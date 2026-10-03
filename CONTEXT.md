@@ -43,6 +43,15 @@ Grupo mostrado como un Nodo unico, con su contador de hijos y las Aristas de sus
 **Enlace entre Vistas**:
 Drill-down de un Nodo hacia otra Vista. Es navegacion, no jerarquia: una Vista puede tener varios padres y los ciclos son validos. La ruta recorrida se muestra como breadcrumbs.
 
+**Tema**:
+Conjunto resuelto de tokens de presentacion (paleta, fuentes, tokens semanticos) con el que se dibuja una Vista. Se declara en el Workspace, es modular (compone partes y hereda de otro Tema) y nunca toca el Modelo.
+
+**Paleta**:
+Colores con nombre de un Tema (`blue`, `danger`). El Modelo y las Vistas solo se refieren a un color por su nombre de Paleta, nunca por valor literal.
+
+**Paso**:
+Punto ordenado de una Vista que revela Nodos y Aristas de forma acumulativa. Solo cambia visibilidad, nunca posicion. Una Vista sin Pasos se muestra completa.
+
 **Pin**:
 Posicion manual de un elemento en una Vista que anula el auto-layout.
 
