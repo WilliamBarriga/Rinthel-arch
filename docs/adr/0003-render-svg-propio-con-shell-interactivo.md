@@ -9,5 +9,5 @@ Props: `geometry` (salida del layout de una Vista), `width` y `height` en px, `t
 ## Consecuencias
 
 - El culling con miles de Nodos se resuelve con colapso (Grupos cerrados no se dibujan) y filtrado por viewport en el shell.
-- slides-rinthel consume el paquete como dependencia normal (su regla de no anadir dependencias es para el agente que escribe slides, no para el repo). El export SVG estatico queda como camino secundario.
+- El paquete `render` es independiente de cualquier consumidor (slides, video, web): este repo no depende de ellos ni los referencia en codigo. Como se instala o integra en un repo consumidor lo decide ese repo y queda fuera de este sistema. El export SVG estatico queda como camino secundario.
 - Declarar pasos de revelado en la Vista (DSL) es azucar futuro sobre `visibility`.

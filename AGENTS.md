@@ -17,5 +17,6 @@ Tecnologia nueva es bienvenida. Antes de adoptar una dependencia, investigarla (
 ## Convenciones
 
 - El nucleo es agnostico del proyecto documentado; todo lo especifico de un proyecto externo vive como ejemplo o caso de uso.
+- Los repos hermanos son referencia de lectura, no dependencias: este repo no depende de ellos ni al reves en codigo, y no los modifica. Integrar el sistema en un repo consumidor (slides, video u otro) es trabajo de ese repo, fuera de este. Slides, video y los demas son casos de uso del contrato de `render`.
 - Eraser DSL y Archify estan descartados; no reintroducirlos.
 - Docs y respuestas en espanol, concisas. Sin emojis unicode.

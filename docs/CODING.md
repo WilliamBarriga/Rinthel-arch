@@ -19,7 +19,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (previsto
 - **Puertos**: interfaces que define el nucleo segun lo que necesita. **Adaptadores**: sistema de archivos, ELK, d3-zoom, Web Worker, CLI; viven en el borde y dependen del nucleo, nunca al reves.
 - Un seam existe cuando algo varia a traves de el: un adaptador es un seam hipotetico, dos es uno real. Con un solo adaptador, llamada directa.
 - Las dependencias entran como argumento; las funciones devuelven resultados en vez de mutar.
-- Direccion de dependencias: `dsl -> canonico -> layout -> render -> shell / cli`. Un paquete solo importa de los anteriores.
+- Direccion de dependencias: `canonico -> dsl -> layout -> render -> shell / cli`. Un paquete solo importa de los anteriores.
 - El nucleo es agnostico del Proyecto documentado (ver `AGENTS.md`).
 
 ## Pruebas
@@ -28,4 +28,4 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (previsto
 - Entradas y salidas observables. Un refactor interno deja todos los tests en verde.
 - Fakes en memoria (adaptadores reales de bajo costo) antes que mocks; mock solo para I/O que no se puede simular.
 - Compilador: texto DSL entra, Fuente canonica sale; se compara contra la salida publica.
-- Runner de pruebas: pendiente de ticket.
+- Runner de pruebas: Vitest. Build de paquetes: tsup. Gestor: pnpm workspaces, sin orquestador de tareas.
