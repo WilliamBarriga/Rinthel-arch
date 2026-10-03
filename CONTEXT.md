@@ -11,7 +11,7 @@ El software o sistema que se explica (ej. un proyecto externo). El sistema de di
 Conjunto unico de Nodos y Aristas de un Proyecto documentado, del que salen todas las Vistas. El texto semantico (titulo, descripcion) vive una sola vez, aqui.
 
 **Nodo**:
-Entidad del Modelo con identidad estable, tipo libre definido por el proyecto (servicio, tabla, actor...), titulo, descripcion, Atributos opcionales y `source` opcional.
+Entidad del Modelo con identidad estable (id cualificado por su jerarquia, ej. `rinthel.api.auth`), Tipo de nodo declarado por el proyecto, titulo, descripcion, Atributos opcionales y `source` opcional.
 
 **Grupo**:
 Nodo que contiene otros Nodos. Se anida sin limite. No es un concepto aparte de Nodo.
@@ -21,6 +21,9 @@ Relacion entre dos extremos del Modelo. Un extremo es un Nodo o un Atributo de u
 
 **Atributo**:
 Elemento estructurado y ordenado de un Nodo (columna, campo, metodo), con nombre, tipo y notas. Es direccionable como extremo de una Arista. Distinto de un Nodo hijo.
+
+**Tipo de nodo**:
+Categoria de Nodo (servicio, tabla, actor...) declarada en el catalogo del Proyecto documentado, con su icono y estilo. Un Tipo de nodo no declarado es error de validacion. Distinto de Tipo de diagrama.
 
 **Source**:
 Lista de referencias opacas de un Nodo al Proyecto documentado (ruta de archivo, ruta y simbolo, URL, id de entidad externa), cada una con `kind` y `ref`. El nucleo las guarda sin interpretarlas.
@@ -38,10 +41,10 @@ Pasar de un Nodo a su detalle. Cada Vista elige el mecanismo: colapsar o expandi
 Posicion manual de un elemento en una Vista que anula el auto-layout.
 
 **Fuente canonica**:
-Formato estructurado y validable por esquema del que se renderiza todo. Escrito a mano, por agentes, o compilado desde un DSL de texto.
+Formato estructurado (Modelo y Vistas) validable por esquema, del que se renderiza todo. Es un artefacto derivado: nadie lo edita, se compila siempre desde el DSL de texto.
 
 **DSL de texto**:
-Sintaxis legible para humanos que compila a la Fuente canonica.
+Sintaxis legible para humanos y agentes, y unica fuente que se edita y versiona. Compila en un solo sentido a la Fuente canonica.
 
-## Terminos pendientes
-Fuente canonica y DSL de texto se afinan en su ticket de grilling del mapa.
+**Workspace**:
+Carpeta de archivos de DSL de texto que se fusionan en el Modelo unico de un Proyecto documentado. Cada archivo puede aportar Nodos, Aristas y Vistas.
