@@ -7,3 +7,4 @@ SYNTAX.md
 examples/
 out/
 node_modules/
+.claude/
