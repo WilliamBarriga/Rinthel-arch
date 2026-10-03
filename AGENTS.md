@@ -16,5 +16,3 @@ Tecnologia nueva es bienvenida. Antes de adoptar una dependencia, investigarla (
 ## Convenciones
 
 - El nucleo es agnostico del proyecto documentado; todo lo especifico de un proyecto externo vive como ejemplo o caso de uso.
-- Eraser DSL y Archify estan descartados. Los archivos viejos sin versionar en la carpeta (`*.eraser`, `eraser_to_archify.py`, `_ir_builder.py`) se ignoran.
-- Docs y respuestas en espanol, concisas. Sin emojis unicode.

@@ -1,10 +1,2 @@
-# legado Eraser/Archify: descartado, no se versiona
-eraser_to_archify.py
-_ir_builder.py
-*.eraser
-QUICKSTART.md
-SYNTAX.md
-examples/
-out/
 node_modules/
 .claude/
