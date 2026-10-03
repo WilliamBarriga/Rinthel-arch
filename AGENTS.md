@@ -6,6 +6,7 @@ Sistema React + TS para escribir y renderizar diagramas grandes y detallados de 
 
 - Vocabulario: `CONTEXT.md`. Usar esos terminos exactos (Modelo, Vista, Tipo de diagrama, Pin...).
 - Decisiones y trabajo pendiente: GitHub Issues de este repo (`gh`, `WilliamBarriga/rinthel-arch`). El mapa es el issue #1 (label `wayfinder:map`); cada ticket es sub-issue con label `wayfinder:<tipo>`.
+- Reglas de codigo (estructura de paquetes, modulos profundos, hexagonal, pruebas): `docs/CODING.md`. Leer antes de crear o modificar codigo.
 - Research: `research/<nombre>.md` en ramas `research/<nombre>`, no en `main`. Leer el archivo antes de re-investigar.
 - Repos hermanos de referencia: `../slides-rinthel`, `../video-openmotion`, `../json-renderer`, `../json-render-learning`. Solo lectura.
 
