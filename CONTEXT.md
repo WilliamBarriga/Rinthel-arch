@@ -35,7 +35,13 @@ Proyeccion declarativa de un Modelo, de un Tipo de diagrama: que Nodos incluye o
 Familia de notacion que fija como se dibuja una Vista. Primera entrega: arquitectura y flujo. Despues: secuencia y ER.
 
 **Drill-down**:
-Pasar de un Nodo a su detalle. Cada Vista elige el mecanismo: colapsar o expandir el Grupo en la misma Vista, o enlazar a otra Vista.
+Pasar de un Nodo a su detalle. Cada Vista tiene un mecanismo por defecto (colapsar o expandir el Grupo en la misma Vista) y puede anularlo por Nodo enlazando a otra Vista. Un Grupo enlazado no se expande en esa Vista.
+
+**Grupo colapsado**:
+Grupo mostrado como un Nodo unico, con su contador de hijos y las Aristas de sus hijos elevadas a su borde. Al abrir una Vista, los Grupos que exceden su profundidad aparecen colapsados.
+
+**Enlace entre Vistas**:
+Drill-down de un Nodo hacia otra Vista. Es navegacion, no jerarquia: una Vista puede tener varios padres y los ciclos son validos. La ruta recorrida se muestra como breadcrumbs.
 
 **Pin**:
 Posicion manual de un elemento en una Vista que anula el auto-layout.
