@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -181,6 +181,16 @@ describe('manifiestos de este workspace', () => {
         exports: Record<string, unknown>;
       };
       expect(Object.keys(manifiestoLeido.exports), nombre).toEqual(['.']);
+    }
+  });
+
+  it('cada package.json.name coincide con el nombre de su carpeta en packages/', () => {
+    const carpetas = readdirSync(resolve(raizDelRepo, 'packages')).sort();
+    for (const carpeta of carpetas) {
+      if (carpeta.startsWith('.')) continue;
+      const ruta = resolve(raizDelRepo, 'packages', carpeta, 'package.json');
+      const manifiesto = JSON.parse(readFileSync(ruta, 'utf8')) as { name?: string };
+      expect(manifiesto.name ?? carpeta, `${carpeta}/package.json.name`).toEqual(carpeta);
     }
   });
 });
