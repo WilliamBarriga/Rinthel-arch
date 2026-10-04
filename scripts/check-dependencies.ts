@@ -56,6 +56,7 @@ interface Paquete {
 }
 
 const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist', 'coverage', '.git']);
+const ARCHIVOS_IGNORADOS = /^tsup\.config\.|^vitest\.config\./;
 const EXTENSIONES_DE_CODIGO = ['.ts', '.tsx', '.mts', '.cts'];
 const RE_ESPECIFICADOR = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/g;
 
@@ -229,7 +230,8 @@ function archivosDe(carpeta: string): string[] {
       } else if (
         entrada.isFile() &&
         EXTENSIONES_DE_CODIGO.some((extension) => entrada.name.endsWith(extension)) &&
-        !entrada.name.endsWith('.d.ts')
+        !entrada.name.endsWith('.d.ts') &&
+        !ARCHIVOS_IGNORADOS.test(entrada.name)
       ) {
         encontrados.push(ruta);
       }
@@ -246,86 +248,15 @@ function extraerEspecificadores(texto: string): string[] {
   return especificadores;
 }
 
-/**
- * Sustituye comentarios por espacios conservando saltos de linea, para no leer
- * import escritos solo en documentacion. Los literales de cadena se conservan:
- * ahi viven los especificadores reales.
- */
+/** Strings -> placeholders, regex elimina comentarios, placeholders -> strings. */
 function sinComentarios(texto: string): string {
-  let salida = '';
-  let i = 0;
-  let estado: 'codigo' | 'linea' | 'bloque' | 'simple' | 'doble' | 'plantilla' = 'codigo';
-
-  while (i < texto.length) {
-    const caracter = texto[i];
-    const siguiente = texto[i + 1];
-
-    if (estado === 'codigo') {
-      if (caracter === '/' && siguiente === '/') {
-        estado = 'linea';
-        salida += '  ';
-        i += 2;
-      } else if (caracter === '/' && siguiente === '*') {
-        estado = 'bloque';
-        salida += '  ';
-        i += 2;
-      } else if (caracter === "'") {
-        estado = 'simple';
-        salida += caracter;
-        i += 1;
-      } else if (caracter === '"') {
-        estado = 'doble';
-        salida += caracter;
-        i += 1;
-      } else if (caracter === '`') {
-        estado = 'plantilla';
-        salida += caracter;
-        i += 1;
-      } else {
-        salida += caracter;
-        i += 1;
-      }
-      continue;
-    }
-
-    if (estado === 'linea') {
-      if (caracter === '\n') {
-        estado = 'codigo';
-        salida += caracter;
-      } else {
-        salida += ' ';
-      }
-      i += 1;
-      continue;
-    }
-
-    if (estado === 'bloque') {
-      if (caracter === '*' && siguiente === '/') {
-        estado = 'codigo';
-        salida += '  ';
-        i += 2;
-      } else {
-        salida += caracter === '\n' ? '\n' : ' ';
-        i += 1;
-      }
-      continue;
-    }
-
-    if (caracter === '\\' && i + 1 < texto.length) {
-      salida += texto.slice(i, i + 2);
-      i += 2;
-      continue;
-    }
-    const cierra =
-      (estado === 'simple' && caracter === "'") ||
-      (estado === 'doble' && caracter === '"') ||
-      (estado === 'plantilla' && caracter === '`');
-    if (cierra) {
-      estado = 'codigo';
-    }
-    salida += caracter;
-    i += 1;
-  }
-
-  return salida;
+  const placeholders: string[] = [];
+  const conPlaceholders = texto
+    .replace(/(?:'[^'\\]*(?:\\.[^'\\]*)*'|"[^"\\]*(?:\\.[^"\\]*)*"|`[^`]*`)/g, (
+      match,
+    ) => `__STR${placeholders.push(match) - 1}__`);
+  const sinComentarios = conPlaceholders
+    .replace(/\/\/.*$/gm, '  ')
+    .replace(/\/\*[\s\S]*?\*\//g, '  ');
+  return sinComentarios.replace(/__STR(\d+)__/g, (_, i) => placeholders[Number(i)]);
 }

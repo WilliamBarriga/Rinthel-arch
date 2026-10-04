@@ -1,32 +1,26 @@
 /**
  * `canonico` — esquema, validacion y resolucion de la Fuente canonica.
  *
- * Interfaz publica. Todo lo que no sale de este archivo (ni de `exports` del
- * `package.json`) es privado y puede cambiar sin avisar.
- *
- * Hoy:
- * - `paquete`: identidad del paquete, observable por cualquier consumidor.
- *
- * Previsto (spec #19, aun sin implementar): esquema Zod de la Fuente canonica,
- * `validate(canonico) -> issues`,
- * `resolveView(canonico, vistaId, estadoExpandido?) -> VistaResuelta` y
- * `revealAt(vistaResuelta, posicion) -> visibility(id)`.
- *
- * Invariantes:
- * - Nucleo puro: sin I/O, sin reloj, sin estado global. Las dependencias entran
- *   como argumento y las funciones devuelven resultados, no mutan.
- * - Los problemas de validacion y de compilacion son datos: lista de `issues`
- *   con `code` estable, `severity`, `file`, `line` y `column`, en orden
- *   determinista (archivo, linea, columna, codigo).
- * - Solo importa paquetes anteriores en la cadena
- *   `canonico -> dsl -> layout -> render -> shell / cli`, por nombre de paquete
- *   y unicamente por lo que declara `exports` de ese paquete.
- *
- * Modos de error:
- * - Invalidacion del dominio: se devuelve como `issues`; nunca lanza.
- * - Excepcion solo para fallos de uso (argumento fuera del contrato) o fallos
- *   internos.
- *
- * Configuracion requerida: ninguna.
+ * Invariantes: ids cualificados (`a.b.c`) definen jerarquia del Modelo (sin
+ * hijos huerfanos); `type` siempre declarado en `specification.nodeTypes`;
+ * colores son nombres de Paleta, nunca valores hex (ADR 0006).
+ * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
+ * excepcion solo para fallos de uso o internos.
+ * Configuracion requerida: ninguna. Solo importa paquetes anteriores en la
+ * cadena `canonico -> dsl -> layout -> render -> shell / cli`.
  */
 export const paquete = 'canonico';
+
+export { fuenteCanonicaSchema, idDeNodoSchema, nodoSchema, tipoDeNodoSchema } from './esquema';
+export type {
+  CatalogoDeTiposDeNodo,
+  FuenteCanonica,
+  Modelo,
+  Nodo,
+  TipoDeNodo,
+} from './esquema';
+
+export type { Issue, IssueFix, IssueRelated, Severity, TextPosition, TextRange } from './issue';
+
+export { CODIGOS, CODIGOS_DEPRECADOS } from './codigos';
+export type { Codigo } from './codigos';
