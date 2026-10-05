@@ -1,0 +1,11 @@
+specification {
+  node servicio
+  node modulo
+}
+
+model {
+  servicio sistema "Sistema" "Ejemplo generico" {
+    servicio api "API"
+    modulo auth "Auth"
+  }
+}

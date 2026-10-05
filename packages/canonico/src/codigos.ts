@@ -13,6 +13,8 @@
  * estos codigos es `validate` (spec #19, tickets `dsl` y `canonico/validate`).
  */
 export const CODIGOS = Object.freeze({
+  /** Texto del DSL que no cumple la gramatica (lexico o sintaxis). */
+  E_SYNTAX_ERROR: 'E_SYNTAX_ERROR',
   /** `type` de Nodo no declarado en el catalogo de Tipos de nodo. */
   E_UNKNOWN_NODE_TYPE: 'E_UNKNOWN_NODE_TYPE',
   /** Dos Nodos con el mismo id sin que medie `extend`. */

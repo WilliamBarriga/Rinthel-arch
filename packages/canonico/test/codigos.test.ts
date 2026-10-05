@@ -5,8 +5,11 @@ import { CODIGOS, CODIGOS_DEPRECADOS } from 'canonico';
 /**
  * Codigos minimos de v1: la lista del spec #19 escrita desde el spec, no desde
  * el catalogo. Anadir un codigo es un cambio de contrato que se revisa aqui.
+ * `E_SYNTAX_ERROR` se anade en el ticket #22: `compile` necesita reportar texto
+ * que no cumple la gramatica y el spec no lo listaba.
  */
 const codigosDeV1 = [
+  'E_SYNTAX_ERROR',
   'E_UNKNOWN_NODE_TYPE',
   'E_DUPLICATE_NODE',
   'E_DANGLING_EDGE',

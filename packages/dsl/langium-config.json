@@ -1,0 +1,19 @@
+{
+  "projectName": "Diagramas",
+  "importExtension": "",
+  "langiumInternal": false,
+  "languages": [
+    {
+      "id": "diagramas",
+      "grammar": "src/gramatica/diagramas.langium",
+      "fileExtensions": [".dg"]
+    }
+  ],
+  "out": "src/generated",
+  "mode": "production",
+  "chevrotainParserConfig": {
+    "skipValidations": true,
+    "recoveryEnabled": true,
+    "nodeLocationTracking": "full"
+  }
+}

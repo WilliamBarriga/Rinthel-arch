@@ -24,3 +24,6 @@ export type { Issue, IssueFix, IssueRelated, Severity, TextPosition, TextRange }
 
 export { CODIGOS, CODIGOS_DEPRECADOS } from './codigos';
 export type { Codigo } from './codigos';
+
+export { CONTRACT_VERSION, issueSchema, salidaDeValidateSchema } from './salida';
+export type { SalidaDeValidate } from './salida';
