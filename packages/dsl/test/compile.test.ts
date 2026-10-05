@@ -32,6 +32,7 @@ describe('compile: Nodos y specification', () => {
           },
         ],
       },
+      views: [],
     });
   });
 
@@ -103,6 +104,38 @@ describe('compile: Nodos y specification', () => {
       line: 3,
       column: 3,
     });
+  });
+
+  it('un typo de Tipo de nodo con un unico candidato emite fix sobre el texto', () => {
+    const { issues } = compile({
+      'main.dg': ['specification { node servicio }', 'model {', '  servico api', '}'].join('\n'),
+    });
+
+    expect(issues[0]?.fix).toEqual({
+      file: 'main.dg',
+      range: { start: { line: 3, column: 3 }, end: { line: 3, column: 10 } },
+      replacement: 'servicio',
+    });
+    expect(issues[0]?.hint).toBeUndefined();
+  });
+
+  it('con dos candidatos de Tipo de nodo no emite fix, solo hint', () => {
+    const { issues } = compile({
+      'main.dg': ['specification { node servicio node servicios }', 'model {', '  servici api', '}'].join('\n'),
+    });
+
+    expect(issues[0]?.code).toBe('E_UNKNOWN_NODE_TYPE');
+    expect(issues[0]?.fix).toBeUndefined();
+    expect(issues[0]?.hint).toBe('Candidatos: servicio, servicios');
+  });
+
+  it('un Tipo de nodo sin parecido no emite fix ni hint', () => {
+    const { issues } = compile({
+      'main.dg': ['specification { node servicio }', 'model {', '  zzz api', '}'].join('\n'),
+    });
+
+    expect(issues[0]?.fix).toBeUndefined();
+    expect(issues[0]?.hint).toBeUndefined();
   });
 
   it('un error de sintaxis es un issue con posicion, no una excepcion', () => {
@@ -548,5 +581,78 @@ describe('compile: Workspace multiarchivo', () => {
     const invertido = { 'y.dg': base['y.dg'], 'x.dg': base['x.dg'] };
 
     expect(compile(invertido)).toEqual(compile(base));
+  });
+});
+
+describe('compile: Vistas', () => {
+  const base = 'specification { node servicio }  model { servicio a { servicio x }  servicio b }';
+
+  it('compila view con type, include, exclude y depth', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        view general {
+          type architecture
+          include a.*, b.**, c
+          exclude b
+          depth 2
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views).toEqual([
+      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2 },
+    ]);
+  });
+
+  it('una Vista flow solo con type; el resto queda vacio', () => {
+    const { canonico } = compile({ 'main.dg': `${base} view f { type flow }` });
+
+    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [] }]);
+  });
+
+  it('acepta `*` y `**` como selectores y varios include', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base} view t { type flow  include *  include ** }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]?.include).toEqual(['*', '**']);
+  });
+
+  it('type ausente es E_UNKNOWN_VIEW_TYPE con posicion', () => {
+    const { issues, canonico } = compile({
+      'main.dg': `${base}\nview sin_tipo {\n  include a\n}`,
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_VIEW_TYPE', file: 'main.dg', line: 2, column: 6 });
+  });
+
+  it('type desconocido es E_UNKNOWN_VIEW_TYPE en la posicion del valor', () => {
+    const { issues } = compile({
+      'main.dg': `${base}\nview v {\n  type secuencia\n}`,
+    });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_VIEW_TYPE', line: 3, column: 8 });
+  });
+
+  it('depth 0 es sintacticamente valido y no hace lanzar a compile', () => {
+    const { canonico, issues } = compile({ 'main.dg': `${base} view v { type flow  include **  depth 0 }` });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]?.depth).toBe(0);
+  });
+
+  it('fusiona Vistas de varios archivos', () => {
+    const { canonico, issues } = compile({
+      'a.dg': base,
+      'b.dg': 'view uno { type flow }',
+      'c.dg': 'view dos { type architecture }',
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views.map((v) => v.id)).toEqual(['uno', 'dos']);
   });
 });

@@ -8,6 +8,20 @@ exports[`validate > con errores sale con codigo 1 y un snapshot estable del cont
       "code": "E_UNKNOWN_NODE_TYPE",
       "column": 3,
       "file": "main.dg",
+      "fix": {
+        "file": "main.dg",
+        "range": {
+          "end": {
+            "column": 10,
+            "line": 6,
+          },
+          "start": {
+            "column": 3,
+            "line": 6,
+          },
+        },
+        "replacement": "servicio",
+      },
       "line": 6,
       "severity": "error",
     },

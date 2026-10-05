@@ -17,7 +17,8 @@ grammar Diagramas
 entry Documento:
   (
     specifications+=Specification |
-    models+=Model
+    models+=Model |
+    views+=View
   )*
 ;
 
@@ -70,6 +71,38 @@ Extend:
   '}'
 ;
 
+// View -------------------------------------
+
+// `view <id> { type architecture|flow  include a.*, b.**  exclude c  depth N }`.
+// Una Vista solo selecciona Nodos del Modelo; nunca declara entidades.
+View:
+  'view' name=Id '{'
+    props+=ViewProperty*
+  '}'
+;
+
+ViewProperty:
+  ViewType | ViewInclude | ViewExclude | ViewDepth;
+
+ViewType:
+  'type' value=Id;
+
+ViewInclude:
+  'include' selectors+=Selector (',' selectors+=Selector)*;
+
+ViewExclude:
+  'exclude' selectors+=Selector (',' selectors+=Selector)*;
+
+ViewDepth:
+  'depth' value=INT;
+
+// `a.b` un Nodo, `a.*` sus hijos directos, `a.**` sus descendientes, `*` y `**` a secas.
+Selector returns string:
+  Ref ('.' Wildcard)? | Wildcard;
+
+Wildcard returns string:
+  '*' | '**';
+
 // `<tipo> <nombre> "titulo" "descripcion" { hijos }`
 Element:
   type=Id name=Id
@@ -101,7 +134,7 @@ Attribute:
 
 Id returns string:
   IdTerminal |
-  'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source';
+  'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth';
 
 // -------------------------
 // Comments
@@ -113,4 +146,5 @@ hidden terminal NL: /[\r\n]+/;
 // -----------------------------------
 // Terminals
 terminal String: /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/;
+terminal INT returns number: /[0-9]+/;
 terminal IdTerminal:  /([a-zA-Z]|_+[a-zA-Z0-9])[-\w]*/;

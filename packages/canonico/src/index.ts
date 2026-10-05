@@ -5,6 +5,9 @@
  * hijos huerfanos); extremos de Arista siempre existentes, y `nodo#atributo`
  * solo con un Atributo declarado en ese Nodo (distinto de un Nodo hijo);
  * `type` siempre declarado en `specification.nodeTypes`;
+ * una Vista (`views`) tiene `type` architecture|flow y solo selecciona Nodos
+ * (`resolveView`, que devuelve `undefined` si la Vista no existe), nunca define
+ * entidades;
  * colores son nombres de Paleta, nunca valores hex (ADR 0006).
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
  * excepcion solo para fallos de uso o internos.
@@ -17,8 +20,12 @@ export {
   fuenteCanonicaSchema,
   idDeNodoSchema,
   nodoSchema,
+  TIPOS_DE_VISTA,
   tipoDeNodoSchema,
+  vistaSchema,
 } from './esquema';
+export { resolveView } from './vistas';
+export type { VistaResuelta } from './vistas';
 export type {
   Arista,
   Atributo,
@@ -29,6 +36,7 @@ export type {
   Nodo,
   ReferenciaOpaca,
   TipoDeNodo,
+  Vista,
 } from './esquema';
 
 export type { Issue, IssueFix, IssueRelated, Severity, TextPosition, TextRange } from './issue';

@@ -185,3 +185,48 @@ describe('validate', () => {
     expect(JSON.parse(resultado.stdout).issues[0]).toMatchObject({ code: 'E_SYNTAX_ERROR', line: 3 });
   });
 });
+
+describe('validate: bucle validate/fix', () => {
+  /** Aplica un `fix` (rangos 1-based, fin excluido) sobre el texto del archivo. */
+  function aplicarFix(texto: string, { range, replacement }: { range: { start: { line: number; column: number }; end: { line: number; column: number } }; replacement: string }): string {
+    const lineas = texto.split('\n');
+    const desplazamiento = (p: { line: number; column: number }) =>
+      lineas.slice(0, p.line - 1).reduce((suma, linea) => suma + linea.length + 1, 0) + p.column - 1;
+    return texto.slice(0, desplazamiento(range.start)) + replacement + texto.slice(desplazamiento(range.end));
+  }
+
+  async function validar(raiz: string) {
+    const resultado = await run(['validate', '--workspace', raiz, '--json']);
+    return salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
+  }
+
+  it('aplicar el fix al texto hace desaparecer el issue al revalidar, sin que validate escriba', async () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'diagramas-fix-'));
+    const archivo = join(raiz, 'main.dg');
+    const original = 'specification { node servicio }\nmodel {\n  servico api\n}\n';
+    writeFileSync(archivo, original);
+
+    const antes = await validar(raiz);
+    expect(readFileSync(archivo, 'utf8')).toBe(original);
+    expect(antes.issues.map((i) => i.code)).toEqual(['E_UNKNOWN_NODE_TYPE']);
+
+    const fix = antes.issues[0]?.fix;
+    expect(fix?.file).toBe('main.dg');
+    writeFileSync(archivo, aplicarFix(original, fix as NonNullable<typeof fix>));
+
+    const despues = await validar(raiz);
+    expect(despues).toMatchObject({ ok: true, issues: [] });
+  });
+
+  it('el fix de una Arista colgante tambien cierra el bucle', async () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'diagramas-fix-'));
+    const archivo = join(raiz, 'main.dg');
+    const original = 'specification { node servicio }\nmodel {\n  servicio api\n  servicio db\n  api -> dbb\n}\n';
+    writeFileSync(archivo, original);
+
+    const fix = (await validar(raiz)).issues[0]?.fix;
+    writeFileSync(archivo, aplicarFix(original, fix as NonNullable<typeof fix>));
+
+    expect((await validar(raiz)).issues).toEqual([]);
+  });
+});

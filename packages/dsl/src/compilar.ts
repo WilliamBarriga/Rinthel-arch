@@ -2,7 +2,7 @@
  * Compilador del DSL de texto: parsea cada archivo con la gramatica derivada de
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
-import { CODIGOS, fuenteCanonicaSchema } from 'canonico';
+import { CODIGOS, TIPOS_DE_VISTA, fuenteCanonicaSchema, vistaSchema } from 'canonico';
 import type {
   Arista,
   Atributo,
@@ -13,6 +13,7 @@ import type {
   ReferenciaOpaca,
   TextRange,
   TipoDeNodo,
+  Vista,
 } from 'canonico';
 import {
   EmptyFileSystem,
@@ -24,7 +25,7 @@ import {
 import type { AstNode, LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Attrs, Documento, Edge, Element, Endpoint, Extend, Source } from './generated/ast';
+import type { Attrs, Documento, Edge, Element, Endpoint, Extend, Source, View } from './generated/ast';
 import { candidatosCercanos } from './sugerencias';
 
 /** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
@@ -53,6 +54,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const issues: Issue[] = [];
   const tiposDeNodo: TipoDeNodo[] = [];
   const conSintaxisRota = new Set<string>();
+  const vistas: Vista[] = [];
   const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
 
   for (const archivo of Object.keys(workspace).sort()) {
@@ -72,6 +74,10 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
         }
         tiposDeNodo.push(tipo);
       }
+    }
+    for (const vista of resultado.value.views) {
+      const compilada = compilarVista(vista, archivo, issues);
+      if (compilada !== undefined) vistas.push(compilada);
     }
     for (const modelo of resultado.value.models) {
       raices.push({
@@ -112,6 +118,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     canonico: fuenteCanonicaSchema.parse({
       specification: { nodeTypes: tiposDeNodo },
       model: { nodes: nodos, edges: aristas },
+      views: vistas,
     }),
     issues,
   };
@@ -127,6 +134,41 @@ interface Contexto {
   declarados: ReadonlySet<string>;
   registro: Map<string, NodoRegistrado>;
   issues: Issue[];
+}
+
+/** Compila una Vista; sin `type` valido es `E_UNKNOWN_VIEW_TYPE` y no hay Vista. */
+function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | undefined {
+  const tipo = vista.props.find((prop) => prop.$type === 'ViewType');
+  if (tipo === undefined) {
+    issues.push({
+      code: CODIGOS.E_UNKNOWN_VIEW_TYPE,
+      severity: 'error',
+      file: archivo,
+      ...rangoDe(vista, 'name').start,
+      message: `La Vista '${vista.name}' no declara 'type' (${TIPOS_DE_VISTA.join(' | ')})`,
+    });
+    return undefined;
+  }
+  const tipoValido = vistaSchema.shape.type.safeParse(tipo.value);
+  if (!tipoValido.success) {
+    issues.push(
+      issueConSugerencia(
+        { code: CODIGOS.E_UNKNOWN_VIEW_TYPE, message: `Tipo de Vista '${tipo.value}' desconocido (${TIPOS_DE_VISTA.join(' | ')})` },
+        archivo, tipo, 'value', TIPOS_DE_VISTA,
+      ),
+    );
+    return undefined;
+  }
+  const selectores = (clase: 'ViewInclude' | 'ViewExclude'): string[] =>
+    vista.props.flatMap((prop) => (prop.$type === clase ? prop.selectors : []));
+  const profundidad = vista.props.find((prop) => prop.$type === 'ViewDepth');
+  return {
+    id: vista.name,
+    type: tipoValido.data,
+    include: selectores('ViewInclude'),
+    exclude: selectores('ViewExclude'),
+    ...(profundidad !== undefined && { depth: profundidad.value }),
+  };
 }
 
 /** Compila un Elemento; un id ya declarado es `E_DUPLICATE_NODE` y el duplicado se descarta. */
@@ -152,13 +194,15 @@ function compilarElemento(
     return undefined;
   }
   if (!declarados.has(elemento.type)) {
-    issues.push({
-      code: CODIGOS.E_UNKNOWN_NODE_TYPE,
-      severity: 'error',
-      file: archivo,
-      ...rangoDe(elemento, 'type').start,
-      message: `Tipo de nodo '${elemento.type}' no declarado en specification`,
-    });
+    issues.push(
+      issueConSugerencia(
+        {
+          code: CODIGOS.E_UNKNOWN_NODE_TYPE,
+          message: `Tipo de nodo '${elemento.type}' no declarado en specification`,
+        },
+        archivo, elemento, 'type', declarados,
+      ),
+    );
   }
   const nodo: Nodo = {
     id,
@@ -274,19 +318,19 @@ function compilarExtremo(
 }
 
 /**
- * Issue de error sobre la propiedad `propiedad` del extremo, con `fix` si hay un
- * unico candidato cercano entre `existentes` y `hint` si hay varios.
+ * Issue de error sobre la propiedad textual `propiedad` de `nodo`, con `fix` si hay
+ * un unico candidato cercano entre `existentes` y `hint` si hay varios.
  */
-function issueConSugerencia(
+function issueConSugerencia<T extends AstNode>(
   base: { code: string; message: string },
   archivo: string,
-  extremo: Endpoint,
-  propiedad: 'node' | 'attribute',
+  nodo: T,
+  propiedad: Extract<keyof T, string>,
   existentes: Iterable<string>,
 ): Issue {
-  const { start: inicio, end: fin } = rangoDe(extremo, propiedad);
+  const { start: inicio, end: fin } = rangoDe(nodo, propiedad);
   const issue: Issue = { ...base, severity: 'error', file: archivo, ...inicio };
-  const candidatos = candidatosCercanos(extremo[propiedad] as string, existentes);
+  const candidatos = candidatosCercanos(nodo[propiedad] as string, existentes);
   const [unico] = candidatos;
   if (candidatos.length === 1 && unico !== undefined) {
     issue.fix = { file: archivo, range: { start: inicio, end: fin }, replacement: unico };
