@@ -138,6 +138,21 @@ const modeloSchema = z.object({
 export const TIPOS_DE_VISTA = ['architecture', 'flow'] as const;
 
 /**
+ * Override de presentacion de un Nodo en una Vista: solo apariencia, nunca toca
+ * el Modelo. `pin` en coordenadas del lienzo post-layout; `color` es un nombre
+ * de Paleta (se valida contra el Tema en su ticket).
+ */
+export const overrideSchema = z.object({
+  node: idDeNodoSchema,
+  label: z.string().optional(),
+  pin: z.object({ x: z.number(), y: z.number() }).optional(),
+  order: z.number().int().optional(),
+  color: z.string().min(1).optional(),
+});
+
+export type OverrideDeNodo = z.infer<typeof overrideSchema>;
+
+/**
  * Vista: selecciona Nodos del Modelo con `include`/`exclude`/`depth` (ver
  * `resolveView`). Nunca define entidades nuevas.
  */
@@ -147,6 +162,7 @@ export const vistaSchema = z.object({
   include: z.array(z.string().min(1)).default([]),
   exclude: z.array(z.string().min(1)).default([]),
   depth: z.number().int().min(0).optional(),
+  overrides: z.array(overrideSchema).default([]),
 });
 
 export type Vista = z.infer<typeof vistaSchema>;

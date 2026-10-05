@@ -2,7 +2,7 @@
  * Compilador del DSL de texto: parsea cada archivo con la gramatica derivada de
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
-import { CODIGOS, TIPOS_DE_VISTA, fuenteCanonicaSchema, vistaSchema } from 'canonico';
+import { CODIGOS, TIPOS_DE_VISTA, fuenteCanonicaSchema, resolveView, vistaSchema } from 'canonico';
 import type {
   Arista,
   Atributo,
@@ -10,6 +10,7 @@ import type {
   FuenteCanonica,
   Issue,
   Nodo,
+  OverrideDeNodo,
   ReferenciaOpaca,
   TextRange,
   TipoDeNodo,
@@ -25,7 +26,7 @@ import {
 import type { AstNode, LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Attrs, Documento, Edge, Element, Endpoint, Extend, Source, View } from './generated/ast';
+import type { Attrs, Documento, Edge, Element, Endpoint, Extend, NodeOverride, Source, View } from './generated/ast';
 import { candidatosCercanos } from './sugerencias';
 
 /** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
@@ -54,7 +55,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const issues: Issue[] = [];
   const tiposDeNodo: TipoDeNodo[] = [];
   const conSintaxisRota = new Set<string>();
-  const vistas: Vista[] = [];
+  const vistas: { vista: Vista; archivo: string; ast: View }[] = [];
   const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
 
   for (const archivo of Object.keys(workspace).sort()) {
@@ -77,7 +78,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
     for (const vista of resultado.value.views) {
       const compilada = compilarVista(vista, archivo, issues);
-      if (compilada !== undefined) vistas.push(compilada);
+      if (compilada !== undefined) vistas.push({ vista: compilada, archivo, ast: vista });
     }
     for (const modelo of resultado.value.models) {
       raices.push({
@@ -112,13 +113,20 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
   }
 
+  const fuente = {
+    specification: { nodeTypes: tiposDeNodo },
+    model: { nodes: nodos, edges: aristas },
+    views: vistas.map(({ vista }) => vista),
+  };
+  for (const { vista, archivo, ast } of vistas) {
+    comprobarOverrides(vista, ast, archivo, fuente, issues);
+  }
+
   issues.sort(compararIssues);
   if (issues.some((issue) => issue.severity === 'error')) return { issues };
   return {
     canonico: fuenteCanonicaSchema.parse({
-      specification: { nodeTypes: tiposDeNodo },
-      model: { nodes: nodos, edges: aristas },
-      views: vistas,
+      ...fuente,
     }),
     issues,
   };
@@ -168,7 +176,40 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
     include: selectores('ViewInclude'),
     exclude: selectores('ViewExclude'),
     ...(profundidad !== undefined && { depth: profundidad.value }),
+    overrides: vista.props.flatMap((prop) => (prop.$type === 'NodeOverride' ? [overrideDe(prop)] : [])),
   };
+}
+
+function overrideDe(declarado: NodeOverride): OverrideDeNodo {
+  const override: OverrideDeNodo = { node: declarado.node };
+  for (const prop of declarado.props) {
+    if (prop.$type === 'OverrideLabel') override.label = prop.value;
+    else if (prop.$type === 'OverridePin') override.pin = { x: prop.x, y: prop.y };
+    else if (prop.$type === 'OverrideOrder') override.order = prop.value;
+    else override.color = prop.value;
+  }
+  return override;
+}
+
+/** Un override solo puede apuntar a un Nodo que la Vista muestra. */
+function comprobarOverrides(
+  vista: Vista,
+  ast: View,
+  archivo: string,
+  fuente: FuenteCanonica,
+  issues: Issue[],
+): void {
+  const visibles = new Set(resolveView(fuente, vista.id)?.nodes.map((nodo) => nodo.id));
+  for (const prop of ast.props) {
+    if (prop.$type !== 'NodeOverride' || visibles.has(prop.node)) continue;
+    issues.push({
+      code: CODIGOS.E_OVERRIDE_OUTSIDE_VIEW,
+      severity: 'error',
+      file: archivo,
+      ...rangoDe(prop, 'node').start,
+      message: `Override sobre '${prop.node}', que la Vista '${vista.id}' no muestra`,
+    });
+  }
 }
 
 /** Compila un Elemento; un id ya declarado es `E_DUPLICATE_NODE` y el duplicado se descarta. */

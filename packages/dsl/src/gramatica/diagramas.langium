@@ -82,7 +82,7 @@ View:
 ;
 
 ViewProperty:
-  ViewType | ViewInclude | ViewExclude | ViewDepth;
+  ViewType | ViewInclude | ViewExclude | ViewDepth | NodeOverride;
 
 ViewType:
   'type' value=Id;
@@ -95,6 +95,26 @@ ViewExclude:
 
 ViewDepth:
   'depth' value=INT;
+
+// Overrides de presentacion de un Nodo en esta Vista; nunca tocan el Modelo.
+// `pin x,y` es en coordenadas del lienzo post-layout; `color` es un nombre de Paleta.
+NodeOverride:
+  'node' node=Ref '{' props+=OverrideProperty* '}';
+
+OverrideProperty:
+  OverrideLabel | OverridePin | OverrideOrder | OverrideColor;
+
+OverrideLabel:
+  'label' value=String;
+
+OverridePin:
+  'pin' x=INT ',' y=INT;
+
+OverrideOrder:
+  'order' value=INT;
+
+OverrideColor:
+  'color' value=Id;
 
 // `a.b` un Nodo, `a.*` sus hijos directos, `a.**` sus descendientes, `*` y `**` a secas.
 Selector returns string:
@@ -134,7 +154,7 @@ Attribute:
 
 Id returns string:
   IdTerminal |
-  'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth';
+  'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order';
 
 // -------------------------
 // Comments

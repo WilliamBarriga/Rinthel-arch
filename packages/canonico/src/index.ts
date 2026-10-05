@@ -7,7 +7,7 @@
  * `type` siempre declarado en `specification.nodeTypes`;
  * una Vista (`views`) tiene `type` architecture|flow y solo selecciona Nodos
  * (`resolveView`, que devuelve `undefined` si la Vista no existe), nunca define
- * entidades;
+ * entidades; sus `overrides` (label, pin, order, color) son solo presentacion;
  * colores son nombres de Paleta, nunca valores hex (ADR 0006).
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
  * excepcion solo para fallos de uso o internos.
@@ -20,6 +20,7 @@ export {
   fuenteCanonicaSchema,
   idDeNodoSchema,
   nodoSchema,
+  overrideSchema,
   TIPOS_DE_VISTA,
   tipoDeNodoSchema,
   vistaSchema,
@@ -34,6 +35,7 @@ export type {
   FuenteCanonica,
   Modelo,
   Nodo,
+  OverrideDeNodo,
   ReferenciaOpaca,
   TipoDeNodo,
   Vista,

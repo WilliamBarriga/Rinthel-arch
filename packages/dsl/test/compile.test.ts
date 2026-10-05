@@ -600,14 +600,14 @@ describe('compile: Vistas', () => {
 
     expect(issues).toEqual([]);
     expect(canonico?.views).toEqual([
-      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2 },
+      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, overrides: [] },
     ]);
   });
 
   it('una Vista flow solo con type; el resto queda vacio', () => {
     const { canonico } = compile({ 'main.dg': `${base} view f { type flow }` });
 
-    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [] }]);
+    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], overrides: [] }]);
   });
 
   it('acepta `*` y `**` como selectores y varios include', () => {
@@ -654,5 +654,68 @@ describe('compile: Vistas', () => {
 
     expect(issues).toEqual([]);
     expect(canonico?.views.map((v) => v.id)).toEqual(['uno', 'dos']);
+  });
+});
+
+describe('compile: overrides de presentacion por Nodo en la Vista', () => {
+  const base = 'specification { node servicio }  model { servicio a { servicio x }  servicio b }';
+
+  it('compila label, pin, order y color a la Vista sin tocar el Modelo', () => {
+    const sin = compile({ 'main.dg': `${base} view v { type architecture include ** }` });
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        view v {
+          type architecture
+          include **
+          node a.x { label "Equis" pin 120,40 order 2 color blue }
+          node b { color red }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]?.overrides).toEqual([
+      { node: 'a.x', label: 'Equis', pin: { x: 120, y: 40 }, order: 2, color: 'blue' },
+      { node: 'b', color: 'red' },
+    ]);
+    expect(canonico?.model).toEqual(sin.canonico?.model);
+  });
+
+  it('una Vista sin overrides los deja vacios', () => {
+    const { canonico } = compile({ 'main.dg': `${base} view v { type flow }` });
+
+    expect(canonico?.views[0]?.overrides).toEqual([]);
+  });
+
+  it('override sobre un Nodo fuera de la Vista es E_OVERRIDE_OUTSIDE_VIEW con posicion', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}\nview v {\n  type flow\n  include a\n  node b { color red }\n}`,
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      code: 'E_OVERRIDE_OUTSIDE_VIEW',
+      severity: 'error',
+      file: 'main.dg',
+      line: 5,
+      column: 8,
+    });
+  });
+
+  it('override sobre un Nodo inexistente tambien es E_OVERRIDE_OUTSIDE_VIEW', () => {
+    const { issues } = compile({
+      'main.dg': `${base} view v { type flow include ** node fantasma { label "x" } }`,
+    });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_OVERRIDE_OUTSIDE_VIEW']);
+  });
+
+  it('color solo acepta nombres de Paleta: un hex es error de sintaxis', () => {
+    const { issues } = compile({
+      'main.dg': `${base} view v { type flow include ** node a { color #ff0000 } }`,
+    });
+
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues.every((i) => i.code === 'E_SYNTAX_ERROR')).toBe(true);
   });
 });
