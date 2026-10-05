@@ -240,3 +240,35 @@ describe('renderToSvgString: Atributos e iconos', () => {
     expect(svg).toBe(await dibujarTabla({ 'iconos/logo.svg': logo }));
   });
 });
+
+describe('renderToSvgString: fuentes incrustadas', () => {
+  async function exportar(fonts?: { family: string; mime: string; data: string }[]): Promise<string> {
+    const v = vista();
+    const geometry = await layoutView(v, OSCURO);
+    return renderToSvgString({ view: v, geometry, theme: OSCURO, width: 800, height: 600, ...(fonts && { fonts }) });
+  }
+
+  it('incrusta cada fuente como @font-face con data URI, sin recursos externos', async () => {
+    const svg = await exportar([{ family: 'Inter', mime: 'font/woff2', data: 'QUJD' }]);
+
+    expect(svg).toContain("@font-face{font-family:'Inter';src:url(data:font/woff2;base64,QUJD)}");
+    expect(svg).not.toMatch(/(?:href|url\()\s*["']?(?!data:|#)[a-z]+:?\/\//i);
+    expect(svg).not.toMatch(/src:url\((?!data:)/);
+  });
+
+  it('sin fuentes no emite <style> y la salida no cambia', async () => {
+    const svg = await exportar();
+
+    expect(svg).not.toContain('<style');
+    expect(await exportar([])).toBe(svg);
+  });
+
+  it('escapa comillas del nombre de la familia y es determinista', async () => {
+    const fuentes = [{ family: "O'Brien", mime: 'font/ttf', data: 'QQ==' }];
+
+    const svg = await exportar(fuentes);
+
+    expect(svg).toContain("font-family:'O\\'Brien'");
+    expect(await exportar(fuentes)).toBe(svg);
+  });
+});

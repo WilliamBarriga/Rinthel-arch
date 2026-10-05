@@ -682,6 +682,20 @@ describe('compile: overrides de presentacion por Nodo en la Vista', () => {
     expect(canonico?.model).toEqual(sin.canonico?.model);
   });
 
+  it('informa la posicion de cada override con pin, para que otros comandos situen sus avisos', () => {
+    const { pins } = compile({
+      'main.dg': `${base}
+view v {
+  type architecture
+  include **
+  node a.x { label "Equis" }
+  node b { pin 5,6 }
+}`,
+    });
+
+    expect(pins).toEqual([{ view: 'v', node: 'b', file: 'main.dg', line: 6, column: 8 }]);
+  });
+
   it('una Vista sin overrides los deja vacios', () => {
     const { canonico } = compile({ 'main.dg': `${base} view v { type flow }` });
 

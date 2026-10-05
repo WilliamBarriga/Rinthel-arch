@@ -13,17 +13,35 @@
  *   `truncated` indica que `issues` se corto en `--max-issues` (100 por defecto).
  * - Codigos de salida: 0 sin errores, 1 hay errores (con `--strict`, tambien
  *   avisos), 2 fallo de uso o interno (mensaje en stderr, stdout vacio).
+ * `build --workspace <ruta> [--theme <nombre>] [--theme-path <carpeta>]` (acepta
+ * tambien `--json`, `--strict`, `--max-issues`): compila, valida y escribe en
+ * `<workspace>/.diagrams/` (reemplazandola) `canonico.json` y
+ * `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`). Una Vista con
+ * `theme` usa ese Tema; si no, `--theme`; si no, el neutro. `--theme-path` se
+ * fusiona antes del Workspace (gana el Workspace en rutas repetidas). Con errores
+ * (o avisos en `--strict`) sale 1 y borra la salida anterior; los Pins solapados salen como
+ * `W_OVERLAPPING_PINS` con posicion y `related`. `--theme` inexistente: codigo 2.
+ * `export --workspace <ruta> [--theme-path <carpeta>]` (sin `--json`, `--strict` ni
+ * `--max-issues`): un SVG estatico por Vista en `.diagrams/svg/<vista>.svg`
+ * (reemplaza esa carpeta), desde la salida de `build` (sin ella: codigo 2). Mismos
+ * bytes para la misma salida; el SVG no referencia recursos externos: las fuentes
+ * del Tema que el Workspace trae como archivo (`<Familia>.woff2|woff|ttf|otf`)
+ * van incrustadas (tambien las de `--theme-path`; gana el Workspace); los iconos son los del Workspace y los genericos.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> render -> shell / cli`.
  */
-import { salidaDeValidateSchema } from 'canonico';
+import { fuenteCanonicaSchema, salidaDeValidateSchema } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
 import { parseArgs } from 'node:util';
 
+import { construirBuild } from './build';
+import type { GeometriaCacheada } from './build';
+import { exportarSvg } from './export';
+
 import { construirSalida, textoLegible } from './validate';
-import { leerWorkspace } from './workspace';
+import { escribirSalida, leerFuentes, leerSalida, leerWorkspace } from './workspace';
 
 export const paquete = 'cli';
 
@@ -37,6 +55,11 @@ export interface ResultadoDeEjecucion {
 export interface Dependencias {
   compilar?: (workspace: ArchivosDelWorkspace) => ResultadoDeCompilacion;
   leer?: (raiz: string) => ArchivosDelWorkspace;
+  escribir?: (raiz: string, archivos: Readonly<Record<string, string>>, subcarpeta?: string) => void;
+  /** Salida de `build` (`.diagrams/`), ruta relativa -> texto. */
+  leerSalida?: (raiz: string) => Record<string, string>;
+  /** Archivos de fuente del Workspace, ruta relativa -> base64. */
+  leerFuentes?: (raiz: string) => Record<string, string>;
 }
 
 const MAX_ISSUES_POR_DEFECTO = 100;
@@ -45,52 +68,147 @@ function uso(mensaje: string): ResultadoDeEjecucion {
   return { exitCode: 2, stdout: '', stderr: `${mensaje}\n` };
 }
 
+type OpcionesParseadas = ReturnType<typeof leerOpciones>;
+
+const OPCIONES_COMUNES = {
+  workspace: { type: 'string' },
+  json: { type: 'boolean', default: false },
+  strict: { type: 'boolean', default: false },
+  'max-issues': { type: 'string' },
+} as const;
+
+function leerOpciones(args: readonly string[], propias: Record<string, { type: 'string' }> = {}) {
+  return parseArgs({
+    args: [...args],
+    options: { ...OPCIONES_COMUNES, ...propias },
+    strict: true,
+  }).values as Record<string, string | boolean | undefined>;
+}
+
 export async function run(
   argv: readonly string[],
-  { compilar = compile, leer = leerWorkspace }: Dependencias = {},
+  dependencias: Dependencias = {},
 ): Promise<ResultadoDeEjecucion> {
   const [comando, ...resto] = argv;
-  if (comando !== 'validate') {
-    return uso(`Comando desconocido '${comando ?? ''}'. Uso: diagrams validate --workspace <ruta>`);
+  if (comando !== 'validate' && comando !== 'build' && comando !== 'export') {
+    return uso(
+      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export> --workspace <ruta>`,
+    );
   }
+  if (comando === 'export') return exportar(resto, dependencias);
 
-  let opciones;
+  let opciones: OpcionesParseadas;
   try {
-    opciones = parseArgs({
-      args: resto,
-      options: {
-        workspace: { type: 'string' },
-        json: { type: 'boolean', default: false },
-        strict: { type: 'boolean', default: false },
-        'max-issues': { type: 'string' },
-      },
-      strict: true,
-    }).values;
+    opciones = leerOpciones(resto, comando === 'build' ? { theme: { type: 'string' }, 'theme-path': { type: 'string' } } : {});
   } catch (error) {
     return uso((error as Error).message);
   }
-  if (opciones.workspace === undefined) return uso('Falta --workspace <ruta>');
+  if (opciones['workspace'] === undefined) return uso('Falta --workspace <ruta>');
   const maxIssues = Number(opciones['max-issues'] ?? MAX_ISSUES_POR_DEFECTO);
   if (!Number.isInteger(maxIssues) || maxIssues < 1) return uso('--max-issues debe ser un entero >= 1');
 
+  return ejecutar(comando, opciones, maxIssues, dependencias);
+}
+
+async function exportar(
+  args: readonly string[],
+  { leer = leerWorkspace, leerSalida: leerCache = leerSalida, leerFuentes: leerLetras = leerFuentes, escribir = escribirSalida }: Dependencias,
+): Promise<ResultadoDeEjecucion> {
+  let raiz: string | undefined;
+  let carpetaDeTemas: string | undefined;
+  try {
+    ({ workspace: raiz, 'theme-path': carpetaDeTemas } = parseArgs({
+      args: [...args],
+      options: { workspace: { type: 'string' }, 'theme-path': { type: 'string' } },
+      strict: true,
+    }).values);
+  } catch (error) {
+    return uso((error as Error).message);
+  }
+  if (raiz === undefined) return uso('Falta --workspace <ruta>');
+
+  let archivos: Record<string, string>;
+  try {
+    const cache = leerCache(raiz);
+    const fuente = fuenteCanonicaSchema.parse(JSON.parse(cache['canonico.json'] ?? 'null'));
+    const geometrias = Object.fromEntries(
+      Object.entries(cache)
+        .filter(([ruta]) => ruta.startsWith('geometria/'))
+        .map(([, texto]) => {
+          const cacheada = JSON.parse(texto) as GeometriaCacheada;
+          return [cacheada.view, cacheada] as const;
+        }),
+    );
+    // El Workspace gana sobre `--theme-path` en rutas repetidas, como en `build`.
+    const fuentes = { ...(carpetaDeTemas === undefined ? {} : leerLetras(carpetaDeTemas)), ...leerLetras(raiz) };
+    archivos = exportarSvg(fuente, geometrias, leer(raiz), fuentes);
+  } catch (error) {
+    return uso(`No hay una salida de build utilizable en '${raiz}/.diagrams' (ejecuta 'build' antes): ${(error as Error).message}`);
+  }
+  try {
+    escribir(raiz, archivos, 'svg');
+  } catch (error) {
+    return uso(`No se pudo escribir .diagrams/svg/: ${(error as Error).message}`);
+  }
+  return { exitCode: 0, stdout: `${Object.keys(archivos).length} SVG escritos en .diagrams/svg/\n`, stderr: '' };
+}
+
+async function ejecutar(
+  comando: 'validate' | 'build',
+  opciones: OpcionesParseadas,
+  maxIssues: number,
+  { compilar = compile, leer = leerWorkspace, escribir = escribirSalida }: Dependencias,
+): Promise<ResultadoDeEjecucion> {
+  const raiz = opciones['workspace'] as string;
+  const carpetaDeTemas = opciones['theme-path'] as string | undefined;
   let resultado: ResultadoDeCompilacion;
   try {
-    resultado = compilar(leer(opciones.workspace));
+    // El Workspace gana sobre `--theme-path` en caso de ruta repetida.
+    const archivos = { ...(carpetaDeTemas === undefined ? {} : leer(carpetaDeTemas)), ...leer(raiz) };
+    resultado = compilar(archivos);
   } catch (error) {
     return uso(`No se pudo leer el Workspace: ${(error as Error).message}`);
+  }
+
+  const issues = [...resultado.issues];
+  const archivosDeSalida: Record<string, string> = {};
+  if (comando === 'build' && resultado.canonico !== undefined) {
+    const tema = opciones['theme'] as string | undefined;
+    if (tema !== undefined && !resultado.canonico.themes.some(({ name }) => name === tema)) {
+      const disponibles = resultado.canonico.themes.map(({ name }) => name).join(', ');
+      return uso(`Tema '${tema}' no declarado. Disponibles: ${disponibles}`);
+    }
+    try {
+      const { archivos, issues: avisos } = await construirBuild(resultado.canonico, {
+        ...(tema !== undefined && { tema }),
+        pins: resultado.pins,
+      });
+      Object.assign(archivosDeSalida, archivos);
+      issues.push(...avisos);
+    } catch (error) {
+      return uso(`Error interno al calcular la geometria: ${(error as Error).message}`);
+    }
   }
 
   let salida;
   try {
     salida = salidaDeValidateSchema.parse(
-      construirSalida(resultado.issues, { maxIssues, strict: opciones.strict }),
+      construirSalida(issues, { maxIssues, strict: opciones['strict'] === true }),
     );
   } catch (error) {
     return uso(`Error interno: la salida no cumple el contrato (${(error as Error).message})`);
   }
+  if (comando === 'build') {
+    // Un build fallido borra la salida anterior: `export` no debe dibujar algo obsoleto.
+    try {
+      escribir(raiz, salida.ok ? archivosDeSalida : {});
+    } catch (error) {
+      return uso(`No se pudo escribir .diagrams/: ${(error as Error).message}`);
+    }
+  }
   return {
     exitCode: salida.ok ? 0 : 1,
-    stdout: opciones.json ? `${JSON.stringify(salida, null, 2)}\n` : textoLegible(salida),
+    stdout: opciones['json'] === true ? `${JSON.stringify(salida, null, 2)}\n` : textoLegible(salida),
     stderr: '',
   };
 }

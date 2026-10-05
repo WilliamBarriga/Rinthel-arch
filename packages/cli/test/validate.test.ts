@@ -99,7 +99,7 @@ describe('validate', () => {
     };
     const dependencias = {
       leer: () => ({}),
-      compilar: () => ({ issues: [warning] }),
+      compilar: () => ({ pins: [], issues: [warning] }),
     };
     const args = ['validate', '--workspace', '.', '--json'];
 
@@ -167,7 +167,7 @@ describe('validate', () => {
 
     const resultado = await run(['validate', '--workspace', '.', '--json'], {
       leer: () => ({}),
-      compilar: () => ({ issues: [roto] }),
+      compilar: () => ({ pins: [], issues: [roto] }),
     });
 
     expect(resultado.exitCode).toBe(2);
@@ -228,5 +228,25 @@ describe('validate: bucle validate/fix', () => {
     writeFileSync(archivo, aplicarFix(original, fix as NonNullable<typeof fix>));
 
     expect((await validar(raiz)).issues).toEqual([]);
+  });
+
+  it('ordena los issues por archivo, linea, columna y codigo aunque la fuente no lo haga', async () => {
+    const issue = (file: string, line: number, column: number, code: string) => ({
+      code, severity: 'warning' as const, file, line, column, message: 'x',
+    });
+    const resultado = await run(['validate', '--workspace', '.', '--json'], {
+      leer: () => ({}),
+      compilar: () => ({
+        pins: [],
+        issues: [issue('b.dg', 1, 1, 'W_B'), issue('a.dg', 2, 1, 'W_A'), issue('a.dg', 1, 5, 'W_C'), issue('a.dg', 1, 5, 'W_A')],
+      }),
+    });
+
+    expect(JSON.parse(resultado.stdout).issues.map((i: { file: string; line: number; column: number; code: string }) => [i.file, i.line, i.column, i.code])).toEqual([
+      ['a.dg', 1, 5, 'W_A'],
+      ['a.dg', 1, 5, 'W_C'],
+      ['a.dg', 2, 1, 'W_A'],
+      ['b.dg', 1, 1, 'W_B'],
+    ]);
   });
 });
