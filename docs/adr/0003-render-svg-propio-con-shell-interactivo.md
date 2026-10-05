@@ -11,3 +11,7 @@ Props: `geometry` (salida del layout de una Vista), `width` y `height` en px, `t
 - El culling con miles de Nodos se resuelve con colapso (Grupos cerrados no se dibujan) y filtrado por viewport en el shell.
 - El paquete `render` es independiente de cualquier consumidor (slides, video, web): este repo no depende de ellos ni los referencia en codigo. Como se instala o integra en un repo consumidor lo decide ese repo y queda fuera de este sistema. El export SVG estatico queda como camino secundario.
 - Declarar pasos de revelado en la Vista (DSL) es azucar futuro sobre `visibility`.
+
+## Enmienda: colapso por `view`, no por `expanded`
+
+El componente no recibe `expanded`: el estado de colapso ya vive en la Vista resuelta (`resolveView(fuente, id, { expanded, collapsed })`), que es lo que decide que Nodos existen y con que Aristas elevadas. Duplicarlo en una prop daria dos fuentes de verdad. `onToggle(id)` solo avisa de que se pulso el control de un Grupo (que se dibuja si hay `onToggle`); quien controla el estado vuelve a resolver la Vista y a calcular el layout.

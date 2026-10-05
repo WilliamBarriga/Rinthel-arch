@@ -7,7 +7,7 @@ import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
-import { alturasDeNodo, medidasDeTexto, tamanoDeNodo } from './medidas';
+import { atributosVisibles, medidasDeTexto, tamanoDeNodo, yDeFila } from './medidas';
 import type { MedidasDeTexto } from './medidas';
 
 /** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
@@ -182,9 +182,8 @@ function ajustarAPuertosDeAtributo(
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
 ): Record<string, RutaDeArista> {
-  const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, nodo.children.length === 0 ? nodo.attributes : []]));
+  const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, atributosVisibles(nodo)]));
   const padre = padresDe(vista);
-  const { cabecera, fila } = alturasDeNodo(tema);
   const rutas = { ...edges };
   for (const arista of vista.edges) {
     const id = idDeArista(arista);
@@ -194,7 +193,7 @@ function ajustarAPuertosDeAtributo(
     for (const [lado, extremo] of [['inicio', arista.from], ['fin', arista.to]] as const) {
       const indice = extremo.attribute === undefined ? -1 : (atributos.get(extremo.node) ?? []).findIndex((a) => a.name === extremo.attribute);
       if (indice < 0) continue;
-      const y = cajaAbsoluta(nodes, padre, extremo.node).y + cabecera + (indice + 0.5) * fila;
+      const y = cajaAbsoluta(nodes, padre, extremo.node).y + yDeFila(tema, indice);
       puntos = moverPuerto(puntos, lado, y);
     }
     rutas[id] = { points: puntos };
@@ -207,9 +206,13 @@ function moverPuerto(puntos: Punto[], lado: 'inicio' | 'fin', y: number): Punto[
   const fin = copia[copia.length - 1]!;
   const previo = copia[copia.length - 2]!;
   if (previo.y !== fin.y || fin.y === y) return puntos;
-  if (copia.length === 2) {
+  const antes = copia[copia.length - 3];
+  if (antes === undefined) {
     const medio = (previo.x + fin.x) / 2;
     copia.splice(1, 0, { x: medio, y: previo.y }, { x: medio, y });
+  } else if (antes.y === previo.y) {
+    // Tramo previo tambien horizontal: un codo nuevo evita dejarlo en diagonal.
+    copia.splice(copia.length - 1, 0, { x: previo.x, y });
   } else {
     copia[copia.length - 2] = { x: previo.x, y };
   }
@@ -247,7 +250,7 @@ function raices(vista: VistaResuelta): NodoResuelto[] {
 
 function aElk(nodo: NodoResuelto, medidas: MedidasDeTexto): ElkNode {
   if (nodo.children.length === 0) {
-    return { id: nodo.id, ...tamanoDeNodo(nodo.label, medidas, nodo.attributes) };
+    return { id: nodo.id, ...tamanoDeNodo(nodo.label, medidas, atributosVisibles(nodo)) };
   }
   return {
     id: nodo.id,

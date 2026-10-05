@@ -4,7 +4,7 @@ exports[`renderToSvgString > dibuja la Vista con el Tema neutro (snapshot) 1`] =
 "<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 517 138">
 <rect width="517" height="138" fill="#ffffff"/>
 <defs>
-<marker id="flecha" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+<marker id="flecha-9ca3af" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
 <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/>
 </marker>
 </defs>
@@ -33,12 +33,12 @@ exports[`renderToSvgString > dibuja la Vista con el Tema neutro (snapshot) 1`] =
 </g>
 </g>
 <g data-edge="a.api -&gt; db">
-<path d="M 148 84 L 158 84 L 158 102 L 385 102" fill="none" stroke="#9ca3af" marker-end="url(#flecha)"/>
+<path d="M 148 84 L 158 84 L 158 102 L 385 102" fill="none" stroke="#9ca3af" marker-end="url(#flecha-9ca3af)"/>
 <text data-cardinality="a.api -&gt; db:from" x="156" y="80" font-family="sans-serif" font-size="11.2" fill="#1f2937">1</text>
 <text data-cardinality="a.api -&gt; db:to" x="377" y="98" font-family="sans-serif" font-size="11.2" fill="#1f2937">0..*</text>
 </g>
 <g data-edge="a.api -&gt; a.auth">
-<path d="M 148 68 L 168 68" fill="none" stroke="#9ca3af" marker-end="url(#flecha)"/>
+<path d="M 148 68 L 168 68" fill="none" stroke="#9ca3af" marker-end="url(#flecha-9ca3af)"/>
 </g>
 </svg>"
 `;
@@ -47,7 +47,7 @@ exports[`renderToSvgString > dibuja la Vista con un Tema oscuro (snapshot) 1`] =
 "<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 533 148.5">
 <rect width="533" height="148.5" fill="#111827"/>
 <defs>
-<marker id="flecha" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+<marker id="flecha-4b5563" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
 <path d="M 0 0 L 10 5 L 0 10 z" fill="#4b5563"/>
 </marker>
 </defs>
@@ -76,12 +76,12 @@ exports[`renderToSvgString > dibuja la Vista con un Tema oscuro (snapshot) 1`] =
 </g>
 </g>
 <g data-edge="a.api -&gt; db">
-<path d="M 148 89.83 L 158 89.83 L 158 109 L 401 109" fill="none" stroke="#4b5563" marker-end="url(#flecha)"/>
+<path d="M 148 89.83 L 158 89.83 L 158 109 L 401 109" fill="none" stroke="#4b5563" marker-end="url(#flecha-4b5563)"/>
 <text data-cardinality="a.api -&gt; db:from" x="156" y="85.83" font-family="Inter, sans-serif" font-size="12.8" fill="#f9fafb">1</text>
 <text data-cardinality="a.api -&gt; db:to" x="393" y="105" font-family="Inter, sans-serif" font-size="12.8" fill="#f9fafb">0..*</text>
 </g>
 <g data-edge="a.api -&gt; a.auth">
-<path d="M 148 71.5 L 168 71.5" fill="none" stroke="#4b5563" marker-end="url(#flecha)"/>
+<path d="M 148 71.5 L 168 71.5" fill="none" stroke="#4b5563" marker-end="url(#flecha-4b5563)"/>
 </g>
 </svg>"
 `;
@@ -90,7 +90,7 @@ exports[`renderToSvgString > dibuja un Grupo colapsado como un Nodo con su conta
 "<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 312 72">
 <rect width="312" height="72" fill="#ffffff"/>
 <defs>
-<marker id="flecha" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+<marker id="flecha-9ca3af" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
 <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/>
 </marker>
 </defs>
@@ -107,7 +107,7 @@ exports[`renderToSvgString > dibuja un Grupo colapsado como un Nodo con su conta
 </g>
 </g>
 <g data-edge="a -&gt; db">
-<path d="M 132 36 L 180 36" fill="none" stroke="#9ca3af" marker-end="url(#flecha)"/>
+<path d="M 132 36 L 180 36" fill="none" stroke="#9ca3af" marker-end="url(#flecha-9ca3af)"/>
 <text data-cardinality="a -&gt; db:from" x="140" y="32" font-family="sans-serif" font-size="11.2" fill="#1f2937">1</text>
 <text data-cardinality="a -&gt; db:to" x="172" y="32" font-family="sans-serif" font-size="11.2" fill="#1f2937">0..*</text>
 </g>
@@ -118,7 +118,7 @@ exports[`renderToSvgString > dibuja una Arista entre Grupos sobre el borde del G
 "<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 312 72">
 <rect width="312" height="72" fill="#ffffff"/>
 <defs>
-<marker id="flecha" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+<marker id="flecha-9ca3af" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
 <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/>
 </marker>
 </defs>
@@ -135,7 +135,7 @@ exports[`renderToSvgString > dibuja una Arista entre Grupos sobre el borde del G
 </g>
 </g>
 <g data-edge="a -&gt; db">
-<path d="M 132 36 L 180 36" fill="none" stroke="#9ca3af" marker-end="url(#flecha)"/>
+<path d="M 132 36 L 180 36" fill="none" stroke="#9ca3af" marker-end="url(#flecha-9ca3af)"/>
 <text data-cardinality="a -&gt; db:from" x="140" y="32" font-family="sans-serif" font-size="11.2" fill="#1f2937">1</text>
 <text data-cardinality="a -&gt; db:to" x="172" y="32" font-family="sans-serif" font-size="11.2" fill="#1f2937">0..*</text>
 </g>
@@ -146,7 +146,7 @@ exports[`renderToSvgString: Atributos e iconos > dibuja un Nodo tipo tabla con s
 "<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 355 150">
 <rect width="355" height="150" fill="#ffffff"/>
 <defs>
-<marker id="flecha" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+<marker id="flecha-9ca3af" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto">
 <path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/>
 </marker>
 </defs>
@@ -170,7 +170,7 @@ exports[`renderToSvgString: Atributos e iconos > dibuja un Nodo tipo tabla con s
 </g>
 </g>
 <g data-edge="api -&gt; usuarios#email">
-<path d="M 132 75 L 156 75 L 156 99 L 180 99" fill="none" stroke="#9ca3af" marker-end="url(#flecha)"/>
+<path d="M 132 75 L 156 75 L 156 99 L 180 99" fill="none" stroke="#9ca3af" marker-end="url(#flecha-9ca3af)"/>
 </g>
 </svg>"
 `;

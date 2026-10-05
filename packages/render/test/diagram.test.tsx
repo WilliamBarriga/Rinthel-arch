@@ -95,6 +95,25 @@ describe('Diagram', () => {
     expect(JSON.stringify(Diagram(p))).toBe(JSON.stringify(Diagram(p)));
   });
 
+  it('un Nodo o Arista con visibilidad 0 no recibe clics', async () => {
+    const visibility = (id: string): number => (id === 'b' || id === 'b -> c' ? 0 : 1);
+    const html = renderToStaticMarkup(<Diagram {...await props(vista(), { visibility })} />);
+
+    expect(html).toMatch(/<g data-part="nodo" opacity="0" pointer-events="none"/);
+    expect(html).toMatch(/<g data-edge="b -&gt; c" opacity="0" pointer-events="none"/);
+    expect(html).not.toMatch(/<g data-part="nodo" opacity="0" pointer-events="none"[^>]*>[\s\S]*?data-id="a\.a1"/);
+  });
+
+  it('dos Diagram con temas distintos no comparten el id del marcador de flecha', async () => {
+    const oscuro = { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, border: '#4b5563' } };
+    const id = (html: string): string => /<marker id="([^"]+)"/.exec(html)![1]!;
+    const a = renderToStaticMarkup(<Diagram {...await props(vista())} />);
+    const b = renderToStaticMarkup(<Diagram {...await props(vista(), { theme: oscuro })} />);
+
+    expect(id(a)).not.toBe(id(b));
+    expect(b).toContain(`url(#${id(b)})`);
+  });
+
   it('la camara controlada fija el viewBox', async () => {
     const html = renderToStaticMarkup(<Diagram {...await props(vista(), { camera: { x: 10, y: 20, width: 300, height: 200 } })} />);
 
@@ -104,7 +123,8 @@ describe('Diagram', () => {
   it('pulsar un Nodo llama a onSelect con su id; pulsar una Arista, con el de la Arista', async () => {
     const onSelect = vi.fn();
     const arbol = Diagram(await props(vista(), { onSelect }));
-    const porId = (id: string) => buscar(arbol, (e) => e.props['data-id'] === id)!;
+    // El clic va en la parte propia del Nodo, hija del `<g data-id>`.
+    const porId = (id: string) => buscar(buscar(arbol, (e) => e.props['data-id'] === id)!.props['children'] as ReactNode, (e) => e.props['data-part'] === 'nodo')!;
     const porArista = (id: string) => buscar(arbol, (e) => e.props['data-edge'] === id)!;
 
     (porId('b').props['onClick'] as () => void)();

@@ -58,9 +58,9 @@ describe('renderToSvgString', () => {
   it('dibuja las Aristas con flecha, como rutas ortogonales', async () => {
     const svg = await dibujar(TEMA_NEUTRO);
 
-    expect(svg).toMatch(/<g data-edge="a\.api -&gt; db">\n<path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" marker-end="url\(#flecha\)"/);
+    expect(svg).toMatch(/<g data-edge="a\.api -&gt; db">\n<path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" marker-end="url\(#flecha-\w+\)"/);
     expect(svg).toMatch(/<g data-edge="a\.api -&gt; a\.auth"/);
-    expect(svg).toContain('<marker id="flecha"');
+    expect(svg).toMatch(/<marker id="flecha-[\w]+"/);
   });
 
   it('dibuja una Arista entre Grupos sobre el borde del Grupo colapsado (snapshot)', async () => {
@@ -207,6 +207,28 @@ describe('renderToSvgString: Atributos e iconos', () => {
 
     expect(svg).not.toContain('x.test');
     expect(svg).not.toContain('<script');
+  });
+
+  it.each([
+    ['evento sin espacio', '<svg xmlns="http://www.w3.org/2000/svg"/onload="alert(1)"><circle r="1"/></svg>'],
+    ['evento tras comilla', '<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"onclick="x()"/></svg>'],
+    ['iframe', '<svg xmlns="http://www.w3.org/2000/svg"><iframe src="https://x.test"/></svg>'],
+    ['animate hacia href', '<svg xmlns="http://www.w3.org/2000/svg"><a><animate attributeName="href" values="javascript:alert(1)"/></a></svg>'],
+    ['href sin comillas', '<svg xmlns="http://www.w3.org/2000/svg"><use href=https://x.test/a.svg#i /></svg>'],
+    ['style con import', '<svg xmlns="http://www.w3.org/2000/svg"><style>@import "https://x.test/a.css";</style></svg>'],
+    ['url externa en atributo', '<svg xmlns="http://www.w3.org/2000/svg"><circle r="1" fill="url(https://x.test/g)"/></svg>'],
+  ])('un icono del Workspace con %s no se incrusta', async (_, peligroso) => {
+    const svg = await dibujarTabla({ 'iconos/logo.svg': peligroso });
+
+    expect(svg).not.toMatch(/x\.test|alert|onload|onclick|<iframe|<animate|<style/);
+  });
+
+  it('un icono con prologo XML y comentarios se incrusta sin ellos', async () => {
+    const limpio = '<?xml version="1.0"?>\n<!-- logo -->\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>';
+    const svg = await dibujarTabla({ 'iconos/logo.svg': limpio });
+
+    expect(svg).not.toContain('<?xml');
+    expect(svg).not.toContain('<!--');
   });
 
   it('un icono del Workspace con su propio width/height queda a tamano del Nodo y el SVG sigue siendo determinista', async () => {

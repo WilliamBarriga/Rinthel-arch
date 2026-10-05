@@ -6,7 +6,7 @@
  */
 import { idDeArista, tamanoDeTexto } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
-import { alturasDeNodo, textoDeAtributo } from 'layout';
+import { alturasDeNodo, atributosVisibles, textoDeAtributo, yDeFila } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
 
 /** Elemento SVG: atributos, y como contenido hijos, texto o marcado inline (iconos). */
@@ -58,9 +58,8 @@ const ESCALA_ATRIBUTO = 0.85;
 interface Contexto extends EntradaDeEscena {
   visibility: Visibilidad;
   fontSize: number;
-  /** Alto de la cabecera y de cada fila de Atributo (los de `layout`). */
+  /** Alto de la cabecera (el de `layout`). */
   cabecera: number;
-  fila: number;
 }
 
 /**
@@ -75,7 +74,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
     ...entrada,
     visibility: entrada.visibility ?? (() => 1),
     fontSize: tamanoDeTexto(theme),
-    ...alturasDeNodo(theme),
+    cabecera: alturasDeNodo(theme).cabecera,
   };
   const anidados = new Set(view.nodes.flatMap((nodo) => nodo.children.map((hijo) => hijo.id)));
   const raices = view.nodes.filter((nodo) => !anidados.has(nodo.id));
@@ -120,11 +119,11 @@ function nodoSvg(nodo: NodoResuelto, contexto: Contexto): Elemento {
   return {
     tag: 'g',
     attrs: { 'data-id': nodo.id, transform: `translate(${num(caja.x)} ${num(caja.y)})` },
-    ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
     hijos: [
       {
         tag: 'g',
         attrs: { 'data-part': 'nodo', ...opacidad(contexto.visibility(nodo.id)) },
+        ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
         hijos: [
           rect,
           etiqueta(texto, caja, esGrupo, tieneFilas(nodo), contexto),
@@ -138,9 +137,8 @@ function nodoSvg(nodo: NodoResuelto, contexto: Contexto): Elemento {
   };
 }
 
-/** Solo un Nodo hoja lista sus Atributos (un Grupo abierto contiene Nodos). */
 function tieneFilas(nodo: NodoResuelto): boolean {
-  return nodo.children.length === 0 && nodo.attributes.length > 0;
+  return atributosVisibles(nodo).length > 0;
 }
 
 /** Un Grupo abierto lleva el titulo arriba a la izquierda; el resto, centrado (en la cabecera si tiene Atributos). */
@@ -161,13 +159,13 @@ function etiqueta(texto: string, caja: CajaDeNodo, esGrupo: boolean, conAtributo
 }
 
 /**
- * Icono del Tipo de nodo, inline en la esquina de la cabecera. Un SVG con
- * referencias externas, scripts o manejadores de eventos no se incrusta: el
- * icono viene de fuera (Workspace) y el SVG exportado debe ser autocontenido.
+ * Icono del Tipo de nodo, inline en la esquina de la cabecera. Solo se
+ * incrusta si pasa `sanearIcono`.
  */
 function icono(nodo: NodoResuelto, trazo: string, { icons, fontSize }: Contexto): Elemento[] {
-  const svg = nodo.icon === undefined ? undefined : icons?.resolve(nodo.icon);
-  if (nodo.icon === undefined || svg === undefined || !esIconoSeguro(svg)) return [];
+  const crudo = nodo.icon === undefined ? undefined : icons?.resolve(nodo.icon);
+  const svg = crudo === undefined ? undefined : sanearIcono(crudo);
+  if (nodo.icon === undefined || svg === undefined) return [];
   const lado = num(fontSize);
   const dimensionado = svg.replace(/<svg\b([^>]*)>/, (_, atributos: string) => {
     const sinMedidas = atributos.replace(/\s(?:width|height)\s*=\s*("[^"]*"|'[^']*')/g, '');
@@ -176,21 +174,45 @@ function icono(nodo: NodoResuelto, trazo: string, { icons, fontSize }: Contexto)
   return [{ tag: 'g', attrs: { 'data-icon': nodo.icon, transform: `translate(${MARGEN_ICONO} ${MARGEN_ICONO})`, color: trazo }, html: dimensionado }];
 }
 
-function esIconoSeguro(svg: string): boolean {
-  return !/<script|<foreignObject|<image|\son\w+\s*=|href\s*=\s*["'](?!#)|url\(\s*["']?(?!#)/i.test(svg);
+const ETIQUETAS_DE_ICONO = new Set(['svg', 'g', 'path', 'circle', 'ellipse', 'rect', 'line', 'polyline', 'polygon']);
+const ATRIBUTOS_DE_ICONO = new Set([
+  'xmlns', 'viewBox', 'width', 'height', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'points', 'transform',
+  'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray', 'fill-rule', 'clip-rule', 'opacity',
+  'fill-opacity', 'stroke-opacity',
+]);
+const ETIQUETA_SVG = /<(\/?)([a-zA-Z][\w-]*)((?:\s+[\w:-]+\s*=\s*"[^"<>]*")*)\s*(\/?)>/g;
+const ATRIBUTO_SVG = /\s+([\w:-]+)\s*=\s*"([^"]*)"/g;
+
+/**
+ * Saneado del icono por lista blanca: solo etiquetas de forma y atributos de
+ * dibujo, entre comillas dobles, sin `url(`; sin texto suelto, sin `id` ni
+ * referencias. Quita el prologo XML y los comentarios. Devuelve `undefined` si
+ * hay algo fuera de la lista: el icono viene de fuera (Workspace) y el SVG
+ * exportado debe ser autocontenido.
+ */
+function sanearIcono(svg: string): string | undefined {
+  const limpio = svg.replace(/^\s*<\?xml[^>]*\?>/, '').replace(/<!--[\s\S]*?-->/g, '').trim();
+  if (limpio.replace(ETIQUETA_SVG, '').trim() !== '') return undefined;
+  for (const [, , nombre = '', atributos = ''] of limpio.matchAll(ETIQUETA_SVG)) {
+    if (!ETIQUETAS_DE_ICONO.has(nombre)) return undefined;
+    for (const [, atributo = '', valor = ''] of atributos.matchAll(ATRIBUTO_SVG)) {
+      if (!ATRIBUTOS_DE_ICONO.has(atributo) || /url\(|javascript:|&/i.test(valor)) return undefined;
+    }
+  }
+  return /^<svg[\s>]/.test(limpio) ? limpio : undefined;
 }
 
 /** Separador bajo la cabecera y una fila de texto por Atributo, en orden. */
-function atributos(nodo: NodoResuelto, caja: CajaDeNodo, trazo: string, { theme, fontSize, cabecera, fila }: Contexto): Elemento[] {
+function atributos(nodo: NodoResuelto, caja: CajaDeNodo, trazo: string, { theme, fontSize, cabecera }: Contexto): Elemento[] {
   if (!tieneFilas(nodo)) return [];
   return [
     { tag: 'line', attrs: { x1: '0', y1: num(cabecera), x2: num(caja.width), y2: num(cabecera), stroke: trazo } },
-    ...nodo.attributes.map((atributo, i) => ({
+    ...atributosVisibles(nodo).map((atributo, i) => ({
       tag: 'text',
       attrs: {
         'data-attribute': `${nodo.id}#${atributo.name}`,
         x: num(10),
-        y: num(cabecera + (i + 0.5) * fila),
+        y: num(yDeFila(theme, i)),
         'dominant-baseline': 'central',
         'font-family': theme.fonts['mono'] ?? 'monospace',
         'font-size': num(fontSize * ESCALA_ATRIBUTO),
@@ -238,6 +260,11 @@ function colorDeLinea(theme: Tema): string {
   return theme.tokens['border'] ?? 'none';
 }
 
+/** Id del marcador de flecha: lleva el color, asi dos Diagram con el mismo Tema comparten una definicion identica y con otro Tema no se pisan. */
+function idDeFlecha(color: string): string {
+  return `flecha-${color.replace(/[^\w]/g, '')}`;
+}
+
 function flecha(color: string): Elemento {
   return {
     tag: 'defs',
@@ -245,7 +272,7 @@ function flecha(color: string): Elemento {
     hijos: [
       {
         tag: 'marker',
-        attrs: { id: 'flecha', viewBox: '0 0 10 10', refX: '10', refY: '5', markerWidth: '8', markerHeight: '8', orient: 'auto' },
+        attrs: { id: idDeFlecha(color), viewBox: '0 0 10 10', refX: '10', refY: '5', markerWidth: '8', markerHeight: '8', orient: 'auto' },
         hijos: [{ tag: 'path', attrs: { d: 'M 0 0 L 10 5 L 0 10 z', fill: color } }],
       },
     ],
@@ -292,17 +319,18 @@ function aristaSvg(arista: AristaResuelta, contexto: Contexto): Elemento[] {
       attrs: { 'data-edge': id, ...opacidad(contexto.visibility(id)) },
       ...(onSelect !== undefined && { alClic: () => onSelect(id) }),
       hijos: [
-        { tag: 'path', attrs: { d: trazo, fill: 'none', stroke: colorDeLinea(theme), 'marker-end': 'url(#flecha)' } },
+        { tag: 'path', attrs: { d: trazo, fill: 'none', stroke: colorDeLinea(theme), 'marker-end': `url(#${idDeFlecha(colorDeLinea(theme))})` } },
         ...cardinalidades,
       ],
     },
   ];
 }
 
-/** `opacity` solo si no es 1, acotada a [0, 1]; un NaN cuenta como 0. */
+/** `opacity` solo si no es 1, acotada a [0, 1]; un NaN cuenta como 0. Con 0 no recibe clics. */
 function opacidad(visibilidad: number): Record<string, string> {
   const valor = Number.isNaN(visibilidad) ? 0 : Math.min(Math.max(visibilidad, 0), 1);
-  return valor === 1 ? {} : { opacity: num(valor) };
+  if (valor === 1) return {};
+  return valor === 0 ? { opacity: '0', 'pointer-events': 'none' } : { opacity: num(valor) };
 }
 
 /** Numero estable: a lo sumo dos decimales, sin ceros sobrantes. */

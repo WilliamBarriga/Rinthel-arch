@@ -4,7 +4,7 @@
  * tamano y la familia de la fuente del Tema.
  */
 import { tamanoDeTexto } from 'canonico';
-import type { Atributo, Tema } from 'canonico';
+import type { Atributo, NodoResuelto, Tema } from 'canonico';
 
 const ANCHO_MINIMO = 120;
 const PADDING_HORIZONTAL = 32;
@@ -36,6 +36,21 @@ export function alturasDeNodo(tema: Tema): { cabecera: number; fila: number } {
 
 function alturasDe(medidas: MedidasDeTexto): { cabecera: number; fila: number } {
   return { cabecera: Math.ceil(medidas.fontSize * ALTO_POR_LINEA), fila: Math.ceil(medidas.fontSize * ALTO_POR_FILA) };
+}
+
+/** Centro vertical de la fila `indice` de Atributos, medido desde el borde superior del Nodo. */
+export function yDeFila(tema: Tema, indice: number): number {
+  const { cabecera, fila } = alturasDeNodo(tema);
+  return cabecera + (indice + 0.5) * fila;
+}
+
+/**
+ * Atributos que un Nodo muestra como filas: solo los de un Nodo hoja (un Grupo
+ * abierto contiene Nodos; uno colapsado es hoja). Una sola regla para `layout`
+ * (tamano y puertos) y `render` (dibujo).
+ */
+export function atributosVisibles(nodo: Pick<NodoResuelto, 'children' | 'attributes'>): readonly Atributo[] {
+  return nodo.children.length === 0 ? nodo.attributes : [];
 }
 
 /** Texto de la fila de un Atributo; `render` escribe lo mismo. */
