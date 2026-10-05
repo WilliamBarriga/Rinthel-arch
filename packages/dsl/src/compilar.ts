@@ -152,13 +152,15 @@ function compilarElemento(
     return undefined;
   }
   if (!declarados.has(elemento.type)) {
-    issues.push({
-      code: CODIGOS.E_UNKNOWN_NODE_TYPE,
-      severity: 'error',
-      file: archivo,
-      ...rangoDe(elemento, 'type').start,
-      message: `Tipo de nodo '${elemento.type}' no declarado en specification`,
-    });
+    issues.push(
+      issueConSugerencia(
+        {
+          code: CODIGOS.E_UNKNOWN_NODE_TYPE,
+          message: `Tipo de nodo '${elemento.type}' no declarado en specification`,
+        },
+        archivo, elemento, 'type', declarados,
+      ),
+    );
   }
   const nodo: Nodo = {
     id,
@@ -274,19 +276,19 @@ function compilarExtremo(
 }
 
 /**
- * Issue de error sobre la propiedad `propiedad` del extremo, con `fix` si hay un
- * unico candidato cercano entre `existentes` y `hint` si hay varios.
+ * Issue de error sobre la propiedad textual `propiedad` de `nodo`, con `fix` si hay
+ * un unico candidato cercano entre `existentes` y `hint` si hay varios.
  */
-function issueConSugerencia(
+function issueConSugerencia<T extends AstNode>(
   base: { code: string; message: string },
   archivo: string,
-  extremo: Endpoint,
-  propiedad: 'node' | 'attribute',
+  nodo: T,
+  propiedad: Extract<keyof T, string>,
   existentes: Iterable<string>,
 ): Issue {
-  const { start: inicio, end: fin } = rangoDe(extremo, propiedad);
+  const { start: inicio, end: fin } = rangoDe(nodo, propiedad);
   const issue: Issue = { ...base, severity: 'error', file: archivo, ...inicio };
-  const candidatos = candidatosCercanos(extremo[propiedad] as string, existentes);
+  const candidatos = candidatosCercanos(nodo[propiedad] as string, existentes);
   const [unico] = candidatos;
   if (candidatos.length === 1 && unico !== undefined) {
     issue.fix = { file: archivo, range: { start: inicio, end: fin }, replacement: unico };

@@ -105,6 +105,38 @@ describe('compile: Nodos y specification', () => {
     });
   });
 
+  it('un typo de Tipo de nodo con un unico candidato emite fix sobre el texto', () => {
+    const { issues } = compile({
+      'main.dg': ['specification { node servicio }', 'model {', '  servico api', '}'].join('\n'),
+    });
+
+    expect(issues[0]?.fix).toEqual({
+      file: 'main.dg',
+      range: { start: { line: 3, column: 3 }, end: { line: 3, column: 10 } },
+      replacement: 'servicio',
+    });
+    expect(issues[0]?.hint).toBeUndefined();
+  });
+
+  it('con dos candidatos de Tipo de nodo no emite fix, solo hint', () => {
+    const { issues } = compile({
+      'main.dg': ['specification { node servicio node servicios }', 'model {', '  servici api', '}'].join('\n'),
+    });
+
+    expect(issues[0]?.code).toBe('E_UNKNOWN_NODE_TYPE');
+    expect(issues[0]?.fix).toBeUndefined();
+    expect(issues[0]?.hint).toBe('Candidatos: servicio, servicios');
+  });
+
+  it('un Tipo de nodo sin parecido no emite fix ni hint', () => {
+    const { issues } = compile({
+      'main.dg': ['specification { node servicio }', 'model {', '  zzz api', '}'].join('\n'),
+    });
+
+    expect(issues[0]?.fix).toBeUndefined();
+    expect(issues[0]?.hint).toBeUndefined();
+  });
+
   it('un error de sintaxis es un issue con posicion, no una excepcion', () => {
     const resultado = compile({
       'main.dg': ['specification { node servicio }', 'model {', '  servicio "api"', '}'].join('\n'),
