@@ -2,7 +2,7 @@
  * Compilador del DSL de texto: parsea cada archivo con la gramatica derivada de
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
-import { CODIGOS, TIPOS_DE_VISTA, fuenteCanonicaSchema, vistaSchema } from 'canonico';
+import { CODIGOS, TIPOS_DE_VISTA, fuenteCanonicaSchema, resolveView, vistaSchema } from 'canonico';
 import type {
   Arista,
   Atributo,
@@ -10,7 +10,9 @@ import type {
   FuenteCanonica,
   Issue,
   Nodo,
+  OverrideDeNodo,
   ReferenciaOpaca,
+  Tema,
   TextRange,
   TipoDeNodo,
   Vista,
@@ -25,8 +27,10 @@ import {
 import type { AstNode, LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Attrs, Documento, Edge, Element, Endpoint, Extend, Source, View } from './generated/ast';
+import type { Attrs, Documento, Edge, Element, Endpoint, Extend, NodeOverride, NodeTypeProperty, Source, View } from './generated/ast';
 import { candidatosCercanos } from './sugerencias';
+import { resolverTemas } from './temas';
+import type { TemaDeclarado } from './temas';
 
 /** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
 export type ArchivosDelWorkspace = Readonly<Record<string, string>>;
@@ -54,7 +58,9 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const issues: Issue[] = [];
   const tiposDeNodo: TipoDeNodo[] = [];
   const conSintaxisRota = new Set<string>();
-  const vistas: Vista[] = [];
+  const temasDeclarados: TemaDeclarado[] = [];
+  const tiposConColor: { archivo: string; prop: NodeTypeProperty }[] = [];
+  const vistas: { vista: Vista; archivo: string; ast: View }[] = [];
   const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
 
   for (const archivo of Object.keys(workspace).sort()) {
@@ -69,15 +75,24 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
         const tipo: TipoDeNodo = { name: decl.name, description: '' };
         for (const prop of decl.props) {
           const valor = prop.value;
+          if (prop.key === 'color') tiposConColor.push({ archivo, prop });
           if (prop.key === 'description') tipo.description = valor;
           else tipo[prop.key] = valor;
         }
         tiposDeNodo.push(tipo);
       }
     }
+    for (const tema of resultado.value.themes) {
+      temasDeclarados.push({
+        archivo,
+        ast: tema,
+        nombre: rangoDe(tema, 'name'),
+        padre: rangoDe(tema, 'parent'),
+      });
+    }
     for (const vista of resultado.value.views) {
       const compilada = compilarVista(vista, archivo, issues);
-      if (compilada !== undefined) vistas.push(compilada);
+      if (compilada !== undefined) vistas.push({ vista: compilada, archivo, ast: vista });
     }
     for (const modelo of resultado.value.models) {
       raices.push({
@@ -112,14 +127,29 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
   }
 
+  const { temas, issues: delTema } = resolverTemas(temasDeclarados);
+  issues.push(...delTema);
+  const fuente = {
+    themes: temas,
+    specification: { nodeTypes: tiposDeNodo },
+    model: { nodes: nodos, edges: aristas },
+    views: vistas.map(({ vista }) => vista),
+  };
+  for (const { vista, archivo, ast } of vistas) {
+    // Con sintaxis rota el AST es parcial: sus overrides darian falsos positivos.
+    if (conSintaxisRota.has(archivo)) continue;
+    comprobarOverrides(vista, ast, archivo, fuente, issues);
+    comprobarTemaYColores(vista, ast, archivo, fuente, issues);
+  }
+  for (const { archivo, prop } of tiposConColor) {
+    if (conSintaxisRota.has(archivo)) continue;
+    comprobarColor(prop, archivo, nombresDePaleta(temas), issues);
+  }
+
   issues.sort(compararIssues);
   if (issues.some((issue) => issue.severity === 'error')) return { issues };
   return {
-    canonico: fuenteCanonicaSchema.parse({
-      specification: { nodeTypes: tiposDeNodo },
-      model: { nodes: nodos, edges: aristas },
-      views: vistas,
-    }),
+    canonico: fuenteCanonicaSchema.parse(fuente),
     issues,
   };
 }
@@ -162,13 +192,98 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
   const selectores = (clase: 'ViewInclude' | 'ViewExclude'): string[] =>
     vista.props.flatMap((prop) => (prop.$type === clase ? prop.selectors : []));
   const profundidad = vista.props.find((prop) => prop.$type === 'ViewDepth');
+  const tema = vista.props.find((prop) => prop.$type === 'ViewTheme');
   return {
     id: vista.name,
     type: tipoValido.data,
     include: selectores('ViewInclude'),
     exclude: selectores('ViewExclude'),
     ...(profundidad !== undefined && { depth: profundidad.value }),
+    ...(tema !== undefined && { theme: tema.value }),
+    overrides: vista.props.flatMap((prop) => (prop.$type === 'NodeOverride' ? [overrideDe(prop)] : [])),
   };
+}
+
+/**
+ * El `theme` de la Vista debe existir, y el color de cada override debe ser un
+ * nombre de la Paleta de ese Tema (o, sin `theme`, de alguno de los Temas).
+ */
+function comprobarTemaYColores(
+  vista: Vista,
+  ast: View,
+  archivo: string,
+  fuente: FuenteCanonica,
+  issues: Issue[],
+): void {
+  const declarado = ast.props.find((prop) => prop.$type === 'ViewTheme');
+  const tema = fuente.themes.find((candidato) => candidato.name === vista.theme);
+  if (declarado !== undefined && tema === undefined) {
+    issues.push(
+      issueConSugerencia(
+        { code: CODIGOS.E_UNKNOWN_THEME, message: `Tema '${declarado.value}' no declarado` },
+        archivo, declarado, 'value', fuente.themes.map(({ name }) => name),
+      ),
+    );
+  }
+  const paleta = nombresDePaleta(tema ? [tema] : fuente.themes);
+  for (const prop of ast.props) {
+    if (prop.$type !== 'NodeOverride') continue;
+    for (const campo of prop.props) {
+      if (campo.$type === 'OverrideColor') comprobarColor(campo, archivo, paleta, issues);
+    }
+  }
+}
+
+function nombresDePaleta(temas: readonly Tema[]): string[] {
+  return temas.flatMap((tema) => Object.keys(tema.palette));
+}
+
+/** Un color es siempre un nombre de Paleta; un hex o un typo es `E_UNKNOWN_PALETTE_COLOR`. */
+function comprobarColor(
+  prop: { value: string } & AstNode,
+  archivo: string,
+  paleta: readonly string[],
+  issues: Issue[],
+): void {
+  if (paleta.includes(prop.value)) return;
+  issues.push(
+    issueConSugerencia(
+      { code: CODIGOS.E_UNKNOWN_PALETTE_COLOR, message: `Color '${prop.value}' no es un nombre de Paleta del Tema` },
+      archivo, prop, 'value', new Set(paleta),
+    ),
+  );
+}
+
+function overrideDe(declarado: NodeOverride): OverrideDeNodo {
+  const override: OverrideDeNodo = { node: declarado.node };
+  for (const prop of declarado.props) {
+    if (prop.$type === 'OverrideLabel') override.label = prop.value;
+    else if (prop.$type === 'OverridePin') override.pin = { x: prop.x, y: prop.y };
+    else if (prop.$type === 'OverrideOrder') override.order = prop.value;
+    else override.color = prop.value;
+  }
+  return override;
+}
+
+/** Un override solo puede apuntar a un Nodo que la Vista muestra. */
+function comprobarOverrides(
+  vista: Vista,
+  ast: View,
+  archivo: string,
+  fuente: FuenteCanonica,
+  issues: Issue[],
+): void {
+  const visibles = new Set(resolveView(fuente, vista.id)?.nodes.map((nodo) => nodo.id));
+  for (const prop of ast.props) {
+    if (prop.$type !== 'NodeOverride' || visibles.has(prop.node)) continue;
+    issues.push({
+      code: CODIGOS.E_OVERRIDE_OUTSIDE_VIEW,
+      severity: 'error',
+      file: archivo,
+      ...rangoDe(prop, 'node').start,
+      message: `Override sobre '${prop.node}', que la Vista '${vista.id}' no muestra`,
+    });
+  }
 }
 
 /** Compila un Elemento; un id ya declarado es `E_DUPLICATE_NODE` y el duplicado se descarta. */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { TEMA_NEUTRO } from 'canonico';
 import { compile } from 'dsl';
 
 describe('compile: Nodos y specification', () => {
@@ -33,6 +34,7 @@ describe('compile: Nodos y specification', () => {
         ],
       },
       views: [],
+      themes: [TEMA_NEUTRO],
     });
   });
 
@@ -600,14 +602,14 @@ describe('compile: Vistas', () => {
 
     expect(issues).toEqual([]);
     expect(canonico?.views).toEqual([
-      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2 },
+      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, overrides: [] },
     ]);
   });
 
   it('una Vista flow solo con type; el resto queda vacio', () => {
     const { canonico } = compile({ 'main.dg': `${base} view f { type flow }` });
 
-    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [] }]);
+    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], overrides: [] }]);
   });
 
   it('acepta `*` y `**` como selectores y varios include', () => {
@@ -654,5 +656,186 @@ describe('compile: Vistas', () => {
 
     expect(issues).toEqual([]);
     expect(canonico?.views.map((v) => v.id)).toEqual(['uno', 'dos']);
+  });
+});
+
+describe('compile: overrides de presentacion por Nodo en la Vista', () => {
+  const base = 'specification { node servicio }  model { servicio a { servicio x }  servicio b }';
+
+  it('compila label, pin, order y color a la Vista sin tocar el Modelo', () => {
+    const sin = compile({ 'main.dg': `${base} view v { type architecture include ** }` });
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        view v {
+          type architecture
+          include **
+          node a.x { label "Equis" pin 120,40 order 2 color blue }
+          node b { color red }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]?.overrides).toEqual([
+      { node: 'a.x', label: 'Equis', pin: { x: 120, y: 40 }, order: 2, color: 'blue' },
+      { node: 'b', color: 'red' },
+    ]);
+    expect(canonico?.model).toEqual(sin.canonico?.model);
+  });
+
+  it('una Vista sin overrides los deja vacios', () => {
+    const { canonico } = compile({ 'main.dg': `${base} view v { type flow }` });
+
+    expect(canonico?.views[0]?.overrides).toEqual([]);
+  });
+
+  it('override sobre un Nodo fuera de la Vista es E_OVERRIDE_OUTSIDE_VIEW con posicion', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}\nview v {\n  type flow\n  include a\n  node b { color red }\n}`,
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      code: 'E_OVERRIDE_OUTSIDE_VIEW',
+      severity: 'error',
+      file: 'main.dg',
+      line: 5,
+      column: 8,
+    });
+  });
+
+  it('override sobre un Nodo inexistente tambien es E_OVERRIDE_OUTSIDE_VIEW', () => {
+    const { issues } = compile({
+      'main.dg': `${base} view v { type flow include ** node fantasma { label "x" } }`,
+    });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_OVERRIDE_OUTSIDE_VIEW']);
+  });
+
+  it('color solo acepta nombres de Paleta: un hex es E_UNKNOWN_PALETTE_COLOR', () => {
+    const { issues } = compile({
+      'main.dg': `${base} view v { type flow include ** node a { color "#ff0000" } }`,
+    });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
+  });
+
+  it('pin admite coordenadas negativas', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base} view v { type flow include ** node a { pin -10,-5 } }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]?.overrides[0]?.pin).toEqual({ x: -10, y: -5 });
+  });
+});
+
+describe('compile: Tema', () => {
+  const base = 'specification { node servicio { color blue } }  model { servicio a }';
+  const claro = 'theme claro { palette { blue "#0000ff"  danger "#ff0000" } fonts { body "Inter" } tokens { surface "#ffffff" } }';
+
+  it('un Workspace sin theme usa el Tema neutro', () => {
+    const { canonico, issues } = compile({ 'main.dg': base });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes).toEqual([TEMA_NEUTRO]);
+  });
+
+  it('compila palette, fonts y tokens a un objeto plano', () => {
+    const { canonico, issues } = compile({ 'main.dg': `${base} ${claro}` });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 'claro')).toEqual({
+      name: 'claro',
+      palette: { blue: '#0000ff', danger: '#ff0000' },
+      fonts: { body: 'Inter' },
+      tokens: { surface: '#ffffff' },
+    });
+  });
+
+  it('extends hereda de un solo padre y el hijo gana; el resultado ya esta resuelto', () => {
+    const { canonico, issues } = compile({
+      'a.dg': `${base} ${claro}`,
+      'b.dg': 'theme oscuro extends claro { palette { blue "#00aaff" } tokens { surface "#111111" } }',
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 'oscuro')).toEqual({
+      name: 'oscuro',
+      palette: { blue: '#00aaff', danger: '#ff0000' },
+      fonts: { body: 'Inter' },
+      tokens: { surface: '#111111' },
+    });
+  });
+
+  it('un Tema puede extender el neutro', () => {
+    const { canonico, issues } = compile({ 'main.dg': `${base} theme t extends neutral { palette { teal "#008080" } }` });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 't')?.palette).toEqual({
+      ...TEMA_NEUTRO.palette,
+      teal: '#008080',
+    });
+  });
+
+  it('tema duplicado es E_DUPLICATE_THEME con related a la primera declaracion', () => {
+    const { issues } = compile({ 'main.dg': `${base}\n${claro}\ntheme claro { }` });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_DUPLICATE_THEME', file: 'main.dg', line: 3 });
+    expect(issues[0]?.related?.[0]).toMatchObject({ file: 'main.dg', line: 2 });
+  });
+
+  it('declarar `neutral` es duplicado del Tema por defecto', () => {
+    const { issues } = compile({ 'main.dg': `${base} theme neutral { }` });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_DUPLICATE_THEME']);
+  });
+
+  it('ciclo de extends es E_EXTENDS_CYCLE', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}\ntheme a extends b { }\ntheme b extends a { }`,
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues.map((i) => i.code)).toEqual(['E_EXTENDS_CYCLE', 'E_EXTENDS_CYCLE']);
+    expect(issues[0]).toMatchObject({ file: 'main.dg', line: 2 });
+  });
+
+  it('extends de un tema inexistente es E_UNKNOWN_THEME', () => {
+    const { issues } = compile({ 'main.dg': `${base} theme a extends fantasma { }` });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_THEME']);
+  });
+
+  it('una Vista puede elegir su theme; uno inexistente es E_UNKNOWN_THEME', () => {
+    const bien = compile({ 'main.dg': `${base} ${claro} view v { type flow theme claro }` });
+    const mal = compile({ 'main.dg': `${base} view v { type flow theme claroo }` });
+
+    expect(bien.issues).toEqual([]);
+    expect(bien.canonico?.views[0]?.theme).toBe('claro');
+    expect(mal.issues.map((i) => i.code)).toEqual(['E_UNKNOWN_THEME']);
+  });
+
+  it('color de Tipo de nodo desconocido es E_UNKNOWN_PALETTE_COLOR con fix si hay un candidato', () => {
+    const { issues } = compile({ 'main.dg': 'specification { node servicio { color blu } }  model { servicio a }' });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_PALETTE_COLOR', file: 'main.dg' });
+    expect(issues[0]?.fix?.replacement).toBe('blue');
+  });
+
+  it('un hex fuera del Tema nunca es un color valido', () => {
+    const { issues } = compile({ 'main.dg': 'specification { node servicio { color "#ff0000" } }  model { servicio a }' });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
+  });
+
+  it('color de override se valida contra la Paleta del theme de la Vista', () => {
+    const vista = (tema: string) =>
+      `${base} ${claro} view v { type flow include ** theme ${tema} node a { color danger } }`;
+
+    expect(compile({ 'main.dg': vista('claro') }).issues).toEqual([]);
+    expect(compile({ 'main.dg': vista('neutral') }).issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
   });
 });

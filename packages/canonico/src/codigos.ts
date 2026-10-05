@@ -21,6 +21,8 @@ export const CODIGOS = Object.freeze({
   E_DUPLICATE_NODE: 'E_DUPLICATE_NODE',
   /** `extend <nodo>` sobre un Nodo que no existe en el Modelo. */
   E_UNKNOWN_EXTEND_TARGET: 'E_UNKNOWN_EXTEND_TARGET',
+  /** Override de Vista sobre un Nodo que la Vista no muestra (o que no existe). */
+  E_OVERRIDE_OUTSIDE_VIEW: 'E_OVERRIDE_OUTSIDE_VIEW',
   /** Extremo de Arista (Nodo) inexistente en el Modelo. */
   E_DANGLING_EDGE: 'E_DANGLING_EDGE',
   /** Extremo de Arista `nodo#atributo` sin ese Atributo en el Nodo. */
