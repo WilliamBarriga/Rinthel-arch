@@ -21,12 +21,17 @@
  * fusiona antes del Workspace (gana el Workspace en rutas repetidas). Con errores
  * (o avisos en `--strict`) sale 1 y borra la salida anterior; los Pins solapados salen como
  * `W_OVERLAPPING_PINS` con posicion y `related`. `--theme` inexistente: codigo 2.
- * `export --workspace <ruta> [--theme-path <carpeta>]` (sin `--json`, `--strict` ni
+ * `export --workspace <ruta> [--theme-path <carpeta>] [--format svg|png]` (sin `--json`, `--strict` ni
  * `--max-issues`): un SVG estatico por Vista en `.diagrams/svg/<vista>.svg`
  * (reemplaza esa carpeta), desde la salida de `build` (sin ella: codigo 2). Mismos
  * bytes para la misma salida; el SVG no referencia recursos externos: las fuentes
  * del Tema que el Workspace trae como archivo (`<Familia>.woff2|woff|ttf|otf`)
  * van incrustadas (tambien las de `--theme-path`; gana el Workspace); los iconos son los del Workspace y los genericos.
+ * Con `--format png` escribe `.diagrams/png/<vista>.png`, rasterizado con resvg (sin
+ * navegador, determinista en una misma maquina): resvg no lee `@font-face`, asi que las
+ * fuentes del Tema salen de `.ttf`/`.otf` del Workspace (si solo hay `woff`/`woff2`:
+ * codigo 2); una familia sin archivo usa las fuentes del sistema, de modo que el
+ * PNG es identico entre maquinas solo si el Workspace trae todas las familias.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> render -> shell / cli`.
@@ -38,7 +43,7 @@ import { parseArgs } from 'node:util';
 
 import { construirBuild } from './build';
 import type { GeometriaCacheada } from './build';
-import { exportarSvg } from './export';
+import { exportarPng, exportarSvg } from './export';
 
 import { construirSalida, textoLegible } from './validate';
 import { escribirSalida, leerFuentes, leerSalida, leerWorkspace } from './workspace';
@@ -55,7 +60,7 @@ export interface ResultadoDeEjecucion {
 export interface Dependencias {
   compilar?: (workspace: ArchivosDelWorkspace) => ResultadoDeCompilacion;
   leer?: (raiz: string) => ArchivosDelWorkspace;
-  escribir?: (raiz: string, archivos: Readonly<Record<string, string>>, subcarpeta?: string) => void;
+  escribir?: (raiz: string, archivos: Readonly<Record<string, string | Uint8Array>>, subcarpeta?: string) => void;
   /** Salida de `build` (`.diagrams/`), ruta relativa -> texto. */
   leerSalida?: (raiz: string) => Record<string, string>;
   /** Archivos de fuente del Workspace, ruta relativa -> base64. */
@@ -116,18 +121,23 @@ async function exportar(
 ): Promise<ResultadoDeEjecucion> {
   let raiz: string | undefined;
   let carpetaDeTemas: string | undefined;
+  let formato: string | undefined;
   try {
-    ({ workspace: raiz, 'theme-path': carpetaDeTemas } = parseArgs({
+    ({ workspace: raiz, 'theme-path': carpetaDeTemas, format: formato } = parseArgs({
       args: [...args],
-      options: { workspace: { type: 'string' }, 'theme-path': { type: 'string' } },
+      options: { workspace: { type: 'string' }, 'theme-path': { type: 'string' }, format: { type: 'string' } },
       strict: true,
     }).values);
   } catch (error) {
     return uso((error as Error).message);
   }
   if (raiz === undefined) return uso('Falta --workspace <ruta>');
+  if (formato !== undefined && formato !== 'svg' && formato !== 'png') {
+    return uso(`Formato '${formato}' desconocido. Formatos: svg, png`);
+  }
+  const esPng = formato === 'png';
 
-  let archivos: Record<string, string>;
+  let archivos: Record<string, string | Uint8Array>;
   try {
     const cache = leerCache(raiz);
     const fuente = fuenteCanonicaSchema.parse(JSON.parse(cache['canonico.json'] ?? 'null'));
@@ -141,16 +151,16 @@ async function exportar(
     );
     // El Workspace gana sobre `--theme-path` en rutas repetidas, como en `build`.
     const fuentes = { ...(carpetaDeTemas === undefined ? {} : leerLetras(carpetaDeTemas)), ...leerLetras(raiz) };
-    archivos = exportarSvg(fuente, geometrias, leer(raiz), fuentes);
+    archivos = (esPng ? exportarPng : exportarSvg)(fuente, geometrias, leer(raiz), fuentes);
   } catch (error) {
     return uso(`No hay una salida de build utilizable en '${raiz}/.diagrams' (ejecuta 'build' antes): ${(error as Error).message}`);
   }
   try {
-    escribir(raiz, archivos, 'svg');
+    escribir(raiz, archivos, esPng ? 'png' : 'svg');
   } catch (error) {
-    return uso(`No se pudo escribir .diagrams/svg/: ${(error as Error).message}`);
+    return uso(`No se pudo escribir .diagrams/${esPng ? 'png' : 'svg'}/: ${(error as Error).message}`);
   }
-  return { exitCode: 0, stdout: `${Object.keys(archivos).length} SVG escritos en .diagrams/svg/\n`, stderr: '' };
+  return { exitCode: 0, stdout: `${Object.keys(archivos).length} ${esPng ? 'PNG' : 'SVG'} escritos en .diagrams/${esPng ? 'png' : 'svg'}/\n`, stderr: '' };
 }
 
 async function ejecutar(

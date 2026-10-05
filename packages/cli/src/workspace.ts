@@ -64,7 +64,11 @@ export function leerSalida(raiz: string): Record<string, string> {
  * `archivos` (ruta relativa a `.diagrams/` con `/` -> texto): la salida es
  * derivada, asi que nunca quedan restos de una Vista que ya no existe.
  */
-export function escribirSalida(raiz: string, archivos: Readonly<Record<string, string>>, subcarpeta = ''): void {
+export function escribirSalida(
+  raiz: string,
+  archivos: Readonly<Record<string, string | Uint8Array>>,
+  subcarpeta = '',
+): void {
   const destino = join(raiz, CARPETA_DE_SALIDA);
   rmSync(join(destino, subcarpeta), { recursive: true, force: true });
   for (const [ruta, texto] of Object.entries(archivos)) {
