@@ -2,15 +2,17 @@
  * Compilador del DSL de texto: parsea cada archivo con la gramatica derivada de
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
-import { CODIGOS, TIPOS_DE_VISTA, combineIconProviders, fuenteCanonicaSchema, genericIcons, workspaceIcons, resolveView, vistaSchema } from 'canonico';
+import { CODIGOS, TIPOS_DE_VISTA, combineIconProviders, fuenteCanonicaSchema, genericIcons, matchesSelector, workspaceIcons, resolveView, vistaSchema } from 'canonico';
 import type {
   Arista,
   Atributo,
+  ElementoDePaso,
   Extremo,
   FuenteCanonica,
   Issue,
   Nodo,
   OverrideDeNodo,
+  Paso,
   ReferenciaOpaca,
   Tema,
   TextRange,
@@ -27,7 +29,7 @@ import {
 import type { AstNode, LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Attrs, Documento, Edge, Element, Endpoint, Extend, NodeOverride, NodeTypeProperty, Source, View } from './generated/ast';
+import type { Attrs, Documento, Edge, Element, Endpoint, Extend, NodeOverride, NodeTypeProperty, Source, Step, View } from './generated/ast';
 import { candidatosCercanos } from './sugerencias';
 import { resolverTemas } from './temas';
 import type { TemaDeclarado } from './temas';
@@ -155,6 +157,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     comprobarOverrides(vista, ast, archivo, fuente, issues);
     comprobarTemaYColores(vista, ast, archivo, fuente, issues);
     comprobarDrillDown(vista, ast, archivo, fuente, issues);
+    comprobarPasos(ast, archivo, fuente, issues);
   }
   for (const { archivo, prop } of tiposConColor) {
     if (conSintaxisRota.has(archivo)) continue;
@@ -220,6 +223,7 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
     expanded: vista.props.flatMap((prop) => (prop.$type === 'ViewExpanded' ? prop.targets : [])),
     links: vista.props.flatMap((prop) => (prop.$type === 'ViewLink' ? [{ node: prop.node, view: prop.view }] : [])),
     overrides: vista.props.flatMap((prop) => (prop.$type === 'NodeOverride' ? [overrideDe(prop)] : [])),
+    steps: vista.props.flatMap((prop) => (prop.$type === 'ViewSteps' ? prop.steps.map(pasoDe) : [])),
   };
 }
 
@@ -255,6 +259,53 @@ function comprobarTemaYColores(
 
 function nombresDePaleta(temas: readonly Tema[]): string[] {
   return temas.flatMap((tema) => Object.keys(tema.palette));
+}
+
+function pasoDe(paso: Step): Paso {
+  const items = (clase: 'StepShow' | 'StepHide'): ElementoDePaso[] =>
+    paso.actions.flatMap((accion) =>
+      accion.$type === clase
+        ? accion.items.map((item) => (item.$type === 'StepEdge' ? { from: item.from, to: item.to } : { selector: item.selector }))
+        : [],
+    );
+  return { title: paso.title, show: items('StepShow'), hide: items('StepHide') };
+}
+
+/**
+ * Pasos: cada selector debe coincidir con algun Nodo del Modelo y cada Arista
+ * nombrada debe existir en el (ADR 0007).
+ */
+function comprobarPasos(ast: View, archivo: string, fuente: FuenteCanonica, issues: Issue[]): void {
+  const ids = todosLosIds(fuente.model.nodes);
+  for (const prop of ast.props) {
+    if (prop.$type !== 'ViewSteps') continue;
+    for (const paso of prop.steps) {
+      for (const accion of paso.actions) {
+        for (const item of accion.items) {
+          if (item.$type === 'StepSelector') {
+            if (ids.some((id) => matchesSelector(item.selector, id))) continue;
+            issues.push(
+              issueConSugerencia(
+                { code: CODIGOS.E_UNKNOWN_STEP, message: `El selector '${item.selector}' no coincide con ningun Nodo del Modelo` },
+                archivo, item, 'selector', ids,
+              ),
+            );
+          } else if (!fuente.model.edges.some((arista) => arista.from.node === item.from && arista.to.node === item.to)) {
+            issues.push(
+              issueConSugerencia(
+                { code: CODIGOS.E_UNKNOWN_STEP, message: `La Arista '${item.from} -> ${item.to}' no existe en el Modelo` },
+                archivo, item, 'from', ids,
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+}
+
+function todosLosIds(nodos: readonly Nodo[]): string[] {
+  return nodos.flatMap((nodo) => [nodo.id, ...todosLosIds(nodo.children)]);
 }
 
 /**

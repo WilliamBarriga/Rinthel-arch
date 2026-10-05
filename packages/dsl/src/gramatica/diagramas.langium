@@ -108,7 +108,7 @@ View:
 ;
 
 ViewProperty:
-  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | ViewDrill | ViewCollapsed | ViewExpanded | ViewLink | NodeOverride;
+  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | ViewDrill | ViewCollapsed | ViewExpanded | ViewLink | ViewSteps | NodeOverride;
 
 ViewType:
   'type' value=Id;
@@ -137,6 +137,32 @@ ViewExpanded:
 
 ViewLink:
   'link' node=Ref '->' view=Id;
+
+// Pasos de revelado (ADR 0007): acumulativos; `show` revela y `hide` oculta.
+// Un item es un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`edge a -> b`, o `a -> b`).
+ViewSteps:
+  'steps' '{' steps+=Step* '}';
+
+Step:
+  'step' title=String '{' actions+=StepAction* '}';
+
+StepAction:
+  StepShow | StepHide;
+
+StepShow:
+  'show' items+=StepItem (',' items+=StepItem)*;
+
+StepHide:
+  'hide' items+=StepItem (',' items+=StepItem)*;
+
+StepItem:
+  StepEdge | StepSelector;
+
+StepEdge:
+  'edge'? from=Ref '->' to=Ref;
+
+StepSelector:
+  selector=Selector;
 
 // Overrides de presentacion de un Nodo en esta Vista; nunca tocan el Modelo.
 // `pin x,y` es en coordenadas del lienzo post-layout; `color` es un nombre de Paleta.
@@ -201,7 +227,8 @@ Id returns string:
   IdTerminal |
   'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order' |
   'theme' | 'extends' | 'palette' | 'fonts' | 'tokens' |
-  'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link';
+  'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
+  'steps' | 'step' | 'show' | 'hide' | 'edge';
 
 // -------------------------
 // Comments

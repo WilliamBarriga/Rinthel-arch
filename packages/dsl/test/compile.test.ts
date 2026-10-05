@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, resolveView } from 'canonico';
+import { TEMA_NEUTRO, resolveView, revealAt } from 'canonico';
 import { compile } from 'dsl';
 
 describe('compile: Nodos y specification', () => {
@@ -602,14 +602,14 @@ describe('compile: Vistas', () => {
 
     expect(issues).toEqual([]);
     expect(canonico?.views).toEqual([
-      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, overrides: [], collapsed: [], expanded: [], links: [] },
+      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, overrides: [], collapsed: [], expanded: [], links: [], steps: [] },
     ]);
   });
 
   it('una Vista flow solo con type; el resto queda vacio', () => {
     const { canonico } = compile({ 'main.dg': `${base} view f { type flow }` });
 
-    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], overrides: [], collapsed: [], expanded: [], links: [] }]);
+    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], overrides: [], collapsed: [], expanded: [], links: [], steps: [] }]);
   });
 
   it('acepta `*` y `**` como selectores y varios include', () => {
@@ -958,5 +958,89 @@ describe('compile: drill-down', () => {
     });
 
     expect(issues.map((i) => i.code)).toEqual(['E_LINK_WITH_EXPANDED']);
+  });
+});
+
+describe('compile: Pasos (steps)', () => {
+  const base = 'specification { node servicio }  model { servicio a { servicio x  servicio y }  servicio b  a.x -> b }';
+
+  it('compila steps con show y hide, selectores y Aristas', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        view v {
+          type architecture
+          include **
+          steps {
+            step "Entrada" { show b }
+            step "Detalle" { show a.*, edge a.x -> b  hide b }
+          }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]?.steps).toEqual([
+      { title: 'Entrada', show: [{ selector: 'b' }], hide: [] },
+      { title: 'Detalle', show: [{ selector: 'a.*' }, { from: 'a.x', to: 'b' }], hide: [{ selector: 'b' }] },
+    ]);
+  });
+
+  it('la Arista se nombra tambien sin la palabra `edge`', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base} view v { type flow  steps { step "s" { show a.x -> b } } }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]?.steps[0]?.show).toEqual([{ from: 'a.x', to: 'b' }]);
+  });
+
+  it('sin steps la Vista queda con steps vacio', () => {
+    const { canonico } = compile({ 'main.dg': `${base} view v { type flow }` });
+
+    expect(canonico?.views[0]?.steps).toEqual([]);
+  });
+
+  it('un selector que no coincide con ningun Nodo es E_UNKNOWN_STEP en su posicion', () => {
+    const { issues } = compile({
+      'main.dg': `${base}\nview v {\n  type flow\n  steps {\n    step "s" { show zzz }\n  }\n}`,
+    });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_STEP', severity: 'error', file: 'main.dg', line: 5, column: 21 });
+  });
+
+  it('un selector comodin sin coincidencias tambien lo es', () => {
+    const { issues } = compile({
+      'main.dg': `${base} view v { type flow  steps { step "s" { hide b.* } } }`,
+    });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_STEP']);
+  });
+
+  it('una Arista que no existe en el Modelo es E_UNKNOWN_STEP', () => {
+    const { issues } = compile({
+      'main.dg': `${base} view v { type flow  steps { step "s" { show edge b -> a.x } } }`,
+    });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_STEP']);
+  });
+
+  it('un id parecido lleva fix con un unico candidato', () => {
+    const { issues } = compile({
+      'main.dg': `${base} view v { type flow  steps { step "s" { show a.xx } } }`,
+    });
+
+    expect(issues[0]?.code).toBe('E_UNKNOWN_STEP');
+    expect(issues[0]?.fix?.replacement).toBe('a.x');
+  });
+
+  it('de punta a punta: DSL -> resolveView -> revealAt', () => {
+    const { canonico } = compile({
+      'main.dg': `${base} view v { type flow  include **  steps { step "1" { show b }  step "2" { show a.x } } }`,
+    });
+    const vista = resolveView(canonico!, 'v')!;
+
+    expect(['a.x', 'b'].map(revealAt(vista, 1))).toEqual([0, 1]);
+    expect(['a.x', 'b'].map(revealAt(vista, 2))).toEqual([1, 1]);
+    expect(revealAt(vista, 2)('a.x -> b')).toBe(1);
   });
 });
