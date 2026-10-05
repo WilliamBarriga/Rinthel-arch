@@ -51,7 +51,14 @@ export interface Nodo {
   title: string;
   description: string;
   attributes: Atributo[];
+  source: ReferenciaOpaca[];
   children: Nodo[];
+}
+
+/** Referencia a algo externo al Modelo; el nucleo no interpreta `kind` ni `ref`. */
+export interface ReferenciaOpaca {
+  kind: string;
+  ref: string;
 }
 
 /** Elemento estructurado y ordenado de un Nodo (columna, campo, metodo). No es un Nodo hijo. */
@@ -84,6 +91,8 @@ export interface Modelo {
   edges: Arista[];
 }
 
+const referenciaOpacaSchema = z.object({ kind: z.string().min(1), ref: z.string() });
+
 export const atributoSchema = z.object({
   name: z.string().min(1),
   type: z.string().min(1),
@@ -102,6 +111,7 @@ export const nodoSchema: z.ZodType<Nodo> = z.lazy(() =>
     title: z.string().min(1),
     description: z.string().default(''),
     attributes: z.array(atributoSchema).default([]),
+    source: z.array(referenciaOpacaSchema).default([]),
     children: z.array(nodoSchema).default([]),
   }),
 );

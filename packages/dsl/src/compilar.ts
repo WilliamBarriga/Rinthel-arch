@@ -3,7 +3,17 @@
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
 import { CODIGOS, fuenteCanonicaSchema } from 'canonico';
-import type { Arista, Extremo, FuenteCanonica, Issue, Nodo, TextRange, TipoDeNodo } from 'canonico';
+import type {
+  Arista,
+  Atributo,
+  Extremo,
+  FuenteCanonica,
+  Issue,
+  Nodo,
+  ReferenciaOpaca,
+  TextRange,
+  TipoDeNodo,
+} from 'canonico';
 import {
   EmptyFileSystem,
   GrammarUtils,
@@ -14,7 +24,7 @@ import {
 import type { AstNode, LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Documento, Edge, Element, Endpoint } from './generated/ast';
+import type { Attrs, Documento, Edge, Element, Endpoint, Extend, Source } from './generated/ast';
 import { candidatosCercanos } from './sugerencias';
 
 /** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
@@ -43,7 +53,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const issues: Issue[] = [];
   const tiposDeNodo: TipoDeNodo[] = [];
   const conSintaxisRota = new Set<string>();
-  const raices: { archivo: string; elementos: Element[]; aristas: Edge[] }[] = [];
+  const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
 
   for (const archivo of Object.keys(workspace).sort()) {
     const texto = workspace[archivo] as string;
@@ -64,17 +74,26 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
       }
     }
     for (const modelo of resultado.value.models) {
-      raices.push({ archivo, elementos: modelo.elements, aristas: modelo.edges });
+      raices.push({
+        archivo,
+        elementos: modelo.elements,
+        aristas: modelo.edges,
+        extensiones: modelo.extensions,
+      });
     }
   }
 
   const declarados = new Set(tiposDeNodo.map((tipo) => tipo.name));
+  const registro = new Map<string, NodoRegistrado>();
+  const contexto: Contexto = { declarados, registro, issues };
   const nodos: Nodo[] = [];
   for (const { archivo, elementos } of raices) {
     for (const elemento of elementos) {
-      nodos.push(compilarElemento(elemento, '', archivo, declarados, issues));
+      const nodo = compilarElemento(elemento, '', archivo, contexto);
+      if (nodo !== undefined) nodos.push(nodo);
     }
   }
+  aplicarExtensiones(raices.flatMap(({ archivo, extensiones }) => extensiones.map((extension) => ({ archivo, extension }))), contexto);
 
   const atributosPorNodo = new Map<string, string[]>();
   recogerAtributos(nodos, atributosPorNodo);
@@ -98,13 +117,40 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   };
 }
 
+/** Nodos ya compilados por id cualificado, con el sitio donde se declararon. */
+interface NodoRegistrado {
+  nodo: Nodo;
+  origen: { file: string; line: number; column: number };
+}
+
+interface Contexto {
+  declarados: ReadonlySet<string>;
+  registro: Map<string, NodoRegistrado>;
+  issues: Issue[];
+}
+
+/** Compila un Elemento; un id ya declarado es `E_DUPLICATE_NODE` y el duplicado se descarta. */
 function compilarElemento(
   elemento: Element,
   prefijo: string,
   archivo: string,
-  declarados: ReadonlySet<string>,
-  issues: Issue[],
-): Nodo {
+  contexto: Contexto,
+): Nodo | undefined {
+  const { declarados, registro, issues } = contexto;
+  const id = prefijo === '' ? elemento.name : `${prefijo}.${elemento.name}`;
+  const { start: sitio } = rangoDe(elemento, 'name');
+  const original = registro.get(id);
+  if (original !== undefined) {
+    issues.push({
+      code: CODIGOS.E_DUPLICATE_NODE,
+      severity: 'error',
+      file: archivo,
+      ...sitio,
+      message: `Nodo duplicado '${id}'; para ampliarlo desde otro archivo usa 'extend ${id} { ... }'`,
+      related: [{ ...original.origen, message: `Primera declaracion de '${id}'` }],
+    });
+    return undefined;
+  }
   if (!declarados.has(elemento.type)) {
     issues.push({
       code: CODIGOS.E_UNKNOWN_NODE_TYPE,
@@ -114,17 +160,69 @@ function compilarElemento(
       message: `Tipo de nodo '${elemento.type}' no declarado en specification`,
     });
   }
-  const id = prefijo === '' ? elemento.name : `${prefijo}.${elemento.name}`;
-  return {
+  const nodo: Nodo = {
     id,
     type: elemento.type,
     title: elemento.title ?? elemento.name,
     description: elemento.description ?? '',
-    attributes: elemento.attrs.flatMap((bloque) =>
-      bloque.items.map((item) => ({ name: item.name, type: item.type, notes: item.notes ?? '' })),
-    ),
-    children: elemento.elements.map((hijo) => compilarElemento(hijo, id, archivo, declarados, issues)),
+    attributes: atributosDe(elemento.attrs),
+    source: referenciasDe(elemento.sources),
+    children: [],
   };
+  registro.set(id, { nodo, origen: { file: archivo, ...sitio } });
+  nodo.children = compilarHijos(elemento.elements, id, archivo, contexto);
+  return nodo;
+}
+
+function compilarHijos(elementos: readonly Element[], prefijo: string, archivo: string, contexto: Contexto): Nodo[] {
+  return elementos.flatMap((hijo) => compilarElemento(hijo, prefijo, archivo, contexto) ?? []);
+}
+
+/**
+ * Aplica los `extend` en pasadas: un `extend` puede apuntar a un Nodo que crea otro
+ * `extend` (de cualquier archivo), asi que se repite mientras alguna pasada avance.
+ * Los que quedan sin objetivo son `E_UNKNOWN_EXTEND_TARGET`.
+ */
+function aplicarExtensiones(
+  extensiones: readonly { archivo: string; extension: Extend }[],
+  contexto: Contexto,
+): void {
+  let pendientes = extensiones;
+  while (pendientes.length > 0) {
+    const siguientes = pendientes.filter(({ archivo, extension }) => !compilarExtension(extension, archivo, contexto));
+    if (siguientes.length === pendientes.length) break;
+    pendientes = siguientes;
+  }
+  for (const { archivo, extension } of pendientes) {
+    contexto.issues.push({
+      code: CODIGOS.E_UNKNOWN_EXTEND_TARGET,
+      severity: 'error',
+      file: archivo,
+      ...rangoDe(extension, 'target').start,
+      message: `'extend' sobre el Nodo '${extension.target}', que no existe en el Modelo`,
+    });
+  }
+}
+
+/** Anade al Nodo `target` los hijos, Atributos y source del `extend`; false si el Nodo aun no existe. */
+function compilarExtension(extension: Extend, archivo: string, contexto: Contexto): boolean {
+  const objetivo = contexto.registro.get(extension.target);
+  if (objetivo === undefined) return false;
+  const { nodo } = objetivo;
+  nodo.attributes.push(...atributosDe(extension.attrs));
+  nodo.source.push(...referenciasDe(extension.sources));
+  nodo.children.push(...compilarHijos(extension.elements, nodo.id, archivo, contexto));
+  return true;
+}
+
+function atributosDe(bloques: readonly Attrs[]): Atributo[] {
+  return bloques.flatMap((bloque) =>
+    bloque.items.map((item) => ({ name: item.name, type: item.type, notes: item.notes ?? '' })),
+  );
+}
+
+function referenciasDe(bloques: readonly Source[]): ReferenciaOpaca[] {
+  return bloques.flatMap((bloque) => bloque.items.map(({ kind, ref }) => ({ kind, ref })));
 }
 
 // Las Aristas se validan aqui (con posicion y `fix`) y, como red estructural,

@@ -27,6 +27,7 @@ describe('compile: Nodos y specification', () => {
             title: 'API',
             description: 'Puerta de entrada',
             attributes: [],
+            source: [],
             children: [],
           },
         ],
@@ -382,5 +383,170 @@ model {
   it('con el Nodo inexistente solo informa E_DANGLING_EDGE, no el Atributo', () => {
     const { issues } = compile({ 'main.dg': `${spec} model { tabla a  a -> nada#x }` });
     expect(issues.map((i) => i.code)).toEqual(['E_DANGLING_EDGE']);
+  });
+});
+
+describe('compile: source', () => {
+  const spec = 'specification { node servicio }';
+
+  it('compila varios source de un Nodo a una lista {kind, ref} en orden', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+        model {
+          servicio api {
+            source { git "src/api.ts" }
+            source { url "https://ejemplo.com/api" doc "docs/api.md" }
+          }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.nodes[0]?.source).toEqual([
+      { kind: 'git', ref: 'src/api.ts' },
+      { kind: 'url', ref: 'https://ejemplo.com/api' },
+      { kind: 'doc', ref: 'docs/api.md' },
+    ]);
+  });
+
+  it('un Nodo sin source tiene la lista vacia', () => {
+    const { canonico } = compile({ 'main.dg': `${spec} model { servicio api }` });
+    expect(canonico?.model.nodes[0]?.source).toEqual([]);
+  });
+
+  it('guarda kind y ref sin interpretarlos', () => {
+    const { canonico } = compile({
+      'main.dg': `${spec} model { servicio api { source { cualquier-cosa "  ../x:y#z  " } } }`,
+    });
+    expect(canonico?.model.nodes[0]?.source).toEqual([{ kind: 'cualquier-cosa', ref: '  ../x:y#z  ' }]);
+  });
+
+  it('un ref que no es cadena es E_SYNTAX_ERROR con posicion', () => {
+    const { issues, canonico } = compile({
+      'main.dg': `${spec}
+        model {
+          servicio api {
+            source { git 42 }
+          }
+        }`,
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues.every((issue) => issue.code === 'E_SYNTAX_ERROR')).toBe(true);
+    expect(issues[0]).toMatchObject({ file: 'main.dg', line: 4, column: 26 });
+  });
+});
+
+describe('compile: Workspace multiarchivo', () => {
+  it('fusiona specification, Nodos y Aristas de varios archivos en un solo Modelo', () => {
+    const { canonico, issues } = compile({
+      'tipos.dg': 'specification { node servicio }',
+      'nodos.dg': 'model { servicio api  servicio db }',
+      'aristas.dg': 'model { api -> db }',
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.specification.nodeTypes.map((t) => t.name)).toEqual(['servicio']);
+    expect(canonico?.model.nodes.map((n) => n.id)).toEqual(['api', 'db']);
+    expect(canonico?.model.edges).toEqual([{ from: { node: 'api' }, to: { node: 'db' } }]);
+  });
+
+  it('extend anade hijos, Atributos y source a un Nodo de otro archivo', () => {
+    const { canonico, issues } = compile({
+      'a.dg': 'specification { node servicio }  model { servicio api { servicio auth } }',
+      'b.dg': `model {
+        extend api {
+          servicio cache
+          attrs { puerto: int }
+          source { git "src/api.ts" }
+        }
+        extend api.auth { servicio tokens }
+      }`,
+    });
+
+    expect(issues).toEqual([]);
+    const api = canonico?.model.nodes[0];
+    expect(api?.children.map((n) => n.id)).toEqual(['api.auth', 'api.cache']);
+    expect(api?.attributes).toEqual([{ name: 'puerto', type: 'int', notes: '' }]);
+    expect(api?.source).toEqual([{ kind: 'git', ref: 'src/api.ts' }]);
+    expect(api?.children[0]?.children.map((n) => n.id)).toEqual(['api.auth.tokens']);
+  });
+
+  it('un extend puede estar en un archivo que se lee antes que el Nodo', () => {
+    const { canonico, issues } = compile({
+      'a-extiende.dg': 'model { extend api { servicio cache } }',
+      'z-define.dg': 'specification { node servicio }  model { servicio api }',
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.nodes[0]?.children.map((n) => n.id)).toEqual(['api.cache']);
+  });
+
+  it('un extend puede apuntar a un Nodo creado por otro extend, en cualquier orden de archivos', () => {
+    const base = { 'a.dg': 'model { extend api.cache { servicio x } }', 'z.dg': 'specification { node servicio }  model { servicio api  extend api { servicio cache } }' };
+    const { canonico, issues } = compile(base);
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.nodes[0]?.children[0]?.children.map((n) => n.id)).toEqual(['api.cache.x']);
+  });
+
+  it('un Nodo duplicado sin extend es E_DUPLICATE_NODE con related al original', () => {
+    const { issues, canonico } = compile({
+      'a.dg': 'specification { node servicio }\nmodel {\n  servicio api\n}',
+      'b.dg': 'model {\n  servicio db\n  servicio api\n}',
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      code: 'E_DUPLICATE_NODE',
+      severity: 'error',
+      file: 'b.dg',
+      line: 3,
+      column: 12,
+      related: [{ file: 'a.dg', line: 3, column: 12 }],
+    });
+  });
+
+  it('detecta duplicados dentro de un mismo archivo y entre hijos', () => {
+    const { issues } = compile({
+      'a.dg': `specification { node servicio }
+        model {
+          servicio api { servicio x  servicio x }
+          servicio api
+        }`,
+    });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_DUPLICATE_NODE', 'E_DUPLICATE_NODE']);
+  });
+
+  it('un extend cuyo Nodo no existe es E_UNKNOWN_EXTEND_TARGET', () => {
+    const { issues } = compile({
+      'a.dg': 'specification { node servicio }\nmodel {\n  extend nada { servicio x }\n}',
+    });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_EXTEND_TARGET', file: 'a.dg', line: 3, column: 10 });
+  });
+
+  it('el resultado no depende del orden en que se pasan los archivos', () => {
+    const archivos: [string, string][] = [
+      ['a.dg', 'specification { node servicio }  model { servicio api }'],
+      ['b.dg', 'model { extend api { servicio cache } servicio db }'],
+      ['c.dg', 'model { extend api { servicio cola } api -> db }'],
+    ];
+    const resultados = [archivos, [...archivos].reverse(), [archivos[1], archivos[2], archivos[0]]].map(
+      (orden) => compile(Object.fromEntries(orden as [string, string][])),
+    );
+
+    expect(resultados[0]?.issues).toEqual([]);
+    expect(resultados[1]).toEqual(resultados[0]);
+    expect(resultados[2]).toEqual(resultados[0]);
+  });
+
+  it('el duplicado se resuelve igual sin importar el orden de los archivos', () => {
+    const base = { 'x.dg': 'model { servicio api }', 'y.dg': 'specification { node servicio }  model { servicio api }' };
+    const invertido = { 'y.dg': base['y.dg'], 'x.dg': base['x.dg'] };
+
+    expect(compile(invertido)).toEqual(compile(base));
   });
 });

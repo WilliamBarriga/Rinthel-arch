@@ -19,6 +19,8 @@ export const CODIGOS = Object.freeze({
   E_UNKNOWN_NODE_TYPE: 'E_UNKNOWN_NODE_TYPE',
   /** Dos Nodos con el mismo id sin que medie `extend`. */
   E_DUPLICATE_NODE: 'E_DUPLICATE_NODE',
+  /** `extend <nodo>` sobre un Nodo que no existe en el Modelo. */
+  E_UNKNOWN_EXTEND_TARGET: 'E_UNKNOWN_EXTEND_TARGET',
   /** Extremo de Arista (Nodo) inexistente en el Modelo. */
   E_DANGLING_EDGE: 'E_DANGLING_EDGE',
   /** Extremo de Arista `nodo#atributo` sin ese Atributo en el Nodo. */
