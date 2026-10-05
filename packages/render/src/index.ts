@@ -6,6 +6,11 @@
  * Nodos y Grupos con los tokens del Tema. Un Grupo colapsado se dibuja como un
  * Nodo con su contador y trazo discontinuo.
  *
+ * Por ahora solo hay camino de cadena (el export estatico del ADR 0003): el
+ * componente React con `visibility`, `expanded` y `camera` llega en tickets
+ * posteriores, y las Aristas se dibujan en #39. `view` es parametro extra a
+ * `geometry` porque la Geometria no lleva jerarquia, textos ni colores.
+ *
  * Invariantes: funcion pura (sin reloj, sin estado propio); determinista byte a
  * byte; los colores salen solo del Tema, por nombre de Paleta (ADR 0006); sin
  * dependencia de Next, Tailwind ni json-render.
