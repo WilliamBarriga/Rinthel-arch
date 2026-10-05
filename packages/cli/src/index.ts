@@ -19,13 +19,14 @@
  * `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`). Una Vista con
  * `theme` usa ese Tema; si no, `--theme`; si no, el neutro. `--theme-path` se
  * fusiona antes del Workspace (gana el Workspace en rutas repetidas). Con errores
- * (o avisos en `--strict`) sale 1 y no escribe; los Pins solapados salen como
+ * (o avisos en `--strict`) sale 1 y borra la salida anterior; los Pins solapados salen como
  * `W_OVERLAPPING_PINS` con posicion y `related`. `--theme` inexistente: codigo 2.
- * `export --workspace <ruta>`: un SVG estatico por Vista en `.diagrams/svg/<vista>.svg`
+ * `export --workspace <ruta> [--theme-path <carpeta>]` (sin `--json`, `--strict` ni
+ * `--max-issues`): un SVG estatico por Vista en `.diagrams/svg/<vista>.svg`
  * (reemplaza esa carpeta), desde la salida de `build` (sin ella: codigo 2). Mismos
  * bytes para la misma salida; el SVG no referencia recursos externos: las fuentes
  * del Tema que el Workspace trae como archivo (`<Familia>.woff2|woff|ttf|otf`)
- * van incrustadas; los iconos son los del Workspace y los genericos.
+ * van incrustadas (tambien las de `--theme-path`; gana el Workspace); los iconos son los del Workspace y los genericos.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> render -> shell / cli`.
@@ -36,8 +37,9 @@ import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
 import { parseArgs } from 'node:util';
 
 import { construirBuild } from './build';
+import type { GeometriaCacheada } from './build';
 import { exportarSvg } from './export';
-import type { GeometriaCacheada } from './export';
+
 import { construirSalida, textoLegible } from './validate';
 import { escribirSalida, leerFuentes, leerSalida, leerWorkspace } from './workspace';
 
@@ -113,8 +115,13 @@ async function exportar(
   { leer = leerWorkspace, leerSalida: leerCache = leerSalida, leerFuentes: leerLetras = leerFuentes, escribir = escribirSalida }: Dependencias,
 ): Promise<ResultadoDeEjecucion> {
   let raiz: string | undefined;
+  let carpetaDeTemas: string | undefined;
   try {
-    raiz = parseArgs({ args: [...args], options: { workspace: { type: 'string' } }, strict: true }).values.workspace;
+    ({ workspace: raiz, 'theme-path': carpetaDeTemas } = parseArgs({
+      args: [...args],
+      options: { workspace: { type: 'string' }, 'theme-path': { type: 'string' } },
+      strict: true,
+    }).values);
   } catch (error) {
     return uso((error as Error).message);
   }
@@ -132,7 +139,9 @@ async function exportar(
           return [cacheada.view, cacheada] as const;
         }),
     );
-    archivos = exportarSvg(fuente, geometrias, leer(raiz), leerLetras(raiz));
+    // El Workspace gana sobre `--theme-path` en rutas repetidas, como en `build`.
+    const fuentes = { ...(carpetaDeTemas === undefined ? {} : leerLetras(carpetaDeTemas)), ...leerLetras(raiz) };
+    archivos = exportarSvg(fuente, geometrias, leer(raiz), fuentes);
   } catch (error) {
     return uso(`No hay una salida de build utilizable en '${raiz}/.diagrams' (ejecuta 'build' antes): ${(error as Error).message}`);
   }
@@ -189,9 +198,10 @@ async function ejecutar(
   } catch (error) {
     return uso(`Error interno: la salida no cumple el contrato (${(error as Error).message})`);
   }
-  if (comando === 'build' && salida.ok && resultado.canonico !== undefined) {
+  if (comando === 'build') {
+    // Un build fallido borra la salida anterior: `export` no debe dibujar algo obsoleto.
     try {
-      escribir(raiz, archivosDeSalida);
+      escribir(raiz, salida.ok ? archivosDeSalida : {});
     } catch (error) {
       return uso(`No se pudo escribir .diagrams/: ${(error as Error).message}`);
     }

@@ -6,8 +6,17 @@ export interface OpcionesDeValidate {
   strict: boolean;
 }
 
-/** Construye el objeto del contrato a partir de todos los issues, ya ordenados. */
-export function construirSalida(issues: Issue[], { maxIssues, strict }: OpcionesDeValidate): SalidaDeValidate {
+/** Orden del contrato (ADR 0008): archivo, linea, columna y codigo. */
+function compararIssues(a: Issue, b: Issue): number {
+  return a.file.localeCompare(b.file) || a.line - b.line || a.column - b.column || a.code.localeCompare(b.code);
+}
+
+/** Construye el objeto del contrato a partir de todos los issues, que ordena aqui para que los de varias fuentes se mezclen bien. */
+export function construirSalida(
+  desordenados: readonly Issue[],
+  { maxIssues, strict }: OpcionesDeValidate,
+): SalidaDeValidate {
+  const issues = [...desordenados].sort(compararIssues);
   const errors = issues.filter((issue) => issue.severity === 'error').length;
   const warnings = issues.length - errors;
   return {

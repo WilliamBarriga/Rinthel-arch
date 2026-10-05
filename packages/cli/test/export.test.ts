@@ -74,6 +74,34 @@ describe('export', () => {
     expect(leerSvg(workspace, 'detalle')).not.toContain('@font-face');
   });
 
+  it('--theme-path aporta fuentes al export; el Workspace gana en rutas repetidas', async () => {
+    const workspace = await workspaceConstruido();
+    writeFileSync(join(workspace, 'temas.dg'), 'theme rotulado extends neutral { fonts { body "Inter, sans-serif" } }');
+    writeFileSync(join(workspace, 'main.dg'), readFileSync(join(workspace, 'main.dg'), 'utf8').replace('type architecture', 'type architecture\n  theme rotulado'));
+    const temas = mkdtempSync(join(tmpdir(), 'temas-'));
+    writeFileSync(join(temas, 'Inter.woff2'), Buffer.from('ABC'));
+    await run(['build', '--workspace', workspace]);
+
+    await run(['export', '--workspace', workspace, '--theme-path', temas]);
+    expect(leerSvg(workspace, 'general')).toContain('base64,QUJD)');
+
+    writeFileSync(join(workspace, 'Inter.woff2'), Buffer.from('XY'));
+    await run(['export', '--workspace', workspace, '--theme-path', temas]);
+    expect(leerSvg(workspace, 'general')).toContain('base64,WFk=)');
+  });
+
+  it('un build fallido borra la salida anterior: export no usa una salida obsoleta', async () => {
+    const workspace = await workspaceConstruido();
+    writeFileSync(join(workspace, 'roto.dg'), 'model { servicio }');
+
+    const construccion = await run(['build', '--workspace', workspace]);
+    const exportacion = await run(['export', '--workspace', workspace]);
+
+    expect(construccion.exitCode).toBe(1);
+    expect(existsSync(join(workspace, '.diagrams'))).toBe(false);
+    expect(exportacion.exitCode).toBe(2);
+  });
+
   it('sin salida de build es un fallo de uso que pide ejecutar build', async () => {
     const workspace = mkdtempSync(join(tmpdir(), 'export-'));
     cpSync(join(fixtures, 'build-basico'), workspace, { recursive: true });

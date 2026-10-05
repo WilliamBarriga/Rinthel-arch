@@ -229,4 +229,24 @@ describe('validate: bucle validate/fix', () => {
 
     expect((await validar(raiz)).issues).toEqual([]);
   });
+
+  it('ordena los issues por archivo, linea, columna y codigo aunque la fuente no lo haga', async () => {
+    const issue = (file: string, line: number, column: number, code: string) => ({
+      code, severity: 'warning' as const, file, line, column, message: 'x',
+    });
+    const resultado = await run(['validate', '--workspace', '.', '--json'], {
+      leer: () => ({}),
+      compilar: () => ({
+        pins: [],
+        issues: [issue('b.dg', 1, 1, 'W_B'), issue('a.dg', 2, 1, 'W_A'), issue('a.dg', 1, 5, 'W_C'), issue('a.dg', 1, 5, 'W_A')],
+      }),
+    });
+
+    expect(JSON.parse(resultado.stdout).issues.map((i: { file: string; line: number; column: number; code: string }) => [i.file, i.line, i.column, i.code])).toEqual([
+      ['a.dg', 1, 5, 'W_A'],
+      ['a.dg', 1, 5, 'W_C'],
+      ['a.dg', 2, 1, 'W_A'],
+      ['b.dg', 1, 1, 'W_B'],
+    ]);
+  });
 });

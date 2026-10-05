@@ -1,17 +1,9 @@
 import { combineIconProviders, genericIcons, resolveView, workspaceIcons } from 'canonico';
 import type { FuenteCanonica, Tema } from 'canonico';
-import type { Geometria } from 'layout';
 import { renderToSvgString } from 'render';
 import type { FuenteIncrustada } from 'render';
 
-import type { SalidaDeBuild } from './build';
-
-/** Geometria de una Vista tal como la deja `build` en `geometria/<vista>.json`. */
-export interface GeometriaCacheada {
-  view: string;
-  theme: string;
-  geometry: Geometria;
-}
+import type { GeometriaCacheada, SalidaDeBuild } from './build';
 
 /** Formatos de fuente que el Workspace puede traer, de mayor a menor preferencia. */
 const FORMATOS: readonly [extension: string, mime: string][] = [

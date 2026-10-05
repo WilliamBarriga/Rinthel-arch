@@ -3,6 +3,7 @@ import type { FuenteCanonica, Issue, Tema, Vista } from 'canonico';
 import { resolveView } from 'canonico';
 import type { PosicionDePin } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
+import type { Geometria } from 'layout';
 
 /** Archivos derivados, por ruta relativa a `<workspace>/.diagrams/`. */
 export type SalidaDeBuild = Record<string, string>;
@@ -17,6 +18,14 @@ export interface ResultadoDeBuild {
   archivos: SalidaDeBuild;
   /** Avisos que solo se conocen tras calcular la geometria. */
   issues: Issue[];
+}
+
+/** Forma de `geometria/<vista>.json`: la escribe `build` y la lee `export`. */
+export interface GeometriaCacheada {
+  view: string;
+  theme: string;
+  layoutKey: string;
+  geometry: Geometria;
 }
 
 const json = (valor: unknown): string => `${JSON.stringify(valor, null, 2)}\n`;
@@ -42,12 +51,13 @@ export async function construirBuild(
     if (resuelta === undefined) continue;
     const temaDeLaVista = temaDeVista(fuente, vista, tema);
     const geometry = await layoutView(resuelta, temaDeLaVista);
-    archivos[`geometria/${vista.id}.json`] = json({
+    const cacheada: GeometriaCacheada = {
       view: vista.id,
       theme: temaDeLaVista.name,
       layoutKey: claveDeLayout(resuelta, temaDeLaVista),
       geometry,
-    });
+    };
+    archivos[`geometria/${vista.id}.json`] = json(cacheada);
     for (const [a, b] of geometry.pinsSolapados) {
       const posicionDe = (nodo: string) => pins.find((pin) => pin.view === vista.id && pin.node === nodo);
       const primero = posicionDe(a);
