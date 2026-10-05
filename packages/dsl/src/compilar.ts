@@ -2,7 +2,7 @@
  * Compilador del DSL de texto: parsea cada archivo con la gramatica derivada de
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
-import { CODIGOS, TIPOS_DE_VISTA, fuenteCanonicaSchema, resolveView, vistaSchema } from 'canonico';
+import { CODIGOS, TIPOS_DE_VISTA, combineIconProviders, fuenteCanonicaSchema, genericIcons, workspaceIcons, resolveView, vistaSchema } from 'canonico';
 import type {
   Arista,
   Atributo,
@@ -59,11 +59,13 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const tiposDeNodo: TipoDeNodo[] = [];
   const conSintaxisRota = new Set<string>();
   const temasDeclarados: TemaDeclarado[] = [];
+  const tiposConIcono: { archivo: string; prop: NodeTypeProperty }[] = [];
   const tiposConColor: { archivo: string; prop: NodeTypeProperty }[] = [];
   const vistas: { vista: Vista; archivo: string; ast: View }[] = [];
   const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
 
   for (const archivo of Object.keys(workspace).sort()) {
+    if (archivo.endsWith('.svg')) continue;
     const texto = workspace[archivo] as string;
     const resultado = servicios().parser.LangiumParser.parse<Documento>(texto);
     const deSintaxis = issuesDeSintaxis(archivo, texto, resultado);
@@ -76,6 +78,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
         for (const prop of decl.props) {
           const valor = prop.value;
           if (prop.key === 'color') tiposConColor.push({ archivo, prop });
+          if (prop.key === 'icon') tiposConIcono.push({ archivo, prop });
           if (prop.key === 'description') tipo.description = valor;
           else tipo[prop.key] = valor;
         }
@@ -127,6 +130,17 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
   }
 
+  const iconos = combineIconProviders(workspaceIcons(workspace), genericIcons());
+  for (const { archivo, prop } of tiposConIcono) {
+    if (conSintaxisRota.has(archivo) || iconos.resolve(prop.value) !== undefined) continue;
+    issues.push(
+      issueConSugerencia(
+        { code: CODIGOS.E_UNKNOWN_ICON, message: `Icono '${prop.value}' no existe (ni generico ni SVG del Workspace)` },
+        archivo, prop, 'value', iconos.keys(),
+      ),
+    );
+  }
+
   const { temas, issues: delTema } = resolverTemas(temasDeclarados);
   issues.push(...delTema);
   const fuente = {
@@ -140,6 +154,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     if (conSintaxisRota.has(archivo)) continue;
     comprobarOverrides(vista, ast, archivo, fuente, issues);
     comprobarTemaYColores(vista, ast, archivo, fuente, issues);
+    comprobarDrillDown(vista, ast, archivo, fuente, issues);
   }
   for (const { archivo, prop } of tiposConColor) {
     if (conSintaxisRota.has(archivo)) continue;
@@ -200,6 +215,10 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
     exclude: selectores('ViewExclude'),
     ...(profundidad !== undefined && { depth: profundidad.value }),
     ...(tema !== undefined && { theme: tema.value }),
+    ...(vista.props.some((prop) => prop.$type === 'ViewDrill') && { drill: 'collapse' as const }),
+    collapsed: vista.props.flatMap((prop) => (prop.$type === 'ViewCollapsed' ? prop.targets : [])),
+    expanded: vista.props.flatMap((prop) => (prop.$type === 'ViewExpanded' ? prop.targets : [])),
+    links: vista.props.flatMap((prop) => (prop.$type === 'ViewLink' ? [{ node: prop.node, view: prop.view }] : [])),
     overrides: vista.props.flatMap((prop) => (prop.$type === 'NodeOverride' ? [overrideDe(prop)] : [])),
   };
 }
@@ -236,6 +255,58 @@ function comprobarTemaYColores(
 
 function nombresDePaleta(temas: readonly Tema[]): string[] {
   return temas.flatMap((tema) => Object.keys(tema.palette));
+}
+
+/**
+ * Drill-down: `link` solo a Vistas que existen; `collapsed`/`expanded` solo sobre
+ * Grupos que la Vista muestra; un Nodo no puede llevar `link` y `expanded`.
+ */
+function comprobarDrillDown(
+  vista: Vista,
+  ast: View,
+  archivo: string,
+  fuente: FuenteCanonica,
+  issues: Issue[],
+): void {
+  const gruposEnLaVista = new Set(
+    resolveView(
+      { ...fuente, views: [{ ...vista, collapsed: [], expanded: [], links: [], depth: undefined }] },
+      vista.id,
+    )?.nodes.filter((nodo) => nodo.childCount > 0).map((nodo) => nodo.id),
+  );
+  const enlazados = new Set(vista.links.map(({ node }) => node));
+  const idsDeVista = fuente.views.map(({ id }) => id);
+
+  for (const prop of ast.props) {
+    if (prop.$type === 'ViewLink' && !idsDeVista.includes(prop.view)) {
+      issues.push(
+        issueConSugerencia(
+          { code: CODIGOS.E_UNKNOWN_VIEW_LINK, message: `link hacia la Vista '${prop.view}', que no existe` },
+          archivo, prop, 'view', idsDeVista,
+        ),
+      );
+    } else if (prop.$type === 'ViewCollapsed' || prop.$type === 'ViewExpanded') {
+      const palabra = prop.$type === 'ViewCollapsed' ? 'collapsed' : 'expanded';
+      prop.targets.forEach((destino, indice) => {
+        const sitio = { file: archivo, ...rangoDeIndice(prop, 'targets', indice).start };
+        if (!gruposEnLaVista.has(destino)) {
+          issues.push({
+            code: CODIGOS.E_INVALID_EXPANSION_TARGET,
+            severity: 'error',
+            ...sitio,
+            message: `'${palabra} ${destino}': no es un Grupo que la Vista '${vista.id}' muestre`,
+          });
+        } else if (palabra === 'expanded' && enlazados.has(destino)) {
+          issues.push({
+            code: CODIGOS.E_LINK_WITH_EXPANDED,
+            severity: 'error',
+            ...sitio,
+            message: `'${destino}' lleva 'link' y 'expanded': un Grupo con link no se expande`,
+          });
+        }
+      });
+    }
+  }
 }
 
 /** Un color es siempre un nombre de Paleta; un hex o un typo es `E_UNKNOWN_PALETTE_COLOR`. */
@@ -458,6 +529,15 @@ function issueConSugerencia<T extends AstNode>(
 /** Rango 1-based (fin excluido) de una propiedad del AST; `1:1` si el CST no lo conoce. */
 function rangoDe(nodo: AstNode, propiedad: string): TextRange {
   const rango = GrammarUtils.findNodeForProperty(nodo.$cstNode, propiedad)?.range;
+  return {
+    start: { line: (rango?.start.line ?? 0) + 1, column: (rango?.start.character ?? 0) + 1 },
+    end: { line: (rango?.end.line ?? 0) + 1, column: (rango?.end.character ?? 0) + 1 },
+  };
+}
+
+/** Como `rangoDe`, para el `indice`-esimo valor de una propiedad multiple. */
+function rangoDeIndice(nodo: AstNode, propiedad: string, indice: number): TextRange {
+  const rango = GrammarUtils.findNodesForProperty(nodo.$cstNode, propiedad)[indice]?.range;
   return {
     start: { line: (rango?.start.line ?? 0) + 1, column: (rango?.start.character ?? 0) + 1 },
     end: { line: (rango?.end.line ?? 0) + 1, column: (rango?.end.character ?? 0) + 1 },

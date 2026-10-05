@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO } from 'canonico';
+import { TEMA_NEUTRO, resolveView } from 'canonico';
 import { compile } from 'dsl';
 
 describe('compile: Nodos y specification', () => {
@@ -602,14 +602,14 @@ describe('compile: Vistas', () => {
 
     expect(issues).toEqual([]);
     expect(canonico?.views).toEqual([
-      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, overrides: [] },
+      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, overrides: [], collapsed: [], expanded: [], links: [] },
     ]);
   });
 
   it('una Vista flow solo con type; el resto queda vacio', () => {
     const { canonico } = compile({ 'main.dg': `${base} view f { type flow }` });
 
-    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], overrides: [] }]);
+    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], overrides: [], collapsed: [], expanded: [], links: [] }]);
   });
 
   it('acepta `*` y `**` como selectores y varios include', () => {
@@ -837,5 +837,126 @@ describe('compile: Tema', () => {
 
     expect(compile({ 'main.dg': vista('claro') }).issues).toEqual([]);
     expect(compile({ 'main.dg': vista('neutral') }).issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
+  });
+});
+describe('compile: iconos', () => {
+  const nodo = (icono: string) => `specification { node servicio { icon ${icono} } }  model { servicio a }`;
+
+  it('acepta una clave de los iconos genericos', () => {
+    const { issues, canonico } = compile({ 'main.dg': nodo('database') });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.specification.nodeTypes[0]?.icon).toBe('database');
+  });
+
+  it('acepta un SVG del Workspace por el nombre de su archivo', () => {
+    const { issues } = compile({ 'main.dg': nodo('mi-logo'), 'iconos/mi-logo.svg': '<svg></svg>' });
+
+    expect(issues).toEqual([]);
+  });
+
+  it('un archivo .svg del Workspace no se parsea como DSL', () => {
+    const { issues } = compile({ 'main.dg': nodo('database'), 'x.svg': '<svg><path d="M0 0"/></svg>' });
+
+    expect(issues).toEqual([]);
+  });
+
+  it('clave desconocida es E_UNKNOWN_ICON con posicion y fix si hay un candidato', () => {
+    const { issues, canonico } = compile({ 'main.dg': nodo('databse') });
+
+    expect(canonico).toBeUndefined();
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_ICON', severity: 'error', file: 'main.dg', line: 1 });
+    expect(issues[0]?.fix?.replacement).toBe('database');
+  });
+});
+describe('compile: drill-down', () => {
+  const base = 'specification { node servicio }  model { servicio a { servicio x }  servicio b { servicio y }  servicio c }';
+
+  it('compila drill collapse, collapsed, expanded y link a la Vista', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        view general {
+          type architecture
+          include **
+          drill collapse
+          collapsed a
+          expanded b
+          link a -> detalle
+        }
+        view detalle { type flow }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]).toMatchObject({
+      drill: 'collapse',
+      collapsed: ['a'],
+      expanded: ['b'],
+      links: [{ node: 'a', view: 'detalle' }],
+    });
+  });
+
+  it('de punta a punta: un Grupo que excede depth abre colapsado y expanded lo abre', () => {
+    const fuente = (extra: string) =>
+      compile({ 'main.dg': `${base} view v { type architecture include ** depth 1 ${extra} }` }).canonico;
+
+    const cerrado = fuente('');
+    const abierto = fuente('expanded a');
+
+    expect(cerrado && resolveView(cerrado, 'v')?.nodes.find((n) => n.id === 'a')).toMatchObject({
+      collapsed: true,
+      childCount: 1,
+      children: [],
+    });
+    expect(abierto && resolveView(abierto, 'v')?.nodes.map((n) => n.id)).toEqual(['a', 'a.x', 'b', 'c']);
+  });
+
+  it('una Vista sin drill-down deja collapsed, expanded y links vacios', () => {
+    const { canonico } = compile({ 'main.dg': `${base} view v { type flow }` });
+
+    expect(canonico?.views[0]).toMatchObject({ collapsed: [], expanded: [], links: [] });
+    expect(canonico?.views[0]?.drill).toBeUndefined();
+  });
+
+  it('link a una Vista inexistente es E_UNKNOWN_VIEW_LINK, con fix si hay un candidato', () => {
+    const { issues } = compile({
+      'main.dg': `${base}\nview v {\n  type flow\n  include **\n  link a -> detale\n}\nview detalle { type flow }`,
+    });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_VIEW_LINK', file: 'main.dg', line: 5 });
+    expect(issues[0]?.fix?.replacement).toBe('detalle');
+  });
+
+  it('link puede apuntar a una Vista de otro archivo', () => {
+    const { issues } = compile({
+      'a.dg': `${base} view v { type flow include ** link a -> otra }`,
+      'b.dg': 'view otra { type flow }',
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  it('collapsed/expanded sobre un Nodo que no es Grupo es E_INVALID_EXPANSION_TARGET', () => {
+    const { issues } = compile({ 'main.dg': `${base}\nview v {\n  type flow\n  include **\n  collapsed c\n}` });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_INVALID_EXPANSION_TARGET', line: 5 });
+  });
+
+  it('collapsed/expanded sobre un Grupo que la Vista no muestra, o inexistente, es E_INVALID_EXPANSION_TARGET', () => {
+    const fuera = compile({ 'main.dg': `${base} view v { type flow include a expanded b }` });
+    const fantasma = compile({ 'main.dg': `${base} view v { type flow include ** collapsed zzz }` });
+
+    expect(fuera.issues.map((i) => i.code)).toEqual(['E_INVALID_EXPANSION_TARGET']);
+    expect(fantasma.issues.map((i) => i.code)).toEqual(['E_INVALID_EXPANSION_TARGET']);
+  });
+
+  it('link junto con expanded sobre el mismo Nodo es E_LINK_WITH_EXPANDED', () => {
+    const { issues } = compile({
+      'main.dg': `${base} view v { type flow include ** expanded a link a -> v }`,
+    });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_LINK_WITH_EXPANDED']);
   });
 });

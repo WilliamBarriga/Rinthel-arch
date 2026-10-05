@@ -108,7 +108,7 @@ View:
 ;
 
 ViewProperty:
-  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | NodeOverride;
+  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | ViewDrill | ViewCollapsed | ViewExpanded | ViewLink | NodeOverride;
 
 ViewType:
   'type' value=Id;
@@ -124,6 +124,19 @@ ViewDepth:
 
 ViewTheme:
   'theme' value=Id;
+
+// Drill-down: mecanismo por defecto, estado inicial de Grupos y enlaces a otra Vista.
+ViewDrill:
+  'drill' mode='collapse';
+
+ViewCollapsed:
+  'collapsed' targets+=Ref (',' targets+=Ref)*;
+
+ViewExpanded:
+  'expanded' targets+=Ref (',' targets+=Ref)*;
+
+ViewLink:
+  'link' node=Ref '->' view=Id;
 
 // Overrides de presentacion de un Nodo en esta Vista; nunca tocan el Modelo.
 // `pin x,y` es en coordenadas del lienzo post-layout; `color` es un nombre de Paleta.
@@ -187,7 +200,8 @@ Attribute:
 Id returns string:
   IdTerminal |
   'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order' |
-  'theme' | 'extends' | 'palette' | 'fonts' | 'tokens';
+  'theme' | 'extends' | 'palette' | 'fonts' | 'tokens' |
+  'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link';
 
 // -------------------------
 // Comments
