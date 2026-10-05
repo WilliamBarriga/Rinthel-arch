@@ -149,6 +149,14 @@ export const temaSchema = z.object({
 
 export type Tema = z.infer<typeof temaSchema>;
 
+const TAMANO_DE_TEXTO_POR_DEFECTO = 14;
+
+/** Tamano de texto en px del Tema (`tokens.fontSize`, p. ej. `"16px"`); 14 si falta o es invalido. */
+export function tamanoDeTexto(tema: Tema): number {
+  const declarado = Number.parseFloat(tema.tokens['fontSize'] ?? '');
+  return Number.isFinite(declarado) && declarado > 0 ? declarado : TAMANO_DE_TEXTO_POR_DEFECTO;
+}
+
 /** Tema por defecto del nucleo: siempre disponible, otros Temas pueden extenderlo. */
 export const TEMA_NEUTRO: Tema = {
   name: 'neutral',

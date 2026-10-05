@@ -185,3 +185,32 @@ describe('Vistas en el esquema', () => {
     expect(() => fuente({ type: 'secuencia' })).toThrow();
   });
 });
+
+describe('resolveView: label y color de cada Nodo', () => {
+  const conTipos = (vista: Record<string, unknown>) =>
+    fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio', color: 'blue' }, { name: 'base' }] },
+      model: {
+        nodes: [
+          { id: 'a', type: 'servicio', title: 'Servicio A', description: '', children: [] },
+          { id: 'b', type: 'base', title: 'Base B', description: '', children: [] },
+        ],
+      },
+      views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], ...vista }],
+    });
+
+  it('el label es el titulo y el color es el del Tipo de nodo, si lo tiene', () => {
+    const [a, b] = resolveView(conTipos({}), 'v')!.nodes;
+
+    expect(a).toMatchObject({ label: 'Servicio A', color: 'blue' });
+    expect(b).toMatchObject({ label: 'Base B' });
+    expect(b).not.toHaveProperty('color');
+  });
+
+  it('el override de la Vista gana al titulo y al color del Tipo', () => {
+    const [a, b] = resolveView(conTipos({ overrides: [{ node: 'a', label: 'Entrada', color: 'red' }, { node: 'b', color: 'green' }] }), 'v')!.nodes;
+
+    expect(a).toMatchObject({ label: 'Entrada', color: 'red' });
+    expect(b).toMatchObject({ label: 'Base B', color: 'green' });
+  });
+});

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, resolveView } from 'canonico';
+import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { Tema, VistaResuelta } from 'canonico';
 import { claveDeLayout, layoutView } from 'layout';
+import type { CajaDeNodo, Geometria } from 'layout';
 
 const nodo = (id: string, children: unknown[] = []) => ({
   id,
@@ -105,6 +106,63 @@ describe('layoutView', () => {
     const conLabel = await layoutView(largo, TEMA_NEUTRO);
 
     expect(conLabel.nodes['c']!.width).toBeGreaterThan(base.nodes['c']!.width);
+  });
+});
+
+/** Caja de un Nodo en coordenadas del lienzo: suma las posiciones de sus Grupos. */
+function absoluta(geometria: Geometria, vistaDe: VistaResuelta, id: string): CajaDeNodo {
+  const padre = vistaDe.nodes.find((nodo) => nodo.children.some((hijo) => hijo.id === id));
+  const caja = geometria.nodes[id]!;
+  if (padre === undefined) return caja;
+  const marco = absoluta(geometria, vistaDe, padre.id);
+  return { ...caja, x: caja.x + marco.x, y: caja.y + marco.y };
+}
+
+const sobreElBorde = (punto: { x: number; y: number }, caja: CajaDeNodo): boolean => {
+  const dentro = punto.x >= caja.x - 1 && punto.x <= caja.x + caja.width + 1 && punto.y >= caja.y - 1 && punto.y <= caja.y + caja.height + 1;
+  const enElBorde = [caja.x, caja.x + caja.width].some((x) => Math.abs(punto.x - x) <= 1) || [caja.y, caja.y + caja.height].some((y) => Math.abs(punto.y - y) <= 1);
+  return dentro && enElBorde;
+};
+
+describe('layoutView: rutas de Aristas', () => {
+  it('cada Arista tiene una ruta ortogonal que une los bordes de sus extremos', async () => {
+    const v = vista();
+    const geometria = await layoutView(v, TEMA_NEUTRO);
+
+    expect(Object.keys(geometria.edges).sort()).toEqual(v.edges.map(idDeArista).sort());
+    for (const arista of v.edges) {
+      const { points } = geometria.edges[idDeArista(arista)]!;
+      expect(points.length).toBeGreaterThanOrEqual(2);
+      expect(sobreElBorde(points[0]!, absoluta(geometria, v, arista.from.node))).toBe(true);
+      expect(sobreElBorde(points.at(-1)!, absoluta(geometria, v, arista.to.node))).toBe(true);
+      points.slice(1).forEach((punto, i) => {
+        const previo = points[i]!;
+        expect(previo.x === punto.x || previo.y === punto.y).toBe(true);
+      });
+    }
+  });
+
+  it('las Aristas entre Grupos distintos se enrutan (a.a2 -> b.b1)', async () => {
+    const v = vista();
+    const { edges } = await layoutView(v, TEMA_NEUTRO);
+
+    expect(edges[idDeArista({ from: { node: 'a.a2' }, to: { node: 'b.b1' } })]!.points.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('las Aristas elevadas de un Grupo colapsado se enrutan sobre su borde', async () => {
+    const v = vista({}, { collapsed: ['a'] });
+    const geometria = await layoutView(v, TEMA_NEUTRO);
+    const elevada = v.edges.find((arista) => arista.from.node === 'a' && arista.to.node === 'b.b1')!;
+    const { points } = geometria.edges[idDeArista(elevada)]!;
+
+    expect(sobreElBorde(points[0]!, absoluta(geometria, v, 'a'))).toBe(true);
+  });
+
+  it('las rutas son deterministas', async () => {
+    const primera = await layoutView(vista(), TEMA_NEUTRO);
+    const segunda = await layoutView(vista(), TEMA_NEUTRO);
+
+    expect(segunda.edges).toEqual(primera.edges);
   });
 });
 
