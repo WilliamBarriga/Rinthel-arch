@@ -2,7 +2,9 @@
  * `canonico` — esquema, validacion y resolucion de la Fuente canonica.
  *
  * Invariantes: ids cualificados (`a.b.c`) definen jerarquia del Modelo (sin
- * hijos huerfanos); `type` siempre declarado en `specification.nodeTypes`;
+ * hijos huerfanos); extremos de Arista siempre existentes, y `nodo#atributo`
+ * solo con un Atributo declarado en ese Nodo (distinto de un Nodo hijo);
+ * `type` siempre declarado en `specification.nodeTypes`;
  * colores son nombres de Paleta, nunca valores hex (ADR 0006).
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
  * excepcion solo para fallos de uso o internos.
@@ -11,9 +13,17 @@
  */
 export const paquete = 'canonico';
 
-export { fuenteCanonicaSchema, idDeNodoSchema, nodoSchema, tipoDeNodoSchema } from './esquema';
+export {
+  fuenteCanonicaSchema,
+  idDeNodoSchema,
+  nodoSchema,
+  tipoDeNodoSchema,
+} from './esquema';
 export type {
+  Arista,
+  Atributo,
   CatalogoDeTiposDeNodo,
+  Extremo,
   FuenteCanonica,
   Modelo,
   Nodo,

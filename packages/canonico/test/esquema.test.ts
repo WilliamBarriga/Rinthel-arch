@@ -202,3 +202,40 @@ describe('fuente canonica: esquema', () => {
     expect(resultado.success).toBe(true);
   });
 });
+
+describe('fuente canonica: Aristas y Atributos', () => {
+  const base = (model: object) => ({
+    specification: { nodeTypes: [{ name: 'tabla' }] },
+    model,
+  });
+  const nodo = (id: string, attributes: object[] = []) => ({ id, type: 'tabla', title: id, attributes });
+
+  it('acepta Aristas con extremos Nodo y Nodo#Atributo y cardinalidad', () => {
+    const resultado = fuenteCanonicaSchema.safeParse(
+      base({
+        nodes: [nodo('a', [{ name: 'id', type: 'uuid' }]), nodo('b')],
+        edges: [{ from: { node: 'b' }, to: { node: 'a', attribute: 'id' }, toCardinality: '1' }],
+      }),
+    );
+    expect(resultado.success).toBe(true);
+  });
+
+  it('rechaza una Arista cuyo extremo no existe, apuntando al extremo', () => {
+    const resultado = fuenteCanonicaSchema.safeParse(
+      base({ nodes: [nodo('a')], edges: [{ from: { node: 'a' }, to: { node: 'nada' } }] }),
+    );
+    expect(resultado.success).toBe(false);
+    expect(resultado.error?.issues[0]?.path).toEqual(['model', 'edges', 0, 'to', 'node']);
+  });
+
+  it('rechaza una Arista a un Atributo que el Nodo no tiene', () => {
+    const resultado = fuenteCanonicaSchema.safeParse(
+      base({
+        nodes: [nodo('a'), nodo('b')],
+        edges: [{ from: { node: 'a' }, to: { node: 'b', attribute: 'x' } }],
+      }),
+    );
+    expect(resultado.success).toBe(false);
+    expect(resultado.error?.issues[0]?.path).toEqual(['model', 'edges', 0, 'to', 'attribute']);
+  });
+});
