@@ -4,7 +4,7 @@
  */
 
 /** Distancia de edicion de Levenshtein. */
-function distancia(a: string, b: string): number {
+function distanciaLevenshtein(a: string, b: string): number {
   let anterior = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
     const actual = [i];
@@ -28,5 +28,5 @@ function distancia(a: string, b: string): number {
  */
 export function candidatosCercanos(escrito: string, existentes: Iterable<string>): string[] {
   const maximo = Math.max(1, Math.floor(escrito.length / 3));
-  return [...existentes].filter((nombre) => distancia(escrito, nombre) <= maximo).sort();
+  return [...existentes].filter((nombre) => distanciaLevenshtein(escrito, nombre) <= maximo).sort();
 }

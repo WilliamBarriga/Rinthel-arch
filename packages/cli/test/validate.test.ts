@@ -65,6 +65,18 @@ describe('validate', () => {
     });
   });
 
+  it('un Atributo inexistente en una Arista sale con E_UNKNOWN_ATTRIBUTE por validate', async () => {
+    const resultado = await run(
+      ['validate', '--workspace', join(fixtures, 'atributo-inexistente'), '--json'],
+    );
+
+    expect(resultado.exitCode).toBe(1);
+    const salida = salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
+    expect(salida.issues.map((i) => [i.line, i.column, i.code])).toEqual([
+      [9, 23, 'E_UNKNOWN_ATTRIBUTE'],
+    ]);
+  });
+
   it('--max-issues corta la lista pero summary cuenta todo y marca truncated', async () => {
     const resultado = await run([
       'validate', '--workspace', join(fixtures, 'con-errores'), '--json', '--max-issues', '1',

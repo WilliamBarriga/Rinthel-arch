@@ -3,7 +3,7 @@
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
 import { CODIGOS, fuenteCanonicaSchema } from 'canonico';
-import type { Arista, Extremo, FuenteCanonica, Issue, Nodo, TipoDeNodo } from 'canonico';
+import type { Arista, Extremo, FuenteCanonica, Issue, Nodo, TextRange, TipoDeNodo } from 'canonico';
 import {
   EmptyFileSystem,
   GrammarUtils,
@@ -11,7 +11,7 @@ import {
   createDefaultSharedCoreModule,
   inject,
 } from 'langium';
-import type { LangiumCoreServices, ParseResult } from 'langium';
+import type { AstNode, LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
 import type { Documento, Edge, Element, Endpoint } from './generated/ast';
@@ -106,13 +106,11 @@ function compilarElemento(
   issues: Issue[],
 ): Nodo {
   if (!declarados.has(elemento.type)) {
-    const rango = GrammarUtils.findNodeForProperty(elemento.$cstNode, 'type')?.range;
     issues.push({
       code: CODIGOS.E_UNKNOWN_NODE_TYPE,
       severity: 'error',
       file: archivo,
-      line: (rango?.start.line ?? 0) + 1,
-      column: (rango?.start.character ?? 0) + 1,
+      ...rangoDe(elemento, 'type').start,
       message: `Tipo de nodo '${elemento.type}' no declarado en specification`,
     });
   }
@@ -129,19 +127,21 @@ function compilarElemento(
   };
 }
 
+// Las Aristas se validan aqui (con posicion y `fix`) y, como red estructural,
+// en el esquema de `canonico`; no es duplicacion evitable: el esquema no ve el texto.
+// `E_DANGLING_EDGE` no lleva `related`: no hay un segundo sitio que senalar.
 function compilarArista(
   arista: Edge,
   archivo: string,
   atributosPorNodo: ReadonlyMap<string, readonly string[]>,
   issues: Issue[],
 ): Arista {
-  const compilada: Arista = {
+  return {
     from: compilarExtremo(arista.from, archivo, atributosPorNodo, issues),
     to: compilarExtremo(arista.to, archivo, atributosPorNodo, issues),
+    ...(arista.fromCardinality !== undefined && { fromCardinality: arista.fromCardinality }),
+    ...(arista.toCardinality !== undefined && { toCardinality: arista.toCardinality }),
   };
-  if (arista.fromCardinality !== undefined) compilada.fromCardinality = arista.fromCardinality;
-  if (arista.toCardinality !== undefined) compilada.toCardinality = arista.toCardinality;
-  return compilada;
 }
 
 /** Compila un extremo; un Nodo inexistente o un Atributo inexistente es un issue. */
@@ -151,8 +151,10 @@ function compilarExtremo(
   atributosPorNodo: ReadonlyMap<string, readonly string[]>,
   issues: Issue[],
 ): Extremo {
-  const compilado: Extremo = { node: extremo.node };
-  if (extremo.attribute !== undefined) compilado.attribute = extremo.attribute;
+  const compilado: Extremo = {
+    node: extremo.node,
+    ...(extremo.attribute !== undefined && { attribute: extremo.attribute }),
+  };
 
   const atributos = atributosPorNodo.get(extremo.node);
   if (atributos === undefined) {
@@ -184,18 +186,25 @@ function issueConSugerencia(
   propiedad: 'node' | 'attribute',
   existentes: Iterable<string>,
 ): Issue {
-  const rango = GrammarUtils.findNodeForProperty(extremo.$cstNode, propiedad)?.range;
-  const inicio = { line: (rango?.start.line ?? 0) + 1, column: (rango?.start.character ?? 0) + 1 };
-  const final = { line: (rango?.end.line ?? 0) + 1, column: (rango?.end.character ?? 0) + 1 };
+  const { start: inicio, end: fin } = rangoDe(extremo, propiedad);
   const issue: Issue = { ...base, severity: 'error', file: archivo, ...inicio };
   const candidatos = candidatosCercanos(extremo[propiedad] as string, existentes);
   const [unico] = candidatos;
   if (candidatos.length === 1 && unico !== undefined) {
-    issue.fix = { file: archivo, range: { start: inicio, end: final }, replacement: unico };
+    issue.fix = { file: archivo, range: { start: inicio, end: fin }, replacement: unico };
   } else if (candidatos.length > 1) {
     issue.hint = `Candidatos: ${candidatos.join(', ')}`;
   }
   return issue;
+}
+
+/** Rango 1-based (fin excluido) de una propiedad del AST; `1:1` si el CST no lo conoce. */
+function rangoDe(nodo: AstNode, propiedad: string): TextRange {
+  const rango = GrammarUtils.findNodeForProperty(nodo.$cstNode, propiedad)?.range;
+  return {
+    start: { line: (rango?.start.line ?? 0) + 1, column: (rango?.start.character ?? 0) + 1 },
+    end: { line: (rango?.end.line ?? 0) + 1, column: (rango?.end.character ?? 0) + 1 },
+  };
 }
 
 /** Nombres de Atributo (en orden) de cada Nodo, a cualquier profundidad. */

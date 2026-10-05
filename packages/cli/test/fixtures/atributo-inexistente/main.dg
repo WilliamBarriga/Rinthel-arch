@@ -1,0 +1,10 @@
+specification {
+  node tabla
+}
+
+model {
+  tabla usuarios { attrs { id: uuid } }
+  tabla pedidos { attrs { usuario_id: uuid } }
+
+  pedidos -> usuarios#nombre
+}
