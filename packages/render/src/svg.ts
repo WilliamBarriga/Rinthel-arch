@@ -75,6 +75,10 @@ function flecha(color: string): string {
 
 /** Margen entre la cardinalidad y el punto del extremo. */
 const SEPARACION_CARDINALIDAD = 8;
+/** Cuanto se sube la cardinalidad de un segmento horizontal para no pisar la linea. */
+const ELEVACION_CARDINALIDAD = 4;
+/** Tamano de la cardinalidad respecto al del texto del Tema. */
+const ESCALA_CARDINALIDAD = 0.8;
 
 /**
  * Arista como ruta ortogonal con flecha en el destino. Una Arista sin ruta en la
@@ -100,9 +104,9 @@ function dibujarArista(arista: AristaResuelta, { geometry, theme, fontSize }: Co
     const dx = Math.sign(vecino.x - extremo.x);
     const dy = Math.sign(vecino.y - extremo.y);
     const x = extremo.x + dx * SEPARACION_CARDINALIDAD;
-    const y = extremo.y + dy * SEPARACION_CARDINALIDAD - (dy === 0 ? 4 : 0);
+    const y = extremo.y + dy * SEPARACION_CARDINALIDAD - (dy === 0 ? ELEVACION_CARDINALIDAD : 0);
     lineas.push(
-      `<text data-cardinality="${escaparXml(id)}:${lado}" x="${numEstable(x)}" y="${numEstable(y)}" font-family="${escaparXml(theme.fonts['body'] ?? 'sans-serif')}" font-size="${numEstable(fontSize * 0.8)}" fill="${escaparXml(theme.tokens['foreground'] ?? 'currentColor')}">${escaparXml(texto)}</text>`,
+      `<text data-cardinality="${escaparXml(id)}:${lado}" x="${numEstable(x)}" y="${numEstable(y)}" font-family="${escaparXml(theme.fonts['body'] ?? 'sans-serif')}" font-size="${numEstable(fontSize * ESCALA_CARDINALIDAD)}" fill="${escaparXml(theme.tokens['foreground'] ?? 'currentColor')}">${escaparXml(texto)}</text>`,
     );
   }
   return lineas.join('\n');
