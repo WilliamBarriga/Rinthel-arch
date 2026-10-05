@@ -93,10 +93,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
       if (nodo !== undefined) nodos.push(nodo);
     }
   }
-  // Las extensiones van tras todos los Nodos: un `extend` puede estar en un archivo anterior al Nodo.
-  for (const { archivo, extensiones } of raices) {
-    for (const extension of extensiones) compilarExtension(extension, archivo, contexto);
-  }
+  aplicarExtensiones(raices.flatMap(({ archivo, extensiones }) => extensiones.map((extension) => ({ archivo, extension }))), contexto);
 
   const atributosPorNodo = new Map<string, string[]>();
   recogerAtributos(nodos, atributosPorNodo);
@@ -181,10 +178,22 @@ function compilarHijos(elementos: readonly Element[], prefijo: string, archivo: 
   return elementos.flatMap((hijo) => compilarElemento(hijo, prefijo, archivo, contexto) ?? []);
 }
 
-/** Anade al Nodo `target` los hijos, Atributos y source del `extend`. */
-function compilarExtension(extension: Extend, archivo: string, contexto: Contexto): void {
-  const objetivo = contexto.registro.get(extension.target);
-  if (objetivo === undefined) {
+/**
+ * Aplica los `extend` en pasadas: un `extend` puede apuntar a un Nodo que crea otro
+ * `extend` (de cualquier archivo), asi que se repite mientras alguna pasada avance.
+ * Los que quedan sin objetivo son `E_UNKNOWN_EXTEND_TARGET`.
+ */
+function aplicarExtensiones(
+  extensiones: readonly { archivo: string; extension: Extend }[],
+  contexto: Contexto,
+): void {
+  let pendientes = extensiones;
+  while (pendientes.length > 0) {
+    const siguientes = pendientes.filter(({ archivo, extension }) => !compilarExtension(extension, archivo, contexto));
+    if (siguientes.length === pendientes.length) break;
+    pendientes = siguientes;
+  }
+  for (const { archivo, extension } of pendientes) {
     contexto.issues.push({
       code: CODIGOS.E_UNKNOWN_EXTEND_TARGET,
       severity: 'error',
@@ -192,12 +201,18 @@ function compilarExtension(extension: Extend, archivo: string, contexto: Context
       ...rangoDe(extension, 'target').start,
       message: `'extend' sobre el Nodo '${extension.target}', que no existe en el Modelo`,
     });
-    return;
   }
+}
+
+/** Anade al Nodo `target` los hijos, Atributos y source del `extend`; false si el Nodo aun no existe. */
+function compilarExtension(extension: Extend, archivo: string, contexto: Contexto): boolean {
+  const objetivo = contexto.registro.get(extension.target);
+  if (objetivo === undefined) return false;
   const { nodo } = objetivo;
   nodo.attributes.push(...atributosDe(extension.attrs));
   nodo.source.push(...referenciasDe(extension.sources));
   nodo.children.push(...compilarHijos(extension.elements, nodo.id, archivo, contexto));
+  return true;
 }
 
 function atributosDe(bloques: readonly Attrs[]): Atributo[] {

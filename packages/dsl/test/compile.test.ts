@@ -481,6 +481,14 @@ describe('compile: Workspace multiarchivo', () => {
     expect(canonico?.model.nodes[0]?.children.map((n) => n.id)).toEqual(['api.cache']);
   });
 
+  it('un extend puede apuntar a un Nodo creado por otro extend, en cualquier orden de archivos', () => {
+    const base = { 'a.dg': 'model { extend api.cache { servicio x } }', 'z.dg': 'specification { node servicio }  model { servicio api  extend api { servicio cache } }' };
+    const { canonico, issues } = compile(base);
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.nodes[0]?.children[0]?.children.map((n) => n.id)).toEqual(['api.cache.x']);
+  });
+
   it('un Nodo duplicado sin extend es E_DUPLICATE_NODE con related al original', () => {
     const { issues, canonico } = compile({
       'a.dg': 'specification { node servicio }\nmodel {\n  servicio api\n}',
