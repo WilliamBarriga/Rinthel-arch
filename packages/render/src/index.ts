@@ -15,6 +15,9 @@
  * - Cada Arista es una ruta ortogonal con flecha en el destino y cardinalidad
  *   junto a cada puerto; sin ruta en la geometria, se omite.
  *
+ * `renderToSvgString` acepta ademas `fonts` (`FuenteIncrustada[]`: familia, MIME y
+ * base64) y las incrusta como `@font-face` con data URI, sin recursos externos.
+ *
  * Props de `Diagram` ademas de las anteriores: `visibility(id) -> 0..1` (opacidad
  * de Nodos, por id, y de Aristas, por `idDeArista`; sin ella, todo 1; `revealAt`
  * de `canonico` la produce), `camera` (viewBox controlado), `onSelect(id)` y
@@ -36,4 +39,4 @@ export { Diagram } from './diagram';
 export type { DiagramProps } from './diagram';
 export type { Camara } from './escena';
 export { renderToSvgString } from './svg';
-export type { EntradaDeRender } from './svg';
+export type { EntradaDeRender, FuenteIncrustada } from './svg';

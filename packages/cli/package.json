@@ -22,7 +22,8 @@
   "dependencies": {
     "canonico": "workspace:*",
     "dsl": "workspace:*",
-    "layout": "workspace:*"
+    "layout": "workspace:*",
+    "render": "workspace:*"
   },
   "bin": {
     "diagrams": "./dist/bin.js"

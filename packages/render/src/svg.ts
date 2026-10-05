@@ -5,12 +5,31 @@
 import { construirEscena } from './escena';
 import type { Elemento, EntradaDeEscena } from './escena';
 
+/** Fuente que el export lleva dentro: nombre de familia y archivo en base64. */
+export interface FuenteIncrustada {
+  family: string;
+  /** Tipo MIME del archivo, p. ej. `font/woff2`. */
+  mime: string;
+  /** Contenido del archivo de fuente en base64. */
+  data: string;
+}
+
 /** Lo que se necesita para exportar una Vista: sin interaccion (`onSelect`, `onToggle`). */
-export type EntradaDeRender = Omit<EntradaDeEscena, 'onSelect' | 'onToggle'>;
+export type EntradaDeRender = Omit<EntradaDeEscena, 'onSelect' | 'onToggle'> & {
+  /** Fuentes del Tema a incrustar como `@font-face` con data URI (SVG autocontenido). */
+  fonts?: readonly FuenteIncrustada[];
+};
 
 /** Dibuja la escena de la Vista (ver `construirEscena`) como cadena SVG. */
-export function renderToSvgString(entrada: EntradaDeRender): string {
-  return aCadena(construirEscena(entrada));
+export function renderToSvgString({ fonts = [], ...entrada }: EntradaDeRender): string {
+  const escena = construirEscena(entrada);
+  if (fonts.length === 0) return aCadena(escena);
+  const estilo: Elemento = { tag: 'style', attrs: {}, hijos: [fonts.map(fontFace).join('\n')] };
+  return aCadena({ ...escena, hijos: [estilo, ...(escena.hijos ?? [])] });
+}
+
+function fontFace({ family, mime, data }: FuenteIncrustada): string {
+  return `@font-face{font-family:'${family.replace(/['\\]/g, '\\$&')}';src:url(data:${mime};base64,${data})}`;
 }
 
 /** Un elemento por linea; uno solo con texto, en una. */

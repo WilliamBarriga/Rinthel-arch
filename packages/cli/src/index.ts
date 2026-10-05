@@ -21,18 +21,25 @@
  * fusiona antes del Workspace (gana el Workspace en rutas repetidas). Con errores
  * (o avisos en `--strict`) sale 1 y no escribe; los Pins solapados salen como
  * `W_OVERLAPPING_PINS` con posicion y `related`. `--theme` inexistente: codigo 2.
+ * `export --workspace <ruta>`: un SVG estatico por Vista en `.diagrams/svg/<vista>.svg`
+ * (reemplaza esa carpeta), desde la salida de `build` (sin ella: codigo 2). Mismos
+ * bytes para la misma salida; el SVG no referencia recursos externos: las fuentes
+ * del Tema que el Workspace trae como archivo (`<Familia>.woff2|woff|ttf|otf`)
+ * van incrustadas; los iconos son los del Workspace y los genericos.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> render -> shell / cli`.
  */
-import { salidaDeValidateSchema } from 'canonico';
+import { fuenteCanonicaSchema, salidaDeValidateSchema } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
 import { parseArgs } from 'node:util';
 
 import { construirBuild } from './build';
+import { exportarSvg } from './export';
+import type { GeometriaCacheada } from './export';
 import { construirSalida, textoLegible } from './validate';
-import { escribirSalida, leerWorkspace } from './workspace';
+import { escribirSalida, leerFuentes, leerSalida, leerWorkspace } from './workspace';
 
 export const paquete = 'cli';
 
@@ -46,7 +53,11 @@ export interface ResultadoDeEjecucion {
 export interface Dependencias {
   compilar?: (workspace: ArchivosDelWorkspace) => ResultadoDeCompilacion;
   leer?: (raiz: string) => ArchivosDelWorkspace;
-  escribir?: (raiz: string, archivos: Readonly<Record<string, string>>) => void;
+  escribir?: (raiz: string, archivos: Readonly<Record<string, string>>, subcarpeta?: string) => void;
+  /** Salida de `build` (`.diagrams/`), ruta relativa -> texto. */
+  leerSalida?: (raiz: string) => Record<string, string>;
+  /** Archivos de fuente del Workspace, ruta relativa -> base64. */
+  leerFuentes?: (raiz: string) => Record<string, string>;
 }
 
 const MAX_ISSUES_POR_DEFECTO = 100;
@@ -77,11 +88,12 @@ export async function run(
   dependencias: Dependencias = {},
 ): Promise<ResultadoDeEjecucion> {
   const [comando, ...resto] = argv;
-  if (comando !== 'validate' && comando !== 'build') {
+  if (comando !== 'validate' && comando !== 'build' && comando !== 'export') {
     return uso(
-      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build> --workspace <ruta>`,
+      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export> --workspace <ruta>`,
     );
   }
+  if (comando === 'export') return exportar(resto, dependencias);
 
   let opciones: OpcionesParseadas;
   try {
@@ -94,6 +106,42 @@ export async function run(
   if (!Number.isInteger(maxIssues) || maxIssues < 1) return uso('--max-issues debe ser un entero >= 1');
 
   return ejecutar(comando, opciones, maxIssues, dependencias);
+}
+
+async function exportar(
+  args: readonly string[],
+  { leer = leerWorkspace, leerSalida: leerCache = leerSalida, leerFuentes: leerLetras = leerFuentes, escribir = escribirSalida }: Dependencias,
+): Promise<ResultadoDeEjecucion> {
+  let raiz: string | undefined;
+  try {
+    raiz = parseArgs({ args: [...args], options: { workspace: { type: 'string' } }, strict: true }).values.workspace;
+  } catch (error) {
+    return uso((error as Error).message);
+  }
+  if (raiz === undefined) return uso('Falta --workspace <ruta>');
+
+  let archivos: Record<string, string>;
+  try {
+    const cache = leerCache(raiz);
+    const fuente = fuenteCanonicaSchema.parse(JSON.parse(cache['canonico.json'] ?? 'null'));
+    const geometrias = Object.fromEntries(
+      Object.entries(cache)
+        .filter(([ruta]) => ruta.startsWith('geometria/'))
+        .map(([, texto]) => {
+          const cacheada = JSON.parse(texto) as GeometriaCacheada;
+          return [cacheada.view, cacheada] as const;
+        }),
+    );
+    archivos = exportarSvg(fuente, geometrias, leer(raiz), leerLetras(raiz));
+  } catch (error) {
+    return uso(`No hay una salida de build utilizable en '${raiz}/.diagrams' (ejecuta 'build' antes): ${(error as Error).message}`);
+  }
+  try {
+    escribir(raiz, archivos, 'svg');
+  } catch (error) {
+    return uso(`No se pudo escribir .diagrams/svg/: ${(error as Error).message}`);
+  }
+  return { exitCode: 0, stdout: `${Object.keys(archivos).length} SVG escritos en .diagrams/svg/\n`, stderr: '' };
 }
 
 async function ejecutar(

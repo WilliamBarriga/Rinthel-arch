@@ -30,14 +30,51 @@ export function leerWorkspace(raiz: string): ArchivosDelWorkspace {
 }
 
 const CARPETA_DE_SALIDA = '.diagrams';
+const FUENTES = ['.woff2', '.woff', '.ttf', '.otf'];
 
 /**
- * Reemplaza `<raiz>/.diagrams/` por `archivos` (ruta relativa con `/` -> texto):
- * la salida es derivada, asi que nunca quedan restos de una Vista que ya no existe.
+ * Archivos de fuente del Workspace (mismas reglas de recorrido que `leerWorkspace`):
+ * ruta relativa con `/` -> contenido en base64.
  */
-export function escribirSalida(raiz: string, archivos: Readonly<Record<string, string>>): void {
+export function leerFuentes(raiz: string): Record<string, string> {
+  const fuentes: Record<string, string> = {};
+  const recorrer = (carpeta: string): void => {
+    for (const entrada of readdirSync(carpeta, { withFileTypes: true })) {
+      if (entrada.name.startsWith('.') || CARPETAS_IGNORADAS.has(entrada.name)) continue;
+      const ruta = join(carpeta, entrada.name);
+      if (entrada.isDirectory()) recorrer(ruta);
+      else if (FUENTES.some((extension) => entrada.name.endsWith(extension))) {
+        fuentes[ruta.slice(raiz.length + 1).split(sep).join('/')] = readFileSync(ruta).toString('base64');
+      }
+    }
+  };
+  recorrer(raiz);
+  return fuentes;
+}
+
+/** Salida de `build` (todo `<raiz>/.diagrams/`, ruta relativa con `/` -> texto); lanza si no existe. */
+export function leerSalida(raiz: string): Record<string, string> {
+  const base = join(raiz, CARPETA_DE_SALIDA);
+  const archivos: Record<string, string> = {};
+  const recorrer = (carpeta: string): void => {
+    for (const entrada of readdirSync(carpeta, { withFileTypes: true })) {
+      const ruta = join(carpeta, entrada.name);
+      if (entrada.isDirectory()) recorrer(ruta);
+      else archivos[ruta.slice(base.length + 1).split(sep).join('/')] = readFileSync(ruta, 'utf8');
+    }
+  };
+  recorrer(base);
+  return archivos;
+}
+
+/**
+ * Reemplaza `<raiz>/.diagrams/<subcarpeta>` (por defecto, todo `.diagrams/`) por
+ * `archivos` (ruta relativa a `.diagrams/` con `/` -> texto): la salida es
+ * derivada, asi que nunca quedan restos de una Vista que ya no existe.
+ */
+export function escribirSalida(raiz: string, archivos: Readonly<Record<string, string>>, subcarpeta = ''): void {
   const destino = join(raiz, CARPETA_DE_SALIDA);
-  rmSync(destino, { recursive: true, force: true });
+  rmSync(join(destino, subcarpeta), { recursive: true, force: true });
   for (const [ruta, texto] of Object.entries(archivos)) {
     const archivo = join(destino, ...ruta.split('/'));
     mkdirSync(dirname(archivo), { recursive: true });
