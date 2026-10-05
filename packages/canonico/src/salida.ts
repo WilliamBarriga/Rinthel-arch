@@ -49,3 +49,11 @@ export const salidaDeValidateSchema = z.object({
 });
 
 export type SalidaDeValidate = z.infer<typeof salidaDeValidateSchema>;
+
+/**
+ * El contrato de la salida como JSON Schema, derivado del esquema Zod: la fuente
+ * del skill generado para agentes (ADR 0008).
+ */
+export function salidaDeValidateJsonSchema(): Record<string, unknown> {
+  return z.toJSONSchema(salidaDeValidateSchema);
+}

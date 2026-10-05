@@ -20,6 +20,7 @@
     "vitest": "^3.2.7"
   },
   "dependencies": {
+    "@resvg/resvg-js": "2.6.2",
     "canonico": "workspace:*",
     "dsl": "workspace:*",
     "layout": "workspace:*",

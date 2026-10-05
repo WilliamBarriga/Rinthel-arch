@@ -1,53 +1,26 @@
 import { combineIconProviders, genericIcons, resolveView, workspaceIcons } from 'canonico';
 import type { FuenteCanonica, Tema } from 'canonico';
 import { renderToSvgString } from 'render';
-import type { FuenteIncrustada } from 'render';
 
 import type { GeometriaCacheada, SalidaDeBuild } from './build';
+import { fuentesDelTema } from './fuentes';
+import { rasterizar } from './png';
 
-/** Formatos de fuente que el Workspace puede traer, de mayor a menor preferencia. */
-const FORMATOS: readonly [extension: string, mime: string][] = [
-  ['woff2', 'font/woff2'],
-  ['woff', 'font/woff'],
-  ['ttf', 'font/ttf'],
-  ['otf', 'font/otf'],
-];
-
-/** Familias de un valor CSS `font-family` (`"Inter, sans-serif"` -> `Inter`, `sans-serif`). */
-function familiasDe(valor: string): string[] {
-  return valor.split(',').map((familia) => familia.trim().replace(/^["']|["']$/g, '')).filter((familia) => familia !== '');
+interface VistaDibujada {
+  id: string;
+  theme: Tema;
+  svg: string;
 }
 
-/**
- * Fuentes del Tema que el Workspace aporta como archivo: `<Familia>.woff2` (o
- * `woff`, `ttf`, `otf`) en cualquier carpeta, con el contenido en base64. Una
- * familia sin archivo (`sans-serif`, una fuente del sistema) no se incrusta.
- */
-export function fuentesDelTema(tema: Tema, archivos: Readonly<Record<string, string>>): FuenteIncrustada[] {
-  const rutas = Object.keys(archivos).sort();
-  const familias = [...new Set(Object.values(tema.fonts).flatMap(familiasDe))];
-  return familias.flatMap((family) => {
-    for (const [extension, mime] of FORMATOS) {
-      const ruta = rutas.find((candidata) => candidata.split('/').pop() === `${family}.${extension}`);
-      if (ruta !== undefined) return [{ family, mime, data: archivos[ruta] as string }];
-    }
-    return [];
-  });
-}
-
-/**
- * Un SVG por Vista (`svg/<vista>.svg`) a partir de la salida de `build`: la Fuente
- * canonica y la geometria cacheada. Sin geometria cacheada para una Vista, lanza.
- */
-export function exportarSvg(
+/** Dibuja cada Vista desde la salida de `build`. Sin geometria cacheada para una Vista, lanza. */
+function dibujarVistas(
   fuente: FuenteCanonica,
   geometrias: Readonly<Record<string, GeometriaCacheada>>,
   workspace: Readonly<Record<string, string>>,
   fuentes: Readonly<Record<string, string>>,
-): SalidaDeBuild {
+): VistaDibujada[] {
   const icons = combineIconProviders(workspaceIcons(workspace), genericIcons());
-  const salida: SalidaDeBuild = {};
-  for (const vista of fuente.views) {
+  return fuente.views.map((vista) => {
     const cacheada = geometrias[vista.id];
     const resuelta = resolveView(fuente, vista.id);
     if (cacheada === undefined || resuelta === undefined) {
@@ -56,7 +29,7 @@ export function exportarSvg(
     const theme = fuente.themes.find(({ name }) => name === cacheada.theme);
     if (theme === undefined) throw new Error(`El Tema '${cacheada.theme}' no esta en la Fuente canonica`);
     const { geometry } = cacheada;
-    salida[`svg/${vista.id}.svg`] = `${renderToSvgString({
+    const svg = renderToSvgString({
       view: resuelta,
       geometry,
       theme,
@@ -64,7 +37,34 @@ export function exportarSvg(
       width: geometry.width,
       height: geometry.height,
       fonts: fuentesDelTema(theme, fuentes),
-    })}\n`;
-  }
-  return salida;
+    });
+    return { id: vista.id, theme, svg };
+  });
+}
+
+/** Un SVG por Vista (`svg/<vista>.svg`) a partir de la salida de `build`. */
+export function exportarSvg(
+  fuente: FuenteCanonica,
+  geometrias: Readonly<Record<string, GeometriaCacheada>>,
+  workspace: Readonly<Record<string, string>>,
+  fuentes: Readonly<Record<string, string>>,
+): SalidaDeBuild {
+  return Object.fromEntries(
+    dibujarVistas(fuente, geometrias, workspace, fuentes).map(({ id, svg }) => [`svg/${id}.svg`, `${svg}\n`]),
+  );
+}
+
+/** Un PNG por Vista (`png/<vista>.png`): el mismo SVG, rasterizado con las fuentes del Tema. */
+export function exportarPng(
+  fuente: FuenteCanonica,
+  geometrias: Readonly<Record<string, GeometriaCacheada>>,
+  workspace: Readonly<Record<string, string>>,
+  fuentes: Readonly<Record<string, string>>,
+): Record<string, Uint8Array> {
+  return Object.fromEntries(
+    dibujarVistas(fuente, geometrias, workspace, fuentes).map(({ id, svg, theme }) => [
+      `png/${id}.png`,
+      rasterizar(svg, theme, fuentes),
+    ]),
+  );
 }

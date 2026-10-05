@@ -1,6 +1,6 @@
 /** Adaptador de disco: unico punto del CLI que lee el Workspace. */
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, sep } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 
 import type { ArchivosDelWorkspace } from 'dsl';
 
@@ -24,7 +24,7 @@ function recorrer(
       if (!incluirOcultas && (entrada.name.startsWith('.') || CARPETAS_IGNORADAS.has(entrada.name))) continue;
       const ruta = join(carpeta, entrada.name);
       if (entrada.isDirectory()) visitar(ruta);
-      else if (acepta(entrada.name)) archivos[ruta.slice(raiz.length + 1).split(sep).join('/')] = leer(ruta);
+      else if (acepta(entrada.name)) archivos[relative(raiz, ruta).split(sep).join('/')] = leer(ruta);
     }
   };
   visitar(raiz);
@@ -64,7 +64,11 @@ export function leerSalida(raiz: string): Record<string, string> {
  * `archivos` (ruta relativa a `.diagrams/` con `/` -> texto): la salida es
  * derivada, asi que nunca quedan restos de una Vista que ya no existe.
  */
-export function escribirSalida(raiz: string, archivos: Readonly<Record<string, string>>, subcarpeta = ''): void {
+export function escribirSalida(
+  raiz: string,
+  archivos: Readonly<Record<string, string | Uint8Array>>,
+  subcarpeta = '',
+): void {
   const destino = join(raiz, CARPETA_DE_SALIDA);
   rmSync(join(destino, subcarpeta), { recursive: true, force: true });
   for (const [ruta, texto] of Object.entries(archivos)) {
@@ -72,4 +76,10 @@ export function escribirSalida(raiz: string, archivos: Readonly<Record<string, s
     mkdirSync(dirname(archivo), { recursive: true });
     writeFileSync(archivo, texto);
   }
+}
+
+/** Escribe `texto` en `ruta`, creando las carpetas que falten. */
+export function escribirTexto(ruta: string, texto: string): void {
+  mkdirSync(dirname(ruta), { recursive: true });
+  writeFileSync(ruta, texto);
 }

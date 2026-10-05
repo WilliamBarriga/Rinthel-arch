@@ -21,27 +21,39 @@
  * fusiona antes del Workspace (gana el Workspace en rutas repetidas). Con errores
  * (o avisos en `--strict`) sale 1 y borra la salida anterior; los Pins solapados salen como
  * `W_OVERLAPPING_PINS` con posicion y `related`. `--theme` inexistente: codigo 2.
- * `export --workspace <ruta> [--theme-path <carpeta>]` (sin `--json`, `--strict` ni
+ * `export --workspace <ruta> [--theme-path <carpeta>] [--format svg|png]` (sin `--json`, `--strict` ni
  * `--max-issues`): un SVG estatico por Vista en `.diagrams/svg/<vista>.svg`
  * (reemplaza esa carpeta), desde la salida de `build` (sin ella: codigo 2). Mismos
  * bytes para la misma salida; el SVG no referencia recursos externos: las fuentes
  * del Tema que el Workspace trae como archivo (`<Familia>.woff2|woff|ttf|otf`)
  * van incrustadas (tambien las de `--theme-path`; gana el Workspace); los iconos son los del Workspace y los genericos.
+ * Con `--format png` escribe `.diagrams/png/<vista>.png`, rasterizado con resvg (sin
+ * navegador, determinista en una misma maquina): resvg no lee `@font-face`, asi que las
+ * fuentes del Tema salen de `.ttf`/`.otf` del Workspace (si solo hay `woff`/`woff2`:
+ * codigo 2); una familia sin archivo usa las fuentes del sistema, de modo que el
+ * PNG es identico entre maquinas solo si el Workspace trae todas las familias.
+ * `skill --workspace <ruta> [--out <archivo>]`: genera el skill para agentes (formato
+ * `SKILL.md`) desde el catalogo del proyecto (Tipos de nodo, Paleta, Temas), la
+ * sintaxis del DSL, el contrato de `validate` (JSON Schema derivado del esquema Zod)
+ * y los codigos de issue. Va a stdout, o a `--out`; determinista (regenerar con otro
+ * catalogo lo actualiza). Con errores de validacion sale 1 y muestra los issues.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> render -> shell / cli`.
  */
 import { fuenteCanonicaSchema, salidaDeValidateSchema } from 'canonico';
+import type { FuenteCanonica } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
 import { parseArgs } from 'node:util';
 
 import { construirBuild } from './build';
 import type { GeometriaCacheada } from './build';
-import { exportarSvg } from './export';
+import { exportarPng, exportarSvg } from './export';
+import { generarSkill } from './skill';
 
 import { construirSalida, textoLegible } from './validate';
-import { escribirSalida, leerFuentes, leerSalida, leerWorkspace } from './workspace';
+import { escribirSalida, escribirTexto, leerFuentes, leerSalida, leerWorkspace } from './workspace';
 
 export const paquete = 'cli';
 
@@ -55,9 +67,11 @@ export interface ResultadoDeEjecucion {
 export interface Dependencias {
   compilar?: (workspace: ArchivosDelWorkspace) => ResultadoDeCompilacion;
   leer?: (raiz: string) => ArchivosDelWorkspace;
-  escribir?: (raiz: string, archivos: Readonly<Record<string, string>>, subcarpeta?: string) => void;
+  escribir?: (raiz: string, archivos: Readonly<Record<string, string | Uint8Array>>, subcarpeta?: string) => void;
   /** Salida de `build` (`.diagrams/`), ruta relativa -> texto. */
   leerSalida?: (raiz: string) => Record<string, string>;
+  /** Escribe un archivo de texto (con sus carpetas); lo usa `skill --out`. */
+  escribirArchivo?: (ruta: string, texto: string) => void;
   /** Archivos de fuente del Workspace, ruta relativa -> base64. */
   leerFuentes?: (raiz: string) => Record<string, string>;
 }
@@ -90,12 +104,13 @@ export async function run(
   dependencias: Dependencias = {},
 ): Promise<ResultadoDeEjecucion> {
   const [comando, ...resto] = argv;
-  if (comando !== 'validate' && comando !== 'build' && comando !== 'export') {
+  if (comando !== 'validate' && comando !== 'build' && comando !== 'export' && comando !== 'skill') {
     return uso(
-      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export> --workspace <ruta>`,
+      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export|skill> --workspace <ruta>`,
     );
   }
   if (comando === 'export') return exportar(resto, dependencias);
+  if (comando === 'skill') return skill(resto, dependencias);
 
   let opciones: OpcionesParseadas;
   try {
@@ -110,28 +125,79 @@ export async function run(
   return ejecutar(comando, opciones, maxIssues, dependencias);
 }
 
+async function skill(
+  args: readonly string[],
+  { compilar = compile, leer = leerWorkspace, escribirArchivo = escribirTexto }: Dependencias,
+): Promise<ResultadoDeEjecucion> {
+  let opciones;
+  try {
+    opciones = parseArgs({
+      args: [...args],
+      options: { workspace: { type: 'string' }, out: { type: 'string' } },
+      strict: true,
+    }).values;
+  } catch (error) {
+    return uso((error as Error).message);
+  }
+  if (opciones.workspace === undefined) return uso('Falta --workspace <ruta>');
+
+  let resultado: ResultadoDeCompilacion;
+  try {
+    resultado = compilar(leer(opciones.workspace));
+  } catch (error) {
+    return uso(`No se pudo leer el Workspace: ${(error as Error).message}`);
+  }
+  if (resultado.canonico === undefined) {
+    // Sin catalogo valido no hay skill fiable: se muestran los issues, como `validate`.
+    return {
+      exitCode: 1,
+      stdout: textoLegible(construirSalida(resultado.issues, { maxIssues: MAX_ISSUES_POR_DEFECTO, strict: false })),
+      stderr: '',
+    };
+  }
+  const texto = generarSkill(resultado.canonico);
+  if (opciones.out === undefined) return { exitCode: 0, stdout: texto, stderr: '' };
+  try {
+    escribirArchivo(opciones.out, texto);
+  } catch (error) {
+    return uso(`No se pudo escribir '${opciones.out}': ${(error as Error).message}`);
+  }
+  return { exitCode: 0, stdout: `Skill escrito en ${opciones.out}\n`, stderr: '' };
+}
+
+/** Formatos de `export`: que dibuja, en que carpeta de `.diagrams/` y como se nombra en la salida. */
+const FORMATOS: Readonly<Record<string, { exportar: typeof exportarSvg | typeof exportarPng; carpeta: string; etiqueta: string }>> = {
+  svg: { exportar: exportarSvg, carpeta: 'svg', etiqueta: 'SVG' },
+  png: { exportar: exportarPng, carpeta: 'png', etiqueta: 'PNG' },
+};
+
 async function exportar(
   args: readonly string[],
   { leer = leerWorkspace, leerSalida: leerCache = leerSalida, leerFuentes: leerLetras = leerFuentes, escribir = escribirSalida }: Dependencias,
 ): Promise<ResultadoDeEjecucion> {
   let raiz: string | undefined;
   let carpetaDeTemas: string | undefined;
+  let formato: string | undefined;
   try {
-    ({ workspace: raiz, 'theme-path': carpetaDeTemas } = parseArgs({
+    ({ workspace: raiz, 'theme-path': carpetaDeTemas, format: formato } = parseArgs({
       args: [...args],
-      options: { workspace: { type: 'string' }, 'theme-path': { type: 'string' } },
+      options: { workspace: { type: 'string' }, 'theme-path': { type: 'string' }, format: { type: 'string' } },
       strict: true,
     }).values);
   } catch (error) {
     return uso((error as Error).message);
   }
   if (raiz === undefined) return uso('Falta --workspace <ruta>');
+  const salida = FORMATOS[formato ?? 'svg'];
+  if (salida === undefined) return uso(`Formato '${formato}' desconocido. Formatos: ${Object.keys(FORMATOS).join(', ')}`);
 
-  let archivos: Record<string, string>;
+  let cache: Record<string, string>;
+  let fuente: FuenteCanonica;
+  let geometrias: Record<string, GeometriaCacheada>;
   try {
-    const cache = leerCache(raiz);
-    const fuente = fuenteCanonicaSchema.parse(JSON.parse(cache['canonico.json'] ?? 'null'));
-    const geometrias = Object.fromEntries(
+    cache = leerCache(raiz);
+    fuente = fuenteCanonicaSchema.parse(JSON.parse(cache['canonico.json'] ?? 'null'));
+    geometrias = Object.fromEntries(
       Object.entries(cache)
         .filter(([ruta]) => ruta.startsWith('geometria/'))
         .map(([, texto]) => {
@@ -139,18 +205,23 @@ async function exportar(
           return [cacheada.view, cacheada] as const;
         }),
     );
-    // El Workspace gana sobre `--theme-path` en rutas repetidas, como en `build`.
-    const fuentes = { ...(carpetaDeTemas === undefined ? {} : leerLetras(carpetaDeTemas)), ...leerLetras(raiz) };
-    archivos = exportarSvg(fuente, geometrias, leer(raiz), fuentes);
   } catch (error) {
     return uso(`No hay una salida de build utilizable en '${raiz}/.diagrams' (ejecuta 'build' antes): ${(error as Error).message}`);
   }
+  let archivos: Record<string, string | Uint8Array>;
   try {
-    escribir(raiz, archivos, 'svg');
+    // El Workspace gana sobre `--theme-path` en rutas repetidas, como en `build`.
+    const fuentes = { ...(carpetaDeTemas === undefined ? {} : leerLetras(carpetaDeTemas)), ...leerLetras(raiz) };
+    archivos = salida.exportar(fuente, geometrias, leer(raiz), fuentes);
   } catch (error) {
-    return uso(`No se pudo escribir .diagrams/svg/: ${(error as Error).message}`);
+    return uso(`No se pudo exportar: ${(error as Error).message}`);
   }
-  return { exitCode: 0, stdout: `${Object.keys(archivos).length} SVG escritos en .diagrams/svg/\n`, stderr: '' };
+  try {
+    escribir(raiz, archivos, salida.carpeta);
+  } catch (error) {
+    return uso(`No se pudo escribir .diagrams/${salida.carpeta}/: ${(error as Error).message}`);
+  }
+  return { exitCode: 0, stdout: `${Object.keys(archivos).length} ${salida.etiqueta} escritos en .diagrams/${salida.carpeta}/\n`, stderr: '' };
 }
 
 async function ejecutar(
