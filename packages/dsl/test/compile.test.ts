@@ -26,6 +26,7 @@ describe('compile: Nodos y specification', () => {
             type: 'servicio',
             title: 'API',
             description: 'Puerta de entrada',
+            attributes: [],
             children: [],
           },
         ],
@@ -263,5 +264,123 @@ model {
   it('informa ambos extremos colgantes', () => {
     const { issues } = compile({ 'main.dg': `${spec} model { x -> y }` });
     expect(issues.map((i) => i.code)).toEqual(['E_DANGLING_EDGE', 'E_DANGLING_EDGE']);
+  });
+});
+
+describe('compile: Atributos', () => {
+  const spec = 'specification { node tabla node servicio }';
+
+  it('conserva orden, tipo y notas de los Atributos de un Nodo', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+        model {
+          tabla usuarios "Usuarios" {
+            attrs {
+              id: uuid "clave primaria"
+              email: text
+              creado: timestamp "UTC"
+            }
+          }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.nodes[0]?.attributes).toEqual([
+      { name: 'id', type: 'uuid', notes: 'clave primaria' },
+      { name: 'email', type: 'text', notes: '' },
+      { name: 'creado', type: 'timestamp', notes: 'UTC' },
+    ]);
+  });
+
+  it('un Atributo no es un Nodo hijo: no aparece en children ni en el Modelo', () => {
+    const { canonico } = compile({
+      'main.dg': `${spec}
+        model {
+          tabla usuarios {
+            attrs { id: uuid }
+            tabla perfil
+          }
+        }`,
+    });
+
+    const [usuarios] = canonico!.model.nodes;
+    expect(usuarios?.children.map((n) => n.id)).toEqual(['usuarios.perfil']);
+    expect(usuarios?.attributes.map((a) => a.name)).toEqual(['id']);
+  });
+
+  it('un Nodo sin attrs tiene lista vacia de Atributos', () => {
+    const { canonico } = compile({ 'main.dg': `${spec} model { tabla t }` });
+    expect(canonico?.model.nodes[0]?.attributes).toEqual([]);
+  });
+
+  it('una Arista a nodo#atributo compila con el Atributo en el extremo', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+        model {
+          tabla usuarios { attrs { id: uuid } }
+          tabla pedidos { attrs { usuario_id: uuid } }
+          pedidos#usuario_id "N" -> "1" usuarios#id
+          pedidos -> usuarios#id
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.edges).toEqual([
+      {
+        from: { node: 'pedidos', attribute: 'usuario_id' },
+        to: { node: 'usuarios', attribute: 'id' },
+        fromCardinality: 'N',
+        toCardinality: '1',
+      },
+      { from: { node: 'pedidos' }, to: { node: 'usuarios', attribute: 'id' } },
+    ]);
+  });
+
+  it('un Atributo inexistente es E_UNKNOWN_ATTRIBUTE con la posicion del Atributo', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+model {
+  tabla usuarios { attrs { id: uuid } }
+  tabla pedidos
+  pedidos -> usuarios#idd
+}`,
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      code: 'E_UNKNOWN_ATTRIBUTE',
+      severity: 'error',
+      file: 'main.dg',
+      line: 5,
+      column: 23,
+      fix: {
+        file: 'main.dg',
+        range: { start: { line: 5, column: 23 }, end: { line: 5, column: 26 } },
+        replacement: 'id',
+      },
+    });
+  });
+
+  it('un Nodo hijo no vale como Atributo, ni un Atributo como Nodo hijo', () => {
+    const { issues } = compile({
+      'main.dg': `${spec}
+        model {
+          tabla usuarios {
+            attrs { id: uuid }
+            tabla perfil
+          }
+          tabla pedidos
+          pedidos -> usuarios#perfil
+          pedidos -> usuarios.id
+        }`,
+    });
+
+    expect(issues.map((i) => i.code).sort()).toEqual(['E_DANGLING_EDGE', 'E_UNKNOWN_ATTRIBUTE']);
+  });
+
+  it('con el Nodo inexistente solo informa E_DANGLING_EDGE, no el Atributo', () => {
+    const { issues } = compile({ 'main.dg': `${spec} model { tabla a  a -> nada#x }` });
+    expect(issues.map((i) => i.code)).toEqual(['E_DANGLING_EDGE']);
   });
 });

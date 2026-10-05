@@ -51,7 +51,12 @@ Model:
 // `<origen> ["card"] -> ["card"] <destino>`; los extremos son ids cualificados.
 // Los espacios alrededor de `->` son obligatorios: `-` es valido dentro de un Id.
 Edge:
-  from=Ref (fromCardinality=String)? '->' (toCardinality=String)? to=Ref
+  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint
+;
+
+// Nodo por id cualificado (`a.b.c`) y, opcional, uno de sus Atributos (`a.b#col`).
+Endpoint:
+  node=Ref ('#' attribute=Id)?
 ;
 
 Ref returns string:
@@ -64,13 +69,22 @@ Element:
     (description=String)?
   )?
   ('{'
-    elements+=Element*
+    (elements+=Element | attrs+=Attrs)*
   '}')?
+;
+
+// `attrs { nombre: tipo "notas" }`; el orden se conserva.
+Attrs:
+  'attrs' '{' items+=Attribute* '}'
+;
+
+Attribute:
+  name=Id ':' type=Id (notes=String)?
 ;
 
 Id returns string:
   IdTerminal |
-  'description' | 'icon' | 'style' | 'color';
+  'description' | 'icon' | 'style' | 'color' | 'attrs';
 
 // -------------------------
 // Comments

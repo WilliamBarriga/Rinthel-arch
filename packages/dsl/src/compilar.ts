@@ -3,7 +3,7 @@
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
 import { CODIGOS, fuenteCanonicaSchema } from 'canonico';
-import type { Arista, FuenteCanonica, Issue, Nodo, TipoDeNodo } from 'canonico';
+import type { Arista, Extremo, FuenteCanonica, Issue, Nodo, TipoDeNodo } from 'canonico';
 import {
   EmptyFileSystem,
   GrammarUtils,
@@ -14,7 +14,7 @@ import {
 import type { LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Documento, Edge, Element } from './generated/ast';
+import type { Documento, Edge, Element, Endpoint } from './generated/ast';
 import { candidatosCercanos } from './sugerencias';
 
 /** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
@@ -76,14 +76,14 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
   }
 
-  const idsDeNodos = new Set<string>();
-  recogerIds(nodos, idsDeNodos);
+  const atributosPorNodo = new Map<string, string[]>();
+  recogerAtributos(nodos, atributosPorNodo);
   const aristas: Arista[] = [];
   for (const { archivo, aristas: delArchivo } of raices) {
     // Con sintaxis rota el AST es parcial: sus Aristas darian falsos colgantes.
     if (conSintaxisRota.has(archivo)) continue;
     for (const arista of delArchivo) {
-      aristas.push(compilarArista(arista, archivo, idsDeNodos, issues));
+      aristas.push(compilarArista(arista, archivo, atributosPorNodo, issues));
     }
   }
 
@@ -122,6 +122,9 @@ function compilarElemento(
     type: elemento.type,
     title: elemento.title ?? elemento.name,
     description: elemento.description ?? '',
+    attributes: elemento.attrs.flatMap((bloque) =>
+      bloque.items.map((item) => ({ name: item.name, type: item.type, notes: item.notes ?? '' })),
+    ),
     children: elemento.elements.map((hijo) => compilarElemento(hijo, id, archivo, declarados, issues)),
   };
 }
@@ -129,42 +132,77 @@ function compilarElemento(
 function compilarArista(
   arista: Edge,
   archivo: string,
-  idsDeNodos: ReadonlySet<string>,
+  atributosPorNodo: ReadonlyMap<string, readonly string[]>,
   issues: Issue[],
 ): Arista {
-  for (const lado of ['from', 'to'] as const) {
-    const id = arista[lado];
-    if (idsDeNodos.has(id)) continue;
-    const rango = GrammarUtils.findNodeForProperty(arista.$cstNode, lado)?.range;
-    const inicio = { line: (rango?.start.line ?? 0) + 1, column: (rango?.start.character ?? 0) + 1 };
-    const final = { line: (rango?.end.line ?? 0) + 1, column: (rango?.end.character ?? 0) + 1 };
-    const candidatos = candidatosCercanos(id, idsDeNodos);
-    const [unico] = candidatos;
-    const issue: Issue = {
-      code: CODIGOS.E_DANGLING_EDGE,
-      severity: 'error',
-      file: archivo,
-      ...inicio,
-      message: `Arista colgante: el Nodo '${id}' no existe en el Modelo`,
-    };
-    if (candidatos.length === 1 && unico !== undefined) {
-      issue.fix = { file: archivo, range: { start: inicio, end: final }, replacement: unico };
-    } else if (candidatos.length > 1) {
-      issue.hint = `Candidatos: ${candidatos.join(', ')}`;
-    }
-    issues.push(issue);
-  }
-  const compilada: Arista = { from: { node: arista.from }, to: { node: arista.to } };
+  const compilada: Arista = {
+    from: compilarExtremo(arista.from, archivo, atributosPorNodo, issues),
+    to: compilarExtremo(arista.to, archivo, atributosPorNodo, issues),
+  };
   if (arista.fromCardinality !== undefined) compilada.fromCardinality = arista.fromCardinality;
   if (arista.toCardinality !== undefined) compilada.toCardinality = arista.toCardinality;
   return compilada;
 }
 
-/** Ids de todos los Nodos, a cualquier profundidad. */
-function recogerIds(nodos: readonly Nodo[], destino: Set<string>): void {
+/** Compila un extremo; un Nodo inexistente o un Atributo inexistente es un issue. */
+function compilarExtremo(
+  extremo: Endpoint,
+  archivo: string,
+  atributosPorNodo: ReadonlyMap<string, readonly string[]>,
+  issues: Issue[],
+): Extremo {
+  const compilado: Extremo = { node: extremo.node };
+  if (extremo.attribute !== undefined) compilado.attribute = extremo.attribute;
+
+  const atributos = atributosPorNodo.get(extremo.node);
+  if (atributos === undefined) {
+    issues.push(
+      issueConSugerencia(
+        { code: CODIGOS.E_DANGLING_EDGE, message: `Arista colgante: el Nodo '${extremo.node}' no existe en el Modelo` },
+        archivo, extremo, 'node', atributosPorNodo.keys(),
+      ),
+    );
+  } else if (extremo.attribute !== undefined && !atributos.includes(extremo.attribute)) {
+    issues.push(
+      issueConSugerencia(
+        { code: CODIGOS.E_UNKNOWN_ATTRIBUTE, message: `El Nodo '${extremo.node}' no tiene el Atributo '${extremo.attribute}'` },
+        archivo, extremo, 'attribute', atributos,
+      ),
+    );
+  }
+  return compilado;
+}
+
+/**
+ * Issue de error sobre la propiedad `propiedad` del extremo, con `fix` si hay un
+ * unico candidato cercano entre `existentes` y `hint` si hay varios.
+ */
+function issueConSugerencia(
+  base: { code: string; message: string },
+  archivo: string,
+  extremo: Endpoint,
+  propiedad: 'node' | 'attribute',
+  existentes: Iterable<string>,
+): Issue {
+  const rango = GrammarUtils.findNodeForProperty(extremo.$cstNode, propiedad)?.range;
+  const inicio = { line: (rango?.start.line ?? 0) + 1, column: (rango?.start.character ?? 0) + 1 };
+  const final = { line: (rango?.end.line ?? 0) + 1, column: (rango?.end.character ?? 0) + 1 };
+  const issue: Issue = { ...base, severity: 'error', file: archivo, ...inicio };
+  const candidatos = candidatosCercanos(extremo[propiedad] as string, existentes);
+  const [unico] = candidatos;
+  if (candidatos.length === 1 && unico !== undefined) {
+    issue.fix = { file: archivo, range: { start: inicio, end: final }, replacement: unico };
+  } else if (candidatos.length > 1) {
+    issue.hint = `Candidatos: ${candidatos.join(', ')}`;
+  }
+  return issue;
+}
+
+/** Nombres de Atributo (en orden) de cada Nodo, a cualquier profundidad. */
+function recogerAtributos(nodos: readonly Nodo[], destino: Map<string, string[]>): void {
   for (const nodo of nodos) {
-    destino.add(nodo.id);
-    recogerIds(nodo.children, destino);
+    destino.set(nodo.id, nodo.attributes.map((atributo) => atributo.name));
+    recogerAtributos(nodo.children, destino);
   }
 }
 

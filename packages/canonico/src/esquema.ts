@@ -2,8 +2,8 @@
  * Esquema Zod de la Fuente canonica.
  *
  * Alcance: Nodos (id cualificado, `type`, titulo, descripcion,
- * jerarquia de hijos), catalogo de Tipos de nodo y Aristas con extremo Nodo y
- * cardinalidad opcional (ticket #24). Atributos, `source`,
+ * Atributos, jerarquia de hijos), catalogo de Tipos de nodo y Aristas con
+ * extremo Nodo o Nodo#Atributo y cardinalidad opcional (tickets #24 y #25). `source`,
  * Vistas, Temas y geometria llegan en tickets posteriores del spec #19.
  *
  * Jerarquia: los ids cualificados (`a.b.c`) definen la jerarquia del Modelo.
@@ -50,12 +50,24 @@ export interface Nodo {
   type: string;
   title: string;
   description: string;
+  attributes: Atributo[];
   children: Nodo[];
 }
 
-/** Extremo de una Arista: un Nodo, por su id cualificado completo. */
+/** Elemento estructurado y ordenado de un Nodo (columna, campo, metodo). No es un Nodo hijo. */
+export interface Atributo {
+  name: string;
+  type: string;
+  notes: string;
+}
+
+/**
+ * Extremo de una Arista: un Nodo por su id cualificado completo y, opcional,
+ * uno de sus Atributos (`nodo#atributo`; el punto queda solo para jerarquia).
+ */
 export interface Extremo {
   node: string;
+  attribute?: string;
 }
 
 /** Relacion dirigida entre dos extremos, con cardinalidad opcional en cada uno. */
@@ -72,6 +84,12 @@ export interface Modelo {
   edges: Arista[];
 }
 
+export const atributoSchema = z.object({
+  name: z.string().min(1),
+  type: z.string().min(1),
+  notes: z.string().default(''),
+});
+
 /**
  * Nodo del Modelo: id cualificado, Tipo de nodo, titulo, descripcion e hijos.
  * Que su `type` este declarado en el catalogo se comprueba en
@@ -83,6 +101,7 @@ export const nodoSchema: z.ZodType<Nodo> = z.lazy(() =>
     type: z.string().min(1),
     title: z.string().min(1),
     description: z.string().default(''),
+    attributes: z.array(atributoSchema).default([]),
     children: z.array(nodoSchema).default([]),
   }),
 );
@@ -91,7 +110,7 @@ const catalogoSchema = z.object({
   nodeTypes: z.array(tipoDeNodoSchema),
 });
 
-const extremoSchema = z.object({ node: idDeNodoSchema });
+const extremoSchema = z.object({ node: idDeNodoSchema, attribute: z.string().min(1).optional() });
 
 export const aristaSchema = z.object({
   from: extremoSchema,
@@ -135,7 +154,7 @@ interface Hallazgo {
  * - jerarquia por id cualificado (sin hijos huerfanos y sin anidacion
  *   incoherente entre `children` y los ids);
  * - `type` declarado en el catalogo de Tipos de nodo;
- * - extremos de Arista que existen en el Modelo.
+ * - extremos de Arista que existen en el Modelo (Nodo y, si lo llevan, Atributo).
  */
 function hallazgosDeModelo(fuente: {
   specification: CatalogoDeTiposDeNodo;
@@ -143,7 +162,7 @@ function hallazgosDeModelo(fuente: {
 }): Hallazgo[] {
   const tipos = new Set(fuente.specification.nodeTypes.map((tipo) => tipo.name));
 
-  const ids = new Set<string>();
+  const ids = new Map<string, Set<string>>();
   recogerIds(fuente.model.nodes, ids);
 
   const hallazgos: Hallazgo[] = [];
@@ -182,10 +201,17 @@ function hallazgosDeModelo(fuente: {
 
   fuente.model.edges.forEach((arista, indice) => {
     for (const lado of ['from', 'to'] as const) {
-      if (!ids.has(arista[lado].node)) {
+      const { node, attribute } = arista[lado];
+      const atributos = ids.get(node);
+      if (atributos === undefined) {
         hallazgos.push({
           path: ['model', 'edges', indice, lado, 'node'],
-          message: `Arista colgante: el Nodo '${arista[lado].node}' no existe en el Modelo`,
+          message: `Arista colgante: el Nodo '${node}' no existe en el Modelo`,
+        });
+      } else if (attribute !== undefined && !atributos.has(attribute)) {
+        hallazgos.push({
+          path: ['model', 'edges', indice, lado, 'attribute'],
+          message: `El Nodo '${node}' no tiene el Atributo '${attribute}'`,
         });
       }
     }
@@ -194,10 +220,10 @@ function hallazgosDeModelo(fuente: {
   return hallazgos;
 }
 
-/** Ids de todos los Nodos, a cualquier profundidad. */
-function recogerIds(nodos: Nodo[], destino: Set<string>): void {
+/** Id de cada Nodo, a cualquier profundidad, con los nombres de sus Atributos. */
+function recogerIds(nodos: Nodo[], destino: Map<string, Set<string>>): void {
   for (const nodo of nodos) {
-    destino.add(nodo.id);
+    destino.set(nodo.id, new Set(nodo.attributes.map((atributo) => atributo.name)));
     recogerIds(nodo.children, destino);
   }
 }

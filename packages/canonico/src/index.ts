@@ -13,6 +13,7 @@ export const paquete = 'canonico';
 
 export {
   aristaSchema,
+  atributoSchema,
   fuenteCanonicaSchema,
   idDeNodoSchema,
   nodoSchema,
@@ -20,6 +21,7 @@ export {
 } from './esquema';
 export type {
   Arista,
+  Atributo,
   CatalogoDeTiposDeNodo,
   Extremo,
   FuenteCanonica,
