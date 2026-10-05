@@ -18,7 +18,8 @@ entry Documento:
   (
     specifications+=Specification |
     models+=Model |
-    views+=View
+    views+=View |
+    themes+=Theme
   )*
 ;
 
@@ -71,6 +72,31 @@ Extend:
   '}'
 ;
 
+// Theme -------------------------------------
+
+// `theme <nombre> [extends <padre>] { palette { azul "#00f" } fonts { ... } tokens { ... } }`
+// Un solo padre; el hex solo vive aqui (ADR 0006).
+Theme:
+  'theme' name=Id ('extends' parent=Id)? '{'
+    parts+=ThemePart*
+  '}'
+;
+
+ThemePart:
+  ThemePalette | ThemeFonts | ThemeTokens;
+
+ThemePalette:
+  'palette' '{' entries+=ThemeEntry* '}';
+
+ThemeFonts:
+  'fonts' '{' entries+=ThemeEntry* '}';
+
+ThemeTokens:
+  'tokens' '{' entries+=ThemeEntry* '}';
+
+ThemeEntry:
+  key=Id ':'? value=String;
+
 // View -------------------------------------
 
 // `view <id> { type architecture|flow  include a.*, b.**  exclude c  depth N }`.
@@ -82,7 +108,7 @@ View:
 ;
 
 ViewProperty:
-  ViewType | ViewInclude | ViewExclude | ViewDepth | NodeOverride;
+  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | NodeOverride;
 
 ViewType:
   'type' value=Id;
@@ -95,6 +121,9 @@ ViewExclude:
 
 ViewDepth:
   'depth' value=INT;
+
+ViewTheme:
+  'theme' value=Id;
 
 // Overrides de presentacion de un Nodo en esta Vista; nunca tocan el Modelo.
 // `pin x,y` es en coordenadas del lienzo post-layout; `color` es un nombre de Paleta.
@@ -154,7 +183,8 @@ Attribute:
 
 Id returns string:
   IdTerminal |
-  'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order';
+  'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order' |
+  'theme' | 'extends' | 'palette' | 'fonts' | 'tokens';
 
 // -------------------------
 // Comments

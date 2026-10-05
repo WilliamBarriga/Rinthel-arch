@@ -134,6 +134,36 @@ const modeloSchema = z.object({
   edges: z.array(aristaSchema).default([]),
 });
 
+const tablaDeCadenasSchema = z.record(z.string(), z.string());
+
+/**
+ * Tema ya resuelto: objeto plano sin herencia (ADR 0006). `palette` mapea nombre
+ * de Paleta a valor literal; el hex solo existe aqui. Un Tema es un solo modo.
+ */
+export const temaSchema = z.object({
+  name: z.string().min(1),
+  palette: tablaDeCadenasSchema.default({}),
+  fonts: tablaDeCadenasSchema.default({}),
+  tokens: tablaDeCadenasSchema.default({}),
+});
+
+export type Tema = z.infer<typeof temaSchema>;
+
+/** Tema por defecto del nucleo: siempre disponible, otros Temas pueden extenderlo. */
+export const TEMA_NEUTRO: Tema = {
+  name: 'neutral',
+  palette: {
+    gray: '#6b7280',
+    blue: '#2563eb',
+    green: '#16a34a',
+    amber: '#d97706',
+    red: '#dc2626',
+    purple: '#7c3aed',
+  },
+  fonts: { body: 'sans-serif', mono: 'monospace' },
+  tokens: { background: '#ffffff', foreground: '#1f2937', border: '#9ca3af' },
+};
+
 /** Tipos de diagrama de la primera entrega. */
 export const TIPOS_DE_VISTA = ['architecture', 'flow'] as const;
 
@@ -163,6 +193,7 @@ export const vistaSchema = z.object({
   exclude: z.array(z.string().min(1)).default([]),
   depth: z.number().int().min(0).optional(),
   overrides: z.array(overrideSchema).default([]),
+  theme: z.string().min(1).optional(),
 });
 
 export type Vista = z.infer<typeof vistaSchema>;
@@ -178,6 +209,7 @@ export const fuenteCanonicaSchema = z
     specification: catalogoSchema,
     model: modeloSchema,
     views: z.array(vistaSchema).default([]),
+    themes: z.array(temaSchema).default([TEMA_NEUTRO]),
   })
   .superRefine((fuente, ctx) => {
     for (const hallazgo of hallazgosDeModelo(fuente)) {

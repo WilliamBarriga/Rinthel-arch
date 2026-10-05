@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { TEMA_NEUTRO } from 'canonico';
 import { compile } from 'dsl';
 
 describe('compile: Nodos y specification', () => {
@@ -33,6 +34,7 @@ describe('compile: Nodos y specification', () => {
         ],
       },
       views: [],
+      themes: [TEMA_NEUTRO],
     });
   });
 
@@ -717,5 +719,115 @@ describe('compile: overrides de presentacion por Nodo en la Vista', () => {
 
     expect(issues.length).toBeGreaterThan(0);
     expect(issues.every((i) => i.code === 'E_SYNTAX_ERROR')).toBe(true);
+  });
+});
+
+describe('compile: Tema', () => {
+  const base = 'specification { node servicio { color blue } }  model { servicio a }';
+  const claro = 'theme claro { palette { blue "#0000ff"  danger "#ff0000" } fonts { body "Inter" } tokens { surface "#ffffff" } }';
+
+  it('un Workspace sin theme usa el Tema neutro', () => {
+    const { canonico, issues } = compile({ 'main.dg': base });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes).toEqual([TEMA_NEUTRO]);
+  });
+
+  it('compila palette, fonts y tokens a un objeto plano', () => {
+    const { canonico, issues } = compile({ 'main.dg': `${base} ${claro}` });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 'claro')).toEqual({
+      name: 'claro',
+      palette: { blue: '#0000ff', danger: '#ff0000' },
+      fonts: { body: 'Inter' },
+      tokens: { surface: '#ffffff' },
+    });
+  });
+
+  it('extends hereda de un solo padre y el hijo gana; el resultado ya esta resuelto', () => {
+    const { canonico, issues } = compile({
+      'a.dg': `${base} ${claro}`,
+      'b.dg': 'theme oscuro extends claro { palette { blue "#00aaff" } tokens { surface "#111111" } }',
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 'oscuro')).toEqual({
+      name: 'oscuro',
+      palette: { blue: '#00aaff', danger: '#ff0000' },
+      fonts: { body: 'Inter' },
+      tokens: { surface: '#111111' },
+    });
+  });
+
+  it('un Tema puede extender el neutro', () => {
+    const { canonico, issues } = compile({ 'main.dg': `${base} theme t extends neutral { palette { teal "#008080" } }` });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 't')?.palette).toEqual({
+      ...TEMA_NEUTRO.palette,
+      teal: '#008080',
+    });
+  });
+
+  it('tema duplicado es E_DUPLICATE_THEME con related a la primera declaracion', () => {
+    const { issues } = compile({ 'main.dg': `${base}\n${claro}\ntheme claro { }` });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_DUPLICATE_THEME', file: 'main.dg', line: 3 });
+    expect(issues[0]?.related?.[0]).toMatchObject({ file: 'main.dg', line: 2 });
+  });
+
+  it('declarar `neutral` es duplicado del Tema por defecto', () => {
+    const { issues } = compile({ 'main.dg': `${base} theme neutral { }` });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_DUPLICATE_THEME']);
+  });
+
+  it('ciclo de extends es E_EXTENDS_CYCLE', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}\ntheme a extends b { }\ntheme b extends a { }`,
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues.map((i) => i.code)).toEqual(['E_EXTENDS_CYCLE', 'E_EXTENDS_CYCLE']);
+    expect(issues[0]).toMatchObject({ file: 'main.dg', line: 2 });
+  });
+
+  it('extends de un tema inexistente es E_UNKNOWN_THEME', () => {
+    const { issues } = compile({ 'main.dg': `${base} theme a extends fantasma { }` });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_THEME']);
+  });
+
+  it('una Vista puede elegir su theme; uno inexistente es E_UNKNOWN_THEME', () => {
+    const bien = compile({ 'main.dg': `${base} ${claro} view v { type flow theme claro }` });
+    const mal = compile({ 'main.dg': `${base} view v { type flow theme claroo }` });
+
+    expect(bien.issues).toEqual([]);
+    expect(bien.canonico?.views[0]?.theme).toBe('claro');
+    expect(mal.issues.map((i) => i.code)).toEqual(['E_UNKNOWN_THEME']);
+  });
+
+  it('color de Tipo de nodo desconocido es E_UNKNOWN_PALETTE_COLOR con fix si hay un candidato', () => {
+    const { issues } = compile({ 'main.dg': 'specification { node servicio { color blu } }  model { servicio a }' });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_PALETTE_COLOR', file: 'main.dg' });
+    expect(issues[0]?.fix?.replacement).toBe('blue');
+  });
+
+  it('un hex fuera del Tema nunca es un color valido', () => {
+    const { issues } = compile({ 'main.dg': 'specification { node servicio { color "#ff0000" } }  model { servicio a }' });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
+  });
+
+  it('color de override se valida contra la Paleta del theme de la Vista', () => {
+    const vista = (tema: string) =>
+      `${base} ${claro} view v { type flow include ** theme ${tema} node a { color danger } }`;
+
+    expect(compile({ 'main.dg': vista('claro') }).issues).toEqual([]);
+    expect(compile({ 'main.dg': vista('neutral') }).issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
   });
 });
