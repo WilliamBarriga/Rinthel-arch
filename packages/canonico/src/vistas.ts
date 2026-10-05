@@ -2,7 +2,7 @@
  * Resolucion de Vistas: que Nodos y Aristas muestra una Vista del Modelo.
  * Pura: no modifica la Fuente. Una Vista solo selecciona, nunca define entidades.
  */
-import type { Arista, Extremo, FuenteCanonica, Nodo, Paso, Vista } from './esquema';
+import type { Arista, Extremo, FuenteCanonica, Nodo, OverrideDeNodo, Paso, Vista } from './esquema';
 
 /** Nodo visible: un Grupo colapsado se muestra como un Nodo unico con su contador. */
 export interface NodoResuelto extends Omit<Nodo, 'children'> {
@@ -21,12 +21,14 @@ export interface AristaResuelta extends Arista {
   count: number;
 }
 
-/** Nodos y Aristas visibles de una Vista. */
+/** Nodos y Aristas visibles de una Vista, mas lo que `layout` y `render` necesitan de ella. */
 export interface VistaResuelta {
   /** Nodos visibles en orden de documento. */
   nodes: NodoResuelto[];
   /** Aristas entre Nodos visibles, con las de los hijos de un Grupo colapsado elevadas a el. */
   edges: AristaResuelta[];
+  /** Overrides de presentacion de la Vista, tal cual (label, pin, order, color). */
+  overrides: OverrideDeNodo[];
   /** Pasos de revelado de la Vista (ADR 0007), tal cual; `revealAt` los interpreta. */
   steps: Paso[];
 }
@@ -96,6 +98,7 @@ export function resolveView(
   return {
     nodes: todos.filter((nodo) => visibles.has(nodo.id)).map(resolver),
     edges: elevarAristas(fuente.model.edges, visibles, ancestroColapsado),
+    overrides: vista.overrides,
     steps: vista.steps,
   };
 }
