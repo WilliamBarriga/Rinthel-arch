@@ -7,7 +7,7 @@ import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
-import { medidasDeTexto, tamanoDeNodo, textoDelNodo } from './medidas';
+import { medidasDeTexto, tamanoDeNodo } from './medidas';
 import type { MedidasDeTexto } from './medidas';
 
 /** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
@@ -72,12 +72,11 @@ export async function layoutView(
 ): Promise<Geometria> {
   const elk = opciones.elk ?? (elkPorDefecto ??= new ELKBundled());
   const medidas = medidasDeTexto(tema);
-  const labels = labelsDeVista(vista);
 
   const grafo: ElkNode = {
     id: 'raiz',
     layoutOptions: OPCIONES_RAIZ,
-    children: raices(vista).map((nodo) => aElk(nodo, medidas, labels)),
+    children: raices(vista).map((nodo) => aElk(nodo, medidas)),
     edges: vista.edges.map((arista) => ({
       id: idDeArista(arista),
       sources: [arista.from.node],
@@ -109,19 +108,15 @@ function raices(vista: VistaResuelta): NodoResuelto[] {
   return vista.nodes.filter((nodo) => !anidados.has(nodo.id));
 }
 
-function aElk(nodo: NodoResuelto, medidas: MedidasDeTexto, labels: ReadonlyMap<string, string>): ElkNode {
+function aElk(nodo: NodoResuelto, medidas: MedidasDeTexto): ElkNode {
   if (nodo.children.length === 0) {
-    return { id: nodo.id, ...tamanoDeNodo(textoDelNodo(nodo, labels), medidas) };
+    return { id: nodo.id, ...tamanoDeNodo(nodo.label, medidas) };
   }
   return {
     id: nodo.id,
     layoutOptions: { 'elk.padding': PADDING_GRUPO },
-    children: nodo.children.map((hijo) => aElk(hijo, medidas, labels)),
+    children: nodo.children.map((hijo) => aElk(hijo, medidas)),
   };
-}
-
-function labelsDeVista(vista: VistaResuelta): Map<string, string> {
-  return new Map(vista.overrides.flatMap(({ node, label }) => (label === undefined ? [] : [[node, label] as const])));
 }
 
 /**
@@ -131,9 +126,8 @@ function labelsDeVista(vista: VistaResuelta): Map<string, string> {
  */
 export function claveDeLayout(vista: VistaResuelta, tema: Tema): string {
   const medidas = medidasDeTexto(tema);
-  const labels = labelsDeVista(vista);
   return JSON.stringify({
-    nodos: vista.nodes.map((nodo) => [nodo.id, textoDelNodo(nodo, labels), nodo.collapsed, nodo.children.map((hijo) => hijo.id)]),
+    nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id)]),
     aristas: vista.edges.map(idDeArista),
     fuentes: [medidas.fontSize, medidas.factorDeAncho, medidas.fuentes],
   });

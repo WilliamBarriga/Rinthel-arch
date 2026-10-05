@@ -29,6 +29,7 @@ export {
   TEMA_NEUTRO,
   temaSchema,
   TIPOS_DE_VISTA,
+  tamanoDeTexto,
   tipoDeNodoSchema,
   vistaSchema,
 } from './esquema';

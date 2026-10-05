@@ -10,6 +10,10 @@ export interface NodoResuelto extends Omit<Nodo, 'children'> {
   children: NodoResuelto[];
   /** El Grupo se muestra cerrado. Un Nodo sin hijos nunca esta colapsado. */
   collapsed: boolean;
+  /** Lo que se escribe en el Nodo: el `label` del override de la Vista o, si no, su titulo. */
+  label: string;
+  /** Nombre de Paleta: el del override de la Vista o, si no, el del Tipo de nodo; sin color si ninguno lo declara. */
+  color?: string;
   /** Hijos directos del Nodo en el Modelo (visibles o no). */
   childCount: number;
   /** Vista a la que enlaza (drill-down); un Grupo con `link` no se expande. */
@@ -44,6 +48,9 @@ export interface EstadoDeColapso {
  * `a.**` descendientes, `*` raices, `**` todo), menos `exclude`. Devuelve
  * `undefined` si la Vista no existe. Los selectores que no coinciden con ningun
  * Nodo no dan error, y `exclude` no arrastra a los descendientes del Nodo excluido.
+ *
+ * Cada Nodo resuelto lleva su `label` y su `color` (override sobre Tipo de nodo,
+ * ADR 0006); el valor literal lo pone el Tema, nunca esta capa.
  *
  * Colapso: un Grupo (Nodo con hijos) esta colapsado si tiene `link`; si no, por
  * precedencia, segun `estado`, luego `collapsed`/`expanded` de la Vista y luego
@@ -82,12 +89,18 @@ export function resolveView(
       .map((nodo) => nodo.id)
       .filter((id) => incluidos.has(id) && !excluidos.has(id) && !ancestroColapsado.has(id) && vista.depth !== 0),
   );
+  const overrides = new Map(vista.overrides.map((override) => [override.node, override]));
+  const colorDeTipo = new Map(fuente.specification.nodeTypes.map((tipo) => [tipo.name, tipo.color]));
   const enlaces = new Map(vista.links.map(({ node, view }) => [node, view]));
   const resolver = (nodo: Nodo): NodoResuelto => {
     const { children, ...resto } = nodo;
     const enlace = enlaces.get(nodo.id);
+    const override = overrides.get(nodo.id);
+    const color = override?.color ?? colorDeTipo.get(nodo.type);
     return {
       ...resto,
+      label: override?.label ?? nodo.title,
+      ...(color !== undefined && { color }),
       children: children.filter((hijo) => visibles.has(hijo.id)).map(resolver),
       collapsed: colapsado(nodo),
       childCount: children.length,
