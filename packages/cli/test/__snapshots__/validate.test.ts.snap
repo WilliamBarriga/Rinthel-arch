@@ -1,0 +1,29 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`validate > con errores sale con codigo 1 y un snapshot estable del contrato 1`] = `
+{
+  "contractVersion": 1,
+  "issues": [
+    {
+      "code": "E_UNKNOWN_NODE_TYPE",
+      "column": 3,
+      "file": "main.dg",
+      "line": 6,
+      "severity": "error",
+    },
+    {
+      "code": "E_SYNTAX_ERROR",
+      "column": 12,
+      "file": "main.dg",
+      "line": 7,
+      "severity": "error",
+    },
+  ],
+  "ok": false,
+  "summary": {
+    "errors": 2,
+    "truncated": false,
+    "warnings": 0,
+  },
+}
+`;

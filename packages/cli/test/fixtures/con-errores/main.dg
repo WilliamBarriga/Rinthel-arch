@@ -1,0 +1,8 @@
+specification {
+  node servicio
+}
+
+model {
+  servico api "API"
+  servicio "roto"
+}

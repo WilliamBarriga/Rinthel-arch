@@ -193,6 +193,13 @@ importers:
         version: 3.2.7(@types/node@24.19.1)
 
   packages/cli:
+    dependencies:
+      canonico:
+        specifier: workspace:*
+        version: link:../canonico
+      dsl:
+        specifier: workspace:*
+        version: link:../dsl
     devDependencies:
       tsup:
         specifier: ^8.5.1
