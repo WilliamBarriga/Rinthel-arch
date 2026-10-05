@@ -3,7 +3,7 @@
  * visibilidad (0..1) de cada Nodo y Arista de una Vista resuelta. Pura; no toca
  * la geometria: el layout se calcula una vez con todos los elementos.
  */
-import type { Arista, ElementoDePaso } from './esquema';
+import type { AristaDePaso, Arista, ElementoDePaso } from './esquema';
 import { matchesSelector } from './vistas';
 import type { NodoResuelto, VistaResuelta } from './vistas';
 
@@ -27,7 +27,7 @@ export function revealAt(vista: VistaResuelta, position: number): Visibilidad {
   const { steps } = vista;
   if (steps.length === 0) return () => 1;
 
-  const acotada = Math.min(Math.max(position, 0), steps.length);
+  const acotada = Number.isNaN(position) ? 0 : Math.min(Math.max(position, 0), steps.length);
   const k = Math.floor(acotada);
   const antes = estadoTras(vista, k);
   if (k === acotada) return (id) => (antes.has(id) ? 1 : 0);
@@ -43,7 +43,7 @@ export function revealAt(vista: VistaResuelta, position: number): Visibilidad {
 
 /** Ids (Nodos y Aristas) revelados tras aplicar los primeros `k` pasos. */
 function estadoTras(vista: VistaResuelta, k: number): Set<string> {
-  const nodos = aplanar(vista.nodes);
+  const nodos = vista.nodes;
   const nombradas = new Set(
     vista.steps.flatMap((paso) => paso.show.filter(esArista).flatMap((item) => idsDeAristas(vista, item))),
   );
@@ -95,17 +95,20 @@ function alcanza(selector: string, nodo: NodoResuelto): boolean {
   return base === nodo.id || base.startsWith(`${nodo.id}.`);
 }
 
-function esArista(item: ElementoDePaso): item is Extract<ElementoDePaso, { from: string }> {
+function esArista(item: ElementoDePaso): item is AristaDePaso {
   return 'from' in item;
 }
 
-/** Aristas de la Vista que une `item` (cualquier Atributo en los extremos). */
-function idsDeAristas(vista: VistaResuelta, item: Extract<ElementoDePaso, { from: string }>): string[] {
+/**
+ * Aristas de la Vista que une `item` (cualquier Atributo en los extremos). Un
+ * extremo dentro de un Grupo colapsado corresponde al Grupo, donde se elevo.
+ */
+function idsDeAristas(vista: VistaResuelta, item: AristaDePaso): string[] {
   return vista.edges
-    .filter((arista) => arista.from.node === item.from && arista.to.node === item.to)
+    .filter((arista) => esExtremo(arista.from.node, item.from) && esExtremo(arista.to.node, item.to))
     .map(idDeArista);
 }
 
-function aplanar(nodos: readonly NodoResuelto[]): NodoResuelto[] {
-  return nodos.flatMap((nodo) => [nodo, ...aplanar(nodo.children)]);
+function esExtremo(enVista: string, nombrado: string): boolean {
+  return enVista === nombrado || nombrado.startsWith(`${enVista}.`);
 }

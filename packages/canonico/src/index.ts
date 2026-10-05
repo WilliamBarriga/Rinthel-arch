@@ -39,6 +39,7 @@ export type { Visibilidad } from './pasos';
 export { matchesSelector, resolveView } from './vistas';
 export type { AristaResuelta, EstadoDeColapso, NodoResuelto, VistaResuelta } from './vistas';
 export type {
+  AristaDePaso,
   Arista,
   Atributo,
   CatalogoDeTiposDeNodo,

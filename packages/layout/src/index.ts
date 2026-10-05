@@ -10,8 +10,8 @@
  *
  * Invariantes: determinista (misma entrada, misma geometria); `INCLUDE_CHILDREN`
  * sin `considerModelOrder` (ADR 0004); el mismo codigo corre en Node y en Web
- * Worker. `Pin` se aplican despues de ELK como posicion relativa al Grupo padre;
- * solo re-enrutan aristas que tocan nodos pineados.
+ * Worker. Los `Pin` se aplicaran despues de ELK como posicion relativa al Grupo
+ * padre (ADR 0004); todavia no se leen.
  * Modos de error: fallos internos de ELK se propagan como rechazo de la promesa.
  * Configuracion requerida: ninguna; `opciones.elk` inyecta otro motor (p. ej. el
  * de Web Worker del shell).

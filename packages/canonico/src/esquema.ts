@@ -182,10 +182,6 @@ export const overrideSchema = z.object({
 
 export type OverrideDeNodo = z.infer<typeof overrideSchema>;
 
-/**
- * Vista: selecciona Nodos del Modelo con `include`/`exclude`/`depth` (ver
- * `resolveView`). Nunca define entidades nuevas.
- */
 /** Lo que un Paso nombra: un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`a -> b`). */
 const elementoDePasoSchema = z.union([
   z.object({ selector: z.string().min(1) }),
@@ -201,7 +197,13 @@ export const pasoSchema = z.object({
 
 export type Paso = z.infer<typeof pasoSchema>;
 export type ElementoDePaso = z.infer<typeof elementoDePasoSchema>;
+/** Elemento de Paso que nombra una Arista (`a -> b`). */
+export type AristaDePaso = Extract<ElementoDePaso, { from: string }>;
 
+/**
+ * Vista: selecciona Nodos del Modelo con `include`/`exclude`/`depth` (ver
+ * `resolveView`). Nunca define entidades nuevas.
+ */
 export const vistaSchema = z.object({
   id: z.string().min(1),
   type: z.enum(TIPOS_DE_VISTA),

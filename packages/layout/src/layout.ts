@@ -30,12 +30,14 @@ export interface OpcionesDeLayout {
   elk?: ELK;
 }
 
+/** Margen interior de un Grupo; arriba deja sitio al titulo. */
+const PADDING_GRUPO = '[top=32,left=16,bottom=16,right=16]';
+
 const OPCIONES_RAIZ = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
   'elk.edgeRouting': 'ORTHOGONAL',
   'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
-  'elk.padding': '[top=32,left=16,bottom=16,right=16]',
   'elk.spacing.nodeNode': '24',
   'elk.layered.spacing.nodeNodeBetweenLayers': '48',
 };
@@ -88,7 +90,11 @@ function aElk(nodo: NodoResuelto, medidas: MedidasDeTexto, labels: ReadonlyMap<s
   if (nodo.children.length === 0) {
     return { id: nodo.id, ...tamanoDeNodo(textoDelNodo(nodo, labels), medidas) };
   }
-  return { id: nodo.id, children: nodo.children.map((hijo) => aElk(hijo, medidas, labels)) };
+  return {
+    id: nodo.id,
+    layoutOptions: { 'elk.padding': PADDING_GRUPO },
+    children: nodo.children.map((hijo) => aElk(hijo, medidas, labels)),
+  };
 }
 
 function labelsDeVista(vista: VistaResuelta): Map<string, string> {

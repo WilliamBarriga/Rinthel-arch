@@ -130,4 +130,21 @@ describe('revealAt', () => {
     expect(revealAt(nombrado, 1)('a')).toBe(1);
     expect(revealAt(hijos, 1)('a')).toBe(1);
   });
+
+  it('nombrar una Arista de un hijo la espera aunque el Grupo este colapsado', () => {
+    const v = vista(
+      { steps: [paso('uno', mostrar('a', 'b')), paso('dos', [{ from: 'a.a1', to: 'b' }])] },
+      { collapsed: ['a'] },
+    );
+    const elevada = idDeArista({ from: { node: 'a' }, to: { node: 'b' } });
+
+    expect(revealAt(v, 1)(elevada)).toBe(0);
+    expect(revealAt(v, 2)(elevada)).toBe(1);
+  });
+
+  it('una posicion NaN se trata como 0', () => {
+    const v = vista({ steps: [paso('uno', mostrar('b'))] });
+
+    expect(revealAt(v, Number.NaN)('b')).toBe(0);
+  });
 });
