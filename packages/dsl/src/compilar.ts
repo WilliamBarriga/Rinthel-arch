@@ -37,11 +37,22 @@ import type { TemaDeclarado } from './temas';
 /** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
 export type ArchivosDelWorkspace = Readonly<Record<string, string>>;
 
+/** Sitio del texto donde una Vista fija el `pin` de un Nodo. */
+export interface PosicionDePin {
+  view: string;
+  node: string;
+  file: string;
+  line: number;
+  column: number;
+}
+
 export interface ResultadoDeCompilacion {
   /** Presente solo si no hay issues con severidad `error`. */
   canonico?: FuenteCanonica;
   /** Todos los issues, ordenados por archivo, linea, columna y codigo. */
   issues: Issue[];
+  /** Posicion de cada override con `pin`, en orden de aparicion. */
+  pins: PosicionDePin[];
 }
 
 let memoServicios: LangiumCoreServices | undefined;
@@ -151,9 +162,11 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     model: { nodes: nodos, edges: aristas },
     views: vistas.map(({ vista }) => vista),
   };
+  const pins: PosicionDePin[] = [];
   for (const { vista, archivo, ast } of vistas) {
     // Con sintaxis rota el AST es parcial: sus overrides darian falsos positivos.
     if (conSintaxisRota.has(archivo)) continue;
+    pins.push(...posicionesDePin(vista, ast, archivo));
     comprobarOverrides(vista, ast, archivo, fuente, issues);
     comprobarTemaYColores(vista, ast, archivo, fuente, issues);
     comprobarDrillDown(vista, ast, archivo, fuente, issues);
@@ -165,10 +178,11 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   }
 
   issues.sort(compararIssues);
-  if (issues.some((issue) => issue.severity === 'error')) return { issues };
+  if (issues.some((issue) => issue.severity === 'error')) return { issues, pins };
   return {
     canonico: fuenteCanonicaSchema.parse(fuente),
     issues,
+    pins,
   };
 }
 
@@ -385,6 +399,14 @@ function overrideDe(declarado: NodeOverride): OverrideDeNodo {
     else override.color = prop.value;
   }
   return override;
+}
+
+function posicionesDePin(vista: Vista, ast: View, archivo: string): PosicionDePin[] {
+  return ast.props.flatMap((prop) =>
+    prop.$type === 'NodeOverride' && prop.props.some((p) => p.$type === 'OverridePin')
+      ? [{ view: vista.id, node: prop.node, file: archivo, ...rangoDe(prop, 'node').start }]
+      : [],
+  );
 }
 
 /** Un override solo puede apuntar a un Nodo que la Vista muestra. */

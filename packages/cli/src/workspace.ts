@@ -1,6 +1,6 @@
 /** Adaptador de disco: unico punto del CLI que lee el Workspace. */
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, sep } from 'node:path';
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join, sep } from 'node:path';
 
 import type { ArchivosDelWorkspace } from 'dsl';
 
@@ -27,4 +27,20 @@ export function leerWorkspace(raiz: string): ArchivosDelWorkspace {
   };
   recorrer(raiz);
   return archivos;
+}
+
+const CARPETA_DE_SALIDA = '.diagrams';
+
+/**
+ * Reemplaza `<raiz>/.diagrams/` por `archivos` (ruta relativa con `/` -> texto):
+ * la salida es derivada, asi que nunca quedan restos de una Vista que ya no existe.
+ */
+export function escribirSalida(raiz: string, archivos: Readonly<Record<string, string>>): void {
+  const destino = join(raiz, CARPETA_DE_SALIDA);
+  rmSync(destino, { recursive: true, force: true });
+  for (const [ruta, texto] of Object.entries(archivos)) {
+    const archivo = join(destino, ...ruta.split('/'));
+    mkdirSync(dirname(archivo), { recursive: true });
+    writeFileSync(archivo, texto);
+  }
 }

@@ -200,6 +200,9 @@ importers:
       dsl:
         specifier: workspace:*
         version: link:../dsl
+      layout:
+        specifier: workspace:*
+        version: link:../layout
     devDependencies:
       tsup:
         specifier: ^8.5.1

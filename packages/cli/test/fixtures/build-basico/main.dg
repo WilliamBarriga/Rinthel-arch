@@ -1,0 +1,24 @@
+specification {
+  node servicio
+}
+
+theme grande extends neutral {
+  tokens { fontSize "24px" }
+}
+
+model {
+  servicio api "API"
+  servicio db "Base de datos"
+  api -> db
+}
+
+view general {
+  type architecture
+  include **
+}
+
+view detalle {
+  type flow
+  include **
+  theme grande
+}

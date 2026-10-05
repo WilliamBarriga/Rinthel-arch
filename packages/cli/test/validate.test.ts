@@ -99,7 +99,7 @@ describe('validate', () => {
     };
     const dependencias = {
       leer: () => ({}),
-      compilar: () => ({ issues: [warning] }),
+      compilar: () => ({ pins: [], issues: [warning] }),
     };
     const args = ['validate', '--workspace', '.', '--json'];
 
@@ -167,7 +167,7 @@ describe('validate', () => {
 
     const resultado = await run(['validate', '--workspace', '.', '--json'], {
       leer: () => ({}),
-      compilar: () => ({ issues: [roto] }),
+      compilar: () => ({ pins: [], issues: [roto] }),
     });
 
     expect(resultado.exitCode).toBe(2);

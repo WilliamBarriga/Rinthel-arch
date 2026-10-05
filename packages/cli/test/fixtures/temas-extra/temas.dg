@@ -1,0 +1,3 @@
+theme corporativo extends neutral {
+  tokens { fontSize "20px" }
+}

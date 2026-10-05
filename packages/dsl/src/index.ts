@@ -10,4 +10,4 @@
 export const paquete = 'dsl';
 
 export { compile } from './compilar';
-export type { ArchivosDelWorkspace, ResultadoDeCompilacion } from './compilar';
+export type { ArchivosDelWorkspace, PosicionDePin, ResultadoDeCompilacion } from './compilar';
