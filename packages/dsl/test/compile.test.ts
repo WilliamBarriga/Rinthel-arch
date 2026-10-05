@@ -602,14 +602,14 @@ describe('compile: Vistas', () => {
 
     expect(issues).toEqual([]);
     expect(canonico?.views).toEqual([
-      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, overrides: [] },
+      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, overrides: [], collapsed: [], expanded: [], links: [] },
     ]);
   });
 
   it('una Vista flow solo con type; el resto queda vacio', () => {
     const { canonico } = compile({ 'main.dg': `${base} view f { type flow }` });
 
-    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], overrides: [] }]);
+    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], overrides: [], collapsed: [], expanded: [], links: [] }]);
   });
 
   it('acepta `*` y `**` como selectores y varios include', () => {
@@ -868,5 +868,80 @@ describe('compile: iconos', () => {
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_ICON', severity: 'error', file: 'main.dg', line: 1 });
     expect(issues[0]?.fix?.replacement).toBe('database');
+  });
+});
+describe('compile: drill-down', () => {
+  const base = 'specification { node servicio }  model { servicio a { servicio x }  servicio b { servicio y }  servicio c }';
+
+  it('compila drill collapse, collapsed, expanded y link a la Vista', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        view general {
+          type architecture
+          include **
+          drill collapse
+          collapsed a
+          expanded b
+          link a -> detalle
+        }
+        view detalle { type flow }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]).toMatchObject({
+      drill: 'collapse',
+      collapsed: ['a'],
+      expanded: ['b'],
+      links: [{ node: 'a', view: 'detalle' }],
+    });
+  });
+
+  it('una Vista sin drill-down deja collapsed, expanded y links vacios', () => {
+    const { canonico } = compile({ 'main.dg': `${base} view v { type flow }` });
+
+    expect(canonico?.views[0]).toMatchObject({ collapsed: [], expanded: [], links: [] });
+    expect(canonico?.views[0]?.drill).toBeUndefined();
+  });
+
+  it('link a una Vista inexistente es E_UNKNOWN_VIEW_LINK, con fix si hay un candidato', () => {
+    const { issues } = compile({
+      'main.dg': `${base}\nview v {\n  type flow\n  include **\n  link a -> detale\n}\nview detalle { type flow }`,
+    });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_VIEW_LINK', file: 'main.dg', line: 5 });
+    expect(issues[0]?.fix?.replacement).toBe('detalle');
+  });
+
+  it('link puede apuntar a una Vista de otro archivo', () => {
+    const { issues } = compile({
+      'a.dg': `${base} view v { type flow include ** link a -> otra }`,
+      'b.dg': 'view otra { type flow }',
+    });
+
+    expect(issues).toEqual([]);
+  });
+
+  it('collapsed/expanded sobre un Nodo que no es Grupo es E_INVALID_EXPANSION_TARGET', () => {
+    const { issues } = compile({ 'main.dg': `${base}\nview v {\n  type flow\n  include **\n  collapsed c\n}` });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_INVALID_EXPANSION_TARGET', line: 5 });
+  });
+
+  it('collapsed/expanded sobre un Grupo que la Vista no muestra, o inexistente, es E_INVALID_EXPANSION_TARGET', () => {
+    const fuera = compile({ 'main.dg': `${base} view v { type flow include a expanded b }` });
+    const fantasma = compile({ 'main.dg': `${base} view v { type flow include ** collapsed zzz }` });
+
+    expect(fuera.issues.map((i) => i.code)).toEqual(['E_INVALID_EXPANSION_TARGET']);
+    expect(fantasma.issues.map((i) => i.code)).toEqual(['E_INVALID_EXPANSION_TARGET']);
+  });
+
+  it('link junto con expanded sobre el mismo Nodo es E_LINK_WITH_EXPANDED', () => {
+    const { issues } = compile({
+      'main.dg': `${base} view v { type flow include ** expanded a link a -> v }`,
+    });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_LINK_WITH_EXPANDED']);
   });
 });

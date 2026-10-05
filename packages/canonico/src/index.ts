@@ -31,7 +31,7 @@ export {
 export { combineIconProviders, genericIcons, resolveNodeTypeIcon, workspaceIcons } from './iconos';
 export type { IconProvider } from './iconos';
 export { resolveView } from './vistas';
-export type { VistaResuelta } from './vistas';
+export type { AristaResuelta, EstadoDeColapso, NodoResuelto, VistaResuelta } from './vistas';
 export type {
   Arista,
   Atributo,

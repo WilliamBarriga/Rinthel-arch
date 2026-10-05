@@ -194,6 +194,13 @@ export const vistaSchema = z.object({
   depth: z.number().int().min(0).optional(),
   overrides: z.array(overrideSchema).default([]),
   theme: z.string().min(1).optional(),
+  /** Mecanismo de drill-down por defecto de la Vista (ver CONTEXT.md, Drill-down). */
+  drill: z.literal('collapse').optional(),
+  /** Grupos que la Vista abre colapsados / expandidos, por encima de la regla de `depth`. */
+  collapsed: z.array(idDeNodoSchema).default([]),
+  expanded: z.array(idDeNodoSchema).default([]),
+  /** Drill-down por Nodo hacia otra Vista; el Grupo enlazado no se expande. */
+  links: z.array(z.object({ node: idDeNodoSchema, view: z.string().min(1) })).default([]),
 });
 
 export type Vista = z.infer<typeof vistaSchema>;
