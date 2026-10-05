@@ -839,3 +839,34 @@ describe('compile: Tema', () => {
     expect(compile({ 'main.dg': vista('neutral') }).issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
   });
 });
+describe('compile: iconos', () => {
+  const nodo = (icono: string) => `specification { node servicio { icon ${icono} } }  model { servicio a }`;
+
+  it('acepta una clave de los iconos genericos', () => {
+    const { issues, canonico } = compile({ 'main.dg': nodo('database') });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.specification.nodeTypes[0]?.icon).toBe('database');
+  });
+
+  it('acepta un SVG del Workspace por el nombre de su archivo', () => {
+    const { issues } = compile({ 'main.dg': nodo('mi-logo'), 'iconos/mi-logo.svg': '<svg></svg>' });
+
+    expect(issues).toEqual([]);
+  });
+
+  it('un archivo .svg del Workspace no se parsea como DSL', () => {
+    const { issues } = compile({ 'main.dg': nodo('database'), 'x.svg': '<svg><path d="M0 0"/></svg>' });
+
+    expect(issues).toEqual([]);
+  });
+
+  it('clave desconocida es E_UNKNOWN_ICON con posicion y fix si hay un candidato', () => {
+    const { issues, canonico } = compile({ 'main.dg': nodo('databse') });
+
+    expect(canonico).toBeUndefined();
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_ICON', severity: 'error', file: 'main.dg', line: 1 });
+    expect(issues[0]?.fix?.replacement).toBe('database');
+  });
+});

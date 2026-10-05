@@ -28,6 +28,8 @@ export {
   tipoDeNodoSchema,
   vistaSchema,
 } from './esquema';
+export { combineIconProviders, genericIcons, resolveNodeTypeIcon, workspaceIcons } from './iconos';
+export type { IconProvider } from './iconos';
 export { resolveView } from './vistas';
 export type { VistaResuelta } from './vistas';
 export type {

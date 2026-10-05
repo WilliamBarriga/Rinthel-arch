@@ -2,7 +2,7 @@
  * Compilador del DSL de texto: parsea cada archivo con la gramatica derivada de
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
-import { CODIGOS, TIPOS_DE_VISTA, fuenteCanonicaSchema, resolveView, vistaSchema } from 'canonico';
+import { CODIGOS, TIPOS_DE_VISTA, combineIconProviders, fuenteCanonicaSchema, genericIcons, workspaceIcons, resolveView, vistaSchema } from 'canonico';
 import type {
   Arista,
   Atributo,
@@ -59,11 +59,13 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const tiposDeNodo: TipoDeNodo[] = [];
   const conSintaxisRota = new Set<string>();
   const temasDeclarados: TemaDeclarado[] = [];
+  const tiposConIcono: { archivo: string; prop: NodeTypeProperty }[] = [];
   const tiposConColor: { archivo: string; prop: NodeTypeProperty }[] = [];
   const vistas: { vista: Vista; archivo: string; ast: View }[] = [];
   const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
 
   for (const archivo of Object.keys(workspace).sort()) {
+    if (archivo.endsWith('.svg')) continue;
     const texto = workspace[archivo] as string;
     const resultado = servicios().parser.LangiumParser.parse<Documento>(texto);
     const deSintaxis = issuesDeSintaxis(archivo, texto, resultado);
@@ -76,6 +78,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
         for (const prop of decl.props) {
           const valor = prop.value;
           if (prop.key === 'color') tiposConColor.push({ archivo, prop });
+          if (prop.key === 'icon') tiposConIcono.push({ archivo, prop });
           if (prop.key === 'description') tipo.description = valor;
           else tipo[prop.key] = valor;
         }
@@ -125,6 +128,17 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     for (const arista of delArchivo) {
       aristas.push(compilarArista(arista, archivo, atributosPorNodo, issues));
     }
+  }
+
+  const iconos = combineIconProviders(workspaceIcons(workspace), genericIcons());
+  for (const { archivo, prop } of tiposConIcono) {
+    if (conSintaxisRota.has(archivo) || iconos.resolve(prop.value) !== undefined) continue;
+    issues.push(
+      issueConSugerencia(
+        { code: CODIGOS.E_UNKNOWN_ICON, message: `Icono '${prop.value}' no existe (ni generico ni SVG del Workspace)` },
+        archivo, prop, 'value', iconos.keys(),
+      ),
+    );
   }
 
   const { temas, issues: delTema } = resolverTemas(temasDeclarados);
