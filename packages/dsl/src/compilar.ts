@@ -123,6 +123,7 @@ function compilarElemento(
     attributes: elemento.attrs.flatMap((bloque) =>
       bloque.items.map((item) => ({ name: item.name, type: item.type, notes: item.notes ?? '' })),
     ),
+    source: elemento.sources.flatMap((bloque) => bloque.items.map(({ kind, ref }) => ({ kind, ref }))),
     children: elemento.elements.map((hijo) => compilarElemento(hijo, id, archivo, declarados, issues)),
   };
 }

@@ -27,6 +27,7 @@ export type {
   FuenteCanonica,
   Modelo,
   Nodo,
+  ReferenciaOpaca,
   TipoDeNodo,
 } from './esquema';
 

@@ -69,7 +69,7 @@ Element:
     (description=String)?
   )?
   ('{'
-    (elements+=Element | attrs+=Attrs)*
+    (elements+=Element | attrs+=Attrs | sources+=Source)*
   '}')?
 ;
 
@@ -78,13 +78,22 @@ Attrs:
   'attrs' '{' items+=Attribute* '}'
 ;
 
+// `source { kind "ref" ... }`: referencias opacas; el `ref` siempre es cadena.
+Source:
+  'source' '{' items+=SourceItem* '}'
+;
+
+SourceItem:
+  kind=Id ref=String
+;
+
 Attribute:
   name=Id ':' type=Id (notes=String)?
 ;
 
 Id returns string:
   IdTerminal |
-  'description' | 'icon' | 'style' | 'color' | 'attrs';
+  'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source';
 
 // -------------------------
 // Comments

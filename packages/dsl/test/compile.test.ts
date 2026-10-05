@@ -27,6 +27,7 @@ describe('compile: Nodos y specification', () => {
             title: 'API',
             description: 'Puerta de entrada',
             attributes: [],
+            source: [],
             children: [],
           },
         ],
@@ -382,5 +383,55 @@ model {
   it('con el Nodo inexistente solo informa E_DANGLING_EDGE, no el Atributo', () => {
     const { issues } = compile({ 'main.dg': `${spec} model { tabla a  a -> nada#x }` });
     expect(issues.map((i) => i.code)).toEqual(['E_DANGLING_EDGE']);
+  });
+});
+
+describe('compile: source', () => {
+  const spec = 'specification { node servicio }';
+
+  it('compila varios source de un Nodo a una lista {kind, ref} en orden', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+        model {
+          servicio api {
+            source { git "src/api.ts" }
+            source { url "https://ejemplo.com/api" doc "docs/api.md" }
+          }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.nodes[0]?.source).toEqual([
+      { kind: 'git', ref: 'src/api.ts' },
+      { kind: 'url', ref: 'https://ejemplo.com/api' },
+      { kind: 'doc', ref: 'docs/api.md' },
+    ]);
+  });
+
+  it('un Nodo sin source tiene la lista vacia', () => {
+    const { canonico } = compile({ 'main.dg': `${spec} model { servicio api }` });
+    expect(canonico?.model.nodes[0]?.source).toEqual([]);
+  });
+
+  it('guarda kind y ref sin interpretarlos', () => {
+    const { canonico } = compile({
+      'main.dg': `${spec} model { servicio api { source { cualquier-cosa "  ../x:y#z  " } } }`,
+    });
+    expect(canonico?.model.nodes[0]?.source).toEqual([{ kind: 'cualquier-cosa', ref: '  ../x:y#z  ' }]);
+  });
+
+  it('un ref que no es cadena es E_SYNTAX_ERROR con posicion', () => {
+    const { issues, canonico } = compile({
+      'main.dg': `${spec}
+        model {
+          servicio api {
+            source { git 42 }
+          }
+        }`,
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues.every((issue) => issue.code === 'E_SYNTAX_ERROR')).toBe(true);
+    expect(issues[0]).toMatchObject({ file: 'main.dg', line: 4, column: 26 });
   });
 });
