@@ -42,6 +42,7 @@
  * anteriores en la cadena `canonico -> dsl -> layout -> render -> shell / cli`.
  */
 import { fuenteCanonicaSchema, salidaDeValidateSchema } from 'canonico';
+import type { FuenteCanonica } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
 import { parseArgs } from 'node:util';
@@ -190,11 +191,13 @@ async function exportar(
   const salida = FORMATOS[formato ?? 'svg'];
   if (salida === undefined) return uso(`Formato '${formato}' desconocido. Formatos: ${Object.keys(FORMATOS).join(', ')}`);
 
-  let archivos: Record<string, string | Uint8Array>;
+  let cache: Record<string, string>;
+  let fuente: FuenteCanonica;
+  let geometrias: Record<string, GeometriaCacheada>;
   try {
-    const cache = leerCache(raiz);
-    const fuente = fuenteCanonicaSchema.parse(JSON.parse(cache['canonico.json'] ?? 'null'));
-    const geometrias = Object.fromEntries(
+    cache = leerCache(raiz);
+    fuente = fuenteCanonicaSchema.parse(JSON.parse(cache['canonico.json'] ?? 'null'));
+    geometrias = Object.fromEntries(
       Object.entries(cache)
         .filter(([ruta]) => ruta.startsWith('geometria/'))
         .map(([, texto]) => {
@@ -202,11 +205,16 @@ async function exportar(
           return [cacheada.view, cacheada] as const;
         }),
     );
+  } catch (error) {
+    return uso(`No hay una salida de build utilizable en '${raiz}/.diagrams' (ejecuta 'build' antes): ${(error as Error).message}`);
+  }
+  let archivos: Record<string, string | Uint8Array>;
+  try {
     // El Workspace gana sobre `--theme-path` en rutas repetidas, como en `build`.
     const fuentes = { ...(carpetaDeTemas === undefined ? {} : leerLetras(carpetaDeTemas)), ...leerLetras(raiz) };
     archivos = salida.exportar(fuente, geometrias, leer(raiz), fuentes);
   } catch (error) {
-    return uso(`No hay una salida de build utilizable en '${raiz}/.diagrams' (ejecuta 'build' antes): ${(error as Error).message}`);
+    return uso(`No se pudo exportar: ${(error as Error).message}`);
   }
   try {
     escribir(raiz, archivos, salida.carpeta);

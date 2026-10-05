@@ -63,6 +63,7 @@ describe('export --format png', () => {
     expect(resultado.exitCode).toBe(2);
     expect(resultado.stderr).toContain('Erica One');
     expect(resultado.stderr).toContain('ttf');
+    expect(resultado.stderr).not.toContain('ejecuta');
     expect(existsSync(join(workspace, '.diagrams', 'png'))).toBe(false);
   });
 
@@ -74,5 +75,23 @@ describe('export --format png', () => {
     expect(resultado.exitCode).toBe(2);
     expect(resultado.stderr).toContain('svg');
     expect(resultado.stderr).toContain('png');
+  });
+
+  it('con --workspace . lee igual las fuentes del Workspace', async () => {
+    const absoluto = await workspaceConstruido(true);
+    cpSync(join(fixtures, 'fuentes', 'Erica One.ttf'), join(absoluto, 'Erica One.ttf'));
+    await run(['export', '--workspace', absoluto, '--format', 'png']);
+    const esperado = leerPng(absoluto, 'general');
+    const anterior = process.cwd();
+
+    try {
+      process.chdir(absoluto);
+      const resultado = await run(['export', '--workspace', '.', '--format', 'png']);
+      expect(resultado.exitCode).toBe(0);
+    } finally {
+      process.chdir(anterior);
+    }
+
+    expect(leerPng(absoluto, 'general').equals(esperado)).toBe(true);
   });
 });

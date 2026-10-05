@@ -46,10 +46,17 @@ describe('skill', () => {
     expect(skill).toMatch(/\| 1 \|/);
     expect(skill).toMatch(/\| 2 \|/);
     expect(skill).toContain('validate --workspace');
+    expect(skill).toContain('diagrams skill --workspace');
     expect(skill).toContain('--json');
     expect(skill).toContain('`fix`');
     const bloque = /```json\n([\s\S]*?)\n```/.exec(skill)?.[1];
     expect(JSON.parse(bloque ?? 'null')).toEqual(salidaDeValidateJsonSchema());
+  });
+
+  it('la sintaxis del skill cubre extend, style, steps y link', async () => {
+    const skill = await generar(workspace());
+
+    for (const palabra of ['extend', 'style', 'steps', 'link']) expect(skill).toContain(`\`${palabra}`);
   });
 
   it('el ejemplo de DSL del skill compila sin issues', async () => {

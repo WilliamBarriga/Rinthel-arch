@@ -61,6 +61,8 @@ Los diagramas se escriben en archivos \`.dg\` del Workspace. Es la unica fuente 
 3. Si \`ok\` es \`false\`, corrige cada issue (empieza por los \`fix\`, que son ediciones exactas del texto) y vuelve al paso 2.
 4. Termina cuando \`ok\` es \`true\`. \`diagrams build\` y \`diagrams export\` generan geometria, SVG y PNG.
 
+Este skill se genera: tras cambiar los Tipos de nodo, Temas o codigos, regeneralo con \`diagrams skill --workspace <ruta> --out <archivo>\`.
+
 ## Tipos de nodo
 
 Todo Nodo declara su tipo con uno de estos (\`specification { node <tipo> { ... } }\`).
@@ -86,7 +88,8 @@ ${EJEMPLO_DE_DSL}
 - Un Nodo es \`<tipo> <id> ["Titulo" ["Descripcion"]] [{ hijos, attrs, source }]\`; sus hijos lo hacen Grupo y su id completo es \`padre.hijo\`.
 - Una Arista es \`origen ["card"] -> ["card"] destino\` (espacios alrededor de \`->\`); un extremo puede ser \`nodo#atributo\`.
 - Una Vista solo selecciona (\`include\`, \`exclude\`, \`depth\`; selectores \`a\`, \`a.*\`, \`a.**\`); \`type\` es \`architecture\` o \`flow\`. Sus overrides por Nodo (\`label\`, \`pin x,y\`, \`order\`, \`color\`) nunca tocan el Modelo.
-- Una Vista puede declarar \`theme\`, \`collapsed\`/\`expanded\`, \`link <nodo> -> <vista>\` y \`steps\` de revelado.
+- Una Vista puede declarar \`theme\`, \`collapsed\`/\`expanded\`, \`link <nodo> -> <vista>\` y \`steps\` de revelado (\`steps { step "Titulo" { show a, a -> b  hide c } }\`: acumulativos; \`show\` revela y \`hide\` oculta lo anterior).
+- \`extend <nodo> { ... }\` anade hijos, \`attrs\` y \`source\` a un Nodo declarado en otro archivo. Un Tipo de nodo admite \`description\`, \`icon\`, \`style\` y \`color\`; el \`icon\` es un icono generico o el nombre de un \`.svg\` del Workspace.
 
 ## Contrato de validate
 

@@ -1,6 +1,6 @@
 /** Adaptador de disco: unico punto del CLI que lee el Workspace. */
 import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, sep } from 'node:path';
+import { dirname, join, relative, sep } from 'node:path';
 
 import type { ArchivosDelWorkspace } from 'dsl';
 
@@ -24,7 +24,7 @@ function recorrer(
       if (!incluirOcultas && (entrada.name.startsWith('.') || CARPETAS_IGNORADAS.has(entrada.name))) continue;
       const ruta = join(carpeta, entrada.name);
       if (entrada.isDirectory()) visitar(ruta);
-      else if (acepta(entrada.name)) archivos[ruta.slice(raiz.length + 1).split(sep).join('/')] = leer(ruta);
+      else if (acepta(entrada.name)) archivos[relative(raiz, ruta).split(sep).join('/')] = leer(ruta);
     }
   };
   visitar(raiz);
