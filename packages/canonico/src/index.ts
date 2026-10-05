@@ -9,7 +9,8 @@
  * (`resolveView`, que devuelve `undefined` si la Vista no existe), nunca define
  * entidades; sus `overrides` (label, pin, order, color) son solo presentacion; un Grupo
  * colapsado (estado, `depth`, `collapsed`/`expanded`, `link`) eleva y fusiona las
- * Aristas de sus hijos; `IconProvider` resuelve claves de icono a SVG inline;
+ * Aristas de sus hijos; los `steps` de una Vista los interpreta `revealAt` (ADR 0007,
+ * acumulativos, con fundido entre pasos); `IconProvider` resuelve claves de icono a SVG inline;
  * colores son nombres de Paleta, nunca valores hex (ADR 0006); el Tema (`themes`,
  * siempre con el neutro) es un objeto plano ya resuelto, sin herencia.
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
@@ -24,6 +25,7 @@ export {
   idDeNodoSchema,
   nodoSchema,
   overrideSchema,
+  pasoSchema,
   TEMA_NEUTRO,
   temaSchema,
   TIPOS_DE_VISTA,
@@ -32,17 +34,21 @@ export {
 } from './esquema';
 export { combineIconProviders, genericIcons, resolveNodeTypeIcon, workspaceIcons } from './iconos';
 export type { IconProvider } from './iconos';
-export { resolveView } from './vistas';
+export { idDeArista, revealAt } from './pasos';
+export type { Visibilidad } from './pasos';
+export { matchesSelector, resolveView } from './vistas';
 export type { AristaResuelta, EstadoDeColapso, NodoResuelto, VistaResuelta } from './vistas';
 export type {
   Arista,
   Atributo,
   CatalogoDeTiposDeNodo,
+  ElementoDePaso,
   Extremo,
   FuenteCanonica,
   Modelo,
   Nodo,
   OverrideDeNodo,
+  Paso,
   ReferenciaOpaca,
   Tema,
   TipoDeNodo,

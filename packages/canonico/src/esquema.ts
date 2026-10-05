@@ -186,6 +186,22 @@ export type OverrideDeNodo = z.infer<typeof overrideSchema>;
  * Vista: selecciona Nodos del Modelo con `include`/`exclude`/`depth` (ver
  * `resolveView`). Nunca define entidades nuevas.
  */
+/** Lo que un Paso nombra: un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`a -> b`). */
+const elementoDePasoSchema = z.union([
+  z.object({ selector: z.string().min(1) }),
+  z.object({ from: idDeNodoSchema, to: idDeNodoSchema }),
+]);
+
+/** Paso de revelado (ADR 0007): acumulativo; `show` revela y `hide` oculta lo anterior. */
+export const pasoSchema = z.object({
+  title: z.string(),
+  show: z.array(elementoDePasoSchema).default([]),
+  hide: z.array(elementoDePasoSchema).default([]),
+});
+
+export type Paso = z.infer<typeof pasoSchema>;
+export type ElementoDePaso = z.infer<typeof elementoDePasoSchema>;
+
 export const vistaSchema = z.object({
   id: z.string().min(1),
   type: z.enum(TIPOS_DE_VISTA),
@@ -201,6 +217,8 @@ export const vistaSchema = z.object({
   expanded: z.array(idDeNodoSchema).default([]),
   /** Drill-down por Nodo hacia otra Vista; el Grupo enlazado no se expande. */
   links: z.array(z.object({ node: idDeNodoSchema, view: z.string().min(1) })).default([]),
+  /** Pasos de revelado en orden; sin pasos todo esta revelado. */
+  steps: z.array(pasoSchema).default([]),
 });
 
 export type Vista = z.infer<typeof vistaSchema>;

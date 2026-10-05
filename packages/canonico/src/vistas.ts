@@ -2,7 +2,7 @@
  * Resolucion de Vistas: que Nodos y Aristas muestra una Vista del Modelo.
  * Pura: no modifica la Fuente. Una Vista solo selecciona, nunca define entidades.
  */
-import type { Arista, Extremo, FuenteCanonica, Nodo, Vista } from './esquema';
+import type { Arista, Extremo, FuenteCanonica, Nodo, Paso, Vista } from './esquema';
 
 /** Nodo visible: un Grupo colapsado se muestra como un Nodo unico con su contador. */
 export interface NodoResuelto extends Omit<Nodo, 'children'> {
@@ -27,6 +27,8 @@ export interface VistaResuelta {
   nodes: NodoResuelto[];
   /** Aristas entre Nodos visibles, con las de los hijos de un Grupo colapsado elevadas a el. */
   edges: AristaResuelta[];
+  /** Pasos de revelado de la Vista (ADR 0007), tal cual; `revealAt` los interpreta. */
+  steps: Paso[];
 }
 
 /** Estado de colapso del llamador (p. ej. el shell); gana a lo declarado en la Vista. */
@@ -59,7 +61,7 @@ export function resolveView(
 
   const todos = aplanar(fuente.model.nodes);
   const seleccionados = (selectores: readonly string[]): Set<string> =>
-    new Set(todos.filter((nodo) => selectores.some((selector) => coincide(selector, nodo.id))).map((nodo) => nodo.id));
+    new Set(todos.filter((nodo) => selectores.some((selector) => matchesSelector(selector, nodo.id))).map((nodo) => nodo.id));
   const incluidos = seleccionados(vista.include);
   const excluidos = seleccionados(vista.exclude);
 
@@ -94,6 +96,7 @@ export function resolveView(
   return {
     nodes: todos.filter((nodo) => visibles.has(nodo.id)).map(resolver),
     edges: elevarAristas(fuente.model.edges, visibles, ancestroColapsado),
+    steps: vista.steps,
   };
 }
 
@@ -151,8 +154,8 @@ function nivel(id: string): number {
   return id.split('.').length;
 }
 
-/** Si el id cae dentro de lo que designa el selector. */
-function coincide(selector: string, id: string): boolean {
+/** Si el id cae dentro de lo que designa el selector (`a`, `a.*`, `a.**`, `*`, `**`). */
+export function matchesSelector(selector: string, id: string): boolean {
   if (selector === '**') return true;
   if (selector === '*') return nivel(id) === 1;
   if (selector.endsWith('.**')) return id.startsWith(selector.slice(0, -2));
