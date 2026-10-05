@@ -18,9 +18,24 @@ export interface CajaDeNodo {
   height: number;
 }
 
-/** Geometria calculada de una Vista, por id de Nodo visible. */
+export interface Punto {
+  x: number;
+  y: number;
+}
+
+/**
+ * Ruta ortogonal de una Arista, en coordenadas del lienzo (no relativas a un
+ * Grupo). El primer y el ultimo punto son los puertos: caen en el borde de los
+ * Nodos extremo (el Grupo, si esta colapsado).
+ */
+export interface RutaDeArista {
+  points: Punto[];
+}
+
+/** Geometria calculada de una Vista: cajas por id de Nodo visible y rutas por `idDeArista`. */
 export interface Geometria {
   nodes: Record<string, CajaDeNodo>;
+  edges: Record<string, RutaDeArista>;
   width: number;
   height: number;
 }
@@ -38,6 +53,8 @@ const OPCIONES_RAIZ = {
   'elk.direction': 'RIGHT',
   'elk.edgeRouting': 'ORTHOGONAL',
   'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
+  'elk.json.edgeCoords': 'ROOT',
+  'elk.json.shapeCoords': 'PARENT',
   'elk.spacing.nodeNode': '24',
   'elk.layered.spacing.nodeNodeBetweenLayers': '48',
 };
@@ -77,7 +94,13 @@ export async function layoutView(
     }
   };
   recoger(resultado.children);
-  return { nodes, width: resultado.width ?? 0, height: resultado.height ?? 0 };
+  const edges: Record<string, RutaDeArista> = {};
+  for (const arista of resultado.edges ?? []) {
+    const [seccion] = arista.sections ?? [];
+    if (seccion === undefined) continue;
+    edges[arista.id] = { points: [seccion.startPoint, ...(seccion.bendPoints ?? []), seccion.endPoint].map(({ x, y }) => ({ x, y })) };
+  }
+  return { nodes, edges, width: resultado.width ?? 0, height: resultado.height ?? 0 };
 }
 
 /** `resolveView` lista todos los Nodos visibles a plano y anida ademas los hijos: las raices son las que nadie anida. */

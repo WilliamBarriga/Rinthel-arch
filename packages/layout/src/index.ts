@@ -2,7 +2,8 @@
  * `layout` — calcula la geometria de una Vista (ELK y Pin).
  *
  * `layoutView(vista, tema, opciones)` recibe una `VistaResuelta` y devuelve la
- * `Geometria`: caja por Nodo visible, con `x`/`y` relativos al Grupo padre. Los
+ * `Geometria`: caja por Nodo visible, con `x`/`y` relativos al Grupo padre, y ruta
+ * ortogonal por Arista (`idDeArista`), en coordenadas del lienzo. Los
  * Grupos colapsados son hojas. El tamano de cada Nodo sale del texto y de las
  * fuentes del Tema (`fonts`, `tokens.fontSize`), sin DOM. `claveDeLayout` dice
  * cuando hace falta relayoutar: cambia con estructura, textos y fuentes, nunca
@@ -20,4 +21,4 @@
 export const paquete = 'layout';
 
 export { claveDeLayout, layoutView } from './layout';
-export type { CajaDeNodo, Geometria, OpcionesDeLayout } from './layout';
+export type { CajaDeNodo, Geometria, OpcionesDeLayout, Punto, RutaDeArista } from './layout';
