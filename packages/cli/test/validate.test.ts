@@ -129,4 +129,27 @@ describe('validate', () => {
 
     expect(resultado.exitCode).toBe(0);
   });
+
+  it('un fallo interno (issue fuera de contrato) sale con codigo 2 y no lanza', async () => {
+    const roto = { code: 'E_X', severity: 'error' as const, file: 'a.dg', line: 0, column: 0, message: 'x' };
+
+    const resultado = await run(['validate', '--workspace', '.', '--json'], {
+      leer: () => ({}),
+      compilar: () => ({ issues: [roto] }),
+    });
+
+    expect(resultado.exitCode).toBe(2);
+    expect(resultado.stdout).toBe('');
+    expect(resultado.stderr).toContain('interno');
+  });
+
+  it('un bloque sin cerrar sale con codigo 1 y posicion valida', async () => {
+    const copia = mkdtempSync(join(tmpdir(), 'diagrams-'));
+    writeFileSync(join(copia, 'main.dg'), 'specification { node servicio }\nmodel {\n  servicio api {');
+
+    const resultado = await run(['validate', '--workspace', copia, '--json']);
+
+    expect(resultado.exitCode).toBe(1);
+    expect(JSON.parse(resultado.stdout).issues[0]).toMatchObject({ code: 'E_SYNTAX_ERROR', line: 3 });
+  });
 });

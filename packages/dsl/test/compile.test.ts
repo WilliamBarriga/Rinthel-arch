@@ -139,4 +139,13 @@ describe('compile: Nodos y specification', () => {
       ['z.dg', 1, 'E_UNKNOWN_NODE_TYPE'],
     ]);
   });
+
+  it('un bloque sin cerrar al final del texto da E_SYNTAX_ERROR con posicion valida', () => {
+    const resultado = compile({ 'main.dg': 'specification { node servicio }\nmodel {\n  servicio api {' });
+
+    expect(resultado.canonico).toBeUndefined();
+    expect(resultado.issues).toHaveLength(1);
+    expect(resultado.issues[0]).toMatchObject({ code: 'E_SYNTAX_ERROR', file: 'main.dg', line: 3 });
+    expect(resultado.issues[0]?.column).toBeGreaterThanOrEqual(1);
+  });
 });

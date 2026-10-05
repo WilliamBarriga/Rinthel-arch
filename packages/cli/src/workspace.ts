@@ -2,6 +2,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, sep } from 'node:path';
 
+import type { ArchivosDelWorkspace } from 'dsl';
+
 const EXTENSION = '.dg';
 const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist']);
 
@@ -10,7 +12,7 @@ const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist']);
  * `.diagrams/`) y devuelve un mapa ruta relativa con `/` -> texto.
  * Lanza `Error` si la raiz no existe o no es una carpeta.
  */
-export function leerWorkspace(raiz: string): Record<string, string> {
+export function leerWorkspace(raiz: string): ArchivosDelWorkspace {
   if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' no es una carpeta`);
   const archivos: Record<string, string> = {};
   const recorrer = (carpeta: string): void => {

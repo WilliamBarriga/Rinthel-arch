@@ -19,10 +19,10 @@
  */
 import { salidaDeValidateSchema } from 'canonico';
 import { compile } from 'dsl';
-import type { ResultadoDeCompilacion } from 'dsl';
+import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
 import { parseArgs } from 'node:util';
 
-import { informe, textoLegible } from './validate';
+import { construirSalida, textoLegible } from './validate';
 import { leerWorkspace } from './workspace';
 
 export const paquete = 'cli';
@@ -35,8 +35,8 @@ export interface ResultadoDeEjecucion {
 
 /** Dependencias que entran como argumento; por defecto, las reales. */
 export interface Dependencias {
-  compilar?: (workspace: Record<string, string>) => ResultadoDeCompilacion;
-  leer?: (raiz: string) => Record<string, string>;
+  compilar?: (workspace: ArchivosDelWorkspace) => ResultadoDeCompilacion;
+  leer?: (raiz: string) => ArchivosDelWorkspace;
 }
 
 const MAX_ISSUES_POR_DEFECTO = 100;
@@ -80,9 +80,14 @@ export async function run(
     return uso(`No se pudo leer el Workspace: ${(error as Error).message}`);
   }
 
-  const salida = salidaDeValidateSchema.parse(
-    informe(resultado.issues, { maxIssues, strict: opciones.strict }),
-  );
+  let salida;
+  try {
+    salida = salidaDeValidateSchema.parse(
+      construirSalida(resultado.issues, { maxIssues, strict: opciones.strict }),
+    );
+  } catch (error) {
+    return uso(`Error interno: la salida no cumple el contrato (${(error as Error).message})`);
+  }
   return {
     exitCode: salida.ok ? 0 : 1,
     stdout: opciones.json ? `${JSON.stringify(salida, null, 2)}\n` : textoLegible(salida),

@@ -1,8 +1,5 @@
 import { defineConfig } from 'tsup';
 
-export default defineConfig({
-  entry: ['src/index.ts', 'src/bin.ts'],
-  format: ['esm'],
-  dts: true,
-  clean: true,
-});
+import shared from '../../tsup.config.shared';
+
+export default defineConfig({ ...(shared as object), entry: ['src/index.ts', 'src/bin.ts'] });

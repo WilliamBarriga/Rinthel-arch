@@ -7,7 +7,7 @@ export interface OpcionesDeValidate {
 }
 
 /** Construye el objeto del contrato a partir de todos los issues, ya ordenados. */
-export function informe(issues: Issue[], { maxIssues, strict }: OpcionesDeValidate): SalidaDeValidate {
+export function construirSalida(issues: Issue[], { maxIssues, strict }: OpcionesDeValidate): SalidaDeValidate {
   const errors = issues.filter((issue) => issue.severity === 'error').length;
   const warnings = issues.length - errors;
   return {
@@ -21,7 +21,8 @@ export function informe(issues: Issue[], { maxIssues, strict }: OpcionesDeValida
 /** Texto para humanos: una linea por issue y un resumen. */
 export function textoLegible(salida: SalidaDeValidate): string {
   const lineas = salida.issues.map(
-    (i) => `${i.file}:${i.line}:${i.column} ${i.severity} ${i.code} ${i.message}`,
+    (issue) =>
+      `${issue.file}:${issue.line}:${issue.column} ${issue.severity} ${issue.code} ${issue.message}`,
   );
   const { errors, warnings, truncated } = salida.summary;
   lineas.push(`${errors} errores, ${warnings} avisos${truncated ? ' (lista truncada)' : ''}`);

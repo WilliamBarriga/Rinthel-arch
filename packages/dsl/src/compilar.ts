@@ -26,15 +26,16 @@ export interface ResultadoDeCompilacion {
   issues: Issue[];
 }
 
-let servicios: LangiumCoreServices | undefined;
+let memoServicios: LangiumCoreServices | undefined;
 
-function parser(): LangiumCoreServices {
-  if (servicios === undefined) {
+/** Servicios de Langium, construidos una vez (memo inmutable: no guarda estado entre llamadas). */
+function servicios(): LangiumCoreServices {
+  if (memoServicios === undefined) {
     const shared = inject(createDefaultSharedCoreModule(EmptyFileSystem), DiagramasGeneratedSharedModule);
-    servicios = inject(createDefaultCoreModule({ shared }), DiagramasGeneratedModule);
-    shared.ServiceRegistry.register(servicios);
+    memoServicios = inject(createDefaultCoreModule({ shared }), DiagramasGeneratedModule);
+    shared.ServiceRegistry.register(memoServicios);
   }
-  return servicios;
+  return memoServicios;
 }
 
 export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion {
@@ -44,7 +45,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
 
   for (const archivo of Object.keys(workspace).sort()) {
     const texto = workspace[archivo] as string;
-    const resultado = parser().parser.LangiumParser.parse<Documento>(texto);
+    const resultado = servicios().parser.LangiumParser.parse<Documento>(texto);
     issues.push(...issuesDeSintaxis(archivo, texto, resultado));
 
     for (const spec of resultado.value.specifications) {
@@ -104,8 +105,8 @@ function compilarElemento(
   return {
     id,
     type: elemento.type,
-    title: elemento.title === undefined ? elemento.name : elemento.title,
-    description: elemento.description === undefined ? '' : elemento.description,
+    title: elemento.title ?? elemento.name,
+    description: elemento.description ?? '',
     children: elemento.elements.map((hijo) => compilarElemento(hijo, id, archivo, declarados, issues)),
   };
 }
@@ -115,7 +116,7 @@ function issuesDeSintaxis(
   texto: string,
   resultado: ParseResult<Documento>,
 ): Issue[] {
-  const issue = (message: string, line: number, column: number): Issue => ({
+  const sintaxis = (message: string, line: number, column: number): Issue => ({
     code: CODIGOS.E_SYNTAX_ERROR,
     severity: 'error',
     file: archivo,
@@ -124,12 +125,13 @@ function issuesDeSintaxis(
     message,
   });
   return [
-    ...resultado.lexerErrors.map((error) => issue(error.message, error.line ?? 1, error.column ?? 1)),
+    ...resultado.lexerErrors.map((error) => sintaxis(error.message, error.line ?? 1, error.column ?? 1)),
     ...resultado.parserErrors.map((error) => {
       const { startLine, startColumn } = error.token;
-      return Number.isFinite(startLine) && Number.isFinite(startColumn)
-        ? issue(error.message, startLine as number, startColumn as number)
-        : issue(error.message, ...finDeTexto(texto));
+      // En EOF Langium da NaN o -1 como posicion: se usa el final del texto.
+      return startLine !== undefined && startColumn !== undefined && startLine >= 1 && startColumn >= 1
+        ? sintaxis(error.message, startLine, startColumn)
+        : sintaxis(error.message, ...finDeTexto(texto));
     }),
   ];
 }
