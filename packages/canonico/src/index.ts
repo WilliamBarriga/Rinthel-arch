@@ -59,8 +59,8 @@ export type {
 
 export type { Issue, IssueFix, IssueRelated, Severity, TextPosition, TextRange } from './issue';
 
-export { CODIGOS, CODIGOS_DEPRECADOS } from './codigos';
+export { CODIGOS, CODIGOS_DEPRECADOS, DESCRIPCION_DE_CODIGO } from './codigos';
 export type { Codigo } from './codigos';
 
-export { CONTRACT_VERSION, issueSchema, salidaDeValidateSchema } from './salida';
+export { CONTRACT_VERSION, issueSchema, salidaDeValidateJsonSchema, salidaDeValidateSchema } from './salida';
 export type { SalidaDeValidate } from './salida';

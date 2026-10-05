@@ -55,6 +55,31 @@ export const CODIGOS = Object.freeze({
 export type Codigo = (typeof CODIGOS)[keyof typeof CODIGOS];
 
 /**
+ * Una frase por codigo activo, para el skill generado para agentes. El tipo
+ * `Record<Codigo, string>` obliga a describir cada codigo nuevo.
+ */
+export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.freeze({
+  E_SYNTAX_ERROR: 'El texto no cumple la gramatica del DSL (lexico o sintaxis).',
+  E_UNKNOWN_NODE_TYPE: 'El tipo de un Nodo no esta declarado en `specification`.',
+  E_DUPLICATE_NODE: 'Dos Nodos con el mismo id sin `extend` de por medio.',
+  E_UNKNOWN_EXTEND_TARGET: '`extend` sobre un Nodo que no existe en el Modelo.',
+  E_OVERRIDE_OUTSIDE_VIEW: 'Override de Vista sobre un Nodo que la Vista no muestra.',
+  E_UNKNOWN_ICON: 'El `icon` de un Tipo de nodo no existe (ni generico ni SVG del Workspace).',
+  E_DANGLING_EDGE: 'Un extremo de Arista apunta a un Nodo que no existe.',
+  E_UNKNOWN_ATTRIBUTE: 'Un extremo `nodo#atributo` nombra un Atributo que el Nodo no tiene.',
+  E_UNKNOWN_PALETTE_COLOR: 'Un color no es un nombre de la Paleta del Tema (nunca hex en el Modelo).',
+  E_EXTENDS_CYCLE: 'Los `extends` de los Temas forman un ciclo.',
+  E_DUPLICATE_THEME: 'Dos Temas con el mismo nombre.',
+  E_UNKNOWN_THEME: 'Un Tema referenciado (`theme` o `extends`) no esta declarado.',
+  E_UNKNOWN_VIEW_LINK: 'Un `link` apunta a una Vista que no existe.',
+  E_INVALID_EXPANSION_TARGET: '`collapsed`/`expanded` sobre un Nodo que no es Grupo o que la Vista no muestra.',
+  E_LINK_WITH_EXPANDED: 'El mismo Nodo tiene `link` y `expanded` en la misma Vista.',
+  E_UNKNOWN_STEP: 'Un Paso nombra un Nodo, selector o Arista que no existe.',
+  E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture` ni `flow`.',
+  W_OVERLAPPING_PINS: 'Dos Nodos con `pin` se solapan en la Vista (aviso).',
+});
+
+/**
  * Codigos retirados: ya no se emiten y su valor no se reutiliza nunca.
  * Hoy vacio; aqui se mueve un codigo al deprecarlo, sin borrar su historial.
  */

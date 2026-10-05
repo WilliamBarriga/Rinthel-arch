@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { salidaDeValidateSchema } from 'canonico';
+import { salidaDeValidateJsonSchema, salidaDeValidateSchema } from 'canonico';
 
 const valida = {
   contractVersion: 1,
@@ -33,5 +33,18 @@ describe('salida de validate (ADR 0008)', () => {
   it('exige posicion 1-based en cada issue', () => {
     const cero = { ...valida, issues: [{ ...valida.issues[0], line: 0 }] };
     expect(salidaDeValidateSchema.safeParse(cero).success).toBe(false);
+  });
+
+  it('publica el contrato como JSON Schema derivado del esquema Zod', () => {
+    const esquema = salidaDeValidateJsonSchema() as {
+      properties: Record<string, { properties?: Record<string, unknown>; items?: { properties: Record<string, unknown> } }>;
+      required: string[];
+    };
+
+    expect(Object.keys(esquema.properties).sort()).toEqual(['contractVersion', 'issues', 'ok', 'summary']);
+    expect(esquema.required).toEqual(expect.arrayContaining(['contractVersion', 'ok', 'summary', 'issues']));
+    expect(Object.keys(esquema.properties['issues']?.items?.properties ?? {})).toEqual(
+      expect.arrayContaining(['code', 'severity', 'file', 'line', 'column', 'message', 'hint', 'related', 'fix']),
+    );
   });
 });

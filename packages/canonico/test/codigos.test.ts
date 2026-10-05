@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CODIGOS, CODIGOS_DEPRECADOS } from 'canonico';
+import { CODIGOS, CODIGOS_DEPRECADOS, DESCRIPCION_DE_CODIGO } from 'canonico';
 
 /**
  * Codigos minimos de v1: la lista del spec #19 escrita desde el spec, no desde
@@ -48,5 +48,12 @@ describe('catalogo de codigos de issue', () => {
       expect(clave).toBe(codigo);
     }
     expect(Object.isFrozen(CODIGOS)).toBe(true);
+  });
+
+  it('describe cada codigo activo en una frase, para el skill de agentes', () => {
+    expect(Object.keys(DESCRIPCION_DE_CODIGO).sort()).toEqual(Object.values(CODIGOS).sort());
+    for (const descripcion of Object.values(DESCRIPCION_DE_CODIGO)) {
+      expect(descripcion.trim().length).toBeGreaterThan(10);
+    }
   });
 });

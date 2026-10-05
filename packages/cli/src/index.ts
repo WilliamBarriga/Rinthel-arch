@@ -32,6 +32,11 @@
  * fuentes del Tema salen de `.ttf`/`.otf` del Workspace (si solo hay `woff`/`woff2`:
  * codigo 2); una familia sin archivo usa las fuentes del sistema, de modo que el
  * PNG es identico entre maquinas solo si el Workspace trae todas las familias.
+ * `skill --workspace <ruta> [--out <archivo>]`: genera el skill para agentes (formato
+ * `SKILL.md`) desde el catalogo del proyecto (Tipos de nodo, Paleta, Temas), la
+ * sintaxis del DSL, el contrato de `validate` (JSON Schema derivado del esquema Zod)
+ * y los codigos de issue. Va a stdout, o a `--out`; determinista (regenerar con otro
+ * catalogo lo actualiza). Con errores de validacion sale 1 y muestra los issues.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> render -> shell / cli`.
@@ -39,11 +44,14 @@
 import { fuenteCanonicaSchema, salidaDeValidateSchema } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { construirBuild } from './build';
 import type { GeometriaCacheada } from './build';
 import { exportarPng, exportarSvg } from './export';
+import { generarSkill } from './skill';
 
 import { construirSalida, textoLegible } from './validate';
 import { escribirSalida, leerFuentes, leerSalida, leerWorkspace } from './workspace';
@@ -95,12 +103,13 @@ export async function run(
   dependencias: Dependencias = {},
 ): Promise<ResultadoDeEjecucion> {
   const [comando, ...resto] = argv;
-  if (comando !== 'validate' && comando !== 'build' && comando !== 'export') {
+  if (comando !== 'validate' && comando !== 'build' && comando !== 'export' && comando !== 'skill') {
     return uso(
-      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export> --workspace <ruta>`,
+      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export|skill> --workspace <ruta>`,
     );
   }
   if (comando === 'export') return exportar(resto, dependencias);
+  if (comando === 'skill') return skill(resto, dependencias);
 
   let opciones: OpcionesParseadas;
   try {
@@ -113,6 +122,47 @@ export async function run(
   if (!Number.isInteger(maxIssues) || maxIssues < 1) return uso('--max-issues debe ser un entero >= 1');
 
   return ejecutar(comando, opciones, maxIssues, dependencias);
+}
+
+async function skill(
+  args: readonly string[],
+  { compilar = compile, leer = leerWorkspace }: Dependencias,
+): Promise<ResultadoDeEjecucion> {
+  let opciones;
+  try {
+    opciones = parseArgs({
+      args: [...args],
+      options: { workspace: { type: 'string' }, out: { type: 'string' } },
+      strict: true,
+    }).values;
+  } catch (error) {
+    return uso((error as Error).message);
+  }
+  if (opciones.workspace === undefined) return uso('Falta --workspace <ruta>');
+
+  let resultado: ResultadoDeCompilacion;
+  try {
+    resultado = compilar(leer(opciones.workspace));
+  } catch (error) {
+    return uso(`No se pudo leer el Workspace: ${(error as Error).message}`);
+  }
+  if (resultado.canonico === undefined) {
+    // Sin catalogo valido no hay skill fiable: se muestran los issues, como `validate`.
+    return {
+      exitCode: 1,
+      stdout: textoLegible(construirSalida(resultado.issues, { maxIssues: MAX_ISSUES_POR_DEFECTO, strict: false })),
+      stderr: '',
+    };
+  }
+  const texto = generarSkill(resultado.canonico);
+  if (opciones.out === undefined) return { exitCode: 0, stdout: texto, stderr: '' };
+  try {
+    mkdirSync(dirname(opciones.out), { recursive: true });
+    writeFileSync(opciones.out, texto);
+  } catch (error) {
+    return uso(`No se pudo escribir '${opciones.out}': ${(error as Error).message}`);
+  }
+  return { exitCode: 0, stdout: `Skill escrito en ${opciones.out}\n`, stderr: '' };
 }
 
 async function exportar(
