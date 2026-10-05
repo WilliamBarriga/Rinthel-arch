@@ -58,15 +58,15 @@ describe('renderToSvgString', () => {
   it('dibuja las Aristas con flecha, como rutas ortogonales', async () => {
     const svg = await dibujar(TEMA_NEUTRO);
 
-    expect(svg).toMatch(/<path data-edge="a\.api -&gt; db"[^>]* d="M [\d. ]+( L [\d. ]+)+"[^>]* marker-end="url\(#flecha\)"/);
-    expect(svg).toMatch(/<path data-edge="a\.api -&gt; a\.auth"/);
+    expect(svg).toMatch(/<g data-edge="a\.api -&gt; db">\n<path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" marker-end="url\(#flecha\)"/);
+    expect(svg).toMatch(/<g data-edge="a\.api -&gt; a\.auth"/);
     expect(svg).toContain('<marker id="flecha"');
   });
 
   it('dibuja una Arista entre Grupos sobre el borde del Grupo colapsado (snapshot)', async () => {
     const svg = await dibujar(TEMA_NEUTRO, { collapsed: ['a'] });
 
-    expect(svg).toMatch(/<path data-edge="a -&gt; db"/);
+    expect(svg).toMatch(/<g data-edge="a -&gt; db"/);
     expect(svg).not.toMatch(/data-edge="a\.api/);
     expect(svg).toMatchSnapshot();
   });
