@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO } from 'canonico';
+import { TEMA_NEUTRO, resolveView } from 'canonico';
 import { compile } from 'dsl';
 
 describe('compile: Nodos y specification', () => {
@@ -894,6 +894,21 @@ describe('compile: drill-down', () => {
       expanded: ['b'],
       links: [{ node: 'a', view: 'detalle' }],
     });
+  });
+
+  it('de punta a punta: un Grupo que excede depth abre colapsado y expanded lo abre', () => {
+    const fuente = (extra: string) =>
+      compile({ 'main.dg': `${base} view v { type architecture include ** depth 1 ${extra} }` }).canonico;
+
+    const cerrado = fuente('');
+    const abierto = fuente('expanded a');
+
+    expect(cerrado && resolveView(cerrado, 'v')?.nodes.find((n) => n.id === 'a')).toMatchObject({
+      collapsed: true,
+      childCount: 1,
+      children: [],
+    });
+    expect(abierto && resolveView(abierto, 'v')?.nodes.map((n) => n.id)).toEqual(['a', 'a.x', 'b', 'c']);
   });
 
   it('una Vista sin drill-down deja collapsed, expanded y links vacios', () => {

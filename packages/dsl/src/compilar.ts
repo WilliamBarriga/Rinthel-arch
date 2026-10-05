@@ -268,7 +268,7 @@ function comprobarDrillDown(
   fuente: FuenteCanonica,
   issues: Issue[],
 ): void {
-  const enLaVista = new Set(
+  const gruposEnLaVista = new Set(
     resolveView(
       { ...fuente, views: [{ ...vista, collapsed: [], expanded: [], links: [], depth: undefined }] },
       vista.id,
@@ -289,7 +289,7 @@ function comprobarDrillDown(
       const palabra = prop.$type === 'ViewCollapsed' ? 'collapsed' : 'expanded';
       prop.targets.forEach((destino, indice) => {
         const sitio = { file: archivo, ...rangoDeIndice(prop, 'targets', indice).start };
-        if (!enLaVista.has(destino)) {
+        if (!gruposEnLaVista.has(destino)) {
           issues.push({
             code: CODIGOS.E_INVALID_EXPANSION_TARGET,
             severity: 'error',

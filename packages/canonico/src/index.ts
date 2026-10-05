@@ -7,7 +7,9 @@
  * `type` siempre declarado en `specification.nodeTypes`;
  * una Vista (`views`) tiene `type` architecture|flow y solo selecciona Nodos
  * (`resolveView`, que devuelve `undefined` si la Vista no existe), nunca define
- * entidades; sus `overrides` (label, pin, order, color) son solo presentacion;
+ * entidades; sus `overrides` (label, pin, order, color) son solo presentacion; un Grupo
+ * colapsado (estado, `depth`, `collapsed`/`expanded`, `link`) eleva y fusiona las
+ * Aristas de sus hijos; `IconProvider` resuelve claves de icono a SVG inline;
  * colores son nombres de Paleta, nunca valores hex (ADR 0006); el Tema (`themes`,
  * siempre con el neutro) es un objeto plano ya resuelto, sin herencia.
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;

@@ -64,10 +64,10 @@ export function resolveView(
   const excluidos = seleccionados(vista.exclude);
 
   const colapsado = (nodo: Nodo): boolean => estaColapsado(nodo, vista, estado);
-  const cerrador = new Map<string, string>();
+  const ancestroColapsado = new Map<string, string>();
   const registrar = (nodos: readonly Nodo[], heredado: string | undefined): void => {
     for (const nodo of nodos) {
-      if (heredado !== undefined) cerrador.set(nodo.id, heredado);
+      if (heredado !== undefined) ancestroColapsado.set(nodo.id, heredado);
       registrar(nodo.children, heredado ?? (colapsado(nodo) ? nodo.id : undefined));
     }
   };
@@ -76,7 +76,7 @@ export function resolveView(
   const visibles = new Set(
     todos
       .map((nodo) => nodo.id)
-      .filter((id) => incluidos.has(id) && !excluidos.has(id) && !cerrador.has(id) && vista.depth !== 0),
+      .filter((id) => incluidos.has(id) && !excluidos.has(id) && !ancestroColapsado.has(id) && vista.depth !== 0),
   );
   const enlaces = new Map(vista.links.map(({ node, view }) => [node, view]));
   const resolver = (nodo: Nodo): NodoResuelto => {
@@ -93,7 +93,7 @@ export function resolveView(
 
   return {
     nodes: todos.filter((nodo) => visibles.has(nodo.id)).map(resolver),
-    edges: elevarAristas(fuente.model.edges, visibles, cerrador),
+    edges: elevarAristas(fuente.model.edges, visibles, ancestroColapsado),
   };
 }
 
@@ -116,12 +116,12 @@ function estaColapsado(nodo: Nodo, vista: Vista, estado: EstadoDeColapso): boole
 function elevarAristas(
   aristas: readonly Arista[],
   visibles: ReadonlySet<string>,
-  cerrador: ReadonlyMap<string, string>,
+  ancestroColapsado: ReadonlyMap<string, string>,
 ): AristaResuelta[] {
   const fusionadas = new Map<string, AristaResuelta>();
   for (const arista of aristas) {
-    const from = elevar(arista.from, cerrador);
-    const to = elevar(arista.to, cerrador);
+    const from = elevar(arista.from, ancestroColapsado);
+    const to = elevar(arista.to, ancestroColapsado);
     if (!visibles.has(from.node) || !visibles.has(to.node)) continue;
     if (from.node === to.node && (from !== arista.from || to !== arista.to)) continue;
 
@@ -137,8 +137,8 @@ function elevarAristas(
   return [...fusionadas.values()];
 }
 
-function elevar(extremo: Extremo, cerrador: ReadonlyMap<string, string>): Extremo {
-  const grupo = cerrador.get(extremo.node);
+function elevar(extremo: Extremo, ancestroColapsado: ReadonlyMap<string, string>): Extremo {
+  const grupo = ancestroColapsado.get(extremo.node);
   return grupo === undefined ? extremo : { node: grupo };
 }
 
