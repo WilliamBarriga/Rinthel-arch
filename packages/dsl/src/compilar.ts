@@ -12,6 +12,7 @@ import type {
   Nodo,
   OverrideDeNodo,
   ReferenciaOpaca,
+  Tema,
   TextRange,
   TipoDeNodo,
   Vista,
@@ -141,15 +142,14 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     comprobarTemaYColores(vista, ast, archivo, fuente, issues);
   }
   for (const { archivo, prop } of tiposConColor) {
-    comprobarColor(prop, archivo, temas.flatMap((tema) => Object.keys(tema.palette)), issues);
+    if (conSintaxisRota.has(archivo)) continue;
+    comprobarColor(prop, archivo, nombresDePaleta(temas), issues);
   }
 
   issues.sort(compararIssues);
   if (issues.some((issue) => issue.severity === 'error')) return { issues };
   return {
-    canonico: fuenteCanonicaSchema.parse({
-      ...fuente,
-    }),
+    canonico: fuenteCanonicaSchema.parse(fuente),
     issues,
   };
 }
@@ -225,13 +225,17 @@ function comprobarTemaYColores(
       ),
     );
   }
-  const paleta = (tema ? [tema] : fuente.themes).flatMap((candidato) => Object.keys(candidato.palette));
+  const paleta = nombresDePaleta(tema ? [tema] : fuente.themes);
   for (const prop of ast.props) {
     if (prop.$type !== 'NodeOverride') continue;
     for (const campo of prop.props) {
       if (campo.$type === 'OverrideColor') comprobarColor(campo, archivo, paleta, issues);
     }
   }
+}
+
+function nombresDePaleta(temas: readonly Tema[]): string[] {
+  return temas.flatMap((tema) => Object.keys(tema.palette));
 }
 
 /** Un color es siempre un nombre de Paleta; un hex o un typo es `E_UNKNOWN_PALETTE_COLOR`. */

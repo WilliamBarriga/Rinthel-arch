@@ -712,13 +712,21 @@ describe('compile: overrides de presentacion por Nodo en la Vista', () => {
     expect(issues.map((i) => i.code)).toEqual(['E_OVERRIDE_OUTSIDE_VIEW']);
   });
 
-  it('color solo acepta nombres de Paleta: un hex es error de sintaxis', () => {
+  it('color solo acepta nombres de Paleta: un hex es E_UNKNOWN_PALETTE_COLOR', () => {
     const { issues } = compile({
-      'main.dg': `${base} view v { type flow include ** node a { color #ff0000 } }`,
+      'main.dg': `${base} view v { type flow include ** node a { color "#ff0000" } }`,
     });
 
-    expect(issues.length).toBeGreaterThan(0);
-    expect(issues.every((i) => i.code === 'E_SYNTAX_ERROR')).toBe(true);
+    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
+  });
+
+  it('pin admite coordenadas negativas', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base} view v { type flow include ** node a { pin -10,-5 } }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]?.overrides[0]?.pin).toEqual({ x: -10, y: -5 });
   });
 });
 

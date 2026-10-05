@@ -137,13 +137,16 @@ OverrideLabel:
   'label' value=String;
 
 OverridePin:
-  'pin' x=INT ',' y=INT;
+  'pin' x=Coordinate ',' y=Coordinate;
+
+Coordinate returns number:
+  '-'? INT;
 
 OverrideOrder:
   'order' value=INT;
 
 OverrideColor:
-  'color' value=Id;
+  'color' value=PropertyValue;
 
 // `a.b` un Nodo, `a.*` sus hijos directos, `a.**` sus descendientes, `*` y `**` a secas.
 Selector returns string:

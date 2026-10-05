@@ -170,7 +170,7 @@ export const TIPOS_DE_VISTA = ['architecture', 'flow'] as const;
 /**
  * Override de presentacion de un Nodo en una Vista: solo apariencia, nunca toca
  * el Modelo. `pin` en coordenadas del lienzo post-layout; `color` es un nombre
- * de Paleta (se valida contra el Tema en su ticket).
+ * de Paleta (`compile` lo valida contra la Paleta del Tema).
  */
 export const overrideSchema = z.object({
   node: idDeNodoSchema,
