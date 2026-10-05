@@ -7,7 +7,7 @@ import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
-import { medidasDeTexto, tamanoDeNodo } from './medidas';
+import { alturasDeNodo, medidasDeTexto, tamanoDeNodo } from './medidas';
 import type { MedidasDeTexto } from './medidas';
 
 /** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
@@ -102,7 +102,8 @@ export async function layoutView(
     edges[arista.id] = { points: [seccion.startPoint, ...(seccion.bendPoints ?? []), seccion.endPoint].map(({ x, y }) => ({ x, y })) };
   }
   const pinneada = aplicarPins(vista, nodes, edges);
-  return { ...pinneada, width: resultado.width ?? 0, height: resultado.height ?? 0 };
+  const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, tema, pinneada.nodes, pinneada.edges) };
+  return { ...conPuertos, width: resultado.width ?? 0, height: resultado.height ?? 0 };
 }
 
 /**
@@ -121,14 +122,7 @@ function aplicarPins(
 ): Pick<Geometria, 'nodes' | 'edges' | 'pinsSolapados'> {
   const pins = vista.overrides.filter((o) => o.pin !== undefined && nodes[o.node] !== undefined);
   if (pins.length === 0) return { nodes, edges, pinsSolapados: [] };
-  const padre = new Map(vista.nodes.flatMap((nodo) => nodo.children.map((hijo) => [hijo.id, nodo.id] as const)));
-  const absoluta = (cajas: Record<string, CajaDeNodo>, id: string): CajaDeNodo => {
-    const caja = cajas[id]!;
-    const arriba = padre.get(id);
-    if (arriba === undefined) return caja;
-    const marco = absoluta(cajas, arriba);
-    return { ...caja, x: marco.x + caja.x, y: marco.y + caja.y };
-  };
+  const padre = padresDe(vista);
   const dentroDe = (id: string, raiz: string): boolean => id === raiz || (padre.has(id) && dentroDe(padre.get(id)!, raiz));
 
   const nuevos: Record<string, CajaDeNodo> = { ...nodes };
@@ -143,12 +137,12 @@ function aplicarPins(
     const id = idDeArista(arista);
     const previa = edges[id];
     if (raizOrigen === raizDestino && previa !== undefined) {
-      const antes = absoluta(nodes, raizOrigen!);
-      const despues = absoluta(nuevos, raizOrigen!);
+      const antes = cajaAbsoluta(nodes, padre, raizOrigen!);
+      const despues = cajaAbsoluta(nuevos, padre, raizOrigen!);
       const [dx, dy] = [despues.x - antes.x, despues.y - antes.y];
       rutas[id] = { points: previa.points.map(({ x, y }) => ({ x: x + dx, y: y + dy })) };
     } else {
-      rutas[id] = { points: rutaOrtogonal(absoluta(nuevos, origen), absoluta(nuevos, destino)) };
+      rutas[id] = { points: rutaOrtogonal(cajaAbsoluta(nuevos, padre, origen), cajaAbsoluta(nuevos, padre, destino)) };
     }
   }
 
@@ -157,10 +151,70 @@ function aplicarPins(
   ids.forEach((a, i) => {
     for (const b of ids.slice(i + 1)) {
       if (dentroDe(a, b) || dentroDe(b, a)) continue;
-      if (seSolapan(absoluta(nuevos, a), absoluta(nuevos, b))) pinsSolapados.push([a, b]);
+      if (seSolapan(cajaAbsoluta(nuevos, padre, a), cajaAbsoluta(nuevos, padre, b))) pinsSolapados.push([a, b]);
     }
   });
   return { nodes: nuevos, edges: rutas, pinsSolapados };
+}
+
+function padresDe(vista: VistaResuelta): Map<string, string> {
+  return new Map(vista.nodes.flatMap((nodo) => nodo.children.map((hijo) => [hijo.id, nodo.id] as const)));
+}
+
+/** Caja de un Nodo en coordenadas del lienzo: suma las posiciones de sus Grupos ancestros. */
+function cajaAbsoluta(cajas: Record<string, CajaDeNodo>, padre: ReadonlyMap<string, string>, id: string): CajaDeNodo {
+  const caja = cajas[id]!;
+  const arriba = padre.get(id);
+  if (arriba === undefined) return caja;
+  const marco = cajaAbsoluta(cajas, padre, arriba);
+  return { ...caja, x: marco.x + caja.x, y: marco.y + caja.y };
+}
+
+/**
+ * Una Arista a `nodo#atributo` termina en la fila de ese Atributo: el puerto
+ * sube o baja a su altura sobre el borde del Nodo (la ruta de ELK apunta al
+ * centro). Solo se ajusta un tramo final horizontal; si la ruta no tiene codo
+ * previo se inserta uno a mitad de camino.
+ */
+function ajustarAPuertosDeAtributo(
+  vista: VistaResuelta,
+  tema: Tema,
+  nodes: Record<string, CajaDeNodo>,
+  edges: Record<string, RutaDeArista>,
+): Record<string, RutaDeArista> {
+  const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, nodo.children.length === 0 ? nodo.attributes : []]));
+  const padre = padresDe(vista);
+  const { cabecera, fila } = alturasDeNodo(tema);
+  const rutas = { ...edges };
+  for (const arista of vista.edges) {
+    const id = idDeArista(arista);
+    const ruta = rutas[id];
+    if (ruta === undefined) continue;
+    let puntos = ruta.points;
+    for (const [lado, extremo] of [['inicio', arista.from], ['fin', arista.to]] as const) {
+      const indice = extremo.attribute === undefined ? -1 : (atributos.get(extremo.node) ?? []).findIndex((a) => a.name === extremo.attribute);
+      if (indice < 0) continue;
+      const y = cajaAbsoluta(nodes, padre, extremo.node).y + cabecera + (indice + 0.5) * fila;
+      puntos = moverPuerto(puntos, lado, y);
+    }
+    rutas[id] = { points: puntos };
+  }
+  return rutas;
+}
+
+function moverPuerto(puntos: Punto[], lado: 'inicio' | 'fin', y: number): Punto[] {
+  const copia = lado === 'inicio' ? [...puntos].reverse() : [...puntos];
+  const fin = copia[copia.length - 1]!;
+  const previo = copia[copia.length - 2]!;
+  if (previo.y !== fin.y || fin.y === y) return puntos;
+  if (copia.length === 2) {
+    const medio = (previo.x + fin.x) / 2;
+    copia.splice(1, 0, { x: medio, y: previo.y }, { x: medio, y });
+  } else {
+    copia[copia.length - 2] = { x: previo.x, y };
+  }
+  copia[copia.length - 1] = { x: fin.x, y };
+  return lado === 'inicio' ? copia.reverse() : copia;
 }
 
 function seSolapan(a: CajaDeNodo, b: CajaDeNodo): boolean {
@@ -193,7 +247,7 @@ function raices(vista: VistaResuelta): NodoResuelto[] {
 
 function aElk(nodo: NodoResuelto, medidas: MedidasDeTexto): ElkNode {
   if (nodo.children.length === 0) {
-    return { id: nodo.id, ...tamanoDeNodo(nodo.label, medidas) };
+    return { id: nodo.id, ...tamanoDeNodo(nodo.label, medidas, nodo.attributes) };
   }
   return {
     id: nodo.id,

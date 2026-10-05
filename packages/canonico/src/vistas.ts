@@ -14,6 +14,8 @@ export interface NodoResuelto extends Omit<Nodo, 'children'> {
   label: string;
   /** Nombre de Paleta: el del override de la Vista o, si no, el del Tipo de nodo; sin color si ninguno lo declara. */
   color?: string;
+  /** Clave de icono del Tipo de nodo (opaca; la resuelve el `IconProvider`); sin icono si el Tipo no lo declara. */
+  icon?: string;
   /** Hijos directos del Nodo en el Modelo (visibles o no). */
   childCount: number;
   /** Vista a la que enlaza (drill-down); un Grupo con `link` no se expande. */
@@ -91,16 +93,19 @@ export function resolveView(
   );
   const overrides = new Map(vista.overrides.map((override) => [override.node, override]));
   const colorDeTipo = new Map(fuente.specification.nodeTypes.map((tipo) => [tipo.name, tipo.color]));
+  const iconoDeTipo = new Map(fuente.specification.nodeTypes.map((tipo) => [tipo.name, tipo.icon]));
   const enlaces = new Map(vista.links.map(({ node, view }) => [node, view]));
   const resolver = (nodo: Nodo): NodoResuelto => {
     const { children, ...resto } = nodo;
     const enlace = enlaces.get(nodo.id);
     const override = overrides.get(nodo.id);
     const color = override?.color ?? colorDeTipo.get(nodo.type);
+    const icon = iconoDeTipo.get(nodo.type);
     return {
       ...resto,
       label: override?.label ?? nodo.title,
       ...(color !== undefined && { color }),
+      ...(icon !== undefined && { icon }),
       children: children.filter((hijo) => visibles.has(hijo.id)).map(resolver),
       collapsed: colapsado(nodo),
       childCount: children.length,

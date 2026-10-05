@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, resolveView } from 'canonico';
-import type { Tema, VistaResuelta } from 'canonico';
-import { layoutView } from 'layout';
+import { TEMA_NEUTRO, combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
+import type { IconProvider, Tema, VistaResuelta } from 'canonico';
+import { alturasDeNodo, layoutView } from 'layout';
 import { renderToSvgString } from 'render';
 
 const nodo = (id: string, title: string, type: string, children: unknown[] = []) => ({
@@ -143,5 +143,78 @@ describe('renderToSvgString', () => {
 
     expect(svg).not.toContain('<script>');
     expect(svg).toContain('&quot;/&gt;&lt;script&gt;');
+  });
+});
+
+describe('renderToSvgString: Atributos e iconos', () => {
+  function tabla(iconos: Record<string, string> = {}): { view: VistaResuelta; icons: IconProvider } {
+    const fuente = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'tabla', icon: 'database', color: 'blue' }, { name: 'servicio', icon: 'logo' }] },
+      model: {
+        nodes: [
+          {
+            ...nodo('usuarios', 'Usuarios', 'tabla'),
+            attributes: [{ name: 'id', type: 'uuid' }, { name: 'email', type: 'text' }, { name: 'creado', type: 'timestamp' }],
+          },
+          nodo('api', 'API', 'servicio'),
+        ],
+        edges: [{ from: { node: 'api' }, to: { node: 'usuarios', attribute: 'email' } }],
+      },
+      views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
+    });
+    return { view: resolveView(fuente, 'v')!, icons: combineIconProviders(workspaceIcons(iconos), genericIcons()) };
+  }
+  async function dibujarTabla(iconos: Record<string, string> = {}): Promise<string> {
+    const { view, icons } = tabla(iconos);
+    const geometry = await layoutView(view, TEMA_NEUTRO);
+    return renderToSvgString({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons });
+  }
+
+  it('dibuja un Nodo tipo tabla con sus Atributos en orden y la Arista al Atributo (snapshot)', async () => {
+    const svg = await dibujarTabla();
+
+    expect(svg.indexOf('id: uuid')).toBeGreaterThan(-1);
+    expect(svg.indexOf('id: uuid')).toBeLessThan(svg.indexOf('email: text'));
+    expect(svg.indexOf('email: text')).toBeLessThan(svg.indexOf('creado: timestamp'));
+    expect(svg).toMatchSnapshot();
+  });
+
+  it('la Arista a nodo#atributo termina a la altura de la fila del Atributo', async () => {
+    const { view, icons } = tabla();
+    const geometry = await layoutView(view, TEMA_NEUTRO);
+    const svg = renderToSvgString({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons });
+    const { cabecera, fila } = alturasDeNodo(TEMA_NEUTRO);
+    const caja = geometry.nodes['usuarios']!;
+    const fin = geometry.edges['api -> usuarios#email']!.points.at(-1)!;
+    const fila2 = new RegExp(`<text data-attribute="usuarios#email" x="[\\d.]+" y="([\\d.]+)"`).exec(svg);
+
+    expect(fin.y).toBe(caja.y + cabecera + 1.5 * fila);
+    expect(Number(fila2![1])).toBe(cabecera + 1.5 * fila);
+  });
+
+  it('el icono del Tipo de nodo se incrusta inline, sin referencias externas', async () => {
+    const svg = await dibujarTabla();
+    const icono = /<g data-icon="database"[^>]*>([\s\S]*?)<\/g>/.exec(svg);
+
+    expect(icono).not.toBeNull();
+    expect(icono![1]).toContain('<ellipse');
+    expect(svg).not.toMatch(/href\s*=|<image|url\(https?:/i);
+  });
+
+  it('un icono del Workspace con referencias externas o scripts no se incrusta', async () => {
+    const peligroso = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><image href="https://x.test/a.png"/><script>alert(1)</script></svg>';
+    const svg = await dibujarTabla({ 'iconos/logo.svg': peligroso });
+
+    expect(svg).not.toContain('x.test');
+    expect(svg).not.toContain('<script');
+  });
+
+  it('un icono del Workspace con su propio width/height queda a tamano del Nodo y el SVG sigue siendo determinista', async () => {
+    const logo = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>';
+    const svg = await dibujarTabla({ 'iconos/logo.svg': logo });
+
+    expect(svg).not.toContain('width="200"');
+    expect(svg).toContain('<circle');
+    expect(svg).toBe(await dibujarTabla({ 'iconos/logo.svg': logo }));
   });
 });

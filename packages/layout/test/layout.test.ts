@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { Tema, VistaResuelta } from 'canonico';
-import { claveDeLayout, layoutView } from 'layout';
+import { alturasDeNodo, claveDeLayout, layoutView } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
 
 const nodo = (id: string, children: unknown[] = []) => ({
@@ -271,5 +271,53 @@ describe('layoutView: Pin post-ELK', () => {
     const a = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
     const b = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
     expect(a).toEqual(b);
+  });
+});
+
+describe('layoutView: Nodos con Atributos', () => {
+  const tabla = (atributos: { name: string; type: string }[]) => ({ ...nodo('t'), attributes: atributos });
+  function conAtributos(atributos: { name: string; type: string }[]): VistaResuelta {
+    const fuente = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio' }] },
+      model: {
+        nodes: [tabla(atributos), nodo('s')],
+        edges: [{ from: { node: 's' }, to: { node: 't', attribute: 'email' } }],
+      },
+      views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
+    });
+    return resolveView(fuente, 'v')!;
+  }
+  const columnas = [{ name: 'id', type: 'uuid' }, { name: 'email', type: 'text' }, { name: 'creado', type: 'timestamp' }];
+
+  it('el Nodo con Atributos es mas alto, una fila por Atributo, y su tamano los cubre', async () => {
+    const sin = await layoutView(conAtributos(columnas.slice(1, 2)), TEMA_NEUTRO);
+    const con = await layoutView(conAtributos(columnas), TEMA_NEUTRO);
+    const { cabecera, fila } = alturasDeNodo(TEMA_NEUTRO);
+
+    expect(con.nodes['t']!.height).toBeGreaterThanOrEqual(cabecera + columnas.length * fila);
+    expect(con.nodes['t']!.height - sin.nodes['t']!.height).toBe((columnas.length - 1) * fila);
+  });
+
+  it('un Atributo largo ensancha el Nodo', async () => {
+    const corto = await layoutView(conAtributos(columnas), TEMA_NEUTRO);
+    const largo = await layoutView(
+      conAtributos([...columnas, { name: 'un_nombre_de_columna_muy_largo_para_el_nodo', type: 'character varying(255)' }]),
+      TEMA_NEUTRO,
+    );
+
+    expect(largo.nodes['t']!.width).toBeGreaterThan(corto.nodes['t']!.width);
+  });
+
+  it('una Arista a nodo#atributo termina en la fila de ese Atributo, sobre el borde', async () => {
+    const { nodes, edges } = await layoutView(conAtributos(columnas), TEMA_NEUTRO);
+    const { cabecera, fila } = alturasDeNodo(TEMA_NEUTRO);
+    const caja = nodes['t']!;
+    const { points } = edges[idDeArista({ from: { node: 's' }, to: { node: 't', attribute: 'email' } })]!;
+    const fin = points[points.length - 1]!;
+    const anterior = points[points.length - 2]!;
+
+    expect(fin.y).toBe(caja.y + cabecera + 1.5 * fila);
+    expect(fin.x === caja.x || fin.x === caja.x + caja.width).toBe(true);
+    expect(anterior.y).toBe(fin.y);
   });
 });

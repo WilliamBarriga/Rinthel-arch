@@ -3,7 +3,8 @@
  * la misma entrada da los mismos bytes.
  */
 import { idDeArista, tamanoDeTexto } from 'canonico';
-import type { AristaResuelta, NodoResuelto, Tema, VistaResuelta } from 'canonico';
+import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta } from 'canonico';
+import { alturasDeNodo, textoDeAtributo } from 'layout';
 import type { CajaDeNodo, Geometria, RutaDeArista } from 'layout';
 
 export interface EntradaDeRender {
@@ -12,6 +13,8 @@ export interface EntradaDeRender {
   /** Salida de `layoutView` para esa misma Vista. */
   geometry: Geometria;
   theme: Tema;
+  /** Resuelve la clave de icono de cada Tipo de nodo a SVG inline; sin el, no se dibujan iconos. */
+  icons?: IconProvider;
   /** Tamano del SVG en px; el contenido escala al `viewBox` de la geometria. */
   width: number;
   height: number;
@@ -25,10 +28,10 @@ const RADIO = 6;
  * Tema no tiene, se usa el token `border`. Lanza si un Nodo de la Vista no
  * esta en la geometria (geometria de otra Vista).
  */
-export function renderToSvgString({ view, geometry, theme, width, height }: EntradaDeRender): string {
+export function renderToSvgString({ view, geometry, theme, icons, width, height }: EntradaDeRender): string {
   const anidados = new Set(view.nodes.flatMap((nodo) => nodo.children.map((hijo) => hijo.id)));
   const fondo = escaparXml(theme.tokens['background'] ?? 'none');
-  const contexto: Contexto = { geometry, theme, fontSize: tamanoDeTexto(theme) };
+  const contexto: Contexto = { geometry, theme, icons, fontSize: tamanoDeTexto(theme), ...alturasDeNodo(theme) };
   const raices = view.nodes.filter((nodo) => !anidados.has(nodo.id));
 
   return [
@@ -44,7 +47,11 @@ export function renderToSvgString({ view, geometry, theme, width, height }: Entr
 interface Contexto {
   geometry: Geometria;
   theme: Tema;
+  icons: IconProvider | undefined;
   fontSize: number;
+  /** Alto de la cabecera y de cada fila de Atributo (los de `layout`). */
+  cabecera: number;
+  fila: number;
 }
 
 function dibujarNodo(nodo: NodoResuelto, contexto: Contexto): string {
@@ -58,10 +65,54 @@ function dibujarNodo(nodo: NodoResuelto, contexto: Contexto): string {
   return [
     `<g data-id="${escaparXml(nodo.id)}" transform="translate(${numEstable(caja.x)} ${numEstable(caja.y)})">`,
     `<rect width="${numEstable(caja.width)}" height="${numEstable(caja.height)}" rx="${RADIO}" fill="${escaparXml(theme.tokens['background'] ?? 'none')}" stroke="${trazo}"${nodo.collapsed ? ' stroke-dasharray="6 3"' : ''}/>`,
-    etiqueta(texto, caja, esGrupo, contexto),
+    etiqueta(texto, caja, esGrupo, contexto, tieneFilas(nodo)),
+    ...icono(nodo, trazo, contexto),
+    ...atributos(nodo, caja, trazo, contexto),
     ...nodo.children.map((hijo) => dibujarNodo(hijo, contexto)),
     '</g>',
   ].join('\n');
+}
+
+/** Solo un Nodo hoja lista sus Atributos (un Grupo abierto contiene Nodos). */
+function tieneFilas(nodo: NodoResuelto): boolean {
+  return nodo.children.length === 0 && nodo.attributes.length > 0;
+}
+
+/** Margen entre el icono y el borde del Nodo. */
+const MARGEN_ICONO = 6;
+
+/**
+ * Icono del Tipo de nodo, inline en la esquina de la cabecera. Un SVG con
+ * referencias externas, scripts o manejadores de eventos no se incrusta: el
+ * icono viene de fuera (Workspace) y el SVG exportado debe ser autocontenido.
+ */
+function icono(nodo: NodoResuelto, trazo: string, { icons, fontSize }: Contexto): string[] {
+  const svg = nodo.icon === undefined ? undefined : icons?.resolve(nodo.icon);
+  if (svg === undefined || !esIconoSeguro(svg)) return [];
+  const lado = numEstable(fontSize);
+  const dimensionado = svg.replace(/<svg\b([^>]*)>/, (_, atributos: string) => {
+    const sinMedidas = atributos.replace(/\s(?:width|height)\s*=\s*("[^"]*"|'[^']*')/g, '');
+    return `<svg width="${lado}" height="${lado}"${sinMedidas}>`;
+  });
+  return [`<g data-icon="${escaparXml(nodo.icon!)}" transform="translate(${MARGEN_ICONO} ${MARGEN_ICONO})" color="${trazo}">`, dimensionado, '</g>'];
+}
+
+function esIconoSeguro(svg: string): boolean {
+  return !/<script|<foreignObject|<image|\son\w+\s*=|href\s*=\s*["'](?!#)|url\(\s*["']?(?!#)/i.test(svg);
+}
+
+/** Separador bajo la cabecera y una fila de texto por Atributo, en orden. */
+function atributos(nodo: NodoResuelto, caja: CajaDeNodo, trazo: string, { theme, fontSize, cabecera, fila }: Contexto): string[] {
+  if (!tieneFilas(nodo)) return [];
+  const fuente = escaparXml(theme.fonts['mono'] ?? 'monospace');
+  const color = escaparXml(theme.tokens['foreground'] ?? 'currentColor');
+  return [
+    `<line x1="0" y1="${numEstable(cabecera)}" x2="${numEstable(caja.width)}" y2="${numEstable(cabecera)}" stroke="${trazo}"/>`,
+    ...nodo.attributes.map(
+      (atributo, i) =>
+        `<text data-attribute="${escaparXml(`${nodo.id}#${atributo.name}`)}" x="${numEstable(10)}" y="${numEstable(cabecera + (i + 0.5) * fila)}" dominant-baseline="central" font-family="${fuente}" font-size="${numEstable(fontSize * 0.85)}" fill="${color}">${escaparXml(textoDeAtributo(atributo))}</text>`,
+    ),
+  ];
 }
 
 /** Color de Aristas y flechas: el token `border` del Tema. */
@@ -117,11 +168,12 @@ function colorDeTrazo(nodo: NodoResuelto, theme: Tema): string {
   return (nodo.color !== undefined ? theme.palette[nodo.color] : undefined) ?? theme.tokens['border'] ?? 'none';
 }
 
-/** Un Grupo abierto lleva el titulo arriba a la izquierda; el resto, centrado. */
-function etiqueta(texto: string, caja: CajaDeNodo, esGrupo: boolean, { theme, fontSize }: Contexto): string {
+/** Un Grupo abierto lleva el titulo arriba a la izquierda; el resto, centrado (en la cabecera si tiene Atributos). */
+function etiqueta(texto: string, caja: CajaDeNodo, esGrupo: boolean, { theme, fontSize, cabecera }: Contexto, conAtributos = false): string {
+  const centroY = conAtributos ? cabecera / 2 : caja.height / 2;
   const atributos = esGrupo
     ? `x="${numEstable(10)}" y="${numEstable(fontSize + 8)}"`
-    : `x="${numEstable(caja.width / 2)}" y="${numEstable(caja.height / 2)}" text-anchor="middle" dominant-baseline="central"`;
+    : `x="${numEstable(caja.width / 2)}" y="${numEstable(centroY)}" text-anchor="middle" dominant-baseline="central"`;
   return `<text ${atributos} font-family="${escaparXml(theme.fonts['body'] ?? 'sans-serif')}" font-size="${numEstable(fontSize)}" fill="${escaparXml(theme.tokens['foreground'] ?? 'currentColor')}">${escaparXml(texto)}</text>`;
 }
 

@@ -89,3 +89,26 @@ exports[`renderToSvgString > dibuja una Arista entre Grupos sobre el borde del G
 <text data-cardinality="a -&gt; db:to" x="172" y="32" font-family="sans-serif" font-size="11.2" fill="#1f2937">0..*</text>
 </svg>"
 `;
+
+exports[`renderToSvgString: Atributos e iconos > dibuja un Nodo tipo tabla con sus Atributos en orden y la Arista al Atributo (snapshot) 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 355 150">
+<rect width="355" height="150" fill="#ffffff"/>
+<defs><marker id="flecha" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/></marker></defs>
+<g data-id="usuarios" transform="translate(180 12)">
+<rect width="163" height="126" rx="6" fill="#ffffff" stroke="#2563eb"/>
+<text x="81.5" y="24" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" fill="#1f2937">Usuarios</text>
+<g data-icon="database" transform="translate(6 6)" color="#2563eb">
+<svg width="14" height="14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+</g>
+<line x1="0" y1="48" x2="163" y2="48" stroke="#2563eb"/>
+<text data-attribute="usuarios#id" x="10" y="61" dominant-baseline="central" font-family="monospace" font-size="11.9" fill="#1f2937">id: uuid</text>
+<text data-attribute="usuarios#email" x="10" y="87" dominant-baseline="central" font-family="monospace" font-size="11.9" fill="#1f2937">email: text</text>
+<text data-attribute="usuarios#creado" x="10" y="113" dominant-baseline="central" font-family="monospace" font-size="11.9" fill="#1f2937">creado: timestamp</text>
+</g>
+<g data-id="api" transform="translate(12 51)">
+<rect width="120" height="48" rx="6" fill="#ffffff" stroke="#9ca3af"/>
+<text x="60" y="24" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="14" fill="#1f2937">API</text>
+</g>
+<path data-edge="api -&gt; usuarios#email" d="M 132 75 L 156 75 L 156 99 L 180 99" fill="none" stroke="#9ca3af" marker-end="url(#flecha)"/>
+</svg>"
+`;

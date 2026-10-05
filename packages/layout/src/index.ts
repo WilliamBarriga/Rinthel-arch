@@ -4,7 +4,9 @@
  * `layoutView(vista, tema, opciones)` recibe una `VistaResuelta` y devuelve la
  * `Geometria`: caja por Nodo visible, con `x`/`y` relativos al Grupo padre, y ruta
  * ortogonal por Arista (`idDeArista`), en coordenadas del lienzo. Los
- * Grupos colapsados son hojas. El tamano de cada Nodo sale del texto y de las
+ * Grupos colapsados son hojas. Un Nodo hoja con Atributos mide cabecera mas una
+ * fila por Atributo (`alturasDeNodo`, `textoDeAtributo`: lo mismo que dibuja
+ * `render`) y las Aristas a `nodo#atributo` terminan en la fila del Atributo. El tamano de cada Nodo sale del texto y de las
  * fuentes del Tema (`fonts`, `tokens.fontSize`), sin DOM. `claveDeLayout` dice
  * cuando hace falta relayoutar: cambia con estructura, textos y fuentes, nunca
  * con paleta, colores o iconos.
@@ -24,4 +26,5 @@
 export const paquete = 'layout';
 
 export { claveDeLayout, layoutView } from './layout';
+export { alturasDeNodo, textoDeAtributo } from './medidas';
 export type { CajaDeNodo, Geometria, OpcionesDeLayout, Punto, RutaDeArista } from './layout';
