@@ -4,11 +4,12 @@
  * tamano y la familia de la fuente del Tema.
  */
 import { tamanoDeTexto } from 'canonico';
-import type { Tema } from 'canonico';
+import type { Atributo, NodoResuelto, Tema } from 'canonico';
 
 const ANCHO_MINIMO = 120;
 const PADDING_HORIZONTAL = 32;
 const ALTO_POR_LINEA = 3.4;
+const ALTO_POR_FILA = 1.8;
 
 /** Lo que del Tema afecta al layout: las fuentes y el tamano de texto. */
 export interface MedidasDeTexto {
@@ -28,9 +29,45 @@ export function medidasDeTexto(tema: Tema): MedidasDeTexto {
   };
 }
 
-export function tamanoDeNodo(texto: string, medidas: MedidasDeTexto): { width: number; height: number } {
+/** Alto de la cabecera (titulo) y de cada fila de Atributo de un Nodo; `render` dibuja con las mismas. */
+export function alturasDeNodo(tema: Tema): { cabecera: number; fila: number } {
+  return alturasDe(medidasDeTexto(tema));
+}
+
+function alturasDe(medidas: MedidasDeTexto): { cabecera: number; fila: number } {
+  return { cabecera: Math.ceil(medidas.fontSize * ALTO_POR_LINEA), fila: Math.ceil(medidas.fontSize * ALTO_POR_FILA) };
+}
+
+/** Centro vertical de la fila `indice` de Atributos, medido desde el borde superior del Nodo. */
+export function yDeFila(tema: Tema, indice: number): number {
+  const { cabecera, fila } = alturasDeNodo(tema);
+  return cabecera + (indice + 0.5) * fila;
+}
+
+/**
+ * Atributos que un Nodo muestra como filas: solo los de un Nodo hoja (un Grupo
+ * abierto contiene Nodos; uno colapsado es hoja). Una sola regla para `layout`
+ * (tamano y puertos) y `render` (dibujo).
+ */
+export function atributosVisibles(nodo: Pick<NodoResuelto, 'children' | 'attributes'>): readonly Atributo[] {
+  return nodo.children.length === 0 ? nodo.attributes : [];
+}
+
+/** Texto de la fila de un Atributo; `render` escribe lo mismo. */
+export function textoDeAtributo(atributo: Atributo): string {
+  return `${atributo.name}: ${atributo.type}`;
+}
+
+/** Tamano de un Nodo hoja: cabecera con el titulo y una fila por Atributo, en orden. */
+export function tamanoDeNodo(
+  texto: string,
+  medidas: MedidasDeTexto,
+  atributos: readonly Atributo[] = [],
+): { width: number; height: number } {
+  const { cabecera, fila } = alturasDe(medidas);
+  const mayor = Math.max(texto.length, ...atributos.map((atributo) => textoDeAtributo(atributo).length));
   return {
-    width: Math.max(ANCHO_MINIMO, Math.ceil(texto.length * medidas.fontSize * medidas.factorDeAncho + PADDING_HORIZONTAL)),
-    height: Math.ceil(medidas.fontSize * ALTO_POR_LINEA),
+    width: Math.max(ANCHO_MINIMO, Math.ceil(mayor * medidas.fontSize * medidas.factorDeAncho + PADDING_HORIZONTAL)),
+    height: cabecera + atributos.length * fila,
   };
 }

@@ -189,7 +189,7 @@ describe('Vistas en el esquema', () => {
 describe('resolveView: label y color de cada Nodo', () => {
   const conTipos = (vista: Record<string, unknown>) =>
     fuenteCanonicaSchema.parse({
-      specification: { nodeTypes: [{ name: 'servicio', color: 'blue' }, { name: 'base' }] },
+      specification: { nodeTypes: [{ name: 'servicio', color: 'blue', icon: 'server' }, { name: 'base' }] },
       model: {
         nodes: [
           { id: 'a', type: 'servicio', title: 'Servicio A', description: '', children: [] },
@@ -212,5 +212,12 @@ describe('resolveView: label y color de cada Nodo', () => {
 
     expect(a).toMatchObject({ label: 'Entrada', color: 'red' });
     expect(b).toMatchObject({ label: 'Base B', color: 'green' });
+  });
+
+  it('el icono del Nodo es la clave del Tipo de nodo, si la tiene', () => {
+    const [a, b] = resolveView(conTipos({}), 'v')!.nodes;
+
+    expect(a).toMatchObject({ icon: 'server' });
+    expect(b).not.toHaveProperty('icon');
   });
 });
