@@ -44,7 +44,7 @@ PropertyValue returns string:
 
 Model:
   name='model' '{'
-    (elements+=Element | edges+=Edge)*
+    (elements+=Element | edges+=Edge | extensions+=Extend)*
   '}'
 ;
 
@@ -61,6 +61,14 @@ Endpoint:
 
 Ref returns string:
   Id ('.' Id)*;
+
+// `extend <nodo> { ... }`: anade hijos, Atributos y source a un Nodo declarado en
+// otro archivo (o en otro bloque `model`).
+Extend:
+  'extend' target=Ref '{'
+    (elements+=Element | attrs+=Attrs | sources+=Source)*
+  '}'
+;
 
 // `<tipo> <nombre> "titulo" "descripcion" { hijos }`
 Element:
