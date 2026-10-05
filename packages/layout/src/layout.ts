@@ -36,6 +36,8 @@ export interface RutaDeArista {
 export interface Geometria {
   nodes: Record<string, CajaDeNodo>;
   edges: Record<string, RutaDeArista>;
+  /** Pares de ids (orden alfabetico) de Nodos pineados cuyas cajas se solapan; el aviso `W_OVERLAPPING_PINS` lo emite quien tiene las posiciones del texto. */
+  pinsSolapados: [string, string][];
   width: number;
   height: number;
 }
@@ -99,7 +101,88 @@ export async function layoutView(
     if (seccion === undefined) continue;
     edges[arista.id] = { points: [seccion.startPoint, ...(seccion.bendPoints ?? []), seccion.endPoint].map(({ x, y }) => ({ x, y })) };
   }
-  return { nodes, edges, width: resultado.width ?? 0, height: resultado.height ?? 0 };
+  const pinneada = aplicarPins(vista, nodes, edges);
+  return { ...pinneada, width: resultado.width ?? 0, height: resultado.height ?? 0 };
+}
+
+/**
+ * Pin post-ELK (ADR 0004): la caja del Nodo pineado pasa a `pin`, relativa a su
+ * Grupo padre. De las Aristas, solo cambian las que tocan el subarbol movido: si
+ * los dos extremos van dentro del mismo subarbol pineado se trasladan con el; si
+ * no, se re-enrutan con una ruta en Z sencilla entre las cajas (pierden la ruta
+ * de ELK). Un Pin sobre un Nodo que la Vista no muestra se ignora (`validate` ya
+ * lo informa). No muta sus argumentos. `pinsSolapados` son los pares de Nodos
+ * pineados cuyas cajas se solapan, salvo ancestro y descendiente.
+ */
+function aplicarPins(
+  vista: VistaResuelta,
+  nodes: Record<string, CajaDeNodo>,
+  edges: Record<string, RutaDeArista>,
+): Pick<Geometria, 'nodes' | 'edges' | 'pinsSolapados'> {
+  const pins = vista.overrides.filter((o) => o.pin !== undefined && nodes[o.node] !== undefined);
+  if (pins.length === 0) return { nodes, edges, pinsSolapados: [] };
+  const padre = new Map(vista.nodes.flatMap((nodo) => nodo.children.map((hijo) => [hijo.id, nodo.id] as const)));
+  const absoluta = (cajas: Record<string, CajaDeNodo>, id: string): CajaDeNodo => {
+    const caja = cajas[id]!;
+    const arriba = padre.get(id);
+    if (arriba === undefined) return caja;
+    const marco = absoluta(cajas, arriba);
+    return { ...caja, x: marco.x + caja.x, y: marco.y + caja.y };
+  };
+  const dentroDe = (id: string, raiz: string): boolean => id === raiz || (padre.has(id) && dentroDe(padre.get(id)!, raiz));
+
+  const nuevos: Record<string, CajaDeNodo> = { ...nodes };
+  for (const { node, pin } of pins) nuevos[node] = { ...nuevos[node]!, ...pin };
+  const movidos = pins.map((o) => o.node);
+  const rutas: Record<string, RutaDeArista> = { ...edges };
+  for (const arista of vista.edges) {
+    const [origen, destino] = [arista.from.node, arista.to.node];
+    const raizOrigen = movidos.find((m) => dentroDe(origen, m));
+    const raizDestino = movidos.find((m) => dentroDe(destino, m));
+    if (raizOrigen === undefined && raizDestino === undefined) continue;
+    const id = idDeArista(arista);
+    const previa = edges[id];
+    if (raizOrigen === raizDestino && previa !== undefined) {
+      const antes = absoluta(nodes, raizOrigen!);
+      const despues = absoluta(nuevos, raizOrigen!);
+      const [dx, dy] = [despues.x - antes.x, despues.y - antes.y];
+      rutas[id] = { points: previa.points.map(({ x, y }) => ({ x: x + dx, y: y + dy })) };
+    } else {
+      rutas[id] = { points: rutaOrtogonal(absoluta(nuevos, origen), absoluta(nuevos, destino)) };
+    }
+  }
+
+  const pinsSolapados: [string, string][] = [];
+  const ids = [...new Set(movidos)].sort();
+  ids.forEach((a, i) => {
+    for (const b of ids.slice(i + 1)) {
+      if (dentroDe(a, b) || dentroDe(b, a)) continue;
+      if (seSolapan(absoluta(nuevos, a), absoluta(nuevos, b))) pinsSolapados.push([a, b]);
+    }
+  });
+  return { nodes: nuevos, edges: rutas, pinsSolapados };
+}
+
+function seSolapan(a: CajaDeNodo, b: CajaDeNodo): boolean {
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+}
+
+/** Ruta en Z entre los bordes de dos cajas: horizontal si estan separadas en x, si no vertical; con cajas encimadas, tambien horizontal (los puertos siguen en el borde, la ruta puede cruzar las cajas). */
+function rutaOrtogonal(origen: CajaDeNodo, destino: CajaDeNodo): Punto[] {
+  const centro = (c: CajaDeNodo): Punto => ({ x: c.x + c.width / 2, y: c.y + c.height / 2 });
+  const [o, d] = [centro(origen), centro(destino)];
+  if (seSolapan(origen, destino) || origen.x + origen.width <= destino.x || destino.x + destino.width <= origen.x) {
+    const derecha = d.x >= o.x;
+    const salida = derecha ? origen.x + origen.width : origen.x;
+    const entrada = derecha ? destino.x : destino.x + destino.width;
+    const medio = (salida + entrada) / 2;
+    return [{ x: salida, y: o.y }, { x: medio, y: o.y }, { x: medio, y: d.y }, { x: entrada, y: d.y }];
+  }
+  const abajo = d.y >= o.y;
+  const salida = abajo ? origen.y + origen.height : origen.y;
+  const entrada = abajo ? destino.y : destino.y + destino.height;
+  const medio = (salida + entrada) / 2;
+  return [{ x: o.x, y: salida }, { x: o.x, y: medio }, { x: d.x, y: medio }, { x: d.x, y: entrada }];
 }
 
 /** `resolveView` lista todos los Nodos visibles a plano y anida ademas los hijos: las raices son las que nadie anida. */

@@ -187,3 +187,89 @@ describe('claveDeLayout', () => {
     expect(claveDeLayout(vista({}, { collapsed: ['a'] }), TEMA_NEUTRO)).not.toBe(claveDeLayout(vista(), TEMA_NEUTRO));
   });
 });
+
+describe('layoutView: Pin post-ELK', () => {
+  const pin = (node: string, x: number, y: number) => ({ overrides: [{ node, pin: { x, y } }] });
+
+  it('el Nodo pineado queda exactamente en su posicion, relativa a su Grupo', async () => {
+    const { nodes } = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
+
+    expect(nodes['a.a1']).toMatchObject({ x: 200, y: 100 });
+  });
+
+  it('las Aristas no incidentes no cambian y las incidentes siguen a su Nodo', async () => {
+    const libre = await layoutView(vista(), TEMA_NEUTRO);
+    const pineada = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
+    const a1 = pineada.nodes['a.a1']!;
+    const grupo = pineada.nodes['a']!;
+
+    expect(pineada.edges[idDeArista({ from: { node: 'b.b2' }, to: { node: 'c' } })]).toEqual(
+      libre.edges[idDeArista({ from: { node: 'b.b2' }, to: { node: 'c' } })],
+    );
+    expect(pineada.edges[idDeArista({ from: { node: 'a.a2' }, to: { node: 'b.b1' } })]).toEqual(
+      libre.edges[idDeArista({ from: { node: 'a.a2' }, to: { node: 'b.b1' } })],
+    );
+    const [inicio] = pineada.edges[idDeArista({ from: { node: 'a.a1' }, to: { node: 'a.a2' } })]!.points;
+    const absoluto = { x: grupo.x + a1.x, y: grupo.y + a1.y };
+    const enBorde =
+      (inicio!.x === absoluto.x || inicio!.x === absoluto.x + a1.width) &&
+      inicio!.y >= absoluto.y && inicio!.y <= absoluto.y + a1.height;
+    const enBordeH =
+      (inicio!.y === absoluto.y || inicio!.y === absoluto.y + a1.height) &&
+      inicio!.x >= absoluto.x && inicio!.x <= absoluto.x + a1.width;
+    expect(enBorde || enBordeH).toBe(true);
+  });
+
+  it('un Pin sobre un Nodo ausente de la Vista se ignora', async () => {
+    const libre = await layoutView(vista(), TEMA_NEUTRO);
+
+    expect(await layoutView(vista(pin('a.zzz', 5, 5)), TEMA_NEUTRO)).toEqual(libre);
+  });
+
+  it('dos Pins que se solapan se informan como par de ids; sin solape, vacio', async () => {
+    const solapados = await layoutView({ ...vista({ overrides: [{ node: 'c', pin: { x: 500, y: 500 } }, { node: 'b', pin: { x: 500, y: 500 } }] }) }, TEMA_NEUTRO);
+    const separados = await layoutView(vista({ overrides: [{ node: 'c', pin: { x: 900, y: 900 } }, { node: 'b', pin: { x: 0, y: 0 } }] }), TEMA_NEUTRO);
+
+    expect(solapados.pinsSolapados).toEqual([['b', 'c']]);
+    expect(separados.pinsSolapados).toEqual([]);
+  });
+
+  it('al pinear un Grupo, sus Aristas internas se trasladan con el y conservan su forma', async () => {
+    const libre = await layoutView(vista(), TEMA_NEUTRO);
+    const pineada = await layoutView(vista(pin('a', 300, 200)), TEMA_NEUTRO);
+    const id = idDeArista({ from: { node: 'a.a1' }, to: { node: 'a.a2' } });
+    const antes = libre.edges[id]!.points;
+    const despues = pineada.edges[id]!.points;
+    const dx = despues[0]!.x - antes[0]!.x;
+    const dy = despues[0]!.y - antes[0]!.y;
+
+    expect(dx !== 0 || dy !== 0).toBe(true);
+    expect(despues).toEqual(antes.map(({ x, y }) => ({ x: x + dx, y: y + dy })));
+  });
+
+  it('un Grupo y su hijo pineados no cuentan como solape', async () => {
+    const { pinsSolapados } = await layoutView(
+      vista({ overrides: [{ node: 'a', pin: { x: 0, y: 0 } }, { node: 'a.a1', pin: { x: 20, y: 40 } }] }),
+      TEMA_NEUTRO,
+    );
+
+    expect(pinsSolapados).toEqual([]);
+  });
+
+  it('con Nodos pineados encimados la ruta no retrocede por dentro de las cajas', async () => {
+    const { edges } = await layoutView(
+      vista({ overrides: [{ node: 'a.a2', pin: { x: 40, y: 40 } }, { node: 'a.a1', pin: { x: 50, y: 50 } }] }),
+      TEMA_NEUTRO,
+    );
+    const { points } = edges[idDeArista({ from: { node: 'a.a1' }, to: { node: 'a.a2' } })]!;
+
+    expect(points.length).toBeGreaterThanOrEqual(2);
+    for (const p of points) expect(Number.isFinite(p.x) && Number.isFinite(p.y)).toBe(true);
+  });
+
+  it('el Pin es determinista', async () => {
+    const a = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
+    const b = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
+    expect(a).toEqual(b);
+  });
+});

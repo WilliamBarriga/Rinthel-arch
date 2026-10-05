@@ -22,7 +22,7 @@ function vista(estado = {}): VistaResuelta {
         nodo('a', 'Plataforma', 'servicio', [nodo('a.api', 'API', 'servicio'), nodo('a.auth', 'Auth & <Tokens>', 'servicio')]),
         nodo('db', 'Base de datos', 'base'),
       ],
-      edges: [{ from: { node: 'a.api' }, to: { node: 'db' } }],
+      edges: [{ from: { node: 'a.api' }, to: { node: 'db' }, fromCardinality: '1', toCardinality: '0..*' }, { from: { node: 'a.api' }, to: { node: 'a.auth' } }],
     },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], overrides: [{ node: 'db', color: 'red', label: 'Postgres' }] }],
   });
@@ -53,6 +53,43 @@ describe('renderToSvgString', () => {
 
   it('dibuja un Grupo colapsado como un Nodo con su contador (snapshot)', async () => {
     expect(await dibujar(TEMA_NEUTRO, { collapsed: ['a'] })).toMatchSnapshot();
+  });
+
+  it('dibuja las Aristas con flecha, como rutas ortogonales', async () => {
+    const svg = await dibujar(TEMA_NEUTRO);
+
+    expect(svg).toMatch(/<path data-edge="a\.api -&gt; db"[^>]* d="M [\d. ]+( L [\d. ]+)+"[^>]* marker-end="url\(#flecha\)"/);
+    expect(svg).toMatch(/<path data-edge="a\.api -&gt; a\.auth"/);
+    expect(svg).toContain('<marker id="flecha"');
+  });
+
+  it('dibuja una Arista entre Grupos sobre el borde del Grupo colapsado (snapshot)', async () => {
+    const svg = await dibujar(TEMA_NEUTRO, { collapsed: ['a'] });
+
+    expect(svg).toMatch(/<path data-edge="a -&gt; db"/);
+    expect(svg).not.toMatch(/data-edge="a\.api/);
+    expect(svg).toMatchSnapshot();
+  });
+
+  it('la cardinalidad va junto al extremo que le corresponde', async () => {
+    const v = vista();
+    const geometry = await layoutView(v, TEMA_NEUTRO);
+    const svg = renderToSvgString({ view: v, geometry, theme: TEMA_NEUTRO, width: 800, height: 600 });
+    const ruta = geometry.edges['a.api -> db']!.points;
+    const inicio = ruta[0]!;
+    const fin = ruta[ruta.length - 1]!;
+    const posicion = (lado: string, texto: string): { x: number; y: number } => {
+      const m = new RegExp(`<text data-cardinality="a\\.api -&gt; db:${lado}" x="([\\d.-]+)" y="([\\d.-]+)"[^>]*>${texto}</text>`).exec(svg);
+      expect(m, `cardinalidad ${lado}`).not.toBeNull();
+      return { x: Number(m![1]), y: Number(m![2]) };
+    };
+    const cerca = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
+    const origen = posicion('from', '1');
+    const destino = posicion('to', '0\\.\\.\\*');
+
+    expect(cerca(origen, inicio)).toBeLessThan(cerca(origen, fin));
+    expect(cerca(destino, fin)).toBeLessThan(cerca(destino, inicio));
+    expect(svg).not.toContain('data-cardinality="a.api -&gt; a.auth');
   });
 
   it('es determinista byte a byte', async () => {
