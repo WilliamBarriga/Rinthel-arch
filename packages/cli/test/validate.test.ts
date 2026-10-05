@@ -39,10 +39,30 @@ describe('validate', () => {
     expect(salida.summary).toEqual({ errors: 2, warnings: 0, truncated: false });
     expect(salida.issues.map((i) => [i.file, i.line, i.column, i.code])).toEqual([
       ['main.dg', 6, 3, 'E_UNKNOWN_NODE_TYPE'],
-      ['main.dg', 7, 12, 'E_SYNTAX_ERROR'],
+      ['main.dg', 8, 1, 'E_SYNTAX_ERROR'],
     ]);
     // `message` no es contrato (ADR 0008): el snapshot fija solo lo que si lo es.
     expect({ ...salida, issues: salida.issues.map(({ message, ...resto }) => resto) }).toMatchSnapshot();
+  });
+
+  it('una Arista colgante sale con E_DANGLING_EDGE, posicion y fix de un unico candidato', async () => {
+    const resultado = await run(['validate', '--workspace', join(fixtures, 'arista-colgante'), '--json']);
+
+    expect(resultado.exitCode).toBe(1);
+    const salida = salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
+    expect(salida.issues).toHaveLength(1);
+    expect(salida.issues[0]).toMatchObject({
+      code: 'E_DANGLING_EDGE',
+      severity: 'error',
+      file: 'main.dg',
+      line: 9,
+      column: 18,
+      fix: {
+        file: 'main.dg',
+        range: { start: { line: 9, column: 18 }, end: { line: 9, column: 21 } },
+        replacement: 'db',
+      },
+    });
   });
 
   it('--max-issues corta la lista pero summary cuenta todo y marca truncated', async () => {

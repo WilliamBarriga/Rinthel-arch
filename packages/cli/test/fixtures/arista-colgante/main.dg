@@ -1,0 +1,10 @@
+specification {
+  node servicio
+  node base
+}
+
+model {
+  servicio api "API"
+  base db "Base de datos"
+  api "1" -> "N" dbb
+}

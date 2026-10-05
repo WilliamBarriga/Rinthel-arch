@@ -1,8 +1,9 @@
 /**
  * Esquema Zod de la Fuente canonica.
  *
- * Alcance del ticket #21: Nodos (id cualificado, `type`, titulo, descripcion,
- * jerarquia de hijos) y catalogo de Tipos de nodo. Aristas, Atributos, `source`,
+ * Alcance: Nodos (id cualificado, `type`, titulo, descripcion,
+ * jerarquia de hijos), catalogo de Tipos de nodo y Aristas con extremo Nodo y
+ * cardinalidad opcional (ticket #24). Atributos, `source`,
  * Vistas, Temas y geometria llegan en tickets posteriores del spec #19.
  *
  * Jerarquia: los ids cualificados (`a.b.c`) definen la jerarquia del Modelo.
@@ -52,9 +53,23 @@ export interface Nodo {
   children: Nodo[];
 }
 
-/** Conjunto unico de Nodos del Proyecto documentado (CONTEXT.md). */
+/** Extremo de una Arista: un Nodo, por su id cualificado completo. */
+export interface Extremo {
+  node: string;
+}
+
+/** Relacion dirigida entre dos extremos, con cardinalidad opcional en cada uno. */
+export interface Arista {
+  from: Extremo;
+  to: Extremo;
+  fromCardinality?: string;
+  toCardinality?: string;
+}
+
+/** Conjunto unico de Nodos y Aristas del Proyecto documentado (CONTEXT.md). */
 export interface Modelo {
   nodes: Nodo[];
+  edges: Arista[];
 }
 
 /**
@@ -76,8 +91,18 @@ const catalogoSchema = z.object({
   nodeTypes: z.array(tipoDeNodoSchema),
 });
 
+const extremoSchema = z.object({ node: idDeNodoSchema });
+
+export const aristaSchema = z.object({
+  from: extremoSchema,
+  to: extremoSchema,
+  fromCardinality: z.string().min(1).optional(),
+  toCardinality: z.string().min(1).optional(),
+});
+
 const modeloSchema = z.object({
   nodes: z.array(nodoSchema),
+  edges: z.array(aristaSchema).default([]),
 });
 
 /**
@@ -109,7 +134,8 @@ interface Hallazgo {
  * Reglas estructurales del Modelo, sin dependencia de Zod:
  * - jerarquia por id cualificado (sin hijos huerfanos y sin anidacion
  *   incoherente entre `children` y los ids);
- * - `type` declarado en el catalogo de Tipos de nodo.
+ * - `type` declarado en el catalogo de Tipos de nodo;
+ * - extremos de Arista que existen en el Modelo.
  */
 function hallazgosDeModelo(fuente: {
   specification: CatalogoDeTiposDeNodo;
@@ -153,6 +179,17 @@ function hallazgosDeModelo(fuente: {
     });
   };
   recorrer(fuente.model.nodes, undefined, ['model', 'nodes']);
+
+  fuente.model.edges.forEach((arista, indice) => {
+    for (const lado of ['from', 'to'] as const) {
+      if (!ids.has(arista[lado].node)) {
+        hallazgos.push({
+          path: ['model', 'edges', indice, lado, 'node'],
+          message: `Arista colgante: el Nodo '${arista[lado].node}' no existe en el Modelo`,
+        });
+      }
+    }
+  });
 
   return hallazgos;
 }

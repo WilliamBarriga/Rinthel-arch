@@ -19,6 +19,7 @@ describe('compile: Nodos y specification', () => {
     expect(resultado.canonico).toEqual({
       specification: { nodeTypes: [{ name: 'servicio', description: '' }] },
       model: {
+        edges: [],
         nodes: [
           {
             id: 'api',
@@ -112,8 +113,10 @@ describe('compile: Nodos y specification', () => {
       code: 'E_SYNTAX_ERROR',
       severity: 'error',
       file: 'main.dg',
-      line: 3,
-      column: 12,
+      // `servicio "api"` es un prefijo valido de Arista (`servicio "1" -> ...`):
+      // el parser solo se queja al llegar al `}` que cierra el bloque.
+      line: 4,
+      column: 1,
     });
   });
 
@@ -147,5 +150,118 @@ describe('compile: Nodos y specification', () => {
     expect(resultado.issues).toHaveLength(1);
     expect(resultado.issues[0]).toMatchObject({ code: 'E_SYNTAX_ERROR', file: 'main.dg', line: 3 });
     expect(resultado.issues[0]?.column).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('compile: Aristas', () => {
+  const spec = 'specification { node servicio node base }';
+
+  it('compila una Arista entre Nodos a la Fuente canonica', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+        model {
+          servicio api
+          base db
+          api -> db
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.edges).toEqual([{ from: { node: 'api' }, to: { node: 'db' } }]);
+  });
+
+  it('lee la cardinalidad opcional de cada extremo', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+        model {
+          servicio api
+          base db
+          api "1" -> "N" db
+          db -> "0..1" api
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.edges).toEqual([
+      { from: { node: 'api' }, to: { node: 'db' }, fromCardinality: '1', toCardinality: 'N' },
+      { from: { node: 'db' }, to: { node: 'api' }, toCardinality: '0..1' },
+    ]);
+  });
+
+  it('resuelve extremos con id cualificado por la jerarquia', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+        model {
+          servicio rinthel { servicio api }
+          base db
+          rinthel.api -> db
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.edges?.[0]?.from).toEqual({ node: 'rinthel.api' });
+  });
+
+  it('un Modelo sin Aristas da una lista vacia', () => {
+    const { canonico } = compile({ 'main.dg': `${spec} model { servicio api }` });
+    expect(canonico?.model.edges).toEqual([]);
+  });
+
+  it('un extremo inexistente es E_DANGLING_EDGE con la posicion del extremo', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+model {
+  servicio api
+  api -> nada
+}`,
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({
+      code: 'E_DANGLING_EDGE',
+      severity: 'error',
+      file: 'main.dg',
+      line: 4,
+      column: 10,
+    });
+    expect(issues[0]?.fix).toBeUndefined();
+  });
+
+  it('con un unico candidato cercano ofrece un fix sobre el extremo', () => {
+    const { issues } = compile({
+      'main.dg': `${spec}
+model {
+  servicio api
+  base db
+  api -> dbb
+}`,
+    });
+
+    expect(issues[0]?.code).toBe('E_DANGLING_EDGE');
+    expect(issues[0]?.fix).toEqual({
+      file: 'main.dg',
+      range: { start: { line: 5, column: 10 }, end: { line: 5, column: 13 } },
+      replacement: 'db',
+    });
+  });
+
+  it('con varios candidatos igual de cercanos no hay fix, solo hint', () => {
+    const { issues } = compile({
+      'main.dg': `${spec}
+model {
+  servicio ab
+  servicio ac
+  ab -> ad
+}`,
+    });
+
+    expect(issues[0]?.fix).toBeUndefined();
+    expect(issues[0]?.hint).toContain('ab');
+  });
+
+  it('informa ambos extremos colgantes', () => {
+    const { issues } = compile({ 'main.dg': `${spec} model { x -> y }` });
+    expect(issues.map((i) => i.code)).toEqual(['E_DANGLING_EDGE', 'E_DANGLING_EDGE']);
   });
 });

@@ -44,9 +44,18 @@ PropertyValue returns string:
 
 Model:
   name='model' '{'
-    elements+=Element*
+    (elements+=Element | edges+=Edge)*
   '}'
 ;
+
+// `<origen> ["card"] -> ["card"] <destino>`; los extremos son ids cualificados.
+// Los espacios alrededor de `->` son obligatorios: `-` es valido dentro de un Id.
+Edge:
+  from=Ref (fromCardinality=String)? '->' (toCardinality=String)? to=Ref
+;
+
+Ref returns string:
+  Id ('.' Id)*;
 
 // `<tipo> <nombre> "titulo" "descripcion" { hijos }`
 Element:
