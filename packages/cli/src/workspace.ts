@@ -77,3 +77,9 @@ export function escribirSalida(
     writeFileSync(archivo, texto);
   }
 }
+
+/** Escribe `texto` en `ruta`, creando las carpetas que falten. */
+export function escribirTexto(ruta: string, texto: string): void {
+  mkdirSync(dirname(ruta), { recursive: true });
+  writeFileSync(ruta, texto);
+}

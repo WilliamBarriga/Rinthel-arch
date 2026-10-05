@@ -44,8 +44,6 @@
 import { fuenteCanonicaSchema, salidaDeValidateSchema } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { construirBuild } from './build';
@@ -54,7 +52,7 @@ import { exportarPng, exportarSvg } from './export';
 import { generarSkill } from './skill';
 
 import { construirSalida, textoLegible } from './validate';
-import { escribirSalida, leerFuentes, leerSalida, leerWorkspace } from './workspace';
+import { escribirSalida, escribirTexto, leerFuentes, leerSalida, leerWorkspace } from './workspace';
 
 export const paquete = 'cli';
 
@@ -71,6 +69,8 @@ export interface Dependencias {
   escribir?: (raiz: string, archivos: Readonly<Record<string, string | Uint8Array>>, subcarpeta?: string) => void;
   /** Salida de `build` (`.diagrams/`), ruta relativa -> texto. */
   leerSalida?: (raiz: string) => Record<string, string>;
+  /** Escribe un archivo de texto (con sus carpetas); lo usa `skill --out`. */
+  escribirArchivo?: (ruta: string, texto: string) => void;
   /** Archivos de fuente del Workspace, ruta relativa -> base64. */
   leerFuentes?: (raiz: string) => Record<string, string>;
 }
@@ -126,7 +126,7 @@ export async function run(
 
 async function skill(
   args: readonly string[],
-  { compilar = compile, leer = leerWorkspace }: Dependencias,
+  { compilar = compile, leer = leerWorkspace, escribirArchivo = escribirTexto }: Dependencias,
 ): Promise<ResultadoDeEjecucion> {
   let opciones;
   try {
@@ -157,13 +157,18 @@ async function skill(
   const texto = generarSkill(resultado.canonico);
   if (opciones.out === undefined) return { exitCode: 0, stdout: texto, stderr: '' };
   try {
-    mkdirSync(dirname(opciones.out), { recursive: true });
-    writeFileSync(opciones.out, texto);
+    escribirArchivo(opciones.out, texto);
   } catch (error) {
     return uso(`No se pudo escribir '${opciones.out}': ${(error as Error).message}`);
   }
   return { exitCode: 0, stdout: `Skill escrito en ${opciones.out}\n`, stderr: '' };
 }
+
+/** Formatos de `export`: que dibuja, en que carpeta de `.diagrams/` y como se nombra en la salida. */
+const FORMATOS: Readonly<Record<string, { exportar: typeof exportarSvg | typeof exportarPng; carpeta: string; etiqueta: string }>> = {
+  svg: { exportar: exportarSvg, carpeta: 'svg', etiqueta: 'SVG' },
+  png: { exportar: exportarPng, carpeta: 'png', etiqueta: 'PNG' },
+};
 
 async function exportar(
   args: readonly string[],
@@ -182,10 +187,8 @@ async function exportar(
     return uso((error as Error).message);
   }
   if (raiz === undefined) return uso('Falta --workspace <ruta>');
-  if (formato !== undefined && formato !== 'svg' && formato !== 'png') {
-    return uso(`Formato '${formato}' desconocido. Formatos: svg, png`);
-  }
-  const esPng = formato === 'png';
+  const salida = FORMATOS[formato ?? 'svg'];
+  if (salida === undefined) return uso(`Formato '${formato}' desconocido. Formatos: ${Object.keys(FORMATOS).join(', ')}`);
 
   let archivos: Record<string, string | Uint8Array>;
   try {
@@ -201,16 +204,16 @@ async function exportar(
     );
     // El Workspace gana sobre `--theme-path` en rutas repetidas, como en `build`.
     const fuentes = { ...(carpetaDeTemas === undefined ? {} : leerLetras(carpetaDeTemas)), ...leerLetras(raiz) };
-    archivos = (esPng ? exportarPng : exportarSvg)(fuente, geometrias, leer(raiz), fuentes);
+    archivos = salida.exportar(fuente, geometrias, leer(raiz), fuentes);
   } catch (error) {
     return uso(`No hay una salida de build utilizable en '${raiz}/.diagrams' (ejecuta 'build' antes): ${(error as Error).message}`);
   }
   try {
-    escribir(raiz, archivos, esPng ? 'png' : 'svg');
+    escribir(raiz, archivos, salida.carpeta);
   } catch (error) {
-    return uso(`No se pudo escribir .diagrams/${esPng ? 'png' : 'svg'}/: ${(error as Error).message}`);
+    return uso(`No se pudo escribir .diagrams/${salida.carpeta}/: ${(error as Error).message}`);
   }
-  return { exitCode: 0, stdout: `${Object.keys(archivos).length} ${esPng ? 'PNG' : 'SVG'} escritos en .diagrams/${esPng ? 'png' : 'svg'}/\n`, stderr: '' };
+  return { exitCode: 0, stdout: `${Object.keys(archivos).length} ${salida.etiqueta} escritos en .diagrams/${salida.carpeta}/\n`, stderr: '' };
 }
 
 async function ejecutar(
