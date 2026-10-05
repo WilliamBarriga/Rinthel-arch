@@ -32,6 +32,7 @@ describe('compile: Nodos y specification', () => {
           },
         ],
       },
+      views: [],
     });
   });
 
@@ -580,5 +581,71 @@ describe('compile: Workspace multiarchivo', () => {
     const invertido = { 'y.dg': base['y.dg'], 'x.dg': base['x.dg'] };
 
     expect(compile(invertido)).toEqual(compile(base));
+  });
+});
+
+describe('compile: Vistas', () => {
+  const base = 'specification { node servicio }  model { servicio a { servicio x }  servicio b }';
+
+  it('compila view con type, include, exclude y depth', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        view general {
+          type architecture
+          include a.*, b.**, c
+          exclude b
+          depth 2
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views).toEqual([
+      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2 },
+    ]);
+  });
+
+  it('una Vista flow solo con type; el resto queda vacio', () => {
+    const { canonico } = compile({ 'main.dg': `${base} view f { type flow }` });
+
+    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [] }]);
+  });
+
+  it('acepta `*` y `**` como selectores y varios include', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base} view t { type flow  include *  include ** }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]?.include).toEqual(['*', '**']);
+  });
+
+  it('type ausente es E_UNKNOWN_VIEW_TYPE con posicion', () => {
+    const { issues, canonico } = compile({
+      'main.dg': `${base}\nview sin_tipo {\n  include a\n}`,
+    });
+
+    expect(canonico).toBeUndefined();
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_VIEW_TYPE', file: 'main.dg', line: 2, column: 6 });
+  });
+
+  it('type desconocido es E_UNKNOWN_VIEW_TYPE en la posicion del valor', () => {
+    const { issues } = compile({
+      'main.dg': `${base}\nview v {\n  type secuencia\n}`,
+    });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_VIEW_TYPE', line: 3, column: 8 });
+  });
+
+  it('fusiona Vistas de varios archivos', () => {
+    const { canonico, issues } = compile({
+      'a.dg': base,
+      'b.dg': 'view uno { type flow }',
+      'c.dg': 'view dos { type architecture }',
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views.map((v) => v.id)).toEqual(['uno', 'dos']);
   });
 });

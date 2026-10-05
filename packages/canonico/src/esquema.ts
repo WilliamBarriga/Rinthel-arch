@@ -134,6 +134,23 @@ const modeloSchema = z.object({
   edges: z.array(aristaSchema).default([]),
 });
 
+/** Tipos de diagrama de la primera entrega. */
+export const TIPOS_DE_VISTA = ['architecture', 'flow'] as const;
+
+/**
+ * Vista: selecciona Nodos del Modelo con `include`/`exclude`/`depth` (ver
+ * `resolveView`). Nunca define entidades nuevas.
+ */
+export const vistaSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum(TIPOS_DE_VISTA),
+  include: z.array(z.string().min(1)).default([]),
+  exclude: z.array(z.string().min(1)).default([]),
+  depth: z.number().int().min(1).optional(),
+});
+
+export type Vista = z.infer<typeof vistaSchema>;
+
 /**
  * Fuente canonica, seccion de Nodos. Todavia no hay validador: la validacion
  * semantica por codigos (ADR 0008) llega con `validate` en tickets posteriores;
@@ -144,6 +161,7 @@ export const fuenteCanonicaSchema = z
   .object({
     specification: catalogoSchema,
     model: modeloSchema,
+    views: z.array(vistaSchema).default([]),
   })
   .superRefine((fuente, ctx) => {
     for (const hallazgo of hallazgosDeModelo(fuente)) {
