@@ -8,3 +8,6 @@
  * anteriores en la cadena `canonico -> dsl`.
  */
 export const paquete = 'dsl';
+
+export { compile } from './compilar';
+export type { ArchivosDelWorkspace, ResultadoDeCompilacion } from './compilar';
