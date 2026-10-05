@@ -146,7 +146,7 @@ export const vistaSchema = z.object({
   type: z.enum(TIPOS_DE_VISTA),
   include: z.array(z.string().min(1)).default([]),
   exclude: z.array(z.string().min(1)).default([]),
-  depth: z.number().int().min(1).optional(),
+  depth: z.number().int().min(0).optional(),
 });
 
 export type Vista = z.infer<typeof vistaSchema>;

@@ -16,7 +16,9 @@ export interface VistaResuelta {
  * Resuelve la Vista `viewId`: `include` (`a` un Nodo, `a.*` hijos directos,
  * `a.**` descendientes, `*` raices, `**` todo), menos `exclude`, limitado a
  * `depth` niveles de anidacion (las raices son el nivel 1). Devuelve
- * `undefined` si la Vista no existe.
+ * `undefined` si la Vista no existe. Los selectores que no coinciden con ningun
+ * Nodo no dan error, y `exclude` no arrastra a los descendientes del Nodo excluido.
+ * Aun sin parametro de estado de colapso: llega con el ticket #33.
  */
 export function resolveView(fuente: FuenteCanonica, viewId: string): VistaResuelta | undefined {
   const vista = fuente.views.find((candidata) => candidata.id === viewId);

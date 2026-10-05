@@ -2,7 +2,7 @@
  * Compilador del DSL de texto: parsea cada archivo con la gramatica derivada de
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
-import { CODIGOS, TIPOS_DE_VISTA, fuenteCanonicaSchema } from 'canonico';
+import { CODIGOS, TIPOS_DE_VISTA, fuenteCanonicaSchema, vistaSchema } from 'canonico';
 import type {
   Arista,
   Atributo,
@@ -139,7 +139,6 @@ interface Contexto {
 /** Compila una Vista; sin `type` valido es `E_UNKNOWN_VIEW_TYPE` y no hay Vista. */
 function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | undefined {
   const tipo = vista.props.find((prop) => prop.$type === 'ViewType');
-  const tiposValidos: readonly string[] = TIPOS_DE_VISTA;
   if (tipo === undefined) {
     issues.push({
       code: CODIGOS.E_UNKNOWN_VIEW_TYPE,
@@ -150,7 +149,8 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
     });
     return undefined;
   }
-  if (!tiposValidos.includes(tipo.value)) {
+  const tipoValido = vistaSchema.shape.type.safeParse(tipo.value);
+  if (!tipoValido.success) {
     issues.push(
       issueConSugerencia(
         { code: CODIGOS.E_UNKNOWN_VIEW_TYPE, message: `Tipo de Vista '${tipo.value}' desconocido (${TIPOS_DE_VISTA.join(' | ')})` },
@@ -164,7 +164,7 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
   const profundidad = vista.props.find((prop) => prop.$type === 'ViewDepth');
   return {
     id: vista.name,
-    type: tipo.value as Vista['type'],
+    type: tipoValido.data,
     include: selectores('ViewInclude'),
     exclude: selectores('ViewExclude'),
     ...(profundidad !== undefined && { depth: profundidad.value }),

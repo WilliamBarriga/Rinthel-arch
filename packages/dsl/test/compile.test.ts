@@ -638,6 +638,13 @@ describe('compile: Vistas', () => {
     expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_VIEW_TYPE', line: 3, column: 8 });
   });
 
+  it('depth 0 es sintacticamente valido y no hace lanzar a compile', () => {
+    const { canonico, issues } = compile({ 'main.dg': `${base} view v { type flow  include **  depth 0 }` });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.views[0]?.depth).toBe(0);
+  });
+
   it('fusiona Vistas de varios archivos', () => {
     const { canonico, issues } = compile({
       'a.dg': base,

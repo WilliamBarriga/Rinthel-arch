@@ -6,7 +6,8 @@
  * solo con un Atributo declarado en ese Nodo (distinto de un Nodo hijo);
  * `type` siempre declarado en `specification.nodeTypes`;
  * una Vista (`views`) tiene `type` architecture|flow y solo selecciona Nodos
- * (`resolveView`), nunca define entidades;
+ * (`resolveView`, que devuelve `undefined` si la Vista no existe), nunca define
+ * entidades;
  * colores son nombres de Paleta, nunca valores hex (ADR 0006).
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
  * excepcion solo para fallos de uso o internos.

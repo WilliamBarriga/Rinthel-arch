@@ -57,6 +57,16 @@ describe('resolveView', () => {
     expect(visibles({ include: ['**'], depth: 2 })).toEqual(['a', 'a.a1', 'a.a2', 'b', 'b.b1', 'c']);
   });
 
+  it('exclude no arrastra a los descendientes: un hijo visible bajo un Nodo excluido sigue visible', () => {
+    expect(visibles({ include: ['**'], exclude: ['a'] })).toEqual([
+      'a.a1', 'a.a1.a1x', 'a.a2', 'b', 'b.b1', 'c',
+    ]);
+  });
+
+  it('depth 0 no muestra nada', () => {
+    expect(visibles({ include: ['**'], depth: 0 })).toEqual([]);
+  });
+
   it('una Vista sin include no muestra nada', () => {
     expect(visibles({})).toEqual([]);
   });
