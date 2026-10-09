@@ -151,17 +151,14 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const morphador = useMorph(morphMs);
   const calculo = useGeometria({ vista, theme, layout, semilla, invalidar: source, onError, alLlegar });
 
-  const [propia, setPropia] = useState<Camara>({ x: 0, y: 0, width, height });
+  // Camara propia: hasta que el usuario (o un colapso) la mueva, encuadra toda la Vista segun la primera geometria.
+  const [movida, setPropia] = useState<Camara | undefined>(undefined);
+  const encuadre = useRef<Camara | undefined>(undefined);
+  if (encuadre.current === undefined && calculo !== undefined) encuadre.current = encuadrar(calculo.geometria, width, height);
+  const propia = movida ?? encuadre.current ?? { x: 0, y: 0, width, height };
   const camaraPropia = useRef(propia);
   camaraPropia.current = propia;
   const camara = props.camera ?? propia;
-  const encuadrada = useRef(false);
-  useEffect(() => {
-    // Primera geometria de la Vista: la camara propia encuadra todo el contenido (sin ampliar por encima de 1:1).
-    if (calculo === undefined || encuadrada.current) return;
-    encuadrada.current = true;
-    if (props.camera === undefined) setPropia(encuadrar(calculo.geometria, width, height));
-  }, [calculo]);
   const [seleccionPropia, setSeleccionPropia] = useState<string | null>(null);
   const seleccionado = props.selected !== undefined ? props.selected : seleccionPropia;
 
