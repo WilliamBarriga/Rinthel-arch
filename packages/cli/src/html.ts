@@ -6,10 +6,12 @@
 import { build } from 'esbuild';
 import { fileURLToPath } from 'node:url';
 import { combineIconProviders, genericIcons, workspaceIcons } from 'canonico';
-import type { FuenteCanonica, Tema } from 'canonico';
+import type { Tema } from 'canonico';
 
-import type { GeometriaCacheada, SalidaDeBuild } from './build';
+import type { SalidaDeBuild } from './build';
 import { fuentesDelTema } from './fuentes';
+import { vistasDibujables } from './vistas-dibujables';
+import type { EntradaDeExport } from './vistas-dibujables';
 
 const ENTRADA = new URL('../navegador/entrada.tsx', import.meta.url);
 
@@ -60,22 +62,12 @@ function estiloDeFuentes(temas: readonly Tema[], fuentes: Readonly<Record<string
   return reglas.join('\n');
 }
 
-/** Un HTML por Vista (`html/<vista>.html`) a partir de la salida de `build`. Sin geometria cacheada para una Vista, lanza. */
-export async function exportarHtml(
-  fuente: FuenteCanonica,
-  geometrias: Readonly<Record<string, GeometriaCacheada>>,
-  workspace: Readonly<Record<string, string>>,
-  fuentes: Readonly<Record<string, string>>,
-): Promise<SalidaDeBuild> {
-  const porVista: Record<string, { theme: string; geometry: GeometriaCacheada['geometry'] }> = {};
-  for (const { id } of fuente.views) {
-    const cacheada = geometrias[id];
-    if (cacheada === undefined) throw new Error(`Falta la geometria de la Vista '${id}'`);
-    if (!fuente.themes.some(({ name }) => name === cacheada.theme)) {
-      throw new Error(`El Tema '${cacheada.theme}' no esta en la Fuente canonica`);
-    }
-    porVista[id] = { theme: cacheada.theme, geometry: cacheada.geometry };
-  }
+/** Un HTML por Vista (`html/<vista>.html`) a partir de la salida de `build`. Lanza si a una Vista le falta la geometria o esta obsoleta. */
+export async function exportarHtml(entrada: EntradaDeExport): Promise<SalidaDeBuild> {
+  const { fuente, workspace, fuentes } = entrada;
+  const porVista = Object.fromEntries(
+    vistasDibujables(entrada).map(({ id, theme, geometry }) => [id, { theme: theme.name, geometry }]),
+  );
   const usados = fuente.themes.filter(({ name }) => Object.values(porVista).some(({ theme }) => theme === name));
   const proveedor = combineIconProviders(workspaceIcons(workspace), genericIcons());
   const iconos = Object.fromEntries(

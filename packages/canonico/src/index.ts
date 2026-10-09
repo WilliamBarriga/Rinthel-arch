@@ -14,6 +14,8 @@
  * acumulativos, con fundido entre pasos); `IconProvider` resuelve claves de icono a SVG inline;
  * colores son nombres de Paleta, nunca valores hex (ADR 0006); el Tema (`themes`,
  * siempre con el neutro) es un objeto plano ya resuelto, sin herencia.
+ * La geometria cacheada por Vista (`geometriaCacheadaSchema`: `{ view, theme, layoutKey,
+ * geometry }`) tiene aqui su esquema para validarla al leerla del disco; la calcula `layout`.
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
  * excepcion solo para fallos de uso o internos.
  * `validate(fuente, { iconos?, ubicar? })` devuelve los issues semanticos de una
@@ -39,6 +41,8 @@ export {
   tipoDeNodoSchema,
   vistaSchema,
 } from './esquema';
+export { geometriaCacheadaSchema, geometriaSchema } from './geometria';
+export type { GeometriaCacheada } from './geometria';
 export { combineIconProviders, genericIcons, resolveNodeTypeIcon, workspaceIcons } from './iconos';
 export type { IconProvider } from './iconos';
 export { idDeArista, revealAt } from './pasos';
