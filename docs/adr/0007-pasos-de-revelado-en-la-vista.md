@@ -1,6 +1,6 @@
 # Pasos de revelado: bloque `steps` en la Vista, azucar sobre `visibility`
 
-Una Vista puede declarar un bloque `steps` con Pasos ordenados. Es acumulativo: cada `step` agrega con `show` lo que se revela (y `hide` opcional lo oculta); lo anterior sigue visible. Nombrar un Nodo revela solo ese Nodo; un Grupo se revela con selector explicito (`a.b.*`). Una Arista se revela sola cuando ambos extremos son visibles, salvo que un paso posterior la nombre (`edge a -> b`) para revelarla despues. Se descarta anotar `#step` en cada elemento: ensucia el Modelo con presentacion y esconde el orden.
+Una Vista puede declarar un bloque `steps` con Pasos ordenados. Es acumulativo: cada `step` agrega con `show` lo que se revela (y `hide` opcional lo oculta); lo anterior sigue visible. Nombrar un Nodo revela solo ese Nodo; un Grupo se revela con selector explicito (`a.b.*`, que revela el Grupo `a.b` y sus hijos directos; `a.b.**`, el Grupo y todos sus descendientes). Una Arista se revela sola cuando ambos extremos son visibles, salvo que un paso posterior la nombre (`edge a -> b`) para revelarla despues. Se descarta anotar `#step` en cada elemento: ensucia el Modelo con presentacion y esconde el orden.
 
 ```
 view overview {

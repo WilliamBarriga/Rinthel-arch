@@ -22,6 +22,7 @@ export function idDeArista(arista: Pick<Arista, 'from' | 'to'>): string {
  * de rango se acota. Sin `steps` todo vale 1. Una Arista aparece sola con ambos
  * extremos visibles, salvo que algun paso la nombre: entonces espera a ese paso.
  * Un Grupo colapsado vale 1 si el mismo o alguno de sus hijos esta revelado.
+ * Los selectores `a.*` y `a.**` revelan (o con `hide`, ocultan) tambien al Grupo `a`.
  */
 export function revealAt(vista: VistaResuelta, position: number): Visibilidad {
   const { steps } = vista;
@@ -72,7 +73,7 @@ function estadoTras(vista: VistaResuelta, k: number): Set<string> {
         }
       } else {
         for (const nodo of nodos) {
-          if (matchesSelector(item.selector, nodo.id)) revelados.delete(nodo.id);
+          if (abarca(item.selector, nodo.id)) revelados.delete(nodo.id);
         }
       }
     }
@@ -87,9 +88,19 @@ function estadoTras(vista: VistaResuelta, k: number): Set<string> {
   return visibles;
 }
 
+/**
+ * Lo que un selector de Paso abarca. A diferencia de `include` de la Vista, `a.*` y
+ * `a.**` incluyen al propio Grupo `a` ademas de sus hijos: es "revelar un Grupo
+ * completo" (ADR 0007); `a` a secas sigue siendo solo `a`.
+ */
+function abarca(selector: string, id: string): boolean {
+  if (matchesSelector(selector, id)) return true;
+  return selector.endsWith('.*') || selector.endsWith('.**') ? id === selector.replace(/\.\*\*?$/, '') : false;
+}
+
 /** Un Grupo colapsado se revela tambien por cualquiera de sus hijos ocultos tras el. */
 function alcanza(selector: string, nodo: NodoResuelto): boolean {
-  if (matchesSelector(selector, nodo.id)) return true;
+  if (abarca(selector, nodo.id)) return true;
   if (!nodo.collapsed) return false;
   const base = selector.replace(/\.\*\*?$/, '');
   return base === nodo.id || base.startsWith(`${nodo.id}.`);

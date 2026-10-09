@@ -53,8 +53,8 @@
  * Worker: `adaptadorDeWorker(puerto)` (pagina) y `servirLayout(puerto)` (dentro
  * del Worker: `servirLayout(self)`) corren el mismo `layoutView` que el build.
  * Zoom semantico: la escala (`width` del lienzo / ancho de la camara) elige el nivel de
- * detalle del texto que pasa a `render` (`nivelDeDetalle`: etiqueta corta, titulo, titulo +
- * Atributos; umbrales por defecto 0.4 y 0.8, ajustables con `detailThresholds`). La
+ * detalle del texto que pasa a `render` (`nivelDeDetalle`: etiqueta, titulo, titulo +
+ * Atributos; el `label` de la Vista se respeta en los tres, y solo `completo` anade Atributos; umbrales por defecto 0.4 y 0.8, ajustables con `detailThresholds`). La
  * geometria, la estructura y el colapso no dependen de la escala: colapsar o expandir
  * sigue siendo una accion explicita (`state`).
  *

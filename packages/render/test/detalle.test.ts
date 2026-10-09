@@ -31,15 +31,17 @@ describe('renderToSvgString: nivel de detalle', () => {
     expect(svg).toContain('data-icon="database"');
   });
 
-  it('titulo: el titulo del Nodo, sin Atributos', async () => {
+  it('titulo: respeta el label del override de la Vista, sin Atributos', async () => {
     const svg = await dibujar('titulo');
-    expect(svg).toContain('>Usuarios del sistema<');
+    expect(svg).toContain('>Usr<');
+    expect(svg).not.toContain('Usuarios del sistema');
     expect(svg).not.toContain('id: uuid');
   });
 
-  it('completo: titulo y Atributos', async () => {
+  it('completo: respeta el label del override y anade los Atributos', async () => {
     const svg = await dibujar('completo');
-    expect(svg).toContain('>Usuarios del sistema<');
+    expect(svg).toContain('>Usr<');
+    expect(svg).not.toContain('Usuarios del sistema');
     expect(svg).toContain('id: uuid');
   });
 

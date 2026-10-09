@@ -7,7 +7,8 @@
  * `type` siempre declarado en `specification.nodeTypes`;
  * una Vista (`views`) tiene `type` architecture|flow y solo selecciona Nodos
  * (`resolveView`, que devuelve `undefined` si la Vista no existe), nunca define
- * entidades; sus `overrides` (label, pin, order, color) son solo presentacion; un Grupo
+ * entidades; sus `overrides` (label, pin, order, color) son solo presentacion (`pin` es relativo al
+ * Grupo padre; `order` solo se almacena, sin efecto en v1: ADR 0004 prohibe `considerModelOrder`); un Grupo
  * colapsado (estado, `depth`, `collapsed`/`expanded`, `link`) eleva y fusiona las
  * Aristas de sus hijos; los `steps` de una Vista los interpreta `revealAt` (ADR 0007,
  * acumulativos, con fundido entre pasos); `IconProvider` resuelve claves de icono a SVG inline;

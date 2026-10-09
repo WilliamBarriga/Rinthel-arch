@@ -177,8 +177,11 @@ export const TIPOS_DE_VISTA = ['architecture', 'flow'] as const;
 
 /**
  * Override de presentacion de un Nodo en una Vista: solo apariencia, nunca toca
- * el Modelo. `pin` en coordenadas del lienzo post-layout; `color` es un nombre
- * de Paleta (`compile` lo valida contra la Paleta del Tema).
+ * el Modelo. `pin` es la posicion del Nodo relativa a su Grupo padre (al lienzo
+ * si es raiz), aplicada despues del layout (ADR 0004). `order` se guarda pero
+ * ningun paso lo usa en v1: ELK corre sin `considerModelOrder` (ADR 0004
+ * enmendado), asi que no hay ordenamiento por el que consumirlo. `color` es un
+ * nombre de Paleta (`validate` lo comprueba contra la Paleta del Tema).
  */
 export const overrideSchema = z.object({
   node: idDeNodoSchema,
@@ -190,7 +193,7 @@ export const overrideSchema = z.object({
 
 export type OverrideDeNodo = z.infer<typeof overrideSchema>;
 
-/** Lo que un Paso nombra: un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`a -> b`). */
+/** Lo que un Paso nombra: un selector de Nodos (`a`; `a.*` y `a.**` incluyen ademas al Grupo `a`) o una Arista (`a -> b`). */
 const elementoDePasoSchema = z.union([
   z.object({ selector: z.string().min(1) }),
   z.object({ from: idDeNodoSchema, to: idDeNodoSchema }),

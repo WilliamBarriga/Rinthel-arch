@@ -26,7 +26,8 @@
  * de que se pulso el control de un Grupo, que se dibuja solo si hay `onToggle`.
  *
  * `detail` (`NivelDeDetalle`: `etiqueta` | `titulo` | `completo`) elige cuanto texto se
- * dibuja sin tocar cajas ni rutas; sin el, etiqueta de la Vista y Atributos.
+ * dibuja sin tocar cajas ni rutas: el `label` de la Vista se respeta siempre y solo
+ * `completo` dibuja los Atributos; sin `detail`, etiqueta de la Vista y Atributos.
  *
  * Invariantes: sin estado ni efectos (mismas props, mismo arbol); determinista
  * byte a byte en la cadena; los colores salen solo del Tema, por nombre de Paleta
