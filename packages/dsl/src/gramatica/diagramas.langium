@@ -140,6 +140,7 @@ ViewLink:
 
 // Pasos de revelado (ADR 0007): acumulativos; `show` revela y `hide` oculta.
 // Un item es un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`edge a -> b`, o `a -> b`).
+// En un Paso, `a.*` y `a.**` abarcan tambien al propio Grupo `a` (revelar un Grupo completo).
 ViewSteps:
   'steps' '{' steps+=Step* '}';
 
@@ -165,7 +166,9 @@ StepSelector:
   selector=Selector;
 
 // Overrides de presentacion de un Nodo en esta Vista; nunca tocan el Modelo.
-// `pin x,y` es en coordenadas del lienzo post-layout; `color` es un nombre de Paleta.
+// `pin x,y` es la posicion relativa al Grupo padre (al lienzo si es raiz), aplicada tras el layout;
+// `order N` se compila y se guarda, pero en v1 nada lo usa (ADR 0004: sin considerModelOrder);
+// `color` es un nombre de Paleta.
 NodeOverride:
   'node' node=Ref '{' props+=OverrideProperty* '}';
 

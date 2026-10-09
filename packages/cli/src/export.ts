@@ -1,70 +1,38 @@
-import { combineIconProviders, genericIcons, resolveView, workspaceIcons } from 'canonico';
-import type { FuenteCanonica, Tema } from 'canonico';
+import { combineIconProviders, genericIcons, workspaceIcons } from 'canonico';
 import { renderToSvgString } from 'render';
 
-import type { GeometriaCacheada, SalidaDeBuild } from './build';
+import type { SalidaDeBuild } from './build';
 import { fuentesDelTema } from './fuentes';
 import { rasterizar } from './png';
+import { vistasDibujables } from './vistas-dibujables';
+import type { EntradaDeExport } from './vistas-dibujables';
 
-interface VistaDibujada {
-  id: string;
-  theme: Tema;
-  svg: string;
-}
-
-/** Dibuja cada Vista desde la salida de `build`. Sin geometria cacheada para una Vista, lanza. */
-function dibujarVistas(
-  fuente: FuenteCanonica,
-  geometrias: Readonly<Record<string, GeometriaCacheada>>,
-  workspace: Readonly<Record<string, string>>,
-  fuentes: Readonly<Record<string, string>>,
-): VistaDibujada[] {
-  const icons = combineIconProviders(workspaceIcons(workspace), genericIcons());
-  return fuente.views.map((vista) => {
-    const cacheada = geometrias[vista.id];
-    const resuelta = resolveView(fuente, vista.id);
-    if (cacheada === undefined || resuelta === undefined) {
-      throw new Error(`Falta la geometria de la Vista '${vista.id}'`);
-    }
-    const theme = fuente.themes.find(({ name }) => name === cacheada.theme);
-    if (theme === undefined) throw new Error(`El Tema '${cacheada.theme}' no esta en la Fuente canonica`);
-    const { geometry } = cacheada;
-    const svg = renderToSvgString({
-      view: resuelta,
+/** Dibuja cada Vista desde la salida de `build`. Lanza si a una Vista le falta la geometria o esta obsoleta. */
+function dibujarVistas(entrada: EntradaDeExport) {
+  const icons = combineIconProviders(workspaceIcons(entrada.workspace), genericIcons());
+  return vistasDibujables(entrada).map(({ id, theme, view, geometry }) => ({
+    id,
+    theme,
+    svg: renderToSvgString({
+      view,
       geometry,
       theme,
       icons,
       width: geometry.width,
       height: geometry.height,
-      fonts: fuentesDelTema(theme, fuentes),
-    });
-    return { id: vista.id, theme, svg };
-  });
+      fonts: fuentesDelTema(theme, entrada.fuentes),
+    }),
+  }));
 }
 
 /** Un SVG por Vista (`svg/<vista>.svg`) a partir de la salida de `build`. */
-export function exportarSvg(
-  fuente: FuenteCanonica,
-  geometrias: Readonly<Record<string, GeometriaCacheada>>,
-  workspace: Readonly<Record<string, string>>,
-  fuentes: Readonly<Record<string, string>>,
-): SalidaDeBuild {
-  return Object.fromEntries(
-    dibujarVistas(fuente, geometrias, workspace, fuentes).map(({ id, svg }) => [`svg/${id}.svg`, `${svg}\n`]),
-  );
+export function exportarSvg(entrada: EntradaDeExport): SalidaDeBuild {
+  return Object.fromEntries(dibujarVistas(entrada).map(({ id, svg }) => [`svg/${id}.svg`, `${svg}\n`]));
 }
 
 /** Un PNG por Vista (`png/<vista>.png`): el mismo SVG, rasterizado con las fuentes del Tema. */
-export function exportarPng(
-  fuente: FuenteCanonica,
-  geometrias: Readonly<Record<string, GeometriaCacheada>>,
-  workspace: Readonly<Record<string, string>>,
-  fuentes: Readonly<Record<string, string>>,
-): Record<string, Uint8Array> {
+export function exportarPng(entrada: EntradaDeExport): Record<string, Uint8Array> {
   return Object.fromEntries(
-    dibujarVistas(fuente, geometrias, workspace, fuentes).map(({ id, svg, theme }) => [
-      `png/${id}.png`,
-      rasterizar(svg, theme, fuentes),
-    ]),
+    dibujarVistas(entrada).map(({ id, svg, theme }) => [`png/${id}.png`, rasterizar(svg, theme, entrada.fuentes)]),
   );
 }

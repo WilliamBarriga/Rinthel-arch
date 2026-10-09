@@ -9,8 +9,9 @@
  * El prefijo (`E_` error, `W_` warning) documenta la severidad habitual; la
  * severidad efectiva vive en `Issue.severity`.
  *
- * Aun no hay validador: el ticket #21 solo publica el catalogo. Quien emite
- * estos codigos es `validate` (spec #19, tickets `dsl` y `canonico/validate`).
+ * Quien los emite: `validate` de este paquete (los semanticos sobre la Fuente
+ * canonica), el compilador de `dsl` (sintaxis y fusion) y el CLI
+ * (`W_OVERLAPPING_PINS`, que necesita la geometria).
  */
 export const CODIGOS = Object.freeze({
   /** Texto del DSL que no cumple la gramatica (lexico o sintaxis). */

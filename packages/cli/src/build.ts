@@ -1,5 +1,5 @@
 import { CODIGOS, TEMA_NEUTRO } from 'canonico';
-import type { FuenteCanonica, Issue, Tema, Vista } from 'canonico';
+import type { FuenteCanonica, GeometriaCacheada, Issue, Tema, Vista } from 'canonico';
 import { resolveView } from 'canonico';
 import type { PosicionDePin } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
@@ -20,19 +20,55 @@ export interface ResultadoDeBuild {
   issues: Issue[];
 }
 
-/** Forma de `geometria/<vista>.json`: la escribe `build` y la lee `export`. */
-export interface GeometriaCacheada {
-  view: string;
-  theme: string;
-  layoutKey: string;
-  geometry: Geometria;
-}
-
 const json = (valor: unknown): string => `${JSON.stringify(valor, null, 2)}\n`;
 
 function temaDeVista(fuente: FuenteCanonica, vista: Vista, global: string | undefined): Tema {
   const nombre = vista.theme ?? global ?? TEMA_NEUTRO.name;
   return fuente.themes.find((tema) => tema.name === nombre) ?? TEMA_NEUTRO;
+}
+
+/**
+ * `W_OVERLAPPING_PINS` de una Vista: un aviso por par de Pins solapados, situado
+ * en el primer Pin del par y con el segundo en `related`. Un par sin posicion de
+ * texto conocida (Pin que no viene del DSL) no se avisa.
+ */
+function avisosDePins(vista: string, geometry: Geometria, pins: readonly PosicionDePin[]): Issue[] {
+  const posicionDe = (nodo: string) => pins.find((pin) => pin.view === vista && pin.node === nodo);
+  return geometry.pinsSolapados.flatMap(([a, b]) => {
+    const [primero, segundo] = [posicionDe(a), posicionDe(b)];
+    if (primero === undefined || segundo === undefined) return [];
+    return [
+      {
+        code: CODIGOS.W_OVERLAPPING_PINS,
+        severity: 'warning' as const,
+        file: primero.file,
+        line: primero.line,
+        column: primero.column,
+        message: `En la Vista '${vista}', los Pins de '${a}' y '${b}' se solapan`,
+        related: [{ file: segundo.file, line: segundo.line, column: segundo.column, message: `Pin de '${b}'` }],
+      },
+    ];
+  });
+}
+
+/**
+ * `W_OVERLAPPING_PINS` para `validate`: el solape solo se conoce tras el layout,
+ * asi que se calcula la geometria de las Vistas con al menos dos Pins (las demas
+ * no pueden solaparse). No escribe nada.
+ */
+export async function avisosDePinsSolapados(
+  fuente: FuenteCanonica,
+  { tema, pins }: OpcionesDeBuild,
+): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  for (const vista of fuente.views) {
+    if (pins.filter((pin) => pin.view === vista.id).length < 2) continue;
+    const resuelta = resolveView(fuente, vista.id);
+    if (resuelta === undefined) continue;
+    const geometry = await layoutView(resuelta, temaDeVista(fuente, vista, tema));
+    issues.push(...avisosDePins(vista.id, geometry, pins));
+  }
+  return issues;
 }
 
 /**
@@ -58,23 +94,7 @@ export async function construirBuild(
       geometry,
     };
     archivos[`geometria/${vista.id}.json`] = json(cacheada);
-    for (const [a, b] of geometry.pinsSolapados) {
-      const posicionDe = (nodo: string) => pins.find((pin) => pin.view === vista.id && pin.node === nodo);
-      const primero = posicionDe(a);
-      const segundo = posicionDe(b);
-      if (primero === undefined || segundo === undefined) continue;
-      issues.push({
-        code: CODIGOS.W_OVERLAPPING_PINS,
-        severity: 'warning',
-        file: primero.file,
-        line: primero.line,
-        column: primero.column,
-        message: `En la Vista '${vista.id}', los Pins de '${a}' y '${b}' se solapan`,
-        related: [
-          { file: segundo.file, line: segundo.line, column: segundo.column, message: `Pin de '${b}'` },
-        ],
-      });
-    }
+    issues.push(...avisosDePins(vista.id, geometry, pins));
   }
   return { archivos, issues };
 }

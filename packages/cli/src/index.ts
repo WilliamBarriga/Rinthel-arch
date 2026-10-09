@@ -7,12 +7,17 @@
  * Invariantes: unico paquete con I/O de disco (lee Workspace, escribe en
  * `<workspace>/.diagrams/`); `validate` nunca reescribe y devuelve todos los
  * issues en una pasada, ordenados (archivo, linea, columna, codigo).
- * `validate --workspace <ruta> [--json] [--max-issues N] [--strict]`:
+ * `validate --workspace <ruta> [--theme <nombre>] [--theme-path <carpeta>] [--json] [--max-issues N] [--strict]`:
  * - `--json`: stdout es exactamente un objeto `salidaDeValidateSchema`
  *   (ADR 0008), sin texto extra; `summary` cuenta todos los issues y
  *   `truncated` indica que `issues` se corto en `--max-issues` (100 por defecto).
  * - Codigos de salida: 0 sin errores, 1 hay errores (con `--strict`, tambien
  *   avisos), 2 fallo de uso o interno (mensaje en stderr, stdout vacio).
+ * - `--theme-path` se fusiona antes del Workspace (gana el Workspace); `--theme` solo
+ *   cambia las medidas con que se detectan Pins solapados, igual que en `build`.
+ * - Sin errores de compilacion, calcula el layout de las Vistas con al menos dos Pins
+ *   (el solape solo se conoce tras ELK) y emite `W_OVERLAPPING_PINS` como `build`; con
+ *   `--strict` ese aviso hace fallar. Las Vistas sin Pins no pagan layout.
  * `build --workspace <ruta> [--theme <nombre>] [--theme-path <carpeta>]` (acepta
  * tambien `--json`, `--strict`, `--max-issues`): compila, valida y escribe en
  * `<workspace>/.diagrams/` (reemplazandola) `canonico.json` y
@@ -21,9 +26,11 @@
  * fusiona antes del Workspace (gana el Workspace en rutas repetidas). Con errores
  * (o avisos en `--strict`) sale 1 y borra la salida anterior; los Pins solapados salen como
  * `W_OVERLAPPING_PINS` con posicion y `related`. `--theme` inexistente: codigo 2.
- * `export --workspace <ruta> [--theme-path <carpeta>] [--format svg|png]` (sin `--json`, `--strict` ni
+ * `export --workspace <ruta> [--theme-path <carpeta>] [--format svg|png|html]` (sin `--json`, `--strict` ni
  * `--max-issues`): un SVG estatico por Vista en `.diagrams/svg/<vista>.svg`
- * (reemplaza esa carpeta), desde la salida de `build` (sin ella: codigo 2). Mismos
+ * (reemplaza esa carpeta), desde la salida de `build` (sin ella, o con geometria que no
+ * cumple su esquema o cuya `layoutKey` no coincide con la de su Fuente canonica: codigo 2,
+ * se pide ejecutar `build`; `canonico.json` y `geometria/` deben ser de la misma corrida). Mismos
  * bytes para la misma salida; el SVG no referencia recursos externos: las fuentes
  * del Tema que el Workspace trae como archivo (`<Familia>.woff2|woff|ttf|otf`)
  * van incrustadas (tambien las de `--theme-path`; gana el Workspace); los iconos son los del Workspace y los genericos.
@@ -37,25 +44,32 @@
  * sintaxis del DSL, el contrato de `validate` (JSON Schema derivado del esquema Zod)
  * y los codigos de issue. Va a stdout, o a `--out`; determinista (regenerar con otro
  * catalogo lo actualiza). Con errores de validacion sale 1 y muestra los issues.
+ * Con `--format html` escribe `.diagrams/html/<vista>.html`: un archivo por Vista, sin
+ * servidor ni peticiones externas, con la Fuente canonica completa, la geometria cacheada
+ * de todas las Vistas, el shell (bundle de `navegador/` hecho con esbuild al exportar:
+ * `VistaInteractiva` + `useEstadoEnHash` con camara), las fuentes del Tema y los iconos
+ * incrustados (estatico: sin watch ni `themeUpdates`; ver la limitacion de la recarga de Tema en
+ * `shell`). Abre en la Vista del archivo (el hash puede decir otra); los Nodos con
+ * `link` navegan a la Vista enlazada dentro del mismo archivo. El estado por defecto sale de
+ * la geometria cacheada; colapsar relayoutea con ELK en un Web Worker creado de un Blob
+ * del propio bundle y, si el navegador no lo permite, en el hilo principal.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> render -> shell / cli`.
  */
-import { fuenteCanonicaSchema, salidaDeValidateSchema } from 'canonico';
-import type { FuenteCanonica } from 'canonico';
+import { salidaDeValidateSchema } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
 import { parseArgs } from 'node:util';
 
-import { construirBuild } from './build';
-import type { GeometriaCacheada } from './build';
+import { avisosDePinsSolapados, construirBuild } from './build';
 import { exportarPng, exportarSvg } from './export';
+import { exportarHtml } from './html';
 import { generarSkill } from './skill';
-
 import { construirSalida, textoLegible } from './validate';
+import { leerSalidaDeBuild } from './vistas-dibujables';
+import type { EntradaDeExport } from './vistas-dibujables';
 import { escribirSalida, escribirTexto, leerFuentes, leerSalida, leerWorkspace } from './workspace';
-
-export const paquete = 'cli';
 
 export interface ResultadoDeEjecucion {
   exitCode: 0 | 1 | 2;
@@ -114,7 +128,7 @@ export async function run(
 
   let opciones: OpcionesParseadas;
   try {
-    opciones = leerOpciones(resto, comando === 'build' ? { theme: { type: 'string' }, 'theme-path': { type: 'string' } } : {});
+    opciones = leerOpciones(resto, { theme: { type: 'string' }, 'theme-path': { type: 'string' } });
   } catch (error) {
     return uso((error as Error).message);
   }
@@ -166,9 +180,10 @@ async function skill(
 }
 
 /** Formatos de `export`: que dibuja, en que carpeta de `.diagrams/` y como se nombra en la salida. */
-const FORMATOS: Readonly<Record<string, { exportar: typeof exportarSvg | typeof exportarPng; carpeta: string; etiqueta: string }>> = {
+const FORMATOS: Readonly<Record<string, { exportar: (entrada: EntradaDeExport) => Record<string, string | Uint8Array> | Promise<Record<string, string | Uint8Array>>; carpeta: string; etiqueta: string }>> = {
   svg: { exportar: exportarSvg, carpeta: 'svg', etiqueta: 'SVG' },
   png: { exportar: exportarPng, carpeta: 'png', etiqueta: 'PNG' },
+  html: { exportar: exportarHtml, carpeta: 'html', etiqueta: 'HTML' },
 };
 
 async function exportar(
@@ -191,20 +206,9 @@ async function exportar(
   const salida = FORMATOS[formato ?? 'svg'];
   if (salida === undefined) return uso(`Formato '${formato}' desconocido. Formatos: ${Object.keys(FORMATOS).join(', ')}`);
 
-  let cache: Record<string, string>;
-  let fuente: FuenteCanonica;
-  let geometrias: Record<string, GeometriaCacheada>;
+  let salidaDeBuild: Pick<EntradaDeExport, 'fuente' | 'geometrias'>;
   try {
-    cache = leerCache(raiz);
-    fuente = fuenteCanonicaSchema.parse(JSON.parse(cache['canonico.json'] ?? 'null'));
-    geometrias = Object.fromEntries(
-      Object.entries(cache)
-        .filter(([ruta]) => ruta.startsWith('geometria/'))
-        .map(([, texto]) => {
-          const cacheada = JSON.parse(texto) as GeometriaCacheada;
-          return [cacheada.view, cacheada] as const;
-        }),
-    );
+    salidaDeBuild = leerSalidaDeBuild(leerCache(raiz));
   } catch (error) {
     return uso(`No hay una salida de build utilizable en '${raiz}/.diagrams' (ejecuta 'build' antes): ${(error as Error).message}`);
   }
@@ -212,7 +216,7 @@ async function exportar(
   try {
     // El Workspace gana sobre `--theme-path` en rutas repetidas, como en `build`.
     const fuentes = { ...(carpetaDeTemas === undefined ? {} : leerLetras(carpetaDeTemas)), ...leerLetras(raiz) };
-    archivos = salida.exportar(fuente, geometrias, leer(raiz), fuentes);
+    archivos = await salida.exportar({ ...salidaDeBuild, workspace: leer(raiz), fuentes });
   } catch (error) {
     return uso(`No se pudo exportar: ${(error as Error).message}`);
   }
@@ -243,19 +247,21 @@ async function ejecutar(
 
   const issues = [...resultado.issues];
   const archivosDeSalida: Record<string, string> = {};
-  if (comando === 'build' && resultado.canonico !== undefined) {
-    const tema = opciones['theme'] as string | undefined;
+  const tema = opciones['theme'] as string | undefined;
+  if (resultado.canonico !== undefined) {
     if (tema !== undefined && !resultado.canonico.themes.some(({ name }) => name === tema)) {
       const disponibles = resultado.canonico.themes.map(({ name }) => name).join(', ');
       return uso(`Tema '${tema}' no declarado. Disponibles: ${disponibles}`);
     }
+    const opcionesDeLayout = { ...(tema !== undefined && { tema }), pins: resultado.pins };
     try {
-      const { archivos, issues: avisos } = await construirBuild(resultado.canonico, {
-        ...(tema !== undefined && { tema }),
-        pins: resultado.pins,
-      });
-      Object.assign(archivosDeSalida, archivos);
-      issues.push(...avisos);
+      if (comando === 'build') {
+        const { archivos, issues: avisos } = await construirBuild(resultado.canonico, opcionesDeLayout);
+        Object.assign(archivosDeSalida, archivos);
+        issues.push(...avisos);
+      } else {
+        issues.push(...(await avisosDePinsSolapados(resultado.canonico, opcionesDeLayout)));
+      }
     } catch (error) {
       return uso(`Error interno al calcular la geometria: ${(error as Error).message}`);
     }

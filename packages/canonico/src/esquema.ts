@@ -1,10 +1,10 @@
 /**
  * Esquema Zod de la Fuente canonica.
  *
- * Alcance: Nodos (id cualificado, `type`, titulo, descripcion,
- * Atributos, jerarquia de hijos), catalogo de Tipos de nodo y Aristas con
- * extremo Nodo o Nodo#Atributo y cardinalidad opcional (tickets #24 y #25). `source`,
- * Vistas, Temas y geometria llegan en tickets posteriores del spec #19.
+ * Alcance: Nodos (id cualificado, `type`, titulo, descripcion, Atributos,
+ * `source`, jerarquia de hijos), catalogo de Tipos de nodo, Aristas con extremo
+ * Nodo o Nodo#Atributo y cardinalidad opcional, Temas ya resueltos y Vistas.
+ * La geometria cacheada tiene su esquema en `geometria.ts`.
  *
  * Jerarquia: los ids cualificados (`a.b.c`) definen la jerarquia del Modelo.
  * `children` la refleja cuando el documento anida; un documento plano (todos los
@@ -177,8 +177,11 @@ export const TIPOS_DE_VISTA = ['architecture', 'flow'] as const;
 
 /**
  * Override de presentacion de un Nodo en una Vista: solo apariencia, nunca toca
- * el Modelo. `pin` en coordenadas del lienzo post-layout; `color` es un nombre
- * de Paleta (`compile` lo valida contra la Paleta del Tema).
+ * el Modelo. `pin` es la posicion del Nodo relativa a su Grupo padre (al lienzo
+ * si es raiz), aplicada despues del layout (ADR 0004). `order` se guarda pero
+ * ningun paso lo usa en v1: ELK corre sin `considerModelOrder` (ADR 0004
+ * enmendado), asi que no hay ordenamiento por el que consumirlo. `color` es un
+ * nombre de Paleta (`validate` lo comprueba contra la Paleta del Tema).
  */
 export const overrideSchema = z.object({
   node: idDeNodoSchema,
@@ -190,7 +193,7 @@ export const overrideSchema = z.object({
 
 export type OverrideDeNodo = z.infer<typeof overrideSchema>;
 
-/** Lo que un Paso nombra: un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`a -> b`). */
+/** Lo que un Paso nombra: un selector de Nodos (`a`; `a.*` y `a.**` incluyen ademas al Grupo `a`) o una Arista (`a -> b`). */
 const elementoDePasoSchema = z.union([
   z.object({ selector: z.string().min(1) }),
   z.object({ from: idDeNodoSchema, to: idDeNodoSchema }),
@@ -234,10 +237,9 @@ export const vistaSchema = z.object({
 export type Vista = z.infer<typeof vistaSchema>;
 
 /**
- * Fuente canonica, seccion de Nodos. Todavia no hay validador: la validacion
- * semantica por codigos (ADR 0008) llega con `validate` en tickets posteriores;
- * aqui solo se validan la forma del documento y las reglas estructurales de
- * jerarquia documentadas en `index.ts`.
+ * Fuente canonica. Aqui solo se validan la forma del documento y las reglas
+ * estructurales de jerarquia documentadas en `index.ts`; la validacion semantica
+ * por codigos (ADR 0008) es `validate`, en `validar.ts`.
  */
 export const fuenteCanonicaSchema = z
   .object({

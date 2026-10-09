@@ -249,4 +249,99 @@ describe('validate: bucle validate/fix', () => {
       ['b.dg', 1, 1, 'W_B'],
     ]);
   });
+
+  describe('W_OVERLAPPING_PINS', () => {
+    const conPinsSolapados = (): string => {
+      const workspace = mkdtempSync(join(tmpdir(), 'validate-'));
+      writeFileSync(
+        join(workspace, 'main.dg'),
+        `specification { node servicio }
+model { servicio a  servicio b }
+view v {
+  type architecture
+  include **
+  node a { pin 0,0 }
+  node b { pin 10,10 }
+}
+`,
+      );
+      return workspace;
+    };
+
+    it('validate --json emite el aviso con posicion y related, sin escribir .diagrams', async () => {
+      const workspace = conPinsSolapados();
+
+      const resultado = await run(['validate', '--workspace', workspace, '--json']);
+
+      expect(resultado.exitCode).toBe(0);
+      const salida = salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
+      expect(salida.ok).toBe(true);
+      expect(salida.summary).toEqual({ errors: 0, warnings: 1, truncated: false });
+      expect(salida.issues).toEqual([
+        expect.objectContaining({
+          code: 'W_OVERLAPPING_PINS',
+          severity: 'warning',
+          file: 'main.dg',
+          line: 6,
+          column: 8,
+          related: [{ file: 'main.dg', line: 7, column: 8, message: "Pin de 'b'" }],
+        }),
+      ]);
+      expect(readdirSync(workspace)).toEqual(['main.dg']);
+    });
+
+    it('con --strict el aviso hace fallar', async () => {
+      const resultado = await run(['validate', '--workspace', conPinsSolapados(), '--strict']);
+
+      expect(resultado.exitCode).toBe(1);
+      expect(resultado.stdout).toContain('W_OVERLAPPING_PINS');
+    });
+
+    it('Pins que no se solapan no avisan', async () => {
+      const workspace = conPinsSolapados();
+      writeFileSync(join(workspace, 'main.dg'), readFileSync(join(workspace, 'main.dg'), 'utf8').replace('pin 10,10', 'pin 500,500'));
+
+      const resultado = await run(['validate', '--workspace', workspace, '--json']);
+
+      expect(JSON.parse(resultado.stdout).issues).toEqual([]);
+    });
+
+    it('no calcula layout si hay errores de compilacion', async () => {
+      const workspace = conPinsSolapados();
+      writeFileSync(join(workspace, 'roto.dg'), 'model { servicio }');
+
+      const resultado = await run(['validate', '--workspace', workspace, '--json']);
+
+      expect(JSON.parse(resultado.stdout).issues.map((i: { code: string }) => i.code)).toEqual(['E_SYNTAX_ERROR']);
+    });
+  });
+
+  describe('--theme-path y --theme', () => {
+    it('--theme-path aporta Temas antes del Workspace', async () => {
+      const resultado = await run([
+        'validate', '--workspace', join(fixtures, 'build-basico'), '--theme-path', join(fixtures, 'temas-extra'), '--json',
+      ]);
+
+      expect(resultado.exitCode).toBe(0);
+      expect(resultado.stderr).toBe('');
+    });
+
+    it('un Tema de --theme-path hace valida una Vista que lo usa', async () => {
+      const workspace = mkdtempSync(join(tmpdir(), 'validate-'));
+      writeFileSync(join(workspace, 'main.dg'), 'specification { node s } model { s a } view v { type flow include ** theme corporativo }');
+
+      const sin = await run(['validate', '--workspace', workspace, '--json']);
+      const con = await run(['validate', '--workspace', workspace, '--theme-path', join(fixtures, 'temas-extra'), '--json']);
+
+      expect(JSON.parse(sin.stdout).issues.map((i: { code: string }) => i.code)).toEqual(['E_UNKNOWN_THEME']);
+      expect(con.exitCode).toBe(0);
+    });
+
+    it('--theme inexistente es un fallo de uso (codigo 2), como en build', async () => {
+      const resultado = await run(['validate', '--workspace', join(fixtures, 'build-basico'), '--theme', 'nada']);
+
+      expect(resultado.exitCode).toBe(2);
+      expect(resultado.stderr).toContain("'nada'");
+    });
+  });
 });

@@ -28,6 +28,14 @@ export interface Camara {
   height: number;
 }
 
+/**
+ * Nivel de detalle del texto: `etiqueta` y `titulo` dibujan la etiqueta del Nodo
+ * en la Vista (el `label` del override o, si no hay, su titulo; el override se
+ * respeta en todos los niveles) y `completo` anade los Atributos. Solo cambia el texto: las
+ * cajas, rutas y el viewBox son identicos en los tres.
+ */
+export type NivelDeDetalle = 'etiqueta' | 'titulo' | 'completo';
+
 export interface EntradaDeEscena {
   view: VistaResuelta;
   geometry: Geometria;
@@ -38,6 +46,8 @@ export interface EntradaDeEscena {
   /** Visibilidad 0..1 de Nodos y Aristas; sin ella, todo vale 1. */
   visibility?: Visibilidad;
   camera?: Camara;
+  /** Nivel de detalle del texto; sin el, etiqueta de la Vista y Atributos (como `completo` pero con la etiqueta). */
+  detail?: NivelDeDetalle;
   onSelect?: (id: string) => void;
   /** Con ella, cada Grupo (o Grupo colapsado sin enlace) lleva un control de colapso. */
   onToggle?: (id: string) => void;
@@ -103,6 +113,7 @@ function nodoSvg(nodo: NodoResuelto, contexto: Contexto): Elemento {
   const { theme, onSelect } = contexto;
   const esGrupo = nodo.children.length > 0;
   const trazo = colorDeTrazo(nodo, theme);
+  // El `label` de la Vista (override o, si no hay, el titulo) manda en todos los niveles.
   const texto = nodo.collapsed ? `${nodo.label} (${nodo.childCount})` : nodo.label;
   const rect: Elemento = {
     tag: 'rect',
@@ -126,7 +137,7 @@ function nodoSvg(nodo: NodoResuelto, contexto: Contexto): Elemento {
         ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
         hijos: [
           rect,
-          etiqueta(texto, caja, esGrupo, tieneFilas(nodo), contexto),
+          etiqueta(texto, caja, esGrupo, tieneFilas(nodo, contexto.detail), contexto),
           ...icono(nodo, trazo, contexto),
           ...atributos(nodo, caja, trazo, contexto),
           ...control(nodo, caja, contexto),
@@ -137,8 +148,8 @@ function nodoSvg(nodo: NodoResuelto, contexto: Contexto): Elemento {
   };
 }
 
-function tieneFilas(nodo: NodoResuelto): boolean {
-  return atributosVisibles(nodo).length > 0;
+function tieneFilas(nodo: NodoResuelto, detail?: NivelDeDetalle): boolean {
+  return (detail === undefined || detail === 'completo') && atributosVisibles(nodo).length > 0;
 }
 
 /** Un Grupo abierto lleva el titulo arriba a la izquierda; el resto, centrado (en la cabecera si tiene Atributos). */
@@ -203,8 +214,8 @@ function sanearIcono(svg: string): string | undefined {
 }
 
 /** Separador bajo la cabecera y una fila de texto por Atributo, en orden. */
-function atributos(nodo: NodoResuelto, caja: CajaDeNodo, trazo: string, { theme, fontSize, cabecera }: Contexto): Elemento[] {
-  if (!tieneFilas(nodo)) return [];
+function atributos(nodo: NodoResuelto, caja: CajaDeNodo, trazo: string, { theme, fontSize, cabecera, detail }: Contexto): Elemento[] {
+  if (!tieneFilas(nodo, detail)) return [];
   return [
     { tag: 'line', attrs: { x1: '0', y1: num(cabecera), x2: num(caja.width), y2: num(cabecera), stroke: trazo } },
     ...atributosVisibles(nodo).map((atributo, i) => ({

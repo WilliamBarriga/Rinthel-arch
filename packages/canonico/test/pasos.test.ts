@@ -72,11 +72,23 @@ describe('revealAt', () => {
     expect(['b', 'c'].map(revealAt(v, 2))).toEqual([0, 1]);
   });
 
-  it('nombrar un Grupo no revela sus hijos; `a.*` revela los hijos directos', () => {
+  it('nombrar un Grupo no revela sus hijos; `a.*` revela el Grupo y sus hijos directos', () => {
     const v = vista({ steps: [paso('uno', mostrar('a')), paso('dos', mostrar('a.*'))] });
 
     expect(['a', 'a.a1', 'a.a2'].map(revealAt(v, 1))).toEqual([1, 0, 0]);
     expect(['a', 'a.a1', 'a.a2'].map(revealAt(v, 2))).toEqual([1, 1, 1]);
+  });
+
+  it('`a.*` revela el Grupo `a` aunque no se haya nombrado antes', () => {
+    const v = vista({ steps: [paso('uno', mostrar('a.*'))] });
+
+    expect(['a', 'a.a1', 'a.a2', 'b'].map(revealAt(v, 1))).toEqual([1, 1, 1, 0]);
+  });
+
+  it('`hide a.*` oculta el Grupo y sus hijos directos', () => {
+    const v = vista({ steps: [paso('uno', mostrar('**')), paso('dos', [], mostrar('a.*'))] });
+
+    expect(['a', 'a.a1', 'a.a2', 'b'].map(revealAt(v, 2))).toEqual([0, 0, 0, 1]);
   });
 
   it('una Arista aparece sola cuando sus dos extremos son visibles', () => {
