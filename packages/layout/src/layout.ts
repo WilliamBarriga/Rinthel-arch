@@ -36,6 +36,8 @@ export interface RutaDeArista {
 export interface Geometria {
   nodes: Record<string, CajaDeNodo>;
   edges: Record<string, RutaDeArista>;
+  /** Caja (coordenadas del lienzo) que ELK reservo a la etiqueta de cada Arista que la tiene, por `idDeArista`. */
+  labels: Record<string, CajaDeNodo>;
   /** Pares de ids (orden alfabetico) de Nodos pineados cuyas cajas se solapan; el aviso `W_OVERLAPPING_PINS` lo emite quien tiene las posiciones del texto. */
   pinsSolapados: [string, string][];
   width: number;
@@ -46,6 +48,9 @@ export interface OpcionesDeLayout {
   /** Motor ELK; por defecto el empaquetado, que corre igual en Node y en Web Worker. */
   elk?: ELK;
 }
+
+/** Tamano del texto de la etiqueta de una Arista respecto al del Tema; `render` dibuja con la misma. */
+export const ESCALA_ETIQUETA = 0.85;
 
 /** Margen interior de un Grupo; arriba deja sitio al titulo. */
 const PADDING_GRUPO = '[top=32,left=16,bottom=16,right=16]';
@@ -82,6 +87,7 @@ export async function layoutView(
       id: idDeArista(arista),
       sources: [arista.from.node],
       targets: [arista.to.node],
+      ...(arista.label !== undefined && { labels: [{ id: `${idDeArista(arista)}:etiqueta`, text: arista.label, ...tamanoDeEtiqueta(arista.label, medidas) }] }),
     })),
   };
   const resultado = await elk.layout(grafo);
@@ -95,12 +101,15 @@ export async function layoutView(
   };
   recoger(resultado.children);
   const edges: Record<string, RutaDeArista> = {};
+  const labels: Record<string, CajaDeNodo> = {};
   for (const arista of resultado.edges ?? []) {
     const [seccion] = arista.sections ?? [];
     if (seccion === undefined) continue;
+    const [etiqueta] = arista.labels ?? [];
+    if (etiqueta !== undefined) labels[arista.id] = { x: etiqueta.x ?? 0, y: etiqueta.y ?? 0, width: etiqueta.width ?? 0, height: etiqueta.height ?? 0 };
     edges[arista.id] = { points: [seccion.startPoint, ...(seccion.bendPoints ?? []), seccion.endPoint].map(({ x, y }) => ({ x, y })) };
   }
-  const pinneada = aplicarPins(vista, nodes, edges);
+  const pinneada = aplicarPins(vista, nodes, edges, labels);
   const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, tema, pinneada.nodes, pinneada.edges) };
   return { ...conPuertos, width: resultado.width ?? 0, height: resultado.height ?? 0 };
 }
@@ -112,15 +121,18 @@ export async function layoutView(
  * no, se re-enrutan con una ruta en Z sencilla entre las cajas (pierden la ruta
  * de ELK). Un Pin sobre un Nodo que la Vista no muestra se ignora (`validate` ya
  * lo informa). No muta sus argumentos. `pinsSolapados` son los pares de Nodos
- * pineados cuyas cajas se solapan, salvo ancestro y descendiente.
+ * pineados cuyas cajas se solapan, salvo ancestro y descendiente. La etiqueta de
+ * una Arista trasladada va con ella; la de una re-enrutada se descarta (`render`
+ * la pone sobre la nueva ruta).
  */
 function aplicarPins(
   vista: VistaResuelta,
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
-): Pick<Geometria, 'nodes' | 'edges' | 'pinsSolapados'> {
+  labels: Record<string, CajaDeNodo>,
+): Pick<Geometria, 'nodes' | 'edges' | 'labels' | 'pinsSolapados'> {
   const pins = vista.overrides.filter((o) => o.pin !== undefined && nodes[o.node] !== undefined);
-  if (pins.length === 0) return { nodes, edges, pinsSolapados: [] };
+  if (pins.length === 0) return { nodes, edges, labels, pinsSolapados: [] };
   const padre = padresDe(vista);
   const dentroDe = (id: string, raiz: string): boolean => id === raiz || (padre.has(id) && dentroDe(padre.get(id)!, raiz));
 
@@ -128,6 +140,7 @@ function aplicarPins(
   for (const { node, pin } of pins) nuevos[node] = { ...nuevos[node]!, ...pin };
   const movidos = pins.map((o) => o.node);
   const rutas: Record<string, RutaDeArista> = { ...edges };
+  const etiquetas: Record<string, CajaDeNodo> = { ...labels };
   for (const arista of vista.edges) {
     const [origen, destino] = [arista.from.node, arista.to.node];
     const raizOrigen = movidos.find((m) => dentroDe(origen, m));
@@ -140,7 +153,10 @@ function aplicarPins(
       const despues = cajaAbsoluta(nuevos, padre, raizOrigen!);
       const [dx, dy] = [despues.x - antes.x, despues.y - antes.y];
       rutas[id] = { points: previa.points.map(({ x, y }) => ({ x: x + dx, y: y + dy })) };
+      const etiqueta = etiquetas[id];
+      if (etiqueta !== undefined) etiquetas[id] = { ...etiqueta, x: etiqueta.x + dx, y: etiqueta.y + dy };
     } else {
+      delete etiquetas[id];
       rutas[id] = { points: rutaOrtogonal(cajaAbsoluta(nuevos, padre, origen), cajaAbsoluta(nuevos, padre, destino)) };
     }
   }
@@ -153,7 +169,7 @@ function aplicarPins(
       if (seSolapan(cajaAbsoluta(nuevos, padre, a), cajaAbsoluta(nuevos, padre, b))) pinsSolapados.push([a, b]);
     }
   });
-  return { nodes: nuevos, edges: rutas, pinsSolapados };
+  return { nodes: nuevos, edges: rutas, labels: etiquetas, pinsSolapados };
 }
 
 function padresDe(vista: VistaResuelta): Map<string, string> {
@@ -247,6 +263,12 @@ function raices(vista: VistaResuelta): NodoResuelto[] {
   return vista.nodes.filter((nodo) => !anidados.has(nodo.id));
 }
 
+/** Caja de una etiqueta de Arista: texto un poco menor que el de los Nodos, medido como ellos. */
+function tamanoDeEtiqueta(texto: string, medidas: MedidasDeTexto): { width: number; height: number } {
+  const fontSize = medidas.fontSize * ESCALA_ETIQUETA;
+  return { width: Math.ceil(texto.length * fontSize * medidas.factorDeAncho) + 8, height: Math.ceil(fontSize * 1.4) };
+}
+
 function aElk(nodo: NodoResuelto, medidas: MedidasDeTexto): ElkNode {
   if (nodo.children.length === 0) {
     return { id: nodo.id, ...tamanoDeNodo(nodo.label, medidas, atributosVisibles(nodo)) };
@@ -267,7 +289,7 @@ export function claveDeLayout(vista: VistaResuelta, tema: Tema): string {
   const medidas = medidasDeTexto(tema);
   return JSON.stringify({
     nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id)]),
-    aristas: vista.edges.map(idDeArista),
+    aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
     fuentes: [medidas.fontSize, medidas.factorDeAncho, medidas.fuentes],
   });
 }

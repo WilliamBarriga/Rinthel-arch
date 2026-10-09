@@ -31,7 +31,7 @@ const fuente = fuenteCanonicaSchema.parse({
 const fijo: AdaptadorDeLayout = async (vista: VistaResuelta) => {
   const nodes: Geometria['nodes'] = { g: { x: 0, y: 0, width: 400, height: 200 } };
   for (const hijo of vista.nodes[0]!.children) nodes[hijo.id] = { x: 20, y: 40, width: 200, height: 100 };
-  return { nodes, edges: {}, pinsSolapados: [], width: 400, height: 200 };
+  return { nodes, edges: {}, labels: {}, pinsSolapados: [], width: 400, height: 200 };
 };
 
 const conAncho = (width: number): Camara => ({ x: 0, y: 0, width, height: (width * 600) / 800 });

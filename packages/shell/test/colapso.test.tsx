@@ -49,7 +49,7 @@ function geometriaCentrada(vista: VistaResuelta): Geometria {
     });
     x += ancho(n) + 20;
   }
-  return { nodes, edges: {}, pinsSolapados: [], width: 800, height: 100 };
+  return { nodes, edges: {}, labels: {}, pinsSolapados: [], width: 800, height: 100 };
 }
 
 const camaraInicial: Camara = { x: 0, y: 0, width: 800, height: 600 };

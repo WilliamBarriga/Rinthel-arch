@@ -188,7 +188,7 @@ describe('integracion con VistaInteractiva y location.hash', () => {
     vista.nodes.forEach((n, i) => {
       nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
     });
-    return { nodes, edges: {}, pinsSolapados: [], width: 500, height: 50 };
+    return { nodes, edges: {}, labels: {}, pinsSolapados: [], width: 500, height: 50 };
   };
   function App() {
     const props = useEstadoEnHash({ source: fuente, hash: hashDelNavegador(window), camera: true });

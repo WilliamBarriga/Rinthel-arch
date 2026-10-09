@@ -41,7 +41,7 @@ const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
       ],
     };
   }
-  return { nodes, edges, pinsSolapados: [], width: 700, height: 50 };
+  return { nodes, edges, labels: {}, pinsSolapados: [], width: 700, height: 50 };
 };
 
 const camaraGrande: Camara = { x: 0, y: 0, width: 800, height: 600 };
@@ -173,7 +173,7 @@ describe('VistaInteractiva', () => {
     const { container, rerender } = montar({ layout: adaptador, camera: camaraGrande });
     rerender(<VistaInteractiva {...props({ layout: adaptador, camera: camaraGrande, theme: { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, fontSize: '20px' } } })} />);
     await waitFor(() => expect(ids(container)).toEqual(['a', 'b', 'c', 'd']));
-    resolverViejo({ nodes: {}, edges: {}, pinsSolapados: [], width: 1, height: 1 });
+    resolverViejo({ nodes: {}, edges: {}, labels: {}, pinsSolapados: [], width: 1, height: 1 });
     await new Promise((r) => setTimeout(r, 0));
     expect(ids(container)).toEqual(['a', 'b', 'c', 'd']);
   });

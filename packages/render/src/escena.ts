@@ -6,7 +6,7 @@
  */
 import { idDeArista, tamanoDeTexto } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
-import { alturasDeNodo, atributosVisibles, textoDeAtributo, yDeFila } from 'layout';
+import { ESCALA_ETIQUETA, alturasDeNodo, atributosVisibles, textoDeAtributo, yDeFila } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
 
 /** Elemento SVG: atributos, y como contenido hijos, texto o marcado inline (iconos). */
@@ -62,10 +62,6 @@ const SEPARACION_CARDINALIDAD = 8;
 const ELEVACION_CARDINALIDAD = 4;
 /** Tamano de la cardinalidad respecto al del texto del Tema. */
 const ESCALA_CARDINALIDAD = 0.8;
-/** Tamano de la etiqueta de una Arista respecto al del texto del Tema. */
-const ESCALA_ETIQUETA = 0.85;
-/** Cuanto se sube la etiqueta sobre el segmento para no pisar la linea. */
-const ELEVACION_ETIQUETA = 4;
 /** Tamano del texto de los Atributos respecto al del Tema. */
 const ESCALA_ATRIBUTO = 0.85;
 
@@ -328,7 +324,7 @@ function aristaSvg(arista: AristaResuelta, contexto: Contexto): Elemento[] {
       hijos: [texto],
     });
   }
-  const etiqueta = arista.label === undefined ? [] : [etiquetaSvg(id, arista.label, puntos, contexto)];
+  const etiqueta = arista.label === undefined ? [] : [etiquetaSvg(id, arista.label, puntos, geometry.labels[id], contexto)];
   return [
     {
       tag: 'g',
@@ -343,25 +339,38 @@ function aristaSvg(arista: AristaResuelta, contexto: Contexto): Elemento[] {
   ];
 }
 
-/** Etiqueta centrada sobre el segmento mas largo de la ruta, con un halo del color de fondo para leerse sobre la linea. */
-function etiquetaSvg(id: string, texto: string, puntos: readonly { x: number; y: number }[], contexto: Contexto): Elemento {
+/**
+ * Etiqueta de una Arista centrada en la caja que ELK le reservo; sin caja (la
+ * Arista se re-enruto por un Pin) va sobre el punto medio del segmento mas largo
+ * de la ruta. Lleva un halo del color de fondo para leerse sobre las lineas.
+ */
+function etiquetaSvg(id: string, texto: string, puntos: readonly { x: number; y: number }[], caja: CajaDeNodo | undefined, contexto: Contexto): Elemento {
   const { theme, fontSize } = contexto;
-  let mejor = { largo: -1, x: puntos[0]!.x, y: puntos[0]!.y };
-  for (let i = 1; i < puntos.length; i++) {
-    const a = puntos[i - 1]!;
-    const b = puntos[i]!;
-    const largo = Math.hypot(b.x - a.x, b.y - a.y);
-    if (largo > mejor.largo) mejor = { largo, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  const tamano = fontSize * ESCALA_ETIQUETA;
+  let centro = { x: 0, y: 0 };
+  if (caja !== undefined) {
+    centro = { x: caja.x + caja.width / 2, y: caja.y + caja.height / 2 + tamano * 0.35 };
+  } else {
+    let mejor = -1;
+    for (let i = 1; i < puntos.length; i++) {
+      const a = puntos[i - 1]!;
+      const b = puntos[i]!;
+      const largo = Math.hypot(b.x - a.x, b.y - a.y);
+      if (largo > mejor) {
+        mejor = largo;
+        centro = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 4 };
+      }
+    }
   }
   return {
     tag: 'text',
     attrs: {
       'data-edge-label': id,
-      x: num(mejor.x),
-      y: num(mejor.y - ELEVACION_ETIQUETA),
+      x: num(centro.x),
+      y: num(centro.y),
       'text-anchor': 'middle',
       'font-family': theme.fonts['body'] ?? 'sans-serif',
-      'font-size': num(fontSize * ESCALA_ETIQUETA),
+      'font-size': num(tamano),
       fill: theme.tokens['foreground'] ?? 'currentColor',
       stroke: theme.tokens['background'] ?? 'none',
       'stroke-width': '3',

@@ -225,6 +225,20 @@ describe('compile: Aristas', () => {
     ]);
   });
 
+  it('acepta como nombre de Atributo o de Nodo las palabras de nivel superior (model, node, specification)', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+        model {
+          base model { attrs { model: text  node: text  specification: int } }
+          servicio node
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.nodes.map((n) => n.id)).toEqual(['model', 'node']);
+    expect(canonico?.model.nodes[0]?.attributes.map((a) => a.name)).toEqual(['model', 'node', 'specification']);
+  });
+
   it('compila la etiqueta de una Arista, con o sin cardinalidad', () => {
     const { canonico, issues } = compile({
       'main.dg': `${spec}

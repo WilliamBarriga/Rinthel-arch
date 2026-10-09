@@ -40,7 +40,7 @@ const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
     const h = nodes[e.to.node]!;
     edges[idDeArista(e)] = { points: [{ x: d.x + 100, y: 25 }, { x: h.x, y: 25 }] };
   }
-  return { nodes, edges, pinsSolapados: [], width: 500, height: 50 };
+  return { nodes, edges, labels: {}, pinsSolapados: [], width: 500, height: 50 };
 };
 
 const montar = (steps: unknown[], extra: Partial<VistaInteractivaProps> = {}) =>

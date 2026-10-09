@@ -25,6 +25,6 @@
  * de Web Worker del shell).
  * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout`.
  */
-export { claveDeLayout, layoutView } from './layout';
+export { ESCALA_ETIQUETA, claveDeLayout, layoutView } from './layout';
 export { alturasDeNodo, atributosVisibles, textoDeAtributo, yDeFila } from './medidas';
 export type { CajaDeNodo, Geometria, OpcionesDeLayout, Punto, RutaDeArista } from './layout';

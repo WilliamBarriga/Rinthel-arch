@@ -39,6 +39,53 @@ function vista(vistaExtra: Record<string, unknown> = {}, estado = {}): VistaResu
 const con = (cambios: Partial<Tema>): Tema => ({ ...TEMA_NEUTRO, ...cambios });
 
 describe('layoutView', () => {
+  describe('etiquetas de Arista', () => {
+    const conEtiqueta = (etiqueta: string | undefined, vistaExtra: Record<string, unknown> = {}): VistaResuelta => {
+      const base = vista(vistaExtra);
+      return { ...base, edges: base.edges.map((arista) => (arista.to.node === 'c' ? { ...arista, ...(etiqueta !== undefined && { label: etiqueta }) } : arista)) };
+    };
+    const absoluta = (g: Geometria, id: string): CajaDeNodo => {
+      const partes = id.split('.');
+      return partes.slice(0, -1).reduce((caja, _, i) => {
+        const padre = g.nodes[partes.slice(0, i + 1).join('.')]!;
+        return { ...caja, x: caja.x + padre.x, y: caja.y + padre.y };
+      }, g.nodes[id]!);
+    };
+
+    it('reserva una caja para cada etiqueta, sin pisar ningun Nodo', async () => {
+      const geometria = await layoutView(conEtiqueta('publica eventos al bus'), TEMA_NEUTRO);
+      const caja = geometria.labels['b.b2 -> c'];
+
+      expect(caja).toBeDefined();
+      expect(caja!.width).toBeGreaterThan(0);
+      expect(caja!.height).toBeGreaterThan(0);
+      expect(Object.keys(geometria.labels)).toEqual(['b.b2 -> c']);
+      for (const id of Object.keys(geometria.nodes)) {
+        const n = absoluta(geometria, id);
+        const fuera = caja!.x + caja!.width <= n.x || n.x + n.width <= caja!.x || caja!.y + caja!.height <= n.y || n.y + n.height <= caja!.y;
+        expect(fuera, `la etiqueta pisa ${id}`).toBe(true);
+      }
+    });
+
+    it('sin etiquetas no hay cajas de etiqueta y el layout no cambia', async () => {
+      const sin = await layoutView(conEtiqueta(undefined), TEMA_NEUTRO);
+
+      expect(sin.labels).toEqual({});
+      expect(sin).toEqual(await layoutView(vista(), TEMA_NEUTRO));
+    });
+
+    it('la etiqueta entra en la clave de layout', () => {
+      expect(claveDeLayout(conEtiqueta('x'), TEMA_NEUTRO)).not.toBe(claveDeLayout(conEtiqueta(undefined), TEMA_NEUTRO));
+    });
+
+    it('una etiqueta mas larga ocupa una caja mas ancha', async () => {
+      const corta = (await layoutView(conEtiqueta('ab'), TEMA_NEUTRO)).labels['b.b2 -> c']!;
+      const larga = (await layoutView(conEtiqueta('una etiqueta bastante larga'), TEMA_NEUTRO)).labels['b.b2 -> c']!;
+
+      expect(larga.width).toBeGreaterThan(corta.width);
+    });
+  });
+
   it('cada Nodo visible tiene tamano positivo y posicion relativa a su Grupo', async () => {
     const geometria = await layoutView(vista(), TEMA_NEUTRO);
 

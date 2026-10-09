@@ -21,6 +21,7 @@ const puntoSchema = z.object({ x: numeroFinito, y: numeroFinito });
 export const geometriaSchema = z.object({
   nodes: z.record(z.string(), cajaDeNodoSchema),
   edges: z.record(z.string(), z.object({ points: z.array(puntoSchema) })),
+  labels: z.record(z.string(), cajaDeNodoSchema).default({}),
   pinsSolapados: z.array(z.tuple([z.string(), z.string()])),
   width: numeroFinito,
   height: numeroFinito,

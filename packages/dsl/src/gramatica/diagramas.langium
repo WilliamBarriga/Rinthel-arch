@@ -231,7 +231,8 @@ Id returns string:
   'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order' |
   'theme' | 'extends' | 'palette' | 'fonts' | 'tokens' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
-  'steps' | 'step' | 'show' | 'hide' | 'edge';
+  'steps' | 'step' | 'show' | 'hide' | 'edge' |
+  'model' | 'node' | 'specification';
 
 // -------------------------
 // Comments
