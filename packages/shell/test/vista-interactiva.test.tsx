@@ -62,6 +62,17 @@ function props(extra: Partial<VistaInteractivaProps> = {}): VistaInteractivaProp
 const montar = (extra: Partial<VistaInteractivaProps> = {}) => render(<VistaInteractiva {...props(extra)} />);
 
 describe('VistaInteractiva', () => {
+  it('dibuja los iconos del proveedor `icons`', async () => {
+    const conIcono = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio', icon: 'logo' }] },
+      model: { nodes: [nodo('a', 'A')], edges: [] },
+      views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
+    });
+    const icons = { resolve: (k: string) => (k === 'logo' ? '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle r="3"/></svg>' : undefined), keys: () => ['logo'] };
+    const { container } = montar({ source: conIcono, camera: camaraGrande, icons });
+    await waitFor(() => expect(container.querySelector('[data-icon="logo"]')).not.toBeNull());
+  });
+
   it('dibuja la Vista con la geometria del adaptador de layout', async () => {
     const { container } = montar({ camera: camaraGrande });
     await waitFor(() => expect(ids(container)).toEqual(['a', 'b', 'c', 'd']));

@@ -32,6 +32,7 @@
  * `defaultView`: lanza. Cambiar de Vista remonta la Vista activa (se pierde el
  * estado no controlado). `cachedGeometry` vale para la Vista declarada
  * (`view ?? defaultView`); con navegacion usa `cachedGeometries` por id.
+ * Iconos: `icons` (`IconProvider`) resuelve la clave `icon` de cada Nodo; sin el no se dibujan.
  * Recarga de Tema: `themeUpdates` (`SuscripcionDeTema`) es el puerto por el que el
  * consumidor entrega el Tema resuelto al guardar el archivo de tema. La Geometria
  * solo se recalcula si cambia `claveDeLayout` (fuentes, tamano de texto); la
@@ -88,6 +89,7 @@ export type { SuscripcionDeTema } from './tema-vigente';
 export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
 export type { UmbralesDeDetalle } from './zoom-semantico';
 export type { Camara, NivelDeDetalle } from 'render';
+export type { IconProvider } from 'canonico';
 export { deserializarEstado, hashDelNavegador, serializarEstado, vistaPorDefecto } from './hash';
 export type { AdaptadorDeHash, EstadoDeShell } from './hash';
 export { useEstadoEnHash } from './estado-en-hash';
