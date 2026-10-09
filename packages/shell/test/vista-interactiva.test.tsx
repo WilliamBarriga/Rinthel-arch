@@ -160,7 +160,7 @@ describe('VistaInteractiva', () => {
     const adaptador: AdaptadorDeLayout = (vista, tema) =>
       ++llamadas === 1 ? new Promise<Geometria>((r) => (resolverViejo = r)) : enFila(vista, tema);
     const { container, rerender } = montar({ layout: adaptador, camera: camaraGrande });
-    rerender(<VistaInteractiva {...props({ layout: adaptador, camera: camaraGrande, theme: { ...TEMA_NEUTRO, name: 'otro' } })} />);
+    rerender(<VistaInteractiva {...props({ layout: adaptador, camera: camaraGrande, theme: { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, fontSize: '20px' } } })} />);
     await waitFor(() => expect(ids(container)).toEqual(['a', 'b', 'c', 'd']));
     resolverViejo({ nodes: {}, edges: {}, pinsSolapados: [], width: 1, height: 1 });
     await new Promise((r) => setTimeout(r, 0));

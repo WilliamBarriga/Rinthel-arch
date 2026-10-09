@@ -38,6 +38,8 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   const [fallo, setFallo] = useState<Error>();
   const ultimo = useRef(entrada);
   ultimo.current = entrada;
+  // Solo lo que mueve el layout (estructura, textos, fuentes) lo repite; la paleta no.
+  const claveTema = claveDeLayout(vista, theme);
   const mostrado = useRef<Calculo | undefined>(undefined);
   const cache = useRef<{ llave: [unknown, AdaptadorDeLayout]; mapa: Map<string, Geometria> } | undefined>(undefined);
 
@@ -46,7 +48,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
       cache.current = { llave: [invalidar, layout], mapa: new Map() };
     }
     const mapa = cache.current.mapa;
-    const clave = claveDeLayout(vista, theme);
+    const clave = claveTema;
     const recibir = (geometria: Geometria): void => {
       mapa.delete(clave);
       mapa.set(clave, geometria);
@@ -63,7 +65,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
     if (cacheada !== undefined) {
       recibir(cacheada);
     } else {
-      layout(vista, theme).then(
+      layout(vista, ultimo.current.theme).then(
         (geometria) => {
           if (vigente) recibir(geometria);
         },
@@ -78,7 +80,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
     return () => {
       vigente = false;
     };
-  }, [vista, theme, layout, invalidar, semilla]);
+  }, [vista, claveTema, layout, invalidar, semilla]);
 
   if (fallo !== undefined) throw fallo;
   return calculo;

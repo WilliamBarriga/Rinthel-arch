@@ -25,6 +25,9 @@
  * su estado de `expanded`/`collapsed` (`resolveView`) y `onToggle` solo avisa
  * de que se pulso el control de un Grupo, que se dibuja solo si hay `onToggle`.
  *
+ * `detail` (`NivelDeDetalle`: `etiqueta` | `titulo` | `completo`) elige cuanto texto se
+ * dibuja sin tocar cajas ni rutas; sin el, etiqueta de la Vista y Atributos.
+ *
  * Invariantes: sin estado ni efectos (mismas props, mismo arbol); determinista
  * byte a byte en la cadena; los colores salen solo del Tema, por nombre de Paleta
  * (ADR 0006); sin dependencia de Next, Tailwind ni json-render. Peer React 18 y 19.
@@ -37,6 +40,6 @@ export const paquete = 'render';
 
 export { Diagram } from './diagram';
 export type { DiagramProps } from './diagram';
-export type { Camara } from './escena';
+export type { Camara, NivelDeDetalle } from './escena';
 export { renderToSvgString } from './svg';
 export type { EntradaDeRender, FuenteIncrustada } from './svg';

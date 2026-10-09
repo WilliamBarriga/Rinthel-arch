@@ -17,6 +17,15 @@
  * Pan y zoom los da d3-zoom (arrastre, rueda, tactil); escala entre 0.05 y 16.
  * Seleccion: `selected` controlada o interna; `onSelect(id)` al pulsar un Nodo;
  * el Nodo marcado lleva un rectangulo con `data-selected="<id>"`.
+ * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con
+ * `onStepChange`, o interno desde `defaultStep`, 0 por defecto) se pasa por
+ * `revealAt` y se dibujan controles anterior/siguiente; la geometria no cambia.
+ * Una `visibility` explicita manda sobre la derivada; sin `steps` no hay controles.
+ * Recarga de Tema: `themeUpdates` (`SuscripcionDeTema`) es el puerto por el que el
+ * consumidor entrega el Tema resuelto al guardar el archivo de tema. La Geometria
+ * solo se recalcula si cambia `claveDeLayout` (fuentes, tamano de texto); la
+ * paleta recolorea sin relayout y sin recomputar la Vista (el Modelo no se
+ * recompila).
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *
@@ -31,6 +40,11 @@
  * avisa por `onLimit`.
  * Worker: `adaptadorDeWorker(puerto)` (pagina) y `servirLayout(puerto)` (dentro
  * del Worker: `servirLayout(self)`) corren el mismo `layoutView` que el build.
+ * Zoom semantico: la escala (`width` del lienzo / ancho de la camara) elige el nivel de
+ * detalle del texto que pasa a `render` (`nivelDeDetalle`: etiqueta corta, titulo, titulo +
+ * Atributos; umbrales por defecto 0.4 y 0.8, ajustables con `detailThresholds`). La
+ * geometria, la estructura y el colapso no dependen de la escala: colapsar o expandir
+ * sigue siendo una accion explicita (`state`).
  *
  * Invariantes: no guarda verdad propia salvo camara y seleccion cuando no son
  * controladas; solo dibuja lo que `render` devuelve; un layout que llega tarde
@@ -45,6 +59,10 @@ export const paquete = 'shell';
 
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';
-export type { Camara } from 'render';
+export type { PropsDePasos } from './pasos';
+export type { SuscripcionDeTema } from './tema-vigente';
+export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
+export type { UmbralesDeDetalle } from './zoom-semantico';
+export type { Camara, NivelDeDetalle } from 'render';
 export { adaptadorDeWorker, servirLayout } from './layout-en-worker';
 export type { PuertoDeMensajes } from './layout-en-worker';

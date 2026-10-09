@@ -11,6 +11,7 @@ import type { D3ZoomEvent, ZoomTransform } from 'd3-zoom';
 
 import { resolveView } from 'canonico';
 import type { EstadoDeColapso, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
+import { claveDeLayout } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram } from 'render';
 import type { Camara } from 'render';
@@ -19,16 +20,24 @@ import { MAX_NODOS_VISIBLES, alternarGrupo, compensarCamara, contarNodosVisibles
 import { useGeometria } from './geometria';
 import type { Calculo } from './geometria';
 import { useMorph } from './morph';
+import { usePasos } from './pasos';
+import type { PropsDePasos } from './pasos';
+import { useTemaVigente } from './tema-vigente';
+import type { SuscripcionDeTema } from './tema-vigente';
 import { cajasAbsolutas, recortarAlViewport } from './viewport';
+import { nivelDeDetalle } from './zoom-semantico';
+import type { UmbralesDeDetalle } from './zoom-semantico';
 
 /** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
 export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema) => Promise<Geometria>;
 
-export interface VistaInteractivaProps {
+export interface VistaInteractivaProps extends PropsDePasos {
   source: FuenteCanonica;
   /** Id de la Vista a mostrar. */
   view: string;
   theme: Tema;
+  /** Puerto de recarga de Tema al guardar: recolorea sin relayout salvo que cambien las fuentes. */
+  themeUpdates?: SuscripcionDeTema;
   layout: AdaptadorDeLayout;
   /** Tamano del lienzo en px. */
   width: number;
@@ -52,8 +61,10 @@ export interface VistaInteractivaProps {
   /** Nodo seleccionado controlado; sin ella el componente guarda el suyo. */
   selected?: string | null;
   onSelect?: (id: string) => void;
-  /** Visibilidad 0..1 de Nodos y Aristas (p. ej. `revealAt`). */
+  /** Visibilidad 0..1 de Nodos y Aristas; si se da, manda sobre la derivada de los Pasos. */
   visibility?: Visibilidad;
+  /** Escalas desde las que el zoom semantico muestra titulo y titulo + Atributos (ver `nivelDeDetalle`). */
+  detailThresholds?: UmbralesDeDetalle;
   /** Fallo del adaptador de layout; sin ella el fallo se lanza al renderizar. */
   onError?: (error: Error) => void;
 }
@@ -74,7 +85,8 @@ function aTransform(c: Camara, ancho: number): ZoomTransform {
 const igual = (a: ZoomTransform, b: ZoomTransform): boolean => a.k === b.k && a.x === b.x && a.y === b.y;
 
 export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
-  const { source, view, theme, layout, width, height, onError, onSelect, visibility, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
+  const { source, view, layout, width, height, onError, onSelect, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
+  const theme = useTemaVigente(props.theme, props.themeUpdates);
   const [estadoPropio, setEstadoPropio] = useState<EstadoDeColapso>({});
   const state = props.state ?? estadoPropio;
   const vista = useMemo(() => {
@@ -111,6 +123,9 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
   const camara = props.camera ?? propia;
   const [seleccionPropia, setSeleccionPropia] = useState<string | null>(null);
   const seleccionado = props.selected !== undefined ? props.selected : seleccionPropia;
+
+  const pasos = usePasos(vista, props);
+  const visibility = pasos.visibility;
 
   const zona = useRef<HTMLDivElement>(null);
   const comportamiento = useRef(zoom<HTMLDivElement, unknown>());
@@ -216,11 +231,13 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
           width={width}
           height={height}
           camera={camaraVista}
+          detail={nivelDeDetalle(width / ancho, props.detailThresholds)}
           onSelect={alSeleccionar}
           onToggle={alternar}
           {...(visibilidadMostrada !== undefined && { visibility: visibilidadMostrada })}
         />
       )}
+      {pasos.controles}
       {marca !== undefined && seleccionado !== null && (
         <svg
           width={width}
