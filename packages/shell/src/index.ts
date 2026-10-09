@@ -17,6 +17,10 @@
  * Pan y zoom los da d3-zoom (arrastre, rueda, tactil); escala entre 0.05 y 16.
  * Seleccion: `selected` controlada o interna; `onSelect(id)` al pulsar un Nodo;
  * el Nodo marcado lleva un rectangulo con `data-selected="<id>"`.
+ * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con
+ * `onStepChange`, o interno desde `defaultStep`, 0 por defecto) se pasa por
+ * `revealAt` y se dibujan controles anterior/siguiente; la geometria no cambia.
+ * Una `visibility` explicita manda sobre la derivada; sin `steps` no hay controles.
  * Recarga de Tema: `themeUpdates` (`SuscripcionDeTema`) es el puerto por el que el
  * consumidor entrega el Tema resuelto al guardar el archivo de tema. La Geometria
  * solo se recalcula si cambia `claveDeLayout` (fuentes, tamano de texto); la
@@ -44,6 +48,7 @@ export const paquete = 'shell';
 
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';
+export type { PropsDePasos } from './pasos';
 export type { SuscripcionDeTema } from './tema-vigente';
 export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
 export type { UmbralesDeDetalle } from './zoom-semantico';
