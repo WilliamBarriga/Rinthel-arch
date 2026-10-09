@@ -15,12 +15,14 @@ import type { Geometria } from 'layout';
 import { Diagram } from 'render';
 import type { Camara } from 'render';
 
+import { usePasos } from './pasos';
+import type { PropsDePasos } from './pasos';
 import { cajasAbsolutas, recortarAlViewport } from './viewport';
 
 /** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
 export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema) => Promise<Geometria>;
 
-export interface VistaInteractivaProps {
+export interface VistaInteractivaProps extends PropsDePasos {
   source: FuenteCanonica;
   /** Id de la Vista a mostrar. */
   view: string;
@@ -38,7 +40,7 @@ export interface VistaInteractivaProps {
   /** Nodo seleccionado controlado; sin ella el componente guarda el suyo. */
   selected?: string | null;
   onSelect?: (id: string) => void;
-  /** Visibilidad 0..1 de Nodos y Aristas (p. ej. `revealAt`). */
+  /** Visibilidad 0..1 de Nodos y Aristas; si se da, manda sobre la derivada de los Pasos. */
   visibility?: Visibilidad;
   /** Fallo del adaptador de layout; sin ella el fallo se lanza al renderizar. */
   onError?: (error: Error) => void;
@@ -60,7 +62,7 @@ function aTransform(c: Camara, ancho: number): ZoomTransform {
 const igual = (a: ZoomTransform, b: ZoomTransform): boolean => a.k === b.k && a.x === b.x && a.y === b.y;
 
 export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
-  const { source, view, theme, layout, width, height, state, onError, onSelect, visibility } = props;
+  const { source, view, theme, layout, width, height, state, onError, onSelect } = props;
   const vista = useMemo(() => {
     const resuelta = resolveView(source, view, state);
     if (resuelta === undefined) throw new Error(`La Vista '${view}' no existe en la Fuente canonica`);
@@ -94,6 +96,9 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
   const camara = props.camera ?? propia;
   const [seleccionPropia, setSeleccionPropia] = useState<string | null>(null);
   const seleccionado = props.selected !== undefined ? props.selected : seleccionPropia;
+
+  const pasos = usePasos(vista, props);
+  const visibility = pasos.visibility;
 
   const zona = useRef<HTMLDivElement>(null);
   const comportamiento = useRef(zoom<HTMLDivElement, unknown>());
@@ -168,6 +173,7 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
           {...(visibility !== undefined && { visibility })}
         />
       )}
+      {pasos.controles}
       {marca !== undefined && seleccionado !== null && (
         <svg
           width={width}
