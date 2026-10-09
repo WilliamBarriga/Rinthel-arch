@@ -1,0 +1,51 @@
+specification {
+  node sistema
+  node servicio
+  node tabla
+}
+
+theme corporativo extends neutral {
+  tokens { fontSize "18px" }
+}
+
+model {
+  sistema plataforma "Plataforma" {
+    sistema backend "Backend" {
+      servicio api "API"
+      servicio auth "Autenticacion"
+      servicio pagos "Pagos"
+    }
+    sistema datos "Datos" {
+      tabla usuarios "Usuarios" { attrs { id: uuid  email: text } }
+      tabla pedidos "Pedidos" { attrs { id: uuid  usuario_id: uuid } }
+    }
+  }
+  servicio cliente "Cliente web"
+
+  cliente -> plataforma.backend.api
+  plataforma.backend.api -> plataforma.backend.auth
+  plataforma.backend.api -> plataforma.backend.pagos
+  plataforma.backend.auth -> plataforma.datos.usuarios#id
+  plataforma.datos.pedidos#usuario_id "N" -> "1" plataforma.datos.usuarios#id
+}
+
+view general {
+  type architecture
+  include **
+  theme corporativo
+  link plataforma.backend -> detalle
+}
+
+view detalle {
+  type flow
+  include plataforma.backend.**
+  steps {
+    step "Entrada" { show plataforma.backend.api }
+    step "Servicios" { show plataforma.backend.auth, plataforma.backend.pagos }
+  }
+}
+
+view datos {
+  type architecture
+  include plataforma.datos.**
+}
