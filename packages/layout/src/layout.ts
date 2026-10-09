@@ -61,18 +61,17 @@ const OPCIONES_RAIZ = {
   'elk.layered.spacing.nodeNodeBetweenLayers': '48',
 };
 
-let elkPorDefecto: ELK | undefined;
-
 /**
  * Calcula la Geometria de `vista` con las medidas del `tema`. Determinista: la
  * misma entrada da la misma geometria. Los Grupos cerrados son Nodos hoja.
+ * Sin `opciones.elk` crea un motor por llamada (unos ms; sin estado compartido).
  */
 export async function layoutView(
   vista: VistaResuelta,
   tema: Tema,
   opciones: OpcionesDeLayout = {},
 ): Promise<Geometria> {
-  const elk = opciones.elk ?? (elkPorDefecto ??= new ELKBundled());
+  const elk = opciones.elk ?? new ELKBundled();
   const medidas = medidasDeTexto(tema);
 
   const grafo: ElkNode = {

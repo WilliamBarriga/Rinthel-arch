@@ -1,6 +1,7 @@
 /**
- * `shell` — capa interactiva sobre `render` (pan/zoom, seleccion, filtrado por
- * viewport; colapso, drill-down y Pasos llegan en tickets siguientes).
+ * `shell` — capa interactiva sobre `render`: pan/zoom, seleccion, filtrado por
+ * viewport, colapso con relayout en Worker, drill-down con breadcrumbs, Pasos,
+ * zoom semantico, estado en el hash de URL y recarga de Tema.
  *
  * Interfaz publica:
  * - `<VistaInteractiva source view theme layout width height ... />`: resuelve la
@@ -37,7 +38,12 @@
  * consumidor entrega el Tema resuelto al guardar el archivo de tema. La Geometria
  * solo se recalcula si cambia `claveDeLayout` (fuentes, tamano de texto); la
  * paleta recolorea sin relayout y sin recomputar la Vista (el Modelo no se
- * recompila).
+ * recompila). Quien alimenta el puerto es el consumidor: observa el archivo de
+ * tema, recompila (`compile` de `dsl`), toma el Tema resuelto de la Fuente
+ * canonica y lo entrega a `alCambiar`. Limitacion de v1: no hay consumidor
+ * incluido (el HTML de `cli export --format html` es estatico, sin servidor ni
+ * watch, y no pasa `themeUpdates`); la historia 35 queda cubierta por el puerto y
+ * sus pruebas, y el watch/dev server queda fuera de alcance.
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *

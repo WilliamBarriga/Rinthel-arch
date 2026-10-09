@@ -55,7 +55,14 @@ export interface ResultadoDeCompilacion {
 
 let memoServicios: LangiumCoreServices | undefined;
 
-/** Servicios de Langium, construidos una vez (memo inmutable: no guarda estado entre llamadas). */
+/**
+ * Servicios de Langium, construidos la primera vez que se compila. Es el unico
+ * estado de modulo del paquete y se conserva a proposito: crearlos cuesta ~100 ms
+ * frente a ~1 ms de compilar un Workspace chico, y `compile` se llama muchas
+ * veces por proceso. Es inmutable e inobservable: solo se usa `parser.LangiumParser`,
+ * que no retiene documentos ni resultados entre llamadas (cada `parse` es
+ * independiente), asi que compilar con o sin memo da el mismo resultado.
+ */
 function servicios(): LangiumCoreServices {
   if (memoServicios === undefined) {
     const shared = inject(createDefaultSharedCoreModule(EmptyFileSystem), DiagramasGeneratedSharedModule);

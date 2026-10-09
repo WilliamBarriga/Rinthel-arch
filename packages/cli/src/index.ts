@@ -48,7 +48,8 @@
  * servidor ni peticiones externas, con la Fuente canonica completa, la geometria cacheada
  * de todas las Vistas, el shell (bundle de `navegador/` hecho con esbuild al exportar:
  * `VistaInteractiva` + `useEstadoEnHash` con camara), las fuentes del Tema y los iconos
- * incrustados. Abre en la Vista del archivo (el hash puede decir otra); los Nodos con
+ * incrustados (estatico: sin watch ni `themeUpdates`; ver la limitacion de la recarga de Tema en
+ * `shell`). Abre en la Vista del archivo (el hash puede decir otra); los Nodos con
  * `link` navegan a la Vista enlazada dentro del mismo archivo. El estado por defecto sale de
  * la geometria cacheada; colapsar relayoutea con ELK en un Web Worker creado de un Blob
  * del propio bundle y, si el navegador no lo permite, en el hilo principal.
