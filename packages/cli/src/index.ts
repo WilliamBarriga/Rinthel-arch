@@ -21,7 +21,7 @@
  * fusiona antes del Workspace (gana el Workspace en rutas repetidas). Con errores
  * (o avisos en `--strict`) sale 1 y borra la salida anterior; los Pins solapados salen como
  * `W_OVERLAPPING_PINS` con posicion y `related`. `--theme` inexistente: codigo 2.
- * `export --workspace <ruta> [--theme-path <carpeta>] [--format svg|png]` (sin `--json`, `--strict` ni
+ * `export --workspace <ruta> [--theme-path <carpeta>] [--format svg|png|html]` (sin `--json`, `--strict` ni
  * `--max-issues`): un SVG estatico por Vista en `.diagrams/svg/<vista>.svg`
  * (reemplaza esa carpeta), desde la salida de `build` (sin ella: codigo 2). Mismos
  * bytes para la misma salida; el SVG no referencia recursos externos: las fuentes
@@ -37,6 +37,14 @@
  * sintaxis del DSL, el contrato de `validate` (JSON Schema derivado del esquema Zod)
  * y los codigos de issue. Va a stdout, o a `--out`; determinista (regenerar con otro
  * catalogo lo actualiza). Con errores de validacion sale 1 y muestra los issues.
+ * Con `--format html` escribe `.diagrams/html/<vista>.html`: un archivo por Vista, sin
+ * servidor ni peticiones externas, con la Fuente canonica completa, la geometria cacheada
+ * de todas las Vistas, el shell (bundle de `navegador/` hecho con esbuild al exportar:
+ * `VistaInteractiva` + `useEstadoEnHash` con camara), las fuentes del Tema y los iconos
+ * incrustados. Abre en la Vista del archivo (el hash puede decir otra); los Nodos con
+ * `link` navegan a la Vista enlazada dentro del mismo archivo. El estado por defecto sale de
+ * la geometria cacheada; colapsar relayoutea con ELK en un Web Worker creado de un Blob
+ * del propio bundle y, si el navegador no lo permite, en el hilo principal.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> render -> shell / cli`.
@@ -50,6 +58,7 @@ import { parseArgs } from 'node:util';
 import { construirBuild } from './build';
 import type { GeometriaCacheada } from './build';
 import { exportarPng, exportarSvg } from './export';
+import { exportarHtml } from './html';
 import { generarSkill } from './skill';
 
 import { construirSalida, textoLegible } from './validate';
@@ -166,9 +175,10 @@ async function skill(
 }
 
 /** Formatos de `export`: que dibuja, en que carpeta de `.diagrams/` y como se nombra en la salida. */
-const FORMATOS: Readonly<Record<string, { exportar: typeof exportarSvg | typeof exportarPng; carpeta: string; etiqueta: string }>> = {
+const FORMATOS: Readonly<Record<string, { exportar: typeof exportarSvg | typeof exportarPng | typeof exportarHtml; carpeta: string; etiqueta: string }>> = {
   svg: { exportar: exportarSvg, carpeta: 'svg', etiqueta: 'SVG' },
   png: { exportar: exportarPng, carpeta: 'png', etiqueta: 'PNG' },
+  html: { exportar: exportarHtml, carpeta: 'html', etiqueta: 'HTML' },
 };
 
 async function exportar(
@@ -212,7 +222,7 @@ async function exportar(
   try {
     // El Workspace gana sobre `--theme-path` en rutas repetidas, como en `build`.
     const fuentes = { ...(carpetaDeTemas === undefined ? {} : leerLetras(carpetaDeTemas)), ...leerLetras(raiz) };
-    archivos = salida.exportar(fuente, geometrias, leer(raiz), fuentes);
+    archivos = await salida.exportar(fuente, geometrias, leer(raiz), fuentes);
   } catch (error) {
     return uso(`No se pudo exportar: ${(error as Error).message}`);
   }

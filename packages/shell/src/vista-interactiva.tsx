@@ -10,7 +10,7 @@ import { zoom, zoomIdentity, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent, ZoomTransform } from 'd3-zoom';
 
 import { resolveView } from 'canonico';
-import type { EstadoDeColapso, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
+import type { EstadoDeColapso, IconProvider, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
 import { claveDeLayout } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram } from 'render';
@@ -67,6 +67,8 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
   visibility?: Visibilidad;
   /** Escalas desde las que el zoom semantico muestra titulo y titulo + Atributos (ver `nivelDeDetalle`). */
   detailThresholds?: UmbralesDeDetalle;
+  /** Proveedor de iconos de los Nodos (claves de `icon` -> SVG inline); sin el, no se dibujan iconos. */
+  icons?: IconProvider;
   /** Fallo del adaptador de layout; sin ella el fallo se lanza al renderizar. */
   onError?: (error: Error) => void;
 }
@@ -254,6 +256,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
           view={recortada}
           geometry={mostrado.geometria}
           theme={theme}
+          {...(props.icons !== undefined && { icons: props.icons })}
           width={width}
           height={height}
           camera={camaraVista}
