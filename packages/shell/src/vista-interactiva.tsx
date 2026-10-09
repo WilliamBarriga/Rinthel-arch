@@ -76,6 +76,14 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
 const ESCALA_MIN = 0.05;
 const ESCALA_MAX = 16;
 
+/** Camara que muestra toda la geometria, centrada y con margen; no amplia por encima de 1:1. */
+function encuadrar(geometria: Geometria, ancho: number, alto: number): Camara {
+  const margen = 24;
+  const escala = Math.min(1, ancho / (geometria.width + 2 * margen), alto / (geometria.height + 2 * margen));
+  const [w, h] = [ancho / escala, alto / escala];
+  return { x: (geometria.width - w) / 2, y: (geometria.height - h) / 2, width: w, height: h };
+}
+
 function aCamara(t: ZoomTransform, ancho: number, alto: number): Camara {
   // `+ 0` normaliza -0 a 0.
   return { x: -t.x / t.k + 0, y: -t.y / t.k + 0, width: ancho / t.k, height: alto / t.k };
@@ -147,6 +155,13 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const camaraPropia = useRef(propia);
   camaraPropia.current = propia;
   const camara = props.camera ?? propia;
+  const encuadrada = useRef(false);
+  useEffect(() => {
+    // Primera geometria de la Vista: la camara propia encuadra todo el contenido (sin ampliar por encima de 1:1).
+    if (calculo === undefined || encuadrada.current) return;
+    encuadrada.current = true;
+    if (props.camera === undefined) setPropia(encuadrar(calculo.geometria, width, height));
+  }, [calculo]);
   const [seleccionPropia, setSeleccionPropia] = useState<string | null>(null);
   const seleccionado = props.selected !== undefined ? props.selected : seleccionPropia;
 

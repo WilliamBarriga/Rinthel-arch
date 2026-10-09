@@ -91,6 +91,10 @@ function App({ datos, layout }: { datos: DatosDelHtml; layout: AdaptadorDeLayout
   useEffect(() => {
     document.title = estado.view;
   }, [estado.view]);
+  const fondo = theme?.tokens['background'];
+  useEffect(() => {
+    if (fondo !== undefined) document.body.style.background = fondo;
+  }, [fondo]);
   if (theme === undefined) throw new Error('La Fuente canonica no trae Temas');
   return (
     <VistaInteractiva {...estado} source={datos.fuente} theme={theme} layout={layout} icons={iconos} width={width} height={height} cachedGeometries={cachedGeometries} />

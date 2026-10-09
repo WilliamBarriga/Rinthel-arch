@@ -78,6 +78,18 @@ describe('VistaInteractiva', () => {
     await waitFor(() => expect(ids(container)).toEqual(['a', 'b', 'c', 'd']));
   });
 
+  it('sin camara, la inicial encuadra toda la Vista en el viewport, centrada', async () => {
+    const { container } = montar({ width: 350, height: 100 });
+
+    await waitFor(() => expect(ids(container)).toEqual(['a', 'b', 'c', 'd']));
+    const [x, y, ancho, alto] = viewBoxDe(container)!.split(' ').map(Number) as [number, number, number, number];
+    expect(x).toBeLessThanOrEqual(0);
+    expect(x + ancho).toBeGreaterThanOrEqual(700);
+    expect(y).toBeLessThanOrEqual(0);
+    expect(y + alto).toBeGreaterThanOrEqual(50);
+    expect(ancho / alto).toBeCloseTo(3.5, 1);
+  });
+
   it('la camara controlada fija el viewBox', async () => {
     const { container } = montar({ camera: { x: 10, y: 20, width: 400, height: 300 } });
     await waitFor(() => expect(viewBoxDe(container)).toBe('10 20 400 300'));
