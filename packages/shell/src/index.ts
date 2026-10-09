@@ -29,6 +29,17 @@
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *
+ * Colapso (ADR 0004): los controles de Grupo de `render` alternan el Grupo. El
+ * estado (`EstadoDeColapso`) es controlado con `state` + `onStateChange` o
+ * interno. Relayout solo en estados no cacheados: la cache es por estructura
+ * (`claveDeLayout`) y `cachedGeometry` (geometria del estado por defecto, p. ej.
+ * la del build) la siembra sin llamar al adaptador. El Grupo tocado se mantiene
+ * fijo en pantalla: la camara se compensa (`onCameraChange` avisa) y la geometria
+ * se interpola `morphMs` ms (0 lo desactiva; un gesto del usuario lo corta). Una
+ * expansion que dejaria mas de `maxNodes` (1000) Nodos visibles se rechaza y se
+ * avisa por `onLimit`.
+ * Worker: `adaptadorDeWorker(puerto)` (pagina) y `servirLayout(puerto)` (dentro
+ * del Worker: `servirLayout(self)`) corren el mismo `layoutView` que el build.
  * Zoom semantico: la escala (`width` del lienzo / ancho de la camara) elige el nivel de
  * detalle del texto que pasa a `render` (`nivelDeDetalle`: etiqueta corta, titulo, titulo +
  * Atributos; umbrales por defecto 0.4 y 0.8, ajustables con `detailThresholds`). La
@@ -53,3 +64,5 @@ export type { SuscripcionDeTema } from './tema-vigente';
 export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
 export type { UmbralesDeDetalle } from './zoom-semantico';
 export type { Camara, NivelDeDetalle } from 'render';
+export { adaptadorDeWorker, servirLayout } from './layout-en-worker';
+export type { PuertoDeMensajes } from './layout-en-worker';
