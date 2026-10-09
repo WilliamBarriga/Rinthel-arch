@@ -1,10 +1,10 @@
 /**
  * Esquema Zod de la Fuente canonica.
  *
- * Alcance: Nodos (id cualificado, `type`, titulo, descripcion,
- * Atributos, jerarquia de hijos), catalogo de Tipos de nodo y Aristas con
- * extremo Nodo o Nodo#Atributo y cardinalidad opcional (tickets #24 y #25). `source`,
- * Vistas, Temas y geometria llegan en tickets posteriores del spec #19.
+ * Alcance: Nodos (id cualificado, `type`, titulo, descripcion, Atributos,
+ * `source`, jerarquia de hijos), catalogo de Tipos de nodo, Aristas con extremo
+ * Nodo o Nodo#Atributo y cardinalidad opcional, Temas ya resueltos y Vistas.
+ * La geometria cacheada tiene su esquema en `geometria.ts`.
  *
  * Jerarquia: los ids cualificados (`a.b.c`) definen la jerarquia del Modelo.
  * `children` la refleja cuando el documento anida; un documento plano (todos los
@@ -234,10 +234,9 @@ export const vistaSchema = z.object({
 export type Vista = z.infer<typeof vistaSchema>;
 
 /**
- * Fuente canonica, seccion de Nodos. Todavia no hay validador: la validacion
- * semantica por codigos (ADR 0008) llega con `validate` en tickets posteriores;
- * aqui solo se validan la forma del documento y las reglas estructurales de
- * jerarquia documentadas en `index.ts`.
+ * Fuente canonica. Aqui solo se validan la forma del documento y las reglas
+ * estructurales de jerarquia documentadas en `index.ts`; la validacion semantica
+ * por codigos (ADR 0008) es `validate`, en `validar.ts`.
  */
 export const fuenteCanonicaSchema = z
   .object({

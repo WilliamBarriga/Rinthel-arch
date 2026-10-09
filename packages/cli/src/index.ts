@@ -64,8 +64,6 @@ import { generarSkill } from './skill';
 import { construirSalida, textoLegible } from './validate';
 import { escribirSalida, escribirTexto, leerFuentes, leerSalida, leerWorkspace } from './workspace';
 
-export const paquete = 'cli';
-
 export interface ResultadoDeEjecucion {
   exitCode: 0 | 1 | 2;
   stdout: string;

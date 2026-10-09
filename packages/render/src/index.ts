@@ -36,8 +36,6 @@
  * paquetes anteriores.
  * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout -> render`.
  */
-export const paquete = 'render';
-
 export { Diagram } from './diagram';
 export type { DiagramProps } from './diagram';
 export type { Camara, NivelDeDetalle } from './escena';

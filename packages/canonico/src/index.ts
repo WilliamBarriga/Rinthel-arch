@@ -15,11 +15,16 @@
  * siempre con el neutro) es un objeto plano ya resuelto, sin herencia.
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
  * excepcion solo para fallos de uso o internos.
+ * `validate(fuente, { iconos?, ubicar? })` devuelve los issues semanticos de una
+ * Fuente ya armada (tipo de nodo, Aristas colgantes, Atributos, iconos, colores
+ * de Paleta, Temas de Vista, overrides, drill-down y Pasos), ordenados. La Fuente
+ * no guarda posiciones: `ubicar(ruta)` las aporta (ver `validar.ts`) y sin el los
+ * issues salen en `(canonico):1:1` sin `fix`. No cubre sintaxis ni fusion (las
+ * detecta `dsl`) ni `W_OVERLAPPING_PINS` (necesita la geometria; lo emite el CLI).
+ * `candidatosCercanos(escrito, existentes)` es la ayuda de typos para `hint`/`fix`.
  * Configuracion requerida: ninguna. Solo importa paquetes anteriores en la
  * cadena `canonico -> dsl -> layout -> render -> shell / cli`.
  */
-export const paquete = 'canonico';
-
 export {
   fuenteCanonicaSchema,
   idDeNodoSchema,
@@ -37,6 +42,9 @@ export { combineIconProviders, genericIcons, resolveNodeTypeIcon, workspaceIcons
 export type { IconProvider } from './iconos';
 export { idDeArista, revealAt } from './pasos';
 export type { Visibilidad } from './pasos';
+export { candidatosCercanos } from './sugerencias';
+export { validate } from './validar';
+export type { OpcionesDeValidate, RutaDeFuente, SitioDeTexto, Ubicador } from './validar';
 export { matchesSelector, resolveView } from './vistas';
 export type { AristaResuelta, EstadoDeColapso, NodoResuelto, VistaResuelta } from './vistas';
 export type {

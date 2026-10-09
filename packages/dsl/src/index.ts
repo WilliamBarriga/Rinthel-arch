@@ -7,7 +7,5 @@
  * nunca excepcion. Configuracion requerida: ninguna. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl`.
  */
-export const paquete = 'dsl';
-
 export { compile } from './compilar';
 export type { ArchivosDelWorkspace, PosicionDePin, ResultadoDeCompilacion } from './compilar';

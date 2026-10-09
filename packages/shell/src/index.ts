@@ -79,8 +79,6 @@
  * Vista, Tema, adaptador de layout y tamano del lienzo. Peer React 18 y 19.
  * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout -> render -> shell`.
  */
-export const paquete = 'shell';
-
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';
 export type { PropsDeNavegacion } from './navegacion';
