@@ -1,20 +1,17 @@
 /**
  * Entrada de navegador del HTML autocontenido (`export --format html`). Se
  * bundlea en un IIFE que el HTML incrusta una sola vez y que cumple dos
- * papeles segun donde corra: en la pagina monta el shell; dentro del Web
- * Worker (el mismo codigo, via Blob) sirve el layout. No es parte de la
- * interfaz del paquete: la lee `html.ts`.
+ * bundle de la pagina: monta el shell. El layout (ELK) va en otro bundle, el de
+ * `worker.ts`, que la pagina recibe como texto y corre en un Web Worker. No es
+ * parte de la interfaz del paquete: la lee `html.ts`.
  */
-import { rolWorker } from './preludio';
-
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import type { FuenteCanonica, IconProvider } from 'canonico';
-import { layoutView } from 'layout';
 import type { Geometria } from 'layout';
-import { VistaInteractiva, adaptadorDeWorker, hashDelNavegador, servirLayout, useEstadoEnHash } from 'shell';
+import { VistaInteractiva, adaptadorDeWorker, hashDelNavegador, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 
 /** Lo que `html.ts` serializa en `<script id="datos" type="application/json">`. */
@@ -28,9 +25,29 @@ export interface DatosDelHtml {
   iconos: Record<string, string>;
 }
 
-/** Layout en un Worker creado desde el propio bundle; si no se puede (o falla), en el hilo principal. */
+/** Puerto en memoria: `self` del codigo del Worker corrido en el hilo principal (el layout no muta lo que recibe, asi que no se copian los mensajes). */
+function layoutEnHiloPrincipal(codigo: string): AdaptadorDeLayout {
+  const crear = (): PuertoDeMensajes & { destino?: PuertoDeMensajes } => {
+    const puerto: PuertoDeMensajes & { destino?: PuertoDeMensajes } = {
+      onmessage: null,
+      postMessage(mensaje) {
+        setTimeout(() => puerto.destino?.onmessage?.({ data: mensaje }), 0);
+      },
+    };
+    return puerto;
+  };
+  const [pagina, servidor] = [crear(), crear()];
+  pagina.destino = servidor;
+  servidor.destino = pagina;
+  // El IIFE del Worker usa `self` como puerto; aqui se le da el del lado del servidor.
+  new Function('self', codigo)(servidor);
+  return adaptadorDeWorker(pagina);
+}
+
+/** Layout en un Worker creado desde `codigo`; si no se puede (o falla), el mismo codigo en el hilo principal. */
 function crearLayout(codigo: string): AdaptadorDeLayout {
-  const directo: AdaptadorDeLayout = (vista, tema) => layoutView(vista, tema);
+  let enPrincipal: AdaptadorDeLayout | undefined;
+  const directo: AdaptadorDeLayout = (vista, tema) => (enPrincipal ??= layoutEnHiloPrincipal(codigo))(vista, tema);
   let enWorker: AdaptadorDeLayout | undefined;
   const reintentos = new Set<() => void>();
   try {
@@ -101,10 +118,6 @@ function App({ datos, layout }: { datos: DatosDelHtml; layout: AdaptadorDeLayout
   );
 }
 
-if (rolWorker) {
-  servirLayout(self as unknown as PuertoDeMensajes);
-} else {
-  const datos = JSON.parse(document.getElementById('datos')?.textContent ?? 'null') as DatosDelHtml;
-  const codigo = document.getElementById('app')?.textContent ?? '';
-  createRoot(document.getElementById('raiz') as HTMLElement).render(<App datos={datos} layout={crearLayout(codigo)} />);
-}
+const datos = JSON.parse(document.getElementById('datos')?.textContent ?? 'null') as DatosDelHtml;
+const codigoDelWorker = document.getElementById('worker')?.textContent ?? '';
+createRoot(document.getElementById('raiz') as HTMLElement).render(<App datos={datos} layout={crearLayout(codigoDelWorker)} />);

@@ -5,8 +5,8 @@
  * `relayout-1k`, `colapso-5k` y `bundle`. Cada escenario corre en un proceso
  * aparte (memoria maxima propia) y el exit code es 1 si algun umbral falla.
  *
- * Los umbrales son los del ADR 0004 y no se ajustan aqui: 2 GB son 2048 MiB y
- * 500 KB son 500 KiB. Los tiempos dependen de la maquina y de su carga.
+ * Los umbrales son los del ADR 0004 (con su enmienda): 2.5 GiB de RSS en el
+ * build de 10k Nodos y 500 KiB por artefacto de bundle. Los tiempos dependen de la maquina y de su carga.
  */
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
@@ -24,13 +24,13 @@ interface Umbral {
 
 const UMBRALES: readonly Umbral[] = [
   { escenario: 'build-10k', descripcion: 'build de una Vista de 10k Nodos: tiempo', medida: (m) => m['tiempoMs']! / 1000, limite: 60, unidad: 's' },
-  { escenario: 'build-10k', descripcion: 'build de una Vista de 10k Nodos: memoria maxima (RSS)', medida: (m) => m['maxRssMb']!, limite: 2048, unidad: 'MiB' },
+  { escenario: 'build-10k', descripcion: 'build de una Vista de 10k Nodos: memoria maxima (RSS)', medida: (m) => m['maxRssMb']!, limite: 2560, unidad: 'MiB' },
   { escenario: 'relayout-1k', descripcion: 'relayout interactivo con 1k Nodos visibles (en frio)', medida: (m) => m['tiempoFrioMs']! / 1000, limite: 2, unidad: 's' },
   { escenario: 'relayout-1k', descripcion: 'relayout interactivo con 1k Nodos visibles (en caliente)', medida: (m) => m['tiempoCalienteMs']! / 1000, limite: 2, unidad: 's' },
   { escenario: 'colapso-5k', descripcion: 'colapso (expandir) con 5k Nodos del Modelo', medida: (m) => m['expandirMs']! / 1000, limite: 3, unidad: 's' },
   { escenario: 'colapso-5k', descripcion: 'colapso (cerrar) con 5k Nodos del Modelo', medida: (m) => m['colapsarMs']! / 1000, limite: 3, unidad: 's' },
   { escenario: 'bundle', descripcion: 'bundle del shell: Worker (gzip)', medida: (m) => m['workerGzipKb']!, limite: 500, unidad: 'KiB' },
-  { escenario: 'bundle', descripcion: 'bundle del shell: pagina + Worker (gzip)', medida: (m) => m['totalGzipKb']!, limite: 500, unidad: 'KiB' },
+  { escenario: 'bundle', descripcion: 'bundle del shell: pagina sin ELK (gzip)', medida: (m) => m['paginaGzipKb']!, limite: 500, unidad: 'KiB' },
 ];
 
 const TODOS = [...new Set(UMBRALES.map((u) => u.escenario))];

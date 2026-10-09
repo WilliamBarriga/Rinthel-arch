@@ -6,8 +6,7 @@
  * `MessagePort` o cualquier par en memoria con `postMessage` y `onmessage`.
  */
 import type { Tema, VistaResuelta } from 'canonico';
-import { layoutView } from 'layout';
-import type { Geometria, OpcionesDeLayout } from 'layout';
+import type { Geometria } from 'layout';
 
 import type { AdaptadorDeLayout } from './vista-interactiva';
 
@@ -17,12 +16,12 @@ export interface PuertoDeMensajes {
   onmessage: ((evento: { data: unknown }) => void) | null;
 }
 
-interface Peticion {
+export interface Peticion {
   id: number;
   vista: VistaResuelta;
   tema: Tema;
 }
-type Respuesta = { id: number; geometria: Geometria } | { id: number; error: string };
+export type Respuesta = { id: number; geometria: Geometria } | { id: number; error: string };
 
 /** Adaptador de layout que delega en el Worker del otro extremo del `puerto`. Una peticion por llamada; las respuestas se casan por id. */
 export function adaptadorDeWorker(puerto: PuertoDeMensajes): AdaptadorDeLayout {
@@ -43,15 +42,4 @@ export function adaptadorDeWorker(puerto: PuertoDeMensajes): AdaptadorDeLayout {
       const peticion: Peticion = { id, vista, tema };
       puerto.postMessage(peticion);
     });
-}
-
-/** Atiende las peticiones de `adaptadorDeWorker` en `puerto` con `layoutView`. En un Worker: `servirLayout(self)`. */
-export function servirLayout(puerto: PuertoDeMensajes, opciones: OpcionesDeLayout = {}): void {
-  puerto.onmessage = ({ data }) => {
-    const { id, vista, tema } = data as Peticion;
-    layoutView(vista, tema, opciones).then(
-      (geometria) => puerto.postMessage({ id, geometria } satisfies Respuesta),
-      (error: unknown) => puerto.postMessage({ id, error: error instanceof Error ? error.message : String(error) } satisfies Respuesta),
-    );
-  };
 }

@@ -205,17 +205,17 @@ view general {
 
     pagina.window.document.querySelector('[data-toggle="g"]')!.dispatchEvent(new pagina.window.MouseEvent('click', { bubbles: true }));
 
-    await esperar(() => ids(pagina).includes('g.h'));
+    await esperar(() => ids(pagina).includes('g.h') || pagina.errores.length > 0);
     expect(pagina.errores).toEqual([]);
     expect(pagina.peticiones).toEqual([]);
     pagina.window.close();
   });
 
-  it('el mismo bundle sirve el layout cuando corre como Worker (sin document)', async () => {
+  it('el bundle del Worker sirve el layout sin document ni zod real', async () => {
     const workspace = await workspaceConstruido();
     await run(['export', '--workspace', workspace, '--format', 'html']);
     const html = leerHtml(workspace, 'general');
-    const codigo = /<script id="app">([\s\S]*)<\/script>/.exec(html)![1]!;
+    const codigo = /<script id="worker" type="text\/plain">([\s\S]*?)<\/script>/.exec(html)![1]!;
     const datos = JSON.parse(/<script id="datos" type="application\/json">([\s\S]*?)<\/script>/.exec(html)![1]!) as {
       fuente: { themes: unknown[] };
     };
@@ -234,6 +234,19 @@ view general {
 
     expect(enviados[0]).toMatchObject({ id: 7 });
     expect(Object.keys((enviados[0] as { geometria?: { nodes: object } }).geometria?.nodes ?? {})).toEqual(['api', 'db']);
+  });
+
+  it('la pagina no lleva ELK: va solo en el script del Worker, que ademas va sin zod', async () => {
+    const workspace = await workspaceConstruido();
+    await run(['export', '--workspace', workspace, '--format', 'html']);
+    const html = leerHtml(workspace, 'general');
+    const pagina = /<script id="app">([\s\S]*?)<\/script>/.exec(html)![1]!;
+    const worker = /<script id="worker" type="text\/plain">([\s\S]*?)<\/script>/.exec(html)![1]!;
+
+    expect(pagina).not.toContain('org.eclipse.elk');
+    expect(worker).toContain('org.eclipse.elk');
+    expect(worker.length).toBeLessThan(2_000_000);
+    expect(worker).not.toContain('Invalid input');
   });
 
   it('el HTML de otra Vista arranca en esa Vista', async () => {

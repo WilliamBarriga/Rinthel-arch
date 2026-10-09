@@ -2,7 +2,6 @@
  * Layout de una Vista resuelta con ELK (ADR 0004): `INCLUDE_CHILDREN`, sin
  * `considerModelOrder` (enmienda del ADR, benchmark #13).
  */
-import ELKBundled from 'elkjs/lib/elk.bundled.js';
 import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
@@ -64,6 +63,8 @@ const OPCIONES_RAIZ = {
   'elk.json.shapeCoords': 'PARENT',
   'elk.spacing.nodeNode': '24',
   'elk.layered.spacing.nodeNodeBetweenLayers': '48',
+  // Esfuerzo de minimizacion de cruces: 1 (el minimo) reduce a la mitad el relayout de 1k Nodos (ADR 0004, enmienda).
+  'elk.layered.thoroughness': '1',
 };
 
 /**
@@ -76,7 +77,8 @@ export async function layoutView(
   tema: Tema,
   opciones: OpcionesDeLayout = {},
 ): Promise<Geometria> {
-  const elk = opciones.elk ?? new ELKBundled();
+  // Import dinamico: quien solo usa las medidas (render) no arrastra ELK al empaquetar.
+  const elk = opciones.elk ?? new (await import('elkjs/lib/elk.bundled.js')).default();
   const medidas = medidasDeTexto(tema);
 
   const grafo: ElkNode = {

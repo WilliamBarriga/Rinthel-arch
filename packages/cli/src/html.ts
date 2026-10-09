@@ -1,6 +1,7 @@
 /**
  * HTML autocontenido por Vista: un archivo con la Fuente canonica, la geometria
- * cacheada de todas las Vistas, el shell interactivo (bundle de `navegador/`),
+ * cacheada de todas las Vistas, el shell interactivo (bundle de `navegador/`), el
+ * layout (ELK) como texto para el Web Worker,
  * las fuentes del Tema y los iconos. Sin peticiones externas.
  */
 import { build } from 'esbuild';
@@ -14,17 +15,26 @@ import { vistasDibujables } from './vistas-dibujables';
 import type { EntradaDeExport } from './vistas-dibujables';
 
 const ENTRADA = new URL('../navegador/entrada.tsx', import.meta.url);
+const ENTRADA_DEL_WORKER = new URL('../navegador/worker.ts', import.meta.url);
+const ZOD_INERTE = new URL('../navegador/zod-inerte.ts', import.meta.url);
 
-let bundle: Promise<string> | undefined;
+interface Bundles {
+  /** Shell + React: la pagina. */
+  pagina: string;
+  /** Layout (ELK) sin zod: lo que corre en el Web Worker. */
+  worker: string;
+}
+
+let bundles: Promise<Bundles> | undefined;
 
 /**
- * IIFE del navegador (shell + React + layout/ELK), minificado y determinista.
- * Se calcula una vez por proceso. Se escapa `</script` y `<!--` para poder
- * ponerlo dentro de un `<script>`; solo aparecen dentro de cadenas.
+ * IIFE minificado y determinista: lo calcula una vez por proceso. Se escapa
+ * `</script` y `<!--` para poder ponerlo dentro de un `<script>`; solo aparecen
+ * dentro de cadenas.
  */
-function bundleDelNavegador(): Promise<string> {
-  bundle ??= build({
-    entryPoints: [fileURLToPath(ENTRADA)],
+async function empaquetar(entrada: URL, alias: Record<string, string> = {}): Promise<string> {
+  const { outputFiles } = await build({
+    entryPoints: [fileURLToPath(entrada)],
     bundle: true,
     write: false,
     minify: true,
@@ -35,12 +45,18 @@ function bundleDelNavegador(): Promise<string> {
     legalComments: 'none',
     jsx: 'automatic',
     logLevel: 'silent',
+    alias,
     define: { 'process.env.NODE_ENV': '"production"' },
-  }).then(({ outputFiles }) => {
-    const codigo = outputFiles[0]?.text ?? '';
-    return codigo.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--');
   });
-  return bundle;
+  return (outputFiles[0]?.text ?? '').replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--');
+}
+
+/** La pagina no lleva ELK; el Worker va aparte y sin zod (el layout no valida). */
+function bundlesDelNavegador(): Promise<Bundles> {
+  bundles ??= Promise.all([empaquetar(ENTRADA), empaquetar(ENTRADA_DEL_WORKER, { zod: fileURLToPath(ZOD_INERTE) })]).then(
+    ([pagina, worker]) => ({ pagina, worker }),
+  );
+  return bundles;
 }
 
 /** JSON seguro dentro de `<script type="application/json">`. */
@@ -76,7 +92,7 @@ export async function exportarHtml(entrada: EntradaDeExport): Promise<SalidaDeBu
       return svg === undefined ? [] : [[clave, svg] as const];
     }),
   );
-  const codigo = await bundleDelNavegador();
+  const { pagina, worker } = await bundlesDelNavegador();
   const estilo = estiloDeFuentes(usados, fuentes);
 
   return Object.fromEntries(
@@ -94,7 +110,8 @@ export async function exportarHtml(entrada: EntradaDeExport): Promise<SalidaDeBu
         '<body>',
         '<div id="raiz"></div>',
         `<script id="datos" type="application/json">${datos}</script>`,
-        `<script id="app">${codigo}</script>`,
+        `<script id="worker" type="text/plain">${worker}</script>`,
+        `<script id="app">${pagina}</script>`,
         '</body>',
         '</html>',
         '',

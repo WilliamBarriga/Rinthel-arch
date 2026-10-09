@@ -37,5 +37,6 @@
     "d3-zoom": "3.0.0",
     "layout": "workspace:*",
     "render": "workspace:*"
-  }
+  },
+  "sideEffects": false
 }

@@ -98,5 +98,6 @@ export { deserializarEstado, hashDelNavegador, serializarEstado, vistaPorDefecto
 export type { AdaptadorDeHash, EstadoDeShell } from './hash';
 export { useEstadoEnHash } from './estado-en-hash';
 export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-hash';
-export { adaptadorDeWorker, servirLayout } from './layout-en-worker';
+export { adaptadorDeWorker } from './layout-en-worker';
+export { servirLayout } from './servir-layout';
 export type { PuertoDeMensajes } from './layout-en-worker';

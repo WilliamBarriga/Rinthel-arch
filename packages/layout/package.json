@@ -22,5 +22,6 @@
   "dependencies": {
     "canonico": "workspace:*",
     "elkjs": "0.12.0"
-  }
+  },
+  "sideEffects": false
 }

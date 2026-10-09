@@ -28,5 +28,6 @@
   "dependencies": {
     "canonico": "workspace:*",
     "layout": "workspace:*"
-  }
+  },
+  "sideEffects": false
 }
