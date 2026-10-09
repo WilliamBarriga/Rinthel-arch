@@ -92,6 +92,27 @@ describe('renderToSvgString', () => {
     expect(svg).not.toContain('data-cardinality="a.api -&gt; a.auth');
   });
 
+  it('la etiqueta de una Arista va sobre su ruta, en un solo texto', async () => {
+    const base = vista();
+    const v: VistaResuelta = {
+      ...base,
+      edges: base.edges.map((arista) => (arista.to.node === 'a.auth' ? { ...arista, label: 'valida <token>' } : arista)),
+    };
+    const geometry = await layoutView(v, TEMA_NEUTRO);
+    const svg = renderToSvgString({ view: v, geometry, theme: TEMA_NEUTRO, width: 800, height: 600 });
+    const ruta = geometry.edges['a.api -> a.auth']!.points;
+    const xs = ruta.map((p) => p.x);
+    const ys = ruta.map((p) => p.y);
+    const m = /<text data-edge-label="a\.api -&gt; a\.auth"[^>]* x="([\d.-]+)" y="([\d.-]+)"[^>]*>valida &lt;token&gt;<\/text>/.exec(svg);
+
+    expect(m).not.toBeNull();
+    expect(Number(m![1])).toBeGreaterThanOrEqual(Math.min(...xs) - 1);
+    expect(Number(m![1])).toBeLessThanOrEqual(Math.max(...xs) + 1);
+    expect(Number(m![2])).toBeGreaterThanOrEqual(Math.min(...ys) - 20);
+    expect(Number(m![2])).toBeLessThanOrEqual(Math.max(...ys) + 20);
+    expect(svg).not.toContain('data-edge-label="a.api -&gt; db"');
+  });
+
   it('es determinista byte a byte', async () => {
     expect(await dibujar(TEMA_NEUTRO)).toBe(await dibujar(TEMA_NEUTRO));
   });

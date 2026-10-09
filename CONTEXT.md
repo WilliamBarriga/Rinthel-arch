@@ -17,7 +17,7 @@ Entidad del Modelo con identidad estable (id cualificado por su jerarquia, ej. `
 Nodo que contiene otros Nodos. Se anida sin limite. No es un concepto aparte de Nodo.
 
 **Arista**:
-Relacion entre dos extremos del Modelo. Un extremo es un Nodo o un Atributo de un Nodo, y puede llevar cardinalidad.
+Relacion entre dos extremos del Modelo. Un extremo es un Nodo o un Atributo de un Nodo, y puede llevar cardinalidad y una etiqueta corta.
 
 **Atributo**:
 Elemento estructurado y ordenado de un Nodo (columna, campo, metodo), con nombre, tipo y notas. Es direccionable como extremo de una Arista. Distinto de un Nodo hijo.

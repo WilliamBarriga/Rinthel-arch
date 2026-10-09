@@ -86,7 +86,7 @@ ${EJEMPLO_DE_DSL}
 \`\`\`
 
 - Un Nodo es \`<tipo> <id> ["Titulo" ["Descripcion"]] [{ hijos, attrs, source }]\`; sus hijos lo hacen Grupo y su id completo es \`padre.hijo\`.
-- Una Arista es \`origen ["card"] -> ["card"] destino\` (espacios alrededor de \`->\`); un extremo puede ser \`nodo#atributo\`.
+- Una Arista es \`origen ["card"] -> ["card"] destino ["etiqueta"]\` (espacios alrededor de \`->\`; la etiqueta se pierde al fusionar Aristas elevadas por un Grupo colapsado); un extremo puede ser \`nodo#atributo\`.
 - Una Vista solo selecciona (\`include\`, \`exclude\`, \`depth\`; selectores \`a\`, \`a.*\`, \`a.**\`); \`type\` es \`architecture\` o \`flow\`. Sus overrides por Nodo (\`label\`, \`pin x,y\`, \`order\`, \`color\`) nunca tocan el Modelo; \`pin\` es la posicion relativa al Grupo padre y \`order\` solo se guarda (sin efecto en v1).
 - Una Vista puede declarar \`theme\`, \`collapsed\`/\`expanded\`, \`link <nodo> -> <vista>\` y \`steps\` de revelado (\`steps { step "Titulo" { show a, a -> b  hide c } }\`: acumulativos; \`show\` revela y \`hide\` oculta lo anterior; en un paso \`a.*\` revela el Grupo \`a\` y sus hijos).
 - \`extend <nodo> { ... }\` anade hijos, \`attrs\` y \`source\` a un Nodo declarado en otro archivo. Un Tipo de nodo admite \`description\`, \`icon\`, \`style\` y \`color\`; el \`icon\` es un icono generico o el nombre de un \`.svg\` del Workspace.

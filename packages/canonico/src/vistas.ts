@@ -154,7 +154,7 @@ function elevarAristas(
     if (previa === undefined) {
       fusionadas.set(clave, { ...arista, from, to, count: 1 });
     } else {
-      const { fromCardinality, toCardinality, ...sinCardinalidad } = previa;
+      const { fromCardinality, toCardinality, label, ...sinCardinalidad } = previa;
       fusionadas.set(clave, { ...sinCardinalidad, count: previa.count + 1 });
     }
   }

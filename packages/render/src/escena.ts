@@ -62,6 +62,10 @@ const SEPARACION_CARDINALIDAD = 8;
 const ELEVACION_CARDINALIDAD = 4;
 /** Tamano de la cardinalidad respecto al del texto del Tema. */
 const ESCALA_CARDINALIDAD = 0.8;
+/** Tamano de la etiqueta de una Arista respecto al del texto del Tema. */
+const ESCALA_ETIQUETA = 0.85;
+/** Cuanto se sube la etiqueta sobre el segmento para no pisar la linea. */
+const ELEVACION_ETIQUETA = 4;
 /** Tamano del texto de los Atributos respecto al del Tema. */
 const ESCALA_ATRIBUTO = 0.85;
 
@@ -324,6 +328,7 @@ function aristaSvg(arista: AristaResuelta, contexto: Contexto): Elemento[] {
       hijos: [texto],
     });
   }
+  const etiqueta = arista.label === undefined ? [] : [etiquetaSvg(id, arista.label, puntos, contexto)];
   return [
     {
       tag: 'g',
@@ -332,9 +337,38 @@ function aristaSvg(arista: AristaResuelta, contexto: Contexto): Elemento[] {
       hijos: [
         { tag: 'path', attrs: { d: trazo, fill: 'none', stroke: colorDeLinea(theme), 'marker-end': `url(#${idDeFlecha(colorDeLinea(theme))})` } },
         ...cardinalidades,
+        ...etiqueta,
       ],
     },
   ];
+}
+
+/** Etiqueta centrada sobre el segmento mas largo de la ruta, con un halo del color de fondo para leerse sobre la linea. */
+function etiquetaSvg(id: string, texto: string, puntos: readonly { x: number; y: number }[], contexto: Contexto): Elemento {
+  const { theme, fontSize } = contexto;
+  let mejor = { largo: -1, x: puntos[0]!.x, y: puntos[0]!.y };
+  for (let i = 1; i < puntos.length; i++) {
+    const a = puntos[i - 1]!;
+    const b = puntos[i]!;
+    const largo = Math.hypot(b.x - a.x, b.y - a.y);
+    if (largo > mejor.largo) mejor = { largo, x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+  return {
+    tag: 'text',
+    attrs: {
+      'data-edge-label': id,
+      x: num(mejor.x),
+      y: num(mejor.y - ELEVACION_ETIQUETA),
+      'text-anchor': 'middle',
+      'font-family': theme.fonts['body'] ?? 'sans-serif',
+      'font-size': num(fontSize * ESCALA_ETIQUETA),
+      fill: theme.tokens['foreground'] ?? 'currentColor',
+      stroke: theme.tokens['background'] ?? 'none',
+      'stroke-width': '3',
+      'paint-order': 'stroke',
+    },
+    hijos: [texto],
+  };
 }
 
 /** `opacity` solo si no es 1, acotada a [0, 1]; un NaN cuenta como 0. Con 0 no recibe clics. */

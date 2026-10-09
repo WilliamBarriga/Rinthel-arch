@@ -171,6 +171,22 @@ describe('resolveView: colapso de Grupos', () => {
     ]);
   });
 
+  it('al fusionar Aristas elevadas que repiten par se pierde la etiqueta; una sola la conserva', () => {
+    const f = (aristas: unknown[]) =>
+      fuenteCanonicaSchema.parse({
+        specification: { nodeTypes: [{ name: 'servicio' }] },
+        model: { nodes: [nodo('t', [nodo('t.x'), nodo('t.y')]), nodo('u')], edges: aristas },
+        views: [{ id: 'v', type: 'architecture', include: ['**'], depth: 1 }],
+      });
+
+    expect(resolveView(f([{ from: { node: 'u' }, to: { node: 't.x' }, label: 'lee' }]), 'v')?.edges).toEqual([
+      { from: { node: 'u' }, to: { node: 't' }, label: 'lee', count: 1 },
+    ]);
+    expect(
+      resolveView(f([{ from: { node: 'u' }, to: { node: 't.x' }, label: 'lee' }, { from: { node: 'u' }, to: { node: 't.y' }, label: 'escribe' }]), 'v')?.edges,
+    ).toEqual([{ from: { node: 'u' }, to: { node: 't' }, count: 2 }]);
+  });
+
   it('el estado de colapso no modifica la Fuente', () => {
     const f = fuente({ include: ['**'], depth: 1 });
     const antes = JSON.stringify(f);

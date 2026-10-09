@@ -363,6 +363,7 @@ function compilarArista(arista: Edge): Arista {
     to: extremo(arista.to),
     ...(arista.fromCardinality !== undefined && { fromCardinality: arista.fromCardinality }),
     ...(arista.toCardinality !== undefined && { toCardinality: arista.toCardinality }),
+    ...(arista.label !== undefined && { label: arista.label }),
   };
 }
 

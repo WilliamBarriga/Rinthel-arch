@@ -225,6 +225,24 @@ describe('compile: Aristas', () => {
     ]);
   });
 
+  it('compila la etiqueta de una Arista, con o sin cardinalidad', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${spec}
+        model {
+          servicio api
+          base db
+          api -> db "lee y escribe"
+          db "1" -> "N" api "devuelve"
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.edges).toEqual([
+      { from: { node: 'api' }, to: { node: 'db' }, label: 'lee y escribe' },
+      { from: { node: 'db' }, to: { node: 'api' }, fromCardinality: '1', toCardinality: 'N', label: 'devuelve' },
+    ]);
+  });
+
   it('resuelve extremos con id cualificado por la jerarquia', () => {
     const { canonico, issues } = compile({
       'main.dg': `${spec}

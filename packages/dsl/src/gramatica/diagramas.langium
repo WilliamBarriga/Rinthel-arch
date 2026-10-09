@@ -50,10 +50,10 @@ Model:
   '}'
 ;
 
-// `<origen> ["card"] -> ["card"] <destino>`; los extremos son ids cualificados.
+// `<origen> ["card"] -> ["card"] <destino> ["etiqueta"]`; los extremos son ids cualificados.
 // Los espacios alrededor de `->` son obligatorios: `-` es valido dentro de un Id.
 Edge:
-  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint
+  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint (label=String)?
 ;
 
 // Nodo por id cualificado (`a.b.c`) y, opcional, uno de sus Atributos (`a.b#col`).

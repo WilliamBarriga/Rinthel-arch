@@ -83,6 +83,8 @@ export interface Arista {
   to: Extremo;
   fromCardinality?: string;
   toCardinality?: string;
+  /** Texto corto sobre la Arista (ej. protocolo o accion). */
+  label?: string;
 }
 
 /** Conjunto unico de Nodos y Aristas del Proyecto documentado (CONTEXT.md). */
@@ -127,6 +129,7 @@ export const aristaSchema = z.object({
   to: extremoSchema,
   fromCardinality: z.string().min(1).optional(),
   toCardinality: z.string().min(1).optional(),
+  label: z.string().min(1).optional(),
 });
 
 const modeloSchema = z.object({
