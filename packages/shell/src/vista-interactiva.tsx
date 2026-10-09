@@ -11,10 +11,13 @@ import type { D3ZoomEvent, ZoomTransform } from 'd3-zoom';
 
 import { resolveView } from 'canonico';
 import type { EstadoDeColapso, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
+import { claveDeLayout } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram } from 'render';
 import type { Camara } from 'render';
 
+import { useTemaVigente } from './tema-vigente';
+import type { SuscripcionDeTema } from './tema-vigente';
 import { cajasAbsolutas, recortarAlViewport } from './viewport';
 
 /** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
@@ -25,6 +28,8 @@ export interface VistaInteractivaProps {
   /** Id de la Vista a mostrar. */
   view: string;
   theme: Tema;
+  /** Puerto de recarga de Tema al guardar: recolorea sin relayout salvo que cambien las fuentes. */
+  themeUpdates?: SuscripcionDeTema;
   layout: AdaptadorDeLayout;
   /** Tamano del lienzo en px. */
   width: number;
@@ -60,7 +65,8 @@ function aTransform(c: Camara, ancho: number): ZoomTransform {
 const igual = (a: ZoomTransform, b: ZoomTransform): boolean => a.k === b.k && a.x === b.x && a.y === b.y;
 
 export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
-  const { source, view, theme, layout, width, height, state, onError, onSelect, visibility } = props;
+  const { source, view, layout, width, height, state, onError, onSelect, visibility } = props;
+  const theme = useTemaVigente(props.theme, props.themeUpdates);
   const vista = useMemo(() => {
     const resuelta = resolveView(source, view, state);
     if (resuelta === undefined) throw new Error(`La Vista '${view}' no existe en la Fuente canonica`);
@@ -69,11 +75,15 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
 
   const [calculo, setCalculo] = useState<{ vista: VistaResuelta; geometria: Geometria }>();
   const [fallo, setFallo] = useState<Error>();
+  // El layout solo se repite si cambia lo que lo mueve (fuentes, textos, estructura), no la paleta.
+  const claveTema = claveDeLayout(vista, theme);
+  const temaActual = useRef(theme);
+  temaActual.current = theme;
   const alFallar = useRef(onError);
   alFallar.current = onError;
   useEffect(() => {
     let vigente = true;
-    layout(vista, theme).then(
+    layout(vista, temaActual.current).then(
       (geometria) => {
         if (vigente) setCalculo({ vista, geometria });
       },
@@ -87,7 +97,7 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
     return () => {
       vigente = false;
     };
-  }, [vista, theme, layout]);
+  }, [vista, claveTema, layout]);
   if (fallo !== undefined) throw fallo;
 
   const [propia, setPropia] = useState<Camara>({ x: 0, y: 0, width, height });

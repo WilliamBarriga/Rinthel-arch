@@ -17,6 +17,11 @@
  * Pan y zoom los da d3-zoom (arrastre, rueda, tactil); escala entre 0.05 y 16.
  * Seleccion: `selected` controlada o interna; `onSelect(id)` al pulsar un Nodo;
  * el Nodo marcado lleva un rectangulo con `data-selected="<id>"`.
+ * Recarga de Tema: `themeUpdates` (`SuscripcionDeTema`) es el puerto por el que el
+ * consumidor entrega el Tema resuelto al guardar el archivo de tema. La Geometria
+ * solo se recalcula si cambia `claveDeLayout` (fuentes, tamano de texto); la
+ * paleta recolorea sin relayout y sin recomputar la Vista (el Modelo no se
+ * recompila).
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *
@@ -33,4 +38,5 @@ export const paquete = 'shell';
 
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';
+export type { SuscripcionDeTema } from './tema-vigente';
 export type { Camara } from 'render';
