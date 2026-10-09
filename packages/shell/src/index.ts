@@ -57,6 +57,18 @@
  * geometria, la estructura y el colapso no dependen de la escala: colapsar o expandir
  * sigue siendo una accion explicita (`state`).
  *
+ * Hash de URL: `useEstadoEnHash({ source, hash, defaultView?, camera? })` devuelve las
+ * props controladas de `VistaInteractiva` (`view`, `path`, `state`, `selected`, `step`,
+ * `camera?` y sus avisos) para esparcirlas: `<VistaInteractiva {...props} ... />`.
+ * `hash` es el adaptador `AdaptadorDeHash` (`hashDelNavegador(window)` en produccion,
+ * un fake en pruebas). Formato: `p` (ruta, repetido), `e`/`c` (Grupos abiertos/cerrados),
+ * `s` (seleccion), `t` (Paso), `cam=x,y,w,h` (solo con `camera: true`); lo que vale su
+ * default se omite. `serializarEstado`/`deserializarEstado` son las funciones puras:
+ * ida y vuelta sin perdida; hash invalido o con ids inexistentes cae al default por
+ * campo, sin lanzar. Cambiar de Vista (ultimo de la ruta) reinicia colapso, seleccion,
+ * Paso y viewport y empuja una entrada de historial; el resto reemplaza la entrada. El
+ * atras del navegador (hashchange/popstate) reemplaza el estado.
+ *
  * Invariantes: no guarda verdad propia salvo camara y seleccion cuando no son
  * controladas; solo dibuja lo que `render` devuelve; un layout que llega tarde
  * (Vista, Tema o adaptador cambiaron) se descarta, y mientras llega el nuevo se
@@ -76,5 +88,9 @@ export type { SuscripcionDeTema } from './tema-vigente';
 export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
 export type { UmbralesDeDetalle } from './zoom-semantico';
 export type { Camara, NivelDeDetalle } from 'render';
+export { deserializarEstado, hashDelNavegador, serializarEstado, vistaPorDefecto } from './hash';
+export type { AdaptadorDeHash, EstadoDeShell } from './hash';
+export { useEstadoEnHash } from './estado-en-hash';
+export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-hash';
 export { adaptadorDeWorker, servirLayout } from './layout-en-worker';
 export type { PuertoDeMensajes } from './layout-en-worker';
