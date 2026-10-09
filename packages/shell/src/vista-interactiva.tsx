@@ -15,6 +15,10 @@ import type { Geometria } from 'layout';
 import { Diagram } from 'render';
 import type { Camara } from 'render';
 
+import { MAX_NODOS_VISIBLES, alternarGrupo, compensarCamara, contarNodosVisibles, interpolarGeometria, visibilidadDeMorph } from './colapso';
+import { useGeometria } from './geometria';
+import type { Calculo } from './geometria';
+import { useMorph } from './morph';
 import { cajasAbsolutas, recortarAlViewport } from './viewport';
 
 /** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
@@ -29,8 +33,18 @@ export interface VistaInteractivaProps {
   /** Tamano del lienzo en px. */
   width: number;
   height: number;
-  /** Estado de colapso que pasa a `resolveView`. */
+  /** Estado de colapso controlado (`resolveView`); sin el, el componente guarda el suyo. */
   state?: EstadoDeColapso;
+  /** Aviso del estado de colapso que resulta de alternar un Grupo. */
+  onStateChange?: (state: EstadoDeColapso) => void;
+  /** Geometria cacheada del estado por defecto de la Vista (sin `state`): se usa sin relayout. */
+  cachedGeometry?: Geometria;
+  /** Duracion del morph al alternar un Grupo, en ms; 0 lo desactiva. Por defecto 300. */
+  morphMs?: number;
+  /** Tope de Nodos visibles; una expansion que lo supera se rechaza. Por defecto 1000. */
+  maxNodes?: number;
+  /** Una expansion se rechazo por superar `maxNodes`. */
+  onLimit?: (id: string) => void;
   /** Camara controlada, en unidades de la geometria; sin ella el componente guarda la suya. */
   camera?: Camara;
   /** Pan o zoom del usuario: la camara que resulta. */
@@ -60,37 +74,40 @@ function aTransform(c: Camara, ancho: number): ZoomTransform {
 const igual = (a: ZoomTransform, b: ZoomTransform): boolean => a.k === b.k && a.x === b.x && a.y === b.y;
 
 export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
-  const { source, view, theme, layout, width, height, state, onError, onSelect, visibility } = props;
+  const { source, view, theme, layout, width, height, onError, onSelect, visibility, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
+  const [estadoPropio, setEstadoPropio] = useState<EstadoDeColapso>({});
+  const state = props.state ?? estadoPropio;
   const vista = useMemo(() => {
     const resuelta = resolveView(source, view, state);
     if (resuelta === undefined) throw new Error(`La Vista '${view}' no existe en la Fuente canonica`);
     return resuelta;
   }, [source, view, state]);
 
-  const [calculo, setCalculo] = useState<{ vista: VistaResuelta; geometria: Geometria }>();
-  const [fallo, setFallo] = useState<Error>();
-  const alFallar = useRef(onError);
-  alFallar.current = onError;
-  useEffect(() => {
-    let vigente = true;
-    layout(vista, theme).then(
-      (geometria) => {
-        if (vigente) setCalculo({ vista, geometria });
-      },
-      (error: unknown) => {
-        if (!vigente) return;
-        const e = error instanceof Error ? error : new Error(String(error));
-        if (alFallar.current === undefined) setFallo(e);
-        else alFallar.current(e);
-      },
-    );
-    return () => {
-      vigente = false;
-    };
-  }, [vista, theme, layout]);
-  if (fallo !== undefined) throw fallo;
+  const semilla = useMemo(() => {
+    if (cachedGeometry === undefined) return undefined;
+    const porDefecto = resolveView(source, view);
+    return porDefecto === undefined ? undefined : { vista: porDefecto, geometria: cachedGeometry };
+  }, [source, view, cachedGeometry]);
+  const pendiente = useRef<string | undefined>(undefined);
+  const alLlegar = (previo: Calculo | undefined, nuevo: Calculo): void => {
+    const ancla = pendiente.current;
+    pendiente.current = undefined;
+    if (previo === undefined || ancla === undefined) return;
+    const antes = cajasAbsolutas(previo.vista, previo.geometria).get(ancla);
+    const despues = cajasAbsolutas(nuevo.vista, nuevo.geometria).get(ancla);
+    if (antes === undefined || despues === undefined) return;
+    const actual = ultimo.current;
+    const compensada = compensarCamara(actual.camera ?? camaraPropia.current, antes, despues);
+    if (actual.camera === undefined) setPropia(compensada);
+    actual.onCameraChange?.(compensada);
+    morphador.iniciar({ desde: previo.geometria, hasta: nuevo.geometria, ancla });
+  };
+  const morphador = useMorph(morphMs);
+  const calculo = useGeometria({ vista, theme, layout, semilla, invalidar: source, onError, alLlegar });
 
   const [propia, setPropia] = useState<Camara>({ x: 0, y: 0, width, height });
+  const camaraPropia = useRef(propia);
+  camaraPropia.current = propia;
   const camara = props.camera ?? propia;
   const [seleccionPropia, setSeleccionPropia] = useState<string | null>(null);
   const seleccionado = props.selected !== undefined ? props.selected : seleccionPropia;
@@ -113,6 +130,7 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
       .scaleExtent([ESCALA_MIN, ESCALA_MAX])
       .on('zoom', (evento: D3ZoomEvent<HTMLDivElement, unknown>) => {
         if (silencio.current) return;
+        morphador.cancelar();
         const nueva = aCamara(evento.transform, width, height);
         const actual = ultimo.current;
         if (actual.camera === undefined) setPropia(nueva);
@@ -138,16 +156,50 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
     }
   });
 
-  const { x, y, width: ancho, height: alto } = camara;
+  // Durante el morph se dibuja la geometria interpolada y la camara sigue al Grupo tocado.
+  const { morph } = morphador;
+  const mostrado = useMemo<Calculo | undefined>(
+    () =>
+      calculo === undefined || morph === undefined
+        ? calculo
+        : { vista: calculo.vista, geometria: interpolarGeometria(morph.desde, morph.hasta, morph.t) },
+    [calculo, morph],
+  );
+  const camaraVista = useMemo<Camara>(() => {
+    if (calculo === undefined || mostrado === undefined || morph === undefined) return camara;
+    const final = cajasAbsolutas(calculo.vista, morph.hasta).get(morph.ancla);
+    const ahora = cajasAbsolutas(mostrado.vista, mostrado.geometria).get(morph.ancla);
+    return final === undefined || ahora === undefined ? camara : { ...camara, x: camara.x - final.x + ahora.x, y: camara.y - final.y + ahora.y };
+  }, [calculo, mostrado, morph, camara]);
+  const visibilidadMostrada = useMemo(
+    () => (morph === undefined ? visibility : visibilidadDeMorph(morph.desde, morph.hasta, morph.t, visibility)),
+    [morph, visibility],
+  );
+
+  const { x, y, width: ancho, height: alto } = camaraVista;
   const recortada = useMemo(
-    () => (calculo === undefined ? undefined : recortarAlViewport(calculo.vista, calculo.geometria, { x, y, width: ancho, height: alto })),
-    [calculo, x, y, ancho, alto],
+    () => (mostrado === undefined ? undefined : recortarAlViewport(mostrado.vista, mostrado.geometria, { x, y, width: ancho, height: alto })),
+    [mostrado, x, y, ancho, alto],
   );
 
   const marca = useMemo(() => {
-    if (calculo === undefined || seleccionado === null) return undefined;
-    return cajasAbsolutas(calculo.vista, calculo.geometria).get(seleccionado);
-  }, [calculo, seleccionado]);
+    if (mostrado === undefined || seleccionado === null) return undefined;
+    return cajasAbsolutas(mostrado.vista, mostrado.geometria).get(seleccionado);
+  }, [mostrado, seleccionado]);
+
+  const alternar = (id: string): void => {
+    const siguiente = alternarGrupo(state, vista, id);
+    if (siguiente === undefined) return;
+    const nueva = resolveView(source, view, siguiente);
+    if (nueva === undefined) return;
+    if (contarNodosVisibles(nueva) > maxNodes && contarNodosVisibles(nueva) > contarNodosVisibles(vista)) {
+      props.onLimit?.(id);
+      return;
+    }
+    pendiente.current = id;
+    if (props.state === undefined) setEstadoPropio(siguiente);
+    props.onStateChange?.(siguiente);
+  };
 
   const alSeleccionar = (id: string): void => {
     if (props.selected === undefined) setSeleccionPropia(id);
@@ -156,16 +208,17 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
 
   return (
     <div ref={zona} style={{ position: 'relative', width, height, overflow: 'hidden', touchAction: 'none' }}>
-      {calculo !== undefined && recortada !== undefined && (
+      {mostrado !== undefined && recortada !== undefined && (
         <Diagram
           view={recortada}
-          geometry={calculo.geometria}
+          geometry={mostrado.geometria}
           theme={theme}
           width={width}
           height={height}
-          camera={camara}
+          camera={camaraVista}
           onSelect={alSeleccionar}
-          {...(visibility !== undefined && { visibility })}
+          onToggle={alternar}
+          {...(visibilidadMostrada !== undefined && { visibility: visibilidadMostrada })}
         />
       )}
       {marca !== undefined && seleccionado !== null && (
