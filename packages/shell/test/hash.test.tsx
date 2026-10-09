@@ -223,3 +223,44 @@ describe('integracion con VistaInteractiva y location.hash', () => {
     await dibujado(container, 'x');
   });
 });
+
+describe('hashDelNavegador en archivos locales', () => {
+  it('si replaceState lanza (file:// en algunos navegadores), reemplaza la entrada con location.replace', () => {
+    const reemplazos: string[] = [];
+    const win = {
+      location: { hash: '', pathname: '/a.html', search: '', replace: (destino: string) => reemplazos.push(destino) },
+      history: {
+        replaceState: () => {
+          throw new DOMException('no permitido', 'SecurityError');
+        },
+        pushState: () => undefined,
+      },
+    } as unknown as Window;
+
+    hashDelNavegador(win).escribir('s=x', { reemplazar: true });
+
+    expect(reemplazos).toEqual(['#s=x']);
+  });
+
+  it('si pushState lanza al vaciar el hash, lo vacia con location.hash', () => {
+    const hashes: string[] = [];
+    const win = {
+      location: {
+        pathname: '/a.html',
+        search: '',
+        set hash(valor: string) {
+          hashes.push(valor);
+        },
+      },
+      history: {
+        pushState: () => {
+          throw new DOMException('no permitido', 'SecurityError');
+        },
+      },
+    } as unknown as Window;
+
+    hashDelNavegador(win).escribir('', { reemplazar: false });
+
+    expect(hashes).toEqual(['']);
+  });
+});

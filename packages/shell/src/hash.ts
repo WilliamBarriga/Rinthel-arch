@@ -30,8 +30,21 @@ export function hashDelNavegador(win: Window): AdaptadorDeHash {
     leer: () => win.location.hash,
     escribir: (hash, { reemplazar }) => {
       const destino = hash === '' ? win.location.pathname + win.location.search : `#${hash}`;
-      if (reemplazar) win.history.replaceState(null, '', destino);
-      else if (hash === '') win.history.pushState(null, '', destino);
+      if (reemplazar) {
+        try {
+          win.history.replaceState(null, '', destino);
+        } catch {
+          // Archivos locales (file://): algunos navegadores rechazan replaceState; un cambio de hash reemplaza la entrada igual.
+          win.location.replace(`#${hash}`);
+        }
+      }
+      else if (hash === '') {
+        try {
+          win.history.pushState(null, '', destino);
+        } catch {
+          win.location.hash = '';
+        }
+      }
       else win.location.hash = hash;
     },
     suscribir: (aviso) => {
