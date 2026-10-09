@@ -17,6 +17,8 @@ import { Diagram } from 'render';
 import type { Camara } from 'render';
 
 import { MAX_NODOS_VISIBLES, alternarGrupo, compensarCamara, contarNodosVisibles, interpolarGeometria, visibilidadDeMorph } from './colapso';
+import { Migas, useNavegacion } from './navegacion';
+import type { PropsDeNavegacion } from './navegacion';
 import { useGeometria } from './geometria';
 import type { Calculo } from './geometria';
 import { useMorph } from './morph';
@@ -31,10 +33,8 @@ import type { UmbralesDeDetalle } from './zoom-semantico';
 /** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
 export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema) => Promise<Geometria>;
 
-export interface VistaInteractivaProps extends PropsDePasos {
+export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
   source: FuenteCanonica;
-  /** Id de la Vista a mostrar. */
-  view: string;
   theme: Tema;
   /** Puerto de recarga de Tema al guardar: recolorea sin relayout salvo que cambien las fuentes. */
   themeUpdates?: SuscripcionDeTema;
@@ -48,6 +48,8 @@ export interface VistaInteractivaProps extends PropsDePasos {
   onStateChange?: (state: EstadoDeColapso) => void;
   /** Geometria cacheada del estado por defecto de la Vista (sin `state`): se usa sin relayout. */
   cachedGeometry?: Geometria;
+  /** Geometria cacheada por id de Vista; manda sobre `cachedGeometry` para esa Vista (util al navegar). */
+  cachedGeometries?: Readonly<Record<string, Geometria>>;
   /** Duracion del morph al alternar un Grupo, en ms; 0 lo desactiva. Por defecto 300. */
   morphMs?: number;
   /** Tope de Nodos visibles; una expansion que lo supera se rechaza. Por defecto 1000. */
@@ -84,7 +86,29 @@ function aTransform(c: Camara, ancho: number): ZoomTransform {
 
 const igual = (a: ZoomTransform, b: ZoomTransform): boolean => a.k === b.k && a.x === b.x && a.y === b.y;
 
+/**
+ * Vista con drill-down: navega por los `link` de la Vista activa. Cada cambio de
+ * Vista remonta la Vista activa, asi que el estado no controlado (colapso, camara,
+ * seleccion, Paso) vuelve a su valor inicial; el controlado lo gobierna el padre.
+ */
 export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
+  const navegacion = useNavegacion(props);
+  const { vista, ir } = navegacion;
+  const declarada = props.view ?? props.defaultView;
+  const geometria = props.cachedGeometries?.[vista] ?? (vista === declarada ? props.cachedGeometry : undefined);
+  return <VistaActiva key={vista} {...props} view={vista} cachedGeometry={geometria} alEnlazar={ir} migas={<Migas navegacion={navegacion} />} />;
+}
+
+interface PropsDeVistaActiva extends Omit<VistaInteractivaProps, 'view' | 'cachedGeometry'> {
+  view: string;
+  cachedGeometry: Geometria | undefined;
+  /** Se pulso un Nodo con `link`: la Vista destino. */
+  alEnlazar: (destino: string) => void;
+  /** Breadcrumbs y boton atras, dibujados dentro del lienzo. */
+  migas: ReactElement;
+}
+
+function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const { source, view, layout, width, height, onError, onSelect, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
   const theme = useTemaVigente(props.theme, props.themeUpdates);
   const [estadoPropio, setEstadoPropio] = useState<EstadoDeColapso>({});
@@ -219,6 +243,8 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
   const alSeleccionar = (id: string): void => {
     if (props.selected === undefined) setSeleccionPropia(id);
     onSelect?.(id);
+    const destino = vista.nodes.find((n) => n.id === id)?.link;
+    if (destino !== undefined && source.views.some((v) => v.id === destino)) props.alEnlazar(destino);
   };
 
   return (
@@ -238,6 +264,7 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
         />
       )}
       {pasos.controles}
+      {props.migas}
       {marca !== undefined && seleccionado !== null && (
         <svg
           width={width}

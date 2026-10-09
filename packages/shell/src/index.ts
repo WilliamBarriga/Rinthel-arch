@@ -21,6 +21,17 @@
  * `onStepChange`, o interno desde `defaultStep`, 0 por defecto) se pasa por
  * `revealAt` y se dibujan controles anterior/siguiente; la geometria no cambia.
  * Una `visibility` explicita manda sobre la derivada; sin `steps` no hay controles.
+ * Drill-down: un Nodo con `link` en la Vista activa, al pulsarlo, lleva a la Vista
+ * enlazada. La ruta recorrida (`path`, ids de Vista; la ultima es la activa) se
+ * dibuja como breadcrumbs con boton `Atras`; pulsar un breadcrumb vuelve a esa
+ * posicion y descarta lo posterior. No hay jerarquia: la ruta admite repetidos
+ * (ciclos). Vista activa y ruta son controlables: `view`/`onViewChange` y
+ * `path`/`onPathChange` (ambos avisos se emiten en cada navegacion); sin ellas
+ * manda el estado interno desde `defaultView`. Si `view` y `path` difieren, la
+ * ruta se trunca hasta `view` (si ya estaba) o la agrega. Falta `view`, `path` y
+ * `defaultView`: lanza. Cambiar de Vista remonta la Vista activa (se pierde el
+ * estado no controlado). `cachedGeometry` vale para la Vista declarada
+ * (`view ?? defaultView`); con navegacion usa `cachedGeometries` por id.
  * Recarga de Tema: `themeUpdates` (`SuscripcionDeTema`) es el puerto por el que el
  * consumidor entrega el Tema resuelto al guardar el archivo de tema. La Geometria
  * solo se recalcula si cambia `claveDeLayout` (fuentes, tamano de texto); la
@@ -59,6 +70,7 @@ export const paquete = 'shell';
 
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';
+export type { PropsDeNavegacion } from './navegacion';
 export type { PropsDePasos } from './pasos';
 export type { SuscripcionDeTema } from './tema-vigente';
 export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
