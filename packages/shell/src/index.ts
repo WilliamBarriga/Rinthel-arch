@@ -25,6 +25,12 @@
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *
+ * Zoom semantico: la escala (`width` del lienzo / ancho de la camara) elige el nivel de
+ * detalle del texto que pasa a `render` (`nivelDeDetalle`: etiqueta corta, titulo, titulo +
+ * Atributos; umbrales por defecto 0.4 y 0.8, ajustables con `detailThresholds`). La
+ * geometria, la estructura y el colapso no dependen de la escala: colapsar o expandir
+ * sigue siendo una accion explicita (`state`).
+ *
  * Invariantes: no guarda verdad propia salvo camara y seleccion cuando no son
  * controladas; solo dibuja lo que `render` devuelve; un layout que llega tarde
  * (Vista, Tema o adaptador cambiaron) se descarta, y mientras llega el nuevo se
@@ -39,4 +45,6 @@ export const paquete = 'shell';
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';
 export type { SuscripcionDeTema } from './tema-vigente';
-export type { Camara } from 'render';
+export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
+export type { UmbralesDeDetalle } from './zoom-semantico';
+export type { Camara, NivelDeDetalle } from 'render';

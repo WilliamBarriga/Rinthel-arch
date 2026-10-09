@@ -19,6 +19,8 @@ import type { Camara } from 'render';
 import { useTemaVigente } from './tema-vigente';
 import type { SuscripcionDeTema } from './tema-vigente';
 import { cajasAbsolutas, recortarAlViewport } from './viewport';
+import { nivelDeDetalle } from './zoom-semantico';
+import type { UmbralesDeDetalle } from './zoom-semantico';
 
 /** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
 export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema) => Promise<Geometria>;
@@ -45,6 +47,8 @@ export interface VistaInteractivaProps {
   onSelect?: (id: string) => void;
   /** Visibilidad 0..1 de Nodos y Aristas (p. ej. `revealAt`). */
   visibility?: Visibilidad;
+  /** Escalas desde las que el zoom semantico muestra titulo y titulo + Atributos (ver `nivelDeDetalle`). */
+  detailThresholds?: UmbralesDeDetalle;
   /** Fallo del adaptador de layout; sin ella el fallo se lanza al renderizar. */
   onError?: (error: Error) => void;
 }
@@ -174,6 +178,7 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
           width={width}
           height={height}
           camera={camara}
+          detail={nivelDeDetalle(width / ancho, props.detailThresholds)}
           onSelect={alSeleccionar}
           {...(visibility !== undefined && { visibility })}
         />
