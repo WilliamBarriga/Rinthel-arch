@@ -29,8 +29,9 @@ export interface Camara {
 }
 
 /**
- * Nivel de detalle del texto: `etiqueta` (etiqueta corta de la Vista), `titulo`
- * (titulo del Nodo) o `completo` (titulo y Atributos). Solo cambia el texto: las
+ * Nivel de detalle del texto: `etiqueta` y `titulo` dibujan la etiqueta del Nodo
+ * en la Vista (el `label` del override o, si no hay, su titulo; el override se
+ * respeta en todos los niveles) y `completo` anade los Atributos. Solo cambia el texto: las
  * cajas, rutas y el viewBox son identicos en los tres.
  */
 export type NivelDeDetalle = 'etiqueta' | 'titulo' | 'completo';
@@ -112,8 +113,8 @@ function nodoSvg(nodo: NodoResuelto, contexto: Contexto): Elemento {
   const { theme, onSelect } = contexto;
   const esGrupo = nodo.children.length > 0;
   const trazo = colorDeTrazo(nodo, theme);
-  const base = contexto.detail === 'titulo' || contexto.detail === 'completo' ? nodo.title : nodo.label;
-  const texto = nodo.collapsed ? `${base} (${nodo.childCount})` : base;
+  // El `label` de la Vista (override o, si no hay, el titulo) manda en todos los niveles.
+  const texto = nodo.collapsed ? `${nodo.label} (${nodo.childCount})` : nodo.label;
   const rect: Elemento = {
     tag: 'rect',
     attrs: {

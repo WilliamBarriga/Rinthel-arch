@@ -112,4 +112,34 @@ describe('export', () => {
     expect(resultado.stderr).toContain('build');
     expect(existsSync(join(workspace, '.diagrams'))).toBe(false);
   });
+
+  describe('geometria cacheada', () => {
+    const rutaDeGeometria = (workspace: string): string => join(workspace, '.diagrams', 'geometria', 'general.json');
+
+    it('una layoutKey que no coincide con la Fuente canonica falla con codigo 2 y pide build', async () => {
+      const workspace = await workspaceConstruido();
+      const cacheada = JSON.parse(readFileSync(rutaDeGeometria(workspace), 'utf8'));
+      writeFileSync(rutaDeGeometria(workspace), JSON.stringify({ ...cacheada, layoutKey: 'otra' }));
+
+      for (const formato of ['svg', 'png', 'html']) {
+        const resultado = await run(['export', '--workspace', workspace, '--format', formato]);
+
+        expect(resultado.exitCode).toBe(2);
+        expect(resultado.stdout).toBe('');
+        expect(resultado.stderr).toContain("'general'");
+        expect(resultado.stderr).toContain("ejecuta 'build'");
+      }
+    });
+
+    it('una geometria que no cumple su esquema es un fallo de uso que pide build', async () => {
+      const workspace = await workspaceConstruido();
+      const cacheada = JSON.parse(readFileSync(rutaDeGeometria(workspace), 'utf8'));
+      writeFileSync(rutaDeGeometria(workspace), JSON.stringify({ ...cacheada, geometry: { width: 'ancho' } }));
+
+      const resultado = await run(['export', '--workspace', workspace]);
+
+      expect(resultado.exitCode).toBe(2);
+      expect(resultado.stderr).toContain("ejecuta 'build'");
+    });
+  });
 });

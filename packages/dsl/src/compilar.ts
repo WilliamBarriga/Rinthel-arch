@@ -2,7 +2,7 @@
  * Compilador del DSL de texto: parsea cada archivo con la gramatica derivada de
  * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
  */
-import { CODIGOS, TIPOS_DE_VISTA, combineIconProviders, fuenteCanonicaSchema, genericIcons, matchesSelector, workspaceIcons, resolveView, vistaSchema } from 'canonico';
+import { CODIGOS, TIPOS_DE_VISTA, combineIconProviders, fuenteCanonicaSchema, genericIcons, validate, vistaSchema, workspaceIcons } from 'canonico';
 import type {
   Arista,
   Atributo,
@@ -14,25 +14,23 @@ import type {
   OverrideDeNodo,
   Paso,
   ReferenciaOpaca,
-  Tema,
-  TextRange,
   TipoDeNodo,
   Vista,
 } from 'canonico';
 import {
   EmptyFileSystem,
-  GrammarUtils,
   createDefaultCoreModule,
   createDefaultSharedCoreModule,
   inject,
 } from 'langium';
-import type { AstNode, LangiumCoreServices, ParseResult } from 'langium';
+import type { LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Attrs, Documento, Edge, Element, Endpoint, Extend, NodeOverride, NodeTypeProperty, Source, Step, View } from './generated/ast';
-import { candidatosCercanos } from './sugerencias';
+import type { Attrs, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, View } from './generated/ast';
+import { issueConSugerencia, rangoDe, rangoDeIndice } from './posiciones';
 import { resolverTemas } from './temas';
 import type { TemaDeclarado } from './temas';
+import { crearUbicador } from './ubicador';
 
 /** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
 export type ArchivosDelWorkspace = Readonly<Record<string, string>>;
@@ -57,7 +55,14 @@ export interface ResultadoDeCompilacion {
 
 let memoServicios: LangiumCoreServices | undefined;
 
-/** Servicios de Langium, construidos una vez (memo inmutable: no guarda estado entre llamadas). */
+/**
+ * Servicios de Langium, construidos la primera vez que se compila. Es el unico
+ * estado de modulo del paquete y se conserva a proposito: crearlos cuesta ~100 ms
+ * frente a ~1 ms de compilar un Workspace chico, y `compile` se llama muchas
+ * veces por proceso. Es inmutable e inobservable: solo se usa `parser.LangiumParser`,
+ * que no retiene documentos ni resultados entre llamadas (cada `parse` es
+ * independiente), asi que compilar con o sin memo da el mismo resultado.
+ */
 function servicios(): LangiumCoreServices {
   if (memoServicios === undefined) {
     const shared = inject(createDefaultSharedCoreModule(EmptyFileSystem), DiagramasGeneratedSharedModule);
@@ -72,8 +77,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const tiposDeNodo: TipoDeNodo[] = [];
   const conSintaxisRota = new Set<string>();
   const temasDeclarados: TemaDeclarado[] = [];
-  const tiposConIcono: { archivo: string; prop: NodeTypeProperty }[] = [];
-  const tiposConColor: { archivo: string; prop: NodeTypeProperty }[] = [];
+  const tiposAst: { archivo: string; ast: NodeTypeDecl }[] = [];
   const vistas: { vista: Vista; archivo: string; ast: View }[] = [];
   const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
 
@@ -90,12 +94,11 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
         const tipo: TipoDeNodo = { name: decl.name, description: '' };
         for (const prop of decl.props) {
           const valor = prop.value;
-          if (prop.key === 'color') tiposConColor.push({ archivo, prop });
-          if (prop.key === 'icon') tiposConIcono.push({ archivo, prop });
           if (prop.key === 'description') tipo.description = valor;
           else tipo[prop.key] = valor;
         }
         tiposDeNodo.push(tipo);
+        tiposAst.push({ archivo, ast: decl });
       }
     }
     for (const tema of resultado.value.themes) {
@@ -120,9 +123,8 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
   }
 
-  const declarados = new Set(tiposDeNodo.map((tipo) => tipo.name));
   const registro = new Map<string, NodoRegistrado>();
-  const contexto: Contexto = { declarados, registro, issues };
+  const contexto: Contexto = { registro, issues };
   const nodos: Nodo[] = [];
   for (const { archivo, elementos } of raices) {
     for (const elemento of elementos) {
@@ -132,49 +134,39 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   }
   aplicarExtensiones(raices.flatMap(({ archivo, extensiones }) => extensiones.map((extension) => ({ archivo, extension }))), contexto);
 
-  const atributosPorNodo = new Map<string, string[]>();
-  recogerAtributos(nodos, atributosPorNodo);
   const aristas: Arista[] = [];
+  const aristasAst: { archivo: string; ast: Edge }[] = [];
   for (const { archivo, aristas: delArchivo } of raices) {
     // Con sintaxis rota el AST es parcial: sus Aristas darian falsos colgantes.
     if (conSintaxisRota.has(archivo)) continue;
     for (const arista of delArchivo) {
-      aristas.push(compilarArista(arista, archivo, atributosPorNodo, issues));
+      aristas.push(compilarArista(arista));
+      aristasAst.push({ archivo, ast: arista });
     }
-  }
-
-  const iconos = combineIconProviders(workspaceIcons(workspace), genericIcons());
-  for (const { archivo, prop } of tiposConIcono) {
-    if (conSintaxisRota.has(archivo) || iconos.resolve(prop.value) !== undefined) continue;
-    issues.push(
-      issueConSugerencia(
-        { code: CODIGOS.E_UNKNOWN_ICON, message: `Icono '${prop.value}' no existe (ni generico ni SVG del Workspace)` },
-        archivo, prop, 'value', iconos.keys(),
-      ),
-    );
   }
 
   const { temas, issues: delTema } = resolverTemas(temasDeclarados);
   issues.push(...delTema);
-  const fuente = {
+  const fuente: FuenteCanonica = {
     themes: temas,
     specification: { nodeTypes: tiposDeNodo },
     model: { nodes: nodos, edges: aristas },
     views: vistas.map(({ vista }) => vista),
   };
+  const ubicar = crearUbicador({
+    fuente,
+    nodos: new Map([...registro].map(([id, { origen, ast }]) => [id, { archivo: origen.file, ast }])),
+    aristas: aristasAst,
+    tipos: tiposAst,
+    vistas: vistas.map(({ archivo, ast }) => ({ archivo, ast })),
+    conSintaxisRota,
+  });
+  issues.push(...validate(fuente, { iconos: combineIconProviders(workspaceIcons(workspace), genericIcons()), ubicar }));
+
   const pins: PosicionDePin[] = [];
   for (const { vista, archivo, ast } of vistas) {
     // Con sintaxis rota el AST es parcial: sus overrides darian falsos positivos.
-    if (conSintaxisRota.has(archivo)) continue;
-    pins.push(...posicionesDePin(vista, ast, archivo));
-    comprobarOverrides(vista, ast, archivo, fuente, issues);
-    comprobarTemaYColores(vista, ast, archivo, fuente, issues);
-    comprobarDrillDown(vista, ast, archivo, fuente, issues);
-    comprobarPasos(ast, archivo, fuente, issues);
-  }
-  for (const { archivo, prop } of tiposConColor) {
-    if (conSintaxisRota.has(archivo)) continue;
-    comprobarColor(prop, archivo, nombresDePaleta(temas), issues);
+    if (!conSintaxisRota.has(archivo)) pins.push(...posicionesDePin(vista, ast, archivo));
   }
 
   issues.sort(compararIssues);
@@ -189,11 +181,11 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
 /** Nodos ya compilados por id cualificado, con el sitio donde se declararon. */
 interface NodoRegistrado {
   nodo: Nodo;
+  ast: Element;
   origen: { file: string; line: number; column: number };
 }
 
 interface Contexto {
-  declarados: ReadonlySet<string>;
   registro: Map<string, NodoRegistrado>;
   issues: Issue[];
 }
@@ -241,40 +233,6 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
   };
 }
 
-/**
- * El `theme` de la Vista debe existir, y el color de cada override debe ser un
- * nombre de la Paleta de ese Tema (o, sin `theme`, de alguno de los Temas).
- */
-function comprobarTemaYColores(
-  vista: Vista,
-  ast: View,
-  archivo: string,
-  fuente: FuenteCanonica,
-  issues: Issue[],
-): void {
-  const declarado = ast.props.find((prop) => prop.$type === 'ViewTheme');
-  const tema = fuente.themes.find((candidato) => candidato.name === vista.theme);
-  if (declarado !== undefined && tema === undefined) {
-    issues.push(
-      issueConSugerencia(
-        { code: CODIGOS.E_UNKNOWN_THEME, message: `Tema '${declarado.value}' no declarado` },
-        archivo, declarado, 'value', fuente.themes.map(({ name }) => name),
-      ),
-    );
-  }
-  const paleta = nombresDePaleta(tema ? [tema] : fuente.themes);
-  for (const prop of ast.props) {
-    if (prop.$type !== 'NodeOverride') continue;
-    for (const campo of prop.props) {
-      if (campo.$type === 'OverrideColor') comprobarColor(campo, archivo, paleta, issues);
-    }
-  }
-}
-
-function nombresDePaleta(temas: readonly Tema[]): string[] {
-  return temas.flatMap((tema) => Object.keys(tema.palette));
-}
-
 function pasoDe(paso: Step): Paso {
   const items = (clase: 'StepShow' | 'StepHide'): ElementoDePaso[] =>
     paso.actions.flatMap((accion) =>
@@ -283,111 +241,6 @@ function pasoDe(paso: Step): Paso {
         : [],
     );
   return { title: paso.title, show: items('StepShow'), hide: items('StepHide') };
-}
-
-/**
- * Pasos: cada selector debe coincidir con algun Nodo del Modelo y cada Arista
- * nombrada debe existir en el (ADR 0007).
- */
-function comprobarPasos(ast: View, archivo: string, fuente: FuenteCanonica, issues: Issue[]): void {
-  const ids = todosLosIds(fuente.model.nodes);
-  for (const prop of ast.props) {
-    if (prop.$type !== 'ViewSteps') continue;
-    for (const paso of prop.steps) {
-      for (const accion of paso.actions) {
-        for (const item of accion.items) {
-          if (item.$type === 'StepSelector') {
-            if (ids.some((id) => matchesSelector(item.selector, id))) continue;
-            issues.push(
-              issueConSugerencia(
-                { code: CODIGOS.E_UNKNOWN_STEP, message: `El selector '${item.selector}' no coincide con ningun Nodo del Modelo` },
-                archivo, item, 'selector', ids,
-              ),
-            );
-          } else if (!fuente.model.edges.some((arista) => arista.from.node === item.from && arista.to.node === item.to)) {
-            issues.push(
-              issueConSugerencia(
-                { code: CODIGOS.E_UNKNOWN_STEP, message: `La Arista '${item.from} -> ${item.to}' no existe en el Modelo` },
-                archivo, item, 'from', ids,
-              ),
-            );
-          }
-        }
-      }
-    }
-  }
-}
-
-function todosLosIds(nodos: readonly Nodo[]): string[] {
-  return nodos.flatMap((nodo) => [nodo.id, ...todosLosIds(nodo.children)]);
-}
-
-/**
- * Drill-down: `link` solo a Vistas que existen; `collapsed`/`expanded` solo sobre
- * Grupos que la Vista muestra; un Nodo no puede llevar `link` y `expanded`.
- */
-function comprobarDrillDown(
-  vista: Vista,
-  ast: View,
-  archivo: string,
-  fuente: FuenteCanonica,
-  issues: Issue[],
-): void {
-  const gruposEnLaVista = new Set(
-    resolveView(
-      { ...fuente, views: [{ ...vista, collapsed: [], expanded: [], links: [], depth: undefined }] },
-      vista.id,
-    )?.nodes.filter((nodo) => nodo.childCount > 0).map((nodo) => nodo.id),
-  );
-  const enlazados = new Set(vista.links.map(({ node }) => node));
-  const idsDeVista = fuente.views.map(({ id }) => id);
-
-  for (const prop of ast.props) {
-    if (prop.$type === 'ViewLink' && !idsDeVista.includes(prop.view)) {
-      issues.push(
-        issueConSugerencia(
-          { code: CODIGOS.E_UNKNOWN_VIEW_LINK, message: `link hacia la Vista '${prop.view}', que no existe` },
-          archivo, prop, 'view', idsDeVista,
-        ),
-      );
-    } else if (prop.$type === 'ViewCollapsed' || prop.$type === 'ViewExpanded') {
-      const palabra = prop.$type === 'ViewCollapsed' ? 'collapsed' : 'expanded';
-      prop.targets.forEach((destino, indice) => {
-        const sitio = { file: archivo, ...rangoDeIndice(prop, 'targets', indice).start };
-        if (!gruposEnLaVista.has(destino)) {
-          issues.push({
-            code: CODIGOS.E_INVALID_EXPANSION_TARGET,
-            severity: 'error',
-            ...sitio,
-            message: `'${palabra} ${destino}': no es un Grupo que la Vista '${vista.id}' muestre`,
-          });
-        } else if (palabra === 'expanded' && enlazados.has(destino)) {
-          issues.push({
-            code: CODIGOS.E_LINK_WITH_EXPANDED,
-            severity: 'error',
-            ...sitio,
-            message: `'${destino}' lleva 'link' y 'expanded': un Grupo con link no se expande`,
-          });
-        }
-      });
-    }
-  }
-}
-
-/** Un color es siempre un nombre de Paleta; un hex o un typo es `E_UNKNOWN_PALETTE_COLOR`. */
-function comprobarColor(
-  prop: { value: string } & AstNode,
-  archivo: string,
-  paleta: readonly string[],
-  issues: Issue[],
-): void {
-  if (paleta.includes(prop.value)) return;
-  issues.push(
-    issueConSugerencia(
-      { code: CODIGOS.E_UNKNOWN_PALETTE_COLOR, message: `Color '${prop.value}' no es un nombre de Paleta del Tema` },
-      archivo, prop, 'value', new Set(paleta),
-    ),
-  );
 }
 
 function overrideDe(declarado: NodeOverride): OverrideDeNodo {
@@ -409,27 +262,6 @@ function posicionesDePin(vista: Vista, ast: View, archivo: string): PosicionDePi
   );
 }
 
-/** Un override solo puede apuntar a un Nodo que la Vista muestra. */
-function comprobarOverrides(
-  vista: Vista,
-  ast: View,
-  archivo: string,
-  fuente: FuenteCanonica,
-  issues: Issue[],
-): void {
-  const visibles = new Set(resolveView(fuente, vista.id)?.nodes.map((nodo) => nodo.id));
-  for (const prop of ast.props) {
-    if (prop.$type !== 'NodeOverride' || visibles.has(prop.node)) continue;
-    issues.push({
-      code: CODIGOS.E_OVERRIDE_OUTSIDE_VIEW,
-      severity: 'error',
-      file: archivo,
-      ...rangoDe(prop, 'node').start,
-      message: `Override sobre '${prop.node}', que la Vista '${vista.id}' no muestra`,
-    });
-  }
-}
-
 /** Compila un Elemento; un id ya declarado es `E_DUPLICATE_NODE` y el duplicado se descarta. */
 function compilarElemento(
   elemento: Element,
@@ -437,7 +269,7 @@ function compilarElemento(
   archivo: string,
   contexto: Contexto,
 ): Nodo | undefined {
-  const { declarados, registro, issues } = contexto;
+  const { registro, issues } = contexto;
   const id = prefijo === '' ? elemento.name : `${prefijo}.${elemento.name}`;
   const { start: sitio } = rangoDe(elemento, 'name');
   const original = registro.get(id);
@@ -452,17 +284,6 @@ function compilarElemento(
     });
     return undefined;
   }
-  if (!declarados.has(elemento.type)) {
-    issues.push(
-      issueConSugerencia(
-        {
-          code: CODIGOS.E_UNKNOWN_NODE_TYPE,
-          message: `Tipo de nodo '${elemento.type}' no declarado en specification`,
-        },
-        archivo, elemento, 'type', declarados,
-      ),
-    );
-  }
   const nodo: Nodo = {
     id,
     type: elemento.type,
@@ -472,7 +293,7 @@ function compilarElemento(
     source: referenciasDe(elemento.sources),
     children: [],
   };
-  registro.set(id, { nodo, origen: { file: archivo, ...sitio } });
+  registro.set(id, { nodo, ast: elemento, origen: { file: archivo, ...sitio } });
   nodo.children = compilarHijos(elemento.elements, id, archivo, contexto);
   return nodo;
 }
@@ -528,101 +349,21 @@ function referenciasDe(bloques: readonly Source[]): ReferenciaOpaca[] {
   return bloques.flatMap((bloque) => bloque.items.map(({ kind, ref }) => ({ kind, ref })));
 }
 
-// Las Aristas se validan aqui (con posicion y `fix`) y, como red estructural,
-// en el esquema de `canonico`; no es duplicacion evitable: el esquema no ve el texto.
-// `E_DANGLING_EDGE` no lleva `related`: no hay un segundo sitio que senalar.
-function compilarArista(
-  arista: Edge,
-  archivo: string,
-  atributosPorNodo: ReadonlyMap<string, readonly string[]>,
-  issues: Issue[],
-): Arista {
+/**
+ * Las Aristas se compilan tal cual; que sus extremos existan lo comprueba
+ * `validate` de `canonico` (con la posicion que aporta el `Ubicador`).
+ */
+function compilarArista(arista: Edge): Arista {
+  const extremo = ({ node, attribute }: Edge['from']): Extremo => ({
+    node,
+    ...(attribute !== undefined && { attribute }),
+  });
   return {
-    from: compilarExtremo(arista.from, archivo, atributosPorNodo, issues),
-    to: compilarExtremo(arista.to, archivo, atributosPorNodo, issues),
+    from: extremo(arista.from),
+    to: extremo(arista.to),
     ...(arista.fromCardinality !== undefined && { fromCardinality: arista.fromCardinality }),
     ...(arista.toCardinality !== undefined && { toCardinality: arista.toCardinality }),
   };
-}
-
-/** Compila un extremo; un Nodo inexistente o un Atributo inexistente es un issue. */
-function compilarExtremo(
-  extremo: Endpoint,
-  archivo: string,
-  atributosPorNodo: ReadonlyMap<string, readonly string[]>,
-  issues: Issue[],
-): Extremo {
-  const compilado: Extremo = {
-    node: extremo.node,
-    ...(extremo.attribute !== undefined && { attribute: extremo.attribute }),
-  };
-
-  const atributos = atributosPorNodo.get(extremo.node);
-  if (atributos === undefined) {
-    issues.push(
-      issueConSugerencia(
-        { code: CODIGOS.E_DANGLING_EDGE, message: `Arista colgante: el Nodo '${extremo.node}' no existe en el Modelo` },
-        archivo, extremo, 'node', atributosPorNodo.keys(),
-      ),
-    );
-  } else if (extremo.attribute !== undefined && !atributos.includes(extremo.attribute)) {
-    issues.push(
-      issueConSugerencia(
-        { code: CODIGOS.E_UNKNOWN_ATTRIBUTE, message: `El Nodo '${extremo.node}' no tiene el Atributo '${extremo.attribute}'` },
-        archivo, extremo, 'attribute', atributos,
-      ),
-    );
-  }
-  return compilado;
-}
-
-/**
- * Issue de error sobre la propiedad textual `propiedad` de `nodo`, con `fix` si hay
- * un unico candidato cercano entre `existentes` y `hint` si hay varios.
- */
-function issueConSugerencia<T extends AstNode>(
-  base: { code: string; message: string },
-  archivo: string,
-  nodo: T,
-  propiedad: Extract<keyof T, string>,
-  existentes: Iterable<string>,
-): Issue {
-  const { start: inicio, end: fin } = rangoDe(nodo, propiedad);
-  const issue: Issue = { ...base, severity: 'error', file: archivo, ...inicio };
-  const candidatos = candidatosCercanos(nodo[propiedad] as string, existentes);
-  const [unico] = candidatos;
-  if (candidatos.length === 1 && unico !== undefined) {
-    issue.fix = { file: archivo, range: { start: inicio, end: fin }, replacement: unico };
-  } else if (candidatos.length > 1) {
-    issue.hint = `Candidatos: ${candidatos.join(', ')}`;
-  }
-  return issue;
-}
-
-/** Rango 1-based (fin excluido) de una propiedad del AST; `1:1` si el CST no lo conoce. */
-function rangoDe(nodo: AstNode, propiedad: string): TextRange {
-  const rango = GrammarUtils.findNodeForProperty(nodo.$cstNode, propiedad)?.range;
-  return {
-    start: { line: (rango?.start.line ?? 0) + 1, column: (rango?.start.character ?? 0) + 1 },
-    end: { line: (rango?.end.line ?? 0) + 1, column: (rango?.end.character ?? 0) + 1 },
-  };
-}
-
-/** Como `rangoDe`, para el `indice`-esimo valor de una propiedad multiple. */
-function rangoDeIndice(nodo: AstNode, propiedad: string, indice: number): TextRange {
-  const rango = GrammarUtils.findNodesForProperty(nodo.$cstNode, propiedad)[indice]?.range;
-  return {
-    start: { line: (rango?.start.line ?? 0) + 1, column: (rango?.start.character ?? 0) + 1 },
-    end: { line: (rango?.end.line ?? 0) + 1, column: (rango?.end.character ?? 0) + 1 },
-  };
-}
-
-/** Nombres de Atributo (en orden) de cada Nodo, a cualquier profundidad. */
-function recogerAtributos(nodos: readonly Nodo[], destino: Map<string, string[]>): void {
-  for (const nodo of nodos) {
-    destino.set(nodo.id, nodo.attributes.map((atributo) => atributo.name));
-    recogerAtributos(nodo.children, destino);
-  }
 }
 
 function issuesDeSintaxis(

@@ -55,15 +55,17 @@ describe('nivelDeDetalle', () => {
 });
 
 describe('VistaInteractiva: zoom semantico', () => {
-  it('a escala 1 muestra titulo y Atributos', async () => {
+  it('a escala 1 muestra la etiqueta de la Vista (override incluido) y los Atributos', async () => {
     const { container } = montar(conAncho(800));
     await waitFor(() => expect(container.textContent).toContain('id: uuid'));
-    expect(container.textContent).toContain('Usuarios del sistema');
+    expect(container.textContent).toContain('Usr');
+    expect(container.textContent).not.toContain('Usuarios del sistema');
   });
 
-  it('a escala media muestra el titulo sin Atributos', async () => {
+  it('a escala media muestra la etiqueta sin Atributos', async () => {
     const { container } = montar(conAncho(1600));
-    await waitFor(() => expect(container.textContent).toContain('Usuarios del sistema'));
+    await waitFor(() => expect(container.textContent).toContain('Usr'));
+    expect(container.textContent).not.toContain('Usuarios del sistema');
     expect(container.textContent).not.toContain('id: uuid');
   });
 
