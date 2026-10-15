@@ -13,3 +13,7 @@ Este repo no depende de slides-rinthel, video-openmotion ni de ningun repo de un
 ## Enmienda: PNG con `@resvg/resvg-js`
 
 El PNG se rasteriza con `@resvg/resvg-js` 2.6.2 (MPL-2.0, binario nativo precompilado por plataforma, sin navegador). resvg no lee los `@font-face` del SVG ni archivos `woff`/`woff2`, y la version actual solo carga fuentes desde archivos: el CLI carga las familias del Tema desde `.ttf`/`.otf` del Workspace (con una copia temporal) y falla si una familia solo existe como `woff`/`woff2`. Una familia sin archivo se resuelve con las fuentes del sistema; el PNG es identico entre maquinas solo si el Workspace trae todas las familias.
+
+## Enmienda: paquete `sesion`
+
+Se suma `sesion` entre `layout` y `render`/`shell`/`cli`: orden `canonico -> dsl -> layout -> sesion -> render -> shell / cli`. Importa solo `canonico`, `dsl` y `layout`. Es una funcion pura sobre el mapa de archivos del Workspace (sin puerto de filesystem: leer disco y observar cambios son adaptadores de `cli`), de modo que CLI, `dev` e `inspect` comparten una sola tuberia compilar, validar y calcular layout. Interfaz: `diagnosticar()`, `construir()` y `geometria(vista)` (perezosa y memoizada por Vista). Ver el termino Sesion en `CONTEXT.md`.

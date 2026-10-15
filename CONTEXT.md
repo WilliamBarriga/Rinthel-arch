@@ -63,3 +63,6 @@ Sintaxis legible para humanos y agentes, y unica fuente que se edita y versiona.
 
 **Workspace**:
 Carpeta de archivos de DSL de texto que se fusionan en el Modelo unico de un Proyecto documentado. Cada archivo puede aportar Nodos, Aristas y Vistas.
+
+**Sesion**:
+Estado compilado de un Workspace en un momento dado: Fuente canonica, issues y geometria por Vista (calculada bajo demanda). Es un valor inmutable; un cambio de archivos produce otra Sesion. Lo consumen el CLI, `dev` y `inspect`.
