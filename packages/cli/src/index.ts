@@ -53,6 +53,8 @@
  * `link` navegan a la Vista enlazada dentro del mismo archivo. El estado por defecto sale de
  * la geometria cacheada; colapsar relayoutea con ELK en un Web Worker creado de un Blob
  * del propio bundle y, si el navegador no lo permite, en el hilo principal.
+ * `dev --workspace <ruta> [--port N]` (ADR 0009, ver `dev.ts`): servidor HTTP solo en 127.0.0.1 (puerto 4173 por
+ * defecto) con vista previa en vivo por SSE y panel de issues; `iniciarDev` es la entrada programatica.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> sesion -> render -> shell / cli`; la tuberia compilar, validar y layout vive en `sesion`.
@@ -63,12 +65,16 @@ import { parseArgs } from 'node:util';
 import { abrirSesion } from 'sesion';
 
 import { exportarPng, exportarSvg } from './export';
+import { comandoDev } from './dev';
 import { exportarHtml } from './html';
 import { generarSkill } from './skill';
 import { construirSalida, textoLegible } from './validate';
 import { leerSalidaDeBuild } from './vistas-dibujables';
 import type { EntradaDeExport } from './vistas-dibujables';
 import { escribirSalida, escribirTexto, leerFuentes, leerSalida, leerWorkspace } from './workspace';
+
+export { iniciarDev } from './dev';
+export type { OpcionesDeDev, ServidorDev } from './dev';
 
 export interface ResultadoDeEjecucion {
   exitCode: 0 | 1 | 2;
@@ -116,6 +122,7 @@ export async function run(
   dependencias: Dependencias = {},
 ): Promise<ResultadoDeEjecucion> {
   const [comando, ...resto] = argv;
+  if (comando === 'dev') return comandoDev(resto, dependencias);
   if (comando !== 'validate' && comando !== 'build' && comando !== 'export' && comando !== 'skill') {
     return uso(
       `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export|skill> --workspace <ruta>`,
