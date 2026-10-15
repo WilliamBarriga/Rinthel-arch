@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { combineIconProviders, genericIcons, workspaceIcons } from 'canonico';
 import type { Tema } from 'canonico';
 
-import type { SalidaDeBuild } from './build';
+import type { SalidaDeBuild } from 'sesion';
 import { fuentesDelTema } from './fuentes';
 import { vistasDibujables } from './vistas-dibujables';
 import type { EntradaDeExport } from './vistas-dibujables';

@@ -236,6 +236,9 @@ importers:
       render:
         specifier: workspace:*
         version: link:../render
+      sesion:
+        specifier: workspace:*
+        version: link:../sesion
       shell:
         specifier: workspace:*
         version: link:../shell
@@ -324,6 +327,28 @@ importers:
       react-dom:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(postcss@8.5.28)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^3.2.7
+        version: 3.2.7(@types/node@24.19.1)(jsdom@30.1.2)
+
+  packages/sesion:
+    dependencies:
+      canonico:
+        specifier: workspace:*
+        version: link:../canonico
+      dsl:
+        specifier: workspace:*
+        version: link:../dsl
+      layout:
+        specifier: workspace:*
+        version: link:../layout
+    devDependencies:
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.28)(typescript@5.9.3)

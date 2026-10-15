@@ -55,14 +55,13 @@
  * del propio bundle y, si el navegador no lo permite, en el hilo principal.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
- * anteriores en la cadena `canonico -> dsl -> layout -> render -> shell / cli`.
+ * anteriores en la cadena `canonico -> dsl -> layout -> sesion -> render -> shell / cli`; la tuberia compilar, validar y layout vive en `sesion`.
  */
 import { salidaDeValidateSchema } from 'canonico';
-import { compile } from 'dsl';
-import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
+import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
+import { abrirSesion } from 'sesion';
 
-import { avisosDePinsSolapados, construirBuild } from './build';
 import { exportarPng, exportarSvg } from './export';
 import { exportarHtml } from './html';
 import { generarSkill } from './skill';
@@ -79,7 +78,6 @@ export interface ResultadoDeEjecucion {
 
 /** Dependencias que entran como argumento; por defecto, las reales. */
 export interface Dependencias {
-  compilar?: (workspace: ArchivosDelWorkspace) => ResultadoDeCompilacion;
   leer?: (raiz: string) => ArchivosDelWorkspace;
   escribir?: (raiz: string, archivos: Readonly<Record<string, string | Uint8Array>>, subcarpeta?: string) => void;
   /** Salida de `build` (`.diagrams/`), ruta relativa -> texto. */
@@ -141,7 +139,7 @@ export async function run(
 
 async function skill(
   args: readonly string[],
-  { compilar = compile, leer = leerWorkspace, escribirArchivo = escribirTexto }: Dependencias,
+  { leer = leerWorkspace, escribirArchivo = escribirTexto }: Dependencias,
 ): Promise<ResultadoDeEjecucion> {
   let opciones;
   try {
@@ -155,21 +153,21 @@ async function skill(
   }
   if (opciones.workspace === undefined) return uso('Falta --workspace <ruta>');
 
-  let resultado: ResultadoDeCompilacion;
+  let sesion;
   try {
-    resultado = compilar(leer(opciones.workspace));
+    sesion = abrirSesion(leer(opciones.workspace));
   } catch (error) {
     return uso(`No se pudo leer el Workspace: ${(error as Error).message}`);
   }
-  if (resultado.canonico === undefined) {
+  if (sesion.fuente === undefined) {
     // Sin catalogo valido no hay skill fiable: se muestran los issues, como `validate`.
     return {
       exitCode: 1,
-      stdout: textoLegible(construirSalida(resultado.issues, { maxIssues: MAX_ISSUES_POR_DEFECTO, strict: false })),
+      stdout: textoLegible(construirSalida(await sesion.diagnosticar(), { maxIssues: MAX_ISSUES_POR_DEFECTO, strict: false })),
       stderr: '',
     };
   }
-  const texto = generarSkill(resultado.canonico);
+  const texto = generarSkill(sesion.fuente);
   if (opciones.out === undefined) return { exitCode: 0, stdout: texto, stderr: '' };
   try {
     escribirArchivo(opciones.out, texto);
@@ -232,39 +230,34 @@ async function ejecutar(
   comando: 'validate' | 'build',
   opciones: OpcionesParseadas,
   maxIssues: number,
-  { compilar = compile, leer = leerWorkspace, escribir = escribirSalida }: Dependencias,
+  { leer = leerWorkspace, escribir = escribirSalida }: Dependencias,
 ): Promise<ResultadoDeEjecucion> {
   const raiz = opciones['workspace'] as string;
   const carpetaDeTemas = opciones['theme-path'] as string | undefined;
-  let resultado: ResultadoDeCompilacion;
+  const tema = opciones['theme'] as string | undefined;
+  let sesion;
   try {
     // El Workspace gana sobre `--theme-path` en caso de ruta repetida.
     const archivos = { ...(carpetaDeTemas === undefined ? {} : leer(carpetaDeTemas)), ...leer(raiz) };
-    resultado = compilar(archivos);
+    sesion = abrirSesion(archivos, tema === undefined ? {} : { tema });
   } catch (error) {
     return uso(`No se pudo leer el Workspace: ${(error as Error).message}`);
   }
 
-  const issues = [...resultado.issues];
-  const archivosDeSalida: Record<string, string> = {};
-  const tema = opciones['theme'] as string | undefined;
-  if (resultado.canonico !== undefined) {
-    if (tema !== undefined && !resultado.canonico.themes.some(({ name }) => name === tema)) {
-      const disponibles = resultado.canonico.themes.map(({ name }) => name).join(', ');
-      return uso(`Tema '${tema}' no declarado. Disponibles: ${disponibles}`);
+  let issues;
+  let archivosDeSalida: Record<string, string> = {};
+  if (sesion.fuente !== undefined && tema !== undefined && !sesion.fuente.themes.some(({ name }) => name === tema)) {
+    const disponibles = sesion.fuente.themes.map(({ name }) => name).join(', ');
+    return uso(`Tema '${tema}' no declarado. Disponibles: ${disponibles}`);
+  }
+  try {
+    if (comando === 'build') {
+      ({ archivos: archivosDeSalida, issues } = await sesion.construir());
+    } else {
+      issues = await sesion.diagnosticar();
     }
-    const opcionesDeLayout = { ...(tema !== undefined && { tema }), pins: resultado.pins };
-    try {
-      if (comando === 'build') {
-        const { archivos, issues: avisos } = await construirBuild(resultado.canonico, opcionesDeLayout);
-        Object.assign(archivosDeSalida, archivos);
-        issues.push(...avisos);
-      } else {
-        issues.push(...(await avisosDePinsSolapados(resultado.canonico, opcionesDeLayout)));
-      }
-    } catch (error) {
-      return uso(`Error interno al calcular la geometria: ${(error as Error).message}`);
-    }
+  } catch (error) {
+    return uso(`Error interno al calcular la geometria: ${(error as Error).message}`);
   }
 
   let salida;

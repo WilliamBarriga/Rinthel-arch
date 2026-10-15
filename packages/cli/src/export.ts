@@ -1,7 +1,7 @@
 import { combineIconProviders, genericIcons, workspaceIcons } from 'canonico';
 import { renderToSvgString } from 'render';
 
-import type { SalidaDeBuild } from './build';
+import type { SalidaDeBuild } from 'sesion';
 import { fuentesDelTema } from './fuentes';
 import { rasterizar } from './png';
 import { vistasDibujables } from './vistas-dibujables';

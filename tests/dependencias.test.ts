@@ -44,7 +44,7 @@ function crearWorkspace(archivos: Record<string, string>): string {
 
 describe('revisarWorkspace', () => {
   it('usa la cadena de dependencias de ADR 0005', () => {
-    expect(CADENA).toEqual(['canonico', 'dsl', 'layout', 'render', 'shell', 'cli']);
+    expect(CADENA).toEqual(['canonico', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli']);
   });
 
   it('falla si un paquete importa de uno posterior en la cadena', () => {
@@ -174,7 +174,7 @@ describe('revisarWorkspace', () => {
 
 describe('manifiestos de este workspace', () => {
   it('cada paquete declara exports con solo la entrada raiz', () => {
-    const nombres = ['canonico', 'dsl', 'layout', 'render', 'shell', 'cli'];
+    const nombres = ['canonico', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli'];
     for (const nombre of nombres) {
       const ruta = resolve(raizDelRepo, 'packages', nombre, 'package.json');
       const manifiestoLeido = JSON.parse(readFileSync(ruta, 'utf8')) as {

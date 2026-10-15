@@ -32,6 +32,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "render": "workspace:*",
+    "sesion": "workspace:*",
     "shell": "workspace:*"
   },
   "bin": {

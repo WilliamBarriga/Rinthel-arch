@@ -4,7 +4,7 @@ Vocabulario de diseno: **Modulo**, **Interfaz**, **Seam**, **Adaptador**, **Prof
 
 ## Estructura
 
-Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (previstos: dsl, canonico, layout, render, shell, cli). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
+Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (previstos: dsl, canonico, layout, sesion, render, shell, cli). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
 
 ## Modulos profundos
 
@@ -19,7 +19,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (previsto
 - **Puertos**: interfaces que define el nucleo segun lo que necesita. **Adaptadores**: sistema de archivos, ELK, d3-zoom, Web Worker, CLI; viven en el borde y dependen del nucleo, nunca al reves.
 - Un seam existe cuando algo varia a traves de el: un adaptador es un seam hipotetico, dos es uno real. Con un solo adaptador, llamada directa.
 - Las dependencias entran como argumento; las funciones devuelven resultados en vez de mutar.
-- Direccion de dependencias: `canonico -> dsl -> layout -> render -> shell / cli`. Un paquete solo importa de los anteriores.
+- Direccion de dependencias: `canonico -> dsl -> layout -> sesion -> render -> shell / cli`. Un paquete solo importa de los anteriores.
 - El nucleo es agnostico del Proyecto documentado (ver `AGENTS.md`).
 
 ## Pruebas
@@ -32,4 +32,4 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (previsto
 
 ## Chequeos automaticos
 
-La direccion de dependencias, los imports internos entre paquetes la superficie `exports` y la pureza del nucleo (`canonico`, `dsl`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell` y `cli` son adaptadores) los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.
+La direccion de dependencias, los imports internos entre paquetes la superficie `exports` y la pureza del nucleo (`canonico`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell` y `cli` son adaptadores) los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.
