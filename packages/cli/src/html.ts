@@ -32,7 +32,7 @@ let bundles: Promise<Bundles> | undefined;
  * `</script` y `<!--` para poder ponerlo dentro de un `<script>`; solo aparecen
  * dentro de cadenas.
  */
-async function empaquetar(entrada: URL, alias: Record<string, string> = {}): Promise<string> {
+export async function empaquetar(entrada: URL, alias: Record<string, string> = {}): Promise<string> {
   const { outputFiles } = await build({
     entryPoints: [fileURLToPath(entrada)],
     bundle: true,

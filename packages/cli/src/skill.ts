@@ -143,7 +143,7 @@ ${JSON.stringify(salidaDeInspectJsonSchema(), null, 2)}
 
 ## Bucle en vivo (dev)
 
-\`diagrams dev --workspace <ruta>\` levanta un servidor local (solo en 127.0.0.1) que sirve el shell. Observa el Workspace y, ante cada cambio en los \`.dg\` (con un debounce de ~150 ms), recompila y empuja al navegador la Vista y los issues por Server-Sent Events. La pantalla muestra la Vista elegida por el hash de la URL (\`#<vista>\`) y un panel de issues clicables (\`archivo:linea\`). Un agente no necesita abrirlo: usa inspect y validate; \`dev\` es para que la persona vea el resultado en vivo. No hay bloqueos de edicion ni estado compartido: el DSL en git es el unico punto de coordinacion.
+\`diagrams dev --workspace <ruta>\` levanta un servidor local (solo en 127.0.0.1, puerto 4173 por defecto; \`--port N\` lo cambia) que sirve el shell. Observa el Workspace y, ante cada cambio en los \`.dg\` (con un debounce de ~150 ms), recompila y empuja al navegador la Vista y los issues por Server-Sent Events. La pantalla muestra la Vista elegida por el hash de la URL (\`#<vista>\`) y un panel de issues clicables (\`archivo:linea\`). Un agente no necesita abrirlo: usa inspect y validate; \`dev\` es para que la persona vea el resultado en vivo. No hay bloqueos de edicion ni estado compartido: el DSL en git es el unico punto de coordinacion.
 
 ## Codigos de issue
 
