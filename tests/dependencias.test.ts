@@ -193,4 +193,28 @@ describe('manifiestos de este workspace', () => {
       expect(manifiesto.name ?? carpeta, `${carpeta}/package.json.name`).toEqual(carpeta);
     }
   });
+
+  it('falla si el nucleo importa Node o usa reloj, y deja pasar tests y adaptadores', () => {
+    const raiz = crearWorkspace({
+      'packages/canonico/package.json': manifiesto('canonico'),
+      'packages/canonico/src/index.ts':
+        "import { readFileSync } from 'node:fs';\nexport const t = Date.now();\n",
+      'packages/canonico/test/a.test.ts': "import 'node:fs';\nexport const t = Date.now();\n",
+      'packages/layout/package.json': manifiesto('layout', {
+        dependencies: { canonico: 'workspace:*' },
+      }),
+      'packages/layout/src/index.ts': "import 'node:fs';\nexport const t = Date.now();\n",
+    });
+
+    const pureza = revisarWorkspace(raiz).filter((v) => v.regla === 'pureza');
+
+    expect(pureza.map((v) => `${v.paquete}:${v.archivo}`)).toEqual([
+      'canonico:packages/canonico/src/index.ts',
+      'canonico:packages/canonico/src/index.ts',
+    ]);
+  });
+
+  it('el workspace real cumple la regla de pureza', () => {
+    expect(revisarWorkspace(raizDelRepo).filter((v) => v.regla === 'pureza')).toEqual([]);
+  });
 });

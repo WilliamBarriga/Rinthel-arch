@@ -15,6 +15,8 @@
  * - `declaracion`: todo paquete del workspace importado se declara en
  *   `dependencies` o `peerDependencies`.
  * - `exports`: la superficie publica es exactamente la entrada raiz `.`.
+ * - `pureza`: los paquetes de `NUCLEO` no importan modulos de Node ni usan
+ *   reloj, azar, `process`, red ni DOM en su codigo fuente (los tests quedan fuera).
  *
  * Invariantes:
  * - Lee archivos, no modifica nada; las dependencias externas (no son del
@@ -27,13 +29,27 @@
  *   de uso del chequeo, no una violacion de arquitectura.
  * - Un `package.json` ausente en una carpeta de `packages/` se ignora.
  */
+import { builtinModules } from 'node:module';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
 /** Orden de dependencias (ADR 0005): un paquete solo importa de los anteriores. */
 export const CADENA = ['canonico', 'dsl', 'layout', 'render', 'shell', 'cli'] as const;
 
-export type Regla = 'cadena' | 'orden' | 'interno' | 'declaracion' | 'exports';
+/** Nucleo puro (CODING.md): sin I/O, sin reloj, sin estado global. layout, shell y cli son adaptadores. */
+export const NUCLEO = ['canonico', 'dsl', 'render'] as const;
+
+const IMPUREZAS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\bnew Date\b|\bDate\.now\b|\bperformance\.now\b/, 'reloj'],
+  [/\bMath\.random\b|\bcrypto\.(?:randomUUID|getRandomValues)\b/, 'azar'],
+  [/\bprocess\.|\bglobalThis\b/, 'estado global del proceso'],
+  [/\bfetch\(|\bXMLHttpRequest\b|\bnew Worker\b/, 'red o workers'],
+  [/\b(?:window|document|localStorage|sessionStorage)\./, 'DOM'],
+];
+
+const MODULOS_DE_NODE = new Set(builtinModules);
+
+export type Regla = 'cadena' | 'orden' | 'interno' | 'declaracion' | 'exports' | 'pureza';
 
 export interface Violacion {
   readonly paquete: string;
@@ -134,7 +150,29 @@ function revisarArchivo(
   const relativo = relative(raiz, archivo);
   const violaciones: Violacion[] = [];
 
+  const esNucleo = (NUCLEO as readonly string[]).includes(nombre) && !esDeTest(relativo);
+  if (esNucleo) {
+    for (const [patron, causa] of IMPUREZAS) {
+      if (patron.test(texto)) {
+        violaciones.push({
+          paquete: nombre,
+          archivo: relativo,
+          regla: 'pureza',
+          mensaje: `el nucleo no usa ${causa}; recibelo como argumento o muevelo a un adaptador`,
+        });
+      }
+    }
+  }
+
   for (const especificador of extraerEspecificadores(texto)) {
+    if (esNucleo && (especificador.startsWith('node:') || MODULOS_DE_NODE.has(especificador))) {
+      violaciones.push({
+        paquete: nombre,
+        archivo: relativo,
+        regla: 'pureza',
+        mensaje: `el nucleo no importa "${especificador}" (I/O); recibelo como puerto desde un adaptador`,
+      });
+    }
     if (especificador.startsWith('.')) {
       const destino = resolve(dirname(archivo), especificador);
       const dueno = paquetes.find((otro) => dentroDe(destino, otro.carpeta));
@@ -191,6 +229,10 @@ function revisarArchivo(
   }
 
   return violaciones;
+}
+
+function esDeTest(ruta: string): boolean {
+  return /(^|\/)(test|tests|__tests__)\//.test(ruta) || /\.(test|spec)\.[cm]?tsx?$/.test(ruta);
 }
 
 function clavesDeExports(manifiesto: Manifiesto): string[] {
