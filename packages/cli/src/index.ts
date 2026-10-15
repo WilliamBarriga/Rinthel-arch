@@ -53,12 +53,25 @@
  * `link` navegan a la Vista enlazada dentro del mismo archivo. El estado por defecto sale de
  * la geometria cacheada; colapsar relayoutea con ELK en un Web Worker creado de un Blob
  * del propio bundle y, si el navegador no lo permite, en el hilo principal.
- * `inspect <buscar|nodo|vista> <argumento> --workspace <ruta> [--json]` (ADR 0009, ver
+ * `inspect <buscar|nodo|vista> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json]` (ADR 0009, ver
  * `comando-inspect.ts`): consulta de solo lectura del Modelo; cada resultado trae id
  * cualificado, tipo y `archivo:linea` del Ubicador. `--json` sigue `salidaDeInspectSchema`
  * (contractVersion propio, independiente de `validate`); el skill lo documenta junto a `dev`.
- * `dev --workspace <ruta> [--port N]` (ADR 0009, ver `dev.ts`): servidor HTTP solo en 127.0.0.1 (puerto 4173 por
- * defecto) con vista previa en vivo por SSE y panel de issues; `iniciarDev` es la entrada programatica.
+ * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>]` (ADR 0009, ver `dev.ts`): servidor HTTP solo en
+ * 127.0.0.1 (puerto 4173 por defecto) con vista previa en vivo por SSE y panel de issues.
+ * `iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev>` es la entrada programatica (el comando solo
+ * parsea argumentos y la llama):
+ * - `OpcionesDeDev`: `workspace` (obligatorio), `temas` (= `--theme-path`, se fusiona antes del Workspace y
+ *   no se observa), `puerto` (0 elige uno libre), `debounceMs` (150 por defecto) y los seams `leer`,
+ *   `observar` y `shell` (para pruebas).
+ * - `ServidorDev`: `url` (`http://127.0.0.1:<puerto>/`) y `cerrar()` (cierra conexiones, libera el puerto
+ *   y deja de observar el disco).
+ * - Invariantes: solo escucha en 127.0.0.1 y responde 403 a cualquier peticion cuyo `Host` no sea
+ *   `127.0.0.1:<puerto>` o `localhost:<puerto>` (defensa contra DNS rebinding); con errores en el
+ *   Workspace conserva la Fuente y la geometria de la ultima Sesion sin errores.
+ * - Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (y no deja el
+ *   observador activo) y lanza si la lectura inicial del Workspace falla; las lecturas fallidas posteriores
+ *   se ignoran hasta el siguiente cambio. `run(['dev', ...])` los convierte en codigo 2.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> sesion -> render -> shell / cli`; la tuberia compilar, validar y layout vive en `sesion`.
@@ -66,12 +79,13 @@
 import { salidaDeValidateSchema } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
-import { abrirSesion } from 'sesion';
 
 import { inspeccionar } from './comando-inspect';
 import { exportarPng, exportarSvg } from './export';
 import { comandoDev } from './dev';
 import { exportarHtml } from './html';
+import { abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
+import type { ResultadoDeEjecucion } from './sesion-cli';
 import { generarSkill } from './skill';
 import { construirSalida, textoLegible } from './validate';
 import { leerSalidaDeBuild } from './vistas-dibujables';
@@ -81,11 +95,7 @@ import { escribirSalida, escribirTexto, leerFuentes, leerSalida, leerWorkspace }
 export { iniciarDev } from './dev';
 export type { OpcionesDeDev, ServidorDev } from './dev';
 
-export interface ResultadoDeEjecucion {
-  exitCode: 0 | 1 | 2;
-  stdout: string;
-  stderr: string;
-}
+export type { ResultadoDeEjecucion };
 
 /** Dependencias que entran como argumento; por defecto, las reales. */
 export interface Dependencias {
@@ -100,10 +110,6 @@ export interface Dependencias {
 }
 
 const MAX_ISSUES_POR_DEFECTO = 100;
-
-function uso(mensaje: string): ResultadoDeEjecucion {
-  return { exitCode: 2, stdout: '', stderr: `${mensaje}\n` };
-}
 
 type OpcionesParseadas = ReturnType<typeof leerOpciones>;
 
@@ -166,20 +172,11 @@ async function skill(
   }
   if (opciones.workspace === undefined) return uso('Falta --workspace <ruta>');
 
-  let sesion;
-  try {
-    sesion = abrirSesion(leer(opciones.workspace));
-  } catch (error) {
-    return uso(`No se pudo leer el Workspace: ${(error as Error).message}`);
-  }
-  if (sesion.fuente === undefined) {
-    // Sin catalogo valido no hay skill fiable: se muestran los issues, como `validate`.
-    return {
-      exitCode: 1,
-      stdout: textoLegible(construirSalida(await sesion.diagnosticar(), { maxIssues: MAX_ISSUES_POR_DEFECTO, strict: false })),
-      stderr: '',
-    };
-  }
+  const abierta = abrirSesionDe(leer, opciones.workspace);
+  if ('fallo' in abierta) return abierta.fallo;
+  const { sesion } = abierta;
+  // Sin catalogo valido no hay skill fiable: se muestran los issues, como `validate`.
+  if (sesion.fuente === undefined) return { exitCode: 1, stdout: await textoDeIssues(sesion), stderr: '' };
   const texto = generarSkill(sesion.fuente);
   if (opciones.out === undefined) return { exitCode: 0, stdout: texto, stderr: '' };
   try {
@@ -248,14 +245,9 @@ async function ejecutar(
   const raiz = opciones['workspace'] as string;
   const carpetaDeTemas = opciones['theme-path'] as string | undefined;
   const tema = opciones['theme'] as string | undefined;
-  let sesion;
-  try {
-    // El Workspace gana sobre `--theme-path` en caso de ruta repetida.
-    const archivos = { ...(carpetaDeTemas === undefined ? {} : leer(carpetaDeTemas)), ...leer(raiz) };
-    sesion = abrirSesion(archivos, tema === undefined ? {} : { tema });
-  } catch (error) {
-    return uso(`No se pudo leer el Workspace: ${(error as Error).message}`);
-  }
+  const abierta = abrirSesionDe(leer, raiz, carpetaDeTemas, tema === undefined ? {} : { tema });
+  if ('fallo' in abierta) return abierta.fallo;
+  const { sesion } = abierta;
 
   let issues;
   let archivosDeSalida: Record<string, string> = {};

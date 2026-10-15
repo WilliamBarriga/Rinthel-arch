@@ -30,13 +30,13 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   const nodos = recorrerNodos(fuente.model.nodes).map(({ nodo, ruta }) => ({ nodo, sitio: sitioDe([...ruta, 'name']) }));
   const vistas = fuente.views.map((vista, i) => ({ vista, sitio: sitioDe(['views', i, 'id']) }));
   const resumen = ({ nodo, sitio }: (typeof nodos)[number]) => ({ id: nodo.id, type: nodo.type, title: nodo.title, ...sitio });
-  const aristaDe = (arista: Arista, i: number) => ({
+  const aristaDe = (arista: Arista, i: number, sitioFijo?: Sitio) => ({
     from: arista.from.node,
     to: arista.to.node,
     ...(arista.from.attribute === undefined ? {} : { fromAttribute: arista.from.attribute }),
     ...(arista.to.attribute === undefined ? {} : { toAttribute: arista.to.attribute }),
     ...(arista.label === undefined ? {} : { label: arista.label }),
-    ...sitioDe(['model', 'edges', i, 'from', 'node']),
+    ...(sitioFijo ?? sitioDe(['model', 'edges', i, 'from', 'node'])),
   });
 
   if (comando === 'buscar') {
@@ -118,7 +118,11 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
         type: encontrada.vista.type,
         ...encontrada.sitio,
         nodos: nodos.filter(({ nodo }) => visibles.has(nodo.id)).map(resumen),
-        aristas: resuelta.edges.map((arista) => ({ ...aristaDe(arista, Math.max(indiceDeArista(arista), 0)), count: arista.count })),
+        aristas: resuelta.edges.map((arista) => {
+          const i = indiceDeArista(arista);
+          // Sin Arista del Modelo que la origine, el sitio es el de la Vista (no se inventa otra Arista).
+          return i < 0 ? { ...aristaDe(arista, 0, encontrada.sitio), count: arista.count } : { ...aristaDe(arista, i), count: arista.count };
+        }),
       },
     },
   };

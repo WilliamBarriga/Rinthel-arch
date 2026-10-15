@@ -1,6 +1,9 @@
+import { request } from 'node:http';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { iniciarDev } from 'cli';
+import { leerWorkspace as leerReal } from '../src/workspace';
 import type { ServidorDev } from 'cli';
 
 const BASE = `specification {
@@ -173,6 +176,37 @@ describe('dev', () => {
     expect(app).toContain('EventSource');
     expect((await (await fetch(`${servidor.url}worker.js`)).text()).length).toBeGreaterThan(1000);
   }, 30000);
+
+  it('rechaza peticiones cuyo Host no es 127.0.0.1 o localhost con el puerto del servidor (DNS rebinding)', async () => {
+    const servidor = await arrancar(entorno({ 'main.dg': BASE }));
+    const puerto = Number(new URL(servidor.url).port);
+    const conHost = (host: string | undefined) =>
+      new Promise<number>((ok, fallo) => {
+        const req = request({ host: '127.0.0.1', port: puerto, path: '/api/estado', headers: host === undefined ? {} : { host } }, (res) => {
+          res.resume();
+          ok(res.statusCode ?? 0);
+        });
+        req.on('error', fallo);
+        req.end();
+      });
+
+    expect(await conHost(`127.0.0.1:${puerto}`)).toBe(200);
+    expect(await conHost(`localhost:${puerto}`)).toBe(200);
+    expect(await conHost(`evil.example:${puerto}`)).toBe(403);
+    expect(await conHost(`127.0.0.1.evil.example:${puerto}`)).toBe(403);
+    expect(await conHost('127.0.0.1:1')).toBe(403);
+    expect(await conHost('127.0.0.1')).toBe(403);
+  });
+
+  it('--theme-path (opcion temas) aporta Temas antes del Workspace', async () => {
+    const env = entorno({ 'main.dg': BASE });
+    const temas = join(import.meta.dirname, 'fixtures', 'temas-extra');
+    const servidor = await iniciarDev({ workspace: '/ws', temas, leer: (raiz) => (raiz === '/ws' ? env.leer() : leerReal(raiz)), observar: env.observar, shell, puerto: 0 });
+    abiertos.push(servidor);
+
+    const fuente = (await estado(servidor)).fuente as unknown as { themes: { name: string }[] };
+    expect(fuente.themes.map(({ name }) => name)).toContain('corporativo');
+  });
 
   it('cerrar libera el puerto y deja de observar', async () => {
     const env = entorno({ 'main.dg': BASE });

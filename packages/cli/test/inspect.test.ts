@@ -1,6 +1,7 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { INSPECT_CONTRACT_VERSION, salidaDeInspectSchema } from 'canonico';
@@ -136,6 +137,40 @@ describe('inspect vista', () => {
   });
 });
 
+describe('inspect --theme-path', () => {
+  it('acepta --theme-path como validate y build', async () => {
+    const temas = join(import.meta.dirname, 'fixtures', 'temas-extra');
+    const r = await run(['inspect', 'buscar', 'db', '--workspace', workspace(), '--theme-path', temas]);
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toContain('sistema.db');
+  });
+});
+
+describe('inspect vista: sitio de Aristas elevadas', () => {
+  it('una Arista elevada por un Grupo colapsado apunta a una Arista del Modelo que fusiona, no a la primera', async () => {
+    const texto = `specification { node servicio }
+model {
+  servicio otro "Otro"
+  servicio grupo "Grupo" {
+    servicio a "A"
+    servicio b "B"
+  }
+  otro -> otro
+  otro -> grupo.a
+}
+view v {
+  type architecture
+  include **
+  collapsed grupo
+}
+`;
+    const { salida } = await json(['vista', 'v'], workspace(texto));
+    const aristas = (salida as { vista: { aristas: { from: string; to: string; line: number }[] } }).vista.aristas;
+    const elevada = aristas.find(({ to }) => to === 'grupo');
+    expect(elevada?.line).toBe(9);
+  });
+});
+
 describe('inspect errores de uso', () => {
   it('sin subcomando, subcomando desconocido, sin argumento o sin --workspace sale 2', async () => {
     const raiz = workspace();
@@ -152,4 +187,22 @@ describe('inspect errores de uso', () => {
     expect(r.stdout).toBe('');
     expect(r.stderr).toContain('E_DANGLING_EDGE');
   });
+});
+
+describe('inspect rendimiento', () => {
+  it('buscar sobre examples/un proyecto externo responde en tiempo comparable a validate', async () => {
+    const raiz = resolve(import.meta.dirname, '../../../examples/un proyecto externo');
+    const medir = async (args: string[]): Promise<{ ms: number; exitCode: number }> => {
+      const t0 = performance.now();
+      const r = await run(args);
+      return { ms: performance.now() - t0, exitCode: r.exitCode };
+    };
+    await medir(['validate', '--workspace', raiz]); // calienta modulos y caches de arranque
+    const validate = Math.min((await medir(['validate', '--workspace', raiz])).ms, (await medir(['validate', '--workspace', raiz])).ms);
+    const inspect = await medir(['inspect', 'buscar', 'a', '--workspace', raiz]);
+
+    expect(inspect.exitCode).toBe(0);
+    // Holgado: inspect no paga layout, asi que no debe pasar de ~3x validate (mas un margen fijo contra ruido).
+    expect(inspect.ms).toBeLessThan(validate * 3 + 500);
+  }, 60000);
 });

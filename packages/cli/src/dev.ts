@@ -15,6 +15,7 @@
  */
 import { createServer } from 'node:http';
 import type { ServerResponse } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -26,6 +27,8 @@ import { abrirSesion } from 'sesion';
 import type { Sesion } from 'sesion';
 
 import { empaquetarShellDev } from './dev-shell';
+import { leerConTemas, uso as usoComun } from './sesion-cli';
+import type { ResultadoDeEjecucion } from './sesion-cli';
 import { leerWorkspace } from './workspace';
 
 /** Bundles del shell: pagina (React + shell) y codigo del Web Worker de layout. */
@@ -36,6 +39,8 @@ export interface ShellDev {
 
 export interface OpcionesDeDev {
   workspace: string;
+  /** Carpeta de Temas (`--theme-path`): se fusiona antes del Workspace, que gana en rutas repetidas. No se observa. */
+  temas?: string;
   /** Puerto en 127.0.0.1; 0 elige uno libre. */
   puerto?: number;
   /** Espera tras el ultimo cambio antes de recompilar (150 ms por defecto). */
@@ -81,8 +86,9 @@ const PAGINA = `<!doctype html>
 `;
 
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, puerto = 0, debounceMs = 150, leer = leerWorkspace, observar = observarDisco, shell = empaquetarShellDev } = opciones;
+  const { workspace, temas, puerto = 0, debounceMs = 150, leer: leerBase = leerWorkspace, observar = observarDisco, shell = empaquetarShellDev } = opciones;
   const raizAbsoluta = resolve(workspace);
+  const leer = (raiz: string): ArchivosDelWorkspace => leerConTemas(leerBase, raiz, temas);
   const bundles = await shell();
 
   let version = 0;
@@ -161,6 +167,13 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   const dejarDeObservar = observar(workspace, alCambiar);
 
   const servidor = createServer((req, res) => {
+    // Contra DNS rebinding: solo se atiende a quien llega por 127.0.0.1 o localhost con el puerto del servidor.
+    const { port } = servidor.address() as AddressInfo;
+    if (req.headers.host !== `127.0.0.1:${port}` && req.headers.host !== `localhost:${port}`) {
+      cabecera(res, 'text/plain', 403);
+      res.end('Host no permitido');
+      return;
+    }
     const ruta = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
     if (ruta === '/') {
       cabecera(res, 'text/html');
@@ -219,24 +232,18 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   };
 }
 
-export interface ResultadoDeDev {
-  exitCode: 0 | 2;
-  stdout: string;
-  stderr: string;
-}
-
 /**
- * `dev --workspace <ruta> [--port N]`: arranca el servidor y vuelve con la URL;
+ * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>]`: arranca el servidor y vuelve con la URL;
  * el servidor mantiene vivo el proceso hasta que se mata.
  */
 export async function comandoDev(
   args: readonly string[],
   dependencias: Pick<OpcionesDeDev, 'leer' | 'observar' | 'shell'> = {},
-): Promise<ResultadoDeDev> {
-  const uso = (mensaje: string): ResultadoDeDev => ({ exitCode: 2, stdout: '', stderr: `${mensaje}\n` });
+): Promise<ResultadoDeEjecucion> {
+  const uso = usoComun;
   let valores;
   try {
-    valores = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, port: { type: 'string' } }, strict: true }).values;
+    valores = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, port: { type: 'string' }, 'theme-path': { type: 'string' } }, strict: true }).values;
   } catch (error) {
     return uso((error as Error).message);
   }
@@ -244,7 +251,7 @@ export async function comandoDev(
   const puerto = Number(valores.port ?? 4173);
   if (!Number.isInteger(puerto) || puerto < 0 || puerto > 65535) return uso('--port debe ser un entero entre 0 y 65535');
   try {
-    const servidor = await iniciarDev({ ...dependencias, workspace: valores.workspace, puerto });
+    const servidor = await iniciarDev({ ...dependencias, workspace: valores.workspace, puerto, ...(valores['theme-path'] === undefined ? {} : { temas: valores['theme-path'] }) });
     return { exitCode: 0, stdout: `diagrams dev escuchando en ${servidor.url}\n`, stderr: '' };
   } catch (error) {
     return uso(`No se pudo iniciar dev: ${(error as Error).message}`);

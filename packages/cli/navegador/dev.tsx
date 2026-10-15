@@ -102,8 +102,14 @@ function PanelDeIssues({ issues }: { issues: readonly IssueDeDev[] }): ReactElem
   );
 }
 
+/**
+ * Adaptador unico del hash: `useEstadoEnHash` se suscribe a `hashchange`/`popstate` por el, de modo
+ * que atras/adelante o editar el hash a mano cambia la Vista; al recompilar, `Vista` no se
+ * remonta, asi que camara, colapso y seleccion se conservan.
+ */
+const hash = hashDelNavegador(window);
+
 function Vista({ fuente, estado, geometrias, layout }: { fuente: FuenteCanonica; estado: Estado; geometrias: Record<string, GeometriaCacheada>; layout: AdaptadorDeLayout }): ReactElement | null {
-  const hash = useMemo(() => hashDelNavegador(window), []);
   const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
   const { width, height } = useTamano();
   const iconos = useMemo<IconProvider>(() => ({ resolve: (clave) => estado.iconos[clave], keys: () => Object.keys(estado.iconos) }), [estado.iconos]);
