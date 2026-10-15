@@ -11,8 +11,11 @@
     "build": "pnpm -r build",
     "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
     "test": "pnpm build && pnpm typecheck && pnpm -r test && vitest run",
+    "check": "pnpm typecheck && pnpm check:deps && pnpm check:emojis",
     "check:deps": "vitest run tests/dependencias.test.ts",
-    "bench": "pnpm build && node bench/ejecutar.ts"
+    "bench": "pnpm build && node bench/ejecutar.ts",
+    "check:emojis": "node scripts/check-emojis.ts",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

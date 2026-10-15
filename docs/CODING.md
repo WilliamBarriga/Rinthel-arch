@@ -1,6 +1,6 @@
 # Reglas de codigo
 
-Vocabulario de diseno: **Modulo**, **Interfaz**, **Seam**, **Adaptador**, **Profundidad** (skill `codebase-design`). Vocabulario de dominio: `CONTEXT.md`.
+Vocabulario de diseno: **Modulo**, **Interfaz**, **Seam**, **Adaptador**, **Profundidad** (skill `codebase-design`). Vocabulario de dominio: `CONTEXT.md`. Decisiones de contrato por modulo: `docs/adr/`.
 
 ## Estructura
 
@@ -29,3 +29,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (previsto
 - Fakes en memoria (adaptadores reales de bajo costo) antes que mocks; mock solo para I/O que no se puede simular.
 - Compilador: texto DSL entra, Fuente canonica sale; se compara contra la salida publica.
 - Runner de pruebas: Vitest. Build de paquetes: tsup. Gestor: pnpm workspaces, sin orquestador de tareas.
+
+## Chequeos automaticos
+
+La direccion de dependencias, los imports internos entre paquetes y la superficie `exports` los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.
