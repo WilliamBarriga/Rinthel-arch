@@ -602,7 +602,10 @@ describe('compile: Workspace multiarchivo', () => {
       ['c.dg', 'model { extend api { servicio cola } api -> db }'],
     ];
     const resultados = [archivos, [...archivos].reverse(), [archivos[1], archivos[2], archivos[0]]].map(
-      (orden) => compile(Object.fromEntries(orden as [string, string][])),
+      (orden) => {
+        const { ubicar: _ubicar, ...resultado } = compile(Object.fromEntries(orden as [string, string][]));
+        return resultado;
+      },
     );
 
     expect(resultados[0]?.issues).toEqual([]);

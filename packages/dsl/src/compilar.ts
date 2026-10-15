@@ -15,6 +15,7 @@ import type {
   Paso,
   ReferenciaOpaca,
   TipoDeNodo,
+  Ubicador,
   Vista,
 } from 'canonico';
 import {
@@ -51,6 +52,8 @@ export interface ResultadoDeCompilacion {
   issues: Issue[];
   /** Posicion de cada override con `pin`, en orden de aparicion. */
   pins: PosicionDePin[];
+  /** Donde se escribio cada valor de la Fuente canonica; presente junto a `canonico`. */
+  ubicar?: Ubicador;
 }
 
 let memoServicios: LangiumCoreServices | undefined;
@@ -175,6 +178,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     canonico: fuenteCanonicaSchema.parse(fuente),
     issues,
     pins,
+    ubicar,
   };
 }
 

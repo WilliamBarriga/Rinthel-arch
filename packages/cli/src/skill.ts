@@ -1,4 +1,11 @@
-import { CODIGOS, CONTRACT_VERSION, DESCRIPCION_DE_CODIGO, salidaDeValidateJsonSchema } from 'canonico';
+import {
+  CODIGOS,
+  CONTRACT_VERSION,
+  DESCRIPCION_DE_CODIGO,
+  INSPECT_CONTRACT_VERSION,
+  salidaDeInspectJsonSchema,
+  salidaDeValidateJsonSchema,
+} from 'canonico';
 import type { FuenteCanonica } from 'canonico';
 
 /** Celda de tabla Markdown: sin saltos de linea ni barras que rompan la fila. */
@@ -47,7 +54,7 @@ export function generarSkill(fuente: FuenteCanonica): string {
 
   return `---
 name: diagrams
-description: Escribir y corregir los archivos .dg (DSL de diagramas) de este proyecto con el bucle diagrams validate / correccion. Usalo al crear o editar Nodos, Aristas, Vistas o Temas.
+description: Escribir y corregir los archivos .dg (DSL de diagramas) de este proyecto con el bucle diagrams inspect, editar, validate. Usalo al crear o editar Nodos, Aristas, Vistas o Temas.
 ---
 
 # Diagramas de este proyecto
@@ -56,10 +63,13 @@ Los diagramas se escriben en archivos \`.dg\` del Workspace. Es la unica fuente 
 
 ## Bucle de trabajo
 
-1. Edita los \`.dg\`.
-2. Ejecuta \`diagrams validate --workspace <ruta> --json\`.
-3. Si \`ok\` es \`false\`, corrige cada issue (empieza por los \`fix\`, que son ediciones exactas del texto) y vuelve al paso 2.
-4. Termina cuando \`ok\` es \`true\`. \`diagrams build\` y \`diagrams export\` generan geometria, SVG y PNG.
+1. Consulta el Modelo con \`diagrams inspect\` para saber que ids existen, donde estan escritos y como se conectan (no adivines ids ni releas todos los \`.dg\`).
+2. Edita los \`.dg\`.
+3. Ejecuta \`diagrams validate --workspace <ruta> --json\`.
+4. Si \`ok\` es \`false\`, corrige cada issue (empieza por los \`fix\`, que son ediciones exactas del texto) y vuelve al paso 3.
+5. Termina cuando \`ok\` es \`true\`. \`diagrams build\` y \`diagrams export\` generan geometria, SVG y PNG.
+
+Para ver el resultado mientras se edita (persona o agente), \`diagrams dev\` abre el bucle en vivo (ver abajo). Si dos autores tocan el mismo \`.dg\`, gana la ultima escritura; la reconciliacion es de git.
 
 Este skill se genera: tras cambiar los Tipos de nodo, Temas o codigos, regeneralo con \`diagrams skill --workspace <ruta> --out <archivo>\`.
 
@@ -108,6 +118,32 @@ Esquema (JSON Schema derivado del esquema Zod del contrato):
 \`\`\`json
 ${JSON.stringify(salidaDeValidateJsonSchema(), null, 2)}
 \`\`\`
+
+## Consultar el Modelo (inspect)
+
+Solo lectura; nunca escribe. Cada resultado trae el id cualificado, el tipo y \`archivo:linea\` de donde se escribio.
+
+\`\`\`text
+diagrams inspect buscar <texto> --workspace <ruta> [--json]
+diagrams inspect nodo <id> --workspace <ruta> [--json]
+diagrams inspect vista <id> --workspace <ruta> [--json]
+\`\`\`
+
+- \`buscar\` encuentra Nodos por id parcial o titulo, y Vistas por id (sin distinguir mayusculas).
+- \`nodo\` devuelve el Nodo, su padre e hijos, sus Atributos, las Aristas que entran y salen, y las Vistas que lo muestran.
+- \`vista\` devuelve los Nodos y Aristas visibles de la Vista en su estado inicial.
+- Sin \`--json\` sale texto legible. Con \`--json\`, stdout es exactamente un objeto (contractVersion ${INSPECT_CONTRACT_VERSION}, independiente del de validate) con \`comando\` = \`buscar\`, \`nodo\` o \`vista\`.
+- Codigos de salida: 0 hay respuesta (\`buscar\` sin coincidencias tambien), 1 el Nodo o la Vista no existe (stderr sugiere ids cercanos) o el Workspace tiene errores (corrigelos con validate), 2 fallo de uso o interno.
+
+Esquema de \`inspect --json\` (JSON Schema derivado del esquema Zod):
+
+\`\`\`json
+${JSON.stringify(salidaDeInspectJsonSchema(), null, 2)}
+\`\`\`
+
+## Bucle en vivo (dev)
+
+\`diagrams dev --workspace <ruta>\` levanta un servidor local (solo en 127.0.0.1) que sirve el shell. Observa el Workspace y, ante cada cambio en los \`.dg\` (con un debounce de ~150 ms), recompila y empuja al navegador la Vista y los issues por Server-Sent Events. La pantalla muestra la Vista elegida por el hash de la URL (\`#<vista>\`) y un panel de issues clicables (\`archivo:linea\`). Un agente no necesita abrirlo: usa inspect y validate; \`dev\` es para que la persona vea el resultado en vivo. No hay bloqueos de edicion ni estado compartido: el DSL en git es el unico punto de coordinacion.
 
 ## Codigos de issue
 

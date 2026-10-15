@@ -53,6 +53,10 @@
  * `link` navegan a la Vista enlazada dentro del mismo archivo. El estado por defecto sale de
  * la geometria cacheada; colapsar relayoutea con ELK en un Web Worker creado de un Blob
  * del propio bundle y, si el navegador no lo permite, en el hilo principal.
+ * `inspect <buscar|nodo|vista> <argumento> --workspace <ruta> [--json]` (ADR 0009, ver
+ * `comando-inspect.ts`): consulta de solo lectura del Modelo; cada resultado trae id
+ * cualificado, tipo y `archivo:linea` del Ubicador. `--json` sigue `salidaDeInspectSchema`
+ * (contractVersion propio, independiente de `validate`); el skill lo documenta junto a `dev`.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> sesion -> render -> shell / cli`; la tuberia compilar, validar y layout vive en `sesion`.
@@ -62,6 +66,7 @@ import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
 import { abrirSesion } from 'sesion';
 
+import { inspeccionar } from './comando-inspect';
 import { exportarPng, exportarSvg } from './export';
 import { exportarHtml } from './html';
 import { generarSkill } from './skill';
@@ -116,6 +121,7 @@ export async function run(
   dependencias: Dependencias = {},
 ): Promise<ResultadoDeEjecucion> {
   const [comando, ...resto] = argv;
+  if (comando === 'inspect') return inspeccionar(resto, dependencias);
   if (comando !== 'validate' && comando !== 'build' && comando !== 'export' && comando !== 'skill') {
     return uso(
       `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export|skill> --workspace <ruta>`,

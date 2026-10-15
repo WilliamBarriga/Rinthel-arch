@@ -1,5 +1,5 @@
 import { CODIGOS, TEMA_NEUTRO, resolveView } from 'canonico';
-import type { FuenteCanonica, GeometriaCacheada, Issue, Tema, Vista } from 'canonico';
+import type { FuenteCanonica, GeometriaCacheada, Issue, Tema, Ubicador, Vista } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
@@ -24,6 +24,8 @@ export interface ResultadoDeConstruir {
 export interface Sesion {
   /** Fuente canonica; ausente si la compilacion tiene errores. */
   readonly fuente: FuenteCanonica | undefined;
+  /** Ubicador de la Fuente (archivo y rango de cada valor); ausente junto a `fuente`. */
+  readonly ubicar: Ubicador | undefined;
   /** Issues de compilacion mas `W_OVERLAPPING_PINS` (layout solo en Vistas con 2 o mas Pins). */
   diagnosticar(): Promise<Issue[]>;
   /** Archivos de `build` (geometria de todas las Vistas) y los issues. */
@@ -124,6 +126,7 @@ function crear(
 
   const sesion: Sesion = {
     fuente,
+    ubicar: compilado.ubicar,
     async diagnosticar() {
       if (fuente === undefined) return [...compilado.issues];
       const conPins = fuente.views.filter(({ id }) => pins.filter((pin) => pin.view === id).length >= 2);

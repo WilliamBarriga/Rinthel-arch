@@ -67,6 +67,7 @@ function deVista(datos: DatosDelUbicador, indice: number, ruta: Ruta): SitioDeTe
   const [campo, i, ...cola] = ruta;
   const props = ast.props;
 
+  if (campo === 'id') return sitio(archivo, rangoDe(ast, 'name'));
   if (campo === 'theme') {
     const tema = props.find((prop) => prop.$type === 'ViewTheme');
     return tema === undefined ? null : sitio(archivo, rangoDe(tema, 'value'));
