@@ -55,6 +55,7 @@ interface Estado {
   issues: { file: string; line: number; severity: string; code: string; href: string }[];
   vistas: string[];
   hashes: Record<string, string>;
+  archivosDeVista: Record<string, string>;
 }
 
 const abiertos: ServidorDev[] = [];
@@ -232,6 +233,13 @@ describe('dev', () => {
     it('el estado expone el hash de cada archivo', async () => {
       const servidor = await arrancar(entorno({ 'main.dg': BASE }));
       expect(Object.keys((await estado(servidor)).hashes)).toEqual(['main.dg']);
+    });
+
+    it('el estado dice en que archivo esta cada Vista, para elegir el hash', async () => {
+      const servidor = await arrancar(entorno({ 'main.dg': BASE }));
+      const { archivosDeVista, hashes } = await estado(servidor);
+      expect(archivosDeVista).toEqual({ general: 'main.dg' });
+      expect(hashes[archivosDeVista['general']!]).toBeDefined();
     });
 
     it('escribe el Pin en el .dg, recompila y responde con la version nueva', async () => {

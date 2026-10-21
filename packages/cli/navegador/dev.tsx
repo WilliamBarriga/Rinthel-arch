@@ -2,15 +2,16 @@
  * Entrada de navegador de `diagrams dev`: pagina viva. Pide el estado a
  * `/api/estado`, se suscribe a `/eventos` (SSE) y, cuando llega un estado
  * nuevo, pide la geometria de cada Vista a `/api/vista/<id>`. Muestra la Vista
- * elegida por el hash de URL y un panel de issues clicables. No es parte de la
+ * elegida por el hash de URL y un panel de issues clicables. Arrastrar un Nodo envia
+ * `POST /api/pin` con el hash del archivo de la Vista; un 409 recarga el estado y avisa. No es parte de la
  * interfaz del paquete: la empaqueta `dev-shell.ts`.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import type { FuenteCanonica, GeometriaCacheada, IconProvider } from 'canonico';
-import { VistaInteractiva, adaptadorDeWorker, hashDelNavegador, useEstadoEnHash } from 'shell';
+import { VistaInteractiva, adaptadorDeWorker, crearEnviadorDePin, hashDelNavegador, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 
 interface IssueDeDev {
@@ -29,6 +30,10 @@ interface Estado {
   fuente?: FuenteCanonica;
   iconos: Record<string, string>;
   vistas: string[];
+  /** Hash del contenido de cada archivo del Workspace. */
+  hashes: Record<string, string>;
+  /** Archivo en que se declara cada Vista. */
+  archivosDeVista: Record<string, string>;
   issues: IssueDeDev[];
 }
 
@@ -42,15 +47,19 @@ function useTamano(): { width: number; height: number } {
   return tamano;
 }
 
-/** Estado vigente: el inicial y cada evento SSE. */
-function useEstado(): Estado | undefined {
+/** Estado vigente (el inicial y cada evento SSE) y `recargar`, que lo pide de nuevo a `/api/estado`. */
+function useEstado(): { estado: Estado | undefined; recargar: () => Promise<void> } {
   const [estado, setEstado] = useState<Estado>();
   useEffect(() => {
     const origen = new EventSource('/eventos');
     origen.onmessage = (evento: MessageEvent<string>) => setEstado(JSON.parse(evento.data) as Estado);
     return () => origen.close();
   }, []);
-  return estado;
+  const recargar = async (): Promise<void> => {
+    const nuevo = (await (await fetch('/api/estado')).json()) as Estado;
+    setEstado((previo) => (previo === undefined || nuevo.version >= previo.version ? nuevo : previo));
+  };
+  return { estado, recargar };
 }
 
 /** Geometria cacheada de cada Vista para la version vigente del estado. */
@@ -83,6 +92,15 @@ function layoutEnWorker(): AdaptadorDeLayout {
   };
 }
 
+function Aviso({ texto }: { texto: string | undefined }): ReactElement | null {
+  if (texto === undefined) return null;
+  return (
+    <div data-aviso="pin" role="alert" style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', padding: '8px 16px', borderRadius: 6, background: 'rgba(30,30,30,.94)', color: '#ffd180', font: '13px/1.5 monospace' }}>
+      {texto}
+    </div>
+  );
+}
+
 function PanelDeIssues({ issues }: { issues: readonly IssueDeDev[] }): ReactElement | null {
   if (issues.length === 0) return null;
   return (
@@ -109,18 +127,51 @@ function PanelDeIssues({ issues }: { issues: readonly IssueDeDev[] }): ReactElem
  */
 const hash = hashDelNavegador(window);
 
-function Vista({ fuente, estado, geometrias, layout }: { fuente: FuenteCanonica; estado: Estado; geometrias: Record<string, GeometriaCacheada>; layout: AdaptadorDeLayout }): ReactElement | null {
+const enviarPin = crearEnviadorDePin();
+
+interface PropsDeVista {
+  fuente: FuenteCanonica;
+  estado: Estado;
+  geometrias: Record<string, GeometriaCacheada>;
+  layout: AdaptadorDeLayout;
+  /** Arrastre soltado: la Vista dibujada y el Nodo; resuelve `false` si se rechazo. */
+  alMover: (vista: string, mov: { id: string; x: number; y: number }) => Promise<boolean>;
+}
+
+function Vista({ fuente, estado, geometrias, layout, alMover }: PropsDeVista): ReactElement | null {
   const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
   const { width, height } = useTamano();
   const iconos = useMemo<IconProvider>(() => ({ resolve: (clave) => estado.iconos[clave], keys: () => Object.keys(estado.iconos) }), [estado.iconos]);
   const cachedGeometries = useMemo(() => Object.fromEntries(Object.entries(geometrias).map(([id, g]) => [id, g.geometry])), [geometrias]);
   const tema = fuente.themes.find(({ name }) => name === geometrias[props.view]?.theme) ?? fuente.themes[0];
   if (tema === undefined) return null;
-  return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} icons={iconos} width={width} height={height} cachedGeometries={cachedGeometries} />;
+  return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} icons={iconos} width={width} height={height} cachedGeometries={cachedGeometries} onMoveNode={(mov) => alMover(props.view, mov)} />;
 }
 
 function App(): ReactElement {
-  const estado = useEstado();
+  const { estado, recargar } = useEstado();
+  const [aviso, setAviso] = useState<string>();
+  useEffect(() => {
+    if (aviso === undefined) return;
+    const t = setTimeout(() => setAviso(undefined), 6000);
+    return () => clearTimeout(t);
+  }, [aviso]);
+  const vivo = useRef(estado);
+  vivo.current = estado;
+  const alMover = async (vista: string, { id, x, y }: { id: string; x: number; y: number }): Promise<boolean> => {
+    const actual = vivo.current;
+    const archivo = actual?.archivosDeVista[vista];
+    const hash = archivo === undefined ? undefined : actual?.hashes[archivo];
+    if (hash === undefined) {
+      setAviso('No se puede mover: la Vista no tiene archivo conocido');
+      return false;
+    }
+    const r = await enviarPin({ vista, nodo: id, x, y, hash });
+    if (r.ok) return true;
+    setAviso(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `No se pudo mover el Pin: ${r.mensaje}`);
+    if (r.desactualizado) await recargar().catch(() => undefined);
+    return false;
+  };
   const geometrias = useGeometrias(estado);
   // La ultima Vista dibujable se conserva mientras llega la nueva.
   const [ultima, setUltima] = useState<{ fuente: FuenteCanonica; estado: Estado; geometrias: Record<string, GeometriaCacheada> }>();
@@ -130,7 +181,8 @@ function App(): ReactElement {
   const layout = useMemo(layoutEnWorker, []);
   return (
     <>
-      {ultima === undefined ? null : <Vista {...ultima} layout={layout} />}
+      {ultima === undefined ? null : <Vista {...ultima} layout={layout} alMover={alMover} />}
+      <Aviso texto={aviso} />
       <PanelDeIssues issues={estado?.issues ?? []} />
     </>
   );
