@@ -16,4 +16,4 @@ Subcomandos de solo lectura: `buscar <texto>`, `nodo <id>`, `vista <id>`. Texto 
 
 ## Fuera de alcance
 
-La edicion estructurada del DSL (aplicar `fix`, mover Pins desde el shell, formateador) queda aparcada: es la unica capacidad que escribe en disco y roza el ADR 0008 (`validate --fix` descartado). Se decide cuando `dev` este en uso.
+La edicion estructurada del DSL (aplicar `fix`, mover Pins desde el shell, formateador) queda aparcada: es la unica capacidad que escribe en disco y roza el ADR 0008 (`validate --fix` descartado). Decidido en el ADR 0010.
