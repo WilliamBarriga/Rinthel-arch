@@ -5,7 +5,7 @@
  * `Sesion`; aqui solo viven los adaptadores (HTTP, observador de disco).
  *
  * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),
- * `/api/estado` (JSON, con `hashes` por archivo), `POST /api/pin` (mover un Pin, ADR 0010), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
+ * `/api/estado` (JSON, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/pin` (mover un Pin, ADR 0010), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
  * envia el estado al conectar y tras cada recompilacion).
  *
  * Invariantes: sin bloqueos ni estado compartido; gana la ultima escritura. Las
@@ -136,6 +136,12 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       fuente,
       iconos,
       vistas: fuente?.views.map(({ id }) => id) ?? [],
+      archivosDeVista: Object.fromEntries(
+        (fuente?.views ?? []).flatMap(({ id }, i) => {
+          const sitio = buena?.sesion.ubicar?.(['views', i, 'id']);
+          return sitio === null || sitio === undefined ? [] : [[id, sitio.file] as const];
+        }),
+      ),
       hashes: Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)])),
       issues: issues.map((issue) => ({
         ...issue,

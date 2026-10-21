@@ -44,6 +44,12 @@
  * incluido (el HTML de `cli export --format html` es estatico, sin servidor ni
  * watch, y no pasa `themeUpdates`); la historia 35 queda cubierta por el puerto y
  * sus pruebas, y el watch/dev server queda fuera de alcance.
+ * Arrastre de Nodos (solo bajo `dev`): con `onMoveNode({id, x, y})` los Nodos se arrastran y al
+ * soltar avisan su posicion nueva (relativa al Grupo padre, unidades de la geometria; es el
+ * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve
+ * si el aviso resuelve `false`. Sin `onMoveNode` (export estatico) no hay arrastre de Nodos.
+ * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
+ * `{ok:true}` o `{ok:false, desactualizado, mensaje}` (409 por hash); nunca lanza.
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *
@@ -98,6 +104,8 @@ export { deserializarEstado, hashDelNavegador, serializarEstado, vistaPorDefecto
 export type { AdaptadorDeHash, EstadoDeShell } from './hash';
 export { useEstadoEnHash } from './estado-en-hash';
 export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-hash';
+export { crearEnviadorDePin } from './enviar-pin';
+export type { EnviadorDePin, IntencionDePinEnviada, ResultadoDeEnvioDePin } from './enviar-pin';
 export { adaptadorDeWorker } from './layout-en-worker';
 export { servirLayout } from './servir-layout';
 export type { PuertoDeMensajes } from './layout-en-worker';
