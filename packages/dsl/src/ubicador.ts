@@ -6,7 +6,15 @@
 import type { FuenteCanonica, SitioDeTexto, TextRange, Ubicador } from 'canonico';
 
 import type { Edge, Element, NodeTypeDecl, View } from './generated/ast';
-import { rangoDe, rangoDeIndice } from './posiciones';
+import { aRango, puntoVacio, rangoDe, rangoDeIndice } from './posiciones';
+import { GrammarUtils } from 'langium';
+import type { AstNode } from 'langium';
+
+/** Punto vacio justo antes de la `}` final del bloque (los bloques de Vista terminan en `}`). */
+function antesDeLaLlave(nodo: AstNode): TextRange {
+  const fin = nodo.$cstNode?.range.end ?? { line: 0, character: 1 };
+  return puntoVacio({ line: fin.line, character: fin.character - 1 });
+}
 
 export interface DatosDelUbicador {
   fuente: FuenteCanonica;
@@ -73,8 +81,19 @@ function deVista(datos: DatosDelUbicador, indice: number, ruta: Ruta): SitioDeTe
     return tema === undefined ? null : sitio(archivo, rangoDe(tema, 'value'));
   }
   if (campo === 'overrides') {
+    // `['views', n, 'overrides']` sin indice: donde insertar un override nuevo (antes del `}` de la Vista).
+    if (i === undefined) return sitio(archivo, antesDeLaLlave(ast));
     const override = props.filter((prop) => prop.$type === 'NodeOverride')[i as number];
     if (override === undefined) return null;
+    if (cola[0] === 'pin') {
+      const pin = override.props.find((prop) => prop.$type === 'OverridePin');
+      if (pin?.$cstNode !== undefined) return sitio(archivo, aRango(pin.$cstNode.range));
+      // Sin pin: punto vacio donde insertarlo, tras la ultima propiedad o tras la `{`.
+      const ultima = override.props.at(-1)?.$cstNode;
+      if (ultima !== undefined) return sitio(archivo, puntoVacio(ultima.range.end));
+      const llave = GrammarUtils.findNodesForKeyword(override.$cstNode, '{')[0];
+      return llave === undefined ? null : sitio(archivo, puntoVacio(llave.range.end));
+    }
     if (cola[0] === 'node') return sitio(archivo, rangoDe(override, 'node'));
     const color = override.props.find((prop) => prop.$type === 'OverrideColor');
     return color === undefined ? null : sitio(archivo, rangoDe(color, 'value'));
