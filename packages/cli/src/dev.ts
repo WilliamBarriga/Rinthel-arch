@@ -1,11 +1,11 @@
 /**
- * Comando `dev` (ADR 0009): servidor HTTP de Node, solo en 127.0.0.1, que sirve
+ * Comando `dev` (ADR 0005): servidor HTTP de Node, solo en 127.0.0.1, que sirve
  * el shell, el estado del Workspace y la geometria por Vista, y empuja los
  * cambios por Server-Sent Events. La tuberia compilar, validar y layout es la
  * `Sesion`; aqui solo viven los adaptadores (HTTP, observador de disco).
  *
  * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),
- * `/api/estado` (JSON, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/pin` (mover un Pin, ADR 0010), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
+ * `/api/estado` (JSON, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/pin` (mover un Pin, ADR 0005), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
  * envia el estado al conectar y tras cada recompilacion).
  *
  * Invariantes: sin bloqueos ni estado compartido; gana la ultima escritura. Las
@@ -199,7 +199,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     res.end(JSON.stringify(cuerpo));
   };
 
-  /** `POST /api/pin`: mueve un Pin escribiendo el .dg (ADR 0010). Lee el disco fresco y lo valida antes de escribir. */
+  /** `POST /api/pin`: mueve un Pin escribiendo el .dg (ADR 0005). Lee el disco fresco y lo valida antes de escribir. */
   const moverPin = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
     const origen = req.headers.origin;
     const { port } = servidor.address() as AddressInfo;

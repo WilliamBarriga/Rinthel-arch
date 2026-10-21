@@ -1,5 +1,5 @@
 /**
- * Animacion del morph entre dos geometrias (ADR 0004). El reloj es el de
+ * Animacion del morph entre dos geometrias (ADR 0003). El reloj es el de
  * `requestAnimationFrame`; sin el, o con duracion 0, no hay animacion.
  */
 import { useCallback, useEffect, useState } from 'react';

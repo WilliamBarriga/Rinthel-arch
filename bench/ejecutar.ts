@@ -1,11 +1,11 @@
 /**
- * Benchmark de los umbrales del ADR 0004. Fuera de la suite por defecto:
+ * Benchmark de los umbrales del ADR 0003. Fuera de la suite por defecto:
  * `pnpm bench` (construye los paquetes y corre todo) o, ya construido,
  * `node bench/ejecutar.ts [escenario...]` con escenarios entre `build-10k`,
  * `relayout-1k`, `colapso-5k` y `bundle`. Cada escenario corre en un proceso
  * aparte (memoria maxima propia) y el exit code es 1 si algun umbral falla.
  *
- * Los umbrales son los del ADR 0004 (con su enmienda): 2.5 GiB de RSS en el
+ * Los umbrales son los del ADR 0003 (con su enmienda): 2.5 GiB de RSS en el
  * build de 10k Nodos y 500 KiB por artefacto de bundle. Los tiempos dependen de la maquina y de su carga.
  */
 import { spawnSync } from 'node:child_process';
@@ -58,7 +58,7 @@ for (const escenario of escenarios) {
 }
 
 let fallos = 0;
-process.stdout.write('\nUmbrales (ADR 0004)\n');
+process.stdout.write('\nUmbrales (ADR 0003)\n');
 for (const umbral of UMBRALES.filter((u) => medidas.has(u.escenario))) {
   const valor = umbral.medida(medidas.get(umbral.escenario)!);
   const cumple = valor < umbral.limite;

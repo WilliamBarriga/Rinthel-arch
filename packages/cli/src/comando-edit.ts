@@ -1,5 +1,5 @@
 /**
- * Comando `edit` del CLI (ADR 0010): unica escritura explicita sobre el DSL de texto.
+ * Comando `edit` del CLI (ADR 0005): unica escritura explicita sobre el DSL de texto.
  * `edit --workspace <ruta> [--theme-path <carpeta>] [--json] [--hash <archivo>=<hash>]...`
  * mas una de estas dos formas:
  * - Intencion de Pin: `--view <id> --node <id cualificado> --x N --y N`. El comando calcula la

@@ -53,7 +53,7 @@
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *
- * Colapso (ADR 0004): los controles de Grupo de `render` alternan el Grupo. El
+ * Colapso (ADR 0003): los controles de Grupo de `render` alternan el Grupo. El
  * estado (`EstadoDeColapso`) es controlado con `state` + `onStateChange` o
  * interno. Relayout solo en estados no cacheados: la cache es por estructura
  * (`claveDeLayout`) y `cachedGeometry` (geometria del estado por defecto, p. ej.

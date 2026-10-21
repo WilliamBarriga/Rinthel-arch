@@ -1,5 +1,5 @@
 /**
- * Catalogo de codigos de issue (ADR 0008).
+ * Catalogo de codigos de issue (ADR 0005).
  *
  * Los codigos son contrato publico: estables, documentados y **nunca se
  * reciclan**. Un codigo que se retira pasa a `CODIGOS_DEPRECADOS` y su valor no
@@ -30,7 +30,7 @@ export const CODIGOS = Object.freeze({
   E_DANGLING_EDGE: 'E_DANGLING_EDGE',
   /** Extremo de Arista `nodo#atributo` sin ese Atributo en el Nodo. */
   E_UNKNOWN_ATTRIBUTE: 'E_UNKNOWN_ATTRIBUTE',
-  /** Color que no es un nombre de Paleta del Tema (ADR 0006). */
+  /** Color que no es un nombre de Paleta del Tema (ADR 0002). */
   E_UNKNOWN_PALETTE_COLOR: 'E_UNKNOWN_PALETTE_COLOR',
   /** Ciclo de `extends` entre Temas. */
   E_EXTENDS_CYCLE: 'E_EXTENDS_CYCLE',
@@ -44,7 +44,7 @@ export const CODIGOS = Object.freeze({
   E_INVALID_EXPANSION_TARGET: 'E_INVALID_EXPANSION_TARGET',
   /** Mismo Nodo con `link` y `expanded` en la misma Vista. */
   E_LINK_WITH_EXPANDED: 'E_LINK_WITH_EXPANDED',
-  /** Paso con id o selector inexistente (ADR 0007). */
+  /** Paso con id o selector inexistente (ADR 0002). */
   E_UNKNOWN_STEP: 'E_UNKNOWN_STEP',
   /** `type` de Vista ausente o desconocido. */
   E_UNKNOWN_VIEW_TYPE: 'E_UNKNOWN_VIEW_TYPE',
@@ -52,7 +52,7 @@ export const CODIGOS = Object.freeze({
   W_OVERLAPPING_PINS: 'W_OVERLAPPING_PINS',
 } as const);
 
-/** Union de los codigos activos; `Issue.code` sigue siendo `string` (ADR 0008). */
+/** Union de los codigos activos; `Issue.code` sigue siendo `string` (ADR 0005). */
 export type Codigo = (typeof CODIGOS)[keyof typeof CODIGOS];
 
 /**

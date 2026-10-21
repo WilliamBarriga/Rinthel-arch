@@ -8,11 +8,11 @@
  * una Vista (`views`) tiene `type` architecture|flow y solo selecciona Nodos
  * (`resolveView`, que devuelve `undefined` si la Vista no existe), nunca define
  * entidades; sus `overrides` (label, pin, order, color) son solo presentacion (`pin` es relativo al
- * Grupo padre; `order` solo se almacena, sin efecto en v1: ADR 0004 prohibe `considerModelOrder`); un Grupo
+ * Grupo padre; `order` solo se almacena, sin efecto en v1: ADR 0003 prohibe `considerModelOrder`); un Grupo
  * colapsado (estado, `depth`, `collapsed`/`expanded`, `link`) eleva y fusiona las
- * Aristas de sus hijos; los `steps` de una Vista los interpreta `revealAt` (ADR 0007,
+ * Aristas de sus hijos; los `steps` de una Vista los interpreta `revealAt` (ADR 0002,
  * acumulativos, con fundido entre pasos); `IconProvider` resuelve claves de icono a SVG inline;
- * colores son nombres de Paleta, nunca valores hex (ADR 0006); el Tema (`themes`,
+ * colores son nombres de Paleta, nunca valores hex (ADR 0002); el Tema (`themes`,
  * siempre con el neutro) es un objeto plano ya resuelto, sin herencia.
  * La geometria cacheada por Vista (`geometriaCacheadaSchema`: `{ view, theme, layoutKey,
  * geometry }`) tiene aqui su esquema para validarla al leerla del disco; la calcula `layout`.

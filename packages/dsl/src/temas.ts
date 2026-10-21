@@ -1,5 +1,5 @@
 /**
- * Resolucion de Temas: aplana `extends` en objetos planos (ADR 0006) y valida
+ * Resolucion de Temas: aplana `extends` en objetos planos (ADR 0002) y valida
  * nombres duplicados, padres desconocidos y ciclos. El Tema neutro del nucleo
  * siempre existe y puede extenderse.
  */

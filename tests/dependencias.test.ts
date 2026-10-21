@@ -43,7 +43,7 @@ function crearWorkspace(archivos: Record<string, string>): string {
 }
 
 describe('revisarWorkspace', () => {
-  it('usa la cadena de dependencias de ADR 0005', () => {
+  it('usa la cadena de dependencias de ADR 0004', () => {
     expect(CADENA).toEqual(['canonico', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli']);
   });
 

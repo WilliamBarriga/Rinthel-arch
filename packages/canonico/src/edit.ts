@@ -1,5 +1,5 @@
 /**
- * Esquema Zod de la salida de `edit --json` (ADR 0010). Fuente del contrato: el CLI
+ * Esquema Zod de la salida de `edit --json` (ADR 0005). Fuente del contrato: el CLI
  * lo usa para emitir y el skill generado para describirlo. Su version es independiente
  * de las de `validate` e `inspect`: anadir campos no rompe el contrato; quitarlos o
  * cambiar su significado exige subir `EDIT_CONTRACT_VERSION`.

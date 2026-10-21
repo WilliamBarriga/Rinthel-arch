@@ -6,7 +6,7 @@ export interface OpcionesDeValidate {
   strict: boolean;
 }
 
-/** Orden del contrato (ADR 0008): archivo, linea, columna y codigo. */
+/** Orden del contrato (ADR 0005): archivo, linea, columna y codigo. */
 function compararIssues(a: Issue, b: Issue): number {
   return a.file.localeCompare(b.file) || a.line - b.line || a.column - b.column || a.code.localeCompare(b.code);
 }
