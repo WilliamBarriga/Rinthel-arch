@@ -16,7 +16,15 @@
  * Modos de error: los errores del Workspace son issues, no excepciones; los
  * fallos internos de layout se propagan como rechazo de la promesa.
  * Configuracion requerida: ninguna; `tema` (opcional) es el Tema global.
+ *
+ * Edicion estructurada (ADR 0010): `aplicarEdiciones(archivos, ediciones)` aplica
+ * `{ file, range, replacement, hash }` sobre el mapa sin tocar disco, todo o nada
+ * (hash viejo, rango invalido, solape o errores nuevos la rechazan con un
+ * `motivo`); `edicionDePin(archivos, { vista, nodo, x, y, hash })` calcula la
+ * edicion minima de un Pin; `hashDeContenido(texto)` produce el hash esperado.
  * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout -> sesion`.
  */
 export { abrirSesion } from './sesion';
+export { aplicarEdiciones, edicionDePin, hashDeContenido } from './ediciones';
+export type { EdicionConHash, IntencionDePin, MotivoDeRechazo, ResultadoDeEdicion } from './ediciones';
 export type { OpcionesDeSesion, ResultadoDeConstruir, SalidaDeBuild, Sesion } from './sesion';
