@@ -2,7 +2,9 @@ import {
   CODIGOS,
   CONTRACT_VERSION,
   DESCRIPCION_DE_CODIGO,
+  EDIT_CONTRACT_VERSION,
   INSPECT_CONTRACT_VERSION,
+  salidaDeEditJsonSchema,
   salidaDeInspectJsonSchema,
   salidaDeValidateJsonSchema,
 } from 'canonico';
@@ -139,6 +141,28 @@ Esquema de \`inspect --json\` (JSON Schema derivado del esquema Zod):
 
 \`\`\`json
 ${JSON.stringify(salidaDeInspectJsonSchema(), null, 2)}
+\`\`\`
+
+## Editar de forma estructurada (edit)
+
+Es la unica escritura explicita del CLI y solo escribe lo que pides; \`validate\` nunca reescribe. Edita siempre el \`.dg\`, nunca el JSON canonico.
+
+\`\`\`text
+diagrams edit --workspace <ruta> --view <vista> --node <id cualificado> --x N --y N [--json]
+diagrams edit --workspace <ruta> --edits '[{"file":"main.dg","range":{"start":{"line":1,"column":1},"end":{"line":1,"column":2}},"replacement":"..."}]' [--json]
+\`\`\`
+
+- La primera forma mueve el Pin de un Nodo en una Vista: reemplaza el \`pin\` si existe y lo anade si no; no necesitas conocer la sintaxis.
+- La segunda aplica ediciones de texto ya calculadas (p. ej. el \`fix\` de un issue de \`validate\`): rangos 1-based, fin excluido.
+- Concurrencia: cada edicion lleva el hash del archivo que viste (\`hash\` en la edicion, o \`--hash <archivo>=<hash>\`); sin hash se usa el del disco. Si el archivo cambio, se rechaza todo sin escritura parcial.
+- Se rechaza tambien lo que introduce errores nuevos, solapa ediciones o apunta fuera del archivo.
+- Con \`--json\`, stdout es exactamente un objeto (contractVersion ${EDIT_CONTRACT_VERSION}, independiente de los otros) con \`ok\`; si es \`false\` trae \`reason\` y \`message\`.
+- Codigos de salida: 0 escrito, 1 edicion rechazada o invalida, 2 fallo de uso o interno.
+
+Esquema de \`edit --json\` (JSON Schema derivado del esquema Zod):
+
+\`\`\`json
+${JSON.stringify(salidaDeEditJsonSchema(), null, 2)}
 \`\`\`
 
 ## Bucle en vivo (dev)

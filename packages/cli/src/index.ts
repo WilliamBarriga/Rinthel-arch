@@ -57,6 +57,10 @@
  * `comando-inspect.ts`): consulta de solo lectura del Modelo; cada resultado trae id
  * cualificado, tipo y `archivo:linea` del Ubicador. `--json` sigue `salidaDeInspectSchema`
  * (contractVersion propio, independiente de `validate`); el skill lo documenta junto a `dev`.
+ * `edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --edits '<json>') [--hash <archivo>=<hash>] [--theme-path <carpeta>] [--json]`
+ * (ADR 0010, ver `comando-edit.ts`): unica escritura explicita sobre el DSL; mueve un Pin o aplica ediciones
+ * `{ file, range, replacement, hash? }` todo o nada, con chequeo de hash. `--json` sigue `salidaDeEditSchema`
+ * (contractVersion propio). Codigos: 0 escrito, 1 rechazada o invalida, 2 fallo de uso o interno.
  * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>]` (ADR 0009, ver `dev.ts`): servidor HTTP solo en
  * 127.0.0.1 (puerto 4173 por defecto) con vista previa en vivo por SSE y panel de issues.
  * `iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev>` es la entrada programatica (el comando solo
@@ -80,6 +84,7 @@ import { salidaDeValidateSchema } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
 
+import { editar } from './comando-edit';
 import { inspeccionar } from './comando-inspect';
 import { exportarPng, exportarSvg } from './export';
 import { comandoDev } from './dev';
@@ -133,11 +138,12 @@ export async function run(
   dependencias: Dependencias = {},
 ): Promise<ResultadoDeEjecucion> {
   const [comando, ...resto] = argv;
+  if (comando === 'edit') return editar(resto, dependencias);
   if (comando === 'inspect') return inspeccionar(resto, dependencias);
   if (comando === 'dev') return comandoDev(resto, dependencias);
   if (comando !== 'validate' && comando !== 'build' && comando !== 'export' && comando !== 'skill') {
     return uso(
-      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export|skill|inspect|dev> --workspace <ruta>`,
+      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export|skill|inspect|edit|dev> --workspace <ruta>`,
     );
   }
   if (comando === 'export') return exportar(resto, dependencias);
