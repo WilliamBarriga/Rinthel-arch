@@ -38,6 +38,11 @@ function entorno(inicial: Record<string, string>) {
       archivos = { ...archivos, [ruta]: texto };
       avisar?.();
     },
+    /** Escritura del endpoint de edicion: no avisa al observador (lo hace el propio servidor). */
+    escribirEdicion: (_raiz: string, ruta: string, texto: string) => {
+      archivos = { ...archivos, [ruta]: texto };
+    },
+    texto: (ruta: string) => archivos[ruta],
     observando: () => avisar !== undefined,
   };
 }
@@ -49,11 +54,12 @@ interface Estado {
   fuente?: { model: { nodes: { id: string }[] } };
   issues: { file: string; line: number; severity: string; code: string; href: string }[];
   vistas: string[];
+  hashes: Record<string, string>;
 }
 
 const abiertos: ServidorDev[] = [];
 async function arrancar(env: ReturnType<typeof entorno>): Promise<ServidorDev> {
-  const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, shell, debounceMs: 5, puerto: 0 });
+  const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, escribir: env.escribirEdicion, shell, debounceMs: 5, puerto: 0 });
   abiertos.push(servidor);
   return servidor;
 }
@@ -217,5 +223,81 @@ describe('dev', () => {
 
     expect(env.observando()).toBe(false);
     await expect(fetch(servidor.url)).rejects.toThrow();
+  });
+
+  describe('POST /api/pin (ADR 0010)', () => {
+    const post = (servidor: ServidorDev, cuerpo: unknown, cabeceras: Record<string, string> = { 'content-type': 'application/json' }) =>
+      fetch(`${servidor.url}api/pin`, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpo) });
+
+    it('el estado expone el hash de cada archivo', async () => {
+      const servidor = await arrancar(entorno({ 'main.dg': BASE }));
+      expect(Object.keys((await estado(servidor)).hashes)).toEqual(['main.dg']);
+    });
+
+    it('escribe el Pin en el .dg, recompila y responde con la version nueva', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      const antes = await estado(servidor);
+
+      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 10, y: 20, hash: antes.hashes['main.dg'] });
+
+      expect(res.status).toBe(200);
+      const cuerpo = (await res.json()) as { ok: boolean; version: number };
+      expect(cuerpo.ok).toBe(true);
+      expect(env.texto('main.dg')).toContain('node api { pin 10,20 }');
+      const despues = await estado(servidor);
+      expect(cuerpo.version).toBe(despues.version);
+      expect(despues.version).toBeGreaterThan(antes.version);
+      expect(despues.hashes['main.dg']).not.toBe(antes.hashes['main.dg']);
+    });
+
+    it('con hash desactualizado responde 409 y no escribe', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      const hash = (await estado(servidor)).hashes['main.dg'];
+      env.escribir('main.dg', BASE + '\n');
+
+      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 1, y: 2, hash });
+
+      expect(res.status).toBe(409);
+      expect(await res.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+      expect(env.texto('main.dg')).toBe(BASE + '\n');
+    });
+
+    it('con Vista o Nodo inexistente responde 422 y no escribe', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      const hash = (await estado(servidor)).hashes['main.dg'];
+
+      const vista = await post(servidor, { vista: 'nada', nodo: 'api', x: 1, y: 2, hash });
+      const nodo = await post(servidor, { vista: 'general', nodo: 'fantasma', x: 1, y: 2, hash });
+
+      expect(vista.status).toBe(422);
+      expect(await vista.json()).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
+      expect(nodo.status).toBe(422);
+      expect(env.texto('main.dg')).toBe(BASE);
+    });
+
+    it('rechaza cuerpos mal formados (400), content-type ajeno (415) y metodos distintos de POST (405)', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+
+      expect((await post(servidor, { vista: 'general', nodo: 'api', x: 'a', y: 2, hash: 'h' })).status).toBe(400);
+      expect((await post(servidor, { vista: 'general' })).status).toBe(400);
+      expect((await post(servidor, { vista: 'general', nodo: 'api', x: 1, y: 2, hash: 'h' }, { 'content-type': 'text/plain' })).status).toBe(415);
+      expect((await fetch(`${servidor.url}api/pin`)).status).toBe(405);
+      expect(env.texto('main.dg')).toBe(BASE);
+    });
+
+    it('rechaza peticiones con Origin ajeno (CSRF desde otra pagina)', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      const hash = (await estado(servidor)).hashes['main.dg'];
+
+      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 1, y: 2, hash }, { 'content-type': 'application/json', origin: 'http://evil.example' });
+
+      expect(res.status).toBe(403);
+      expect(env.texto('main.dg')).toBe(BASE);
+    });
   });
 });
