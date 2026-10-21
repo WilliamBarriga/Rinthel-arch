@@ -15,14 +15,13 @@
 import { EDIT_CONTRACT_VERSION, edicionesPedidasSchema, salidaDeEditSchema } from 'canonico';
 import type { SalidaDeEdit } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { join } from 'node:path';
 import { parseArgs } from 'node:util';
-import { abrirSesion, aplicarEdiciones, edicionDePin, hashDeContenido } from 'sesion';
+import { abrirSesion, aplicarEdiciones, archivoDeVista, edicionDePin, hashDeContenido } from 'sesion';
 import type { EdicionConHash } from 'sesion';
 
-import { leerConTemas, uso } from './sesion-cli';
+import { cambiosDeEdicion, leerConTemas, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
-import { escribirTexto, leerWorkspace } from './workspace';
+import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
 
 const USO =
   "Uso: diagrams edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --edits '<json>') [--hash <archivo>=<hash>] [--theme-path <carpeta>] [--json]";
@@ -93,9 +92,7 @@ export async function editar(
     if (v.view === undefined || v.node === undefined || v.x === undefined || v.y === undefined || !Number.isFinite(x) || !Number.isFinite(y)) {
       return uso(`El Pin requiere --view, --node, --x y --y numericos. ${USO}`);
     }
-    const sesion = abrirSesion(archivos);
-    const indice = sesion.fuente?.views.findIndex(({ id }) => id === v.view) ?? -1;
-    const file = indice >= 0 ? sesion.ubicar?.(['views', indice, 'id'])?.file : undefined;
+    const file = archivoDeVista(abrirSesion(archivos), v.view);
     const calculada = edicionDePin(archivos, {
       vista: v.view,
       nodo: v.node,
@@ -110,15 +107,12 @@ export async function editar(
   const aplicada = aplicarEdiciones(archivos, ediciones);
   if (!aplicada.ok) return rechazado(aplicada, json);
   // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.
-  const cambiados = Object.keys(aplicada.archivos)
-    .filter((f) => aplicada.archivos[f] !== archivos[f])
-    .sort();
-  const fuera = cambiados.find((f) => !(f in propios));
+  const { cambiados, fuera } = cambiosDeEdicion(archivos, aplicada.archivos, propios);
   if (fuera !== undefined) {
     return rechazado({ motivo: 'archivo-desconocido', mensaje: `'${fuera}' no pertenece al Workspace`, file: fuera }, json);
   }
   try {
-    for (const f of cambiados) escribirArchivo(join(v.workspace, ...f.split('/')), aplicada.archivos[f] as string);
+    for (const f of cambiados) escribirArchivo(destinoEnWorkspace(v.workspace, f), aplicada.archivos[f] as string);
   } catch (error) {
     return uso(`No se pudo escribir: ${(error as Error).message}`);
   }

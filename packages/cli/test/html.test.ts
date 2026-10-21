@@ -143,6 +143,28 @@ describe('export --format html', () => {
     }
   });
 
+  it('el export estatico no tiene arrastre de Nodos (onMoveNode ausente): ni cliente de /api/pin ni Nodos que se muevan', async () => {
+    const workspace = await workspaceConstruido();
+    await run(['export', '--workspace', workspace, '--format', 'html']);
+    const html = leerHtml(workspace, 'general');
+    expect(html).not.toContain('/api/pin');
+
+    const pagina = abrir(html, 'general');
+    await esperar(() => ids(pagina).length > 0);
+    const nodo = pagina.window.document.querySelector('svg [data-id="api"]') as Element;
+    const antes = nodo.getAttribute('transform');
+    const evento = (tipo: string, x: number, y: number) =>
+      new pagina.window.MouseEvent(tipo, { bubbles: true, cancelable: true, button: 0, clientX: x, clientY: y });
+    nodo.dispatchEvent(evento('mousedown', 100, 100));
+    pagina.window.dispatchEvent(evento('mousemove', 160, 130));
+    pagina.window.dispatchEvent(evento('mouseup', 160, 130));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(nodo.getAttribute('transform')).toBe(antes);
+    expect(pagina.peticiones).toEqual([]);
+    pagina.window.close();
+  });
+
   it('abre sin servidor, sin peticiones externas, con fuente e icono incrustados', async () => {
     const workspace = await workspaceConstruido();
     await run(['export', '--workspace', workspace, '--format', 'html']);
