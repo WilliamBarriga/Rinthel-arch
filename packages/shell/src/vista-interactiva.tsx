@@ -204,19 +204,21 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
       if (id === undefined || caja === undefined) return;
       const [x0, y0] = [evento.clientX, evento.clientY];
       let movido = false;
+      /** Pixeles de pantalla por unidad de diagrama con la camara de este instante. */
+      const escalaVigente = (): number => ultimo.current.width / camaraVigente.current.width;
       const alMover = (m: MouseEvent): void => {
         const [px, py] = [m.clientX - x0, m.clientY - y0];
         if (!movido && Math.hypot(px, py) < UMBRAL_DE_ARRASTRE) return;
         movido = true;
         m.preventDefault();
-        const k = ultimo.current.width / camaraVigente.current.width;
+        const k = escalaVigente();
         setDesplazado({ id, x: Math.round(caja.x + px / k), y: Math.round(caja.y + py / k) });
       };
       const alSoltar = (m: MouseEvent): void => {
         window.removeEventListener('mousemove', alMover);
         window.removeEventListener('mouseup', alSoltar);
         if (!movido) return;
-        const k = ultimo.current.width / camaraVigente.current.width;
+        const k = escalaVigente();
         const destino = { id, x: Math.round(caja.x + (m.clientX - x0) / k), y: Math.round(caja.y + (m.clientY - y0) / k) };
         // El clic que sigue al soltar no debe seleccionar ni navegar.
         arrastrando.current = true;

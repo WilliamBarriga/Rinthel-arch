@@ -17,6 +17,8 @@
  * fallos internos de layout se propagan como rechazo de la promesa.
  * Configuracion requerida: ninguna; `tema` (opcional) es el Tema global.
  *
+ * `archivoDeVista(sesion, vista)` da el archivo que declara una Vista (el de su hash).
+ *
  * Edicion estructurada (ADR 0005): `aplicarEdiciones(archivos, ediciones)` aplica
  * `{ file, range, replacement, hash }` sobre el mapa sin tocar disco, todo o nada
  * (hash viejo, rango invalido, solape o errores nuevos la rechazan con un
@@ -24,7 +26,7 @@
  * edicion minima de un Pin; `hashDeContenido(texto)` produce el hash esperado.
  * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout -> sesion`.
  */
-export { abrirSesion } from './sesion';
+export { abrirSesion, archivoDeVista } from './sesion';
 export { aplicarEdiciones, edicionDePin, hashDeContenido } from './ediciones';
 export type { EdicionConHash, IntencionDePin, MotivoDeRechazo, ResultadoDeEdicion } from './ediciones';
 export type { OpcionesDeSesion, ResultadoDeConstruir, SalidaDeBuild, Sesion } from './sesion';

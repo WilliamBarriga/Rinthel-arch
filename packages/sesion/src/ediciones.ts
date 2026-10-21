@@ -66,13 +66,20 @@ function offsetDe(texto: string, { line, column }: TextPosition): number | undef
   return column >= 1 && offset <= limite ? offset : undefined;
 }
 
-const clave = (issue: Issue) => `${issue.code}|${issue.file}|${issue.message}`;
+/** Clave estable ante cambios de mensaje o de linea: un error es el mismo si comparte codigo y archivo. */
+const clave = (issue: Issue) => `${issue.code}|${issue.file}`;
+
+/** Limite de coordenadas de un Pin: enteros dentro de este rango (formato fijo del DSL escrito). */
+const LIMITE_DE_PIN = 100_000;
+const coordenadaDePin = (n: number): number => Math.min(LIMITE_DE_PIN, Math.max(-LIMITE_DE_PIN, Math.round(n))) + 0;
 
 /**
  * Aplica ediciones `{ file, range, replacement, hash }` sobre el mapa de archivos y devuelve
  * el mapa nuevo; no toca disco ni muta la entrada. Todo o nada: si algun hash no coincide con
  * el contenido actual, un rango es invalido, dos ediciones se solapan, o el resultado
- * introduce errores que antes no estaban, no se devuelve ningun archivo. Los `issues`
+ * introduce errores que antes no estaban (se cuentan por codigo y archivo: un error
+ * preexistente cuyo mensaje cambia no cuenta como nuevo, uno adicional si), no se
+ * devuelve ningun archivo. Los `issues`
  * devueltos son los del Workspace resultante.
  */
 export function aplicarEdiciones(
@@ -107,9 +114,15 @@ export function aplicarEdiciones(
     resultado[file] = texto;
   }
 
-  const antes = new Set(compile(archivos).issues.filter((i) => i.severity === 'error').map(clave));
+  const conteo = new Map<string, number>();
+  for (const i of compile(archivos).issues) if (i.severity === 'error') conteo.set(clave(i), (conteo.get(clave(i)) ?? 0) + 1);
   const despues = compile(resultado).issues;
-  const nuevo = despues.find((i) => i.severity === 'error' && !antes.has(clave(i)));
+  const nuevo = despues.find((i) => {
+    if (i.severity !== 'error') return false;
+    const restantes = conteo.get(clave(i)) ?? 0;
+    conteo.set(clave(i), restantes - 1);
+    return restantes <= 0;
+  });
   if (nuevo !== undefined) return rechazo('invalida', `La edicion introduce un error: ${nuevo.message}`, nuevo.file);
   return { ok: true, archivos: resultado, issues: despues };
 }
@@ -117,14 +130,15 @@ export function aplicarEdiciones(
 /**
  * Traduce la intencion de mover un Pin a la edicion minima: reemplaza `pin x,y` si el Nodo ya
  * lo tiene en la Vista, lo anade al override si existe sin pin, o crea `node <id> { pin x,y }`
- * al final de la Vista. Formato fijo; el resto del archivo no cambia. Rechaza hash viejo, Vista
+ * al final de la Vista. Formato fijo: x e y se redondean a enteros y se limitan a +-100000; el resto del archivo no cambia. Rechaza hash viejo, Vista
  * desconocida y cualquier intencion cuyo resultado no compile limpio (p. ej. Nodo inexistente).
  */
 export function edicionDePin(
   archivos: ArchivosDelWorkspace,
   intencion: IntencionDePin,
 ): ResultadoDeEdicion<{ ediciones: EdicionConHash[] }> {
-  const { vista, nodo, x, y } = intencion;
+  const { vista, nodo } = intencion;
+  const [x, y] = [coordenadaDePin(intencion.x), coordenadaDePin(intencion.y)];
   const compilado = compile(archivos);
   const { canonico: fuente, ubicar } = compilado;
   if (fuente === undefined || ubicar === undefined) {

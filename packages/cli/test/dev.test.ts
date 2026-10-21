@@ -297,6 +297,41 @@ describe('dev', () => {
       expect(env.texto('main.dg')).toBe(BASE);
     });
 
+    it('no escribe archivos que no son del Workspace (los de --theme-path): responde 422', async () => {
+      const [modelo, vistas] = BASE.split('\nview general');
+      const propios = { 'main.dg': modelo as string };
+      const deTemas = { 'vistas.dg': `view general${vistas as string}` };
+      const escritos: string[] = [];
+      const servidor = await iniciarDev({
+        workspace: '/ws',
+        temas: '/temas',
+        leer: (raiz) => (raiz === '/temas' ? deTemas : propios),
+        observar: () => () => undefined,
+        escribir: (_raiz, ruta) => void escritos.push(ruta),
+        shell,
+        puerto: 0,
+      });
+      abiertos.push(servidor);
+      const { hashes } = await estado(servidor);
+
+      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 1, y: 2, hash: hashes['vistas.dg'] });
+
+      expect(res.status).toBe(422);
+      expect(await res.json()).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'vistas.dg' });
+      expect(escritos).toEqual([]);
+    });
+
+    it('redondea las coordenadas del Pin a enteros', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      const hash = (await estado(servidor)).hashes['main.dg'];
+
+      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 10.6, y: 20.2, hash });
+
+      expect(res.status).toBe(200);
+      expect(env.texto('main.dg')).toContain('node api { pin 11,20 }');
+    });
+
     it('rechaza peticiones con Origin ajeno (CSRF desde otra pagina)', async () => {
       const env = entorno({ 'main.dg': BASE });
       const servidor = await arrancar(env);

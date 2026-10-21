@@ -1,6 +1,6 @@
 /** Adaptador de disco: unico punto del CLI que lee el Workspace. */
-import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, join, relative, sep } from 'node:path';
+import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import type { ArchivosDelWorkspace } from 'dsl';
 
@@ -78,8 +78,28 @@ export function escribirSalida(
   }
 }
 
-/** Escribe `texto` en `ruta`, creando las carpetas que falten. */
+/**
+ * Escribe `texto` en `ruta`, creando las carpetas que falten. Atomico: escribe un temporal en
+ * la misma carpeta y lo renombra, de modo que un lector (o un corte) nunca ve el archivo a medias.
+ */
 export function escribirTexto(ruta: string, texto: string): void {
   mkdirSync(dirname(ruta), { recursive: true });
-  writeFileSync(ruta, texto);
+  const temporal = `${ruta}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    writeFileSync(temporal, texto);
+    renameSync(temporal, ruta);
+  } catch (error) {
+    rmSync(temporal, { force: true });
+    throw error;
+  }
+}
+
+/** Ruta absoluta de `ruta` (relativa a `raiz`, con `/`); lanza si el destino queda fuera de la raiz. */
+export function destinoEnWorkspace(raiz: string, ruta: string): string {
+  const base = resolve(raiz);
+  const destino = resolve(base, ...ruta.split('/'));
+  if (ruta.startsWith('/') || isAbsolute(ruta) || !destino.startsWith(base + sep)) {
+    throw new Error(`'${ruta}' queda fuera del Workspace`);
+  }
+  return destino;
 }

@@ -102,3 +102,47 @@ describe('edicionDePin + aplicarEdiciones', () => {
     expect(edicionDePin({ 'main.dg': texto }, { ...intencion(texto), nodo: 'nada' })).toMatchObject({ ok: false, motivo: 'invalida' });
   });
 });
+
+describe('formato del Pin y robustez de la comparacion de errores', () => {
+  it('redondea x e y a enteros y los limita a un rango razonable', () => {
+    const texto = base('');
+    const pin = (x: number, y: number) => {
+      const e = edicionDePin({ 'main.dg': texto }, intencion(texto, x, y));
+      return e.ok ? e.ediciones[0]?.replacement : e;
+    };
+    expect(pin(10.6, -3.4)).toBe('  node a { pin 11,-3 }\n');
+    expect(pin(1e12, -1e12)).toBe('  node a { pin 100000,-100000 }\n');
+    expect(pin(1e-9, -0.2)).toBe('  node a { pin 0,0 }\n');
+  });
+
+  it('un error preexistente que cambia de mensaje no bloquea una edicion ajena', () => {
+    // Mismo codigo y archivo; el mensaje cambia porque la edicion cambia un nombre citado en el.
+    const roto = `specification { node servicio }
+model { servicio a  servicio b  a -> nada }
+view v {
+  type architecture
+  include **
+}
+`;
+    const hash = hashDeContenido(roto);
+    const r = aplicarEdiciones({ 'main.dg': roto }, [
+      { file: 'main.dg', range: { start: { line: 2, column: 38 }, end: { line: 2, column: 42 } }, replacement: 'otra', hash },
+    ]);
+    expect(r).toMatchObject({ ok: true });
+  });
+
+  it('una edicion que anade un segundo error del mismo codigo en el mismo archivo se rechaza', () => {
+    const roto = `specification { node servicio }
+model { servicio a  servicio b  a -> nada }
+view v {
+  type architecture
+  include **
+}
+`;
+    const hash = hashDeContenido(roto);
+    const r = aplicarEdiciones({ 'main.dg': roto }, [
+      { file: 'main.dg', range: { start: { line: 2, column: 42 }, end: { line: 2, column: 42 } }, replacement: ' b -> fantasma', hash },
+    ]);
+    expect(r).toMatchObject({ ok: false, motivo: 'invalida' });
+  });
+});

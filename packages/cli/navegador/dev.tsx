@@ -14,6 +14,8 @@ import type { FuenteCanonica, GeometriaCacheada, IconProvider } from 'canonico';
 import { VistaInteractiva, adaptadorDeWorker, crearEnviadorDePin, hashDelNavegador, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 
+import { crearAlMover } from './mover';
+
 interface IssueDeDev {
   file: string;
   line: number;
@@ -158,20 +160,7 @@ function App(): ReactElement {
   }, [aviso]);
   const vivo = useRef(estado);
   vivo.current = estado;
-  const alMover = async (vista: string, { id, x, y }: { id: string; x: number; y: number }): Promise<boolean> => {
-    const actual = vivo.current;
-    const archivo = actual?.archivosDeVista[vista];
-    const hash = archivo === undefined ? undefined : actual?.hashes[archivo];
-    if (hash === undefined) {
-      setAviso('No se puede mover: la Vista no tiene archivo conocido');
-      return false;
-    }
-    const r = await enviarPin({ vista, nodo: id, x, y, hash });
-    if (r.ok) return true;
-    setAviso(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `No se pudo mover el Pin: ${r.mensaje}`);
-    if (r.desactualizado) await recargar().catch(() => undefined);
-    return false;
-  };
+  const alMover = crearAlMover({ estado: () => vivo.current, enviar: enviarPin, avisar: setAviso, recargar });
   const geometrias = useGeometrias(estado);
   // La ultima Vista dibujable se conserva mientras llega la nueva.
   const [ultima, setUltima] = useState<{ fuente: FuenteCanonica; estado: Estado; geometrias: Record<string, GeometriaCacheada> }>();

@@ -8,6 +8,18 @@
  * `/api/estado` (JSON, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/pin` (mover un Pin, ADR 0005), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
  * envia el estado al conectar y tras cada recompilacion).
  *
+ * `iniciarDev(OpcionesDeDev) -> ServidorDev` es la entrada programatica (el comando solo parsea y la llama).
+ * `OpcionesDeDev`: `workspace` (obligatorio), `temas` (= `--theme-path`, se fusiona antes del Workspace,
+ * no se observa y nunca se escribe), `puerto` (0 elige uno libre), `debounceMs` y los seams `leer`,
+ * `observar`, `shell` y `escribir`. `ServidorDev`: `url` y `cerrar()` (cierra conexiones, libera el
+ * puerto y deja de observar).
+ * Seguridad: solo escucha en 127.0.0.1 y responde 403 a cualquier peticion cuyo `Host` no sea
+ * `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding). `POST /api/pin` solo escribe archivos
+ * del Workspace, bajo su raiz y de forma atomica.
+ * Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (sin dejar el
+ * observador activo) y lanza si la lectura inicial falla; las lecturas fallidas posteriores se ignoran
+ * hasta el siguiente cambio. `run(['dev', ...])` los convierte en codigo 2.
+ *
  * Invariantes: sin bloqueos ni estado compartido; gana la ultima escritura. Las
  * recompilaciones se agrupan con debounce y se serializan. Si el Workspace
  * tiene errores, el estado lleva los issues pero conserva la Fuente y la
@@ -16,20 +28,20 @@
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { mkdirSync, watch, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { watch } from 'node:fs';
+import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { combineIconProviders, genericIcons, workspaceIcons } from 'canonico';
 import type { Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { abrirSesion, aplicarEdiciones, edicionDePin, hashDeContenido } from 'sesion';
+import { abrirSesion, aplicarEdiciones, archivoDeVista, edicionDePin, hashDeContenido } from 'sesion';
 import type { Sesion } from 'sesion';
 
 import { empaquetarShellDev } from './dev-shell';
-import { leerConTemas, uso as usoComun } from './sesion-cli';
+import { cambiosDeEdicion, leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
-import { leerWorkspace } from './workspace';
+import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
 
 /** Bundles del shell: pagina (React + shell) y codigo del Web Worker de layout. */
 export interface ShellDev {
@@ -68,10 +80,9 @@ function observarDisco(raiz: string, alCambiar: () => void): () => void {
   return () => observador.close();
 }
 
+/** Escritura real: atomica y siempre bajo la raiz del Workspace. */
 function escribirEnDisco(raiz: string, ruta: string, texto: string): void {
-  const destino = join(raiz, ...ruta.split('/'));
-  mkdirSync(dirname(destino), { recursive: true });
-  writeFileSync(destino, texto);
+  escribirTexto(destinoEnWorkspace(raiz, ruta), texto);
 }
 
 function leerCuerpo(req: IncomingMessage): Promise<string> {
@@ -137,9 +148,9 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       iconos,
       vistas: fuente?.views.map(({ id }) => id) ?? [],
       archivosDeVista: Object.fromEntries(
-        (fuente?.views ?? []).flatMap(({ id }, i) => {
-          const sitio = buena?.sesion.ubicar?.(['views', i, 'id']);
-          return sitio === null || sitio === undefined ? [] : [[id, sitio.file] as const];
+        (fuente?.views ?? []).flatMap(({ id }) => {
+          const archivo = buena === undefined ? undefined : archivoDeVista(buena.sesion, id);
+          return archivo === undefined ? [] : [[id, archivo] as const];
         }),
       ),
       hashes: Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)])),
@@ -228,8 +239,10 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       return;
     }
     let disco: ArchivosDelWorkspace;
+    let propios: ArchivosDelWorkspace;
     try {
-      disco = leer(workspace);
+      propios = leerBase(workspace);
+      disco = leerConTemas(leerBase, workspace, temas);
     } catch (error) {
       responder(res, 500, { ok: false, mensaje: (error as Error).message });
       return;
@@ -242,10 +255,14 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       responder(res, motivo === 'hash-desactualizado' ? 409 : 422, { ok, motivo, mensaje, ...(file === undefined ? {} : { file }) });
       return;
     }
+    // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.
+    const { cambiados, fuera } = cambiosDeEdicion(disco, aplicada.archivos, propios);
+    if (fuera !== undefined) {
+      responder(res, 422, { ok: false, motivo: 'archivo-desconocido', mensaje: `'${fuera}' no pertenece al Workspace`, file: fuera });
+      return;
+    }
     try {
-      for (const [ruta, texto] of Object.entries(aplicada.archivos)) {
-        if (texto !== disco[ruta]) escribir(workspace, ruta, texto);
-      }
+      for (const ruta of cambiados) escribir(workspace, ruta, aplicada.archivos[ruta] as string);
     } catch (error) {
       responder(res, 500, { ok: false, mensaje: (error as Error).message });
       return;
