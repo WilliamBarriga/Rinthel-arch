@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema } from 'canonico';
+import { EDIT_CONTRACT_VERSION, INSPECT_CONTRACT_VERSION, salidaDeEditJsonSchema, salidaDeInspectJsonSchema } from 'canonico';
 import { run } from 'cli';
 
 async function skill(): Promise<string> {
@@ -28,5 +28,14 @@ describe('skill: inspect y dev', () => {
 
     const bloques = [...texto.matchAll(/```json\n([\s\S]*?)\n```/g)].map((m) => JSON.parse(m[1] ?? 'null') as unknown);
     expect(bloques).toContainEqual(salidaDeInspectJsonSchema());
+  });
+
+  it('documenta edit con su contrato y su esquema JSON', async () => {
+    const texto = await skill();
+
+    expect(texto).toContain('diagrams edit --workspace');
+    expect(texto).toContain(`contractVersion ${EDIT_CONTRACT_VERSION}`);
+    const bloques = [...texto.matchAll(/```json\n([\s\S]*?)\n```/g)].map((m) => JSON.parse(m[1] ?? 'null') as unknown);
+    expect(bloques).toContainEqual(salidaDeEditJsonSchema());
   });
 });

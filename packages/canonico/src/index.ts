@@ -75,6 +75,9 @@ export type { Issue, IssueFix, IssueRelated, Severity, TextPosition, TextRange }
 export { CODIGOS, CODIGOS_DEPRECADOS, DESCRIPCION_DE_CODIGO } from './codigos';
 export type { Codigo } from './codigos';
 
+export { EDIT_CONTRACT_VERSION, edicionDeTextoSchema, edicionesPedidasSchema, salidaDeEditJsonSchema, salidaDeEditSchema } from './edit';
+export type { SalidaDeEdit } from './edit';
+
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';
 export type { SalidaDeInspect } from './inspect';
 
