@@ -41,7 +41,7 @@ view general {
 /**
  * Skill para agentes (formato `SKILL.md`) del proyecto: Tipos de nodo, Paleta y
  * Temas de su catalogo, sintaxis del DSL, contrato de `validate` (derivado del
- * esquema Zod, ADR 0008) y codigos de issue. Pura y determinista: el mismo
+ * esquema Zod, ADR 0005) y codigos de issue. Pura y determinista: el mismo
  * catalogo produce los mismos bytes.
  */
 export function generarSkill(fuente: FuenteCanonica): string {

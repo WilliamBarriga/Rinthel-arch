@@ -1,6 +1,6 @@
 /**
  * `validate(canonico) -> issues`: las comprobaciones semanticas que operan sobre
- * la Fuente canonica ya armada (ADR 0008). Puro; nunca lanza ni muta.
+ * la Fuente canonica ya armada (ADR 0005). Puro; nunca lanza ni muta.
  *
  * La Fuente canonica no guarda posiciones de texto: quien las tiene (el
  * compilador del DSL) las aporta con un `Ubicador`, que traduce la ruta del
@@ -195,7 +195,7 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
     });
   }
 
-  // Pasos (ADR 0007): selectores y Aristas que existen en el Modelo.
+  // Pasos (ADR 0002): selectores y Aristas que existen en el Modelo.
   const nodos = todosLosIds(fuente.model.nodes);
   vista.steps.forEach((paso, s) => {
     for (const accion of ['show', 'hide'] as const) {

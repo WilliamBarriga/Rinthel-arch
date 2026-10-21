@@ -1,5 +1,5 @@
 /**
- * Cliente de `POST /api/pin` de `diagrams dev` (ADR 0010): envia la intencion de
+ * Cliente de `POST /api/pin` de `diagrams dev` (ADR 0005): envia la intencion de
  * mover un Pin y traduce la respuesta. El `fetch` entra como argumento.
  */
 

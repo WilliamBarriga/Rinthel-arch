@@ -226,7 +226,7 @@ describe('dev', () => {
     await expect(fetch(servidor.url)).rejects.toThrow();
   });
 
-  describe('POST /api/pin (ADR 0010)', () => {
+  describe('POST /api/pin (ADR 0005)', () => {
     const post = (servidor: ServidorDev, cuerpo: unknown, cabeceras: Record<string, string> = { 'content-type': 'application/json' }) =>
       fetch(`${servidor.url}api/pin`, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpo) });
 

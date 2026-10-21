@@ -1,5 +1,5 @@
 /**
- * Lado del Worker de `adaptadorDeWorker` (ADR 0004): ejecuta `layoutView` (ELK) por un
+ * Lado del Worker de `adaptadorDeWorker` (ADR 0003): ejecuta `layoutView` (ELK) por un
  * puerto de mensajes. Archivo propio para que la pagina, que solo usa el adaptador, no
  * arrastre ELK al empaquetar.
  */

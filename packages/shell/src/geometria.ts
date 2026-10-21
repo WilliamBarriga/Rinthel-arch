@@ -1,5 +1,5 @@
 /**
- * Geometria de la Vista activa con cache por estructura (ADR 0004): el adaptador
+ * Geometria de la Vista activa con cache por estructura (ADR 0003): el adaptador
  * de layout solo se llama en estados no cacheados. La geometria por defecto
  * (la que trae el build) entra como semilla y no cuesta relayout.
  */

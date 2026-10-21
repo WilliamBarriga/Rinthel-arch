@@ -1,5 +1,5 @@
 /**
- * Pasos de revelado (ADR 0007): `revealAt` convierte una posicion de paso en la
+ * Pasos de revelado (ADR 0002): `revealAt` convierte una posicion de paso en la
  * visibilidad (0..1) de cada Nodo y Arista de una Vista resuelta. Pura; no toca
  * la geometria: el layout se calcula una vez con todos los elementos.
  */
@@ -91,7 +91,7 @@ function estadoTras(vista: VistaResuelta, k: number): Set<string> {
 /**
  * Lo que un selector de Paso abarca. A diferencia de `include` de la Vista, `a.*` y
  * `a.**` incluyen al propio Grupo `a` ademas de sus hijos: es "revelar un Grupo
- * completo" (ADR 0007); `a` a secas sigue siendo solo `a`.
+ * completo" (ADR 0002); `a` a secas sigue siendo solo `a`.
  */
 function abarca(selector: string, id: string): boolean {
   if (matchesSelector(selector, id)) return true;

@@ -1,7 +1,7 @@
 /**
- * Esquema Zod de la salida de `inspect --json` (ADR 0009). Es la fuente del
+ * Esquema Zod de la salida de `inspect --json` (ADR 0005). Es la fuente del
  * contrato: el CLI lo usa para emitir y el skill generado para describirlo. Su
- * version es independiente de la de `validate` (ADR 0008): anadir campos no
+ * version es independiente de la de `validate` (ADR 0005): anadir campos no
  * rompe el contrato; quitarlos o cambiar su significado exige subir
  * `INSPECT_CONTRACT_VERSION`.
  */

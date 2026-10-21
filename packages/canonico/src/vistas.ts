@@ -35,7 +35,7 @@ export interface VistaResuelta {
   edges: AristaResuelta[];
   /** Overrides de presentacion de la Vista, tal cual (label, pin, order, color). */
   overrides: OverrideDeNodo[];
-  /** Pasos de revelado de la Vista (ADR 0007), tal cual; `revealAt` los interpreta. */
+  /** Pasos de revelado de la Vista (ADR 0002), tal cual; `revealAt` los interpreta. */
   steps: Paso[];
 }
 
@@ -52,7 +52,7 @@ export interface EstadoDeColapso {
  * Nodo no dan error, y `exclude` no arrastra a los descendientes del Nodo excluido.
  *
  * Cada Nodo resuelto lleva su `label` y su `color` (override sobre Tipo de nodo,
- * ADR 0006); el valor literal lo pone el Tema, nunca esta capa.
+ * ADR 0002); el valor literal lo pone el Tema, nunca esta capa.
  *
  * Colapso: un Grupo (Nodo con hijos) esta colapsado si tiene `link`; si no, por
  * precedencia, segun `estado`, luego `collapsed`/`expanded` de la Vista y luego

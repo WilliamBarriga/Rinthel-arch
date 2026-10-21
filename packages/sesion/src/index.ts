@@ -17,7 +17,7 @@
  * fallos internos de layout se propagan como rechazo de la promesa.
  * Configuracion requerida: ninguna; `tema` (opcional) es el Tema global.
  *
- * Edicion estructurada (ADR 0010): `aplicarEdiciones(archivos, ediciones)` aplica
+ * Edicion estructurada (ADR 0005): `aplicarEdiciones(archivos, ediciones)` aplica
  * `{ file, range, replacement, hash }` sobre el mapa sin tocar disco, todo o nada
  * (hash viejo, rango invalido, solape o errores nuevos la rechazan con un
  * `motivo`); `edicionDePin(archivos, { vista, nodo, x, y, hash })` calcula la

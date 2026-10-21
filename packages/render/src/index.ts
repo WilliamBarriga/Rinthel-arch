@@ -3,7 +3,7 @@
  *
  * Dos salidas de una misma escena (`construirEscena`): `renderToSvgString({ view,
  * geometry, theme, width, height, icons? })` devuelve el SVG como cadena (export
- * estatico) y `<Diagram {...props} />` es el componente React (ADR 0003). Ambos
+ * estatico) y `<Diagram {...props} />` es el componente React (ADR 0002). Ambos
  * reciben la Vista resuelta y su Geometria (salida de `layout`; `view` es extra
  * porque la Geometria no lleva jerarquia, textos ni colores) y dibujan Nodos,
  * Grupos y Aristas con los tokens del Tema:
@@ -31,7 +31,7 @@
  *
  * Invariantes: sin estado ni efectos (mismas props, mismo arbol); determinista
  * byte a byte en la cadena; los colores salen solo del Tema, por nombre de Paleta
- * (ADR 0006); sin dependencia de Next, Tailwind ni json-render. Peer React 18 y 19.
+ * (ADR 0002); sin dependencia de Next, Tailwind ni json-render. Peer React 18 y 19.
  * Modos de error: una geometria que no contiene un Nodo de la Vista lanza
  * excepcion de uso. Configuracion requerida: `theme` y `geometry` resueltos por
  * paquetes anteriores.

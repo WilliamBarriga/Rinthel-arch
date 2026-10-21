@@ -1,5 +1,5 @@
 /**
- * Generador de Workspaces sinteticos para los umbrales del ADR 0004.
+ * Generador de Workspaces sinteticos para los umbrales del ADR 0003.
  *
  * `generarWorkspace({ nodos, ... })` devuelve los archivos de un Workspace
  * (`ruta -> texto DSL`) con exactamente `nodos` Nodos: un bosque con `raices`

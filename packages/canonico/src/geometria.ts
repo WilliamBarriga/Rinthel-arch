@@ -1,5 +1,5 @@
 /**
- * Esquema Zod de la capa de geometria cacheada por Vista (spec #19, ADR 0004):
+ * Esquema Zod de la capa de geometria cacheada por Vista (spec #19, ADR 0003):
  * lo que `build` escribe en `.diagrams/geometria/<vista>.json` y lo que `export`
  * y el HTML leen de vuelta. La calcula `layout`; aqui solo se describe su forma
  * para validarla al leer del disco, sin que `canonico` dependa de `layout`.
