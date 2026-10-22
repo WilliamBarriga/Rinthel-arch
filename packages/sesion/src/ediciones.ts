@@ -133,10 +133,13 @@ export function aplicarEdiciones(
 }
 
 /**
- * Gesto de editar un Pin: reemplaza `pin x,y` si el Nodo ya lo tiene en la Vista,
- * lo anade al override si existe sin pin, o crea `node <id> { pin x,y }` al final
- * de la Vista. Formato fijo: x e y se redondean a enteros y se limitan a +-100000;
- * el resto del archivo no cambia. Rechaza hash viejo, Vista desconocida y cualquier
+ * Gesto de editar un Pin (ADR 0005): fusa calcular la edicion minima, auto-probarla
+ * una vez y aplicar en memoria. Devuelve los archivos nuevos (sin tocar disco), las
+ * ediciones calculadas y los issues del Workspace resultante. Pura; reutiliza la
+ * compilacion unica que localiza el Pin tambien para comparar errores, de modo que
+ * un gesto paga 2 compilaciones del Workspace en total. `aplicarEdiciones` queda
+ * exportada: es la entrada de las ediciones ya calculadas (`--edits`, `fix`).
+ * Rechaza hash viejo, Vista desconocida y cualquier
  * intencion cuyo resultado no compile limpio (p. ej. Nodo inexistente).
  */
 export function editarPin(
@@ -151,7 +154,7 @@ export function editarPin(
   return { ok: true, archivos: aplicada.archivos, ediciones: calculada.ediciones, issues: aplicada.issues };
 }
 
-/** Parte de calculo compartida por `editarPin`; no auto-prueba, la prueba la hace la aplicacion unica. */
+/** Calculo del Pin compartido; la auto-prueba la hace la aplicacion unica de `editarPin`. */
 function edicionDePinSobre(
   archivos: ArchivosDelWorkspace,
   intencion: IntencionDePin,
