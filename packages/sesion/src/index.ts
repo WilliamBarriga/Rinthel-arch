@@ -22,15 +22,18 @@
  * Edicion estructurada (ADR 0005): `aplicarEdiciones(archivos, ediciones)` aplica
  * `{ file, range, replacement, hash }` sobre el mapa sin tocar disco, todo o nada
  * (hash viejo, rango invalido, solape o errores nuevos la rechazan con un
- * `motivo`); `edicionDePin(archivos, { vista, nodo, x, y, hash })` calcula la
- * edicion minima de un Pin; `hashDeContenido(texto)` produce el hash esperado.
- * El vocabulario del Gesto (`IntencionDePin`, `MotivoDeRechazo`,
- * `intencionDePinSchema`) se declara una sola vez en `canonico` y se reexporta
- * aqui para los consumidores. Solo importa paquetes anteriores en la cadena
- * `canonico -> dsl -> layout -> sesion`.
+ * `motivo`); `editarPin(archivos, { vista, nodo, x, y, hash })` es el Gesto de mover
+ * un Pin: fusa calcular la edicion minima, auto-probarla una vez y aplicar en
+ * memoria (devuelve archivos, ediciones e issues); `hashDeContenido(texto)`
+ * produce el hash esperado. La intencion de Pin se consume solo via `editarPin`;
+ * `aplicarEdiciones` es la entrada de las ediciones ya calculadas (`--edits`,
+ * `fix` de `validate`). El vocabulario del Gesto (`IntencionDePin`,
+ * `MotivoDeRechazo`, `intencionDePinSchema`) se declara una sola vez en
+ * `canonico` y se reexporta aqui para los consumidores. Solo importa paquetes
+ * anteriores en la cadena `canonico -> dsl -> layout -> sesion`.
  */
 export { abrirSesion, archivoDeVista } from './sesion';
-export { aplicarEdiciones, editarPin, edicionDePin, hashDeContenido } from './ediciones';
+export { aplicarEdiciones, editarPin, hashDeContenido } from './ediciones';
 // Vocabulario del Gesto declarado una sola vez en `canonico`; se reexporta para no romper consumidores.
 export { intencionDePinSchema } from 'canonico';
 export type { IntencionDePin, MotivoDeRechazo } from 'canonico';
