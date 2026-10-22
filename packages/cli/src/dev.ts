@@ -35,7 +35,7 @@ import { parseArgs } from 'node:util';
 import { combineIconProviders, genericIcons, workspaceIcons } from 'canonico';
 import type { Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { abrirSesion, aplicarEdiciones, archivoDeVista, edicionDePin, hashDeContenido } from 'sesion';
+import { abrirSesion, archivoDeVista, editarPin, hashDeContenido } from 'sesion';
 import type { Sesion } from 'sesion';
 
 import { empaquetarShellDev } from './dev-shell';
@@ -248,21 +248,21 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       return;
     }
     const intencion = { vista: c['vista'], nodo: c['nodo'], x: c['x'], y: c['y'], hash: c['hash'] };
-    const calculada = edicionDePin(disco, intencion);
-    const aplicada = calculada.ok ? aplicarEdiciones(disco, calculada.ediciones) : calculada;
-    if (!aplicada.ok) {
-      const { ok, motivo, mensaje, file } = aplicada;
+    // El Gesto de `sesion` fusa calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
+    const gesta = editarPin(disco, intencion);
+    if (!gesta.ok) {
+      const { ok, motivo, mensaje, file } = gesta;
       responder(res, motivo === 'hash-desactualizado' ? 409 : 422, { ok, motivo, mensaje, ...(file === undefined ? {} : { file }) });
       return;
     }
     // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.
-    const { cambiados, fuera } = cambiosDeEdicion(disco, aplicada.archivos, propios);
+    const { cambiados, fuera } = cambiosDeEdicion(disco, gesta.archivos, propios);
     if (fuera !== undefined) {
       responder(res, 422, { ok: false, motivo: 'archivo-desconocido', mensaje: `'${fuera}' no pertenece al Workspace`, file: fuera });
       return;
     }
     try {
-      for (const ruta of cambiados) escribir(workspace, ruta, aplicada.archivos[ruta] as string);
+      for (const ruta of cambiados) escribir(workspace, ruta, gesta.archivos[ruta] as string);
     } catch (error) {
       responder(res, 500, { ok: false, mensaje: (error as Error).message });
       return;
