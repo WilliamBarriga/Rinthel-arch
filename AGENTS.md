@@ -8,7 +8,7 @@ Sistema React + TS para escribir y renderizar diagramas grandes y detallados de 
 - Decisiones y trabajo pendiente: GitHub Issues de este repo (`gh`, `WilliamBarriga/rinthel-arch`). El mapa es el issue #1 (label `wayfinder:map`); cada ticket es sub-issue con label `wayfinder:<tipo>`.
 - Reglas de codigo (estructura de paquetes, modulos profundos, hexagonal, pruebas): `docs/CODING.md`. Leer antes de crear o modificar codigo.
 - Research: `research/<nombre>.md` en ramas `research/<nombre>`, no en `main`; listarlas con `git branch -a -l '*research/*'` y leer el archivo con `git show research/<nombre>:research/<nombre>.md` antes de re-investigar.
-- ADRs de contrato (`validate`, layout, render, paquetes): `docs/adr/`. Leer el ADR del modulo antes de cambiar su interfaz.
+- ADRs de contrato (dsl, render, layout, paquetes, cli): `docs/adr/`. Leer el ADR del modulo antes de cambiar su interfaz.
 - Repos hermanos de referencia: `../slides-rinthel`, `../video-openmotion`, `../json-renderer`, `../json-render-learning`. Solo lectura.
 
 ## Dependencias y tecnologia

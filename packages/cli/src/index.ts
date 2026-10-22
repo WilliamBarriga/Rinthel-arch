@@ -1,5 +1,5 @@
 /**
- * `cli` — comandos `validate`, `build` y `export`.
+ * `cli` — comandos `validate`, `build`, `export`, `skill`, `inspect`, `edit` y `dev`.
  *
  * Interfaz: `run(argv, dependencias?) -> { exitCode, stdout, stderr }`. No
  * escribe en el proceso: el binario (`bin.ts`) imprime el resultado.
@@ -9,7 +9,7 @@
  * issues en una pasada, ordenados (archivo, linea, columna, codigo).
  * `validate --workspace <ruta> [--theme <nombre>] [--theme-path <carpeta>] [--json] [--max-issues N] [--strict]`:
  * - `--json`: stdout es exactamente un objeto `salidaDeValidateSchema`
- *   (ADR 0008), sin texto extra; `summary` cuenta todos los issues y
+ *   (ADR 0005), sin texto extra; `summary` cuenta todos los issues y
  *   `truncated` indica que `issues` se corto en `--max-issues` (100 por defecto).
  * - Codigos de salida: 0 sin errores, 1 hay errores (con `--strict`, tambien
  *   avisos), 2 fallo de uso o interno (mensaje en stderr, stdout vacio).
@@ -53,25 +53,16 @@
  * `link` navegan a la Vista enlazada dentro del mismo archivo. El estado por defecto sale de
  * la geometria cacheada; colapsar relayoutea con ELK en un Web Worker creado de un Blob
  * del propio bundle y, si el navegador no lo permite, en el hilo principal.
- * `inspect <buscar|nodo|vista> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json]` (ADR 0009, ver
- * `comando-inspect.ts`): consulta de solo lectura del Modelo; cada resultado trae id
- * cualificado, tipo y `archivo:linea` del Ubicador. `--json` sigue `salidaDeInspectSchema`
- * (contractVersion propio, independiente de `validate`); el skill lo documenta junto a `dev`.
- * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>]` (ADR 0009, ver `dev.ts`): servidor HTTP solo en
- * 127.0.0.1 (puerto 4173 por defecto) con vista previa en vivo por SSE y panel de issues.
- * `iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev>` es la entrada programatica (el comando solo
- * parsea argumentos y la llama):
- * - `OpcionesDeDev`: `workspace` (obligatorio), `temas` (= `--theme-path`, se fusiona antes del Workspace y
- *   no se observa), `puerto` (0 elige uno libre), `debounceMs` (150 por defecto) y los seams `leer`,
- *   `observar` y `shell` (para pruebas).
- * - `ServidorDev`: `url` (`http://127.0.0.1:<puerto>/`) y `cerrar()` (cierra conexiones, libera el puerto
- *   y deja de observar el disco).
- * - Invariantes: solo escucha en 127.0.0.1 y responde 403 a cualquier peticion cuyo `Host` no sea
- *   `127.0.0.1:<puerto>` o `localhost:<puerto>` (defensa contra DNS rebinding); con errores en el
- *   Workspace conserva la Fuente y la geometria de la ultima Sesion sin errores.
- * - Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (y no deja el
- *   observador activo) y lanza si la lectura inicial del Workspace falla; las lecturas fallidas posteriores
- *   se ignoran hasta el siguiente cambio. `run(['dev', ...])` los convierte en codigo 2.
+ * `inspect <buscar|nodo|vista> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json]`
+ * (ADR 0005): consulta de solo lectura del Modelo, con contrato JSON propio; el contrato y los
+ * codigos de salida estan en `comando-inspect.ts`.
+ * `edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --edits '<json>') [--hash <archivo>=<hash>] [--theme-path <carpeta>] [--json]`
+ * (ADR 0005): unica escritura explicita sobre el DSL, todo o nada y con chequeo de hash; solo
+ * escribe archivos del Workspace (nunca los de `--theme-path`). Contrato en `comando-edit.ts`.
+ * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>]` (ADR 0005): servidor en 127.0.0.1
+ * (puerto 4173 por defecto) con vista previa en vivo y panel de issues. Entrada programatica:
+ * `iniciarDev(OpcionesDeDev) -> ServidorDev` (`url`, `cerrar()`); invariantes, rutas y modos de
+ * error en `dev.ts`. `run(['dev', ...])` convierte sus fallos en codigo 2.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> dsl -> layout -> sesion -> render -> shell / cli`; la tuberia compilar, validar y layout vive en `sesion`.
@@ -80,11 +71,12 @@ import { salidaDeValidateSchema } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
 
+import { editar } from './comando-edit';
 import { inspeccionar } from './comando-inspect';
 import { exportarPng, exportarSvg } from './export';
 import { comandoDev } from './dev';
 import { exportarHtml } from './html';
-import { abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
+import { MAX_ISSUES_POR_DEFECTO, abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { generarSkill } from './skill';
 import { construirSalida, textoLegible } from './validate';
@@ -109,7 +101,7 @@ export interface Dependencias {
   leerFuentes?: (raiz: string) => Record<string, string>;
 }
 
-const MAX_ISSUES_POR_DEFECTO = 100;
+
 
 type OpcionesParseadas = ReturnType<typeof leerOpciones>;
 
@@ -133,11 +125,12 @@ export async function run(
   dependencias: Dependencias = {},
 ): Promise<ResultadoDeEjecucion> {
   const [comando, ...resto] = argv;
+  if (comando === 'edit') return editar(resto, dependencias);
   if (comando === 'inspect') return inspeccionar(resto, dependencias);
   if (comando === 'dev') return comandoDev(resto, dependencias);
   if (comando !== 'validate' && comando !== 'build' && comando !== 'export' && comando !== 'skill') {
     return uso(
-      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export|skill|inspect|dev> --workspace <ruta>`,
+      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export|skill|inspect|edit|dev> --workspace <ruta>`,
     );
   }
   if (comando === 'export') return exportar(resto, dependencias);

@@ -1,5 +1,5 @@
 /**
- * Colapso y expansion de Grupos (ADR 0004): funciones puras sin DOM. Alternar
+ * Colapso y expansion de Grupos (ADR 0003): funciones puras sin DOM. Alternar
  * un Grupo cambia el `EstadoDeColapso`; la camara se compensa para que el Grupo
  * tocado no se mueva en pantalla; la geometria vieja y la nueva se interpolan
  * para el morph.
@@ -8,7 +8,7 @@ import type { EstadoDeColapso, NodoResuelto, Visibilidad, VistaResuelta } from '
 import type { CajaDeNodo, Geometria, RutaDeArista } from 'layout';
 import type { Camara } from 'render';
 
-/** Tope de Nodos visibles a la vez (ADR 0004: ~1k). */
+/** Tope de Nodos visibles a la vez (ADR 0003: ~1k). */
 export const MAX_NODOS_VISIBLES = 1000;
 
 export function buscarNodo(vista: VistaResuelta, id: string): NodoResuelto | undefined {

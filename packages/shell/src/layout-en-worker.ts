@@ -1,5 +1,5 @@
 /**
- * Layout detras de un Web Worker (ADR 0004). Dos mitades sobre un puerto de
+ * Layout detras de un Web Worker (ADR 0003). Dos mitades sobre un puerto de
  * mensajes: `adaptadorDeWorker(puerto)` (lado de la pagina, produce un
  * `AdaptadorDeLayout`) y `servirLayout(puerto)` (lado del Worker, ejecuta el
  * mismo `layoutView` que usa el build en Node). El puerto es un `Worker`, un

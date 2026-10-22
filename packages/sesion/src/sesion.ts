@@ -38,6 +38,12 @@ export interface Sesion {
   actualizar(archivos: ArchivosDelWorkspace): Sesion;
 }
 
+/** Archivo en que se declara una Vista; `undefined` si no existe o la Sesion no tiene Fuente. */
+export function archivoDeVista(sesion: Pick<Sesion, 'fuente' | 'ubicar'>, vista: string): string | undefined {
+  const indice = sesion.fuente?.views.findIndex(({ id }) => id === vista) ?? -1;
+  return indice < 0 ? undefined : sesion.ubicar?.(['views', indice, 'id'])?.file;
+}
+
 const json = (valor: unknown): string => `${JSON.stringify(valor, null, 2)}\n`;
 
 function temaDeVista(fuente: FuenteCanonica, vista: Vista, global: string | undefined): Tema {

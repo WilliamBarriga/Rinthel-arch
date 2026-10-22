@@ -27,7 +27,7 @@ const nombreDeTipoSchema = z.string().min(1);
 /**
  * Tipo de nodo del catalogo (`specification`): su clave y los campos minimos
  * que define el spec #19. `color` es siempre un nombre de Paleta, nunca un
- * valor literal (ADR 0006); `icon` es una clave opaca del `IconProvider`.
+ * valor literal (ADR 0002); `icon` es una clave opaca del `IconProvider`.
  */
 export const tipoDeNodoSchema = z.object({
   name: nombreDeTipoSchema,
@@ -140,7 +140,7 @@ const modeloSchema = z.object({
 const tablaDeCadenasSchema = z.record(z.string(), z.string());
 
 /**
- * Tema ya resuelto: objeto plano sin herencia (ADR 0006). `palette` mapea nombre
+ * Tema ya resuelto: objeto plano sin herencia (ADR 0002). `palette` mapea nombre
  * de Paleta a valor literal; el hex solo existe aqui. Un Tema es un solo modo.
  */
 export const temaSchema = z.object({
@@ -181,8 +181,8 @@ export const TIPOS_DE_VISTA = ['architecture', 'flow'] as const;
 /**
  * Override de presentacion de un Nodo en una Vista: solo apariencia, nunca toca
  * el Modelo. `pin` es la posicion del Nodo relativa a su Grupo padre (al lienzo
- * si es raiz), aplicada despues del layout (ADR 0004). `order` se guarda pero
- * ningun paso lo usa en v1: ELK corre sin `considerModelOrder` (ADR 0004
+ * si es raiz), aplicada despues del layout (ADR 0003). `order` se guarda pero
+ * ningun paso lo usa en v1: ELK corre sin `considerModelOrder` (ADR 0003
  * enmendado), asi que no hay ordenamiento por el que consumirlo. `color` es un
  * nombre de Paleta (`validate` lo comprueba contra la Paleta del Tema).
  */
@@ -202,7 +202,7 @@ const elementoDePasoSchema = z.union([
   z.object({ from: idDeNodoSchema, to: idDeNodoSchema }),
 ]);
 
-/** Paso de revelado (ADR 0007): acumulativo; `show` revela y `hide` oculta lo anterior. */
+/** Paso de revelado (ADR 0002): acumulativo; `show` revela y `hide` oculta lo anterior. */
 export const pasoSchema = z.object({
   title: z.string(),
   show: z.array(elementoDePasoSchema).default([]),
@@ -242,7 +242,7 @@ export type Vista = z.infer<typeof vistaSchema>;
 /**
  * Fuente canonica. Aqui solo se validan la forma del documento y las reglas
  * estructurales de jerarquia documentadas en `index.ts`; la validacion semantica
- * por codigos (ADR 0008) es `validate`, en `validar.ts`.
+ * por codigos (ADR 0005) es `validate`, en `validar.ts`.
  */
 export const fuenteCanonicaSchema = z
   .object({

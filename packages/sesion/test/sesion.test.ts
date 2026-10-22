@@ -1,6 +1,22 @@
 import { describe, expect, it } from 'vitest';
 
-import { abrirSesion } from 'sesion';
+import { abrirSesion, archivoDeVista } from 'sesion';
+
+describe('archivoDeVista', () => {
+  it('devuelve el archivo en que se declara la Vista', () => {
+    const sesion = abrirSesion({
+      'a.dg': 'specification { node servicio }\nmodel { servicio x }\n',
+      'b.dg': 'view v {\n  type architecture\n  include **\n}\n',
+    });
+    expect(archivoDeVista(sesion, 'v')).toBe('b.dg');
+  });
+
+  it('es undefined para una Vista inexistente o una Sesion con errores', () => {
+    const valida = abrirSesion({ 'main.dg': 'specification { node servicio }\nmodel { servicio a }\nview v { type architecture include ** }\n' });
+    expect(archivoDeVista(valida, 'nada')).toBeUndefined();
+    expect(archivoDeVista(abrirSesion({ 'main.dg': 'model {' }), 'v')).toBeUndefined();
+  });
+});
 
 const base = (extra = '') => `specification { node servicio }
 model { servicio a  servicio b  servicio c }

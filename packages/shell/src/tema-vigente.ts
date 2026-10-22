@@ -1,5 +1,5 @@
 /**
- * Recarga de Tema al guardar (ADR 0006). El nucleo no lee archivos: el consumidor
+ * Recarga de Tema al guardar (ADR 0002). El nucleo no lee archivos: el consumidor
  * (cli, dev server) entrega el Tema ya resuelto por un puerto de suscripcion.
  */
 import { useEffect, useState } from 'react';

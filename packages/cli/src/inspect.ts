@@ -1,5 +1,5 @@
 /**
- * Consulta de solo lectura del Modelo (`diagrams inspect`, ADR 0009): `buscar`,
+ * Consulta de solo lectura del Modelo (`diagrams inspect`, ADR 0005): `buscar`,
  * `nodo` y `vista`. Puro sobre una Sesion; el comando de `index.ts` solo parsea
  * argumentos y la imprime.
  */

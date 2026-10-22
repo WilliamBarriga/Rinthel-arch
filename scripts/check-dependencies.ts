@@ -2,7 +2,7 @@
  * `check-dependencies` — chequeo automatizado de la arquitectura del workspace.
  *
  * Interfaz publica:
- * - `CADENA`: orden de dependencias de ADR 0005, fuente unica de verdad.
+ * - `CADENA`: orden de dependencias de ADR 0004, fuente unica de verdad.
  * - `revisarWorkspace(raiz) -> Violacion[]`: escanea `packages/*` (fuente,
  *   tests, configs y `package.json`) y devuelve las violaciones en orden
  *   determinista (paquete, archivo, regla, mensaje). Vacio significa verde.
@@ -33,7 +33,7 @@ import { builtinModules } from 'node:module';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
-/** Orden de dependencias (ADR 0005): un paquete solo importa de los anteriores. */
+/** Orden de dependencias (ADR 0004): un paquete solo importa de los anteriores. */
 export const CADENA = ['canonico', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli'] as const;
 
 /** Nucleo puro (CODING.md): sin I/O, sin reloj, sin estado global. layout, shell y cli son adaptadores. */

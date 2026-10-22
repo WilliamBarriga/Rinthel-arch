@@ -1,6 +1,6 @@
 /**
  * Puerto `IconProvider` (clave opaca -> SVG inline) y sus adaptadores: los
- * iconos genericos del nucleo y los SVG del Workspace (ADR 0006). El nucleo no
+ * iconos genericos del nucleo y los SVG del Workspace (ADR 0002). El nucleo no
  * conoce ningun set de marcas: uno externo se enchufa como otro `IconProvider`.
  */
 import type { TipoDeNodo } from './esquema';

@@ -19,7 +19,12 @@ export function rangoDeIndice(nodo: AstNode, propiedad: string, indice: number):
   return aRango(GrammarUtils.findNodesForProperty(nodo.$cstNode, propiedad)[indice]?.range);
 }
 
-function aRango(rango: RangoDeLangium | undefined): TextRange {
+/** Rango vacio en una posicion 0-based de Langium. */
+export function puntoVacio(punto: { line: number; character: number }): TextRange {
+  return aRango({ start: punto, end: punto });
+}
+
+export function aRango(rango: RangoDeLangium | undefined): TextRange {
   return {
     start: { line: (rango?.start.line ?? 0) + 1, column: (rango?.start.character ?? 0) + 1 },
     end: { line: (rango?.end.line ?? 0) + 1, column: (rango?.end.character ?? 0) + 1 },

@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import type { Issue } from 'canonico';
 
-/** Forma exigida por el ADR 0008, escrita desde el contrato y no desde el codigo. */
+/** Forma exigida por el ADR 0005, escrita desde el contrato y no desde el codigo. */
 type IssueEsperado = {
   code: string;
   severity: 'error' | 'warning';
@@ -19,7 +19,7 @@ type IssueEsperado = {
   };
 };
 
-describe('Issue (ADR 0008)', () => {
+describe('Issue (ADR 0005)', () => {
   it('es exactamente el contrato de salida de validate', () => {
     expectTypeOf<Issue>().toEqualTypeOf<IssueEsperado>();
   });

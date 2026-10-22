@@ -14,9 +14,9 @@
  * con paleta, colores o iconos.
  *
  * Invariantes: determinista (misma entrada, misma geometria); `INCLUDE_CHILDREN`
- * sin `considerModelOrder` (ADR 0004); el mismo codigo corre en Node y en Web
+ * sin `considerModelOrder` (ADR 0003); el mismo codigo corre en Node y en Web
  * Worker. Los `pin` de los overrides se aplican despues de ELK como posicion
- * relativa al Grupo padre (ADR 0004): solo se re-enrutan las Aristas que tocan
+ * relativa al Grupo padre (ADR 0003): solo se re-enrutan las Aristas que tocan
  * Nodos movidos, y un Pin sobre un Nodo ausente de la Vista se ignora.
  * `Geometria.pinsSolapados` lista los pares de Pins que se solapan, para que
  * `validate` emita `W_OVERLAPPING_PINS` con la posicion del texto.

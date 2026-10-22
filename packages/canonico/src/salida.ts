@@ -1,5 +1,5 @@
 /**
- * Esquema Zod de la salida de `validate --json` (ADR 0008). Es la fuente del
+ * Esquema Zod de la salida de `validate --json` (ADR 0005). Es la fuente del
  * contrato: el CLI lo usa para emitir y el skill generado para describirlo.
  * Anadir campos o codigos no rompe el contrato; quitarlos o cambiar su
  * significado exige subir `CONTRACT_VERSION`.
@@ -52,7 +52,7 @@ export type SalidaDeValidate = z.infer<typeof salidaDeValidateSchema>;
 
 /**
  * El contrato de la salida como JSON Schema, derivado del esquema Zod: la fuente
- * del skill generado para agentes (ADR 0008).
+ * del skill generado para agentes (ADR 0005).
  */
 export function salidaDeValidateJsonSchema(): Record<string, unknown> {
   return z.toJSONSchema(salidaDeValidateSchema);

@@ -41,7 +41,7 @@ describe('validate', () => {
       ['main.dg', 6, 3, 'E_UNKNOWN_NODE_TYPE'],
       ['main.dg', 8, 1, 'E_SYNTAX_ERROR'],
     ]);
-    // `message` no es contrato (ADR 0008): el snapshot fija solo lo que si lo es.
+    // `message` no es contrato (ADR 0005): el snapshot fija solo lo que si lo es.
     expect({ ...salida, issues: salida.issues.map(({ message, ...resto }) => resto) }).toMatchSnapshot();
   });
 

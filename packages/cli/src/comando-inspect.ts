@@ -1,5 +1,5 @@
 /**
- * Comando `inspect` del CLI (ADR 0009): `inspect <buscar|nodo|vista> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json]`.
+ * Comando `inspect` del CLI (ADR 0005): `inspect <buscar|nodo|vista> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json]`.
  * Solo lectura. Salida: texto legible o, con `--json`, un objeto `salidaDeInspectSchema`
  * (su propio `contractVersion`). Codigos: 0 respuesta, 1 el Nodo/Vista no existe o el
  * Workspace tiene errores (mensaje en stderr, stdout vacio), 2 fallo de uso o interno.

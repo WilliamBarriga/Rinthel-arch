@@ -19,7 +19,7 @@ const valida = {
   ],
 };
 
-describe('salida de validate (ADR 0008)', () => {
+describe('salida de validate (ADR 0005)', () => {
   it('acepta el objeto versionado con sus issues', () => {
     expect(salidaDeValidateSchema.parse(valida)).toEqual(valida);
   });

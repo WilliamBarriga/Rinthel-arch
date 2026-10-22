@@ -1,5 +1,5 @@
 /**
- * Layout de una Vista resuelta con ELK (ADR 0004): `INCLUDE_CHILDREN`, sin
+ * Layout de una Vista resuelta con ELK (ADR 0003): `INCLUDE_CHILDREN`, sin
  * `considerModelOrder` (enmienda del ADR, benchmark #13).
  */
 import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
@@ -63,7 +63,7 @@ const OPCIONES_RAIZ = {
   'elk.json.shapeCoords': 'PARENT',
   'elk.spacing.nodeNode': '24',
   'elk.layered.spacing.nodeNodeBetweenLayers': '48',
-  // Esfuerzo de minimizacion de cruces: 1 (el minimo) reduce a la mitad el relayout de 1k Nodos (ADR 0004, enmienda).
+  // Esfuerzo de minimizacion de cruces: 1 (el minimo) reduce a la mitad el relayout de 1k Nodos (ADR 0003, enmienda).
   'elk.layered.thoroughness': '1',
 };
 
@@ -117,7 +117,7 @@ export async function layoutView(
 }
 
 /**
- * Pin post-ELK (ADR 0004): la caja del Nodo pineado pasa a `pin`, relativa a su
+ * Pin post-ELK (ADR 0003): la caja del Nodo pineado pasa a `pin`, relativa a su
  * Grupo padre. De las Aristas, solo cambian las que tocan el subarbol movido: si
  * los dos extremos van dentro del mismo subarbol pineado se trasladan con el; si
  * no, se re-enrutan con una ruta en Z sencilla entre las cajas (pierden la ruta
