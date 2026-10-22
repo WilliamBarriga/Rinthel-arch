@@ -2,8 +2,8 @@
  * Comando `edit` del CLI (ADR 0005): unica escritura explicita sobre el DSL de texto.
  * `edit --workspace <ruta> [--theme-path <carpeta>] [--json] [--hash <archivo>=<hash>]...`
  * mas una de estas dos formas:
- * - Intencion de Pin: `--view <id> --node <id cualificado> --x N --y N`. El comando calcula la
- *   edicion minima con el AST y el Ubicador (reemplaza el `pin` o lo inserta).
+ * - Intencion de Pin: `--view <id> --node <id cualificado> --x N --y N`. El Gesto `editarPin` de `sesion`
+ *   calcula la edicion minima (reemplaza el `pin` o lo inserta), la auto-prueba y la aplica en memoria.
  * - Ediciones ya calculadas: `--edits '<json>'`, un arreglo de `{ file, range, replacement, hash? }`
  *   (p. ej. el `fix` de un issue de `validate`). Rangos 1-based, fin excluido.
  * Concurrencia: cada edicion lleva el hash del archivo que vio quien la pide (`hash` en la edicion
@@ -16,7 +16,7 @@ import { EDIT_CONTRACT_VERSION, edicionesPedidasSchema, salidaDeEditSchema } fro
 import type { SalidaDeEdit } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
-import { abrirSesion, aplicarEdiciones, archivoDeVista, edicionDePin, hashDeContenido } from 'sesion';
+import { abrirSesion, aplicarEdiciones, archivoDeVista, editarPin, hashDeContenido } from 'sesion';
 import type { EdicionConHash } from 'sesion';
 
 import { cambiosDeEdicion, leerConTemas, uso } from './sesion-cli';
@@ -78,6 +78,7 @@ export async function editar(
   const json = v.json === true;
 
   let ediciones: EdicionConHash[];
+  let editados: ArchivosDelWorkspace;
   if (v.edits !== undefined) {
     let pedidas;
     try {
@@ -86,6 +87,9 @@ export async function editar(
       return uso(`--edits no es un arreglo valido de { file, range, replacement, hash? }: ${(error as Error).message}`);
     }
     ediciones = pedidas.map((e) => ({ ...e, hash: e.hash ?? hashVigente(e.file) }));
+    const aplicada = aplicarEdiciones(archivos, ediciones);
+    if (!aplicada.ok) return rechazado(aplicada, json);
+    editados = aplicada.archivos;
   } else {
     const x = Number(v.x);
     const y = Number(v.y);
@@ -93,26 +97,26 @@ export async function editar(
       return uso(`El Pin requiere --view, --node, --x y --y numericos. ${USO}`);
     }
     const file = archivoDeVista(abrirSesion(archivos), v.view);
-    const calculada = edicionDePin(archivos, {
+    // El Gesto de `sesion` fusa calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
+    const gesta = editarPin(archivos, {
       vista: v.view,
       nodo: v.node,
       x,
       y,
       hash: file === undefined ? '' : hashVigente(file),
     });
-    if (!calculada.ok) return rechazado(calculada, json);
-    ediciones = calculada.ediciones;
+    if (!gesta.ok) return rechazado(gesta, json);
+    ediciones = gesta.ediciones;
+    editados = gesta.archivos;
   }
 
-  const aplicada = aplicarEdiciones(archivos, ediciones);
-  if (!aplicada.ok) return rechazado(aplicada, json);
   // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.
-  const { cambiados, fuera } = cambiosDeEdicion(archivos, aplicada.archivos, propios);
+  const { cambiados, fuera } = cambiosDeEdicion(archivos, editados, propios);
   if (fuera !== undefined) {
     return rechazado({ motivo: 'archivo-desconocido', mensaje: `'${fuera}' no pertenece al Workspace`, file: fuera }, json);
   }
   try {
-    for (const f of cambiados) escribirArchivo(destinoEnWorkspace(v.workspace, f), aplicada.archivos[f] as string);
+    for (const f of cambiados) escribirArchivo(destinoEnWorkspace(v.workspace, f), editados[f] as string);
   } catch (error) {
     return uso(`No se pudo escribir: ${(error as Error).message}`);
   }
