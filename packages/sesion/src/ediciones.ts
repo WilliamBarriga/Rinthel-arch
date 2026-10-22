@@ -1,4 +1,4 @@
-import type { Issue, TextPosition, TextRange } from 'canonico';
+import type { Issue, IntencionDePin, MotivoDeRechazo, TextPosition, TextRange } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace } from 'dsl';
 
@@ -11,25 +11,6 @@ export interface EdicionConHash {
   /** `hashDeContenido` del archivo tal como lo vio el llamador. */
   hash: string;
 }
-
-/** Intencion de mover un Pin: el servidor calcula el texto; el llamador no conoce la sintaxis. */
-export interface IntencionDePin {
-  vista: string;
-  /** Id cualificado del Nodo. */
-  nodo: string;
-  x: number;
-  y: number;
-  /** `hashDeContenido` del archivo que contiene la Vista, tal como lo vio el llamador. */
-  hash: string;
-}
-
-export type MotivoDeRechazo =
-  | 'hash-desactualizado'
-  | 'archivo-desconocido'
-  | 'rango-invalido'
-  | 'ediciones-solapadas'
-  | 'vista-desconocida'
-  | 'invalida';
 
 export type ResultadoDeEdicion<T> =
   | ({ ok: true } & T)
