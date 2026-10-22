@@ -30,7 +30,7 @@
  * `canonico -> dsl -> layout -> sesion`.
  */
 export { abrirSesion, archivoDeVista } from './sesion';
-export { aplicarEdiciones, edicionDePin, hashDeContenido } from './ediciones';
+export { aplicarEdiciones, editarPin, edicionDePin, hashDeContenido } from './ediciones';
 // Vocabulario del Gesto declarado una sola vez en `canonico`; se reexporta para no romper consumidores.
 export { intencionDePinSchema } from 'canonico';
 export type { IntencionDePin, MotivoDeRechazo } from 'canonico';

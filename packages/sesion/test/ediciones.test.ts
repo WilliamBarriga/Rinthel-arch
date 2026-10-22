@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { abrirSesion, aplicarEdiciones, edicionDePin, hashDeContenido } from 'sesion';
+import { abrirSesion, aplicarEdiciones, editarPin, edicionDePin, hashDeContenido } from 'sesion';
 
 const base = (extra: string) => `specification { node servicio }
 model { servicio a  servicio b }
@@ -16,6 +16,21 @@ const intencion = (texto: string, x = 5, y = -7) => ({
   x,
   y,
   hash: hashDeContenido(texto),
+});
+
+describe('editarPin', () => {
+  it('fusa calcular, auto-probar y aplicar: devuelve archivos nuevos, las ediciones y los issues sin errores nuevos', () => {
+    const texto = base('  node a { label "A" pin 1,2 }\n');
+    const r = editarPin({ 'main.dg': texto }, intencion(texto, 5, -7));
+
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.archivos['main.dg']).toBe(base('  node a { label "A" pin 5,-7 }\n'));
+    expect(r.ediciones).toEqual([
+      { file: 'main.dg', range: expect.anything(), replacement: 'pin 5,-7', hash: intencion(texto, 5, -7).hash },
+    ]);
+    expect(r.issues.some((i) => i.severity === 'error')).toBe(false);
+  });
 });
 
 describe('edicionDePin + aplicarEdiciones', () => {

@@ -1,6 +1,6 @@
 import type { Issue, IntencionDePin, MotivoDeRechazo, TextPosition, TextRange } from 'canonico';
 import { compile } from 'dsl';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
 
 /** Edicion de texto sobre un archivo del Workspace, con el hash del contenido que vio quien la pide. */
 export interface EdicionConHash {
@@ -50,6 +50,13 @@ function offsetDe(texto: string, { line, column }: TextPosition): number | undef
 /** Clave estable ante cambios de mensaje o de linea: un error es el mismo si comparte codigo y archivo. */
 const clave = (issue: Issue) => `${issue.code}|${issue.file}`;
 
+/** Conteo de errores por `clave` (codigo y archivo): los preexistentes no bloquean una edicion ajena. */
+const erroresPorClave = (issues: readonly Issue[]): Map<string, number> => {
+  const conteo = new Map<string, number>();
+  for (const i of issues) if (i.severity === 'error') conteo.set(clave(i), (conteo.get(clave(i)) ?? 0) + 1);
+  return conteo;
+};
+
 /** Limite de coordenadas de un Pin: enteros dentro de este rango (formato fijo del DSL escrito). */
 const LIMITE_DE_PIN = 100_000;
 const coordenadaDePin = (n: number): number => Math.min(LIMITE_DE_PIN, Math.max(-LIMITE_DE_PIN, Math.round(n))) + 0;
@@ -61,11 +68,13 @@ const coordenadaDePin = (n: number): number => Math.min(LIMITE_DE_PIN, Math.max(
  * introduce errores que antes no estaban (se cuentan por codigo y archivo: un error
  * preexistente cuyo mensaje cambia no cuenta como nuevo, uno adicional si), no se
  * devuelve ningun archivo. Los `issues`
- * devueltos son los del Workspace resultante.
+ * devueltos son los del Workspace resultante. `erroresAntes` es el conteo de errores
+ * del mapa de entrada ya hecho por quien llama: reutiliza compilaciones pagadas.
  */
-export function aplicarEdiciones(
+function aplicarSobre(
   archivos: ArchivosDelWorkspace,
   ediciones: readonly EdicionConHash[],
+  erroresAntes: Map<string, number>,
 ): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace; issues: Issue[] }> {
   const porArchivo = new Map<string, { inicio: number; fin: number; texto: string }[]>();
   for (const { file, range, replacement, hash } of ediciones) {
@@ -95,9 +104,8 @@ export function aplicarEdiciones(
     resultado[file] = texto;
   }
 
-  const conteo = new Map<string, number>();
-  for (const i of compile(archivos).issues) if (i.severity === 'error') conteo.set(clave(i), (conteo.get(clave(i)) ?? 0) + 1);
   const despues = compile(resultado).issues;
+  const conteo = new Map(erroresAntes);
   const nuevo = despues.find((i) => {
     if (i.severity !== 'error') return false;
     const restantes = conteo.get(clave(i)) ?? 0;
@@ -109,18 +117,49 @@ export function aplicarEdiciones(
 }
 
 /**
- * Traduce la intencion de mover un Pin a la edicion minima: reemplaza `pin x,y` si el Nodo ya
- * lo tiene en la Vista, lo anade al override si existe sin pin, o crea `node <id> { pin x,y }`
- * al final de la Vista. Formato fijo: x e y se redondean a enteros y se limitan a +-100000; el resto del archivo no cambia. Rechaza hash viejo, Vista
- * desconocida y cualquier intencion cuyo resultado no compile limpio (p. ej. Nodo inexistente).
+ * Aplica ediciones `{ file, range, replacement, hash }` sobre el mapa de archivos y devuelve
+ * el mapa nuevo; no toca disco ni muta la entrada. Todo o nada: si algun hash no coincide con
+ * el contenido actual, un rango es invalido, dos ediciones se solapan, o el resultado
+ * introduce errores que antes no estaban (se cuentan por codigo y archivo: un error
+ * preexistente cuyo mensaje cambia no cuenta como nuevo, uno adicional si), no se
+ * devuelve ningun archivo. Los `issues`
+ * devueltos son los del Workspace resultante.
  */
-export function edicionDePin(
+export function aplicarEdiciones(
+  archivos: ArchivosDelWorkspace,
+  ediciones: readonly EdicionConHash[],
+): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace; issues: Issue[] }> {
+  return aplicarSobre(archivos, ediciones, erroresPorClave(compile(archivos).issues));
+}
+
+/**
+ * Gesto de mover un Pin (ADR 0005): fusa calcular la edicion minima, auto-probarla
+ * una vez y aplicar en memoria. Devuelve los archivos nuevos (sin tocar disco),
+ * las ediciones calculadas y los issues del Workspace resultante. Pura; reutiliza
+ * la compilacion unica que localiza el Pin tambien para comparar errores, de
+ * modo que el gesto paga 2 compilaciones del Workspace en total.
+ * Rechaza hash viejo, Vista desconocida y cualquier intencion cuyo resultado no compile limpio (p. ej. Nodo inexistente).
+ */
+export function editarPin(
   archivos: ArchivosDelWorkspace,
   intencion: IntencionDePin,
+): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace; ediciones: EdicionConHash[]; issues: Issue[] }> {
+  const compilado = compile(archivos);
+  const calculada = edicionDePinSobre(archivos, intencion, compilado);
+  if (!calculada.ok) return calculada;
+  const aplicada = aplicarSobre(archivos, calculada.ediciones, erroresPorClave(compilado.issues));
+  if (!aplicada.ok) return aplicada;
+  return { ok: true, archivos: aplicada.archivos, ediciones: calculada.ediciones, issues: aplicada.issues };
+}
+
+/** Parte de calculo compartida por `edicionDePin` y `editarPin`; no auto-prueba. */
+function edicionDePinSobre(
+  archivos: ArchivosDelWorkspace,
+  intencion: IntencionDePin,
+  compilado: ResultadoDeCompilacion,
 ): ResultadoDeEdicion<{ ediciones: EdicionConHash[] }> {
   const { vista, nodo } = intencion;
   const [x, y] = [coordenadaDePin(intencion.x), coordenadaDePin(intencion.y)];
-  const compilado = compile(archivos);
   const { canonico: fuente, ubicar } = compilado;
   if (fuente === undefined || ubicar === undefined) {
     const primero = compilado.issues.find((i) => i.severity === 'error');
@@ -166,7 +205,22 @@ export function edicionDePin(
     }
   }
 
-  const prueba = aplicarEdiciones(archivos, [hecha]);
-  if (!prueba.ok) return prueba;
   return { ok: true, ediciones: [hecha] };
+}
+
+/**
+ * Traduce la intencion de mover un Pin a la edicion minima: reemplaza `pin x,y` si el Nodo ya
+ * lo tiene en la Vista, lo anade al override si existe sin pin, o crea `node <id> { pin x,y }`
+ * al final de la Vista. Formato fijo: x e y se redondean a enteros y se limitan a +-100000; el resto del archivo no cambia. Rechaza hash viejo, Vista
+ * desconocida y cualquier intencion cuyo resultado no compile limpio (p. ej. Nodo inexistente).
+ */
+export function edicionDePin(
+  archivos: ArchivosDelWorkspace,
+  intencion: IntencionDePin,
+): ResultadoDeEdicion<{ ediciones: EdicionConHash[] }> {
+  const calculada = edicionDePinSobre(archivos, intencion, compile(archivos));
+  if (!calculada.ok) return calculada;
+  const prueba = aplicarEdiciones(archivos, calculada.ediciones);
+  if (!prueba.ok) return prueba;
+  return { ok: true, ediciones: calculada.ediciones };
 }
