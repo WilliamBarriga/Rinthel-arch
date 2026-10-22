@@ -25,6 +25,10 @@
  * issues salen en `(canonico):1:1` sin `fix`. No cubre sintaxis ni fusion (las
  * detecta `dsl`) ni `W_OVERLAPPING_PINS` (necesita la geometria; lo emite el CLI).
  * `candidatosCercanos(escrito, existentes)` es la ayuda de typos para `hint`/`fix`.
+ * El Gesto de editar un Pin (ADR 0005) tiene aqui su vocabulario: `IntencionDePin`
+ * (el cuerpo de `POST /api/pin`, validado por `intencionDePinSchema`) y
+ * `MotivoDeRechazo` (`MOTIVOS_DE_RECHAZO`), del que deriva el enum `reason` de
+ * `salidaDeEditSchema`; se declaran una sola vez y `sesion` los reexporta.
  * Configuracion requerida: ninguna. Solo importa paquetes anteriores en la
  * cadena `canonico -> dsl -> layout -> render -> shell / cli`.
  */
@@ -80,6 +84,9 @@ export type { SalidaDeEdit } from './edit';
 
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';
 export type { SalidaDeInspect } from './inspect';
+
+export { MOTIVOS_DE_RECHAZO, intencionDePinSchema } from './pin';
+export type { IntencionDePin, MotivoDeRechazo } from './pin';
 
 export { CONTRACT_VERSION, issueSchema, salidaDeValidateJsonSchema, salidaDeValidateSchema } from './salida';
 export type { SalidaDeValidate } from './salida';

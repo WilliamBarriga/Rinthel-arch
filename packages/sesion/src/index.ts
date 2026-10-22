@@ -24,9 +24,15 @@
  * (hash viejo, rango invalido, solape o errores nuevos la rechazan con un
  * `motivo`); `edicionDePin(archivos, { vista, nodo, x, y, hash })` calcula la
  * edicion minima de un Pin; `hashDeContenido(texto)` produce el hash esperado.
- * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout -> sesion`.
+ * El vocabulario del Gesto (`IntencionDePin`, `MotivoDeRechazo`,
+ * `intencionDePinSchema`) se declara una sola vez en `canonico` y se reexporta
+ * aqui para los consumidores. Solo importa paquetes anteriores en la cadena
+ * `canonico -> dsl -> layout -> sesion`.
  */
 export { abrirSesion, archivoDeVista } from './sesion';
 export { aplicarEdiciones, edicionDePin, hashDeContenido } from './ediciones';
-export type { EdicionConHash, IntencionDePin, MotivoDeRechazo, ResultadoDeEdicion } from './ediciones';
+// Vocabulario del Gesto declarado una sola vez en `canonico`; se reexporta para no romper consumidores.
+export { intencionDePinSchema } from 'canonico';
+export type { IntencionDePin, MotivoDeRechazo } from 'canonico';
+export type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
 export type { OpcionesDeSesion, ResultadoDeConstruir, SalidaDeBuild, Sesion } from './sesion';
