@@ -139,6 +139,28 @@ const modeloSchema = z.object({
 
 const tablaDeCadenasSchema = z.record(z.string(), z.string());
 
+const colorSchema = z.string().min(1);
+
+/** Sombra de un Nodo: desplazamiento y desenfoque en px, color literal o nombre de Paleta. */
+const sombraSchema = z.strictObject({ dx: z.number(), dy: z.number(), blur: z.number().min(0), color: colorSchema });
+
+/** Tokens de un Tipo de nodo: relleno, trazo y sombra. El color del override de la Vista manda sobre `stroke`. */
+export const tokensDeTipoDeNodoSchema = z.strictObject({
+  fill: colorSchema.optional(),
+  stroke: colorSchema.optional(),
+  strokeWidth: z.number().positive().optional(),
+  shadow: sombraSchema.optional(),
+});
+
+/** Tokens de un tipo de Arista: trazo y grosor. */
+export const tokensDeTipoDeAristaSchema = z.strictObject({
+  stroke: colorSchema.optional(),
+  strokeWidth: z.number().positive().optional(),
+});
+
+export type TokensDeTipoDeNodo = z.infer<typeof tokensDeTipoDeNodoSchema>;
+export type TokensDeTipoDeArista = z.infer<typeof tokensDeTipoDeAristaSchema>;
+
 /**
  * Tema ya resuelto: objeto plano sin herencia (ADR 0002). `palette` mapea nombre
  * de Paleta a valor literal; el hex solo existe aqui. Un Tema es un solo modo.
@@ -148,6 +170,13 @@ export const temaSchema = z.object({
   palette: tablaDeCadenasSchema.default({}),
   fonts: tablaDeCadenasSchema.default({}),
   tokens: tablaDeCadenasSchema.default({}),
+  /** Tokens por nombre de Tipo de nodo, sin tocar el Modelo (ADR 0002). Sin ellos el dibujo no cambia. */
+  nodeStyles: z.record(z.string(), tokensDeTipoDeNodoSchema).optional(),
+  /**
+   * Tokens por nombre de tipo de Arista. El Modelo aun no tipa Aristas: hasta
+   * entonces solo se aplica la entrada `default`, a todas.
+   */
+  edgeStyles: z.record(z.string(), tokensDeTipoDeAristaSchema).optional(),
 });
 
 export type Tema = z.infer<typeof temaSchema>;

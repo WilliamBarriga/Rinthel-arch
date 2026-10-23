@@ -25,5 +25,5 @@ Contexto: cambiar la estetica obligaba a recorrer la construccion de la escena y
 ## Consecuencias y siguiente paso
 
 - Redisenar la estetica es editar `estilo.ts` (y las Metricas), no recorrer la escena.
-- Un Tema aun no sobrescribe el Estilo por nombre ni declara rellenos o sombras por Tipo de nodo o tipo de Arista: el Estilo es la tabla donde eso se enchufa despues, sin tocar el Modelo (ADR 0002). Los estados visuales (seleccionado, hover, fantasma) y las variables CSS del chrome del shell son un ticket posterior y se apoyan en este.
+- El Tema declara rellenos, trazos y sombras por Tipo de nodo (`nodeStyles`) y trazo por tipo de Arista (`edgeStyles`), validados por `temaSchema`; `resolverEstilo` los resuelve contra la Paleta en `estilo.nodo.porTipo` y `estilo.arista.porTipo`, sin tocar el Modelo (ADR 0002). El color del Tipo/override de la Vista manda sobre `stroke`. El Modelo aun no tipa Aristas: solo se aplica `edgeStyles.default`. La sintaxis DSL para declararlos queda pendiente; hoy llegan en el objeto Tema. Los estados visuales (seleccionado, hover, fantasma) y las variables CSS del chrome del shell son un ticket posterior y se apoyan en este.
 - Un Tema que antes dibujaba con `none` por un token ausente ahora falla con un mensaje claro; los Temas del nucleo y de los ejemplos ya cumplen el contrato.

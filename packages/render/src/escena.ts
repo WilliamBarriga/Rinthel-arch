@@ -14,7 +14,7 @@ import { num } from './elemento';
 import type { Elemento } from './elemento';
 import { resolverEstilo } from './estilo';
 import type { Estilo } from './estilo';
-import { pintarArista, pintarControl, pintarEtiquetaDeArista, pintarFlecha, pintarFondo, pintarGrupo, pintarNodo } from './pintores';
+import { pintarArista, pintarControl, pintarEtiquetaDeArista, pintarFlecha, pintarFondo, pintarGrupo, pintarNodo, pintarSombras } from './pintores';
 
 export type { Elemento } from './elemento';
 
@@ -85,6 +85,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
     hijos: [
       pintarFondo(estilo, geometry.width, geometry.height),
       pintarFlecha(estilo),
+      ...[pintarSombras(estilo)].filter((e) => e !== undefined),
       ...raices.map((nodo) => nodoSvg(nodo, contexto)),
       ...view.edges.flatMap((arista) => aristaSvg(arista, contexto)),
     ],
@@ -126,7 +127,7 @@ function tieneFilas(nodo: NodoResuelto, detail?: NivelDeDetalle): boolean {
 
 /** Valor de la Paleta para el color del Nodo; sin color, o desconocido, el borde del Estilo. */
 function colorDeTrazo(nodo: NodoResuelto, estilo: Estilo): string {
-  return (nodo.color !== undefined ? estilo.paleta[nodo.color] : undefined) ?? estilo.borde;
+  return (nodo.color !== undefined ? estilo.paleta[nodo.color] : undefined) ?? estilo.nodo.porTipo[nodo.type]?.trazo ?? estilo.borde;
 }
 
 /** Arista con su etiqueta. Una Arista sin ruta en la geometria (ELK no la enruto) se omite. */

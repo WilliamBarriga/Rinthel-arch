@@ -20,7 +20,7 @@ describe('resolverEstilo', () => {
   it('trae los defaults de dibujo en un solo sitio', () => {
     const estilo = resolverEstilo(TEMA_NEUTRO);
 
-    expect(estilo.nodo).toEqual({ radio: 6, relleno: '#ffffff', trazoColapsado: '6 3' });
+    expect(estilo.nodo).toEqual({ radio: 6, relleno: '#ffffff', trazoColapsado: '6 3', porTipo: {} });
     expect(estilo.arista.color).toBe('#9ca3af');
     expect(estilo.arista.flecha).toEqual({ ancho: 8, alto: 8, forma: 'M 0 0 L 10 5 L 0 10 z' });
     expect(estilo.etiqueta.halo).toEqual({ color: '#ffffff', ancho: 3 });
