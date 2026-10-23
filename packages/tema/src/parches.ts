@@ -7,7 +7,7 @@
 import { CODIGOS } from 'canonico';
 
 import { CATALOGO, construirPrimitiva, sugerir } from './catalogo';
-import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva } from './catalogo';
+import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva, UbicacionDePrimitiva } from './catalogo';
 import type { TemaResuelto } from './tema';
 
 /** Estados de la cascada; `foco` y `en-ruta` los calcula la shell, el Tema solo decide como se ven. */
@@ -53,6 +53,7 @@ export function aplicarOps(
   ops: readonly OpDeCapa[],
   paleta: Readonly<Record<string, string>>,
   modo: ModoDeParche,
+  ubicacion: UbicacionDePrimitiva = 'capa-nodo',
 ): { pila: CapaDeTema[]; errores: ErrorDeOp[] } {
   const capas = pila.map((c) => ({ ...c, primitiva: { ...c.primitiva, props: { ...c.primitiva.props } } }));
   const errores: ErrorDeOp[] = [];
@@ -106,7 +107,7 @@ export function aplicarOps(
 
     const tipo = op.primitiva ?? existente?.primitiva.tipo ?? '';
     const props = Object.entries(op.primitiva === undefined ? { ...existente?.primitiva.props, ...op.props } : op.props).map(([clave, valor]) => ({ clave, valor }));
-    const { primitiva, errores: delCatalogo } = construirPrimitiva(tipo, props, paleta);
+    const { primitiva, errores: delCatalogo } = construirPrimitiva(tipo, props, paleta, ubicacion);
     for (const e of delCatalogo) falla(e, e.clave === undefined ? 'nombre' : 'propiedad', existente?.nombre);
     if (primitiva === undefined) return;
 
@@ -130,10 +131,11 @@ export function validarOps(
   ops: readonly OpDeCapa[],
   paleta: Readonly<Record<string, string>>,
   modo: ModoDeParche,
+  ubicacion: UbicacionDePrimitiva = 'capa-nodo',
 ): ErrorDeOp[] {
   let mejor: ErrorDeOp[] | undefined;
   for (const pila of candidatas) {
-    const { errores } = aplicarOps(pila, ops, paleta, modo);
+    const { errores } = aplicarOps(pila, ops, paleta, modo, ubicacion);
     if (mejor === undefined || errores.length < mejor.length) mejor = errores;
     if (mejor.length === 0) break;
   }

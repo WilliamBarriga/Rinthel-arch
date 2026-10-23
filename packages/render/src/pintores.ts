@@ -7,9 +7,10 @@
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
-import { atributosVisibles, colocarEnCaja, metricasDeHoja, textoDeAtributo } from 'tema';
+import { atributosVisibles, colocarEnCaja, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo } from 'tema';
 import type { Metricas, Rect } from 'tema';
 
+import { pintarMarcadores, pintarTrazos } from './aristas';
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
 import { aspectoDeEstado } from './estilo';
@@ -112,39 +113,19 @@ export function pintarControl(estilo: Estilo, { nodo, caja, alClic }: { nodo: No
   };
 }
 
-/** Id del marcador de flecha: lleva el color, asi dos dibujos con el mismo color comparten una definicion identica y con otro no se pisan. */
-function idDeFlecha(color: string): string {
-  return `flecha-${color.replace(/[^\w]/g, '')}`;
-}
-
-/** Definicion del marcador de flecha del color de las Aristas. */
-export function pintarFlecha(estilo: Estilo): Elemento {
-  const { flecha } = estilo.arista;
-  const colores = [estilo.arista.color];
-  return {
-    tag: 'defs',
-    attrs: {},
-    hijos: colores.map((color) => ({
-      tag: 'marker',
-      attrs: { id: idDeFlecha(color), viewBox: flecha.viewBox, refX: num(flecha.refX), refY: num(flecha.refY), markerWidth: num(flecha.ancho), markerHeight: num(flecha.alto), orient: 'auto' },
-      hijos: [{ tag: 'path', attrs: { d: flecha.forma, fill: color } }],
-    })),
-  };
-}
-
 /**
- * Arista: ruta ortogonal con flecha en el destino y la cardinalidad de cada
- * extremo junto a su puerto, desplazada hacia fuera del Nodo. Los hijos extra
+ * Arista: la pila de trazos del Tema sobre la ruta ortogonal, sus marcadores de
+ * extremo y la cardinalidad de cada extremo junto a su puerto, desplazada hacia
+ * fuera del Nodo. `origen` es el color de Paleta del Nodo de origen (`ORIGEN`). Los hijos extra
  * (la etiqueta) los pone quien llama; `atributos` lleva opacidad e id.
  */
 export function pintarArista(
   estilo: Estilo,
-  datos: { id: string; puntos: readonly Punto[]; desde?: string; hasta?: string; atributos?: Record<string, string>; extra?: Elemento[]; alClic?: () => void },
+  datos: { id: string; puntos: readonly Punto[]; origen?: string; desde?: string; hasta?: string; atributos?: Record<string, string>; extra?: Elemento[]; alClic?: () => void },
 ): Elemento {
-  const { id, puntos, desde, hasta, atributos = {}, extra = [], alClic } = datos;
+  const { id, puntos, origen, desde, hasta, atributos = {}, extra = [], alClic } = datos;
   const { arista, metricas } = estilo;
-  const color = arista.color;
-  const ruta = puntos.map(({ x, y }, i) => `${i === 0 ? 'M' : 'L'} ${num(x)} ${num(y)}`).join(' ');
+  const pintura = (origen === undefined ? undefined : estilo.pintura.arista.origenes[origen]) ?? estilo.pintura.arista;
   const extremos = [
     ['from', desde, puntos[0]!, puntos[1]!],
     ['to', hasta, puntos[puntos.length - 1]!, puntos[puntos.length - 2]!],
@@ -173,7 +154,8 @@ export function pintarArista(
     attrs: { 'data-edge': id, ...atributos },
     ...(alClic !== undefined && { alClic }),
     hijos: [
-      { tag: 'path', attrs: { d: ruta, fill: 'none', stroke: color, 'marker-end': `url(#${idDeFlecha(color)})` } },
+      ...pintarTrazos(pintura, puntos),
+      ...pintarMarcadores(estilo, pintura, puntos),
       ...cardinalidades,
       ...extra,
     ],
@@ -210,7 +192,12 @@ export function pintarEtiquetaDeArista(
     caja !== undefined
       ? { x: caja.x + caja.width / 2, y: caja.y + caja.height / 2 + tamano * etiqueta.centradoVertical }
       : centroDeEtiquetaSinCaja(estilo, puntos);
-  return {
+  // Modelo de caja de la etiqueta: con `fill` o `border` se dibuja la caja que ELK reservo (o la medida) tras el texto.
+  const { fill, border, radius } = estilo.pintura.arista.etiqueta.props;
+  const conCaja = fill !== undefined || border !== undefined;
+  const medida = tamanoDeEtiqueta(texto, metricas);
+  const rect = caja ?? { x: centro.x - medida.width / 2, y: centro.y - tamano * etiqueta.centradoVertical - medida.height / 2, ...medida };
+  const textoSvg: Elemento = {
     tag: 'text',
     attrs: {
       'data-edge-label': id,
@@ -220,12 +207,25 @@ export function pintarEtiquetaDeArista(
       'font-family': estilo.fuenteCuerpo,
       'font-size': num(tamano),
       fill: estilo.texto,
-      stroke: etiqueta.halo.color,
-      'stroke-width': num(etiqueta.halo.ancho),
-      'paint-order': 'stroke',
+      ...(!conCaja && { stroke: etiqueta.halo.color, 'stroke-width': num(etiqueta.halo.ancho), 'paint-order': 'stroke' }),
     },
     hijos: [texto],
   };
+  if (!conCaja) return textoSvg;
+  const cajaSvg: Elemento = {
+    tag: 'rect',
+    attrs: {
+      'data-edge-label-box': id,
+      x: num(rect.x),
+      y: num(rect.y),
+      width: num(rect.width),
+      height: num(rect.height),
+      rx: num(Number(radius)),
+      fill: fill === undefined ? 'none' : String(fill),
+      ...(border !== undefined && { stroke: String(border) }),
+    },
+  };
+  return { tag: 'g', attrs: {}, hijos: [cajaSvg, textoSvg] };
 }
 
 /** Contorno de estado alrededor de una caja (Nodo, Grupo) o de una fila de Atributo (`rect`, relativa a la caja del Nodo). Su aspecto lo da la hoja de estilo. */

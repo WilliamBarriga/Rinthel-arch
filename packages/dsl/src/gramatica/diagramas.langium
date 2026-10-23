@@ -84,7 +84,7 @@ Theme:
 ;
 
 ThemePart:
-  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode;
+  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeEdge;
 
 ThemePalette:
   'palette' '{' entries+=ThemeEntry* '}';
@@ -154,8 +154,27 @@ LayerAtom returns string:
 MixValue returns string:
   'mix' '(' Id ',' Id ',' Num ')';
 
+// Cada Slot puede llevar su estilo de texto: `slots { title { weight 600 color ink }  attrs }`.
 ThemeSlots:
-  'slots' '{' names+=Id* '}';
+  'slots' '{' entries+=SlotEntry* '}';
+
+SlotEntry:
+  name=Id ('{' props+=LayerProp* '}')?;
+
+// `edge { layer glow line { color ORIGEN/0.3 width 6 }  start dot  end arrow { size 10 }  label { pad 6 fill paper } }`
+// Bloque de dibujo de la Arista (ADR 0008): pila de trazos, marcadores de extremo y etiqueta con modelo de caja.
+ThemeEdge:
+  'edge' '{' items+=EdgeItem* '}';
+
+EdgeItem:
+  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel;
+
+// `start|end <marcador> [{ props }]` o `start|end none`.
+ThemeMarker:
+  side=('start' | 'end') (remove?='none' | kind=IdTerminal ('{' props+=LayerProp* '}')?);
+
+ThemeLabel:
+  'label' '{' props+=LayerProp* '}';
 
 // View -------------------------------------
 
@@ -292,7 +311,7 @@ Id returns string:
   'theme' | 'extends' | 'palette' | 'fonts' | 'tokens' |
   'layer' | 'slots' | 'state' | 'part' | 'use' | 'before' | 'after' | 'over' | 'none' | 'mix' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
-  'steps' | 'step' | 'show' | 'hide' | 'edge' |
+  'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' |
   'model' | 'node' | 'specification';
 
 // -------------------------

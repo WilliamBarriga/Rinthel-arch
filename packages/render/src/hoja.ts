@@ -7,7 +7,7 @@
  * `PINTORES` es la tabla exhaustiva Primitiva -> pintor: anadir una Primitiva al
  * catalogo de `tema` sin pintor aqui rompe el typecheck.
  */
-import type { NombreDePrimitiva } from 'tema';
+import type { CapaPintada, NombreDePrimitivaEn } from 'tema';
 
 import { PINTORES_DE_EFECTOS } from './efectos';
 import { num } from './elemento';
@@ -22,7 +22,7 @@ import { PINTORES_DE_RELLENO } from './pintura/relleno';
 export type { Declaraciones, Pintor };
 
 /** Un pintor por Primitiva del catalogo. El trazo puede venir de la variable `--trazo` del Nodo (su color de Tipo). */
-export const PINTORES: { readonly [P in NombreDePrimitiva]: Pintor } = {
+export const PINTORES: { readonly [P in NombreDePrimitivaEn<'capa-nodo'>]: Pintor } = {
   rect: ({ radius }) => ({ 'border-radius': px(radius) }),
   solid: ({ color }) => ({ background: css(color) }),
   border: ({ color, width }) => ({ border: `${px(width)} solid var(--trazo, ${css(color)})` }),
@@ -49,7 +49,7 @@ export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
   const acumulados: Record<string, string[]> = {};
   const sombras: string[] = [];
   for (const capa of capas) {
-    for (const [propiedad, valor] of Object.entries(PINTORES[capa.tipo](capa.props))) {
+    for (const [propiedad, valor] of Object.entries(PINTORES[capa.tipo as NombreDePrimitivaEn<'capa-nodo'>](capa.props))) {
       if (propiedad === SOMBRAS) sombras.unshift(valor);
       else if ((FONDOS_ACUMULABLES as readonly string[]).includes(propiedad)) (acumulados[propiedad] ??= []).push(valor);
       else declaraciones[propiedad] = valor;
@@ -102,12 +102,29 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-encabezado', { 'text-align': 'left' }],
     ['& .rd-separado', { 'border-top': '1px solid var(--trazo, currentColor)' }],
     ['& .rd-fila', { position: 'absolute', 'white-space': 'nowrap', overflow: 'hidden', 'text-overflow': 'ellipsis', 'padding-left': px(metricas.margenDeTexto), 'box-sizing': 'border-box', 'font-family': css(estilo.fuenteMono), 'font-size': px(metricas.fontSize * metricas.escalaAtributo) }],
+    ...reglasDeTexto(estilo),
     ['& .rd-icono', { position: 'absolute' }],
     ['& .rd-control', { position: 'absolute', 'text-align': 'center', cursor: 'pointer', 'font-family': css(estilo.fuenteMono) }],
     ['& .rd-estado', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'none', 'border-radius': radio }],
     ['& [data-atenuado]', { opacity: num(estilo.estados.atenuado.opacidad) }],
     ...(Object.keys(estilo.estados) as EstadoVisual[]).filter((estado) => estado !== 'atenuado').map((estado): [string, Declaraciones] => [`& .rd-estado[data-state="${estado}"]`, declaracionesDeEstado(estilo, estado)]),
   ];
+}
+
+/** Estilo de texto (`text`) de cada Slot que el Tema lo declara; solo pinta, no cambia el espacio reservado. */
+function reglasDeTexto(estilo: Estilo): Array<[string, Declaraciones]> {
+  return Object.entries(estilo.pintura.nodo.textos).map(([slot, texto]): [string, Declaraciones] => {
+    const { weight, color, style, transform } = texto.props;
+    return [
+      `& .rd-slot[data-slot="${slot}"]`,
+      {
+        'font-weight': css(weight),
+        'font-style': css(style),
+        'text-transform': transform === 'uppercase' ? 'uppercase' : 'none',
+        ...(color !== undefined && { color: css(color) }),
+      },
+    ];
+  });
 }
 
 /** Hoja de estilo del Estilo: `clase` es la de alcance que debe llevar el contenedor del dibujo. */
