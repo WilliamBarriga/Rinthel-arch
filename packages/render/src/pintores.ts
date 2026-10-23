@@ -11,6 +11,7 @@ import type { CajaDeNodo } from 'layout';
 import { num } from './elemento';
 import type { Elemento } from './elemento';
 import type { EstadoVisual, Estilo } from './estilo';
+import { aristaDeVariante, defsDeVariante, etiquetaDeVariante, fondoDeVariante, grupoDeVariante, nodoDeVariante } from './prototipo';
 
 type Punto = { x: number; y: number };
 
@@ -47,6 +48,7 @@ export function pintarSombras(estilo: Estilo): Elemento | undefined {
 
 /** Fondo del lienzo. */
 export function pintarFondo(estilo: Estilo, ancho: number, alto: number): Elemento {
+  if (estilo.variante !== undefined) return { tag: 'g', attrs: {}, hijos: [{ tag: 'defs', attrs: {}, hijos: defsDeVariante(estilo, estilo.variante, ancho, alto) }, ...fondoDeVariante(estilo, estilo.variante, ancho, alto)] };
   return { tag: 'rect', attrs: { width: num(ancho), height: num(alto), fill: estilo.fondo } };
 }
 
@@ -72,6 +74,7 @@ function caja({ nodo, caja, trazo }: DatosDeNodo, estilo: Estilo): Elemento {
 export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: boolean }): Elemento[] {
   const { nodo, caja: c, trazo, texto, conAtributos, icons } = datos;
   const { metricas } = estilo;
+  if (estilo.variante !== undefined) return [...nodoDeVariante(estilo, estilo.variante, datos), ...(conAtributos ? pintarAtributos(estilo, nodo, c, trazo) : [])];
   return [
     caja(datos, estilo),
     pintarEtiqueta(estilo, texto, {
@@ -87,6 +90,7 @@ export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: 
 
 /** Grupo abierto: caja, titulo arriba a la izquierda e icono. */
 export function pintarGrupo(estilo: Estilo, datos: DatosDeNodo): Elemento[] {
+  if (estilo.variante !== undefined) return grupoDeVariante(estilo, estilo.variante, datos);
   const { metricas } = estilo;
   return [
     caja(datos, estilo),
@@ -224,7 +228,7 @@ export function pintarArista(
     attrs: { 'data-edge': id, ...atributos },
     ...(alClic !== undefined && { alClic }),
     hijos: [
-      { tag: 'path', attrs: { d: ruta, fill: 'none', stroke: color, ...(porTipo?.ancho !== undefined && { 'stroke-width': num(porTipo.ancho) }), 'marker-end': `url(#${idDeFlecha(color)})` } },
+      ...(estilo.variante !== undefined ? aristaDeVariante(estilo, estilo.variante, puntos) : [{ tag: 'path', attrs: { d: ruta, fill: 'none', stroke: color, ...(porTipo?.ancho !== undefined && { 'stroke-width': num(porTipo.ancho) }), 'marker-end': `url(#${idDeFlecha(color)})` } }]),
       ...cardinalidades,
       ...extra,
     ],
@@ -261,6 +265,7 @@ export function pintarEtiquetaDeArista(
     caja !== undefined
       ? { x: caja.x + caja.width / 2, y: caja.y + caja.height / 2 + tamano * etiqueta.centradoVertical }
       : centroDeEtiquetaSinCaja(estilo, puntos);
+  if (estilo.variante !== undefined) return { tag: 'g', attrs: { 'data-edge-label': id }, hijos: etiquetaDeVariante(estilo, estilo.variante, texto, centro) };
   return {
     tag: 'text',
     attrs: {
