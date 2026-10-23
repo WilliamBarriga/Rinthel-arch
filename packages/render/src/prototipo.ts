@@ -12,7 +12,7 @@ import type { Elemento } from './elemento';
 import type { Estilo } from './estilo';
 
 type Punto = { x: number; y: number };
-export type Variante = 'A' | 'B' | 'C' | 'D';
+export type Variante = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G';
 
 const el = (tag: string, attrs: Record<string, string | number>, hijos?: (Elemento | string)[]): Elemento => ({
   tag,
@@ -44,12 +44,13 @@ function icono(nodo: NodoResuelto, color: string, lado: number, x: number, y: nu
 }
 
 const ids = (c: string) => c.replace(/[^\w]/g, '');
+const vidrio = (v: Variante) => v === 'B' || v === 'D' || v === 'E';
 const colores = (e: Estilo) => [...new Set([e.borde, ...Object.values(e.paleta)])];
 
 /** Definiciones comunes: degradados, brillos y marcadores de la variante. */
 export function defsDeVariante(e: Estilo, v: Variante, ancho: number, alto: number): Elemento[] {
   const defs: Elemento[] = [];
-  if (v === 'B' || v === 'D') {
+  if (vidrio(v)) {
     defs.push(
       el('radialGradient', { id: 'p-fondo', cx: '25%', cy: '0%', r: '110%' }, [el('stop', { offset: 0, 'stop-color': '#1b1850' }), el('stop', { offset: 1, 'stop-color': e.fondo })]),
       el('linearGradient', { id: 'p-brillo', x1: '0', y1: '0', x2: '0', y2: '1' }, [el('stop', { offset: 0, 'stop-color': '#fff', 'stop-opacity': 0.09 }), el('stop', { offset: 1, 'stop-color': '#fff', 'stop-opacity': 0.01 })]),
@@ -62,14 +63,14 @@ export function defsDeVariante(e: Estilo, v: Variante, ancho: number, alto: numb
       );
     }
   }
-  if (v === 'A' || v === 'C') {
-    defs.push(el('pattern', { id: 'p-puntos', width: 22, height: 22, patternUnits: 'userSpaceOnUse' }, [el('circle', { cx: 1, cy: 1, r: 1, fill: e.texto, 'fill-opacity': v === 'A' ? 0.1 : 0.07 })]));
+  if (v === 'A' || v === 'C' || v === 'F' || v === 'G') {
+    defs.push(el('pattern', { id: 'p-puntos', width: 22, height: 22, patternUnits: 'userSpaceOnUse' }, [el('circle', { cx: 1, cy: 1, r: v === 'G' ? 1.2 : 1, fill: e.texto, 'fill-opacity': v === 'G' ? 0.2 : v === 'A' || v === 'F' ? 0.1 : 0.07 })]));
   }
   defs.push(
-    el('marker', { id: 'p-flecha', viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: v === 'A' ? 9 : 10, markerHeight: v === 'A' ? 9 : 10, markerUnits: 'userSpaceOnUse', orient: 'auto' }, [
-      v === 'A'
+    el('marker', { id: 'p-flecha', viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: v === 'A' || v === 'F' ? 9 : 11, markerHeight: v === 'A' || v === 'F' ? 9 : 11, markerUnits: 'userSpaceOnUse', orient: 'auto' }, [
+      v === 'A' || v === 'F'
         ? el('path', { d: 'M 1.5 1.5 L 8 5 L 1.5 8.5', fill: 'none', stroke: e.texto, 'stroke-opacity': 0.55, 'stroke-width': 1.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })
-        : el('path', { d: 'M 0 1 L 9 5 L 0 9 z', fill: e.texto, 'fill-opacity': v === 'B' || v === 'D' ? 0.7 : 0.45 }),
+        : el('path', { d: 'M 0 1 L 9 5 L 0 9 z', fill: e.texto, 'fill-opacity': vidrio(v) ? 0.7 : v === 'G' ? 1 : 0.45 }),
     ]),
   );
   void ancho; void alto;
@@ -77,8 +78,8 @@ export function defsDeVariante(e: Estilo, v: Variante, ancho: number, alto: numb
 }
 
 export function fondoDeVariante(e: Estilo, v: Variante, ancho: number, alto: number): Elemento[] {
-  const base = el('rect', { width: ancho, height: alto, fill: v === 'B' || v === 'D' ? 'url(#p-fondo)' : e.fondo });
-  return v === 'B' || v === 'D' ? [base] : [base, el('rect', { width: ancho, height: alto, fill: 'url(#p-puntos)' })];
+  const base = el('rect', { width: ancho, height: alto, fill: vidrio(v) ? 'url(#p-fondo)' : e.fondo });
+  return vidrio(v) ? [base] : [base, el('rect', { width: ancho, height: alto, fill: 'url(#p-puntos)' })];
 }
 
 const neutro = (e: Estilo, fill: number, stroke: number, w = 1): Record<string, string | number> => ({ fill: e.texto, 'fill-opacity': fill, stroke: e.texto, 'stroke-opacity': stroke, 'stroke-width': w });
@@ -123,6 +124,43 @@ export function nodoDeVariante(e: Estilo, v: Variante, d: { nodo: NodoResuelto; 
       pie(e, 46, cy + 9, tipo),
     ];
   }
+  if (v === 'E') {
+    const c = ids(trazo);
+    const lado = 28;
+    return [
+      el('rect', { width: w, height: h, rx: 12, fill: e.fondo, filter: `url(#p-glow-${c})` }),
+      el('rect', { width: w, height: h, rx: 12, fill: `url(#p-g-${c})` }),
+      el('rect', { width: w, height: h, rx: 12, fill: 'url(#p-brillo)' }),
+      el('rect', { x: 0.5, y: 0.5, width: w - 1, height: h - 1, rx: 11.5, fill: 'none', stroke: 'url(#p-borde)' }),
+      el('rect', { x: 10, y: cy - lado / 2, width: lado, height: lado, rx: 8, fill: trazo, 'fill-opacity': 0.2, stroke: trazo, 'stroke-opacity': 0.55 }),
+      ...(nodo.icon === undefined ? [el('circle', { cx: 10 + lado / 2, cy, r: 3.5, fill: trazo })] : icono(nodo, trazo, 15, 10 + (lado - 15) / 2, cy - 7.5, icons)),
+      titulo(e, 10 + lado + 10, cy - 6, texto),
+      pie(e, 10 + lado + 10, cy + 9, tipo),
+    ];
+  }
+  if (v === 'F') {
+    const r = h / 2;
+    const lado = h - 14;
+    return [
+      el('rect', { width: w, height: h, rx: r, fill: e.fondo }),
+      el('rect', { width: w, height: h, rx: r, ...neutro(e, 0.05, 0.14) }),
+      el('circle', { cx: r, cy, r: lado / 2, fill: trazo, 'fill-opacity': 0.16, stroke: trazo, 'stroke-opacity': 0.5 }),
+      ...(nodo.icon === undefined ? [el('circle', { cx: r, cy, r: 3.5, fill: trazo })] : icono(nodo, trazo, 15, r - 7.5, cy - 7.5, icons)),
+      titulo(e, r + lado / 2 + 9, cy - 6, texto),
+      pie(e, r + lado / 2 + 9, cy + 9, tipo),
+    ];
+  }
+  if (v === 'G') {
+    const lado = 30;
+    return [
+      el('rect', { x: 4, y: 4, width: w, height: h, rx: 6, fill: e.texto }),
+      el('rect', { width: w, height: h, rx: 6, fill: '#ffffff', stroke: e.texto, 'stroke-width': 2 }),
+      el('rect', { x: 10, y: cy - lado / 2, width: lado, height: lado, rx: 5, fill: trazo, stroke: e.texto, 'stroke-width': 2 }),
+      ...(nodo.icon === undefined ? [el('circle', { cx: 10 + lado / 2, cy, r: 4, fill: e.texto })] : icono(nodo, e.texto, 16, 10 + (lado - 16) / 2, cy - 8, icons)),
+      titulo(e, 10 + lado + 10, cy - 6, texto, { 'font-weight': 800, fill: '#111111' }),
+      el('text', { x: 10 + lado + 10, y: cy + 10, 'font-family': e.fuenteMono, 'font-size': fontSize * 0.66, 'letter-spacing': '0.08em', fill: '#111111', 'fill-opacity': 0.6, 'dominant-baseline': 'central' }, [tipo.toUpperCase()]),
+    ];
+  }
   if (v === 'D') {
     const c = ids(trazo);
     const r = h / 2;
@@ -151,7 +189,7 @@ export function grupoDeVariante(e: Estilo, v: Variante, d: { nodo: NodoResuelto;
   const { caja, trazo, texto, nodo, icons } = d;
   const { w, h } = { w: caja.width, h: caja.height };
   const fs = e.metricas.fontSize;
-  if (v === 'A') {
+  if (v === 'A' || v === 'F') {
     return [
       el('rect', { width: w, height: h, rx: 16, ...neutro(e, 0.025, 0.14), 'stroke-dasharray': '2 5', 'stroke-linecap': 'round' }),
       el('circle', { cx: 18, cy: 20, r: 3, fill: trazo }),
@@ -169,7 +207,15 @@ export function grupoDeVariante(e: Estilo, v: Variante, d: { nodo: NodoResuelto;
       el('text', { x: nodo.icon === undefined ? 22 : 40, y: 20, 'font-family': e.fuenteCuerpo, 'font-size': fs * 0.85, 'font-weight': 600, fill: e.texto, 'dominant-baseline': 'central' }, [texto]),
     ];
   }
-  if (v === 'D') {
+  if (v === 'G') {
+    const ancho = Math.min(w - 24, texto.length * fs * 0.7 + 24);
+    return [
+      el('rect', { width: w, height: h, rx: 8, fill: trazo, 'fill-opacity': 0.3, stroke: e.texto, 'stroke-width': 2, 'stroke-dasharray': '7 5' }),
+      el('rect', { x: 12, y: 10, width: ancho, height: 26, rx: 4, fill: '#ffffff', stroke: e.texto, 'stroke-width': 2 }),
+      el('text', { x: 22, y: 23, 'font-family': e.fuenteMono, 'font-size': fs * 0.8, 'font-weight': 700, 'letter-spacing': '0.06em', fill: '#111111', 'dominant-baseline': 'central' }, [texto.toUpperCase()]),
+    ];
+  }
+  if (v === 'D' || v === 'E') {
     const c = ids(trazo);
     const ancho = Math.min(w - 24, texto.length * fs * 0.62 + 40);
     return [
@@ -189,11 +235,14 @@ export function grupoDeVariante(e: Estilo, v: Variante, d: { nodo: NodoResuelto;
 
 /** Ruta, punto de origen y capa de brillo de una Arista. */
 export function aristaDeVariante(e: Estilo, v: Variante, puntos: readonly Punto[]): Elemento[] {
-  const d = rutaRedondeada(puntos, v === 'A' ? 6 : v === 'B' ? 16 : 20);
-  const brillo = v === 'B' || v === 'D';
+  const d = rutaRedondeada(puntos, v === 'A' ? 6 : v === 'B' ? 16 : v === 'E' ? 10 : v === 'F' ? 14 : v === 'G' ? 2 : 20);
+  const brillo = vidrio(v);
   const p0 = puntos[0]!;
   const base = { fill: 'none', stroke: e.texto, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
-  if (v === 'A') {
+  if (v === 'G') {
+    return [el('path', { d, ...base, 'stroke-opacity': 1, 'stroke-width': 2, 'stroke-linejoin': 'miter', 'stroke-linecap': 'butt', 'marker-end': 'url(#p-flecha)' }), el('rect', { x: p0.x - 4, y: p0.y - 4, width: 8, height: 8, fill: e.texto })];
+  }
+  if (v === 'A' || v === 'F') {
     return [el('path', { d, ...base, 'stroke-opacity': 0.32, 'stroke-width': 1.2, 'marker-end': 'url(#p-flecha)' }), el('circle', { cx: p0.x, cy: p0.y, r: 2.2, fill: e.texto, 'fill-opacity': 0.5 })];
   }
   if (brillo) {
@@ -212,6 +261,16 @@ export function etiquetaDeVariante(e: Estilo, v: Variante, texto: string, centro
   const ancho = texto.length * fs * 0.56 + 18;
   const alto = fs + 10;
   const t = el('text', { x: centro.x, y: centro.y, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-family': e.fuenteCuerpo, 'font-size': fs, fill: e.texto, 'fill-opacity': v === 'C' ? 0.6 : 0.78 }, [texto]);
+  if (v === 'G') {
+    const ancho2 = texto.length * fs * 0.62 + 16;
+    return [
+      el('g', { transform: `rotate(-2 ${num(centro.x)} ${num(centro.y)})` }, [
+        el('rect', { x: centro.x - ancho2 / 2 + 2, y: centro.y - alto / 2 + 2, width: ancho2, height: alto, rx: 3, fill: e.texto }),
+        el('rect', { x: centro.x - ancho2 / 2, y: centro.y - alto / 2, width: ancho2, height: alto, rx: 3, fill: '#fde047', stroke: e.texto, 'stroke-width': 1.5 }),
+        el('text', { x: centro.x, y: centro.y, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-family': e.fuenteMono, 'font-size': fs * 0.92, 'font-weight': 700, fill: '#111111' }, [texto]),
+      ]),
+    ];
+  }
   if (v === 'C') return [el('text', { ...t.attrs, stroke: e.fondo, 'stroke-width': 4, 'paint-order': 'stroke', 'fill-opacity': 0.6 }, [texto])];
   return [
     el('rect', { x: centro.x - ancho / 2, y: centro.y - alto / 2, width: ancho, height: alto, rx: alto / 2, fill: e.fondo, stroke: e.texto, 'stroke-opacity': v === 'A' ? 0.16 : 0.22 }),
