@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
-import { alturasDeNodo } from 'layout';
+import { metricasDe } from 'layout';
 
 import { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from '../src/interaccion';
 
@@ -25,7 +25,7 @@ const fuente = fuenteCanonicaSchema.parse({
 const vista = resolveView(fuente, 'v', { expanded: ['g'] }) as VistaResuelta;
 const arista = vista.edges[0]!;
 const idArista = idDeArista(arista);
-const { cabecera, fila } = alturasDeNodo(TEMA_NEUTRO);
+const { cabecera, fila } = metricasDe(TEMA_NEUTRO);
 
 /** g en (100,100) 300x200; h dentro de g en (20,40) 200x{cabecera+2 filas}; p en (1000,100). */
 const geometria: Geometria = {

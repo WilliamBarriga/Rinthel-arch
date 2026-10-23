@@ -9,10 +9,10 @@
  * sigue siendo hallable. Orden de arriba a abajo, como dibuja `render`: etiqueta
  * de Arista, Arista (con `tolerancia`), Atributo, Nodo (el mas anidado gana).
  */
-import { idDeArista, tamanoDeTexto } from 'canonico';
+import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
-import { ESCALA_ETIQUETA, alturasDeNodo, atributosVisibles, indiceDeGeometria } from 'layout';
-import type { CajaDeNodo, Geometria, Punto } from 'layout';
+import { atributosVisibles, indiceDeGeometria, metricasDe } from 'layout';
+import type { CajaDeNodo, Geometria, Metricas, Punto } from 'layout';
 
 export type TipoDeElemento = 'nodo' | 'arista' | 'etiqueta' | 'atributo';
 
@@ -30,7 +30,6 @@ export interface OpcionesDeHitTest {
 }
 
 const TOLERANCIA_POR_DEFECTO = 4;
-const FACTOR_DE_ANCHO_ETIQUETA = 0.55;
 
 type Geo = Pick<Geometria, 'nodes' | 'edges' | 'labels'>;
 
@@ -45,10 +44,10 @@ function distanciaASegmento(p: Punto, a: Punto, b: Punto): number {
 }
 
 /** Caja de la etiqueta: la que reservo el layout o, si la Arista se re-enruto, una estimada sobre el segmento mas largo. */
-function cajaDeEtiqueta(texto: string, puntos: readonly Punto[], reservada: CajaDeNodo | undefined, tema: Tema): CajaDeNodo {
+function cajaDeEtiqueta(texto: string, puntos: readonly Punto[], reservada: CajaDeNodo | undefined, metricas: Metricas): CajaDeNodo {
   if (reservada !== undefined) return reservada;
-  const tamano = tamanoDeTexto(tema) * ESCALA_ETIQUETA;
-  const [width, height] = [texto.length * tamano * FACTOR_DE_ANCHO_ETIQUETA, tamano];
+  const tamano = metricas.fontSize * metricas.escalaEtiqueta;
+  const [width, height] = [texto.length * tamano * metricas.factorDeAncho + metricas.holguraDeEtiqueta, tamano];
   let centro = puntos[0] ?? { x: 0, y: 0 };
   let mejor = -1;
   for (let i = 1; i < puntos.length; i++) {
@@ -76,12 +75,13 @@ export function elementoBajo(
   { tolerancia = TOLERANCIA_POR_DEFECTO, atributos = true }: OpcionesDeHitTest = {},
 ): ElementoSeleccionable | undefined {
   const { cajas, raices } = indiceDeGeometria(vista, geometria);
+  const metricas = metricasDe(tema);
 
   // Aristas se dibujan encima de los Nodos; la ultima dibujada es la superior.
   const aristas = vista.edges.map((arista) => ({ arista, id: idDeArista(arista), puntos: geometria.edges[idDeArista(arista)]?.points ?? [] }));
   const dibujadas = aristas.filter(({ puntos }) => puntos.length >= 2);
   for (const { arista, id, puntos } of [...dibujadas].reverse()) {
-    if (arista.label !== undefined && contiene(cajaDeEtiqueta(arista.label, puntos, geometria.labels[id], tema), punto)) return { tipo: 'etiqueta', id };
+    if (arista.label !== undefined && contiene(cajaDeEtiqueta(arista.label, puntos, geometria.labels[id], metricas), punto)) return { tipo: 'etiqueta', id };
   }
   for (const { id, puntos } of [...dibujadas].reverse()) {
     for (let i = 1; i < puntos.length; i++) {
@@ -93,7 +93,7 @@ export function elementoBajo(
     const caja = cajas.get(nodo.id);
     if (caja === undefined || !contiene(caja, punto)) continue;
     const filas = atributos ? atributosVisibles(nodo) : [];
-    const { cabecera, fila } = alturasDeNodo(tema);
+    const { cabecera, fila } = metricas;
     const indice = Math.floor((punto.y - caja.y - cabecera) / fila);
     const atributo = punto.y - caja.y >= cabecera ? filas[indice] : undefined;
     return atributo === undefined ? { tipo: 'nodo', id: nodo.id } : { tipo: 'atributo', id: `${nodo.id}#${atributo.name}` };
@@ -111,14 +111,14 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
     const caja = cajas.get(idNodo);
     const indice = nodo === undefined ? -1 : atributosVisibles(nodo).findIndex((a) => a.name === nombre);
     if (caja === undefined || indice < 0) return undefined;
-    const { cabecera, fila } = alturasDeNodo(tema);
+    const { cabecera, fila } = metricasDe(tema);
     return { x: caja.x, y: caja.y + cabecera + indice * fila, width: caja.width, height: fila };
   }
   const arista = vista.edges.find((a) => idDeArista(a) === elemento.id);
   const puntos = geometria.edges[elemento.id]?.points ?? [];
   if (arista === undefined || puntos.length < 2) return undefined;
   if (elemento.tipo === 'etiqueta') {
-    return arista.label === undefined ? undefined : cajaDeEtiqueta(arista.label, puntos, geometria.labels[elemento.id], tema);
+    return arista.label === undefined ? undefined : cajaDeEtiqueta(arista.label, puntos, geometria.labels[elemento.id], metricasDe(tema));
   }
   const [xs, ys] = [puntos.map((p) => p.x), puntos.map((p) => p.y)];
   const [x, y] = [Math.min(...xs), Math.min(...ys)];

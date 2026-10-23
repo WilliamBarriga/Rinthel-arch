@@ -187,7 +187,15 @@ describe('export --format html', () => {
     const pagina = abrir(leerHtml(workspace, 'general'), 'general');
     await esperar(() => ids(pagina).length > 0);
 
-    pagina.window.document.querySelector('[data-id="api"] [data-part="nodo"]')!.dispatchEvent(new pagina.window.MouseEvent('click', { bubbles: true }));
+    // El clic va a las coordenadas del Nodo: la Seleccion la decide el hit-test del nucleo, no el elemento pulsado.
+    const doc = pagina.window.document;
+    const svg = doc.querySelector('svg[viewBox]')!;
+    const [vx, vy, vw] = svg.getAttribute('viewBox')!.split(' ').map(Number) as [number, number, number, number];
+    const k = Number(svg.getAttribute('width')) / vw;
+    const [, tx, ty] = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(doc.querySelector('[data-id="api"]')!.getAttribute('transform')!)!;
+    const caja = doc.querySelector('[data-id="api"] [data-part="nodo"] > rect')!;
+    const [cx, cy] = [Number(tx) + Number(caja.getAttribute('width')) / 2, Number(ty) + Number(caja.getAttribute('height')) / 2];
+    svg.dispatchEvent(new pagina.window.MouseEvent('click', { bubbles: true, clientX: (cx - vx) * k, clientY: (cy - vy) * k }));
 
     await esperar(() => pagina.window.location.hash.includes('p=detalle'));
     expect(pagina.window.location.pathname).toBe('/proyecto/.diagrams/html/general.html');
