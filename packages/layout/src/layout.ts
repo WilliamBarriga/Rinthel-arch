@@ -6,8 +6,8 @@ import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
-import { atributosVisibles, medidasDeTexto, tamanoDeNodo, yDeFila } from './medidas';
-import type { MedidasDeTexto } from './medidas';
+import { atributosVisibles, metricasDe, tamanoDeEtiqueta, tamanoDeNodo, yDeFila } from './metricas';
+import type { Metricas } from './metricas';
 
 /** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
 export interface CajaDeNodo {
@@ -46,6 +46,8 @@ export interface Geometria {
 export interface OpcionesDeLayout {
   /** Motor ELK; por defecto el empaquetado, que corre igual en Node y en Web Worker. */
   elk?: ELK;
+  /** Metricas con las que medir; por defecto las derivadas del Tema. `render` debe dibujar con las mismas. */
+  metricas?: Metricas;
 }
 
 /** Tamano del texto de la etiqueta de una Arista respecto al del Tema; `render` dibuja con la misma. */
@@ -79,7 +81,7 @@ export async function layoutView(
 ): Promise<Geometria> {
   // Import dinamico: quien solo usa las medidas (render) no arrastra ELK al empaquetar.
   const elk = opciones.elk ?? new (await import('elkjs/lib/elk.bundled.js')).default();
-  const medidas = medidasDeTexto(tema);
+  const medidas = opciones.metricas ?? metricasDe(tema);
 
   const grafo: ElkNode = {
     id: 'raiz',
@@ -112,7 +114,7 @@ export async function layoutView(
     edges[arista.id] = { points: [seccion.startPoint, ...(seccion.bendPoints ?? []), seccion.endPoint].map(({ x, y }) => ({ x, y })) };
   }
   const pinneada = aplicarPins(vista, nodes, edges, labels);
-  const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, tema, pinneada.nodes, pinneada.edges) };
+  const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
   return { ...conPuertos, width: resultado.width ?? 0, height: resultado.height ?? 0 };
 }
 
@@ -195,7 +197,7 @@ function cajaAbsoluta(cajas: Record<string, CajaDeNodo>, padre: ReadonlyMap<stri
  */
 function ajustarAPuertosDeAtributo(
   vista: VistaResuelta,
-  tema: Tema,
+  metricas: Metricas,
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
 ): Record<string, RutaDeArista> {
@@ -210,7 +212,7 @@ function ajustarAPuertosDeAtributo(
     for (const [lado, extremo] of [['inicio', arista.from], ['fin', arista.to]] as const) {
       const indice = extremo.attribute === undefined ? -1 : (atributos.get(extremo.node) ?? []).findIndex((a) => a.name === extremo.attribute);
       if (indice < 0) continue;
-      const y = cajaAbsoluta(nodes, padre, extremo.node).y + yDeFila(tema, indice);
+      const y = cajaAbsoluta(nodes, padre, extremo.node).y + yDeFila(metricas, indice);
       puntos = moverPuerto(puntos, lado, y);
     }
     rutas[id] = { points: puntos };
@@ -265,33 +267,30 @@ function raices(vista: VistaResuelta): NodoResuelto[] {
   return vista.nodes.filter((nodo) => !anidados.has(nodo.id));
 }
 
-/** Caja de una etiqueta de Arista: texto un poco menor que el de los Nodos, medido como ellos. */
-function tamanoDeEtiqueta(texto: string, medidas: MedidasDeTexto): { width: number; height: number } {
-  const fontSize = medidas.fontSize * ESCALA_ETIQUETA;
-  return { width: Math.ceil(texto.length * fontSize * medidas.factorDeAncho) + 8, height: Math.ceil(fontSize * 1.4) };
+function paddingElk({ top, left, bottom, right }: Metricas['paddingGrupo']): string {
+  return `[top=${top},left=${left},bottom=${bottom},right=${right}]`;
 }
 
-function aElk(nodo: NodoResuelto, medidas: MedidasDeTexto): ElkNode {
+function aElk(nodo: NodoResuelto, medidas: Metricas): ElkNode {
   if (nodo.children.length === 0) {
     return { id: nodo.id, ...tamanoDeNodo(nodo.label, medidas, atributosVisibles(nodo)) };
   }
   return {
     id: nodo.id,
-    layoutOptions: { 'elk.padding': PADDING_GRUPO },
+    layoutOptions: { 'elk.padding': paddingElk(medidas.paddingGrupo) },
     children: nodo.children.map((hijo) => aElk(hijo, medidas)),
   };
 }
 
 /**
  * Clave de cache de la geometria: igual si y solo si el layout no cambia. Entran
- * la estructura visible, los textos y las fuentes del Tema; no la paleta, los
+ * la estructura visible, los textos y las Metricas (fuentes, tamanos y espaciado); no la paleta, los
  * colores ni los iconos, que no mueven nada.
  */
-export function claveDeLayout(vista: VistaResuelta, tema: Tema): string {
-  const medidas = medidasDeTexto(tema);
+export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas = metricasDe(tema)): string {
   return JSON.stringify({
     nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id)]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
-    fuentes: [medidas.fontSize, medidas.factorDeAncho, medidas.fuentes],
+    metricas,
   });
 }

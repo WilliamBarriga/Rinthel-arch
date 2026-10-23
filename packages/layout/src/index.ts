@@ -6,12 +6,15 @@
  * ortogonal por Arista (`idDeArista`), en coordenadas del lienzo. Los
  * Grupos colapsados son hojas. Un Nodo hoja con Atributos mide cabecera mas una
  * fila por Atributo y las Aristas a `nodo#atributo` terminan en la fila del
- * Atributo; un Grupo abierto no lista Atributos. `alturasDeNodo`, `yDeFila`,
- * `atributosVisibles` y `textoDeAtributo` son esa misma medida, para que `render`
- * dibuje lo que `layout` reservo. El tamano de cada Nodo sale del texto y de las
- * fuentes del Tema (`fonts`, `tokens.fontSize`), sin DOM. `claveDeLayout` dice
- * cuando hace falta relayoutar: cambia con estructura, textos y fuentes, nunca
- * con paleta, colores o iconos.
+ * Atributo; un Grupo abierto no lista Atributos. `Metricas` (`metricasDe(tema)`)
+ * son los numeros de espaciado y escala que `layout` usa para medir y `render`
+ * para dibujar, junto con `yDeFila`, `atributosVisibles` y `textoDeAtributo`:
+ * lo reservado y lo dibujado no divergen. Los Atributos se miden a la escala
+ * con que se dibujan. El tamano de cada Nodo sale del texto y de las Metricas
+ * (derivadas de `fonts` y `tokens.fontSize`), sin DOM; `opciones.metricas` las
+ * sobrescribe (y `render` debe recibir las mismas). `claveDeLayout` dice cuando
+ * hace falta relayoutar: cambia con estructura, textos y Metricas, nunca con
+ * paleta, colores o iconos.
  *
  * Invariantes: determinista (misma entrada, misma geometria); `INCLUDE_CHILDREN`
  * sin `considerModelOrder` (ADR 0003); el mismo codigo corre en Node y en Web
@@ -25,6 +28,7 @@
  * de Web Worker del shell).
  * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout`.
  */
-export { ESCALA_ETIQUETA, claveDeLayout, layoutView } from './layout';
-export { alturasDeNodo, atributosVisibles, textoDeAtributo, yDeFila } from './medidas';
+export { claveDeLayout, layoutView } from './layout';
+export { atributosVisibles, metricasDe, textoDeAtributo, yDeFila } from './metricas';
+export type { Metricas } from './metricas';
 export type { CajaDeNodo, Geometria, OpcionesDeLayout, Punto, RutaDeArista } from './layout';

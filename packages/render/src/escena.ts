@@ -4,10 +4,10 @@
  * la misma entrada da el mismo arbol. Los valores de atributo van sin escapar:
  * cada salida (cadena o React) escapa a su manera.
  */
-import { idDeArista, tamanoDeTexto } from 'canonico';
+import { idDeArista } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
-import { ESCALA_ETIQUETA, alturasDeNodo, atributosVisibles, textoDeAtributo, yDeFila } from 'layout';
-import type { CajaDeNodo, Geometria } from 'layout';
+import { atributosVisibles, metricasDe, textoDeAtributo, yDeFila } from 'layout';
+import type { CajaDeNodo, Geometria, Metricas } from 'layout';
 
 /** Elemento SVG: atributos, y como contenido hijos, texto o marcado inline (iconos). */
 export interface Elemento {
@@ -51,22 +51,19 @@ export interface EntradaDeEscena {
   onSelect?: (id: string) => void;
   /** Con ella, cada Grupo (o Grupo colapsado sin enlace) lleva un control de colapso. */
   onToggle?: (id: string) => void;
+  /** Metricas con las que dibujar; deben ser las del layout. Por defecto las derivadas del Tema. */
+  metricas?: Metricas;
 }
 
 const RADIO = 6;
-/** Margen entre el icono y el borde del Nodo. */
-const MARGEN_ICONO = 6;
 /** Margen entre la cardinalidad y el punto del extremo. */
 const SEPARACION_CARDINALIDAD = 8;
 /** Cuanto se sube la cardinalidad de un segmento horizontal para no pisar la linea. */
 const ELEVACION_CARDINALIDAD = 4;
-/** Tamano de la cardinalidad respecto al del texto del Tema. */
-const ESCALA_CARDINALIDAD = 0.8;
-/** Tamano del texto de los Atributos respecto al del Tema. */
-const ESCALA_ATRIBUTO = 0.85;
 
 interface Contexto extends EntradaDeEscena {
   visibility: Visibilidad;
+  metricas: Metricas;
   fontSize: number;
   /** Alto de la cabecera (el de `layout`). */
   cabecera: number;
@@ -80,11 +77,13 @@ interface Contexto extends EntradaDeEscena {
  */
 export function construirEscena(entrada: EntradaDeEscena): Elemento {
   const { view, geometry, theme, width, height, camera } = entrada;
+  const metricas = entrada.metricas ?? metricasDe(theme);
   const contexto: Contexto = {
     ...entrada,
     visibility: entrada.visibility ?? (() => 1),
-    fontSize: tamanoDeTexto(theme),
-    cabecera: alturasDeNodo(theme).cabecera,
+    metricas,
+    fontSize: metricas.fontSize,
+    cabecera: metricas.cabecera,
   };
   const anidados = new Set(view.nodes.flatMap((nodo) => nodo.children.map((hijo) => hijo.id)));
   const raices = view.nodes.filter((nodo) => !anidados.has(nodo.id));
@@ -153,9 +152,9 @@ function tieneFilas(nodo: NodoResuelto, detail?: NivelDeDetalle): boolean {
 }
 
 /** Un Grupo abierto lleva el titulo arriba a la izquierda; el resto, centrado (en la cabecera si tiene Atributos). */
-function etiqueta(texto: string, caja: CajaDeNodo, esGrupo: boolean, conAtributos: boolean, { theme, fontSize, cabecera }: Contexto): Elemento {
+function etiqueta(texto: string, caja: CajaDeNodo, esGrupo: boolean, conAtributos: boolean, { theme, fontSize, cabecera, metricas }: Contexto): Elemento {
   const posicion: Record<string, string> = esGrupo
-    ? { x: num(10), y: num(fontSize + 8) }
+    ? { x: num(metricas.margenDeTexto), y: num(metricas.baseDeTitulo) }
     : { x: num(caja.width / 2), y: num(conAtributos ? cabecera / 2 : caja.height / 2), 'text-anchor': 'middle', 'dominant-baseline': 'central' };
   return {
     tag: 'text',
@@ -173,16 +172,16 @@ function etiqueta(texto: string, caja: CajaDeNodo, esGrupo: boolean, conAtributo
  * Icono del Tipo de nodo, inline en la esquina de la cabecera. Solo se
  * incrusta si pasa `sanearIcono`.
  */
-function icono(nodo: NodoResuelto, trazo: string, { icons, fontSize }: Contexto): Elemento[] {
+function icono(nodo: NodoResuelto, trazo: string, { icons, metricas }: Contexto): Elemento[] {
   const crudo = nodo.icon === undefined ? undefined : icons?.resolve(nodo.icon);
   const svg = crudo === undefined ? undefined : sanearIcono(crudo);
   if (nodo.icon === undefined || svg === undefined) return [];
-  const lado = num(fontSize);
+  const lado = num(metricas.iconoLado);
   const dimensionado = svg.replace(/<svg\b([^>]*)>/, (_, atributos: string) => {
     const sinMedidas = atributos.replace(/\s(?:width|height)\s*=\s*("[^"]*"|'[^']*')/g, '');
     return `<svg width="${lado}" height="${lado}"${sinMedidas}>`;
   });
-  return [{ tag: 'g', attrs: { 'data-icon': nodo.icon, transform: `translate(${MARGEN_ICONO} ${MARGEN_ICONO})`, color: trazo }, html: dimensionado }];
+  return [{ tag: 'g', attrs: { 'data-icon': nodo.icon, transform: `translate(${metricas.margenIcono} ${metricas.margenIcono})`, color: trazo }, html: dimensionado }];
 }
 
 const ETIQUETAS_DE_ICONO = new Set(['svg', 'g', 'path', 'circle', 'ellipse', 'rect', 'line', 'polyline', 'polygon']);
@@ -214,7 +213,7 @@ function sanearIcono(svg: string): string | undefined {
 }
 
 /** Separador bajo la cabecera y una fila de texto por Atributo, en orden. */
-function atributos(nodo: NodoResuelto, caja: CajaDeNodo, trazo: string, { theme, fontSize, cabecera, detail }: Contexto): Elemento[] {
+function atributos(nodo: NodoResuelto, caja: CajaDeNodo, trazo: string, { theme, cabecera, detail, metricas }: Contexto): Elemento[] {
   if (!tieneFilas(nodo, detail)) return [];
   return [
     { tag: 'line', attrs: { x1: '0', y1: num(cabecera), x2: num(caja.width), y2: num(cabecera), stroke: trazo } },
@@ -222,11 +221,11 @@ function atributos(nodo: NodoResuelto, caja: CajaDeNodo, trazo: string, { theme,
       tag: 'text',
       attrs: {
         'data-attribute': `${nodo.id}#${atributo.name}`,
-        x: num(10),
-        y: num(yDeFila(theme, i)),
+        x: num(metricas.margenDeTexto),
+        y: num(yDeFila(metricas, i)),
         'dominant-baseline': 'central',
         'font-family': theme.fonts['mono'] ?? 'monospace',
-        'font-size': num(fontSize * ESCALA_ATRIBUTO),
+        'font-size': num(metricas.fontSize * metricas.escalaAtributo),
         fill: theme.tokens['foreground'] ?? 'currentColor',
       },
       hijos: [textoDeAtributo(atributo)],
@@ -235,7 +234,7 @@ function atributos(nodo: NodoResuelto, caja: CajaDeNodo, trazo: string, { theme,
 }
 
 /** Control de colapso de un Grupo (o de un Grupo colapsado sin enlace): solo si el llamador atiende `onToggle`. */
-function control(nodo: NodoResuelto, caja: CajaDeNodo, { onToggle, theme, fontSize }: Contexto): Elemento[] {
+function control(nodo: NodoResuelto, caja: CajaDeNodo, { onToggle, theme, fontSize, metricas }: Contexto): Elemento[] {
   const conmutable = nodo.children.length > 0 || (nodo.collapsed && nodo.link === undefined);
   if (onToggle === undefined || !conmutable) return [];
   return [
@@ -247,8 +246,8 @@ function control(nodo: NodoResuelto, caja: CajaDeNodo, { onToggle, theme, fontSi
         {
           tag: 'text',
           attrs: {
-            x: num(caja.width - 12),
-            y: num(fontSize + 8),
+            x: num(caja.width - metricas.margenDeControl),
+            y: num(metricas.baseDeTitulo),
             'text-anchor': 'middle',
             'font-family': theme.fonts['mono'] ?? 'monospace',
             'font-size': num(fontSize),
@@ -296,7 +295,7 @@ function flecha(color: string): Elemento {
  * a su puerto, desplazada hacia fuera del Nodo.
  */
 function aristaSvg(arista: AristaResuelta, contexto: Contexto): Elemento[] {
-  const { geometry, theme, fontSize, onSelect } = contexto;
+  const { geometry, theme, fontSize, onSelect, metricas } = contexto;
   const id = idDeArista(arista);
   const puntos = geometry.edges[id]?.points;
   if (puntos === undefined || puntos.length < 2) return [];
@@ -318,7 +317,7 @@ function aristaSvg(arista: AristaResuelta, contexto: Contexto): Elemento[] {
         x: num(extremo.x + dx * SEPARACION_CARDINALIDAD),
         y: num(extremo.y + dy * SEPARACION_CARDINALIDAD - (dy === 0 ? ELEVACION_CARDINALIDAD : 0)),
         'font-family': theme.fonts['body'] ?? 'sans-serif',
-        'font-size': num(fontSize * ESCALA_CARDINALIDAD),
+        'font-size': num(fontSize * metricas.escalaCardinalidad),
         fill: theme.tokens['foreground'] ?? 'currentColor',
       },
       hijos: [texto],
@@ -345,8 +344,8 @@ function aristaSvg(arista: AristaResuelta, contexto: Contexto): Elemento[] {
  * de la ruta. Lleva un halo del color de fondo para leerse sobre las lineas.
  */
 function etiquetaSvg(id: string, texto: string, puntos: readonly { x: number; y: number }[], caja: CajaDeNodo | undefined, contexto: Contexto): Elemento {
-  const { theme, fontSize } = contexto;
-  const tamano = fontSize * ESCALA_ETIQUETA;
+  const { theme, fontSize, metricas } = contexto;
+  const tamano = fontSize * metricas.escalaEtiqueta;
   let centro = { x: 0, y: 0 };
   if (caja !== undefined) {
     centro = { x: caja.x + caja.width / 2, y: caja.y + caja.height / 2 + tamano * 0.35 };
