@@ -16,10 +16,11 @@
  */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
-import { ESTADOS, TEMA_NEUTRO, aplicarOps, construirSlots, opTocaMetricas } from 'tema';
+import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, construirSlots, opTocaMetricas } from 'tema';
 import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, TemaResuelto } from 'tema';
 
 import type { NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeUse } from './generated/ast';
+import { ARCHIVO_INCORPORADOS, NOMBRES_INCORPORADOS } from './incorporados';
 import { aRango, issueConSugerencia, rangoDeIndice } from './posiciones';
 import { compilarArista, compilarTextoDeSlots } from './temas-arista';
 import { compilarAnimacionDeNodo } from './temas-animacion';
@@ -111,14 +112,14 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
   for (const declarado of declarados) {
     const { name } = declarado.ast;
     const original = porNombre.get(name);
-    if (name === TEMA_NEUTRO.name || original !== undefined) {
+    if (original !== undefined || name === TEMA_ALTO_CONTRASTE.name) {
       issues.push({
         code: CODIGOS.E_DUPLICATE_THEME,
         severity: 'error',
         file: declarado.archivo,
         ...declarado.nombre.start,
         message: `Tema duplicado '${name}'`,
-        ...(original !== undefined && {
+        ...(original !== undefined && original.archivo !== ARCHIVO_INCORPORADOS && {
           related: [{ file: original.archivo, ...original.nombre.start, message: `Primera declaracion de '${name}'` }],
         }),
       });
@@ -144,8 +145,9 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     });
   }
 
-  const neutro: Compilado = { tema: TEMA_NEUTRO, origenes: new Map(), origen: { sitio: { file: '(incorporado)', line: 1, column: 1 }, extends: [], partes: [], base: {}, tipos: {}, estados: {} } };
-  const resueltos = new Map<string, Compilado>([[TEMA_NEUTRO.name, neutro]]);
+  const incorporado = { sitio: { file: '(incorporado)', line: 1, column: 1 }, extends: [], partes: [], base: {}, tipos: {}, estados: {} };
+  const resueltos = new Map<string, Compilado>();
+  const altoContraste: Compilado = { tema: TEMA_ALTO_CONTRASTE, origenes: new Map(), origen: incorporado };
   const enCurso = new Set<string>();
   const fallidos = new Set<string>();
   const resolver = (declarado: TemaDeclarado): Compilado | undefined => {
@@ -158,7 +160,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     let base: Compilado | undefined;
     if (parent !== undefined) {
       const padre = porNombre.get(parent);
-      base = parent === TEMA_NEUTRO.name ? neutro : padre && resolver(padre);
+      base = parent === TEMA_ALTO_CONTRASTE.name ? altoContraste : padre && resolver(padre);
       if (base === undefined) {
         const enCiclo = padre !== undefined;
         issues.push({
@@ -176,7 +178,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       }
     }
 
-    const origen = (base ?? neutro).tema;
+    const origen = base?.tema ?? TEMA_NEUTRO;
     const tema: TemaResuelto = {
       name,
       palette: { ...(base?.tema.palette ?? {}) },
@@ -211,13 +213,13 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     const delBordeDeArista = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeEdge' ? parte.items : []));
     compilarArista(delBordeDeArista, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
     enCurso.delete(name);
-    const delPadre = base === undefined || base === neutro ? [] : [parent as string, ...base.origen.extends];
+    const delPadre = base === undefined ? [] : [parent as string, ...base.origen.extends];
     const compilado: Compilado = {
       tema,
       origenes,
       origen: {
         sitio: { file: declarado.archivo, ...declarado.nombre.start },
-        extends: base === neutro ? [TEMA_NEUTRO.name] : delPadre,
+        extends: delPadre,
         partes: [...new Set([...(base?.origen.partes ?? []), ...partesUsadas([...items, ...delBordeDeArista], partes)])],
         base: sitioDeCopia(origenes),
         tipos: Object.fromEntries(Object.entries(porTipo).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),
@@ -230,9 +232,12 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
   for (const declarado of porNombre.values()) resolver(declarado);
 
   return {
-    temas: [...resueltos.values()].map(({ tema }) => tema),
+    // Los incorporados primero y en su orden; `alto-contraste` lo define `tema`.
+    temas: [...resueltos.values(), altoContraste]
+      .map(({ tema }) => tema)
+      .sort((a, b) => (NOMBRES_INCORPORADOS.indexOf(a.name as never) + 1 || 99) - (NOMBRES_INCORPORADOS.indexOf(b.name as never) + 1 || 99)),
     issues,
-    origenes: Object.fromEntries([...resueltos].filter(([nombre]) => nombre !== TEMA_NEUTRO.name).map(([nombre, { origen }]) => [nombre, origen])),
+    origenes: Object.fromEntries([...resueltos].filter(([, { origen }]) => origen.sitio.file !== ARCHIVO_INCORPORADOS).map(([nombre, { origen }]) => [nombre, origen])),
     parchesDeVista: (nombreDeTema, items, archivo) => {
       const delTema = resueltos.get(nombreDeTema);
       const delVista: Issue[] = [];

@@ -16,7 +16,7 @@ const vista = (tema = '') => `view v {
 ${tema}}
 `;
 
-const tema = (nodo: string, extra = '') => `theme t extends neutral {
+const tema = (nodo: string, extra = '') => `theme t {
   palette { rojo "#dc2626"  papel "#fefce8" ${extra} }
   node {
 ${nodo}

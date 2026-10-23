@@ -1,0 +1,29 @@
+// Contraste: ninguno
+// Synthwave neon: degradado rosa a cian con glow intenso y rejilla de fondo.
+theme synthwave {
+  palette {
+    fondo "#13001f"  texto "#fdf4ff"  rosa "#ff2bd6"  cian "#22e4ff"
+    blue "#22e4ff"  purple "#b36bff"  green "#3dffb5"  amber "#ffb13d"  red "#ff2b6a"  gray "#c9a6ff"
+  }
+  tokens { background "#13001f"  foreground "#fdf4ff"  border "#ff2bd6" }
+  node {
+    layer glow glow { color rosa/0.55  radius 18 }
+    layer neon rect { radius 12 }
+    layer degradado gradient { from rosa  to cian  angle 100 }
+    layer interior gradient { from fondo  to COLOR/0.25  angle 160 }
+    layer rejilla grid { color rosa/0.12  size 12  width 1 }
+    layer borde border { color cian/0.8 width 1 }
+    slots { title { weight 700 }  attrs }
+    type externo { layer glow { color cian/0.4  radius 12 }  layer borde dashed { color cian } }
+    state hover { layer glow { color cian/0.8  radius 28 }  transition 140ms ease-out }
+    state en-ruta { layer glow { motion aura 2s ease-in-out intensity 0.6 } }
+    state atenuado { layer glow none }
+  }
+  edge {
+    layer halo line { color rosa/0.2 width 8 }
+    layer linea line { color cian width 1.8 }
+    start dot { size 6  color rosa }
+    end arrow { size 9  color cian }
+    label { scale 0.8  pad 8  radius 50  fill fondo  border rosa }
+  }
+}

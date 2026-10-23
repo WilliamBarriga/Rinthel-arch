@@ -1,0 +1,26 @@
+// Contraste: ninguno
+// Tarjeta sobria oscura (estilo Linear/Vercel): relleno translucido, borde fino y Aristas discretas.
+theme soft-card {
+  palette {
+    fondo "#09090b"  texto "#fafafa"
+    blue "#60a5fa"  purple "#a78bfa"  green "#34d399"  amber "#fbbf24"  red "#f87171"  gray "#a1a1aa"
+  }
+  tokens { background "#09090b"  foreground "#fafafa"  border "#a1a1aa"  radius 10 }
+  node {
+    layer caja rect { radius $radius }
+    layer relleno solid { color texto/0.1 }
+    layer borde border { color texto/0.4 width 1 }
+    slots { title { weight 600 }  attrs }
+    type externo { layer borde dashed { color texto/0.5 } }
+    type servicio { layer acento outline after borde { color COLOR/0.5 width 1 offset 0 } }
+    state hover { layer borde { color COLOR }  transition 120ms ease-out }
+    state en-ruta { layer borde { color COLOR  width 2 } }
+    state atenuado { layer relleno none }
+  }
+  edge {
+    layer linea line { color texto/0.5 width 1.2 }
+    start dot { size 5 }
+    end arrow { size 8 }
+    label { scale 0.8  pad 6  radius 50  fill fondo  border texto/0.4 }
+  }
+}

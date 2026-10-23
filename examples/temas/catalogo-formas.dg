@@ -15,7 +15,7 @@ model {
   c -> d
 }
 
-theme base-muestra extends neutral {
+theme base-muestra {
   palette { papel "#fefce8"  tinta "#1e293b"  acento "#2563eb"  suave "#bfdbfe" }
   tokens { background "#ffffff"  foreground "#1e293b"  border "#475569" }
 }

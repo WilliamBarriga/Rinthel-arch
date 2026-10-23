@@ -29,6 +29,7 @@ import type { LangiumCoreServices, ParseResult } from 'langium';
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
 import type { Attrs, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, Theme, View } from './generated/ast';
 import { issueConSugerencia, rangoDe, rangoDeIndice } from './posiciones';
+import { ARCHIVO_INCORPORADOS, temasIncorporados } from './incorporados';
 import { resolverTemas } from './temas';
 import type { DeclaracionDeParte, OrigenDeTema, TemaDeclarado } from './temas';
 import { crearUbicador } from './ubicador';
@@ -81,7 +82,12 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const issues: Issue[] = [];
   const tiposDeNodo: TipoDeNodo[] = [];
   const conSintaxisRota = new Set<string>();
-  const temasDeclarados: TemaDeclarado[] = [];
+  const temasDeclarados: TemaDeclarado[] = temasIncorporados((texto) => servicios().parser.LangiumParser.parse<Documento>(texto).value).map((tema) => ({
+    archivo: ARCHIVO_INCORPORADOS,
+    ast: tema,
+    nombre: rangoDe(tema, 'name'),
+    padre: rangoDe(tema, 'parent'),
+  }));
   const partesDeclaradas: DeclaracionDeParte[] = [];
   const tiposAst: { archivo: string; ast: NodeTypeDecl }[] = [];
   const vistas: { vista: Vista; archivo: string; ast: View }[] = [];

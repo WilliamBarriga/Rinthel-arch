@@ -1,0 +1,27 @@
+// Contraste: ninguno
+// Claro suave (estilo Stripe/Apple): tarjetas blancas con sombras en capas y Aristas redondeadas.
+theme claro-suave {
+  palette {
+    fondo "#f5f6fa"  texto "#0f172a"  blanco "#ffffff"
+    blue "#4f46e5"  purple "#9333ea"  green "#059669"  amber "#b45309"  red "#e11d48"  gray "#64748b"
+  }
+  tokens { background "#f5f6fa"  foreground "#0f172a"  border "#64748b" }
+  node {
+    layer sombra-lejana shadow { color texto/0.1  x 0  y 10  blur 28 }
+    layer sombra-cercana shadow { color texto/0.1  x 0  y 1  blur 2 }
+    layer forma rect { radius 16 }
+    layer relleno solid { color blanco }
+    layer borde border { color texto/0.5 width 1 }
+    slots { title { weight 600 }  attrs }
+    type externo { layer sombra-lejana none  layer sombra-cercana none  layer relleno { color fondo }  layer borde dashed { color texto/0.45 } }
+    type servicio { layer tinte gradient after relleno { from blanco  to COLOR/0.10  angle 160 } }
+    state hover { layer sombra-lejana { color COLOR/0.25  y 18  blur 40 }  transition 180ms ease-out }
+    state en-ruta { layer borde { color COLOR  width 2 } }
+    state atenuado { layer relleno { color fondo } }
+  }
+  edge {
+    layer linea line { color texto/0.5 width 1.5 }
+    end arrow { size 8 }
+    label { scale 0.8  pad 8  radius 50  fill blanco  border texto/0.3 }
+  }
+}

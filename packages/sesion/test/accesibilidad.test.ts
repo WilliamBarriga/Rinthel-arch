@@ -15,7 +15,7 @@ const vista = `view v {
   theme t
 }
 `;
-const tema = (relleno: string, extra = '') => `theme t extends neutral {
+const tema = (relleno: string, extra = '') => `theme t {
   palette { rojo "#f0f0f0"  azul "#f0e0e0" }
   ${extra}
   node {
@@ -54,5 +54,16 @@ describe('seam sesion: accesibilidad del Tema', () => {
     const issues = await abrirSesion({ 'main.dg': modelo + tema('rojo').replace('rojo "#f0f0f0"', 'rojo "#ffffff"') + vista }).diagnosticar();
 
     expect(issues).toEqual([]);
+  });
+
+  it.each(['', 'neutral', 'neutral-dark', 'alto-contraste'])('el Tema incorporado %j no da warnings de contraste', async (nombre) => {
+    const colores = `specification { node servicio { color blue }  node base { color green }  node cola { color amber }  node otro { color purple } }
+model { servicio a  base b  cola c  otro d  a -> b }
+view v { type architecture include **${nombre === '' ? '' : `  theme ${nombre}`} }
+`;
+
+    // `solo-color` depende de los Tipos del Modelo (con 4 Tipos de una misma forma avisa en cualquier Tema); aqui se mide el Tema.
+    const issues = await abrirSesion({ 'main.dg': colores }).diagnosticar();
+    expect(issues.filter((i) => i.code !== 'W_THEME_COLOR_ONLY')).toEqual([]);
   });
 });

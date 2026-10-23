@@ -1,0 +1,30 @@
+// Contraste: ninguno
+// Circuito impreso: placa verde, chips negros, pistas de cobre con esquina en chaflan y vias en los extremos.
+theme pcb {
+  fonts { body "JetBrains Mono"  mono "JetBrains Mono" }
+  palette {
+    placa "#0c4a2f"  texto "#f2f2ea"  chip "#16171a"  cobre "#d8a24a"  estano "#c9ccd1"
+    blue "#6fb7ff"  purple "#c49bff"  green "#7be38f"  amber "#ffcc55"  red "#ff7a6b"  gray "#c9ccd1"
+  }
+  tokens { background "#0c4a2f"  foreground "#f2f2ea"  border "#c9ccd1" }
+  node {
+    layer forma rect { radius 3 }
+    layer chip solid { color chip }
+    layer brillo gradient { from estano/0.12  to chip/0  angle 160 }
+    layer patas dashed { color estano  width 2 }
+    layer serigrafia border { color texto/0.5 width 1 }
+    slots { title { weight 700  transform uppercase }  attrs }
+    type actor { layer forma pill  layer chip solid { color cobre/0.15 }  layer serigrafia border { color cobre  width 2 } }
+    type externo { layer chip solid { color placa }  layer patas none  layer serigrafia dashed { color texto  width 2 } }
+    state hover { layer brillo { from COLOR/0.3 }  transition 100ms linear }
+    state en-ruta { layer serigrafia { color COLOR  width 2 } }
+    state atenuado { layer brillo none }
+  }
+  edge {
+    layer halo line { color cobre/0.25 width 7 }
+    layer pista line { color cobre  width 3  corner chamfer  cut 8 }
+    start via { size 6  color cobre }
+    end via { size 6  color cobre }
+    label { scale 0.75  pad 4  radius 0  fill placa  border texto }
+  }
+}
