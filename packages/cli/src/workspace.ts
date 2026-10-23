@@ -1,4 +1,5 @@
 /** Adaptador de disco: unico punto del CLI que lee el Workspace. */
+import { createHash } from 'node:crypto';
 import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
@@ -38,6 +39,18 @@ function recorrer(
 export function leerWorkspace(raiz: string): ArchivosDelWorkspace {
   if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' no es una carpeta`);
   return recorrer(raiz, (nombre) => nombre.endsWith(EXTENSION) || nombre.endsWith('.svg'), (ruta) => readFileSync(ruta, 'utf8'));
+}
+
+const EXTENSIONES_DE_RECURSO = ['.tsx', '.ttf', '.otf', '.woff', '.woff2'];
+
+/**
+ * Recursos del Workspace que no son texto del DSL y que `dev` vigila: componentes `.tsx` de los Temas y
+ * fuentes tipograficas. Devuelve ruta relativa con `/` -> hash del contenido (SHA-256), que basta para
+ * saber si cambiaron. Lanza `Error` si la raiz no existe o no es una carpeta.
+ */
+export function leerRecursos(raiz: string): Record<string, string> {
+  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' no es una carpeta`);
+  return recorrer(raiz, (nombre) => EXTENSIONES_DE_RECURSO.some((extension) => nombre.endsWith(extension)), (ruta) => createHash('sha256').update(readFileSync(ruta)).digest('hex'));
 }
 
 const CARPETA_DE_SALIDA = '.diagrams';

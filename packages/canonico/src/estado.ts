@@ -14,8 +14,19 @@ export const issueDeDevSchema = issueSchema.extend({
   href: z.string(),
 });
 
+/**
+ * Que cambio produjo el estado empujado (enmienda de Temas del ADR 0005), para que el visor haga lo minimo:
+ * `pintura` (solo Capas pintadas o animacion: se reaplica el Estilo resuelto con la Geometria vigente),
+ * `estructura` (Metricas, fuentes, Modelo o Vistas: relayout) y `codigo` (un `.tsx`: se vuelve a registrar
+ * el componente, sin relayout). Si cambian varios a la vez gana el mas fuerte: estructura, codigo, pintura.
+ */
+export const TIPOS_DE_CAMBIO = ['pintura', 'estructura', 'codigo'] as const;
+export type TipoDeCambio = (typeof TIPOS_DE_CAMBIO)[number];
+
 export const estadoDeDevSchema = z.object({
   version: z.number().int(),
+  /** Ausente en el estado inicial y cuando la recompilacion fallo (se conserva el ultimo dibujo bueno). */
+  cambio: z.enum(TIPOS_DE_CAMBIO).optional(),
   /** Ausente mientras el Workspace nunca compilo sin errores. */
   fuente: fuenteCanonicaSchema.optional(),
   iconos: z.record(z.string(), z.string()),

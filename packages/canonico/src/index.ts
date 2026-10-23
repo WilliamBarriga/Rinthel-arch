@@ -88,8 +88,8 @@ export type { SalidaDeInspect } from './inspect';
 
 export { MOTIVOS_DE_RECHAZO, intencionDePinSchema, intencionSchema } from './pin';
 export type { Intencion, IntencionDePin, MotivoDeRechazo } from './pin';
-export { estadoDeDevSchema, issueDeDevSchema } from './estado';
-export type { EstadoDeDev, IssueDeDev } from './estado';
+export { TIPOS_DE_CAMBIO, estadoDeDevSchema, issueDeDevSchema } from './estado';
+export type { EstadoDeDev, IssueDeDev, TipoDeCambio } from './estado';
 
 export { CONTRACT_VERSION, issueSchema, salidaDeValidateJsonSchema, salidaDeValidateSchema } from './salida';
 export type { SalidaDeValidate } from './salida';

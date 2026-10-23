@@ -14,3 +14,4 @@
  */
 export { compile } from './compilar';
 export type { ArchivosDelWorkspace, PosicionDePin, ResultadoDeCompilacion } from './compilar';
+export type { OrigenDeTema } from './temas';

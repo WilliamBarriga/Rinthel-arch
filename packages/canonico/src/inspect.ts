@@ -74,6 +74,39 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       aristas: z.array(aristaSchema.extend({ count: z.number().int().min(1) })),
     }),
   }),
+  z.object({
+    ...comun,
+    comando: z.literal('tema'),
+    tema: z.object({
+      name: z.string(),
+      /** Donde se declara; `(incorporado)` para un Tema del nucleo. */
+      ...sitioSchema,
+      /** Cadena `extends`, del padre hacia la raiz. */
+      extends: z.array(z.string()),
+      /** `part` usadas por el Tema y sus ancestros. */
+      partes: z.array(z.string()),
+      /** Tipo y estado pedidos para resolver la cascada, si se pidieron. */
+      tipo: z.string().optional(),
+      estado: z.string().optional(),
+      /** Pila de Capas resuelta, de abajo arriba; `origen` es el parche que la fijo. */
+      capas: z.array(
+        z.object({
+          nombre: z.string(),
+          primitiva: z.string(),
+          props: z.record(z.string(), z.union([z.string(), z.number()])),
+          encima: z.boolean(),
+          animada: z.boolean(),
+          origen: z.object(sitioSchema),
+        }),
+      ),
+      /** Metricas del Nodo del Tipo pedido (o la base): lo unico que mueve el layout. */
+      metricas: z.object({ fontSize: z.number(), slots: z.array(z.string()) }).catchall(z.unknown()),
+      temaConCodigo: z.boolean(),
+      componentes: z.array(z.string()),
+      /** Con `--catalogo`: claves del catalogo de Primitivas, Movimientos y efectos. */
+      catalogo: z.object({ primitivas: z.array(z.string()), movimientos: z.array(z.string()), efectos: z.array(z.string()) }).optional(),
+    }),
+  }),
 ]);
 
 export type SalidaDeInspect = z.infer<typeof salidaDeInspectSchema>;

@@ -30,7 +30,7 @@ import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './gene
 import type { Attrs, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, Theme, View } from './generated/ast';
 import { issueConSugerencia, rangoDe, rangoDeIndice } from './posiciones';
 import { resolverTemas } from './temas';
-import type { DeclaracionDeParte, TemaDeclarado } from './temas';
+import type { DeclaracionDeParte, OrigenDeTema, TemaDeclarado } from './temas';
 import { crearUbicador } from './ubicador';
 
 /** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
@@ -54,6 +54,8 @@ export interface ResultadoDeCompilacion {
   pins: PosicionDePin[];
   /** Donde se escribio cada valor de la Fuente canonica; presente junto a `canonico`. */
   ubicar?: Ubicador;
+  /** Origen de las Capas de cada Tema declarado (cadena `extends`, `part` usadas y sitio de cada Capa); presente junto a `canonico`. */
+  origenesDeTemas?: Record<string, OrigenDeTema>;
 }
 
 let memoServicios: LangiumCoreServices | undefined;
@@ -152,7 +154,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
   }
 
-  const { temas, issues: delTema, parchesDeVista } = resolverTemas(temasDeclarados, partesDeclaradas, tiposDeNodo.map(({ name }) => name));
+  const { temas, issues: delTema, parchesDeVista, origenes: origenesDeTemas } = resolverTemas(temasDeclarados, partesDeclaradas, tiposDeNodo.map(({ name }) => name));
   issues.push(...delTema);
   for (const { vista, archivo, ast } of vistas) {
     const bloque = ast.props.find((prop) => prop.$type === 'ViewTheme');
@@ -190,6 +192,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     issues,
     pins,
     ubicar,
+    origenesDeTemas,
   };
 }
 

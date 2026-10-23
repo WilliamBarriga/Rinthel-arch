@@ -126,13 +126,15 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
           ? rangoDe(prop, error.codigo === CODIGOS.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value')
           : rangoDe(item, error.codigo === CODIGOS.E_THEME_UNKNOWN_PRIMITIVE ? 'primitive' : 'name');
     const origen = baseDeError === undefined ? undefined : base.get(baseDeError);
+    // Con un unico candidato cercano el arreglo es inequivoco: `fix` en vez de `hint` (ADR 0005). Los tokens van con `$` y no se arreglan aqui.
+    const arreglable = error.candidato !== undefined && error.codigo !== CODIGOS.E_THEME_UNKNOWN_TOKEN;
     return {
       code: error.codigo,
       severity: 'error',
       file: archivo,
       ...rango.start,
       message: error.mensaje,
-      ...(error.hint !== undefined && { hint: error.hint }),
+      ...(arreglable ? { fix: { file: archivo, range: rango, replacement: error.candidato as string } } : error.hint !== undefined && { hint: error.hint }),
       ...(origen !== undefined && { related: [{ ...origen, message: `Capa base '${baseDeError}' que este parche modifica` }] }),
     };
   };

@@ -146,7 +146,7 @@ describe('seam sesion: validacion estricta de la cascada', () => {
     const issues = await abrirSesion(trabajoT(temaT('    type servicio { layer barra rect after rellno }'))).diagnosticar();
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_THEME_UNKNOWN_LAYER', severity: 'error', file: 'main.dg', hint: expect.stringContaining("'relleno'") });
+    expect(issues[0]).toMatchObject({ code: 'E_THEME_UNKNOWN_LAYER', severity: 'error', file: 'main.dg', fix: expect.objectContaining({ replacement: 'relleno' }) });
     expect(issues[0]!.message).toContain("'rellno'");
   });
 

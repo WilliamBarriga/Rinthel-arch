@@ -38,10 +38,26 @@ export interface TemaDeclarado {
 /** Un `part` del DSL con el sitio donde se declaro. */
 export type DeclaracionDeParte = ParteDeclarada;
 
+/** Donde se fijo cada Capa de un Tema, por nivel de la cascada; lo usa `inspect tema`. */
+export interface OrigenDeTema {
+  /** Donde se declara el Tema. */
+  sitio: Sitio;
+  /** Ancestros por `extends`, del padre hacia la raiz. */
+  extends: string[];
+  /** Partes (`part`) que usan el Tema y sus ancestros. */
+  partes: string[];
+  /** Ultimo parche que fijo cada Capa en la pila base, en la de cada Tipo y en la de cada estado. */
+  base: Record<string, Sitio>;
+  tipos: Record<string, Record<string, Sitio>>;
+  estados: Record<string, Record<string, Sitio>>;
+}
+
 /** Resultado de compilar los Temas y herramienta para compilar el override de una Vista. */
 export interface TemasCompilados {
   temas: TemaResuelto[];
   issues: Issue[];
+  /** Origen de las Capas de cada Tema declarado en el texto (el neutro incorporado no figura). */
+  origenes: Record<string, OrigenDeTema>;
   /** Parches de Capa de una Vista (`theme t { layer ... }`) validados contra el Tema `tema`. */
   parchesDeVista(tema: string, items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string): { ops: OpDeCapa[]; issues: Issue[] };
 }
@@ -50,13 +66,37 @@ interface Compilado {
   tema: TemaResuelto;
   /** Sitio de cada Capa de la pila base, para `related`. */
   origenes: Map<string, Sitio>;
+  origen: OrigenDeTema;
 }
+
+type Registro = Record<string, Map<string, Sitio>>;
 
 interface Entorno {
   partes: ReadonlyMap<string, ParteDeclarada>;
   tipos: readonly string[];
   issues: Issue[];
+  /** Origen de las Capas fijadas por parches de Tipo y de estado. */
+  porTipo: Registro;
+  porEstado: Registro;
 }
+
+/** Nombres de las `part` que usa un bloque, incluidas las que usan esas partes. */
+function partesUsadas(items: ReadonlyArray<{ $type: string }>, partes: ReadonlyMap<string, ParteDeclarada>, vistas = new Set<string>()): string[] {
+  for (const item of items) {
+    if (item.$type === 'ThemeUse') {
+      const { name } = item as ThemeUse;
+      if (vistas.has(name)) continue;
+      vistas.add(name);
+      const parte = partes.get(name);
+      if (parte !== undefined) partesUsadas(parte.ast.items, partes, vistas);
+    } else if ('items' in item && Array.isArray(item.items)) partesUsadas(item.items as ReadonlyArray<{ $type: string }>, partes, vistas);
+  }
+  return [...vistas];
+}
+
+const sitioDeCopia = (mapa: ReadonlyMap<string, Sitio>): Record<string, Sitio> => Object.fromEntries(mapa);
+const copiarRegistro = (registro: Record<string, Record<string, Sitio>>): Registro =>
+  Object.fromEntries(Object.entries(registro).map(([clave, sitios]) => [clave, new Map(Object.entries(sitios))]));
 
 const copiarCapa = <C extends { primitiva: { props: Record<string, string | number> } }>(c: C): C => ({ ...c, primitiva: { ...c.primitiva, props: { ...c.primitiva.props } } });
 
@@ -104,7 +144,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     });
   }
 
-  const neutro: Compilado = { tema: TEMA_NEUTRO, origenes: new Map() };
+  const neutro: Compilado = { tema: TEMA_NEUTRO, origenes: new Map(), origen: { sitio: { file: '(incorporado)', line: 1, column: 1 }, extends: [], partes: [], base: {}, tipos: {}, estados: {} } };
   const resueltos = new Map<string, Compilado>([[TEMA_NEUTRO.name, neutro]]);
   const enCurso = new Set<string>();
   const fallidos = new Set<string>();
@@ -158,6 +198,8 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       },
     };
     const origenes = new Map(base?.origenes);
+    const porTipo = copiarRegistro(base?.origen.tipos ?? {});
+    const porEstado = copiarRegistro(base?.origen.estados ?? {});
     for (const parte of declarado.ast.parts) {
       if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeEdge') continue;
       const destino = parte.$type === 'ThemePalette' ? tema.palette : parte.$type === 'ThemeFonts' ? tema.fonts : tema.tokens;
@@ -165,11 +207,23 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     }
     // El bloque `node` se compila al final: sus colores y tokens se validan contra la Paleta y los tokens ya completos.
     const items = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeNode' ? parte.items : []));
-    compilarNodo(declarado.archivo, items, tema, origenes, { partes, tipos, issues });
+    compilarNodo(declarado.archivo, items, tema, origenes, { partes, tipos, issues, porTipo, porEstado });
     const delBordeDeArista = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeEdge' ? parte.items : []));
     compilarArista(delBordeDeArista, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
     enCurso.delete(name);
-    const compilado = { tema, origenes };
+    const delPadre = base === undefined || base === neutro ? [] : [parent as string, ...base.origen.extends];
+    const compilado: Compilado = {
+      tema,
+      origenes,
+      origen: {
+        sitio: { file: declarado.archivo, ...declarado.nombre.start },
+        extends: base === neutro ? [TEMA_NEUTRO.name] : delPadre,
+        partes: [...new Set([...(base?.origen.partes ?? []), ...partesUsadas([...items, ...delBordeDeArista], partes)])],
+        base: sitioDeCopia(origenes),
+        tipos: Object.fromEntries(Object.entries(porTipo).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),
+        estados: Object.fromEntries(Object.entries(porEstado).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),
+      },
+    };
     resueltos.set(name, compilado);
     return compilado;
   };
@@ -178,6 +232,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
   return {
     temas: [...resueltos.values()].map(({ tema }) => tema),
     issues,
+    origenes: Object.fromEntries([...resueltos].filter(([nombre]) => nombre !== TEMA_NEUTRO.name).map(([nombre, { origen }]) => [nombre, origen])),
     parchesDeVista: (nombreDeTema, items, archivo) => {
       const delTema = resueltos.get(nombreDeTema);
       const delVista: Issue[] = [];
@@ -243,8 +298,10 @@ function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: Tem
       );
       continue;
     }
-    const ops = compilarBloque(item.items, { ...contexto, modo: 'parchear', candidatas: [base] });
+    const propios = new Map(origenes);
+    const ops = compilarBloque(item.items, { ...contexto, origenes: propios, modo: 'parchear', candidatas: [base] });
     tema.nodo.tipos[item.name] = [...(tema.nodo.tipos[item.name] ?? []), ...ops];
+    anotarOrigenes(entorno.porTipo, item.name, propios, origenes);
   }
 
   // 3) Parches por estado, sobre la pila base o la de cualquier Tipo.
@@ -271,7 +328,10 @@ function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: Tem
       });
     }
     const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');
-    const ops = compilarBloque(capas, { ...contexto, modo: 'parchear', candidatas: sobreTipos });
+    const propios = new Map([...origenes, ...[...Object.values(entorno.porTipo)].flatMap((mapa) => [...mapa])]);
+    const inicial = new Map(propios);
+    const ops = compilarBloque(capas, { ...contexto, origenes: propios, modo: 'parchear', candidatas: sobreTipos });
+    anotarOrigenes(entorno.porEstado, estado, propios, inicial);
     for (const op of ops) {
       const razon = opTocaMetricas(op, sobreTipos);
       if (razon === undefined) continue;
@@ -285,6 +345,13 @@ function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: Tem
     }
     tema.nodo.estados[estado] = [...(tema.nodo.estados[estado] ?? []), ...ops];
   }
+}
+
+/** Guarda en `registro[clave]` las Capas que el bloque fijo: las que `propios` tiene distintas de `antes`. */
+function anotarOrigenes(registro: Registro, clave: string, propios: ReadonlyMap<string, Sitio>, antes: ReadonlyMap<string, Sitio>): void {
+  const destino = registro[clave] ?? new Map<string, Sitio>();
+  for (const [nombre, sitio] of propios) if (antes.get(nombre) !== sitio) destino.set(nombre, sitio);
+  registro[clave] = destino;
 }
 
 function aIssue(archivo: string, error: ErrorDeCatalogo, rango: TextRange): Issue {

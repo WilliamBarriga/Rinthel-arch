@@ -22,6 +22,12 @@
  * observador activo) y lanza si la lectura inicial falla; las lecturas fallidas posteriores se ignoran
  * hasta el siguiente cambio. `run(['dev', ...])` los convierte en codigo 2.
  *
+ * Recarga clasificada (enmienda de Temas del ADR 0005): `dev` vigila tambien los `.tsx` y las fuentes del
+ * Workspace (`leerRecursos`, hash por archivo) y cada estado empujado trae `cambio` (`TipoDeCambio` de
+ * `canonico`): `pintura` (solo Capas pintadas o animacion: el visor reaplica el Estilo resuelto con la
+ * Geometria vigente, sin relayout), `estructura` (Metricas, fuentes, Modelo o Vistas) o `codigo` (un `.tsx`).
+ * Lo decide `clasificarCambio` comparando con el ultimo estado bueno; si la recompilacion falla no hay `cambio`.
+ *
  * Invariantes: las peticiones de edicion, deshacer y rehacer se serializan en una cola; una escritura que falla a mitad se revierte; gana la ultima escritura. Las
  * recompilaciones se agrupan con debounce y se serializan. Si el Workspace
  * tiene errores, el estado lleva los issues pero conserva la Fuente y la
@@ -35,7 +41,7 @@ import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { combineIconProviders, genericIcons, intencionDePinSchema, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
-import type { EstadoDeDev, Intencion, Issue } from 'canonico';
+import type { EstadoDeDev, Intencion, Issue, TipoDeCambio } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion, aplicarAlWorkspace, apilar, archivoDeVista, crearHistorial, deshacer, hashDeContenido, rehacer } from 'sesion';
 import type { Historial, Sesion } from 'sesion';
@@ -44,7 +50,8 @@ import { empaquetarShellDev } from './dev-shell';
 import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
-import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
+import { clasificarCambio } from './cambio';
+import { destinoEnWorkspace, escribirTexto, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
 
 /** Bundles del shell: pagina (React + shell) y codigo del Web Worker de layout. */
 export interface ShellDev {
@@ -61,6 +68,8 @@ export interface OpcionesDeDev {
   /** Espera tras el ultimo cambio antes de recompilar (150 ms por defecto). */
   debounceMs?: number;
   leer?: (raiz: string) => ArchivosDelWorkspace;
+  /** Hash de cada recurso vigilado (`.tsx`, fuentes) bajo `raiz`, para clasificar el cambio; por defecto lee el disco (o nada si se inyecta `leer`). */
+  leerRecursos?: (raiz: string) => Record<string, string>;
   /** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
   observar?: (raiz: string, alCambiar: () => void) => () => void;
   shell?: () => Promise<ShellDev>;
@@ -128,13 +137,17 @@ const PAGINA = `<!doctype html>
 `;
 
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puerto = 0, debounceMs = 150, leer: leerBase = leerWorkspace, observar = observarDisco, shell = empaquetarShellDev, escribir = escribirEnDisco, borrar = borrarEnDisco } = opciones;
+  const { workspace, temas, puerto = 0, debounceMs = 150, leer: leerBase = leerWorkspace, leerRecursos: leerRecursosBase = opciones.leer === undefined ? leerRecursosReal : () => ({}), observar = observarDisco, shell = empaquetarShellDev, escribir = escribirEnDisco, borrar = borrarEnDisco } = opciones;
   const raizAbsoluta = resolve(workspace);
   const leer = (raiz: string): ArchivosDelWorkspace => leerConTemas(leerBase, raiz, temas);
   const bundles = await shell();
+  const recursosDe = (): Record<string, string> => ({ ...(temas === undefined ? {} : leerRecursosBase(temas)), ...leerRecursosBase(workspace) });
 
   let version = 0;
   let archivos = leer(workspace);
+  /** Recursos (`.tsx`, fuentes) del ultimo instante bueno y tipo del ultimo cambio empujado. */
+  let recursos = recursosDe();
+  let cambio: TipoDeCambio | undefined;
   let actual: Sesion = abrirSesion(archivos);
   /** Ultima Sesion sin errores de compilacion y los archivos con que se abrio. */
   let buena: { sesion: Sesion; archivos: ArchivosDelWorkspace } | undefined = actual.fuente === undefined ? undefined : { sesion: actual, archivos };
@@ -194,6 +207,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     const iconos = proveedor === undefined ? {} : serializarIconos(proveedor);
     return {
       version,
+      ...(cambio !== undefined && { cambio }),
       fuente,
       iconos,
       vistas: fuente?.views.map(({ id }) => id) ?? [],
@@ -233,11 +247,22 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         } catch {
           continue; // lectura a medias (archivo en reescritura): el siguiente evento reintenta
         }
+        let nuevosRecursos: Record<string, string>;
+        try {
+          nuevosRecursos = recursosDe();
+        } catch {
+          continue;
+        }
         const sesion = (buena?.sesion ?? actual).actualizar(nuevos);
         const nuevosIssues = await sesion.diagnosticar();
         actual = sesion;
         archivos = nuevos;
-        if (sesion.fuente !== undefined) buena = { sesion, archivos: nuevos };
+        // Con errores se conserva el ultimo dibujo bueno (y sus recursos de referencia): no hay cambio que dibujar.
+        cambio = sesion.fuente === undefined ? undefined : clasificarCambio({ fuente: buena?.sesion.fuente, recursos }, { fuente: sesion.fuente, recursos: nuevosRecursos });
+        if (sesion.fuente !== undefined) {
+          buena = { sesion, archivos: nuevos };
+          recursos = nuevosRecursos;
+        }
         issues = nuevosIssues;
         version += 1;
         estado = construirEstado();
