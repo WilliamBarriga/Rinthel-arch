@@ -6,7 +6,7 @@
  */
 import { idDeArista, tamanoDeTexto } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
-import { ESCALA_ETIQUETA, alturasDeNodo, atributosVisibles, textoDeAtributo, yDeFila } from 'layout';
+import { ESCALA_ETIQUETA, alturasDeNodo, indiceDeGeometria, atributosVisibles, textoDeAtributo, yDeFila } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
 
 /** Elemento SVG: atributos, y como contenido hijos, texto o marcado inline (iconos). */
@@ -86,8 +86,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
     fontSize: tamanoDeTexto(theme),
     cabecera: alturasDeNodo(theme).cabecera,
   };
-  const anidados = new Set(view.nodes.flatMap((nodo) => nodo.children.map((hijo) => hijo.id)));
-  const raices = view.nodes.filter((nodo) => !anidados.has(nodo.id));
+  const { raices } = indiceDeGeometria(view, geometry);
   const vista = camera ?? { x: 0, y: 0, width: geometry.width, height: geometry.height };
 
   return {

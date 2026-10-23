@@ -11,7 +11,7 @@ import type { D3ZoomEvent, ZoomTransform } from 'd3-zoom';
 
 import { resolveView } from 'canonico';
 import type { EstadoDeColapso, IconProvider, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
-import { claveDeLayout } from 'layout';
+import { claveDeLayout, indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram } from 'render';
 import type { Camara } from 'render';
@@ -26,7 +26,7 @@ import { usePasos } from './pasos';
 import type { PropsDePasos } from './pasos';
 import { useTemaVigente } from './tema-vigente';
 import type { SuscripcionDeTema } from './tema-vigente';
-import { cajasAbsolutas, recortarAlViewport } from './viewport';
+import { recortarAlViewport } from './viewport';
 import { nivelDeDetalle } from './zoom-semantico';
 import type { UmbralesDeDetalle } from './zoom-semantico';
 
@@ -152,8 +152,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     const ancla = pendiente.current;
     pendiente.current = undefined;
     if (previo === undefined || ancla === undefined) return;
-    const antes = cajasAbsolutas(previo.vista, previo.geometria).get(ancla);
-    const despues = cajasAbsolutas(nuevo.vista, nuevo.geometria).get(ancla);
+    const antes = indiceDeGeometria(previo.vista, previo.geometria).cajas.get(ancla);
+    const despues = indiceDeGeometria(nuevo.vista, nuevo.geometria).cajas.get(ancla);
     if (antes === undefined || despues === undefined) return;
     const actual = ultimo.current;
     const compensada = compensarCamara(actual.camera ?? camaraPropia.current, antes, despues);
@@ -298,8 +298,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   calculoActual.current = calculo;
   const camaraVista = useMemo<Camara>(() => {
     if (calculo === undefined || mostrado === undefined || morph === undefined) return camara;
-    const final = cajasAbsolutas(calculo.vista, morph.hasta).get(morph.ancla);
-    const ahora = cajasAbsolutas(mostrado.vista, mostrado.geometria).get(morph.ancla);
+    const final = indiceDeGeometria(calculo.vista, morph.hasta).cajas.get(morph.ancla);
+    const ahora = indiceDeGeometria(mostrado.vista, mostrado.geometria).cajas.get(morph.ancla);
     return final === undefined || ahora === undefined ? camara : { ...camara, x: camara.x - final.x + ahora.x, y: camara.y - final.y + ahora.y };
   }, [calculo, mostrado, morph, camara]);
   const visibilidadMostrada = useMemo(
@@ -317,7 +317,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
 
   const marca = useMemo(() => {
     if (mostrado === undefined || seleccionado === null) return undefined;
-    return cajasAbsolutas(mostrado.vista, mostrado.geometria).get(seleccionado);
+    return indiceDeGeometria(mostrado.vista, mostrado.geometria).cajas.get(seleccionado);
   }, [mostrado, seleccionado]);
 
   const alternar = (id: string): void => {
