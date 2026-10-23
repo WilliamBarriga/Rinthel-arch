@@ -34,7 +34,7 @@ import { watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { combineIconProviders, genericIcons, intencionDePinSchema, workspaceIcons } from 'canonico';
+import { combineIconProviders, genericIcons, intencionDePinSchema, serializarIconos, workspaceIcons } from 'canonico';
 import type { Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion, archivoDeVista, editarPin, hashDeContenido } from 'sesion';
@@ -139,12 +139,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   function serializar(): string {
     const fuente = buena?.sesion.fuente;
     const proveedor = buena === undefined ? undefined : combineIconProviders(workspaceIcons(buena.archivos), genericIcons());
-    const iconos = Object.fromEntries(
-      (proveedor?.keys().sort() ?? []).flatMap((clave) => {
-        const svg = proveedor?.resolve(clave);
-        return svg === undefined ? [] : [[clave, svg] as const];
-      }),
-    );
+    const iconos = proveedor === undefined ? {} : serializarIconos(proveedor);
     return JSON.stringify({
       version,
       fuente,

@@ -11,7 +11,7 @@
  * Grupo padre; `order` solo se almacena, sin efecto en v1: ADR 0003 prohibe `considerModelOrder`); un Grupo
  * colapsado (estado, `depth`, `collapsed`/`expanded`, `link`) eleva y fusiona las
  * Aristas de sus hijos; los `steps` de una Vista los interpreta `revealAt` (ADR 0002,
- * acumulativos, con fundido entre pasos); `IconProvider` resuelve claves de icono a SVG inline;
+ * acumulativos, con fundido entre pasos); `IconProvider` resuelve claves de icono a SVG inline (`serializarIconos`/`hidratarIconos` lo llevan al navegador y de vuelta; `sanearIcono` filtra por lista blanca los SVG externos);
  * colores son nombres de Paleta, nunca valores hex (ADR 0002); el Tema (`themes`,
  * siempre con el neutro) es un objeto plano ya resuelto, sin herencia.
  * La geometria cacheada por Vista (`geometriaCacheadaSchema`: `{ view, theme, layoutKey,
@@ -47,7 +47,7 @@ export {
 } from './esquema';
 export { geometriaCacheadaSchema, geometriaSchema } from './geometria';
 export type { GeometriaCacheada } from './geometria';
-export { combineIconProviders, genericIcons, resolveNodeTypeIcon, workspaceIcons } from './iconos';
+export { combineIconProviders, genericIcons, hidratarIconos, resolveNodeTypeIcon, sanearIcono, serializarIconos, workspaceIcons } from './iconos';
 export type { IconProvider } from './iconos';
 export { idDeArista, revealAt } from './pasos';
 export type { Visibilidad } from './pasos';
