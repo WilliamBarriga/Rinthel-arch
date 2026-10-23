@@ -159,7 +159,7 @@ describe('renderToSvgString', () => {
   });
 
   it('escapa tambien los valores del Tema que van en atributos', async () => {
-    const hostil: Tema = { ...TEMA_NEUTRO, palette: { ...TEMA_NEUTRO.palette, blue: '"/><script>' }, fonts: { body: 'a"b' } };
+    const hostil: Tema = { ...TEMA_NEUTRO, palette: { ...TEMA_NEUTRO.palette, blue: '"/><script>' }, fonts: { body: 'a"b', mono: 'monospace' } };
     const svg = await dibujar(hostil);
 
     expect(svg).not.toContain('<script>');
