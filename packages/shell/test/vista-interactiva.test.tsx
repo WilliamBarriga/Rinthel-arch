@@ -195,6 +195,31 @@ describe('VistaInteractiva', () => {
     expect(container.querySelector('[data-selected]')!.getAttribute('data-selected')).toBe('c');
   });
 
+  it('la Seleccion multiple controlada manda y avisa con todos los ids', async () => {
+    const onSelectionChange = vi.fn();
+    const { container } = montar({ camera: camaraGrande, selection: ['a', 'c'], onSelectionChange });
+    const marcados = (): (string | null)[] => [...container.querySelectorAll('[data-selected]')].map((e) => e.getAttribute('data-selected'));
+    await waitFor(() => expect(marcados()).toEqual(['a', 'c']));
+
+    pulsarNodo(container, 'b', { shiftKey: true });
+
+    expect(onSelectionChange).toHaveBeenCalledWith(['a', 'c', 'b']);
+    expect(marcados()).toEqual(['a', 'c']);
+  });
+
+  it('onSelectionChange avisa tambien al quitar y al vaciar la Seleccion', async () => {
+    const onSelectionChange = vi.fn();
+    const { container } = montar({ camera: camaraGrande, onSelectionChange });
+    await waitFor(() => expect(ids(container)).toContain('b'));
+
+    pulsarNodo(container, 'a');
+    pulsarNodo(container, 'b', { shiftKey: true });
+    pulsarNodo(container, 'a', { shiftKey: true });
+    pulsarNodo(container, 'b', { shiftKey: true });
+
+    expect(onSelectionChange.mock.calls.map((c) => c[0])).toEqual([['a'], ['a', 'b'], ['b'], []]);
+  });
+
   it('no dibuja los Nodos ni las Aristas fuera del viewport', async () => {
     const { container, rerender } = montar({ camera: { x: 0, y: 0, width: 350, height: 100 } });
     await waitFor(() => expect(ids(container)).toEqual(['a', 'b']));
