@@ -103,7 +103,7 @@ EntryValue returns string:
   String | Num;
 
 Num returns string:
-  INT ('.' INT)?;
+  DIGITS ('.' DIGITS)?;
 
 // `node { layer fondo solid { color azul }  slots { title attrs }  type servicio { ... }  state hover { ... } }`
 // Bloque de dibujo del Nodo (ADR 0008): una pila de Capas, de abajo hacia arriba, los
@@ -180,7 +180,7 @@ Easing returns string:
   'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out';
 
 SignedNum returns string:
-  '-'? INT ('.' INT)?;
+  '-'? DIGITS ('.' DIGITS)?;
 
 LayerProp:
   key=Id value=LayerValue;
@@ -240,7 +240,7 @@ ViewExclude:
   'exclude' selectors+=Selector (',' selectors+=Selector)*;
 
 ViewDepth:
-  'depth' value=INT;
+  'depth' value=Natural;
 
 ViewTheme:
   'theme' value=Id ('{' items+=PatchItem* '}')?;
@@ -301,11 +301,14 @@ OverrideLabel:
 OverridePin:
   'pin' x=Coordinate ',' y=Coordinate;
 
+Natural returns number:
+  DIGITS;
+
 Coordinate returns number:
-  '-'? INT;
+  '-'? DIGITS;
 
 OverrideOrder:
-  'order' value=INT;
+  'order' value=Natural;
 
 OverrideColor:
   'color' value=PropertyValue;
@@ -367,6 +370,7 @@ hidden terminal NL: /[\r\n]+/;
 // -----------------------------------
 // Terminals
 terminal String: /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/;
-terminal INT returns number: /[0-9]+/;
+// Texto, no numero, y no se llama INT (Langium convertiria a numero por nombre): `Num` concatena sus digitos y un numero perderia los ceros a la izquierda (0.05 -> 0.5).
+terminal DIGITS: /[0-9]+/;
 terminal TokenRef: /\$[a-zA-Z_][-\w]*/;
 terminal IdTerminal:  /([a-zA-Z]|_+[a-zA-Z0-9])[-\w]*/;

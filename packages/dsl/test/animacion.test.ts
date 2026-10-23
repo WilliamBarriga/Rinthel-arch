@@ -99,4 +99,14 @@ describe('compile: animacion declarativa del Tema', () => {
     expect(issues).toEqual([]);
     expect(canonico?.model.nodes.map((n) => n.id)).toEqual(['delay', 'linear']);
   });
+
+  it('un decimal con cero a la izquierda conserva sus ceros (0.05 no es 0.5)', () => {
+    const resultado = tema(`palette { blue "#00f" }
+      node {
+        ${CAPAS.replace('width 2 }', 'width 2  motion pulso intensity 0.05 }')}
+      }`);
+
+    expect(resultado.issues).toEqual([]);
+    expect(nodoDe(resultado)['capas'][1].animacion.intensidad).toBe(0.05);
+  });
 });
