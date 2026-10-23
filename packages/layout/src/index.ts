@@ -7,7 +7,8 @@
  * Grupos colapsados son hojas. Un Nodo hoja con Atributos mide cabecera mas una
  * fila por Atributo y las Aristas a `nodo#atributo` terminan en la fila del
  * Atributo; un Grupo abierto no lista Atributos. Las `Metricas` y la colocacion de
- * Slots son del paquete `tema` (`metricasDe`, `colocarNodo`, `colocarEnCaja`): `layout`
+ * Slots son del paquete `tema` (`tablaDeMetricas`: una entrada por Tipo de nodo, Grupo
+ * abierto, Grupo colapsado y etiqueta de Arista; `colocarNodo`, `colocarEnCaja`): `layout`
  * las usa para medir y `render` para dibujar, asi lo reservado y lo dibujado no
  * divergen. Cada caja de un Nodo hoja lleva `slots`, el rectangulo (relativo a la
  * caja) de cada Slot que el Tema muestra. El tamano de cada Nodo sale del texto y

@@ -6,12 +6,12 @@
  */
 import type { Tema } from 'canonico';
 
-import { metricasDe } from './metricas';
-import type { Metricas } from './metricas';
+import { metricasDe, tablaDeMetricas } from './metricas';
+import type { Metricas, TablaDeMetricas } from './metricas';
 import { CATALOGO } from './catalogo';
 import type { DefinicionDePrimitiva, NombreDePrimitiva } from './catalogo';
 import { resolverColor } from './color';
-import { aplicarOps } from './parches';
+import { cascada } from './parches';
 import type { CapaDeTema, Estado, OpDeCapa } from './parches';
 import { resolverTema } from './tema';
 import type { TemaResuelto } from './tema';
@@ -39,7 +39,10 @@ export interface Pintura {
 }
 
 export interface EstiloResuelto {
+  /** Entrada base de la tabla (Nodo sin Tipo): lo que mide un Nodo que el Tema no menciona. */
   metricas: Metricas;
+  /** Metricas por elemento (ADR 0008): Nodo por Tipo, Grupo abierto y colapsado, etiqueta de Arista. */
+  tabla: TablaDeMetricas;
   pintura: Pintura;
 }
 
@@ -51,20 +54,6 @@ export interface OpcionesDeEstilo {
 }
 
 const COLOR_DE_RESPALDO = '__borde';
-
-/**
- * Pila de Capas tras la cascada: Tema base, Tipo de nodo, estado, override de la
- * Vista; el ultimo gana. Un parche que no encuentra su Capa en esta pila (p. ej.
- * una Capa que solo anade otro Tipo) no aplica a ella: `validate` ya lo acepto
- * por existir en alguna.
- */
-export function cascada(tema: TemaResuelto, nivel: { tipo?: string; estado?: Estado; vista?: readonly OpDeCapa[] } = {}): CapaDeTema[] {
-  const aplicar = (pila: CapaDeTema[], ops: readonly OpDeCapa[] | undefined): CapaDeTema[] =>
-    ops === undefined || ops.length === 0 ? pila : aplicarOps(pila, ops, tema.palette, 'parchear').pila;
-  const porTipo = aplicar(tema.nodo.capas as CapaDeTema[], nivel.tipo === undefined ? undefined : tema.nodo.tipos[nivel.tipo]);
-  const porEstado = aplicar(porTipo, nivel.estado === undefined ? undefined : tema.nodo.estados[nivel.estado]);
-  return aplicar(porEstado, nivel.vista);
-}
 
 function pintar(pila: readonly CapaDeTema[], tema: TemaResuelto, colorDelTipo: string | undefined): CapaPintada[] {
   const paleta = { ...tema.palette, [COLOR_DE_RESPALDO]: tema.tokens.border };
@@ -96,6 +85,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
   });
   return {
     metricas: metricasDe(tema),
+    tabla: tablaDeMetricas(tema),
     pintura: {
       ...(resuelto.tokens.seed !== undefined && { semilla: Number(resuelto.tokens.seed) }),
       nodo: {
