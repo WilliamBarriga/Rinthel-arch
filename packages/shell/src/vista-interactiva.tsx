@@ -151,7 +151,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     morphador.iniciar({ desde: previo.geometria, hasta: nuevo.geometria, ancla });
   };
   const morphador = useMorph(morphMs, props.clock);
-  const calculo = useGeometria({ vista, theme, layout, semilla, invalidar: source, onError, alLlegar });
+  const calculo = useGeometria({ vista, theme, layout, semilla, onError, alLlegar });
 
   // Camara: controlada por el padre o propia; hasta que el usuario (o un colapso) la mueva, encuadra toda la Vista segun la primera geometria.
   const [movida, fijarCamara] = useControlado<Camara | undefined>(props.camera, undefined, (nueva) => nueva && ultimo.current.onCameraChange?.(nueva));
