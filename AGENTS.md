@@ -27,4 +27,5 @@ Antes de adoptar una dependencia, investigarla (licencia, mantenimiento, encaje 
 - Iterar con `pnpm check` (typecheck, orden de paquetes, emojis); el hook pre-commit lo corre. `pnpm test` es la compuerta completa (build + tests).
 - No hay CI: todo se prueba en local. No agregar workflows de GitHub Actions.
 - Esperar procesos largos con Monitor, no con `sleep`.
+- Todo HTML que se quiera mostrar al usuario (reportes, previews, exports) se sirve desde un mini server local (ej. `python3 -m http.server` en el directorio del archivo, o `dev`) y se entrega la URL `http://localhost:<puerto>/...`. Firefox no ve este disco, asi que `xdg-open` de un archivo o una ruta `file://` no sirve.
 - Ticket por subagente: cargar la skill `tdd` primero (`.claude/` no la fija; ponerlo en el prompt).
