@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { Tema, VistaResuelta } from 'canonico';
-import { claveDeLayout, layoutView, metricasDe } from 'layout';
+import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView, metricasDe } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
 
 const nodo = (id: string, children: unknown[] = []) => ({
@@ -423,5 +423,25 @@ describe('Metricas', () => {
     const { width } = (await layoutView(tabla(largo), TEMA_NEUTRO)).nodes['t']!;
 
     expect(width).toBe(Math.ceil(texto.length * m.fontSize * m.escalaAtributo * m.factorDeAncho + m.paddingHorizontal));
+  });
+});
+
+describe('Pin sin relayout de ELK', () => {
+  const conPin = (x: number, y: number) => vista({ overrides: [{ node: 'a.a1', pin: { x, y } }] });
+
+  it('la clave de estructura ignora los Pins pero no la estructura', () => {
+    const base = claveDeEstructura(vista(), TEMA_NEUTRO);
+
+    expect(claveDeEstructura(conPin(10, 20), TEMA_NEUTRO)).toBe(base);
+    expect(claveDeEstructura(conPin(30, 40), TEMA_NEUTRO)).toBe(base);
+    expect(claveDeEstructura(vista({}, { collapsed: ['a'] }), TEMA_NEUTRO)).not.toBe(base);
+  });
+
+  it('aplicar Pins a la geometria sin Pins da la misma que un layout completo', async () => {
+    const sinPins = await layoutView(vista(), TEMA_NEUTRO);
+
+    for (const [x, y] of [[200, 100], [210, 90]] as const) {
+      expect(aplicarPinsAGeometria(conPin(x, y), sinPins, TEMA_NEUTRO)).toEqual(await layoutView(conPin(x, y), TEMA_NEUTRO));
+    }
   });
 });

@@ -14,7 +14,9 @@
  * (derivadas de `fonts` y `tokens.fontSize`), sin DOM; `opciones.metricas` las
  * sobrescribe (y `render` debe recibir las mismas). `claveDeLayout` dice cuando
  * hace falta relayoutar: cambia con estructura, textos, Pins y Metricas, nunca con
- * paleta, colores o iconos.
+ * paleta, colores o iconos. `claveDeEstructura` es la misma sin Pins y
+ * `aplicarPinsAGeometria(vista, base, tema)` aplica los Pins a una geometria calculada
+ * sin ellos: mover un Pin no requiere volver a ejecutar ELK.
  *
  * `indiceDeGeometria(vista, geometria)` es la unica respuesta a las cajas
  * absolutas (lienzo), el padre de cada Nodo y las raices; `render` y `shell` la consumen.
@@ -31,7 +33,7 @@
  * de Web Worker del shell).
  * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout`.
  */
-export { claveDeLayout, layoutView } from './layout';
+export { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView } from './layout';
 export { indiceDeGeometria } from './indice';
 export type { IndiceDeGeometria } from './indice';
 export { atributosVisibles, metricasDe, textoDeAtributo, yDeFila } from './metricas';
