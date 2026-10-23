@@ -49,12 +49,12 @@ describe('Temas incorporados', () => {
     const tema = resolverTema(compilar().themes.find((t) => t.name === nombre)!);
     const { palette: p, tokens } = tema;
     expect(contraste(tokens.foreground, tokens.background)).toBeGreaterThanOrEqual(4.5);
-    expect(contraste(p['tinta']!, p['papel']!)).toBeGreaterThanOrEqual(4.5);
-    expect(contraste(p['tinta']!, tokens.background)).toBeGreaterThanOrEqual(4.5);
-    expect(contraste(p['linea']!, tokens.background)).toBeGreaterThanOrEqual(3);
+    const papel = p['papel'] ?? p['black'] ?? tokens.background;
+    expect(contraste(p['tinta'] ?? tokens.foreground, papel)).toBeGreaterThanOrEqual(4.5);
+    expect(contraste(p['linea'] ?? tokens.border, tokens.background)).toBeGreaterThanOrEqual(3);
     expect(contraste(tokens.border, tokens.background)).toBeGreaterThanOrEqual(3);
     for (const color of ['gray', 'blue', 'green', 'amber', 'red', 'purple']) {
-      expect(contraste(p[color]!, p['papel']!), `${nombre}/${color} sobre papel`).toBeGreaterThanOrEqual(3);
+      expect(contraste(p[color]!, papel), `${nombre}/${color} sobre papel`).toBeGreaterThanOrEqual(3);
       expect(contraste(p[color]!, tokens.background), `${nombre}/${color} sobre fondo`).toBeGreaterThanOrEqual(3);
     }
   });

@@ -1,10 +1,11 @@
 /**
  * Temas incorporados del nucleo (ADR 0008): `neutral` (el de una Vista sin Tema),
- * `neutral-dark` y `alto-contraste`. Estan escritos en el mismo DSL que cualquier
- * Tema y se compilan con el Workspace como si fueran un archivo mas, por lo que
+ * y `neutral-dark`. Estan escritos en el mismo DSL que cualquier Tema y se compilan con el Workspace como si fueran un archivo mas, por lo que
  * sirven de referencia y se pueden extender. Solo Primitivas simples, fuentes del
  * sistema (las del neutro base de `tema`), animacion minima (`hover`, `en-ruta`) y
  * cero warnings de contraste: texto 4.5:1 y partes graficas 3:1 sobre su fondo.
+ * `alto-contraste` es el tercer incorporado, pero lo define `tema` (`TEMA_ALTO_CONTRASTE`, ya
+ * resuelto) porque el visor lo necesita sin compilar; `resolverTemas` lo anade a la Fuente.
  */
 import type { Documento, Theme } from './generated/ast';
 
@@ -39,23 +40,11 @@ theme neutral-dark extends neutral {
   }
   tokens { background "#111827"  foreground "#f3f4f6"  border "#9ca3af" }
 }
-
-theme alto-contraste extends neutral {
-  palette {
-    gray "#404040"  blue "#0033cc"  green "#006400"  amber "#8a4b00"  red "#b00000"  purple "#5a1a9e"
-    papel "#ffffff"  tinta "#000000"  linea "#000000"
-  }
-  tokens { background "#ffffff"  foreground "#000000"  border "#000000" }
-  node {
-    layer borde { width 3 }
-    slots { title { weight 700  color tinta }  attrs { color tinta } }
-  }
-  edge { layer linea { width 2.5 } }
-}
 `;
 
 /** Nombres de los Temas incorporados, en orden. */
 export const NOMBRES_INCORPORADOS = ['neutral', 'neutral-dark', 'alto-contraste'] as const;
+
 
 /** Temas del texto incorporado ya parseados; el llamador sabe parsear (`parse` es el de `compile`). */
 export const temasIncorporados = (parse: (texto: string) => Documento): Theme[] => parse(FUENTE_INCORPORADOS).themes;
