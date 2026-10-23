@@ -31,9 +31,10 @@ export interface EntradaDeArrastre {
   ultimoAviso: RefObject<AlMoverNodo | undefined>;
 }
 
-/** Devuelve la posicion provisional del Nodo arrastrado y si un arrastre acaba de terminar (para ignorar el clic que le sigue). */
-export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | undefined; arrastrando: RefObject<boolean> } {
+/** Devuelve la posicion provisional del Nodo arrastrado, `enCurso` (id del Nodo mientras el gesto sigue vivo, para dibujarlo fantasma) y si un arrastre acaba de terminar (para ignorar el clic que le sigue). */
+export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | undefined; arrastrando: RefObject<boolean>; enCurso: string | undefined } {
   const [desplazado, setDesplazado] = useState<Movimiento | undefined>(undefined);
+  const [enCurso, setEnCurso] = useState<string | undefined>(undefined);
   const arrastrando = useRef(false);
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
         const [px, py] = [m.clientX - x0, m.clientY - y0];
         if (!movido && Math.hypot(px, py) < e.umbral.current!) return;
         movido = true;
+        setEnCurso(id);
         m.preventDefault();
         const k = escalaVigente();
         setDesplazado({ id, x: Math.round(caja.x + px / k), y: Math.round(caja.y + py / k) });
@@ -64,6 +66,7 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
       const alSoltar = (m: MouseEvent): void => {
         window.removeEventListener('mousemove', alMover);
         window.removeEventListener('mouseup', alSoltar);
+        setEnCurso(undefined);
         if (!movido) return;
         const k = escalaVigente();
         const destino = { id, x: Math.round(caja.x + (m.clientX - x0) / k), y: Math.round(caja.y + (m.clientY - y0) / k) };
@@ -89,5 +92,5 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
     return () => nodo.removeEventListener('mousedown', alPulsar);
   }, [arrastrable]);
 
-  return { desplazado, arrastrando };
+  return { desplazado, arrastrando, enCurso };
 }

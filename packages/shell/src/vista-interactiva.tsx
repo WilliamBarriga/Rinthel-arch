@@ -3,27 +3,28 @@
  * Nodo y filtrado por viewport. El estado de camara y seleccion es controlable
  * por props; sin ellas el componente guarda el suyo.
  */
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MouseEvent as EventoDeRaton, ReactElement } from 'react';
 import { select } from 'd3-selection';
 import { zoom, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent } from 'd3-zoom';
 
 import { resolveView } from 'canonico';
-import type { EstadoDeColapso, IconProvider, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
+import type { EstadoDeColapso, IconProvider, IssueDeDev, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
 import { claveDeLayout, indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
 import type { Camara } from 'render';
 
 import { aCamara, aTransform, compensarCamara, encuadrar, mismaTransform } from './camara';
+import { PanelDeIssues, Toasts } from './avisos';
 import { EstiloDelChrome, variablesDeChrome } from './chrome';
 import { MAX_NODOS_VISIBLES, alternarGrupo, contarNodosVisibles } from './colapso';
 import { AJUSTES_POR_DEFECTO } from './configuracion';
 import type { AjustesDeInteraccion } from './configuracion';
 import { idDeNodoBajo, useArrastre } from './arrastre';
 import { useControlado } from './controlado';
-import { useSeleccion } from './seleccion';
+import { conEstadosTransitorios, useSeleccion } from './seleccion';
 import { elementoBajo } from './interaccion';
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
@@ -88,6 +89,10 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
   icons?: IconProvider;
   /** Umbrales y margenes de la interaccion (arrastre, acierto de Aristas, escala, encuadre); ver `AjustesDeInteraccion`. */
   tuning?: Partial<AjustesDeInteraccion>;
+  /** Issues de la Fuente; se dibujan como panel clicable dentro del lienzo, con el Tema. */
+  issues?: readonly IssueDeDev[];
+  /** Avisos efimeros (el padre decide cuando quitarlos); se dibujan dentro del lienzo, con el Tema. */
+  toasts?: readonly string[];
   /** Reloj del morph; por defecto `requestAnimationFrame`. Util en pruebas. */
   clock?: RelojDeCuadros;
   /** Fallo del adaptador de layout; sin ella el fallo se lanza al renderizar. */
@@ -171,7 +176,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   umbralDeArrastre.current = ajustes.dragThreshold;
   const ultimoAviso = useRef(props.onMoveNode);
   ultimoAviso.current = props.onMoveNode;
-  const { desplazado, arrastrando } = useArrastre({
+  const { desplazado, arrastrando, enCurso } = useArrastre({
     zona,
     alMoverNodo: props.onMoveNode,
     calculo,
@@ -248,7 +253,9 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     [mostrado, x, y, ancho, alto],
   );
 
-  const { estados, pulsar } = useSeleccion(vista, props.selected);
+  const { estados: estadosDeSeleccion, pulsar } = useSeleccion(vista, props.selected);
+  const [hover, fijarHover] = useState<string | undefined>(undefined);
+  const estados = useMemo(() => conEstadosTransitorios(estadosDeSeleccion, enCurso === undefined ? hover : undefined, enCurso), [estadosDeSeleccion, hover, enCurso]);
   const estilo = useMemo(() => resolverEstilo(theme), [theme]);
 
   const alternar = (id: string): void => {
@@ -267,14 +274,23 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
 
   const detalle = nivelDeDetalle(width / ancho, props.detailThresholds);
 
-  /** Clic en el diagrama: el nucleo decide que hay bajo el punto, sobre la Vista completa (no la recortada). */
-  const alPulsar = (evento: EventoDeRaton): void => {
-    if (arrastrando.current || mostrado === undefined) return;
-    if ((evento.target as Element).closest('svg') === null) return;
+  /** Elemento bajo un evento de raton: el nucleo decide que hay bajo el punto, sobre la Vista completa (no la recortada). */
+  const elementoBajoElRaton = (evento: EventoDeRaton) => {
+    if (mostrado === undefined || (evento.target as Element).closest('svg') === null) return undefined;
     const caja = zona.current!.getBoundingClientRect();
     const k = width / camaraVigente.current.width;
     const punto = { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k };
-    const elemento = elementoBajo(mostrado.vista, mostrado.geometria, theme, punto, { tolerancia: ajustes.hitTolerance / k, atributos: detalle === 'completo' });
+    return elementoBajo(mostrado.vista, mostrado.geometria, theme, punto, { tolerancia: ajustes.hitTolerance / k, atributos: detalle === 'completo' });
+  };
+
+  const alMoverElRaton = (evento: EventoDeRaton): void => {
+    if (enCurso !== undefined) return;
+    fijarHover(elementoBajoElRaton(evento)?.id);
+  };
+
+  const alPulsar = (evento: EventoDeRaton): void => {
+    if (arrastrando.current) return;
+    const elemento = elementoBajoElRaton(evento);
     if (elemento === undefined) return;
     const acumula = evento.shiftKey || evento.ctrlKey || evento.metaKey;
     if (!pulsar(elemento, acumula)) return;
@@ -285,7 +301,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   };
 
   return (
-    <div ref={zona} onClick={alPulsar} className="rd-vista" style={{ ...variablesDeChrome(estilo), width, height }}>
+    <div ref={zona} onClick={alPulsar} onMouseMove={alMoverElRaton} onMouseLeave={() => fijarHover(undefined)} className="rd-vista" style={{ ...variablesDeChrome(estilo), width, height }}>
       <EstiloDelChrome />
       {mostrado !== undefined && recortada !== undefined && (
         <Diagram
@@ -305,6 +321,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
       )}
       {pasos.controles}
       {props.migas}
+      <PanelDeIssues issues={props.issues ?? []} />
+      <Toasts toasts={props.toasts ?? []} />
     </div>
   );
 }

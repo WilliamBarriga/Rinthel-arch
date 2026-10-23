@@ -64,25 +64,14 @@ function layoutEnWorker(): AdaptadorDeLayout {
   };
 }
 
-function Aviso({ texto }: { texto: string | undefined }): ReactElement | null {
-  if (texto === undefined) return null;
-  return (
-    <div data-aviso="pin" role="alert" style={{ position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', padding: '8px 16px', borderRadius: 6, background: 'rgba(30,30,30,.94)', color: '#ffd180', font: '13px/1.5 monospace' }}>
-      {texto}
-    </div>
-  );
-}
-
-function PanelDeIssues({ issues }: { issues: readonly IssueDeDev[] }): ReactElement | null {
+/** Mientras no hay Vista dibujable (el Workspace nunca compilo) no hay lienzo que aloje el chrome: lista simple sin Tema. */
+function IssuesSinVista({ issues }: { issues: readonly IssueDeDev[] }): ReactElement | null {
   if (issues.length === 0) return null;
   return (
-    <ul
-      data-panel="issues"
-      style={{ position: 'fixed', left: 0, right: 0, bottom: 0, maxHeight: '35%', overflow: 'auto', margin: 0, padding: '8px 16px', listStyle: 'none', background: 'rgba(30,30,30,.94)', color: '#eee', font: '13px/1.5 monospace' }}
-    >
+    <ul data-panel="issues">
       {issues.map((issue, i) => (
-        <li key={i} style={{ color: issue.severity === 'error' ? '#ff8a80' : '#ffd180' }}>
-          <a href={issue.href} style={{ color: 'inherit' }}>
+        <li key={i}>
+          <a href={issue.href}>
             {issue.file}:{issue.line}
           </a>{' '}
           {issue.code} {issue.message}
@@ -108,13 +97,15 @@ interface PropsDeVista {
   layout: AdaptadorDeLayout;
   /** Arrastre soltado: la Vista dibujada y el Nodo; resuelve `false` si se rechazo. */
   alMover: (vista: string, mov: { id: string; x: number; y: number }) => Promise<boolean>;
+  /** Aviso vigente de un Pin rechazado. */
+  aviso: string | undefined;
 }
 
-function Vista({ fuente, estado, geometrias, layout, alMover }: PropsDeVista): ReactElement | null {
+function Vista({ fuente, estado, geometrias, layout, alMover, aviso }: PropsDeVista): ReactElement | null {
   const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
   const { icons, cachedGeometries, theme: tema, width, height } = usePropsDeDatos({ fuente, iconos: estado.iconos, geometrias }, props.view);
   if (tema === undefined) return null;
-  return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} icons={icons} width={width} height={height} cachedGeometries={cachedGeometries} onMoveNode={(mov) => alMover(props.view, mov)} />;
+  return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} icons={icons} width={width} height={height} cachedGeometries={cachedGeometries} onMoveNode={(mov) => alMover(props.view, mov)} issues={estado.issues} toasts={aviso === undefined ? [] : [aviso]} />;
 }
 
 function App(): ReactElement {
@@ -137,9 +128,7 @@ function App(): ReactElement {
   const layout = useMemo(layoutEnWorker, []);
   return (
     <>
-      {ultima === undefined ? null : <Vista {...ultima} layout={layout} alMover={alMover} />}
-      <Aviso texto={aviso} />
-      <PanelDeIssues issues={estado?.issues ?? []} />
+      {ultima === undefined ? <IssuesSinVista issues={estado?.issues ?? []} /> : <Vista {...ultima} layout={layout} alMover={alMover} aviso={aviso} />}
     </>
   );
 }
