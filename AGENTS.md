@@ -9,7 +9,7 @@ Sistema React + TS para escribir y renderizar diagramas grandes y detallados de 
 - Reglas de codigo (estructura de paquetes, modulos profundos, hexagonal, pruebas): `docs/CODING.md`. Leer antes de crear o modificar codigo.
 - Research: `research/<nombre>.md` en ramas `research/<nombre>`, no en `main`; listarlas con `git branch -a -l '*research/*'` y leer el archivo con `git show research/<nombre>:research/<nombre>.md` antes de re-investigar.
 - ADRs de contrato (dsl, render, layout, paquetes, cli): `docs/adr/`. Leer el ADR del modulo antes de cambiar su interfaz.
-- Repos hermanos de referencia: `../slides-rinthel`, `../video-openmotion`, `../json-renderer`, `../json-render-learning`. Solo lectura.
+- Repos hermanos de referencia: `../slides-rinthel`, `../video-openmotion`. Solo lectura.
 
 ## Dependencias y tecnologia
 
