@@ -801,6 +801,7 @@ describe('compile: Tema', () => {
       fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter' },
       tokens: { ...TEMA_NEUTRO.tokens, surface: '#ffffff' },
       nodo: TEMA_NEUTRO.nodo,
+      arista: TEMA_NEUTRO.arista,
     });
   });
 
@@ -817,6 +818,7 @@ describe('compile: Tema', () => {
       fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter' },
       tokens: { ...TEMA_NEUTRO.tokens, surface: '#111111' },
       nodo: TEMA_NEUTRO.nodo,
+      arista: TEMA_NEUTRO.arista,
     });
   });
 
@@ -851,8 +853,64 @@ describe('compile: Tema', () => {
         { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'gray', width: 2 } } },
       ],
       slots: ['attrs', 'title'],
+      textos: {},
       tipos: {},
       estados: {},
+    });
+  });
+
+  it('compila el bloque edge: pila de trazos con glow, marcadores y etiqueta con modelo de caja', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme metro extends neutral {
+          edge {
+            layer glow line { color ORIGEN/0.3  width 8 }
+            layer principal line { color ORIGEN  width 2  style dashed  corner chamfer }
+            start dot { size 6 }
+            end via
+            label { pad 6  fill blue }
+          }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 'metro')?.['arista']).toEqual({
+      capas: [
+        { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6 } } },
+        { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGEN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6 } } },
+      ],
+      origen: { tipo: 'dot', props: { size: 6 } },
+      fin: { tipo: 'via', props: { size: 8 } },
+      etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 6, radius: 0, fill: 'blue' } },
+    });
+  });
+
+  it('el bloque edge rechaza Primitivas de Nodo, valores invalidos y marcadores desconocidos con sugerencia', () => {
+    const { issues } = compile({
+      'main.dg': `${base}
+        theme malo extends neutral {
+          edge {
+            layer a solid { color blue }
+            layer b line { color blue  style rayado }
+            end flecha
+          }
+        }`,
+    });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_THEME_UNKNOWN_PRIMITIVE', 'E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_PRIMITIVE']);
+    expect(issues[2]?.message).toContain('arrow');
+  });
+
+  it('un Slot lleva su estilo de texto en el bloque slots', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme t extends neutral { node { slots { title { weight 700  transform uppercase }  attrs } } }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 't')?.['nodo']).toMatchObject({
+      slots: ['title', 'attrs'],
+      textos: { title: { tipo: 'text', props: { weight: 700, style: 'normal', transform: 'uppercase' } } },
     });
   });
 

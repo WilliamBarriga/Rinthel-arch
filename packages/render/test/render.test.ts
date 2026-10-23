@@ -37,6 +37,7 @@ const OSCURO: TemaResuelto = {
   fonts: { body: 'Inter, sans-serif', mono: 'monospace' },
   tokens: { background: '#111827', foreground: '#f9fafb', border: '#4b5563', fontSize: '16px' },
   nodo: TEMA_NEUTRO.nodo,
+  arista: TEMA_NEUTRO.arista,
 };
 
 async function dibujar(tema: Tema, estado = {}): Promise<string> {
@@ -62,9 +63,9 @@ describe('Diagram', () => {
   it('dibuja las Aristas con flecha, como rutas ortogonales', async () => {
     const svg = await dibujar(TEMA_NEUTRO);
 
-    expect(svg).toMatch(/<g data-edge="a\.api -&gt; db"><path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" marker-end="url\(#flecha-\w+\)"/);
+    expect(svg).toMatch(/<g data-edge="a\.api -&gt; db"><path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" stroke-width="[\d.]+" data-capa="linea"/);
     expect(svg).toMatch(/<g data-edge="a\.api -&gt; a\.auth"/);
-    expect(svg).toMatch(/<marker id="flecha-[\w]+"/);
+    expect(svg).toMatch(/<g data-marker="fin" transform="translate\([\d. ]+\) rotate\(-?[\d.]+\)"><path d="M 0 0 L -8 -4 L -8 4 z"/);
   });
 
   it('dibuja una Arista entre Grupos sobre el borde del Grupo colapsado', async () => {

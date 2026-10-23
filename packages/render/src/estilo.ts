@@ -1,6 +1,6 @@
 /**
  * Estilo resuelto: la tabla de todo lo que el dibujo necesita saber de aspecto
- * (colores, fuentes, radios, trazos, flecha, halo, glifos y las Metricas
+ * (colores, fuentes, radios, trazos, halo, glifos y las Metricas
  * compartidas con `layout`). `resolverEstilo` lo deriva del Tema, valida el
  * contrato del Tema y es el unico sitio con defaults y numeros de dibujo: los
  * pintores solo leen de aqui. Pura.
@@ -41,8 +41,6 @@ export interface Estilo {
     trazoColapsado: string;
   };
   arista: {
-    color: string;
-    flecha: { ancho: number; alto: number; forma: string; viewBox: string; refX: number; refY: number };
     /** Margen entre la cardinalidad y el punto del extremo. */
     separacionCardinalidad: number;
     /** Cuanto se sube la cardinalidad de un segmento horizontal para no pisar la linea. */
@@ -80,8 +78,6 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
     paleta: palette,
     nodo: { radio: 6, relleno: tokens.background, trazoColapsado: '6 3' },
     arista: {
-      color: tokens.border,
-      flecha: { ancho: 8, alto: 8, forma: 'M 0 0 L 10 5 L 0 10 z', viewBox: '0 0 10 10', refX: 10, refY: 5 },
       separacionCardinalidad: 8,
       elevacionCardinalidad: 4,
       elevacionEtiquetaSinCaja: 4,

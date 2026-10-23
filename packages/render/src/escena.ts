@@ -20,7 +20,7 @@ import type { Elemento } from './elemento';
 import { resolverEstilo } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { compilarHoja } from './hoja';
-import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEstadoDeRuta, pintarEtiquetaDeArista, pintarFlecha, pintarGrupo, pintarNodo } from './pintores';
+import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEstadoDeRuta, pintarEtiquetaDeArista, pintarGrupo, pintarNodo } from './pintores';
 
 export type { Elemento } from './elemento';
 
@@ -71,6 +71,8 @@ interface Contexto extends EntradaDeEscena {
   estilo: Estilo;
   /** Cajas en coordenadas del lienzo (las de la geometria son relativas al Grupo padre). */
   cajas: ReadonlyMap<string, CajaDeNodo>;
+  /** Color de Paleta de cada Nodo: el de su Tipo o override; `ORIGEN` de una Arista toma el de su origen. */
+  coloresDeNodo: ReadonlyMap<string, string | undefined>;
 }
 
 /**
@@ -84,7 +86,8 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
   const { view, geometry, theme, width, height, camera } = entrada;
   const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.metricas);
   const { raices, cajas } = indiceDeGeometria(view, geometry);
-  const contexto: Contexto = { ...entrada, visibility: entrada.visibility ?? (() => 1), estilo, cajas };
+  const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));
+  const contexto: Contexto = { ...entrada, visibility: entrada.visibility ?? (() => 1), estilo, cajas, coloresDeNodo };
   const vista = camera ?? { x: 0, y: 0, width: geometry.width, height: geometry.height };
   const hoja = compilarHoja(estilo);
 
@@ -123,7 +126,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
               viewBox: `0 0 ${num(geometry.width)} ${num(geometry.height)}`,
               'aria-hidden': 'true',
             },
-            hijos: [pintarFlecha(estilo), ...view.edges.flatMap((arista) => aristaSvg(arista, contexto))],
+            hijos: [...view.edges.flatMap((arista) => aristaSvg(arista, contexto))],
           },
           { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: nodos.filter((n) => !esGrupo(n)).map((nodo) => cajaDeNodo(nodo, contexto)) },
         ],
@@ -201,15 +204,17 @@ function colorDeTrazo(nodo: NodoResuelto, estilo: Estilo): string {
 }
 
 /** Arista con su etiqueta. Una Arista sin ruta en la geometria (ELK no la enruto) se omite. */
-function aristaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibility, estados }: Contexto): Elemento[] {
+function aristaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibility, estados, coloresDeNodo }: Contexto): Elemento[] {
   const id = idDeArista(arista);
   const puntos = geometry.edges[id]?.points;
   if (puntos === undefined || puntos.length < 2) return [];
   const v = visibilidadSvg(visibility(id));
+  const colorDelOrigen = coloresDeNodo.get(arista.from.node);
   return [
     pintarArista(estilo, {
       id,
       puntos,
+      ...(colorDelOrigen !== undefined && { origen: colorDelOrigen }),
       desde: arista.fromCardinality,
       hasta: arista.toCardinality,
       atributos: v,

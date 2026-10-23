@@ -29,8 +29,8 @@ describe('resolverEstilo', () => {
     const estilo = resolverEstilo(TEMA_NEUTRO);
 
     expect(estilo.nodo).toEqual({ radio: 6, relleno: '#ffffff', trazoColapsado: '6 3' });
-    expect(estilo.arista.color).toBe('#9ca3af');
-    expect(estilo.arista.flecha).toEqual({ ancho: 8, alto: 8, forma: 'M 0 0 L 10 5 L 0 10 z', viewBox: '0 0 10 10', refX: 10, refY: 5 });
+    expect(estilo.pintura.arista.capas[0]?.props['color']).toBe('#9ca3af');
+    expect(estilo.pintura.arista.fin).toEqual({ tipo: 'arrow', props: { size: 8, color: '#9ca3af' } });
     expect(estilo.etiqueta.halo).toEqual({ color: '#ffffff', ancho: 3 });
     expect(estilo.glifos).toEqual({ expandido: '-', colapsado: '+' });
   });

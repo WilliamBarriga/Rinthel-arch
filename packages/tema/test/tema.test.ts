@@ -53,8 +53,8 @@ describe('catalogo', () => {
     expect(error).toMatchObject({ codigo: 'E_THEME_UNKNOWN_PRIMITIVE', hint: "quisiste decir 'solid'" });
   });
 
-  it('ninguna Primitiva de esta rebanada afecta a las Metricas', () => {
-    expect(Object.values(CATALOGO).map((p) => p.afectaMetricas)).toEqual([false, false, false]);
+  it('solo la etiqueta de Arista afecta a las Metricas', () => {
+    expect(Object.entries(CATALOGO).filter(([, p]) => p.afectaMetricas).map(([nombre]) => nombre)).toEqual(['label']);
   });
 });
 
