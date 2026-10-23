@@ -1,12 +1,12 @@
 /**
  * Vocabulario del Gesto de editar un Pin (ADR 0005): `IntencionDePin` es el cuerpo
  * de `POST /api/pin` que consumen `sesion` (via `editarPin`), `shell` (el cliente
- * del endpoint) y el servidor de `dev` (que en el futuro lo valida con
+ * del endpoint) y el servidor de `dev` (que lo valida con
  * `intencionDePinSchema`); `MotivoDeRechazo` es el motivo con el que `sesion`
- * rechaza la edicion y que la salida de `edit`/`dev` salta al llamador (el enum
- * `reason` de `salidaDeEditSchema` se deriva de el). Se declaran una sola vez
- * aqui: el compilador empareja a los llamadores y un motivo nuevo es una sola
- * edicion.
+ * rechaza la edicion y que la salida de `edit`/`dev` salta al llamador;
+ * `MOTIVOS_DE_RECHAZO` alimenta la salida de `edit` (el enum `reason` de
+ * `salidaDeEditSchema` se deriva de el). Se declaran una sola vez aqui: el
+ * compilador empareja a los llamadores y un motivo nuevo es una sola edicion.
  */
 import { z } from 'zod';
 

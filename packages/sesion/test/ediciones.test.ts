@@ -86,15 +86,22 @@ describe('editarPin', () => {
 });
 
 describe('aplicarEdiciones', () => {
-  it('aplica las ediciones del Gesto ya calculadas (entradas de --edits y del fix de validate)', async () => {
+  it('aplica las ediciones del Gesto ya calculadas (entradas de --edits y del fix de validate)', () => {
     const texto = base('');
-    const r = editarPin({ 'main.dg': texto }, intencion(texto));
-    if (!r.ok) throw new Error(r.mensaje);
+    const r = aplicarEdiciones({ 'main.dg': texto }, [
+      {
+        file: 'main.dg',
+        range: { start: { line: 2, column: 30 }, end: { line: 2, column: 31 } },
+        replacement: 'c',
+        hash: hashDeContenido(texto),
+      },
+    ]);
 
-    // `editarPin` no toca disco: aplicar sus ediciones de nuevo sobre el mapa original da el mismo resultado.
-    const segunda = aplicarEdiciones({ 'main.dg': texto }, r.ediciones);
-    expect(segunda.ok).toBe(true);
-    if (segunda.ok) expect(segunda.archivos['main.dg']).toBe(r.archivos['main.dg']);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.archivos['main.dg']).toBe(base('').replace('servicio b', 'servicio c'));
+      expect(r.issues.some((i) => i.severity === 'error')).toBe(false);
+    }
   });
 
   it('rechaza todo si una de varias ediciones tiene hash viejo', () => {

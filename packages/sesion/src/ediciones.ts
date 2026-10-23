@@ -118,12 +118,8 @@ function aplicarSobre(
 
 /**
  * Aplica ediciones `{ file, range, replacement, hash }` sobre el mapa de archivos y devuelve
- * el mapa nuevo; no toca disco ni muta la entrada. Todo o nada: si algun hash no coincide con
- * el contenido actual, un rango es invalido, dos ediciones se solapan, o el resultado
- * introduce errores que antes no estaban (se cuentan por codigo y archivo: un error
- * preexistente cuyo mensaje cambia no cuenta como nuevo, uno adicional si), no se
- * devuelve ningun archivo. Los `issues`
- * devueltos son los del Workspace resultante.
+ * el mapa nuevo; no toca disco ni muta la entrada. Misma semantica todo o nada que
+ * `aplicarSobre`, con su `motivo` de rechazo.
  */
 export function aplicarEdiciones(
   archivos: ArchivosDelWorkspace,

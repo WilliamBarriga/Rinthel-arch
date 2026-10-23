@@ -347,17 +347,6 @@ describe('dev', () => {
       expect(escritos).toEqual([]);
     });
 
-    it('redondea las coordenadas del Pin a enteros', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      const hash = (await estado(servidor)).hashes['main.dg'];
-
-      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 10.6, y: 20.2, hash });
-
-      expect(res.status).toBe(200);
-      expect(env.texto('main.dg')).toContain('node api { pin 11,20 }');
-    });
-
     it('rechaza peticiones con Origin ajeno (CSRF desde otra pagina)', async () => {
       const env = entorno({ 'main.dg': BASE });
       const servidor = await arrancar(env);

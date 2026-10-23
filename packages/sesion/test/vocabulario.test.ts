@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { intencionDePinSchema as schemaDeCanonico } from 'canonico';
-import { intencionDePinSchema as schemaDeSesion } from 'sesion';
+import { intencionDePinSchema } from 'sesion';
 import type { IntencionDePin, MotivoDeRechazo } from 'sesion';
 
 describe('vocabulario del Gesto', () => {
-  it('sesion reexporta el schema del cuerpo de POST /api/pin que vive en canonico', () => {
-    expect(schemaDeSesion).toBe(schemaDeCanonico);
+  it('el schema del cuerpo de POST /api/pin acepta una intencion valida y rechaza invalidas', () => {
+    const valida = { vista: 'v', nodo: 'a', x: 1, y: 2, hash: 'h' };
+
+    expect(intencionDePinSchema.safeParse(valida).success).toBe(true);
+    expect(intencionDePinSchema.safeParse({ ...valida, x: '1' }).success).toBe(false);
+    expect(intencionDePinSchema.safeParse({ vista: 'v', nodo: 'a', x: 1, y: 2 }).success).toBe(false);
   });
 
   it('sesion reexporta IntencionDePin y MotivoDeRechazo desde canonico', () => {

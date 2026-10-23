@@ -101,16 +101,16 @@ export async function editar(
     }
     const file = archivoDeVista(abrirSesion(archivos), v.view);
     // El Gesto de `sesion` fusa calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
-    const gesta = editarPin(archivos, {
+    const gesto = editarPin(archivos, {
       vista: v.view,
       nodo: v.node,
       x,
       y,
       hash: file === undefined ? '' : hashVigente(file),
     });
-    if (!gesta.ok) return rechazado(gesta, json);
-    ediciones = gesta.ediciones;
-    editados = gesta.archivos;
+    if (!gesto.ok) return rechazado(gesto, json);
+    ediciones = gesto.ediciones;
+    editados = gesto.archivos;
   }
 
   // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.

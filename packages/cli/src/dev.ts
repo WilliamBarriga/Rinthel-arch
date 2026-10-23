@@ -247,13 +247,13 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       return;
     }
     // El Gesto de `sesion` fusa calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
-    const gesta = editarPin(disco, parseo.data);
-    if (!gesta.ok) {
-      responder(res, SALIDA_DE_RECHAZO[gesta.motivo].estadoHttp, gesta);
+    const gesto = editarPin(disco, parseo.data);
+    if (!gesto.ok) {
+      responder(res, SALIDA_DE_RECHAZO[gesto.motivo].estadoHttp, gesto);
       return;
     }
     // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.
-    const { cambiados, fuera } = cambiosDeEdicion(disco, gesta.archivos, propios);
+    const { cambiados, fuera } = cambiosDeEdicion(disco, gesto.archivos, propios);
     if (fuera !== undefined) {
       responder(
         res,
@@ -263,7 +263,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       return;
     }
     try {
-      for (const ruta of cambiados) escribir(workspace, ruta, gesta.archivos[ruta] as string);
+      for (const ruta of cambiados) escribir(workspace, ruta, gesto.archivos[ruta] as string);
     } catch (error) {
       responder(res, 500, { ok: false, mensaje: (error as Error).message });
       return;
