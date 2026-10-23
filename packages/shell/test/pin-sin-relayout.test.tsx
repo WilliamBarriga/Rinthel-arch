@@ -7,6 +7,7 @@ import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
+import { posicionDe } from './ayudas';
 
 afterEach(cleanup);
 
@@ -20,8 +21,6 @@ const fuente = (overrides: unknown[]): FuenteCanonica =>
 const conPin = (x: number, y: number) => fuente([{ node: 'b', pin: { x, y } }]);
 
 const camara: Camara = { x: 0, y: 0, width: 800, height: 600 };
-const posicionDe = (c: HTMLElement, id: string) =>
-  /translate\(([-\d.]+) ([-\d.]+)\)/.exec(c.querySelector(`svg [data-id="${id}"]`)?.getAttribute('transform') ?? '')?.slice(1, 3).map(Number);
 
 describe('mover un Pin en el shell', () => {
   it('no vuelve a llamar al adaptador de layout y muestra el Pin nuevo', async () => {

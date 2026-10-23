@@ -83,7 +83,7 @@ describe('VistaInteractiva: zoom semantico', () => {
       await waitFor(() => expect(container.querySelector('[data-id="g.u"]')).not.toBeNull());
       const datos = {
         ids: [...container.querySelectorAll('[data-id]')].map((e) => e.getAttribute('data-id')),
-        cajas: [...container.querySelectorAll('[data-id]')].map((e) => [e.getAttribute('transform'), e.querySelector('rect')!.getAttribute('width'), e.querySelector('rect')!.getAttribute('height')]),
+        cajas: [...container.querySelectorAll<HTMLElement>('[data-id]')].map((e) => [e.style.transform, e.style.width, e.style.height]),
         toggles: container.querySelectorAll('[data-toggle]').length,
       };
       unmount();

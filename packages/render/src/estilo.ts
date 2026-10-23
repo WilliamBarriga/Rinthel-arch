@@ -6,8 +6,8 @@
  * pintores solo leen de aqui. Pura.
  */
 import type { Tema } from 'canonico';
-import { metricasDe, resolverTema } from 'tema';
-import type { Metricas } from 'tema';
+import { estiloResuelto, metricasDe, resolverTema } from 'tema';
+import type { Metricas, Pintura } from 'tema';
 
 /** Estado visual de un elemento dibujado, ademas de su aspecto normal. */
 export type EstadoVisual = 'seleccionado' | 'hover' | 'fantasma';
@@ -23,6 +23,8 @@ export interface AspectoDeEstado {
 export interface Estilo {
   /** Metricas con las que se dibuja; deben ser las del layout. */
   metricas: Metricas;
+  /** Pintura del Tema: la pila de Capas de cada elemento, con los colores ya resueltos. */
+  pintura: Pintura;
   fondo: string;
   texto: string;
   borde: string;
@@ -68,6 +70,7 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
   const acento = palette['blue'] ?? tokens.foreground;
   return {
     metricas: metricas ?? metricasDe(tema),
+    pintura: estiloResuelto(tema).pintura,
     fondo: tokens.background,
     texto: tokens.foreground,
     borde: tokens.border,

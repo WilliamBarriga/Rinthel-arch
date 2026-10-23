@@ -196,7 +196,7 @@ describe('integracion con VistaInteractiva y location.hash', () => {
     const props = useEstadoEnHash({ source: fuente, hash: hashDelNavegador(window), camera: true });
     return <VistaInteractiva source={fuente} theme={TEMA_NEUTRO} layout={layout} width={800} height={600} {...props} />;
   }
-  const dibujado = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`svg [data-id="${id}"]`)).not.toBeNull());
+  const dibujado = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`[data-id="${id}"]`)).not.toBeNull());
 
   it('recargar con el hash restaura Vista y ruta', async () => {
     const primera = render(<App />);

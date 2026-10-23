@@ -6,7 +6,7 @@ import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva, crearEnviadorDePin } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
-import { pulsarNodo } from './ayudas';
+import { posicionDe, pulsarNodo } from './ayudas';
 import { TEMA_NEUTRO } from 'tema';
 
 afterEach(cleanup);
@@ -38,7 +38,7 @@ async function montar(extra: Partial<VistaInteractivaProps> = {}) {
   return r;
 }
 const nodoA = (c: HTMLElement) => c.querySelector('[data-id="a"] [data-part="nodo"]')!;
-const posicionA = (c: HTMLElement) => c.querySelector('[data-id="a"]')!.getAttribute('transform');
+const posicionA = (c: HTMLElement) => { const p = posicionDe(c, 'a'); return p === undefined ? undefined : `translate(${p[0]} ${p[1]})`; };
 
 describe('arrastre de Nodos (onMoveNode)', () => {
   it('soltar un Nodo avisa el centro nuevo (coordenadas de Pin) y no mueve la camara', async () => {

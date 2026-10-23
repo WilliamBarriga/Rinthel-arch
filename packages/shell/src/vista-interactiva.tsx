@@ -272,7 +272,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
 
   /** Elemento bajo un evento de raton: el nucleo decide que hay bajo el punto, sobre la Vista completa (no la recortada). */
   const elementoBajoElRaton = (evento: EventoDeRaton) => {
-    if (mostrado === undefined || (evento.target as Element).closest('svg') === null) return undefined;
+    if (mostrado === undefined || (evento.target as Element).closest('[data-diagram]') === null) return undefined;
     const caja = zona.current!.getBoundingClientRect();
     const k = width / camaraVigente.current.width;
     const punto = { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k };

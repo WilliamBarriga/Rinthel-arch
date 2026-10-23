@@ -7,6 +7,7 @@ import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
+import { opacidadDeNodo, posicionDe } from './ayudas';
 
 afterEach(() => {
   cleanup();
@@ -54,12 +55,13 @@ function geometriaCentrada(vista: VistaResuelta): Geometria {
 }
 
 const camaraInicial: Camara = { x: 0, y: 0, width: 800, height: 600 };
-const ids = (c: HTMLElement) => [...c.querySelectorAll('svg [data-id]')].map((e) => e.getAttribute('data-id'));
+/** Ids dibujados, ordenados: las capas planas pintan los Grupos antes que los Nodos. */
+const ids = (c: HTMLElement) => [...c.querySelectorAll('[data-id]')].map((e) => e.getAttribute('data-id')).sort();
 const alternar = (c: HTMLElement, id: string) => fireEvent.click(c.querySelector(`[data-toggle="${id}"]`)!);
 /** x en pantalla del Nodo raiz `id`: su translate menos el origen del viewBox (escala 1). */
 function xEnPantalla(c: HTMLElement, id: string): number {
-  const caja = /translate\(([-\d.]+)/.exec(c.querySelector(`[data-id="${id}"]`)!.getAttribute('transform')!)![1]!;
-  return Number(caja) - Number(c.querySelector('svg[viewBox]')!.getAttribute('viewBox')!.split(' ')[0]);
+  const caja = posicionDe(c, id)![0];
+  return caja - Number(c.querySelector('[data-diagram]')!.getAttribute('data-camara')!.split(' ')[0]);
 }
 
 function montar(extra: Partial<VistaInteractivaProps> = {}, llamadas = { n: 0 }) {
@@ -166,7 +168,7 @@ describe('colapso y expansion', () => {
     const siguiente = () => act(async () => cuadros.shift()!(performance.now()));
     await siguiente(); // inicio
     await siguiente();
-    const medio = container.querySelector('[data-id="g.a"] [data-part="nodo"]')!.getAttribute('opacity');
+    const medio = opacidadDeNodo(container, 'g.a');
     expect(xEnPantalla(container, 'g')).toBeCloseTo(antes, 5);
     expect(medio).not.toBeNull();
     expect(Number(medio)).toBeLessThan(1);
@@ -186,7 +188,7 @@ describe('colapso y expansion', () => {
 
     alternar(container, 'g');
     await waitFor(() => expect(ids(container)).toContain('g.a'));
-    const opacidad = () => container.querySelector('[data-id="g.a"] [data-part="nodo"]')?.getAttribute('opacity');
+    const opacidad = () => opacidadDeNodo(container, 'g.a');
     await act(async () => cuadros.shift()!(1000)); // inicio: t = 0
     await act(async () => cuadros.shift()!(1050)); // mitad
     expect(xEnPantalla(container, 'g')).toBeCloseTo(antes, 5);

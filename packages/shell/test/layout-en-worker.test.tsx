@@ -6,6 +6,7 @@ import { layoutView } from 'layout';
 import { VistaInteractiva, adaptadorDeWorker, servirLayout } from 'shell';
 import type { PuertoDeMensajes } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
+import { posicionDe } from './ayudas';
 
 afterEach(cleanup);
 
@@ -60,11 +61,11 @@ describe('layout en Worker', () => {
     const { container } = render(
       <VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={adaptadorDeWorker(pagina)} width={800} height={600} morphMs={0} />,
     );
-    const ids = () => [...container.querySelectorAll('svg [data-id]')].map((e) => e.getAttribute('data-id'));
+    const ids = () => [...container.querySelectorAll('[data-id]')].map((e) => e.getAttribute('data-id'));
     const pantalla = () => {
-      const t = /translate\(([-\d.]+) ([-\d.]+)/.exec(container.querySelector('[data-id="g"]')!.getAttribute('transform')!)!;
-      const vb = container.querySelector('svg[viewBox]')!.getAttribute('viewBox')!.split(' ').map(Number);
-      return [Number(t[1]) - vb[0]!, Number(t[2]) - vb[1]!];
+      const t = posicionDe(container, 'g')!;
+      const vb = container.querySelector('[data-diagram]')!.getAttribute('data-camara')!.split(' ').map(Number);
+      return [t[0] - vb[0]!, t[1] - vb[1]!];
     };
     await waitFor(() => expect(ids()).toEqual(['c', 'g']), { timeout: 5000 });
     const antes = pantalla();

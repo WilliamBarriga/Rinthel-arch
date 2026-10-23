@@ -6,7 +6,7 @@ import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
-import { pulsarEn, pulsarNodo } from './ayudas';
+import { opacidadDeNodo, pulsarEn, pulsarNodo } from './ayudas';
 import { TEMA_NEUTRO, metricasDe } from 'tema';
 
 afterEach(cleanup);
@@ -47,8 +47,8 @@ const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
 };
 
 const camaraGrande: Camara = { x: 0, y: 0, width: 800, height: 600 };
-const ids = (c: HTMLElement) => [...c.querySelectorAll('svg [data-id]')].map((e) => e.getAttribute('data-id'));
-const viewBoxDe = (c: HTMLElement) => c.querySelector('svg[viewBox]')!.getAttribute('viewBox');
+const ids = (c: HTMLElement) => [...c.querySelectorAll('[data-id]')].map((e) => e.getAttribute('data-id'));
+const viewBoxDe = (c: HTMLElement) => c.querySelector('[data-diagram]')!.getAttribute('data-camara');
 const zonaDe = (c: HTMLElement) => c.firstElementChild!;
 
 /** Evento de raton con `view`, que d3-zoom usa para seguir el arrastre (jsdom no deja pasarlo al constructor). */
@@ -236,7 +236,7 @@ describe('VistaInteractiva', () => {
 
   it('pasa la visibilidad de Pasos a render', async () => {
     const { container } = montar({ camera: camaraGrande, visibility: (id) => (id === 'a' ? 0.5 : 1) });
-    await waitFor(() => expect(container.querySelector('[data-id="a"] [data-part="nodo"]')?.getAttribute('opacity')).toBe('0.5'));
+    await waitFor(() => expect(opacidadDeNodo(container, 'a')).toBe('0.5'));
   });
 
   it('un fallo del adaptador de layout se avisa por onError', async () => {

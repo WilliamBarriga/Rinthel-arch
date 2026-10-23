@@ -1,14 +1,16 @@
 /**
- * Pintores por parte: cada uno dibuja una parte de la Vista (fondo, Nodo, Grupo,
- * Arista, etiqueta, control) leyendo solo del Estilo resuelto, sin tokens ni
- * numeros propios. Puros; la escena los ordena y decide el que se dibuja.
+ * Pintores por parte: cada uno dibuja una parte de la Vista leyendo solo del
+ * Estilo resuelto, sin tokens ni numeros propios. Nodos y Grupos son HTML (cada
+ * Slot en el rectangulo que reservo `layout`; el CSS solo pinta y recorta);
+ * Aristas y sus etiquetas son SVG. Puros; la escena los ordena.
  */
 import { sanearIcono } from 'canonico';
-import type { IconProvider, NodoResuelto } from 'canonico';
+import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
 import { atributosVisibles, colocarEnCaja, textoDeAtributo } from 'tema';
+import type { Metricas, Rect } from 'tema';
 
-import { num } from './elemento';
+import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
 import type { EstadoVisual, Estilo } from './estilo';
 
@@ -24,66 +26,42 @@ export interface DatosDeNodo {
   icons?: IconProvider;
 }
 
-/** Fondo del lienzo. */
-export function pintarFondo(estilo: Estilo, ancho: number, alto: number): Elemento {
-  return { tag: 'rect', attrs: { width: num(ancho), height: num(alto), fill: estilo.fondo } };
+/** `left/top/width/height` en px de un rectangulo (relativo a su caja contenedora). */
+function enRect(r: Rect, extra = ''): string {
+  return `left:${num(r.x)}px;top:${num(r.y)}px;width:${num(r.width)}px;height:${num(r.height)}px;${extra}`;
 }
 
-/** Caja de un Nodo o Grupo: radio, relleno y trazo del Estilo; discontinua si esta colapsado. */
-function caja({ nodo, caja, trazo }: DatosDeNodo, estilo: Estilo): Elemento {
-  return {
-    tag: 'rect',
-    attrs: {
-      width: num(caja.width),
-      height: num(caja.height),
-      rx: String(estilo.nodo.radio),
-      fill: estilo.nodo.relleno,
-      stroke: trazo,
-      ...(nodo.collapsed && { 'stroke-dasharray': estilo.nodo.trazoColapsado }),
-    },
-  };
+/** Slot de texto: un `div` absoluto exactamente en su rectangulo; el CSS solo recorta (elipsis). */
+function slotDeTexto(nombre: string, clases: string, r: Rect, texto: string): Elemento {
+  return { tag: 'div', attrs: { class: `rd-slot ${clases}`, 'data-slot': nombre, style: enRect(r, `line-height:${num(r.height)}px;`) }, hijos: [texto] };
 }
 
-/** Nodo (hoja, o Grupo colapsado): caja, etiqueta centrada, icono y filas de Atributos. `conAtributos`: si se dibujan las filas. */
+/** Altura de la franja de titulo de un Grupo y de su control de colapso (centrada sobre la linea base de las Metricas). */
+function altoDeEncabezado(metricas: Metricas): number {
+  return Math.round(2 * (metricas.baseDeTitulo - metricas.fontSize * 0.35));
+}
+
+/**
+ * Contenido de un Nodo (hoja, o Grupo colapsado): Slot `title` centrado, icono y
+ * Slot `attrs` con una fila por Atributo. `conAtributos`: si se dibujan las filas.
+ */
 export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: boolean }): Elemento[] {
   const { nodo, caja: c, trazo, texto, conAtributos, icons } = datos;
-  const filas = conAtributos ? atributosVisibles(nodo, estilo.metricas).length : 0;
-  // Cada Slot se pinta en el rectangulo que reservo `layout` (colocacion de `tema`).
-  const { slots } = colocarEnCaja(estilo.metricas, filas, c.width);
-  const titulo = slots.title;
+  const atributos = conAtributos ? atributosVisibles(nodo, estilo.metricas) : [];
+  const { title, attrs } = colocarEnCaja(estilo.metricas, atributos.length, c.width).slots;
   return [
-    caja(datos, estilo),
-    ...(titulo === undefined
-      ? []
-      : [
-          pintarEtiqueta(estilo, texto, {
-            x: num(titulo.x + titulo.width / 2),
-            y: num(filas > 0 ? titulo.y + titulo.height / 2 : c.height / 2),
-            'text-anchor': 'middle',
-            'dominant-baseline': 'central',
-          }),
-        ]),
+    ...(title === undefined ? [] : [slotDeTexto('title', 'rd-title', title, texto)]),
     ...pintarIcono(estilo, nodo, trazo, icons),
-    ...(conAtributos ? pintarAtributos(estilo, nodo, c, trazo) : []),
+    ...(attrs === undefined || atributos.length === 0 ? [] : [pintarAtributos(estilo, nodo.id, atributos, attrs)]),
   ];
 }
 
-/** Grupo abierto: caja, titulo arriba a la izquierda e icono. */
+/** Contenido de un Grupo abierto: titulo arriba a la izquierda e icono (sus hijos son Nodos de otras capas). */
 export function pintarGrupo(estilo: Estilo, datos: DatosDeNodo): Elemento[] {
   const { metricas } = estilo;
-  return [
-    caja(datos, estilo),
-    pintarEtiqueta(estilo, datos.texto, { x: num(metricas.margenDeTexto), y: num(metricas.baseDeTitulo) }),
-    ...pintarIcono(estilo, datos.nodo, datos.trazo, datos.icons),
-  ];
-}
-
-function pintarEtiqueta(estilo: Estilo, texto: string, posicion: Record<string, string>): Elemento {
-  return {
-    tag: 'text',
-    attrs: { ...posicion, 'font-family': estilo.fuenteCuerpo, 'font-size': num(estilo.metricas.fontSize), fill: estilo.texto },
-    hijos: [texto],
-  };
+  const ancho = Math.max(0, datos.caja.width - metricas.margenDeTexto - 2 * metricas.margenDeControl);
+  const encabezado = { x: metricas.margenDeTexto, y: 0, width: ancho, height: altoDeEncabezado(metricas) };
+  return [slotDeTexto('title', 'rd-title rd-encabezado', encabezado, datos.texto), ...pintarIcono(estilo, datos.nodo, datos.trazo, datos.icons)];
 }
 
 /** Icono del Tipo de nodo, inline en la esquina de la cabecera. Solo se incrusta si pasa `sanearIcono`. */
@@ -97,55 +75,38 @@ function pintarIcono(estilo: Estilo, nodo: NodoResuelto, trazo: string, icons?: 
     const sinMedidas = atributos.replace(/\s(?:width|height)\s*=\s*("[^"]*"|'[^']*')/g, '');
     return `<svg width="${lado}" height="${lado}"${sinMedidas}>`;
   });
-  return [{ tag: 'g', attrs: { 'data-icon': nodo.icon, transform: `translate(${metricas.margenIcono} ${metricas.margenIcono})`, color: trazo }, html: dimensionado }];
+  const rect = { x: metricas.margenIcono, y: metricas.margenIcono, width: metricas.iconoLado, height: metricas.iconoLado };
+  return [{ tag: 'div', attrs: { class: 'rd-icono', 'data-icon': nodo.icon, style: enRect(rect, `color:${limpiarValorCss(trazo)};`) }, html: dimensionado }];
 }
 
-/** Separador sobre el Slot `attrs` y una fila de texto por Atributo, en orden, cada una en su rectangulo. */
-function pintarAtributos(estilo: Estilo, nodo: NodoResuelto, caja: CajaDeNodo, trazo: string): Elemento[] {
+/** Slot `attrs`: una fila de texto por Atributo, en orden, cada una en su rectangulo (relativo al Slot). */
+function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect): Elemento {
   const { metricas } = estilo;
-  const atributos = atributosVisibles(nodo, metricas);
-  const { slots, filas } = colocarEnCaja(metricas, atributos.length, caja.width);
-  const zona = slots.attrs;
-  if (zona === undefined) return [];
-  return [
-    ...(zona.y > 0 ? [{ tag: 'line', attrs: { x1: '0', y1: num(zona.y), x2: num(caja.width), y2: num(zona.y), stroke: trazo } }] : []),
-    ...atributos.map((atributo, i) => ({
-      tag: 'text',
+  return {
+    tag: 'div',
+    attrs: { class: `rd-slot rd-attrs${zona.y > 0 ? ' rd-separado' : ''}`, 'data-slot': 'attrs', style: enRect(zona) },
+    hijos: atributos.map((atributo, i) => ({
+      tag: 'div',
       attrs: {
-        'data-attribute': `${nodo.id}#${atributo.name}`,
-        x: num(metricas.margenDeTexto),
-        y: num(filas[i]!.y + filas[i]!.height / 2),
-        'dominant-baseline': 'central',
-        'font-family': estilo.fuenteMono,
-        'font-size': num(metricas.fontSize * metricas.escalaAtributo),
-        fill: estilo.texto,
+        class: 'rd-fila',
+        'data-attribute': `${id}#${atributo.name}`,
+        style: enRect({ x: 0, y: i * metricas.fila, width: zona.width, height: metricas.fila }, `line-height:${num(metricas.fila)}px;`),
       },
       hijos: [textoDeAtributo(atributo)],
     })),
-  ];
+  };
 }
 
 /** Control de colapso de un Grupo: el glifo del Estilo segun el estado. */
 export function pintarControl(estilo: Estilo, { nodo, caja, alClic }: { nodo: NodoResuelto; caja: CajaDeNodo; alClic: () => void }): Elemento {
   const { metricas } = estilo;
+  const alto = altoDeEncabezado(metricas);
+  const rect = { x: caja.width - 2 * metricas.margenDeControl, y: 0, width: 2 * metricas.margenDeControl, height: alto };
   return {
-    tag: 'g',
-    attrs: { 'data-toggle': nodo.id },
+    tag: 'div',
+    attrs: { class: 'rd-control', 'data-toggle': nodo.id, style: enRect(rect, `line-height:${alto}px;`) },
     alClic,
-    hijos: [
-      {
-        tag: 'text',
-        attrs: {
-          x: num(caja.width - metricas.margenDeControl),
-          y: num(metricas.baseDeTitulo),
-          'text-anchor': 'middle',
-          'font-family': estilo.fuenteMono,
-          'font-size': num(metricas.fontSize),
-          fill: estilo.texto,
-        },
-        hijos: [nodo.collapsed ? estilo.glifos.colapsado : estilo.glifos.expandido],
-      },
-    ],
+    hijos: [nodo.collapsed ? estilo.glifos.colapsado : estilo.glifos.expandido],
   };
 }
 
@@ -265,30 +226,35 @@ export function pintarEtiquetaDeArista(
   };
 }
 
-function atributosDeEstado(estilo: Estilo, estado: EstadoVisual, id: string): Record<string, string> {
-  const { color, ancho, trazo, opacidad } = estilo.estados[estado];
+/** Contorno de estado alrededor de una caja (Nodo, Grupo) o de una fila de Atributo (`rect`, relativa a la caja del Nodo). Su aspecto lo da la hoja de estilo. */
+export function pintarEstadoDeCaja(estado: EstadoVisual, id: string, rect?: Rect): Elemento {
   return {
-    'data-state': estado,
-    ...(estado === 'seleccionado' && { 'data-selected': id }),
-    fill: 'none',
-    stroke: color,
-    'stroke-width': num(ancho),
-    ...(trazo !== undefined && { 'stroke-dasharray': trazo }),
-    ...(opacidad !== 1 && { opacity: num(opacidad) }),
-    'pointer-events': 'none',
+    tag: 'div',
+    attrs: {
+      class: 'rd-estado',
+      'data-state': estado,
+      ...(estado === 'seleccionado' && { 'data-selected': id }),
+      ...(rect !== undefined && { style: enRect(rect) }),
+    },
   };
 }
 
-/** Contorno de estado alrededor de una caja (Nodo, Grupo o fila de Atributo), en coordenadas locales del Nodo. */
-export function pintarEstadoDeCaja(estilo: Estilo, estado: EstadoVisual, id: string, caja: CajaDeNodo): Elemento {
-  return {
-    tag: 'rect',
-    attrs: { x: num(caja.x), y: num(caja.y), width: num(caja.width), height: num(caja.height), rx: String(estilo.nodo.radio), ...atributosDeEstado(estilo, estado, id) },
-  };
-}
-
-/** Contorno de estado sobre la ruta de una Arista. */
+/** Contorno de estado sobre la ruta de una Arista (SVG). */
 export function pintarEstadoDeRuta(estilo: Estilo, estado: EstadoVisual, id: string, puntos: readonly Punto[]): Elemento {
+  const { color, ancho, trazo, opacidad } = estilo.estados[estado];
   const ruta = puntos.map(({ x, y }, i) => `${i === 0 ? 'M' : 'L'} ${num(x)} ${num(y)}`).join(' ');
-  return { tag: 'path', attrs: { d: ruta, ...atributosDeEstado(estilo, estado, id) } };
+  return {
+    tag: 'path',
+    attrs: {
+      d: ruta,
+      'data-state': estado,
+      ...(estado === 'seleccionado' && { 'data-selected': id }),
+      fill: 'none',
+      stroke: color,
+      'stroke-width': num(ancho),
+      ...(trazo !== undefined && { 'stroke-dasharray': trazo }),
+      ...(opacidad !== 1 && { opacity: num(opacidad) }),
+      'pointer-events': 'none',
+    },
+  };
 }

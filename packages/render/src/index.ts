@@ -1,9 +1,16 @@
 /**
- * `render` — dibuja una Vista como componente React (ADR 0002).
+ * `render` — dibuja una Vista como componente React (ADR 0002 y 0008).
  *
  * `<Diagram {...props} />` recibe la Vista resuelta y su Geometria (salida de
  * `layout`; `view` es extra porque la Geometria no lleva jerarquia, textos ni
- * colores) y dibuja Nodos, Grupos y Aristas con los tokens del Tema:
+ * colores) y dibuja Nodos, Grupos y Aristas con el Estilo resuelto del Tema. Render
+ * hibrido: tres capas planas en coordenadas absolutas (Grupos HTML, Aristas SVG,
+ * Nodos HTML, en ese orden de apilado) bajo un contenedor `[data-diagram]` con un
+ * solo `transform` de pan/zoom (la camara; `data-camara` la refleja). Cada Slot es
+ * un `div` en el rectangulo de la Geometria; la pintura sale de una hoja de estilo
+ * determinista (`<style>` con clase de alcance por contenido, estados como
+ * selectores) donde cada Primitiva tiene su pintor (tabla exhaustiva) y cada
+ * Nodo lleva `contain: layout style`:
  * - Un Grupo colapsado es un Nodo con su contador y trazo discontinuo.
  * - Un Nodo hoja con Atributos los lista en orden; una Arista a `nodo#atributo`
  *   termina en la fila del Atributo.
@@ -14,7 +21,7 @@
  *
  * Props de `Diagram` ademas de las anteriores: `visibility(id) -> 0..1` (opacidad
  * de Nodos, por id, y de Aristas, por `idDeArista`; sin ella, todo 1; `revealAt`
- * de `canonico` la produce), `camera` (viewBox controlado), `onSelect(id)` y
+ * de `canonico` la produce), `camera` (ventana visible del lienzo), `onSelect(id)` y
  * `onToggle(id)`. El colapso viene en `view`: quien llama resuelve la Vista con
  * su estado de `expanded`/`collapsed` (`resolveView`) y `onToggle` solo avisa
  * de que se pulso el control de un Grupo, que se dibuja solo si hay `onToggle`.
@@ -31,7 +38,7 @@
  *
  * Estados visuales: `estados` (`Estados`: id de Nodo, de Arista o `nodo#atributo` ->
  * lista de `EstadoVisual`: `seleccionado`, `hover`, `fantasma`) dibuja un contorno por estado
- * con el aspecto de `estilo.estados` (`data-state`; el seleccionado lleva tambien `data-selected`).
+ * con el aspecto de `estilo.estados` (`data-state`, estilado por la hoja; el seleccionado lleva tambien `data-selected`).
  * Un id que no esta dibujado se ignora. Es la unica via de resaltado: el shell no pinta overlays propios.
  *
  * Invariantes: sin estado ni efectos (mismas props, mismo arbol); determinista

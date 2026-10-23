@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
 import { layoutView } from 'layout';
-import { aSvg } from './ayudas';
+import { aHtml, etiquetaCon } from './ayudas';
 import type { DiagramProps } from 'render';
 import { TEMA_NEUTRO } from 'tema';
 
@@ -20,10 +20,10 @@ async function dibujar(detail?: Detalle): Promise<string> {
   const view = resolveView(fuente, 'v')!;
   const geometry = await layoutView(view, TEMA_NEUTRO);
   const icons = combineIconProviders(workspaceIcons({}), genericIcons());
-  return aSvg({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons, ...(detail !== undefined && { detail }) });
+  return aHtml({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons, ...(detail !== undefined && { detail }) });
 }
 
-describe('aSvg: nivel de detalle', () => {
+describe('Diagram: nivel de detalle', () => {
   it('etiqueta: solo la etiqueta corta, sin Atributos, con icono', async () => {
     const svg = await dibujar('etiqueta');
     expect(svg).toContain('>Usr<');
@@ -52,8 +52,8 @@ describe('aSvg: nivel de detalle', () => {
     expect(svg).toContain('id: uuid');
   });
 
-  it('el rectangulo del Nodo y el viewBox son identicos entre niveles', async () => {
-    const forma = (s: string) => [/<rect[^>]*rx[^>]*>/.exec(s)![0], /viewBox="[^"]*"/.exec(s)![0]];
+  it('la caja del Nodo y la camara son identicas entre niveles', async () => {
+    const forma = (s: string) => [etiquetaCon(s, 'data-id="usuarios"'), /data-camara="[^"]*"/.exec(s)![0]];
     const base = forma(await dibujar('etiqueta'));
     expect(forma(await dibujar('titulo'))).toEqual(base);
     expect(forma(await dibujar('completo'))).toEqual(base);

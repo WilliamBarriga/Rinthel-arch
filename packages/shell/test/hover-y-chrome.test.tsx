@@ -30,7 +30,7 @@ async function montar(extra: Partial<VistaInteractivaProps> = {}) {
   await waitFor(() => expect(r.container.querySelector('[data-id="a"]')).not.toBeNull());
   return r;
 }
-const sobre = (c: HTMLElement, x: number, y: number) => fireEvent.mouseMove(c.querySelector('svg')!, { clientX: x, clientY: y });
+const sobre = (c: HTMLElement, x: number, y: number) => fireEvent.mouseMove(c.querySelector('[data-diagram]')!, { clientX: x, clientY: y });
 const conEstado = (c: HTMLElement, estado: string) => [...c.querySelectorAll(`[data-state="${estado}"]`)];
 
 function gesto(destino: Element | Window, tipo: string, clientX: number, clientY: number): void {

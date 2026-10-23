@@ -12,7 +12,7 @@ import type { Calculo } from './geometria';
 export type Movimiento = { id: string; x: number; y: number };
 export type AlMoverNodo = (movimiento: Movimiento) => void | boolean | Promise<boolean | void>;
 
-/** Id del Nodo dibujado (`g[data-id]` mas interno) bajo un evento, si lo hay. */
+/** Id del Nodo dibujado (la caja `[data-id]` mas interna) bajo un evento, si lo hay. */
 export function idDeNodoBajo(destino: EventTarget | null): string | undefined {
   return (destino as Element | null)?.closest?.('[data-id]')?.getAttribute('data-id') ?? undefined;
 }
