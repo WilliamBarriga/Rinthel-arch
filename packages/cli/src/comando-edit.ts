@@ -10,7 +10,8 @@
  * o `--hash`); sin hash se usa el del disco al leer. Un hash viejo rechaza todo, sin escritura parcial.
  * Salida: con `--json`, un objeto `salidaDeEditSchema` (su propio `contractVersion`), tambien al
  * rechazar. Codigos: 0 escrito, 1 edicion rechazada o invalida (sin `--json`, mensaje en stderr y
- * stdout vacio), 2 fallo de uso o interno. Solo escribe lo pedido; nunca como efecto de validar.
+ * stdout vacio; el codigo de cada motivo sale de la tabla unica `SALIDA_DE_RECHAZO` de `rechazos.ts`),
+ * 2 fallo de uso o interno. Solo escribe lo pedido; nunca como efecto de validar.
  */
 import { EDIT_CONTRACT_VERSION, edicionesPedidasSchema, salidaDeEditSchema } from 'canonico';
 import type { SalidaDeEdit } from 'canonico';
@@ -21,6 +22,8 @@ import type { EdicionConHash } from 'sesion';
 
 import { cambiosDeEdicion, leerConTemas, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
+import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
+import type { RechazoDeEdicion } from './rechazos';
 import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
 
 const USO =
@@ -113,7 +116,7 @@ export async function editar(
   // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.
   const { cambiados, fuera } = cambiosDeEdicion(archivos, editados, propios);
   if (fuera !== undefined) {
-    return rechazado({ motivo: 'archivo-desconocido', mensaje: `'${fuera}' no pertenece al Workspace`, file: fuera }, json);
+    return rechazado(rechazoDeEdicion('archivo-desconocido', `'${fuera}' no pertenece al Workspace`, fuera), json);
   }
   try {
     for (const f of cambiados) escribirArchivo(destinoEnWorkspace(v.workspace, f), editados[f] as string);
@@ -133,8 +136,9 @@ export async function editar(
   };
 }
 
-function rechazado(r: { motivo: string; mensaje: string; file?: string }, json: boolean): ResultadoDeEjecucion {
-  if (!json) return { exitCode: 1, stdout: '', stderr: `Edicion rechazada (${r.motivo}): ${r.mensaje}\n` };
+function rechazado(r: RechazoDeEdicion, json: boolean): ResultadoDeEjecucion {
+  const { exitCode } = SALIDA_DE_RECHAZO[r.motivo];
+  if (!json) return { exitCode, stdout: '', stderr: `Edicion rechazada (${r.motivo}): ${r.mensaje}\n` };
   const salida = salidaDeEditSchema.parse({
     contractVersion: EDIT_CONTRACT_VERSION,
     ok: false,
@@ -142,5 +146,5 @@ function rechazado(r: { motivo: string; mensaje: string; file?: string }, json: 
     message: r.mensaje,
     ...(r.file === undefined ? {} : { file: r.file }),
   });
-  return { exitCode: 1, stdout: `${JSON.stringify(salida, null, 2)}\n`, stderr: '' };
+  return { exitCode, stdout: `${JSON.stringify(salida, null, 2)}\n`, stderr: '' };
 }
