@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { intencionDePinSchema, salidaDeEditSchema } from 'canonico';
-import type { IntencionDePin, MotivoDeRechazo } from 'canonico';
+import type { IntencionDePin } from 'canonico';
 
 describe('intencionDePinSchema', () => {
   it('acepta la intencion de mover un Pin { vista, nodo, x, y, hash }', () => {
@@ -36,19 +36,6 @@ describe('intencionDePinSchema', () => {
 });
 
 describe('MotivoDeRechazo', () => {
-  it('es un tipo cuyos valores se asignan como motivo de rechazo', () => {
-    const motivos: MotivoDeRechazo[] = [
-      'hash-desactualizado',
-      'archivo-desconocido',
-      'rango-invalido',
-      'ediciones-solapadas',
-      'vista-desconocida',
-      'invalida',
-    ];
-
-    expect(motivos).toHaveLength(6);
-  });
-
   it('alimenta el enum reason de la salida de edit (un solo sitio para un motivo)', () => {
     // Los seis motivos de hoy, escritos a mano como fuente de verdad independiente.
     const motivos = [

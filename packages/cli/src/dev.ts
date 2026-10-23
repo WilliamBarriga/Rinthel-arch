@@ -246,10 +246,10 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       responder(res, 500, { ok: false, mensaje: (error as Error).message });
       return;
     }
-    // El Gesto de `sesion` fusa calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
+    // El Gesto de `sesion` fusiona calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
     const gesto = editarPin(disco, parseo.data);
     if (!gesto.ok) {
-      responder(res, SALIDA_DE_RECHAZO[gesto.motivo].estadoHttp, gesto);
+      responder(res, SALIDA_DE_RECHAZO[gesto.motivo].estadoHttp, rechazoDeEdicion(gesto.motivo, gesto.mensaje, gesto.file));
       return;
     }
     // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.

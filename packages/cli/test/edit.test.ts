@@ -109,4 +109,21 @@ describe('edit --edits', () => {
     expect((await run(['edit', '--workspace', raiz, '--edits', 'no es json'])).exitCode).toBe(2);
     expect((await run(['edit', '--workspace', raiz, '--edits', '[{"file":1}]'])).exitCode).toBe(2);
   });
+
+  it('cada motivo de rechazo restante (archivo, rango, solape) sale con codigo 1, su reason y sin escribir', async () => {
+    const raiz = workspace();
+    const casos: [string, unknown[]][] = [
+      ['archivo-desconocido', [edicion('x', { file: 'otro.dg' })]],
+      ['rango-invalido', [edicion('x', { range: { start: { line: 99, column: 1 }, end: { line: 99, column: 2 } } })]],
+      ['ediciones-solapadas', [edicion('"Y"'), edicion('"Z"')]],
+    ];
+
+    for (const [reason, ediciones] of casos) {
+      const r = await run(['edit', '--workspace', raiz, '--edits', JSON.stringify(ediciones), '--json']);
+
+      expect(r.exitCode, reason).toBe(1);
+      expect(salidaDeEditSchema.parse(JSON.parse(r.stdout)), reason).toMatchObject({ ok: false, reason });
+      expect(leer(raiz)).toBe(DG);
+    }
+  });
 });

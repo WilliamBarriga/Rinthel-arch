@@ -100,7 +100,7 @@ export async function editar(
       return uso(`El Pin requiere --view, --node, --x y --y numericos. ${USO}`);
     }
     const file = archivoDeVista(abrirSesion(archivos), v.view);
-    // El Gesto de `sesion` fusa calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
+    // El Gesto de `sesion` fusiona calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
     const gesto = editarPin(archivos, {
       vista: v.view,
       nodo: v.node,

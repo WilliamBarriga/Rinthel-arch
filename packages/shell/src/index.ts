@@ -50,6 +50,8 @@
  * si el aviso resuelve `false`. Sin `onMoveNode` (export estatico) no hay arrastre de Nodos.
  * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
  * `{ok:true}` o `{ok:false, desactualizado, mensaje}` (409 por hash); nunca lanza.
+ * La intencion es `IntencionDePin` (`{vista, nodo, x, y, hash}`, declarada en `canonico` y
+ * reexportada aqui); `IntencionDePinEnviada` es su alias historico en `shell`.
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *

@@ -129,7 +129,7 @@ export function aplicarEdiciones(
 }
 
 /**
- * Gesto de editar un Pin (ADR 0005): fusa calcular la edicion minima, auto-probarla
+ * Gesto de editar un Pin (ADR 0005): fusiona calcular la edicion minima, auto-probarla
  * una vez y aplicar en memoria. Devuelve los archivos nuevos (sin tocar disco), las
  * ediciones calculadas y los issues del Workspace resultante. Pura; reutiliza la
  * compilacion unica que localiza el Pin tambien para comparar errores, de modo que
