@@ -3,7 +3,7 @@
  * Nodo y filtrado por viewport. El estado de camara y seleccion es controlable
  * por props; sin ellas el componente guarda el suyo.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { MouseEvent as EventoDeRaton, ReactElement } from 'react';
 import { select } from 'd3-selection';
 import { zoom, zoomTransform } from 'd3-zoom';
@@ -14,16 +14,17 @@ import type { EstadoDeColapso, IconProvider, FuenteCanonica, Tema, Visibilidad, 
 import { claveDeLayout, indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
-import type { Camara, Estados } from 'render';
+import type { Camara } from 'render';
 
 import { aCamara, aTransform, compensarCamara, encuadrar, mismaTransform } from './camara';
 import { EstiloDelChrome, variablesDeChrome } from './chrome';
 import { MAX_NODOS_VISIBLES, alternarGrupo, contarNodosVisibles } from './colapso';
 import { AJUSTES_POR_DEFECTO } from './configuracion';
 import type { AjustesDeInteraccion } from './configuracion';
+import { idDeNodoBajo, useArrastre } from './arrastre';
 import { useControlado } from './controlado';
-import { SELECCION_VACIA, elementoBajo, elementoPorId, seleccionar } from './interaccion';
-import type { Seleccion } from './interaccion';
+import { useSeleccion } from './seleccion';
+import { elementoBajo } from './interaccion';
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
 import { useGeometria } from './geometria';
@@ -93,11 +94,6 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
   onError?: (error: Error) => void;
 }
 
-/** Id del Nodo dibujado (`g[data-id]` mas interno) bajo un evento, si lo hay. */
-function idDeNodoBajo(destino: EventTarget | null): string | undefined {
-  return (destino as Element | null)?.closest?.('[data-id]')?.getAttribute('data-id') ?? undefined;
-}
-
 /**
  * Vista con drill-down: navega por los `link` de la Vista activa. Cada cambio de
  * Vista remonta la Vista activa, asi que el estado no controlado (colapso, camara,
@@ -159,73 +155,32 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const camara = movida ?? encuadre.current ?? { x: 0, y: 0, width, height };
   const camaraBase = useRef(camara);
   camaraBase.current = camara;
-  const [seleccionPropia, setSeleccionPropia] = useState<Seleccion>(SELECCION_VACIA);
 
   const pasos = usePasos(vista, props);
   const visibility = pasos.visibility;
 
   const zona = useRef<HTMLDivElement>(null);
-  /** Posicion (relativa al padre) de un Nodo arrastrado o recien soltado, hasta que llegue otra geometria. */
-  const [desplazado, setDesplazado] = useState<{ id: string; x: number; y: number } | undefined>(undefined);
-  const arrastrando = useRef(false);
   const comportamiento = useRef(zoom<HTMLDivElement, unknown>());
   const silencio = useRef(false);
   const ultimo = useRef(props);
   ultimo.current = props;
-
-  useEffect(() => {
-    setDesplazado(undefined);
-  }, [calculo]);
-
-  const arrastrable = props.onMoveNode !== undefined;
-  useEffect(() => {
-    if (!arrastrable) return;
-    const nodo = zona.current!;
-    const alPulsar = (evento: MouseEvent): void => {
-      if (evento.button !== 0 || evento.ctrlKey) return;
-      const id = idDeNodoBajo(evento.target);
-      const actual = calculoActual.current;
-      const caja = id === undefined ? undefined : actual?.geometria.nodes[id];
-      if (id === undefined || caja === undefined) return;
-      const [x0, y0] = [evento.clientX, evento.clientY];
-      let movido = false;
-      /** Pixeles de pantalla por unidad de diagrama con la camara de este instante. */
-      const escalaVigente = (): number => ultimo.current.width / camaraVigente.current.width;
-      const alMover = (m: MouseEvent): void => {
-        const [px, py] = [m.clientX - x0, m.clientY - y0];
-        if (!movido && Math.hypot(px, py) < ajustesVigentes.current.dragThreshold) return;
-        movido = true;
-        m.preventDefault();
-        const k = escalaVigente();
-        setDesplazado({ id, x: Math.round(caja.x + px / k), y: Math.round(caja.y + py / k) });
-      };
-      const alSoltar = (m: MouseEvent): void => {
-        window.removeEventListener('mousemove', alMover);
-        window.removeEventListener('mouseup', alSoltar);
-        if (!movido) return;
-        const k = escalaVigente();
-        const destino = { id, x: Math.round(caja.x + (m.clientX - x0) / k), y: Math.round(caja.y + (m.clientY - y0) / k) };
-        // El clic que sigue al soltar no debe seleccionar ni navegar.
-        arrastrando.current = true;
-        setTimeout(() => {
-          arrastrando.current = false;
-        }, 0);
-        setDesplazado(destino);
-        const devolver = (): void => setDesplazado((d) => (d?.id === id ? undefined : d));
-        try {
-          const resultado = ultimo.current.onMoveNode?.(destino);
-          if (typeof resultado === 'object') resultado.then((ok) => ok === false && devolver(), devolver);
-          else if (resultado === false) devolver();
-        } catch {
-          devolver();
-        }
-      };
-      window.addEventListener('mousemove', alMover);
-      window.addEventListener('mouseup', alSoltar);
-    };
-    nodo.addEventListener('mousedown', alPulsar);
-    return () => nodo.removeEventListener('mousedown', alPulsar);
-  }, [arrastrable]);
+  const calculoActual = useRef(calculo);
+  calculoActual.current = calculo;
+  const camaraVigente = useRef(camara);
+  const umbralDeArrastre = useRef(ajustes.dragThreshold);
+  umbralDeArrastre.current = ajustes.dragThreshold;
+  const ultimoAviso = useRef(props.onMoveNode);
+  ultimoAviso.current = props.onMoveNode;
+  const { desplazado, arrastrando } = useArrastre({
+    zona,
+    alMoverNodo: props.onMoveNode,
+    calculo,
+    calculoActual,
+    camaraVigente,
+    ancho: width,
+    umbral: umbralDeArrastre,
+    ultimoAviso,
+  });
 
   useEffect(() => {
     const nodo = zona.current!;
@@ -275,8 +230,6 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     if (base === undefined || desplazado === undefined || caja === undefined) return base;
     return { vista: base.vista, geometria: { ...base.geometria, nodes: { ...base.geometria.nodes, [desplazado.id]: { ...caja, x: desplazado.x, y: desplazado.y } } } };
   }, [calculo, morph, desplazado]);
-  const calculoActual = useRef(calculo);
-  calculoActual.current = calculo;
   const camaraVista = useMemo<Camara>(() => {
     if (calculo === undefined || mostrado === undefined || morph === undefined) return camara;
     const final = indiceDeGeometria(calculo.vista, morph.hasta).cajas.get(morph.ancla);
@@ -288,7 +241,6 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     [morph, visibility],
   );
 
-  const camaraVigente = useRef(camaraVista);
   camaraVigente.current = camaraVista;
   const { x, y, width: ancho, height: alto } = camaraVista;
   const recortada = useMemo(
@@ -296,16 +248,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     [mostrado, x, y, ancho, alto],
   );
 
-  const seleccion = useMemo<Seleccion>(() => {
-    if (props.selected === undefined) return seleccionPropia;
-    const elemento = props.selected === null ? undefined : elementoPorId(vista, props.selected);
-    return elemento === undefined ? SELECCION_VACIA : [elemento];
-  }, [props.selected, seleccionPropia, vista]);
-  const estados = useMemo<Estados>(() => {
-    const porId: Record<string, ['seleccionado']> = {};
-    for (const elemento of seleccion) porId[elemento.id] = ['seleccionado'];
-    return porId;
-  }, [seleccion]);
+  const { estados, pulsar } = useSeleccion(vista, props.selected);
   const estilo = useMemo(() => resolverEstilo(theme), [theme]);
 
   const alternar = (id: string): void => {
@@ -334,9 +277,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     const elemento = elementoBajo(mostrado.vista, mostrado.geometria, theme, punto, { tolerancia: ajustes.hitTolerance / k, atributos: detalle === 'completo' });
     if (elemento === undefined) return;
     const acumula = evento.shiftKey || evento.ctrlKey || evento.metaKey;
-    const siguiente = seleccionar(seleccion, elemento, acumula ? 'alternar' : 'reemplazar');
-    if (props.selected === undefined) setSeleccionPropia(siguiente);
-    if (!siguiente.some((e) => e.tipo === elemento.tipo && e.id === elemento.id)) return;
+    if (!pulsar(elemento, acumula)) return;
     onSelect?.(elemento.id);
     if (acumula || elemento.tipo !== 'nodo') return;
     const destino = vista.nodes.find((n) => n.id === elemento.id)?.link;
