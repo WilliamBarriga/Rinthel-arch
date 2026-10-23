@@ -1,0 +1,29 @@
+// Contraste: ninguno
+// Bauhaus: primarios sobre papel crema, formas geometricas puras (pastilla, esquina cortada) y bordes gruesos.
+theme bauhaus {
+  palette {
+    fondo "#efe8d8"  texto "#141414"  papel "#fbf7ee"  amarillo "#f2b705"
+    blue "#1f4fbf"  purple "#141414"  green "#1f4fbf"  amber "#f2b705"  red "#d6301f"  gray "#141414"
+  }
+  tokens { background "#efe8d8"  foreground "#141414"  border "#141414" }
+  node {
+    layer bloque solid { color COLOR }
+    layer forma rect
+    layer relleno solid { color papel }
+    layer borde border { color texto  width 3 }
+    layer franja lines over { color COLOR/0.5  size 6  width 2  angle 45 }
+    slots { title { weight 800  transform uppercase }  attrs }
+    type actor { layer forma pill }
+    type externo { layer forma cut { cut 18 }  layer relleno { color COLOR/0.25 } }
+    type almacen { layer forma circle }
+    state hover { layer relleno { color amarillo }  transition 100ms linear }
+    state en-ruta { layer relleno { color COLOR/0.3 } }
+    state atenuado { layer franja none }
+  }
+  edge {
+    layer linea line { color texto  width 3 }
+    start bar { size 10 }
+    end arrow { size 12 }
+    label { scale 0.8  pad 6  radius 0  fill amarillo  border texto }
+  }
+}

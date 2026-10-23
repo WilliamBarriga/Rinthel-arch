@@ -1,0 +1,17 @@
+// Una Vista por Tema: el mismo Modelo, el Grupo `plataforma` abierto y `persistencia` colapsado.
+// Sirve la galeria con `node packages/cli/dist/bin.js dev --workspace examples/temas/galeria`
+// y cambia de Vista para comparar los 14 Temas.
+view soft-card    { type architecture  theme soft-card     include **  expanded plataforma, estados  collapsed persistencia }
+view glass-chip   { type architecture  theme glass-chip    include **  expanded plataforma, estados  collapsed persistencia }
+view neobrutalist { type architecture  theme neobrutalist  include **  expanded plataforma, estados  collapsed persistencia }
+view blueprint    { type architecture  theme blueprint     include **  expanded plataforma, estados  collapsed persistencia }
+view claro-suave  { type architecture  theme claro-suave   include **  expanded plataforma, estados  collapsed persistencia }
+view crt-terminal { type architecture  theme crt-terminal  include **  expanded plataforma, estados  collapsed persistencia }
+view synthwave    { type architecture  theme synthwave     include **  expanded plataforma, estados  collapsed persistencia }
+view editorial    { type architecture  theme editorial     include **  expanded plataforma, estados  collapsed persistencia }
+view bauhaus      { type architecture  theme bauhaus       include **  expanded plataforma, estados  collapsed persistencia }
+view sticky-notes { type architecture  theme sticky-notes  include **  expanded plataforma, estados  collapsed persistencia }
+view keycaps      { type architecture  theme keycaps       include **  expanded plataforma, estados  collapsed persistencia }
+view metro-map    { type architecture  theme metro-map     include **  expanded plataforma, estados  collapsed persistencia }
+view pcb          { type architecture  theme pcb           include **  expanded plataforma, estados  collapsed persistencia }
+view pixel-art    { type architecture  theme pixel-art     include **  expanded plataforma, estados  collapsed persistencia }

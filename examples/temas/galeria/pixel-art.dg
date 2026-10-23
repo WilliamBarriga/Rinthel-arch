@@ -1,0 +1,30 @@
+// Contraste: actor, servicio, almacen, cola, externo, dominio, nota
+// Deliberado: el contorno negro duro (borde del Nodo) casi no contrasta con el cielo oscuro de la pagina.
+// Pixel art 8 bits: bloques sin curvas, contorno negro duro de 4 px, sombra inset y Aristas de pixeles.
+theme pixel-art {
+  fonts { body "Press Start 2P"  mono "Press Start 2P" }
+  palette {
+    fondo "#1b1135"  texto "#ffffff"  negro "#0d0a1f"  luz "#ffffff"
+    blue "#3fa9f5"  purple "#b26bff"  green "#5ee65e"  amber "#ffd23f"  red "#ff4d6d"  gray "#c0c0d0"
+  }
+  tokens { background "#1b1135"  foreground "#0d0a1f"  border "#ffffff"  fontSize "11px" }
+  node {
+    layer sombra shadow { color negro/0.45  x 8  y 8  blur 0 }
+    layer forma rect
+    layer bloque solid { color COLOR }
+    layer luz shadow { color luz/0.45  x 4  y 4  blur 0  inset 1 }
+    layer contorno border { color negro  width 4 }
+    slots { title { weight 400  transform uppercase }  attrs }
+    type externo { layer trama grid after bloque { color negro/0.25  size 4  width 1 } }
+    state hover { layer contorno { color luz }  transition 60ms linear }
+    state en-ruta { layer aro ring after contorno { color luz  width 2  offset 2 } }
+    state atenuado { layer sombra none }
+  }
+  edge {
+    layer sombra line { color negro/0.6 width 8 }
+    layer linea line { color luz width 4  style pixel }
+    start bar { size 8 }
+    end arrow { size 10 }
+    label { scale 0.7  pad 4  radius 0  fill luz  border negro }
+  }
+}

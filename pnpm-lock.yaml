@@ -187,6 +187,9 @@ importers:
       render:
         specifier: workspace:*
         version: link:packages/render
+      sesion:
+        specifier: workspace:*
+        version: link:packages/sesion
       shell:
         specifier: workspace:*
         version: link:packages/shell

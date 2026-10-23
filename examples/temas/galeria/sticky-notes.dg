@@ -1,0 +1,29 @@
+// Contraste: ninguno
+// Pizarra con post-its: notas de colores ligeramente giradas, cinta adhesiva y trazo de mano alzada.
+theme sticky-notes {
+  fonts { body "Caveat"  mono "Caveat" }
+  palette {
+    fondo "#fcfcf8"  texto "#2b2b2b"  cinta "#d8d2c0"  papel "#fcfcf8"  tinta "#2456c9"
+    blue "#bfe3ff"  purple "#e4d0ff"  green "#c8f2c2"  amber "#fff3a0"  red "#ffc9d6"  gray "#fff3a0"
+  }
+  tokens { background "#fcfcf8"  foreground "#2b2b2b"  border "#2456c9"  fontSize "18px"  seed 7 }
+  node {
+    layer giro tilt { degrees 2 }
+    layer sombra shadow { color texto/0.18  x 1  y 10  blur 14 }
+    layer forma rect { radius 2 }
+    layer nota solid { color COLOR }
+    layer pliegue gradient { from texto/0  to texto/0.10  angle 170 }
+    layer cinta tape over { color cinta/0.7  width 54  height 16 }
+    slots { title { weight 700 }  attrs }
+    type actor { layer forma pill  layer nota solid { color papel }  layer cinta none  layer pliegue none  layer trazo sketch after forma { roughness 2 }  layer borde border after nota { color texto  width 2 } }
+    type externo { layer nota solid { color papel }  layer cinta none  layer pliegue none  layer trazo sketch after forma { roughness 2 }  layer borde dashed after nota { color tinta  width 2 } }
+    state hover { layer sombra { y 18  blur 24 }  transition 150ms ease-out }
+    state en-ruta { layer sombra { color tinta/0.3 } }
+    state atenuado { layer sombra none }
+  }
+  edge {
+    layer linea line { color tinta width 2 }
+    end arrow { size 8 }
+    label { scale 1  pad 4  radius 0  fill fondo  border fondo }
+  }
+}

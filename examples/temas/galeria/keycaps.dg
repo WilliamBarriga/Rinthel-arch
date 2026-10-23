@@ -1,0 +1,30 @@
+// Contraste: ninguno
+// Teclas 3D: cada Nodo es una tecla con sombra solida apilada que simula el canto y brillo en el borde.
+theme keycaps {
+  palette {
+    fondo "#2b2d3a"  texto "#1b1c24"  luz "#ffffff"  papel "#d9dce6"
+    blue "#8ab4ff"  purple "#c7a6ff"  green "#86e3b5"  amber "#ffd27a"  red "#ff9a9a"  gray "#d9dce6"
+  }
+  tokens { background "#2b2d3a"  foreground "#1b1c24"  border "#d9dce6" }
+  node {
+    layer canto-3 shadow { color texto/0.45  x 0  y 8 }
+    layer canto-2 shadow { color texto/0.5  x 0  y 6 }
+    layer canto-1 shadow { color texto/0.6  x 0  y 4 }
+    layer suelo shadow { color texto/0.55  x 0  y 14  blur 16 }
+    layer forma rect { radius 12 }
+    layer tecla gradient { from COLOR  to COLOR/0.85  angle 180 }
+    layer borde border { color luz/0.5 width 1 }
+    slots { title { weight 800 }  attrs }
+    type externo { layer tecla gradient { from papel  to papel/0.85  angle 180 }  layer borde dashed { color papel  width 2 }  layer canto-3 none  layer canto-2 none  layer canto-1 none  layer suelo none }
+    state hover { layer canto-3 none  layer canto-2 none  layer suelo { y 4  blur 8 }  transition 80ms ease-out }
+    state en-ruta { layer borde { color luz  width 2 } }
+    state atenuado { layer suelo none }
+  }
+  edge {
+    layer cable line { color texto/0.6 width 7 }
+    layer hilo line { color papel width 2.5 }
+    start dot { size 6 }
+    end arrow { size 9 }
+    label { scale 0.8  pad 6  radius 8  fill papel  border texto }
+  }
+}

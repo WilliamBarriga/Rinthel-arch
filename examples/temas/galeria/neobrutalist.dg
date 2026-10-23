@@ -1,0 +1,28 @@
+// Contraste: ninguno
+// Neobrutalista (estilo Gumroad): bordes gruesos negros y sombra dura sin desenfoque.
+theme neobrutalist {
+  palette {
+    fondo "#f3eee1"  texto "#111111"  papel "#ffffff"  sticker "#fde047"
+    blue "#93c5fd"  purple "#c4b5fd"  green "#86efac"  amber "#fdba74"  red "#fca5a5"  gray "#d4d4d8"
+  }
+  tokens { background "#f3eee1"  foreground "#111111"  border "#111111" }
+  node {
+    layer sombra shadow { color texto  x 4  y 4  blur 0 }
+    layer forma rect { radius 6 }
+    layer relleno solid { color papel }
+    layer borde border { color texto  width 2 }
+    slots { title { weight 800 }  attrs }
+    type externo { layer forma cut { cut 12 }  layer relleno { color COLOR/0.35 } }
+    type nota { layer relleno { color sticker } }
+    type actor { layer relleno { color COLOR } }
+    state hover { layer sombra { x 7  y 7 }  transition 100ms ease-out }
+    state en-ruta { layer relleno { color sticker } }
+    state atenuado { layer sombra none }
+  }
+  edge {
+    layer linea line { color texto  width 2 }
+    start bar { size 8 }
+    end arrow { size 10 }
+    label { scale 0.8  pad 6  radius 3  fill sticker  border texto }
+  }
+}

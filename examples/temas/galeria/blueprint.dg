@@ -1,0 +1,28 @@
+// Contraste: ninguno
+// Plano tecnico: papel azul, trazo fino, cuadricula de dibujo y angulos rectos.
+theme blueprint {
+  fonts { body "JetBrains Mono"  mono "JetBrains Mono" }
+  palette {
+    fondo "#0d3b73"  texto "#e6f0ff"
+    blue "#bfe0ff"  purple "#d9ccff"  green "#c4f5df"  amber "#ffe3a8"  red "#ffc2c2"  gray "#cfdcef"
+  }
+  tokens { background "#0d3b73"  foreground "#e6f0ff"  border "#e6f0ff" }
+  node {
+    layer forma rect
+    layer relleno solid { color fondo }
+    layer cuadricula grid { color texto/0.10  size 10  width 1 }
+    layer borde border { color texto  width 2 }
+    layer interior outline { color texto/0.5  width 1  offset 3 }
+    slots { title { weight 700  transform uppercase }  attrs }
+    type externo { layer borde dashed { color texto  width 2 }  layer interior none }
+    state hover { layer relleno { color texto/0.12 }  transition 100ms linear }
+    state en-ruta { layer borde { color COLOR } }
+    state atenuado { layer cuadricula none }
+  }
+  edge {
+    layer linea line { color texto  width 1  corner chamfer  cut 4 }
+    start dot { size 4 }
+    end arrow { size 8 }
+    label { scale 0.75  pad 4  radius 0  fill fondo  border texto }
+  }
+}
