@@ -83,7 +83,7 @@ Theme:
 ;
 
 ThemePart:
-  ThemePalette | ThemeFonts | ThemeTokens;
+  ThemePalette | ThemeFonts | ThemeTokens | ThemeNodeStyles | ThemeEdgeStyles;
 
 ThemePalette:
   'palette' '{' entries+=ThemeEntry* '}';
@@ -96,6 +96,34 @@ ThemeTokens:
 
 ThemeEntry:
   key=Id ':'? value=String;
+
+// `nodeStyles { servicio { fill "#dbeafe" stroke amber strokeWidth 2 shadow 2 3 4 "#000" } }`
+// Tokens por Tipo de nodo; `shadow` es `dx dy blur color`. Color: literal o nombre de Paleta.
+ThemeNodeStyles:
+  'nodeStyles' '{' styles+=TypeStyle* '}';
+
+// `edgeStyles { default { stroke "#f00" strokeWidth 3 } }`
+// Hoy solo `default` se aplica (el Modelo aun no tipa Aristas).
+ThemeEdgeStyles:
+  'edgeStyles' '{' styles+=TypeStyle* '}';
+
+TypeStyle:
+  type=Id '{' props+=StyleProp* '}';
+
+StyleProp:
+  StyleFill | StyleStroke | StyleStrokeWidth | StyleShadow;
+
+StyleFill:
+  'fill' value=PropertyValue;
+
+StyleStroke:
+  'stroke' value=PropertyValue;
+
+StyleStrokeWidth:
+  'strokeWidth' value=INT;
+
+StyleShadow:
+  'shadow' dx=Coordinate dy=Coordinate blur=INT color=PropertyValue;
 
 // View -------------------------------------
 
@@ -230,6 +258,7 @@ Id returns string:
   IdTerminal |
   'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order' |
   'theme' | 'extends' | 'palette' | 'fonts' | 'tokens' |
+  'nodeStyles' | 'edgeStyles' | 'fill' | 'stroke' | 'strokeWidth' | 'shadow' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' |
   'model' | 'node' | 'specification';
