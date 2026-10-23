@@ -51,7 +51,7 @@ describe('Familias de efectos del catalogo', () => {
     const familias = new Set(Object.values(CATALOGO).map((p) => p.familia));
 
     for (const f of ['sombra', 'glow', 'vidrio', 'filtro', 'decoracion']) expect(familias).toContain(f);
-    for (const p of Object.values(CATALOGO)) expect(p.afectaMetricas).toBe(false);
+    for (const p of Object.values(CATALOGO).filter((d) => ['sombra', 'glow', 'vidrio', 'filtro', 'decoracion'].includes(d.familia))) expect(p.afectaMetricas).toBe(false);
   });
 
   it('la sombra admite inset, spread y blur 0 (sombra dura)', () => {

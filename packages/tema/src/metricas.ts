@@ -10,7 +10,8 @@
  */
 import type { Atributo, NodoResuelto, Tema } from 'canonico';
 
-import type { NombreDeSlot } from './catalogo';
+import { CATALOGO } from './catalogo';
+import type { DefinicionDePrimitiva, NombreDeSlot } from './catalogo';
 import { resolverTema } from './tema';
 
 export interface Metricas {
@@ -22,6 +23,8 @@ export interface Metricas {
   fuentes: Record<string, string>;
   /** Slots del Nodo que el Tema muestra, en orden visual. */
   slots: readonly NombreDeSlot[];
+  /** La forma del Nodo exige una caja cuadrada (p. ej. `circle`); sale de la regla de caja minima de las Primitivas. */
+  cajaCuadrada: boolean;
   /** Ancho minimo de un Nodo hoja. */
   anchoMinimo: number;
   /** Suma de los margenes izquierdo y derecho del texto de un Nodo hoja. */
@@ -67,6 +70,7 @@ export function metricasDe(tema: Tema): Metricas {
     factorDeAncho: proporcional ? 0.55 : 0.6,
     fuentes: resuelto.fonts,
     slots: resuelto.nodo.slots,
+    cajaCuadrada: resuelto.nodo.capas.some((capa) => (CATALOGO[capa.primitiva.tipo as keyof typeof CATALOGO] as DefinicionDePrimitiva).cajaMinima === 'cuadrado'),
     anchoMinimo: 120,
     paddingHorizontal: 32,
     margenDeTexto: 10,
