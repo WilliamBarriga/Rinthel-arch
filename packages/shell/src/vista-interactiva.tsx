@@ -4,7 +4,7 @@
  * por props; sin ellas el componente guarda el suyo.
  */
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { ReactElement } from 'react';
+import type { MouseEvent as EventoDeRaton, ReactElement } from 'react';
 import { select } from 'd3-selection';
 import { zoom, zoomIdentity, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent, ZoomTransform } from 'd3-zoom';
@@ -17,6 +17,8 @@ import { Diagram } from 'render';
 import type { Camara } from 'render';
 
 import { MAX_NODOS_VISIBLES, alternarGrupo, compensarCamara, contarNodosVisibles, interpolarGeometria, visibilidadDeMorph } from './colapso';
+import { SELECCION_VACIA, cajaDeElemento, elementoBajo, elementoPorId, seleccionar } from './interaccion';
+import type { Seleccion } from './interaccion';
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
 import { useGeometria } from './geometria';
@@ -60,8 +62,9 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
   camera?: Camara;
   /** Pan o zoom del usuario: la camara que resulta. */
   onCameraChange?: (camara: Camara) => void;
-  /** Nodo seleccionado controlado; sin ella el componente guarda el suyo. */
+  /** Elemento seleccionado controlado (id de Nodo, de Arista o `nodo#atributo`); sin ella el componente guarda su Seleccion. */
   selected?: string | null;
+  /** Se selecciono un elemento: su id (Nodo, Arista o etiqueta por `idDeArista`, Atributo como `nodo#atributo`). */
   onSelect?: (id: string) => void;
   /**
    * Habilita arrastrar Nodos (solo bajo `dev`; sin ella, arrastrar un Nodo mueve la camara). Al soltar avisa
@@ -81,6 +84,8 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
 }
 
 const UMBRAL_DE_ARRASTRE = 3;
+/** Distancia en pantalla a la que un clic acierta una Arista. */
+const TOLERANCIA_EN_PX = 4;
 const ESCALA_MIN = 0.05;
 const ESCALA_MAX = 16;
 
@@ -172,8 +177,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const camaraPropia = useRef(propia);
   camaraPropia.current = propia;
   const camara = props.camera ?? propia;
-  const [seleccionPropia, setSeleccionPropia] = useState<string | null>(null);
-  const seleccionado = props.selected !== undefined ? props.selected : seleccionPropia;
+  const [seleccionPropia, setSeleccionPropia] = useState<Seleccion>(SELECCION_VACIA);
 
   const pasos = usePasos(vista, props);
   const visibility = pasos.visibility;
@@ -315,10 +319,21 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     [mostrado, x, y, ancho, alto],
   );
 
-  const marca = useMemo(() => {
-    if (mostrado === undefined || seleccionado === null) return undefined;
-    return indiceDeGeometria(mostrado.vista, mostrado.geometria).cajas.get(seleccionado);
-  }, [mostrado, seleccionado]);
+  const seleccion = useMemo<Seleccion>(() => {
+    if (props.selected === undefined) return seleccionPropia;
+    const elemento = props.selected === null ? undefined : elementoPorId(vista, props.selected);
+    return elemento === undefined ? SELECCION_VACIA : [elemento];
+  }, [props.selected, seleccionPropia, vista]);
+  const marcas = useMemo(
+    () =>
+      mostrado === undefined
+        ? []
+        : seleccion.flatMap((elemento) => {
+            const caja = cajaDeElemento(mostrado.vista, mostrado.geometria, theme, elemento);
+            return caja === undefined ? [] : [{ elemento, caja }];
+          }),
+    [mostrado, seleccion, theme],
+  );
 
   const alternar = (id: string): void => {
     if (arrastrando.current) return;
@@ -335,16 +350,29 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     props.onStateChange?.(siguiente);
   };
 
-  const alSeleccionar = (id: string): void => {
-    if (arrastrando.current) return;
-    if (props.selected === undefined) setSeleccionPropia(id);
-    onSelect?.(id);
-    const destino = vista.nodes.find((n) => n.id === id)?.link;
+  const detalle = nivelDeDetalle(width / ancho, props.detailThresholds);
+
+  /** Clic en el diagrama: el nucleo decide que hay bajo el punto, sobre la Vista completa (no la recortada). */
+  const alPulsar = (evento: EventoDeRaton): void => {
+    if (arrastrando.current || mostrado === undefined) return;
+    if ((evento.target as Element).closest('svg') === null) return;
+    const caja = zona.current!.getBoundingClientRect();
+    const k = width / camaraVigente.current.width;
+    const punto = { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k };
+    const elemento = elementoBajo(mostrado.vista, mostrado.geometria, theme, punto, { tolerancia: TOLERANCIA_EN_PX / k, atributos: detalle === 'completo' });
+    if (elemento === undefined) return;
+    const acumula = evento.shiftKey || evento.ctrlKey || evento.metaKey;
+    const siguiente = seleccionar(seleccion, elemento, acumula ? 'alternar' : 'reemplazar');
+    if (props.selected === undefined) setSeleccionPropia(siguiente);
+    if (!siguiente.some((e) => e.tipo === elemento.tipo && e.id === elemento.id)) return;
+    onSelect?.(elemento.id);
+    if (acumula || elemento.tipo !== 'nodo') return;
+    const destino = vista.nodes.find((n) => n.id === elemento.id)?.link;
     if (destino !== undefined && source.views.some((v) => v.id === destino)) props.alEnlazar(destino);
   };
 
   return (
-    <div ref={zona} style={{ position: 'relative', width, height, overflow: 'hidden', touchAction: 'none' }}>
+    <div ref={zona} onClick={alPulsar} style={{ position: 'relative', width, height, overflow: 'hidden', touchAction: 'none' }}>
       {mostrado !== undefined && recortada !== undefined && (
         <Diagram
           view={recortada}
@@ -354,32 +382,35 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
           width={width}
           height={height}
           camera={camaraVista}
-          detail={nivelDeDetalle(width / ancho, props.detailThresholds)}
-          onSelect={alSeleccionar}
+          detail={detalle}
           onToggle={alternar}
           {...(visibilidadMostrada !== undefined && { visibility: visibilidadMostrada })}
         />
       )}
       {pasos.controles}
       {props.migas}
-      {marca !== undefined && seleccionado !== null && (
+      {marcas.length > 0 && (
         <svg
           width={width}
           height={height}
           viewBox={`${x} ${y} ${ancho} ${alto}`}
           style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}
         >
-          <rect
-            data-selected={seleccionado}
-            x={marca.x}
-            y={marca.y}
-            width={marca.width}
-            height={marca.height}
-            rx={6}
-            fill="none"
-            stroke={theme.palette['blue'] ?? theme.tokens['foreground'] ?? 'currentColor'}
-            strokeWidth={3}
-          />
+          {marcas.map(({ elemento, caja }) => (
+            <rect
+              key={`${elemento.tipo}:${elemento.id}`}
+              data-selected={elemento.id}
+              data-selected-type={elemento.tipo}
+              x={caja.x}
+              y={caja.y}
+              width={caja.width}
+              height={caja.height}
+              rx={6}
+              fill="none"
+              stroke={theme.palette['blue'] ?? theme.tokens['foreground'] ?? 'currentColor'}
+              strokeWidth={3}
+            />
+          ))}
         </svg>
       )}
     </div>
