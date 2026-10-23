@@ -63,7 +63,7 @@
  * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
  * `{ok:true}` o `{ok:false, desactualizado, mensaje}` (409 por hash); nunca lanza.
  * La intencion es `IntencionDePin` (`{vista, nodo, x, y, hash}`, declarada en `canonico` y
- * reexportada aqui); `IntencionDePinEnviada` es su alias historico en `shell`.
+ * reexportada aqui).
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *
@@ -111,6 +111,8 @@ export { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from './in
 export type { ElementoSeleccionable, ModoDeSeleccion, OpcionesDeHitTest, Seleccion, TipoDeElemento } from './interaccion';
 export type { PropsDeNavegacion } from './navegacion';
 export type { PropsDePasos } from './pasos';
+export type { AjustesDeInteraccion } from './configuracion';
+export type { RelojDeCuadros } from './morph';
 export type { SuscripcionDeTema } from './tema-vigente';
 export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
 export type { UmbralesDeDetalle } from './zoom-semantico';
@@ -122,7 +124,7 @@ export { useEstadoEnHash } from './estado-en-hash';
 export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-hash';
 // La `IntencionDePin` vive en `canonico`; se reexporta para no renombrar la interfaz de `shell`.
 export { crearEnviadorDePin } from './enviar-pin';
-export type { EnviadorDePin, IntencionDePinEnviada, ResultadoDeEnvioDePin } from './enviar-pin';
+export type { EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
 export type { IntencionDePin } from 'canonico';
 export { crearControlDeEdicion } from './control-de-edicion';
 export type { ControlDeEdicion, ResultadoDeAplicar } from './control-de-edicion';
