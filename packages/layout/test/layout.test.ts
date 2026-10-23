@@ -230,6 +230,15 @@ describe('claveDeLayout', () => {
     expect(claveDeLayout(coloreada, TEMA_NEUTRO)).toBe(base);
   });
 
+  it('cambia al cambiar solo un Pin y es estable sin cambios de Pin', () => {
+    const conPin = (x: number, y: number) => vista({ overrides: [{ node: 'c', pin: { x, y } }] });
+    const base = claveDeLayout(conPin(10, 20), TEMA_NEUTRO);
+
+    expect(claveDeLayout(conPin(10, 20), TEMA_NEUTRO)).toBe(base);
+    expect(claveDeLayout(conPin(11, 20), TEMA_NEUTRO)).not.toBe(base);
+    expect(claveDeLayout(vista(), TEMA_NEUTRO)).not.toBe(base);
+  });
+
   it('cambia con la estructura: otro estado de colapso', () => {
     expect(claveDeLayout(vista({}, { collapsed: ['a'] }), TEMA_NEUTRO)).not.toBe(claveDeLayout(vista(), TEMA_NEUTRO));
   });

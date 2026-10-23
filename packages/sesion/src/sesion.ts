@@ -98,8 +98,7 @@ function crear(
     const resuelta = resolveView(fuente, vista);
     if (declarada === undefined || resuelta === undefined) return undefined;
     const tema = temaDeVista(fuente, declarada, opciones.tema);
-    const delPin = resuelta.overrides.flatMap((o) => (o.pin === undefined ? [] : [[o.node, o.pin.x, o.pin.y]]));
-    return { clave: JSON.stringify([tema.name, claveDeLayout(resuelta, tema), delPin]), tema, resuelta };
+    return { clave: JSON.stringify([tema.name, claveDeLayout(resuelta, tema)]), tema, resuelta };
   };
 
   const geometria = (vista: string): Promise<GeometriaCacheada | undefined> => {
