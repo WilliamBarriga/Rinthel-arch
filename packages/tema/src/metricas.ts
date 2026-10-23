@@ -72,6 +72,8 @@ function tamanoDeTexto(fontSize: string | undefined): number {
 
 function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas?: MedidasDeTexto): Metricas {
   const fontSize = tamanoDeTexto(resuelto.tokens.fontSize);
+  // Solo la etiqueta de Arista cuenta en las Metricas: trazos y marcadores son pintura.
+  const etiqueta = resuelto.arista.etiqueta?.props as { scale?: number; pad?: number } | undefined;
   const proporcional = !/mono/i.test(resuelto.fonts.body);
   return {
     fontSize,
@@ -91,10 +93,10 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas?
     margenIcono: 6,
     baseDeTitulo: fontSize + 8,
     margenDeControl: 12,
-    escalaEtiqueta: 0.85,
+    escalaEtiqueta: etiqueta?.scale ?? 0.85,
     escalaAtributo: 0.85,
     escalaCardinalidad: 0.8,
-    holguraDeEtiqueta: 8,
+    holguraDeEtiqueta: 2 * (etiqueta?.pad ?? 4),
     altoDeEtiqueta: 1.4,
   };
 }

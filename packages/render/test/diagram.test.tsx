@@ -8,7 +8,7 @@ import { layoutView } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
-import { CATALOGO, TEMA_NEUTRO, colocarEnCaja, metricasDe } from 'tema';
+import { TEMA_NEUTRO, colocarEnCaja, metricasDe, primitivasDe } from 'tema';
 import type { TemaResuelto } from 'tema';
 
 import { PINTORES } from '../src/hoja';
@@ -42,6 +42,7 @@ const CON_CAPAS: TemaResuelto = {
   ...TEMA_NEUTRO,
   nodo: {
     slots: ['title', 'attrs'],
+    textos: {},
     tipos: {},
     estados: {},
     capas: [
@@ -179,7 +180,7 @@ describe('Diagram: hoja de estilo', () => {
   });
 
   it('cada Primitiva del catalogo tiene su pintor', () => {
-    expect(Object.keys(PINTORES).sort()).toEqual(Object.keys(CATALOGO).sort());
+    expect(Object.keys(PINTORES).sort()).toEqual(primitivasDe('capa-nodo').sort());
   });
 
   it('un valor hostil del Tema no puede cerrar la hoja ni inyectar reglas', async () => {
@@ -230,7 +231,7 @@ describe('Diagram', () => {
     expect(opacidadDe(enPaso(1), 'a.a1')).toBeUndefined();
     expect(opacidadDe(enPaso(1), 'b')).toBe('0');
     expect(opacidadDe(enPaso(2), 'b')).toBeUndefined();
-    expect(opacidadDe(enPaso(1.5), 'b')).toBe('0.5');
+    expect(opacidadDe(enPaso(1.5), 'b')).toBe('0');
   });
 
   it('sin estado propio: las mismas props producen el mismo arbol', async () => {
@@ -249,14 +250,14 @@ describe('Diagram', () => {
     expect(html).toMatch(/<g data-edge="b -&gt; c" opacity="0" pointer-events="none"/);
   });
 
-  it('dos Diagram con temas distintos no comparten el id del marcador de flecha', async () => {
+  it('el marcador de flecha toma el color de borde del Tema y no hay ids que compartir', async () => {
     const oscuro = { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, border: '#4b5563' } };
-    const id = (html: string): string => /<marker id="([^"]+)"/.exec(html)![1]!;
     const a = dibujo(await props(vista()));
     const b = dibujo(await props(vista(), { theme: oscuro }));
 
-    expect(id(a)).not.toBe(id(b));
-    expect(b).toContain(`url(#${id(b)})`);
+    expect(a).toContain('data-marker="fin"');
+    expect(a).not.toContain('<marker');
+    expect(b).toMatch(/data-marker="fin"[^>]*><path d="[^"]+" fill="#4b5563"/);
   });
 
   it('cambiar un valor del Estilo cambia lo que dibuja Diagram', async () => {

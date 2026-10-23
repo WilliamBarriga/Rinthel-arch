@@ -21,6 +21,8 @@ import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, TemaResuelto } from 'tema';
 
 import type { NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeUse } from './generated/ast';
 import { aRango, issueConSugerencia, rangoDeIndice } from './posiciones';
+import { compilarArista, compilarTextoDeSlots } from './temas-arista';
+import { compilarAnimacionDeNodo } from './temas-animacion';
 import { compilarBloque } from './temas-capas';
 import type { ParteDeclarada, Sitio } from './temas-capas';
 
@@ -143,19 +145,29 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       nodo: {
         capas: origen.nodo.capas.map(copiarCapa),
         slots: [...origen.nodo.slots],
+        textos: { ...origen.nodo.textos },
         tipos: Object.fromEntries(Object.entries(origen.nodo.tipos).map(([tipo, ops]) => [tipo, [...ops]])),
         estados: Object.fromEntries(Object.entries(origen.nodo.estados).map(([estado, ops]) => [estado, [...ops]])),
+        ...(origen.nodo.animacion !== undefined && { animacion: structuredClone(origen.nodo.animacion) }),
+      },
+      arista: {
+        capas: origen.arista.capas.map(copiarCapa),
+        ...(origen.arista.origen !== undefined && { origen: { ...origen.arista.origen, props: { ...origen.arista.origen.props } } }),
+        ...(origen.arista.fin !== undefined && { fin: { ...origen.arista.fin, props: { ...origen.arista.fin.props } } }),
+        ...(origen.arista.etiqueta !== undefined && { etiqueta: { ...origen.arista.etiqueta, props: { ...origen.arista.etiqueta.props } } }),
       },
     };
     const origenes = new Map(base?.origenes);
     for (const parte of declarado.ast.parts) {
-      if (parte.$type === 'ThemeNode') continue;
+      if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeEdge') continue;
       const destino = parte.$type === 'ThemePalette' ? tema.palette : parte.$type === 'ThemeFonts' ? tema.fonts : tema.tokens;
       for (const { key, value } of parte.entries) destino[key] = value;
     }
     // El bloque `node` se compila al final: sus colores y tokens se validan contra la Paleta y los tokens ya completos.
     const items = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeNode' ? parte.items : []));
     compilarNodo(declarado.archivo, items, tema, origenes, { partes, tipos, issues });
+    const delBordeDeArista = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeEdge' ? parte.items : []));
+    compilarArista(delBordeDeArista, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
     enCurso.delete(name);
     const compilado = { tema, origenes };
     resueltos.set(name, compilado);
@@ -205,10 +217,18 @@ function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: Tem
   tema.nodo.capas = aplicarOps(tema.nodo.capas as CapaDeTema[], opsBase, tema.palette, modo).pila;
   for (const item of items) {
     if (item.$type !== 'ThemeSlots') continue;
-    const { slots, errores } = construirSlots(item.names);
-    for (const error of errores) issues.push(aIssue(archivo, error, rangoDeIndice(item, 'names', error.indice)));
-    if (errores.length === 0) tema.nodo.slots = slots;
+    const { slots, errores } = construirSlots(item.entries.map((e) => e.name));
+    for (const error of errores) issues.push(aIssue(archivo, error, rangoDeIndice(item, 'entries', error.indice)));
+    if (errores.length === 0) {
+      tema.nodo.slots = slots;
+      tema.nodo.textos = Object.fromEntries(Object.entries(tema.nodo.textos).filter(([slot]) => slots.some((s) => s === slot)));
+      compilarTextoDeSlots(item.entries, tema, { archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
+    }
   }
+
+  // Animacion del Nodo: `transition`, `enter`, `exit` y `stagger` (solo pintura, nunca Metricas).
+  const animacion = compilarAnimacionDeNodo(items, tema.nodo.animacion, archivo, issues);
+  if (animacion !== undefined) tema.nodo.animacion = animacion;
 
   // 2) Parches por Tipo de nodo, sobre la pila base.
   const base = tema.nodo.capas as CapaDeTema[];
@@ -250,7 +270,7 @@ function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: Tem
         message: `Un parche de estado no puede tocar los Slots: '${estado}' nunca relayouta; cambialos en el bloque base`,
       });
     }
-    const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type !== 'ThemeSlots');
+    const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');
     const ops = compilarBloque(capas, { ...contexto, modo: 'parchear', candidatas: sobreTipos });
     for (const op of ops) {
       const razon = opTocaMetricas(op, sobreTipos);

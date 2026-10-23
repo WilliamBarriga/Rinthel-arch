@@ -6,10 +6,11 @@
  */
 import type { Tema } from 'canonico';
 
+import type { Animacion, Efecto, Transicion } from './animacion';
 import { metricasDe, tablaDeMetricas } from './metricas';
 import type { Metricas, TablaDeMetricas } from './metricas';
 import { CATALOGO } from './catalogo';
-import type { DefinicionDePrimitiva, NombreDePrimitiva } from './catalogo';
+import type { DefinicionDePrimitiva, NombreDePrimitiva, NombreDeSlot } from './catalogo';
 import { resolverColor } from './color';
 import { cascada } from './parches';
 import type { CapaDeTema, Estado, OpDeCapa } from './parches';
@@ -23,12 +24,43 @@ export interface CapaPintada {
   props: Record<string, number | string>;
   /** Va sobre el contenido (`over`); sin la clave, bajo el. */
   encima?: true;
+  animacion?: Animacion;
+}
+
+/** Primitiva de marcador o etiqueta con sus colores ya resueltos. */
+export interface PrimitivaPintada {
+  tipo: NombreDePrimitiva;
+  props: Record<string, number | string>;
+}
+
+/** Pintura de una Arista: trazos (de abajo hacia arriba), marcadores y etiqueta. El color del marcador sin `color` es el del primer trazo. */
+export interface PinturaDeArista {
+  capas: CapaPintada[];
+  origen?: PrimitivaPintada;
+  fin?: PrimitivaPintada;
+  etiqueta: PrimitivaPintada;
 }
 
 /** Pila de un Nodo por estado: `capas` es el reposo; cada estado declarado trae su pila completa. */
 export interface PinturaDeNodo {
   capas: CapaPintada[];
+  /** Estilo de texto de los Slots que lo declaran. */
+  textos: Partial<Record<NombreDeSlot, PrimitivaPintada>>;
   estados: Partial<Record<Estado, CapaPintada[]>>;
+  /** Animacion del elemento (no de una Capa); ausente si el Tema no declara ninguna. */
+  animacion?: AnimacionDeNodo;
+}
+
+/**
+ * `transition` base, por estado, `enter`/`exit` y `stagger` del Nodo. Solo
+ * pintura: ninguno de estos valores entra en las Metricas.
+ */
+export interface AnimacionDeNodo {
+  transicion?: Transicion;
+  transicionesDeEstado?: Partial<Record<Estado, Transicion>>;
+  entrada?: Efecto;
+  salida?: Efecto;
+  escalonadoMs?: number;
 }
 
 export interface Pintura {
@@ -36,6 +68,8 @@ export interface Pintura {
   semilla?: number;
   /** Reposo y estados del Nodo sin Tipo, y los de cada Tipo de nodo pedido en `OpcionesDeEstilo.tipos`. */
   nodo: PinturaDeNodo & { tipos: Record<string, PinturaDeNodo> };
+  /** Reposo de la Arista y, por color de Paleta del Nodo de origen, la suya (`ORIGEN` toma ese color). */
+  arista: PinturaDeArista & { origenes: Record<string, PinturaDeArista> };
 }
 
 export interface EstiloResuelto {
@@ -55,25 +89,73 @@ export interface OpcionesDeEstilo {
 
 const COLOR_DE_RESPALDO = '__borde';
 
+const contextoDeColor = (tema: TemaResuelto, colorDelTipo: string | undefined): { paleta: Record<string, string>; contexto: { color: string; origen: string } } => {
+  const nombre = colorDelTipo !== undefined && Object.hasOwn(tema.palette, colorDelTipo) ? colorDelTipo : COLOR_DE_RESPALDO;
+  return { paleta: { ...tema.palette, [COLOR_DE_RESPALDO]: tema.tokens.border }, contexto: { color: nombre, origen: nombre } };
+};
+
+/** Props de una Primitiva con sus colores (nombre de Paleta y modificadores) convertidos a valor. */
+function resolverProps(
+  primitiva: { tipo: string; props: Readonly<Record<string, number | string>> },
+  paleta: Readonly<Record<string, string>>,
+  contexto: { color: string; origen: string },
+): Record<string, number | string> {
+  const definicion: DefinicionDePrimitiva = CATALOGO[primitiva.tipo as NombreDePrimitiva];
+  return Object.fromEntries(
+    Object.entries(primitiva.props).map(([clave, valor]) => [
+      clave,
+      definicion.propiedades[clave]?.tipo === 'color' ? resolverColor(String(valor), paleta, contexto) : valor,
+    ]),
+  );
+}
+
 function pintar(pila: readonly CapaDeTema[], tema: TemaResuelto, colorDelTipo: string | undefined): CapaPintada[] {
-  const paleta = { ...tema.palette, [COLOR_DE_RESPALDO]: tema.tokens.border };
-  const contexto = { color: colorDelTipo !== undefined && Object.hasOwn(tema.palette, colorDelTipo) ? colorDelTipo : COLOR_DE_RESPALDO };
-  return pila.map(({ nombre, primitiva, encima }) => {
-    const definicion: DefinicionDePrimitiva = CATALOGO[primitiva.tipo as NombreDePrimitiva];
-    const props = Object.fromEntries(
-      Object.entries(primitiva.props).map(([clave, valor]) => [
-        clave,
-        definicion.propiedades[clave]?.tipo === 'color' ? resolverColor(String(valor), paleta, contexto) : valor,
-      ]),
-    );
-    return { nombre, tipo: primitiva.tipo as NombreDePrimitiva, props, ...(encima === true && { encima: true as const }) };
-  });
+  const { paleta, contexto } = contextoDeColor(tema, colorDelTipo);
+  return pila.map(({ nombre, primitiva, encima, animacion }) => ({
+    nombre,
+    tipo: primitiva.tipo as NombreDePrimitiva,
+    props: resolverProps(primitiva, paleta, contexto),
+    ...(encima === true && { encima: true as const }),
+    ...(animacion !== undefined && { animacion }),
+  }));
+}
+
+/** Trazo por defecto de una Arista sin pila: una linea del color del borde. */
+const TRAZO_POR_DEFECTO: CapaDeTema = { nombre: 'linea', primitiva: { tipo: 'line', props: { color: COLOR_DE_RESPALDO, width: 1, style: 'solid', corner: 'sharp', cut: 6 } } };
+
+/** Pintura de una Arista cuyo Nodo de origen tiene el color `colorDeOrigen` (nombre de Paleta). */
+function pintarArista(tema: TemaResuelto, colorDeOrigen: string | undefined): PinturaDeArista {
+  const { arista } = tema;
+  const { paleta, contexto } = contextoDeColor(tema, colorDeOrigen);
+  const capas = pintar(arista.capas.length === 0 ? [TRAZO_POR_DEFECTO] : (arista.capas as CapaDeTema[]), tema, colorDeOrigen);
+  const colorDelTrazo = capas[0]?.props['color'];
+  const marcador = (primitiva: { tipo: string; props: Record<string, number | string> } | undefined): PrimitivaPintada | undefined => {
+    if (primitiva === undefined) return undefined;
+    const props = resolverProps(primitiva, paleta, contexto);
+    if (props['color'] === undefined && colorDelTrazo !== undefined) props['color'] = colorDelTrazo;
+    return { tipo: primitiva.tipo as NombreDePrimitiva, props };
+  };
+  const etiqueta = arista.etiqueta ?? { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 0 } };
+  const origen = marcador(arista.origen);
+  const fin = marcador(arista.fin);
+  return {
+    capas,
+    ...(origen !== undefined && { origen }),
+    ...(fin !== undefined && { fin }),
+    etiqueta: { tipo: etiqueta.tipo as NombreDePrimitiva, props: resolverProps(etiqueta, paleta, contexto) },
+  };
 }
 
 export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): EstiloResuelto {
   const resuelto = resolverTema(tema);
   const pinturaDe = (tipo: string | undefined, color: string | undefined): PinturaDeNodo => ({
     capas: pintar(cascada(resuelto, { ...(tipo !== undefined && { tipo }), ...(opciones.vista && { vista: opciones.vista }) }), resuelto, color),
+    textos: Object.fromEntries(
+      Object.entries(resuelto.nodo.textos).map(([slot, texto]) => {
+        const { paleta, contexto } = contextoDeColor(resuelto, color);
+        return [slot, { tipo: texto.tipo as NombreDePrimitiva, props: resolverProps(texto, paleta, contexto) }];
+      }),
+    ),
     estados: Object.fromEntries(
       (Object.keys(resuelto.nodo.estados) as Estado[])
         .sort()
@@ -90,7 +172,12 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
       ...(resuelto.tokens.seed !== undefined && { semilla: Number(resuelto.tokens.seed) }),
       nodo: {
         ...pinturaDe(undefined, undefined),
+        ...(resuelto.nodo.animacion !== undefined && { animacion: resuelto.nodo.animacion }),
         tipos: Object.fromEntries(Object.entries(opciones.tipos ?? {}).map(([tipo, color]) => [tipo, pinturaDe(tipo, color)])),
+      },
+      arista: {
+        ...pintarArista(resuelto, undefined),
+        origenes: Object.fromEntries(Object.keys(resuelto.palette).sort().map((color) => [color, pintarArista(resuelto, color)])),
       },
     },
   };

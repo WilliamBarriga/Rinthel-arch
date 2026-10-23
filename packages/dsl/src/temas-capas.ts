@@ -9,10 +9,11 @@
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
 import { resolverTokens, validarOps } from 'tema';
-import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa } from 'tema';
+import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, UbicacionDePrimitiva } from 'tema';
 
 import type { PartDecl, ThemeLayer, ThemeUse } from './generated/ast';
 import { issueConSugerencia, rangoDe } from './posiciones';
+import { compilarAnimacionDeCapa } from './temas-animacion';
 
 /** Donde se definio por ultima vez una Capa de la pila base; sirve de `related`. */
 export interface Sitio {
@@ -34,6 +35,8 @@ export interface ContextoDeBloque {
   tokens: Readonly<Record<string, string>>;
   /** `definir` solo en el primer bloque de un Tema sin Capas heredadas. */
   modo: 'definir' | 'parchear';
+  /** Donde se usan las Capas del bloque; `capa-nodo` si falta. */
+  ubicacion?: UbicacionDePrimitiva;
   /** Pilas sobre las que el bloque puede aplicar; basta que valga para una. */
   candidatas: ReadonlyArray<readonly CapaDeTema[]>;
   /** Sitio de cada Capa de la pila base; el bloque lo actualiza con lo que define. */
@@ -107,7 +110,12 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
     return false;
   });
 
-  const compiladas = unicos.map((elemento) => ({ elemento, ...aOp(elemento, ctx) }));
+  const compiladas = unicos.map((elemento) => {
+    const delOp = aOp(elemento, ctx);
+    const animada = compilarAnimacionDeCapa(elemento.item, elemento.archivo, ctx.issues);
+    if (animada.animacion !== undefined) delOp.op.animacion = animada.animacion;
+    return { elemento, ...delOp, animacionFalla: animada.fallo };
+  });
   const issueDe = (elemento: Elemento, error: ErrorDeCatalogo, donde: 'nombre' | 'ubicacion' | 'propiedad', baseDeError?: string): Issue => {
     const { item, archivo } = elemento;
     const prop = error.clave === undefined ? undefined : item.props.find(({ key }) => key === error.clave);
@@ -134,7 +142,10 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
   }
   const ops = compiladas.map(({ op }) => op);
   const fallidas = new Set<number>();
-  for (const error of validarOps(ctx.candidatas, ops, ctx.paleta, ctx.modo)) {
+  compiladas.forEach(({ animacionFalla }, i) => {
+    if (animacionFalla) fallidas.add(i);
+  });
+  for (const error of validarOps(ctx.candidatas, ops, ctx.paleta, ctx.modo, ctx.ubicacion)) {
     fallidas.add(error.indice);
     ctx.issues.push(issueDe((compiladas[error.indice] as { elemento: Elemento }).elemento, error, error.donde, error.base));
   }

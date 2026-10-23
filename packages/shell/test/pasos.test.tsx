@@ -57,7 +57,7 @@ const opacidad = (c: HTMLElement, id: string): number => {
 };
 const dibujado = (c: HTMLElement) => waitFor(() => expect(c.querySelector('[data-id="a"]')).not.toBeNull());
 const sinVisibilidad = (c: HTMLElement) =>
-  c.querySelector('[data-diagram]')!.innerHTML.replace(/ opacity="[^"]*"/g, '').replace(/\s*(opacity|pointer-events): [^;"]+;?/g, '').replace(/ pointer-events="[^"]*"/g, '');
+  c.querySelector('[data-diagram]')!.innerHTML.replace(/ data-oculto=""/g, '').replace(/ opacity="[^"]*"/g, '').replace(/\s*(opacity|pointer-events): [^;"]+;?/g, '').replace(/ pointer-events="[^"]*"/g, '');
 
 describe('Pasos anterior y siguiente', () => {
   it('sin steps no hay controles ni se oculta nada', async () => {
