@@ -827,6 +827,45 @@ describe('compile: Tema', () => {
     });
   });
 
+  it('compila nodeStyles y edgeStyles a tokens por tipo', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme ejemplo {
+          nodeStyles {
+            servicio { fill "#dbeafe"  stroke blue  strokeWidth 2  shadow 2 3 4 "#000000" }
+            tabla { fill "#fef3c7" }
+          }
+          edgeStyles { default { stroke "#ff0000"  strokeWidth 3 } }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 'ejemplo')).toEqual({
+      name: 'ejemplo',
+      palette: {},
+      fonts: {},
+      tokens: {},
+      nodeStyles: {
+        servicio: { fill: '#dbeafe', stroke: 'blue', strokeWidth: 2, shadow: { dx: 2, dy: 3, blur: 4, color: '#000000' } },
+        tabla: { fill: '#fef3c7' },
+      },
+      edgeStyles: { default: { stroke: '#ff0000', strokeWidth: 3 } },
+    });
+  });
+
+  it('el hijo hereda nodeStyles y los fusiona por tipo; un desplazamiento puede ser negativo', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme padre { nodeStyles { servicio { fill "#111111"  stroke red } } }
+        theme hijo extends padre { nodeStyles { servicio { fill "#222222"  shadow -1 -2 0 black } } }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 'hijo')?.nodeStyles).toEqual({
+      servicio: { fill: '#222222', stroke: 'red', shadow: { dx: -1, dy: -2, blur: 0, color: 'black' } },
+    });
+  });
+
   it('tema duplicado es E_DUPLICATE_THEME con related a la primera declaracion', () => {
     const { issues } = compile({ 'main.dg': `${base}\n${claro}\ntheme claro { }` });
 
@@ -1091,5 +1130,22 @@ describe('compile: Pasos (steps)', () => {
     expect(['a.x', 'b'].map(revealAt(vista, 1))).toEqual([0, 1]);
     expect(['a.x', 'b'].map(revealAt(vista, 2))).toEqual([1, 1]);
     expect(revealAt(vista, 2)('a.x -> b')).toBe(1);
+  });
+});
+
+describe('compile: Temas del ejemplo un proyecto externo', () => {
+  it('declaran tokens por Tipo de nodo, el oscuro y uno claro, sin issues', async () => {
+    const { readFileSync, readdirSync } = await import('node:fs');
+    const dir = new URL('../../../examples/un proyecto externo/', import.meta.url);
+    const fuentes = Object.fromEntries(
+      readdirSync(dir).filter((f) => f.endsWith('.dg')).map((f) => [f, readFileSync(new URL(f, dir), 'utf8')]),
+    );
+    const { canonico, issues } = compile(fuentes);
+
+    expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
+    const temas = canonico?.themes ?? [];
+    expect(temas.find((t) => t.name === 'rinthel')?.tokens['background']).toBe('#0f172a');
+    expect(temas.find((t) => t.name === 'rinthel')?.nodeStyles?.['servicio']?.fill).toBe('#1e3a5f');
+    expect(temas.find((t) => t.name === 'rinthel-claro')?.nodeStyles?.['tabla']?.fill).toBe('#dcfce7');
   });
 });

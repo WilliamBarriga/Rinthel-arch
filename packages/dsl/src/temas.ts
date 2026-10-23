@@ -6,7 +6,7 @@
 import { CODIGOS, TEMA_NEUTRO } from 'canonico';
 import type { Issue, Tema, TextRange } from 'canonico';
 
-import type { Theme } from './generated/ast';
+import type { Theme, TypeStyle } from './generated/ast';
 
 /** Un `theme` del DSL con el sitio donde se declaro. */
 export interface TemaDeclarado {
@@ -79,8 +79,18 @@ export function resolverTemas(declarados: readonly TemaDeclarado[]): { temas: Te
       palette: { ...base?.palette },
       fonts: { ...base?.fonts },
       tokens: { ...base?.tokens },
+      ...(base?.nodeStyles !== undefined && { nodeStyles: copiar(base.nodeStyles) }),
+      ...(base?.edgeStyles !== undefined && { edgeStyles: copiar(base.edgeStyles) }),
     };
     for (const parte of declarado.ast.parts) {
+      if (parte.$type === 'ThemeNodeStyles') {
+        tema.nodeStyles = fusionar(tema.nodeStyles, parte.styles);
+        continue;
+      }
+      if (parte.$type === 'ThemeEdgeStyles') {
+        tema.edgeStyles = fusionar(tema.edgeStyles, parte.styles);
+        continue;
+      }
       const destino = parte.$type === 'ThemePalette' ? tema.palette : parte.$type === 'ThemeFonts' ? tema.fonts : tema.tokens;
       for (const { key, value } of parte.entries) destino[key] = value;
     }
@@ -91,4 +101,26 @@ export function resolverTemas(declarados: readonly TemaDeclarado[]): { temas: Te
   for (const declarado of porNombre.values()) resolver(declarado);
 
   return { temas: [...resueltos.values()], issues };
+}
+
+type TokensDeNodo = NonNullable<Tema['nodeStyles']>[string];
+type Tokens = TokensDeNodo;
+
+const copiar = <T extends Tokens>(tabla: Record<string, T>): Record<string, T> =>
+  Object.fromEntries(Object.entries(tabla).map(([tipo, tokens]) => [tipo, { ...tokens }]));
+
+/** Fusiona los tokens declarados sobre los heredados, por tipo y token (el hijo gana). */
+function fusionar<T extends Tokens>(heredado: Record<string, T> | undefined, estilos: readonly TypeStyle[]): Record<string, T> {
+  const resultado: Record<string, Tokens> = { ...heredado };
+  for (const { type, props } of estilos) {
+    const tokens: Tokens = { ...resultado[type] };
+    for (const prop of props) {
+      if (prop.$type === 'StyleFill') tokens.fill = prop.value;
+      else if (prop.$type === 'StyleStroke') tokens.stroke = prop.value;
+      else if (prop.$type === 'StyleStrokeWidth') tokens.strokeWidth = prop.value;
+      else tokens.shadow = { dx: prop.dx, dy: prop.dy, blur: prop.blur, color: prop.color };
+    }
+    resultado[type] = tokens;
+  }
+  return resultado as Record<string, T>;
 }
