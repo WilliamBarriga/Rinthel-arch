@@ -10,7 +10,7 @@
  * `atributosVisibles` y `textoDeAtributo` son esa misma medida, para que `render`
  * dibuje lo que `layout` reservo. El tamano de cada Nodo sale del texto y de las
  * fuentes del Tema (`fonts`, `tokens.fontSize`), sin DOM. `claveDeLayout` dice
- * cuando hace falta relayoutar: cambia con estructura, textos y fuentes, nunca
+ * cuando hace falta relayoutar: cambia con estructura, textos, Pins y fuentes, nunca
  * con paleta, colores o iconos.
  *
  * `indiceDeGeometria(vista, geometria)` es la unica respuesta a las cajas
