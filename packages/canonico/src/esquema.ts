@@ -225,7 +225,7 @@ export const TIPOS_DE_VISTA = ['architecture', 'flow'] as const;
 
 /**
  * Override de presentacion de un Nodo en una Vista: solo apariencia, nunca toca
- * el Modelo. `pin` es la posicion del Nodo relativa a su Grupo padre (al lienzo
+ * el Modelo. `pin` es la posicion del centro del Nodo relativa a su Grupo padre (al lienzo
  * si es raiz), aplicada despues del layout (ADR 0003). `order` se guarda pero
  * ningun paso lo usa en v1: ELK corre sin `considerModelOrder` (ADR 0003
  * enmendado), asi que no hay ordenamiento por el que consumirlo. `color` es un

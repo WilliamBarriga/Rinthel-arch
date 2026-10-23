@@ -139,6 +139,6 @@ view w { type architecture  include *  theme neutral }
     const nueva = await despues.geometria('v');
 
     expect(nueva).not.toBe(geo);
-    expect(nueva?.geometry.nodes['a']).toMatchObject({ x: 300, y: 300 });
+    expect(nueva?.geometry.nodes['a']).toMatchObject({ x: 240, y: 276 });
   });
 });

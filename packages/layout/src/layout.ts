@@ -130,8 +130,8 @@ export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tem
 }
 
 /**
- * Pin post-ELK (ADR 0003): la caja del Nodo pineado pasa a `pin`, relativa a su
- * Grupo padre. De las Aristas, solo cambian las que tocan el subarbol movido: si
+ * Pin post-ELK (ADR 0003): el centro de la caja del Nodo pineado pasa a `pin`,
+ * relativo a su Grupo padre (la caja crece alrededor del Pin). De las Aristas, solo cambian las que tocan el subarbol movido: si
  * los dos extremos van dentro del mismo subarbol pineado se trasladan con el; si
  * no, se re-enrutan con una ruta en Z sencilla entre las cajas (pierden la ruta
  * de ELK). Un Pin sobre un Nodo que la Vista no muestra se ignora (`validate` ya
@@ -149,7 +149,10 @@ function aplicarPins(
   const pins = vista.overrides.filter((o) => o.pin !== undefined && nodes[o.node] !== undefined);
   if (pins.length === 0) return { nodes, edges, labels, pinsSolapados: [] };
   const nuevos: Record<string, CajaDeNodo> = { ...nodes };
-  for (const { node, pin } of pins) nuevos[node] = { ...nuevos[node]!, ...pin };
+  for (const { node, pin } of pins) {
+    const caja = nuevos[node]!;
+    nuevos[node] = { ...caja, x: pin!.x - caja.width / 2, y: pin!.y - caja.height / 2 };
+  }
   const previo = indiceDeGeometria(vista, { nodes });
   const indice = indiceDeGeometria(vista, { nodes: nuevos });
   const { padre } = indice;

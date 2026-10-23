@@ -4,7 +4,7 @@ ELK (EPL-2.0) es el unico motor verificado que cubre Grupos anidados, puertos, r
 
 ## Decisiones derivadas
 
-- **Pin**: se aplica despues de ELK como posicion relativa al Grupo padre, y se re-enrutan solo las Aristas que tocan Nodos pineados. Se descarta `position` + `semiInteractive` porque solo respeta el orden en la capa, no la posicion. El solape entre Pins es responsabilidad del autor; `validate` puede avisar.
+- **Pin**: se aplica despues de ELK como posicion del centro del Nodo, relativa al Grupo padre (la esquina superior izquierda de la caja es `pin - tamano/2`, asi un Nodo que cambia de tamano crece alrededor de su Pin), y se re-enrutan solo las Aristas que tocan Nodos pineados. Se descarta `position` + `semiInteractive` porque solo respeta el orden en la capa, no la posicion. El solape entre Pins es responsabilidad del autor; `validate` puede avisar.
 - **Drill-down por colapso**: relayout de la Vista completa con `hierarchyHandling: INCLUDE_CHILDREN`, Aristas a Nodos ocultos agregadas sobre el Grupo cerrado, sin `considerModelOrder`; estabilidad visual por compensacion de camara (el Grupo tocado no se mueve en pantalla) mas morph animado entre la geometria anterior y la nueva. Se descarta `SEPARATE_CHILDREN` porque pierde precision en Aristas entre Grupos.
 
 ## Consecuencias
@@ -31,3 +31,7 @@ Medidos con `pnpm bench` sobre el generador sintetico; cada cambio se hizo con l
 
 `claveDeLayout` sigue incluyendo los Pins (es la respuesta de vigencia para `sesion`, `cli` y `export`), pero el shell ya no repite ELK al moverlos. `layout` expone `claveDeEstructura` (la clave sin Pins) y `aplicarPinsAGeometria` (el paso post-ELK de `layoutView`, sincrono y con el mismo resultado). La cache del shell guarda la geometria sin Pins por clave de estructura; al llegar una Vista con otros Pins se aplican sobre la geometria cacheada, sin llamar al adaptador. Al adaptador se le pide siempre la Vista sin Pins. La cache ya no se descarta al cambiar la Fuente (la clave de estructura cubre lo que mueve ELK); solo al cambiar el adaptador.
 
+
+## Enmienda: el Pin ancla el centro (#26, spec #24)
+
+El Pin pasa de la esquina superior izquierda al centro de la caja (ADR 0008). `aplicarPins` coloca la caja en `x = pin.x - ancho/2`, `y = pin.y - alto/2`; el resto del contrato (post-ELK, re-enrutado de las Aristas que tocan Nodos pineados, clave de estructura sin Pins, clave de layout con Pins) no cambia. Como el centro no depende del tamano, un cambio de Tema que redimensione el Nodo no lo mueve ni invalida su Pin. Migracion: un Pin antiguo `(x, y)` equivale a `(x + ancho/2, y + alto/2)` con las Metricas vigentes; el repo no tenia `.dg` con Pins en ejemplos, solo fixtures de prueba, que se reescriben.

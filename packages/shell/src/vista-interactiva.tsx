@@ -80,7 +80,7 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
   onSelectionChange?: (ids: string[]) => void;
   /**
    * Habilita arrastrar Nodos (solo bajo `dev`; sin ella, arrastrar un Nodo mueve la camara). Al soltar avisa
-   * la posicion nueva del Nodo, relativa a su Grupo padre y en unidades de la geometria, como un Pin. El Nodo
+   * el centro nuevo del Nodo (coordenada de Pin), relativo a su Grupo padre y en unidades de la geometria, como un Pin. El Nodo
    * se queda en la posicion soltada hasta que llega otra geometria; si el aviso devuelve una promesa que resuelve
    * `false` (o rechaza), vuelve a su sitio. Un arrastre no selecciona ni navega.
    */
