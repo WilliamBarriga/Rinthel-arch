@@ -11,8 +11,8 @@ import type { PuertoDeMensajes, Peticion, Respuesta } from './layout-en-worker';
 /** Atiende las peticiones de `adaptadorDeWorker` en `puerto` con `layoutView`. En un Worker: `servirLayout(self)`. */
 export function servirLayout(puerto: PuertoDeMensajes, opciones: OpcionesDeLayout = {}): void {
   puerto.onmessage = ({ data }) => {
-    const { id, vista, tema } = data as Peticion;
-    layoutView(vista, tema, opciones).then(
+    const { id, vista, tema, medidas } = data as Peticion;
+    layoutView(vista, tema, { ...opciones, ...(medidas !== undefined && { medidas }) }).then(
       (geometria) => puerto.postMessage({ id, geometria } satisfies Respuesta),
       (error: unknown) => puerto.postMessage({ id, error: error instanceof Error ? error.message : String(error) } satisfies Respuesta),
     );

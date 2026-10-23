@@ -11,6 +11,8 @@
 import type { Atributo, NodoResuelto, Tema } from 'canonico';
 
 import { CATALOGO } from './catalogo';
+import { anchoDeTexto } from './medicion';
+import type { MedicionDeMetricas, MedidasDeTexto } from './medicion';
 import type { DefinicionDePrimitiva, NombreDeSlot } from './catalogo';
 import { cascada } from './parches';
 import type { CapaDeTema } from './parches';
@@ -22,8 +24,12 @@ export interface Metricas {
   fontSize: number;
   /** Ancho medio de un caracter, relativo al tamano. */
   factorDeAncho: number;
-  /** Familias del Tema; solo para la clave de layout. */
+  /** Familias del Tema; entran en la clave de layout y dicen con que familia se mide cada Slot. */
   fuentes: Record<string, string>;
+  /** Origen de las medidas de texto (estimado o medido, con el hash de cada fuente); entra en la clave de layout. */
+  medicion: MedicionDeMetricas;
+  /** Anchos medidos por `claveDeTexto`; ausente al estimar. No entra en la clave (ver `claveDeMetricas`). */
+  anchos?: Readonly<Record<string, number>>;
   /** Slots del Nodo que el Tema muestra, en orden visual. */
   slots: readonly NombreDeSlot[];
   /** La forma del Nodo exige una caja cuadrada (p. ej. `circle`); sale de la regla de caja minima de las Primitivas. */
@@ -64,13 +70,15 @@ function tamanoDeTexto(fontSize: string | undefined): number {
   return Number.isFinite(declarado) && declarado > 0 ? declarado : TAMANO_DE_TEXTO_POR_DEFECTO;
 }
 
-function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[]): Metricas {
+function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas?: MedidasDeTexto): Metricas {
   const fontSize = tamanoDeTexto(resuelto.tokens.fontSize);
   const proporcional = !/mono/i.test(resuelto.fonts.body);
   return {
     fontSize,
     factorDeAncho: proporcional ? 0.55 : 0.6,
     fuentes: resuelto.fonts,
+    medicion: medidas === undefined ? { nivel: 'estimado', fuentes: {} } : { nivel: 'medido', fuentes: medidas.fuentes },
+    ...(medidas !== undefined && { anchos: medidas.anchos }),
     slots: resuelto.nodo.slots,
     cajaCuadrada: pila.some((capa) => (CATALOGO[capa.primitiva.tipo] as DefinicionDePrimitiva).cajaMinima === 'cuadrado'),
     anchoMinimo: 120,
@@ -107,13 +115,13 @@ export interface TablaDeMetricas {
   etiqueta: Metricas;
 }
 
-export function tablaDeMetricas(tema: Tema): TablaDeMetricas {
+export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto): TablaDeMetricas {
   const resuelto = resolverTema(tema);
-  const base = entradaDe(resuelto, cascada(resuelto));
+  const base = entradaDe(resuelto, cascada(resuelto), medidas);
   const claveBase = JSON.stringify(base);
   const tipos: Record<string, Metricas> = {};
   for (const tipo of Object.keys(resuelto.nodo.tipos).sort()) {
-    const entrada = entradaDe(resuelto, cascada(resuelto, { tipo }));
+    const entrada = entradaDe(resuelto, cascada(resuelto, { tipo }), medidas);
     if (JSON.stringify(entrada) !== claveBase) tipos[tipo] = entrada;
   }
   return { base, tipos, grupoAbierto: base, grupoColapsado: base, etiqueta: base };
@@ -143,7 +151,7 @@ export const comoTabla = (m: Metricas | TablaDeMetricas): TablaDeMetricas => ('g
 
 /** Parte de la clave de estructura que aportan las Metricas: igual si y solo si ningun elemento cambia de caja. */
 export function claveDeMetricas(tabla: TablaDeMetricas): string {
-  return JSON.stringify(tabla);
+  return JSON.stringify(tabla, (clave, valor: unknown) => (clave === 'anchos' ? undefined : valor));
 }
 
 /**
@@ -167,7 +175,7 @@ export function textoDeAtributo(atributo: Atributo): string {
 export function tamanoDeEtiqueta(texto: string, metricas: Metricas): { width: number; height: number } {
   const tamano = metricas.fontSize * metricas.escalaEtiqueta;
   return {
-    width: Math.ceil(texto.length * tamano * metricas.factorDeAncho) + metricas.holguraDeEtiqueta,
+    width: Math.ceil(anchoDeTexto(metricas, metricas.fuentes['body']!, tamano, texto)) + metricas.holguraDeEtiqueta,
     height: Math.ceil(tamano * metricas.altoDeEtiqueta),
   };
 }

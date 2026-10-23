@@ -10,6 +10,7 @@
 import type { Atributo } from 'canonico';
 
 import type { NombreDeSlot } from './catalogo';
+import { anchoDeTexto } from './medicion';
 import { textoDeAtributo } from './metricas';
 import type { Metricas } from './metricas';
 
@@ -49,9 +50,9 @@ function apilar(metricas: Metricas, filas: number, ancho: number): { slots: Colo
  * mostrados; el alto, de la suma de sus rectangulos.
  */
 export function colocarNodo(titulo: string, atributos: readonly Atributo[], metricas: Metricas): ColocacionDeNodo {
-  const { fontSize, factorDeAncho, escalaAtributo } = metricas;
-  const delTitulo = metricas.slots.includes('title') ? titulo.length * fontSize * factorDeAncho : 0;
-  const deAtributos = atributos.map((a) => textoDeAtributo(a).length * fontSize * escalaAtributo * factorDeAncho);
+  const { fontSize, escalaAtributo, fuentes } = metricas;
+  const delTitulo = metricas.slots.includes('title') ? anchoDeTexto(metricas, fuentes['body']!, fontSize, titulo) : 0;
+  const deAtributos = atributos.map((a) => anchoDeTexto(metricas, fuentes['mono']!, fontSize * escalaAtributo, textoDeAtributo(a)));
   const ancho = Math.max(metricas.anchoMinimo, Math.ceil(Math.max(delTitulo, ...deAtributos) + metricas.paddingHorizontal));
   if (!metricas.cajaCuadrada) return colocarEnCaja(metricas, atributos.length, ancho);
   // Forma que pide un cuadrado (circulo): el lado contiene el contenido en ambos ejes.
