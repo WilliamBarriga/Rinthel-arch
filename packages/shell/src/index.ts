@@ -29,6 +29,11 @@
  * devuelve el `ElementoSeleccionable` superior (`{tipo: nodo|arista|etiqueta|atributo, id}`) o
  * `undefined`; `cajaDeElemento` da su caja en el lienzo; `seleccionar(seleccion, elemento, modo)`
  * (`reemplazar|agregar|quitar|alternar`) es el reductor de la `Seleccion`, inmutable.
+ * Ruta y foco (ADR 0008): el shell calcula `en-ruta`, `atenuado` y `foco` y los pasa por `estados`; render solo los pinta.
+ * Ruta: `route` (ids de Nodos en orden) o, sin ella, la ruta mas corta entre dos Nodos seleccionados (`rutaMasCorta`);
+ * sus Nodos y las Aristas entre consecutivos van `en-ruta` y el resto `atenuado`. Teclado: el lienzo es focalizable
+ * (`tabIndex` 0); Tab y Shift+Tab recorren Nodos y Grupos en orden del Modelo (en los extremos sueltan el foco al
+ * navegador), las flechas saltan por Aristas al vecino, Enter o Espacio colapsa o abre el Grupo con foco.
  * Hover y fantasma: el raton sobre un elemento lo dibuja en `hover`; el Nodo que se arrastra, en `fantasma`.
  * `issues` y `toasts` se dibujan dentro del lienzo con clases `rd-*` y las variables del Tema.
  * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con

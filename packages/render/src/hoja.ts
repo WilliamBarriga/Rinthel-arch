@@ -10,6 +10,7 @@
 import type { CapaPintada, NombreDePrimitiva } from 'tema';
 
 import { limpiarValorCss, num } from './elemento';
+import { aspectoDeEstado } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 
 /** Declaraciones CSS de una Capa: propiedad -> valor. */
@@ -52,7 +53,7 @@ function huella(texto: string): string {
 }
 
 function declaracionesDeEstado(estilo: Estilo, estado: EstadoVisual): Declaraciones {
-  const { color, ancho, trazo, opacidad } = estilo.estados[estado];
+  const { color, ancho, trazo, opacidad } = aspectoDeEstado(estilo, estado);
   return {
     border: `${px(ancho)} ${trazo === undefined ? 'solid' : 'dashed'} ${css(color)}`,
     ...(opacidad !== 1 && { opacity: num(opacidad) }),
@@ -81,7 +82,8 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-icono', { position: 'absolute' }],
     ['& .rd-control', { position: 'absolute', 'text-align': 'center', cursor: 'pointer', 'font-family': css(estilo.fuenteMono) }],
     ['& .rd-estado', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'none', 'border-radius': radio }],
-    ...(Object.keys(estilo.estados) as EstadoVisual[]).map((estado): [string, Declaraciones] => [`& .rd-estado[data-state="${estado}"]`, declaracionesDeEstado(estilo, estado)]),
+    ['& [data-atenuado]', { opacity: num(estilo.estados.atenuado.opacidad) }],
+    ...(Object.keys(estilo.estados) as EstadoVisual[]).filter((estado) => estado !== 'atenuado').map((estado): [string, Declaraciones] => [`& .rd-estado[data-state="${estado}"]`, declaracionesDeEstado(estilo, estado)]),
   ];
 }
 

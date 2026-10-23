@@ -10,9 +10,12 @@ import { estiloResuelto, metricasDe, resolverTema } from 'tema';
 import type { Metricas, Pintura } from 'tema';
 
 /** Estado visual de un elemento dibujado, ademas de su aspecto normal. */
-export type EstadoVisual = 'seleccionado' | 'hover' | 'fantasma';
+export type EstadoVisual = 'seleccionado' | 'hover' | 'fantasma' | 'en-ruta' | 'atenuado' | 'foco';
 
-/** Contorno de un estado: color, grosor, trazo discontinuo opcional y opacidad. */
+/** Grosor minimo del anillo de foco: el nucleo lo garantiza, ningun Estilo lo quita (ADR 0008). */
+export const ANILLO_DE_FOCO_MINIMO = 2;
+
+/** Contorno de un estado: color, grosor, trazo discontinuo opcional y opacidad. En `atenuado` solo cuenta `opacidad`: la del elemento entero. */
 export interface AspectoDeEstado {
   color: string;
   ancho: number;
@@ -91,9 +94,19 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
       seleccionado: { color: acento, ancho: 3, opacidad: 1 },
       hover: { color: acento, ancho: 2, opacidad: 0.6 },
       fantasma: { color: tokens.border, ancho: 2, trazo: '4 3', opacidad: 0.7 },
+      'en-ruta': { color: acento, ancho: 3, opacidad: 1 },
+      atenuado: { color: tokens.border, ancho: 0, opacidad: 0.3 },
+      foco: { color: acento, ancho: 3, opacidad: 1 },
     },
     glifos: { expandido: '-', colapsado: '+' },
   };
+}
+
+/** Aspecto de un estado tal como se dibuja: el anillo de foco nunca baja del minimo ni es invisible. */
+export function aspectoDeEstado(estilo: Estilo, estado: EstadoVisual): AspectoDeEstado {
+  const aspecto = estilo.estados[estado];
+  if (estado !== 'foco') return aspecto;
+  return { ...aspecto, ancho: Math.max(aspecto.ancho, ANILLO_DE_FOCO_MINIMO), opacidad: 1 };
 }
 
 const COLOR_DE_ERROR_POR_DEFECTO = '#dc2626';
