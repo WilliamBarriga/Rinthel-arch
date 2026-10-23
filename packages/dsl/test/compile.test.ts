@@ -35,7 +35,7 @@ describe('compile: Nodos y specification', () => {
         ],
       },
       views: [],
-      themes: [TEMA_NEUTRO],
+      themes: expect.any(Array),
     });
   });
 
@@ -788,7 +788,7 @@ describe('compile: Tema', () => {
     const { canonico, issues } = compile({ 'main.dg': base });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes).toEqual([TEMA_NEUTRO]);
+    expect(canonico?.themes.map((t) => t.name)).toEqual(['neutral', 'neutral-dark', 'alto-contraste']);
   });
 
   it('compila palette, fonts y tokens a un objeto plano', () => {
@@ -826,16 +826,15 @@ describe('compile: Tema', () => {
     const { canonico, issues } = compile({ 'main.dg': `${base} theme t extends neutral { palette { teal "#008080" } }` });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 't')?.palette).toEqual({
-      ...TEMA_NEUTRO.palette,
-      teal: '#008080',
-    });
+    const neutral = canonico?.themes.find((t) => t.name === 'neutral');
+    expect(canonico?.themes.find((t) => t.name === 't')).toEqual({ ...neutral, name: 't', palette: { ...neutral?.palette, teal: '#008080' } });
   });
 
   it('compila el bloque node a una pila de Capas y a los Slots, con los defectos del catalogo', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}
-        theme ejemplo extends neutral {
+        theme ejemplo {
+          palette { blue "#2563eb"  gray "#6b7280" }
           node {
             layer forma rect
             layer relleno solid { color blue }
@@ -862,7 +861,8 @@ describe('compile: Tema', () => {
   it('compila el bloque edge: pila de trazos con glow, marcadores y etiqueta con modelo de caja', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}
-        theme metro extends neutral {
+        theme metro {
+          palette { blue "#2563eb"  gray "#6b7280" }
           edge {
             layer glow line { color ORIGEN/0.3  width 8 }
             layer principal line { color ORIGEN  width 2  style dashed  corner chamfer }
@@ -888,7 +888,8 @@ describe('compile: Tema', () => {
   it('el bloque edge rechaza Primitivas de Nodo, valores invalidos y marcadores desconocidos con sugerencia', () => {
     const { issues } = compile({
       'main.dg': `${base}
-        theme malo extends neutral {
+        theme malo {
+          palette { blue "#2563eb"  gray "#6b7280" }
           edge {
             layer a solid { color blue }
             layer b line { color blue  style rayado }
@@ -904,7 +905,7 @@ describe('compile: Tema', () => {
   it('un Slot lleva su estilo de texto en el bloque slots', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}
-        theme t extends neutral { node { slots { title { weight 700  transform uppercase }  attrs } } }`,
+        theme t { node { slots { title { weight 700  transform uppercase }  attrs } } }`,
     });
 
     expect(issues).toEqual([]);
@@ -917,7 +918,8 @@ describe('compile: Tema', () => {
   it('compila las Familias de efectos con sus defectos, y `seed N` en tokens', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}
-        theme efectos extends neutral {
+        theme efectos {
+          palette { blue "#2563eb"  gray "#6b7280" }
           tokens { seed 7 }
           node {
             layer sombra shadow { color gray  blur 0  x 4  y 4 }
@@ -936,13 +938,13 @@ describe('compile: Tema', () => {
   });
 
   it('un giro de mas de 3 grados es un error, no se recorta', () => {
-    const { issues } = compile({ 'main.dg': `${base} theme excedido extends neutral { node { layer ladeo tilt { degrees 4 } } }` });
+    const { issues } = compile({ 'main.dg': `${base} theme excedido { node { layer ladeo tilt { degrees 4 } } }` });
 
     expect(issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
   });
 
   it('los bloques nodeStyles y edgeStyles ya no existen en el DSL', () => {
-    const { issues } = compile({ 'main.dg': `${base} theme viejo extends neutral { nodeStyles { servicio { fill red } } }` });
+    const { issues } = compile({ 'main.dg': `${base} theme viejo { nodeStyles { servicio { fill red } } }` });
 
     expect(issues.map((i) => i.code)).toContain('E_SYNTAX_ERROR');
   });

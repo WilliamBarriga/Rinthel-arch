@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { compile } from 'dsl';
 
 const base = 'specification { node servicio { color blue } }  model { servicio a }';
-const tema = (cuerpo: string, cabecera = 'theme t extends neutral') => compile({ 'main.dg': `${base}\n${cabecera} { ${cuerpo} }` });
+const tema = (cuerpo: string, cabecera = 'theme t') => compile({ 'main.dg': `${base}\n${cabecera} { ${cuerpo} }` });
 const nodoDe = (resultado: ReturnType<typeof compile>, nombre = 't') => resultado.canonico?.themes.find((t) => t.name === nombre)?.['nodo'] as Record<string, any>;
 
 const CAPAS = `
@@ -49,7 +49,7 @@ describe('compile: animacion declarativa del Tema', () => {
   });
 
   it('motion none en un estado o en un hijo quita el Movimiento heredado', () => {
-    const padre = `theme p extends neutral { palette { blue "#00f" }  node { ${CAPAS.replace('width 2 }', 'width 2  motion respiracion }')} } }`;
+    const padre = `theme p { palette { blue "#00f" }  node { ${CAPAS.replace('width 2 }', 'width 2  motion respiracion }')} } }`;
     const resultado = compile({ 'main.dg': `${base}\n${padre}\ntheme h extends p { node { layer acento { motion none } } }` });
 
     expect(resultado.issues).toEqual([]);
@@ -58,7 +58,7 @@ describe('compile: animacion declarativa del Tema', () => {
   });
 
   it('un hijo hereda la animacion del Nodo y puede cambiarla', () => {
-    const padre = `theme p extends neutral { node { transition 100ms  stagger 40ms } }`;
+    const padre = `theme p { node { transition 100ms  stagger 40ms } }`;
     const resultado = compile({ 'main.dg': `${base}\n${padre}\ntheme h extends p { node { stagger 90ms } }` });
 
     expect(resultado.issues).toEqual([]);

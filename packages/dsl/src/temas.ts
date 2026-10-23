@@ -20,6 +20,7 @@ import { ESTADOS, TEMA_NEUTRO, aplicarOps, construirSlots, opTocaMetricas } from
 import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, TemaResuelto } from 'tema';
 
 import type { NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeUse } from './generated/ast';
+import { ARCHIVO_INCORPORADOS } from './incorporados';
 import { aRango, issueConSugerencia, rangoDeIndice } from './posiciones';
 import { compilarArista, compilarTextoDeSlots } from './temas-arista';
 import { compilarAnimacionDeNodo } from './temas-animacion';
@@ -71,14 +72,14 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
   for (const declarado of declarados) {
     const { name } = declarado.ast;
     const original = porNombre.get(name);
-    if (name === TEMA_NEUTRO.name || original !== undefined) {
+    if (original !== undefined) {
       issues.push({
         code: CODIGOS.E_DUPLICATE_THEME,
         severity: 'error',
         file: declarado.archivo,
         ...declarado.nombre.start,
         message: `Tema duplicado '${name}'`,
-        ...(original !== undefined && {
+        ...(original.archivo !== ARCHIVO_INCORPORADOS && {
           related: [{ file: original.archivo, ...original.nombre.start, message: `Primera declaracion de '${name}'` }],
         }),
       });
@@ -104,8 +105,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     });
   }
 
-  const neutro: Compilado = { tema: TEMA_NEUTRO, origenes: new Map() };
-  const resueltos = new Map<string, Compilado>([[TEMA_NEUTRO.name, neutro]]);
+  const resueltos = new Map<string, Compilado>();
   const enCurso = new Set<string>();
   const fallidos = new Set<string>();
   const resolver = (declarado: TemaDeclarado): Compilado | undefined => {
@@ -118,7 +118,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     let base: Compilado | undefined;
     if (parent !== undefined) {
       const padre = porNombre.get(parent);
-      base = parent === TEMA_NEUTRO.name ? neutro : padre && resolver(padre);
+      base = padre && resolver(padre);
       if (base === undefined) {
         const enCiclo = padre !== undefined;
         issues.push({
@@ -136,7 +136,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       }
     }
 
-    const origen = (base ?? neutro).tema;
+    const origen = base?.tema ?? TEMA_NEUTRO;
     const tema: TemaResuelto = {
       name,
       palette: { ...(base?.tema.palette ?? {}) },
