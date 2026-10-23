@@ -5,7 +5,7 @@
  * `Sesion`; aqui solo viven los adaptadores (HTTP, observador de disco).
  *
  * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),
- * `/api/estado` (JSON, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/pin` (mover un Pin, ADR 0005), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
+ * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
  * envia el estado al conectar y tras cada recompilacion).
  *
  * `iniciarDev(OpcionesDeDev) -> ServidorDev` es la entrada programatica (el comando solo parsea y la llama).
@@ -14,9 +14,9 @@
  * `observar`, `shell` y `escribir`. `ServidorDev`: `url` y `cerrar()` (cierra conexiones, libera el
  * puerto y deja de observar).
  * Seguridad: solo escucha en 127.0.0.1 y responde 403 a cualquier peticion cuyo `Host` no sea
- * `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding). `POST /api/pin` solo escribe archivos
- * del Workspace, bajo su raiz y de forma atomica; valida el cuerpo con `intencionDePinSchema` de
- * `canonico` (400 con `Se esperaba { vista, nodo, x, y, hash }`) y traduce cada `MotivoDeRechazo` a su
+ * `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding). Las dos rutas de edicion solo escriben archivos
+ * del Workspace, bajo su raiz y de forma atomica; validan el cuerpo con `intencionSchema` / `intencionDePinSchema` de
+ * `canonico` (400; `/api/pin` con `Se esperaba { vista, nodo, x, y, hash }`) y traduce cada `MotivoDeRechazo` a su
  * Estado con la tabla unica `SALIDA_DE_RECHAZO` (409 solo `hash-desactualizado`, 422 el resto).
  * Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (sin dejar el
  * observador activo) y lanza si la lectura inicial falla; las lecturas fallidas posteriores se ignoran
@@ -34,15 +34,15 @@ import { watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { combineIconProviders, genericIcons, intencionDePinSchema, workspaceIcons } from 'canonico';
-import type { Issue } from 'canonico';
+import { combineIconProviders, genericIcons, intencionDePinSchema, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
+import type { EstadoDeDev, Intencion, Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { abrirSesion, archivoDeVista, editarPin, hashDeContenido } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, archivoDeVista, hashDeContenido } from 'sesion';
 import type { Sesion } from 'sesion';
 
 import { empaquetarShellDev } from './dev-shell';
 import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
-import { cambiosDeEdicion, leerConTemas, uso as usoComun } from './sesion-cli';
+import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
 
@@ -132,20 +132,16 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   /** Ultima Sesion sin errores de compilacion y los archivos con que se abrio. */
   let buena: { sesion: Sesion; archivos: ArchivosDelWorkspace } | undefined = actual.fuente === undefined ? undefined : { sesion: actual, archivos };
   let issues: Issue[] = await actual.diagnosticar();
-  let estado = serializar();
+  let estado = construirEstado();
 
   const clientes = new Set<ServerResponse>();
 
-  function serializar(): string {
+  /** Estado vigente con la forma de `estadoDeDevSchema` (`canonico`), el esquema unico servidor-navegador. */
+  function construirEstado(): EstadoDeDev {
     const fuente = buena?.sesion.fuente;
     const proveedor = buena === undefined ? undefined : combineIconProviders(workspaceIcons(buena.archivos), genericIcons());
-    const iconos = Object.fromEntries(
-      (proveedor?.keys().sort() ?? []).flatMap((clave) => {
-        const svg = proveedor?.resolve(clave);
-        return svg === undefined ? [] : [[clave, svg] as const];
-      }),
-    );
-    return JSON.stringify({
+    const iconos = proveedor === undefined ? {} : serializarIconos(proveedor);
+    return {
       version,
       fuente,
       iconos,
@@ -161,11 +157,11 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         ...issue,
         href: `vscode://file/${raizAbsoluta}/${issue.file}:${issue.line}:${issue.column}`,
       })),
-    });
+    };
   }
 
   const empujar = (): void => {
-    for (const cliente of clientes) cliente.write(`data: ${estado}\n\n`);
+    for (const cliente of clientes) cliente.write(`data: ${JSON.stringify(estado)}\n\n`);
   };
 
   // Recompilaciones serializadas: si llega un cambio durante una, se repite al terminar.
@@ -193,7 +189,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         if (sesion.fuente !== undefined) buena = { sesion, archivos: nuevos };
         issues = nuevosIssues;
         version += 1;
-        estado = serializar();
+        estado = construirEstado();
         empujar();
       } while (pendiente);
     } finally {
@@ -213,8 +209,12 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     res.end(JSON.stringify(cuerpo));
   };
 
-  /** `POST /api/pin`: mueve un Pin escribiendo el .dg (ADR 0005). Lee el disco fresco y lo valida antes de escribir. */
-  const moverPin = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  /**
+   * Puerta de edicion unica (ADR 0007): `POST /api/edit` recibe cualquier Intencion y `POST /api/pin`
+   * (compatibilidad, cuerpo sin `tipo`) la traduce a `mover-pin`. `dev` solo hace de enrutador HTTP:
+   * valida origen y cuerpo, delega en `aplicarAlWorkspace` de `sesion` y traduce el motivo con `SALIDA_DE_RECHAZO`.
+   */
+  const editar = async (req: IncomingMessage, res: ServerResponse, leerIntencion: (cuerpo: unknown) => Intencion | undefined, esperado: string): Promise<void> => {
     const origen = req.headers.origin;
     const { port } = servidor.address() as AddressInfo;
     if (origen !== undefined && origen !== `http://127.0.0.1:${port}` && origen !== `http://localhost:${port}`) {
@@ -232,45 +232,45 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       responder(res, 400, { ok: false, mensaje: 'JSON invalido' });
       return;
     }
-    const parseo = intencionDePinSchema.safeParse(cuerpo);
-    if (!parseo.success) {
-      responder(res, 400, { ok: false, mensaje: 'Se esperaba { vista, nodo, x, y, hash }' });
+    const intencion = leerIntencion(cuerpo);
+    if (intencion === undefined) {
+      responder(res, 400, { ok: false, mensaje: esperado });
       return;
     }
-    let disco: ArchivosDelWorkspace;
-    let propios: ArchivosDelWorkspace;
+    // Adaptador del Workspace: lee fresco del disco y escribe solo bajo la raiz (los Temas de `--theme-path` no se tocan).
+    let resultado;
     try {
-      propios = leerBase(workspace);
-      disco = leerConTemas(leerBase, workspace, temas);
-    } catch (error) {
-      responder(res, 500, { ok: false, mensaje: (error as Error).message });
-      return;
-    }
-    // El Gesto de `sesion` fusiona calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
-    const gesto = editarPin(disco, parseo.data);
-    if (!gesto.ok) {
-      responder(res, SALIDA_DE_RECHAZO[gesto.motivo].estadoHttp, rechazoDeEdicion(gesto.motivo, gesto.mensaje, gesto.file));
-      return;
-    }
-    // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.
-    const { cambiados, fuera } = cambiosDeEdicion(disco, gesto.archivos, propios);
-    if (fuera !== undefined) {
-      responder(
-        res,
-        SALIDA_DE_RECHAZO['archivo-desconocido'].estadoHttp,
-        rechazoDeEdicion('archivo-desconocido', `'${fuera}' no pertenece al Workspace`, fuera),
+      resultado = aplicarAlWorkspace(
+        {
+          leer: () => ({ propios: leerBase(workspace), disco: leerConTemas(leerBase, workspace, temas) }),
+          escribir: (ruta, texto) => escribir(workspace, ruta, texto),
+        },
+        intencion,
       );
-      return;
-    }
-    try {
-      for (const ruta of cambiados) escribir(workspace, ruta, gesto.archivos[ruta] as string);
     } catch (error) {
       responder(res, 500, { ok: false, mensaje: (error as Error).message });
+      return;
+    }
+    if (!resultado.ok) {
+      responder(res, SALIDA_DE_RECHAZO[resultado.motivo].estadoHttp, rechazoDeEdicion(resultado.motivo, resultado.mensaje, resultado.file));
       return;
     }
     await recompilar();
     responder(res, 200, { ok: true, version });
   };
+
+  const comoIntencion = (cuerpo: unknown): Intencion | undefined => {
+    const r = intencionSchema.safeParse(cuerpo);
+    return r.success ? r.data : undefined;
+  };
+  const comoMoverPin = (cuerpo: unknown): Intencion | undefined => {
+    const r = intencionDePinSchema.safeParse(cuerpo);
+    return r.success ? { tipo: 'mover-pin', ...r.data } : undefined;
+  };
+  const rutasDeEdicion = {
+    '/api/edit': { leer: comoIntencion, esperado: 'Se esperaba una Intencion { tipo, ... }' },
+    '/api/pin': { leer: comoMoverPin, esperado: 'Se esperaba { vista, nodo, x, y, hash }' },
+  } as const;
 
   const servidor = createServer((req, res) => {
     // Contra DNS rebinding: solo se atiende a quien llega por 127.0.0.1 o localhost con el puerto del servidor.
@@ -281,12 +281,13 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       return;
     }
     const ruta = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
-    if (ruta === '/api/pin') {
+    const edicion = ruta === '/api/edit' || ruta === '/api/pin' ? rutasDeEdicion[ruta] : undefined;
+    if (edicion !== undefined) {
       if (req.method !== 'POST') {
         res.setHeader('allow', 'POST');
         responder(res, 405, { ok: false, mensaje: 'Metodo no permitido' });
       } else {
-        moverPin(req, res).catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
+        editar(req, res, edicion.leer, edicion.esperado).catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
       }
     } else if (ruta === '/') {
       cabecera(res, 'text/html');
@@ -299,12 +300,12 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       res.end(bundles.worker);
     } else if (ruta === '/api/estado') {
       cabecera(res, 'application/json');
-      res.end(estado);
+      res.end(JSON.stringify(estado));
     } else if (ruta === '/eventos') {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       clientes.add(res);
       res.on('close', () => clientes.delete(res));
-      res.write(`data: ${estado}\n\n`);
+      res.write(`data: ${JSON.stringify(estado)}\n\n`);
     } else if (ruta.startsWith('/api/vista/')) {
       const id = decodeURIComponent(ruta.slice('/api/vista/'.length));
       (buena?.sesion.geometria(id) ?? Promise.resolve(undefined)).then(

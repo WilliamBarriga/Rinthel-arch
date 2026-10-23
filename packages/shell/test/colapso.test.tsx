@@ -170,4 +170,29 @@ describe('colapso y expansion', () => {
     expect(medio).not.toBeNull();
     expect(Number(medio)).toBeLessThan(1);
   });
+
+  it('morph con reloj inyectado: no usa requestAnimationFrame y termina al cumplir la duracion', async () => {
+    const raf = vi.fn();
+    vi.stubGlobal('requestAnimationFrame', raf);
+    const cuadros: Array<(ahoraMs: number) => void> = [];
+    const clock = (cuadro: (ahoraMs: number) => void) => {
+      cuadros.push(cuadro);
+      return () => {};
+    };
+    const { container } = montar({ morphMs: 100, clock });
+    await waitFor(() => expect(ids(container)).toEqual(['c', 'g']));
+    const antes = xEnPantalla(container, 'g');
+
+    alternar(container, 'g');
+    await waitFor(() => expect(ids(container)).toContain('g.a'));
+    const opacidad = () => container.querySelector('[data-id="g.a"] [data-part="nodo"]')?.getAttribute('opacity');
+    await act(async () => cuadros.shift()!(1000)); // inicio: t = 0
+    await act(async () => cuadros.shift()!(1050)); // mitad
+    expect(xEnPantalla(container, 'g')).toBeCloseTo(antes, 5);
+    expect(Number(opacidad())).toBeGreaterThan(0);
+    expect(Number(opacidad())).toBeLessThan(1);
+    await act(async () => cuadros.shift()!(1100)); // fin
+    expect(opacidad()).toBeNull();
+    expect(raf).not.toHaveBeenCalled();
+  });
 });

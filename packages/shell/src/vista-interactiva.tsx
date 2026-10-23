@@ -3,30 +3,38 @@
  * Nodo y filtrado por viewport. El estado de camara y seleccion es controlable
  * por props; sin ellas el componente guarda el suyo.
  */
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import type { ReactElement } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { MouseEvent as EventoDeRaton, ReactElement } from 'react';
 import { select } from 'd3-selection';
-import { zoom, zoomIdentity, zoomTransform } from 'd3-zoom';
-import type { D3ZoomEvent, ZoomTransform } from 'd3-zoom';
+import { zoom, zoomTransform } from 'd3-zoom';
+import type { D3ZoomEvent } from 'd3-zoom';
 
 import { resolveView } from 'canonico';
 import type { EstadoDeColapso, IconProvider, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
-import { claveDeLayout } from 'layout';
+import { claveDeLayout, indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
-import { Diagram } from 'render';
-import type { Camara } from 'render';
+import { Diagram, resolverEstilo } from 'render';
+import type { Camara, Estados } from 'render';
 
-import { MAX_NODOS_VISIBLES, alternarGrupo, compensarCamara, contarNodosVisibles, interpolarGeometria, visibilidadDeMorph } from './colapso';
+import { aCamara, aTransform, compensarCamara, encuadrar, mismaTransform } from './camara';
+import { EstiloDelChrome, variablesDeChrome } from './chrome';
+import { MAX_NODOS_VISIBLES, alternarGrupo, contarNodosVisibles } from './colapso';
+import { AJUSTES_POR_DEFECTO } from './configuracion';
+import type { AjustesDeInteraccion } from './configuracion';
+import { useControlado } from './controlado';
+import { SELECCION_VACIA, elementoBajo, elementoPorId, seleccionar } from './interaccion';
+import type { Seleccion } from './interaccion';
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
 import { useGeometria } from './geometria';
 import type { Calculo } from './geometria';
-import { useMorph } from './morph';
+import { interpolarGeometria, useMorph, visibilidadDeMorph } from './morph';
+import type { RelojDeCuadros } from './morph';
 import { usePasos } from './pasos';
 import type { PropsDePasos } from './pasos';
 import { useTemaVigente } from './tema-vigente';
 import type { SuscripcionDeTema } from './tema-vigente';
-import { cajasAbsolutas, recortarAlViewport } from './viewport';
+import { recortarAlViewport } from './viewport';
 import { nivelDeDetalle } from './zoom-semantico';
 import type { UmbralesDeDetalle } from './zoom-semantico';
 
@@ -60,8 +68,9 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
   camera?: Camara;
   /** Pan o zoom del usuario: la camara que resulta. */
   onCameraChange?: (camara: Camara) => void;
-  /** Nodo seleccionado controlado; sin ella el componente guarda el suyo. */
+  /** Elemento seleccionado controlado (id de Nodo, de Arista o `nodo#atributo`); sin ella el componente guarda su Seleccion. */
   selected?: string | null;
+  /** Se selecciono un elemento: su id (Nodo, Arista o etiqueta por `idDeArista`, Atributo como `nodo#atributo`). */
   onSelect?: (id: string) => void;
   /**
    * Habilita arrastrar Nodos (solo bajo `dev`; sin ella, arrastrar un Nodo mueve la camara). Al soltar avisa
@@ -76,38 +85,18 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
   detailThresholds?: UmbralesDeDetalle;
   /** Proveedor de iconos de los Nodos (claves de `icon` -> SVG inline); sin el, no se dibujan iconos. */
   icons?: IconProvider;
+  /** Umbrales y margenes de la interaccion (arrastre, acierto de Aristas, escala, encuadre); ver `AjustesDeInteraccion`. */
+  tuning?: Partial<AjustesDeInteraccion>;
+  /** Reloj del morph; por defecto `requestAnimationFrame`. Util en pruebas. */
+  clock?: RelojDeCuadros;
   /** Fallo del adaptador de layout; sin ella el fallo se lanza al renderizar. */
   onError?: (error: Error) => void;
-}
-
-const UMBRAL_DE_ARRASTRE = 3;
-const ESCALA_MIN = 0.05;
-const ESCALA_MAX = 16;
-
-/** Camara que muestra toda la geometria, centrada y con margen; no amplia por encima de 1:1. */
-function encuadrar(geometria: Geometria, ancho: number, alto: number): Camara {
-  const margen = 24;
-  const escala = Math.min(1, ancho / (geometria.width + 2 * margen), alto / (geometria.height + 2 * margen));
-  const [w, h] = [ancho / escala, alto / escala];
-  return { x: (geometria.width - w) / 2, y: (geometria.height - h) / 2, width: w, height: h };
-}
-
-function aCamara(t: ZoomTransform, ancho: number, alto: number): Camara {
-  // `+ 0` normaliza -0 a 0.
-  return { x: -t.x / t.k + 0, y: -t.y / t.k + 0, width: ancho / t.k, height: alto / t.k };
-}
-
-function aTransform(c: Camara, ancho: number): ZoomTransform {
-  const k = ancho / c.width;
-  return zoomIdentity.translate(-c.x * k, -c.y * k).scale(k);
 }
 
 /** Id del Nodo dibujado (`g[data-id]` mas interno) bajo un evento, si lo hay. */
 function idDeNodoBajo(destino: EventTarget | null): string | undefined {
   return (destino as Element | null)?.closest?.('[data-id]')?.getAttribute('data-id') ?? undefined;
 }
-
-const igual = (a: ZoomTransform, b: ZoomTransform): boolean => a.k === b.k && a.x === b.x && a.y === b.y;
 
 /**
  * Vista con drill-down: navega por los `link` de la Vista activa. Cada cambio de
@@ -134,8 +123,10 @@ interface PropsDeVistaActiva extends Omit<VistaInteractivaProps, 'view' | 'cache
 function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const { source, view, layout, width, height, onError, onSelect, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
   const theme = useTemaVigente(props.theme, props.themeUpdates);
-  const [estadoPropio, setEstadoPropio] = useState<EstadoDeColapso>({});
-  const state = props.state ?? estadoPropio;
+  const [state, fijarEstado] = useControlado<EstadoDeColapso>(props.state, {}, props.onStateChange);
+  const ajustes = { ...AJUSTES_POR_DEFECTO, ...props.tuning };
+  const ajustesVigentes = useRef(ajustes);
+  ajustesVigentes.current = ajustes;
   const vista = useMemo(() => {
     const resuelta = resolveView(source, view, state);
     if (resuelta === undefined) throw new Error(`La Vista '${view}' no existe en la Fuente canonica`);
@@ -152,28 +143,23 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     const ancla = pendiente.current;
     pendiente.current = undefined;
     if (previo === undefined || ancla === undefined) return;
-    const antes = cajasAbsolutas(previo.vista, previo.geometria).get(ancla);
-    const despues = cajasAbsolutas(nuevo.vista, nuevo.geometria).get(ancla);
+    const antes = indiceDeGeometria(previo.vista, previo.geometria).cajas.get(ancla);
+    const despues = indiceDeGeometria(nuevo.vista, nuevo.geometria).cajas.get(ancla);
     if (antes === undefined || despues === undefined) return;
-    const actual = ultimo.current;
-    const compensada = compensarCamara(actual.camera ?? camaraPropia.current, antes, despues);
-    if (actual.camera === undefined) setPropia(compensada);
-    actual.onCameraChange?.(compensada);
+    fijarCamara(compensarCamara(camaraBase.current, antes, despues));
     morphador.iniciar({ desde: previo.geometria, hasta: nuevo.geometria, ancla });
   };
-  const morphador = useMorph(morphMs);
+  const morphador = useMorph(morphMs, props.clock);
   const calculo = useGeometria({ vista, theme, layout, semilla, invalidar: source, onError, alLlegar });
 
-  // Camara propia: hasta que el usuario (o un colapso) la mueva, encuadra toda la Vista segun la primera geometria.
-  const [movida, setPropia] = useState<Camara | undefined>(undefined);
+  // Camara: controlada por el padre o propia; hasta que el usuario (o un colapso) la mueva, encuadra toda la Vista segun la primera geometria.
+  const [movida, fijarCamara] = useControlado<Camara | undefined>(props.camera, undefined, (nueva) => nueva && ultimo.current.onCameraChange?.(nueva));
   const encuadre = useRef<Camara | undefined>(undefined);
-  if (encuadre.current === undefined && calculo !== undefined) encuadre.current = encuadrar(calculo.geometria, width, height);
-  const propia = movida ?? encuadre.current ?? { x: 0, y: 0, width, height };
-  const camaraPropia = useRef(propia);
-  camaraPropia.current = propia;
-  const camara = props.camera ?? propia;
-  const [seleccionPropia, setSeleccionPropia] = useState<string | null>(null);
-  const seleccionado = props.selected !== undefined ? props.selected : seleccionPropia;
+  if (encuadre.current === undefined && calculo !== undefined) encuadre.current = encuadrar(calculo.geometria, width, height, ajustes.fitMargin);
+  const camara = movida ?? encuadre.current ?? { x: 0, y: 0, width, height };
+  const camaraBase = useRef(camara);
+  camaraBase.current = camara;
+  const [seleccionPropia, setSeleccionPropia] = useState<Seleccion>(SELECCION_VACIA);
 
   const pasos = usePasos(vista, props);
   const visibility = pasos.visibility;
@@ -186,7 +172,6 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const silencio = useRef(false);
   const ultimo = useRef(props);
   ultimo.current = props;
-  const [, reajustar] = useReducer((n: number) => n + 1, 0);
 
   useEffect(() => {
     setDesplazado(undefined);
@@ -208,7 +193,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
       const escalaVigente = (): number => ultimo.current.width / camaraVigente.current.width;
       const alMover = (m: MouseEvent): void => {
         const [px, py] = [m.clientX - x0, m.clientY - y0];
-        if (!movido && Math.hypot(px, py) < UMBRAL_DE_ARRASTRE) return;
+        if (!movido && Math.hypot(px, py) < ajustesVigentes.current.dragThreshold) return;
         movido = true;
         m.preventDefault();
         const k = escalaVigente();
@@ -254,27 +239,23 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
         [0, 0],
         [width, height],
       ])
-      .scaleExtent([ESCALA_MIN, ESCALA_MAX])
+      .scaleExtent([ajustes.minScale, ajustes.maxScale])
       .on('zoom', (evento: D3ZoomEvent<HTMLDivElement, unknown>) => {
         if (silencio.current) return;
         morphador.cancelar();
-        const nueva = aCamara(evento.transform, width, height);
-        const actual = ultimo.current;
-        if (actual.camera === undefined) setPropia(nueva);
-        else reajustar();
-        actual.onCameraChange?.(nueva);
+        fijarCamara(aCamara(evento.transform, width, height));
       });
     select(nodo).call(comp);
     return () => {
       select(nodo).on('.zoom', null);
     };
-  }, [width, height]);
+  }, [width, height, ajustes.minScale, ajustes.maxScale]);
 
   // Lleva d3-zoom a la camara vigente cuando difieren (camara controlada que el padre cambio o ignoro).
   useEffect(() => {
     const nodo = zona.current!;
     const deseada = aTransform(camara, width);
-    if (igual(zoomTransform(nodo), deseada)) return;
+    if (mismaTransform(zoomTransform(nodo), deseada)) return;
     silencio.current = true;
     try {
       comportamiento.current.transform(select(nodo), deseada);
@@ -298,8 +279,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   calculoActual.current = calculo;
   const camaraVista = useMemo<Camara>(() => {
     if (calculo === undefined || mostrado === undefined || morph === undefined) return camara;
-    const final = cajasAbsolutas(calculo.vista, morph.hasta).get(morph.ancla);
-    const ahora = cajasAbsolutas(mostrado.vista, mostrado.geometria).get(morph.ancla);
+    const final = indiceDeGeometria(calculo.vista, morph.hasta).cajas.get(morph.ancla);
+    const ahora = indiceDeGeometria(mostrado.vista, mostrado.geometria).cajas.get(morph.ancla);
     return final === undefined || ahora === undefined ? camara : { ...camara, x: camara.x - final.x + ahora.x, y: camara.y - final.y + ahora.y };
   }, [calculo, mostrado, morph, camara]);
   const visibilidadMostrada = useMemo(
@@ -315,10 +296,17 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     [mostrado, x, y, ancho, alto],
   );
 
-  const marca = useMemo(() => {
-    if (mostrado === undefined || seleccionado === null) return undefined;
-    return cajasAbsolutas(mostrado.vista, mostrado.geometria).get(seleccionado);
-  }, [mostrado, seleccionado]);
+  const seleccion = useMemo<Seleccion>(() => {
+    if (props.selected === undefined) return seleccionPropia;
+    const elemento = props.selected === null ? undefined : elementoPorId(vista, props.selected);
+    return elemento === undefined ? SELECCION_VACIA : [elemento];
+  }, [props.selected, seleccionPropia, vista]);
+  const estados = useMemo<Estados>(() => {
+    const porId: Record<string, ['seleccionado']> = {};
+    for (const elemento of seleccion) porId[elemento.id] = ['seleccionado'];
+    return porId;
+  }, [seleccion]);
+  const estilo = useMemo(() => resolverEstilo(theme), [theme]);
 
   const alternar = (id: string): void => {
     if (arrastrando.current) return;
@@ -331,20 +319,33 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
       return;
     }
     pendiente.current = id;
-    if (props.state === undefined) setEstadoPropio(siguiente);
-    props.onStateChange?.(siguiente);
+    fijarEstado(siguiente);
   };
 
-  const alSeleccionar = (id: string): void => {
-    if (arrastrando.current) return;
-    if (props.selected === undefined) setSeleccionPropia(id);
-    onSelect?.(id);
-    const destino = vista.nodes.find((n) => n.id === id)?.link;
+  const detalle = nivelDeDetalle(width / ancho, props.detailThresholds);
+
+  /** Clic en el diagrama: el nucleo decide que hay bajo el punto, sobre la Vista completa (no la recortada). */
+  const alPulsar = (evento: EventoDeRaton): void => {
+    if (arrastrando.current || mostrado === undefined) return;
+    if ((evento.target as Element).closest('svg') === null) return;
+    const caja = zona.current!.getBoundingClientRect();
+    const k = width / camaraVigente.current.width;
+    const punto = { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k };
+    const elemento = elementoBajo(mostrado.vista, mostrado.geometria, theme, punto, { tolerancia: ajustes.hitTolerance / k, atributos: detalle === 'completo' });
+    if (elemento === undefined) return;
+    const acumula = evento.shiftKey || evento.ctrlKey || evento.metaKey;
+    const siguiente = seleccionar(seleccion, elemento, acumula ? 'alternar' : 'reemplazar');
+    if (props.selected === undefined) setSeleccionPropia(siguiente);
+    if (!siguiente.some((e) => e.tipo === elemento.tipo && e.id === elemento.id)) return;
+    onSelect?.(elemento.id);
+    if (acumula || elemento.tipo !== 'nodo') return;
+    const destino = vista.nodes.find((n) => n.id === elemento.id)?.link;
     if (destino !== undefined && source.views.some((v) => v.id === destino)) props.alEnlazar(destino);
   };
 
   return (
-    <div ref={zona} style={{ position: 'relative', width, height, overflow: 'hidden', touchAction: 'none' }}>
+    <div ref={zona} onClick={alPulsar} className="rd-vista" style={{ ...variablesDeChrome(estilo), width, height }}>
+      <EstiloDelChrome />
       {mostrado !== undefined && recortada !== undefined && (
         <Diagram
           view={recortada}
@@ -354,34 +355,15 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
           width={width}
           height={height}
           camera={camaraVista}
-          detail={nivelDeDetalle(width / ancho, props.detailThresholds)}
-          onSelect={alSeleccionar}
+          detail={detalle}
+          estados={estados}
+          estilo={estilo}
           onToggle={alternar}
           {...(visibilidadMostrada !== undefined && { visibility: visibilidadMostrada })}
         />
       )}
       {pasos.controles}
       {props.migas}
-      {marca !== undefined && seleccionado !== null && (
-        <svg
-          width={width}
-          height={height}
-          viewBox={`${x} ${y} ${ancho} ${alto}`}
-          style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}
-        >
-          <rect
-            data-selected={seleccionado}
-            x={marca.x}
-            y={marca.y}
-            width={marca.width}
-            height={marca.height}
-            rx={6}
-            fill="none"
-            stroke={theme.palette['blue'] ?? theme.tokens['foreground'] ?? 'currentColor'}
-            strokeWidth={3}
-          />
-        </svg>
-      )}
     </div>
   );
 }

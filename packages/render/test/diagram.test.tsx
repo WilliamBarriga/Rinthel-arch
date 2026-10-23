@@ -6,7 +6,7 @@ import { TEMA_NEUTRO, fuenteCanonicaSchema, resolveView, revealAt } from 'canoni
 import type { VistaResuelta } from 'canonico';
 import { layoutView } from 'layout';
 import type { Geometria } from 'layout';
-import { Diagram } from 'render';
+import { Diagram, renderToSvgString, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
 
 const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
@@ -114,6 +114,24 @@ describe('Diagram', () => {
     expect(b).toContain(`url(#${id(b)})`);
   });
 
+  it('cambiar un valor del Estilo cambia por igual el SVG exportado y Diagram', async () => {
+    const base = await props(vista());
+    const estilo = resolverEstilo(TEMA_NEUTRO);
+    const otro = { ...estilo, nodo: { ...estilo.nodo, radio: 13, relleno: '#fafafa' }, glifos: { expandido: 'v', colapsado: '>' } };
+    const conToggle = { onToggle: () => {} };
+    const exportado = (e: typeof estilo) => renderToSvgString({ ...base, estilo: e });
+    const componente = (e: typeof estilo) => renderToStaticMarkup(<Diagram {...base} {...conToggle} estilo={e} />);
+
+    expect(exportado(otro)).not.toBe(exportado(estilo));
+    expect(exportado(otro)).toContain('rx="13"');
+    expect(exportado(otro)).toContain('fill="#fafafa"');
+    expect(componente(otro)).toContain('rx="13"');
+    expect(componente(otro)).toContain('fill="#fafafa"');
+    expect(componente(otro)).toContain('>v<');
+    // Sin handlers la cadena y el componente dibujan lo mismo con el mismo Estilo.
+    expect(renderToStaticMarkup(<Diagram {...base} estilo={otro} />).replace(/ xmlns="[^"]*"/, '')).toContain('rx="13"');
+  });
+
   it('la camara controlada fija el viewBox', async () => {
     const html = renderToStaticMarkup(<Diagram {...await props(vista(), { camera: { x: 10, y: 20, width: 300, height: 200 } })} />);
 
@@ -151,5 +169,66 @@ describe('Diagram', () => {
     const html = renderToStaticMarkup(<Diagram {...await props(vista())} />);
 
     expect(html).not.toContain('data-toggle');
+  });
+
+  describe('estados visuales', () => {
+    const marcas = (html: string, estado: string): string[] =>
+      [...html.matchAll(new RegExp(`<[^>]*data-state="${estado}"[^>]*>`, 'g'))].map((m) => m[0]);
+
+    it('un Nodo seleccionado lleva un contorno con el color y el radio del Estilo', async () => {
+      const base = await props(vista(), { estados: { b: ['seleccionado'] } });
+      const estilo = resolverEstilo(TEMA_NEUTRO);
+      const [marca] = marcas(renderToStaticMarkup(<Diagram {...base} />), 'seleccionado');
+
+      expect(marca).toContain('data-selected="b"');
+      expect(marca).toContain(`stroke="${estilo.estados.seleccionado.color}"`);
+      expect(marca).toContain(`rx="${estilo.nodo.radio}"`);
+      expect(marca).toContain('fill="none"');
+    });
+
+    it('sin estados no se dibuja ninguna marca', async () => {
+      expect(renderToStaticMarkup(<Diagram {...await props(vista())} />)).not.toContain('data-state');
+    });
+
+    it('una Arista y un Atributo seleccionados se marcan donde estan', async () => {
+      const estados = { 'b -> c': ['hover'], 'a#x': ['seleccionado'] } as const;
+      const html = renderToStaticMarkup(<Diagram {...await props(vista(), { estados })} />);
+
+      expect(marcas(html, 'hover')).toHaveLength(1);
+      expect(marcas(html, 'hover')[0]).toContain('<path');
+      expect(marcas(html, 'seleccionado')).toHaveLength(0);
+    });
+
+    it('el hover y el fantasma usan sus propias entradas del Estilo', async () => {
+      const estilo = resolverEstilo(TEMA_NEUTRO);
+      const otro = { ...estilo, estados: { ...estilo.estados, fantasma: { ...estilo.estados.fantasma, color: 'hotpink', trazo: '1 1' } } };
+      const html = renderToStaticMarkup(<Diagram {...await props(vista(), { estados: { c: ['fantasma'], b: ['hover'] }, estilo: otro })} />);
+
+      expect(marcas(html, 'fantasma')[0]).toContain('stroke="hotpink"');
+      expect(marcas(html, 'fantasma')[0]).toContain('stroke-dasharray="1 1"');
+      expect(marcas(html, 'hover')[0]).toContain(`stroke="${estilo.estados.hover.color}"`);
+    });
+
+    it('el SVG exportado dibuja los mismos estados', async () => {
+      const entrada = await props(vista(), { estados: { b: ['seleccionado'] } });
+      const svg = renderToSvgString(entrada);
+
+      expect(svg).toContain('data-state="seleccionado"');
+    });
+
+    it('un Atributo seleccionado marca su fila', async () => {
+      const fuente = fuenteCanonicaSchema.parse({
+        specification: { nodeTypes: [{ name: 'servicio' }] },
+        model: { nodes: [{ ...nodo('t', 'T'), attributes: [{ name: 'id', type: 'int' }, { name: 'nombre', type: 'text' }] }], edges: [] },
+        views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
+      });
+      const v = resolveView(fuente, 'v')!;
+      const html = renderToStaticMarkup(<Diagram {...await props(v, { estados: { 't#nombre': ['seleccionado'] } })} />);
+      const estilo = resolverEstilo(TEMA_NEUTRO);
+      const [marca] = marcas(html, 'seleccionado');
+
+      expect(marca).toContain('data-selected="t#nombre"');
+      expect(marca).toContain(`y="${estilo.metricas.cabecera + estilo.metricas.fila}"`);
+    });
   });
 });

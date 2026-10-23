@@ -11,9 +11,11 @@
  * Grupo padre; `order` solo se almacena, sin efecto en v1: ADR 0003 prohibe `considerModelOrder`); un Grupo
  * colapsado (estado, `depth`, `collapsed`/`expanded`, `link`) eleva y fusiona las
  * Aristas de sus hijos; los `steps` de una Vista los interpreta `revealAt` (ADR 0002,
- * acumulativos, con fundido entre pasos); `IconProvider` resuelve claves de icono a SVG inline;
+ * acumulativos, con fundido entre pasos); `IconProvider` resuelve claves de icono a SVG inline (`serializarIconos`/`hidratarIconos` lo llevan al navegador y de vuelta; `sanearIcono` filtra por lista blanca los SVG externos);
  * colores son nombres de Paleta, nunca valores hex (ADR 0002); el Tema (`themes`,
- * siempre con el neutro) es un objeto plano ya resuelto, sin herencia.
+ * siempre con el neutro) es un objeto plano ya resuelto, sin herencia;
+ * `contratoDeTemaSchema` declara lo que el dibujo exige de el (tokens `background`,
+ * `foreground`, `border`; fuentes `body`, `mono`; `fontSize` en px si existe).
  * La geometria cacheada por Vista (`geometriaCacheadaSchema`: `{ view, theme, layoutKey,
  * geometry }`) tiene aqui su esquema para validarla al leerla del disco; la calcula `layout`.
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
@@ -29,6 +31,8 @@
  * (el cuerpo de `POST /api/pin`, validado por `intencionDePinSchema`) y
  * `MotivoDeRechazo` (`MOTIVOS_DE_RECHAZO`), del que deriva el enum `reason` de
  * `salidaDeEditSchema`; se declaran una sola vez y `sesion` los reexporta.
+ * `intencionSchema`/`Intencion` es la union de Intenciones de `POST /api/edit` (ADR 0007) y
+ * `estadoDeDevSchema`/`EstadoDeDev` el esquema unico del estado servidor-navegador de `dev`.
  * Configuracion requerida: ninguna. Solo importa paquetes anteriores en la
  * cadena `canonico -> dsl -> layout -> render -> shell / cli`.
  */
@@ -40,6 +44,9 @@ export {
   pasoSchema,
   TEMA_NEUTRO,
   temaSchema,
+  tokensDeTipoDeNodoSchema,
+  tokensDeTipoDeAristaSchema,
+  contratoDeTemaSchema,
   TIPOS_DE_VISTA,
   tamanoDeTexto,
   tipoDeNodoSchema,
@@ -47,7 +54,7 @@ export {
 } from './esquema';
 export { geometriaCacheadaSchema, geometriaSchema } from './geometria';
 export type { GeometriaCacheada } from './geometria';
-export { combineIconProviders, genericIcons, resolveNodeTypeIcon, workspaceIcons } from './iconos';
+export { combineIconProviders, genericIcons, hidratarIconos, resolveNodeTypeIcon, sanearIcono, serializarIconos, workspaceIcons } from './iconos';
 export type { IconProvider } from './iconos';
 export { idDeArista, revealAt } from './pasos';
 export type { Visibilidad } from './pasos';
@@ -85,8 +92,10 @@ export type { SalidaDeEdit } from './edit';
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';
 export type { SalidaDeInspect } from './inspect';
 
-export { MOTIVOS_DE_RECHAZO, intencionDePinSchema } from './pin';
-export type { IntencionDePin, MotivoDeRechazo } from './pin';
+export { MOTIVOS_DE_RECHAZO, intencionDePinSchema, intencionSchema } from './pin';
+export type { Intencion, IntencionDePin, MotivoDeRechazo } from './pin';
+export { estadoDeDevSchema, issueDeDevSchema } from './estado';
+export type { EstadoDeDev, IssueDeDev } from './estado';
 
 export { CONTRACT_VERSION, issueSchema, salidaDeValidateJsonSchema, salidaDeValidateSchema } from './salida';
 export type { SalidaDeValidate } from './salida';

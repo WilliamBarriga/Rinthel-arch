@@ -8,46 +8,16 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
-import { createRoot } from 'react-dom/client';
 
-import type { FuenteCanonica, GeometriaCacheada, IconProvider } from 'canonico';
+import type { EstadoDeDev, FuenteCanonica, GeometriaCacheada, IssueDeDev } from 'canonico';
 import { VistaInteractiva, adaptadorDeWorker, crearEnviadorDePin, hashDelNavegador, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 
+import { montar, usePropsDeDatos } from './arranque';
 import { crearAlMover } from './mover';
 
-interface IssueDeDev {
-  file: string;
-  line: number;
-  column: number;
-  severity: 'error' | 'warning';
-  code: string;
-  message: string;
-  /** Enlace que abre el editor en `archivo:linea`. */
-  href: string;
-}
-
-interface Estado {
-  version: number;
-  fuente?: FuenteCanonica;
-  iconos: Record<string, string>;
-  vistas: string[];
-  /** Hash del contenido de cada archivo del Workspace. */
-  hashes: Record<string, string>;
-  /** Archivo en que se declara cada Vista. */
-  archivosDeVista: Record<string, string>;
-  issues: IssueDeDev[];
-}
-
-function useTamano(): { width: number; height: number } {
-  const [tamano, setTamano] = useState({ width: window.innerWidth, height: window.innerHeight });
-  useEffect(() => {
-    const alCambiar = (): void => setTamano({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener('resize', alCambiar);
-    return () => window.removeEventListener('resize', alCambiar);
-  }, []);
-  return tamano;
-}
+/** Estado del servidor: esquema unico de `canonico` (`estadoDeDevSchema`), el mismo que produce `dev`. */
+type Estado = EstadoDeDev;
 
 /** Estado vigente (el inicial y cada evento SSE) y `recargar`, que lo pide de nuevo a `/api/estado`. */
 function useEstado(): { estado: Estado | undefined; recargar: () => Promise<void> } {
@@ -142,12 +112,9 @@ interface PropsDeVista {
 
 function Vista({ fuente, estado, geometrias, layout, alMover }: PropsDeVista): ReactElement | null {
   const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
-  const { width, height } = useTamano();
-  const iconos = useMemo<IconProvider>(() => ({ resolve: (clave) => estado.iconos[clave], keys: () => Object.keys(estado.iconos) }), [estado.iconos]);
-  const cachedGeometries = useMemo(() => Object.fromEntries(Object.entries(geometrias).map(([id, g]) => [id, g.geometry])), [geometrias]);
-  const tema = fuente.themes.find(({ name }) => name === geometrias[props.view]?.theme) ?? fuente.themes[0];
+  const { icons, cachedGeometries, theme: tema, width, height } = usePropsDeDatos({ fuente, iconos: estado.iconos, geometrias }, props.view);
   if (tema === undefined) return null;
-  return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} icons={iconos} width={width} height={height} cachedGeometries={cachedGeometries} onMoveNode={(mov) => alMover(props.view, mov)} />;
+  return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} icons={icons} width={width} height={height} cachedGeometries={cachedGeometries} onMoveNode={(mov) => alMover(props.view, mov)} />;
 }
 
 function App(): ReactElement {
@@ -177,4 +144,4 @@ function App(): ReactElement {
   );
 }
 
-createRoot(document.getElementById('raiz') as HTMLElement).render(<App />);
+montar(<App />);

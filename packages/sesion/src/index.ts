@@ -17,6 +17,16 @@
  * fallos internos de layout se propagan como rechazo de la promesa.
  * Configuracion requerida: ninguna; `tema` (opcional) es el Tema global.
  *
+ * Intenciones (ADR 0007): `Intencion` es la union discriminada por `tipo` (hoy `mover-pin`);
+ * `aplicarIntencion(archivos, intencion)` es el reductor puro (reutiliza `editarPin`);
+ * `Historial` (`crearHistorial`, `editarEnHistorial`, `deshacer`, `rehacer`) es la pila
+ * inmutable de deshacer/rehacer sobre el texto: deshacer restaura el DSL exactamente.
+ *
+ * `aplicarAlWorkspace(puerto, intencion)` aplica una Intencion al Workspace en disco a traves
+ * del puerto `PuertoDeWorkspace` (`leer` -> `{ disco, propios }`, `escribir(ruta, texto)`):
+ * reduce, y escribe solo los archivos propios que cambian (todo o nada; un archivo de
+ * `--theme-path` se rechaza como `archivo-desconocido`). Los fallos de I/O del puerto se propagan.
+ *
  * `archivoDeVista(sesion, vista)` da el archivo que declara una Vista (el de su hash).
  *
  * Edicion estructurada (ADR 0005): `aplicarEdiciones(archivos, ediciones)` aplica
@@ -35,6 +45,10 @@
 export { abrirSesion, archivoDeVista } from './sesion';
 export { aplicarEdiciones, editarPin, hashDeContenido } from './ediciones';
 // Vocabulario del Gesto declarado una sola vez en `canonico`; se reexporta para no romper consumidores.
+export { aplicarAlWorkspace, cambiosDeEdicion } from './aplicar';
+export type { PuertoDeWorkspace, ResultadoDeAplicar } from './aplicar';
+export { aplicarIntencion, crearHistorial, deshacer, editarEnHistorial, rehacer } from './intenciones';
+export type { Historial, Intencion, ResultadoDeIntencion } from './intenciones';
 export type { IntencionDePin, MotivoDeRechazo } from 'canonico';
 export type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
 export type { OpcionesDeSesion, ResultadoDeConstruir, SalidaDeBuild, Sesion } from './sesion';

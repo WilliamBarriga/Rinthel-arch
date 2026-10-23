@@ -3,11 +3,13 @@
  * interno) se traduce con `revealAt` en la visibilidad que recibe `Diagram`, y
  * los controles anterior/siguiente lo cambian. La geometria no se toca.
  */
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { ReactElement } from 'react';
 
 import { revealAt } from 'canonico';
 import type { Visibilidad, VistaResuelta } from 'canonico';
+
+import { useControlado } from './controlado';
 
 export interface PropsDePasos {
   /** Paso actual controlado: 0 es antes del primero, k aplica los pasos 1..k. */
@@ -30,23 +32,19 @@ const acotar = (paso: number, total: number): number => Math.min(Math.max(Number
 
 export function usePasos(vista: VistaResuelta, props: PropsDePasos): PasosEnVista {
   const total = vista.steps.length;
-  const [propio, setPropio] = useState(props.defaultStep ?? 0);
-  const paso = acotar(props.step ?? propio, total);
+  const [pasoVigente, fijarPaso] = useControlado(props.step, props.defaultStep ?? 0, props.onStepChange);
+  const paso = acotar(pasoVigente, total);
 
   const derivada = useMemo(() => (total === 0 ? undefined : revealAt(vista, paso)), [vista, total, paso]);
   const visibility = props.visibility ?? derivada;
   if (total === 0) return { visibility, controles: null };
 
-  const ir = (destino: number): void => {
-    const nuevo = acotar(destino, total);
-    if (props.step === undefined) setPropio(nuevo);
-    props.onStepChange?.(nuevo);
-  };
+  const ir = (destino: number): void => fijarPaso(acotar(destino, total));
   const actual = vista.steps[paso - 1];
   const controles = (
     <div
+      className="rd-chrome rd-pasos"
       data-pasos
-      style={{ position: 'absolute', left: 8, bottom: 8, display: 'flex', gap: 8, alignItems: 'center', font: '12px sans-serif' }}
     >
       <button type="button" aria-label="Paso anterior" disabled={paso <= 0} onClick={() => ir(paso - 1)}>
         &lt;

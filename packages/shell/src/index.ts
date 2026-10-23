@@ -16,8 +16,18 @@
  * Camara: controlada con `camera` + `onCameraChange` (el padre decide; si
  * ignora el aviso, la camara no se mueve) o interna si no se pasa `camera`.
  * Pan y zoom los da d3-zoom (arrastre, rueda, tactil); escala entre 0.05 y 16.
- * Seleccion: `selected` controlada o interna; `onSelect(id)` al pulsar un Nodo;
- * el Nodo marcado lleva un rectangulo con `data-selected="<id>"`.
+ * Seleccion: `selected` controlada o interna; `onSelect(id)` al pulsar un Nodo, una Arista,
+ * su etiqueta o la fila de un Atributo (`nodo#atributo`); la marca la dibuja `render` (prop
+ * `estados`, estado `seleccionado`, con `data-selected="<id>"`); el shell no pinta overlays propios.
+ * Chrome (pasos, breadcrumbs): clases `rd-*` y variables CSS `--rd-fondo|texto|borde|acento|fuente`
+ * emitidas en el contenedor desde el Estilo resuelto del Tema, sin estilos en linea. Con mayusculas, ctrl o meta la Seleccion crece
+ * (o decrece) en lugar de reemplazarse. Que hay bajo el clic lo decide el nucleo de
+ * interaccion (`elementoBajo`, puro y sin DOM, sobre la Vista completa: el culling del
+ * viewport no lo afecta); `VistaInteractiva` solo traduce el raton a un punto del lienzo.
+ * Nucleo de interaccion: `elementoBajo(vista, geometria, tema, punto, {tolerancia?, atributos?})`
+ * devuelve el `ElementoSeleccionable` superior (`{tipo: nodo|arista|etiqueta|atributo, id}`) o
+ * `undefined`; `cajaDeElemento` da su caja en el lienzo; `seleccionar(seleccion, elemento, modo)`
+ * (`reemplazar|agregar|quitar|alternar`) es el reductor de la `Seleccion`, inmutable.
  * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con
  * `onStepChange`, o interno desde `defaultStep`, 0 por defecto) se pasa por
  * `revealAt` y se dibujan controles anterior/siguiente; la geometria no cambia.
@@ -48,10 +58,12 @@
  * soltar avisan su posicion nueva (relativa al Grupo padre, unidades de la geometria; es el
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve
  * si el aviso resuelve `false`. Sin `onMoveNode` (export estatico) no hay arrastre de Nodos.
+ * `crearControlDeEdicion(archivos)` conecta las Intenciones y el historial de `sesion` a
+ * `aplicar`, `deshacer` y `rehacer` (ADR 0007).
  * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
  * `{ok:true}` o `{ok:false, desactualizado, mensaje}` (409 por hash); nunca lanza.
  * La intencion es `IntencionDePin` (`{vista, nodo, x, y, hash}`, declarada en `canonico` y
- * reexportada aqui); `IntencionDePinEnviada` es su alias historico en `shell`.
+ * reexportada aqui).
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *
@@ -95,8 +107,12 @@
  */
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';
+export { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from './interaccion';
+export type { ElementoSeleccionable, ModoDeSeleccion, OpcionesDeHitTest, Seleccion, TipoDeElemento } from './interaccion';
 export type { PropsDeNavegacion } from './navegacion';
 export type { PropsDePasos } from './pasos';
+export type { AjustesDeInteraccion } from './configuracion';
+export type { RelojDeCuadros } from './morph';
 export type { SuscripcionDeTema } from './tema-vigente';
 export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
 export type { UmbralesDeDetalle } from './zoom-semantico';
@@ -108,8 +124,11 @@ export { useEstadoEnHash } from './estado-en-hash';
 export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-hash';
 // La `IntencionDePin` vive en `canonico`; se reexporta para no renombrar la interfaz de `shell`.
 export { crearEnviadorDePin } from './enviar-pin';
-export type { EnviadorDePin, IntencionDePinEnviada, ResultadoDeEnvioDePin } from './enviar-pin';
+export type { EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
 export type { IntencionDePin } from 'canonico';
+export { crearControlDeEdicion } from './control-de-edicion';
+export type { ControlDeEdicion, ResultadoDeEdicion } from './control-de-edicion';
+export type { Historial, Intencion } from 'sesion';
 export { adaptadorDeWorker } from './layout-en-worker';
 export { servirLayout } from './servir-layout';
 export type { PuertoDeMensajes } from './layout-en-worker';
