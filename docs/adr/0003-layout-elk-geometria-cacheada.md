@@ -9,7 +9,7 @@ ELK (EPL-2.0) es el unico motor verificado que cubre Grupos anidados, puertos, r
 
 ## Consecuencias
 
-- Umbrales de aceptacion para el plan de construccion: build CLI de una Vista hasta 10k Nodos en menos de 60 s y 2 GB; relayout interactivo con hasta 1k Nodos visibles en menos de 2 s; colapso con 5k Nodos del Modelo en menos de 3 s; bundle del shell (elkjs worker + api) por debajo de 500 KB gzip. El shell no expande mas de ~1k Nodos a la vez. Se verifican con un proyecto externo y en navegador cuando exista la implementacion.
+- Umbrales de aceptacion para el plan de construccion: build CLI de una Vista hasta 10k Nodos en menos de 60 s y 2 GB; relayout interactivo con hasta 1k Nodos visibles en menos de 2 s; colapso con 5k Nodos del Modelo en menos de 3 s; bundle del shell (elkjs worker + api) por debajo de 500 KB gzip. El shell no expande mas de ~1k Nodos a la vez. Se verifican con el banco sintetico (`pnpm bench`) y en navegador cuando exista la implementacion.
 - Solo se cachea la geometria por defecto de cada Vista; no se precalculan otros estados de colapso.
 
 ## Enmienda

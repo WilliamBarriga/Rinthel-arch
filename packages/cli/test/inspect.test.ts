@@ -190,8 +190,8 @@ describe('inspect errores de uso', () => {
 });
 
 describe('inspect rendimiento', () => {
-  it('buscar sobre examples/un proyecto externo responde en tiempo comparable a validate', async () => {
-    const raiz = resolve(import.meta.dirname, '../../../examples/un proyecto externo');
+  it('buscar sobre examples/rinthel-arch responde en tiempo comparable a validate', async () => {
+    const raiz = resolve(import.meta.dirname, '../../../examples/rinthel-arch');
     const medir = async (args: string[]): Promise<{ ms: number; exitCode: number }> => {
       const t0 = performance.now();
       const r = await run(args);

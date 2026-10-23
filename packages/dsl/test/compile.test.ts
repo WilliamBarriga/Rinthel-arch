@@ -1145,10 +1145,10 @@ describe('compile: Pasos (steps)', () => {
   });
 });
 
-describe('compile: Temas del ejemplo un proyecto externo', () => {
+describe('compile: Temas del ejemplo rinthel-arch', () => {
   it('declaran tokens por Tipo de nodo, el oscuro y uno claro, sin issues', async () => {
     const { readFileSync, readdirSync } = await import('node:fs');
-    const dir = new URL('../../../examples/un proyecto externo/', import.meta.url);
+    const dir = new URL('../../../examples/rinthel-arch/', import.meta.url);
     const fuentes = Object.fromEntries(
       readdirSync(dir).filter((f) => f.endsWith('.dg')).map((f) => [f, readFileSync(new URL(f, dir), 'utf8')]),
     );
@@ -1156,8 +1156,8 @@ describe('compile: Temas del ejemplo un proyecto externo', () => {
 
     expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
     const temas = canonico?.themes ?? [];
-    expect(temas.find((t) => t.name === 'rinthel')?.tokens['background']).toBe('#0f172a');
-    expect(temas.find((t) => t.name === 'rinthel')?.nodeStyles?.['servicio']?.fill).toBe('#1e3a5f');
-    expect(temas.find((t) => t.name === 'rinthel-claro')?.nodeStyles?.['tabla']?.fill).toBe('#dcfce7');
+    expect(temas.find((t) => t.name === 'diagrams')?.tokens['background']).toBe('#0f172a');
+    expect(temas.find((t) => t.name === 'diagrams')?.nodeStyles?.['paquete']?.fill).toBe('#1e3a5f');
+    expect(temas.find((t) => t.name === 'diagrams-claro')?.nodeStyles?.['artefacto']?.fill).toBe('#dcfce7');
   });
 });

@@ -1,0 +1,115 @@
+// Vistas del mapa: una por pregunta ("como se parten los paquetes", "como se exporta", "como fluye una edicion").
+view paquetes {
+  type architecture
+  theme diagrams
+  include autor, agente, workspace, salida-derivada, canonico, dsl, layout, sesion, render, shell, cli
+  depth 1
+  link canonico -> canonico-detalle
+  link dsl -> dsl-detalle
+  link layout -> layout-detalle
+  link sesion -> sesion-detalle
+  link render -> render-detalle
+  link shell -> shell-detalle
+  link cli -> exportacion
+}
+
+view canonico-detalle {
+  type architecture
+  theme diagrams
+  include canonico.**, zod
+  depth 2
+}
+
+view dsl-detalle {
+  type architecture
+  theme diagrams
+  include dsl.**, langium, canonico
+  depth 2
+}
+
+view layout-detalle {
+  type architecture
+  theme diagrams
+  include layout.**, elk, canonico
+  depth 2
+}
+
+view sesion-detalle {
+  type architecture
+  theme diagrams-claro
+  include sesion.**, dsl.dsl-compilar, dsl.dsl-ubicador, canonico.can-validar, layout.lay-layout
+  depth 2
+}
+
+view render-detalle {
+  type architecture
+  theme diagrams
+  include render.**, react, canonico, layout
+  depth 2
+}
+
+view shell-detalle {
+  type architecture
+  theme diagrams
+  include shell.**, d3, layout.lay-layout, render, sesion.ses-intenciones, canonico.can-vistas
+  depth 2
+}
+
+view exportacion {
+  type architecture
+  theme diagrams
+  include cli.**, sesion, render, resvg, esbuild, svg, png, html, workspace, salida-derivada
+  depth 2
+}
+
+view flujo-export {
+  type flow
+  theme diagrams
+  include autor, workspace, cli.cli-export, dsl.dsl-compilar, canonico.can-validar, layout.lay-layout, elk, render.ren-diagram, resvg, esbuild, svg, png, html, salida-derivada
+  steps {
+    step "El autor pide un export" {
+      show autor, cli.cli-export, workspace
+    }
+    step "Se compilan los .dg a Fuente canonica y se valida" {
+      show dsl.dsl-compilar, canonico.can-validar
+    }
+    step "ELK calcula la geometria de la Vista" {
+      show layout.lay-layout, elk
+    }
+    step "render dibuja el SVG" {
+      show render.ren-diagram, svg
+    }
+    step "resvg rasteriza el PNG y esbuild empaqueta el HTML" {
+      show resvg, png, esbuild, html
+    }
+    step "La salida queda en .diagrams/" {
+      show salida-derivada
+    }
+  }
+}
+
+view flujo-edicion {
+  type flow
+  theme diagrams
+  include autor, shell.sh-seleccion, sesion.ses-intenciones, sesion.ses-ediciones, dsl.dsl-ubicador, workspace, sesion.ses-sesion, layout.lay-layout, render.ren-diagram
+  steps {
+    step "El autor arrastra un Pin en el shell" {
+      show autor, shell.sh-seleccion
+    }
+    step "El gesto se traduce en una Intencion" {
+      show sesion.ses-intenciones
+    }
+    step "La edicion estructurada ubica el texto a cambiar" {
+      show sesion.ses-ediciones, dsl.dsl-ubicador
+    }
+    step "Se reescribe el archivo .dg" {
+      show workspace
+    }
+    step "La Sesion recompila y recalcula solo lo necesario" {
+      show sesion.ses-sesion, layout.lay-layout
+    }
+    step "El shell vuelve a dibujar la Vista" {
+      show render.ren-diagram
+    }
+  }
+}

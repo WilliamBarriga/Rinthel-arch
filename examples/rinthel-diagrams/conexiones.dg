@@ -1,0 +1,57 @@
+// Dependencias entre paquetes (orden: canonico -> dsl -> layout -> sesion -> render -> shell / cli) y flujo de datos.
+model {
+  autor -> workspace "escribe .dg"
+  agente -> cli "validate / inspect / edit"
+  autor -> cli.cli-dev "abre el shell"
+  cli -> workspace "lee"
+  cli -> salida-derivada "escribe"
+
+  dsl -> canonico
+  layout -> canonico
+  sesion -> canonico
+  sesion -> dsl
+  sesion -> layout
+  render -> canonico
+  render -> layout
+  shell -> sesion
+  shell -> render
+  shell -> layout
+  cli -> sesion
+  cli -> render
+
+  dsl.dsl-gramatica -> langium
+  dsl.dsl-compilar -> dsl.dsl-gramatica
+  dsl.dsl-compilar -> dsl.dsl-temas
+  dsl.dsl-compilar -> dsl.dsl-ubicador
+  canonico.can-esquema -> zod
+  canonico.can-validar -> canonico.can-esquema
+  canonico.can-vistas -> canonico.can-esquema
+  canonico.can-pasos -> canonico.can-vistas
+  canonico.can-pin -> canonico.can-esquema
+  canonico.can-inspect -> canonico.can-vistas
+  layout.lay-layout -> elk
+  layout.lay-layout -> layout.lay-metricas
+  layout.lay-indice -> layout.lay-layout
+  sesion.ses-sesion -> dsl.dsl-compilar
+  sesion.ses-sesion -> canonico.can-validar
+  sesion.ses-sesion -> layout.lay-layout "memoiza por Vista"
+  sesion.ses-ediciones -> dsl.dsl-ubicador
+  sesion.ses-intenciones -> sesion.ses-ediciones
+  render.ren-diagram -> react
+  render.ren-diagram -> render.ren-escena
+  render.ren-escena -> render.ren-estilo
+  shell.sh-camara -> d3
+  shell.sh-worker -> layout.lay-layout
+  shell.sh-seleccion -> sesion.ses-intenciones
+  shell.sh-colapso -> canonico.can-vistas
+  cli.cli-validate -> sesion.ses-sesion
+  cli.cli-inspect -> canonico.can-inspect
+  cli.cli-edit -> sesion.ses-ediciones
+  cli.cli-dev -> shell
+  cli.cli-export -> render.ren-diagram
+  cli.cli-export -> resvg "PNG"
+  cli.cli-export -> esbuild "HTML"
+  cli.cli-export -> svg
+  cli.cli-export -> png
+  cli.cli-export -> html
+}

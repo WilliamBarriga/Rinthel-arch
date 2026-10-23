@@ -1,6 +1,6 @@
 # AGENTS.md - rinthel-arch
 
-Sistema React + TS para escribir y renderizar diagramas grandes y detallados de cualquier proyecto. un proyecto externo (`../un proyecto externo`) es el primer caso de uso; el sistema no depende de el.
+Sistema React + TS para escribir y renderizar diagramas grandes y detallados de cualquier proyecto. El ejemplo de `examples/rinthel-arch/` documenta este mismo repo; el sistema no depende de ningun proyecto externo.
 
 ## Fuentes de verdad
 
@@ -17,7 +17,7 @@ Antes de adoptar una dependencia, investigarla (licencia, mantenimiento, encaje 
 
 ## Convenciones
 
-- El nucleo es agnostico del proyecto documentado; todo lo especifico de un proyecto externo vive como ejemplo o caso de uso.
+- El nucleo es agnostico del proyecto documentado; todo lo especifico de un proyecto vive como ejemplo o caso de uso.
 - Los repos hermanos son referencia de lectura, no dependencias: este repo no depende de ellos ni al reves en codigo, y no los modifica. Integrar el sistema en un repo consumidor (slides, video u otro) es trabajo de ese repo, fuera de este. Slides, video y los demas son casos de uso del contrato de `render`.
 - Eraser DSL y Archify estan descartados; no reintroducirlos.
 - Docs y respuestas en espanol. Sin emojis unicode (`pnpm check:emojis` lo verifica).

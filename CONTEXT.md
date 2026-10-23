@@ -5,7 +5,7 @@ Sistema para explicar proyectos con diagramas grandes y detallados, agnostico de
 ## Language
 
 **Proyecto documentado**:
-El software o sistema que se explica (ej. un proyecto externo). El sistema de diagramas no depende de el.
+El software o sistema que se explica (ej. este mismo repo, en `examples/rinthel-arch/`). El sistema de diagramas no depende de el.
 
 **Modelo**:
 Conjunto unico de Nodos y Aristas de un Proyecto documentado, del que salen todas las Vistas. El texto semantico (titulo, descripcion) vive una sola vez, aqui.
