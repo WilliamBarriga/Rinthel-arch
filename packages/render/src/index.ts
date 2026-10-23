@@ -51,6 +51,12 @@
  * `reducedMotion: 'on' | 'off'` de `Diagram`); `nuevos` acota el `stagger` a lo recien revelado.
  * Lo animado solo toca propiedades pintadas o componibles: nunca provoca relayout.
  *
+ * Via de escape en codigo (ADR 0008): la prop `componentes` (`ComponentesDeTema`, nombre -> componente React) es
+ * el puerto por el que entra el codigo del Workspace; `render` nunca lo importa. Cada Capa `code` se dibuja en un
+ * contenedor de tamano fijo igual a la caja del elemento (`data-codigo`), bajo el contenido o sobre el (`over`), con
+ * `PropsDeCodigo` congeladas y serializables (id, caja, estado, colores resueltos, parametros del estado vigente y
+ * datos acotados); un componente que lanza solo pierde su Capa y uno sin registrar deja el contenedor vacio.
+ *
  * Invariantes: sin estado ni efectos (mismas props, mismo arbol); determinista
  * byte a byte en el marcado; los colores salen solo del Tema, por nombre de Paleta
  * (ADR 0002); sin dependencia de Next, Tailwind ni json-render. Peer React 18 y 19.
@@ -60,6 +66,7 @@
  * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> render`.
  */
 export { Diagram } from './diagram';
+export type { ComponenteDeTema, ComponentesDeTema, PropsDeCodigo } from './codigo';
 export type { DiagramProps } from './diagram';
 export type { Camara, Estados, NivelDeDetalle } from './escena';
 export { resolverEstilo } from './estilo';

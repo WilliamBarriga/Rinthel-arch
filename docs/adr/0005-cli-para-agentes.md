@@ -104,6 +104,8 @@ Los codigos de Tema (propiedad desconocida, `before`/`after` inexistente, contra
 
 Si algo falla (DSL o compilacion) el panel de issues lo muestra y `dev` conserva el ultimo dibujo bueno.
 
+Confianza en el codigo: `dev` no sirve `/componentes.js` mientras el usuario no confirme (el visor pregunta la primera vez que el Workspace tiene un Tema con codigo; `--trust-code` lo da de antemano) y avisa del codigo al arrancar. `/api/codigo` informa `temaConCodigo`, los componentes y si esta confirmado.
+
 ### Queda como implementacion
 
 El subcomando `inspect tema`, los codigos de Tema en `validate`, el clasificador de cambios (`pintura` | `estructura` | `codigo`) y el watcher de fuentes y `.tsx`.

@@ -31,6 +31,8 @@ export const PINTORES: { readonly [P in NombreDePrimitivaEn<'capa-nodo'>]: Pinto
   ...PINTORES_DE_RELLENO,
   ...PINTORES_DE_BORDE,
   ...PINTORES_DE_EFECTOS,
+  // La Capa `code` no pinta CSS: la dibuja su componente (ver `codigo.ts`).
+  code: () => ({}),
 };
 
 /** Sombras (box-shadow): se apilan separadas por coma y la ultima Capa queda encima (va primero en CSS). */
@@ -92,6 +94,8 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-nodo[data-collapsed]', { 'border-style': 'dashed' }],
     ['& .rd-cinta', { position: 'absolute', 'pointer-events': 'none' }],
     ['& .rd-defs', { position: 'absolute', 'pointer-events': 'none' }],
+    // Capa `code`: contenedor de tamano fijo (el de la caja, en linea); el componente no puede cambiarlo.
+    ['& .rd-codigo', { position: 'absolute', left: '0', top: '0', 'pointer-events': 'none', contain: 'layout style' }],
     ['& .rd-slot', { position: 'absolute', overflow: 'hidden', 'white-space': 'nowrap', 'text-overflow': 'ellipsis', 'box-sizing': 'border-box' }],
     ['& .rd-title', { 'text-align': 'center' }],
     ['& .rd-encabezado', { 'text-align': 'left' }],

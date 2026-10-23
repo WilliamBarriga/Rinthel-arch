@@ -1,0 +1,25 @@
+specification {
+  node servicio { color rojo }
+}
+
+model {
+  servicio api "API"
+  servicio db "Base"
+  api -> db
+}
+
+theme neon extends neutral {
+  palette { rojo "#dc2626"  papel "#fefce8" }
+  node {
+    layer forma rect { radius 8 }
+    layer relleno solid { color papel }
+    layer aura code over { component Aurora  hue 3 }
+    slots { title attrs }
+  }
+}
+
+view general {
+  type architecture
+  include **
+  theme neon
+}

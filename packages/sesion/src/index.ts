@@ -17,6 +17,11 @@
  * Modos de error: los errores del Workspace son issues, no excepciones; los
  * fallos internos de layout se propagan como rechazo de la promesa.
  * Configuracion requerida: ninguna; `tema` (opcional) es el Tema global.
+ * Via de escape en codigo (ADR 0008): `sesion` nunca importa codigo. `diagnosticar` y `construir` emiten
+ * `W_THEME_WITH_CODE` por Tema (o Vista) que usa la Capa `code`; con `componentes` (nombre -> `InterfazDeComponente`,
+ * que da el adaptador) comprueban ademas que el componente existe y que sus parametros coinciden, y
+ * `issuesDelAdaptador` suma los issues del adaptador (un `.tsx` que no compila). `actualizar(archivos, cambios)`
+ * puede renovar ambos.
  *
  * Intenciones (ADR 0007): `Intencion` es la union discriminada por `tipo` (hoy `mover-pin`);
  * `aplicarIntencion(archivos, intencion)` es el reductor puro (reutiliza `editarPin`);
@@ -58,4 +63,4 @@ export { aplicarIntencion, apilar, crearHistorial, deshacer, editarEnHistorial, 
 export type { Historial, Intencion, ResultadoDeIntencion } from './intenciones';
 export type { IntencionDePin, MotivoDeRechazo } from 'canonico';
 export type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
-export type { OpcionesDeSesion, ResultadoDeConstruir, SalidaDeBuild, Sesion } from './sesion';
+export type { InterfazDeComponente, OpcionesDeSesion, ResultadoDeConstruir, SalidaDeBuild, Sesion } from './sesion';

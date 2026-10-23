@@ -71,6 +71,8 @@
  * `onHighContrastChange`, por defecto `prefers-contrast: more`) reemplaza el Tema
  * solo en el visor por `alto-contraste`; `legend` (`auto` | `always` | `never`)
  * dibuja la leyenda derivada del Tema, sola cuando dos Tipos difieren unicamente por color.
+ * Componentes de Tema (Capa `code`): `componentes` (`ComponentesDeTema`) se pasa tal cual a `Diagram`; el registro lo
+ * llena el adaptador (`dev`), el shell no carga codigo.
  * Arrastre de Nodos (solo bajo `dev`): con `onMoveNode({id, x, y})` los Nodos se arrastran y al
  * soltar avisan su posicion nueva (relativa al Grupo padre, unidades de la geometria; es el
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve

@@ -3,6 +3,8 @@
  * pintores y la hoja de estilo; ninguno depende de los otros.
  */
 
+import type { ComponenteDeTema, PropsDeCodigo } from './codigo';
+
 /** Elemento HTML o SVG: atributos, y como contenido hijos, texto o marcado inline (iconos, hoja de estilo). */
 export interface Elemento {
   tag: string;
@@ -11,6 +13,8 @@ export interface Elemento {
   /** Marcado ya saneado que va dentro del elemento (el icono, la hoja de estilo). */
   html?: string;
   alClic?: () => void;
+  /** Componente de Tema (Capa `code`) que se monta dentro del elemento, con sus props de solo lectura. */
+  componente?: { tipo: ComponenteDeTema; props: PropsDeCodigo };
 }
 
 /** Numero estable: a lo sumo dos decimales, sin ceros sobrantes. */

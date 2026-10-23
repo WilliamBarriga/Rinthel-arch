@@ -46,6 +46,10 @@ import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion, aplicarAlWorkspace, apilar, archivoDeVista, crearHistorial, deshacer, hashDeContenido, rehacer } from 'sesion';
 import type { Historial, Sesion } from 'sesion';
 
+import { componentesDeTema } from 'tema';
+
+import { compiladorDeCodigo } from './codigo';
+import type { ResultadoDeCodigo } from './codigo';
 import { empaquetarShellDev } from './dev-shell';
 import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
@@ -77,11 +81,22 @@ export interface OpcionesDeDev {
   escribir?: (raiz: string, ruta: string, texto: string) => void;
   /** Borra un archivo del Workspace (ruta relativa a `raiz`); deshacer/rehacer lo usan para quitar archivos que creo una edicion. */
   borrar?: (raiz: string, ruta: string) => void;
+  /**
+   * Los `.tsx` de los Temas ya confirmados: `dev` sirve el codigo del Workspace (`/componentes.js`) sin pedir
+   * confirmacion en el navegador (`--trust-code`). Por defecto no: abrir un Workspace ajeno exige confirmar.
+   */
+  confiarEnCodigo?: boolean;
+  /** Compila los `.tsx` del Workspace; por defecto el adaptador de esbuild (o nada si se inyecta `leer`). */
+  compilarCodigo?: () => ResultadoDeCodigo;
 }
 
 export interface ServidorDev {
   /** `http://127.0.0.1:<puerto>/` */
   url: string;
+  /** Componentes de Tema que los Temas del Workspace usaban al arrancar (vacio si no hay codigo). */
+  conCodigo: string[];
+  /** Si el codigo ya se sirve (confirmado de antemano con `confiarEnCodigo`). */
+  confiado: boolean;
   cerrar(): Promise<void>;
 }
 
@@ -121,6 +136,8 @@ function cabecera(res: ServerResponse, tipo: string, estado = 200): void {
   res.writeHead(estado, { 'content-type': `${tipo}; charset=utf-8`, 'cache-control': 'no-store' });
 }
 
+const SIN_CODIGO: ResultadoDeCodigo = { componentes: {}, issues: [], bundle: 'return {};' };
+
 const PAGINA = `<!doctype html>
 <html lang="es">
 <head>
@@ -137,7 +154,8 @@ const PAGINA = `<!doctype html>
 `;
 
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puerto = 0, debounceMs = 150, leer: leerBase = leerWorkspace, leerRecursos: leerRecursosBase = opciones.leer === undefined ? leerRecursosReal : () => ({}), observar = observarDisco, shell = empaquetarShellDev, escribir = escribirEnDisco, borrar = borrarEnDisco } = opciones;
+  const { workspace, temas, puerto = 0, debounceMs = 150, leer: leerBase = leerWorkspace, leerRecursos: leerRecursosBase = opciones.leer === undefined ? leerRecursosReal : () => ({}), observar = observarDisco, shell = empaquetarShellDev, escribir = escribirEnDisco, borrar = borrarEnDisco, confiarEnCodigo = false } = opciones;
+  const compilarCodigo = opciones.compilarCodigo ?? (opciones.leer === undefined ? compiladorDeCodigo(workspace).compilar : () => SIN_CODIGO);
   const raizAbsoluta = resolve(workspace);
   const leer = (raiz: string): ArchivosDelWorkspace => leerConTemas(leerBase, raiz, temas);
   const bundles = await shell();
@@ -148,7 +166,10 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   /** Recursos (`.tsx`, fuentes) del ultimo instante bueno y tipo del ultimo cambio empujado. */
   let recursos = recursosDe();
   let cambio: TipoDeCambio | undefined;
-  let actual: Sesion = abrirSesion(archivos);
+  /** Ultimo resultado de compilar los `.tsx` (con el ultimo bueno de cada archivo) y si el usuario confirmo cargar el codigo. */
+  let codigo = compilarCodigo();
+  let confiado = confiarEnCodigo;
+  let actual: Sesion = abrirSesion(archivos, { componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
   /** Ultima Sesion sin errores de compilacion y los archivos con que se abrio. */
   let buena: { sesion: Sesion; archivos: ArchivosDelWorkspace } | undefined = actual.fuente === undefined ? undefined : { sesion: actual, archivos };
   let issues: Issue[] = await actual.diagnosticar();
@@ -253,7 +274,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         } catch {
           continue;
         }
-        const sesion = (buena?.sesion ?? actual).actualizar(nuevos);
+        codigo = compilarCodigo();
+        const sesion = (buena?.sesion ?? actual).actualizar(nuevos, { componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
         const nuevosIssues = await sesion.diagnosticar();
         actual = sesion;
         archivos = nuevos;
@@ -279,6 +301,9 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     temporizador = setTimeout(() => void recompilar().catch(() => undefined), debounceMs);
   };
   const dejarDeObservar = observar(workspace, alCambiar);
+
+  /** Componentes que usan los Temas de la ultima Fuente buena. */
+  const componentesUsados = (): string[] => [...new Set((buena?.sesion.fuente?.themes ?? []).flatMap((tema) => componentesDeTema(tema)))].sort();
 
   const responder = (res: ServerResponse, estadoHttp: number, cuerpo: unknown): void => {
     cabecera(res, 'application/json', estadoHttp);
@@ -424,6 +449,29 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     } else if (ruta === '/worker.js') {
       cabecera(res, 'text/javascript');
       res.end(bundles.worker);
+    } else if (ruta === '/api/codigo') {
+      cabecera(res, 'application/json');
+      const componentes = componentesUsados();
+      res.end(JSON.stringify({ temaConCodigo: componentes.length > 0, componentes, confiado }));
+    } else if (ruta === '/componentes.js') {
+      if (!confiado) {
+        cabecera(res, 'text/plain', 403);
+        res.end('El codigo del Workspace no esta confirmado');
+      } else {
+        cabecera(res, 'text/javascript');
+        res.end(codigo.bundle);
+      }
+    } else if (ruta === '/api/confiar') {
+      if (req.method !== 'POST') {
+        res.setHeader('allow', 'POST');
+        responder(res, 405, { ok: false, mensaje: 'Metodo no permitido' });
+      } else {
+        void leerCuerpoJson(req, res).then((leido) => {
+          if (leido === undefined) return;
+          confiado = true;
+          responder(res, 200, { ok: true });
+        });
+      }
     } else if (ruta === '/api/estado') {
       cabecera(res, 'application/json');
       res.end(JSON.stringify(estado));
@@ -462,6 +510,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 
   return {
     url: `http://127.0.0.1:${direccion.port}/`,
+    conCodigo: componentesUsados(),
+    confiado,
     cerrar: () =>
       new Promise<void>((ok) => {
         clearTimeout(temporizador);
@@ -473,7 +523,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 }
 
 /**
- * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>]`: arranca el servidor y vuelve con la URL;
+ * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>] [--trust-code]`: arranca el servidor y vuelve con la URL;
  * el servidor mantiene vivo el proceso hasta que se mata.
  */
 export async function comandoDev(
@@ -483,7 +533,7 @@ export async function comandoDev(
   const uso = usoComun;
   let valores;
   try {
-    valores = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, port: { type: 'string' }, 'theme-path': { type: 'string' } }, strict: true }).values;
+    valores = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, port: { type: 'string' }, 'theme-path': { type: 'string' }, 'trust-code': { type: 'boolean' } }, strict: true }).values;
   } catch (error) {
     return uso((error as Error).message);
   }
@@ -491,8 +541,14 @@ export async function comandoDev(
   const puerto = Number(valores.port ?? 4173);
   if (!Number.isInteger(puerto) || puerto < 0 || puerto > 65535) return uso('--port debe ser un entero entre 0 y 65535');
   try {
-    const servidor = await iniciarDev({ ...dependencias, workspace: valores.workspace, puerto, ...(valores['theme-path'] === undefined ? {} : { temas: valores['theme-path'] }) });
-    return { exitCode: 0, stdout: `diagrams dev escuchando en ${servidor.url}\n`, stderr: '' };
+    const servidor = await iniciarDev({ ...dependencias, workspace: valores.workspace, puerto, ...(valores['trust-code'] === true && { confiarEnCodigo: true }), ...(valores['theme-path'] === undefined ? {} : { temas: valores['theme-path'] }) });
+    const aviso =
+      servidor.conCodigo.length === 0
+        ? ''
+        : servidor.confiado
+          ? `AVISO: los Temas del Workspace cargan codigo (${servidor.conCodigo.join(', ')}); confirmado con --trust-code.\n`
+          : `AVISO: los Temas del Workspace cargan codigo (${servidor.conCodigo.join(', ')}) que corre en tu navegador sin sandbox. El visor pedira confirmacion antes de cargarlo; usa --trust-code solo en un Workspace propio.\n`;
+    return { exitCode: 0, stdout: `${aviso}diagrams dev escuchando en ${servidor.url}\n`, stderr: '' };
   } catch (error) {
     return uso(`No se pudo iniciar dev: ${(error as Error).message}`);
   }

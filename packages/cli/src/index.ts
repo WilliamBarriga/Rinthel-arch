@@ -37,10 +37,14 @@
  * `edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --edits '<json>') [--hash <archivo>=<hash>] [--theme-path <carpeta>] [--json]`
  * (ADR 0005): unica escritura explicita sobre el DSL, todo o nada y con chequeo de hash; solo
  * escribe archivos del Workspace (nunca los de `--theme-path`). Contrato en `comando-edit.ts`.
- * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>]` (ADR 0005): servidor en 127.0.0.1
+ * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>] [--trust-code]` (ADR 0005): servidor en 127.0.0.1
  * (puerto 4173 por defecto) con vista previa en vivo y panel de issues. Entrada programatica:
  * `iniciarDev(OpcionesDeDev) -> ServidorDev` (`url`, `cerrar()`); invariantes, rutas y modos de
  * error en `dev.ts`. `run(['dev', ...])` convierte sus fallos en codigo 2.
+ * Temas con codigo (ADR 0008): `src/codigo.ts` compila con esbuild, sin ejecutar, los `.tsx` del Workspace; `validate`, `build` e
+ * `inspect` reciben de el los nombres de componente y los errores de compilacion (`E_THEME_CODE_COMPILE` con file/line),
+ * e `inspect tema` marca `temaConCodigo`. `dev` sirve el bundle en `/componentes.js` solo tras la confirmacion
+ * (`POST /api/confiar` o `--trust-code`) y conserva la ultima version buena de cada `.tsx`.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
  * anteriores en la cadena `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`; la tuberia compilar, validar y layout vive en `sesion`.

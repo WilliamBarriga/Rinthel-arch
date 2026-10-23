@@ -16,6 +16,8 @@ import { atributosVisibles, colocarEnCaja, metricasDeHoja } from 'tema';
 import type { Metricas } from 'tema';
 
 import { pintarCapasAnimadas } from './animacion';
+import { pintarCodigo } from './codigo';
+import type { ComponentesDeTema } from './codigo';
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
 import { efectosDeElemento } from './efectos';
@@ -73,6 +75,12 @@ export interface EntradaDeEscena {
   reducedMotion?: 'on' | 'off';
   /** Ids recien revelados (un Paso): el `stagger` de `enter` cuenta solo entre ellos; sin ella, entre todos los visibles. */
   nuevos?: readonly string[];
+  /**
+   * Componentes de Tema (Capa `code`) por nombre: el puerto por el que entra el codigo del Workspace. `render`
+   * nunca lo importa; `dev` compila el `.tsx` y las pruebas pasan un registro en memoria. Un nombre sin
+   * componente deja su contenedor vacio.
+   */
+  componentes?: ComponentesDeTema;
 }
 
 interface Contexto extends EntradaDeEscena {
@@ -212,6 +220,15 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
   const datos = { nodo, caja, trazo, texto, icons };
   const conmutable = grupo || (nodo.collapsed && nodo.link === undefined);
   const efectos = efectosDeElemento(estilo, nodo.id);
+  const codigo = {
+    nodo,
+    ancho: caja.width,
+    alto: caja.height,
+    trazo,
+    estados: contexto.estados?.[nodo.id] ?? [],
+    tieneContenido: grupo ? nodo.children.length > 0 : tieneFilas(nodo, estilo, detail),
+    componentes: contexto.componentes,
+  };
 
   return {
     tag: 'div',
@@ -233,8 +250,10 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
         hijos: [
           ...efectos.debajo,
           ...pintarCapasAnimadas(estilo, false),
+          ...pintarCodigo(estilo, codigo, false),
           ...(grupo ? pintarGrupo(estilo, datos) : pintarNodo(estilo, { ...datos, conAtributos: tieneFilas(nodo, estilo, detail) })),
           ...pintarCapasAnimadas(estilo, true),
+          ...pintarCodigo(estilo, codigo, true),
           ...(onToggle !== undefined && conmutable ? [pintarControl(estilo, { nodo, caja, alClic: () => onToggle(nodo.id) })] : []),
           ...efectos.encima,
         ],

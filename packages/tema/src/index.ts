@@ -54,6 +54,12 @@
  *   (`hashDeFuente`) entran en `claveDeMetricas`; los anchos no. Un texto sin
  *   medida cae a la estimacion.
  *
+ * - Codigo (via de escape): la Primitiva `code` (Familia codigo) es una Capa mas que nombra un
+ *   Componente de Tema (`component`, obligatoria); las demas propiedades son los parametros
+ *   declarados, numero o texto tal cual. Nunca afecta a las Metricas. `usosDeCodigo(tema, vista?)`
+ *   y `componentesDeTema` dicen que componentes usa un Tema (el "Tema con codigo" de `inspect` y
+ *   `validate`) recorriendo la cascada completa.
+ *
  * Invariantes: puro y determinista; sin I/O, reloj, azar ni DOM. Una Capa es
  * una instancia de una Primitiva del catalogo cerrado; el color es siempre un
  * nombre de Paleta. Modos de error: los datos invalidos se devuelven como
@@ -81,5 +87,7 @@ export type { ContextoDeColor, ErrorDeColor } from './color';
 export { advertenciasDeContraste, leyendaDelTema, razonDeContraste, tiposSoloColor } from './contraste';
 export type { AdvertenciaDeContraste, EntradaDeLeyenda, Leyenda, TipoParaLeyenda } from './contraste';
 export { TEMA_ALTO_CONTRASTE } from './alto-contraste';
+export { componentesDeTema, usosDeCodigo } from './codigo';
+export type { UsoDeComponente } from './codigo';
 export { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES, construirEfecto, construirEscalonado, construirKeyframes, construirMovimiento, construirTransicion, duracionEnMs } from './animacion';
 export type { Animacion, Easing, Efecto, KeyframesDeCapa, Movimiento, NombreDeEfecto, NombreDeMovimiento, ParametroDeAnimacion, PasoDeKeyframes, PropiedadAnimable, Reducido, Transicion } from './animacion';

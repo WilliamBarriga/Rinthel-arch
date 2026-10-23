@@ -6,6 +6,7 @@
 import { createElement } from 'react';
 import type { MouseEvent, ReactElement, ReactNode } from 'react';
 
+import { ConLimite } from './limite';
 import { construirEscena } from './escena';
 import type { Elemento, EntradaDeEscena } from './escena';
 
@@ -33,7 +34,7 @@ function estiloReact(texto: string): Record<string, string> {
   return estilo;
 }
 
-function aReact({ tag, attrs, hijos, html, alClic }: Elemento, clave: string): ReactElement {
+function aReact({ tag, attrs, hijos, html, alClic, componente }: Elemento, clave: string): ReactElement {
   const props: Record<string, unknown> = { key: clave };
   for (const [nombre, valor] of Object.entries(attrs)) props[nombreReact(nombre)] = nombre === 'style' ? estiloReact(valor) : valor;
   if (alClic !== undefined) {
@@ -44,5 +45,6 @@ function aReact({ tag, attrs, hijos, html, alClic }: Elemento, clave: string): R
   }
   if (html !== undefined) props['dangerouslySetInnerHTML'] = { __html: html };
   const contenido: ReactNode[] | undefined = hijos?.map((hijo, i) => (typeof hijo === 'string' ? hijo : aReact(hijo, String(i))));
+  if (componente !== undefined) return createElement(tag, props, createElement(ConLimite, null, createElement(componente.tipo, componente.props)));
   return createElement(tag, props, ...(contenido ?? []));
 }

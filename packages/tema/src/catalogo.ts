@@ -12,6 +12,7 @@ import { CATALOGO_DE_EFECTOS } from './catalogo-efectos';
 import type { FamiliaDeEfectos } from './catalogo-efectos';
 import { validarColor } from './color';
 import { BORDES } from './familias/borde';
+import { CODIGO } from './familias/codigo';
 import { FORMAS } from './familias/forma';
 import { MARCADORES } from './familias/marcador';
 import { RELLENOS } from './familias/relleno';
@@ -22,19 +23,23 @@ import { TRAZOS } from './familias/trazo';
 export type DefinicionDePropiedad =
   | { readonly tipo: 'numero'; readonly min: number; readonly max: number; readonly defecto?: number }
   | { readonly tipo: 'color'; readonly opcional?: true }
-  | { readonly tipo: 'opcion'; readonly valores: readonly string[]; readonly defecto: string };
+  | { readonly tipo: 'opcion'; readonly valores: readonly string[]; readonly defecto: string }
+  /** Nombre de un Componente de Tema: identificador que empieza en mayuscula. */
+  | { readonly tipo: 'nombre' };
 
 /** Donde se usa una Primitiva: Capa de Nodo (defecto), Capa de Arista, marcador de extremo, etiqueta de Arista o estilo de texto de un Slot. */
 export type UbicacionDePrimitiva = 'capa-nodo' | 'capa-arista' | 'marcador' | 'etiqueta' | 'texto-slot';
 
 export interface DefinicionDePrimitiva {
-  readonly familia: 'forma' | 'relleno' | 'borde' | 'trazo' | 'marcador' | 'texto' | FamiliaDeEfectos;
+  readonly familia: 'forma' | 'relleno' | 'borde' | 'trazo' | 'marcador' | 'texto' | 'codigo' | FamiliaDeEfectos;
   readonly ubicacion?: UbicacionDePrimitiva;
   readonly propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
   /** Si cambia la caja o los Slots (Metricas). Por defecto una Primitiva solo pinta. */
   readonly afectaMetricas: boolean;
   /** Regla de caja minima que exige la forma; sin ella, cualquier caja sirve. */
   readonly cajaMinima?: 'cuadrado';
+  /** Acepta ademas propiedades no declaradas (los parametros de un Componente de Tema): numero o texto, tal cual. */
+  readonly abierta?: true;
 }
 
 export const CATALOGO = {
@@ -53,6 +58,7 @@ export const CATALOGO = {
   ...TRAZOS,
   ...MARCADORES,
   ...TEXTOS,
+  ...CODIGO,
 } as const satisfies Record<string, DefinicionDePrimitiva>;
 
 export type NombreDePrimitiva = keyof typeof CATALOGO;
@@ -126,7 +132,9 @@ export function construirPrimitiva(
 
   for (const { clave, valor } of props) {
     const propiedad = definicion.propiedades[clave];
-    if (propiedad === undefined) {
+    if (propiedad === undefined && definicion.abierta === true) {
+      resultado[clave] = typeof valor === 'string' && /^-?\d+(?:\.\d+)?$/.test(valor) ? Number(valor) : valor;
+    } else if (propiedad === undefined) {
       errores.push({
         codigo: CODIGOS.E_THEME_UNKNOWN_PROPERTY,
         mensaje: `La Primitiva '${tipo}' no tiene la propiedad '${clave}'; disponibles: ${Object.keys(definicion.propiedades).join(', ')}`,
@@ -145,6 +153,9 @@ export function construirPrimitiva(
           ...(problema.hint !== undefined && { hint: problema.hint }),
         });
       }
+    } else if (propiedad.tipo === 'nombre') {
+      if (/^[A-Z][A-Za-z0-9_]*$/.test(String(valor))) resultado[clave] = String(valor);
+      else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' de '${tipo}' debe ser un nombre de Componente (empieza en mayuscula, p. ej. Aurora), no '${valor}'`, clave });
     } else if (propiedad.tipo === 'opcion') {
       if (propiedad.valores.includes(String(valor))) resultado[clave] = String(valor);
       else {

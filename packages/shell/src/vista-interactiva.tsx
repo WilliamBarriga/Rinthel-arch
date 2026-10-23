@@ -14,7 +14,7 @@ import type { EstadoDeColapso, IconProvider, IssueDeDev, FuenteCanonica, Tema, V
 import { claveDeLayout, indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
-import type { Camara } from 'render';
+import type { Camara, ComponentesDeTema } from 'render';
 import type { MedidasDeTexto, TextoAMedir } from 'tema';
 
 import { aCamara, aTransform, compensarCamara, encuadrar, mismaTransform } from './camara';
@@ -53,6 +53,8 @@ export type MedidorDeTexto = (textos: TextoAMedir[]) => Promise<MedidasDeTexto>;
 export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, PropsDeAltoContraste {
   /** Leyenda de Tipos derivada del Tema: `auto` (por defecto) solo si dos Tipos difieren unicamente por color. */
   legend?: ModoDeLeyenda;
+  /** Componentes de Tema (Capa `code`) por nombre; los registra el adaptador (`dev`), el shell solo los pasa a `Diagram`. */
+  componentes?: ComponentesDeTema;
   source: FuenteCanonica;
   theme: Tema;
   /** Puerto de recarga de Tema al guardar: recolorea sin relayout salvo que cambien las fuentes. */
@@ -374,6 +376,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
           geometry={mostrado.geometria}
           theme={theme}
           {...(props.icons !== undefined && { icons: props.icons })}
+          {...(props.componentes !== undefined && { componentes: props.componentes })}
           width={width}
           height={height}
           camera={camaraVista}

@@ -80,6 +80,16 @@ export const CODIGOS = Object.freeze({
   W_THEME_LOW_CONTRAST: 'W_THEME_LOW_CONTRAST',
   /** Dos Tipos de una Vista se distinguen solo por color de Paleta (`solo-color`); aviso. */
   W_THEME_COLOR_ONLY: 'W_THEME_COLOR_ONLY',
+  /** Un Tema usa la Capa `code`: hay que revisarlo con confianza (corre codigo del Workspace); aviso. */
+  W_THEME_WITH_CODE: 'W_THEME_WITH_CODE',
+  /** Una Capa `code` nombra un Componente de Tema que ningun `.tsx` del Workspace exporta. */
+  E_THEME_COMPONENT_MISSING: 'E_THEME_COMPONENT_MISSING',
+  /** Los parametros de una Capa `code` no coinciden con los que el componente declara. */
+  E_THEME_COMPONENT_PARAMS: 'E_THEME_COMPONENT_PARAMS',
+  /** Dos modulos `.tsx` del Workspace exportan un componente con el mismo nombre. */
+  E_THEME_COMPONENT_DUPLICATE: 'E_THEME_COMPONENT_DUPLICATE',
+  /** Un `.tsx` de un Componente de Tema no compila (`file`/`line` apuntan al error). */
+  E_THEME_CODE_COMPILE: 'E_THEME_CODE_COMPILE',
 } as const);
 
 /** Union de los codigos activos; `Issue.code` sigue siendo `string` (ADR 0005). */
@@ -123,6 +133,11 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_DUPLICATE_PART: 'Dos `part` con el mismo nombre en el Workspace.',
   W_THEME_LOW_CONTRAST: 'Un Tipo de nodo y estado del Tema queda bajo el contraste minimo (4.5:1 texto, 3:1 graficos); aviso.',
   W_THEME_COLOR_ONLY: 'Dos Tipos de una Vista se distinguen solo por color de Paleta (solo-color); aviso.',
+  W_THEME_WITH_CODE: 'Un Tema usa la Capa `code` (Tema con codigo): corre codigo del Workspace sin sandbox, hay que revisarlo; aviso.',
+  E_THEME_COMPONENT_MISSING: 'Una Capa `code` nombra un Componente de Tema que ningun `.tsx` del Workspace exporta.',
+  E_THEME_COMPONENT_PARAMS: 'Los parametros de una Capa `code` no coinciden con los que declara el componente (desconocido o de otro tipo).',
+  E_THEME_COMPONENT_DUPLICATE: 'Dos `.tsx` del Workspace exportan un Componente de Tema con el mismo nombre.',
+  E_THEME_CODE_COMPILE: 'Un `.tsx` de un Componente de Tema no compila; `file` y `line` apuntan al error.',
 });
 
 /**

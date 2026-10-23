@@ -6,7 +6,7 @@
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos, resolveView, salidaDeInspectSchema } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
-import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, cascada, metricasDeNodo, resolverTema, tablaDeMetricas } from 'tema';
+import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, cascada, componentesDeTema, metricasDeNodo, resolverTema, tablaDeMetricas } from 'tema';
 import type { CapaDeTema, Estado } from 'tema';
 
 type Sitio = { file: string; line: number };
@@ -163,6 +163,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   }
 
   const tema = resolverTema(declarado);
+  const componentes = componentesDeTema(declarado);
   const origen = origenes[nombre];
   const sitioDe = (capa: string): Sitio => {
     // El ultimo nivel de la cascada que fijo la Capa gana: estado, Tipo, base.
@@ -190,9 +191,8 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
         ...(estadoValido !== undefined && { estado: estadoValido }),
         capas,
         metricas: JSON.parse(JSON.stringify(metricasDeNodo(tablaDeMetricas(declarado), tipo))) as never,
-        // La Capa `code` llega con su propio ticket; hasta entonces ningun Tema usa codigo.
-        temaConCodigo: false,
-        componentes: [],
+        temaConCodigo: componentes.length > 0,
+        componentes,
         ...(catalogo && { catalogo: { primitivas: Object.keys(CATALOGO), movimientos: Object.keys(MOVIMIENTOS), efectos: [...EFECTOS] } }),
       },
     },
