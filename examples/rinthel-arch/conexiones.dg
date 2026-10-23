@@ -1,4 +1,4 @@
-// Dependencias entre paquetes (orden: canonico -> dsl -> layout -> sesion -> render -> shell / cli) y flujo de datos.
+// Dependencias entre paquetes (orden: canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli) y flujo de datos.
 model {
   autor -> workspace "escribe .dg"
   agente -> cli "validate / inspect / edit"
@@ -6,13 +6,17 @@ model {
   cli -> workspace "lee"
   cli -> salida-derivada "escribe"
 
+  tema -> canonico
   dsl -> canonico
+  dsl -> tema
   layout -> canonico
+  layout -> tema
   sesion -> canonico
   sesion -> dsl
   sesion -> layout
   render -> canonico
   render -> layout
+  render -> tema
   shell -> sesion
   shell -> render
   shell -> layout
@@ -30,7 +34,11 @@ model {
   canonico.can-pin -> canonico.can-esquema
   canonico.can-inspect -> canonico.can-vistas
   layout.lay-layout -> elk
-  layout.lay-layout -> layout.lay-metricas
+  layout.lay-layout -> tema.tem-slots
+  tema.tem-slots -> tema.tem-metricas
+  tema.tem-estilo -> tema.tem-tema
+  tema.tem-tema -> tema.tem-catalogo
+  dsl.dsl-temas -> tema.tem-catalogo
   layout.lay-indice -> layout.lay-layout
   sesion.ses-sesion -> dsl.dsl-compilar
   sesion.ses-sesion -> canonico.can-validar

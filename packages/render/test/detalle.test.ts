@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
+import { combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
 import { layoutView } from 'layout';
 import { aSvg } from './ayudas';
 import type { DiagramProps } from 'render';
+import { TEMA_NEUTRO } from 'tema';
 
 type Detalle = NonNullable<DiagramProps['detail']>;
 

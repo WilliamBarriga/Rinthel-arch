@@ -9,11 +9,12 @@ import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { gzipSync } from 'node:zlib';
 
-import { TEMA_NEUTRO, resolveView } from 'canonico';
+import { resolveView } from 'canonico';
 import type { EstadoDeColapso, FuenteCanonica, Nodo, Tema, VistaResuelta } from 'canonico';
 import { run } from 'cli';
 import { compile } from 'dsl';
 import { layoutView } from 'layout';
+import { TEMA_NEUTRO } from 'tema';
 import { adaptadorDeWorker, servirLayout } from 'shell';
 import type { PuertoDeMensajes } from 'shell';
 import { build } from 'esbuild';

@@ -7,14 +7,16 @@
  */
 import { idDeArista } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
-import { atributosVisibles, indiceDeGeometria } from 'layout';
-import type { CajaDeNodo, Geometria, Metricas } from 'layout';
+import { indiceDeGeometria } from 'layout';
+import type { CajaDeNodo, Geometria } from 'layout';
+import { atributosVisibles, colocarEnCaja } from 'tema';
+import type { Metricas } from 'tema';
 
 import { num } from './elemento';
 import type { Elemento } from './elemento';
 import { resolverEstilo } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
-import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEstadoDeRuta, pintarEtiquetaDeArista, pintarFlecha, pintarFondo, pintarGrupo, pintarNodo, pintarSombras } from './pintores';
+import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEstadoDeRuta, pintarEtiquetaDeArista, pintarFlecha, pintarFondo, pintarGrupo, pintarNodo } from './pintores';
 
 export type { Elemento } from './elemento';
 
@@ -90,7 +92,6 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
     hijos: [
       pintarFondo(estilo, geometry.width, geometry.height),
       pintarFlecha(estilo),
-      ...[pintarSombras(estilo)].filter((e) => e !== undefined),
       ...raices.map((nodo) => nodoSvg(nodo, contexto)),
       ...view.edges.flatMap((arista) => aristaSvg(arista, contexto)),
     ],
@@ -117,7 +118,7 @@ function nodoSvg(nodo: NodoResuelto, contexto: Contexto): Elemento {
         attrs: { 'data-part': 'nodo', ...opacidad(contexto.visibility(nodo.id)) },
         ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
         hijos: [
-          ...(esGrupo ? pintarGrupo(estilo, datos) : pintarNodo(estilo, { ...datos, conAtributos: tieneFilas(nodo, contexto.detail) })),
+          ...(esGrupo ? pintarGrupo(estilo, datos) : pintarNodo(estilo, { ...datos, conAtributos: tieneFilas(nodo, estilo, contexto.detail) })),
           ...(onToggle !== undefined && conmutable ? [pintarControl(estilo, { nodo, caja, alClic: () => onToggle(nodo.id) })] : []),
         ],
       },
@@ -130,22 +131,23 @@ function nodoSvg(nodo: NodoResuelto, contexto: Contexto): Elemento {
 function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, detail }: Contexto): Elemento[] {
   if (estados === undefined) return [];
   const propios = (estados[nodo.id] ?? []).map((e) => pintarEstadoDeCaja(estilo, e, nodo.id, { x: 0, y: 0, width: caja.width, height: caja.height }));
-  if (nodo.children.length > 0 || !tieneFilas(nodo, detail)) return propios;
-  const { cabecera, fila } = estilo.metricas;
-  const filas = atributosVisibles(nodo).flatMap((atributo, i) => {
+  if (nodo.children.length > 0 || !tieneFilas(nodo, estilo, detail)) return propios;
+  const atributos = atributosVisibles(nodo, estilo.metricas);
+  const rectas = colocarEnCaja(estilo.metricas, atributos.length, caja.width).filas;
+  const filas = atributos.flatMap((atributo, i) => {
     const id = `${nodo.id}#${atributo.name}`;
-    return (estados[id] ?? []).map((e) => pintarEstadoDeCaja(estilo, e, id, { x: 0, y: cabecera + i * fila, width: caja.width, height: fila }));
+    return (estados[id] ?? []).map((e) => pintarEstadoDeCaja(estilo, e, id, rectas[i]!));
   });
   return [...propios, ...filas];
 }
 
-function tieneFilas(nodo: NodoResuelto, detail?: NivelDeDetalle): boolean {
-  return (detail === undefined || detail === 'completo') && atributosVisibles(nodo).length > 0;
+function tieneFilas(nodo: NodoResuelto, estilo: Estilo, detail?: NivelDeDetalle): boolean {
+  return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, estilo.metricas).length > 0;
 }
 
 /** Valor de la Paleta para el color del Nodo; sin color, o desconocido, el borde del Estilo. */
 function colorDeTrazo(nodo: NodoResuelto, estilo: Estilo): string {
-  return (nodo.color !== undefined ? estilo.paleta[nodo.color] : undefined) ?? estilo.nodo.porTipo[nodo.type]?.trazo ?? estilo.borde;
+  return (nodo.color !== undefined ? estilo.paleta[nodo.color] : undefined) ?? estilo.borde;
 }
 
 /** Arista con su etiqueta. Una Arista sin ruta en la geometria (ELK no la enruto) se omite. */

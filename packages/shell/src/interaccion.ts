@@ -11,8 +11,9 @@
  */
 import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
-import { atributosVisibles, indiceDeGeometria } from 'layout';
+import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria, Punto } from 'layout';
+import { atributosVisibles, colocarEnCaja } from 'tema';
 import { centroDeEtiquetaSinCaja, resolverEstilo } from 'render';
 import type { Estilo } from 'render';
 
@@ -87,10 +88,10 @@ export function elementoBajo(
   for (const nodo of enOrdenDeDibujo(raices).reverse()) {
     const caja = cajas.get(nodo.id);
     if (caja === undefined || !contiene(caja, punto)) continue;
-    const filas = atributos ? atributosVisibles(nodo) : [];
-    const { cabecera, fila } = metricas;
-    const indice = Math.floor((punto.y - caja.y - cabecera) / fila);
-    const atributo = punto.y - caja.y >= cabecera ? filas[indice] : undefined;
+    const filas = atributos ? atributosVisibles(nodo, metricas) : [];
+    const rectas = colocarEnCaja(metricas, filas.length, caja.width).filas;
+    const indice = rectas.findIndex((r) => punto.y >= caja.y + r.y && punto.y < caja.y + r.y + r.height);
+    const atributo = filas[indice];
     return atributo === undefined ? { tipo: 'nodo', id: nodo.id } : { tipo: 'atributo', id: `${nodo.id}#${atributo.name}` };
   }
   return undefined;
@@ -101,13 +102,15 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
   const { cajas } = indiceDeGeometria(vista, geometria);
   if (elemento.tipo === 'nodo') return cajas.get(elemento.id);
   if (elemento.tipo === 'atributo') {
+    const { metricas } = resolverEstilo(tema);
     const [idNodo = '', nombre] = elemento.id.split('#');
     const nodo = enOrdenDeDibujo(indiceDeGeometria(vista, geometria).raices).find((n) => n.id === idNodo);
     const caja = cajas.get(idNodo);
-    const indice = nodo === undefined ? -1 : atributosVisibles(nodo).findIndex((a) => a.name === nombre);
+    const atributos = nodo === undefined ? [] : atributosVisibles(nodo, metricas);
+    const indice = atributos.findIndex((a) => a.name === nombre);
     if (caja === undefined || indice < 0) return undefined;
-    const { cabecera, fila } = resolverEstilo(tema).metricas;
-    return { x: caja.x, y: caja.y + cabecera + indice * fila, width: caja.width, height: fila };
+    const fila = colocarEnCaja(metricas, atributos.length, caja.width).filas[indice]!;
+    return { x: caja.x + fila.x, y: caja.y + fila.y, width: fila.width, height: fila.height };
   }
   const arista = vista.edges.find((a) => idDeArista(a) === elemento.id);
   const puntos = geometria.edges[elemento.id]?.points ?? [];

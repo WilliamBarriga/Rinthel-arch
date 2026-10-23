@@ -25,6 +25,7 @@
     "esbuild": "^0.25.0",
     "layout": "workspace:*",
     "shell": "workspace:*",
+    "tema": "workspace:*",
     "typescript": "^5.9.3",
     "vitest": "^3.2.7"
   }

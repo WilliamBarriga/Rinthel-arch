@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
+import { combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
 import type { IconProvider, Tema, VistaResuelta } from 'canonico';
-import { layoutView, metricasDe } from 'layout';
+import { layoutView } from 'layout';
 import { aSvg } from './ayudas';
+import { TEMA_NEUTRO, metricasDe } from 'tema';
+import type { TemaResuelto } from 'tema';
 
 const nodo = (id: string, title: string, type: string, children: unknown[] = []) => ({
   id,
@@ -29,11 +31,12 @@ function vista(estado = {}): VistaResuelta {
   return resolveView(fuente, 'v', estado)!;
 }
 
-const OSCURO: Tema = {
+const OSCURO: TemaResuelto = {
   name: 'oscuro',
   palette: { ...TEMA_NEUTRO.palette, blue: '#60a5fa', green: '#4ade80', red: '#f87171' },
   fonts: { body: 'Inter, sans-serif', mono: 'monospace' },
   tokens: { background: '#111827', foreground: '#f9fafb', border: '#4b5563', fontSize: '16px' },
+  nodo: TEMA_NEUTRO.nodo,
 };
 
 async function dibujar(tema: Tema, estado = {}): Promise<string> {

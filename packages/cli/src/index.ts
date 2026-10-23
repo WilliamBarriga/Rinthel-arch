@@ -43,7 +43,7 @@
  * error en `dev.ts`. `run(['dev', ...])` convierte sus fallos en codigo 2.
  * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
  * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
- * anteriores en la cadena `canonico -> dsl -> layout -> sesion -> render -> shell / cli`; la tuberia compilar, validar y layout vive en `sesion`.
+ * anteriores en la cadena `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`; la tuberia compilar, validar y layout vive en `sesion`.
  */
 import { salidaDeValidateSchema } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';

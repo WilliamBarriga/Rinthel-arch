@@ -2,12 +2,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, resolveView, revealAt } from 'canonico';
+import { fuenteCanonicaSchema, resolveView, revealAt } from 'canonico';
 import type { VistaResuelta } from 'canonico';
 import { layoutView } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
+import { TEMA_NEUTRO } from 'tema';
 
 const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
 

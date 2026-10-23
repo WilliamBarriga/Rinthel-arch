@@ -7,8 +7,8 @@ import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
-import { atributosVisibles, metricasDe, tamanoDeEtiqueta, tamanoDeNodo, yDeFila } from './metricas';
-import type { Metricas } from './metricas';
+import { atributosVisibles, colocarEnCaja, colocarNodo, metricasDe, tamanoDeEtiqueta } from 'tema';
+import type { Metricas, Rect } from 'tema';
 
 /** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
 export interface CajaDeNodo {
@@ -16,6 +16,8 @@ export interface CajaDeNodo {
   y: number;
   width: number;
   height: number;
+  /** Rectangulo de cada Slot que el Tema muestra en este Nodo hoja, relativo a la caja (colocacion de `tema`). */
+  slots?: Record<string, Rect>;
 }
 
 export interface Punto {
@@ -117,7 +119,20 @@ export async function layoutView(
 function conPinsYPuertos(vista: VistaResuelta, medidas: Metricas, base: Geometria): Geometria {
   const pinneada = aplicarPins(vista, base.nodes, base.edges, base.labels);
   const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
-  return { ...conPuertos, width: base.width, height: base.height };
+  return { ...conPuertos, nodes: conSlots(vista, medidas, conPuertos.nodes), width: base.width, height: base.height };
+}
+
+/** Anade a cada Nodo hoja el rectangulo de sus Slots, el mismo que usa `render` para pintar. */
+function conSlots(vista: VistaResuelta, medidas: Metricas, nodes: Record<string, CajaDeNodo>): Record<string, CajaDeNodo> {
+  const resultado = { ...nodes };
+  // `vista.nodes` ya lista todos los Nodos visibles a plano.
+  for (const nodo of vista.nodes) {
+    const caja = resultado[nodo.id];
+    if (nodo.children.length === 0 && caja !== undefined) {
+      resultado[nodo.id] = { ...caja, slots: colocarEnCaja(medidas, atributosVisibles(nodo, medidas).length, caja.width).slots };
+    }
+  }
+  return resultado;
 }
 
 /**
@@ -203,7 +218,7 @@ function ajustarAPuertosDeAtributo(
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
 ): Record<string, RutaDeArista> {
-  const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, atributosVisibles(nodo)]));
+  const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, atributosVisibles(nodo, metricas)]));
   const { cajas } = indiceDeGeometria(vista, { nodes });
   const rutas = { ...edges };
   for (const arista of vista.edges) {
@@ -214,7 +229,8 @@ function ajustarAPuertosDeAtributo(
     for (const [lado, extremo] of [['inicio', arista.from], ['fin', arista.to]] as const) {
       const indice = extremo.attribute === undefined ? -1 : (atributos.get(extremo.node) ?? []).findIndex((a) => a.name === extremo.attribute);
       if (indice < 0) continue;
-      const y = cajas.get(extremo.node)!.y + yDeFila(metricas, indice);
+      const fila = colocarEnCaja(metricas, indice + 1, 0).filas[indice]!;
+      const y = cajas.get(extremo.node)!.y + fila.y + fila.height / 2;
       puntos = moverPuerto(puntos, lado, y);
     }
     rutas[id] = { points: puntos };
@@ -269,7 +285,8 @@ function paddingElk({ top, left, bottom, right }: Metricas['paddingGrupo']): str
 
 function aElk(nodo: NodoResuelto, medidas: Metricas): ElkNode {
   if (nodo.children.length === 0) {
-    return { id: nodo.id, ...tamanoDeNodo(nodo.label, medidas, atributosVisibles(nodo)) };
+    const { width, height } = colocarNodo(nodo.label, atributosVisibles(nodo, medidas), medidas);
+    return { id: nodo.id, width, height };
   }
   return {
     id: nodo.id,
@@ -296,7 +313,7 @@ const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin =
  */
 export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas = metricasDe(tema)): string {
   return JSON.stringify({
-    nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo).map((a) => [a.name, a.type])]),
+    nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricas).map((a) => [a.name, a.type])]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
     metricas,
   });

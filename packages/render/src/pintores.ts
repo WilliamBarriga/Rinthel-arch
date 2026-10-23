@@ -5,8 +5,8 @@
  */
 import { sanearIcono } from 'canonico';
 import type { IconProvider, NodoResuelto } from 'canonico';
-import { atributosVisibles, textoDeAtributo, yDeFila } from 'layout';
 import type { CajaDeNodo } from 'layout';
+import { atributosVisibles, colocarEnCaja, textoDeAtributo } from 'tema';
 
 import { num } from './elemento';
 import type { Elemento } from './elemento';
@@ -24,27 +24,6 @@ export interface DatosDeNodo {
   icons?: IconProvider;
 }
 
-function idDeSombra(tipo: string): string {
-  return `sombra-${tipo.replace(/[^\w-]/g, '_')}`;
-}
-
-/** Definiciones de las sombras por Tipo de nodo del Estilo; `undefined` si ninguno declara sombra. */
-export function pintarSombras(estilo: Estilo): Elemento | undefined {
-  const region = estilo.nodo.regionDeSombra;
-  const filtros = Object.entries(estilo.nodo.porTipo).flatMap(([tipo, t]): Elemento[] =>
-    t.sombra === undefined
-      ? []
-      : [
-          {
-            tag: 'filter',
-            attrs: { id: idDeSombra(tipo), x: region.origen, y: region.origen, width: region.tamano, height: region.tamano },
-            hijos: [{ tag: 'feDropShadow', attrs: { dx: num(t.sombra.dx), dy: num(t.sombra.dy), stdDeviation: num(t.sombra.desenfoque), 'flood-color': t.sombra.color } }],
-          },
-        ],
-  );
-  return filtros.length === 0 ? undefined : { tag: 'defs', attrs: {}, hijos: filtros };
-}
-
 /** Fondo del lienzo. */
 export function pintarFondo(estilo: Estilo, ancho: number, alto: number): Elemento {
   return { tag: 'rect', attrs: { width: num(ancho), height: num(alto), fill: estilo.fondo } };
@@ -52,17 +31,14 @@ export function pintarFondo(estilo: Estilo, ancho: number, alto: number): Elemen
 
 /** Caja de un Nodo o Grupo: radio, relleno y trazo del Estilo; discontinua si esta colapsado. */
 function caja({ nodo, caja, trazo }: DatosDeNodo, estilo: Estilo): Elemento {
-  const porTipo = estilo.nodo.porTipo[nodo.type];
   return {
     tag: 'rect',
     attrs: {
       width: num(caja.width),
       height: num(caja.height),
       rx: String(estilo.nodo.radio),
-      fill: porTipo?.relleno ?? estilo.nodo.relleno,
+      fill: estilo.nodo.relleno,
       stroke: trazo,
-      ...(porTipo?.anchoTrazo !== undefined && { 'stroke-width': num(porTipo.anchoTrazo) }),
-      ...(porTipo?.sombra !== undefined && { filter: `url(#${idDeSombra(nodo.type)})` }),
       ...(nodo.collapsed && { 'stroke-dasharray': estilo.nodo.trazoColapsado }),
     },
   };
@@ -71,15 +47,22 @@ function caja({ nodo, caja, trazo }: DatosDeNodo, estilo: Estilo): Elemento {
 /** Nodo (hoja, o Grupo colapsado): caja, etiqueta centrada, icono y filas de Atributos. `conAtributos`: si se dibujan las filas. */
 export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: boolean }): Elemento[] {
   const { nodo, caja: c, trazo, texto, conAtributos, icons } = datos;
-  const { metricas } = estilo;
+  const filas = conAtributos ? atributosVisibles(nodo, estilo.metricas).length : 0;
+  // Cada Slot se pinta en el rectangulo que reservo `layout` (colocacion de `tema`).
+  const { slots } = colocarEnCaja(estilo.metricas, filas, c.width);
+  const titulo = slots.title;
   return [
     caja(datos, estilo),
-    pintarEtiqueta(estilo, texto, {
-      x: num(c.width / 2),
-      y: num(conAtributos ? metricas.cabecera / 2 : c.height / 2),
-      'text-anchor': 'middle',
-      'dominant-baseline': 'central',
-    }),
+    ...(titulo === undefined
+      ? []
+      : [
+          pintarEtiqueta(estilo, texto, {
+            x: num(titulo.x + titulo.width / 2),
+            y: num(filas > 0 ? titulo.y + titulo.height / 2 : c.height / 2),
+            'text-anchor': 'middle',
+            'dominant-baseline': 'central',
+          }),
+        ]),
     ...pintarIcono(estilo, nodo, trazo, icons),
     ...(conAtributos ? pintarAtributos(estilo, nodo, c, trazo) : []),
   ];
@@ -117,17 +100,21 @@ function pintarIcono(estilo: Estilo, nodo: NodoResuelto, trazo: string, icons?: 
   return [{ tag: 'g', attrs: { 'data-icon': nodo.icon, transform: `translate(${metricas.margenIcono} ${metricas.margenIcono})`, color: trazo }, html: dimensionado }];
 }
 
-/** Separador bajo la cabecera y una fila de texto por Atributo, en orden. */
+/** Separador sobre el Slot `attrs` y una fila de texto por Atributo, en orden, cada una en su rectangulo. */
 function pintarAtributos(estilo: Estilo, nodo: NodoResuelto, caja: CajaDeNodo, trazo: string): Elemento[] {
   const { metricas } = estilo;
+  const atributos = atributosVisibles(nodo, metricas);
+  const { slots, filas } = colocarEnCaja(metricas, atributos.length, caja.width);
+  const zona = slots.attrs;
+  if (zona === undefined) return [];
   return [
-    { tag: 'line', attrs: { x1: '0', y1: num(metricas.cabecera), x2: num(caja.width), y2: num(metricas.cabecera), stroke: trazo } },
-    ...atributosVisibles(nodo).map((atributo, i) => ({
+    ...(zona.y > 0 ? [{ tag: 'line', attrs: { x1: '0', y1: num(zona.y), x2: num(caja.width), y2: num(zona.y), stroke: trazo } }] : []),
+    ...atributos.map((atributo, i) => ({
       tag: 'text',
       attrs: {
         'data-attribute': `${nodo.id}#${atributo.name}`,
         x: num(metricas.margenDeTexto),
-        y: num(yDeFila(metricas, i)),
+        y: num(filas[i]!.y + filas[i]!.height / 2),
         'dominant-baseline': 'central',
         'font-family': estilo.fuenteMono,
         'font-size': num(metricas.fontSize * metricas.escalaAtributo),
@@ -167,10 +154,10 @@ function idDeFlecha(color: string): string {
   return `flecha-${color.replace(/[^\w]/g, '')}`;
 }
 
-/** Definicion de los marcadores de flecha: uno por color de Arista (el base y los de cada tipo). */
+/** Definicion del marcador de flecha del color de las Aristas. */
 export function pintarFlecha(estilo: Estilo): Elemento {
   const { flecha } = estilo.arista;
-  const colores = [...new Set([estilo.arista.color, ...Object.values(estilo.arista.porTipo).flatMap((t) => (t.color === undefined ? [] : [t.color]))])];
+  const colores = [estilo.arista.color];
   return {
     tag: 'defs',
     attrs: {},
@@ -189,12 +176,11 @@ export function pintarFlecha(estilo: Estilo): Elemento {
  */
 export function pintarArista(
   estilo: Estilo,
-  datos: { id: string; tipo?: string; puntos: readonly Punto[]; desde?: string; hasta?: string; atributos?: Record<string, string>; extra?: Elemento[]; alClic?: () => void },
+  datos: { id: string; puntos: readonly Punto[]; desde?: string; hasta?: string; atributos?: Record<string, string>; extra?: Elemento[]; alClic?: () => void },
 ): Elemento {
-  const { id, tipo = 'default', puntos, desde, hasta, atributos = {}, extra = [], alClic } = datos;
+  const { id, puntos, desde, hasta, atributos = {}, extra = [], alClic } = datos;
   const { arista, metricas } = estilo;
-  const porTipo = arista.porTipo[tipo];
-  const color = porTipo?.color ?? arista.color;
+  const color = arista.color;
   const ruta = puntos.map(({ x, y }, i) => `${i === 0 ? 'M' : 'L'} ${num(x)} ${num(y)}`).join(' ');
   const extremos = [
     ['from', desde, puntos[0]!, puntos[1]!],
@@ -224,7 +210,7 @@ export function pintarArista(
     attrs: { 'data-edge': id, ...atributos },
     ...(alClic !== undefined && { alClic }),
     hijos: [
-      { tag: 'path', attrs: { d: ruta, fill: 'none', stroke: color, ...(porTipo?.ancho !== undefined && { 'stroke-width': num(porTipo.ancho) }), 'marker-end': `url(#${idDeFlecha(color)})` } },
+      { tag: 'path', attrs: { d: ruta, fill: 'none', stroke: color, 'marker-end': `url(#${idDeFlecha(color)})` } },
       ...cardinalidades,
       ...extra,
     ],

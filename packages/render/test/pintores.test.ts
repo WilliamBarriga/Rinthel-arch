@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO } from 'canonico';
 import type { NodoResuelto } from 'canonico';
 import { resolverEstilo } from 'render';
 
 import type { Elemento } from '../src/elemento';
 import { pintarArista, pintarControl, pintarEtiquetaDeArista, pintarFlecha, pintarFondo, pintarGrupo, pintarNodo } from '../src/pintores';
+import { TEMA_NEUTRO } from 'tema';
 
 const estilo = resolverEstilo(TEMA_NEUTRO);
 const caja = { x: 0, y: 0, width: 140, height: 60 };

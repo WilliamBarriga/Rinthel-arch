@@ -2,7 +2,8 @@
  * `sesion` — estado compilado de un Workspace (termino Sesion en CONTEXT.md).
  *
  * Interfaz: `abrirSesion(archivos, { tema? }) -> Sesion`, con `fuente`,
- * `diagnosticar()`, `construir()`, `geometria(vista)` y `actualizar(archivos)`.
+ * `diagnosticar()`, `construir()`, `geometria(vista)`, `estilo(vista)` (Estilo resuelto
+ * del Tema de la Vista: Metricas y pintura) y `actualizar(archivos)`.
  * Es la unica tuberia compilar, validar y calcular layout: la comparten `cli`,
  * `dev` e `inspect`.
  *
@@ -43,7 +44,7 @@
  * `fix` de `validate`). El vocabulario del Gesto (`IntencionDePin`,
  * `MotivoDeRechazo`) se declara una sola vez en
  * `canonico` y se reexporta aqui para los consumidores. Solo importa paquetes
- * anteriores en la cadena `canonico -> dsl -> layout -> sesion`.
+ * anteriores en la cadena `canonico -> tema -> dsl -> layout -> sesion`.
  */
 export { abrirSesion, archivoDeVista } from './sesion';
 export { aplicarEdiciones, editarPin, hashDeContenido } from './ediciones';

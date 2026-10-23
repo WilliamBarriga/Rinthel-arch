@@ -1,10 +1,11 @@
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, resolveView } from 'canonico';
+import { fuenteCanonicaSchema, resolveView } from 'canonico';
 import { layoutView } from 'layout';
 import { VistaInteractiva, adaptadorDeWorker, servirLayout } from 'shell';
 import type { PuertoDeMensajes } from 'shell';
+import { TEMA_NEUTRO } from 'tema';
 
 afterEach(cleanup);
 

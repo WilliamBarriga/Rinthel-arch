@@ -2,7 +2,7 @@
 view paquetes {
   type architecture
   theme diagrams
-  include autor, agente, workspace, salida-derivada, canonico, dsl, layout, sesion, render, shell, cli
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli
   depth 1
   link canonico -> canonico-detalle
   link dsl -> dsl-detalle

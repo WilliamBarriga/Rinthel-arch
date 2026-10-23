@@ -106,7 +106,7 @@
  * renderizar; un rechazo del adaptador va a `onError` o, sin el, se lanza al
  * renderizar (para un error boundary). Configuracion requerida: Fuente canonica,
  * Vista, Tema, adaptador de layout y tamano del lienzo. Peer React 18 y 19.
- * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout -> render -> shell`.
+ * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> render -> shell`.
  */
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';

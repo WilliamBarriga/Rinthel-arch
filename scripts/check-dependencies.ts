@@ -34,10 +34,10 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
 /** Orden de dependencias (ADR 0004): un paquete solo importa de los anteriores. */
-export const CADENA = ['canonico', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli'] as const;
+export const CADENA = ['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli'] as const;
 
 /** Nucleo puro (CODING.md): sin I/O, sin reloj, sin estado global. layout, shell y cli son adaptadores. */
-export const NUCLEO = ['canonico', 'dsl', 'sesion', 'render'] as const;
+export const NUCLEO = ['canonico', 'tema', 'dsl', 'sesion', 'render'] as const;
 
 const IMPUREZAS: ReadonlyArray<readonly [RegExp, string]> = [
   [/\bnew Date\b|\bDate\.now\b|\bperformance\.now\b/, 'reloj'],

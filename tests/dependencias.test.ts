@@ -44,7 +44,7 @@ function crearWorkspace(archivos: Record<string, string>): string {
 
 describe('revisarWorkspace', () => {
   it('usa la cadena de dependencias de ADR 0004', () => {
-    expect(CADENA).toEqual(['canonico', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli']);
+    expect(CADENA).toEqual(['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli']);
   });
 
   it('falla si un paquete importa de uno posterior en la cadena', () => {
@@ -174,7 +174,7 @@ describe('revisarWorkspace', () => {
 
 describe('manifiestos de este workspace', () => {
   it('cada paquete declara exports con solo la entrada raiz', () => {
-    const nombres = ['canonico', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli'];
+    const nombres = ['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli'];
     for (const nombre of nombres) {
       const ruta = resolve(raizDelRepo, 'packages', nombre, 'package.json');
       const manifiestoLeido = JSON.parse(readFileSync(ruta, 'utf8')) as {
@@ -212,6 +212,23 @@ describe('manifiestos de este workspace', () => {
       'canonico:packages/canonico/src/index.ts',
       'canonico:packages/canonico/src/index.ts',
     ]);
+  });
+
+  it('el paquete tema esta en el nucleo puro y solo puede importar de canonico', () => {
+    const raiz = crearWorkspace({
+      'packages/canonico/package.json': manifiesto('canonico'),
+      'packages/canonico/src/index.ts': 'export const a = 1;\n',
+      'packages/tema/package.json': manifiesto('tema', { dependencies: { canonico: 'workspace:*' } }),
+      'packages/tema/src/index.ts': "import { a } from 'canonico';\nexport const t = a + Math.random();\n",
+      'packages/dsl/package.json': manifiesto('dsl'),
+      'packages/dsl/src/index.ts': "import { t } from 'tema';\nexport const d = t;\n",
+    });
+
+    const violaciones = revisarWorkspace(raiz);
+
+    expect(violaciones).toContainEqual(expect.objectContaining({ paquete: 'tema', regla: 'pureza' }));
+    expect(violaciones).toContainEqual(expect.objectContaining({ paquete: 'dsl', regla: 'declaracion' }));
+    expect(violaciones.filter((v) => v.regla === 'orden')).toEqual([]);
   });
 
   it('el workspace real cumple la regla de pureza', () => {

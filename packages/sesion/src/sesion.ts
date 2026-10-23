@@ -1,9 +1,11 @@
-import { CODIGOS, TEMA_NEUTRO, resolveView } from 'canonico';
+import { CODIGOS, resolveView } from 'canonico';
 import type { FuenteCanonica, GeometriaCacheada, Issue, Tema, Ubicador, Vista } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
 import type { Geometria } from 'layout';
+import { TEMA_NEUTRO, estiloResuelto } from 'tema';
+import type { EstiloResuelto } from 'tema';
 
 /** Archivos derivados, por ruta relativa a `<workspace>/.diagrams/`. */
 export type SalidaDeBuild = Record<string, string>;
@@ -32,6 +34,8 @@ export interface Sesion {
   construir(): Promise<ResultadoDeConstruir>;
   /** Geometria cacheable de una Vista, perezosa y memoizada; `undefined` si la Vista no existe. */
   geometria(vista: string): Promise<GeometriaCacheada | undefined>;
+  /** Estilo resuelto (Metricas y pintura) del Tema de una Vista; `undefined` si la Vista no existe. Sincrono: no necesita layout. */
+  estilo(vista: string): EstiloResuelto | undefined;
   /** Ids de las Vistas cuya geometria ya se pidio (calculada o en curso). */
   vistasConGeometria(): string[];
   /** Otra Sesion para estos archivos; la actual no cambia y su geometria se reutiliza por `layoutKey`. */
@@ -148,6 +152,10 @@ function crear(
       return { archivos: salida, issues };
     },
     geometria,
+    estilo: (vista) => {
+      const datos = claveDe(vista);
+      return datos === undefined ? undefined : estiloResuelto(datos.tema);
+    },
     vistasConGeometria: () => [...memo.keys()],
     actualizar: (nuevos) => crear(nuevos, opciones, compile(nuevos), memo),
   };

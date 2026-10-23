@@ -23,9 +23,9 @@
  * dibuja sin tocar cajas ni rutas: el `label` de la Vista se respeta siempre y solo
  * `completo` dibuja los Atributos; sin `detail`, etiqueta de la Vista y Atributos.
  *
- * Estilo resuelto (ADR 0006): `resolverEstilo(tema, metricas?) -> Estilo` entrega todo
+ * Estilo resuelto (ADR 0008): `resolverEstilo(tema, metricas?) -> Estilo` entrega todo
  * lo que el dibujo necesita (colores, fuentes, radios, trazos, flecha, halo, glifos y
- * las Metricas de `layout`) y lanza si el Tema no cumple `contratoDeTemaSchema`. Los
+ * las Metricas de `layout`) y lanza si el Tema no cumple `resolverTema` (paquete `tema`). Los
  * pintores por parte leen solo de el; `estilo` (prop opcional, por defecto el del Tema)
  * lo sustituye.
  *
@@ -40,7 +40,7 @@
  * Modos de error: una geometria que no contiene un Nodo de la Vista lanza
  * excepcion de uso. Configuracion requerida: `theme` y `geometry` resueltos por
  * paquetes anteriores.
- * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout -> render`.
+ * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> render`.
  */
 export { Diagram } from './diagram';
 export type { DiagramProps } from './diagram';

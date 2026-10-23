@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "canonico": "workspace:*",
-    "langium": "^4.4.0"
+    "langium": "^4.4.0",
+    "tema": "workspace:*"
   }
 }

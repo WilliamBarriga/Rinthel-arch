@@ -12,10 +12,9 @@
  * colapsado (estado, `depth`, `collapsed`/`expanded`, `link`) eleva y fusiona las
  * Aristas de sus hijos; los `steps` de una Vista los interpreta `revealAt` (ADR 0002,
  * acumulativos, con fundido entre pasos); `IconProvider` resuelve claves de icono a SVG inline (`serializarIconos`/`hidratarIconos` lo llevan al navegador y de vuelta; `sanearIcono` filtra por lista blanca los SVG externos);
- * colores son nombres de Paleta, nunca valores hex (ADR 0002); el Tema (`themes`,
- * siempre con el neutro) es un objeto plano ya resuelto, sin herencia;
- * `contratoDeTemaSchema` declara lo que el dibujo exige de el (tokens `background`,
- * `foreground`, `border`; fuentes `body`, `mono`; `fontSize` en px si existe).
+ * colores son nombres de Paleta, nunca valores hex (ADR 0002); el Tema (`themes`) es
+ * un objeto ya resuelto, sin herencia, del que `canonico` solo conoce el sobre (`name`,
+ * `palette`); su contenido y su contrato de dibujo son del paquete `tema` (ADR 0008).
  * La geometria cacheada por Vista (`geometriaCacheadaSchema`: `{ view, theme, layoutKey,
  * geometry }`) tiene aqui su esquema para validarla al leerla del disco; la calcula `layout`.
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
@@ -34,7 +33,7 @@
  * `intencionSchema`/`Intencion` es la union de Intenciones de `POST /api/edit` (ADR 0007) y
  * `estadoDeDevSchema`/`EstadoDeDev` el esquema unico del estado servidor-navegador de `dev`.
  * Configuracion requerida: ninguna. Solo importa paquetes anteriores en la
- * cadena `canonico -> dsl -> layout -> render -> shell / cli`.
+ * cadena `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`.
  */
 export {
   fuenteCanonicaSchema,
@@ -42,13 +41,8 @@ export {
   nodoSchema,
   overrideSchema,
   pasoSchema,
-  TEMA_NEUTRO,
   temaSchema,
-  tokensDeTipoDeNodoSchema,
-  tokensDeTipoDeAristaSchema,
-  contratoDeTemaSchema,
   TIPOS_DE_VISTA,
-  tamanoDeTexto,
   tipoDeNodoSchema,
   vistaSchema,
 } from './esquema';

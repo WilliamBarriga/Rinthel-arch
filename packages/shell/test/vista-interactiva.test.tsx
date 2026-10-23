@@ -1,13 +1,13 @@
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista } from 'canonico';
+import { fuenteCanonicaSchema, idDeArista } from 'canonico';
 import type { VistaResuelta } from 'canonico';
-import { metricasDe } from 'layout';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
 import { pulsarEn, pulsarNodo } from './ayudas';
+import { TEMA_NEUTRO, metricasDe } from 'tema';
 
 afterEach(cleanup);
 

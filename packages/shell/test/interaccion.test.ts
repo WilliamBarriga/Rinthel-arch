@@ -1,12 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
+import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
-import { metricasDe } from 'layout';
 
 import { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from '../src/interaccion';
+import { TEMA_NEUTRO, metricasDe } from 'tema';
 
 const nodo = (id: string, extra: object = {}) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [], ...extra });
 

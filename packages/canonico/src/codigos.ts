@@ -50,8 +50,16 @@ export const CODIGOS = Object.freeze({
   E_UNKNOWN_VIEW_TYPE: 'E_UNKNOWN_VIEW_TYPE',
   /** Dos Pins de la Vista se solapan (warning, responsabilidad del autor). */
   W_OVERLAPPING_PINS: 'W_OVERLAPPING_PINS',
-  /** `edgeStyles` con un tipo distinto de `default`: el Modelo no tipa Aristas y el estilo se ignora (warning). */
-  W_UNKNOWN_EDGE_STYLE_TYPE: 'W_UNKNOWN_EDGE_STYLE_TYPE',
+  /** Primitiva de Capa que no esta en el catalogo de Temas (ADR 0008). */
+  E_THEME_UNKNOWN_PRIMITIVE: 'E_THEME_UNKNOWN_PRIMITIVE',
+  /** Propiedad que la Primitiva de la Capa no declara. */
+  E_THEME_UNKNOWN_PROPERTY: 'E_THEME_UNKNOWN_PROPERTY',
+  /** Valor de propiedad de Capa fuera de rango, de otro tipo o ausente; nunca se recorta en silencio. */
+  E_THEME_INVALID_VALUE: 'E_THEME_INVALID_VALUE',
+  /** Slot que el catalogo no conoce, o repetido en el bloque `slots`. */
+  E_THEME_UNKNOWN_SLOT: 'E_THEME_UNKNOWN_SLOT',
+  /** Dos Capas con el mismo nombre en el mismo bloque del Tema. */
+  E_THEME_DUPLICATE_LAYER: 'E_THEME_DUPLICATE_LAYER',
 } as const);
 
 /** Union de los codigos activos; `Issue.code` sigue siendo `string` (ADR 0005). */
@@ -80,11 +88,15 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_UNKNOWN_STEP: 'Un Paso nombra un Nodo, selector o Arista que no existe.',
   E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture` ni `flow`.',
   W_OVERLAPPING_PINS: 'Dos Nodos con `pin` se solapan en la Vista (aviso).',
-  W_UNKNOWN_EDGE_STYLE_TYPE: 'Un `edgeStyles` usa un tipo distinto de `default`; las Aristas no tienen tipo y se ignora (aviso).',
+  E_THEME_UNKNOWN_PRIMITIVE: 'Una Capa de Tema usa una Primitiva que no esta en el catalogo.',
+  E_THEME_UNKNOWN_PROPERTY: 'Una Capa de Tema usa una propiedad que su Primitiva no declara.',
+  E_THEME_INVALID_VALUE: 'Una propiedad de Capa tiene un valor ausente, de otro tipo o fuera de rango (no se recorta).',
+  E_THEME_UNKNOWN_SLOT: 'Un bloque `slots` nombra un Slot desconocido o repetido.',
+  E_THEME_DUPLICATE_LAYER: 'Dos Capas del mismo bloque de un Tema llevan el mismo nombre.',
 });
 
 /**
  * Codigos retirados: ya no se emiten y su valor no se reutiliza nunca.
- * Hoy vacio; aqui se mueve un codigo al deprecarlo, sin borrar su historial.
+ * Aqui se mueve un codigo al deprecarlo, sin borrar su historial.
  */
-export const CODIGOS_DEPRECADOS: readonly string[] = Object.freeze([]);
+export const CODIGOS_DEPRECADOS: readonly string[] = Object.freeze(['W_UNKNOWN_EDGE_STYLE_TYPE']);

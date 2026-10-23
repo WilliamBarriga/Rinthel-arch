@@ -75,23 +75,6 @@ function servicios(): LangiumCoreServices {
   return memoServicios;
 }
 
-/** `edgeStyles` solo admite `default` (el Modelo no tipa Aristas): otro tipo se ignora, y se avisa. */
-function avisosDeEstilosDeArista(archivo: string, tema: Theme): Issue[] {
-  return tema.parts.flatMap((parte) =>
-    parte.$type !== 'ThemeEdgeStyles'
-      ? []
-      : parte.styles
-          .filter((estilo) => estilo.type !== 'default')
-          .map((estilo) => ({
-            code: CODIGOS.W_UNKNOWN_EDGE_STYLE_TYPE,
-            severity: 'warning' as const,
-            file: archivo,
-            ...rangoDe(estilo, 'type').start,
-            message: `edgeStyles '${estilo.type}' se ignora: las Aristas no tienen tipo, solo existe 'default'`,
-          })),
-  );
-}
-
 export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion {
   const issues: Issue[] = [];
   const tiposDeNodo: TipoDeNodo[] = [];
@@ -128,7 +111,6 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
         nombre: rangoDe(tema, 'name'),
         padre: rangoDe(tema, 'parent'),
       });
-      issues.push(...avisosDeEstilosDeArista(archivo, tema));
     }
     for (const vista of resultado.value.views) {
       const compilada = compilarVista(vista, archivo, issues);

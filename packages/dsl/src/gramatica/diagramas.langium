@@ -83,7 +83,7 @@ Theme:
 ;
 
 ThemePart:
-  ThemePalette | ThemeFonts | ThemeTokens | ThemeNodeStyles | ThemeEdgeStyles;
+  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode;
 
 ThemePalette:
   'palette' '{' entries+=ThemeEntry* '}';
@@ -97,33 +97,28 @@ ThemeTokens:
 ThemeEntry:
   key=Id ':'? value=String;
 
-// `nodeStyles { servicio { fill "#dbeafe" stroke amber strokeWidth 2 shadow 2 3 4 "#000" } }`
-// Tokens por Tipo de nodo; `shadow` es `dx dy blur color`. Color: literal o nombre de Paleta.
-ThemeNodeStyles:
-  'nodeStyles' '{' styles+=TypeStyle* '}';
+// `node { layer fondo solid { color azul }  slots { title attrs } }`
+// Bloque de dibujo del Nodo (ADR 0008): una pila de Capas, de abajo hacia arriba, y los
+// Slots que se pintan, en orden. En un Tema con `extends`, una Capa del mismo nombre
+// reemplaza a la heredada y una nueva se anade arriba; `slots` reemplaza la lista.
+ThemeNode:
+  'node' '{' items+=NodeItem* '}';
 
-// `edgeStyles { default { stroke "#f00" strokeWidth 3 } }`
-// Hoy solo `default` se aplica (el Modelo aun no tipa Aristas).
-ThemeEdgeStyles:
-  'edgeStyles' '{' styles+=TypeStyle* '}';
+NodeItem:
+  ThemeLayer | ThemeSlots;
 
-TypeStyle:
-  type=Id '{' props+=StyleProp* '}';
+// `layer <nombre> <primitiva> { clave valor ... }`; las propiedades las valida el catalogo de `tema`.
+ThemeLayer:
+  'layer' name=Id primitive=Id ('{' props+=LayerProp* '}')?;
 
-StyleProp:
-  StyleFill | StyleStroke | StyleStrokeWidth | StyleShadow;
+LayerProp:
+  key=Id value=LayerValue;
 
-StyleFill:
-  'fill' value=PropertyValue;
+LayerValue returns string:
+  PropertyValue | INT;
 
-StyleStroke:
-  'stroke' value=PropertyValue;
-
-StyleStrokeWidth:
-  'strokeWidth' value=INT;
-
-StyleShadow:
-  'shadow' dx=Coordinate dy=Coordinate blur=INT color=PropertyValue;
+ThemeSlots:
+  'slots' '{' names+=Id* '}';
 
 // View -------------------------------------
 
@@ -258,7 +253,7 @@ Id returns string:
   IdTerminal |
   'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order' |
   'theme' | 'extends' | 'palette' | 'fonts' | 'tokens' |
-  'nodeStyles' | 'edgeStyles' | 'fill' | 'stroke' | 'strokeWidth' | 'shadow' |
+  'layer' | 'slots' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' |
   'model' | 'node' | 'specification';

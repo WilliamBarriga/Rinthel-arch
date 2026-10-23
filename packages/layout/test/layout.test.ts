@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
+import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { Atributo, Tema, VistaResuelta } from 'canonico';
-import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView, metricasDe } from 'layout';
+import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
+import { TEMA_NEUTRO, metricasDe } from 'tema';
 
 const nodo = (id: string, children: unknown[] = []) => ({
   id,

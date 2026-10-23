@@ -7,7 +7,7 @@ Workspace de ejemplo en el que el sistema se documenta a si mismo: paquetes del 
 | Archivo | Que mapea |
 | --- | --- |
 | `especificacion.dg` | Tipos de nodo (actor, paquete, modulo, artefacto, salida, externo...) y Temas `diagrams` (oscuro) y `diagrams-claro` |
-| `sistema.dg` | Los siete paquetes con sus modulos y las librerias externas |
+| `sistema.dg` | Los ocho paquetes con sus modulos y las librerias externas |
 | `conexiones.dg` | Dependencias entre paquetes y entre modulos (las Aristas solo se declaran en `model`, con ids cualificados) |
 | `vistas.dg` | Vista de paquetes con drill-down a cada paquete, y una Vista de flujo con Pasos: edicion |
 | `fuentes/` | DejaVu Sans y Mono (licencia en `LICENCIA-DejaVu.txt`) |

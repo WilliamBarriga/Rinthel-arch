@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, resolveView, revealAt } from 'canonico';
+import { resolveView, revealAt } from 'canonico';
 import { compile } from 'dsl';
+import { TEMA_NEUTRO } from 'tema';
 
 describe('compile: Nodos y specification', () => {
   it('compila un Tipo de nodo y un Nodo a la Fuente canonica', () => {
@@ -797,8 +798,9 @@ describe('compile: Tema', () => {
     expect(canonico?.themes.find((t) => t.name === 'claro')).toEqual({
       name: 'claro',
       palette: { blue: '#0000ff', danger: '#ff0000' },
-      fonts: { body: 'Inter' },
-      tokens: { surface: '#ffffff' },
+      fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter' },
+      tokens: { ...TEMA_NEUTRO.tokens, surface: '#ffffff' },
+      nodo: TEMA_NEUTRO.nodo,
     });
   });
 
@@ -812,8 +814,9 @@ describe('compile: Tema', () => {
     expect(canonico?.themes.find((t) => t.name === 'oscuro')).toEqual({
       name: 'oscuro',
       palette: { blue: '#00aaff', danger: '#ff0000' },
-      fonts: { body: 'Inter' },
-      tokens: { surface: '#111111' },
+      fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter' },
+      tokens: { ...TEMA_NEUTRO.tokens, surface: '#111111' },
+      nodo: TEMA_NEUTRO.nodo,
     });
   });
 
@@ -827,55 +830,41 @@ describe('compile: Tema', () => {
     });
   });
 
-  it('compila nodeStyles y edgeStyles a tokens por tipo', () => {
+  it('compila el bloque node a una pila de Capas y a los Slots, con los defectos del catalogo', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}
-        theme ejemplo {
-          nodeStyles {
-            servicio { fill "#dbeafe"  stroke blue  strokeWidth 2  shadow 2 3 4 "#000000" }
-            tabla { fill "#fef3c7" }
+        theme ejemplo extends neutral {
+          node {
+            layer forma rect
+            layer relleno solid { color blue }
+            layer borde border { color gray  width 2 }
+            slots { attrs title }
           }
-          edgeStyles { default { stroke "#ff0000"  strokeWidth 3 } }
         }`,
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 'ejemplo')).toEqual({
-      name: 'ejemplo',
-      palette: {},
-      fonts: {},
-      tokens: {},
-      nodeStyles: {
-        servicio: { fill: '#dbeafe', stroke: 'blue', strokeWidth: 2, shadow: { dx: 2, dy: 3, blur: 4, color: '#000000' } },
-        tabla: { fill: '#fef3c7' },
-      },
-      edgeStyles: { default: { stroke: '#ff0000', strokeWidth: 3 } },
+    expect(canonico?.themes.find((t) => t.name === 'ejemplo')?.['nodo']).toEqual({
+      capas: [
+        { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
+        { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'blue' } } },
+        { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'gray', width: 2 } } },
+      ],
+      slots: ['attrs', 'title'],
     });
   });
 
-  it('un edgeStyles con un tipo distinto de default se ignora con un aviso, no un error', () => {
-    const { canonico, issues } = compile({
-      'main.dg': `${base}
-        theme ejemplo { edgeStyles { default { stroke red }  async { stroke blue } } }`,
-    });
+  it('los bloques nodeStyles y edgeStyles ya no existen en el DSL', () => {
+    const { issues } = compile({ 'main.dg': `${base} theme viejo extends neutral { nodeStyles { servicio { fill red } } }` });
 
-    expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'W_UNKNOWN_EDGE_STYLE_TYPE', severity: 'warning', file: 'main.dg' });
-    expect(issues[0]!.message).toContain('async');
-    expect(canonico?.themes.find((t) => t.name === 'ejemplo')?.edgeStyles).toHaveProperty('default');
+    expect(issues.map((i) => i.code)).toContain('E_SYNTAX_ERROR');
   });
 
-  it('el hijo hereda nodeStyles y los fusiona por tipo; un desplazamiento puede ser negativo', () => {
-    const { canonico, issues } = compile({
-      'main.dg': `${base}
-        theme padre { nodeStyles { servicio { fill "#111111"  stroke red } } }
-        theme hijo extends padre { nodeStyles { servicio { fill "#222222"  shadow -1 -2 0 black } } }`,
-    });
+  it('layer y slots siguen siendo identificadores validos en el Modelo', () => {
+    const { canonico, issues } = compile({ 'main.dg': 'specification { node layer }  model { layer slots }' });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 'hijo')?.nodeStyles).toEqual({
-      servicio: { fill: '#222222', stroke: 'red', shadow: { dx: -1, dy: -2, blur: 0, color: 'black' } },
-    });
+    expect(canonico?.model.nodes.map((n) => n.id)).toEqual(['slots']);
   });
 
   it('tema duplicado es E_DUPLICATE_THEME con related a la primera declaracion', () => {
@@ -1146,7 +1135,7 @@ describe('compile: Pasos (steps)', () => {
 });
 
 describe('compile: Temas del ejemplo rinthel-arch', () => {
-  it('declaran tokens por Tipo de nodo, el oscuro y uno claro, sin issues', async () => {
+  it('declaran el Tema oscuro y uno claro con Capas, sin issues', async () => {
     const { readFileSync, readdirSync } = await import('node:fs');
     const dir = new URL('../../../examples/rinthel-arch/', import.meta.url);
     const fuentes = Object.fromEntries(
@@ -1156,8 +1145,9 @@ describe('compile: Temas del ejemplo rinthel-arch', () => {
 
     expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
     const temas = canonico?.themes ?? [];
-    expect(temas.find((t) => t.name === 'diagrams')?.tokens['background']).toBe('#0f172a');
-    expect(temas.find((t) => t.name === 'diagrams')?.nodeStyles?.['paquete']?.fill).toBe('#1e3a5f');
-    expect(temas.find((t) => t.name === 'diagrams-claro')?.nodeStyles?.['artefacto']?.fill).toBe('#dcfce7');
+    expect(temas.find((t) => t.name === 'diagrams')?.['tokens']).toMatchObject({ background: '#0f172a' });
+    const capas = (nombre: string) => (temas.find((t) => t.name === nombre)?.['nodo'] as { capas: { nombre: string }[] }).capas.map((c) => c.nombre);
+    expect(capas('diagrams')).toEqual(['forma', 'relleno', 'borde']);
+    expect(capas('diagrams-claro')).toEqual(['forma', 'relleno', 'borde']);
   });
 });

@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { CODIGOS, TEMA_NEUTRO, fuenteCanonicaSchema, genericIcons, validate } from 'canonico';
+import { CODIGOS, fuenteCanonicaSchema, genericIcons, validate } from 'canonico';
 import type { FuenteCanonica, Ubicador } from 'canonico';
+
+const TEMA_NEUTRO = {
+  name: 'neutral',
+  palette: { gray: '#6b7280', blue: '#2563eb', green: '#16a34a', amber: '#d97706', red: '#dc2626', purple: '#7c3aed' },
+};
 
 const nodo = (id: string, extra: Record<string, unknown> = {}) => ({
   id,
