@@ -37,9 +37,9 @@ describe('mover un Pin en el shell', () => {
     await waitFor(() => expect(posicionDe(container, 'b')).toEqual([200, 0]));
 
     rerender(<VistaInteractiva {...props(conPin(500, 300))} />);
-    await waitFor(() => expect(posicionDe(container, 'b')).toEqual([500, 300]));
+    await waitFor(() => expect(posicionDe(container, 'b')).toEqual([450, 275])); // el Pin ancla el centro: esquina = Pin - mitad de la caja (100x50)
     rerender(<VistaInteractiva {...props(conPin(510, 310))} />);
-    await waitFor(() => expect(posicionDe(container, 'b')).toEqual([510, 310]));
+    await waitFor(() => expect(posicionDe(container, 'b')).toEqual([460, 285]));
 
     expect(layout).toHaveBeenCalledTimes(1);
   });

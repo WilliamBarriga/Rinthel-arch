@@ -40,7 +40,7 @@ const nodoA = (c: HTMLElement) => c.querySelector('[data-id="a"] [data-part="nod
 const posicionA = (c: HTMLElement) => c.querySelector('[data-id="a"]')!.getAttribute('transform');
 
 describe('arrastre de Nodos (onMoveNode)', () => {
-  it('soltar un Nodo avisa su posicion nueva y no mueve la camara', async () => {
+  it('soltar un Nodo avisa el centro nuevo (coordenadas de Pin) y no mueve la camara', async () => {
     const onMoveNode = vi.fn();
     const onCameraChange = vi.fn();
     const { container } = await montar({ onMoveNode, onCameraChange });
@@ -49,7 +49,7 @@ describe('arrastre de Nodos (onMoveNode)', () => {
     gesto(window, 'mousemove', 60, 30);
     gesto(window, 'mouseup', 60, 30);
 
-    expect(onMoveNode).toHaveBeenCalledWith({ id: 'a', x: 50, y: 20 });
+    expect(onMoveNode).toHaveBeenCalledWith({ id: 'a', x: 100, y: 45 });
     expect(onCameraChange).not.toHaveBeenCalled();
   });
 
@@ -67,7 +67,7 @@ describe('arrastre de Nodos (onMoveNode)', () => {
     gesto(nodoA(container), 'mousedown', 10, 10);
     gesto(window, 'mousemove', 110, 10);
     gesto(window, 'mouseup', 110, 10);
-    expect(onMoveNode).toHaveBeenCalledWith({ id: 'a', x: 50, y: 0 });
+    expect(onMoveNode).toHaveBeenCalledWith({ id: 'a', x: 100, y: 25 });
   });
 
   it('un clic sin movimiento sigue seleccionando y no avisa', async () => {
