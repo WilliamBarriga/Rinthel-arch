@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { Tema, VistaResuelta } from 'canonico';
 import { claveDeLayout, layoutView } from 'layout';
-import { TEMA_NEUTRO, metricasDe } from 'tema';
+import { TEMA_NEUTRO, claveDeTexto, metricasDe, tablaDeMetricas } from 'tema';
 
 const capas = [
   { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
@@ -54,5 +54,31 @@ describe('Metricas por Tipo y relayout por clave de estructura', () => {
     const ruta = g.edges[idDeArista(v.edges[0]!)]!.points;
 
     expect(ruta[ruta.length - 1]!.y).toBe(g.nodes['t']!.y + m.cabecera + m.fila / 2);
+  });
+});
+
+describe('medicion de texto en el layout', () => {
+  const tema = TEMA_NEUTRO as unknown as Tema;
+  const una = (): VistaResuelta => vistaDe([nodo('api', 'servicio')], []);
+  const medidasDe = (ancho: number, hash = 'aaaa') => {
+    const m = tablaDeMetricas(tema).base;
+    return { nivel: 'medido' as const, fuentes: { sans: hash }, anchos: { [claveDeTexto(TEMA_NEUTRO.fonts.body, m.fontSize, 'api')]: ancho } };
+  };
+
+  it('con medidas la caja sale del ancho medido; sin ellas, de la estimacion', async () => {
+    const estimada = await layoutView(una(), tema);
+    const medida = await layoutView(una(), tema, { medidas: medidasDe(400) });
+
+    expect(medida.nodes['api']!.width).toBe(400 + tablaDeMetricas(tema).base.paddingHorizontal);
+    expect(estimada.nodes['api']!.width).toBe(120);
+  });
+
+  it('la clave cambia con el origen de las medidas y con el hash de fuente, y con nada mas de la pintura', () => {
+    const clave = (m?: ReturnType<typeof medidasDe>) => claveDeLayout(una(), tema, tablaDeMetricas(tema, m));
+    const repintado = { ...tema, palette: { ...tema.palette, blue: '#ff0000' } } as Tema;
+
+    expect(clave(medidasDe(400))).not.toBe(clave());
+    expect(clave(medidasDe(400, 'bbbb'))).not.toBe(clave(medidasDe(400)));
+    expect(claveDeLayout(una(), repintado, tablaDeMetricas(repintado))).toBe(clave());
   });
 });

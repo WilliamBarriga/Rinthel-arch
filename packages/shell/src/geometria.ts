@@ -10,8 +10,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { Tema, VistaResuelta } from 'canonico';
 import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout } from 'layout';
 import type { Geometria } from 'layout';
+import { tablaDeMetricas, textosAMedir } from 'tema';
+import type { MedidasDeTexto } from 'tema';
 
-import type { AdaptadorDeLayout } from './vista-interactiva';
+import type { AdaptadorDeLayout, MedidorDeTexto } from './vista-interactiva';
 
 export interface Calculo {
   vista: VistaResuelta;
@@ -22,6 +24,8 @@ export interface EntradaDeGeometria {
   vista: VistaResuelta;
   theme: Tema;
   layout: AdaptadorDeLayout;
+  /** Medicion real de texto; si esta, el layout espera las medidas y la clave incluye nivel y hash de fuente. */
+  medir?: MedidorDeTexto | undefined;
   /** Geometria del estado por defecto de la Vista (cacheada en el build), con la Vista resuelta a la que corresponde. */
   semilla?: Calculo | undefined;
   onError?: ((error: Error) => void) | undefined;
@@ -38,13 +42,37 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   const [fallo, setFallo] = useState<Error>();
   const ultimo = useRef(entrada);
   ultimo.current = entrada;
-  // Solo lo que mueve el layout (estructura, textos, fuentes) lo repite; la paleta no.
-  const claveTema = claveDeLayout(vista, theme);
-  const claveBase = claveDeEstructura(vista, theme);
+  // Medidas reales: se piden cuando cambian los textos o las fuentes y el layout espera a tenerlas.
+  const textos = entrada.medir === undefined ? undefined : textosAMedir(vista, tablaDeMetricas(theme));
+  const claveTextos = textos === undefined ? undefined : JSON.stringify(textos);
+  const [medido, setMedido] = useState<{ clave: string; medidas: MedidasDeTexto }>();
+  useEffect(() => {
+    if (claveTextos === undefined) return;
+    let vigente = true;
+    ultimo.current.medir!(textos!).then(
+      (medidas) => vigente && setMedido({ clave: claveTextos, medidas }),
+      (error: unknown) => {
+        if (!vigente) return;
+        const e = error instanceof Error ? error : new Error(String(error));
+        if (ultimo.current.onError === undefined) setFallo(e);
+        else ultimo.current.onError(e);
+      },
+    );
+    return () => {
+      vigente = false;
+    };
+  }, [claveTextos]);
+  const medidas = claveTextos !== undefined && medido?.clave === claveTextos ? medido.medidas : undefined;
+  const esperando = claveTextos !== undefined && medidas === undefined;
+  // Solo lo que mueve el layout (estructura, textos, fuentes, origen de las medidas) lo repite; la paleta no.
+  const tabla = tablaDeMetricas(theme, medidas);
+  const claveTema = claveDeLayout(vista, theme, tabla);
+  const claveBase = claveDeEstructura(vista, theme, tabla);
   const mostrado = useRef<Calculo | undefined>(undefined);
   const cache = useRef<{ llave: AdaptadorDeLayout; mapa: Map<string, Geometria> } | undefined>(undefined);
 
   useEffect(() => {
+    if (esperando) return;
     if (cache.current === undefined || cache.current.llave !== layout) cache.current = { llave: layout, mapa: new Map() };
     const mapa = cache.current.mapa;
     const clave = claveBase;
@@ -60,17 +88,17 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
       mapa.delete(clave);
       mapa.set(clave, base);
       if (mapa.size > MAX_CACHE) mapa.delete(mapa.keys().next().value!);
-      mostrar(aplicarPinsAGeometria(vista, base, tema));
+      mostrar(aplicarPinsAGeometria(vista, base, tema, tabla));
     };
 
     let vigente = true;
     const base = mapa.get(clave);
     if (base !== undefined) {
       recibir(base);
-    } else if (semilla !== undefined && claveDeLayout(semilla.vista, theme) === claveTema) {
+    } else if (semilla !== undefined && medidas === undefined && claveDeLayout(semilla.vista, theme) === claveTema) {
       mostrar(semilla.geometria);
     } else {
-      layout(sinPins(vista), tema).then(
+      layout(sinPins(vista), tema, medidas).then(
         (geometria) => {
           if (vigente) recibir(geometria);
         },
@@ -85,7 +113,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
     return () => {
       vigente = false;
     };
-  }, [vista, claveTema, layout, semilla]);
+  }, [vista, claveTema, layout, semilla, esperando]);
 
   if (fallo !== undefined) throw fallo;
   return calculo;

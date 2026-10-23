@@ -52,6 +52,10 @@
  * estado no controlado). `cachedGeometry` vale para la Vista declarada
  * (`view ?? defaultView`); con navegacion usa `cachedGeometries` por id.
  * Iconos: `icons` (`IconProvider`) resuelve la clave `icon` de cada Nodo; sin el no se dibujan.
+ * Medicion de texto (ADR 0008): `measure` (`MedidorDeTexto`, p. ej. `(t) => medirEnVisor(t, {hashes})`)
+ * mide con la fuente real tras `document.fonts.load`; el layout espera las medidas y las recibe como
+ * tercer argumento del adaptador (viajan al Worker). Sin `measure` se estima por caracter. La clave de
+ * layout incluye el nivel y el hash de fuente: cambiar el archivo de fuente relayouta, la pintura no.
  * Recarga de Tema: `themeUpdates` (`SuscripcionDeTema`) es el puerto por el que el
  * consumidor entrega el Tema resuelto al guardar el archivo de tema. La Geometria
  * solo se recalcula si cambia `claveDeLayout` (fuentes, tamano de texto); la
@@ -119,7 +123,7 @@
  * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> render -> shell`.
  */
 export { VistaInteractiva } from './vista-interactiva';
-export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';
+export type { AdaptadorDeLayout, MedidorDeTexto, VistaInteractivaProps } from './vista-interactiva';
 export { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from './interaccion';
 export type { ElementoSeleccionable, ModoDeSeleccion, OpcionesDeHitTest, Seleccion, TipoDeElemento } from './interaccion';
 export type { PropsDeNavegacion } from './navegacion';
@@ -144,4 +148,6 @@ export type { ControlDeEdicion, ResultadoDeEdicion } from './control-de-edicion'
 export type { Historial, Intencion } from 'sesion';
 export { adaptadorDeWorker } from './layout-en-worker';
 export { servirLayout } from './servir-layout';
+export { medirEnVisor } from './medicion-de-visor';
+export type { OpcionesDeMedicion } from './medicion-de-visor';
 export type { PuertoDeMensajes } from './layout-en-worker';

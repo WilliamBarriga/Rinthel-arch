@@ -47,6 +47,13 @@
  *   `tiposSoloColor` y `leyendaDelTema` (Tipo, forma, color; `necesaria` si hay solo-color) solo calculan:
  *   que sean warnings y no bloqueen lo decide `sesion`. `TEMA_ALTO_CONTRASTE` es el Tema incorporado del visor.
  *
+ * - Medicion de texto: el ancho viene de un origen `estimado` (por caracter; CLI,
+ *   Workers, pruebas) o `medido` (`MedidasDeTexto`, que el visor toma tras
+ *   `document.fonts.load` y entrega como datos: `tablaDeMetricas(tema, medidas)`).
+ *   `textosAMedir(vista, tabla)` dice que medir. El nivel y el hash de cada fuente
+ *   (`hashDeFuente`) entran en `claveDeMetricas`; los anchos no. Un texto sin
+ *   medida cae a la estimacion.
+ *
  * Invariantes: puro y determinista; sin I/O, reloj, azar ni DOM. Una Capa es
  * una instancia de una Primitiva del catalogo cerrado; el color es siempre un
  * nombre de Paleta. Modos de error: los datos invalidos se devuelven como
@@ -60,6 +67,9 @@ export { TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
 export { atributosVisibles, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeAtributo } from './metricas';
 export type { Metricas, TablaDeMetricas } from './metricas';
+export { anchoDeTexto, claveDeTexto, hashDeFuente } from './medicion';
+export type { MedicionDeMetricas, MedidasDeTexto, TextoAMedir } from './medicion';
+export { textosAMedir } from './textos-a-medir';
 export { colocarEnCaja, colocarNodo } from './slots';
 export type { ColocacionDeNodo, Rect } from './slots';
 export { estiloResuelto } from './estilo';

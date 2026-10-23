@@ -12,7 +12,10 @@
  * las usa para medir y `render` para dibujar, asi lo reservado y lo dibujado no
  * divergen. Cada caja de un Nodo hoja lleva `slots`, el rectangulo (relativo a la
  * caja) de cada Slot que el Tema muestra. El tamano de cada Nodo sale del texto y
- * de las Metricas, sin DOM; `opciones.metricas` las sobrescribe (y `render` debe
+ * de las Metricas, sin DOM; `opciones.medidas` (`MedidasDeTexto`, tomadas por el
+ * visor con la fuente cargada) sustituyen la estimacion de texto, y la clave de
+ * layout (`tablaDeMetricas(tema, medidas)` como `metricas`) cambia con el nivel de
+ * medicion y el hash de cada fuente; `opciones.metricas` las sobrescribe (y `render` debe
  * recibir las mismas). `claveDeLayout` dice cuando
  * hace falta relayoutar: cambia con estructura, textos, Pins y Metricas, nunca con
  * paleta, colores o iconos. `claveDeEstructura` es la misma sin Pins y

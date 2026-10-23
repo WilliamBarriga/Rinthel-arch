@@ -15,6 +15,7 @@ import { claveDeLayout, indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
 import type { Camara } from 'render';
+import type { MedidasDeTexto, TextoAMedir } from 'tema';
 
 import { aCamara, aTransform, compensarCamara, encuadrar, mismaTransform } from './camara';
 import { Leyenda, useAltoContraste } from './accesibilidad';
@@ -44,7 +45,10 @@ import { nivelDeDetalle } from './zoom-semantico';
 import type { UmbralesDeDetalle } from './zoom-semantico';
 
 /** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
-export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema) => Promise<Geometria>;
+export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema, medidas?: MedidasDeTexto) => Promise<Geometria>;
+
+/** Medidor de texto inyectado (ADR 0008): el visor mide con la fuente real (`medirEnVisor`); sin el se estima por caracter. */
+export type MedidorDeTexto = (textos: TextoAMedir[]) => Promise<MedidasDeTexto>;
 
 export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, PropsDeAltoContraste {
   /** Leyenda de Tipos derivada del Tema: `auto` (por defecto) solo si dos Tipos difieren unicamente por color. */
@@ -54,6 +58,8 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   /** Puerto de recarga de Tema al guardar: recolorea sin relayout salvo que cambien las fuentes. */
   themeUpdates?: SuscripcionDeTema;
   layout: AdaptadorDeLayout;
+  /** Medicion real de texto; con ella el layout espera las medidas y la clave de layout incluye el hash de fuente y el nivel `medido`. */
+  measure?: MedidorDeTexto;
   /** Tamano del lienzo en px. */
   width: number;
   height: number;
@@ -165,7 +171,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     morphador.iniciar({ desde: previo.geometria, hasta: nuevo.geometria, ancla });
   };
   const morphador = useMorph(morphMs, props.clock);
-  const calculo = useGeometria({ vista, theme, layout, semilla, onError, alLlegar });
+  const calculo = useGeometria({ vista, theme, layout, medir: props.measure, semilla, onError, alLlegar });
 
   // Camara: controlada por el padre o propia; hasta que el usuario (o un colapso) la mueva, encuadra toda la Vista segun la primera geometria.
   const [movida, fijarCamara] = useControlado<Camara | undefined>(props.camera, undefined, (nueva) => nueva && ultimo.current.onCameraChange?.(nueva));
