@@ -258,6 +258,66 @@ describe('dev', () => {
     });
   });
 
+  describe('POST /api/deshacer y /api/rehacer (ADR 0007)', () => {
+    const cabeceras = { 'content-type': 'application/json' };
+    const post = (servidor: ServidorDev, ruta: string, cuerpo: unknown = {}) =>
+      fetch(`${servidor.url}api/${ruta}`, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpo) });
+    const moverPin = async (servidor: ServidorDev, x: number, y: number) => {
+      const hash = (await estado(servidor)).hashes['main.dg'];
+      return post(servidor, 'pin', { vista: 'general', nodo: 'api', x, y, hash });
+    };
+
+    it('deshacer restaura el texto exacto anterior y rehacer reaplica la edicion', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      await moverPin(servidor, 1, 2);
+      const conPin = env.texto('main.dg');
+      expect(conPin).not.toBe(BASE);
+
+      const res = await post(servidor, 'deshacer');
+      expect(res.status).toBe(200);
+      expect(env.texto('main.dg')).toBe(BASE);
+
+      expect((await post(servidor, 'rehacer')).status).toBe(200);
+      expect(env.texto('main.dg')).toBe(conPin);
+    });
+
+    it('sin nada que deshacer o rehacer responde 422 y no escribe', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      expect((await post(servidor, 'deshacer')).status).toBe(422);
+      expect((await post(servidor, 'rehacer')).status).toBe(422);
+      expect(env.texto('main.dg')).toBe(BASE);
+    });
+
+    it('si el archivo cambio en disco fuera de dev, deshacer responde 409 y no pisa el cambio', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      await moverPin(servidor, 1, 2);
+      const externo = `${env.texto('main.dg')}\n// editado a mano\n`;
+      env.escribirEdicion('/ws', 'main.dg', externo);
+
+      const res = await post(servidor, 'deshacer');
+      expect(res.status).toBe(409);
+      expect(await res.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+      expect(env.texto('main.dg')).toBe(externo);
+    });
+
+    it('una edicion nueva descarta lo rehacible', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      await moverPin(servidor, 1, 2);
+      await post(servidor, 'deshacer');
+      await moverPin(servidor, 3, 4);
+      expect((await post(servidor, 'rehacer')).status).toBe(422);
+    });
+
+    it('solo acepta POST', async () => {
+      const servidor = await arrancar(entorno({ 'main.dg': BASE }));
+      expect((await fetch(`${servidor.url}api/deshacer`)).status).toBe(405);
+    });
+  });
+
   describe('POST /api/pin (ADR 0005)', () => {
     const post = (servidor: ServidorDev, cuerpo: unknown, cabeceras: Record<string, string> = { 'content-type': 'application/json' }) =>
       fetch(`${servidor.url}api/pin`, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpo) });

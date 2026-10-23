@@ -16,7 +16,7 @@ La interfaz de red no cambia: el cuerpo de `POST /api/pin` sigue siendo `Intenci
 
 ## Shell
 
-`shell` expone `crearControlDeEdicion(archivos)` con `aplicar`, `deshacer`, `rehacer`, `puedeDeshacer` y `puedeRehacer`; es el adaptador con estado sobre el historial puro de `sesion`. El servidor de `dev` escribe a disco solo por `POST /api/pin` y `POST /api/edit`; llevar deshacer/rehacer al disco de `dev` (escribir el texto restaurado con el hash vigente) queda para el ticket que conecte los atajos de teclado.
+`shell` expone `crearControlDeEdicion(archivos)` con `aplicar`, `deshacer`, `rehacer`, `puedeDeshacer` y `puedeRehacer`; es el adaptador con estado sobre el historial puro de `sesion`. El servidor de `dev` escribe a disco por `POST /api/pin`, `POST /api/edit`, `POST /api/deshacer` y `POST /api/rehacer`. `dev` guarda un `Historial` del texto propio del Workspace: cada edicion lo apila (`apilar`) y deshacer/rehacer escriben el texto exacto de la instantanea. Si el disco ya no coincide con el historial (edicion externa), responden 409 `hash-desactualizado` y el historial vuelve a empezar; sin nada que deshacer o rehacer, 422. La pagina de `dev` conecta Ctrl/Cmd+Z y Ctrl/Cmd+Mayus+Z (o Ctrl+Y) a esos endpoints, salvo con el foco en un campo de texto. `crearControlDeEdicion` sigue siendo el adaptador en memoria de `shell` para consumidores que tengan el texto en el cliente.
 
 ## Consecuencias
 
