@@ -6,6 +6,8 @@
  */
 import { z } from 'zod';
 
+import { MOTIVOS_DE_RECHAZO } from './pin';
+
 export const EDIT_CONTRACT_VERSION = 1;
 
 const posicionSchema = z.object({ line: z.number().int().min(1), column: z.number().int().min(1) });
@@ -34,14 +36,8 @@ export const salidaDeEditSchema = z.discriminatedUnion('ok', [
   z.object({
     ...comun,
     ok: z.literal(false),
-    reason: z.enum([
-      'hash-desactualizado',
-      'archivo-desconocido',
-      'rango-invalido',
-      'ediciones-solapadas',
-      'vista-desconocida',
-      'invalida',
-    ]),
+    /** Motivo del rechazo: el mismo vocabulario de `MotivoDeRechazo`. */
+    reason: z.enum(MOTIVOS_DE_RECHAZO),
     message: z.string(),
     file: z.string().optional(),
   }),

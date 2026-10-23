@@ -50,6 +50,8 @@
  * si el aviso resuelve `false`. Sin `onMoveNode` (export estatico) no hay arrastre de Nodos.
  * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
  * `{ok:true}` o `{ok:false, desactualizado, mensaje}` (409 por hash); nunca lanza.
+ * La intencion es `IntencionDePin` (`{vista, nodo, x, y, hash}`, declarada en `canonico` y
+ * reexportada aqui); `IntencionDePinEnviada` es su alias historico en `shell`.
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *
@@ -104,8 +106,10 @@ export { deserializarEstado, hashDelNavegador, serializarEstado, vistaPorDefecto
 export type { AdaptadorDeHash, EstadoDeShell } from './hash';
 export { useEstadoEnHash } from './estado-en-hash';
 export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-hash';
+// La `IntencionDePin` vive en `canonico`; se reexporta para no renombrar la interfaz de `shell`.
 export { crearEnviadorDePin } from './enviar-pin';
 export type { EnviadorDePin, IntencionDePinEnviada, ResultadoDeEnvioDePin } from './enviar-pin';
+export type { IntencionDePin } from 'canonico';
 export { adaptadorDeWorker } from './layout-en-worker';
 export { servirLayout } from './servir-layout';
 export type { PuertoDeMensajes } from './layout-en-worker';

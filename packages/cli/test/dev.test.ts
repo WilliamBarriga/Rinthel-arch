@@ -283,6 +283,32 @@ describe('dev', () => {
       expect(vista.status).toBe(422);
       expect(await vista.json()).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
       expect(nodo.status).toBe(422);
+      expect(await nodo.json()).toMatchObject({ ok: false, motivo: 'invalida' });
+      expect(env.texto('main.dg')).toBe(BASE);
+    });
+
+    it('valida el cuerpo con el esquema de canonico y responde 400 con el mensaje de siempre', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+
+      const malformados = [
+        { vista: 'general', nodo: 'api', x: '10', y: 2, hash: 'h' },
+        { vista: 'general', nodo: 'api', x: 10, y: 2 },
+        { vista: 'general', nodo: 7, x: 10, y: 2, hash: 'h' },
+      ];
+      for (const cuerpo of malformados) {
+        const res = await post(servidor, cuerpo);
+        expect(res.status).toBe(400);
+        expect(await res.json()).toEqual({ ok: false, mensaje: 'Se esperaba { vista, nodo, x, y, hash }' });
+      }
+
+      const json = await fetch(`${servidor.url}api/pin`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: 'no es json',
+      });
+      expect(json.status).toBe(400);
+      expect(await json.json()).toEqual({ ok: false, mensaje: 'JSON invalido' });
       expect(env.texto('main.dg')).toBe(BASE);
     });
 
@@ -319,17 +345,6 @@ describe('dev', () => {
       expect(res.status).toBe(422);
       expect(await res.json()).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'vistas.dg' });
       expect(escritos).toEqual([]);
-    });
-
-    it('redondea las coordenadas del Pin a enteros', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      const hash = (await estado(servidor)).hashes['main.dg'];
-
-      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 10.6, y: 20.2, hash });
-
-      expect(res.status).toBe(200);
-      expect(env.texto('main.dg')).toContain('node api { pin 11,20 }');
     });
 
     it('rechaza peticiones con Origin ajeno (CSRF desde otra pagina)', async () => {

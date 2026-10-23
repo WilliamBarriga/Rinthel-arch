@@ -1,21 +1,18 @@
 /**
  * Cliente de `POST /api/pin` de `diagrams dev` (ADR 0005): envia la intencion de
- * mover un Pin y traduce la respuesta. El `fetch` entra como argumento.
+ * mover un Pin y traduce la respuesta. El `fetch` entra como argumento. La
+ * `IntencionDePin` se declara una sola vez en `canonico` y se importa type-only.
  */
+import type { IntencionDePin } from 'canonico';
 
-export interface IntencionDePinEnviada {
-  vista: string;
-  /** Id cualificado del Nodo. */
-  nodo: string;
-  x: number;
-  y: number;
-  /** Hash del archivo de la Vista que vio quien pide (`hashes[<archivo>]` del estado de dev). */
-  hash: string;
-}
+export type { IntencionDePin } from 'canonico';
+
+/** Nombre historico de `shell` para la intencion; el tipo vive en `canonico`. */
+export type IntencionDePinEnviada = IntencionDePin;
 
 export type ResultadoDeEnvioDePin = { ok: true } | { ok: false; desactualizado: boolean; mensaje: string };
 
-export type EnviadorDePin = (intencion: IntencionDePinEnviada) => Promise<ResultadoDeEnvioDePin>;
+export type EnviadorDePin = (intencion: IntencionDePin) => Promise<ResultadoDeEnvioDePin>;
 
 /** `desactualizado` es el 409 por hash: hay que recargar la Vista y avisar. Nunca lanza. */
 export function crearEnviadorDePin(fetchFn: typeof fetch = (...a) => fetch(...a)): EnviadorDePin {

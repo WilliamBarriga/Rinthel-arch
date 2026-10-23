@@ -15,7 +15,9 @@
  * puerto y deja de observar).
  * Seguridad: solo escucha en 127.0.0.1 y responde 403 a cualquier peticion cuyo `Host` no sea
  * `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding). `POST /api/pin` solo escribe archivos
- * del Workspace, bajo su raiz y de forma atomica.
+ * del Workspace, bajo su raiz y de forma atomica; valida el cuerpo con `intencionDePinSchema` de
+ * `canonico` (400 con `Se esperaba { vista, nodo, x, y, hash }`) y traduce cada `MotivoDeRechazo` a su
+ * Estado con la tabla unica `SALIDA_DE_RECHAZO` (409 solo `hash-desactualizado`, 422 el resto).
  * Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (sin dejar el
  * observador activo) y lanza si la lectura inicial falla; las lecturas fallidas posteriores se ignoran
  * hasta el siguiente cambio. `run(['dev', ...])` los convierte en codigo 2.
@@ -32,13 +34,14 @@ import { watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { combineIconProviders, genericIcons, workspaceIcons } from 'canonico';
+import { combineIconProviders, genericIcons, intencionDePinSchema, workspaceIcons } from 'canonico';
 import type { Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { abrirSesion, aplicarEdiciones, archivoDeVista, edicionDePin, hashDeContenido } from 'sesion';
+import { abrirSesion, archivoDeVista, editarPin, hashDeContenido } from 'sesion';
 import type { Sesion } from 'sesion';
 
 import { empaquetarShellDev } from './dev-shell';
+import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
 import { cambiosDeEdicion, leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
@@ -229,12 +232,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       responder(res, 400, { ok: false, mensaje: 'JSON invalido' });
       return;
     }
-    const c = cuerpo as Record<string, unknown> | null;
-    if (
-      typeof c !== 'object' || c === null ||
-      typeof c['vista'] !== 'string' || typeof c['nodo'] !== 'string' || typeof c['hash'] !== 'string' ||
-      typeof c['x'] !== 'number' || !Number.isFinite(c['x']) || typeof c['y'] !== 'number' || !Number.isFinite(c['y'])
-    ) {
+    const parseo = intencionDePinSchema.safeParse(cuerpo);
+    if (!parseo.success) {
       responder(res, 400, { ok: false, mensaje: 'Se esperaba { vista, nodo, x, y, hash }' });
       return;
     }
@@ -247,22 +246,24 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       responder(res, 500, { ok: false, mensaje: (error as Error).message });
       return;
     }
-    const intencion = { vista: c['vista'], nodo: c['nodo'], x: c['x'], y: c['y'], hash: c['hash'] };
-    const calculada = edicionDePin(disco, intencion);
-    const aplicada = calculada.ok ? aplicarEdiciones(disco, calculada.ediciones) : calculada;
-    if (!aplicada.ok) {
-      const { ok, motivo, mensaje, file } = aplicada;
-      responder(res, motivo === 'hash-desactualizado' ? 409 : 422, { ok, motivo, mensaje, ...(file === undefined ? {} : { file }) });
+    // El Gesto de `sesion` fusiona calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
+    const gesto = editarPin(disco, parseo.data);
+    if (!gesto.ok) {
+      responder(res, SALIDA_DE_RECHAZO[gesto.motivo].estadoHttp, rechazoDeEdicion(gesto.motivo, gesto.mensaje, gesto.file));
       return;
     }
     // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.
-    const { cambiados, fuera } = cambiosDeEdicion(disco, aplicada.archivos, propios);
+    const { cambiados, fuera } = cambiosDeEdicion(disco, gesto.archivos, propios);
     if (fuera !== undefined) {
-      responder(res, 422, { ok: false, motivo: 'archivo-desconocido', mensaje: `'${fuera}' no pertenece al Workspace`, file: fuera });
+      responder(
+        res,
+        SALIDA_DE_RECHAZO['archivo-desconocido'].estadoHttp,
+        rechazoDeEdicion('archivo-desconocido', `'${fuera}' no pertenece al Workspace`, fuera),
+      );
       return;
     }
     try {
-      for (const ruta of cambiados) escribir(workspace, ruta, aplicada.archivos[ruta] as string);
+      for (const ruta of cambiados) escribir(workspace, ruta, gesto.archivos[ruta] as string);
     } catch (error) {
       responder(res, 500, { ok: false, mensaje: (error as Error).message });
       return;
