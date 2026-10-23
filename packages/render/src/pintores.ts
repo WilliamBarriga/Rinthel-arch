@@ -10,7 +10,7 @@ import type { CajaDeNodo } from 'layout';
 
 import { num } from './elemento';
 import type { Elemento } from './elemento';
-import type { Estilo } from './estilo';
+import type { EstadoVisual, Estilo } from './estilo';
 
 type Punto = { x: number; y: number };
 
@@ -248,4 +248,32 @@ export function pintarEtiquetaDeArista(
     },
     hijos: [texto],
   };
+}
+
+function atributosDeEstado(estilo: Estilo, estado: EstadoVisual, id: string): Record<string, string> {
+  const { color, ancho, trazo, opacidad } = estilo.estados[estado];
+  return {
+    'data-state': estado,
+    ...(estado === 'seleccionado' && { 'data-selected': id }),
+    fill: 'none',
+    stroke: color,
+    'stroke-width': num(ancho),
+    ...(trazo !== undefined && { 'stroke-dasharray': trazo }),
+    ...(opacidad !== 1 && { opacity: num(opacidad) }),
+    'pointer-events': 'none',
+  };
+}
+
+/** Contorno de estado alrededor de una caja (Nodo, Grupo o fila de Atributo), en coordenadas locales del Nodo. */
+export function pintarEstadoDeCaja(estilo: Estilo, estado: EstadoVisual, id: string, caja: CajaDeNodo): Elemento {
+  return {
+    tag: 'rect',
+    attrs: { x: num(caja.x), y: num(caja.y), width: num(caja.width), height: num(caja.height), rx: String(estilo.nodo.radio), ...atributosDeEstado(estilo, estado, id) },
+  };
+}
+
+/** Contorno de estado sobre la ruta de una Arista. */
+export function pintarEstadoDeRuta(estilo: Estilo, estado: EstadoVisual, id: string, puntos: readonly Punto[]): Elemento {
+  const ruta = puntos.map(({ x, y }, i) => `${i === 0 ? 'M' : 'L'} ${num(x)} ${num(y)}`).join(' ');
+  return { tag: 'path', attrs: { d: ruta, ...atributosDeEstado(estilo, estado, id) } };
 }
