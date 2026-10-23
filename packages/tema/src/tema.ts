@@ -60,6 +60,9 @@ export const temaResueltoSchema = z
         if (tokens.fontSize !== undefined && !/^\d+(\.\d+)?px$/.test(tokens.fontSize)) {
           ctx.addIssue({ code: 'custom', path: ['fontSize'], message: 'debe ser un tamano en px, p. ej. "14px"' });
         }
+        if (tokens.seed !== undefined && !/^\d+$/.test(tokens.seed)) {
+          ctx.addIssue({ code: 'custom', path: ['seed'], message: '`seed` debe ser un entero no negativo, p. ej. 7' });
+        }
       }),
     nodo: nodoSchema.default({ capas: [], slots: [...SLOTS], tipos: {}, estados: {} }),
   })

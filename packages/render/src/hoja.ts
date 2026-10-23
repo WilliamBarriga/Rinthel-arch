@@ -9,6 +9,7 @@
  */
 import type { CapaPintada, NombreDePrimitiva } from 'tema';
 
+import { PINTORES_DE_EFECTOS } from './efectos';
 import { limpiarValorCss, num } from './elemento';
 import type { EstadoVisual, Estilo } from './estilo';
 
@@ -24,7 +25,20 @@ export const PINTORES: { readonly [P in NombreDePrimitiva]: Pintor } = {
   rect: ({ radius }) => ({ 'border-radius': px(radius) }),
   solid: ({ color }) => ({ background: css(color) }),
   border: ({ color, width }) => ({ border: `${px(width)} solid var(--trazo, ${css(color)})` }),
+  ...PINTORES_DE_EFECTOS,
 };
+
+/** Propiedades que se acumulan entre Capas (lista separada por comas, la ultima Capa encima) en vez de pisarse. */
+const ACUMULABLES = new Set(['box-shadow']);
+
+function fusionar(acumulado: Declaraciones, nuevas: Declaraciones): Declaraciones {
+  const resultado = { ...acumulado };
+  for (const [propiedad, valor] of Object.entries(nuevas)) {
+    const previo = resultado[propiedad];
+    resultado[propiedad] = ACUMULABLES.has(propiedad) && previo !== undefined ? `${valor}, ${previo}` : valor;
+  }
+  return resultado;
+}
 
 /** Declaraciones de la caja de un Nodo o Grupo: las Capas de abajo hacia arriba; sin Capas, el aspecto por defecto del Estilo. */
 export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
@@ -36,7 +50,7 @@ export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
       border: `1px solid var(--trazo, ${css(estilo.borde)})`,
     };
   }
-  return Object.assign({}, ...capas.map((capa) => PINTORES[capa.tipo](capa.props)));
+  return capas.reduce<Declaraciones>((acumulado, capa) => fusionar(acumulado, PINTORES[capa.tipo](capa.props)), {});
 }
 
 const bloque = (declaraciones: Declaraciones): string =>
@@ -73,6 +87,8 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-caja', { position: 'absolute', left: '0', top: '0', contain: 'layout style' }],
     ['& .rd-nodo, & .rd-grupo', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'auto', ...caja }],
     ['& .rd-nodo[data-collapsed]', { 'border-style': 'dashed' }],
+    ['& .rd-cinta', { position: 'absolute', 'pointer-events': 'none' }],
+    ['& .rd-defs', { position: 'absolute', 'pointer-events': 'none' }],
     ['& .rd-slot', { position: 'absolute', overflow: 'hidden', 'white-space': 'nowrap', 'text-overflow': 'ellipsis', 'box-sizing': 'border-box' }],
     ['& .rd-title', { 'text-align': 'center' }],
     ['& .rd-encabezado', { 'text-align': 'left' }],

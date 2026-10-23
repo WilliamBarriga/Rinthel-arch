@@ -53,8 +53,8 @@ describe('catalogo', () => {
     expect(error).toMatchObject({ codigo: 'E_THEME_UNKNOWN_PRIMITIVE', hint: "quisiste decir 'solid'" });
   });
 
-  it('ninguna Primitiva de esta rebanada afecta a las Metricas', () => {
-    expect(Object.values(CATALOGO).map((p) => p.afectaMetricas)).toEqual([false, false, false]);
+  it('ninguna Primitiva del catalogo actual afecta a las Metricas', () => {
+    expect(Object.values(CATALOGO).every((p) => p.afectaMetricas === false)).toBe(true);
   });
 });
 

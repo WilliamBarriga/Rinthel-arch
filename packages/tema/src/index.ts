@@ -40,6 +40,7 @@
  */
 export { CATALOGO, SLOTS, construirPrimitiva, construirSlots, resolverTokens, sugerir } from './catalogo';
 export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDeSlot, Primitiva } from './catalogo';
+export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
 export { TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
 export { atributosVisibles, metricasDe, tamanoDeEtiqueta, textoDeAtributo } from './metricas';

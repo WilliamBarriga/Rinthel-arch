@@ -17,6 +17,7 @@ import type { Metricas } from 'tema';
 
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
+import { efectosDeElemento } from './efectos';
 import { resolverEstilo } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { compilarHoja } from './hoja';
@@ -154,10 +155,11 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
   const texto = nodo.collapsed ? `${nodo.label} (${nodo.childCount})` : nodo.label;
   const datos = { nodo, caja, trazo, texto, icons };
   const conmutable = grupo || (nodo.collapsed && nodo.link === undefined);
+  const efectos = efectosDeElemento(estilo, nodo.id);
 
   return {
     tag: 'div',
-    attrs: { class: 'rd-caja', 'data-id': nodo.id, style: posicion(caja) },
+    attrs: { class: 'rd-caja', 'data-id': nodo.id, style: posicion(caja) + efectos.caja },
     hijos: [
       {
         tag: 'div',
@@ -165,12 +167,14 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
           class: grupo ? 'rd-grupo' : 'rd-nodo',
           'data-part': 'nodo',
           ...(nodo.collapsed && { 'data-collapsed': '' }),
-          style: `--trazo:${limpiarValorCss(trazo)};${opacidad(contexto.visibility(nodo.id))}`,
+          style: `--trazo:${limpiarValorCss(trazo)};${opacidad(contexto.visibility(nodo.id))}${efectos.nodo}`,
         },
         ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
         hijos: [
+          ...efectos.debajo,
           ...(grupo ? pintarGrupo(estilo, datos) : pintarNodo(estilo, { ...datos, conAtributos: tieneFilas(nodo, estilo, detail) })),
           ...(onToggle !== undefined && conmutable ? [pintarControl(estilo, { nodo, caja, alClic: () => onToggle(nodo.id) })] : []),
+          ...efectos.encima,
         ],
       },
       ...estadosDeNodo(nodo, caja, contexto),

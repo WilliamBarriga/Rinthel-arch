@@ -8,6 +8,8 @@
  */
 import { CODIGOS, candidatosCercanos } from 'canonico';
 
+import { CATALOGO_DE_EFECTOS } from './catalogo-efectos';
+import type { FamiliaDeEfectos } from './catalogo-efectos';
 import { validarColor } from './color';
 
 /** Valor de una propiedad de Primitiva: numero con rango, o color (nombre de Paleta). */
@@ -16,7 +18,7 @@ export type DefinicionDePropiedad =
   | { readonly tipo: 'color' };
 
 export interface DefinicionDePrimitiva {
-  readonly familia: 'forma' | 'relleno' | 'borde';
+  readonly familia: 'forma' | 'relleno' | 'borde' | FamiliaDeEfectos;
   readonly propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
   /** Si cambia la caja o los Slots (Metricas). Por defecto una Primitiva solo pinta. */
   readonly afectaMetricas: boolean;
@@ -30,6 +32,7 @@ export const CATALOGO = {
     afectaMetricas: false,
     propiedades: { color: { tipo: 'color' }, width: { tipo: 'numero', min: 1, max: 16, defecto: 1 } },
   },
+  ...CATALOGO_DE_EFECTOS,
 } as const satisfies Record<string, DefinicionDePrimitiva>;
 
 export type NombreDePrimitiva = keyof typeof CATALOGO;
