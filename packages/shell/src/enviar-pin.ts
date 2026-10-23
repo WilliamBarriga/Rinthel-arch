@@ -7,9 +7,6 @@ import type { IntencionDePin } from 'canonico';
 
 export type { IntencionDePin } from 'canonico';
 
-/** Nombre historico de `shell` para la intencion; el tipo vive en `canonico`. */
-export type IntencionDePinEnviada = IntencionDePin;
-
 export type ResultadoDeEnvioDePin = { ok: true } | { ok: false; desactualizado: boolean; mensaje: string };
 
 export type EnviadorDePin = (intencion: IntencionDePin) => Promise<ResultadoDeEnvioDePin>;

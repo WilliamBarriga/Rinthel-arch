@@ -3,8 +3,9 @@
  * (breadcrumbs) son controlables por props o internas. No hay jerarquia de
  * Vistas: la ruta es una lista de ids que admite repetidos (ciclos).
  */
-import { useState } from 'react';
 import type { ReactElement } from 'react';
+
+import { useControlado } from './controlado';
 
 export interface PropsDeNavegacion {
   /** Vista activa controlada; sin ella manda el ultimo elemento de la ruta. */
@@ -42,16 +43,14 @@ function conciliar(ruta: readonly string[], vista: string): readonly string[] {
 export function useNavegacion(props: PropsDeNavegacion): Navegacion {
   const inicial = props.view ?? props.path?.[props.path.length - 1] ?? props.defaultView;
   if (inicial === undefined) throw new Error('VistaInteractiva requiere `view`, `path` o `defaultView`');
-  const [propia, setPropia] = useState<readonly string[]>([inicial]);
-  const base = props.path !== undefined && props.path.length > 0 ? props.path : propia;
+  const rutaControlada = props.path !== undefined && props.path.length > 0 ? props.path : undefined;
+  const [base, fijar] = useControlado<readonly string[]>(rutaControlada, [inicial], (nueva) => {
+    props.onPathChange?.([...nueva]);
+    props.onViewChange?.(nueva[nueva.length - 1]!);
+  });
   const vista = props.view ?? base[base.length - 1]!;
   const ruta = conciliar(base, vista);
 
-  const fijar = (nueva: readonly string[]): void => {
-    if (props.path === undefined) setPropia(nueva);
-    props.onPathChange?.([...nueva]);
-    props.onViewChange?.(nueva[nueva.length - 1]!);
-  };
   return {
     vista,
     ruta,
