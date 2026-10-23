@@ -1,8 +1,8 @@
 /**
- * Escena de una Vista: el arbol de elementos SVG que `renderToSvgString` y el
- * componente `Diagram` dibujan por igual. Pura: sin reloj, sin estado, sin DOM;
+ * Escena de una Vista: el arbol de elementos SVG que dibuja el
+ * componente `Diagram`. Pura: sin reloj, sin estado, sin DOM;
  * la misma entrada da el mismo arbol. Los valores de atributo van sin escapar:
- * cada salida (cadena o React) escapa a su manera. Ordena y compone; el aspecto
+ * React los escapa. Ordena y compone; el aspecto
  * de cada parte lo dibujan los pintores (`pintores.ts`) desde el Estilo resuelto.
  */
 import { idDeArista } from 'canonico';

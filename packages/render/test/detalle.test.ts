@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { TEMA_NEUTRO, combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
 import { layoutView } from 'layout';
-import { renderToSvgString } from 'render';
-import type { EntradaDeRender } from 'render';
+import { aSvg } from './ayudas';
+import type { DiagramProps } from 'render';
 
-type Detalle = NonNullable<EntradaDeRender['detail']>;
+type Detalle = NonNullable<DiagramProps['detail']>;
 
 async function dibujar(detail?: Detalle): Promise<string> {
   const fuente = fuenteCanonicaSchema.parse({
@@ -19,10 +19,10 @@ async function dibujar(detail?: Detalle): Promise<string> {
   const view = resolveView(fuente, 'v')!;
   const geometry = await layoutView(view, TEMA_NEUTRO);
   const icons = combineIconProviders(workspaceIcons({}), genericIcons());
-  return renderToSvgString({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons, ...(detail !== undefined && { detail }) });
+  return aSvg({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons, ...(detail !== undefined && { detail }) });
 }
 
-describe('renderToSvgString: nivel de detalle', () => {
+describe('aSvg: nivel de detalle', () => {
   it('etiqueta: solo la etiqueta corta, sin Atributos, con icono', async () => {
     const svg = await dibujar('etiqueta');
     expect(svg).toContain('>Usr<');

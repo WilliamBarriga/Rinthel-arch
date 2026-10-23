@@ -48,10 +48,4 @@ model {
   cli.cli-inspect -> canonico.can-inspect
   cli.cli-edit -> sesion.ses-ediciones
   cli.cli-dev -> shell
-  cli.cli-export -> render.ren-diagram
-  cli.cli-export -> resvg "PNG"
-  cli.cli-export -> esbuild "HTML"
-  cli.cli-export -> svg
-  cli.cli-export -> png
-  cli.cli-export -> html
 }

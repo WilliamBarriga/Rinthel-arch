@@ -69,7 +69,7 @@ Los diagramas se escriben en archivos \`.dg\` del Workspace. Es la unica fuente 
 2. Edita los \`.dg\`.
 3. Ejecuta \`diagrams validate --workspace <ruta> --json\`.
 4. Si \`ok\` es \`false\`, corrige cada issue (empieza por los \`fix\`, que son ediciones exactas del texto) y vuelve al paso 3.
-5. Termina cuando \`ok\` es \`true\`. \`diagrams build\` y \`diagrams export\` generan geometria, SVG y PNG.
+5. Termina cuando \`ok\` es \`true\`. \`diagrams build\` genera la geometria y \`diagrams dev\` muestra los diagramas.
 
 Para ver el resultado mientras se edita (persona o agente), \`diagrams dev\` abre el bucle en vivo (ver abajo). Si dos autores tocan el mismo \`.dg\`, gana la ultima escritura; la reconciliacion es de git.
 

@@ -53,10 +53,9 @@ model {
     modulo sh-worker "layout-en-worker" "Relayout en Worker"
   }
 
-  paquete cli "cli" "validate, build, export, inspect, edit, dev" {
+  paquete cli "cli" "validate, build, inspect, edit, dev" {
     source { path "packages/cli/src" }
     modulo cli-validate "validate" "Diagnosticos"
-    modulo cli-export "export" "SVG, PNG y HTML"
     modulo cli-inspect "inspect" "Ids, sitios y vecinos"
     modulo cli-edit "edit" "Ediciones desde la terminal"
     modulo cli-dev "dev" "Servidor local con recarga"
@@ -67,10 +66,5 @@ model {
   externo elk "ELK (elkjs)" "Motor de layout"
   externo react "React 19" "Dibujo del SVG"
   externo d3 "d3-zoom" "Camara"
-  externo resvg "resvg-js" "SVG a PNG sin navegador"
-  externo esbuild "esbuild" "Empaqueta el shell en el HTML"
 
-  salida svg "SVG" "Estatico, sobre la geometria cacheada"
-  salida png "PNG" "Rasterizado con resvg"
-  salida html "HTML" "Interactivo, un solo archivo"
 }

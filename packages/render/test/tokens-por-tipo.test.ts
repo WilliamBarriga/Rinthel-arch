@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { TEMA_NEUTRO, fuenteCanonicaSchema, resolveView, temaSchema } from 'canonico';
 import type { Tema, VistaResuelta } from 'canonico';
 import { layoutView } from 'layout';
-import { renderToSvgString, resolverEstilo } from 'render';
+import { resolverEstilo } from 'render';
+import { aSvg } from './ayudas';
 
 const nodo = (id: string, type: string) => ({ id, type, title: id, description: '', children: [] });
 
@@ -33,7 +34,7 @@ const TEMA_EJEMPLO: Tema = {
 async function dibujar(tema: Tema): Promise<string> {
   const v = vista();
   const geometry = await layoutView(v, tema);
-  return renderToSvgString({ view: v, geometry, theme: tema, width: 800, height: 600 });
+  return aSvg({ view: v, geometry, theme: tema, width: 800, height: 600 });
 }
 
 /** Primera caja (`<rect>`) dibujada para un Nodo. */

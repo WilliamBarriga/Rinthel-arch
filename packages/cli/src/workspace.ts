@@ -41,24 +41,6 @@ export function leerWorkspace(raiz: string): ArchivosDelWorkspace {
 }
 
 const CARPETA_DE_SALIDA = '.diagrams';
-const FUENTES = ['.woff2', '.woff', '.ttf', '.otf'];
-
-/** Archivos de fuente bajo `raiz`: ruta relativa con `/` -> contenido en base64. */
-export function leerFuentes(raiz: string): Record<string, string> {
-  return recorrer(
-    raiz,
-    (nombre) => FUENTES.some((extension) => nombre.endsWith(extension)),
-    (ruta) => readFileSync(ruta).toString('base64'),
-  );
-}
-
-/** Salida de `build` (todo `<raiz>/.diagrams/`, ruta relativa con `/` -> texto); lanza si no existe. */
-export function leerSalida(raiz: string): Record<string, string> {
-  const base = join(raiz, CARPETA_DE_SALIDA);
-  statSync(base);
-  return recorrer(base, () => true, (ruta) => readFileSync(ruta, 'utf8'), true);
-}
-
 /**
  * Reemplaza `<raiz>/.diagrams/<subcarpeta>` (por defecto, todo `.diagrams/`) por
  * `archivos` (ruta relativa a `.diagrams/` con `/` -> texto): la salida es

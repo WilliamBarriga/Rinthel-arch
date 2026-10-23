@@ -4,7 +4,7 @@ specification {
   node paquete  { description "Paquete pnpm del monorepo"                  icon box       color blue }
   node modulo   { description "Modulo profundo dentro de un paquete"       icon box       color gray }
   node artefacto { description "Archivo o carpeta que se lee o se produce"  icon box       color green }
-  node salida   { description "Formato de export"                          icon box       color amber }
+  node salida   { description "Salida del sistema"                          icon box       color amber }
   node externo  { description "Libreria o herramienta de terceros"         icon cloud     color red }
   node proceso  { description "Proceso en ejecucion"                       icon server    color blue }
 }

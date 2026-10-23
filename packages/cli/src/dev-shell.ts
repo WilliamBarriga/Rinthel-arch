@@ -1,7 +1,7 @@
 /** Bundles del navegador para `dev`: la pagina viva (`navegador/dev.tsx`) y el Worker de layout. */
 import { fileURLToPath } from 'node:url';
 
-import { empaquetar } from './html';
+import { empaquetar } from './empaquetar';
 
 const ENTRADA = new URL('../navegador/dev.tsx', import.meta.url);
 const ENTRADA_DEL_WORKER = new URL('../navegador/worker.ts', import.meta.url);

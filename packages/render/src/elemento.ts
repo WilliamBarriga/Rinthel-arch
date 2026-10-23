@@ -10,7 +10,6 @@ export interface Elemento {
   hijos?: (Elemento | string)[];
   /** Marcado SVG ya saneado que va dentro del elemento (el icono). */
   html?: string;
-  /** Solo lo usa el componente; la cadena no lleva manejadores. */
   alClic?: () => void;
 }
 

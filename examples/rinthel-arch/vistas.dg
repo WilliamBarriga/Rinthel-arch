@@ -1,4 +1,4 @@
-// Vistas del mapa: una por pregunta ("como se parten los paquetes", "como se exporta", "como fluye una edicion").
+// Vistas del mapa: una por pregunta ("como se parten los paquetes", "como fluye una edicion").
 view paquetes {
   type architecture
   theme diagrams
@@ -10,7 +10,6 @@ view paquetes {
   link sesion -> sesion-detalle
   link render -> render-detalle
   link shell -> shell-detalle
-  link cli -> exportacion
 }
 
 view canonico-detalle {
@@ -53,39 +52,6 @@ view shell-detalle {
   theme diagrams
   include shell.**, d3, layout.lay-layout, render, sesion.ses-intenciones, canonico.can-vistas
   depth 2
-}
-
-view exportacion {
-  type architecture
-  theme diagrams
-  include cli.**, sesion, render, resvg, esbuild, svg, png, html, workspace, salida-derivada
-  depth 2
-}
-
-view flujo-export {
-  type flow
-  theme diagrams
-  include autor, workspace, cli.cli-export, dsl.dsl-compilar, canonico.can-validar, layout.lay-layout, elk, render.ren-diagram, resvg, esbuild, svg, png, html, salida-derivada
-  steps {
-    step "El autor pide un export" {
-      show autor, cli.cli-export, workspace
-    }
-    step "Se compilan los .dg a Fuente canonica y se valida" {
-      show dsl.dsl-compilar, canonico.can-validar
-    }
-    step "ELK calcula la geometria de la Vista" {
-      show layout.lay-layout, elk
-    }
-    step "render dibuja el SVG" {
-      show render.ren-diagram, svg
-    }
-    step "resvg rasteriza el PNG y esbuild empaqueta el HTML" {
-      show resvg, png, esbuild, html
-    }
-    step "La salida queda en .diagrams/" {
-      show salida-derivada
-    }
-  }
 }
 
 view flujo-edicion {

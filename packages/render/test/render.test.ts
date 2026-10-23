@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { TEMA_NEUTRO, combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
 import type { IconProvider, Tema, VistaResuelta } from 'canonico';
 import { layoutView, metricasDe } from 'layout';
-import { escaparXml, hidratarFuentes, renderToSvgString, serializarFuentes } from 'render';
+import { aSvg } from './ayudas';
 
 const nodo = (id: string, title: string, type: string, children: unknown[] = []) => ({
   id,
@@ -39,10 +39,10 @@ const OSCURO: Tema = {
 async function dibujar(tema: Tema, estado = {}): Promise<string> {
   const v = vista(estado);
   const geometry = await layoutView(v, tema);
-  return renderToSvgString({ view: v, geometry, theme: tema, width: 800, height: 600 });
+  return aSvg({ view: v, geometry, theme: tema, width: 800, height: 600 });
 }
 
-describe('renderToSvgString', () => {
+describe('aSvg', () => {
   it('dibuja la Vista con el Tema neutro (snapshot)', async () => {
     expect(await dibujar(TEMA_NEUTRO)).toMatchSnapshot();
   });
@@ -58,7 +58,7 @@ describe('renderToSvgString', () => {
   it('dibuja las Aristas con flecha, como rutas ortogonales', async () => {
     const svg = await dibujar(TEMA_NEUTRO);
 
-    expect(svg).toMatch(/<g data-edge="a\.api -&gt; db">\n<path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" marker-end="url\(#flecha-\w+\)"/);
+    expect(svg).toMatch(/<g data-edge="a\.api -&gt; db"><path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" marker-end="url\(#flecha-\w+\)"/);
     expect(svg).toMatch(/<g data-edge="a\.api -&gt; a\.auth"/);
     expect(svg).toMatch(/<marker id="flecha-[\w]+"/);
   });
@@ -74,7 +74,7 @@ describe('renderToSvgString', () => {
   it('la cardinalidad va junto al extremo que le corresponde', async () => {
     const v = vista();
     const geometry = await layoutView(v, TEMA_NEUTRO);
-    const svg = renderToSvgString({ view: v, geometry, theme: TEMA_NEUTRO, width: 800, height: 600 });
+    const svg = aSvg({ view: v, geometry, theme: TEMA_NEUTRO, width: 800, height: 600 });
     const ruta = geometry.edges['a.api -> db']!.points;
     const inicio = ruta[0]!;
     const fin = ruta[ruta.length - 1]!;
@@ -99,7 +99,7 @@ describe('renderToSvgString', () => {
       edges: base.edges.map((arista) => (arista.to.node === 'a.auth' ? { ...arista, label: 'valida <token>' } : arista)),
     };
     const geometry = await layoutView(v, TEMA_NEUTRO);
-    const svg = renderToSvgString({ view: v, geometry, theme: TEMA_NEUTRO, width: 800, height: 600 });
+    const svg = aSvg({ view: v, geometry, theme: TEMA_NEUTRO, width: 800, height: 600 });
     const ruta = geometry.edges['a.api -> a.auth']!.points;
     const xs = ruta.map((p) => p.x);
     const ys = ruta.map((p) => p.y);
@@ -167,7 +167,7 @@ describe('renderToSvgString', () => {
   });
 });
 
-describe('renderToSvgString: Atributos e iconos', () => {
+describe('aSvg: Atributos e iconos', () => {
   function tabla(iconos: Record<string, string> = {}): { view: VistaResuelta; icons: IconProvider } {
     const fuente = fuenteCanonicaSchema.parse({
       specification: { nodeTypes: [{ name: 'tabla', icon: 'database', color: 'blue' }, { name: 'servicio', icon: 'logo' }] },
@@ -188,7 +188,7 @@ describe('renderToSvgString: Atributos e iconos', () => {
   async function dibujarTabla(iconos: Record<string, string> = {}): Promise<string> {
     const { view, icons } = tabla(iconos);
     const geometry = await layoutView(view, TEMA_NEUTRO);
-    return renderToSvgString({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons });
+    return aSvg({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons });
   }
 
   it('dibuja un Nodo tipo tabla con sus Atributos en orden y la Arista al Atributo (snapshot)', async () => {
@@ -203,7 +203,7 @@ describe('renderToSvgString: Atributos e iconos', () => {
   it('la Arista a nodo#atributo termina a la altura de la fila del Atributo', async () => {
     const { view, icons } = tabla();
     const geometry = await layoutView(view, TEMA_NEUTRO);
-    const svg = renderToSvgString({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons });
+    const svg = aSvg({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons });
     const { cabecera, fila } = metricasDe(TEMA_NEUTRO);
     const caja = geometry.nodes['usuarios']!;
     const fin = geometry.edges['api -> usuarios#email']!.points.at(-1)!;
@@ -262,38 +262,6 @@ describe('renderToSvgString: Atributos e iconos', () => {
   });
 });
 
-describe('renderToSvgString: fuentes incrustadas', () => {
-  async function exportar(fonts?: { family: string; mime: string; data: string }[]): Promise<string> {
-    const v = vista();
-    const geometry = await layoutView(v, OSCURO);
-    return renderToSvgString({ view: v, geometry, theme: OSCURO, width: 800, height: 600, ...(fonts && { fonts }) });
-  }
-
-  it('incrusta cada fuente como @font-face con data URI, sin recursos externos', async () => {
-    const svg = await exportar([{ family: 'Inter', mime: 'font/woff2', data: 'QUJD' }]);
-
-    expect(svg).toContain("@font-face{font-family:'Inter';src:url(data:font/woff2;base64,QUJD)}");
-    expect(svg).not.toMatch(/(?:href|url\()\s*["']?(?!data:|#)[a-z]+:?\/\//i);
-    expect(svg).not.toMatch(/src:url\((?!data:)/);
-  });
-
-  it('sin fuentes no emite <style> y la salida no cambia', async () => {
-    const svg = await exportar();
-
-    expect(svg).not.toContain('<style');
-    expect(await exportar([])).toBe(svg);
-  });
-
-  it('escapa comillas del nombre de la familia y es determinista', async () => {
-    const fuentes = [{ family: "O'Brien", mime: 'font/ttf', data: 'QQ==' }];
-
-    const svg = await exportar(fuentes);
-
-    expect(svg).toContain("font-family:'O\\'Brien'");
-    expect(await exportar(fuentes)).toBe(svg);
-  });
-});
-
 describe('Metricas compartidas: layout y dibujo', () => {
   const fuente = fuenteCanonicaSchema.parse({
     specification: { nodeTypes: [{ name: 'tabla' }] },
@@ -308,7 +276,7 @@ describe('Metricas compartidas: layout y dibujo', () => {
 
   async function dibujarCon(metricas = metricasDe(TEMA_NEUTRO)) {
     const geometry = await layoutView(view, TEMA_NEUTRO, { metricas });
-    const svg = renderToSvgString({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, metricas });
+    const svg = aSvg({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, metricas });
     const filas = [...svg.matchAll(/<text data-attribute="t#[^"]+" x="([\d.]+)" y="([\d.]+)"[^>]*font-size="([\d.]+)"[^>]*>([^<]*)</g)].map((m) => ({
       x: Number(m[1]),
       y: Number(m[2]),
@@ -338,33 +306,5 @@ describe('Metricas compartidas: layout y dibujo', () => {
     expect(otra.caja.width).toBe(base.caja.width + 16);
     expect(otra.filas[0]!.y).toBe(base.filas[0]!.y + 12 + 3);
     expect(otra.filas[1]!.y).toBeLessThan(otra.caja.height);
-  });
-});
-
-describe('fuentes: serializar / hidratar', () => {
-  const fuentes = [
-    { family: 'Inter', mime: 'font/woff2', data: 'QUJD' },
-    { family: "O'Neil", mime: 'font/ttf', data: 'REVG' },
-  ];
-
-  it('ida y vuelta: el CSS hidratado devuelve las mismas fuentes', () => {
-    expect(hidratarFuentes(serializarFuentes(fuentes))).toEqual(fuentes);
-  });
-
-  it('una familia repetida se incrusta una sola vez', () => {
-    const css = serializarFuentes([...fuentes, { family: 'Inter', mime: 'font/woff', data: 'WFla' }]);
-
-    expect(hidratarFuentes(css)).toEqual(fuentes);
-  });
-
-  it('sin fuentes no hay CSS', () => {
-    expect(serializarFuentes([])).toBe('');
-    expect(hidratarFuentes('')).toEqual([]);
-  });
-});
-
-describe('escaparXml', () => {
-  it('escapa los cuatro caracteres con significado en XML y HTML', () => {
-    expect(escaparXml('<a href="x">&</a>')).toBe('&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;');
   });
 });

@@ -1,5 +1,5 @@
 /**
- * `cli` — comandos `validate`, `build`, `export`, `skill`, `inspect`, `edit` y `dev`.
+ * `cli` — comandos `validate`, `build`, `skill`, `inspect`, `edit` y `dev`.
  *
  * Interfaz: `run(argv, dependencias?) -> { exitCode, stdout, stderr }`. No
  * escribe en el proceso: el binario (`bin.ts`) imprime el resultado.
@@ -26,33 +26,11 @@
  * fusiona antes del Workspace (gana el Workspace en rutas repetidas). Con errores
  * (o avisos en `--strict`) sale 1 y borra la salida anterior; los Pins solapados salen como
  * `W_OVERLAPPING_PINS` con posicion y `related`. `--theme` inexistente: codigo 2.
- * `export --workspace <ruta> [--theme-path <carpeta>] [--format svg|png|html]` (sin `--json`, `--strict` ni
- * `--max-issues`): un SVG estatico por Vista en `.diagrams/svg/<vista>.svg`
- * (reemplaza esa carpeta), desde la salida de `build` (sin ella, o con geometria que no
- * cumple su esquema o cuya `layoutKey` no coincide con la de su Fuente canonica: codigo 2,
- * se pide ejecutar `build`; `canonico.json` y `geometria/` deben ser de la misma corrida). Mismos
- * bytes para la misma salida; el SVG no referencia recursos externos: las fuentes
- * del Tema que el Workspace trae como archivo (`<Familia>.woff2|woff|ttf|otf`)
- * van incrustadas (tambien las de `--theme-path`; gana el Workspace); los iconos son los del Workspace y los genericos.
- * Con `--format png` escribe `.diagrams/png/<vista>.png`, rasterizado con resvg (sin
- * navegador, determinista en una misma maquina): resvg no lee `@font-face`, asi que las
- * fuentes del Tema salen de `.ttf`/`.otf` del Workspace (si solo hay `woff`/`woff2`:
- * codigo 2); una familia sin archivo usa las fuentes del sistema, de modo que el
- * PNG es identico entre maquinas solo si el Workspace trae todas las familias.
  * `skill --workspace <ruta> [--out <archivo>]`: genera el skill para agentes (formato
  * `SKILL.md`) desde el catalogo del proyecto (Tipos de nodo, Paleta, Temas), la
  * sintaxis del DSL, el contrato de `validate` (JSON Schema derivado del esquema Zod)
  * y los codigos de issue. Va a stdout, o a `--out`; determinista (regenerar con otro
  * catalogo lo actualiza). Con errores de validacion sale 1 y muestra los issues.
- * Con `--format html` escribe `.diagrams/html/<vista>.html`: un archivo por Vista, sin
- * servidor ni peticiones externas, con la Fuente canonica completa, la geometria cacheada
- * de todas las Vistas, el shell (bundle de `navegador/` hecho con esbuild al exportar:
- * `VistaInteractiva` + `useEstadoEnHash` con camara), las fuentes del Tema y los iconos
- * incrustados (estatico: sin watch ni `themeUpdates`; ver la limitacion de la recarga de Tema en
- * `shell`). Abre en la Vista del archivo (el hash puede decir otra); los Nodos con
- * `link` navegan a la Vista enlazada dentro del mismo archivo. El estado por defecto sale de
- * la geometria cacheada; colapsar relayoutea con ELK en un Web Worker creado de un Blob
- * del propio bundle y, si el navegador no lo permite, en el hilo principal.
  * `inspect <buscar|nodo|vista> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json]`
  * (ADR 0005): consulta de solo lectura del Modelo, con contrato JSON propio; el contrato y los
  * codigos de salida estan en `comando-inspect.ts`.
@@ -73,16 +51,12 @@ import { parseArgs } from 'node:util';
 
 import { editar } from './comando-edit';
 import { inspeccionar } from './comando-inspect';
-import { exportarPng, exportarSvg } from './export';
 import { comandoDev } from './dev';
-import { exportarHtml } from './html';
 import { MAX_ISSUES_POR_DEFECTO, abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { generarSkill } from './skill';
 import { construirSalida, textoLegible } from './validate';
-import { leerSalidaDeBuild } from './vistas-dibujables';
-import type { EntradaDeExport } from './vistas-dibujables';
-import { escribirSalida, escribirTexto, leerFuentes, leerSalida, leerWorkspace } from './workspace';
+import { escribirSalida, escribirTexto, leerWorkspace } from './workspace';
 
 export { iniciarDev } from './dev';
 export type { OpcionesDeDev, ServidorDev } from './dev';
@@ -93,12 +67,8 @@ export type { ResultadoDeEjecucion };
 export interface Dependencias {
   leer?: (raiz: string) => ArchivosDelWorkspace;
   escribir?: (raiz: string, archivos: Readonly<Record<string, string | Uint8Array>>, subcarpeta?: string) => void;
-  /** Salida de `build` (`.diagrams/`), ruta relativa -> texto. */
-  leerSalida?: (raiz: string) => Record<string, string>;
   /** Escribe un archivo de texto (con sus carpetas); lo usa `skill --out`. */
   escribirArchivo?: (ruta: string, texto: string) => void;
-  /** Archivos de fuente del Workspace, ruta relativa -> base64. */
-  leerFuentes?: (raiz: string) => Record<string, string>;
 }
 
 
@@ -128,12 +98,11 @@ export async function run(
   if (comando === 'edit') return editar(resto, dependencias);
   if (comando === 'inspect') return inspeccionar(resto, dependencias);
   if (comando === 'dev') return comandoDev(resto, dependencias);
-  if (comando !== 'validate' && comando !== 'build' && comando !== 'export' && comando !== 'skill') {
+  if (comando !== 'validate' && comando !== 'build' && comando !== 'skill') {
     return uso(
-      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|export|skill|inspect|edit|dev> --workspace <ruta>`,
+      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|skill|inspect|edit|dev> --workspace <ruta>`,
     );
   }
-  if (comando === 'export') return exportar(resto, dependencias);
   if (comando === 'skill') return skill(resto, dependencias);
 
   let opciones: OpcionesParseadas;
@@ -180,55 +149,6 @@ async function skill(
   return { exitCode: 0, stdout: `Skill escrito en ${opciones.out}\n`, stderr: '' };
 }
 
-/** Formatos de `export`: que dibuja, en que carpeta de `.diagrams/` y como se nombra en la salida. */
-const FORMATOS: Readonly<Record<string, { exportar: (entrada: EntradaDeExport) => Record<string, string | Uint8Array> | Promise<Record<string, string | Uint8Array>>; carpeta: string; etiqueta: string }>> = {
-  svg: { exportar: exportarSvg, carpeta: 'svg', etiqueta: 'SVG' },
-  png: { exportar: exportarPng, carpeta: 'png', etiqueta: 'PNG' },
-  html: { exportar: exportarHtml, carpeta: 'html', etiqueta: 'HTML' },
-};
-
-async function exportar(
-  args: readonly string[],
-  { leer = leerWorkspace, leerSalida: leerCache = leerSalida, leerFuentes: leerLetras = leerFuentes, escribir = escribirSalida }: Dependencias,
-): Promise<ResultadoDeEjecucion> {
-  let raiz: string | undefined;
-  let carpetaDeTemas: string | undefined;
-  let formato: string | undefined;
-  try {
-    ({ workspace: raiz, 'theme-path': carpetaDeTemas, format: formato } = parseArgs({
-      args: [...args],
-      options: { workspace: { type: 'string' }, 'theme-path': { type: 'string' }, format: { type: 'string' } },
-      strict: true,
-    }).values);
-  } catch (error) {
-    return uso((error as Error).message);
-  }
-  if (raiz === undefined) return uso('Falta --workspace <ruta>');
-  const salida = FORMATOS[formato ?? 'svg'];
-  if (salida === undefined) return uso(`Formato '${formato}' desconocido. Formatos: ${Object.keys(FORMATOS).join(', ')}`);
-
-  let salidaDeBuild: Pick<EntradaDeExport, 'fuente' | 'geometrias'>;
-  try {
-    salidaDeBuild = leerSalidaDeBuild(leerCache(raiz));
-  } catch (error) {
-    return uso(`No hay una salida de build utilizable en '${raiz}/.diagrams' (ejecuta 'build' antes): ${(error as Error).message}`);
-  }
-  let archivos: Record<string, string | Uint8Array>;
-  try {
-    // El Workspace gana sobre `--theme-path` en rutas repetidas, como en `build`.
-    const fuentes = { ...(carpetaDeTemas === undefined ? {} : leerLetras(carpetaDeTemas)), ...leerLetras(raiz) };
-    archivos = await salida.exportar({ ...salidaDeBuild, workspace: leer(raiz), fuentes });
-  } catch (error) {
-    return uso(`No se pudo exportar: ${(error as Error).message}`);
-  }
-  try {
-    escribir(raiz, archivos, salida.carpeta);
-  } catch (error) {
-    return uso(`No se pudo escribir .diagrams/${salida.carpeta}/: ${(error as Error).message}`);
-  }
-  return { exitCode: 0, stdout: `${Object.keys(archivos).length} ${salida.etiqueta} escritos en .diagrams/${salida.carpeta}/\n`, stderr: '' };
-}
-
 async function ejecutar(
   comando: 'validate' | 'build',
   opciones: OpcionesParseadas,
@@ -267,7 +187,7 @@ async function ejecutar(
     return uso(`Error interno: la salida no cumple el contrato (${(error as Error).message})`);
   }
   if (comando === 'build') {
-    // Un build fallido borra la salida anterior: `export` no debe dibujar algo obsoleto.
+    // Un build fallido borra la salida anterior: no debe quedar geometria obsoleta.
     try {
       escribir(raiz, salida.ok ? archivosDeSalida : {});
     } catch (error) {

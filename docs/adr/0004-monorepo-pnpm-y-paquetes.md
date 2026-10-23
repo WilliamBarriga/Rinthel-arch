@@ -4,7 +4,7 @@ pnpm workspaces sin orquestador de tareas (seis paquetes no lo justifican; los r
 
 ## Export
 
-El CLI produce por Vista: SVG estatico (render sobre la geometria cacheada), PNG rasterizando ese SVG con resvg (determinista, sin navegador) y HTML interactivo en un solo archivo autocontenido con Fuente canonica y geometria incrustadas. Las fuentes las declara el tema y se incrustan para que SVG y PNG coincidan.
+Superado (ticket #27, ADR 0008): el sistema de exportaciones (`export` svg/png/html) se borro. El CLI ya no produce SVG, PNG ni HTML; las Vistas se ven con `dev`.
 
 ## Independencia
 
@@ -12,7 +12,7 @@ Este repo no depende de slides-rinthel, video-openmotion ni de ningun repo de un
 
 ## Enmienda: PNG con `@resvg/resvg-js`
 
-El PNG se rasteriza con `@resvg/resvg-js` 2.6.2 (MPL-2.0, binario nativo precompilado por plataforma, sin navegador). resvg no lee los `@font-face` del SVG ni archivos `woff`/`woff2`, y la version actual solo carga fuentes desde archivos: el CLI carga las familias del Tema desde `.ttf`/`.otf` del Workspace (con una copia temporal) y falla si una familia solo existe como `woff`/`woff2`. Una familia sin archivo se resuelve con las fuentes del sistema; el PNG es identico entre maquinas solo si el Workspace trae todas las familias.
+Superada: se quito el PNG y la dependencia `@resvg/resvg-js` junto con el resto de las exportaciones.
 
 ## Enmienda: paquete `sesion`
 
