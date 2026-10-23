@@ -10,6 +10,17 @@ import type { Tema } from 'canonico';
 import { metricasDe } from 'layout';
 import type { Metricas } from 'layout';
 
+/** Estado visual de un elemento dibujado, ademas de su aspecto normal. */
+export type EstadoVisual = 'seleccionado' | 'hover' | 'fantasma';
+
+/** Contorno de un estado: color, grosor, trazo discontinuo opcional y opacidad. */
+export interface AspectoDeEstado {
+  color: string;
+  ancho: number;
+  trazo?: string;
+  opacidad: number;
+}
+
 export interface Estilo {
   /** Metricas con las que se dibuja; deben ser las del layout. */
   metricas: Metricas;
@@ -42,6 +53,8 @@ export interface Estilo {
     /** Fraccion del tamano de texto que baja la linea base para centrar en la caja. */
     centradoVertical: number;
   };
+  /** Contorno de cada estado visual; se dibuja con los mismos pintores que el resto. */
+  estados: Record<EstadoVisual, AspectoDeEstado>;
   glifos: { expandido: string; colapsado: string };
 }
 
@@ -56,6 +69,7 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
     throw new Error(`El Tema '${tema.name}' no cumple el contrato: ${detalle}`);
   }
   const { fonts, tokens } = contrato.data;
+  const acento = tema.palette['blue'] ?? tokens.foreground;
   return {
     metricas: metricas ?? metricasDe(tema),
     fondo: tokens.background,
@@ -73,6 +87,11 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
       elevacionEtiquetaSinCaja: 4,
     },
     etiqueta: { halo: { color: tokens.background, ancho: 3 }, centradoVertical: 0.35 },
+    estados: {
+      seleccionado: { color: acento, ancho: 3, opacidad: 1 },
+      hover: { color: acento, ancho: 2, opacidad: 0.6 },
+      fantasma: { color: tokens.border, ancho: 2, trazo: '4 3', opacidad: 0.7 },
+    },
     glifos: { expandido: '-', colapsado: '+' },
   };
 }

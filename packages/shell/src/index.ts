@@ -17,8 +17,10 @@
  * ignora el aviso, la camara no se mueve) o interna si no se pasa `camera`.
  * Pan y zoom los da d3-zoom (arrastre, rueda, tactil); escala entre 0.05 y 16.
  * Seleccion: `selected` controlada o interna; `onSelect(id)` al pulsar un Nodo, una Arista,
- * su etiqueta o la fila de un Atributo (`nodo#atributo`); cada elemento marcado lleva un
- * rectangulo con `data-selected="<id>"`. Con mayusculas, ctrl o meta la Seleccion crece
+ * su etiqueta o la fila de un Atributo (`nodo#atributo`); la marca la dibuja `render` (prop
+ * `estados`, estado `seleccionado`, con `data-selected="<id>"`); el shell no pinta overlays propios.
+ * Chrome (pasos, breadcrumbs): clases `rd-*` y variables CSS `--rd-fondo|texto|borde|acento|fuente`
+ * emitidas en el contenedor desde el Estilo resuelto del Tema, sin estilos en linea. Con mayusculas, ctrl o meta la Seleccion crece
  * (o decrece) en lugar de reemplazarse. Que hay bajo el clic lo decide el nucleo de
  * interaccion (`elementoBajo`, puro y sin DOM, sobre la Vista completa: el culling del
  * viewport no lo afecta); `VistaInteractiva` solo traduce el raton a un punto del lienzo.

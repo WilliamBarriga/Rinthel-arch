@@ -13,11 +13,12 @@ import { resolveView } from 'canonico';
 import type { EstadoDeColapso, IconProvider, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
 import { claveDeLayout, indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
-import { Diagram } from 'render';
-import type { Camara } from 'render';
+import { Diagram, resolverEstilo } from 'render';
+import type { Camara, Estados } from 'render';
 
+import { EstiloDelChrome, variablesDeChrome } from './chrome';
 import { MAX_NODOS_VISIBLES, alternarGrupo, compensarCamara, contarNodosVisibles, interpolarGeometria, visibilidadDeMorph } from './colapso';
-import { SELECCION_VACIA, cajaDeElemento, elementoBajo, elementoPorId, seleccionar } from './interaccion';
+import { SELECCION_VACIA, elementoBajo, elementoPorId, seleccionar } from './interaccion';
 import type { Seleccion } from './interaccion';
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
@@ -324,16 +325,12 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     const elemento = props.selected === null ? undefined : elementoPorId(vista, props.selected);
     return elemento === undefined ? SELECCION_VACIA : [elemento];
   }, [props.selected, seleccionPropia, vista]);
-  const marcas = useMemo(
-    () =>
-      mostrado === undefined
-        ? []
-        : seleccion.flatMap((elemento) => {
-            const caja = cajaDeElemento(mostrado.vista, mostrado.geometria, theme, elemento);
-            return caja === undefined ? [] : [{ elemento, caja }];
-          }),
-    [mostrado, seleccion, theme],
-  );
+  const estados = useMemo<Estados>(() => {
+    const porId: Record<string, ['seleccionado']> = {};
+    for (const elemento of seleccion) porId[elemento.id] = ['seleccionado'];
+    return porId;
+  }, [seleccion]);
+  const estilo = useMemo(() => resolverEstilo(theme), [theme]);
 
   const alternar = (id: string): void => {
     if (arrastrando.current) return;
@@ -372,7 +369,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   };
 
   return (
-    <div ref={zona} onClick={alPulsar} style={{ position: 'relative', width, height, overflow: 'hidden', touchAction: 'none' }}>
+    <div ref={zona} onClick={alPulsar} className="rd-vista" style={{ ...variablesDeChrome(estilo), width, height }}>
+      <EstiloDelChrome />
       {mostrado !== undefined && recortada !== undefined && (
         <Diagram
           view={recortada}
@@ -383,36 +381,14 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
           height={height}
           camera={camaraVista}
           detail={detalle}
+          estados={estados}
+          estilo={estilo}
           onToggle={alternar}
           {...(visibilidadMostrada !== undefined && { visibility: visibilidadMostrada })}
         />
       )}
       {pasos.controles}
       {props.migas}
-      {marcas.length > 0 && (
-        <svg
-          width={width}
-          height={height}
-          viewBox={`${x} ${y} ${ancho} ${alto}`}
-          style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}
-        >
-          {marcas.map(({ elemento, caja }) => (
-            <rect
-              key={`${elemento.tipo}:${elemento.id}`}
-              data-selected={elemento.id}
-              data-selected-type={elemento.tipo}
-              x={caja.x}
-              y={caja.y}
-              width={caja.width}
-              height={caja.height}
-              rx={6}
-              fill="none"
-              stroke={theme.palette['blue'] ?? theme.tokens['foreground'] ?? 'currentColor'}
-              strokeWidth={3}
-            />
-          ))}
-        </svg>
-      )}
     </div>
   );
 }

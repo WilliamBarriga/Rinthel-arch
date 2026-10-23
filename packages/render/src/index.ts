@@ -37,6 +37,11 @@
  * pintores por parte leen solo de el; `estilo` (prop opcional, por defecto el del Tema)
  * lo sustituye y cambia por igual el SVG exportado y `Diagram`.
  *
+ * Estados visuales: `estados` (`Estados`: id de Nodo, de Arista o `nodo#atributo` ->
+ * lista de `EstadoVisual`: `seleccionado`, `hover`, `fantasma`) dibuja un contorno por estado
+ * con el aspecto de `estilo.estados` (`data-state`; el seleccionado lleva tambien `data-selected`).
+ * Un id que no esta dibujado se ignora. Es la unica via de resaltado: el shell no pinta overlays propios.
+ *
  * Invariantes: sin estado ni efectos (mismas props, mismo arbol); determinista
  * byte a byte en la cadena; los colores salen solo del Tema, por nombre de Paleta
  * (ADR 0002); sin dependencia de Next, Tailwind ni json-render. Peer React 18 y 19.
@@ -47,9 +52,9 @@
  */
 export { Diagram } from './diagram';
 export type { DiagramProps } from './diagram';
-export type { Camara, NivelDeDetalle } from './escena';
+export type { Camara, Estados, NivelDeDetalle } from './escena';
 export { resolverEstilo } from './estilo';
-export type { Estilo } from './estilo';
+export type { AspectoDeEstado, EstadoVisual, Estilo } from './estilo';
 export { hidratarFuentes, serializarFuentes } from './fuentes';
 export type { FuenteIncrustada } from './fuentes';
 export { escaparXml, renderToSvgString } from './svg';
