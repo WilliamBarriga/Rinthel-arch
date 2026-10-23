@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { accionDeAtajo, crearAlAtajo } from '../navegador/historial';
 
-const tecla = (o: Partial<Parameters<typeof accionDeAtajo>[0]>) => ({ key: 'z', ctrlKey: true, metaKey: false, shiftKey: false, altKey: false, enCampoDeTexto: false, ...o });
+const tecla = (o: Partial<Parameters<typeof accionDeAtajo>[0]>) => ({ key: 'z', ctrlKey: true, metaKey: false, shiftKey: false, altKey: false, enCampoDeTexto: false, repeat: false, ...o });
 
 describe('accionDeAtajo', () => {
   it.each([
@@ -20,6 +20,7 @@ describe('accionDeAtajo', () => {
     expect(accionDeAtajo(tecla({ altKey: true }))).toBeUndefined();
     expect(accionDeAtajo(tecla({ key: 'a' }))).toBeUndefined();
     expect(accionDeAtajo(tecla({ enCampoDeTexto: true }))).toBeUndefined();
+    expect(accionDeAtajo(tecla({ repeat: true }))).toBeUndefined();
   });
 });
 

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { iniciarDev } from 'cli';
 import { leerWorkspace as leerReal } from '../src/workspace';
-import type { ServidorDev } from 'cli';
+import type { OpcionesDeDev, ServidorDev } from 'cli';
 
 const BASE = `specification {
   node servicio
@@ -42,6 +42,11 @@ function entorno(inicial: Record<string, string>) {
     escribirEdicion: (_raiz: string, ruta: string, texto: string) => {
       archivos = { ...archivos, [ruta]: texto };
     },
+    /** Borrado del endpoint de deshacer/rehacer: tampoco avisa al observador. */
+    borrar: (_raiz: string, ruta: string) => {
+      const { [ruta]: _quitado, ...resto } = archivos;
+      archivos = resto;
+    },
     texto: (ruta: string) => archivos[ruta],
     observando: () => avisar !== undefined,
   };
@@ -59,8 +64,8 @@ interface Estado {
 }
 
 const abiertos: ServidorDev[] = [];
-async function arrancar(env: ReturnType<typeof entorno>): Promise<ServidorDev> {
-  const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, escribir: env.escribirEdicion, shell, debounceMs: 5, puerto: 0 });
+async function arrancar(env: ReturnType<typeof entorno>, extra: Partial<OpcionesDeDev> = {}): Promise<ServidorDev> {
+  const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, escribir: env.escribirEdicion, borrar: env.borrar, ...extra, shell, debounceMs: 5, puerto: 0 });
   abiertos.push(servidor);
   return servidor;
 }
@@ -286,7 +291,80 @@ describe('dev', () => {
       const env = entorno({ 'main.dg': BASE });
       const servidor = await arrancar(env);
       expect((await post(servidor, 'deshacer')).status).toBe(422);
-      expect((await post(servidor, 'rehacer')).status).toBe(422);
+      const sinDeshacer = await post(servidor, 'deshacer');
+      expect(sinDeshacer.status).toBe(422);
+      expect(await sinDeshacer.json()).toMatchObject({ ok: false, motivo: 'nada-que-deshacer' });
+      const sinRehacer = await post(servidor, 'rehacer');
+      expect(sinRehacer.status).toBe(422);
+      expect(await sinRehacer.json()).toMatchObject({ ok: false, motivo: 'nada-que-rehacer' });
+      expect(env.texto('main.dg')).toBe(BASE);
+    });
+
+    it('una edicion que no cambia el texto no apila una entrada de historial', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      await moverPin(servidor, 1, 2);
+      await moverPin(servidor, 1, 2);
+      expect((await post(servidor, 'deshacer')).status).toBe(200);
+      expect(env.texto('main.dg')).toBe(BASE);
+      expect((await post(servidor, 'deshacer')).status).toBe(422);
+    });
+
+    describe('archivos creados o borrados por la edicion y escrituras parciales', () => {
+      /** Escritura de edicion que ademas crea `extra.dg` junto a `main.dg`; `fallo.activo` hace fallar `main.dg`. */
+      const conExtra = (env: ReturnType<typeof entorno>) => {
+        const fallo = { activo: false };
+        const escribir = (raiz: string, ruta: string, texto: string): void => {
+          if (ruta === 'main.dg' && fallo.activo) throw new Error('disco lleno');
+          env.escribirEdicion(raiz, ruta, texto);
+          if (ruta === 'main.dg' && !texto.includes('// extra')) env.escribirEdicion(raiz, 'extra.dg', '// extra\n');
+        };
+        return { fallo, escribir };
+      };
+
+      it('deshacer borra el archivo que creo la edicion y rehacer lo vuelve a crear, sin 409', async () => {
+        const env = entorno({ 'main.dg': BASE });
+        const { escribir } = conExtra(env);
+        const servidor = await arrancar(env, { escribir });
+        await moverPin(servidor, 1, 2);
+        expect(env.texto('extra.dg')).toBeDefined();
+
+        expect((await post(servidor, 'deshacer')).status).toBe(200);
+        expect(env.texto('extra.dg')).toBeUndefined();
+        expect(env.texto('main.dg')).toBe(BASE);
+
+        expect((await post(servidor, 'rehacer')).status).toBe(200);
+        expect(env.texto('extra.dg')).toBe('// extra\n');
+        expect((await post(servidor, 'deshacer')).status).toBe(200);
+      });
+
+      it('si la escritura falla a mitad, revierte lo escrito y el historial sigue valido', async () => {
+        const env = entorno({ 'main.dg': BASE });
+        const { fallo, escribir } = conExtra(env);
+        const servidor = await arrancar(env, { escribir });
+        await moverPin(servidor, 1, 2);
+        const conPin = env.texto('main.dg');
+        await post(servidor, 'deshacer');
+
+        fallo.activo = true;
+        const roto = await post(servidor, 'rehacer');
+        expect(roto.status).toBe(500);
+        expect(env.texto('extra.dg')).toBeUndefined();
+        expect(env.texto('main.dg')).toBe(BASE);
+
+        fallo.activo = false;
+        expect((await post(servidor, 'rehacer')).status).toBe(200);
+        expect(env.texto('main.dg')).toBe(conPin);
+      });
+    });
+
+    it('peticiones concurrentes de deshacer se aplican una tras otra', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      await moverPin(servidor, 1, 2);
+      await moverPin(servidor, 3, 4);
+      const respuestas = await Promise.all([post(servidor, 'deshacer'), post(servidor, 'deshacer'), post(servidor, 'deshacer')]);
+      expect(respuestas.map((r) => r.status).sort()).toEqual([200, 200, 422]);
       expect(env.texto('main.dg')).toBe(BASE);
     });
 

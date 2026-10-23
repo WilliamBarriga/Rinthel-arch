@@ -21,6 +21,9 @@
  * `aplicarIntencion(archivos, intencion)` es el reductor puro (reutiliza `editarPin`);
  * `Historial` (`crearHistorial`, `editarEnHistorial`, `deshacer`, `rehacer`) es la pila
  * inmutable de deshacer/rehacer sobre el texto: deshacer restaura el DSL exactamente.
+ * `apilar(historial, archivos)` registra `archivos` como el nuevo texto vigente cuando el llamador
+ * ya lo escribio por su cuenta (el anterior pasa al pasado y el futuro se descarta); es pura y
+ * no comprueba que `archivos` difiera del vigente: evitar entradas repetidas es del llamador.
  *
  * `aplicarAlWorkspace(puerto, intencion)` aplica una Intencion al Workspace en disco a traves
  * del puerto `PuertoDeWorkspace` (`leer` -> `{ disco, propios }`, `escribir(ruta, texto)`):

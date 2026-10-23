@@ -13,13 +13,15 @@ export interface TeclaPulsada {
   metaKey: boolean;
   shiftKey: boolean;
   altKey: boolean;
+  /** Tecla mantenida pulsada (autorepeticion): no dispara el atajo. */
+  repeat: boolean;
   /** El foco esta en un campo de texto: ahi manda el deshacer propio del navegador. */
   enCampoDeTexto: boolean;
 }
 
 /** Ctrl/Cmd+Z deshace; Ctrl/Cmd+Mayus+Z y Ctrl+Y rehacen. */
 export function accionDeAtajo(t: TeclaPulsada): AccionDeHistorial | undefined {
-  if (t.enCampoDeTexto || t.altKey || !(t.ctrlKey || t.metaKey)) return undefined;
+  if (t.enCampoDeTexto || t.repeat || t.altKey || !(t.ctrlKey || t.metaKey)) return undefined;
   const tecla = t.key.toLowerCase();
   if (tecla === 'z') return t.shiftKey ? 'rehacer' : 'deshacer';
   if (tecla === 'y' && !t.shiftKey) return 'rehacer';

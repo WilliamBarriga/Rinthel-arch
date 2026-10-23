@@ -5,13 +5,13 @@
  * `Sesion`; aqui solo viven los adaptadores (HTTP, observador de disco).
  *
  * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),
- * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `POST /api/deshacer` y `POST /api/rehacer` (restauran el texto exacto del historial del servidor, ADR 0007; 409 si el disco cambio fuera de dev, 422 si no hay nada), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
+ * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `POST /api/deshacer` y `POST /api/rehacer` (restauran el texto exacto del historial del servidor, ADR 0007; 409 si el disco cambio fuera de dev, 422 con motivo `nada-que-deshacer` / `nada-que-rehacer` si no hay nada), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
  * envia el estado al conectar y tras cada recompilacion).
  *
  * `iniciarDev(OpcionesDeDev) -> ServidorDev` es la entrada programatica (el comando solo parsea y la llama).
  * `OpcionesDeDev`: `workspace` (obligatorio), `temas` (= `--theme-path`, se fusiona antes del Workspace,
  * no se observa y nunca se escribe), `puerto` (0 elige uno libre), `debounceMs` y los seams `leer`,
- * `observar`, `shell` y `escribir`. `ServidorDev`: `url` y `cerrar()` (cierra conexiones, libera el
+ * `observar`, `shell`, `escribir` y `borrar`. `ServidorDev`: `url` y `cerrar()` (cierra conexiones, libera el
  * puerto y deja de observar).
  * Seguridad: solo escucha en 127.0.0.1 y responde 403 a cualquier peticion cuyo `Host` no sea
  * `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding). Las dos rutas de edicion solo escriben archivos
@@ -22,7 +22,7 @@
  * observador activo) y lanza si la lectura inicial falla; las lecturas fallidas posteriores se ignoran
  * hasta el siguiente cambio. `run(['dev', ...])` los convierte en codigo 2.
  *
- * Invariantes: sin bloqueos ni estado compartido; gana la ultima escritura. Las
+ * Invariantes: las peticiones de edicion, deshacer y rehacer se serializan en una cola; una escritura que falla a mitad se revierte; gana la ultima escritura. Las
  * recompilaciones se agrupan con debounce y se serializan. Si el Workspace
  * tiene errores, el estado lleva los issues pero conserva la Fuente y la
  * geometria de la ultima Sesion sin errores (la Vista previa se conserva).
@@ -30,7 +30,7 @@
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { watch } from 'node:fs';
+import { rmSync, watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -64,8 +64,10 @@ export interface OpcionesDeDev {
   /** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
   observar?: (raiz: string, alCambiar: () => void) => () => void;
   shell?: () => Promise<ShellDev>;
-  /** Escribe un archivo del Workspace (ruta relativa a `raiz`); solo lo usa `POST /api/pin`. */
+  /** Escribe un archivo del Workspace (ruta relativa a `raiz`); lo usan las rutas de edicion y de deshacer/rehacer. */
   escribir?: (raiz: string, ruta: string, texto: string) => void;
+  /** Borra un archivo del Workspace (ruta relativa a `raiz`); deshacer/rehacer lo usan para quitar archivos que creo una edicion. */
+  borrar?: (raiz: string, ruta: string) => void;
 }
 
 export interface ServidorDev {
@@ -86,6 +88,11 @@ function observarDisco(raiz: string, alCambiar: () => void): () => void {
 /** Escritura real: atomica y siempre bajo la raiz del Workspace. */
 function escribirEnDisco(raiz: string, ruta: string, texto: string): void {
   escribirTexto(destinoEnWorkspace(raiz, ruta), texto);
+}
+
+/** Borrado real: siempre bajo la raiz del Workspace; un archivo ya ausente no es error. */
+function borrarEnDisco(raiz: string, ruta: string): void {
+  rmSync(destinoEnWorkspace(raiz, ruta), { force: true });
 }
 
 function leerCuerpo(req: IncomingMessage): Promise<string> {
@@ -121,7 +128,7 @@ const PAGINA = `<!doctype html>
 `;
 
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puerto = 0, debounceMs = 150, leer: leerBase = leerWorkspace, observar = observarDisco, shell = empaquetarShellDev, escribir = escribirEnDisco } = opciones;
+  const { workspace, temas, puerto = 0, debounceMs = 150, leer: leerBase = leerWorkspace, observar = observarDisco, shell = empaquetarShellDev, escribir = escribirEnDisco, borrar = borrarEnDisco } = opciones;
   const raizAbsoluta = resolve(workspace);
   const leer = (raiz: string): ArchivosDelWorkspace => leerConTemas(leerBase, raiz, temas);
   const bundles = await shell();
@@ -138,6 +145,43 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 
   /** Historial de deshacer/rehacer del texto propio del Workspace (ADR 0007); vive mientras viva el servidor. */
   let historial: Historial | undefined;
+  /** Cola simple: las peticiones de edicion/deshacer/rehacer se ejecutan una tras otra. */
+  let cola: Promise<unknown> = Promise.resolve();
+  const enCola = <T>(tarea: () => Promise<T>): Promise<T> => {
+    const resultado = cola.then(tarea, tarea);
+    cola = resultado.catch(() => undefined);
+    return resultado;
+  };
+  /** Deja el disco con el texto de `destino` (escribe lo distinto o nuevo, borra lo sobrante); si falla a mitad revierte a `origen` y relanza. */
+  const dejarEnDisco = (origen: ArchivosDelWorkspace, destino: ArchivosDelWorkspace): void => {
+    const aEscribir = Object.keys(destino).filter((r) => destino[r] !== origen[r]).sort();
+    const aBorrar = Object.keys(origen).filter((r) => !(r in destino)).sort();
+    const tocadas: string[] = [];
+    try {
+      for (const ruta of aEscribir) {
+        tocadas.push(ruta);
+        escribir(workspace, ruta, destino[ruta] as string);
+      }
+      for (const ruta of aBorrar) {
+        tocadas.push(ruta);
+        borrar(workspace, ruta);
+      }
+    } catch (error) {
+      revertir(origen, tocadas);
+      throw error;
+    }
+  };
+  /** Restaura en disco, sin interrumpirse por nuevos fallos, las `rutas` al texto de `origen` (o las borra si no existian). */
+  const revertir = (origen: ArchivosDelWorkspace, rutas: readonly string[]): void => {
+    for (const ruta of rutas) {
+      try {
+        if (ruta in origen) escribir(workspace, ruta, origen[ruta] as string);
+        else borrar(workspace, ruta);
+      } catch {
+        // mejor esfuerzo: si el disco sigue fallando, el siguiente deshacer/rehacer detecta la diferencia (409) y reinicia el historial
+      }
+    }
+  };
   const mismoTexto = (a: ArchivosDelWorkspace, b: ArchivosDelWorkspace): boolean => {
     const claves = Object.keys(a);
     return claves.length === Object.keys(b).length && claves.every((k) => a[k] === b[k]);
@@ -251,17 +295,22 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     }
     // Adaptador del Workspace: lee fresco del disco y escribe solo bajo la raiz (los Temas de `--theme-path` no se tocan).
     let resultado;
-    let antes: ArchivosDelWorkspace;
+    let antes: ArchivosDelWorkspace = {};
+    const escritas: string[] = [];
     try {
       antes = leerBase(workspace);
       resultado = aplicarAlWorkspace(
         {
           leer: () => ({ propios: leerBase(workspace), disco: leerConTemas(leerBase, workspace, temas) }),
-          escribir: (ruta, texto) => escribir(workspace, ruta, texto),
+          escribir: (ruta, texto) => {
+            escritas.push(ruta);
+            escribir(workspace, ruta, texto);
+          },
         },
         intencion,
       );
     } catch (error) {
+      revertir(antes, escritas);
       responder(res, 500, { ok: false, mensaje: (error as Error).message });
       return;
     }
@@ -270,17 +319,21 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       return;
     }
     // Si el texto ya no es el del historial (se edito fuera de dev), el historial vuelve a empezar desde ahi.
-    const base = historial !== undefined && mismoTexto(historial.archivos, antes) ? historial : crearHistorial(antes);
-    historial = apilar(base, leerBase(workspace));
+    const despues = leerBase(workspace);
+    if (!mismoTexto(antes, despues)) {
+      const base = historial !== undefined && mismoTexto(historial.archivos, antes) ? historial : crearHistorial(antes);
+      historial = apilar(base, despues);
+    }
     await recompilar();
     responder(res, 200, { ok: true, version });
   };
 
   /**
-   * `POST /api/deshacer` y `/api/rehacer`: escriben en disco el texto exacto de la instantanea (ADR 0007).
-   * Si el texto del disco ya no coincide con el del historial (edicion externa), 409 y el historial se descarta.
+   * `POST /api/deshacer` y `/api/rehacer`: dejan en disco el texto exacto de la instantanea (ADR 0007),
+   * incluidos los archivos que la edicion creo o borro. Si el texto del disco ya no coincide con el del
+   * historial (edicion externa), 409 y el historial se descarta. Si la escritura falla, se revierte.
    */
-  const viajar = async (req: IncomingMessage, res: ServerResponse, ir: (h: Historial) => Historial | undefined, nada: string): Promise<void> => {
+  const restaurarHistorial = async (req: IncomingMessage, res: ServerResponse, mover: (h: Historial) => Historial | undefined, motivoSinHistorial: 'nada-que-deshacer' | 'nada-que-rehacer'): Promise<void> => {
     if ((await leerCuerpoJson(req, res)) === undefined) return;
     const disco = leerBase(workspace);
     if (historial === undefined) historial = crearHistorial(disco);
@@ -289,15 +342,13 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       responder(res, 409, rechazoDeEdicion('hash-desactualizado', 'El Workspace cambio fuera de dev; no hay historial que restaurar'));
       return;
     }
-    const siguiente = ir(historial);
+    const siguiente = mover(historial);
     if (siguiente === undefined) {
-      responder(res, 422, rechazoDeEdicion('invalida', nada));
+      responder(res, SALIDA_DE_RECHAZO[motivoSinHistorial].estadoHttp, rechazoDeEdicion(motivoSinHistorial, motivoSinHistorial === 'nada-que-deshacer' ? 'Nada que deshacer' : 'Nada que rehacer'));
       return;
     }
     try {
-      for (const ruta of Object.keys(siguiente.archivos).filter((r) => siguiente.archivos[r] !== disco[r]).sort()) {
-        escribir(workspace, ruta, siguiente.archivos[ruta] as string);
-      }
+      dejarEnDisco(disco, siguiente.archivos);
     } catch (error) {
       responder(res, 500, { ok: false, mensaje: (error as Error).message });
       return;
@@ -329,14 +380,15 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       return;
     }
     const ruta = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
-    const viaje = ruta === '/api/deshacer' ? { ir: deshacer, nada: 'Nada que deshacer' } : ruta === '/api/rehacer' ? { ir: rehacer, nada: 'Nada que rehacer' } : undefined;
+    const rutaDeHistorial =
+      ruta === '/api/deshacer' ? ({ mover: deshacer, motivoSinHistorial: 'nada-que-deshacer' } as const) : ruta === '/api/rehacer' ? ({ mover: rehacer, motivoSinHistorial: 'nada-que-rehacer' } as const) : undefined;
     const edicion = ruta === '/api/edit' || ruta === '/api/pin' ? rutasDeEdicion[ruta] : undefined;
-    if (edicion !== undefined || viaje !== undefined) {
+    if (edicion !== undefined || rutaDeHistorial !== undefined) {
       if (req.method !== 'POST') {
         res.setHeader('allow', 'POST');
         responder(res, 405, { ok: false, mensaje: 'Metodo no permitido' });
       } else {
-        (edicion === undefined ? viajar(req, res, viaje!.ir, viaje!.nada) : editar(req, res, edicion.leer, edicion.esperado)).catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
+        enCola(() => (edicion === undefined ? restaurarHistorial(req, res, rutaDeHistorial!.mover, rutaDeHistorial!.motivoSinHistorial) : editar(req, res, edicion.leer, edicion.esperado))).catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
       }
     } else if (ruta === '/') {
       cabecera(res, 'text/html');

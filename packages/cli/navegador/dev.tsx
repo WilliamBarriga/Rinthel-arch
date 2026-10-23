@@ -128,7 +128,7 @@ function App(): ReactElement {
     const alTeclear = (e: KeyboardEvent): void => {
       const destino = e.target instanceof HTMLElement ? e.target : undefined;
       const enCampoDeTexto = destino !== undefined && (destino.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(destino.tagName));
-      const accion = accionDeAtajo({ key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey, altKey: e.altKey, enCampoDeTexto });
+      const accion = accionDeAtajo({ key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey, altKey: e.altKey, repeat: e.repeat, enCampoDeTexto });
       if (accion === undefined) return;
       e.preventDefault();
       void alAtajoVivo.current(accion);

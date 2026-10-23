@@ -45,6 +45,8 @@ describe('MotivoDeRechazo', () => {
       'ediciones-solapadas',
       'vista-desconocida',
       'invalida',
+      'nada-que-deshacer',
+      'nada-que-rehacer',
     ] as const;
 
     for (const reason of motivos) {

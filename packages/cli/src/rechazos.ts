@@ -29,6 +29,8 @@ export const SALIDA_DE_RECHAZO: Record<MotivoDeRechazo, SalidaDeRechazo> = {
   'ediciones-solapadas': { estadoHttp: 422, exitCode: 1 },
   'vista-desconocida': { estadoHttp: 422, exitCode: 1 },
   invalida: { estadoHttp: 422, exitCode: 1 },
+  'nada-que-deshacer': { estadoHttp: 422, exitCode: 1 },
+  'nada-que-rehacer': { estadoHttp: 422, exitCode: 1 },
 };
 
 /** Rechazo con la forma comun (`ok`, `motivo`, `mensaje`, `file`), para las respuestas manuales de I/O. */
