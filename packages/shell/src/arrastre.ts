@@ -3,7 +3,7 @@
  * provisional del Nodo hasta que llega otra geometria o el aviso de movimiento lo rechaza.
  */
 import { useEffect, useRef, useState } from 'react';
-import type { MutableRefObject, RefObject } from 'react';
+import type { RefObject } from 'react';
 
 import type { Camara } from 'render';
 
@@ -23,12 +23,10 @@ export interface EntradaDeArrastre {
   alMoverNodo: AlMoverNodo | undefined;
   /** Calculo vigente (sin morph ni desplazamiento): al cambiar, el desplazamiento provisional se descarta. */
   calculo: Calculo | undefined;
-  calculoActual: RefObject<Calculo | undefined>;
   camaraVigente: RefObject<Camara>;
   ancho: number;
-  umbral: MutableRefObject<number> | RefObject<number>;
-  /** Ref al aviso mas reciente (el efecto es de larga vida). */
-  ultimoAviso: RefObject<AlMoverNodo | undefined>;
+  /** Distancia en pixeles de pantalla a partir de la cual el gesto cuenta como arrastre. */
+  umbral: number;
 }
 
 /** Devuelve la posicion provisional del Nodo arrastrado, `enCurso` (id del Nodo mientras el gesto sigue vivo, para dibujarlo fantasma) y si un arrastre acaba de terminar (para ignorar el clic que le sigue). */
@@ -36,6 +34,9 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
   const [desplazado, setDesplazado] = useState<Movimiento | undefined>(undefined);
   const [enCurso, setEnCurso] = useState<string | undefined>(undefined);
   const arrastrando = useRef(false);
+  // El efecto del gesto es de larga vida: lee siempre lo ultimo a traves de refs.
+  const ultimo = useRef(e);
+  ultimo.current = e;
 
   useEffect(() => {
     setDesplazado(undefined);
@@ -48,7 +49,7 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
     const alPulsar = (evento: MouseEvent): void => {
       if (evento.button !== 0 || evento.ctrlKey) return;
       const id = idDeNodoBajo(evento.target);
-      const caja = id === undefined ? undefined : e.calculoActual.current?.geometria.nodes[id];
+      const caja = id === undefined ? undefined : ultimo.current.calculo?.geometria.nodes[id];
       if (id === undefined || caja === undefined) return;
       const [x0, y0] = [evento.clientX, evento.clientY];
       let movido = false;
@@ -56,7 +57,7 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
       const escalaVigente = (): number => e.ancho / e.camaraVigente.current!.width;
       const alMover = (m: MouseEvent): void => {
         const [px, py] = [m.clientX - x0, m.clientY - y0];
-        if (!movido && Math.hypot(px, py) < e.umbral.current!) return;
+        if (!movido && Math.hypot(px, py) < ultimo.current.umbral) return;
         movido = true;
         setEnCurso(id);
         m.preventDefault();
@@ -78,7 +79,7 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
         setDesplazado(destino);
         const devolver = (): void => setDesplazado((d) => (d?.id === id ? undefined : d));
         try {
-          const resultado = e.ultimoAviso.current?.(destino);
+          const resultado = ultimo.current.alMoverNodo?.(destino);
           if (typeof resultado === 'object') resultado.then((ok) => ok === false && devolver(), devolver);
           else if (resultado === false) devolver();
         } catch {

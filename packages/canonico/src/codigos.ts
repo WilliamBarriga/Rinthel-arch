@@ -50,6 +50,8 @@ export const CODIGOS = Object.freeze({
   E_UNKNOWN_VIEW_TYPE: 'E_UNKNOWN_VIEW_TYPE',
   /** Dos Pins de la Vista se solapan (warning, responsabilidad del autor). */
   W_OVERLAPPING_PINS: 'W_OVERLAPPING_PINS',
+  /** `edgeStyles` con un tipo distinto de `default`: el Modelo no tipa Aristas y el estilo se ignora (warning). */
+  W_UNKNOWN_EDGE_STYLE_TYPE: 'W_UNKNOWN_EDGE_STYLE_TYPE',
 } as const);
 
 /** Union de los codigos activos; `Issue.code` sigue siendo `string` (ADR 0005). */
@@ -78,6 +80,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_UNKNOWN_STEP: 'Un Paso nombra un Nodo, selector o Arista que no existe.',
   E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture` ni `flow`.',
   W_OVERLAPPING_PINS: 'Dos Nodos con `pin` se solapan en la Vista (aviso).',
+  W_UNKNOWN_EDGE_STYLE_TYPE: 'Un `edgeStyles` usa un tipo distinto de `default`; las Aristas no tienen tipo y se ignora (aviso).',
 });
 
 /**

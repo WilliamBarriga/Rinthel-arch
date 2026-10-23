@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
-import type { Tema, VistaResuelta } from 'canonico';
+import type { Atributo, Tema, VistaResuelta } from 'canonico';
 import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView, metricasDe } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
 
@@ -244,6 +244,44 @@ describe('claveDeLayout', () => {
   });
 });
 
+describe('claveDeEstructura', () => {
+  const conAtributos = (atributos: Atributo[]): VistaResuelta => {
+    const base = vista();
+    const marcar = (n: VistaResuelta['nodes'][number]): VistaResuelta['nodes'][number] =>
+      n.id === 'c' ? { ...n, attributes: atributos } : { ...n, children: n.children.map(marcar) };
+    return { ...base, nodes: base.nodes.map(marcar) };
+  };
+
+  it('cambia con los Atributos de un Nodo hoja (nombre o tipo)', () => {
+    const base = claveDeEstructura(conAtributos([{ name: 'id', type: 'uuid', notes: '' }]), TEMA_NEUTRO);
+
+    expect(claveDeEstructura(conAtributos([{ name: 'id', type: 'uuid', notes: '' }, { name: 'x', type: 'int', notes: '' }]), TEMA_NEUTRO)).not.toBe(base);
+    expect(claveDeEstructura(conAtributos([{ name: 'id', type: 'texto largo', notes: '' }]), TEMA_NEUTRO)).not.toBe(base);
+  });
+
+  it('cambia con los extremos de una Arista a un Atributo', () => {
+    const v = conAtributos([{ name: 'id', type: 'uuid', notes: '' }]);
+    const aAtributo = { ...v, edges: v.edges.map((e) => (e.to.node === 'c' ? { ...e, to: { node: 'c', attribute: 'id' } } : e)) };
+
+    expect(claveDeEstructura(aAtributo, TEMA_NEUTRO)).not.toBe(claveDeEstructura(v, TEMA_NEUTRO));
+  });
+
+  it('cambia con la estructura de Grupos anidados mas de un nivel', () => {
+    const base = vista();
+    const anidar = (n: VistaResuelta['nodes'][number]): VistaResuelta['nodes'][number] =>
+      n.id === 'a.a1' ? { ...n, children: [{ ...n, id: 'a.a1.x', children: [] }] } : { ...n, children: n.children.map(anidar) };
+    const profunda = { ...base, nodes: base.nodes.map(anidar) };
+
+    expect(claveDeEstructura(profunda, TEMA_NEUTRO)).not.toBe(claveDeEstructura(base, TEMA_NEUTRO));
+  });
+
+  it('no cambia al mover un Pin', () => {
+    const conPin = vista({ overrides: [{ node: 'c', pin: { x: 5, y: 5 } }] });
+
+    expect(claveDeEstructura(conPin, TEMA_NEUTRO)).toBe(claveDeEstructura(vista(), TEMA_NEUTRO));
+  });
+});
+
 describe('layoutView: Pin post-ELK', () => {
   const pin = (node: string, x: number, y: number) => ({ overrides: [{ node, pin: { x, y } }] });
 
@@ -343,7 +381,7 @@ describe('layoutView: Nodos con Atributos', () => {
     });
     return resolveView(fuente, 'v')!;
   }
-  const columnas = [{ name: 'id', type: 'uuid' }, { name: 'email', type: 'text' }, { name: 'creado', type: 'timestamp' }];
+  const columnas = [{ name: 'id', type: 'uuid', notes: '' }, { name: 'email', type: 'text' }, { name: 'creado', type: 'timestamp' }];
 
   it('el Nodo con Atributos es mas alto, una fila por Atributo, y su tamano los cubre', async () => {
     const sin = await layoutView(conAtributos(columnas.slice(1, 2)), TEMA_NEUTRO);

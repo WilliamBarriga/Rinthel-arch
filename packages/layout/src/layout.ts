@@ -293,7 +293,7 @@ const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin =
  */
 export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas = metricasDe(tema)): string {
   return JSON.stringify({
-    nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id)]),
+    nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo).map((a) => [a.name, a.type])]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
     metricas,
   });

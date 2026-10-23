@@ -853,6 +853,18 @@ describe('compile: Tema', () => {
     });
   });
 
+  it('un edgeStyles con un tipo distinto de default se ignora con un aviso, no un error', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme ejemplo { edgeStyles { default { stroke red }  async { stroke blue } } }`,
+    });
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ code: 'W_UNKNOWN_EDGE_STYLE_TYPE', severity: 'warning', file: 'main.dg' });
+    expect(issues[0]!.message).toContain('async');
+    expect(canonico?.themes.find((t) => t.name === 'ejemplo')?.edgeStyles).toHaveProperty('default');
+  });
+
   it('el hijo hereda nodeStyles y los fusiona por tipo; un desplazamiento puede ser negativo', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}

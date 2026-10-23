@@ -173,22 +173,14 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const silencio = useRef(false);
   const ultimo = useRef(props);
   ultimo.current = props;
-  const calculoActual = useRef(calculo);
-  calculoActual.current = calculo;
   const camaraVigente = useRef(camara);
-  const umbralDeArrastre = useRef(ajustes.dragThreshold);
-  umbralDeArrastre.current = ajustes.dragThreshold;
-  const ultimoAviso = useRef(props.onMoveNode);
-  ultimoAviso.current = props.onMoveNode;
   const { desplazado, arrastrando, enCurso } = useArrastre({
     zona,
     alMoverNodo: props.onMoveNode,
     calculo,
-    calculoActual,
     camaraVigente,
     ancho: width,
-    umbral: umbralDeArrastre,
-    ultimoAviso,
+    umbral: ajustes.dragThreshold,
   });
 
   useEffect(() => {

@@ -103,8 +103,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[]): { temas: Te
   return { temas: [...resueltos.values()], issues };
 }
 
-type TokensDeNodo = NonNullable<Tema['nodeStyles']>[string];
-type Tokens = TokensDeNodo;
+type Tokens = NonNullable<Tema['nodeStyles']>[string];
 
 const copiar = <T extends Tokens>(tabla: Record<string, T>): Record<string, T> =>
   Object.fromEntries(Object.entries(tabla).map(([tipo, tokens]) => [tipo, { ...tokens }]));

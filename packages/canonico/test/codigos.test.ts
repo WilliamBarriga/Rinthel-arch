@@ -27,6 +27,7 @@ const codigosDeV1 = [
   'E_OVERRIDE_OUTSIDE_VIEW',
   'E_UNKNOWN_ICON',
   'W_OVERLAPPING_PINS',
+  'W_UNKNOWN_EDGE_STYLE_TYPE',
 ];
 
 describe('catalogo de codigos de issue', () => {
