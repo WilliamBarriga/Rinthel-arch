@@ -9,7 +9,8 @@
  */
 import type { Atributo } from 'canonico';
 
-import type { NombreDeSlot } from './catalogo';
+import { CATALOGO } from './catalogo';
+import type { DefinicionDePrimitiva, NombreDeSlot } from './catalogo';
 import { textoDeAtributo } from './metricas';
 import type { Metricas } from './metricas';
 
@@ -43,6 +44,17 @@ function apilar(metricas: Metricas, filas: number, ancho: number): { slots: Colo
   return { slots, alto: y };
 }
 
+/** Caja minima que exigen las formas de la pila para un contenido de ese tamano. */
+function cajaDeFormas(metricas: Metricas, contenido: { ancho: number; alto: number }): { ancho: number; alto: number } {
+  let [ancho, alto] = [contenido.ancho, contenido.alto];
+  for (const { tipo, props } of metricas.formas) {
+    const definicion: DefinicionDePrimitiva = CATALOGO[tipo];
+    const minima = definicion.cajaMinima?.(props, contenido);
+    if (minima !== undefined) [ancho, alto] = [Math.max(ancho, minima.ancho), Math.max(alto, minima.alto)];
+  }
+  return { ancho, alto };
+}
+
 /**
  * Colocacion de un Nodo hoja (o Grupo colapsado) con `atributos` ya filtrados
  * por `atributosVisibles`. El ancho sale del texto mas largo entre los Slots
@@ -52,8 +64,9 @@ export function colocarNodo(titulo: string, atributos: readonly Atributo[], metr
   const { fontSize, factorDeAncho, escalaAtributo } = metricas;
   const delTitulo = metricas.slots.includes('title') ? titulo.length * fontSize * factorDeAncho : 0;
   const deAtributos = atributos.map((a) => textoDeAtributo(a).length * fontSize * escalaAtributo * factorDeAncho);
-  const ancho = Math.max(metricas.anchoMinimo, Math.ceil(Math.max(delTitulo, ...deAtributos) + metricas.paddingHorizontal));
-  return colocarEnCaja(metricas, atributos.length, ancho);
+  const deTexto = Math.max(metricas.anchoMinimo, Math.ceil(Math.max(delTitulo, ...deAtributos) + metricas.paddingHorizontal));
+  const apilado = apilar(metricas, atributos.length, deTexto).alto;
+  return colocarEnCaja(metricas, atributos.length, cajaDeFormas(metricas, { ancho: deTexto, alto: apilado }).ancho);
 }
 
 /** Colocacion dentro de una caja de ancho conocido (la que entrega la Geometria); `render` la usa para pintar. */
@@ -62,7 +75,7 @@ export function colocarEnCaja(metricas: Metricas, filas: number, ancho: number):
   const zona = slots.attrs;
   return {
     width: ancho,
-    height: alto,
+    height: cajaDeFormas(metricas, { ancho, alto }).alto,
     slots,
     filas:
       zona === undefined

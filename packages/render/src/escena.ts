@@ -12,7 +12,7 @@ import { idDeArista } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
-import { atributosVisibles, colocarEnCaja } from 'tema';
+import { atributosVisibles, colocarEnCaja, metricasDeHoja } from 'tema';
 import type { Metricas } from 'tema';
 
 import { limpiarValorCss, num } from './elemento';
@@ -182,8 +182,9 @@ function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, 
   if (estados === undefined) return [];
   const propios = (estados[nodo.id] ?? []).map((e) => pintarEstadoDeCaja(e, nodo.id));
   if (esGrupo(nodo) || !tieneFilas(nodo, estilo, detail)) return propios;
-  const atributos = atributosVisibles(nodo, estilo.metricas);
-  const rectas = colocarEnCaja(estilo.metricas, atributos.length, caja.width).filas;
+  const metricas = metricasDeHoja(estilo.tabla, nodo);
+  const atributos = atributosVisibles(nodo, metricas);
+  const rectas = colocarEnCaja(metricas, atributos.length, caja.width).filas;
   const filas = atributos.flatMap((atributo, i) => {
     const id = `${nodo.id}#${atributo.name}`;
     return (estados[id] ?? []).map((e) => pintarEstadoDeCaja(e, id, rectas[i]!));
@@ -192,7 +193,7 @@ function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, 
 }
 
 function tieneFilas(nodo: NodoResuelto, estilo: Estilo, detail?: NivelDeDetalle): boolean {
-  return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, estilo.metricas).length > 0;
+  return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, metricasDeHoja(estilo.tabla, nodo)).length > 0;
 }
 
 /** Valor de la Paleta para el color del Nodo; sin color, o desconocido, el borde del Estilo. */

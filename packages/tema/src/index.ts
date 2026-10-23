@@ -42,13 +42,13 @@ export { CATALOGO, SLOTS, construirPrimitiva, construirSlots, resolverTokens, su
 export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDeSlot, Primitiva } from './catalogo';
 export { TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
-export { atributosVisibles, metricasDe, tamanoDeEtiqueta, textoDeAtributo } from './metricas';
-export type { Metricas } from './metricas';
+export { atributosVisibles, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeAtributo } from './metricas';
+export type { FormaDeMetricas, Metricas, TablaDeMetricas } from './metricas';
 export { colocarEnCaja, colocarNodo } from './slots';
 export type { ColocacionDeNodo, Rect } from './slots';
-export { cascada, estiloResuelto } from './estilo';
+export { estiloResuelto } from './estilo';
 export type { CapaPintada, EstiloResuelto, OpcionesDeEstilo, Pintura, PinturaDeNodo } from './estilo';
-export { aplicarOps, ESTADOS, validarOps } from './parches';
+export { aplicarOps, cascada, ESTADOS, opTocaMetricas, validarOps } from './parches';
 export type { CapaDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa } from './parches';
 export { resolverColor, validarColor } from './color';
 export type { ContextoDeColor, ErrorDeColor } from './color';

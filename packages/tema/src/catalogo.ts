@@ -12,18 +12,35 @@ import { validarColor } from './color';
 
 /** Valor de una propiedad de Primitiva: numero con rango, o color (nombre de Paleta). */
 export type DefinicionDePropiedad =
-  | { readonly tipo: 'numero'; readonly min: number; readonly max: number; readonly defecto?: number }
+  | { readonly tipo: 'numero'; readonly min: number; readonly max: number; readonly defecto?: number; readonly metrica?: true }
   | { readonly tipo: 'color' };
+
+/** Caja minima que exige una forma, dado lo que ya ocupa el contenido (el circulo pide un cuadrado que lo contenga). */
+export type CajaMinima = (props: Readonly<Record<string, number | string>>, contenido: { ancho: number; alto: number }) => { ancho: number; alto: number };
 
 export interface DefinicionDePrimitiva {
   readonly familia: 'forma' | 'relleno' | 'borde';
+  /**
+   * Caja minima de una Primitiva de forma (Metricas). Solo las propiedades marcadas
+   * `metrica` entran en las Metricas; el resto de la forma es pintura.
+   */
+  readonly cajaMinima?: CajaMinima;
   readonly propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
   /** Si cambia la caja o los Slots (Metricas). Por defecto una Primitiva solo pinta. */
   readonly afectaMetricas: boolean;
 }
 
 export const CATALOGO = {
-  rect: { familia: 'forma', afectaMetricas: false, propiedades: { radius: { tipo: 'numero', min: 0, max: 100, defecto: 0 } } },
+  rect: {
+    familia: 'forma',
+    afectaMetricas: false,
+    propiedades: {
+      radius: { tipo: 'numero', min: 0, max: 100, defecto: 0 },
+      minWidth: { tipo: 'numero', min: 0, max: 2000, defecto: 0, metrica: true },
+      minHeight: { tipo: 'numero', min: 0, max: 2000, defecto: 0, metrica: true },
+    },
+    cajaMinima: (props) => ({ ancho: Number(props['minWidth'] ?? 0), alto: Number(props['minHeight'] ?? 0) }),
+  },
   solid: { familia: 'relleno', afectaMetricas: false, propiedades: { color: { tipo: 'color' } } },
   border: {
     familia: 'borde',
@@ -121,6 +138,8 @@ export function construirPrimitiva(
   const dadas = new Set(props.map((p) => p.clave));
   for (const [clave, propiedad] of Object.entries(definicion.propiedades)) {
     if (dadas.has(clave)) continue;
+    // Una propiedad de Metrica sin escribir queda ausente: su defecto se aplica al medir, y asi una Capa que no la usa no la lleva.
+    if (propiedad.tipo === 'numero' && propiedad.metrica === true) continue;
     if (propiedad.tipo === 'numero' && propiedad.defecto !== undefined) resultado[clave] = propiedad.defecto;
     else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `La Primitiva '${tipo}' exige la propiedad '${clave}'`, clave });
   }

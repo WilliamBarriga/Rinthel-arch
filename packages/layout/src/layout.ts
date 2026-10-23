@@ -7,8 +7,8 @@ import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
-import { atributosVisibles, colocarEnCaja, colocarNodo, metricasDe, tamanoDeEtiqueta } from 'tema';
-import type { Metricas, Rect } from 'tema';
+import { atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
+import type { Metricas, Rect, TablaDeMetricas } from 'tema';
 
 /** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
 export interface CajaDeNodo {
@@ -49,12 +49,9 @@ export interface Geometria {
 export interface OpcionesDeLayout {
   /** Motor ELK; por defecto el empaquetado, que corre igual en Node y en Web Worker. */
   elk?: ELK;
-  /** Metricas con las que medir; por defecto las derivadas del Tema. `render` debe dibujar con las mismas. */
-  metricas?: Metricas;
+  /** Metricas con las que medir; por defecto la tabla derivada del Tema. Una sola `Metricas` se usa para todo elemento. `render` debe dibujar con las mismas. */
+  metricas?: Metricas | TablaDeMetricas;
 }
-
-/** Margen interior de un Grupo; arriba deja sitio al titulo. */
-const PADDING_GRUPO = '[top=32,left=16,bottom=16,right=16]';
 
 const OPCIONES_RAIZ = {
   'elk.algorithm': 'layered',
@@ -81,7 +78,7 @@ export async function layoutView(
 ): Promise<Geometria> {
   // Import dinamico: quien solo usa las medidas (render) no arrastra ELK al empaquetar.
   const elk = opciones.elk ?? new (await import('elkjs/lib/elk.bundled.js')).default();
-  const medidas = opciones.metricas ?? metricasDe(tema);
+  const medidas = opciones.metricas === undefined ? tablaDeMetricas(tema) : comoTabla(opciones.metricas);
 
   const grafo: ElkNode = {
     id: 'raiz',
@@ -91,7 +88,7 @@ export async function layoutView(
       id: idDeArista(arista),
       sources: [arista.from.node],
       targets: [arista.to.node],
-      ...(arista.label !== undefined && { labels: [{ id: `${idDeArista(arista)}:etiqueta`, text: arista.label, ...tamanoDeEtiqueta(arista.label, medidas) }] }),
+      ...(arista.label !== undefined && { labels: [{ id: `${idDeArista(arista)}:etiqueta`, text: arista.label, ...tamanoDeEtiqueta(arista.label, medidas.etiqueta) }] }),
     })),
   };
   const resultado = await elk.layout(grafo);
@@ -116,20 +113,21 @@ export async function layoutView(
   return conPinsYPuertos(vista, medidas, { nodes, edges, labels, pinsSolapados: [], width: resultado.width ?? 0, height: resultado.height ?? 0 });
 }
 
-function conPinsYPuertos(vista: VistaResuelta, medidas: Metricas, base: Geometria): Geometria {
+function conPinsYPuertos(vista: VistaResuelta, medidas: TablaDeMetricas, base: Geometria): Geometria {
   const pinneada = aplicarPins(vista, base.nodes, base.edges, base.labels);
   const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
   return { ...conPuertos, nodes: conSlots(vista, medidas, conPuertos.nodes), width: base.width, height: base.height };
 }
 
 /** Anade a cada Nodo hoja el rectangulo de sus Slots, el mismo que usa `render` para pintar. */
-function conSlots(vista: VistaResuelta, medidas: Metricas, nodes: Record<string, CajaDeNodo>): Record<string, CajaDeNodo> {
+function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<string, CajaDeNodo>): Record<string, CajaDeNodo> {
   const resultado = { ...nodes };
   // `vista.nodes` ya lista todos los Nodos visibles a plano.
   for (const nodo of vista.nodes) {
     const caja = resultado[nodo.id];
     if (nodo.children.length === 0 && caja !== undefined) {
-      resultado[nodo.id] = { ...caja, slots: colocarEnCaja(medidas, atributosVisibles(nodo, medidas).length, caja.width).slots };
+      const m = metricasDeHoja(medidas, nodo);
+      resultado[nodo.id] = { ...caja, slots: colocarEnCaja(m, atributosVisibles(nodo, m).length, caja.width).slots };
     }
   }
   return resultado;
@@ -140,8 +138,8 @@ function conSlots(vista: VistaResuelta, medidas: Metricas, nodes: Record<string,
  * (`layoutView` de la Vista sin overrides de Pin). Es el paso post-ELK de `layoutView` y da el mismo
  * resultado que un layout completo, sin volver a ejecutar ELK: mover un Pin no relayouta.
  */
-export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas = metricasDe(tema)): Geometria {
-  return conPinsYPuertos(vista, metricas, base);
+export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): Geometria {
+  return conPinsYPuertos(vista, comoTabla(metricas), base);
 }
 
 /**
@@ -214,11 +212,11 @@ function aplicarPins(
  */
 function ajustarAPuertosDeAtributo(
   vista: VistaResuelta,
-  metricas: Metricas,
+  tabla: TablaDeMetricas,
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
 ): Record<string, RutaDeArista> {
-  const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, atributosVisibles(nodo, metricas)]));
+  const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, atributosVisibles(nodo, metricasDeHoja(tabla, nodo))]));
   const { cajas } = indiceDeGeometria(vista, { nodes });
   const rutas = { ...edges };
   for (const arista of vista.edges) {
@@ -229,7 +227,7 @@ function ajustarAPuertosDeAtributo(
     for (const [lado, extremo] of [['inicio', arista.from], ['fin', arista.to]] as const) {
       const indice = extremo.attribute === undefined ? -1 : (atributos.get(extremo.node) ?? []).findIndex((a) => a.name === extremo.attribute);
       if (indice < 0) continue;
-      const fila = colocarEnCaja(metricas, indice + 1, 0).filas[indice]!;
+      const fila = colocarEnCaja(metricasDeHoja(tabla, vista.nodes.find((n) => n.id === extremo.node)!), indice + 1, 0).filas[indice]!;
       const y = cajas.get(extremo.node)!.y + fila.y + fila.height / 2;
       puntos = moverPuerto(puntos, lado, y);
     }
@@ -283,15 +281,16 @@ function paddingElk({ top, left, bottom, right }: Metricas['paddingGrupo']): str
   return `[top=${top},left=${left},bottom=${bottom},right=${right}]`;
 }
 
-function aElk(nodo: NodoResuelto, medidas: Metricas): ElkNode {
+function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
   if (nodo.children.length === 0) {
+    const medidas = metricasDeHoja(tabla, nodo);
     const { width, height } = colocarNodo(nodo.label, atributosVisibles(nodo, medidas), medidas);
     return { id: nodo.id, width, height };
   }
   return {
     id: nodo.id,
-    layoutOptions: { 'elk.padding': paddingElk(medidas.paddingGrupo) },
-    children: nodo.children.map((hijo) => aElk(hijo, medidas)),
+    layoutOptions: { 'elk.padding': paddingElk(tabla.grupoAbierto.paddingGrupo) },
+    children: nodo.children.map((hijo) => aElk(hijo, tabla)),
   };
 }
 
@@ -301,7 +300,7 @@ function aElk(nodo: NodoResuelto, medidas: Metricas): ElkNode {
  * paleta, los colores ni los iconos, que no mueven nada. Es la unica respuesta a
  * "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`.
  */
-export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas = metricasDe(tema)): string {
+export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): string {
   return JSON.stringify({ estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista) });
 }
 
@@ -311,10 +310,11 @@ const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin =
  * Como `claveDeLayout` sin los Pins: identifica la geometria que ELK calcula (los Pins se aplican despues,
  * `aplicarPinsAGeometria`). Mover un Pin no la cambia, asi que no exige relayout de ELK.
  */
-export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas = metricasDe(tema)): string {
+export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): string {
+  const tabla = comoTabla(metricas);
   return JSON.stringify({
-    nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricas).map((a) => [a.name, a.type])]),
+    nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => [a.name, a.type])]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
-    metricas,
+    metricas: claveDeMetricas(tabla),
   });
 }

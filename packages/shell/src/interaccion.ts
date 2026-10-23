@@ -13,7 +13,7 @@ import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria, Punto } from 'layout';
-import { atributosVisibles, colocarEnCaja } from 'tema';
+import { atributosVisibles, colocarEnCaja, metricasDeHoja } from 'tema';
 import { centroDeEtiquetaSinCaja, resolverEstilo } from 'render';
 import type { Estilo } from 'render';
 
@@ -88,8 +88,9 @@ export function elementoBajo(
   for (const nodo of enOrdenDeDibujo(raices).reverse()) {
     const caja = cajas.get(nodo.id);
     if (caja === undefined || !contiene(caja, punto)) continue;
-    const filas = atributos ? atributosVisibles(nodo, metricas) : [];
-    const rectas = colocarEnCaja(metricas, filas.length, caja.width).filas;
+    const delNodo = metricasDeHoja(estilo.tabla, nodo);
+    const filas = atributos ? atributosVisibles(nodo, delNodo) : [];
+    const rectas = colocarEnCaja(delNodo, filas.length, caja.width).filas;
     const indice = rectas.findIndex((r) => punto.y >= caja.y + r.y && punto.y < caja.y + r.y + r.height);
     const atributo = filas[indice];
     return atributo === undefined ? { tipo: 'nodo', id: nodo.id } : { tipo: 'atributo', id: `${nodo.id}#${atributo.name}` };
@@ -102,10 +103,11 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
   const { cajas } = indiceDeGeometria(vista, geometria);
   if (elemento.tipo === 'nodo') return cajas.get(elemento.id);
   if (elemento.tipo === 'atributo') {
-    const { metricas } = resolverEstilo(tema);
+    const { tabla } = resolverEstilo(tema);
     const [idNodo = '', nombre] = elemento.id.split('#');
     const nodo = enOrdenDeDibujo(indiceDeGeometria(vista, geometria).raices).find((n) => n.id === idNodo);
     const caja = cajas.get(idNodo);
+    const metricas = nodo === undefined ? tabla.base : metricasDeHoja(tabla, nodo);
     const atributos = nodo === undefined ? [] : atributosVisibles(nodo, metricas);
     const indice = atributos.findIndex((a) => a.name === nombre);
     if (caja === undefined || indice < 0) return undefined;

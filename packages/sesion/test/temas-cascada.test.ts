@@ -192,6 +192,11 @@ describe('seam sesion: validacion estricta de la cascada', () => {
     expect(await codigos(trabajoT(temaT('    state hover { slots { title } }')))).toEqual(['E_THEME_STATE_TOUCHES_METRICS']);
   });
 
+  it('un parche de estado que cambia la caja minima de la forma es un error; uno de pintura no', async () => {
+    expect(await codigos(trabajoT(temaT('    state hover { layer forma { minWidth 300 } }')))).toEqual(['E_THEME_STATE_TOUCHES_METRICS']);
+    expect(await codigos(trabajoT(temaT('    state hover { layer forma { radius 8 } }')))).toEqual([]);
+  });
+
   it('estado, parte y Tipo desconocidos se informan con sugerencia', async () => {
     const dsl = temaT('    state hovr { layer borde { width 2 } }\n    type servicio { use resalte }\n    type servico { layer borde { width 2 } }');
     const issues = await abrirSesion(trabajoT(dsl)).diagnosticar();

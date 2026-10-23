@@ -7,7 +7,7 @@
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
-import { atributosVisibles, colocarEnCaja, textoDeAtributo } from 'tema';
+import { atributosVisibles, colocarEnCaja, metricasDeHoja, textoDeAtributo } from 'tema';
 import type { Metricas, Rect } from 'tema';
 
 import { limpiarValorCss, num } from './elemento';
@@ -47,8 +47,9 @@ function altoDeEncabezado(metricas: Metricas): number {
  */
 export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: boolean }): Elemento[] {
   const { nodo, caja: c, trazo, texto, conAtributos, icons } = datos;
-  const atributos = conAtributos ? atributosVisibles(nodo, estilo.metricas) : [];
-  const { title, attrs } = colocarEnCaja(estilo.metricas, atributos.length, c.width).slots;
+  const metricas = metricasDeHoja(estilo.tabla, nodo);
+  const atributos = conAtributos ? atributosVisibles(nodo, metricas) : [];
+  const { title, attrs } = colocarEnCaja(metricas, atributos.length, c.width).slots;
   return [
     ...(title === undefined ? [] : [slotDeTexto('title', 'rd-title', title, texto)]),
     ...pintarIcono(estilo, nodo, trazo, icons),

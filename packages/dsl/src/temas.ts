@@ -16,7 +16,7 @@
  */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
-import { ESTADOS, TEMA_NEUTRO, aplicarOps, construirSlots } from 'tema';
+import { ESTADOS, TEMA_NEUTRO, aplicarOps, construirSlots, opTocaMetricas } from 'tema';
 import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, TemaResuelto } from 'tema';
 
 import type { NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeUse } from './generated/ast';
@@ -252,6 +252,17 @@ function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: Tem
     }
     const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type !== 'ThemeSlots');
     const ops = compilarBloque(capas, { ...contexto, modo: 'parchear', candidatas: sobreTipos });
+    for (const op of ops) {
+      const razon = opTocaMetricas(op, sobreTipos);
+      if (razon === undefined) continue;
+      issues.push({
+        code: CODIGOS.E_THEME_STATE_TOUCHES_METRICS,
+        severity: 'error',
+        file: archivo,
+        ...aRango(item.$cstNode?.range).start,
+        message: `Un parche de estado no puede tocar las Metricas: ${razon}; '${estado}' nunca relayouta, cambiala en el bloque base`,
+      });
+    }
     tema.nodo.estados[estado] = [...(tema.nodo.estados[estado] ?? []), ...ops];
   }
 }
