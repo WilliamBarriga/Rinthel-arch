@@ -1,15 +1,15 @@
-import type { Issue, IntencionDePin } from 'canonico';
+import type { Intencion, Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
 import { editarPin } from './ediciones';
 import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
 
 /**
- * Intencion de edicion: union discriminada por `tipo`. Cada herramienta nueva
- * (redimensionar, renombrar, crear Arista) es una variante mas, con su rama en
- * `aplicarIntencion`. Hoy solo existe mover un Pin.
+ * Intencion de edicion: union discriminada por `tipo`, declarada en `canonico`
+ * (`intencionSchema`). Cada herramienta nueva es una variante mas alla, con su rama
+ * en `aplicarIntencion`. Hoy solo existe mover un Pin.
  */
-export type Intencion = { tipo: 'mover-pin' } & IntencionDePin;
+export type { Intencion };
 
 export type ResultadoDeIntencion = ResultadoDeEdicion<{
   archivos: ArchivosDelWorkspace;

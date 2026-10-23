@@ -35,3 +35,11 @@ export const MOTIVOS_DE_RECHAZO = [
 ] as const;
 
 export type MotivoDeRechazo = (typeof MOTIVOS_DE_RECHAZO)[number];
+
+/**
+ * Union de Intenciones de edicion (ADR 0007), discriminada por `tipo`: el cuerpo de
+ * `POST /api/edit`. Una Intencion nueva es una variante mas aqui; el endpoint no cambia.
+ */
+export const intencionSchema = z.discriminatedUnion('tipo', [intencionDePinSchema.extend({ tipo: z.literal('mover-pin') })]);
+
+export type Intencion = z.infer<typeof intencionSchema>;

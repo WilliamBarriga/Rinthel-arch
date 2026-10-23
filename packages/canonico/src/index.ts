@@ -31,6 +31,8 @@
  * (el cuerpo de `POST /api/pin`, validado por `intencionDePinSchema`) y
  * `MotivoDeRechazo` (`MOTIVOS_DE_RECHAZO`), del que deriva el enum `reason` de
  * `salidaDeEditSchema`; se declaran una sola vez y `sesion` los reexporta.
+ * `intencionSchema`/`Intencion` es la union de Intenciones de `POST /api/edit` (ADR 0007) y
+ * `estadoDeDevSchema`/`EstadoDeDev` el esquema unico del estado servidor-navegador de `dev`.
  * Configuracion requerida: ninguna. Solo importa paquetes anteriores en la
  * cadena `canonico -> dsl -> layout -> render -> shell / cli`.
  */
@@ -90,8 +92,10 @@ export type { SalidaDeEdit } from './edit';
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';
 export type { SalidaDeInspect } from './inspect';
 
-export { MOTIVOS_DE_RECHAZO, intencionDePinSchema } from './pin';
-export type { IntencionDePin, MotivoDeRechazo } from './pin';
+export { MOTIVOS_DE_RECHAZO, intencionDePinSchema, intencionSchema } from './pin';
+export type { Intencion, IntencionDePin, MotivoDeRechazo } from './pin';
+export { estadoDeDevSchema, issueDeDevSchema } from './estado';
+export type { EstadoDeDev, IssueDeDev } from './estado';
 
 export { CONTRACT_VERSION, issueSchema, salidaDeValidateJsonSchema, salidaDeValidateSchema } from './salida';
 export type { SalidaDeValidate } from './salida';

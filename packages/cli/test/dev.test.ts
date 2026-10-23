@@ -226,6 +226,38 @@ describe('dev', () => {
     await expect(fetch(servidor.url)).rejects.toThrow();
   });
 
+  describe('POST /api/edit (ADR 0007)', () => {
+    const cabeceras = { 'content-type': 'application/json' };
+    const post = (servidor: ServidorDev, cuerpo: unknown) =>
+      fetch(`${servidor.url}api/edit`, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpo) });
+
+    it('acepta una Intencion mover-pin y responde igual que /api/pin', async () => {
+      const env = entorno({ 'main.dg': BASE });
+      const servidor = await arrancar(env);
+      const antes = await estado(servidor);
+
+      const res = await post(servidor, { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, hash: antes.hashes['main.dg'] });
+
+      expect(res.status).toBe(200);
+      expect(((await res.json()) as { ok: boolean }).ok).toBe(true);
+      expect(env.texto('main.dg')).toContain('node api { pin 1,2 }');
+    });
+
+    it('rechaza con 409 un hash desactualizado', async () => {
+      const servidor = await arrancar(entorno({ 'main.dg': BASE }));
+      const res = await post(servidor, { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, hash: 'viejo' });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    });
+
+    it('responde 400 a una Intencion de tipo desconocido o sin tipo', async () => {
+      const servidor = await arrancar(entorno({ 'main.dg': BASE }));
+      const pin = { vista: 'general', nodo: 'api', x: 1, y: 2, hash: 'h' };
+      expect((await post(servidor, pin)).status).toBe(400);
+      expect((await post(servidor, { tipo: 'otra', ...pin })).status).toBe(400);
+    });
+  });
+
   describe('POST /api/pin (ADR 0005)', () => {
     const post = (servidor: ServidorDev, cuerpo: unknown, cabeceras: Record<string, string> = { 'content-type': 'application/json' }) =>
       fetch(`${servidor.url}api/pin`, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpo) });

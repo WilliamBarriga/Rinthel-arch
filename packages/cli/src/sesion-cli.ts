@@ -44,17 +44,4 @@ export async function textoDeIssues(sesion: Sesion): Promise<string> {
   return textoLegible(construirSalida(await sesion.diagnosticar(), { maxIssues: MAX_ISSUES_POR_DEFECTO, strict: false }));
 }
 
-/**
- * Archivos que cambia una edicion aplicada (ordenados) y, si hay, el primero que no pertenece al
- * Workspace (viene de `--theme-path`): `edit` y `dev` solo escriben en la raiz del Workspace.
- */
-export function cambiosDeEdicion(
-  antes: ArchivosDelWorkspace,
-  despues: ArchivosDelWorkspace,
-  propios: ArchivosDelWorkspace,
-): { cambiados: string[]; fuera: string | undefined } {
-  const cambiados = Object.keys(despues)
-    .filter((f) => despues[f] !== antes[f])
-    .sort();
-  return { cambiados, fuera: cambiados.find((f) => !(f in propios)) };
-}
+export { cambiosDeEdicion } from 'sesion';
