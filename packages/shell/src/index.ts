@@ -57,7 +57,7 @@
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve
  * si el aviso resuelve `false`. Sin `onMoveNode` (export estatico) no hay arrastre de Nodos.
  * `crearControlDeEdicion(archivos)` conecta las Intenciones y el historial de `sesion` a
- * `aplicar`, `deshacer` y `rehacer` (ADR 0006).
+ * `aplicar`, `deshacer` y `rehacer` (ADR 0007).
  * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
  * `{ok:true}` o `{ok:false, desactualizado, mensaje}` (409 por hash); nunca lanza.
  * La intencion es `IntencionDePin` (`{vista, nodo, x, y, hash}`, declarada en `canonico` y

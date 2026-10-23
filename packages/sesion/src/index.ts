@@ -17,7 +17,7 @@
  * fallos internos de layout se propagan como rechazo de la promesa.
  * Configuracion requerida: ninguna; `tema` (opcional) es el Tema global.
  *
- * Intenciones (ADR 0006): `Intencion` es la union discriminada por `tipo` (hoy `mover-pin`);
+ * Intenciones (ADR 0007): `Intencion` es la union discriminada por `tipo` (hoy `mover-pin`);
  * `aplicarIntencion(archivos, intencion)` es el reductor puro (reutiliza `editarPin`);
  * `Historial` (`crearHistorial`, `editarEnHistorial`, `deshacer`, `rehacer`) es la pila
  * inmutable de deshacer/rehacer sobre el texto: deshacer restaura el DSL exactamente.

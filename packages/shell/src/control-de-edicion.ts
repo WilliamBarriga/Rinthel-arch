@@ -1,6 +1,6 @@
 /**
  * Control de edicion del shell: conecta las Intenciones y el historial de `sesion`
- * (ADR 0006) a una superficie con estado para la UI (atajos de deshacer/rehacer).
+ * (ADR 0007) a una superficie con estado para la UI (atajos de deshacer/rehacer).
  * El estado vive aqui; la logica es la pura de `sesion`.
  */
 import { crearHistorial, deshacer, editarEnHistorial, rehacer } from 'sesion';
