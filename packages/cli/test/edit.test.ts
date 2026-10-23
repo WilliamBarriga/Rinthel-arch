@@ -68,6 +68,18 @@ describe('edit pin', () => {
     expect(leer(raiz)).toBe(DG);
   });
 
+  it('Vista o Nodo inexistente con --json: codigo 1 y el motivo en la salida', async () => {
+    const raiz = workspace();
+    const v = await run(['edit', '--workspace', raiz, ...pin('nada', 'a', '1', '2'), '--json']);
+    expect(v.exitCode).toBe(1);
+    expect(v.stderr).toBe('');
+    expect(salidaDeEditSchema.parse(JSON.parse(v.stdout))).toMatchObject({ ok: false, reason: 'vista-desconocida' });
+    const n = await run(['edit', '--workspace', raiz, ...pin('general', 'zzz', '1', '2'), '--json']);
+    expect(n.exitCode).toBe(1);
+    expect(salidaDeEditSchema.parse(JSON.parse(n.stdout))).toMatchObject({ ok: false, reason: 'invalida' });
+    expect(leer(raiz)).toBe(DG);
+  });
+
   it('fallos de uso: codigo 2', async () => {
     const raiz = workspace();
     expect((await run(['edit', ...pin('general', 'a', '1', '2')])).exitCode).toBe(2);
