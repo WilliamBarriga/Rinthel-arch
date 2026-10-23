@@ -74,6 +74,10 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
   selected?: string | null;
   /** Se selecciono un elemento: su id (Nodo, Arista o etiqueta por `idDeArista`, Atributo como `nodo#atributo`). */
   onSelect?: (id: string) => void;
+  /** Seleccion multiple controlada (ids como en `selected`); manda sobre `selected` y la interna. */
+  selection?: readonly string[];
+  /** La Seleccion cambio (al pulsar, acumular o quitar): todos sus ids en orden de seleccion; `[]` si queda vacia. */
+  onSelectionChange?: (ids: string[]) => void;
   /**
    * Habilita arrastrar Nodos (solo bajo `dev`; sin ella, arrastrar un Nodo mueve la camara). Al soltar avisa
    * la posicion nueva del Nodo, relativa a su Grupo padre y en unidades de la geometria, como un Pin. El Nodo
@@ -253,7 +257,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     [mostrado, x, y, ancho, alto],
   );
 
-  const { estados: estadosDeSeleccion, pulsar } = useSeleccion(vista, props.selected);
+  const { estados: estadosDeSeleccion, pulsar } = useSeleccion(vista, props.selected, props.selection);
   const [hover, fijarHover] = useState<string | undefined>(undefined);
   const estados = useMemo(() => conEstadosTransitorios(estadosDeSeleccion, enCurso === undefined ? hover : undefined, enCurso), [estadosDeSeleccion, hover, enCurso]);
   const estilo = useMemo(() => resolverEstilo(theme), [theme]);
@@ -293,7 +297,9 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     const elemento = elementoBajoElRaton(evento);
     if (elemento === undefined) return;
     const acumula = evento.shiftKey || evento.ctrlKey || evento.metaKey;
-    if (!pulsar(elemento, acumula)) return;
+    const resultado = pulsar(elemento, acumula);
+    props.onSelectionChange?.(resultado.seleccion.map((e) => e.id));
+    if (!resultado.seleccionado) return;
     onSelect?.(elemento.id);
     if (acumula || elemento.tipo !== 'nodo') return;
     const destino = vista.nodes.find((n) => n.id === elemento.id)?.link;

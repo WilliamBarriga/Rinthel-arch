@@ -13,7 +13,7 @@ import type { ElementoSeleccionable, Seleccion } from './interaccion';
 export interface ResultadoDeSeleccion {
   estados: Estados;
   /** Aplica el clic sobre un elemento; devuelve si queda seleccionado (para avisar y navegar). */
-  pulsar: (elemento: ElementoSeleccionable, acumula: boolean) => boolean;
+  pulsar: (elemento: ElementoSeleccionable, acumula: boolean) => { seleccionado: boolean; seleccion: Seleccion };
 }
 
 /** Une a los estados de seleccion los de hover (id bajo el raton) y fantasma (id arrastrandose). */
@@ -25,22 +25,27 @@ export function conEstadosTransitorios(base: Estados, hover: string | undefined,
   return unido;
 }
 
-export function useSeleccion(vista: VistaResuelta, selected: string | null | undefined): ResultadoDeSeleccion & { seleccion: Seleccion } {
+export function useSeleccion(
+  vista: VistaResuelta,
+  selected: string | null | undefined,
+  selection?: readonly string[],
+): ResultadoDeSeleccion & { seleccion: Seleccion } {
   const [propia, setPropia] = useState<Seleccion>(SELECCION_VACIA);
   const seleccion = useMemo<Seleccion>(() => {
+    if (selection !== undefined) return selection.map((id) => elementoPorId(vista, id));
     if (selected === undefined) return propia;
     const elemento = selected === null ? undefined : elementoPorId(vista, selected);
     return elemento === undefined ? SELECCION_VACIA : [elemento];
-  }, [selected, propia, vista]);
+  }, [selection, selected, propia, vista]);
   const estados = useMemo<Estados>(() => {
     const porId: Record<string, ['seleccionado']> = {};
     for (const elemento of seleccion) porId[elemento.id] = ['seleccionado'];
     return porId;
   }, [seleccion]);
-  const pulsar = (elemento: ElementoSeleccionable, acumula: boolean): boolean => {
+  const pulsar = (elemento: ElementoSeleccionable, acumula: boolean): { seleccionado: boolean; seleccion: Seleccion } => {
     const siguiente = seleccionar(seleccion, elemento, acumula ? 'alternar' : 'reemplazar');
-    if (selected === undefined) setPropia(siguiente);
-    return siguiente.some((e) => e.tipo === elemento.tipo && e.id === elemento.id);
+    if (selected === undefined && selection === undefined) setPropia(siguiente);
+    return { seleccionado: siguiente.some((e) => e.tipo === elemento.tipo && e.id === elemento.id), seleccion: siguiente };
   };
   return { seleccion, estados, pulsar };
 }
