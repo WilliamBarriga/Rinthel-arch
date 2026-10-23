@@ -9,35 +9,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 
-import type { FuenteCanonica, GeometriaCacheada } from 'canonico';
+import type { EstadoDeDev, FuenteCanonica, GeometriaCacheada, IssueDeDev } from 'canonico';
 import { VistaInteractiva, adaptadorDeWorker, crearEnviadorDePin, hashDelNavegador, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 
 import { montar, usePropsDeDatos } from './arranque';
 import { crearAlMover } from './mover';
 
-interface IssueDeDev {
-  file: string;
-  line: number;
-  column: number;
-  severity: 'error' | 'warning';
-  code: string;
-  message: string;
-  /** Enlace que abre el editor en `archivo:linea`. */
-  href: string;
-}
-
-interface Estado {
-  version: number;
-  fuente?: FuenteCanonica;
-  iconos: Record<string, string>;
-  vistas: string[];
-  /** Hash del contenido de cada archivo del Workspace. */
-  hashes: Record<string, string>;
-  /** Archivo en que se declara cada Vista. */
-  archivosDeVista: Record<string, string>;
-  issues: IssueDeDev[];
-}
+/** Estado del servidor: esquema unico de `canonico` (`estadoDeDevSchema`), el mismo que produce `dev`. */
+type Estado = EstadoDeDev;
 
 /** Estado vigente (el inicial y cada evento SSE) y `recargar`, que lo pide de nuevo a `/api/estado`. */
 function useEstado(): { estado: Estado | undefined; recargar: () => Promise<void> } {
