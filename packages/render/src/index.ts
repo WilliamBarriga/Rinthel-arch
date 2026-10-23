@@ -31,6 +31,12 @@
  * dibuja sin tocar cajas ni rutas: el `label` de la Vista se respeta siempre y solo
  * `completo` dibuja los Atributos; sin `detail`, etiqueta de la Vista y Atributos.
  *
+ * Estilo resuelto (ADR 0006): `resolverEstilo(tema, metricas?) -> Estilo` entrega todo
+ * lo que el dibujo necesita (colores, fuentes, radios, trazos, flecha, halo, glifos y
+ * las Metricas de `layout`) y lanza si el Tema no cumple `contratoDeTemaSchema`. Los
+ * pintores por parte leen solo de el; `estilo` (prop opcional, por defecto el del Tema)
+ * lo sustituye y cambia por igual el SVG exportado y `Diagram`.
+ *
  * Invariantes: sin estado ni efectos (mismas props, mismo arbol); determinista
  * byte a byte en la cadena; los colores salen solo del Tema, por nombre de Paleta
  * (ADR 0002); sin dependencia de Next, Tailwind ni json-render. Peer React 18 y 19.
@@ -42,6 +48,8 @@
 export { Diagram } from './diagram';
 export type { DiagramProps } from './diagram';
 export type { Camara, NivelDeDetalle } from './escena';
+export { resolverEstilo } from './estilo';
+export type { Estilo } from './estilo';
 export { hidratarFuentes, serializarFuentes } from './fuentes';
 export type { FuenteIncrustada } from './fuentes';
 export { escaparXml, renderToSvgString } from './svg';

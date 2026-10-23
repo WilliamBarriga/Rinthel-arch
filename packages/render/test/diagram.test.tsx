@@ -6,7 +6,7 @@ import { TEMA_NEUTRO, fuenteCanonicaSchema, resolveView, revealAt } from 'canoni
 import type { VistaResuelta } from 'canonico';
 import { layoutView } from 'layout';
 import type { Geometria } from 'layout';
-import { Diagram } from 'render';
+import { Diagram, renderToSvgString, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
 
 const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
@@ -112,6 +112,24 @@ describe('Diagram', () => {
 
     expect(id(a)).not.toBe(id(b));
     expect(b).toContain(`url(#${id(b)})`);
+  });
+
+  it('cambiar un valor del Estilo cambia por igual el SVG exportado y Diagram', async () => {
+    const base = await props(vista());
+    const estilo = resolverEstilo(TEMA_NEUTRO);
+    const otro = { ...estilo, nodo: { ...estilo.nodo, radio: 13, relleno: '#fafafa' }, glifos: { expandido: 'v', colapsado: '>' } };
+    const conToggle = { onToggle: () => {} };
+    const exportado = (e: typeof estilo) => renderToSvgString({ ...base, estilo: e });
+    const componente = (e: typeof estilo) => renderToStaticMarkup(<Diagram {...base} {...conToggle} estilo={e} />);
+
+    expect(exportado(otro)).not.toBe(exportado(estilo));
+    expect(exportado(otro)).toContain('rx="13"');
+    expect(exportado(otro)).toContain('fill="#fafafa"');
+    expect(componente(otro)).toContain('rx="13"');
+    expect(componente(otro)).toContain('fill="#fafafa"');
+    expect(componente(otro)).toContain('>v<');
+    // Sin handlers la cadena y el componente dibujan lo mismo con el mismo Estilo.
+    expect(renderToStaticMarkup(<Diagram {...base} estilo={otro} />).replace(/ xmlns="[^"]*"/, '')).toContain('rx="13"');
   });
 
   it('la camara controlada fija el viewBox', async () => {

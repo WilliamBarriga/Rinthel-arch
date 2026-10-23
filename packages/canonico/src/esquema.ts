@@ -152,6 +152,22 @@ export const temaSchema = z.object({
 
 export type Tema = z.infer<typeof temaSchema>;
 
+/**
+ * Contrato del Tema para dibujar: lo minimo que `render` necesita. Un Tema
+ * ya resuelto que no lo cumple (falta un token o una fuente, o `fontSize` no es
+ * un tamano en px) falla al validarse, no al dibujar. Extiende `temaSchema`: el
+ * Tema puede declarar mas tokens, el contrato solo exige estos.
+ */
+export const contratoDeTemaSchema = temaSchema.extend({
+  fonts: z.looseObject({ body: z.string().min(1), mono: z.string().min(1) }),
+  tokens: z.looseObject({
+    background: z.string().min(1),
+    foreground: z.string().min(1),
+    border: z.string().min(1),
+    fontSize: z.string().regex(/^\d+(\.\d+)?px$/, 'debe ser un tamano en px, p. ej. "14px"').optional(),
+  }),
+});
+
 const TAMANO_DE_TEXTO_POR_DEFECTO = 14;
 
 /** Tamano de texto en px del Tema (`tokens.fontSize`, p. ej. `"16px"`); 14 si falta o es invalido. */
