@@ -42,6 +42,8 @@ const CON_CAPAS: TemaResuelto = {
   ...TEMA_NEUTRO,
   nodo: {
     slots: ['title', 'attrs'],
+    tipos: {},
+    estados: {},
     capas: [
       { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 12 } } },
       { nombre: 'fondo', primitiva: { tipo: 'solid', props: { color: 'amber' } } },
