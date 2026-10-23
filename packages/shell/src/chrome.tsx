@@ -7,6 +7,8 @@ import type { CSSProperties, ReactElement } from 'react';
 
 import type { Estilo } from 'render';
 
+import { CSS_DE_AVISOS } from './avisos';
+
 /** Variables CSS del chrome derivadas del Estilo resuelto. */
 export function variablesDeChrome(estilo: Estilo): CSSProperties {
   return {
@@ -15,6 +17,7 @@ export function variablesDeChrome(estilo: Estilo): CSSProperties {
     '--rd-borde': estilo.borde,
     '--rd-acento': estilo.estados.seleccionado.color,
     '--rd-fuente': estilo.fuenteCuerpo,
+    '--rd-error': estilo.estados.fantasma.color,
   } as CSSProperties;
 }
 
@@ -27,7 +30,7 @@ const CSS = `
 .rd-chrome button:disabled { opacity: 0.5; cursor: default; }
 .rd-chrome button:focus-visible { outline: 2px solid var(--rd-acento); }
 .rd-contenido { display: contents; }
-`;
+${CSS_DE_AVISOS}`;
 
 /** Hoja de estilo del chrome; va una vez dentro del contenedor. */
 export function EstiloDelChrome(): ReactElement {

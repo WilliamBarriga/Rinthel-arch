@@ -28,6 +28,8 @@
  * devuelve el `ElementoSeleccionable` superior (`{tipo: nodo|arista|etiqueta|atributo, id}`) o
  * `undefined`; `cajaDeElemento` da su caja en el lienzo; `seleccionar(seleccion, elemento, modo)`
  * (`reemplazar|agregar|quitar|alternar`) es el reductor de la `Seleccion`, inmutable.
+ * Hover y fantasma: el raton sobre un elemento lo dibuja en `hover`; el Nodo que se arrastra, en `fantasma`.
+ * `issues` y `toasts` se dibujan dentro del lienzo con clases `rd-*` y las variables del Tema.
  * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con
  * `onStepChange`, o interno desde `defaultStep`, 0 por defecto) se pasa por
  * `revealAt` y se dibujan controles anterior/siguiente; la geometria no cambia.
