@@ -30,7 +30,7 @@ import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './gene
 import type { Attrs, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, Theme, View } from './generated/ast';
 import { issueConSugerencia, rangoDe, rangoDeIndice } from './posiciones';
 import { resolverTemas } from './temas';
-import type { TemaDeclarado } from './temas';
+import type { DeclaracionDeParte, TemaDeclarado } from './temas';
 import { crearUbicador } from './ubicador';
 
 /** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
@@ -80,6 +80,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const tiposDeNodo: TipoDeNodo[] = [];
   const conSintaxisRota = new Set<string>();
   const temasDeclarados: TemaDeclarado[] = [];
+  const partesDeclaradas: DeclaracionDeParte[] = [];
   const tiposAst: { archivo: string; ast: NodeTypeDecl }[] = [];
   const vistas: { vista: Vista; archivo: string; ast: View }[] = [];
   const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
@@ -111,6 +112,9 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
         nombre: rangoDe(tema, 'name'),
         padre: rangoDe(tema, 'parent'),
       });
+    }
+    for (const parte of resultado.value.parts) {
+      partesDeclaradas.push({ archivo, ast: parte, nombre: rangoDe(parte, 'name') });
     }
     for (const vista of resultado.value.views) {
       const compilada = compilarVista(vista, archivo, issues);
@@ -148,8 +152,15 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
   }
 
-  const { temas, issues: delTema } = resolverTemas(temasDeclarados);
+  const { temas, issues: delTema, parchesDeVista } = resolverTemas(temasDeclarados, partesDeclaradas, tiposDeNodo.map(({ name }) => name));
   issues.push(...delTema);
+  for (const { vista, archivo, ast } of vistas) {
+    const bloque = ast.props.find((prop) => prop.$type === 'ViewTheme');
+    if (bloque === undefined || bloque.items.length === 0 || vista.theme === undefined) continue;
+    const { ops, issues: delOverride } = parchesDeVista(vista.theme, bloque.items, archivo);
+    issues.push(...delOverride);
+    if (ops.length > 0) vista.themePatch = ops.map((op) => ({ ...op }));
+  }
   const fuente: FuenteCanonica = {
     themes: temas,
     specification: { nodeTypes: tiposDeNodo },

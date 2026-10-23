@@ -1,22 +1,28 @@
 /**
  * Compilador de Temas: aplana `extends` en objetos planos (ADR 0002) y compila
- * el bloque `node` (Capas y Slots, ADR 0008) validandolo contra el catalogo de
- * `tema`. Valida nombres duplicados, padres desconocidos y ciclos. El Tema
- * neutro del nucleo siempre existe y puede extenderse.
+ * el bloque `node` (Capas, Slots, parches por Tipo y por estado, ADR 0008)
+ * validandolo contra el catalogo de `tema`. Valida nombres duplicados (de
+ * `theme` y de `part`) en todo el Workspace, padres desconocidos y ciclos. El
+ * Tema neutro del nucleo siempre existe y puede extenderse.
  *
- * Herencia: paleta, fuentes y tokens se fusionan por clave (el hijo gana). Una
- * Capa del bloque `node` con el nombre de una heredada la reemplaza en su sitio;
- * una nueva se anade arriba de la pila; `slots` reemplaza la lista heredada. Un
- * Tema sin `extends` parte de las fuentes, tokens y Slots del neutro, con la
+ * Herencia: paleta, fuentes y tokens se fusionan por clave (el hijo gana). El
+ * bloque `node` del hijo es un parche sobre la pila heredada: una Capa con el
+ * nombre de una heredada la cambia, una nueva exige `before`/`after`, y
+ * `layer x none` la quita; los parches por Tipo y por estado se acumulan tras
+ * los del padre; `slots` reemplaza la lista heredada. Un Tema sin base
+ * (sin `extends`, o cuyo padre no tiene Capas) define su pila en orden.
+ * Un Tema sin `extends` parte de las fuentes, tokens y Slots del neutro, con la
  * paleta vacia, para que cumpla siempre el contrato de dibujo.
  */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
-import { TEMA_NEUTRO, construirPrimitiva, construirSlots } from 'tema';
-import type { ErrorDeCatalogo, TemaResuelto } from 'tema';
+import { ESTADOS, TEMA_NEUTRO, aplicarOps, construirSlots } from 'tema';
+import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, TemaResuelto } from 'tema';
 
-import type { Theme, ThemeLayer, ThemeSlots } from './generated/ast';
-import { rangoDe, rangoDeIndice } from './posiciones';
+import type { NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeUse } from './generated/ast';
+import { aRango, issueConSugerencia, rangoDeIndice } from './posiciones';
+import { compilarBloque } from './temas-capas';
+import type { ParteDeclarada, Sitio } from './temas-capas';
 
 /** Un `theme` del DSL con el sitio donde se declaro. */
 export interface TemaDeclarado {
@@ -27,11 +33,37 @@ export interface TemaDeclarado {
   padre: TextRange;
 }
 
+/** Un `part` del DSL con el sitio donde se declaro. */
+export type DeclaracionDeParte = ParteDeclarada;
+
+/** Resultado de compilar los Temas y herramienta para compilar el override de una Vista. */
+export interface TemasCompilados {
+  temas: TemaResuelto[];
+  issues: Issue[];
+  /** Parches de Capa de una Vista (`theme t { layer ... }`) validados contra el Tema `tema`. */
+  parchesDeVista(tema: string, items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string): { ops: OpDeCapa[]; issues: Issue[] };
+}
+
+interface Compilado {
+  tema: TemaResuelto;
+  /** Sitio de cada Capa de la pila base, para `related`. */
+  origenes: Map<string, Sitio>;
+}
+
+interface Entorno {
+  partes: ReadonlyMap<string, ParteDeclarada>;
+  tipos: readonly string[];
+  issues: Issue[];
+}
+
+const copiarCapa = <C extends { primitiva: { props: Record<string, string | number> } }>(c: C): C => ({ ...c, primitiva: { ...c.primitiva, props: { ...c.primitiva.props } } });
+
 /**
  * Temas resueltos (el neutro primero) e issues. Los Temas con ciclo o padre
  * desconocido no se resuelven. No toca el texto: lee posiciones del CST ya construido.
+ * `tipos` son los Tipos de nodo declarados en `specification`.
  */
-export function resolverTemas(declarados: readonly TemaDeclarado[]): { temas: TemaResuelto[]; issues: Issue[] } {
+export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclaradas: readonly DeclaracionDeParte[], tipos: readonly string[]): TemasCompilados {
   const issues: Issue[] = [];
   const porNombre = new Map<string, TemaDeclarado>();
   for (const declarado of declarados) {
@@ -53,20 +85,38 @@ export function resolverTemas(declarados: readonly TemaDeclarado[]): { temas: Te
     porNombre.set(name, declarado);
   }
 
-  const resueltos = new Map<string, TemaResuelto>([[TEMA_NEUTRO.name, TEMA_NEUTRO]]);
+  const partes = new Map<string, ParteDeclarada>();
+  for (const parte of partesDeclaradas) {
+    const original = partes.get(parte.ast.name);
+    if (original === undefined) {
+      partes.set(parte.ast.name, parte);
+      continue;
+    }
+    issues.push({
+      code: CODIGOS.E_DUPLICATE_PART,
+      severity: 'error',
+      file: parte.archivo,
+      ...parte.nombre.start,
+      message: `Parte duplicada '${parte.ast.name}'`,
+      related: [{ file: original.archivo, ...original.nombre.start, message: `Primera declaracion de '${parte.ast.name}'` }],
+    });
+  }
+
+  const neutro: Compilado = { tema: TEMA_NEUTRO, origenes: new Map() };
+  const resueltos = new Map<string, Compilado>([[TEMA_NEUTRO.name, neutro]]);
   const enCurso = new Set<string>();
   const fallidos = new Set<string>();
-  const resolver = (declarado: TemaDeclarado): TemaResuelto | undefined => {
+  const resolver = (declarado: TemaDeclarado): Compilado | undefined => {
     const { name, parent } = declarado.ast;
     const hecho = resueltos.get(name);
     if (hecho !== undefined) return hecho;
     if (enCurso.has(name) || fallidos.has(name)) return undefined;
     enCurso.add(name);
 
-    let base: TemaResuelto | undefined;
+    let base: Compilado | undefined;
     if (parent !== undefined) {
       const padre = porNombre.get(parent);
-      base = parent === TEMA_NEUTRO.name ? TEMA_NEUTRO : padre && resolver(padre);
+      base = parent === TEMA_NEUTRO.name ? neutro : padre && resolver(padre);
       if (base === undefined) {
         const enCiclo = padre !== undefined;
         issues.push({
@@ -84,66 +134,125 @@ export function resolverTemas(declarados: readonly TemaDeclarado[]): { temas: Te
       }
     }
 
+    const origen = (base ?? neutro).tema;
     const tema: TemaResuelto = {
       name,
-      palette: { ...(base?.palette ?? {}) },
-      fonts: { ...(base ?? TEMA_NEUTRO).fonts },
-      tokens: { ...(base ?? TEMA_NEUTRO).tokens },
-      nodo: { capas: (base ?? TEMA_NEUTRO).nodo.capas.map((c) => ({ ...c, primitiva: { ...c.primitiva, props: { ...c.primitiva.props } } })), slots: [...(base ?? TEMA_NEUTRO).nodo.slots] },
+      palette: { ...(base?.tema.palette ?? {}) },
+      fonts: { ...origen.fonts },
+      tokens: { ...origen.tokens },
+      nodo: {
+        capas: origen.nodo.capas.map(copiarCapa),
+        slots: [...origen.nodo.slots],
+        tipos: Object.fromEntries(Object.entries(origen.nodo.tipos).map(([tipo, ops]) => [tipo, [...ops]])),
+        estados: Object.fromEntries(Object.entries(origen.nodo.estados).map(([estado, ops]) => [estado, [...ops]])),
+      },
     };
+    const origenes = new Map(base?.origenes);
     for (const parte of declarado.ast.parts) {
       if (parte.$type === 'ThemeNode') continue;
       const destino = parte.$type === 'ThemePalette' ? tema.palette : parte.$type === 'ThemeFonts' ? tema.fonts : tema.tokens;
       for (const { key, value } of parte.entries) destino[key] = value;
     }
-    // El bloque `node` se compila al final: sus colores se validan contra la Paleta ya completa.
-    for (const parte of declarado.ast.parts) {
-      if (parte.$type === 'ThemeNode') compilarNodo(declarado.archivo, parte.items, tema, issues);
-    }
+    // El bloque `node` se compila al final: sus colores y tokens se validan contra la Paleta y los tokens ya completos.
+    const items = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeNode' ? parte.items : []));
+    compilarNodo(declarado.archivo, items, tema, origenes, { partes, tipos, issues });
     enCurso.delete(name);
-    resueltos.set(name, tema);
-    return tema;
+    const compilado = { tema, origenes };
+    resueltos.set(name, compilado);
+    return compilado;
   };
   for (const declarado of porNombre.values()) resolver(declarado);
 
-  return { temas: [...resueltos.values()], issues };
+  return {
+    temas: [...resueltos.values()].map(({ tema }) => tema),
+    issues,
+    parchesDeVista: (nombreDeTema, items, archivo) => {
+      const delTema = resueltos.get(nombreDeTema);
+      const delVista: Issue[] = [];
+      if (delTema === undefined) return { ops: [], issues: delVista };
+      const ops = compilarBloque(items, {
+        archivo,
+        partes,
+        paleta: delTema.tema.palette,
+        tokens: delTema.tema.tokens,
+        modo: 'parchear',
+        candidatas: todasLasPilas(delTema.tema),
+        origenes: new Map(delTema.origenes),
+        issues: delVista,
+      });
+      return { ops, issues: delVista };
+    },
+  };
 }
 
-function compilarNodo(archivo: string, items: ReadonlyArray<ThemeLayer | ThemeSlots>, tema: TemaResuelto, issues: Issue[]): void {
-  const declaradas = new Set<string>();
+/** Pila base, la de cada Tipo con parches y la de cada estado sobre ellas: contra cual puede valer un parche. */
+function todasLasPilas(tema: TemaResuelto): CapaDeTema[][] {
+  const base = tema.nodo.capas as CapaDeTema[];
+  const sobreTipos = [base, ...Object.values(tema.nodo.tipos).map((ops) => aplicarOps(base, ops, tema.palette, 'parchear').pila)];
+  const porEstado = Object.values(tema.nodo.estados).flatMap((ops) => sobreTipos.map((pila) => aplicarOps(pila, ops, tema.palette, 'parchear').pila));
+  return [...sobreTipos, ...porEstado];
+}
+
+/** Compila el contenido de los `node { ... }` de un Tema sobre la pila heredada: base, luego Tipos, luego estados. */
+function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: TemaResuelto, origenes: Map<string, Sitio>, entorno: Entorno): void {
+  const { partes, tipos, issues } = entorno;
+  const contexto = { archivo, partes, paleta: tema.palette, tokens: tema.tokens, origenes, issues };
+
+  // 1) Pila base: Capas y `use` del propio bloque; despues los `slots`.
+  const delBase = items.filter((item): item is ThemeLayer | ThemeUse => item.$type === 'ThemeLayer' || item.$type === 'ThemeUse');
+  const modo = tema.nodo.capas.length === 0 ? 'definir' : 'parchear';
+  const opsBase = compilarBloque(delBase, { ...contexto, modo, candidatas: [tema.nodo.capas as CapaDeTema[]] });
+  tema.nodo.capas = aplicarOps(tema.nodo.capas as CapaDeTema[], opsBase, tema.palette, modo).pila;
   for (const item of items) {
-    if (item.$type === 'ThemeSlots') {
-      const { slots, errores } = construirSlots(item.names);
-      for (const error of errores) issues.push(aIssue(archivo, error, rangoDeIndice(item, 'names', error.indice)));
-      if (errores.length === 0) tema.nodo.slots = slots;
+    if (item.$type !== 'ThemeSlots') continue;
+    const { slots, errores } = construirSlots(item.names);
+    for (const error of errores) issues.push(aIssue(archivo, error, rangoDeIndice(item, 'names', error.indice)));
+    if (errores.length === 0) tema.nodo.slots = slots;
+  }
+
+  // 2) Parches por Tipo de nodo, sobre la pila base.
+  const base = tema.nodo.capas as CapaDeTema[];
+  for (const item of items) {
+    if (item.$type !== 'ThemeType') continue;
+    if (!tipos.includes(item.name)) {
+      issues.push(
+        issueConSugerencia(
+          { code: CODIGOS.E_UNKNOWN_NODE_TYPE, message: `Tipo de nodo '${item.name}' no declarado en 'specification'` },
+          archivo, item, 'name', tipos,
+        ),
+      );
       continue;
     }
-    if (declaradas.has(item.name)) {
+    const ops = compilarBloque(item.items, { ...contexto, modo: 'parchear', candidatas: [base] });
+    tema.nodo.tipos[item.name] = [...(tema.nodo.tipos[item.name] ?? []), ...ops];
+  }
+
+  // 3) Parches por estado, sobre la pila base o la de cualquier Tipo.
+  const sobreTipos = [base, ...Object.values(tema.nodo.tipos).map((ops) => aplicarOps(base, ops, tema.palette, 'parchear').pila)];
+  for (const item of items) {
+    if (item.$type !== 'ThemeState') continue;
+    const estado = ESTADOS.find((e) => e === item.name);
+    if (estado === undefined) {
+      issues.push(
+        issueConSugerencia(
+          { code: CODIGOS.E_THEME_UNKNOWN_STATE, message: `Estado '${item.name}' desconocido; disponibles: ${ESTADOS.join(', ')}` },
+          archivo, item, 'name', ESTADOS,
+        ),
+      );
+      continue;
+    }
+    for (const slots of item.items.filter((i): i is ThemeSlots => i.$type === 'ThemeSlots')) {
       issues.push({
-        code: CODIGOS.E_THEME_DUPLICATE_LAYER,
+        code: CODIGOS.E_THEME_STATE_TOUCHES_METRICS,
         severity: 'error',
         file: archivo,
-        ...rangoDe(item, 'name').start,
-        message: `Capa '${item.name}' repetida en el mismo bloque`,
+        ...aRango(slots.$cstNode?.range).start,
+        message: `Un parche de estado no puede tocar los Slots: '${estado}' nunca relayouta; cambialos en el bloque base`,
       });
-      continue;
     }
-    declaradas.add(item.name);
-    const { primitiva, errores } = construirPrimitiva(
-      item.primitive,
-      item.props.map(({ key, value }) => ({ clave: key, valor: value })),
-      tema.palette,
-    );
-    for (const error of errores) {
-      const prop = error.clave === undefined ? undefined : item.props.find(({ key }) => key === error.clave);
-      const rango = prop !== undefined ? rangoDe(prop, error.codigo === CODIGOS.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value') : rangoDe(item, error.clave === undefined ? 'primitive' : 'name');
-      issues.push(aIssue(archivo, error, rango));
-    }
-    if (primitiva === undefined) continue;
-    const existente = tema.nodo.capas.findIndex((capa) => capa.nombre === item.name);
-    const capa = { nombre: item.name, primitiva };
-    if (existente >= 0) tema.nodo.capas[existente] = capa;
-    else tema.nodo.capas.push(capa);
+    const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type !== 'ThemeSlots');
+    const ops = compilarBloque(capas, { ...contexto, modo: 'parchear', candidatas: sobreTipos });
+    tema.nodo.estados[estado] = [...(tema.nodo.estados[estado] ?? []), ...ops];
   }
 }
 

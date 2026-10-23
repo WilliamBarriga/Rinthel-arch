@@ -9,6 +9,8 @@ import type { Tema } from 'canonico';
 
 import { construirPrimitiva, SLOTS } from './catalogo';
 import type { NombreDeSlot } from './catalogo';
+import { ESTADOS, aplicarOps, validarOps } from './parches';
+import type { CapaDeTema, OpDeCapa } from './parches';
 
 const capaSchema = z.strictObject({
   nombre: z.string().min(1),
@@ -16,6 +18,19 @@ const capaSchema = z.strictObject({
     tipo: z.string().min(1),
     props: z.record(z.string(), z.union([z.string(), z.number()])),
   }),
+  /** Sobre el contenido (`over`); sin ella, bajo el contenido. */
+  encima: z.literal(true).optional(),
+});
+
+/** Parche de Capa por nombre (ADR 0008): ver `OpDeCapa`. */
+export const opSchema = z.strictObject({
+  nombre: z.string().min(1),
+  quitar: z.literal(true).optional(),
+  primitiva: z.string().min(1).optional(),
+  props: z.record(z.string(), z.union([z.string(), z.number()])).default({}),
+  antes: z.string().min(1).optional(),
+  despues: z.string().min(1).optional(),
+  encima: z.literal(true).optional(),
 });
 
 const nodoSchema = z.strictObject({
@@ -23,6 +38,10 @@ const nodoSchema = z.strictObject({
   capas: z.array(capaSchema).default([]),
   /** Slots que se pintan, en orden visual; uno no listado no se pinta. */
   slots: z.array(z.enum(SLOTS)).default([...SLOTS]),
+  /** Parches por Tipo de nodo, en orden de aplicacion sobre la pila base. */
+  tipos: z.record(z.string(), z.array(opSchema)).default({}),
+  /** Parches por estado, aplicados sobre la pila base ya parcheada por Tipo. */
+  estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
 });
 
 export const temaResueltoSchema = z
@@ -42,7 +61,7 @@ export const temaResueltoSchema = z
           ctx.addIssue({ code: 'custom', path: ['fontSize'], message: 'debe ser un tamano en px, p. ej. "14px"' });
         }
       }),
-    nodo: nodoSchema.default({ capas: [], slots: [...SLOTS] }),
+    nodo: nodoSchema.default({ capas: [], slots: [...SLOTS], tipos: {}, estados: {} }),
   })
   .superRefine((tema, ctx) => {
     const vistas = new Set<string>();
@@ -58,7 +77,21 @@ export const temaResueltoSchema = z
         ctx.addIssue({ code: 'custom', path: ['nodo', 'capas', i, 'primitiva', ...(error.clave === undefined ? [] : ['props', error.clave])], message: error.mensaje });
       }
     });
+    const base = tema.nodo.capas as CapaDeTema[];
+    const porTipo = Object.entries(tema.nodo.tipos);
+    const pilas = [base];
+    for (const [tipo, ops] of porTipo) {
+      const errores = validarOps([base], ops, tema.palette, 'parchear');
+      for (const e of errores) ctx.addIssue({ code: 'custom', path: ['nodo', 'tipos', tipo, e.indice], message: e.mensaje });
+      pilas.push(aplicarSinErrores(base, ops, tema.palette));
+    }
+    for (const [estado, ops] of Object.entries(tema.nodo.estados)) {
+      for (const e of validarOps(pilas, ops, tema.palette, 'parchear')) ctx.addIssue({ code: 'custom', path: ['nodo', 'estados', estado, e.indice], message: e.mensaje });
+    }
   });
+
+const aplicarSinErrores = (base: CapaDeTema[], ops: Parameters<typeof aplicarOps>[1], paleta: Record<string, string>): CapaDeTema[] =>
+  aplicarOps(base, ops, paleta, 'parchear').pila;
 
 export type TemaResuelto = z.output<typeof temaResueltoSchema>;
 
@@ -75,8 +108,11 @@ export const TEMA_NEUTRO: TemaResuelto = {
   },
   fonts: { body: 'sans-serif', mono: 'monospace' },
   tokens: { background: '#ffffff', foreground: '#1f2937', border: '#9ca3af' },
-  nodo: { capas: [], slots: ['title', 'attrs'] },
+  nodo: { capas: [], slots: ['title', 'attrs'], tipos: {}, estados: {} },
 };
+
+/** Parches de Capa guardados en la Fuente (p. ej. el override de una Vista), validados contra su esquema. */
+export const leerOps = (datos: unknown): OpDeCapa[] => z.array(opSchema).parse(datos);
 
 const memo = new WeakMap<object, TemaResuelto>();
 

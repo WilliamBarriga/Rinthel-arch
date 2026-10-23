@@ -8,6 +8,8 @@
  */
 import { CODIGOS, candidatosCercanos } from 'canonico';
 
+import { validarColor } from './color';
+
 /** Valor de una propiedad de Primitiva: numero con rango, o color (nombre de Paleta). */
 export type DefinicionDePropiedad =
   | { readonly tipo: 'numero'; readonly min: number; readonly max: number; readonly defecto?: number }
@@ -53,7 +55,7 @@ export interface ErrorDeCatalogo {
 const esPrimitiva = (nombre: string): nombre is NombreDePrimitiva => Object.hasOwn(CATALOGO, nombre);
 const esSlot = (nombre: string): nombre is NombreDeSlot => (SLOTS as readonly string[]).includes(nombre);
 
-const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string } => {
+export const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string } => {
   const candidatos = candidatosCercanos(escrito, existentes);
   return candidatos.length === 0 ? {} : { hint: `quisiste decir ${candidatos.map((c) => `'${c}'`).join(' o ')}` };
 };
@@ -93,14 +95,15 @@ export function construirPrimitiva(
         ...sugerir(clave, Object.keys(definicion.propiedades)),
       });
     } else if (propiedad.tipo === 'color') {
-      const nombre = String(valor);
-      if (Object.hasOwn(paleta, nombre)) resultado[clave] = nombre;
-      else {
+      const expresion = String(valor);
+      const problemas = validarColor(expresion, paleta);
+      if (problemas.length === 0) resultado[clave] = expresion;
+      for (const problema of problemas) {
         errores.push({
-          codigo: CODIGOS.E_UNKNOWN_PALETTE_COLOR,
-          mensaje: `Color '${nombre}' no es un nombre de Paleta del Tema`,
+          codigo: problema.fueraDePaleta === true ? CODIGOS.E_UNKNOWN_PALETTE_COLOR : CODIGOS.E_THEME_INVALID_VALUE,
+          mensaje: problema.mensaje,
           clave,
-          ...sugerir(nombre, Object.keys(paleta)),
+          ...(problema.hint !== undefined && { hint: problema.hint }),
         });
       }
     } else {
@@ -141,4 +144,36 @@ export function construirSlots(nombres: readonly string[]): { slots: NombreDeSlo
     } else slots.push(nombre);
   });
   return { slots, errores };
+}
+
+/**
+ * Sustituye cada valor `$token` por el numero del bloque `tokens` del Tema. Un
+ * token no declarado o no numerico es un error (nunca un valor por defecto).
+ */
+export function resolverTokens(
+  props: ReadonlyArray<{ clave: string; valor: string | number }>,
+  tokens: Readonly<Record<string, string>>,
+): { props: Array<{ clave: string; valor: string | number }>; errores: ErrorDeCatalogo[] } {
+  const errores: ErrorDeCatalogo[] = [];
+  const resueltas: Array<{ clave: string; valor: string | number }> = [];
+  for (const { clave, valor } of props) {
+    if (typeof valor !== 'string' || !valor.startsWith('$')) {
+      resueltas.push({ clave, valor });
+      continue;
+    }
+    const nombre = valor.slice(1);
+    if (!Object.hasOwn(tokens, nombre)) {
+      errores.push({
+        codigo: CODIGOS.E_THEME_UNKNOWN_TOKEN,
+        mensaje: `Token '${valor}' no declarado en 'tokens' del Tema`,
+        clave,
+        ...sugerir(nombre, Object.keys(tokens)),
+      });
+      continue;
+    }
+    const numero = Number(tokens[nombre]);
+    if (Number.isFinite(numero)) resueltas.push({ clave, valor: numero });
+    else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `El token '${valor}' no es un numero ('${tokens[nombre]}')`, clave });
+  }
+  return { props: resueltas, errores };
 }
