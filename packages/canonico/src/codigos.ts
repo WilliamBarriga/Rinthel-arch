@@ -60,6 +60,20 @@ export const CODIGOS = Object.freeze({
   E_THEME_UNKNOWN_SLOT: 'E_THEME_UNKNOWN_SLOT',
   /** Dos Capas con el mismo nombre en el mismo bloque del Tema. */
   E_THEME_DUPLICATE_LAYER: 'E_THEME_DUPLICATE_LAYER',
+  /** `$token` que el Tema no declara en `tokens`. */
+  E_THEME_UNKNOWN_TOKEN: 'E_THEME_UNKNOWN_TOKEN',
+  /** `before`/`after` (o `none`) hacia una Capa que no existe en la pila. */
+  E_THEME_UNKNOWN_LAYER: 'E_THEME_UNKNOWN_LAYER',
+  /** Parche de una Capa que no existe y sin `before`/`after` que diga donde anadirla. */
+  E_THEME_PATCH_WITHOUT_PLACEMENT: 'E_THEME_PATCH_WITHOUT_PLACEMENT',
+  /** Parche de estado que toca las Metricas (Slots): hover nunca relayouta. */
+  E_THEME_STATE_TOUCHES_METRICS: 'E_THEME_STATE_TOUCHES_METRICS',
+  /** Estado que la cascada no conoce. */
+  E_THEME_UNKNOWN_STATE: 'E_THEME_UNKNOWN_STATE',
+  /** `use` de una Parte de Tema que no esta declarada. */
+  E_THEME_UNKNOWN_PART: 'E_THEME_UNKNOWN_PART',
+  /** Dos `part` con el mismo nombre en el Workspace. */
+  E_DUPLICATE_PART: 'E_DUPLICATE_PART',
 } as const);
 
 /** Union de los codigos activos; `Issue.code` sigue siendo `string` (ADR 0005). */
@@ -93,6 +107,13 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_THEME_INVALID_VALUE: 'Una propiedad de Capa tiene un valor ausente, de otro tipo o fuera de rango (no se recorta).',
   E_THEME_UNKNOWN_SLOT: 'Un bloque `slots` nombra un Slot desconocido o repetido.',
   E_THEME_DUPLICATE_LAYER: 'Dos Capas del mismo bloque de un Tema llevan el mismo nombre.',
+  E_THEME_UNKNOWN_TOKEN: 'Un `$token` no esta declarado en el bloque `tokens` del Tema.',
+  E_THEME_UNKNOWN_LAYER: 'Un `before`/`after` o un `none` nombra una Capa que no existe en la pila.',
+  E_THEME_PATCH_WITHOUT_PLACEMENT: 'Un parche nombra una Capa inexistente y no dice donde anadirla (`before`/`after`).',
+  E_THEME_STATE_TOUCHES_METRICS: 'Un parche de estado toca las Metricas (Slots); solo el estado base puede.',
+  E_THEME_UNKNOWN_STATE: 'Un bloque `state` nombra un estado que no existe.',
+  E_THEME_UNKNOWN_PART: 'Un `use` nombra una `part` no declarada.',
+  E_DUPLICATE_PART: 'Dos `part` con el mismo nombre en el Workspace.',
 });
 
 /**

@@ -19,7 +19,8 @@ entry Documento:
     specifications+=Specification |
     models+=Model |
     views+=View |
-    themes+=Theme
+    themes+=Theme |
+    parts+=PartDecl
   )*
 ;
 
@@ -95,27 +96,63 @@ ThemeTokens:
   'tokens' '{' entries+=ThemeEntry* '}';
 
 ThemeEntry:
-  key=Id ':'? value=String;
+  key=Id ':'? value=EntryValue;
 
-// `node { layer fondo solid { color azul }  slots { title attrs } }`
-// Bloque de dibujo del Nodo (ADR 0008): una pila de Capas, de abajo hacia arriba, y los
-// Slots que se pintan, en orden. En un Tema con `extends`, una Capa del mismo nombre
-// reemplaza a la heredada y una nueva se anade arriba; `slots` reemplaza la lista.
+// Cadena (`"#00f"`, `"16px"`) o numero (los `tokens` numericos: `gap 8`).
+EntryValue returns string:
+  String | Num;
+
+Num returns string:
+  INT ('.' INT)?;
+
+// `node { layer fondo solid { color azul }  slots { title attrs }  type servicio { ... }  state hover { ... } }`
+// Bloque de dibujo del Nodo (ADR 0008): una pila de Capas, de abajo hacia arriba, los
+// Slots que se pintan, en orden, y parches por Tipo de nodo (`type`) y por estado (`state`).
 ThemeNode:
   'node' '{' items+=NodeItem* '}';
 
 NodeItem:
-  ThemeLayer | ThemeSlots;
+  ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState;
 
-// `layer <nombre> <primitiva> { clave valor ... }`; las propiedades las valida el catalogo de `tema`.
+ThemeType:
+  'type' name=Id '{' items+=PatchItem* '}';
+
+// Los parches de estado no pueden tocar las Metricas; `slots` se acepta aqui solo para
+// que el catalogo lo rechace con un error claro (E_THEME_STATE_TOUCHES_METRICS).
+ThemeState:
+  'state' name=Id '{' items+=StateItem* '}';
+
+PatchItem:
+  ThemeLayer | ThemeUse;
+
+StateItem:
+  ThemeLayer | ThemeUse | ThemeSlots;
+
+// `part <nombre> { layer ... }`: parche reutilizable sin Tema, que se incluye con `use` (nombre unico en el Workspace).
+PartDecl:
+  'part' name=Id '{' items+=PatchItem* '}';
+
+ThemeUse:
+  'use' name=Id;
+
+// Un solo verbo de Capa (ADR 0008). `layer <nombre> [<primitiva>] [before|after <otra>] [over] [{ props }]`
+// define, cambia o anade segun exista o no en el nivel de abajo; `layer <nombre> none` la quita.
+// La primitiva es un identificador plano (nunca una palabra clave) para no confundirla con `over`/`none`.
 ThemeLayer:
-  'layer' name=Id primitive=Id ('{' props+=LayerProp* '}')?;
+  'layer' name=Id (remove?='none' | (primitive=IdTerminal)? (placement=('before' | 'after') target=Id)? (over?='over')? ('{' props+=LayerProp* '}')?);
 
 LayerProp:
   key=Id value=LayerValue;
 
+// Numero, `$token`, nombre de Paleta, `nombre/alfa` o `mix(a, b, t)`; el catalogo de `tema` lo interpreta.
 LayerValue returns string:
-  PropertyValue | INT;
+  MixValue | LayerAtom ('/' Num)?;
+
+LayerAtom returns string:
+  String | Id | TokenRef | Num;
+
+MixValue returns string:
+  'mix' '(' Id ',' Id ',' Num ')';
 
 ThemeSlots:
   'slots' '{' names+=Id* '}';
@@ -146,7 +183,7 @@ ViewDepth:
   'depth' value=INT;
 
 ViewTheme:
-  'theme' value=Id;
+  'theme' value=Id ('{' items+=PatchItem* '}')?;
 
 // Drill-down: mecanismo por defecto, estado inicial de Grupos y enlaces a otra Vista.
 ViewDrill:
@@ -253,7 +290,7 @@ Id returns string:
   IdTerminal |
   'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order' |
   'theme' | 'extends' | 'palette' | 'fonts' | 'tokens' |
-  'layer' | 'slots' |
+  'layer' | 'slots' | 'state' | 'part' | 'use' | 'before' | 'after' | 'over' | 'none' | 'mix' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' |
   'model' | 'node' | 'specification';
@@ -269,4 +306,5 @@ hidden terminal NL: /[\r\n]+/;
 // Terminals
 terminal String: /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/;
 terminal INT returns number: /[0-9]+/;
+terminal TokenRef: /\$[a-zA-Z_][-\w]*/;
 terminal IdTerminal:  /([a-zA-Z]|_+[a-zA-Z0-9])[-\w]*/;

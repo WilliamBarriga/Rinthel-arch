@@ -4,7 +4,7 @@ import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
 import type { Geometria } from 'layout';
-import { TEMA_NEUTRO, estiloResuelto } from 'tema';
+import { TEMA_NEUTRO, estiloResuelto, leerOps } from 'tema';
 import type { EstiloResuelto } from 'tema';
 
 /** Archivos derivados, por ruta relativa a `<workspace>/.diagrams/`. */
@@ -154,7 +154,10 @@ function crear(
     geometria,
     estilo: (vista) => {
       const datos = claveDe(vista);
-      return datos === undefined ? undefined : estiloResuelto(datos.tema);
+      if (datos === undefined || fuente === undefined) return undefined;
+      const declarada = fuente.views.find(({ id }) => id === vista);
+      const tipos = Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
+      return estiloResuelto(datos.tema, { tipos, ...(declarada?.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
     },
     vistasConGeometria: () => [...memo.keys()],
     actualizar: (nuevos) => crear(nuevos, opciones, compile(nuevos), memo),

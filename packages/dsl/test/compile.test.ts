@@ -851,6 +851,8 @@ describe('compile: Tema', () => {
         { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'gray', width: 2 } } },
       ],
       slots: ['attrs', 'title'],
+      tipos: {},
+      estados: {},
     });
   });
 

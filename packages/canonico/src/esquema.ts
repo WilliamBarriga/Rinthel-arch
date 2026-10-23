@@ -201,6 +201,11 @@ export const vistaSchema = z.object({
   depth: z.number().int().min(0).optional(),
   overrides: z.array(overrideSchema).default([]),
   theme: z.string().min(1).optional(),
+  /**
+   * Override de la Vista sobre el Tema (`theme t { layer ... }`): parches de Capa por nombre,
+   * ultimo nivel de la cascada. El contenido (forma de cada parche) lo valida el paquete `tema`.
+   */
+  themePatch: z.array(z.looseObject({ nombre: z.string().min(1) })).optional(),
   /** Mecanismo de drill-down por defecto de la Vista (ver CONTEXT.md, Drill-down). */
   drill: z.literal('collapse').optional(),
   /** Grupos que la Vista abre colapsados / expandidos, por encima de la regla de `depth`. */

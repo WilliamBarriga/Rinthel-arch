@@ -126,7 +126,7 @@ describe('seam sesion: Temas con Capas y Slots', () => {
     expect(issues.map((i) => i.code)).toEqual(['E_THEME_DUPLICATE_LAYER']);
   });
 
-  it('extends: una Capa del mismo nombre reemplaza a la heredada y una nueva se anade arriba', () => {
+  it('extends: una Capa del mismo nombre se parchea por nombre y una nueva exige ubicacion', () => {
     const sesion = abrirSesion({
       'main.dg':
         modelo +
@@ -134,8 +134,8 @@ describe('seam sesion: Temas con Capas y Slots', () => {
         `theme hijo extends t {
   palette { azul "#2563eb" }
   node {
-    layer borde border { color azul }
-    layer extra rect { radius 1 }
+    layer borde { color azul }
+    layer extra rect after forma { radius 1 }
   }
 }\n` +
         vista('  theme hijo\n'),
@@ -143,9 +143,9 @@ describe('seam sesion: Temas con Capas y Slots', () => {
 
     expect(sesion.estilo('v')!.pintura.nodo.capas.map((c) => [c.nombre, c.props['color'] ?? c.props['radius']])).toEqual([
       ['forma', 8],
+      ['extra', 1],
       ['relleno', '#fefce8'],
       ['borde', '#2563eb'],
-      ['extra', 1],
     ]);
   });
 

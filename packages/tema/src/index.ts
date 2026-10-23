@@ -19,6 +19,14 @@
  * - Estilo resuelto: `estiloResuelto(tema) -> { metricas, pintura }`. Las
  *   Metricas (`metricasDe`) solo dependen de fuentes, tamano de texto y Slots;
  *   la pintura (Capas con colores literales) nunca las cambia.
+
+ * - Cascada y parches: `aplicarOps(pila, ops, paleta, modo)` aplica parches por
+ *   nombre de Capa (cambiar, anadir con `antes`/`despues`, quitar, `encima`) y
+ *   devuelve todos los errores a la vez con el indice del parche y la Capa base
+ *   que tocan; `validarOps` lo prueba contra varias pilas posibles. `cascada`
+ *   da la pila para un Tipo, estado y override de la Vista (el ultimo gana).
+ * - Color: `validarColor` / `resolverColor` (nombre, `nombre/alfa`, `mix(a, b, t)`,
+ *   `COLOR`, `ORIGEN`); `resolverTokens` sustituye `$token` por numeros.
  * - Slots: `colocarNodo(titulo, atributos, metricas)` da el tamano de caja y el
  *   rectangulo de cada Slot y de cada fila de Atributo; `colocarEnCaja` lo hace
  *   sobre una caja ya medida. `layout` y `render` usan lo mismo.
@@ -30,13 +38,17 @@
  * errores de catalogo; solo `resolverTema` lanza. Configuracion requerida: ninguna.
  * Solo importa `canonico`.
  */
-export { CATALOGO, SLOTS, construirPrimitiva, construirSlots } from './catalogo';
+export { CATALOGO, SLOTS, construirPrimitiva, construirSlots, resolverTokens, sugerir } from './catalogo';
 export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDeSlot, Primitiva } from './catalogo';
-export { TEMA_NEUTRO, resolverTema, temaResueltoSchema } from './tema';
+export { TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
 export { atributosVisibles, metricasDe, tamanoDeEtiqueta, textoDeAtributo } from './metricas';
 export type { Metricas } from './metricas';
 export { colocarEnCaja, colocarNodo } from './slots';
 export type { ColocacionDeNodo, Rect } from './slots';
-export { estiloResuelto } from './estilo';
-export type { CapaPintada, EstiloResuelto, Pintura } from './estilo';
+export { cascada, estiloResuelto } from './estilo';
+export type { CapaPintada, EstiloResuelto, OpcionesDeEstilo, Pintura, PinturaDeNodo } from './estilo';
+export { aplicarOps, ESTADOS, validarOps } from './parches';
+export type { CapaDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa } from './parches';
+export { resolverColor, validarColor } from './color';
+export type { ContextoDeColor, ErrorDeColor } from './color';
