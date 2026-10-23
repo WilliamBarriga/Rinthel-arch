@@ -66,3 +66,21 @@ Carpeta de archivos de DSL de texto que se fusionan en el Modelo unico de un Pro
 
 **Sesion**:
 Estado compilado de un Workspace en un momento dado: Fuente canonica, issues y geometria por Vista (calculada bajo demanda). Es un valor inmutable; un cambio de archivos produce otra Sesion. Lo consumen el CLI, `dev` y `inspect`.
+
+**Estilo resuelto**:
+Conjunto completo de decisiones visuales (radios, grosores, trazos, escalas de texto, paddings, flechas, rellenos) que se obtiene de un Tema, con todos sus valores por defecto. Con el se dibuja una Vista; cambiar la estetica es cambiar el Estilo resuelto, no la logica de dibujo.
+
+**Metricas**:
+Medidas de espacio derivadas de un Tema (padding de Nodo, cabecera de Grupo, alto de fila de Atributo). Las comparten el calculo de posiciones y el dibujo, de modo que lo reservado y lo dibujado no pueden divergir.
+
+**Geometria vigente**:
+Geometria cacheada de una Vista que sigue valiendo: nada de lo que influye en las posiciones (estructura, textos, fuentes, Metricas, Pins) cambio desde que se calculo. Una sola respuesta para Sesion, CLI y shell.
+
+**Intencion**:
+Cambio que el usuario pide sobre el DSL de texto, expresado en terminos del dominio (hoy: mover el Pin de un Nodo en una Vista). Aun no es una edicion de texto; un Gesto la convierte en una.
+
+**Gesto**:
+Operacion de la Sesion que recibe una Intencion, calcula la edicion minima del DSL de texto, la auto-prueba y la aplica en memoria. Quien lo invoca solo se ocupa de escribir el resultado.
+
+**Seleccion**:
+Elemento o elementos de una Vista (Nodo, Arista, Atributo) sobre los que actua el editor. Es el sujeto de las Intenciones.
