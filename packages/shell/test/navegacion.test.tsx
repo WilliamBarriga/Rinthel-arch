@@ -6,6 +6,7 @@ import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
+import { pulsarNodo } from './ayudas';
 
 afterEach(cleanup);
 
@@ -45,7 +46,7 @@ const montar = (extra: Partial<VistaInteractivaProps> = {}) =>
   );
 
 const dibujado = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`svg [data-id="${id}"]`)).not.toBeNull());
-const pulsar = (c: HTMLElement, id: string) => fireEvent.click(c.querySelector(`[data-id="${id}"] [data-part="nodo"]`)!);
+const pulsar = (c: HTMLElement, id: string) => pulsarNodo(c, id);
 const migas = () => Array.from(document.querySelectorAll('[data-breadcrumbs] [data-crumb]')).map((e) => e.getAttribute('data-crumb'));
 
 describe('link, breadcrumbs y atras', () => {

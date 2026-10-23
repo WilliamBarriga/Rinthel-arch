@@ -3,9 +3,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista } from 'canonico';
 import type { VistaResuelta } from 'canonico';
+import { alturasDeNodo } from 'layout';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
+import { pulsarEn, pulsarNodo } from './ayudas';
 
 afterEach(cleanup);
 
@@ -133,16 +135,63 @@ describe('VistaInteractiva', () => {
     const { container } = montar({ camera: camaraGrande, onSelect });
     await waitFor(() => expect(ids(container)).toContain('b'));
 
-    fireEvent.click(container.querySelector('[data-id="b"] [data-part="nodo"]')!);
+    pulsarNodo(container, 'b');
 
     expect(onSelect).toHaveBeenCalledWith('b');
     await waitFor(() => expect(container.querySelector('[data-selected]')?.getAttribute('data-selected')).toBe('b'));
   });
 
+  it('seleccionar una Arista dispara onSelect con su id y la marca', async () => {
+    const onSelect = vi.fn();
+    const { container } = montar({ camera: camaraGrande, onSelect });
+    await waitFor(() => expect(ids(container)).toContain('b'));
+
+    pulsarEn(container, 150, 25);
+
+    const id = idDeArista({ from: { node: 'a' }, to: { node: 'b' } });
+    expect(onSelect).toHaveBeenCalledWith(id);
+    await waitFor(() => expect(container.querySelector('[data-selected]')?.getAttribute('data-selected')).toBe(id));
+  });
+
+  it('seleccionar una fila de Atributo la selecciona a ella y no al Nodo', async () => {
+    const conAtributos = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio' }] },
+      model: { nodes: [{ ...nodo('t', 'T'), attributes: [{ name: 'id', type: 'uuid' }, { name: 'mail', type: 'text' }] }], edges: [] },
+      views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
+    });
+    const { cabecera, fila } = alturasDeNodo(TEMA_NEUTRO);
+    const alto: AdaptadorDeLayout = async () => ({
+      nodes: { t: { x: 0, y: 0, width: 200, height: cabecera + 2 * fila } },
+      edges: {},
+      labels: {},
+      pinsSolapados: [],
+      width: 200,
+      height: cabecera + 2 * fila,
+    });
+    const onSelect = vi.fn();
+    const { container } = montar({ source: conAtributos, layout: alto, camera: { x: 0, y: 0, width: 400, height: 300 }, onSelect });
+    await waitFor(() => expect(ids(container)).toContain('t'));
+
+    pulsarEn(container, 50, cabecera + fila * 1.5);
+
+    expect(onSelect).toHaveBeenCalledWith('t#mail');
+  });
+
+  it('con mayusculas pulsadas la Seleccion crece y pulsar de nuevo quita', async () => {
+    const { container } = montar({ camera: camaraGrande });
+    await waitFor(() => expect(ids(container)).toContain('b'));
+
+    pulsarNodo(container, 'a');
+    pulsarNodo(container, 'b', { shiftKey: true });
+    await waitFor(() => expect([...container.querySelectorAll('[data-selected]')].map((e) => e.getAttribute('data-selected'))).toEqual(['a', 'b']));
+    pulsarNodo(container, 'a', { shiftKey: true });
+    await waitFor(() => expect([...container.querySelectorAll('[data-selected]')].map((e) => e.getAttribute('data-selected'))).toEqual(['b']));
+  });
+
   it('la seleccion controlada manda sobre la interna', async () => {
     const { container } = montar({ camera: camaraGrande, selected: 'c' });
     await waitFor(() => expect(container.querySelector('[data-selected]')?.getAttribute('data-selected')).toBe('c'));
-    fireEvent.click(container.querySelector('[data-id="b"] [data-part="nodo"]')!);
+    pulsarNodo(container, 'b');
     expect(container.querySelector('[data-selected]')!.getAttribute('data-selected')).toBe('c');
   });
 
