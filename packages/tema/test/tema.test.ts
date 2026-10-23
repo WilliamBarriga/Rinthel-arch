@@ -53,13 +53,48 @@ describe('catalogo', () => {
     expect(error).toMatchObject({ codigo: 'E_THEME_UNKNOWN_PRIMITIVE', hint: "quisiste decir 'solid'" });
   });
 
-  it('ninguna Primitiva de esta rebanada afecta a las Metricas', () => {
-    expect(Object.values(CATALOGO).map((p) => p.afectaMetricas)).toEqual([false, false, false]);
+  it('solo circle afecta a las Metricas y pide una caja cuadrada', () => {
+    const afectan = Object.entries(CATALOGO).filter(([, p]) => p.afectaMetricas).map(([nombre]) => nombre);
+    const cuadradas = Object.entries(CATALOGO).filter(([, p]) => 'cajaMinima' in p).map(([nombre]) => nombre);
+
+    expect(afectan).toEqual(['circle']);
+    expect(cuadradas).toEqual(['circle']);
+  });
+
+  it.each([
+    ['cut', 'cut', 0],
+    ['cut', 'cut', 101],
+    ['gradient', 'angle', 361],
+    ['grid', 'size', 1],
+    ['lines', 'angle', 181],
+    ['dots', 'radius', 0],
+    ['noise', 'opacity', 1.5],
+    ['noise', 'frequency', 0],
+    ['dashed', 'width', 17],
+    ['outline', 'offset', -17],
+  ])('%s: %s=%s fuera de rango es error y no se recorta', (tipo, clave, valor) => {
+    const paleta = { a: '#000', b: '#fff' };
+    const colores = ['color', 'from', 'to'].filter((c) => Object.hasOwn(CATALOGO[tipo as keyof typeof CATALOGO].propiedades, c)).map((c) => ({ clave: c, valor: 'a' }));
+    const { primitiva, errores } = construirPrimitiva(tipo, [...colores, { clave, valor }], paleta);
+
+    expect(primitiva).toBeUndefined();
+    expect(errores.map((e) => e.codigo)).toEqual(['E_THEME_INVALID_VALUE']);
   });
 });
 
 describe('Metricas y colocacion de Slots', () => {
   const metricas = metricasDe(TEMA_NEUTRO);
+
+  it('una forma circle da una caja cuadrada que contiene el contenido, centrado en vertical', () => {
+    const circulo = metricasDe({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'forma', primitiva: { tipo: 'circle', props: {} } }] } });
+    const colocado = colocarNodo('API', [], circulo);
+
+    expect(metricas.cajaCuadrada).toBe(false);
+    expect(circulo.cajaCuadrada).toBe(true);
+    expect(colocado.width).toBe(colocado.height);
+    expect(colocado.width).toBe(Math.max(120, circulo.cabecera));
+    expect(colocado.slots.title).toEqual({ x: 0, y: (colocado.height - circulo.cabecera) / 2, width: colocado.width, height: circulo.cabecera });
+  });
 
   it('un Nodo sin Atributos mide la cabecera; con Atributos suma una fila por cada uno', () => {
     const solo = colocarNodo('API', [], metricas);
