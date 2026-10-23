@@ -43,7 +43,7 @@ export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, Nom
 export { TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
 export { atributosVisibles, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeAtributo } from './metricas';
-export type { FormaDeMetricas, Metricas, TablaDeMetricas } from './metricas';
+export type { Metricas, TablaDeMetricas } from './metricas';
 export { colocarEnCaja, colocarNodo } from './slots';
 export type { ColocacionDeNodo, Rect } from './slots';
 export { estiloResuelto } from './estilo';

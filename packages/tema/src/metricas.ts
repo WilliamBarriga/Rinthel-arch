@@ -11,17 +11,11 @@
 import type { Atributo, NodoResuelto, Tema } from 'canonico';
 
 import { CATALOGO } from './catalogo';
-import type { DefinicionDePrimitiva, NombreDePrimitiva, NombreDeSlot } from './catalogo';
+import type { DefinicionDePrimitiva, NombreDeSlot } from './catalogo';
 import { cascada } from './parches';
 import type { CapaDeTema } from './parches';
 import { resolverTema } from './tema';
 import type { TemaResuelto } from './tema';
-
-/** Forma de la pila que exige una caja minima; solo lleva las propiedades que son Metricas (el resto es pintura). */
-export interface FormaDeMetricas {
-  tipo: NombreDePrimitiva;
-  props: Record<string, number | string>;
-}
 
 export interface Metricas {
   /** Tamano del texto del Tema. */
@@ -32,8 +26,8 @@ export interface Metricas {
   fuentes: Record<string, string>;
   /** Slots del Nodo que el Tema muestra, en orden visual. */
   slots: readonly NombreDeSlot[];
-  /** Formas de la pila con caja minima declarada (el circulo pide un cuadrado); vacio si ninguna. */
-  formas: readonly FormaDeMetricas[];
+  /** La forma del Nodo exige una caja cuadrada (p. ej. `circle`); sale de la regla de caja minima de las Primitivas. */
+  cajaCuadrada: boolean;
   /** Ancho minimo de un Nodo hoja. */
   anchoMinimo: number;
   /** Suma de los margenes izquierdo y derecho del texto de un Nodo hoja. */
@@ -70,19 +64,6 @@ function tamanoDeTexto(fontSize: string | undefined): number {
   return Number.isFinite(declarado) && declarado > 0 ? declarado : TAMANO_DE_TEXTO_POR_DEFECTO;
 }
 
-function formasDe(pila: readonly CapaDeTema[]): FormaDeMetricas[] {
-  return pila.flatMap(({ primitiva }) => {
-    const definicion: DefinicionDePrimitiva = CATALOGO[primitiva.tipo];
-    if (definicion.cajaMinima === undefined) return [];
-    const props = Object.fromEntries(
-      Object.entries(definicion.propiedades).flatMap(([clave, propiedad]) =>
-        propiedad.tipo === 'numero' && propiedad.metrica === true ? [[clave, Number(primitiva.props[clave] ?? propiedad.defecto ?? 0)]] : [],
-      ),
-    );
-    return [{ tipo: primitiva.tipo, props }];
-  });
-}
-
 function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[]): Metricas {
   const fontSize = tamanoDeTexto(resuelto.tokens.fontSize);
   const proporcional = !/mono/i.test(resuelto.fonts.body);
@@ -91,7 +72,7 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[]): Metrica
     factorDeAncho: proporcional ? 0.55 : 0.6,
     fuentes: resuelto.fonts,
     slots: resuelto.nodo.slots,
-    formas: formasDe(pila),
+    cajaCuadrada: pila.some((capa) => (CATALOGO[capa.primitiva.tipo] as DefinicionDePrimitiva).cajaMinima === 'cuadrado'),
     anchoMinimo: 120,
     paddingHorizontal: 32,
     margenDeTexto: 10,

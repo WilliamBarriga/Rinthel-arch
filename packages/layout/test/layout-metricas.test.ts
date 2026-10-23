@@ -6,12 +6,12 @@ import { claveDeLayout, layoutView } from 'layout';
 import { TEMA_NEUTRO, metricasDe } from 'tema';
 
 const capas = [
-  { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0, minWidth: 0, minHeight: 0 } } },
+  { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
   { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'blue' } } },
 ];
 const conTipos = (tipos: Record<string, unknown[]>, capasBase: unknown[] = capas) =>
   ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capasBase, tipos } }) as Tema;
-const grande = conTipos({ db: [{ nombre: 'forma', props: { minWidth: 240, minHeight: 100 } }] });
+const grande = conTipos({ db: [{ nombre: 'forma', primitiva: 'circle', props: {} }] });
 
 const nodo = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, title: id, description: '', children: [], ...extra });
 
@@ -29,13 +29,12 @@ describe('Metricas por Tipo y relayout por clave de estructura', () => {
   it('cajas distintas por Tipo en una misma Vista', async () => {
     const g = await layoutView(dosTipos(), grande);
 
-    expect(g.nodes['datos']).toMatchObject({ width: 240, height: 100 });
-    expect(g.nodes['api']).toMatchObject({ width: 120 });
-    expect(g.nodes['api']!.height).toBeLessThan(100);
+    expect(g.nodes['datos']!.width).toBe(g.nodes['datos']!.height);
+    expect(g.nodes['api']!.width).not.toBe(g.nodes['api']!.height);
   });
 
   it('un Tema con Metricas identicas reutiliza la clave de layout aunque cambie la pintura', () => {
-    const otraPintura = conTipos({ db: [{ nombre: 'forma', props: { minWidth: 240, minHeight: 100, radius: 20 } }] }, [
+    const otraPintura = conTipos({ db: [{ nombre: 'forma', primitiva: 'circle', props: {} }] }, [
       capas[0],
       { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'red' } } },
       { nombre: 'aura', primitiva: { tipo: 'border', props: { color: 'red', width: 4 } } },

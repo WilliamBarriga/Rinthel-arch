@@ -156,21 +156,15 @@ export function cascada(tema: Pick<TemaResuelto, 'palette' | 'nodo'>, nivel: { t
 
 /**
  * Por que un parche de estado toca las Metricas, o `undefined` si solo pinta. Toca si
- * quita o sustituye una forma con caja minima, o cambia una de sus propiedades
- * marcadas como Metrica, o introduce una Primitiva que afecta a las Metricas.
- * `pilas` son las pilas posibles sobre las que se aplica (base y una por Tipo).
+ * introduce una Primitiva que afecta a las Metricas (p. ej. `circle`) o si cambia o
+ * quita una Capa cuya Primitiva las afecta. `pilas` son las pilas posibles sobre las
+ * que se aplica (base y una por Tipo).
  */
 export function opTocaMetricas(op: OpDeCapa, pilas: ReadonlyArray<readonly CapaDeTema[]>): string | undefined {
   const existente = pilas.flatMap((pila) => pila.filter((capa) => capa.nombre === op.nombre))[0];
-  const antes: DefinicionDePrimitiva | undefined = existente === undefined ? undefined : CATALOGO[existente.primitiva.tipo];
-  const despues: DefinicionDePrimitiva | undefined = op.primitiva === undefined ? antes : (CATALOGO as Record<string, DefinicionDePrimitiva>)[op.primitiva];
-  const razon = (por: string): string => `la Capa '${op.nombre}' ${por}`;
-  if (op.quitar === true) return antes?.cajaMinima !== undefined || antes?.afectaMetricas === true ? razon('define la caja y no puede quitarse') : undefined;
-  if (despues?.afectaMetricas === true) return razon(`usa una Primitiva que afecta a las Metricas`);
-  if (op.primitiva !== undefined && (antes?.cajaMinima !== undefined || despues?.cajaMinima !== undefined)) return razon('cambia la forma');
-  const claves = Object.keys(op.props).filter((clave) => {
-    const propiedad = despues?.propiedades[clave];
-    return propiedad?.tipo === 'numero' && propiedad.metrica === true;
-  });
-  return claves.length > 0 ? razon(`cambia ${claves.map((c) => `'${c}'`).join(', ')}, que son Metricas`) : undefined;
+  const afecta = (tipo: string | undefined): boolean => tipo !== undefined && ((CATALOGO as Record<string, DefinicionDePrimitiva>)[tipo]?.afectaMetricas ?? false);
+  if (op.quitar === true) return afecta(existente?.primitiva.tipo) ? `la Capa '${op.nombre}' define la caja y no puede quitarse` : undefined;
+  const nuevo = op.primitiva ?? existente?.primitiva.tipo;
+  if (afecta(nuevo)) return `la Capa '${op.nombre}' usa '${nuevo}', que afecta a las Metricas`;
+  return afecta(existente?.primitiva.tipo) ? `la Capa '${op.nombre}' sustituye una forma que define la caja` : undefined;
 }

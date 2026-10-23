@@ -4,19 +4,21 @@ import type { Tema } from 'canonico';
 import { TEMA_NEUTRO, claveDeMetricas, colocarNodo, metricasDeNodo, opTocaMetricas, tablaDeMetricas } from 'tema';
 import type { OpDeCapa } from 'tema';
 
-const forma = (props: Record<string, number> = {}) => ({ nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0, minWidth: 0, minHeight: 0, ...props } } });
+const forma = (props: Record<string, number> = {}) => ({ nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0, ...props } } });
 const relleno = (color: string) => ({ nombre: 'relleno', primitiva: { tipo: 'solid', props: { color } } });
-const op = (nombre: string, props: Record<string, number | string>): OpDeCapa => ({ nombre, props });
+const op = (nombre: string, props: Record<string, number | string>, primitiva?: string): OpDeCapa => ({ nombre, props, ...(primitiva !== undefined && { primitiva }) });
+const circulo = (): OpDeCapa => op('forma', {}, 'circle');
 
 const tema = (capas: unknown[], tipos: Record<string, OpDeCapa[]> = {}): Tema =>
   ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas, tipos } }) as Tema;
 
 describe('tabla de Metricas por elemento', () => {
   it('un Tipo con caja minima propia tiene su entrada; un Tipo no mencionado usa la entrada base', () => {
-    const tabla = tablaDeMetricas(tema([forma(), relleno('blue')], { db: [op('forma', { minWidth: 220, minHeight: 90 })] }));
+    const tabla = tablaDeMetricas(tema([forma(), relleno('blue')], { db: [circulo()] }));
 
-    expect(colocarNodo('x', [], metricasDeNodo(tabla, 'db'))).toMatchObject({ width: 220, height: 90 });
+    expect(colocarNodo('x', [], metricasDeNodo(tabla, 'db'))).toMatchObject({ width: 120, height: 120 });
     expect(colocarNodo('x', [], metricasDeNodo(tabla, 'servicio'))).toMatchObject({ width: 120 });
+    expect(colocarNodo('x', [], metricasDeNodo(tabla, 'servicio')).height).toBeLessThan(120);
     expect(metricasDeNodo(tabla, 'servicio')).toBe(tabla.base);
   });
 
@@ -34,9 +36,9 @@ describe('tabla de Metricas por elemento', () => {
     expect(claveDeMetricas(tablaDeMetricas(b))).toBe(claveDeMetricas(tablaDeMetricas(a)));
   });
 
-  it('cambiar la caja minima cambia la clave', () => {
+  it('cambiar la forma a una con caja minima cambia la clave', () => {
     const a = tema([forma()]);
-    const b = tema([forma({ minWidth: 200 })]);
+    const b = tema([{ nombre: 'forma', primitiva: { tipo: 'circle', props: {} } }]);
 
     expect(claveDeMetricas(tablaDeMetricas(b))).not.toBe(claveDeMetricas(tablaDeMetricas(a)));
   });
@@ -53,14 +55,14 @@ describe('tabla de Metricas por elemento', () => {
 describe('parches de estado y Metricas', () => {
   const pilas = [[forma(), relleno('blue')] as never];
 
-  it('un parche que toca la caja minima de una forma toca las Metricas; uno de pintura no', () => {
-    expect(opTocaMetricas(op('forma', { minWidth: 300 }), pilas)).toBeDefined();
+  it('un parche que cambia la forma por una con caja minima toca las Metricas; uno de pintura no', () => {
+    expect(opTocaMetricas(circulo(), pilas)).toBeDefined();
     expect(opTocaMetricas(op('forma', { radius: 8 }), pilas)).toBeUndefined();
     expect(opTocaMetricas(op('relleno', { color: 'red' }), pilas)).toBeUndefined();
   });
 
   it('el esquema rechaza un parche de estado que cambia la caja', () => {
-    const malo = { ...tema([forma()]), nodo: { ...TEMA_NEUTRO.nodo, capas: [forma()], estados: { hover: [op('forma', { minWidth: 300 })] } } } as Tema;
+    const malo = { ...tema([forma()]), nodo: { ...TEMA_NEUTRO.nodo, capas: [forma()], estados: { hover: [circulo()] } } } as Tema;
 
     expect(() => tablaDeMetricas(malo)).toThrow(/Metricas/);
   });

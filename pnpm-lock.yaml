@@ -184,6 +184,9 @@ importers:
       layout:
         specifier: workspace:*
         version: link:packages/layout
+      render:
+        specifier: workspace:*
+        version: link:packages/render
       shell:
         specifier: workspace:*
         version: link:packages/shell
