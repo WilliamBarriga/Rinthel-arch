@@ -1,0 +1,135 @@
+# Referencia del catalogo de Temas
+
+Generado por `pnpm docs:catalogo` desde el catalogo de `packages/tema`; no editar a mano. El contrato esta en `docs/adr/0008-sistema-de-temas-expresivo.md`.
+
+Un numero se escribe como `minimo a maximo (defecto)`; fuera de rango es un error, nunca se recorta. Los colores son siempre nombres de Paleta. "Metricas" dice si la Primitiva puede cambiar la caja o los Slots (por defecto solo pinta).
+
+## Primitivas
+
+### Familia forma
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `rect` | capa-nodo | `radius` 0 a 100 (0) | no |
+| `pill` | capa-nodo | - | no |
+| `cut` | capa-nodo | `cut` 1 a 100 (8) | no |
+| `circle` | capa-nodo | - | si |
+
+### Familia relleno
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `solid` | capa-nodo | `color` color de Paleta | no |
+| `gradient` | capa-nodo | `from` color de Paleta; `to` color de Paleta; `angle` 0 a 360 (180) | no |
+| `grid` | capa-nodo | `color` color de Paleta; `size` 2 a 200 (16); `width` 1 a 8 (1) | no |
+| `lines` | capa-nodo | `color` color de Paleta; `size` 2 a 200 (8); `width` 1 a 8 (1); `angle` 0 a 180 (45) | no |
+| `dots` | capa-nodo | `color` color de Paleta; `size` 4 a 200 (12); `radius` 1 a 50 (2) | no |
+| `noise` | capa-nodo | `frequency` 0.1 a 2 (0.8); `opacity` 0 a 1 (0.15) | no |
+
+### Familia borde
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `border` | capa-nodo | `color` color de Paleta; `width` 1 a 16 (1) | no |
+| `dashed` | capa-nodo | `color` color de Paleta; `width` 1 a 16 (1) | no |
+| `dotted` | capa-nodo | `color` color de Paleta; `width` 1 a 16 (1) | no |
+| `outline` | capa-nodo | `color` color de Paleta; `width` 1 a 16 (1); `offset` -16 a 16 (2) | no |
+
+### Familia sombra
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `shadow` | capa-nodo | `color` color de Paleta; `x` -200 a 200 (0); `y` -200 a 200 (4); `blur` 0 a 200 (0); `spread` -100 a 100 (0); `inset` 0 a 1 (0) | no |
+
+### Familia glow
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `glow` | capa-nodo | `color` color de Paleta; `radius` 1 a 100 (12); `spread` 0 a 32 (0) | no |
+
+### Familia vidrio
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `glass` | capa-nodo | `blur` 0 a 64 (12); `saturate` 0 a 300 (100) | no |
+
+### Familia filtro
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `sketch` | capa-nodo | `roughness` 0 a 20 (2); `frequency` 0.001 a 0.5 (0.03) | no |
+
+### Familia decoracion
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `tilt` | capa-nodo | `degrees` 0 a 3 (1) | no |
+| `tape` | capa-nodo | `color` color de Paleta; `width` 8 a 200 (48); `height` 4 a 60 (16) | no |
+| `ring` | capa-nodo | `color` color de Paleta; `width` 1 a 16 (2); `offset` 0 a 32 (4) | no |
+
+### Familia trazo
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `line` | capa-arista | `color` color de Paleta; `width` 0.5 a 24 (1.5); `style` solid|dashed|dotted|pixel (solid); `corner` sharp|chamfer (sharp); `cut` 1 a 32 (6) | no |
+
+### Familia marcador
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `arrow` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `dot` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `diamond` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `bar` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `via` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+
+### Familia texto
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `text` | texto-slot | `weight` 100 a 900 (400); `color` color de Paleta (opcional); `style` normal|italic (normal); `transform` none|uppercase (none) | no |
+| `label` | etiqueta | `scale` 0.5 a 2 (0.85); `pad` 0 a 32 (4); `radius` 0 a 50 (0); `fill` color de Paleta (opcional); `border` color de Paleta (opcional) | si |
+
+### Familia codigo
+
+| Primitiva | Ubicacion | Propiedades | Metricas |
+| --- | --- | --- | --- |
+| `code` | capa-nodo | `component` nombre de Componente; parametros libres (numero o texto) | no |
+
+## Slots
+
+| Slot |
+| --- |
+| `title` |
+| `attrs` |
+
+## Movimientos
+
+| Movimiento | Intensidad | Easing | Duracion (ms) |
+| --- | --- | --- | --- |
+| `flujo` | no | linear | 2000 |
+| `pulso` | si | ease-in-out | 1200 |
+| `respiracion` | si | ease-in-out | 3000 |
+| `giro` | no | linear | 2000 |
+| `aura` | si | ease-in-out | 2000 |
+
+Easings: `linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`.
+
+## Efectos de entrada y salida
+
+| Efecto |
+| --- |
+| `fundido` |
+| `escala` |
+| `deslizar` |
+
+## Propiedades animables con keyframes
+
+| Propiedad | Rango |
+| --- | --- |
+| `opacity` | 0 a 1 |
+| `scale` | 0 a 4 |
+| `rotate` | -360 a 360 |
+| `shift-x` | -200 a 200 |
+| `shift-y` | -200 a 200 |
+| `blur` | 0 a 32 |

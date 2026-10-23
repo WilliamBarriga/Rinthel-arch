@@ -28,6 +28,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 - Entradas y salidas observables. Un refactor interno deja todos los tests en verde.
 - Fakes en memoria (adaptadores reales de bajo costo) antes que mocks; mock solo para I/O que no se puede simular.
 - Compilador: texto DSL entra, Fuente canonica sale; se compara contra la salida publica.
+- Documentacion derivada: lo que sale de un esquema se genera, no se escribe a mano. `docs/referencia-catalogo.md` sale del catalogo de `tema` (`pnpm docs:catalogo`); `tests/referencia-catalogo.test.ts` falla si se desvia. Una Primitiva nueva: una entrada en el catalogo, su pintor y regenerar la referencia.
 - Runner de pruebas: Vitest. Build de paquetes: tsup. Gestor: pnpm workspaces, sin orquestador de tareas.
 
 ## Chequeos automaticos

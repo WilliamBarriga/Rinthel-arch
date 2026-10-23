@@ -1,6 +1,6 @@
 # Sistema de Temas expresivo: Capas declarativas, render hibrido y animacion
 
-Contexto: el modelo anterior (Anatomia cerrada, ADR 0002 y 0006) solo permitia variar valores dentro de unas pocas formas fijas. El prototipo de estetica (variantes A-G) y el del render hibrido (14 Temas: vidrio, Bauhaus, post-its, teclas 3D, metro, PCB, pixel...) mostraron que cambiar solo el Tema puede dar disenos radicalmente distintos si el Tema describe el dibujo como datos y no como una eleccion entre anatomias. Este ADR reemplaza ese modelo. Reescribe el ADR 0002 (queda solo con lo que no cambia) y absorbe y borra el ADR 0006. Las decisiones salen del mapa "Sistema de Temas expresivo" y sus tickets; el detalle de cada una vive en el ticket citado. La implementacion queda fuera.
+Contexto: el modelo anterior (formas fijas cerradas, ADR 0002 y 0006) solo permitia variar valores dentro de unas pocas formas. El prototipo de estetica (variantes A-G) y el del render hibrido (14 Temas: vidrio, Bauhaus, post-its, teclas 3D, metro, PCB, pixel...) mostraron que cambiar solo el Tema puede dar disenos radicalmente distintos si el Tema describe el dibujo como datos y no como una eleccion entre formas fijas. Este ADR reemplaza ese modelo. Reescribe el ADR 0002 (queda solo con lo que no cambia) y absorbe y borra el ADR 0006. Las decisiones salen del mapa "Sistema de Temas expresivo" y sus tickets; el detalle de cada una vive en el ticket citado. La implementacion queda fuera.
 
 ## Render hibrido: HTML/CSS para Nodos y Grupos, SVG para Aristas
 
@@ -21,7 +21,7 @@ Cada elemento (Nodo, Arista, Grupo y fondo de pagina) es una pila ordenada de **
 - **Orden respecto al contenido**: cada Capa va bajo el contenido (defecto) o sobre el (`over`).
 - **Grupo**: mismo modelo que el Nodo, con un Slot extra de cabecera y una zona de hijos; colapsado es otro parche de estado y se comporta como un Nodo hoja.
 - **Arista**: modelo propio mas pequeno: pila de trazos (un segundo trazo ancho y translucido da el glow), marcadores de origen y fin del catalogo, y etiqueta que reutiliza el modelo de caja del Nodo. El enrutado sigue siendo de ELK y no depende del Tema.
-- **Anatomia desaparece** como concepto: cada Tema describe su dibujo con Capas.
+- **Sin formas fijas**: cada Tema describe su dibujo con Capas.
 - **Valores**: el color es siempre un nombre de Paleta (ADR 0002) con modificadores (alfa, `mix`, los especiales `COLOR` y `ORIGEN`); sin hex fuera de `palette`. Los numeros son literales o `$token` con nombre, sin aritmetica.
 
 ### Cascada y parches
@@ -133,7 +133,7 @@ Se conserva del ADR 0006 el principio de que layout y render leen las mismas Met
 
 ## Consecuencias
 
-- Se reemplaza la Anatomia por Capas; el Estilo resuelto y las Metricas se redefinen (ver arriba y `CONTEXT.md`). Los ADR 0003 (Pin al centro, clave de cache con fuentes y origen de medidas) y 0007 (semantica de `pin`) se ajustan al implementar.
+- Las formas fijas del modelo anterior se reemplazan por Capas; el Estilo resuelto y las Metricas se redefinen (ver arriba y `CONTEXT.md`). Los ADR 0003 (Pin al centro, clave de cache con fuentes y origen de medidas) y 0007 (semantica de `pin`) se ajustan al implementar.
 - Vocabulario nuevo en `CONTEXT.md`: Capa, Primitiva, Familia, Slot, Movimiento, Parte de Tema, Componente de Tema y Tema por defecto.
 - El contrato del CLI para Temas (`inspect tema`, `validate`, recarga de `dev`) esta en la enmienda del ADR 0005; `edit` no cambia.
-- Fuera de alcance: quitar el sistema de exportaciones (`export` svg/png/html, `png.ts`, `html.ts`, resvg), la integracion con slides, video u otros consumidores, y mezclar Temas completos dentro de una Vista.
+- Fuera de alcance: la integracion con slides, video u otros consumidores, y mezclar Temas completos dentro de una Vista.

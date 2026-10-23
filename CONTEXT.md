@@ -53,7 +53,7 @@ Tema incorporado que usa una Vista sin Tema: `neutral` (claro). Lo acompanan `ne
 Unidad con nombre de la pila que dibuja un elemento; es una instancia de una Primitiva, va bajo el contenido (defecto) o sobre el, y puede animarse. La variacion por Tipo, estado o Vista se expresa como parche por nombre de Capa (cambiar, anadir con `before`/`after`, quitar con `none`). Un componente de codigo del Tema tambien es una Capa (Componente de Tema).
 
 **Primitiva**:
-Tipo de Capa del catalogo cerrado (forma, relleno, trazo, sombra, vidrio, decoracion...). Sustituye a la Anatomia. Una Primitiva nueva se anade al catalogo por issue; una Familia nueva, por ADR.
+Tipo de Capa del catalogo cerrado (forma, relleno, trazo, sombra, vidrio, decoracion...). Una Primitiva nueva se anade al catalogo por issue; una Familia nueva, por ADR.
 
 **Familia**:
 Grupo de Primitivas del mismo oficio (forma, relleno, borde/trazo, sombra, glow, vidrio, filtro, decoracion, marcador de Arista, estilo de texto de Slot, codigo). Cada Primitiva pertenece a una sola.

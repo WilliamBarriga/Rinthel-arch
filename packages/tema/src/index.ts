@@ -60,6 +60,10 @@
  *   y `componentesDeTema` dicen que componentes usa un Tema (el "Tema con codigo" de `inspect` y
  *   `validate`) recorriendo la cascada completa.
  *
+ * - Referencia: `referenciaDelCatalogo()` genera en Markdown la tabla del catalogo (Primitivas por
+ *   Familia, Slots, Movimientos, Efectos) desde las mismas tablas que validan; `pnpm docs:catalogo`
+ *   la escribe en `docs/referencia-catalogo.md` y una prueba comprueba que no se desvia.
+ *
  * Invariantes: puro y determinista; sin I/O, reloj, azar ni DOM. Una Capa es
  * una instancia de una Primitiva del catalogo cerrado; el color es siempre un
  * nombre de Paleta. Modos de error: los datos invalidos se devuelven como
@@ -76,6 +80,7 @@ export type { Metricas, TablaDeMetricas } from './metricas';
 export { anchoDeTexto, claveDeTexto, hashDeFuente } from './medicion';
 export type { MedicionDeMetricas, MedidasDeTexto, TextoAMedir } from './medicion';
 export { textosAMedir } from './textos-a-medir';
+export { referenciaDelCatalogo } from './referencia';
 export { colocarEnCaja, colocarNodo } from './slots';
 export type { ColocacionDeNodo, Rect } from './slots';
 export { estiloResuelto } from './estilo';
