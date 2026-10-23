@@ -5,7 +5,7 @@
 import { useMemo, useState } from 'react';
 
 import type { VistaResuelta } from 'canonico';
-import type { Estados } from 'render';
+import type { EstadoVisual, Estados } from 'render';
 
 import { SELECCION_VACIA, elementoPorId, seleccionar } from './interaccion';
 import type { ElementoSeleccionable, Seleccion } from './interaccion';
@@ -14,6 +14,15 @@ export interface ResultadoDeSeleccion {
   estados: Estados;
   /** Aplica el clic sobre un elemento; devuelve si queda seleccionado (para avisar y navegar). */
   pulsar: (elemento: ElementoSeleccionable, acumula: boolean) => { seleccionado: boolean; seleccion: Seleccion };
+}
+
+/** Une a los estados de seleccion los de hover (id bajo el raton) y fantasma (id arrastrandose). */
+export function conEstadosTransitorios(base: Estados, hover: string | undefined, fantasma: string | undefined): Estados {
+  if (hover === undefined && fantasma === undefined) return base;
+  const unido: Record<string, readonly EstadoVisual[]> = { ...base };
+  if (hover !== undefined) unido[hover] = [...(unido[hover] ?? []), 'hover'];
+  if (fantasma !== undefined) unido[fantasma] = [...(unido[fantasma] ?? []), 'fantasma'];
+  return unido;
 }
 
 export function useSeleccion(
