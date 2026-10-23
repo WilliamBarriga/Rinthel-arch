@@ -3,13 +3,18 @@
  * la validacion, los mensajes y, mas adelante, `inspect` y la tabla de docs.
  * Anadir una Primitiva es una entrada aqui (mas su pintor en `render`).
  *
- * Esta rebanada trae tres Primitivas (una por Familia) y dos Slots; el resto
- * del catalogo llega por Familia en tickets posteriores.
+ * `rect`, `solid` y `border` viven aqui; el resto de las Familias forma, relleno
+ * y borde estan en `familias/`, un archivo por Familia, y se suman al registro.
  */
 import { CODIGOS, candidatosCercanos } from 'canonico';
 
+import { CATALOGO_DE_EFECTOS } from './catalogo-efectos';
+import type { FamiliaDeEfectos } from './catalogo-efectos';
 import { validarColor } from './color';
+import { BORDES } from './familias/borde';
+import { FORMAS } from './familias/forma';
 import { MARCADORES } from './familias/marcador';
+import { RELLENOS } from './familias/relleno';
 import { TEXTOS } from './familias/texto';
 import { TRAZOS } from './familias/trazo';
 
@@ -23,11 +28,13 @@ export type DefinicionDePropiedad =
 export type UbicacionDePrimitiva = 'capa-nodo' | 'capa-arista' | 'marcador' | 'etiqueta' | 'texto-slot';
 
 export interface DefinicionDePrimitiva {
-  readonly familia: 'forma' | 'relleno' | 'borde' | 'trazo' | 'marcador' | 'texto';
+  readonly familia: 'forma' | 'relleno' | 'borde' | 'trazo' | 'marcador' | 'texto' | FamiliaDeEfectos;
   readonly ubicacion?: UbicacionDePrimitiva;
   readonly propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
   /** Si cambia la caja o los Slots (Metricas). Por defecto una Primitiva solo pinta. */
   readonly afectaMetricas: boolean;
+  /** Regla de caja minima que exige la forma; sin ella, cualquier caja sirve. */
+  readonly cajaMinima?: 'cuadrado';
 }
 
 export const CATALOGO = {
@@ -38,7 +45,11 @@ export const CATALOGO = {
     afectaMetricas: false,
     propiedades: { color: { tipo: 'color' }, width: { tipo: 'numero', min: 1, max: 16, defecto: 1 } },
   },
-  // Una entrada por Familia, cada una en su archivo (`familias/`).
+  ...FORMAS,
+  ...RELLENOS,
+  ...BORDES,
+  ...CATALOGO_DE_EFECTOS,
+  // Aristas y texto de Slot: una entrada por Familia, cada una en su archivo (`familias/`).
   ...TRAZOS,
   ...MARCADORES,
   ...TEXTOS,

@@ -9,7 +9,7 @@ import type { Tema } from 'canonico';
 
 import { construirPrimitiva, SLOTS } from './catalogo';
 import type { NombreDeSlot, UbicacionDePrimitiva } from './catalogo';
-import { ESTADOS, aplicarOps, validarOps } from './parches';
+import { ESTADOS, aplicarOps, opTocaMetricas, validarOps } from './parches';
 import type { CapaDeTema, OpDeCapa } from './parches';
 
 const capaSchema = z.strictObject({
@@ -76,6 +76,9 @@ export const temaResueltoSchema = z
         if (tokens.fontSize !== undefined && !/^\d+(\.\d+)?px$/.test(tokens.fontSize)) {
           ctx.addIssue({ code: 'custom', path: ['fontSize'], message: 'debe ser un tamano en px, p. ej. "14px"' });
         }
+        if (tokens.seed !== undefined && !/^\d+$/.test(tokens.seed)) {
+          ctx.addIssue({ code: 'custom', path: ['seed'], message: '`seed` debe ser un entero no negativo, p. ej. 7' });
+        }
       }),
     nodo: nodoSchema.default({ capas: [], slots: [...SLOTS], textos: {}, tipos: {}, estados: {} }),
     arista: aristaSchema.default({ capas: [] }),
@@ -120,6 +123,12 @@ export const temaResueltoSchema = z
     }
     for (const [estado, ops] of Object.entries(tema.nodo.estados)) {
       for (const e of validarOps(pilas, ops, tema.palette, 'parchear')) ctx.addIssue({ code: 'custom', path: ['nodo', 'estados', estado, e.indice], message: e.mensaje });
+      ops.forEach((op, indice) => {
+        const razon = opTocaMetricas(op, pilas);
+        if (razon !== undefined) {
+          ctx.addIssue({ code: 'custom', path: ['nodo', 'estados', estado, indice], message: `un parche de estado no puede tocar las Metricas: ${razon}; hover nunca relayouta` });
+        }
+      });
     }
   });
 

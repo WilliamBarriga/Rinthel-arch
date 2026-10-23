@@ -53,12 +53,18 @@ export function colocarNodo(titulo: string, atributos: readonly Atributo[], metr
   const delTitulo = metricas.slots.includes('title') ? titulo.length * fontSize * factorDeAncho : 0;
   const deAtributos = atributos.map((a) => textoDeAtributo(a).length * fontSize * escalaAtributo * factorDeAncho);
   const ancho = Math.max(metricas.anchoMinimo, Math.ceil(Math.max(delTitulo, ...deAtributos) + metricas.paddingHorizontal));
-  return colocarEnCaja(metricas, atributos.length, ancho);
+  if (!metricas.cajaCuadrada) return colocarEnCaja(metricas, atributos.length, ancho);
+  // Forma que pide un cuadrado (circulo): el lado contiene el contenido en ambos ejes.
+  return colocarEnCaja(metricas, atributos.length, Math.max(ancho, apilar(metricas, atributos.length, ancho).alto));
 }
 
 /** Colocacion dentro de una caja de ancho conocido (la que entrega la Geometria); `render` la usa para pintar. */
 export function colocarEnCaja(metricas: Metricas, filas: number, ancho: number): ColocacionDeNodo {
-  const { slots, alto } = apilar(metricas, filas, ancho);
+  const apiladas = apilar(metricas, filas, ancho);
+  // En una caja cuadrada el contenido se centra en vertical; el resto de formas se ajusta al contenido.
+  const alto = metricas.cajaCuadrada ? Math.max(apiladas.alto, ancho) : apiladas.alto;
+  const desplazamiento = (alto - apiladas.alto) / 2;
+  const slots = Object.fromEntries(Object.entries(apiladas.slots).map(([nombre, r]) => [nombre, { ...r, y: r.y + desplazamiento }])) as ColocacionDeNodo['slots'];
   const zona = slots.attrs;
   return {
     width: ancho,

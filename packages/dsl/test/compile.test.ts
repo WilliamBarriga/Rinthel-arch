@@ -914,6 +914,33 @@ describe('compile: Tema', () => {
     });
   });
 
+  it('compila las Familias de efectos con sus defectos, y `seed N` en tokens', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme efectos extends neutral {
+          tokens { seed 7 }
+          node {
+            layer sombra shadow { color gray  blur 0  x 4  y 4 }
+            layer aura glow { color blue }
+            layer cristal glass
+            layer trazo sketch { roughness 3 }
+            layer ladeo tilt { degrees 2 }
+          }
+        }`,
+    });
+
+    const tema = canonico?.themes.find((t) => t.name === 'efectos');
+    expect(issues).toEqual([]);
+    expect((tema?.['tokens'] as Record<string, string>)['seed']).toBe('7');
+    expect((tema?.['nodo'] as { capas: Array<{ primitiva: { tipo: string } }> }).capas.map((c) => c.primitiva.tipo)).toEqual(['shadow', 'glow', 'glass', 'sketch', 'tilt']);
+  });
+
+  it('un giro de mas de 3 grados es un error, no se recorta', () => {
+    const { issues } = compile({ 'main.dg': `${base} theme excedido extends neutral { node { layer ladeo tilt { degrees 4 } } }` });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+  });
+
   it('los bloques nodeStyles y edgeStyles ya no existen en el DSL', () => {
     const { issues } = compile({ 'main.dg': `${base} theme viejo extends neutral { nodeStyles { servicio { fill red } } }` });
 

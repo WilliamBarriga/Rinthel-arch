@@ -12,11 +12,12 @@ import { idDeArista } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
-import { atributosVisibles, colocarEnCaja } from 'tema';
+import { atributosVisibles, colocarEnCaja, metricasDeHoja } from 'tema';
 import type { Metricas } from 'tema';
 
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
+import { efectosDeElemento } from './efectos';
 import { resolverEstilo } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { compilarHoja } from './hoja';
@@ -60,7 +61,7 @@ export interface EntradaDeEscena {
   onToggle?: (id: string) => void;
   /** Metricas con las que dibujar; deben ser las del layout. Por defecto las derivadas del Tema. */
   metricas?: Metricas;
-  /** Estados visuales (seleccionado, hover, fantasma) que se dibujan con el Estilo resuelto; sin ellos, ninguno. */
+  /** Estados visuales (seleccionado, hover, fantasma, en-ruta, atenuado, foco) que se dibujan con el Estilo resuelto; sin ellos, ninguno. */
   estados?: Estados;
   /** Estilo resuelto con el que dibujar; por defecto el del Tema (`resolverEstilo`). */
   estilo?: Estilo;
@@ -157,10 +158,11 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
   const texto = nodo.collapsed ? `${nodo.label} (${nodo.childCount})` : nodo.label;
   const datos = { nodo, caja, trazo, texto, icons };
   const conmutable = grupo || (nodo.collapsed && nodo.link === undefined);
+  const efectos = efectosDeElemento(estilo, nodo.id);
 
   return {
     tag: 'div',
-    attrs: { class: 'rd-caja', 'data-id': nodo.id, style: posicion(caja) },
+    attrs: { class: 'rd-caja', 'data-id': nodo.id, ...(atenuado(contexto.estados, nodo.id) && { 'data-atenuado': '' }), style: posicion(caja) + efectos.caja },
     hijos: [
       {
         tag: 'div',
@@ -168,12 +170,14 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
           class: grupo ? 'rd-grupo' : 'rd-nodo',
           'data-part': 'nodo',
           ...(nodo.collapsed && { 'data-collapsed': '' }),
-          style: `--trazo:${limpiarValorCss(trazo)};${opacidad(contexto.visibility(nodo.id))}`,
+          style: `--trazo:${limpiarValorCss(trazo)};${opacidad(contexto.visibility(nodo.id))}${efectos.nodo}`,
         },
         ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
         hijos: [
+          ...efectos.debajo,
           ...(grupo ? pintarGrupo(estilo, datos) : pintarNodo(estilo, { ...datos, conAtributos: tieneFilas(nodo, estilo, detail) })),
           ...(onToggle !== undefined && conmutable ? [pintarControl(estilo, { nodo, caja, alClic: () => onToggle(nodo.id) })] : []),
+          ...efectos.encima,
         ],
       },
       ...estadosDeNodo(nodo, caja, contexto),
@@ -183,19 +187,24 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
 
 function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, detail }: Contexto): Elemento[] {
   if (estados === undefined) return [];
-  const propios = (estados[nodo.id] ?? []).map((e) => pintarEstadoDeCaja(e, nodo.id));
+  const propios = contornos(estados[nodo.id]).map((e) => pintarEstadoDeCaja(e, nodo.id));
   if (esGrupo(nodo) || !tieneFilas(nodo, estilo, detail)) return propios;
-  const atributos = atributosVisibles(nodo, estilo.metricas);
-  const rectas = colocarEnCaja(estilo.metricas, atributos.length, caja.width).filas;
+  const metricas = metricasDeHoja(estilo.tabla, nodo);
+  const atributos = atributosVisibles(nodo, metricas);
+  const rectas = colocarEnCaja(metricas, atributos.length, caja.width).filas;
   const filas = atributos.flatMap((atributo, i) => {
     const id = `${nodo.id}#${atributo.name}`;
-    return (estados[id] ?? []).map((e) => pintarEstadoDeCaja(e, id, rectas[i]!));
+    return contornos(estados[id]).map((e) => pintarEstadoDeCaja(e, id, rectas[i]!));
   });
   return [...propios, ...filas];
 }
 
+/** `atenuado` no tiene contorno: atenua el elemento entero (marca `data-atenuado`, estilada por la hoja). */
+const atenuado = (estados: Estados | undefined, id: string): boolean => estados?.[id]?.includes('atenuado') === true;
+const contornos = (lista: readonly EstadoVisual[] | undefined): EstadoVisual[] => (lista ?? []).filter((e) => e !== 'atenuado');
+
 function tieneFilas(nodo: NodoResuelto, estilo: Estilo, detail?: NivelDeDetalle): boolean {
-  return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, estilo.metricas).length > 0;
+  return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, metricasDeHoja(estilo.tabla, nodo)).length > 0;
 }
 
 /** Valor de la Paleta para el color del Nodo; sin color, o desconocido, el borde del Estilo. */
@@ -217,10 +226,10 @@ function aristaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibil
       ...(colorDelOrigen !== undefined && { origen: colorDelOrigen }),
       desde: arista.fromCardinality,
       hasta: arista.toCardinality,
-      atributos: v,
+      atributos: atenuado(estados, id) ? { ...v, 'data-atenuado': '' } : v,
       extra: [
         ...(arista.label === undefined ? [] : [pintarEtiquetaDeArista(estilo, { id, texto: arista.label, puntos, caja: geometry.labels[id] })]),
-        ...(estados?.[id] ?? []).map((e) => pintarEstadoDeRuta(estilo, e, id, puntos)),
+        ...contornos(estados?.[id]).map((e) => pintarEstadoDeRuta(estilo, e, id, puntos)),
       ],
       ...(onSelect !== undefined && { alClic: () => onSelect(id) }),
     }),
