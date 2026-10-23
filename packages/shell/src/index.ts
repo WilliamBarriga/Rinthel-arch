@@ -56,6 +56,8 @@
  * soltar avisan su posicion nueva (relativa al Grupo padre, unidades de la geometria; es el
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve
  * si el aviso resuelve `false`. Sin `onMoveNode` (export estatico) no hay arrastre de Nodos.
+ * `crearControlDeEdicion(archivos)` conecta las Intenciones y el historial de `sesion` a
+ * `aplicar`, `deshacer` y `rehacer` (ADR 0006).
  * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
  * `{ok:true}` o `{ok:false, desactualizado, mensaje}` (409 por hash); nunca lanza.
  * La intencion es `IntencionDePin` (`{vista, nodo, x, y, hash}`, declarada en `canonico` y
@@ -120,6 +122,9 @@ export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-ha
 export { crearEnviadorDePin } from './enviar-pin';
 export type { EnviadorDePin, IntencionDePinEnviada, ResultadoDeEnvioDePin } from './enviar-pin';
 export type { IntencionDePin } from 'canonico';
+export { crearControlDeEdicion } from './control-de-edicion';
+export type { ControlDeEdicion, ResultadoDeAplicar } from './control-de-edicion';
+export type { Historial, Intencion } from 'sesion';
 export { adaptadorDeWorker } from './layout-en-worker';
 export { servirLayout } from './servir-layout';
 export type { PuertoDeMensajes } from './layout-en-worker';
