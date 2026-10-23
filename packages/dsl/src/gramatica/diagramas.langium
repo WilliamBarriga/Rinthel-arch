@@ -112,7 +112,7 @@ ThemeNode:
   'node' '{' items+=NodeItem* '}';
 
 NodeItem:
-  ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState;
+  ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState | ThemeTransition | ThemeEnter | ThemeExit | ThemeStagger;
 
 ThemeType:
   'type' name=Id '{' items+=PatchItem* '}';
@@ -126,7 +126,7 @@ PatchItem:
   ThemeLayer | ThemeUse;
 
 StateItem:
-  ThemeLayer | ThemeUse | ThemeSlots;
+  ThemeLayer | ThemeUse | ThemeSlots | ThemeTransition;
 
 // `part <nombre> { layer ... }`: parche reutilizable sin Tema, que se incluye con `use` (nombre unico en el Workspace).
 PartDecl:
@@ -139,7 +139,48 @@ ThemeUse:
 // define, cambia o anade segun exista o no en el nivel de abajo; `layer <nombre> none` la quita.
 // La primitiva es un identificador plano (nunca una palabra clave) para no confundirla con `over`/`none`.
 ThemeLayer:
-  'layer' name=Id (remove?='none' | (primitive=IdTerminal)? (placement=('before' | 'after') target=Id)? (over?='over')? ('{' props+=LayerProp* '}')?);
+  'layer' name=Id (remove?='none' | (primitive=IdTerminal)? (placement=('before' | 'after') target=Id)? (over?='over')? ('{' (animations+=LayerAnimation | props+=LayerProp)* '}')?);
+
+// Animacion declarativa (ADR 0008). Dentro de una Capa: `motion pulso 1.2s ease-in-out intensity 0.4`,
+// `motion none` (quita el heredado) o `keyframes opacity 2s { 0 1  50 0.4  100 1 }`. En el bloque `node`:
+// `transition 120ms ease-out`, `enter fundido 300ms`, `exit escala 200ms`, `stagger 60ms`; `transition`
+// tambien dentro de un `state`. Los parametros son palabras cerradas (no colisionan con las propiedades).
+LayerAnimation:
+  ThemeMotion | ThemeKeyframes;
+
+ThemeMotion:
+  'motion' (remove?='none' | name=IdTerminal params+=AnimParam*);
+
+ThemeKeyframes:
+  'keyframes' property=IdTerminal params+=AnimParam* '{' steps+=KeyframeStep* '}';
+
+KeyframeStep:
+  at=Num value=SignedNum;
+
+ThemeTransition:
+  'transition' params+=AnimParam*;
+
+ThemeEnter:
+  'enter' effect=IdTerminal params+=AnimParam*;
+
+ThemeExit:
+  'exit' effect=IdTerminal params+=AnimParam*;
+
+ThemeStagger:
+  'stagger' amount=Duracion;
+
+AnimParam:
+  duration=Duracion | 'delay' delay=Duracion | 'intensity' intensity=Num | 'reduced' reduced=IdTerminal | easing=Easing;
+
+// Numero seguido de su unidad (`ms` o `s`); la unidad se valida al compilar.
+Duracion:
+  amount=Num unit=IdTerminal;
+
+Easing returns string:
+  'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out';
+
+SignedNum returns string:
+  '-'? INT ('.' INT)?;
 
 LayerProp:
   key=Id value=LayerValue;
@@ -310,6 +351,8 @@ Id returns string:
   'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order' |
   'theme' | 'extends' | 'palette' | 'fonts' | 'tokens' |
   'layer' | 'slots' | 'state' | 'part' | 'use' | 'before' | 'after' | 'over' | 'none' | 'mix' |
+  'motion' | 'keyframes' | 'transition' | 'enter' | 'exit' | 'stagger' | 'delay' | 'intensity' | 'reduced' |
+  'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' |
   'model' | 'node' | 'specification';

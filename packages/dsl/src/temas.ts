@@ -22,6 +22,7 @@ import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, TemaResuelto } from 'tema';
 import type { NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeUse } from './generated/ast';
 import { aRango, issueConSugerencia, rangoDeIndice } from './posiciones';
 import { compilarArista, compilarTextoDeSlots } from './temas-arista';
+import { compilarAnimacionDeNodo } from './temas-animacion';
 import { compilarBloque } from './temas-capas';
 import type { ParteDeclarada, Sitio } from './temas-capas';
 
@@ -147,6 +148,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
         textos: { ...origen.nodo.textos },
         tipos: Object.fromEntries(Object.entries(origen.nodo.tipos).map(([tipo, ops]) => [tipo, [...ops]])),
         estados: Object.fromEntries(Object.entries(origen.nodo.estados).map(([estado, ops]) => [estado, [...ops]])),
+        ...(origen.nodo.animacion !== undefined && { animacion: structuredClone(origen.nodo.animacion) }),
       },
       arista: {
         capas: origen.arista.capas.map(copiarCapa),
@@ -224,6 +226,10 @@ function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: Tem
     }
   }
 
+  // Animacion del Nodo: `transition`, `enter`, `exit` y `stagger` (solo pintura, nunca Metricas).
+  const animacion = compilarAnimacionDeNodo(items, tema.nodo.animacion, archivo, issues);
+  if (animacion !== undefined) tema.nodo.animacion = animacion;
+
   // 2) Parches por Tipo de nodo, sobre la pila base.
   const base = tema.nodo.capas as CapaDeTema[];
   for (const item of items) {
@@ -264,7 +270,7 @@ function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: Tem
         message: `Un parche de estado no puede tocar los Slots: '${estado}' nunca relayouta; cambialos en el bloque base`,
       });
     }
-    const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type !== 'ThemeSlots');
+    const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');
     const ops = compilarBloque(capas, { ...contexto, modo: 'parchear', candidatas: sobreTipos });
     for (const op of ops) {
       const razon = opTocaMetricas(op, sobreTipos);

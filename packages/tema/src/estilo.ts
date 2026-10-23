@@ -6,6 +6,7 @@
  */
 import type { Tema } from 'canonico';
 
+import type { Animacion, Efecto, Transicion } from './animacion';
 import { metricasDe, tablaDeMetricas } from './metricas';
 import type { Metricas, TablaDeMetricas } from './metricas';
 import { CATALOGO } from './catalogo';
@@ -23,6 +24,7 @@ export interface CapaPintada {
   props: Record<string, number | string>;
   /** Va sobre el contenido (`over`); sin la clave, bajo el. */
   encima?: true;
+  animacion?: Animacion;
 }
 
 /** Primitiva de marcador o etiqueta con sus colores ya resueltos. */
@@ -45,6 +47,20 @@ export interface PinturaDeNodo {
   /** Estilo de texto de los Slots que lo declaran. */
   textos: Partial<Record<NombreDeSlot, PrimitivaPintada>>;
   estados: Partial<Record<Estado, CapaPintada[]>>;
+  /** Animacion del elemento (no de una Capa); ausente si el Tema no declara ninguna. */
+  animacion?: AnimacionDeNodo;
+}
+
+/**
+ * `transition` base, por estado, `enter`/`exit` y `stagger` del Nodo. Solo
+ * pintura: ninguno de estos valores entra en las Metricas.
+ */
+export interface AnimacionDeNodo {
+  transicion?: Transicion;
+  transicionesDeEstado?: Partial<Record<Estado, Transicion>>;
+  entrada?: Efecto;
+  salida?: Efecto;
+  escalonadoMs?: number;
 }
 
 export interface Pintura {
@@ -95,11 +111,12 @@ function resolverProps(
 
 function pintar(pila: readonly CapaDeTema[], tema: TemaResuelto, colorDelTipo: string | undefined): CapaPintada[] {
   const { paleta, contexto } = contextoDeColor(tema, colorDelTipo);
-  return pila.map(({ nombre, primitiva, encima }) => ({
+  return pila.map(({ nombre, primitiva, encima, animacion }) => ({
     nombre,
     tipo: primitiva.tipo as NombreDePrimitiva,
     props: resolverProps(primitiva, paleta, contexto),
     ...(encima === true && { encima: true as const }),
+    ...(animacion !== undefined && { animacion }),
   }));
 }
 
@@ -155,6 +172,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
       ...(resuelto.tokens.seed !== undefined && { semilla: Number(resuelto.tokens.seed) }),
       nodo: {
         ...pinturaDe(undefined, undefined),
+        ...(resuelto.nodo.animacion !== undefined && { animacion: resuelto.nodo.animacion }),
         tipos: Object.fromEntries(Object.entries(opciones.tipos ?? {}).map(([tipo, color]) => [tipo, pinturaDe(tipo, color)])),
       },
       arista: {

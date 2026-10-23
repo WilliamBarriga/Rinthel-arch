@@ -9,8 +9,9 @@
  */
 import type { CapaPintada, NombreDePrimitivaEn } from 'tema';
 
+import { animacionDeHoja, nombresAnimados } from './animacion';
 import { PINTORES_DE_EFECTOS } from './efectos';
-import { num } from './elemento';
+import { huella, num } from './elemento';
 import { aspectoDeEstado } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { PINTORES_DE_BORDE } from './pintura/borde';
@@ -37,8 +38,9 @@ const SOMBRAS = 'box-shadow';
 
 /** Declaraciones de la caja de un Nodo o Grupo: las Capas de abajo hacia arriba; sin Capas, el aspecto por defecto del Estilo. */
 export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
-  const { capas } = estilo.pintura.nodo;
-  if (capas.length === 0) {
+  const animadas = nombresAnimados(estilo);
+  const capas = estilo.pintura.nodo.capas.filter((capa) => !animadas.has(capa.nombre));
+  if (capas.length === 0 && estilo.pintura.nodo.capas.length === 0) {
     return {
       'border-radius': px(estilo.nodo.radio),
       background: css(estilo.nodo.relleno),
@@ -65,13 +67,6 @@ const bloque = (declaraciones: Declaraciones): string =>
   Object.entries(declaraciones)
     .map(([propiedad, valor]) => `${propiedad}:${valor}`)
     .join(';');
-
-/** FNV-1a de 32 bits, en base 36: identificador corto y estable del contenido. */
-function huella(texto: string): string {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < texto.length; i++) h = Math.imul(h ^ texto.charCodeAt(i), 0x01000193) >>> 0;
-  return h.toString(36);
-}
 
 function declaracionesDeEstado(estilo: Estilo, estado: EstadoVisual): Declaraciones {
   const { color, ancho, trazo, opacidad } = aspectoDeEstado(estilo, estado);
@@ -129,9 +124,10 @@ function reglasDeTexto(estilo: Estilo): Array<[string, Declaraciones]> {
 
 /** Hoja de estilo del Estilo: `clase` es la de alcance que debe llevar el contenedor del dibujo. */
 export function compilarHoja(estilo: Estilo): { clase: string; css: string } {
-  const todas = reglas(estilo);
-  const clase = `rd-${huella(todas.map(([selector, d]) => `${selector}{${bloque(d)}}`).join(''))}`;
+  const animacion = animacionDeHoja(estilo, (capa) => PINTORES[capa.tipo as NombreDePrimitivaEn<'capa-nodo'>](capa.props));
+  const todas = [...reglas(estilo), ...animacion.reglas];
+  const clase = `rd-${huella(todas.map(([selector, d]) => `${selector}{${bloque(d)}}`).join('') + animacion.bloques.join(''))}`;
   const alcance = (selector: string): string => selector.replace(/&/g, `.${clase}`);
-  const texto = todas.map(([selector, d]) => `${selector.split(', ').map(alcance).join(',')}{${bloque(d)}}`).join('\n');
+  const texto = [...todas.map(([selector, d]) => `${selector.split(', ').map(alcance).join(',')}{${bloque(d)}}`), ...animacion.bloques.map(alcance)].join('\n');
   return { clase, css: texto };
 }

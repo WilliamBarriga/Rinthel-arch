@@ -7,10 +7,43 @@
 import { z } from 'zod';
 import type { Tema } from 'canonico';
 
+import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
 import { construirPrimitiva, SLOTS } from './catalogo';
 import type { NombreDeSlot, UbicacionDePrimitiva } from './catalogo';
 import { ESTADOS, aplicarOps, opTocaMetricas, validarOps } from './parches';
 import type { CapaDeTema, OpDeCapa } from './parches';
+
+const easingSchema = z.enum(EASINGS);
+const tiempoSchema = { duracionMs: z.number().min(1).max(60000), easing: easingSchema, retardoMs: z.number().min(0).max(10000) };
+
+/** Movimiento de catalogo o `keyframes` minimos de una Capa (ver `Animacion`). */
+const animacionSchema = z.discriminatedUnion('clase', [
+  z.strictObject({
+    clase: z.literal('movimiento'),
+    movimiento: z.enum(Object.keys(MOVIMIENTOS) as [keyof typeof MOVIMIENTOS, ...Array<keyof typeof MOVIMIENTOS>]),
+    intensidad: z.number().min(0).max(1).optional(),
+    reducido: z.literal('still'),
+    ...tiempoSchema,
+  }),
+  z.strictObject({
+    clase: z.literal('keyframes'),
+    propiedad: z.enum(Object.keys(PROPIEDADES_ANIMABLES) as [keyof typeof PROPIEDADES_ANIMABLES, ...Array<keyof typeof PROPIEDADES_ANIMABLES>]),
+    pasos: z.array(z.strictObject({ en: z.number().min(0).max(100), valor: z.number() })).min(2),
+    reducido: z.literal('still'),
+    ...tiempoSchema,
+  }),
+]);
+
+const transicionSchema = z.strictObject({ duracionMs: tiempoSchema.duracionMs, easing: easingSchema, reducido: z.enum(['fade', 'instant']) });
+const efectoSchema = z.strictObject({ efecto: z.enum(EFECTOS), reducido: z.enum(['fade', 'instant']), ...tiempoSchema });
+
+const animacionDeNodoSchema = z.strictObject({
+  transicion: transicionSchema.optional(),
+  transicionesDeEstado: z.partialRecord(z.enum(ESTADOS), transicionSchema).optional(),
+  entrada: efectoSchema.optional(),
+  salida: efectoSchema.optional(),
+  escalonadoMs: z.number().min(0).max(2000).optional(),
+});
 
 const capaSchema = z.strictObject({
   nombre: z.string().min(1),
@@ -20,6 +53,7 @@ const capaSchema = z.strictObject({
   }),
   /** Sobre el contenido (`over`); sin ella, bajo el contenido. */
   encima: z.literal(true).optional(),
+  animacion: animacionSchema.optional(),
 });
 
 /** Parche de Capa por nombre (ADR 0008): ver `OpDeCapa`. */
@@ -31,6 +65,7 @@ export const opSchema = z.strictObject({
   antes: z.string().min(1).optional(),
   despues: z.string().min(1).optional(),
   encima: z.literal(true).optional(),
+  animacion: animacionSchema.nullable().optional(),
 });
 
 const primitivaSchema = z.strictObject({
@@ -58,6 +93,8 @@ const nodoSchema = z.strictObject({
   tipos: z.record(z.string(), z.array(opSchema)).default({}),
   /** Parches por estado, aplicados sobre la pila base ya parcheada por Tipo. */
   estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
+  /** `transition`, `enter`, `exit` y `stagger` del Nodo; solo pintura. */
+  animacion: animacionDeNodoSchema.optional(),
 });
 
 export const temaResueltoSchema = z

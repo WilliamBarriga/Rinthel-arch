@@ -231,7 +231,7 @@ describe('Diagram', () => {
     expect(opacidadDe(enPaso(1), 'a.a1')).toBeUndefined();
     expect(opacidadDe(enPaso(1), 'b')).toBe('0');
     expect(opacidadDe(enPaso(2), 'b')).toBeUndefined();
-    expect(opacidadDe(enPaso(1.5), 'b')).toBe('0.5');
+    expect(opacidadDe(enPaso(1.5), 'b')).toBe('0');
   });
 
   it('sin estado propio: las mismas props producen el mismo arbol', async () => {

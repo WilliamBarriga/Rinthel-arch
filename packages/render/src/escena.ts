@@ -15,6 +15,7 @@ import type { CajaDeNodo, Geometria } from 'layout';
 import { atributosVisibles, colocarEnCaja, metricasDeHoja } from 'tema';
 import type { Metricas } from 'tema';
 
+import { pintarCapasAnimadas } from './animacion';
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
 import { efectosDeElemento } from './efectos';
@@ -65,6 +66,13 @@ export interface EntradaDeEscena {
   estados?: Estados;
   /** Estilo resuelto con el que dibujar; por defecto el del Tema (`resolverEstilo`). */
   estilo?: Estilo;
+  /**
+   * Interruptor manual de reduced-motion, independiente de la preferencia del sistema:
+   * `on` reduce siempre, `off` nunca; sin el, manda `prefers-reduced-motion`.
+   */
+  reducedMotion?: 'on' | 'off';
+  /** Ids recien revelados (un Paso): el `stagger` de `enter` cuenta solo entre ellos; sin ella, entre todos los visibles. */
+  nuevos?: readonly string[];
 }
 
 interface Contexto extends EntradaDeEscena {
@@ -74,6 +82,8 @@ interface Contexto extends EntradaDeEscena {
   cajas: ReadonlyMap<string, CajaDeNodo>;
   /** Color de Paleta de cada Nodo: el de su Tipo o override; `ORIGEN` de una Arista toma el de su origen. */
   coloresDeNodo: ReadonlyMap<string, string | undefined>;
+  /** Posicion de cada Nodo en el escalonado de `enter`; vacio si el Tema no declara `stagger`. */
+  escalonado: ReadonlyMap<string, number>;
 }
 
 /**
@@ -87,8 +97,9 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
   const { view, geometry, theme, width, height, camera } = entrada;
   const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.metricas);
   const { raices, cajas } = indiceDeGeometria(view, geometry);
+  const visibility = entrada.visibility ?? (() => 1);
   const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));
-  const contexto: Contexto = { ...entrada, visibility: entrada.visibility ?? (() => 1), estilo, cajas, coloresDeNodo };
+  const contexto: Contexto = { ...entrada, visibility, estilo, cajas, coloresDeNodo, escalonado: posicionesDeEscalonado(raices, visibility, estilo, entrada.nuevos) };
   const vista = camera ?? { x: 0, y: 0, width: geometry.width, height: geometry.height };
   const hoja = compilarHoja(estilo);
 
@@ -104,6 +115,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
       class: hoja.clase,
       'data-diagram': '',
       'data-camara': `${num(vista.x)} ${num(vista.y)} ${num(vista.width)} ${num(vista.height)}`,
+      ...(entrada.reducedMotion !== undefined && { 'data-reduced-motion': entrada.reducedMotion }),
       style: `width:${num(width)}px;height:${num(height)}px;`,
     },
     hijos: [
@@ -138,6 +150,20 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
 
 const esGrupo = (nodo: NodoResuelto): boolean => nodo.children.length > 0;
 
+/**
+ * Posicion de cada Nodo visible en el `stagger` de `enter`: en orden de dibujo, entre los
+ * `nuevos` si se dan o entre todos los visibles. Vacio sin `stagger` en el Tema.
+ */
+function posicionesDeEscalonado(raices: readonly NodoResuelto[], visibility: Visibilidad, estilo: Estilo, nuevos?: readonly string[]): Map<string, number> {
+  const posiciones = new Map<string, number>();
+  if (estilo.pintura.nodo.animacion?.escalonadoMs === undefined) return posiciones;
+  const elegidos = nuevos === undefined ? undefined : new Set(nuevos);
+  for (const nodo of raices.flatMap((raiz) => aplanar(raiz))) {
+    if (acotar(visibility(nodo.id)) > 0 && (elegidos === undefined || elegidos.has(nodo.id))) posiciones.set(nodo.id, posiciones.size);
+  }
+  return posiciones;
+}
+
 /** Nodos en preorden (un Grupo antes que sus hijos): el orden de apilado dentro de cada capa. */
 function aplanar(nodo: NodoResuelto): NodoResuelto[] {
   return [nodo, ...nodo.children.flatMap(aplanar)];
@@ -170,12 +196,16 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
           class: grupo ? 'rd-grupo' : 'rd-nodo',
           'data-part': 'nodo',
           ...(nodo.collapsed && { 'data-collapsed': '' }),
-          style: `--trazo:${limpiarValorCss(trazo)};${opacidad(contexto.visibility(nodo.id))}${efectos.nodo}`,
+          ...(acotar(contexto.visibility(nodo.id)) === 0 && { 'data-oculto': '' }),
+          ...((contexto.estados?.[nodo.id]?.length ?? 0) > 0 && { 'data-estados': (contexto.estados?.[nodo.id] ?? []).join(' ') }),
+          style: `--trazo:${limpiarValorCss(trazo)};${contexto.escalonado.has(nodo.id) ? `--rd-n:${contexto.escalonado.get(nodo.id)};` : ''}${opacidad(contexto.visibility(nodo.id))}${efectos.nodo}`,
         },
         ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
         hijos: [
           ...efectos.debajo,
+          ...pintarCapasAnimadas(estilo, false),
           ...(grupo ? pintarGrupo(estilo, datos) : pintarNodo(estilo, { ...datos, conAtributos: tieneFilas(nodo, estilo, detail) })),
+          ...pintarCapasAnimadas(estilo, true),
           ...(onToggle !== undefined && conmutable ? [pintarControl(estilo, { nodo, caja, alClic: () => onToggle(nodo.id) })] : []),
           ...efectos.encima,
         ],
