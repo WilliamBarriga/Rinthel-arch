@@ -13,7 +13,7 @@
  * con que se dibujan. El tamano de cada Nodo sale del texto y de las Metricas
  * (derivadas de `fonts` y `tokens.fontSize`), sin DOM; `opciones.metricas` las
  * sobrescribe (y `render` debe recibir las mismas). `claveDeLayout` dice cuando
- * hace falta relayoutar: cambia con estructura, textos y Metricas, nunca con
+ * hace falta relayoutar: cambia con estructura, textos, Pins y Metricas, nunca con
  * paleta, colores o iconos.
  *
  * Invariantes: determinista (misma entrada, misma geometria); `INCLUDE_CHILDREN`

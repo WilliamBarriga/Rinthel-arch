@@ -284,13 +284,15 @@ function aElk(nodo: NodoResuelto, medidas: Metricas): ElkNode {
 
 /**
  * Clave de cache de la geometria: igual si y solo si el layout no cambia. Entran
- * la estructura visible, los textos y las Metricas (fuentes, tamanos y espaciado); no la paleta, los
- * colores ni los iconos, que no mueven nada.
+ * la estructura visible, los textos, los Pins y las Metricas (fuentes, tamanos y espaciado); no la
+ * paleta, los colores ni los iconos, que no mueven nada. Es la unica respuesta a
+ * "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`.
  */
 export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas = metricasDe(tema)): string {
   return JSON.stringify({
     nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id)]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
+    pins: vista.overrides.flatMap((o) => (o.pin === undefined ? [] : [[o.node, o.pin.x, o.pin.y]])),
     metricas,
   });
 }
