@@ -62,6 +62,11 @@
  * incluido (el HTML de `cli export --format html` es estatico, sin servidor ni
  * watch, y no pasa `themeUpdates`); la historia 35 queda cubierta por el puerto y
  * sus pruebas, y el watch/dev server queda fuera de alcance.
+ *
+ * Accesibilidad (ADR 0008): un boton "Alto contraste" (prop `highContrast` /
+ * `onHighContrastChange`, por defecto `prefers-contrast: more`) reemplaza el Tema
+ * solo en el visor por `alto-contraste`; `legend` (`auto` | `always` | `never`)
+ * dibuja la leyenda derivada del Tema, sola cuando dos Tipos difieren unicamente por color.
  * Arrastre de Nodos (solo bajo `dev`): con `onMoveNode({id, x, y})` los Nodos se arrastran y al
  * soltar avisan su posicion nueva (relativa al Grupo padre, unidades de la geometria; es el
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve

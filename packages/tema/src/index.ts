@@ -32,6 +32,10 @@
  *   sobre una caja ya medida. `layout` y `render` usan lo mismo.
  *   `atributosVisibles` es la regla unica de que Atributos se muestran.
  *
+ * - Accesibilidad: `advertenciasDeContraste(tema, tipos)` (4.5:1 texto, 3:1 graficos, por Tipo y estado),
+ *   `tiposSoloColor` y `leyendaDelTema` (Tipo, forma, color; `necesaria` si hay solo-color) solo calculan:
+ *   que sean warnings y no bloqueen lo decide `sesion`. `TEMA_ALTO_CONTRASTE` es el Tema incorporado del visor.
+ *
  * Invariantes: puro y determinista; sin I/O, reloj, azar ni DOM. Una Capa es
  * una instancia de una Primitiva del catalogo cerrado; el color es siempre un
  * nombre de Paleta. Modos de error: los datos invalidos se devuelven como

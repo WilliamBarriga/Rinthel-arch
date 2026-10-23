@@ -17,6 +17,8 @@ import { Diagram, resolverEstilo } from 'render';
 import type { Camara } from 'render';
 
 import { aCamara, aTransform, compensarCamara, encuadrar, mismaTransform } from './camara';
+import { Leyenda, useAltoContraste } from './accesibilidad';
+import type { ModoDeLeyenda, PropsDeAltoContraste } from './accesibilidad';
 import { PanelDeIssues, Toasts } from './avisos';
 import { EstiloDelChrome, variablesDeChrome } from './chrome';
 import { MAX_NODOS_VISIBLES, alternarGrupo, contarNodosVisibles } from './colapso';
@@ -44,7 +46,9 @@ import type { UmbralesDeDetalle } from './zoom-semantico';
 /** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
 export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema) => Promise<Geometria>;
 
-export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
+export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, PropsDeAltoContraste {
+  /** Leyenda de Tipos derivada del Tema: `auto` (por defecto) solo si dos Tipos difieren unicamente por color. */
+  legend?: ModoDeLeyenda;
   source: FuenteCanonica;
   theme: Tema;
   /** Puerto de recarga de Tema al guardar: recolorea sin relayout salvo que cambien las fuentes. */
@@ -133,7 +137,7 @@ interface PropsDeVistaActiva extends Omit<VistaInteractivaProps, 'view' | 'cache
 
 function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const { source, view, layout, width, height, onError, onSelect, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
-  const theme = useTemaVigente(props.theme, props.themeUpdates);
+  const { tema: theme, interruptor } = useAltoContraste(useTemaVigente(props.theme, props.themeUpdates), props);
   const [state, fijarEstado] = useControlado<EstadoDeColapso>(props.state, {}, props.onStateChange);
   const ajustes = { ...AJUSTES_POR_DEFECTO, ...props.tuning };
   const ajustesVigentes = useRef(ajustes);
@@ -375,6 +379,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
         />
       )}
       {pasos.controles}
+      {interruptor}
+      <Leyenda fuente={source} vista={vista} tema={theme} modo={props.legend ?? 'auto'} />
       {props.migas}
       <PanelDeIssues issues={props.issues ?? []} />
       <Toasts toasts={props.toasts ?? []} />

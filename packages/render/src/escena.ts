@@ -72,6 +72,8 @@ interface Contexto extends EntradaDeEscena {
   estilo: Estilo;
   /** Cajas en coordenadas del lienzo (las de la geometria son relativas al Grupo padre). */
   cajas: ReadonlyMap<string, CajaDeNodo>;
+  /** Nombre accesible de cada Nodo, sacado solo del Modelo (nunca del Tema). */
+  nombres?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -94,6 +96,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
   const tx = (width - vista.width * k) / 2 - vista.x * k;
   const ty = (height - vista.height * k) / 2 - vista.y * k;
   const nodos = raices.flatMap((nodo) => aplanar(nodo));
+  contexto.nombres = nombresAccesibles(view, nodos);
 
   return {
     tag: 'div',
@@ -135,6 +138,30 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
 
 const esGrupo = (nodo: NodoResuelto): boolean => nodo.children.length > 0;
 
+/**
+ * Nombre accesible de cada Nodo (ADR 0008): etiqueta, Tipo y relaciones ("va a" /
+ * "viene de", con la etiqueta de la Arista). Sale solo del Modelo: el Tema no puede
+ * cambiarlo. El SVG de Aristas es decorativo, asi que la relacion se anuncia aqui.
+ */
+function nombresAccesibles(view: VistaResuelta, nodos: readonly NodoResuelto[]): Map<string, string> {
+  const etiqueta = new Map(nodos.map((n) => [n.id, n.label]));
+  const destino = (id: string, arista: AristaResuelta): string => `${etiqueta.get(id) ?? id}${arista.label === undefined ? '' : ` (${arista.label})`}`;
+  return new Map(
+    nodos.map((nodo) => {
+      const sale = view.edges.filter((e) => e.from.node === nodo.id).map((e) => destino(e.to.node, e));
+      const entra = view.edges.filter((e) => e.to.node === nodo.id).map((e) => destino(e.from.node, e));
+      const partes = [
+        nodo.label,
+        nodo.type,
+        ...(nodo.childCount > 0 ? [`grupo con ${nodo.childCount} hijos${nodo.collapsed ? ', colapsado' : ''}`] : []),
+        ...(sale.length > 0 ? [`va a ${sale.join(', ')}`] : []),
+        ...(entra.length > 0 ? [`viene de ${entra.join(', ')}`] : []),
+      ];
+      return [nodo.id, partes.join(', ')];
+    }),
+  );
+}
+
 /** Nodos en preorden (un Grupo antes que sus hijos): el orden de apilado dentro de cada capa. */
 function aplanar(nodo: NodoResuelto): NodoResuelto[] {
   return [nodo, ...nodo.children.flatMap(aplanar)];
@@ -159,7 +186,7 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
 
   return {
     tag: 'div',
-    attrs: { class: 'rd-caja', 'data-id': nodo.id, ...(atenuado(contexto.estados, nodo.id) && { 'data-atenuado': '' }), style: posicion(caja) + efectos.caja },
+    attrs: { class: 'rd-caja', 'data-id': nodo.id, role: 'group', 'aria-label': contexto.nombres?.get(nodo.id) ?? nodo.label, ...(atenuado(contexto.estados, nodo.id) && { 'data-atenuado': '' }), style: posicion(caja) + efectos.caja },
     hijos: [
       {
         tag: 'div',
