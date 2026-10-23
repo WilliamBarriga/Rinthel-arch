@@ -21,6 +21,18 @@ export interface AspectoDeEstado {
   opacidad: number;
 }
 
+export interface EstiloDeTipoDeNodo {
+  relleno?: string;
+  trazo?: string;
+  anchoTrazo?: number;
+  sombra?: { dx: number; dy: number; desenfoque: number; color: string };
+}
+
+export interface EstiloDeTipoDeArista {
+  color?: string;
+  ancho?: number;
+}
+
 export interface Estilo {
   /** Metricas con las que se dibuja; deben ser las del layout. */
   metricas: Metricas;
@@ -36,6 +48,8 @@ export interface Estilo {
     relleno: string;
     /** `stroke-dasharray` de un Grupo colapsado. */
     trazoColapsado: string;
+    /** Tokens por nombre de Tipo de nodo (colores ya resueltos); vacio si el Tema no declara. */
+    porTipo: Record<string, EstiloDeTipoDeNodo>;
   };
   arista: {
     color: string;
@@ -46,6 +60,8 @@ export interface Estilo {
     elevacionCardinalidad: number;
     /** Cuanto se sube la etiqueta sobre el segmento cuando no tiene caja propia. */
     elevacionEtiquetaSinCaja: number;
+    /** Tokens por tipo de Arista (hoy solo `default`, ya que el Modelo no tipa Aristas). */
+    porTipo: Record<string, EstiloDeTipoDeArista>;
   };
   etiqueta: {
     /** Halo del color de fondo para leerse sobre las lineas. */
@@ -78,13 +94,14 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
     fuenteCuerpo: fonts.body,
     fuenteMono: fonts.mono,
     paleta: tema.palette,
-    nodo: { radio: 6, relleno: tokens.background, trazoColapsado: '6 3' },
+    nodo: { radio: 6, relleno: tokens.background, trazoColapsado: '6 3', porTipo: porTipoDeNodo(tema) },
     arista: {
       color: tokens.border,
       flecha: { ancho: 8, alto: 8, forma: 'M 0 0 L 10 5 L 0 10 z' },
       separacionCardinalidad: 8,
       elevacionCardinalidad: 4,
       elevacionEtiquetaSinCaja: 4,
+      porTipo: porTipoDeArista(tema),
     },
     etiqueta: { halo: { color: tokens.background, ancho: 3 }, centradoVertical: 0.35 },
     estados: {
@@ -94,4 +111,30 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
     },
     glifos: { expandido: '-', colapsado: '+' },
   };
+}
+
+/** Nombre de Paleta -> valor; si no es de la Paleta, se toma como literal. */
+const colorDe = (tema: Tema, valor: string): string => tema.palette[valor] ?? valor;
+
+function porTipoDeNodo(tema: Tema): Record<string, EstiloDeTipoDeNodo> {
+  return Object.fromEntries(
+    Object.entries(tema.nodeStyles ?? {}).map(([tipo, t]) => [
+      tipo,
+      {
+        ...(t.fill !== undefined && { relleno: colorDe(tema, t.fill) }),
+        ...(t.stroke !== undefined && { trazo: colorDe(tema, t.stroke) }),
+        ...(t.strokeWidth !== undefined && { anchoTrazo: t.strokeWidth }),
+        ...(t.shadow !== undefined && { sombra: { dx: t.shadow.dx, dy: t.shadow.dy, desenfoque: t.shadow.blur, color: colorDe(tema, t.shadow.color) } }),
+      },
+    ]),
+  );
+}
+
+function porTipoDeArista(tema: Tema): Record<string, EstiloDeTipoDeArista> {
+  return Object.fromEntries(
+    Object.entries(tema.edgeStyles ?? {}).map(([tipo, t]) => [
+      tipo,
+      { ...(t.stroke !== undefined && { color: colorDe(tema, t.stroke) }), ...(t.strokeWidth !== undefined && { ancho: t.strokeWidth }) },
+    ]),
+  );
 }
