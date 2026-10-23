@@ -6,7 +6,8 @@ import { CODIGOS, CODIGOS_DEPRECADOS, DESCRIPCION_DE_CODIGO } from 'canonico';
  * Codigos minimos de v1: la lista del spec #19 escrita desde el spec, no desde
  * el catalogo. Anadir un codigo es un cambio de contrato que se revisa aqui.
  * `E_SYNTAX_ERROR` se anade en el ticket #22: `compile` necesita reportar texto
- * que no cumple la gramatica y el spec no lo listaba.
+ * que no cumple la gramatica y el spec no lo listaba. Los `E_THEME_*` son de la
+ * spec #24 (ADR 0008); `W_UNKNOWN_EDGE_STYLE_TYPE` se depreco con `edgeStyles`.
  */
 const codigosDeV1 = [
   'E_SYNTAX_ERROR',
@@ -27,7 +28,11 @@ const codigosDeV1 = [
   'E_OVERRIDE_OUTSIDE_VIEW',
   'E_UNKNOWN_ICON',
   'W_OVERLAPPING_PINS',
-  'W_UNKNOWN_EDGE_STYLE_TYPE',
+  'E_THEME_UNKNOWN_PRIMITIVE',
+  'E_THEME_UNKNOWN_PROPERTY',
+  'E_THEME_INVALID_VALUE',
+  'E_THEME_UNKNOWN_SLOT',
+  'E_THEME_DUPLICATE_LAYER',
 ];
 
 describe('catalogo de codigos de issue', () => {
@@ -41,6 +46,10 @@ describe('catalogo de codigos de issue', () => {
 
     expect(new Set(historicos).size).toBe(historicos.length);
     expect(activos.filter((codigo) => CODIGOS_DEPRECADOS.includes(codigo))).toEqual([]);
+  });
+
+  it('retira W_UNKNOWN_EDGE_STYLE_TYPE sin reciclar su valor', () => {
+    expect(CODIGOS_DEPRECADOS).toContain('W_UNKNOWN_EDGE_STYLE_TYPE');
   });
 
   it('usa prefijo E_ o W_ y clave igual que valor', () => {
