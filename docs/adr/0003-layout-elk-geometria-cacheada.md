@@ -26,3 +26,8 @@ Medidos con `pnpm bench` sobre el generador sintetico; cada cambio se hizo con l
 ## Enmienda: la clave de cache incluye los Pins (#92, spec #91)
 
 `claveDeLayout` incluye los Pins de la Vista (nodo, x, y): el layout depende de ellos, asi que cambiar solo un Pin cambia la clave y la geometria cacheada anterior deja de ser vigente (`export` la rechaza y pide `build`). La clave es la unica respuesta a "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`; `sesion` ya no agrega un componente de Pins propio. Consecuencia: en el shell, mover un Pin produce una clave nueva y por tanto un relayout (el cache por clave sigue evitando repetir estados ya vistos); optimizar el arrastre continuo queda para el nucleo de interaccion del spec #91.
+
+## Enmienda: mover un Pin no relayouta (#108, spec #91)
+
+`claveDeLayout` sigue incluyendo los Pins (es la respuesta de vigencia para `sesion`, `cli` y `export`), pero el shell ya no repite ELK al moverlos. `layout` expone `claveDeEstructura` (la clave sin Pins) y `aplicarPinsAGeometria` (el paso post-ELK de `layoutView`, sincrono y con el mismo resultado). La cache del shell guarda la geometria sin Pins por clave de estructura; al llegar una Vista con otros Pins se aplican sobre la geometria cacheada, sin llamar al adaptador. Al adaptador se le pide siempre la Vista sin Pins. La cache ya no se descarta al cambiar la Fuente (la clave de estructura cubre lo que mueve ELK); solo al cambiar el adaptador.
+

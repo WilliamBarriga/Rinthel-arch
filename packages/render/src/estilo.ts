@@ -41,6 +41,8 @@ export interface Estilo {
   borde: string;
   fuenteCuerpo: string;
   fuenteMono: string;
+  /** Color de los avisos de error del chrome: el token `error` del Tema o, si falta, un rojo por defecto. */
+  colorDeError: string;
   /** Nombre de Paleta -> valor. */
   paleta: Record<string, string>;
   nodo: {
@@ -95,6 +97,7 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
     borde: tokens.border,
     fuenteCuerpo: fonts.body,
     fuenteMono: fonts.mono,
+    colorDeError: tema.tokens['error'] ?? COLOR_DE_ERROR_POR_DEFECTO,
     paleta: tema.palette,
     nodo: { radio: 6, relleno: tokens.background, trazoColapsado: '6 3', regionDeSombra: { origen: '-20%', tamano: '150%' }, porTipo: porTipoDeNodo(tema) },
     arista: {
@@ -114,6 +117,8 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
     glifos: { expandido: '-', colapsado: '+' },
   };
 }
+
+const COLOR_DE_ERROR_POR_DEFECTO = '#dc2626';
 
 /** Nombre de Paleta -> valor; si no es de la Paleta, se toma como literal. */
 const colorDe = (tema: Tema, valor: string): string => tema.palette[valor] ?? valor;

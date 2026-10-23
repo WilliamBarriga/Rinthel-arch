@@ -36,6 +36,13 @@ Umbral de arrastre (3 px), tolerancia de acierto de Aristas (4 px), escala minim
 
 `IntencionDePinEnviada` (alias de `IntencionDePin`) se elimina de `enviar-pin.ts` y de `index.ts`. Nadie en el repo lo usa; `IntencionDePin` sigue reexportada desde `shell`.
 
+## Hooks de arrastre y seleccion (ticket #109)
+
+`VistaActiva` delega dos responsabilidades en hooks, sin cambiar comportamiento:
+
+- `arrastre.ts`: `useArrastre` (gesto de raton de Nodos bajo `dev`, posicion provisional `desplazado`, bandera `arrastrando` para ignorar el clic posterior) e `idDeNodoBajo`.
+- `seleccion.ts`: `useSeleccion` (Seleccion controlada por id o propia, `estados` para el render y `pulsar`).
+
 ## Fuera de alcance
 
-Trocear `VistaActiva` en hooks de arrastre y de seleccion, y recortar el comentario de `index.ts` que duplica el JSDoc de los props, no se hacen aqui: el ticket pide un mecanismo de controlados, la separacion por archivos de colapso/camara/morph, configuracion y reloj.
+Recortar el comentario de `index.ts` que duplica el JSDoc de los props no se hace aqui.

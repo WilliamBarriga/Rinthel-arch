@@ -17,6 +17,15 @@ describe('resolverEstilo', () => {
     expect(estilo.paleta['blue']).toBe('#2563eb');
   });
 
+  it('el color de error es el token `error` del Tema, con un rojo por defecto, y no depende del estado fantasma', () => {
+    const propio = resolverEstilo({ ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, error: '#aa0000' } });
+    const porDefecto = resolverEstilo(TEMA_NEUTRO);
+
+    expect(propio.colorDeError).toBe('#aa0000');
+    expect(porDefecto.colorDeError).toBe('#dc2626');
+    expect(porDefecto.colorDeError).not.toBe(porDefecto.estados.fantasma.color);
+  });
+
   it('trae los defaults de dibujo en un solo sitio', () => {
     const estilo = resolverEstilo(TEMA_NEUTRO);
 

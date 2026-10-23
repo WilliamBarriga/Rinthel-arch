@@ -16,7 +16,8 @@
  * Camara: controlada con `camera` + `onCameraChange` (el padre decide; si
  * ignora el aviso, la camara no se mueve) o interna si no se pasa `camera`.
  * Pan y zoom los da d3-zoom (arrastre, rueda, tactil); escala entre 0.05 y 16.
- * Seleccion: `selected` controlada o interna; `onSelect(id)` al pulsar un Nodo, una Arista,
+ * Seleccion: `selected` (un id) o `selection` (varios ids, manda sobre `selected`) controladas, o interna;
+ * `onSelectionChange(ids)` avisa la Seleccion completa tras cada clic (tambien al quitar o vaciar); `onSelect(id)` al pulsar un Nodo, una Arista,
  * su etiqueta o la fila de un Atributo (`nodo#atributo`); la marca la dibuja `render` (prop
  * `estados`, estado `seleccionado`, con `data-selected="<id>"`); el shell no pinta overlays propios.
  * Chrome (pasos, breadcrumbs): clases `rd-*` y variables CSS `--rd-fondo|texto|borde|acento|fuente`
@@ -28,6 +29,8 @@
  * devuelve el `ElementoSeleccionable` superior (`{tipo: nodo|arista|etiqueta|atributo, id}`) o
  * `undefined`; `cajaDeElemento` da su caja en el lienzo; `seleccionar(seleccion, elemento, modo)`
  * (`reemplazar|agregar|quitar|alternar`) es el reductor de la `Seleccion`, inmutable.
+ * Hover y fantasma: el raton sobre un elemento lo dibuja en `hover`; el Nodo que se arrastra, en `fantasma`.
+ * `issues` y `toasts` se dibujan dentro del lienzo con clases `rd-*` y las variables del Tema.
  * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con
  * `onStepChange`, o interno desde `defaultStep`, 0 por defecto) se pasa por
  * `revealAt` y se dibujan controles anterior/siguiente; la geometria no cambia.
