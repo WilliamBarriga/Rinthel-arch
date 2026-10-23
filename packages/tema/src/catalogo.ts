@@ -3,12 +3,17 @@
  * la validacion, los mensajes y, mas adelante, `inspect` y la tabla de docs.
  * Anadir una Primitiva es una entrada aqui (mas su pintor en `render`).
  *
- * Esta rebanada trae tres Primitivas (una por Familia) y dos Slots; el resto
- * del catalogo llega por Familia en tickets posteriores.
+ * `rect`, `solid` y `border` viven aqui; el resto de las Familias forma, relleno
+ * y borde estan en `familias/`, un archivo por Familia, y se suman al registro.
  */
 import { CODIGOS, candidatosCercanos } from 'canonico';
 
+import { CATALOGO_DE_EFECTOS } from './catalogo-efectos';
+import type { FamiliaDeEfectos } from './catalogo-efectos';
 import { validarColor } from './color';
+import { BORDES } from './familias/borde';
+import { FORMAS } from './familias/forma';
+import { RELLENOS } from './familias/relleno';
 
 /** Valor de una propiedad de Primitiva: numero con rango, o color (nombre de Paleta). */
 export type DefinicionDePropiedad =
@@ -16,10 +21,12 @@ export type DefinicionDePropiedad =
   | { readonly tipo: 'color' };
 
 export interface DefinicionDePrimitiva {
-  readonly familia: 'forma' | 'relleno' | 'borde';
+  readonly familia: 'forma' | 'relleno' | 'borde' | FamiliaDeEfectos;
   readonly propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
   /** Si cambia la caja o los Slots (Metricas). Por defecto una Primitiva solo pinta. */
   readonly afectaMetricas: boolean;
+  /** Regla de caja minima que exige la forma; sin ella, cualquier caja sirve. */
+  readonly cajaMinima?: 'cuadrado';
 }
 
 export const CATALOGO = {
@@ -30,6 +37,10 @@ export const CATALOGO = {
     afectaMetricas: false,
     propiedades: { color: { tipo: 'color' }, width: { tipo: 'numero', min: 1, max: 16, defecto: 1 } },
   },
+  ...FORMAS,
+  ...RELLENOS,
+  ...BORDES,
+  ...CATALOGO_DE_EFECTOS,
 } as const satisfies Record<string, DefinicionDePrimitiva>;
 
 export type NombreDePrimitiva = keyof typeof CATALOGO;

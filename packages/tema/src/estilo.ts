@@ -48,6 +48,8 @@ export interface AnimacionDeNodo {
 }
 
 export interface Pintura {
+  /** `seed N` del Tema (token `seed`); sin el, la semilla de cada Capa sale solo del id y del nombre. */
+  semilla?: number;
   /** Reposo y estados del Nodo sin Tipo, y los de cada Tipo de nodo pedido en `OpcionesDeEstilo.tipos`. */
   nodo: PinturaDeNodo & { tipos: Record<string, PinturaDeNodo> };
 }
@@ -111,6 +113,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
   return {
     metricas: metricasDe(tema),
     pintura: {
+      ...(resuelto.tokens.seed !== undefined && { semilla: Number(resuelto.tokens.seed) }),
       nodo: {
         ...pinturaDe(undefined, undefined),
         ...(resuelto.nodo.animacion !== undefined && { animacion: resuelto.nodo.animacion }),

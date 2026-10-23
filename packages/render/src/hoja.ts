@@ -7,25 +7,33 @@
  * `PINTORES` es la tabla exhaustiva Primitiva -> pintor: anadir una Primitiva al
  * catalogo de `tema` sin pintor aqui rompe el typecheck.
  */
-import type { CapaPintada, NombreDePrimitiva } from 'tema';
+import type { NombreDePrimitiva } from 'tema';
 
 import { animacionDeHoja, nombresAnimados } from './animacion';
-import { huella, limpiarValorCss, num } from './elemento';
+import { PINTORES_DE_EFECTOS } from './efectos';
+import { huella, num } from './elemento';
 import type { EstadoVisual, Estilo } from './estilo';
+import { PINTORES_DE_BORDE } from './pintura/borde';
+import { FONDOS_ACUMULABLES, css, px } from './pintura/comun';
+import type { Declaraciones, Pintor } from './pintura/comun';
+import { PINTORES_DE_FORMA } from './pintura/forma';
+import { PINTORES_DE_RELLENO } from './pintura/relleno';
 
-/** Declaraciones CSS de una Capa: propiedad -> valor. */
-export type Declaraciones = Record<string, string>;
-export type Pintor = (props: CapaPintada['props']) => Declaraciones;
-
-const px = (valor: number | string | undefined): string => `${num(Number(valor))}px`;
-const css = (valor: number | string | undefined): string => limpiarValorCss(String(valor));
+export type { Declaraciones, Pintor };
 
 /** Un pintor por Primitiva del catalogo. El trazo puede venir de la variable `--trazo` del Nodo (su color de Tipo). */
 export const PINTORES: { readonly [P in NombreDePrimitiva]: Pintor } = {
   rect: ({ radius }) => ({ 'border-radius': px(radius) }),
   solid: ({ color }) => ({ background: css(color) }),
   border: ({ color, width }) => ({ border: `${px(width)} solid var(--trazo, ${css(color)})` }),
+  ...PINTORES_DE_FORMA,
+  ...PINTORES_DE_RELLENO,
+  ...PINTORES_DE_BORDE,
+  ...PINTORES_DE_EFECTOS,
 };
+
+/** Sombras (box-shadow): se apilan separadas por coma y la ultima Capa queda encima (va primero en CSS). */
+const SOMBRAS = 'box-shadow';
 
 /** Declaraciones de la caja de un Nodo o Grupo: las Capas de abajo hacia arriba; sin Capas, el aspecto por defecto del Estilo. */
 export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
@@ -38,7 +46,20 @@ export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
       border: `1px solid var(--trazo, ${css(estilo.borde)})`,
     };
   }
-  return Object.assign({}, ...capas.map((capa) => PINTORES[capa.tipo](capa.props)));
+  const declaraciones: Declaraciones = {};
+  const acumulados: Record<string, string[]> = {};
+  const sombras: string[] = [];
+  for (const capa of capas) {
+    for (const [propiedad, valor] of Object.entries(PINTORES[capa.tipo](capa.props))) {
+      if (propiedad === SOMBRAS) sombras.unshift(valor);
+      else if ((FONDOS_ACUMULABLES as readonly string[]).includes(propiedad)) (acumulados[propiedad] ??= []).push(valor);
+      else declaraciones[propiedad] = valor;
+    }
+  }
+  // Al final y en orden fijo: el relleno solido (`background`, que reinicia las imagenes) no puede pisar los patrones.
+  for (const propiedad of FONDOS_ACUMULABLES) if (acumulados[propiedad] !== undefined) declaraciones[propiedad] = acumulados[propiedad].join(',');
+  if (sombras.length > 0) declaraciones[SOMBRAS] = sombras.join(', ');
+  return declaraciones;
 }
 
 const bloque = (declaraciones: Declaraciones): string =>
@@ -68,6 +89,8 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-caja', { position: 'absolute', left: '0', top: '0', contain: 'layout style' }],
     ['& .rd-nodo, & .rd-grupo', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'auto', ...caja }],
     ['& .rd-nodo[data-collapsed]', { 'border-style': 'dashed' }],
+    ['& .rd-cinta', { position: 'absolute', 'pointer-events': 'none' }],
+    ['& .rd-defs', { position: 'absolute', 'pointer-events': 'none' }],
     ['& .rd-slot', { position: 'absolute', overflow: 'hidden', 'white-space': 'nowrap', 'text-overflow': 'ellipsis', 'box-sizing': 'border-box' }],
     ['& .rd-title', { 'text-align': 'center' }],
     ['& .rd-encabezado', { 'text-align': 'left' }],

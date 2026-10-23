@@ -18,6 +18,7 @@ import type { Metricas } from 'tema';
 import { pintarCapasAnimadas } from './animacion';
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
+import { efectosDeElemento } from './efectos';
 import { resolverEstilo } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { compilarHoja } from './hoja';
@@ -180,10 +181,11 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
   const texto = nodo.collapsed ? `${nodo.label} (${nodo.childCount})` : nodo.label;
   const datos = { nodo, caja, trazo, texto, icons };
   const conmutable = grupo || (nodo.collapsed && nodo.link === undefined);
+  const efectos = efectosDeElemento(estilo, nodo.id);
 
   return {
     tag: 'div',
-    attrs: { class: 'rd-caja', 'data-id': nodo.id, style: posicion(caja) },
+    attrs: { class: 'rd-caja', 'data-id': nodo.id, style: posicion(caja) + efectos.caja },
     hijos: [
       {
         tag: 'div',
@@ -193,14 +195,16 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
           ...(nodo.collapsed && { 'data-collapsed': '' }),
           ...(acotar(contexto.visibility(nodo.id)) === 0 && { 'data-oculto': '' }),
           ...((contexto.estados?.[nodo.id]?.length ?? 0) > 0 && { 'data-estados': (contexto.estados?.[nodo.id] ?? []).join(' ') }),
-          style: `--trazo:${limpiarValorCss(trazo)};${contexto.escalonado.has(nodo.id) ? `--rd-n:${contexto.escalonado.get(nodo.id)};` : ''}${opacidad(contexto.visibility(nodo.id))}`,
+          style: `--trazo:${limpiarValorCss(trazo)};${contexto.escalonado.has(nodo.id) ? `--rd-n:${contexto.escalonado.get(nodo.id)};` : ''}${opacidad(contexto.visibility(nodo.id))}${efectos.nodo}`,
         },
         ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
         hijos: [
+          ...efectos.debajo,
           ...pintarCapasAnimadas(estilo, false),
           ...(grupo ? pintarGrupo(estilo, datos) : pintarNodo(estilo, { ...datos, conAtributos: tieneFilas(nodo, estilo, detail) })),
           ...pintarCapasAnimadas(estilo, true),
           ...(onToggle !== undefined && conmutable ? [pintarControl(estilo, { nodo, caja, alClic: () => onToggle(nodo.id) })] : []),
+          ...efectos.encima,
         ],
       },
       ...estadosDeNodo(nodo, caja, contexto),
