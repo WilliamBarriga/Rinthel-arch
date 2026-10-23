@@ -8,6 +8,7 @@ import { CODIGOS } from 'canonico';
 
 import { construirPrimitiva, sugerir } from './catalogo';
 import type { ErrorDeCatalogo, Primitiva } from './catalogo';
+import type { Animacion } from './animacion';
 
 /** Estados de la cascada; `foco` y `en-ruta` los calcula la shell, el Tema solo decide como se ven. */
 export const ESTADOS = ['hover', 'seleccionado', 'fantasma', 'en-ruta', 'atenuado', 'foco'] as const;
@@ -18,6 +19,8 @@ export interface CapaDeTema {
   nombre: string;
   primitiva: Primitiva;
   encima?: true;
+  /** Movimiento o `keyframes` de la Capa; nunca cambia las Metricas. */
+  animacion?: Animacion;
 }
 
 /** Un parche de Capa tal como se escribe: ya con `$token` resueltos y la Capa por nombre. */
@@ -27,6 +30,8 @@ export interface OpDeCapa {
   /** Si se da, sustituye la Primitiva de la Capa; si no, `props` se mezcla sobre las vigentes. */
   primitiva?: string;
   props: Record<string, string | number>;
+  /** Animacion ya validada de la Capa; `null` la quita (`motion none`), sin la clave se conserva. */
+  animacion?: Animacion | null;
   antes?: string;
   despues?: string;
   encima?: true;
@@ -110,7 +115,8 @@ export function aplicarOps(
     if (primitiva === undefined) return;
 
     const encima = op.encima === true || existente?.encima === true;
-    const nueva: CapaDeTema = { nombre: op.nombre, primitiva, ...(encima && { encima: true as const }) };
+    const animacion = op.animacion === undefined ? existente?.animacion : (op.animacion ?? undefined);
+    const nueva: CapaDeTema = { nombre: op.nombre, primitiva, ...(encima && { encima: true as const }), ...(animacion !== undefined && { animacion }) };
     if (existente !== undefined) capas.splice(actual, 1);
     const sitio = destino === undefined ? (actual >= 0 ? actual : capas.length) : indiceDe(destino) + (lado === 'despues' ? 1 : 0);
     capas.splice(sitio, 0, nueva);

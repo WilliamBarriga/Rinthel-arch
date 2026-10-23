@@ -41,6 +41,13 @@
  * con el aspecto de `estilo.estados` (`data-state`, estilado por la hoja; el seleccionado lleva tambien `data-selected`).
  * Un id que no esta dibujado se ignora. Es la unica via de resaltado: el shell no pinta overlays propios.
  *
+ * Animacion (ADR 0008): el Estilo resuelto compila a CSS nativo. Una Capa con Movimiento o
+ * `keyframes` se dibuja como elemento propio `.rd-anim`; `transition`, `enter`, `exit` y
+ * `stagger` salen de atributos del Nodo (`data-estados`, `data-oculto`, `--rd-n`). La politica
+ * de reduced-motion esta en un unico punto (media query del sistema mas el interruptor
+ * `reducedMotion: 'on' | 'off'` de `Diagram`); `nuevos` acota el `stagger` a lo recien revelado.
+ * Lo animado solo toca propiedades pintadas o componibles: nunca provoca relayout.
+ *
  * Invariantes: sin estado ni efectos (mismas props, mismo arbol); determinista
  * byte a byte en el marcado; los colores salen solo del Tema, por nombre de Paleta
  * (ADR 0002); sin dependencia de Next, Tailwind ni json-render. Peer React 18 y 19.

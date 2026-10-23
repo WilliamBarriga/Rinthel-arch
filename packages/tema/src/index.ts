@@ -25,6 +25,11 @@
  *   devuelve todos los errores a la vez con el indice del parche y la Capa base
  *   que tocan; `validarOps` lo prueba contra varias pilas posibles. `cascada`
  *   da la pila para un Tipo, estado y override de la Vista (el ultimo gana).
+ * - Animacion: `construirMovimiento`, `construirKeyframes`, `construirTransicion`,
+ *   `construirEfecto`, `construirEscalonado` y `duracionEnMs` validan la animacion declarativa
+ *   (catalogo `MOVIMIENTOS`, `EFECTOS`, `PROPIEDADES_ANIMABLES`) y rellenan defectos; una Capa
+ *   lleva `animacion` y `pintura.nodo.animacion` trae `transition`/`enter`/`exit`/`stagger`.
+ *   Nada animado entra en las Metricas.
  * - Color: `validarColor` / `resolverColor` (nombre, `nombre/alfa`, `mix(a, b, t)`,
  *   `COLOR`, `ORIGEN`); `resolverTokens` sustituye `$token` por numeros.
  * - Slots: `colocarNodo(titulo, atributos, metricas)` da el tamano de caja y el
@@ -47,8 +52,10 @@ export type { Metricas } from './metricas';
 export { colocarEnCaja, colocarNodo } from './slots';
 export type { ColocacionDeNodo, Rect } from './slots';
 export { cascada, estiloResuelto } from './estilo';
-export type { CapaPintada, EstiloResuelto, OpcionesDeEstilo, Pintura, PinturaDeNodo } from './estilo';
+export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, OpcionesDeEstilo, Pintura, PinturaDeNodo } from './estilo';
 export { aplicarOps, ESTADOS, validarOps } from './parches';
 export type { CapaDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa } from './parches';
 export { resolverColor, validarColor } from './color';
 export type { ContextoDeColor, ErrorDeColor } from './color';
+export { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES, construirEfecto, construirEscalonado, construirKeyframes, construirMovimiento, construirTransicion, duracionEnMs } from './animacion';
+export type { Animacion, Easing, Efecto, KeyframesDeCapa, Movimiento, NombreDeEfecto, NombreDeMovimiento, ParametroDeAnimacion, PasoDeKeyframes, PropiedadAnimable, Reducido, Transicion } from './animacion';

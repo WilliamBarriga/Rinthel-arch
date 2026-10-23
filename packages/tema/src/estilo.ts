@@ -6,6 +6,7 @@
  */
 import type { Tema } from 'canonico';
 
+import type { Animacion, Efecto, Transicion } from './animacion';
 import { metricasDe } from './metricas';
 import type { Metricas } from './metricas';
 import { CATALOGO } from './catalogo';
@@ -23,12 +24,27 @@ export interface CapaPintada {
   props: Record<string, number | string>;
   /** Va sobre el contenido (`over`); sin la clave, bajo el. */
   encima?: true;
+  animacion?: Animacion;
 }
 
 /** Pila de un Nodo por estado: `capas` es el reposo; cada estado declarado trae su pila completa. */
 export interface PinturaDeNodo {
   capas: CapaPintada[];
   estados: Partial<Record<Estado, CapaPintada[]>>;
+  /** Animacion del elemento (no de una Capa); ausente si el Tema no declara ninguna. */
+  animacion?: AnimacionDeNodo;
+}
+
+/**
+ * `transition` base, por estado, `enter`/`exit` y `stagger` del Nodo. Solo
+ * pintura: ninguno de estos valores entra en las Metricas.
+ */
+export interface AnimacionDeNodo {
+  transicion?: Transicion;
+  transicionesDeEstado?: Partial<Record<Estado, Transicion>>;
+  entrada?: Efecto;
+  salida?: Efecto;
+  escalonadoMs?: number;
 }
 
 export interface Pintura {
@@ -67,7 +83,7 @@ export function cascada(tema: TemaResuelto, nivel: { tipo?: string; estado?: Est
 function pintar(pila: readonly CapaDeTema[], tema: TemaResuelto, colorDelTipo: string | undefined): CapaPintada[] {
   const paleta = { ...tema.palette, [COLOR_DE_RESPALDO]: tema.tokens.border };
   const contexto = { color: colorDelTipo !== undefined && Object.hasOwn(tema.palette, colorDelTipo) ? colorDelTipo : COLOR_DE_RESPALDO };
-  return pila.map(({ nombre, primitiva, encima }) => {
+  return pila.map(({ nombre, primitiva, encima, animacion }) => {
     const definicion: DefinicionDePrimitiva = CATALOGO[primitiva.tipo as NombreDePrimitiva];
     const props = Object.fromEntries(
       Object.entries(primitiva.props).map(([clave, valor]) => [
@@ -75,7 +91,7 @@ function pintar(pila: readonly CapaDeTema[], tema: TemaResuelto, colorDelTipo: s
         definicion.propiedades[clave]?.tipo === 'color' ? resolverColor(String(valor), paleta, contexto) : valor,
       ]),
     );
-    return { nombre, tipo: primitiva.tipo as NombreDePrimitiva, props, ...(encima === true && { encima: true as const }) };
+    return { nombre, tipo: primitiva.tipo as NombreDePrimitiva, props, ...(encima === true && { encima: true as const }), ...(animacion !== undefined && { animacion }) };
   });
 }
 
@@ -97,6 +113,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
     pintura: {
       nodo: {
         ...pinturaDe(undefined, undefined),
+        ...(resuelto.nodo.animacion !== undefined && { animacion: resuelto.nodo.animacion }),
         tipos: Object.fromEntries(Object.entries(opciones.tipos ?? {}).map(([tipo, color]) => [tipo, pinturaDe(tipo, color)])),
       },
     },

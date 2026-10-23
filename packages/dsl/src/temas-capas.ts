@@ -13,6 +13,7 @@ import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa } from 'tema';
 
 import type { PartDecl, ThemeLayer, ThemeUse } from './generated/ast';
 import { issueConSugerencia, rangoDe } from './posiciones';
+import { compilarAnimacionDeCapa } from './temas-animacion';
 
 /** Donde se definio por ultima vez una Capa de la pila base; sirve de `related`. */
 export interface Sitio {
@@ -107,7 +108,12 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
     return false;
   });
 
-  const compiladas = unicos.map((elemento) => ({ elemento, ...aOp(elemento, ctx) }));
+  const compiladas = unicos.map((elemento) => {
+    const delOp = aOp(elemento, ctx);
+    const animada = compilarAnimacionDeCapa(elemento.item, elemento.archivo, ctx.issues);
+    if (animada.animacion !== undefined) delOp.op.animacion = animada.animacion;
+    return { elemento, ...delOp, animacionFalla: animada.fallo };
+  });
   const issueDe = (elemento: Elemento, error: ErrorDeCatalogo, donde: 'nombre' | 'ubicacion' | 'propiedad', baseDeError?: string): Issue => {
     const { item, archivo } = elemento;
     const prop = error.clave === undefined ? undefined : item.props.find(({ key }) => key === error.clave);
@@ -134,6 +140,9 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
   }
   const ops = compiladas.map(({ op }) => op);
   const fallidas = new Set<number>();
+  compiladas.forEach(({ animacionFalla }, i) => {
+    if (animacionFalla) fallidas.add(i);
+  });
   for (const error of validarOps(ctx.candidatas, ops, ctx.paleta, ctx.modo)) {
     fallidas.add(error.indice);
     ctx.issues.push(issueDe((compiladas[error.indice] as { elemento: Elemento }).elemento, error, error.donde, error.base));

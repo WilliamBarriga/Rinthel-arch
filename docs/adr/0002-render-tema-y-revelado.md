@@ -8,7 +8,7 @@ El render es una funcion pura de geometria y Estilo resuelto a una vista React, 
 
 ### Contrato del componente
 
-Props: `geometry` (salida del layout de una Vista), `width` y `height` en px, el Tema ya resuelto, `visibility: (id) => 0..1` para Nodos y Aristas, `camera`/`viewBox` controlado, `onToggle` y `onSelect`. Sin dependencia de Next, Tailwind ni json-render; peer React 18 y 19.
+Props: `geometry` (salida del layout de una Vista), `width` y `height` en px, el Tema ya resuelto, `visibility: (id) => number` para Nodos y Aristas (0 oculto, 1 revelado; ver la decision de `visibility` en Pasos de revelado), `camera`/`viewBox` controlado, `onToggle` y `onSelect`. Sin dependencia de Next, Tailwind ni json-render; peer React 18 y 19.
 
 - **Colapso por `view`, no por `expanded`**: el estado de colapso vive en la Vista resuelta (`resolveView(fuente, id, { expanded, collapsed })`), que decide que Nodos existen y con que Aristas elevadas. Duplicarlo en una prop daria dos fuentes de verdad. `onToggle(id)` solo avisa de que se pulso el control de un Grupo (que se dibuja si hay `onToggle`); quien controla el estado vuelve a resolver la Vista y a calcular el layout.
 - El culling con miles de Nodos se resuelve con colapso y filtrado por viewport en el shell.
@@ -41,8 +41,16 @@ view overview {
 ### Consecuencias
 
 - El layout de ELK se calcula una vez con todos los elementos de la Vista; los pasos solo cambian visibilidad, nunca geometria. No hay relayout por paso ni saltos de posicion; el costo es espacio vacio reservado en los primeros pasos.
-- Una funcion pura `revealAt(view, position: number)` convierte un paso en el `visibility(id)` del contrato de render: entero da 0/1, fraccion interpola con fundido. Los consumidores no reimplementan la logica.
+- Una funcion pura `revealAt(view, position: number)` convierte un paso en el `visibility(id)` del contrato de render: da siempre 0 o 1 y una fraccion cuenta como su parte entera. Los consumidores no reimplementan la logica.
 - Sin `steps`, todo esta revelado. Un Grupo colapsado cuenta como visible si algun hijo esta revelado.
 - El shell ofrece anterior/siguiente; el paso actual vive en el hash de URL, como el drill-down.
 - Los codigos de error de validacion cubren pasos con ids o selectores inexistentes.
 - Un Paso solo dispara la animacion `enter` de lo recien revelado (ADR 0008); sigue sin cambiar posicion.
+
+### Decision: la visibilidad continua `0..1` se elimina del revelado (ticket de animacion)
+
+Un Paso solo cambia que esta revelado; no tiene mecanismo de animacion propio (ADR 0008): lo recien revelado dispara el `enter` del Tema y lo que se oculta, su `exit`, ambos en CSS nativo. Por eso:
+
+- `revealAt` ya no interpola: devuelve 0 o 1 y una posicion fraccionaria aplica el paso entero anterior. El fundido entre pasos es del Tema (`enter`/`exit`, con `stagger`), no de un numero continuo.
+- El render distingue oculto (`visibility` 0, atributo `data-oculto`, sin clics) de visible; la entrada es la animacion `enter` del elemento que deja de estar oculto, y la salida la transicion `exit` hacia `data-oculto`. Sin `enter`/`exit` en el Tema el cambio es instantaneo. La prop opcional `nuevos` de `Diagram` acota el `stagger` a lo recien revelado.
+- El tipo `Visibilidad` sigue devolviendo `number` y el render sigue pintando una opacidad intermedia si la recibe: no rompe a la shell, cuyo morph de layout (animacion de layout, que el ADR 0008 deja al codigo y no a lo declarativo) la usa para fundir Nodos que aparecen al cambiar de Vista. Nada del flujo de Pasos ni del DSL produce ya valores intermedios.

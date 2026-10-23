@@ -57,12 +57,12 @@ describe('revealAt', () => {
     expect(revealAt(v, -3)('b')).toBe(0);
   });
 
-  it('una fraccion interpola con fundido entre los pasos adyacentes', () => {
+  it('la visibilidad es siempre 0 o 1: una fraccion no interpola, aplica el paso entero anterior', () => {
     const v = vista({ steps: [paso('uno', mostrar('b')), paso('dos', mostrar('c'))] });
 
-    expect(revealAt(v, 0.25)('b')).toBeCloseTo(0.25);
-    expect(revealAt(v, 1.5)('c')).toBeCloseTo(0.5);
-    expect(revealAt(v, 1.5)('b')).toBe(1);
+    expect(['b', 'c'].map(revealAt(v, 0.25))).toEqual([0, 0]);
+    expect(['b', 'c'].map(revealAt(v, 1.5))).toEqual([1, 0]);
+    expect(['b', 'c'].map(revealAt(v, 1.99))).toEqual([1, 0]);
   });
 
   it('lo anterior sigue visible (acumulativo) y hide lo oculta', () => {
