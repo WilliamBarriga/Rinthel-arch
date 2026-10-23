@@ -6,8 +6,9 @@
  */
 import { CODIGOS } from 'canonico';
 
-import { construirPrimitiva, sugerir } from './catalogo';
-import type { ErrorDeCatalogo, Primitiva } from './catalogo';
+import { CATALOGO, construirPrimitiva, sugerir } from './catalogo';
+import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva } from './catalogo';
+import type { TemaResuelto } from './tema';
 
 /** Estados de la cascada; `foco` y `en-ruta` los calcula la shell, el Tema solo decide como se ven. */
 export const ESTADOS = ['hover', 'seleccionado', 'fantasma', 'en-ruta', 'atenuado', 'foco'] as const;
@@ -137,4 +138,33 @@ export function validarOps(
     if (mejor.length === 0) break;
   }
   return mejor ?? [];
+}
+
+/**
+ * Pila de Capas tras la cascada: Tema base, Tipo de nodo, estado, override de la
+ * Vista; el ultimo gana. Un parche que no encuentra su Capa en esta pila (p. ej.
+ * una Capa que solo anade otro Tipo) no aplica a ella: `validate` ya lo acepto
+ * por existir en alguna.
+ */
+export function cascada(tema: Pick<TemaResuelto, 'palette' | 'nodo'>, nivel: { tipo?: string; estado?: Estado; vista?: readonly OpDeCapa[] } = {}): CapaDeTema[] {
+  const aplicar = (pila: CapaDeTema[], ops: readonly OpDeCapa[] | undefined): CapaDeTema[] =>
+    ops === undefined || ops.length === 0 ? pila : aplicarOps(pila, ops, tema.palette, 'parchear').pila;
+  const porTipo = aplicar(tema.nodo.capas as CapaDeTema[], nivel.tipo === undefined ? undefined : tema.nodo.tipos[nivel.tipo]);
+  const porEstado = aplicar(porTipo, nivel.estado === undefined ? undefined : tema.nodo.estados[nivel.estado]);
+  return aplicar(porEstado, nivel.vista);
+}
+
+/**
+ * Por que un parche de estado toca las Metricas, o `undefined` si solo pinta. Toca si
+ * introduce una Primitiva que afecta a las Metricas (p. ej. `circle`) o si cambia o
+ * quita una Capa cuya Primitiva las afecta. `pilas` son las pilas posibles sobre las
+ * que se aplica (base y una por Tipo).
+ */
+export function opTocaMetricas(op: OpDeCapa, pilas: ReadonlyArray<readonly CapaDeTema[]>): string | undefined {
+  const existente = pilas.flatMap((pila) => pila.filter((capa) => capa.nombre === op.nombre))[0];
+  const afecta = (tipo: string | undefined): boolean => tipo !== undefined && ((CATALOGO as Record<string, DefinicionDePrimitiva>)[tipo]?.afectaMetricas ?? false);
+  if (op.quitar === true) return afecta(existente?.primitiva.tipo) ? `la Capa '${op.nombre}' define la caja y no puede quitarse` : undefined;
+  const nuevo = op.primitiva ?? existente?.primitiva.tipo;
+  if (afecta(nuevo)) return `la Capa '${op.nombre}' usa '${nuevo}', que afecta a las Metricas`;
+  return afecta(existente?.primitiva.tipo) ? `la Capa '${op.nombre}' sustituye una forma que define la caja` : undefined;
 }
