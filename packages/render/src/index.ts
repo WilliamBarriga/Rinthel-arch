@@ -37,8 +37,11 @@
  * lo sustituye.
  *
  * Estados visuales: `estados` (`Estados`: id de Nodo, de Arista o `nodo#atributo` ->
- * lista de `EstadoVisual`: `seleccionado`, `hover`, `fantasma`) dibuja un contorno por estado
- * con el aspecto de `estilo.estados` (`data-state`, estilado por la hoja; el seleccionado lleva tambien `data-selected`).
+ * lista de `EstadoVisual`: `seleccionado`, `hover`, `fantasma`, `en-ruta`, `atenuado`, `foco`) dibuja un contorno
+ * por estado con el aspecto de `estilo.estados` (`data-state`, estilado por la hoja; el seleccionado lleva tambien
+ * `data-selected`). `atenuado` no tiene contorno: marca `data-atenuado` en la caja del Nodo o en la Arista y la hoja
+ * baja su opacidad. El anillo de `foco` nunca baja de `ANILLO_DE_FOCO_MINIMO` px: un Estilo no puede quitarlo. Render
+ * solo pinta: la shell calcula `en-ruta`, `atenuado` y `foco`.
  * Un id que no esta dibujado se ignora. Es la unica via de resaltado: el shell no pinta overlays propios.
  *
  * Invariantes: sin estado ni efectos (mismas props, mismo arbol); determinista

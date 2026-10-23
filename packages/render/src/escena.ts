@@ -61,7 +61,7 @@ export interface EntradaDeEscena {
   onToggle?: (id: string) => void;
   /** Metricas con las que dibujar; deben ser las del layout. Por defecto las derivadas del Tema. */
   metricas?: Metricas;
-  /** Estados visuales (seleccionado, hover, fantasma) que se dibujan con el Estilo resuelto; sin ellos, ninguno. */
+  /** Estados visuales (seleccionado, hover, fantasma, en-ruta, atenuado, foco) que se dibujan con el Estilo resuelto; sin ellos, ninguno. */
   estados?: Estados;
   /** Estilo resuelto con el que dibujar; por defecto el del Tema (`resolverEstilo`). */
   estilo?: Estilo;
@@ -159,7 +159,7 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
 
   return {
     tag: 'div',
-    attrs: { class: 'rd-caja', 'data-id': nodo.id, style: posicion(caja) + efectos.caja },
+    attrs: { class: 'rd-caja', 'data-id': nodo.id, ...(atenuado(contexto.estados, nodo.id) && { 'data-atenuado': '' }), style: posicion(caja) + efectos.caja },
     hijos: [
       {
         tag: 'div',
@@ -184,16 +184,20 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
 
 function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, detail }: Contexto): Elemento[] {
   if (estados === undefined) return [];
-  const propios = (estados[nodo.id] ?? []).map((e) => pintarEstadoDeCaja(e, nodo.id));
+  const propios = contornos(estados[nodo.id]).map((e) => pintarEstadoDeCaja(e, nodo.id));
   if (esGrupo(nodo) || !tieneFilas(nodo, estilo, detail)) return propios;
   const atributos = atributosVisibles(nodo, estilo.metricas);
   const rectas = colocarEnCaja(estilo.metricas, atributos.length, caja.width).filas;
   const filas = atributos.flatMap((atributo, i) => {
     const id = `${nodo.id}#${atributo.name}`;
-    return (estados[id] ?? []).map((e) => pintarEstadoDeCaja(e, id, rectas[i]!));
+    return contornos(estados[id]).map((e) => pintarEstadoDeCaja(e, id, rectas[i]!));
   });
   return [...propios, ...filas];
 }
+
+/** `atenuado` no tiene contorno: atenua el elemento entero (marca `data-atenuado`, estilada por la hoja). */
+const atenuado = (estados: Estados | undefined, id: string): boolean => estados?.[id]?.includes('atenuado') === true;
+const contornos = (lista: readonly EstadoVisual[] | undefined): EstadoVisual[] => (lista ?? []).filter((e) => e !== 'atenuado');
 
 function tieneFilas(nodo: NodoResuelto, estilo: Estilo, detail?: NivelDeDetalle): boolean {
   return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, estilo.metricas).length > 0;
@@ -216,10 +220,10 @@ function aristaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibil
       puntos,
       desde: arista.fromCardinality,
       hasta: arista.toCardinality,
-      atributos: v,
+      atributos: atenuado(estados, id) ? { ...v, 'data-atenuado': '' } : v,
       extra: [
         ...(arista.label === undefined ? [] : [pintarEtiquetaDeArista(estilo, { id, texto: arista.label, puntos, caja: geometry.labels[id] })]),
-        ...(estados?.[id] ?? []).map((e) => pintarEstadoDeRuta(estilo, e, id, puntos)),
+        ...contornos(estados?.[id]).map((e) => pintarEstadoDeRuta(estilo, e, id, puntos)),
       ],
       ...(onSelect !== undefined && { alClic: () => onSelect(id) }),
     }),
