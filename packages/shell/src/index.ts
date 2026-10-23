@@ -16,8 +16,16 @@
  * Camara: controlada con `camera` + `onCameraChange` (el padre decide; si
  * ignora el aviso, la camara no se mueve) o interna si no se pasa `camera`.
  * Pan y zoom los da d3-zoom (arrastre, rueda, tactil); escala entre 0.05 y 16.
- * Seleccion: `selected` controlada o interna; `onSelect(id)` al pulsar un Nodo;
- * el Nodo marcado lleva un rectangulo con `data-selected="<id>"`.
+ * Seleccion: `selected` controlada o interna; `onSelect(id)` al pulsar un Nodo, una Arista,
+ * su etiqueta o la fila de un Atributo (`nodo#atributo`); cada elemento marcado lleva un
+ * rectangulo con `data-selected="<id>"`. Con mayusculas, ctrl o meta la Seleccion crece
+ * (o decrece) en lugar de reemplazarse. Que hay bajo el clic lo decide el nucleo de
+ * interaccion (`elementoBajo`, puro y sin DOM, sobre la Vista completa: el culling del
+ * viewport no lo afecta); `VistaInteractiva` solo traduce el raton a un punto del lienzo.
+ * Nucleo de interaccion: `elementoBajo(vista, geometria, tema, punto, {tolerancia?, atributos?})`
+ * devuelve el `ElementoSeleccionable` superior (`{tipo: nodo|arista|etiqueta|atributo, id}`) o
+ * `undefined`; `cajaDeElemento` da su caja en el lienzo; `seleccionar(seleccion, elemento, modo)`
+ * (`reemplazar|agregar|quitar|alternar`) es el reductor de la `Seleccion`, inmutable.
  * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con
  * `onStepChange`, o interno desde `defaultStep`, 0 por defecto) se pasa por
  * `revealAt` y se dibujan controles anterior/siguiente; la geometria no cambia.
@@ -95,6 +103,8 @@
  */
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';
+export { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from './interaccion';
+export type { ElementoSeleccionable, ModoDeSeleccion, OpcionesDeHitTest, Seleccion, TipoDeElemento } from './interaccion';
 export type { PropsDeNavegacion } from './navegacion';
 export type { PropsDePasos } from './pasos';
 export type { SuscripcionDeTema } from './tema-vigente';

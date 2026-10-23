@@ -6,6 +6,7 @@ import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva, crearEnviadorDePin } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
+import { pulsarNodo } from './ayudas';
 
 afterEach(cleanup);
 
@@ -75,7 +76,7 @@ describe('arrastre de Nodos (onMoveNode)', () => {
     const { container } = await montar({ onMoveNode, onSelect });
     gesto(nodoA(container), 'mousedown', 10, 10);
     gesto(window, 'mouseup', 10, 10);
-    fireEvent.click(nodoA(container));
+    pulsarNodo(container, 'a');
     expect(onMoveNode).not.toHaveBeenCalled();
     expect(onSelect).toHaveBeenCalledWith('a');
   });
@@ -86,7 +87,7 @@ describe('arrastre de Nodos (onMoveNode)', () => {
     gesto(nodoA(container), 'mousedown', 10, 10);
     gesto(window, 'mousemove', 60, 30);
     gesto(window, 'mouseup', 60, 30);
-    fireEvent.click(nodoA(container));
+    pulsarNodo(container, 'a');
     expect(onSelect).not.toHaveBeenCalled();
   });
 

@@ -6,6 +6,7 @@ import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva, deserializarEstado, hashDelNavegador, serializarEstado, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeHash, AdaptadorDeLayout, EstadoDeShell } from 'shell';
+import { pulsarNodo } from './ayudas';
 
 afterEach(() => {
   cleanup();
@@ -199,7 +200,7 @@ describe('integracion con VistaInteractiva y location.hash', () => {
   it('recargar con el hash restaura Vista y ruta', async () => {
     const primera = render(<App />);
     await dibujado(primera.container, 'x');
-    fireEvent.click(primera.container.querySelector('[data-id="x"] [data-part="nodo"]')!);
+    pulsarNodo(primera.container, 'x');
     await dibujado(primera.container, 'y');
     expect(window.location.hash).toContain('p=a&p=b');
     primera.unmount();
