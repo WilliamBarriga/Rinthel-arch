@@ -63,7 +63,7 @@ theme soft-card {
 - **Composicion**: `extends` de un solo padre con semantica de parche; `part <nombre> { ... }` es un parche reutilizable sin Tema, que se incluye con `use <parte>` dentro de un elemento. Sin herencia multiple.
 - **Nombres unicos** en todo el Workspace: `theme` o `part` repetido es error de duplicado, nunca fusion. Retocar un Tema ajeno se hace con `extends`.
 - **Sin compatibilidad** con el formato viejo: `nodeStyles`, `edgeStyles`, los `tokens` de Tema y los Temas actuales desaparecen. Ejemplos y fixtures se reescriben al formato de Capas.
-- La gramatica Langium concreta y los nombres finales de propiedades se fijan al implementar, usando los `const T` de `prototype-estetica/hibrido.ts` como casos de prueba.
+- La gramatica Langium concreta y los nombres finales de propiedades se fijan al implementar, usando los `const T` del prototipo hibrido (rama del prototipo) como casos de prueba.
 
 ## Ampliacion y validacion del catalogo
 
