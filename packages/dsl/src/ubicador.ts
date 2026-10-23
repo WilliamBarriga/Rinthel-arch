@@ -26,6 +26,8 @@ export interface DatosDelUbicador {
   tipos: readonly { archivo: string; ast: NodeTypeDecl }[];
   /** Vistas, en el mismo orden que `fuente.views`. */
   vistas: readonly { archivo: string; ast: View }[];
+  /** Temas por nombre: archivo y rango del nombre en su declaracion. */
+  temas: ReadonlyMap<string, { archivo: string; nombre: TextRange }>;
   /** Archivos con sintaxis rota: su AST es parcial y daria falsos positivos. */
   conSintaxisRota: ReadonlySet<string>;
 }
@@ -40,6 +42,10 @@ export function crearUbicador(datos: DatosDelUbicador): Ubicador {
     if (seccion === 'model' && indice === 'nodes') return deNodo(datos, ruta);
     if (seccion === 'model' && indice === 'edges') return deArista(datos, resto);
     if (seccion === 'specification') return deTipo(datos, resto);
+    if (seccion === 'themes' && resto[0] === 'name') {
+      const declarado = datos.temas.get(datos.fuente.themes[indice as number]?.name ?? '');
+      return declarado === undefined || datos.conSintaxisRota.has(declarado.archivo) ? null : sitio(declarado.archivo, declarado.nombre);
+    }
     if (seccion === 'views') return deVista(datos, indice as number, resto);
     return null;
   };

@@ -53,3 +53,6 @@ export { aplicarOps, cascada, ESTADOS, opTocaMetricas, validarOps } from './parc
 export type { CapaDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa } from './parches';
 export { resolverColor, validarColor } from './color';
 export type { ContextoDeColor, ErrorDeColor } from './color';
+export { advertenciasDeContraste, leyendaDelTema, razonDeContraste, tiposSoloColor } from './contraste';
+export type { AdvertenciaDeContraste, EntradaDeLeyenda, Leyenda, TipoParaLeyenda } from './contraste';
+export { TEMA_ALTO_CONTRASTE } from './alto-contraste';
