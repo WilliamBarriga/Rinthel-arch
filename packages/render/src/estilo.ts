@@ -34,8 +34,6 @@ export interface EstiloDeTipoDeArista {
 }
 
 export interface Estilo {
-  /** PROTOTIPO: anatomia de dibujo alternativa. */
-  variante?: 'A' | 'B' | 'C';
   /** Metricas con las que se dibuja; deben ser las del layout. */
   metricas: Metricas;
   fondo: string;
