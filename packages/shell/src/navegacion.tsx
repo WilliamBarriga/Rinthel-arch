@@ -69,9 +69,9 @@ export function Migas({ navegacion }: { navegacion: Navegacion }): ReactElement 
   const { ruta, atras, irA } = navegacion;
   return (
     <nav
+      className="rd-chrome rd-migas"
       data-breadcrumbs
       aria-label="Ruta"
-      style={{ position: 'absolute', left: 8, top: 8, display: 'flex', gap: 6, alignItems: 'center', font: '12px sans-serif' }}
     >
       <button type="button" aria-label="Atras" disabled={ruta.length <= 1} onClick={atras}>
         &lt;
@@ -82,7 +82,7 @@ export function Migas({ navegacion }: { navegacion: Navegacion }): ReactElement 
             {id}
           </span>
         ) : (
-          <span key={i} style={{ display: 'contents' }}>
+          <span key={i} className="rd-contenido">
             <button type="button" data-crumb={id} onClick={() => irA(i)}>
               {id}
             </button>

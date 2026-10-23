@@ -43,8 +43,8 @@ export function usePasos(vista: VistaResuelta, props: PropsDePasos): PasosEnVist
   const actual = vista.steps[paso - 1];
   const controles = (
     <div
+      className="rd-chrome rd-pasos"
       data-pasos
-      style={{ position: 'absolute', left: 8, bottom: 8, display: 'flex', gap: 8, alignItems: 'center', font: '12px sans-serif' }}
     >
       <button type="button" aria-label="Paso anterior" disabled={paso <= 0} onClick={() => ir(paso - 1)}>
         &lt;

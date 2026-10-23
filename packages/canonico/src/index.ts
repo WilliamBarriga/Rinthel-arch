@@ -42,6 +42,8 @@ export {
   pasoSchema,
   TEMA_NEUTRO,
   temaSchema,
+  tokensDeTipoDeNodoSchema,
+  tokensDeTipoDeAristaSchema,
   contratoDeTemaSchema,
   TIPOS_DE_VISTA,
   tamanoDeTexto,
