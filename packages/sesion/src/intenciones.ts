@@ -36,6 +36,13 @@ export interface Historial {
 
 export const crearHistorial = (archivos: ArchivosDelWorkspace): Historial => ({ archivos, pasado: [], futuro: [] });
 
+/** Apila `archivos` como el nuevo texto vigente (el anterior pasa al pasado) y descarta el futuro. */
+export const apilar = (historial: Historial, archivos: ArchivosDelWorkspace): Historial => ({
+  archivos,
+  pasado: [...historial.pasado, historial.archivos],
+  futuro: [],
+});
+
 /** Aplica una Intencion y la apila; descarta el futuro. Un rechazo no altera el historial. */
 export function editarEnHistorial(
   historial: Historial,
@@ -45,7 +52,7 @@ export function editarEnHistorial(
   if (!r.ok) return r;
   return {
     ok: true,
-    historial: { archivos: r.archivos, pasado: [...historial.pasado, historial.archivos], futuro: [] },
+    historial: apilar(historial, r.archivos),
     ediciones: r.ediciones,
     issues: r.issues,
   };

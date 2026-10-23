@@ -5,7 +5,7 @@
  * `Sesion`; aqui solo viven los adaptadores (HTTP, observador de disco).
  *
  * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),
- * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
+ * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `POST /api/deshacer` y `POST /api/rehacer` (restauran el texto exacto del historial del servidor, ADR 0007; 409 si el disco cambio fuera de dev, 422 si no hay nada), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
  * envia el estado al conectar y tras cada recompilacion).
  *
  * `iniciarDev(OpcionesDeDev) -> ServidorDev` es la entrada programatica (el comando solo parsea y la llama).
@@ -37,8 +37,8 @@ import { parseArgs } from 'node:util';
 import { combineIconProviders, genericIcons, intencionDePinSchema, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
 import type { EstadoDeDev, Intencion, Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { abrirSesion, aplicarAlWorkspace, archivoDeVista, hashDeContenido } from 'sesion';
-import type { Sesion } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, apilar, archivoDeVista, crearHistorial, deshacer, hashDeContenido, rehacer } from 'sesion';
+import type { Historial, Sesion } from 'sesion';
 
 import { empaquetarShellDev } from './dev-shell';
 import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
@@ -136,6 +136,13 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 
   const clientes = new Set<ServerResponse>();
 
+  /** Historial de deshacer/rehacer del texto propio del Workspace (ADR 0007); vive mientras viva el servidor. */
+  let historial: Historial | undefined;
+  const mismoTexto = (a: ArchivosDelWorkspace, b: ArchivosDelWorkspace): boolean => {
+    const claves = Object.keys(a);
+    return claves.length === Object.keys(b).length && claves.every((k) => a[k] === b[k]);
+  };
+
   /** Estado vigente con la forma de `estadoDeDevSchema` (`canonico`), el esquema unico servidor-navegador. */
   function construirEstado(): EstadoDeDev {
     const fuente = buena?.sesion.fuente;
@@ -209,37 +216,44 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     res.end(JSON.stringify(cuerpo));
   };
 
+  /** Origen, content-type y JSON validos para cualquier ruta de escritura; si no, responde el error y devuelve `undefined`. */
+  const leerCuerpoJson = async (req: IncomingMessage, res: ServerResponse): Promise<{ cuerpo: unknown } | undefined> => {
+    const origen = req.headers.origin;
+    const { port } = servidor.address() as AddressInfo;
+    if (origen !== undefined && origen !== `http://127.0.0.1:${port}` && origen !== `http://localhost:${port}`) {
+      responder(res, 403, { ok: false, mensaje: 'Origen no permitido' });
+      return undefined;
+    }
+    if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) {
+      responder(res, 415, { ok: false, mensaje: 'Se esperaba application/json' });
+      return undefined;
+    }
+    try {
+      return { cuerpo: JSON.parse(await leerCuerpo(req)) as unknown };
+    } catch {
+      responder(res, 400, { ok: false, mensaje: 'JSON invalido' });
+      return undefined;
+    }
+  };
+
   /**
    * Puerta de edicion unica (ADR 0007): `POST /api/edit` recibe cualquier Intencion y `POST /api/pin`
    * (compatibilidad, cuerpo sin `tipo`) la traduce a `mover-pin`. `dev` solo hace de enrutador HTTP:
    * valida origen y cuerpo, delega en `aplicarAlWorkspace` de `sesion` y traduce el motivo con `SALIDA_DE_RECHAZO`.
    */
   const editar = async (req: IncomingMessage, res: ServerResponse, leerIntencion: (cuerpo: unknown) => Intencion | undefined, esperado: string): Promise<void> => {
-    const origen = req.headers.origin;
-    const { port } = servidor.address() as AddressInfo;
-    if (origen !== undefined && origen !== `http://127.0.0.1:${port}` && origen !== `http://localhost:${port}`) {
-      responder(res, 403, { ok: false, mensaje: 'Origen no permitido' });
-      return;
-    }
-    if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) {
-      responder(res, 415, { ok: false, mensaje: 'Se esperaba application/json' });
-      return;
-    }
-    let cuerpo: unknown;
-    try {
-      cuerpo = JSON.parse(await leerCuerpo(req));
-    } catch {
-      responder(res, 400, { ok: false, mensaje: 'JSON invalido' });
-      return;
-    }
-    const intencion = leerIntencion(cuerpo);
+    const leido = await leerCuerpoJson(req, res);
+    if (leido === undefined) return;
+    const intencion = leerIntencion(leido.cuerpo);
     if (intencion === undefined) {
       responder(res, 400, { ok: false, mensaje: esperado });
       return;
     }
     // Adaptador del Workspace: lee fresco del disco y escribe solo bajo la raiz (los Temas de `--theme-path` no se tocan).
     let resultado;
+    let antes: ArchivosDelWorkspace;
     try {
+      antes = leerBase(workspace);
       resultado = aplicarAlWorkspace(
         {
           leer: () => ({ propios: leerBase(workspace), disco: leerConTemas(leerBase, workspace, temas) }),
@@ -255,6 +269,40 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       responder(res, SALIDA_DE_RECHAZO[resultado.motivo].estadoHttp, rechazoDeEdicion(resultado.motivo, resultado.mensaje, resultado.file));
       return;
     }
+    // Si el texto ya no es el del historial (se edito fuera de dev), el historial vuelve a empezar desde ahi.
+    const base = historial !== undefined && mismoTexto(historial.archivos, antes) ? historial : crearHistorial(antes);
+    historial = apilar(base, leerBase(workspace));
+    await recompilar();
+    responder(res, 200, { ok: true, version });
+  };
+
+  /**
+   * `POST /api/deshacer` y `/api/rehacer`: escriben en disco el texto exacto de la instantanea (ADR 0007).
+   * Si el texto del disco ya no coincide con el del historial (edicion externa), 409 y el historial se descarta.
+   */
+  const viajar = async (req: IncomingMessage, res: ServerResponse, ir: (h: Historial) => Historial | undefined, nada: string): Promise<void> => {
+    if ((await leerCuerpoJson(req, res)) === undefined) return;
+    const disco = leerBase(workspace);
+    if (historial === undefined) historial = crearHistorial(disco);
+    if (!mismoTexto(historial.archivos, disco)) {
+      historial = crearHistorial(disco);
+      responder(res, 409, rechazoDeEdicion('hash-desactualizado', 'El Workspace cambio fuera de dev; no hay historial que restaurar'));
+      return;
+    }
+    const siguiente = ir(historial);
+    if (siguiente === undefined) {
+      responder(res, 422, rechazoDeEdicion('invalida', nada));
+      return;
+    }
+    try {
+      for (const ruta of Object.keys(siguiente.archivos).filter((r) => siguiente.archivos[r] !== disco[r]).sort()) {
+        escribir(workspace, ruta, siguiente.archivos[ruta] as string);
+      }
+    } catch (error) {
+      responder(res, 500, { ok: false, mensaje: (error as Error).message });
+      return;
+    }
+    historial = siguiente;
     await recompilar();
     responder(res, 200, { ok: true, version });
   };
@@ -281,13 +329,14 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       return;
     }
     const ruta = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
+    const viaje = ruta === '/api/deshacer' ? { ir: deshacer, nada: 'Nada que deshacer' } : ruta === '/api/rehacer' ? { ir: rehacer, nada: 'Nada que rehacer' } : undefined;
     const edicion = ruta === '/api/edit' || ruta === '/api/pin' ? rutasDeEdicion[ruta] : undefined;
-    if (edicion !== undefined) {
+    if (edicion !== undefined || viaje !== undefined) {
       if (req.method !== 'POST') {
         res.setHeader('allow', 'POST');
         responder(res, 405, { ok: false, mensaje: 'Metodo no permitido' });
       } else {
-        editar(req, res, edicion.leer, edicion.esperado).catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
+        (edicion === undefined ? viajar(req, res, viaje!.ir, viaje!.nada) : editar(req, res, edicion.leer, edicion.esperado)).catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
       }
     } else if (ruta === '/') {
       cabecera(res, 'text/html');

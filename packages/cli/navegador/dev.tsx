@@ -2,7 +2,7 @@
  * Entrada de navegador de `diagrams dev`: pagina viva. Pide el estado a
  * `/api/estado`, se suscribe a `/eventos` (SSE) y, cuando llega un estado
  * nuevo, pide la geometria de cada Vista a `/api/vista/<id>`. Muestra la Vista
- * elegida por el hash de URL y un panel de issues clicables. Arrastrar un Nodo envia
+ * elegida por el hash de URL y un panel de issues clicables. Ctrl/Cmd+Z y Ctrl/Cmd+Mayus+Z (o Ctrl+Y) piden deshacer/rehacer al servidor. Arrastrar un Nodo envia
  * `POST /api/pin` con el hash del archivo de la Vista; un 409 recarga el estado y avisa. No es parte de la
  * interfaz del paquete: la empaqueta `dev-shell.ts`.
  */
@@ -14,6 +14,7 @@ import { VistaInteractiva, adaptadorDeWorker, crearEnviadorDePin, hashDelNavegad
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 
 import { montar, usePropsDeDatos } from './arranque';
+import { accionDeAtajo, crearAlAtajo, crearEnviadorDeHistorial } from './historial';
 import { crearAlMover } from './mover';
 
 /** Estado del servidor: esquema unico de `canonico` (`estadoDeDevSchema`), el mismo que produce `dev`. */
@@ -89,6 +90,7 @@ function IssuesSinVista({ issues }: { issues: readonly IssueDeDev[] }): ReactEle
 const hash = hashDelNavegador(window);
 
 const enviarPin = crearEnviadorDePin();
+const enviarHistorial = crearEnviadorDeHistorial();
 
 interface PropsDeVista {
   fuente: FuenteCanonica;
@@ -119,6 +121,21 @@ function App(): ReactElement {
   const vivo = useRef(estado);
   vivo.current = estado;
   const alMover = crearAlMover({ estado: () => vivo.current, enviar: enviarPin, avisar: setAviso, recargar });
+  const alAtajo = crearAlAtajo({ enviar: enviarHistorial, avisar: setAviso, recargar });
+  const alAtajoVivo = useRef(alAtajo);
+  alAtajoVivo.current = alAtajo;
+  useEffect(() => {
+    const alTeclear = (e: KeyboardEvent): void => {
+      const destino = e.target instanceof HTMLElement ? e.target : undefined;
+      const enCampoDeTexto = destino !== undefined && (destino.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(destino.tagName));
+      const accion = accionDeAtajo({ key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey, altKey: e.altKey, enCampoDeTexto });
+      if (accion === undefined) return;
+      e.preventDefault();
+      void alAtajoVivo.current(accion);
+    };
+    window.addEventListener('keydown', alTeclear);
+    return () => window.removeEventListener('keydown', alTeclear);
+  }, []);
   const geometrias = useGeometrias(estado);
   // La ultima Vista dibujable se conserva mientras llega la nueva.
   const [ultima, setUltima] = useState<{ fuente: FuenteCanonica; estado: Estado; geometrias: Record<string, GeometriaCacheada> }>();

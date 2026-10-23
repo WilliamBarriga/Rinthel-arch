@@ -47,7 +47,7 @@ export { aplicarEdiciones, editarPin, hashDeContenido } from './ediciones';
 // Vocabulario del Gesto declarado una sola vez en `canonico`; se reexporta para no romper consumidores.
 export { aplicarAlWorkspace, cambiosDeEdicion } from './aplicar';
 export type { PuertoDeWorkspace, ResultadoDeAplicar } from './aplicar';
-export { aplicarIntencion, crearHistorial, deshacer, editarEnHistorial, rehacer } from './intenciones';
+export { aplicarIntencion, apilar, crearHistorial, deshacer, editarEnHistorial, rehacer } from './intenciones';
 export type { Historial, Intencion, ResultadoDeIntencion } from './intenciones';
 export type { IntencionDePin, MotivoDeRechazo } from 'canonico';
 export type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
