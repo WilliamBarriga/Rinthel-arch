@@ -8,6 +8,8 @@
  */
 import { CODIGOS, candidatosCercanos } from 'canonico';
 
+import { CATALOGO_DE_EFECTOS } from './catalogo-efectos';
+import type { FamiliaDeEfectos } from './catalogo-efectos';
 import { validarColor } from './color';
 import { BORDES } from './familias/borde';
 import { FORMAS } from './familias/forma';
@@ -19,7 +21,7 @@ export type DefinicionDePropiedad =
   | { readonly tipo: 'color' };
 
 export interface DefinicionDePrimitiva {
-  readonly familia: 'forma' | 'relleno' | 'borde';
+  readonly familia: 'forma' | 'relleno' | 'borde' | FamiliaDeEfectos;
   readonly propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
   /** Si cambia la caja o los Slots (Metricas). Por defecto una Primitiva solo pinta. */
   readonly afectaMetricas: boolean;
@@ -38,6 +40,7 @@ export const CATALOGO = {
   ...FORMAS,
   ...RELLENOS,
   ...BORDES,
+  ...CATALOGO_DE_EFECTOS,
 } as const satisfies Record<string, DefinicionDePrimitiva>;
 
 export type NombreDePrimitiva = keyof typeof CATALOGO;
