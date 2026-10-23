@@ -111,9 +111,22 @@ export async function layoutView(
     if (etiqueta !== undefined) labels[arista.id] = { x: etiqueta.x ?? 0, y: etiqueta.y ?? 0, width: etiqueta.width ?? 0, height: etiqueta.height ?? 0 };
     edges[arista.id] = { points: [seccion.startPoint, ...(seccion.bendPoints ?? []), seccion.endPoint].map(({ x, y }) => ({ x, y })) };
   }
-  const pinneada = aplicarPins(vista, nodes, edges, labels);
+  return conPinsYPuertos(vista, medidas, { nodes, edges, labels, pinsSolapados: [], width: resultado.width ?? 0, height: resultado.height ?? 0 });
+}
+
+function conPinsYPuertos(vista: VistaResuelta, medidas: Metricas, base: Geometria): Geometria {
+  const pinneada = aplicarPins(vista, base.nodes, base.edges, base.labels);
   const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
-  return { ...conPuertos, width: resultado.width ?? 0, height: resultado.height ?? 0 };
+  return { ...conPuertos, width: base.width, height: base.height };
+}
+
+/**
+ * Aplica los Pins de `vista` a `base`, la geometria de la misma estructura calculada sin Pins
+ * (`layoutView` de la Vista sin overrides de Pin). Es el paso post-ELK de `layoutView` y da el mismo
+ * resultado que un layout completo, sin volver a ejecutar ELK: mover un Pin no relayouta.
+ */
+export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas = metricasDe(tema)): Geometria {
+  return conPinsYPuertos(vista, metricas, base);
 }
 
 /**
@@ -269,10 +282,19 @@ function aElk(nodo: NodoResuelto, medidas: Metricas): ElkNode {
  * "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`.
  */
 export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas = metricasDe(tema)): string {
+  return JSON.stringify({ estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista) });
+}
+
+const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin === undefined ? [] : [[o.node, o.pin.x, o.pin.y]]));
+
+/**
+ * Como `claveDeLayout` sin los Pins: identifica la geometria que ELK calcula (los Pins se aplican despues,
+ * `aplicarPinsAGeometria`). Mover un Pin no la cambia, asi que no exige relayout de ELK.
+ */
+export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas = metricasDe(tema)): string {
   return JSON.stringify({
     nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id)]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
-    pins: vista.overrides.flatMap((o) => (o.pin === undefined ? [] : [[o.node, o.pin.x, o.pin.y]])),
     metricas,
   });
 }
