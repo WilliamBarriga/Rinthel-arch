@@ -13,6 +13,9 @@
  * cuando hace falta relayoutar: cambia con estructura, textos y fuentes, nunca
  * con paleta, colores o iconos.
  *
+ * `indiceDeGeometria(vista, geometria)` es la unica respuesta a las cajas
+ * absolutas (lienzo), el padre de cada Nodo y las raices; `render` y `shell` la consumen.
+ *
  * Invariantes: determinista (misma entrada, misma geometria); `INCLUDE_CHILDREN`
  * sin `considerModelOrder` (ADR 0003); el mismo codigo corre en Node y en Web
  * Worker. Los `pin` de los overrides se aplican despues de ELK como posicion
@@ -26,5 +29,7 @@
  * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout`.
  */
 export { ESCALA_ETIQUETA, claveDeLayout, layoutView } from './layout';
+export { indiceDeGeometria } from './indice';
+export type { IndiceDeGeometria } from './indice';
 export { alturasDeNodo, atributosVisibles, textoDeAtributo, yDeFila } from './medidas';
 export type { CajaDeNodo, Geometria, OpcionesDeLayout, Punto, RutaDeArista } from './layout';

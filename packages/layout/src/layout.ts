@@ -6,6 +6,7 @@ import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
+import { indiceDeGeometria } from './indice';
 import { atributosVisibles, medidasDeTexto, tamanoDeNodo, yDeFila } from './medidas';
 import type { MedidasDeTexto } from './medidas';
 
@@ -84,7 +85,7 @@ export async function layoutView(
   const grafo: ElkNode = {
     id: 'raiz',
     layoutOptions: OPCIONES_RAIZ,
-    children: raices(vista).map((nodo) => aElk(nodo, medidas)),
+    children: indiceDeGeometria(vista, { nodes: {} }).raices.map((nodo) => aElk(nodo, medidas)),
     edges: vista.edges.map((arista) => ({
       id: idDeArista(arista),
       sources: [arista.from.node],
@@ -135,11 +136,12 @@ function aplicarPins(
 ): Pick<Geometria, 'nodes' | 'edges' | 'labels' | 'pinsSolapados'> {
   const pins = vista.overrides.filter((o) => o.pin !== undefined && nodes[o.node] !== undefined);
   if (pins.length === 0) return { nodes, edges, labels, pinsSolapados: [] };
-  const padre = padresDe(vista);
-  const dentroDe = (id: string, raiz: string): boolean => id === raiz || (padre.has(id) && dentroDe(padre.get(id)!, raiz));
-
   const nuevos: Record<string, CajaDeNodo> = { ...nodes };
   for (const { node, pin } of pins) nuevos[node] = { ...nuevos[node]!, ...pin };
+  const previo = indiceDeGeometria(vista, { nodes });
+  const indice = indiceDeGeometria(vista, { nodes: nuevos });
+  const { padre } = indice;
+  const dentroDe = (id: string, raiz: string): boolean => id === raiz || (padre.has(id) && dentroDe(padre.get(id)!, raiz));
   const movidos = pins.map((o) => o.node);
   const rutas: Record<string, RutaDeArista> = { ...edges };
   const etiquetas: Record<string, CajaDeNodo> = { ...labels };
@@ -151,15 +153,15 @@ function aplicarPins(
     const id = idDeArista(arista);
     const previa = edges[id];
     if (raizOrigen === raizDestino && previa !== undefined) {
-      const antes = cajaAbsoluta(nodes, padre, raizOrigen!);
-      const despues = cajaAbsoluta(nuevos, padre, raizOrigen!);
+      const antes = previo.cajas.get(raizOrigen!)!;
+      const despues = indice.cajas.get(raizOrigen!)!;
       const [dx, dy] = [despues.x - antes.x, despues.y - antes.y];
       rutas[id] = { points: previa.points.map(({ x, y }) => ({ x: x + dx, y: y + dy })) };
       const etiqueta = etiquetas[id];
       if (etiqueta !== undefined) etiquetas[id] = { ...etiqueta, x: etiqueta.x + dx, y: etiqueta.y + dy };
     } else {
       delete etiquetas[id];
-      rutas[id] = { points: rutaOrtogonal(cajaAbsoluta(nuevos, padre, origen), cajaAbsoluta(nuevos, padre, destino)) };
+      rutas[id] = { points: rutaOrtogonal(indice.cajas.get(origen)!, indice.cajas.get(destino)!) };
     }
   }
 
@@ -168,23 +170,10 @@ function aplicarPins(
   ids.forEach((a, i) => {
     for (const b of ids.slice(i + 1)) {
       if (dentroDe(a, b) || dentroDe(b, a)) continue;
-      if (seSolapan(cajaAbsoluta(nuevos, padre, a), cajaAbsoluta(nuevos, padre, b))) pinsSolapados.push([a, b]);
+      if (seSolapan(indice.cajas.get(a)!, indice.cajas.get(b)!)) pinsSolapados.push([a, b]);
     }
   });
   return { nodes: nuevos, edges: rutas, labels: etiquetas, pinsSolapados };
-}
-
-function padresDe(vista: VistaResuelta): Map<string, string> {
-  return new Map(vista.nodes.flatMap((nodo) => nodo.children.map((hijo) => [hijo.id, nodo.id] as const)));
-}
-
-/** Caja de un Nodo en coordenadas del lienzo: suma las posiciones de sus Grupos ancestros. */
-function cajaAbsoluta(cajas: Record<string, CajaDeNodo>, padre: ReadonlyMap<string, string>, id: string): CajaDeNodo {
-  const caja = cajas[id]!;
-  const arriba = padre.get(id);
-  if (arriba === undefined) return caja;
-  const marco = cajaAbsoluta(cajas, padre, arriba);
-  return { ...caja, x: marco.x + caja.x, y: marco.y + caja.y };
 }
 
 /**
@@ -200,7 +189,7 @@ function ajustarAPuertosDeAtributo(
   edges: Record<string, RutaDeArista>,
 ): Record<string, RutaDeArista> {
   const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, atributosVisibles(nodo)]));
-  const padre = padresDe(vista);
+  const { cajas } = indiceDeGeometria(vista, { nodes });
   const rutas = { ...edges };
   for (const arista of vista.edges) {
     const id = idDeArista(arista);
@@ -210,7 +199,7 @@ function ajustarAPuertosDeAtributo(
     for (const [lado, extremo] of [['inicio', arista.from], ['fin', arista.to]] as const) {
       const indice = extremo.attribute === undefined ? -1 : (atributos.get(extremo.node) ?? []).findIndex((a) => a.name === extremo.attribute);
       if (indice < 0) continue;
-      const y = cajaAbsoluta(nodes, padre, extremo.node).y + yDeFila(tema, indice);
+      const y = cajas.get(extremo.node)!.y + yDeFila(tema, indice);
       puntos = moverPuerto(puntos, lado, y);
     }
     rutas[id] = { points: puntos };
@@ -257,12 +246,6 @@ function rutaOrtogonal(origen: CajaDeNodo, destino: CajaDeNodo): Punto[] {
   const entrada = abajo ? destino.y : destino.y + destino.height;
   const medio = (salida + entrada) / 2;
   return [{ x: o.x, y: salida }, { x: o.x, y: medio }, { x: d.x, y: medio }, { x: d.x, y: entrada }];
-}
-
-/** `resolveView` lista todos los Nodos visibles a plano y anida ademas los hijos: las raices son las que nadie anida. */
-function raices(vista: VistaResuelta): NodoResuelto[] {
-  const anidados = new Set(vista.nodes.flatMap((nodo) => nodo.children.map((hijo) => hijo.id)));
-  return vista.nodes.filter((nodo) => !anidados.has(nodo.id));
 }
 
 /** Caja de una etiqueta de Arista: texto un poco menor que el de los Nodos, medido como ellos. */
