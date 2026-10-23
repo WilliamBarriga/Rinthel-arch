@@ -3,9 +3,11 @@
  * claros gruesos. Lo activa un interruptor del visor o `prefers-contrast: more`
  * y reemplaza el Tema de la Vista solo en el visor. Cero warnings de contraste.
  */
+import { TEMA_NEUTRO } from './tema';
 import type { TemaResuelto } from './tema';
 
 export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
+  ...TEMA_NEUTRO,
   name: 'alto-contraste',
   palette: {
     white: '#ffffff',
@@ -20,13 +22,12 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
   fonts: { body: 'sans-serif', mono: 'monospace' },
   tokens: { background: '#000000', foreground: '#ffffff', border: '#ffffff' },
   nodo: {
+    ...TEMA_NEUTRO.nodo,
     capas: [
       { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
       { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'black' } } },
       { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'COLOR', width: 3 } } },
     ],
-    slots: ['title', 'attrs'],
-    tipos: {},
     estados: { seleccionado: [{ nombre: 'borde', props: { width: 6 } }] },
   },
 };

@@ -23,9 +23,10 @@ async function props(theme: TemaResuelto): Promise<DiagramProps> {
   return { view, geometry: await layoutView(view, theme), theme, width: 800, height: 600 };
 }
 
+/** `aria-label` del elemento `data-part="nodo"` de la caja del Nodo `id`. */
 const etiquetaDe = (html: string, id: string): string => {
-  const caja = new RegExp(`<div class="rd-caja"[^>]*data-id="${id}"[^>]*>`).exec(html)?.[0] ?? '';
-  return /aria-label="([^"]*)"/.exec(caja)?.[1] ?? '';
+  const resto = html.slice(html.indexOf(`data-id="${id}"`));
+  return /data-part="nodo"[^>]*aria-label="([^"]*)"/.exec(resto)?.[1] ?? '';
 };
 
 describe('Diagram: contenido accesible', () => {

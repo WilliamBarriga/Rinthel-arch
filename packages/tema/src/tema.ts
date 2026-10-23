@@ -7,10 +7,43 @@
 import { z } from 'zod';
 import type { Tema } from 'canonico';
 
+import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
 import { construirPrimitiva, SLOTS } from './catalogo';
-import type { NombreDeSlot } from './catalogo';
+import type { NombreDeSlot, UbicacionDePrimitiva } from './catalogo';
 import { ESTADOS, aplicarOps, opTocaMetricas, validarOps } from './parches';
 import type { CapaDeTema, OpDeCapa } from './parches';
+
+const easingSchema = z.enum(EASINGS);
+const tiempoSchema = { duracionMs: z.number().min(1).max(60000), easing: easingSchema, retardoMs: z.number().min(0).max(10000) };
+
+/** Movimiento de catalogo o `keyframes` minimos de una Capa (ver `Animacion`). */
+const animacionSchema = z.discriminatedUnion('clase', [
+  z.strictObject({
+    clase: z.literal('movimiento'),
+    movimiento: z.enum(Object.keys(MOVIMIENTOS) as [keyof typeof MOVIMIENTOS, ...Array<keyof typeof MOVIMIENTOS>]),
+    intensidad: z.number().min(0).max(1).optional(),
+    reducido: z.literal('still'),
+    ...tiempoSchema,
+  }),
+  z.strictObject({
+    clase: z.literal('keyframes'),
+    propiedad: z.enum(Object.keys(PROPIEDADES_ANIMABLES) as [keyof typeof PROPIEDADES_ANIMABLES, ...Array<keyof typeof PROPIEDADES_ANIMABLES>]),
+    pasos: z.array(z.strictObject({ en: z.number().min(0).max(100), valor: z.number() })).min(2),
+    reducido: z.literal('still'),
+    ...tiempoSchema,
+  }),
+]);
+
+const transicionSchema = z.strictObject({ duracionMs: tiempoSchema.duracionMs, easing: easingSchema, reducido: z.enum(['fade', 'instant']) });
+const efectoSchema = z.strictObject({ efecto: z.enum(EFECTOS), reducido: z.enum(['fade', 'instant']), ...tiempoSchema });
+
+const animacionDeNodoSchema = z.strictObject({
+  transicion: transicionSchema.optional(),
+  transicionesDeEstado: z.partialRecord(z.enum(ESTADOS), transicionSchema).optional(),
+  entrada: efectoSchema.optional(),
+  salida: efectoSchema.optional(),
+  escalonadoMs: z.number().min(0).max(2000).optional(),
+});
 
 const capaSchema = z.strictObject({
   nombre: z.string().min(1),
@@ -20,6 +53,7 @@ const capaSchema = z.strictObject({
   }),
   /** Sobre el contenido (`over`); sin ella, bajo el contenido. */
   encima: z.literal(true).optional(),
+  animacion: animacionSchema.optional(),
 });
 
 /** Parche de Capa por nombre (ADR 0008): ver `OpDeCapa`. */
@@ -31,6 +65,21 @@ export const opSchema = z.strictObject({
   antes: z.string().min(1).optional(),
   despues: z.string().min(1).optional(),
   encima: z.literal(true).optional(),
+  animacion: animacionSchema.nullable().optional(),
+});
+
+const primitivaSchema = z.strictObject({
+  tipo: z.string().min(1),
+  props: z.record(z.string(), z.union([z.string(), z.number()])),
+});
+
+/** Arista (ADR 0008): pila de trazos, marcadores de origen y fin, y etiqueta con modelo de caja. */
+const aristaSchema = z.strictObject({
+  /** Pila de trazos (Primitivas `line`), de abajo hacia arriba. Vacia: un trazo del color del borde. */
+  capas: z.array(capaSchema).default([]),
+  origen: primitivaSchema.optional(),
+  fin: primitivaSchema.optional(),
+  etiqueta: primitivaSchema.optional(),
 });
 
 const nodoSchema = z.strictObject({
@@ -38,10 +87,14 @@ const nodoSchema = z.strictObject({
   capas: z.array(capaSchema).default([]),
   /** Slots que se pintan, en orden visual; uno no listado no se pinta. */
   slots: z.array(z.enum(SLOTS)).default([...SLOTS]),
+  /** Estilo de texto (Primitiva `text`) de los Slots que lo declaran. */
+  textos: z.partialRecord(z.enum(SLOTS), primitivaSchema).default({}),
   /** Parches por Tipo de nodo, en orden de aplicacion sobre la pila base. */
   tipos: z.record(z.string(), z.array(opSchema)).default({}),
   /** Parches por estado, aplicados sobre la pila base ya parcheada por Tipo. */
   estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
+  /** `transition`, `enter`, `exit` y `stagger` del Nodo; solo pintura. */
+  animacion: animacionDeNodoSchema.optional(),
 });
 
 export const temaResueltoSchema = z
@@ -64,7 +117,8 @@ export const temaResueltoSchema = z
           ctx.addIssue({ code: 'custom', path: ['seed'], message: '`seed` debe ser un entero no negativo, p. ej. 7' });
         }
       }),
-    nodo: nodoSchema.default({ capas: [], slots: [...SLOTS], tipos: {}, estados: {} }),
+    nodo: nodoSchema.default({ capas: [], slots: [...SLOTS], textos: {}, tipos: {}, estados: {} }),
+    arista: aristaSchema.default({ capas: [] }),
   })
   .superRefine((tema, ctx) => {
     const vistas = new Set<string>();
@@ -80,6 +134,22 @@ export const temaResueltoSchema = z
         ctx.addIssue({ code: 'custom', path: ['nodo', 'capas', i, 'primitiva', ...(error.clave === undefined ? [] : ['props', error.clave])], message: error.mensaje });
       }
     });
+    const validar = (primitiva: { tipo: string; props: Record<string, string | number> }, ubicacion: UbicacionDePrimitiva, path: Array<string | number>): void => {
+      const props = Object.entries(primitiva.props).map(([clave, valor]) => ({ clave, valor }));
+      for (const error of construirPrimitiva(primitiva.tipo, props, tema.palette, ubicacion).errores) {
+        ctx.addIssue({ code: 'custom', path: [...path, ...(error.clave === undefined ? [] : ['props', error.clave])], message: error.mensaje });
+      }
+    };
+    const trazos = new Set<string>();
+    tema.arista.capas.forEach((capa, i) => {
+      if (trazos.has(capa.nombre)) ctx.addIssue({ code: 'custom', path: ['arista', 'capas', i, 'nombre'], message: `Capa '${capa.nombre}' repetida` });
+      trazos.add(capa.nombre);
+      validar(capa.primitiva, 'capa-arista', ['arista', 'capas', i, 'primitiva']);
+    });
+    if (tema.arista.origen !== undefined) validar(tema.arista.origen, 'marcador', ['arista', 'origen']);
+    if (tema.arista.fin !== undefined) validar(tema.arista.fin, 'marcador', ['arista', 'fin']);
+    if (tema.arista.etiqueta !== undefined) validar(tema.arista.etiqueta, 'etiqueta', ['arista', 'etiqueta']);
+    for (const [slot, texto] of Object.entries(tema.nodo.textos)) validar(texto, 'texto-slot', ['nodo', 'textos', slot]);
     const base = tema.nodo.capas as CapaDeTema[];
     const porTipo = Object.entries(tema.nodo.tipos);
     const pilas = [base];
@@ -117,7 +187,8 @@ export const TEMA_NEUTRO: TemaResuelto = {
   },
   fonts: { body: 'sans-serif', mono: 'monospace' },
   tokens: { background: '#ffffff', foreground: '#1f2937', border: '#9ca3af' },
-  nodo: { capas: [], slots: ['title', 'attrs'], tipos: {}, estados: {} },
+  nodo: { capas: [], slots: ['title', 'attrs'], textos: {}, tipos: {}, estados: {} },
+  arista: { capas: [], fin: { tipo: 'arrow', props: { size: 8 } } },
 };
 
 /** Parches de Capa guardados en la Fuente (p. ej. el override de una Vista), validados contra su esquema. */

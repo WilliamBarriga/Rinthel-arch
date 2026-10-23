@@ -7,8 +7,9 @@
 import { CODIGOS } from 'canonico';
 
 import { CATALOGO, construirPrimitiva, sugerir } from './catalogo';
-import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva } from './catalogo';
+import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva, UbicacionDePrimitiva } from './catalogo';
 import type { TemaResuelto } from './tema';
+import type { Animacion } from './animacion';
 
 /** Estados de la cascada; `foco` y `en-ruta` los calcula la shell, el Tema solo decide como se ven. */
 export const ESTADOS = ['hover', 'seleccionado', 'fantasma', 'en-ruta', 'atenuado', 'foco'] as const;
@@ -19,6 +20,8 @@ export interface CapaDeTema {
   nombre: string;
   primitiva: Primitiva;
   encima?: true;
+  /** Movimiento o `keyframes` de la Capa; nunca cambia las Metricas. */
+  animacion?: Animacion;
 }
 
 /** Un parche de Capa tal como se escribe: ya con `$token` resueltos y la Capa por nombre. */
@@ -28,6 +31,8 @@ export interface OpDeCapa {
   /** Si se da, sustituye la Primitiva de la Capa; si no, `props` se mezcla sobre las vigentes. */
   primitiva?: string;
   props: Record<string, string | number>;
+  /** Animacion ya validada de la Capa; `null` la quita (`motion none`), sin la clave se conserva. */
+  animacion?: Animacion | null;
   antes?: string;
   despues?: string;
   encima?: true;
@@ -53,6 +58,7 @@ export function aplicarOps(
   ops: readonly OpDeCapa[],
   paleta: Readonly<Record<string, string>>,
   modo: ModoDeParche,
+  ubicacion: UbicacionDePrimitiva = 'capa-nodo',
 ): { pila: CapaDeTema[]; errores: ErrorDeOp[] } {
   const capas = pila.map((c) => ({ ...c, primitiva: { ...c.primitiva, props: { ...c.primitiva.props } } }));
   const errores: ErrorDeOp[] = [];
@@ -106,12 +112,13 @@ export function aplicarOps(
 
     const tipo = op.primitiva ?? existente?.primitiva.tipo ?? '';
     const props = Object.entries(op.primitiva === undefined ? { ...existente?.primitiva.props, ...op.props } : op.props).map(([clave, valor]) => ({ clave, valor }));
-    const { primitiva, errores: delCatalogo } = construirPrimitiva(tipo, props, paleta);
+    const { primitiva, errores: delCatalogo } = construirPrimitiva(tipo, props, paleta, ubicacion);
     for (const e of delCatalogo) falla(e, e.clave === undefined ? 'nombre' : 'propiedad', existente?.nombre);
     if (primitiva === undefined) return;
 
     const encima = op.encima === true || existente?.encima === true;
-    const nueva: CapaDeTema = { nombre: op.nombre, primitiva, ...(encima && { encima: true as const }) };
+    const animacion = op.animacion === undefined ? existente?.animacion : (op.animacion ?? undefined);
+    const nueva: CapaDeTema = { nombre: op.nombre, primitiva, ...(encima && { encima: true as const }), ...(animacion !== undefined && { animacion }) };
     if (existente !== undefined) capas.splice(actual, 1);
     const sitio = destino === undefined ? (actual >= 0 ? actual : capas.length) : indiceDe(destino) + (lado === 'despues' ? 1 : 0);
     capas.splice(sitio, 0, nueva);
@@ -130,10 +137,11 @@ export function validarOps(
   ops: readonly OpDeCapa[],
   paleta: Readonly<Record<string, string>>,
   modo: ModoDeParche,
+  ubicacion: UbicacionDePrimitiva = 'capa-nodo',
 ): ErrorDeOp[] {
   let mejor: ErrorDeOp[] | undefined;
   for (const pila of candidatas) {
-    const { errores } = aplicarOps(pila, ops, paleta, modo);
+    const { errores } = aplicarOps(pila, ops, paleta, modo, ubicacion);
     if (mejor === undefined || errores.length < mejor.length) mejor = errores;
     if (mejor.length === 0) break;
   }

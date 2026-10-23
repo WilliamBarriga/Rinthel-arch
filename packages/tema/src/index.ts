@@ -25,6 +25,17 @@
  *   devuelve todos los errores a la vez con el indice del parche y la Capa base
  *   que tocan; `validarOps` lo prueba contra varias pilas posibles. `cascada`
  *   da la pila para un Tipo, estado y override de la Vista (el ultimo gana).
+ * - Aristas (ADR 0008): `arista` del Tema es una pila de trazos (`line`; un segundo
+ *   trazo ancho y translucido da glow), marcadores de `origen` y `fin` (`arrow`,
+ *   `dot`, `diamond`, `bar`, `via`) y una `etiqueta` (`label`) con modelo de caja.
+ *   Cada Primitiva declara su `ubicacion` y `construirPrimitiva` la comprueba.
+ *   De las Aristas solo la etiqueta (`scale`, `pad`) entra en las Metricas.
+ *   `nodo.textos` da el estilo de texto (`text`) de cada Slot; solo pinta.
+ * - Animacion: `construirMovimiento`, `construirKeyframes`, `construirTransicion`,
+ *   `construirEfecto`, `construirEscalonado` y `duracionEnMs` validan la animacion declarativa
+ *   (catalogo `MOVIMIENTOS`, `EFECTOS`, `PROPIEDADES_ANIMABLES`) y rellenan defectos; una Capa
+ *   lleva `animacion` y `pintura.nodo.animacion` trae `transition`/`enter`/`exit`/`stagger`.
+ *   Nada animado entra en las Metricas.
  * - Color: `validarColor` / `resolverColor` (nombre, `nombre/alfa`, `mix(a, b, t)`,
  *   `COLOR`, `ORIGEN`); `resolverTokens` sustituye `$token` por numeros.
  * - Slots: `colocarNodo(titulo, atributos, metricas)` da el tamano de caja y el
@@ -42,8 +53,8 @@
  * errores de catalogo; solo `resolverTema` lanza. Configuracion requerida: ninguna.
  * Solo importa `canonico`.
  */
-export { CATALOGO, SLOTS, construirPrimitiva, construirSlots, resolverTokens, sugerir } from './catalogo';
-export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDeSlot, Primitiva } from './catalogo';
+export { CATALOGO, SLOTS, construirPrimitiva, primitivasDe, construirSlots, resolverTokens, sugerir } from './catalogo';
+export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDePrimitivaEn, NombreDeSlot, Primitiva, UbicacionDePrimitiva } from './catalogo';
 export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
 export { TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
@@ -52,7 +63,7 @@ export type { Metricas, TablaDeMetricas } from './metricas';
 export { colocarEnCaja, colocarNodo } from './slots';
 export type { ColocacionDeNodo, Rect } from './slots';
 export { estiloResuelto } from './estilo';
-export type { CapaPintada, EstiloResuelto, OpcionesDeEstilo, Pintura, PinturaDeNodo } from './estilo';
+export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeNodo, PrimitivaPintada } from './estilo';
 export { aplicarOps, cascada, ESTADOS, opTocaMetricas, validarOps } from './parches';
 export type { CapaDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa } from './parches';
 export { resolverColor, validarColor } from './color';
@@ -60,3 +71,5 @@ export type { ContextoDeColor, ErrorDeColor } from './color';
 export { advertenciasDeContraste, leyendaDelTema, razonDeContraste, tiposSoloColor } from './contraste';
 export type { AdvertenciaDeContraste, EntradaDeLeyenda, Leyenda, TipoParaLeyenda } from './contraste';
 export { TEMA_ALTO_CONTRASTE } from './alto-contraste';
+export { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES, construirEfecto, construirEscalonado, construirKeyframes, construirMovimiento, construirTransicion, duracionEnMs } from './animacion';
+export type { Animacion, Easing, Efecto, KeyframesDeCapa, Movimiento, NombreDeEfecto, NombreDeMovimiento, ParametroDeAnimacion, PasoDeKeyframes, PropiedadAnimable, Reducido, Transicion } from './animacion';

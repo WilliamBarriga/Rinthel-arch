@@ -57,7 +57,7 @@ describe('catalogo', () => {
     const afectan = Object.entries(CATALOGO).filter(([, p]) => p.afectaMetricas).map(([nombre]) => nombre);
     const cuadradas = Object.entries(CATALOGO).filter(([, p]) => 'cajaMinima' in p).map(([nombre]) => nombre);
 
-    expect(afectan).toEqual(['circle']);
+    expect(afectan).toEqual(['circle', 'label']);
     expect(cuadradas).toEqual(['circle']);
   });
 

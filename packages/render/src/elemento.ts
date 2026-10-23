@@ -26,3 +26,10 @@ export function num(valor: number): string {
 export function limpiarValorCss(valor: string): string {
   return valor.replace(/[<>{};\\\n\r]/g, '');
 }
+
+/** FNV-1a de 32 bits, en base 36: identificador corto y estable del contenido. */
+export function huella(texto: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < texto.length; i++) h = Math.imul(h ^ texto.charCodeAt(i), 0x01000193) >>> 0;
+  return h.toString(36);
+}

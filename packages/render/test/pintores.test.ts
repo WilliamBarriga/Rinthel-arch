@@ -4,7 +4,7 @@ import type { NodoResuelto } from 'canonico';
 import { resolverEstilo } from 'render';
 
 import type { Elemento } from '../src/elemento';
-import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEtiquetaDeArista, pintarFlecha, pintarGrupo, pintarNodo } from '../src/pintores';
+import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEtiquetaDeArista, pintarGrupo, pintarNodo } from '../src/pintores';
 import { TEMA_NEUTRO, colocarEnCaja } from 'tema';
 
 const estilo = resolverEstilo(TEMA_NEUTRO);
@@ -64,13 +64,12 @@ describe('pintores por parte', () => {
     expect(pintarEstadoDeCaja('hover', 'n').attrs['data-selected']).toBeUndefined();
   });
 
-  it('la Arista usa el color y la flecha del Estilo', () => {
+  it('la Arista usa el trazo y la flecha de la pintura del Estilo', () => {
     const g = pintarArista(estilo, { id: 'a -> b', puntos: [{ x: 0, y: 0 }, { x: 50, y: 0 }] });
     const ruta = buscar(g, 'path')!;
 
-    expect(ruta.attrs['stroke']).toBe(estilo.arista.color);
-    expect(ruta.attrs['marker-end']).toMatch(/^url\(#flecha-/);
-    expect(buscar(pintarFlecha(estilo), 'marker')!.attrs).toMatchObject({ markerWidth: '8', markerHeight: '8' });
+    expect(ruta.attrs['stroke']).toBe('#9ca3af');
+    expect(JSON.stringify(g)).toContain('"data-marker":"fin"');
   });
 
   it('la etiqueta de Arista lleva el halo del Estilo', () => {
