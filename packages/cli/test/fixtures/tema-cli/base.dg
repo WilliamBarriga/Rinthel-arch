@@ -1,0 +1,13 @@
+part resalte {
+  layer brillo solid before relleno over { color tinta }
+}
+
+theme base {
+  palette { rojo "#dc2626"  azul "#2563eb"  papel "#fefce8"  tinta "#1f2937" }
+  node {
+    layer forma rect { radius 8 }
+    layer relleno solid { color papel }
+    layer borde border { color tinta width 1 }
+    slots { title attrs }
+  }
+}

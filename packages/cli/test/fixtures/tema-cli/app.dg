@@ -1,0 +1,10 @@
+theme app extends base {
+  node {
+    layer borde { width 2 }
+    type servicio {
+      layer relleno { color rojo }
+      use resalte
+    }
+    state hover { layer borde { width 4 } }
+  }
+}

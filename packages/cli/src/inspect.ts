@@ -5,6 +5,9 @@
  */
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos, resolveView, salidaDeInspectSchema } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
+import type { OrigenDeTema } from 'dsl';
+import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, cascada, metricasDeNodo, resolverTema, tablaDeMetricas } from 'tema';
+import type { CapaDeTema, Estado } from 'tema';
 
 type Sitio = { file: string; line: number };
 type Consulta = { comando: 'buscar' | 'nodo' | 'vista'; argumento: string };
@@ -128,6 +131,74 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   };
 }
 
+interface ConsultaDeTema {
+  nombre: string;
+  tipo?: string;
+  estado?: string;
+  catalogo: boolean;
+}
+
+const INCORPORADO: Sitio = { file: '(incorporado)', line: 1 };
+
+/**
+ * `inspect tema <nombre>`: cadena `extends`, `part` usadas, pila de Capas resuelta para un Tipo y
+ * estado (cada Capa con el sitio del parche que la fijo), Metricas y uso de codigo. Las claves del
+ * catalogo salen de las mismas tablas que validan (sin listas paralelas).
+ */
+export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<string, OrigenDeTema>>, { nombre, tipo, estado, catalogo }: ConsultaDeTema): Respuesta {
+  const declarado = fuente.themes.find((t) => t.name === nombre);
+  if (declarado === undefined) {
+    const cerca = candidatosCercanos(nombre, fuente.themes.map((t) => t.name));
+    return { noEncontrado: `No existe el Tema '${nombre}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+  }
+  const tipos = fuente.specification.nodeTypes.map((t) => t.name);
+  if (tipo !== undefined && !tipos.includes(tipo)) {
+    const cerca = candidatosCercanos(tipo, tipos);
+    return { noEncontrado: `No existe el Tipo de nodo '${tipo}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+  }
+  const estadoValido = estado === undefined ? undefined : ESTADOS.find((e) => e === estado);
+  if (estado !== undefined && estadoValido === undefined) {
+    const cerca = candidatosCercanos(estado, ESTADOS);
+    return { noEncontrado: `No existe el estado '${estado}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}. Estados: ${ESTADOS.join(', ')}` };
+  }
+
+  const tema = resolverTema(declarado);
+  const origen = origenes[nombre];
+  const sitioDe = (capa: string): Sitio => {
+    // El ultimo nivel de la cascada que fijo la Capa gana: estado, Tipo, base.
+    const sitio = (estadoValido === undefined ? undefined : origen?.estados[estadoValido]?.[capa]) ?? (tipo === undefined ? undefined : origen?.tipos[tipo]?.[capa]) ?? origen?.base[capa];
+    return sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line };
+  };
+  const capas = cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido as Estado }) }).map((capa: CapaDeTema) => ({
+    nombre: capa.nombre,
+    primitiva: capa.primitiva.tipo,
+    props: capa.primitiva.props,
+    encima: capa.encima === true,
+    animada: capa.animacion !== undefined,
+    origen: sitioDe(capa.nombre),
+  }));
+  return {
+    salida: {
+      contractVersion: INSPECT_CONTRACT_VERSION,
+      comando: 'tema',
+      tema: {
+        name: nombre,
+        ...(origen === undefined ? INCORPORADO : { file: origen.sitio.file, line: origen.sitio.line }),
+        extends: origen?.extends ?? [],
+        partes: origen?.partes ?? [],
+        ...(tipo !== undefined && { tipo }),
+        ...(estadoValido !== undefined && { estado: estadoValido }),
+        capas,
+        metricas: JSON.parse(JSON.stringify(metricasDeNodo(tablaDeMetricas(declarado), tipo))) as never,
+        // La Capa `code` llega con su propio ticket; hasta entonces ningun Tema usa codigo.
+        temaConCodigo: false,
+        componentes: [],
+        ...(catalogo && { catalogo: { primitivas: Object.keys(CATALOGO), movimientos: Object.keys(MOVIMIENTOS), efectos: [...EFECTOS] } }),
+      },
+    },
+  };
+}
+
 /** Valida contra el contrato antes de emitir. */
 export const comoJson = (salida: SalidaDeInspect): string => `${JSON.stringify(salidaDeInspectSchema.parse(salida), null, 2)}\n`;
 
@@ -154,6 +225,24 @@ export function textoLegible(salida: SalidaDeInspect): string {
     }
     lineas.push('Vistas:');
     for (const v of salida.vistas) lineas.push(`  ${v.id} ${sitio(v)}`);
+  } else if (salida.comando === 'tema') {
+    const { tema } = salida;
+    lineas.push(`${tema.name} ${tema.file}:${tema.line}${tema.tipo === undefined ? '' : ` tipo=${tema.tipo}`}${tema.estado === undefined ? '' : ` estado=${tema.estado}`}`);
+    lineas.push(`extends: ${tema.extends.length === 0 ? '(ninguno)' : tema.extends.join(' > ')}`);
+    lineas.push(`partes: ${tema.partes.length === 0 ? '(ninguna)' : tema.partes.join(', ')}`);
+    lineas.push('Capas:');
+    for (const c of tema.capas) {
+      const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
+      lineas.push(`  ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`}${c.encima ? ' [encima]' : ''}${c.animada ? ' [animada]' : ''} ${sitio(c.origen)}`);
+    }
+    lineas.push('Metricas:');
+    for (const [clave, valor] of Object.entries(tema.metricas)) lineas.push(`  ${clave}: ${typeof valor === 'object' ? JSON.stringify(valor) : String(valor)}`);
+    lineas.push(tema.temaConCodigo ? `con codigo: ${tema.componentes.join(', ')}` : 'sin codigo');
+    if (tema.catalogo !== undefined) {
+      lineas.push(`Primitivas: ${tema.catalogo.primitivas.join(', ')}`);
+      lineas.push(`Movimientos: ${tema.catalogo.movimientos.join(', ')}`);
+      lineas.push(`Efectos: ${tema.catalogo.efectos.join(', ')}`);
+    }
   } else {
     const { vista } = salida;
     lineas.push(`${vista.id} ${vista.type} ${sitio(vista)}`);

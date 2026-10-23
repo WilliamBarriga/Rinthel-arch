@@ -1,0 +1,32 @@
+specification {
+  node servicio
+}
+
+model {
+  servicio api "API"
+}
+
+view general {
+  type architecture
+  include **
+  theme malo
+}
+
+theme malo {
+  palette { papel "#fefce8"  tinta "#1f2937" }
+  node {
+    layer forma rect { radius 8 }
+    layer relleno solid { color papel }
+    layer borde border { color tinta widt 2 }
+    slots { title }
+    type servicio {
+      layer relleno { color tinta }
+    }
+    state hover {
+      layer relleno { colour papel }
+      layer sombra shadow after fondo { blur 4 }
+      layer inexistente { color tinta }
+      slots { title attrs }
+    }
+  }
+}

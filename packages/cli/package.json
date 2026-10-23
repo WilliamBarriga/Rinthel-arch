@@ -30,7 +30,8 @@
     "react-dom": "19.3.0",
     "render": "workspace:*",
     "sesion": "workspace:*",
-    "shell": "workspace:*"
+    "shell": "workspace:*",
+    "tema": "workspace:*"
   },
   "bin": {
     "diagrams": "./dist/bin.js"

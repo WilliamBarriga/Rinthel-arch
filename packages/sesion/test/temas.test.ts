@@ -109,8 +109,8 @@ describe('seam sesion: Temas con Capas y Slots', () => {
     expect(issues.map((i) => i.code).sort()).toEqual(
       ['E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_PRIMITIVE', 'E_THEME_UNKNOWN_PROPERTY', 'E_THEME_UNKNOWN_SLOT'].sort(),
     );
-    expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_PRIMITIVE')).toMatchObject({ severity: 'error', file: 'main.dg', line: 10, hint: expect.stringContaining("'rect'") });
-    expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_PROPERTY')!.hint).toContain("'color'");
+    expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_PRIMITIVE')).toMatchObject({ severity: 'error', file: 'main.dg', line: 10, fix: expect.objectContaining({ replacement: 'rect' }) });
+    expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_PROPERTY')!.fix?.replacement).toBe('color');
     expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_SLOT')!.message).toContain("'titulo'");
   });
 

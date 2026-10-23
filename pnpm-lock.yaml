@@ -245,6 +245,9 @@ importers:
       shell:
         specifier: workspace:*
         version: link:../shell
+      tema:
+        specifier: workspace:*
+        version: link:../tema
     devDependencies:
       '@types/react':
         specifier: ^19.3.0

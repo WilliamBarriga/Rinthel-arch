@@ -31,6 +31,9 @@
  * reduce, y escribe solo los archivos propios que cambian (todo o nada; un archivo de
  * `--theme-path` se rechaza como `archivo-desconocido`). Los fallos de I/O del puerto se propagan.
  *
+ * `origenesDeTema` da, por Tema declarado, la cadena `extends`, las `part` usadas y el sitio de la ultima
+ * escritura de cada Capa (base, por Tipo y por estado); lo consume `inspect tema`.
+ *
  * `archivoDeVista(sesion, vista)` da el archivo que declara una Vista (el de su hash).
  *
  * Edicion estructurada (ADR 0005): `aplicarEdiciones(archivos, ediciones)` aplica

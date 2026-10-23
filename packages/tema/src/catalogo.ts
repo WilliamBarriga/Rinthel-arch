@@ -78,6 +78,8 @@ export interface ErrorDeCatalogo {
   mensaje: string;
   clave?: string;
   hint?: string;
+  /** Unico candidato cercano ("quisiste decir"): el que un `fix` puede aplicar sin ambiguedad. */
+  candidato?: string;
 }
 
 const esPrimitiva = (nombre: string): nombre is NombreDePrimitiva => Object.hasOwn(CATALOGO, nombre);
@@ -87,9 +89,10 @@ export const primitivasDe = (ubicacion: UbicacionDePrimitiva): string[] =>
   (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => ubicacionDe(nombre) === ubicacion);
 const esSlot = (nombre: string): nombre is NombreDeSlot => (SLOTS as readonly string[]).includes(nombre);
 
-export const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string } => {
+export const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string; candidato?: string } => {
   const candidatos = candidatosCercanos(escrito, existentes);
-  return candidatos.length === 0 ? {} : { hint: `quisiste decir ${candidatos.map((c) => `'${c}'`).join(' o ')}` };
+  const [unico] = candidatos;
+  return candidatos.length === 0 ? {} : { hint: `quisiste decir ${candidatos.map((c) => `'${c}'`).join(' o ')}`, ...(candidatos.length === 1 && unico !== undefined && { candidato: unico }) };
 };
 
 /**
