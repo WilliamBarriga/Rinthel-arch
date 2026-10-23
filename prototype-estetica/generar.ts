@@ -42,7 +42,9 @@ for (const v of variantes) {
   const metricas = { ...metricasDe(tema), ...v.m };
   const geometry = await layoutView(view, tema, { metricas });
   const estilo = { ...resolverEstilo(tema, metricas), variante: v.k };
-  svgs.push(renderToSvgString({ view, geometry, theme: tema, icons, width: geometry.width, height: geometry.height, estilo, metricas }));
+  // Las variantes comparten pagina: ids unicos por variante (Firefox resuelve url(#id) contra el primer id, aunque este oculto).
+  const svg = renderToSvgString({ view, geometry, theme: tema, icons, width: geometry.width, height: geometry.height, estilo, metricas });
+  svgs.push(svg.replaceAll('id="p-', `id="${v.k}-p-`).replaceAll('url(#p-', `url(#${v.k}-p-`));
 }
 
 const html = `<!doctype html><meta charset=utf-8><title>PROTOTIPO estetica</title>
