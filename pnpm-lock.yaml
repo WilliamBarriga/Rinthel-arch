@@ -376,6 +376,9 @@ importers:
       render:
         specifier: workspace:*
         version: link:../render
+      sesion:
+        specifier: workspace:*
+        version: link:../sesion
     devDependencies:
       '@testing-library/dom':
         specifier: ^10.4.2
