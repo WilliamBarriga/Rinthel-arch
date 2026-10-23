@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { TEMA_NEUTRO, combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
 import type { IconProvider, Tema, VistaResuelta } from 'canonico';
-import { alturasDeNodo, layoutView } from 'layout';
-import { renderToSvgString } from 'render';
+import { layoutView, metricasDe } from 'layout';
+import { escaparXml, hidratarFuentes, renderToSvgString, serializarFuentes } from 'render';
 
 const nodo = (id: string, title: string, type: string, children: unknown[] = []) => ({
   id,
@@ -204,7 +204,7 @@ describe('renderToSvgString: Atributos e iconos', () => {
     const { view, icons } = tabla();
     const geometry = await layoutView(view, TEMA_NEUTRO);
     const svg = renderToSvgString({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons });
-    const { cabecera, fila } = alturasDeNodo(TEMA_NEUTRO);
+    const { cabecera, fila } = metricasDe(TEMA_NEUTRO);
     const caja = geometry.nodes['usuarios']!;
     const fin = geometry.edges['api -> usuarios#email']!.points.at(-1)!;
     const fila2 = new RegExp(`<text data-attribute="usuarios#email" x="[\\d.]+" y="([\\d.]+)"`).exec(svg);
@@ -291,5 +291,80 @@ describe('renderToSvgString: fuentes incrustadas', () => {
 
     expect(svg).toContain("font-family:'O\\'Brien'");
     expect(await exportar(fuentes)).toBe(svg);
+  });
+});
+
+describe('Metricas compartidas: layout y dibujo', () => {
+  const fuente = fuenteCanonicaSchema.parse({
+    specification: { nodeTypes: [{ name: 'tabla' }] },
+    model: {
+      nodes: [
+        { ...nodo('t', 'Tabla', 'tabla'), attributes: [{ name: 'id', type: 'uuid' }, { name: 'columna_muy_larga_de_verdad', type: 'varchar(255)' }] },
+      ],
+    },
+    views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
+  });
+  const view = resolveView(fuente, 'v')!;
+
+  async function dibujarCon(metricas = metricasDe(TEMA_NEUTRO)) {
+    const geometry = await layoutView(view, TEMA_NEUTRO, { metricas });
+    const svg = renderToSvgString({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, metricas });
+    const filas = [...svg.matchAll(/<text data-attribute="t#[^"]+" x="([\d.]+)" y="([\d.]+)"[^>]*font-size="([\d.]+)"[^>]*>([^<]*)</g)].map((m) => ({
+      x: Number(m[1]),
+      y: Number(m[2]),
+      tamano: Number(m[3]),
+      texto: m[4]!,
+    }));
+    return { caja: geometry.nodes['t']!, filas };
+  }
+
+  it('lo dibujado cabe en lo reservado: filas dentro de la caja y texto dentro del ancho', async () => {
+    const m = metricasDe(TEMA_NEUTRO);
+    const { caja, filas } = await dibujarCon();
+
+    expect(filas).toHaveLength(2);
+    for (const f of filas) {
+      expect(f.y).toBeLessThan(caja.height);
+      expect(f.x + f.texto.length * f.tamano * m.factorDeAncho).toBeLessThanOrEqual(caja.width);
+    }
+  });
+
+  it('cambiar una Metrica mueve layout y dibujo a la vez, y lo dibujado sigue cabiendo', async () => {
+    const m = metricasDe(TEMA_NEUTRO);
+    const base = await dibujarCon();
+    const otra = await dibujarCon({ ...m, cabecera: m.cabecera + 12, fila: m.fila + 6, paddingHorizontal: m.paddingHorizontal + 16 });
+
+    expect(otra.caja.height).toBe(base.caja.height + 12 + 2 * 6);
+    expect(otra.caja.width).toBe(base.caja.width + 16);
+    expect(otra.filas[0]!.y).toBe(base.filas[0]!.y + 12 + 3);
+    expect(otra.filas[1]!.y).toBeLessThan(otra.caja.height);
+  });
+});
+
+describe('fuentes: serializar / hidratar', () => {
+  const fuentes = [
+    { family: 'Inter', mime: 'font/woff2', data: 'QUJD' },
+    { family: "O'Neil", mime: 'font/ttf', data: 'REVG' },
+  ];
+
+  it('ida y vuelta: el CSS hidratado devuelve las mismas fuentes', () => {
+    expect(hidratarFuentes(serializarFuentes(fuentes))).toEqual(fuentes);
+  });
+
+  it('una familia repetida se incrusta una sola vez', () => {
+    const css = serializarFuentes([...fuentes, { family: 'Inter', mime: 'font/woff', data: 'WFla' }]);
+
+    expect(hidratarFuentes(css)).toEqual(fuentes);
+  });
+
+  it('sin fuentes no hay CSS', () => {
+    expect(serializarFuentes([])).toBe('');
+    expect(hidratarFuentes('')).toEqual([]);
+  });
+});
+
+describe('escaparXml', () => {
+  it('escapa los cuatro caracteres con significado en XML y HTML', () => {
+    expect(escaparXml('<a href="x">&</a>')).toBe('&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;');
   });
 });

@@ -5,14 +5,14 @@
  * `worker.ts`, que la pagina recibe como texto y corre en un Web Worker. No es
  * parte de la interfaz del paquete: la lee `html.ts`.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { ReactElement } from 'react';
-import { createRoot } from 'react-dom/client';
-
-import type { FuenteCanonica, IconProvider } from 'canonico';
+import type { FuenteCanonica } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva, adaptadorDeWorker, hashDelNavegador, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
+
+import { montar, usePropsDeDatos } from './arranque';
 
 /** Lo que `html.ts` serializa en `<script id="datos" type="application/json">`. */
 export interface DatosDelHtml {
@@ -81,30 +81,13 @@ function crearLayout(codigo: string): AdaptadorDeLayout {
   };
 }
 
-function useTamano(): { width: number; height: number } {
-  const [tamano, setTamano] = useState({ width: window.innerWidth, height: window.innerHeight });
-  useEffect(() => {
-    const alCambiar = (): void => setTamano({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener('resize', alCambiar);
-    return () => window.removeEventListener('resize', alCambiar);
-  }, []);
-  return tamano;
-}
-
 function App({ datos, layout }: { datos: DatosDelHtml; layout: AdaptadorDeLayout }): ReactElement {
   const hash = useMemo(() => hashDelNavegador(window), []);
   const estado = useEstadoEnHash({ source: datos.fuente, hash, defaultView: datos.vista, camera: true });
-  const { width, height } = useTamano();
-  const iconos = useMemo<IconProvider>(
-    () => ({ resolve: (clave) => datos.iconos[clave], keys: () => Object.keys(datos.iconos) }),
-    [datos],
+  const { icons, cachedGeometries, theme, width, height } = usePropsDeDatos(
+    { fuente: datos.fuente, iconos: datos.iconos, geometrias: datos.geometrias },
+    estado.view,
   );
-  const cachedGeometries = useMemo(
-    () => Object.fromEntries(Object.entries(datos.geometrias).map(([id, { geometry }]) => [id, geometry])),
-    [datos],
-  );
-  const nombreDelTema = datos.geometrias[estado.view]?.theme;
-  const theme = datos.fuente.themes.find(({ name }) => name === nombreDelTema) ?? datos.fuente.themes[0];
   useEffect(() => {
     document.title = estado.view;
   }, [estado.view]);
@@ -114,10 +97,10 @@ function App({ datos, layout }: { datos: DatosDelHtml; layout: AdaptadorDeLayout
   }, [fondo]);
   if (theme === undefined) throw new Error('La Fuente canonica no trae Temas');
   return (
-    <VistaInteractiva {...estado} source={datos.fuente} theme={theme} layout={layout} icons={iconos} width={width} height={height} cachedGeometries={cachedGeometries} />
+    <VistaInteractiva {...estado} source={datos.fuente} theme={theme} layout={layout} icons={icons} width={width} height={height} cachedGeometries={cachedGeometries} />
   );
 }
 
 const datos = JSON.parse(document.getElementById('datos')?.textContent ?? 'null') as DatosDelHtml;
 const codigoDelWorker = document.getElementById('worker')?.textContent ?? '';
-createRoot(document.getElementById('raiz') as HTMLElement).render(<App datos={datos} layout={crearLayout(codigoDelWorker)} />);
+montar(<App datos={datos} layout={crearLayout(codigoDelWorker)} />);
