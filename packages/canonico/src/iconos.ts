@@ -58,3 +58,46 @@ export function combineIconProviders(...proveedores: IconProvider[]): IconProvid
 export function resolveNodeTypeIcon(tipo: TipoDeNodo, iconos: IconProvider): string | undefined {
   return tipo.icon === undefined ? undefined : iconos.resolve(tipo.icon);
 }
+
+/** Iconos de un proveedor como mapa clave -> SVG, con claves ordenadas (determinista); lo que viaja al navegador. */
+export function serializarIconos(proveedor: IconProvider): Record<string, string> {
+  return Object.fromEntries(
+    proveedor.keys().sort().flatMap((clave) => {
+      const svg = proveedor.resolve(clave);
+      return svg === undefined ? [] : [[clave, svg] as const];
+    }),
+  );
+}
+
+/** Inverso de `serializarIconos`: un `IconProvider` sobre el mapa. */
+export function hidratarIconos(iconos: Readonly<Record<string, string>>): IconProvider {
+  return { resolve: (clave) => iconos[clave], keys: () => Object.keys(iconos) };
+}
+
+const ETIQUETAS_DE_ICONO = new Set(['svg', 'g', 'path', 'circle', 'ellipse', 'rect', 'line', 'polyline', 'polygon']);
+const ATRIBUTOS_DE_ICONO = new Set([
+  'xmlns', 'viewBox', 'width', 'height', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'points', 'transform',
+  'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray', 'fill-rule', 'clip-rule', 'opacity',
+  'fill-opacity', 'stroke-opacity',
+]);
+const ETIQUETA_SVG = /<(\/?)([a-zA-Z][\w-]*)((?:\s+[\w:-]+\s*=\s*"[^"<>]*")*)\s*(\/?)>/g;
+const ATRIBUTO_SVG = /\s+([\w:-]+)\s*=\s*"([^"]*)"/g;
+
+/**
+ * Saneado del icono por lista blanca: solo etiquetas de forma y atributos de
+ * dibujo, entre comillas dobles, sin `url(`; sin texto suelto, sin `id` ni
+ * referencias. Quita el prologo XML y los comentarios. Devuelve `undefined` si
+ * hay algo fuera de la lista: el icono viene de fuera (Workspace) y el SVG
+ * exportado debe ser autocontenido.
+ */
+export function sanearIcono(svg: string): string | undefined {
+  const limpio = svg.replace(/^\s*<\?xml[^>]*\?>/, '').replace(/<!--[\s\S]*?-->/g, '').trim();
+  if (limpio.replace(ETIQUETA_SVG, '').trim() !== '') return undefined;
+  for (const [, , nombre = '', atributos = ''] of limpio.matchAll(ETIQUETA_SVG)) {
+    if (!ETIQUETAS_DE_ICONO.has(nombre)) return undefined;
+    for (const [, atributo = '', valor = ''] of atributos.matchAll(ATRIBUTO_SVG)) {
+      if (!ATRIBUTOS_DE_ICONO.has(atributo) || /url\(|javascript:|&/i.test(valor)) return undefined;
+    }
+  }
+  return /^<svg[\s>]/.test(limpio) ? limpio : undefined;
+}

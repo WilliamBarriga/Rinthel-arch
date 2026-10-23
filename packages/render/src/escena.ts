@@ -4,7 +4,7 @@
  * la misma entrada da el mismo arbol. Los valores de atributo van sin escapar:
  * cada salida (cadena o React) escapa a su manera.
  */
-import { idDeArista, tamanoDeTexto } from 'canonico';
+import { idDeArista, sanearIcono, tamanoDeTexto } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
 import { ESCALA_ETIQUETA, alturasDeNodo, atributosVisibles, textoDeAtributo, yDeFila } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
@@ -183,34 +183,6 @@ function icono(nodo: NodoResuelto, trazo: string, { icons, fontSize }: Contexto)
     return `<svg width="${lado}" height="${lado}"${sinMedidas}>`;
   });
   return [{ tag: 'g', attrs: { 'data-icon': nodo.icon, transform: `translate(${MARGEN_ICONO} ${MARGEN_ICONO})`, color: trazo }, html: dimensionado }];
-}
-
-const ETIQUETAS_DE_ICONO = new Set(['svg', 'g', 'path', 'circle', 'ellipse', 'rect', 'line', 'polyline', 'polygon']);
-const ATRIBUTOS_DE_ICONO = new Set([
-  'xmlns', 'viewBox', 'width', 'height', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'points', 'transform',
-  'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray', 'fill-rule', 'clip-rule', 'opacity',
-  'fill-opacity', 'stroke-opacity',
-]);
-const ETIQUETA_SVG = /<(\/?)([a-zA-Z][\w-]*)((?:\s+[\w:-]+\s*=\s*"[^"<>]*")*)\s*(\/?)>/g;
-const ATRIBUTO_SVG = /\s+([\w:-]+)\s*=\s*"([^"]*)"/g;
-
-/**
- * Saneado del icono por lista blanca: solo etiquetas de forma y atributos de
- * dibujo, entre comillas dobles, sin `url(`; sin texto suelto, sin `id` ni
- * referencias. Quita el prologo XML y los comentarios. Devuelve `undefined` si
- * hay algo fuera de la lista: el icono viene de fuera (Workspace) y el SVG
- * exportado debe ser autocontenido.
- */
-function sanearIcono(svg: string): string | undefined {
-  const limpio = svg.replace(/^\s*<\?xml[^>]*\?>/, '').replace(/<!--[\s\S]*?-->/g, '').trim();
-  if (limpio.replace(ETIQUETA_SVG, '').trim() !== '') return undefined;
-  for (const [, , nombre = '', atributos = ''] of limpio.matchAll(ETIQUETA_SVG)) {
-    if (!ETIQUETAS_DE_ICONO.has(nombre)) return undefined;
-    for (const [, atributo = '', valor = ''] of atributos.matchAll(ATRIBUTO_SVG)) {
-      if (!ATRIBUTOS_DE_ICONO.has(atributo) || /url\(|javascript:|&/i.test(valor)) return undefined;
-    }
-  }
-  return /^<svg[\s>]/.test(limpio) ? limpio : undefined;
 }
 
 /** Separador bajo la cabecera y una fila de texto por Atributo, en orden. */

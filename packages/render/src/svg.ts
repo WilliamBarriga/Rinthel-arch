@@ -4,15 +4,8 @@
  */
 import { construirEscena } from './escena';
 import type { Elemento, EntradaDeEscena } from './escena';
-
-/** Fuente que el export lleva dentro: nombre de familia y archivo en base64. */
-export interface FuenteIncrustada {
-  family: string;
-  /** Tipo MIME del archivo, p. ej. `font/woff2`. */
-  mime: string;
-  /** Contenido del archivo de fuente en base64. */
-  data: string;
-}
+import { serializarFuentes } from './fuentes';
+import type { FuenteIncrustada } from './fuentes';
 
 /** Lo que se necesita para exportar una Vista: sin interaccion (`onSelect`, `onToggle`). */
 export type EntradaDeRender = Omit<EntradaDeEscena, 'onSelect' | 'onToggle'> & {
@@ -24,12 +17,8 @@ export type EntradaDeRender = Omit<EntradaDeEscena, 'onSelect' | 'onToggle'> & {
 export function renderToSvgString({ fonts = [], ...entrada }: EntradaDeRender): string {
   const escena = construirEscena(entrada);
   if (fonts.length === 0) return aCadena(escena);
-  const estilo: Elemento = { tag: 'style', attrs: {}, hijos: [fonts.map(fontFace).join('\n')] };
+  const estilo: Elemento = { tag: 'style', attrs: {}, hijos: [serializarFuentes(fonts)] };
   return aCadena({ ...escena, hijos: [estilo, ...(escena.hijos ?? [])] });
-}
-
-function fontFace({ family, mime, data }: FuenteIncrustada): string {
-  return `@font-face{font-family:'${family.replace(/['\\]/g, '\\$&')}';src:url(data:${mime};base64,${data})}`;
 }
 
 /** Un elemento por linea; uno solo con texto, en una. */
@@ -45,6 +34,7 @@ function aCadena({ tag, attrs, hijos, html }: Elemento): string {
   return `${abre}>\n${cuerpo.join('\n')}\n</${tag}>`;
 }
 
-function escaparXml(texto: string): string {
+/** Escapa `& < > "` para texto y atributos, en XML o HTML. */
+export function escaparXml(texto: string): string {
   return texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }

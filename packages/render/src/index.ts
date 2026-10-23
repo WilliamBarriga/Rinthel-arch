@@ -17,6 +17,8 @@
  *
  * `renderToSvgString` acepta ademas `fonts` (`FuenteIncrustada[]`: familia, MIME y
  * base64) y las incrusta como `@font-face` con data URI, sin recursos externos.
+ * `serializarFuentes` / `hidratarFuentes` convierten esa lista a CSS y de vuelta (una
+ * regla por familia); `escaparXml` escapa texto para XML y HTML.
  *
  * Props de `Diagram` ademas de las anteriores: `visibility(id) -> 0..1` (opacidad
  * de Nodos, por id, y de Aristas, por `idDeArista`; sin ella, todo 1; `revealAt`
@@ -40,5 +42,7 @@
 export { Diagram } from './diagram';
 export type { DiagramProps } from './diagram';
 export type { Camara, NivelDeDetalle } from './escena';
-export { renderToSvgString } from './svg';
-export type { EntradaDeRender, FuenteIncrustada } from './svg';
+export { hidratarFuentes, serializarFuentes } from './fuentes';
+export type { FuenteIncrustada } from './fuentes';
+export { escaparXml, renderToSvgString } from './svg';
+export type { EntradaDeRender } from './svg';

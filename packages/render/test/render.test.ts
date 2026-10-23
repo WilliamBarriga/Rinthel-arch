@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { TEMA_NEUTRO, combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
 import type { IconProvider, Tema, VistaResuelta } from 'canonico';
 import { alturasDeNodo, layoutView } from 'layout';
-import { renderToSvgString } from 'render';
+import { escaparXml, hidratarFuentes, renderToSvgString, serializarFuentes } from 'render';
 
 const nodo = (id: string, title: string, type: string, children: unknown[] = []) => ({
   id,
@@ -291,5 +291,33 @@ describe('renderToSvgString: fuentes incrustadas', () => {
 
     expect(svg).toContain("font-family:'O\\'Brien'");
     expect(await exportar(fuentes)).toBe(svg);
+  });
+});
+
+describe('fuentes: serializar / hidratar', () => {
+  const fuentes = [
+    { family: 'Inter', mime: 'font/woff2', data: 'QUJD' },
+    { family: "O'Neil", mime: 'font/ttf', data: 'REVG' },
+  ];
+
+  it('ida y vuelta: el CSS hidratado devuelve las mismas fuentes', () => {
+    expect(hidratarFuentes(serializarFuentes(fuentes))).toEqual(fuentes);
+  });
+
+  it('una familia repetida se incrusta una sola vez', () => {
+    const css = serializarFuentes([...fuentes, { family: 'Inter', mime: 'font/woff', data: 'WFla' }]);
+
+    expect(hidratarFuentes(css)).toEqual(fuentes);
+  });
+
+  it('sin fuentes no hay CSS', () => {
+    expect(serializarFuentes([])).toBe('');
+    expect(hidratarFuentes('')).toEqual([]);
+  });
+});
+
+describe('escaparXml', () => {
+  it('escapa los cuatro caracteres con significado en XML y HTML', () => {
+    expect(escaparXml('<a href="x">&</a>')).toBe('&lt;a href=&quot;x&quot;&gt;&amp;&lt;/a&gt;');
   });
 });

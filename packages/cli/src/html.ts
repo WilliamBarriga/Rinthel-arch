@@ -6,9 +6,10 @@
  */
 import { build } from 'esbuild';
 import { fileURLToPath } from 'node:url';
-import { combineIconProviders, genericIcons, workspaceIcons } from 'canonico';
+import { combineIconProviders, genericIcons, serializarIconos, workspaceIcons } from 'canonico';
 import type { Tema } from 'canonico';
 
+import { escaparXml, serializarFuentes } from 'render';
 import type { SalidaDeBuild } from 'sesion';
 import { fuentesDelTema } from './fuentes';
 import { vistasDibujables } from './vistas-dibujables';
@@ -63,20 +64,9 @@ function bundlesDelNavegador(): Promise<Bundles> {
 const jsonEnHtml = (valor: unknown): string =>
   JSON.stringify(valor).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 
-const escaparHtml = (texto: string): string =>
-  texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
 /** `@font-face` con data URI para las fuentes de los Temas en uso. */
-function estiloDeFuentes(temas: readonly Tema[], fuentes: Readonly<Record<string, string>>): string {
-  const vistas = new Set<string>();
-  const reglas: string[] = [];
-  for (const { family, mime, data } of temas.flatMap((tema) => fuentesDelTema(tema, fuentes))) {
-    if (vistas.has(family)) continue;
-    vistas.add(family);
-    reglas.push(`@font-face{font-family:'${family.replace(/['\\]/g, '\\$&')}';src:url(data:${mime};base64,${data})}`);
-  }
-  return reglas.join('\n');
-}
+const estiloDeFuentes = (temas: readonly Tema[], fuentes: Readonly<Record<string, string>>): string =>
+  serializarFuentes(temas.flatMap((tema) => fuentesDelTema(tema, fuentes)));
 
 /** Un HTML por Vista (`html/<vista>.html`) a partir de la salida de `build`. Lanza si a una Vista le falta la geometria o esta obsoleta. */
 export async function exportarHtml(entrada: EntradaDeExport): Promise<SalidaDeBuild> {
@@ -86,12 +76,7 @@ export async function exportarHtml(entrada: EntradaDeExport): Promise<SalidaDeBu
   );
   const usados = fuente.themes.filter(({ name }) => Object.values(porVista).some(({ theme }) => theme === name));
   const proveedor = combineIconProviders(workspaceIcons(workspace), genericIcons());
-  const iconos = Object.fromEntries(
-    proveedor.keys().sort().flatMap((clave) => {
-      const svg = proveedor.resolve(clave);
-      return svg === undefined ? [] : [[clave, svg] as const];
-    }),
-  );
+  const iconos = serializarIconos(proveedor);
   const { pagina, worker } = await bundlesDelNavegador();
   const estilo = estiloDeFuentes(usados, fuentes);
 
@@ -104,7 +89,7 @@ export async function exportarHtml(entrada: EntradaDeExport): Promise<SalidaDeBu
         '<head>',
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width,initial-scale=1">',
-        `<title>${escaparHtml(id)}</title>`,
+        `<title>${escaparXml(id)}</title>`,
         `<style>html,body,#raiz{margin:0;height:100%;overflow:hidden}${estilo === '' ? '' : `\n${estilo}\n`}</style>`,
         '</head>',
         '<body>',
