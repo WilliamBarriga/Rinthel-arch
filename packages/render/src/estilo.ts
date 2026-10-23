@@ -48,12 +48,14 @@ export interface Estilo {
     relleno: string;
     /** `stroke-dasharray` de un Grupo colapsado. */
     trazoColapsado: string;
+    /** Region del filtro de sombra respecto de la caja (origen y tamano relativos). */
+    regionDeSombra: { origen: string; tamano: string };
     /** Tokens por nombre de Tipo de nodo (colores ya resueltos); vacio si el Tema no declara. */
     porTipo: Record<string, EstiloDeTipoDeNodo>;
   };
   arista: {
     color: string;
-    flecha: { ancho: number; alto: number; forma: string };
+    flecha: { ancho: number; alto: number; forma: string; viewBox: string; refX: number; refY: number };
     /** Margen entre la cardinalidad y el punto del extremo. */
     separacionCardinalidad: number;
     /** Cuanto se sube la cardinalidad de un segmento horizontal para no pisar la linea. */
@@ -94,10 +96,10 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
     fuenteCuerpo: fonts.body,
     fuenteMono: fonts.mono,
     paleta: tema.palette,
-    nodo: { radio: 6, relleno: tokens.background, trazoColapsado: '6 3', porTipo: porTipoDeNodo(tema) },
+    nodo: { radio: 6, relleno: tokens.background, trazoColapsado: '6 3', regionDeSombra: { origen: '-20%', tamano: '150%' }, porTipo: porTipoDeNodo(tema) },
     arista: {
       color: tokens.border,
-      flecha: { ancho: 8, alto: 8, forma: 'M 0 0 L 10 5 L 0 10 z' },
+      flecha: { ancho: 8, alto: 8, forma: 'M 0 0 L 10 5 L 0 10 z', viewBox: '0 0 10 10', refX: 10, refY: 5 },
       separacionCardinalidad: 8,
       elevacionCardinalidad: 4,
       elevacionEtiquetaSinCaja: 4,

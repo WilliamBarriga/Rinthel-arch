@@ -30,13 +30,14 @@ function idDeSombra(tipo: string): string {
 
 /** Definiciones de las sombras por Tipo de nodo del Estilo; `undefined` si ninguno declara sombra. */
 export function pintarSombras(estilo: Estilo): Elemento | undefined {
+  const region = estilo.nodo.regionDeSombra;
   const filtros = Object.entries(estilo.nodo.porTipo).flatMap(([tipo, t]): Elemento[] =>
     t.sombra === undefined
       ? []
       : [
           {
             tag: 'filter',
-            attrs: { id: idDeSombra(tipo), x: '-20%', y: '-20%', width: '150%', height: '150%' },
+            attrs: { id: idDeSombra(tipo), x: region.origen, y: region.origen, width: region.tamano, height: region.tamano },
             hijos: [{ tag: 'feDropShadow', attrs: { dx: num(t.sombra.dx), dy: num(t.sombra.dy), stdDeviation: num(t.sombra.desenfoque), 'flood-color': t.sombra.color } }],
           },
         ],
@@ -175,7 +176,7 @@ export function pintarFlecha(estilo: Estilo): Elemento {
     attrs: {},
     hijos: colores.map((color) => ({
       tag: 'marker',
-      attrs: { id: idDeFlecha(color), viewBox: '0 0 10 10', refX: '10', refY: '5', markerWidth: num(flecha.ancho), markerHeight: num(flecha.alto), orient: 'auto' },
+      attrs: { id: idDeFlecha(color), viewBox: flecha.viewBox, refX: num(flecha.refX), refY: num(flecha.refY), markerWidth: num(flecha.ancho), markerHeight: num(flecha.alto), orient: 'auto' },
       hijos: [{ tag: 'path', attrs: { d: flecha.forma, fill: color } }],
     })),
   };
@@ -230,6 +231,21 @@ export function pintarArista(
   };
 }
 
+/** Punto de una etiqueta sin caja propia: medio del segmento mas largo de la ruta, subido `elevacionEtiquetaSinCaja`. Compartido con el hit-test del shell. */
+export function centroDeEtiquetaSinCaja(estilo: Estilo, puntos: readonly Punto[]): Punto {
+  let centro = puntos[0] ?? { x: 0, y: 0 };
+  let mejor = -1;
+  for (let i = 1; i < puntos.length; i++) {
+    const [a, b] = [puntos[i - 1]!, puntos[i]!];
+    const largo = Math.hypot(b.x - a.x, b.y - a.y);
+    if (largo > mejor) {
+      mejor = largo;
+      centro = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - estilo.arista.elevacionEtiquetaSinCaja };
+    }
+  }
+  return centro;
+}
+
 /**
  * Etiqueta de una Arista centrada en la caja que ELK le reservo; sin caja (la
  * Arista se re-enruto por un Pin) va sobre el punto medio del segmento mas largo
@@ -239,23 +255,12 @@ export function pintarEtiquetaDeArista(
   estilo: Estilo,
   { id, texto, puntos, caja }: { id: string; texto: string; puntos: readonly Punto[]; caja: CajaDeNodo | undefined },
 ): Elemento {
-  const { metricas, etiqueta, arista } = estilo;
+  const { metricas, etiqueta } = estilo;
   const tamano = metricas.fontSize * metricas.escalaEtiqueta;
-  let centro = { x: 0, y: 0 };
-  if (caja !== undefined) {
-    centro = { x: caja.x + caja.width / 2, y: caja.y + caja.height / 2 + tamano * etiqueta.centradoVertical };
-  } else {
-    let mejor = -1;
-    for (let i = 1; i < puntos.length; i++) {
-      const a = puntos[i - 1]!;
-      const b = puntos[i]!;
-      const largo = Math.hypot(b.x - a.x, b.y - a.y);
-      if (largo > mejor) {
-        mejor = largo;
-        centro = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - arista.elevacionEtiquetaSinCaja };
-      }
-    }
-  }
+  const centro =
+    caja !== undefined
+      ? { x: caja.x + caja.width / 2, y: caja.y + caja.height / 2 + tamano * etiqueta.centradoVertical }
+      : centroDeEtiquetaSinCaja(estilo, puntos);
   return {
     tag: 'text',
     attrs: {

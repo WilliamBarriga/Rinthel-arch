@@ -127,7 +127,7 @@ export { crearEnviadorDePin } from './enviar-pin';
 export type { EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
 export type { IntencionDePin } from 'canonico';
 export { crearControlDeEdicion } from './control-de-edicion';
-export type { ControlDeEdicion, ResultadoDeAplicar } from './control-de-edicion';
+export type { ControlDeEdicion, ResultadoDeEdicion } from './control-de-edicion';
 export type { Historial, Intencion } from 'sesion';
 export { adaptadorDeWorker } from './layout-en-worker';
 export { servirLayout } from './servir-layout';

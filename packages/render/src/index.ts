@@ -54,6 +54,7 @@ export { Diagram } from './diagram';
 export type { DiagramProps } from './diagram';
 export type { Camara, Estados, NivelDeDetalle } from './escena';
 export { resolverEstilo } from './estilo';
+export { centroDeEtiquetaSinCaja } from './pintores';
 export type { AspectoDeEstado, EstadoVisual, Estilo } from './estilo';
 export { hidratarFuentes, serializarFuentes } from './fuentes';
 export type { FuenteIncrustada } from './fuentes';

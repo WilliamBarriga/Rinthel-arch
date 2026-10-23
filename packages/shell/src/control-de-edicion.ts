@@ -8,12 +8,12 @@ import type { Historial, Intencion, MotivoDeRechazo } from 'sesion';
 
 type Archivos = Historial['archivos'];
 
-export type ResultadoDeAplicar = { ok: true } | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
+export type ResultadoDeEdicion = { ok: true } | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
 
 export interface ControlDeEdicion {
   /** Texto vigente del Workspace tras las ediciones, deshaceres y rehaceres. */
   archivos(): Archivos;
-  aplicar(intencion: Intencion): ResultadoDeAplicar;
+  aplicar(intencion: Intencion): ResultadoDeEdicion;
   /** `false` si no habia nada que deshacer. */
   deshacer(): boolean;
   rehacer(): boolean;

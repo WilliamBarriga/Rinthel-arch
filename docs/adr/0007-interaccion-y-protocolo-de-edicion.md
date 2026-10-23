@@ -16,7 +16,7 @@ La interfaz de red no cambia: el cuerpo de `POST /api/pin` sigue siendo `Intenci
 
 ## Shell
 
-`shell` expone `crearControlDeEdicion(archivos)` con `aplicar`, `deshacer`, `rehacer`, `puedeDeshacer` y `puedeRehacer`; es el adaptador con estado sobre el historial puro de `sesion`. El servidor de `dev` mantiene `POST /api/pin` como unica escritura a disco; llevar deshacer/rehacer al disco de `dev` (escribir el texto restaurado con el hash vigente) queda para el ticket que conecte los atajos de teclado.
+`shell` expone `crearControlDeEdicion(archivos)` con `aplicar`, `deshacer`, `rehacer`, `puedeDeshacer` y `puedeRehacer`; es el adaptador con estado sobre el historial puro de `sesion`. El servidor de `dev` escribe a disco solo por `POST /api/pin` y `POST /api/edit`; llevar deshacer/rehacer al disco de `dev` (escribir el texto restaurado con el hash vigente) queda para el ticket que conecte los atajos de teclado.
 
 ## Consecuencias
 

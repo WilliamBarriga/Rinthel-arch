@@ -11,8 +11,12 @@
  */
 import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
-import { atributosVisibles, indiceDeGeometria, metricasDe } from 'layout';
-import type { CajaDeNodo, Geometria, Metricas, Punto } from 'layout';
+import { atributosVisibles, indiceDeGeometria } from 'layout';
+import type { CajaDeNodo, Geometria, Punto } from 'layout';
+import { centroDeEtiquetaSinCaja, resolverEstilo } from 'render';
+import type { Estilo } from 'render';
+
+import { AJUSTES_POR_DEFECTO } from './configuracion';
 
 export type TipoDeElemento = 'nodo' | 'arista' | 'etiqueta' | 'atributo';
 
@@ -23,13 +27,11 @@ export interface ElementoSeleccionable {
 }
 
 export interface OpcionesDeHitTest {
-  /** Distancia maxima al trazo de una Arista, en unidades de la geometria. Por defecto 4. */
+  /** Distancia maxima al trazo de una Arista, en unidades de la geometria. Por defecto `AJUSTES_POR_DEFECTO.hitTolerance`. */
   tolerancia?: number;
   /** Si los Atributos estan dibujados (zoom semantico); sin ellos el punto cae en el Nodo. Por defecto true. */
   atributos?: boolean;
 }
-
-const TOLERANCIA_POR_DEFECTO = 4;
 
 type Geo = Pick<Geometria, 'nodes' | 'edges' | 'labels'>;
 
@@ -44,21 +46,13 @@ function distanciaASegmento(p: Punto, a: Punto, b: Punto): number {
 }
 
 /** Caja de la etiqueta: la que reservo el layout o, si la Arista se re-enruto, una estimada sobre el segmento mas largo. */
-function cajaDeEtiqueta(texto: string, puntos: readonly Punto[], reservada: CajaDeNodo | undefined, metricas: Metricas): CajaDeNodo {
+function cajaDeEtiqueta(texto: string, puntos: readonly Punto[], reservada: CajaDeNodo | undefined, estilo: Estilo): CajaDeNodo {
   if (reservada !== undefined) return reservada;
+  const { metricas } = estilo;
   const tamano = metricas.fontSize * metricas.escalaEtiqueta;
   const [width, height] = [texto.length * tamano * metricas.factorDeAncho + metricas.holguraDeEtiqueta, tamano];
-  let centro = puntos[0] ?? { x: 0, y: 0 };
-  let mejor = -1;
-  for (let i = 1; i < puntos.length; i++) {
-    const [a, b] = [puntos[i - 1]!, puntos[i]!];
-    const largo = Math.hypot(b.x - a.x, b.y - a.y);
-    if (largo > mejor) {
-      mejor = largo;
-      centro = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 4 };
-    }
-  }
-  return { x: centro.x - width / 2, y: centro.y - height * 0.65, width, height };
+  const centro = centroDeEtiquetaSinCaja(estilo, puntos);
+  return { x: centro.x - width / 2, y: centro.y - height * (1 - estilo.etiqueta.centradoVertical), width, height };
 }
 
 /** Nodos en el orden en que `render` los dibuja: cada Grupo antes que sus hijos. */
@@ -72,16 +66,17 @@ export function elementoBajo(
   geometria: Geo,
   tema: Tema,
   punto: Punto,
-  { tolerancia = TOLERANCIA_POR_DEFECTO, atributos = true }: OpcionesDeHitTest = {},
+  { tolerancia = AJUSTES_POR_DEFECTO.hitTolerance, atributos = true }: OpcionesDeHitTest = {},
 ): ElementoSeleccionable | undefined {
   const { cajas, raices } = indiceDeGeometria(vista, geometria);
-  const metricas = metricasDe(tema);
+  const estilo = resolverEstilo(tema);
+  const { metricas } = estilo;
 
   // Aristas se dibujan encima de los Nodos; la ultima dibujada es la superior.
   const aristas = vista.edges.map((arista) => ({ arista, id: idDeArista(arista), puntos: geometria.edges[idDeArista(arista)]?.points ?? [] }));
   const dibujadas = aristas.filter(({ puntos }) => puntos.length >= 2);
   for (const { arista, id, puntos } of [...dibujadas].reverse()) {
-    if (arista.label !== undefined && contiene(cajaDeEtiqueta(arista.label, puntos, geometria.labels[id], metricas), punto)) return { tipo: 'etiqueta', id };
+    if (arista.label !== undefined && contiene(cajaDeEtiqueta(arista.label, puntos, geometria.labels[id], estilo), punto)) return { tipo: 'etiqueta', id };
   }
   for (const { id, puntos } of [...dibujadas].reverse()) {
     for (let i = 1; i < puntos.length; i++) {
@@ -111,14 +106,14 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
     const caja = cajas.get(idNodo);
     const indice = nodo === undefined ? -1 : atributosVisibles(nodo).findIndex((a) => a.name === nombre);
     if (caja === undefined || indice < 0) return undefined;
-    const { cabecera, fila } = metricasDe(tema);
+    const { cabecera, fila } = resolverEstilo(tema).metricas;
     return { x: caja.x, y: caja.y + cabecera + indice * fila, width: caja.width, height: fila };
   }
   const arista = vista.edges.find((a) => idDeArista(a) === elemento.id);
   const puntos = geometria.edges[elemento.id]?.points ?? [];
   if (arista === undefined || puntos.length < 2) return undefined;
   if (elemento.tipo === 'etiqueta') {
-    return arista.label === undefined ? undefined : cajaDeEtiqueta(arista.label, puntos, geometria.labels[elemento.id], metricasDe(tema));
+    return arista.label === undefined ? undefined : cajaDeEtiqueta(arista.label, puntos, geometria.labels[elemento.id], resolverEstilo(tema));
   }
   const [xs, ys] = [puntos.map((p) => p.x), puntos.map((p) => p.y)];
   const [x, y] = [Math.min(...xs), Math.min(...ys)];
