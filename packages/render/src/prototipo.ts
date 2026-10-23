@@ -12,7 +12,7 @@ import type { Elemento } from './elemento';
 import type { Estilo } from './estilo';
 
 type Punto = { x: number; y: number };
-export type Variante = 'A' | 'B' | 'C';
+export type Variante = 'A' | 'B' | 'C' | 'D';
 
 const el = (tag: string, attrs: Record<string, string | number>, hijos?: (Elemento | string)[]): Elemento => ({
   tag,
@@ -49,7 +49,7 @@ const colores = (e: Estilo) => [...new Set([e.borde, ...Object.values(e.paleta)]
 /** Definiciones comunes: degradados, brillos y marcadores de la variante. */
 export function defsDeVariante(e: Estilo, v: Variante, ancho: number, alto: number): Elemento[] {
   const defs: Elemento[] = [];
-  if (v === 'B') {
+  if (v === 'B' || v === 'D') {
     defs.push(
       el('radialGradient', { id: 'p-fondo', cx: '25%', cy: '0%', r: '110%' }, [el('stop', { offset: 0, 'stop-color': '#1b1850' }), el('stop', { offset: 1, 'stop-color': e.fondo })]),
       el('linearGradient', { id: 'p-brillo', x1: '0', y1: '0', x2: '0', y2: '1' }, [el('stop', { offset: 0, 'stop-color': '#fff', 'stop-opacity': 0.09 }), el('stop', { offset: 1, 'stop-color': '#fff', 'stop-opacity': 0.01 })]),
@@ -69,7 +69,7 @@ export function defsDeVariante(e: Estilo, v: Variante, ancho: number, alto: numb
     el('marker', { id: 'p-flecha', viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: v === 'A' ? 9 : 10, markerHeight: v === 'A' ? 9 : 10, markerUnits: 'userSpaceOnUse', orient: 'auto' }, [
       v === 'A'
         ? el('path', { d: 'M 1.5 1.5 L 8 5 L 1.5 8.5', fill: 'none', stroke: e.texto, 'stroke-opacity': 0.55, 'stroke-width': 1.4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' })
-        : el('path', { d: 'M 0 1 L 9 5 L 0 9 z', fill: e.texto, 'fill-opacity': v === 'B' ? 0.7 : 0.45 }),
+        : el('path', { d: 'M 0 1 L 9 5 L 0 9 z', fill: e.texto, 'fill-opacity': v === 'B' || v === 'D' ? 0.7 : 0.45 }),
     ]),
   );
   void ancho; void alto;
@@ -77,8 +77,8 @@ export function defsDeVariante(e: Estilo, v: Variante, ancho: number, alto: numb
 }
 
 export function fondoDeVariante(e: Estilo, v: Variante, ancho: number, alto: number): Elemento[] {
-  const base = el('rect', { width: ancho, height: alto, fill: v === 'B' ? 'url(#p-fondo)' : e.fondo });
-  return v === 'B' ? [base] : [base, el('rect', { width: ancho, height: alto, fill: 'url(#p-puntos)' })];
+  const base = el('rect', { width: ancho, height: alto, fill: v === 'B' || v === 'D' ? 'url(#p-fondo)' : e.fondo });
+  return v === 'B' || v === 'D' ? [base] : [base, el('rect', { width: ancho, height: alto, fill: 'url(#p-puntos)' })];
 }
 
 const neutro = (e: Estilo, fill: number, stroke: number, w = 1): Record<string, string | number> => ({ fill: e.texto, 'fill-opacity': fill, stroke: e.texto, 'stroke-opacity': stroke, 'stroke-width': w });
@@ -123,6 +123,19 @@ export function nodoDeVariante(e: Estilo, v: Variante, d: { nodo: NodoResuelto; 
       pie(e, 46, cy + 9, tipo),
     ];
   }
+  if (v === 'D') {
+    const c = ids(trazo);
+    const r = h / 2;
+    return [
+      el('rect', { width: w, height: h, rx: r, fill: e.fondo, filter: `url(#p-glow-${c})` }),
+      el('rect', { width: w, height: h, rx: r, fill: `url(#p-g-${c})` }),
+      el('rect', { width: w, height: h, rx: r, fill: 'url(#p-brillo)' }),
+      el('rect', { x: 0.5, y: 0.5, width: w - 1, height: h - 1, rx: r - 0.5, fill: 'none', stroke: 'url(#p-borde)' }),
+      el('circle', { cx: r, cy, r: 9, fill: trazo, 'fill-opacity': 0.25 }),
+      el('circle', { cx: r, cy, r: 4, fill: trazo }),
+      titulo(e, r + 17, cy, texto, { 'font-weight': 500 }),
+    ];
+  }
   // C: chip compacto, un punto de color y solo el titulo.
   return [
     el('rect', { width: w, height: h, rx: h / 2, fill: e.fondo }),
@@ -156,6 +169,17 @@ export function grupoDeVariante(e: Estilo, v: Variante, d: { nodo: NodoResuelto;
       el('text', { x: nodo.icon === undefined ? 22 : 40, y: 20, 'font-family': e.fuenteCuerpo, 'font-size': fs * 0.85, 'font-weight': 600, fill: e.texto, 'dominant-baseline': 'central' }, [texto]),
     ];
   }
+  if (v === 'D') {
+    const c = ids(trazo);
+    const ancho = Math.min(w - 24, texto.length * fs * 0.62 + 40);
+    return [
+      el('rect', { width: w, height: h, rx: 24, fill: `url(#p-g-${c})`, 'fill-opacity': 0.45 }),
+      el('rect', { x: 0.5, y: 0.5, width: w - 1, height: h - 1, rx: 23.5, fill: 'none', stroke: 'url(#p-borde)' }),
+      el('rect', { x: 12, y: 9, width: ancho, height: 24, rx: 12, fill: trazo, 'fill-opacity': 0.2, stroke: trazo, 'stroke-opacity': 0.5 }),
+      el('circle', { cx: 25, cy: 21, r: 3.5, fill: trazo }),
+      el('text', { x: 36, y: 21, 'font-family': e.fuenteCuerpo, 'font-size': fs * 0.85, 'font-weight': 600, fill: e.texto, 'dominant-baseline': 'central' }, [texto]),
+    ];
+  }
   return [
     el('rect', { width: w, height: h, rx: 22, fill: trazo, 'fill-opacity': 0.07 }),
     el('circle', { cx: 20, cy: 20, r: 4, fill: trazo }),
@@ -166,12 +190,13 @@ export function grupoDeVariante(e: Estilo, v: Variante, d: { nodo: NodoResuelto;
 /** Ruta, punto de origen y capa de brillo de una Arista. */
 export function aristaDeVariante(e: Estilo, v: Variante, puntos: readonly Punto[]): Elemento[] {
   const d = rutaRedondeada(puntos, v === 'A' ? 6 : v === 'B' ? 16 : 20);
+  const brillo = v === 'B' || v === 'D';
   const p0 = puntos[0]!;
   const base = { fill: 'none', stroke: e.texto, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
   if (v === 'A') {
     return [el('path', { d, ...base, 'stroke-opacity': 0.32, 'stroke-width': 1.2, 'marker-end': 'url(#p-flecha)' }), el('circle', { cx: p0.x, cy: p0.y, r: 2.2, fill: e.texto, 'fill-opacity': 0.5 })];
   }
-  if (v === 'B') {
+  if (brillo) {
     return [
       el('path', { d, ...base, 'stroke-opacity': 0.08, 'stroke-width': 6 }),
       el('path', { d, ...base, 'stroke-opacity': 0.55, 'stroke-width': 1.5, 'marker-end': 'url(#p-flecha)' }),

@@ -25,6 +25,8 @@ const variantes = [
     m: { anchoMinimo: 170, paddingHorizontal: 92, cabecera: 58, paddingGrupo: { top: 48, left: 24, bottom: 24, right: 24 } } },
   { k: 'C' as const, nombre: 'Compacta', bg: '#0c0c0f', fg: '#f4f4f5', pal: { blue: '#38bdf8', purple: '#c4b5fd', green: '#4ade80', amber: '#fcd34d', red: '#fca5a5', gray: '#a1a1aa' },
     m: { anchoMinimo: 120, paddingHorizontal: 64, cabecera: 38, paddingGrupo: { top: 44, left: 18, bottom: 18, right: 18 } } },
+  { k: 'D' as const, nombre: 'Chip de vidrio (B + C)', bg: '#0a0a14', fg: '#eef0ff', pal: { blue: '#818cf8', purple: '#c084fc', green: '#2dd4bf', amber: '#fbbf24', red: '#fb7185', gray: '#94a3b8' },
+    m: { anchoMinimo: 130, paddingHorizontal: 68, cabecera: 40, paddingGrupo: { top: 48, left: 22, bottom: 22, right: 22 } } },
 ];
 
 const svgs: string[] = [];
