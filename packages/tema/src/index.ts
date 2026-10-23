@@ -43,6 +43,17 @@
  *   sobre una caja ya medida. `layout` y `render` usan lo mismo.
  *   `atributosVisibles` es la regla unica de que Atributos se muestran.
  *
+ * - Accesibilidad: `advertenciasDeContraste(tema, tipos)` (4.5:1 texto, 3:1 graficos, por Tipo y estado),
+ *   `tiposSoloColor` y `leyendaDelTema` (Tipo, forma, color; `necesaria` si hay solo-color) solo calculan:
+ *   que sean warnings y no bloqueen lo decide `sesion`. `TEMA_ALTO_CONTRASTE` es el Tema incorporado del visor.
+ *
+ * - Medicion de texto: el ancho viene de un origen `estimado` (por caracter; CLI,
+ *   Workers, pruebas) o `medido` (`MedidasDeTexto`, que el visor toma tras
+ *   `document.fonts.load` y entrega como datos: `tablaDeMetricas(tema, medidas)`).
+ *   `textosAMedir(vista, tabla)` dice que medir. El nivel y el hash de cada fuente
+ *   (`hashDeFuente`) entran en `claveDeMetricas`; los anchos no. Un texto sin
+ *   medida cae a la estimacion.
+ *
  * Invariantes: puro y determinista; sin I/O, reloj, azar ni DOM. Una Capa es
  * una instancia de una Primitiva del catalogo cerrado; el color es siempre un
  * nombre de Paleta. Modos de error: los datos invalidos se devuelven como
@@ -56,6 +67,9 @@ export { TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
 export { atributosVisibles, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeAtributo } from './metricas';
 export type { Metricas, TablaDeMetricas } from './metricas';
+export { anchoDeTexto, claveDeTexto, hashDeFuente } from './medicion';
+export type { MedicionDeMetricas, MedidasDeTexto, TextoAMedir } from './medicion';
+export { textosAMedir } from './textos-a-medir';
 export { colocarEnCaja, colocarNodo } from './slots';
 export type { ColocacionDeNodo, Rect } from './slots';
 export { estiloResuelto } from './estilo';
@@ -64,5 +78,8 @@ export { aplicarOps, cascada, ESTADOS, opTocaMetricas, validarOps } from './parc
 export type { CapaDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa } from './parches';
 export { resolverColor, validarColor } from './color';
 export type { ContextoDeColor, ErrorDeColor } from './color';
+export { advertenciasDeContraste, leyendaDelTema, razonDeContraste, tiposSoloColor } from './contraste';
+export type { AdvertenciaDeContraste, EntradaDeLeyenda, Leyenda, TipoParaLeyenda } from './contraste';
+export { TEMA_ALTO_CONTRASTE } from './alto-contraste';
 export { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES, construirEfecto, construirEscalonado, construirKeyframes, construirMovimiento, construirTransicion, duracionEnMs } from './animacion';
 export type { Animacion, Easing, Efecto, KeyframesDeCapa, Movimiento, NombreDeEfecto, NombreDeMovimiento, ParametroDeAnimacion, PasoDeKeyframes, PropiedadAnimable, Reducido, Transicion } from './animacion';

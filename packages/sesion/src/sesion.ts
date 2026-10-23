@@ -4,7 +4,7 @@ import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
 import type { Geometria } from 'layout';
-import { TEMA_NEUTRO, estiloResuelto, leerOps } from 'tema';
+import { TEMA_NEUTRO, advertenciasDeContraste, estiloResuelto, leerOps, tiposSoloColor } from 'tema';
 import type { EstiloResuelto } from 'tema';
 
 /** Archivos derivados, por ruta relativa a `<workspace>/.diagrams/`. */
@@ -79,6 +79,49 @@ function avisosDePins(vista: string, geometry: Geometria, pins: readonly Posicio
   });
 }
 
+/** Color de Paleta de cada Tipo de nodo de la Fuente. */
+const coloresDeTipos = (fuente: FuenteCanonica): Record<string, string | undefined> =>
+  Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
+
+/**
+ * Warnings de accesibilidad (ADR 0008), nunca errores: `W_THEME_LOW_CONTRAST` por Tema,
+ * Tipo y estado (situado en el nombre del Tema) y `W_THEME_COLOR_ONLY` por Vista cuando
+ * dos de sus Tipos solo difieren por color (situado en el id de la Vista).
+ */
+function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefined, global: string | undefined): Issue[] {
+  /** Posicion del valor en `ruta`; `null` si su archivo no es fiable (no se avisa). */
+  const sitio = (ruta: Parameters<Ubicador>[0]): { file: string; line: number; column: number } | null => {
+    const donde = ubicar === undefined ? { file: '(canonico)', range: { start: { line: 1, column: 1 } } } : ubicar(ruta);
+    return donde === null ? null : { file: donde.file, ...donde.range.start };
+  };
+  const colores = coloresDeTipos(fuente);
+  const issues: Issue[] = [];
+  fuente.themes.forEach((tema, i) => {
+    const donde = sitio(['themes', i, 'name']);
+    if (donde === null) return;
+    for (const aviso of advertenciasDeContraste(tema, colores)) {
+      issues.push({ code: CODIGOS.W_THEME_LOW_CONTRAST, severity: 'warning', ...donde, message: `Tema '${tema.name}': ${aviso.mensaje}`, hint: `ajusta la Capa '${aviso.capa}' o los colores de la Paleta` });
+    }
+  });
+  fuente.views.forEach((declarada, i) => {
+    const resuelta = resolveView(fuente, declarada.id);
+    const donde = sitio(['views', i, 'id']);
+    if (resuelta === undefined || donde === null) return;
+    const usados = new Set(resuelta.nodes.map((n) => n.type));
+    const tipos = fuente.specification.nodeTypes.filter((t) => usados.has(t.name)).map((t) => ({ name: t.name, color: colores[t.name], icon: t.icon }));
+    for (const [a, b] of tiposSoloColor(temaDeVista(fuente, declarada, global), tipos)) {
+      issues.push({
+        code: CODIGOS.W_THEME_COLOR_ONLY,
+        severity: 'warning',
+        ...donde,
+        message: `En la Vista '${declarada.id}', los Tipos '${a}' y '${b}' se distinguen solo por color`,
+        hint: 'da al Tema una forma, un icono o un borde distinto por Tipo; el visor mostrara la leyenda',
+      });
+    }
+  });
+  return issues;
+}
+
 interface EntradaDeGeometria {
   /** `layoutKey` mas los Pins de la Vista: lo unico de que depende la geometria. */
   clave: string;
@@ -138,8 +181,9 @@ function crear(
     ubicar: compilado.ubicar,
     async diagnosticar() {
       if (fuente === undefined) return [...compilado.issues];
+      const accesibilidad = avisosDeAccesibilidad(fuente, compilado.ubicar, opciones.tema);
       const conPins = fuente.views.filter(({ id }) => pins.filter((pin) => pin.view === id).length >= 2);
-      return [...compilado.issues, ...(await avisos(conPins.map(({ id }) => id)))];
+      return [...compilado.issues, ...accesibilidad, ...(await avisos(conPins.map(({ id }) => id)))];
     },
     async construir() {
       if (fuente === undefined) return { archivos: {}, issues: [...compilado.issues] };
@@ -148,7 +192,7 @@ function crear(
         const cacheada = await geometria(id);
         if (cacheada !== undefined) salida[`geometria/${id}.json`] = json(cacheada);
       }
-      const issues = [...compilado.issues, ...(await avisos(fuente.views.map(({ id }) => id)))];
+      const issues = [...compilado.issues, ...avisosDeAccesibilidad(fuente, compilado.ubicar, opciones.tema), ...(await avisos(fuente.views.map(({ id }) => id)))];
       return { archivos: salida, issues };
     },
     geometria,

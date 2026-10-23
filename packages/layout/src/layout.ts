@@ -8,7 +8,7 @@ import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
 import { atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
-import type { Metricas, Rect, TablaDeMetricas } from 'tema';
+import type { MedidasDeTexto, Metricas, Rect, TablaDeMetricas } from 'tema';
 
 /** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
 export interface CajaDeNodo {
@@ -51,6 +51,8 @@ export interface OpcionesDeLayout {
   elk?: ELK;
   /** Metricas con las que medir; por defecto la tabla derivada del Tema. Una sola `Metricas` se usa para todo elemento. `render` debe dibujar con las mismas. */
   metricas?: Metricas | TablaDeMetricas;
+  /** Medidas reales de texto (el visor las toma con la fuente cargada); sin ellas se estima por caracter. Se ignoran si se pasa `metricas`. */
+  medidas?: MedidasDeTexto;
 }
 
 const OPCIONES_RAIZ = {
@@ -78,7 +80,7 @@ export async function layoutView(
 ): Promise<Geometria> {
   // Import dinamico: quien solo usa las medidas (render) no arrastra ELK al empaquetar.
   const elk = opciones.elk ?? new (await import('elkjs/lib/elk.bundled.js')).default();
-  const medidas = opciones.metricas === undefined ? tablaDeMetricas(tema) : comoTabla(opciones.metricas);
+  const medidas = opciones.metricas === undefined ? tablaDeMetricas(tema, opciones.medidas) : comoTabla(opciones.metricas);
 
   const grafo: ElkNode = {
     id: 'raiz',

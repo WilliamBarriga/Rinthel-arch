@@ -50,7 +50,7 @@ const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string
   return candidatos.length === 0 ? {} : { hint: `quisiste decir ${candidatos.map((c) => `'${c}'`).join(' o ')}` };
 };
 
-function hexARgb(hex: string): [number, number, number] | undefined {
+export function hexARgb(hex: string): [number, number, number] | undefined {
   const corto = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(hex);
   if (corto !== null) return [1, 2, 3].map((i) => Number.parseInt((corto[i] as string).repeat(2), 16)) as [number, number, number];
   const largo = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);

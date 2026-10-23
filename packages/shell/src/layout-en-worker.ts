@@ -7,6 +7,7 @@
  */
 import type { Tema, VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
+import type { MedidasDeTexto } from 'tema';
 
 import type { AdaptadorDeLayout } from './vista-interactiva';
 
@@ -20,6 +21,8 @@ export interface Peticion {
   id: number;
   vista: VistaResuelta;
   tema: Tema;
+  /** Medidas reales de texto; sin ellas el Worker estima por caracter. */
+  medidas?: MedidasDeTexto | undefined;
 }
 export type Respuesta = { id: number; geometria: Geometria } | { id: number; error: string };
 
@@ -35,11 +38,11 @@ export function adaptadorDeWorker(puerto: PuertoDeMensajes): AdaptadorDeLayout {
     if ('error' in respuesta) espera.fallo(new Error(respuesta.error));
     else espera.ok(respuesta.geometria);
   };
-  return (vista, tema) =>
+  return (vista, tema, medidas) =>
     new Promise<Geometria>((ok, fallo) => {
       const id = siguiente++;
       pendientes.set(id, { ok, fallo });
-      const peticion: Peticion = { id, vista, tema };
+      const peticion: Peticion = { id, vista, tema, ...(medidas !== undefined && { medidas }) };
       puerto.postMessage(peticion);
     });
 }

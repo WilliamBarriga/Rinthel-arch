@@ -179,6 +179,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     aristas: aristasAst,
     tipos: tiposAst,
     vistas: vistas.map(({ archivo, ast }) => ({ archivo, ast })),
+    temas: new Map(temasDeclarados.map(({ archivo, ast, nombre }) => [ast.name, { archivo, nombre }])),
     conSintaxisRota,
   });
   issues.push(...validate(fuente, { iconos: combineIconProviders(workspaceIcons(workspace), genericIcons()), ubicar }));

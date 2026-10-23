@@ -41,6 +41,8 @@ const codigosDeV1 = [
   'E_THEME_UNKNOWN_PART',
   'E_THEME_UNKNOWN_MOTION',
   'E_DUPLICATE_PART',
+  'W_THEME_LOW_CONTRAST',
+  'W_THEME_COLOR_ONLY',
 ];
 
 describe('catalogo de codigos de issue', () => {
