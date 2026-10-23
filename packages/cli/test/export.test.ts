@@ -131,6 +131,20 @@ describe('export', () => {
       }
     });
 
+    it('una edicion solo de Pin invalida la geometria cacheada: export la rechaza y pide build', async () => {
+      const workspace = await workspaceConstruido();
+      const rutaCanonica = join(workspace, '.diagrams', 'canonico.json');
+      const fuente = JSON.parse(readFileSync(rutaCanonica, 'utf8'));
+      const vista = fuente.views.find((v: { id: string }) => v.id === 'general');
+      vista.overrides = [...(vista.overrides ?? []), { node: 'api', pin: { x: 40, y: 50 } }];
+      writeFileSync(rutaCanonica, JSON.stringify(fuente));
+
+      const resultado = await run(['export', '--workspace', workspace]);
+
+      expect(resultado.exitCode).toBe(2);
+      expect(resultado.stderr).toContain("ejecuta 'build'");
+    });
+
     it('una geometria que no cumple su esquema es un fallo de uso que pide build', async () => {
       const workspace = await workspaceConstruido();
       const cacheada = JSON.parse(readFileSync(rutaDeGeometria(workspace), 'utf8'));
