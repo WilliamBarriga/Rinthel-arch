@@ -21,7 +21,7 @@ const CAPAS = `    layer forma rect { radius 8 }
     layer relleno solid { color papel }
     slots { title attrs }`;
 
-const tema = (extra: string) => `theme t extends neutral {
+const tema = (extra: string) => `theme t {
   palette { rojo "#dc2626"  papel "#fefce8" }
   node {
 ${CAPAS}
