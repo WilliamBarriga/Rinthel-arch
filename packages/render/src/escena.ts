@@ -8,13 +8,13 @@
 import { idDeArista } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
 import { atributosVisibles, indiceDeGeometria } from 'layout';
-import type { Geometria, Metricas } from 'layout';
+import type { CajaDeNodo, Geometria, Metricas } from 'layout';
 
 import { num } from './elemento';
 import type { Elemento } from './elemento';
 import { resolverEstilo } from './estilo';
-import type { Estilo } from './estilo';
-import { pintarArista, pintarControl, pintarEtiquetaDeArista, pintarFlecha, pintarFondo, pintarGrupo, pintarNodo } from './pintores';
+import type { EstadoVisual, Estilo } from './estilo';
+import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEstadoDeRuta, pintarEtiquetaDeArista, pintarFlecha, pintarFondo, pintarGrupo, pintarNodo } from './pintores';
 
 export type { Elemento } from './elemento';
 
@@ -34,6 +34,9 @@ export interface Camara {
  */
 export type NivelDeDetalle = 'etiqueta' | 'titulo' | 'completo';
 
+/** Estados visuales por id de elemento (Nodo, Arista o `nodo#atributo`); un elemento puede tener varios. */
+export type Estados = Readonly<Record<string, readonly EstadoVisual[]>>;
+
 export interface EntradaDeEscena {
   view: VistaResuelta;
   geometry: Geometria;
@@ -51,6 +54,8 @@ export interface EntradaDeEscena {
   onToggle?: (id: string) => void;
   /** Metricas con las que dibujar; deben ser las del layout. Por defecto las derivadas del Tema. */
   metricas?: Metricas;
+  /** Estados visuales (seleccionado, hover, fantasma) que se dibujan con el Estilo resuelto; sin ellos, ninguno. */
+  estados?: Estados;
   /** Estilo resuelto con el que dibujar; por defecto el del Tema (`resolverEstilo`). */
   estilo?: Estilo;
 }
@@ -116,8 +121,21 @@ function nodoSvg(nodo: NodoResuelto, contexto: Contexto): Elemento {
         ],
       },
       ...nodo.children.map((hijo) => nodoSvg(hijo, contexto)),
+      ...estadosDeNodo(nodo, caja, contexto),
     ],
   };
+}
+
+function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, detail }: Contexto): Elemento[] {
+  if (estados === undefined) return [];
+  const propios = (estados[nodo.id] ?? []).map((e) => pintarEstadoDeCaja(estilo, e, nodo.id, { x: 0, y: 0, width: caja.width, height: caja.height }));
+  if (nodo.children.length > 0 || !tieneFilas(nodo, detail)) return propios;
+  const { cabecera, fila } = estilo.metricas;
+  const filas = atributosVisibles(nodo).flatMap((atributo, i) => {
+    const id = `${nodo.id}#${atributo.name}`;
+    return (estados[id] ?? []).map((e) => pintarEstadoDeCaja(estilo, e, id, { x: 0, y: cabecera + i * fila, width: caja.width, height: fila }));
+  });
+  return [...propios, ...filas];
 }
 
 function tieneFilas(nodo: NodoResuelto, detail?: NivelDeDetalle): boolean {
@@ -130,7 +148,7 @@ function colorDeTrazo(nodo: NodoResuelto, estilo: Estilo): string {
 }
 
 /** Arista con su etiqueta. Una Arista sin ruta en la geometria (ELK no la enruto) se omite. */
-function aristaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibility }: Contexto): Elemento[] {
+function aristaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibility, estados }: Contexto): Elemento[] {
   const id = idDeArista(arista);
   const puntos = geometry.edges[id]?.points;
   if (puntos === undefined || puntos.length < 2) return [];
@@ -141,7 +159,10 @@ function aristaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibil
       desde: arista.fromCardinality,
       hasta: arista.toCardinality,
       atributos: opacidad(visibility(id)),
-      extra: arista.label === undefined ? [] : [pintarEtiquetaDeArista(estilo, { id, texto: arista.label, puntos, caja: geometry.labels[id] })],
+      extra: [
+        ...(arista.label === undefined ? [] : [pintarEtiquetaDeArista(estilo, { id, texto: arista.label, puntos, caja: geometry.labels[id] })]),
+        ...(estados?.[id] ?? []).map((e) => pintarEstadoDeRuta(estilo, e, id, puntos)),
+      ],
       ...(onSelect !== undefined && { alClic: () => onSelect(id) }),
     }),
   ];
