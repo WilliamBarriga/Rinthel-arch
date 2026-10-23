@@ -80,6 +80,8 @@ interface Contexto extends EntradaDeEscena {
   estilo: Estilo;
   /** Cajas en coordenadas del lienzo (las de la geometria son relativas al Grupo padre). */
   cajas: ReadonlyMap<string, CajaDeNodo>;
+  /** Nombre accesible de cada Nodo, sacado solo del Modelo (nunca del Tema). */
+  nombres?: ReadonlyMap<string, string>;
   /** Color de Paleta de cada Nodo: el de su Tipo o override; `ORIGEN` de una Arista toma el de su origen. */
   coloresDeNodo: ReadonlyMap<string, string | undefined>;
   /** Posicion de cada Nodo en el escalonado de `enter`; vacio si el Tema no declara `stagger`. */
@@ -108,6 +110,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
   const tx = (width - vista.width * k) / 2 - vista.x * k;
   const ty = (height - vista.height * k) / 2 - vista.y * k;
   const nodos = raices.flatMap((nodo) => aplanar(nodo));
+  contexto.nombres = nombresAccesibles(view, nodos);
 
   return {
     tag: 'div',
@@ -149,6 +152,30 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
 }
 
 const esGrupo = (nodo: NodoResuelto): boolean => nodo.children.length > 0;
+
+/**
+ * Nombre accesible de cada Nodo (ADR 0008): etiqueta, Tipo y relaciones ("va a" /
+ * "viene de", con la etiqueta de la Arista). Sale solo del Modelo: el Tema no puede
+ * cambiarlo. El SVG de Aristas es decorativo, asi que la relacion se anuncia aqui.
+ */
+function nombresAccesibles(view: VistaResuelta, nodos: readonly NodoResuelto[]): Map<string, string> {
+  const etiqueta = new Map(nodos.map((n) => [n.id, n.label]));
+  const destino = (id: string, arista: AristaResuelta): string => `${etiqueta.get(id) ?? id}${arista.label === undefined ? '' : ` (${arista.label})`}`;
+  return new Map(
+    nodos.map((nodo) => {
+      const sale = view.edges.filter((e) => e.from.node === nodo.id).map((e) => destino(e.to.node, e));
+      const entra = view.edges.filter((e) => e.to.node === nodo.id).map((e) => destino(e.from.node, e));
+      const partes = [
+        nodo.label,
+        nodo.type,
+        ...(nodo.childCount > 0 ? [`grupo con ${nodo.childCount} hijos${nodo.collapsed ? ', colapsado' : ''}`] : []),
+        ...(sale.length > 0 ? [`va a ${sale.join(', ')}`] : []),
+        ...(entra.length > 0 ? [`viene de ${entra.join(', ')}`] : []),
+      ];
+      return [nodo.id, partes.join(', ')];
+    }),
+  );
+}
 
 /**
  * Posicion de cada Nodo visible en el `stagger` de `enter`: en orden de dibujo, entre los
@@ -195,6 +222,8 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
         attrs: {
           class: grupo ? 'rd-grupo' : 'rd-nodo',
           'data-part': 'nodo',
+          role: 'group',
+          'aria-label': contexto.nombres?.get(nodo.id) ?? nodo.label,
           ...(nodo.collapsed && { 'data-collapsed': '' }),
           ...(acotar(contexto.visibility(nodo.id)) === 0 && { 'data-oculto': '' }),
           ...((contexto.estados?.[nodo.id]?.length ?? 0) > 0 && { 'data-estados': (contexto.estados?.[nodo.id] ?? []).join(' ') }),

@@ -15,8 +15,11 @@ import { claveDeLayout, indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
 import type { Camara } from 'render';
+import type { MedidasDeTexto, TextoAMedir } from 'tema';
 
 import { aCamara, aTransform, compensarCamara, encuadrar, mismaTransform } from './camara';
+import { Leyenda, useAltoContraste } from './accesibilidad';
+import type { ModoDeLeyenda, PropsDeAltoContraste } from './accesibilidad';
 import { PanelDeIssues, Toasts } from './avisos';
 import { EstiloDelChrome, variablesDeChrome } from './chrome';
 import { MAX_NODOS_VISIBLES, alternarGrupo, contarNodosVisibles } from './colapso';
@@ -42,14 +45,21 @@ import { nivelDeDetalle } from './zoom-semantico';
 import type { UmbralesDeDetalle } from './zoom-semantico';
 
 /** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
-export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema) => Promise<Geometria>;
+export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema, medidas?: MedidasDeTexto) => Promise<Geometria>;
 
-export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion {
+/** Medidor de texto inyectado (ADR 0008): el visor mide con la fuente real (`medirEnVisor`); sin el se estima por caracter. */
+export type MedidorDeTexto = (textos: TextoAMedir[]) => Promise<MedidasDeTexto>;
+
+export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, PropsDeAltoContraste {
+  /** Leyenda de Tipos derivada del Tema: `auto` (por defecto) solo si dos Tipos difieren unicamente por color. */
+  legend?: ModoDeLeyenda;
   source: FuenteCanonica;
   theme: Tema;
   /** Puerto de recarga de Tema al guardar: recolorea sin relayout salvo que cambien las fuentes. */
   themeUpdates?: SuscripcionDeTema;
   layout: AdaptadorDeLayout;
+  /** Medicion real de texto; con ella el layout espera las medidas y la clave de layout incluye el hash de fuente y el nivel `medido`. */
+  measure?: MedidorDeTexto;
   /** Tamano del lienzo en px. */
   width: number;
   height: number;
@@ -133,7 +143,7 @@ interface PropsDeVistaActiva extends Omit<VistaInteractivaProps, 'view' | 'cache
 
 function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const { source, view, layout, width, height, onError, onSelect, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
-  const theme = useTemaVigente(props.theme, props.themeUpdates);
+  const { tema: theme, interruptor } = useAltoContraste(useTemaVigente(props.theme, props.themeUpdates), props);
   const [state, fijarEstado] = useControlado<EstadoDeColapso>(props.state, {}, props.onStateChange);
   const ajustes = { ...AJUSTES_POR_DEFECTO, ...props.tuning };
   const ajustesVigentes = useRef(ajustes);
@@ -161,7 +171,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     morphador.iniciar({ desde: previo.geometria, hasta: nuevo.geometria, ancla });
   };
   const morphador = useMorph(morphMs, props.clock);
-  const calculo = useGeometria({ vista, theme, layout, semilla, onError, alLlegar });
+  const calculo = useGeometria({ vista, theme, layout, medir: props.measure, semilla, onError, alLlegar });
 
   // Camara: controlada por el padre o propia; hasta que el usuario (o un colapso) la mueva, encuadra toda la Vista segun la primera geometria.
   const [movida, fijarCamara] = useControlado<Camara | undefined>(props.camera, undefined, (nueva) => nueva && ultimo.current.onCameraChange?.(nueva));
@@ -375,6 +385,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
         />
       )}
       {pasos.controles}
+      {interruptor}
+      <Leyenda fuente={source} vista={vista} tema={theme} modo={props.legend ?? 'auto'} />
       {props.migas}
       <PanelDeIssues issues={props.issues ?? []} />
       <Toasts toasts={props.toasts ?? []} />

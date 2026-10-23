@@ -7,6 +7,7 @@ import type { CSSProperties, ReactElement } from 'react';
 
 import type { Estilo } from 'render';
 
+import { CSS_DE_ACCESIBILIDAD } from './accesibilidad';
 import { CSS_DE_AVISOS } from './avisos';
 
 /** Variables CSS del chrome derivadas del Estilo resuelto. */
@@ -30,7 +31,7 @@ const CSS = `
 .rd-chrome button:disabled { opacity: 0.5; cursor: default; }
 .rd-chrome button:focus-visible { outline: 2px solid var(--rd-acento); }
 .rd-contenido { display: contents; }
-${CSS_DE_AVISOS}`;
+${CSS_DE_AVISOS}${CSS_DE_ACCESIBILIDAD}`;
 
 /** Hoja de estilo del chrome; va una vez dentro del contenedor. */
 export function EstiloDelChrome(): ReactElement {

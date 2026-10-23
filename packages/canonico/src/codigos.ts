@@ -76,6 +76,10 @@ export const CODIGOS = Object.freeze({
   E_THEME_UNKNOWN_MOTION: 'E_THEME_UNKNOWN_MOTION',
   /** Dos `part` con el mismo nombre en el Workspace. */
   E_DUPLICATE_PART: 'E_DUPLICATE_PART',
+  /** Contraste de un Tipo y estado bajo 4.5:1 (texto) o 3:1 (graficos); aviso, no bloquea el render. */
+  W_THEME_LOW_CONTRAST: 'W_THEME_LOW_CONTRAST',
+  /** Dos Tipos de una Vista se distinguen solo por color de Paleta (`solo-color`); aviso. */
+  W_THEME_COLOR_ONLY: 'W_THEME_COLOR_ONLY',
 } as const);
 
 /** Union de los codigos activos; `Issue.code` sigue siendo `string` (ADR 0005). */
@@ -117,6 +121,8 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_THEME_UNKNOWN_PART: 'Un `use` nombra una `part` no declarada.',
   E_THEME_UNKNOWN_MOTION: 'Un Movimiento, un efecto de `enter`/`exit` o una propiedad de `keyframes` no esta en el catalogo de animacion.',
   E_DUPLICATE_PART: 'Dos `part` con el mismo nombre en el Workspace.',
+  W_THEME_LOW_CONTRAST: 'Un Tipo de nodo y estado del Tema queda bajo el contraste minimo (4.5:1 texto, 3:1 graficos); aviso.',
+  W_THEME_COLOR_ONLY: 'Dos Tipos de una Vista se distinguen solo por color de Paleta (solo-color); aviso.',
 });
 
 /**
