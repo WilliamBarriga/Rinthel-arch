@@ -18,6 +18,8 @@ import type { AdaptadorDeLayout, MedidorDeTexto } from './vista-interactiva';
 export interface Calculo {
   vista: VistaResuelta;
   geometria: Geometria;
+  /** Medidas reales de texto con las que se calculo la Geometria; el dibujo coloca los Slots con ellas. */
+  medidas?: MedidasDeTexto;
 }
 
 export interface EntradaDeGeometria {
@@ -79,7 +81,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
     const mapa = cache.current.mapa;
     const clave = claveBase;
     const mostrar = (geometria: Geometria): void => {
-      const nuevo = { vista, geometria };
+      const nuevo = { vista, geometria, ...(medidas !== undefined && { medidas }) };
       ultimo.current.alLlegar?.(mostrado.current, nuevo);
       mostrado.current = nuevo;
       setCalculo(nuevo);

@@ -9,7 +9,8 @@ import type { Tema } from 'canonico';
 import type { Animacion, Efecto, Transicion } from './animacion';
 import { pilaDeFuente, resolverFuentes } from './fuentes';
 import type { CaraDeFuente } from './fuentes';
-import { metricasDe, tablaDeMetricas } from './metricas';
+import type { MedidasDeTexto } from './medicion';
+import { tablaDeMetricas } from './metricas';
 import type { Metricas, TablaDeMetricas } from './metricas';
 import { CATALOGO } from './catalogo';
 import type { DefinicionDePrimitiva, NombreDePrimitiva, NombreDeSlot } from './catalogo';
@@ -106,6 +107,8 @@ export interface EstiloResuelto {
 }
 
 export interface OpcionesDeEstilo {
+  /** Medidas reales de texto con las que se calculo la Geometria: las Metricas del dibujo deben ser las del layout. */
+  medidas?: MedidasDeTexto;
   /** Rutas de los archivos de fuente del Workspace; de ellos salen las caras de `fuentes`. Sin ellas, ninguna. */
   archivosDeFuente?: readonly string[];
   /** Tipos de nodo de la Fuente y el nombre de Paleta de su `color` (`COLOR` lo usa). */
@@ -229,8 +232,8 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
   };
   const reserva = resuelto.fonts['fallback'];
   return {
-    metricas: metricasDe(tema),
-    tabla: tablaDeMetricas(tema),
+    metricas: tablaDeMetricas(tema, opciones.medidas).base,
+    tabla: tablaDeMetricas(tema, opciones.medidas),
     fuentes: {
       cuerpo: pilaDeFuente(resuelto.fonts.body, reserva),
       mono: pilaDeFuente(resuelto.fonts.mono, reserva),

@@ -259,7 +259,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     const base =
       calculo === undefined || morph === undefined
         ? calculo
-        : { vista: calculo.vista, geometria: interpolarGeometria(morph.desde, morph.hasta, morph.t) };
+        : { ...calculo, geometria: interpolarGeometria(morph.desde, morph.hasta, morph.t) };
     const caja = desplazado === undefined ? undefined : base?.geometria.nodes[desplazado.id];
     if (base === undefined || desplazado === undefined || caja === undefined) return base;
     return { vista: base.vista, geometria: { ...base.geometria, nodes: { ...base.geometria.nodes, [desplazado.id]: { ...caja, x: desplazado.x, y: desplazado.y } } } };
@@ -285,7 +285,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const { seleccion, estados: estadosDeSeleccion, pulsar } = useSeleccion(vista, props.selected, props.selection);
   const [hover, fijarHover] = useState<string | undefined>(undefined);
   const estados = useMemo(() => conEstadosTransitorios(estadosDeSeleccion, enCurso === undefined ? hover : undefined, enCurso), [estadosDeSeleccion, hover, enCurso]);
-  const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles)), [theme, fontFiles]);
+  const medidas = calculo?.medidas;
+  const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas), [theme, fontFiles, medidas]);
 
   // Ruta (en-ruta / atenuado) y foco de teclado: los calcula el shell y render solo los pinta.
   const nodosSeleccionados = seleccion.filter((e) => e.tipo === 'nodo').map((e) => e.id);

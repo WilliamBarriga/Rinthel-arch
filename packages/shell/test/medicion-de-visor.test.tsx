@@ -77,6 +77,20 @@ describe('VistaInteractiva con medicion real', () => {
     expect(pedidos.map((t) => t.texto)).toContain('a');
     expect(recibidas).toEqual([medidas]);
   });
+
+  it('el dibujo coloca los Slots con las mismas medidas que el layout: un titulo en chip toma su ancho medido', async () => {
+    const enChip = {
+      ...TEMA_NEUTRO,
+      nodo: { ...TEMA_NEUTRO.nodo, slots: { direccion: 'row' as const, gap: 0, pad: 0, hijos: [{ slot: 'title' as const }] }, textos: { title: { tipo: 'text', props: { fill: 'blue' } } } },
+    };
+    const medidas: MedidasDeTexto = { nivel: 'medido', fuentes: {}, anchos: { [claveDeTexto(TEMA_NEUTRO.fonts.body, 14, 'a')]: 300 } };
+    const layout: AdaptadorDeLayout = async (vista, tema, m) => (await import('layout')).layoutView(vista, tema, { ...(m !== undefined && { medidas: m }) });
+
+    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={enChip} layout={layout} width={400} height={300} measure={async () => medidas} />);
+    await waitFor(() => expect(container.querySelector('[data-id="a"] [data-slot="title"]')).not.toBeNull());
+
+    expect((container.querySelector('[data-id="a"] [data-slot="title"]') as HTMLElement).style.width).toBe('300px');
+  });
 });
 
 describe('layout en Worker con medidas', () => {
