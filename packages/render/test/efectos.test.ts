@@ -93,13 +93,21 @@ describe('mano alzada y giro deterministas', () => {
   it('el giro es estable, no pasa de 3 grados y varia con la semilla', async () => {
     const giro = async (seed?: string) => {
       const html = await dibujar(conCapas([capa('ladeo', 'tilt', { degrees: 3 })], seed));
-      return Number.parseFloat((propiedad(etiquetaCon(html, 'data-id="db"'), 'rotate') ?? '').replace('deg', ''));
+      return Number.parseFloat(/rotate\((-?[\d.]+)deg\)/.exec(propiedad(etiquetaCon(html, 'data-id="db"'), 'transform') ?? '')?.[1] ?? '');
     };
 
     const base = await giro();
     expect(Math.abs(base)).toBeLessThanOrEqual(3);
     expect(await giro()).toBe(base);
     expect(await giro('5')).not.toBe(base);
+  });
+
+  it('el giro es sobre el centro de la caja en su sitio: va tras la traslacion, no la desplaza', async () => {
+    const html = await dibujar(conCapas([capa('ladeo', 'tilt', { degrees: 3 })]));
+    const caja = etiquetaCon(html, 'data-id="db"');
+
+    expect(propiedad(caja, 'transform')).toMatch(/^translate\([-\d.]+px,[-\d.]+px\) rotate\(-?[\d.]+deg\)$/);
+    expect(propiedad(caja, 'rotate')).toBeUndefined();
   });
 });
 

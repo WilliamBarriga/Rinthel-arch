@@ -226,9 +226,13 @@ function aplanar(nodo: NodoResuelto): NodoResuelto[] {
   return [nodo, ...nodo.children.flatMap(aplanar)];
 }
 
-/** Estilo en linea de la caja de un Nodo/Grupo: su posicion absoluta y tamano (unicos valores que vienen de la geometria). */
-function posicion(caja: CajaDeNodo): string {
-  return `width:${num(caja.width)}px;height:${num(caja.height)}px;transform:translate(${num(caja.x)}px,${num(caja.y)}px);`;
+/**
+ * Estilo en linea de la caja de un Nodo/Grupo: su posicion absoluta y tamano (unicos valores que vienen de la geometria)
+ * y su giro. El giro va en el mismo `transform`, tras la traslacion: gira la caja sobre su centro sin moverla de su sitio
+ * (la propiedad `rotate` se aplicaria antes de la traslacion y la desplazaria).
+ */
+function posicion(caja: CajaDeNodo, giro = 0): string {
+  return `width:${num(caja.width)}px;height:${num(caja.height)}px;transform:translate(${num(caja.x)}px,${num(caja.y)}px)${giro === 0 ? '' : ` rotate(${num(giro)}deg)`};`;
 }
 
 function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
@@ -254,7 +258,7 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
 
   return {
     tag: 'div',
-    attrs: { class: 'rd-caja', 'data-id': nodo.id, 'data-elemento': clave, ...(tipo !== undefined && { 'data-tipo': tipo }), ...(atenuado(contexto.estados, nodo.id) && { 'data-atenuado': '' }), style: posicion(caja) + efectos.caja },
+    attrs: { class: 'rd-caja', 'data-id': nodo.id, 'data-elemento': clave, ...(tipo !== undefined && { 'data-tipo': tipo }), ...(atenuado(contexto.estados, nodo.id) && { 'data-atenuado': '' }), style: posicion(caja, efectos.giro) },
     hijos: [
       {
         tag: 'div',

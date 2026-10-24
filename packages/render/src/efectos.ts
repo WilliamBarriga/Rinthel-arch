@@ -45,8 +45,8 @@ export const PINTORES_DE_EFECTOS: { readonly [P in NombreDeEfecto]: (props: Prop
 
 /** Lo que los efectos por elemento anaden a la caja de un Nodo o Grupo. */
 export interface EfectosDeElemento {
-  /** Estilo en linea de la caja posicionada (el giro). */
-  caja: string;
+  /** Giro de la caja posicionada, en grados (0 sin giro): va tras su traslacion, sobre su centro. */
+  giro: number;
   /** Estilo en linea del contenedor pintado (el filtro de mano alzada). */
   nodo: string;
   /** Hijos antes del contenido (filtros SVG, cintas bajo el contenido). */
@@ -55,7 +55,7 @@ export interface EfectosDeElemento {
   encima: Elemento[];
 }
 
-const SIN_EFECTOS: EfectosDeElemento = { caja: '', nodo: '', debajo: [], encima: [] };
+const SIN_EFECTOS: EfectosDeElemento = { giro: 0, nodo: '', debajo: [], encima: [] };
 
 /** Primitivas que se pintan por elemento (con su semilla o como hijos propios), no en la hoja. */
 const POR_ELEMENTO: ReadonlySet<string> = new Set<NombreDeEfecto>(['sketch', 'tilt', 'tape', 'fold', 'pins', 'stripe']);
@@ -64,7 +64,7 @@ const POR_ELEMENTO: ReadonlySet<string> = new Set<NombreDeEfecto>(['sketch', 'ti
 export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo, 'capas'>, id: string): EfectosDeElemento {
   const semillaDelTema = estilo.pintura.semilla;
   if (!capas.some((c) => POR_ELEMENTO.has(c.tipo))) return SIN_EFECTOS;
-  const resultado: EfectosDeElemento = { caja: '', nodo: '', debajo: [], encima: [] };
+  const resultado: EfectosDeElemento = { giro: 0, nodo: '', debajo: [], encima: [] };
   for (const capa of capas) {
     const semilla = semillaDeCapa(id, capa.nombre, semillaDelTema);
     if (capa.tipo === 'sketch') {
@@ -72,7 +72,7 @@ export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo,
       resultado.nodo += `filter:url(#${idDeFiltro});`;
       resultado.debajo.push(filtroDeManoAlzada(idDeFiltro, semilla, Number(capa.props['roughness']), Number(capa.props['frequency'])));
     } else if (capa.tipo === 'tilt') {
-      resultado.caja += `rotate:${num(giroDeCapa(semilla, Number(capa.props['degrees'])))}deg;`;
+      resultado.giro += giroDeCapa(semilla, Number(capa.props['degrees']));
     } else if (capa.tipo === 'tape') {
       (capa.encima === true ? resultado.encima : resultado.debajo).push(cinta(capa.props, semilla));
     } else if (capa.tipo === 'fold') {
