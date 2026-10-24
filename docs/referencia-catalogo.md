@@ -97,7 +97,8 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 
 | Primitiva | Ubicacion | Propiedades | Metricas |
 | --- | --- | --- | --- |
-| `text` | texto-slot | `weight` 100 a 900 (400); `color` color de Paleta (opcional); `style` normal|italic (normal); `transform` none|uppercase (none) | no |
+| `text` | texto-slot | `weight` 100 a 900 (400); `color` color de Paleta (opcional); `style` normal|italic (normal); `transform` none|uppercase (none); `alpha` 0 a 1 (opcional); `text-align` start|center|end (opcional); `size` 0.4 a 3 (opcional); `leading` 1 a 5 (opcional) | si |
+| `chip` | texto-slot | `weight` 100 a 900 (700); `color` color de Paleta (opcional); `fill` color de Paleta (opcional); `border` color de Paleta (opcional); `radius` 0 a 50 (50); `size` 0.4 a 3 (opcional) | si |
 | `icon` | texto-slot | `variant` plain|box|dot (plain); `side` 6 a 96 (16); `radius` 0 a 50 (6); `fill` color de Paleta (opcional); `border` color de Paleta (opcional); `color` color de Paleta (opcional) | si |
 | `label` | etiqueta | `scale` 0.5 a 2 (0.85); `pad` 0 a 32 (4); `radius` 0 a 50 (0); `fill` color de Paleta (opcional); `border` color de Paleta (opcional) | si |
 
@@ -109,11 +110,15 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 
 ## Slots
 
-| Slot |
-| --- |
-| `icon` |
-| `title` |
-| `attrs` |
+| Slot | Estilo |
+| --- | --- |
+| `icon` | `icon` |
+| `title` | `text` |
+| `badge` | `text` |
+| `desc` | `text` |
+| `footer` | `text` |
+| `attrs` | `text` |
+| `counter` | `chip` |
 
 ## Movimientos
 

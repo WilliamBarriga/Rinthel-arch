@@ -99,6 +99,8 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-codigo', { position: 'absolute', left: '0', top: '0', 'pointer-events': 'none', contain: 'layout style' }],
     ['& .rd-slot', { position: 'absolute', overflow: 'hidden', 'white-space': 'nowrap', 'text-overflow': 'ellipsis', 'box-sizing': 'border-box' }],
     ['& .rd-title', { 'text-align': 'center' }],
+    // El contador es una caja pequena con el numero centrado; sin estilo `chip` no tiene caja.
+    ['& .rd-counter', { 'text-align': 'center', 'font-weight': '700' }],
     ['& .rd-encabezado', { 'text-align': 'left' }],
     ['& .rd-separado', { 'border-top': '1px solid var(--trazo, currentColor)' }],
     ['& .rd-fila', { position: 'absolute', 'white-space': 'nowrap', overflow: 'hidden', 'text-overflow': 'ellipsis', 'padding-left': px(metricas.margenDeTexto), 'box-sizing': 'border-box', 'font-family': css(estilo.fuenteMono), 'font-size': px(metricas.fontSize * metricas.escalaAtributo) }],
@@ -126,17 +128,27 @@ function reglasDeIcono(estilo: Estilo): Array<[string, Declaraciones]> {
   return reglas;
 }
 
-/** Estilo de texto (`text`) de cada Slot que el Tema lo declara; solo pinta, no cambia el espacio reservado. */
+const ALINEACION_CSS: Record<string, string> = { start: 'left', center: 'center', end: 'right' };
+
+/** Estilo de texto (`text`, o `chip` en el contador) de cada Slot que el Tema lo declara; solo pinta: el tamano y el alto ya los reservo la colocacion. */
 function reglasDeTexto(estilo: Estilo): Array<[string, Declaraciones]> {
   return Object.entries(estilo.pintura.nodo.textos).map(([slot, texto]): [string, Declaraciones] => {
-    const { weight, color, style, transform } = texto.props;
+    const { weight, color, style, transform, alpha, fill, border, radius } = texto.props;
+    const alineacion = texto.props['text-align'];
     return [
       `& .rd-slot[data-slot="${slot}"]`,
       {
         'font-weight': css(weight),
-        'font-style': css(style),
+        ...(style !== undefined && { 'font-style': css(style) }),
         'text-transform': transform === 'uppercase' ? 'uppercase' : 'none',
         ...(color !== undefined && { color: css(color) }),
+        ...(alpha !== undefined && { opacity: css(alpha) }),
+        ...(alineacion !== undefined && { 'text-align': ALINEACION_CSS[String(alineacion)] ?? 'left' }),
+        ...(texto.tipo === 'chip' && {
+          'border-radius': px(radius),
+          ...(fill !== undefined && { background: css(fill) }),
+          border: border === undefined ? 'none' : `1px solid ${css(border)}`,
+        }),
       },
     ];
   });

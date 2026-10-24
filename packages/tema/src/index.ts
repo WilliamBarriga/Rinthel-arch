@@ -90,7 +90,7 @@ export { textosAMedir } from './textos-a-medir';
 export { pilaDeFuente, resolverFuentes } from './fuentes';
 export type { CaraDeFuente, FuenteFaltante } from './fuentes';
 export { referenciaDelCatalogo } from './referencia';
-export { colocarDisposicion, colocarEnCaja, colocarNodo, medirDisposicion } from './slots';
+export { colocarDisposicion, colocarEnCaja, colocarNodo, medirDisposicion, textoDeSlot } from './slots';
 export type { ColocacionDeNodo, ContenidoDeNodo, MedidaDeSlot, Rect, Tamano } from './slots';
 export { estiloResuelto } from './estilo';
 export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeNodo, PinturaDePagina, PrimitivaPintada } from './estilo';

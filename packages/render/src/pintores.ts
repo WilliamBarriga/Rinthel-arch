@@ -7,8 +7,8 @@
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
-import { colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo } from 'tema';
-import type { Metricas, NombreDeSlot, Rect } from 'tema';
+import { colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
+import type { ContenidoDeNodo, Metricas, NombreDeSlot, Rect } from 'tema';
 
 import { pintarMarcadores, pintarTrazos } from './aristas';
 import { limpiarValorCss, num } from './elemento';
@@ -23,7 +23,7 @@ export interface DatosDeNodo {
   caja: CajaDeNodo;
   /** Color de trazo ya resuelto de la Paleta. */
   trazo: string;
-  /** Texto de la etiqueta (con el contador si esta colapsado). */
+  /** Texto de la etiqueta del Nodo (el titulo de un Grupo abierto; un Nodo hoja usa el que da `contenidoDeNodo`). */
   texto: string;
   icons?: IconProvider;
 }
@@ -34,8 +34,8 @@ function enRect(r: Rect, extra = ''): string {
 }
 
 /** Slot de texto: un `div` absoluto exactamente en su rectangulo; el CSS solo recorta (elipsis). */
-function slotDeTexto(nombre: string, clases: string, r: Rect, texto: string): Elemento {
-  return { tag: 'div', attrs: { class: `rd-slot ${clases}`, 'data-slot': nombre, style: enRect(r, `line-height:${num(r.height)}px;`) }, hijos: [texto] };
+function slotDeTexto(nombre: string, clases: string, r: Rect, texto: string, extra = ''): Elemento {
+  return { tag: 'div', attrs: { class: `rd-slot ${clases}`, 'data-slot': nombre, style: enRect(r, `line-height:${num(r.height)}px;${extra}`) }, hijos: [texto] };
 }
 
 /** Altura de la franja de titulo de un Grupo y de su control de colapso (centrada sobre la linea base de las Metricas). */
@@ -49,6 +49,17 @@ interface ContextoDeSlot {
   datos: DatosDeNodo;
   /** Atributos que se dibujan (vacio si el nivel de detalle los oculta). */
   atributos: readonly Atributo[];
+  metricas: Metricas;
+  contenido: ContenidoDeNodo;
+}
+
+/** Slot de una sola linea de texto, con el tamano que reservo la colocacion (y el texto que mido `layout`). */
+function pintarTexto(slot: 'title' | 'badge' | 'desc' | 'footer' | 'counter', { metricas, contenido }: ContextoDeSlot, rect: Rect): Elemento[] {
+  const medido = textoDeSlot(slot, metricas, contenido);
+  if (medido === undefined) return [];
+  const tamano = medido.tamano === metricas.fontSize ? '' : `font-size:${num(medido.tamano)}px;`;
+  // El contador es una caja de 1px de borde: su texto se centra en el interior.
+  return [slotDeTexto(slot, `rd-${slot}`, rect, medido.texto, slot === 'counter' ? `${tamano}line-height:${num(rect.height - 2)}px;` : tamano)];
 }
 
 /**
@@ -57,7 +68,11 @@ interface ContextoDeSlot {
  * la colocacion de `tema` le dio, sin posiciones propias.
  */
 const PINTORES_DE_SLOT: { readonly [S in NombreDeSlot]: (contexto: ContextoDeSlot, rect: Rect) => Elemento[] } = {
-  title: ({ datos }, rect) => [slotDeTexto('title', 'rd-title', rect, datos.texto)],
+  title: (contexto, rect) => pintarTexto('title', contexto, rect),
+  badge: (contexto, rect) => pintarTexto('badge', contexto, rect),
+  desc: (contexto, rect) => pintarTexto('desc', contexto, rect),
+  footer: (contexto, rect) => pintarTexto('footer', contexto, rect),
+  counter: (contexto, rect) => pintarTexto('counter', contexto, rect),
   icon: ({ estilo, datos }, rect) => pintarIcono(estilo, datos.nodo, datos.trazo, datos.icons, rect, variantePropia(estilo)),
   attrs: ({ estilo, datos, atributos }, rect) => (atributos.length === 0 ? [] : [pintarAtributos(estilo, datos.nodo.id, atributos, rect)]),
 };
@@ -70,7 +85,7 @@ export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: 
   const metricas = metricasDeHoja(estilo.tabla, datos.nodo);
   const contenido = contenidoDeNodo(datos.nodo, metricas);
   const { slots } = colocarEnCaja(metricas, contenido, datos.caja.width);
-  const contexto = { estilo, datos, atributos: datos.conAtributos ? contenido.atributos : [] };
+  const contexto = { estilo, datos, metricas, contenido, atributos: datos.conAtributos ? contenido.atributos : [] };
   return (Object.keys(slots) as NombreDeSlot[]).flatMap((slot) => PINTORES_DE_SLOT[slot](contexto, slots[slot]!));
 }
 

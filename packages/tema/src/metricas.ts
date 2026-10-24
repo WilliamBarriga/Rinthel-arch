@@ -35,6 +35,8 @@ export interface Metricas {
   anchos?: Readonly<Record<string, number>>;
   /** Mini-layout de los Slots del Nodo que el Tema muestra (un Slot fuera del arbol no se pinta ni se mide). */
   disposicion: CajaDeSlots;
+  /** `size` y `leading` que el Tema fija a un Slot de texto (los que no, usan los de `DEFINICION_DE_SLOT`); cambian el alto y el ancho que reserva. */
+  medidaDeTexto: Readonly<Partial<Record<NombreDeSlot, { size?: number; leading?: number }>>>;
   /** La forma del Nodo exige una caja cuadrada (p. ej. `circle`); sale de la regla de caja minima de las Primitivas. */
   cajaCuadrada: boolean;
   /** Ancho minimo de un Nodo hoja. */
@@ -85,6 +87,12 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas?
     medicion: medidas === undefined ? { nivel: 'estimado', fuentes: {} } : { nivel: 'medido', fuentes: medidas.fuentes },
     ...(medidas !== undefined && { anchos: medidas.anchos }),
     disposicion: resuelto.nodo.slots,
+    medidaDeTexto: Object.fromEntries(
+      Object.entries(resuelto.nodo.textos).flatMap(([slot, texto]) => {
+        const { size, leading } = texto.props as { size?: number; leading?: number };
+        return size === undefined && leading === undefined ? [] : [[slot, { ...(size !== undefined && { size }), ...(leading !== undefined && { leading }) }]];
+      }),
+    ),
     cajaCuadrada: pila.some((capa) => (CATALOGO[capa.primitiva.tipo] as DefinicionDePrimitiva).cajaMinima === 'cuadrado'),
     anchoMinimo: 120,
     paddingHorizontal: 32,
@@ -181,8 +189,21 @@ export function muestra(metricas: Pick<Metricas, 'disposicion'>, slot: NombreDeS
 }
 
 /** Lo que un Nodo aporta a la colocacion de Slots; una sola regla para `layout`, `render` y `shell`. */
-export function contenidoDeNodo(nodo: Pick<NodoResuelto, 'children' | 'attributes' | 'label' | 'icon'>, metricas: Pick<Metricas, 'disposicion'>): ContenidoDeNodo {
-  return { titulo: nodo.label, atributos: atributosVisibles(nodo, metricas), icono: nodo.icon !== undefined };
+export function contenidoDeNodo(
+  nodo: Pick<NodoResuelto, 'children' | 'attributes' | 'label' | 'icon' | 'type' | 'description' | 'source' | 'collapsed' | 'childCount'>,
+  metricas: Pick<Metricas, 'disposicion'>,
+): ContenidoDeNodo {
+  const cuenta = nodo.collapsed ? nodo.childCount : undefined;
+  return {
+    // Sin Slot `counter`, un Grupo colapsado dice cuantos hijos esconde en el titulo.
+    titulo: cuenta !== undefined && !muestra(metricas, 'counter') ? `${nodo.label} (${cuenta})` : nodo.label,
+    atributos: atributosVisibles(nodo, metricas),
+    icono: nodo.icon !== undefined,
+    tipo: nodo.type,
+    descripcion: nodo.description,
+    ...(nodo.source[0] !== undefined && { fuente: nodo.source[0].ref }),
+    ...(cuenta !== undefined && { cuenta }),
+  };
 }
 
 /** Texto de la fila de un Atributo; `render` escribe lo mismo. */

@@ -232,8 +232,7 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
   const grupo = esGrupo(nodo);
   const trazo = colorDeTrazo(nodo, estilo);
   // El `label` de la Vista (override o, si no hay, el titulo) manda en todos los niveles.
-  const texto = nodo.collapsed ? `${nodo.label} (${nodo.childCount})` : nodo.label;
-  const datos = { nodo, caja, trazo, texto, icons };
+  const datos = { nodo, caja, trazo, texto: nodo.label, icons };
   const conmutable = grupo || (nodo.collapsed && nodo.link === undefined);
   const efectos = efectosDeElemento(estilo, nodo.id);
   const codigo = {

@@ -7,8 +7,9 @@ import type { VistaResuelta } from 'canonico';
 
 import { claveDeTexto } from './medicion';
 import type { TextoAMedir } from './medicion';
-import { atributosVisibles, metricasDeHoja, muestra, textoDeAtributo } from './metricas';
+import { contenidoDeNodo, metricasDeHoja } from './metricas';
 import type { TablaDeMetricas } from './metricas';
+import { textosDeNodo } from './slots';
 
 export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges'>, tabla: TablaDeMetricas): TextoAMedir[] {
   const vistos = new Map<string, TextoAMedir>();
@@ -19,8 +20,7 @@ export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges'>, tabl
   for (const nodo of vista.nodes) {
     if (nodo.children.length > 0) continue;
     const m = metricasDeHoja(tabla, nodo);
-    if (muestra(m, 'title')) anadir(m.fuentes['body']!, m.fontSize, nodo.label);
-    for (const atributo of atributosVisibles(nodo, m)) anadir(m.fuentes['mono']!, m.fontSize * m.escalaAtributo, textoDeAtributo(atributo));
+    for (const { familia, tamano, texto } of textosDeNodo(m, contenidoDeNodo(nodo, m))) anadir(familia, tamano, texto);
   }
   const e = tabla.etiqueta;
   for (const arista of vista.edges) if (arista.label !== undefined) anadir(e.fuentes['body']!, e.fontSize * e.escalaEtiqueta, arista.label);

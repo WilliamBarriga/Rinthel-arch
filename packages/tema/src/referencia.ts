@@ -5,17 +5,17 @@
  * disco es `scripts/generar-referencia-catalogo.ts`.
  */
 import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
-import { CATALOGO, PROPIEDADES_DE_DESPLAZAMIENTO, SLOTS, ubicacionesDe } from './catalogo';
+import { CATALOGO, DEFINICION_DE_SLOT, PROPIEDADES_DE_DESPLAZAMIENTO, SLOTS, ubicacionesDe } from './catalogo';
 import type { DefinicionDePrimitiva, DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
 
 const propiedad = (nombre: string, definicion: DefinicionDePropiedad): string => {
   switch (definicion.tipo) {
     case 'numero':
-      return `\`${nombre}\` ${definicion.min} a ${definicion.max}${definicion.defecto === undefined ? '' : ` (${definicion.defecto})`}`;
+      return `\`${nombre}\` ${definicion.min} a ${definicion.max}${definicion.defecto !== undefined ? ` (${definicion.defecto})` : definicion.opcional === true ? ' (opcional)' : ''}`;
     case 'color':
       return `\`${nombre}\` color de Paleta${definicion.opcional === true ? ' (opcional)' : ''}`;
     case 'opcion':
-      return `\`${nombre}\` ${definicion.valores.join('|')} (${definicion.defecto})`;
+      return `\`${nombre}\` ${definicion.valores.join('|')}${definicion.defecto !== undefined ? ` (${definicion.defecto})` : definicion.opcional === true ? ' (opcional)' : ''}`;
     case 'nombre':
       return `\`${nombre}\` nombre de Componente`;
   }
@@ -56,7 +56,7 @@ export function referenciaDelCatalogo(): string {
       });
     lineas.push(...tabla(['Primitiva', 'Ubicacion', 'Propiedades', 'Metricas'], filas));
   }
-  lineas.push('', '## Slots', '', ...tabla(['Slot'], SLOTS.map((slot) => [`\`${slot}\``])));
+  lineas.push('', '## Slots', '', ...tabla(['Slot', 'Estilo'], SLOTS.map((slot) => [`\`${slot}\``, `\`${DEFINICION_DE_SLOT[slot].estilo}\``])));
   lineas.push(
     '',
     '## Movimientos',
