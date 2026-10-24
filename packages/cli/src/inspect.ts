@@ -6,8 +6,8 @@
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos, resolveView, salidaDeInspectSchema } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
-import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, cascada, componentesDeTema, metricasDeNodo, resolverTema, tablaDeMetricas } from 'tema';
-import type { CapaDeTema, Estado } from 'tema';
+import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, cascada, componentesDeTema, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas } from 'tema';
+import type { CapaDeTema } from 'tema';
 
 type Sitio = { file: string; line: number };
 type Consulta = { comando: 'buscar' | 'nodo' | 'vista'; argumento: string };
@@ -156,11 +156,12 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
     const cerca = candidatosCercanos(tipo, tipos);
     return { noEncontrado: `No existe el Tipo de nodo '${tipo}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
   }
-  const estadoValido = estado === undefined ? undefined : ESTADOS.find((e) => e === estado);
-  if (estado !== undefined && estadoValido === undefined) {
-    const cerca = candidatosCercanos(estado, ESTADOS);
-    return { noEncontrado: `No existe el estado '${estado}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}. Estados: ${ESTADOS.join(', ')}` };
+  const parseado = estado === undefined ? undefined : parsearEstado(estado);
+  if (parseado !== undefined && 'error' in parseado) {
+    const { candidatos } = parseado.error;
+    return { noEncontrado: `No existe el estado '${estado}'${candidatos.length === 0 ? '' : `. Quiza: ${candidatos.join(', ')}`}. Estados: ${ESTADOS.join(', ')}` };
   }
+  const estadoValido = parseado === undefined || 'error' in parseado ? undefined : parseado.estado;
 
   const tema = resolverTema(declarado);
   const componentes = componentesDeTema(declarado);
@@ -170,7 +171,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
     const sitio = (estadoValido === undefined ? undefined : origen?.estados[estadoValido]?.[capa]) ?? (tipo === undefined ? undefined : origen?.tipos[tipo]?.[capa]) ?? origen?.base[capa];
     return sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line };
   };
-  const capas = cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido as Estado }) }).map((capa: CapaDeTema) => ({
+  const capas = cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido }) }).map((capa: CapaDeTema) => ({
     nombre: capa.nombre,
     primitiva: capa.primitiva.tipo,
     props: capa.primitiva.props,

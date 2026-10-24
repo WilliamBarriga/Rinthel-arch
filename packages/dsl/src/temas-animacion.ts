@@ -6,7 +6,7 @@
  */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
-import { ESTADOS, construirEfecto, construirEscalonado, construirKeyframes, construirMovimiento, construirTransicion, duracionEnMs } from 'tema';
+import { construirEfecto, construirEscalonado, construirKeyframes, construirMovimiento, construirTransicion, duracionEnMs, parsearEstado } from 'tema';
 import type { Animacion, AnimacionDeNodo, ErrorDeCatalogo, ParametroDeAnimacion } from 'tema';
 
 import type { AnimParam, Duracion, NodeItem, ThemeEnter, ThemeExit, ThemeLayer, ThemeStagger, ThemeTransition } from './generated/ast';
@@ -134,7 +134,8 @@ export function compilarAnimacionDeNodo(items: ReadonlyArray<NodeItem>, heredada
       const ms = escalonadoDe(item, archivo, issues);
       if (ms !== undefined) resultado.escalonadoMs = ms;
     } else if (item.$type === 'ThemeState') {
-      const estado = ESTADOS.find((e) => e === item.name);
+      const parseado = parsearEstado(item.name);
+      const estado = 'estado' in parseado ? parseado.estado : undefined;
       const transiciones = item.items.filter((i): i is ThemeTransition => i.$type === 'ThemeTransition');
       transiciones.forEach((transicion, i) => {
         if (i > 0) issues.push(repetido(archivo, 'transition', transicion));

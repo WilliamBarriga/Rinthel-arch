@@ -1,5 +1,5 @@
 /**
- * Accesibilidad del visor (ADR 0008): interruptor de `alto-contraste`, que sigue a
+ * Accesibilidad del visor (ADR 0008): interruptor de reduced-motion, interruptor de `alto-contraste`, que sigue a
  * `prefers-contrast: more` y reemplaza el Tema solo en el visor, y la leyenda
  * derivada del Tema (Tipo, forma, color), que se muestra sola cuando dos Tipos
  * solo difieren por color. No toca el Workspace ni el Modelo.
@@ -12,6 +12,7 @@ import { TEMA_ALTO_CONTRASTE, leyendaDelTema } from 'tema';
 
 export const CSS_DE_ACCESIBILIDAD = `
 .rd-contraste { right: 8px; top: 8px; }
+.rd-contraste { gap: 6px; }
 .rd-contraste button { padding: 2px 8px; }
 .rd-contraste button[aria-pressed="true"] { border-width: 3px; }
 .rd-leyenda { right: 8px; bottom: 8px; flex-direction: column; align-items: flex-start; gap: 4px; padding: 6px 8px; margin: 0; list-style: none; background: var(--rd-fondo); border: 1px solid var(--rd-borde); border-radius: 4px; }
@@ -43,7 +44,8 @@ export interface PropsDeAltoContraste {
 }
 
 /** Tema efectivo del visor y el interruptor: `alto-contraste` reemplaza al Tema solo aqui. */
-export function useAltoContraste(tema: Tema, props: PropsDeAltoContraste): { tema: Tema; activo: boolean; interruptor: ReactElement } {
+export function useAltoContraste(tema: Tema, props: PropsDeAltoContraste): { tema: Tema; activo: boolean; interruptor: ReactElement; reducedMotion: 'on' | 'off' | undefined } {
+  const { reducedMotion, interruptor: movimiento } = useReducedMotion();
   const sistema = usePrefiereAltoContraste();
   const [manual, fijarManual] = useState<boolean | undefined>(undefined);
   const activo = props.highContrast ?? manual ?? sistema;
@@ -56,9 +58,29 @@ export function useAltoContraste(tema: Tema, props: PropsDeAltoContraste): { tem
       <button type="button" aria-pressed={activo} onClick={alternar}>
         Alto contraste
       </button>
+      {movimiento}
     </div>
   );
-  return { tema: activo ? TEMA_ALTO_CONTRASTE : tema, activo, interruptor };
+  return { tema: activo ? TEMA_ALTO_CONTRASTE : tema, activo, interruptor, reducedMotion };
+}
+
+const CONSULTA_MOVIMIENTO = '(prefers-reduced-motion: reduce)';
+
+/**
+ * Interruptor manual de reduced-motion (ADR 0008, US39), independiente de la preferencia
+ * del sistema: `reducedMotion` es `undefined` hasta tocarlo (manda `prefers-reduced-motion`);
+ * despues `on`/`off` fijan la politica de `Diagram`. El boton arranca pulsado si el sistema lo pide.
+ */
+export function useReducedMotion(): { reducedMotion: 'on' | 'off' | undefined; interruptor: ReactElement } {
+  const [manual, fijarManual] = useState<boolean | undefined>(undefined);
+  const sistema = typeof matchMedia === 'function' ? matchMedia(CONSULTA_MOVIMIENTO).matches : false;
+  const activo = manual ?? sistema;
+  const interruptor = (
+    <button type="button" aria-pressed={activo} onClick={() => fijarManual(!activo)}>
+      Reducir movimiento
+    </button>
+  );
+  return { reducedMotion: manual === undefined ? undefined : manual ? 'on' : 'off', interruptor };
 }
 
 export type ModoDeLeyenda = 'auto' | 'always' | 'never';

@@ -7,10 +7,10 @@
  */
 import type { Tema } from 'canonico';
 import { estiloResuelto, resolverTema, tablaUniforme } from 'tema';
-import type { Metricas, Pintura, TablaDeMetricas } from 'tema';
+import type { Estado, Metricas, Pintura, TablaDeMetricas } from 'tema';
 
 /** Estado visual de un elemento dibujado, ademas de su aspecto normal. */
-export type EstadoVisual = 'seleccionado' | 'hover' | 'fantasma' | 'en-ruta' | 'atenuado' | 'foco';
+export type EstadoVisual = Estado;
 
 /** Grosor minimo del anillo de foco: el nucleo lo garantiza, ningun Estilo lo quita (ADR 0008). */
 export const ANILLO_DE_FOCO_MINIMO = 2;

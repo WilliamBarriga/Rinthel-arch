@@ -145,7 +145,7 @@ interface PropsDeVistaActiva extends Omit<VistaInteractivaProps, 'view' | 'cache
 
 function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const { source, view, layout, width, height, onError, onSelect, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
-  const { tema: theme, interruptor } = useAltoContraste(useTemaVigente(props.theme, props.themeUpdates), props);
+  const { tema: theme, interruptor, reducedMotion } = useAltoContraste(useTemaVigente(props.theme, props.themeUpdates), props);
   const [state, fijarEstado] = useControlado<EstadoDeColapso>(props.state, {}, props.onStateChange);
   const ajustes = { ...AJUSTES_POR_DEFECTO, ...props.tuning };
   const ajustesVigentes = useRef(ajustes);
@@ -384,6 +384,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
           estados={estadosFinales}
           estilo={estilo}
           onToggle={alternar}
+          {...(reducedMotion !== undefined && { reducedMotion })}
           {...(visibilidadMostrada !== undefined && { visibility: visibilidadMostrada })}
         />
       )}

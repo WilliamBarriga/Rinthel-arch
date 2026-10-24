@@ -16,7 +16,7 @@
  */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
-import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, construirSlots, opTocaMetricas } from 'tema';
+import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, construirSlots, opTocaMetricas, parsearEstado } from 'tema';
 import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, TemaResuelto } from 'tema';
 
 import type { NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeUse } from './generated/ast';
@@ -260,9 +260,14 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
 /** Pila base, la de cada Tipo con parches y la de cada estado sobre ellas: contra cual puede valer un parche. */
 function todasLasPilas(tema: TemaResuelto): CapaDeTema[][] {
   const base = tema.nodo.capas as CapaDeTema[];
-  const sobreTipos = [base, ...Object.values(tema.nodo.tipos).map((ops) => aplicarOps(base, ops, tema.palette, 'parchear').pila)];
+  const sobreTipos = pilasSobreTipos(tema, base);
   const porEstado = Object.values(tema.nodo.estados).flatMap((ops) => sobreTipos.map((pila) => aplicarOps(pila, ops, tema.palette, 'parchear').pila));
   return [...sobreTipos, ...porEstado];
+}
+
+/** La pila base y la de cada Tipo con parches, aplicados sobre ella. */
+function pilasSobreTipos(tema: TemaResuelto, base: CapaDeTema[]): CapaDeTema[][] {
+  return [base, ...Object.values(tema.nodo.tipos).map((ops) => aplicarOps(base, ops, tema.palette, 'parchear').pila)];
 }
 
 /** Compila el contenido de los `node { ... }` de un Tema sobre la pila heredada: base, luego Tipos, luego estados. */
@@ -310,19 +315,15 @@ function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: Tem
   }
 
   // 3) Parches por estado, sobre la pila base o la de cualquier Tipo.
-  const sobreTipos = [base, ...Object.values(tema.nodo.tipos).map((ops) => aplicarOps(base, ops, tema.palette, 'parchear').pila)];
+  const sobreTipos = pilasSobreTipos(tema, base);
   for (const item of items) {
     if (item.$type !== 'ThemeState') continue;
-    const estado = ESTADOS.find((e) => e === item.name);
-    if (estado === undefined) {
-      issues.push(
-        issueConSugerencia(
-          { code: CODIGOS.E_THEME_UNKNOWN_STATE, message: `Estado '${item.name}' desconocido; disponibles: ${ESTADOS.join(', ')}` },
-          archivo, item, 'name', ESTADOS,
-        ),
-      );
+    const parseado = parsearEstado(item.name);
+    if ('error' in parseado) {
+      issues.push(issueConSugerencia({ code: parseado.error.code, message: parseado.error.message }, archivo, item, 'name', ESTADOS));
       continue;
     }
+    const { estado } = parseado;
     for (const slots of item.items.filter((i): i is ThemeSlots => i.$type === 'ThemeSlots')) {
       issues.push({
         code: CODIGOS.E_THEME_STATE_TOUCHES_METRICS,

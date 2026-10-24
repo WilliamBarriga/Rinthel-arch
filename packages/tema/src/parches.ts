@@ -4,7 +4,7 @@
  * cambia una Capa existente, la anade (con `before`/`after`) o la quita
  * (`none`); nunca se dirige por indice. Puro y determinista.
  */
-import { CODIGOS } from 'canonico';
+import { CODIGOS, candidatosCercanos } from 'canonico';
 
 import { CATALOGO, construirPrimitiva, sugerir } from './catalogo';
 import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva, UbicacionDePrimitiva } from './catalogo';
@@ -175,4 +175,22 @@ export function opTocaMetricas(op: OpDeCapa, pilas: ReadonlyArray<readonly CapaD
   const nuevo = op.primitiva ?? existente?.primitiva.tipo;
   if (afecta(nuevo)) return `la Capa '${op.nombre}' usa '${nuevo}', que afecta a las Metricas`;
   return afecta(existente?.primitiva.tipo) ? `la Capa '${op.nombre}' sustituye una forma que define la caja` : undefined;
+}
+
+/** Resultado de `parsearEstado`: el estado o el error `E_THEME_UNKNOWN_STATE` con sus candidatos cercanos. */
+export type ResultadoDeEstado =
+  | { estado: Estado }
+  | { error: { code: typeof CODIGOS.E_THEME_UNKNOWN_STATE; message: string; candidatos: string[] } };
+
+/** Unica busqueda de un estado por nombre (DSL, CLI): reconoce los de `ESTADOS` o sugiere los cercanos. */
+export function parsearEstado(escrito: string): ResultadoDeEstado {
+  const estado = ESTADOS.find((e) => e === escrito);
+  if (estado !== undefined) return { estado };
+  return {
+    error: {
+      code: CODIGOS.E_THEME_UNKNOWN_STATE,
+      message: `Estado '${escrito}' desconocido; disponibles: ${ESTADOS.join(', ')}`,
+      candidatos: candidatosCercanos(escrito, ESTADOS),
+    },
+  };
 }

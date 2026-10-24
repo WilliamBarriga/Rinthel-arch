@@ -109,3 +109,34 @@ describe('leyenda derivada del Tema', () => {
     expect(otro.container.querySelector('[data-leyenda]')).not.toBeNull();
   });
 });
+
+describe('interruptor manual de reduced-motion', () => {
+  const montar = () => render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layoutContador().layout} width={800} height={600} />);
+  const marca = (c: HTMLElement) => c.querySelector('[data-reduced-motion]')?.getAttribute('data-reduced-motion');
+
+  it('sin tocarlo manda la preferencia del sistema: el Diagram no lleva el atributo', async () => {
+    const { container, getByRole } = montar();
+    await waitFor(() => expect(container.querySelector('svg')).not.toBeNull());
+    expect(marca(container)).toBeUndefined();
+    expect(getByRole('button', { name: 'Reducir movimiento' }).getAttribute('aria-pressed')).toBe('false');
+  });
+
+  it('activarlo fija data-reduced-motion=on y desactivarlo fija off, aunque el sistema no lo pida', async () => {
+    const { container, getByRole } = montar();
+    await waitFor(() => expect(container.querySelector('svg')).not.toBeNull());
+    fireEvent.click(getByRole('button', { name: 'Reducir movimiento' }));
+    expect(marca(container)).toBe('on');
+    expect(getByRole('button', { name: 'Reducir movimiento' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(getByRole('button', { name: 'Reducir movimiento' }));
+    expect(marca(container)).toBe('off');
+  });
+
+  it('es independiente de prefers-reduced-motion: con el sistema en reduce arranca pulsado y se puede apagar', async () => {
+    vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('prefers-reduced-motion'), addEventListener: () => undefined, removeEventListener: () => undefined }));
+    const { container, getByRole } = montar();
+    await waitFor(() => expect(container.querySelector('svg')).not.toBeNull());
+    expect(getByRole('button', { name: 'Reducir movimiento' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(getByRole('button', { name: 'Reducir movimiento' }));
+    expect(marca(container)).toBe('off');
+  });
+});
