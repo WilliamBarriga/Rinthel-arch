@@ -50,6 +50,13 @@ describe('seam sesion: accesibilidad del Tema', () => {
     expect(soloColor[0]!.message).toContain("'base'");
   });
 
+  it('si el Nodo muestra la insignia (badge), el nombre del Tipo los distingue: no hay solo-color', async () => {
+    const conInsignia = tema('COLOR').replace('slots { title attrs }', 'slots { title badge attrs }');
+    const issues = await abrirSesion({ 'main.dg': modelo + conInsignia + vista }).diagnosticar();
+
+    expect(issues.filter((i) => i.code === 'W_THEME_COLOR_ONLY')).toEqual([]);
+  });
+
   it('un Tema que no usa el color del Tipo ni tiene mal contraste no avisa', async () => {
     const issues = await abrirSesion({ 'main.dg': modelo + tema('rojo').replace('rojo "#f0f0f0"', 'rojo "#ffffff"') + vista }).diagnosticar();
 

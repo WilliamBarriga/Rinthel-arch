@@ -9,6 +9,7 @@ import { CATALOGO } from './catalogo';
 import type { DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
 import { hexARgb } from './color';
 import { estiloResuelto } from './estilo';
+import { muestra } from './metricas';
 import { resolverTema } from './tema';
 import type { CapaPintada } from './estilo';
 import type { Estado } from './parches';
@@ -134,10 +135,12 @@ const quitarColor = (capa: CapaPintada) => ({
 /**
  * Pares de Tipos que se distinguen unicamente por color de Paleta: misma pila
  * de Capas (sin contar colores) en reposo y en cada estado, mismo icono, y
- * colores pintados distintos. Orden de declaracion.
+ * colores pintados distintos. Orden de declaracion. Si el Nodo muestra la
+ * insignia (`badge`, el nombre del Tipo en texto) ningun par es solo-color.
  */
 export function tiposSoloColor(tema: Tema, tipos: readonly TipoParaLeyenda[]): Array<[string, string]> {
   const estilo = estiloResuelto(tema, { tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
+  if (muestra(estilo.metricas, 'badge')) return [];
   const firma = (t: TipoParaLeyenda) => {
     const p = estilo.pintura.nodo.tipos[t.name]!;
     const pilas = [p.capas, ...Object.entries(p.estados).sort(([a], [b]) => a.localeCompare(b)).map(([, pila]) => pila!)];
