@@ -15,4 +15,4 @@ const marcador = {
   },
 } as const satisfies DefinicionDePrimitiva;
 
-export const MARCADORES = { arrow: marcador, dot: marcador, diamond: marcador, bar: marcador, via: marcador } as const;
+export const MARCADORES = { arrow: marcador, dot: marcador, diamond: marcador, square: marcador, bar: marcador, via: marcador } as const;
