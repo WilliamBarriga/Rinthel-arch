@@ -31,8 +31,8 @@ describe('medirEnVisor', () => {
       ancho: (fuente, texto) => (orden.push(`mide ${fuente} ${texto}`), texto.length * 10),
     });
 
-    expect(orden.indexOf('carga 14px Inter hola')).toBeLessThan(orden.indexOf('mide 14px Inter hola'));
-    expect(orden.indexOf('carga 12px Inter x')).toBeLessThan(orden.indexOf('mide 12px Inter x'));
+    expect(orden.indexOf('carga 14px "Inter" hola')).toBeLessThan(orden.indexOf('mide 14px "Inter" hola'));
+    expect(orden.indexOf('carga 12px "Inter" x')).toBeLessThan(orden.indexOf('mide 12px "Inter" x'));
     expect(medidas).toEqual({
       nivel: 'medido',
       fuentes: { Inter: 'abcd1234' },

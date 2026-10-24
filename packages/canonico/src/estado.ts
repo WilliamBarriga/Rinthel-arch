@@ -35,8 +35,16 @@ export const estadoDeDevSchema = z.object({
   archivosDeVista: z.record(z.string(), z.string()),
   /** Hash del contenido de cada archivo del Workspace. */
   hashes: z.record(z.string(), z.string()),
+  /** Archivos de fuente del Workspace (ruta relativa -> hash del contenido): `dev` los sirve en `/fuentes/<ruta>`. Ausente si el adaptador no los conoce. */
+  fuentes: z.record(z.string(), z.string()).optional(),
   issues: z.array(issueDeDevSchema),
 });
 
 export type IssueDeDev = z.infer<typeof issueDeDevSchema>;
 export type EstadoDeDev = z.infer<typeof estadoDeDevSchema>;
+
+/** Ruta del servidor de `dev` por la que el navegador pide los archivos de fuente del Workspace. */
+export const RUTA_DE_FUENTES = '/fuentes/';
+
+/** URL (relativa al servidor de `dev`) de la fuente `ruta` del Workspace, con cada segmento codificado. */
+export const urlDeFuente = (ruta: string): string => RUTA_DE_FUENTES + ruta.split('/').map(encodeURIComponent).join('/');

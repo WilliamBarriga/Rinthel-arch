@@ -90,6 +90,8 @@ export const CODIGOS = Object.freeze({
   E_THEME_COMPONENT_DUPLICATE: 'E_THEME_COMPONENT_DUPLICATE',
   /** Un `.tsx` de un Componente de Tema no compila (`file`/`line` apuntan al error). */
   E_THEME_CODE_COMPILE: 'E_THEME_CODE_COMPILE',
+  /** Una familia de `fonts` no tiene archivo de fuente en el Workspace. */
+  E_THEME_FONT_MISSING: 'E_THEME_FONT_MISSING',
 } as const);
 
 /** Union de los codigos activos; `Issue.code` sigue siendo `string` (ADR 0005). */
@@ -138,6 +140,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_THEME_COMPONENT_PARAMS: 'Los parametros de una Capa `code` no coinciden con los que declara el componente (desconocido o de otro tipo).',
   E_THEME_COMPONENT_DUPLICATE: 'Dos `.tsx` del Workspace exportan un Componente de Tema con el mismo nombre.',
   E_THEME_CODE_COMPILE: 'Un `.tsx` de un Componente de Tema no compila; `file` y `line` apuntan al error.',
+  E_THEME_FONT_MISSING: 'Una familia de `fonts` de un Tema no tiene archivo de fuente (`woff2|woff|ttf|otf`) en el Workspace; las genericas CSS no lo necesitan.',
 });
 
 /**

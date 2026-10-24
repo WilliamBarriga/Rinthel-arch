@@ -127,12 +127,30 @@ function reglasDeTexto(estilo: Estilo): Array<[string, Declaraciones]> {
   });
 }
 
-/** Hoja de estilo del Estilo: `clase` es la de alcance que debe llevar el contenedor del dibujo. */
-export function compilarHoja(estilo: Estilo): { clase: string; css: string } {
+const FORMATO_DE_FUENTE: Record<string, string> = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
+
+/**
+ * `@font-face` de cada cara del Estilo, con la URL que entrega el consumidor (en `dev`, la ruta de fuentes
+ * del servidor). `block` evita medir y pintar con la fuente de reserva y saltar despues (research `fuentes-tema`).
+ * Global, no va bajo la clase de alcance: una cara es de la pagina.
+ */
+export function hojaDeFuentes(caras: Estilo['caras'], urlDeFuente: (ruta: string) => string): string {
+  return caras
+    .map((cara) => {
+      const formato = FORMATO_DE_FUENTE[cara.ruta.slice(cara.ruta.lastIndexOf('.') + 1).toLowerCase()] ?? 'woff2';
+      const url = urlDeFuente(cara.ruta).replace(/["'()\\<>{};\n\r]/g, encodeURIComponent);
+      return `@font-face{font-family:"${cara.familia.replace(/["\\]/g, '')}";font-style:${cara.estilo};font-weight:${cara.peso};font-display:block;src:url("${url}") format("${formato}")}`;
+    })
+    .join('\n');
+}
+
+/** Hoja de estilo del Estilo: `clase` es la de alcance que debe llevar el contenedor del dibujo; con `urlDeFuente` incluye los `@font-face`. */
+export function compilarHoja(estilo: Estilo, urlDeFuente?: (ruta: string) => string): { clase: string; css: string } {
   const animacion = animacionDeHoja(estilo, (capa) => PINTORES[capa.tipo as NombreDePrimitivaEn<'capa-nodo'>](capa.props));
   const todas = [...reglas(estilo), ...animacion.reglas];
   const clase = `rd-${huella(todas.map(([selector, d]) => `${selector}{${bloque(d)}}`).join('') + animacion.bloques.join(''))}`;
   const alcance = (selector: string): string => selector.replace(/&/g, `.${clase}`);
-  const texto = [...todas.map(([selector, d]) => `${selector.split(', ').map(alcance).join(',')}{${bloque(d)}}`), ...animacion.bloques.map(alcance)].join('\n');
+  const caras = urlDeFuente === undefined || estilo.caras.length === 0 ? [] : [hojaDeFuentes(estilo.caras, urlDeFuente)];
+  const texto = [...caras, ...todas.map(([selector, d]) => `${selector.split(', ').map(alcance).join(',')}{${bloque(d)}}`), ...animacion.bloques.map(alcance)].join('\n');
   return { clase, css: texto };
 }

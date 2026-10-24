@@ -25,7 +25,19 @@ El script extrae el prototipo a un directorio temporal (cache por commit), levan
 
 Temas: `soft-card`, `glass-chip`, `neobrutalist`, `blueprint`, `claro-suave`, `crt-terminal`, `synthwave`, `editorial`, `bauhaus`, `sticky-notes`, `keycaps`, `metro-map`, `pcb`, `pixel-art`. La primera linea de cada archivo, `// Contraste: ...`, lista los Tipos con warning de contraste deliberado (`ninguno` si no hay); una prueba exige que esos sean los unicos warnings de cada Tema (sin `W_THEME_COLOR_ONLY` ni otros).
 
-`fuentes/` trae Caveat, Press Start 2P y JetBrains Mono en `woff2` (licencia OFL en `LICENCIA-OFL.txt`), auto-hospedadas, sin CDN. Los Temas las nombran en `fonts`; el visor aun no declara el `@font-face` desde el Workspace, asi que sin ello se ve el fallback.
+## Fuentes
+
+`fuentes/` trae, en `woff2`, todas las familias que usa el prototipo en los 14 Temas, auto-hospedadas y sin CDN (ADR 0008): Caveat (400, 500, 700), Press Start 2P (400), JetBrains Mono (400, 700), Space Mono (400, 700), Outfit (400, 700), Nunito (600, 800) e Inter (400, 500, 600, 800). Georgia, Futura, Helvetica, SF Pro y los demas del prototipo son fuentes del sistema: un Tema las expresa con una familia generica (`serif`, `sans-serif`...) o con `fallback`.
+
+Origen: archivos `latin` de [Fontsource](https://fontsource.org) 5.3.0 (`@fontsource/<familia>`, licencia OFL-1.1), tal cual, sin subsetear ni renombrar la fuente; descargados el 2026-10-23 de `https://cdn.jsdelivr.net/fontsource/fonts/<familia>@latest/latin-<peso>-normal.woff2`, que sirve los mismos archivos del paquete npm. Cada familia trae su licencia, copiada de `@fontsource/<familia>/LICENSE`, en `OFL-<familia>.txt` (copyright de sus autores: Caveat, Press Start 2P, JetBrains Mono, Space Mono, Outfit, Nunito, Inter). Repos de los autores: [googlefonts/caveat](https://github.com/googlefonts/caveat), [JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono), [googlefonts/spacemono](https://github.com/googlefonts/spacemono), [Outfitio/Outfit-Fonts](https://github.com/Outfitio/Outfit-Fonts), [googlefonts/nunito](https://github.com/googlefonts/nunito), [rsms/inter](https://github.com/rsms/inter); Press Start 2P es de Cody "CodeMan38" Boisclair (Reserved Font Name "Press Start 2P").
+
+Un Tema las nombra en `fonts` y declara la reserva con `fallback`:
+
+```
+fonts { body "Caveat"  mono "Caveat"  fallback "cursive" }
+```
+
+El archivo de una familia se encuentra por nombre, con la convencion de Fontsource: `<familia-en-kebab>-<subset>-<peso>-<estilo>.<ext>` (`caveat-latin-700-normal.woff2`; tambien vale `<Familia>.<ext>` como peso 400). Una familia no generica sin archivo en el Workspace es el error `E_THEME_FONT_MISSING`, situado en el Tema, con "quisiste decir". `dev` sirve los archivos en `/fuentes/<ruta>` (solo fuentes del Workspace) y el visor declara el `@font-face` y mide con la fuente ya cargada. Los Temas de la galeria que hoy usan estas fuentes son `sticky-notes` (Caveat), `pixel-art` (Press Start 2P) y `blueprint`, `crt-terminal` y `pcb` (JetBrains Mono); las demas quedan disponibles para #55-#57.
 
 ## Limites del catalogo actual
 

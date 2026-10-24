@@ -13,8 +13,9 @@ import { resolveView } from 'canonico';
 import type { EstadoDeColapso, IconProvider, IssueDeDev, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
 import { claveDeLayout, indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
-import { Diagram, resolverEstilo } from 'render';
+import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
 import type { Camara, ComponentesDeTema } from 'render';
+import { resolverTema } from 'tema';
 import type { MedidasDeTexto, TextoAMedir } from 'tema';
 
 import { aCamara, aTransform, compensarCamara, encuadrar, mismaTransform } from './camara';
@@ -33,6 +34,7 @@ import { estadosDeRuta, moverFoco, rutaMasCorta, unirEstados } from './ruta-y-fo
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
 import { useGeometria } from './geometria';
+import { hashesDeFamilias, medirEnVisor } from './medicion-de-visor';
 import type { Calculo } from './geometria';
 import { interpolarGeometria, useMorph, visibilidadDeMorph } from './morph';
 import type { RelojDeCuadros } from './morph';
@@ -62,6 +64,13 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   layout: AdaptadorDeLayout;
   /** Medicion real de texto; con ella el layout espera las medidas y la clave de layout incluye el hash de fuente y el nivel `medido`. */
   measure?: MedidorDeTexto;
+  /**
+   * Archivos de fuente del Workspace (ruta -> hash del contenido). Con ellos y `fontUrl` el visor declara el
+   * `@font-face` de cada fuente del Tema y, si no hay `measure`, mide con la fuente real (`medirEnVisor`).
+   */
+  fontFiles?: Readonly<Record<string, string>>;
+  /** URL con la que el navegador pide un archivo de fuente del Workspace (en `dev`, su ruta de fuentes). */
+  fontUrl?: (ruta: string) => string;
   /** Tamano del lienzo en px. */
   width: number;
   height: number;
@@ -173,7 +182,13 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     morphador.iniciar({ desde: previo.geometria, hasta: nuevo.geometria, ancla });
   };
   const morphador = useMorph(morphMs, props.clock);
-  const calculo = useGeometria({ vista, theme, layout, medir: props.measure, semilla, onError, alLlegar });
+  const { fontFiles, fontUrl } = props;
+  const hashesDeFuentes = useMemo(() => (fontFiles === undefined ? undefined : hashesDeFamilias(resolverTema(theme).fonts, fontFiles)), [fontFiles, theme]);
+  const medirConFuentes = useMemo<MedidorDeTexto | undefined>(
+    () => (props.measure !== undefined || hashesDeFuentes === undefined || fontUrl === undefined ? props.measure : (textos) => medirEnVisor(textos, { hashes: hashesDeFuentes })),
+    [props.measure, hashesDeFuentes, fontUrl],
+  );
+  const calculo = useGeometria({ vista, theme, layout, medir: medirConFuentes, claveDeFuentes: JSON.stringify(hashesDeFuentes), semilla, onError, alLlegar });
 
   // Camara: controlada por el padre o propia; hasta que el usuario (o un colapso) la mueva, encuadra toda la Vista segun la primera geometria.
   const [movida, fijarCamara] = useControlado<Camara | undefined>(props.camera, undefined, (nueva) => nueva && ultimo.current.onCameraChange?.(nueva));
@@ -270,7 +285,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const { seleccion, estados: estadosDeSeleccion, pulsar } = useSeleccion(vista, props.selected, props.selection);
   const [hover, fijarHover] = useState<string | undefined>(undefined);
   const estados = useMemo(() => conEstadosTransitorios(estadosDeSeleccion, enCurso === undefined ? hover : undefined, enCurso), [estadosDeSeleccion, hover, enCurso]);
-  const estilo = useMemo(() => resolverEstilo(theme), [theme]);
+  const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles)), [theme, fontFiles]);
 
   // Ruta (en-ruta / atenuado) y foco de teclado: los calcula el shell y render solo los pinta.
   const nodosSeleccionados = seleccion.filter((e) => e.tipo === 'nodo').map((e) => e.id);
@@ -370,6 +385,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   return (
     <div ref={zona} onClick={alPulsar} onMouseMove={alMoverElRaton} onMouseLeave={() => fijarHover(undefined)} className="rd-vista" data-vista={view} data-layout={calculo !== undefined && calculo.vista === vista && morph === undefined ? 'listo' : 'calculando'} tabIndex={0} onKeyDown={alTeclear} onFocus={alEnfocar} onBlur={alSoltarElFoco} style={{ ...variablesDeChrome(estilo), width, height }}>
       <EstiloDelChrome />
+      {fontUrl !== undefined && estilo.caras.length > 0 && <style data-fuentes="">{hojaDeFuentes(estilo.caras, fontUrl)}</style>}
       {mostrado !== undefined && recortada !== undefined && (
         <Diagram
           view={recortada}
@@ -383,6 +399,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
           detail={detalle}
           estados={estadosFinales}
           estilo={estilo}
+          {...(fontUrl !== undefined && { urlDeFuente: fontUrl })}
           onToggle={alternar}
           {...(reducedMotion !== undefined && { reducedMotion })}
           {...(visibilidadMostrada !== undefined && { visibility: visibilidadMostrada })}

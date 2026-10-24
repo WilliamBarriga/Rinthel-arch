@@ -120,10 +120,17 @@ describe('galeria de Temas de ejemplo', () => {
     expect(warnings.filter((i) => !TEMAS.some((n) => i.message.startsWith(`Tema '${n}'`) || i.message.startsWith(`En la Vista '${n}'`))).map((i) => `${i.code}: ${i.message}`), 'warnings sin Tema').toEqual([]);
   });
 
-  it('las fuentes incluidas son archivos OFL del Workspace, sin CDN', () => {
+  it('las fuentes incluidas son archivos OFL del Workspace, cada familia con su licencia, sin CDN', () => {
     const fuentes = readdirSync(resolve(RAIZ, 'fuentes'));
-    expect(fuentes.some((f) => /\.woff2$/.test(f))).toBe(true);
-    expect(fuentes.some((f) => /^LICENCIA/.test(f))).toBe(true);
+    const familias = new Set(fuentes.filter((f) => f.endsWith('.woff2')).map((f) => f.replace(/-latin-\d{3}-normal\.woff2$/, '')));
+    expect([...familias].sort()).toEqual(['caveat', 'inter', 'jetbrains-mono', 'nunito', 'outfit', 'press-start-2p', 'space-mono']);
+    for (const familia of familias) expect(fuentes, familia).toContain(`OFL-${familia}.txt`);
     for (const texto of Object.values(archivos)) expect(texto).not.toMatch(/https?:\/\//);
+  });
+
+  it('toda fuente que declara un Tema de la galeria tiene archivo en el Workspace', async () => {
+    const archivosDeFuente = readdirSync(resolve(RAIZ, 'fuentes')).map((f) => `fuentes/${f}`);
+    const faltantes = (await abrirSesion(archivos, { archivosDeFuente }).diagnosticar()).filter((i) => i.code === 'E_THEME_FONT_MISSING');
+    expect(faltantes.map((i) => i.message)).toEqual([]);
   });
 });

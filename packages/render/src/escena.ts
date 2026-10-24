@@ -68,6 +68,8 @@ export interface EntradaDeEscena {
   estados?: Estados;
   /** Estilo resuelto con el que dibujar; por defecto el del Tema (`resolverEstilo`). */
   estilo?: Estilo;
+  /** URL con la que el navegador pide un archivo de fuente del Workspace (la entrega el shell); con ella el dibujo declara los `@font-face` de `estilo.caras`. */
+  urlDeFuente?: (ruta: string) => string;
   /**
    * Interruptor manual de reduced-motion, independiente de la preferencia del sistema:
    * `on` reduce siempre, `off` nunca; sin el, manda `prefers-reduced-motion`.
@@ -111,7 +113,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
   const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));
   const contexto: Contexto = { ...entrada, visibility, estilo, cajas, coloresDeNodo, escalonado: posicionesDeEscalonado(raices, visibility, estilo, entrada.nuevos) };
   const vista = camera ?? { x: 0, y: 0, width: geometry.width, height: geometry.height };
-  const hoja = compilarHoja(estilo);
+  const hoja = compilarHoja(estilo, entrada.urlDeFuente);
 
   // Mismo encuadre que un `viewBox` con `preserveAspectRatio` por defecto: escala uniforme, centrada.
   const k = Math.min(width / vista.width, height / vista.height);

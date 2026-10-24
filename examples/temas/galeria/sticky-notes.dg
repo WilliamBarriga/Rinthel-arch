@@ -1,7 +1,7 @@
 // Contraste: ninguno
 // Pizarra con post-its: notas de colores ligeramente giradas, cinta adhesiva y trazo de mano alzada.
 theme sticky-notes {
-  fonts { body "Caveat"  mono "Caveat" }
+  fonts { body "Caveat"  mono "Caveat"  fallback "cursive" }
   palette {
     fondo "#fcfcf8"  texto "#2b2b2b"  cinta "#d8d2c0"  papel "#fcfcf8"  tinta "#2456c9"
     blue "#bfe3ff"  purple "#e4d0ff"  green "#c8f2c2"  amber "#fff3a0"  red "#ffc9d6"  gray "#fff3a0"

@@ -7,7 +7,7 @@
  */
 import type { Tema } from 'canonico';
 import { estiloResuelto, resolverTema, tablaUniforme } from 'tema';
-import type { Estado, Metricas, Pintura, TablaDeMetricas } from 'tema';
+import type { CaraDeFuente, Estado, Metricas, Pintura, TablaDeMetricas } from 'tema';
 
 /** Estado visual de un elemento dibujado, ademas de su aspecto normal. */
 export type EstadoVisual = Estado;
@@ -35,6 +35,8 @@ export interface Estilo {
   borde: string;
   fuenteCuerpo: string;
   fuenteMono: string;
+  /** Caras de fuente del Workspace que usa el Tema (`@font-face`); vacio si el consumidor no dio archivos. */
+  caras: CaraDeFuente[];
   /** Color de los avisos de error del chrome: el token `error` del Tema o, si falta, un rojo por defecto. */
   colorDeError: string;
   /** Nombre de Paleta -> valor. */
@@ -68,10 +70,10 @@ export interface Estilo {
  * Estilo resuelto del Tema. Lanza si el Tema no cumple el contrato (`resolverTema`),
  * con un mensaje que nombra cada ruta que falta. `metricas` sustituye a las derivadas del Tema.
  */
-export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
-  const { fonts, tokens, palette } = resolverTema(tema);
+export function resolverEstilo(tema: Tema, metricas?: Metricas, archivosDeFuente?: readonly string[]): Estilo {
+  const { tokens, palette } = resolverTema(tema);
   const acento = palette['blue'] ?? tokens.foreground;
-  const resuelto = estiloResuelto(tema);
+  const resuelto = estiloResuelto(tema, archivosDeFuente === undefined ? {} : { archivosDeFuente });
   const tabla = metricas === undefined ? resuelto.tabla : tablaUniforme(metricas);
   return {
     metricas: tabla.base,
@@ -80,8 +82,9 @@ export function resolverEstilo(tema: Tema, metricas?: Metricas): Estilo {
     fondo: tokens.background,
     texto: tokens.foreground,
     borde: tokens.border,
-    fuenteCuerpo: fonts.body,
-    fuenteMono: fonts.mono,
+    fuenteCuerpo: resuelto.fuentes.cuerpo,
+    fuenteMono: resuelto.fuentes.mono,
+    caras: resuelto.fuentes.caras,
     colorDeError: tokens['error'] ?? COLOR_DE_ERROR_POR_DEFECTO,
     paleta: palette,
     nodo: { radio: 6, relleno: tokens.background, trazoColapsado: '6 3' },
