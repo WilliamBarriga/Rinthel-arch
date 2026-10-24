@@ -68,4 +68,15 @@ describe('compile: bloque page del Tema', () => {
     expect(resultado.issues[1]?.hint ?? resultado.issues[1]?.fix?.replacement).toMatch(/ink/);
     expect(resultado.issues[0]?.message).toContain('rect');
   });
+
+  it('una Capa de page con motion o keyframes es error: la pagina no se anima', () => {
+    const resultado = tema(`page { layer puntos dots { color ink/0.1  motion pulso 1s } }`);
+    const keyframes = tema(`page { layer puntos dots { color ink/0.1  keyframes opacity 1s { 0 1  100 0.5 } } }`);
+
+    for (const r of [resultado, keyframes]) {
+      expect(r.issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+      expect(r.issues[0]).toMatchObject({ file: 'main.dg', line: 3, message: expect.stringContaining("'page'") });
+      expect(r.issues[0]?.hint).toContain('node');
+    }
+  });
 });

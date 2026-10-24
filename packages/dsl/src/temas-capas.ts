@@ -12,8 +12,9 @@ import { validarOps } from 'tema';
 import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, UbicacionDePrimitiva } from 'tema';
 
 import type { ThemeLayer, ThemeUse } from './generated/ast';
-import { issueConSugerencia, rangoDe } from './posiciones';
+import { aRango, issueConSugerencia, rangoDe } from './posiciones';
 import { compilarAnimacionDeCapa } from './temas-animacion';
+import type { AnimacionDeCapa } from './temas-animacion';
 import { inicioDePropiedad, propiedadDeClave, propiedadesResueltas } from './temas-comun';
 import type { Contexto } from './temas-comun';
 
@@ -77,6 +78,21 @@ function aOp(elemento: Elemento, ctx: ContextoDeBloque): { op: OpDeCapa; errores
   return { op, errores };
 }
 
+/** El fondo de pagina no se anima (ADR 0008: la animacion es de los Nodos y Grupos): `motion` y `keyframes` en `page` son error, no se descartan en silencio. */
+function rechazarAnimacionDePagina(item: ThemeLayer, archivo: string, issues: Issue[]): AnimacionDeCapa {
+  const [anim] = item.animations;
+  if (anim === undefined) return { fallo: false };
+  issues.push({
+    code: CODIGOS.E_THEME_INVALID_VALUE,
+    severity: 'error',
+    file: archivo,
+    ...aRango(anim.$cstNode?.range).start,
+    message: `La Capa '${item.name}' de 'page' no admite '${anim.$type === 'ThemeMotion' ? 'motion' : 'keyframes'}': el fondo de pagina no se anima`,
+    hint: "Anima las Capas de 'node' o 'group'; 'page' es solo pintura estatica",
+  });
+  return { fallo: true };
+}
+
 /**
  * Compila los elementos de un bloque. Devuelve los parches sin error en orden
  * de aplicacion y deja los issues en `ctx.issues`.
@@ -103,7 +119,7 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
 
   const compiladas = unicos.map((elemento) => {
     const delOp = aOp(elemento, ctx);
-    const animada = compilarAnimacionDeCapa(elemento.item, elemento.archivo, ctx.issues);
+    const animada = ctx.ubicacion === 'capa-pagina' ? rechazarAnimacionDePagina(elemento.item, elemento.archivo, ctx.issues) : compilarAnimacionDeCapa(elemento.item, elemento.archivo, ctx.issues);
     if (animada.animacion !== undefined) delOp.op.animacion = animada.animacion;
     return { elemento, ...delOp, animacionFalla: animada.fallo };
   });
