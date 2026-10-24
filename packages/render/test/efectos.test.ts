@@ -183,5 +183,16 @@ describe('decoracion y desbordes', () => {
     expect(etiquetaCon(html.slice(html.indexOf('data-id="db"')), 'class="rd-cinta"')).toContain('rotate(-4deg)');
     expect(etiquetaCon(html.slice(html.indexOf('data-id="a.api"')), 'class="rd-cinta"')).toContain('rotate(-4deg)');
   });
+
+  it('la franja es una banda del color de la Capa en un lado de la caja, sobre su borde y recortada por su contorno', async () => {
+    const html = await dibujar(conCapas([capa('borde', 'border', { color: 'gray', width: 3 }), capa('franja', 'stripe', { color: 'blue', side: 'right', width: 12 })]));
+    const franja = etiquetaCon(html.slice(html.indexOf('data-id="db"')), 'class="rd-franja"');
+
+    expect(propiedad(franja, 'left')).toBe('-3px');
+    expect(propiedad(franja, 'top')).toBe('-3px');
+    expect(propiedad(franja, 'width')).toBe('calc(100% + 6px)');
+    expect(propiedad(franja, 'background')).toBe('linear-gradient(to left,#2563eb 12px,transparent 12px)');
+    expect(hojaDe(html)).toMatch(/\.rd-franja\{position:absolute;[^}]*border-radius:inherit/);
+  });
 });
 

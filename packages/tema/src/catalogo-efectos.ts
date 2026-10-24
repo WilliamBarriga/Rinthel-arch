@@ -29,6 +29,8 @@ export const CATALOGO_DE_EFECTOS = {
   tilt: { familia: 'decoracion', afectaMetricas: false, propiedades: { degrees: num(0, 3, 1) } },
   // Cinta adhesiva centrada sobre el borde superior; sobresale de la caja. Sin `angle`, ladeada con la semilla del elemento.
   tape: { familia: 'decoracion', afectaMetricas: false, propiedades: { color, width: num(8, 200, 48), height: num(4, 60, 16), angle: { tipo: 'numero', min: -15, max: 15, opcional: true } } },
+  // Franja: banda de `width` px del color de la Capa en un lado de la caja, sobre su borde y recortada por su contorno.
+  stripe: { familia: 'decoracion', afectaMetricas: false, propiedades: { color, side: { tipo: 'opcion', valores: ['left', 'right', 'top', 'bottom'], defecto: 'left' }, width: num(1, 200, 4) } },
   // Pines: dos peines (arriba y abajo) que sobresalen `length` px de la caja, dientes de `width` px cada `step` px y `margin` px libres a los lados.
   pins: { familia: 'decoracion', afectaMetricas: false, propiedades: { color, width: num(1, 40, 4), step: num(2, 100, 11), length: num(1, 40, 6), margin: num(0, 200, 10) } },
   // Esquina superior derecha doblada: el triangulo de fuera toma el fondo de pagina, el de dentro `color`; `shadow`, sombra dura opcional.

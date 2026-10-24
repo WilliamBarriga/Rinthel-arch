@@ -23,7 +23,7 @@ import type { Estilo } from './estilo';
 
 type Declaraciones = Record<string, string>;
 type Props = CapaPintada['props'];
-type NombreDeEfecto = Extract<NombreDePrimitiva, 'shadow' | 'glow' | 'glass' | 'sketch' | 'tilt' | 'tape' | 'ring' | 'fold' | 'pins'>;
+type NombreDeEfecto = Extract<NombreDePrimitiva, 'shadow' | 'glow' | 'glass' | 'sketch' | 'tilt' | 'tape' | 'ring' | 'fold' | 'pins' | 'stripe'>;
 
 const px = (valor: number | string | undefined): string => `${num(Number(valor))}px`;
 const css = (valor: number | string | undefined): string => limpiarValorCss(String(valor));
@@ -40,6 +40,7 @@ export const PINTORES_DE_EFECTOS: { readonly [P in NombreDeEfecto]: (props: Prop
   tape: () => ({}),
   fold: () => ({}),
   pins: () => ({}),
+  stripe: () => ({}),
 };
 
 /** Lo que los efectos por elemento anaden a la caja de un Nodo o Grupo. */
@@ -57,7 +58,7 @@ export interface EfectosDeElemento {
 const SIN_EFECTOS: EfectosDeElemento = { caja: '', nodo: '', debajo: [], encima: [] };
 
 /** Primitivas que se pintan por elemento (con su semilla o como hijos propios), no en la hoja. */
-const POR_ELEMENTO: ReadonlySet<string> = new Set<NombreDeEfecto>(['sketch', 'tilt', 'tape', 'fold', 'pins']);
+const POR_ELEMENTO: ReadonlySet<string> = new Set<NombreDeEfecto>(['sketch', 'tilt', 'tape', 'fold', 'pins', 'stripe']);
 
 /** Efectos que dependen del elemento: semilla = id del elemento + nombre de Capa (+ `seed N` del Tema). */
 export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo, 'capas'>, id: string): EfectosDeElemento {
@@ -78,6 +79,8 @@ export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo,
       resultado.encima.push(doblez(capa.props, estilo.fondo, anchoDeBorde(capas)));
     } else if (capa.tipo === 'pins') {
       (capa.encima === true ? resultado.encima : resultado.debajo).push(pines(capa.props));
+    } else if (capa.tipo === 'stripe') {
+      (capa.encima === true ? resultado.encima : resultado.debajo).push(franja(capa.props, anchoDeBorde(capas)));
     }
   }
   return resultado;
@@ -110,6 +113,22 @@ function doblez(props: Props, fondo: string, borde: number): Elemento {
     attrs: {
       class: 'rd-doblez',
       style: `top:${px(-borde)};right:${px(-borde)};border-width:0 ${lado} ${lado} 0;border-color:transparent ${css(fondo)} ${css(props['color'])} transparent;${sombra}`,
+    },
+  };
+}
+
+/** Direccion del gradiente que pinta la franja desde su lado. */
+const HACIA: Record<string, string> = { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
+
+/** Franja en un lado: un elemento que cubre la caja desde su contorno exterior, con el radio de la caja, y un gradiente de corte nitido. */
+function franja(props: Props, borde: number): Elemento {
+  const ancho = px(props['width']);
+  const cubre = `calc(100% + ${px(2 * borde)})`;
+  return {
+    tag: 'div',
+    attrs: {
+      class: 'rd-franja',
+      style: `left:${px(-borde)};top:${px(-borde)};width:${cubre};height:${cubre};background:linear-gradient(to ${HACIA[String(props['side'])] ?? 'right'},${css(props['color'])} ${ancho},transparent ${ancho});`,
     },
   };
 }
