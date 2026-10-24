@@ -21,7 +21,7 @@ import { build } from 'esbuild';
 
 import { generarWorkspace } from './generador.ts';
 
-const ESCENARIOS = ['build-10k', 'relayout-1k', 'relayout-slots', 'colapso-5k', 'bundle'] as const;
+const ESCENARIOS = ['build-10k', 'relayout-1k', 'relayout-slots', 'relayout-grande', 'colapso-5k', 'bundle'] as const;
 type Escenario = (typeof ESCENARIOS)[number];
 
 const ms = (desde: number): number => Math.round(performance.now() - desde);
@@ -130,9 +130,9 @@ const SLOTS_ANIDADOS = {
   ],
 } as const;
 
-/** Relayout de cientos de Nodos con Slots `row/column` anidados, frente al mismo Modelo con la disposicion plana del Tema neutro. */
-async function relayoutConSlotsAnidados(): Promise<Record<string, number>> {
-  const fuente = compilar(500);
+/** Relayout de `nodos` Nodos del Modelo (con sus Grupos) con Slots `row/column` anidados, frente al mismo Modelo con la disposicion plana del Tema neutro. */
+async function relayoutConSlotsAnidados(nodos: number): Promise<Record<string, number>> {
+  const fuente = compilar(nodos);
   const anidado = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, slots: SLOTS_ANIDADOS } } as unknown as Tema;
   const [pagina, worker] = parDePuertos();
   servirLayout(worker);
@@ -141,6 +141,7 @@ async function relayoutConSlotsAnidados(): Promise<Record<string, number>> {
   const frio = await relayout(fuente, {}, adaptador, anidado);
   const caliente = await relayout(fuente, {}, adaptador, anidado);
   return {
+    nodosDelModelo: contarNodos(fuente.model.nodes),
     nodosVisibles: frio.vista.nodes.length,
     tiempoNeutroMs: neutro.totalMs,
     tiempoFrioMs: frio.totalMs,
@@ -235,5 +236,13 @@ if (escenario === undefined || !ESCENARIOS.includes(escenario)) {
   process.stderr.write(`Uso: node bench/escenario.ts <${ESCENARIOS.join('|')}>\n`);
   process.exit(2);
 }
-const medidas = await { 'build-10k': buildDe10k, 'relayout-1k': relayoutDe1k, 'relayout-slots': relayoutConSlotsAnidados, 'colapso-5k': colapsoDe5k, bundle: bundleDelShell }[escenario]();
+const ejecutores: Record<Escenario, () => Promise<Record<string, number>>> = {
+  'build-10k': buildDe10k,
+  'relayout-1k': relayoutDe1k,
+  'relayout-slots': () => relayoutConSlotsAnidados(500),
+  'relayout-grande': () => relayoutConSlotsAnidados(3000),
+  'colapso-5k': colapsoDe5k,
+  bundle: bundleDelShell,
+};
+const medidas = await ejecutores[escenario]();
 process.stdout.write(`${JSON.stringify({ escenario, medidas })}\n`);

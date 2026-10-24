@@ -2,11 +2,11 @@
  * Benchmark de los umbrales del ADR 0003. Fuera de la suite por defecto:
  * `pnpm bench` (construye los paquetes y corre todo) o, ya construido,
  * `node bench/ejecutar.ts [escenario...]` con escenarios entre `build-10k`,
- * `relayout-1k`, `relayout-slots`, `colapso-5k` y `bundle`. Cada escenario corre en un proceso
+ * `relayout-1k`, `relayout-slots`, `relayout-grande`, `colapso-5k` y `bundle`. Cada escenario corre en un proceso
  * aparte (memoria maxima propia) y el exit code es 1 si algun umbral falla.
  *
  * Los umbrales son los del ADR 0003 (con su enmienda): 2.5 GiB de RSS en el
- * build de 10k Nodos y 500 KiB por artefacto de bundle. Los tiempos dependen de la maquina y de su carga.
+ * build de 10k Nodos, 1 MiB para el Worker de layout y 500 KiB para la pagina (bundle). Los tiempos dependen de la maquina y de su carga.
  */
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
@@ -29,9 +29,11 @@ const UMBRALES: readonly Umbral[] = [
   { escenario: 'relayout-1k', descripcion: 'relayout interactivo con 1k Nodos visibles (en caliente)', medida: (m) => m['tiempoCalienteMs']! / 1000, limite: 2, unidad: 's' },
   { escenario: 'relayout-slots', descripcion: 'relayout con 500 Nodos y Slots anidados (en frio)', medida: (m) => m['tiempoFrioMs']! / 1000, limite: 2, unidad: 's' },
   { escenario: 'relayout-slots', descripcion: 'relayout con 500 Nodos y Slots anidados (en caliente)', medida: (m) => m['tiempoCalienteMs']! / 1000, limite: 2, unidad: 's' },
+  { escenario: 'relayout-grande', descripcion: 'relayout con 3000 Nodos con Grupos y Slots anidados (en frio)', medida: (m) => m['tiempoFrioMs']! / 1000, limite: 8, unidad: 's' },
+  { escenario: 'relayout-grande', descripcion: 'relayout con 3000 Nodos con Grupos y Slots anidados (en caliente)', medida: (m) => m['tiempoCalienteMs']! / 1000, limite: 8, unidad: 's' },
   { escenario: 'colapso-5k', descripcion: 'colapso (expandir) con 5k Nodos del Modelo', medida: (m) => m['expandirMs']! / 1000, limite: 3, unidad: 's' },
   { escenario: 'colapso-5k', descripcion: 'colapso (cerrar) con 5k Nodos del Modelo', medida: (m) => m['colapsarMs']! / 1000, limite: 3, unidad: 's' },
-  { escenario: 'bundle', descripcion: 'bundle del shell: Worker (gzip)', medida: (m) => m['workerGzipKb']!, limite: 500, unidad: 'KiB' },
+  { escenario: 'bundle', descripcion: 'bundle del shell: Worker (gzip)', medida: (m) => m['workerGzipKb']!, limite: 1024, unidad: 'KiB' },
   { escenario: 'bundle', descripcion: 'bundle del shell: pagina sin ELK (gzip)', medida: (m) => m['paginaGzipKb']!, limite: 500, unidad: 'KiB' },
 ];
 

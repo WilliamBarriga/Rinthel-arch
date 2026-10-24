@@ -35,3 +35,24 @@ Medidos con `pnpm bench` sobre el generador sintetico; cada cambio se hizo con l
 ## Enmienda: el Pin ancla el centro (#26, spec #24)
 
 El Pin pasa de la esquina superior izquierda al centro de la caja (ADR 0008). `aplicarPins` coloca la caja en `x = pin.x - ancho/2`, `y = pin.y - alto/2`; el resto del contrato (post-ELK, re-enrutado de las Aristas que tocan Nodos pineados, clave de estructura sin Pins, clave de layout con Pins) no cambia. Como el centro no depende del tamano, un cambio de Tema que redimensione el Nodo no lo mueve ni invalida su Pin. Migracion: un Pin antiguo `(x, y)` equivale a `(x + ancho/2, y + alto/2)` con las Metricas vigentes; el repo no tenia `.dg` con Pins en ejemplos, solo fixtures de prueba, que se reescriben.
+
+## Enmienda: el Worker recibe datos validados y el limite de su bundle sube a 1 MiB (spec #44)
+
+El Worker de layout pesaba 556.6 KiB gzip (limite: 500) porque el Tema se validaba con zod dentro de el. Dos decisiones:
+
+- **El Tema se valida una vez, en la pagina.** `adaptadorDeWorker` resuelve el Tema (`tablaDeMetricas(tema, medidas)`, que valida con `resolverTema` y memoiza) y manda al Worker `{ id, vista, metricas }`; el Worker ejecuta `layoutConMetricas(vista, metricas)`, el nucleo de `layoutView` sobre Metricas ya resueltas. `layoutView(vista, tema, opciones)` sigue siendo la entrada de Node: valida el Tema y delega en el mismo nucleo, asi el resultado es identico (prueba en el seam del Worker: `layout-en-worker.test.tsx` compara contra `layoutView`, y `tests/worker-sin-zod.test.ts` ejecuta el bundle real del Worker y comprueba que no necesita zod). El bundle del Worker sustituye el paquete `zod` por un objeto inerte (`navegador/zod-inerte.ts`) porque `canonico` y `tema` construyen sus esquemas al cargarse; si algo que importa el Worker llamara a zod, esa prueba falla. Resultado: 463.2 KiB gzip, de los cuales 456.8 son ELK.
+- **El limite del Worker sube a 1 MiB gzip.** El mantenedor necesita diagramas mas grandes que los ejemplos y 500 KiB queda corto cuando ELK solo pesa ~457. El tamano de los diagramas lo gobiernan los presupuestos de relayout (tiempos y memoria de los escenarios del banco), no el bundle: este limite solo evita que el Worker crezca sin darse cuenta. La pagina (shell + React, sin ELK) conserva 500 KiB (mide 162.3).
+
+### Escenario de diagrama grande
+
+Nuevo escenario `relayout-grande` (`pnpm bench`): 3000 Nodos del Modelo, todos visibles, en Grupos de 8 hijos (4-5 niveles) con la disposicion de Slots `row/column` anidada tres niveles de `relayout-slots`. Se mide por el Worker real (puertos en memoria) en frio (primer relayout con ese Tema) y en caliente (repetido). Presupuesto: 8 s en ambos casos, unos 2x de holgura sobre la medida porque el tiempo depende de la maquina y su carga; no es una promesa de interactividad (el limite interactivo sigue siendo 2 s con 1k Nodos visibles) sino el techo a partir del cual un diagrama de ese tamano se considera roto.
+
+Medidas (pnpm bench, misma maquina):
+
+| Escenario | Frio | Caliente | Limite |
+|---|---|---|---|
+| `relayout-1k` (1000 visibles) | 1.6 s | 1.3 s | 2 s |
+| `relayout-slots` (500 con Slots anidados) | 0.6 s | 0.5 s | 2 s |
+| `relayout-grande` (3000 con Grupos y Slots anidados) | 4.1 s | 4.0 s | 8 s |
+
+`relayout-grande` usa unos 1.6 GiB de RSS. Bundle: Worker 463.2 KiB (limite 1024), pagina 162.3 KiB (limite 500).
