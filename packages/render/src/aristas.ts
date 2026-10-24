@@ -73,6 +73,7 @@ export function pintarTrazos(pintura: PinturaDeArista, puntos: readonly Punto[],
         'stroke-width': num(grosor),
         'data-capa': capa.nombre,
         ...(ESTILOS[style]?.(grosor) ?? {}),
+        ...(capa.props['cap'] !== undefined && { 'stroke-linecap': String(capa.props['cap']) }),
         ...(manoAlzada(capa.props).rugosidad > 0 && { filter: `url(#${idDeFiltro(capa.props, semilla)})` }),
       },
     };

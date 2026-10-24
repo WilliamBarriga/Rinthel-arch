@@ -35,6 +35,16 @@ describe('Aristas del Tema', () => {
     expect(dibujo({ corner: 'chamfer', cut: 6 })['d']).toBe('M 0 0 L 34 0 L 40 6 L 40 40');
   });
 
+  it('cap redondea o cuadra los extremos del trazo; sin cap, el remate es el de su estilo', () => {
+    const dibujo = (props: Record<string, string | number>) =>
+      todos(pintarArista(resolverEstilo(tema({ capas: [linea('l', { color: 'blue', ...props })] })), { id: 'e', puntos: L }), 'path')[0]!.attrs;
+
+    expect(dibujo({ cap: 'round' })['stroke-linecap']).toBe('round');
+    expect(dibujo({ cap: 'square' })['stroke-linecap']).toBe('square');
+    expect(dibujo({})['stroke-linecap']).toBeUndefined();
+    expect(dibujo({ style: 'dotted' })['stroke-linecap']).toBe('round');
+  });
+
   it('la esquina round curva cada giro con un radio limitado a la mitad del segmento', () => {
     const dibujo = (props: Record<string, string | number>) =>
       todos(pintarArista(resolverEstilo(tema({ capas: [linea('l', { color: 'blue', ...props })] })), { id: 'e', puntos: L }), 'path')[0]!.attrs['d'];
