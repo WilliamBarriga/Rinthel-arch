@@ -81,5 +81,12 @@ describe('Diagram: offset y grow de una Capa', () => {
     expect(regla).toContain('width:calc(100% + 8px);height:calc(100% + 8px)');
     expect(regla).toContain('translate:-7px -7px');
   });
+
+  it('una Capa que no pinta en la caja (un giro) antes de la desplazada no la saca de debajo del relleno', async () => {
+    const conGiro = [{ nombre: 'giro', primitiva: { tipo: 'tilt', props: { degrees: 2 } } }, ...capas({ 'offset-x': 6, 'offset-y': 5 })];
+    const { html } = await dibujar(temaCon({ capas: conGiro }));
+
+    expect(hojaDe(html).match(/\.rd-anim\[data-anim="sombra"\]\{([^}]*)\}/)![1]).toContain('z-index:-1');
+  });
 });
 

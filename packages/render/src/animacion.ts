@@ -122,7 +122,8 @@ function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesD
     for (const b of c.bloques) if (!emitidos.has(b)) (emitidos.add(b), salida.bloques.push(b));
   };
   // Las Capas con elemento propio que van antes de la primera Capa fusionada (una sombra desplazada) quedan bajo la caja, no sobre su relleno.
-  const primeraFusionada = capas.findIndex((c) => !animadas.has(c.nombre));
+  // Solo cuentan las que pintan en la caja: un giro o una cinta (por elemento) no la tapan.
+  const primeraFusionada = capas.findIndex((c) => !animadas.has(c.nombre) && Object.keys(declaracionesDeCapa(c)).length > 0);
   capas.forEach((capa, indice) => {
     if (!animadas.has(capa.nombre)) return;
     const debajo = capa.encima !== true && primeraFusionada > indice;
