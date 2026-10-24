@@ -876,8 +876,8 @@ describe('compile: Tema', () => {
     expect(issues).toEqual([]);
     expect(canonico?.themes.find((t) => t.name === 'metro')?.['arista']).toEqual({
       capas: [
-        { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6 } } },
-        { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGEN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6 } } },
+        { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } },
+        { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGEN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6, radius: 8 } } },
       ],
       origen: { tipo: 'dot', props: { size: 6 } },
       fin: { tipo: 'via', props: { size: 8 } },

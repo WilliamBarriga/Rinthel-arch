@@ -19,3 +19,19 @@ export const css = (valor: number | string | undefined): string => limpiarValorC
  * acumulan separadas por coma en el orden de la pila en lugar de pisarse.
  */
 export const FONDOS_ACUMULABLES = ['background-image', 'background-size'] as const;
+
+/**
+ * Desplazamiento de una Capa (`offset x y`, `grow`): `translate` mueve el elemento
+ * de la Capa (componible, se anima con `transition`) y `grow` agranda su ancho y
+ * alto sin centrar. Solo pinta; la caja medida del Nodo no cambia.
+ */
+export function declaracionesDeDesplazamiento(props: CapaPintada['props']): Declaraciones {
+  const crece = props['grow'];
+  return {
+    ...((props['offset-x'] !== undefined || props['offset-y'] !== undefined) && { translate: `${px(props['offset-x'] ?? 0)} ${px(props['offset-y'] ?? 0)}` }),
+    ...(crece !== undefined && { width: `calc(100% + ${px(crece)})`, height: `calc(100% + ${px(crece)})` }),
+  };
+}
+
+/** Si la Capa se mueve o crece: va en un elemento propio y no en la caja fusionada. */
+export const estaDesplazada = (capa: CapaPintada): boolean => ['offset-x', 'offset-y', 'grow'].some((clave) => capa.props[clave] !== undefined);

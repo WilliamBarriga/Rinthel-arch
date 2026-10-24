@@ -23,7 +23,7 @@ theme pixel-art {
   edge {
     layer sombra line { color negro/0.6 width 8 }
     layer linea line { color luz width 4  style pixel }
-    start bar { size 8 }
+    start square { size 8 }
     end arrow { size 10 }
     label { scale 0.7  pad 4  radius 0  fill luz  border negro }
   }

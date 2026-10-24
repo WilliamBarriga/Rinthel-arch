@@ -22,7 +22,7 @@ theme bauhaus {
   }
   edge {
     layer linea line { color texto  width 3 }
-    start bar { size 10 }
+    start square { size 10 }
     end arrow { size 12 }
     label { scale 0.8  pad 6  radius 0  fill amarillo  border texto }
   }

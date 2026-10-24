@@ -27,9 +27,14 @@ const unidad = (a: Punto, b: Punto): Punto => {
   return { x: (b.x - a.x) / largo, y: (b.y - a.y) / largo };
 };
 
-/** Ruta `M ... L ...`; con `chamfer` cada esquina se corta a `corte` (o a la mitad del segmento mas corto). */
-export function rutaDeTrazo(puntos: readonly Punto[], esquina: 'sharp' | 'chamfer', corte: number): string {
-  const orden: Punto[] = [];
+export type Esquina = 'sharp' | 'chamfer' | 'round';
+
+/**
+ * Ruta `M ... L ...`; con `chamfer` cada esquina se corta a `medida` y con `round`
+ * se curva con una `Q` de radio `medida` (ambas limitadas a la mitad del segmento mas corto).
+ */
+export function rutaDeTrazo(puntos: readonly Punto[], esquina: Esquina, medida: number): string {
+  const orden: Array<Punto & { curva?: Punto }> = [];
   puntos.forEach((p, i) => {
     const a = puntos[i - 1];
     const c = puntos[i + 1];
@@ -37,23 +42,23 @@ export function rutaDeTrazo(puntos: readonly Punto[], esquina: 'sharp' | 'chamfe
       orden.push(p);
       return;
     }
-    const k = Math.min(corte, Math.hypot(p.x - a.x, p.y - a.y) / 2, Math.hypot(c.x - p.x, c.y - p.y) / 2);
+    const k = Math.min(medida, Math.hypot(p.x - a.x, p.y - a.y) / 2, Math.hypot(c.x - p.x, c.y - p.y) / 2);
     const entra = unidad(a, p);
     const sale = unidad(p, c);
-    orden.push({ x: p.x - entra.x * k, y: p.y - entra.y * k }, { x: p.x + sale.x * k, y: p.y + sale.y * k });
+    orden.push({ x: p.x - entra.x * k, y: p.y - entra.y * k }, { x: p.x + sale.x * k, y: p.y + sale.y * k, ...(esquina === 'round' && { curva: p }) });
   });
-  return orden.map(({ x, y }, i) => `${i === 0 ? 'M' : 'L'} ${num(x)} ${num(y)}`).join(' ');
+  return orden.map(({ x, y, curva }, i) => (curva !== undefined ? `Q ${num(curva.x)} ${num(curva.y)} ` : i === 0 ? 'M ' : 'L ') + `${num(x)} ${num(y)}`).join(' ');
 }
 
 /** La pila de trazos, de abajo hacia arriba: un trazo ancho y translucido bajo el principal es el glow. */
 export function pintarTrazos(pintura: PinturaDeArista, puntos: readonly Punto[]): Elemento[] {
   return pintura.capas.map((capa) => {
-    const { color, width, style, corner, cut } = capa.props as Props & { style: string; corner: 'sharp' | 'chamfer' };
+    const { color, width, style, corner, cut, radius } = capa.props as Props & { style: string; corner: Esquina };
     const grosor = Number(width);
     return {
       tag: 'path',
       attrs: {
-        d: rutaDeTrazo(puntos, corner, Number(cut)),
+        d: rutaDeTrazo(puntos, corner, Number(corner === 'round' ? radius : cut)),
         fill: 'none',
         stroke: String(color),
         'stroke-width': num(grosor),
@@ -70,6 +75,7 @@ type Dibujo = (lado: number, color: string, fondo: string) => Elemento[];
 const MARCADORES: { readonly [M in NombreDePrimitivaEn<'marcador'>]: Dibujo } = {
   arrow: (s, color) => [{ tag: 'path', attrs: { d: `M 0 0 L ${num(-s)} ${num(-s / 2)} L ${num(-s)} ${num(s / 2)} z`, fill: color } }],
   dot: (s, color) => [{ tag: 'circle', attrs: { cx: num(-s / 2), cy: '0', r: num(s / 2), fill: color } }],
+  square: (s, color) => [{ tag: 'rect', attrs: { x: num(-s), y: num(-s / 2), width: num(s), height: num(s), fill: color } }],
   diamond: (s, color) => [{ tag: 'path', attrs: { d: `M 0 0 L ${num(-s / 2)} ${num(-s / 2)} L ${num(-s)} 0 L ${num(-s / 2)} ${num(s / 2)} z`, fill: color } }],
   bar: (s, color) => [{ tag: 'path', attrs: { d: `M 0 ${num(-s / 2)} L 0 ${num(s / 2)}`, stroke: color, 'stroke-width': num(Math.max(2, s / 4)), fill: 'none' } }],
   via: (s, color, fondo) => [

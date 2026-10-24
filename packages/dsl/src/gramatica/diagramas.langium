@@ -182,15 +182,16 @@ Easing returns string:
 SignedNum returns string:
   '-'? DIGITS ('.' DIGITS)?;
 
+// `offset x y` lleva dos valores (`second`); cualquier otra clave con segundo valor es un error al compilar.
 LayerProp:
-  key=Id value=LayerValue;
+  key=Id value=LayerValue (second=SignedNum)?;
 
 // Numero, `$token`, nombre de Paleta, `nombre/alfa` o `mix(a, b, t)`; el catalogo de `tema` lo interpreta.
 LayerValue returns string:
   MixValue | LayerAtom ('/' Num)?;
 
 LayerAtom returns string:
-  String | Id | TokenRef | Num;
+  String | Id | TokenRef | SignedNum;
 
 MixValue returns string:
   'mix' '(' Id ',' Id ',' Num ')';
