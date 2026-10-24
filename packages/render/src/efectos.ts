@@ -4,8 +4,8 @@
  *
  * - `PINTORES_DE_EFECTOS`: declaraciones CSS que valen para todos los elementos
  *   (sombra, glow, vidrio, aro); entran en la hoja de estilo como el resto de
- *   Primitivas. Las que dependen de cada elemento (mano alzada, giro, cinta)
- *   devuelven `{}` aqui.
+ *   Primitivas. Las que dependen de cada elemento devuelven `{}` aqui.
+ *   Ambas salen de la tabla `EFECTOS`: un efecto nuevo es una entrada.
  * - `efectosDeElemento`: lo que si depende del elemento, con la semilla
  *   FNV-1a de su id y el nombre de la Capa (`tema/semilla`): el filtro de mano
  *   alzada, el giro y la cinta. Nunca lee el tamano de la caja ni el orden de
@@ -23,25 +23,9 @@ import type { Estilo } from './estilo';
 
 type Declaraciones = Record<string, string>;
 type Props = CapaPintada['props'];
-type NombreDeEfecto = Extract<NombreDePrimitiva, 'shadow' | 'glow' | 'glass' | 'sketch' | 'tilt' | 'tape' | 'ring' | 'fold' | 'pins' | 'stripe'>;
 
 const px = (valor: number | string | undefined): string => `${num(Number(valor))}px`;
 const css = (valor: number | string | undefined): string => limpiarValorCss(String(valor));
-
-export const PINTORES_DE_EFECTOS: { readonly [P in NombreDeEfecto]: (props: Props) => Declaraciones } = {
-  // Varias sombras se apilan (ver `declaracionesDeCaja`); blur 0 da la sombra dura.
-  shadow: ({ x, y, blur, spread, inset, color }) => ({ 'box-shadow': `${Number(inset) === 1 ? 'inset ' : ''}${px(x)} ${px(y)} ${px(blur)} ${px(spread)} ${css(color)}` }),
-  glow: ({ radius, spread, color }) => ({ 'box-shadow': `0px 0px ${px(radius)} ${px(spread)} ${css(color)}` }),
-  glass: ({ blur, saturate }) => ({ 'backdrop-filter': `blur(${px(blur)}) saturate(${num(Number(saturate))}%)` }),
-  ring: ({ color, width, offset }) => ({ outline: `${px(width)} solid ${css(color)}`, 'outline-offset': px(offset) }),
-  // Por elemento: ver `efectosDeElemento`.
-  sketch: () => ({}),
-  tilt: () => ({}),
-  tape: () => ({}),
-  fold: () => ({}),
-  pins: () => ({}),
-  stripe: () => ({}),
-};
 
 /** Lo que los efectos por elemento anaden a la caja de un Nodo o Grupo. */
 export interface EfectosDeElemento {
@@ -55,33 +39,73 @@ export interface EfectosDeElemento {
   encima: Elemento[];
 }
 
+/** Lo que un efecto por elemento necesita saber de su Capa y su elemento. */
+interface ContextoDeEfecto {
+  estilo: Estilo;
+  capas: PinturaDeNodo['capas'];
+  /** Semilla de la Capa: id del elemento + nombre de Capa (+ `seed N` del Tema). */
+  semilla: number;
+}
+
+/** Un efecto es de hoja (declaraciones CSS que valen para todos los elementos) o por elemento (hijos, giro o filtro propios). */
+type Efecto = { readonly hoja: (props: Props) => Declaraciones } | { readonly elemento: (capa: CapaPintada, contexto: ContextoDeEfecto, resultado: EfectosDeElemento) => void };
+
+const alLado = (capa: CapaPintada, resultado: EfectosDeElemento, hijo: Elemento): void => {
+  (capa.encima === true ? resultado.encima : resultado.debajo).push(hijo);
+};
+
+/**
+ * La unica tabla de efectos: anadir uno es anadir una entrada. De ella salen el nombre del efecto, el pintor
+ * de hoja (`PINTORES_DE_EFECTOS`) y el aplicador por elemento (`efectosDeElemento`).
+ */
+const EFECTOS = {
+  // Varias sombras se apilan (ver `declaracionesDeCaja`); blur 0 da la sombra dura.
+  shadow: { hoja: ({ x, y, blur, spread, inset, color }) => ({ 'box-shadow': `${Number(inset) === 1 ? 'inset ' : ''}${px(x)} ${px(y)} ${px(blur)} ${px(spread)} ${css(color)}` }) },
+  glow: { hoja: ({ radius, spread, color }) => ({ 'box-shadow': `0px 0px ${px(radius)} ${px(spread)} ${css(color)}` }) },
+  glass: { hoja: ({ blur, saturate }) => ({ 'backdrop-filter': `blur(${px(blur)}) saturate(${num(Number(saturate))}%)` }) },
+  ring: { hoja: ({ color, width, offset }) => ({ outline: `${px(width)} solid ${css(color)}`, 'outline-offset': px(offset) }) },
+  sketch: {
+    elemento: ({ props }, { semilla }, resultado) => {
+      const idDeFiltro = `rd-sk-${fnv1a(`${semilla}|${props['roughness']}|${props['frequency']}`).toString(36)}`;
+      resultado.nodo += `filter:url(#${idDeFiltro});`;
+      resultado.debajo.push(filtroDeManoAlzada(idDeFiltro, semilla, Number(props['roughness']), Number(props['frequency'])));
+    },
+  },
+  tilt: {
+    elemento: ({ props }, { semilla }, resultado) => {
+      resultado.giro += giroDeCapa(semilla, Number(props['degrees']));
+    },
+  },
+  tape: { elemento: (capa, { semilla }, resultado) => alLado(capa, resultado, cinta(capa.props, semilla)) },
+  fold: {
+    elemento: ({ props }, { estilo, capas }, resultado) => {
+      resultado.encima.push(doblez(props, estilo.fondo, anchoDeBorde(capas)));
+    },
+  },
+  pins: { elemento: (capa, _contexto, resultado) => alLado(capa, resultado, pines(capa.props)) },
+  stripe: { elemento: (capa, { capas }, resultado) => alLado(capa, resultado, franja(capa.props, anchoDeBorde(capas))) },
+} as const satisfies Partial<Record<NombreDePrimitiva, Efecto>>;
+
+type NombreDeEfecto = keyof typeof EFECTOS;
+
+const SIN_PINTAR = (): Declaraciones => ({});
+
+/** Pintor de hoja de cada efecto; los que se pintan por elemento no aportan declaraciones aqui. */
+export const PINTORES_DE_EFECTOS: { readonly [P in NombreDeEfecto]: (props: Props) => Declaraciones } = Object.fromEntries(
+  Object.entries(EFECTOS as Record<string, Efecto>).map(([nombre, efecto]) => [nombre, 'hoja' in efecto ? efecto.hoja : SIN_PINTAR]),
+) as { [P in NombreDeEfecto]: (props: Props) => Declaraciones };
+
 const SIN_EFECTOS: EfectosDeElemento = { giro: 0, nodo: '', debajo: [], encima: [] };
 
-/** Primitivas que se pintan por elemento (con su semilla o como hijos propios), no en la hoja. */
-const POR_ELEMENTO: ReadonlySet<string> = new Set<NombreDeEfecto>(['sketch', 'tilt', 'tape', 'fold', 'pins', 'stripe']);
+const esPorElemento = (tipo: string): boolean => tipo in EFECTOS && 'elemento' in (EFECTOS as Record<string, Efecto>)[tipo]!;
 
 /** Efectos que dependen del elemento: semilla = id del elemento + nombre de Capa (+ `seed N` del Tema). */
 export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo, 'capas'>, id: string): EfectosDeElemento {
-  const semillaDelTema = estilo.pintura.semilla;
-  if (!capas.some((c) => POR_ELEMENTO.has(c.tipo))) return SIN_EFECTOS;
+  if (!capas.some((c) => esPorElemento(c.tipo))) return SIN_EFECTOS;
   const resultado: EfectosDeElemento = { giro: 0, nodo: '', debajo: [], encima: [] };
   for (const capa of capas) {
-    const semilla = semillaDeCapa(id, capa.nombre, semillaDelTema);
-    if (capa.tipo === 'sketch') {
-      const idDeFiltro = `rd-sk-${fnv1a(`${semilla}|${capa.props['roughness']}|${capa.props['frequency']}`).toString(36)}`;
-      resultado.nodo += `filter:url(#${idDeFiltro});`;
-      resultado.debajo.push(filtroDeManoAlzada(idDeFiltro, semilla, Number(capa.props['roughness']), Number(capa.props['frequency'])));
-    } else if (capa.tipo === 'tilt') {
-      resultado.giro += giroDeCapa(semilla, Number(capa.props['degrees']));
-    } else if (capa.tipo === 'tape') {
-      (capa.encima === true ? resultado.encima : resultado.debajo).push(cinta(capa.props, semilla));
-    } else if (capa.tipo === 'fold') {
-      resultado.encima.push(doblez(capa.props, estilo.fondo, anchoDeBorde(capas)));
-    } else if (capa.tipo === 'pins') {
-      (capa.encima === true ? resultado.encima : resultado.debajo).push(pines(capa.props));
-    } else if (capa.tipo === 'stripe') {
-      (capa.encima === true ? resultado.encima : resultado.debajo).push(franja(capa.props, anchoDeBorde(capas)));
-    }
+    const efecto = (EFECTOS as Record<string, Efecto>)[capa.tipo];
+    if (efecto !== undefined && 'elemento' in efecto) efecto.elemento(capa, { estilo, capas, semilla: semillaDeCapa(id, capa.nombre, estilo.pintura.semilla) }, resultado);
   }
   return resultado;
 }
