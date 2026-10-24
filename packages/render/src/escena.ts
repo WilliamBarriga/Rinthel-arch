@@ -16,6 +16,7 @@ import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } fro
 import type { Metricas } from 'tema';
 
 import { pintarCapasAnimadas } from './animacion';
+import { filtrosDeTrazo } from './aristas';
 import { pintarCodigo } from './codigo';
 import type { ComponentesDeTema } from './codigo';
 import { limpiarValorCss, num } from './elemento';
@@ -164,7 +165,11 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
               viewBox: `0 0 ${num(geometry.width)} ${num(geometry.height)}`,
               'aria-hidden': 'true',
             },
-            hijos: [...view.edges.flatMap((arista) => aristaSvg(arista, contexto)), ...view.edges.flatMap((arista) => etiquetaSvg(arista, contexto))],
+            hijos: [
+              ...filtrosDeTrazo(estilo, geometry.width, geometry.height),
+              ...view.edges.flatMap((arista) => aristaSvg(arista, contexto)),
+              ...view.edges.flatMap((arista) => etiquetaSvg(arista, contexto)),
+            ],
           },
           { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: nodos.filter((n) => !esGrupo(n)).map((nodo) => cajaDeNodo(nodo, contexto)) },
         ],

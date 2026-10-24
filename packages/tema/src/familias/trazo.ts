@@ -22,6 +22,9 @@ export const TRAZOS = {
       cut: { tipo: 'numero', min: 1, max: 32, defecto: 6 },
       /** Radio de una esquina `round`; se limita a la mitad del segmento mas corto. */
       radius: { tipo: 'numero', min: 1, max: 64, defecto: 8 },
+      /** Mano alzada: cuanto desplaza el ruido el trazo (0, sin filtro) y la frecuencia del ruido. */
+      roughness: { tipo: 'numero', min: 0, max: 20, defecto: 0 },
+      frequency: { tipo: 'numero', min: 0.001, max: 0.5, defecto: 0.03 },
     },
   },
 } as const satisfies Record<string, DefinicionDePrimitiva>;

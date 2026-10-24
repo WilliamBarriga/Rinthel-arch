@@ -7,7 +7,7 @@
  */
 import type { NombreDePrimitivaEn, PinturaDeArista, PrimitivaPintada } from 'tema';
 
-import { num } from './elemento';
+import { huella, num } from './elemento';
 import type { Elemento } from './elemento';
 import type { Estilo } from './estilo';
 
@@ -50,8 +50,17 @@ export function rutaDeTrazo(puntos: readonly Punto[], esquina: Esquina, medida: 
   return orden.map(({ x, y, curva }, i) => (curva !== undefined ? `Q ${num(curva.x)} ${num(curva.y)} ` : i === 0 ? 'M ' : 'L ') + `${num(x)} ${num(y)}`).join(' ');
 }
 
+/** Trazo a mano alzada de una Capa: su desplazamiento (`roughness`, 0 si no tiene) y la frecuencia del ruido. */
+const manoAlzada = (props: Props): { rugosidad: number; frecuencia: number } => ({ rugosidad: Number(props['roughness'] ?? 0), frecuencia: Number(props['frequency'] ?? 0) });
+
+/** Id del filtro de mano alzada de un trazo: el mismo para las mismas propiedades y semilla. */
+const idDeFiltro = (props: Props, semilla: number): string => {
+  const { rugosidad, frecuencia } = manoAlzada(props);
+  return `rd-skl-${huella(`${rugosidad}|${frecuencia}|${semilla}`)}`;
+};
+
 /** La pila de trazos, de abajo hacia arriba: un trazo ancho y translucido bajo el principal es el glow. */
-export function pintarTrazos(pintura: PinturaDeArista, puntos: readonly Punto[]): Elemento[] {
+export function pintarTrazos(pintura: PinturaDeArista, puntos: readonly Punto[], semilla = 0): Elemento[] {
   return pintura.capas.map((capa) => {
     const { color, width, style, corner, cut, radius } = capa.props as Props & { style: string; corner: Esquina };
     const grosor = Number(width);
@@ -64,10 +73,38 @@ export function pintarTrazos(pintura: PinturaDeArista, puntos: readonly Punto[])
         'stroke-width': num(grosor),
         'data-capa': capa.nombre,
         ...(ESTILOS[style]?.(grosor) ?? {}),
+        ...(manoAlzada(capa.props).rugosidad > 0 && { filter: `url(#${idDeFiltro(capa.props, semilla)})` }),
       },
     };
   });
 }
+
+/**
+ * Filtros de mano alzada de los trazos del Estilo, uno por cada combinacion de propiedades, para el lienzo de
+ * Aristas (`ancho` x `alto`). Region en coordenadas del lienzo: con la caja del trazo un tramo recto (alto 0) desapareceria.
+ */
+export function filtrosDeTrazo(estilo: Estilo, ancho: number, alto: number): Elemento[] {
+  const semilla = estilo.pintura.semilla ?? 0;
+  const pinturas = [estilo.pintura.arista, ...Object.values(estilo.pintura.arista.origenes)];
+  const filtros = new Map<string, Elemento>();
+  for (const capa of pinturas.flatMap((p) => p.capas)) {
+    const { rugosidad, frecuencia } = manoAlzada(capa.props);
+    const id = idDeFiltro(capa.props, semilla);
+    if (rugosidad <= 0 || filtros.has(id)) continue;
+    filtros.set(id, {
+      tag: 'filter',
+      attrs: { id, filterUnits: 'userSpaceOnUse', x: num(-MARGEN_DE_FILTRO), y: num(-MARGEN_DE_FILTRO), width: num(ancho + 2 * MARGEN_DE_FILTRO), height: num(alto + 2 * MARGEN_DE_FILTRO) },
+      hijos: [
+        { tag: 'feTurbulence', attrs: { type: 'fractalNoise', baseFrequency: String(Math.round(frecuencia * 1000) / 1000), numOctaves: '2', seed: String(semilla % 1_000_000), result: 'ruido' } },
+        { tag: 'feDisplacementMap', attrs: { in: 'SourceGraphic', in2: 'ruido', scale: num(rugosidad), xChannelSelector: 'R', yChannelSelector: 'G' } },
+      ],
+    });
+  }
+  return filtros.size === 0 ? [] : [{ tag: 'defs', attrs: {}, hijos: [...filtros.values()] }];
+}
+
+/** Lo que la region del filtro de un trazo sobresale del lienzo, para que el desplazamiento no recorte los bordes. */
+const MARGEN_DE_FILTRO = 40;
 
 type Dibujo = (lado: number, color: string, fondo: string) => Elemento[];
 

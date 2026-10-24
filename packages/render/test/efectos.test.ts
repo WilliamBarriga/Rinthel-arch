@@ -103,6 +103,34 @@ describe('mano alzada y giro deterministas', () => {
   });
 });
 
+describe('trazo de Arista a mano alzada', () => {
+  const linea = (props: Record<string, string | number>) => {
+    const { primitiva, errores } = construirPrimitiva('line', Object.entries(props).map(([clave, valor]) => ({ clave, valor })), TEMA_NEUTRO.palette, 'capa-arista');
+    if (primitiva === undefined) throw new Error(errores.map((e) => e.mensaje).join('; '));
+    return { nombre: 'linea', primitiva };
+  };
+  const conTrazo = (props: Record<string, string | number>): Tema => ({ ...TEMA_NEUTRO, arista: { ...TEMA_NEUTRO.arista, capas: [linea({ color: 'blue', ...props })] } });
+  const aristas = (html: string): string => /data-capa="aristas"[\s\S]*?<\/svg>/.exec(html)?.[0] ?? '';
+
+  it('roughness desplaza el trazo con un filtro de ruido en el lienzo, que no desaparece en tramos rectos', async () => {
+    const svg = aristas(await dibujar(conTrazo({ roughness: 3.5, frequency: 0.035 })));
+    const id = /<filter[^>]*id="([^"]+)"/.exec(svg)?.[1];
+
+    expect(id).toBeDefined();
+    expect(svg).toMatch(/<filter[^>]*filterUnits="userSpaceOnUse"/);
+    expect(svg).toContain('baseFrequency="0.035"');
+    expect(svg).toContain('scale="3.5"');
+    expect(svg).toContain(`filter="url(#${id})"`);
+  });
+
+  it('sin roughness el trazo no lleva filtro', async () => {
+    const svg = aristas(await dibujar(conTrazo({})));
+
+    expect(svg).not.toContain('<filter');
+    expect(svg).not.toContain('filter="url(');
+  });
+});
+
 describe('decoracion y desbordes', () => {
   const adornado = conCapas([capa('sombra', 'shadow', { color: 'gray', blur: 20 }), capa('cinta', 'tape', { color: 'blue/0.5' }), capa('aro', 'ring', { color: 'blue', offset: 8 }), capa('trazo', 'sketch')]);
 

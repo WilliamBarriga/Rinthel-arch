@@ -192,7 +192,7 @@ export function pintarArista(
     attrs: { 'data-edge': id, ...atributos },
     ...(alClic !== undefined && { alClic }),
     hijos: [
-      ...pintarTrazos(pintura, puntos),
+      ...pintarTrazos(pintura, puntos, estilo.pintura.semilla),
       ...pintarMarcadores(estilo, pintura, puntos),
       ...cardinalidades,
       ...extra,
