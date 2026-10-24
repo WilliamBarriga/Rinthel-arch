@@ -150,4 +150,13 @@ describe('Metricas de la Arista', () => {
     expect(resuelto.arista.capas[0]?.primitiva.props).toMatchObject({ corner: 'sharp', cut: 6, radius: 8 });
     expect(Object.keys(resuelto.arista.fin?.props ?? {}).length).toBeGreaterThan(0);
   });
+
+  it('un marcador sin color toma el del trazo principal (el ultimo de la pila), no el del halo de debajo', () => {
+    const tema = { ...GLOW, arista: { ...GLOW.arista, fin: { tipo: 'arrow', props: { size: 10 } } } };
+
+    const { fin, capas } = estiloResuelto(tema).pintura.arista;
+
+    expect(fin?.props['color']).toBe(capas[1]?.props['color']);
+    expect(fin?.props['color']).not.toBe(capas[0]?.props['color']);
+  });
 });

@@ -163,7 +163,8 @@ function pintarArista(tema: TemaResuelto, colorDeOrigen: string | undefined): Pi
   const { arista } = tema;
   const { paleta, contexto } = contextoDeColor(tema, colorDeOrigen);
   const capas = pintar(arista.capas.length === 0 ? [TRAZO_POR_DEFECTO] : (arista.capas as CapaDeTema[]), tema, colorDeOrigen);
-  const colorDelTrazo = capas[0]?.props['color'];
+  // El marcador sin color toma el del trazo principal (el de arriba de la pila), no el del halo de debajo.
+  const colorDelTrazo = capas.at(-1)?.props['color'];
   const marcador = (primitiva: { tipo: string; props: Record<string, number | string> } | undefined): PrimitivaPintada | undefined => {
     if (primitiva === undefined) return undefined;
     const props = resolverProps(primitiva, paleta, contexto);
