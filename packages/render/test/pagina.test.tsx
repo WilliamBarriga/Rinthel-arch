@@ -70,4 +70,17 @@ describe('Diagram: fondo de pagina', () => {
     expect(imagenes.indexOf('radial-gradient(circle,')).toBeLessThan(imagenes.indexOf('radial-gradient(circle at'));
     expect(imagenes).toContain('radial-gradient(circle at 15% 10%,rgba(37, 99, 235, 0.5),rgba(16, 32, 48, 0) 110%)');
   });
+
+  it('un disco es un circulo de borde nitido en una posicion de la pagina (porcentaje) o de la caja (px)', async () => {
+    const conDiscos: TemaResuelto = {
+      ...TEMA_NEUTRO,
+      palette: { ...TEMA_NEUTRO.palette, sol: '#f2b705' },
+      pagina: { fijo: true, capas: [{ nombre: 'sol', primitiva: { tipo: 'disc', props: { color: 'sol/0.9', radius: 170, x: 88, y: 18, unit: 'percent' } } }] },
+      nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'muesca', primitiva: { tipo: 'disc', props: { color: 'sol', radius: 3, x: 9, y: 9, unit: 'px' } } }] },
+    };
+    const hoja = hojaDe(await dibujo(conDiscos));
+
+    expect(/\.rd-\w+ \.rd-pagina\{([^}]*)\}/.exec(hoja)?.[1]).toContain('background-image:radial-gradient(circle at 88% 18%,rgba(242, 183, 5, 0.9) 0 170px,transparent 171px)');
+    expect(/\.rd-\w+ \.rd-nodo\{([^}]*)\}/.exec(hoja)?.[1]).toContain('background-image:radial-gradient(circle at 9px 9px,#f2b705 0 3px,transparent 4px)');
+  });
 });

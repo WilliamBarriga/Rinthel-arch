@@ -20,6 +20,10 @@ export const PINTORES_DE_RELLENO = {
   solid: ({ color }) => ({ background: css(color) }),
   gradient: ({ from, to, angle }) => capa(`linear-gradient(${Number(angle)}deg,${css(from)},${css(to)})`),
   radial: ({ from, to, x, y }) => capa(`radial-gradient(circle at ${Number(x)}% ${Number(y)}%,${css(from)},${css(to)} 110%)`),
+  disc: ({ color, radius, x, y, unit }) => {
+    const en = (valor: number | string | undefined): string => (unit === 'px' ? px(valor) : `${Number(valor)}%`);
+    return capa(`radial-gradient(circle at ${en(x)} ${en(y)},${css(color)} 0 ${px(radius)},transparent ${px(Number(radius) + 1)})`);
+  },
   grid: ({ color, size, width }) =>
     capa(
       `linear-gradient(to right,${css(color)} ${px(width)},transparent ${px(width)}),linear-gradient(to bottom,${css(color)} ${px(width)},transparent ${px(width)})`,

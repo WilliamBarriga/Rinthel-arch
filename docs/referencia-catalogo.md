@@ -30,6 +30,7 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | `solid` | capa-nodo, capa-pagina | `color` color de Paleta | no |
 | `gradient` | capa-nodo, capa-pagina | `from` color de Paleta; `to` color de Paleta; `angle` 0 a 360 (180) | no |
 | `radial` | capa-nodo, capa-pagina | `from` color de Paleta; `to` color de Paleta; `x` 0 a 100 (50); `y` 0 a 100 (50) | no |
+| `disc` | capa-nodo, capa-pagina | `color` color de Paleta; `radius` 1 a 2000 (8); `x` -2000 a 2000 (50); `y` -2000 a 2000 (50); `unit` percent|px (percent) | no |
 | `grid` | capa-nodo, capa-pagina | `color` color de Paleta; `size` 2 a 200 (16); `width` 1 a 8 (1) | no |
 | `lines` | capa-nodo, capa-pagina | `color` color de Paleta; `size` 2 a 200 (8); `width` 1 a 8 (1); `angle` 0 a 180 (45) | no |
 | `dots` | capa-nodo, capa-pagina | `color` color de Paleta; `size` 4 a 200 (12); `radius` 1 a 50 (2) | no |

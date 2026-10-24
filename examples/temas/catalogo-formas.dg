@@ -101,6 +101,20 @@ theme relleno-discos extends base-muestra {
   }
 }
 
+theme relleno-disco extends base-muestra {
+  page {
+    layer sol disc { color suave  radius 160  x 85  y 20 }
+    fixed
+  }
+  node {
+    layer forma rect
+    layer base solid { color papel }
+    layer muesca disc { color tinta/0.3  radius 3  x 9  y 9  unit px }
+    layer borde border { color tinta }
+    slots { title attrs }
+  }
+}
+
 theme relleno-ruido extends base-muestra {
   node {
     layer forma rect

@@ -13,6 +13,21 @@ export const RELLENOS = {
     afectaMetricas: false,
     propiedades: { from: { tipo: 'color' }, to: { tipo: 'color' }, x: { tipo: 'numero', min: 0, max: 100, defecto: 50 }, y: { tipo: 'numero', min: 0, max: 100, defecto: 50 } },
   },
+  /**
+   * Disco de borde nitido de radio `radius` (px) centrado en `x`/`y`: porcentaje de la caja o de la pagina, o px
+   * desde su esquina superior izquierda con `unit px`. Varias Capas `disc` dibujan composiciones de formas.
+   */
+  disc: {
+    familia: 'relleno',
+    afectaMetricas: false,
+    propiedades: {
+      color: { tipo: 'color' },
+      radius: { tipo: 'numero', min: 1, max: 2000, defecto: 8 },
+      x: { tipo: 'numero', min: -2000, max: 2000, defecto: 50 },
+      y: { tipo: 'numero', min: -2000, max: 2000, defecto: 50 },
+      unit: { tipo: 'opcion', valores: ['percent', 'px'], defecto: 'percent' },
+    },
+  },
   grid: {
     familia: 'relleno',
     afectaMetricas: false,
