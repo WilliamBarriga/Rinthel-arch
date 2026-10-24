@@ -141,4 +141,13 @@ describe('Metricas de la Arista', () => {
   it('un Tema con una Arista invalida no cumple el contrato', () => {
     expect(() => resolverTema(conArista({ fin: { tipo: 'flecha' as never, props: {} } }))).toThrow(/arista\.fin/);
   });
+
+  it('un Tema escrito a mano que omite propiedades con defecto las recibe del catalogo (corner, cut, radius de un trazo)', () => {
+    const minimo = conArista({ capas: [linea('linea', { color: 'blue', width: 2, style: 'solid' })], fin: { tipo: 'arrow', props: {} } });
+
+    const resuelto = resolverTema(minimo);
+
+    expect(resuelto.arista.capas[0]?.primitiva.props).toMatchObject({ corner: 'sharp', cut: 6, radius: 8 });
+    expect(Object.keys(resuelto.arista.fin?.props ?? {}).length).toBeGreaterThan(0);
+  });
 });

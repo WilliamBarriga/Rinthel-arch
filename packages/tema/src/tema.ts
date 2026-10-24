@@ -324,8 +324,44 @@ export function resolverTema(tema: Tema): TemaResuelto {
     const detalle = leido.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`El Tema '${tema.name}' no cumple el contrato: ${detalle}`);
   }
-  memo.set(tema, leido.data);
-  return leido.data;
+  const completo = conDefectos(leido.data);
+  memo.set(tema, completo);
+  return completo;
+}
+
+/**
+ * El Tema con los defectos del catalogo en cada Primitiva (Capas, marcadores, etiqueta y estilo de Slots): un Tema
+ * de `dsl` ya los trae, uno escrito a mano puede omitirlos y el dibujo no debe leer propiedades que faltan.
+ * Los parches (`tipos`, `estados`) y las Capas `code` quedan como estan.
+ */
+function conDefectos(tema: TemaResuelto): TemaResuelto {
+  const completar = <P extends { tipo: string; props: Record<string, string | number> }>(primitiva: P, ubicacion: UbicacionDePrimitiva): P | Primitiva => {
+    if (primitiva.tipo === 'code') return primitiva;
+    const props = Object.entries(primitiva.props).map(([clave, valor]) => ({ clave, valor }));
+    return construirPrimitiva(primitiva.tipo, props, tema.palette, ubicacion).primitiva ?? primitiva;
+  };
+  const capas = <C extends { primitiva: { tipo: string; props: Record<string, string | number> } }>(lista: C[], ubicacion: UbicacionDePrimitiva): C[] => lista.map((c) => ({ ...c, primitiva: completar(c.primitiva, ubicacion) }));
+  const textos = (lista: Partial<Record<NombreDeSlot, Primitiva>>): Partial<Record<NombreDeSlot, Primitiva>> =>
+    Object.fromEntries(Object.entries(lista).map(([slot, primitiva]) => [slot, completar(primitiva, 'texto-slot')]));
+  const { origen, fin, etiqueta } = tema.arista;
+  return {
+    ...tema,
+    nodo: { ...tema.nodo, capas: capas(tema.nodo.capas, 'capa-nodo'), textos: textos(tema.nodo.textos) },
+    grupo: {
+      ...tema.grupo,
+      capas: capas(tema.grupo.capas, 'capa-nodo'),
+      textos: textos(tema.grupo.textos),
+      colapsado: { ...tema.grupo.colapsado, ...(tema.grupo.colapsado.textos !== undefined && { textos: textos(tema.grupo.colapsado.textos) }) },
+    },
+    arista: {
+      ...tema.arista,
+      capas: capas(tema.arista.capas, 'capa-arista'),
+      ...(origen !== undefined && { origen: completar(origen, 'marcador') }),
+      ...(fin !== undefined && { fin: completar(fin, 'marcador') }),
+      ...(etiqueta !== undefined && { etiqueta: completar(etiqueta, 'etiqueta') }),
+    },
+    pagina: { ...tema.pagina, capas: capas(tema.pagina.capas, 'capa-pagina') },
+  };
 }
 
 export type { NombreDeSlot };
