@@ -1,6 +1,6 @@
 /**
  * Capturas lado a lado: el prototipo aprobado (`prototype/render-hibrido`) contra la galeria de Temas en `dev`.
- * Uso (necesita `pnpm build`): `pnpm capturas <tema> [abierto|cobertura]`  o  `pnpm capturas --todos [vista]`.
+ * Uso (necesita `pnpm build`): `pnpm capturas <tema>... [abierto|cobertura]`  o  `pnpm capturas --todos [vista]`.
  *   abierto (por defecto): Vista de referencia de la galeria (`<tema>-referencia`) contra la Vista `abierto` del prototipo.
  *   cobertura: solo la galeria (`<tema>`, el Modelo de cobertura); el prototipo no tiene Vista equivalente.
  * Salida: PNG y una pagina de comparacion en `$CAPTURAS_DIR` (por defecto `/tmp/rinthel-capturas`, fuera del repo),
@@ -33,13 +33,17 @@ function leerArgumentos(): { temas: string[]; vista: Vista } {
   const args = process.argv.slice(2);
   const todos = args.includes('--todos');
   const posicionales = args.filter((a) => !a.startsWith('--'));
-  const [tema, vista = 'abierto'] = todos ? [undefined, posicionales[0]] : posicionales;
-  if (!VISTAS.includes(vista as Vista)) fallar(`Vista '${vista}' desconocida. Usa: ${VISTAS.join(', ')}.`);
+  // La Vista, si se da, va al final: `pnpm capturas soft-card glass-chip cobertura`.
+  const vista = VISTAS.includes(posicionales[posicionales.length - 1] as Vista) ? (posicionales.pop() as Vista) : 'abierto';
   const nombres = Object.keys(VARIANTE_DE_TEMA);
-  if (todos) return { temas: nombres, vista: vista as Vista };
-  if (tema === undefined) return fallar(`Uso: pnpm capturas <tema> [${VISTAS.join('|')}]  o  pnpm capturas --todos\nTemas: ${nombres.join(', ')}`);
-  if (!nombres.includes(tema)) return fallar(`Tema '${tema}' desconocido. Temas: ${nombres.join(', ')}`);
-  return { temas: [tema], vista: vista as Vista };
+  if (todos) {
+    if (posicionales.length > 0) fallar(`Vista '${posicionales[0]}' desconocida. Usa: ${VISTAS.join(', ')}.`);
+    return { temas: nombres, vista };
+  }
+  if (posicionales.length === 0) return fallar(`Uso: pnpm capturas <tema>... [${VISTAS.join('|')}]  o  pnpm capturas --todos [vista]\nTemas: ${nombres.join(', ')}`);
+  const desconocido = posicionales.find((t) => !nombres.includes(t));
+  if (desconocido !== undefined) return fallar(`Tema '${desconocido}' desconocido. Temas: ${nombres.join(', ')}`);
+  return { temas: posicionales, vista };
 }
 
 /** Chromium de la cache de Playwright (la revision instalada puede no ser la que espera la version de Playwright). */
