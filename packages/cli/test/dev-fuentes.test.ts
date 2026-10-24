@@ -118,7 +118,7 @@ describe('dev: ruta de fuentes del Workspace', () => {
   });
 
   it('una fuente declarada sin archivo es un error en el estado, con posicion', async () => {
-    writeFileSync(join(raiz, 'main.dg'), modelo('fonts { body "Press Start 2P"  mono "monospace" }'));
+    writeFileSync(join(raiz, 'main.dg'), modelo('fonts { body "Press Start 2P"  mono "monospace"  fallback "monospace" }'));
     const { url } = await arrancar();
 
     const estado = (await (await fetch(`${url}api/estado`)).json()) as { issues: { code: string; file: string; line: number }[] };

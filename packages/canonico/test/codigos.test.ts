@@ -49,6 +49,7 @@ const codigosDeV1 = [
   'E_THEME_COMPONENT_DUPLICATE',
   'E_THEME_CODE_COMPILE',
   'E_THEME_FONT_MISSING',
+  'E_THEME_FONT_NO_FALLBACK',
 ];
 
 describe('catalogo de codigos de issue', () => {

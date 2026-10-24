@@ -782,7 +782,7 @@ view v {
 
 describe('compile: Tema', () => {
   const base = 'specification { node servicio { color blue } }  model { servicio a }';
-  const claro = 'theme claro { palette { blue "#0000ff"  danger "#ff0000" } fonts { body "Inter" } tokens { surface "#ffffff" } }';
+  const claro = 'theme claro { palette { blue "#0000ff"  danger "#ff0000" } fonts { body "Inter, sans-serif" } tokens { surface "#ffffff" } }';
 
   it('un Workspace sin theme usa el Tema neutro', () => {
     const { canonico, issues } = compile({ 'main.dg': base });
@@ -798,7 +798,7 @@ describe('compile: Tema', () => {
     expect(canonico?.themes.find((t) => t.name === 'claro')).toEqual({
       name: 'claro',
       palette: { blue: '#0000ff', danger: '#ff0000' },
-      fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter' },
+      fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter, sans-serif' },
       tokens: { ...TEMA_NEUTRO.tokens, surface: '#ffffff' },
       nodo: TEMA_NEUTRO.nodo,
       grupo: TEMA_NEUTRO.grupo,
@@ -817,7 +817,7 @@ describe('compile: Tema', () => {
     expect(canonico?.themes.find((t) => t.name === 'oscuro')).toEqual({
       name: 'oscuro',
       palette: { blue: '#00aaff', danger: '#ff0000' },
-      fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter' },
+      fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter, sans-serif' },
       tokens: { ...TEMA_NEUTRO.tokens, surface: '#111111' },
       nodo: TEMA_NEUTRO.nodo,
       grupo: TEMA_NEUTRO.grupo,

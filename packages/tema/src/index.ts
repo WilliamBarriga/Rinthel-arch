@@ -89,7 +89,7 @@ export type { Metricas, TablaDeMetricas } from './metricas';
 export { anchoDeTexto, claveDeTexto, hashDeFuente } from './medicion';
 export type { MedicionDeMetricas, MedidasDeTexto, TextoAMedir } from './medicion';
 export { textosAMedir } from './textos-a-medir';
-export { pilaDeFuente, resolverFuentes } from './fuentes';
+export { fuentesSinReserva, pilaDeFuente, resolverFuentes } from './fuentes';
 export type { CaraDeFuente, FuenteFaltante } from './fuentes';
 export { referenciaDelCatalogo } from './referencia';
 export { PUNTO_DE_TITULO_EM, alturaDeCabecera, colocarDisposicion, colocarEnCaja, colocarNodo, medirDisposicion, textoDeSlot } from './slots';

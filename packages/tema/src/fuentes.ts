@@ -68,6 +68,15 @@ export function resolverFuentes(fonts: Readonly<Record<string, string>>, archivo
   return { caras: ordenadas, faltantes };
 }
 
+/** Entradas de `fonts` con una familia no generica y sin reserva: ni `fallback` en el Tema ni una generica en su propia lista. */
+export function fuentesSinReserva(fonts: Readonly<Record<string, string>>): string[] {
+  if (RESERVA in fonts) return [];
+  return Object.entries(fonts).flatMap(([clave, valor]) => {
+    const familias = familiasDe(valor);
+    return familias.some((f) => !esGenerica(f)) && !familias.some(esGenerica) ? [clave] : [];
+  });
+}
+
 /** Valor CSS de `font-family`: familias con nombre entre comillas, genericas tal cual y la reserva declarada al final (si hace falta). */
 export function pilaDeFuente(valor: string, reserva?: string): string {
   const familias = familiasDe(valor);

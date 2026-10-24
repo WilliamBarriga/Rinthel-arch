@@ -34,7 +34,7 @@ const CON_CAVEAT = 'fonts { body "Caveat"  mono "Caveat"  fallback "cursive" }';
 
 describe('seam sesion: fuentes del Workspace', () => {
   it('una fuente declarada sin archivo es un error con codigo y posicion en el Tema, y sugiere la cercana', async () => {
-    const sesion = abrirSesion(trabajo('fonts { body "Cavet"  mono "monospace" }'), { archivosDeFuente: CAVEAT });
+    const sesion = abrirSesion(trabajo('fonts { body "Cavet"  mono "monospace"  fallback "sans-serif" }'), { archivosDeFuente: CAVEAT });
 
     const errores = (await sesion.diagnosticar()).filter((x) => x.severity === 'error');
     expect(errores).toHaveLength(1);
@@ -45,7 +45,7 @@ describe('seam sesion: fuentes del Workspace', () => {
   });
 
   it('el error tambien sale de construir', async () => {
-    const { issues } = await abrirSesion(trabajo('fonts { body "Caveat"  mono "monospace" }'), { archivosDeFuente: [] }).construir();
+    const { issues } = await abrirSesion(trabajo('fonts { body "Caveat"  mono "monospace"  fallback "sans-serif" }'), { archivosDeFuente: [] }).construir();
 
     expect(issues.map((x) => x.code)).toContain('E_THEME_FONT_MISSING');
   });

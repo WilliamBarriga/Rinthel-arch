@@ -19,7 +19,7 @@
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
 import type { AstNode as Ast } from 'langium';
-import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, opTocaMetricas, parsearEstado } from 'tema';
+import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, fuentesSinReserva, opTocaMetricas, parsearEstado } from 'tema';
 import type { CapaDeTema, ElementoDeTema, ErrorDeCatalogo, OpDeCapa, TemaResuelto } from 'tema';
 
 import type { GroupItem, GroupPadding, NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeState, ThemeUse } from './generated/ast';
@@ -233,6 +233,21 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeGroup' || parte.$type === 'ThemeEdge' || parte.$type === 'ThemePage') continue;
       const destino = parte.$type === 'ThemePalette' ? tema.palette : parte.$type === 'ThemeFonts' ? tema.fonts : tema.tokens;
       for (const { key, value } of parte.entries) destino[key] = value;
+    }
+    // Una familia no generica pide reserva explicita (historia 30): se comprueba con las `fonts` ya heredadas.
+    const sinReserva = fuentesSinReserva(tema.fonts);
+    for (const parte of declarado.ast.parts) {
+      if (parte.$type !== 'ThemeFonts') continue;
+      for (const entrada of parte.entries.filter((e) => sinReserva.includes(e.key))) {
+        issues.push({
+          code: CODIGOS.E_THEME_FONT_NO_FALLBACK,
+          severity: 'error',
+          file: declarado.archivo,
+          ...aRango(entrada.$cstNode?.range).start,
+          message: `La familia '${entrada.value}' de fonts.${entrada.key} no declara reserva`,
+          hint: 'Agrega fallback "sans-serif" (o la generica que corresponda) al bloque fonts',
+        });
+      }
     }
     // El bloque `node` se compila al final: sus colores y tokens se validan contra la Paleta y los tokens ya completos.
     const items = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeNode' ? parte.items : []));

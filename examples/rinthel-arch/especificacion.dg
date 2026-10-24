@@ -12,12 +12,12 @@ specification {
 // Temas del mapa: la tarjeta de los incorporados (neutral-dark y neutral) con las fuentes del Workspace y
 // dos parches por Tipo (ADR 0008): el paquete lleva una barra de su color a la izquierda y el externo, borde discontinuo.
 theme diagrams extends neutral-dark {
-  fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono" }
+  fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono"  fallback "sans-serif" }
   node { type paquete { use acento }  type externo { use discontinuo } }
 }
 
 theme diagrams-claro extends neutral {
-  fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono" }
+  fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono"  fallback "sans-serif" }
   node { type paquete { use acento }  type externo { use discontinuo } }
 }
 
