@@ -9,28 +9,17 @@ specification {
   node proceso  { description "Proceso en ejecucion"                       icon server    color blue }
 }
 
-// Tema oscuro: el Nodo es una pila de Capas (forma, relleno, borde) y muestra titulo y Atributos.
-// La variacion por Tipo de nodo llega con los parches por Capa (ADR 0008).
-theme diagrams extends neutral {
+// Temas del mapa: la tarjeta de los incorporados (neutral-dark y neutral) con las fuentes del Workspace y
+// dos parches por Tipo (ADR 0008): el paquete lleva una barra de su color a la izquierda y el externo, borde discontinuo.
+theme diagrams extends neutral-dark {
   fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono" }
-  palette { purple "#8b5cf6"  amber "#f59e0b"  superficie "#1e3a5f" }
-  tokens { background "#0f172a"  foreground "#e2e8f0"  border "#475569" }
-  node {
-    layer forma rect { radius 6 }
-    layer relleno solid { color superficie }
-    layer borde border { color amber width 2 }
-    slots { title attrs }
-  }
+  node { type paquete { use acento }  type externo { use discontinuo } }
 }
 
-// Tema claro de ejemplo: las mismas Capas con relleno pastel.
 theme diagrams-claro extends neutral {
   fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono" }
-  palette { pastel "#dbeafe" }
-  node {
-    layer forma rect { radius 6 }
-    layer relleno solid { color pastel }
-    layer borde border { color blue }
-    slots { title attrs }
-  }
+  node { type paquete { use acento }  type externo { use discontinuo } }
 }
+
+part acento { layer acento shadow after borde { color COLOR  x 3  y 0  inset 1 } }
+part discontinuo { layer relleno { color fondo }  layer borde dashed { color marco } }

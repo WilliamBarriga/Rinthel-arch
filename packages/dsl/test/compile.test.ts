@@ -1289,7 +1289,7 @@ describe('compile: Pasos (steps)', () => {
 });
 
 describe('compile: Temas del ejemplo rinthel-arch', () => {
-  it('declaran el Tema oscuro y uno claro con Capas, sin issues', async () => {
+  it('extienden los incorporados oscuro y claro con parches por Tipo, sin issues', async () => {
     const { readFileSync, readdirSync } = await import('node:fs');
     const dir = new URL('../../../examples/rinthel-arch/', import.meta.url);
     const fuentes = Object.fromEntries(
@@ -1299,9 +1299,13 @@ describe('compile: Temas del ejemplo rinthel-arch', () => {
 
     expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
     const temas = canonico?.themes ?? [];
-    expect(temas.find((t) => t.name === 'diagrams')?.['tokens']).toMatchObject({ background: '#0f172a' });
-    const capas = (nombre: string) => (temas.find((t) => t.name === nombre)?.['nodo'] as { capas: { nombre: string }[] }).capas.map((c) => c.nombre);
-    expect(capas('diagrams')).toEqual(['forma', 'relleno', 'borde']);
-    expect(capas('diagrams-claro')).toEqual(['forma', 'relleno', 'borde']);
+    expect(issues).toEqual([]);
+    const tema = (nombre: string) => temas.find((t) => t.name === nombre) as unknown as { tokens: object; nodo: { tipos: Record<string, Array<{ nombre: string }>> } };
+    expect(tema('diagrams').tokens).toMatchObject({ background: '#09090b' });
+    expect(tema('diagrams-claro').tokens).toMatchObject({ background: '#f8fafc' });
+    for (const nombre of ['diagrams', 'diagrams-claro']) {
+      expect(tema(nombre).nodo.tipos['paquete']?.map((op) => op.nombre)).toEqual(['acento']);
+      expect(tema(nombre).nodo.tipos['externo']?.map((op) => op.nombre)).toEqual(['relleno', 'borde']);
+    }
   });
 });

@@ -12,6 +12,15 @@ view paquetes {
   link shell -> shell-detalle
 }
 
+// Los paquetes con render, sesion y layout abiertos y los demas cerrados (la Vista `abierto` del prototipo aprobado).
+view abierto {
+  type architecture
+  theme diagrams
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+
 view canonico-detalle {
   type architecture
   theme diagrams
