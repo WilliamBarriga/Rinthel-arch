@@ -42,6 +42,19 @@ export interface DefinicionDePrimitiva {
   readonly abierta?: true;
 }
 
+/**
+ * Propiedades de pintura que acepta toda Capa de Nodo o Grupo sin que cada
+ * Primitiva las declare: `offset x y` (el DSL las escribe juntas) mueve la Capa
+ * y `grow` agranda su ancho y alto. Solo pintan: ni cambian las Metricas ni
+ * provocan relayout, asi que un parche de estado puede animarlas. Sin defecto:
+ * ausentes, la Capa se pinta sobre la caja.
+ */
+export const PROPIEDADES_DE_DESPLAZAMIENTO = {
+  'offset-x': { tipo: 'numero', min: -200, max: 200 },
+  'offset-y': { tipo: 'numero', min: -200, max: 200 },
+  grow: { tipo: 'numero', min: -100, max: 100 },
+} as const satisfies Record<string, DefinicionDePropiedad>;
+
 export const CATALOGO = {
   rect: { familia: 'forma', afectaMetricas: false, propiedades: { radius: { tipo: 'numero', min: 0, max: 100, defecto: 0 } } },
   solid: { familia: 'relleno', afectaMetricas: false, propiedades: { color: { tipo: 'color' } } },
@@ -132,7 +145,9 @@ export function construirPrimitiva(
       ],
     };
   }
-  const definicion: DefinicionDePrimitiva = CATALOGO[tipo];
+  const base: DefinicionDePrimitiva = CATALOGO[tipo];
+  const definicion: DefinicionDePrimitiva =
+    ubicacion === 'capa-nodo' && base.abierta !== true ? { ...base, propiedades: { ...base.propiedades, ...PROPIEDADES_DE_DESPLAZAMIENTO } } : base;
   const errores: ErrorDeCatalogo[] = [];
   const resultado: Record<string, number | string> = {};
 
@@ -187,6 +202,7 @@ export function construirPrimitiva(
   const dadas = new Set(props.map((p) => p.clave));
   for (const [clave, propiedad] of Object.entries(definicion.propiedades)) {
     if (dadas.has(clave)) continue;
+    if (propiedad.tipo === 'numero' && propiedad.defecto === undefined && clave in PROPIEDADES_DE_DESPLAZAMIENTO) continue;
     if (propiedad.tipo === 'numero' && propiedad.defecto !== undefined) resultado[clave] = propiedad.defecto;
     else if (propiedad.tipo === 'opcion') resultado[clave] = propiedad.defecto;
     else if (propiedad.tipo === 'color' && propiedad.opcional === true) continue;

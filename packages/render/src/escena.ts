@@ -161,7 +161,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
               viewBox: `0 0 ${num(geometry.width)} ${num(geometry.height)}`,
               'aria-hidden': 'true',
             },
-            hijos: [...view.edges.flatMap((arista) => aristaSvg(arista, contexto))],
+            hijos: [...view.edges.flatMap((arista) => aristaSvg(arista, contexto)), ...view.edges.flatMap((arista) => etiquetaSvg(arista, contexto))],
           },
           { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: nodos.filter((n) => !esGrupo(n)).map((nodo) => cajaDeNodo(nodo, contexto)) },
         ],
@@ -319,12 +319,29 @@ function aristaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibil
       desde: arista.fromCardinality,
       hasta: arista.toCardinality,
       atributos: atenuado(estados, id) ? { ...v, 'data-atenuado': '' } : v,
-      extra: [
-        ...(arista.label === undefined ? [] : [pintarEtiquetaDeArista(estilo, { id, texto: arista.label, puntos, caja: geometry.labels[id] })]),
-        ...contornos(estados?.[id]).map((e) => pintarEstadoDeRuta(estilo, e, id, puntos)),
-      ],
+      extra: contornos(estados?.[id]).map((e) => pintarEstadoDeRuta(estilo, e, id, puntos)),
       ...(onSelect !== undefined && { alClic: () => onSelect(id) }),
     }),
+  ];
+}
+
+/**
+ * Etiqueta de una Arista, en una pasada posterior a todos los trazos para que
+ * ningun trazo (de esta ni de otra Arista) la tape. Hereda la visibilidad, el
+ * atenuado y el clic de su Arista.
+ */
+function etiquetaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibility, estados }: Contexto): Elemento[] {
+  const id = idDeArista(arista);
+  const puntos = geometry.edges[id]?.points;
+  if (arista.label === undefined || puntos === undefined || puntos.length < 2) return [];
+  const v = visibilidadSvg(visibility(id));
+  return [
+    {
+      tag: 'g',
+      attrs: { 'data-edge-labels': id, ...(atenuado(estados, id) ? { ...v, 'data-atenuado': '' } : v) },
+      ...(onSelect !== undefined && { alClic: () => onSelect(id) }),
+      hijos: [pintarEtiquetaDeArista(estilo, { id, texto: arista.label, puntos, caja: geometry.labels[id] })],
+    },
   ];
 }
 

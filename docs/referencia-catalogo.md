@@ -6,6 +6,14 @@ Un numero se escribe como `minimo a maximo (defecto)`; fuera de rango es un erro
 
 ## Primitivas
 
+Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las declare: `offset x y` (se escribe con dos valores y se guarda como `offset-x`/`offset-y`; admite negativos) y `grow`. Solo pintan: no cambian las Metricas ni provocan relayout, y un parche de estado puede cambiarlas con `transition`.
+
+| Propiedad comun | Rango |
+| --- | --- |
+| `offset-x` | -200 a 200 |
+| `offset-y` | -200 a 200 |
+| `grow` | -100 a 100 |
+
 ### Familia forma
 
 | Primitiva | Ubicacion | Propiedades | Metricas |
@@ -72,7 +80,7 @@ Un numero se escribe como `minimo a maximo (defecto)`; fuera de rango es un erro
 
 | Primitiva | Ubicacion | Propiedades | Metricas |
 | --- | --- | --- | --- |
-| `line` | capa-arista | `color` color de Paleta; `width` 0.5 a 24 (1.5); `style` solid|dashed|dotted|pixel (solid); `corner` sharp|chamfer (sharp); `cut` 1 a 32 (6) | no |
+| `line` | capa-arista | `color` color de Paleta; `width` 0.5 a 24 (1.5); `style` solid|dashed|dotted|pixel (solid); `corner` sharp|chamfer|round (sharp); `cut` 1 a 32 (6); `radius` 1 a 64 (8) | no |
 
 ### Familia marcador
 
@@ -81,6 +89,7 @@ Un numero se escribe como `minimo a maximo (defecto)`; fuera de rango es un erro
 | `arrow` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `dot` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `diamond` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `square` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `bar` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `via` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 

@@ -201,6 +201,16 @@ describe('Diagram', () => {
     expect(html).toContain('data-edge="a.a1 -&gt; b"');
   });
 
+  it('las etiquetas de Arista van en una pasada posterior a todos los trazos, con la visibilidad de su Arista', async () => {
+    const base = vista();
+    const view: VistaResuelta = { ...base, edges: base.edges.map((e, i) => (i === 0 ? { ...e, label: 'uno' } : e)) };
+    const html = dibujo(await props(view, { visibility: (id) => (id === 'a.a1 -> b' ? 0.5 : 1) }));
+    const ultimaArista = html.lastIndexOf('<g data-edge="');
+
+    expect(html.indexOf('data-edge-labels="a.a1 -&gt; b"')).toBeGreaterThan(ultimaArista);
+    expect(html).toMatch(/<g data-edge-labels="a.a1 -&gt; b" opacity="0.5"/);
+  });
+
   it('visibility 0, 1 y fraccion se reflejan en la opacidad de Nodos y Aristas', async () => {
     const visibility = (id: string): number => ({ b: 0, c: 0.5, 'b -> c': 0.25 })[id] ?? 1;
     const html = dibujo(await props(vista(), { visibility }));

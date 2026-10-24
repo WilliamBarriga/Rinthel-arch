@@ -22,7 +22,7 @@ theme synthwave {
   edge {
     layer halo line { color rosa/0.2 width 8 }
     layer linea line { color cian width 1.8 }
-    start dot { size 6  color rosa }
+    start via { size 6  color rosa }
     end arrow { size 9  color cian }
     label { scale 0.8  pad 8  radius 50  fill fondo  border rosa }
   }

@@ -7,7 +7,7 @@ theme neobrutalist {
   }
   tokens { background "#f3eee1"  foreground "#111111"  border "#111111" }
   node {
-    layer sombra shadow { color texto  x 4  y 4  blur 0 }
+    layer sombra solid { color texto  offset 4 4 }
     layer forma rect { radius 6 }
     layer relleno solid { color papel }
     layer borde border { color texto  width 2 }
@@ -15,13 +15,13 @@ theme neobrutalist {
     type externo { layer forma cut { cut 12 }  layer relleno { color COLOR/0.35 } }
     type nota { layer relleno { color sticker } }
     type actor { layer relleno { color COLOR } }
-    state hover { layer sombra { x 7  y 7 }  transition 100ms ease-out }
+    state hover { layer sombra { offset 7 7 }  transition 100ms ease-out }
     state en-ruta { layer relleno { color sticker } }
     state atenuado { layer sombra none }
   }
   edge {
     layer linea line { color texto  width 2 }
-    start bar { size 8 }
+    start square { size 8 }
     end arrow { size 10 }
     label { scale 0.8  pad 6  radius 3  fill sticker  border texto }
   }
