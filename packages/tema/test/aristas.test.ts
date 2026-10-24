@@ -30,6 +30,8 @@ describe('Familia trazo', () => {
       corner: 'chamfer',
       cut: 6,
       radius: 8,
+      roughness: 0,
+      frequency: 0.03,
     });
   });
 
