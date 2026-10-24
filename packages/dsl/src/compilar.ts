@@ -184,7 +184,10 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     temas: new Map(temasDeclarados.map(({ archivo, ast, nombre }) => [ast.name, { archivo, nombre }])),
     conSintaxisRota,
   });
-  issues.push(...validate(fuente, { iconos: combineIconProviders(workspaceIcons(workspace), genericIcons()), ubicar }));
+  // Un Tema declarado que no se resolvio ya tiene su error (`delTema`): decir ademas que la Vista usa un Tema "no declarado" seria enganoso.
+  const sinResolver = new Set(temasDeclarados.map(({ ast }) => ast.name).filter((nombre) => !temas.some((t) => t.name === nombre)));
+  const sinTema = (issue: Issue): boolean => issue.code === CODIGOS.E_UNKNOWN_THEME && vistas.some(({ vista }) => vista.theme !== undefined && sinResolver.has(vista.theme) && issue.message === `Tema '${vista.theme}' no declarado`);
+  issues.push(...validate(fuente, { iconos: combineIconProviders(workspaceIcons(workspace), genericIcons()), ubicar }).filter((issue) => !sinTema(issue)));
 
   const pins: PosicionDePin[] = [];
   for (const { vista, archivo, ast } of vistas) {

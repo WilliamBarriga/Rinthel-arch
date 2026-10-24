@@ -1076,6 +1076,13 @@ describe('compile: Tema', () => {
     expect(mal.issues.map((i) => i.code)).toEqual(['E_UNKNOWN_THEME']);
   });
 
+  it('una Vista con un Tema que existe pero no se resuelve no dice "no declarado": solo queda el error real del Tema', () => {
+    const { issues } = compile({ 'main.dg': `${base} theme a extends fantasma { }  view v { type flow theme a }` });
+
+    expect(issues.map((i) => [i.code, i.line])).toEqual([['E_UNKNOWN_THEME', 1]]);
+    expect(issues[0]?.message).toContain("'fantasma'");
+  });
+
   it('color de Tipo de nodo desconocido es E_UNKNOWN_PALETTE_COLOR con fix si hay un candidato', () => {
     const { issues } = compile({ 'main.dg': 'specification { node servicio { color blu } }  model { servicio a }' });
 
