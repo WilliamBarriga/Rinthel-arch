@@ -12,12 +12,13 @@
  *
  * Interfaz:
  * - Catalogo: `CATALOGO`, `SLOTS`, `construirPrimitiva(tipo, props, paleta)` y
- *   `construirSlots(nombres)` devuelven todos los errores a la vez, con codigo
- *   estable y sugerencia "quisiste decir" cuando hay un candidato. Nunca recortan.
+ *   `construirDisposicion(arbol)` (el mini-layout de Slots) devuelven todos los
+ *   errores a la vez, con codigo estable y sugerencia "quisiste decir" cuando hay
+ *   un candidato. Nunca recortan.
  * - Tema: `temaResueltoSchema` (estricto: `nodeStyles`/`edgeStyles` ya no existen),
  *   `resolverTema(tema)` (lanza si no cumple el contrato), `TEMA_NEUTRO`.
  * - Estilo resuelto: `estiloResuelto(tema) -> { metricas, pintura }`. Las
- *   Metricas (`metricasDe`) solo dependen de fuentes, tamano de texto y Slots;
+ *   Metricas (`metricasDe`) solo dependen de fuentes, tamano de texto y la disposicion de Slots;
  *   la pintura (Capas con colores literales) nunca las cambia.
 
  * - Cascada y parches: `aplicarOps(pila, ops, paleta, modo)` aplica parches por
@@ -38,10 +39,14 @@
  *   Nada animado entra en las Metricas.
  * - Color: `validarColor` / `resolverColor` (nombre, `nombre/alfa`, `mix(a, b, t)`,
  *   `COLOR`, `ORIGEN`); `resolverTokens` sustituye `$token` por numeros.
- * - Slots: `colocarNodo(titulo, atributos, metricas)` da el tamano de caja y el
- *   rectangulo de cada Slot y de cada fila de Atributo; `colocarEnCaja` lo hace
- *   sobre una caja ya medida. `layout` y `render` usan lo mismo.
- *   `atributosVisibles` es la regla unica de que Atributos se muestran.
+ * - Slots: el Tema declara un arbol de cajas `row`/`column` (`CajaDeSlots`: gap, pad,
+ *   alineacion por hijo, anidable). `colocarDisposicion(arbol, medida, ancho)` es el
+ *   nucleo: devuelve un rectangulo absoluto por Slot y no conoce ninguno por nombre.
+ *   `colocarNodo(contenido, metricas)` da el tamano de caja, el rectangulo de cada
+ *   Slot y de cada fila de Atributo; `colocarEnCaja` lo hace sobre una caja ya medida.
+ *   `contenidoDeNodo(nodo, metricas)` es la regla unica de lo que un Nodo aporta
+ *   (titulo, Atributos visibles segun `atributosVisibles`, icono). `layout` y
+ *   `render` usan lo mismo. Un Slot fuera del arbol no se pinta ni se mide.
  *
  * - Accesibilidad: `advertenciasDeContraste(tema, tipos)` (4.5:1 texto, 3:1 graficos, por Tipo y estado),
  *   `tiposSoloColor` y `leyendaDelTema` (Tipo, forma, color; `necesaria` si hay solo-color) solo calculan:
@@ -70,12 +75,14 @@
  * errores de catalogo; solo `resolverTema` lanza. Configuracion requerida: ninguna.
  * Solo importa `canonico`.
  */
-export { CATALOGO, SLOTS, construirPrimitiva, primitivasDe, construirSlots, resolverTokens, sugerir } from './catalogo';
+export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, construirPrimitiva, primitivasDe, resolverTokens, sugerir } from './catalogo';
+export { ALINEACIONES, DIRECCIONES, DISPOSICION_POR_DEFECTO, alineacionDe, construirDisposicion, describirDisposicion, esCaja, slotsDe } from './disposicion';
+export type { Alineacion, CajaDeSlots, Direccion, ElementoDeSlots, EntradaDeCaja, EntradaDeSlot, ErrorDeDisposicion, HojaDeSlots, PropiedadEscrita } from './disposicion';
 export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDePrimitivaEn, NombreDeSlot, Primitiva, UbicacionDePrimitiva } from './catalogo';
 export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
 export { TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
-export { atributosVisibles, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeAtributo } from './metricas';
+export { atributosVisibles, claveDeMetricas, contenidoDeNodo, muestra, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeAtributo } from './metricas';
 export type { Metricas, TablaDeMetricas } from './metricas';
 export { anchoDeTexto, claveDeTexto, hashDeFuente } from './medicion';
 export type { MedicionDeMetricas, MedidasDeTexto, TextoAMedir } from './medicion';
@@ -83,8 +90,8 @@ export { textosAMedir } from './textos-a-medir';
 export { pilaDeFuente, resolverFuentes } from './fuentes';
 export type { CaraDeFuente, FuenteFaltante } from './fuentes';
 export { referenciaDelCatalogo } from './referencia';
-export { colocarEnCaja, colocarNodo } from './slots';
-export type { ColocacionDeNodo, Rect } from './slots';
+export { colocarDisposicion, colocarEnCaja, colocarNodo, medirDisposicion } from './slots';
+export type { ColocacionDeNodo, ContenidoDeNodo, MedidaDeSlot, Rect, Tamano } from './slots';
 export { estiloResuelto } from './estilo';
 export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeNodo, PinturaDePagina, PrimitivaPintada } from './estilo';
 export { aplicarOps, cascada, ESTADOS, opTocaMetricas, parsearEstado, validarOps } from './parches';

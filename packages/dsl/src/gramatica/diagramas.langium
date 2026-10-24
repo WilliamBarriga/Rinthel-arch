@@ -196,9 +196,20 @@ LayerAtom returns string:
 MixValue returns string:
   'mix' '(' Id ',' Id ',' Num ')';
 
-// Cada Slot puede llevar su estilo de texto: `slots { title { weight 600 color ink }  attrs }`.
+// Mini-layout de Slots (ADR 0008): `slots [row|column] [gap N] [pad N] [align A] { hijos }`; sin direccion es una
+// columna. Un hijo es un Slot o una caja anidada (`row`/`column`). Un Slot lleva su estilo y su `align` entre llaves:
+// `slots column gap 8 { row gap 6 { icon { variant box side 24 }  title { weight 600 } }  attrs }`.
 ThemeSlots:
-  'slots' '{' entries+=SlotEntry* '}';
+  'slots' direction=SlotDirection? props+=LayerProp* '{' children+=SlotChild* '}';
+
+SlotDirection returns string:
+  'row' | 'column';
+
+SlotChild:
+  SlotBox | SlotEntry;
+
+SlotBox:
+  direction=SlotDirection props+=LayerProp* '{' children+=SlotChild* '}';
 
 SlotEntry:
   name=Id ('{' props+=LayerProp* '}')?;
@@ -366,7 +377,7 @@ Id returns string:
   IdTerminal |
   'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order' |
   'theme' | 'extends' | 'palette' | 'fonts' | 'tokens' |
-  'layer' | 'slots' | 'state' | 'part' | 'use' | 'before' | 'after' | 'over' | 'none' | 'mix' |
+  'layer' | 'slots' | 'row' | 'column' | 'state' | 'part' | 'use' | 'before' | 'after' | 'over' | 'none' | 'mix' |
   'motion' | 'keyframes' | 'transition' | 'enter' | 'exit' | 'stagger' | 'delay' | 'intensity' | 'reduced' |
   'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |

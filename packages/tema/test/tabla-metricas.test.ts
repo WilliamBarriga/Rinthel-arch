@@ -16,9 +16,9 @@ describe('tabla de Metricas por elemento', () => {
   it('un Tipo con caja minima propia tiene su entrada; un Tipo no mencionado usa la entrada base', () => {
     const tabla = tablaDeMetricas(tema([forma(), relleno('blue')], { db: [circulo()] }));
 
-    expect(colocarNodo('x', [], metricasDeNodo(tabla, 'db'))).toMatchObject({ width: 120, height: 120 });
-    expect(colocarNodo('x', [], metricasDeNodo(tabla, 'servicio'))).toMatchObject({ width: 120 });
-    expect(colocarNodo('x', [], metricasDeNodo(tabla, 'servicio')).height).toBeLessThan(120);
+    expect(colocarNodo({ titulo: 'x', atributos: [], icono: false }, metricasDeNodo(tabla, 'db'))).toMatchObject({ width: 120, height: 120 });
+    expect(colocarNodo({ titulo: 'x', atributos: [], icono: false }, metricasDeNodo(tabla, 'servicio'))).toMatchObject({ width: 120 });
+    expect(colocarNodo({ titulo: 'x', atributos: [], icono: false }, metricasDeNodo(tabla, 'servicio')).height).toBeLessThan(120);
     expect(metricasDeNodo(tabla, 'servicio')).toBe(tabla.base);
   });
 
@@ -47,7 +47,7 @@ describe('tabla de Metricas por elemento', () => {
     const tabla = tablaDeMetricas(TEMA_NEUTRO);
 
     expect(tabla.grupoAbierto.paddingGrupo).toEqual({ top: 32, left: 16, bottom: 16, right: 16 });
-    expect(tabla.grupoColapsado.slots).toEqual(['title', 'attrs']);
+    expect(tabla.grupoColapsado.disposicion).toEqual(TEMA_NEUTRO.nodo.slots);
     expect(tabla.etiqueta.escalaEtiqueta).toBe(0.85);
   });
 });

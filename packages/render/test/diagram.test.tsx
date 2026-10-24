@@ -41,7 +41,7 @@ const PASOS = [
 const CON_CAPAS: TemaResuelto = {
   ...TEMA_NEUTRO,
   nodo: {
-    slots: ['title', 'attrs'],
+    slots: TEMA_NEUTRO.nodo.slots,
     textos: {},
     tipos: {},
     estados: {},
@@ -134,7 +134,7 @@ describe('Diagram: estructura hibrida', () => {
   it('cada Slot va en el rectangulo que reservo la colocacion compartida', async () => {
     const p = await props(vista());
     const html = dibujo(p);
-    const { slots } = colocarEnCaja(metricasDe(TEMA_NEUTRO), 0, p.geometry.nodes['b']!.width);
+    const { slots } = colocarEnCaja(metricasDe(TEMA_NEUTRO), { titulo: 'b', atributos: [], icono: false }, p.geometry.nodes['b']!.width);
     const titulo = etiquetaCon(html.slice(html.indexOf('data-id="b"')), 'data-slot="title"');
 
     expect(rectDe(titulo)).toEqual(slots.title);

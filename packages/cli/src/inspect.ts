@@ -6,7 +6,7 @@
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos, resolveView, salidaDeInspectSchema } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
-import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, cascada, componentesDeTema, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas } from 'tema';
+import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, cascada, componentesDeTema, describirDisposicion, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas } from 'tema';
 import type { CapaDeTema } from 'tema';
 
 type Sitio = { file: string; line: number };
@@ -187,6 +187,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
       return aCapa(capa, sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line });
     }),
   };
+  const delNodo = metricasDeNodo(tablaDeMetricas(declarado), tipo);
   return {
     salida: {
       contractVersion: INSPECT_CONTRACT_VERSION,
@@ -200,7 +201,8 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
         ...(estadoValido !== undefined && { estado: estadoValido }),
         capas,
         pagina,
-        metricas: JSON.parse(JSON.stringify(metricasDeNodo(tablaDeMetricas(declarado), tipo))) as never,
+        slots: describirDisposicion(delNodo.disposicion),
+        metricas: JSON.parse(JSON.stringify(delNodo)) as never,
         temaConCodigo: componentes.length > 0,
         componentes,
         ...(catalogo && { catalogo: { primitivas: Object.keys(CATALOGO), movimientos: Object.keys(MOVIMIENTOS), efectos: [...EFECTOS] } }),
@@ -250,8 +252,9 @@ export function textoLegible(salida: SalidaDeInspect): string {
       const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
       lineas.push(`  ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`} ${sitio(c.origen)}`);
     }
+    lineas.push(`Slots: ${tema.slots}`);
     lineas.push('Metricas:');
-    for (const [clave, valor] of Object.entries(tema.metricas)) lineas.push(`  ${clave}: ${typeof valor === 'object' ? JSON.stringify(valor) : String(valor)}`);
+    for (const [clave, valor] of Object.entries(tema.metricas)) if (clave !== 'disposicion') lineas.push(`  ${clave}: ${typeof valor === 'object' ? JSON.stringify(valor) : String(valor)}`);
     lineas.push(tema.temaConCodigo ? `con codigo: ${tema.componentes.join(', ')}` : 'sin codigo');
     if (tema.catalogo !== undefined) {
       lineas.push(`Primitivas: ${tema.catalogo.primitivas.join(', ')}`);

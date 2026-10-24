@@ -9,20 +9,21 @@
  * bloque `node` del hijo es un parche sobre la pila heredada: una Capa con el
  * nombre de una heredada la cambia, una nueva exige `before`/`after`, y
  * `layer x none` la quita; los parches por Tipo y por estado se acumulan tras
- * los del padre; `slots` reemplaza la lista heredada. Un Tema sin base
+ * los del padre; `slots` reemplaza la disposicion heredada. Un Tema sin base
  * (sin `extends`, o cuyo padre no tiene Capas) define su pila en orden.
  * Un Tema sin `extends` parte de las fuentes, tokens y Slots del neutro, con la
  * paleta vacia, para que cumpla siempre el contrato de dibujo.
  */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
-import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, construirSlots, opTocaMetricas, parsearEstado } from 'tema';
+import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, opTocaMetricas, parsearEstado } from 'tema';
 import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, TemaResuelto } from 'tema';
 
 import type { NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeUse } from './generated/ast';
 import { ARCHIVO_INCORPORADOS, NOMBRES_INCORPORADOS } from './incorporados';
-import { aRango, issueConSugerencia, rangoDeIndice } from './posiciones';
-import { compilarArista, compilarTextoDeSlots } from './temas-arista';
+import { aRango, issueConSugerencia } from './posiciones';
+import { compilarArista } from './temas-arista';
+import { compilarSlots } from './temas-slots';
 import { compilarAnimacionDeNodo } from './temas-animacion';
 import { compilarBloque } from './temas-capas';
 import { compilarPagina } from './temas-pagina';
@@ -189,7 +190,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       tokens: { ...origen.tokens },
       nodo: {
         capas: origen.nodo.capas.map(copiarCapa),
-        slots: [...origen.nodo.slots],
+        slots: structuredClone(origen.nodo.slots),
         textos: { ...origen.nodo.textos },
         tipos: Object.fromEntries(Object.entries(origen.nodo.tipos).map(([tipo, ops]) => [tipo, [...ops]])),
         estados: Object.fromEntries(Object.entries(origen.nodo.estados).map(([estado, ops]) => [estado, [...ops]])),
@@ -290,13 +291,7 @@ function compilarNodo(archivo: string, items: ReadonlyArray<NodeItem>, tema: Tem
   tema.nodo.capas = aplicarOps(tema.nodo.capas as CapaDeTema[], opsBase, tema.palette, modo).pila;
   for (const item of items) {
     if (item.$type !== 'ThemeSlots') continue;
-    const { slots, errores } = construirSlots(item.entries.map((e) => e.name));
-    for (const error of errores) issues.push(aIssue(archivo, error, rangoDeIndice(item, 'entries', error.indice)));
-    if (errores.length === 0) {
-      tema.nodo.slots = slots;
-      tema.nodo.textos = Object.fromEntries(Object.entries(tema.nodo.textos).filter(([slot]) => slots.some((s) => s === slot)));
-      compilarTextoDeSlots(item.entries, tema, { archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
-    }
+    compilarSlots(item, tema, { archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
   }
 
   // Animacion del Nodo: `transition`, `enter`, `exit` y `stagger` (solo pintura, nunca Metricas).
@@ -366,15 +361,4 @@ function anotarOrigenes(registro: Registro, clave: string, propios: ReadonlyMap<
   const destino = registro[clave] ?? new Map<string, Sitio>();
   for (const [nombre, sitio] of propios) if (antes.get(nombre) !== sitio) destino.set(nombre, sitio);
   registro[clave] = destino;
-}
-
-function aIssue(archivo: string, error: ErrorDeCatalogo, rango: TextRange): Issue {
-  return {
-    code: error.codigo,
-    severity: 'error',
-    file: archivo,
-    ...rango.start,
-    message: error.mensaje,
-    ...(error.hint !== undefined && { hint: error.hint }),
-  };
 }

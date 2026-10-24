@@ -42,7 +42,7 @@ describe('seam sesion: Temas con Capas y Slots', () => {
       { nombre: 'relleno', tipo: 'solid', props: { color: '#fefce8' } },
       { nombre: 'borde', tipo: 'border', props: { color: '#dc2626', width: 2 } },
     ]);
-    expect(estilo.metricas.slots).toEqual(['title', 'attrs']);
+    expect(estilo.metricas.disposicion).toEqual({ direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'attrs' }] });
   });
 
   it('la Geometria lleva el rectangulo de cada Slot, apilados en el orden del Tema', async () => {
@@ -161,7 +161,84 @@ describe('seam sesion: Temas con Capas y Slots', () => {
   it('una Vista sin Tema usa el neutro, que muestra titulo y Atributos', async () => {
     const sesion = abrirSesion({ 'main.dg': (modelo + vista()).replace('{ color rojo }', '') });
 
-    expect(sesion.estilo('v')!.metricas.slots).toEqual(['title', 'attrs']);
+    expect(sesion.estilo('v')!.metricas.disposicion.hijos).toHaveLength(2);
     expect(sesion.estilo('nada')).toBeUndefined();
+  });
+});
+
+describe('seam sesion: mini-layout de Slots', () => {
+  const conIconos = `specification { node servicio { color rojo  icon box } }
+model {
+  servicio api { attrs { id: int  nombre: texto } }
+  servicio db
+  api#nombre -> db
+}
+`;
+  const geometriaDe = async (slots: string, fuente = conIconos) => {
+    const sesion = abrirSesion({ 'main.dg': fuente + tema(`    layer forma rect\n    ${slots}`) + vista('  theme t\n') });
+    expect(await sesion.diagnosticar()).toEqual([]);
+    return { geometry: (await sesion.geometria('v'))!.geometry, metricas: sesion.estilo('v')!.metricas };
+  };
+
+  it('una fila icono + titulo: el icono queda a la izquierda dentro de su rectangulo y no solapa al titulo', async () => {
+    const { geometry, metricas } = await geometriaDe('slots column { row gap 6 { icon { side 20 }  title }  attrs }');
+    const { slots, width } = geometry.nodes['db']!;
+    const { icon, title } = slots!;
+
+    expect(icon).toEqual({ x: 0, y: (metricas.cabecera - 20) / 2, width: 20, height: 20 });
+    expect(title).toEqual({ x: 26, y: 0, width: width - 26, height: metricas.cabecera });
+    expect(icon!.x + icon!.width).toBeLessThanOrEqual(title!.x);
+  });
+
+  it('una columna anidada con pad y gap da los rectangulos, el tamano de caja y el puerto del Atributo', async () => {
+    const { geometry, metricas } = await geometriaDe('slots column pad 8 gap 4 { row { icon  title }  attrs }');
+    const api = geometry.nodes['api']!;
+    const lado = metricas.iconoLado;
+    const fila = Math.max(lado, metricas.cabecera);
+
+    expect(api.slots!['attrs']).toEqual({ x: 8, y: 8 + fila + 4, width: api.width - 16, height: 2 * metricas.fila });
+    expect(api.height).toBe(8 + fila + 4 + 2 * metricas.fila + 8);
+    // La Arista `api#nombre -> db` sale por la fila `nombre` (la segunda): su puerto cae en el centro de esa fila.
+    const ruta = geometry.edges['api.nombre->db'] ?? Object.values(geometry.edges)[0]!;
+    const centro = api.y + api.slots!['attrs']!.y + metricas.fila * 1.5;
+    expect(ruta.points[0]!.y).toBe(centro);
+  });
+
+  it('una fila de dos Slots con align end pega el titulo al final de su eje cruzado', async () => {
+    const { geometry, metricas } = await geometriaDe('slots row { icon { side 40 }  title { align end } }');
+    const { icon, title } = geometry.nodes['db']!.slots!;
+
+    expect(icon!.height).toBe(40);
+    expect(title!.y + title!.height).toBe(Math.max(40, metricas.cabecera));
+  });
+
+  it('un Slot que el Tema no lista no se coloca aunque el Nodo tenga icono', async () => {
+    const { geometry } = await geometriaDe('slots { title }');
+
+    expect(Object.keys(geometry.nodes['db']!.slots!)).toEqual(['title']);
+  });
+
+  it('un Nodo sin icono no reserva el Slot icon', async () => {
+    const { geometry } = await geometriaDe('slots row gap 6 { icon title }', conIconos.replace('icon box', ''));
+
+    expect(Object.keys(geometry.nodes['db']!.slots!)).toEqual(['title']);
+    expect(geometry.nodes['db']!.slots!['title']!.x).toBe(0);
+  });
+
+  it('claves desconocidas, Slots desconocidos, alineaciones invalidas y Slots repetidos: todos a la vez con sugerencia', async () => {
+    const sesion = abrirSesion({ 'main.dg': conIconos + tema('    slots row gapp 4 { icn  title { align centro }  title }') + vista('  theme t\n') });
+    const issues = await sesion.diagnosticar();
+
+    expect(issues.map((i) => i.code)).toEqual(['E_THEME_UNKNOWN_PROPERTY', 'E_THEME_UNKNOWN_SLOT', 'E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_SLOT']);
+    expect(issues[0]!.hint).toBe("quisiste decir 'gap'");
+    expect(issues[1]!.hint).toBe("quisiste decir 'icon'");
+    expect(issues[2]!.hint).toBe("quisiste decir 'center'");
+  });
+
+  it('cambiar la disposicion cambia la clave de layout; el icono de un Nodo tambien', async () => {
+    const a = abrirSesion({ 'main.dg': conIconos + tema('    slots row { icon title }') + vista('  theme t\n') });
+    const b = abrirSesion({ 'main.dg': conIconos + tema('    slots column { icon title }') + vista('  theme t\n') });
+
+    expect((await a.geometria('v'))!.geometry.nodes['db']!.height).not.toBe((await b.geometria('v'))!.geometry.nodes['db']!.height);
   });
 });

@@ -102,8 +102,10 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       capas: z.array(capaDeTemaSchema),
       /** Fondo de pagina: pila de rellenos de abajo arriba y si queda fijo al visor. */
       pagina: z.object({ fijo: z.boolean(), capas: z.array(capaDeTemaSchema) }),
+      /** Disposicion de Slots del Nodo del Tipo pedido, en la sintaxis del DSL (`column { row gap 6 { icon title } attrs }`). */
+      slots: z.string(),
       /** Metricas del Nodo del Tipo pedido (o la base): lo unico que mueve el layout. */
-      metricas: z.object({ fontSize: z.number(), slots: z.array(z.string()) }).catchall(z.unknown()),
+      metricas: z.object({ fontSize: z.number() }).catchall(z.unknown()),
       temaConCodigo: z.boolean(),
       componentes: z.array(z.string()),
       /** Con `--catalogo`: claves del catalogo de Primitivas, Movimientos y efectos. */

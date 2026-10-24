@@ -853,7 +853,7 @@ describe('compile: Tema', () => {
         { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'blue' } } },
         { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'gray', width: 2 } } },
       ],
-      slots: ['attrs', 'title'],
+      slots: { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'attrs' }, { slot: 'title' }] },
       textos: {},
       tipos: {},
       estados: {},
@@ -912,9 +912,70 @@ describe('compile: Tema', () => {
 
     expect(issues).toEqual([]);
     expect(canonico?.themes.find((t) => t.name === 't')?.['nodo']).toMatchObject({
-      slots: ['title', 'attrs'],
+      slots: { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'attrs' }] },
       textos: { title: { tipo: 'text', props: { weight: 700, style: 'normal', transform: 'uppercase' } } },
     });
+  });
+
+  it('slots admite filas y columnas anidadas con gap, pad, align y tokens, y el estilo del icono', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme t {
+          tokens { gap 6 }
+          palette { ink "#111111" }
+          node {
+            slots column pad 10 {
+              row gap $gap {
+                icon { variant box  side 24  radius 6  fill ink/0.1  border ink }
+                title { align start  weight 700 }
+              }
+              attrs
+            }
+          }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 't')?.['nodo']).toMatchObject({
+      slots: {
+        direccion: 'column',
+        gap: 0,
+        pad: 10,
+        hijos: [
+          { direccion: 'row', gap: 6, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'title', align: 'start' }] },
+          { slot: 'attrs' },
+        ],
+      },
+      textos: {
+        icon: { tipo: 'icon', props: { variant: 'box', side: 24, radius: 6, fill: 'ink/0.1', border: 'ink' } },
+        title: { tipo: 'text', props: { weight: 700 } },
+      },
+    });
+  });
+
+  it('las claves de slots se validan con sugerencia y posicion; un parche de estado no cambia la disposicion', () => {
+    const { issues } = compile({
+      'main.dg': `${base}
+        theme t {
+          node {
+            slots row gapp 4 {
+              icn
+              title { align centro }
+            }
+            state hover { slots column { title } }
+          }
+        }`,
+    });
+
+    expect(issues.map((i) => [i.code, i.line])).toEqual([
+      ['E_THEME_UNKNOWN_PROPERTY', 4],
+      ['E_THEME_UNKNOWN_SLOT', 5],
+      ['E_THEME_INVALID_VALUE', 6],
+      ['E_THEME_STATE_TOUCHES_METRICS', 8],
+    ]);
+    expect(issues[0]!.hint).toContain("'gap'");
+    expect(issues[1]!.hint).toContain("'icon'");
+    expect(issues[2]!.hint).toContain("'center'");
   });
 
   it('compila las Familias de efectos con sus defectos, y `seed N` en tokens', () => {

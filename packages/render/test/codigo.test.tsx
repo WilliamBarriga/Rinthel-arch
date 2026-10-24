@@ -31,7 +31,7 @@ const base = [
 const aura = (encima = false) => ({ nombre: 'aura', primitiva: { tipo: 'code', props: { component: 'Aurora', hue: 3 } }, ...(encima && { encima: true }) });
 
 const temaCon = (capas: unknown[], estados: Record<string, unknown[]> = {}): TemaResuelto =>
-  ({ ...TEMA_NEUTRO, nodo: { slots: ['title', 'attrs'], tipos: {}, estados, textos: {}, capas } }) as unknown as TemaResuelto;
+  ({ ...TEMA_NEUTRO, nodo: { slots: TEMA_NEUTRO.nodo.slots, tipos: {}, estados, textos: {}, capas } }) as unknown as TemaResuelto;
 
 async function dibujar(theme: TemaResuelto, extra: Partial<DiagramProps> = {}): Promise<string> {
   const view = vista();

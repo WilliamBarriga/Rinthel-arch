@@ -13,7 +13,7 @@ import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria, Punto } from 'layout';
-import { atributosVisibles, colocarEnCaja, metricasDeHoja } from 'tema';
+import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
 import { centroDeEtiquetaSinCaja, resolverEstilo } from 'render';
 import type { Estilo } from 'render';
 
@@ -90,7 +90,7 @@ export function elementoBajo(
     if (caja === undefined || !contiene(caja, punto)) continue;
     const delNodo = metricasDeHoja(estilo.tabla, nodo);
     const filas = atributos ? atributosVisibles(nodo, delNodo) : [];
-    const rectas = colocarEnCaja(delNodo, filas.length, caja.width).filas;
+    const rectas = colocarEnCaja(delNodo, contenidoDeNodo(nodo, delNodo), caja.width).filas;
     const indice = rectas.findIndex((r) => punto.y >= caja.y + r.y && punto.y < caja.y + r.y + r.height);
     const atributo = filas[indice];
     return atributo === undefined ? { tipo: 'nodo', id: nodo.id } : { tipo: 'atributo', id: `${nodo.id}#${atributo.name}` };
@@ -110,8 +110,8 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
     const metricas = nodo === undefined ? tabla.base : metricasDeHoja(tabla, nodo);
     const atributos = nodo === undefined ? [] : atributosVisibles(nodo, metricas);
     const indice = atributos.findIndex((a) => a.name === nombre);
-    if (caja === undefined || indice < 0) return undefined;
-    const fila = colocarEnCaja(metricas, atributos.length, caja.width).filas[indice]!;
+    if (nodo === undefined || caja === undefined || indice < 0) return undefined;
+    const fila = colocarEnCaja(metricas, contenidoDeNodo(nodo, metricas), caja.width).filas[indice]!;
     return { x: caja.x + fila.x, y: caja.y + fila.y, width: fila.width, height: fila.height };
   }
   const arista = vista.edges.find((a) => idDeArista(a) === elemento.id);

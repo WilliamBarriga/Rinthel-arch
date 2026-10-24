@@ -103,12 +103,27 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-separado', { 'border-top': '1px solid var(--trazo, currentColor)' }],
     ['& .rd-fila', { position: 'absolute', 'white-space': 'nowrap', overflow: 'hidden', 'text-overflow': 'ellipsis', 'padding-left': px(metricas.margenDeTexto), 'box-sizing': 'border-box', 'font-family': css(estilo.fuenteMono), 'font-size': px(metricas.fontSize * metricas.escalaAtributo) }],
     ...reglasDeTexto(estilo),
-    ['& .rd-icono', { position: 'absolute' }],
+    ['& .rd-icono', { position: 'absolute', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'box-sizing': 'border-box' }],
+    ...reglasDeIcono(estilo),
     ['& .rd-control', { position: 'absolute', 'text-align': 'center', cursor: 'pointer', 'font-family': css(estilo.fuenteMono) }],
     ['& .rd-estado', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'none', 'border-radius': radio }],
     ['& [data-atenuado]', { opacity: num(estilo.estados.atenuado.opacidad) }],
     ...(Object.keys(estilo.estados) as EstadoVisual[]).filter((estado) => estado !== 'atenuado').map((estado): [string, Declaraciones] => [`& .rd-estado[data-state="${estado}"]`, declaracionesDeEstado(estilo, estado)]),
   ];
+}
+
+/** Aspecto del Slot `icon` segun su estilo `icon`: caja (radio, relleno, borde) o punto; el lado ya lo fijo la colocacion. */
+function reglasDeIcono(estilo: Estilo): Array<[string, Declaraciones]> {
+  const props = estilo.pintura.nodo.textos.icon?.props ?? {};
+  const { radius, fill, border } = props;
+  const reglas: Array<[string, Declaraciones]> = [
+    [
+      '& .rd-icono[data-variante="box"]',
+      { 'border-radius': px(radius ?? 6), ...(fill !== undefined && { background: css(fill) }), ...(border !== undefined && { border: `1px solid ${css(border)}` }) },
+    ],
+    ['& .rd-icono[data-variante="dot"]', { 'border-radius': '50%', background: fill !== undefined ? css(fill) : 'currentColor', ...(border !== undefined && { border: `1px solid ${css(border)}` }) }],
+  ];
+  return reglas;
 }
 
 /** Estilo de texto (`text`) de cada Slot que el Tema lo declara; solo pinta, no cambia el espacio reservado. */

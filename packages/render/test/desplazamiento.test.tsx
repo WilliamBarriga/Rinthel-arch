@@ -29,7 +29,7 @@ const capas = (sombra: Record<string, number>) => [
 ];
 
 const temaCon = (nodoExtra: Record<string, unknown> = {}): TemaResuelto =>
-  ({ ...TEMA_NEUTRO, nodo: { slots: ['title'], tipos: {}, estados: {}, capas: capas({ 'offset-x': 4, 'offset-y': -3, grow: 2 }), ...nodoExtra } }) as unknown as TemaResuelto;
+  ({ ...TEMA_NEUTRO, nodo: { slots: TEMA_NEUTRO.nodo.slots, tipos: {}, estados: {}, capas: capas({ 'offset-x': 4, 'offset-y': -3, grow: 2 }), ...nodoExtra } }) as unknown as TemaResuelto;
 
 async function dibujar(theme: TemaResuelto, extra: Partial<DiagramProps> = {}) {
   const view = vista();

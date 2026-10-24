@@ -7,8 +7,8 @@
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
-import { atributosVisibles, colocarEnCaja, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo } from 'tema';
-import type { Metricas, Rect } from 'tema';
+import { colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo } from 'tema';
+import type { Metricas, NombreDeSlot, Rect } from 'tema';
 
 import { pintarMarcadores, pintarTrazos } from './aristas';
 import { limpiarValorCss, num } from './elemento';
@@ -43,20 +43,35 @@ function altoDeEncabezado(metricas: Metricas): number {
   return Math.round(2 * (metricas.baseDeTitulo - metricas.fontSize * 0.35));
 }
 
+/** Lo que un pintor de Slot necesita saber del Nodo que dibuja. */
+interface ContextoDeSlot {
+  estilo: Estilo;
+  datos: DatosDeNodo;
+  /** Atributos que se dibujan (vacio si el nivel de detalle los oculta). */
+  atributos: readonly Atributo[];
+}
+
 /**
- * Contenido de un Nodo (hoja, o Grupo colapsado): Slot `title` centrado, icono y
- * Slot `attrs` con una fila por Atributo. `conAtributos`: si se dibujan las filas.
+ * Un pintor por Slot del catalogo, tabla exhaustiva: anadir un Slot a `tema` sin
+ * pintor aqui rompe el typecheck. Cada pintor dibuja su Slot en el rectangulo que
+ * la colocacion de `tema` le dio, sin posiciones propias.
+ */
+const PINTORES_DE_SLOT: { readonly [S in NombreDeSlot]: (contexto: ContextoDeSlot, rect: Rect) => Elemento[] } = {
+  title: ({ datos }, rect) => [slotDeTexto('title', 'rd-title', rect, datos.texto)],
+  icon: ({ estilo, datos }, rect) => pintarIcono(estilo, datos.nodo, datos.trazo, datos.icons, rect, variantePropia(estilo)),
+  attrs: ({ estilo, datos, atributos }, rect) => (atributos.length === 0 ? [] : [pintarAtributos(estilo, datos.nodo.id, atributos, rect)]),
+};
+
+/**
+ * Contenido de un Nodo (hoja, o Grupo colapsado): cada Slot que el Tema lista, en
+ * su rectangulo. `conAtributos`: si se dibujan las filas de `attrs`.
  */
 export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: boolean }): Elemento[] {
-  const { nodo, caja: c, trazo, texto, conAtributos, icons } = datos;
-  const metricas = metricasDeHoja(estilo.tabla, nodo);
-  const atributos = conAtributos ? atributosVisibles(nodo, metricas) : [];
-  const { title, attrs } = colocarEnCaja(metricas, atributos.length, c.width).slots;
-  return [
-    ...(title === undefined ? [] : [slotDeTexto('title', 'rd-title', title, texto)]),
-    ...pintarIcono(estilo, nodo, trazo, icons),
-    ...(attrs === undefined || atributos.length === 0 ? [] : [pintarAtributos(estilo, nodo.id, atributos, attrs)]),
-  ];
+  const metricas = metricasDeHoja(estilo.tabla, datos.nodo);
+  const contenido = contenidoDeNodo(datos.nodo, metricas);
+  const { slots } = colocarEnCaja(metricas, contenido, datos.caja.width);
+  const contexto = { estilo, datos, atributos: datos.conAtributos ? contenido.atributos : [] };
+  return (Object.keys(slots) as NombreDeSlot[]).flatMap((slot) => PINTORES_DE_SLOT[slot](contexto, slots[slot]!));
 }
 
 /** Contenido de un Grupo abierto: titulo arriba a la izquierda e icono (sus hijos son Nodos de otras capas). */
@@ -64,22 +79,35 @@ export function pintarGrupo(estilo: Estilo, datos: DatosDeNodo): Elemento[] {
   const { metricas } = estilo;
   const ancho = Math.max(0, datos.caja.width - metricas.margenDeTexto - 2 * metricas.margenDeControl);
   const encabezado = { x: metricas.margenDeTexto, y: 0, width: ancho, height: altoDeEncabezado(metricas) };
-  return [slotDeTexto('title', 'rd-title rd-encabezado', encabezado, datos.texto), ...pintarIcono(estilo, datos.nodo, datos.trazo, datos.icons)];
+  const rect = { x: metricas.margenIcono, y: metricas.margenIcono, width: metricas.iconoLado, height: metricas.iconoLado };
+  return [slotDeTexto('title', 'rd-title rd-encabezado', encabezado, datos.texto), ...pintarIcono(estilo, datos.nodo, datos.trazo, datos.icons, rect, 'plain')];
 }
 
-/** Icono del Tipo de nodo, inline en la esquina de la cabecera. Solo se incrusta si pasa `sanearIcono`. */
-function pintarIcono(estilo: Estilo, nodo: NodoResuelto, trazo: string, icons?: IconProvider): Elemento[] {
-  const { metricas } = estilo;
-  const crudo = nodo.icon === undefined ? undefined : icons?.resolve(nodo.icon);
+/** Variante del Slot `icon` segun su estilo (`plain` sin estilo). */
+function variantePropia(estilo: Estilo): string {
+  return String(estilo.pintura.nodo.textos.icon?.props['variant'] ?? 'plain');
+}
+
+/**
+ * Icono del Tipo de nodo dentro de `rect`. Variantes: `plain` (el glifo),
+ * `box` (glifo en una caja con radio, relleno y borde) y `dot` (punto de color,
+ * sin glifo). Solo se incrusta el glifo si pasa `sanearIcono`; el aspecto de la
+ * caja y del punto lo da la hoja.
+ */
+function pintarIcono(estilo: Estilo, nodo: NodoResuelto, trazo: string, icons: IconProvider | undefined, rect: Rect, variante: string): Elemento[] {
+  if (nodo.icon === undefined) return [];
+  const atributos = { class: 'rd-icono', 'data-slot': 'icon', 'data-icon': nodo.icon, 'data-variante': variante, style: enRect(rect, `color:${limpiarValorCss(String(estilo.pintura.nodo.textos.icon?.props['color'] ?? trazo))};`) };
+  if (variante === 'dot') return [{ tag: 'div', attrs: atributos }];
+  const crudo = icons?.resolve(nodo.icon);
   const svg = crudo === undefined ? undefined : sanearIcono(crudo);
-  if (nodo.icon === undefined || svg === undefined) return [];
-  const lado = num(metricas.iconoLado);
-  const dimensionado = svg.replace(/<svg\b([^>]*)>/, (_, atributos: string) => {
-    const sinMedidas = atributos.replace(/\s(?:width|height)\s*=\s*("[^"]*"|'[^']*')/g, '');
+  if (svg === undefined) return variante === 'box' ? [{ tag: 'div', attrs: atributos }] : [];
+  // En caja el glifo deja un margen; suelto ocupa todo el rectangulo.
+  const lado = num(variante === 'box' ? Math.round(Math.min(rect.width, rect.height) * 0.6) : Math.min(rect.width, rect.height));
+  const dimensionado = svg.replace(/<svg\b([^>]*)>/, (_, atributosDelSvg: string) => {
+    const sinMedidas = atributosDelSvg.replace(/\s(?:width|height)\s*=\s*("[^"]*"|'[^']*')/g, '');
     return `<svg width="${lado}" height="${lado}"${sinMedidas}>`;
   });
-  const rect = { x: metricas.margenIcono, y: metricas.margenIcono, width: metricas.iconoLado, height: metricas.iconoLado };
-  return [{ tag: 'div', attrs: { class: 'rd-icono', 'data-icon': nodo.icon, style: enRect(rect, `color:${limpiarValorCss(trazo)};`) }, html: dimensionado }];
+  return [{ tag: 'div', attrs: atributos, html: dimensionado }];
 }
 
 /** Slot `attrs`: una fila de texto por Atributo, en orden, cada una en su rectangulo (relativo al Slot). */

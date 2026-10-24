@@ -16,7 +16,7 @@ const tema = (
     name: 't',
     palette,
     tokens: { ...TEMA_NEUTRO.tokens, ...tokens },
-    nodo: { capas, slots: ['title', 'attrs'], tipos: {}, estados: {}, ...extra },
+    nodo: { capas, slots: TEMA_NEUTRO.nodo.slots, tipos: {}, estados: {}, ...extra },
   }) as TemaResuelto;
 
 describe('razon de contraste (WCAG)', () => {
