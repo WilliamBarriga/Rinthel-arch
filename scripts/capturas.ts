@@ -54,7 +54,7 @@ function rutaDeChromium(): string {
 }
 
 async function capturarGaleria(navegador: Browser, url: string, vista: string, destino: string): Promise<void> {
-  const contexto = await navegador.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1, reducedMotion: 'reduce' });
+  const contexto = await navegador.newContext({ viewport: VIEWPORT, deviceScaleFactor: 2, reducedMotion: 'reduce' });
   const pagina = await contexto.newPage();
   const listo = '.rd-vista[data-layout="listo"]';
   await pagina.goto(`${url}#p=${encodeURIComponent(vista)}`);
@@ -69,7 +69,7 @@ async function capturarGaleria(navegador: Browser, url: string, vista: string, d
 }
 
 async function capturarPrototipo(navegador: Browser, url: string, variante: string, destino: string): Promise<void> {
-  const contexto = await navegador.newContext({ viewport: VIEWPORT, deviceScaleFactor: 1, reducedMotion: 'reduce' });
+  const contexto = await navegador.newContext({ viewport: VIEWPORT, deviceScaleFactor: 2, reducedMotion: 'reduce' });
   const pagina = await contexto.newPage();
   await pagina.goto(`${url}?variant=${variante}&vista=abierto`, { waitUntil: 'load' });
   // El prototipo rellena `#st` tras medir el texto real contra las cajas del layout.
