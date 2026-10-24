@@ -9,7 +9,7 @@ import type { Tema } from 'canonico';
 
 import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
 import { DEFINICION_DE_SLOT, SLOTS, construirPrimitiva } from './catalogo';
-import type { NombreDeSlot, UbicacionDePrimitiva } from './catalogo';
+import type { NombreDePrimitiva, NombreDeSlot, Primitiva, UbicacionDePrimitiva } from './catalogo';
 import { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, esCaja } from './disposicion';
 import type { CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { ESTADOS, aplicarOps, opTocaMetricas, validarOps } from './parches';
@@ -70,8 +70,9 @@ export const opSchema = z.strictObject({
   animacion: animacionSchema.nullable().optional(),
 });
 
+/** Una Primitiva suelta; el nombre se comprueba contra el catalogo en `resolverTema`, aqui solo que sea texto no vacio. */
 const primitivaSchema = z.strictObject({
-  tipo: z.string().min(1),
+  tipo: z.custom<NombreDePrimitiva>((valor) => typeof valor === 'string' && valor.length > 0),
   props: z.record(z.string(), z.union([z.string(), z.number()])),
 });
 
@@ -245,7 +246,7 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
     }
   };
   recorrer(bloque.slots, 'slots');
-  const estiloDeSlot = (textos: Partial<Record<NombreDeSlot, { tipo: string; props: Record<string, string | number> }>>, ruta: Array<string | number>): void => {
+  const estiloDeSlot = (textos: Partial<Record<NombreDeSlot, Primitiva>>, ruta: Array<string | number>): void => {
     for (const [slot, texto] of Object.entries(textos)) {
       const props = Object.entries(texto.props).map(([clave, valor]) => ({ clave, valor }));
       for (const error of construirPrimitiva(texto.tipo, props, tema.palette, 'texto-slot').errores) falla([...ruta, slot, ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);

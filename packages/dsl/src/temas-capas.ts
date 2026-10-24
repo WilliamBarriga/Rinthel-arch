@@ -8,12 +8,14 @@
  */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
-import { resolverTokens, validarOps } from 'tema';
+import { validarOps } from 'tema';
 import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, UbicacionDePrimitiva } from 'tema';
 
-import type { LayerProp, PartDecl, ThemeLayer, ThemeUse } from './generated/ast';
+import type { ThemeLayer, ThemeUse } from './generated/ast';
 import { issueConSugerencia, rangoDe } from './posiciones';
 import { compilarAnimacionDeCapa } from './temas-animacion';
+import { inicioDePropiedad, propiedadDeClave, propiedadesResueltas } from './temas-comun';
+import type { Contexto } from './temas-comun';
 
 /** Donde se definio por ultima vez una Capa de la pila base; sirve de `related`. */
 export interface Sitio {
@@ -22,17 +24,7 @@ export interface Sitio {
   column: number;
 }
 
-export interface ParteDeclarada {
-  archivo: string;
-  ast: PartDecl;
-  nombre: TextRange;
-}
-
-export interface ContextoDeBloque {
-  archivo: string;
-  partes: ReadonlyMap<string, ParteDeclarada>;
-  paleta: Readonly<Record<string, string>>;
-  tokens: Readonly<Record<string, string>>;
+export interface ContextoDeBloque extends Contexto {
   /** `definir` solo en el primer bloque de un Tema sin Capas heredadas. */
   modo: 'definir' | 'parchear';
   /** Donde se usan las Capas del bloque; `capa-nodo` si falta. */
@@ -41,7 +33,6 @@ export interface ContextoDeBloque {
   candidatas: ReadonlyArray<readonly CapaDeTema[]>;
   /** Sitio de cada Capa de la pila base; el bloque lo actualiza con lo que define. */
   origenes: Map<string, Sitio>;
-  issues: Issue[];
 }
 
 interface Elemento {
@@ -69,29 +60,11 @@ function expandir(items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string, 
   });
 }
 
-/**
- * Propiedades escritas de una Capa como pares clave-valor para el catalogo.
- * `offset x y` (dos valores) se expande a `offset-x` y `offset-y`; un segundo
- * valor en cualquier otra clave se conserva en el valor para que el catalogo
- * lo rechace con su mensaje habitual.
- */
-export function propiedadesEscritas(props: readonly LayerProp[]): Array<{ clave: string; valor: string }> {
-  return props.flatMap(({ key, value, second }) => {
-    if (second === undefined) return [{ clave: key, valor: value }];
-    if (key === 'offset') return [{ clave: 'offset-x', valor: value }, { clave: 'offset-y', valor: second }];
-    return [{ clave: key, valor: `${value} ${second}` }];
-  });
-}
-
-/** La propiedad escrita que origino `clave` (`offset-x` y `offset-y` salen de `offset`); sirve para situar un error. */
-export const propiedadDeClave = (props: readonly LayerProp[], clave: string): LayerProp | undefined =>
-  props.find(({ key, second }) => key === clave || (key === 'offset' && second !== undefined && (clave === 'offset-x' || clave === 'offset-y')));
-
 const sitioDe = (archivo: string, rango: TextRange): Sitio => ({ file: archivo, ...rango.start });
 
 function aOp(elemento: Elemento, ctx: ContextoDeBloque): { op: OpDeCapa; errores: ErrorDeCatalogo[] } {
   const { item } = elemento;
-  const { props, errores } = resolverTokens(propiedadesEscritas(item.props), ctx.tokens);
+  const { props, errores } = propiedadesResueltas(item.props, ctx.tokens);
   const op: OpDeCapa = {
     nombre: item.name,
     props: Object.fromEntries(props.map(({ clave, valor }) => [clave, valor])),

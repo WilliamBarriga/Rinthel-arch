@@ -7,9 +7,10 @@
  * Cero warnings de contraste.
  */
 import { TEMA_NEUTRO } from './tema';
+import type { Primitiva } from './catalogo';
 import type { TemaResuelto } from './tema';
 
-const texto = (props: Record<string, string | number>) => ({ tipo: 'text', props: { weight: 400, style: 'normal', transform: 'none', tracking: 0, radius: 0, pad: 0, color: 'white', ...props } });
+const texto = (props: Record<string, string | number>) : Primitiva => ({ tipo: 'text', props: { weight: 400, style: 'normal', transform: 'none', tracking: 0, radius: 0, pad: 0, color: 'white', ...props } });
 
 export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
   ...TEMA_NEUTRO,

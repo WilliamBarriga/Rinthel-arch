@@ -139,6 +139,6 @@ describe('Metricas de la Arista', () => {
   });
 
   it('un Tema con una Arista invalida no cumple el contrato', () => {
-    expect(() => resolverTema(conArista({ fin: { tipo: 'flecha', props: {} } }))).toThrow(/arista\.fin/);
+    expect(() => resolverTema(conArista({ fin: { tipo: 'flecha' as never, props: {} } }))).toThrow(/arista\.fin/);
   });
 });

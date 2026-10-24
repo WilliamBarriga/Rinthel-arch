@@ -11,19 +11,11 @@ import type { Animacion, AnimacionDeNodo, ErrorDeCatalogo, ParametroDeAnimacion 
 
 import type { AnimParam, Duracion, NodeItem, ThemeEnter, ThemeExit, ThemeLayer, ThemeStagger, ThemeTransition } from './generated/ast';
 import { aRango, rangoDe } from './posiciones';
+import { aIssue as situar } from './temas-comun';
 
 type Ast = Parameters<typeof rangoDe>[0];
 
-function aIssue(archivo: string, error: ErrorDeCatalogo, rango: TextRange): Issue {
-  return {
-    code: error.codigo,
-    severity: 'error',
-    file: archivo,
-    ...rango.start,
-    message: error.mensaje,
-    ...(error.hint !== undefined && { hint: error.hint }),
-  };
-}
+const aIssue = (archivo: string, error: ErrorDeCatalogo, rango: TextRange): Issue => situar(archivo, error, rango.start);
 
 /** Pasa los parametros del AST a la forma del catalogo; una unidad desconocida es un error de valor. */
 function leerParametros(params: readonly AnimParam[], archivo: string, issues: Issue[]): ParametroDeAnimacion[] {

@@ -11,11 +11,10 @@ import type { CapaDeTema, TemaResuelto } from 'tema';
 import type { PageItem, ThemeLayer, ThemeUse } from './generated/ast';
 import { compilarBloque } from './temas-capas';
 import type { ContextoDeBloque } from './temas-capas';
-
-type Contexto = Pick<ContextoDeBloque, 'archivo' | 'partes' | 'paleta' | 'tokens' | 'issues' | 'origenes'>;
+import type { Contexto } from './temas-comun';
 
 /** Aplica los `page { ... }` de un Tema sobre `tema.pagina` (heredada del padre o vacia). */
-export function compilarPagina(items: readonly PageItem[], tema: TemaResuelto, ctx: Contexto): void {
+export function compilarPagina(items: readonly PageItem[], tema: TemaResuelto, ctx: Contexto & Pick<ContextoDeBloque, 'origenes'>): void {
   const delBloque = items.filter((item): item is ThemeLayer | ThemeUse => item.$type === 'ThemeLayer' || item.$type === 'ThemeUse');
   const modo = tema.pagina.capas.length === 0 ? 'definir' : 'parchear';
   const ops = compilarBloque(delBloque, {

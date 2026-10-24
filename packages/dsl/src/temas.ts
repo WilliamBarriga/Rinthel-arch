@@ -30,7 +30,8 @@ import { compilarSlots } from './temas-slots';
 import { compilarAnimacionDeNodo } from './temas-animacion';
 import { compilarBloque } from './temas-capas';
 import { compilarPagina } from './temas-pagina';
-import type { ContextoDeBloque, ParteDeclarada, Sitio } from './temas-capas';
+import type { ContextoDeBloque, Sitio } from './temas-capas';
+import type { ParteDeclarada } from './temas-comun';
 
 /** Un `theme` del DSL con el sitio donde se declaro. */
 export interface TemaDeclarado {
@@ -299,6 +300,12 @@ function todasLasPilas(tema: TemaResuelto): CapaDeTema[][] {
   return [...sobreTipos, ...porEstado];
 }
 
+/** `collapsed`: el parche del Grupo cerrado. No es un Estado de `tema` (no es de interaccion): solo el Grupo lo admite. */
+const ESTADO_COLAPSADO = 'collapsed';
+
+/** Los estados que admite cada elemento en `state <nombre>`. */
+const ESTADOS_DE: Record<ElementoDeTema, readonly string[]> = { nodo: ESTADOS, grupo: [...ESTADOS, ESTADO_COLAPSADO] };
+
 /** La pila base y la de cada Tipo con parches, aplicados sobre ella. */
 function pilasSobreTipos(tema: TemaResuelto, base: CapaDeTema[], elemento: ElementoDeTema): CapaDeTema[][] {
   return [base, ...Object.values(tema[elemento].tipos).map((ops) => aplicarOps(base, ops, tema.palette, 'parchear').pila)];
@@ -332,6 +339,7 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
   const { partes, tipos, issues } = entorno;
   const contexto = { archivo, partes, paleta: tema.palette, tokens: tema.tokens, origenes, issues };
   const bloque = tema[elemento];
+  const colapsable = ESTADOS_DE[elemento].includes(ESTADO_COLAPSADO);
   const delNodo = items.filter((item): item is NodeItem => item.$type !== 'GroupPadding');
 
   // 1) Pila base: Capas y `use` del propio bloque; despues los `slots` (la cabecera, en el Grupo) y el padding.
@@ -370,16 +378,16 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
 
   // 3) Parches por estado, sobre la pila base o la de cualquier Tipo (y, en el Grupo, tambien cerrado).
   const sobreTipos = pilasSobreTipos(tema, base, elemento);
-  const conColapso = elemento === 'grupo' ? [...sobreTipos, ...sobreTipos.map((pila) => aplicarOps(pila, tema.grupo.colapsado.ops, tema.palette, 'parchear').pila)] : sobreTipos;
+  const conColapso = colapsable ? [...sobreTipos, ...sobreTipos.map((pila) => aplicarOps(pila, tema.grupo.colapsado.ops, tema.palette, 'parchear').pila)] : sobreTipos;
   for (const item of delNodo) {
     if (item.$type !== 'ThemeState') continue;
-    if (elemento === 'grupo' && item.name === 'collapsed') {
+    if (colapsable && item.name === ESTADO_COLAPSADO) {
       compilarColapsado(item, tema, { ...contexto, entorno, sobreTipos });
       continue;
     }
     const parseado = parsearEstado(item.name);
     if ('error' in parseado) {
-      issues.push(issueConSugerencia({ code: parseado.error.code, message: parseado.error.message }, archivo, item, 'name', elemento === 'grupo' ? [...ESTADOS, 'collapsed'] : ESTADOS));
+      issues.push(issueConSugerencia({ code: parseado.error.code, message: parseado.error.message }, archivo, item, 'name', ESTADOS_DE[elemento]));
       continue;
     }
     const { estado } = parseado;
@@ -424,7 +432,7 @@ function compilarColapsado(item: ThemeState, tema: TemaResuelto, ctx: Omit<Conte
   const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');
   const propios = new Map(ctx.origenes);
   const ops = compilarBloque(capas, { ...ctx, origenes: propios, modo: 'parchear', candidatas: ctx.sobreTipos });
-  anotarOrigenes(entorno.porColapso, 'collapsed', propios, ctx.origenes);
+  anotarOrigenes(entorno.porColapso, ESTADO_COLAPSADO, propios, ctx.origenes);
   colapsado.ops = [...colapsado.ops, ...ops];
 }
 

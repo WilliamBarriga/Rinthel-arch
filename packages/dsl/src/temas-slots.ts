@@ -5,14 +5,13 @@
  * cada Slot (Primitiva `text` o `icon`) en `nodo.textos`. Solo traduce y situa
  * los errores; las reglas son del catalogo.
  */
-import { CODIGOS } from 'canonico';
-import { DEFINICION_DE_SLOT, construirDisposicion, resolverTokens } from 'tema';
+import { DEFINICION_DE_SLOT, construirDisposicion } from 'tema';
 import type { CajaDeSlots, ElementoDeTema, NombreDeSlot, EntradaDeCaja, EntradaDeSlot, ErrorDeCatalogo, Primitiva, PropiedadEscrita } from 'tema';
 
 import type { LayerProp, SlotBox, SlotEntry, ThemeSlots } from './generated/ast';
 import { aRango, rangoDe } from './posiciones';
-import { aIssue, primitivaSuelta } from './temas-arista';
-import type { Contexto } from './temas-arista';
+import { aIssue, inicioDePropiedad, propiedadDeClave, propiedadesResueltas, primitivaSuelta } from './temas-comun';
+import type { Contexto } from './temas-comun';
 
 type Hijo = SlotBox | SlotEntry;
 type Origen = ThemeSlots | SlotBox | SlotEntry | LayerProp;
@@ -21,7 +20,7 @@ const esCaja = (hijo: Hijo): hijo is SlotBox => hijo.$type === 'SlotBox';
 
 /** Posicion donde situar un error: la propiedad culpable (clave o valor segun el error) o el elemento. */
 function sitio(origen: Origen, error: ErrorDeCatalogo): { line: number; column: number } {
-  if (origen.$type === 'LayerProp') return rangoDe(origen, error.codigo === CODIGOS.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value').start;
+  if (origen.$type === 'LayerProp') return inicioDePropiedad(origen, error);
   const propiedad = origen.$type === 'SlotEntry' ? 'name' : 'direction';
   const rango = rangoDe(origen, propiedad);
   // `slots { ... }` sin direccion escrita: se situa en el inicio del bloque.
@@ -31,19 +30,16 @@ function sitio(origen: Origen, error: ErrorDeCatalogo): { line: number; column: 
 /** Lo que un bloque `slots { ... }` fija: la disposicion y el estilo de cada Slot (el Nodo, la cabecera del Grupo o su parche `collapsed`). */
 export interface DestinoDeSlots {
   slots?: CajaDeSlots | undefined;
-  textos?: Partial<Record<NombreDeSlot, { tipo: string; props: Record<string, string | number> }>> | undefined;
+  textos?: Partial<Record<NombreDeSlot, Primitiva>> | undefined;
 }
 
 /** Aplica un bloque `slots { ... }` sobre `destino`: disposicion y estilo de cada Slot. Los errores quedan en `ctx.issues`. */
 export function compilarSlots(item: ThemeSlots, destino: DestinoDeSlots, ctx: Contexto, elemento: ElementoDeTema = 'nodo'): void {
   const errores: Array<{ error: ErrorDeCatalogo; origen: Origen }> = [];
   const props = (lista: readonly LayerProp[]): Array<PropiedadEscrita<Origen>> => {
-    const resueltas = resolverTokens(lista.map(({ key, value }) => ({ clave: key, valor: value })), ctx.tokens);
-    for (const error of resueltas.errores) errores.push({ error, origen: lista.find((p) => p.key === error.clave) ?? item });
-    return resueltas.props.flatMap(({ clave, valor }) => {
-      const prop = lista.find((p) => p.key === clave);
-      return prop === undefined ? [] : [{ clave, valor, ref: prop }];
-    });
+    const resueltas = propiedadesResueltas(lista, ctx.tokens);
+    for (const error of resueltas.errores) errores.push({ error, origen: (error.clave === undefined ? undefined : propiedadDeClave(lista, error.clave)) ?? item });
+    return resueltas.props;
   };
   const caja = (nodo: ThemeSlots | SlotBox): EntradaDeCaja<Origen> => ({
     ref: nodo,
@@ -62,13 +58,13 @@ export function compilarSlots(item: ThemeSlots, destino: DestinoDeSlots, ctx: Co
 
   destino.slots = disposicion;
   const entradas = hojas(item.children);
-  const textos = Object.fromEntries(Object.entries(destino.textos ?? {}).filter(([slot]) => entradas.some((e) => e.name === slot))) as NonNullable<DestinoDeSlots['textos']>;
+  const textos: NonNullable<DestinoDeSlots['textos']> = Object.fromEntries(Object.entries(destino.textos ?? {}).filter(([slot]) => entradas.some((e) => e.name === slot)));
   destino.textos = textos;
   for (const entrada of entradas) {
     const propias = entrada.props.filter((p) => p.key !== 'align');
     if (propias.length === 0 || !Object.hasOwn(DEFINICION_DE_SLOT, entrada.name)) continue;
     const estilo = primitivaSuelta(DEFINICION_DE_SLOT[entrada.name as NombreDeSlot].estilo, propias, 'texto-slot', ctx, rangoDe(entrada, 'name').start);
-    if (estilo !== undefined) (textos as Record<string, Primitiva>)[entrada.name] = estilo;
+    if (estilo !== undefined) textos[entrada.name as NombreDeSlot] = estilo;
   }
 }
 
