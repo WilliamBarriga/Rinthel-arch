@@ -7,7 +7,8 @@ import type { VistaResuelta } from 'canonico';
 
 import { claveDeTexto } from './medicion';
 import type { TextoAMedir } from './medicion';
-import { contenidoDeNodo, metricasDeHoja } from './metricas';
+import { contenidoDeNodo } from './contenido';
+import { metricasDeHoja } from './metricas';
 import type { TablaDeMetricas } from './metricas';
 import { textosDeNodo } from './slots';
 

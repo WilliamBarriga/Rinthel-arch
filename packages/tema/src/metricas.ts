@@ -8,18 +8,17 @@
  * familia de la fuente del Tema; una medicion real entraria aqui, como
  * adaptador de `metricasDe`.
  */
-import type { Atributo, NodoResuelto, Tema } from 'canonico';
+import type { NodoResuelto, Tema } from 'canonico';
 
 import { CATALOGO } from './catalogo';
 import { anchoDeTexto } from './medicion';
 import type { MedicionDeMetricas, MedidasDeTexto } from './medicion';
 import type { DefinicionDePrimitiva, NombreDeSlot } from './catalogo';
-import { slotsDe } from './disposicion';
 import type { CajaDeSlots } from './disposicion';
+import { muestra } from './contenido';
 import { cascada } from './parches';
 import type { CapaDeTema } from './parches';
 import { alturaDeCabecera } from './slots';
-import type { ContenidoDeNodo } from './slots';
 import { resolverTema } from './tema';
 import type { TemaResuelto } from './tema';
 
@@ -235,50 +234,6 @@ export const comoTabla = (m: Metricas | TablaDeMetricas): TablaDeMetricas => ('g
 /** Parte de la clave de estructura que aportan las Metricas: igual si y solo si ningun elemento cambia de caja. */
 export function claveDeMetricas(tabla: TablaDeMetricas): string {
   return JSON.stringify(tabla, (clave, valor: unknown) => (clave === 'anchos' ? undefined : valor));
-}
-
-/**
- * Atributos que un Nodo muestra como filas: solo los de un Nodo hoja (un Grupo
- * abierto contiene Nodos; uno colapsado es hoja) y solo si el Tema lista el Slot
- * `attrs`. Una sola regla para `layout` (tamano y puertos) y `render` (dibujo).
- */
-export function atributosVisibles(
-  nodo: Pick<NodoResuelto, 'children' | 'attributes'>,
-  metricas: Pick<Metricas, 'disposicion'>,
-): readonly Atributo[] {
-  return nodo.children.length === 0 && muestra(metricas, 'attrs') ? nodo.attributes : [];
-}
-
-const listas = new WeakMap<CajaDeSlots, readonly NombreDeSlot[]>();
-
-/** Si la disposicion del Tema incluye el Slot (memoizado por disposicion: se consulta por cada Nodo). */
-export function muestra(metricas: Pick<Metricas, 'disposicion'>, slot: NombreDeSlot): boolean {
-  let lista = listas.get(metricas.disposicion);
-  if (lista === undefined) listas.set(metricas.disposicion, (lista = slotsDe(metricas.disposicion)));
-  return lista.includes(slot);
-}
-
-/** Lo que un Nodo aporta a la colocacion de Slots; una sola regla para `layout`, `render` y `shell`. */
-export function contenidoDeNodo(
-  nodo: Pick<NodoResuelto, 'children' | 'attributes' | 'label' | 'icon' | 'type' | 'description' | 'source' | 'collapsed' | 'childCount'>,
-  metricas: Pick<Metricas, 'disposicion'>,
-): ContenidoDeNodo {
-  const cuenta = nodo.collapsed ? nodo.childCount : undefined;
-  return {
-    // Sin Slot `counter`, un Grupo colapsado dice cuantos hijos esconde en el titulo.
-    titulo: cuenta !== undefined && !muestra(metricas, 'counter') ? `${nodo.label} (${cuenta})` : nodo.label,
-    atributos: atributosVisibles(nodo, metricas),
-    icono: nodo.icon !== undefined,
-    tipo: nodo.type,
-    descripcion: nodo.description,
-    ...(nodo.source[0] !== undefined && { fuente: nodo.source[0].ref }),
-    ...(cuenta !== undefined && { cuenta }),
-  };
-}
-
-/** Texto de la fila de un Atributo; `render` escribe lo mismo. */
-export function textoDeAtributo(atributo: Atributo): string {
-  return `${atributo.name}: ${atributo.type}`;
 }
 
 /** Caja de una etiqueta de Arista: texto a `escalaEtiqueta`, medido como el de los Nodos. */

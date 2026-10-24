@@ -27,7 +27,8 @@ import { esCaja, slotsDe } from './disposicion';
 import type { Alineacion, CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { anchoDeTexto } from './medicion';
 import type { TextoAMedir } from './medicion';
-import { muestra, textoDeAtributo } from './metricas';
+import { muestra, textoDeAtributo } from './contenido';
+import type { ContenidoDeNodo } from './contenido';
 import type { Metricas } from './metricas';
 
 export interface Rect {
@@ -131,21 +132,6 @@ export function colocarDisposicion(arbol: CajaDeSlots, medida: MedidaDeSlot, anc
   if (medido === undefined) return { slots, alto: 0 };
   colocar(medido, { x: 0, y: 0, width: ancho, height: medido.tam.height }, slots);
   return { slots, alto: medido.tam.height };
-}
-
-/** Lo que un Nodo aporta a la colocacion: su titulo, sus Atributos visibles y si tiene icono. */
-export interface ContenidoDeNodo {
-  titulo: string;
-  atributos: readonly Atributo[];
-  icono: boolean;
-  /** Tipo de nodo (Slot `badge`). */
-  tipo?: string;
-  /** Descripcion del Nodo (Slot `desc`); vacia: el Slot no reserva espacio. */
-  descripcion?: string;
-  /** Primera fuente del Nodo (Slot `footer`). */
-  fuente?: string;
-  /** Hijos que esconde un Grupo colapsado (Slot `counter`); solo existe en el colapsado. */
-  cuenta?: number;
 }
 
 export interface ColocacionDeNodo {

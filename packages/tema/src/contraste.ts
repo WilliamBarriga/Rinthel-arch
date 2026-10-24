@@ -9,7 +9,7 @@ import { CATALOGO } from './catalogo';
 import type { DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
 import { hexARgb } from './color';
 import { estiloResuelto } from './estilo';
-import { muestra } from './metricas';
+import { muestra } from './contenido';
 import { resolverTema } from './tema';
 import type { CapaPintada } from './estilo';
 import type { Estado } from './parches';
