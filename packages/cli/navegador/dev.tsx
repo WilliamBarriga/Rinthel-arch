@@ -81,11 +81,12 @@ function useComponentes(estado: Estado | undefined): ComponentesDeTema | undefin
 
 function layoutEnWorker(): AdaptadorDeLayout {
   let adaptador: Promise<AdaptadorDeLayout> | undefined;
-  return (vista, tema) => {
+  // Las medidas reales de texto (fuentes del Workspace) viajan al Worker: sin ellas el layout estima por caracter.
+  return (vista, tema, medidas) => {
     adaptador ??= fetch('/worker.js')
       .then((r) => r.text())
       .then((codigo) => adaptadorDeWorker(new Worker(URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' }))) as unknown as PuertoDeMensajes));
-    return adaptador.then((layout) => layout(vista, tema));
+    return adaptador.then((layout) => layout(vista, tema, medidas));
   };
 }
 
