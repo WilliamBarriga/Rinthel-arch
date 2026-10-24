@@ -26,6 +26,16 @@ const resumenDeNodoSchema = z.object({ id: z.string(), type: z.string(), title: 
 
 const comun = { contractVersion: z.literal(INSPECT_CONTRACT_VERSION) };
 
+/** Capa de una pila de Tema ya resuelta; `origen` es el parche que la fijo. */
+const capaDeTemaSchema = z.object({
+  nombre: z.string(),
+  primitiva: z.string(),
+  props: z.record(z.string(), z.union([z.string(), z.number()])),
+  encima: z.boolean(),
+  animada: z.boolean(),
+  origen: z.object(sitioSchema),
+});
+
 export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
   z.object({
     ...comun,
@@ -89,16 +99,9 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       tipo: z.string().optional(),
       estado: z.string().optional(),
       /** Pila de Capas resuelta, de abajo arriba; `origen` es el parche que la fijo. */
-      capas: z.array(
-        z.object({
-          nombre: z.string(),
-          primitiva: z.string(),
-          props: z.record(z.string(), z.union([z.string(), z.number()])),
-          encima: z.boolean(),
-          animada: z.boolean(),
-          origen: z.object(sitioSchema),
-        }),
-      ),
+      capas: z.array(capaDeTemaSchema),
+      /** Fondo de pagina: pila de rellenos de abajo arriba y si queda fijo al visor. */
+      pagina: z.object({ fijo: z.boolean(), capas: z.array(capaDeTemaSchema) }),
       /** Metricas del Nodo del Tipo pedido (o la base): lo unico que mueve el layout. */
       metricas: z.object({ fontSize: z.number(), slots: z.array(z.string()) }).catchall(z.unknown()),
       temaConCodigo: z.boolean(),

@@ -84,7 +84,7 @@ export { referenciaDelCatalogo } from './referencia';
 export { colocarEnCaja, colocarNodo } from './slots';
 export type { ColocacionDeNodo, Rect } from './slots';
 export { estiloResuelto } from './estilo';
-export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeNodo, PrimitivaPintada } from './estilo';
+export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeNodo, PinturaDePagina, PrimitivaPintada } from './estilo';
 export { aplicarOps, cascada, ESTADOS, opTocaMetricas, parsearEstado, validarOps } from './parches';
 export type { CapaDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa, ResultadoDeEstado } from './parches';
 export { resolverColor, validarColor } from './color';

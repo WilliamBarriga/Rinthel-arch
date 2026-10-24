@@ -1,0 +1,16 @@
+specification { node servicio { color rojo } }
+model { servicio a }
+view v { type architecture  include a }
+
+theme base {
+  palette { rojo "#dc2626"  papel "#fefce8"  tinta "#1f2937" }
+  page {
+    layer fondo solid { color papel }
+    layer puntos dots { color tinta/0.1  size 22 }
+    fixed
+  }
+}
+
+theme hijo extends base {
+  page { layer puntos { size 30 } }
+}

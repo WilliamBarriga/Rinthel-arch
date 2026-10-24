@@ -19,12 +19,13 @@ Un numero se escribe como `minimo a maximo (defecto)`; fuera de rango es un erro
 
 | Primitiva | Ubicacion | Propiedades | Metricas |
 | --- | --- | --- | --- |
-| `solid` | capa-nodo | `color` color de Paleta | no |
-| `gradient` | capa-nodo | `from` color de Paleta; `to` color de Paleta; `angle` 0 a 360 (180) | no |
-| `grid` | capa-nodo | `color` color de Paleta; `size` 2 a 200 (16); `width` 1 a 8 (1) | no |
-| `lines` | capa-nodo | `color` color de Paleta; `size` 2 a 200 (8); `width` 1 a 8 (1); `angle` 0 a 180 (45) | no |
-| `dots` | capa-nodo | `color` color de Paleta; `size` 4 a 200 (12); `radius` 1 a 50 (2) | no |
-| `noise` | capa-nodo | `frequency` 0.1 a 2 (0.8); `opacity` 0 a 1 (0.15) | no |
+| `solid` | capa-nodo, capa-pagina | `color` color de Paleta | no |
+| `gradient` | capa-nodo, capa-pagina | `from` color de Paleta; `to` color de Paleta; `angle` 0 a 360 (180) | no |
+| `radial` | capa-nodo, capa-pagina | `from` color de Paleta; `to` color de Paleta; `x` 0 a 100 (50); `y` 0 a 100 (50) | no |
+| `grid` | capa-nodo, capa-pagina | `color` color de Paleta; `size` 2 a 200 (16); `width` 1 a 8 (1) | no |
+| `lines` | capa-nodo, capa-pagina | `color` color de Paleta; `size` 2 a 200 (8); `width` 1 a 8 (1); `angle` 0 a 180 (45) | no |
+| `dots` | capa-nodo, capa-pagina | `color` color de Paleta; `size` 4 a 200 (12); `radius` 1 a 50 (2) | no |
+| `noise` | capa-nodo, capa-pagina | `frequency` 0.1 a 2 (0.8); `opacity` 0 a 1 (0.15) | no |
 
 ### Familia borde
 

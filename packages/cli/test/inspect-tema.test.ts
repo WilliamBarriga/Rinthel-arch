@@ -91,6 +91,24 @@ describe('inspect tema', () => {
     expect(r.stdout).toContain('Metricas:');
   });
 
+  it('muestra el fondo de pagina con el parche que fijo cada Capa y si queda fijo', async () => {
+    const raiz = resolve(__dirname, 'fixtures/tema-pagina');
+    const r = await json(['hijo'], raiz);
+
+    expect(r.exitCode).toBe(0);
+    const { pagina } = temaDe(r.salida);
+    expect(pagina.fijo).toBe(true);
+    expect(pagina.capas.map((c) => [c.nombre, c.primitiva, `${c.origen.file}:${c.origen.line}`])).toEqual([
+      ['fondo', 'solid', 'main.dg:8'],
+      ['puntos', 'dots', 'main.dg:15'],
+    ]);
+    expect(pagina.capas[1]?.props).toMatchObject({ size: 30 });
+
+    const texto = await run(['inspect', 'tema', 'hijo', '--workspace', raiz]);
+    expect(texto.stdout).toContain('Pagina: (fija al visor)');
+    expect(texto.stdout).toMatch(/puntos dots .*main\.dg:15/);
+  });
+
   it('un Workspace con errores no se consulta (codigo 1)', async () => {
     const r = await run(['inspect', 'tema', 'app', '--workspace', join(__dirname, 'fixtures/con-errores')]);
     expect(r.exitCode).toBe(1);

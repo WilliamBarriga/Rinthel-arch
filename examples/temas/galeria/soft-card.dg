@@ -6,6 +6,10 @@ theme soft-card {
     blue "#60a5fa"  purple "#a78bfa"  green "#34d399"  amber "#fbbf24"  red "#f87171"  gray "#a1a1aa"
   }
   tokens { background "#09090b"  foreground "#fafafa"  border "#a1a1aa"  radius 10 }
+  page {
+    layer puntos dots { color texto/0.1  size 22  radius 1 }
+    fixed
+  }
   node {
     layer caja rect { radius $radius }
     layer relleno solid { color texto/0.1 }

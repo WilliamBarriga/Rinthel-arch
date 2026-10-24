@@ -1,4 +1,4 @@
-/** Familia relleno: lo que cubre la caja. `solid` vive en `catalogo.ts`; aqui gradiente, patrones y ruido. */
+/** Familia relleno: lo que cubre la caja de un Nodo o la pagina. `solid` vive en `catalogo.ts`; aqui gradientes, patrones y ruido. */
 import type { DefinicionDePrimitiva } from '../catalogo';
 
 export const RELLENOS = {
@@ -6,6 +6,12 @@ export const RELLENOS = {
     familia: 'relleno',
     afectaMetricas: false,
     propiedades: { from: { tipo: 'color' }, to: { tipo: 'color' }, angle: { tipo: 'numero', min: 0, max: 360, defecto: 180 } },
+  },
+  /** Gradiente circular desde el punto `x`/`y` (porcentaje de la caja) hasta el 110% del radio. */
+  radial: {
+    familia: 'relleno',
+    afectaMetricas: false,
+    propiedades: { from: { tipo: 'color' }, to: { tipo: 'color' }, x: { tipo: 'numero', min: 0, max: 100, defecto: 50 }, y: { tipo: 'numero', min: 0, max: 100, defecto: 50 } },
   },
   grid: {
     familia: 'relleno',

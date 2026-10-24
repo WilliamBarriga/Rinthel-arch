@@ -1,5 +1,5 @@
 /**
- * Pintores de la Familia relleno (salvo `solid`, en `hoja.ts`). Todos pintan en
+ * Pintores de la Familia relleno. Todos salvo `solid` pintan en
  * `background-image`/`background-size`, que la hoja acumula en el orden de la
  * pila; el ruido es un SVG `feTurbulence` en un data URI, determinista y sin red.
  */
@@ -17,7 +17,9 @@ const ruido = (frecuencia: number, opacidad: number): string => {
 };
 
 export const PINTORES_DE_RELLENO = {
+  solid: ({ color }) => ({ background: css(color) }),
   gradient: ({ from, to, angle }) => capa(`linear-gradient(${Number(angle)}deg,${css(from)},${css(to)})`),
+  radial: ({ from, to, x, y }) => capa(`radial-gradient(circle at ${Number(x)}% ${Number(y)}%,${css(from)},${css(to)} 110%)`),
   grid: ({ color, size, width }) =>
     capa(
       `linear-gradient(to right,${css(color)} ${px(width)},transparent ${px(width)}),linear-gradient(to bottom,${css(color)} ${px(width)},transparent ${px(width)})`,

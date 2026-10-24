@@ -18,6 +18,7 @@ import { PINTORES_DE_BORDE } from './pintura/borde';
 import { FONDOS_ACUMULABLES, css, px } from './pintura/comun';
 import type { Declaraciones, Pintor } from './pintura/comun';
 import { PINTORES_DE_FORMA } from './pintura/forma';
+import { declaracionesDePagina } from './pintura/pagina';
 import { PINTORES_DE_RELLENO } from './pintura/relleno';
 
 export type { Declaraciones, Pintor };
@@ -25,7 +26,6 @@ export type { Declaraciones, Pintor };
 /** Un pintor por Primitiva del catalogo. El trazo puede venir de la variable `--trazo` del Nodo (su color de Tipo). */
 export const PINTORES: { readonly [P in NombreDePrimitivaEn<'capa-nodo'>]: Pintor } = {
   rect: ({ radius }) => ({ 'border-radius': px(radius) }),
-  solid: ({ color }) => ({ background: css(color) }),
   border: ({ color, width }) => ({ border: `${px(width)} solid var(--trazo, ${css(color)})` }),
   ...PINTORES_DE_FORMA,
   ...PINTORES_DE_RELLENO,
@@ -89,6 +89,7 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-capa', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'pointer-events': 'none' }],
     ['& .rd-aristas', { overflow: 'visible' }],
     ['& .rd-aristas [data-edge]', { 'pointer-events': 'stroke' }],
+    ['& .rd-pagina', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'pointer-events': 'none', ...declaracionesDePagina(estilo.pintura.pagina.capas) }],
     ['& .rd-caja', { position: 'absolute', left: '0', top: '0', contain: 'layout style' }],
     ['& .rd-nodo, & .rd-grupo', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'auto', ...caja }],
     ['& .rd-nodo[data-collapsed]', { 'border-style': 'dashed' }],

@@ -7,6 +7,11 @@ theme blueprint {
     blue "#bfe0ff"  purple "#d9ccff"  green "#c4f5df"  amber "#ffe3a8"  red "#ffc2c2"  gray "#cfdcef"
   }
   tokens { background "#0d3b73"  foreground "#e6f0ff"  border "#e6f0ff" }
+  page {
+    layer fina grid { color texto/0.06  size 20 }
+    layer gruesa grid { color texto/0.13  size 100 }
+    fixed
+  }
   node {
     layer forma rect
     layer relleno solid { color fondo }

@@ -171,14 +171,22 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
     const sitio = (estadoValido === undefined ? undefined : origen?.estados[estadoValido]?.[capa]) ?? (tipo === undefined ? undefined : origen?.tipos[tipo]?.[capa]) ?? origen?.base[capa];
     return sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line };
   };
-  const capas = cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido }) }).map((capa: CapaDeTema) => ({
+  const aCapa = (capa: CapaDeTema, sitio: Sitio) => ({
     nombre: capa.nombre,
     primitiva: capa.primitiva.tipo,
     props: capa.primitiva.props,
     encima: capa.encima === true,
     animada: capa.animacion !== undefined,
-    origen: sitioDe(capa.nombre),
-  }));
+    origen: sitio,
+  });
+  const capas = cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido }) }).map((capa: CapaDeTema) => aCapa(capa, sitioDe(capa.nombre)));
+  const pagina = {
+    fijo: tema.pagina.fijo,
+    capas: (tema.pagina.capas as CapaDeTema[]).map((capa) => {
+      const sitio = origen?.pagina[capa.nombre];
+      return aCapa(capa, sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line });
+    }),
+  };
   return {
     salida: {
       contractVersion: INSPECT_CONTRACT_VERSION,
@@ -191,6 +199,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
         ...(tipo !== undefined && { tipo }),
         ...(estadoValido !== undefined && { estado: estadoValido }),
         capas,
+        pagina,
         metricas: JSON.parse(JSON.stringify(metricasDeNodo(tablaDeMetricas(declarado), tipo))) as never,
         temaConCodigo: componentes.length > 0,
         componentes,
@@ -235,6 +244,11 @@ export function textoLegible(salida: SalidaDeInspect): string {
     for (const c of tema.capas) {
       const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
       lineas.push(`  ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`}${c.encima ? ' [encima]' : ''}${c.animada ? ' [animada]' : ''} ${sitio(c.origen)}`);
+    }
+    lineas.push(`Pagina:${tema.pagina.capas.length === 0 ? ' (solo el color background)' : tema.pagina.fijo ? ' (fija al visor)' : ' (se mueve con la camara)'}`);
+    for (const c of tema.pagina.capas) {
+      const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
+      lineas.push(`  ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`} ${sitio(c.origen)}`);
     }
     lineas.push('Metricas:');
     for (const [clave, valor] of Object.entries(tema.metricas)) lineas.push(`  ${clave}: ${typeof valor === 'object' ? JSON.stringify(valor) : String(valor)}`);

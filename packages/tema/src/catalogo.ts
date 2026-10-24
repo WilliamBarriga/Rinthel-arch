@@ -27,8 +27,8 @@ export type DefinicionDePropiedad =
   /** Nombre de un Componente de Tema: identificador que empieza en mayuscula. */
   | { readonly tipo: 'nombre' };
 
-/** Donde se usa una Primitiva: Capa de Nodo (defecto), Capa de Arista, marcador de extremo, etiqueta de Arista o estilo de texto de un Slot. */
-export type UbicacionDePrimitiva = 'capa-nodo' | 'capa-arista' | 'marcador' | 'etiqueta' | 'texto-slot';
+/** Donde se usa una Primitiva: Capa de Nodo (defecto), Capa de la pagina (solo las de la Familia relleno, que tambien valen en el Nodo), Capa de Arista, marcador de extremo, etiqueta de Arista o estilo de texto de un Slot. */
+export type UbicacionDePrimitiva = 'capa-nodo' | 'capa-arista' | 'marcador' | 'etiqueta' | 'texto-slot' | 'capa-pagina';
 
 export interface DefinicionDePrimitiva {
   readonly familia: 'forma' | 'relleno' | 'borde' | 'trazo' | 'marcador' | 'texto' | 'codigo' | FamiliaDeEfectos;
@@ -90,9 +90,15 @@ export interface ErrorDeCatalogo {
 
 const esPrimitiva = (nombre: string): nombre is NombreDePrimitiva => Object.hasOwn(CATALOGO, nombre);
 const ubicacionDe = (nombre: NombreDePrimitiva): UbicacionDePrimitiva => (CATALOGO[nombre] as DefinicionDePrimitiva).ubicacion ?? 'capa-nodo';
+/** La pagina admite los rellenos; el resto de las ubicaciones, solo las Primitivas declaradas para ella. */
+const valeEn = (nombre: NombreDePrimitiva, ubicacion: UbicacionDePrimitiva): boolean =>
+  ubicacion === 'capa-pagina' ? (CATALOGO[nombre] as DefinicionDePrimitiva).familia === 'relleno' : ubicacionDe(nombre) === ubicacion;
 /** Nombres de las Primitivas que valen en `ubicacion`. */
 export const primitivasDe = (ubicacion: UbicacionDePrimitiva): string[] =>
-  (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => ubicacionDe(nombre) === ubicacion);
+  (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => valeEn(nombre, ubicacion));
+/** Ubicaciones donde vale una Primitiva (para la referencia generada). */
+export const ubicacionesDe = (nombre: NombreDePrimitiva): UbicacionDePrimitiva[] =>
+  valeEn(nombre, 'capa-pagina') ? [ubicacionDe(nombre), 'capa-pagina'] : [ubicacionDe(nombre)];
 const esSlot = (nombre: string): nombre is NombreDeSlot => (SLOTS as readonly string[]).includes(nombre);
 
 export const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string; candidato?: string } => {
@@ -112,14 +118,14 @@ export function construirPrimitiva(
   paleta: Readonly<Record<string, string>>,
   ubicacion: UbicacionDePrimitiva = 'capa-nodo',
 ): { primitiva?: Primitiva; errores: ErrorDeCatalogo[] } {
-  if (!esPrimitiva(tipo) || ubicacionDe(tipo) !== ubicacion) {
+  if (!esPrimitiva(tipo) || !valeEn(tipo, ubicacion)) {
     const validas = primitivasDe(ubicacion);
     return {
       errores: [
         {
           codigo: CODIGOS.E_THEME_UNKNOWN_PRIMITIVE,
           mensaje: esPrimitiva(tipo)
-            ? `La Primitiva '${tipo}' no vale aqui (es de ${ubicacionDe(tipo)}); disponibles: ${validas.join(', ')}`
+            ? `La Primitiva '${tipo}' no vale aqui (es de ${ubicacionesDe(tipo).join(' y ')}); disponibles: ${validas.join(', ')}`
             : `Primitiva '${tipo}' desconocida; disponibles: ${validas.join(', ')}`,
           ...sugerir(tipo, validas),
         },
@@ -143,7 +149,7 @@ export function construirPrimitiva(
       });
     } else if (propiedad.tipo === 'color') {
       const expresion = String(valor);
-      const problemas = validarColor(expresion, paleta, ubicacion === 'capa-nodo' || ubicacion === 'texto-slot' ? 'nodo' : 'arista');
+      const problemas = validarColor(expresion, paleta, ubicacion === 'capa-nodo' || ubicacion === 'texto-slot' ? 'nodo' : ubicacion === 'capa-pagina' ? 'pagina' : 'arista');
       if (problemas.length === 0) resultado[clave] = expresion;
       for (const problema of problemas) {
         errores.push({

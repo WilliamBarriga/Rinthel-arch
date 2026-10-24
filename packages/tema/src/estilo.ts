@@ -63,6 +63,12 @@ export interface AnimacionDeNodo {
   escalonadoMs?: number;
 }
 
+/** Fondo de pagina: rellenos de abajo hacia arriba y si quedan fijos al visor. Sin Capas, solo el color `background` del Tema. */
+export interface PinturaDePagina {
+  capas: CapaPintada[];
+  fijo: boolean;
+}
+
 export interface Pintura {
   /** `seed N` del Tema (token `seed`); sin el, la semilla de cada Capa sale solo del id y del nombre. */
   semilla?: number;
@@ -70,6 +76,7 @@ export interface Pintura {
   nodo: PinturaDeNodo & { tipos: Record<string, PinturaDeNodo> };
   /** Reposo de la Arista y, por color de Paleta del Nodo de origen, la suya (`ORIGEN` toma ese color). */
   arista: PinturaDeArista & { origenes: Record<string, PinturaDeArista> };
+  pagina: PinturaDePagina;
 }
 
 export interface EstiloResuelto {
@@ -175,6 +182,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
         ...(resuelto.nodo.animacion !== undefined && { animacion: resuelto.nodo.animacion }),
         tipos: Object.fromEntries(Object.entries(opciones.tipos ?? {}).map(([tipo, color]) => [tipo, pinturaDe(tipo, color)])),
       },
+      pagina: { capas: pintar(resuelto.pagina.capas as CapaDeTema[], resuelto, undefined), fijo: resuelto.pagina.fijo },
       arista: {
         ...pintarArista(resuelto, undefined),
         origenes: Object.fromEntries(Object.keys(resuelto.palette).sort().map((color) => [color, pintarArista(resuelto, color)])),

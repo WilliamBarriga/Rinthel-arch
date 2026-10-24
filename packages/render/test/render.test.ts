@@ -38,6 +38,7 @@ const OSCURO: TemaResuelto = {
   tokens: { background: '#111827', foreground: '#f9fafb', border: '#4b5563', fontSize: '16px' },
   nodo: TEMA_NEUTRO.nodo,
   arista: TEMA_NEUTRO.arista,
+  pagina: TEMA_NEUTRO.pagina,
 };
 
 async function dibujar(tema: Tema, estado = {}): Promise<string> {

@@ -25,6 +25,7 @@ import { aRango, issueConSugerencia, rangoDeIndice } from './posiciones';
 import { compilarArista, compilarTextoDeSlots } from './temas-arista';
 import { compilarAnimacionDeNodo } from './temas-animacion';
 import { compilarBloque } from './temas-capas';
+import { compilarPagina } from './temas-pagina';
 import type { ParteDeclarada, Sitio } from './temas-capas';
 
 /** Un `theme` del DSL con el sitio donde se declaro. */
@@ -51,6 +52,8 @@ export interface OrigenDeTema {
   base: Record<string, Sitio>;
   tipos: Record<string, Record<string, Sitio>>;
   estados: Record<string, Record<string, Sitio>>;
+  /** Ultimo parche que fijo cada Capa del fondo de pagina. */
+  pagina: Record<string, Sitio>;
 }
 
 /** Resultado de compilar los Temas y herramienta para compilar el override de una Vista. */
@@ -145,7 +148,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     });
   }
 
-  const incorporado = { sitio: { file: '(incorporado)', line: 1, column: 1 }, extends: [], partes: [], base: {}, tipos: {}, estados: {} };
+  const incorporado = { sitio: { file: '(incorporado)', line: 1, column: 1 }, extends: [], partes: [], base: {}, tipos: {}, estados: {}, pagina: {} };
   const resueltos = new Map<string, Compilado>();
   const altoContraste: Compilado = { tema: TEMA_ALTO_CONTRASTE, origenes: new Map(), origen: incorporado };
   const enCurso = new Set<string>();
@@ -198,12 +201,13 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
         ...(origen.arista.fin !== undefined && { fin: { ...origen.arista.fin, props: { ...origen.arista.fin.props } } }),
         ...(origen.arista.etiqueta !== undefined && { etiqueta: { ...origen.arista.etiqueta, props: { ...origen.arista.etiqueta.props } } }),
       },
+      pagina: { capas: origen.pagina.capas.map(copiarCapa), fijo: origen.pagina.fijo },
     };
     const origenes = new Map(base?.origenes);
     const porTipo = copiarRegistro(base?.origen.tipos ?? {});
     const porEstado = copiarRegistro(base?.origen.estados ?? {});
     for (const parte of declarado.ast.parts) {
-      if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeEdge') continue;
+      if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeEdge' || parte.$type === 'ThemePage') continue;
       const destino = parte.$type === 'ThemePalette' ? tema.palette : parte.$type === 'ThemeFonts' ? tema.fonts : tema.tokens;
       for (const { key, value } of parte.entries) destino[key] = value;
     }
@@ -212,6 +216,9 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     compilarNodo(declarado.archivo, items, tema, origenes, { partes, tipos, issues, porTipo, porEstado });
     const delBordeDeArista = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeEdge' ? parte.items : []));
     compilarArista(delBordeDeArista, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
+    const delaPagina = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemePage' ? parte.items : []));
+    const origenesDePagina = new Map(Object.entries(base?.origen.pagina ?? {}));
+    compilarPagina(delaPagina, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues, origenes: origenesDePagina });
     enCurso.delete(name);
     const delPadre = base === undefined ? [] : [parent as string, ...base.origen.extends];
     const compilado: Compilado = {
@@ -220,10 +227,11 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       origen: {
         sitio: { file: declarado.archivo, ...declarado.nombre.start },
         extends: delPadre,
-        partes: [...new Set([...(base?.origen.partes ?? []), ...partesUsadas([...items, ...delBordeDeArista], partes)])],
+        partes: [...new Set([...(base?.origen.partes ?? []), ...partesUsadas([...items, ...delBordeDeArista, ...delaPagina], partes)])],
         base: sitioDeCopia(origenes),
         tipos: Object.fromEntries(Object.entries(porTipo).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),
         estados: Object.fromEntries(Object.entries(porEstado).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),
+        pagina: sitioDeCopia(origenesDePagina),
       },
     };
     resueltos.set(name, compilado);

@@ -802,6 +802,7 @@ describe('compile: Tema', () => {
       tokens: { ...TEMA_NEUTRO.tokens, surface: '#ffffff' },
       nodo: TEMA_NEUTRO.nodo,
       arista: TEMA_NEUTRO.arista,
+      pagina: TEMA_NEUTRO.pagina,
     });
   });
 
@@ -819,6 +820,7 @@ describe('compile: Tema', () => {
       tokens: { ...TEMA_NEUTRO.tokens, surface: '#111111' },
       nodo: TEMA_NEUTRO.nodo,
       arista: TEMA_NEUTRO.arista,
+      pagina: TEMA_NEUTRO.pagina,
     });
   });
 

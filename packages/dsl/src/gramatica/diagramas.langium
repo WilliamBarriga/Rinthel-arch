@@ -84,7 +84,7 @@ Theme:
 ;
 
 ThemePart:
-  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeEdge;
+  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeEdge | ThemePage;
 
 ThemePalette:
   'palette' '{' entries+=ThemeEntry* '}';
@@ -216,6 +216,18 @@ ThemeMarker:
 
 ThemeLabel:
   'label' '{' props+=LayerProp* '}';
+
+// `page { layer fondo solid { color paper }  layer puntos dots { color ink/0.1 size 22 }  fixed }`
+// Bloque del fondo de pagina (ADR 0008): pila de rellenos bajo Grupos, Aristas y Nodos.
+// Sin `fixed` el patron se mueve y escala con el pan/zoom; con `fixed` queda fijo al visor.
+ThemePage:
+  'page' '{' items+=PageItem* '}';
+
+PageItem:
+  ThemeLayer | ThemeUse | PageFixed;
+
+PageFixed:
+  fixed?='fixed';
 
 // View -------------------------------------
 
@@ -357,7 +369,7 @@ Id returns string:
   'motion' | 'keyframes' | 'transition' | 'enter' | 'exit' | 'stagger' | 'delay' | 'intensity' | 'reduced' |
   'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
-  'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' |
+  'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' |
   'model' | 'node' | 'specification';
 
 // -------------------------

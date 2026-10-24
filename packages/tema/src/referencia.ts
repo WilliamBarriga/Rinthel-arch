@@ -5,8 +5,8 @@
  * disco es `scripts/generar-referencia-catalogo.ts`.
  */
 import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
-import { CATALOGO, SLOTS } from './catalogo';
-import type { DefinicionDePrimitiva, DefinicionDePropiedad } from './catalogo';
+import { CATALOGO, SLOTS, ubicacionesDe } from './catalogo';
+import type { DefinicionDePrimitiva, DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
 
 const propiedad = (nombre: string, definicion: DefinicionDePropiedad): string => {
   switch (definicion.tipo) {
@@ -46,7 +46,7 @@ export function referenciaDelCatalogo(): string {
       .map(([nombre, definicion]) => {
         const props = Object.entries(definicion.propiedades).map(([clave, valor]) => propiedad(clave, valor));
         if (definicion.abierta === true) props.push('parametros libres (numero o texto)');
-        return [`\`${nombre}\``, definicion.ubicacion ?? 'capa-nodo', props.join('; ') || '-', definicion.afectaMetricas ? 'si' : 'no'];
+        return [`\`${nombre}\``, ubicacionesDe(nombre as NombreDePrimitiva).join(', '), props.join('; ') || '-', definicion.afectaMetricas ? 'si' : 'no'];
       });
     lineas.push(...tabla(['Primitiva', 'Ubicacion', 'Propiedades', 'Metricas'], filas));
   }

@@ -62,7 +62,7 @@ export function hexARgb(hex: string): [number, number, number] | undefined {
  * Comprueba una expresion de color contra la Paleta del Tema. `ambito` decide si
  * `ORIGEN` es valido (solo en Aristas). Devuelve todos los problemas.
  */
-export function validarColor(texto: string, paleta: Readonly<Record<string, string>>, ambito: 'nodo' | 'arista' = 'nodo'): ErrorDeColor[] {
+export function validarColor(texto: string, paleta: Readonly<Record<string, string>>, ambito: 'nodo' | 'arista' | 'pagina' = 'nodo'): ErrorDeColor[] {
   const expresion = leer(texto);
   if (expresion === undefined) return [{ mensaje: `'${texto}' no es una expresion de color valida (nombre, nombre/alfa o mix(a, b, t))` }];
   const errores: ErrorDeColor[] = [];
@@ -80,8 +80,10 @@ export function validarColor(texto: string, paleta: Readonly<Record<string, stri
     comprobar(base.a);
     comprobar(base.b);
     if (base.t < 0 || base.t > 1) errores.push({ mensaje: `El factor de mix debe estar entre 0 y 1, no ${base.t}` });
-  } else if (base.nombre === 'ORIGEN' && ambito === 'nodo') {
+  } else if (base.nombre === 'ORIGEN' && ambito !== 'arista') {
     errores.push({ mensaje: "'ORIGEN' solo vale en Aristas (es el color del Nodo de origen)" });
+  } else if (base.nombre === 'COLOR' && ambito === 'pagina') {
+    errores.push({ mensaje: "'COLOR' no vale en la pagina (es el color del Tipo de nodo); usa un nombre de Paleta" });
   }
   if (alfa !== undefined && (alfa < 0 || alfa > 1)) errores.push({ mensaje: `El alfa debe estar entre 0 y 1, no ${alfa}` });
   return errores;

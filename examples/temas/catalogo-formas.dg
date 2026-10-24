@@ -57,6 +57,20 @@ theme relleno-gradiente extends base-muestra {
   }
 }
 
+theme relleno-radial extends base-muestra {
+  page {
+    layer luz radial { from suave  to papel  x 15  y 10 }
+    layer rejilla grid { color tinta/0.06  size 24 }
+    fixed
+  }
+  node {
+    layer forma rect { radius 8 }
+    layer relleno radial { from papel  to suave  x 30  y 20 }
+    layer borde border { color tinta }
+    slots { title attrs }
+  }
+}
+
 theme relleno-cuadricula extends base-muestra {
   node {
     layer forma rect

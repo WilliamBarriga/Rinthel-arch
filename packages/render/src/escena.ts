@@ -1,6 +1,6 @@
 /**
  * Escena de una Vista: el arbol de elementos que dibuja el componente `Diagram`.
- * Render hibrido (ADR 0008): tres capas planas en coordenadas absolutas del
+ * Render hibrido (ADR 0008): bajo ellas, la pagina (fondo del Tema), y tres capas planas en coordenadas absolutas del
  * lienzo, en este orden de apilado (Grupos HTML, Aristas SVG, Nodos HTML), bajo un
  * unico contenedor con un solo `transform` de pan/zoom; asi HTML y SVG quedan
  * alineados a cualquier zoom. Pura: sin reloj, sin estado, sin DOM; la misma
@@ -120,6 +120,15 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
   const nodos = raices.flatMap((nodo) => aplanar(nodo));
   contexto.nombres = nombresAccesibles(view, nodos);
 
+  const { pagina } = estilo.pintura;
+  // Fijo al visor: hermana del mundo. Sin fijar: dentro del mundo, con margen para cubrir el visor al alejar o desplazar.
+  const fondo = (extra: string): Elemento => ({ tag: 'div', attrs: { class: 'rd-pagina', 'data-capa': 'pagina', ...(extra !== '' && { style: extra }) }, hijos: [] });
+  const paginaFija = pagina.capas.length > 0 && pagina.fijo ? [fondo('')] : [];
+  const paginaMovil =
+    pagina.capas.length > 0 && !pagina.fijo
+      ? [fondo(`left:${num(-MARGEN_DE_PAGINA)}px;top:${num(-MARGEN_DE_PAGINA)}px;width:${num(geometry.width + 2 * MARGEN_DE_PAGINA)}px;height:${num(geometry.height + 2 * MARGEN_DE_PAGINA)}px;`)]
+      : [];
+
   return {
     tag: 'div',
     attrs: {
@@ -131,6 +140,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
     },
     hijos: [
       { tag: 'style', attrs: {}, html: hoja.css },
+      ...paginaFija,
       {
         tag: 'div',
         attrs: {
@@ -138,6 +148,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
           style: `width:${num(geometry.width)}px;height:${num(geometry.height)}px;transform:translate(${num(tx)}px,${num(ty)}px) scale(${num(k)});`,
         },
         hijos: [
+          ...paginaMovil,
           { tag: 'div', attrs: { class: 'rd-capa rd-grupos', 'data-capa': 'grupos' }, hijos: nodos.filter(esGrupo).map((nodo) => cajaDeNodo(nodo, contexto)) },
           {
             tag: 'svg',
@@ -158,6 +169,9 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
     ],
   };
 }
+
+/** Cuanto sobresale, en unidades del lienzo, la pagina que se mueve con la camara. */
+const MARGEN_DE_PAGINA = 4000;
 
 const esGrupo = (nodo: NodoResuelto): boolean => nodo.children.length > 0;
 

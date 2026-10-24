@@ -82,6 +82,14 @@ const aristaSchema = z.strictObject({
   etiqueta: primitivaSchema.optional(),
 });
 
+/** Fondo de pagina (ADR 0008): pila de rellenos bajo Grupos, Aristas y Nodos. */
+const paginaSchema = z.strictObject({
+  /** Pila de rellenos (`solid`, gradientes, patrones, ruido), de abajo hacia arriba. Vacia: solo el color `background`. */
+  capas: z.array(capaSchema).default([]),
+  /** El patron queda fijo al visor; sin la marca, se mueve y escala con el pan/zoom. */
+  fijo: z.boolean().default(false),
+});
+
 const nodoSchema = z.strictObject({
   /** Pila de Capas, de abajo hacia arriba. */
   capas: z.array(capaSchema).default([]),
@@ -119,6 +127,7 @@ export const temaResueltoSchema = z
       }),
     nodo: nodoSchema.default({ capas: [], slots: [...SLOTS], textos: {}, tipos: {}, estados: {} }),
     arista: aristaSchema.default({ capas: [] }),
+    pagina: paginaSchema.default({ capas: [], fijo: false }),
   })
   .superRefine((tema, ctx) => {
     const vistas = new Set<string>();
@@ -140,6 +149,12 @@ export const temaResueltoSchema = z
         ctx.addIssue({ code: 'custom', path: [...path, ...(error.clave === undefined ? [] : ['props', error.clave])], message: error.mensaje });
       }
     };
+    const rellenos = new Set<string>();
+    tema.pagina.capas.forEach((capa, i) => {
+      if (rellenos.has(capa.nombre)) ctx.addIssue({ code: 'custom', path: ['pagina', 'capas', i, 'nombre'], message: `Capa '${capa.nombre}' repetida` });
+      rellenos.add(capa.nombre);
+      validar(capa.primitiva, 'capa-pagina', ['pagina', 'capas', i, 'primitiva']);
+    });
     const trazos = new Set<string>();
     tema.arista.capas.forEach((capa, i) => {
       if (trazos.has(capa.nombre)) ctx.addIssue({ code: 'custom', path: ['arista', 'capas', i, 'nombre'], message: `Capa '${capa.nombre}' repetida` });
@@ -189,6 +204,7 @@ export const TEMA_NEUTRO: TemaResuelto = {
   tokens: { background: '#ffffff', foreground: '#1f2937', border: '#9ca3af' },
   nodo: { capas: [], slots: ['title', 'attrs'], textos: {}, tipos: {}, estados: {} },
   arista: { capas: [], fin: { tipo: 'arrow', props: { size: 8 } } },
+  pagina: { capas: [], fijo: false },
 };
 
 /** Parches de Capa guardados en la Fuente (p. ej. el override de una Vista), validados contra su esquema. */
