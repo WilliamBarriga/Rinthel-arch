@@ -88,7 +88,7 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-mundo', { position: 'absolute', left: '0', top: '0', 'transform-origin': '0 0' }],
     ['& .rd-capa', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'pointer-events': 'none' }],
     ['& .rd-aristas', { overflow: 'visible' }],
-    ['& .rd-aristas [data-edge]', { 'pointer-events': 'stroke' }],
+    ['& .rd-aristas [data-edge], & .rd-aristas [data-edge-labels]', { 'pointer-events': 'stroke' }],
     ['& .rd-caja', { position: 'absolute', left: '0', top: '0', contain: 'layout style' }],
     ['& .rd-nodo, & .rd-grupo', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'auto', ...caja }],
     ['& .rd-nodo[data-collapsed]', { 'border-style': 'dashed' }],

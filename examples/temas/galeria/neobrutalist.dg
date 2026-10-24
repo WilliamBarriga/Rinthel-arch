@@ -21,7 +21,7 @@ theme neobrutalist {
   }
   edge {
     layer linea line { color texto  width 2 }
-    start bar { size 8 }
+    start square { size 8 }
     end arrow { size 10 }
     label { scale 0.8  pad 6  radius 3  fill sticker  border texto }
   }

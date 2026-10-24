@@ -23,7 +23,7 @@ theme glass-chip {
   edge {
     layer halo line { color texto/0.12 width 6 }
     layer linea line { color texto/0.6 width 1.5 }
-    start dot { size 6 }
+    start via { size 6 }
     end arrow { size 9 }
     label { scale 0.8  pad 8  radius 50  fill fondo  border texto/0.5 }
   }
