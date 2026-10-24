@@ -10,7 +10,7 @@ import type { CajaDeNodo } from 'layout';
 import { alturaDeCabecera, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
 import type { ContenidoDeNodo, Metricas, NombreDeSlot, PinturaDeNodo, Rect } from 'tema';
 
-import { pintarMarcadores, pintarTrazos } from './aristas';
+import { pintarMarcadores, pintarTrazos, rutaDeCapa } from './aristas';
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
 import { aspectoDeEstado } from './estilo';
@@ -294,7 +294,9 @@ export function pintarEstadoDeCaja(estado: EstadoVisual, id: string, rect?: Rect
 /** Contorno de estado sobre la ruta de una Arista (SVG). */
 export function pintarEstadoDeRuta(estilo: Estilo, estado: EstadoVisual, id: string, puntos: readonly Punto[]): Elemento {
   const { color, ancho, trazo, opacidad } = aspectoDeEstado(estilo, estado);
-  const ruta = puntos.map(({ x, y }, i) => `${i === 0 ? 'M' : 'L'} ${num(x)} ${num(y)}`).join(' ');
+  // El contorno sigue la ruta del trazo principal (el ultimo de la pila): mismas esquinas que la Arista.
+  const principal = estilo.pintura.arista.capas.at(-1);
+  const ruta = principal === undefined ? puntos.map(({ x, y }, i) => `${i === 0 ? 'M' : 'L'} ${num(x)} ${num(y)}`).join(' ') : rutaDeCapa(principal, puntos);
   return {
     tag: 'path',
     attrs: {

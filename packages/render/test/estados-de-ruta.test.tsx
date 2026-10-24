@@ -51,6 +51,18 @@ describe('Diagram: estados de ruta y foco como selectores', () => {
     expect(marcas(html, 'data-atenuado')[0]).toContain('data-edge="b -&gt; c"');
   });
 
+  it('el contorno de estado de una ruta con codo sigue la misma esquina que el trazo de la Arista', async () => {
+    const linea = { nombre: 'linea', primitiva: { tipo: 'line', props: { color: 'gray', width: 2, style: 'solid', corner: 'round', radius: 8, cut: 6 } } };
+    const redondo = { ...TEMA_NEUTRO, arista: { ...TEMA_NEUTRO.arista, capas: [linea] } };
+    const base = await props({ theme: redondo });
+    const codo = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 60, y: 60 }];
+    const geometry = { ...base.geometry, edges: { ...base.geometry.edges, 'a -> b': { ...base.geometry.edges['a -> b']!, points: codo } } };
+    const html = dibujo({ ...base, geometry, estados: { 'a -> b': ['en-ruta'] } });
+
+    const contorno = marcas(html, 'data-state="en-ruta"').find((m) => m.startsWith('<path'))!;
+    expect(contorno).toContain('d="M 0 0 L 52 0 Q 60 0 60 8 L 60 60"');
+  });
+
   it('el anillo de foco es irremovible: un Estilo que lo deja sin grosor se dibuja con el minimo', async () => {
     const base = resolverEstilo(TEMA_NEUTRO);
     const sinAnillo = { ...base, estados: { ...base.estados, foco: { ...base.estados.foco, ancho: 0 } } };

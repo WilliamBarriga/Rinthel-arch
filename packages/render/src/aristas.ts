@@ -62,15 +62,21 @@ const idDeFiltro = (props: Props, semilla: number): string => {
   return `rd-skl-${huella(`${rugosidad}|${frecuencia}|${semilla}`)}`;
 };
 
+/** Ruta SVG (`d`) de un trazo sobre `puntos`, con la esquina y la medida que su Capa declara. */
+export function rutaDeCapa(capa: { props: Props }, puntos: readonly Punto[]): string {
+  const { corner, cut, radius } = capa.props as Props & { corner: Esquina };
+  return rutaDeTrazo(puntos, corner, Number(corner === 'round' ? radius : cut));
+}
+
 /** La pila de trazos, de abajo hacia arriba: un trazo ancho y translucido bajo el principal es el glow. */
 export function pintarTrazos(pintura: PinturaDeArista, puntos: readonly Punto[], semilla = 0): Elemento[] {
   return pintura.capas.map((capa) => {
-    const { color, width, style, corner, cut, radius } = capa.props as Props & { style: string; corner: Esquina };
+    const { color, width, style } = capa.props as Props & { style: string };
     const grosor = Number(width);
     return {
       tag: 'path',
       attrs: {
-        d: rutaDeTrazo(puntos, corner, Number(corner === 'round' ? radius : cut)),
+        d: rutaDeCapa(capa, puntos),
         fill: 'none',
         stroke: String(color),
         'stroke-width': num(grosor),
