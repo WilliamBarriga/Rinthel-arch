@@ -72,7 +72,7 @@ const PINTORES_DE_SLOT: { readonly [S in NombreDeSlot]: (contexto: ContextoDeSlo
   desc: (contexto, rect) => pintarTexto('desc', contexto, rect),
   footer: (contexto, rect) => pintarTexto('footer', contexto, rect),
   counter: (contexto, rect) => pintarTexto('counter', contexto, rect),
-  icon: ({ datos, textos }, rect) => pintarIcono(textos, datos.nodo, datos.trazo, datos.icons, rect, String(textos.icon?.props['variant'] ?? 'plain')),
+  icon: ({ datos, textos }, rect) => pintarIcono(textos, datos.nodo, datos.trazo, datos.icons, rect),
   attrs: ({ estilo, datos, atributos }, rect) => (atributos.length === 0 ? [] : [pintarAtributos(estilo, datos.nodo.id, atributos, rect)]),
 };
 
@@ -104,15 +104,18 @@ export function pintarGrupo(estilo: Estilo, datos: DatosDeNodo): Elemento[] {
  * sin glifo). Solo se incrusta el glifo si pasa `sanearIcono`; el aspecto de la
  * caja y del punto lo da la hoja.
  */
-function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo: string, icons: IconProvider | undefined, rect: Rect, variante: string): Elemento[] {
+function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo: string, icons: IconProvider | undefined, rect: Rect): Elemento[] {
   if (nodo.icon === undefined) return [];
+  const variante = String(textos.icon?.props['variant'] ?? 'plain');
+  const glifo = textos.icon?.props['glyph'];
   const atributos = { class: 'rd-icono', 'data-slot': 'icon', 'data-icon': nodo.icon, 'data-variante': variante, style: enRect(rect, `color:${limpiarValorCss(String(textos.icon?.props['color'] ?? trazo))};`) };
   if (variante === 'dot') return [{ tag: 'div', attrs: atributos }];
   const crudo = icons?.resolve(nodo.icon);
   const svg = crudo === undefined ? undefined : sanearIcono(crudo);
   if (svg === undefined) return variante === 'box' ? [{ tag: 'div', attrs: atributos }] : [];
-  // En caja el glifo deja un margen; suelto ocupa todo el rectangulo.
-  const lado = num(variante === 'box' ? Math.round(Math.min(rect.width, rect.height) * 0.6) : Math.min(rect.width, rect.height));
+  // En caja el glifo deja un margen (o mide `glyph`); suelto ocupa todo el rectangulo.
+  const disponible = Math.min(rect.width, rect.height);
+  const lado = num(glifo !== undefined ? Math.min(Number(glifo), disponible) : variante === 'box' ? Math.round(disponible * 0.6) : disponible);
   const dimensionado = svg.replace(/<svg\b([^>]*)>/, (_, atributosDelSvg: string) => {
     const sinMedidas = atributosDelSvg.replace(/\s(?:width|height)\s*=\s*("[^"]*"|'[^']*')/g, '');
     return `<svg width="${lado}" height="${lado}"${sinMedidas}>`;
@@ -231,7 +234,7 @@ export function pintarEtiquetaDeArista(
       ? { x: caja.x + caja.width / 2, y: caja.y + caja.height / 2 + tamano * etiqueta.centradoVertical }
       : centroDeEtiquetaSinCaja(estilo, puntos);
   // Modelo de caja de la etiqueta: con `fill` o `border` se dibuja la caja que ELK reservo (o la medida) tras el texto.
-  const { fill, border, radius, color, weight, font, shadow, rotate } = estilo.pintura.arista.etiqueta.props;
+  const { fill, border, radius, color, weight, font, shadow, rotate, style } = estilo.pintura.arista.etiqueta.props;
   const anchoDeBorde = estilo.pintura.arista.etiqueta.props['border-width'];
   const conCaja = fill !== undefined || border !== undefined;
   const medida = tamanoDeEtiqueta(texto, metricas);
@@ -247,6 +250,7 @@ export function pintarEtiquetaDeArista(
       'font-size': num(tamano),
       fill: color === undefined ? estilo.texto : String(color),
       ...(weight !== undefined && { 'font-weight': num(Number(weight)) }),
+      ...(style === 'italic' && { 'font-style': 'italic' }),
       ...(!conCaja && { stroke: etiqueta.halo.color, 'stroke-width': num(etiqueta.halo.ancho), 'paint-order': 'stroke' }),
     },
     hijos: [texto],

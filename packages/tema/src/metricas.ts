@@ -37,7 +37,7 @@ export interface Metricas {
   /** Mini-layout de los Slots del Nodo que el Tema muestra (un Slot fuera del arbol no se pinta ni se mide). */
   disposicion: CajaDeSlots;
   /** `size`, `leading`, `font mono` y `weight` que el Tema fija a un Slot de texto (los que no, usan los de `DEFINICION_DE_SLOT`); cambian el alto y el ancho que reserva. */
-  medidaDeTexto: Readonly<Partial<Record<NombreDeSlot, { size?: number; leading?: number; mono?: boolean; peso?: number }>>>;
+  medidaDeTexto: Readonly<Partial<Record<NombreDeSlot, { size?: number; leading?: number; mono?: boolean; peso?: number; prefijo?: string }>>>;
   /** Estilo `text` del Slot `title` que cambia su ancho (ademas de `size`): ver `textoDeSlot` en `slots.ts`. */
   titulo: {
     /** Separacion entre letras, en em. */
@@ -123,10 +123,16 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas:
     disposicion: slots,
     medidaDeTexto: Object.fromEntries(
       Object.entries(textos).flatMap(([slot, texto]) => {
-        const { size, leading, font, weight } = texto.props as { size?: number; leading?: number; font?: string; weight?: number };
+        const { size, leading, font, weight, prefix } = texto.props as { size?: number; leading?: number; font?: string; weight?: number; prefix?: string };
         const mono = font === 'mono';
         const peso = weight === undefined || weight === 400 ? undefined : weight;
-        const medida = { ...(size !== undefined && { size }), ...(leading !== undefined && { leading }), ...(mono && { mono }), ...(peso !== undefined && { peso }) };
+        const medida = {
+          ...(size !== undefined && { size }),
+          ...(leading !== undefined && { leading }),
+          ...(mono && { mono }),
+          ...(peso !== undefined && { peso }),
+          ...(prefix !== undefined && prefix !== '' && { prefijo: prefix }),
+        };
         return Object.keys(medida).length === 0 ? [] : [[slot, medida]];
       }),
     ),

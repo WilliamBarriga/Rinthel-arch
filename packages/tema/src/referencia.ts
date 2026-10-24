@@ -18,6 +18,8 @@ const propiedad = (nombre: string, definicion: DefinicionDePropiedad): string =>
       return `\`${nombre}\` ${definicion.valores.join('|')}${definicion.defecto !== undefined ? ` (${definicion.defecto})` : definicion.opcional === true ? ' (opcional)' : ''}`;
     case 'nombre':
       return `\`${nombre}\` nombre de Componente`;
+    case 'texto':
+      return `\`${nombre}\` texto de hasta ${definicion.largo} caracteres${definicion.opcional === true ? ' (opcional)' : ''}`;
   }
 };
 

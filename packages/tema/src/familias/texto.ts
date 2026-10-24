@@ -44,6 +44,10 @@ export const TEXTOS = {
       pad: { tipo: 'numero', min: 0, max: 32, defecto: 0 },
       /** Punto de color antes del texto; mide un `size` (en em) de ancho. */
       dot: { tipo: 'color', opcional: true },
+      /** Texto que se antepone al del Slot (p. ej. `"> "`): se mide y se pinta como parte de el. */
+      prefix: { tipo: 'texto', largo: 8, opcional: true },
+      /** Resplandor del texto (sombra sin desplazamiento); solo pinta. */
+      glow: { tipo: 'color', opcional: true },
     },
   },
   /** Estilo del Slot `counter`: un texto en una caja (relleno, borde y radio) que entra en las Metricas por su tamano. */
@@ -79,6 +83,8 @@ export const TEXTOS = {
       'border-width': ANCHO_DE_BORDE,
       /** Color del glifo; sin el, el color de trazo del Tipo. */
       color: { tipo: 'color', opcional: true },
+      /** Lado del glifo en px, dentro de la caja; sin el, en `box` ocupa el 60% del lado. Solo pinta. */
+      glyph: { tipo: 'numero', min: 6, max: 96, opcional: true },
     },
   },
   label: {
@@ -103,6 +109,7 @@ export const TEXTOS = {
       /** Sombra dura de la caja (desplazada 2 px abajo a la derecha) y giro en grados alrededor de su centro. */
       shadow: { tipo: 'color', opcional: true },
       rotate: { tipo: 'numero', min: -15, max: 15, opcional: true },
+      style: { tipo: 'opcion', valores: ['normal', 'italic'], defecto: 'normal' },
     },
   },
 } as const satisfies Record<string, DefinicionDePrimitiva>;

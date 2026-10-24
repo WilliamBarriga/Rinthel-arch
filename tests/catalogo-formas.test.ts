@@ -14,7 +14,7 @@ const FAMILIAS = ['forma', 'relleno', 'borde'];
 const delCatalogo = Object.entries(CATALOGO).filter(([, p]) => FAMILIAS.includes(p.familia));
 
 /** Valor valido de una propiedad para ejercitar el pintor: el defecto, o un color de Paleta. */
-const valorDe = (p: DefinicionDePropiedad): string | number => (p.tipo === 'color' ? 'ink' : p.tipo === 'nombre' ? 'Ejemplo' : p.tipo === 'opcion' ? (p.defecto ?? p.valores[0]!) : (p.defecto ?? p.min));
+const valorDe = (p: DefinicionDePropiedad): string | number => (p.tipo === 'color' ? 'ink' : p.tipo === 'nombre' ? 'Ejemplo' : p.tipo === 'opcion' ? (p.defecto ?? p.valores[0]!) : p.tipo === 'texto' ? 'x' : (p.defecto ?? p.min));
 
 type TemaConCapas = { nodo?: { capas: Array<{ primitiva: { tipo: string } }> } };
 
