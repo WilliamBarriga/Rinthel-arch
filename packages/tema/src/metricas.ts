@@ -52,9 +52,9 @@ export interface Metricas {
   };
   /** La forma del Nodo exige una caja cuadrada (p. ej. `circle`); sale de la regla de caja minima de las Primitivas. */
   cajaCuadrada: boolean;
-  /** Ancho minimo de un Nodo hoja. */
+  /** Ancho minimo de un Nodo hoja: el `min-width` de la raiz de la disposicion o el del nucleo. */
   anchoMinimo: number;
-  /** Suma de los margenes izquierdo y derecho del texto de un Nodo hoja. */
+  /** Holgura tras el contenido de un Nodo hoja: el `slack` de la raiz de la disposicion o el del nucleo. */
   paddingHorizontal: number;
   /** Margen izquierdo del titulo y de los Atributos. */
   margenDeTexto: number;
@@ -121,8 +121,9 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas:
       }),
     ),
     cajaCuadrada: pila.some((capa) => (CATALOGO[capa.primitiva.tipo] as DefinicionDePrimitiva).cajaMinima === 'cuadrado'),
-    anchoMinimo: 120,
-    paddingHorizontal: 32,
+    // La raiz de la disposicion puede fijar su caja minima y su holgura; sin ellas, las del nucleo.
+    anchoMinimo: slots.anchoMinimo ?? 120,
+    paddingHorizontal: slots.holgura ?? 32,
     margenDeTexto: 10,
     cabecera: Math.ceil(fontSize * 3.4),
     fila: Math.ceil(fontSize * 1.8),

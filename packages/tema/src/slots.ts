@@ -60,6 +60,9 @@ interface Medido {
   hijos: Medido[];
 }
 
+/** Margen interior horizontal y vertical de una caja. */
+const margenes = (caja: CajaDeSlots): { x: number; y: number } => ({ x: caja.pad, y: caja.padY ?? caja.pad });
+
 function medir(elemento: ElementoDeSlots, medida: MedidaDeSlot): Medido | undefined {
   if (!esCaja(elemento)) {
     const medido = medida(elemento.slot);
@@ -70,11 +73,13 @@ function medir(elemento: ElementoDeSlots, medida: MedidaDeSlot): Medido | undefi
   const hijos = elemento.hijos.flatMap((hijo) => medir(hijo, medida) ?? []);
   if (hijos.length === 0) return undefined;
   const horizontal = elemento.direccion === 'row';
-  const huecos = elemento.gap * (hijos.length - 1) + 2 * elemento.pad;
-  const principal = hijos.reduce((suma, h) => suma + (horizontal ? h.tam.width : h.tam.height), 0) + huecos;
-  const cruzado = Math.max(...hijos.map((h) => (horizontal ? h.tam.height : h.tam.width))) + 2 * elemento.pad;
+  const { x: padX, y: padY } = margenes(elemento);
+  const suma = hijos.reduce((total, h) => total + (horizontal ? h.tam.width : h.tam.height), 0) + elemento.gap * (hijos.length - 1);
+  const mayor = Math.max(...hijos.map((h) => (horizontal ? h.tam.height : h.tam.width)));
+  const ancho = (horizontal ? suma : mayor) + 2 * padX + (elemento.holgura ?? 0);
+  const alto = (horizontal ? mayor : suma) + 2 * padY;
   return {
-    tam: horizontal ? { width: principal, height: cruzado } : { width: cruzado, height: principal },
+    tam: { width: Math.max(ancho, elemento.anchoMinimo ?? 0), height: Math.max(alto, elemento.altoMinimo ?? 0) },
     // Una caja es elastica si alguno de sus hijos lo es: dentro de una fila se estira a lo ancho.
     elastico: hijos.some((h) => h.elastico),
     align: elemento.align,
@@ -90,7 +95,8 @@ function colocar(nodo: Medido, rect: Rect, salida: Partial<Record<NombreDeSlot, 
   }
   const caja = nodo.caja!;
   const horizontal = caja.direccion === 'row';
-  const dentro: Rect = { x: rect.x + caja.pad, y: rect.y + caja.pad, width: Math.max(0, rect.width - 2 * caja.pad), height: Math.max(0, rect.height - 2 * caja.pad) };
+  const { x: padX, y: padY } = margenes(caja);
+  const dentro: Rect = { x: rect.x + padX, y: rect.y + padY, width: Math.max(0, rect.width - 2 * padX), height: Math.max(0, rect.height - 2 * padY) };
   const principalLibre = horizontal ? dentro.width : dentro.height;
   const fijo = nodo.hijos.reduce((suma, h) => suma + (horizontal ? (h.elastico ? 0 : h.tam.width) : h.tam.height), 0) + caja.gap * (nodo.hijos.length - 1);
   // Solo se estiran los elasticos de una fila (el ancho libre); en columna cada hijo ocupa su alto.
@@ -225,8 +231,10 @@ export function textosDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): Te
  * el margen del Tema; el alto, de la disposicion.
  */
 export function colocarNodo(contenido: ContenidoDeNodo, metricas: Metricas): ColocacionDeNodo {
-  const natural = medirDisposicion(metricas.disposicion, medidasDeNodo(metricas, contenido));
-  const ancho = Math.max(metricas.anchoMinimo, Math.ceil(natural.width + metricas.paddingHorizontal));
+  // La raiz se mide con la caja minima y la holgura de las Metricas (las suyas o las del nucleo).
+  const raiz = { ...metricas.disposicion, holgura: metricas.paddingHorizontal };
+  const natural = medirDisposicion(raiz, medidasDeNodo(metricas, contenido));
+  const ancho = Math.max(metricas.anchoMinimo, Math.ceil(natural.width));
   // Forma que pide un cuadrado (circulo): el lado contiene el contenido en ambos ejes.
   return colocarEnCaja(metricas, contenido, metricas.cajaCuadrada ? Math.max(ancho, natural.height) : ancho);
 }

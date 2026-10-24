@@ -101,6 +101,10 @@ const cajaSchema: z.ZodType<CajaDeSlots> = z.strictObject({
   direccion: z.enum(DIRECCIONES),
   gap: z.number().min(0).max(64),
   pad: z.number().min(0).max(64),
+  padY: z.number().min(0).max(64).optional(),
+  anchoMinimo: z.number().min(0).max(1200).optional(),
+  altoMinimo: z.number().min(0).max(600).optional(),
+  holgura: z.number().min(0).max(400).optional(),
   align: z.enum(ALINEACIONES).optional(),
   hijos: z.array(elementoSchema),
 }) as z.ZodType<CajaDeSlots>;

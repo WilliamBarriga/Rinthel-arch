@@ -26,7 +26,14 @@ export interface HojaDeSlots {
 export interface CajaDeSlots {
   direccion: Direccion;
   gap: number;
+  /** Margen interior a cada lado; `padY`, si esta, sustituye el de arriba y abajo. */
   pad: number;
+  padY?: number;
+  /** Caja minima (`min-width`, `min-height`), contando el margen interior; el contenido se reparte o centra dentro. */
+  anchoMinimo?: number;
+  altoMinimo?: number;
+  /** Ancho libre que la caja reserva tras su contenido (`slack`); en la raiz sustituye la holgura por defecto de las Metricas. */
+  holgura?: number;
   align?: Alineacion;
   hijos: ElementoDeSlots[];
 }
@@ -81,15 +88,30 @@ export function alineacionDe(caja: CajaDeSlots, slot: NombreDeSlot): Alineacion 
  * propiedades que difieren del defecto. Es lo que muestra `inspect tema`.
  */
 export function describirDisposicion(caja: CajaDeSlots): string {
-  const propiedades = [caja.gap > 0 ? `gap ${caja.gap}` : '', caja.pad > 0 ? `pad ${caja.pad}` : '', caja.align !== undefined ? `align ${caja.align}` : ''].filter((p) => p !== '');
+  const propiedades = [
+    caja.gap > 0 ? `gap ${caja.gap}` : '',
+    caja.pad > 0 ? `pad ${caja.pad}` : '',
+    caja.padY !== undefined ? `pad-y ${caja.padY}` : '',
+    caja.anchoMinimo !== undefined ? `min-width ${caja.anchoMinimo}` : '',
+    caja.altoMinimo !== undefined ? `min-height ${caja.altoMinimo}` : '',
+    caja.holgura !== undefined ? `slack ${caja.holgura}` : '',
+    caja.align !== undefined ? `align ${caja.align}` : '',
+  ].filter((p) => p !== '');
   const hijos = caja.hijos.map((hijo) => (esCaja(hijo) ? describirDisposicion(hijo) : hijo.align === undefined ? hijo.slot : `${hijo.slot} align ${hijo.align}`));
   return `${[caja.direccion, ...propiedades].join(' ')} { ${hijos.join(' ')} }`;
 }
+
+const opcional = <K extends string>(clave: K, valor: number | string | undefined): Partial<Record<K, number>> =>
+  (valor === undefined ? {} : { [clave]: Number(valor) }) as Partial<Record<K, number>>;
 
 const ALINEACION: DefinicionDePropiedad = { tipo: 'opcion', valores: ALINEACIONES, defecto: 'start' };
 const PROPIEDADES_DE_CAJA = {
   gap: { tipo: 'numero', min: 0, max: 64, defecto: 0 },
   pad: { tipo: 'numero', min: 0, max: 64, defecto: 0 },
+  'pad-y': { tipo: 'numero', min: 0, max: 64, opcional: true },
+  'min-width': { tipo: 'numero', min: 0, max: 1200, opcional: true },
+  'min-height': { tipo: 'numero', min: 0, max: 600, opcional: true },
+  slack: { tipo: 'numero', min: 0, max: 400, opcional: true },
   align: ALINEACION,
 } as const satisfies Record<string, DefinicionDePropiedad>;
 
@@ -104,7 +126,7 @@ export interface PropiedadEscrita<R = unknown> {
 export interface EntradaDeCaja<R = unknown> {
   ref: R;
   direccion: string;
-  /** `gap`, `pad` y `align` (otra clave es error). */
+  /** `gap`, `pad`, `pad-y`, `min-width`, `min-height`, `slack` y `align` (otra clave es error). */
   props: ReadonlyArray<PropiedadEscrita<R>>;
   hijos: Array<EntradaDeCaja<R> | EntradaDeSlot<R>>;
 }
@@ -161,6 +183,10 @@ export function construirDisposicion<R>(entrada: EntradaDeCaja<R>, elemento: 'no
       direccion: c.direccion === 'row' ? 'row' : 'column',
       gap: Number(props['gap'] ?? 0),
       pad: Number(props['pad'] ?? 0),
+      ...opcional('padY', props['pad-y']),
+      ...opcional('anchoMinimo', props['min-width']),
+      ...opcional('altoMinimo', props['min-height']),
+      ...opcional('holgura', props['slack']),
       ...(a !== undefined && { align: a }),
       hijos,
     };

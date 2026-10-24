@@ -323,3 +323,48 @@ model {
     expect(sesion.estilo('v')!.pintura.nodo.textos.counter!.props).toMatchObject({ radius: 8 });
   });
 });
+
+describe('seam sesion: tamano de la caja desde la disposicion', () => {
+  const fuente = `specification { node servicio { color rojo  icon box } }
+model {
+  servicio db
+  servicio largo "Un titulo bastante mas largo que el minimo"
+}
+`;
+  const nodos = async (slots: string) => {
+    const sesion = abrirSesion({ 'main.dg': fuente + tema(`    layer forma rect\n    ${slots}`) + vista('  theme t\n') });
+    expect(await sesion.diagnosticar()).toEqual([]);
+    return (await sesion.geometria('v'))!.geometry.nodes;
+  };
+
+  it('min-width y min-height fijan la caja minima y el contenido se centra en vertical', async () => {
+    const { db } = await nodos('slots row gap 10 pad 10 min-width 160 min-height 54 { icon { variant box side 28 }  title { leading 1.25 } }');
+
+    expect([db!.width, db!.height]).toEqual([160, 54]);
+    expect(db!.slots!['icon']).toEqual({ x: 10, y: 13, width: 28, height: 28 });
+  });
+
+  it('slack sustituye la holgura por defecto tras el contenido', async () => {
+    const sin = await nodos('slots row pad 10 slack 0 { title }');
+    const con = await nodos('slots row pad 10 slack 26 { title }');
+    const defecto = await nodos('slots row pad 10 { title }');
+
+    expect(con['largo']!.width - sin['largo']!.width).toBe(26);
+    expect(defecto['largo']!.width - sin['largo']!.width).toBe(32);
+  });
+
+  it('pad-y cambia solo el margen vertical de la caja', async () => {
+    const { db } = await nodos('slots row pad 14 pad-y 0 { title { leading 1.25 } }');
+
+    expect(db!.slots!['title']).toMatchObject({ x: 14, y: 0, height: 18 });
+    expect(db!.height).toBe(18);
+  });
+
+  it('las claves de caja nuevas se validan con rango y sugerencia', async () => {
+    const sesion = abrirSesion({ 'main.dg': fuente + tema('    slots row min-widht 10 min-height 9999 { title }') + vista('  theme t\n') });
+    const issues = await sesion.diagnosticar();
+
+    expect(issues.map((i) => i.code)).toEqual(['E_THEME_UNKNOWN_PROPERTY', 'E_THEME_INVALID_VALUE']);
+    expect(issues[0]!.hint).toContain("'min-width'");
+  });
+});
