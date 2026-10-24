@@ -296,6 +296,14 @@ model {
     expect(g.slots!['title']!.x + g.slots!['title']!.width + 8).toBeLessThanOrEqual(g.slots!['counter']!.x);
   });
 
+  it('la caja del counter cuenta el grosor de su borde, a lo ancho y a lo alto', async () => {
+    const fino = (await nodos('slots row { title counter { align center } }', '  collapsed g\n')).nodes['g']!.slots!['counter']!;
+    const grueso = (await nodos('slots row { title counter { border rojo  border-width 3  align center } }', '  collapsed g\n')).nodes['g']!.slots!['counter']!;
+
+    expect(grueso.width - fino.width).toBe(6);
+    expect(grueso.height - fino.height).toBe(6);
+  });
+
   it('con counter en el Tema, el titulo del colapsado no lleva el contador pegado y mide menos', async () => {
     const con = await nodos('slots row { title counter }', '  collapsed g\n');
     const sin = await nodos('slots row { title }', '  collapsed g\n');

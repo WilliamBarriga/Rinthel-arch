@@ -2,28 +2,60 @@
 // Bauhaus: primarios sobre papel crema, formas geometricas puras (pastilla, esquina cortada) y bordes gruesos.
 theme bauhaus {
   palette {
-    fondo "#efe8d8"  texto "#141414"  papel "#fbf7ee"  amarillo "#f2b705"
+    fondo "#efe8d8"  texto "#141414"  papel "#fbf7ee"  rojo "#d6301f"  amarillo "#f2b705"  azul "#1f4fbf"
     blue "#1f4fbf"  purple "#141414"  green "#1f4fbf"  amber "#f2b705"  red "#d6301f"  gray "#141414"
   }
+  fonts { body "sans-serif"  mono "JetBrains Mono"  fallback "sans-serif" }
   tokens { background "#efe8d8"  foreground "#141414"  border "#141414" }
+  // Tres discos de color fijos al visor: azul grande al centro, rojo abajo a la izquierda y amarillo arriba a la derecha.
+  page {
+    layer azul disc { color azul/0.12  radius 320  x 55  y 60 }
+    layer rojo disc { color rojo/0.85  radius 110  x 8  y 92 }
+    layer amarillo disc { color amarillo/0.9  radius 170  x 88  y 18 }
+    fixed
+  }
   node {
-    layer bloque solid { color COLOR }
+    // Bloque del color del Tipo asomando arriba a la izquierda, bajo una caja de papel con borde grueso.
+    layer bloque solid { color COLOR  offset -7 -7 }
     layer forma rect
     layer relleno solid { color papel }
     layer borde border { color texto  width 3 }
-    layer franja lines over { color COLOR/0.5  size 6  width 2  angle 45 }
-    slots { title { weight 800  transform uppercase }  badge { alpha 0.7 }  attrs }
+    slots column min-width 180 slack 30 {
+      row gap 12 pad 14 min-height 58 {
+        icon { variant box  side 26  radius 50  fill COLOR  color papel }
+        column {
+          title { weight 800  transform uppercase  tracking 0.04  text-align start  leading 1.25 }
+          badge { alpha 0.7  transform uppercase  size 0.62  tracking 0.25 }
+        }
+        counter { fill amarillo  border texto  border-width 2 }
+      }
+      attrs
+    }
     type actor { layer forma pill }
-    type externo { layer forma cut { cut 18 }  layer relleno { color COLOR/0.25 } }
-    type almacen { layer forma circle }
-    state hover { layer relleno { color amarillo }  transition 100ms linear }
-    state en-ruta { layer relleno { color COLOR/0.3 } }
-    state atenuado { layer franja none }
+    type externo { layer bloque none  layer forma cut { cut 18 }  layer tinte gradient after relleno { from COLOR/0.25  to COLOR/0.25 } }
+    state hover { layer bloque { offset -11 -11 }  transition 100ms linear }
+    state en-ruta { layer relleno { color amarillo } }
+    state atenuado { layer bloque none }
+  }
+  group {
+    layer forma rect
+    layer relleno solid { color COLOR/0.1 }
+    layer borde border { color texto  width 3 }
+    slots row pad 12 pad-y 9 {
+      title { transform uppercase  size 0.8  leading 2.3  tracking 0.2  weight 600  fill papel  border texto  border-width 3  pad 10 }
+    }
+    padding 8 26 26 26
+    // Cerrado es la caja del Nodo con su bloque y una franja gruesa del color del Tipo a la derecha.
+    state collapsed {
+      layer bloque solid before forma { color COLOR  offset -7 -7 }
+      layer relleno { color papel }
+      layer franja shadow after borde { color COLOR  x -12  y 0  inset 1 }
+    }
   }
   edge {
     layer linea line { color texto  width 3 }
-    start square { size 10 }
-    end arrow { size 12 }
-    label { scale 0.8  pad 6  radius 0  fill amarillo  border texto }
+    start square { size 8 }
+    end arrow { size 10 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 0  fill amarillo  border texto  color texto/0.8 }
   }
 }
