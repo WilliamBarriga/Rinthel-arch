@@ -10,14 +10,19 @@
 import type { NodoResuelto } from 'canonico';
 import type { Pintura, PinturaDeElemento, PinturaDeNodo } from 'tema';
 
-export type ClaveDeElemento = 'nodo' | 'grupo' | 'colapsado';
+/** La unica tabla de elementos: de ella salen la clave, el orden en que la hoja los emite y de donde sale la pintura de cada uno. */
+const PINTURA_DE = {
+  nodo: (pintura: Pintura): PinturaDeElemento => pintura.nodo,
+  grupo: (pintura: Pintura): PinturaDeElemento => pintura.grupo.abierto,
+  colapsado: (pintura: Pintura): PinturaDeElemento => pintura.grupo.colapsado,
+} as const;
+
+export type ClaveDeElemento = keyof typeof PINTURA_DE;
 
 /** Claves en el orden en que la hoja las emite. */
-export const ELEMENTOS: readonly ClaveDeElemento[] = ['nodo', 'grupo', 'colapsado'];
+export const ELEMENTOS = Object.keys(PINTURA_DE) as readonly ClaveDeElemento[];
 
-export function pinturaDeElemento(pintura: Pintura, clave: ClaveDeElemento): PinturaDeElemento {
-  return clave === 'nodo' ? pintura.nodo : clave === 'grupo' ? pintura.grupo.abierto : pintura.grupo.colapsado;
-}
+export const pinturaDeElemento = (pintura: Pintura, clave: ClaveDeElemento): PinturaDeElemento => PINTURA_DE[clave](pintura);
 
 /** Elemento con que se dibuja un Nodo visible: un Grupo cerrado es una hoja con su propia pintura. */
 export function claveDe(nodo: Pick<NodoResuelto, 'collapsed' | 'children'>): ClaveDeElemento {
