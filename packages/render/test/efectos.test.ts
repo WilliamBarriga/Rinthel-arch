@@ -122,4 +122,15 @@ describe('decoracion y desbordes', () => {
     expect(hojaDe(html)).toContain('outline:2px solid #2563eb;outline-offset:8px');
     expect(hojaDe(html)).toContain('.rd-cinta{');
   });
+
+  it('el doblez es una esquina superior derecha doblada que tapa el borde, con el fondo de pagina y sombra dura', async () => {
+    const html = await dibujar(conCapas([capa('borde', 'border', { color: 'gray', width: 2 }), capa('doblez', 'fold', { color: 'blue', size: 14, shadow: 'gray' })]));
+    const doblez = etiquetaCon(html.slice(html.indexOf('data-id="db"')), 'class="rd-doblez"');
+
+    expect(propiedad(doblez, 'top')).toBe('-2px');
+    expect(propiedad(doblez, 'right')).toBe('-2px');
+    expect(propiedad(doblez, 'border-width')).toBe('0 14px 14px 0');
+    expect(propiedad(doblez, 'border-color')).toBe(`transparent ${TEMA_NEUTRO.tokens.background} #2563eb transparent`);
+    expect(propiedad(doblez, 'box-shadow')).toBe('-2px 2px 0 #6b7280');
+  });
 });

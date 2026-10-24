@@ -74,6 +74,7 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | --- | --- | --- | --- |
 | `tilt` | capa-nodo | `degrees` 0 a 3 (1) | no |
 | `tape` | capa-nodo | `color` color de Paleta; `width` 8 a 200 (48); `height` 4 a 60 (16) | no |
+| `fold` | capa-nodo | `color` color de Paleta; `size` 4 a 60 (14); `shadow` color de Paleta (opcional) | no |
 | `ring` | capa-nodo | `color` color de Paleta; `width` 1 a 16 (2); `offset` 0 a 32 (4) | no |
 
 ### Familia trazo

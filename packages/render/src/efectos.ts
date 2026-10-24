@@ -22,7 +22,7 @@ import type { Estilo } from './estilo';
 
 type Declaraciones = Record<string, string>;
 type Props = CapaPintada['props'];
-type NombreDeEfecto = Extract<NombreDePrimitiva, 'shadow' | 'glow' | 'glass' | 'sketch' | 'tilt' | 'tape' | 'ring'>;
+type NombreDeEfecto = Extract<NombreDePrimitiva, 'shadow' | 'glow' | 'glass' | 'sketch' | 'tilt' | 'tape' | 'ring' | 'fold'>;
 
 const px = (valor: number | string | undefined): string => `${num(Number(valor))}px`;
 const css = (valor: number | string | undefined): string => limpiarValorCss(String(valor));
@@ -37,6 +37,7 @@ export const PINTORES_DE_EFECTOS: { readonly [P in NombreDeEfecto]: (props: Prop
   sketch: () => ({}),
   tilt: () => ({}),
   tape: () => ({}),
+  fold: () => ({}),
 };
 
 /** Lo que los efectos por elemento anaden a la caja de un Nodo o Grupo. */
@@ -56,7 +57,7 @@ const SIN_EFECTOS: EfectosDeElemento = { caja: '', nodo: '', debajo: [], encima:
 /** Efectos que dependen del elemento: semilla = id del elemento + nombre de Capa (+ `seed N` del Tema). */
 export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo, 'capas'>, id: string): EfectosDeElemento {
   const semillaDelTema = estilo.pintura.semilla;
-  if (!capas.some((c) => c.tipo === 'sketch' || c.tipo === 'tilt' || c.tipo === 'tape')) return SIN_EFECTOS;
+  if (!capas.some((c) => c.tipo === 'sketch' || c.tipo === 'tilt' || c.tipo === 'tape' || c.tipo === 'fold')) return SIN_EFECTOS;
   const resultado: EfectosDeElemento = { caja: '', nodo: '', debajo: [], encima: [] };
   for (const capa of capas) {
     const semilla = semillaDeCapa(id, capa.nombre, semillaDelTema);
@@ -68,6 +69,8 @@ export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo,
       resultado.caja += `rotate:${num(giroDeCapa(semilla, Number(capa.props['degrees'])))}deg;`;
     } else if (capa.tipo === 'tape') {
       (capa.encima === true ? resultado.encima : resultado.debajo).push(cinta(capa.props, semilla));
+    } else if (capa.tipo === 'fold') {
+      resultado.encima.push(doblez(capa.props, estilo.fondo, anchoDeBorde(capas)));
     }
   }
   return resultado;
@@ -88,6 +91,25 @@ function filtroDeManoAlzada(idDeFiltro: string, semilla: number, rugosidad: numb
         ],
       },
     ],
+  };
+}
+
+/** Grosor del borde de la pila (la ultima Capa de la Familia borde): el doblez lo tapa. */
+function anchoDeBorde(capas: readonly CapaPintada[]): number {
+  const borde = capas.filter((c) => c.tipo === 'border' || c.tipo === 'dashed' || c.tipo === 'dotted').pop();
+  return borde === undefined ? 0 : Number(borde.props['width']);
+}
+
+/** Esquina doblada arriba a la derecha: dos triangulos (fondo de pagina fuera, `color` dentro) sobre el borde. */
+function doblez(props: Props, fondo: string, borde: number): Elemento {
+  const lado = px(props['size']);
+  const sombra = props['shadow'] === undefined ? '' : `box-shadow:-2px 2px 0 ${css(props['shadow'])};`;
+  return {
+    tag: 'div',
+    attrs: {
+      class: 'rd-doblez',
+      style: `top:${px(-borde)};right:${px(-borde)};border-width:0 ${lado} ${lado} 0;border-color:transparent ${css(fondo)} ${css(props['color'])} transparent;${sombra}`,
+    },
   };
 }
 

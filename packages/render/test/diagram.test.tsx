@@ -392,6 +392,13 @@ describe('Diagram', () => {
     expect(buscar(arbol, (e) => e.props['data-toggle'] === 'b')).toBeUndefined();
   });
 
+  it('el control de colapso solo se ve al pasar el raton por su caja o con el foco del teclado dentro', async () => {
+    const hoja = hojaDe(dibujo(await props(vista(), { onToggle: () => undefined })));
+
+    expect(hoja).toMatch(/\.rd-control\{[^}]*opacity:0/);
+    expect(hoja).toMatch(/\.rd-caja:hover \.rd-control,\.rd-[a-z0-9]+ \.rd-caja:focus-within \.rd-control\{opacity:1\}/);
+  });
+
   it('sin onToggle no se dibujan controles de colapso', async () => {
     expect(dibujo(await props(vista()))).not.toContain('data-toggle');
   });

@@ -29,6 +29,8 @@ export const CATALOGO_DE_EFECTOS = {
   tilt: { familia: 'decoracion', afectaMetricas: false, propiedades: { degrees: num(0, 3, 1) } },
   // Cinta adhesiva centrada sobre el borde superior; sobresale de la caja.
   tape: { familia: 'decoracion', afectaMetricas: false, propiedades: { color, width: num(8, 200, 48), height: num(4, 60, 16) } },
+  // Esquina superior derecha doblada: el triangulo de fuera toma el fondo de pagina, el de dentro `color`; `shadow`, sombra dura opcional.
+  fold: { familia: 'decoracion', afectaMetricas: false, propiedades: { color, size: num(4, 60, 14), shadow: { tipo: 'color', opcional: true } } },
   // Aro exterior separado del borde (outline); sobresale de la caja.
   ring: { familia: 'decoracion', afectaMetricas: false, propiedades: { color, width: num(1, 16, 2), offset: num(0, 32, 4) } },
 } as const satisfies Record<string, DefinicionDeEfecto>;

@@ -4,6 +4,8 @@ import type { Pintor } from './comun';
 
 export const PINTORES_DE_FORMA = {
   pill: () => ({ 'border-radius': '9999px' }),
-  cut: ({ cut }) => ({ 'clip-path': `polygon(0 0,calc(100% - ${px(cut)}) 0,100% ${px(cut)},100% 100%,0 100%)` }),
+  // Esquinas cortadas arriba a la izquierda y abajo a la derecha. `corner-shape` hace que el borde y la sombra
+  // sigan el corte; un navegador sin `corner-shape` dibuja esas dos esquinas redondeadas.
+  cut: ({ cut }) => ({ 'border-radius': `${px(cut)} 0 ${px(cut)} 0`, 'corner-shape': 'bevel' }),
   circle: () => ({ 'border-radius': '50%' }),
 } satisfies Record<string, Pintor>;
