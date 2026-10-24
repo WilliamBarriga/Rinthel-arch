@@ -3,28 +3,76 @@
 theme pcb {
   fonts { body "JetBrains Mono"  mono "JetBrains Mono"  fallback "monospace" }
   palette {
-    placa "#0c4a2f"  texto "#f2f2ea"  chip "#16171a"  cobre "#d8a24a"  estano "#c9ccd1"
+    fondo "#0c4a2f"  texto "#f2f2ea"  placa "#0c4a2f"  chip "#16171a"  cobre "#d8a24a"  estano "#c9ccd1"  serigrafia "#f2f2ea"  blanco "#ffffff"
     blue "#6fb7ff"  purple "#c49bff"  green "#7be38f"  amber "#ffcc55"  red "#ff7a6b"  gray "#c9ccd1"
   }
   tokens { background "#0c4a2f"  foreground "#f2f2ea"  border "#c9ccd1" }
+  // Placa con fibra de vidrio (grano claro) y la rejilla de puntos de la serigrafia.
+  page {
+    layer fibra noise { color blanco  opacity 0.07  frequency 0.8 }
+    layer rejilla dots { color serigrafia/0.08  size 16  radius 1 }
+    fixed
+  }
   node {
+    // Chip negro con patas de estano arriba y abajo y la muesca del pin 1.
+    layer patas pins { color estano  width 4  step 11  length 6  margin 10 }
+    layer sombra shadow { color chip/0.6  x 0  y 3  blur 6 }
     layer forma rect { radius 3 }
-    layer chip solid { color chip }
-    layer brillo gradient { from estano/0.12  to chip/0  angle 160 }
-    layer patas dashed { color estano  width 2 }
-    layer serigrafia border { color texto/0.5 width 1 }
-    slots { title { weight 700  transform uppercase }  badge { alpha 0.5 }  attrs }
-    type actor { layer forma pill  layer chip solid { color cobre/0.15 }  layer serigrafia border { color cobre  width 2 } }
-    type externo { layer chip solid { color placa }  layer patas none  layer serigrafia dashed { color texto  width 2 } }
-    state hover { layer brillo { from COLOR/0.3 }  transition 100ms linear }
-    state en-ruta { layer serigrafia { color COLOR  width 2 } }
-    state atenuado { layer brillo none }
+    layer chip gradient { from chip  to mix(chip, serigrafia, 0.1)  angle 160 }
+    layer muesca disc { color serigrafia/0.25  radius 3  x 9  y 9  unit px }
+    slots column min-width 170 slack 22 {
+      row gap 10 pad 18 min-height 54 {
+        icon { variant box  side 22  radius 2  fill COLOR/0.15  border COLOR/0.6 }
+        column {
+          title { weight 700  transform uppercase  size 0.86  tracking 0.05  text-align start  leading 1.25 }
+          badge { alpha 0.5  font mono  transform uppercase  size 0.62  tracking 0.15 }
+        }
+        counter { fill cobre  border cobre  font mono }
+      }
+      attrs
+    }
+    // El actor es una almohadilla de cobre; el externo, un conector con patas de cobre y serigrafia discontinua.
+    type actor {
+      layer patas none  layer muesca none  layer sombra none
+      layer forma pill
+      layer chip solid { color cobre/0.15 }
+      layer borde border after chip { color cobre  width 2 }
+    }
+    type externo {
+      layer patas pins { color cobre  width 6  step 16  length 8  margin 14 }
+      layer sombra none  layer muesca none
+      layer chip solid { color placa }
+      layer borde dashed after chip { color serigrafia/0.8  width 1.5 }
+    }
+    type artefacto { layer forma { radius 2 }  layer chip gradient { from mix(estano, chip, 0.65)  to mix(estano, chip, 0.8)  angle 180 } }
+    state hover { layer resplandor glow after sombra { color COLOR/0.6  radius 14 }  transition 100ms linear }
+    state en-ruta { layer resplandor glow after sombra { color COLOR  radius 18 } }
+    state atenuado { layer sombra none }
+  }
+  group {
+    // Contorno de serigrafia con una zona discontinua por dentro.
+    layer forma rect
+    layer borde border { color serigrafia/0.75  width 1.5 }
+    layer zona dashed { color serigrafia/0.25  offset 5 5  grow -10 }
+    slots row pad 18 pad-y 9 { title { transform uppercase  font mono  size 0.75  leading 1.2  tracking 0.2  weight 600 } }
+    padding 19 26 30 26
+    // Cerrado es el chip del Nodo con un disipador de lineas finas encima.
+    state collapsed {
+      layer patas pins before forma { color estano  width 4  step 11  length 6  margin 10 }
+      layer sombra shadow before forma { color chip/0.6  x 0  y 3  blur 6 }
+      layer forma { radius 3 }
+      layer chip gradient after forma { from chip  to mix(chip, serigrafia, 0.1)  angle 160 }
+      layer muesca disc after chip { color serigrafia/0.25  radius 3  x 9  y 9  unit px }
+      layer disipador lines after muesca { color serigrafia/0.06  size 4  width 1  angle 0 }
+      layer borde none
+      layer zona none
+    }
   }
   edge {
-    layer halo line { color cobre/0.25 width 7 }
-    layer pista line { color cobre  width 3  corner chamfer  cut 8 }
-    start via { size 6  color cobre }
-    end via { size 6  color cobre }
-    label { scale 0.75  pad 4  radius 0  fill placa  border texto }
+    layer halo line { color cobre/0.25  width 7  corner chamfer  cut 10  cap round }
+    layer pista line { color cobre  width 3  corner chamfer  cut 10  cap round }
+    start via { size 10  color cobre }
+    end via { size 10  color cobre }
+    label { scale 0.75  pad 10  pad-y 2.5  radius 0  fill placa  border serigrafia/0.7  border-width 1.5  font mono  weight 700  color serigrafia }
   }
 }

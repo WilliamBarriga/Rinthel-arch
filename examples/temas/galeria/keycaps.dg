@@ -1,30 +1,75 @@
-// Contraste: ninguno
+// Contraste: externo
+// Deliberado, como en el prototipo: el externo es una tecla hueca (papel al 15 %) y su texto oscuro apenas se lee sobre el fondo; la tecla se lee por su borde discontinuo.
 // Teclas 3D: cada Nodo es una tecla con sombra solida apilada que simula el canto y brillo en el borde.
 theme keycaps {
   palette {
     fondo "#2b2d3a"  texto "#1b1c24"  luz "#ffffff"  papel "#d9dce6"
     blue "#8ab4ff"  purple "#c7a6ff"  green "#86e3b5"  amber "#ffd27a"  red "#ff9a9a"  gray "#d9dce6"
   }
+  fonts { body "Nunito"  mono "JetBrains Mono"  fallback "sans-serif" }
   tokens { background "#2b2d3a"  foreground "#1b1c24"  border "#d9dce6" }
+  page {
+    layer luz radial { from mix(fondo, luz, 0.15)  to fondo  x 50  y 30 }
+    fixed
+  }
   node {
-    layer canto-3 shadow { color texto/0.45  x 0  y 8 }
-    layer canto-2 shadow { color texto/0.5  x 0  y 6 }
-    layer canto-1 shadow { color texto/0.6  x 0  y 4 }
+    // El canto de la tecla son sombras duras apiladas, cada una algo mas oscura, sobre la sombra suave del suelo.
     layer suelo shadow { color texto/0.55  x 0  y 14  blur 16 }
+    layer canto-8 shadow { color mix(COLOR, texto, 0.55)  x 0  y 8 }
+    layer canto-6 shadow { color mix(COLOR, texto, 0.5)  x 0  y 6 }
+    layer canto-4 shadow { color mix(COLOR, texto, 0.45)  x 0  y 4 }
+    layer canto-2 shadow { color mix(COLOR, texto, 0.4)  x 0  y 2 }
     layer forma rect { radius 12 }
-    layer tecla gradient { from COLOR  to COLOR/0.85  angle 180 }
-    layer borde border { color luz/0.5 width 1 }
-    slots { title { weight 800 }  badge { alpha 0.55 }  attrs }
-    type externo { layer tecla gradient { from papel  to papel/0.85  angle 180 }  layer borde dashed { color papel  width 2 }  layer canto-3 none  layer canto-2 none  layer canto-1 none  layer suelo none }
-    state hover { layer canto-3 none  layer canto-2 none  layer suelo { y 4  blur 8 }  transition 80ms ease-out }
+    layer tecla gradient { from mix(COLOR, luz, 0.3)  to COLOR  angle 180 }
+    layer borde border { color luz/0.5 }
+    slots column min-width 160 slack 20 {
+      row gap 10 pad 12 min-height 56 {
+        icon { variant box  side 30  radius 9  fill luz/0.45  border luz/0.6  color texto }
+        column {
+          title { weight 800  text-align start  leading 1.25 }
+          badge { alpha 0.55  size 0.7 }
+        }
+        counter { fill luz/0.6  border texto/0.3 }
+      }
+      attrs
+    }
+    type externo {
+      layer suelo none  layer canto-8 none  layer canto-6 none  layer canto-4 none  layer canto-2 none
+      layer tecla solid { color papel/0.15 }
+      layer borde dashed { color papel/0.5  width 2 }
+    }
+    // Pulsada: la tecla baja y solo queda el primer canto.
+    state hover { layer canto-8 none  layer canto-6 none  layer canto-4 none  layer suelo { color texto/0.5  y 4  blur 8 }  transition 80ms ease-out }
     state en-ruta { layer borde { color luz  width 2 } }
     state atenuado { layer suelo none }
   }
+  group {
+    // Bandeja oscura con un filo de luz arriba.
+    layer brillo shadow { color luz/0.08  x 0  y 2 }
+    layer forma rect { radius 20 }
+    layer relleno solid { color texto/0.35 }
+    layer borde border { color texto/0.6 }
+    slots row pad 12 pad-y 9 { title { size 0.8  weight 600  fill COLOR/0.2  border COLOR/0.5  radius 50  pad 10  dot COLOR } }
+    padding 14 24 30 24
+    // Cerrado es la tecla del Nodo sobre una base oscura que la rodea.
+    state collapsed {
+      layer base solid before brillo { color texto/0.35  offset -4 -4  grow 8 }
+      layer suelo shadow before brillo { color texto/0.55  x 0  y 14  blur 16 }
+      layer canto-8 shadow before brillo { color mix(COLOR, texto, 0.55)  x 0  y 8 }
+      layer canto-6 shadow before brillo { color mix(COLOR, texto, 0.5)  x 0  y 6 }
+      layer canto-4 shadow before brillo { color mix(COLOR, texto, 0.45)  x 0  y 4 }
+      layer canto-2 shadow before brillo { color mix(COLOR, texto, 0.4)  x 0  y 2 }
+      layer brillo none
+      layer forma { radius 12 }
+      layer relleno gradient { from mix(COLOR, luz, 0.3)  to COLOR  angle 180 }
+      layer borde { color luz/0.5 }
+    }
+  }
   edge {
-    layer cable line { color texto/0.6 width 7 }
-    layer hilo line { color papel width 2.5 }
-    start via { size 6 }
-    end arrow { size 9 }
-    label { scale 0.8  pad 6  radius 8  fill papel  border texto }
+    layer cable line { color texto/0.6  width 7  corner round  radius 16  cap round }
+    layer hilo line { color papel/0.85  width 2.5  corner round  radius 16  cap round }
+    start hollow { size 7  color texto/0.7 }
+    end arrow { size 10  color papel/0.85 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 8  fill papel  border texto/0.5  color texto/0.8 }
   }
 }

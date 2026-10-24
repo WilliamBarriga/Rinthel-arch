@@ -1,26 +1,51 @@
-// Contraste: ninguno
+// Contraste: cola
 // Solo color: modulo/artefacto, paquete/artefacto, paquete/modulo
-// Deliberado, como en el prototipo: sin insignia, en la Vista de referencia paquete, modulo y artefacto solo cambian de color.
+// Deliberado, como en el prototipo: al pasar o en ruta, el borde ambar de la estacion casi no contrasta con su propio tinte ambar.
+// Deliberado, como en el prototipo: sin insignia, paquete, modulo y artefacto son estaciones iguales y solo cambia el color de su icono y de sus lineas.
 // Mapa de metro: estaciones en pastilla con borde grueso y lineas gruesas del color del origen.
 theme metro-map {
   palette {
     fondo "#ffffff"  texto "#111111"  blanco "#ffffff"
-    blue "#0067b1"  purple "#8a3ffc"  green "#00953b"  amber "#b45f06"  red "#e3001b"  gray "#7a7a7a"
+    blue "#0067b1"  purple "#8a3ffc"  green "#00953b"  amber "#f5a300"  red "#e3001b"  gray "#7a7a7a"
   }
+  fonts { body "Inter"  mono "JetBrains Mono"  fallback "sans-serif" }
   tokens { background "#ffffff"  foreground "#111111"  border "#111111" }
   node {
+    // Estacion: pastilla blanca con borde grueso; el color del Tipo va en el punto del icono.
     layer forma pill
     layer relleno solid { color blanco }
     layer borde border { color texto  width 4 }
-    slots { title { weight 700 }  attrs }
+    slots column min-width 150 slack 20 {
+      row gap 10 pad 12 min-height 52 {
+        icon { variant box  side 22  radius 50  fill COLOR  border texto  border-width 3  color blanco }
+        title { weight 700  text-align start  leading 1.25 }
+        counter { fill blanco  border texto  border-width 2 }
+      }
+      attrs
+    }
     type externo { layer borde dashed { color texto  width 4 } }
     state hover { layer relleno { color COLOR/0.12 }  layer borde { color COLOR }  transition 120ms ease-out }
     state en-ruta { layer borde { color COLOR  width 6 } }
     state atenuado { layer borde { color gray } }
   }
+  group {
+    // Zona de tarifa: un area tenue del color del Tipo, sin borde.
+    layer forma rect { radius 36 }
+    layer relleno solid { color COLOR/0.07 }
+    slots row pad 18 pad-y 9 { title { transform uppercase  size 0.75  leading 1.2  tracking 0.18  weight 600 } }
+    padding 19 26 26 26
+    // Cerrado es una estacion de intercambio: la del Nodo con el borde mas grueso.
+    state collapsed {
+      layer forma pill
+      layer relleno { color blanco }
+      layer borde border after relleno { color texto  width 7 }
+    }
+  }
   edge {
-    layer contorno line { color blanco width 11 }
-    layer linea line { color ORIGEN width 6 }
-    label { scale 0.8  pad 8  radius 3  fill texto  border texto }
+    // Linea del color del Nodo de origen, con un contorno blanco que la separa de las que cruza.
+    layer contorno line { color blanco  width 11  corner round  radius 22  cap round }
+    layer linea line { color ORIGEN  width 6  corner round  radius 22  cap round }
+    end none
+    label { scale 0.82  pad 10  pad-y 2.5  radius 3  fill texto  border texto  color blanco  weight 700 }
   }
 }

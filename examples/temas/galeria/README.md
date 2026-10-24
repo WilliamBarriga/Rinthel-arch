@@ -38,8 +38,4 @@ Un Tema las nombra en `fonts` y declara la reserva con `fallback`:
 fonts { body "Caveat"  mono "Caveat"  fallback "cursive" }
 ```
 
-El archivo de una familia se encuentra por nombre, con la convencion de Fontsource: `<familia-en-kebab>-<subset>-<peso>-<estilo>.<ext>` (`caveat-latin-700-normal.woff2`; tambien vale `<Familia>.<ext>` como peso 400). Una familia no generica sin archivo en el Workspace es el error `E_THEME_FONT_MISSING`, situado en el Tema, con "quisiste decir". `dev` sirve los archivos en `/fuentes/<ruta>` (solo fuentes del Workspace) y el visor declara el `@font-face` y mide con la fuente ya cargada. Los Temas de la galeria que hoy usan estas fuentes son `sticky-notes` (Caveat), `pixel-art` (Press Start 2P) y `blueprint`, `crt-terminal` y `pcb` (JetBrains Mono); las demas quedan disponibles para #55-#57.
-
-## Limites del catalogo actual
-
-Estos Temas aproximan el prototipo con las Primitivas que existen hoy: sin bloque propio de Grupo. (Los decimales con cero a la izquierda, como `0.05`, ya se leen bien en el DSL.)
+El archivo de una familia se encuentra por nombre, con la convencion de Fontsource: `<familia-en-kebab>-<subset>-<peso>-<estilo>.<ext>` (`caveat-latin-700-normal.woff2`; tambien vale `<Familia>.<ext>` como peso 400). Una familia no generica sin archivo en el Workspace es el error `E_THEME_FONT_MISSING`, situado en el Tema, con "quisiste decir". `dev` sirve los archivos en `/fuentes/<ruta>` (solo fuentes del Workspace) y el visor declara el `@font-face` y mide con la fuente ya cargada. Cada Tema nombra las familias de su variante del prototipo (p. ej. `sticky-notes` Caveat, `keycaps` Nunito, `pixel-art` Press Start 2P, `pcb` JetBrains Mono); donde el prototipo cae en una fuente del sistema (Futura en `bauhaus`, Helvetica en `metro-map`) el Tema nombra lo que el navegador termina usando: la familia generica o la siguiente de la pila que si esta en `fuentes/`.

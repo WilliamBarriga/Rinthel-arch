@@ -22,7 +22,7 @@ theme bauhaus {
     layer borde border { color texto  width 3 }
     slots column min-width 180 slack 30 {
       row gap 12 pad 14 min-height 58 {
-        icon { variant box  side 26  radius 50  fill COLOR  color papel }
+        icon { variant box  side 26  radius 50  fill COLOR  border texto  color papel }
         column {
           title { weight 800  transform uppercase  tracking 0.04  text-align start  leading 1.25 }
           badge { alpha 0.7  transform uppercase  size 0.62  tracking 0.25 }
@@ -49,11 +49,11 @@ theme bauhaus {
     state collapsed {
       layer bloque solid before forma { color COLOR  offset -7 -7 }
       layer relleno { color papel }
-      layer franja shadow after borde { color COLOR  x -12  y 0  inset 1 }
+      layer franja stripe after borde over { color COLOR  side right  width 12 }
     }
   }
   edge {
-    layer linea line { color texto  width 3 }
+    layer linea line { color texto  width 3  cap round }
     start square { size 8 }
     end arrow { size 10 }
     label { scale 0.82  pad 10  pad-y 2.5  radius 0  fill amarillo  border texto  color texto/0.8 }
