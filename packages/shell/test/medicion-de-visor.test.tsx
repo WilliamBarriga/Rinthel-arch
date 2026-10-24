@@ -44,6 +44,17 @@ describe('medirEnVisor', () => {
 describe('VistaInteractiva con medicion real', () => {
   const geometria: Geometria = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, pinsSolapados: [], width: 100, height: 50 };
 
+  it('un texto con peso se carga y se mide con ese peso, bajo su propia clave', async () => {
+    const fuentes: string[] = [];
+    const medidas = await medirEnVisor([{ familia: 'Inter', tamano: 14, texto: 'hola', peso: 800 }], {
+      cargar: async (fuente) => void fuentes.push(fuente),
+      ancho: (fuente) => (fuentes.push(fuente), 50),
+    });
+
+    expect(fuentes).toEqual(['800 14px "Inter"', '800 14px "Inter"']);
+    expect(medidas.anchos).toEqual({ [claveDeTexto('Inter', 14, 'hola', 800)]: 50 });
+  });
+
   it('espera las medidas y se las entrega al layout; sin medidor el layout no las recibe', async () => {
     const recibidas: (MedidasDeTexto | undefined)[] = [];
     const layout: AdaptadorDeLayout = async (_vista, _tema, medidas) => (recibidas.push(medidas), geometria);

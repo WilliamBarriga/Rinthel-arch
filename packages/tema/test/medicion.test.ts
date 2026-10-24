@@ -63,6 +63,23 @@ describe('medicion de texto', () => {
     expect(textos.filter((t) => t.texto === 'abcd')).toHaveLength(1);
   });
 
+  it('un Slot o una etiqueta con peso propio se miden con ese peso (un titulo grueso es mas ancho)', () => {
+    const grueso = {
+      ...TEMA_NEUTRO,
+      nodo: { ...TEMA_NEUTRO.nodo, slots: { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }] }, textos: { title: { tipo: 'text', props: { weight: 800 } } } },
+      arista: { ...TEMA_NEUTRO.arista, etiqueta: { tipo: 'label', props: { weight: 700 } } },
+    } as unknown as Tema;
+    const nodo = { id: 'a', type: 't', label: 'abcd', collapsed: false, children: [], source: [], attributes: [] };
+    const tabla = tablaDeMetricas(grueso);
+    const textos = textosAMedir({ nodes: [nodo], edges: [{ label: 'lee' }] } as never, tabla);
+
+    expect(textos.map((t) => [t.texto, t.peso])).toEqual([['abcd', 800], ['lee', 700]]);
+    const clave = claveDeTexto(TEMA_NEUTRO.fonts.body, tabla.base.fontSize, 'abcd', 800);
+    expect(clave).not.toBe(claveDeTexto(TEMA_NEUTRO.fonts.body, tabla.base.fontSize, 'abcd'));
+    const medido = tablaDeMetricas(grueso, medidas({ [clave]: 300 })).base;
+    expect(colocarNodo({ titulo: 'abcd', atributos: [], icono: false }, medido).width).toBe(300 + medido.paddingHorizontal);
+  });
+
   it('un Slot o una etiqueta con font mono se miden con la fuente mono', () => {
     const mono = {
       ...TEMA_NEUTRO,

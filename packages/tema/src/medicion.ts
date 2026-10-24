@@ -28,9 +28,12 @@ export interface TextoAMedir {
   familia: string;
   tamano: number;
   texto: string;
+  /** Peso de la fuente (`weight` del estilo); sin el, el normal. Un texto grueso es mas ancho. */
+  peso?: number;
 }
 
-export const claveDeTexto = (familia: string, tamano: number, texto: string): string => `${familia}|${tamano}|${texto}`;
+export const claveDeTexto = (familia: string, tamano: number, texto: string, peso?: number): string =>
+  peso === undefined ? `${familia}|${tamano}|${texto}` : `${familia}|${peso}|${tamano}|${texto}`;
 
 /** Ancho de `texto`: la medida si existe; si no, la estimacion por caracter (`factor` = ancho medio relativo al tamano). */
 export function anchoDeTexto(
@@ -38,8 +41,9 @@ export function anchoDeTexto(
   familia: string,
   tamano: number,
   texto: string,
+  peso?: number,
 ): number {
-  return origen.anchos?.[claveDeTexto(familia, tamano, texto)] ?? texto.length * tamano * origen.factorDeAncho;
+  return origen.anchos?.[claveDeTexto(familia, tamano, texto, peso)] ?? texto.length * tamano * origen.factorDeAncho;
 }
 
 /** Hash FNV-1a de 32 bits (hex) del contenido de un archivo de fuente: puro y estable entre motores. */

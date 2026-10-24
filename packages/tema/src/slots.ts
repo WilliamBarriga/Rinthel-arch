@@ -178,7 +178,7 @@ export function textoDeSlot(slot: SlotDeTexto, metricas: Metricas, contenido: Co
   const estilo = slot === 'title' ? metricas.titulo : undefined;
   const texto = estilo?.mayusculas === true ? crudo.toUpperCase() : crudo;
   const definicion: DefinicionDeSlot = DEFINICION_DE_SLOT[slot];
-  const { size, leading, mono } = metricas.medidaDeTexto[slot] ?? {};
+  const { size, leading, mono, peso } = metricas.medidaDeTexto[slot] ?? {};
   const tamano = metricas.fontSize * (size ?? definicion.escala ?? 1);
   const interlineado = leading ?? definicion.interlineado;
   const chip = slot === 'counter';
@@ -186,8 +186,9 @@ export function textoDeSlot(slot: SlotDeTexto, metricas: Metricas, contenido: Co
     familia: metricas.fuentes[mono === true ? 'mono' : 'body']!,
     tamano,
     texto,
+    ...(peso !== undefined && { peso }),
     alto: (interlineado === undefined ? metricas.cabecera : Math.ceil(tamano * interlineado)) + (chip ? HOLGURA_DE_CHIP.y : 0),
-    holgura: chip ? HOLGURA_DE_CHIP.x : estilo === undefined ? 0 : estilo.tracking * tamano * texto.length + (estilo.punto ? PUNTO_DE_TITULO_EM * tamano : 0) + 2 * estilo.relleno,
+    holgura: chip ? HOLGURA_DE_CHIP.x : estilo === undefined ? 0 : estilo.tracking * tamano * texto.length + (estilo.punto ? PUNTO_DE_TITULO_EM * tamano : 0) + 2 * (estilo.relleno + estilo.borde),
   };
 }
 
@@ -198,7 +199,7 @@ function medidasDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): MedidaDe
   const { fontSize, escalaAtributo, fuentes } = metricas;
   const delTexto = (slot: SlotDeTexto) => (): Tamano | undefined => {
     const t = textoDeSlot(slot, metricas, contenido);
-    return t === undefined ? undefined : { width: anchoDeTexto(metricas, t.familia, t.tamano, t.texto) + t.holgura, height: t.alto, ...(slot === 'title' && { elastico: !metricas.titulo.caja }) };
+    return t === undefined ? undefined : { width: anchoDeTexto(metricas, t.familia, t.tamano, t.texto, t.peso) + t.holgura, height: t.alto, ...(slot === 'title' && { elastico: !metricas.titulo.caja }) };
   };
   const medidas: Record<NombreDeSlot, () => Tamano | undefined> = {
     icon: () => (contenido.icono ? { width: metricas.iconoLado, height: metricas.iconoLado } : undefined),
@@ -222,7 +223,7 @@ function medidasDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): MedidaDe
 export function textosDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): TextoAMedir[] {
   const delTexto = SLOTS_DE_TEXTO.filter((slot) => muestra(metricas, slot)).flatMap((slot) => textoDeSlot(slot, metricas, contenido) ?? []);
   const atributos = contenido.atributos.map((a) => ({ familia: metricas.fuentes['mono']!, tamano: metricas.fontSize * metricas.escalaAtributo, texto: textoDeAtributo(a) }));
-  return [...delTexto.map(({ familia, tamano, texto }) => ({ familia, tamano, texto })), ...atributos];
+  return [...delTexto.map(({ familia, tamano, texto, peso }) => ({ familia, tamano, texto, ...(peso !== undefined && { peso }) })), ...atributos];
 }
 
 /**

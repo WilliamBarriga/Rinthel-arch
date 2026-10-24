@@ -36,15 +36,16 @@ export interface Metricas {
   anchos?: Readonly<Record<string, number>>;
   /** Mini-layout de los Slots del Nodo que el Tema muestra (un Slot fuera del arbol no se pinta ni se mide). */
   disposicion: CajaDeSlots;
-  /** `size`, `leading` y `font mono` que el Tema fija a un Slot de texto (los que no, usan los de `DEFINICION_DE_SLOT`); cambian el alto y el ancho que reserva. */
-  medidaDeTexto: Readonly<Partial<Record<NombreDeSlot, { size?: number; leading?: number; mono?: boolean }>>>;
+  /** `size`, `leading`, `font mono` y `weight` que el Tema fija a un Slot de texto (los que no, usan los de `DEFINICION_DE_SLOT`); cambian el alto y el ancho que reserva. */
+  medidaDeTexto: Readonly<Partial<Record<NombreDeSlot, { size?: number; leading?: number; mono?: boolean; peso?: number }>>>;
   /** Estilo `text` del Slot `title` que cambia su ancho (ademas de `size`): ver `textoDeSlot` en `slots.ts`. */
   titulo: {
     /** Separacion entre letras, en em. */
     tracking: number;
     mayusculas: boolean;
-    /** Margen a cada lado del texto, en px (chip). */
+    /** Margen a cada lado del texto, en px (chip), y grosor de su borde. */
     relleno: number;
+    borde: number;
     /** Lleva un punto antes del texto. */
     punto: boolean;
     /** Tiene caja propia (relleno o borde): se mide a su ancho natural en vez de estirarse. */
@@ -81,6 +82,8 @@ export interface Metricas {
   /** Margen vertical que la etiqueta suma a su alto (`pad-y`, a cada lado) y familia con la que se mide (`font`). */
   holguraVerticalDeEtiqueta: number;
   fuenteDeEtiqueta: string;
+  /** Peso del texto de la etiqueta (`weight`); sin el, el normal. */
+  pesoDeEtiqueta?: number;
 }
 
 const TAMANO_DE_TEXTO_POR_DEFECTO = 14;
@@ -99,6 +102,7 @@ function estiloDeTitulo(textos: EstilosDeSlot): Metricas['titulo'] {
     tracking: Number(props['tracking'] ?? 0),
     mayusculas: props['transform'] === 'uppercase',
     relleno: Number(props['pad'] ?? 0),
+    borde: props['border'] === undefined ? 0 : Number(props['border-width'] ?? 1),
     punto: props['dot'] !== undefined,
     caja: props['fill'] !== undefined || props['border'] !== undefined,
   };
@@ -108,7 +112,7 @@ function estiloDeTitulo(textos: EstilosDeSlot): Metricas['titulo'] {
 function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas: MedidasDeTexto | undefined, { slots, textos }: { slots: CajaDeSlots; textos: EstilosDeSlot } = resuelto.nodo): Metricas {
   const fontSize = tamanoDeTexto(resuelto.tokens.fontSize);
   // Solo la etiqueta de Arista cuenta en las Metricas: trazos y marcadores son pintura.
-  const etiqueta = resuelto.arista.etiqueta?.props as { scale?: number; pad?: number; 'pad-y'?: number; font?: string } | undefined;
+  const etiqueta = resuelto.arista.etiqueta?.props as { scale?: number; pad?: number; 'pad-y'?: number; font?: string; weight?: number } | undefined;
   const proporcional = !/mono/i.test(resuelto.fonts.body);
   return {
     fontSize,
@@ -119,9 +123,11 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas:
     disposicion: slots,
     medidaDeTexto: Object.fromEntries(
       Object.entries(textos).flatMap(([slot, texto]) => {
-        const { size, leading, font } = texto.props as { size?: number; leading?: number; font?: string };
+        const { size, leading, font, weight } = texto.props as { size?: number; leading?: number; font?: string; weight?: number };
         const mono = font === 'mono';
-        return size === undefined && leading === undefined && !mono ? [] : [[slot, { ...(size !== undefined && { size }), ...(leading !== undefined && { leading }), ...(mono && { mono }) }]];
+        const peso = weight === undefined || weight === 400 ? undefined : weight;
+        const medida = { ...(size !== undefined && { size }), ...(leading !== undefined && { leading }), ...(mono && { mono }), ...(peso !== undefined && { peso }) };
+        return Object.keys(medida).length === 0 ? [] : [[slot, medida]];
       }),
     ),
     cajaCuadrada: pila.some((capa) => (CATALOGO[capa.primitiva.tipo] as DefinicionDePrimitiva).cajaMinima === 'cuadrado'),
@@ -144,6 +150,7 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas:
     altoDeEtiqueta: 1.4,
     holguraVerticalDeEtiqueta: 2 * (etiqueta?.['pad-y'] ?? 0),
     fuenteDeEtiqueta: etiqueta?.font === 'mono' ? resuelto.fonts.mono : resuelto.fonts.body,
+    ...(etiqueta?.weight !== undefined && etiqueta.weight !== 400 && { pesoDeEtiqueta: etiqueta.weight }),
   };
 }
 
@@ -269,7 +276,7 @@ export function textoDeAtributo(atributo: Atributo): string {
 export function tamanoDeEtiqueta(texto: string, metricas: Metricas): { width: number; height: number } {
   const tamano = metricas.fontSize * metricas.escalaEtiqueta;
   return {
-    width: Math.ceil(anchoDeTexto(metricas, metricas.fuenteDeEtiqueta, tamano, texto)) + metricas.holguraDeEtiqueta,
+    width: Math.ceil(anchoDeTexto(metricas, metricas.fuenteDeEtiqueta, tamano, texto, metricas.pesoDeEtiqueta)) + metricas.holguraDeEtiqueta,
     height: Math.ceil(tamano * metricas.altoDeEtiqueta) + metricas.holguraVerticalDeEtiqueta,
   };
 }

@@ -46,10 +46,10 @@ export async function medirEnVisor(textos: readonly TextoAMedir[], opciones: Opc
   const cargar = opciones.cargar ?? ((fuente, texto) => document.fonts.load(fuente, texto));
   const ancho = opciones.ancho ?? anchoConLienzo();
   const anchos: Record<string, number> = {};
-  for (const { familia, tamano, texto } of textos) {
-    const fuente = `${tamano}px ${pilaDeFuente(familia)}`;
+  for (const { familia, tamano, texto, peso } of textos) {
+    const fuente = `${peso === undefined ? '' : `${peso} `}${tamano}px ${pilaDeFuente(familia)}`;
     await cargar(fuente, texto);
-    anchos[claveDeTexto(familia, tamano, texto)] = ancho(fuente, texto);
+    anchos[claveDeTexto(familia, tamano, texto, peso)] = ancho(fuente, texto);
   }
   return { nivel: 'medido', fuentes: { ...opciones.hashes }, anchos };
 }
