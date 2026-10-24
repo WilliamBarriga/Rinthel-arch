@@ -18,7 +18,7 @@ theme soft-card {
     state atenuado { layer relleno none }
   }
   edge {
-    layer linea line { color texto/0.5 width 1.2 }
+    layer linea line { color texto/0.32 width 1.2  corner round  radius 6 }
     start dot { size 5 }
     end arrow { size 8 }
     label { scale 0.8  pad 6  radius 50  fill fondo  border texto/0.4 }
