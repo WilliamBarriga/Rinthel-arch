@@ -1,7 +1,7 @@
 // Contraste: ninguno
 // Editorial (estilo Stripe Press): papel crema, tipografia con serifa, solo reglas finas y sin color de relleno.
 theme editorial {
-  fonts { body "Georgia"  mono "Georgia" }
+  fonts { body "serif"  mono "serif" }
   palette {
     fondo "#fbf8f1"  texto "#1c1917"
     blue "#1d4ed8"  purple "#7e22ce"  green "#15803d"  amber "#b45309"  red "#b91c1c"  gray "#57534e"

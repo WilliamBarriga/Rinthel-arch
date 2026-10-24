@@ -2,7 +2,7 @@
 // Deliberado: el contorno negro duro (borde del Nodo) casi no contrasta con el cielo oscuro de la pagina.
 // Pixel art 8 bits: bloques sin curvas, contorno negro duro de 4 px, sombra inset y Aristas de pixeles.
 theme pixel-art {
-  fonts { body "Press Start 2P"  mono "Press Start 2P" }
+  fonts { body "Press Start 2P"  mono "Press Start 2P"  fallback "monospace" }
   palette {
     fondo "#1b1135"  texto "#ffffff"  negro "#0d0a1f"  luz "#ffffff"
     blue "#3fa9f5"  purple "#b26bff"  green "#5ee65e"  amber "#ffd23f"  red "#ff4d6d"  gray "#c0c0d0"

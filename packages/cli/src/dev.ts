@@ -5,7 +5,8 @@
  * `Sesion`; aqui solo viven los adaptadores (HTTP, observador de disco).
  *
  * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),
- * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `POST /api/deshacer` y `POST /api/rehacer` (restauran el texto exacto del historial del servidor, ADR 0007; 409 si el disco cambio fuera de dev, 422 con motivo `nada-que-deshacer` / `nada-que-rehacer` si no hay nada), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
+ * `/fuentes/<ruta>` (solo los archivos de fuente `woff2|woff|ttf|otf` del Workspace, o de `--theme-path`; todo lo demas, incluido salir de la raiz, es 404),
+ * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo, `fuentes` (ruta -> hash de cada archivo de fuente) y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `POST /api/deshacer` y `POST /api/rehacer` (restauran el texto exacto del historial del servidor, ADR 0007; 409 si el disco cambio fuera de dev, 422 con motivo `nada-que-deshacer` / `nada-que-rehacer` si no hay nada), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
  * envia el estado al conectar y tras cada recompilacion).
  *
  * `iniciarDev(OpcionesDeDev) -> ServidorDev` es la entrada programatica (el comando solo parsea y la llama).
@@ -40,7 +41,7 @@ import { rmSync, watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { combineIconProviders, genericIcons, intencionDePinSchema, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
+import { RUTA_DE_FUENTES, combineIconProviders, genericIcons, intencionDePinSchema, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
 import type { EstadoDeDev, Intencion, Issue, TipoDeCambio } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion, aplicarAlWorkspace, apilar, archivoDeVista, crearHistorial, deshacer, hashDeContenido, rehacer } from 'sesion';
@@ -55,7 +56,7 @@ import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { clasificarCambio } from './cambio';
-import { destinoEnWorkspace, escribirTexto, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
+import { destinoEnWorkspace, escribirTexto, esArchivoDeFuente, leerArchivoDeFuente, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
 
 /** Bundles del shell: pagina (React + shell) y codigo del Web Worker de layout. */
 export interface ShellDev {
@@ -161,6 +162,14 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   const bundles = await shell();
   const recursosDe = (): Record<string, string> => ({ ...(temas === undefined ? {} : leerRecursosBase(temas)), ...leerRecursosBase(workspace) });
 
+  /** Fuentes del Workspace (ruta -> hash), o `undefined` si el adaptador de lectura no las conoce (lectura inyectada sin recursos). */
+  const fuentesDe = (todos: Record<string, string>): Record<string, string> | undefined =>
+    opciones.leer !== undefined && opciones.leerRecursos === undefined ? undefined : Object.fromEntries(Object.entries(todos).filter(([ruta]) => esArchivoDeFuente(ruta)));
+  const opcionesDeSesion = (todos: Record<string, string>): { archivosDeFuente?: string[] } => {
+    const fuentes = fuentesDe(todos);
+    return fuentes === undefined ? {} : { archivosDeFuente: Object.keys(fuentes) };
+  };
+
   let version = 0;
   let archivos = leer(workspace);
   /** Recursos (`.tsx`, fuentes) del ultimo instante bueno y tipo del ultimo cambio empujado. */
@@ -169,7 +178,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   /** Ultimo resultado de compilar los `.tsx` (con el ultimo bueno de cada archivo) y si el usuario confirmo cargar el codigo. */
   let codigo = compilarCodigo();
   let confiado = confiarEnCodigo;
-  let actual: Sesion = abrirSesion(archivos, { componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
+  let actual: Sesion = abrirSesion(archivos, { ...opcionesDeSesion(recursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
   /** Ultima Sesion sin errores de compilacion y los archivos con que se abrio. */
   let buena: { sesion: Sesion; archivos: ArchivosDelWorkspace } | undefined = actual.fuente === undefined ? undefined : { sesion: actual, archivos };
   let issues: Issue[] = await actual.diagnosticar();
@@ -239,6 +248,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         }),
       ),
       hashes: Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)])),
+      ...(fuentesDe(recursos) !== undefined && { fuentes: fuentesDe(recursos) }),
       issues: issues.map((issue) => ({
         ...issue,
         href: `vscode://file/${raizAbsoluta}/${issue.file}:${issue.line}:${issue.column}`,
@@ -275,7 +285,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
           continue;
         }
         codigo = compilarCodigo();
-        const sesion = (buena?.sesion ?? actual).actualizar(nuevos, { componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
+        const sesion = (buena?.sesion ?? actual).actualizar(nuevos, { ...opcionesDeSesion(nuevosRecursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
         const nuevosIssues = await sesion.diagnosticar();
         actual = sesion;
         archivos = nuevos;
@@ -408,6 +418,15 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     responder(res, 200, { ok: true, version });
   };
 
+  /** Fuente pedida a `/fuentes/<ruta>`: solo archivos de fuente del Workspace (y de `--theme-path`); una ruta mal codificada o que sale de la raiz no existe. */
+  const servirFuente = (rutaCodificada: string): ReturnType<typeof leerArchivoDeFuente> => {
+    try {
+      return leerArchivoDeFuente(temas === undefined ? [workspace] : [workspace, temas], decodeURIComponent(rutaCodificada));
+    } catch {
+      return undefined;
+    }
+  };
+
   const comoIntencion = (cuerpo: unknown): Intencion | undefined => {
     const r = intencionSchema.safeParse(cuerpo);
     return r.success ? r.data : undefined;
@@ -471,6 +490,15 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
           confiado = true;
           responder(res, 200, { ok: true });
         });
+      }
+    } else if (ruta.startsWith(RUTA_DE_FUENTES)) {
+      const fuente = servirFuente(ruta.slice(RUTA_DE_FUENTES.length));
+      if (fuente === undefined) {
+        cabecera(res, 'text/plain', 404);
+        res.end('No encontrado');
+      } else {
+        res.writeHead(200, { 'content-type': fuente.tipo, 'cache-control': 'no-store', 'content-length': fuente.bytes.length });
+        res.end(fuente.bytes);
       }
     } else if (ruta === '/api/estado') {
       cabecera(res, 'application/json');

@@ -1,8 +1,7 @@
 /**
  * Entrada del Web Worker del HTML autocontenido: sirve el layout (ELK) por el
- * puerto `self`. `html.ts` la empaqueta aparte de la pagina, sin zod (ver
- * `zod-inerte.ts`), y la incrusta como texto; la pagina la ejecuta en un Worker
- * (via Blob) o, si no puede, en el hilo principal con un puerto en memoria.
+ * puerto `self`. `html.ts` la empaqueta aparte de la pagina y la incrusta como texto; la pagina la
+ * ejecuta en un Worker (via Blob) o, si no puede, en el hilo principal con un puerto en memoria.
  */
 import './preludio';
 

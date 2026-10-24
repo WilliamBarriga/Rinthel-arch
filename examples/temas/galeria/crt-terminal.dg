@@ -1,7 +1,7 @@
 // Contraste: ninguno
 // Terminal de fosforo (CRT): verde sobre negro, glow, lineas de barrido y Aristas punteadas.
 theme crt-terminal {
-  fonts { body "JetBrains Mono"  mono "JetBrains Mono" }
+  fonts { body "JetBrains Mono"  mono "JetBrains Mono"  fallback "monospace" }
   palette {
     fondo "#020a04"  texto "#7dff9b"
     blue "#5cf2ff"  purple "#c49bff"  green "#7dff9b"  amber "#ffcc55"  red "#ff6b6b"  gray "#7dff9b"

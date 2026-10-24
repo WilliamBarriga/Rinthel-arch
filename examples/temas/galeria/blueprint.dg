@@ -1,7 +1,7 @@
 // Contraste: ninguno
 // Plano tecnico: papel azul, trazo fino, cuadricula de dibujo y angulos rectos.
 theme blueprint {
-  fonts { body "JetBrains Mono"  mono "JetBrains Mono" }
+  fonts { body "JetBrains Mono"  mono "JetBrains Mono"  fallback "monospace" }
   palette {
     fondo "#0d3b73"  texto "#e6f0ff"
     blue "#bfe0ff"  purple "#d9ccff"  green "#c4f5df"  amber "#ffe3a8"  red "#ffc2c2"  gray "#cfdcef"

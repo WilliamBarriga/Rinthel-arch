@@ -1,7 +1,7 @@
 // Contraste: ninguno
 // Circuito impreso: placa verde, chips negros, pistas de cobre con esquina en chaflan y vias en los extremos.
 theme pcb {
-  fonts { body "JetBrains Mono"  mono "JetBrains Mono" }
+  fonts { body "JetBrains Mono"  mono "JetBrains Mono"  fallback "monospace" }
   palette {
     placa "#0c4a2f"  texto "#f2f2ea"  chip "#16171a"  cobre "#d8a24a"  estano "#c9ccd1"
     blue "#6fb7ff"  purple "#c49bff"  green "#7be38f"  amber "#ffcc55"  red "#ff7a6b"  gray "#c9ccd1"
