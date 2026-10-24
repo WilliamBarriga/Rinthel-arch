@@ -24,9 +24,9 @@ export const TRAZOS = {
       radius: { tipo: 'numero', min: 1, max: 64, defecto: 8 },
       /** Remate de los extremos (`butt`, `round`, `square`); sin el, el de su estilo (redondo en `dotted`, recto en el resto). */
       cap: { tipo: 'opcion', valores: ['butt', 'round', 'square'], opcional: true },
-      /** Mano alzada: cuanto desplaza el ruido el trazo (0, sin filtro) y la frecuencia del ruido. */
-      roughness: { tipo: 'numero', min: 0, max: 20, defecto: 0 },
-      frequency: { tipo: 'numero', min: 0.001, max: 0.5, defecto: 0.03 },
+      /** Mano alzada: cuanto desplaza el ruido el trazo (sin el, o 0, no hay filtro) y la frecuencia del ruido (0.03 sin ella). */
+      roughness: { tipo: 'numero', min: 0, max: 20, opcional: true },
+      frequency: { tipo: 'numero', min: 0.001, max: 0.5, opcional: true },
     },
   },
 } as const satisfies Record<string, DefinicionDePrimitiva>;

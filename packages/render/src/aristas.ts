@@ -50,8 +50,11 @@ export function rutaDeTrazo(puntos: readonly Punto[], esquina: Esquina, medida: 
   return orden.map(({ x, y, curva }, i) => (curva !== undefined ? `Q ${num(curva.x)} ${num(curva.y)} ` : i === 0 ? 'M ' : 'L ') + `${num(x)} ${num(y)}`).join(' ');
 }
 
+/** Frecuencia del ruido de mano alzada si el trazo no la da (la del filtro `sketch` de los Nodos). */
+const FRECUENCIA_POR_DEFECTO = 0.03;
+
 /** Trazo a mano alzada de una Capa: su desplazamiento (`roughness`, 0 si no tiene) y la frecuencia del ruido. */
-const manoAlzada = (props: Props): { rugosidad: number; frecuencia: number } => ({ rugosidad: Number(props['roughness'] ?? 0), frecuencia: Number(props['frequency'] ?? 0) });
+const manoAlzada = (props: Props): { rugosidad: number; frecuencia: number } => ({ rugosidad: Number(props['roughness'] ?? 0), frecuencia: Number(props['frequency'] ?? FRECUENCIA_POR_DEFECTO) });
 
 /** Id del filtro de mano alzada de un trazo: el mismo para las mismas propiedades y semilla. */
 const idDeFiltro = (props: Props, semilla: number): string => {

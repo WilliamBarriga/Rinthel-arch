@@ -84,7 +84,7 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 
 | Primitiva | Ubicacion | Propiedades | Metricas |
 | --- | --- | --- | --- |
-| `line` | capa-arista | `color` color de Paleta; `width` 0.5 a 24 (1.5); `style` solid|dashed|dotted|pixel (solid); `corner` sharp|chamfer|round (sharp); `cut` 1 a 32 (6); `radius` 1 a 64 (8); `cap` butt|round|square (opcional); `roughness` 0 a 20 (0); `frequency` 0.001 a 0.5 (0.03) | no |
+| `line` | capa-arista | `color` color de Paleta; `width` 0.5 a 24 (1.5); `style` solid|dashed|dotted|pixel (solid); `corner` sharp|chamfer|round (sharp); `cut` 1 a 32 (6); `radius` 1 a 64 (8); `cap` butt|round|square (opcional); `roughness` 0 a 20 (opcional); `frequency` 0.001 a 0.5 (opcional) | no |
 
 ### Familia marcador
 
