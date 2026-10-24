@@ -150,6 +150,6 @@ export type { ControlDeEdicion, ResultadoDeEdicion } from './control-de-edicion'
 export type { Historial, Intencion } from 'sesion';
 export { adaptadorDeWorker } from './layout-en-worker';
 export { servirLayout } from './servir-layout';
-export { medirEnVisor } from './medicion-de-visor';
+export { hashesDeFamilias, medirEnVisor } from './medicion-de-visor';
 export type { OpcionesDeMedicion } from './medicion-de-visor';
 export type { PuertoDeMensajes } from './layout-en-worker';

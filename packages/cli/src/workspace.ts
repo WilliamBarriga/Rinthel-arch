@@ -53,6 +53,13 @@ export function leerRecursos(raiz: string): Record<string, string> {
   return recorrer(raiz, (nombre) => EXTENSIONES_DE_RECURSO.some((extension) => nombre.endsWith(extension)), (ruta) => createHash('sha256').update(readFileSync(ruta)).digest('hex'));
 }
 
+const EXTENSIONES_DE_FUENTE = ['.ttf', '.otf', '.woff', '.woff2'];
+
+/** Rutas (relativas a `raiz`, con `/`) de los archivos de fuente del Workspace: lo que `sesion` necesita para asociar familias a archivos. */
+export function leerFuentes(raiz: string): string[] {
+  return Object.keys(leerRecursos(raiz)).filter((ruta) => EXTENSIONES_DE_FUENTE.some((extension) => ruta.toLowerCase().endsWith(extension)));
+}
+
 const CARPETA_DE_SALIDA = '.diagrams';
 /**
  * Reemplaza `<raiz>/.diagrams/<subcarpeta>` (por defecto, todo `.diagrams/`) por

@@ -26,6 +26,8 @@ export interface EntradaDeGeometria {
   layout: AdaptadorDeLayout;
   /** Medicion real de texto; si esta, el layout espera las medidas y la clave incluye nivel y hash de fuente. */
   medir?: MedidorDeTexto | undefined;
+  /** Identidad de las fuentes que usa el medidor (hash de sus archivos): si cambia, se vuelve a medir aunque los textos sean los mismos. */
+  claveDeFuentes?: string | undefined;
   /** Geometria del estado por defecto de la Vista (cacheada en el build), con la Vista resuelta a la que corresponde. */
   semilla?: Calculo | undefined;
   onError?: ((error: Error) => void) | undefined;
@@ -44,7 +46,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   ultimo.current = entrada;
   // Medidas reales: se piden cuando cambian los textos o las fuentes y el layout espera a tenerlas.
   const textos = entrada.medir === undefined ? undefined : textosAMedir(vista, tablaDeMetricas(theme));
-  const claveTextos = textos === undefined ? undefined : JSON.stringify(textos);
+  const claveTextos = textos === undefined ? undefined : JSON.stringify([entrada.claveDeFuentes, textos]);
   const [medido, setMedido] = useState<{ clave: string; medidas: MedidasDeTexto }>();
   useEffect(() => {
     if (claveTextos === undefined) return;
