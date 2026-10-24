@@ -201,6 +201,21 @@ describe('Diagram: estructura hibrida', () => {
       expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*border-radius:8px[^}]*background:${TEMA_NEUTRO.palette['amber']}[^}]*border:1px solid ${TEMA_NEUTRO.palette['blue']}`));
     });
 
+    it('un Tema con icon variant dot muestra el punto del color del Tipo aunque el Tipo no declare icon, y reserva su sitio', async () => {
+      const FILA_ICONO: CajaDeSlots = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'title' }] };
+      const conPunto = conSlots(FILA_ICONO, { icon: { tipo: 'icon', props: { variant: 'dot', side: 7, radius: 6, fill: 'COLOR' } } });
+      const conGlifo = conSlots(FILA_ICONO, { icon: { tipo: 'icon', props: { variant: 'plain', side: 7 } } });
+      const { html, geometry } = await dibujar(conPunto);
+      const { geometry: sinPunto } = await dibujar(conGlifo);
+
+      expect(rectDe(slotDe(html, 'b', 'icon'))).toMatchObject({ width: 7, height: 7 });
+      expect(slotDe(html, 'b', 'icon')).toContain('data-variante="dot"');
+      expect(slotDe(html, 'b', 'icon')).not.toContain('data-icon=');
+      // Con otra variante, un Tipo sin icon no reserva el sitio.
+      expect(geometry.nodes['b']!.width).toBeGreaterThan(sinPunto.nodes['b']!.width - 1);
+      expect(sinPunto.nodes['b']!.slots?.['icon']).toBeUndefined();
+    });
+
     it('font mono y border-width llegan al texto, al contador y al icono; el punto con ring va sobre un aro', async () => {
       const { html } = await dibujar(
         conSlots(

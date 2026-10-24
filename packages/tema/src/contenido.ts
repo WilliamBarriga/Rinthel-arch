@@ -49,14 +49,14 @@ export function muestra(metricas: Pick<Metricas, 'disposicion'>, slot: NombreDeS
 /** Lo que un Nodo aporta a la colocacion de Slots; una sola regla para `layout`, `render` y `shell`. */
 export function contenidoDeNodo(
   nodo: Pick<NodoResuelto, 'children' | 'attributes' | 'label' | 'icon' | 'type' | 'description' | 'source' | 'collapsed' | 'childCount'>,
-  metricas: Pick<Metricas, 'disposicion'>,
+  metricas: Pick<Metricas, 'disposicion' | 'iconoEsPunto'>,
 ): ContenidoDeNodo {
   const cuenta = nodo.collapsed ? nodo.childCount : undefined;
   return {
     // Sin Slot `counter`, un Grupo colapsado dice cuantos hijos esconde en el titulo.
     titulo: cuenta !== undefined && !muestra(metricas, 'counter') ? `${nodo.label} (${cuenta})` : nodo.label,
     atributos: atributosVisibles(nodo, metricas),
-    icono: nodo.icon !== undefined,
+    icono: nodo.icon !== undefined || metricas.iconoEsPunto,
     tipo: nodo.type,
     descripcion: nodo.description,
     ...(nodo.source[0] !== undefined && { fuente: nodo.source[0].ref }),

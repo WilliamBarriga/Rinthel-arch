@@ -66,6 +66,8 @@ export interface Metricas {
   paddingGrupo: { top: number; left: number; bottom: number; right: number };
   /** Lado del Slot `icon` (de su estilo `icon`, o el tamano de texto) y margen del icono de un Grupo respecto a su borde. */
   iconoLado: number;
+  /** Si el estilo del Slot `icon` es un punto (`variant dot`): se muestra aunque el Tipo no declare icono. */
+  iconoEsPunto: boolean;
   margenIcono: number;
   /** Linea base del titulo de un Grupo abierto y del control de colapso, desde el borde superior. */
   baseDeTitulo: number;
@@ -147,6 +149,7 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas:
     fila: Math.ceil(fontSize * 1.8),
     paddingGrupo: { top: 32, left: 16, bottom: 16, right: 16 },
     iconoLado: Number(textos.icon?.props['side'] ?? fontSize),
+    iconoEsPunto: textos.icon?.props['variant'] === 'dot',
     margenIcono: 6,
     baseDeTitulo: fontSize + 8,
     margenDeControl: 12,

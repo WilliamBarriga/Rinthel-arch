@@ -105,12 +105,13 @@ export function pintarGrupo(estilo: Estilo, datos: DatosDeNodo): Elemento[] {
  * caja y del punto lo da la hoja.
  */
 function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo: string, icons: IconProvider | undefined, rect: Rect): Elemento[] {
-  if (nodo.icon === undefined) return [];
   const variante = String(textos.icon?.props['variant'] ?? 'plain');
+  // Un punto es el color del Tipo y no necesita glifo: se muestra aunque el Tipo no declare icono.
+  if (nodo.icon === undefined && variante !== 'dot') return [];
   const glifo = textos.icon?.props['glyph'];
-  const atributos = { class: 'rd-icono', 'data-slot': 'icon', 'data-icon': nodo.icon, 'data-variante': variante, style: enRect(rect, `color:${limpiarValorCss(String(textos.icon?.props['color'] ?? trazo))};`) };
+  const atributos = { class: 'rd-icono', 'data-slot': 'icon', ...(nodo.icon !== undefined && { 'data-icon': nodo.icon }), 'data-variante': variante, style: enRect(rect, `color:${limpiarValorCss(String(textos.icon?.props['color'] ?? trazo))};`) };
   if (variante === 'dot') return [{ tag: 'div', attrs: atributos }];
-  const crudo = icons?.resolve(nodo.icon);
+  const crudo = nodo.icon === undefined ? undefined : icons?.resolve(nodo.icon);
   const svg = crudo === undefined ? undefined : sanearIcono(crudo);
   if (svg === undefined) return variante === 'box' ? [{ tag: 'div', attrs: atributos }] : [];
   // En caja el glifo deja un margen (o mide `glyph`); suelto ocupa todo el rectangulo.
