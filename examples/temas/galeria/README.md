@@ -10,12 +10,13 @@ Cambia de Vista para comparar. El Modelo cubre todos los Tipos, un Grupo abierto
 
 ## Comparar con el prototipo
 
-Cada Tema tiene una Vista de referencia, `<tema>-referencia`, que equivale a la Vista `abierto` del prototipo aprobado (rama `prototype/render-hibrido`): mismos Nodos, Grupos abiertos (`render`, `sesion`, `layout`), Grupos colapsados y Aristas. Su Modelo vive en `referencia.dg`, bajo el Grupo `referencia`, y las Vistas de cobertura lo excluyen.
+Cada Tema tiene una Vista de referencia, `<tema>-referencia`, que equivale a la Vista `abierto` del prototipo aprobado (rama `prototype/render-hibrido`): mismos Nodos, Grupos abiertos (`render`, `sesion`, `layout`), Grupos colapsados y Aristas. Su Modelo vive en `referencia.dg`, con los Tipos del prototipo (`paquete`, `modulo`, `artefacto`, mas `actor` y `externo`), bajo el Grupo `referencia`, y las Vistas de cobertura lo excluyen.
 
 ```
 pnpm build                          # una vez; el script usa el CLI construido
 pnpm capturas soft-card             # un Tema: Vista de referencia contra la Vista `abierto` del prototipo
 pnpm capturas --todos               # los 14 Temas
+pnpm capturas soft-card glass-chip  # varios Temas en una sola pagina
 pnpm capturas soft-card cobertura   # solo la galeria, Modelo de cobertura
 ```
 
@@ -23,7 +24,7 @@ El script extrae el prototipo a un directorio temporal (cache por commit), levan
 
 ## Contenido
 
-Temas: `soft-card`, `glass-chip`, `neobrutalist`, `blueprint`, `claro-suave`, `crt-terminal`, `synthwave`, `editorial`, `bauhaus`, `sticky-notes`, `keycaps`, `metro-map`, `pcb`, `pixel-art`. La primera linea de cada archivo, `// Contraste: ...`, lista los Tipos con warning de contraste deliberado (`ninguno` si no hay); una prueba exige que esos sean los unicos warnings de cada Tema (sin `W_THEME_COLOR_ONLY` ni otros).
+Temas: `soft-card`, `glass-chip`, `neobrutalist`, `blueprint`, `claro-suave`, `crt-terminal`, `synthwave`, `editorial`, `bauhaus`, `sticky-notes`, `keycaps`, `metro-map`, `pcb`, `pixel-art`. La primera linea de cada archivo, `// Contraste: ...`, lista los Tipos con warning de contraste deliberado (`ninguno` si no hay) y, si hace falta, `// Solo color: a/b, ...` los pares de Tipos que el Tema distingue solo por color (`W_THEME_COLOR_ONLY`, como el prototipo en glass-chip y metro-map); una prueba exige que esos sean los unicos warnings de cada Tema, en sus dos Vistas.
 
 ## Fuentes
 

@@ -5,24 +5,58 @@ theme neobrutalist {
     fondo "#f3eee1"  texto "#111111"  papel "#ffffff"  sticker "#fde047"
     blue "#93c5fd"  purple "#c4b5fd"  green "#86efac"  amber "#fdba74"  red "#fca5a5"  gray "#d4d4d8"
   }
+  fonts { body "Inter"  mono "Space Mono"  fallback "sans-serif" }
   tokens { background "#f3eee1"  foreground "#111111"  border "#111111" }
+  page {
+    layer puntos dots { color texto/0.2  size 22  radius 1 }
+    fixed
+  }
   node {
-    layer sombra solid { color texto  offset 4 4 }
+    layer sombra shadow { color texto  x 4  y 4 }
     layer forma rect { radius 6 }
     layer relleno solid { color papel }
     layer borde border { color texto  width 2 }
-    slots { title { weight 800 }  attrs }
-    type externo { layer forma cut { cut 12 }  layer relleno { color COLOR/0.35 } }
-    type nota { layer relleno { color sticker } }
-    type actor { layer relleno { color COLOR } }
-    state hover { layer sombra { offset 7 7 }  transition 100ms ease-out }
+    // Icono en caja de color, titulo grueso con la insignia mono debajo y, en un Grupo cerrado, el contador.
+    slots column min-width 170 slack 36 {
+      row gap 10 pad 10 min-height 56 {
+        icon { variant box  side 30  radius 5  fill COLOR  border texto  border-width 2  color texto }
+        column {
+          title { weight 800  text-align start  leading 1.25 }
+          badge { alpha 0.6  transform uppercase  font mono  size 0.66  tracking 0.08 }
+        }
+        counter { fill sticker  border texto  border-width 2  font mono }
+      }
+      attrs
+    }
+    type externo { layer forma cut { cut 12 }  layer tinte gradient after relleno { from COLOR/0.35  to COLOR/0.35 } }
+    type artefacto { layer doblez fold after borde { color COLOR  size 14  shadow texto } }
+    state hover { layer sombra { x 7  y 7 }  transition 100ms ease-out }
     state en-ruta { layer relleno { color sticker } }
     state atenuado { layer sombra none }
   }
+  group {
+    layer forma rect { radius 8 }
+    layer relleno solid { color COLOR/0.3 }
+    layer borde dashed { color texto  width 2 }
+    slots row pad 12 pad-y 9 {
+      title { transform uppercase  font mono  size 0.8  leading 2.1  tracking 0.06  weight 600  fill papel  border texto  border-width 2  radius 4  pad 10 }
+    }
+    padding 6 22 22 22
+    // Cerrado es la tarjeta del Nodo con otras dos debajo: sombras duras alternas de papel y tinta.
+    state collapsed {
+      layer forma { radius 6 }
+      layer relleno { color papel }
+      layer borde border { color texto  width 2 }
+      layer pila-3 shadow before forma { color texto  x 12  y 12 }
+      layer pila-2 shadow before forma { color papel  x 10  y 10 }
+      layer pila-1 shadow before forma { color texto  x 6  y 6 }
+      layer sombra shadow before forma { color papel  x 4  y 4 }
+    }
+  }
   edge {
-    layer linea line { color texto  width 2 }
+    layer linea line { color texto  width 2  corner round  radius 2 }
     start square { size 8 }
     end arrow { size 10 }
-    label { scale 0.8  pad 6  radius 3  fill sticker  border texto }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 3  fill sticker  border texto  border-width 1.5  shadow texto  rotate -2  font mono  weight 700  color texto/0.8 }
   }
 }
