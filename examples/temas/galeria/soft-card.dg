@@ -1,0 +1,59 @@
+// Contraste: actor, almacen, artefacto, cola, dominio, modulo, nota, paquete, servicio
+// Deliberado, como en el prototipo: el borde fino translucido (texto/0.13) es decorativo; la tarjeta se lee por su relleno y su texto.
+// Tarjeta sobria oscura (estilo Linear/Vercel): relleno translucido, borde fino y Aristas discretas.
+theme soft-card {
+  palette {
+    fondo "#09090b"  texto "#fafafa"
+    blue "#60a5fa"  purple "#a78bfa"  green "#34d399"  amber "#fbbf24"  red "#f87171"  gray "#a1a1aa"
+  }
+  fonts { body "Inter"  mono "JetBrains Mono"  fallback "sans-serif" }
+  tokens { background "#09090b"  foreground "#fafafa"  border "#a1a1aa" }
+  page {
+    layer puntos dots { color texto/0.1  size 22  radius 1 }
+    fixed
+  }
+  node {
+    layer caja rect { radius 10 }
+    layer relleno solid { color texto/0.045 }
+    layer borde border { color texto/0.13 }
+    // Icono en caja, titulo con la insignia del Tipo debajo y, en un Grupo cerrado, el contador a la derecha.
+    slots column min-width 160 slack 26 {
+      row gap 10 pad 10 min-height 54 {
+        icon { variant box  side 28  radius 7  fill COLOR/0.14  border COLOR/0.45 }
+        column { title { weight 600  text-align start  leading 1.25 }  badge { alpha 0.5  tracking 0.02 } }
+        counter { fill texto/0.08  border texto/0.15 }
+      }
+      attrs
+    }
+    type paquete { use acento }
+    type externo { layer relleno { color fondo }  layer borde dashed { color texto/0.22 } }
+    state hover { layer borde { color COLOR/0.7 }  transition 120ms ease-out }
+    state en-ruta { layer borde { color COLOR  width 2 } }
+    state atenuado { layer relleno none }
+  }
+  group {
+    layer caja rect { radius 16 }
+    layer relleno solid { color texto/0.025 }
+    layer borde dashed { color texto/0.14 }
+    slots row pad 18 pad-y 6 { title { dot COLOR  transform uppercase  size 0.8  tracking 0.1  alpha 0.6  weight 600 } }
+    padding 12 20 20 20
+    // Cerrado es una tarjeta como la del Nodo, con otra desplazada debajo (la pila) y el acento del paquete.
+    state collapsed {
+      layer pila solid before caja { color fondo  offset 5 5 }
+      layer pila-borde border before caja { color texto/0.1  offset 5 5 }
+      layer caja { radius 10 }
+      layer relleno { color texto/0.045 }
+      layer borde border { color texto/0.13 }
+      use acento
+    }
+  }
+  edge {
+    layer linea line { color texto/0.32  width 1.2  corner round  radius 6 }
+    start dot { size 4.4  color texto/0.5 }
+    end chevron { size 9 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 50  fill fondo  border texto/0.16  color texto/0.8 }
+  }
+}
+
+// Acento del paquete: una barra de 3 px del color del Tipo en el borde izquierdo.
+part acento { layer acento shadow after borde { color COLOR  x 3  y 0  inset 1 } }

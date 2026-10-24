@@ -29,8 +29,9 @@ import type { LangiumCoreServices, ParseResult } from 'langium';
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
 import type { Attrs, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, Theme, View } from './generated/ast';
 import { issueConSugerencia, rangoDe, rangoDeIndice } from './posiciones';
+import { ARCHIVO_INCORPORADOS, temasIncorporados } from './incorporados';
 import { resolverTemas } from './temas';
-import type { TemaDeclarado } from './temas';
+import type { DeclaracionDeParte, OrigenDeTema, TemaDeclarado } from './temas';
 import { crearUbicador } from './ubicador';
 
 /** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
@@ -54,6 +55,8 @@ export interface ResultadoDeCompilacion {
   pins: PosicionDePin[];
   /** Donde se escribio cada valor de la Fuente canonica; presente junto a `canonico`. */
   ubicar?: Ubicador;
+  /** Origen de las Capas de cada Tema declarado (cadena `extends`, `part` usadas y sitio de cada Capa); presente junto a `canonico`. */
+  origenesDeTemas?: Record<string, OrigenDeTema>;
 }
 
 let memoServicios: LangiumCoreServices | undefined;
@@ -75,28 +78,17 @@ function servicios(): LangiumCoreServices {
   return memoServicios;
 }
 
-/** `edgeStyles` solo admite `default` (el Modelo no tipa Aristas): otro tipo se ignora, y se avisa. */
-function avisosDeEstilosDeArista(archivo: string, tema: Theme): Issue[] {
-  return tema.parts.flatMap((parte) =>
-    parte.$type !== 'ThemeEdgeStyles'
-      ? []
-      : parte.styles
-          .filter((estilo) => estilo.type !== 'default')
-          .map((estilo) => ({
-            code: CODIGOS.W_UNKNOWN_EDGE_STYLE_TYPE,
-            severity: 'warning' as const,
-            file: archivo,
-            ...rangoDe(estilo, 'type').start,
-            message: `edgeStyles '${estilo.type}' se ignora: las Aristas no tienen tipo, solo existe 'default'`,
-          })),
-  );
-}
-
 export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion {
   const issues: Issue[] = [];
   const tiposDeNodo: TipoDeNodo[] = [];
   const conSintaxisRota = new Set<string>();
-  const temasDeclarados: TemaDeclarado[] = [];
+  const temasDeclarados: TemaDeclarado[] = temasIncorporados((texto) => servicios().parser.LangiumParser.parse<Documento>(texto).value).map((tema) => ({
+    archivo: ARCHIVO_INCORPORADOS,
+    ast: tema,
+    nombre: rangoDe(tema, 'name'),
+    padre: rangoDe(tema, 'parent'),
+  }));
+  const partesDeclaradas: DeclaracionDeParte[] = [];
   const tiposAst: { archivo: string; ast: NodeTypeDecl }[] = [];
   const vistas: { vista: Vista; archivo: string; ast: View }[] = [];
   const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
@@ -128,7 +120,9 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
         nombre: rangoDe(tema, 'name'),
         padre: rangoDe(tema, 'parent'),
       });
-      issues.push(...avisosDeEstilosDeArista(archivo, tema));
+    }
+    for (const parte of resultado.value.parts) {
+      partesDeclaradas.push({ archivo, ast: parte, nombre: rangoDe(parte, 'name') });
     }
     for (const vista of resultado.value.views) {
       const compilada = compilarVista(vista, archivo, issues);
@@ -166,8 +160,15 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
   }
 
-  const { temas, issues: delTema } = resolverTemas(temasDeclarados);
+  const { temas, issues: delTema, parchesDeVista, origenes: origenesDeTemas } = resolverTemas(temasDeclarados, partesDeclaradas, tiposDeNodo.map(({ name }) => name));
   issues.push(...delTema);
+  for (const { vista, archivo, ast } of vistas) {
+    const bloque = ast.props.find((prop) => prop.$type === 'ViewTheme');
+    if (bloque === undefined || bloque.items.length === 0 || vista.theme === undefined) continue;
+    const { ops, issues: delOverride } = parchesDeVista(vista.theme, bloque.items, archivo);
+    issues.push(...delOverride);
+    if (ops.length > 0) vista.themePatch = ops.map((op) => ({ ...op }));
+  }
   const fuente: FuenteCanonica = {
     themes: temas,
     specification: { nodeTypes: tiposDeNodo },
@@ -180,9 +181,13 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     aristas: aristasAst,
     tipos: tiposAst,
     vistas: vistas.map(({ archivo, ast }) => ({ archivo, ast })),
+    temas: new Map(temasDeclarados.map(({ archivo, ast, nombre }) => [ast.name, { archivo, nombre }])),
     conSintaxisRota,
   });
-  issues.push(...validate(fuente, { iconos: combineIconProviders(workspaceIcons(workspace), genericIcons()), ubicar }));
+  // Un Tema declarado que no se resolvio ya tiene su error (`delTema`): decir ademas que la Vista usa un Tema "no declarado" seria enganoso.
+  const sinResolver = new Set(temasDeclarados.map(({ ast }) => ast.name).filter((nombre) => !temas.some((t) => t.name === nombre)));
+  const sinTema = (issue: Issue): boolean => issue.code === CODIGOS.E_UNKNOWN_THEME && vistas.some(({ vista }) => vista.theme !== undefined && sinResolver.has(vista.theme) && issue.message === `Tema '${vista.theme}' no declarado`);
+  issues.push(...validate(fuente, { iconos: combineIconProviders(workspaceIcons(workspace), genericIcons()), ubicar }).filter((issue) => !sinTema(issue)));
 
   const pins: PosicionDePin[] = [];
   for (const { vista, archivo, ast } of vistas) {
@@ -197,6 +202,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     issues,
     pins,
     ubicar,
+    origenesDeTemas,
   };
 }
 

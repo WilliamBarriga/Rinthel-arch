@@ -9,18 +9,19 @@ import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { gzipSync } from 'node:zlib';
 
-import { TEMA_NEUTRO, resolveView } from 'canonico';
+import { resolveView } from 'canonico';
 import type { EstadoDeColapso, FuenteCanonica, Nodo, Tema, VistaResuelta } from 'canonico';
 import { run } from 'cli';
 import { compile } from 'dsl';
 import { layoutView } from 'layout';
+import { TEMA_NEUTRO } from 'tema';
 import { adaptadorDeWorker, servirLayout } from 'shell';
 import type { PuertoDeMensajes } from 'shell';
 import { build } from 'esbuild';
 
 import { generarWorkspace } from './generador.ts';
 
-const ESCENARIOS = ['build-10k', 'relayout-1k', 'colapso-5k', 'bundle'] as const;
+const ESCENARIOS = ['build-10k', 'relayout-1k', 'relayout-slots', 'relayout-grande', 'colapso-5k', 'bundle'] as const;
 type Escenario = (typeof ESCENARIOS)[number];
 
 const ms = (desde: number): number => Math.round(performance.now() - desde);
@@ -74,11 +75,11 @@ async function buildDe10k(): Promise<Record<string, number>> {
 const TEMA: Tema = TEMA_NEUTRO;
 
 /** Resuelve la Vista en `estado` y la pasa por el layout del Worker (puertos en memoria). */
-async function relayout(fuente: FuenteCanonica, estado: EstadoDeColapso, adaptador: ReturnType<typeof adaptadorDeWorker>) {
+async function relayout(fuente: FuenteCanonica, estado: EstadoDeColapso, adaptador: ReturnType<typeof adaptadorDeWorker>, tema: Tema = TEMA) {
   const inicio = performance.now();
   const vista = resolveView(fuente, 'todo', estado)!;
   const resolucionMs = ms(inicio);
-  await adaptador(vista, TEMA);
+  await adaptador(vista, tema);
   return { vista, resolucionMs, totalMs: ms(inicio) };
 }
 
@@ -97,6 +98,54 @@ async function relayoutDe1k(): Promise<Record<string, number>> {
     tiempoFrioMs: frio.totalMs,
     tiempoCalienteMs: caliente.totalMs,
     layoutDirectoMs: ms(inicio),
+    maxRssMb: mb(process.resourceUsage().maxRSS * 1024),
+  };
+}
+
+/**
+ * Disposicion de Slots anidada tres niveles (`row`/`column` dentro de `row`/`column`, con gap, pad y `align`):
+ * el peor caso razonable del mini-layout, que `colocarEnCaja` recorre por cada Nodo en cada relayout.
+ */
+const SLOTS_ANIDADOS = {
+  direccion: 'column',
+  gap: 4,
+  pad: 8,
+  hijos: [
+    {
+      direccion: 'row',
+      gap: 6,
+      pad: 2,
+      hijos: [
+        { slot: 'icon' },
+        {
+          direccion: 'column',
+          gap: 2,
+          pad: 0,
+          hijos: [{ slot: 'title' }, { direccion: 'row', gap: 4, pad: 0, hijos: [{ slot: 'badge', align: 'start' }, { slot: 'counter', align: 'end' }] }],
+        },
+      ],
+    },
+    { direccion: 'column', gap: 2, pad: 0, hijos: [{ slot: 'desc' }, { direccion: 'row', gap: 4, pad: 0, hijos: [{ slot: 'footer' }] }] },
+    { slot: 'attrs' },
+  ],
+} as const;
+
+/** Relayout de `nodos` Nodos del Modelo (con sus Grupos) con Slots `row/column` anidados, frente al mismo Modelo con la disposicion plana del Tema neutro. */
+async function relayoutConSlotsAnidados(nodos: number): Promise<Record<string, number>> {
+  const fuente = compilar(nodos);
+  const anidado = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, slots: SLOTS_ANIDADOS } } as unknown as Tema;
+  const [pagina, worker] = parDePuertos();
+  servirLayout(worker);
+  const adaptador = adaptadorDeWorker(pagina);
+  const neutro = await relayout(fuente, {}, adaptador);
+  const frio = await relayout(fuente, {}, adaptador, anidado);
+  const caliente = await relayout(fuente, {}, adaptador, anidado);
+  return {
+    nodosDelModelo: contarNodos(fuente.model.nodes),
+    nodosVisibles: frio.vista.nodes.length,
+    tiempoNeutroMs: neutro.totalMs,
+    tiempoFrioMs: frio.totalMs,
+    tiempoCalienteMs: caliente.totalMs,
     maxRssMb: mb(process.resourceUsage().maxRSS * 1024),
   };
 }
@@ -147,7 +196,7 @@ async function empaquetar(contents: string): Promise<{ min: number; gzip: number
 
 async function bundleDelShell(): Promise<Record<string, number>> {
   // Los dos bundles que `export --format html` incrusta (mismas opciones que `packages/cli/src/html.ts`):
-  // la pagina (shell + React, sin ELK) y el Worker (layout con ELK, sin zod).
+  // la pagina (shell + React, sin ELK) y el Worker (layout con ELK, sin zod, tal cual los empaqueta el CLI).
   const navegador = join(import.meta.dirname, '..', 'packages', 'cli', 'navegador');
   const bundle = async (entrada: string, alias: Record<string, string> = {}): Promise<{ min: number; gzip: number }> => {
     const salida = await build({
@@ -168,7 +217,7 @@ async function bundleDelShell(): Promise<Record<string, number>> {
     const texto = salida.outputFiles[0]!.contents;
     return { min: texto.length, gzip: gzipSync(texto, { level: 9 }).length };
   };
-  const pagina = await bundle('entrada.tsx');
+  const pagina = await bundle('arranque.tsx');
   const worker = await bundle('worker.ts', { zod: join(navegador, 'zod-inerte.ts') });
   // Suelo: lo que pesa elkjs separado en api (pagina) + worker, sin nada nuestro.
   const lib = join(import.meta.dirname, '..', 'packages', 'layout', 'node_modules', 'elkjs', 'lib');
@@ -187,5 +236,13 @@ if (escenario === undefined || !ESCENARIOS.includes(escenario)) {
   process.stderr.write(`Uso: node bench/escenario.ts <${ESCENARIOS.join('|')}>\n`);
   process.exit(2);
 }
-const medidas = await { 'build-10k': buildDe10k, 'relayout-1k': relayoutDe1k, 'colapso-5k': colapsoDe5k, bundle: bundleDelShell }[escenario]();
+const ejecutores: Record<Escenario, () => Promise<Record<string, number>>> = {
+  'build-10k': buildDe10k,
+  'relayout-1k': relayoutDe1k,
+  'relayout-slots': () => relayoutConSlotsAnidados(500),
+  'relayout-grande': () => relayoutConSlotsAnidados(3000),
+  'colapso-5k': colapsoDe5k,
+  bundle: bundleDelShell,
+};
+const medidas = await ejecutores[escenario]();
 process.stdout.write(`${JSON.stringify({ escenario, medidas })}\n`);

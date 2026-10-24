@@ -6,13 +6,17 @@
  * ortogonal por Arista (`idDeArista`), en coordenadas del lienzo. Los
  * Grupos colapsados son hojas. Un Nodo hoja con Atributos mide cabecera mas una
  * fila por Atributo y las Aristas a `nodo#atributo` terminan en la fila del
- * Atributo; un Grupo abierto no lista Atributos. `Metricas` (`metricasDe(tema)`)
- * son los numeros de espaciado y escala que `layout` usa para medir y `render`
- * para dibujar, junto con `yDeFila`, `atributosVisibles` y `textoDeAtributo`:
- * lo reservado y lo dibujado no divergen. Los Atributos se miden a la escala
- * con que se dibujan. El tamano de cada Nodo sale del texto y de las Metricas
- * (derivadas de `fonts` y `tokens.fontSize`), sin DOM; `opciones.metricas` las
- * sobrescribe (y `render` debe recibir las mismas). `claveDeLayout` dice cuando
+ * Atributo; un Grupo abierto no lista Atributos. Las `Metricas` y la colocacion de
+ * Slots son del paquete `tema` (`tablaDeMetricas`: una entrada por Tipo de nodo, Grupo
+ * abierto, Grupo colapsado y etiqueta de Arista; `colocarNodo`, `colocarEnCaja`): `layout`
+ * las usa para medir y `render` para dibujar, asi lo reservado y lo dibujado no
+ * divergen. Cada caja de un Nodo hoja lleva `slots`, el rectangulo (relativo a la
+ * caja) de cada Slot que el Tema muestra. El tamano de cada Nodo sale del texto y
+ * de las Metricas, sin DOM; `opciones.medidas` (`MedidasDeTexto`, tomadas por el
+ * visor con la fuente cargada) sustituyen la estimacion de texto, y la clave de
+ * layout (`tablaDeMetricas(tema, medidas)` como `metricas`) cambia con el nivel de
+ * medicion y el hash de cada fuente; `opciones.metricas` las sobrescribe (y `render` debe
+ * recibir las mismas). `claveDeLayout` dice cuando
  * hace falta relayoutar: cambia con estructura, textos, Pins y Metricas, nunca con
  * paleta, colores o iconos. `claveDeEstructura` es la misma sin Pins y
  * `aplicarPinsAGeometria(vista, base, tema)` aplica los Pins a una geometria calculada
@@ -31,11 +35,9 @@
  * Modos de error: fallos internos de ELK se propagan como rechazo de la promesa.
  * Configuracion requerida: ninguna; `opciones.elk` inyecta otro motor (p. ej. el
  * de Web Worker del shell).
- * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout`.
+ * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout`.
  */
-export { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView } from './layout';
+export { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutConMetricas, layoutView } from './layout';
 export { indiceDeGeometria } from './indice';
 export type { IndiceDeGeometria } from './indice';
-export { atributosVisibles, metricasDe, textoDeAtributo, yDeFila } from './metricas';
-export type { Metricas } from './metricas';
 export type { CajaDeNodo, Geometria, OpcionesDeLayout, Punto, RutaDeArista } from './layout';

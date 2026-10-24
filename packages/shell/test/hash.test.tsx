@@ -1,12 +1,13 @@
 import { act, cleanup, fireEvent, render, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema } from 'canonico';
+import { fuenteCanonicaSchema } from 'canonico';
 import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva, deserializarEstado, hashDelNavegador, serializarEstado, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeHash, AdaptadorDeLayout, EstadoDeShell } from 'shell';
 import { pulsarNodo } from './ayudas';
+import { TEMA_NEUTRO } from 'tema';
 
 afterEach(() => {
   cleanup();
@@ -195,7 +196,7 @@ describe('integracion con VistaInteractiva y location.hash', () => {
     const props = useEstadoEnHash({ source: fuente, hash: hashDelNavegador(window), camera: true });
     return <VistaInteractiva source={fuente} theme={TEMA_NEUTRO} layout={layout} width={800} height={600} {...props} />;
   }
-  const dibujado = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`svg [data-id="${id}"]`)).not.toBeNull());
+  const dibujado = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`[data-id="${id}"]`)).not.toBeNull());
 
   it('recargar con el hash restaura Vista y ruta', async () => {
     const primera = render(<App />);

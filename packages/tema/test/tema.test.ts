@@ -1,0 +1,126 @@
+import { describe, expect, it } from 'vitest';
+
+import { CATALOGO, TEMA_NEUTRO, colocarEnCaja, colocarNodo, construirPrimitiva, estiloResuelto, metricasDe, resolverTema, temaResueltoSchema } from 'tema';
+
+describe('contrato del Tema', () => {
+  it('acepta el Tema neutro y uno con tokens adicionales', () => {
+    expect(temaResueltoSchema.safeParse(TEMA_NEUTRO).success).toBe(true);
+    expect(temaResueltoSchema.safeParse({ ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, fontSize: '16px', surface: '#eee' } }).success).toBe(true);
+  });
+
+  it('un Tema sin un token o fuente requeridos falla senalando la ruta', () => {
+    const { border: _borde, ...tokens } = TEMA_NEUTRO.tokens;
+    const sinBorde = temaResueltoSchema.safeParse({ ...TEMA_NEUTRO, tokens });
+    const sinMono = temaResueltoSchema.safeParse({ ...TEMA_NEUTRO, fonts: { body: 'serif' } });
+
+    expect(sinBorde.error?.issues.map((i) => i.path.join('.'))).toEqual(['tokens.border']);
+    expect(sinMono.error?.issues.map((i) => i.path.join('.'))).toEqual(['fonts.mono']);
+  });
+
+  it('un fontSize que no es px falla', () => {
+    const malo = temaResueltoSchema.safeParse({ ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, fontSize: 'grande' } });
+
+    expect(malo.error?.issues.map((i) => i.path.join('.'))).toEqual(['tokens.fontSize']);
+  });
+
+  it('los Temas viejos (nodeStyles, edgeStyles) ya no se aceptan', () => {
+    expect(temaResueltoSchema.safeParse({ ...TEMA_NEUTRO, nodeStyles: { servicio: { fill: '#fff' } } }).success).toBe(false);
+    expect(temaResueltoSchema.safeParse({ ...TEMA_NEUTRO, edgeStyles: { default: { stroke: 'red' } } }).success).toBe(false);
+    expect(() => resolverTema({ ...TEMA_NEUTRO, nodeStyles: {} })).toThrow(/nodeStyles/);
+  });
+
+  it('una Capa con una Primitiva o propiedad invalida falla con la ruta de la Capa', () => {
+    const capa = (primitiva: unknown) => ({ ...TEMA_NEUTRO, nodo: { capas: [{ nombre: 'c', primitiva }], slots: TEMA_NEUTRO.nodo.slots } });
+
+    expect(temaResueltoSchema.safeParse(capa({ tipo: 'rect', props: { radius: 999 } })).success).toBe(false);
+    expect(temaResueltoSchema.safeParse(capa({ tipo: 'solid', props: { color: 'inexistente' } })).success).toBe(false);
+    expect(temaResueltoSchema.safeParse(capa({ tipo: 'nada', props: {} })).success).toBe(false);
+    expect(temaResueltoSchema.safeParse(capa({ tipo: 'solid', props: { color: 'blue' } })).success).toBe(true);
+  });
+});
+
+describe('catalogo', () => {
+  it('rellena los defectos y rechaza sin recortar', () => {
+    expect(construirPrimitiva('rect', [], {}).primitiva).toEqual({ tipo: 'rect', props: { radius: 0 } });
+    expect(construirPrimitiva('border', [{ clave: 'color', valor: 'a' }], { a: '#000' }).primitiva).toEqual({ tipo: 'border', props: { color: 'a', width: 1 } });
+    expect(construirPrimitiva('rect', [{ clave: 'radius', valor: '101' }], {}).errores.map((e) => e.codigo)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(construirPrimitiva('rect', [{ clave: 'radius', valor: 'x' }], {}).primitiva).toBeUndefined();
+  });
+
+  it('sugiere el candidato cercano en una Primitiva mal escrita', () => {
+    const [error] = construirPrimitiva('sollid', [], {}).errores;
+
+    expect(error).toMatchObject({ codigo: 'E_THEME_UNKNOWN_PRIMITIVE', hint: "quisiste decir 'solid'" });
+  });
+
+  it('solo circle y los estilos de texto de Slot y etiqueta afectan a las Metricas y pide una caja cuadrada', () => {
+    const afectan = Object.entries(CATALOGO).filter(([, p]) => p.afectaMetricas).map(([nombre]) => nombre);
+    const cuadradas = Object.entries(CATALOGO).filter(([, p]) => 'cajaMinima' in p).map(([nombre]) => nombre);
+
+    expect(afectan).toEqual(['circle', 'text', 'chip', 'icon', 'label']);
+    expect(cuadradas).toEqual(['circle']);
+  });
+
+  it.each([
+    ['cut', 'cut', 0],
+    ['cut', 'cut', 101],
+    ['gradient', 'angle', 361],
+    ['grid', 'size', 1],
+    ['lines', 'angle', 181],
+    ['dots', 'radius', 0],
+    ['noise', 'opacity', 1.5],
+    ['noise', 'frequency', 0],
+    ['dashed', 'width', 17],
+    ['outline', 'offset', -17],
+  ])('%s: %s=%s fuera de rango es error y no se recorta', (tipo, clave, valor) => {
+    const paleta = { a: '#000', b: '#fff' };
+    const colores = ['color', 'from', 'to'].filter((c) => Object.hasOwn(CATALOGO[tipo as keyof typeof CATALOGO].propiedades, c)).map((c) => ({ clave: c, valor: 'a' }));
+    const { primitiva, errores } = construirPrimitiva(tipo, [...colores, { clave, valor }], paleta);
+
+    expect(primitiva).toBeUndefined();
+    expect(errores.map((e) => e.codigo)).toEqual(['E_THEME_INVALID_VALUE']);
+  });
+});
+
+describe('Metricas y colocacion de Slots', () => {
+  const metricas = metricasDe(TEMA_NEUTRO);
+
+  it('una forma circle da una caja cuadrada que contiene el contenido, centrado en vertical', () => {
+    const circulo = metricasDe({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'forma', primitiva: { tipo: 'circle', props: {} } }] } });
+    const colocado = colocarNodo({ titulo: 'API', atributos: [], icono: false }, circulo);
+
+    expect(metricas.cajaCuadrada).toBe(false);
+    expect(circulo.cajaCuadrada).toBe(true);
+    expect(colocado.width).toBe(colocado.height);
+    expect(colocado.width).toBe(Math.max(120, circulo.cabecera));
+    expect(colocado.slots.title).toEqual({ x: 0, y: (colocado.height - circulo.cabecera) / 2, width: colocado.width, height: circulo.cabecera });
+  });
+
+  it('un Nodo sin Atributos mide la cabecera; con Atributos suma una fila por cada uno', () => {
+    const solo = colocarNodo({ titulo: 'API', atributos: [], icono: false }, metricas);
+    const con = colocarNodo({ titulo: 'API', atributos: [{ name: 'id', type: 'int', notes: '' }, { name: 'nombre', type: 'texto', notes: '' }], icono: false }, metricas);
+
+    expect(solo).toMatchObject({ width: 120, height: metricas.cabecera, filas: [] });
+    expect(con.height).toBe(metricas.cabecera + 2 * metricas.fila);
+    expect(con.filas).toEqual([
+      { x: 0, y: metricas.cabecera, width: con.width, height: metricas.fila },
+      { x: 0, y: metricas.cabecera + metricas.fila, width: con.width, height: metricas.fila },
+    ]);
+  });
+
+  it('el ancho sale del texto mas largo entre los Slots mostrados', () => {
+    const largo = 'un titulo bastante largo para forzar el ancho';
+    const sinTitulo = { ...metricas, disposicion: { direccion: 'column' as const, gap: 0, pad: 0, hijos: [{ slot: 'attrs' as const }] } };
+
+    expect(colocarNodo({ titulo: largo, atributos: [], icono: false }, metricas).width).toBeGreaterThan(120);
+    expect(colocarNodo({ titulo: largo, atributos: [], icono: false }, sinTitulo).width).toBe(120);
+  });
+
+  it('las Metricas no cambian con la pintura del Tema', () => {
+    const otro = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'f', primitiva: { tipo: 'solid', props: { color: 'blue' } } }] } };
+
+    expect(estiloResuelto(otro).metricas).toEqual(estiloResuelto(TEMA_NEUTRO).metricas);
+    expect(estiloResuelto(otro).pintura).not.toEqual(estiloResuelto(TEMA_NEUTRO).pintura);
+    expect(colocarEnCaja(metricas, { titulo: 'x', atributos: [{ name: 'a', type: 't', notes: '' }], icono: false }, 200).slots.title).toEqual({ x: 0, y: 0, width: 200, height: metricas.cabecera });
+  });
+});

@@ -1,11 +1,13 @@
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema } from 'canonico';
+import { fuenteCanonicaSchema } from 'canonico';
 import type { Tema } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
+import { TEMA_NEUTRO } from 'tema';
+import type { TemaResuelto } from 'tema';
 
 afterEach(cleanup);
 
@@ -22,7 +24,7 @@ const layout: AdaptadorDeLayout = async (vista) => {
   });
   return { nodes, edges: {}, labels: {}, pinsSolapados: [], width: 300, height: 50 };
 };
-const OSCURO: Tema = {
+const OSCURO: TemaResuelto = {
   ...TEMA_NEUTRO,
   name: 'oscuro',
   palette: { ...TEMA_NEUTRO.palette, blue: '#60a5fa' },

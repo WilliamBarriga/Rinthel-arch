@@ -1,0 +1,59 @@
+// Contraste: ninguno
+// Plano tecnico: papel azul, trazo fino, cuadricula de dibujo y angulos rectos.
+theme blueprint {
+  palette {
+    fondo "#0d3b73"  texto "#e6f0ff"
+    blue "#bfe0ff"  purple "#d9ccff"  green "#c4f5df"  amber "#ffe3a8"  red "#ffc2c2"  gray "#cfdcef"
+  }
+  fonts { body "JetBrains Mono"  mono "JetBrains Mono"  fallback "monospace" }
+  tokens { background "#0d3b73"  foreground "#e6f0ff"  border "#e6f0ff" }
+  page {
+    layer fina grid { color texto/0.06  size 20 }
+    layer gruesa grid { color texto/0.13  size 100 }
+    fixed
+  }
+  node {
+    layer forma rect
+    layer relleno solid { color fondo }
+    // Doble linea de plano: un segundo marco fino 4 px hacia dentro.
+    layer interior border { color texto/0.3  offset 4 4  grow -8 }
+    layer borde border { color texto/0.9  width 1.5 }
+    // Icono en caja recta, titulo en mayusculas con la insignia mono debajo y, en un Grupo cerrado, el contador.
+    slots column min-width 170 slack 36 {
+      row gap 10 pad 12 pad-y 0 min-height 54 {
+        icon { variant box  side 26  radius 0  fill COLOR/0.12  border COLOR }
+        column {
+          title { weight 600  transform uppercase  size 0.86  tracking 0.06  text-align start  leading 1.25 }
+          badge { alpha 0.6  font mono  size 0.7 }
+        }
+        counter { fill fondo  border texto  font mono }
+      }
+      attrs
+    }
+    type externo { layer borde dashed { color texto/0.8  width 1.5 }  layer interior none }
+    state hover { layer relleno { color texto/0.08 }  transition 100ms linear }
+    state en-ruta { layer borde { color COLOR } }
+    state atenuado { layer interior none }
+  }
+  group {
+    layer forma rect
+    layer borde dashed { color texto/0.6 }
+    slots row pad 12 pad-y 9 {
+      title { transform uppercase  font mono  size 0.75  leading 2  tracking 0.12  weight 600  fill fondo  border texto  radius 4  pad 10 }
+    }
+    padding 7 22 22 22
+    // Cerrado es la caja del Nodo con una cota del color del Tipo en el borde derecho.
+    state collapsed {
+      layer relleno solid after forma { color fondo }
+      layer borde border { color texto/0.9  width 1.5 }
+      layer cota shadow after borde { color COLOR/0.6  x -6  y 0  inset 1 }
+      layer interior border after cota { color texto/0.3  offset 4 4  grow -8 }
+    }
+  }
+  edge {
+    layer linea line { color texto/0.85  width 1 }
+    start dot { size 4.4  color texto/0.5 }
+    end chevron { size 9 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 0  fill fondo  border texto/0.7  border-width 1.5  font mono  weight 700  color texto/0.8 }
+  }
+}

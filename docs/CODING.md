@@ -4,7 +4,7 @@ Vocabulario de diseno: **Modulo**, **Interfaz**, **Seam**, **Adaptador**, **Prof
 
 ## Estructura
 
-Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (previstos: dsl, canonico, layout, sesion, render, shell, cli). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
+Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico, tema, dsl, layout, sesion, render, shell, cli). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
 
 ## Modulos profundos
 
@@ -19,7 +19,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (previsto
 - **Puertos**: interfaces que define el nucleo segun lo que necesita. **Adaptadores**: sistema de archivos, ELK, d3-zoom, Web Worker, CLI; viven en el borde y dependen del nucleo, nunca al reves.
 - Un seam existe cuando algo varia a traves de el: un adaptador es un seam hipotetico, dos es uno real. Con un solo adaptador, llamada directa.
 - Las dependencias entran como argumento; las funciones devuelven resultados en vez de mutar.
-- Direccion de dependencias: `canonico -> dsl -> layout -> sesion -> render -> shell / cli`. Un paquete solo importa de los anteriores.
+- Direccion de dependencias: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`. Un paquete solo importa de los anteriores. `tema` va tras `canonico` porque reutiliza sus `Issue` y codigos, y antes de `dsl` porque el compilador de Temas valida con su catalogo (ADR 0004, enmienda).
 - El nucleo es agnostico del Proyecto documentado (ver `AGENTS.md`).
 
 ## Pruebas
@@ -28,8 +28,9 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (previsto
 - Entradas y salidas observables. Un refactor interno deja todos los tests en verde.
 - Fakes en memoria (adaptadores reales de bajo costo) antes que mocks; mock solo para I/O que no se puede simular.
 - Compilador: texto DSL entra, Fuente canonica sale; se compara contra la salida publica.
+- Documentacion derivada: lo que sale de un esquema se genera, no se escribe a mano. `docs/referencia-catalogo.md` sale del catalogo de `tema` (`pnpm docs:catalogo`); `tests/referencia-catalogo.test.ts` falla si se desvia. Una Primitiva nueva: una entrada en el catalogo, su pintor y regenerar la referencia.
 - Runner de pruebas: Vitest. Build de paquetes: tsup. Gestor: pnpm workspaces, sin orquestador de tareas.
 
 ## Chequeos automaticos
 
-La direccion de dependencias, los imports internos entre paquetes la superficie `exports` y la pureza del nucleo (`canonico`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell` y `cli` son adaptadores) los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.
+La direccion de dependencias, los imports internos entre paquetes la superficie `exports` y la pureza del nucleo (`canonico`, `tema`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell` y `cli` son adaptadores) los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.

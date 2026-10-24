@@ -69,7 +69,7 @@ Los diagramas se escriben en archivos \`.dg\` del Workspace. Es la unica fuente 
 2. Edita los \`.dg\`.
 3. Ejecuta \`diagrams validate --workspace <ruta> --json\`.
 4. Si \`ok\` es \`false\`, corrige cada issue (empieza por los \`fix\`, que son ediciones exactas del texto) y vuelve al paso 3.
-5. Termina cuando \`ok\` es \`true\`. \`diagrams build\` y \`diagrams export\` generan geometria, SVG y PNG.
+5. Termina cuando \`ok\` es \`true\`. \`diagrams build\` genera la geometria y \`diagrams dev\` muestra los diagramas.
 
 Para ver el resultado mientras se edita (persona o agente), \`diagrams dev\` abre el bucle en vivo (ver abajo). Si dos autores tocan el mismo \`.dg\`, gana la ultima escritura; la reconciliacion es de git.
 
@@ -129,13 +129,15 @@ Solo lectura; nunca escribe. Cada resultado trae el id cualificado, el tipo y \`
 diagrams inspect buscar <texto> --workspace <ruta> [--json]
 diagrams inspect nodo <id> --workspace <ruta> [--json]
 diagrams inspect vista <id> --workspace <ruta> [--json]
+diagrams inspect tema <nombre> --workspace <ruta> [--tipo <tipo>] [--estado <estado>] [--catalogo] [--json]
 \`\`\`
 
 - \`buscar\` encuentra Nodos por id parcial o titulo, y Vistas por id (sin distinguir mayusculas).
 - \`nodo\` devuelve el Nodo, su padre e hijos, sus Atributos, las Aristas que entran y salen, y las Vistas que lo muestran.
 - \`vista\` devuelve los Nodos y Aristas visibles de la Vista en su estado inicial.
-- Sin \`--json\` sale texto legible. Con \`--json\`, stdout es exactamente un objeto (contractVersion ${INSPECT_CONTRACT_VERSION}, independiente del de validate) con \`comando\` = \`buscar\`, \`nodo\` o \`vista\`.
-- Codigos de salida: 0 hay respuesta (\`buscar\` sin coincidencias tambien), 1 el Nodo o la Vista no existe (stderr sugiere ids cercanos) o el Workspace tiene errores (corrigelos con validate), 2 fallo de uso o interno.
+- \`tema\` devuelve la cadena \`extends\`, las \`part\` usadas, la pila de Capas resuelta para el \`--tipo\` y \`--estado\` pedidos (cada Capa con el \`archivo:linea\` del parche que la fijo, para saber que parche editar), las Metricas y si el Tema usa codigo; con \`--catalogo\`, tambien las claves del catalogo de Primitivas, Movimientos y efectos.
+- Sin \`--json\` sale texto legible. Con \`--json\`, stdout es exactamente un objeto (contractVersion ${INSPECT_CONTRACT_VERSION}, independiente del de validate) con \`comando\` = \`buscar\`, \`nodo\`, \`vista\` o \`tema\`.
+- Codigos de salida: 0 hay respuesta (\`buscar\` sin coincidencias tambien), 1 el Nodo, la Vista, el Tema, el Tipo o el estado no existe (stderr sugiere ids cercanos) o el Workspace tiene errores (corrigelos con validate), 2 fallo de uso o interno.
 
 Esquema de \`inspect --json\` (JSON Schema derivado del esquema Zod):
 

@@ -1,11 +1,12 @@
 import { act, cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema } from 'canonico';
+import { fuenteCanonicaSchema } from 'canonico';
 import type { Tema, VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, SuscripcionDeTema } from 'shell';
+import { TEMA_NEUTRO } from 'tema';
 
 afterEach(cleanup);
 

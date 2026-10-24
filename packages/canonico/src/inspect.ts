@@ -26,6 +26,16 @@ const resumenDeNodoSchema = z.object({ id: z.string(), type: z.string(), title: 
 
 const comun = { contractVersion: z.literal(INSPECT_CONTRACT_VERSION) };
 
+/** Capa de una pila de Tema ya resuelta; `origen` es el parche que la fijo. */
+const capaDeTemaSchema = z.object({
+  nombre: z.string(),
+  primitiva: z.string(),
+  props: z.record(z.string(), z.union([z.string(), z.number()])),
+  encima: z.boolean(),
+  animada: z.boolean(),
+  origen: z.object(sitioSchema),
+});
+
 export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
   z.object({
     ...comun,
@@ -72,6 +82,51 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       nodos: z.array(resumenDeNodoSchema),
       /** Aristas visibles; `count` es cuantas Aristas del Modelo fusiona. */
       aristas: z.array(aristaSchema.extend({ count: z.number().int().min(1) })),
+    }),
+  }),
+  z.object({
+    ...comun,
+    comando: z.literal('tema'),
+    tema: z.object({
+      name: z.string(),
+      /** Donde se declara; `(incorporado)` para un Tema del nucleo. */
+      ...sitioSchema,
+      /** Cadena `extends`, del padre hacia la raiz. */
+      extends: z.array(z.string()),
+      /** `part` usadas por el Tema y sus ancestros. */
+      partes: z.array(z.string()),
+      /** Tipo y estado pedidos para resolver la cascada, si se pidieron. */
+      tipo: z.string().optional(),
+      estado: z.string().optional(),
+      /** Pila de Capas resuelta, de abajo arriba; `origen` es el parche que la fijo. */
+      capas: z.array(capaDeTemaSchema),
+      /** Fondo de pagina: pila de rellenos de abajo arriba y si queda fijo al visor. */
+      pagina: z.object({ fijo: z.boolean(), capas: z.array(capaDeTemaSchema) }),
+      /**
+       * Grupo del Tipo y estado pedidos: pila del Grupo abierto y del cerrado (de abajo arriba, cada Capa con su
+       * `origen`), la cabecera y el padding de la zona de hijos. `propio` es falso si el Tema no declara `group`:
+       * entonces las Capas salen vacias y el dibujo usa un Grupo sobrio derivado de los tokens del Tema.
+       */
+      grupo: z.object({
+        propio: z.boolean(),
+        cabecera: z.string(),
+        /** Donde se escribio la cabecera (`slots` de `group`); el Tema si ninguno la escribe. */
+        origenDeCabecera: z.object(sitioSchema),
+        alturaDeCabecera: z.number(),
+        padding: z.object({ top: z.number(), left: z.number(), bottom: z.number(), right: z.number() }),
+        capas: z.array(capaDeTemaSchema),
+        colapsado: z.object({ slots: z.string(), origenDeSlots: z.object(sitioSchema), capas: z.array(capaDeTemaSchema) }),
+      }),
+      /** Disposicion de Slots del Nodo del Tipo pedido, en la sintaxis del DSL (`column { row gap 6 { icon title } attrs }`). */
+      slots: z.string(),
+      /** Donde se escribio esa disposicion (`slots` de `node`); el Tema si ninguno la escribe. */
+      origenDeSlots: z.object(sitioSchema),
+      /** Metricas del Nodo del Tipo pedido (o la base): lo unico que mueve el layout. */
+      metricas: z.object({ fontSize: z.number() }).catchall(z.unknown()),
+      temaConCodigo: z.boolean(),
+      componentes: z.array(z.string()),
+      /** Con `--catalogo`: claves del catalogo de Primitivas, Movimientos y efectos. */
+      catalogo: z.object({ primitivas: z.array(z.string()), movimientos: z.array(z.string()), efectos: z.array(z.string()) }).optional(),
     }),
   }),
 ]);

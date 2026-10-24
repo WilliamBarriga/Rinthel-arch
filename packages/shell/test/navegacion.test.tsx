@@ -1,12 +1,13 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema } from 'canonico';
+import { fuenteCanonicaSchema } from 'canonico';
 import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
 import { pulsarNodo } from './ayudas';
+import { TEMA_NEUTRO } from 'tema';
 
 afterEach(cleanup);
 
@@ -45,7 +46,7 @@ const montar = (extra: Partial<VistaInteractivaProps> = {}) =>
     <VistaInteractiva source={fuente} theme={TEMA_NEUTRO} layout={enFila} width={800} height={600} camera={{ x: 0, y: 0, width: 800, height: 600 }} {...extra} />,
   );
 
-const dibujado = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`svg [data-id="${id}"]`)).not.toBeNull());
+const dibujado = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`[data-id="${id}"]`)).not.toBeNull());
 const pulsar = (c: HTMLElement, id: string) => pulsarNodo(c, id);
 const migas = () => Array.from(document.querySelectorAll('[data-breadcrumbs] [data-crumb]')).map((e) => e.getAttribute('data-crumb'));
 
@@ -56,7 +57,7 @@ describe('link, breadcrumbs y atras', () => {
     expect(migas()).toEqual(['a']);
     pulsar(container, 'x');
     await dibujado(container, 'y');
-    expect(container.querySelector('svg [data-id="x"]')).toBeNull();
+    expect(container.querySelector('[data-id="x"]')).toBeNull();
     expect(migas()).toEqual(['a', 'b']);
   });
 
@@ -66,7 +67,7 @@ describe('link, breadcrumbs y atras', () => {
     pulsar(container, 'x');
     await dibujado(container, 'y');
     pulsar(container, 'z');
-    await waitFor(() => expect(container.querySelector('svg [data-id="y"]')).toBeNull());
+    await waitFor(() => expect(container.querySelector('[data-id="y"]')).toBeNull());
     await dibujado(container, 'z');
     expect(migas()).toEqual(['a', 'b', 'c']);
 
@@ -101,7 +102,7 @@ describe('link, breadcrumbs y atras', () => {
     pulsar(container, 'x');
     expect(onViewChange).toHaveBeenCalledWith('b');
     expect(onPathChange).toHaveBeenCalledWith(['a', 'b']);
-    expect(container.querySelector('svg [data-id="x"]')).not.toBeNull();
+    expect(container.querySelector('[data-id="x"]')).not.toBeNull();
     expect(migas()).toEqual(['a']);
   });
 

@@ -1,0 +1,61 @@
+// Modelo comun de la galeria de Temas: agnostico del proyecto documentado. Lo comparten las
+// 14 Vistas (una por Tema), asi que cualquier diferencia visual sale solo del Tema.
+//
+// Cubre: todos los Tipos de nodo, un Grupo abierto (plataforma) y uno colapsado (persistencia),
+// Aristas con y sin etiqueta, Atributos y un Nodo por estado del ADR 0008 (grupo `estados`):
+// pasa el raton por `hover`, haz clic en `seleccionado` o en cualquiera para ver `en-ruta` y
+// `atenuado`, y navega con teclado para ver `foco`.
+specification {
+  node actor    { description "Persona o agente que usa el sistema"  icon user    color purple }
+  node servicio { description "Pieza de logica en ejecucion"          icon server     color blue }
+  node almacen  { description "Datos que persisten"                   icon database     color green }
+  node cola     { description "Canal de mensajes entre piezas"        icon queue     color amber }
+  node externo  { description "Sistema de terceros"                   icon cloud   color red }
+  node dominio  { description "Agrupa piezas relacionadas"            icon box     color gray }
+  node nota     { description "Elemento de prueba de un estado"       color gray }
+}
+
+model {
+  actor cliente "Cliente" "Quien hace pedidos"
+  servicio pasarela "Pasarela" "Punto de entrada"
+
+  dominio plataforma "Plataforma" {
+    servicio pedidos "Pedidos" "Registra y consulta pedidos" {
+      attrs {
+        id: uuid
+        total: decimal "en centavos"
+      }
+    }
+    servicio pagos "Pagos"
+    cola eventos "Eventos"
+  }
+
+  dominio persistencia "Persistencia" {
+    almacen base "Base de datos"
+    almacen cache "Cache"
+  }
+
+  externo proveedor "Proveedor de pagos"
+
+  dominio estados "Estados" {
+    nota hover "hover"
+    nota seleccionado "seleccionado"
+    nota fantasma "fantasma"
+    nota en-ruta "en-ruta"
+    nota atenuado "atenuado"
+    nota foco "foco"
+  }
+
+  cliente -> pasarela "HTTPS"
+  pasarela -> plataforma.pedidos
+  plataforma.pedidos -> plataforma.pagos "cobra"
+  plataforma.pedidos -> plataforma.eventos
+  plataforma.pagos -> proveedor "API"
+  plataforma.pedidos -> persistencia.base "guarda"
+  plataforma.eventos -> persistencia.cache
+  estados.hover -> estados.seleccionado
+  estados.seleccionado -> estados.fantasma
+  estados.fantasma -> estados.en-ruta
+  estados.en-ruta -> estados.atenuado
+  estados.atenuado -> estados.foco
+}

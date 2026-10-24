@@ -29,6 +29,11 @@
  * devuelve el `ElementoSeleccionable` superior (`{tipo: nodo|arista|etiqueta|atributo, id}`) o
  * `undefined`; `cajaDeElemento` da su caja en el lienzo; `seleccionar(seleccion, elemento, modo)`
  * (`reemplazar|agregar|quitar|alternar`) es el reductor de la `Seleccion`, inmutable.
+ * Ruta y foco (ADR 0008): el shell calcula `en-ruta`, `atenuado` y `foco` y los pasa por `estados`; render solo los pinta.
+ * Ruta: `route` (ids de Nodos en orden) o, sin ella, la ruta mas corta entre dos Nodos seleccionados (`rutaMasCorta`);
+ * sus Nodos y las Aristas entre consecutivos van `en-ruta` y el resto `atenuado`. Teclado: el lienzo es focalizable
+ * (`tabIndex` 0); Tab y Shift+Tab recorren Nodos y Grupos en orden del Modelo (en los extremos sueltan el foco al
+ * navegador), las flechas saltan por Aristas al vecino, Enter o Espacio colapsa o abre el Grupo con foco.
  * Hover y fantasma: el raton sobre un elemento lo dibuja en `hover`; el Nodo que se arrastra, en `fantasma`.
  * `issues` y `toasts` se dibujan dentro del lienzo con clases `rd-*` y las variables del Tema.
  * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con
@@ -47,6 +52,10 @@
  * estado no controlado). `cachedGeometry` vale para la Vista declarada
  * (`view ?? defaultView`); con navegacion usa `cachedGeometries` por id.
  * Iconos: `icons` (`IconProvider`) resuelve la clave `icon` de cada Nodo; sin el no se dibujan.
+ * Medicion de texto (ADR 0008): `measure` (`MedidorDeTexto`, p. ej. `(t) => medirEnVisor(t, {hashes})`)
+ * mide con la fuente real tras `document.fonts.load`; el layout espera las medidas y las recibe como
+ * tercer argumento del adaptador (viajan al Worker). Sin `measure` se estima por caracter. La clave de
+ * layout incluye el nivel y el hash de fuente: cambiar el archivo de fuente relayouta, la pintura no.
  * Recarga de Tema: `themeUpdates` (`SuscripcionDeTema`) es el puerto por el que el
  * consumidor entrega el Tema resuelto al guardar el archivo de tema. La Geometria
  * solo se recalcula si cambia `claveDeLayout` (fuentes, tamano de texto); la
@@ -57,6 +66,13 @@
  * incluido (el HTML de `cli export --format html` es estatico, sin servidor ni
  * watch, y no pasa `themeUpdates`); la historia 35 queda cubierta por el puerto y
  * sus pruebas, y el watch/dev server queda fuera de alcance.
+ *
+ * Accesibilidad (ADR 0008): un boton "Alto contraste" (prop `highContrast` /
+ * `onHighContrastChange`, por defecto `prefers-contrast: more`) reemplaza el Tema
+ * solo en el visor por `alto-contraste`; `legend` (`auto` | `always` | `never`)
+ * dibuja la leyenda derivada del Tema, sola cuando dos Tipos difieren unicamente por color.
+ * Componentes de Tema (Capa `code`): `componentes` (`ComponentesDeTema`) se pasa tal cual a `Diagram`; el registro lo
+ * llena el adaptador (`dev`), el shell no carga codigo.
  * Arrastre de Nodos (solo bajo `dev`): con `onMoveNode({id, x, y})` los Nodos se arrastran y al
  * soltar avisan su posicion nueva (relativa al Grupo padre, unidades de la geometria; es el
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve
@@ -106,10 +122,10 @@
  * renderizar; un rechazo del adaptador va a `onError` o, sin el, se lanza al
  * renderizar (para un error boundary). Configuracion requerida: Fuente canonica,
  * Vista, Tema, adaptador de layout y tamano del lienzo. Peer React 18 y 19.
- * Solo importa paquetes anteriores en la cadena `canonico -> dsl -> layout -> render -> shell`.
+ * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> render -> shell`.
  */
 export { VistaInteractiva } from './vista-interactiva';
-export type { AdaptadorDeLayout, VistaInteractivaProps } from './vista-interactiva';
+export type { AdaptadorDeLayout, MedidorDeTexto, VistaInteractivaProps } from './vista-interactiva';
 export { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from './interaccion';
 export type { ElementoSeleccionable, ModoDeSeleccion, OpcionesDeHitTest, Seleccion, TipoDeElemento } from './interaccion';
 export type { PropsDeNavegacion } from './navegacion';
@@ -134,4 +150,6 @@ export type { ControlDeEdicion, ResultadoDeEdicion } from './control-de-edicion'
 export type { Historial, Intencion } from 'sesion';
 export { adaptadorDeWorker } from './layout-en-worker';
 export { servirLayout } from './servir-layout';
+export { hashesDeFamilias, medirEnVisor } from './medicion-de-visor';
+export type { OpcionesDeMedicion } from './medicion-de-visor';
 export type { PuertoDeMensajes } from './layout-en-worker';

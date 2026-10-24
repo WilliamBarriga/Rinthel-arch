@@ -1,11 +1,12 @@
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema } from 'canonico';
+import { fuenteCanonicaSchema } from 'canonico';
 import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva, nivelDeDetalle } from 'shell';
 import type { AdaptadorDeLayout, Camara } from 'shell';
+import { TEMA_NEUTRO } from 'tema';
 
 afterEach(cleanup);
 
@@ -82,7 +83,7 @@ describe('VistaInteractiva: zoom semantico', () => {
       await waitFor(() => expect(container.querySelector('[data-id="g.u"]')).not.toBeNull());
       const datos = {
         ids: [...container.querySelectorAll('[data-id]')].map((e) => e.getAttribute('data-id')),
-        cajas: [...container.querySelectorAll('[data-id]')].map((e) => [e.getAttribute('transform'), e.querySelector('rect')!.getAttribute('width'), e.querySelector('rect')!.getAttribute('height')]),
+        cajas: [...container.querySelectorAll<HTMLElement>('[data-id]')].map((e) => [e.style.transform, e.style.width, e.style.height]),
         toggles: container.querySelectorAll('[data-toggle]').length,
       };
       unmount();

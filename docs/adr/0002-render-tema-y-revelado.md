@@ -1,42 +1,28 @@
-# Render: nucleo SVG propio, tema modular y pasos de revelado
+# Render: contrato puro, color por Paleta y pasos de revelado
 
-## Nucleo SVG propio puro, shell interactivo aparte
+Reescrito por el ADR 0008 (Sistema de Temas expresivo). Del original sobreviven el contrato puro del render, el color solo por nombre de Paleta, los iconos y los Pasos de revelado. El render hibrido (HTML/CSS para Nodos y Grupos, SVG para Aristas), el modelo de Temas, el relayout y la animacion estan en el ADR 0008. Los codigos de error de Tema de este ADR (herencia, duplicados) pasan al ADR 0008.
 
-El render es una funcion pura de geometria y tema a SVG React, sin reloj ni estado propio. El pan/zoom (d3-zoom), el colapso y la seleccion viven en un shell interactivo separado que controla las mismas props. Se descarta React Flow como renderer: ELK ya entrega posiciones, puertos y rutas de aristas, asi que React Flow solo aportaria pan/zoom y culling, su export a imagen es raster (html-to-image fijado a 1.11.11), su ejemplo de colapso es Pro y obligaria a mantener un segundo renderer para export, slides y video. tldraw queda descartado por licencia de produccion. Un solo dibujo sirve a web, slides, video y export SVG/PNG.
+## Render puro, shell interactivo aparte
+
+El render es una funcion pura de geometria y Estilo resuelto a una vista React, sin reloj externo ni estado propio de datos. El pan/zoom, el colapso y la seleccion viven en un shell interactivo separado que controla las mismas props. Se descarta React Flow como renderer: ELK ya entrega posiciones, puertos y rutas de aristas, y React Flow solo aportaria pan/zoom y culling. tldraw queda descartado por licencia de produccion.
 
 ### Contrato del componente
 
-Props: `geometry` (salida del layout de una Vista), `width` y `height` en px, `theme` (tokens), `expanded` y `onToggle` (colapso controlado), `visibility: (id) => 0..1` para Nodos y Aristas (slides devuelve 0 o 1 por paso, video un valor interpolado del frame), `camera`/`viewBox` controlado y `onSelect`. Sin dependencia de Next, Tailwind ni json-render; peer React 18 y 19.
+Props: `geometry` (salida del layout de una Vista), `width` y `height` en px, el Tema ya resuelto, `visibility: (id) => number` para Nodos y Aristas (0 oculto, 1 revelado; ver la decision de `visibility` en Pasos de revelado), `camera`/`viewBox` controlado, `onToggle` y `onSelect`. Sin dependencia de Next, Tailwind ni json-render; peer React 18 y 19.
 
-### Consecuencias
+- **Colapso por `view`, no por `expanded`**: el estado de colapso vive en la Vista resuelta (`resolveView(fuente, id, { expanded, collapsed })`), que decide que Nodos existen y con que Aristas elevadas. Duplicarlo en una prop daria dos fuentes de verdad. `onToggle(id)` solo avisa de que se pulso el control de un Grupo (que se dibuja si hay `onToggle`); quien controla el estado vuelve a resolver la Vista y a calcular el layout.
+- El culling con miles de Nodos se resuelve con colapso y filtrado por viewport en el shell.
+- El paquete `render` es independiente de cualquier consumidor (slides, video, web): este repo no depende de ellos ni los referencia en codigo. Como se integra en un repo consumidor lo decide ese repo.
 
-- El culling con miles de Nodos se resuelve con colapso (Grupos cerrados no se dibujan) y filtrado por viewport en el shell.
-- El paquete `render` es independiente de cualquier consumidor (slides, video, web): este repo no depende de ellos ni los referencia en codigo. Como se instala o integra en un repo consumidor lo decide ese repo y queda fuera de este sistema. El export SVG estatico queda como camino secundario.
-- Declarar pasos de revelado en la Vista (DSL) es azucar sobre `visibility`; ver la ultima seccion.
+## Color solo por nombre de Paleta
 
-### Enmienda: colapso por `view`, no por `expanded`
+El Tema se declara en el DSL (bloque `theme`, en cualquier archivo del Workspace) y compila a la Fuente canonica; `render` recibe el objeto ya resuelto, sin logica de herencia. Un color se escribe unicamente por nombre de Paleta, en Tipos de nodo (`specification`), en Temas y en overrides de Vista; el valor literal (hex) vive solo dentro del bloque `palette` del Tema. Se descarta permitir hex en el Modelo: un cambio de Tema dejaria de recolorear todo. Error con codigo estable y archivo/linea: color de Paleta desconocido.
 
-El componente no recibe `expanded`: el estado de colapso ya vive en la Vista resuelta (`resolveView(fuente, id, { expanded, collapsed })`), que es lo que decide que Nodos existen y con que Aristas elevadas. Duplicarlo en una prop daria dos fuentes de verdad. `onToggle(id)` solo avisa de que se pulso el control de un Grupo (que se dibuja si hay `onToggle`); quien controla el estado vuelve a resolver la Vista y a calcular el layout.
-
-## Tema modular, color solo por nombre de paleta
-
-El Tema se declara en el DSL (bloque `theme`, en cualquier archivo del Workspace, fusionados como `specification`) y compila a la Fuente canonica; `render` recibe el objeto plano ya resuelto (contrato de render, arriba), sin logica de herencia. Se compone con partes con nombre (`palette`, `fonts`, `tokens`) que un tema referencia, y con `extends` de un solo padre para variantes (claro/oscuro, alto contraste). Un tema es un solo modo. El nucleo trae un Tema neutro por defecto; la paleta Rinthel es solo un ejemplo.
-
-Un color se escribe unicamente por nombre de Paleta, en Tipos de nodo (`specification`) y en overrides de Vista; el valor literal (hex) vive solo dentro del Tema. Cascada: Tema, Tipo de nodo, override de la Vista. Se descarta permitir hex en el Modelo: un cambio de Tema dejaria de recolorear todo.
-
-### Seleccion y alcance
-
-- Tema global por `--theme <nombre>`; una Vista puede declarar `theme` y anularlo.
-- Carpetas de temas adicionales por `--theme-path`, fusionadas antes del Workspace (el Workspace gana). Paquetes npm de temas, despues.
-- Errores con codigo estable y archivo/linea: color de Paleta desconocido, ciclo de `extends`, nombre de tema duplicado.
-
-### Relayout
-
-El Tema no cambia el tamano de Nodos salvo por las fuentes, que se miden en el layout (ADR 0003): un cambio de fuente o tamano de texto relayouta; paleta e iconos no. El shell recarga al guardar el archivo de tema sin recompilar el Modelo.
+La seleccion de Tema (`--theme`, `--theme-path`, `theme` en la Vista, Tema por defecto) y el resto del modelo de Temas estan en el ADR 0008.
 
 ### Iconos
 
-El nucleo trae un set pequeno de iconos genericos y acepta SVG del Workspace, incrustados en el export (autocontenido). Un icono se resuelve a SVG inline por un puerto del catalogo, de modo que un set de marcas opcional se enchufa sin tocar el nucleo; su eleccion queda en el research de iconos de marcas.
+El nucleo trae un set pequeno de iconos genericos y acepta SVG del Workspace. Un icono se resuelve a SVG inline por un puerto del catalogo, de modo que un set de marcas opcional se enchufa sin tocar el nucleo; su eleccion queda en el research de iconos de marcas.
 
 ## Pasos de revelado: bloque `steps` en la Vista, azucar sobre `visibility`
 
@@ -55,7 +41,16 @@ view overview {
 ### Consecuencias
 
 - El layout de ELK se calcula una vez con todos los elementos de la Vista; los pasos solo cambian visibilidad, nunca geometria. No hay relayout por paso ni saltos de posicion; el costo es espacio vacio reservado en los primeros pasos.
-- Una funcion pura `revealAt(view, position: number)` convierte un paso en el `visibility(id)` del contrato de render: entero da 0/1 (slides), fraccion interpola con fundido (video). Los consumidores no reimplementan la logica.
+- Una funcion pura `revealAt(view, position: number)` convierte un paso en el `visibility(id)` del contrato de render: da siempre 0 o 1 y una fraccion cuenta como su parte entera. Los consumidores no reimplementan la logica.
 - Sin `steps`, todo esta revelado. Un Grupo colapsado cuenta como visible si algun hijo esta revelado.
 - El shell ofrece anterior/siguiente; el paso actual vive en el hash de URL, como el drill-down.
 - Los codigos de error de validacion cubren pasos con ids o selectores inexistentes.
+- Un Paso solo dispara la animacion `enter` de lo recien revelado (ADR 0008); sigue sin cambiar posicion.
+
+### Decision: la visibilidad continua `0..1` se elimina del revelado (ticket de animacion)
+
+Un Paso solo cambia que esta revelado; no tiene mecanismo de animacion propio (ADR 0008): lo recien revelado dispara el `enter` del Tema y lo que se oculta, su `exit`, ambos en CSS nativo. Por eso:
+
+- `revealAt` ya no interpola: devuelve 0 o 1 y una posicion fraccionaria aplica el paso entero anterior. El fundido entre pasos es del Tema (`enter`/`exit`, con `stagger`), no de un numero continuo.
+- El render distingue oculto (`visibility` 0, atributo `data-oculto`, sin clics) de visible; la entrada es la animacion `enter` del elemento que deja de estar oculto, y la salida la transicion `exit` hacia `data-oculto`. Sin `enter`/`exit` en el Tema el cambio es instantaneo. La prop opcional `nuevos` de `Diagram` acota el `stagger` a lo recien revelado.
+- El tipo `Visibilidad` sigue devolviendo `number` y el render sigue pintando una opacidad intermedia si la recibe: no rompe a la shell, cuyo morph de layout (animacion de layout, que el ADR 0008 deja al codigo y no a lo declarativo) la usa para fundir Nodos que aparecen al cambiar de Vista. Nada del flujo de Pasos ni del DSL produce ya valores intermedios.

@@ -2,7 +2,8 @@
  * `sesion` — estado compilado de un Workspace (termino Sesion en CONTEXT.md).
  *
  * Interfaz: `abrirSesion(archivos, { tema? }) -> Sesion`, con `fuente`,
- * `diagnosticar()`, `construir()`, `geometria(vista)` y `actualizar(archivos)`.
+ * `diagnosticar()`, `construir()`, `geometria(vista)`, `estilo(vista)` (Estilo resuelto
+ * del Tema de la Vista: Metricas y pintura) y `actualizar(archivos)`.
  * Es la unica tuberia compilar, validar y calcular layout: la comparten `cli`,
  * `dev` e `inspect`.
  *
@@ -16,6 +17,11 @@
  * Modos de error: los errores del Workspace son issues, no excepciones; los
  * fallos internos de layout se propagan como rechazo de la promesa.
  * Configuracion requerida: ninguna; `tema` (opcional) es el Tema global.
+ * Via de escape en codigo (ADR 0008): `sesion` nunca importa codigo. `diagnosticar` y `construir` emiten
+ * `W_THEME_WITH_CODE` por Tema (o Vista) que usa la Capa `code`; con `componentes` (nombre -> `InterfazDeComponente`,
+ * que da el adaptador) comprueban ademas que el componente existe y que sus parametros coinciden, y
+ * `issuesDelAdaptador` suma los issues del adaptador (un `.tsx` que no compila). `actualizar(archivos, cambios)`
+ * puede renovar ambos.
  *
  * Intenciones (ADR 0007): `Intencion` es la union discriminada por `tipo` (hoy `mover-pin`);
  * `aplicarIntencion(archivos, intencion)` es el reductor puro (reutiliza `editarPin`);
@@ -30,6 +36,9 @@
  * reduce, y escribe solo los archivos propios que cambian (todo o nada; un archivo de
  * `--theme-path` se rechaza como `archivo-desconocido`). Los fallos de I/O del puerto se propagan.
  *
+ * `origenesDeTema` da, por Tema declarado, la cadena `extends`, las `part` usadas y el sitio de la ultima
+ * escritura de cada Capa (base, por Tipo y por estado); lo consume `inspect tema`.
+ *
  * `archivoDeVista(sesion, vista)` da el archivo que declara una Vista (el de su hash).
  *
  * Edicion estructurada (ADR 0005): `aplicarEdiciones(archivos, ediciones)` aplica
@@ -43,7 +52,7 @@
  * `fix` de `validate`). El vocabulario del Gesto (`IntencionDePin`,
  * `MotivoDeRechazo`) se declara una sola vez en
  * `canonico` y se reexporta aqui para los consumidores. Solo importa paquetes
- * anteriores en la cadena `canonico -> dsl -> layout -> sesion`.
+ * anteriores en la cadena `canonico -> tema -> dsl -> layout -> sesion`.
  */
 export { abrirSesion, archivoDeVista } from './sesion';
 export { aplicarEdiciones, editarPin, hashDeContenido } from './ediciones';
@@ -54,4 +63,4 @@ export { aplicarIntencion, apilar, crearHistorial, deshacer, editarEnHistorial, 
 export type { Historial, Intencion, ResultadoDeIntencion } from './intenciones';
 export type { IntencionDePin, MotivoDeRechazo } from 'canonico';
 export type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
-export type { OpcionesDeSesion, ResultadoDeConstruir, SalidaDeBuild, Sesion } from './sesion';
+export type { InterfazDeComponente, OpcionesDeSesion, ResultadoDeConstruir, SalidaDeBuild, Sesion } from './sesion';

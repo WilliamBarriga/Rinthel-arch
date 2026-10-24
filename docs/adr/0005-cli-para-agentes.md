@@ -66,3 +66,46 @@ La primera entrega cubre solo arrastrar Pins. El modulo es generico: cada gesto 
 - Formateador canonico completo: reescribe archivos enteros y no hay necesidad concreta. Cada gesto emite la edicion minima con formato fijo. Se retoma si aparece ruido real en los diffs.
 - `validate --fix` y cualquier correccion automatica al validar.
 - Deshacer propio y bloqueos de edicion.
+
+## Enmienda: Temas en el CLI (Sistema de Temas expresivo, ADR 0008)
+
+Un Tema es texto del DSL como cualquier otro bloque, asi que el CLI no gana un modo nuevo. Solo se acotan cuatro puntos; el detalle de cada Tema, Capa y codigo vive en el ADR 0008.
+
+### `inspect tema <nombre>`
+
+Subcomando de solo lectura, con `--json` y `contractVersion` propio como el resto de `inspect`. Opciones `--tipo <tipo>` y `--estado <estado>` para resolver la cascada de un caso. La salida trae:
+
+- la cadena `extends` y las `part` usadas;
+- la pila de Capas resuelta para el Tipo y estado pedidos, cada Capa con el `archivo:linea` del parche que la fijo;
+- la tabla de Metricas;
+- `temaConCodigo` y la lista de componentes;
+- con `--catalogo`, las claves del catalogo de Primitivas y Movimientos, derivadas del esquema unico (sin listas paralelas).
+
+Sirve al agente para saber que parche tocar antes de editar.
+
+### `edit`: sin cambios
+
+`edit` no gana gestos para Temas: el agente edita el `.dg` con sus herramientas y revalida. Un parche de Capa es texto legible, no un gesto incomodo a mano. Un gesto futuro (p. ej. selector de color en el visor) es un ticket pequeno sin ADR, como ya establece este ADR. Por `edit` solo se aplican los `fix` de `validate` (`{ file, range, replacement }`).
+
+### `validate`: sin enmienda estructural
+
+Los codigos de Tema (propiedad desconocida, `before`/`after` inexistente, contraste, `solo-color`, `temaConCodigo`, errores de compilacion de `.tsx`...) son codigos nuevos: anadir codigos no rompe el contrato y `contractVersion` sigue en 1. Convenciones para ellos:
+
+- el `fix` con "quisiste decir" se emite solo con un unico candidato cercano; si hay mas, queda `hint`;
+- los issues de un parche de Tema traen `related` apuntando a la Capa base que parchea.
+
+### `dev`: recarga clasificada por tipo de cambio
+
+`dev` observa tambien las fuentes y los `.tsx` del Workspace, con el mismo debounce (~150 ms) y el mismo canal SSE. El mensaje empujado indica el tipo de cambio para que el visor haga lo minimo:
+
+- `pintura` (solo Capas pintadas o animacion): se empuja el Estilo resuelto sin relayout, con la Geometria vigente;
+- `estructura` (cambia la clave de estructura: Metricas, fuente): relayout;
+- `codigo` (cambia un `.tsx`): se recompila y se vuelve a registrar el componente, sin relayout.
+
+Si algo falla (DSL o compilacion) el panel de issues lo muestra y `dev` conserva el ultimo dibujo bueno.
+
+Confianza en el codigo: `dev` no sirve `/componentes.js` mientras el usuario no confirme (el visor pregunta la primera vez que el Workspace tiene un Tema con codigo; `--trust-code` lo da de antemano) y avisa del codigo al arrancar. `/api/codigo` informa `temaConCodigo`, los componentes y si esta confirmado.
+
+### Queda como implementacion
+
+El subcomando `inspect tema`, los codigos de Tema en `validate`, el clasificador de cambios (`pintura` | `estructura` | `codigo`) y el watcher de fuentes y `.tsx`.

@@ -27,7 +27,8 @@
   },
   "dependencies": {
     "canonico": "workspace:*",
-    "layout": "workspace:*"
+    "layout": "workspace:*",
+    "tema": "workspace:*"
   },
   "sideEffects": false
 }

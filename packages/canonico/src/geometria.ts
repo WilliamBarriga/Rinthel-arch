@@ -13,6 +13,8 @@ const cajaDeNodoSchema = z.object({
   y: numeroFinito,
   width: numeroFinito,
   height: numeroFinito,
+  /** Rectangulo de cada Slot que el Tema muestra, relativo a la caja (lo coloca `tema`). */
+  slots: z.record(z.string(), z.object({ x: numeroFinito, y: numeroFinito, width: numeroFinito, height: numeroFinito })).optional(),
 });
 
 const puntoSchema = z.object({ x: numeroFinito, y: numeroFinito });

@@ -7,8 +7,8 @@ import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
-import { atributosVisibles, metricasDe, tamanoDeEtiqueta, tamanoDeNodo, yDeFila } from './metricas';
-import type { Metricas } from './metricas';
+import { atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, contenidoDeNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
+import type { MedidasDeTexto, Metricas, Rect, TablaDeMetricas } from 'tema';
 
 /** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
 export interface CajaDeNodo {
@@ -16,6 +16,8 @@ export interface CajaDeNodo {
   y: number;
   width: number;
   height: number;
+  /** Rectangulo de cada Slot que el Tema muestra en este Nodo hoja, relativo a la caja (colocacion de `tema`). */
+  slots?: Record<string, Rect>;
 }
 
 export interface Punto {
@@ -47,12 +49,11 @@ export interface Geometria {
 export interface OpcionesDeLayout {
   /** Motor ELK; por defecto el empaquetado, que corre igual en Node y en Web Worker. */
   elk?: ELK;
-  /** Metricas con las que medir; por defecto las derivadas del Tema. `render` debe dibujar con las mismas. */
-  metricas?: Metricas;
+  /** Metricas con las que medir; por defecto la tabla derivada del Tema. Una sola `Metricas` se usa para todo elemento. `render` debe dibujar con las mismas. */
+  metricas?: Metricas | TablaDeMetricas;
+  /** Medidas reales de texto (el visor las toma con la fuente cargada); sin ellas se estima por caracter. Se ignoran si se pasa `metricas`. */
+  medidas?: MedidasDeTexto;
 }
-
-/** Margen interior de un Grupo; arriba deja sitio al titulo. */
-const PADDING_GRUPO = '[top=32,left=16,bottom=16,right=16]';
 
 const OPCIONES_RAIZ = {
   'elk.algorithm': 'layered',
@@ -71,15 +72,29 @@ const OPCIONES_RAIZ = {
  * Calcula la Geometria de `vista` con las medidas del `tema`. Determinista: la
  * misma entrada da la misma geometria. Los Grupos cerrados son Nodos hoja.
  * Sin `opciones.elk` crea un motor por llamada (unos ms; sin estado compartido).
+ * Valida y resuelve el Tema (`tablaDeMetricas`) y delega en `layoutConMetricas`.
  */
 export async function layoutView(
   vista: VistaResuelta,
   tema: Tema,
   opciones: OpcionesDeLayout = {},
 ): Promise<Geometria> {
+  return layoutConMetricas(vista, opciones.metricas ?? tablaDeMetricas(tema, opciones.medidas), opciones);
+}
+
+/**
+ * Nucleo de `layoutView` sobre Metricas ya resueltas: no valida ni conoce el Tema. Es lo que corre el
+ * Worker (ADR 0003, enmienda): quien lo llama resolvio el Tema una vez (`tablaDeMetricas`) y el Worker
+ * no empaqueta el esquema del Tema.
+ */
+export async function layoutConMetricas(
+  vista: VistaResuelta,
+  metricas: Metricas | TablaDeMetricas,
+  opciones: { elk?: ELK } = {},
+): Promise<Geometria> {
   // Import dinamico: quien solo usa las medidas (render) no arrastra ELK al empaquetar.
   const elk = opciones.elk ?? new (await import('elkjs/lib/elk.bundled.js')).default();
-  const medidas = opciones.metricas ?? metricasDe(tema);
+  const medidas = comoTabla(metricas);
 
   const grafo: ElkNode = {
     id: 'raiz',
@@ -89,7 +104,7 @@ export async function layoutView(
       id: idDeArista(arista),
       sources: [arista.from.node],
       targets: [arista.to.node],
-      ...(arista.label !== undefined && { labels: [{ id: `${idDeArista(arista)}:etiqueta`, text: arista.label, ...tamanoDeEtiqueta(arista.label, medidas) }] }),
+      ...(arista.label !== undefined && { labels: [{ id: `${idDeArista(arista)}:etiqueta`, text: arista.label, ...tamanoDeEtiqueta(arista.label, medidas.etiqueta) }] }),
     })),
   };
   const resultado = await elk.layout(grafo);
@@ -114,10 +129,24 @@ export async function layoutView(
   return conPinsYPuertos(vista, medidas, { nodes, edges, labels, pinsSolapados: [], width: resultado.width ?? 0, height: resultado.height ?? 0 });
 }
 
-function conPinsYPuertos(vista: VistaResuelta, medidas: Metricas, base: Geometria): Geometria {
+function conPinsYPuertos(vista: VistaResuelta, medidas: TablaDeMetricas, base: Geometria): Geometria {
   const pinneada = aplicarPins(vista, base.nodes, base.edges, base.labels);
   const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
-  return { ...conPuertos, width: base.width, height: base.height };
+  return { ...conPuertos, nodes: conSlots(vista, medidas, conPuertos.nodes), width: base.width, height: base.height };
+}
+
+/** Anade a cada Nodo hoja el rectangulo de sus Slots, el mismo que usa `render` para pintar. */
+function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<string, CajaDeNodo>): Record<string, CajaDeNodo> {
+  const resultado = { ...nodes };
+  // `vista.nodes` ya lista todos los Nodos visibles a plano.
+  for (const nodo of vista.nodes) {
+    const caja = resultado[nodo.id];
+    if (nodo.children.length === 0 && caja !== undefined) {
+      const m = metricasDeHoja(medidas, nodo);
+      resultado[nodo.id] = { ...caja, slots: colocarEnCaja(m, contenidoDeNodo(nodo, m), caja.width).slots };
+    }
+  }
+  return resultado;
 }
 
 /**
@@ -125,13 +154,13 @@ function conPinsYPuertos(vista: VistaResuelta, medidas: Metricas, base: Geometri
  * (`layoutView` de la Vista sin overrides de Pin). Es el paso post-ELK de `layoutView` y da el mismo
  * resultado que un layout completo, sin volver a ejecutar ELK: mover un Pin no relayouta.
  */
-export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas = metricasDe(tema)): Geometria {
-  return conPinsYPuertos(vista, metricas, base);
+export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): Geometria {
+  return conPinsYPuertos(vista, comoTabla(metricas), base);
 }
 
 /**
- * Pin post-ELK (ADR 0003): la caja del Nodo pineado pasa a `pin`, relativa a su
- * Grupo padre. De las Aristas, solo cambian las que tocan el subarbol movido: si
+ * Pin post-ELK (ADR 0003): el centro de la caja del Nodo pineado pasa a `pin`,
+ * relativo a su Grupo padre (la caja crece alrededor del Pin). De las Aristas, solo cambian las que tocan el subarbol movido: si
  * los dos extremos van dentro del mismo subarbol pineado se trasladan con el; si
  * no, se re-enrutan con una ruta en Z sencilla entre las cajas (pierden la ruta
  * de ELK). Un Pin sobre un Nodo que la Vista no muestra se ignora (`validate` ya
@@ -149,7 +178,10 @@ function aplicarPins(
   const pins = vista.overrides.filter((o) => o.pin !== undefined && nodes[o.node] !== undefined);
   if (pins.length === 0) return { nodes, edges, labels, pinsSolapados: [] };
   const nuevos: Record<string, CajaDeNodo> = { ...nodes };
-  for (const { node, pin } of pins) nuevos[node] = { ...nuevos[node]!, ...pin };
+  for (const { node, pin } of pins) {
+    const caja = nuevos[node]!;
+    nuevos[node] = { ...caja, x: pin!.x - caja.width / 2, y: pin!.y - caja.height / 2 };
+  }
   const previo = indiceDeGeometria(vista, { nodes });
   const indice = indiceDeGeometria(vista, { nodes: nuevos });
   const { padre } = indice;
@@ -196,11 +228,11 @@ function aplicarPins(
  */
 function ajustarAPuertosDeAtributo(
   vista: VistaResuelta,
-  metricas: Metricas,
+  tabla: TablaDeMetricas,
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
 ): Record<string, RutaDeArista> {
-  const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, atributosVisibles(nodo)]));
+  const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, atributosVisibles(nodo, metricasDeHoja(tabla, nodo))]));
   const { cajas } = indiceDeGeometria(vista, { nodes });
   const rutas = { ...edges };
   for (const arista of vista.edges) {
@@ -211,7 +243,10 @@ function ajustarAPuertosDeAtributo(
     for (const [lado, extremo] of [['inicio', arista.from], ['fin', arista.to]] as const) {
       const indice = extremo.attribute === undefined ? -1 : (atributos.get(extremo.node) ?? []).findIndex((a) => a.name === extremo.attribute);
       if (indice < 0) continue;
-      const y = cajas.get(extremo.node)!.y + yDeFila(metricas, indice);
+      const dueno = vista.nodes.find((n) => n.id === extremo.node)!;
+      const m = metricasDeHoja(tabla, dueno);
+      const fila = colocarEnCaja(m, contenidoDeNodo(dueno, m), cajas.get(extremo.node)!.width).filas[indice]!;
+      const y = cajas.get(extremo.node)!.y + fila.y + fila.height / 2;
       puntos = moverPuerto(puntos, lado, y);
     }
     rutas[id] = { points: puntos };
@@ -264,24 +299,28 @@ function paddingElk({ top, left, bottom, right }: Metricas['paddingGrupo']): str
   return `[top=${top},left=${left},bottom=${bottom},right=${right}]`;
 }
 
-function aElk(nodo: NodoResuelto, medidas: Metricas): ElkNode {
+function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
   if (nodo.children.length === 0) {
-    return { id: nodo.id, ...tamanoDeNodo(nodo.label, medidas, atributosVisibles(nodo)) };
+    const medidas = metricasDeHoja(tabla, nodo);
+    const { width, height } = colocarNodo(contenidoDeNodo(nodo, medidas), medidas);
+    return { id: nodo.id, width, height };
   }
+  // El Grupo abierto nunca es mas angosto que su cabecera (titulo, icono y control de colapso).
+  const { width } = colocarNodo(contenidoDeNodo(nodo, tabla.grupoAbierto), tabla.grupoAbierto);
   return {
     id: nodo.id,
-    layoutOptions: { 'elk.padding': paddingElk(medidas.paddingGrupo) },
-    children: nodo.children.map((hijo) => aElk(hijo, medidas)),
+    layoutOptions: { 'elk.padding': paddingElk(tabla.grupoAbierto.paddingGrupo), 'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': `(${width}, 0)` },
+    children: nodo.children.map((hijo) => aElk(hijo, tabla)),
   };
 }
 
 /**
  * Clave de cache de la geometria: igual si y solo si el layout no cambia. Entran
  * la estructura visible, los textos, los Pins y las Metricas (fuentes, tamanos y espaciado); no la
- * paleta, los colores ni los iconos, que no mueven nada. Es la unica respuesta a
+ * paleta ni los colores, que no mueven nada; del icono solo si el Nodo lo tiene (reserva su Slot). Es la unica respuesta a
  * "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`.
  */
-export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas = metricasDe(tema)): string {
+export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): string {
   return JSON.stringify({ estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista) });
 }
 
@@ -291,10 +330,11 @@ const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin =
  * Como `claveDeLayout` sin los Pins: identifica la geometria que ELK calcula (los Pins se aplican despues,
  * `aplicarPinsAGeometria`). Mover un Pin no la cambia, asi que no exige relayout de ELK.
  */
-export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas = metricasDe(tema)): string {
+export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): string {
+  const tabla = comoTabla(metricas);
   return JSON.stringify({
-    nodos: vista.nodes.map((nodo) => [nodo.id, nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo).map((a) => [a.name, a.type])]),
+    nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => [a.name, a.type])]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
-    metricas,
+    metricas: claveDeMetricas(tabla),
   });
 }

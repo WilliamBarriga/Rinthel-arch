@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
+import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { Atributo, Tema, VistaResuelta } from 'canonico';
-import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView, metricasDe } from 'layout';
+import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
+import { TEMA_NEUTRO, metricasDe, tablaDeMetricas } from 'tema';
 
 const nodo = (id: string, children: unknown[] = []) => ({
   id,
@@ -285,10 +286,24 @@ describe('claveDeEstructura', () => {
 describe('layoutView: Pin post-ELK', () => {
   const pin = (node: string, x: number, y: number) => ({ overrides: [{ node, pin: { x, y } }] });
 
-  it('el Nodo pineado queda exactamente en su posicion, relativa a su Grupo', async () => {
+  it('el centro del Nodo pineado queda exactamente en su Pin, relativo a su Grupo', async () => {
     const { nodes } = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
+    const caja = nodes['a.a1']!;
 
-    expect(nodes['a.a1']).toMatchObject({ x: 200, y: 100 });
+    expect(caja.x + caja.width / 2).toBe(200);
+    expect(caja.y + caja.height / 2).toBe(100);
+  });
+
+  it('un Nodo que cambia de tamano crece alrededor de su Pin', async () => {
+    const conLabel = (label: string) => vista({ overrides: [{ node: 'a.a1', label, pin: { x: 200, y: 100 } }] });
+    const corto = (await layoutView(conLabel('A'), TEMA_NEUTRO)).nodes['a.a1']!;
+    const largo = (await layoutView(conLabel('Servicio de facturacion con nombre muy largo'), TEMA_NEUTRO)).nodes['a.a1']!;
+
+    expect(largo.width).toBeGreaterThan(corto.width);
+    for (const caja of [corto, largo]) {
+      expect(caja.x + caja.width / 2).toBe(200);
+      expect(caja.y + caja.height / 2).toBe(100);
+    }
   });
 
   it('las Aristas no incidentes no cambian y las incidentes siguen a su Nodo', async () => {
@@ -441,7 +456,7 @@ describe('Metricas', () => {
     expect(claveDeLayout(vista(), TEMA_NEUTRO, { ...base, paddingHorizontal: base.paddingHorizontal + 8 })).not.toBe(
       claveDeLayout(vista(), TEMA_NEUTRO),
     );
-    expect(claveDeLayout(vista(), TEMA_NEUTRO, base)).toBe(claveDeLayout(vista(), TEMA_NEUTRO));
+    expect(claveDeLayout(vista(), TEMA_NEUTRO, tablaDeMetricas(TEMA_NEUTRO))).toBe(claveDeLayout(vista(), TEMA_NEUTRO));
   });
 
   it('cambiar una Metrica mueve el layout: mas padding, Nodo mas ancho; mas fila, mas alto', async () => {

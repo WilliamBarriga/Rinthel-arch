@@ -27,11 +27,15 @@ export function construirSalida(
   };
 }
 
-/** Texto para humanos: una linea por issue y un resumen. */
+/** La pista del issue para quien lee texto: su `hint`, o el reemplazo de su `fix` como "quisiste decir". */
+const pista = (issue: Issue): string =>
+  issue.hint !== undefined ? `; ${issue.hint}` : issue.fix !== undefined && issue.fix.replacement !== '' ? `; quisiste decir '${issue.fix.replacement}'` : '';
+
+/** Texto para humanos: una linea por issue (con su pista, si tiene) y un resumen. */
 export function textoLegible(salida: SalidaDeValidate): string {
   const lineas = salida.issues.map(
     (issue) =>
-      `${issue.file}:${issue.line}:${issue.column} ${issue.severity} ${issue.code} ${issue.message}`,
+      `${issue.file}:${issue.line}:${issue.column} ${issue.severity} ${issue.code} ${issue.message}${pista(issue)}`,
   );
   const { errors, warnings, truncated } = salida.summary;
   lineas.push(`${errors} errores, ${warnings} avisos${truncated ? ' (lista truncada)' : ''}`);

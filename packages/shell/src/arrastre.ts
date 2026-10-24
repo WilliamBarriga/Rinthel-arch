@@ -12,7 +12,7 @@ import type { Calculo } from './geometria';
 export type Movimiento = { id: string; x: number; y: number };
 export type AlMoverNodo = (movimiento: Movimiento) => void | boolean | Promise<boolean | void>;
 
-/** Id del Nodo dibujado (`g[data-id]` mas interno) bajo un evento, si lo hay. */
+/** Id del Nodo dibujado (la caja `[data-id]` mas interna) bajo un evento, si lo hay. */
 export function idDeNodoBajo(destino: EventTarget | null): string | undefined {
   return (destino as Element | null)?.closest?.('[data-id]')?.getAttribute('data-id') ?? undefined;
 }
@@ -70,7 +70,8 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
         setEnCurso(undefined);
         if (!movido) return;
         const k = escalaVigente();
-        const destino = { id, x: Math.round(caja.x + (m.clientX - x0) / k), y: Math.round(caja.y + (m.clientY - y0) / k) };
+        const [x, y] = [Math.round(caja.x + (m.clientX - x0) / k), Math.round(caja.y + (m.clientY - y0) / k)];
+        const destino = { id, x, y };
         // El clic que sigue al soltar no debe seleccionar ni navegar.
         arrastrando.current = true;
         setTimeout(() => {
@@ -79,7 +80,8 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
         setDesplazado(destino);
         const devolver = (): void => setDesplazado((d) => (d?.id === id ? undefined : d));
         try {
-          const resultado = ultimo.current.alMoverNodo?.(destino);
+          // El Pin ancla el centro: el aviso lleva el centro de la caja soltada.
+          const resultado = ultimo.current.alMoverNodo?.({ id, x: Math.round(x + caja.width / 2), y: Math.round(y + caja.height / 2) });
           if (typeof resultado === 'object') resultado.then((ok) => ok === false && devolver(), devolver);
           else if (resultado === false) devolver();
         } catch {

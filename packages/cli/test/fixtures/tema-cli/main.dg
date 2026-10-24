@@ -1,0 +1,16 @@
+specification {
+  node servicio { color rojo }
+  node tabla { color azul }
+}
+
+model {
+  servicio api "API"
+  tabla db "Base"
+  api -> db
+}
+
+view general {
+  type architecture
+  include **
+  theme app
+}

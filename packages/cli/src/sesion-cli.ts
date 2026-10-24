@@ -7,6 +7,8 @@ import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion } from 'sesion';
 import type { Sesion } from 'sesion';
 
+import { compiladorDeCodigo } from './codigo';
+import { leerFuentes, leerWorkspace } from './workspace';
 import { construirSalida, textoLegible } from './validate';
 
 export interface ResultadoDeEjecucion {
@@ -31,7 +33,13 @@ export function abrirSesionDe(
   opciones: { tema?: string } = {},
 ): { sesion: Sesion } | { fallo: ResultadoDeEjecucion } {
   try {
-    return { sesion: abrirSesion(leerConTemas(leer, raiz, carpetaDeTemas), opciones) };
+    // Los .tsx de los Temas solo se transforman (nunca se ejecutan): dan los nombres de componente y los errores de compilacion.
+    // Con una lectura inyectada (pruebas) el Workspace no esta en disco: no hay `.tsx` que compilar.
+    const enDisco = leer === leerWorkspace;
+    const codigo = enDisco ? compiladorDeCodigo(raiz).compilar() : { componentes: {}, issues: [] };
+    // Las fuentes son archivos del Workspace (y de `--theme-path`): solo se conocen leyendo el disco.
+    const fuentes = enDisco ? { archivosDeFuente: [...new Set([...(carpetaDeTemas === undefined ? [] : leerFuentes(carpetaDeTemas)), ...leerFuentes(raiz)])] } : {};
+    return { sesion: abrirSesion(leerConTemas(leer, raiz, carpetaDeTemas), { ...opciones, ...fuentes, componentes: codigo.componentes, issuesDelAdaptador: codigo.issues }) };
   } catch (error) {
     return { fallo: uso(`No se pudo leer el Workspace: ${(error as Error).message}`) };
   }

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO } from 'canonico';
 import type { Tema } from 'canonico';
-import { metricasDe } from 'layout';
 import { resolverEstilo } from 'render';
+import { TEMA_NEUTRO, metricasDe } from 'tema';
 
 describe('resolverEstilo', () => {
   it('entrega los colores y fuentes del Tema', () => {
@@ -29,9 +28,9 @@ describe('resolverEstilo', () => {
   it('trae los defaults de dibujo en un solo sitio', () => {
     const estilo = resolverEstilo(TEMA_NEUTRO);
 
-    expect(estilo.nodo).toEqual({ radio: 6, relleno: '#ffffff', trazoColapsado: '6 3', regionDeSombra: { origen: '-20%', tamano: '150%' }, porTipo: {} });
-    expect(estilo.arista.color).toBe('#9ca3af');
-    expect(estilo.arista.flecha).toEqual({ ancho: 8, alto: 8, forma: 'M 0 0 L 10 5 L 0 10 z', viewBox: '0 0 10 10', refX: 10, refY: 5 });
+    expect(estilo.nodo).toEqual({ radio: 6, relleno: '#ffffff', trazoColapsado: '6 3' });
+    expect(estilo.pintura.arista.capas[0]?.props['color']).toBe('#9ca3af');
+    expect(estilo.pintura.arista.fin).toEqual({ tipo: 'arrow', props: { size: 8, color: '#9ca3af' } });
     expect(estilo.etiqueta.halo).toEqual({ color: '#ffffff', ancho: 3 });
     expect(estilo.glifos).toEqual({ expandido: '-', colapsado: '+' });
   });

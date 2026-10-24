@@ -1,11 +1,12 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, idDeArista } from 'canonico';
+import { fuenteCanonicaSchema, idDeArista } from 'canonico';
 import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
+import { TEMA_NEUTRO } from 'tema';
 
 afterEach(cleanup);
 
@@ -49,13 +50,14 @@ const montar = (steps: unknown[], extra: Partial<VistaInteractivaProps> = {}) =>
   );
 
 const opacidad = (c: HTMLElement, id: string): number => {
-  const el = c.querySelector(`svg [data-id="${id}"], svg [data-edge="${id}"]`);
-  const v = (el?.querySelector('[data-part]') ?? el)?.getAttribute('opacity');
-  return v === null || v === undefined ? 1 : Number(v);
+  const el = c.querySelector(`[data-id="${id}"], [data-edge="${id}"]`);
+  const parte = el?.querySelector<HTMLElement>('[data-part]');
+  const v = parte != null ? parte.style.opacity : el?.getAttribute('opacity');
+  return v === null || v === undefined || v === '' ? 1 : Number(v);
 };
-const dibujado = (c: HTMLElement) => waitFor(() => expect(c.querySelector('svg [data-id="a"]')).not.toBeNull());
+const dibujado = (c: HTMLElement) => waitFor(() => expect(c.querySelector('[data-id="a"]')).not.toBeNull());
 const sinVisibilidad = (c: HTMLElement) =>
-  c.querySelector('svg')!.innerHTML.replace(/ opacity="[^"]*"/g, '').replace(/ pointer-events="[^"]*"/g, '');
+  c.querySelector('[data-diagram]')!.innerHTML.replace(/ data-oculto=""/g, '').replace(/ opacity="[^"]*"/g, '').replace(/\s*(opacity|pointer-events): [^;"]+;?/g, '').replace(/ pointer-events="[^"]*"/g, '');
 
 describe('Pasos anterior y siguiente', () => {
   it('sin steps no hay controles ni se oculta nada', async () => {

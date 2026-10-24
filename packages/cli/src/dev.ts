@@ -5,7 +5,8 @@
  * `Sesion`; aqui solo viven los adaptadores (HTTP, observador de disco).
  *
  * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),
- * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `POST /api/deshacer` y `POST /api/rehacer` (restauran el texto exacto del historial del servidor, ADR 0007; 409 si el disco cambio fuera de dev, 422 con motivo `nada-que-deshacer` / `nada-que-rehacer` si no hay nada), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
+ * `/fuentes/<ruta>` (solo los archivos de fuente `woff2|woff|ttf|otf` del Workspace, o de `--theme-path`; todo lo demas, incluido salir de la raiz, es 404),
+ * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo, `fuentes` (ruta -> hash de cada archivo de fuente) y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `POST /api/deshacer` y `POST /api/rehacer` (restauran el texto exacto del historial del servidor, ADR 0007; 409 si el disco cambio fuera de dev, 422 con motivo `nada-que-deshacer` / `nada-que-rehacer` si no hay nada), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
  * envia el estado al conectar y tras cada recompilacion).
  *
  * `iniciarDev(OpcionesDeDev) -> ServidorDev` es la entrada programatica (el comando solo parsea y la llama).
@@ -22,6 +23,12 @@
  * observador activo) y lanza si la lectura inicial falla; las lecturas fallidas posteriores se ignoran
  * hasta el siguiente cambio. `run(['dev', ...])` los convierte en codigo 2.
  *
+ * Recarga clasificada (enmienda de Temas del ADR 0005): `dev` vigila tambien los `.tsx` y las fuentes del
+ * Workspace (`leerRecursos`, hash por archivo) y cada estado empujado trae `cambio` (`TipoDeCambio` de
+ * `canonico`): `pintura` (solo Capas pintadas o animacion: el visor reaplica el Estilo resuelto con la
+ * Geometria vigente, sin relayout), `estructura` (Metricas, fuentes, Modelo o Vistas) o `codigo` (un `.tsx`).
+ * Lo decide `clasificarCambio` comparando con el ultimo estado bueno; si la recompilacion falla no hay `cambio`.
+ *
  * Invariantes: las peticiones de edicion, deshacer y rehacer se serializan en una cola; una escritura que falla a mitad se revierte; gana la ultima escritura. Las
  * recompilaciones se agrupan con debounce y se serializan. Si el Workspace
  * tiene errores, el estado lleva los issues pero conserva la Fuente y la
@@ -34,17 +41,22 @@ import { rmSync, watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { combineIconProviders, genericIcons, intencionDePinSchema, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
-import type { EstadoDeDev, Intencion, Issue } from 'canonico';
+import { RUTA_DE_FUENTES, combineIconProviders, genericIcons, intencionDePinSchema, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
+import type { EstadoDeDev, Intencion, Issue, TipoDeCambio } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion, aplicarAlWorkspace, apilar, archivoDeVista, crearHistorial, deshacer, hashDeContenido, rehacer } from 'sesion';
 import type { Historial, Sesion } from 'sesion';
 
+import { componentesDeTema } from 'tema';
+
+import { compiladorDeCodigo } from './codigo';
+import type { ResultadoDeCodigo } from './codigo';
 import { empaquetarShellDev } from './dev-shell';
 import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
-import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
+import { clasificarCambio } from './cambio';
+import { destinoEnWorkspace, escribirTexto, esArchivoDeFuente, leerArchivoDeFuente, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
 
 /** Bundles del shell: pagina (React + shell) y codigo del Web Worker de layout. */
 export interface ShellDev {
@@ -61,6 +73,8 @@ export interface OpcionesDeDev {
   /** Espera tras el ultimo cambio antes de recompilar (150 ms por defecto). */
   debounceMs?: number;
   leer?: (raiz: string) => ArchivosDelWorkspace;
+  /** Hash de cada recurso vigilado (`.tsx`, fuentes) bajo `raiz`, para clasificar el cambio; por defecto lee el disco (o nada si se inyecta `leer`). */
+  leerRecursos?: (raiz: string) => Record<string, string>;
   /** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
   observar?: (raiz: string, alCambiar: () => void) => () => void;
   shell?: () => Promise<ShellDev>;
@@ -68,11 +82,22 @@ export interface OpcionesDeDev {
   escribir?: (raiz: string, ruta: string, texto: string) => void;
   /** Borra un archivo del Workspace (ruta relativa a `raiz`); deshacer/rehacer lo usan para quitar archivos que creo una edicion. */
   borrar?: (raiz: string, ruta: string) => void;
+  /**
+   * Los `.tsx` de los Temas ya confirmados: `dev` sirve el codigo del Workspace (`/componentes.js`) sin pedir
+   * confirmacion en el navegador (`--trust-code`). Por defecto no: abrir un Workspace ajeno exige confirmar.
+   */
+  confiarEnCodigo?: boolean;
+  /** Compila los `.tsx` del Workspace; por defecto el adaptador de esbuild (o nada si se inyecta `leer`). */
+  compilarCodigo?: () => ResultadoDeCodigo;
 }
 
 export interface ServidorDev {
   /** `http://127.0.0.1:<puerto>/` */
   url: string;
+  /** Componentes de Tema que los Temas del Workspace usaban al arrancar (vacio si no hay codigo). */
+  conCodigo: string[];
+  /** Si el codigo ya se sirve (confirmado de antemano con `confiarEnCodigo`). */
+  confiado: boolean;
   cerrar(): Promise<void>;
 }
 
@@ -112,6 +137,8 @@ function cabecera(res: ServerResponse, tipo: string, estado = 200): void {
   res.writeHead(estado, { 'content-type': `${tipo}; charset=utf-8`, 'cache-control': 'no-store' });
 }
 
+const SIN_CODIGO: ResultadoDeCodigo = { componentes: {}, issues: [], bundle: 'return {};' };
+
 const PAGINA = `<!doctype html>
 <html lang="es">
 <head>
@@ -128,14 +155,30 @@ const PAGINA = `<!doctype html>
 `;
 
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puerto = 0, debounceMs = 150, leer: leerBase = leerWorkspace, observar = observarDisco, shell = empaquetarShellDev, escribir = escribirEnDisco, borrar = borrarEnDisco } = opciones;
+  const { workspace, temas, puerto = 0, debounceMs = 150, leer: leerBase = leerWorkspace, leerRecursos: leerRecursosBase = opciones.leer === undefined ? leerRecursosReal : () => ({}), observar = observarDisco, shell = empaquetarShellDev, escribir = escribirEnDisco, borrar = borrarEnDisco, confiarEnCodigo = false } = opciones;
+  const compilarCodigo = opciones.compilarCodigo ?? (opciones.leer === undefined ? compiladorDeCodigo(workspace).compilar : () => SIN_CODIGO);
   const raizAbsoluta = resolve(workspace);
   const leer = (raiz: string): ArchivosDelWorkspace => leerConTemas(leerBase, raiz, temas);
   const bundles = await shell();
+  const recursosDe = (): Record<string, string> => ({ ...(temas === undefined ? {} : leerRecursosBase(temas)), ...leerRecursosBase(workspace) });
+
+  /** Fuentes del Workspace (ruta -> hash), o `undefined` si el adaptador de lectura no las conoce (lectura inyectada sin recursos). */
+  const fuentesDe = (todos: Record<string, string>): Record<string, string> | undefined =>
+    opciones.leer !== undefined && opciones.leerRecursos === undefined ? undefined : Object.fromEntries(Object.entries(todos).filter(([ruta]) => esArchivoDeFuente(ruta)));
+  const opcionesDeSesion = (todos: Record<string, string>): { archivosDeFuente?: string[] } => {
+    const fuentes = fuentesDe(todos);
+    return fuentes === undefined ? {} : { archivosDeFuente: Object.keys(fuentes) };
+  };
 
   let version = 0;
   let archivos = leer(workspace);
-  let actual: Sesion = abrirSesion(archivos);
+  /** Recursos (`.tsx`, fuentes) del ultimo instante bueno y tipo del ultimo cambio empujado. */
+  let recursos = recursosDe();
+  let cambio: TipoDeCambio | undefined;
+  /** Ultimo resultado de compilar los `.tsx` (con el ultimo bueno de cada archivo) y si el usuario confirmo cargar el codigo. */
+  let codigo = compilarCodigo();
+  let confiado = confiarEnCodigo;
+  let actual: Sesion = abrirSesion(archivos, { ...opcionesDeSesion(recursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
   /** Ultima Sesion sin errores de compilacion y los archivos con que se abrio. */
   let buena: { sesion: Sesion; archivos: ArchivosDelWorkspace } | undefined = actual.fuente === undefined ? undefined : { sesion: actual, archivos };
   let issues: Issue[] = await actual.diagnosticar();
@@ -194,6 +237,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     const iconos = proveedor === undefined ? {} : serializarIconos(proveedor);
     return {
       version,
+      ...(cambio !== undefined && { cambio }),
       fuente,
       iconos,
       vistas: fuente?.views.map(({ id }) => id) ?? [],
@@ -204,6 +248,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         }),
       ),
       hashes: Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)])),
+      ...(fuentesDe(recursos) !== undefined && { fuentes: fuentesDe(recursos) }),
       issues: issues.map((issue) => ({
         ...issue,
         href: `vscode://file/${raizAbsoluta}/${issue.file}:${issue.line}:${issue.column}`,
@@ -233,11 +278,23 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         } catch {
           continue; // lectura a medias (archivo en reescritura): el siguiente evento reintenta
         }
-        const sesion = (buena?.sesion ?? actual).actualizar(nuevos);
+        let nuevosRecursos: Record<string, string>;
+        try {
+          nuevosRecursos = recursosDe();
+        } catch {
+          continue;
+        }
+        codigo = compilarCodigo();
+        const sesion = (buena?.sesion ?? actual).actualizar(nuevos, { ...opcionesDeSesion(nuevosRecursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
         const nuevosIssues = await sesion.diagnosticar();
         actual = sesion;
         archivos = nuevos;
-        if (sesion.fuente !== undefined) buena = { sesion, archivos: nuevos };
+        // Con errores se conserva el ultimo dibujo bueno (y sus recursos de referencia): no hay cambio que dibujar.
+        cambio = sesion.fuente === undefined ? undefined : clasificarCambio({ fuente: buena?.sesion.fuente, recursos }, { fuente: sesion.fuente, recursos: nuevosRecursos });
+        if (sesion.fuente !== undefined) {
+          buena = { sesion, archivos: nuevos };
+          recursos = nuevosRecursos;
+        }
         issues = nuevosIssues;
         version += 1;
         estado = construirEstado();
@@ -254,6 +311,9 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     temporizador = setTimeout(() => void recompilar().catch(() => undefined), debounceMs);
   };
   const dejarDeObservar = observar(workspace, alCambiar);
+
+  /** Componentes que usan los Temas de la ultima Fuente buena. */
+  const componentesUsados = (): string[] => [...new Set((buena?.sesion.fuente?.themes ?? []).flatMap((tema) => componentesDeTema(tema)))].sort();
 
   const responder = (res: ServerResponse, estadoHttp: number, cuerpo: unknown): void => {
     cabecera(res, 'application/json', estadoHttp);
@@ -358,6 +418,15 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     responder(res, 200, { ok: true, version });
   };
 
+  /** Fuente pedida a `/fuentes/<ruta>`: solo archivos de fuente del Workspace (y de `--theme-path`); una ruta mal codificada o que sale de la raiz no existe. */
+  const servirFuente = (rutaCodificada: string): ReturnType<typeof leerArchivoDeFuente> => {
+    try {
+      return leerArchivoDeFuente(temas === undefined ? [workspace] : [workspace, temas], decodeURIComponent(rutaCodificada));
+    } catch {
+      return undefined;
+    }
+  };
+
   const comoIntencion = (cuerpo: unknown): Intencion | undefined => {
     const r = intencionSchema.safeParse(cuerpo);
     return r.success ? r.data : undefined;
@@ -399,6 +468,38 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     } else if (ruta === '/worker.js') {
       cabecera(res, 'text/javascript');
       res.end(bundles.worker);
+    } else if (ruta === '/api/codigo') {
+      cabecera(res, 'application/json');
+      const componentes = componentesUsados();
+      res.end(JSON.stringify({ temaConCodigo: componentes.length > 0, componentes, confiado }));
+    } else if (ruta === '/componentes.js') {
+      if (!confiado) {
+        cabecera(res, 'text/plain', 403);
+        res.end('El codigo del Workspace no esta confirmado');
+      } else {
+        cabecera(res, 'text/javascript');
+        res.end(codigo.bundle);
+      }
+    } else if (ruta === '/api/confiar') {
+      if (req.method !== 'POST') {
+        res.setHeader('allow', 'POST');
+        responder(res, 405, { ok: false, mensaje: 'Metodo no permitido' });
+      } else {
+        void leerCuerpoJson(req, res).then((leido) => {
+          if (leido === undefined) return;
+          confiado = true;
+          responder(res, 200, { ok: true });
+        });
+      }
+    } else if (ruta.startsWith(RUTA_DE_FUENTES)) {
+      const fuente = servirFuente(ruta.slice(RUTA_DE_FUENTES.length));
+      if (fuente === undefined) {
+        cabecera(res, 'text/plain', 404);
+        res.end('No encontrado');
+      } else {
+        res.writeHead(200, { 'content-type': fuente.tipo, 'cache-control': 'no-store', 'content-length': fuente.bytes.length });
+        res.end(fuente.bytes);
+      }
     } else if (ruta === '/api/estado') {
       cabecera(res, 'application/json');
       res.end(JSON.stringify(estado));
@@ -437,6 +538,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 
   return {
     url: `http://127.0.0.1:${direccion.port}/`,
+    conCodigo: componentesUsados(),
+    confiado,
     cerrar: () =>
       new Promise<void>((ok) => {
         clearTimeout(temporizador);
@@ -448,7 +551,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 }
 
 /**
- * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>]`: arranca el servidor y vuelve con la URL;
+ * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>] [--trust-code]`: arranca el servidor y vuelve con la URL;
  * el servidor mantiene vivo el proceso hasta que se mata.
  */
 export async function comandoDev(
@@ -458,7 +561,7 @@ export async function comandoDev(
   const uso = usoComun;
   let valores;
   try {
-    valores = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, port: { type: 'string' }, 'theme-path': { type: 'string' } }, strict: true }).values;
+    valores = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, port: { type: 'string' }, 'theme-path': { type: 'string' }, 'trust-code': { type: 'boolean' } }, strict: true }).values;
   } catch (error) {
     return uso((error as Error).message);
   }
@@ -466,8 +569,14 @@ export async function comandoDev(
   const puerto = Number(valores.port ?? 4173);
   if (!Number.isInteger(puerto) || puerto < 0 || puerto > 65535) return uso('--port debe ser un entero entre 0 y 65535');
   try {
-    const servidor = await iniciarDev({ ...dependencias, workspace: valores.workspace, puerto, ...(valores['theme-path'] === undefined ? {} : { temas: valores['theme-path'] }) });
-    return { exitCode: 0, stdout: `diagrams dev escuchando en ${servidor.url}\n`, stderr: '' };
+    const servidor = await iniciarDev({ ...dependencias, workspace: valores.workspace, puerto, ...(valores['trust-code'] === true && { confiarEnCodigo: true }), ...(valores['theme-path'] === undefined ? {} : { temas: valores['theme-path'] }) });
+    const aviso =
+      servidor.conCodigo.length === 0
+        ? ''
+        : servidor.confiado
+          ? `AVISO: los Temas del Workspace cargan codigo (${servidor.conCodigo.join(', ')}); confirmado con --trust-code.\n`
+          : `AVISO: los Temas del Workspace cargan codigo (${servidor.conCodigo.join(', ')}) que corre en tu navegador sin sandbox. El visor pedira confirmacion antes de cargarlo; usa --trust-code solo en un Workspace propio.\n`;
+    return { exitCode: 0, stdout: `${aviso}diagrams dev escuchando en ${servidor.url}\n`, stderr: '' };
   } catch (error) {
     return uso(`No se pudo iniciar dev: ${(error as Error).message}`);
   }

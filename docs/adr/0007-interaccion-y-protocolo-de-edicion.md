@@ -23,3 +23,7 @@ La interfaz de red no cambia: el cuerpo de `POST /api/pin` sigue siendo `Intenci
 - El rechazo por hash desactualizado se mantiene: una Intencion se calcula contra el texto que vio quien la emite.
 - Un historial por sesion de edicion; no persiste entre recargas.
 - Se descarta una pila de ediciones inversas (fragil ante cambios de formato del DSL) y un historial de Intenciones reproducibles (el resultado dependeria del texto base).
+
+## Enmienda: `pin x,y` es el centro del Nodo (#26, spec #24)
+
+Las coordenadas de `IntencionDePin`, de `mover-pin` y del `pin x,y` escrito en el DSL son las del **centro** del Nodo, relativas a su Grupo padre (ADR 0003, ADR 0008). El Gesto de mover (`onMoveNode` en `shell`) avisa el centro de la caja soltada; `editarPin` sigue escribiendo la `Intencion` tal cual, sin conocer tamanos. La forma de las interfaces de red y de `edit --json` no cambia.

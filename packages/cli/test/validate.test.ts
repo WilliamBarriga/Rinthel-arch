@@ -45,6 +45,26 @@ describe('validate', () => {
     expect({ ...salida, issues: salida.issues.map(({ message, ...resto }) => resto) }).toMatchSnapshot();
   });
 
+  it('en texto, cada issue con candidato dice "quisiste decir" (de su fix o de su hint), como en --json', async () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'validate-hint-'));
+    writeFileSync(
+      join(raiz, 'main.dg'),
+      `specification { node servicio { color blue } }
+model { servicio a }
+view v { type architecture  include **  theme mio }
+theme mio extends neutral-drak { }
+theme otro extends neutral { node { layer relleno { color margo } } }
+`,
+    );
+
+    const resultado = await run(['validate', '--workspace', raiz]);
+
+    expect(resultado.exitCode).toBe(1);
+    const lineas = resultado.stdout.split('\n');
+    expect(lineas.find((l) => l.includes("'neutral-drak'"))).toContain("quisiste decir 'neutral-dark'");
+    expect(lineas.find((l) => l.includes('E_UNKNOWN_PALETTE_COLOR'))).toContain("quisiste decir 'marco'");
+  });
+
   it('una Arista colgante sale con E_DANGLING_EDGE, posicion y fix de un unico candidato', async () => {
     const resultado = await run(['validate', '--workspace', join(fixtures, 'arista-colgante'), '--json']);
 

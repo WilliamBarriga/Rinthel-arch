@@ -2,12 +2,17 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, resolveView, revealAt } from 'canonico';
+import { fuenteCanonicaSchema, resolveView, revealAt } from 'canonico';
 import type { VistaResuelta } from 'canonico';
 import { layoutView } from 'layout';
 import type { Geometria } from 'layout';
-import { Diagram, renderToSvgString, resolverEstilo } from 'render';
+import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
+import { TEMA_NEUTRO, colocarEnCaja, metricasDe, primitivasDe } from 'tema';
+import type { CajaDeSlots, TemaResuelto } from 'tema';
+
+import { PINTORES } from '../src/hoja';
+import { capaDe, etiquetaCon, hojaDe, propiedad, rectDe, traslacionDe } from './ayudas';
 
 const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
 
@@ -32,6 +37,22 @@ const PASOS = [
   { title: 'dos', show: [{ selector: 'b' }, { selector: 'c' }], hide: [] },
 ];
 
+/** Tema con una pila de Capas: forma redonda, relleno y borde de Paleta. */
+const CON_CAPAS: TemaResuelto = {
+  ...TEMA_NEUTRO,
+  nodo: {
+    slots: TEMA_NEUTRO.nodo.slots,
+    textos: {},
+    tipos: {},
+    estados: {},
+    capas: [
+      { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 12 } } },
+      { nombre: 'fondo', primitiva: { tipo: 'solid', props: { color: 'amber' } } },
+      { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'blue', width: 2 } } },
+    ],
+  },
+};
+
 async function props(view: VistaResuelta, extra: Partial<DiagramProps> = {}): Promise<DiagramProps> {
   const geometry: Geometria = await layoutView(view, TEMA_NEUTRO);
   return { view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, ...extra };
@@ -46,21 +67,252 @@ function buscar(nodo: ReactNode, quien: (e: ReactElement<Record<string, unknown>
   return buscar(elemento.props?.['children'] as ReactNode, quien);
 }
 
-const opacidadDe = (html: string, marca: string): string | undefined =>
-  new RegExp(`<g data-id="${marca}"[^>]*><g data-part="nodo"( opacity="([\\d.]+)")?`).exec(html)?.[2];
+const dibujo = (p: DiagramProps): string => renderToStaticMarkup(<Diagram {...p} />);
+const parteDe = (html: string, id: string): string | undefined => etiquetaCon(html.slice(html.indexOf(`data-id="${id}"`)), 'data-part="nodo"');
+const opacidadDe = (html: string, id: string): string | undefined => propiedad(parteDe(html, id), 'opacity');
+const mundoDe = (html: string): string | undefined => etiquetaCon(html, 'class="rd-mundo"');
+
+describe('Diagram: estructura hibrida', () => {
+  it('son tres capas planas en orden Grupo, Arista, Nodo bajo un contenedor', async () => {
+    const html = dibujo(await props(vista()));
+    const [g, a, n] = ['grupos', 'aristas', 'nodos'].map((c) => html.indexOf(`data-capa="${c}"`)) as [number, number, number];
+
+    expect(html).toMatch(/^<div class="rd-\w+" data-diagram="" data-camara="0 0 \d+ \d+" style="width:800px;height:600px">/);
+    expect(g).toBeGreaterThan(-1);
+    expect(g).toBeLessThan(a);
+    expect(a).toBeLessThan(n);
+    expect(etiquetaCon(html, 'data-capa="aristas"')).toContain('aria-hidden="true"');
+  });
+
+  it('los Grupos abiertos van en su capa, los Nodos hoja en la de Nodos y las Aristas en el SVG', async () => {
+    const html = dibujo(await props(vista()));
+    const ids = (capa: 'grupos' | 'aristas' | 'nodos', atributo: string): string[] =>
+      [...capaDe(html, capa).matchAll(new RegExp(`${atributo}="([^"]+)"`, 'g'))].map((m) => m[1]!);
+
+    expect(ids('grupos', 'data-id')).toEqual(['a']);
+    expect(ids('nodos', 'data-id')).toEqual(['a.a1', 'a.a2', 'b', 'c']);
+    expect(ids('aristas', 'data-edge')).toEqual(['a.a1 -&gt; b', 'b -&gt; c']);
+    expect(ids('nodos', 'data-edge')).toEqual([]);
+  });
+
+  it('un unico transform de pan/zoom en el contenedor, con el encuadre de la camara', async () => {
+    const html = dibujo(await props(vista(), { camera: { x: 10, y: 20, width: 400, height: 300 } }));
+
+    expect(html).toContain('data-camara="10 20 400 300"');
+    expect(propiedad(mundoDe(html), 'transform')).toBe('translate(-20px,-40px) scale(2)');
+    expect(html.match(/scale\(/g)).toHaveLength(1);
+  });
+
+  it('una camara con otra proporcion se centra como un viewBox', async () => {
+    const html = dibujo(await props(vista(), { camera: { x: 0, y: 0, width: 400, height: 600 } }));
+
+    // escala 1 (min(2, 1)); sobran 400 px a lo ancho, 200 a cada lado.
+    expect(propiedad(mundoDe(html), 'transform')).toBe('translate(200px,0px) scale(1)');
+  });
+
+  it('cada caja esta en coordenadas absolutas del lienzo, tambien las de un Nodo dentro de un Grupo', async () => {
+    const p = await props(vista());
+    const html = dibujo(p);
+    const { a, 'a.a1': a1, b } = p.geometry.nodes;
+
+    expect(traslacionDe(etiquetaCon(html, 'data-id="a"'))).toEqual({ x: a!.x, y: a!.y });
+    expect(traslacionDe(etiquetaCon(html, 'data-id="a.a1"'))).toEqual({ x: a!.x + a1!.x, y: a!.y + a1!.y });
+    expect(traslacionDe(etiquetaCon(html, 'data-id="b"'))).toEqual({ x: b!.x, y: b!.y });
+    expect(rectDe(etiquetaCon(html, 'data-id="a.a1"'))).toMatchObject({ width: a1!.width, height: a1!.height });
+  });
+
+  it('el mundo mide como la geometria y las Aristas van en un SVG del mismo tamano', async () => {
+    const p = await props(vista());
+    const html = dibujo(p);
+    const { width, height } = p.geometry;
+
+    expect(propiedad(mundoDe(html), 'width')).toBe(`${width}px`);
+    expect(propiedad(mundoDe(html), 'height')).toBe(`${height}px`);
+    expect(html).toContain(`width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"`);
+  });
+
+  it('cada Slot va en el rectangulo que reservo la colocacion compartida', async () => {
+    const p = await props(vista());
+    const html = dibujo(p);
+    const { slots } = colocarEnCaja(metricasDe(TEMA_NEUTRO), { titulo: 'b', atributos: [], icono: false }, p.geometry.nodes['b']!.width);
+    const titulo = etiquetaCon(html.slice(html.indexOf('data-id="b"')), 'data-slot="title"');
+
+    expect(rectDe(titulo)).toEqual(slots.title);
+    expect(titulo).toContain('class="rd-slot rd-title"');
+  });
+
+  describe('Slots badge, desc, footer y counter', () => {
+    const COLUMNA: CajaDeSlots = { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }, { slot: 'desc' }, { slot: 'footer' }] };
+    const FILA: CajaDeSlots = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'title' }, { slot: 'counter' }] };
+    const conSlots = (slots: TemaResuelto['nodo']['slots'], textos: TemaResuelto['nodo']['textos'] = {}): TemaResuelto => ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, slots, textos } });
+    const dibujar = async (tema: TemaResuelto, estado = {}) => {
+      const v = vista(estado);
+      const nodos = v.nodes.map((n) => (n.id === 'b' ? { ...n, description: 'Reparte la carga', source: [{ kind: 'ruta', ref: 'src/b.ts' }] } : n));
+      const geometry = await layoutView({ ...v, nodes: nodos }, tema);
+      return { html: dibujo({ view: { ...v, nodes: nodos }, geometry, theme: tema, width: 800, height: 600 }), geometry };
+    };
+    const slotDe = (html: string, id: string, slot: string) => etiquetaCon(html.slice(html.indexOf(`data-id="${id}"`)), `data-slot="${slot}"`);
+
+    it('cada Slot nuevo se pinta en su rectangulo con su texto', async () => {
+      const { html, geometry } = await dibujar(conSlots(COLUMNA));
+      const slots = geometry.nodes['b']!.slots!;
+
+      for (const [slot, texto] of [['badge', 'servicio'], ['desc', 'Reparte la carga'], ['footer', 'src/b.ts']] as const) {
+        expect(rectDe(slotDe(html, 'b', slot))).toEqual(slots[slot]);
+        expect(html).toContain(`>${texto}</div>`);
+      }
+      // El tamano de texto reservado (14 * 0.74) se escribe en el elemento.
+      expect(propiedad(slotDe(html, 'b', 'badge'), 'font-size')).toBe('10.36px');
+    });
+
+    it('un Nodo sin descripcion ni fuente no pinta desc ni footer', async () => {
+      const { html } = await dibujar(conSlots(COLUMNA));
+
+      expect(slotDe(html, 'c', 'desc')).toBeUndefined();
+      expect(slotDe(html, 'c', 'footer')).toBeUndefined();
+      expect(slotDe(html, 'c', 'badge')).toBeDefined();
+    });
+
+    it('counter solo se pinta en el Grupo colapsado, con el numero de hijos', async () => {
+      const { html } = await dibujar(conSlots(FILA), { collapsed: ['a'] });
+
+      expect(slotDe(html, 'a', 'counter')).toBeDefined();
+      expect(slotDe(html, 'b', 'counter')).toBeUndefined();
+      expect(html).toContain('>2</div>');
+      // Con el contador en su Slot, el titulo no lo repite.
+      expect(html).not.toContain('A (2)');
+    });
+
+    it('el estilo de texto (alpha, text-align) y el de caja del contador salen en la hoja', async () => {
+      const { html } = await dibujar(
+        conSlots(
+          { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }, { slot: 'counter' }] },
+          {
+            title: { tipo: 'text', props: { weight: 600, style: 'normal', transform: 'none', 'text-align': 'start' } },
+            badge: { tipo: 'text', props: { weight: 400, style: 'normal', transform: 'none', alpha: 0.5, 'text-align': 'end' } },
+            counter: { tipo: 'chip', props: { weight: 700, radius: 8, fill: 'amber', border: 'blue' } },
+          },
+        ),
+      );
+      const hoja = hojaDe(html);
+
+      expect(hoja).toMatch(/data-slot="title"\]\{[^}]*text-align:left/);
+      expect(hoja).toMatch(/data-slot="badge"\]\{[^}]*opacity:0.5[^}]*text-align:right/);
+      expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*border-radius:8px[^}]*background:${TEMA_NEUTRO.palette['amber']}[^}]*border:1px solid ${TEMA_NEUTRO.palette['blue']}`));
+    });
+
+    it('un Tema con icon variant dot muestra el punto del color del Tipo aunque el Tipo no declare icon, y reserva su sitio', async () => {
+      const FILA_ICONO: CajaDeSlots = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'title' }] };
+      const conPunto = conSlots(FILA_ICONO, { icon: { tipo: 'icon', props: { variant: 'dot', side: 7, radius: 6, fill: 'COLOR' } } });
+      const conGlifo = conSlots(FILA_ICONO, { icon: { tipo: 'icon', props: { variant: 'plain', side: 7 } } });
+      const { html, geometry } = await dibujar(conPunto);
+      const { geometry: sinPunto } = await dibujar(conGlifo);
+
+      expect(rectDe(slotDe(html, 'b', 'icon'))).toMatchObject({ width: 7, height: 7 });
+      expect(slotDe(html, 'b', 'icon')).toContain('data-variante="dot"');
+      expect(slotDe(html, 'b', 'icon')).not.toContain('data-icon=');
+      // Con otra variante, un Tipo sin icon no reserva el sitio.
+      expect(geometry.nodes['b']!.width).toBeGreaterThan(sinPunto.nodes['b']!.width - 1);
+      expect(sinPunto.nodes['b']!.slots?.['icon']).toBeUndefined();
+    });
+
+    it('font mono y border-width llegan al texto, al contador y al icono; el punto con ring va sobre un aro', async () => {
+      const { html } = await dibujar(
+        conSlots(
+          { direccion: 'row', gap: 0, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'badge' }, { slot: 'counter' }] },
+          {
+            icon: { tipo: 'icon', props: { variant: 'dot', side: 18, radius: 6, ring: 'amber', border: 'blue', 'border-width': 2 } },
+            badge: { tipo: 'text', props: { weight: 400, style: 'normal', transform: 'none', font: 'mono', border: 'blue', 'border-width': 2 } },
+            counter: { tipo: 'chip', props: { weight: 700, radius: 8, border: 'blue', 'border-width': 2, font: 'mono' } },
+          },
+        ),
+        { collapsed: ['a'] },
+      );
+      const hoja = hojaDe(html);
+      const mono = TEMA_NEUTRO.fonts.mono;
+
+      expect(hoja).toMatch(new RegExp(String.raw`data-slot="badge"\]\{[^}]*font-family:${mono}[^}]*border:2px solid`));
+      expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*font-family:${mono}[^}]*border:2px solid`));
+      expect(hoja).toMatch(new RegExp(String.raw`data-variante="dot"\]\{[^}]*background:radial-gradient\(circle closest-side,currentColor 0 44%,${TEMA_NEUTRO.palette['amber']} 46%\)[^}]*border:2px solid`));
+      // El texto del contador se centra dentro de su borde de 2px.
+      const contador = slotDe(html, 'a', 'counter');
+      expect(propiedad(contador, 'line-height')).toBe(`${rectDe(contador).height - 4}px`);
+    });
+  });
+
+  it('cada Nodo es una caja con contain: layout style', async () => {
+    const html = dibujo(await props(vista()));
+
+    expect(hojaDe(html)).toMatch(/\.rd-caja\{[^}]*contain:layout style/);
+    expect(html).toMatch(/class="rd-caja" data-id="b"/);
+  });
+});
+
+describe('Diagram: hoja de estilo', () => {
+  it('compila las Capas del Tema a CSS en orden, y el color de Tipo del Nodo va como variable', async () => {
+    const html = dibujo(await props(vista(), { theme: CON_CAPAS }));
+
+    expect(hojaDe(html)).toContain('border-radius:12px;background:#d97706;border:2px solid #2563eb');
+    expect(propiedad(parteDe(html, 'b'), '--trazo')).toBe('#9ca3af');
+  });
+
+  it('es determinista y los estados son selectores', async () => {
+    const p = await props(vista());
+    const hoja = hojaDe(dibujo(p));
+
+    expect(hojaDe(dibujo(p))).toBe(hoja);
+    for (const estado of ['seleccionado', 'hover', 'fantasma']) expect(hoja).toContain(`.rd-estado[data-state="${estado}"]{`);
+    expect(hoja).toContain('.rd-estado[data-state="fantasma"]{border:2px dashed #9ca3af;opacity:0.7}');
+  });
+
+  it('sin Capas en el Tema se usa el aspecto por defecto del Estilo', async () => {
+    expect(hojaDe(dibujo(await props(vista())))).toContain('border-radius:6px;background:#ffffff;border:1px solid var(--trazo, #9ca3af)');
+  });
+
+  it('dos Temas dan clases de alcance distintas, asi no se pisan en la misma pagina', async () => {
+    const clase = (html: string): string => /^<div class="(rd-\w+)"/.exec(html)![1]!;
+    const a = dibujo(await props(vista()));
+    const b = dibujo(await props(vista(), { theme: CON_CAPAS }));
+
+    expect(clase(a)).not.toBe(clase(b));
+    expect(hojaDe(b)).not.toContain(`.${clase(a)}`);
+  });
+
+  it('cada Primitiva del catalogo tiene su pintor', () => {
+    expect(Object.keys(PINTORES).sort()).toEqual(primitivasDe('capa-nodo').sort());
+  });
+
+  it('un valor hostil del Tema no puede cerrar la hoja ni inyectar reglas', async () => {
+    const hostil: TemaResuelto = { ...CON_CAPAS, palette: { ...CON_CAPAS.palette, amber: 'red}</style><script>x()</script>' } };
+    const html = dibujo(await props(vista(), { theme: hostil }));
+
+    expect(html).not.toContain('<script>');
+    expect(hojaDe(html)).not.toContain('</style>');
+    expect(hojaDe(html)).toContain('background:red/stylescriptx()/script');
+  });
+});
 
 describe('Diagram', () => {
-  it('dibuja Nodos, Grupos y Aristas como un SVG', async () => {
-    const html = renderToStaticMarkup(<Diagram {...await props(vista())} />);
+  it('dibuja Nodos, Grupos y Aristas', async () => {
+    const html = dibujo(await props(vista()));
 
-    expect(html).toMatch(/^<svg [^>]*width="800" height="600" viewBox="0 0 \d+ \d+"/);
     for (const id of ['a', 'a.a1', 'a.a2', 'b', 'c']) expect(html).toContain(`data-id="${id}"`);
     expect(html).toContain('data-edge="a.a1 -&gt; b"');
   });
 
+  it('las etiquetas de Arista van en una pasada posterior a todos los trazos, con la visibilidad de su Arista', async () => {
+    const base = vista();
+    const view: VistaResuelta = { ...base, edges: base.edges.map((e, i) => (i === 0 ? { ...e, label: 'uno' } : e)) };
+    const html = dibujo(await props(view, { visibility: (id) => (id === 'a.a1 -> b' ? 0.5 : 1) }));
+    const ultimaArista = html.lastIndexOf('<g data-edge="');
+
+    expect(html.indexOf('data-edge-labels="a.a1 -&gt; b"')).toBeGreaterThan(ultimaArista);
+    expect(html).toMatch(/<g data-edge-labels="a.a1 -&gt; b" opacity="0.5"/);
+  });
+
   it('visibility 0, 1 y fraccion se reflejan en la opacidad de Nodos y Aristas', async () => {
     const visibility = (id: string): number => ({ b: 0, c: 0.5, 'b -> c': 0.25 })[id] ?? 1;
-    const html = renderToStaticMarkup(<Diagram {...await props(vista(), { visibility })} />);
+    const html = dibujo(await props(vista(), { visibility }));
 
     expect(opacidadDe(html, 'b')).toBe('0');
     expect(opacidadDe(html, 'c')).toBe('0.5');
@@ -70,78 +322,68 @@ describe('Diagram', () => {
   });
 
   it('un Grupo colapsado es un Nodo unico con contador y sin hijos', async () => {
-    const html = renderToStaticMarkup(<Diagram {...await props(vista({ collapsed: ['a'] }))} />);
+    const html = dibujo(await props(vista({ collapsed: ['a'] })));
 
     expect(html).toContain('A (2)');
     expect(html).not.toContain('data-id="a.a1"');
     expect(html).toContain('data-edge="a -&gt; b"');
+    expect(capaDe(html, 'nodos')).toContain('data-id="a"');
+    expect(capaDe(html, 'grupos')).not.toContain('data-id=');
+    expect(parteDe(html, 'a')).toContain('data-collapsed=""');
   });
 
   it('con revealAt el resultado coincide con el paso esperado', async () => {
     const view = vista({}, PASOS);
     const base = await props(view);
-    const enPaso = (k: number): string => renderToStaticMarkup(<Diagram {...base} visibility={revealAt(view, k)} />);
+    const enPaso = (k: number): string => dibujo({ ...base, visibility: revealAt(view, k) });
 
     expect(opacidadDe(enPaso(1), 'a.a1')).toBeUndefined();
     expect(opacidadDe(enPaso(1), 'b')).toBe('0');
     expect(opacidadDe(enPaso(2), 'b')).toBeUndefined();
-    expect(opacidadDe(enPaso(1.5), 'b')).toBe('0.5');
+    expect(opacidadDe(enPaso(1.5), 'b')).toBe('0');
   });
 
   it('sin estado propio: las mismas props producen el mismo arbol', async () => {
     const p = await props(vista(), { visibility: (id) => (id === 'c' ? 0.3 : 1) });
 
-    expect(renderToStaticMarkup(<Diagram {...p} />)).toBe(renderToStaticMarkup(<Diagram {...p} />));
+    expect(dibujo(p)).toBe(dibujo(p));
     expect(JSON.stringify(Diagram(p))).toBe(JSON.stringify(Diagram(p)));
   });
 
   it('un Nodo o Arista con visibilidad 0 no recibe clics', async () => {
     const visibility = (id: string): number => (id === 'b' || id === 'b -> c' ? 0 : 1);
-    const html = renderToStaticMarkup(<Diagram {...await props(vista(), { visibility })} />);
+    const html = dibujo(await props(vista(), { visibility }));
 
-    expect(html).toMatch(/<g data-part="nodo" opacity="0" pointer-events="none"/);
+    expect(propiedad(parteDe(html, 'b'), 'pointer-events')).toBe('none');
+    expect(propiedad(parteDe(html, 'c'), 'pointer-events')).toBeUndefined();
     expect(html).toMatch(/<g data-edge="b -&gt; c" opacity="0" pointer-events="none"/);
-    expect(html).not.toMatch(/<g data-part="nodo" opacity="0" pointer-events="none"[^>]*>[\s\S]*?data-id="a\.a1"/);
   });
 
-  it('dos Diagram con temas distintos no comparten el id del marcador de flecha', async () => {
+  it('el marcador de flecha toma el color de borde del Tema y no hay ids que compartir', async () => {
     const oscuro = { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, border: '#4b5563' } };
-    const id = (html: string): string => /<marker id="([^"]+)"/.exec(html)![1]!;
-    const a = renderToStaticMarkup(<Diagram {...await props(vista())} />);
-    const b = renderToStaticMarkup(<Diagram {...await props(vista(), { theme: oscuro })} />);
+    const a = dibujo(await props(vista()));
+    const b = dibujo(await props(vista(), { theme: oscuro }));
 
-    expect(id(a)).not.toBe(id(b));
-    expect(b).toContain(`url(#${id(b)})`);
+    expect(a).toContain('data-marker="fin"');
+    expect(a).not.toContain('<marker');
+    expect(b).toMatch(/data-marker="fin"[^>]*><path d="[^"]+" fill="#4b5563"/);
   });
 
-  it('cambiar un valor del Estilo cambia por igual el SVG exportado y Diagram', async () => {
+  it('cambiar un valor del Estilo cambia lo que dibuja Diagram', async () => {
     const base = await props(vista());
     const estilo = resolverEstilo(TEMA_NEUTRO);
     const otro = { ...estilo, nodo: { ...estilo.nodo, radio: 13, relleno: '#fafafa' }, glifos: { expandido: 'v', colapsado: '>' } };
-    const conToggle = { onToggle: () => {} };
-    const exportado = (e: typeof estilo) => renderToSvgString({ ...base, estilo: e });
-    const componente = (e: typeof estilo) => renderToStaticMarkup(<Diagram {...base} {...conToggle} estilo={e} />);
+    const dibujar = (e: typeof estilo): string => dibujo({ ...base, onToggle: () => {}, estilo: e });
 
-    expect(exportado(otro)).not.toBe(exportado(estilo));
-    expect(exportado(otro)).toContain('rx="13"');
-    expect(exportado(otro)).toContain('fill="#fafafa"');
-    expect(componente(otro)).toContain('rx="13"');
-    expect(componente(otro)).toContain('fill="#fafafa"');
-    expect(componente(otro)).toContain('>v<');
-    // Sin handlers la cadena y el componente dibujan lo mismo con el mismo Estilo.
-    expect(renderToStaticMarkup(<Diagram {...base} estilo={otro} />).replace(/ xmlns="[^"]*"/, '')).toContain('rx="13"');
-  });
-
-  it('la camara controlada fija el viewBox', async () => {
-    const html = renderToStaticMarkup(<Diagram {...await props(vista(), { camera: { x: 10, y: 20, width: 300, height: 200 } })} />);
-
-    expect(html).toContain('viewBox="10 20 300 200"');
+    expect(dibujar(otro)).not.toBe(dibujar(estilo));
+    expect(hojaDe(dibujar(otro))).toContain('border-radius:13px;background:#fafafa');
+    expect(dibujar(otro)).toContain('>v<');
   });
 
   it('pulsar un Nodo llama a onSelect con su id; pulsar una Arista, con el de la Arista', async () => {
     const onSelect = vi.fn();
     const arbol = Diagram(await props(vista(), { onSelect }));
-    // El clic va en la parte propia del Nodo, hija del `<g data-id>`.
+    // El clic va en la parte propia del Nodo, hija de la caja `data-id`.
     const porId = (id: string) => buscar(buscar(arbol, (e) => e.props['data-id'] === id)!.props['children'] as ReactNode, (e) => e.props['data-part'] === 'nodo')!;
     const porArista = (id: string) => buscar(arbol, (e) => e.props['data-edge'] === id)!;
 
@@ -165,70 +407,66 @@ describe('Diagram', () => {
     expect(buscar(arbol, (e) => e.props['data-toggle'] === 'b')).toBeUndefined();
   });
 
-  it('sin onToggle no se dibujan controles de colapso', async () => {
-    const html = renderToStaticMarkup(<Diagram {...await props(vista())} />);
+  it('el control de colapso solo se ve al pasar el raton por su caja o con el foco del teclado dentro', async () => {
+    const hoja = hojaDe(dibujo(await props(vista(), { onToggle: () => undefined })));
 
-    expect(html).not.toContain('data-toggle');
+    expect(hoja).toMatch(/\.rd-control\{[^}]*opacity:0/);
+    expect(hoja).toMatch(/\.rd-caja:hover \.rd-control,\.rd-[a-z0-9]+ \.rd-caja:focus-within \.rd-control\{opacity:1\}/);
+  });
+
+  it('sin onToggle no se dibujan controles de colapso', async () => {
+    expect(dibujo(await props(vista()))).not.toContain('data-toggle');
   });
 
   describe('estados visuales', () => {
-    const marcas = (html: string, estado: string): string[] =>
-      [...html.matchAll(new RegExp(`<[^>]*data-state="${estado}"[^>]*>`, 'g'))].map((m) => m[0]);
+    const marcas = (html: string, estado: string): string[] => [...html.matchAll(new RegExp(`<[^>]*data-state="${estado}"[^>]*>`, 'g'))].map((m) => m[0]);
 
-    it('un Nodo seleccionado lleva un contorno con el color y el radio del Estilo', async () => {
-      const base = await props(vista(), { estados: { b: ['seleccionado'] } });
+    it('un Nodo seleccionado lleva un contorno dentro de su caja, estilado por la hoja con el color del Estilo', async () => {
+      const html = dibujo(await props(vista(), { estados: { b: ['seleccionado'] } }));
       const estilo = resolverEstilo(TEMA_NEUTRO);
-      const [marca] = marcas(renderToStaticMarkup(<Diagram {...base} />), 'seleccionado');
+      const [marca] = marcas(html, 'seleccionado');
 
       expect(marca).toContain('data-selected="b"');
-      expect(marca).toContain(`stroke="${estilo.estados.seleccionado.color}"`);
-      expect(marca).toContain(`rx="${estilo.nodo.radio}"`);
-      expect(marca).toContain('fill="none"');
+      expect(marca).toContain('class="rd-estado"');
+      expect(html.slice(html.indexOf('data-id="b"'), html.indexOf('data-id="c"'))).toContain('data-state="seleccionado"');
+      expect(hojaDe(html)).toContain(`.rd-estado[data-state="seleccionado"]{border:3px solid ${estilo.estados.seleccionado.color}}`);
     });
 
     it('sin estados no se dibuja ninguna marca', async () => {
-      expect(renderToStaticMarkup(<Diagram {...await props(vista())} />)).not.toContain('data-state');
+      expect(dibujo(await props(vista())).replace(/<style>[\s\S]*<\/style>/, '')).not.toContain('data-state');
     });
 
-    it('una Arista y un Atributo seleccionados se marcan donde estan', async () => {
+    it('una Arista marcada se dibuja en su capa SVG; un Atributo que no se muestra, no', async () => {
       const estados = { 'b -> c': ['hover'], 'a#x': ['seleccionado'] } as const;
-      const html = renderToStaticMarkup(<Diagram {...await props(vista(), { estados })} />);
+      const html = dibujo(await props(vista(), { estados }));
 
-      expect(marcas(html, 'hover')).toHaveLength(1);
-      expect(marcas(html, 'hover')[0]).toContain('<path');
+      expect(marcas(capaDe(html, 'aristas'), 'hover')).toHaveLength(1);
+      expect(marcas(capaDe(html, 'aristas'), 'hover')[0]).toContain('<path');
       expect(marcas(html, 'seleccionado')).toHaveLength(0);
     });
 
-    it('el hover y el fantasma usan sus propias entradas del Estilo', async () => {
+    it('el fantasma y el hover usan sus propias entradas del Estilo', async () => {
       const estilo = resolverEstilo(TEMA_NEUTRO);
-      const otro = { ...estilo, estados: { ...estilo.estados, fantasma: { ...estilo.estados.fantasma, color: 'hotpink', trazo: '1 1' } } };
-      const html = renderToStaticMarkup(<Diagram {...await props(vista(), { estados: { c: ['fantasma'], b: ['hover'] }, estilo: otro })} />);
+      const otro = { ...estilo, estados: { ...estilo.estados, fantasma: { ...estilo.estados.fantasma, color: 'hotpink' } } };
+      const hoja = hojaDe(dibujo(await props(vista(), { estados: { c: ['fantasma'] }, estilo: otro })));
 
-      expect(marcas(html, 'fantasma')[0]).toContain('stroke="hotpink"');
-      expect(marcas(html, 'fantasma')[0]).toContain('stroke-dasharray="1 1"');
-      expect(marcas(html, 'hover')[0]).toContain(`stroke="${estilo.estados.hover.color}"`);
+      expect(hoja).toContain('.rd-estado[data-state="fantasma"]{border:2px dashed hotpink;opacity:0.7}');
+      expect(hoja).toContain(`.rd-estado[data-state="hover"]{border:2px solid ${estilo.estados.hover.color};opacity:0.6}`);
     });
 
-    it('el SVG exportado dibuja los mismos estados', async () => {
-      const entrada = await props(vista(), { estados: { b: ['seleccionado'] } });
-      const svg = renderToSvgString(entrada);
-
-      expect(svg).toContain('data-state="seleccionado"');
-    });
-
-    it('un Atributo seleccionado marca su fila', async () => {
+    it('un Atributo seleccionado marca su fila, en el rectangulo de la colocacion', async () => {
       const fuente = fuenteCanonicaSchema.parse({
         specification: { nodeTypes: [{ name: 'servicio' }] },
         model: { nodes: [{ ...nodo('t', 'T'), attributes: [{ name: 'id', type: 'int' }, { name: 'nombre', type: 'text' }] }], edges: [] },
         views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
       });
       const v = resolveView(fuente, 'v')!;
-      const html = renderToStaticMarkup(<Diagram {...await props(v, { estados: { 't#nombre': ['seleccionado'] } })} />);
-      const estilo = resolverEstilo(TEMA_NEUTRO);
-      const [marca] = marcas(html, 'seleccionado');
+      const p = await props(v, { estados: { 't#nombre': ['seleccionado'] } });
+      const marca = marcas(dibujo(p), 'seleccionado')[0];
+      const m = metricasDe(TEMA_NEUTRO);
 
       expect(marca).toContain('data-selected="t#nombre"');
-      expect(marca).toContain(`y="${estilo.metricas.cabecera + estilo.metricas.fila}"`);
+      expect(rectDe(marca)).toEqual({ x: 0, y: m.cabecera + m.fila, width: p.geometry.nodes['t']!.width, height: m.fila });
     });
   });
 });

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema, resolveView } from 'canonico';
+import { fuenteCanonicaSchema, resolveView } from 'canonico';
 import { layoutView } from 'layout';
+import { TEMA_NEUTRO } from 'tema';
 
 describe('layout', () => {
   it('se importa por nombre de paquete y calcula la geometria de una Vista', async () => {

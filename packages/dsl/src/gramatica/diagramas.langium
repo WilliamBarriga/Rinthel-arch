@@ -19,7 +19,8 @@ entry Documento:
     specifications+=Specification |
     models+=Model |
     views+=View |
-    themes+=Theme
+    themes+=Theme |
+    parts+=PartDecl
   )*
 ;
 
@@ -83,7 +84,7 @@ Theme:
 ;
 
 ThemePart:
-  ThemePalette | ThemeFonts | ThemeTokens | ThemeNodeStyles | ThemeEdgeStyles;
+  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeGroup | ThemeEdge | ThemePage;
 
 ThemePalette:
   'palette' '{' entries+=ThemeEntry* '}';
@@ -95,35 +96,163 @@ ThemeTokens:
   'tokens' '{' entries+=ThemeEntry* '}';
 
 ThemeEntry:
-  key=Id ':'? value=String;
+  key=Id ':'? value=EntryValue;
 
-// `nodeStyles { servicio { fill "#dbeafe" stroke amber strokeWidth 2 shadow 2 3 4 "#000" } }`
-// Tokens por Tipo de nodo; `shadow` es `dx dy blur color`. Color: literal o nombre de Paleta.
-ThemeNodeStyles:
-  'nodeStyles' '{' styles+=TypeStyle* '}';
+// Cadena (`"#00f"`, `"16px"`) o numero (los `tokens` numericos: `gap 8`).
+EntryValue returns string:
+  String | Num;
 
-// `edgeStyles { default { stroke "#f00" strokeWidth 3 } }`
-// Hoy solo `default` se aplica (el Modelo aun no tipa Aristas).
-ThemeEdgeStyles:
-  'edgeStyles' '{' styles+=TypeStyle* '}';
+Num returns string:
+  DIGITS ('.' DIGITS)?;
 
-TypeStyle:
-  type=Id '{' props+=StyleProp* '}';
+// `node { layer fondo solid { color azul }  slots { title attrs }  type servicio { ... }  state hover { ... } }`
+// Bloque de dibujo del Nodo (ADR 0008): una pila de Capas, de abajo hacia arriba, los
+// Slots que se pintan, en orden, y parches por Tipo de nodo (`type`) y por estado (`state`).
+ThemeNode:
+  'node' '{' items+=NodeItem* '}';
 
-StyleProp:
-  StyleFill | StyleStroke | StyleStrokeWidth | StyleShadow;
+NodeItem:
+  ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState | ThemeTransition | ThemeEnter | ThemeExit | ThemeStagger;
 
-StyleFill:
-  'fill' value=PropertyValue;
+// `group { layer caja rect { radius 16 }  slots row gap 6 { icon title }  padding 8 16 16  type ...  state collapsed { ... } }`
+// Bloque de dibujo del Grupo (ADR 0008): las mismas Capas, `type` y `state` que `node`, la cabecera (`slots`), el
+// `padding` de la zona de hijos (1, 2 o 4 valores como en CSS) y `state collapsed`, el parche del Grupo cerrado, que
+// se comporta como un Nodo hoja (puede cambiar `slots` y la caja).
+ThemeGroup:
+  'group' '{' items+=GroupItem* '}';
 
-StyleStroke:
-  'stroke' value=PropertyValue;
+GroupItem:
+  NodeItem | GroupPadding;
 
-StyleStrokeWidth:
-  'strokeWidth' value=INT;
+GroupPadding:
+  'padding' values+=Num+;
 
-StyleShadow:
-  'shadow' dx=Coordinate dy=Coordinate blur=INT color=PropertyValue;
+ThemeType:
+  'type' name=Id '{' items+=PatchItem* '}';
+
+// Los parches de estado no pueden tocar las Metricas; `slots` se acepta aqui solo para
+// que el catalogo lo rechace con un error claro (E_THEME_STATE_TOUCHES_METRICS).
+ThemeState:
+  'state' name=Id '{' items+=StateItem* '}';
+
+PatchItem:
+  ThemeLayer | ThemeUse;
+
+StateItem:
+  ThemeLayer | ThemeUse | ThemeSlots | ThemeTransition;
+
+// `part <nombre> { layer ... }`: parche reutilizable sin Tema, que se incluye con `use` (nombre unico en el Workspace).
+PartDecl:
+  'part' name=Id '{' items+=PatchItem* '}';
+
+ThemeUse:
+  'use' name=Id;
+
+// Un solo verbo de Capa (ADR 0008). `layer <nombre> [<primitiva>] [before|after <otra>] [over] [{ props }]`
+// define, cambia o anade segun exista o no en el nivel de abajo; `layer <nombre> none` la quita.
+// La primitiva es un identificador plano (nunca una palabra clave) para no confundirla con `over`/`none`.
+ThemeLayer:
+  'layer' name=Id (remove?='none' | (primitive=IdTerminal)? (placement=('before' | 'after') target=Id)? (over?='over')? ('{' (animations+=LayerAnimation | props+=LayerProp)* '}')?);
+
+// Animacion declarativa (ADR 0008). Dentro de una Capa: `motion pulso 1.2s ease-in-out intensity 0.4`,
+// `motion none` (quita el heredado) o `keyframes opacity 2s { 0 1  50 0.4  100 1 }`. En el bloque `node`:
+// `transition 120ms ease-out`, `enter fundido 300ms`, `exit escala 200ms`, `stagger 60ms`; `transition`
+// tambien dentro de un `state`. Los parametros son palabras cerradas (no colisionan con las propiedades).
+LayerAnimation:
+  ThemeMotion | ThemeKeyframes;
+
+ThemeMotion:
+  'motion' (remove?='none' | name=IdTerminal params+=AnimParam*);
+
+ThemeKeyframes:
+  'keyframes' property=IdTerminal params+=AnimParam* '{' steps+=KeyframeStep* '}';
+
+KeyframeStep:
+  at=Num value=SignedNum;
+
+ThemeTransition:
+  'transition' params+=AnimParam*;
+
+ThemeEnter:
+  'enter' effect=IdTerminal params+=AnimParam*;
+
+ThemeExit:
+  'exit' effect=IdTerminal params+=AnimParam*;
+
+ThemeStagger:
+  'stagger' amount=Duracion;
+
+AnimParam:
+  duration=Duracion | 'delay' delay=Duracion | 'intensity' intensity=Num | 'reduced' reduced=IdTerminal | easing=Easing;
+
+// Numero seguido de su unidad (`ms` o `s`); la unidad se valida al compilar.
+Duracion:
+  amount=Num unit=IdTerminal;
+
+Easing returns string:
+  'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out';
+
+SignedNum returns string:
+  '-'? DIGITS ('.' DIGITS)?;
+
+// `offset x y` lleva dos valores (`second`); cualquier otra clave con segundo valor es un error al compilar.
+LayerProp:
+  key=Id value=LayerValue (second=SignedNum)?;
+
+// Numero, `$token`, nombre de Paleta, `nombre/alfa` o `mix(a, b, t)`; el catalogo de `tema` lo interpreta.
+LayerValue returns string:
+  MixValue | LayerAtom ('/' Num)?;
+
+LayerAtom returns string:
+  String | Id | TokenRef | SignedNum;
+
+MixValue returns string:
+  'mix' '(' Id ',' Id ',' Num ')';
+
+// Mini-layout de Slots (ADR 0008): `slots [row|column] [gap N] [pad N] [align A] { hijos }`; sin direccion es una
+// columna. Un hijo es un Slot o una caja anidada (`row`/`column`). Un Slot lleva su estilo y su `align` entre llaves:
+// `slots column gap 8 { row gap 6 { icon { variant box side 24 }  title { weight 600 } }  attrs }`.
+ThemeSlots:
+  'slots' direction=SlotDirection? props+=LayerProp* '{' children+=SlotChild* '}';
+
+SlotDirection returns string:
+  'row' | 'column';
+
+SlotChild:
+  SlotBox | SlotEntry;
+
+SlotBox:
+  direction=SlotDirection props+=LayerProp* '{' children+=SlotChild* '}';
+
+SlotEntry:
+  name=Id ('{' props+=LayerProp* '}')?;
+
+// `edge { layer glow line { color ORIGEN/0.3 width 6 }  start dot  end arrow { size 10 }  label { pad 6 fill paper } }`
+// Bloque de dibujo de la Arista (ADR 0008): pila de trazos, marcadores de extremo y etiqueta con modelo de caja.
+ThemeEdge:
+  'edge' '{' items+=EdgeItem* '}';
+
+EdgeItem:
+  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel;
+
+// `start|end <marcador> [{ props }]` o `start|end none`.
+ThemeMarker:
+  side=('start' | 'end') (remove?='none' | kind=IdTerminal ('{' props+=LayerProp* '}')?);
+
+ThemeLabel:
+  'label' '{' props+=LayerProp* '}';
+
+// `page { layer fondo solid { color paper }  layer puntos dots { color ink/0.1 size 22 }  fixed }`
+// Bloque del fondo de pagina (ADR 0008): pila de rellenos bajo Grupos, Aristas y Nodos.
+// Sin `fixed` el patron se mueve y escala con el pan/zoom; con `fixed` queda fijo al visor.
+ThemePage:
+  'page' '{' items+=PageItem* '}';
+
+PageItem:
+  ThemeLayer | ThemeUse | PageFixed;
+
+PageFixed:
+  fixed?='fixed';
 
 // View -------------------------------------
 
@@ -148,10 +277,10 @@ ViewExclude:
   'exclude' selectors+=Selector (',' selectors+=Selector)*;
 
 ViewDepth:
-  'depth' value=INT;
+  'depth' value=Natural;
 
 ViewTheme:
-  'theme' value=Id;
+  'theme' value=Id ('{' items+=PatchItem* '}')?;
 
 // Drill-down: mecanismo por defecto, estado inicial de Grupos y enlaces a otra Vista.
 ViewDrill:
@@ -209,11 +338,14 @@ OverrideLabel:
 OverridePin:
   'pin' x=Coordinate ',' y=Coordinate;
 
+Natural returns number:
+  DIGITS;
+
 Coordinate returns number:
-  '-'? INT;
+  '-'? DIGITS;
 
 OverrideOrder:
-  'order' value=INT;
+  'order' value=Natural;
 
 OverrideColor:
   'color' value=PropertyValue;
@@ -258,9 +390,11 @@ Id returns string:
   IdTerminal |
   'description' | 'icon' | 'style' | 'color' | 'attrs' | 'source' | 'view' | 'type' | 'include' | 'exclude' | 'depth' | 'label' | 'pin' | 'order' |
   'theme' | 'extends' | 'palette' | 'fonts' | 'tokens' |
-  'nodeStyles' | 'edgeStyles' | 'fill' | 'stroke' | 'strokeWidth' | 'shadow' |
+  'layer' | 'slots' | 'row' | 'column' | 'state' | 'part' | 'use' | 'before' | 'after' | 'over' | 'none' | 'mix' |
+  'motion' | 'keyframes' | 'transition' | 'enter' | 'exit' | 'stagger' | 'delay' | 'intensity' | 'reduced' |
+  'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
-  'steps' | 'step' | 'show' | 'hide' | 'edge' |
+  'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' |
   'model' | 'node' | 'specification';
 
 // -------------------------
@@ -273,5 +407,7 @@ hidden terminal NL: /[\r\n]+/;
 // -----------------------------------
 // Terminals
 terminal String: /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/;
-terminal INT returns number: /[0-9]+/;
+// Texto, no numero, y no se llama INT (Langium convertiria a numero por nombre): `Num` concatena sus digitos y un numero perderia los ceros a la izquierda (0.05 -> 0.5).
+terminal DIGITS: /[0-9]+/;
+terminal TokenRef: /\$[a-zA-Z_][-\w]*/;
 terminal IdTerminal:  /([a-zA-Z]|_+[a-zA-Z0-9])[-\w]*/;

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, resolveView, revealAt } from 'canonico';
+import { resolveView, revealAt } from 'canonico';
 import { compile } from 'dsl';
+import { TEMA_NEUTRO } from 'tema';
 
 describe('compile: Nodos y specification', () => {
   it('compila un Tipo de nodo y un Nodo a la Fuente canonica', () => {
@@ -34,7 +35,7 @@ describe('compile: Nodos y specification', () => {
         ],
       },
       views: [],
-      themes: [TEMA_NEUTRO],
+      themes: expect.any(Array),
     });
   });
 
@@ -781,13 +782,13 @@ view v {
 
 describe('compile: Tema', () => {
   const base = 'specification { node servicio { color blue } }  model { servicio a }';
-  const claro = 'theme claro { palette { blue "#0000ff"  danger "#ff0000" } fonts { body "Inter" } tokens { surface "#ffffff" } }';
+  const claro = 'theme claro { palette { blue "#0000ff"  danger "#ff0000" } fonts { body "Inter, sans-serif" } tokens { surface "#ffffff" } }';
 
   it('un Workspace sin theme usa el Tema neutro', () => {
     const { canonico, issues } = compile({ 'main.dg': base });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes).toEqual([TEMA_NEUTRO]);
+    expect(canonico?.themes.map((t) => t.name)).toEqual(['neutral', 'neutral-dark', 'alto-contraste']);
   });
 
   it('compila palette, fonts y tokens a un objeto plano', () => {
@@ -797,8 +798,12 @@ describe('compile: Tema', () => {
     expect(canonico?.themes.find((t) => t.name === 'claro')).toEqual({
       name: 'claro',
       palette: { blue: '#0000ff', danger: '#ff0000' },
-      fonts: { body: 'Inter' },
-      tokens: { surface: '#ffffff' },
+      fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter, sans-serif' },
+      tokens: { ...TEMA_NEUTRO.tokens, surface: '#ffffff' },
+      nodo: TEMA_NEUTRO.nodo,
+      grupo: TEMA_NEUTRO.grupo,
+      arista: TEMA_NEUTRO.arista,
+      pagina: TEMA_NEUTRO.pagina,
     });
   });
 
@@ -812,8 +817,12 @@ describe('compile: Tema', () => {
     expect(canonico?.themes.find((t) => t.name === 'oscuro')).toEqual({
       name: 'oscuro',
       palette: { blue: '#00aaff', danger: '#ff0000' },
-      fonts: { body: 'Inter' },
-      tokens: { surface: '#111111' },
+      fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter, sans-serif' },
+      tokens: { ...TEMA_NEUTRO.tokens, surface: '#111111' },
+      nodo: TEMA_NEUTRO.nodo,
+      grupo: TEMA_NEUTRO.grupo,
+      arista: TEMA_NEUTRO.arista,
+      pagina: TEMA_NEUTRO.pagina,
     });
   });
 
@@ -821,61 +830,211 @@ describe('compile: Tema', () => {
     const { canonico, issues } = compile({ 'main.dg': `${base} theme t extends neutral { palette { teal "#008080" } }` });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 't')?.palette).toEqual({
-      ...TEMA_NEUTRO.palette,
-      teal: '#008080',
-    });
+    const neutral = canonico?.themes.find((t) => t.name === 'neutral');
+    expect(canonico?.themes.find((t) => t.name === 't')).toEqual({ ...neutral, name: 't', palette: { ...neutral?.palette, teal: '#008080' } });
   });
 
-  it('compila nodeStyles y edgeStyles a tokens por tipo', () => {
+  it('compila el bloque node a una pila de Capas y a los Slots, con los defectos del catalogo', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}
         theme ejemplo {
-          nodeStyles {
-            servicio { fill "#dbeafe"  stroke blue  strokeWidth 2  shadow 2 3 4 "#000000" }
-            tabla { fill "#fef3c7" }
+          palette { blue "#2563eb"  gray "#6b7280" }
+          node {
+            layer forma rect
+            layer relleno solid { color blue }
+            layer borde border { color gray  width 2 }
+            slots { attrs title }
           }
-          edgeStyles { default { stroke "#ff0000"  strokeWidth 3 } }
         }`,
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 'ejemplo')).toEqual({
-      name: 'ejemplo',
-      palette: {},
-      fonts: {},
-      tokens: {},
-      nodeStyles: {
-        servicio: { fill: '#dbeafe', stroke: 'blue', strokeWidth: 2, shadow: { dx: 2, dy: 3, blur: 4, color: '#000000' } },
-        tabla: { fill: '#fef3c7' },
-      },
-      edgeStyles: { default: { stroke: '#ff0000', strokeWidth: 3 } },
+    expect(canonico?.themes.find((t) => t.name === 'ejemplo')?.['nodo']).toEqual({
+      capas: [
+        { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
+        { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'blue' } } },
+        { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'gray', width: 2 } } },
+      ],
+      slots: { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'attrs' }, { slot: 'title' }] },
+      textos: {},
+      tipos: {},
+      estados: {},
     });
   });
 
-  it('un edgeStyles con un tipo distinto de default se ignora con un aviso, no un error', () => {
+  it('compila el bloque edge: pila de trazos con glow, marcadores y etiqueta con modelo de caja', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}
-        theme ejemplo { edgeStyles { default { stroke red }  async { stroke blue } } }`,
-    });
-
-    expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'W_UNKNOWN_EDGE_STYLE_TYPE', severity: 'warning', file: 'main.dg' });
-    expect(issues[0]!.message).toContain('async');
-    expect(canonico?.themes.find((t) => t.name === 'ejemplo')?.edgeStyles).toHaveProperty('default');
-  });
-
-  it('el hijo hereda nodeStyles y los fusiona por tipo; un desplazamiento puede ser negativo', () => {
-    const { canonico, issues } = compile({
-      'main.dg': `${base}
-        theme padre { nodeStyles { servicio { fill "#111111"  stroke red } } }
-        theme hijo extends padre { nodeStyles { servicio { fill "#222222"  shadow -1 -2 0 black } } }`,
+        theme metro {
+          palette { blue "#2563eb"  gray "#6b7280" }
+          edge {
+            layer glow line { color ORIGEN/0.3  width 8 }
+            layer principal line { color ORIGEN  width 2  style dashed  corner chamfer }
+            start dot { size 6 }
+            end via
+            label { pad 6  fill blue }
+          }
+        }`,
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 'hijo')?.nodeStyles).toEqual({
-      servicio: { fill: '#222222', stroke: 'red', shadow: { dx: -1, dy: -2, blur: 0, color: 'black' } },
+    expect(canonico?.themes.find((t) => t.name === 'metro')?.['arista']).toEqual({
+      capas: [
+        { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } },
+        { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGEN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6, radius: 8 } } },
+      ],
+      origen: { tipo: 'dot', props: { size: 6 } },
+      fin: { tipo: 'via', props: { size: 8 } },
+      etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 6, radius: 0, fill: 'blue' } },
     });
+  });
+
+  it('el bloque edge rechaza Primitivas de Nodo, valores invalidos y marcadores desconocidos con sugerencia', () => {
+    const { issues } = compile({
+      'main.dg': `${base}
+        theme malo {
+          palette { blue "#2563eb"  gray "#6b7280" }
+          edge {
+            layer a solid { color blue }
+            layer b line { color blue  style rayado }
+            end flecha
+          }
+        }`,
+    });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_THEME_UNKNOWN_PRIMITIVE', 'E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_PRIMITIVE']);
+    expect(issues[2]?.message).toContain('arrow');
+  });
+
+  it('un Slot lleva su estilo de texto en el bloque slots', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme t { node { slots { title { weight 700  transform uppercase }  attrs } } }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 't')?.['nodo']).toMatchObject({
+      slots: { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'attrs' }] },
+      textos: { title: { tipo: 'text', props: { weight: 700, style: 'normal', transform: 'uppercase' } } },
+    });
+  });
+
+  it('slots admite filas y columnas anidadas con gap, pad, align y tokens, y el estilo del icono', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme t {
+          tokens { gap 6 }
+          palette { ink "#111111" }
+          node {
+            slots column pad 10 {
+              row gap $gap {
+                icon { variant box  side 24  radius 6  fill ink/0.1  border ink }
+                title { align start  weight 700 }
+              }
+              attrs
+            }
+          }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.themes.find((t) => t.name === 't')?.['nodo']).toMatchObject({
+      slots: {
+        direccion: 'column',
+        gap: 0,
+        pad: 10,
+        hijos: [
+          { direccion: 'row', gap: 6, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'title', align: 'start' }] },
+          { slot: 'attrs' },
+        ],
+      },
+      textos: {
+        icon: { tipo: 'icon', props: { variant: 'box', side: 24, radius: 6, fill: 'ink/0.1', border: 'ink' } },
+        title: { tipo: 'text', props: { weight: 700 } },
+      },
+    });
+  });
+
+  it('las claves de slots se validan con sugerencia y posicion; un parche de estado no cambia la disposicion', () => {
+    const { issues } = compile({
+      'main.dg': `${base}
+        theme t {
+          node {
+            slots row gapp 4 {
+              icn
+              title { align centro }
+            }
+            state hover { slots column { title } }
+          }
+        }`,
+    });
+
+    expect(issues.map((i) => [i.code, i.line])).toEqual([
+      ['E_THEME_UNKNOWN_PROPERTY', 4],
+      ['E_THEME_UNKNOWN_SLOT', 5],
+      ['E_THEME_INVALID_VALUE', 6],
+      ['E_THEME_STATE_TOUCHES_METRICS', 8],
+    ]);
+    expect(issues[0]!.hint).toContain("'gap'");
+    expect(issues[1]!.hint).toContain("'icon'");
+    expect(issues[2]!.hint).toContain("'center'");
+  });
+
+  it('un parche de estado que cambia el estilo de texto de la cabecera de Grupo (tracking, chip, size) es error, igual que la disposicion', () => {
+    const { issues } = compile({
+      'main.dg': `${base}
+        theme t {
+          group {
+            slots row { title { size 0.9 } counter }
+            state hover { slots { title { tracking 0.2 size 1.4 } } }
+            state collapsed { slots column { title { tracking 0.1 } } }
+          }
+        }`,
+    });
+
+    expect(issues.map((i) => [i.code, i.line])).toEqual([['E_THEME_STATE_TOUCHES_METRICS', 5]]);
+    expect(issues[0]!.message).toContain('Slots');
+  });
+
+  it('compila las Familias de efectos con sus defectos, y `seed N` en tokens', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme efectos {
+          palette { blue "#2563eb"  gray "#6b7280" }
+          tokens { seed 7 }
+          node {
+            layer sombra shadow { color gray  blur 0  x 4  y 4 }
+            layer aura glow { color blue }
+            layer cristal glass
+            layer trazo sketch { roughness 3 }
+            layer ladeo tilt { degrees 2 }
+          }
+        }`,
+    });
+
+    const tema = canonico?.themes.find((t) => t.name === 'efectos');
+    expect(issues).toEqual([]);
+    expect((tema?.['tokens'] as Record<string, string>)['seed']).toBe('7');
+    expect((tema?.['nodo'] as { capas: Array<{ primitiva: { tipo: string } }> }).capas.map((c) => c.primitiva.tipo)).toEqual(['shadow', 'glow', 'glass', 'sketch', 'tilt']);
+  });
+
+  it('un giro de mas de 3 grados es un error, no se recorta', () => {
+    const { issues } = compile({ 'main.dg': `${base} theme excedido { node { layer ladeo tilt { degrees 4 } } }` });
+
+    expect(issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+  });
+
+  it('los bloques nodeStyles y edgeStyles ya no existen en el DSL', () => {
+    const { issues } = compile({ 'main.dg': `${base} theme viejo { nodeStyles { servicio { fill red } } }` });
+
+    expect(issues.map((i) => i.code)).toContain('E_SYNTAX_ERROR');
+  });
+
+  it('layer y slots siguen siendo identificadores validos en el Modelo', () => {
+    const { canonico, issues } = compile({ 'main.dg': 'specification { node layer }  model { layer slots }' });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.nodes.map((n) => n.id)).toEqual(['slots']);
   });
 
   it('tema duplicado es E_DUPLICATE_THEME con related a la primera declaracion', () => {
@@ -915,6 +1074,13 @@ describe('compile: Tema', () => {
     expect(bien.issues).toEqual([]);
     expect(bien.canonico?.views[0]?.theme).toBe('claro');
     expect(mal.issues.map((i) => i.code)).toEqual(['E_UNKNOWN_THEME']);
+  });
+
+  it('una Vista con un Tema que existe pero no se resuelve no dice "no declarado": solo queda el error real del Tema', () => {
+    const { issues } = compile({ 'main.dg': `${base} theme a extends fantasma { }  view v { type flow theme a }` });
+
+    expect(issues.map((i) => [i.code, i.line])).toEqual([['E_UNKNOWN_THEME', 1]]);
+    expect(issues[0]?.message).toContain("'fantasma'");
   });
 
   it('color de Tipo de nodo desconocido es E_UNKNOWN_PALETTE_COLOR con fix si hay un candidato', () => {
@@ -1146,7 +1312,7 @@ describe('compile: Pasos (steps)', () => {
 });
 
 describe('compile: Temas del ejemplo rinthel-arch', () => {
-  it('declaran tokens por Tipo de nodo, el oscuro y uno claro, sin issues', async () => {
+  it('extienden los incorporados oscuro y claro con parches por Tipo, sin issues', async () => {
     const { readFileSync, readdirSync } = await import('node:fs');
     const dir = new URL('../../../examples/rinthel-arch/', import.meta.url);
     const fuentes = Object.fromEntries(
@@ -1156,8 +1322,13 @@ describe('compile: Temas del ejemplo rinthel-arch', () => {
 
     expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
     const temas = canonico?.themes ?? [];
-    expect(temas.find((t) => t.name === 'diagrams')?.tokens['background']).toBe('#0f172a');
-    expect(temas.find((t) => t.name === 'diagrams')?.nodeStyles?.['paquete']?.fill).toBe('#1e3a5f');
-    expect(temas.find((t) => t.name === 'diagrams-claro')?.nodeStyles?.['artefacto']?.fill).toBe('#dcfce7');
+    expect(issues).toEqual([]);
+    const tema = (nombre: string) => temas.find((t) => t.name === nombre) as unknown as { tokens: object; nodo: { tipos: Record<string, Array<{ nombre: string }>> } };
+    expect(tema('diagrams').tokens).toMatchObject({ background: '#09090b' });
+    expect(tema('diagrams-claro').tokens).toMatchObject({ background: '#f8fafc' });
+    for (const nombre of ['diagrams', 'diagrams-claro']) {
+      expect(tema(nombre).nodo.tipos['paquete']?.map((op) => op.nombre)).toEqual(['acento']);
+      expect(tema(nombre).nodo.tipos['externo']?.map((op) => op.nombre)).toEqual(['relleno', 'borde']);
+    }
   });
 });

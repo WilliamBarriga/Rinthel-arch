@@ -4,32 +4,22 @@ specification {
   node paquete  { description "Paquete pnpm del monorepo"                  icon box       color blue }
   node modulo   { description "Modulo profundo dentro de un paquete"       icon box       color gray }
   node artefacto { description "Archivo o carpeta que se lee o se produce"  icon box       color green }
-  node salida   { description "Formato de export"                          icon box       color amber }
+  node salida   { description "Salida del sistema"                          icon box       color amber }
   node externo  { description "Libreria o herramienta de terceros"         icon cloud     color red }
   node proceso  { description "Proceso en ejecucion"                       icon server    color blue }
 }
 
-theme diagrams extends neutral {
-  fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono" }
-  palette { purple "#8b5cf6"  amber "#f59e0b" }
-  tokens { background "#0f172a"  foreground "#e2e8f0"  border "#475569" }
-  // Tema oscuro: rellenos distintos por Tipo de nodo, sobre fondo oscuro.
-  nodeStyles {
-    paquete  { fill "#1e3a5f" }
-    artefacto { fill "#14342a" }
-    salida   { fill "#3b2f0f"  shadow 0 2 6 "#000000" }
-    externo  { fill "#3f1d1d"  stroke red  strokeWidth 2 }
-  }
-  edgeStyles { default { stroke "#94a3b8"  strokeWidth 1 } }
+// Temas del mapa: la tarjeta de los incorporados (neutral-dark y neutral) con las fuentes del Workspace y
+// dos parches por Tipo (ADR 0008): el paquete lleva una barra de su color a la izquierda y el externo, borde discontinuo.
+theme diagrams extends neutral-dark {
+  fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono"  fallback "sans-serif" }
+  node { type paquete { use acento }  type externo { use discontinuo } }
 }
 
-// Tema claro de ejemplo: mismos Tipos, rellenos pastel y sombra suave.
 theme diagrams-claro extends neutral {
-  fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono" }
-  nodeStyles {
-    paquete  { fill "#dbeafe"  shadow 1 2 4 "#9ca3af" }
-    artefacto { fill "#dcfce7" }
-    salida   { fill "#fef3c7" }
-    externo  { fill "#fee2e2"  stroke red  strokeWidth 2 }
-  }
+  fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono"  fallback "sans-serif" }
+  node { type paquete { use acento }  type externo { use discontinuo } }
 }
+
+part acento { layer acento shadow after borde { color COLOR  x 3  y 0  inset 1 } }
+part discontinuo { layer relleno { color fondo }  layer borde dashed { color marco } }

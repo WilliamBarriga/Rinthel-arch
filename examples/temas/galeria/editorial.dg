@@ -1,0 +1,49 @@
+// Contraste: ninguno
+// Editorial (estilo Stripe Press): papel crema, tipografia con serifa, solo reglas finas y sin color de relleno.
+// Gelasio (OFL, metricas compatibles con Georgia) es la serifa del prototipo auto-hospedada.
+theme editorial {
+  palette {
+    fondo "#fbf8f1"  texto "#1c1917"
+    blue "#1d4ed8"  purple "#7e22ce"  green "#15803d"  amber "#b45309"  red "#b91c1c"  gray "#57534e"
+  }
+  fonts { body "Gelasio"  mono "JetBrains Mono"  fallback "serif" }
+  tokens { background "#fbf8f1"  foreground "#1c1917"  border "#57534e" }
+  node {
+    // Sin forma ni relleno: una regla arriba y otra mas tenue abajo.
+    layer regla-sup shadow { color texto  x 0  y 1  inset 1 }
+    layer regla-inf shadow { color texto/0.35  x 0  y -1  inset 1 }
+    // Sin icono: titulo grande en redonda con la insignia en cursiva debajo.
+    slots column min-width 170 slack 24 {
+      row gap 10 pad 14 pad-y 0 min-height 58 {
+        column {
+          title { weight 400  size 1.25  text-align start  leading 1.25 }
+          badge { alpha 0.6  style italic  size 0.8 }
+        }
+        counter { weight 700  fill fondo  border texto/0.4 }
+      }
+      attrs
+    }
+    type paquete { layer regla-sup { color COLOR  y 3 } }
+    type externo { layer regla-sup { color texto/0.35 } }
+    state hover { layer regla-inf { color COLOR  y -2 }  transition 150ms ease }
+    state en-ruta { layer regla-sup { color COLOR  y 3 } }
+    state atenuado { layer regla-inf none }
+  }
+  group {
+    layer forma rect
+    layer borde border { color texto/0.8 }
+    slots row pad 18 pad-y 6 { title { transform uppercase  size 0.72  tracking 0.22  weight 600 } }
+    padding 22 26 26 26
+    // Cerrado son las reglas del Nodo, con la superior gruesa del color del paquete.
+    state collapsed {
+      layer borde none
+      layer regla-sup shadow after forma { color COLOR  x 0  y 3  inset 1 }
+      layer regla-inf shadow after regla-sup { color texto/0.35  x 0  y -1  inset 1 }
+    }
+  }
+  edge {
+    layer linea line { color texto/0.75  width 0.8 }
+    end chevron { size 9 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 0  fill fondo  border fondo  style italic  color texto/0.8 }
+  }
+}

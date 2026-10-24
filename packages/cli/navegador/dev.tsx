@@ -9,11 +9,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 
+import { urlDeFuente } from 'canonico';
 import type { EstadoDeDev, FuenteCanonica, GeometriaCacheada, IssueDeDev } from 'canonico';
 import { VistaInteractiva, adaptadorDeWorker, crearEnviadorDePin, hashDelNavegador, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
+import type { ComponentesDeTema } from 'render';
 
 import { montar, usePropsDeDatos } from './arranque';
+import { crearCargadorDeCodigo } from './componentes';
 import { accionDeAtajo, crearAlAtajo, crearEnviadorDeHistorial } from './historial';
 import { crearAlMover } from './mover';
 
@@ -55,13 +58,35 @@ function useGeometrias(estado: Estado | undefined): Record<string, GeometriaCach
   return geometrias?.version === version ? geometrias?.porVista : undefined;
 }
 
+/**
+ * Componentes de Tema (Capa `code`): tras cada estado nuevo se vuelve a pedir el codigo (un cambio de `.tsx` llega como
+ * estado `codigo`), con confirmacion explicita la primera vez. Si la carga falla se conserva el registro anterior.
+ */
+function useComponentes(estado: Estado | undefined): ComponentesDeTema | undefined {
+  const cargar = useMemo(() => crearCargadorDeCodigo({ fetch: (...args) => fetch(...args), confirmar: (mensaje) => window.confirm(mensaje) }), []);
+  const [componentes, setComponentes] = useState<ComponentesDeTema>();
+  const version = estado?.version;
+  useEffect(() => {
+    if (version === undefined) return;
+    let vigente = true;
+    void cargar().then((registro) => {
+      if (vigente) setComponentes(registro);
+    }, () => undefined);
+    return () => {
+      vigente = false;
+    };
+  }, [version, cargar]);
+  return componentes;
+}
+
 function layoutEnWorker(): AdaptadorDeLayout {
   let adaptador: Promise<AdaptadorDeLayout> | undefined;
-  return (vista, tema) => {
+  // Las medidas reales de texto (fuentes del Workspace) viajan al Worker: sin ellas el layout estima por caracter.
+  return (vista, tema, medidas) => {
     adaptador ??= fetch('/worker.js')
       .then((r) => r.text())
       .then((codigo) => adaptadorDeWorker(new Worker(URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' }))) as unknown as PuertoDeMensajes));
-    return adaptador.then((layout) => layout(vista, tema));
+    return adaptador.then((layout) => layout(vista, tema, medidas));
   };
 }
 
@@ -97,17 +122,18 @@ interface PropsDeVista {
   estado: Estado;
   geometrias: Record<string, GeometriaCacheada>;
   layout: AdaptadorDeLayout;
+  componentes: ComponentesDeTema | undefined;
   /** Arrastre soltado: la Vista dibujada y el Nodo; resuelve `false` si se rechazo. */
   alMover: (vista: string, mov: { id: string; x: number; y: number }) => Promise<boolean>;
   /** Aviso vigente de un Pin rechazado. */
   aviso: string | undefined;
 }
 
-function Vista({ fuente, estado, geometrias, layout, alMover, aviso }: PropsDeVista): ReactElement | null {
+function Vista({ fuente, estado, geometrias, layout, componentes, alMover, aviso }: PropsDeVista): ReactElement | null {
   const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
   const { icons, cachedGeometries, theme: tema, width, height } = usePropsDeDatos({ fuente, iconos: estado.iconos, geometrias }, props.view);
   if (tema === undefined) return null;
-  return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} icons={icons} width={width} height={height} cachedGeometries={cachedGeometries} onMoveNode={(mov) => alMover(props.view, mov)} issues={estado.issues} toasts={aviso === undefined ? [] : [aviso]} />;
+  return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} {...(estado.fuentes !== undefined && { fontFiles: estado.fuentes, fontUrl: urlDeFuente })} icons={icons} {...(componentes !== undefined && { componentes })} width={width} height={height} cachedGeometries={cachedGeometries} onMoveNode={(mov) => alMover(props.view, mov)} issues={estado.issues} toasts={aviso === undefined ? [] : [aviso]} />;
 }
 
 function App(): ReactElement {
@@ -143,9 +169,10 @@ function App(): ReactElement {
     if (estado?.fuente !== undefined && geometrias !== undefined) setUltima({ fuente: estado.fuente, estado, geometrias });
   }, [estado, geometrias]);
   const layout = useMemo(layoutEnWorker, []);
+  const componentes = useComponentes(estado);
   return (
     <>
-      {ultima === undefined ? <IssuesSinVista issues={estado?.issues ?? []} /> : <Vista {...ultima} layout={layout} alMover={alMover} aviso={aviso} />}
+      {ultima === undefined ? <IssuesSinVista issues={estado?.issues ?? []} /> : <Vista {...ultima} layout={layout} componentes={componentes} alMover={alMover} aviso={aviso} />}
     </>
   );
 }

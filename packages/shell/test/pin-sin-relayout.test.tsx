@@ -1,11 +1,13 @@
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema } from 'canonico';
+import { fuenteCanonicaSchema } from 'canonico';
 import type { FuenteCanonica } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara } from 'shell';
+import { TEMA_NEUTRO } from 'tema';
+import { posicionDe } from './ayudas';
 
 afterEach(cleanup);
 
@@ -19,8 +21,6 @@ const fuente = (overrides: unknown[]): FuenteCanonica =>
 const conPin = (x: number, y: number) => fuente([{ node: 'b', pin: { x, y } }]);
 
 const camara: Camara = { x: 0, y: 0, width: 800, height: 600 };
-const posicionDe = (c: HTMLElement, id: string) =>
-  /translate\(([-\d.]+) ([-\d.]+)\)/.exec(c.querySelector(`svg [data-id="${id}"]`)?.getAttribute('transform') ?? '')?.slice(1, 3).map(Number);
 
 describe('mover un Pin en el shell', () => {
   it('no vuelve a llamar al adaptador de layout y muestra el Pin nuevo', async () => {
@@ -37,9 +37,9 @@ describe('mover un Pin en el shell', () => {
     await waitFor(() => expect(posicionDe(container, 'b')).toEqual([200, 0]));
 
     rerender(<VistaInteractiva {...props(conPin(500, 300))} />);
-    await waitFor(() => expect(posicionDe(container, 'b')).toEqual([500, 300]));
+    await waitFor(() => expect(posicionDe(container, 'b')).toEqual([450, 275])); // el Pin ancla el centro: esquina = Pin - mitad de la caja (100x50)
     rerender(<VistaInteractiva {...props(conPin(510, 310))} />);
-    await waitFor(() => expect(posicionDe(container, 'b')).toEqual([510, 310]));
+    await waitFor(() => expect(posicionDe(container, 'b')).toEqual([460, 285]));
 
     expect(layout).toHaveBeenCalledTimes(1);
   });

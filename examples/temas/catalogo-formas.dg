@@ -1,0 +1,161 @@
+// Catalogo de formas, rellenos y bordes (Familias forma, relleno y borde del ADR 0008).
+// Un Tema por grupo de Primitivas, para compararlas en la misma Vista. Cada Primitiva del
+// catalogo aparece al menos una vez; una prueba lo verifica. Sin warnings de contraste intencionales.
+specification {
+  node pieza { description "Nodo de muestra" icon box color blue }
+}
+
+model {
+  pieza a "Pastilla"
+  pieza b "Esquina cortada"
+  pieza c "Circulo"
+  pieza d "Rellenos"
+  a -> b "forma"
+  b -> c
+  c -> d
+}
+
+theme base-muestra {
+  palette { papel "#fefce8"  tinta "#1e293b"  acento "#2563eb"  suave "#bfdbfe" }
+  tokens { background "#ffffff"  foreground "#1e293b"  border "#475569" }
+}
+
+// Formas: pastilla, esquina cortada y circulo (el circulo pide una caja cuadrada).
+theme forma-pastilla extends base-muestra {
+  node {
+    layer forma pill
+    layer relleno solid { color papel }
+    layer borde border { color tinta width 2 }
+    slots { title attrs }
+  }
+}
+
+theme forma-esquina extends base-muestra {
+  node {
+    layer forma cut { cut 12 }
+    layer relleno solid { color suave }
+    slots { title attrs }
+  }
+}
+
+theme forma-circulo extends base-muestra {
+  node {
+    layer forma circle
+    layer relleno solid { color papel }
+    layer borde border { color acento width 2 }
+    slots { title }
+  }
+}
+
+// Rellenos: gradiente, cuadricula, lineas, discos y ruido (los patrones sobre un color solido).
+theme relleno-gradiente extends base-muestra {
+  node {
+    layer forma rect { radius 8 }
+    layer relleno gradient { from papel  to suave  angle 135 }
+    layer borde border { color tinta }
+    slots { title attrs }
+  }
+}
+
+theme relleno-radial extends base-muestra {
+  page {
+    layer luz radial { from suave  to papel  x 15  y 10 }
+    layer rejilla grid { color tinta/0.06  size 24 }
+    fixed
+  }
+  node {
+    layer forma rect { radius 8 }
+    layer relleno radial { from papel  to suave  x 30  y 20 }
+    layer borde border { color tinta }
+    slots { title attrs }
+  }
+}
+
+theme relleno-cuadricula extends base-muestra {
+  node {
+    layer forma rect
+    layer base solid { color papel }
+    layer trama grid { color suave  size 12  width 1 }
+    layer borde border { color tinta }
+    slots { title attrs }
+  }
+}
+
+theme relleno-lineas extends base-muestra {
+  node {
+    layer forma rect
+    layer base solid { color papel }
+    layer trama lines { color suave  size 8  width 2  angle 45 }
+    layer borde border { color tinta }
+    slots { title attrs }
+  }
+}
+
+theme relleno-discos extends base-muestra {
+  node {
+    layer forma rect
+    layer base solid { color papel }
+    layer trama dots { color suave  size 10  radius 2 }
+    layer borde border { color tinta }
+    slots { title attrs }
+  }
+}
+
+theme relleno-disco extends base-muestra {
+  page {
+    layer sol disc { color suave  radius 160  x 85  y 20 }
+    fixed
+  }
+  node {
+    layer forma rect
+    layer base solid { color papel }
+    layer muesca disc { color tinta/0.3  radius 3  x 9  y 9  unit px }
+    layer borde border { color tinta }
+    slots { title attrs }
+  }
+}
+
+theme relleno-ruido extends base-muestra {
+  node {
+    layer forma rect
+    layer base solid { color papel }
+    layer grano noise { frequency 0.8  opacity 0.2 }
+    layer borde border { color tinta }
+    slots { title attrs }
+  }
+}
+
+// Bordes y trazos: discontinuo, punteado y contorno separado.
+theme borde-discontinuo extends base-muestra {
+  node {
+    layer forma rect { radius 4 }
+    layer relleno solid { color papel }
+    layer borde dashed { color tinta  width 2 }
+    slots { title attrs }
+  }
+}
+
+theme borde-punteado extends base-muestra {
+  node {
+    layer forma rect { radius 4 }
+    layer relleno solid { color papel }
+    layer borde dotted { color tinta  width 3 }
+    slots { title attrs }
+  }
+}
+
+theme borde-contorno extends base-muestra {
+  node {
+    layer forma rect { radius 4 }
+    layer relleno solid { color papel }
+    layer borde border { color tinta }
+    layer aura outline { color acento  width 2  offset 3 }
+    slots { title attrs }
+  }
+}
+
+view formas {
+  type architecture
+  theme forma-pastilla
+  include **
+}

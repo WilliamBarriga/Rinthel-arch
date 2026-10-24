@@ -1,11 +1,12 @@
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO, fuenteCanonicaSchema } from 'canonico';
+import { fuenteCanonicaSchema } from 'canonico';
 import type { IssueDeDev, VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
+import { TEMA_NEUTRO } from 'tema';
 
 afterEach(cleanup);
 
@@ -29,7 +30,7 @@ async function montar(extra: Partial<VistaInteractivaProps> = {}) {
   await waitFor(() => expect(r.container.querySelector('[data-id="a"]')).not.toBeNull());
   return r;
 }
-const sobre = (c: HTMLElement, x: number, y: number) => fireEvent.mouseMove(c.querySelector('svg')!, { clientX: x, clientY: y });
+const sobre = (c: HTMLElement, x: number, y: number) => fireEvent.mouseMove(c.querySelector('[data-diagram]')!, { clientX: x, clientY: y });
 const conEstado = (c: HTMLElement, estado: string) => [...c.querySelectorAll(`[data-state="${estado}"]`)];
 
 function gesto(destino: Element | Window, tipo: string, clientX: number, clientY: number): void {
@@ -72,15 +73,32 @@ describe('fantasma de arrastre', () => {
 describe('chrome de issues y toasts', () => {
   const issues: IssueDeDev[] = [{ severity: 'error', code: 'E1', message: 'roto', file: 'a.dg', line: 3, column: 1, href: 'vscode://a.dg:3' }] as IssueDeDev[];
 
-  it('dibuja los issues como enlaces con clases y sin estilos en linea', async () => {
-    const { container } = await montar({ issues });
+  const aviso = { severity: 'warning', code: 'W1', message: 'dudoso', file: 'b.dg', line: 7, column: 2, href: 'vscode://b.dg:7' } as IssueDeDev;
+  const desplegar = (c: HTMLElement) => fireEvent.click(c.querySelector('[data-panel="issues"] button')!);
+
+  it('arranca plegado con el conteo de errores y warnings, sin lista', async () => {
+    const { container } = await montar({ issues: [...issues, aviso] });
+    const panel = container.querySelector('[data-panel="issues"]')!;
+    expect(panel.textContent).toContain('1 error');
+    expect(panel.textContent).toContain('1 warning');
+    expect(panel.querySelector('li')).toBeNull();
+    expect(panel.querySelector('button')!.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('desplegado dibuja todos los issues como enlaces con clases y sin estilos en linea; se vuelve a plegar', async () => {
+    const { container } = await montar({ issues: [...issues, aviso] });
+    desplegar(container);
     const panel = container.querySelector('[data-panel="issues"]')!;
     expect(panel.getAttribute('style')).toBeNull();
     expect(panel.className).toContain('rd-');
+    expect(panel.querySelectorAll('li')).toHaveLength(2);
     const enlace = panel.querySelector('a')!;
     expect(enlace.textContent).toBe('a.dg:3');
     expect(enlace.getAttribute('href')).toBe('vscode://a.dg:3');
     expect(panel.textContent).toContain('E1 roto');
+    expect(panel.textContent).toContain('W1 dudoso');
+    desplegar(container);
+    expect(panel.querySelector('li')).toBeNull();
   });
 
   it('sin issues no hay panel', async () => {

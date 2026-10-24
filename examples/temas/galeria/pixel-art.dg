@@ -1,0 +1,76 @@
+// Contraste: externo
+// Deliberado, como en el prototipo: el externo es un bloque hueco (solo trama) y su texto negro apenas se lee sobre el cielo; el bloque se lee por su trama y su contorno.
+// Pixel art 8 bits: bloques sin curvas, contorno negro duro de 4 px, sombra inset y Aristas de pixeles.
+theme pixel-art {
+  fonts { body "Press Start 2P"  mono "Press Start 2P"  fallback "monospace" }
+  palette {
+    fondo "#1b1135"  texto "#ffffff"  negro "#0d0a1f"  luz "#ffffff"  estrella "#ffe9a8"
+    blue "#3fa9f5"  purple "#b26bff"  green "#5ee65e"  amber "#ffd23f"  red "#ff4d6d"  gray "#c0c0d0"
+  }
+  tokens { background "#1b1135"  foreground "#0d0a1f"  border "#ffffff" }
+  // Cielo nocturno en degradado con estrellas.
+  page {
+    layer cielo gradient { from fondo  to mix(fondo, purple, 0.3)  angle 180 }
+    layer estrellas dots { color estrella/0.5  size 37  radius 1 }
+    fixed
+  }
+  node {
+    // Bloque del color del Tipo: sombra dura, contorno negro de 4 px (cuatro sombras) y bisel con sombras inset.
+    layer sombra shadow { color negro/0.45  x 8  y 8 }
+    layer contorno-der shadow { color negro  x 4  y 0 }
+    layer contorno-izq shadow { color negro  x -4  y 0 }
+    layer contorno-inf shadow { color negro  x 0  y 4 }
+    layer contorno-sup shadow { color negro  x 0  y -4 }
+    layer forma rect
+    layer bloque solid { color COLOR }
+    layer bisel-oscuro shadow { color negro/0.35  x -4  y -4  inset 1 }
+    layer bisel-claro shadow { color luz/0.45  x 4  y 4  inset 1 }
+    slots column min-width 170 slack 50 {
+      row gap 10 pad 12 min-height 58 {
+        icon { variant box  side 24  radius 0  fill negro/0.2  color negro }
+        column {
+          title { weight 400  transform uppercase  size 0.68  color negro  text-align start  leading 1.25 }
+          badge { alpha 0.65  transform uppercase  size 0.5  color negro }
+        }
+        counter { fill luz  border negro  border-width 3  color negro }
+      }
+      attrs
+    }
+    type externo { layer bloque grid { color negro/0.25  size 4 } }
+    state hover { layer bloque { color mix(COLOR, luz, 0.25) }  transition 60ms linear }
+    state en-ruta { layer aro ring after bisel-claro { color luz  width 2  offset 6 } }
+    state atenuado { layer sombra none }
+  }
+  group {
+    // Marco oscuro con contorno claro de 4 px.
+    layer contorno-der shadow { color luz/0.8  x 4  y 0 }
+    layer contorno-izq shadow { color luz/0.8  x -4  y 0 }
+    layer contorno-inf shadow { color luz/0.8  x 0  y 4 }
+    layer contorno-sup shadow { color luz/0.8  x 0  y -4 }
+    layer forma rect
+    layer relleno solid { color negro/0.35 }
+    slots row pad 12 pad-y 9 {
+      title { transform uppercase  size 0.6  leading 2.5  weight 400  color texto  fill amber  border texto  border-width 3  radius 4  pad 10 }
+    }
+    padding 13 26 26 26
+    // Cerrado es el bloque del Nodo con una pila de monedas (franja ambar) a la derecha.
+    state collapsed {
+      layer sombra shadow before contorno-der { color negro/0.45  x 8  y 8 }
+      layer contorno-der { color negro }
+      layer contorno-izq { color negro }
+      layer contorno-inf { color negro }
+      layer contorno-sup { color negro }
+      layer relleno { color COLOR }
+      layer bisel-oscuro shadow after relleno { color negro/0.35  x -4  y -4  inset 1 }
+      layer bisel-claro shadow after bisel-oscuro { color luz/0.45  x 4  y 4  inset 1 }
+      layer monedas stripe after bisel-claro over { color amber  side right  width 8 }
+    }
+  }
+  edge {
+    layer sombra line { color negro/0.6  width 8 }
+    layer linea line { color luz  width 4  style pixel }
+    start square { size 8  color texto }
+    end arrow { size 10  color luz }
+    label { scale 0.57  pad 10  pad-y 2.5  radius 0  fill luz  border negro  color negro  weight 400 }
+  }
+}
