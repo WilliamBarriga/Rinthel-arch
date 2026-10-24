@@ -70,6 +70,7 @@ export type { ComponenteDeTema, ComponentesDeTema, PropsDeCodigo } from './codig
 export type { DiagramProps } from './diagram';
 export type { Camara, Estados, NivelDeDetalle } from './escena';
 export { resolverEstilo } from './estilo';
+export { hojaDeFuentes } from './hoja';
 export { PINTORES } from './hoja';
 export { centroDeEtiquetaSinCaja } from './pintores';
 export type { AspectoDeEstado, EstadoVisual, Estilo } from './estilo';

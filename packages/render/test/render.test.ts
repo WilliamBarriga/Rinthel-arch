@@ -50,7 +50,7 @@ describe('Diagram', () => {
   it('dibuja la Vista con el Tema oscuro: fondo y texto del Tema en la hoja', async () => {
     const html = await dibujar(OSCURO);
 
-    expect(html).toContain('background:#111827;color:#f9fafb;font-family:Inter, sans-serif;font-size:16px');
+    expect(html).toContain('background:#111827;color:#f9fafb;font-family:"Inter", sans-serif;font-size:16px');
   });
 
   it('dibuja un Grupo colapsado como un Nodo con su contador', async () => {

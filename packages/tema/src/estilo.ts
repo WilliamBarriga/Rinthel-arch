@@ -7,6 +7,8 @@
 import type { Tema } from 'canonico';
 
 import type { Animacion, Efecto, Transicion } from './animacion';
+import { pilaDeFuente, resolverFuentes } from './fuentes';
+import type { CaraDeFuente } from './fuentes';
 import { metricasDe, tablaDeMetricas } from './metricas';
 import type { Metricas, TablaDeMetricas } from './metricas';
 import { CATALOGO } from './catalogo';
@@ -72,15 +74,25 @@ export interface Pintura {
   arista: PinturaDeArista & { origenes: Record<string, PinturaDeArista> };
 }
 
+/** Fuentes del Estilo resuelto: la pila `font-family` de cuerpo y mono (con la reserva declarada) y las caras que el Workspace aporta. */
+export interface FuentesResueltas {
+  cuerpo: string;
+  mono: string;
+  caras: CaraDeFuente[];
+}
+
 export interface EstiloResuelto {
   /** Entrada base de la tabla (Nodo sin Tipo): lo que mide un Nodo que el Tema no menciona. */
   metricas: Metricas;
   /** Metricas por elemento (ADR 0008): Nodo por Tipo, Grupo abierto y colapsado, etiqueta de Arista. */
   tabla: TablaDeMetricas;
   pintura: Pintura;
+  fuentes: FuentesResueltas;
 }
 
 export interface OpcionesDeEstilo {
+  /** Rutas de los archivos de fuente del Workspace; de ellos salen las caras de `fuentes`. Sin ellas, ninguna. */
+  archivosDeFuente?: readonly string[];
   /** Tipos de nodo de la Fuente y el nombre de Paleta de su `color` (`COLOR` lo usa). */
   tipos?: Readonly<Record<string, string | undefined>>;
   /** Cuarto nivel de la cascada: parches de la Vista, aplicados al final de cada pila. */
@@ -165,9 +177,15 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
         ]),
     ),
   });
+  const reserva = resuelto.fonts['fallback'];
   return {
     metricas: metricasDe(tema),
     tabla: tablaDeMetricas(tema),
+    fuentes: {
+      cuerpo: pilaDeFuente(resuelto.fonts.body, reserva),
+      mono: pilaDeFuente(resuelto.fonts.mono, reserva),
+      caras: resolverFuentes(resuelto.fonts, opciones.archivosDeFuente ?? []).caras,
+    },
     pintura: {
       ...(resuelto.tokens.seed !== undefined && { semilla: Number(resuelto.tokens.seed) }),
       nodo: {

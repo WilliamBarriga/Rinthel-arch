@@ -4,7 +4,7 @@ import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, OrigenDeTema, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
 import type { Geometria } from 'layout';
-import { TEMA_NEUTRO, advertenciasDeContraste, estiloResuelto, leerOps, tiposSoloColor, usosDeCodigo } from 'tema';
+import { TEMA_NEUTRO, advertenciasDeContraste, estiloResuelto, leerOps, resolverFuentes, resolverTema, tiposSoloColor, usosDeCodigo } from 'tema';
 import type { EstiloResuelto, UsoDeComponente } from 'tema';
 
 /** Archivos derivados, por ruta relativa a `<workspace>/.diagrams/`. */
@@ -25,6 +25,12 @@ export interface OpcionesDeSesion {
    * de que el Tema tiene codigo.
    */
   componentes?: Readonly<Record<string, InterfazDeComponente>>;
+  /**
+   * Rutas (relativas al Workspace, con `/`) de los archivos de fuente que el adaptador encontro. Con ellas
+   * `diagnosticar` y `construir` exigen un archivo por cada familia de `fonts` (`E_THEME_FONT_MISSING`) y el
+   * Estilo resuelto trae las caras; sin ellas (el adaptador no las conoce) no se comprueba.
+   */
+  archivosDeFuente?: readonly string[];
   /** Issues que el adaptador ya conoce (p. ej. un `.tsx` que no compila): se suman tal cual a los de `diagnosticar` y `construir`. */
   issuesDelAdaptador?: readonly Issue[];
 }
@@ -55,7 +61,7 @@ export interface Sesion {
   /** Ids de las Vistas cuya geometria ya se pidio (calculada o en curso). */
   vistasConGeometria(): string[];
   /** Otra Sesion para estos archivos; la actual no cambia y su geometria se reutiliza por `layoutKey`. */
-  actualizar(archivos: ArchivosDelWorkspace, cambios?: Pick<OpcionesDeSesion, 'componentes' | 'issuesDelAdaptador'>): Sesion;
+  actualizar(archivos: ArchivosDelWorkspace, cambios?: Pick<OpcionesDeSesion, 'componentes' | 'issuesDelAdaptador' | 'archivosDeFuente'>): Sesion;
 }
 
 /** Archivo en que se declara una Vista; `undefined` si no existe o la Sesion no tiene Fuente. */
@@ -191,6 +197,29 @@ function avisosDeCodigo(fuente: FuenteCanonica, ubicar: Ubicador | undefined, co
   return issues;
 }
 
+/** `E_THEME_FONT_MISSING` por familia de `fonts` sin archivo, situado en el nombre del Tema; con la familia cercana si la hay. */
+function avisosDeFuentes(fuente: FuenteCanonica, ubicar: Ubicador | undefined, archivos: readonly string[] | undefined): Issue[] {
+  if (archivos === undefined) return [];
+  const disponibles = [...new Set(archivos.flatMap((ruta) => /([^/]+?)(?:-[a-z]+(?:-ext)?-\d{3}-(?:normal|italic))?\.(?:woff2|woff|ttf|otf)$/i.exec(ruta)?.[1]?.toLowerCase() ?? []))];
+  const issues: Issue[] = [];
+  fuente.themes.forEach((tema, i) => {
+    const donde = ubicar === undefined ? { file: '(canonico)', range: { start: { line: 1, column: 1 } } } : ubicar(['themes', i, 'name']);
+    if (donde === null) return;
+    for (const { clave, familia } of resolverFuentes(resolverTema(tema).fonts, archivos).faltantes) {
+      const cerca = candidatosCercanos(familia.toLowerCase().replace(/\s+/g, '-'), disponibles);
+      issues.push({
+        code: CODIGOS.E_THEME_FONT_MISSING,
+        severity: 'error',
+        file: donde.file,
+        ...donde.range.start,
+        message: `Tema '${tema.name}': la fuente '${familia}' (fonts.${clave}) no tiene archivo en el Workspace`,
+        hint: cerca.length > 0 ? `quisiste decir ${cerca.map((c) => `'${c}'`).join(' o ')}` : `copia ${familia.toLowerCase().replace(/\s+/g, '-')}-latin-400-normal.woff2 al Workspace, o usa una familia generica (sans-serif, monospace...)`,
+      });
+    }
+  });
+  return issues;
+}
+
 interface EntradaDeGeometria {
   /** `layoutKey` mas los Pins de la Vista: lo unico de que depende la geometria. */
   clave: string;
@@ -252,7 +281,7 @@ function crear(
     origenesDeTema: compilado.origenesDeTemas ?? {},
     async diagnosticar() {
       if (fuente === undefined) return [...compilado.issues, ...externos];
-      const accesibilidad = [...avisosDeAccesibilidad(fuente, compilado.ubicar, opciones.tema), ...avisosDeCodigo(fuente, compilado.ubicar, opciones.componentes)];
+      const accesibilidad = [...avisosDeAccesibilidad(fuente, compilado.ubicar, opciones.tema), ...avisosDeCodigo(fuente, compilado.ubicar, opciones.componentes), ...avisosDeFuentes(fuente, compilado.ubicar, opciones.archivosDeFuente)];
       const conPins = fuente.views.filter(({ id }) => pins.filter((pin) => pin.view === id).length >= 2);
       return [...compilado.issues, ...externos, ...accesibilidad, ...(await avisos(conPins.map(({ id }) => id)))];
     },
@@ -263,7 +292,7 @@ function crear(
         const cacheada = await geometria(id);
         if (cacheada !== undefined) salida[`geometria/${id}.json`] = json(cacheada);
       }
-      const issues = [...compilado.issues, ...externos, ...avisosDeAccesibilidad(fuente, compilado.ubicar, opciones.tema), ...avisosDeCodigo(fuente, compilado.ubicar, opciones.componentes), ...(await avisos(fuente.views.map(({ id }) => id)))];
+      const issues = [...compilado.issues, ...externos, ...avisosDeAccesibilidad(fuente, compilado.ubicar, opciones.tema), ...avisosDeCodigo(fuente, compilado.ubicar, opciones.componentes), ...avisosDeFuentes(fuente, compilado.ubicar, opciones.archivosDeFuente), ...(await avisos(fuente.views.map(({ id }) => id)))];
       return { archivos: salida, issues };
     },
     geometria,
@@ -272,7 +301,7 @@ function crear(
       if (datos === undefined || fuente === undefined) return undefined;
       const declarada = fuente.views.find(({ id }) => id === vista);
       const tipos = Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
-      return estiloResuelto(datos.tema, { tipos, ...(declarada?.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
+      return estiloResuelto(datos.tema, { tipos, ...(opciones.archivosDeFuente !== undefined && { archivosDeFuente: opciones.archivosDeFuente }), ...(declarada?.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
     },
     vistasConGeometria: () => [...memo.keys()],
     actualizar: (nuevos, cambios = {}) => crear(nuevos, { ...opciones, ...cambios }, compile(nuevos), memo),
