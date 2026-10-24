@@ -139,6 +139,16 @@ describe('seam sesion: parches por nombre de Capa y cascada', () => {
     expect(marca('servicio')).toBe('#dc2626');
     expect(marca('tabla')).toBe('#2563eb');
   });
+
+  it('mix acepta COLOR en cualquier lado: el color de cada Tipo mezclado con uno de Paleta', () => {
+    const sesion = abrirSesion(trabajoT(temaT('    layer marca solid after relleno { color mix(COLOR, papel, 0.5) }\n    layer velo solid after marca { color mix(tinta, COLOR, 0.25) }')));
+
+    const prop = (tipo: string, nombre: string) => sesion.estilo('v')!.pintura.nodo.tipos[tipo]!.capas.find((c) => c.nombre === nombre)!.props['color'];
+    expect(prop('servicio', 'marca')).toBe('#ed9187');
+    expect(prop('tabla', 'marca')).toBe('#92b0ea');
+    // tinta #1f2937 hacia azul #2563eb un 25%: (33, 56, 100).
+    expect(prop('tabla', 'velo')).toBe('#213864');
+  });
 });
 
 describe('seam sesion: validacion estricta de la cascada', () => {
@@ -171,13 +181,14 @@ describe('seam sesion: validacion estricta de la cascada', () => {
     expect(noNumerico).toEqual(['E_THEME_INVALID_VALUE']);
   });
 
-  it('colores: fuera de Paleta, alfa o mix fuera de rango y ORIGEN en un Nodo son errores', async () => {
+  it('colores: fuera de Paleta, alfa o mix fuera de rango y ORIGEN en un Nodo (tambien dentro de mix) son errores', async () => {
     const dsl = temaT(`    layer a solid after forma { color verde }
     layer b solid after forma { color rojo/1.5 }
     layer c solid after forma { color mix(rojo, papel, 2) }
-    layer d solid after forma { color ORIGEN }`);
+    layer d solid after forma { color ORIGEN }
+    layer e solid after forma { color mix(ORIGEN, rojo, 0.5) }`);
 
-    expect(await codigos(trabajoT(dsl))).toEqual(['E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_UNKNOWN_PALETTE_COLOR']);
+    expect(await codigos(trabajoT(dsl))).toEqual(['E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_UNKNOWN_PALETTE_COLOR']);
   });
 
   it('los issues de un parche traen related a la Capa base', async () => {

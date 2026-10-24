@@ -146,6 +146,13 @@ describe('Diagram: parches de Tipo y de estado pintados igual en Nodos y Grupos'
     expect(regla(css, '.rd-nodo')).toContain('border:1px solid var(--trazo)');
     expect(etiquetaCon(html, 'aria-label="G.A')).toContain('--trazo:#2563eb');
   });
+
+  it('mix con COLOR lo mezcla el navegador: color-mix de la variable del Nodo con el de Paleta', async () => {
+    const t = tema({ capas: [capa('forma', 'rect', { radius: 3 }), capa('relleno', 'gradient', { from: 'mix(COLOR, gray, 0.3)', to: 'COLOR', angle: 180 })] });
+    const { css } = await dibujar(t);
+
+    expect(regla(css, '.rd-nodo')).toContain('linear-gradient(180deg,color-mix(in srgb, var(--trazo) 70%, #6b7280),var(--trazo))');
+  });
 });
 
 describe('Diagram: cabecera del Grupo', () => {
