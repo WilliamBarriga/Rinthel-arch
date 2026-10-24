@@ -195,9 +195,9 @@ async function empaquetar(contents: string): Promise<{ min: number; gzip: number
 
 async function bundleDelShell(): Promise<Record<string, number>> {
   // Los dos bundles que `export --format html` incrusta (mismas opciones que `packages/cli/src/html.ts`):
-  // la pagina (shell + React, sin ELK) y el Worker (layout con ELK y zod, tal cual los empaqueta el CLI).
+  // la pagina (shell + React, sin ELK) y el Worker (layout con ELK, sin zod, tal cual los empaqueta el CLI).
   const navegador = join(import.meta.dirname, '..', 'packages', 'cli', 'navegador');
-  const bundle = async (entrada: string): Promise<{ min: number; gzip: number }> => {
+  const bundle = async (entrada: string, alias: Record<string, string> = {}): Promise<{ min: number; gzip: number }> => {
     const salida = await build({
       entryPoints: [join(navegador, entrada)],
       bundle: true,
@@ -210,13 +210,14 @@ async function bundleDelShell(): Promise<Record<string, number>> {
       legalComments: 'none',
       jsx: 'automatic',
       logLevel: 'error',
+      alias,
       define: { 'process.env.NODE_ENV': '"production"' },
     });
     const texto = salida.outputFiles[0]!.contents;
     return { min: texto.length, gzip: gzipSync(texto, { level: 9 }).length };
   };
   const pagina = await bundle('arranque.tsx');
-  const worker = await bundle('worker.ts');
+  const worker = await bundle('worker.ts', { zod: join(navegador, 'zod-inerte.ts') });
   // Suelo: lo que pesa elkjs separado en api (pagina) + worker, sin nada nuestro.
   const lib = join(import.meta.dirname, '..', 'packages', 'layout', 'node_modules', 'elkjs', 'lib');
   const elkApi = gzipSync(readFileSync(join(lib, 'elk-api.js')), { level: 9 }).length;

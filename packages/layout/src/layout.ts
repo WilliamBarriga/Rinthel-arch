@@ -72,15 +72,29 @@ const OPCIONES_RAIZ = {
  * Calcula la Geometria de `vista` con las medidas del `tema`. Determinista: la
  * misma entrada da la misma geometria. Los Grupos cerrados son Nodos hoja.
  * Sin `opciones.elk` crea un motor por llamada (unos ms; sin estado compartido).
+ * Valida y resuelve el Tema (`tablaDeMetricas`) y delega en `layoutConMetricas`.
  */
 export async function layoutView(
   vista: VistaResuelta,
   tema: Tema,
   opciones: OpcionesDeLayout = {},
 ): Promise<Geometria> {
+  return layoutConMetricas(vista, opciones.metricas ?? tablaDeMetricas(tema, opciones.medidas), opciones);
+}
+
+/**
+ * Nucleo de `layoutView` sobre Metricas ya resueltas: no valida ni conoce el Tema. Es lo que corre el
+ * Worker (ADR 0003, enmienda): quien lo llama resolvio el Tema una vez (`tablaDeMetricas`) y el Worker
+ * no empaqueta el esquema del Tema.
+ */
+export async function layoutConMetricas(
+  vista: VistaResuelta,
+  metricas: Metricas | TablaDeMetricas,
+  opciones: { elk?: ELK } = {},
+): Promise<Geometria> {
   // Import dinamico: quien solo usa las medidas (render) no arrastra ELK al empaquetar.
   const elk = opciones.elk ?? new (await import('elkjs/lib/elk.bundled.js')).default();
-  const medidas = opciones.metricas === undefined ? tablaDeMetricas(tema, opciones.medidas) : comoTabla(opciones.metricas);
+  const medidas = comoTabla(metricas);
 
   const grafo: ElkNode = {
     id: 'raiz',

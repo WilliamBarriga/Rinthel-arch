@@ -37,7 +37,7 @@
  * de Web Worker del shell).
  * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout`.
  */
-export { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView } from './layout';
+export { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutConMetricas, layoutView } from './layout';
 export { indiceDeGeometria } from './indice';
 export type { IndiceDeGeometria } from './indice';
 export type { CajaDeNodo, Geometria, OpcionesDeLayout, Punto, RutaDeArista } from './layout';
