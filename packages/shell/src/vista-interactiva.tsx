@@ -34,7 +34,7 @@ import { estadosDeRuta, moverFoco, rutaMasCorta, unirEstados } from './ruta-y-fo
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
 import { useGeometria } from './geometria';
-import { hashesDeFamilias, medirEnVisor } from './medicion-de-visor';
+import { avisoDeFuentesSinServir, hashesDeFamilias, medirEnVisor } from './medicion-de-visor';
 import type { Calculo } from './geometria';
 import { interpolarGeometria, useMorph, visibilidadDeMorph } from './morph';
 import type { RelojDeCuadros } from './morph';
@@ -188,6 +188,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     () => (props.measure !== undefined || hashesDeFuentes === undefined || fontUrl === undefined ? props.measure : (textos) => medirEnVisor(textos, { hashes: hashesDeFuentes })),
     [props.measure, hashesDeFuentes, fontUrl],
   );
+  // Sin `fontUrl` el visor no puede pedir las fuentes del Tema: lo dice, en vez de medir y pintar en silencio con la reserva.
+  const avisosDeFuentes = useMemo(() => (fontUrl === undefined ? avisoDeFuentesSinServir(resolverTema(theme).fonts) : []), [fontUrl, theme]);
   const calculo = useGeometria({ vista, theme, layout, medir: medirConFuentes, claveDeFuentes: JSON.stringify(hashesDeFuentes), semilla, onError, alLlegar });
 
   // Camara: controlada por el padre o propia; hasta que el usuario (o un colapso) la mueva, encuadra toda la Vista segun la primera geometria.
@@ -410,7 +412,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
       {interruptor}
       <Leyenda fuente={source} vista={vista} tema={theme} modo={props.legend ?? 'auto'} />
       {props.migas}
-      <PanelDeIssues issues={props.issues ?? []} />
+      <PanelDeIssues issues={[...(props.issues ?? []), ...avisosDeFuentes]} />
       <Toasts toasts={props.toasts ?? []} />
     </div>
   );

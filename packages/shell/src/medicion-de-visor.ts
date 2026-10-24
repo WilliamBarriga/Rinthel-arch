@@ -9,6 +9,8 @@
  * (`hashesDeFamilias`).
  * Las dos costuras del navegador (`cargar`, `ancho`) son inyectables.
  */
+import { CODIGOS } from 'canonico';
+import type { IssueDeDev } from 'canonico';
 import { claveDeTexto, pilaDeFuente, resolverFuentes } from 'tema';
 import type { MedidasDeTexto, TextoAMedir } from 'tema';
 
@@ -21,6 +23,26 @@ export function hashesDeFamilias(fonts: Readonly<Record<string, string>>, archiv
   const porFamilia = new Map<string, string[]>();
   for (const cara of resolverFuentes(fonts, Object.keys(archivos)).caras) porFamilia.set(cara.familia, [...(porFamilia.get(cara.familia) ?? []), archivos[cara.ruta]!]);
   return Object.fromEntries([...porFamilia].map(([familia, hashes]) => [familia, hashes.join('+')]));
+}
+
+/**
+ * Aviso (`W_THEME_FONT_NOT_SERVED`) de las familias no genericas que el Tema declara y el visor no puede pedir
+ * por falta de `fontUrl`; vacio si todas son genericas. Es un issue de visor: su `file` es el Tema, sin enlace al editor.
+ */
+export function avisoDeFuentesSinServir(fonts: Readonly<Record<string, string>>): IssueDeDev[] {
+  const familias = resolverFuentes(fonts, []).faltantes.map((f) => f.familia);
+  if (familias.length === 0) return [];
+  return [
+    {
+      code: CODIGOS.W_THEME_FONT_NOT_SERVED,
+      severity: 'warning',
+      file: '(visor)',
+      line: 1,
+      column: 1,
+      message: `El visor no recibe fontUrl: ${familias.join(', ')} se mide y se pinta con la reserva; entrega fontUrl y fontFiles para usar la fuente declarada`,
+      href: '#',
+    },
+  ];
 }
 
 export interface OpcionesDeMedicion {

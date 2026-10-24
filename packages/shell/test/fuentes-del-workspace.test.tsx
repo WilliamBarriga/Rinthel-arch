@@ -65,4 +65,24 @@ describe('VistaInteractiva con fuentes del Workspace', () => {
     expect(container.querySelector('style[data-fuentes]')).toBeNull();
     expect(recibidas[0]).toBeUndefined();
   });
+
+  it('sin fontUrl y con un Tema que declara fuentes no genericas, el panel de issues avisa en vez de medir en silencio con otra fuente', async () => {
+    const layout: AdaptadorDeLayout = async () => geometria;
+    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={CAVEAT} layout={layout} width={400} height={300} />);
+
+    const panel = container.querySelector('[data-panel="issues"]');
+    expect(panel?.textContent).toContain('1 warning');
+    (panel?.querySelector('button') as HTMLButtonElement).click();
+    await waitFor(() => expect(panel?.textContent).toContain('W_THEME_FONT_NOT_SERVED'));
+    expect(panel?.textContent).toContain('Caveat');
+  });
+
+  it('con fontUrl, o con un Tema de familias genericas, no avisa', () => {
+    const layout: AdaptadorDeLayout = async () => geometria;
+    const conUrl = render(<VistaInteractiva source={fuente} view="v" theme={CAVEAT} layout={layout} width={400} height={300} fontFiles={ARCHIVOS} fontUrl={url} />);
+    expect(conUrl.container.querySelector('[data-panel="issues"]')).toBeNull();
+    cleanup();
+    const generico = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={400} height={300} />);
+    expect(generico.container.querySelector('[data-panel="issues"]')).toBeNull();
+  });
 });
