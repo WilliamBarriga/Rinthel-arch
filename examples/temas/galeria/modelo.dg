@@ -7,12 +7,12 @@
 // `atenuado`, y navega con teclado para ver `foco`.
 specification {
   node actor    { description "Persona o agente que usa el sistema"  icon user    color purple }
-  node servicio { description "Pieza de logica en ejecucion"          icon box     color blue }
-  node almacen  { description "Datos que persisten"                   icon box     color green }
-  node cola     { description "Canal de mensajes entre piezas"        icon box     color amber }
+  node servicio { description "Pieza de logica en ejecucion"          icon server     color blue }
+  node almacen  { description "Datos que persisten"                   icon database     color green }
+  node cola     { description "Canal de mensajes entre piezas"        icon queue     color amber }
   node externo  { description "Sistema de terceros"                   icon cloud   color red }
   node dominio  { description "Agrupa piezas relacionadas"            icon box     color gray }
-  node nota     { description "Elemento de prueba de un estado"       icon box     color gray }
+  node nota     { description "Elemento de prueba de un estado"       color gray }
 }
 
 model {

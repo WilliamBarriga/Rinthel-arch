@@ -104,15 +104,20 @@ describe('galeria de Temas de ejemplo', () => {
     expect(JSON.stringify(estiloResuelto(tema))).toBe(JSON.stringify(estiloResuelto(otro)));
   });
 
-  it('los warnings de contraste son exactamente los listados en el comentario inicial de cada archivo', async () => {
-    const avisos = (await abrirSesion(archivos).diagnosticar()).filter((i) => i.code === 'W_THEME_LOW_CONTRAST');
+  it('los warnings de cada ejemplo son exactamente los declarados en su cabecera, y no hay otros', async () => {
+    const warnings = (await abrirSesion(archivos).diagnosticar()).filter((i) => i.severity === 'warning');
+    const deTema = (nombre: string) => warnings.filter((i) => i.message.startsWith(`Tema '${nombre}'`) || i.message.startsWith(`En la Vista '${nombre}'`));
     for (const nombre of TEMAS) {
       const cabecera = /^\/\/ Contraste:\s*(.+)$/m.exec(archivos[`${nombre}.dg`]!)?.[1]?.replace(/\.$/, '').trim();
       expect(cabecera, `${nombre}: falta la linea "// Contraste: ..." al inicio`).toBeDefined();
       const listados = cabecera === 'ninguno' ? [] : cabecera!.split(',').map((t) => t.trim()).sort();
-      const reales = [...new Set(avisos.filter((i) => i.message.startsWith(`Tema '${nombre}'`)).map((i) => /Tipo '([^']+)'/.exec(i.message)![1]!))].sort();
+      const contraste = deTema(nombre).filter((i) => i.code === 'W_THEME_LOW_CONTRAST');
+      const reales = [...new Set(contraste.map((i) => /Tipo '([^']+)'/.exec(i.message)![1]!))].sort();
       expect(reales, nombre).toEqual(listados);
+      // Cualquier otro warning del Tema (p. ej. W_THEME_COLOR_ONLY) no esta declarado en la cabecera: es un defecto del ejemplo.
+      expect(deTema(nombre).filter((i) => i.code !== 'W_THEME_LOW_CONTRAST').map((i) => `${i.code}: ${i.message}`), nombre).toEqual([]);
     }
+    expect(warnings.filter((i) => !TEMAS.some((n) => i.message.startsWith(`Tema '${n}'`) || i.message.startsWith(`En la Vista '${n}'`))).map((i) => `${i.code}: ${i.message}`), 'warnings sin Tema').toEqual([]);
   });
 
   it('las fuentes incluidas son archivos OFL del Workspace, sin CDN', () => {
