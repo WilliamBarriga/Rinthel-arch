@@ -109,7 +109,8 @@ export const TEXTOS = {
       /** Sombra dura de la caja (desplazada 2 px abajo a la derecha) y giro en grados alrededor de su centro. */
       shadow: { tipo: 'color', opcional: true },
       rotate: { tipo: 'numero', min: -15, max: 15, opcional: true },
-      style: { tipo: 'opcion', valores: ['normal', 'italic'], defecto: 'normal' },
+      /** Cursiva del texto; solo pinta. */
+      style: { tipo: 'opcion', valores: ['normal', 'italic'], opcional: true },
     },
   },
 } as const satisfies Record<string, DefinicionDePrimitiva>;
