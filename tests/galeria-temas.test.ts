@@ -128,8 +128,8 @@ describe('galeria de Temas de ejemplo', () => {
 
   it('las fuentes incluidas son archivos OFL del Workspace, cada familia con su licencia, sin CDN', () => {
     const fuentes = readdirSync(resolve(RAIZ, 'fuentes'));
-    const familias = new Set(fuentes.filter((f) => f.endsWith('.woff2')).map((f) => f.replace(/-latin-\d{3}-normal\.woff2$/, '')));
-    expect([...familias].sort()).toEqual(['caveat', 'inter', 'jetbrains-mono', 'nunito', 'outfit', 'press-start-2p', 'space-mono']);
+    const familias = new Set(fuentes.filter((f) => f.endsWith('.woff2')).map((f) => f.replace(/-latin-\d{3}-(?:normal|italic)\.woff2$/, '')));
+    expect([...familias].sort()).toEqual(['caveat', 'gelasio', 'inter', 'jetbrains-mono', 'nunito', 'outfit', 'press-start-2p', 'space-mono']);
     for (const familia of familias) expect(fuentes, familia).toContain(`OFL-${familia}.txt`);
     for (const texto of Object.values(archivos)) expect(texto).not.toMatch(/https?:\/\//);
   });

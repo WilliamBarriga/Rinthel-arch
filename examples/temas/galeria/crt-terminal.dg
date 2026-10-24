@@ -1,30 +1,58 @@
 // Contraste: ninguno
 // Terminal de fosforo (CRT): verde sobre negro, glow, lineas de barrido y Aristas punteadas.
 theme crt-terminal {
-  fonts { body "JetBrains Mono"  mono "JetBrains Mono"  fallback "monospace" }
   palette {
     fondo "#020a04"  texto "#7dff9b"
     blue "#5cf2ff"  purple "#c49bff"  green "#7dff9b"  amber "#ffcc55"  red "#ff6b6b"  gray "#7dff9b"
   }
+  fonts { body "JetBrains Mono"  mono "JetBrains Mono"  fallback "monospace" }
   tokens { background "#020a04"  foreground "#7dff9b"  border "#7dff9b" }
+  page {
+    layer base radial { from green/0.10  to fondo  x 50  y 50 }
+    layer barrido lines { color texto/0.05  size 3  angle 0 }
+    fixed
+  }
   node {
     layer glow glow { color COLOR/0.35  radius 10 }
     layer forma rect
-    layer relleno solid { color fondo }
-    layer tinte solid { color COLOR/0.1 }
-    layer barrido lines { color texto/0.1  size 3  width 1  angle 0 }
-    layer borde border { color COLOR  width 1 }
-    slots { title { weight 700  transform uppercase }  badge { alpha 0.55 }  attrs }
-    type externo { layer glow none  layer borde dashed { color COLOR } }
-    state hover { layer tinte { color COLOR/0.2 }  layer glow { radius 18 }  transition 80ms linear }
+    layer relleno solid { color COLOR/0.05 }
+    layer borde border { color COLOR/0.8 }
+    // Sin icono: el titulo es una linea de comando con su resplandor y la insignia mono debajo.
+    slots column min-width 170 slack 56 {
+      row gap 8 pad 12 pad-y 0 min-height 46 {
+        column {
+          title { weight 700  transform uppercase  tracking 0.04  glow COLOR/0.8  prefix "> "  text-align start  leading 1.25 }
+          badge { alpha 0.55  font mono  size 0.72 }
+        }
+        counter { fill fondo  border COLOR  font mono }
+      }
+      attrs
+    }
+    type externo { layer glow none  layer relleno { color fondo }  layer borde dashed { color COLOR/0.6 } }
+    state hover { layer relleno { color COLOR/0.2 }  layer glow { color COLOR/0.7  radius 18 }  transition 80ms linear }
     state en-ruta { layer glow { color COLOR  motion pulso 1.2s ease-in-out intensity 0.5 } }
     state atenuado { layer glow none }
   }
+  group {
+    layer forma rect
+    layer borde dashed { color texto/0.45 }
+    slots row pad 12 pad-y 9 {
+      title { transform uppercase  font mono  size 0.8  leading 1.9  tracking 0.1  weight 600  fill fondo  border texto  radius 4  pad 10 }
+    }
+    padding 4 20 20 20
+    // Cerrado es la caja del Nodo con un cursor del color del Tipo en el borde derecho.
+    state collapsed {
+      layer glow glow before forma { color COLOR/0.35  radius 10 }
+      layer relleno solid after forma { color COLOR/0.05 }
+      layer borde border { color COLOR/0.8 }
+      layer cursor shadow after borde { color COLOR  x -4  y 0  inset 1 }
+    }
+  }
   edge {
-    layer halo line { color texto/0.12 width 5 }
-    layer linea line { color texto  width 1.2  style dotted }
-    start square { size 6 }
-    end arrow { size 8 }
-    label { scale 0.75  pad 4  radius 0  fill fondo  border texto }
+    layer halo line { color texto/0.12  width 5 }
+    layer linea line { color texto/0.8  width 1.2  style dotted }
+    start square { size 8  color texto }
+    end chevron { size 9  color texto/0.8 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 0  fill fondo  border texto/0.6  border-width 1.5  font mono  weight 700  color texto/0.8 }
   }
 }
