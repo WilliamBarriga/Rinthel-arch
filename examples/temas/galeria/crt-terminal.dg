@@ -23,7 +23,7 @@ theme crt-terminal {
   edge {
     layer halo line { color texto/0.12 width 5 }
     layer linea line { color texto  width 1.2  style dotted }
-    start diamond { size 6 }
+    start square { size 6 }
     end arrow { size 8 }
     label { scale 0.75  pad 4  radius 0  fill fondo  border texto }
   }

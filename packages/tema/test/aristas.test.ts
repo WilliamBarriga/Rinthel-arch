@@ -13,8 +13,8 @@ const conArista = (arista: Partial<TemaResuelto['arista']>): TemaResuelto => ({
 
 const GLOW = conArista({
   capas: [
-    linea('glow', { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6 }),
-    linea('principal', { color: 'ORIGEN', width: 2, style: 'solid', corner: 'sharp', cut: 6 }),
+    linea('glow', { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 }),
+    linea('principal', { color: 'ORIGEN', width: 2, style: 'solid', corner: 'sharp', cut: 6, radius: 8 }),
   ],
 });
 
@@ -29,7 +29,17 @@ describe('Familia trazo', () => {
       style: 'solid',
       corner: 'chamfer',
       cut: 6,
+      radius: 8,
     });
+  });
+
+  it('acepta la esquina round con su radio y rechaza un radio fuera de rango', () => {
+    const ok = construirPrimitiva('line', [{ clave: 'color', valor: 'blue' }, { clave: 'corner', valor: 'round' }, { clave: 'radius', valor: 12 }], paleta, 'capa-arista');
+    const mal = construirPrimitiva('line', [{ clave: 'color', valor: 'blue' }, { clave: 'radius', valor: 999 }], paleta, 'capa-arista');
+
+    expect(ok.errores).toEqual([]);
+    expect(ok.primitiva?.props).toMatchObject({ corner: 'round', radius: 12 });
+    expect(mal.errores[0]?.codigo).toBe('E_THEME_INVALID_VALUE');
   });
 
   it('rechaza un estilo desconocido con sugerencia y un grosor fuera de rango sin recortar', () => {

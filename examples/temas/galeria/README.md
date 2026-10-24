@@ -41,4 +41,4 @@ El archivo de una familia se encuentra por nombre, con la convencion de Fontsour
 
 ## Limites del catalogo actual
 
-Estos Temas aproximan el prototipo con las Primitivas que existen hoy: sin bloque propio de Grupo ni de fondo de pagina, sin desplazamiento de Capa ni offsets negativos. (Los decimales con cero a la izquierda, como `0.05`, ya se leen bien en el DSL.)
+Estos Temas aproximan el prototipo con las Primitivas que existen hoy: sin bloque propio de Grupo ni de fondo de pagina. (Los decimales con cero a la izquierda, como `0.05`, ya se leen bien en el DSL.)

@@ -9,7 +9,7 @@
  */
 import type { CapaPintada, NombreDePrimitivaEn } from 'tema';
 
-import { animacionDeHoja, nombresAnimados } from './animacion';
+import { animacionDeHoja, nombresAparte } from './animacion';
 import { PINTORES_DE_EFECTOS } from './efectos';
 import { huella, num } from './elemento';
 import { aspectoDeEstado } from './estilo';
@@ -40,8 +40,8 @@ const SOMBRAS = 'box-shadow';
 
 /** Declaraciones de la caja de un Nodo o Grupo: las Capas de abajo hacia arriba; sin Capas, el aspecto por defecto del Estilo. */
 export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
-  const animadas = nombresAnimados(estilo);
-  const capas = estilo.pintura.nodo.capas.filter((capa) => !animadas.has(capa.nombre));
+  const aparte = nombresAparte(estilo);
+  const capas = estilo.pintura.nodo.capas.filter((capa) => !aparte.has(capa.nombre));
   if (capas.length === 0 && estilo.pintura.nodo.capas.length === 0) {
     return {
       'border-radius': px(estilo.nodo.radio),
@@ -88,7 +88,7 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-mundo', { position: 'absolute', left: '0', top: '0', 'transform-origin': '0 0' }],
     ['& .rd-capa', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'pointer-events': 'none' }],
     ['& .rd-aristas', { overflow: 'visible' }],
-    ['& .rd-aristas [data-edge]', { 'pointer-events': 'stroke' }],
+    ['& .rd-aristas [data-edge], & .rd-aristas [data-edge-labels]', { 'pointer-events': 'stroke' }],
     ['& .rd-caja', { position: 'absolute', left: '0', top: '0', contain: 'layout style' }],
     ['& .rd-nodo, & .rd-grupo', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'auto', ...caja }],
     ['& .rd-nodo[data-collapsed]', { 'border-style': 'dashed' }],
