@@ -271,7 +271,7 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
           ...(nodo.collapsed && { 'data-collapsed': '' }),
           ...(acotar(contexto.visibility(nodo.id)) === 0 && { 'data-oculto': '' }),
           ...((contexto.estados?.[nodo.id]?.length ?? 0) > 0 && { 'data-estados': (contexto.estados?.[nodo.id] ?? []).join(' ') }),
-          style: `--trazo:${limpiarValorCss(trazo)};${contexto.escalonado.has(nodo.id) ? `--rd-n:${contexto.escalonado.get(nodo.id)};` : ''}${opacidad(contexto.visibility(nodo.id))}${efectos.nodo}`,
+          style: `--trazo:${limpiarValorCss(trazo)};--rd-ancho:${num(caja.width)};--rd-alto:${num(caja.height)};${contexto.escalonado.has(nodo.id) ? `--rd-n:${contexto.escalonado.get(nodo.id)};` : ''}${opacidad(contexto.visibility(nodo.id))}${efectos.nodo}`,
         },
         ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
         hijos: [

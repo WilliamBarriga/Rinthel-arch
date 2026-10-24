@@ -88,5 +88,22 @@ describe('Diagram: offset y grow de una Capa', () => {
 
     expect(hojaDe(html).match(/\.rd-anim\[data-anim="sombra"\]\{([^}]*)\}/)![1]).toContain('z-index:-1');
   });
+
+  it('un parche de estado que cambia grow lo anima con scale (compositor), no con width ni height', async () => {
+    const transicion = construirTransicion([{ clave: 'duration', valor: 150 }]).animacion!;
+    const tema = temaCon({
+      capas: capas({ 'offset-x': 4, 'offset-y': 4, grow: 2 }),
+      estados: { hover: [{ nombre: 'sombra', props: { grow: 10 } }] },
+      animacion: { transicion },
+    });
+    const { html } = await dibujar(tema, { estados: { a: ['hover'] } });
+    const css = hojaDe(html);
+    const deHover = css.match(/\[data-estados~="hover"\] \.rd-anim\[data-anim="sombra"\]\{([^}]*)\}/)![1]!;
+
+    expect(deHover).toContain('scale:calc((var(--rd-ancho) + 10) / (var(--rd-ancho) + 2)) calc((var(--rd-alto) + 10) / (var(--rd-alto) + 2))');
+    expect(deHover).not.toMatch(/width|height/);
+    expect(css).toMatch(/\.rd-anim\[data-anim="sombra"\]\{[^}]*transform-origin:0 0/);
+    expect(html).toMatch(/--rd-ancho:\d+/);
+  });
 });
 

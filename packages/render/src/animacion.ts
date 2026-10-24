@@ -107,6 +107,19 @@ function compilarKeyframes(k: KeyframesDeCapa, tiempo: string): Compilada {
 
 const transicionCss = (t: Transicion): string => PROPIEDADES_DE_TRANSICION.map((p) => `${p} ${ms(t.duracionMs)} ${t.easing}`).join(',');
 
+/**
+ * `scale` que lleva el elemento de una Capa de su `grow` en reposo al de un estado, o `undefined` si el estado no lo
+ * cambia. `width` y `height` no se transicionan (solo pintura y composicion); el factor sale del tamano de la caja,
+ * que el Nodo expone como `--rd-ancho` y `--rd-alto` (numeros sin unidad) y de la esquina superior izquierda fija.
+ */
+function crecimientoDe(deEstado: CapaPintada, base: CapaPintada, borde: number): string | undefined {
+  const antes = Number(base.props['grow'] ?? 0);
+  const despues = Number(deEstado.props['grow'] ?? antes);
+  if (antes === despues) return undefined;
+  const eje = (variable: string): string => `calc((var(${variable}) + ${num(despues + 2 * borde)}) / (var(${variable}) + ${num(antes + 2 * borde)}))`;
+  return `${eje('--rd-ancho')} ${eje('--rd-alto')}`;
+}
+
 function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesDeCapa: (capa: CapaPintada) => Declaraciones, salida: { reglas: Regla[]; bloques: string[] }): void {
   const { capas, estados } = pila;
   const animadas = nombresAparte(pila);
@@ -129,6 +142,10 @@ function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesD
     const debajo = capa.encima !== true && primeraFusionada > indice;
     const selector = `${elemento} .rd-anim[data-anim="${capa.nombre.replace(/[^\w-]/g, '')}"]`;
     const pintadaBase = pintadaComoElemento(capa);
+    const creceEnEstado = ESTADOS.some((estado) => {
+      const deEstado = estados[estado]?.find((c) => c.nombre === capa.nombre);
+      return deEstado !== undefined && crecimientoDe(deEstado, capa, borde) !== undefined;
+    });
     const propia = capa.animacion === undefined ? undefined : compilarAnimacion(capa.animacion);
     if (propia !== undefined) anadir(propia);
     salida.reglas.push([
@@ -142,6 +159,7 @@ function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesD
         'box-sizing': 'border-box',
         'pointer-events': 'none',
         'border-radius': 'inherit',
+        ...(creceEnEstado && { 'transform-origin': '0 0' }),
         ...(debajo && { 'z-index': '-1' }),
         ...pintadaBase,
         ...propia?.declaraciones,
@@ -150,7 +168,12 @@ function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesD
     for (const estado of ESTADOS) {
       const deEstado = estados[estado]?.find((c) => c.nombre === capa.nombre);
       if (deEstado === undefined) continue;
-      const cambiadas = Object.fromEntries(Object.entries(pintadaComoElemento(deEstado)).filter(([k, v]) => pintadaBase[k] !== v));
+      const crece = crecimientoDe(deEstado, capa, borde);
+      // El crecimiento de un estado se anima con `scale` (compositor), no con width/height: ver `crecimientoDe`.
+      const cambiadas = Object.fromEntries(
+        Object.entries(pintadaComoElemento(deEstado)).filter(([k, v]) => pintadaBase[k] !== v && !(crece !== undefined && (k === 'width' || k === 'height'))),
+      );
+      if (crece !== undefined) cambiadas['scale'] = crece;
       const animacionCambia = JSON.stringify(deEstado.animacion) !== JSON.stringify(capa.animacion);
       const compilada = !animacionCambia || deEstado.animacion === undefined ? undefined : compilarAnimacion(deEstado.animacion);
       if (compilada !== undefined) anadir(compilada);
