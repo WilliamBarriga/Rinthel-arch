@@ -7,7 +7,7 @@ import type { CajaDeSlots, EntradaDeCaja, MedidaDeSlot, NombreDeSlot } from 'tem
 const medida =
   (ausentes: NombreDeSlot[] = []): MedidaDeSlot =>
   (slot) =>
-    ausentes.includes(slot) ? undefined : { icon: { width: 20, height: 20 }, title: { width: 100, height: 30 }, attrs: { width: 80, height: 40 } }[slot];
+    ausentes.includes(slot) ? undefined : ({ icon: { width: 20, height: 20 }, title: { width: 100, height: 30 }, attrs: { width: 80, height: 40 } } as Partial<Record<NombreDeSlot, { width: number; height: number }>>)[slot];
 
 const caja = (direccion: 'row' | 'column', hijos: CajaDeSlots['hijos'], resto: Partial<CajaDeSlots> = {}): CajaDeSlots => ({ direccion, gap: 0, pad: 0, hijos, ...resto });
 

@@ -9,7 +9,7 @@ import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
 import { TEMA_NEUTRO, colocarEnCaja, metricasDe, primitivasDe } from 'tema';
-import type { TemaResuelto } from 'tema';
+import type { CajaDeSlots, TemaResuelto } from 'tema';
 
 import { PINTORES } from '../src/hoja';
 import { capaDe, etiquetaCon, hojaDe, propiedad, rectDe, traslacionDe } from './ayudas';
@@ -139,6 +139,67 @@ describe('Diagram: estructura hibrida', () => {
 
     expect(rectDe(titulo)).toEqual(slots.title);
     expect(titulo).toContain('class="rd-slot rd-title"');
+  });
+
+  describe('Slots badge, desc, footer y counter', () => {
+    const COLUMNA: CajaDeSlots = { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }, { slot: 'desc' }, { slot: 'footer' }] };
+    const FILA: CajaDeSlots = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'title' }, { slot: 'counter' }] };
+    const conSlots = (slots: TemaResuelto['nodo']['slots'], textos: TemaResuelto['nodo']['textos'] = {}): TemaResuelto => ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, slots, textos } });
+    const dibujar = async (tema: TemaResuelto, estado = {}) => {
+      const v = vista(estado);
+      const nodos = v.nodes.map((n) => (n.id === 'b' ? { ...n, description: 'Reparte la carga', source: [{ kind: 'ruta', ref: 'src/b.ts' }] } : n));
+      const geometry = await layoutView({ ...v, nodes: nodos }, tema);
+      return { html: dibujo({ view: { ...v, nodes: nodos }, geometry, theme: tema, width: 800, height: 600 }), geometry };
+    };
+    const slotDe = (html: string, id: string, slot: string) => etiquetaCon(html.slice(html.indexOf(`data-id="${id}"`)), `data-slot="${slot}"`);
+
+    it('cada Slot nuevo se pinta en su rectangulo con su texto', async () => {
+      const { html, geometry } = await dibujar(conSlots(COLUMNA));
+      const slots = geometry.nodes['b']!.slots!;
+
+      for (const [slot, texto] of [['badge', 'servicio'], ['desc', 'Reparte la carga'], ['footer', 'src/b.ts']] as const) {
+        expect(rectDe(slotDe(html, 'b', slot))).toEqual(slots[slot]);
+        expect(html).toContain(`>${texto}</div>`);
+      }
+      // El tamano de texto reservado (14 * 0.74) se escribe en el elemento.
+      expect(propiedad(slotDe(html, 'b', 'badge'), 'font-size')).toBe('10.36px');
+    });
+
+    it('un Nodo sin descripcion ni fuente no pinta desc ni footer', async () => {
+      const { html } = await dibujar(conSlots(COLUMNA));
+
+      expect(slotDe(html, 'c', 'desc')).toBeUndefined();
+      expect(slotDe(html, 'c', 'footer')).toBeUndefined();
+      expect(slotDe(html, 'c', 'badge')).toBeDefined();
+    });
+
+    it('counter solo se pinta en el Grupo colapsado, con el numero de hijos', async () => {
+      const { html } = await dibujar(conSlots(FILA), { collapsed: ['a'] });
+
+      expect(slotDe(html, 'a', 'counter')).toBeDefined();
+      expect(slotDe(html, 'b', 'counter')).toBeUndefined();
+      expect(html).toContain('>2</div>');
+      // Con el contador en su Slot, el titulo no lo repite.
+      expect(html).not.toContain('A (2)');
+    });
+
+    it('el estilo de texto (alpha, text-align) y el de caja del contador salen en la hoja', async () => {
+      const { html } = await dibujar(
+        conSlots(
+          { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }, { slot: 'counter' }] },
+          {
+            title: { tipo: 'text', props: { weight: 600, style: 'normal', transform: 'none', 'text-align': 'start' } },
+            badge: { tipo: 'text', props: { weight: 400, style: 'normal', transform: 'none', alpha: 0.5, 'text-align': 'end' } },
+            counter: { tipo: 'chip', props: { weight: 700, radius: 8, fill: 'amber', border: 'blue' } },
+          },
+        ),
+      );
+      const hoja = hojaDe(html);
+
+      expect(hoja).toMatch(/data-slot="title"\]\{[^}]*text-align:left/);
+      expect(hoja).toMatch(/data-slot="badge"\]\{[^}]*opacity:0.5[^}]*text-align:right/);
+      expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*border-radius:8px[^}]*background:${TEMA_NEUTRO.palette['amber']}[^}]*border:1px solid ${TEMA_NEUTRO.palette['blue']}`));
+    });
   });
 
   it('cada Nodo es una caja con contain: layout style', async () => {

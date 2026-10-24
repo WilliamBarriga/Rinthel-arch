@@ -151,13 +151,13 @@ describe('Diagram: parches de Tipo y de estado pintados igual en Nodos y Grupos'
 describe('Diagram: cabecera del Grupo', () => {
   it('el estilo de texto del titulo (mayusculas, tracking, tamano, alfa, chip y punto) sale del Tema como CSS', async () => {
     const titulo = { tipo: 'text', props: { weight: 600, style: 'normal', transform: 'uppercase', size: 0.8, tracking: 0.1, alpha: 0.6, fill: 'COLOR/0.2', border: 'COLOR/0.5', radius: 50, pad: 8, dot: 'COLOR' } };
-    const { css } = await dibujar(tema({}, { textos: { title: titulo } }));
+    const { css, html } = await dibujar(tema({}, { textos: { title: titulo } }));
     const reglaTitulo = regla(css, '.rd-grupo .rd-slot[data-slot="title"]')!;
 
+    expect(capaDe(html, 'grupos')).toContain('font-size:11.2px'); // el tamano lo reserva y fija la colocacion
     expect(reglaTitulo).toContain('text-transform:uppercase');
-    expect(reglaTitulo).toContain('font-size:11.2px');
     expect(reglaTitulo).toContain('letter-spacing:0.1em');
-    expect(reglaTitulo).toContain('color:color-mix(in srgb, currentColor 60%, transparent)');
+    expect(reglaTitulo).toContain('opacity:0.6');
     expect(reglaTitulo).toContain('background:color-mix(in srgb, var(--trazo) 20%, transparent)');
     expect(reglaTitulo).toContain('border:1px solid color-mix(in srgb, var(--trazo) 50%, transparent)');
     expect(reglaTitulo).toContain('border-radius:50px');

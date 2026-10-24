@@ -15,9 +15,13 @@ theme soft-card {
     layer relleno solid { color texto/0.1 }
     layer borde border { color texto/0.4 width 1 }
     slots column {
-      row gap 10 pad 8 {
+      row gap 10 pad 10 {
         icon { variant box  side 28  radius 7  fill COLOR/0.14  border COLOR/0.45 }
-        title { weight 600 }
+        column {
+          title { weight 600  text-align start  leading 1.25 }
+          badge { alpha 0.5 }
+        }
+        counter { fill texto/0.08  border texto/0.15 }
       }
       attrs
     }
@@ -38,7 +42,6 @@ theme soft-card {
       layer caja { radius $radius }
       layer relleno { color texto/0.1 }
       layer borde border { color texto/0.4  width 1 }
-      slots column pad 8 { title { weight 600 } }
     }
   }
   edge {

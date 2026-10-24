@@ -22,10 +22,12 @@
 import type { Atributo } from 'canonico';
 
 import { DEFINICION_DE_SLOT } from './catalogo';
-import type { NombreDeSlot } from './catalogo';
+import type { DefinicionDeSlot, NombreDeSlot } from './catalogo';
 import { esCaja, slotsDe } from './disposicion';
 import type { Alineacion, CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { anchoDeTexto } from './medicion';
+import type { TextoAMedir } from './medicion';
+import { muestra, textoDeAtributo } from './metricas';
 import type { Metricas } from './metricas';
 
 export interface Rect {
@@ -125,35 +127,19 @@ export function colocarDisposicion(arbol: CajaDeSlots, medida: MedidaDeSlot, anc
   return { slots, alto: medido.tam.height };
 }
 
-/** Texto de la fila de un Atributo; `render` escribe lo mismo. */
-export function textoDeAtributo(atributo: Atributo): string {
-  return `${atributo.name}: ${atributo.type}`;
-}
-
-/** Em que ocupa el punto del titulo (diametro mas separacion): `render` lo pinta con la misma cuenta. */
-export const PUNTO_DE_TITULO_EM = 1;
-
-/**
- * Texto y tamano con que se mide y se pinta el Slot `title`: el estilo `text` del Tema escala el
- * tamano y puede pasarlo a mayusculas. Una sola regla para `layout`, `textosAMedir` y `render`.
- */
-export function textoDeTitulo(metricas: Pick<Metricas, 'fontSize' | 'titulo'>, titulo: string): { texto: string; tamano: number } {
-  const { escala, mayusculas } = metricas.titulo;
-  return { texto: mayusculas ? titulo.toUpperCase() : titulo, tamano: metricas.fontSize * escala };
-}
-
-/** Ancho natural del titulo: texto con su separacion entre letras, mas el punto y el relleno del chip. */
-function anchoDeTitulo(metricas: Metricas, titulo: string): number {
-  const { texto, tamano } = textoDeTitulo(metricas, titulo);
-  const { tracking, punto, relleno } = metricas.titulo;
-  return anchoDeTexto(metricas, metricas.fuentes['body']!, tamano, texto) + tracking * tamano * texto.length + (punto ? PUNTO_DE_TITULO_EM * tamano : 0) + 2 * relleno;
-}
-
 /** Lo que un Nodo aporta a la colocacion: su titulo, sus Atributos visibles y si tiene icono. */
 export interface ContenidoDeNodo {
   titulo: string;
   atributos: readonly Atributo[];
   icono: boolean;
+  /** Tipo de nodo (Slot `badge`). */
+  tipo?: string;
+  /** Descripcion del Nodo (Slot `desc`); vacia: el Slot no reserva espacio. */
+  descripcion?: string;
+  /** Primera fuente del Nodo (Slot `footer`). */
+  fuente?: string;
+  /** Hijos que esconde un Grupo colapsado (Slot `counter`); solo existe en el colapsado. */
+  cuenta?: number;
 }
 
 export interface ColocacionDeNodo {
@@ -166,21 +152,71 @@ export interface ColocacionDeNodo {
   filas: Rect[];
 }
 
+type SlotDeTexto = 'title' | 'badge' | 'desc' | 'footer' | 'counter';
+
+/** Holgura de la caja del contador alrededor de su texto (padding mas borde). */
+const HOLGURA_DE_CHIP = { x: 14, y: 2 };
+
+/** Em que ocupa el punto del titulo (diametro mas separacion): `render` lo pinta con la misma cuenta. */
+export const PUNTO_DE_TITULO_EM = 1;
+
+/**
+ * Texto de un Slot de una sola linea: que se escribe, con que familia y tamano, y cuanto
+ * mide su caja. Una sola regla para la colocacion (`medidasDeNodo`) y para lo que `layout` mide
+ * (`textosDeNodo`). `undefined`: el Nodo no tiene ese contenido y el Slot no reserva espacio.
+ */
+export function textoDeSlot(slot: SlotDeTexto, metricas: Metricas, contenido: ContenidoDeNodo): (TextoAMedir & { alto: number; holgura: number }) | undefined {
+  const crudo = { title: contenido.titulo, badge: contenido.tipo, desc: contenido.descripcion, footer: contenido.fuente, counter: contenido.cuenta?.toString() }[slot];
+  if (crudo === undefined || (crudo === '' && slot !== 'title')) return undefined;
+  // El estilo `text` del titulo cambia lo que se mide: mayusculas, separacion entre letras, punto y relleno del chip.
+  const estilo = slot === 'title' ? metricas.titulo : undefined;
+  const texto = estilo?.mayusculas === true ? crudo.toUpperCase() : crudo;
+  const definicion: DefinicionDeSlot = DEFINICION_DE_SLOT[slot];
+  const { size, leading } = metricas.medidaDeTexto[slot] ?? {};
+  const tamano = metricas.fontSize * (size ?? definicion.escala ?? 1);
+  const interlineado = leading ?? definicion.interlineado;
+  const chip = slot === 'counter';
+  return {
+    familia: metricas.fuentes['body']!,
+    tamano,
+    texto,
+    alto: (interlineado === undefined ? metricas.cabecera : Math.ceil(tamano * interlineado)) + (chip ? HOLGURA_DE_CHIP.y : 0),
+    holgura: chip ? HOLGURA_DE_CHIP.x : estilo === undefined ? 0 : estilo.tracking * tamano * texto.length + (estilo.punto ? PUNTO_DE_TITULO_EM * tamano : 0) + 2 * estilo.relleno,
+  };
+}
+
+const SLOTS_DE_TEXTO: readonly SlotDeTexto[] = ['title', 'badge', 'desc', 'footer', 'counter'];
+
 /** Tabla de medidas de los Slots de un Nodo (ver `DEFINICION_DE_SLOT`): una entrada por Slot del catalogo. */
-function medidasDeNodo(metricas: Metricas, { titulo, atributos, icono }: ContenidoDeNodo): MedidaDeSlot {
+function medidasDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): MedidaDeSlot {
   const { fontSize, escalaAtributo, fuentes } = metricas;
+  const delTexto = (slot: SlotDeTexto) => (): Tamano | undefined => {
+    const t = textoDeSlot(slot, metricas, contenido);
+    return t === undefined ? undefined : { width: anchoDeTexto(metricas, t.familia, t.tamano, t.texto) + t.holgura, height: t.alto, ...(slot === 'title' && { elastico: !metricas.titulo.caja }) };
+  };
   const medidas: Record<NombreDeSlot, () => Tamano | undefined> = {
-    icon: () => (icono ? { width: metricas.iconoLado, height: metricas.iconoLado } : undefined),
-    title: () => ({ width: anchoDeTitulo(metricas, titulo), height: metricas.cabecera, elastico: !metricas.titulo.caja }),
+    icon: () => (contenido.icono ? { width: metricas.iconoLado, height: metricas.iconoLado } : undefined),
+    title: delTexto('title'),
+    badge: delTexto('badge'),
+    desc: delTexto('desc'),
+    footer: delTexto('footer'),
+    counter: delTexto('counter'),
     attrs: () =>
-      atributos.length === 0
+      contenido.atributos.length === 0
         ? undefined
         : {
-            width: Math.max(...atributos.map((a) => anchoDeTexto(metricas, fuentes['mono']!, fontSize * escalaAtributo, textoDeAtributo(a)))),
-            height: atributos.length * metricas.fila,
+            width: Math.max(...contenido.atributos.map((a) => anchoDeTexto(metricas, fuentes['mono']!, fontSize * escalaAtributo, textoDeAtributo(a)))),
+            height: contenido.atributos.length * metricas.fila,
           },
   };
   return (slot) => medidas[slot]();
+}
+
+/** Los textos que `layout` debe medir para este Nodo: los mismos que `medidasDeNodo` mide, solo de los Slots que el Tema muestra. */
+export function textosDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): TextoAMedir[] {
+  const delTexto = SLOTS_DE_TEXTO.filter((slot) => muestra(metricas, slot)).flatMap((slot) => textoDeSlot(slot, metricas, contenido) ?? []);
+  const atributos = contenido.atributos.map((a) => ({ familia: metricas.fuentes['mono']!, tamano: metricas.fontSize * metricas.escalaAtributo, texto: textoDeAtributo(a) }));
+  return [...delTexto.map(({ familia, tamano, texto }) => ({ familia, tamano, texto })), ...atributos];
 }
 
 /**

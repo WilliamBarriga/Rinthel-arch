@@ -242,3 +242,84 @@ model {
     expect((await a.geometria('v'))!.geometry.nodes['db']!.height).not.toBe((await b.geometria('v'))!.geometry.nodes['db']!.height);
   });
 });
+
+describe('seam sesion: Slots badge, counter, desc y footer', () => {
+  const fuente = `specification { node paquete { color rojo } }
+model {
+  paquete g "G" "Agrupa dos modulos" {
+    source { ruta "packages/g" }
+    paquete h
+    paquete i
+  }
+  paquete solo
+}
+`;
+  const abrir = (slots: string, vistaExtra = '') =>
+    abrirSesion({ 'main.dg': fuente + tema(`    layer forma rect\n    ${slots}`) + vista(`  theme t\n${vistaExtra}`) });
+  const nodos = async (slots: string, vistaExtra = '') => {
+    const sesion = abrir(slots, vistaExtra);
+    expect(await sesion.diagnosticar()).toEqual([]);
+    return { nodes: (await sesion.geometria('v'))!.geometry.nodes, metricas: sesion.estilo('v')!.metricas };
+  };
+
+  it('badge va bajo el titulo, con el alto de su texto (14 * 0.74 * 1.25 redondeado arriba = 13)', async () => {
+    const { nodes, metricas } = await nodos('slots column { title badge }');
+    const { title, badge } = nodes['solo']!.slots!;
+
+    expect(badge).toEqual({ x: 0, y: title!.y + title!.height, width: nodes['solo']!.width, height: 13 });
+    expect(nodes['solo']!.height).toBe(metricas.cabecera + 13);
+  });
+
+  it('un Slot que el Tema no lista no cambia la caja', async () => {
+    const sin = await nodos('slots column { title }');
+    const con = await nodos('slots column { title badge }');
+
+    expect(Object.keys(sin.nodes['solo']!.slots!)).toEqual(['title']);
+    expect(con.nodes['solo']!.height).toBeGreaterThan(sin.nodes['solo']!.height);
+  });
+
+  it('desc y footer reservan su fila solo si el Nodo tiene descripcion o fuente', async () => {
+    const { nodes } = await nodos('slots column { title desc footer }', '  collapsed g\n');
+
+    expect(Object.keys(nodes['g']!.slots!)).toEqual(['title', 'desc', 'footer']);
+    expect(Object.keys(nodes['solo']!.slots!)).toEqual(['title']);
+  });
+
+  it('counter solo existe en un Grupo colapsado, a la derecha del titulo, y ensancha la caja', async () => {
+    const abierto = await nodos('slots row gap 8 { title counter }');
+    const colapsado = await nodos('slots row gap 8 { title counter }', '  collapsed g\n');
+    const g = colapsado.nodes['g']!;
+
+    expect(Object.keys(abierto.nodes['solo']!.slots!)).toEqual(['title']);
+    expect(Object.keys(g.slots!)).toEqual(['title', 'counter']);
+    expect(g.slots!['counter']!.x + g.slots!['counter']!.width).toBe(g.width);
+    expect(g.slots!['title']!.x + g.slots!['title']!.width + 8).toBeLessThanOrEqual(g.slots!['counter']!.x);
+  });
+
+  it('con counter en el Tema, el titulo del colapsado no lleva el contador pegado y mide menos', async () => {
+    const con = await nodos('slots row { title counter }', '  collapsed g\n');
+    const sin = await nodos('slots row { title }', '  collapsed g\n');
+
+    // Sin counter, el "(2)" va en el titulo y la caja lo mide.
+    expect(sin.nodes['g']!.slots!['title']!.width).toBeGreaterThan(0);
+    expect(con.nodes['g']!.slots!['counter']!.width).toBeGreaterThan(0);
+    expect(con.nodes['g']!.width).toBeGreaterThanOrEqual(sin.nodes['g']!.width - 40);
+  });
+
+  it('text-align y los estilos de los Slots nuevos se validan con sugerencia', async () => {
+    const sesion = abrir('slots column { title { text-align centro }  badge { alpa 0.5 }  counter { fil rojo } }');
+    const issues = await sesion.diagnosticar();
+
+    expect(issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_PROPERTY', 'E_THEME_UNKNOWN_PROPERTY']);
+    expect(issues[0]!.hint).toBe("quisiste decir 'center'");
+    expect(issues[1]!.hint).toBe("quisiste decir 'alpha'");
+    expect(issues[2]!.hint).toBe("quisiste decir 'fill'");
+  });
+
+  it('el estilo del contador es una caja (chip): relleno, borde y radio', async () => {
+    const sesion = abrir('slots row { title counter { fill rojo/0.2  border rojo  radius 8 } }');
+
+    expect(await sesion.diagnosticar()).toEqual([]);
+    expect(sesion.estilo('v')!.pintura.nodo.textos.counter!.props).toMatchObject({ radius: 8 });
+  });
+});

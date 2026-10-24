@@ -9,7 +9,7 @@ import { TEMA_NEUTRO, alturaDeCabecera, colocarEnCaja } from 'tema';
 
 const estilo = resolverEstilo(TEMA_NEUTRO);
 const caja = { x: 0, y: 0, width: 140, height: 60 };
-const nodoBase = { id: 'n', label: 'N', collapsed: false, children: [], attributes: [], childCount: 0 } as unknown as NodoResuelto;
+const nodoBase = { id: 'n', label: 'N', collapsed: false, children: [], source: [], type: 't', attributes: [], childCount: 0 } as unknown as NodoResuelto;
 const conNodo = (parcial: Partial<NodoResuelto>): NodoResuelto => ({ ...nodoBase, ...parcial });
 
 const buscar = (e: Elemento | string, tag: string): Elemento | undefined => {

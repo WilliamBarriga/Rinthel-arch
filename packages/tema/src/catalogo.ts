@@ -21,9 +21,9 @@ import { TRAZOS } from './familias/trazo';
 
 /** Valor de una propiedad de Primitiva: numero con rango, o color (nombre de Paleta). */
 export type DefinicionDePropiedad =
-  | { readonly tipo: 'numero'; readonly min: number; readonly max: number; readonly defecto?: number }
+  | { readonly tipo: 'numero'; readonly min: number; readonly max: number; readonly defecto?: number; readonly opcional?: true }
   | { readonly tipo: 'color'; readonly opcional?: true }
-  | { readonly tipo: 'opcion'; readonly valores: readonly string[]; readonly defecto: string }
+  | { readonly tipo: 'opcion'; readonly valores: readonly string[]; readonly defecto?: string; readonly opcional?: true }
   /** Nombre de un Componente de Tema: identificador que empieza en mayuscula. */
   | { readonly tipo: 'nombre' };
 
@@ -81,6 +81,16 @@ export type NombreDePrimitivaEn<U extends UbicacionDePrimitiva> = {
   [K in NombreDePrimitiva]: (typeof CATALOGO)[K] extends { readonly ubicacion: infer V } ? (V extends U ? K : never) : U extends 'capa-nodo' ? K : never;
 }[NombreDePrimitiva];
 
+/** Definicion de un Slot: con que Primitiva se estiliza, si se estira en su fila y, para los de texto, tamano y interlineado por defecto. */
+export interface DefinicionDeSlot {
+  readonly estilo: 'text' | 'icon' | 'chip';
+  readonly elastico: boolean;
+  /** Tamano del texto respecto al del Tema (`size` lo cambia). */
+  readonly escala?: number;
+  /** Alto de la linea respecto al tamano del texto (`leading` lo cambia); sin el, el alto de cabecera de las Metricas. */
+  readonly interlineado?: number;
+}
+
 /**
  * Slots que el catalogo sabe colocar. Un Slot nuevo es una entrada en
  * `DEFINICION_DE_SLOT`, su medida en `slots.ts` y su pintor en `render`; el
@@ -91,9 +101,17 @@ export const DEFINICION_DE_SLOT = {
   icon: { estilo: 'icon', elastico: false },
   /** Titulo: texto que se estira para ocupar el espacio libre de su fila. */
   title: { estilo: 'text', elastico: true },
+  /** Insignia: el Tipo de nodo, en texto pequeno (normalmente bajo el titulo). */
+  badge: { estilo: 'text', elastico: true, escala: 0.74, interlineado: 1.25 },
+  /** Descripcion del Nodo; no reserva espacio si no tiene. */
+  desc: { estilo: 'text', elastico: true, escala: 0.85, interlineado: 1.25 },
+  /** Pie: la fuente del Nodo (la primera `source` del Modelo); no reserva espacio si no tiene. */
+  footer: { estilo: 'text', elastico: true, escala: 0.75, interlineado: 1.25 },
   /** Filas de Atributo: una por Atributo visible. */
   attrs: { estilo: 'text', elastico: true },
-} as const satisfies Record<string, { estilo: 'text' | 'icon'; elastico: boolean }>;
+  /** Contador: cuantos hijos esconde un Grupo colapsado, en una caja (Primitiva `chip`); solo existe en el colapsado. */
+  counter: { estilo: 'chip', elastico: false, escala: 0.8, interlineado: 1.25 },
+} as const satisfies Record<string, DefinicionDeSlot>;
 export type NombreDeSlot = keyof typeof DEFINICION_DE_SLOT;
 export const SLOTS = Object.keys(DEFINICION_DE_SLOT) as NombreDeSlot[];
 
@@ -239,9 +257,10 @@ export function validarPropiedades(
   const dadas = new Set(props.map((p) => p.clave));
   for (const [clave, propiedad] of Object.entries(definidas)) {
     if (dadas.has(clave)) continue;
-    if (propiedad.tipo === 'numero' && propiedad.defecto === undefined && clave in PROPIEDADES_DE_DESPLAZAMIENTO) continue;
+    if (propiedad.tipo === 'numero' && propiedad.defecto === undefined && (propiedad.opcional === true || clave in PROPIEDADES_DE_DESPLAZAMIENTO)) continue;
     if (propiedad.tipo === 'numero' && propiedad.defecto !== undefined) resultado[clave] = propiedad.defecto;
-    else if (propiedad.tipo === 'opcion') resultado[clave] = propiedad.defecto;
+    else if (propiedad.tipo === 'opcion' && propiedad.defecto !== undefined) resultado[clave] = propiedad.defecto;
+    else if (propiedad.tipo === 'opcion' && propiedad.opcional === true) continue;
     else if (propiedad.tipo === 'color' && propiedad.opcional === true) continue;
     else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `${sujeto} exige la propiedad '${clave}'`, clave });
   }

@@ -36,6 +36,20 @@ export interface Metricas {
   anchos?: Readonly<Record<string, number>>;
   /** Mini-layout de los Slots del Nodo que el Tema muestra (un Slot fuera del arbol no se pinta ni se mide). */
   disposicion: CajaDeSlots;
+  /** `size` y `leading` que el Tema fija a un Slot de texto (los que no, usan los de `DEFINICION_DE_SLOT`); cambian el alto y el ancho que reserva. */
+  medidaDeTexto: Readonly<Partial<Record<NombreDeSlot, { size?: number; leading?: number }>>>;
+  /** Estilo `text` del Slot `title` que cambia su ancho (ademas de `size`): ver `textoDeSlot` en `slots.ts`. */
+  titulo: {
+    /** Separacion entre letras, en em. */
+    tracking: number;
+    mayusculas: boolean;
+    /** Margen a cada lado del texto, en px (chip). */
+    relleno: number;
+    /** Lleva un punto antes del texto. */
+    punto: boolean;
+    /** Tiene caja propia (relleno o borde): se mide a su ancho natural en vez de estirarse. */
+    caja: boolean;
+  };
   /** La forma del Nodo exige una caja cuadrada (p. ej. `circle`); sale de la regla de caja minima de las Primitivas. */
   cajaCuadrada: boolean;
   /** Ancho minimo de un Nodo hoja. */
@@ -57,20 +71,6 @@ export interface Metricas {
   baseDeTitulo: number;
   /** Distancia del control de colapso al borde derecho. */
   margenDeControl: number;
-  /** Estilo del Slot `title` que cambia su ancho (`text` del Tema): ver `textoDeTitulo` en `slots.ts`. */
-  titulo: {
-    /** Tamano del texto respecto al del Tema. */
-    escala: number;
-    /** Separacion entre letras, en em. */
-    tracking: number;
-    mayusculas: boolean;
-    /** Margen a cada lado del texto, en px (chip). */
-    relleno: number;
-    /** Lleva un punto antes del texto. */
-    punto: boolean;
-    /** Tiene caja propia (relleno o borde): se mide a su ancho natural en vez de estirarse. */
-    caja: boolean;
-  };
   /** Tamano de texto respecto al del Tema. */
   escalaEtiqueta: number;
   escalaAtributo: number;
@@ -93,7 +93,6 @@ type EstilosDeSlot = TemaResuelto['nodo']['textos'];
 function estiloDeTitulo(textos: EstilosDeSlot): Metricas['titulo'] {
   const props = textos.title?.props ?? {};
   return {
-    escala: Number(props['size'] ?? 1),
     tracking: Number(props['tracking'] ?? 0),
     mayusculas: props['transform'] === 'uppercase',
     relleno: Number(props['pad'] ?? 0),
@@ -115,6 +114,12 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas:
     medicion: medidas === undefined ? { nivel: 'estimado', fuentes: {} } : { nivel: 'medido', fuentes: medidas.fuentes },
     ...(medidas !== undefined && { anchos: medidas.anchos }),
     disposicion: slots,
+    medidaDeTexto: Object.fromEntries(
+      Object.entries(textos).flatMap(([slot, texto]) => {
+        const { size, leading } = texto.props as { size?: number; leading?: number };
+        return size === undefined && leading === undefined ? [] : [[slot, { ...(size !== undefined && { size }), ...(leading !== undefined && { leading }) }]];
+      }),
+    ),
     cajaCuadrada: pila.some((capa) => (CATALOGO[capa.primitiva.tipo] as DefinicionDePrimitiva).cajaMinima === 'cuadrado'),
     anchoMinimo: 120,
     paddingHorizontal: 32,
@@ -167,15 +172,17 @@ export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto): TablaDeMe
  * Entrada de un Grupo. Abierto: su cabecera es la disposicion `group`, la celda del titulo sigue el
  * tamano de su texto, el ancho minimo es el de la cabecera (mas el control de colapso) y el padding
  * superior suma el alto de la cabecera al de la zona de hijos, de modo que los hijos nunca la tocan.
- * Colapsado: una hoja con los Slots del parche `collapsed` (o la cabecera, si no los cambia).
+ * Colapsado: una hoja con los Slots del Nodo, o los del parche `collapsed` si los cambia.
  */
 function entradaDeGrupo(resuelto: TemaResuelto, colapsado: boolean, medidas?: MedidasDeTexto): Metricas {
   const { grupo } = resuelto;
-  const textos = colapsado ? { ...grupo.textos, ...grupo.colapsado.textos } : grupo.textos;
-  const slots = colapsado ? (grupo.colapsado.slots ?? grupo.slots) : grupo.slots;
+  // El Grupo cerrado es un Nodo hoja: usa los Slots y estilos del Nodo salvo lo que `state collapsed` cambie.
+  const textos = colapsado ? { ...resuelto.nodo.textos, ...grupo.colapsado.textos } : grupo.textos;
+  const slots = colapsado ? (grupo.colapsado.slots ?? resuelto.nodo.slots) : grupo.slots;
   const entrada = entradaDe(resuelto, cascada(resuelto, { colapsado }, 'grupo'), medidas, { slots, textos });
   if (colapsado) return entrada;
-  const abierto = { ...entrada, cajaCuadrada: false, anchoMinimo: 0, paddingHorizontal: 2 * entrada.margenDeControl, cabecera: Math.ceil(entrada.fontSize * entrada.titulo.escala * 1.7) };
+  const escala = entrada.medidaDeTexto.title?.size ?? 1;
+  const abierto = { ...entrada, cajaCuadrada: false, anchoMinimo: 0, paddingHorizontal: 2 * entrada.margenDeControl, cabecera: Math.ceil(entrada.fontSize * escala * 1.7) };
   const { top, left, bottom, right } = grupo.padding;
   return { ...abierto, paddingGrupo: { top: alturaDeCabecera(abierto) + top, left, bottom, right } };
 }
@@ -229,8 +236,26 @@ export function muestra(metricas: Pick<Metricas, 'disposicion'>, slot: NombreDeS
 }
 
 /** Lo que un Nodo aporta a la colocacion de Slots; una sola regla para `layout`, `render` y `shell`. */
-export function contenidoDeNodo(nodo: Pick<NodoResuelto, 'children' | 'attributes' | 'label' | 'icon'>, metricas: Pick<Metricas, 'disposicion'>): ContenidoDeNodo {
-  return { titulo: nodo.label, atributos: atributosVisibles(nodo, metricas), icono: nodo.icon !== undefined };
+export function contenidoDeNodo(
+  nodo: Pick<NodoResuelto, 'children' | 'attributes' | 'label' | 'icon' | 'type' | 'description' | 'source' | 'collapsed' | 'childCount'>,
+  metricas: Pick<Metricas, 'disposicion'>,
+): ContenidoDeNodo {
+  const cuenta = nodo.collapsed ? nodo.childCount : undefined;
+  return {
+    // Sin Slot `counter`, un Grupo colapsado dice cuantos hijos esconde en el titulo.
+    titulo: cuenta !== undefined && !muestra(metricas, 'counter') ? `${nodo.label} (${cuenta})` : nodo.label,
+    atributos: atributosVisibles(nodo, metricas),
+    icono: nodo.icon !== undefined,
+    tipo: nodo.type,
+    descripcion: nodo.description,
+    ...(nodo.source[0] !== undefined && { fuente: nodo.source[0].ref }),
+    ...(cuenta !== undefined && { cuenta }),
+  };
+}
+
+/** Texto de la fila de un Atributo; `render` escribe lo mismo. */
+export function textoDeAtributo(atributo: Atributo): string {
+  return `${atributo.name}: ${atributo.type}`;
 }
 
 /** Caja de una etiqueta de Arista: texto a `escalaEtiqueta`, medido como el de los Nodos. */

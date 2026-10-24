@@ -53,11 +53,11 @@ describe('catalogo', () => {
     expect(error).toMatchObject({ codigo: 'E_THEME_UNKNOWN_PRIMITIVE', hint: "quisiste decir 'solid'" });
   });
 
-  it('solo circle afecta a las Metricas y pide una caja cuadrada', () => {
+  it('solo circle y los estilos de texto de Slot y etiqueta afectan a las Metricas y pide una caja cuadrada', () => {
     const afectan = Object.entries(CATALOGO).filter(([, p]) => p.afectaMetricas).map(([nombre]) => nombre);
     const cuadradas = Object.entries(CATALOGO).filter(([, p]) => 'cajaMinima' in p).map(([nombre]) => nombre);
 
-    expect(afectan).toEqual(['circle', 'icon', 'label']);
+    expect(afectan).toEqual(['circle', 'text', 'chip', 'icon', 'label']);
     expect(cuadradas).toEqual(['circle']);
   });
 

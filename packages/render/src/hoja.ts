@@ -118,7 +118,7 @@ function reglasDeElemento(estilo: Estilo, clave: (typeof ELEMENTOS)[number]): Ar
     salida.push([`${contenedor} .rd-estado`, { 'border-radius': reposo['border-radius'] ?? '0px' }]);
   }
   const textos = pinturaDeElemento(estilo.pintura, clave).textos;
-  return [...salida, ...reglasDeTexto(estilo, `& .rd-${clave}`, textos), ...reglasDeIcono(`& .rd-${clave}`, textos)];
+  return [...salida, ...reglasDeTexto(`& .rd-${clave}`, textos), ...reglasDeIcono(`& .rd-${clave}`, textos)];
 }
 
 /** Reglas sin alcance: selector (con `&` por la clase de alcance) y declaraciones. */
@@ -140,8 +140,10 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-codigo', { position: 'absolute', left: '0', top: '0', 'pointer-events': 'none', contain: 'layout style' }],
     ['& .rd-slot', { position: 'absolute', overflow: 'hidden', 'white-space': 'nowrap', 'text-overflow': 'ellipsis', 'box-sizing': 'border-box' }],
     ['& .rd-title', { 'text-align': 'center' }],
-    // El titulo de un Grupo es una cabecera: se alinea a la izquierda de su Slot.
+    // El titulo de un Grupo es una cabecera: se alinea a la izquierda de su Slot (un `text-align` del Tema manda).
     ['& .rd-grupo .rd-title, & .rd-colapsado .rd-title', { 'text-align': 'left' }],
+    // El contador es una caja pequena con el numero centrado; sin estilo `chip` no tiene caja.
+    ['& .rd-counter', { 'text-align': 'center', 'font-weight': '700' }],
     ['& .rd-separado', { 'border-top': '1px solid var(--trazo, currentColor)' }],
     ['& .rd-fila', { position: 'absolute', 'white-space': 'nowrap', overflow: 'hidden', 'text-overflow': 'ellipsis', 'padding-left': px(metricas.margenDeTexto), 'box-sizing': 'border-box', 'font-family': css(estilo.fuenteMono), 'font-size': px(metricas.fontSize * metricas.escalaAtributo) }],
     ['& .rd-icono', { position: 'absolute', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'box-sizing': 'border-box' }],
@@ -168,29 +170,32 @@ function reglasDeIcono(caja: string, textos: PinturaDeNodo['textos']): Array<[st
 /** Diametro del punto del titulo en em; el resto de `PUNTO_DE_TITULO_EM` es la separacion con el texto. */
 const DIAMETRO_DE_PUNTO_EM = 0.55;
 
+const ALINEACION_CSS: Record<string, string> = { start: 'left', center: 'center', end: 'right' };
+
 /**
- * Estilo de texto (`text`) de cada Slot de un elemento que el Tema lo declara. Es pintura: el tamano, la separacion entre
- * letras y el chip (relleno, borde, margen y punto) se midieron con `textoDeTitulo` y las Metricas, no cambian el espacio.
+ * Estilo de texto (`text`, o `chip` en el contador) de cada Slot de un elemento que el Tema lo declara. Es pintura: el
+ * tamano, el alto, la separacion entre letras, el punto y el relleno del chip ya los midio la colocacion (`textoDeSlot`).
  */
-function reglasDeTexto(estilo: Estilo, caja: string, textos: PinturaDeNodo['textos']): Array<[string, Declaraciones]> {
+function reglasDeTexto(caja: string, textos: PinturaDeNodo['textos']): Array<[string, Declaraciones]> {
   return Object.entries(textos).flatMap(([slot, texto]): Array<[string, Declaraciones]> => {
-    if (texto.tipo !== 'text') return [];
-    const { weight, color, style, transform, size, tracking, alpha, fill, border, radius, pad, dot } = texto.props;
+    if (texto.tipo !== 'text' && texto.tipo !== 'chip') return [];
+    const { weight, color, style, transform, alpha, fill, border, radius, tracking, pad, dot } = texto.props;
+    const alineacion = texto.props['text-align'];
     const selector = `${caja} .rd-slot[data-slot="${slot}"]`;
-    const tinta = color === undefined ? 'currentColor' : css(color);
+    const conCaja = fill !== undefined || border !== undefined || Number(radius) > 0;
     const reglas: Array<[string, Declaraciones]> = [
       [
         selector,
         {
           'font-weight': css(weight),
-          'font-style': css(style),
+          ...(style !== undefined && { 'font-style': css(style) }),
           'text-transform': transform === 'uppercase' ? 'uppercase' : 'none',
-          ...(Number(size) !== 1 && { 'font-size': px(estilo.metricas.fontSize * Number(size)) }),
+          ...(color !== undefined && { color: css(color) }),
+          ...(alpha !== undefined && { opacity: css(alpha) }),
+          ...(alineacion !== undefined && { 'text-align': ALINEACION_CSS[String(alineacion)] ?? 'left' }),
           ...(Number(tracking) > 0 && { 'letter-spacing': `${num(Number(tracking))}em` }),
-          ...(Number(alpha) < 1 ? { color: `color-mix(in srgb, ${tinta} ${num(Number(alpha) * 100)}%, transparent)` } : color !== undefined && { color: css(color) }),
-          ...(fill !== undefined && { background: css(fill) }),
-          ...(border !== undefined && { border: `1px solid ${css(border)}` }),
-          ...((fill !== undefined || border !== undefined || Number(radius) > 0) && { 'border-radius': px(radius) }),
+          ...(texto.tipo === 'chip' && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), border: border === undefined ? 'none' : `1px solid ${css(border)}` }),
+          ...(texto.tipo === 'text' && conCaja && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), ...(border !== undefined && { border: `1px solid ${css(border)}` }) }),
           ...(Number(pad) > 0 && { 'padding-left': px(pad), 'padding-right': px(pad) }),
         },
       ],

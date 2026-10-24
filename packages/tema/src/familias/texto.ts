@@ -1,28 +1,35 @@
 /**
  * Familia estilo de texto (ADR 0008): `text` es el estilo de un Slot de Nodo
- * (pinta y, en el titulo, mide: tamano, separacion, mayusculas y chip), `icon` el del Slot `icon` (variante y lado) y `label` es la etiqueta de una Arista con el modelo de caja del
+ * (`size` y `leading` cambian el alto que reserva; el resto solo pinta), `chip` el del
+ * Slot `counter` (texto en una caja), `icon` el del Slot `icon` (variante y lado) y `label` es la etiqueta de una Arista con el modelo de caja del
  * Nodo. De las Aristas, solo `label` cuenta en las Metricas (`pad` y `scale`
  * cambian la caja que ELK reserva); `fill`, `border` y `radius` son pintura.
  */
-import type { DefinicionDePrimitiva } from '../catalogo';
+import type { DefinicionDePrimitiva, DefinicionDePropiedad } from '../catalogo';
+
+/** Tamano del texto respecto al del Tema y alto de su linea respecto a ese tamano; sin ellos manda el Slot (`DEFINICION_DE_SLOT`). */
+const MEDIDA_DE_TEXTO = {
+  size: { tipo: 'numero', min: 0.4, max: 3, opcional: true },
+  leading: { tipo: 'numero', min: 1, max: 5, opcional: true },
+} as const satisfies Record<string, DefinicionDePropiedad>;
 
 export const TEXTOS = {
   text: {
     familia: 'texto',
     ubicacion: 'texto-slot',
-    // `size`, `tracking`, `transform`, `pad` y `dot` cambian el ancho del titulo medido; el resto es pintura.
     afectaMetricas: true,
     propiedades: {
       weight: { tipo: 'numero', min: 100, max: 900, defecto: 400 },
       color: { tipo: 'color', opcional: true },
       style: { tipo: 'opcion', valores: ['normal', 'italic'], defecto: 'normal' },
       transform: { tipo: 'opcion', valores: ['none', 'uppercase'], defecto: 'none' },
-      /** Tamano respecto al del Tema. Cambia el ancho del texto, asi que entra en las Metricas del Slot `title`. */
-      size: { tipo: 'numero', min: 0.5, max: 2, defecto: 1 },
+      /** Opacidad del texto. */
+      alpha: { tipo: 'numero', min: 0, max: 1, opcional: true },
+      /** Alineacion del texto dentro de su rectangulo; sin ella manda el Slot (el titulo se centra, el resto empieza a la izquierda). */
+      'text-align': { tipo: 'opcion', valores: ['start', 'center', 'end'], opcional: true },
+      ...MEDIDA_DE_TEXTO,
       /** Separacion entre letras, en em; tambien ensancha el texto medido. */
       tracking: { tipo: 'numero', min: 0, max: 1, defecto: 0 },
-      /** Opacidad del texto (no la del fondo ni la del borde del chip). */
-      alpha: { tipo: 'numero', min: 0, max: 1, defecto: 1 },
       /** Chip: el Slot toma su ancho natural mas `pad` a cada lado y pinta caja con relleno, borde y radio. */
       fill: { tipo: 'color', opcional: true },
       border: { tipo: 'color', opcional: true },
@@ -30,6 +37,20 @@ export const TEXTOS = {
       pad: { tipo: 'numero', min: 0, max: 32, defecto: 0 },
       /** Punto de color antes del texto; mide un `size` (en em) de ancho. */
       dot: { tipo: 'color', opcional: true },
+    },
+  },
+  /** Estilo del Slot `counter`: un texto en una caja (relleno, borde y radio) que entra en las Metricas por su tamano. */
+  chip: {
+    familia: 'texto',
+    ubicacion: 'texto-slot',
+    afectaMetricas: true,
+    propiedades: {
+      weight: { tipo: 'numero', min: 100, max: 900, defecto: 700 },
+      color: { tipo: 'color', opcional: true },
+      fill: { tipo: 'color', opcional: true },
+      border: { tipo: 'color', opcional: true },
+      radius: { tipo: 'numero', min: 0, max: 50, defecto: 50 },
+      size: MEDIDA_DE_TEXTO.size,
     },
   },
   /** Estilo del Slot `icon` (afecta el lado de su rectangulo, que entra en las Metricas): glifo suelto, en caja o punto de color. */

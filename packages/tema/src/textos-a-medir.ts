@@ -7,9 +7,9 @@ import type { VistaResuelta } from 'canonico';
 
 import { claveDeTexto } from './medicion';
 import type { TextoAMedir } from './medicion';
-import { atributosVisibles, metricasDeHoja, muestra } from './metricas';
+import { contenidoDeNodo, metricasDeHoja } from './metricas';
 import type { TablaDeMetricas } from './metricas';
-import { textoDeAtributo, textoDeTitulo } from './slots';
+import { textosDeNodo } from './slots';
 
 export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges'>, tabla: TablaDeMetricas): TextoAMedir[] {
   const vistos = new Map<string, TextoAMedir>();
@@ -18,14 +18,9 @@ export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges'>, tabl
     if (!vistos.has(clave)) vistos.set(clave, { familia, tamano, texto });
   };
   for (const nodo of vista.nodes) {
-    const abierto = nodo.children.length > 0;
-    const m = abierto ? tabla.grupoAbierto : metricasDeHoja(tabla, nodo);
-    if (muestra(m, 'title')) {
-      const { texto, tamano } = textoDeTitulo(m, nodo.label);
-      anadir(m.fuentes['body']!, tamano, texto);
-    }
-    if (abierto) continue;
-    for (const atributo of atributosVisibles(nodo, m)) anadir(m.fuentes['mono']!, m.fontSize * m.escalaAtributo, textoDeAtributo(atributo));
+    // Un Grupo abierto mide su cabecera; un Nodo hoja o Grupo colapsado, sus Slots.
+    const m = nodo.children.length > 0 ? tabla.grupoAbierto : metricasDeHoja(tabla, nodo);
+    for (const { familia, tamano, texto } of textosDeNodo(m, contenidoDeNodo(nodo, m))) anadir(familia, tamano, texto);
   }
   const e = tabla.etiqueta;
   for (const arista of vista.edges) if (arista.label !== undefined) anadir(e.fuentes['body']!, e.fontSize * e.escalaEtiqueta, arista.label);

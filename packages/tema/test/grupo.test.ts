@@ -106,11 +106,13 @@ describe('Grupo del Tema: Metricas', () => {
       textos: { title: { tipo: 'text', props: { transform: 'uppercase', tracking: 0.2, size: 0.8 } } },
     });
     const tabla = tablaDeMetricas(t);
-    const medidos = textosAMedir({ nodes: [{ id: 'g', children: [{ id: 'h', children: [] }], label: 'plataforma' }], edges: [] } as never, tabla).map((m) => m.texto);
+    const medidos = textosAMedir({ nodes: [{ id: 'g', type: 'capa', children: [{ id: 'h', children: [] }], label: 'plataforma', attributes: [], source: [], description: '', collapsed: false, childCount: 1 }], edges: [] } as never, tabla).map((m) => m.texto);
 
     expect(tabla.grupoColapsado.disposicion.hijos).toEqual([{ slot: 'title' }]);
+    // Sin parche de Slots, el Grupo cerrado usa los del Nodo (una hoja), no la cabecera.
+    expect(tablaDeMetricas(tema()).grupoColapsado.disposicion).toEqual(TEMA_NEUTRO.nodo.slots);
     expect(tabla.grupoAbierto.disposicion.hijos.map((h) => ('slot' in h ? h.slot : '?'))).toEqual(['icon', 'title']);
     expect(medidos).toContain('PLATAFORMA');
-    expect(tablaDeMetricas(tema()).grupoAbierto.titulo).toMatchObject({ escala: 1, tracking: 0, mayusculas: false });
+    expect(tablaDeMetricas(tema()).grupoAbierto.titulo).toMatchObject({ tracking: 0, mayusculas: false });
   });
 });

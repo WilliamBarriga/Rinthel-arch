@@ -209,7 +209,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
             color,
             variable,
           );
-    const textos = elemento === 'grupo' && colapsado ? { ...resuelto.grupo.textos, ...resuelto.grupo.colapsado.textos } : bloque.textos;
+    const textos = elemento === 'grupo' && colapsado ? { ...resuelto.nodo.textos, ...resuelto.grupo.colapsado.textos } : bloque.textos;
     const { paleta, contexto } = contextoDeColor(resuelto, color, variable);
     return {
       capas: pila(),

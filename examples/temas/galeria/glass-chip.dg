@@ -31,7 +31,6 @@ theme glass-chip {
       layer forma pill
       layer tinte { color COLOR/0.25 }
       layer borde { color COLOR/0.6 }
-      slots column pad 10 { title { weight 500 } }
     }
   }
   edge {

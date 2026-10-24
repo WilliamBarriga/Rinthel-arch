@@ -55,7 +55,7 @@ describe('medicion de texto', () => {
 
   it('textosAMedir lista cada texto con su familia y tamano, sin repetidos', () => {
     const m = tablaDeMetricas(tema);
-    const nodo = { id: 'a', type: 't', label: 'abcd', collapsed: false, children: [], attributes: [{ name: 'id', type: 'uuid' }] };
+    const nodo = { id: 'a', type: 't', label: 'abcd', collapsed: false, children: [], source: [], attributes: [{ name: 'id', type: 'uuid' }] };
     const textos = textosAMedir({ nodes: [nodo, { ...nodo, id: 'b' }], edges: [{ label: 'lee' }] } as never, m);
 
     expect(textos).toContainEqual({ familia: TEMA_NEUTRO.fonts.body, tamano: m.base.fontSize, texto: 'abcd' });
