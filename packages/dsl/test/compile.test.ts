@@ -980,6 +980,22 @@ describe('compile: Tema', () => {
     expect(issues[2]!.hint).toContain("'center'");
   });
 
+  it('un parche de estado que cambia el estilo de texto de la cabecera de Grupo (tracking, chip, size) es error, igual que la disposicion', () => {
+    const { issues } = compile({
+      'main.dg': `${base}
+        theme t {
+          group {
+            slots row { title { size 0.9 } counter }
+            state hover { slots { title { tracking 0.2 size 1.4 } } }
+            state collapsed { slots column { title { tracking 0.1 } } }
+          }
+        }`,
+    });
+
+    expect(issues.map((i) => [i.code, i.line])).toEqual([['E_THEME_STATE_TOUCHES_METRICS', 5]]);
+    expect(issues[0]!.message).toContain('Slots');
+  });
+
   it('compila las Familias de efectos con sus defectos, y `seed N` en tokens', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}
