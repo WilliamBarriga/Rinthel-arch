@@ -78,6 +78,13 @@ const MARCADORES: { readonly [M in NombreDePrimitivaEn<'marcador'>]: Dibujo } = 
   square: (s, color) => [{ tag: 'rect', attrs: { x: num(-s), y: num(-s / 2), width: num(s), height: num(s), fill: color } }],
   diamond: (s, color) => [{ tag: 'path', attrs: { d: `M 0 0 L ${num(-s / 2)} ${num(-s / 2)} L ${num(-s)} 0 L ${num(-s / 2)} ${num(s / 2)} z`, fill: color } }],
   bar: (s, color) => [{ tag: 'path', attrs: { d: `M 0 ${num(-s / 2)} L 0 ${num(s / 2)}`, stroke: color, 'stroke-width': num(Math.max(2, s / 4)), fill: 'none' } }],
+  hollow: (s, color, fondo) => [{ tag: 'circle', attrs: { cx: num(-s / 2), cy: '0', r: num(s / 2), fill: fondo, stroke: color, 'stroke-width': '1' } }],
+  chevron: (s, color) => [
+    {
+      tag: 'path',
+      attrs: { d: `M ${num(-0.65 * s)} ${num(-0.35 * s)} L 0 0 L ${num(-0.65 * s)} ${num(0.35 * s)}`, fill: 'none', stroke: color, 'stroke-width': num(Math.max(1, s / 7)), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
+    },
+  ],
   via: (s, color, fondo) => [
     { tag: 'circle', attrs: { cx: num(-s / 2), cy: '0', r: num(s / 2), fill: fondo, stroke: color, 'stroke-width': num(Math.max(1, s / 4)) } },
   ],

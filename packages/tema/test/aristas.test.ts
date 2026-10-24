@@ -123,6 +123,15 @@ describe('Metricas de la Arista', () => {
     expect(grande.height).toBeGreaterThan(base.height);
   });
 
+  it('pad-y agranda el alto de la caja de la etiqueta y font mono la mide con la fuente mono', () => {
+    const base = tamanoDeEtiqueta('conecta', metricasDe(TEMA_NEUTRO));
+    const alta = conArista({ etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 0, 'pad-y': 3, font: 'mono' } } });
+
+    expect(tamanoDeEtiqueta('conecta', metricasDe(alta)).height).toBe(base.height + 6);
+    expect(metricasDe(alta).fuenteDeEtiqueta).toBe(TEMA_NEUTRO.fonts.mono);
+    expect(metricasDe(TEMA_NEUTRO).fuenteDeEtiqueta).toBe(TEMA_NEUTRO.fonts.body);
+  });
+
   it('el relleno y el borde de la etiqueta son pintura: no cambian las Metricas', () => {
     const pintada = conArista({ etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 0, fill: 'blue', border: 'gray' } } });
 

@@ -200,6 +200,29 @@ describe('Diagram: estructura hibrida', () => {
       expect(hoja).toMatch(/data-slot="badge"\]\{[^}]*opacity:0.5[^}]*text-align:right/);
       expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*border-radius:8px[^}]*background:${TEMA_NEUTRO.palette['amber']}[^}]*border:1px solid ${TEMA_NEUTRO.palette['blue']}`));
     });
+
+    it('font mono y border-width llegan al texto, al contador y al icono; el punto con ring va sobre un aro', async () => {
+      const { html } = await dibujar(
+        conSlots(
+          { direccion: 'row', gap: 0, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'badge' }, { slot: 'counter' }] },
+          {
+            icon: { tipo: 'icon', props: { variant: 'dot', side: 18, radius: 6, ring: 'amber', border: 'blue', 'border-width': 2 } },
+            badge: { tipo: 'text', props: { weight: 400, style: 'normal', transform: 'none', font: 'mono', border: 'blue', 'border-width': 2 } },
+            counter: { tipo: 'chip', props: { weight: 700, radius: 8, border: 'blue', 'border-width': 2, font: 'mono' } },
+          },
+        ),
+        { collapsed: ['a'] },
+      );
+      const hoja = hojaDe(html);
+      const mono = TEMA_NEUTRO.fonts.mono;
+
+      expect(hoja).toMatch(new RegExp(String.raw`data-slot="badge"\]\{[^}]*font-family:${mono}[^}]*border:2px solid`));
+      expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*font-family:${mono}[^}]*border:2px solid`));
+      expect(hoja).toMatch(new RegExp(String.raw`data-variante="dot"\]\{[^}]*background:radial-gradient\(circle closest-side,currentColor 0 44%,${TEMA_NEUTRO.palette['amber']} 46%\)[^}]*border:2px solid`));
+      // El texto del contador se centra dentro de su borde de 2px.
+      const contador = slotDe(html, 'a', 'counter');
+      expect(propiedad(contador, 'line-height')).toBe(`${rectDe(contador).height - 4}px`);
+    });
   });
 
   it('cada Nodo es una caja con contain: layout style', async () => {

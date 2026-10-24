@@ -1,6 +1,7 @@
 /**
  * Familia marcador (ADR 0008): el adorno de un extremo de Arista (origen o fin).
- * `via` es el anillo hueco de un via de PCB. Sin `color` toma el del primer
+ * `via` es el anillo hueco de un via de PCB, `hollow` un anillo fino del color de
+ * fondo y `chevron` una punta en V abierta. Sin `color` toma el del primer
  * trazo. Solo pinta.
  */
 import type { DefinicionDePrimitiva } from '../catalogo';
@@ -15,4 +16,4 @@ const marcador = {
   },
 } as const satisfies DefinicionDePrimitiva;
 
-export const MARCADORES = { arrow: marcador, dot: marcador, diamond: marcador, square: marcador, bar: marcador, via: marcador } as const;
+export const MARCADORES = { arrow: marcador, dot: marcador, diamond: marcador, square: marcador, bar: marcador, via: marcador, hollow: marcador, chevron: marcador } as const;

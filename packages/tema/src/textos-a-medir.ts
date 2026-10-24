@@ -23,6 +23,6 @@ export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges'>, tabl
     for (const { familia, tamano, texto } of textosDeNodo(m, contenidoDeNodo(nodo, m))) anadir(familia, tamano, texto);
   }
   const e = tabla.etiqueta;
-  for (const arista of vista.edges) if (arista.label !== undefined) anadir(e.fuentes['body']!, e.fontSize * e.escalaEtiqueta, arista.label);
+  for (const arista of vista.edges) if (arista.label !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, arista.label);
   return [...vistos.values()];
 }

@@ -118,7 +118,7 @@ function reglasDeElemento(estilo: Estilo, clave: (typeof ELEMENTOS)[number]): Ar
     salida.push([`${contenedor} .rd-estado`, { 'border-radius': reposo['border-radius'] ?? '0px' }]);
   }
   const textos = pinturaDeElemento(estilo.pintura, clave).textos;
-  return [...salida, ...reglasDeTexto(`& .rd-${clave}`, textos), ...reglasDeIcono(`& .rd-${clave}`, textos)];
+  return [...salida, ...reglasDeTexto(`& .rd-${clave}`, textos, estilo.fuenteMono), ...reglasDeIcono(`& .rd-${clave}`, textos)];
 }
 
 /** Reglas sin alcance: selector (con `&` por la clase de alcance) y declaraciones. */
@@ -157,15 +157,25 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
 /** Aspecto del Slot `icon` segun su estilo `icon`: caja (radio, relleno, borde) o punto; el lado ya lo fijo la colocacion. */
 function reglasDeIcono(caja: string, textos: PinturaDeNodo['textos']): Array<[string, Declaraciones]> {
   const props = textos.icon?.props ?? {};
-  const { radius, fill, border } = props;
+  const { radius, fill, border, ring } = props;
+  const punto = fill !== undefined ? css(fill) : 'currentColor';
+  const contorno: Declaraciones = border === undefined ? {} : { border: `${px(props['border-width'] ?? 1)} solid ${css(border)}` };
   return [
+    [`${caja} .rd-icono[data-variante="box"]`, { 'border-radius': px(radius ?? 6), ...(fill !== undefined && { background: css(fill) }), ...contorno }],
+    // Con `ring`, el punto va sobre un aro de ese color: el punto ocupa 4/9 del lado.
     [
-      `${caja} .rd-icono[data-variante="box"]`,
-      { 'border-radius': px(radius ?? 6), ...(fill !== undefined && { background: css(fill) }), ...(border !== undefined && { border: `1px solid ${css(border)}` }) },
+      `${caja} .rd-icono[data-variante="dot"]`,
+      {
+        'border-radius': '50%',
+        background: ring === undefined ? punto : `radial-gradient(circle closest-side,${punto} 0 ${PUNTO_SOBRE_ARO}%,${css(ring)} ${PUNTO_SOBRE_ARO + 2}%)`,
+        ...contorno,
+      },
     ],
-    [`${caja} .rd-icono[data-variante="dot"]`, { 'border-radius': '50%', background: fill !== undefined ? css(fill) : 'currentColor', ...(border !== undefined && { border: `1px solid ${css(border)}` }) }],
   ];
 }
+
+/** Diametro del punto sobre el aro del icono `dot`, en % del radio (8 px en un aro de 18). */
+const PUNTO_SOBRE_ARO = 44;
 
 /** Diametro del punto del titulo en em; el resto de `PUNTO_DE_TITULO_EM` es la separacion con el texto. */
 const DIAMETRO_DE_PUNTO_EM = 0.55;
@@ -176,10 +186,11 @@ const ALINEACION_CSS: Record<string, string> = { start: 'left', center: 'center'
  * Estilo de texto (`text`, o `chip` en el contador) de cada Slot de un elemento que el Tema lo declara. Es pintura: el
  * tamano, el alto, la separacion entre letras, el punto y el relleno del chip ya los midio la colocacion (`textoDeSlot`).
  */
-function reglasDeTexto(caja: string, textos: PinturaDeNodo['textos']): Array<[string, Declaraciones]> {
+function reglasDeTexto(caja: string, textos: PinturaDeNodo['textos'], fuenteMono: string): Array<[string, Declaraciones]> {
   return Object.entries(textos).flatMap(([slot, texto]): Array<[string, Declaraciones]> => {
     if (texto.tipo !== 'text' && texto.tipo !== 'chip') return [];
-    const { weight, color, style, transform, alpha, fill, border, radius, tracking, pad, dot } = texto.props;
+    const { weight, color, style, transform, alpha, fill, border, radius, tracking, pad, dot, font } = texto.props;
+    const contorno = border === undefined ? 'none' : `${px(texto.props['border-width'] ?? 1)} solid ${css(border)}`;
     const alineacion = texto.props['text-align'];
     const selector = `${caja} .rd-slot[data-slot="${slot}"]`;
     const conCaja = fill !== undefined || border !== undefined || Number(radius) > 0;
@@ -189,13 +200,14 @@ function reglasDeTexto(caja: string, textos: PinturaDeNodo['textos']): Array<[st
         {
           'font-weight': css(weight),
           ...(style !== undefined && { 'font-style': css(style) }),
+          ...(font === 'mono' && { 'font-family': css(fuenteMono) }),
           'text-transform': transform === 'uppercase' ? 'uppercase' : 'none',
           ...(color !== undefined && { color: css(color) }),
           ...(alpha !== undefined && { opacity: css(alpha) }),
           ...(alineacion !== undefined && { 'text-align': ALINEACION_CSS[String(alineacion)] ?? 'left' }),
           ...(Number(tracking) > 0 && { 'letter-spacing': `${num(Number(tracking))}em` }),
-          ...(texto.tipo === 'chip' && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), border: border === undefined ? 'none' : `1px solid ${css(border)}` }),
-          ...(texto.tipo === 'text' && conCaja && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), ...(border !== undefined && { border: `1px solid ${css(border)}` }) }),
+          ...(texto.tipo === 'chip' && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), border: contorno }),
+          ...(texto.tipo === 'text' && conCaja && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), ...(border !== undefined && { border: contorno }) }),
           ...(Number(pad) > 0 && { 'padding-left': px(pad), 'padding-right': px(pad) }),
         },
       ],

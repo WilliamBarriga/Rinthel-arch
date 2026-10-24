@@ -178,12 +178,12 @@ export function textoDeSlot(slot: SlotDeTexto, metricas: Metricas, contenido: Co
   const estilo = slot === 'title' ? metricas.titulo : undefined;
   const texto = estilo?.mayusculas === true ? crudo.toUpperCase() : crudo;
   const definicion: DefinicionDeSlot = DEFINICION_DE_SLOT[slot];
-  const { size, leading } = metricas.medidaDeTexto[slot] ?? {};
+  const { size, leading, mono } = metricas.medidaDeTexto[slot] ?? {};
   const tamano = metricas.fontSize * (size ?? definicion.escala ?? 1);
   const interlineado = leading ?? definicion.interlineado;
   const chip = slot === 'counter';
   return {
-    familia: metricas.fuentes['body']!,
+    familia: metricas.fuentes[mono === true ? 'mono' : 'body']!,
     tamano,
     texto,
     alto: (interlineado === undefined ? metricas.cabecera : Math.ceil(tamano * interlineado)) + (chip ? HOLGURA_DE_CHIP.y : 0),

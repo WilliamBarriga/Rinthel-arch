@@ -92,15 +92,17 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | `square` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `bar` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `via` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `hollow` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `chevron` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 
 ### Familia texto
 
 | Primitiva | Ubicacion | Propiedades | Metricas |
 | --- | --- | --- | --- |
-| `text` | texto-slot | `weight` 100 a 900 (400); `color` color de Paleta (opcional); `style` normal|italic (normal); `transform` none|uppercase (none); `alpha` 0 a 1 (opcional); `text-align` start|center|end (opcional); `size` 0.4 a 3 (opcional); `leading` 1 a 5 (opcional); `tracking` 0 a 1 (0); `fill` color de Paleta (opcional); `border` color de Paleta (opcional); `radius` 0 a 50 (0); `pad` 0 a 32 (0); `dot` color de Paleta (opcional) | si |
-| `chip` | texto-slot | `weight` 100 a 900 (700); `color` color de Paleta (opcional); `fill` color de Paleta (opcional); `border` color de Paleta (opcional); `radius` 0 a 50 (50); `size` 0.4 a 3 (opcional) | si |
-| `icon` | texto-slot | `variant` plain|box|dot (plain); `side` 6 a 96 (16); `radius` 0 a 50 (6); `fill` color de Paleta (opcional); `border` color de Paleta (opcional); `color` color de Paleta (opcional) | si |
-| `label` | etiqueta | `scale` 0.5 a 2 (0.85); `pad` 0 a 32 (4); `radius` 0 a 50 (0); `fill` color de Paleta (opcional); `border` color de Paleta (opcional) | si |
+| `text` | texto-slot | `weight` 100 a 900 (400); `color` color de Paleta (opcional); `style` normal|italic (normal); `transform` none|uppercase (none); `font` body|mono (opcional); `alpha` 0 a 1 (opcional); `text-align` start|center|end (opcional); `size` 0.4 a 3 (opcional); `leading` 1 a 5 (opcional); `tracking` 0 a 1 (0); `fill` color de Paleta (opcional); `border` color de Paleta (opcional); `border-width` 0 a 8 (opcional); `radius` 0 a 50 (0); `pad` 0 a 32 (0); `dot` color de Paleta (opcional) | si |
+| `chip` | texto-slot | `weight` 100 a 900 (700); `color` color de Paleta (opcional); `fill` color de Paleta (opcional); `border` color de Paleta (opcional); `border-width` 0 a 8 (opcional); `radius` 0 a 50 (50); `size` 0.4 a 3 (opcional); `font` body|mono (opcional) | si |
+| `icon` | texto-slot | `variant` plain|box|dot (plain); `side` 6 a 96 (16); `radius` 0 a 50 (6); `fill` color de Paleta (opcional); `ring` color de Paleta (opcional); `border` color de Paleta (opcional); `border-width` 0 a 8 (opcional); `color` color de Paleta (opcional) | si |
+| `label` | etiqueta | `scale` 0.5 a 2 (0.85); `pad` 0 a 32 (4); `pad-y` 0 a 16 (opcional); `radius` 0 a 50 (0); `fill` color de Paleta (opcional); `border` color de Paleta (opcional); `border-width` 0.5 a 8 (opcional); `color` color de Paleta (opcional); `weight` 100 a 900 (opcional); `font` body|mono (opcional); `shadow` color de Paleta (opcional); `rotate` -15 a 15 (opcional) | si |
 
 ### Familia codigo
 

@@ -36,8 +36,8 @@ export interface Metricas {
   anchos?: Readonly<Record<string, number>>;
   /** Mini-layout de los Slots del Nodo que el Tema muestra (un Slot fuera del arbol no se pinta ni se mide). */
   disposicion: CajaDeSlots;
-  /** `size` y `leading` que el Tema fija a un Slot de texto (los que no, usan los de `DEFINICION_DE_SLOT`); cambian el alto y el ancho que reserva. */
-  medidaDeTexto: Readonly<Partial<Record<NombreDeSlot, { size?: number; leading?: number }>>>;
+  /** `size`, `leading` y `font mono` que el Tema fija a un Slot de texto (los que no, usan los de `DEFINICION_DE_SLOT`); cambian el alto y el ancho que reserva. */
+  medidaDeTexto: Readonly<Partial<Record<NombreDeSlot, { size?: number; leading?: number; mono?: boolean }>>>;
   /** Estilo `text` del Slot `title` que cambia su ancho (ademas de `size`): ver `textoDeSlot` en `slots.ts`. */
   titulo: {
     /** Separacion entre letras, en em. */
@@ -78,6 +78,9 @@ export interface Metricas {
   /** Holgura horizontal y relacion alto/tamano de la caja de una etiqueta de Arista. */
   holguraDeEtiqueta: number;
   altoDeEtiqueta: number;
+  /** Margen vertical que la etiqueta suma a su alto (`pad-y`, a cada lado) y familia con la que se mide (`font`). */
+  holguraVerticalDeEtiqueta: number;
+  fuenteDeEtiqueta: string;
 }
 
 const TAMANO_DE_TEXTO_POR_DEFECTO = 14;
@@ -105,7 +108,7 @@ function estiloDeTitulo(textos: EstilosDeSlot): Metricas['titulo'] {
 function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas: MedidasDeTexto | undefined, { slots, textos }: { slots: CajaDeSlots; textos: EstilosDeSlot } = resuelto.nodo): Metricas {
   const fontSize = tamanoDeTexto(resuelto.tokens.fontSize);
   // Solo la etiqueta de Arista cuenta en las Metricas: trazos y marcadores son pintura.
-  const etiqueta = resuelto.arista.etiqueta?.props as { scale?: number; pad?: number } | undefined;
+  const etiqueta = resuelto.arista.etiqueta?.props as { scale?: number; pad?: number; 'pad-y'?: number; font?: string } | undefined;
   const proporcional = !/mono/i.test(resuelto.fonts.body);
   return {
     fontSize,
@@ -116,8 +119,9 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas:
     disposicion: slots,
     medidaDeTexto: Object.fromEntries(
       Object.entries(textos).flatMap(([slot, texto]) => {
-        const { size, leading } = texto.props as { size?: number; leading?: number };
-        return size === undefined && leading === undefined ? [] : [[slot, { ...(size !== undefined && { size }), ...(leading !== undefined && { leading }) }]];
+        const { size, leading, font } = texto.props as { size?: number; leading?: number; font?: string };
+        const mono = font === 'mono';
+        return size === undefined && leading === undefined && !mono ? [] : [[slot, { ...(size !== undefined && { size }), ...(leading !== undefined && { leading }), ...(mono && { mono }) }]];
       }),
     ),
     cajaCuadrada: pila.some((capa) => (CATALOGO[capa.primitiva.tipo] as DefinicionDePrimitiva).cajaMinima === 'cuadrado'),
@@ -138,6 +142,8 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas:
     escalaCardinalidad: 0.8,
     holguraDeEtiqueta: 2 * (etiqueta?.pad ?? 4),
     altoDeEtiqueta: 1.4,
+    holguraVerticalDeEtiqueta: 2 * (etiqueta?.['pad-y'] ?? 0),
+    fuenteDeEtiqueta: etiqueta?.font === 'mono' ? resuelto.fonts.mono : resuelto.fonts.body,
   };
 }
 
@@ -263,7 +269,7 @@ export function textoDeAtributo(atributo: Atributo): string {
 export function tamanoDeEtiqueta(texto: string, metricas: Metricas): { width: number; height: number } {
   const tamano = metricas.fontSize * metricas.escalaEtiqueta;
   return {
-    width: Math.ceil(anchoDeTexto(metricas, metricas.fuentes['body']!, tamano, texto)) + metricas.holguraDeEtiqueta,
-    height: Math.ceil(tamano * metricas.altoDeEtiqueta),
+    width: Math.ceil(anchoDeTexto(metricas, metricas.fuenteDeEtiqueta, tamano, texto)) + metricas.holguraDeEtiqueta,
+    height: Math.ceil(tamano * metricas.altoDeEtiqueta) + metricas.holguraVerticalDeEtiqueta,
   };
 }

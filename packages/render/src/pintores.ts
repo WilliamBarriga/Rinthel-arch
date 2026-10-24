@@ -52,12 +52,13 @@ interface ContextoDeSlot {
 }
 
 /** Slot de una sola linea de texto, con el tamano que reservo la colocacion (y el texto que mido `layout`). */
-function pintarTexto(slot: 'title' | 'badge' | 'desc' | 'footer' | 'counter', { metricas, contenido }: ContextoDeSlot, rect: Rect): Elemento[] {
+function pintarTexto(slot: 'title' | 'badge' | 'desc' | 'footer' | 'counter', { metricas, contenido, textos }: ContextoDeSlot, rect: Rect): Elemento[] {
   const medido = textoDeSlot(slot, metricas, contenido);
   if (medido === undefined) return [];
   const tamano = medido.tamano === metricas.fontSize ? '' : `font-size:${num(medido.tamano)}px;`;
-  // El contador es una caja de 1px de borde: su texto se centra en el interior.
-  return [slotDeTexto(slot, `rd-${slot}`, rect, medido.texto, slot === 'counter' ? `${tamano}line-height:${num(rect.height - 2)}px;` : tamano)];
+  // El contador es una caja con borde: su texto se centra en el interior.
+  const borde = textos.counter?.props['border'] === undefined ? 0 : Number(textos.counter.props['border-width'] ?? 1);
+  return [slotDeTexto(slot, `rd-${slot}`, rect, medido.texto, slot === 'counter' ? `${tamano}line-height:${num(rect.height - 2 * borde)}px;` : tamano)];
 }
 
 /**
@@ -230,7 +231,8 @@ export function pintarEtiquetaDeArista(
       ? { x: caja.x + caja.width / 2, y: caja.y + caja.height / 2 + tamano * etiqueta.centradoVertical }
       : centroDeEtiquetaSinCaja(estilo, puntos);
   // Modelo de caja de la etiqueta: con `fill` o `border` se dibuja la caja que ELK reservo (o la medida) tras el texto.
-  const { fill, border, radius } = estilo.pintura.arista.etiqueta.props;
+  const { fill, border, radius, color, weight, font, shadow, rotate } = estilo.pintura.arista.etiqueta.props;
+  const anchoDeBorde = estilo.pintura.arista.etiqueta.props['border-width'];
   const conCaja = fill !== undefined || border !== undefined;
   const medida = tamanoDeEtiqueta(texto, metricas);
   const rect = caja ?? { x: centro.x - medida.width / 2, y: centro.y - tamano * etiqueta.centradoVertical - medida.height / 2, ...medida };
@@ -241,29 +243,36 @@ export function pintarEtiquetaDeArista(
       x: num(centro.x),
       y: num(centro.y),
       'text-anchor': 'middle',
-      'font-family': estilo.fuenteCuerpo,
+      'font-family': font === 'mono' ? estilo.fuenteMono : estilo.fuenteCuerpo,
       'font-size': num(tamano),
-      fill: estilo.texto,
+      fill: color === undefined ? estilo.texto : String(color),
+      ...(weight !== undefined && { 'font-weight': num(Number(weight)) }),
       ...(!conCaja && { stroke: etiqueta.halo.color, 'stroke-width': num(etiqueta.halo.ancho), 'paint-order': 'stroke' }),
     },
     hijos: [texto],
   };
   if (!conCaja) return textoSvg;
+  // Como el `border-radius` de CSS: el radio no pasa de la mitad del lado corto, asi una pastilla nunca es una elipse.
+  const r = num(Math.min(Number(radius), rect.width / 2, rect.height / 2));
+  const forma = { x: num(rect.x), y: num(rect.y), width: num(rect.width), height: num(rect.height), rx: r, ry: r };
+  const sombra: Elemento[] =
+    shadow === undefined ? [] : [{ tag: 'rect', attrs: { ...forma, x: num(rect.x + SOMBRA_DE_ETIQUETA), y: num(rect.y + SOMBRA_DE_ETIQUETA), fill: String(shadow) } }];
   const cajaSvg: Elemento = {
     tag: 'rect',
     attrs: {
       'data-edge-label-box': id,
-      x: num(rect.x),
-      y: num(rect.y),
-      width: num(rect.width),
-      height: num(rect.height),
-      rx: num(Number(radius)),
+      ...forma,
       fill: fill === undefined ? 'none' : String(fill),
       ...(border !== undefined && { stroke: String(border) }),
+      ...(border !== undefined && anchoDeBorde !== undefined && { 'stroke-width': num(Number(anchoDeBorde)) }),
     },
   };
-  return { tag: 'g', attrs: {}, hijos: [cajaSvg, textoSvg] };
+  const giro: Record<string, string> = rotate === undefined || Number(rotate) === 0 ? {} : { transform: `rotate(${num(Number(rotate))} ${num(rect.x + rect.width / 2)} ${num(rect.y + rect.height / 2)})` };
+  return { tag: 'g', attrs: giro, hijos: [...sombra, cajaSvg, textoSvg] };
 }
+
+/** Desplazamiento (px) de la sombra dura de una etiqueta de Arista. */
+const SOMBRA_DE_ETIQUETA = 2;
 
 /** Contorno de estado alrededor de una caja (Nodo, Grupo) o de una fila de Atributo (`rect`, relativa a la caja del Nodo). Su aspecto lo da la hoja de estilo. */
 export function pintarEstadoDeCaja(estado: EstadoVisual, id: string, rect?: Rect): Elemento {

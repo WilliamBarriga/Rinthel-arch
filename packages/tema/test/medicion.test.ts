@@ -62,4 +62,16 @@ describe('medicion de texto', () => {
     expect(textos).toContainEqual({ familia: TEMA_NEUTRO.fonts.body, tamano: m.base.fontSize * m.etiqueta.escalaEtiqueta, texto: 'lee' });
     expect(textos.filter((t) => t.texto === 'abcd')).toHaveLength(1);
   });
+
+  it('un Slot o una etiqueta con font mono se miden con la fuente mono', () => {
+    const mono = {
+      ...TEMA_NEUTRO,
+      nodo: { ...TEMA_NEUTRO.nodo, slots: { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }] }, textos: { title: { tipo: 'text', props: { font: 'mono' } } } },
+      arista: { ...TEMA_NEUTRO.arista, etiqueta: { tipo: 'label', props: { font: 'mono' } } },
+    } as unknown as Tema;
+    const nodo = { id: 'a', type: 't', label: 'abcd', collapsed: false, children: [], source: [], attributes: [] };
+    const textos = textosAMedir({ nodes: [nodo], edges: [{ label: 'lee' }] } as never, tablaDeMetricas(mono));
+
+    expect(textos.map((t) => [t.texto, t.familia])).toEqual([['abcd', TEMA_NEUTRO.fonts.mono], ['lee', TEMA_NEUTRO.fonts.mono]]);
+  });
 });

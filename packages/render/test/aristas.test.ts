@@ -73,4 +73,32 @@ describe('Aristas del Tema', () => {
     expect(todos(b, 'rect')).toEqual([]);
     expect(todos(b, 'text')[0]?.attrs['paint-order']).toBe('stroke');
   });
+
+  it('el radio de la caja de la etiqueta se limita a la mitad de su alto: una pastilla, nunca una elipse', () => {
+    const estilo = resolverEstilo(tema({ etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 50, fill: 'blue' } } }));
+    const rect = todos(pintarEtiquetaDeArista(estilo, { id: 'e', texto: 'x', puntos: L, caja: { x: 0, y: 0, width: 60, height: 20 } }), 'rect')[0]!;
+
+    expect(rect.attrs).toMatchObject({ rx: '10', ry: '10' });
+  });
+
+  it('la etiqueta lleva color, peso, fuente mono, borde, sombra dura y giro del Tema', () => {
+    const props = { scale: 0.85, pad: 4, radius: 3, fill: 'amber', border: 'gray', color: 'red', weight: 700, font: 'mono', 'border-width': 1.5, shadow: 'gray', rotate: -2 };
+    const estilo = resolverEstilo(tema({ etiqueta: { tipo: 'label', props } }));
+    const g = pintarEtiquetaDeArista(estilo, { id: 'e', texto: 'x', puntos: L, caja: { x: 0, y: 0, width: 60, height: 20 } });
+    const [sombra, caja] = todos(g, 'rect');
+    const texto = todos(g, 'text')[0]!;
+
+    expect(typeof g !== 'string' && g.attrs['transform']).toBe('rotate(-2 30 10)');
+    expect(sombra!.attrs).toMatchObject({ x: '2', y: '2', fill: TEMA_NEUTRO.palette['gray'] });
+    expect(caja!.attrs).toMatchObject({ x: '0', 'stroke-width': '1.5', stroke: TEMA_NEUTRO.palette['gray'] });
+    expect(texto.attrs).toMatchObject({ fill: TEMA_NEUTRO.palette['red'], 'font-weight': '700', 'font-family': estilo.fuenteMono });
+  });
+
+  it('chevron es una V abierta y hollow un anillo hueco del color de fondo', () => {
+    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], origen: { tipo: 'hollow', props: { size: 7 } }, fin: { tipo: 'chevron', props: { size: 9 } } }));
+    const marcas = todos(pintarArista(estilo, { id: 'e', puntos: L }), 'g').filter((g) => g.attrs['data-marker'] !== undefined);
+
+    expect(marcas[0]?.hijos?.[0]).toMatchObject({ tag: 'circle', attrs: { r: '3.5', fill: TEMA_NEUTRO.tokens.background, stroke: '#2563eb', 'stroke-width': '1' } });
+    expect(marcas[1]?.hijos?.[0]).toMatchObject({ tag: 'path', attrs: { fill: 'none', stroke: '#2563eb', 'stroke-linecap': 'round' } });
+  });
 });
