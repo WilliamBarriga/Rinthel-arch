@@ -18,6 +18,8 @@ pnpm capturas soft-card             # un Tema: Vista de referencia contra la Vis
 pnpm capturas --todos               # los 14 Temas
 pnpm capturas soft-card glass-chip  # varios Temas en una sola pagina
 pnpm capturas soft-card cobertura   # solo la galeria, Modelo de cobertura
+pnpm capturas --workspace examples/rinthel-arch --vista abierto --prototipo A neutral neutral-dark
+                                    # otro Workspace: su Vista con cada Tema (del Workspace o incorporado), junto a una variante del prototipo
 ```
 
 El script extrae el prototipo a un directorio temporal (cache por commit), levanta `dev` sobre esta galeria, captura ambos con Chromium (espera las fuentes y la senal `data-layout="listo"` del shell) y sirve una pagina de comparacion lado a lado. Imprime `http://localhost:<puerto>/salida/`; el servidor sigue vivo y el siguiente `pnpm capturas` reemplaza al anterior. La salida va a `$CAPTURAS_DIR` (por defecto `/tmp/rinthel-capturas`, fuera del repo). Chromium sale de `$CHROMIUM_PATH` o de la cache de Playwright. No corre en `pnpm test`.

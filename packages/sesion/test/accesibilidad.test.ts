@@ -63,14 +63,21 @@ describe('seam sesion: accesibilidad del Tema', () => {
     expect(issues).toEqual([]);
   });
 
-  it.each(['', 'neutral', 'neutral-dark', 'alto-contraste'])('el Tema incorporado %j no da warnings de contraste', async (nombre) => {
-    const colores = `specification { node servicio { color blue }  node base { color green }  node cola { color amber }  node otro { color purple } }
-model { servicio a  base b  cola c  otro d  a -> b }
-view v { type architecture include **${nombre === '' ? '' : `  theme ${nombre}`} }
+  it.each(['', 'neutral', 'neutral-dark', 'alto-contraste'])('el Tema incorporado %j no da ningun warning, con Grupos abiertos y cerrados', async (nombre) => {
+    // Un .dg minimo como lo empieza una persona: Tipos con color e icono, un Grupo abierto, uno cerrado y Aristas.
+    const colores = `specification {
+  node servicio { color blue  icon server }  node base { color green  icon database }
+  node cola { color amber }  node otro { color purple }  node equipo { color gray }
+}
+model {
+  equipo plataforma "Plataforma" { servicio a "API"  base b "Datos" }
+  equipo bordes "Bordes" { cola c  otro d }
+  plataforma.a -> plataforma.b "lee"
+  plataforma.a -> bordes.c
+}
+view v { type architecture include **  collapsed bordes${nombre === '' ? '' : `  theme ${nombre}`} }
 `;
 
-    // `solo-color` depende de los Tipos del Modelo (con 4 Tipos de una misma forma avisa en cualquier Tema); aqui se mide el Tema.
-    const issues = await abrirSesion({ 'main.dg': colores }).diagnosticar();
-    expect(issues.filter((i) => i.code !== 'W_THEME_COLOR_ONLY')).toEqual([]);
+    expect(await abrirSesion({ 'main.dg': colores }).diagnosticar()).toEqual([]);
   });
 });

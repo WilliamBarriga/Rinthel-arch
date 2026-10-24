@@ -3,6 +3,9 @@
  * Uso (necesita `pnpm build`): `pnpm capturas <tema>... [abierto|cobertura]`  o  `pnpm capturas --todos [vista]`.
  *   abierto (por defecto): Vista de referencia de la galeria (`<tema>-referencia`) contra la Vista `abierto` del prototipo.
  *   cobertura: solo la galeria (`<tema>`, el Modelo de cobertura); el prototipo no tiene Vista equivalente.
+ * Otro Workspace: `pnpm capturas --workspace <ruta> --vista <id> [--prototipo <variante>] <tema>...` pinta esa Vista
+ *   con cada Tema (del Workspace o incorporado) sobre una copia temporal (`capturas/workspace.ts`) y, con
+ *   `--prototipo`, la pone junto a la Vista `abierto` de esa variante del prototipo (p. ej. `A`, la de soft-card).
  * Salida: PNG y una pagina de comparacion en `$CAPTURAS_DIR` (por defecto `/tmp/rinthel-capturas`, fuera del repo),
  * servida por un mini server local que sigue vivo al terminar; imprime `http://localhost:<puerto>/salida/`.
  * Chromium: `$CHROMIUM_PATH` o la cache de Playwright (`~/.cache/ms-playwright/chromium-*`). Un solo motor fijo para
@@ -11,12 +14,14 @@
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { parseArgs } from 'node:util';
 
 import { chromium } from 'playwright';
 import type { Browser } from 'playwright';
 
 import { VARIANTE_DE_TEMA, prepararPrototipo } from './capturas/prototipo.ts';
 import { iniciarDevDeGaleria, servirEstatico } from './capturas/servidores.ts';
+import { prepararWorkspace } from './capturas/workspace.ts';
 
 const REPO = resolve(import.meta.dirname, '..');
 const GALERIA = 'examples/temas/galeria';
@@ -29,21 +34,58 @@ const fallar = (mensaje: string): never => {
   return process.exit(1);
 };
 
-function leerArgumentos(): { temas: string[]; vista: Vista } {
-  const args = process.argv.slice(2);
-  const todos = args.includes('--todos');
-  const posicionales = args.filter((a) => !a.startsWith('--'));
+/** Que capturar: cada Tema con su Vista en un Workspace y, si hay, la variante del prototipo con la que se compara. */
+interface Pedido {
+  workspace: string;
+  temas: string[];
+  /** Vista del Workspace que pinta cada Tema. */
+  vistaDe: (tema: string) => string;
+  /** Variante del prototipo de cada Tema (Vista `abierto`); `undefined` = sin prototipo. */
+  varianteDe: (tema: string) => string | undefined;
+  titulo: string;
+  /** Nombre del lado propio en archivos y pagina (`galeria` o `workspace`). */
+  lado: string;
+}
+
+const USO = `Uso: pnpm capturas <tema>... [${VISTAS.join('|')}]  o  pnpm capturas --todos [vista]
+     pnpm capturas --workspace <ruta> --vista <id> [--prototipo <variante>] <tema>...`;
+
+function leerArgumentos(): Pedido {
+  const { values: v, positionals: posicionales } = parseArgs({
+    args: process.argv.slice(2),
+    options: { todos: { type: 'boolean', default: false }, workspace: { type: 'string' }, vista: { type: 'string' }, prototipo: { type: 'string' } },
+    allowPositionals: true,
+  });
+  if (v.workspace !== undefined) return pedidoDeWorkspace(v.workspace, v.vista, v.prototipo, posicionales);
+  if (v.vista !== undefined || v.prototipo !== undefined) return fallar(`--vista y --prototipo van con --workspace.\n${USO}`);
   // La Vista, si se da, va al final: `pnpm capturas soft-card glass-chip cobertura`.
   const vista = VISTAS.includes(posicionales[posicionales.length - 1] as Vista) ? (posicionales.pop() as Vista) : 'abierto';
   const nombres = Object.keys(VARIANTE_DE_TEMA);
-  if (todos) {
+  let temas = posicionales;
+  if (v.todos) {
     if (posicionales.length > 0) fallar(`Vista '${posicionales[0]}' desconocida. Usa: ${VISTAS.join(', ')}.`);
-    return { temas: nombres, vista };
+    temas = nombres;
   }
-  if (posicionales.length === 0) return fallar(`Uso: pnpm capturas <tema>... [${VISTAS.join('|')}]  o  pnpm capturas --todos [vista]\nTemas: ${nombres.join(', ')}`);
-  const desconocido = posicionales.find((t) => !nombres.includes(t));
+  if (temas.length === 0) return fallar(`${USO}\nTemas: ${nombres.join(', ')}`);
+  const desconocido = temas.find((t) => !nombres.includes(t));
   if (desconocido !== undefined) return fallar(`Tema '${desconocido}' desconocido. Temas: ${nombres.join(', ')}`);
-  return { temas: posicionales, vista };
+  return {
+    workspace: GALERIA,
+    temas,
+    vistaDe: (t) => (vista === 'abierto' ? `${t}-referencia` : t),
+    varianteDe: (t) => (vista === 'abierto' ? VARIANTE_DE_TEMA[t] : undefined),
+    titulo: `Prototipo contra galeria (Vista ${vista})`,
+    lado: 'galeria',
+  };
+}
+
+function pedidoDeWorkspace(ruta: string, vista: string | undefined, variante: string | undefined, temas: string[]): Pedido {
+  if (vista === undefined || temas.length === 0) return fallar(`Con --workspace hacen falta --vista y al menos un Tema.\n${USO}`);
+  const variantes = Object.values(VARIANTE_DE_TEMA);
+  if (variante !== undefined && !variantes.includes(variante)) return fallar(`Variante '${variante}' desconocida. Variantes: ${variantes.join(', ')}`);
+  const copia = prepararWorkspace(resolve(REPO, ruta), vista, temas, process.env['CAPTURAS_DIR'] ?? '/tmp/rinthel-capturas');
+  const comparada = variante === undefined ? '' : ` contra la variante ${variante} del prototipo`;
+  return { workspace: copia.directorio, temas, vistaDe: copia.vistaDe, varianteDe: () => variante, titulo: `${ruta}, Vista ${vista}${comparada}`, lado: 'workspace' };
 }
 
 /** Chromium de la cache de Playwright (la revision instalada puede no ser la que espera la version de Playwright). */
@@ -84,44 +126,48 @@ async function capturarPrototipo(navegador: Browser, url: string, variante: stri
   await contexto.close();
 }
 
-function paginaDeComparacion(vista: Vista, temas: string[]): string {
+function paginaDeComparacion(pedido: Pedido): string {
   const imagen = (tema: string, lado: string): string => `<figure><figcaption>${lado}</figcaption><img src="${tema}-${lado}.png" alt="${tema} ${lado}"></figure>`;
-  const secciones = temas
-    .map((t) => `<section id="${t}"><h2>${t} <small>variante ${VARIANTE_DE_TEMA[t]} del prototipo</small></h2><div class="par">${vista === 'abierto' ? imagen(t, 'prototipo') : ''}${imagen(t, 'galeria')}</div></section>`)
+  const secciones = pedido.temas
+    .map((t) => {
+      const variante = pedido.varianteDe(t);
+      const subtitulo = variante === undefined ? '' : ` <small>variante ${variante} del prototipo</small>`;
+      return `<section id="${t}"><h2>${t}${subtitulo}</h2><div class="par">${variante === undefined ? '' : imagen(t, 'prototipo')}${imagen(t, pedido.lado)}</div></section>`;
+    })
     .join('\n');
-  const indice = temas.map((t) => `<a href="#${t}">${t}</a>`).join(' ');
-  return `<!doctype html><meta charset="utf-8"><title>Capturas: prototipo contra galeria</title>
+  const indice = pedido.temas.map((t) => `<a href="#${t}">${t}</a>`).join(' ');
+  return `<!doctype html><meta charset="utf-8"><title>Capturas: ${pedido.titulo}</title>
 <style>body{font:14px system-ui;margin:16px;background:#18181b;color:#e4e4e7}a{color:#93c5fd;margin-right:10px}h2{margin:28px 0 8px}small{opacity:.6;font-weight:400}
 .par{display:flex;gap:12px;align-items:flex-start}figure{margin:0;flex:1;min-width:0}figcaption{margin-bottom:4px;opacity:.7}img{width:100%;display:block;border:1px solid #3f3f46}</style>
-<h1>Prototipo contra galeria (Vista ${vista})</h1><nav>${indice}</nav>
+<h1>${pedido.titulo}</h1><nav>${indice}</nav>
 ${secciones}`;
 }
 
 async function principal(): Promise<void> {
-  const { temas, vista } = leerArgumentos();
+  const pedido = leerArgumentos();
   const cache = process.env['CAPTURAS_DIR'] ?? '/tmp/rinthel-capturas';
   const salida = join(cache, 'salida');
   mkdirSync(salida, { recursive: true });
 
-  const prototipo = vista === 'abierto' ? prepararPrototipo(cache, REPO) : undefined;
+  const prototipo = pedido.temas.some((t) => pedido.varianteDe(t) !== undefined) ? prepararPrototipo(cache, REPO) : undefined;
   const origen = await servirEstatico(cache);
-  const galeria = await iniciarDevDeGaleria(REPO, GALERIA);
+  const galeria = await iniciarDevDeGaleria(REPO, pedido.workspace);
   const navegador = await chromium.launch({ executablePath: rutaDeChromium(), headless: true });
   try {
-    for (const tema of temas) {
-      const vistaDeGaleria = vista === 'abierto' ? `${tema}-referencia` : tema;
-      await capturarGaleria(navegador, galeria.url, vistaDeGaleria, join(salida, `${tema}-galeria.png`));
-      if (prototipo !== undefined) {
+    for (const tema of pedido.temas) {
+      await capturarGaleria(navegador, galeria.url, pedido.vistaDe(tema), join(salida, `${tema}-${pedido.lado}.png`));
+      const variante = pedido.varianteDe(tema);
+      if (prototipo !== undefined && variante !== undefined) {
         const rutaDelPrototipo = `${origen}/${prototipo.directorio.split('/').pop()}/${prototipo.pagina}`;
-        await capturarPrototipo(navegador, rutaDelPrototipo, VARIANTE_DE_TEMA[tema]!, join(salida, `${tema}-prototipo.png`));
+        await capturarPrototipo(navegador, rutaDelPrototipo, variante, join(salida, `${tema}-prototipo.png`));
       }
-      console.log(`capturado ${tema} (${vista})`);
+      console.log(`capturado ${tema} (${pedido.vistaDe(tema)})`);
     }
   } finally {
     await navegador.close();
     galeria.detener();
   }
-  writeFileSync(join(salida, 'index.html'), paginaDeComparacion(vista, temas));
+  writeFileSync(join(salida, 'index.html'), paginaDeComparacion(pedido));
   console.log(`\nComparacion: ${origen}/salida/`);
 }
 
