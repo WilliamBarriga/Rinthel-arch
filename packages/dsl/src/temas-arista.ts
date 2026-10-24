@@ -13,7 +13,7 @@ import type { CapaDeTema, ErrorDeCatalogo, Primitiva, TemaResuelto, UbicacionDeP
 
 import type { EdgeItem, LayerProp, SlotEntry, ThemeLabel, ThemeLayer, ThemeMarker, ThemeUse } from './generated/ast';
 import { aRango, rangoDe } from './posiciones';
-import { compilarBloque } from './temas-capas';
+import { compilarBloque, propiedadDeClave, propiedadesEscritas } from './temas-capas';
 import type { ContextoDeBloque } from './temas-capas';
 
 type Contexto = Pick<ContextoDeBloque, 'archivo' | 'partes' | 'paleta' | 'tokens' | 'issues'>;
@@ -26,10 +26,10 @@ function primitivaSuelta(
   ctx: Contexto,
   culpable: { line: number; column: number },
 ): Primitiva | undefined {
-  const resueltas = resolverTokens(props.map(({ key, value }) => ({ clave: key, valor: value })), ctx.tokens);
+  const resueltas = resolverTokens(propiedadesEscritas(props), ctx.tokens);
   const { primitiva, errores } = construirPrimitiva(tipo, resueltas.props, ctx.paleta, ubicacion);
   for (const error of [...resueltas.errores, ...errores]) {
-    const prop = error.clave === undefined ? undefined : props.find(({ key }) => key === error.clave);
+    const prop = error.clave === undefined ? undefined : propiedadDeClave(props, error.clave);
     const donde = prop !== undefined ? rangoDe(prop, error.codigo === CODIGOS.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value').start : culpable;
     ctx.issues.push(aIssue(ctx.archivo, error, donde));
   }

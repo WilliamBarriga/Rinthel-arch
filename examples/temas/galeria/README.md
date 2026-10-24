@@ -29,4 +29,4 @@ Temas: `soft-card`, `glass-chip`, `neobrutalist`, `blueprint`, `claro-suave`, `c
 
 ## Limites del catalogo actual
 
-Estos Temas aproximan el prototipo con las Primitivas que existen hoy: sin bloque propio de Grupo ni de fondo de pagina, sin desplazamiento de Capa ni offsets negativos. (Los decimales con cero a la izquierda, como `0.05`, ya se leen bien en el DSL.)
+Estos Temas aproximan el prototipo con las Primitivas que existen hoy: sin bloque propio de Grupo ni de fondo de pagina. (Los decimales con cero a la izquierda, como `0.05`, ya se leen bien en el DSL.)

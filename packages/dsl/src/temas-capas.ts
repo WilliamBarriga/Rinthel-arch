@@ -11,7 +11,7 @@ import type { Issue, TextRange } from 'canonico';
 import { resolverTokens, validarOps } from 'tema';
 import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, UbicacionDePrimitiva } from 'tema';
 
-import type { PartDecl, ThemeLayer, ThemeUse } from './generated/ast';
+import type { LayerProp, PartDecl, ThemeLayer, ThemeUse } from './generated/ast';
 import { issueConSugerencia, rangoDe } from './posiciones';
 import { compilarAnimacionDeCapa } from './temas-animacion';
 
@@ -69,11 +69,29 @@ function expandir(items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string, 
   });
 }
 
+/**
+ * Propiedades escritas de una Capa como pares clave-valor para el catalogo.
+ * `offset x y` (dos valores) se expande a `offset-x` y `offset-y`; un segundo
+ * valor en cualquier otra clave se conserva en el valor para que el catalogo
+ * lo rechace con su mensaje habitual.
+ */
+export function propiedadesEscritas(props: readonly LayerProp[]): Array<{ clave: string; valor: string }> {
+  return props.flatMap(({ key, value, second }) => {
+    if (second === undefined) return [{ clave: key, valor: value }];
+    if (key === 'offset') return [{ clave: 'offset-x', valor: value }, { clave: 'offset-y', valor: second }];
+    return [{ clave: key, valor: `${value} ${second}` }];
+  });
+}
+
+/** La propiedad escrita que origino `clave` (`offset-x` y `offset-y` salen de `offset`); sirve para situar un error. */
+export const propiedadDeClave = (props: readonly LayerProp[], clave: string): LayerProp | undefined =>
+  props.find(({ key, second }) => key === clave || (key === 'offset' && second !== undefined && (clave === 'offset-x' || clave === 'offset-y')));
+
 const sitioDe = (archivo: string, rango: TextRange): Sitio => ({ file: archivo, ...rango.start });
 
 function aOp(elemento: Elemento, ctx: ContextoDeBloque): { op: OpDeCapa; errores: ErrorDeCatalogo[] } {
   const { item } = elemento;
-  const { props, errores } = resolverTokens(item.props.map(({ key, value }) => ({ clave: key, valor: value })), ctx.tokens);
+  const { props, errores } = resolverTokens(propiedadesEscritas(item.props), ctx.tokens);
   const op: OpDeCapa = {
     nombre: item.name,
     props: Object.fromEntries(props.map(({ clave, valor }) => [clave, valor])),
@@ -118,7 +136,7 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
   });
   const issueDe = (elemento: Elemento, error: ErrorDeCatalogo, donde: 'nombre' | 'ubicacion' | 'propiedad', baseDeError?: string): Issue => {
     const { item, archivo } = elemento;
-    const prop = error.clave === undefined ? undefined : item.props.find(({ key }) => key === error.clave);
+    const prop = error.clave === undefined ? undefined : propiedadDeClave(item.props, error.clave);
     const rango =
       donde === 'ubicacion'
         ? rangoDe(item, 'target')

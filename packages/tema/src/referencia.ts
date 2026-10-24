@@ -5,7 +5,7 @@
  * disco es `scripts/generar-referencia-catalogo.ts`.
  */
 import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
-import { CATALOGO, SLOTS } from './catalogo';
+import { CATALOGO, PROPIEDADES_DE_DESPLAZAMIENTO, SLOTS } from './catalogo';
 import type { DefinicionDePrimitiva, DefinicionDePropiedad } from './catalogo';
 
 const propiedad = (nombre: string, definicion: DefinicionDePropiedad): string => {
@@ -39,6 +39,12 @@ export function referenciaDelCatalogo(): string {
     '',
     '## Primitivas',
   ];
+  lineas.push(
+    '',
+    'Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las declare: `offset x y` (se escribe con dos valores y se guarda como `offset-x`/`offset-y`; admite negativos) y `grow`. Solo pintan: no cambian las Metricas ni provocan relayout, y un parche de estado puede cambiarlas con `transition`.',
+    '',
+    ...tabla(['Propiedad comun', 'Rango'], Object.entries(PROPIEDADES_DE_DESPLAZAMIENTO).map(([clave, valor]) => [`\`${clave}\``, `${valor.min} a ${valor.max}`])),
+  );
   for (const familia of familias) {
     lineas.push('', `### Familia ${familia}`, '');
     const filas = entradas

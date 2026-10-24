@@ -6,6 +6,14 @@ Un numero se escribe como `minimo a maximo (defecto)`; fuera de rango es un erro
 
 ## Primitivas
 
+Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las declare: `offset x y` (se escribe con dos valores y se guarda como `offset-x`/`offset-y`; admite negativos) y `grow`. Solo pintan: no cambian las Metricas ni provocan relayout, y un parche de estado puede cambiarlas con `transition`.
+
+| Propiedad comun | Rango |
+| --- | --- |
+| `offset-x` | -200 a 200 |
+| `offset-y` | -200 a 200 |
+| `grow` | -100 a 100 |
+
 ### Familia forma
 
 | Primitiva | Ubicacion | Propiedades | Metricas |

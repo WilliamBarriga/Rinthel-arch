@@ -9,7 +9,7 @@
  */
 import type { CapaPintada, NombreDePrimitivaEn } from 'tema';
 
-import { animacionDeHoja, nombresAnimados } from './animacion';
+import { animacionDeHoja, nombresAparte } from './animacion';
 import { PINTORES_DE_EFECTOS } from './efectos';
 import { huella, num } from './elemento';
 import { aspectoDeEstado } from './estilo';
@@ -40,8 +40,8 @@ const SOMBRAS = 'box-shadow';
 
 /** Declaraciones de la caja de un Nodo o Grupo: las Capas de abajo hacia arriba; sin Capas, el aspecto por defecto del Estilo. */
 export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
-  const animadas = nombresAnimados(estilo);
-  const capas = estilo.pintura.nodo.capas.filter((capa) => !animadas.has(capa.nombre));
+  const aparte = nombresAparte(estilo);
+  const capas = estilo.pintura.nodo.capas.filter((capa) => !aparte.has(capa.nombre));
   if (capas.length === 0 && estilo.pintura.nodo.capas.length === 0) {
     return {
       'border-radius': px(estilo.nodo.radio),
