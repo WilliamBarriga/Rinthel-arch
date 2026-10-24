@@ -14,7 +14,7 @@ theme crt-terminal {
     layer tinte solid { color COLOR/0.1 }
     layer barrido lines { color texto/0.1  size 3  width 1  angle 0 }
     layer borde border { color COLOR  width 1 }
-    slots { title { weight 700  transform uppercase }  attrs }
+    slots { title { weight 700  transform uppercase }  badge { alpha 0.55 }  attrs }
     type externo { layer glow none  layer borde dashed { color COLOR } }
     state hover { layer tinte { color COLOR/0.2 }  layer glow { radius 18 }  transition 80ms linear }
     state en-ruta { layer glow { color COLOR  motion pulso 1.2s ease-in-out intensity 0.5 } }

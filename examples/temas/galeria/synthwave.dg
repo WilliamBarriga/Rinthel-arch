@@ -13,7 +13,7 @@ theme synthwave {
     layer interior gradient { from fondo  to COLOR/0.25  angle 160 }
     layer rejilla grid { color rosa/0.12  size 12  width 1 }
     layer borde border { color cian/0.8 width 1 }
-    slots { title { weight 700 }  attrs }
+    slots { title { weight 700 }  badge { alpha 0.6 }  attrs }
     type externo { layer glow { color cian/0.4  radius 12 }  layer borde dashed { color cian } }
     state hover { layer glow { color cian/0.8  radius 28 }  transition 140ms ease-out }
     state en-ruta { layer glow { motion aura 2s ease-in-out intensity 0.6 } }

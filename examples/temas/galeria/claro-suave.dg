@@ -12,7 +12,7 @@ theme claro-suave {
     layer forma rect { radius 16 }
     layer relleno solid { color blanco }
     layer borde border { color texto/0.5 width 1 }
-    slots { title { weight 600 }  attrs }
+    slots { title { weight 600 }  badge { alpha 0.5 }  attrs }
     type externo { layer sombra-lejana none  layer sombra-cercana none  layer relleno { color fondo }  layer borde dashed { color texto/0.45 } }
     type servicio { layer tinte gradient after relleno { from blanco  to COLOR/0.10  angle 160 } }
     state hover { layer sombra-lejana { color COLOR/0.25  y 18  blur 40 }  transition 180ms ease-out }

@@ -1,63 +1,69 @@
 // Modelo de referencia para comparar un Tema con el prototipo aprobado (rama `prototype/render-hibrido`, ticket #46).
-// Copia, con los Tipos de la galeria, el Modelo del prototipo: paquetes del monorepo con Grupos abiertos, Grupos
-// colapsados, Aristas con y sin etiqueta y Aristas elevadas. Tipos: paquete = servicio, modulo = dominio,
-// artefacto = almacen. Vive bajo el Grupo `referencia` para que las Vistas de cobertura (`**`) lo excluyan.
+// Copia el Modelo del prototipo, con sus Tipos (paquete, modulo, artefacto, mas actor y externo de `modelo.dg`):
+// paquetes del monorepo con Grupos abiertos, Grupos colapsados, Aristas con y sin etiqueta y Aristas elevadas.
+// Vive bajo el Grupo `referencia` para que las Vistas de cobertura (`**`) lo excluyan.
 // La Vista `<tema>-referencia` equivale a la Vista `abierto` del prototipo (ver `vistas.dg`).
+specification {
+  node paquete   { description "Paquete del monorepo"           icon box  color blue }
+  node modulo    { description "Modulo dentro de un paquete"    icon box  color gray }
+  node artefacto { description "Archivo o carpeta del Proyecto" icon box  color green }
+}
+
 model {
   dominio referencia "Referencia" {
     actor autor "Autor" "Escribe archivos .dg y mira los diagramas"
     actor agente "Agente" "Valida, consulta y edita por CLI"
 
-    almacen workspace "Workspace" "Carpeta de archivos .dg del Proyecto documentado"
-    almacen salida-derivada ".diagrams/" "Salida derivada; no se versiona"
+    artefacto workspace "Workspace" "Carpeta de archivos .dg del Proyecto documentado"
+    artefacto salida-derivada ".diagrams/" "Salida derivada; no se versiona"
 
-    servicio canonico "canonico" "Esquema Zod, validacion y resolucion de Vistas" {
-      dominio can-esquema "esquema" "Fuente canonica (Zod)"
-      dominio can-validar "validar" "Issues con codigo y sugerencias"
-      dominio can-vistas "vistas" "Resolucion de include, exclude y depth"
-      dominio can-pasos "pasos" "Revelado paso a paso de Vistas flow"
-      dominio can-pin "pin" "Pin: posicion fijada por el autor"
-      dominio can-inspect "inspect" "Consultas sobre el Modelo"
+    paquete canonico "canonico" "Esquema Zod, validacion y resolucion de Vistas" {
+      modulo can-esquema "esquema" "Fuente canonica (Zod)"
+      modulo can-validar "validar" "Issues con codigo y sugerencias"
+      modulo can-vistas "vistas" "Resolucion de include, exclude y depth"
+      modulo can-pasos "pasos" "Revelado paso a paso de Vistas flow"
+      modulo can-pin "pin" "Pin: posicion fijada por el autor"
+      modulo can-inspect "inspect" "Consultas sobre el Modelo"
     }
 
-    servicio dsl "dsl" "Texto a Fuente canonica; fusion del Workspace" {
-      dominio dsl-gramatica "gramatica" "Gramatica Langium"
-      dominio dsl-compilar "compilar" "Archivos a Fuente canonica"
-      dominio dsl-temas "temas" "Temas, paleta y tokens"
-      dominio dsl-ubicador "ubicador" "Posiciones en el texto fuente"
+    paquete dsl "dsl" "Texto a Fuente canonica; fusion del Workspace" {
+      modulo dsl-gramatica "gramatica" "Gramatica Langium"
+      modulo dsl-compilar "compilar" "Archivos a Fuente canonica"
+      modulo dsl-temas "temas" "Temas, paleta y tokens"
+      modulo dsl-ubicador "ubicador" "Posiciones en el texto fuente"
     }
 
-    servicio layout "layout" "ELK y Pin; geometria cacheada" {
-      dominio lay-layout "layout" "Vista a geometria"
-      dominio lay-metricas "metricas" "Medicion de texto"
-      dominio lay-indice "indice" "Indice de geometria"
+    paquete layout "layout" "ELK y Pin; geometria cacheada" {
+      modulo lay-layout "layout" "Vista a geometria"
+      modulo lay-metricas "metricas" "Medicion de texto"
+      modulo lay-indice "indice" "Indice de geometria"
     }
 
-    servicio sesion "sesion" "Tuberia compilar, validar y calcular layout" {
-      dominio ses-sesion "sesion" "diagnosticar, construir, geometria"
-      dominio ses-ediciones "ediciones" "Edicion estructurada del DSL"
-      dominio ses-intenciones "intenciones" "Intenciones, deshacer y rehacer"
+    paquete sesion "sesion" "Tuberia compilar, validar y calcular layout" {
+      modulo ses-sesion "sesion" "diagnosticar, construir, geometria"
+      modulo ses-ediciones "ediciones" "Edicion estructurada del DSL"
+      modulo ses-intenciones "intenciones" "Intenciones, deshacer y rehacer"
     }
 
-    servicio render "render" "SVG React puro" {
-      dominio ren-escena "escena" "Geometria a elementos"
-      dominio ren-estilo "estilo" "Estilo resuelto contra el Tema"
-      dominio ren-diagram "diagram" "Componente Diagram"
+    paquete render "render" "SVG React puro" {
+      modulo ren-escena "escena" "Geometria a elementos"
+      modulo ren-estilo "estilo" "Estilo resuelto contra el Tema"
+      modulo ren-diagram "diagram" "Componente Diagram"
     }
 
-    servicio shell "shell" "Interaccion en el navegador" {
-      dominio sh-camara "camara" "Pan y zoom"
-      dominio sh-colapso "colapso" "Colapso de Grupos"
-      dominio sh-seleccion "seleccion" "Seleccion y arrastre de Pins"
-      dominio sh-worker "layout-en-worker" "Relayout en Worker"
+    paquete shell "shell" "Interaccion en el navegador" {
+      modulo sh-camara "camara" "Pan y zoom"
+      modulo sh-colapso "colapso" "Colapso de Grupos"
+      modulo sh-seleccion "seleccion" "Seleccion y arrastre de Pins"
+      modulo sh-worker "layout-en-worker" "Relayout en Worker"
     }
 
-    servicio cli "cli" "validate, build, export, inspect, edit, dev" {
-      dominio cli-validate "validate" "Diagnosticos"
-      dominio cli-export "export" "SVG, PNG y HTML"
-      dominio cli-inspect "inspect" "Ids, sitios y vecinos"
-      dominio cli-edit "edit" "Ediciones desde la terminal"
-      dominio cli-dev "dev" "Servidor local con recarga"
+    paquete cli "cli" "validate, build, export, inspect, edit, dev" {
+      modulo cli-validate "validate" "Diagnosticos"
+      modulo cli-export "export" "SVG, PNG y HTML"
+      modulo cli-inspect "inspect" "Ids, sitios y vecinos"
+      modulo cli-edit "edit" "Ediciones desde la terminal"
+      modulo cli-dev "dev" "Servidor local con recarga"
     }
 
     externo elk "ELK (elkjs)" "Motor de layout"

@@ -11,7 +11,7 @@ theme editorial {
     layer forma rect
     layer relleno solid { color fondo }
     layer regla border { color texto  width 1 }
-    slots { title { weight 400  style italic }  attrs }
+    slots { title { weight 400  style italic }  badge { alpha 0.6 }  attrs }
     type servicio { layer regla { color COLOR  width 2 } }
     type externo { layer regla dotted { color texto  width 2 } }
     state hover { layer relleno { color texto/0.1 }  transition 150ms ease }

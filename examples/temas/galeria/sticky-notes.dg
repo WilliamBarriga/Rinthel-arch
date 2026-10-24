@@ -14,7 +14,7 @@ theme sticky-notes {
     layer nota solid { color COLOR }
     layer pliegue gradient { from texto/0  to texto/0.10  angle 170 }
     layer cinta tape over { color cinta/0.7  width 54  height 16 }
-    slots { title { weight 700 }  attrs }
+    slots { title { weight 700 }  badge { alpha 0.55 }  attrs }
     type actor { layer forma pill  layer nota solid { color papel }  layer cinta none  layer pliegue none  layer trazo sketch after forma { roughness 2 }  layer borde border after nota { color texto  width 2 } }
     type externo { layer nota solid { color papel }  layer cinta none  layer pliegue none  layer trazo sketch after forma { roughness 2 }  layer borde dashed after nota { color tinta  width 2 } }
     state hover { layer sombra { y 18  blur 24 }  transition 150ms ease-out }

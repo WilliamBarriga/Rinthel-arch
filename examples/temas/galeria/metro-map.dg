@@ -1,4 +1,6 @@
 // Contraste: ninguno
+// Solo color: modulo/artefacto, paquete/artefacto, paquete/modulo
+// Deliberado, como en el prototipo: sin insignia, en la Vista de referencia paquete, modulo y artefacto solo cambian de color.
 // Mapa de metro: estaciones en pastilla con borde grueso y lineas gruesas del color del origen.
 theme metro-map {
   palette {

@@ -12,7 +12,7 @@ theme bauhaus {
     layer relleno solid { color papel }
     layer borde border { color texto  width 3 }
     layer franja lines over { color COLOR/0.5  size 6  width 2  angle 45 }
-    slots { title { weight 800  transform uppercase }  attrs }
+    slots { title { weight 800  transform uppercase }  badge { alpha 0.7 }  attrs }
     type actor { layer forma pill }
     type externo { layer forma cut { cut 18 }  layer relleno { color COLOR/0.25 } }
     type almacen { layer forma circle }

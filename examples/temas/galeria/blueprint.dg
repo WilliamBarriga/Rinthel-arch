@@ -18,7 +18,7 @@ theme blueprint {
     layer cuadricula grid { color texto/0.10  size 10  width 1 }
     layer borde border { color texto  width 2 }
     layer interior outline { color texto/0.5  width 1  offset 3 }
-    slots { title { weight 700  transform uppercase }  attrs }
+    slots { title { weight 700  transform uppercase }  badge { alpha 0.6 }  attrs }
     type externo { layer borde dashed { color texto  width 2 }  layer interior none }
     state hover { layer relleno { color texto/0.12 }  transition 100ms linear }
     state en-ruta { layer borde { color COLOR } }

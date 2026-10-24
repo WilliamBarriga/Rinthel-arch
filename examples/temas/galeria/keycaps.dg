@@ -14,7 +14,7 @@ theme keycaps {
     layer forma rect { radius 12 }
     layer tecla gradient { from COLOR  to COLOR/0.85  angle 180 }
     layer borde border { color luz/0.5 width 1 }
-    slots { title { weight 800 }  attrs }
+    slots { title { weight 800 }  badge { alpha 0.55 }  attrs }
     type externo { layer tecla gradient { from papel  to papel/0.85  angle 180 }  layer borde dashed { color papel  width 2 }  layer canto-3 none  layer canto-2 none  layer canto-1 none  layer suelo none }
     state hover { layer canto-3 none  layer canto-2 none  layer suelo { y 4  blur 8 }  transition 80ms ease-out }
     state en-ruta { layer borde { color luz  width 2 } }

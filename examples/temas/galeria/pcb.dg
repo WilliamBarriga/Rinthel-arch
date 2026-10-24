@@ -13,7 +13,7 @@ theme pcb {
     layer brillo gradient { from estano/0.12  to chip/0  angle 160 }
     layer patas dashed { color estano  width 2 }
     layer serigrafia border { color texto/0.5 width 1 }
-    slots { title { weight 700  transform uppercase }  attrs }
+    slots { title { weight 700  transform uppercase }  badge { alpha 0.5 }  attrs }
     type actor { layer forma pill  layer chip solid { color cobre/0.15 }  layer serigrafia border { color cobre  width 2 } }
     type externo { layer chip solid { color placa }  layer patas none  layer serigrafia dashed { color texto  width 2 } }
     state hover { layer brillo { from COLOR/0.3 }  transition 100ms linear }
