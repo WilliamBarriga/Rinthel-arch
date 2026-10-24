@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, advertenciasDeContraste, leyendaDelTema, razonDeContraste, tiposSoloColor } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, advertenciasDeContraste, construirPrimitiva, leyendaDelTema, razonDeContraste, tiposSoloColor } from 'tema';
+import type { TemaResuelto, UbicacionDePrimitiva } from 'tema';
+
+type Primitiva = { tipo: string; props: Record<string, string | number> };
 
 const capa = (nombre: string, tipo: string, props: Record<string, string | number>) => ({ nombre, primitiva: { tipo, props } });
 
@@ -61,6 +63,22 @@ describe('advertencias de contraste', () => {
   it('los Temas incorporados neutral y alto-contraste no dan avisos', () => {
     expect(advertenciasDeContraste(TEMA_NEUTRO, { servicio: 'blue' })).toEqual([]);
     expect(advertenciasDeContraste(TEMA_ALTO_CONTRASTE, { servicio: 'blue', db: 'green' })).toEqual([]);
+  });
+
+  it('alto-contraste llega ya resuelto: cada Primitiva trae los defectos del catalogo, como si saliera de dsl', () => {
+    const t = TEMA_ALTO_CONTRASTE;
+    const primitivas: Array<[Primitiva, UbicacionDePrimitiva]> = [
+      ...t.pagina.capas.map((c): [Primitiva, UbicacionDePrimitiva] => [c.primitiva, 'capa-pagina']),
+      ...[...t.nodo.capas, ...t.grupo.capas].map((c): [Primitiva, UbicacionDePrimitiva] => [c.primitiva, 'capa-nodo']),
+      ...[...Object.values(t.nodo.textos), ...Object.values(t.grupo.textos)].map((p): [Primitiva, UbicacionDePrimitiva] => [p, 'texto-slot']),
+      ...t.arista.capas.map((c): [Primitiva, UbicacionDePrimitiva] => [c.primitiva, 'capa-arista']),
+      ...[t.arista.fin, t.arista.origen].flatMap((p): Array<[Primitiva, UbicacionDePrimitiva]> => (p === undefined ? [] : [[p, 'marcador']])),
+      ...(t.arista.etiqueta === undefined ? [] : [[t.arista.etiqueta, 'etiqueta'] as [Primitiva, UbicacionDePrimitiva]]),
+    ];
+    for (const [primitiva, ubicacion] of primitivas) {
+      const props = Object.entries(primitiva.props).map(([clave, valor]) => ({ clave, valor }));
+      expect(construirPrimitiva(primitiva.tipo, props, t.palette, ubicacion).primitiva, primitiva.tipo).toEqual(primitiva);
+    }
   });
 });
 
