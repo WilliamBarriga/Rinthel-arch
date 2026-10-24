@@ -34,7 +34,7 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | `grid` | capa-nodo, capa-pagina | `color` color de Paleta; `size` 2 a 200 (16); `width` 1 a 8 (1) | no |
 | `lines` | capa-nodo, capa-pagina | `color` color de Paleta; `size` 2 a 200 (8); `width` 1 a 8 (1); `angle` 0 a 180 (45) | no |
 | `dots` | capa-nodo, capa-pagina | `color` color de Paleta; `size` 4 a 200 (12); `radius` 1 a 50 (2) | no |
-| `noise` | capa-nodo, capa-pagina | `frequency` 0.1 a 2 (0.8); `opacity` 0 a 1 (0.15) | no |
+| `noise` | capa-nodo, capa-pagina | `frequency` 0.1 a 2 (0.8); `opacity` 0 a 1 (0.15); `color` color de Paleta (opcional) | no |
 
 ### Familia borde
 

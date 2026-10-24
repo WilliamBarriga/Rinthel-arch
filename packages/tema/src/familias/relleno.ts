@@ -48,9 +48,10 @@ export const RELLENOS = {
     afectaMetricas: false,
     propiedades: { color: { tipo: 'color' }, size: { tipo: 'numero', min: 4, max: 200, defecto: 12 }, radius: { tipo: 'numero', min: 1, max: 50, defecto: 2 } },
   },
+  /** Grano fractal: gris sin `color`; con `color`, grano de ese color (de Paleta: es una imagen aparte, `COLOR` no llega). */
   noise: {
     familia: 'relleno',
     afectaMetricas: false,
-    propiedades: { frequency: { tipo: 'numero', min: 0.1, max: 2, defecto: 0.8 }, opacity: { tipo: 'numero', min: 0, max: 1, defecto: 0.15 } },
+    propiedades: { frequency: { tipo: 'numero', min: 0.1, max: 2, defecto: 0.8 }, opacity: { tipo: 'numero', min: 0, max: 1, defecto: 0.15 }, color: { tipo: 'color', opcional: true } },
   },
 } as const satisfies Record<string, DefinicionDePrimitiva>;

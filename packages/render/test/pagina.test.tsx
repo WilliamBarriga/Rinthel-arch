@@ -83,4 +83,22 @@ describe('Diagram: fondo de pagina', () => {
     expect(/\.rd-\w+ \.rd-pagina\{([^}]*)\}/.exec(hoja)?.[1]).toContain('background-image:radial-gradient(circle at 88% 18%,rgba(242, 183, 5, 0.9) 0 170px,transparent 171px)');
     expect(/\.rd-\w+ \.rd-nodo\{([^}]*)\}/.exec(hoja)?.[1]).toContain('background-image:radial-gradient(circle at 9px 9px,#f2b705 0 3px,transparent 4px)');
   });
+
+  it('el ruido con color es grano de ese color (no gris), con la opacidad de la Capa', async () => {
+    const conGrano = (color?: string): TemaResuelto => ({
+      ...TEMA_NEUTRO,
+      palette: { ...TEMA_NEUTRO.palette, white: '#ffffff' },
+      pagina: { fijo: true, capas: [{ nombre: 'fibra', primitiva: { tipo: 'noise', props: { frequency: 0.8, opacity: 0.07, ...(color !== undefined && { color }) } } }] },
+    });
+    const svgDe = async (tema: TemaResuelto): Promise<string> => {
+      const regla = /\.rd-\w+ \.rd-pagina\{([^}]*)\}/.exec(hojaDe(await dibujo(tema)))?.[1] ?? '';
+      return decodeURIComponent(/data:image\/svg\+xml,([^"]*)/.exec(regla)?.[1] ?? '');
+    };
+
+    const blanco = await svgDe(conGrano('white'));
+    expect(blanco).toContain("<feFlood flood-color='#ffffff'/><feComposite in2='ruido' operator='in'/>");
+    expect(blanco).toContain("opacity='0.07'");
+    expect(await svgDe(conGrano())).toContain("<feColorMatrix type='saturate' values='0'/>");
+  });
 });
+
