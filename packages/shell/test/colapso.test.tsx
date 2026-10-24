@@ -165,9 +165,11 @@ describe('colapso y expansion', () => {
 
     alternar(container, 'g');
     await waitFor(() => expect(ids(container)).toContain('g.a'));
-    const siguiente = () => act(async () => cuadros.shift()!(performance.now()));
-    await siguiente(); // inicio
-    await siguiente();
+    // Reloj propio: con `performance.now()` una maquina cargada puede tardar mas que `morphMs` entre cuadros y el morph ya habria terminado.
+    let ahora = 1000;
+    const siguiente = (avanceMs: number) => act(async () => cuadros.shift()!((ahora += avanceMs)));
+    await siguiente(0); // inicio
+    await siguiente(40); // 40 de 100 ms
     const medio = opacidadDeNodo(container, 'g.a');
     expect(xEnPantalla(container, 'g')).toBeCloseTo(antes, 5);
     expect(medio).not.toBeNull();
