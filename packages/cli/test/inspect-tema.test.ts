@@ -160,6 +160,13 @@ describe('inspect tema', () => {
     expect(texto).toMatch(/^Slots: .* main\.dg:18$/m);
   });
 
+  it('las Metricas traen el padding efectivo del Grupo (cabecera mas padding), no el por defecto del Nodo', async () => {
+    const raiz = resolve(__dirname, 'fixtures/tema-grupo');
+    const { metricas, grupo } = temaDe((await json(['hijo'], raiz)).salida);
+
+    expect(metricas['paddingGrupo']).toEqual({ top: grupo.alturaDeCabecera + 12, left: 12, bottom: 12, right: 12 });
+  });
+
   it('un Tema sin group lo dice: pila sobria de los tokens y no las Capas del Nodo', async () => {
     const raiz = resolve(__dirname, 'fixtures/tema-grupo');
     const { grupo } = temaDe((await json(['sobrio'], raiz)).salida);

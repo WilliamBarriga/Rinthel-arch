@@ -228,7 +228,8 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
         grupo,
         slots: describirDisposicion(delNodo.disposicion),
         origenDeSlots: sitioDeSlots(origen?.slots.nodo),
-        metricas: JSON.parse(JSON.stringify(delNodo)) as never,
+        // `paddingGrupo` es del Grupo: la tabla del Nodo trae el valor por defecto, que no dice nada de este Tema.
+        metricas: JSON.parse(JSON.stringify({ ...delNodo, paddingGrupo: tabla.grupoAbierto.paddingGrupo })) as never,
         temaConCodigo: componentes.length > 0,
         componentes,
         ...(catalogo && { catalogo: { primitivas: Object.keys(CATALOGO), movimientos: Object.keys(MOVIMIENTOS), efectos: [...EFECTOS] } }),
