@@ -122,8 +122,10 @@ const MARCADORES: { readonly [M in NombreDePrimitivaEn<'marcador'>]: Dibujo } = 
       attrs: { d: `M ${num(-0.65 * s)} ${num(-0.35 * s)} L 0 0 L ${num(-0.65 * s)} ${num(0.35 * s)}`, fill: 'none', stroke: color, 'stroke-width': num(Math.max(1, s / 7)), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
     },
   ],
+  // Almohadilla de una via: centrada en el extremo (no detras de la punta), disco del color con el agujero del fondo.
   via: (s, color, fondo) => [
-    { tag: 'circle', attrs: { cx: num(-s / 2), cy: '0', r: num(s / 2), fill: fondo, stroke: color, 'stroke-width': num(Math.max(1, s / 4)) } },
+    { tag: 'circle', attrs: { cx: '0', cy: '0', r: num(s / 2), fill: color } },
+    { tag: 'circle', attrs: { cx: '0', cy: '0', r: num(s / 5), fill: fondo } },
   ],
 };
 

@@ -58,7 +58,16 @@ describe('Aristas del Tema', () => {
     expect(marcas[0]?.attrs['transform']).toBe('translate(0 0) rotate(180)');
     expect(marcas[1]?.attrs['transform']).toBe('translate(40 40) rotate(90)');
     expect(marcas[0]?.hijos?.[0]).toMatchObject({ tag: 'circle', attrs: { r: '3', fill: '#2563eb' } });
-    expect(marcas[1]?.hijos?.[0]).toMatchObject({ tag: 'circle', attrs: { r: '4', fill: TEMA_NEUTRO.tokens.background, stroke: '#2563eb' } });
+  });
+
+  it('la via es una almohadilla centrada en el extremo: disco del color con el agujero del fondo', () => {
+    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], fin: { tipo: 'via', props: { size: 10 } } }));
+    const via = todos(pintarArista(estilo, { id: 'e', puntos: L }), 'g').find((g) => g.attrs['data-marker'] === 'fin');
+
+    expect(via?.hijos).toEqual([
+      { tag: 'circle', attrs: { cx: '0', cy: '0', r: '5', fill: '#2563eb' } },
+      { tag: 'circle', attrs: { cx: '0', cy: '0', r: '2', fill: TEMA_NEUTRO.tokens.background } },
+    ]);
   });
 
   it('la etiqueta con fill dibuja su caja con el radio del Tema; sin fill solo lleva halo', () => {
