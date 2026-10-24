@@ -61,6 +61,8 @@ export interface OrigenDeTema {
   grupo: { base: Record<string, Sitio>; tipos: Record<string, Record<string, Sitio>>; estados: Record<string, Record<string, Sitio>>; colapsado: Record<string, Sitio> };
   /** Ultimo parche que fijo cada Capa del fondo de pagina. */
   pagina: Record<string, Sitio>;
+  /** Donde se escribio por ultima vez la disposicion de Slots del Nodo, de la cabecera del Grupo y del Grupo cerrado (`state collapsed`); falta el que el Tema no escribe (ni sus ancestros). */
+  slots: Partial<Record<'nodo' | 'grupo' | 'colapsado', Sitio>>;
 }
 
 /** Resultado de compilar los Temas y herramienta para compilar el override de una Vista. */
@@ -91,6 +93,8 @@ interface Entorno {
   porEstado: Registro;
   /** Origen de las Capas del parche `collapsed` del Grupo (bajo la clave `collapsed`). */
   porColapso: Registro;
+  /** Donde se escribio cada disposicion de Slots (clave `nodo`, `grupo` o `colapsado`). */
+  sitiosDeSlots: Map<'nodo' | 'grupo' | 'colapsado', Sitio>;
 }
 
 /** Nombres de las `part` que usa un bloque, incluidas las que usan esas partes. */
@@ -157,7 +161,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     });
   }
 
-  const incorporado: OrigenDeTema = { sitio: { file: '(incorporado)', line: 1, column: 1 }, extends: [], partes: [], base: {}, tipos: {}, estados: {}, grupo: { base: {}, tipos: {}, estados: {}, colapsado: {} }, pagina: {} };
+  const incorporado: OrigenDeTema = { sitio: { file: '(incorporado)', line: 1, column: 1 }, extends: [], partes: [], base: {}, tipos: {}, estados: {}, grupo: { base: {}, tipos: {}, estados: {}, colapsado: {} }, pagina: {}, slots: {} };
   const resueltos = new Map<string, Compilado>();
   const altoContraste: Compilado = { tema: TEMA_ALTO_CONTRASTE, origenes: new Map(), origen: incorporado };
   const enCurso = new Set<string>();
@@ -223,6 +227,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     const origenesDeGrupo = new Map(Object.entries(base?.origen.grupo.base ?? {}));
     const grupoPorTipo = copiarRegistro(base?.origen.grupo.tipos ?? {});
     const grupoPorEstado = copiarRegistro(base?.origen.grupo.estados ?? {});
+    const sitiosDeSlots = new Map(Object.entries(base?.origen.slots ?? {}) as Array<['nodo' | 'grupo' | 'colapsado', Sitio]>);
     const grupoPorColapso = copiarRegistro({ collapsed: base?.origen.grupo.colapsado ?? {} });
     for (const parte of declarado.ast.parts) {
       if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeGroup' || parte.$type === 'ThemeEdge' || parte.$type === 'ThemePage') continue;
@@ -231,9 +236,9 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     }
     // El bloque `node` se compila al final: sus colores y tokens se validan contra la Paleta y los tokens ya completos.
     const items = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeNode' ? parte.items : []));
-    compilarElemento('nodo', declarado.archivo, items, tema, origenes, { partes, tipos, issues, porTipo, porEstado, porColapso: {} });
+    compilarElemento('nodo', declarado.archivo, items, tema, origenes, { partes, tipos, issues, porTipo, porEstado, porColapso: {}, sitiosDeSlots });
     const delGrupo = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeGroup' ? parte.items : []));
-    compilarElemento('grupo', declarado.archivo, delGrupo, tema, origenesDeGrupo, { partes, tipos, issues, porTipo: grupoPorTipo, porEstado: grupoPorEstado, porColapso: grupoPorColapso });
+    compilarElemento('grupo', declarado.archivo, delGrupo, tema, origenesDeGrupo, { partes, tipos, issues, porTipo: grupoPorTipo, porEstado: grupoPorEstado, porColapso: grupoPorColapso, sitiosDeSlots });
     const delBordeDeArista = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeEdge' ? parte.items : []));
     compilarArista(delBordeDeArista, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
     const delaPagina = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemePage' ? parte.items : []));
@@ -258,6 +263,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
           colapsado: sitioDeCopia(grupoPorColapso['collapsed'] ?? new Map()),
         },
         pagina: sitioDeCopia(origenesDePagina),
+        slots: Object.fromEntries(sitiosDeSlots),
       },
     };
     resueltos.set(name, compilado);
@@ -348,8 +354,10 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
   const opsBase = compilarBloque(delBase, { ...contexto, modo, candidatas: [bloque.capas as CapaDeTema[]] });
   bloque.capas = aplicarOps(bloque.capas as CapaDeTema[], opsBase, tema.palette, modo).pila;
   for (const item of items) {
-    if (item.$type === 'ThemeSlots') compilarSlots(item, bloque, { archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues }, elemento);
-    else if (item.$type === 'GroupPadding' && elemento === 'grupo') compilarPadding(item, tema, archivo, issues);
+    if (item.$type === 'ThemeSlots') {
+      entorno.sitiosDeSlots.set(elemento, { file: archivo, ...aRango(item.$cstNode?.range).start });
+      compilarSlots(item, bloque, { archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues }, elemento);
+    } else if (item.$type === 'GroupPadding' && elemento === 'grupo') compilarPadding(item, tema, archivo, issues);
   }
 
   // Animacion del elemento: `transition`, `enter`, `exit` y `stagger` (solo pintura, nunca Metricas).
@@ -427,6 +435,7 @@ function compilarColapsado(item: ThemeState, tema: TemaResuelto, ctx: Omit<Conte
   const { archivo, partes, issues, entorno } = ctx;
   const colapsado = tema.grupo.colapsado;
   for (const slots of item.items.filter((i): i is ThemeSlots => i.$type === 'ThemeSlots')) {
+    entorno.sitiosDeSlots.set('colapsado', { file: archivo, ...aRango(slots.$cstNode?.range).start });
     compilarSlots(slots, colapsado, { archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues }, 'grupo');
   }
   const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');

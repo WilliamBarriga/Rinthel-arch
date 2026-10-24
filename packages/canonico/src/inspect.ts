@@ -110,13 +110,17 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       grupo: z.object({
         propio: z.boolean(),
         cabecera: z.string(),
+        /** Donde se escribio la cabecera (`slots` de `group`); el Tema si ninguno la escribe. */
+        origenDeCabecera: z.object(sitioSchema),
         alturaDeCabecera: z.number(),
         padding: z.object({ top: z.number(), left: z.number(), bottom: z.number(), right: z.number() }),
         capas: z.array(capaDeTemaSchema),
-        colapsado: z.object({ slots: z.string(), capas: z.array(capaDeTemaSchema) }),
+        colapsado: z.object({ slots: z.string(), origenDeSlots: z.object(sitioSchema), capas: z.array(capaDeTemaSchema) }),
       }),
       /** Disposicion de Slots del Nodo del Tipo pedido, en la sintaxis del DSL (`column { row gap 6 { icon title } attrs }`). */
       slots: z.string(),
+      /** Donde se escribio esa disposicion (`slots` de `node`); el Tema si ninguno la escribe. */
+      origenDeSlots: z.object(sitioSchema),
       /** Metricas del Nodo del Tipo pedido (o la base): lo unico que mueve el layout. */
       metricas: z.object({ fontSize: z.number() }).catchall(z.unknown()),
       temaConCodigo: z.boolean(),

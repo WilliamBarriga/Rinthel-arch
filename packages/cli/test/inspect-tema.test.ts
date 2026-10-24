@@ -36,6 +36,7 @@ describe('inspect tema', () => {
     expect(tema.capas[2]?.props).toMatchObject({ width: 2 });
     expect(tema.metricas.fontSize).toBeGreaterThan(0);
     expect(tema.slots).toBe('column { title attrs }');
+    expect(`${tema.origenDeSlots.file}:${tema.origenDeSlots.line}`).toBe('base.dg:11');
   });
 
   it('--tipo y --estado resuelven la cascada de un caso, con las part usadas', async () => {
@@ -142,6 +143,21 @@ describe('inspect tema', () => {
     expect(texto.stdout).toContain('Grupo:');
     expect(texto.stdout).toContain('cabecera: row gap 6 pad 6 { icon title }');
     expect(texto.stdout).toMatch(/borde dashed .*main\.dg:19/);
+  });
+
+  it('muestra donde se escribio la disposicion de Slots del Nodo, de la cabecera del Grupo y del Grupo cerrado', async () => {
+    const raiz = resolve(__dirname, 'fixtures/tema-grupo');
+    const { grupo, origenDeSlots } = temaDe((await json(['hijo'], raiz)).salida);
+    const sitio = ({ file, line }: { file: string; line: number }) => `${file}:${line}`;
+
+    // El Tema `hijo` hereda de `base` su cabecera; el Grupo cerrado y el Nodo no escriben `slots`: valen la linea del Tema.
+    expect(sitio(grupo.origenDeCabecera)).toBe('main.dg:10');
+    expect(sitio(grupo.colapsado.origenDeSlots)).toBe(sitio(origenDeSlots));
+    expect(sitio(origenDeSlots)).toBe('main.dg:18');
+
+    const texto = (await run(['inspect', 'tema', 'hijo', '--workspace', raiz])).stdout;
+    expect(texto).toMatch(/cabecera: row gap 6 pad 6 \{ icon title \} \(alto \d+\) main\.dg:10/);
+    expect(texto).toMatch(/^Slots: .* main\.dg:18$/m);
   });
 
   it('un Tema sin group lo dice: pila sobria de los tokens y no las Capas del Nodo', async () => {

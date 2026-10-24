@@ -187,6 +187,8 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
       return aCapa(capa, sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line });
     }),
   };
+  // Donde se escribio una disposicion de Slots; si ningun bloque la escribe, vale la del Tema (o el nucleo).
+  const sitioDeSlots = (sitio: Sitio | undefined): Sitio => sitio ?? origen?.sitio ?? INCORPORADO;
   const tabla = tablaDeMetricas(declarado);
   const delNodo = metricasDeNodo(tabla, tipo);
   const delGrupo = origen?.grupo;
@@ -204,10 +206,11 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   const grupo = {
     propio: tema.grupo.capas.length > 0,
     cabecera: describirDisposicion(tabla.grupoAbierto.disposicion),
+    origenDeCabecera: sitioDeSlots(origen?.slots.grupo),
     alturaDeCabecera: alturaDeCabecera(tabla.grupoAbierto),
     padding: tema.grupo.padding,
     capas: pilaDeGrupo(false),
-    colapsado: { slots: describirDisposicion(tabla.grupoColapsado.disposicion), capas: pilaDeGrupo(true) },
+    colapsado: { slots: describirDisposicion(tabla.grupoColapsado.disposicion), origenDeSlots: sitioDeSlots(origen?.slots.colapsado ?? origen?.slots.nodo), capas: pilaDeGrupo(true) },
   };
   return {
     salida: {
@@ -224,6 +227,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
         pagina,
         grupo,
         slots: describirDisposicion(delNodo.disposicion),
+        origenDeSlots: sitioDeSlots(origen?.slots.nodo),
         metricas: JSON.parse(JSON.stringify(delNodo)) as never,
         temaConCodigo: componentes.length > 0,
         componentes,
@@ -276,7 +280,7 @@ export function textoLegible(salida: SalidaDeInspect): string {
     }
     const { grupo } = tema;
     lineas.push(`Grupo:${grupo.propio ? '' : ' (sin group: pila sobria derivada de los tokens del Tema, no las Capas del Nodo)'}`);
-    lineas.push(`  cabecera: ${grupo.cabecera} (alto ${grupo.alturaDeCabecera})`);
+    lineas.push(`  cabecera: ${grupo.cabecera} (alto ${grupo.alturaDeCabecera}) ${sitio(grupo.origenDeCabecera)}`);
     lineas.push(`  padding: ${grupo.padding.top} ${grupo.padding.right} ${grupo.padding.bottom} ${grupo.padding.left}`);
     for (const [titulo, capas] of [['abierto', grupo.capas], ['colapsado', grupo.colapsado.capas]] as const) {
       if (capas.length > 0) lineas.push(`  ${titulo}:`);
@@ -285,8 +289,8 @@ export function textoLegible(salida: SalidaDeInspect): string {
         lineas.push(`    ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`}${c.encima ? ' [encima]' : ''}${c.animada ? ' [animada]' : ''} ${sitio(c.origen)}`);
       }
     }
-    lineas.push(`  colapsado cabecera: ${grupo.colapsado.slots}`);
-    lineas.push(`Slots: ${tema.slots}`);
+    lineas.push(`  colapsado cabecera: ${grupo.colapsado.slots} ${sitio(grupo.colapsado.origenDeSlots)}`);
+    lineas.push(`Slots: ${tema.slots} ${sitio(tema.origenDeSlots)}`);
     lineas.push('Metricas:');
     for (const [clave, valor] of Object.entries(tema.metricas)) if (clave !== 'disposicion') lineas.push(`  ${clave}: ${typeof valor === 'object' ? JSON.stringify(valor) : String(valor)}`);
     lineas.push(tema.temaConCodigo ? `con codigo: ${tema.componentes.join(', ')}` : 'sin codigo');
