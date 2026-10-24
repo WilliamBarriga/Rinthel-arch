@@ -46,8 +46,8 @@ describe('tabla de Metricas por elemento', () => {
   it('la tabla trae Grupo abierto, Grupo colapsado y etiqueta de Arista', () => {
     const tabla = tablaDeMetricas(TEMA_NEUTRO);
 
-    expect(tabla.grupoAbierto.paddingGrupo).toEqual({ top: 32, left: 16, bottom: 16, right: 16 });
-    expect(tabla.grupoColapsado.disposicion).toEqual(TEMA_NEUTRO.nodo.slots);
+    expect(tabla.grupoAbierto.paddingGrupo).toEqual({ top: 44, left: 16, bottom: 16, right: 16 });
+    expect(tabla.grupoColapsado.disposicion).toEqual(TEMA_NEUTRO.grupo.slots);
     expect(tabla.etiqueta.escalaEtiqueta).toBe(0.85);
   });
 });

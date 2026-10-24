@@ -4,7 +4,7 @@ import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { Atributo, Tema, VistaResuelta } from 'canonico';
 import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
-import { TEMA_NEUTRO, metricasDe } from 'tema';
+import { TEMA_NEUTRO, metricasDe, tablaDeMetricas } from 'tema';
 
 const nodo = (id: string, children: unknown[] = []) => ({
   id,
@@ -456,7 +456,7 @@ describe('Metricas', () => {
     expect(claveDeLayout(vista(), TEMA_NEUTRO, { ...base, paddingHorizontal: base.paddingHorizontal + 8 })).not.toBe(
       claveDeLayout(vista(), TEMA_NEUTRO),
     );
-    expect(claveDeLayout(vista(), TEMA_NEUTRO, base)).toBe(claveDeLayout(vista(), TEMA_NEUTRO));
+    expect(claveDeLayout(vista(), TEMA_NEUTRO, tablaDeMetricas(TEMA_NEUTRO))).toBe(claveDeLayout(vista(), TEMA_NEUTRO));
   });
 
   it('cambiar una Metrica mueve el layout: mas padding, Nodo mas ancho; mas fila, mas alto', async () => {

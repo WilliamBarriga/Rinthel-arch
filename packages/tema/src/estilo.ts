@@ -14,8 +14,9 @@ import type { Metricas, TablaDeMetricas } from './metricas';
 import { CATALOGO } from './catalogo';
 import type { DefinicionDePrimitiva, NombreDePrimitiva, NombreDeSlot } from './catalogo';
 import { resolverColor } from './color';
+import type { ContextoDeColor } from './color';
 import { cascada } from './parches';
-import type { CapaDeTema, Estado, OpDeCapa } from './parches';
+import type { CapaDeTema, ElementoDeTema, Estado, OpDeCapa } from './parches';
 import { resolverTema } from './tema';
 import type { TemaResuelto } from './tema';
 
@@ -71,11 +72,18 @@ export interface PinturaDePagina {
   fijo: boolean;
 }
 
+/** Pintura de un Nodo o de un Grupo (abierto o colapsado): la del elemento sin Tipo y la de cada Tipo con parches. */
+export interface PinturaDeElemento extends PinturaDeNodo {
+  tipos: Record<string, PinturaDeNodo>;
+}
+
 export interface Pintura {
   /** `seed N` del Tema (token `seed`); sin el, la semilla de cada Capa sale solo del id y del nombre. */
   semilla?: number;
-  /** Reposo y estados del Nodo sin Tipo, y los de cada Tipo de nodo pedido en `OpcionesDeEstilo.tipos`. */
-  nodo: PinturaDeNodo & { tipos: Record<string, PinturaDeNodo> };
+  /** Reposo y estados del Nodo sin Tipo, y los de cada Tipo de nodo con parches o pedido en `OpcionesDeEstilo.tipos`. */
+  nodo: PinturaDeElemento;
+  /** Grupo abierto y colapsado (una hoja): cada uno con su pila, Tipos y estados. Sin `group` en el Tema, la pila sobria derivada de sus tokens. */
+  grupo: { abierto: PinturaDeElemento; colapsado: PinturaDeElemento };
   /** Reposo de la Arista y, por color de Paleta del Nodo de origen, la suya (`ORIGEN` toma ese color). */
   arista: PinturaDeArista & { origenes: Record<string, PinturaDeArista> };
   pagina: PinturaDePagina;
@@ -102,22 +110,27 @@ export interface OpcionesDeEstilo {
   archivosDeFuente?: readonly string[];
   /** Tipos de nodo de la Fuente y el nombre de Paleta de su `color` (`COLOR` lo usa). */
   tipos?: Readonly<Record<string, string | undefined>>;
-  /** Cuarto nivel de la cascada: parches de la Vista, aplicados al final de cada pila. */
+  /** Cuarto nivel de la cascada: parches de la Vista, aplicados al final de cada pila del Nodo. */
   vista?: readonly OpDeCapa[];
+  /**
+   * Variable CSS que el dibujo fija por elemento con su color (p. ej. `--trazo`): `COLOR` se resuelve a ella y
+   * una misma hoja sirve a todos los colores. Sin ella, `COLOR` toma el de `tipos` (o el borde del Tema).
+   */
+  colorEnVariable?: string;
 }
 
 const COLOR_DE_RESPALDO = '__borde';
 
-const contextoDeColor = (tema: TemaResuelto, colorDelTipo: string | undefined): { paleta: Record<string, string>; contexto: { color: string; origen: string } } => {
+const contextoDeColor = (tema: TemaResuelto, colorDelTipo: string | undefined, variable?: string): { paleta: Record<string, string>; contexto: ContextoDeColor } => {
   const nombre = colorDelTipo !== undefined && Object.hasOwn(tema.palette, colorDelTipo) ? colorDelTipo : COLOR_DE_RESPALDO;
-  return { paleta: { ...tema.palette, [COLOR_DE_RESPALDO]: tema.tokens.border }, contexto: { color: nombre, origen: nombre } };
+  return { paleta: { ...tema.palette, [COLOR_DE_RESPALDO]: tema.tokens.border }, contexto: { color: nombre, origen: nombre, ...(variable !== undefined && { variable }) } };
 };
 
 /** Props de una Primitiva con sus colores (nombre de Paleta y modificadores) convertidos a valor. */
 function resolverProps(
   primitiva: { tipo: string; props: Readonly<Record<string, number | string>> },
   paleta: Readonly<Record<string, string>>,
-  contexto: { color: string; origen: string },
+  contexto: ContextoDeColor,
 ): Record<string, number | string> {
   const definicion: DefinicionDePrimitiva = CATALOGO[primitiva.tipo as NombreDePrimitiva];
   return Object.fromEntries(
@@ -128,8 +141,8 @@ function resolverProps(
   );
 }
 
-function pintar(pila: readonly CapaDeTema[], tema: TemaResuelto, colorDelTipo: string | undefined): CapaPintada[] {
-  const { paleta, contexto } = contextoDeColor(tema, colorDelTipo);
+function pintar(pila: readonly CapaDeTema[], tema: TemaResuelto, colorDelTipo: string | undefined, variable?: string): CapaPintada[] {
+  const { paleta, contexto } = contextoDeColor(tema, colorDelTipo, variable);
   return pila.map(({ nombre, primitiva, encima, animacion }) => ({
     nombre,
     tipo: primitiva.tipo as NombreDePrimitiva,
@@ -165,25 +178,55 @@ function pintarArista(tema: TemaResuelto, colorDeOrigen: string | undefined): Pi
   };
 }
 
+/**
+ * Pila sobria de un Grupo sin Capas en el Tema (derivada solo de sus tokens, nunca de las Capas del Nodo):
+ * esquinas suaves, un velo del color del texto y un borde del color del Tipo (o del borde del Tema).
+ * Colapsado, el velo es mas denso y el borde discontinuo.
+ */
+function grupoSobrio(tema: TemaResuelto, colapsado: boolean, variable: string | undefined): CapaPintada[] {
+  const { foreground, border } = tema.tokens;
+  const velo = `color-mix(in srgb, ${foreground} ${colapsado ? 8 : 4}%, transparent)`;
+  return [
+    { nombre: 'caja', tipo: 'rect', props: { radius: 8 } },
+    { nombre: 'relleno', tipo: 'solid', props: { color: velo } },
+    { nombre: 'borde', tipo: colapsado ? 'dashed' : 'border', props: { color: variable === undefined ? border : `var(${variable})`, width: 1 } },
+  ];
+}
+
 export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): EstiloResuelto {
   const resuelto = resolverTema(tema);
-  const pinturaDe = (tipo: string | undefined, color: string | undefined): PinturaDeNodo => ({
-    capas: pintar(cascada(resuelto, { ...(tipo !== undefined && { tipo }), ...(opciones.vista && { vista: opciones.vista }) }), resuelto, color),
-    textos: Object.fromEntries(
-      Object.entries(resuelto.nodo.textos).map(([slot, texto]) => {
-        const { paleta, contexto } = contextoDeColor(resuelto, color);
-        return [slot, { tipo: texto.tipo as NombreDePrimitiva, props: resolverProps(texto, paleta, contexto) }];
-      }),
-    ),
-    estados: Object.fromEntries(
-      (Object.keys(resuelto.nodo.estados) as Estado[])
-        .sort()
-        .map((estado) => [
-          estado,
-          pintar(cascada(resuelto, { ...(tipo !== undefined && { tipo }), estado, ...(opciones.vista && { vista: opciones.vista }) }), resuelto, color),
-        ]),
-    ),
-  });
+  const variable = opciones.colorEnVariable;
+  /** Pintura de un elemento en el reposo y en cada estado declarado, para un Tipo (o ninguno) y, en el Grupo, abierto o colapsado. */
+  const pinturaDe = (elemento: ElementoDeTema, tipo: string | undefined, color: string | undefined, colapsado = false): PinturaDeNodo => {
+    const bloque = resuelto[elemento];
+    const sobrio = elemento === 'grupo' && resuelto.grupo.capas.length === 0;
+    const pila = (estado?: Estado): CapaPintada[] =>
+      sobrio
+        ? grupoSobrio(resuelto, colapsado, variable)
+        : pintar(
+            cascada(resuelto, { ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(colapsado && { colapsado }), ...(elemento === 'nodo' && opciones.vista && { vista: opciones.vista }) }, elemento),
+            resuelto,
+            color,
+            variable,
+          );
+    const textos = elemento === 'grupo' && colapsado ? { ...resuelto.grupo.textos, ...resuelto.grupo.colapsado.textos } : bloque.textos;
+    const { paleta, contexto } = contextoDeColor(resuelto, color, variable);
+    return {
+      capas: pila(),
+      textos: Object.fromEntries(Object.entries(textos).map(([slot, texto]) => [slot, { tipo: texto.tipo as NombreDePrimitiva, props: resolverProps(texto, paleta, contexto) }])),
+      estados: sobrio ? {} : Object.fromEntries((Object.keys(bloque.estados) as Estado[]).sort().map((estado) => [estado, pila(estado)])),
+    };
+  };
+  /** Pintura del elemento y de cada Tipo con parches (o pedido por quien llama, para dar color a `COLOR`). */
+  const elementoDe = (elemento: ElementoDeTema, colapsado = false): PinturaDeElemento => {
+    const colores = opciones.tipos ?? {};
+    const tipos = [...new Set([...(elemento === 'nodo' ? Object.keys(colores) : []), ...Object.keys(resuelto[elemento].tipos)])];
+    return {
+      ...pinturaDe(elemento, undefined, undefined, colapsado),
+      ...(resuelto[elemento].animacion !== undefined && { animacion: resuelto[elemento].animacion }),
+      tipos: Object.fromEntries(tipos.map((tipo) => [tipo, pinturaDe(elemento, tipo, colores[tipo], colapsado)])),
+    };
+  };
   const reserva = resuelto.fonts['fallback'];
   return {
     metricas: metricasDe(tema),
@@ -195,11 +238,8 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
     },
     pintura: {
       ...(resuelto.tokens.seed !== undefined && { semilla: Number(resuelto.tokens.seed) }),
-      nodo: {
-        ...pinturaDe(undefined, undefined),
-        ...(resuelto.nodo.animacion !== undefined && { animacion: resuelto.nodo.animacion }),
-        tipos: Object.fromEntries(Object.entries(opciones.tipos ?? {}).map(([tipo, color]) => [tipo, pinturaDe(tipo, color)])),
-      },
+      nodo: elementoDe('nodo'),
+      grupo: { abierto: elementoDe('grupo'), colapsado: elementoDe('grupo', true) },
       pagina: { capas: pintar(resuelto.pagina.capas as CapaDeTema[], resuelto, undefined), fijo: resuelto.pagina.fijo },
       arista: {
         ...pintarArista(resuelto, undefined),

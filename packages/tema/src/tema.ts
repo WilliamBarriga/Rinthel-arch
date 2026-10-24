@@ -10,7 +10,7 @@ import type { Tema } from 'canonico';
 import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
 import { DEFINICION_DE_SLOT, SLOTS, construirPrimitiva } from './catalogo';
 import type { NombreDeSlot, UbicacionDePrimitiva } from './catalogo';
-import { ALINEACIONES, DIRECCIONES, DISPOSICION_POR_DEFECTO, esCaja } from './disposicion';
+import { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, esCaja } from './disposicion';
 import type { CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { ESTADOS, aplicarOps, opTocaMetricas, validarOps } from './parches';
 import type { CapaDeTema, OpDeCapa } from './parches';
@@ -120,6 +120,44 @@ const nodoSchema = z.strictObject({
   animacion: animacionDeNodoSchema.optional(),
 });
 
+const relleno = z.number().min(0).max(128);
+
+/**
+ * Grupo (ADR 0008): misma pila de Capas, parches por Tipo y por estado que el Nodo, mas la cabecera (un
+ * mini-layout de Slots), el padding de la zona de hijos y `colapsado`, el parche de estado con el que el Grupo
+ * cerrado se comporta como un Nodo hoja. Sin Capas, el Estilo resuelto da un Grupo sobrio de la Paleta.
+ */
+const grupoSchema = z.strictObject({
+  capas: z.array(capaSchema).default([]),
+  /** Cabecera del Grupo abierto; el orden del arbol es el orden visual. */
+  slots: cajaSchema.default(CABECERA_POR_DEFECTO),
+  textos: z.partialRecord(z.enum(NOMBRES_DE_SLOT), primitivaSchema).default({}),
+  /** Margen interior de la zona de hijos, bajo la cabecera. */
+  padding: z.strictObject({ top: relleno, left: relleno, bottom: relleno, right: relleno }).default({ top: 8, left: 16, bottom: 16, right: 16 }),
+  tipos: z.record(z.string(), z.array(opSchema)).default({}),
+  estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
+  /** Grupo cerrado: parches de Capa y, si el Tema lo pide, otros Slots y estilos (puede cambiar la caja). */
+  colapsado: z
+    .strictObject({
+      ops: z.array(opSchema).default([]),
+      slots: cajaSchema.optional(),
+      textos: z.partialRecord(z.enum(NOMBRES_DE_SLOT), primitivaSchema).optional(),
+    })
+    .default({ ops: [] }),
+  animacion: animacionDeNodoSchema.optional(),
+});
+
+/** Grupo por defecto: sin Capas (el Estilo resuelto pone las suyas), cabecera de icono y titulo. */
+export const GRUPO_POR_DEFECTO: z.output<typeof grupoSchema> = {
+  capas: [],
+  slots: CABECERA_POR_DEFECTO,
+  textos: {},
+  padding: { top: 8, left: 16, bottom: 16, right: 16 },
+  tipos: {},
+  estados: {},
+  colapsado: { ops: [] },
+};
+
 export const temaResueltoSchema = z
   .strictObject({
     name: z.string().min(1),
@@ -141,23 +179,11 @@ export const temaResueltoSchema = z
         }
       }),
     nodo: nodoSchema.default({ capas: [], slots: DISPOSICION_POR_DEFECTO, textos: {}, tipos: {}, estados: {} }),
+    grupo: grupoSchema.default(GRUPO_POR_DEFECTO),
     arista: aristaSchema.default({ capas: [] }),
     pagina: paginaSchema.default({ capas: [], fijo: false }),
   })
   .superRefine((tema, ctx) => {
-    const vistas = new Set<string>();
-    tema.nodo.capas.forEach((capa, i) => {
-      if (vistas.has(capa.nombre)) ctx.addIssue({ code: 'custom', path: ['nodo', 'capas', i, 'nombre'], message: `Capa '${capa.nombre}' repetida` });
-      vistas.add(capa.nombre);
-      const { errores } = construirPrimitiva(
-        capa.primitiva.tipo,
-        Object.entries(capa.primitiva.props).map(([clave, valor]) => ({ clave, valor })),
-        tema.palette,
-      );
-      for (const error of errores) {
-        ctx.addIssue({ code: 'custom', path: ['nodo', 'capas', i, 'primitiva', ...(error.clave === undefined ? [] : ['props', error.clave])], message: error.mensaje });
-      }
-    });
     const validar = (primitiva: { tipo: string; props: Record<string, string | number> }, ubicacion: UbicacionDePrimitiva, path: Array<string | number>): void => {
       const props = Object.entries(primitiva.props).map(([clave, valor]) => ({ clave, valor }));
       for (const error of construirPrimitiva(primitiva.tipo, props, tema.palette, ubicacion).errores) {
@@ -179,38 +205,77 @@ export const temaResueltoSchema = z
     if (tema.arista.origen !== undefined) validar(tema.arista.origen, 'marcador', ['arista', 'origen']);
     if (tema.arista.fin !== undefined) validar(tema.arista.fin, 'marcador', ['arista', 'fin']);
     if (tema.arista.etiqueta !== undefined) validar(tema.arista.etiqueta, 'etiqueta', ['arista', 'etiqueta']);
-    const enArbol = new Set<string>();
-    const repetidos = (caja: CajaDeSlots): void => {
-      for (const hijo of caja.hijos) {
-        if (esCaja(hijo)) repetidos(hijo);
-        else if (enArbol.has(hijo.slot)) ctx.addIssue({ code: 'custom', path: ['nodo', 'slots'], message: `Slot '${hijo.slot}' repetido` });
-        else enArbol.add(hijo.slot);
-      }
-    };
-    repetidos(tema.nodo.slots);
-    for (const [slot, texto] of Object.entries(tema.nodo.textos)) {
-      validar(texto, 'texto-slot', ['nodo', 'textos', slot]);
-      const esperado = DEFINICION_DE_SLOT[slot as NombreDeSlot].estilo;
-      if (texto.tipo !== esperado) ctx.addIssue({ code: 'custom', path: ['nodo', 'textos', slot], message: `el Slot '${slot}' se estiliza con la Primitiva '${esperado}', no '${texto.tipo}'` });
-    }
-    const base = tema.nodo.capas as CapaDeTema[];
-    const porTipo = Object.entries(tema.nodo.tipos);
-    const pilas = [base];
-    for (const [tipo, ops] of porTipo) {
-      const errores = validarOps([base], ops, tema.palette, 'parchear');
-      for (const e of errores) ctx.addIssue({ code: 'custom', path: ['nodo', 'tipos', tipo, e.indice], message: e.mensaje });
-      pilas.push(aplicarSinErrores(base, ops, tema.palette));
-    }
-    for (const [estado, ops] of Object.entries(tema.nodo.estados)) {
-      for (const e of validarOps(pilas, ops, tema.palette, 'parchear')) ctx.addIssue({ code: 'custom', path: ['nodo', 'estados', estado, e.indice], message: e.mensaje });
-      ops.forEach((op, indice) => {
-        const razon = opTocaMetricas(op, pilas);
-        if (razon !== undefined) {
-          ctx.addIssue({ code: 'custom', path: ['nodo', 'estados', estado, indice], message: `un parche de estado no puede tocar las Metricas: ${razon}; hover nunca relayouta` });
-        }
-      });
-    }
+    validarElemento(ctx, tema, 'nodo');
+    validarElemento(ctx, tema, 'grupo');
   });
+
+type Elemento = 'nodo' | 'grupo';
+
+/**
+ * Valida la pila, los Slots, los estilos de texto y los parches por Tipo y por estado de un elemento
+ * (Nodo o Grupo) contra el catalogo: una sola ruta de reglas para los dos. Un parche de estado no puede
+ * tocar las Metricas; en el Grupo tampoco uno de Tipo (su tabla no tiene entrada por Tipo). Solo el
+ * `colapsado` del Grupo, que es una caja hoja, puede cambiarlas.
+ */
+function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Elemento): void {
+  const bloque = tema[elemento];
+  const falla = (path: Array<string | number>, message: string): void => ctx.addIssue({ code: 'custom', path: [elemento, ...path], message });
+  const vistas = new Set<string>();
+  bloque.capas.forEach((capa, i) => {
+    if (vistas.has(capa.nombre)) falla(['capas', i, 'nombre'], `Capa '${capa.nombre}' repetida`);
+    vistas.add(capa.nombre);
+    const { errores } = construirPrimitiva(
+      capa.primitiva.tipo,
+      Object.entries(capa.primitiva.props).map(([clave, valor]) => ({ clave, valor })),
+      tema.palette,
+    );
+    for (const error of errores) falla(['capas', i, 'primitiva', ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
+  });
+  /** Cada arbol de Slots (la cabecera, el del colapsado) repite un Slot por separado. */
+  const recorrer = (caja: CajaDeSlots, ruta: string, enArbol = new Set<string>()): void => {
+    for (const hijo of caja.hijos) {
+      if (esCaja(hijo)) recorrer(hijo, ruta, enArbol);
+      else if (enArbol.has(hijo.slot)) falla([ruta], `Slot '${hijo.slot}' repetido`);
+      else if (elemento === 'grupo' && SLOTS_SOLO_DE_NODO.includes(hijo.slot)) falla([ruta], `el Slot '${hijo.slot}' no vale en un Grupo: solo en un Nodo hoja`);
+      else enArbol.add(hijo.slot);
+    }
+  };
+  recorrer(bloque.slots, 'slots');
+  const estiloDeSlot = (textos: Partial<Record<NombreDeSlot, { tipo: string; props: Record<string, string | number> }>>, ruta: Array<string | number>): void => {
+    for (const [slot, texto] of Object.entries(textos)) {
+      const props = Object.entries(texto.props).map(([clave, valor]) => ({ clave, valor }));
+      for (const error of construirPrimitiva(texto.tipo, props, tema.palette, 'texto-slot').errores) falla([...ruta, slot, ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
+      const esperado = DEFINICION_DE_SLOT[slot as NombreDeSlot].estilo;
+      if (texto.tipo !== esperado) falla([...ruta, slot], `el Slot '${slot}' se estiliza con la Primitiva '${esperado}', no '${texto.tipo}'`);
+    }
+  };
+  estiloDeSlot(bloque.textos, ['textos']);
+
+  const base = bloque.capas as CapaDeTema[];
+  const pilas = [base];
+  const sinMetricas = (ops: readonly OpDeCapa[], candidatas: ReadonlyArray<readonly CapaDeTema[]>, ruta: Array<string | number>, que: string): void => {
+    ops.forEach((op, indice) => {
+      const razon = opTocaMetricas(op, candidatas);
+      if (razon !== undefined) falla([...ruta, indice], `un parche ${que} no puede tocar las Metricas: ${razon}${que === 'de estado' ? '; hover nunca relayouta' : ''}`);
+    });
+  };
+  for (const [tipo, ops] of Object.entries(bloque.tipos)) {
+    for (const e of validarOps([base], ops, tema.palette, 'parchear')) falla(['tipos', tipo, e.indice], e.mensaje);
+    if (elemento === 'grupo') sinMetricas(ops, [base], ['tipos', tipo], 'de Tipo');
+    pilas.push(aplicarSinErrores(base, ops, tema.palette));
+  }
+  if (elemento === 'grupo') {
+    const colapsado = (bloque as z.output<typeof grupoSchema>).colapsado;
+    for (const e of validarOps(pilas, colapsado.ops, tema.palette, 'parchear')) falla(['colapsado', 'ops', e.indice], e.mensaje);
+    if (colapsado.textos !== undefined) estiloDeSlot(colapsado.textos, ['colapsado', 'textos']);
+    if (colapsado.slots !== undefined) recorrer(colapsado.slots, 'colapsado');
+    pilas.push(...pilas.map((pila) => aplicarSinErrores(pila, colapsado.ops, tema.palette)));
+  }
+  for (const [estado, ops] of Object.entries(bloque.estados)) {
+    for (const e of validarOps(pilas, ops, tema.palette, 'parchear')) falla(['estados', estado, e.indice], e.mensaje);
+    sinMetricas(ops, pilas, ['estados', estado], 'de estado');
+  }
+}
 
 const aplicarSinErrores = (base: CapaDeTema[], ops: Parameters<typeof aplicarOps>[1], paleta: Record<string, string>): CapaDeTema[] =>
   aplicarOps(base, ops, paleta, 'parchear').pila;
@@ -231,6 +296,7 @@ export const TEMA_NEUTRO: TemaResuelto = {
   fonts: { body: 'sans-serif', mono: 'monospace' },
   tokens: { background: '#ffffff', foreground: '#1f2937', border: '#9ca3af' },
   nodo: { capas: [], slots: DISPOSICION_POR_DEFECTO, textos: {}, tipos: {}, estados: {} },
+  grupo: GRUPO_POR_DEFECTO,
   arista: { capas: [], fin: { tipo: 'arrow', props: { size: 8 } } },
   pagina: { capas: [], fijo: false },
 };

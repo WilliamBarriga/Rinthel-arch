@@ -37,6 +37,7 @@ const OSCURO: TemaResuelto = {
   fonts: { body: 'Inter, sans-serif', mono: 'monospace' },
   tokens: { background: '#111827', foreground: '#f9fafb', border: '#4b5563', fontSize: '16px' },
   nodo: TEMA_NEUTRO.nodo,
+  grupo: TEMA_NEUTRO.grupo,
   arista: TEMA_NEUTRO.arista,
   pagina: TEMA_NEUTRO.pagina,
 };

@@ -16,6 +16,19 @@ export const TEXTOS = {
       color: { tipo: 'color', opcional: true },
       style: { tipo: 'opcion', valores: ['normal', 'italic'], defecto: 'normal' },
       transform: { tipo: 'opcion', valores: ['none', 'uppercase'], defecto: 'none' },
+      /** Tamano respecto al del Tema. Cambia el ancho del texto, asi que entra en las Metricas del Slot `title`. */
+      size: { tipo: 'numero', min: 0.5, max: 2, defecto: 1 },
+      /** Separacion entre letras, en em; tambien ensancha el texto medido. */
+      tracking: { tipo: 'numero', min: 0, max: 1, defecto: 0 },
+      /** Opacidad del texto (no la del fondo ni la del borde del chip). */
+      alpha: { tipo: 'numero', min: 0, max: 1, defecto: 1 },
+      /** Chip: el Slot toma su ancho natural mas `pad` a cada lado y pinta caja con relleno, borde y radio. */
+      fill: { tipo: 'color', opcional: true },
+      border: { tipo: 'color', opcional: true },
+      radius: { tipo: 'numero', min: 0, max: 50, defecto: 0 },
+      pad: { tipo: 'numero', min: 0, max: 32, defecto: 0 },
+      /** Punto de color antes del texto; mide un `size` (en em) de ancho. */
+      dot: { tipo: 'color', opcional: true },
     },
   },
   /** Estilo del Slot `icon` (afecta el lado de su rectangulo, que entra en las Metricas): glifo suelto, en caja o punto de color. */

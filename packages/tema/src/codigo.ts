@@ -19,17 +19,22 @@ export interface UsoDeComponente {
 /** Usos de `code` del Tema, sin repetidos, ordenados por nombre y parametros. `vista` son los parches de una Vista. */
 export function usosDeCodigo(tema: Tema, vista?: readonly OpDeCapa[]): UsoDeComponente[] {
   const resuelto = resolverTema(tema);
-  const tipos: Array<string | undefined> = [undefined, ...Object.keys(resuelto.nodo.tipos)];
-  const estados: Array<Estado | undefined> = [undefined, ...ESTADOS.filter((e) => resuelto.nodo.estados[e] !== undefined)];
   const usos = new Map<string, UsoDeComponente>();
-  for (const tipo of tipos) {
-    for (const estado of estados) {
-      const pila = cascada(resuelto, { ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(vista !== undefined && { vista }) });
-      for (const capa of pila) {
-        if (capa.primitiva.tipo !== 'code') continue;
-        const { component, ...parametros } = capa.primitiva.props;
-        const uso = { nombre: String(component), parametros };
-        usos.set(JSON.stringify(uso), uso);
+  for (const elemento of ['nodo', 'grupo'] as const) {
+    const tipos: Array<string | undefined> = [undefined, ...Object.keys(resuelto[elemento].tipos)];
+    const estados: Array<Estado | undefined> = [undefined, ...ESTADOS.filter((e) => resuelto[elemento].estados[e] !== undefined)];
+    // El Grupo cerrado es otra pila (parche `collapsed`); el Nodo no tiene esa variante.
+    for (const colapsado of elemento === 'grupo' ? [false, true] : [false]) {
+      for (const tipo of tipos) {
+        for (const estado of estados) {
+          const nivel = { ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(colapsado && { colapsado }), ...(elemento === 'nodo' && vista !== undefined && { vista }) };
+          for (const capa of cascada(resuelto, nivel, elemento)) {
+            if (capa.primitiva.tipo !== 'code') continue;
+            const { component, ...parametros } = capa.primitiva.props;
+            const uso = { nombre: String(component), parametros };
+            usos.set(JSON.stringify(uso), uso);
+          }
+        }
       }
     }
   }

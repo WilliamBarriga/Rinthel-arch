@@ -801,6 +801,7 @@ describe('compile: Tema', () => {
       fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter' },
       tokens: { ...TEMA_NEUTRO.tokens, surface: '#ffffff' },
       nodo: TEMA_NEUTRO.nodo,
+      grupo: TEMA_NEUTRO.grupo,
       arista: TEMA_NEUTRO.arista,
       pagina: TEMA_NEUTRO.pagina,
     });
@@ -819,6 +820,7 @@ describe('compile: Tema', () => {
       fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter' },
       tokens: { ...TEMA_NEUTRO.tokens, surface: '#111111' },
       nodo: TEMA_NEUTRO.nodo,
+      grupo: TEMA_NEUTRO.grupo,
       arista: TEMA_NEUTRO.arista,
       pagina: TEMA_NEUTRO.pagina,
     });

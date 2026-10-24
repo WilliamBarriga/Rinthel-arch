@@ -148,18 +148,27 @@ export function validarOps(
   return mejor ?? [];
 }
 
+/** Elemento cuya pila se resuelve: el Nodo o el Grupo (cada uno con su bloque en el Tema). */
+export type ElementoDeTema = 'nodo' | 'grupo';
+
 /**
- * Pila de Capas tras la cascada: Tema base, Tipo de nodo, estado, override de la
- * Vista; el ultimo gana. Un parche que no encuentra su Capa en esta pila (p. ej.
- * una Capa que solo anade otro Tipo) no aplica a ella: `validate` ya lo acepto
- * por existir en alguna.
+ * Pila de Capas tras la cascada: Tema base, Tipo de nodo, `colapsado` (solo del Grupo), estado, override de
+ * la Vista; el ultimo gana. Un parche que no encuentra su Capa en esta pila (p. ej. una Capa que solo anade
+ * otro Tipo) no aplica a ella: `validate` ya lo acepto por existir en alguna. El override de la Vista solo
+ * parchea la pila del Nodo.
  */
-export function cascada(tema: Pick<TemaResuelto, 'palette' | 'nodo'>, nivel: { tipo?: string; estado?: Estado; vista?: readonly OpDeCapa[] } = {}): CapaDeTema[] {
+export function cascada(
+  tema: Pick<TemaResuelto, 'palette' | 'nodo' | 'grupo'>,
+  nivel: { tipo?: string; estado?: Estado; vista?: readonly OpDeCapa[]; colapsado?: boolean } = {},
+  elemento: ElementoDeTema = 'nodo',
+): CapaDeTema[] {
   const aplicar = (pila: CapaDeTema[], ops: readonly OpDeCapa[] | undefined): CapaDeTema[] =>
     ops === undefined || ops.length === 0 ? pila : aplicarOps(pila, ops, tema.palette, 'parchear').pila;
-  const porTipo = aplicar(tema.nodo.capas as CapaDeTema[], nivel.tipo === undefined ? undefined : tema.nodo.tipos[nivel.tipo]);
-  const porEstado = aplicar(porTipo, nivel.estado === undefined ? undefined : tema.nodo.estados[nivel.estado]);
-  return aplicar(porEstado, nivel.vista);
+  const bloque = tema[elemento];
+  const porTipo = aplicar(bloque.capas as CapaDeTema[], nivel.tipo === undefined ? undefined : bloque.tipos[nivel.tipo]);
+  const porColapso = elemento === 'grupo' && nivel.colapsado === true ? aplicar(porTipo, tema.grupo.colapsado.ops) : porTipo;
+  const porEstado = aplicar(porColapso, nivel.estado === undefined ? undefined : bloque.estados[nivel.estado]);
+  return elemento === 'nodo' ? aplicar(porEstado, nivel.vista) : porEstado;
 }
 
 /**

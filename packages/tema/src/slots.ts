@@ -23,10 +23,9 @@ import type { Atributo } from 'canonico';
 
 import { DEFINICION_DE_SLOT } from './catalogo';
 import type { NombreDeSlot } from './catalogo';
-import { esCaja } from './disposicion';
+import { esCaja, slotsDe } from './disposicion';
 import type { Alineacion, CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { anchoDeTexto } from './medicion';
-import { textoDeAtributo } from './metricas';
 import type { Metricas } from './metricas';
 
 export interface Rect {
@@ -41,8 +40,11 @@ export interface Tamano {
   height: number;
 }
 
-/** Cuanto ocupa un Slot por si mismo; `undefined` si no tiene contenido y no reserva espacio. */
-export type MedidaDeSlot = (slot: NombreDeSlot) => Tamano | undefined;
+/**
+ * Cuanto ocupa un Slot por si mismo; `undefined` si no tiene contenido y no reserva espacio.
+ * `elastico` sustituye al de `DEFINICION_DE_SLOT` cuando el contenido lo decide (un titulo en chip no se estira).
+ */
+export type MedidaDeSlot = (slot: NombreDeSlot) => (Tamano & { elastico?: boolean }) | undefined;
 
 /** Elemento del arbol ya medido. */
 interface Medido {
@@ -58,8 +60,10 @@ interface Medido {
 
 function medir(elemento: ElementoDeSlots, medida: MedidaDeSlot): Medido | undefined {
   if (!esCaja(elemento)) {
-    const tam = medida(elemento.slot);
-    return tam === undefined ? undefined : { tam, elastico: DEFINICION_DE_SLOT[elemento.slot].elastico, align: elemento.align, slot: elemento.slot, hijos: [] };
+    const medido = medida(elemento.slot);
+    if (medido === undefined) return undefined;
+    const { elastico = DEFINICION_DE_SLOT[elemento.slot].elastico, ...tam } = medido;
+    return { tam, elastico, align: elemento.align, slot: elemento.slot, hijos: [] };
   }
   const hijos = elemento.hijos.flatMap((hijo) => medir(hijo, medida) ?? []);
   if (hijos.length === 0) return undefined;
@@ -121,6 +125,30 @@ export function colocarDisposicion(arbol: CajaDeSlots, medida: MedidaDeSlot, anc
   return { slots, alto: medido.tam.height };
 }
 
+/** Texto de la fila de un Atributo; `render` escribe lo mismo. */
+export function textoDeAtributo(atributo: Atributo): string {
+  return `${atributo.name}: ${atributo.type}`;
+}
+
+/** Em que ocupa el punto del titulo (diametro mas separacion): `render` lo pinta con la misma cuenta. */
+export const PUNTO_DE_TITULO_EM = 1;
+
+/**
+ * Texto y tamano con que se mide y se pinta el Slot `title`: el estilo `text` del Tema escala el
+ * tamano y puede pasarlo a mayusculas. Una sola regla para `layout`, `textosAMedir` y `render`.
+ */
+export function textoDeTitulo(metricas: Pick<Metricas, 'fontSize' | 'titulo'>, titulo: string): { texto: string; tamano: number } {
+  const { escala, mayusculas } = metricas.titulo;
+  return { texto: mayusculas ? titulo.toUpperCase() : titulo, tamano: metricas.fontSize * escala };
+}
+
+/** Ancho natural del titulo: texto con su separacion entre letras, mas el punto y el relleno del chip. */
+function anchoDeTitulo(metricas: Metricas, titulo: string): number {
+  const { texto, tamano } = textoDeTitulo(metricas, titulo);
+  const { tracking, punto, relleno } = metricas.titulo;
+  return anchoDeTexto(metricas, metricas.fuentes['body']!, tamano, texto) + tracking * tamano * texto.length + (punto ? PUNTO_DE_TITULO_EM * tamano : 0) + 2 * relleno;
+}
+
 /** Lo que un Nodo aporta a la colocacion: su titulo, sus Atributos visibles y si tiene icono. */
 export interface ContenidoDeNodo {
   titulo: string;
@@ -143,7 +171,7 @@ function medidasDeNodo(metricas: Metricas, { titulo, atributos, icono }: Conteni
   const { fontSize, escalaAtributo, fuentes } = metricas;
   const medidas: Record<NombreDeSlot, () => Tamano | undefined> = {
     icon: () => (icono ? { width: metricas.iconoLado, height: metricas.iconoLado } : undefined),
-    title: () => ({ width: anchoDeTexto(metricas, fuentes['body']!, fontSize, titulo), height: metricas.cabecera }),
+    title: () => ({ width: anchoDeTitulo(metricas, titulo), height: metricas.cabecera, elastico: !metricas.titulo.caja }),
     attrs: () =>
       atributos.length === 0
         ? undefined
@@ -184,4 +212,13 @@ export function colocarEnCaja(metricas: Metricas, contenido: ContenidoDeNodo, an
         ? []
         : Array.from({ length: contenido.atributos.length }, (_, i) => ({ x: zona.x, y: zona.y + i * metricas.fila, width: zona.width, height: metricas.fila })),
   };
+}
+
+/**
+ * Alto de la cabecera de un Grupo abierto (`metricas` es la entrada `grupoAbierto`): la disposicion
+ * a su alto natural, reservando el icono si el Tema lo lista (no depende del texto ni del Grupo).
+ */
+export function alturaDeCabecera(metricas: Metricas): number {
+  const icono = slotsDe(metricas.disposicion).includes('icon');
+  return medirDisposicion(metricas.disposicion, medidasDeNodo(metricas, { titulo: '', atributos: [], icono })).height;
 }

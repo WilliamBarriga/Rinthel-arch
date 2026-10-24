@@ -46,6 +46,12 @@ export const DISPOSICION_POR_DEFECTO: CajaDeSlots = {
   ],
 };
 
+/** Slots que solo valen en un Nodo hoja: un Grupo no muestra Atributos en su cabecera. */
+export const SLOTS_SOLO_DE_NODO: readonly NombreDeSlot[] = ['attrs'];
+
+/** Cabecera por defecto de un Grupo (Tema sin `group`): icono y titulo en una fila con aire alrededor. */
+export const CABECERA_POR_DEFECTO: CajaDeSlots = { direccion: 'row', gap: 6, pad: 6, hijos: [{ slot: 'icon' }, { slot: 'title' }] };
+
 /** Los Slots de la disposicion, en orden visual (los repetidos solo cuentan una vez). */
 export function slotsDe(caja: CajaDeSlots): NombreDeSlot[] {
   const vistos = new Set<NombreDeSlot>();
@@ -117,7 +123,7 @@ export type ErrorDeDisposicion<R> = ErrorDeCatalogo & { ref: R };
  * de caja, Slots conocidos y sin repetir, alineaciones, rangos) y devuelve la
  * disposicion con todos los errores a la vez, cada uno con sugerencia.
  */
-export function construirDisposicion<R>(entrada: EntradaDeCaja<R>): { disposicion?: CajaDeSlots; errores: Array<ErrorDeDisposicion<R>> } {
+export function construirDisposicion<R>(entrada: EntradaDeCaja<R>, elemento: 'nodo' | 'grupo' = 'nodo'): { disposicion?: CajaDeSlots; errores: Array<ErrorDeDisposicion<R>> } {
   const errores: Array<ErrorDeDisposicion<R>> = [];
   const vistos = new Set<string>();
   /** Valida `props` contra `propiedades`; los errores llevan el `ref` de la propiedad culpable o `respaldo`. */
@@ -139,6 +145,8 @@ export function construirDisposicion<R>(entrada: EntradaDeCaja<R>): { disposicio
         hijos.push(caja(h));
       } else if (!esSlot(h.slot)) {
         errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Slot '${h.slot}' desconocido; disponibles: ${SLOTS.join(', ')}`, ref: h.ref, ...sugerir(h.slot, SLOTS) });
+      } else if (elemento === 'grupo' && SLOTS_SOLO_DE_NODO.includes(h.slot)) {
+        errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `El Slot '${h.slot}' no vale en un Grupo: solo en un Nodo hoja`, ref: h.ref });
       } else if (vistos.has(h.slot)) {
         errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Slot '${h.slot}' repetido`, ref: h.ref });
       } else {

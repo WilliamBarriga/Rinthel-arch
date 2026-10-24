@@ -7,8 +7,9 @@ import type { VistaResuelta } from 'canonico';
 
 import { claveDeTexto } from './medicion';
 import type { TextoAMedir } from './medicion';
-import { atributosVisibles, metricasDeHoja, muestra, textoDeAtributo } from './metricas';
+import { atributosVisibles, metricasDeHoja, muestra } from './metricas';
 import type { TablaDeMetricas } from './metricas';
+import { textoDeAtributo, textoDeTitulo } from './slots';
 
 export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges'>, tabla: TablaDeMetricas): TextoAMedir[] {
   const vistos = new Map<string, TextoAMedir>();
@@ -17,9 +18,13 @@ export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges'>, tabl
     if (!vistos.has(clave)) vistos.set(clave, { familia, tamano, texto });
   };
   for (const nodo of vista.nodes) {
-    if (nodo.children.length > 0) continue;
-    const m = metricasDeHoja(tabla, nodo);
-    if (muestra(m, 'title')) anadir(m.fuentes['body']!, m.fontSize, nodo.label);
+    const abierto = nodo.children.length > 0;
+    const m = abierto ? tabla.grupoAbierto : metricasDeHoja(tabla, nodo);
+    if (muestra(m, 'title')) {
+      const { texto, tamano } = textoDeTitulo(m, nodo.label);
+      anadir(m.fuentes['body']!, tamano, texto);
+    }
+    if (abierto) continue;
     for (const atributo of atributosVisibles(nodo, m)) anadir(m.fuentes['mono']!, m.fontSize * m.escalaAtributo, textoDeAtributo(atributo));
   }
   const e = tabla.etiqueta;

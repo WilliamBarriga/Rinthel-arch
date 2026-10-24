@@ -76,13 +76,13 @@
  * Solo importa `canonico`.
  */
 export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, construirPrimitiva, primitivasDe, resolverTokens, sugerir } from './catalogo';
-export { ALINEACIONES, DIRECCIONES, DISPOSICION_POR_DEFECTO, alineacionDe, construirDisposicion, describirDisposicion, esCaja, slotsDe } from './disposicion';
+export { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, alineacionDe, construirDisposicion, describirDisposicion, esCaja, slotsDe } from './disposicion';
 export type { Alineacion, CajaDeSlots, Direccion, ElementoDeSlots, EntradaDeCaja, EntradaDeSlot, ErrorDeDisposicion, HojaDeSlots, PropiedadEscrita } from './disposicion';
 export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDePrimitivaEn, NombreDeSlot, Primitiva, UbicacionDePrimitiva } from './catalogo';
 export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
-export { TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
+export { GRUPO_POR_DEFECTO, TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
-export { atributosVisibles, claveDeMetricas, contenidoDeNodo, muestra, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeAtributo } from './metricas';
+export { atributosVisibles, claveDeMetricas, contenidoDeNodo, muestra, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta } from './metricas';
 export type { Metricas, TablaDeMetricas } from './metricas';
 export { anchoDeTexto, claveDeTexto, hashDeFuente } from './medicion';
 export type { MedicionDeMetricas, MedidasDeTexto, TextoAMedir } from './medicion';
@@ -90,12 +90,12 @@ export { textosAMedir } from './textos-a-medir';
 export { pilaDeFuente, resolverFuentes } from './fuentes';
 export type { CaraDeFuente, FuenteFaltante } from './fuentes';
 export { referenciaDelCatalogo } from './referencia';
-export { colocarDisposicion, colocarEnCaja, colocarNodo, medirDisposicion } from './slots';
+export { PUNTO_DE_TITULO_EM, alturaDeCabecera, colocarDisposicion, colocarEnCaja, colocarNodo, medirDisposicion, textoDeAtributo, textoDeTitulo } from './slots';
 export type { ColocacionDeNodo, ContenidoDeNodo, MedidaDeSlot, Rect, Tamano } from './slots';
 export { estiloResuelto } from './estilo';
-export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeNodo, PinturaDePagina, PrimitivaPintada } from './estilo';
+export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeElemento, PinturaDeNodo, PinturaDePagina, PrimitivaPintada } from './estilo';
 export { aplicarOps, cascada, ESTADOS, opTocaMetricas, parsearEstado, validarOps } from './parches';
-export type { CapaDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa, ResultadoDeEstado } from './parches';
+export type { CapaDeTema, ElementoDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa, ResultadoDeEstado } from './parches';
 export { resolverColor, validarColor } from './color';
 export type { ContextoDeColor, ErrorDeColor } from './color';
 export { advertenciasDeContraste, leyendaDelTema, razonDeContraste, tiposSoloColor } from './contraste';

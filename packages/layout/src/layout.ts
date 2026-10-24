@@ -291,9 +291,11 @@ function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
     const { width, height } = colocarNodo(contenidoDeNodo(nodo, medidas), medidas);
     return { id: nodo.id, width, height };
   }
+  // El Grupo abierto nunca es mas angosto que su cabecera (titulo, icono y control de colapso).
+  const { width } = colocarNodo(contenidoDeNodo(nodo, tabla.grupoAbierto), tabla.grupoAbierto);
   return {
     id: nodo.id,
-    layoutOptions: { 'elk.padding': paddingElk(tabla.grupoAbierto.paddingGrupo) },
+    layoutOptions: { 'elk.padding': paddingElk(tabla.grupoAbierto.paddingGrupo), 'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': `(${width}, 0)` },
     children: nodo.children.map((hijo) => aElk(hijo, tabla)),
   };
 }

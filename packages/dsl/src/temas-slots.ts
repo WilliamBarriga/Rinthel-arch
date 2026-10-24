@@ -7,7 +7,7 @@
  */
 import { CODIGOS } from 'canonico';
 import { DEFINICION_DE_SLOT, construirDisposicion, resolverTokens } from 'tema';
-import type { NombreDeSlot, EntradaDeCaja, EntradaDeSlot, ErrorDeCatalogo, Primitiva, PropiedadEscrita, TemaResuelto } from 'tema';
+import type { CajaDeSlots, ElementoDeTema, NombreDeSlot, EntradaDeCaja, EntradaDeSlot, ErrorDeCatalogo, Primitiva, PropiedadEscrita } from 'tema';
 
 import type { LayerProp, SlotBox, SlotEntry, ThemeSlots } from './generated/ast';
 import { aRango, rangoDe } from './posiciones';
@@ -28,8 +28,14 @@ function sitio(origen: Origen, error: ErrorDeCatalogo): { line: number; column: 
   return rango.start.line === 1 && rango.start.column === 1 && origen.$cstNode !== undefined ? aRango(origen.$cstNode.range).start : rango.start;
 }
 
-/** Aplica un bloque `slots { ... }` sobre `tema.nodo`: disposicion y estilo de cada Slot. Los errores quedan en `ctx.issues`. */
-export function compilarSlots(item: ThemeSlots, tema: TemaResuelto, ctx: Contexto): void {
+/** Lo que un bloque `slots { ... }` fija: la disposicion y el estilo de cada Slot (el Nodo, la cabecera del Grupo o su parche `collapsed`). */
+export interface DestinoDeSlots {
+  slots?: CajaDeSlots | undefined;
+  textos?: Partial<Record<NombreDeSlot, { tipo: string; props: Record<string, string | number> }>> | undefined;
+}
+
+/** Aplica un bloque `slots { ... }` sobre `destino`: disposicion y estilo de cada Slot. Los errores quedan en `ctx.issues`. */
+export function compilarSlots(item: ThemeSlots, destino: DestinoDeSlots, ctx: Contexto, elemento: ElementoDeTema = 'nodo'): void {
   const errores: Array<{ error: ErrorDeCatalogo; origen: Origen }> = [];
   const props = (lista: readonly LayerProp[]): Array<PropiedadEscrita<Origen>> => {
     const resueltas = resolverTokens(lista.map(({ key, value }) => ({ clave: key, valor: value })), ctx.tokens);
@@ -49,19 +55,20 @@ export function compilarSlots(item: ThemeSlots, tema: TemaResuelto, ctx: Context
       return { ref: hijo, slot: hijo.name, ...(align !== undefined && { align: { clave: 'align', valor: align.value, ref: align } }) };
     }),
   });
-  const { disposicion, errores: delArbol } = construirDisposicion(caja(item));
+  const { disposicion, errores: delArbol } = construirDisposicion(caja(item), elemento);
   for (const { ref, ...error } of delArbol) errores.push({ error, origen: ref });
   for (const { error, origen } of errores) ctx.issues.push(aIssue(ctx.archivo, error, sitio(origen, error)));
   if (disposicion === undefined || errores.length > 0) return;
 
-  tema.nodo.slots = disposicion;
+  destino.slots = disposicion;
   const entradas = hojas(item.children);
-  tema.nodo.textos = Object.fromEntries(Object.entries(tema.nodo.textos).filter(([slot]) => entradas.some((e) => e.name === slot)));
+  const textos = Object.fromEntries(Object.entries(destino.textos ?? {}).filter(([slot]) => entradas.some((e) => e.name === slot))) as NonNullable<DestinoDeSlots['textos']>;
+  destino.textos = textos;
   for (const entrada of entradas) {
     const propias = entrada.props.filter((p) => p.key !== 'align');
     if (propias.length === 0 || !Object.hasOwn(DEFINICION_DE_SLOT, entrada.name)) continue;
     const estilo = primitivaSuelta(DEFINICION_DE_SLOT[entrada.name as NombreDeSlot].estilo, propias, 'texto-slot', ctx, rangoDe(entrada, 'name').start);
-    if (estilo !== undefined) (tema.nodo.textos as Record<string, Primitiva>)[entrada.name] = estilo;
+    if (estilo !== undefined) (textos as Record<string, Primitiva>)[entrada.name] = estilo;
   }
 }
 

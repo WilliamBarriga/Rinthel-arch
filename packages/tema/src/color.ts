@@ -26,6 +26,11 @@ export interface ContextoDeColor {
   color?: string;
   /** Nombre de Paleta del color del Nodo de origen (solo en Aristas). */
   origen?: string;
+  /**
+   * Variable CSS que el dibujo fija por elemento con su color: `COLOR` se resuelve a `var(<variable>)`
+   * (con alfa, a un `color-mix`) en vez de a un valor, y una misma hoja sirve a todos los colores.
+   */
+  variable?: string;
 }
 
 const NUMERO = /^(?:\d+\.?\d*|\.\d+)$/;
@@ -100,6 +105,10 @@ export function resolverColor(texto: string, paleta: Readonly<Record<string, str
   const expresion = leer(texto);
   if (expresion === undefined) return texto;
   const { base, alfa } = expresion;
+  if (base.tipo === 'especial' && base.nombre === 'COLOR' && contexto.variable !== undefined) {
+    const variable = `var(${contexto.variable})`;
+    return alfa === undefined ? variable : `color-mix(in srgb, ${variable} ${Math.round(alfa * 10000) / 100}%, transparent)`;
+  }
   const nombre = base.tipo === 'paleta' ? base.nombre : base.tipo === 'especial' ? (base.nombre === 'COLOR' ? contexto.color : contexto.origen) : undefined;
   let valor: string;
   if (base.tipo === 'mix') {

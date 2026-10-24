@@ -84,7 +84,7 @@ Theme:
 ;
 
 ThemePart:
-  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeEdge | ThemePage;
+  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeGroup | ThemeEdge | ThemePage;
 
 ThemePalette:
   'palette' '{' entries+=ThemeEntry* '}';
@@ -113,6 +113,19 @@ ThemeNode:
 
 NodeItem:
   ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState | ThemeTransition | ThemeEnter | ThemeExit | ThemeStagger;
+
+// `group { layer caja rect { radius 16 }  slots row gap 6 { icon title }  padding 8 16 16  type ...  state collapsed { ... } }`
+// Bloque de dibujo del Grupo (ADR 0008): las mismas Capas, `type` y `state` que `node`, la cabecera (`slots`), el
+// `padding` de la zona de hijos (1, 2 o 4 valores como en CSS) y `state collapsed`, el parche del Grupo cerrado, que
+// se comporta como un Nodo hoja (puede cambiar `slots` y la caja).
+ThemeGroup:
+  'group' '{' items+=GroupItem* '}';
+
+GroupItem:
+  NodeItem | GroupPadding;
+
+GroupPadding:
+  'padding' values+=Num+;
 
 ThemeType:
   'type' name=Id '{' items+=PatchItem* '}';
@@ -381,7 +394,7 @@ Id returns string:
   'motion' | 'keyframes' | 'transition' | 'enter' | 'exit' | 'stagger' | 'delay' | 'intensity' | 'reduced' |
   'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
-  'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' |
+  'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' |
   'model' | 'node' | 'specification';
 
 // -------------------------
