@@ -15,6 +15,7 @@
     "check:deps": "vitest run tests/dependencias.test.ts",
     "bench": "pnpm build && node bench/ejecutar.ts",
     "check:emojis": "node scripts/check-emojis.ts",
+    "capturas": "node scripts/capturas.ts",
     "docs:catalogo": "node scripts/generar-referencia-catalogo.ts",
     "prepare": "git config core.hooksPath .githooks"
   },
@@ -25,6 +26,7 @@
     "dsl": "workspace:*",
     "esbuild": "^0.25.0",
     "layout": "workspace:*",
+    "playwright": "^1.64.0",
     "render": "workspace:*",
     "sesion": "workspace:*",
     "shell": "workspace:*",
