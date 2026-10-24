@@ -17,6 +17,7 @@ import { fnv1a, giroDeCapa, semillaDeCapa } from 'tema';
 import type { CapaPintada, NombreDePrimitiva, PinturaDeNodo } from 'tema';
 
 import { limpiarValorCss, num } from './elemento';
+import { anchoDeBorde } from './pintura/comun';
 import type { Elemento } from './elemento';
 import type { Estilo } from './estilo';
 
@@ -98,12 +99,6 @@ function filtroDeManoAlzada(idDeFiltro: string, semilla: number, rugosidad: numb
       },
     ],
   };
-}
-
-/** Grosor del borde de la pila (la ultima Capa de la Familia borde): el doblez lo tapa. */
-function anchoDeBorde(capas: readonly CapaPintada[]): number {
-  const borde = capas.filter((c) => c.tipo === 'border' || c.tipo === 'dashed' || c.tipo === 'dotted').pop();
-  return borde === undefined ? 0 : Number(borde.props['width']);
 }
 
 /** Esquina doblada arriba a la derecha: dos triangulos (fondo de pagina fuera, `color` dentro) sobre el borde. */

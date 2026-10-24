@@ -23,14 +23,23 @@ export const FONDOS_ACUMULABLES = ['background-image', 'background-size'] as con
 /**
  * Desplazamiento de una Capa (`offset x y`, `grow`): `translate` mueve el elemento
  * de la Capa (componible, se anima con `transition`) y `grow` agranda su ancho y
- * alto sin centrar. Solo pinta; la caja medida del Nodo no cambia.
+ * alto sin centrar. Solo pinta; la caja medida del Nodo no cambia. `borde` es el
+ * grosor del borde de la caja: el elemento sale de su contorno exterior, no del
+ * interior del borde, asi `offset 0 0` coincide con la caja dibujada.
  */
-export function declaracionesDeDesplazamiento(props: CapaPintada['props']): Declaraciones {
-  const crece = props['grow'];
+export function declaracionesDeDesplazamiento(props: CapaPintada['props'], borde = 0): Declaraciones {
+  const crece = Number(props['grow'] ?? 0) + 2 * borde;
   return {
+    ...(borde > 0 && { left: px(-borde), top: px(-borde) }),
     ...((props['offset-x'] !== undefined || props['offset-y'] !== undefined) && { translate: `${px(props['offset-x'] ?? 0)} ${px(props['offset-y'] ?? 0)}` }),
-    ...(crece !== undefined && { width: `calc(100% + ${px(crece)})`, height: `calc(100% + ${px(crece)})` }),
+    ...((props['grow'] !== undefined || borde > 0) && { width: `calc(100% + ${px(crece)})`, height: `calc(100% + ${px(crece)})` }),
   };
+}
+
+/** Grosor del borde de una pila: el de su ultima Capa de la Familia borde (0 sin borde). */
+export function anchoDeBorde(capas: readonly CapaPintada[]): number {
+  const borde = capas.filter((c) => c.tipo === 'border' || c.tipo === 'dashed' || c.tipo === 'dotted').pop();
+  return borde === undefined ? 0 : Number(borde.props['width']);
 }
 
 /** Si la Capa se mueve o crece: va en un elemento propio y no en la caja fusionada. */

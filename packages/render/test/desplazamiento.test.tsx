@@ -71,4 +71,15 @@ describe('Diagram: offset y grow de una Capa', () => {
     expect(css).toMatch(/transition:[^;}]*translate 150ms/);
     expect(css).not.toMatch(/@keyframes/);
   });
+
+  it('la Capa con elemento propio cubre la caja entera, borde incluido: offset 0 coincide con el contorno', async () => {
+    const conBorde = [...capas({ 'offset-x': -7, 'offset-y': -7, grow: 2 }), { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'gray', width: 3 } } }];
+    const { html } = await dibujar(temaCon({ capas: conBorde }));
+    const regla = hojaDe(html).match(/\.rd-anim\[data-anim="sombra"\]\{([^}]*)\}/)![1]!;
+
+    expect(regla).toContain('left:-3px;top:-3px');
+    expect(regla).toContain('width:calc(100% + 8px);height:calc(100% + 8px)');
+    expect(regla).toContain('translate:-7px -7px');
+  });
 });
+

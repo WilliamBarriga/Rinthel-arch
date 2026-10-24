@@ -19,7 +19,7 @@ import type { Elemento } from './elemento';
 import type { Estilo } from './estilo';
 import { ELEMENTOS, pilasDeElemento, pinturaDeElemento } from './pilas';
 import type { ClaveDeElemento, PilaVigente } from './pilas';
-import { declaracionesDeDesplazamiento, estaDesplazada } from './pintura/comun';
+import { anchoDeBorde, declaracionesDeDesplazamiento, estaDesplazada } from './pintura/comun';
 
 export type Declaraciones = Record<string, string>;
 type Regla = [selector: string, declaraciones: Declaraciones];
@@ -111,10 +111,12 @@ function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesD
   const { capas, estados } = pila;
   const animadas = nombresAparte(pila);
   const emitidos = new Set<string>();
+  // El borde de la caja fusionada: el elemento propio de una Capa cubre la caja desde su contorno exterior.
+  const borde = anchoDeBorde(capas.filter((c) => !animadas.has(c.nombre)));
   /** Declaraciones de una Capa como elemento propio: su pintura y su desplazamiento. */
   const pintadaComoElemento = (capa: CapaPintada): Declaraciones => ({
     ...Object.fromEntries(Object.entries(declaracionesDeCapa(capa)).map(([k, v]) => [k, limpiarValorCss(v)])),
-    ...declaracionesDeDesplazamiento(capa.props),
+    ...declaracionesDeDesplazamiento(capa.props, borde),
   });
   const anadir = (c: Compilada): void => {
     for (const b of c.bloques) if (!emitidos.has(b)) (emitidos.add(b), salida.bloques.push(b));
