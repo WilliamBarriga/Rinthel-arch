@@ -57,11 +57,21 @@ describe('inspect tema', () => {
 
     expect(r.exitCode).toBe(0);
     const tema = temaDe(r.salida);
-    expect(tema.file).toBe('(incorporado)');
+    expect(tema.file).toBe('<incorporados>');
     expect(tema.catalogo?.primitivas).toEqual(expect.arrayContaining(['rect', 'solid', 'border', 'circle']));
     expect(tema.catalogo?.movimientos).toEqual(expect.arrayContaining(['pulso']));
     expect(tema.catalogo?.efectos.length).toBeGreaterThan(0);
     expect(temaDe((await json(['neutral'])).salida).catalogo).toBeUndefined();
+  });
+
+  it('un incorporado que extiende a otro da su cadena extends y el sitio de cada Capa en el texto incorporado', async () => {
+    const tema = temaDe((await json(['neutral-dark'])).salida);
+
+    expect(tema.extends).toEqual(['neutral']);
+    // neutral-dark solo cambia la Paleta: todas sus Capas las fijo neutral, en lineas distintas del texto incorporado.
+    const sitios = tema.capas.map((c) => c.origen);
+    expect(sitios.every((s) => s.file === '<incorporados>' && s.line > 1)).toBe(true);
+    expect(new Set(sitios.map((s) => s.line)).size).toBe(sitios.length);
   });
 
   it('un Tema, Tipo o estado inexistente sale con codigo 1 y sugerencia', async () => {
