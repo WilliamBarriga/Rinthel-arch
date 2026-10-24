@@ -139,6 +139,7 @@ view w { type architecture  include *  theme neutral }
     const nueva = await despues.geometria('v');
 
     expect(nueva).not.toBe(geo);
-    expect(nueva?.geometry.nodes['a']).toMatchObject({ x: 240, y: 276 });
+    // El Pin fija el centro: la tarjeta del neutro mide 160 x 54.
+    expect(nueva?.geometry.nodes['a']).toMatchObject({ x: 220, y: 273, width: 160, height: 54 });
   });
 });

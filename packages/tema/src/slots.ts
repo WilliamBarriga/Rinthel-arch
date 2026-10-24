@@ -176,9 +176,10 @@ export function textoDeSlot(slot: SlotDeTexto, metricas: Metricas, contenido: Co
   if (crudo === undefined || (crudo === '' && slot !== 'title')) return undefined;
   // El estilo `text` del titulo cambia lo que se mide: mayusculas, separacion entre letras, punto y relleno del chip.
   const estilo = slot === 'title' ? metricas.titulo : undefined;
-  const texto = estilo?.mayusculas === true ? crudo.toUpperCase() : crudo;
+  const { size, leading, mono, peso, prefijo = '', borde = 0 } = metricas.medidaDeTexto[slot] ?? {};
+  // El prefijo es parte del texto: se mide y se pinta con el (y con sus mayusculas).
+  const texto = prefijo + (estilo?.mayusculas === true ? crudo.toUpperCase() : crudo);
   const definicion: DefinicionDeSlot = DEFINICION_DE_SLOT[slot];
-  const { size, leading, mono, peso, borde = 0 } = metricas.medidaDeTexto[slot] ?? {};
   const tamano = metricas.fontSize * (size ?? definicion.escala ?? 1);
   const interlineado = leading ?? definicion.interlineado;
   const chip = slot === 'counter';

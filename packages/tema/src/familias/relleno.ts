@@ -7,11 +7,11 @@ export const RELLENOS = {
     afectaMetricas: false,
     propiedades: { from: { tipo: 'color' }, to: { tipo: 'color' }, angle: { tipo: 'numero', min: 0, max: 360, defecto: 180 } },
   },
-  /** Gradiente circular desde el punto `x`/`y` (porcentaje de la caja) hasta el 110% del radio. */
+  /** Gradiente circular desde el punto `x`/`y` (porcentaje de la caja; puede quedar fuera de ella) hasta el 110% del radio. */
   radial: {
     familia: 'relleno',
     afectaMetricas: false,
-    propiedades: { from: { tipo: 'color' }, to: { tipo: 'color' }, x: { tipo: 'numero', min: 0, max: 100, defecto: 50 }, y: { tipo: 'numero', min: 0, max: 100, defecto: 50 } },
+    propiedades: { from: { tipo: 'color' }, to: { tipo: 'color' }, x: { tipo: 'numero', min: -100, max: 200, defecto: 50 }, y: { tipo: 'numero', min: -100, max: 200, defecto: 50 } },
   },
   /**
    * Disco de borde nitido de radio `radius` (px) centrado en `x`/`y`: porcentaje de la caja o de la pagina, o px

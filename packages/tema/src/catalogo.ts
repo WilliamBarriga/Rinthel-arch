@@ -25,7 +25,9 @@ export type DefinicionDePropiedad =
   | { readonly tipo: 'color'; readonly opcional?: true }
   | { readonly tipo: 'opcion'; readonly valores: readonly string[]; readonly defecto?: string; readonly opcional?: true }
   /** Nombre de un Componente de Tema: identificador que empieza en mayuscula. */
-  | { readonly tipo: 'nombre' };
+  | { readonly tipo: 'nombre' }
+  /** Texto literal entre comillas, de a lo sumo `largo` caracteres. */
+  | { readonly tipo: 'texto'; readonly largo: number; readonly opcional?: true };
 
 /** Donde se usa una Primitiva: Capa de Nodo (defecto), Capa de la pagina (solo las de la Familia relleno, que tambien valen en el Nodo), Capa de Arista, marcador de extremo, etiqueta de Arista o estilo de texto de un Slot. */
 export type UbicacionDePrimitiva = 'capa-nodo' | 'capa-arista' | 'marcador' | 'etiqueta' | 'texto-slot' | 'capa-pagina';
@@ -232,6 +234,10 @@ export function validarPropiedades(
     } else if (propiedad.tipo === 'nombre') {
       if (/^[A-Z][A-Za-z0-9_]*$/.test(String(valor))) resultado[clave] = String(valor);
       else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' de ${nombre} debe ser un nombre de Componente (empieza en mayuscula, p. ej. Aurora), no '${valor}'`, clave });
+    } else if (propiedad.tipo === 'texto') {
+      const texto = String(valor);
+      if (texto.length <= propiedad.largo) resultado[clave] = texto;
+      else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' de ${nombre} debe ser un texto de a lo sumo ${propiedad.largo} caracteres, no '${texto}'`, clave });
     } else if (propiedad.tipo === 'opcion') {
       if (propiedad.valores.includes(String(valor))) resultado[clave] = String(valor);
       else {
@@ -261,7 +267,7 @@ export function validarPropiedades(
     if (propiedad.tipo === 'numero' && propiedad.defecto !== undefined) resultado[clave] = propiedad.defecto;
     else if (propiedad.tipo === 'opcion' && propiedad.defecto !== undefined) resultado[clave] = propiedad.defecto;
     else if (propiedad.tipo === 'opcion' && propiedad.opcional === true) continue;
-    else if (propiedad.tipo === 'color' && propiedad.opcional === true) continue;
+    else if ((propiedad.tipo === 'color' || propiedad.tipo === 'texto') && propiedad.opcional === true) continue;
     else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `${sujeto} exige la propiedad '${clave}'`, clave });
   }
   return { propiedades: resultado, errores };

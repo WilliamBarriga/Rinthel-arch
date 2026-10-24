@@ -26,6 +26,15 @@ describe('compile: bloque page del Tema', () => {
     });
   });
 
+  it('el centro de un radial puede quedar fuera de la caja (luz que sube desde abajo), con limite', () => {
+    const fuera = tema(`page { layer luz radial { from ink/0.3  to paper  x 50  y 115 } }`);
+    const lejos = tema(`page { layer luz radial { from ink/0.3  to paper  x -150  y 50 } }`);
+
+    expect(fuera.issues).toEqual([]);
+    expect(paginaDe(fuera)).toMatchObject({ capas: [{ primitiva: { props: { x: 50, y: 115 } } }] });
+    expect(lejos.issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+  });
+
   it('un Tema sin page tiene la pagina vacia y movil', () => {
     expect(paginaDe(tema(''))).toEqual({ capas: [], fijo: false });
   });

@@ -66,7 +66,7 @@ export interface OrigenDeTema {
 export interface TemasCompilados {
   temas: TemaResuelto[];
   issues: Issue[];
-  /** Origen de las Capas de cada Tema declarado en el texto (el neutro incorporado no figura). */
+  /** Origen de las Capas de cada Tema escrito en DSL, incorporados incluidos (archivo `<incorporados>`); `alto-contraste` no figura. */
   origenes: Record<string, OrigenDeTema>;
   /** Parches de Capa de una Vista (`theme t { layer ... }`) validados contra el Tema `tema`. */
   parchesDeVista(tema: string, items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string): { ops: OpDeCapa[]; issues: Issue[] };
@@ -173,16 +173,11 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       const padre = porNombre.get(parent);
       base = parent === TEMA_ALTO_CONTRASTE.name ? altoContraste : padre && resolver(padre);
       if (base === undefined) {
-        const enCiclo = padre !== undefined;
-        issues.push({
-          code: enCiclo ? CODIGOS.E_EXTENDS_CYCLE : CODIGOS.E_UNKNOWN_THEME,
-          severity: 'error',
-          file: declarado.archivo,
-          ...declarado.padre.start,
-          message: enCiclo
-            ? `Ciclo de extends: '${name}' extiende a '${parent}', que depende de el`
-            : `Tema '${parent}' no declarado`,
-        });
+        issues.push(
+          padre !== undefined
+            ? { code: CODIGOS.E_EXTENDS_CYCLE, severity: 'error', file: declarado.archivo, ...declarado.padre.start, message: `Ciclo de extends: '${name}' extiende a '${parent}', que depende de el` }
+            : issueConSugerencia({ code: CODIGOS.E_UNKNOWN_THEME, message: `Tema '${parent}' no declarado` }, declarado.archivo, declarado.ast, 'parent', [...porNombre.keys(), TEMA_ALTO_CONTRASTE.name]),
+        );
         enCurso.delete(name);
         fallidos.add(name);
         return undefined;
@@ -275,7 +270,8 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       .map(({ tema }) => tema)
       .sort((a, b) => (NOMBRES_INCORPORADOS.indexOf(a.name as never) + 1 || 99) - (NOMBRES_INCORPORADOS.indexOf(b.name as never) + 1 || 99)),
     issues,
-    origenes: Object.fromEntries([...resueltos].filter(([, { origen }]) => origen.sitio.file !== ARCHIVO_INCORPORADOS).map(([nombre, { origen }]) => [nombre, origen])),
+    // Tambien los incorporados: su sitio es una linea de `<incorporados>` y `inspect tema` muestra su cadena `extends`.
+    origenes: Object.fromEntries([...resueltos].map(([nombre, { origen }]) => [nombre, origen])),
     parchesDeVista: (nombreDeTema, items, archivo) => {
       const delTema = resueltos.get(nombreDeTema);
       const delVista: Issue[] = [];

@@ -35,9 +35,20 @@ describe('Temas incorporados', () => {
 
   it('el neutro dibuja con Capas, Slots, estados y animacion minima', () => {
     const neutro = resolverTema(compilar().themes[0]!);
-    expect(neutro.nodo.capas.map((c) => c.nombre)).toEqual(['forma', 'relleno', 'borde']);
-    expect(Object.keys(neutro.nodo.estados).sort()).toEqual(['en-ruta', 'hover']);
+    expect(neutro.nodo.capas.map((c) => c.nombre)).toEqual(['forma', 'relleno', 'borde', 'sombra']);
+    expect(Object.keys(neutro.nodo.estados).sort()).toEqual(['atenuado', 'en-ruta', 'hover']);
     expect(neutro.nodo.animacion?.transicionesDeEstado?.hover).toBeDefined();
+  });
+
+  it.each(['neutral', 'neutral-dark', 'alto-contraste'])('%s usa los Slots de tarjeta, el Grupo propio y el fondo de pagina', (nombre) => {
+    const tema = resolverTema(compilar().themes.find((t) => t.name === nombre)!);
+    const slots = JSON.stringify(tema.nodo.slots);
+    for (const slot of ['icon', 'title', 'badge', 'counter', 'attrs']) expect(slots).toContain(`"slot":"${slot}"`);
+    expect(tema.grupo.capas.length).toBeGreaterThan(0);
+    expect(tema.grupo.colapsado.ops.length).toBeGreaterThan(0);
+    expect(JSON.stringify(tema.grupo.slots)).toContain('"slot":"title"');
+    expect(tema.pagina.capas.length).toBeGreaterThan(0);
+    expect(tema.arista.etiqueta).toBeDefined();
   });
 
   it('un Tema del usuario no puede llamarse como un incorporado', () => {

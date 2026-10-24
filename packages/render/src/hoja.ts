@@ -186,6 +186,9 @@ const PUNTO_SOBRE_ARO = 44;
 /** Diametro del punto del titulo en em; el resto de `PUNTO_DE_TITULO_EM` es la separacion con el texto. */
 const DIAMETRO_DE_PUNTO_EM = 0.55;
 
+/** Desenfoque (px) del resplandor `glow` de un texto. */
+const RESPLANDOR_DE_TEXTO = 8;
+
 const ALINEACION_CSS: Record<string, string> = { start: 'left', center: 'center', end: 'right' };
 
 /**
@@ -195,7 +198,7 @@ const ALINEACION_CSS: Record<string, string> = { start: 'left', center: 'center'
 function reglasDeTexto(caja: string, textos: PinturaDeNodo['textos'], fuenteMono: string): Array<[string, Declaraciones]> {
   return Object.entries(textos).flatMap(([slot, texto]): Array<[string, Declaraciones]> => {
     if (texto.tipo !== 'text' && texto.tipo !== 'chip') return [];
-    const { weight, color, style, transform, alpha, fill, border, radius, tracking, pad, dot, font } = texto.props;
+    const { weight, color, style, transform, alpha, fill, border, radius, tracking, pad, dot, font, glow } = texto.props;
     const contorno = border === undefined ? 'none' : `${px(texto.props['border-width'] ?? 1)} solid ${css(border)}`;
     const alineacion = texto.props['text-align'];
     const selector = `${caja} .rd-slot[data-slot="${slot}"]`;
@@ -212,6 +215,7 @@ function reglasDeTexto(caja: string, textos: PinturaDeNodo['textos'], fuenteMono
           ...(alpha !== undefined && { opacity: css(alpha) }),
           ...(alineacion !== undefined && { 'text-align': ALINEACION_CSS[String(alineacion)] ?? 'left' }),
           ...(Number(tracking) > 0 && { 'letter-spacing': `${num(Number(tracking))}em` }),
+          ...(glow !== undefined && { 'text-shadow': `0 0 ${px(RESPLANDOR_DE_TEXTO)} ${css(glow)}` }),
           ...(texto.tipo === 'chip' && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), border: contorno }),
           ...(texto.tipo === 'text' && conCaja && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), ...(border !== undefined && { border: contorno }) }),
           ...(Number(pad) > 0 && { 'padding-left': px(pad), 'padding-right': px(pad) }),
