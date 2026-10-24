@@ -368,7 +368,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   };
 
   return (
-    <div ref={zona} onClick={alPulsar} onMouseMove={alMoverElRaton} onMouseLeave={() => fijarHover(undefined)} className="rd-vista" tabIndex={0} onKeyDown={alTeclear} onFocus={alEnfocar} onBlur={alSoltarElFoco} style={{ ...variablesDeChrome(estilo), width, height }}>
+    <div ref={zona} onClick={alPulsar} onMouseMove={alMoverElRaton} onMouseLeave={() => fijarHover(undefined)} className="rd-vista" data-vista={view} data-layout={calculo !== undefined && calculo.vista === vista && morph === undefined ? 'listo' : 'calculando'} tabIndex={0} onKeyDown={alTeclear} onFocus={alEnfocar} onBlur={alSoltarElFoco} style={{ ...variablesDeChrome(estilo), width, height }}>
       <EstiloDelChrome />
       {mostrado !== undefined && recortada !== undefined && (
         <Diagram

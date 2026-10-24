@@ -1,0 +1,105 @@
+// Modelo de referencia para comparar un Tema con el prototipo aprobado (rama `prototype/render-hibrido`, ticket #46).
+// Copia, con los Tipos de la galeria, el Modelo del prototipo: paquetes del monorepo con Grupos abiertos, Grupos
+// colapsados, Aristas con y sin etiqueta y Aristas elevadas. Tipos: paquete = servicio, modulo = dominio,
+// artefacto = almacen. Vive bajo el Grupo `referencia` para que las Vistas de cobertura (`**`) lo excluyan.
+// La Vista `<tema>-referencia` equivale a la Vista `abierto` del prototipo (ver `vistas.dg`).
+model {
+  dominio referencia "Referencia" {
+    actor autor "Autor" "Escribe archivos .dg y mira los diagramas"
+    actor agente "Agente" "Valida, consulta y edita por CLI"
+
+    almacen workspace "Workspace" "Carpeta de archivos .dg del Proyecto documentado"
+    almacen salida-derivada ".diagrams/" "Salida derivada; no se versiona"
+
+    servicio canonico "canonico" "Esquema Zod, validacion y resolucion de Vistas" {
+      dominio can-esquema "esquema" "Fuente canonica (Zod)"
+      dominio can-validar "validar" "Issues con codigo y sugerencias"
+      dominio can-vistas "vistas" "Resolucion de include, exclude y depth"
+      dominio can-pasos "pasos" "Revelado paso a paso de Vistas flow"
+      dominio can-pin "pin" "Pin: posicion fijada por el autor"
+      dominio can-inspect "inspect" "Consultas sobre el Modelo"
+    }
+
+    servicio dsl "dsl" "Texto a Fuente canonica; fusion del Workspace" {
+      dominio dsl-gramatica "gramatica" "Gramatica Langium"
+      dominio dsl-compilar "compilar" "Archivos a Fuente canonica"
+      dominio dsl-temas "temas" "Temas, paleta y tokens"
+      dominio dsl-ubicador "ubicador" "Posiciones en el texto fuente"
+    }
+
+    servicio layout "layout" "ELK y Pin; geometria cacheada" {
+      dominio lay-layout "layout" "Vista a geometria"
+      dominio lay-metricas "metricas" "Medicion de texto"
+      dominio lay-indice "indice" "Indice de geometria"
+    }
+
+    servicio sesion "sesion" "Tuberia compilar, validar y calcular layout" {
+      dominio ses-sesion "sesion" "diagnosticar, construir, geometria"
+      dominio ses-ediciones "ediciones" "Edicion estructurada del DSL"
+      dominio ses-intenciones "intenciones" "Intenciones, deshacer y rehacer"
+    }
+
+    servicio render "render" "SVG React puro" {
+      dominio ren-escena "escena" "Geometria a elementos"
+      dominio ren-estilo "estilo" "Estilo resuelto contra el Tema"
+      dominio ren-diagram "diagram" "Componente Diagram"
+    }
+
+    servicio shell "shell" "Interaccion en el navegador" {
+      dominio sh-camara "camara" "Pan y zoom"
+      dominio sh-colapso "colapso" "Colapso de Grupos"
+      dominio sh-seleccion "seleccion" "Seleccion y arrastre de Pins"
+      dominio sh-worker "layout-en-worker" "Relayout en Worker"
+    }
+
+    servicio cli "cli" "validate, build, export, inspect, edit, dev" {
+      dominio cli-validate "validate" "Diagnosticos"
+      dominio cli-export "export" "SVG, PNG y HTML"
+      dominio cli-inspect "inspect" "Ids, sitios y vecinos"
+      dominio cli-edit "edit" "Ediciones desde la terminal"
+      dominio cli-dev "dev" "Servidor local con recarga"
+    }
+
+    externo elk "ELK (elkjs)" "Motor de layout"
+    externo react "React 19" "Dibujo del SVG"
+  }
+
+  referencia.autor -> referencia.workspace "escribe .dg"
+  referencia.agente -> referencia.cli "validate / inspect / edit"
+  referencia.autor -> referencia.cli.cli-dev "abre el shell"
+  referencia.cli -> referencia.workspace "lee"
+  referencia.cli -> referencia.salida-derivada "escribe"
+
+  referencia.dsl -> referencia.canonico
+  referencia.layout -> referencia.canonico
+  referencia.sesion -> referencia.canonico
+  referencia.sesion -> referencia.dsl
+  referencia.sesion -> referencia.layout
+  referencia.render -> referencia.canonico
+  referencia.render -> referencia.layout
+  referencia.shell -> referencia.sesion
+  referencia.shell -> referencia.render
+  referencia.shell -> referencia.layout
+  referencia.cli -> referencia.sesion
+  referencia.cli -> referencia.render
+
+  referencia.layout.lay-layout -> referencia.elk
+  referencia.layout.lay-layout -> referencia.layout.lay-metricas
+  referencia.layout.lay-indice -> referencia.layout.lay-layout
+  referencia.sesion.ses-sesion -> referencia.dsl.dsl-compilar
+  referencia.sesion.ses-sesion -> referencia.canonico.can-validar
+  referencia.sesion.ses-sesion -> referencia.layout.lay-layout "memoiza por Vista"
+  referencia.sesion.ses-ediciones -> referencia.dsl.dsl-ubicador
+  referencia.sesion.ses-intenciones -> referencia.sesion.ses-ediciones
+  referencia.render.ren-diagram -> referencia.react
+  referencia.render.ren-diagram -> referencia.render.ren-escena
+  referencia.render.ren-escena -> referencia.render.ren-estilo
+  referencia.shell.sh-worker -> referencia.layout.lay-layout
+  referencia.shell.sh-seleccion -> referencia.sesion.ses-intenciones
+  referencia.shell.sh-colapso -> referencia.canonico.can-vistas
+  referencia.cli.cli-validate -> referencia.sesion.ses-sesion
+  referencia.cli.cli-inspect -> referencia.canonico.can-inspect
+  referencia.cli.cli-edit -> referencia.sesion.ses-ediciones
+  referencia.cli.cli-dev -> referencia.shell
+  referencia.cli.cli-export -> referencia.render.ren-diagram
+}

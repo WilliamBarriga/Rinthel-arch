@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { resolveView } from 'canonico';
 import { compile } from 'dsl';
 import { abrirSesion } from 'sesion';
 import { CATALOGO, ESTADOS, estiloResuelto, resolverTema } from 'tema';
@@ -47,8 +48,31 @@ describe('galeria de Temas de ejemplo', () => {
     expect(errores).toEqual([]);
   });
 
-  it('hay una Vista por Tema', () => {
-    expect(canonico?.views.map((v) => v.id).sort()).toEqual([...TEMAS].sort());
+  it('hay una Vista de cobertura y una Vista de referencia por Tema', () => {
+    const esperadas = [...TEMAS, ...TEMAS.map((t) => `${t}-referencia`)];
+    expect(canonico?.views.map((v) => v.id).sort()).toEqual(esperadas.sort());
+  });
+
+  it('las Vistas de cobertura no muestran el Modelo de referencia', () => {
+    for (const tema of TEMAS) {
+      const ids = resolveView(canonico!, tema)!.nodes.map((n) => n.id);
+      expect(ids.filter((id) => id.startsWith('referencia')), tema).toEqual([]);
+    }
+  });
+
+  it.each(TEMAS)('la Vista de referencia de %s equivale a la Vista abierto del prototipo', (tema) => {
+    const vista = resolveView(canonico!, `${tema}-referencia`)!;
+    const abierto = (id: string) => vista.nodes.find((n) => n.id === `referencia.${id}`)!;
+    // Grupos abiertos con sus modulos y Grupos colapsados con contador (4 raices, 3 abiertos).
+    for (const id of ['render', 'sesion', 'layout']) expect(abierto(id).collapsed, id).toBe(false);
+    for (const [id, hijos] of [['canonico', 6], ['dsl', 4], ['shell', 4], ['cli', 5]] as const) {
+      expect(abierto(id).collapsed, id).toBe(true);
+      expect(abierto(id).childCount, id).toBe(hijos);
+    }
+    expect(vista.nodes.map((n) => n.id)).not.toContain('referencia');
+    expect(vista.nodes).toHaveLength(22);
+    expect(vista.edges).toHaveLength(36);
+    expect(vista.edges.some((a) => a.label === 'memoiza por Vista')).toBe(true);
   });
 
   it('el Modelo cubre Grupo abierto y colapsado, Aristas con y sin etiqueta y un Nodo por estado', () => {
