@@ -10,7 +10,7 @@ Cambia de Vista para comparar. El Modelo cubre todos los Tipos, un Grupo abierto
 
 ## Contenido
 
-Temas: `soft-card`, `glass-chip`, `neobrutalist`, `blueprint`, `claro-suave`, `crt-terminal`, `synthwave`, `editorial`, `bauhaus`, `sticky-notes`, `keycaps`, `metro-map`, `pcb`, `pixel-art`. La primera linea de cada archivo, `// Contraste: ...`, lista los Tipos con warning de contraste deliberado (`ninguno` si no hay); una prueba la compara con `validate`.
+Temas: `soft-card`, `glass-chip`, `neobrutalist`, `blueprint`, `claro-suave`, `crt-terminal`, `synthwave`, `editorial`, `bauhaus`, `sticky-notes`, `keycaps`, `metro-map`, `pcb`, `pixel-art`. La primera linea de cada archivo, `// Contraste: ...`, lista los Tipos con warning de contraste deliberado (`ninguno` si no hay); una prueba exige que esos sean los unicos warnings de cada Tema (sin `W_THEME_COLOR_ONLY` ni otros).
 
 `fuentes/` trae Caveat, Press Start 2P y JetBrains Mono en `woff2` (licencia OFL en `LICENCIA-OFL.txt`), auto-hospedadas, sin CDN. Los Temas las nombran en `fonts`; el visor aun no declara el `@font-face` desde el Workspace, asi que sin ello se ve el fallback.
 
