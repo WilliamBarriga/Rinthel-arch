@@ -12,7 +12,7 @@ import { idDeArista } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
-import { atributosVisibles, colocarEnCaja, metricasDeHoja } from 'tema';
+import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
 import type { Metricas } from 'tema';
 
 import { pintarCapasAnimadas } from './animacion';
@@ -269,7 +269,7 @@ function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, 
   if (esGrupo(nodo) || !tieneFilas(nodo, estilo, detail)) return propios;
   const metricas = metricasDeHoja(estilo.tabla, nodo);
   const atributos = atributosVisibles(nodo, metricas);
-  const rectas = colocarEnCaja(metricas, atributos.length, caja.width).filas;
+  const rectas = colocarEnCaja(metricas, contenidoDeNodo(nodo, metricas), caja.width).filas;
   const filas = atributos.flatMap((atributo, i) => {
     const id = `${nodo.id}#${atributo.name}`;
     return contornos(estados[id]).map((e) => pintarEstadoDeCaja(e, id, rectas[i]!));

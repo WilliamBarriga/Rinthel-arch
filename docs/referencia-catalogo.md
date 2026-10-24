@@ -88,6 +88,7 @@ Un numero se escribe como `minimo a maximo (defecto)`; fuera de rango es un erro
 | Primitiva | Ubicacion | Propiedades | Metricas |
 | --- | --- | --- | --- |
 | `text` | texto-slot | `weight` 100 a 900 (400); `color` color de Paleta (opcional); `style` normal|italic (normal); `transform` none|uppercase (none) | no |
+| `icon` | texto-slot | `variant` plain|box|dot (plain); `side` 6 a 96 (16); `radius` 0 a 50 (6); `fill` color de Paleta (opcional); `border` color de Paleta (opcional); `color` color de Paleta (opcional) | si |
 | `label` | etiqueta | `scale` 0.5 a 2 (0.85); `pad` 0 a 32 (4); `radius` 0 a 50 (0); `fill` color de Paleta (opcional); `border` color de Paleta (opcional) | si |
 
 ### Familia codigo
@@ -100,6 +101,7 @@ Un numero se escribe como `minimo a maximo (defecto)`; fuera de rango es un erro
 
 | Slot |
 | --- |
+| `icon` |
 | `title` |
 | `attrs` |
 

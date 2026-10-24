@@ -30,7 +30,7 @@ describe('contrato del Tema', () => {
   });
 
   it('una Capa con una Primitiva o propiedad invalida falla con la ruta de la Capa', () => {
-    const capa = (primitiva: unknown) => ({ ...TEMA_NEUTRO, nodo: { capas: [{ nombre: 'c', primitiva }], slots: ['title'] } });
+    const capa = (primitiva: unknown) => ({ ...TEMA_NEUTRO, nodo: { capas: [{ nombre: 'c', primitiva }], slots: TEMA_NEUTRO.nodo.slots } });
 
     expect(temaResueltoSchema.safeParse(capa({ tipo: 'rect', props: { radius: 999 } })).success).toBe(false);
     expect(temaResueltoSchema.safeParse(capa({ tipo: 'solid', props: { color: 'inexistente' } })).success).toBe(false);
@@ -57,7 +57,7 @@ describe('catalogo', () => {
     const afectan = Object.entries(CATALOGO).filter(([, p]) => p.afectaMetricas).map(([nombre]) => nombre);
     const cuadradas = Object.entries(CATALOGO).filter(([, p]) => 'cajaMinima' in p).map(([nombre]) => nombre);
 
-    expect(afectan).toEqual(['circle', 'label']);
+    expect(afectan).toEqual(['circle', 'icon', 'label']);
     expect(cuadradas).toEqual(['circle']);
   });
 
@@ -87,7 +87,7 @@ describe('Metricas y colocacion de Slots', () => {
 
   it('una forma circle da una caja cuadrada que contiene el contenido, centrado en vertical', () => {
     const circulo = metricasDe({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'forma', primitiva: { tipo: 'circle', props: {} } }] } });
-    const colocado = colocarNodo('API', [], circulo);
+    const colocado = colocarNodo({ titulo: 'API', atributos: [], icono: false }, circulo);
 
     expect(metricas.cajaCuadrada).toBe(false);
     expect(circulo.cajaCuadrada).toBe(true);
@@ -97,8 +97,8 @@ describe('Metricas y colocacion de Slots', () => {
   });
 
   it('un Nodo sin Atributos mide la cabecera; con Atributos suma una fila por cada uno', () => {
-    const solo = colocarNodo('API', [], metricas);
-    const con = colocarNodo('API', [{ name: 'id', type: 'int', notes: '' }, { name: 'nombre', type: 'texto', notes: '' }], metricas);
+    const solo = colocarNodo({ titulo: 'API', atributos: [], icono: false }, metricas);
+    const con = colocarNodo({ titulo: 'API', atributos: [{ name: 'id', type: 'int', notes: '' }, { name: 'nombre', type: 'texto', notes: '' }], icono: false }, metricas);
 
     expect(solo).toMatchObject({ width: 120, height: metricas.cabecera, filas: [] });
     expect(con.height).toBe(metricas.cabecera + 2 * metricas.fila);
@@ -110,10 +110,10 @@ describe('Metricas y colocacion de Slots', () => {
 
   it('el ancho sale del texto mas largo entre los Slots mostrados', () => {
     const largo = 'un titulo bastante largo para forzar el ancho';
-    const sinTitulo = { ...metricas, slots: ['attrs'] as const };
+    const sinTitulo = { ...metricas, disposicion: { direccion: 'column' as const, gap: 0, pad: 0, hijos: [{ slot: 'attrs' as const }] } };
 
-    expect(colocarNodo(largo, [], metricas).width).toBeGreaterThan(120);
-    expect(colocarNodo(largo, [], sinTitulo).width).toBe(120);
+    expect(colocarNodo({ titulo: largo, atributos: [], icono: false }, metricas).width).toBeGreaterThan(120);
+    expect(colocarNodo({ titulo: largo, atributos: [], icono: false }, sinTitulo).width).toBe(120);
   });
 
   it('las Metricas no cambian con la pintura del Tema', () => {
@@ -121,6 +121,6 @@ describe('Metricas y colocacion de Slots', () => {
 
     expect(estiloResuelto(otro).metricas).toEqual(estiloResuelto(TEMA_NEUTRO).metricas);
     expect(estiloResuelto(otro).pintura).not.toEqual(estiloResuelto(TEMA_NEUTRO).pintura);
-    expect(colocarEnCaja(metricas, 1, 200).slots.title).toEqual({ x: 0, y: 0, width: 200, height: metricas.cabecera });
+    expect(colocarEnCaja(metricas, { titulo: 'x', atributos: [{ name: 'a', type: 't', notes: '' }], icono: false }, 200).slots.title).toEqual({ x: 0, y: 0, width: 200, height: metricas.cabecera });
   });
 });

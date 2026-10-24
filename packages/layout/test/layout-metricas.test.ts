@@ -53,7 +53,11 @@ describe('Metricas por Tipo y relayout por clave de estructura', () => {
     const m = metricasDe(TEMA_NEUTRO);
     const ruta = g.edges[idDeArista(v.edges[0]!)]!.points;
 
-    expect(ruta[ruta.length - 1]!.y).toBe(g.nodes['t']!.y + m.cabecera + m.fila / 2);
+    const caja = g.nodes['t']!;
+    // El tipo `db` es un circulo: el contenido (cabecera + una fila) va centrado en su caja cuadrada.
+    const arriba = (caja.height - (m.cabecera + m.fila)) / 2;
+
+    expect(ruta[ruta.length - 1]!.y).toBe(caja.y + arriba + m.cabecera + m.fila / 2);
   });
 });
 

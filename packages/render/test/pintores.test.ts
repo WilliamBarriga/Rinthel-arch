@@ -28,12 +28,24 @@ describe('pintores por parte', () => {
     const atributos = [{ name: 'id', type: 'uuid', notes: '' }];
     const datos = { nodo: conNodo({ attributes: atributos }), caja, trazo: 'red', texto: 'N', conAtributos: true };
     const [titulo, ...resto] = pintarNodo(estilo, datos);
-    const { slots } = colocarEnCaja(estilo.metricas, 1, caja.width);
+    const { slots } = colocarEnCaja(estilo.metricas, { titulo: 'N', atributos, icono: false }, caja.width);
 
     expect(titulo!.attrs['data-slot']).toBe('title');
     expect(titulo!.attrs['style']).toContain(`top:${slots.title!.y}px;width:${slots.title!.width}px;height:${slots.title!.height}px`);
     expect(resto[0]!.attrs['data-slot']).toBe('attrs');
     expect(JSON.stringify(resto)).toContain('id: uuid');
+  });
+
+  it('el icono es el Slot `icon`: va en su rectangulo, a la izquierda del titulo y sin solaparlo', () => {
+    const icons = { keys: () => ['box'], resolve: () => '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>' };
+    const elementos = pintarNodo(estilo, { nodo: conNodo({ icon: 'box' }), caja, trazo: 'red', texto: 'N', conAtributos: false, icons });
+    const rectDe = (e: Elemento) => Object.fromEntries([...e.attrs['style']!.matchAll(/(left|top|width|height):([\d.]+)px/g)].map((m) => [m[1], Number(m[2])])) as Record<string, number>;
+    const icono = elementos.find((e) => e.attrs['data-slot'] === 'icon')!;
+    const titulo = elementos.find((e) => e.attrs['data-slot'] === 'title')!;
+
+    expect(rectDe(icono)['left']! + rectDe(icono)['width']!).toBeLessThanOrEqual(rectDe(titulo)['left']!);
+    expect(icono.html).toContain('<svg width=');
+    expect(pintarNodo(estilo, { nodo: conNodo({}), caja, trazo: 'red', texto: 'N', conAtributos: false }).map((e) => e.attrs['data-slot'])).toEqual(['title']);
   });
 
   it('sin conAtributos el Nodo no dibuja el Slot attrs', () => {

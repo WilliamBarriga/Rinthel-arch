@@ -1,9 +1,9 @@
 /**
- * Compilacion del bloque `edge` de un Tema y del estilo de texto de los Slots
- * (ADR 0008). La pila de trazos reutiliza los parches de Capa (`layer`, `use`,
- * `before`/`after`, `none`) validados contra la Familia trazo; los marcadores
- * (`start`/`end`) y la etiqueta (`label`) son una Primitiva suelta cada uno, y
- * el estilo de un Slot es una Primitiva `text`. Toda la validacion es del
+ * Compilacion del bloque `edge` de un Tema (ADR 0008). La pila de trazos
+ * reutiliza los parches de Capa (`layer`, `use`, `before`/`after`, `none`)
+ * validados contra la Familia trazo; los marcadores (`start`/`end`) y la
+ * etiqueta (`label`) son una Primitiva suelta cada uno. `primitivaSuelta` la
+ * comparte `temas-slots.ts` para el estilo de un Slot. Toda la validacion es del
  * catalogo de `tema`; aqui solo se traduce el AST y se situan los errores.
  */
 import { CODIGOS } from 'canonico';
@@ -16,10 +16,10 @@ import { aRango, rangoDe } from './posiciones';
 import { compilarBloque } from './temas-capas';
 import type { ContextoDeBloque } from './temas-capas';
 
-type Contexto = Pick<ContextoDeBloque, 'archivo' | 'partes' | 'paleta' | 'tokens' | 'issues'>;
+export type Contexto = Pick<ContextoDeBloque, 'archivo' | 'partes' | 'paleta' | 'tokens' | 'issues'>;
 
 /** Primitiva suelta (marcador, etiqueta, estilo de Slot) desde sus props escritas; deja los errores en `ctx.issues`. */
-function primitivaSuelta(
+export function primitivaSuelta(
   tipo: string,
   props: readonly LayerProp[],
   ubicacion: UbicacionDePrimitiva,
@@ -36,7 +36,7 @@ function primitivaSuelta(
   return resueltas.errores.length === 0 && errores.length === 0 ? primitiva : undefined;
 }
 
-function aIssue(archivo: string, error: ErrorDeCatalogo, inicio: { line: number; column: number }): Issue {
+export function aIssue(archivo: string, error: ErrorDeCatalogo, inicio: { line: number; column: number }): Issue {
   return { code: error.codigo, severity: 'error', file: archivo, ...inicio, message: error.mensaje, ...(error.hint !== undefined && { hint: error.hint }) };
 }
 
@@ -70,13 +70,4 @@ function compilarMarcador(item: ThemeMarker, tema: TemaResuelto, ctx: Contexto):
   }
   const marcador = primitivaSuelta(item.kind ?? '', item.props, 'marcador', ctx, rangoDe(item, 'kind').start);
   if (marcador !== undefined) tema.arista[lado] = marcador;
-}
-
-/** Estilo de texto (`text`) de los Slots que lo declaran en `slots { title { weight 600 } }`. */
-export function compilarTextoDeSlots(entradas: readonly SlotEntry[], tema: TemaResuelto, ctx: Contexto): void {
-  for (const entrada of entradas) {
-    if (entrada.props.length === 0) continue;
-    const texto = primitivaSuelta('text', entrada.props, 'texto-slot', ctx, rangoDe(entrada, 'name').start);
-    if (texto !== undefined) (tema.nodo.textos as Record<string, Primitiva>)[entrada.name] = texto;
-  }
 }

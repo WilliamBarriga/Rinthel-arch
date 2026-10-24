@@ -35,7 +35,7 @@ const capas = (animacion?: object) => [
 const temaCon = (nodoExtra: Record<string, unknown> = {}, conAnimacion = true): TemaResuelto =>
   ({
     ...TEMA_NEUTRO,
-    nodo: { slots: ['title', 'attrs'], tipos: {}, estados: {}, capas: capas(conAnimacion ? ok(construirMovimiento('pulso', [p('duration', 1200), p('intensity', '0.4')])) : undefined), ...nodoExtra },
+    nodo: { slots: TEMA_NEUTRO.nodo.slots, tipos: {}, estados: {}, capas: capas(conAnimacion ? ok(construirMovimiento('pulso', [p('duration', 1200), p('intensity', '0.4')])) : undefined), ...nodoExtra },
   }) as unknown as TemaResuelto;
 
 async function dibujar(theme: TemaResuelto, extra: Partial<DiagramProps> = {}): Promise<string> {

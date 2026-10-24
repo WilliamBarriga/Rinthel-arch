@@ -15,7 +15,7 @@ describe('animacion en el Estilo resuelto', () => {
         { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 4 } } },
         { nombre: 'acento', primitiva: { tipo: 'border', props: { color: 'blue', width: 2 } }, animacion: pulso },
       ],
-      slots: ['title'],
+      slots: TEMA_NEUTRO.nodo.slots,
       tipos: {},
       estados: { seleccionado: [{ nombre: 'acento', props: {}, animacion: aura }], hover: [{ nombre: 'acento', props: {}, animacion: null }] },
       animacion: { transicion: { duracionMs: 120, easing: 'ease-out', reducido: 'fade' }, escalonadoMs: 60 },

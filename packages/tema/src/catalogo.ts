@@ -68,9 +68,21 @@ export type NombreDePrimitivaEn<U extends UbicacionDePrimitiva> = {
   [K in NombreDePrimitiva]: (typeof CATALOGO)[K] extends { readonly ubicacion: infer V } ? (V extends U ? K : never) : U extends 'capa-nodo' ? K : never;
 }[NombreDePrimitiva];
 
-/** Slots que el catalogo sabe colocar hoy; el orden de un bloque `slots` es el orden visual. */
-export const SLOTS = ['title', 'attrs'] as const;
-export type NombreDeSlot = (typeof SLOTS)[number];
+/**
+ * Slots que el catalogo sabe colocar. Un Slot nuevo es una entrada en
+ * `DEFINICION_DE_SLOT`, su medida en `slots.ts` y su pintor en `render`; el
+ * algoritmo de colocacion no cambia.
+ */
+export const DEFINICION_DE_SLOT = {
+  /** Icono del Tipo de nodo: caja de lado fijo (Primitiva `icon`). */
+  icon: { estilo: 'icon', elastico: false },
+  /** Titulo: texto que se estira para ocupar el espacio libre de su fila. */
+  title: { estilo: 'text', elastico: true },
+  /** Filas de Atributo: una por Atributo visible. */
+  attrs: { estilo: 'text', elastico: true },
+} as const satisfies Record<string, { estilo: 'text' | 'icon'; elastico: boolean }>;
+export type NombreDeSlot = keyof typeof DEFINICION_DE_SLOT;
+export const SLOTS = Object.keys(DEFINICION_DE_SLOT) as NombreDeSlot[];
 
 /** Primitiva ya validada: propiedades completas (con defectos), colores aun como nombre de Paleta. */
 export interface Primitiva {
@@ -93,7 +105,7 @@ const ubicacionDe = (nombre: NombreDePrimitiva): UbicacionDePrimitiva => (CATALO
 /** Nombres de las Primitivas que valen en `ubicacion`. */
 export const primitivasDe = (ubicacion: UbicacionDePrimitiva): string[] =>
   (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => ubicacionDe(nombre) === ubicacion);
-const esSlot = (nombre: string): nombre is NombreDeSlot => (SLOTS as readonly string[]).includes(nombre);
+export const esSlot = (nombre: string): nombre is NombreDeSlot => Object.hasOwn(DEFINICION_DE_SLOT, nombre);
 
 export const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string; candidato?: string } => {
   const candidatos = candidatosCercanos(escrito, existentes);
@@ -127,23 +139,49 @@ export function construirPrimitiva(
     };
   }
   const definicion: DefinicionDePrimitiva = CATALOGO[tipo];
+  const { propiedades, errores } = validarPropiedades({ sujeto: `La Primitiva '${tipo}'`, nombre: `'${tipo}'`, propiedades: definicion.propiedades, abierta: definicion.abierta === true }, props, paleta, ubicacion === 'capa-nodo' || ubicacion === 'texto-slot' ? 'nodo' : 'arista');
+  return errores.length > 0 ? { errores } : { primitiva: { tipo, props: propiedades }, errores };
+}
+
+/** Lo que describe un conjunto de propiedades para `validarPropiedades`: como se nombra en los mensajes y cuales admite. */
+export interface ConjuntoDePropiedades {
+  /** Sujeto de los mensajes, p. ej. `La Primitiva 'rect'`. */
+  sujeto: string;
+  /** Nombre entre comillas para "'clave' de 'rect' debe ser ...". */
+  nombre: string;
+  propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
+  abierta?: boolean;
+}
+
+/**
+ * Valida propiedades `clave valor` contra su definicion (la regla unica de
+ * rangos, opciones, colores y defectos): Primitivas y bloques de disposicion
+ * de Slots comparten estos mensajes y sugerencias.
+ */
+export function validarPropiedades(
+  conjunto: ConjuntoDePropiedades,
+  props: ReadonlyArray<{ clave: string; valor: string | number }>,
+  paleta: Readonly<Record<string, string>>,
+  contextoDeColor: 'nodo' | 'arista' = 'nodo',
+): { propiedades: Record<string, number | string>; errores: ErrorDeCatalogo[] } {
+  const { sujeto, nombre, propiedades: definidas } = conjunto;
   const errores: ErrorDeCatalogo[] = [];
   const resultado: Record<string, number | string> = {};
 
   for (const { clave, valor } of props) {
-    const propiedad = definicion.propiedades[clave];
-    if (propiedad === undefined && definicion.abierta === true) {
+    const propiedad = definidas[clave];
+    if (propiedad === undefined && conjunto.abierta === true) {
       resultado[clave] = typeof valor === 'string' && /^-?\d+(?:\.\d+)?$/.test(valor) ? Number(valor) : valor;
     } else if (propiedad === undefined) {
       errores.push({
         codigo: CODIGOS.E_THEME_UNKNOWN_PROPERTY,
-        mensaje: `La Primitiva '${tipo}' no tiene la propiedad '${clave}'; disponibles: ${Object.keys(definicion.propiedades).join(', ')}`,
+        mensaje: `${sujeto} no tiene la propiedad '${clave}'; disponibles: ${Object.keys(definidas).join(', ')}`,
         clave,
-        ...sugerir(clave, Object.keys(definicion.propiedades)),
+        ...sugerir(clave, Object.keys(definidas)),
       });
     } else if (propiedad.tipo === 'color') {
       const expresion = String(valor);
-      const problemas = validarColor(expresion, paleta, ubicacion === 'capa-nodo' || ubicacion === 'texto-slot' ? 'nodo' : 'arista');
+      const problemas = validarColor(expresion, paleta, contextoDeColor);
       if (problemas.length === 0) resultado[clave] = expresion;
       for (const problema of problemas) {
         errores.push({
@@ -155,13 +193,13 @@ export function construirPrimitiva(
       }
     } else if (propiedad.tipo === 'nombre') {
       if (/^[A-Z][A-Za-z0-9_]*$/.test(String(valor))) resultado[clave] = String(valor);
-      else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' de '${tipo}' debe ser un nombre de Componente (empieza en mayuscula, p. ej. Aurora), no '${valor}'`, clave });
+      else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' de ${nombre} debe ser un nombre de Componente (empieza en mayuscula, p. ej. Aurora), no '${valor}'`, clave });
     } else if (propiedad.tipo === 'opcion') {
       if (propiedad.valores.includes(String(valor))) resultado[clave] = String(valor);
       else {
         errores.push({
           codigo: CODIGOS.E_THEME_INVALID_VALUE,
-          mensaje: `'${clave}' de '${tipo}' debe ser uno de ${propiedad.valores.join(', ')}, no '${valor}'`,
+          mensaje: `'${clave}' de ${nombre} debe ser uno de ${propiedad.valores.join(', ')}, no '${valor}'`,
           clave,
           ...sugerir(String(valor), propiedad.valores),
         });
@@ -171,7 +209,7 @@ export function construirPrimitiva(
       if (Number.isNaN(numero) || numero < propiedad.min || numero > propiedad.max) {
         errores.push({
           codigo: CODIGOS.E_THEME_INVALID_VALUE,
-          mensaje: `'${clave}' de '${tipo}' debe ser un numero entre ${propiedad.min} y ${propiedad.max}, no '${valor}'`,
+          mensaje: `'${clave}' de ${nombre} debe ser un numero entre ${propiedad.min} y ${propiedad.max}, no '${valor}'`,
           clave,
         });
       } else resultado[clave] = numero;
@@ -179,34 +217,16 @@ export function construirPrimitiva(
   }
 
   const dadas = new Set(props.map((p) => p.clave));
-  for (const [clave, propiedad] of Object.entries(definicion.propiedades)) {
+  for (const [clave, propiedad] of Object.entries(definidas)) {
     if (dadas.has(clave)) continue;
     if (propiedad.tipo === 'numero' && propiedad.defecto !== undefined) resultado[clave] = propiedad.defecto;
     else if (propiedad.tipo === 'opcion') resultado[clave] = propiedad.defecto;
     else if (propiedad.tipo === 'color' && propiedad.opcional === true) continue;
-    else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `La Primitiva '${tipo}' exige la propiedad '${clave}'`, clave });
+    else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `${sujeto} exige la propiedad '${clave}'`, clave });
   }
-  return errores.length > 0 ? { errores } : { primitiva: { tipo, props: resultado }, errores };
+  return { propiedades: resultado, errores };
 }
 
-/** Valida un bloque `slots` (nombres conocidos, sin repetir) y devuelve los validos en orden. */
-export function construirSlots(nombres: readonly string[]): { slots: NombreDeSlot[]; errores: Array<ErrorDeCatalogo & { indice: number }> } {
-  const slots: NombreDeSlot[] = [];
-  const errores: Array<ErrorDeCatalogo & { indice: number }> = [];
-  nombres.forEach((nombre, indice) => {
-    if (!esSlot(nombre)) {
-      errores.push({
-        codigo: CODIGOS.E_THEME_UNKNOWN_SLOT,
-        mensaje: `Slot '${nombre}' desconocido; disponibles: ${SLOTS.join(', ')}`,
-        indice,
-        ...sugerir(nombre, SLOTS),
-      });
-    } else if (slots.includes(nombre)) {
-      errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Slot '${nombre}' repetido`, indice });
-    } else slots.push(nombre);
-  });
-  return { slots, errores };
-}
 
 /**
  * Sustituye cada valor `$token` por el numero del bloque `tokens` del Tema. Un

@@ -12,7 +12,7 @@ describe('medicion de texto', () => {
     const m = metricasDe(tema);
 
     expect(m.medicion).toEqual({ nivel: 'estimado', fuentes: {} });
-    expect(colocarNodo('abcd', [], m).width).toBe(Math.max(m.anchoMinimo, Math.ceil(4 * m.fontSize * m.factorDeAncho + m.paddingHorizontal)));
+    expect(colocarNodo({ titulo: 'abcd', atributos: [], icono: false }, m).width).toBe(Math.max(m.anchoMinimo, Math.ceil(4 * m.fontSize * m.factorDeAncho + m.paddingHorizontal)));
   });
 
   it('con medidas el ancho del Slot sale de la medida, no de la estimacion', () => {
@@ -20,13 +20,13 @@ describe('medicion de texto', () => {
     const clave = claveDeTexto(TEMA_NEUTRO.fonts.body, m.fontSize, 'abcd');
     const medido = tablaDeMetricas(tema, medidas({ [clave]: 500 })).base;
 
-    expect(colocarNodo('abcd', [], medido).width).toBe(500 + m.paddingHorizontal);
+    expect(colocarNodo({ titulo: 'abcd', atributos: [], icono: false }, medido).width).toBe(500 + m.paddingHorizontal);
   });
 
   it('un texto sin medida cae a la estimacion', () => {
     const medido = tablaDeMetricas(tema, medidas({})).base;
 
-    expect(colocarNodo('abcd', [], medido).width).toBe(colocarNodo('abcd', [], metricasDe(tema)).width);
+    expect(colocarNodo({ titulo: 'abcd', atributos: [], icono: false }, medido).width).toBe(colocarNodo({ titulo: 'abcd', atributos: [], icono: false }, metricasDe(tema)).width);
   });
 
   it('la caja de una etiqueta usa la medida', () => {

@@ -8,8 +8,10 @@ import { z } from 'zod';
 import type { Tema } from 'canonico';
 
 import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
-import { construirPrimitiva, SLOTS } from './catalogo';
+import { DEFINICION_DE_SLOT, SLOTS, construirPrimitiva } from './catalogo';
 import type { NombreDeSlot, UbicacionDePrimitiva } from './catalogo';
+import { ALINEACIONES, DIRECCIONES, DISPOSICION_POR_DEFECTO, esCaja } from './disposicion';
+import type { CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { ESTADOS, aplicarOps, opTocaMetricas, validarOps } from './parches';
 import type { CapaDeTema, OpDeCapa } from './parches';
 
@@ -82,13 +84,26 @@ const aristaSchema = z.strictObject({
   etiqueta: primitivaSchema.optional(),
 });
 
+const NOMBRES_DE_SLOT = SLOTS as [NombreDeSlot, ...NombreDeSlot[]];
+
+/** Mini-layout de Slots: cajas `row`/`column` anidables con Slots en las hojas (ver `disposicion.ts`). */
+const elementoSchema: z.ZodType<ElementoDeSlots> = z.lazy(() => z.union([hojaSchema, cajaSchema]));
+const hojaSchema = z.strictObject({ slot: z.enum(NOMBRES_DE_SLOT), align: z.enum(ALINEACIONES).optional() });
+const cajaSchema: z.ZodType<CajaDeSlots> = z.strictObject({
+  direccion: z.enum(DIRECCIONES),
+  gap: z.number().min(0).max(64),
+  pad: z.number().min(0).max(64),
+  align: z.enum(ALINEACIONES).optional(),
+  hijos: z.array(elementoSchema),
+}) as z.ZodType<CajaDeSlots>;
+
 const nodoSchema = z.strictObject({
   /** Pila de Capas, de abajo hacia arriba. */
   capas: z.array(capaSchema).default([]),
-  /** Slots que se pintan, en orden visual; uno no listado no se pinta. */
-  slots: z.array(z.enum(SLOTS)).default([...SLOTS]),
-  /** Estilo de texto (Primitiva `text`) de los Slots que lo declaran. */
-  textos: z.partialRecord(z.enum(SLOTS), primitivaSchema).default({}),
+  /** Mini-layout de los Slots: el orden del arbol es el orden visual; un Slot que no esta no se pinta. */
+  slots: cajaSchema.default(DISPOSICION_POR_DEFECTO),
+  /** Estilo de los Slots que lo declaran: `text` para los de texto, `icon` para el icono. */
+  textos: z.partialRecord(z.enum(NOMBRES_DE_SLOT), primitivaSchema).default({}),
   /** Parches por Tipo de nodo, en orden de aplicacion sobre la pila base. */
   tipos: z.record(z.string(), z.array(opSchema)).default({}),
   /** Parches por estado, aplicados sobre la pila base ya parcheada por Tipo. */
@@ -117,7 +132,7 @@ export const temaResueltoSchema = z
           ctx.addIssue({ code: 'custom', path: ['seed'], message: '`seed` debe ser un entero no negativo, p. ej. 7' });
         }
       }),
-    nodo: nodoSchema.default({ capas: [], slots: [...SLOTS], textos: {}, tipos: {}, estados: {} }),
+    nodo: nodoSchema.default({ capas: [], slots: DISPOSICION_POR_DEFECTO, textos: {}, tipos: {}, estados: {} }),
     arista: aristaSchema.default({ capas: [] }),
   })
   .superRefine((tema, ctx) => {
@@ -149,7 +164,20 @@ export const temaResueltoSchema = z
     if (tema.arista.origen !== undefined) validar(tema.arista.origen, 'marcador', ['arista', 'origen']);
     if (tema.arista.fin !== undefined) validar(tema.arista.fin, 'marcador', ['arista', 'fin']);
     if (tema.arista.etiqueta !== undefined) validar(tema.arista.etiqueta, 'etiqueta', ['arista', 'etiqueta']);
-    for (const [slot, texto] of Object.entries(tema.nodo.textos)) validar(texto, 'texto-slot', ['nodo', 'textos', slot]);
+    const enArbol = new Set<string>();
+    const repetidos = (caja: CajaDeSlots): void => {
+      for (const hijo of caja.hijos) {
+        if (esCaja(hijo)) repetidos(hijo);
+        else if (enArbol.has(hijo.slot)) ctx.addIssue({ code: 'custom', path: ['nodo', 'slots'], message: `Slot '${hijo.slot}' repetido` });
+        else enArbol.add(hijo.slot);
+      }
+    };
+    repetidos(tema.nodo.slots);
+    for (const [slot, texto] of Object.entries(tema.nodo.textos)) {
+      validar(texto, 'texto-slot', ['nodo', 'textos', slot]);
+      const esperado = DEFINICION_DE_SLOT[slot as NombreDeSlot].estilo;
+      if (texto.tipo !== esperado) ctx.addIssue({ code: 'custom', path: ['nodo', 'textos', slot], message: `el Slot '${slot}' se estiliza con la Primitiva '${esperado}', no '${texto.tipo}'` });
+    }
     const base = tema.nodo.capas as CapaDeTema[];
     const porTipo = Object.entries(tema.nodo.tipos);
     const pilas = [base];
@@ -187,7 +215,7 @@ export const TEMA_NEUTRO: TemaResuelto = {
   },
   fonts: { body: 'sans-serif', mono: 'monospace' },
   tokens: { background: '#ffffff', foreground: '#1f2937', border: '#9ca3af' },
-  nodo: { capas: [], slots: ['title', 'attrs'], textos: {}, tipos: {}, estados: {} },
+  nodo: { capas: [], slots: DISPOSICION_POR_DEFECTO, textos: {}, tipos: {}, estados: {} },
   arista: { capas: [], fin: { tipo: 'arrow', props: { size: 8 } } },
 };
 

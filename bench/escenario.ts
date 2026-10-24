@@ -169,7 +169,7 @@ async function bundleDelShell(): Promise<Record<string, number>> {
     const texto = salida.outputFiles[0]!.contents;
     return { min: texto.length, gzip: gzipSync(texto, { level: 9 }).length };
   };
-  const pagina = await bundle('entrada.tsx');
+  const pagina = await bundle('arranque.tsx');
   const worker = await bundle('worker.ts', { zod: join(navegador, 'zod-inerte.ts') });
   // Suelo: lo que pesa elkjs separado en api (pagina) + worker, sin nada nuestro.
   const lib = join(import.meta.dirname, '..', 'packages', 'layout', 'node_modules', 'elkjs', 'lib');

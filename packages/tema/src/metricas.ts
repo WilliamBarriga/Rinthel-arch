@@ -2,7 +2,7 @@
  * Metricas: los numeros de espaciado y escala derivados del Tema que `layout`
  * usa para medir y `render` para dibujar. Un solo modulo, para que lo reservado
  * y lo dibujado no puedan divergir. Solo dependen de la caja y de los Slots
- * (fuentes, tamano de texto, que Slots se muestran y en que orden): las Capas
+ * (fuentes, tamano de texto, la disposicion de Slots): las Capas
  * de pintura nunca las cambian. Sin medir texto real (el layout corre en Node
  * y en Worker, sin DOM): el ancho se estima por caracter segun el tamano y la
  * familia de la fuente del Tema; una medicion real entraria aqui, como
@@ -14,8 +14,11 @@ import { CATALOGO } from './catalogo';
 import { anchoDeTexto } from './medicion';
 import type { MedicionDeMetricas, MedidasDeTexto } from './medicion';
 import type { DefinicionDePrimitiva, NombreDeSlot } from './catalogo';
+import { slotsDe } from './disposicion';
+import type { CajaDeSlots } from './disposicion';
 import { cascada } from './parches';
 import type { CapaDeTema } from './parches';
+import type { ContenidoDeNodo } from './slots';
 import { resolverTema } from './tema';
 import type { TemaResuelto } from './tema';
 
@@ -30,8 +33,8 @@ export interface Metricas {
   medicion: MedicionDeMetricas;
   /** Anchos medidos por `claveDeTexto`; ausente al estimar. No entra en la clave (ver `claveDeMetricas`). */
   anchos?: Readonly<Record<string, number>>;
-  /** Slots del Nodo que el Tema muestra, en orden visual. */
-  slots: readonly NombreDeSlot[];
+  /** Mini-layout de los Slots del Nodo que el Tema muestra (un Slot fuera del arbol no se pinta ni se mide). */
+  disposicion: CajaDeSlots;
   /** La forma del Nodo exige una caja cuadrada (p. ej. `circle`); sale de la regla de caja minima de las Primitivas. */
   cajaCuadrada: boolean;
   /** Ancho minimo de un Nodo hoja. */
@@ -46,7 +49,7 @@ export interface Metricas {
   fila: number;
   /** Margen interior de un Grupo abierto; `top` deja sitio al titulo. */
   paddingGrupo: { top: number; left: number; bottom: number; right: number };
-  /** Lado de la caja del icono y margen entre el icono y el borde del Nodo. */
+  /** Lado del Slot `icon` (de su estilo `icon`, o el tamano de texto) y margen del icono de un Grupo respecto a su borde. */
   iconoLado: number;
   margenIcono: number;
   /** Linea base del titulo de un Grupo abierto y del control de colapso, desde el borde superior. */
@@ -81,7 +84,7 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas?
     fuentes: resuelto.fonts,
     medicion: medidas === undefined ? { nivel: 'estimado', fuentes: {} } : { nivel: 'medido', fuentes: medidas.fuentes },
     ...(medidas !== undefined && { anchos: medidas.anchos }),
-    slots: resuelto.nodo.slots,
+    disposicion: resuelto.nodo.slots,
     cajaCuadrada: pila.some((capa) => (CATALOGO[capa.primitiva.tipo] as DefinicionDePrimitiva).cajaMinima === 'cuadrado'),
     anchoMinimo: 120,
     paddingHorizontal: 32,
@@ -89,7 +92,7 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas?
     cabecera: Math.ceil(fontSize * 3.4),
     fila: Math.ceil(fontSize * 1.8),
     paddingGrupo: { top: 32, left: 16, bottom: 16, right: 16 },
-    iconoLado: fontSize,
+    iconoLado: Number(resuelto.nodo.textos.icon?.props['side'] ?? fontSize),
     margenIcono: 6,
     baseDeTitulo: fontSize + 8,
     margenDeControl: 12,
@@ -163,9 +166,23 @@ export function claveDeMetricas(tabla: TablaDeMetricas): string {
  */
 export function atributosVisibles(
   nodo: Pick<NodoResuelto, 'children' | 'attributes'>,
-  metricas: Pick<Metricas, 'slots'>,
+  metricas: Pick<Metricas, 'disposicion'>,
 ): readonly Atributo[] {
-  return nodo.children.length === 0 && metricas.slots.includes('attrs') ? nodo.attributes : [];
+  return nodo.children.length === 0 && muestra(metricas, 'attrs') ? nodo.attributes : [];
+}
+
+const listas = new WeakMap<CajaDeSlots, readonly NombreDeSlot[]>();
+
+/** Si la disposicion del Tema incluye el Slot (memoizado por disposicion: se consulta por cada Nodo). */
+export function muestra(metricas: Pick<Metricas, 'disposicion'>, slot: NombreDeSlot): boolean {
+  let lista = listas.get(metricas.disposicion);
+  if (lista === undefined) listas.set(metricas.disposicion, (lista = slotsDe(metricas.disposicion)));
+  return lista.includes(slot);
+}
+
+/** Lo que un Nodo aporta a la colocacion de Slots; una sola regla para `layout`, `render` y `shell`. */
+export function contenidoDeNodo(nodo: Pick<NodoResuelto, 'children' | 'attributes' | 'label' | 'icon'>, metricas: Pick<Metricas, 'disposicion'>): ContenidoDeNodo {
+  return { titulo: nodo.label, atributos: atributosVisibles(nodo, metricas), icono: nodo.icon !== undefined };
 }
 
 /** Texto de la fila de un Atributo; `render` escribe lo mismo. */

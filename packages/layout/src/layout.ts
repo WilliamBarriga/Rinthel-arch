@@ -7,7 +7,7 @@ import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
-import { atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
+import { atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, contenidoDeNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
 import type { MedidasDeTexto, Metricas, Rect, TablaDeMetricas } from 'tema';
 
 /** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
@@ -129,7 +129,7 @@ function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<
     const caja = resultado[nodo.id];
     if (nodo.children.length === 0 && caja !== undefined) {
       const m = metricasDeHoja(medidas, nodo);
-      resultado[nodo.id] = { ...caja, slots: colocarEnCaja(m, atributosVisibles(nodo, m).length, caja.width).slots };
+      resultado[nodo.id] = { ...caja, slots: colocarEnCaja(m, contenidoDeNodo(nodo, m), caja.width).slots };
     }
   }
   return resultado;
@@ -229,7 +229,9 @@ function ajustarAPuertosDeAtributo(
     for (const [lado, extremo] of [['inicio', arista.from], ['fin', arista.to]] as const) {
       const indice = extremo.attribute === undefined ? -1 : (atributos.get(extremo.node) ?? []).findIndex((a) => a.name === extremo.attribute);
       if (indice < 0) continue;
-      const fila = colocarEnCaja(metricasDeHoja(tabla, vista.nodes.find((n) => n.id === extremo.node)!), indice + 1, 0).filas[indice]!;
+      const dueno = vista.nodes.find((n) => n.id === extremo.node)!;
+      const m = metricasDeHoja(tabla, dueno);
+      const fila = colocarEnCaja(m, contenidoDeNodo(dueno, m), cajas.get(extremo.node)!.width).filas[indice]!;
       const y = cajas.get(extremo.node)!.y + fila.y + fila.height / 2;
       puntos = moverPuerto(puntos, lado, y);
     }
@@ -286,7 +288,7 @@ function paddingElk({ top, left, bottom, right }: Metricas['paddingGrupo']): str
 function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
   if (nodo.children.length === 0) {
     const medidas = metricasDeHoja(tabla, nodo);
-    const { width, height } = colocarNodo(nodo.label, atributosVisibles(nodo, medidas), medidas);
+    const { width, height } = colocarNodo(contenidoDeNodo(nodo, medidas), medidas);
     return { id: nodo.id, width, height };
   }
   return {
@@ -299,7 +301,7 @@ function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
 /**
  * Clave de cache de la geometria: igual si y solo si el layout no cambia. Entran
  * la estructura visible, los textos, los Pins y las Metricas (fuentes, tamanos y espaciado); no la
- * paleta, los colores ni los iconos, que no mueven nada. Es la unica respuesta a
+ * paleta ni los colores, que no mueven nada; del icono solo si el Nodo lo tiene (reserva su Slot). Es la unica respuesta a
  * "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`.
  */
 export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): string {
@@ -315,7 +317,7 @@ const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin =
 export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): string {
   const tabla = comoTabla(metricas);
   return JSON.stringify({
-    nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => [a.name, a.type])]),
+    nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => [a.name, a.type])]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
     metricas: claveDeMetricas(tabla),
   });

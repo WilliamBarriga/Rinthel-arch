@@ -10,7 +10,13 @@ theme soft-card {
     layer caja rect { radius $radius }
     layer relleno solid { color texto/0.1 }
     layer borde border { color texto/0.4 width 1 }
-    slots { title { weight 600 }  attrs }
+    slots column {
+      row gap 10 pad 8 {
+        icon { variant box  side 28  radius 7  fill COLOR/0.14  border COLOR/0.45 }
+        title { weight 600 }
+      }
+      attrs
+    }
     type externo { layer borde dashed { color texto/0.5 } }
     type servicio { layer acento outline after borde { color COLOR/0.5 width 1 offset 0 } }
     state hover { layer borde { color COLOR }  transition 120ms ease-out }

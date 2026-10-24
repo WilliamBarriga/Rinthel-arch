@@ -35,7 +35,7 @@ describe('inspect tema', () => {
     expect(origenes(r.salida)).toEqual({ forma: 'base.dg:8', relleno: 'base.dg:9', borde: 'app.dg:3' });
     expect(tema.capas[2]?.props).toMatchObject({ width: 2 });
     expect(tema.metricas.fontSize).toBeGreaterThan(0);
-    expect(tema.metricas.slots).toEqual(['title', 'attrs']);
+    expect(tema.slots).toBe('column { title attrs }');
   });
 
   it('--tipo y --estado resuelven la cascada de un caso, con las part usadas', async () => {

@@ -1,6 +1,6 @@
 /**
  * Familia estilo de texto (ADR 0008): `text` es el estilo de un Slot de Nodo
- * (solo pinta) y `label` es la etiqueta de una Arista con el modelo de caja del
+ * (solo pinta), `icon` el del Slot `icon` (variante y lado) y `label` es la etiqueta de una Arista con el modelo de caja del
  * Nodo. De las Aristas, solo `label` cuenta en las Metricas (`pad` y `scale`
  * cambian la caja que ELK reserva); `fill`, `border` y `radius` son pintura.
  */
@@ -16,6 +16,22 @@ export const TEXTOS = {
       color: { tipo: 'color', opcional: true },
       style: { tipo: 'opcion', valores: ['normal', 'italic'], defecto: 'normal' },
       transform: { tipo: 'opcion', valores: ['none', 'uppercase'], defecto: 'none' },
+    },
+  },
+  /** Estilo del Slot `icon` (afecta el lado de su rectangulo, que entra en las Metricas): glifo suelto, en caja o punto de color. */
+  icon: {
+    familia: 'texto',
+    ubicacion: 'texto-slot',
+    afectaMetricas: true,
+    propiedades: {
+      variant: { tipo: 'opcion', valores: ['plain', 'box', 'dot'], defecto: 'plain' },
+      /** Lado del cuadrado del icono, en px. */
+      side: { tipo: 'numero', min: 6, max: 96, defecto: 16 },
+      radius: { tipo: 'numero', min: 0, max: 50, defecto: 6 },
+      fill: { tipo: 'color', opcional: true },
+      border: { tipo: 'color', opcional: true },
+      /** Color del glifo; sin el, el color de trazo del Tipo. */
+      color: { tipo: 'color', opcional: true },
     },
   },
   label: {
