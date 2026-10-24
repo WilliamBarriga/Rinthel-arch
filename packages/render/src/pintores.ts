@@ -7,14 +7,15 @@
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
-import { colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo } from 'tema';
-import type { Metricas, NombreDeSlot, Rect } from 'tema';
+import { alturaDeCabecera, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo } from 'tema';
+import type { Metricas, NombreDeSlot, PinturaDeNodo, Rect } from 'tema';
 
 import { pintarMarcadores, pintarTrazos } from './aristas';
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
 import { aspectoDeEstado } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
+import { pilaDeNodo } from './pilas';
 
 type Punto = { x: number; y: number };
 
@@ -38,17 +39,14 @@ function slotDeTexto(nombre: string, clases: string, r: Rect, texto: string): El
   return { tag: 'div', attrs: { class: `rd-slot ${clases}`, 'data-slot': nombre, style: enRect(r, `line-height:${num(r.height)}px;`) }, hijos: [texto] };
 }
 
-/** Altura de la franja de titulo de un Grupo y de su control de colapso (centrada sobre la linea base de las Metricas). */
-function altoDeEncabezado(metricas: Metricas): number {
-  return Math.round(2 * (metricas.baseDeTitulo - metricas.fontSize * 0.35));
-}
-
 /** Lo que un pintor de Slot necesita saber del Nodo que dibuja. */
 interface ContextoDeSlot {
   estilo: Estilo;
   datos: DatosDeNodo;
   /** Atributos que se dibujan (vacio si el nivel de detalle los oculta). */
   atributos: readonly Atributo[];
+  /** Estilo de texto de los Slots del elemento que se dibuja (Nodo, Grupo abierto o colapsado). */
+  textos: PinturaDeNodo['textos'];
 }
 
 /**
@@ -58,34 +56,30 @@ interface ContextoDeSlot {
  */
 const PINTORES_DE_SLOT: { readonly [S in NombreDeSlot]: (contexto: ContextoDeSlot, rect: Rect) => Elemento[] } = {
   title: ({ datos }, rect) => [slotDeTexto('title', 'rd-title', rect, datos.texto)],
-  icon: ({ estilo, datos }, rect) => pintarIcono(estilo, datos.nodo, datos.trazo, datos.icons, rect, variantePropia(estilo)),
+  icon: ({ datos, textos }, rect) => pintarIcono(textos, datos.nodo, datos.trazo, datos.icons, rect, String(textos.icon?.props['variant'] ?? 'plain')),
   attrs: ({ estilo, datos, atributos }, rect) => (atributos.length === 0 ? [] : [pintarAtributos(estilo, datos.nodo.id, atributos, rect)]),
 };
 
-/**
- * Contenido de un Nodo (hoja, o Grupo colapsado): cada Slot que el Tema lista, en
- * su rectangulo. `conAtributos`: si se dibujan las filas de `attrs`.
- */
-export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: boolean }): Elemento[] {
-  const metricas = metricasDeHoja(estilo.tabla, datos.nodo);
+/** Cada Slot que el Tema lista para `metricas`, en su rectangulo dentro de una caja de `ancho`. `conAtributos`: si se dibujan las filas de `attrs`. */
+function pintarSlots(estilo: Estilo, datos: DatosDeNodo, metricas: Metricas, ancho: number, conAtributos: boolean): Elemento[] {
   const contenido = contenidoDeNodo(datos.nodo, metricas);
-  const { slots } = colocarEnCaja(metricas, contenido, datos.caja.width);
-  const contexto = { estilo, datos, atributos: datos.conAtributos ? contenido.atributos : [] };
+  const { slots } = colocarEnCaja(metricas, contenido, ancho);
+  const contexto = { estilo, datos, atributos: conAtributos ? contenido.atributos : [], textos: pilaDeNodo(estilo.pintura, datos.nodo).pila.textos };
   return (Object.keys(slots) as NombreDeSlot[]).flatMap((slot) => PINTORES_DE_SLOT[slot](contexto, slots[slot]!));
 }
 
-/** Contenido de un Grupo abierto: titulo arriba a la izquierda e icono (sus hijos son Nodos de otras capas). */
-export function pintarGrupo(estilo: Estilo, datos: DatosDeNodo): Elemento[] {
-  const { metricas } = estilo;
-  const ancho = Math.max(0, datos.caja.width - metricas.margenDeTexto - 2 * metricas.margenDeControl);
-  const encabezado = { x: metricas.margenDeTexto, y: 0, width: ancho, height: altoDeEncabezado(metricas) };
-  const rect = { x: metricas.margenIcono, y: metricas.margenIcono, width: metricas.iconoLado, height: metricas.iconoLado };
-  return [slotDeTexto('title', 'rd-title rd-encabezado', encabezado, datos.texto), ...pintarIcono(estilo, datos.nodo, datos.trazo, datos.icons, rect, 'plain')];
+/** Contenido de un Nodo (hoja, o Grupo colapsado): cada Slot que el Tema lista, en su rectangulo. */
+export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: boolean }): Elemento[] {
+  return pintarSlots(estilo, datos, metricasDeHoja(estilo.tabla, datos.nodo), datos.caja.width, datos.conAtributos);
 }
 
-/** Variante del Slot `icon` segun su estilo (`plain` sin estilo). */
-function variantePropia(estilo: Estilo): string {
-  return String(estilo.pintura.nodo.textos.icon?.props['variant'] ?? 'plain');
+/**
+ * Cabecera de un Grupo abierto: los Slots de su disposicion `group` (sus hijos son Nodos de otras capas), en la
+ * franja que `layout` reservo sobre ellos; a la derecha queda el sitio del control de colapso.
+ */
+export function pintarGrupo(estilo: Estilo, datos: DatosDeNodo): Elemento[] {
+  const metricas = estilo.tabla.grupoAbierto;
+  return pintarSlots(estilo, datos, metricas, Math.max(0, datos.caja.width - 2 * metricas.margenDeControl), false);
 }
 
 /**
@@ -94,9 +88,9 @@ function variantePropia(estilo: Estilo): string {
  * sin glifo). Solo se incrusta el glifo si pasa `sanearIcono`; el aspecto de la
  * caja y del punto lo da la hoja.
  */
-function pintarIcono(estilo: Estilo, nodo: NodoResuelto, trazo: string, icons: IconProvider | undefined, rect: Rect, variante: string): Elemento[] {
+function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo: string, icons: IconProvider | undefined, rect: Rect, variante: string): Elemento[] {
   if (nodo.icon === undefined) return [];
-  const atributos = { class: 'rd-icono', 'data-slot': 'icon', 'data-icon': nodo.icon, 'data-variante': variante, style: enRect(rect, `color:${limpiarValorCss(String(estilo.pintura.nodo.textos.icon?.props['color'] ?? trazo))};`) };
+  const atributos = { class: 'rd-icono', 'data-slot': 'icon', 'data-icon': nodo.icon, 'data-variante': variante, style: enRect(rect, `color:${limpiarValorCss(String(textos.icon?.props['color'] ?? trazo))};`) };
   if (variante === 'dot') return [{ tag: 'div', attrs: atributos }];
   const crudo = icons?.resolve(nodo.icon);
   const svg = crudo === undefined ? undefined : sanearIcono(crudo);
@@ -130,8 +124,8 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atribut
 
 /** Control de colapso de un Grupo: el glifo del Estilo segun el estado. */
 export function pintarControl(estilo: Estilo, { nodo, caja, alClic }: { nodo: NodoResuelto; caja: CajaDeNodo; alClic: () => void }): Elemento {
-  const { metricas } = estilo;
-  const alto = altoDeEncabezado(metricas);
+  const metricas = nodo.collapsed ? estilo.tabla.grupoColapsado : estilo.tabla.grupoAbierto;
+  const alto = Math.min(alturaDeCabecera(metricas), caja.height);
   const rect = { x: caja.width - 2 * metricas.margenDeControl, y: 0, width: 2 * metricas.margenDeControl, height: alto };
   return {
     tag: 'div',

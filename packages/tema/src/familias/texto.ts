@@ -1,6 +1,6 @@
 /**
  * Familia estilo de texto (ADR 0008): `text` es el estilo de un Slot de Nodo
- * (solo pinta), `icon` el del Slot `icon` (variante y lado) y `label` es la etiqueta de una Arista con el modelo de caja del
+ * (pinta y, en el titulo, mide: tamano, separacion, mayusculas y chip), `icon` el del Slot `icon` (variante y lado) y `label` es la etiqueta de una Arista con el modelo de caja del
  * Nodo. De las Aristas, solo `label` cuenta en las Metricas (`pad` y `scale`
  * cambian la caja que ELK reserva); `fill`, `border` y `radius` son pintura.
  */
@@ -10,7 +10,8 @@ export const TEXTOS = {
   text: {
     familia: 'texto',
     ubicacion: 'texto-slot',
-    afectaMetricas: false,
+    // `size`, `tracking`, `transform`, `pad` y `dot` cambian el ancho del titulo medido; el resto es pintura.
+    afectaMetricas: true,
     propiedades: {
       weight: { tipo: 'numero', min: 100, max: 900, defecto: 400 },
       color: { tipo: 'color', opcional: true },

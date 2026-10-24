@@ -24,6 +24,7 @@ import { efectosDeElemento } from './efectos';
 import { resolverEstilo } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { compilarHoja } from './hoja';
+import { ELEMENTOS, pilaDeNodo, pinturaDeElemento } from './pilas';
 import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEstadoDeRuta, pintarEtiquetaDeArista, pintarGrupo, pintarNodo } from './pintores';
 
 export type { Elemento } from './elemento';
@@ -207,7 +208,7 @@ function nombresAccesibles(view: VistaResuelta, nodos: readonly NodoResuelto[]):
  */
 function posicionesDeEscalonado(raices: readonly NodoResuelto[], visibility: Visibilidad, estilo: Estilo, nuevos?: readonly string[]): Map<string, number> {
   const posiciones = new Map<string, number>();
-  if (estilo.pintura.nodo.animacion?.escalonadoMs === undefined) return posiciones;
+  if (ELEMENTOS.every((clave) => pinturaDeElemento(estilo.pintura, clave).animacion?.escalonadoMs === undefined)) return posiciones;
   const elegidos = nuevos === undefined ? undefined : new Set(nuevos);
   for (const nodo of raices.flatMap((raiz) => aplanar(raiz))) {
     if (acotar(visibility(nodo.id)) > 0 && (elegidos === undefined || elegidos.has(nodo.id))) posiciones.set(nodo.id, posiciones.size);
@@ -230,12 +231,13 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
   if (caja === undefined) throw new Error(`El Nodo '${nodo.id}' no esta en la geometria`);
   const { estilo, onSelect, onToggle, icons, detail } = contexto;
   const grupo = esGrupo(nodo);
+  const { clave, tipo, pila } = pilaDeNodo(estilo.pintura, nodo);
   const trazo = colorDeTrazo(nodo, estilo);
   // El `label` de la Vista (override o, si no hay, el titulo) manda en todos los niveles.
   const texto = nodo.collapsed ? `${nodo.label} (${nodo.childCount})` : nodo.label;
   const datos = { nodo, caja, trazo, texto, icons };
   const conmutable = grupo || (nodo.collapsed && nodo.link === undefined);
-  const efectos = efectosDeElemento(estilo, nodo.id);
+  const efectos = efectosDeElemento(estilo, pila, nodo.id);
   const codigo = {
     nodo,
     ancho: caja.width,
@@ -248,13 +250,14 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
 
   return {
     tag: 'div',
-    attrs: { class: 'rd-caja', 'data-id': nodo.id, ...(atenuado(contexto.estados, nodo.id) && { 'data-atenuado': '' }), style: posicion(caja) + efectos.caja },
+    attrs: { class: 'rd-caja', 'data-id': nodo.id, 'data-elemento': clave, ...(tipo !== undefined && { 'data-tipo': tipo }), ...(atenuado(contexto.estados, nodo.id) && { 'data-atenuado': '' }), style: posicion(caja) + efectos.caja },
     hijos: [
       {
         tag: 'div',
         attrs: {
-          class: grupo ? 'rd-grupo' : 'rd-nodo',
+          class: `rd-${clave}`,
           'data-part': 'nodo',
+          ...(tipo !== undefined && { 'data-tipo': tipo }),
           role: 'group',
           'aria-label': contexto.nombres?.get(nodo.id) ?? nodo.label,
           ...(nodo.collapsed && { 'data-collapsed': '' }),
@@ -265,11 +268,11 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
         ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
         hijos: [
           ...efectos.debajo,
-          ...pintarCapasAnimadas(estilo, false),
-          ...pintarCodigo(estilo, codigo, false),
+          ...pintarCapasAnimadas(pila, false),
+          ...pintarCodigo(estilo, pila, codigo, false),
           ...(grupo ? pintarGrupo(estilo, datos) : pintarNodo(estilo, { ...datos, conAtributos: tieneFilas(nodo, estilo, detail) })),
-          ...pintarCapasAnimadas(estilo, true),
-          ...pintarCodigo(estilo, codigo, true),
+          ...pintarCapasAnimadas(pila, true),
+          ...pintarCodigo(estilo, pila, codigo, true),
           ...(onToggle !== undefined && conmutable ? [pintarControl(estilo, { nodo, caja, alClic: () => onToggle(nodo.id) })] : []),
           ...efectos.encima,
         ],

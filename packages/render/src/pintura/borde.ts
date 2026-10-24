@@ -4,7 +4,7 @@ import type { Pintor } from './comun';
 
 const trazo =
   (estilo: 'dashed' | 'dotted'): Pintor =>
-  ({ color, width }) => ({ border: `${px(width)} ${estilo} var(--trazo, ${css(color)})` });
+  ({ color, width }) => ({ border: `${px(width)} ${estilo} ${css(color)}` });
 
 export const PINTORES_DE_BORDE = {
   dashed: trazo('dashed'),

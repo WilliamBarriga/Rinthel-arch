@@ -102,6 +102,19 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       capas: z.array(capaDeTemaSchema),
       /** Fondo de pagina: pila de rellenos de abajo arriba y si queda fijo al visor. */
       pagina: z.object({ fijo: z.boolean(), capas: z.array(capaDeTemaSchema) }),
+      /**
+       * Grupo del Tipo y estado pedidos: pila del Grupo abierto y del cerrado (de abajo arriba, cada Capa con su
+       * `origen`), la cabecera y el padding de la zona de hijos. `propio` es falso si el Tema no declara `group`:
+       * entonces las Capas salen vacias y el dibujo usa un Grupo sobrio derivado de los tokens del Tema.
+       */
+      grupo: z.object({
+        propio: z.boolean(),
+        cabecera: z.string(),
+        alturaDeCabecera: z.number(),
+        padding: z.object({ top: z.number(), left: z.number(), bottom: z.number(), right: z.number() }),
+        capas: z.array(capaDeTemaSchema),
+        colapsado: z.object({ slots: z.string(), capas: z.array(capaDeTemaSchema) }),
+      }),
       /** Disposicion de Slots del Nodo del Tipo pedido, en la sintaxis del DSL (`column { row gap 6 { icon title } attrs }`). */
       slots: z.string(),
       /** Metricas del Nodo del Tipo pedido (o la base): lo unico que mueve el layout. */

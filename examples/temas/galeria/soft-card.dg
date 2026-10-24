@@ -27,6 +27,20 @@ theme soft-card {
     state en-ruta { layer borde { color COLOR  width 2 } }
     state atenuado { layer relleno none }
   }
+  group {
+    layer caja rect { radius 16 }
+    layer relleno solid { color texto/0.03 }
+    layer borde dashed { color texto/0.14  width 1 }
+    slots row gap 8 pad 12 { title { dot COLOR  transform uppercase  size 0.8  tracking 0.1  alpha 0.6 } }
+    padding 10 20 20 20
+    state hover { layer borde { color texto/0.3 } }
+    state collapsed {
+      layer caja { radius $radius }
+      layer relleno { color texto/0.1 }
+      layer borde border { color texto/0.4  width 1 }
+      slots column pad 8 { title { weight 600 } }
+    }
+  }
   edge {
     layer linea line { color texto/0.32 width 1.2  corner round  radius 6 }
     start dot { size 5 }

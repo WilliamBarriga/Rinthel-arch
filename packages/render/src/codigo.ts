@@ -10,7 +10,7 @@
  * fuera (`dev` compila el `.tsx`; las pruebas usan un registro en memoria).
  */
 import type { ComponentType } from 'react';
-import type { CapaPintada } from 'tema';
+import type { CapaPintada, PinturaDeNodo } from 'tema';
 import type { NodoResuelto } from 'canonico';
 
 import { limpiarValorCss, num } from './elemento';
@@ -46,11 +46,12 @@ const congelar = <T extends object>(valor: T): Readonly<T> => Object.freeze(valo
  */
 export function pintarCodigo(
   estilo: Estilo,
+  pila: Pick<PinturaDeNodo, 'capas' | 'estados'>,
   datos: { nodo: NodoResuelto; ancho: number; alto: number; trazo: string; estados: readonly string[]; tieneContenido: boolean; componentes: ComponentesDeTema | undefined },
   encima: boolean,
 ): Elemento[] {
   const { nodo, ancho, alto, trazo, estados, tieneContenido, componentes } = datos;
-  const { capas, estados: porEstado } = estilo.pintura.nodo;
+  const { capas, estados: porEstado } = pila;
   return capas
     .filter((capa) => capa.tipo === 'code' && (capa.encima === true) === encima)
     .map((base): Elemento => {

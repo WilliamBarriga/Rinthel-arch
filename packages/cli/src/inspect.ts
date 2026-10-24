@@ -6,7 +6,7 @@
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos, resolveView, salidaDeInspectSchema } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
-import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, cascada, componentesDeTema, describirDisposicion, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas } from 'tema';
+import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, alturaDeCabecera, cascada, componentesDeTema, describirDisposicion, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas } from 'tema';
 import type { CapaDeTema } from 'tema';
 
 type Sitio = { file: string; line: number };
@@ -187,7 +187,28 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
       return aCapa(capa, sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line });
     }),
   };
-  const delNodo = metricasDeNodo(tablaDeMetricas(declarado), tipo);
+  const tabla = tablaDeMetricas(declarado);
+  const delNodo = metricasDeNodo(tabla, tipo);
+  const delGrupo = origen?.grupo;
+  const sitioDeGrupo = (capa: string, colapsado: boolean): Sitio => {
+    // Mismo orden de la cascada: estado, colapsado, Tipo, base.
+    const sitio =
+      (estadoValido === undefined ? undefined : delGrupo?.estados[estadoValido]?.[capa]) ??
+      (colapsado ? delGrupo?.colapsado[capa] : undefined) ??
+      (tipo === undefined ? undefined : delGrupo?.tipos[tipo]?.[capa]) ??
+      delGrupo?.base[capa];
+    return sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line };
+  };
+  const pilaDeGrupo = (colapsado: boolean) =>
+    cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido }), ...(colapsado && { colapsado }) }, 'grupo').map((capa: CapaDeTema) => aCapa(capa, sitioDeGrupo(capa.nombre, colapsado)));
+  const grupo = {
+    propio: tema.grupo.capas.length > 0,
+    cabecera: describirDisposicion(tabla.grupoAbierto.disposicion),
+    alturaDeCabecera: alturaDeCabecera(tabla.grupoAbierto),
+    padding: tema.grupo.padding,
+    capas: pilaDeGrupo(false),
+    colapsado: { slots: describirDisposicion(tabla.grupoColapsado.disposicion), capas: pilaDeGrupo(true) },
+  };
   return {
     salida: {
       contractVersion: INSPECT_CONTRACT_VERSION,
@@ -201,6 +222,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
         ...(estadoValido !== undefined && { estado: estadoValido }),
         capas,
         pagina,
+        grupo,
         slots: describirDisposicion(delNodo.disposicion),
         metricas: JSON.parse(JSON.stringify(delNodo)) as never,
         temaConCodigo: componentes.length > 0,
@@ -252,6 +274,18 @@ export function textoLegible(salida: SalidaDeInspect): string {
       const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
       lineas.push(`  ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`} ${sitio(c.origen)}`);
     }
+    const { grupo } = tema;
+    lineas.push(`Grupo:${grupo.propio ? '' : ' (sin group: pila sobria derivada de los tokens del Tema, no las Capas del Nodo)'}`);
+    lineas.push(`  cabecera: ${grupo.cabecera} (alto ${grupo.alturaDeCabecera})`);
+    lineas.push(`  padding: ${grupo.padding.top} ${grupo.padding.right} ${grupo.padding.bottom} ${grupo.padding.left}`);
+    for (const [titulo, capas] of [['abierto', grupo.capas], ['colapsado', grupo.colapsado.capas]] as const) {
+      if (capas.length > 0) lineas.push(`  ${titulo}:`);
+      for (const c of capas) {
+        const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
+        lineas.push(`    ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`}${c.encima ? ' [encima]' : ''}${c.animada ? ' [animada]' : ''} ${sitio(c.origen)}`);
+      }
+    }
+    lineas.push(`  colapsado cabecera: ${grupo.colapsado.slots}`);
     lineas.push(`Slots: ${tema.slots}`);
     lineas.push('Metricas:');
     for (const [clave, valor] of Object.entries(tema.metricas)) if (clave !== 'disposicion') lineas.push(`  ${clave}: ${typeof valor === 'object' ? JSON.stringify(valor) : String(valor)}`);

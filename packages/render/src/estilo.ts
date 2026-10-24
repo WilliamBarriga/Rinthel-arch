@@ -73,7 +73,8 @@ export interface Estilo {
 export function resolverEstilo(tema: Tema, metricas?: Metricas, archivosDeFuente?: readonly string[]): Estilo {
   const { tokens, palette } = resolverTema(tema);
   const acento = palette['blue'] ?? tokens.foreground;
-  const resuelto = estiloResuelto(tema, archivosDeFuente === undefined ? {} : { archivosDeFuente });
+  // `COLOR` de una Capa es la variable `--trazo` que cada Nodo y Grupo fija con su color: una hoja sirve a todos los colores.
+  const resuelto = estiloResuelto(tema, { colorEnVariable: '--trazo', ...(archivosDeFuente !== undefined && { archivosDeFuente }) });
   const tabla = metricas === undefined ? resuelto.tabla : tablaUniforme(metricas);
   return {
     metricas: tabla.base,

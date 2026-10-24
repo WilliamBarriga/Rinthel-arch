@@ -109,6 +109,39 @@ describe('inspect tema', () => {
     expect(texto.stdout).toMatch(/puntos dots .*main\.dg:15/);
   });
 
+  it('muestra la pila de group, la del Grupo cerrado y la cabecera, cada Capa con el parche que la fijo', async () => {
+    const raiz = resolve(__dirname, 'fixtures/tema-grupo');
+    const abierto = temaDe((await json(['hijo'], raiz)).salida).grupo;
+    const porTipo = temaDe((await json(['hijo', '--tipo', 'capa', '--estado', 'hover'], raiz)).salida).grupo;
+    const origen = (capas: typeof abierto.capas) => Object.fromEntries(capas.map((c) => [c.nombre, `${c.origen.file}:${c.origen.line}`]));
+
+    expect(abierto).toMatchObject({ propio: true, cabecera: 'row gap 6 pad 6 { icon title }', padding: { top: 12, left: 12, bottom: 12, right: 12 } });
+    expect(abierto.alturaDeCabecera).toBeGreaterThan(0);
+    expect(abierto.capas.map((c) => c.nombre)).toEqual(['caja', 'borde']);
+    // `borde` lo fijo el parche del hijo (ancho); el resto viene del padre.
+    expect(origen(abierto.capas)).toEqual({ caja: 'main.dg:8', borde: 'main.dg:19' });
+    expect(abierto.capas[1]?.props).toMatchObject({ width: 2, color: 'tinta' });
+    // Cerrado: otra pila, con la Capa que anade `state collapsed` del padre.
+    expect(abierto.colapsado.capas.map((c) => c.nombre)).toEqual(['caja', 'relleno', 'borde']);
+    expect(origen(abierto.colapsado.capas)['relleno']).toBe('main.dg:14');
+    // Con Tipo y estado: gana el ultimo nivel que fijo la Capa.
+    expect(origen(porTipo.capas)['borde']).toBe('main.dg:13');
+    expect(porTipo.capas.find((c) => c.nombre === 'borde')?.props).toMatchObject({ color: 'azul', width: 3 });
+
+    const texto = await run(['inspect', 'tema', 'hijo', '--workspace', raiz]);
+    expect(texto.stdout).toContain('Grupo:');
+    expect(texto.stdout).toContain('cabecera: row gap 6 pad 6 { icon title }');
+    expect(texto.stdout).toMatch(/borde dashed .*main\.dg:19/);
+  });
+
+  it('un Tema sin group lo dice: pila sobria de los tokens y no las Capas del Nodo', async () => {
+    const raiz = resolve(__dirname, 'fixtures/tema-grupo');
+    const { grupo } = temaDe((await json(['sobrio'], raiz)).salida);
+
+    expect(grupo).toMatchObject({ propio: false, capas: [] });
+    expect((await run(['inspect', 'tema', 'sobrio', '--workspace', raiz])).stdout).toContain('Grupo: (sin group: pila sobria derivada de los tokens del Tema, no las Capas del Nodo)');
+  });
+
   it('un Workspace con errores no se consulta (codigo 1)', async () => {
     const r = await run(['inspect', 'tema', 'app', '--workspace', join(__dirname, 'fixtures/con-errores')]);
     expect(r.exitCode).toBe(1);

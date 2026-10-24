@@ -5,7 +5,7 @@ import { resolverEstilo } from 'render';
 
 import type { Elemento } from '../src/elemento';
 import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEtiquetaDeArista, pintarGrupo, pintarNodo } from '../src/pintores';
-import { TEMA_NEUTRO, colocarEnCaja } from 'tema';
+import { TEMA_NEUTRO, alturaDeCabecera, colocarEnCaja } from 'tema';
 
 const estilo = resolverEstilo(TEMA_NEUTRO);
 const caja = { x: 0, y: 0, width: 140, height: 60 };
@@ -54,11 +54,30 @@ describe('pintores por parte', () => {
     expect(elementos.map((e) => e.attrs['data-slot'])).toEqual(['title']);
   });
 
-  it('el Grupo pone el titulo arriba a la izquierda, con el margen de las Metricas', () => {
-    const [titulo] = pintarGrupo(estilo, { nodo: conNodo({}), caja, trazo: 'red', texto: 'G' });
+  it('la cabecera del Grupo coloca sus Slots con el mini-layout de las Metricas del Grupo abierto, sin solapar el icono y dentro de la franja de la cabecera', () => {
+    const icons = { keys: () => ['box'], resolve: () => '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>' };
+    const datos = { nodo: conNodo({ icon: 'box', children: [conNodo({ id: 'h' })] }), caja, trazo: 'red', texto: 'G', icons };
+    const elementos = pintarGrupo(estilo, datos);
+    const m = estilo.tabla.grupoAbierto;
+    const { slots } = colocarEnCaja(m, { titulo: 'G', atributos: [], icono: true }, caja.width - 2 * m.margenDeControl);
+    const rectDe = (e: Elemento) => Object.fromEntries([...e.attrs['style']!.matchAll(/(left|top|width|height):([\d.]+)px/g)].map((x) => [x[1], Number(x[2])])) as Record<string, number>;
+    const icono = rectDe(elementos.find((e) => e.attrs['data-slot'] === 'icon')!);
+    const titulo = rectDe(elementos.find((e) => e.attrs['data-slot'] === 'title')!);
 
-    expect(titulo!.attrs['class']).toContain('rd-encabezado');
-    expect(titulo!.attrs['style']).toContain(`left:${estilo.metricas.margenDeTexto}px;top:0px`);
+    expect(titulo).toMatchObject({ left: slots.title!.x, top: slots.title!.y, width: slots.title!.width });
+    expect(icono['left']! + icono['width']!).toBeLessThanOrEqual(titulo['left']!);
+    expect(titulo['top']! + titulo['height']!).toBeLessThanOrEqual(alturaDeCabecera(m));
+    expect(titulo['left']! + titulo['width']!).toBeLessThanOrEqual(caja.width - 2 * m.margenDeControl);
+    expect(JSON.stringify(elementos)).not.toContain('rd-encabezado');
+  });
+
+  it('la cabecera del Grupo sigue la disposicion que declara el Tema, no una posicion fija', () => {
+    const tema = { ...TEMA_NEUTRO, grupo: { ...TEMA_NEUTRO.grupo, slots: { direccion: 'row' as const, gap: 4, pad: 2, hijos: [{ slot: 'title' as const }, { slot: 'icon' as const }] } } };
+    const propio = resolverEstilo(tema);
+    const icons = { keys: () => ['box'], resolve: () => '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>' };
+    const elementos = pintarGrupo(propio, { nodo: conNodo({ icon: 'box', children: [conNodo({ id: 'h' })] }), caja, trazo: 'red', texto: 'G', icons });
+
+    expect(elementos.map((e) => e.attrs['data-slot'])).toEqual(['title', 'icon']);
   });
 
   it('el control muestra el glifo del Estilo segun el estado', () => {

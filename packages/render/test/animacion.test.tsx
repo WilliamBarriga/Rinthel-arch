@@ -57,8 +57,8 @@ describe('Diagram: Movimientos de Capa', () => {
     const css = hojaDe(html);
 
     expect(html.match(/class="rd-anim" data-anim="acento"/g)).toHaveLength(3);
-    expect(css).toMatch(/\.rd-nodo,\.[\w-]+ \.rd-grupo\{[^}]*border-radius:8px/);
-    expect(css).not.toMatch(/\.rd-nodo,[^{]*\{[^}]*border:2px/);
+    expect(css).toMatch(/\.rd-nodo\{[^}]*border-radius:8px/);
+    expect(css).not.toMatch(/\.rd-nodo\{[^}]*border:2px/);
     expect(css).toMatch(/\.rd-anim\[data-anim="acento"\]\{[^}]*border:2px solid[^}]*animation:rd-mov-pulso 1200ms ease-in-out 0ms infinite[^}]*--rd-i:0\.4/);
     expect(css).toMatch(/@keyframes rd-mov-pulso\{/);
   });
@@ -116,8 +116,8 @@ describe('Diagram: transition, enter, exit y stagger', () => {
     const html = await dibujar(tema, { visibility: (id) => (id === 'b' ? 0 : 1) });
 
     expect(css).toContain('@keyframes rd-in-escala{');
-    expect(css).toMatch(/\.rd-nodo:not\(\[data-oculto\]\),[^{]*\{animation:rd-in-escala 300ms ease-out calc\(0ms \+ var\(--rd-n, 0\) \* 80ms\) backwards/);
-    expect(css).toMatch(/\.rd-nodo\[data-oculto\],[^{]*\{transition:[^;}]*opacity 200ms ease-out/);
+    expect(css).toMatch(/\.rd-nodo:not\(\[data-oculto\]\)\{animation:rd-in-escala 300ms ease-out calc\(0ms \+ var\(--rd-n, 0\) \* 80ms\) backwards/);
+    expect(css).toMatch(/\.rd-nodo\[data-oculto\]\{transition:[^;}]*opacity 200ms ease-out/);
     expect(html.match(/data-oculto=""/g)).toHaveLength(1);
     expect(html).toMatch(/data-id="a"[^>]*>(?:<div[^>]*--rd-n:0)/);
     expect(html).toMatch(/data-id="c"[^>]*>(?:<div[^>]*--rd-n:1)/);
@@ -146,8 +146,8 @@ describe('Diagram: reduced-motion', () => {
   it('enter fade reduce a un fundido corto; instant lo elimina', async () => {
     const css = hojaDe(await dibujar(tema));
 
-    expect(css).toMatch(/\[data-reduced-motion="on"\] \.rd-nodo:not\(\[data-oculto\]\),[^{]*\{animation-name:rd-in-fundido!important;animation-duration:100ms!important/);
-    expect(css).toMatch(/\[data-reduced-motion="on"\] \.rd-nodo\[data-oculto\],[^{]*\{transition:none!important/);
+    expect(css).toMatch(/\[data-reduced-motion="on"\] \.rd-nodo:not\(\[data-oculto\]\)\{animation-name:rd-in-fundido!important;animation-duration:100ms!important/);
+    expect(css).toMatch(/\[data-reduced-motion="on"\] \.rd-nodo\[data-oculto\]\{transition:none!important/);
     expect(css).toMatch(/\[data-reduced-motion="on"\] \.rd-nodo,[^{]*\{transition:none!important/);
   });
 
@@ -184,7 +184,7 @@ describe('Diagram: lo animado no afecta a las Metricas ni relayouta', () => {
   });
 
   it('la posicion y el tamano de cada caja no cambian con la animacion', async () => {
-    const cajas = (html: string): string[] => [...html.matchAll(/class="rd-caja" data-id="[^"]+" style="([^"]*)"/g)].map((m) => m[1]!);
+    const cajas = (html: string): string[] => [...html.matchAll(/class="rd-caja" data-id="[^"]+"[^>]*? style="([^"]*)"/g)].map((m) => m[1]!);
     const con = cajas(await dibujar(animada));
 
     expect(con.length).toBeGreaterThan(0);

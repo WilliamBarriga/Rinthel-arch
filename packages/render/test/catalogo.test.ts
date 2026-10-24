@@ -5,10 +5,10 @@ import { TEMA_NEUTRO } from 'tema';
 import { declaracionesDeCaja } from '../src/hoja';
 import { resolverEstilo } from '../src/estilo';
 
-const caja = (...capas: Array<[string, Record<string, string | number>]>) =>
-  declaracionesDeCaja(
-    resolverEstilo({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capas.map(([tipo, props], i) => ({ nombre: `c${i}`, primitiva: { tipo, props } })) } }),
-  );
+const caja = (...capas: Array<[string, Record<string, string | number>]>) => {
+  const estilo = resolverEstilo({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capas.map(([tipo, props], i) => ({ nombre: `c${i}`, primitiva: { tipo, props } })) } });
+  return declaracionesDeCaja(estilo, estilo.pintura.nodo);
+};
 
 describe('pintores del catalogo de formas, rellenos y bordes', () => {
   it('las formas se traducen a su contorno CSS', () => {
@@ -33,8 +33,8 @@ describe('pintores del catalogo de formas, rellenos y bordes', () => {
   });
 
   it('bordes: discontinuo, punteado y contorno', () => {
-    expect(caja(['dashed', { color: 'blue', width: 2 }])['border']).toBe('2px dashed var(--trazo, #2563eb)');
-    expect(caja(['dotted', { color: 'blue', width: 3 }])['border']).toBe('3px dotted var(--trazo, #2563eb)');
+    expect(caja(['dashed', { color: 'blue', width: 2 }])['border']).toBe('2px dashed #2563eb');
+    expect(caja(['dotted', { color: 'blue', width: 3 }])['border']).toBe('3px dotted #2563eb');
     expect(caja(['outline', { color: 'blue', width: 2, offset: 3 }])).toMatchObject({ outline: '2px solid #2563eb', 'outline-offset': '3px' });
   });
 });

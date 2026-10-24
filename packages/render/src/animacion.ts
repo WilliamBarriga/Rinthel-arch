@@ -12,11 +12,13 @@
  * `reduced` por animacion pero no puede desactivar la politica.
  */
 import { ESTADOS } from 'tema';
-import type { Animacion, CapaPintada, KeyframesDeCapa, Movimiento, NombreDeEfecto, NombreDeMovimiento, PropiedadAnimable, Transicion } from 'tema';
+import type { Animacion, AnimacionDeNodo, CapaPintada, KeyframesDeCapa, Movimiento, NombreDeEfecto, NombreDeMovimiento, PinturaDeNodo, PropiedadAnimable, Transicion } from 'tema';
 
 import { huella, limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
 import type { Estilo } from './estilo';
+import { ELEMENTOS, pilasDeElemento, pinturaDeElemento } from './pilas';
+import type { ClaveDeElemento, PilaVigente } from './pilas';
 import { declaracionesDeDesplazamiento, estaDesplazada } from './pintura/comun';
 
 export type Declaraciones = Record<string, string>;
@@ -54,29 +56,24 @@ const PROPIEDAD_CSS: { readonly [P in PropiedadAnimable]: (valor: number) => str
 /** Propiedades que `transition` interpola: solo pintura y composicion. */
 const PROPIEDADES_DE_TRANSICION = ['opacity', 'color', 'background-color', 'border-color', 'box-shadow', 'filter', 'scale', 'rotate', 'translate'];
 
-const CAJAS = '& .rd-nodo, & .rd-grupo';
-const VISIBLES = '& .rd-nodo:not([data-oculto]), & .rd-grupo:not([data-oculto])';
-const OCULTOS = '& .rd-nodo[data-oculto], & .rd-grupo[data-oculto]';
-
 const bloque = (d: Declaraciones): string => Object.entries(d).map(([k, v]) => `${k}:${v}`).join(';');
 
 /**
- * Nombres de las Capas de la pila base que van en un elemento propio: las que
+ * Nombres de las Capas de una pila que van en un elemento propio: las que
  * tienen animacion o `offset`/`grow`, en el reposo o en algun estado. No pueden
  * fusionarse en la caja porque se animan o se mueven por separado.
  */
-export function nombresAparte(estilo: Estilo): Set<string> {
-  const { capas, estados } = estilo.pintura.nodo;
+export function nombresAparte({ capas, estados }: Pick<PinturaDeNodo, 'capas' | 'estados'>): Set<string> {
   const conEstado = new Set(
     Object.values(estados).flatMap((pila) => (pila ?? []).filter((c) => c.animacion !== undefined || estaDesplazada(c)).map((c) => c.nombre)),
   );
   return new Set(capas.filter((c) => c.animacion !== undefined || estaDesplazada(c) || conEstado.has(c.nombre)).map((c) => c.nombre));
 }
 
-/** Elementos de las Capas animadas, bajo el contenido (`encima` falso) o sobre el. */
-export function pintarCapasAnimadas(estilo: Estilo, encima: boolean): Elemento[] {
-  const animadas = nombresAparte(estilo);
-  return estilo.pintura.nodo.capas
+/** Elementos de las Capas con elemento propio de una pila, bajo el contenido (`encima` falso) o sobre el. */
+export function pintarCapasAnimadas(pila: Pick<PinturaDeNodo, 'capas' | 'estados'>, encima: boolean): Elemento[] {
+  const animadas = nombresAparte(pila);
+  return pila.capas
     .filter((capa) => animadas.has(capa.nombre) && (capa.encima === true) === encima)
     .map((capa) => ({ tag: 'div', attrs: { class: 'rd-anim', 'data-anim': capa.nombre, 'aria-hidden': 'true' } }));
 }
@@ -110,9 +107,9 @@ function compilarKeyframes(k: KeyframesDeCapa, tiempo: string): Compilada {
 
 const transicionCss = (t: Transicion): string => PROPIEDADES_DE_TRANSICION.map((p) => `${p} ${ms(t.duracionMs)} ${t.easing}`).join(',');
 
-function reglasDeCapas(estilo: Estilo, declaracionesDeCapa: (capa: CapaPintada) => Declaraciones, salida: { reglas: Regla[]; bloques: string[] }): void {
-  const { capas, estados } = estilo.pintura.nodo;
-  const animadas = nombresAparte(estilo);
+function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesDeCapa: (capa: CapaPintada) => Declaraciones, salida: { reglas: Regla[]; bloques: string[] }): void {
+  const { capas, estados } = pila;
+  const animadas = nombresAparte(pila);
   const emitidos = new Set<string>();
   /** Declaraciones de una Capa como elemento propio: su pintura y su desplazamiento. */
   const pintadaComoElemento = (capa: CapaPintada): Declaraciones => ({
@@ -127,7 +124,7 @@ function reglasDeCapas(estilo: Estilo, declaracionesDeCapa: (capa: CapaPintada) 
   capas.forEach((capa, indice) => {
     if (!animadas.has(capa.nombre)) return;
     const debajo = capa.encima !== true && primeraFusionada > indice;
-    const selector = `& .rd-anim[data-anim="${capa.nombre.replace(/[^\w-]/g, '')}"]`;
+    const selector = `${elemento} .rd-anim[data-anim="${capa.nombre.replace(/[^\w-]/g, '')}"]`;
     const pintadaBase = pintadaComoElemento(capa);
     const propia = capa.animacion === undefined ? undefined : compilarAnimacion(capa.animacion);
     if (propia !== undefined) anadir(propia);
@@ -156,16 +153,19 @@ function reglasDeCapas(estilo: Estilo, declaracionesDeCapa: (capa: CapaPintada) 
       if (compilada !== undefined) anadir(compilada);
       const animacion = !animacionCambia ? {} : (compilada?.declaraciones ?? { animation: 'none' });
       if (Object.keys(cambiadas).length === 0 && !animacionCambia) continue;
-      salida.reglas.push([`& [data-estados~="${estado}"] ${selector.slice(2)}`, { ...cambiadas, ...animacion }]);
+      salida.reglas.push([`${elemento}[data-estados~="${estado}"] .rd-anim[data-anim="${capa.nombre.replace(/[^\w-]/g, '')}"]`, { ...cambiadas, ...animacion }]);
     }
   });
 }
 
-function reglasDeElemento(estilo: Estilo, salida: { reglas: Regla[]; bloques: string[]; reducidas: Regla[] }): void {
-  const animacion = estilo.pintura.nodo.animacion;
+/** `transition`, `enter`, `exit` y `stagger` de un elemento (`animacion` es la de su bloque), bajo su propia clase. */
+function reglasDeElemento(clave: ClaveDeElemento, animacion: AnimacionDeNodo | undefined, salida: { reglas: Regla[]; bloques: string[]; reducidas: Regla[] }): void {
   if (animacion === undefined) return;
   const { transicion, transicionesDeEstado, entrada, salida: salidaDeNodo, escalonadoMs } = animacion;
-  const destino = `${CAJAS}, & .rd-anim`;
+  const caja = `& .rd-${clave}`;
+  const destino = `${caja}, ${caja} .rd-anim`;
+  const VISIBLES = `${caja}:not([data-oculto])`;
+  const OCULTOS = `${caja}[data-oculto]`;
 
   if (transicion !== undefined) {
     salida.reglas.push([destino, { transition: transicionCss(transicion) }]);
@@ -174,7 +174,7 @@ function reglasDeElemento(estilo: Estilo, salida: { reglas: Regla[]; bloques: st
   for (const estado of ESTADOS) {
     const t = transicionesDeEstado?.[estado];
     if (t === undefined) continue;
-    const selector = `& .rd-nodo[data-estados~="${estado}"], & .rd-grupo[data-estados~="${estado}"], & [data-estados~="${estado}"] .rd-anim`;
+    const selector = `${caja}[data-estados~="${estado}"], ${caja}[data-estados~="${estado}"] .rd-anim`;
     salida.reglas.push([selector, { transition: transicionCss(t) }]);
     salida.reducidas.push([selector, reducida(t.reducido, 'transition')]);
   }
@@ -219,9 +219,15 @@ function politicaReducida(reglas: readonly Regla[]): string[] {
  */
 export function animacionDeHoja(estilo: Estilo, declaracionesDeCapa: (capa: CapaPintada) => Declaraciones): { reglas: Regla[]; bloques: string[] } {
   const salida = { reglas: [] as Regla[], bloques: [] as string[], reducidas: [] as Regla[] };
-  reglasDeCapas(estilo, declaracionesDeCapa, salida);
-  reglasDeElemento(estilo, salida);
-  const hayCapas = nombresAparte(estilo).size > 0;
+  let hayCapas = false;
+  for (const clave of ELEMENTOS) {
+    for (const vigente of pilasDeElemento(estilo.pintura, clave)) {
+      reglasDeCapas(vigente, declaracionesDeCapa, salida);
+      hayCapas ||= nombresAparte(vigente.pila).size > 0;
+    }
+    reglasDeElemento(clave, pinturaDeElemento(estilo.pintura, clave).animacion, salida);
+  }
   const reducidas: Regla[] = [...(hayCapas ? ([['& .rd-anim', { animation: 'none!important' }]] as Regla[]) : []), ...salida.reducidas];
-  return { reglas: salida.reglas, bloques: [...salida.bloques, ...politicaReducida(reducidas)] };
+  // Dos elementos con la misma entrada emiten el mismo `@keyframes`: uno solo.
+  return { reglas: salida.reglas, bloques: [...new Set(salida.bloques), ...politicaReducida(reducidas)] };
 }

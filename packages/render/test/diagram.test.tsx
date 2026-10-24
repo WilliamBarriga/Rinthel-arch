@@ -150,10 +150,10 @@ describe('Diagram: estructura hibrida', () => {
 });
 
 describe('Diagram: hoja de estilo', () => {
-  it('compila las Capas del Tema a CSS en orden, con el color de Tipo del Nodo como variable', async () => {
+  it('compila las Capas del Tema a CSS en orden, y el color de Tipo del Nodo va como variable', async () => {
     const html = dibujo(await props(vista(), { theme: CON_CAPAS }));
 
-    expect(hojaDe(html)).toContain('border-radius:12px;background:#d97706;border:2px solid var(--trazo, #2563eb)');
+    expect(hojaDe(html)).toContain('border-radius:12px;background:#d97706;border:2px solid #2563eb');
     expect(propiedad(parteDe(html, 'b'), '--trazo')).toBe('#9ca3af');
   });
 

@@ -20,6 +20,20 @@ theme glass-chip {
     state en-ruta { layer glow { color COLOR  radius 26 } }
     state atenuado { layer glow none }
   }
+  group {
+    layer forma rect { radius 24 }
+    layer vidrio glass { blur 4  saturate 100 }
+    layer tinte solid { color COLOR/0.08 }
+    layer borde border { color blanco/0.16  width 1 }
+    slots row pad 10 { title { size 0.85  fill COLOR/0.2  border COLOR/0.5  radius 50  pad 10  dot COLOR } }
+    padding 8 22 22 22
+    state collapsed {
+      layer forma pill
+      layer tinte { color COLOR/0.25 }
+      layer borde { color COLOR/0.6 }
+      slots column pad 10 { title { weight 500 } }
+    }
+  }
   edge {
     layer halo line { color texto/0.12 width 6 }
     layer linea line { color texto/0.6 width 1.5 }

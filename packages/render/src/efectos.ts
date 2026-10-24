@@ -14,7 +14,7 @@
  * Todo solo pinta: puede sobresalir de la caja sin tocar las Metricas.
  */
 import { fnv1a, giroDeCapa, semillaDeCapa } from 'tema';
-import type { CapaPintada, NombreDePrimitiva } from 'tema';
+import type { CapaPintada, NombreDePrimitiva, PinturaDeNodo } from 'tema';
 
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
@@ -54,8 +54,7 @@ export interface EfectosDeElemento {
 const SIN_EFECTOS: EfectosDeElemento = { caja: '', nodo: '', debajo: [], encima: [] };
 
 /** Efectos que dependen del elemento: semilla = id del elemento + nombre de Capa (+ `seed N` del Tema). */
-export function efectosDeElemento(estilo: Estilo, id: string): EfectosDeElemento {
-  const { capas } =estilo.pintura.nodo;
+export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo, 'capas'>, id: string): EfectosDeElemento {
   const semillaDelTema = estilo.pintura.semilla;
   if (!capas.some((c) => c.tipo === 'sketch' || c.tipo === 'tilt' || c.tipo === 'tape')) return SIN_EFECTOS;
   const resultado: EfectosDeElemento = { caja: '', nodo: '', debajo: [], encima: [] };

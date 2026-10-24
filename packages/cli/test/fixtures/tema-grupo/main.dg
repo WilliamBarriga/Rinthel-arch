@@ -1,0 +1,24 @@
+specification { node servicio { color rojo }  node capa { color azul } }
+model { capa plataforma { servicio api } }
+view v { type architecture  include ** }
+
+theme base {
+  palette { rojo "#dc2626"  azul "#2563eb"  papel "#fefce8"  tinta "#1f2937" }
+  group {
+    layer caja rect { radius 16 }
+    layer borde dashed { color tinta width 1 }
+    slots row gap 6 pad 6 { icon  title { transform uppercase } }
+    padding 12
+    type capa { layer borde { color azul } }
+    state hover { layer borde { width 3 } }
+    state collapsed { layer relleno solid before borde { color papel } }
+  }
+}
+
+theme hijo extends base {
+  group { layer borde { width 2 } }
+}
+
+theme sobrio {
+  palette { rojo "#dc2626" }
+}

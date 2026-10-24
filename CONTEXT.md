@@ -37,6 +37,9 @@ Familia de notacion que fija como se dibuja una Vista. Primera entrega: arquitec
 **Drill-down**:
 Pasar de un Nodo a su detalle. Cada Vista tiene un mecanismo por defecto (colapsar o expandir el Grupo en la misma Vista) y puede anularlo por Nodo enlazando a otra Vista. Un Grupo enlazado no se expande en esa Vista.
 
+**Cabecera del Grupo**:
+Arbol de Slots (mini-layout) que el Tema declara en `group` para el titulo y el icono de un Grupo abierto; su alto, con el padding de la zona de hijos, es el margen superior que layout reserva.
+
 **Grupo colapsado**:
 Grupo mostrado como un Nodo unico, con su contador de hijos y las Aristas de sus hijos elevadas a su borde. Al abrir una Vista, los Grupos que exceden su profundidad aparecen colapsados.
 

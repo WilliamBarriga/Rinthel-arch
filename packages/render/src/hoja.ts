@@ -7,7 +7,8 @@
  * `PINTORES` es la tabla exhaustiva Primitiva -> pintor: anadir una Primitiva al
  * catalogo de `tema` sin pintor aqui rompe el typecheck.
  */
-import type { CapaPintada, NombreDePrimitivaEn } from 'tema';
+import { ESTADOS, PUNTO_DE_TITULO_EM } from 'tema';
+import type { CapaPintada, NombreDePrimitivaEn, PinturaDeNodo } from 'tema';
 
 import { animacionDeHoja, nombresAparte } from './animacion';
 import { PINTORES_DE_EFECTOS } from './efectos';
@@ -17,16 +18,17 @@ import type { EstadoVisual, Estilo } from './estilo';
 import { PINTORES_DE_BORDE } from './pintura/borde';
 import { FONDOS_ACUMULABLES, css, px } from './pintura/comun';
 import type { Declaraciones, Pintor } from './pintura/comun';
+import { ELEMENTOS, pilasDeElemento, pinturaDeElemento } from './pilas';
 import { PINTORES_DE_FORMA } from './pintura/forma';
 import { declaracionesDePagina } from './pintura/pagina';
 import { PINTORES_DE_RELLENO } from './pintura/relleno';
 
 export type { Declaraciones, Pintor };
 
-/** Un pintor por Primitiva del catalogo. El trazo puede venir de la variable `--trazo` del Nodo (su color de Tipo). */
+/** Un pintor por Primitiva del catalogo. El color de la Capa es el que dice el Tema; `COLOR` ya llega como la variable `--trazo` del Nodo (su color de Tipo). */
 export const PINTORES: { readonly [P in NombreDePrimitivaEn<'capa-nodo'>]: Pintor } = {
   rect: ({ radius }) => ({ 'border-radius': px(radius) }),
-  border: ({ color, width }) => ({ border: `${px(width)} solid var(--trazo, ${css(color)})` }),
+  border: ({ color, width }) => ({ border: `${px(width)} solid ${css(color)}` }),
   ...PINTORES_DE_FORMA,
   ...PINTORES_DE_RELLENO,
   ...PINTORES_DE_BORDE,
@@ -38,11 +40,15 @@ export const PINTORES: { readonly [P in NombreDePrimitivaEn<'capa-nodo'>]: Pinto
 /** Sombras (box-shadow): se apilan separadas por coma y la ultima Capa queda encima (va primero en CSS). */
 const SOMBRAS = 'box-shadow';
 
-/** Declaraciones de la caja de un Nodo o Grupo: las Capas de abajo hacia arriba; sin Capas, el aspecto por defecto del Estilo. */
-export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
-  const aparte = nombresAparte(estilo);
-  const capas = estilo.pintura.nodo.capas.filter((capa) => !aparte.has(capa.nombre));
-  if (capas.length === 0 && estilo.pintura.nodo.capas.length === 0) {
+/**
+ * Declaraciones de la caja de un elemento con las Capas `capas` (las de su pila en reposo o en un estado), de abajo
+ * hacia arriba. Las Capas con elemento propio de `pila` quedan fuera; una pila sin Capas en el reposo es el aspecto
+ * por defecto del Estilo.
+ */
+export function declaracionesDeCaja(estilo: Estilo, pila: Pick<PinturaDeNodo, 'capas' | 'estados'>, capas: readonly CapaPintada[] = pila.capas): Declaraciones {
+  const aparte = nombresAparte(pila);
+  const fusionadas = capas.filter((capa) => !aparte.has(capa.nombre));
+  if (fusionadas.length === 0 && pila.capas.length === 0) {
     return {
       'border-radius': px(estilo.nodo.radio),
       background: css(estilo.nodo.relleno),
@@ -52,7 +58,7 @@ export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
   const declaraciones: Declaraciones = {};
   const acumulados: Record<string, string[]> = {};
   const sombras: string[] = [];
-  for (const capa of capas) {
+  for (const capa of fusionadas) {
     for (const [propiedad, valor] of Object.entries(PINTORES[capa.tipo as NombreDePrimitivaEn<'capa-nodo'>](capa.props))) {
       if (propiedad === SOMBRAS) sombras.unshift(valor);
       else if ((FONDOS_ACUMULABLES as readonly string[]).includes(propiedad)) (acumulados[propiedad] ??= []).push(valor);
@@ -63,6 +69,18 @@ export function declaracionesDeCaja(estilo: Estilo): Declaraciones {
   for (const propiedad of FONDOS_ACUMULABLES) if (acumulados[propiedad] !== undefined) declaraciones[propiedad] = acumulados[propiedad].join(',');
   if (sombras.length > 0) declaraciones[SOMBRAS] = sombras.join(', ');
   return declaraciones;
+}
+
+/**
+ * Lo que cambia al pasar de `de` a `a`: los valores distintos y, de lo que ya no esta, su valor inicial. Si cambia el
+ * `background` (que reinicia las imagenes de fondo) se repiten las imagenes de `a`, para que el cambio no las borre.
+ */
+function diferencia(de: Declaraciones, a: Declaraciones): Declaraciones {
+  const cambios: Declaraciones = {};
+  for (const [propiedad, valor] of Object.entries(a)) if (de[propiedad] !== valor) cambios[propiedad] = valor;
+  for (const propiedad of Object.keys(de)) if (!(propiedad in a)) cambios[propiedad] = 'initial';
+  if ('background' in cambios) for (const propiedad of FONDOS_ACUMULABLES) if (propiedad in a) cambios[propiedad] = a[propiedad]!;
+  return cambios;
 }
 
 const bloque = (declaraciones: Declaraciones): string =>
@@ -78,11 +96,34 @@ function declaracionesDeEstado(estilo: Estilo, estado: EstadoVisual): Declaracio
   };
 }
 
+/** Las tres clases de caja pintada: Nodo, Grupo abierto y Grupo colapsado. */
+const CAJAS = ELEMENTOS.map((clave) => `& .rd-${clave}`).join(', ');
+
+/**
+ * Pintura de un elemento (Nodo, Grupo abierto o colapsado): la caja de su pila base y de la de cada Tipo con parches
+ * (`data-tipo`), el cambio que trae cada estado (`data-estados`), el radio del contorno de estado y el estilo de sus Slots.
+ * Una sola ruta para los tres; solo cambia la pintura de la que parten.
+ */
+function reglasDeElemento(estilo: Estilo, clave: (typeof ELEMENTOS)[number]): Array<[string, Declaraciones]> {
+  const salida: Array<[string, Declaraciones]> = [];
+  for (const { selector, caja: contenedor, pila } of pilasDeElemento(estilo.pintura, clave)) {
+    const reposo = declaracionesDeCaja(estilo, pila);
+    salida.push([selector, reposo]);
+    for (const estado of ESTADOS) {
+      const deEstado = pila.estados[estado];
+      if (deEstado === undefined) continue;
+      const cambios = diferencia(reposo, declaracionesDeCaja(estilo, pila, deEstado));
+      if (Object.keys(cambios).length > 0) salida.push([`${selector}[data-estados~="${estado}"]`, cambios]);
+    }
+    salida.push([`${contenedor} .rd-estado`, { 'border-radius': reposo['border-radius'] ?? '0px' }]);
+  }
+  const textos = pinturaDeElemento(estilo.pintura, clave).textos;
+  return [...salida, ...reglasDeTexto(estilo, `& .rd-${clave}`, textos), ...reglasDeIcono(`& .rd-${clave}`, textos)];
+}
+
 /** Reglas sin alcance: selector (con `&` por la clase de alcance) y declaraciones. */
 function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
   const { metricas } = estilo;
-  const caja = declaracionesDeCaja(estilo);
-  const radio = caja['border-radius'] ?? '0px';
   return [
     ['&', { position: 'relative', overflow: 'hidden', 'user-select': 'none', background: css(estilo.fondo), color: css(estilo.texto), 'font-family': css(estilo.fuenteCuerpo), 'font-size': px(metricas.fontSize) }],
     ['& .rd-mundo', { position: 'absolute', left: '0', top: '0', 'transform-origin': '0 0' }],
@@ -91,54 +132,76 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-aristas [data-edge], & .rd-aristas [data-edge-labels]', { 'pointer-events': 'stroke' }],
     ['& .rd-pagina', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'pointer-events': 'none', ...declaracionesDePagina(estilo.pintura.pagina.capas) }],
     ['& .rd-caja', { position: 'absolute', left: '0', top: '0', contain: 'layout style' }],
-    ['& .rd-nodo, & .rd-grupo', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'auto', ...caja }],
-    ['& .rd-nodo[data-collapsed]', { 'border-style': 'dashed' }],
+    [CAJAS, { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'auto' }],
+    ...ELEMENTOS.flatMap((clave) => reglasDeElemento(estilo, clave)),
     ['& .rd-cinta', { position: 'absolute', 'pointer-events': 'none' }],
     ['& .rd-defs', { position: 'absolute', 'pointer-events': 'none' }],
     // Capa `code`: contenedor de tamano fijo (el de la caja, en linea); el componente no puede cambiarlo.
     ['& .rd-codigo', { position: 'absolute', left: '0', top: '0', 'pointer-events': 'none', contain: 'layout style' }],
     ['& .rd-slot', { position: 'absolute', overflow: 'hidden', 'white-space': 'nowrap', 'text-overflow': 'ellipsis', 'box-sizing': 'border-box' }],
     ['& .rd-title', { 'text-align': 'center' }],
-    ['& .rd-encabezado', { 'text-align': 'left' }],
+    // El titulo de un Grupo es una cabecera: se alinea a la izquierda de su Slot.
+    ['& .rd-grupo .rd-title, & .rd-colapsado .rd-title', { 'text-align': 'left' }],
     ['& .rd-separado', { 'border-top': '1px solid var(--trazo, currentColor)' }],
     ['& .rd-fila', { position: 'absolute', 'white-space': 'nowrap', overflow: 'hidden', 'text-overflow': 'ellipsis', 'padding-left': px(metricas.margenDeTexto), 'box-sizing': 'border-box', 'font-family': css(estilo.fuenteMono), 'font-size': px(metricas.fontSize * metricas.escalaAtributo) }],
-    ...reglasDeTexto(estilo),
     ['& .rd-icono', { position: 'absolute', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'box-sizing': 'border-box' }],
-    ...reglasDeIcono(estilo),
     ['& .rd-control', { position: 'absolute', 'text-align': 'center', cursor: 'pointer', 'font-family': css(estilo.fuenteMono) }],
-    ['& .rd-estado', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'none', 'border-radius': radio }],
+    ['& .rd-estado', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'none' }],
     ['& [data-atenuado]', { opacity: num(estilo.estados.atenuado.opacidad) }],
     ...(Object.keys(estilo.estados) as EstadoVisual[]).filter((estado) => estado !== 'atenuado').map((estado): [string, Declaraciones] => [`& .rd-estado[data-state="${estado}"]`, declaracionesDeEstado(estilo, estado)]),
   ];
 }
 
 /** Aspecto del Slot `icon` segun su estilo `icon`: caja (radio, relleno, borde) o punto; el lado ya lo fijo la colocacion. */
-function reglasDeIcono(estilo: Estilo): Array<[string, Declaraciones]> {
-  const props = estilo.pintura.nodo.textos.icon?.props ?? {};
+function reglasDeIcono(caja: string, textos: PinturaDeNodo['textos']): Array<[string, Declaraciones]> {
+  const props = textos.icon?.props ?? {};
   const { radius, fill, border } = props;
-  const reglas: Array<[string, Declaraciones]> = [
+  return [
     [
-      '& .rd-icono[data-variante="box"]',
+      `${caja} .rd-icono[data-variante="box"]`,
       { 'border-radius': px(radius ?? 6), ...(fill !== undefined && { background: css(fill) }), ...(border !== undefined && { border: `1px solid ${css(border)}` }) },
     ],
-    ['& .rd-icono[data-variante="dot"]', { 'border-radius': '50%', background: fill !== undefined ? css(fill) : 'currentColor', ...(border !== undefined && { border: `1px solid ${css(border)}` }) }],
+    [`${caja} .rd-icono[data-variante="dot"]`, { 'border-radius': '50%', background: fill !== undefined ? css(fill) : 'currentColor', ...(border !== undefined && { border: `1px solid ${css(border)}` }) }],
   ];
-  return reglas;
 }
 
-/** Estilo de texto (`text`) de cada Slot que el Tema lo declara; solo pinta, no cambia el espacio reservado. */
-function reglasDeTexto(estilo: Estilo): Array<[string, Declaraciones]> {
-  return Object.entries(estilo.pintura.nodo.textos).map(([slot, texto]): [string, Declaraciones] => {
-    const { weight, color, style, transform } = texto.props;
-    return [
-      `& .rd-slot[data-slot="${slot}"]`,
-      {
-        'font-weight': css(weight),
-        'font-style': css(style),
-        'text-transform': transform === 'uppercase' ? 'uppercase' : 'none',
-        ...(color !== undefined && { color: css(color) }),
-      },
+/** Diametro del punto del titulo en em; el resto de `PUNTO_DE_TITULO_EM` es la separacion con el texto. */
+const DIAMETRO_DE_PUNTO_EM = 0.55;
+
+/**
+ * Estilo de texto (`text`) de cada Slot de un elemento que el Tema lo declara. Es pintura: el tamano, la separacion entre
+ * letras y el chip (relleno, borde, margen y punto) se midieron con `textoDeTitulo` y las Metricas, no cambian el espacio.
+ */
+function reglasDeTexto(estilo: Estilo, caja: string, textos: PinturaDeNodo['textos']): Array<[string, Declaraciones]> {
+  return Object.entries(textos).flatMap(([slot, texto]): Array<[string, Declaraciones]> => {
+    if (texto.tipo !== 'text') return [];
+    const { weight, color, style, transform, size, tracking, alpha, fill, border, radius, pad, dot } = texto.props;
+    const selector = `${caja} .rd-slot[data-slot="${slot}"]`;
+    const tinta = color === undefined ? 'currentColor' : css(color);
+    const reglas: Array<[string, Declaraciones]> = [
+      [
+        selector,
+        {
+          'font-weight': css(weight),
+          'font-style': css(style),
+          'text-transform': transform === 'uppercase' ? 'uppercase' : 'none',
+          ...(Number(size) !== 1 && { 'font-size': px(estilo.metricas.fontSize * Number(size)) }),
+          ...(Number(tracking) > 0 && { 'letter-spacing': `${num(Number(tracking))}em` }),
+          ...(Number(alpha) < 1 ? { color: `color-mix(in srgb, ${tinta} ${num(Number(alpha) * 100)}%, transparent)` } : color !== undefined && { color: css(color) }),
+          ...(fill !== undefined && { background: css(fill) }),
+          ...(border !== undefined && { border: `1px solid ${css(border)}` }),
+          ...((fill !== undefined || border !== undefined || Number(radius) > 0) && { 'border-radius': px(radius) }),
+          ...(Number(pad) > 0 && { 'padding-left': px(pad), 'padding-right': px(pad) }),
+        },
+      ],
     ];
+    if (dot !== undefined) {
+      reglas.push([
+        `${selector}::before`,
+        { content: '""', display: 'inline-block', width: `${DIAMETRO_DE_PUNTO_EM}em`, height: `${DIAMETRO_DE_PUNTO_EM}em`, 'margin-right': `${num(PUNTO_DE_TITULO_EM - DIAMETRO_DE_PUNTO_EM)}em`, 'border-radius': '50%', 'vertical-align': 'middle', background: css(dot) },
+      ]);
+    }
+    return reglas;
   });
 }
 
