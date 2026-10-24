@@ -27,8 +27,10 @@ export const CATALOGO_DE_EFECTOS = {
   sketch: { familia: 'filtro', afectaMetricas: false, propiedades: { roughness: num(0, 20, 2), frequency: num(0.001, 0.5, 0.03) } },
   // Giro sembrado de la caja entera, con tope de 3 grados.
   tilt: { familia: 'decoracion', afectaMetricas: false, propiedades: { degrees: num(0, 3, 1) } },
-  // Cinta adhesiva centrada sobre el borde superior; sobresale de la caja.
-  tape: { familia: 'decoracion', afectaMetricas: false, propiedades: { color, width: num(8, 200, 48), height: num(4, 60, 16) } },
+  // Cinta adhesiva centrada sobre el borde superior; sobresale de la caja. Sin `angle`, ladeada con la semilla del elemento.
+  tape: { familia: 'decoracion', afectaMetricas: false, propiedades: { color, width: num(8, 200, 48), height: num(4, 60, 16), angle: { tipo: 'numero', min: -15, max: 15, opcional: true } } },
+  // Pines: dos peines (arriba y abajo) que sobresalen `length` px de la caja, dientes de `width` px cada `step` px y `margin` px libres a los lados.
+  pins: { familia: 'decoracion', afectaMetricas: false, propiedades: { color, width: num(1, 40, 4), step: num(2, 100, 11), length: num(1, 40, 6), margin: num(0, 200, 10) } },
   // Esquina superior derecha doblada: el triangulo de fuera toma el fondo de pagina, el de dentro `color`; `shadow`, sombra dura opcional.
   fold: { familia: 'decoracion', afectaMetricas: false, propiedades: { color, size: num(4, 60, 14), shadow: { tipo: 'color', opcional: true } } },
   // Aro exterior separado del borde (outline); sobresale de la caja.

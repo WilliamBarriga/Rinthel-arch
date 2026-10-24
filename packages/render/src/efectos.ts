@@ -22,7 +22,7 @@ import type { Estilo } from './estilo';
 
 type Declaraciones = Record<string, string>;
 type Props = CapaPintada['props'];
-type NombreDeEfecto = Extract<NombreDePrimitiva, 'shadow' | 'glow' | 'glass' | 'sketch' | 'tilt' | 'tape' | 'ring' | 'fold'>;
+type NombreDeEfecto = Extract<NombreDePrimitiva, 'shadow' | 'glow' | 'glass' | 'sketch' | 'tilt' | 'tape' | 'ring' | 'fold' | 'pins'>;
 
 const px = (valor: number | string | undefined): string => `${num(Number(valor))}px`;
 const css = (valor: number | string | undefined): string => limpiarValorCss(String(valor));
@@ -38,6 +38,7 @@ export const PINTORES_DE_EFECTOS: { readonly [P in NombreDeEfecto]: (props: Prop
   tilt: () => ({}),
   tape: () => ({}),
   fold: () => ({}),
+  pins: () => ({}),
 };
 
 /** Lo que los efectos por elemento anaden a la caja de un Nodo o Grupo. */
@@ -54,10 +55,13 @@ export interface EfectosDeElemento {
 
 const SIN_EFECTOS: EfectosDeElemento = { caja: '', nodo: '', debajo: [], encima: [] };
 
+/** Primitivas que se pintan por elemento (con su semilla o como hijos propios), no en la hoja. */
+const POR_ELEMENTO: ReadonlySet<string> = new Set<NombreDeEfecto>(['sketch', 'tilt', 'tape', 'fold', 'pins']);
+
 /** Efectos que dependen del elemento: semilla = id del elemento + nombre de Capa (+ `seed N` del Tema). */
 export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo, 'capas'>, id: string): EfectosDeElemento {
   const semillaDelTema = estilo.pintura.semilla;
-  if (!capas.some((c) => c.tipo === 'sketch' || c.tipo === 'tilt' || c.tipo === 'tape' || c.tipo === 'fold')) return SIN_EFECTOS;
+  if (!capas.some((c) => POR_ELEMENTO.has(c.tipo))) return SIN_EFECTOS;
   const resultado: EfectosDeElemento = { caja: '', nodo: '', debajo: [], encima: [] };
   for (const capa of capas) {
     const semilla = semillaDeCapa(id, capa.nombre, semillaDelTema);
@@ -71,6 +75,8 @@ export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo,
       (capa.encima === true ? resultado.encima : resultado.debajo).push(cinta(capa.props, semilla));
     } else if (capa.tipo === 'fold') {
       resultado.encima.push(doblez(capa.props, estilo.fondo, anchoDeBorde(capas)));
+    } else if (capa.tipo === 'pins') {
+      (capa.encima === true ? resultado.encima : resultado.debajo).push(pines(capa.props));
     }
   }
   return resultado;
@@ -113,10 +119,24 @@ function doblez(props: Props, fondo: string, borde: number): Elemento {
   };
 }
 
-/** Cinta adhesiva centrada sobre el borde superior, ladeada hasta 3 grados con el PRNG de su Capa. */
+/** Dos peines, arriba y abajo, fuera de la caja: un solo elemento con el mismo patron en sus dos franjas. */
+function pines(props: Props): Elemento {
+  const largo = px(props['length']);
+  const ancho = px(props['width']);
+  const peine = `repeating-linear-gradient(90deg,${css(props['color'])} 0 ${ancho},transparent ${ancho} ${px(props['step'])})`;
+  return {
+    tag: 'div',
+    attrs: {
+      class: 'rd-pines',
+      style: `left:${px(props['margin'])};right:${px(props['margin'])};top:-${largo};bottom:-${largo};background-image:${peine},${peine};background-size:100% ${largo},100% ${largo};background-position:0 0,0 100%;`,
+    },
+  };
+}
+
+/** Cinta adhesiva centrada sobre el borde superior: `angle` fijo o, sin el, ladeada hasta 3 grados con el PRNG de su Capa. */
 function cinta(props: Props, semilla: number): Elemento {
   const alto = Number(props['height']);
-  const giro = num(giroDeCapa(semilla, 3));
+  const giro = num(props['angle'] === undefined ? giroDeCapa(semilla, 3) : Number(props['angle']));
   return {
     tag: 'div',
     attrs: {

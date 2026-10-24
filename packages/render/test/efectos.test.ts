@@ -133,4 +133,27 @@ describe('decoracion y desbordes', () => {
     expect(propiedad(doblez, 'border-color')).toBe(`transparent ${TEMA_NEUTRO.tokens.background} #2563eb transparent`);
     expect(propiedad(doblez, 'box-shadow')).toBe('-2px 2px 0 #6b7280');
   });
+
+  it('los pines son dos peines del color de la Capa que sobresalen por arriba y por abajo, con margen lateral', async () => {
+    const html = await dibujar(conCapas([capa('patas', 'pins', { color: 'gray', width: 4, step: 11, length: 6, margin: 10 })]));
+    const pines = etiquetaCon(html.slice(html.indexOf('data-id="db"')), 'class="rd-pines"');
+    const peine = 'repeating-linear-gradient(90deg,#6b7280 0 4px,transparent 4px 11px)';
+
+    expect(propiedad(pines, 'left')).toBe('10px');
+    expect(propiedad(pines, 'right')).toBe('10px');
+    expect(propiedad(pines, 'top')).toBe('-6px');
+    expect(propiedad(pines, 'bottom')).toBe('-6px');
+    expect(propiedad(pines, 'background-image')).toBe(`${peine},${peine}`);
+    expect(propiedad(pines, 'background-size')).toBe('100% 6px,100% 6px');
+    expect(propiedad(pines, 'background-position')).toBe('0 0,0 100%');
+    expect(hojaDe(html)).toMatch(/\.rd-pines\{position:absolute;[^}]*background-repeat:no-repeat/);
+  });
+
+  it('la cinta con angle se gira ese angulo fijo, igual en todos los elementos', async () => {
+    const html = await dibujar(conCapas([capa('cinta', 'tape', { color: 'blue/0.5', angle: -4 })]));
+
+    expect(etiquetaCon(html.slice(html.indexOf('data-id="db"')), 'class="rd-cinta"')).toContain('rotate(-4deg)');
+    expect(etiquetaCon(html.slice(html.indexOf('data-id="a.api"')), 'class="rd-cinta"')).toContain('rotate(-4deg)');
+  });
 });
+

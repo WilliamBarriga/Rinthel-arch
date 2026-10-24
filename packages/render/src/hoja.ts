@@ -136,6 +136,7 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     [CAJAS, { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'auto' }],
     ...ELEMENTOS.flatMap((clave) => reglasDeElemento(estilo, clave)),
     ['& .rd-cinta', { position: 'absolute', 'pointer-events': 'none' }],
+    ['& .rd-pines', { position: 'absolute', 'pointer-events': 'none', 'background-repeat': 'no-repeat' }],
     ['& .rd-doblez', { position: 'absolute', width: '0', height: '0', 'border-style': 'solid', 'pointer-events': 'none' }],
     ['& .rd-defs', { position: 'absolute', 'pointer-events': 'none' }],
     // Capa `code`: contenedor de tamano fijo (el de la caja, en linea); el componente no puede cambiarlo.
