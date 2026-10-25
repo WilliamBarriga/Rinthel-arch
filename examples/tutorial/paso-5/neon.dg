@@ -1,0 +1,44 @@
+// Paso 5 (opcional): un Tema sin padre. Todo lo que no declaras no se dibuja: aqui escribimos las Capas de Nodo, Grupo, Arista y fondo.
+theme neon {
+  palette {
+    fondo "#13001f"  texto "#fdf4ff"  rosa "#ff2bd6"  cian "#22e4ff"
+    blue "#22e4ff"  purple "#b36bff"  green "#3dffb5"  amber "#ffb13d"  red "#ff2b6a"  gray "#c9a6ff"
+  }
+  fonts { body "system-ui"  mono "ui-monospace"  fallback "sans-serif" }
+  tokens { background "#13001f"  foreground "#fdf4ff"  border "#ff2bd6" }
+  page {
+    layer rejilla grid { color rosa/0.10  size 44 }
+    fixed
+  }
+  node {
+    layer glow glow { color rosa/0.55  radius 18 }
+    layer forma rect { radius 12 }
+    layer relleno gradient { from fondo  to COLOR/0.25  angle 160 }
+    layer borde border { color rosa  width 2 }
+    slots column min-width 160 slack 28 {
+      row gap 10 pad 14 min-height 50 {
+        icon { variant dot  side 18 }
+        column { title { weight 700 }  badge { alpha 0.6  transform uppercase  size 0.66  tracking 0.18 } }
+        counter { fill rosa  border cian }
+      }
+      attrs
+    }
+    type externo { layer glow { color cian/0.4  radius 12 }  layer borde dashed { color cian } }
+    state hover { layer glow { color cian/0.8  radius 28 }  transition 140ms ease-out }
+    state en-ruta { layer glow { motion aura 2s ease-in-out intensity 0.6 } }
+    enter fundido 300ms
+  }
+  group {
+    layer forma rect { radius 18 }
+    layer relleno solid { color cian/0.04 }
+    layer borde border { color cian/0.5 }
+    slots row pad 12 pad-y 9 { title { transform uppercase  size 0.75  tracking 0.18 } }
+    padding 12 22 22 22
+  }
+  edge {
+    layer halo line { color rosa/0.18  width 8  corner round  radius 14 }
+    layer linea line { color cian  width 1.8  corner round  radius 14 }
+    layer flujo line over { color texto  width 1.8  motion flujo 2s }
+    end arrow { size 10  color cian }
+  }
+}

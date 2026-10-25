@@ -13,13 +13,13 @@ specification {
 // dos parches por Tipo (ADR 0008): el paquete lleva una barra de su color a la izquierda y el externo, borde discontinuo.
 theme diagrams extends neutral-dark {
   fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono"  fallback "sans-serif" }
-  node { type paquete { use acento }  type externo { use discontinuo } }
+  node { type paquete { use barra-paquete }  type externo { use borde-discontinuo } }
 }
 
 theme diagrams-claro extends neutral {
   fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono"  fallback "sans-serif" }
-  node { type paquete { use acento }  type externo { use discontinuo } }
+  node { type paquete { use barra-paquete }  type externo { use borde-discontinuo } }
 }
 
-part acento { layer acento shadow after borde { color COLOR  x 3  y 0  inset 1 } }
-part discontinuo { layer relleno { color fondo }  layer borde dashed { color marco } }
+part barra-paquete { layer acento shadow after borde { color COLOR  x 3  y 0  inset 1 } }
+part borde-discontinuo { layer relleno { color fondo }  layer borde dashed { color marco } }

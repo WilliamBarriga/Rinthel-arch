@@ -8,7 +8,9 @@ node packages/cli/dist/bin.js dev --workspace examples/temas/galeria
 
 Cambia de Vista para comparar. El Modelo cubre todos los Tipos, un Grupo abierto (`plataforma`) y uno colapsado (`persistencia`), Aristas con y sin etiqueta, Atributos y un Nodo por estado (grupo `estados`: pasa el raton, selecciona, navega con teclado).
 
-## Comparar con el prototipo
+## Comparar con el prototipo (uso interno de mantenedores)
+
+Esta seccion es para quien mantiene los Temas: necesita las ramas `prototype/*` del repo y no hace falta para usar la galeria. Para ver la galeria o capturar un Tema basta `dev` (arriba) y `pnpm docs:capturas`.
 
 Cada Tema tiene una Vista de referencia, `<tema>-referencia`, que equivale a la Vista `abierto` del prototipo aprobado (rama `prototype/render-hibrido`): mismos Nodos, Grupos abiertos (`render`, `sesion`, `layout`), Grupos colapsados y Aristas. Su Modelo vive en `referencia.dg`, con los Tipos del prototipo (`paquete`, `modulo`, `artefacto`, mas `actor` y `externo`), bajo el Grupo `referencia`, y las Vistas de cobertura lo excluyen.
 

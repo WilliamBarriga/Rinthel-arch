@@ -1,0 +1,62 @@
+// Contraste: actor, almacen, artefacto, cola, dominio, modulo, nota, paquete, servicio
+// Solo color: modulo/artefacto, paquete/artefacto, paquete/modulo
+// Deliberado, como en el prototipo: sin insignia ni glifo, paquete, modulo y artefacto solo cambian de color, y el borde blanco/0.2 de la pastilla es decorativo (la leen su glow y su tinte).
+// Chip de vidrio (estilo Raycast/Arc): pastilla con glow, vidrio real (backdrop-filter) y brillo superior.
+theme glass-chip {
+  palette {
+    fondo "#0a0a14"  texto "#eef0ff"  blanco "#ffffff"  profundo "#1b1850"
+    blue "#818cf8"  purple "#c084fc"  green "#2dd4bf"  amber "#fbbf24"  red "#fb7185"  gray "#94a3b8"
+  }
+  fonts { body "Inter"  mono "JetBrains Mono"  fallback "sans-serif" }
+  tokens { background "#0a0a14"  foreground "#eef0ff"  border "#94a3b8" }
+  page {
+    layer luz radial { from profundo  to fondo  x 25  y 0 }
+    fixed
+  }
+  node {
+    layer glow glow { color COLOR/0.35  radius 14 }
+    layer forma pill
+    layer vidrio glass { blur 10  saturate 100 }
+    layer tinte gradient { from COLOR/0.30  to COLOR/0.07  angle 135 }
+    layer borde border { color blanco/0.2 }
+    layer brillo gradient over { from blanco/0.10  to blanco/0  angle 180 }
+    // Punto de color sobre su aro, el titulo y, en un Grupo cerrado, el contador.
+    slots column min-width 130 slack 12 {
+      row gap 10 pad 14 pad-y 0 min-height 40 {
+        icon { variant dot  side 18  ring COLOR/0.25 }
+        title { weight 500  text-align start  leading 1.25 }
+        counter { fill COLOR/0.35  border blanco/0.25 }
+      }
+      attrs
+    }
+    type externo { layer glow none  layer tinte solid { color blanco/0.04 }  layer borde dashed { color blanco/0.25 } }
+    type actor { layer halo border before glow { color COLOR/0.4  offset -4 -4  grow 8 } }
+    state hover { layer glow { color COLOR/0.7  radius 22 }  transition 160ms ease-out }
+    state en-ruta { layer glow { color COLOR  radius 26 } }
+    state atenuado { layer glow none }
+  }
+  group {
+    layer forma rect { radius 24 }
+    layer vidrio glass { blur 4  saturate 100 }
+    layer tinte solid { color COLOR/0.08 }
+    layer borde border { color blanco/0.16 }
+    slots row pad 12 pad-y 9 { title { size 0.85  weight 600  fill COLOR/0.2  border COLOR/0.5  radius 50  pad 10  dot COLOR } }
+    padding 9 22 22 22
+    // Cerrado es la pastilla del Nodo con el borde del color del Tipo.
+    state collapsed {
+      layer glow glow before forma { color COLOR/0.35  radius 14 }
+      layer forma pill
+      layer vidrio { blur 10 }
+      layer tinte gradient { from COLOR/0.30  to COLOR/0.07  angle 135 }
+      layer borde { color COLOR/0.6 }
+      layer brillo gradient after borde over { from blanco/0.10  to blanco/0  angle 180 }
+    }
+  }
+  edge {
+    layer halo line { color texto/0.08  width 6  corner round  radius 20 }
+    layer linea line { color texto/0.55  width 1.5  corner round  radius 20 }
+    start hollow { size 7  color texto/0.7 }
+    end arrow { size 10  color texto/0.55 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 50  fill fondo  border texto/0.22  color texto/0.8 }
+  }
+}

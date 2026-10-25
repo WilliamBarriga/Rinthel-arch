@@ -6,11 +6,13 @@ Workspace de ejemplo en el que el sistema se documenta a si mismo: paquetes del 
 
 | Archivo | Que mapea |
 | --- | --- |
-| `especificacion.dg` | Tipos de nodo (actor, paquete, modulo, artefacto, salida, externo...) y Temas `diagrams` (oscuro) y `diagrams-claro`: extienden los incorporados `neutral-dark` y `neutral` con las fuentes del Workspace y dos parches por Tipo |
+| `especificacion.dg` | Tipos de nodo (actor, paquete, modulo, artefacto, salida, externo...) y Temas `diagrams` (oscuro) y `diagrams-claro`: extienden los incorporados `neutral-dark` y `neutral` con las fuentes del Workspace y dos parches por Tipo (las Partes `barra-paquete` y `borde-discontinuo`) |
 | `sistema.dg` | Los ocho paquetes con sus modulos y las librerias externas |
 | `conexiones.dg` | Dependencias entre paquetes y entre modulos (las Aristas solo se declaran en `model`, con ids cualificados) |
 | `vistas.dg` | Vista de paquetes con drill-down a cada paquete, la Vista `abierto` (render, sesion y layout abiertos; la Vista `abierto` del prototipo aprobado) y una Vista de flujo con Pasos: edicion |
-| `fuentes/` | DejaVu Sans y Mono (licencia en `LICENCIA-DejaVu.txt`) |
+| `temas/` | Los 14 Temas aprobados (copia de `examples/temas/galeria/`; una prueba exige que sean identicos) |
+| `vistas-temas.dg` | Una Vista `abierto-<tema>` por Tema: el mismo diagrama de la Vista `abierto` con cada estetica. Sus capturas estan en el README de la raiz |
+| `fuentes/` | DejaVu Sans y Mono (licencia en `LICENCIA-DejaVu.txt`) y las familias de los 14 Temas, en `woff2` (licencias `OFL-<familia>.txt`) |
 
 ## Uso
 
@@ -20,7 +22,7 @@ node packages/cli/dist/bin.js build    --workspace examples/rinthel-arch
 node packages/cli/dist/bin.js dev      --workspace examples/rinthel-arch
 ```
 
-Para ver una Vista con otro Tema sin tocar el ejemplo (necesita `pnpm build`):
+Para regenerar las capturas del README: `pnpm docs:capturas`. Para ver una Vista con otro Tema sin tocar el ejemplo (necesita `pnpm build`):
 
 ```
 pnpm capturas --workspace examples/rinthel-arch --vista abierto --prototipo A neutral neutral-dark

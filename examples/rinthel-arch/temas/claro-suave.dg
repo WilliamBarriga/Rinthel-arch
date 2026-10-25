@@ -1,0 +1,57 @@
+// Contraste: actor, almacen, artefacto, cola, dominio, modulo, nota, paquete, servicio
+// Deliberado, como en el prototipo: el borde de la tarjeta (texto/0.06) es un filo; la tarjeta se lee por su blanco y sus sombras.
+// Claro suave (estilo Stripe/Apple): tarjetas blancas con sombras en capas y Aristas redondeadas.
+theme claro-suave {
+  palette {
+    fondo "#f5f6fa"  texto "#0f172a"  blanco "#ffffff"
+    blue "#4f46e5"  purple "#9333ea"  green "#059669"  amber "#d97706"  red "#e11d48"  gray "#64748b"
+  }
+  fonts { body "Inter"  mono "JetBrains Mono"  fallback "sans-serif" }
+  tokens { background "#f5f6fa"  foreground "#0f172a"  border "#64748b" }
+  page {
+    layer luz radial { from blue/0.10  to fondo/0  x 15  y 10 }
+    fixed
+  }
+  node {
+    layer sombra-lejana shadow { color texto/0.08  x 0  y 10  blur 28 }
+    layer sombra-cercana shadow { color texto/0.06  x 0  y 1  blur 2 }
+    layer forma rect { radius 16 }
+    layer relleno solid { color blanco }
+    layer borde border { color texto/0.06 }
+    // Icono en caja tenue del color del Tipo, titulo con la insignia debajo y, en un Grupo cerrado, el contador.
+    slots column min-width 180 slack 30 {
+      row gap 12 pad 12 pad-y 0 min-height 60 {
+        icon { variant box  side 34  radius 10  fill COLOR/0.1  glyph 16 }
+        column { title { weight 600  text-align start  leading 1.25 }  badge { alpha 0.5  tracking 0.02 } }
+        counter { fill COLOR/0.1 }
+      }
+      attrs
+    }
+    type externo { layer sombra-lejana none  layer sombra-cercana none  layer relleno { color fondo }  layer borde dashed { color texto/0.15 } }
+    state hover { layer sombra-lejana { color COLOR/0.25  y 18  blur 40 }  layer sombra-cercana { y 2  blur 4 }  transition 180ms ease-out }
+    state en-ruta { layer borde { color COLOR  width 2 } }
+    state atenuado { layer sombra-lejana none }
+  }
+  group {
+    layer forma rect { radius 22 }
+    layer relleno solid { color COLOR/0.05 }
+    slots row pad 12 pad-y 9 { title { size 0.85  weight 600  fill COLOR/0.2  border COLOR/0.5  radius 50  pad 10 } }
+    padding 13 24 24 24
+    // Cerrado es la tarjeta del Nodo con otra hoja desplazada debajo.
+    state collapsed {
+      layer hoja-sombra shadow before forma { color texto/0.06  x 0  y 4  blur 12  offset 6 6 }
+      layer hoja solid before forma { color blanco  offset 6 6 }
+      layer hoja-borde border before forma { color texto/0.06  offset 6 6 }
+      layer sombra-lejana shadow before forma { color texto/0.08  x 0  y 10  blur 28 }
+      layer sombra-cercana shadow before forma { color texto/0.06  x 0  y 1  blur 2 }
+      layer forma { radius 16 }
+      layer relleno { color blanco }
+      layer borde border after relleno { color texto/0.06 }
+    }
+  }
+  edge {
+    layer linea line { color texto/0.22  width 1.5  corner round  radius 14 }
+    end arrow { size 10 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 50  fill blanco  border texto/0.08  color texto/0.8 }
+  }
+}

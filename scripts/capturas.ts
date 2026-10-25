@@ -6,6 +6,8 @@
  * Otro Workspace: `pnpm capturas --workspace <ruta> --vista <id> [--prototipo <variante>] <tema>...` pinta esa Vista
  *   con cada Tema (del Workspace o incorporado) sobre una copia temporal (`capturas/workspace.ts`) y, con
  *   `--prototipo`, la pone junto a la Vista `abierto` de esa variante del prototipo (p. ej. `A`, la de soft-card).
+ * Para la documentacion (`pnpm docs:capturas`): `--salida <dir>` escribe `<prefijo><tema>.png` en ese directorio (`--prefijo`,
+ *   `--ancho`/`--alto` para el encuadre (1600x900 por defecto), `--escala` para el deviceScaleFactor, 2 por defecto), sin pagina de comparacion, y termina.
  * Salida: PNG y una pagina de comparacion en `$CAPTURAS_DIR` (por defecto `/tmp/rinthel-capturas`, fuera del repo),
  * servida por un mini server local que sigue vivo al terminar; imprime `http://localhost:<puerto>/salida/`.
  * Chromium: `$CHROMIUM_PATH` o la cache de Playwright (`~/.cache/ms-playwright/chromium-*`). Un solo motor fijo para
@@ -45,6 +47,8 @@ interface Pedido {
   titulo: string;
   /** Nombre del lado propio en archivos y pagina (`galeria` o `workspace`). */
   lado: string;
+  /** Modo documentacion (`--salida`): PNG `<prefijo><tema>.png` en `dir`, sin pagina de comparacion. */
+  docs?: { dir: string; prefijo: string; escala: number; encuadre: { width: number; height: number } };
 }
 
 const USO = `Uso: pnpm capturas <tema>... [${VISTAS.join('|')}]  o  pnpm capturas --todos [vista]
@@ -53,10 +57,14 @@ const USO = `Uso: pnpm capturas <tema>... [${VISTAS.join('|')}]  o  pnpm captura
 function leerArgumentos(): Pedido {
   const { values: v, positionals: posicionales } = parseArgs({
     args: process.argv.slice(2),
-    options: { todos: { type: 'boolean', default: false }, workspace: { type: 'string' }, vista: { type: 'string' }, prototipo: { type: 'string' } },
+    options: { todos: { type: 'boolean', default: false }, workspace: { type: 'string' }, salida: { type: 'string' }, prefijo: { type: 'string' }, escala: { type: 'string' }, ancho: { type: 'string' }, alto: { type: 'string' }, vista: { type: 'string' }, prototipo: { type: 'string' } },
     allowPositionals: true,
   });
-  if (v.workspace !== undefined) return pedidoDeWorkspace(v.workspace, v.vista, v.prototipo, posicionales);
+  if (v.workspace !== undefined) {
+    const pedido = pedidoDeWorkspace(v.workspace, v.vista, v.prototipo, posicionales);
+    if (v.salida !== undefined) pedido.docs = { dir: resolve(REPO, v.salida), prefijo: v.prefijo ?? '', escala: Number(v.escala ?? 2), encuadre: { width: Number(v.ancho ?? VIEWPORT.width), height: Number(v.alto ?? VIEWPORT.height) } };
+    return pedido;
+  }
   if (v.vista !== undefined || v.prototipo !== undefined) return fallar(`--vista y --prototipo van con --workspace.\n${USO}`);
   // La Vista, si se da, va al final: `pnpm capturas soft-card glass-chip cobertura`.
   const vista = VISTAS.includes(posicionales[posicionales.length - 1] as Vista) ? (posicionales.pop() as Vista) : 'abierto';
@@ -99,8 +107,8 @@ function rutaDeChromium(): string {
   return join(cache, ultima, 'chrome-linux64/chrome');
 }
 
-async function capturarGaleria(navegador: Browser, url: string, vista: string, destino: string): Promise<void> {
-  const contexto = await navegador.newContext({ viewport: VIEWPORT, deviceScaleFactor: 2, reducedMotion: 'reduce' });
+async function capturarGaleria(navegador: Browser, url: string, vista: string, destino: string, escala = 2, encuadre = VIEWPORT): Promise<void> {
+  const contexto = await navegador.newContext({ viewport: encuadre, deviceScaleFactor: escala, reducedMotion: 'reduce' });
   const pagina = await contexto.newPage();
   const listo = '.rd-vista[data-layout="listo"]';
   await pagina.goto(`${url}#p=${encodeURIComponent(vista)}`);
@@ -146,7 +154,7 @@ ${secciones}`;
 async function principal(): Promise<void> {
   const pedido = leerArgumentos();
   const cache = process.env['CAPTURAS_DIR'] ?? '/tmp/rinthel-capturas';
-  const salida = join(cache, 'salida');
+  const salida = pedido.docs?.dir ?? join(cache, 'salida');
   mkdirSync(salida, { recursive: true });
 
   const prototipo = pedido.temas.some((t) => pedido.varianteDe(t) !== undefined) ? prepararPrototipo(cache, REPO) : undefined;
@@ -155,7 +163,8 @@ async function principal(): Promise<void> {
   const navegador = await chromium.launch({ executablePath: rutaDeChromium(), headless: true });
   try {
     for (const tema of pedido.temas) {
-      await capturarGaleria(navegador, galeria.url, pedido.vistaDe(tema), join(salida, `${tema}-${pedido.lado}.png`));
+      const archivo = pedido.docs === undefined ? `${tema}-${pedido.lado}.png` : `${pedido.docs.prefijo}${tema}.png`;
+      await capturarGaleria(navegador, galeria.url, pedido.vistaDe(tema), join(salida, archivo), pedido.docs?.escala, pedido.docs?.encuadre);
       const variante = pedido.varianteDe(tema);
       if (prototipo !== undefined && variante !== undefined) {
         const rutaDelPrototipo = `${origen}/${prototipo.directorio.split('/').pop()}/${prototipo.pagina}`;
@@ -167,6 +176,7 @@ async function principal(): Promise<void> {
     await navegador.close();
     galeria.detener();
   }
+  if (pedido.docs !== undefined) return process.exit(0);
   writeFileSync(join(salida, 'index.html'), paginaDeComparacion(pedido));
   console.log(`\nComparacion: ${origen}/salida/`);
 }

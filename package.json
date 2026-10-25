@@ -16,6 +16,7 @@
     "bench": "pnpm build && node bench/ejecutar.ts",
     "check:emojis": "node scripts/check-emojis.ts",
     "capturas": "node scripts/capturas.ts",
+    "docs:capturas": "node scripts/docs-capturas.ts",
     "docs:catalogo": "node scripts/generar-referencia-catalogo.ts",
     "prepare": "git config core.hooksPath .githooks"
   },
