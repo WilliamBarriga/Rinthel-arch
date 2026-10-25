@@ -1,78 +1,373 @@
-// Los ocho paquetes del monorepo, sus modulos principales y las librerias externas que usan (ADR 0004).
+// Los ocho paquetes del monorepo con sus modulos reales (ADR 0004), los actores, los artefactos y las librerias externas.
+// Un `modulo` por archivo (o grupo de archivos) de `packages/<paquete>/src`; las dependencias estan en `conexiones.dg`.
 model {
-  actor autor "Autor" "Escribe archivos .dg y mira los diagramas"
-  actor agente "Agente" "Valida, consulta y edita por CLI"
+  actor autor "Autor" "Escribe archivos .dg y mira los diagramas en el visor"
+  actor agente "Agente" "Valida, consulta y edita por CLI con salida JSON estable"
 
-  artefacto workspace "Workspace" "Carpeta de archivos .dg del Proyecto documentado"
-  artefacto salida-derivada ".diagrams/" "Salida derivada; no se versiona"
+  artefacto workspace "Workspace" "Carpeta de archivos .dg, Temas .tsx y fuentes del Proyecto documentado"
+  artefacto dg-tema-codigo "Tema de codigo (.tsx)" "Pintores propios del Workspace; exigen --trust-code"
+  artefacto fuentes-ws "Fuentes del Workspace" "woff2, woff, ttf y otf servidos bajo /fuentes"
+  salida salida-derivada ".diagrams/" "Salida derivada (SVG, HTML); no se versiona"
+  salida visor-html "Visor en el navegador" "Pagina, app.js y worker.js empaquetados por esbuild"
 
-  paquete canonico "canonico" "Esquema Zod, validacion y resolucion de Vistas" {
+  proceso servidor-dev "Servidor dev" "HTTP solo en 127.0.0.1, SSE y observador de disco"
+  proceso worker-layout "Web Worker de layout" "Relayout fuera del hilo de la interfaz"
+
+  paquete canonico "canonico" "Esquema Zod, validacion, resolucion de Vistas, Pasos, Pins y consultas; base sin dependencias internas" {
     source { path "packages/canonico/src" }
-    modulo can-esquema "esquema" "Fuente canonica (Zod)"
-    modulo can-validar "validar" "Issues con codigo y sugerencias"
-    modulo can-vistas "vistas" "Resolucion de include, exclude y depth"
-    modulo can-pasos "pasos" "Revelado paso a paso de Vistas flow"
-    modulo can-pin "pin" "Pin: posicion fijada por el autor"
-    modulo can-inspect "inspect" "Consultas sobre el Modelo"
+    modulo can-esquema "canonico/esquema" "Fuente canonica: Modelo, Vistas, Tema y Pasos como esquemas Zod" {
+      source { file "packages/canonico/src/esquema.ts" }
+    }
+    modulo can-codigos "canonico/codigos" "Catalogo estable de codigos E_ y W_ de los issues" {
+      source { file "packages/canonico/src/codigos.ts" }
+    }
+    modulo can-issue "canonico/issue" "Forma de un issue: codigo, severidad, sitio, hint y fix" {
+      source { file "packages/canonico/src/issue.ts" }
+    }
+    modulo can-sugerencias "canonico/sugerencias" "Candidatos por distancia de edicion para los hint y fix" {
+      source { file "packages/canonico/src/sugerencias.ts" }
+    }
+    modulo can-iconos "canonico/iconos" "Iconos validos para los Tipos de nodo" {
+      source { file "packages/canonico/src/iconos.ts" }
+    }
+    modulo can-validar "canonico/validar" "Validacion semantica del Modelo y las Vistas, con codigo y sugerencias" {
+      source { file "packages/canonico/src/validar.ts" }
+    }
+    modulo can-vistas "canonico/vistas" "Resolucion de include, exclude, depth, expanded y link a una Vista resuelta" {
+      source { file "packages/canonico/src/vistas.ts" }
+    }
+    modulo can-pasos "canonico/pasos" "Revelado acumulativo de Vistas flow: show y hide por Paso" {
+      source { file "packages/canonico/src/pasos.ts" }
+    }
+    modulo can-pin "canonico/pin" "Pin: posicion fijada por el autor, relativa al Grupo padre" {
+      source { file "packages/canonico/src/pin.ts" }
+    }
+    modulo can-edit "canonico/edit" "Forma de una edicion estructurada y su resultado" {
+      source { file "packages/canonico/src/edit.ts" }
+    }
+    modulo can-inspect "canonico/inspect" "Consultas sobre el Modelo: ids, vecinos y busqueda" {
+      source { file "packages/canonico/src/inspect.ts" }
+    }
+    modulo can-geometria "canonico/geometria" "Tipos de Geometria compartidos por layout, render y shell" {
+      source { file "packages/canonico/src/geometria.ts" }
+    }
+    modulo can-estado "canonico/estado" "EstadoDeDev y TipoDeCambio: lo que el servidor dev empuja al visor" {
+      source { file "packages/canonico/src/estado.ts" }
+    }
+    modulo can-salida "canonico/salida" "Esquemas de la salida JSON del CLI (contractVersion)" {
+      source { file "packages/canonico/src/salida.ts" }
+    }
   }
 
-  paquete tema "tema" "Catalogo de Primitivas y Slots, Estilo resuelto y colocacion de Slots" {
+  paquete tema "tema" "Catalogo de Primitivas, Slots, Movimientos y Efectos; Estilo resuelto y colocacion de Slots" {
     source { path "packages/tema/src" }
-    modulo tem-catalogo "catalogo" "Primitivas y Slots; validacion con sugerencias"
-    modulo tem-tema "tema" "Esquema estricto del Tema resuelto"
-    modulo tem-metricas "metricas" "Metricas derivadas de caja y Slots"
-    modulo tem-slots "slots" "Rectangulo de cada Slot"
-    modulo tem-estilo "estilo" "Estilo resuelto: Metricas y pintura"
+    modulo tem-catalogo "tema/catalogo" "Primitivas y Slots con rangos y defectos; validacion con sugerencias" {
+      source { file "packages/tema/src/catalogo.ts" }
+    }
+    modulo tem-catalogo-efectos "tema/catalogo-efectos" "Efectos del catalogo y su ambito (por elemento o global)" {
+      source { file "packages/tema/src/catalogo-efectos.ts" }
+    }
+    modulo tem-familias "tema/familias" "Una Familia por tipo de Primitiva: definicion de cada una" {
+      source { path "packages/tema/src/familias" }
+      modulo tem-fam-forma "tema/forma" "Formas del Nodo" { source { file "packages/tema/src/familias/forma.ts" } }
+      modulo tem-fam-relleno "tema/relleno" "Rellenos: solido, degradado, trama, stripe" { source { file "packages/tema/src/familias/relleno.ts" } }
+      modulo tem-fam-borde "tema/borde" "Bordes: solido, discontinuo, punteado" { source { file "packages/tema/src/familias/borde.ts" } }
+      modulo tem-fam-trazo "tema/trazo" "Trazos de las Aristas, incluido a mano alzada" { source { file "packages/tema/src/familias/trazo.ts" } }
+      modulo tem-fam-marcador "tema/marcador" "Puntas y marcadores de Arista" { source { file "packages/tema/src/familias/marcador.ts" } }
+      modulo tem-fam-texto "tema/texto" "Slots de texto: titulo, descripcion, etiquetas" { source { file "packages/tema/src/familias/texto.ts" } }
+      modulo tem-fam-codigo "tema/codigo" "Primitivas que delegan en un pintor de codigo" { source { file "packages/tema/src/familias/codigo.ts" } }
+    }
+    modulo tem-tema "tema/tema" "Esquema estricto del Tema resuelto: Paleta, tokens, Capas y Slots" {
+      source { file "packages/tema/src/tema.ts" }
+    }
+    modulo tem-parches "tema/parches" "Parches por Tipo y Parte: aplicacion sobre un Tema base" {
+      source { file "packages/tema/src/parches.ts" }
+    }
+    modulo tem-animacion "tema/animacion" "Movimientos y Efectos del Tema: duraciones, curvas y disparadores" {
+      source { file "packages/tema/src/animacion.ts" }
+    }
+    modulo tem-color "tema/color" "Conversion y mezcla de colores" {
+      source { file "packages/tema/src/color.ts" }
+    }
+    modulo tem-fuentes "tema/fuentes" "Familias tipograficas del Tema y su recurso de respaldo" {
+      source { file "packages/tema/src/fuentes.ts" }
+    }
+    modulo tem-medicion "tema/medicion" "Medidas de texto inyectables (canvas, estimador o tabla)" {
+      source { file "packages/tema/src/medicion.ts" }
+    }
+    modulo tem-contenido "tema/contenido" "Que texto lleva cada Slot de un Nodo" {
+      source { file "packages/tema/src/contenido.ts" }
+    }
+    modulo tem-disposicion "tema/disposicion" "Disposicion del contenido: columnas, alineacion y relleno" {
+      source { file "packages/tema/src/disposicion.ts" }
+    }
+    modulo tem-metricas "tema/metricas" "Metricas derivadas de caja, Slots y texto medido" {
+      source { file "packages/tema/src/metricas.ts" }
+    }
+    modulo tem-slots "tema/slots" "Rectangulo de cada Slot dentro de la caja del Nodo" {
+      source { file "packages/tema/src/slots.ts" }
+    }
+    modulo tem-textos-a-medir "tema/textos-a-medir" "Lista de textos que el layout debe medir antes de colocar" {
+      source { file "packages/tema/src/textos-a-medir.ts" }
+    }
+    modulo tem-estilo "tema/estilo" "Estilo resuelto: Metricas, pintura y animacion contra el Tema" {
+      source { file "packages/tema/src/estilo.ts" }
+    }
+    modulo tem-contraste "tema/contraste" "Avisos W_THEME_LOW_CONTRAST por relacion de contraste" {
+      source { file "packages/tema/src/contraste.ts" }
+    }
+    modulo tem-alto-contraste "tema/alto-contraste" "Variante de alto contraste de un Tema" {
+      source { file "packages/tema/src/alto-contraste.ts" }
+    }
+    modulo tem-codigo "tema/codigo" "Contrato del Tema de codigo (.tsx) y su carga confiada" {
+      source { file "packages/tema/src/codigo.ts" }
+    }
+    modulo tem-referencia "tema/referencia" "Genera docs/referencia-catalogo.md desde el catalogo" {
+      source { file "packages/tema/src/referencia.ts" }
+    }
+    modulo tem-semilla "tema/semilla" "Semilla determinista para el trazo a mano alzada" {
+      source { file "packages/tema/src/semilla.ts" }
+    }
   }
 
-  paquete dsl "dsl" "Texto a Fuente canonica; fusion del Workspace" {
+  paquete dsl "dsl" "Texto a Fuente canonica; fusion del Workspace y compilador de Temas" {
     source { path "packages/dsl/src" }
-    modulo dsl-gramatica "gramatica" "Gramatica Langium"
-    modulo dsl-compilar "compilar" "Archivos a Fuente canonica"
-    modulo dsl-temas "temas" "Compilador de Temas: paleta, tokens, Capas y Slots"
-    modulo dsl-ubicador "ubicador" "Posiciones en el texto fuente"
+    modulo dsl-gramatica "dsl/gramatica" "Gramatica Langium y parser generado" {
+      source { path "packages/dsl/src/gramatica" }
+    }
+    modulo dsl-compilar "dsl/compilar" "Archivos del Workspace a Fuente canonica, con issues de sintaxis" {
+      source { file "packages/dsl/src/compilar.ts" }
+    }
+    modulo dsl-incorporados "dsl/incorporados" "Temas incorporados: neutral y neutral-dark" {
+      source { file "packages/dsl/src/incorporados.ts" }
+    }
+    modulo dsl-temas "dsl/temas" "Compilador de Temas: extends, paleta, tokens y parches" {
+      source { file "packages/dsl/src/temas.ts" }
+    }
+    modulo dsl-temas-capas "dsl/temas-capas" "Capas pintadas del Tema" {
+      source { file "packages/dsl/src/temas-capas.ts" }
+    }
+    modulo dsl-temas-slots "dsl/temas-slots" "Slots y su colocacion en el DSL de Temas" {
+      source { file "packages/dsl/src/temas-slots.ts" }
+    }
+    modulo dsl-temas-animacion "dsl/temas-animacion" "Movimientos y Efectos en el DSL de Temas" {
+      source { file "packages/dsl/src/temas-animacion.ts" }
+    }
+    modulo dsl-temas-arista "dsl/temas-arista" "Trazo y marcadores de Arista en el DSL de Temas" {
+      source { file "packages/dsl/src/temas-arista.ts" }
+    }
+    modulo dsl-temas-pagina "dsl/temas-pagina" "Fondo de pagina del Tema" {
+      source { file "packages/dsl/src/temas-pagina.ts" }
+    }
+    modulo dsl-temas-comun "dsl/temas-comun" "Utilidades compartidas por los compiladores de Temas" {
+      source { file "packages/dsl/src/temas-comun.ts" }
+    }
+    modulo dsl-posiciones "dsl/posiciones" "Rangos de texto de cada nodo del AST" {
+      source { file "packages/dsl/src/posiciones.ts" }
+    }
+    modulo dsl-ubicador "dsl/ubicador" "Archivo y linea de cada Nodo, Arista, Vista y Pin en el texto fuente" {
+      source { file "packages/dsl/src/ubicador.ts" }
+    }
   }
 
-  paquete layout "layout" "ELK y Pin; geometria cacheada" {
+  paquete layout "layout" "ELK y Pin; geometria cacheada y claves de invalidacion" {
     source { path "packages/layout/src" }
-    modulo lay-layout "layout" "Vista a geometria"
-    modulo lay-indice "indice" "Indice de geometria"
+    modulo lay-layout "layout/layout" "Vista resuelta a Geometria con ELK (INCLUDE_CHILDREN), Pins y etiquetas de Arista" {
+      source { file "packages/layout/src/layout.ts" }
+    }
+    modulo lay-indice "layout/indice" "Indice de Geometria para localizar Nodos y Aristas" {
+      source { file "packages/layout/src/indice.ts" }
+    }
+    modulo lay-claves "layout/claves" "claveDeEstructura y claveDeLayout: cuando basta repintar y cuando relayout" {
+      source { file "packages/layout/src/index.ts" }
+    }
   }
 
-  paquete sesion "sesion" "Tuberia compilar, validar y calcular layout" {
+  paquete sesion "sesion" "Tuberia compilar, validar y calcular layout; nucleo puro de edicion" {
     source { path "packages/sesion/src" }
-    modulo ses-sesion "sesion" "diagnosticar, construir, geometria"
-    modulo ses-ediciones "ediciones" "Edicion estructurada del DSL"
-    modulo ses-intenciones "intenciones" "Intenciones, deshacer y rehacer"
+    modulo ses-sesion "sesion/sesion" "diagnosticar, construir y geometria, memoizando layout por Vista" {
+      source { file "packages/sesion/src/sesion.ts" }
+    }
+    modulo ses-ediciones "sesion/ediciones" "Edicion estructurada del DSL sobre rangos ubicados, con hash por archivo" {
+      source { file "packages/sesion/src/ediciones.ts" }
+    }
+    modulo ses-intenciones "sesion/intenciones" "Intenciones del autor (mover Pin, renombrar...) traducidas a ediciones" {
+      source { file "packages/sesion/src/intenciones.ts" }
+    }
+    modulo ses-aplicar "sesion/aplicar" "Aplica un resultado al Workspace y devuelve el texto nuevo" {
+      source { file "packages/sesion/src/aplicar.ts" }
+    }
+    modulo ses-historial "sesion/historial" "Historial de texto exacto para deshacer y rehacer (ADR 0007)" {
+      source { file "packages/sesion/src/index.ts" }
+    }
   }
 
-  paquete render "render" "SVG React puro" {
+  paquete render "render" "SVG React puro: Geometria y Estilo a elementos pintados" {
     source { path "packages/render/src" }
-    modulo ren-escena "escena" "Geometria a elementos"
-    modulo ren-estilo "estilo" "Estilo resuelto contra el Tema"
-    modulo ren-diagram "diagram" "Componente Diagram"
+    modulo ren-diagram "render/diagram" "Componente Diagram: Geometria y Tema a SVG" {
+      source { file "packages/render/src/diagram.tsx" }
+    }
+    modulo ren-limite "render/limite" "Limite de errores que aisla un pintor de codigo roto" {
+      source { file "packages/render/src/limite.tsx" }
+    }
+    modulo ren-escena "render/escena" "Geometria a lista de elementos ordenados por pila" {
+      source { file "packages/render/src/escena.ts" }
+    }
+    modulo ren-estilo "render/estilo" "Estilo resuelto contra el Tema, listo para pintar" {
+      source { file "packages/render/src/estilo.ts" }
+    }
+    modulo ren-hoja "render/hoja" "Hoja de estilo CSS derivada del Estilo (clases por elemento)" {
+      source { file "packages/render/src/hoja.ts" }
+    }
+    modulo ren-pintores "render/pintores" "Un pintor por Slot y Primitiva" {
+      source { file "packages/render/src/pintores.ts" }
+    }
+    modulo ren-pintura "render/pintura" "Pintores de forma, relleno, borde y pagina" {
+      source { path "packages/render/src/pintura" }
+      modulo ren-pin-comun "render/comun" "Reglas compartidas, como 'es borde'" { source { file "packages/render/src/pintura/comun.ts" } }
+      modulo ren-pin-forma "render/forma" "Trazado de la forma" { source { file "packages/render/src/pintura/forma.ts" } }
+      modulo ren-pin-relleno "render/relleno" "Rellenos y degradados" { source { file "packages/render/src/pintura/relleno.ts" } }
+      modulo ren-pin-borde "render/borde" "Bordes" { source { file "packages/render/src/pintura/borde.ts" } }
+      modulo ren-pin-pagina "render/pagina" "Fondo de pagina" { source { file "packages/render/src/pintura/pagina.ts" } }
+    }
+    modulo ren-aristas "render/aristas" "Trazado y etiquetas de Arista" {
+      source { file "packages/render/src/aristas.ts" }
+    }
+    modulo ren-efectos "render/efectos" "Efectos por elemento y globales" {
+      source { file "packages/render/src/efectos.ts" }
+    }
+    modulo ren-animacion "render/animacion" "Movimientos: transiciones y disparadores del Tema" {
+      source { file "packages/render/src/animacion.ts" }
+    }
+    modulo ren-pilas "render/pilas" "Orden de apilado de las Capas" {
+      source { file "packages/render/src/pilas.ts" }
+    }
+    modulo ren-elemento "render/elemento" "Elemento de escena: el tipo que produce escena y consume el SVG" {
+      source { file "packages/render/src/elemento.ts" }
+    }
+    modulo ren-codigo "render/codigo" "Puente al Tema de codigo (.tsx)" {
+      source { file "packages/render/src/codigo.ts" }
+    }
   }
 
-  paquete shell "shell" "Interaccion en el navegador" {
+  paquete shell "shell" "Interaccion en el navegador: camara, seleccion, arrastre, Pasos y colapso" {
     source { path "packages/shell/src" }
-    modulo sh-camara "camara" "Pan y zoom"
-    modulo sh-colapso "colapso" "Colapso de Grupos"
-    modulo sh-seleccion "seleccion" "Seleccion y arrastre de Pins"
-    modulo sh-worker "layout-en-worker" "Relayout en Worker"
+    modulo sh-vista "shell/vista-interactiva" "Componente que une camara, seleccion, arrastre, Pasos y navegacion" {
+      source { file "packages/shell/src/vista-interactiva.tsx" }
+    }
+    modulo sh-camara "shell/camara" "Pan y zoom con d3-zoom" {
+      source { file "packages/shell/src/camara.ts" }
+    }
+    modulo sh-viewport "shell/viewport" "Ventana visible y encuadre de la Vista" {
+      source { file "packages/shell/src/viewport.ts" }
+    }
+    modulo sh-zoom-semantico "shell/zoom-semantico" "Detalle segun el nivel de zoom" {
+      source { file "packages/shell/src/zoom-semantico.ts" }
+    }
+    modulo sh-colapso "shell/colapso" "Colapso y expansion de Grupos" {
+      source { file "packages/shell/src/colapso.ts" }
+    }
+    modulo sh-seleccion "shell/seleccion" "Seleccion de Nodos y Aristas" {
+      source { file "packages/shell/src/seleccion.ts" }
+    }
+    modulo sh-interaccion "shell/interaccion" "Maquina de gestos: clic, arrastre y teclado" {
+      source { file "packages/shell/src/interaccion.ts" }
+    }
+    modulo sh-arrastre "shell/arrastre" "Arrastre de un Nodo hasta un Pin" {
+      source { file "packages/shell/src/arrastre.ts" }
+    }
+    modulo sh-enviar-pin "shell/enviar-pin" "POST /api/pin al servidor dev" {
+      source { file "packages/shell/src/enviar-pin.ts" }
+    }
+    modulo sh-control-edicion "shell/control-de-edicion" "Edicion, deshacer y rehacer contra /api/edit" {
+      source { file "packages/shell/src/control-de-edicion.ts" }
+    }
+    modulo sh-navegacion "shell/navegacion" "Drill-down por link y migas" {
+      source { file "packages/shell/src/navegacion.tsx" }
+    }
+    modulo sh-pasos "shell/pasos" "Control de Pasos de una Vista flow" {
+      source { file "packages/shell/src/pasos.tsx" }
+    }
+    modulo sh-hash "shell/hash" "Estado del visor en el hash de la URL (#p=)" {
+      source { file "packages/shell/src/estado-en-hash.ts" }
+    }
+    modulo sh-morph "shell/morph" "Transicion animada entre dos Geometrias" {
+      source { file "packages/shell/src/morph.ts" }
+    }
+    modulo sh-worker "shell/layout-en-worker" "Relayout en Worker con medidas de texto del navegador" {
+      source { file "packages/shell/src/layout-en-worker.ts" }
+    }
+    modulo sh-servir-layout "shell/servir-layout" "Lado Worker: recibe una Vista y devuelve Geometria" {
+      source { file "packages/shell/src/servir-layout.ts" }
+    }
+    modulo sh-medicion "shell/medicion-de-visor" "Medidas de texto con canvas y fuentes cargadas" {
+      source { file "packages/shell/src/medicion-de-visor.ts" }
+    }
+    modulo sh-tema-vigente "shell/tema-vigente" "Tema activo de la Vista y su cambio en caliente" {
+      source { file "packages/shell/src/tema-vigente.ts" }
+    }
+    modulo sh-accesibilidad "shell/accesibilidad" "Roles ARIA, foco y navegacion por teclado" {
+      source { file "packages/shell/src/accesibilidad.tsx" }
+    }
+    modulo sh-avisos "shell/avisos" "Issues del Workspace y del Tema mostrados en el visor" {
+      source { file "packages/shell/src/avisos.tsx" }
+    }
   }
 
-  paquete cli "cli" "validate, build, inspect, edit, dev" {
+  paquete cli "cli" "validate, build, inspect, edit, dev y skill; adaptadores de disco y HTTP" {
     source { path "packages/cli/src" }
-    modulo cli-validate "validate" "Diagnosticos"
-    modulo cli-inspect "inspect" "Ids, sitios y vecinos"
-    modulo cli-edit "edit" "Ediciones desde la terminal"
-    modulo cli-dev "dev" "Servidor local con recarga"
+    modulo cli-index "cli/index" "run(): enruta el comando, parsea opciones y devuelve el codigo de salida" {
+      source { file "packages/cli/src/index.ts" }
+    }
+    modulo cli-ayuda "cli/ayuda" "Texto de --help por comando" {
+      source { file "packages/cli/src/ayuda.ts" }
+    }
+    modulo cli-workspace "cli/workspace" "Lee la carpeta de .dg y los recursos del Workspace" {
+      source { file "packages/cli/src/workspace.ts" }
+    }
+    modulo cli-sesion "cli/sesion-cli" "Abre la Sesion con los Temas de --theme-path" {
+      source { file "packages/cli/src/sesion-cli.ts" }
+    }
+    modulo cli-validate "cli/validate" "Diagnosticos humanos y --json" {
+      source { file "packages/cli/src/validate.ts" }
+    }
+    modulo cli-inspect "cli/inspect" "Ids, sitios, vecinos y busqueda" {
+      source { file "packages/cli/src/inspect.ts" }
+    }
+    modulo cli-comando-inspect "cli/comando-inspect" "Subcomandos de inspect y su salida" {
+      source { file "packages/cli/src/comando-inspect.ts" }
+    }
+    modulo cli-edit "cli/comando-edit" "Ediciones estructuradas desde la terminal (dg edit)" {
+      source { file "packages/cli/src/comando-edit.ts" }
+    }
+    modulo cli-rechazos "cli/rechazos" "Tabla unica de MotivoDeRechazo a estado HTTP y codigo" {
+      source { file "packages/cli/src/rechazos.ts" }
+    }
+    modulo cli-codigo "cli/codigo" "Confianza (--trust-code) y carga de Temas .tsx" {
+      source { file "packages/cli/src/codigo.ts" }
+    }
+    modulo cli-empaquetar "cli/empaquetar" "esbuild: bundles del shell y del Worker" {
+      source { file "packages/cli/src/empaquetar.ts" }
+    }
+    modulo cli-dev-shell "cli/dev-shell" "Pagina HTML y bundles que sirve dev" {
+      source { file "packages/cli/src/dev-shell.ts" }
+    }
+    modulo cli-cambio "cli/cambio" "clasificarCambio: pintura, estructura o codigo" {
+      source { file "packages/cli/src/cambio.ts" }
+    }
+    modulo cli-dev "cli/dev" "Servidor local: watcher, cola de edicion, historial, SSE y rutas" {
+      source { file "packages/cli/src/dev.ts" }
+    }
+    modulo cli-skill "cli/skill" "Instala las skills del repo para agentes" {
+      source { file "packages/cli/src/skill.ts" }
+    }
   }
 
   externo langium "Langium" "Generador de parser"
   externo zod "Zod" "Validacion de esquemas"
   externo elk "ELK (elkjs)" "Motor de layout"
   externo react "React 19" "Dibujo del SVG"
-  externo d3 "d3-zoom" "Camara"
-
+  externo d3 "d3-zoom y d3-selection" "Camara"
+  externo esbuild "esbuild" "Empaquetado del shell"
+  externo node-http "node:http y node:fs" "Servidor y observador de disco"
 }

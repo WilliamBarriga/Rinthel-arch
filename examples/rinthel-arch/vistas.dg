@@ -5,11 +5,13 @@ view paquetes {
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli
   depth 1
   link canonico -> canonico-detalle
+  link tema -> tema-detalle
   link dsl -> dsl-detalle
   link layout -> layout-detalle
   link sesion -> sesion-detalle
   link render -> render-detalle
   link shell -> shell-detalle
+  link cli -> cli-detalle
 }
 
 // Los paquetes con render, sesion y layout abiertos y los demas cerrados (la Vista `abierto` del prototipo aprobado).
@@ -18,27 +20,27 @@ view abierto {
   theme diagrams
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 
 view canonico-detalle {
   type architecture
   theme diagrams
-  include canonico.**, zod
+  include canonico.**, zod, dsl.dsl-compilar, sesion.ses-sesion, cli.cli-inspect, shell.sh-colapso, shell.sh-pasos
   depth 2
 }
 
 view dsl-detalle {
   type architecture
   theme diagrams
-  include dsl.**, langium, canonico
+  include dsl.**, langium, canonico.can-esquema, tema.tem-catalogo, sesion.ses-sesion
   depth 2
 }
 
 view layout-detalle {
   type architecture
   theme diagrams
-  include layout.**, elk, canonico
+  include layout.**, elk, canonico.can-geometria, tema.tem-slots, tema.tem-metricas, sesion.ses-sesion, shell.sh-servir-layout
   depth 2
 }
 
@@ -52,8 +54,8 @@ view sesion-detalle {
 view render-detalle {
   type architecture
   theme diagrams
-  include render.**, react, canonico, layout
-  depth 2
+  include render.**, react, tema.tem-estilo, layout.lay-layout, shell.sh-vista
+  depth 3
 }
 
 view shell-detalle {
@@ -85,6 +87,107 @@ view flujo-edicion {
     }
     step "El shell vuelve a dibujar la Vista" {
       show render.ren-diagram
+    }
+  }
+}
+
+view tema-detalle {
+  type architecture
+  theme diagrams
+  include tema.**, zod, canonico.can-esquema, dsl.dsl-temas, layout.lay-layout, render.ren-estilo
+  depth 3
+}
+
+view cli-detalle {
+  type architecture
+  theme diagrams
+  include cli.**, esbuild, node-http, servidor-dev, workspace, sesion.ses-sesion, sesion.ses-ediciones, sesion.ses-historial, canonico.can-inspect, shell.sh-vista
+  depth 2
+}
+
+// Que ocurre cuando el agente corre `dg validate` (o `build`).
+view flujo-validate {
+  type flow
+  theme diagrams
+  include agente, cli.cli-index, cli.cli-workspace, workspace, cli.cli-sesion, sesion.ses-sesion, dsl.dsl-compilar, canonico.can-validar, cli.cli-validate
+  steps {
+    step "El agente invoca dg validate --json" {
+      show agente, cli.cli-index
+    }
+    step "El CLI lee la carpeta de .dg" {
+      show cli.cli-workspace, workspace
+    }
+    step "Se abre la Sesion con los Temas de --theme-path" {
+      show cli.cli-sesion, sesion.ses-sesion
+    }
+    step "El DSL se compila a Fuente canonica" {
+      show dsl.dsl-compilar
+    }
+    step "La Fuente se valida: issues con codigo, hint y fix" {
+      show canonico.can-validar
+    }
+    step "Se imprime el resumen y el codigo de salida" {
+      show cli.cli-validate
+    }
+  }
+}
+
+// Que ocurre desde que se guarda un .dg hasta que el visor se actualiza en `dg dev`.
+view flujo-dev {
+  type flow
+  theme diagrams
+  include autor, workspace, cli.cli-dev, cli.cli-cambio, sesion.ses-sesion, layout.lay-layout, servidor-dev, visor-html, shell.sh-vista, shell.sh-worker, render.ren-diagram
+  steps {
+    step "El autor guarda un .dg" {
+      show autor, workspace
+    }
+    step "El observador de disco detecta el cambio (con debounce)" {
+      show cli.cli-dev
+    }
+    step "La Sesion recompila y valida" {
+      show sesion.ses-sesion
+    }
+    step "Se clasifica el cambio: pintura, estructura o codigo" {
+      show cli.cli-cambio
+    }
+    step "El servidor empuja el estado por SSE" {
+      show servidor-dev, visor-html
+    }
+    step "Si cambio la estructura, el Worker recalcula el layout" {
+      show shell.sh-worker, layout.lay-layout
+    }
+    step "El shell vuelve a dibujar la Vista" {
+      show shell.sh-vista, render.ren-diagram
+    }
+  }
+}
+
+// De un Tema escrito en DSL a pixeles: como llega una Primitiva al SVG.
+view flujo-tema {
+  type flow
+  theme diagrams
+  include workspace, dsl.dsl-temas, tema.tem-catalogo, tema.tem-tema, tema.tem-contraste, tema.tem-estilo, tema.tem-metricas, layout.lay-layout, render.ren-estilo, render.ren-hoja, render.ren-diagram
+  steps {
+    step "El Tema se escribe en un .dg" {
+      show workspace
+    }
+    step "El compilador de Temas lo valida contra el catalogo" {
+      show dsl.dsl-temas, tema.tem-catalogo
+    }
+    step "Se resuelve el Tema: Paleta, Capas y Slots" {
+      show tema.tem-tema
+    }
+    step "Se avisa de contraste insuficiente" {
+      show tema.tem-contraste
+    }
+    step "Las Metricas dan el tamano de cada Nodo al layout" {
+      show tema.tem-metricas, layout.lay-layout
+    }
+    step "El Estilo resuelto pasa al render" {
+      show tema.tem-estilo, render.ren-estilo
+    }
+    step "La hoja y los pintores producen el SVG" {
+      show render.ren-hoja, render.ren-diagram
     }
   }
 }

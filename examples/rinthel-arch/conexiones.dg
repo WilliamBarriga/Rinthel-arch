@@ -1,11 +1,21 @@
-// Dependencias entre paquetes (orden: canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli) y flujo de datos.
+// Dependencias entre paquetes (orden: canonico -> tema -> dsl / layout -> sesion -> render -> shell -> cli), entre modulos y flujo de datos.
+// Las Aristas se declaran solo aqui, con ids cualificados. Las de paquete salen de package.json; las de modulo, de los imports.
 model {
+  // Actores y artefactos
   autor -> workspace "escribe .dg"
-  agente -> cli "validate / inspect / edit"
-  autor -> cli.cli-dev "abre el shell"
-  cli -> workspace "lee"
-  cli -> salida-derivada "escribe"
+  autor -> visor-html "mira y arrastra Pins"
+  agente -> cli.cli-index "validate / inspect / edit"
+  cli.cli-workspace -> workspace "lee"
+  cli.cli-workspace -> fuentes-ws "lee"
+  cli.cli-codigo -> dg-tema-codigo "carga si hay confianza"
+  cli.cli-dev -> workspace "reescribe de forma atomica"
+  cli.cli-validate -> salida-derivada "escribe (build)"
+  cli.cli-dev -> servidor-dev "levanta"
+  servidor-dev -> visor-html "sirve"
+  visor-html -> shell.sh-vista "monta"
+  shell.sh-worker -> worker-layout "crea"
 
+  // Paquetes
   tema -> canonico
   dsl -> canonico
   dsl -> tema
@@ -14,46 +24,212 @@ model {
   sesion -> canonico
   sesion -> dsl
   sesion -> layout
+  sesion -> tema
   render -> canonico
   render -> layout
   render -> tema
-  shell -> sesion
-  shell -> render
+  shell -> canonico
   shell -> layout
-  cli -> sesion
+  shell -> render
+  shell -> sesion
+  shell -> tema
+  cli -> canonico
+  cli -> dsl
+  cli -> layout
   cli -> render
+  cli -> sesion
+  cli -> shell
+  cli -> tema
 
-  dsl.dsl-gramatica -> langium
-  dsl.dsl-compilar -> dsl.dsl-gramatica
-  dsl.dsl-compilar -> dsl.dsl-temas
-  dsl.dsl-compilar -> dsl.dsl-ubicador
-  canonico.can-esquema -> zod
+  // canonico
   canonico.can-validar -> canonico.can-esquema
+  canonico.can-validar -> canonico.can-codigos
+  canonico.can-validar -> canonico.can-issue
+  canonico.can-validar -> canonico.can-sugerencias
+  canonico.can-validar -> canonico.can-iconos
+  canonico.can-validar -> canonico.can-vistas
+  canonico.can-iconos -> canonico.can-esquema
   canonico.can-vistas -> canonico.can-esquema
   canonico.can-pasos -> canonico.can-vistas
-  canonico.can-pin -> canonico.can-esquema
-  canonico.can-inspect -> canonico.can-vistas
+  canonico.can-pasos -> canonico.can-esquema
+  canonico.can-edit -> canonico.can-pin
+  canonico.can-estado -> canonico.can-esquema
+  canonico.can-estado -> canonico.can-salida
+  canonico.can-salida -> canonico.can-issue
+  canonico.can-esquema -> zod
+
+  // tema
+  tema.tem-catalogo -> tema.tem-catalogo-efectos
+  tema.tem-catalogo -> tema.tem-familias
+  tema.tem-catalogo -> tema.tem-color
+  tema.tem-familias.tem-fam-forma -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-relleno -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-borde -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-trazo -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-marcador -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-texto -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-codigo -> tema.tem-catalogo
+  tema.tem-catalogo-efectos -> tema.tem-catalogo
+  tema.tem-tema -> tema.tem-catalogo
+  tema.tem-tema -> tema.tem-animacion
+  tema.tem-tema -> tema.tem-disposicion
+  tema.tem-tema -> tema.tem-parches
+  tema.tem-parches -> tema.tem-tema
+  tema.tem-animacion -> tema.tem-catalogo
+  tema.tem-disposicion -> tema.tem-catalogo
+  tema.tem-contenido -> tema.tem-disposicion
+  tema.tem-contenido -> tema.tem-metricas
+  tema.tem-metricas -> tema.tem-medicion
+  tema.tem-metricas -> tema.tem-contenido
+  tema.tem-metricas -> tema.tem-slots
+  tema.tem-slots -> tema.tem-metricas
+  tema.tem-slots -> tema.tem-contenido
+  tema.tem-textos-a-medir -> tema.tem-contenido
+  tema.tem-textos-a-medir -> tema.tem-metricas
+  tema.tem-estilo -> tema.tem-tema
+  tema.tem-estilo -> tema.tem-metricas
+  tema.tem-estilo -> tema.tem-animacion
+  tema.tem-estilo -> tema.tem-fuentes
+  tema.tem-estilo -> tema.tem-color
+  tema.tem-contraste -> tema.tem-estilo
+  tema.tem-contraste -> tema.tem-color
+  tema.tem-alto-contraste -> tema.tem-tema
+  tema.tem-codigo -> tema.tem-tema
+  tema.tem-codigo -> tema.tem-parches
+  tema.tem-referencia -> tema.tem-catalogo
+  tema.tem-referencia -> tema.tem-animacion
+  tema.tem-catalogo -> zod
+
+  // dsl
+  dsl.dsl-gramatica -> langium
+  dsl.dsl-compilar -> dsl.dsl-gramatica
+  dsl.dsl-compilar -> dsl.dsl-incorporados
+  dsl.dsl-compilar -> dsl.dsl-temas
+  dsl.dsl-compilar -> dsl.dsl-ubicador
+  dsl.dsl-compilar -> dsl.dsl-posiciones
+  dsl.dsl-temas -> dsl.dsl-incorporados
+  dsl.dsl-temas -> dsl.dsl-temas-capas
+  dsl.dsl-temas -> dsl.dsl-temas-slots
+  dsl.dsl-temas -> dsl.dsl-temas-animacion
+  dsl.dsl-temas -> dsl.dsl-temas-arista
+  dsl.dsl-temas -> dsl.dsl-temas-pagina
+  dsl.dsl-temas -> dsl.dsl-temas-comun
+  dsl.dsl-temas-capas -> dsl.dsl-temas-comun
+  dsl.dsl-temas-slots -> dsl.dsl-temas-comun
+  dsl.dsl-temas-animacion -> dsl.dsl-temas-comun
+  dsl.dsl-temas-arista -> dsl.dsl-temas-capas
+  dsl.dsl-temas-pagina -> dsl.dsl-temas-capas
+  dsl.dsl-temas-comun -> dsl.dsl-posiciones
+  dsl.dsl-ubicador -> dsl.dsl-posiciones
+  dsl.dsl-temas -> tema.tem-catalogo "valida contra el catalogo"
+  dsl.dsl-compilar -> canonico.can-esquema "produce la Fuente"
+
+  // layout
   layout.lay-layout -> elk
   layout.lay-layout -> tema.tem-slots
-  tema.tem-slots -> tema.tem-metricas
-  tema.tem-estilo -> tema.tem-tema
-  tema.tem-tema -> tema.tem-catalogo
-  dsl.dsl-temas -> tema.tem-catalogo
+  layout.lay-layout -> tema.tem-metricas
+  layout.lay-layout -> canonico.can-geometria
   layout.lay-indice -> layout.lay-layout
+  layout.lay-claves -> layout.lay-layout
+
+  // sesion
   sesion.ses-sesion -> dsl.dsl-compilar
   sesion.ses-sesion -> canonico.can-validar
   sesion.ses-sesion -> layout.lay-layout "memoiza por Vista"
+  sesion.ses-sesion -> tema.tem-estilo
   sesion.ses-ediciones -> dsl.dsl-ubicador
   sesion.ses-intenciones -> sesion.ses-ediciones
+  sesion.ses-intenciones -> canonico.can-pin
+  sesion.ses-aplicar -> sesion.ses-intenciones
+  sesion.ses-historial -> sesion.ses-aplicar
+
+  // render
   render.ren-diagram -> react
   render.ren-diagram -> render.ren-escena
+  render.ren-diagram -> render.ren-limite
+  render.ren-escena -> render.ren-hoja
+  render.ren-escena -> render.ren-pintores
+  render.ren-escena -> render.ren-aristas
+  render.ren-escena -> render.ren-efectos
+  render.ren-escena -> render.ren-animacion
+  render.ren-escena -> render.ren-pilas
+  render.ren-escena -> render.ren-codigo
+  render.ren-escena -> render.ren-elemento
   render.ren-escena -> render.ren-estilo
+  render.ren-hoja -> render.ren-pintura
+  render.ren-hoja -> render.ren-efectos
+  render.ren-hoja -> render.ren-animacion
+  render.ren-pintores -> render.ren-aristas
+  render.ren-pintores -> render.ren-pilas
+  render.ren-aristas -> render.ren-estilo
+  render.ren-efectos -> render.ren-estilo
+  render.ren-animacion -> render.ren-estilo
+  render.ren-codigo -> render.ren-estilo
+  render.ren-pintura.ren-pin-forma -> render.ren-pintura.ren-pin-comun
+  render.ren-pintura.ren-pin-borde -> render.ren-pintura.ren-pin-comun
+  render.ren-pintura.ren-pin-relleno -> render.ren-pintura.ren-pin-comun
+  render.ren-pintura.ren-pin-pagina -> render.ren-pintura.ren-pin-relleno
+  render.ren-pintura.ren-pin-comun -> render.ren-elemento
+  render.ren-estilo -> tema.tem-estilo "consume el Estilo resuelto"
+  render.ren-escena -> layout.lay-layout "lee la Geometria"
+
+  // shell
+  shell.sh-vista -> shell.sh-camara
+  shell.sh-vista -> shell.sh-colapso
+  shell.sh-vista -> shell.sh-seleccion
+  shell.sh-vista -> shell.sh-interaccion
+  shell.sh-vista -> shell.sh-arrastre
+  shell.sh-vista -> shell.sh-navegacion
+  shell.sh-vista -> shell.sh-pasos
+  shell.sh-vista -> shell.sh-morph
+  shell.sh-vista -> shell.sh-viewport
+  shell.sh-vista -> shell.sh-zoom-semantico
+  shell.sh-vista -> shell.sh-tema-vigente
+  shell.sh-vista -> shell.sh-accesibilidad
+  shell.sh-vista -> shell.sh-avisos
+  shell.sh-vista -> shell.sh-medicion
+  shell.sh-vista -> render.ren-diagram "dibuja"
   shell.sh-camara -> d3
-  shell.sh-worker -> layout.lay-layout
-  shell.sh-seleccion -> sesion.ses-intenciones
+  shell.sh-seleccion -> shell.sh-interaccion
+  shell.sh-arrastre -> shell.sh-enviar-pin
+  shell.sh-enviar-pin -> servidor-dev "POST /api/pin"
+  shell.sh-control-edicion -> servidor-dev "POST /api/edit"
+  shell.sh-control-edicion -> sesion.ses-historial "estado de deshacer"
+  shell.sh-hash -> shell.sh-navegacion
+  shell.sh-worker -> shell.sh-servir-layout "mensajes"
+  shell.sh-servir-layout -> layout.lay-layout
   shell.sh-colapso -> canonico.can-vistas
-  cli.cli-validate -> sesion.ses-sesion
+  shell.sh-pasos -> canonico.can-pasos
+  shell.sh-medicion -> tema.tem-medicion
+
+  // cli
+  cli.cli-index -> cli.cli-ayuda
+  cli.cli-index -> cli.cli-workspace
+  cli.cli-index -> cli.cli-sesion
+  cli.cli-index -> cli.cli-validate
+  cli.cli-index -> cli.cli-comando-inspect
+  cli.cli-index -> cli.cli-edit
+  cli.cli-index -> cli.cli-dev
+  cli.cli-index -> cli.cli-skill
+  cli.cli-sesion -> sesion.ses-sesion
+  cli.cli-sesion -> cli.cli-validate
+  cli.cli-sesion -> cli.cli-codigo
+  cli.cli-comando-inspect -> cli.cli-inspect
   cli.cli-inspect -> canonico.can-inspect
   cli.cli-edit -> sesion.ses-ediciones
-  cli.cli-dev -> shell
+  cli.cli-edit -> cli.cli-rechazos
+  cli.cli-edit -> cli.cli-workspace
+  cli.cli-validate -> canonico.can-issue
+  cli.cli-dev -> cli.cli-cambio
+  cli.cli-dev -> cli.cli-dev-shell
+  cli.cli-dev -> cli.cli-rechazos
+  cli.cli-dev -> cli.cli-sesion
+  cli.cli-dev -> cli.cli-workspace
+  cli.cli-dev -> sesion.ses-historial "deshacer y rehacer"
+  cli.cli-dev -> node-http
+  cli.cli-dev-shell -> cli.cli-empaquetar
+  cli.cli-empaquetar -> esbuild
+  cli.cli-empaquetar -> shell.sh-vista "empaqueta"
+  cli.cli-cambio -> canonico.can-estado
+  cli.cli-codigo -> tema.tem-codigo
 }
