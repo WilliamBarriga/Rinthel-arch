@@ -14,7 +14,7 @@ Sistema React + TS para escribir y renderizar diagramas grandes y detallados de 
 
 ## Skills del repo
 
-`skills/` (formato `SKILL.md`, agnostico del harness): `diagramas` (escribir, validar y servir `.dg`) y `temas` (personalizar la estetica). Cargalas antes de editar un Workspace o un Tema. Opciones del CLI: `docs/guia/cli.md` o `diagrams <comando> --help`.
+`skills/` (formato `SKILL.md`, agnostico del harness): `rinthel-diagramas` (escribir, validar y servir `.dg`) y `rinthel-temas` (personalizar la estetica). Cargalas antes de editar un Workspace o un Tema. Opciones del CLI: `docs/guia/cli.md` o `diagrams <comando> --help`.
 
 ## Dependencias y tecnologia
 

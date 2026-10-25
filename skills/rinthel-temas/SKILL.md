@@ -1,5 +1,5 @@
 ---
-name: temas
+name: rinthel-temas
 description: Personalizar la estetica de un diagrama con Temas (Paleta, fuentes, Capas, Slots, Movimientos, Partes). Usalo al crear o ajustar un Tema, cambiar colores o fuentes, animar, o corregir issues de Tema de validate.
 ---
 
@@ -13,9 +13,9 @@ La estetica vive en el **Tema** (texto `.dg`), nunca en el Modelo: cambiar `them
 2. **Saber que parche editar**: `dg inspect tema <nombre> --workspace <ruta> --tipo <tipo> --estado <estado>` muestra la pila de Capas con el `archivo:linea` de cada parche. Edita ese parche.
 3. **Editar** con el vocabulario cerrado del catalogo: `docs/referencia-catalogo.md` (Primitivas, Slots, Movimientos, Efectos con rangos). Un nombre fuera del catalogo es un error; `validate` propone el parecido.
 4. **Validar**: `dg validate --workspace <ruta> --json` hasta `ok: true`. Corrige contraste (`W_THEME_LOW_CONTRAST`) y `W_THEME_COLOR_ONLY` o declara en la primera linea del Tema que su estetica los exige.
-5. **Mirar**: `dg dev --workspace <ruta>` y la Vista con ese Tema (ver skill `diagramas` para servirlo).
+5. **Mirar**: `dg dev --workspace <ruta>` y la Vista con ese Tema (ver skill `rinthel-diagramas` para servirlo).
 
-`dg` es `node packages/cli/dist/bin.js` (`pnpm build` si falta `dist/`).
+`dg` es el CLI `diagrams` (ver `rinthel-diagramas`). Las rutas `docs/` y `examples/` son del repo rinthel-arch.
 
 ## Reglas que ahorran errores
 
