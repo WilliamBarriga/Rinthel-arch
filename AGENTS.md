@@ -12,6 +12,10 @@ Sistema React + TS para escribir y renderizar diagramas grandes y detallados de 
 - ADRs de contrato (dsl, render, layout, paquetes, cli): `docs/adr/`. Leer el ADR del modulo antes de cambiar su interfaz.
 - Catalogo de Temas (Primitivas, Slots, Movimientos, Efectos con rangos y defectos): `docs/referencia-catalogo.md`, generado desde `packages/tema` con `pnpm docs:catalogo`; no editar a mano (una prueba falla si se desvia).
 
+## Skills del repo
+
+`.claude/skills/` (versionado): `diagramas` (escribir, validar y servir `.dg`) y `temas` (personalizar la estetica). Cargalas antes de editar un Workspace o un Tema. Opciones del CLI: `docs/guia/cli.md` o `diagrams <comando> --help`.
+
 ## Dependencias y tecnologia
 
 Antes de adoptar una dependencia, investigarla (licencia, mantenimiento, encaje con los requisitos) y dejar el research escrito; la adopcion se decide en un ticket o ADR.
