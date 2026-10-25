@@ -1,0 +1,23 @@
+// Paso 1: lo minimo. Tipos de nodo, un Modelo y una Vista.
+specification {
+  node actor    { description "Quien usa el sistema"       icon user    color purple }
+  node servicio { description "Pieza de logica"            icon server  color blue }
+  node almacen  { description "Datos que persisten"        icon database color green }
+}
+
+model {
+  actor cliente "Cliente" "Hace pedidos"
+
+  servicio api "API" "Punto de entrada"
+  servicio pedidos "Pedidos" "Registra pedidos"
+  almacen db "Base de datos" "Guarda los pedidos"
+
+  cliente -> api "HTTP"
+  api -> pedidos
+  pedidos -> db "SQL"
+}
+
+view principal {
+  type architecture
+  include **
+}

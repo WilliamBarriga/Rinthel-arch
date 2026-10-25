@@ -1313,10 +1313,11 @@ describe('compile: Pasos (steps)', () => {
 
 describe('compile: Temas del ejemplo rinthel-arch', () => {
   it('extienden los incorporados oscuro y claro con parches por Tipo, sin issues', async () => {
+    // `vistas-temas.dg` usa los 14 Temas de `temas/`, con avisos de contraste deliberados: lo cubre tests/ejemplos-docs.test.ts.
     const { readFileSync, readdirSync } = await import('node:fs');
     const dir = new URL('../../../examples/rinthel-arch/', import.meta.url);
     const fuentes = Object.fromEntries(
-      readdirSync(dir).filter((f) => f.endsWith('.dg')).map((f) => [f, readFileSync(new URL(f, dir), 'utf8')]),
+      readdirSync(dir).filter((f) => f.endsWith('.dg') && f !== 'vistas-temas.dg').map((f) => [f, readFileSync(new URL(f, dir), 'utf8')]),
     );
     const { canonico, issues } = compile(fuentes);
 

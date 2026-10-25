@@ -1,0 +1,49 @@
+// Paso 2: Grupos, Atributos, Aristas con etiqueta y una segunda Vista enlazada.
+specification {
+  node actor    { description "Quien usa el sistema"       icon user     color purple }
+  node servicio { description "Pieza de logica"            icon server   color blue }
+  node almacen  { description "Datos que persisten"        icon database color green }
+  node cola     { description "Canal de mensajes"          icon queue    color amber }
+  node externo  { description "Sistema de terceros"        icon cloud    color red }
+  node dominio  { description "Agrupa piezas relacionadas" icon box      color gray }
+}
+
+model {
+  actor cliente "Cliente" "Hace pedidos"
+  servicio api "API" "Punto de entrada"
+
+  dominio tienda "Tienda" {
+    servicio pedidos "Pedidos" "Registra pedidos"
+    servicio pagos "Pagos" "Cobra los pedidos"
+    cola eventos "Eventos"
+    almacen db "Base de datos" {
+      attrs {
+        id: uuid
+        total: decimal "en centavos"
+      }
+    }
+  }
+
+  externo stripe "Pasarela de pago"
+
+  cliente -> api "HTTP"
+  api -> tienda.pedidos
+  tienda.pedidos -> tienda.eventos "pedido creado"
+  tienda.eventos -> tienda.pagos
+  tienda.pagos -> stripe "cobra"
+  tienda.pedidos -> tienda.db
+}
+
+view principal {
+  theme neutral-dark
+  type architecture
+  include **
+  collapsed tienda
+  link tienda -> tienda-detalle
+}
+
+view tienda-detalle {
+  theme neutral-dark
+  type architecture
+  include tienda.**, api, stripe
+}

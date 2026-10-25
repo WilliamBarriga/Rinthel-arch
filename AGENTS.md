@@ -8,9 +8,9 @@ Sistema React + TS para escribir y renderizar diagramas grandes y detallados de 
 - Decisiones y trabajo pendiente: GitHub Issues de este repo (`gh`, `WilliamBarriga/Rinthel-arch`); cada ticket es un issue con label `wayfinder:<tipo>`.
 - Reglas de codigo (estructura de paquetes, modulos profundos, hexagonal, pruebas): `docs/CODING.md`. Leer antes de crear o modificar codigo.
 - Research: `research/<nombre>.md` en ramas `research/<nombre>`, no en `main`; listarlas con `git branch -a -l '*research/*'` y leer el archivo con `git show research/<nombre>:research/<nombre>.md` antes de re-investigar.
+- Guias de usuario (README, `docs/guia/`, `CONTRIBUTING.md`): al cambiar el DSL, un Tema de ejemplo o el CLI, actualizarlas; `pnpm docs:capturas` regenera las imagenes de `docs/img/`.
 - ADRs de contrato (dsl, render, layout, paquetes, cli): `docs/adr/`. Leer el ADR del modulo antes de cambiar su interfaz.
 - Catalogo de Temas (Primitivas, Slots, Movimientos, Efectos con rangos y defectos): `docs/referencia-catalogo.md`, generado desde `packages/tema` con `pnpm docs:catalogo`; no editar a mano (una prueba falla si se desvia).
-- Repos hermanos de referencia: `../slides-rinthel`, `../video-openmotion`. Solo lectura.
 
 ## Dependencias y tecnologia
 
@@ -19,7 +19,7 @@ Antes de adoptar una dependencia, investigarla (licencia, mantenimiento, encaje 
 ## Convenciones
 
 - El nucleo es agnostico del proyecto documentado; todo lo especifico de un proyecto vive como ejemplo o caso de uso.
-- Los repos hermanos son referencia de lectura, no dependencias: este repo no depende de ellos ni al reves en codigo, y no los modifica. Integrar el sistema en un repo consumidor (slides, video u otro) es trabajo de ese repo, fuera de este. Slides, video y los demas son casos de uso del contrato de `render`.
+- Este repo es independiente: no depende de ningun repo consumidor. Integrar el sistema en un repo consumidor (slides, video u otro) es trabajo de ese repo, fuera de este. Slides, video y los demas son casos de uso del contrato de `render`.
 - Eraser DSL y Archify estan descartados; no reintroducirlos.
 - Docs y respuestas en espanol. Sin emojis unicode (`pnpm check:emojis` lo verifica).
 

@@ -1,0 +1,74 @@
+// Contraste: ninguno
+// Pizarra con post-its: notas de colores ligeramente giradas, cinta adhesiva y trazo de mano alzada.
+theme sticky-notes {
+  fonts { body "Caveat"  mono "Caveat"  fallback "cursive" }
+  palette {
+    fondo "#fcfcf8"  texto "#2b2b2b"  cinta "#d8d2c0"  papel "#fcfcf8"  tinta "#2456c9"
+    blue "#bfe3ff"  purple "#e4d0ff"  green "#c8f2c2"  amber "#fff3a0"  red "#ffc9d6"  gray "#fff3a0"
+  }
+  tokens { background "#fcfcf8"  foreground "#2b2b2b"  border "#2456c9"  seed 7 }
+  page {
+    layer cuadros grid { color tinta/0.07  size 26 }
+    fixed
+  }
+  node {
+    // Nota del color del Tipo, algo girada, con su sombra y un trozo de cinta arriba.
+    layer giro tilt { degrees 3 }
+    layer sombra shadow { color texto/0.18  x 1  y 10  blur 14 }
+    layer forma rect { radius 2 }
+    layer nota gradient { from COLOR  to mix(COLOR, texto, 0.08)  angle 170 }
+    layer cinta tape over { color cinta/0.7  width 54  height 18  angle -4 }
+    slots column min-width 170 slack 62 {
+      row gap 8 pad 14 min-height 62 {
+        column {
+          title { weight 700  size 1.45  text-align start  leading 1.25 }
+          badge { alpha 0.55  size 0.95 }
+        }
+        counter { fill papel  border texto }
+      }
+      attrs
+    }
+    // Actor y externo no son notas: papel con trazo a mano alzada (el externo, discontinuo y en tinta).
+    type actor {
+      layer sombra none  layer cinta none
+      layer forma pill
+      layer nota solid { color papel }
+      layer borde border after nota { color texto  width 2 }
+      layer trazo sketch after borde { roughness 3.5  frequency 0.035 }
+    }
+    type externo {
+      layer sombra none  layer cinta none
+      layer nota solid { color papel }
+      layer borde dashed after nota { color tinta  width 2 }
+      layer trazo sketch after borde { roughness 3.5  frequency 0.035 }
+    }
+    state hover { layer sombra { color texto/0.25  x 2  y 18  blur 24 }  transition 150ms ease-out }
+    state en-ruta { layer sombra { color tinta/0.3 } }
+    state atenuado { layer sombra none }
+  }
+  group {
+    // Recuadro de tinta a mano alzada, sin relleno, con el nombre escrito encima.
+    layer forma rect { radius 14 }
+    layer borde border { color tinta/0.7  width 2.5 }
+    layer trazo sketch { roughness 3.5  frequency 0.035 }
+    slots row pad 18 pad-y 9 { title { size 1.4  leading 1.3  weight 600 } }
+    padding 12 26 26 26
+    // Cerrado es una nota como la del Nodo con otra mas oscura asomando debajo.
+    state collapsed {
+      layer giro tilt before forma { degrees 3 }
+      layer debajo-sombra shadow before forma { color texto/0.15  x 1  y 6  blur 10  offset 6 5 }
+      layer debajo solid before forma { color mix(COLOR, texto, 0.15)  offset 6 5 }
+      layer sombra shadow before forma { color texto/0.18  x 1  y 10  blur 14 }
+      layer forma { radius 2 }
+      layer nota gradient after forma { from COLOR  to mix(COLOR, texto, 0.08)  angle 170 }
+      layer borde none
+      layer trazo none
+      layer cinta tape after nota over { color cinta/0.7  width 54  height 18  angle -4 }
+    }
+  }
+  edge {
+    layer linea line { color tinta  width 2  corner round  radius 18  cap round  roughness 3.5  frequency 0.035 }
+    end chevron { size 9 }
+    label { scale 1.21  pad 10  pad-y 2.5  radius 0  fill fondo/0  border fondo/0  color tinta }
+  }
+}

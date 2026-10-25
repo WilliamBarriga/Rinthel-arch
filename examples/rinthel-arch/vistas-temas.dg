@@ -1,0 +1,100 @@
+// Una Vista por Tema aprobado (ADR 0008): la Vista `abierto` del mapa con cada uno, para ver cuanto cambia el mismo diagrama.
+// Los archivos de `temas/` son los mismos de `examples/temas/galeria/` (una prueba lo verifica).
+view abierto-soft-card {
+  type architecture
+  theme soft-card
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-glass-chip {
+  type architecture
+  theme glass-chip
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-neobrutalist {
+  type architecture
+  theme neobrutalist
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-blueprint {
+  type architecture
+  theme blueprint
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-claro-suave {
+  type architecture
+  theme claro-suave
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-crt-terminal {
+  type architecture
+  theme crt-terminal
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-synthwave {
+  type architecture
+  theme synthwave
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-editorial {
+  type architecture
+  theme editorial
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-bauhaus {
+  type architecture
+  theme bauhaus
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-sticky-notes {
+  type architecture
+  theme sticky-notes
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-keycaps {
+  type architecture
+  theme keycaps
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-metro-map {
+  type architecture
+  theme metro-map
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-pcb {
+  type architecture
+  theme pcb
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
+view abierto-pixel-art {
+  type architecture
+  theme pixel-art
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, sesion, layout
+  collapsed canonico, tema, dsl, shell, cli
+}
