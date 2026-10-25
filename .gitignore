@@ -1,7 +1,6 @@
 node_modules/
 dist/
-.claude/*
-!.claude/skills/
+.claude/
 .diagrams/
 /*.png
 prototype-estetica/

@@ -76,7 +76,7 @@ Todo o nada: si una edicion falla no se escribe nada. Con `--hash`, rechaza la e
 dg skill --workspace <ruta> [--out <archivo>]
 ```
 
-Genera un `SKILL.md` con los Tipos de nodo, Temas, sintaxis, contratos y codigos de issue de ese Workspace. Es para proyectos que usan el sistema: instalala en su `.claude/skills/diagrams/SKILL.md`. Regenerala cuando cambien los Tipos de nodo, los Temas o los codigos.
+Genera un `SKILL.md` con los Tipos de nodo, Temas, sintaxis, contratos y codigos de issue de ese Workspace. Es para proyectos que usan el sistema: instalala en la carpeta de skills de tu harness. Regenerala cuando cambien los Tipos de nodo, los Temas o los codigos.
 
 ## Bucle de trabajo
 
