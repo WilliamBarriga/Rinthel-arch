@@ -24,7 +24,7 @@
   "dependencies": {
     "canonico": "workspace:*",
     "dsl": "workspace:*",
-    "esbuild": "0.27.7",
+    "esbuild": "0.28.1",
     "layout": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0",
