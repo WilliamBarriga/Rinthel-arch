@@ -1,8 +1,12 @@
 # rinthel-arch
 
+[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
+![Node >= 20](https://img.shields.io/badge/node-%3E%3D20-green.svg)
+![Estado: 0.x](https://img.shields.io/badge/estado-0.x%20en%20desarrollo-orange.svg)
+
 Sistema (React + TypeScript) para escribir y renderizar diagramas grandes y detallados de cualquier proyecto. Describes tu sistema una vez en texto (`.dg`) y obtienes varias Vistas navegables, con la estetica que elijas: el mismo diagrama puede verse como tarjetas sobrias, neon, plano tecnico, post-its o placa de circuito, cambiando solo el Tema.
 
-*In short: a text DSL for large architecture and flow diagrams, rendered with fully themeable, animatable styles. Documentation is in Spanish for now.*
+**English:** a text DSL for large architecture and flow diagrams. You describe a system once and get several navigable views, rendered with fully themeable and animatable styles. Documentation is in Spanish for now; see the [short English overview](README.en.md).
 
 ![El mismo diagrama con el Tema synthwave](docs/img/temas/synthwave.png)
 
@@ -13,17 +17,43 @@ Sistema (React + TypeScript) para escribir y renderizar diagramas grandes y deta
 - **Visor en vivo.** `dev` recompila al guardar; el visor tiene pan y zoom, colapso de Grupos y arrastre de Nodos que reescribe el `.dg`.
 - **Pensado para humanos y agentes.** `validate` devuelve issues estructurados con sugerencias, `inspect` consulta el Modelo y `skill` explica el flujo a un agente.
 
+## Un vistazo al DSL
+
+```
+specification {
+  node actor    { icon user     color purple }
+  node servicio { icon server   color blue }
+  node almacen  { icon database color green }
+}
+
+model {
+  actor cliente "Cliente"
+  servicio api "API" "Punto de entrada"
+  servicio pedidos "Pedidos"
+  almacen db "Base de datos"
+
+  cliente -> api "HTTP"
+  api -> pedidos
+  pedidos -> db
+}
+
+view principal {
+  type architecture
+  include **
+}
+```
+
+El [tutorial](docs/guia/tutorial.md) arma un diagrama parecido (una tienda en linea) y lo lleva, en cinco pasos, a Grupos, Vistas enlazadas y un Tema propio.
+
 ## Galeria
 
-El mismo mapa de este repo (`examples/rinthel-arch/`), cambiando solo el Tema. Cada imagen sale de una Vista `abierto-<tema>`.
+El mismo mapa de este repo (`examples/rinthel-arch/`), cambiando solo el Tema.
 
 | | | |
 | --- | --- | --- |
-| ![soft-card](docs/img/temas/soft-card.png)<br>`soft-card` | ![glass-chip](docs/img/temas/glass-chip.png)<br>`glass-chip` | ![neobrutalist](docs/img/temas/neobrutalist.png)<br>`neobrutalist` |
-| ![blueprint](docs/img/temas/blueprint.png)<br>`blueprint` | ![claro-suave](docs/img/temas/claro-suave.png)<br>`claro-suave` | ![crt-terminal](docs/img/temas/crt-terminal.png)<br>`crt-terminal` |
-| ![synthwave](docs/img/temas/synthwave.png)<br>`synthwave` | ![editorial](docs/img/temas/editorial.png)<br>`editorial` | ![bauhaus](docs/img/temas/bauhaus.png)<br>`bauhaus` |
-| ![sticky-notes](docs/img/temas/sticky-notes.png)<br>`sticky-notes` | ![keycaps](docs/img/temas/keycaps.png)<br>`keycaps` | ![metro-map](docs/img/temas/metro-map.png)<br>`metro-map` |
-| ![pcb](docs/img/temas/pcb.png)<br>`pcb` | ![pixel-art](docs/img/temas/pixel-art.png)<br>`pixel-art` | |
+| ![Tema soft-card: tarjetas sobrias](docs/img/temas/soft-card.png)<br>`soft-card` | ![Tema blueprint: plano tecnico](docs/img/temas/blueprint.png)<br>`blueprint` | ![Tema crt-terminal: terminal verde](docs/img/temas/crt-terminal.png)<br>`crt-terminal` |
+
+Los 14 Temas, con una imagen cada uno, estan en la [galeria completa](docs/galeria.md).
 
 ## Empezar
 
@@ -37,7 +67,7 @@ pnpm build
 node packages/cli/dist/bin.js dev --workspace examples/rinthel-arch
 ```
 
-Abre la URL que imprime `dev` (`http://127.0.0.1:4173/`) y cambia a las Vistas `abierto-<tema>` para ver los 14 Temas.
+`dev` imprime una URL (`http://127.0.0.1:4173/`). Si el visor carga ahi, todo funciona; cambia a las Vistas `abierto-<tema>` para ver los 14 Temas. Para tu propio diagrama, apunta `--workspace` a una carpeta con tus `.dg`.
 
 ## Documentacion
 
@@ -50,27 +80,15 @@ Abre la URL que imprime `dev` (`http://127.0.0.1:4173/`) y cambia a las Vistas `
 | [Referencia del DSL](docs/guia/referencia-dsl.md) | Sintaxis de Modelo, Vistas y Pasos |
 | [Catalogo de Temas](docs/referencia-catalogo.md) | Todas las Primitivas, Slots, Movimientos y Efectos con sus rangos |
 
-Para entender el sistema por dentro: el glosario esta en [CONTEXT.md](CONTEXT.md), las decisiones en [docs/adr/](docs/adr/) y las reglas de codigo en [docs/CODING.md](docs/CODING.md). Para contribuir, [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Mapa del repo
-
-| Ruta | Contenido |
-| --- | --- |
-| `packages/canonico` | Esquema de la Fuente canonica (Zod), validacion y resolucion de Vistas |
-| `packages/tema` | Catalogo de Primitivas y Slots, Estilo resuelto y Metricas |
-| `packages/dsl` | Gramatica (Langium) y compilador del texto `.dg` |
-| `packages/layout` | Layout con ELK y Pins; geometria cacheada |
-| `packages/sesion` | Tuberia compartida: compilar, validar y calcular geometria |
-| `packages/render` | Dibujo puro en React (Nodos y Grupos en HTML/CSS, Aristas en SVG) |
-| `packages/shell` | Visor interactivo: pan/zoom, colapso, arrastre |
-| `packages/cli` | `validate`, `build`, `dev`, `inspect`, `edit`, `skill` |
-| `examples/tutorial` | El tutorial, un Workspace por paso |
-| `examples/rinthel-arch` | Este repo documentado con su propio DSL, con los 14 Temas |
-| `examples/temas/galeria` | Un Modelo comun con los 14 Temas, y estados de cada Nodo |
+Por dentro: el glosario esta en [CONTEXT.md](CONTEXT.md), las decisiones en [docs/adr/](docs/adr/) y las reglas de codigo en [docs/CODING.md](docs/CODING.md).
 
 ## Estado
 
-Primera entrega: Tipos de diagrama `architecture` y `flow`. Secuencia y ER vienen despues. El trabajo pendiente vive en los [issues](https://github.com/WilliamBarriga/Rinthel-arch/issues).
+Version 0.x, sin publicar en npm: el DSL y los contratos de los paquetes pueden cambiar entre versiones. Soporta los Tipos de diagrama `architecture` y `flow`; secuencia y ER vienen despues. El trabajo pendiente vive en los [issues](https://github.com/WilliamBarriga/Rinthel-arch/issues).
+
+## Contribuir
+
+Los issues y PRs son bienvenidos. Abre un issue antes de una contribucion grande y lee [CONTRIBUTING.md](CONTRIBUTING.md), que incluye el mapa de paquetes. Para reportar una vulnerabilidad, mira [SECURITY.md](SECURITY.md).
 
 ## Licencia
 

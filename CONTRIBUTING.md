@@ -27,6 +27,22 @@ No hay CI: las pruebas se corren en local. El hook de pre-commit corre `pnpm che
 - Las capturas de `docs/img/` se regeneran con `pnpm docs:capturas` (necesita `pnpm build` y Chromium) cuando cambia un Tema o un ejemplo.
 - Antes de adoptar una dependencia nueva, investigala (licencia, mantenimiento, encaje) y deja el research escrito; la adopcion se decide en un issue o ADR.
 
+## Mapa del repo
+
+| Ruta | Contenido |
+| --- | --- |
+| `packages/canonico` | Esquema de la Fuente canonica (Zod), validacion y resolucion de Vistas |
+| `packages/tema` | Catalogo de Primitivas y Slots, Estilo resuelto y Metricas |
+| `packages/dsl` | Gramatica (Langium) y compilador del texto `.dg` |
+| `packages/layout` | Layout con ELK y Pins; geometria cacheada |
+| `packages/sesion` | Tuberia compartida: compilar, validar y calcular geometria |
+| `packages/render` | Dibujo puro en React (Nodos y Grupos en HTML/CSS, Aristas en SVG) |
+| `packages/shell` | Visor interactivo: pan/zoom, colapso, arrastre |
+| `packages/cli` | `validate`, `build`, `dev`, `inspect`, `edit`, `skill` |
+| `examples/tutorial` | El tutorial, un Workspace por paso |
+| `examples/rinthel-arch` | Este repo documentado con su propio DSL, con los 14 Temas |
+| `examples/temas/galeria` | Un Modelo comun con los 14 Temas, y estados de cada Nodo |
+
 ## Ramas de research y prototipos
 
 Las ramas `research/*` guardan investigaciones (un archivo `research/<nombre>.md` por rama) y `prototype/*` guarda los prototipos que fundaron decisiones. Son material de contexto: no se mezclan en `main`. Lista las de research con `git branch -a -l '*research/*'` y lee una con `git show research/<nombre>:research/<nombre>.md`.
