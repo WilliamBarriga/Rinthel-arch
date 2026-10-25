@@ -12,6 +12,10 @@ Sistema React + TS para escribir y renderizar diagramas grandes y detallados de 
 - ADRs de contrato (dsl, render, layout, paquetes, cli): `docs/adr/`. Leer el ADR del modulo antes de cambiar su interfaz.
 - Catalogo de Temas (Primitivas, Slots, Movimientos, Efectos con rangos y defectos): `docs/referencia-catalogo.md`, generado desde `packages/tema` con `pnpm docs:catalogo`; no editar a mano (una prueba falla si se desvia).
 
+## Skills del repo
+
+`skills/` (formato `SKILL.md`, agnostico del harness): `rinthel-diagramas` (escribir, validar y servir `.dg`) y `rinthel-temas` (personalizar la estetica). Cargalas antes de editar un Workspace o un Tema. Opciones del CLI: `docs/guia/cli.md` o `diagrams <comando> --help`.
+
 ## Dependencias y tecnologia
 
 Antes de adoptar una dependencia, investigarla (licencia, mantenimiento, encaje con los requisitos) y dejar el research escrito; la adopcion se decide en un ticket o ADR.
@@ -29,4 +33,4 @@ Antes de adoptar una dependencia, investigarla (licencia, mantenimiento, encaje 
 - No hay CI: todo se prueba en local. No agregar workflows de GitHub Actions.
 - Esperar procesos largos con Monitor, no con `sleep`.
 - Todo HTML que se quiera mostrar al usuario (reportes, previews, exports) se sirve desde un mini server local (ej. `python3 -m http.server` en el directorio del archivo, o `dev`) y se entrega la URL `http://localhost:<puerto>/...`. Firefox no ve este disco, asi que `xdg-open` de un archivo o una ruta `file://` no sirve.
-- Ticket por subagente: cargar la skill `tdd` primero (`.claude/` no la fija; ponerlo en el prompt).
+- Ticket por subagente: cargar la skill `tdd` primero (no queda fijada en el repo; ponerlo en el prompt).

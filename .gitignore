@@ -4,3 +4,4 @@ dist/
 .diagrams/
 /*.png
 prototype-estetica/
+.agents/

@@ -45,6 +45,7 @@ Abre la URL que imprime `dev` (`http://127.0.0.1:4173/`) y cambia a las Vistas `
 | --- | --- |
 | [Inicio rapido](docs/guia/inicio-rapido.md) | Instalar, correr el CLI y recorrer los ejemplos |
 | [Tutorial](docs/guia/tutorial.md) | Crear un diagrama pequeno y personalizarlo en cinco pasos |
+| [CLI](docs/guia/cli.md) | Comandos, opciones, codigos de salida y salida `--json` |
 | [Personalizar con Temas](docs/guia/personalizar-temas.md) | Paleta, Capas, parches por Tipo y estado, Partes, movimiento |
 | [Referencia del DSL](docs/guia/referencia-dsl.md) | Sintaxis de Modelo, Vistas y Pasos |
 | [Catalogo de Temas](docs/referencia-catalogo.md) | Todas las Primitivas, Slots, Movimientos y Efectos con sus rangos |

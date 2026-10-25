@@ -39,7 +39,7 @@ Un archivo `.dg` tiene hasta cinco clases de bloque:
 
 ## Los comandos
 
-Todos piden `--workspace <ruta>`.
+Detalle de cada uno en la [guia del CLI](cli.md), o `dg <comando> --help`. Todos piden `--workspace <ruta>`.
 
 | Comando | Que hace |
 | --- | --- |

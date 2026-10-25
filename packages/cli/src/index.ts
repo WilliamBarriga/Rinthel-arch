@@ -7,6 +7,7 @@
  * Invariantes: unico paquete con I/O de disco (lee Workspace, escribe en
  * `<workspace>/.diagrams/`); `validate` nunca reescribe y devuelve todos los
  * issues en una pasada, ordenados (archivo, linea, columna, codigo).
+ * Ayuda (`ayuda.ts`): `--help`, `-h`, `help [comando]` o sin argumentos imprimen el uso a stdout con codigo 0.
  * `validate --workspace <ruta> [--theme <nombre>] [--theme-path <carpeta>] [--json] [--max-issues N] [--strict]`:
  * - `--json`: stdout es exactamente un objeto `salidaDeValidateSchema`
  *   (ADR 0005), sin texto extra; `summary` cuenta todos los issues y
@@ -53,6 +54,7 @@ import { salidaDeValidateSchema } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
 
+import { ayudaPara } from './ayuda';
 import { editar } from './comando-edit';
 import { inspeccionar } from './comando-inspect';
 import { comandoDev } from './dev';
@@ -98,13 +100,15 @@ export async function run(
   argv: readonly string[],
   dependencias: Dependencias = {},
 ): Promise<ResultadoDeEjecucion> {
+  const ayuda = ayudaPara(argv);
+  if (ayuda !== undefined) return { exitCode: 0, stdout: ayuda, stderr: '' };
   const [comando, ...resto] = argv;
   if (comando === 'edit') return editar(resto, dependencias);
   if (comando === 'inspect') return inspeccionar(resto, dependencias);
   if (comando === 'dev') return comandoDev(resto, dependencias);
   if (comando !== 'validate' && comando !== 'build' && comando !== 'skill') {
     return uso(
-      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|skill|inspect|edit|dev> --workspace <ruta>`,
+      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|skill|inspect|edit|dev> --workspace <ruta> (diagrams --help para el detalle)`,
     );
   }
   if (comando === 'skill') return skill(resto, dependencias);

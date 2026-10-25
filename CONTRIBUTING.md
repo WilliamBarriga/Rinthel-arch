@@ -33,4 +33,4 @@ Las ramas `research/*` guardan investigaciones (un archivo `research/<nombre>.md
 
 ## Agentes
 
-`AGENTS.md` y `CLAUDE.md` describen el repo para agentes de codigo. Si contribuyes con uno, empieza por ahi.
+`AGENTS.md` y `CLAUDE.md` describen el repo para agentes de codigo; `skills/` trae las skills `rinthel-diagramas` y `rinthel-temas`. Si contribuyes con un agente, empieza por ahi.

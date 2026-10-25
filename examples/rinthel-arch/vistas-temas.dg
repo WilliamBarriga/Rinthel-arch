@@ -5,96 +5,96 @@ view abierto-soft-card {
   theme soft-card
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-glass-chip {
   type architecture
   theme glass-chip
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-neobrutalist {
   type architecture
   theme neobrutalist
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-blueprint {
   type architecture
   theme blueprint
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-claro-suave {
   type architecture
   theme claro-suave
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-crt-terminal {
   type architecture
   theme crt-terminal
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-synthwave {
   type architecture
   theme synthwave
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-editorial {
   type architecture
   theme editorial
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-bauhaus {
   type architecture
   theme bauhaus
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-sticky-notes {
   type architecture
   theme sticky-notes
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-keycaps {
   type architecture
   theme keycaps
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-metro-map {
   type architecture
   theme metro-map
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-pcb {
   type architecture
   theme pcb
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
 view abierto-pixel-art {
   type architecture
   theme pixel-art
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli
+  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
 }
