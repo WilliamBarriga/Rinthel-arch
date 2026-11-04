@@ -75,10 +75,10 @@
  * errores de catalogo; solo `resolverTema` lanza. Configuracion requerida: ninguna.
  * Solo importa `canonico`.
  */
-export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, construirPrimitiva, primitivasDe, resolverTokens, sugerir } from './catalogo';
+export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, SLOTS_DE_TEXTO, construirPrimitiva, primitivasDe, resolverTokens, sugerir } from './catalogo';
 export { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, alineacionDe, construirDisposicion, describirDisposicion, esCaja, slotsDe } from './disposicion';
 export type { Alineacion, CajaDeSlots, Direccion, ElementoDeSlots, EntradaDeCaja, EntradaDeSlot, ErrorDeDisposicion, HojaDeSlots, PropiedadEscrita } from './disposicion';
-export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDePrimitivaEn, NombreDeSlot, Primitiva, UbicacionDePrimitiva } from './catalogo';
+export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDePrimitivaEn, NombreDeSlot, NombreDeSlotDeTexto, Primitiva, UbicacionDePrimitiva } from './catalogo';
 export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
 export { GRUPO_POR_DEFECTO, TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
