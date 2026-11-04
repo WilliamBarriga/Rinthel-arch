@@ -38,6 +38,13 @@ const primitivasDe = (t: TemaResuelto): Set<string> => {
 };
 
 describe('galeria de Temas de ejemplo', () => {
+  it('las 40 Primitivas del catalogo aparecen en al menos un Tema de ejemplo', () => {
+    const usadas = new Set<string>();
+    const sueltos = ['catalogo-formas.dg', 'codigo.dg'].map((f) => compile({ [f]: readFileSync(resolve(import.meta.dirname, '../examples/temas', f), 'utf8') }).canonico!);
+    for (const tema of [...canonico!.themes, ...sueltos.flatMap((c) => c.themes)]) for (const p of primitivasDe(resolverTema(tema))) usadas.add(p);
+    expect(Object.keys(CATALOGO).filter((p) => !usadas.has(p))).toEqual([]);
+  });
+
   it('cada Tema vive en su propio archivo y estan los 14', () => {
     for (const nombre of TEMAS) {
       expect(archivos[`${nombre}.dg`], nombre).toBeDefined();

@@ -93,6 +93,8 @@ export type NombreDePrimitivaEn<U extends UbicacionDePrimitiva> = {
 export interface DefinicionDeSlot {
   readonly estilo: 'text' | 'icon' | 'chip';
   readonly elastico: boolean;
+  /** `true`: Slot de una sola linea de texto (titulo, insignia, contador...), medido con `textoDeSlot`; no se deriva del estilo (`attrs` es `text` y no lo es, `counter` es `chip` y si). */
+  readonly texto?: true;
   /** Tamano del texto respecto al del Tema (`size` lo cambia). */
   readonly escala?: number;
   /** Alto de la linea respecto al tamano del texto (`leading` lo cambia); sin el, el alto de cabecera de las Metricas. */
@@ -108,20 +110,23 @@ export const DEFINICION_DE_SLOT = {
   /** Icono del Tipo de nodo: caja de lado fijo (Primitiva `icon`). */
   icon: { estilo: 'icon', elastico: false },
   /** Titulo: texto que se estira para ocupar el espacio libre de su fila. */
-  title: { estilo: 'text', elastico: true },
+  title: { estilo: 'text', elastico: true, texto: true },
   /** Insignia: el Tipo de nodo, en texto pequeno (normalmente bajo el titulo). */
-  badge: { estilo: 'text', elastico: true, escala: 0.74, interlineado: 1.25 },
+  badge: { estilo: 'text', elastico: true, texto: true, escala: 0.74, interlineado: 1.25 },
   /** Descripcion del Nodo; no reserva espacio si no tiene. */
-  desc: { estilo: 'text', elastico: true, escala: 0.85, interlineado: 1.25 },
+  desc: { estilo: 'text', elastico: true, texto: true, escala: 0.85, interlineado: 1.25 },
   /** Pie: la fuente del Nodo (la primera `source` del Modelo); no reserva espacio si no tiene. */
-  footer: { estilo: 'text', elastico: true, escala: 0.75, interlineado: 1.25 },
+  footer: { estilo: 'text', elastico: true, texto: true, escala: 0.75, interlineado: 1.25 },
   /** Filas de Atributo: una por Atributo visible. */
   attrs: { estilo: 'text', elastico: true },
   /** Contador: cuantos hijos esconde un Grupo colapsado, en una caja (Primitiva `chip`); solo existe en el colapsado. */
-  counter: { estilo: 'chip', elastico: false, escala: 0.8, interlineado: 1.25 },
+  counter: { estilo: 'chip', elastico: false, texto: true, escala: 0.8, interlineado: 1.25 },
 } as const satisfies Record<string, DefinicionDeSlot>;
 export type NombreDeSlot = keyof typeof DEFINICION_DE_SLOT;
 export const SLOTS = Object.keys(DEFINICION_DE_SLOT) as NombreDeSlot[];
+/** Slots de una sola linea de texto: los que declaran `texto` en su definicion. */
+export type NombreDeSlotDeTexto = { [S in NombreDeSlot]: (typeof DEFINICION_DE_SLOT)[S] extends { readonly texto: true } ? S : never }[NombreDeSlot];
+export const SLOTS_DE_TEXTO = SLOTS.filter((slot): slot is NombreDeSlotDeTexto => 'texto' in DEFINICION_DE_SLOT[slot]);
 
 /** Primitiva ya validada: propiedades completas (con defectos), colores aun como nombre de Paleta. */
 export interface Primitiva {

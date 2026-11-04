@@ -21,8 +21,8 @@
  */
 import type { Atributo } from 'canonico';
 
-import { DEFINICION_DE_SLOT } from './catalogo';
-import type { DefinicionDeSlot, NombreDeSlot } from './catalogo';
+import { DEFINICION_DE_SLOT, SLOTS_DE_TEXTO } from './catalogo';
+import type { DefinicionDeSlot, NombreDeSlot, NombreDeSlotDeTexto } from './catalogo';
 import { esCaja, slotsDe } from './disposicion';
 import type { Alineacion, CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { anchoDeTexto } from './medicion';
@@ -144,8 +144,6 @@ export interface ColocacionDeNodo {
   filas: Rect[];
 }
 
-type SlotDeTexto = 'title' | 'badge' | 'desc' | 'footer' | 'counter';
-
 /** Holgura de la caja del contador alrededor de su texto (padding mas borde). */
 const HOLGURA_DE_CHIP = { x: 14, y: 2 };
 
@@ -157,7 +155,7 @@ export const PUNTO_DE_TITULO_EM = 1;
  * mide su caja. Una sola regla para la colocacion (`medidasDeNodo`) y para lo que `layout` mide
  * (`textosDeNodo`). `undefined`: el Nodo no tiene ese contenido y el Slot no reserva espacio.
  */
-export function textoDeSlot(slot: SlotDeTexto, metricas: Metricas, contenido: ContenidoDeNodo): (TextoAMedir & { alto: number; holgura: number }) | undefined {
+export function textoDeSlot(slot: NombreDeSlotDeTexto, metricas: Metricas, contenido: ContenidoDeNodo): (TextoAMedir & { alto: number; holgura: number }) | undefined {
   const crudo = { title: contenido.titulo, badge: contenido.tipo, desc: contenido.descripcion, footer: contenido.fuente, counter: contenido.cuenta?.toString() }[slot];
   if (crudo === undefined || (crudo === '' && slot !== 'title')) return undefined;
   // El estilo `text` del titulo cambia lo que se mide: mayusculas, separacion entre letras, punto y relleno del chip.
@@ -179,12 +177,10 @@ export function textoDeSlot(slot: SlotDeTexto, metricas: Metricas, contenido: Co
   };
 }
 
-const SLOTS_DE_TEXTO: readonly SlotDeTexto[] = ['title', 'badge', 'desc', 'footer', 'counter'];
-
 /** Tabla de medidas de los Slots de un Nodo (ver `DEFINICION_DE_SLOT`): una entrada por Slot del catalogo. */
 function medidasDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): MedidaDeSlot {
   const { fontSize, escalaAtributo, fuentes } = metricas;
-  const delTexto = (slot: SlotDeTexto) => (): Tamano | undefined => {
+  const delTexto = (slot: NombreDeSlotDeTexto) => (): Tamano | undefined => {
     const t = textoDeSlot(slot, metricas, contenido);
     return t === undefined ? undefined : { width: anchoDeTexto(metricas, t.familia, t.tamano, t.texto, t.peso) + t.holgura, height: t.alto, ...(slot === 'title' && { elastico: !metricas.titulo.caja }) };
   };
