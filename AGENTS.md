@@ -7,6 +7,7 @@ Sistema React + TS para escribir y renderizar diagramas grandes y detallados de 
 - Vocabulario: `CONTEXT.md`. Usar esos terminos exactos (Modelo, Vista, Tipo de diagrama, Pin...).
 - Decisiones y trabajo pendiente: GitHub Issues de este repo (`gh`, `WilliamBarriga/Rinthel-arch`); cada ticket es un issue con label `wayfinder:<tipo>`.
 - Reglas de codigo (estructura de paquetes, modulos profundos, hexagonal, pruebas): `docs/CODING.md`. Leer antes de crear o modificar codigo.
+- Indice de ramas con una conclusion por rama: `docs/ramas.md`.
 - Research: `research/<nombre>.md` en ramas `research/<nombre>`, no en `main`; listarlas con `git branch -a -l '*research/*'` y leer el archivo con `git show research/<nombre>:research/<nombre>.md` antes de re-investigar.
 - Guias de usuario (README, `docs/guia/`, `CONTRIBUTING.md`): al cambiar el DSL, un Tema de ejemplo o el CLI, actualizarlas; `pnpm docs:capturas` regenera las imagenes de `docs/img/`.
 - ADRs de contrato (dsl, render, layout, paquetes, cli): `docs/adr/`. Leer el ADR del modulo antes de cambiar su interfaz.
