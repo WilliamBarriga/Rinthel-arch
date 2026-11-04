@@ -16,12 +16,14 @@ export type RelojDeCuadros = (cuadro: (ahoraMs: number) => void) => () => void;
 
 /** Reloj de `requestAnimationFrame`, o `undefined` si el entorno no lo tiene. */
 export function relojDelNavegador(): RelojDeCuadros | undefined {
-  if (typeof requestAnimationFrame !== 'function') return undefined;
-  return (cuadro) => {
-    const id = requestAnimationFrame(cuadro);
-    return () => cancelAnimationFrame(id);
-  };
+  return typeof requestAnimationFrame === 'function' ? relojDeRaf : undefined;
 }
+
+/** Una sola funcion para todos los renders: `useMorph` la usa como dependencia de un efecto y, si cambiara de identidad, reiniciaria el morph en cada cuadro. */
+const relojDeRaf: RelojDeCuadros = (cuadro) => {
+  const id = requestAnimationFrame(cuadro);
+  return () => cancelAnimationFrame(id);
+};
 
 export interface Morph {
   desde: Geometria;

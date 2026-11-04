@@ -176,6 +176,36 @@ describe('colapso y expansion', () => {
     expect(Number(medio)).toBeLessThan(1);
   });
 
+  it('morph con el reloj por defecto: termina al cumplir la duracion aunque cada cuadro re-renderice (no tiembla)', async () => {
+    // rAF con cancelacion real: solo queda pendiente el ultimo cuadro pedido, como en el navegador.
+    const pendientes = new Map<number, FrameRequestCallback>();
+    let proximo = 0;
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      pendientes.set(++proximo, cb);
+      return proximo;
+    });
+    vi.stubGlobal('cancelAnimationFrame', (id: number) => pendientes.delete(id));
+    const cuadros = {
+      shift: () => {
+        const [id, cb] = [...pendientes][0]!;
+        pendientes.delete(id);
+        return cb;
+      },
+    };
+    const { container } = montar({ morphMs: 100 });
+    await waitFor(() => expect(ids(container)).toEqual(['c', 'g']));
+
+    alternar(container, 'g');
+    await waitFor(() => expect(ids(container)).toContain('g.a'));
+    let ahora = 1000;
+    const siguiente = (avanceMs: number) => act(async () => cuadros.shift()!((ahora += avanceMs)));
+    await siguiente(0); // inicio
+    await siguiente(50); // cada cuadro hace setT: si el reloj cambia de identidad, el morph reinicia y nunca llega a 100 ms
+    await siguiente(50);
+    expect(opacidadDeNodo(container, 'g.a')).toBeNull();
+    expect(container.querySelector('[data-layout]')!.getAttribute('data-layout')).toBe('listo');
+  });
+
   it('morph con reloj inyectado: no usa requestAnimationFrame y termina al cumplir la duracion', async () => {
     const raf = vi.fn();
     vi.stubGlobal('requestAnimationFrame', raf);
