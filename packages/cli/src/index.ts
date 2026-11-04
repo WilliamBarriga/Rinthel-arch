@@ -1,54 +1,10 @@
 /**
- * `cli` — comandos `validate`, `build`, `skill`, `inspect`, `edit` y `dev`.
+ * `cli` — comandos `validate`, `build`, `skill`, `inspect`, `edit` y `dev` (opciones: `docs/guia/cli.md`).
  *
- * Interfaz: `run(argv, dependencias?) -> { exitCode, stdout, stderr }`. No
- * escribe en el proceso: el binario (`bin.ts`) imprime el resultado.
- *
- * Invariantes: unico paquete con I/O de disco (lee Workspace, escribe en
- * `<workspace>/.diagrams/`); `validate` nunca reescribe y devuelve todos los
- * issues en una pasada, ordenados (archivo, linea, columna, codigo).
- * Ayuda (`ayuda.ts`): `--help`, `-h`, `help [comando]` o sin argumentos imprimen el uso a stdout con codigo 0.
- * `validate --workspace <ruta> [--theme <nombre>] [--theme-path <carpeta>] [--json] [--max-issues N] [--strict]`:
- * - `--json`: stdout es exactamente un objeto `salidaDeValidateSchema`
- *   (ADR 0005), sin texto extra; `summary` cuenta todos los issues y
- *   `truncated` indica que `issues` se corto en `--max-issues` (100 por defecto).
- * - Codigos de salida: 0 sin errores, 1 hay errores (con `--strict`, tambien
- *   avisos), 2 fallo de uso o interno (mensaje en stderr, stdout vacio).
- * - `--theme-path` se fusiona antes del Workspace (gana el Workspace); `--theme` solo
- *   cambia las medidas con que se detectan Pins solapados, igual que en `build`.
- * - Sin errores de compilacion, calcula el layout de las Vistas con al menos dos Pins
- *   (el solape solo se conoce tras ELK) y emite `W_OVERLAPPING_PINS` como `build`; con
- *   `--strict` ese aviso hace fallar. Las Vistas sin Pins no pagan layout.
- * `build --workspace <ruta> [--theme <nombre>] [--theme-path <carpeta>]` (acepta
- * tambien `--json`, `--strict`, `--max-issues`): compila, valida y escribe en
- * `<workspace>/.diagrams/` (reemplazandola) `canonico.json` y
- * `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`). Una Vista con
- * `theme` usa ese Tema; si no, `--theme`; si no, el neutro. `--theme-path` se
- * fusiona antes del Workspace (gana el Workspace en rutas repetidas). Con errores
- * (o avisos en `--strict`) sale 1 y borra la salida anterior; los Pins solapados salen como
- * `W_OVERLAPPING_PINS` con posicion y `related`. `--theme` inexistente: codigo 2.
- * `skill --workspace <ruta> [--out <archivo>]`: genera el skill para agentes (formato
- * `SKILL.md`) desde el catalogo del proyecto (Tipos de nodo, Paleta, Temas), la
- * sintaxis del DSL, el contrato de `validate` (JSON Schema derivado del esquema Zod)
- * y los codigos de issue. Va a stdout, o a `--out`; determinista (regenerar con otro
- * catalogo lo actualiza). Con errores de validacion sale 1 y muestra los issues.
- * `inspect <buscar|nodo|vista> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json]`
- * (ADR 0005): consulta de solo lectura del Modelo, con contrato JSON propio; el contrato y los
- * codigos de salida estan en `comando-inspect.ts`.
- * `edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --edits '<json>') [--hash <archivo>=<hash>] [--theme-path <carpeta>] [--json]`
- * (ADR 0005): unica escritura explicita sobre el DSL, todo o nada y con chequeo de hash; solo
- * escribe archivos del Workspace (nunca los de `--theme-path`). Contrato en `comando-edit.ts`.
- * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>] [--trust-code]` (ADR 0005): servidor en 127.0.0.1
- * (puerto 4173 por defecto) con vista previa en vivo y panel de issues. Entrada programatica:
- * `iniciarDev(OpcionesDeDev) -> ServidorDev` (`url`, `cerrar()`); invariantes, rutas y modos de
- * error en `dev.ts`. `run(['dev', ...])` convierte sus fallos en codigo 2.
- * Temas con codigo (ADR 0008): `src/codigo.ts` compila con esbuild, sin ejecutar, los `.tsx` del Workspace; `validate`, `build` e
- * `inspect` reciben de el los nombres de componente y los errores de compilacion (`E_THEME_CODE_COMPILE` con file/line),
- * e `inspect tema` marca `temaConCodigo`. `dev` sirve el bundle en `/componentes.js` solo tras la confirmacion
- * (`POST /api/confiar` o `--trust-code`) y conserva la ultima version buena de cada `.tsx`.
- * Modos de error: issues como datos; fallo de uso -> stderr + codigo 2.
- * Configuracion requerida: `--workspace <ruta>`. Solo importa paquetes
- * anteriores en la cadena `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`; la tuberia compilar, validar y layout vive en `sesion`.
+ * Interfaz: `run(argv, dependencias?) -> { exitCode, stdout, stderr }`; no escribe en el proceso (`bin.ts` imprime).
+ * Invariantes: unico paquete con I/O de disco; `validate` nunca reescribe y devuelve todos los issues ordenados.
+ * Modos de error: issues como datos; fallo de uso o interno -> stderr, stdout vacio, codigo 2.
+ * Codigos de salida: 0 correcto, 1 errores del Workspace o edicion rechazada, 2 fallo de uso o interno.
  */
 import { salidaDeValidateSchema } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
@@ -67,6 +23,7 @@ import { escribirSalida, escribirTexto, leerWorkspace } from './workspace';
 export { iniciarDev } from './dev';
 export type { OpcionesDeDev, ServidorDev } from './dev';
 
+/** Resultado de `run`: codigo de salida y textos que el binario imprime. */
 export type { ResultadoDeEjecucion };
 
 /** Dependencias que entran como argumento; por defecto, las reales. */
@@ -76,8 +33,6 @@ export interface Dependencias {
   /** Escribe un archivo de texto (con sus carpetas); lo usa `skill --out`. */
   escribirArchivo?: (ruta: string, texto: string) => void;
 }
-
-
 
 type OpcionesParseadas = ReturnType<typeof leerOpciones>;
 
@@ -96,6 +51,22 @@ function leerOpciones(args: readonly string[], propias: Record<string, { type: '
   }).values as Record<string, string | boolean | undefined>;
 }
 
+/**
+ * Ejecuta un comando del CLI. `--help`, `-h`, `help [comando]` o sin argumentos dan el uso (codigo 0).
+ * `validate` y `build` salen 1 con errores (con `--strict`, tambien con avisos); `--json` imprime
+ * exactamente un objeto `salidaDeValidateSchema` (ADR 0005).
+ * - `validate` suma `W_OVERLAPPING_PINS` (el solape solo se conoce tras ELK): calcula el layout de las
+ *   Vistas con al menos dos Pins; las Vistas sin Pins no pagan layout.
+ * - `build` escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`) en
+ *   `<workspace>/.diagrams/`; con errores (o avisos en `--strict`) borra la salida anterior.
+ * - `--theme` es el Tema global (una Vista con `theme` propio lo anula; sin ninguno, el neutro); uno no
+ *   declarado sale 2. `--theme-path` se fusiona antes del Workspace, que gana en nombres repetidos.
+ * - Los Temas con codigo (`.tsx`, ADR 0008) se compilan con esbuild sin ejecutarse: `validate`, `build` e
+ *   `inspect` reciben los nombres de componente y los errores `E_THEME_CODE_COMPILE` (con file y line);
+ *   `inspect tema` marca `temaConCodigo`.
+ * - `skill` genera el skill de agente (a stdout o `--out`); `inspect`, `edit` y `dev` delegan en
+ *   `comando-inspect.ts`, `comando-edit.ts` y `dev.ts`. Un comando desconocido o una opcion invalida salen 2.
+ */
 export async function run(
   argv: readonly string[],
   dependencias: Dependencias = {},

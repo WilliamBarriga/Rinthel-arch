@@ -9,7 +9,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 ## Modulos profundos
 
 - Interfaz pequena (pocas funciones y tipos), mucho comportamiento detras.
-- La interfaz incluye invariantes, orden de llamadas, modos de error y configuracion requerida. Se documenta en el `index.ts` del paquete.
+- La interfaz incluye invariantes, orden de llamadas, modos de error y configuracion requerida. La cabecera del `index.ts` la resume en pocas lineas (interfaz, invariantes, modos de error, dependencias); el detalle de cada export vive en su TSDoc y las opciones de usuario en `docs/guia/`.
 - Test de borrado: si borrar el modulo hace desaparecer la complejidad, era un pass-through; se fusiona con quien lo usa.
 - Las piezas internas pueden ser pequenas y sustituibles; solo cuenta como interfaz lo que cruza el seam.
 
@@ -31,6 +31,19 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 - Documentacion derivada: lo que sale de un esquema se genera, no se escribe a mano. `docs/referencia-catalogo.md` sale del catalogo de `tema` (`pnpm docs:catalogo`); `tests/referencia-catalogo.test.ts` falla si se desvia. Una Primitiva nueva: una entrada en el catalogo, su pintor y regenerar la referencia.
 - Runner de pruebas: Vitest. Build de paquetes: tsup. Gestor: pnpm workspaces, sin orquestador de tareas.
 
+## README de paquete
+
+`packages/<paquete>/README.md` es la puerta de entrada del paquete: hasta 25 lineas (sin linea en blanco tras cada encabezado), con un resumen de una linea bajo el titulo `# <paquete>` y estas secciones `##`, en este orden (la lista vive en `SECCIONES_README` de `scripts/check-docs.ts`):
+
+1. `Que hace`: las capacidades del paquete, en pocas lineas.
+2. `Que NO hace`: lo que se busca aqui y vive en otro paquete, con el paquete dueno.
+3. `Depende de`: paquetes del workspace que importa (o "Ningun paquete del workspace").
+4. `Archivo de entrada`: ruta del `index.ts` entre comillas invertidas, relativa a la raiz del repo.
+5. `ADR relacionado`: el ADR del contrato del paquete.
+6. `Probar`: `pnpm --filter <paquete> test`.
+
+Modelo: `packages/canonico/README.md`. `pnpm check:docs` falla si un README existente pierde una seccion, nombra un archivo de entrada inexistente o no da el comando de `Probar`.
+
 ## Chequeos automaticos
 
-La direccion de dependencias, los imports internos entre paquetes la superficie `exports` y la pureza del nucleo (`canonico`, `tema`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell` y `cli` son adaptadores) los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.
+La direccion de dependencias, los imports internos entre paquetes, la superficie `exports` y la pureza del nucleo (`canonico`, `tema`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell` y `cli` son adaptadores) los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.

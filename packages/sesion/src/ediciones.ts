@@ -12,6 +12,7 @@ export interface EdicionConHash {
   hash: string;
 }
 
+/** Resultado de una edicion: `ok: true` con el payload `T`, o `ok: false` con `motivo` y `mensaje` (nada se escribe). */
 export type ResultadoDeEdicion<T> =
   | ({ ok: true } & T)
   | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };

@@ -5,7 +5,7 @@ La estetica de un diagrama vive en el **Tema**, nunca en el Modelo: el mismo Mod
 ## Elegir un Tema
 
 - Los incorporados: `neutral` (defecto), `neutral-dark` y `alto-contraste`.
-- Los 14 de ejemplo, en [`examples/rinthel-arch/temas/`](../../examples/rinthel-arch/temas/): `soft-card`, `glass-chip`, `neobrutalist`, `blueprint`, `claro-suave`, `crt-terminal`, `synthwave`, `editorial`, `bauhaus`, `sticky-notes`, `keycaps`, `metro-map`, `pcb` y `pixel-art`. Copia el `.dg` de uno a tu Workspace (y sus fuentes, ver abajo) y usalo en una Vista. Para ver todos aplicados a un mismo diagrama, mira la [galeria del README](../../README.md#galeria).
+- Los de ejemplo, un `.dg` por Tema en [`examples/rinthel-arch/temas/`](../../examples/rinthel-arch/temas/): el listado, con una imagen cada uno, esta en la [galeria](../galeria.md). Copia el `.dg` de uno a tu Workspace (y sus fuentes, ver abajo) y usalo en una Vista.
 - El tuyo: un bloque `theme` en cualquier `.dg` del Workspace.
 
 Una Vista usa un Tema. Se puede ajustar solo para esa Vista con un parche entre llaves:

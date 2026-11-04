@@ -56,8 +56,8 @@ En el visor, la Vista se elige con el hash de la URL (`#p=<vista>`), y los enlac
 
 ```
 dg dev --workspace examples/tutorial/paso-2      # el diagrama pequeno del tutorial
-dg dev --workspace examples/rinthel-arch         # este repo documentado, con 14 Temas
-dg dev --workspace examples/temas/galeria --theme-path examples/rinthel-arch/temas        # un Modelo comun con los 14 Temas y los estados de cada Nodo
+dg dev --workspace examples/rinthel-arch         # este repo documentado, con sus Temas de ejemplo
+dg dev --workspace examples/temas/galeria --theme-path examples/rinthel-arch/temas        # un Modelo comun con los Temas de ejemplo y los estados de cada Nodo
 ```
 
 En `examples/rinthel-arch` prueba la Vista `paquetes` y haz clic en un paquete (drill-down), o abre una Vista `abierto-<tema>`. La Vista `flujo-edicion` es de Tipo `flow`: avanza sus Pasos para ver como se revela el diagrama.

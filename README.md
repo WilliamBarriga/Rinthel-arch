@@ -13,7 +13,7 @@ Sistema (React + TypeScript) para escribir y renderizar diagramas grandes y deta
 ## Que ofrece
 
 - **Un Modelo, muchas Vistas.** Los Nodos, Aristas y Atributos se escriben una vez; cada Vista elige que mostrar (`include`, `exclude`, `depth`) y puede enlazar a otra (drill-down) o revelarse paso a paso.
-- **La estetica es un Tema.** Un Tema es texto: Paleta, fuentes y una pila de Capas por elemento, tomadas de un catalogo cerrado (formas, rellenos, bordes, sombras, glow, vidrio, trazos, marcadores, animaciones). Hay 14 Temas de ejemplo y tres incorporados.
+- **La estetica es un Tema.** Un Tema es texto: Paleta, fuentes y una pila de Capas por elemento, tomadas de un catalogo cerrado (formas, rellenos, bordes, sombras, glow, vidrio, trazos, marcadores, animaciones). Hay Temas de ejemplo (ver la [galeria](docs/galeria.md)) y tres incorporados.
 - **Visor en vivo.** `dev` recompila al guardar; el visor tiene pan y zoom, colapso de Grupos y arrastre de Nodos que reescribe el `.dg`.
 - **Pensado para humanos y agentes.** `validate` devuelve issues estructurados con sugerencias, `inspect` consulta el Modelo y `skill` explica el flujo a un agente.
 
@@ -53,7 +53,7 @@ El mismo mapa de este repo (`examples/rinthel-arch/`), cambiando solo el Tema.
 | --- | --- | --- |
 | ![Tema soft-card: tarjetas sobrias](docs/img/temas/soft-card.png)<br>`soft-card` | ![Tema blueprint: plano tecnico](docs/img/temas/blueprint.png)<br>`blueprint` | ![Tema crt-terminal: terminal verde](docs/img/temas/crt-terminal.png)<br>`crt-terminal` |
 
-Los 14 Temas, con una imagen cada uno, estan en la [galeria completa](docs/galeria.md).
+Los Temas de ejemplo, con una imagen cada uno, estan en la [galeria completa](docs/galeria.md).
 
 ## Empezar
 
@@ -67,7 +67,7 @@ pnpm build
 node packages/cli/dist/bin.js dev --workspace examples/rinthel-arch
 ```
 
-`dev` imprime una URL (`http://127.0.0.1:4173/`). Si el visor carga ahi, todo funciona; cambia a las Vistas `abierto-<tema>` para ver los 14 Temas. Para tu propio diagrama, apunta `--workspace` a una carpeta con tus `.dg`.
+`dev` imprime una URL (`http://127.0.0.1:4173/`). Si el visor carga ahi, todo funciona; cambia a las Vistas `abierto-<tema>` para ver los Temas de ejemplo. Para tu propio diagrama, apunta `--workspace` a una carpeta con tus `.dg`.
 
 ## Documentacion
 

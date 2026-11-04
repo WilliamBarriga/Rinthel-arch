@@ -64,6 +64,7 @@ export interface ShellDev {
   worker: string;
 }
 
+/** Opciones de `iniciarDev`; todo lo que no es `workspace` se inyecta en pruebas y tiene un defecto real. */
 export interface OpcionesDeDev {
   workspace: string;
   /** Carpeta de Temas (`--theme-path`): se fusiona antes del Workspace, que gana en rutas repetidas. No se observa. */
@@ -91,6 +92,7 @@ export interface OpcionesDeDev {
   compilarCodigo?: () => ResultadoDeCodigo;
 }
 
+/** Servidor de `dev` en marcha: `url`, estado del codigo de Temas y `cerrar()`. */
 export interface ServidorDev {
   /** `http://127.0.0.1:<puerto>/` */
   url: string;
@@ -154,6 +156,12 @@ const PAGINA = `<!doctype html>
 </html>
 `;
 
+/**
+ * Inicia el servidor de `dev` en 127.0.0.1 (puerto 4173 por defecto) con vista previa en vivo y panel
+ * de issues. Devuelve `{ url, cerrar() }`. Los Temas con codigo (`.tsx`, ADR 0008) se sirven en
+ * `/componentes.js` solo tras la confirmacion (`POST /api/confiar` o `--trust-code`) y se conserva la
+ * ultima version buena de cada uno. `run(['dev', ...])` convierte sus fallos en codigo 2.
+ */
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
   const { workspace, temas, puerto = 0, debounceMs = 150, leer: leerBase = leerWorkspace, leerRecursos: leerRecursosBase = opciones.leer === undefined ? leerRecursosReal : () => ({}), observar = observarDisco, shell = empaquetarShellDev, escribir = escribirEnDisco, borrar = borrarEnDisco, confiarEnCodigo = false } = opciones;
   const compilarCodigo = opciones.compilarCodigo ?? (opciones.leer === undefined ? compiladorDeCodigo(workspace).compilar : () => SIN_CODIGO);
