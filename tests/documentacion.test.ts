@@ -5,7 +5,12 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { SECCIONES_README, revisarIndiceDeAdrs, revisarReadmes } from '../scripts/check-docs';
+import {
+  SECCIONES_README,
+  revisarEnlacesDeAgents,
+  revisarIndiceDeAdrs,
+  revisarReadmes,
+} from '../scripts/check-docs';
 
 const raizDelRepo = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const temporales: string[] = [];
@@ -70,10 +75,12 @@ describe('revisarReadmes', () => {
     expect(revisarReadmes(raiz)).toEqual([]);
   });
 
-  it('no exige que todos los paquetes tengan README', () => {
+  it('falla si un paquete no tiene README', () => {
     const raiz = crearRepo(repoConPaquete());
 
-    expect(revisarReadmes(raiz)).toEqual([]);
+    expect(revisarReadmes(raiz)).toContainEqual(
+      expect.objectContaining({ archivo: 'packages/canonico/README.md', regla: 'seccion' }),
+    );
   });
 
   it('falla si un README pierde una seccion', () => {
@@ -147,5 +154,31 @@ describe('revisarIndiceDeAdrs', () => {
 
   it('el indice de este repo lista todos los ADRs', () => {
     expect(revisarIndiceDeAdrs(raizDelRepo)).toEqual([]);
+  });
+});
+
+describe('revisarEnlacesDeAgents', () => {
+  const completo = 'Indices: `docs/adr/README.md` y `docs/ramas.md`.\n';
+
+  it('acepta un AGENTS.md que enlaza ambos indices', () => {
+    expect(revisarEnlacesDeAgents(crearRepo({ 'AGENTS.md': completo }))).toEqual([]);
+  });
+
+  it('falla si falta el enlace al indice de ADRs', () => {
+    const raiz = crearRepo({ 'AGENTS.md': 'Solo `docs/ramas.md`.\n' });
+
+    expect(revisarEnlacesDeAgents(raiz)).toContainEqual(
+      expect.objectContaining({ archivo: 'AGENTS.md', regla: 'indice' }),
+    );
+  });
+
+  it('falla si falta el enlace al indice de ramas', () => {
+    const raiz = crearRepo({ 'AGENTS.md': 'Solo `docs/adr/README.md`.\n' });
+
+    expect(revisarEnlacesDeAgents(raiz)).toHaveLength(1);
+  });
+
+  it('el AGENTS.md de este repo enlaza ambos indices', () => {
+    expect(revisarEnlacesDeAgents(raizDelRepo)).toEqual([]);
   });
 });

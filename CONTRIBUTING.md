@@ -4,9 +4,11 @@ Gracias por el interes. Este archivo dice por donde empezar; el detalle esta en 
 
 ## Antes de escribir codigo
 
+Sigue el camino de lectura de [AGENTS.md](AGENTS.md#camino-de-lectura): glosario, reglas de codigo, ADR del modulo y README del paquete. Para probar un solo paquete: `pnpm --filter <paquete> test`.
+
 - Vocabulario: [CONTEXT.md](CONTEXT.md). Usa esos terminos exactos (Modelo, Vista, Tema, Pin...) en codigo, docs y mensajes.
 - Reglas de codigo (estructura de paquetes, modulos profundos, arquitectura hexagonal, pruebas): [docs/CODING.md](docs/CODING.md).
-- Decisiones: [docs/adr/](docs/adr/). Lee el ADR del modulo antes de cambiar su interfaz.
+- Decisiones: [indice de ADRs](docs/adr/README.md). Lee el ADR del modulo antes de cambiar su interfaz.
 - Trabajo pendiente: los [issues](https://github.com/WilliamBarriga/Rinthel-arch/issues). Abre uno antes de una contribucion grande.
 
 ## Entorno
@@ -45,7 +47,7 @@ No hay CI: las pruebas se corren en local. El hook de pre-commit corre `pnpm che
 
 ## Ramas de research y prototipos
 
-Las ramas `research/*` guardan investigaciones (un archivo `research/<nombre>.md` por rama) y `prototype/*` guarda los prototipos que fundaron decisiones. Son material de contexto: no se mezclan en `main`. Lista las de research con `git branch -a -l '*research/*'` y lee una con `git show research/<nombre>:research/<nombre>.md`.
+Las ramas `research/*` guardan investigaciones (un archivo `research/<nombre>.md` por rama) y `prototype/*` guarda los prototipos que fundaron decisiones. Son material de contexto: no se mezclan en `main`. El indice con una conclusion por rama es [docs/ramas.md](docs/ramas.md). Lista las de research con `git branch -a -l '*research/*'` y lee una con `git show research/<nombre>:research/<nombre>.md`.
 
 ## Agentes
 

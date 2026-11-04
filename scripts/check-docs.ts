@@ -5,7 +5,7 @@
  * - `SECCIONES_README`: plantilla de README por paquete, fuente unica de verdad
  *   (la explica `docs/CODING.md`, "README de paquete").
  * - `revisarReadmes(raiz) -> Violacion[]`: revisa cada `packages/<paquete>/README.md`
- *   que exista (no exige que todos los paquetes lo tengan) y devuelve las
+ *   (todo paquete debe tenerlo; si falta, regla `seccion`) y devuelve las
  *   violaciones ordenadas. Vacio significa verde.
  *
  * Reglas de `revisarReadmes`:
@@ -16,6 +16,9 @@
  *
  * - `revisarIndiceDeAdrs(raiz) -> Violacion[]`: cada `docs/adr/NNNN-*.md` aparece
  *   (por nombre de archivo) en `docs/adr/README.md`; regla `indice`.
+ *
+ * - `revisarEnlacesDeAgents(raiz) -> Violacion[]`: `AGENTS.md` nombra `docs/adr/README.md`
+ *   y `docs/ramas.md`; regla `indice`.
  *
  * Los chequeos de indices se suman aqui con la misma forma: `revisarX(raiz) -> Violacion[]`.
  */
@@ -54,7 +57,10 @@ export function revisarReadmes(raiz: string): Violacion[] {
 
   for (const paquete of readdirSync(carpetaPaquetes).sort()) {
     const archivo = `packages/${paquete}/README.md`;
-    if (!existsSync(join(raiz, archivo))) continue;
+    if (!existsSync(join(raiz, archivo))) {
+      violaciones.push({ archivo, regla: 'seccion', mensaje: 'falta el README del paquete' });
+      continue;
+    }
     const readme = readFileSync(join(raiz, archivo), 'utf8');
     const violar = (regla: Violacion['regla'], mensaje: string) =>
       violaciones.push({ archivo, regla, mensaje });
@@ -105,4 +111,20 @@ export function revisarIndiceDeAdrs(raiz: string): Violacion[] {
       regla: 'indice' as const,
       mensaje: `el ADR no aparece en ${rutaIndice}`,
     }));
+}
+
+const INDICES_DE_AGENTS = ['docs/adr/README.md', 'docs/ramas.md'] as const;
+
+/** `AGENTS.md` debe enlazar el indice de ADRs y el de ramas. */
+export function revisarEnlacesDeAgents(raiz: string): Violacion[] {
+  const archivo = 'AGENTS.md';
+  if (!existsSync(join(raiz, archivo))) {
+    return [{ archivo, regla: 'indice', mensaje: 'falta AGENTS.md' }];
+  }
+  const agents = readFileSync(join(raiz, archivo), 'utf8');
+  return INDICES_DE_AGENTS.filter((indice) => !agents.includes(indice)).map((indice) => ({
+    archivo,
+    regla: 'indice' as const,
+    mensaje: `AGENTS.md no enlaza ${indice}`,
+  }));
 }
