@@ -80,9 +80,12 @@ export const CATALOGO = {
 
 export type NombreDePrimitiva = keyof typeof CATALOGO;
 
+/** Definicion de una Primitiva con el tipo ancho (el literal del catalogo pierde las claves opcionales). */
+export const definicionDe = (nombre: NombreDePrimitiva): DefinicionDePrimitiva => CATALOGO[nombre];
+
 /** Nombres de las Primitivas de una Familia, en orden de catalogo: de aqui derivan las reglas de contraste, leyenda y grosor de borde. */
 export const primitivasDeFamilia = (familia: DefinicionDePrimitiva['familia']): NombreDePrimitiva[] =>
-  (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => (CATALOGO[nombre] as DefinicionDePrimitiva).familia === familia);
+  (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => definicionDe(nombre).familia === familia);
 
 /** Nombres de las Primitivas declaradas para `U`; sin `ubicacion` declarada son Capas de Nodo. Sirve para tablas de pintores exhaustivas. */
 export type NombreDePrimitivaEn<U extends UbicacionDePrimitiva> = {
@@ -145,10 +148,10 @@ export interface ErrorDeCatalogo {
 }
 
 const esPrimitiva = (nombre: string): nombre is NombreDePrimitiva => Object.hasOwn(CATALOGO, nombre);
-const ubicacionDe = (nombre: NombreDePrimitiva): UbicacionDePrimitiva => (CATALOGO[nombre] as DefinicionDePrimitiva).ubicacion ?? 'capa-nodo';
+const ubicacionDe = (nombre: NombreDePrimitiva): UbicacionDePrimitiva => definicionDe(nombre).ubicacion ?? 'capa-nodo';
 /** La pagina admite los rellenos; el resto de las ubicaciones, solo las Primitivas declaradas para ella. */
 const valeEn = (nombre: NombreDePrimitiva, ubicacion: UbicacionDePrimitiva): boolean =>
-  ubicacion === 'capa-pagina' ? (CATALOGO[nombre] as DefinicionDePrimitiva).familia === 'relleno' : ubicacionDe(nombre) === ubicacion;
+  ubicacion === 'capa-pagina' ? definicionDe(nombre).familia === 'relleno' : ubicacionDe(nombre) === ubicacion;
 /** Nombres de las Primitivas que valen en `ubicacion`. */
 export const primitivasDe = (ubicacion: UbicacionDePrimitiva): string[] =>
   (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => valeEn(nombre, ubicacion));

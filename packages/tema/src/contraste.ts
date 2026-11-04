@@ -5,8 +5,8 @@
  */
 import type { Tema } from 'canonico';
 
-import { CATALOGO, primitivasDeFamilia } from './catalogo';
-import type { DefinicionDePrimitiva, DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
+import { CATALOGO, definicionDe, primitivasDeFamilia } from './catalogo';
+import type { DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
 import { hexARgb } from './color';
 import { estiloResuelto } from './estilo';
 import { muestra } from './contenido';
@@ -68,12 +68,10 @@ export interface AdvertenciaDeContraste {
 const ultima = (pila: readonly CapaPintada[], tipos: readonly NombreDePrimitiva[]): CapaPintada | undefined =>
   [...pila].reverse().find((capa) => tipos.includes(capa.tipo));
 
-const RELLENOS_DE_FONDO = primitivasDeFamilia('relleno').filter((n) => 'fondoDeTexto' in CATALOGO[n]);
-
 function evaluar(pila: readonly CapaPintada[], fondo: Rgb, texto: Rgb): Array<{ parte: 'texto' | 'grafico'; capa: string; razon: number; color: string }> {
   const resultados: Array<{ parte: 'texto' | 'grafico'; capa: string; razon: number; color: string }> = [];
-  const relleno = ultima(pila, RELLENOS_DE_FONDO);
-  const colores = relleno === undefined ? [] : ((CATALOGO[relleno.tipo] as DefinicionDePrimitiva).fondoDeTexto ?? []).map((k) => String(relleno.props[k]));
+  const relleno = [...pila].reverse().find((capa) => definicionDe(capa.tipo).fondoDeTexto !== undefined);
+  const colores = relleno === undefined ? [] : (definicionDe(relleno.tipo).fondoDeTexto ?? []).map((k) => String(relleno.props[k]));
   const fondos = colores.map((c) => ({ c, rgb: opaco(c, fondo) })).filter((x): x is { c: string; rgb: Rgb } => x.rgb !== undefined);
   if (relleno !== undefined && fondos.length > 0) {
     const peor = fondos.map((f) => ({ ...f, r: razon(texto, f.rgb) })).sort((a, b) => a.r - b.r)[0]!;

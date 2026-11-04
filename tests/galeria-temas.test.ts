@@ -38,7 +38,7 @@ const primitivasDe = (t: TemaResuelto): Set<string> => {
 };
 
 describe('galeria de Temas de ejemplo', () => {
-  it('las 40 Primitivas del catalogo aparecen en al menos un Tema de ejemplo', () => {
+  it('toda Primitiva del catalogo (sin fijar su cantidad) aparece en al menos un Tema de ejemplo', () => {
     const usadas = new Set<string>();
     const sueltos = ['catalogo-formas.dg', 'codigo.dg'].map((f) => compile({ [f]: readFileSync(resolve(import.meta.dirname, '../examples/temas', f), 'utf8') }).canonico!);
     for (const tema of [...canonico!.themes, ...sueltos.flatMap((c) => c.themes)]) for (const p of primitivasDe(resolverTema(tema))) usadas.add(p);

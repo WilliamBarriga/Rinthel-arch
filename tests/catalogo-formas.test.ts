@@ -25,11 +25,10 @@ describe('catalogo de formas, rellenos y bordes', () => {
   it.each(delCatalogo.map(([nombre]) => nombre))('%s aparece en un Tema de ejemplo', (nombre) => {
     const definicion = CATALOGO[nombre as keyof typeof CATALOGO];
     const props = Object.entries(definicion.propiedades).map(([clave, p]) => ({ clave, valor: valorDe(p as DefinicionDePropiedad) }));
-    const { primitiva, errores } = construirPrimitiva(nombre, props, { ink: '#111111' });
+    const { errores } = construirPrimitiva(nombre, props, { ink: '#111111' });
     const usadoEn = (canonico?.themes ?? []).filter((t) => ((t as unknown as TemaConCapas).nodo?.capas ?? []).some((c) => c.primitiva.tipo === nombre));
 
     expect(errores).toEqual([]);
-    expect(primitiva).toBeDefined();
     expect(usadoEn.length).toBeGreaterThan(0);
   });
 

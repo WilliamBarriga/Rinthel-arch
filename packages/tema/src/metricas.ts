@@ -10,10 +10,10 @@
  */
 import type { NodoResuelto, Tema } from 'canonico';
 
-import { CATALOGO } from './catalogo';
+import { definicionDe } from './catalogo';
 import { anchoDeTexto } from './medicion';
 import type { MedicionDeMetricas, MedidasDeTexto } from './medicion';
-import type { DefinicionDePrimitiva, NombreDeSlot } from './catalogo';
+import type { NombreDeSlot } from './catalogo';
 import type { CajaDeSlots } from './disposicion';
 import { muestra } from './contenido';
 import { cascada } from './parches';
@@ -140,7 +140,7 @@ function entradaDe(resuelto: TemaResuelto, pila: readonly CapaDeTema[], medidas:
         return Object.keys(medida).length === 0 ? [] : [[slot, medida]];
       }),
     ),
-    cajaCuadrada: pila.some((capa) => (CATALOGO[capa.primitiva.tipo] as DefinicionDePrimitiva).cajaMinima === 'cuadrado'),
+    cajaCuadrada: pila.some((capa) => definicionDe(capa.primitiva.tipo).cajaMinima === 'cuadrado'),
     // La raiz de la disposicion puede fijar su caja minima y su holgura; sin ellas, las del nucleo.
     anchoMinimo: slots.anchoMinimo ?? 120,
     paddingHorizontal: slots.holgura ?? 32,

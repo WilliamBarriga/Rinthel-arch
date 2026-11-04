@@ -27,7 +27,7 @@ import { prepararWorkspace } from './capturas/workspace.ts';
 
 const REPO = resolve(import.meta.dirname, '..');
 const GALERIA = 'examples/temas/galeria';
-/** Los 14 Temas de ejemplo y sus fuentes: una sola copia, compartida con `examples/rinthel-arch`. */
+/** Temas de ejemplo y sus fuentes: una sola copia, compartida con `examples/rinthel-arch`. */
 const TEMAS_DE_EJEMPLO = 'examples/rinthel-arch/temas';
 const VIEWPORT = { width: 1600, height: 900 };
 const VISTAS = ['abierto', 'cobertura'] as const;

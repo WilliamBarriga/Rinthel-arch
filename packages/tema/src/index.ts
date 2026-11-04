@@ -65,6 +65,10 @@
  *   y `componentesDeTema` dicen que componentes usa un Tema (el "Tema con codigo" de `inspect` y
  *   `validate`) recorriendo la cascada completa.
  *
+ * - Familias y Slots de texto: `primitivasDeFamilia(familia)` lista las Primitivas de una Familia en orden
+ *   de catalogo (de ahi salen las reglas de contraste, leyenda y borde); `SLOTS_DE_TEXTO` son los Slots de
+ *   una sola linea de texto y `NombreDeSlotDeTexto` su tipo.
+ *
  * - Referencia: `referenciaDelCatalogo()` genera en Markdown la tabla del catalogo (Primitivas por
  *   Familia, Slots, Movimientos, Efectos) desde las mismas tablas que validan; `pnpm docs:catalogo`
  *   la escribe en `docs/referencia-catalogo.md` y una prueba comprueba que no se desvia.
