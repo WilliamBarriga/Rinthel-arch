@@ -159,3 +159,18 @@ view formas {
   theme forma-pastilla
   include **
 }
+
+// Franja lateral y marcadores de Arista que el resto de la galeria no usa.
+theme franja-marcadores extends base-muestra {
+  node {
+    layer forma rect { radius 4 }
+    layer relleno solid { color papel }
+    layer franja stripe { color acento  side left  width 6 }
+    slots { title attrs }
+  }
+  edge {
+    layer linea line { color tinta }
+    start diamond { size 8 }
+    end bar { size 8 }
+  }
+}

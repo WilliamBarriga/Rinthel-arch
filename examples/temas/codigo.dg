@@ -1,0 +1,21 @@
+// Capa `code` (ADR 0008): un componente React propio del Workspace pinta la Capa. Este ejemplo
+// solo declara el uso; el componente `Aurora` vive en un `.tsx` junto al Workspace que lo use.
+// El compilador avisa W_THEME_WITH_CODE (intencional: el Tema ejecuta codigo del usuario).
+specification {
+  node pieza { description "Nodo de muestra" icon box color blue }
+}
+
+model {
+  pieza a "Con codigo"
+}
+
+theme con-codigo {
+  palette { papel "#fefce8"  tinta "#1e293b" }
+  tokens { background "#ffffff"  foreground "#1e293b"  border "#475569" }
+  node {
+    layer forma rect { radius 4 }
+    layer relleno solid { color papel }
+    layer aura code over { component Aurora  hue 3 }
+    slots { title }
+  }
+}
