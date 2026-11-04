@@ -38,6 +38,8 @@ export interface DefinicionDePrimitiva {
   readonly propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
   /** Si cambia la caja o los Slots (Metricas). Por defecto una Primitiva solo pinta. */
   readonly afectaMetricas: boolean;
+  /** Propiedades de color que cubren la caja entera: el fondo contra el que se mide el contraste del texto. Solo en la Familia relleno. */
+  readonly fondoDeTexto?: readonly string[];
   /** Regla de caja minima que exige la forma; sin ella, cualquier caja sirve. */
   readonly cajaMinima?: 'cuadrado';
   /** Acepta ademas propiedades no declaradas (los parametros de un Componente de Tema): numero o texto, tal cual. */
@@ -59,7 +61,7 @@ export const PROPIEDADES_DE_DESPLAZAMIENTO = {
 
 export const CATALOGO = {
   rect: { familia: 'forma', afectaMetricas: false, propiedades: { radius: { tipo: 'numero', min: 0, max: 100, defecto: 0 } } },
-  solid: { familia: 'relleno', afectaMetricas: false, propiedades: { color: { tipo: 'color' } } },
+  solid: { familia: 'relleno', afectaMetricas: false, propiedades: { color: { tipo: 'color' } }, fondoDeTexto: ['color'] },
   border: {
     familia: 'borde',
     afectaMetricas: false,
@@ -78,6 +80,13 @@ export const CATALOGO = {
 
 export type NombreDePrimitiva = keyof typeof CATALOGO;
 
+/** Definicion de una Primitiva con el tipo ancho (el literal del catalogo pierde las claves opcionales). */
+export const definicionDe = (nombre: NombreDePrimitiva): DefinicionDePrimitiva => CATALOGO[nombre];
+
+/** Nombres de las Primitivas de una Familia, en orden de catalogo: de aqui derivan las reglas de contraste, leyenda y grosor de borde. */
+export const primitivasDeFamilia = (familia: DefinicionDePrimitiva['familia']): NombreDePrimitiva[] =>
+  (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => definicionDe(nombre).familia === familia);
+
 /** Nombres de las Primitivas declaradas para `U`; sin `ubicacion` declarada son Capas de Nodo. Sirve para tablas de pintores exhaustivas. */
 export type NombreDePrimitivaEn<U extends UbicacionDePrimitiva> = {
   [K in NombreDePrimitiva]: (typeof CATALOGO)[K] extends { readonly ubicacion: infer V } ? (V extends U ? K : never) : U extends 'capa-nodo' ? K : never;
@@ -87,6 +96,8 @@ export type NombreDePrimitivaEn<U extends UbicacionDePrimitiva> = {
 export interface DefinicionDeSlot {
   readonly estilo: 'text' | 'icon' | 'chip';
   readonly elastico: boolean;
+  /** `true`: Slot de una sola linea de texto (titulo, insignia, contador...), medido con `textoDeSlot`; no se deriva del estilo (`attrs` es `text` y no lo es, `counter` es `chip` y si). */
+  readonly texto?: true;
   /** Tamano del texto respecto al del Tema (`size` lo cambia). */
   readonly escala?: number;
   /** Alto de la linea respecto al tamano del texto (`leading` lo cambia); sin el, el alto de cabecera de las Metricas. */
@@ -102,20 +113,23 @@ export const DEFINICION_DE_SLOT = {
   /** Icono del Tipo de nodo: caja de lado fijo (Primitiva `icon`). */
   icon: { estilo: 'icon', elastico: false },
   /** Titulo: texto que se estira para ocupar el espacio libre de su fila. */
-  title: { estilo: 'text', elastico: true },
+  title: { estilo: 'text', elastico: true, texto: true },
   /** Insignia: el Tipo de nodo, en texto pequeno (normalmente bajo el titulo). */
-  badge: { estilo: 'text', elastico: true, escala: 0.74, interlineado: 1.25 },
+  badge: { estilo: 'text', elastico: true, texto: true, escala: 0.74, interlineado: 1.25 },
   /** Descripcion del Nodo; no reserva espacio si no tiene. */
-  desc: { estilo: 'text', elastico: true, escala: 0.85, interlineado: 1.25 },
+  desc: { estilo: 'text', elastico: true, texto: true, escala: 0.85, interlineado: 1.25 },
   /** Pie: la fuente del Nodo (la primera `source` del Modelo); no reserva espacio si no tiene. */
-  footer: { estilo: 'text', elastico: true, escala: 0.75, interlineado: 1.25 },
+  footer: { estilo: 'text', elastico: true, texto: true, escala: 0.75, interlineado: 1.25 },
   /** Filas de Atributo: una por Atributo visible. */
   attrs: { estilo: 'text', elastico: true },
   /** Contador: cuantos hijos esconde un Grupo colapsado, en una caja (Primitiva `chip`); solo existe en el colapsado. */
-  counter: { estilo: 'chip', elastico: false, escala: 0.8, interlineado: 1.25 },
+  counter: { estilo: 'chip', elastico: false, texto: true, escala: 0.8, interlineado: 1.25 },
 } as const satisfies Record<string, DefinicionDeSlot>;
 export type NombreDeSlot = keyof typeof DEFINICION_DE_SLOT;
 export const SLOTS = Object.keys(DEFINICION_DE_SLOT) as NombreDeSlot[];
+/** Slots de una sola linea de texto: los que declaran `texto` en su definicion. */
+export type NombreDeSlotDeTexto = { [S in NombreDeSlot]: (typeof DEFINICION_DE_SLOT)[S] extends { readonly texto: true } ? S : never }[NombreDeSlot];
+export const SLOTS_DE_TEXTO = SLOTS.filter((slot): slot is NombreDeSlotDeTexto => 'texto' in DEFINICION_DE_SLOT[slot]);
 
 /** Primitiva ya validada: propiedades completas (con defectos), colores aun como nombre de Paleta. */
 export interface Primitiva {
@@ -134,10 +148,10 @@ export interface ErrorDeCatalogo {
 }
 
 const esPrimitiva = (nombre: string): nombre is NombreDePrimitiva => Object.hasOwn(CATALOGO, nombre);
-const ubicacionDe = (nombre: NombreDePrimitiva): UbicacionDePrimitiva => (CATALOGO[nombre] as DefinicionDePrimitiva).ubicacion ?? 'capa-nodo';
+const ubicacionDe = (nombre: NombreDePrimitiva): UbicacionDePrimitiva => definicionDe(nombre).ubicacion ?? 'capa-nodo';
 /** La pagina admite los rellenos; el resto de las ubicaciones, solo las Primitivas declaradas para ella. */
 const valeEn = (nombre: NombreDePrimitiva, ubicacion: UbicacionDePrimitiva): boolean =>
-  ubicacion === 'capa-pagina' ? (CATALOGO[nombre] as DefinicionDePrimitiva).familia === 'relleno' : ubicacionDe(nombre) === ubicacion;
+  ubicacion === 'capa-pagina' ? definicionDe(nombre).familia === 'relleno' : ubicacionDe(nombre) === ubicacion;
 /** Nombres de las Primitivas que valen en `ubicacion`. */
 export const primitivasDe = (ubicacion: UbicacionDePrimitiva): string[] =>
   (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => valeEn(nombre, ubicacion));

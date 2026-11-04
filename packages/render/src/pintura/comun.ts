@@ -3,9 +3,13 @@
  * este directorio). Un pintor traduce las propiedades ya validadas de una Capa
  * a declaraciones CSS; no valida ni recorta nada.
  */
+import { primitivasDeFamilia } from 'tema';
 import type { CapaPintada } from 'tema';
 
 import { limpiarValorCss, num } from '../elemento';
+
+/** Primitivas de la Familia borde, del catalogo: cuentan para el grosor de la pila. */
+const BORDES: readonly string[] = primitivasDeFamilia('borde');
 
 /** Declaraciones CSS de una Capa: propiedad -> valor. */
 export type Declaraciones = Record<string, string>;
@@ -38,7 +42,7 @@ export function declaracionesDeDesplazamiento(props: CapaPintada['props'], borde
 
 /** Grosor del borde de una pila: el de su ultima Capa de la Familia borde (0 sin borde). */
 export function anchoDeBorde(capas: readonly CapaPintada[]): number {
-  const borde = capas.filter((c) => c.tipo === 'border' || c.tipo === 'dashed' || c.tipo === 'dotted').pop();
+  const borde = capas.filter((c) => BORDES.includes(c.tipo)).pop();
   return borde === undefined ? 0 : Number(borde.props['width']);
 }
 

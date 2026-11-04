@@ -65,6 +65,10 @@
  *   y `componentesDeTema` dicen que componentes usa un Tema (el "Tema con codigo" de `inspect` y
  *   `validate`) recorriendo la cascada completa.
  *
+ * - Familias y Slots de texto: `primitivasDeFamilia(familia)` lista las Primitivas de una Familia en orden
+ *   de catalogo (de ahi salen las reglas de contraste, leyenda y borde); `SLOTS_DE_TEXTO` son los Slots de
+ *   una sola linea de texto y `NombreDeSlotDeTexto` su tipo.
+ *
  * - Referencia: `referenciaDelCatalogo()` genera en Markdown la tabla del catalogo (Primitivas por
  *   Familia, Slots, Movimientos, Efectos) desde las mismas tablas que validan; `pnpm docs:catalogo`
  *   la escribe en `docs/referencia-catalogo.md` y una prueba comprueba que no se desvia.
@@ -75,10 +79,10 @@
  * errores de catalogo; solo `resolverTema` lanza. Configuracion requerida: ninguna.
  * Solo importa `canonico`.
  */
-export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, construirPrimitiva, primitivasDe, resolverTokens, sugerir } from './catalogo';
+export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, SLOTS_DE_TEXTO, construirPrimitiva, primitivasDe, primitivasDeFamilia, resolverTokens, sugerir } from './catalogo';
 export { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, alineacionDe, construirDisposicion, describirDisposicion, esCaja, slotsDe } from './disposicion';
 export type { Alineacion, CajaDeSlots, Direccion, ElementoDeSlots, EntradaDeCaja, EntradaDeSlot, ErrorDeDisposicion, HojaDeSlots, PropiedadEscrita } from './disposicion';
-export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDePrimitivaEn, NombreDeSlot, Primitiva, UbicacionDePrimitiva } from './catalogo';
+export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDePrimitivaEn, NombreDeSlot, NombreDeSlotDeTexto, Primitiva, UbicacionDePrimitiva } from './catalogo';
 export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
 export { GRUPO_POR_DEFECTO, TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';

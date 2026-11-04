@@ -15,10 +15,10 @@ export interface DevDeGaleria {
 }
 
 /** Arranca `diagrams dev` sobre `workspace` en un puerto libre y espera su URL. Necesita `pnpm build`. */
-export async function iniciarDevDeGaleria(repo: string, workspace: string): Promise<DevDeGaleria> {
+export async function iniciarDevDeGaleria(repo: string, workspace: string, carpetaDeTemas?: string): Promise<DevDeGaleria> {
   const bin = join(repo, 'packages/cli/dist/bin.js');
   if (!existsSync(bin)) throw new Error('Falta el build del CLI: ejecuta `pnpm build` antes de `pnpm capturas`.');
-  const hijo = spawn('node', [bin, 'dev', '--workspace', workspace, '--port', '0'], { cwd: repo, stdio: ['ignore', 'pipe', 'pipe'] });
+  const hijo = spawn('node', [bin, 'dev', '--workspace', workspace, ...(carpetaDeTemas === undefined ? [] : ['--theme-path', carpetaDeTemas]), '--port', '0'], { cwd: repo, stdio: ['ignore', 'pipe', 'pipe'] });
   const url = await new Promise<string>((resolver, rechazar) => {
     let salida = '';
     const alRecibir = (trozo: Buffer): void => {

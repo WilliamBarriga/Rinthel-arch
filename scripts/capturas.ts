@@ -27,6 +27,8 @@ import { prepararWorkspace } from './capturas/workspace.ts';
 
 const REPO = resolve(import.meta.dirname, '..');
 const GALERIA = 'examples/temas/galeria';
+/** Temas de ejemplo y sus fuentes: una sola copia, compartida con `examples/rinthel-arch`. */
+const TEMAS_DE_EJEMPLO = 'examples/rinthel-arch/temas';
 const VIEWPORT = { width: 1600, height: 900 };
 const VISTAS = ['abierto', 'cobertura'] as const;
 type Vista = (typeof VISTAS)[number];
@@ -39,6 +41,8 @@ const fallar = (mensaje: string): never => {
 /** Que capturar: cada Tema con su Vista en un Workspace y, si hay, la variante del prototipo con la que se compara. */
 interface Pedido {
   workspace: string;
+  /** `--theme-path` del dev: Temas y fuentes que el Workspace no trae. */
+  carpetaDeTemas?: string;
   temas: string[];
   /** Vista del Workspace que pinta cada Tema. */
   vistaDe: (tema: string) => string;
@@ -79,6 +83,7 @@ function leerArgumentos(): Pedido {
   if (desconocido !== undefined) return fallar(`Tema '${desconocido}' desconocido. Temas: ${nombres.join(', ')}`);
   return {
     workspace: GALERIA,
+    carpetaDeTemas: TEMAS_DE_EJEMPLO,
     temas,
     vistaDe: (t) => (vista === 'abierto' ? `${t}-referencia` : t),
     varianteDe: (t) => (vista === 'abierto' ? VARIANTE_DE_TEMA[t] : undefined),
@@ -159,7 +164,7 @@ async function principal(): Promise<void> {
 
   const prototipo = pedido.temas.some((t) => pedido.varianteDe(t) !== undefined) ? prepararPrototipo(cache, REPO) : undefined;
   const origen = await servirEstatico(cache);
-  const galeria = await iniciarDevDeGaleria(REPO, pedido.workspace);
+  const galeria = await iniciarDevDeGaleria(REPO, pedido.workspace, pedido.carpetaDeTemas);
   const navegador = await chromium.launch({ executablePath: rutaDeChromium(), headless: true });
   try {
     for (const tema of pedido.temas) {

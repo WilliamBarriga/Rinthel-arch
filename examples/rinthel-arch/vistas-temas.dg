@@ -1,5 +1,5 @@
 // Una Vista por Tema aprobado (ADR 0008): la Vista `abierto` del mapa con cada uno, para ver cuanto cambia el mismo diagrama.
-// Los archivos de `temas/` son los mismos de `examples/temas/galeria/` (una prueba lo verifica).
+// Los archivos de `temas/` son la unica copia de los 14 Temas: la galeria (`examples/temas/galeria/`) los toma con `--theme-path`.
 view abierto-soft-card {
   type architecture
   theme soft-card

@@ -8,7 +8,7 @@ import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
 import { alturaDeCabecera, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
-import type { ContenidoDeNodo, Metricas, NombreDeSlot, PinturaDeNodo, Rect } from 'tema';
+import type { ContenidoDeNodo, Metricas, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeNodo, Rect } from 'tema';
 
 import { pintarMarcadores, pintarTrazos, rutaDeCapa } from './aristas';
 import { limpiarValorCss, num } from './elemento';
@@ -52,7 +52,7 @@ interface ContextoDeSlot {
 }
 
 /** Slot de una sola linea de texto, con el tamano que reservo la colocacion (y el texto que mido `layout`). */
-function pintarTexto(slot: 'title' | 'badge' | 'desc' | 'footer' | 'counter', { metricas, contenido, textos }: ContextoDeSlot, rect: Rect): Elemento[] {
+function pintarTexto(slot: NombreDeSlotDeTexto, { metricas, contenido, textos }: ContextoDeSlot, rect: Rect): Elemento[] {
   const medido = textoDeSlot(slot, metricas, contenido);
   if (medido === undefined) return [];
   const tamano = medido.tamano === metricas.fontSize ? '' : `font-size:${num(medido.tamano)}px;`;

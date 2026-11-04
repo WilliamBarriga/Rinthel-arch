@@ -5,6 +5,7 @@ export const RELLENOS = {
   gradient: {
     familia: 'relleno',
     afectaMetricas: false,
+    fondoDeTexto: ['from', 'to'],
     propiedades: { from: { tipo: 'color' }, to: { tipo: 'color' }, angle: { tipo: 'numero', min: 0, max: 360, defecto: 180 } },
   },
   /** Gradiente circular desde el punto `x`/`y` (porcentaje de la caja; puede quedar fuera de ella) hasta el 110% del radio. */

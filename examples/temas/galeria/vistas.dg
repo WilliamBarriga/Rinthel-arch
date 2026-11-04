@@ -1,5 +1,5 @@
 // Una Vista por Tema: el mismo Modelo, el Grupo `plataforma` abierto y `persistencia` colapsado.
-// Sirve la galeria con `node packages/cli/dist/bin.js dev --workspace examples/temas/galeria`
+// Sirve la galeria con `node packages/cli/dist/bin.js dev --workspace examples/temas/galeria --theme-path examples/rinthel-arch/temas`
 // y cambia de Vista para comparar los 14 Temas.
 view soft-card    { type architecture  theme soft-card     include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
 view glass-chip   { type architecture  theme glass-chip    include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
