@@ -1,4 +1,4 @@
-/** Pintores de la Familia borde/trazo (salvo `border`, en `hoja.ts`). */
+/** Pintores de la Familia borde (salvo `border`, en `hoja.ts`). */
 import { css, px } from './comun';
 import type { Pintor } from './comun';
 

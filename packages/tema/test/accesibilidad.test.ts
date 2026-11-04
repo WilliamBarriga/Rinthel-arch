@@ -48,6 +48,12 @@ describe('advertencias de contraste', () => {
     expect(advertenciasDeContraste(t, { x: undefined }).map((a) => a.parte)).toEqual(['grafico']);
   });
 
+  it.each(['dashed', 'dotted', 'outline'])('un borde palido de la Familia borde (%s) tambien avisa 3:1', (tipo) => {
+    const t = tema({ palido: '#eeeeee' }, [capa('borde', tipo, { color: 'palido', width: 1 })]);
+
+    expect(advertenciasDeContraste(t, { x: undefined }).map((a) => a.parte)).toEqual(['grafico']);
+  });
+
   it('avisa por estado cuando solo el parche empeora el contraste', () => {
     const t = tema(
       { oscuro: '#111111', claro: '#f5f5f5' },

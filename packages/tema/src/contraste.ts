@@ -5,8 +5,8 @@
  */
 import type { Tema } from 'canonico';
 
-import { CATALOGO } from './catalogo';
-import type { DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
+import { CATALOGO, primitivasDeFamilia } from './catalogo';
+import type { DefinicionDePrimitiva, DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
 import { hexARgb } from './color';
 import { estiloResuelto } from './estilo';
 import { muestra } from './contenido';
@@ -68,16 +68,18 @@ export interface AdvertenciaDeContraste {
 const ultima = (pila: readonly CapaPintada[], tipos: readonly NombreDePrimitiva[]): CapaPintada | undefined =>
   [...pila].reverse().find((capa) => tipos.includes(capa.tipo));
 
+const RELLENOS_DE_FONDO = primitivasDeFamilia('relleno').filter((n) => 'fondoDeTexto' in CATALOGO[n]);
+
 function evaluar(pila: readonly CapaPintada[], fondo: Rgb, texto: Rgb): Array<{ parte: 'texto' | 'grafico'; capa: string; razon: number; color: string }> {
   const resultados: Array<{ parte: 'texto' | 'grafico'; capa: string; razon: number; color: string }> = [];
-  const relleno = ultima(pila, ['solid', 'gradient']);
-  const colores = relleno === undefined ? [] : (relleno.tipo === 'solid' ? ['color'] : ['from', 'to']).map((k) => String(relleno.props[k]));
+  const relleno = ultima(pila, RELLENOS_DE_FONDO);
+  const colores = relleno === undefined ? [] : ((CATALOGO[relleno.tipo] as DefinicionDePrimitiva).fondoDeTexto ?? []).map((k) => String(relleno.props[k]));
   const fondos = colores.map((c) => ({ c, rgb: opaco(c, fondo) })).filter((x): x is { c: string; rgb: Rgb } => x.rgb !== undefined);
   if (relleno !== undefined && fondos.length > 0) {
     const peor = fondos.map((f) => ({ ...f, r: razon(texto, f.rgb) })).sort((a, b) => a.r - b.r)[0]!;
     resultados.push({ parte: 'texto', capa: relleno.nombre, razon: peor.r, color: peor.c });
   } else resultados.push({ parte: 'texto', capa: 'tokens', razon: razon(texto, fondo), color: 'fondo' });
-  const borde = ultima(pila, ['border']);
+  const borde = ultima(pila, primitivasDeFamilia('borde'));
   const trazo = borde === undefined ? undefined : opaco(String(borde.props['color']), fondo);
   if (borde !== undefined && trazo !== undefined) resultados.push({ parte: 'grafico', capa: borde.nombre, razon: razon(trazo, fondo), color: String(borde.props['color']) });
   return resultados;
@@ -178,7 +180,7 @@ export function leyendaDelTema(tema: Tema, tipos: readonly TipoParaLeyenda[]): L
     necesaria: tiposSoloColor(tema, tipos).length > 0,
     entradas: tipos.map((t) => ({
       tipo: t.name,
-      forma: ultima(estilo.pintura.nodo.tipos[t.name]!.capas, ['rect', 'pill', 'cut', 'circle'])?.tipo ?? 'rect',
+      forma: ultima(estilo.pintura.nodo.tipos[t.name]!.capas, primitivasDeFamilia('forma'))?.tipo ?? 'rect',
       color: t.color === undefined ? undefined : Object.hasOwn(paleta, t.color) ? paleta[t.color] : undefined,
     })),
   };

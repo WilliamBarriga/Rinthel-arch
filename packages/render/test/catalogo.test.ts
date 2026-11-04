@@ -4,6 +4,18 @@ import { TEMA_NEUTRO } from 'tema';
 
 import { declaracionesDeCaja } from '../src/hoja';
 import { resolverEstilo } from '../src/estilo';
+import { anchoDeBorde } from '../src/pintura/comun';
+
+describe('grosor del borde de una pila', () => {
+  it.each([
+    ['border', {}],
+    ['dashed', {}],
+    ['dotted', {}],
+    ['outline', { offset: 2 }],
+  ])('la Familia borde (%s) cuenta como borde', (tipo, extra) => {
+    expect(anchoDeBorde([{ nombre: 'b', tipo, props: { color: '#000', width: 3, ...extra } }] as never)).toBe(3);
+  });
+});
 
 const caja = (...capas: Array<[string, Record<string, string | number>]>) => {
   const estilo = resolverEstilo({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capas.map(([tipo, props], i) => ({ nombre: `c${i}`, primitiva: { tipo, props } })) } });

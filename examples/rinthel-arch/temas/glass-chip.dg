@@ -29,7 +29,7 @@ theme glass-chip {
       }
       attrs
     }
-    type externo { layer glow none  layer tinte solid { color blanco/0.04 }  layer borde dashed { color blanco/0.25 } }
+    type externo { layer glow none  layer tinte solid { color blanco/0.04 }  layer borde dashed { color blanco/0.5 } }
     type actor { layer halo border before glow { color COLOR/0.4  offset -4 -4  grow 8 } }
     state hover { layer glow { color COLOR/0.7  radius 22 }  transition 160ms ease-out }
     state en-ruta { layer glow { color COLOR  radius 26 } }

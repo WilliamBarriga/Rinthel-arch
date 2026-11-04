@@ -38,6 +38,8 @@ export interface DefinicionDePrimitiva {
   readonly propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
   /** Si cambia la caja o los Slots (Metricas). Por defecto una Primitiva solo pinta. */
   readonly afectaMetricas: boolean;
+  /** Propiedades de color que cubren la caja entera: el fondo contra el que se mide el contraste del texto. Solo en la Familia relleno. */
+  readonly fondoDeTexto?: readonly string[];
   /** Regla de caja minima que exige la forma; sin ella, cualquier caja sirve. */
   readonly cajaMinima?: 'cuadrado';
   /** Acepta ademas propiedades no declaradas (los parametros de un Componente de Tema): numero o texto, tal cual. */
@@ -59,7 +61,7 @@ export const PROPIEDADES_DE_DESPLAZAMIENTO = {
 
 export const CATALOGO = {
   rect: { familia: 'forma', afectaMetricas: false, propiedades: { radius: { tipo: 'numero', min: 0, max: 100, defecto: 0 } } },
-  solid: { familia: 'relleno', afectaMetricas: false, propiedades: { color: { tipo: 'color' } } },
+  solid: { familia: 'relleno', afectaMetricas: false, propiedades: { color: { tipo: 'color' } }, fondoDeTexto: ['color'] },
   border: {
     familia: 'borde',
     afectaMetricas: false,
@@ -77,6 +79,10 @@ export const CATALOGO = {
 } as const satisfies Record<string, DefinicionDePrimitiva>;
 
 export type NombreDePrimitiva = keyof typeof CATALOGO;
+
+/** Nombres de las Primitivas de una Familia, en orden de catalogo: de aqui derivan las reglas de contraste, leyenda y grosor de borde. */
+export const primitivasDeFamilia = (familia: DefinicionDePrimitiva['familia']): NombreDePrimitiva[] =>
+  (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => (CATALOGO[nombre] as DefinicionDePrimitiva).familia === familia);
 
 /** Nombres de las Primitivas declaradas para `U`; sin `ubicacion` declarada son Capas de Nodo. Sirve para tablas de pintores exhaustivas. */
 export type NombreDePrimitivaEn<U extends UbicacionDePrimitiva> = {

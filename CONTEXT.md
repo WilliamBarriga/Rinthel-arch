@@ -59,7 +59,7 @@ Unidad con nombre de la pila que dibuja un elemento; es una instancia de una Pri
 Tipo de Capa del catalogo cerrado (forma, relleno, trazo, sombra, vidrio, decoracion...). Una Primitiva nueva se anade al catalogo por issue; una Familia nueva, por ADR.
 
 **Familia**:
-Grupo de Primitivas del mismo oficio (forma, relleno, borde/trazo, sombra, glow, vidrio, filtro, decoracion, marcador de Arista, estilo de texto de Slot, codigo). Cada Primitiva pertenece a una sola.
+Grupo de Primitivas del mismo oficio (forma, relleno, borde (continuo, discontinuo, punteado, outline), trazo de Arista, sombra, glow, vidrio, filtro, decoracion, marcador de Arista, estilo de texto de Slot, codigo). Cada Primitiva pertenece a una sola.
 
 **Slot**:
 Lugar de contenido de nombre fijo en un Nodo o Grupo (`icon`, `title`, `desc`, `badge`, `footer`, `attrs`, `counter`). El Tema decide cuales se muestran, en que orden y con que estilo. Junto con la caja, son lo unico que afecta a las Metricas.
