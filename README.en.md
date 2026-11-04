@@ -7,7 +7,7 @@ A React + TypeScript system for writing and rendering large, detailed diagrams o
 ## Highlights
 
 - **One Model, many Views.** Nodes, Edges and Attributes are written once; each View picks what to show and can link to another (drill-down) or reveal itself step by step.
-- **Aesthetics are a Theme.** A Theme is text: a Palette, fonts and a stack of Layers per element, drawn from a closed catalog (shapes, fills, borders, shadows, glow, glass, strokes, markers, animations). 14 example Themes ship with the repo.
+- **Aesthetics are a Theme.** A Theme is text: a Palette, fonts and a stack of Layers per element, drawn from a closed catalog (shapes, fills, borders, shadows, glow, glass, strokes, markers, animations). Example Themes ship with the repo; see the [gallery](docs/galeria.md).
 - **Live viewer.** `dev` rebuilds on save; the viewer has pan and zoom, Group collapse, and node dragging that rewrites the `.dg`.
 - **Built for humans and agents.** `validate` returns structured issues with suggestions, `inspect` queries the Model, `skill` explains the workflow to an agent.
 
