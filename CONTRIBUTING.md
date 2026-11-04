@@ -41,7 +41,7 @@ No hay CI: las pruebas se corren en local. El hook de pre-commit corre `pnpm che
 | `packages/cli` | `validate`, `build`, `dev`, `inspect`, `edit`, `skill` |
 | `examples/tutorial` | El tutorial, un Workspace por paso |
 | `examples/rinthel-arch` | Este repo documentado con su propio DSL, con los 14 Temas |
-| `examples/temas/galeria` | Un Modelo comun con los 14 Temas, y estados de cada Nodo |
+| `examples/temas/galeria` | Un Modelo comun para los 14 Temas (de `examples/rinthel-arch/temas`, via `--theme-path`), y estados de cada Nodo |
 
 ## Ramas de research y prototipos
 

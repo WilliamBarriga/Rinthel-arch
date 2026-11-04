@@ -10,8 +10,10 @@ import type { TemaResuelto } from 'tema';
 
 /** Galeria de los 14 Temas de ejemplo (ADR 0008): un `.dg` por Tema sobre un Modelo comun. */
 const RAIZ = resolve(import.meta.dirname, '../examples/temas/galeria');
-const leer = (): Record<string, string> =>
-  Object.fromEntries(readdirSync(RAIZ).filter((f) => f.endsWith('.dg')).map((f) => [f, readFileSync(resolve(RAIZ, f), 'utf8')]));
+/** Los 14 Temas y sus fuentes tienen una sola copia, en `examples/rinthel-arch/temas/`; la galeria los toma con `--theme-path`. */
+const CARPETA_DE_TEMAS = resolve(import.meta.dirname, '../examples/rinthel-arch/temas');
+const leerDg = (raiz: string): [string, string][] => readdirSync(raiz).filter((f) => f.endsWith('.dg')).map((f) => [f, readFileSync(resolve(raiz, f), 'utf8')]);
+const leer = (): Record<string, string> => Object.fromEntries([...leerDg(CARPETA_DE_TEMAS), ...leerDg(RAIZ)]);
 
 const TEMAS = [
   'soft-card', 'glass-chip', 'neobrutalist', 'blueprint', 'claro-suave', 'crt-terminal', 'synthwave',
@@ -127,7 +129,7 @@ describe('galeria de Temas de ejemplo', () => {
   });
 
   it('las fuentes incluidas son archivos OFL del Workspace, cada familia con su licencia, sin CDN', () => {
-    const fuentes = readdirSync(resolve(RAIZ, 'fuentes'));
+    const fuentes = readdirSync(resolve(CARPETA_DE_TEMAS, 'fuentes'));
     const familias = new Set(fuentes.filter((f) => f.endsWith('.woff2')).map((f) => f.replace(/-latin-\d{3}-(?:normal|italic)\.woff2$/, '')));
     expect([...familias].sort()).toEqual(['caveat', 'gelasio', 'inter', 'jetbrains-mono', 'nunito', 'outfit', 'press-start-2p', 'space-mono']);
     for (const familia of familias) expect(fuentes, familia).toContain(`OFL-${familia}.txt`);
@@ -135,7 +137,7 @@ describe('galeria de Temas de ejemplo', () => {
   });
 
   it('toda fuente que declara un Tema de la galeria tiene archivo en el Workspace', async () => {
-    const archivosDeFuente = readdirSync(resolve(RAIZ, 'fuentes')).map((f) => `fuentes/${f}`);
+    const archivosDeFuente = readdirSync(resolve(CARPETA_DE_TEMAS, 'fuentes')).map((f) => `fuentes/${f}`);
     const faltantes = (await abrirSesion(archivos, { archivosDeFuente }).diagnosticar()).filter((i) => i.code === 'E_THEME_FONT_MISSING');
     expect(faltantes.map((i) => i.message)).toEqual([]);
   });

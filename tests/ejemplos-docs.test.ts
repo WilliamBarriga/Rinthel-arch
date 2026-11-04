@@ -40,12 +40,6 @@ describe('mapa de rinthel-arch con los 14 Temas', () => {
     const ids = canonico!.views.map((v) => v.id);
     for (const t of TEMAS) expect(ids, t).toContain(`abierto-${t}`);
   });
-
-  it('los archivos de Tema son los mismos de la galeria', () => {
-    for (const t of TEMAS) {
-      expect(archivos[`temas/${t}.dg`], t).toBe(readFileSync(resolve(RAIZ, `examples/temas/galeria/${t}.dg`), 'utf8'));
-    }
-  });
 });
 
 describe('documentacion publica', () => {
