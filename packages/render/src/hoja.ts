@@ -11,7 +11,7 @@ import { ESTADOS, PUNTO_DE_TITULO_EM } from 'tema';
 import type { CapaPintada, NombreDePrimitivaEn, PinturaDeNodo } from 'tema';
 
 import { animacionDeHoja, nombresAparte } from './animacion';
-import { PINTORES_DE_EFECTOS } from './efectos';
+import { PINTORES_DE_EFECTOS, REGLAS_DE_EFECTOS } from './efectos';
 import { huella, num } from './elemento';
 import { aspectoDeEstado } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
@@ -135,11 +135,7 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-caja', { position: 'absolute', left: '0', top: '0', contain: 'layout style' }],
     [CAJAS, { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'auto' }],
     ...ELEMENTOS.flatMap((clave) => reglasDeElemento(estilo, clave)),
-    ['& .rd-cinta', { position: 'absolute', 'pointer-events': 'none' }],
-    ['& .rd-franja', { position: 'absolute', 'pointer-events': 'none', 'border-radius': 'inherit' }],
-    ['& .rd-pines', { position: 'absolute', 'pointer-events': 'none', 'background-repeat': 'no-repeat' }],
-    ['& .rd-doblez', { position: 'absolute', width: '0', height: '0', 'border-style': 'solid', 'pointer-events': 'none' }],
-    ['& .rd-defs', { position: 'absolute', 'pointer-events': 'none' }],
+    ...REGLAS_DE_EFECTOS,
     // Capa `code`: contenedor de tamano fijo (el de la caja, en linea); el componente no puede cambiarlo.
     ['& .rd-codigo', { position: 'absolute', left: '0', top: '0', 'pointer-events': 'none', contain: 'layout style' }],
     ['& .rd-slot', { position: 'absolute', overflow: 'hidden', 'white-space': 'nowrap', 'text-overflow': 'ellipsis', 'box-sizing': 'border-box' }],

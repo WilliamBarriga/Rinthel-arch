@@ -48,7 +48,13 @@ interface ContextoDeEfecto {
 }
 
 /** Un efecto es de hoja (declaraciones CSS que valen para todos los elementos) o por elemento (hijos, giro o filtro propios). */
-type Efecto = { readonly hoja: (props: Props) => Declaraciones } | { readonly elemento: (capa: CapaPintada, contexto: ContextoDeEfecto, resultado: EfectosDeElemento) => void };
+type Efecto =
+  | { readonly hoja: (props: Props) => Declaraciones }
+  | {
+      readonly elemento: (capa: CapaPintada, contexto: ContextoDeEfecto, resultado: EfectosDeElemento) => void;
+      /** Regla de hoja de los hijos que pinta (si los hay): selector (con `&` por la clase de alcance) y declaraciones. */
+      readonly regla?: [string, Declaraciones];
+    };
 
 const alLado = (capa: CapaPintada, resultado: EfectosDeElemento, hijo: Elemento): void => {
   (capa.encima === true ? resultado.encima : resultado.debajo).push(hijo);
@@ -56,7 +62,8 @@ const alLado = (capa: CapaPintada, resultado: EfectosDeElemento, hijo: Elemento)
 
 /**
  * La unica tabla de efectos: anadir uno es anadir una entrada. De ella salen el nombre del efecto, el pintor
- * de hoja (`PINTORES_DE_EFECTOS`) y el aplicador por elemento (`efectosDeElemento`).
+ * de hoja (`PINTORES_DE_EFECTOS`), el aplicador por elemento (`efectosDeElemento`) y los selectores de los
+ * hijos que pintan (`REGLAS_DE_EFECTOS`).
  */
 const EFECTOS = {
   // Varias sombras se apilan (ver `declaracionesDeCaja`); blur 0 da la sombra dura.
@@ -64,26 +71,37 @@ const EFECTOS = {
   glow: { hoja: ({ radius, spread, color }) => ({ 'box-shadow': `0px 0px ${px(radius)} ${px(spread)} ${css(color)}` }) },
   glass: { hoja: ({ blur, saturate }) => ({ 'backdrop-filter': `blur(${px(blur)}) saturate(${num(Number(saturate))}%)` }) },
   ring: { hoja: ({ color, width, offset }) => ({ outline: `${px(width)} solid ${css(color)}`, 'outline-offset': px(offset) }) },
+  tape: {
+    elemento: (capa, { semilla }, resultado) => alLado(capa, resultado, cinta(capa.props, semilla)),
+    regla: ['& .rd-cinta', { position: 'absolute', 'pointer-events': 'none' }],
+  },
+  stripe: {
+    elemento: (capa, { capas }, resultado) => alLado(capa, resultado, franja(capa.props, anchoDeBorde(capas))),
+    regla: ['& .rd-franja', { position: 'absolute', 'pointer-events': 'none', 'border-radius': 'inherit' }],
+  },
+  pins: {
+    elemento: (capa, _contexto, resultado) => alLado(capa, resultado, pines(capa.props)),
+    regla: ['& .rd-pines', { position: 'absolute', 'pointer-events': 'none', 'background-repeat': 'no-repeat' }],
+  },
+  fold: {
+    elemento: ({ props }, { estilo, capas }, resultado) => {
+      resultado.encima.push(doblez(props, estilo.fondo, anchoDeBorde(capas)));
+    },
+    regla: ['& .rd-doblez', { position: 'absolute', width: '0', height: '0', 'border-style': 'solid', 'pointer-events': 'none' }],
+  },
   sketch: {
     elemento: ({ props }, { semilla }, resultado) => {
       const idDeFiltro = `rd-sk-${fnv1a(`${semilla}|${props['roughness']}|${props['frequency']}`).toString(36)}`;
       resultado.nodo += `filter:url(#${idDeFiltro});`;
       resultado.debajo.push(filtroDeManoAlzada(idDeFiltro, semilla, Number(props['roughness']), Number(props['frequency'])));
     },
+    regla: ['& .rd-defs', { position: 'absolute', 'pointer-events': 'none' }],
   },
   tilt: {
     elemento: ({ props }, { semilla }, resultado) => {
       resultado.giro += giroDeCapa(semilla, Number(props['degrees']));
     },
   },
-  tape: { elemento: (capa, { semilla }, resultado) => alLado(capa, resultado, cinta(capa.props, semilla)) },
-  fold: {
-    elemento: ({ props }, { estilo, capas }, resultado) => {
-      resultado.encima.push(doblez(props, estilo.fondo, anchoDeBorde(capas)));
-    },
-  },
-  pins: { elemento: (capa, _contexto, resultado) => alLado(capa, resultado, pines(capa.props)) },
-  stripe: { elemento: (capa, { capas }, resultado) => alLado(capa, resultado, franja(capa.props, anchoDeBorde(capas))) },
 } as const satisfies Partial<Record<NombreDePrimitiva, Efecto>>;
 
 type NombreDeEfecto = keyof typeof EFECTOS;
@@ -94,6 +112,9 @@ const SIN_PINTAR = (): Declaraciones => ({});
 export const PINTORES_DE_EFECTOS: { readonly [P in NombreDeEfecto]: (props: Props) => Declaraciones } = Object.fromEntries(
   Object.entries(EFECTOS as Record<string, Efecto>).map(([nombre, efecto]) => [nombre, 'hoja' in efecto ? efecto.hoja : SIN_PINTAR]),
 ) as { [P in NombreDeEfecto]: (props: Props) => Declaraciones };
+
+/** Reglas de hoja de los hijos que pintan los efectos por elemento, en el orden de la tabla. */
+export const REGLAS_DE_EFECTOS: ReadonlyArray<[string, Declaraciones]> = (Object.values(EFECTOS) as Efecto[]).flatMap((efecto) => ('regla' in efecto && efecto.regla !== undefined ? [efecto.regla] : []));
 
 const SIN_EFECTOS: EfectosDeElemento = { giro: 0, nodo: '', debajo: [], encima: [] };
 
