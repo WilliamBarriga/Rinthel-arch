@@ -14,6 +14,9 @@
  *   comillas invertidas, y cada ruta existe (relativa a la raiz del repo).
  * - `probar`: la seccion "Probar" contiene `pnpm --filter <paquete> test`.
  *
+ * - `revisarIndiceDeAdrs(raiz) -> Violacion[]`: cada `docs/adr/NNNN-*.md` aparece
+ *   (por nombre de archivo) en `docs/adr/README.md`; regla `indice`.
+ *
  * Los chequeos de indices se suman aqui con la misma forma: `revisarX(raiz) -> Violacion[]`.
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -30,7 +33,7 @@ export const SECCIONES_README = [
 
 export interface Violacion {
   archivo: string;
-  regla: 'seccion' | 'entrada' | 'probar';
+  regla: 'seccion' | 'entrada' | 'probar' | 'indice';
   mensaje: string;
 }
 
@@ -79,4 +82,27 @@ export function revisarReadmes(raiz: string): Violacion[] {
     }
   }
   return violaciones;
+}
+
+/** Cada ADR de `docs/adr/` debe nombrarse en el indice `docs/adr/README.md`. */
+export function revisarIndiceDeAdrs(raiz: string): Violacion[] {
+  const carpeta = join(raiz, 'docs/adr');
+  if (!existsSync(carpeta)) return [];
+  const adrs = readdirSync(carpeta)
+    .filter((f) => /^\d{4}-.+\.md$/.test(f))
+    .sort();
+  if (adrs.length === 0) return [];
+
+  const rutaIndice = 'docs/adr/README.md';
+  if (!existsSync(join(raiz, rutaIndice))) {
+    return [{ archivo: rutaIndice, regla: 'indice', mensaje: 'falta el indice de ADRs' }];
+  }
+  const indice = readFileSync(join(raiz, rutaIndice), 'utf8');
+  return adrs
+    .filter((adr) => !indice.includes(adr))
+    .map((adr) => ({
+      archivo: `docs/adr/${adr}`,
+      regla: 'indice' as const,
+      mensaje: `el ADR no aparece en ${rutaIndice}`,
+    }));
 }

@@ -1,31 +1,30 @@
 # sesion
 
-Estado compilado de un Workspace (Sesion), Intenciones de edicion e historial de deshacer.
+Estado compilado de un Workspace: compila, valida, calcula layout y edita el texto DSL sin tocar disco.
 
 ## Que hace
 
-- `abrirSesion` compila, valida y calcula layout; es la unica tuberia que comparten `cli`, `dev` e `inspect`.
-- La Sesion es inmutable: `actualizar` devuelve otra y reutiliza la geometria de las Vistas sin cambios.
-- `aplicarIntencion` es el reductor puro de Intenciones; `editarPin` reescribe el Pin en el texto.
-- `Historial` (`crearHistorial`, `editarEnHistorial`, `deshacer`, `rehacer`, `apilar`) es la pila inmutable de deshacer y rehacer sobre el texto.
+- `abrirSesion` da una `Sesion` inmutable con `diagnosticar`, `construir`, `geometria` (perezosa, memoizada por Vista), `estilo` y `actualizar`.
+- Edita el texto: `aplicarEdiciones` y `editarPin` (todo o nada, con hash), `aplicarIntencion` y `Historial` (deshacer/rehacer).
+- `aplicarAlWorkspace` escribe una Intencion a traves del puerto `PuertoDeWorkspace`.
 
 ## Que NO hace
 
-- No lee ni escribe disco ni observa archivos: eso es de `cli`.
-- No importa codigo de usuario: el adaptador de `cli` entrega la interfaz de los componentes.
-- No dibuja ni maneja el raton: eso es de `render` y `shell`.
+- No lee disco ni observa cambios: eso es de `cli` (adaptador del puerto).
+- No parsea DSL ni calcula posiciones: eso es de `dsl` y `layout`.
+- No ejecuta ni importa codigo de Temas: lo conoce el adaptador (`componentes`).
 
 ## Depende de
 
-`canonico`, `dsl`, `layout` y `tema`.
+`canonico`, `tema`, `dsl` y `layout` (`docs/CODING.md`, "Direccion de dependencias").
 
 ## Archivo de entrada
 
-`packages/sesion/src/index.ts` (la cabecera documenta invariantes y modos de error).
+`packages/sesion/src/index.ts` (la cabecera resume la interfaz; el detalle esta en el TSDoc de cada export).
 
 ## ADR relacionado
 
-`docs/adr/0007-interaccion-y-protocolo-de-edicion.md` (Intenciones e historial) y `docs/adr/0008-sistema-de-temas-expresivo.md` (via de escape en codigo).
+`docs/adr/0007-interaccion-y-protocolo-de-edicion.md` (Intenciones e Historial) y `docs/adr/0005-cli-para-agentes.md` (edicion estructurada).
 
 ## Probar
 

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { SECCIONES_README, revisarReadmes } from '../scripts/check-docs';
+import { SECCIONES_README, revisarIndiceDeAdrs, revisarReadmes } from '../scripts/check-docs';
 
 const raizDelRepo = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const temporales: string[] = [];
@@ -110,5 +110,42 @@ describe('revisarReadmes', () => {
 
   it('los READMEs de este repo cumplen la plantilla', () => {
     expect(revisarReadmes(raizDelRepo)).toEqual([]);
+  });
+});
+
+describe('revisarIndiceDeAdrs', () => {
+  const indice = '# ADRs\n\n- `0001-uno.md`: vigente.\n- `0002-dos.md`: vigente.\n';
+
+  it('acepta un indice que lista todos los ADRs', () => {
+    const raiz = crearRepo({
+      'docs/adr/README.md': indice,
+      'docs/adr/0001-uno.md': '# Uno\n',
+      'docs/adr/0002-dos.md': '# Dos\n',
+    });
+
+    expect(revisarIndiceDeAdrs(raiz)).toEqual([]);
+  });
+
+  it('falla si un ADR no aparece en el indice', () => {
+    const raiz = crearRepo({
+      'docs/adr/README.md': indice,
+      'docs/adr/0001-uno.md': '# Uno\n',
+      'docs/adr/0002-dos.md': '# Dos\n',
+      'docs/adr/0003-tres.md': '# Tres\n',
+    });
+
+    expect(revisarIndiceDeAdrs(raiz)).toContainEqual(
+      expect.objectContaining({ archivo: 'docs/adr/0003-tres.md', regla: 'indice' }),
+    );
+  });
+
+  it('falla si hay ADRs y falta el indice', () => {
+    const raiz = crearRepo({ 'docs/adr/0001-uno.md': '# Uno\n' });
+
+    expect(revisarIndiceDeAdrs(raiz)).toContainEqual(expect.objectContaining({ regla: 'indice' }));
+  });
+
+  it('el indice de este repo lista todos los ADRs', () => {
+    expect(revisarIndiceDeAdrs(raizDelRepo)).toEqual([]);
   });
 });

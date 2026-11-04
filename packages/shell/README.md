@@ -1,32 +1,34 @@
 # shell
 
-Capa interactiva sobre `render`: pan/zoom, seleccion, colapso, navegacion y Pasos.
+Capa interactiva en React sobre `render`: pan/zoom, Seleccion, navegacion entre Vistas y edicion de Pins.
 
 ## Que hace
 
-- `<VistaInteractiva>` resuelve la Vista, pide la Geometria al `AdaptadorDeLayout` y la dibuja con `Diagram`.
-- Camara controlada o interna (d3-zoom), Seleccion multiple y filtrado por viewport.
-- Colapso de Grupos con relayout en Web Worker, drill-down con breadcrumbs, controles de Pasos, zoom semantico y estado en el hash de la URL.
-- `elementoBajo` decide que hay bajo un punto del lienzo, sin DOM.
+- `VistaInteractiva` resuelve una Vista, pide la Geometria al adaptador de `layout` y la dibuja con `render`.
+- Camara con pan y zoom (d3-zoom), filtrado por viewport y zoom semantico.
+- Seleccion, ruta mas corta, foco por teclado, hover y colapso de Grupos con relayout en Worker.
+- Pasos con controles anterior/siguiente, drill-down con breadcrumbs y estado de la Vista en el hash de la URL.
+- Arrastre de Nodos que emite el Gesto de mover un Pin, con historial de deshacer y rehacer (`sesion`).
+- Recarga de Tema al guardar su archivo y medicion de texto con la fuente real.
 
 ## Que NO hace
 
-- No dibuja Nodos ni Aristas: eso es de `render`.
-- No calcula layout: lo pide por el adaptador; el motor es de `layout`.
-- No lee ni escribe disco ni sirve HTTP: eso es de `cli`.
-- No define el Tema: recibe el Tema resuelto de `tema`.
+- No dibuja SVG: eso es de `render`.
+- No calcula posiciones: eso es de `layout`; el shell solo llama al adaptador `AdaptadorDeLayout`.
+- No lee ni escribe el DSL en disco: la edicion y el historial puros son de `sesion`.
+- No define el CLI ni sirve archivos: eso es de `cli`.
 
 ## Depende de
 
-`canonico`, `layout`, `render`, `sesion` y `tema`. Dependencias externas: `d3-selection`, `d3-zoom` y `react` (peer).
+`canonico`, `tema`, `layout`, `sesion` y `render`. Dependencias externas: `d3-selection`, `d3-zoom`; `react` es peer.
 
 ## Archivo de entrada
 
-`packages/shell/src/index.ts` (la cabecera documenta la interfaz publica).
+`packages/shell/src/index.ts` (la cabecera documenta la interfaz publica y los props).
 
 ## ADR relacionado
 
-`docs/adr/0007-interaccion-y-protocolo-de-edicion.md` (interaccion y edicion) y `docs/adr/0003-layout-elk-geometria-cacheada.md` (relayout en Worker).
+`docs/adr/0008-sistema-de-temas-expresivo.md` (ruta, foco y medicion de texto) y `docs/adr/0007-interaccion-y-protocolo-de-edicion.md` (Gesto de mover un Pin).
 
 ## Probar
 

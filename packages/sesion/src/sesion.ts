@@ -20,7 +20,7 @@ export interface OpcionesDeSesion {
   /** Tema global; una Vista con `theme` propio lo anula. */
   tema?: string;
   /**
-   * Componentes de Tema que el adaptador conoce, por nombre. `sesion` nunca importa codigo: con este
+   * Componentes de Tema que el adaptador conoce, por nombre (nombre -> `InterfazDeComponente`). Con el registro `diagnosticar` y `construir` comprueban que el componente existe y que sus parametros coinciden; sin el solo emiten `W_THEME_WITH_CODE` por Tema (o Vista) que usa la Capa `code`. `sesion` nunca importa codigo: con este
    * registro (CLI, `dev`, pruebas) `validate` comprueba la interfaz de cada Capa `code`; sin el solo avisa
    * de que el Tema tiene codigo.
    */
@@ -42,7 +42,11 @@ export interface ResultadoDeConstruir {
   issues: Issue[];
 }
 
-/** Estado compilado de un Workspace en un momento dado; valor inmutable. */
+/**
+ * Estado compilado de un Workspace en un momento dado; valor inmutable. Es la unica tuberia
+ * compilar, validar y calcular layout (la comparten `cli`, `dev` e `inspect`). Cada Sesion compila
+ * todo el Workspace: no hay compilacion incremental.
+ */
 export interface Sesion {
   /** Fuente canonica; ausente si la compilacion tiene errores. */
   readonly fuente: FuenteCanonica | undefined;
@@ -50,17 +54,24 @@ export interface Sesion {
   readonly ubicar: Ubicador | undefined;
   /** Origen de las Capas de cada Tema declarado en el texto (cadena `extends`, `part`, sitio de cada Capa); vacio sin Fuente. */
   readonly origenesDeTema: Readonly<Record<string, OrigenDeTema>>;
-  /** Issues de compilacion mas `W_OVERLAPPING_PINS` (layout solo en Vistas con 2 o mas Pins). */
+  /**
+   * Issues de compilacion, los del adaptador (`issuesDelAdaptador`), los de Tema (`W_THEME_*`, `E_THEME_FONT_MISSING`)
+   * y `W_OVERLAPPING_PINS`. Solo paga layout en Vistas con 2 o mas Pins (el solape se conoce tras ELK).
+   * Los errores del Workspace son issues, no excepciones; un fallo interno de layout rechaza la promesa.
+   */
   diagnosticar(): Promise<Issue[]>;
-  /** Archivos de `build` (geometria de todas las Vistas) y los issues. */
+  /** Archivos de `build` (geometria de todas las Vistas) y todos los issues. Un fallo interno de layout rechaza la promesa. */
   construir(): Promise<ResultadoDeConstruir>;
-  /** Geometria cacheable de una Vista, perezosa y memoizada; `undefined` si la Vista no existe. */
+  /** Geometria cacheable de una Vista, perezosa y memoizada por Vista; `undefined` si la Vista no existe. Un fallo interno de layout rechaza la promesa. */
   geometria(vista: string): Promise<GeometriaCacheada | undefined>;
   /** Estilo resuelto (Metricas y pintura) del Tema de una Vista; `undefined` si la Vista no existe. Sincrono: no necesita layout. */
   estilo(vista: string): EstiloResuelto | undefined;
   /** Ids de las Vistas cuya geometria ya se pidio (calculada o en curso). */
   vistasConGeometria(): string[];
-  /** Otra Sesion para estos archivos; la actual no cambia y su geometria se reutiliza por `layoutKey`. */
+  /**
+   * Otra Sesion para estos archivos; la actual no cambia. Reutiliza la geometria de una Vista cuando su
+   * `layoutKey`, su Tema y sus Pins no cambian. `cambios` renueva `componentes`, `issuesDelAdaptador` y `archivosDeFuente`.
+   */
   actualizar(archivos: ArchivosDelWorkspace, cambios?: Pick<OpcionesDeSesion, 'componentes' | 'issuesDelAdaptador' | 'archivosDeFuente'>): Sesion;
 }
 
@@ -311,7 +322,8 @@ function crear(
 
 /**
  * Abre una Sesion sobre el mapa de archivos del Workspace: compila una vez y deja
- * el layout bajo demanda. Pura; no lee disco ni observa cambios.
+ * el layout bajo demanda. Pura sobre `archivos`: no lee disco ni observa cambios (eso es de los adaptadores de `cli`).
+ * `sesion` nunca importa codigo (ADR 0008): `opciones.componentes` es lo unico que sabe de Capas `code`.
  */
 export function abrirSesion(archivos: ArchivosDelWorkspace, opciones: OpcionesDeSesion = {}): Sesion {
   return crear(archivos, opciones, compile(archivos), new Map());
