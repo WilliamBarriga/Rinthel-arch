@@ -37,7 +37,8 @@ export function cambiosDeEdicion(
 /**
  * Aplica una Intencion al Workspace: lee fresco, reduce con `aplicarIntencion`
  * (calcular, auto-probar, aplicar en memoria) y escribe solo los archivos propios
- * que cambian. Todo o nada: un rechazo no escribe nada.
+ * que cambian. Todo o nada: un rechazo no escribe nada. Un archivo de `--theme-path` que cambiaria
+ * se rechaza como `archivo-desconocido`. Los fallos de I/O del puerto se propagan.
  */
 export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, intencion: Intencion): ResultadoDeAplicar {
   const { disco, propios } = puerto.leer();

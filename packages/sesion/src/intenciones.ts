@@ -27,7 +27,7 @@ export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Inte
   }
 }
 
-/** Estado inmutable de deshacer/rehacer sobre el texto del Workspace: `archivos` es el vigente. */
+/** Pila inmutable de deshacer/rehacer sobre el texto del Workspace: `archivos` es el vigente; `deshacer` restaura el DSL exactamente. */
 export interface Historial {
   readonly archivos: ArchivosDelWorkspace;
   readonly pasado: readonly ArchivosDelWorkspace[];
@@ -36,7 +36,11 @@ export interface Historial {
 
 export const crearHistorial = (archivos: ArchivosDelWorkspace): Historial => ({ archivos, pasado: [], futuro: [] });
 
-/** Apila `archivos` como el nuevo texto vigente (el anterior pasa al pasado) y descarta el futuro. */
+/**
+ * Registra `archivos` como el nuevo texto vigente cuando el llamador ya lo escribio por su cuenta (el anterior
+ * pasa al pasado) y descarta el futuro. Pura; no comprueba que `archivos` difiera del vigente: evitar
+ * entradas repetidas es del llamador.
+ */
 export const apilar = (historial: Historial, archivos: ArchivosDelWorkspace): Historial => ({
   archivos,
   pasado: [...historial.pasado, historial.archivos],
