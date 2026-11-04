@@ -10,9 +10,9 @@ Workspace de ejemplo en el que el sistema se documenta a si mismo: paquetes del 
 | `sistema.dg` | Los ocho paquetes con sus ~110 modulos (uno por archivo de `src`, con `source` al archivo), actores, artefactos, procesos y librerias externas. Los titulos de modulo llevan el paquete (`tema/estilo`) para distinguir homonimos |
 | `conexiones.dg` | Dependencias entre paquetes (de `package.json`) y entre modulos (de los imports), mas el flujo de datos con actores, servidor dev y Worker. Las Aristas solo se declaran en `model`, con ids cualificados |
 | `vistas.dg` | Vista de paquetes con drill-down a cada paquete, la Vista `abierto` (render, sesion y layout abiertos; la Vista `abierto` del prototipo aprobado) detalles por paquete (`*-detalle`, incluidos `tema-detalle` y `cli-detalle`) y cuatro Vistas de flujo con Pasos: `flujo-edicion`, `flujo-validate`, `flujo-dev` y `flujo-tema` |
-| `temas/` | Los 14 Temas aprobados (copia de `examples/temas/galeria/`; una prueba exige que sean identicos) |
+| `temas/` | Los 14 Temas aprobados y, en `temas/fuentes/`, sus familias en `woff2` con licencias `OFL-<familia>.txt`. Es la unica copia: la galeria los usa con `--theme-path` |
 | `vistas-temas.dg` | Una Vista `abierto-<tema>` por Tema: el mismo diagrama de la Vista `abierto` con cada estetica. Sus capturas estan en el README de la raiz |
-| `fuentes/` | DejaVu Sans y Mono (licencia en `LICENCIA-DejaVu.txt`) y las familias de los 14 Temas, en `woff2` (licencias `OFL-<familia>.txt`) |
+| `fuentes/` | DejaVu Sans y Mono (licencia en `LICENCIA-DejaVu.txt`) |
 
 ## Uso
 
