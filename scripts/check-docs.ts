@@ -18,7 +18,7 @@
  *   (por nombre de archivo) en `docs/adr/README.md`; regla `indice`.
  *
  * - `revisarEnlacesDeAgents(raiz) -> Violacion[]`: `AGENTS.md` nombra `docs/adr/README.md`
- *   y `docs/ramas.md`; regla `indice`.
+ *   y `docs/ramas.md`, y ambos archivos existen; regla `indice`.
  *
  * Los chequeos de indices se suman aqui con la misma forma: `revisarX(raiz) -> Violacion[]`.
  */
@@ -115,16 +115,22 @@ export function revisarIndiceDeAdrs(raiz: string): Violacion[] {
 
 const INDICES_DE_AGENTS = ['docs/adr/README.md', 'docs/ramas.md'] as const;
 
-/** `AGENTS.md` debe enlazar el indice de ADRs y el de ramas. */
+/** `AGENTS.md` debe enlazar el indice de ADRs y el de ramas, y ambos archivos deben existir. */
 export function revisarEnlacesDeAgents(raiz: string): Violacion[] {
   const archivo = 'AGENTS.md';
   if (!existsSync(join(raiz, archivo))) {
     return [{ archivo, regla: 'indice', mensaje: 'falta AGENTS.md' }];
   }
   const agents = readFileSync(join(raiz, archivo), 'utf8');
-  return INDICES_DE_AGENTS.filter((indice) => !agents.includes(indice)).map((indice) => ({
+  const sinEnlace = INDICES_DE_AGENTS.filter((indice) => !agents.includes(indice)).map((indice) => ({
     archivo,
     regla: 'indice' as const,
     mensaje: `AGENTS.md no enlaza ${indice}`,
   }));
+  const inexistentes = INDICES_DE_AGENTS.filter((indice) => !existsSync(join(raiz, indice))).map((indice) => ({
+    archivo: indice,
+    regla: 'indice' as const,
+    mensaje: 'falta el archivo que AGENTS.md enlaza',
+  }));
+  return [...sinEnlace, ...inexistentes];
 }

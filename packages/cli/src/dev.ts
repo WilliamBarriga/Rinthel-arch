@@ -64,6 +64,7 @@ export interface ShellDev {
   worker: string;
 }
 
+/** Opciones de `iniciarDev`; todo lo que no es `workspace` se inyecta en pruebas y tiene un defecto real. */
 export interface OpcionesDeDev {
   workspace: string;
   /** Carpeta de Temas (`--theme-path`): se fusiona antes del Workspace, que gana en rutas repetidas. No se observa. */
@@ -91,6 +92,7 @@ export interface OpcionesDeDev {
   compilarCodigo?: () => ResultadoDeCodigo;
 }
 
+/** Servidor de `dev` en marcha: `url`, estado del codigo de Temas y `cerrar()`. */
 export interface ServidorDev {
   /** `http://127.0.0.1:<puerto>/` */
   url: string;

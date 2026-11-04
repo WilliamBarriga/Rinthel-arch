@@ -15,6 +15,7 @@ export interface PuertoDeWorkspace {
   escribir(ruta: string, texto: string): void;
 }
 
+/** Resultado de `aplicarAlWorkspace`: los archivos `cambiados`, o el rechazo con `motivo` y `mensaje`. */
 export type ResultadoDeAplicar =
   | { ok: true; cambiados: string[] }
   | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };

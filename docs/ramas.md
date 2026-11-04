@@ -1,6 +1,6 @@
 # Ramas research y prototype
 
-Indice de las ramas `research/*` y `prototype/*`: una conclusion por rama y el comando para leerla. No copia las investigaciones; lee la rama antes de re-investigar. Mantenido a mano, sin test (un clon no siempre trae todas las ramas).
+Indice de las ramas `research/*` y `prototype/*`: una conclusion por rama y el comando para leerla. No copia las investigaciones; lee la rama antes de re-investigar. Mantenido a mano; `pnpm check:docs` solo comprueba que el archivo existe y que `AGENTS.md` lo enlaza (un clon no siempre trae todas las ramas).
 
 Listar: `git branch -a -l '*research/*' '*prototype/*'`
 
@@ -12,7 +12,7 @@ Cada rama tiene un solo archivo, `research/<nombre>.md`. Leer: `git show researc
 |---|---|---|
 | `research/animacion-efectos` | Base CSS + WAAPI nativos sin dependencia; Motion (MIT) solo en la via "con codigo" y con ticket/ADR propio; descartar GSAP (licencia no OSI) y anime.js. | `git show research/animacion-efectos:research/animacion-efectos.md` |
 | `research/capturas-visuales` | Playwright (Apache-2.0, Chromium headless) como devDependency de la raiz, no de ningun paquete; el shell no tiene senal de layout terminado (propuesto `data-layout="listo"` en `.rd-vista`); Firefox descartado. | `git show research/capturas-visuales:research/capturas-visuales.md` |
-| `research/dsl-landscape` | LikeC4 (MIT) era la unica opcion con modelo, Vistas, anidacion, TS y herramientas para agentes; si se escribe un DSL propio, sobre Langium; Mermaid, PlantUML, D2 y DOT solo como export. | `git show research/dsl-landscape:research/dsl-landscape.md` |
+| `research/dsl-landscape` | LikeC4 (MIT) es la unica opcion con modelo, Vistas, anidacion, TS y herramientas para agentes; si se escribe un DSL propio, sobre Langium; Mermaid, PlantUML, D2 y DOT solo como export. | `git show research/dsl-landscape:research/dsl-landscape.md` |
 | `research/elk-benchmark` | Con `considerModelOrder: NODES_AND_EDGES` 10k Nodos tardan 633 s y 5k colapsados 40 s; sin esa opcion 18 s y 1.7 s; el costo lo domina esa opcion. | `git show research/elk-benchmark:research/elk-benchmark.md` |
 | `research/fuentes-tema` | Fuentes auto-hospedadas e incrustadas desde el Workspace; sin CDN en el nucleo; fuentes del sistema solo como fallback; medicion en niveles (estimacion por caracter, `measureText` tras `document.fonts.load`, glifos del archivo) y hash de fuente en la clave de layout. | `git show research/fuentes-tema:research/fuentes-tema.md` |
 | `research/iconos-marcas` | Nucleo sin set de iconos (clave opaca via puerto `IconProvider`); paquete opcional de marcas sobre `simple-icons` (CC0); AWS, Azure y OpenAI fuera del set por defecto; la licencia del set no cubre la marca. | `git show research/iconos-marcas:research/iconos-marcas.md` |

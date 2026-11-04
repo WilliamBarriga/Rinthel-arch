@@ -16,6 +16,7 @@ export interface InterfazDeComponente {
   parametros?: Readonly<Record<string, 'numero' | 'texto'>>;
 }
 
+/** Opciones de `abrirSesion`: Tema global, registro de Componentes de Tema e issues del adaptador. */
 export interface OpcionesDeSesion {
   /** Tema global; una Vista con `theme` propio lo anula. */
   tema?: string;
@@ -35,6 +36,7 @@ export interface OpcionesDeSesion {
   issuesDelAdaptador?: readonly Issue[];
 }
 
+/** Resultado de `Sesion.construir`: los archivos de `build` y todos los issues. */
 export interface ResultadoDeConstruir {
   /** `canonico.json` y `geometria/<vista>.json`; vacio si el Workspace tiene errores. */
   archivos: SalidaDeBuild;

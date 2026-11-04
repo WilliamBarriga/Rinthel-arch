@@ -28,7 +28,7 @@ Con `--json`, stdout es exactamente un objeto, sin texto extra. `validate`/`buil
 dg validate --workspace <ruta> [--json] [--strict] [--max-issues N] [--theme <nombre>] [--theme-path <dir>]
 ```
 
-Lista todos los issues en una pasada, ordenados por archivo, linea, columna y codigo. `--max-issues` (100 por defecto) corta la lista y marca `summary.truncated`. Un issue puede traer `fix` (`{ file, range, replacement }`) cuando hay un unico candidato, o `hint` si hay varios. `validate` nunca reescribe archivos.
+Lista todos los issues en una pasada, ordenados por archivo, linea, columna y codigo. Sin errores de compilacion calcula el layout de las Vistas con al menos dos Pins y avisa `W_OVERLAPPING_PINS` por cada par solapado (con `--strict` hace fallar); las Vistas sin Pins no pagan layout. Si un Tema trae codigo (`.tsx`) que no compila, el error es `E_THEME_CODE_COMPILE`, con archivo y linea. `--max-issues` (100 por defecto) corta la lista y marca `summary.truncated`. Un issue puede traer `fix` (`{ file, range, replacement }`) cuando hay un unico candidato, o `hint` si hay varios. `validate` nunca reescribe archivos.
 
 ### `build`: escribir la geometria
 
@@ -36,7 +36,7 @@ Lista todos los issues en una pasada, ordenados por archivo, linea, columna y co
 dg build --workspace <ruta> [las opciones de validate]
 ```
 
-Escribe `canonico.json` y `geometria/<vista>.json` en `<ruta>/.diagrams/` (derivado: no se versiona ni se edita). Con errores sale 1 y borra la salida anterior.
+Escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`) en `<ruta>/.diagrams/`, reemplazandola (derivado: no se versiona ni se edita). Con errores, o con avisos en `--strict`, sale 1 y borra la salida anterior. `--theme` fija el Tema global (una Vista con `theme` propio lo anula; sin ninguno, el neutro); un Tema no declarado sale 2.
 
 ### `dev`: visor en vivo
 
@@ -59,7 +59,7 @@ dg inspect vista <id>       --workspace <ruta> [--json]
 dg inspect tema <nombre>    --workspace <ruta> [--tipo <tipo>] [--estado <estado>] [--catalogo] [--json]
 ```
 
-Cada resultado trae el id cualificado, el tipo y `archivo:linea`. `tema` muestra la cadena `extends`, las Partes, la pila de Capas con el `archivo:linea` del parche que fijo cada una (asi se sabe que editar) y las Metricas; `--catalogo` agrega las claves de Primitivas y Movimientos. Sale 1 si el Nodo, la Vista o el Tema no existe (stderr sugiere ids cercanos).
+Cada resultado trae el id cualificado, el tipo y `archivo:linea`. `tema` muestra la cadena `extends`, las Partes, la pila de Capas con el `archivo:linea` del parche que fijo cada una (asi se sabe que editar) y las Metricas; `--catalogo` agrega las claves de Primitivas y Movimientos. `inspect tema` marca `temaConCodigo` y lista los componentes cuando el Tema usa codigo. Sale 1 si el Nodo, la Vista o el Tema no existe (stderr sugiere ids cercanos).
 
 ### `edit`: la unica escritura explicita
 

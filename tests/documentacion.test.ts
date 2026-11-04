@@ -159,13 +159,14 @@ describe('revisarIndiceDeAdrs', () => {
 
 describe('revisarEnlacesDeAgents', () => {
   const completo = 'Indices: `docs/adr/README.md` y `docs/ramas.md`.\n';
+  const indices = { 'docs/adr/README.md': '# ADRs\n', 'docs/ramas.md': '# Ramas\n' };
 
-  it('acepta un AGENTS.md que enlaza ambos indices', () => {
-    expect(revisarEnlacesDeAgents(crearRepo({ 'AGENTS.md': completo }))).toEqual([]);
+  it('acepta un AGENTS.md que enlaza ambos indices existentes', () => {
+    expect(revisarEnlacesDeAgents(crearRepo({ 'AGENTS.md': completo, ...indices }))).toEqual([]);
   });
 
   it('falla si falta el enlace al indice de ADRs', () => {
-    const raiz = crearRepo({ 'AGENTS.md': 'Solo `docs/ramas.md`.\n' });
+    const raiz = crearRepo({ 'AGENTS.md': 'Solo `docs/ramas.md`.\n', ...indices });
 
     expect(revisarEnlacesDeAgents(raiz)).toContainEqual(
       expect.objectContaining({ archivo: 'AGENTS.md', regla: 'indice' }),
@@ -173,12 +174,20 @@ describe('revisarEnlacesDeAgents', () => {
   });
 
   it('falla si falta el enlace al indice de ramas', () => {
-    const raiz = crearRepo({ 'AGENTS.md': 'Solo `docs/adr/README.md`.\n' });
+    const raiz = crearRepo({ 'AGENTS.md': 'Solo `docs/adr/README.md`.\n', ...indices });
 
     expect(revisarEnlacesDeAgents(raiz)).toHaveLength(1);
   });
 
-  it('el AGENTS.md de este repo enlaza ambos indices', () => {
+  it('falla si docs/ramas.md no existe', () => {
+    const raiz = crearRepo({ 'AGENTS.md': completo, 'docs/adr/README.md': '# ADRs\n' });
+
+    expect(revisarEnlacesDeAgents(raiz)).toContainEqual(
+      expect.objectContaining({ archivo: 'docs/ramas.md', regla: 'indice' }),
+    );
+  });
+
+  it('el AGENTS.md de este repo enlaza ambos indices y existen', () => {
     expect(revisarEnlacesDeAgents(raizDelRepo)).toEqual([]);
   });
 });

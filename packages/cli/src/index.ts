@@ -53,11 +53,19 @@ function leerOpciones(args: readonly string[], propias: Record<string, { type: '
 
 /**
  * Ejecuta un comando del CLI. `--help`, `-h`, `help [comando]` o sin argumentos dan el uso (codigo 0).
- * `validate` y `build` salen 1 con errores (con `--strict`, tambien con avisos); `build` con errores
- * borra la salida anterior de `.diagrams/`. `--json` imprime exactamente un objeto `salidaDeValidateSchema`
- * (ADR 0005). `skill` genera el skill de agente (a stdout o `--out`); `inspect`, `edit` y `dev` delegan
- * en `comando-inspect.ts`, `comando-edit.ts` y `dev.ts`. Un comando desconocido o una opcion invalida
- * salen 2.
+ * `validate` y `build` salen 1 con errores (con `--strict`, tambien con avisos); `--json` imprime
+ * exactamente un objeto `salidaDeValidateSchema` (ADR 0005).
+ * - `validate` suma `W_OVERLAPPING_PINS` (el solape solo se conoce tras ELK): calcula el layout de las
+ *   Vistas con al menos dos Pins; las Vistas sin Pins no pagan layout.
+ * - `build` escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`) en
+ *   `<workspace>/.diagrams/`; con errores (o avisos en `--strict`) borra la salida anterior.
+ * - `--theme` es el Tema global (una Vista con `theme` propio lo anula; sin ninguno, el neutro); uno no
+ *   declarado sale 2. `--theme-path` se fusiona antes del Workspace, que gana en nombres repetidos.
+ * - Los Temas con codigo (`.tsx`, ADR 0008) se compilan con esbuild sin ejecutarse: `validate`, `build` e
+ *   `inspect` reciben los nombres de componente y los errores `E_THEME_CODE_COMPILE` (con file y line);
+ *   `inspect tema` marca `temaConCodigo`.
+ * - `skill` genera el skill de agente (a stdout o `--out`); `inspect`, `edit` y `dev` delegan en
+ *   `comando-inspect.ts`, `comando-edit.ts` y `dev.ts`. Un comando desconocido o una opcion invalida salen 2.
  */
 export async function run(
   argv: readonly string[],

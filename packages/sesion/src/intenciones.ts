@@ -11,6 +11,7 @@ import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
  */
 export type { Intencion };
 
+/** Resultado de `aplicarIntencion`: los `archivos` nuevos y las `ediciones` aplicadas, o el rechazo. */
 export type ResultadoDeIntencion = ResultadoDeEdicion<{
   archivos: ArchivosDelWorkspace;
   ediciones: EdicionConHash[];
@@ -34,6 +35,7 @@ export interface Historial {
   readonly futuro: readonly ArchivosDelWorkspace[];
 }
 
+/** Historial vacio sobre `archivos`: sin pasado ni futuro. */
 export const crearHistorial = (archivos: ArchivosDelWorkspace): Historial => ({ archivos, pasado: [], futuro: [] });
 
 /**
