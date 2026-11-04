@@ -1,0 +1,82 @@
+/**
+ * `check-docs` — chequeo de la documentacion que se puede pudrir.
+ *
+ * Interfaz publica:
+ * - `SECCIONES_README`: plantilla de README por paquete, fuente unica de verdad
+ *   (la explica `docs/CODING.md`, "README de paquete").
+ * - `revisarReadmes(raiz) -> Violacion[]`: revisa cada `packages/<paquete>/README.md`
+ *   que exista (no exige que todos los paquetes lo tengan) y devuelve las
+ *   violaciones ordenadas. Vacio significa verde.
+ *
+ * Reglas de `revisarReadmes`:
+ * - `seccion`: el README tiene un encabezado `## <seccion>` por cada entrada de la plantilla.
+ * - `entrada`: la seccion "Archivo de entrada" nombra al menos una ruta entre
+ *   comillas invertidas, y cada ruta existe (relativa a la raiz del repo).
+ * - `probar`: la seccion "Probar" contiene `pnpm --filter <paquete> test`.
+ *
+ * Los chequeos de indices se suman aqui con la misma forma: `revisarX(raiz) -> Violacion[]`.
+ */
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+
+export const SECCIONES_README = [
+  'Que hace',
+  'Que NO hace',
+  'Depende de',
+  'Archivo de entrada',
+  'ADR relacionado',
+  'Probar',
+] as const;
+
+export interface Violacion {
+  archivo: string;
+  regla: 'seccion' | 'entrada' | 'probar';
+  mensaje: string;
+}
+
+/** Texto bajo `## <seccion>` hasta el siguiente `## `; `undefined` si falta el encabezado. */
+function cuerpoDeSeccion(readme: string, seccion: string): string | undefined {
+  const lineas = readme.split('\n');
+  const inicio = lineas.findIndex((l) => l.trim() === `## ${seccion}`);
+  if (inicio === -1) return undefined;
+  const resto = lineas.slice(inicio + 1);
+  const fin = resto.findIndex((l) => l.startsWith('## '));
+  return (fin === -1 ? resto : resto.slice(0, fin)).join('\n');
+}
+
+export function revisarReadmes(raiz: string): Violacion[] {
+  const violaciones: Violacion[] = [];
+  const carpetaPaquetes = join(raiz, 'packages');
+  if (!existsSync(carpetaPaquetes)) return violaciones;
+
+  for (const paquete of readdirSync(carpetaPaquetes).sort()) {
+    const archivo = `packages/${paquete}/README.md`;
+    if (!existsSync(join(raiz, archivo))) continue;
+    const readme = readFileSync(join(raiz, archivo), 'utf8');
+    const violar = (regla: Violacion['regla'], mensaje: string) =>
+      violaciones.push({ archivo, regla, mensaje });
+
+    for (const seccion of SECCIONES_README) {
+      if (cuerpoDeSeccion(readme, seccion) === undefined) {
+        violar('seccion', `falta la seccion "## ${seccion}"`);
+      }
+    }
+
+    const entrada = cuerpoDeSeccion(readme, 'Archivo de entrada');
+    if (entrada !== undefined) {
+      const rutas = [...entrada.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+      if (rutas.length === 0) {
+        violar('entrada', 'la seccion de entrada no nombra ningun archivo entre comillas invertidas');
+      }
+      for (const ruta of rutas) {
+        if (!existsSync(join(raiz, ruta))) violar('entrada', `el archivo de entrada "${ruta}" no existe`);
+      }
+    }
+
+    const probar = cuerpoDeSeccion(readme, 'Probar');
+    if (probar !== undefined && !probar.includes(`pnpm --filter ${paquete} test`)) {
+      violar('probar', `la seccion "Probar" no contiene "pnpm --filter ${paquete} test"`);
+    }
+  }
+  return violaciones;
+}
