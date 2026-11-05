@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, renderHook, waitFor } from '@testing-library/react';
+import { act, cleanup, render, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema } from 'canonico';

@@ -71,7 +71,6 @@ export function elementoBajo(
 ): ElementoSeleccionable | undefined {
   const { cajas, raices } = indiceDeGeometria(vista, geometria);
   const estilo = resolverEstilo(tema);
-  const { metricas } = estilo;
 
   // Aristas se dibujan encima de los Nodos; la ultima dibujada es la superior.
   const aristas = vista.edges.map((arista) => ({ arista, id: idDeArista(arista), puntos: geometria.edges[idDeArista(arista)]?.points ?? [] }));

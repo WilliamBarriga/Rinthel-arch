@@ -4,6 +4,8 @@ import { compile } from 'dsl';
 
 const base = 'specification { node servicio { color blue } }  model { servicio a }';
 const tema = (cuerpo: string, cabecera = 'theme t') => compile({ 'main.dg': `${base}\n${cabecera} { ${cuerpo} }` });
+// Navegacion libre de un objeto canonico en las pruebas.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const nodoDe = (resultado: ReturnType<typeof compile>, nombre = 't') => resultado.canonico?.themes.find((t) => t.name === nombre)?.['nodo'] as Record<string, any>;
 
 const CAPAS = `

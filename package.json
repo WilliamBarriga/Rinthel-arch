@@ -11,7 +11,8 @@
     "build": "pnpm -r build",
     "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
     "test": "pnpm build && pnpm typecheck && pnpm -r test && vitest run",
-    "check": "pnpm typecheck && pnpm check:deps && pnpm check:docs && pnpm check:emojis",
+    "lint": "eslint .",
+    "check": "pnpm typecheck && pnpm lint && pnpm check:deps && pnpm check:docs && pnpm check:emojis",
     "check:deps": "vitest run tests/dependencias.test.ts",
     "check:docs": "vitest run tests/documentacion.test.ts",
     "bench": "pnpm build && node bench/ejecutar.ts",
@@ -22,11 +23,13 @@
     "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24.0.0",
     "canonico": "workspace:*",
     "cli": "workspace:*",
     "dsl": "workspace:*",
     "esbuild": "^0.25.0",
+    "eslint": "^10.14.0",
     "layout": "workspace:*",
     "playwright": "^1.64.0",
     "render": "workspace:*",
@@ -34,6 +37,7 @@
     "shell": "workspace:*",
     "tema": "workspace:*",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
     "vitest": "^3.2.7"
   }
 }

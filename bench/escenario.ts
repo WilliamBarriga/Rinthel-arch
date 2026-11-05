@@ -10,7 +10,7 @@ import { performance } from 'node:perf_hooks';
 import { gzipSync } from 'node:zlib';
 
 import { resolveView } from 'canonico';
-import type { EstadoDeColapso, FuenteCanonica, Nodo, Tema, VistaResuelta } from 'canonico';
+import type { EstadoDeColapso, FuenteCanonica, Nodo, Tema } from 'canonico';
 import { run } from 'cli';
 import { compile } from 'dsl';
 import { layoutView } from 'layout';
@@ -176,22 +176,6 @@ async function colapsoDe5k(): Promise<Record<string, number>> {
     colapsarMs: colapsar.totalMs,
     maxRssMb: mb(process.resourceUsage().maxRSS * 1024),
   };
-}
-
-async function empaquetar(contents: string): Promise<{ min: number; gzip: number }> {
-  const salida = await build({
-    stdin: { contents, resolveDir: import.meta.dirname, loader: 'ts' },
-    bundle: true,
-    minify: true,
-    write: false,
-    format: 'esm',
-    platform: 'browser',
-    target: 'es2022',
-    external: ['react', 'react-dom', 'react/jsx-runtime'],
-    logLevel: 'error',
-  });
-  const texto = salida.outputFiles[0]!.contents;
-  return { min: texto.length, gzip: gzipSync(texto, { level: 9 }).length };
 }
 
 async function bundleDelShell(): Promise<Record<string, number>> {

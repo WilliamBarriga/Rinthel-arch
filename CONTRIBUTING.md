@@ -15,7 +15,7 @@ Sigue el camino de lectura de [AGENTS.md](AGENTS.md#camino-de-lectura): glosario
 
 ```
 pnpm install
-pnpm check   # typecheck, orden de paquetes y emojis: rapido, para iterar
+pnpm check   # typecheck, lint, orden de paquetes y emojis: rapido, para iterar
 pnpm test    # compuerta completa: build, typecheck y todas las pruebas
 ```
 

@@ -46,7 +46,7 @@ function ejecutar(comando: string, args: string[], cwd: string, entrada?: Buffer
     execFileSync(comando, args, { cwd, stdio: [entrada === undefined ? 'ignore' : 'pipe', 'ignore', 'pipe'], ...(entrada === undefined ? {} : { input: entrada }) });
   } catch (error) {
     const detalle = (error as { stderr?: Buffer }).stderr?.toString().trim() ?? String(error);
-    throw new Error(`Fallo \`${comando} ${args.join(' ')}\` en ${cwd}:\n${detalle}`);
+    throw new Error(`Fallo \`${comando} ${args.join(' ')}\` en ${cwd}:\n${detalle}`, { cause: error });
   }
 }
 

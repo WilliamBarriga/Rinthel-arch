@@ -15,7 +15,6 @@ import { anchoDeTexto } from './medicion';
 import type { MedicionDeMetricas, MedidasDeTexto } from './medicion';
 import type { NombreDeSlot } from './catalogo';
 import type { CajaDeSlots } from './disposicion';
-import { muestra } from './contenido';
 import { cascada } from './parches';
 import type { CapaDeTema } from './parches';
 import { alturaDeCabecera } from './slots';
