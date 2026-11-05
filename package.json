@@ -28,7 +28,7 @@
     "canonico": "workspace:*",
     "cli": "workspace:*",
     "dsl": "workspace:*",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.1",
     "eslint": "^10.14.0",
     "layout": "workspace:*",
     "playwright": "^1.64.0",
