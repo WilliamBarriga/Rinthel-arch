@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
 import type { IconProvider, Tema, VistaResuelta } from 'canonico';
 import { layoutView } from 'layout';
-import { aHtml, etiquetaCon, propiedad, rectDe } from './ayudas';
+import { aHtml, etiquetaCon, rectDe } from './ayudas';
 import { TEMA_NEUTRO, metricasDe } from 'tema';
 import type { TemaResuelto } from 'tema';
 

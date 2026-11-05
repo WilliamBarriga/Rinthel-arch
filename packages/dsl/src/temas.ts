@@ -20,7 +20,7 @@ import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
 import type { AstNode as Ast } from 'langium';
 import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, fuentesSinReserva, opTocaMetricas, parsearEstado } from 'tema';
-import type { CapaDeTema, ElementoDeTema, ErrorDeCatalogo, OpDeCapa, TemaResuelto } from 'tema';
+import type { CapaDeTema, ElementoDeTema, OpDeCapa, TemaResuelto } from 'tema';
 
 import type { GroupItem, GroupPadding, NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeState, ThemeUse } from './generated/ast';
 import { ARCHIVO_INCORPORADOS, NOMBRES_INCORPORADOS } from './incorporados';

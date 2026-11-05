@@ -19,7 +19,6 @@
  * `align`, se centran en vertical. Con `align` un hijo toma su tamano natural y
  * se pega al inicio, centro o final del eje cruzado.
  */
-import type { Atributo } from 'canonico';
 
 import { DEFINICION_DE_SLOT, SLOTS_DE_TEXTO } from './catalogo';
 import type { DefinicionDeSlot, NombreDeSlot, NombreDeSlotDeTexto } from './catalogo';

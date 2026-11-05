@@ -11,7 +11,7 @@ import type { D3ZoomEvent } from 'd3-zoom';
 
 import { resolveView } from 'canonico';
 import type { EstadoDeColapso, IconProvider, IssueDeDev, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
-import { claveDeLayout, indiceDeGeometria } from 'layout';
+import { indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
 import type { Camara, ComponentesDeTema } from 'render';

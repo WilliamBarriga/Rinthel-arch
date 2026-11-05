@@ -15,7 +15,7 @@ import type { ThemeLayer, ThemeUse } from './generated/ast';
 import { aRango, issueConSugerencia, rangoDe } from './posiciones';
 import { compilarAnimacionDeCapa } from './temas-animacion';
 import type { AnimacionDeCapa } from './temas-animacion';
-import { inicioDePropiedad, propiedadDeClave, propiedadesResueltas } from './temas-comun';
+import { propiedadDeClave, propiedadesResueltas } from './temas-comun';
 import type { Contexto } from './temas-comun';
 
 /** Donde se definio por ultima vez una Capa de la pila base; sirve de `related`. */

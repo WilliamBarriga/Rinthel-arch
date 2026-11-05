@@ -27,8 +27,8 @@ import {
 import type { LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Attrs, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, Theme, View } from './generated/ast';
-import { issueConSugerencia, rangoDe, rangoDeIndice } from './posiciones';
+import type { Attrs, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, View } from './generated/ast';
+import { issueConSugerencia, rangoDe } from './posiciones';
 import { ARCHIVO_INCORPORADOS, temasIncorporados } from './incorporados';
 import { resolverTemas } from './temas';
 import type { DeclaracionDeParte, OrigenDeTema, TemaDeclarado } from './temas';

@@ -46,7 +46,7 @@ const montar = (layout: AdaptadorDeLayout, theme: TemaResuelto, extra: Record<st
 
 describe('alto contraste en el visor', () => {
   it('el interruptor reemplaza el Tema solo en el visor y se puede volver', async () => {
-    const { temas, layout } = layoutContador();
+    const { layout } = layoutContador();
     const { container, getByRole } = montar(layout, TEMA_NEUTRO);
     await waitFor(() => expect(container.querySelector('[data-id="x"]')).not.toBeNull());
     const boton = getByRole('button', { name: /alto contraste/i });
