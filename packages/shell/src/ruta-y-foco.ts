@@ -87,3 +87,31 @@ export function unirEstados(base: Estados, extra: Estados): Estados {
   for (const id of ids) unido[id] = [...(unido[id] ?? []), ...extra[id]!];
   return unido;
 }
+
+export type MovimientoDeFocoEnSecuencia = 'siguiente' | 'anterior' | 'izquierda' | 'derecha' | 'abajo' | 'arriba';
+
+/** Id de cada Mensaje visible, en orden temporal (`interaccion:ruta`). */
+const mensajesVisibles = (vista: VistaResuelta, visible: (id: string) => boolean): string[] =>
+  (vista.interaction?.messages ?? []).map((m) => `${vista.interaction!.id}:${m.ruta}`).filter(visible);
+
+/**
+ * Foco de teclado en secuencia (ADR 0009): `siguiente`/`anterior` (Tab) recorren las Lifelines visibles en orden de
+ * columna y devuelven `undefined` al salirse por un extremo; `izquierda`/`derecha` pasan a la Lifeline vecina (desde un
+ * Mensaje, a partir de su emisor); `abajo`/`arriba` recorren los Mensajes visibles en orden temporal (el foco pasa al
+ * Mensaje). Lo no revelado por un Paso (`visible` falso) se salta. Sin foco previo, aterriza en la primera Lifeline.
+ */
+export function moverFocoEnSecuencia(vista: VistaResuelta, actual: string | undefined, movimiento: MovimientoDeFocoEnSecuencia, visible: (id: string) => boolean = () => true): string | undefined {
+  const lifelines = vista.nodes.map((n) => n.id).filter(visible);
+  const mensajes = mensajesVisibles(vista, visible);
+  const esMensaje = actual !== undefined && mensajes.includes(actual);
+  if (actual === undefined || (!esMensaje && !lifelines.includes(actual))) return lifelines[0];
+  if (movimiento === 'abajo' || movimiento === 'arriba') {
+    const i = mensajes.indexOf(actual);
+    if (i < 0) return (movimiento === 'abajo' ? mensajes[0] : mensajes.at(-1)) ?? actual;
+    return mensajes[i + (movimiento === 'abajo' ? 1 : -1)] ?? actual;
+  }
+  const propia = esMensaje ? vista.interaction!.messages.find((m) => `${vista.interaction!.id}:${m.ruta}` === actual)!.from : actual;
+  const i = lifelines.indexOf(propia);
+  if (movimiento === 'siguiente' || movimiento === 'anterior') return lifelines[i + (movimiento === 'siguiente' ? 1 : -1)];
+  return lifelines[i + (movimiento === 'derecha' ? 1 : -1)] ?? propia;
+}

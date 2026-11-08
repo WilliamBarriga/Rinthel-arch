@@ -66,6 +66,12 @@ const idsDelModelo = (nodos: readonly Nodo[], acumulado = new Set<string>()): Se
   return acumulado;
 };
 
+/** `interaccion:ruta` (Mensaje, Fragmento o Nota de secuencia) de una Interaccion que existe en la Fuente. */
+function esElementoDeInteraccion(id: string, source: FuenteCanonica): boolean {
+  const corte = id.lastIndexOf(':');
+  return corte > 0 && /^\d+(\.\d+)*$/.test(id.slice(corte + 1)) && (source.model.interactions ?? []).some((i) => i.id === id.slice(0, corte));
+}
+
 /** Vista por defecto: la primera de la Fuente (`undefined` si no hay Vistas). */
 export const vistaPorDefecto = (source: FuenteCanonica): string | undefined => source.views[0]?.id;
 
@@ -117,7 +123,7 @@ export function deserializarEstado(hash: string, source: FuenteCanonica, vistaIn
   const state: EstadoDeColapso = expanded.length === 0 && collapsed.length === 0 ? {} : { expanded, collapsed };
 
   const s = p.get('s');
-  const selected = s !== null && nodos.has(s) ? s : null;
+  const selected = s !== null && (nodos.has(s) || esElementoDeInteraccion(s, source)) ? s : null;
 
   const t = p.get('t');
   const n = t !== null && /^\d+$/.test(t) ? Number(t) : 0;

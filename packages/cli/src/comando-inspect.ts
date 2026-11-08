@@ -1,5 +1,5 @@
 /**
- * Comando `inspect` del CLI (ADR 0005): `inspect <buscar|nodo|vista|tema> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json]`.
+ * Comando `inspect` del CLI (ADR 0005): `inspect <buscar|nodo|vista|interaccion|tema> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json]`.
  * `inspect tema <nombre> [--tipo T] [--estado E] [--catalogo]` resuelve la cascada de un Tema (enmienda de Temas).
  * Solo lectura. Salida: texto legible o, con `--json`, un objeto `salidaDeInspectSchema`
  * (su propio `contractVersion`). Codigos: 0 respuesta, 1 el Nodo/Vista no existe o el
@@ -13,7 +13,7 @@ import { abrirSesionDe, textoDeIssues, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { leerWorkspace } from './workspace';
 
-const SUBCOMANDOS = ['buscar', 'nodo', 'vista', 'tema'] as const;
+const SUBCOMANDOS = ['buscar', 'nodo', 'vista', 'interaccion', 'tema'] as const;
 const fallo = (exitCode: 1 | 2, mensaje: string): ResultadoDeEjecucion => ({ ...usoComun(mensaje), exitCode });
 
 export async function inspeccionar(
@@ -40,7 +40,7 @@ export async function inspeccionar(
     return fallo(2, (error as Error).message);
   }
   const [comando, argumento, ...sobrantes] = parseado.positionals;
-  const uso = 'Uso: diagrams inspect <buscar|nodo|vista|tema> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json] (tema admite --tipo <tipo> --estado <estado> --diagrama <tipo> --catalogo)';
+  const uso = 'Uso: diagrams inspect <buscar|nodo|vista|interaccion|tema> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json] (tema admite --tipo <tipo> --estado <estado> --diagrama <tipo> --catalogo)';
   if (comando === undefined || !(SUBCOMANDOS as readonly string[]).includes(comando)) return fallo(2, `Subcomando de inspect desconocido o ausente. ${uso}`);
   if (argumento === undefined || sobrantes.length > 0) return fallo(2, `inspect ${comando} requiere exactamente un argumento. ${uso}`);
   const { tipo, estado, diagrama, catalogo } = parseado.values;

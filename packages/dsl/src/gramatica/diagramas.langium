@@ -416,14 +416,19 @@ ViewAutonumber:
 // Pasos de revelado (ADR 0002): acumulativos; `show` revela y `hide` oculta.
 // Un item es un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`edge a -> b`, o `a -> b`).
 // En un Paso, `a.*` y `a.**` abarcan tambien al propio Grupo `a` (revelar un Grupo completo).
+// `steps each` (solo secuencia): un Paso por Mensaje proyectado.
 ViewSteps:
-  'steps' '{' steps+=Step* '}';
+  'steps' (each?='each' | '{' steps+=Step* '}');
 
 Step:
   'step' title=String '{' actions+=StepAction* '}';
 
 StepAction:
-  StepShow | StepHide;
+  StepShow | StepHide | StepUpto;
+
+// Solo secuencia: el Paso muestra la Interaccion hasta ese Mensaje (por su id), incluido.
+StepUpto:
+  'upto' target=Ref;
 
 StepShow:
   'show' items+=StepItem (',' items+=StepItem)*;
@@ -520,7 +525,7 @@ Id returns string:
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
   'model' | 'node' | 'specification' | 'interaction' | 'autonumber' | 'async' | 'reply' | 'create' | 'destroy' |
   'opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par' | 'else' | 'and' | 'note' | 'left' | 'right' | 'of' | 'ref' |
-  'pk' | 'fk' | 'uk' | 'identifying' | 'height' | 'key' | 'optional' | 'alternate' |
+  'upto' | 'each' | 'pk' | 'fk' | 'uk' | 'identifying' | 'height' | 'key' | 'optional' | 'alternate' |
   'lifeline' | 'activation' | 'message' | 'fragment' | 'kind' | 'op';
 
 // -------------------------

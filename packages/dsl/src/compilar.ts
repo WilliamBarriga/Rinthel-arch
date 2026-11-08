@@ -278,6 +278,7 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
     links: vista.props.flatMap((prop) => (prop.$type === 'ViewLink' ? [{ node: prop.node, view: prop.view }] : [])),
     overrides: vista.props.flatMap((prop) => (prop.$type === 'NodeOverride' ? [overrideDe(prop)] : [])),
     steps: vista.props.flatMap((prop) => (prop.$type === 'ViewSteps' ? prop.steps.map(pasoDe) : [])),
+    ...(vista.props.some((prop) => prop.$type === 'ViewSteps' && prop.each) && { stepsEach: true as const }),
   };
 }
 
@@ -288,7 +289,8 @@ function pasoDe(paso: Step): Paso {
         ? accion.items.map((item) => (item.$type === 'StepEdge' ? { from: item.from, to: item.to } : { selector: item.selector }))
         : [],
     );
-  return { title: paso.title, show: items('StepShow'), hide: items('StepHide') };
+  const upto = paso.actions.flatMap((accion) => (accion.$type === 'StepUpto' ? [accion.target] : []))[0];
+  return { title: paso.title, show: items('StepShow'), hide: items('StepHide'), ...(upto !== undefined && { upto }) };
 }
 
 function overrideDe(declarado: NodeOverride): OverrideDeNodo {
