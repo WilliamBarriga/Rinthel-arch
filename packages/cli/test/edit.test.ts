@@ -127,3 +127,43 @@ describe('edit --edits', () => {
     }
   });
 });
+
+describe('edit --intent (ordenar-lifelines)', () => {
+  const SEC = `specification { node servicio }
+model {
+  servicio cliente
+  servicio api
+  servicio db
+  interaction i {
+    cliente -> api "pedir"
+    api -> db "leer"
+  }
+}
+view flujo {
+  type sequence
+  interaction i
+}
+`;
+  const intent = (orden: string[], extra: object = {}) => JSON.stringify({ tipo: 'ordenar-lifelines', vista: 'flujo', orden, ...extra });
+
+  it('aplica la Intencion por su contrato JSON y escribe el order', async () => {
+    const raiz = workspace(SEC);
+    const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db', 'cliente', 'api']), '--json']);
+    expect(r.exitCode).toBe(0);
+    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: true, files: ['main.dg'] });
+    expect(leer(raiz)).toBe(SEC.replace('  interaction i\n}', '  interaction i\n  order db, cliente, api\n}'));
+  });
+
+  it('con hash viejo rechaza con codigo 1 y sin escribir', async () => {
+    const raiz = workspace(SEC);
+    const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db'], { hash: '000' }), '--json']);
+    expect(r.exitCode).toBe(1);
+    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'hash-desactualizado' });
+    expect(leer(raiz)).toBe(SEC);
+  });
+
+  it('una Intencion mal formada es un fallo de uso', async () => {
+    const r = await run(['edit', '--workspace', workspace(SEC), '--intent', '{"tipo":"nada"}']);
+    expect(r.exitCode).toBe(2);
+  });
+});

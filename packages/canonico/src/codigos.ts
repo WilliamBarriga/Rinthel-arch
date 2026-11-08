@@ -193,7 +193,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_THEME_UNKNOWN_MOTION: 'Un Movimiento, un efecto de `enter`/`exit` o una propiedad de `keyframes` no esta en el catalogo de animacion.',
   E_DUPLICATE_PART: 'Dos `part` con el mismo nombre en el Workspace.',
   W_THEME_LOW_CONTRAST: 'Un Tipo de nodo y estado del Tema queda bajo el contraste minimo (4.5:1 texto, 3:1 graficos); aviso.',
-  W_THEME_COLOR_ONLY: 'Dos Tipos de una Vista se distinguen solo por color de Paleta (solo-color); aviso.',
+  W_THEME_COLOR_ONLY: 'Dos Tipos de una Vista, dos tipos de Mensaje de secuencia o la Arista identificante y la no identificante de ER se distinguen solo por color de Paleta (solo-color); aviso.',
   W_THEME_WITH_CODE: 'Un Tema usa la Capa `code` (Tema con codigo): corre codigo del Workspace sin sandbox, hay que revisarlo; aviso.',
   E_THEME_COMPONENT_MISSING: 'Una Capa `code` nombra un Componente de Tema que ningun `.tsx` del Workspace exporta.',
   E_THEME_COMPONENT_PARAMS: 'Los parametros de una Capa `code` no coinciden con los que declara el componente (desconocido o de otro tipo).',

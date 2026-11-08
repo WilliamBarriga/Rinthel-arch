@@ -1,9 +1,11 @@
 /**
  * Comando `edit` del CLI (ADR 0005): unica escritura explicita sobre el DSL de texto.
  * `edit --workspace <ruta> [--theme-path <carpeta>] [--json] [--hash <archivo>=<hash>]...`
- * mas una de estas dos formas:
+ * mas una de estas tres formas:
  * - Intencion de Pin: `--view <id> --node <id cualificado> --x N --y N`. El Gesto `editarPin` de `sesion`
  *   calcula la edicion minima (reemplaza el `pin` o lo inserta), la auto-prueba y la aplica en memoria.
+ * - Intencion por su contrato JSON: `--intent '<json>'`, p. ej. `{"tipo":"ordenar-lifelines","vista":"flujo","orden":["a","b"]}`
+ *   (ADR 0007/0009); sin `hash` se usa el del archivo de la Vista al leer. Pasa por `aplicarIntencion` de `sesion`.
  * - Ediciones ya calculadas: `--edits '<json>'`, un arreglo de `{ file, range, replacement, hash? }`
  *   (p. ej. el `fix` de un issue de `validate`). Rangos 1-based, fin excluido.
  * Concurrencia: cada edicion lleva el hash del archivo que vio quien la pide (`hash` en la edicion
@@ -13,11 +15,11 @@
  * stdout vacio; el codigo de cada motivo sale de la tabla unica `SALIDA_DE_RECHAZO` de `rechazos.ts`),
  * 2 fallo de uso o interno. Solo escribe lo pedido; nunca como efecto de validar.
  */
-import { EDIT_CONTRACT_VERSION, edicionesPedidasSchema, salidaDeEditSchema } from 'canonico';
+import { EDIT_CONTRACT_VERSION, edicionesPedidasSchema, intencionSchema, salidaDeEditSchema } from 'canonico';
 import type { SalidaDeEdit } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
-import { abrirSesion, aplicarEdiciones, archivoDeVista, editarPin, hashDeContenido } from 'sesion';
+import { abrirSesion, aplicarEdiciones, aplicarIntencion, archivoDeVista, editarPin, hashDeContenido } from 'sesion';
 import type { EdicionConHash } from 'sesion';
 
 import { cambiosDeEdicion, leerConTemas, uso } from './sesion-cli';
@@ -27,7 +29,7 @@ import type { RechazoDeEdicion } from './rechazos';
 import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
 
 const USO =
-  "Uso: diagrams edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --edits '<json>') [--hash <archivo>=<hash>] [--theme-path <carpeta>] [--json]";
+  "Uso: diagrams edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --intent '<json>' | --edits '<json>') [--hash <archivo>=<hash>] [--theme-path <carpeta>] [--json]";
 
 export async function editar(
   args: readonly string[],
@@ -49,6 +51,7 @@ export async function editar(
         x: { type: 'string' },
         y: { type: 'string' },
         edits: { type: 'string' },
+        intent: { type: 'string' },
         hash: { type: 'string', multiple: true },
       },
       strict: true,
@@ -58,8 +61,8 @@ export async function editar(
   }
   if (v.workspace === undefined) return uso(`Falta --workspace <ruta>. ${USO}`);
   const hayPin = [v.view, v.node, v.x, v.y].some((o) => o !== undefined);
-  if (hayPin === (v.edits !== undefined)) {
-    return uso(`Indica una intencion de Pin (--view --node --x --y) o --edits, no ambas ni ninguna. ${USO}`);
+  if ([hayPin, v.edits !== undefined, v.intent !== undefined].filter(Boolean).length !== 1) {
+    return uso(`Indica una intencion de Pin (--view --node --x --y), --intent o --edits, solo una. ${USO}`);
   }
 
   const hashes = new Map<string, string>();
@@ -93,6 +96,20 @@ export async function editar(
     const aplicada = aplicarEdiciones(archivos, ediciones);
     if (!aplicada.ok) return rechazado(aplicada, json);
     editados = aplicada.archivos;
+  } else if (v.intent !== undefined) {
+    let crudo;
+    try {
+      crudo = JSON.parse(v.intent) as Record<string, unknown>;
+    } catch (error) {
+      return uso(`--intent no es JSON: ${(error as Error).message}`);
+    }
+    const vista = typeof crudo.vista === 'string' ? archivoDeVista(abrirSesion(archivos), crudo.vista) : undefined;
+    const leida = intencionSchema.safeParse({ hash: vista === undefined ? '' : hashVigente(vista), ...crudo });
+    if (!leida.success) return uso(`--intent no es una Intencion valida: ${leida.error.message}`);
+    const gesto = aplicarIntencion(archivos, leida.data);
+    if (!gesto.ok) return rechazado(gesto, json);
+    ediciones = gesto.ediciones;
+    editados = gesto.archivos;
   } else {
     const x = Number(v.x);
     const y = Number(v.y);

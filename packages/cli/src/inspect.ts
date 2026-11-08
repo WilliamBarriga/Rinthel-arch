@@ -6,7 +6,7 @@
 import { INSPECT_CONTRACT_VERSION, aplanarMensajes, candidatosCercanos, lifelinesDe, resolveView, salidaDeInspectSchema } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
-import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, TIPOS_DE_DIAGRAMA, alturaDeCabecera, cascada, componentesDeTema, describirDisposicion, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas, temaParaDiagrama } from 'tema';
+import { BLOQUES_DE_SECUENCIA, CATALOGO, ESPECIFICACION_DE_SECUENCIA, EFECTOS, ESTADOS, MOVIMIENTOS, TIPOS_DE_DIAGRAMA, alturaDeCabecera, aplicarOps, cascada, componentesDeTema, describirDisposicion, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas, temaParaDiagrama } from 'tema';
 import type { CapaDeTema } from 'tema';
 
 type Sitio = { file: string; line: number };
@@ -217,6 +217,30 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
     origen: sitio,
   });
   const capas = cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido }) }).map((capa: CapaDeTema) => aCapa(capa, sitioDe(capa.nombre)));
+  const sitioDelTema = origen?.sitio ?? INCORPORADO;
+  const delSitio = (capas: readonly CapaDeTema[]) => capas.map((capa) => aCapa(capa, sitioDelTema));
+  const secuencia = Object.fromEntries(
+    BLOQUES_DE_SECUENCIA.flatMap((nombre) => {
+      const bloque = tema.secuencia?.[nombre];
+      if (bloque === undefined) return [];
+      const base = bloque.capas as CapaDeTema[];
+      return [
+        [
+          nombre,
+          {
+            capas: delSitio(base),
+            marcadores: Object.fromEntries([...(bloque.origen === undefined ? [] : [['start', bloque.origen.tipo]]), ...(bloque.fin === undefined ? [] : [['end', bloque.fin.tipo]])]),
+            parches: Object.fromEntries(Object.entries(bloque.parches).map(([variante, parche]) => [variante, delSitio(aplicarOps(base, parche.ops, tema.palette, 'parchear', ESPECIFICACION_DE_SECUENCIA[nombre].capas).pila)])),
+            metricas: bloque.metricas,
+          },
+        ],
+      ];
+    }),
+  );
+  const elementos = {
+    ...(Object.keys(secuencia).length > 0 && { secuencia }),
+    ...(tema.fila !== undefined && { fila: { ...(tema.fila.alto !== undefined && { alto: tema.fila.alto }), capas: delSitio(tema.fila.capas as CapaDeTema[]) } }),
+  };
   const pagina = {
     fijo: tema.pagina.fijo,
     capas: (tema.pagina.capas as CapaDeTema[]).map((capa) => {
@@ -264,6 +288,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
         capas,
         pagina,
         grupo,
+        ...(Object.keys(elementos).length > 0 && { elementos }),
         slots: describirDisposicion(delNodo.disposicion),
         origenDeSlots: sitioDeSlots(origen?.slots.nodo),
         // `paddingGrupo` es del Grupo: la tabla del Nodo trae el valor por defecto, que no dice nada de este Tema.
@@ -337,6 +362,24 @@ export function textoLegible(salida: SalidaDeInspect): string {
       }
     }
     lineas.push(`  colapsado cabecera: ${grupo.colapsado.slots} ${sitio(grupo.colapsado.origenDeSlots)}`);
+    const { elementos } = tema;
+    if (elementos?.secuencia !== undefined) {
+      lineas.push('Secuencia:');
+      for (const [nombre, bloque] of Object.entries(elementos.secuencia)) {
+        const marcadores = Object.entries(bloque.marcadores).map(([lado, tipo]) => ` ${lado}=${tipo}`).join('');
+        const metricas = Object.entries(bloque.metricas).map(([clave, valor]) => ` ${clave}=${valor}`).join('');
+        lineas.push(`  ${nombre}:${marcadores}${metricas}`);
+        for (const c of bloque.capas) lineas.push(`    ${c.nombre} ${c.primitiva} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
+        for (const [variante, capas] of Object.entries(bloque.parches)) {
+          lineas.push(`    kind/op ${variante}:`);
+          for (const c of capas) lineas.push(`      ${c.nombre} ${c.primitiva} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
+        }
+      }
+    }
+    if (elementos?.fila !== undefined) {
+      lineas.push(`Fila: alto ${elementos.fila.alto ?? '(defecto)'}`);
+      for (const c of elementos.fila.capas) lineas.push(`  ${c.nombre} ${c.primitiva} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
+    }
     lineas.push(`Slots: ${tema.slots} ${sitio(tema.origenDeSlots)}`);
     lineas.push('Metricas:');
     for (const [clave, valor] of Object.entries(tema.metricas)) if (clave !== 'disposicion') lineas.push(`  ${clave}: ${typeof valor === 'object' ? JSON.stringify(valor) : String(valor)}`);

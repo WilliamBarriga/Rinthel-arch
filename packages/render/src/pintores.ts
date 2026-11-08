@@ -7,7 +7,7 @@
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
-import { LARGO_DE_MARCADOR_ER, alturaDeCabecera, pilaDeFila, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
+import { LARGO_DE_MARCADOR_ER, alturaDeCabecera, capasDeAristaEr, pilaDeFila, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
 import type { ContenidoDeNodo, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
 
 import { pintarMarcadores, pintarTrazos, rutaDeCapa } from './aristas';
@@ -276,10 +276,7 @@ const FORMA_ER: Readonly<Record<string, NombreDePrimitiva>> = { '1': 'one', '0..
  * del Tema (`fin`, si no `origen`) o del trazo principal; el tamano se acota al tramo final disponible.
  */
 function pinturaEr(base: PinturaDeArista, puntos: readonly Punto[], desde: string | undefined, hasta: string | undefined, identificante: boolean): PinturaDeArista {
-  const capas = base.capas.map((capa) => {
-    const estilo = capa.props['style'];
-    return estilo === 'solid' || estilo === 'dashed' ? { ...capa, props: { ...capa.props, style: identificante ? 'solid' : 'dashed' } } : capa;
-  });
+  const capas = capasDeAristaEr(base, identificante);
   const delTema = base.fin ?? base.origen;
   const color = delTema?.props['color'] ?? capas.at(-1)?.props['color'] ?? '';
   const tamano = Number(delTema?.props['size'] ?? LARGO_DE_MARCADOR_ER);

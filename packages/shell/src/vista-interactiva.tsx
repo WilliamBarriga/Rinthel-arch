@@ -26,6 +26,8 @@ import { MAX_NODOS_VISIBLES, alternarGrupo, contarNodosVisibles } from './colaps
 import { AJUSTES_POR_DEFECTO } from './configuracion';
 import type { AjustesDeInteraccion } from './configuracion';
 import { idDeNodoBajo, useArrastre } from './arrastre';
+import type { AlReordenarLifelines } from './arrastre';
+import { unidadBajo } from './ordenar-lifelines';
 import { useControlado } from './controlado';
 import { conEstadosTransitorios, useSeleccion } from './seleccion';
 import { destinoDeNavegacionPorRef, elementoBajo } from './interaccion';
@@ -106,6 +108,12 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
    * `false` (o rechaza), vuelve a su sitio. Un arrastre no selecciona ni navega.
    */
   onMoveNode?: (movimiento: { id: string; x: number; y: number }) => void | boolean | Promise<boolean | void>;
+  /**
+   * Habilita reordenar Lifelines por arrastre en una Vista de secuencia (solo bajo `dev`): arrastrar la cabecera de
+   * una Lifeline, o el titulo de un `box`, avisa el orden visible completo (`orden`, ids de izquierda a derecha); una
+   * hija no sale del `box` de su Grupo y el titulo mueve el bloque. Mismo contrato de retorno que `onMoveNode`.
+   */
+  onReorderLifelines?: AlReordenarLifelines;
   /**
    * Ruta resaltada: ids de Nodos en orden. Sus Nodos y las Aristas entre consecutivos pasan a `en-ruta` y todo lo
    * demas a `atenuado`. Sin ella, con exactamente dos Nodos seleccionados se resalta la ruta mas corta entre ellos.
@@ -208,14 +216,28 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const ultimo = useRef(props);
   ultimo.current = props;
   const camaraVigente = useRef(camara);
+  const geometriaVigente = useRef<Geometria | undefined>(undefined);
+  geometriaVigente.current = calculo?.geometria;
+  const vistaVigente = useRef(vista);
+  vistaVigente.current = calculo?.vista ?? vista;
   const { desplazado, arrastrando, enCurso } = useArrastre({
     zona,
     alMoverNodo: props.onMoveNode,
+    alReordenar: props.onReorderLifelines,
     calculo,
     camaraVigente,
     ancho: width,
     umbral: ajustes.dragThreshold,
   });
+
+  /** Un mousedown que agarra una cabecera o el titulo de un `box` en secuencia es un arrastre, no un pan. */
+  const agarraEnSecuencia = (evento: MouseEvent): boolean => {
+    const geometria = geometriaVigente.current;
+    if (geometria?.kind !== 'secuencia') return false;
+    const caja = zona.current!.getBoundingClientRect();
+    const k = width / camaraVigente.current.width;
+    return unidadBajo(geometria, vistaVigente.current.interaction?.groups ?? [], { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k }) !== undefined;
+  };
 
   useEffect(() => {
     const nodo = zona.current!;
@@ -223,6 +245,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     comp
       .filter((evento: Event) => {
         if (ultimo.current.onMoveNode !== undefined && evento.type === 'mousedown' && idDeNodoBajo(evento.target) !== undefined) return false;
+        if (ultimo.current.onReorderLifelines !== undefined && evento.type === 'mousedown' && agarraEnSecuencia(evento as MouseEvent)) return false;
         return (!(evento as MouseEvent).ctrlKey || evento.type === 'wheel') && !(evento as MouseEvent).button;
       })
       .extent([

@@ -2,7 +2,7 @@
 
 ## Intencion: union discriminada por `tipo`
 
-Toda edicion que nace de la interaccion es una `Intencion` (paquete `sesion`): una union discriminada por `tipo`. Hoy hay una variante, `mover-pin`, que es la `IntencionDePin` de `canonico` (`{ vista, nodo, x, y, hash }`) mas `tipo: 'mover-pin'`. Cada herramienta futura (redimensionar, renombrar, crear Arista) se agrega como una variante nueva con su rama en el reductor; no cambia el resto del protocolo.
+Toda edicion que nace de la interaccion es una `Intencion` (paquete `sesion`): una union discriminada por `tipo`. Hay dos variantes: `ordenar-lifelines` (ADR 0009: `{ vista, orden, hash }`, reescribe el `order` de una Vista de secuencia) y `mover-pin`, que es la `IntencionDePin` de `canonico` (`{ vista, nodo, x, y, hash }`) mas `tipo: 'mover-pin'`. Cada herramienta futura (redimensionar, renombrar, crear Arista) se agrega como una variante nueva con su rama en el reductor; no cambia el resto del protocolo.
 
 La interfaz de red no cambia: el cuerpo de `POST /api/pin` sigue siendo `IntencionDePin` sin `tipo`, y la salida de `edit --json` y la respuesta del endpoint conservan su forma (ADR 0005). `tipo` es vocabulario interno del cliente y de `sesion`.
 

@@ -127,7 +127,7 @@ Theme:
 ;
 
 ThemePart:
-  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeGroup | ThemeEdge | ThemePage | ThemeRow;
+  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeGroup | ThemeEdge | ThemePage | ThemeRow | ThemeSequence;
 
 ThemePalette:
   'palette' '{' entries+=ThemeEntry* '}';
@@ -285,7 +285,11 @@ ThemeEdge:
   'edge' '{' items+=EdgeItem* '}';
 
 EdgeItem:
-  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel | ThemeDiagram;
+  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel | ThemeDiagram | EdgeIdentifying;
+
+// `identifying { layer linea { color azul } }` (ADR 0009): parche del trazo de las Aristas identificantes de una Vista ER.
+EdgeIdentifying:
+  'identifying' '{' items+=PatchItem* '}';
 
 // `start|end <marcador> [{ props }]` o `start|end none`.
 ThemeMarker:
@@ -319,6 +323,30 @@ RowAlternate:
 
 // El nombre del texto (`name`, `type`, `key`) se valida al compilar para dar un `fix` por typo.
 RowText:
+  slot=Id '{' props+=LayerProp* '}';
+
+// `message { layer linea line { color tinta }  end arrow { size 9 }  gap 36  kind reply { layer linea { style dashed } } }`
+// Elementos de secuencia (ADR 0009): `lifeline`, `activation`, `message`, `fragment`, `note`. Cada uno lleva su pila de
+// Capas, marcadores (`start`/`end`), parches por variante (`kind <tipo>` en message, `op <operador>` en fragment),
+// estados, Metricas propias (`gap 36`, `width 10`...) y estilo de texto o trazo suelto (`label`, `operator`, `guard`,
+// `divider`, `text`). Que admite cada uno lo valida el catalogo de `tema`; el nombre del estilo, de la Metrica y de la
+// variante se comprueba al compilar para dar un `fix` por typo.
+ThemeSequence:
+  element=('lifeline' | 'activation' | 'message' | 'fragment' | 'note') '{' items+=SequenceItem* '}';
+
+SequenceItem:
+  ThemeLayer | ThemeUse | ThemeMarker | ThemeState | SequencePatch | SequenceMetric | SequenceText;
+
+SequencePatch:
+  word=('kind' | 'op') name=Id '{' items+=SequencePatchItem* '}';
+
+SequencePatchItem:
+  ThemeLayer | ThemeUse | ThemeMarker;
+
+SequenceMetric:
+  key=Id value=SignedNum;
+
+SequenceText:
   slot=Id '{' props+=LayerProp* '}';
 
 // `page { layer fondo solid { color paper }  layer puntos dots { color ink/0.1 size 22 }  fixed }`
@@ -497,7 +525,8 @@ Id returns string:
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
   'model' | 'node' | 'specification' | 'interaction' | 'autonumber' | 'async' | 'reply' | 'create' | 'destroy' |
   'opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par' | 'else' | 'and' | 'note' | 'left' | 'right' | 'of' | 'ref' |
-  'upto' | 'each' | 'pk' | 'fk' | 'uk' | 'identifying' | 'height' | 'key' | 'optional' | 'alternate';
+  'upto' | 'each' | 'pk' | 'fk' | 'uk' | 'identifying' | 'height' | 'key' | 'optional' | 'alternate' |
+  'lifeline' | 'activation' | 'message' | 'fragment' | 'kind' | 'op';
 
 // -------------------------
 // Comments

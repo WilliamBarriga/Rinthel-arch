@@ -8,7 +8,7 @@
  * Detalle por funcion: TSDoc de cada export. Importa solo `canonico`, `tema`, `dsl` y `layout`.
  */
 export { abrirSesion, archivoDeVista } from './sesion';
-export { aplicarEdiciones, editarPin, hashDeContenido } from './ediciones';
+export { aplicarEdiciones, editarPin, hashDeContenido, ordenarLifelines } from './ediciones';
 export { aplicarAlWorkspace, cambiosDeEdicion } from './aplicar';
 export type { PuertoDeWorkspace, ResultadoDeAplicar } from './aplicar';
 export { aplicarIntencion, apilar, crearHistorial, deshacer, editarEnHistorial, rehacer } from './intenciones';

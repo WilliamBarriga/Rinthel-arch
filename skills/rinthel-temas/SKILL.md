@@ -20,6 +20,7 @@ La estetica vive en el **Tema** (texto `.dg`), nunca en el Modelo: cambiar `them
 ## Reglas que ahorran errores
 
 - El hex solo existe en `palette`; en todo lo demas un color es un nombre de Paleta, con `nombre/0.4` para opacidad, o `COLOR` (color del Tipo del Nodo) y `ORIGEN` (en Aristas).
+- Vistas `sequence`: bloques `lifeline`, `activation`, `message` (parches `kind <tipo>`), `fragment` (`op <operador>`) y `note`, con las separaciones de secuencia como Metricas (`gap`, `loop-width`, `width`, `padding`); `row` para tablas ER. Sin ellos se derivan de `edge` y `node`. Ver `docs/guia/personalizar-temas.md` y `examples/temas/secuencia.dg`.
 - La cascada, donde gana el ultimo: Tema base, Tipo de nodo, estado, parche de la Vista. Los estados (`hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado`, `foco`) solo cambian pintura: tamano y Slots quedan fijos.
 - Fuentes autohospedadas: archivos `woff2` o `ttf` en `fuentes/` del Workspace, nombrados en `fonts`. Licencia junto al archivo (ejemplos en `examples/rinthel-arch/temas/fuentes/`).
 - Ajuste solo para una Vista: `theme <nombre> { layer borde { color amber } }` dentro de la `view`.

@@ -20,6 +20,7 @@ import { aplicarOps, cascada } from './parches';
 import type { CapaDeTema, ElementoDeTema, Estado, OpDeCapa, TipoDeDiagrama } from './parches';
 import { CLAVES_DE_FILA, claveDeFila, variantesDeFila } from './fila';
 import type { TextoDeFila, VarianteDeFila } from './fila';
+import { ESPECIFICACION_DE_SECUENCIA } from './secuencia';
 import { resolverTema, temaParaDiagrama } from './tema';
 import type { TemaResuelto } from './tema';
 
@@ -42,6 +43,8 @@ export interface PrimitivaPintada {
 /** Pintura de una Arista: trazos (de abajo hacia arriba), marcadores y etiqueta. El color del marcador sin `color` es el del primer trazo. */
 export interface PinturaDeArista {
   capas: CapaPintada[];
+  /** Trazos de las Aristas identificantes de una Vista ER (`identifying` del bloque `edge`); ausente = los de `capas`. */
+  identificante?: CapaPintada[];
   origen?: PrimitivaPintada;
   fin?: PrimitivaPintada;
   etiqueta: PrimitivaPintada;
@@ -93,6 +96,34 @@ export interface PinturaDeFila {
 /** Pila de Capas de una fila: la de su variante si el Tema la parchea, si no la base. */
 export const pilaDeFila = (fila: PinturaDeFila, variante: VarianteDeFila): CapaPintada[] => fila.variantes[claveDeFila(variante)] ?? fila.base;
 
+/** Trazo de un elemento de secuencia (`lifeline`, `message`): pila de trazos, marcadores, etiqueta y la pila de cada variante (`kind`) que el Tema parchea. */
+export interface PinturaDeTrazoDeSecuencia {
+  capas: CapaPintada[];
+  origen?: PrimitivaPintada;
+  fin?: PrimitivaPintada;
+  /** Variantes con parche propio (tipo de Mensaje); la que falta se deriva del base. */
+  variantes: Record<string, { capas: CapaPintada[]; origen?: PrimitivaPintada; fin?: PrimitivaPintada }>;
+}
+
+/** Elemento de secuencia con Capas de Nodo (`activation`, `fragment`, `note`): su pila, el estilo de sus textos y la pila de cada variante (`op`). */
+export interface PinturaDeCajaDeSecuencia {
+  capas: CapaPintada[];
+  textos: Record<string, PrimitivaPintada>;
+  variantes: Record<string, CapaPintada[]>;
+}
+
+/**
+ * Pintura de los elementos de secuencia que el Tema declara (ADR 0009); lo que no declara se deriva en `render` de
+ * `edge` y `node`. Lifeline y Mensaje van por color de Paleta del Nodo de origen (`ORIGEN`), como la Arista.
+ */
+export interface PinturaDeSecuencia {
+  lifeline?: { base: PinturaDeTrazoDeSecuencia; origenes: Record<string, PinturaDeTrazoDeSecuencia> };
+  mensaje?: { base: PinturaDeTrazoDeSecuencia; origenes: Record<string, PinturaDeTrazoDeSecuencia> };
+  activacion?: PinturaDeCajaDeSecuencia;
+  fragmento?: PinturaDeCajaDeSecuencia;
+  nota?: PinturaDeCajaDeSecuencia;
+}
+
 export interface Pintura {
   /** `seed N` del Tema (token `seed`); sin el, la semilla de cada Capa sale solo del id y del nombre. */
   semilla?: number;
@@ -105,6 +136,8 @@ export interface Pintura {
   pagina: PinturaDePagina;
   /** Fila de las tablas ER; solo en una Vista ER cuyo Tema declara `row`. */
   fila?: PinturaDeFila;
+  /** Elementos de secuencia declarados por el Tema; solo en una Vista de secuencia. */
+  secuencia?: PinturaDeSecuencia;
 }
 
 /** Fuentes del Estilo resuelto: la pila `font-family` de cuerpo y mono (con la reserva declarada) y las caras que el Workspace aporta. */
@@ -191,10 +224,12 @@ function pintarArista(tema: TemaResuelto, colorDeOrigen: string | undefined): Pi
     return { tipo: primitiva.tipo as NombreDePrimitiva, props };
   };
   const etiqueta = arista.etiqueta ?? { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 0 } };
+  const identificante = arista.identificante === undefined ? undefined : pintar(aplicarOps(arista.capas.length === 0 ? [TRAZO_POR_DEFECTO] : (arista.capas as CapaDeTema[]), arista.identificante, tema.palette, 'parchear', 'capa-arista').pila, tema, colorDeOrigen);
   const origen = marcador(arista.origen);
   const fin = marcador(arista.fin);
   return {
     capas,
+    ...(identificante !== undefined && { identificante }),
     ...(origen !== undefined && { origen }),
     ...(fin !== undefined && { fin }),
     etiqueta: { tipo: etiqueta.tipo as NombreDePrimitiva, props: resolverProps(etiqueta, paleta, contexto) },
@@ -236,6 +271,73 @@ function pinturaDeFila(tema: TemaResuelto, variable: string | undefined): Pintur
   return { base, variantes, textos };
 }
 
+/** Pintura de los bloques de secuencia que el Tema declara. `variable` da el color del Nodo a `COLOR` en los bloques de caja. */
+function pinturaDeSecuencia(tema: TemaResuelto, variable: string | undefined): PinturaDeSecuencia | undefined {
+  const { secuencia } = tema;
+  if (secuencia === undefined) return undefined;
+  const marcador = (primitiva: { tipo: string; props: Record<string, number | string> } | undefined, paleta: Record<string, string>, contexto: ContextoDeColor, color: unknown): PrimitivaPintada | undefined => {
+    if (primitiva === undefined) return undefined;
+    const props = resolverProps(primitiva, paleta, contexto);
+    if (props['color'] === undefined && color !== undefined) props['color'] = color as string;
+    return { tipo: primitiva.tipo as NombreDePrimitiva, props };
+  };
+  const trazo = (nombre: 'lifeline' | 'message', colorDeOrigen: string | undefined): PinturaDeTrazoDeSecuencia | undefined => {
+    const bloque = secuencia[nombre];
+    if (bloque === undefined) return undefined;
+    const { paleta, contexto } = contextoDeColor(tema, colorDeOrigen);
+    const ubicacion = ESPECIFICACION_DE_SECUENCIA[nombre].capas;
+    const capas = pintar(bloque.capas.length === 0 ? [TRAZO_POR_DEFECTO] : (bloque.capas as CapaDeTema[]), tema, colorDeOrigen);
+    const colorDelTrazo = capas.at(-1)?.props['color'];
+    const origen = marcador(bloque.origen, paleta, contexto, colorDelTrazo);
+    const fin = marcador(bloque.fin, paleta, contexto, colorDelTrazo);
+    const variantes = Object.fromEntries(
+      Object.entries(bloque.parches).map(([variante, parche]) => {
+        const propias = pintar(aplicarOps(bloque.capas as CapaDeTema[], parche.ops, tema.palette, 'parchear', ubicacion).pila, tema, colorDeOrigen);
+        const colorPropio = propias.at(-1)?.props['color'];
+        const o = marcador(parche.origen, paleta, contexto, colorPropio);
+        const f = marcador(parche.fin, paleta, contexto, colorPropio);
+        return [variante, { capas: propias, ...(o !== undefined && { origen: o }), ...(f !== undefined && { fin: f }) }];
+      }),
+    );
+    return {
+      capas,
+      ...(origen !== undefined && { origen }),
+      ...(fin !== undefined && { fin }),
+      variantes,
+    };
+  };
+  const porColor = (nombre: 'lifeline' | 'message'): { base: PinturaDeTrazoDeSecuencia; origenes: Record<string, PinturaDeTrazoDeSecuencia> } | undefined => {
+    const base = trazo(nombre, undefined);
+    if (base === undefined) return undefined;
+    return { base, origenes: Object.fromEntries(Object.keys(tema.palette).sort().map((color) => [color, trazo(nombre, color)!])) };
+  };
+  const caja = (nombre: 'activation' | 'fragment' | 'note'): PinturaDeCajaDeSecuencia | undefined => {
+    const bloque = secuencia[nombre];
+    if (bloque === undefined) return undefined;
+    const { paleta, contexto } = contextoDeColor(tema, undefined, variable);
+    const ubicacion = ESPECIFICACION_DE_SECUENCIA[nombre].capas;
+    return {
+      capas: pintar(bloque.capas as CapaDeTema[], tema, undefined, variable),
+      textos: Object.fromEntries(Object.entries(bloque.textos).map(([clave, texto]) => [clave, { tipo: texto.tipo as NombreDePrimitiva, props: resolverProps(texto, paleta, contexto) }])),
+      variantes: Object.fromEntries(
+        Object.entries(bloque.parches).map(([variante, parche]) => [variante, pintar(aplicarOps(bloque.capas as CapaDeTema[], parche.ops, tema.palette, 'parchear', ubicacion).pila, tema, undefined, variable)]),
+      ),
+    };
+  };
+  const lifeline = porColor('lifeline');
+  const mensaje = porColor('message');
+  const activacion = caja('activation');
+  const fragmento = caja('fragment');
+  const nota = caja('note');
+  return {
+    ...(lifeline !== undefined && { lifeline }),
+    ...(mensaje !== undefined && { mensaje }),
+    ...(activacion !== undefined && { activacion }),
+    ...(fragmento !== undefined && { fragmento }),
+    ...(nota !== undefined && { nota }),
+  };
+}
+
 export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): EstiloResuelto {
   const resuelto = temaParaDiagrama(resolverTema(tema), opciones.diagrama);
   const variable = opciones.colorEnVariable;
@@ -272,6 +374,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
   };
   const tabla = tablaDeMetricas(tema, opciones.medidas, opciones.diagrama);
   const fila = opciones.diagrama === 'er' ? pinturaDeFila(resuelto, variable) : undefined;
+  const secuencia = opciones.diagrama === 'sequence' ? pinturaDeSecuencia(resuelto, variable) : undefined;
   const reserva = resuelto.fonts['fallback'];
   return {
     metricas: tabla.base,
@@ -287,6 +390,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
       grupo: { abierto: elementoDe('grupo'), colapsado: elementoDe('grupo', true) },
       pagina: { capas: pintar(resuelto.pagina.capas as CapaDeTema[], resuelto, undefined), fijo: resuelto.pagina.fijo },
       ...(fila !== undefined && { fila }),
+      ...(secuencia !== undefined && { secuencia }),
       arista: {
         ...pintarArista(resuelto, undefined),
         origenes: Object.fromEntries(Object.keys(resuelto.palette).sort().map((color) => [color, pintarArista(resuelto, color)])),

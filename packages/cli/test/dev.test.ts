@@ -248,6 +248,26 @@ describe('dev', () => {
       expect(env.texto('main.dg')).toContain('node api { pin 1,2 }');
     });
 
+    it('acepta ordenar-lifelines, lo escribe y deshacer restaura el texto', async () => {
+      const secuencia = `specification { node servicio }
+model {
+  servicio a
+  servicio b
+  interaction i { a -> b "x" }
+}
+view s { type sequence
+ interaction i }
+`;
+      const env = entorno({ 'main.dg': secuencia });
+      const servidor = await arrancar(env);
+      const antes = await estado(servidor);
+      const res = await post(servidor, { tipo: 'ordenar-lifelines', vista: 's', orden: ['b', 'a'], hash: antes.hashes['main.dg'] });
+      expect(res.status).toBe(200);
+      expect(env.texto('main.dg')).toContain('order b, a');
+      await fetch(`${servidor.url}api/deshacer`, { method: 'POST', headers: cabeceras, body: '{}' });
+      expect(env.texto('main.dg')).toBe(secuencia);
+    });
+
     it('rechaza con 409 un hash desactualizado', async () => {
       const servidor = await arrancar(entorno({ 'main.dg': BASE }));
       const res = await post(servidor, { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, hash: 'viejo' });

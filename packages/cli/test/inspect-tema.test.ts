@@ -203,3 +203,31 @@ describe('inspect tema --diagrama', () => {
     expect(r.stderr).toContain('flow');
   });
 });
+
+describe('inspect tema: elementos de secuencia y fila', () => {
+  const RAIZ_SECUENCIA = resolve(__dirname, 'fixtures/tema-secuencia');
+
+  it('muestra la pila, los parches y las Metricas de cada elemento declarado', async () => {
+    const r = await json(['t'], RAIZ_SECUENCIA);
+
+    const { elementos } = temaDe(r.salida);
+    expect(elementos?.secuencia?.['message']).toMatchObject({
+      capas: [{ nombre: 'linea', primitiva: 'line' }],
+      marcadores: { end: 'arrow' },
+      metricas: { gap: 40 },
+      parches: { reply: [{ nombre: 'linea', primitiva: 'line', props: { style: 'dashed' } }] },
+    });
+    expect(elementos?.secuencia?.['fragment']?.parches['alt']?.map((c) => c.nombre)).toEqual(['forma', 'relleno']);
+    expect(elementos?.secuencia?.['lifeline']).toBeUndefined();
+    expect(elementos?.fila).toMatchObject({ alto: 30, capas: [{ nombre: 'fondo' }] });
+  });
+
+  it('el texto legible lista los elementos y un Tema sin ellos no los menciona', async () => {
+    const con = await run(['inspect', 'tema', 't', '--workspace', RAIZ_SECUENCIA]);
+    const sin = await run(['inspect', 'tema', 'app', '--workspace', RAIZ]);
+
+    expect(con.stdout).toMatch(/Secuencia:\n {2}message:[^\n]*\n[\s\S]*kind\/op reply/);
+    expect(con.stdout).toMatch(/Fila: alto 30/);
+    expect(sin.stdout).not.toMatch(/Secuencia:|Fila:/);
+  });
+});

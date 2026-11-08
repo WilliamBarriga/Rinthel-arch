@@ -20,7 +20,7 @@ El CLI es `diagrams` (abreviado `dg`; si no esta instalado, `node <rinthel-arch>
 ## Servir y mostrar
 
 - `dg dev --workspace <ruta> --port <N>` sirve el visor en `http://127.0.0.1:<N>/#p=<vista>`. Lanzalo en segundo plano, espera la linea con la URL con Monitor y entrega esa URL al usuario.
-- `dev` recompila al guardar: edita el `.dg` y el visor se actualiza solo. Arrastrar un Nodo en el visor reescribe su `pin` en el `.dg`; vuelve a leer el archivo antes de editarlo.
+- `dev` recompila al guardar: edita el `.dg` y el visor se actualiza solo. Arrastrar un Nodo en el visor reescribe su `pin` en el `.dg` (en una Vista `sequence`, arrastrar una cabecera de Lifeline reescribe el `order`); vuelve a leer el archivo antes de editarlo.
 - Imagen de una Vista: captura el visor de `dev` con un navegador headless y entrega al usuario una URL servida por un servidor local (`http://localhost:<puerto>/...`), no una ruta de archivo. En el repo rinthel-arch, `pnpm capturas --workspace <ruta> --vista <id> <tema>...` lo hace (necesita `pnpm build` y Chromium).
 - Un Workspace con Tema de codigo (`.tsx`) exige `--trust-code` o confirmar en el visor; confia solo en Workspaces propios.
 
