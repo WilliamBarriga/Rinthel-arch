@@ -99,6 +99,7 @@ function deInteraccion({ interacciones }: DatosDelUbicador, [i, campo, ...resto]
     }
     const propiedad = resto[k] as string | undefined;
     if (nodo === undefined) return null;
+    if (propiedad === 'targets' && typeof resto[k + 1] === 'number') return sitio(interaccion.archivo, rangoDeIndice(nodo, 'targets', resto[k + 1] as number));
     return sitio(interaccion.archivo, propiedad === undefined ? aRango(nodo.$cstNode?.range) : rangoDe(nodo, propiedad === 'id' ? 'alias' : propiedad));
   }
   return sitio(interaccion.archivo, rangoDe(interaccion.ast, campo === 'id' ? 'name' : (campo as string)));

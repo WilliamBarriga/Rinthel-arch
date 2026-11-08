@@ -268,3 +268,48 @@ export const LARGO_DE_MARCADOR_ER = 12;
 
 /** Texto con que se pinta (y se mide) la guarda de un operando de Fragmento: `[guarda]`. */
 export const textoDeGuarda = (guarda: string): string => `[${guarda}]`;
+
+/** Ancho maximo del texto de una Nota (px); un texto mas largo se envuelve por palabras. */
+export const ANCHO_MAXIMO_DE_NOTA = 200;
+/** Relleno de la caja de una Nota (px) y esquina doblada que se le recorta. */
+export const RELLENO_DE_NOTA = 8;
+export const ESQUINA_DE_NOTA = 10;
+
+/** Palabras (y el espacio) cuyo ancho necesita `cajaDeNota`: lo que `textosAMedir` pide al visor. */
+export function palabrasDeNota(texto: string): string[] {
+  return [...new Set([' ', ...texto.split(/\s+/).filter((palabra) => palabra !== '')])];
+}
+
+/** Fuente y tamano con que se mide y se pinta el texto de una Nota: el de la etiqueta, sin la escala. */
+export function estiloDeTextoDeNota(metricas: Metricas): { familia: string; tamano: number; peso?: number } {
+  return { familia: metricas.fuenteDeEtiqueta, tamano: metricas.fontSize, ...(metricas.pesoDeEtiqueta !== undefined && { peso: metricas.pesoDeEtiqueta }) };
+}
+
+/**
+ * Caja de una Nota "papel": el texto envuelto por palabras a `ANCHO_MAXIMO_DE_NOTA`, mas relleno y esquina doblada.
+ * El ancho de una linea es la suma de sus palabras medidas y los espacios entre ellas.
+ */
+export function cajaDeNota(texto: string, metricas: Metricas): { width: number; height: number; lines: string[]; lineHeight: number } {
+  const { familia, tamano, peso } = estiloDeTextoDeNota(metricas);
+  const ancho = (t: string): number => anchoDeTexto(metricas, familia, tamano, t, peso);
+  const espacio = ancho(' ');
+  const lineas: { texto: string; ancho: number }[] = [];
+  for (const palabra of texto.split(/\s+/).filter((p) => p !== '')) {
+    const w = ancho(palabra);
+    const ultima = lineas.at(-1);
+    if (ultima !== undefined && ultima.ancho + espacio + w <= ANCHO_MAXIMO_DE_NOTA) {
+      ultima.texto += ` ${palabra}`;
+      ultima.ancho += espacio + w;
+    } else {
+      lineas.push({ texto: palabra, ancho: w });
+    }
+  }
+  if (lineas.length === 0) lineas.push({ texto: '', ancho: 0 });
+  const lineHeight = Math.ceil(tamano * metricas.altoDeEtiqueta);
+  return {
+    width: Math.ceil(Math.max(...lineas.map((l) => l.ancho))) + 2 * RELLENO_DE_NOTA + ESQUINA_DE_NOTA / 2,
+    height: lineas.length * lineHeight + 2 * RELLENO_DE_NOTA,
+    lines: lineas.map((l) => l.texto),
+    lineHeight,
+  };
+}

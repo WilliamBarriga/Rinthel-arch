@@ -60,8 +60,8 @@ export type { Visibilidad } from './pasos';
 export { candidatosCercanos } from './sugerencias';
 export { validate } from './validar';
 export type { OpcionesDeValidate, RutaDeFuente, SitioDeTexto, Ubicador } from './validar';
-export { activacionesDe, aplanarMensajes, lifelinesDe } from './secuencia';
-export type { Activacion, FragmentoResuelto, InteraccionResuelta, ItemResuelto, MensajeResuelto, MensajeUbicado } from './secuencia';
+export { activacionesDe, aplanarMensajes, destinoDeRef, lifelinesDe } from './secuencia';
+export type { Activacion, FragmentoResuelto, InteraccionResuelta, ItemResuelto, MensajeResuelto, MensajeUbicado, NotaResuelta, RefResuelto } from './secuencia';
 export { matchesSelector, resolveView } from './vistas';
 export type { AristaResuelta, EstadoDeColapso, NodoResuelto, VistaResuelta } from './vistas';
 export type {
@@ -77,6 +77,9 @@ export type {
   ItemDeInteraccion,
   Fragmento,
   Mensaje,
+  AnclajeDeNota,
+  Nota,
+  Referencia,
   Operando,
   OperadorDeFragmento,
   Modelo,

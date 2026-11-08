@@ -68,6 +68,8 @@ export const CODIGOS = Object.freeze({
   E_INVALID_FRAGMENT_OPERAND: 'E_INVALID_FRAGMENT_OPERAND',
   /** Entrada de `order` cuyo Nodo no participa en la Interaccion que proyecta la Vista (aviso; se ignora). */
   W_ORDER_NOT_IN_INTERACTION: 'W_ORDER_NOT_IN_INTERACTION',
+  /** `ref` a una Interaccion que ninguna Vista de secuencia proyecta (aviso; el marco queda inerte). */
+  W_REF_WITHOUT_VIEW: 'W_REF_WITHOUT_VIEW',
   /** `reply` sin un `sync` abierto del receptor al emisor (aviso). */
   W_REPLY_WITHOUT_SYNC: 'W_REPLY_WITHOUT_SYNC',
   /** Dos Pins de la Vista se solapan (warning, responsabilidad del autor). */
@@ -153,7 +155,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture`, `flow`, `sequence` ni `er`.',
   E_VIEW_PROPERTY_FOR_TYPE: 'Una propiedad de Vista no vale para su Tipo de diagrama (`include`/`pin` en secuencia; `interaction`/`order` fuera de ella).',
   E_SEQUENCE_WITHOUT_INTERACTION: 'Una Vista `sequence` no declara `interaction`.',
-  E_UNKNOWN_INTERACTION: 'El `interaction` de una Vista nombra una Interaccion que no existe.',
+  E_UNKNOWN_INTERACTION: 'El `interaction` de una Vista o un `ref` nombra una Interaccion que no existe.',
   E_DUPLICATE_INTERACTION: 'Dos Interacciones con el mismo id.',
   E_UNKNOWN_LIFELINE: 'El extremo de un Mensaje o una entrada de `order` no es un Nodo del Modelo.',
   E_DUPLICATE_MESSAGE_ID: 'Dos Mensajes de la misma Interaccion con el mismo id.',
@@ -161,6 +163,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_AFTER_DESTROY: 'Una Lifeline aparece en un Mensaje despues de su `destroy`.',
   E_INVALID_FRAGMENT_OPERAND: 'Un Fragmento tiene operandos invalidos: `else` es de `alt`, `and` de `par`, y `opt|loop|break|critical` tienen un solo operando.',
   W_ORDER_NOT_IN_INTERACTION: 'Una entrada de `order` nombra un Nodo que no participa en la Interaccion de la Vista; se ignora (aviso).',
+  W_REF_WITHOUT_VIEW: 'Un `ref` nombra una Interaccion que ninguna Vista de secuencia proyecta; el marco no navega (aviso).',
   W_REPLY_WITHOUT_SYNC: 'Un `reply` no cierra ningun `sync` abierto del receptor al emisor (aviso).',
   W_OVERLAPPING_PINS: 'Dos Nodos con `pin` se solapan en la Vista (aviso).',
   E_THEME_UNKNOWN_PRIMITIVE: 'Una Capa de Tema usa una Primitiva que no esta en el catalogo.',

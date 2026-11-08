@@ -45,7 +45,8 @@ const geometriaSecuenciaSchema = z.object({
     .array(
       z.object({
         ruta: z.string(),
-        operator: z.enum(['opt', 'loop', 'break', 'critical', 'alt', 'par']),
+        operator: z.enum(['opt', 'loop', 'break', 'critical', 'alt', 'par', 'ref']),
+        title: z.object({ text: z.string(), box: cajaDeNodoSchema }).optional(),
         nivel: z.number().int(),
         x: numeroFinito,
         y: numeroFinito,
@@ -53,6 +54,21 @@ const geometriaSecuenciaSchema = z.object({
         height: numeroFinito,
         tab: cajaDeNodoSchema,
         operands: z.array(z.object({ y1: numeroFinito, y2: numeroFinito, guard: z.object({ text: z.string(), box: cajaDeNodoSchema }).optional(), divider: numeroFinito.optional() })),
+      }),
+    )
+    .default([]),
+  notes: z
+    .array(
+      z.object({
+        ruta: z.string(),
+        anchor: z.enum(['left', 'right', 'over']),
+        x: numeroFinito,
+        y: numeroFinito,
+        width: numeroFinito,
+        height: numeroFinito,
+        lines: z.array(z.string()),
+        lineHeight: numeroFinito,
+        fold: numeroFinito,
       }),
     )
     .default([]),
