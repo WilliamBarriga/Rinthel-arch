@@ -93,7 +93,8 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
   });
   const hayOcultos = mensajes.some((mensaje) => geometry.messages[mensaje.ruta] !== undefined && visibility(idDe(mensaje)) <= 0);
   const corte = hayOcultos ? Math.max(-Infinity, ...reveladas) : Infinity;
-  const activaciones = geometry.activations.map((activacion) => activacionHtml(activacion, contexto, corte));
+  // Una Lifeline recortada por el viewport (su cabecera quedo fuera de la camara) no pinta sus activaciones.
+  const activaciones = geometry.activations.filter((activacion) => view.nodes.some((n) => n.id === activacion.lifeline)).map((activacion) => activacionHtml(activacion, contexto, corte));
   const idDeInteraccion = interaccion?.id ?? '';
   const rutas = mensajes.flatMap((mensaje) => {
     const ruta = geometry.messages[mensaje.ruta];

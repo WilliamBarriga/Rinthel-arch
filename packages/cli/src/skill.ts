@@ -153,11 +153,13 @@ Es la unica escritura explicita del CLI y solo escribe lo que pides; \`validate\
 
 \`\`\`text
 diagrams edit --workspace <ruta> --view <vista> --node <id cualificado> --x N --y N [--json]
+diagrams edit --workspace <ruta> --intent '{"tipo":"ordenar-lifelines","vista":"<vista>","orden":["a","b"]}' [--json]
 diagrams edit --workspace <ruta> --edits '[{"file":"main.dg","range":{"start":{"line":1,"column":1},"end":{"line":1,"column":2}},"replacement":"..."}]' [--json]
 \`\`\`
 
 - La primera forma mueve el Pin de un Nodo en una Vista: reemplaza el \`pin\` si existe y lo anade si no; no necesitas conocer la sintaxis.
-- La segunda aplica ediciones de texto ya calculadas (p. ej. el \`fix\` de un issue de \`validate\`): rangos 1-based, fin excluido.
+- La segunda aplica una Intencion por su contrato JSON (sin \`hash\` usa el del disco); \`ordenar-lifelines\` reescribe el \`order\` completo de una Vista \`sequence\` con el orden visible dado, y las entradas de \`order\` hoy ocultas (Grupo colapsado, \`exclude\`) conservan su posicion relativa.
+- La tercera aplica ediciones de texto ya calculadas (p. ej. el \`fix\` de un issue de \`validate\`): rangos 1-based, fin excluido.
 - Concurrencia: cada edicion lleva el hash del archivo que viste (\`hash\` en la edicion, o \`--hash <archivo>=<hash>\`); sin hash se usa el del disco. Si el archivo cambio, se rechaza todo sin escritura parcial.
 - Se rechaza tambien lo que introduce errores nuevos, solapa ediciones o apunta fuera del archivo.
 - Con \`--json\`, stdout es exactamente un objeto (contractVersion ${EDIT_CONTRACT_VERSION}, independiente de los otros) con \`ok\`; si es \`false\` trae \`reason\` y \`message\`.

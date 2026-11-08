@@ -4,7 +4,7 @@ Estado compilado de un Workspace: compila, valida, calcula layout y edita el tex
 
 ## Que hace
 - `abrirSesion` da una `Sesion` inmutable con `diagnosticar`, `construir`, `geometria`, `estilo` y `actualizar`.
-- Edita el texto: `aplicarEdiciones`, `editarPin`, `aplicarIntencion` y `Historial`; `aplicarAlWorkspace` escribe por el puerto `PuertoDeWorkspace`.
+- Edita el texto: `aplicarEdiciones`, `editarPin`, `aplicarIntencion` (`mover-pin`, `ordenar-lifelines`) y `Historial`; `aplicarAlWorkspace` escribe por el puerto `PuertoDeWorkspace`.
 
 ## Que NO hace
 - No lee disco ni observa cambios: eso es de `cli`.

@@ -104,8 +104,8 @@ export type { SalidaDeEdit } from './edit';
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';
 export type { SalidaDeInspect } from './inspect';
 
-export { MOTIVOS_DE_RECHAZO, intencionDePinSchema, intencionSchema } from './pin';
-export type { Intencion, IntencionDePin, MotivoDeRechazo } from './pin';
+export { MOTIVOS_DE_RECHAZO, intencionDeOrdenSchema, intencionDePinSchema, intencionSchema } from './pin';
+export type { Intencion, IntencionDeOrden, IntencionDePin, MotivoDeRechazo } from './pin';
 export { RUTA_DE_FUENTES, TIPOS_DE_CAMBIO, estadoDeDevSchema, issueDeDevSchema, urlDeFuente } from './estado';
 export type { EstadoDeDev, IssueDeDev, TipoDeCambio } from './estado';
 

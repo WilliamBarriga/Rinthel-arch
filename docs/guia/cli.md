@@ -59,7 +59,7 @@ dg dev --workspace <ruta> [--port N] [--trust-code] [--theme-path <dir>]
 Sirve en `http://127.0.0.1:<puerto>/` (4173 por defecto, `--port 0` elige uno libre; solo escucha en localhost). Sirve los cuatro Tipos de diagrama (architecture, flow, sequence y er). Recompila al guardar y muestra un panel de issues clicables; si una edicion rompe el DSL conserva el ultimo dibujo bueno. La Vista se elige con el hash (`#p=<vista>`).
 
 - **Temas con codigo (`.tsx`)**: `dev` no los sirve hasta que lo confirmes en el visor; `--trust-code` lo da de antemano. Usalo solo con Workspaces que conoces.
-- **Arrastrar un Nodo** fija su Pin y reescribe el `.dg` (mismo nucleo que `edit`).
+- **Arrastrar un Nodo** fija su Pin y reescribe el `.dg` (mismo nucleo que `edit`). En una Vista `sequence`, arrastrar en horizontal la cabecera de una Lifeline (o el titulo de un `box`, que mueve el bloque) reescribe el `order` completo; una hija no sale del `box` de su Grupo.
 - **Como proceso**: es de larga vida. Lanzalo en segundo plano y espera la linea con la URL; el puerto ocupado es un error (`--port` otro).
 
 ### `inspect`: consultar el Modelo (solo lectura)
@@ -78,10 +78,11 @@ Cada resultado trae el id cualificado, el tipo y `archivo:linea`. `buscar` tambi
 
 ```
 dg edit --workspace <ruta> --view <id> --node <id> --x N --y N [--hash <archivo>=<hash>] [--json]
+dg edit --workspace <ruta> --intent '<json>' [--hash <archivo>=<hash>] [--json]
 dg edit --workspace <ruta> --edits '<json>' [--hash <archivo>=<hash>] [--json]
 ```
 
-Todo o nada: si una edicion falla no se escribe nada. Con `--hash`, rechaza la edicion si el archivo cambio desde que se leyo. Solo toca `.dg` del Workspace. Sirve para fijar Pins y para aplicar los `fix` de `validate`; el resto de cambios se editan a mano en el `.dg` y se revalidan.
+Todo o nada: si una edicion falla no se escribe nada. Con `--hash`, rechaza la edicion si el archivo cambio desde que se leyo. Solo toca `.dg` del Workspace. `--intent` aplica una Intencion por su contrato JSON (sin `hash` usa el del disco); hoy ademas de `mover-pin` existe `{"tipo":"ordenar-lifelines","vista":"flujo","orden":["cliente","api","db"]}`: reescribe el `order` completo de una Vista `sequence` con el orden visible dado, aunque coincida con la primera aparicion; las entradas de `order` hoy ocultas (hijas de un Grupo colapsado, excluidas) conservan su posicion relativa. Sirve para fijar Pins y para aplicar los `fix` de `validate`; el resto de cambios se editan a mano en el `.dg` y se revalidan.
 
 ### `skill`: skill de agente de un Workspace
 

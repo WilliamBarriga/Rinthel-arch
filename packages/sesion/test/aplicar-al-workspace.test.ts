@@ -25,7 +25,7 @@ function fake(propios: Record<string, string>, temas: Record<string, string> = {
   return { puerto, escrituras, texto: (ruta: string) => actuales[ruta] };
 }
 
-const mover = (t: string, extra: Partial<Intencion> = {}): Intencion => ({
+const mover = (t: string, extra: Partial<Extract<Intencion, { tipo: 'mover-pin' }>> = {}): Intencion => ({
   tipo: 'mover-pin',
   vista: 'v',
   nodo: 'a',

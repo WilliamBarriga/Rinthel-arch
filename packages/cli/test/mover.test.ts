@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { crearAlMover } from '../navegador/mover';
+import { crearAlMover, crearAlOrdenar } from '../navegador/mover';
 import type { ResultadoDeEnvioDePin } from 'shell';
 
 const datos = { archivosDeVista: { general: 'main.dg' }, hashes: { 'main.dg': 'h1' } };
@@ -47,5 +47,27 @@ describe('alMover de dev (navegador/mover)', () => {
 
     expect(enviar).not.toHaveBeenCalled();
     expect(avisar).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('alOrdenar de dev (navegador/mover)', () => {
+  const armarOrden = (respuesta: ResultadoDeEnvioDePin) => {
+    const enviar = vi.fn(() => Promise.resolve(respuesta));
+    const avisar = vi.fn();
+    const recargar = vi.fn(() => Promise.resolve());
+    return { enviar, avisar, recargar, alOrdenar: crearAlOrdenar({ estado: () => datos, enviar, avisar, recargar }) };
+  };
+
+  it('envia la Intencion ordenar-lifelines con el hash del archivo de la Vista', async () => {
+    const { alOrdenar, enviar } = armarOrden({ ok: true });
+    expect(await alOrdenar('general', { orden: ['b', 'a'] })).toBe(true);
+    expect(enviar).toHaveBeenCalledWith({ tipo: 'ordenar-lifelines', vista: 'general', orden: ['b', 'a'], hash: 'h1' });
+  });
+
+  it('ante un 409 avisa, recarga y resuelve false', async () => {
+    const { alOrdenar, avisar, recargar } = armarOrden({ ok: false, desactualizado: true, mensaje: 'cambio' });
+    expect(await alOrdenar('general', { orden: ['a'] })).toBe(false);
+    expect(avisar).toHaveBeenCalledWith(expect.stringContaining('se recargo la Vista'));
+    expect(recargar).toHaveBeenCalledTimes(1);
   });
 });
