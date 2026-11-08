@@ -5,7 +5,7 @@
  * cambia una Capa existente, la anade (con `before`/`after`) o la quita
  * (`none`); nunca se dirige por indice. Puro y determinista.
  */
-import { CODIGOS, candidatosCercanos } from 'canonico';
+import { CODIGOS, TIPOS_DE_VISTA, candidatosCercanos } from 'canonico';
 
 import { CATALOGO, construirPrimitiva, sugerir } from './catalogo';
 import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva, UbicacionDePrimitiva } from './catalogo';
@@ -15,10 +15,10 @@ import type { Animacion } from './animacion';
 /** Estados de la cascada; `foco` y `en-ruta` los calcula la shell, el Tema solo decide como se ven. */
 export const ESTADOS = ['hover', 'seleccionado', 'fantasma', 'en-ruta', 'atenuado', 'foco'] as const;
 export type Estado = (typeof ESTADOS)[number];
-
-/** Tipos de diagrama que un Tema puede distinguir con `diagram <tipo> { ... }` (ADR 0009), aunque aun no todos tengan Vistas. */
-export const TIPOS_DE_DIAGRAMA = ['architecture', 'flow', 'sequence', 'er'] as const;
-export type TipoDeDiagrama = (typeof TIPOS_DE_DIAGRAMA)[number];
+/** Tipos de diagrama que un Tema puede distinguir con `diagram <tipo> { ... }` (ADR 0009): los mismos que las Vistas, `TIPOS_DE_VISTA` de canonico. */
+/** Tipos de diagrama que un Tema puede distinguir (los mismos que las Vistas: `TIPOS_DE_VISTA` de canonico) con `diagram <tipo> { ... }` (ADR 0009), aunque aun no todos tengan Vistas. */
+export const TIPOS_DE_DIAGRAMA = TIPOS_DE_VISTA;
+export type TipoDeDiagrama = (typeof TIPOS_DE_VISTA)[number];
 
 /** Capa de la pila de un Nodo: instancia de una Primitiva, bajo el contenido salvo `encima`. */
 export interface CapaDeTema {
