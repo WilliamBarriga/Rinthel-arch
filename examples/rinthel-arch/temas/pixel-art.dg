@@ -73,4 +73,25 @@ theme pixel-art {
     end arrow { size 10  color luz }
     label { scale 0.57  pad 10  pad-y 2.5  radius 0  fill luz  border negro  color negro  weight 400 }
   }
+  // Tablas ER y secuencia: texto pequeno para que el pixel font quepa y Fragmento y Nota con contorno duro.
+  row {
+    height 30
+    name { size 0.55  color negro }
+    type { size 0.5  color negro  alpha 0.75 }
+    key { size 0.4  fill luz  border negro  color negro  radius 0 }
+  }
+  fragment {
+    layer forma rect
+    layer relleno solid { color luz/0.06 }
+    layer borde border { color luz  width 2 }
+    operator { scale 0.5  color negro  fill amber  border negro  border-width 3  radius 0  pad 6 }
+    guard { size 0.5  color texto }
+    divider { color luz  width 2  style dashed }
+  }
+  note {
+    layer forma rect
+    layer relleno solid { color amber }
+    layer borde border { color negro  width 3 }
+    text { size 0.5  color negro  weight 400 }
+  }
 }
