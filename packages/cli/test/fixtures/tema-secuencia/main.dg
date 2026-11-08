@@ -1,0 +1,22 @@
+specification { node servicio }
+model { servicio api }
+theme t {
+  palette { azul "#2563eb"  rojo "#dc2626" }
+  node { layer forma rect  layer relleno solid { color azul }  slots { title } }
+  message {
+    layer linea line { color azul }
+    end arrow
+    gap 40
+    kind reply { layer linea { color rojo  style dashed } }
+  }
+  fragment {
+    layer forma rect
+    layer relleno solid { color azul/0.1 }
+    op alt { layer relleno { color rojo/0.1 } }
+  }
+  row {
+    height 30
+    layer fondo solid { color azul/0.05 }
+  }
+}
+view v { type flow  include **  theme t }

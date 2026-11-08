@@ -165,6 +165,32 @@ edge { diagram er { end arrow { size 12  color azul } } }   // solo color y size
 - `zone header` pinta de arriba hasta donde empiezan las filas (`attrs`); sin `attrs` equivale a `all`. `zone body` cubre las filas. Una Capa con `zone` pinta aparte de la caja, asi que un parche de estado no la cambia.
 - `row` solo vale en Vistas `er`; en las demas los Atributos siguen con el estilo del Slot `attrs`. El alto (`height`, 12 a 120) es una Metrica; las Capas y parches solo pintan (uno que cambie la caja es `E_THEME_STATE_TOUCHES_METRICS`).
 - El marcador de cada extremo lo fija el nucleo segun la cardinalidad (`1` a `one`, `0..1` a `zero-one`, `1..*` a `many`, `0..*` a `zero-many`); el Tema solo cambia su `color` y `size`.
+- Las Aristas identificantes (`identifying`) van continuas y las demas discontinuas; `edge { identifying { layer linea { color azul } } }` cambia ademas el trazo de las identificantes. Si ambas quedan iguales salvo el color, `validate` avisa con `W_THEME_COLOR_ONLY`.
+
+### Secuencia: `lifeline`, `activation`, `message`, `fragment` y `note`
+
+Una Vista `sequence` se dibuja sola con cualquier Tema (los elementos se derivan de `edge` y `node`); para estilizarla se declaran bloques al nivel de `node` y `edge` (ejemplo completo en [`examples/temas/secuencia.dg`](../../examples/temas/secuencia.dg)). Todos admiten `layer`, `use`, `state` y, donde aplica, parches por variante, y las separaciones de secuencia son sus Metricas:
+
+```
+lifeline   { layer linea line { color gris  style dashed }  end cross { size 12 }  gap 200 }   // gap: distancia minima entre Lifelines
+activation { layer relleno solid { color azul/0.2 }  layer borde border { color azul }  width 12 }
+message {
+  layer linea line { color tinta }  end arrow { size 10 }
+  gap 40  loop-width 48  create-offset 0           // entre Mensajes, ancho del lazo propio, desplazamiento de la cabecera creada
+  kind async { layer linea { color verde }  end chevron }   // parche por tipo: sync, async, reply, create, destroy
+}
+fragment {
+  layer borde border { color tinta }  operator { weight 700 }  guard { color tinta }  divider { style dashed }
+  op alt { layer borde { color azul } }            // parche por operador: opt loop break critical alt par ref
+  padding 20  padding-y 10                         // alrededor del contenido
+}
+note { layer relleno solid { color ambar/0.25 }  layer borde border { color ambar }  text { weight 600 } }
+```
+
+- Que cambia con cada tipo: `message { kind async { ... } }` solo toca los Mensajes `async`. Sin parche, `reply` y `create` van con la continuidad opuesta a la del trazo base y el marcador depende del tipo.
+- `lifeline` y `message` usan trazos de Arista; `activation`, `fragment` y `note` usan Capas de Nodo. `COLOR` es el de la Lifeline. `gap`, `loop-width`, `create-offset`, `width` y `padding` son Metricas (cambian la Geometria); lo demas solo pinta. Los rangos y defectos estan en el [catalogo](../referencia-catalogo.md#elementos-de-secuencia); uno fuera de rango es un error de `validate`.
+- Si dos tipos de Mensaje (los que usa la Vista) quedan iguales salvo el color, `validate` avisa con `W_THEME_COLOR_ONLY`.
+- Los Temas incorporados declaran todos estos elementos y la fila `row`: `neutral` es el modelo de referencia, `neutral-dark` lo hereda y solo cambia la Paleta, `alto-contraste` usa trazos mas gruesos. `inspect tema <nombre>` muestra la pila, los parches y las Metricas de cada uno.
 
 ## Movimiento y entrada
 

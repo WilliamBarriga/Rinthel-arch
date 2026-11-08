@@ -8,7 +8,7 @@
  */
 import { activacionesDe } from 'canonico';
 import type { Activacion, AnclajeDeNota, ItemResuelto, MensajeResuelto, NotaResuelta, OperadorDeFragmento, VistaResuelta } from 'canonico';
-import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeGuarda } from 'tema';
+import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, contenidoDeNodo, metricasDeHoja, metricasDeSecuencia, tamanoDeEtiqueta, textoDeGuarda } from 'tema';
 import type { Metricas, TablaDeMetricas } from 'tema';
 
 import type { CajaDeNodo, Punto } from './layout';
@@ -101,21 +101,17 @@ export interface GeometriaSecuencia {
   height: number;
 }
 
-/** Defectos del nucleo para la secuencia (px); el Tema los ajustara con `diagram sequence`. */
+/**
+ * Constantes de la secuencia (px) que el Tema no ajusta. Las separaciones que si (hueco entre Lifelines y entre Mensajes,
+ * ancho de lazo y de activacion, padding de Fragmento, desplazamiento de `create`) son Metricas del Tema: `Metricas.secuencia`.
+ */
 const MARGEN = 24;
-const HUECO_ENTRE_LIFELINES = 160;
 const SEPARACION_DE_CABECERAS = 24;
 const HOLGURA_DE_ETIQUETA = 24;
-const ANCHO_DE_ACTIVACION = 10;
-const ANCHO_DE_LAZO = 36;
 const ALTO_DE_LAZO = 28;
 const ESPACIO_ANTES_DEL_MENSAJE = 12;
-const ESPACIO_DESPUES_DEL_MENSAJE = 20;
 const RELLENO_FINAL = 24;
-const RELLENO_H_DE_FRAGMENTO = 16;
 const SANGRIA_DE_ANIDADO = 10;
-const RELLENO_ARRIBA_DE_FRAGMENTO = 6;
-const RELLENO_ABAJO_DE_FRAGMENTO = 10;
 const HUECO_ENTRE_FRAGMENTOS = 10;
 const HOLGURA_DE_PESTANA = 12;
 const HOLGURA_DE_GUARDA = 8;
@@ -150,6 +146,14 @@ function notasDe(items: readonly ItemResuelto[]): NotaResuelta[] {
 
 export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | TablaDeMetricas): GeometriaSecuencia {
   const tabla = comoTabla(metricas);
+  const sec = tabla.base.secuencia ?? metricasDeSecuencia(undefined);
+  const HUECO_ENTRE_LIFELINES = sec.huecoEntreLifelines;
+  const ANCHO_DE_ACTIVACION = sec.anchoDeActivacion;
+  const ANCHO_DE_LAZO = sec.anchoDeLazo;
+  const ESPACIO_DESPUES_DEL_MENSAJE = Math.max(0, sec.huecoEntreMensajes - ESPACIO_ANTES_DEL_MENSAJE);
+  const RELLENO_H_DE_FRAGMENTO = sec.rellenoDeFragmento;
+  const RELLENO_ABAJO_DE_FRAGMENTO = sec.rellenoVerticalDeFragmento;
+  const RELLENO_ARRIBA_DE_FRAGMENTO = Math.max(2, RELLENO_ABAJO_DE_FRAGMENTO - 4);
   const mensajes = vista.interaction?.messages ?? [];
   const lifelines = vista.nodes;
   const columna = new Map(lifelines.map((nodo, i) => [nodo.id, i]));
@@ -330,7 +334,7 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   /** `y` de la cabecera de cada Lifeline: la inicial, o centrada en su Mensaje `create`. */
   const yDeCabecera = (id: string): number => {
     const c = creada(id);
-    return c < 0 ? yCabecera : Math.round(ys[c]! - altoDeCabecera / 2);
+    return c < 0 ? yCabecera : Math.max(yCabecera, Math.round(ys[c]! - altoDeCabecera / 2 + sec.desplazamientoDeCreate));
   };
   /** `y` final de la linea: el fondo, o el Mensaje `destroy` que la corta. */
   const yFinalDe = (id: string): number => {

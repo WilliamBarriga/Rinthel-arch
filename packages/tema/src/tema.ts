@@ -12,6 +12,7 @@ import { DEFINICION_DE_SLOT, SLOTS, construirPrimitiva } from './catalogo';
 import type { NombreDePrimitiva, NombreDeSlot, Primitiva, UbicacionDePrimitiva } from './catalogo';
 import { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, esCaja } from './disposicion';
 import type { CajaDeSlots, ElementoDeSlots } from './disposicion';
+import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA } from './secuencia';
 import { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA } from './fila';
 import { ESTADOS, TIPOS_DE_DIAGRAMA, aplicarOps, opTocaMetricas, validarOps } from './parches';
 import type { CapaDeTema, OpDeCapa, TipoDeDiagrama } from './parches';
@@ -84,6 +85,8 @@ const aristaSchema = z.strictObject({
   origen: primitivaSchema.optional(),
   fin: primitivaSchema.optional(),
   etiqueta: primitivaSchema.optional(),
+  /** Parche de trazo de las Aristas identificantes de una Vista ER (ADR 0009); ausente = el mismo trazo que las demas. */
+  identificante: z.array(opSchema).optional(),
   /** Parches por Tipo de diagrama (ADR 0009): parches de trazo y marcadores o etiqueta que sustituyen a los del Tema. */
   diagramas: z
     .partialRecord(
@@ -150,6 +153,31 @@ const filaSchema = z.strictObject({
   textos: z.partialRecord(z.enum(NOMBRES_DE_TEXTO_DE_FILA as [keyof typeof TEXTOS_DE_FILA, ...Array<keyof typeof TEXTOS_DE_FILA>]), primitivaSchema).default({}),
   claves: z.partialRecord(z.enum(CLAVES_DE_FILA as [(typeof CLAVES_DE_FILA)[number], ...Array<(typeof CLAVES_DE_FILA)[number]>]), z.array(opSchema)).default({}),
   opcional: z.array(opSchema).default([]),
+});
+
+/** Parche de una variante de Mensaje (`kind`) o de Fragmento (`op`): parches de Capa y, en Mensajes, marcadores propios. */
+const parcheDeVarianteSchema = z.strictObject({ ops: z.array(opSchema).default([]), origen: primitivaSchema.optional(), fin: primitivaSchema.optional() });
+
+/**
+ * Elemento de secuencia (ADR 0009: `lifeline`, `activation`, `message`, `fragment`, `note`): pila de Capas, marcadores,
+ * estilo de texto o trazo suelto, parches por variante (`kind`/`op`), parches de estado y Metricas propias. Ausente =
+ * el nucleo lo deriva de `edge` y `node`. Que admite cada uno lo dice `ESPECIFICACION_DE_SECUENCIA`.
+ */
+const bloqueDeSecuenciaSchema = z.strictObject({
+  capas: z.array(capaSchema).default([]),
+  origen: primitivaSchema.optional(),
+  fin: primitivaSchema.optional(),
+  textos: z.record(z.string(), primitivaSchema).default({}),
+  parches: z.record(z.string(), parcheDeVarianteSchema).default({}),
+  estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
+  metricas: z.record(z.string(), z.number()).default({}),
+});
+const secuenciaSchema = z.strictObject({
+  lifeline: bloqueDeSecuenciaSchema.optional(),
+  activation: bloqueDeSecuenciaSchema.optional(),
+  message: bloqueDeSecuenciaSchema.optional(),
+  fragment: bloqueDeSecuenciaSchema.optional(),
+  note: bloqueDeSecuenciaSchema.optional(),
 });
 
 const relleno = z.number().min(0).max(128);
@@ -221,6 +249,8 @@ export const temaResueltoSchema = z
     pagina: paginaSchema.default({ capas: [], fijo: false }),
     /** Fila de las tablas ER; ausente = sin estilo propio (no entra en los snapshots de los Temas que no la usan). */
     fila: filaSchema.optional(),
+    /** Elementos de secuencia; ausente = derivados de `edge` y `node` (no entra en los snapshots de los Temas que no los usan). */
+    secuencia: secuenciaSchema.optional(),
   })
   .superRefine((tema, ctx) => {
     const validar = (primitiva: { tipo: string; props: Record<string, string | number> }, ubicacion: UbicacionDePrimitiva, path: Array<string | number>): void => {
@@ -252,10 +282,62 @@ export const temaResueltoSchema = z
       if (parche.fin !== undefined) validar(parche.fin, 'marcador', ['arista', 'diagramas', diagrama, 'fin']);
       if (parche.etiqueta !== undefined) validar(parche.etiqueta, 'etiqueta', ['arista', 'diagramas', diagrama, 'etiqueta']);
     }
+    if (tema.arista.identificante !== undefined) {
+      for (const e of validarOps([tema.arista.capas as CapaDeTema[]], tema.arista.identificante, tema.palette, 'parchear', 'capa-arista')) {
+        ctx.addIssue({ code: 'custom', path: ['arista', 'identificante', e.indice], message: e.mensaje });
+      }
+    }
     validarElemento(ctx, tema, 'nodo');
     validarElemento(ctx, tema, 'grupo');
     if (tema.fila !== undefined) validarFila(ctx, tema, tema.fila);
+    if (tema.secuencia !== undefined) validarSecuencia(ctx, tema, tema.secuencia);
   });
+
+/** Valida los bloques de secuencia: Capas contra el catalogo, parches contra su pila, texto y Metricas contra `ESPECIFICACION_DE_SECUENCIA`. */
+function validarSecuencia(ctx: z.RefinementCtx, tema: TemaResuelto, secuencia: NonNullable<TemaResuelto['secuencia']>): void {
+  for (const nombre of BLOQUES_DE_SECUENCIA) {
+    const bloque = secuencia[nombre];
+    if (bloque === undefined) continue;
+    const espec = ESPECIFICACION_DE_SECUENCIA[nombre];
+    const falla = (path: Array<string | number>, message: string): void => ctx.addIssue({ code: 'custom', path: ['secuencia', nombre, ...path], message });
+    const primitiva = (p: { tipo: string; props: Record<string, string | number> }, ubicacion: UbicacionDePrimitiva, path: Array<string | number>): void => {
+      const props = Object.entries(p.props).map(([clave, valor]) => ({ clave, valor }));
+      for (const error of construirPrimitiva(p.tipo, props, tema.palette, ubicacion).errores) falla([...path, ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
+    };
+    const vistas = new Set<string>();
+    bloque.capas.forEach((capa, i) => {
+      if (vistas.has(capa.nombre)) falla(['capas', i, 'nombre'], `Capa '${capa.nombre}' repetida`);
+      vistas.add(capa.nombre);
+      primitiva(capa.primitiva, espec.capas, ['capas', i, 'primitiva']);
+    });
+    for (const [lado, p] of [['origen', bloque.origen], ['fin', bloque.fin]] as const) {
+      if (p === undefined) continue;
+      if (!espec.marcadores.includes(lado === 'origen' ? 'start' : 'end')) falla([lado], `'${nombre}' no admite el marcador '${lado === 'origen' ? 'start' : 'end'}'`);
+      else primitiva(p, 'marcador', [lado]);
+    }
+    for (const [clave, texto] of Object.entries(bloque.textos)) {
+      const permitido = espec.textos[clave];
+      if (permitido === undefined) falla(['textos', clave], `'${nombre}' no tiene el estilo '${clave}'`);
+      else if (texto.tipo !== permitido.primitiva) falla(['textos', clave], `el estilo '${clave}' de '${nombre}' usa la Primitiva '${permitido.primitiva}', no '${texto.tipo}'`);
+      else primitiva(texto, permitido.ubicacion, ['textos', clave]);
+    }
+    for (const [clave, valor] of Object.entries(bloque.metricas)) {
+      const rango = espec.metricas[clave];
+      if (rango === undefined) falla(['metricas', clave], `'${nombre}' no tiene la Metrica '${clave}'`);
+      else if (valor < rango.min || valor > rango.max) falla(['metricas', clave], `'${clave}' de '${nombre}' va de ${rango.min} a ${rango.max}`);
+    }
+    const base = bloque.capas as CapaDeTema[];
+    for (const [variante, parche] of Object.entries(bloque.parches)) {
+      if (espec.parches === undefined || !espec.parches.nombres.includes(variante)) falla(['parches', variante], `'${variante}' no es una variante de '${nombre}'`);
+      for (const e of validarOps([base], parche.ops, tema.palette, 'parchear', espec.capas)) falla(['parches', variante, 'ops', e.indice], e.mensaje);
+      if (parche.origen !== undefined) primitiva(parche.origen, 'marcador', ['parches', variante, 'origen']);
+      if (parche.fin !== undefined) primitiva(parche.fin, 'marcador', ['parches', variante, 'fin']);
+    }
+    for (const [estado, ops] of Object.entries(bloque.estados)) {
+      for (const e of validarOps([base], ops, tema.palette, 'parchear', espec.capas)) falla(['estados', estado, e.indice], e.mensaje);
+    }
+  }
+}
 
 /** Valida el bloque `row`: sus Capas contra el catalogo, sus parches contra la pila base (sin tocar las Metricas) y el estilo de sus textos. */
 function validarFila(ctx: z.RefinementCtx, tema: TemaResuelto, fila: NonNullable<TemaResuelto['fila']>): void {
@@ -363,6 +445,30 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
   }
 }
 
+type Completar = <P extends { tipo: string; props: Record<string, string | number> }>(primitiva: P, ubicacion: UbicacionDePrimitiva) => P | Primitiva;
+
+/** Los bloques de secuencia con los defectos del catalogo en cada Primitiva suya. */
+function conDefectosDeSecuencia(secuencia: NonNullable<TemaResuelto['secuencia']>, completar: Completar): NonNullable<TemaResuelto['secuencia']> {
+  const salida: NonNullable<TemaResuelto['secuencia']> = {};
+  for (const nombre of BLOQUES_DE_SECUENCIA) {
+    const bloque = secuencia[nombre];
+    if (bloque === undefined) continue;
+    const espec = ESPECIFICACION_DE_SECUENCIA[nombre];
+    const marcadores = (p: { origen?: Primitiva | undefined; fin?: Primitiva | undefined }): { origen?: Primitiva; fin?: Primitiva } => ({
+      ...(p.origen !== undefined && { origen: completar(p.origen, 'marcador') }),
+      ...(p.fin !== undefined && { fin: completar(p.fin, 'marcador') }),
+    });
+    salida[nombre] = {
+      ...bloque,
+      capas: bloque.capas.map((c) => ({ ...c, primitiva: completar(c.primitiva, espec.capas) })),
+      ...marcadores(bloque),
+      textos: Object.fromEntries(Object.entries(bloque.textos).map(([clave, texto]) => [clave, completar(texto, espec.textos[clave]?.ubicacion ?? 'texto-slot')])),
+      parches: Object.fromEntries(Object.entries(bloque.parches).map(([variante, parche]) => [variante, { ...parche, ...marcadores(parche) }])),
+    };
+  }
+  return salida;
+}
+
 const aplicarSinErrores = (base: CapaDeTema[], ops: Parameters<typeof aplicarOps>[1], paleta: Record<string, string>): CapaDeTema[] =>
   aplicarOps(base, ops, paleta, 'parchear').pila;
 
@@ -380,7 +486,9 @@ export function temaParaDiagrama(tema: TemaResuelto, diagrama: TipoDeDiagrama | 
   const delNodo = tema.nodo.diagramas?.[diagrama];
   const delGrupo = tema.grupo.diagramas?.[diagrama];
   const delaArista = tema.arista.diagramas?.[diagrama];
-  if (delNodo === undefined && delGrupo === undefined && delaArista === undefined) return tema;
+  // El estilo `label` del bloque `message` es la etiqueta de la Arista en secuencia: asi sus Metricas son las del layout.
+  const etiquetaDeMensaje = diagrama === 'sequence' ? tema.secuencia?.message?.textos['label'] : undefined;
+  if (delNodo === undefined && delGrupo === undefined && delaArista === undefined && etiquetaDeMensaje === undefined) return tema;
   const hecho = porDiagrama.get(tema)?.get(diagrama);
   if (hecho !== undefined) return hecho;
   const parchear = (capas: TemaResuelto['nodo']['capas'], ops: readonly OpDeCapa[] | undefined, ubicacion?: UbicacionDePrimitiva): TemaResuelto['nodo']['capas'] =>
@@ -395,6 +503,7 @@ export function temaParaDiagrama(tema: TemaResuelto, diagrama: TipoDeDiagrama | 
       ...(delaArista?.origen !== undefined && { origen: delaArista.origen }),
       ...(delaArista?.fin !== undefined && { fin: delaArista.fin }),
       ...(delaArista?.etiqueta !== undefined && { etiqueta: delaArista.etiqueta }),
+      ...(etiquetaDeMensaje !== undefined && { etiqueta: etiquetaDeMensaje }),
     },
   };
   const memo = porDiagrama.get(tema) ?? new Map<TipoDeDiagrama, TemaResuelto>();
@@ -477,6 +586,7 @@ function conDefectos(tema: TemaResuelto): TemaResuelto {
       ...(etiqueta !== undefined && { etiqueta: completar(etiqueta, 'etiqueta') }),
     },
     pagina: { ...tema.pagina, capas: capas(tema.pagina.capas, 'capa-pagina') },
+    ...(tema.secuencia !== undefined && { secuencia: conDefectosDeSecuencia(tema.secuencia, completar) }),
     ...(tema.fila !== undefined && { fila: { ...tema.fila, capas: capas(tema.fila.capas, 'capa-nodo'), textos: Object.fromEntries(Object.entries(tema.fila.textos).map(([nombre, primitiva]) => [nombre, completar(primitiva, 'texto-slot')])) } }),
   };
 }

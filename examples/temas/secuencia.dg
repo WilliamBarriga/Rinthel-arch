@@ -1,0 +1,75 @@
+// Tema de ejemplo para diagramas de secuencia: Lifelines, activaciones, Mensajes por tipo, Fragmentos por operador y
+// Notas, con las separaciones de secuencia ajustadas. Todo lo que no se declara se deriva de `edge` y `node`.
+specification {
+  node servicio { description "Un servicio" icon box color blue }
+}
+
+model {
+  servicio cliente "Cliente"
+  servicio api "API"
+  servicio cola "Cola"
+  interaction compra "Compra" {
+    cliente -> api "POST /pedidos"
+    alt "hay stock" {
+      async api -> cola "pedido.creado"
+      note right of cola "se procesa luego"
+    } else "sin stock" {
+      api -> api "validar"
+    }
+    reply api -> cliente "201"
+    destroy api -> cola
+  }
+}
+
+theme secuencia {
+  palette { papel "#fefce8"  tinta "#1f2937"  azul "#2563eb"  verde "#16a34a"  rojo "#dc2626"  ambar "#d97706" }
+  node {
+    layer forma rect { radius 6 }
+    layer relleno solid { color papel }
+    layer borde border { color tinta }
+    slots { title }
+  }
+  edge { layer linea line { color tinta  width 1.2 } }
+  lifeline {
+    layer linea line { color tinta/0.5  width 1  style dashed }
+    end cross { size 12  color rojo }
+    gap 200
+  }
+  activation {
+    layer forma rect { radius 2 }
+    layer relleno solid { color azul/0.2 }
+    layer borde border { color azul }
+    width 12
+  }
+  message {
+    layer linea line { color tinta  width 1.5 }
+    end arrow { size 10 }
+    gap 40
+    loop-width 48
+    kind async { layer linea { color verde }  end chevron { size 10  color verde } }
+    kind reply { layer linea { style dashed }  end chevron { size 10 } }
+    kind destroy { layer linea { color rojo }  end arrow { color rojo } }
+  }
+  fragment {
+    layer forma rect { radius 8 }
+    layer relleno solid { color papel/0.6 }
+    layer borde border { color tinta/0.6 }
+    operator { color tinta  weight 700 }
+    guard { color tinta }
+    divider { color tinta/0.5  width 1.5  style dashed }
+    op alt { layer borde { color azul } }
+    op ref { layer relleno { color ambar/0.1 } }
+    padding 20
+  }
+  note {
+    layer relleno solid { color ambar/0.25 }
+    layer borde border { color ambar }
+    text { color tinta  weight 600 }
+  }
+}
+
+view compra {
+  type sequence
+  interaction compra
+  theme secuencia
+}

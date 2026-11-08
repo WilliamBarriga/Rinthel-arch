@@ -28,6 +28,7 @@ import { ARCHIVO_INCORPORADOS, NOMBRES_INCORPORADOS } from './incorporados';
 import { aRango, issueConSugerencia } from './posiciones';
 import { compilarArista } from './temas-arista';
 import { compilarFila } from './temas-fila';
+import { compilarSecuencia } from './temas-secuencia';
 import { compilarSlots } from './temas-slots';
 import type { DestinoDeSlots } from './temas-slots';
 import { compilarAnimacionDeNodo } from './temas-animacion';
@@ -222,12 +223,14 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       arista: {
         capas: origen.arista.capas.map(copiarCapa),
         ...(origen.arista.diagramas !== undefined && { diagramas: structuredClone(origen.arista.diagramas) }),
+        ...(origen.arista.identificante !== undefined && { identificante: structuredClone(origen.arista.identificante) }),
         ...(origen.arista.origen !== undefined && { origen: { ...origen.arista.origen, props: { ...origen.arista.origen.props } } }),
         ...(origen.arista.fin !== undefined && { fin: { ...origen.arista.fin, props: { ...origen.arista.fin.props } } }),
         ...(origen.arista.etiqueta !== undefined && { etiqueta: { ...origen.arista.etiqueta, props: { ...origen.arista.etiqueta.props } } }),
       },
       pagina: { capas: origen.pagina.capas.map(copiarCapa), fijo: origen.pagina.fijo },
       ...(origen.fila !== undefined && { fila: structuredClone(origen.fila) }),
+      ...(origen.secuencia !== undefined && { secuencia: structuredClone(origen.secuencia) }),
     };
     const origenes = new Map(base?.origenes);
     const porTipo = copiarRegistro(base?.origen.tipos ?? {});
@@ -238,7 +241,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     const sitiosDeSlots = new Map(Object.entries(base?.origen.slots ?? {}) as Array<['nodo' | 'grupo' | 'colapsado', Sitio]>);
     const grupoPorColapso = copiarRegistro({ collapsed: base?.origen.grupo.colapsado ?? {} });
     for (const parte of declarado.ast.parts) {
-      if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeGroup' || parte.$type === 'ThemeEdge' || parte.$type === 'ThemePage' || parte.$type === 'ThemeRow') continue;
+      if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeGroup' || parte.$type === 'ThemeEdge' || parte.$type === 'ThemePage' || parte.$type === 'ThemeRow' || parte.$type === 'ThemeSequence') continue;
       const destino = parte.$type === 'ThemePalette' ? tema.palette : parte.$type === 'ThemeFonts' ? tema.fonts : tema.tokens;
       for (const { key, value } of parte.entries) destino[key] = value;
     }
@@ -266,6 +269,8 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     compilarArista(delBordeDeArista, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
     const delaFila = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeRow' ? parte.items : []));
     compilarFila(delaFila, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
+    const deSecuencia = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeSequence' ? [parte] : []));
+    compilarSecuencia(deSecuencia, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
     const delaPagina = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemePage' ? parte.items : []));
     const origenesDePagina = new Map(Object.entries(base?.origen.pagina ?? {}));
     compilarPagina(delaPagina, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues, origenes: origenesDePagina });
@@ -277,7 +282,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       origen: {
         sitio: { file: declarado.archivo, ...declarado.nombre.start },
         extends: delPadre,
-        partes: [...new Set([...(base?.origen.partes ?? []), ...partesUsadas([...items, ...delGrupo, ...delBordeDeArista, ...delaFila, ...delaPagina], partes)])],
+        partes: [...new Set([...(base?.origen.partes ?? []), ...partesUsadas([...items, ...delGrupo, ...delBordeDeArista, ...delaFila, ...deSecuencia.flatMap((b) => b.items), ...delaPagina], partes)])],
         base: sitioDeCopia(origenes),
         tipos: Object.fromEntries(Object.entries(porTipo).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),
         estados: Object.fromEntries(Object.entries(porEstado).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),
