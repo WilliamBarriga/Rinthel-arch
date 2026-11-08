@@ -93,3 +93,71 @@ export function generarWorkspace(opciones: OpcionesDeGenerador): Record<string, 
   ].join('\n');
   return { 'main.dg': texto };
 }
+
+export interface OpcionesDeSecuencia {
+  /** Mensajes totales de la Interaccion (al menos 1). */
+  mensajes: number;
+  /** Lifelines (por defecto 50, al menos 2). */
+  lifelines?: number;
+  /** Profundidad maxima de anidamiento de Fragmentos (por defecto 3). */
+  profundidad?: number;
+  /** Semilla del PRNG (por defecto 1). */
+  semilla?: number;
+}
+
+/**
+ * Workspace con una Vista `sequence` de una sola Interaccion `grande`: exactamente `mensajes` Mensajes entre
+ * `lifelines` Lifelines, con Fragmentos (opt, loop, alt, par) anidados hasta `profundidad` niveles.
+ * Determinista: misma entrada, mismos archivos.
+ */
+export function generarSecuencia(opciones: OpcionesDeSecuencia): Record<string, string> {
+  const { mensajes, lifelines = 50, profundidad = 3, semilla = 1 } = opciones;
+  const azar = prng(semilla);
+  const lineas: string[] = [];
+  let restantes = mensajes;
+  const entero = (n: number): number => Math.floor(azar() * n);
+  const mensaje = (nivel: number): void => {
+    const de = entero(lifelines);
+    const a = (de + 1 + entero(lifelines - 1)) % lifelines;
+    lineas.push(`${SANGRIA.repeat(nivel)}l${de} -> l${a} "m${mensajes - restantes}"`);
+    restantes--;
+  };
+  const fragmento = (nivel: number, nivelFragmento: number): void => {
+    const sangria = SANGRIA.repeat(nivel);
+    const operador = ['opt', 'loop', 'alt', 'par'][entero(4)]!;
+    const separador = operador === 'par' ? 'and' : 'else';
+    const operandos = operador === 'alt' || operador === 'par' ? 2 : 1;
+    for (let k = 0; k < operandos; k++) {
+      lineas.push(k === 0 ? `${sangria}${operador} "g${restantes}" {` : `${sangria}} ${separador} "g${restantes}" {`);
+      const propios = 2 + entero(3);
+      for (let i = 0; i < propios && restantes > 0; i++) mensaje(nivel + 1);
+      if (nivelFragmento < profundidad && restantes > 0) fragmento(nivel + 1, nivelFragmento + 1);
+      if (restantes > 0) mensaje(nivel + 1);
+    }
+    lineas.push(`${sangria}}`);
+  };
+  while (restantes > 0) {
+    for (let i = 0; i < 4 && restantes > 0; i++) mensaje(2);
+    if (restantes > 0) fragmento(2, 1);
+  }
+
+  const texto = [
+    'specification {',
+    `${SANGRIA}node servicio`,
+    '}',
+    '',
+    'model {',
+    ...Array.from({ length: lifelines }, (_, i) => `${SANGRIA}servicio l${i} "Servicio ${i}"`),
+    `${SANGRIA}interaction grande {`,
+    ...lineas,
+    `${SANGRIA}}`,
+    '}',
+    '',
+    'view secuencia {',
+    `${SANGRIA}type sequence`,
+    `${SANGRIA}interaction grande`,
+    '}',
+    '',
+  ].join('\n');
+  return { 'main.dg': texto };
+}

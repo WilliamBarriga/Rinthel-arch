@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { resolveView } from 'canonico';
 import type { Nodo } from 'canonico';
 import { compile } from 'dsl';
 
-import { generarWorkspace } from '../bench/generador';
+import { generarSecuencia, generarWorkspace } from '../bench/generador';
 
 const contar = (nodos: readonly Nodo[]): number => nodos.reduce((suma, nodo) => suma + 1 + contar(nodo.children), 0);
 const profundidad = (nodos: readonly Nodo[]): number => nodos.reduce((max, nodo) => Math.max(max, 1 + profundidad(nodo.children)), 0);
@@ -37,5 +38,30 @@ describe('generarWorkspace', () => {
 
   it('es generico: no menciona Rinthel', () => {
     expect(JSON.stringify(generarWorkspace({ nodos: 50 })).toLowerCase()).not.toContain('rinthel');
+  });
+});
+
+describe('generarSecuencia', () => {
+  const generar = (mensajes: number) => compile(generarSecuencia({ mensajes }));
+
+  it.each([1, 30, 1000])('compila sin issues y tiene exactamente %i Mensajes', (mensajes) => {
+    const { issues, canonico } = generar(mensajes);
+
+    expect(issues).toEqual([]);
+    const vista = resolveView(canonico!, 'secuencia')!;
+    expect(vista.interaction!.messages).toHaveLength(mensajes);
+  });
+
+  it('tiene 50 Lifelines y Fragmentos anidados tres niveles', () => {
+    const vista = resolveView(generar(1000).canonico!, 'secuencia')!;
+
+    expect(vista.nodes).toHaveLength(50);
+    const maxima = Math.max(...vista.interaction!.messages.map((m) => m.ambito?.length ?? 0));
+    expect(maxima).toBe(3);
+  });
+
+  it('es determinista: misma entrada, mismos archivos; otra semilla, otra Interaccion', () => {
+    expect(generarSecuencia({ mensajes: 200 })).toEqual(generarSecuencia({ mensajes: 200 }));
+    expect(generarSecuencia({ mensajes: 200, semilla: 2 })).not.toEqual(generarSecuencia({ mensajes: 200 }));
   });
 });
