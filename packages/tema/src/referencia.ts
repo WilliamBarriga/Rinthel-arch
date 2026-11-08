@@ -5,6 +5,7 @@
  * disco es `scripts/generar-referencia-catalogo.ts`.
  */
 import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
+import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA } from './secuencia';
 import { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA } from './fila';
 import { CATALOGO, DEFINICION_DE_SLOT, PROPIEDADES_DE_DESPLAZAMIENTO, PROPIEDAD_DE_ZONA, SLOTS, ubicacionesDe } from './catalogo';
 import type { DefinicionDePrimitiva, DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
@@ -78,6 +79,28 @@ export function referenciaDelCatalogo(): string {
         ...NOMBRES_DE_TEXTO_DE_FILA.map((nombre) => [`\`${nombre} { ... }\``, `Estilo de texto con la Primitiva \`${TEXTOS_DE_FILA[nombre]}\`${nombre === 'key' ? ' (el chip de cada marca de clave)' : ''}`]),
       ],
     ),
+    '',
+    '## Elementos de secuencia',
+    '',
+    'Bloques del Tema para una Vista `sequence`; sin ellos el nucleo los deriva de `edge` y `node`. Cada uno admite `layer`, `use` y `state`; las Metricas son las separaciones de secuencia (px, con su rango y defecto del nucleo).',
+    '',
+    ...tabla(
+      ['Bloque', 'Capas', 'Marcadores', 'Estilos', 'Parches', 'Metricas'],
+      BLOQUES_DE_SECUENCIA.map((nombre) => {
+        const e = ESPECIFICACION_DE_SECUENCIA[nombre];
+        const metricas = Object.entries(e.metricas).map(([clave, m]) => `\`${clave}\` ${m.min} a ${m.max} (${m.defecto})`);
+        return [
+          `\`${nombre}\``,
+          e.capas === 'capa-arista' ? 'trazos' : 'de Nodo',
+          e.marcadores.map((m) => `\`${m}\``).join(', ') || '-',
+          Object.entries(e.textos).map(([clave, t]) => `\`${clave}\` (\`${t.primitiva}\`)`).join(', ') || '-',
+          e.parches === undefined ? '-' : `\`${e.parches.palabra} <${e.parches.palabra === 'kind' ? 'tipo' : 'operador'}>\`: ${e.parches.nombres.join(', ')}`,
+          metricas.join('; ') || '-',
+        ];
+      }),
+    ),
+    '',
+    'El parche `identifying { ... }` del bloque `edge` cambia el trazo de las Aristas identificantes de una Vista ER.',
     '',
     '## Movimientos',
     '',

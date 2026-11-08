@@ -47,6 +47,7 @@ export {
   pasoSchema,
   temaSchema,
   TIPOS_DE_MENSAJE,
+  OPERADORES_DE_FRAGMENTO,
   TIPOS_DE_VISTA,
   tipoDeNodoSchema,
   vistaSchema,

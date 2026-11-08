@@ -35,6 +35,12 @@ export function compilarArista(items: readonly EdgeItem[], tema: TemaResuelto, c
       const etiqueta = primitivaSuelta('label', (item as ThemeLabel).props, 'etiqueta', ctx, aRango(item.$cstNode?.range).start);
       if (etiqueta !== undefined) tema.arista.etiqueta = etiqueta;
     } else if (item.$type === 'ThemeDiagram') compilarDiagramaDeArista(item, tema, ctx);
+    else if (item.$type === 'EdgeIdentifying') {
+      const previo = tema.arista.identificante ?? [];
+      const vigente = aplicarOps(tema.arista.capas as CapaDeTema[], previo, tema.palette, 'parchear', 'capa-arista').pila;
+      const ops = compilarBloque(item.items, { ...ctx, modo: 'parchear', ubicacion: 'capa-arista', candidatas: [vigente], origenes: new Map() });
+      tema.arista.identificante = [...previo, ...ops];
+    }
   }
 }
 

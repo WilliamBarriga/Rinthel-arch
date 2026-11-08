@@ -147,6 +147,20 @@ Bloque del Tema que estiliza las filas de una Vista `er`. `height` (12 a 120) es
 | `type { ... }` | Estilo de texto con la Primitiva `text` |
 | `key { ... }` | Estilo de texto con la Primitiva `chip` (el chip de cada marca de clave) |
 
+## Elementos de secuencia
+
+Bloques del Tema para una Vista `sequence`; sin ellos el nucleo los deriva de `edge` y `node`. Cada uno admite `layer`, `use` y `state`; las Metricas son las separaciones de secuencia (px, con su rango y defecto del nucleo).
+
+| Bloque | Capas | Marcadores | Estilos | Parches | Metricas |
+| --- | --- | --- | --- | --- | --- |
+| `lifeline` | trazos | `end` | - | - | `gap` 40 a 600 (160) |
+| `activation` | de Nodo | - | - | - | `width` 4 a 40 (10) |
+| `message` | trazos | `start`, `end` | `label` (`label`) | `kind <tipo>`: sync, async, reply, create, destroy | `gap` 12 a 120 (32); `loop-width` 12 a 120 (36); `create-offset` -40 a 40 (0) |
+| `fragment` | de Nodo | - | `operator` (`label`), `guard` (`text`), `divider` (`line`) | `op <operador>`: opt, loop, break, critical, alt, par, ref | `padding` 0 a 64 (16); `padding-y` 2 a 40 (10) |
+| `note` | de Nodo | - | `text` (`text`) | - | - |
+
+El parche `identifying { ... }` del bloque `edge` cambia el trazo de las Aristas identificantes de una Vista ER.
+
 ## Movimientos
 
 | Movimiento | Intensidad | Easing | Duracion (ms) |

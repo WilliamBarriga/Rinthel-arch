@@ -3,15 +3,16 @@
  * y leyenda derivada. Solo calcula; que sea warning y no bloquee el render lo
  * decide quien emite el issue. Puro y determinista.
  */
-import type { Tema } from 'canonico';
+import type { Tema, TipoDeMensaje } from 'canonico';
 
 import { CATALOGO, definicionDe, primitivasDeFamilia } from './catalogo';
 import type { DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
 import { hexARgb } from './color';
 import { estiloResuelto } from './estilo';
+import { capasDeAristaEr, pinturaDeMensajeConTema } from './mensajes';
 import { muestra } from './contenido';
 import { resolverTema } from './tema';
-import type { CapaPintada } from './estilo';
+import type { CapaPintada, PrimitivaPintada } from './estilo';
 import type { Estado } from './parches';
 
 type Rgb = readonly [number, number, number];
@@ -154,6 +155,38 @@ export function tiposSoloColor(tema: Tema, tipos: readonly TipoParaLeyenda[]): A
     }
   }
   return pares;
+}
+
+const quitarColorDeMarcador = (marcador: PrimitivaPintada | undefined) => (marcador === undefined ? null : quitarColor({ nombre: '', tipo: marcador.tipo, props: marcador.props }));
+
+/** Pares de variantes (`{ capas, origen?, fin? }`) con la misma estructura de trazo y marcadores (sin contar colores) pero distinto color. */
+function paresSoloColor<T extends string>(nombres: readonly T[], pintura: (nombre: T) => { capas: readonly CapaPintada[]; origen?: PrimitivaPintada | undefined; fin?: PrimitivaPintada | undefined }): Array<[T, T]> {
+  const firmas = nombres.map((nombre) => {
+    const { capas, origen, fin } = pintura(nombre);
+    return { estructura: JSON.stringify([capas.map(quitarColor), quitarColorDeMarcador(origen), quitarColorDeMarcador(fin)]), completa: JSON.stringify([capas, origen ?? null, fin ?? null]) };
+  });
+  const pares: Array<[T, T]> = [];
+  for (let i = 0; i < nombres.length; i++) {
+    for (let j = i + 1; j < nombres.length; j++) {
+      if (firmas[i]!.estructura === firmas[j]!.estructura && firmas[i]!.completa !== firmas[j]!.completa) pares.push([nombres[i]!, nombres[j]!]);
+    }
+  }
+  return pares;
+}
+
+/**
+ * Pares de tipos de Mensaje que el Tema distingue unicamente por color (ADR 0009, `solo-color`): mismo trazo y
+ * marcadores salvo el color. Solo cuenta los tipos dados (los que usa la Vista); orden de aparicion.
+ */
+export function mensajesSoloColor(tema: Tema, tipos: readonly TipoDeMensaje[]): Array<[TipoDeMensaje, TipoDeMensaje]> {
+  const estilo = estiloResuelto(tema, { diagrama: 'sequence' });
+  return paresSoloColor(tipos, (kind) => pinturaDeMensajeConTema(estilo.pintura.secuencia, estilo.pintura.arista, undefined, kind));
+}
+
+/** El Tema pinta las Aristas identificantes y las no identificantes de una Vista ER iguales salvo el color. */
+export function aristaIdentificanteSoloColor(tema: Tema): boolean {
+  const { arista } = estiloResuelto(tema, { diagrama: 'er' }).pintura;
+  return paresSoloColor(['identificante', 'no-identificante'] as const, (nombre) => ({ capas: capasDeAristaEr(arista, nombre === 'identificante') })).length > 0;
 }
 
 export interface EntradaDeLeyenda {
