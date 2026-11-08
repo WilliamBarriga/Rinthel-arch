@@ -86,7 +86,7 @@ export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, Nom
 export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
 export { GRUPO_POR_DEFECTO, TEMA_NEUTRO, leerOps, resolverTema, temaParaDiagrama, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
-export { anchoDeChips, atributosVisibles, chipsDeClaves, contenidoDeNodo, muestra, textoDeAtributo } from './contenido';
+export { anchoDeChips, atributosVisibles, chipsDeClaves, contenidoDeNodo, muestra, piezasDeAtributo, textoDeAtributo } from './contenido';
 export type { ChipDeClave } from './contenido';
 export type { ContenidoDeNodo } from './contenido';
 export { ANCHO_MAXIMO_DE_NOTA, ESQUINA_DE_NOTA, LARGO_DE_MARCADOR_ER, RELLENO_DE_NOTA, cajaDeNota, estiloDeTextoDeNota, palabrasDeNota, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeGuarda } from './metricas';
@@ -102,6 +102,7 @@ export type { ColocacionDeNodo, MedidaDeSlot, Rect, Tamano } from './slots';
 export { estiloResuelto, pilaDeFila } from './estilo';
 export { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA, claveDeFila } from './fila';
 export type { TextoDeFila, VarianteDeFila } from './fila';
+export { primitivaPintada } from './estilo';
 export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeCajaDeSecuencia, PinturaDeElemento, PinturaDeFila, PinturaDeNodo, PinturaDePagina, PinturaDeSecuencia, PinturaDeTrazoDeSecuencia, PrimitivaPintada } from './estilo';
 export { capasDeAristaEr, pinturaDeMensaje, pinturaDeMensajeConTema } from './mensajes';
 export { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA, metricasDeSecuencia } from './secuencia';

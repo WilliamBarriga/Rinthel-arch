@@ -15,6 +15,8 @@ import { anchoDeTexto } from './medicion';
 import type { MedicionDeMetricas, MedidasDeTexto } from './medicion';
 import type { NombreDeSlot } from './catalogo';
 import type { CajaDeSlots } from './disposicion';
+import { NOMBRES_DE_TEXTO_DE_FILA } from './fila';
+import type { TextoDeFila } from './fila';
 import { cascada } from './parches';
 import type { CapaDeTema, TipoDeDiagrama } from './parches';
 import { metricasDeSecuencia } from './secuencia';
@@ -59,6 +61,8 @@ export interface Metricas {
   paddingHorizontal: number;
   /** Vista ER: las filas de Atributo dibujan chips de clave (`pk`, `fk`, `uk`) y el `?` de los opcionales. Ausente fuera de ER. */
   marcasDeClave?: true;
+  /** Vista ER: tamano (px) que el `size` de `row name|type|key` fija a ese texto de la fila; ausente = el del Slot `attrs` (los chips, 0.8 de el). */
+  tamanoDeFila?: Partial<Record<TextoDeFila, number>>;
   /** Vista de secuencia: separaciones que el Tema ajusta en `lifeline`, `message`, `activation` y `fragment`. Ausente fuera de secuencia. */
   secuencia?: MetricasDeSecuencia;
   /** Margen izquierdo del titulo y de los Atributos. */
@@ -186,6 +190,19 @@ export interface TablaDeMetricas {
   etiqueta: Metricas;
 }
 
+/** Alto de fila por px de texto cuando el Tema fija `size` sin `height` (el defecto del nucleo es 1.8 sobre el tamano del Tema). */
+const ESPACIO_DE_LINEA_DE_FILA = 1.4;
+
+/** `size` de cada texto de la fila (`row name|type|key`) como px: multiplica el tamano de texto del Tema, como en los Slots. */
+function tamanosDeFila(textos: NonNullable<TemaResuelto['fila']>['textos'] | undefined, fontSize: number): Partial<Record<TextoDeFila, number>> {
+  const salida: Partial<Record<TextoDeFila, number>> = {};
+  for (const nombre of NOMBRES_DE_TEXTO_DE_FILA) {
+    const size = textos?.[nombre]?.props['size'];
+    if (typeof size === 'number') salida[nombre] = fontSize * size;
+  }
+  return salida;
+}
+
 export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto, diagrama?: TipoDeDiagrama): TablaDeMetricas {
   const tabla = tablaSinMarcas(tema, medidas, diagrama);
   if (diagrama === 'sequence') {
@@ -197,8 +214,14 @@ export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto, diagrama?:
   if (diagrama !== 'er') return tabla;
   // Vista ER: todas las entradas dibujan marcas de clave (`claveDeMetricas` las distingue de las de arquitectura) y
   // toman el alto de fila del bloque `row` del Tema, si lo declara.
-  const alto = resolverTema(tema).fila?.alto;
-  const conMarcas = (m: Metricas): Metricas => ({ ...m, ...(alto !== undefined && { fila: alto }), marcasDeClave: true });
+  const fila = resolverTema(tema).fila;
+  const conMarcas = (m: Metricas): Metricas => {
+    const tamano = tamanosDeFila(fila?.textos, m.fontSize);
+    const mayor = Math.max(0, ...Object.values(tamano));
+    // Sin `height` declarado, un texto mayor que la linea ensancha la fila para no recortarse.
+    const alto = fila?.alto ?? (mayor > 0 ? Math.max(m.fila, Math.ceil(mayor * ESPACIO_DE_LINEA_DE_FILA)) : undefined);
+    return { ...m, ...(alto !== undefined && { fila: alto }), ...(Object.keys(tamano).length > 0 && { tamanoDeFila: tamano }), marcasDeClave: true };
+  };
   return { base: conMarcas(tabla.base), tipos: Object.fromEntries(Object.entries(tabla.tipos).map(([tipo, m]) => [tipo, conMarcas(m)])), grupoAbierto: conMarcas(tabla.grupoAbierto), grupoColapsado: conMarcas(tabla.grupoColapsado), etiqueta: conMarcas(tabla.etiqueta) };
 }
 

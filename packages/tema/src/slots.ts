@@ -26,7 +26,7 @@ import { esCaja, slotsDe } from './disposicion';
 import type { Alineacion, CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { anchoDeTexto } from './medicion';
 import type { TextoAMedir } from './medicion';
-import { anchoDeChips, muestra, textoDeAtributo } from './contenido';
+import { anchoDeChips, muestra, piezasDeAtributo } from './contenido';
 import type { ContenidoDeNodo } from './contenido';
 import type { Metricas } from './metricas';
 
@@ -178,7 +178,7 @@ export function textoDeSlot(slot: NombreDeSlotDeTexto, metricas: Metricas, conte
 
 /** Tabla de medidas de los Slots de un Nodo (ver `DEFINICION_DE_SLOT`): una entrada por Slot del catalogo. */
 function medidasDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): MedidaDeSlot {
-  const { fontSize, escalaAtributo, fuentes } = metricas;
+  const { fuentes } = metricas;
   const delTexto = (slot: NombreDeSlotDeTexto) => (): Tamano | undefined => {
     const t = textoDeSlot(slot, metricas, contenido);
     return t === undefined ? undefined : { width: anchoDeTexto(metricas, t.familia, t.tamano, t.texto, t.peso) + t.holgura, height: t.alto, ...(slot === 'title' && { elastico: !metricas.titulo.caja }) };
@@ -194,7 +194,7 @@ function medidasDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): MedidaDe
       contenido.atributos.length === 0
         ? undefined
         : {
-            width: Math.max(...contenido.atributos.map((a) => anchoDeTexto(metricas, fuentes['mono']!, fontSize * escalaAtributo, textoDeAtributo(a, metricas.marcasDeClave === true)) + anchoDeChips(a, metricas))),
+            width: Math.max(...contenido.atributos.map((a) => piezasDeAtributo(a, metricas).reduce((suma, p) => suma + anchoDeTexto(metricas, fuentes['mono']!, p.tamano, p.texto), 0) + anchoDeChips(a, metricas))),
             height: contenido.atributos.length * metricas.fila,
           },
   };
@@ -204,7 +204,7 @@ function medidasDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): MedidaDe
 /** Los textos que `layout` debe medir para este Nodo: los mismos que `medidasDeNodo` mide, solo de los Slots que el Tema muestra. */
 export function textosDeNodo(metricas: Metricas, contenido: ContenidoDeNodo): TextoAMedir[] {
   const delTexto = SLOTS_DE_TEXTO.filter((slot) => muestra(metricas, slot)).flatMap((slot) => textoDeSlot(slot, metricas, contenido) ?? []);
-  const atributos = contenido.atributos.map((a) => ({ familia: metricas.fuentes['mono']!, tamano: metricas.fontSize * metricas.escalaAtributo, texto: textoDeAtributo(a, metricas.marcasDeClave === true) }));
+  const atributos = contenido.atributos.flatMap((a) => piezasDeAtributo(a, metricas).map(({ texto, tamano }) => ({ familia: metricas.fuentes['mono']!, tamano, texto })));
   return [...delTexto.map(({ familia, tamano, texto, peso }) => ({ familia, tamano, texto, ...(peso !== undefined && { peso }) })), ...atributos];
 }
 

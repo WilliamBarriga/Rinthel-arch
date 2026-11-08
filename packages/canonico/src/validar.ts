@@ -326,28 +326,31 @@ function validarCicloDeVida(mensaje: MensajeUbicado, j: number, ruta: (string | 
   }
 }
 
+/** Propiedad de Vista que solo vale en `sequence`: como se llama en el DSL, donde esta en la Vista (una ruta por aparicion) y que sugerir. */
+interface PropiedadSoloDeSecuencia {
+  nombre: string;
+  donde: (vista: Vista) => Array<Array<string | number>>;
+  hint: string;
+}
+
+const PROPIEDADES_SOLO_DE_SECUENCIA: readonly PropiedadSoloDeSecuencia[] = [
+  { nombre: 'interaction', donde: (v) => (v.interaction === undefined ? [] : [['interaction']]), hint: "cambia 'type' a sequence o quita 'interaction'" },
+  { nombre: 'autonumber', donde: (v) => (v.autonumber === true ? [['autonumber']] : []), hint: "cambia 'type' a sequence o quita 'autonumber'" },
+  { nombre: 'order', donde: (v) => (v.order.length > 0 ? [['order', 0]] : []), hint: "cambia 'type' a sequence o quita 'order'" },
+  { nombre: 'steps each', donde: (v) => (v.stepsEach === true ? [['stepsEach']] : []), hint: "usa 'step { show ... }' o cambia 'type' a sequence" },
+  { nombre: 'upto', donde: (v) => v.steps.flatMap((paso, s) => (paso.upto === undefined ? [] : [['steps', s, 'upto']])), hint: "usa 'show'/'hide' o cambia 'type' a sequence" },
+];
+
 /** Propiedades de Vista segun su Tipo de diagrama y la Interaccion que proyecta una Vista de secuencia. */
 function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: number, emitir: Emitir, emitirCon: EmitirCon): void {
   const ruta = ['views', indice];
   const interacciones = fuente.model.interactions.map(({ id }) => id);
   if (vista.type !== 'sequence') {
-    if (vista.interaction !== undefined) {
-      emitirCon([...ruta, 'interaction'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'interaction' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "cambia 'type' a sequence o quita 'interaction'" });
-    }
-    if (vista.autonumber === true) {
-      emitirCon([...ruta, 'autonumber'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'autonumber' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "cambia 'type' a sequence o quita 'autonumber'" });
-    }
-    if (vista.order.length > 0) {
-      emitirCon([...ruta, 'order', 0], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'order' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "cambia 'type' a sequence o quita 'order'" });
-    }
-    if (vista.stepsEach === true) {
-      emitirCon([...ruta, 'stepsEach'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'steps each' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "usa 'step { show ... }' o cambia 'type' a sequence" });
-    }
-    vista.steps.forEach((paso, s) => {
-      if (paso.upto !== undefined) {
-        emitirCon([...ruta, 'steps', s, 'upto'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'upto' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "usa 'show'/'hide' o cambia 'type' a sequence" });
+    for (const propiedad of PROPIEDADES_SOLO_DE_SECUENCIA) {
+      for (const donde of propiedad.donde(vista)) {
+        emitirCon([...ruta, ...donde], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'${propiedad.nombre}' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: propiedad.hint });
       }
-    });
+    }
     return;
   }
   if (vista.include.length > 0) {

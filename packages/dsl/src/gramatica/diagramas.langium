@@ -307,7 +307,7 @@ ThemeRow:
   'row' '{' items+=RowItem* '}';
 
 RowItem:
-  ThemeLayer | ThemeUse | RowHeight | RowKeyPatch | RowOptional | RowAlternate | RowText;
+  ThemeLayer | ThemeUse | RowHeight | RowKeyPatch | RowOptional | RowAlternate | RowState | RowText;
 
 RowHeight:
   'height' value=Num;
@@ -320,6 +320,10 @@ RowOptional:
 
 RowAlternate:
   'alternate' '{' items+=PatchItem* '}';
+
+// Parche de estado de la fila (`hover`, `seleccionado`...): solo pinta, como los de `node`.
+RowState:
+  'state' name=Id '{' items+=PatchItem* '}';
 
 // El nombre del texto (`name`, `type`, `key`) se valida al compilar para dar un `fix` por typo.
 RowText:

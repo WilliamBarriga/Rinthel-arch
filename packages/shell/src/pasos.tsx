@@ -32,7 +32,7 @@ const acotar = (paso: number, total: number): number => Math.min(Math.max(Number
 
 export function usePasos(vista: VistaResuelta, props: PropsDePasos): PasosEnVista {
   const total = vista.steps.length;
-  const [pasoVigente, fijarPaso] = useControlado(props.step, props.defaultStep ?? 0, props.onStepChange);
+  const [pasoVigente, fijarPaso] = useControlado(props.step, props.defaultStep ?? (vista.type === 'sequence' && total > 0 ? 1 : 0), props.onStepChange);
   const paso = acotar(pasoVigente, total);
 
   const derivada = useMemo(() => (total === 0 ? undefined : revealAt(vista, paso)), [vista, total, paso]);

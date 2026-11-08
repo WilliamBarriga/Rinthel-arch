@@ -38,7 +38,8 @@ const camara = { x: 0, y: 0, width: 1200, height: 800 };
 
 async function montar(vista: string, extra: Partial<VistaInteractivaProps> = {}) {
   const r = render(<VistaInteractiva source={fuente} view={vista} theme={TEMA_NEUTRO} layout={layout} width={1200} height={800} camera={camara} {...extra} />);
-  await waitFor(() => expect(r.container.querySelector('[data-lifeline="cola"]')).not.toBeNull(), { timeout: 8000 });
+  // Con la maquina cargada las cabeceras aparecen antes de que el layout termine: el gesto se hace sobre la Geometria final.
+  await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-lifeline="cola"]')).not.toBeNull(), { timeout: 15000 });
   return r;
 }
 
@@ -64,7 +65,7 @@ function arrastrarCabecera(c: HTMLElement, id: string, haciaX: number): void {
   gesto(window, 'mouseup', haciaX, y);
 }
 
-const T = { timeout: 15000 };
+const T = { timeout: 30000 };
 
 describe('VistaInteractiva: ordenar Lifelines por arrastre', () => {
   it('arrastrar una cabecera avisa el orden visible completo, sin mover la camara', T, async () => {

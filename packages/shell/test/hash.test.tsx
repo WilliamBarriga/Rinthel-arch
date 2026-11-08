@@ -86,6 +86,19 @@ describe('serializarEstado y deserializarEstado', () => {
     expect(deserializarEstado('p=nada', fuente).path).toEqual(['a']);
   });
 
+  it('una Vista de secuencia con Pasos entra en el primero; arquitectura conserva el 0', () => {
+    const secuencia = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio' }] },
+      model: { nodes: [nodo('x'), nodo('y')], edges: [], interactions: [{ id: 'i', title: 'i', items: [{ type: 'message', kind: 'sync', from: 'x', to: 'y' }] }] },
+      views: [{ id: 's', type: 'sequence', include: ['**'], exclude: [], interaction: 'i', steps: [{ title: 'uno', show: [] }] }],
+    });
+    expect(deserializarEstado('', secuencia).step).toBe(1);
+    expect(deserializarEstado('p=s&t=0', secuencia).step).toBe(0);
+    expect(serializarEstado({ path: ['s'], state: {}, selected: null, step: 1 }, 's', secuencia)).toBe('');
+    expect(serializarEstado({ path: ['s'], state: {}, selected: null, step: 0 }, 's', secuencia)).toBe('t=0');
+    expect(deserializarEstado('', fuente).step).toBe(0);
+  });
+
   it('el Paso se acota a los Pasos de la Vista activa', () => {
     expect(deserializarEstado('p=b&t=1', fuente).step).toBe(0);
     expect(deserializarEstado('p=a&t=-1', fuente).step).toBe(0);

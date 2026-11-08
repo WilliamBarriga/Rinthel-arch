@@ -7,11 +7,11 @@
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
-import { LARGO_DE_MARCADOR_ER, alturaDeCabecera, capasDeAristaEr, pilaDeFila, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
-import type { ContenidoDeNodo, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
+import { ESTADOS, LARGO_DE_MARCADOR_ER, alturaDeCabecera, capasDeAristaEr, pilaDeFila, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
+import type { ContenidoDeNodo, Estado, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
 
 import { pintarMarcadores, pintarTrazos, rutaDeCapa } from './aristas';
-import { limpiarValorCss, num } from './elemento';
+import { declaracionesLimpias, limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
 import { declaracionesDeCaja, declaracionesDeTexto } from './hoja';
 import { efectosDeElemento } from './efectos';
@@ -30,6 +30,8 @@ export interface DatosDeNodo {
   /** Texto de la etiqueta del Nodo (el titulo de un Grupo abierto; un Nodo hoja usa el que da `contenidoDeNodo`). */
   texto: string;
   icons?: IconProvider;
+  /** Estados visuales por id de elemento; los de una fila ER van bajo `nodo#atributo` y se pintan con la pila de estado de `row`. */
+  estados?: Readonly<Record<string, readonly EstadoVisual[]>>;
 }
 
 /** `left/top/width/height` en px de un rectangulo (relativo a su caja contenedora). */
@@ -76,7 +78,7 @@ const PINTORES_DE_SLOT: { readonly [S in NombreDeSlot]: (contexto: ContextoDeSlo
   footer: (contexto, rect) => pintarTexto('footer', contexto, rect),
   counter: (contexto, rect) => pintarTexto('counter', contexto, rect),
   icon: ({ datos, textos }, rect) => pintarIcono(textos, datos.nodo, datos.trazo, datos.icons, rect),
-  attrs: ({ estilo, datos, atributos, metricas }, rect) => (atributos.length === 0 ? [] : [pintarAtributos(estilo, datos.nodo.id, atributos, rect, metricas)]),
+  attrs: ({ estilo, datos, atributos, metricas }, rect) => (atributos.length === 0 ? [] : [pintarAtributos(estilo, datos.nodo.id, atributos, rect, metricas, datos.estados)]),
 };
 
 /** Cada Slot que el Tema lista para `metricas`, en su rectangulo dentro de una caja de `ancho`. `conAtributos`: si se dibujan las filas de `attrs`. */
@@ -109,7 +111,9 @@ export function pintarZonas(estilo: Estilo, datos: DatosDeNodo, capas: readonly 
     const hasta = filas === undefined || !cabecera ? datos.caja.height : filas.y;
     if (hasta <= desde) return [];
     const esquinas = cabecera ? 'border-top-left-radius:inherit;border-top-right-radius:inherit;' : 'border-bottom-left-radius:inherit;border-bottom-right-radius:inherit;';
-    const pintura = Object.entries(declaracionesDeCaja(estilo, { capas: [capa], estados: {} }, [capa], true)).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+    // Los Slots se corren el ancho del borde (`--rd-borde`): la franja de la zona acompana esa linea de corte.
+    const alBorde = `height:calc(${num(hasta - desde)}px - var(--rd-borde, 0px));${cabecera ? '' : 'margin-top:calc(-1 * var(--rd-borde, 0px));'}`;
+    const pintura = alBorde + declaracionesLimpias(declaracionesDeCaja(estilo, { capas: [capa], estados: {} }, [capa], true));
     return [{ tag: 'div', attrs: { class: 'rd-zona', 'data-zona': String(capa.props['zone']), 'data-capa': capa.nombre, 'aria-hidden': 'true', style: enRect({ x: 0, y: desde, width: datos.caja.width, height: hasta - desde }, `${esquinas}${pintura}`) } }];
   });
 }
@@ -149,16 +153,19 @@ function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo:
   return [{ tag: 'div', attrs: atributos, html: dimensionado }];
 }
 
+/** Estado que manda sobre una fila: el ultimo de `ESTADOS` que lleva (el orden de la hoja de los Nodos). */
+const estadoDeFila = (lista: readonly EstadoVisual[] | undefined): Estado | undefined => ESTADOS.filter((estado) => lista?.includes(estado) === true).at(-1);
+
 /** Estilo en linea de un texto de la fila (`name`, `type`, `key`) que el Tema declara; vacio si no. */
-const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo): string =>
-  texto === undefined ? '' : Object.entries(declaracionesDeTexto(texto, estilo.fuenteMono)).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo, tamano?: number): string =>
+  texto === undefined ? '' : declaracionesLimpias({ ...declaracionesDeTexto(texto, estilo.fuenteMono), ...(tamano !== undefined && { 'font-size': `${num(tamano)}px` }) });
 
 /**
  * Slot `attrs`: una fila por Atributo, en orden, cada una en su rectangulo (relativo al Slot). En una Vista ER cuyo Tema
  * declara `row`, la fila pinta su pila de Capas (segun si es impar, sus marcas de clave y si es opcional) y sus textos
  * `name`, `type` y `key` con el estilo del Tema.
  */
-function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect, metricasDeNodo: Metricas): Elemento {
+function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect, metricasDeNodo: Metricas, estados?: DatosDeNodo['estados']): Elemento {
   const { metricas } = estilo;
   const marcas = metricasDeNodo.marcasDeClave === true;
   const delTema = marcas ? estilo.pintura.fila : undefined;
@@ -166,9 +173,9 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atribut
     tag: 'div',
     attrs: { class: `rd-slot rd-attrs${zona.y > 0 ? ' rd-separado' : ''}`, 'data-slot': 'attrs', style: enRect(zona) },
     hijos: atributos.map((atributo, i) => {
-      const capas = delTema === undefined ? [] : pilaDeFila(delTema, { impar: i % 2 === 1, keys: atributo.keys ?? [], opcional: atributo.optional === true });
+      const capas = delTema === undefined ? [] : pilaDeFila(delTema, { impar: i % 2 === 1, keys: atributo.keys ?? [], opcional: atributo.optional === true }, estadoDeFila(estados?.[`${id}#${atributo.name}`]));
       const efectos = capas.length === 0 ? undefined : efectosDeElemento(estilo, { capas }, `${id}#${atributo.name}`);
-      const caja = capas.length === 0 ? '' : Object.entries(declaracionesDeCaja(estilo, { capas, estados: {} }, capas.filter((c) => !esDeZona(c)))).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+      const caja = capas.length === 0 ? '' : declaracionesLimpias(declaracionesDeCaja(estilo, { capas, estados: {} }, capas.filter((c) => !esDeZona(c))));
       return {
         tag: 'div',
         attrs: {
@@ -181,9 +188,9 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atribut
           ...(delTema === undefined
             ? [textoDeAtributo(atributo, marcas)]
             : [
-                { tag: 'span', attrs: { 'data-fila-texto': 'name', style: enLinea(delTema.textos.name, estilo) }, hijos: [atributo.name] } as Elemento,
+                { tag: 'span', attrs: { 'data-fila-texto': 'name', style: enLinea(delTema.textos.name, estilo, metricasDeNodo.tamanoDeFila?.name) }, hijos: [atributo.name] } as Elemento,
                 ': ',
-                { tag: 'span', attrs: { 'data-fila-texto': 'type', style: enLinea(delTema.textos.type, estilo) }, hijos: [`${atributo.type}${atributo.optional === true ? '?' : ''}`] } as Elemento,
+                { tag: 'span', attrs: { 'data-fila-texto': 'type', style: enLinea(delTema.textos.type, estilo, metricasDeNodo.tamanoDeFila?.type) }, hijos: [`${atributo.type}${atributo.optional === true ? '?' : ''}`] } as Elemento,
               ]),
           // Vista ER: un chip por marca de clave, pegado al borde derecho de la fila.
           ...chipsDeClaves(atributo, metricasDeNodo).map((chip): Elemento => ({
@@ -191,7 +198,7 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atribut
             attrs: {
               class: 'rd-clave',
               'data-key': chip.clave,
-              style: `right:${num(chip.derecha)}px;width:${num(chip.width)}px;font-size:${num(chip.tamano)}px;line-height:${num(chip.tamano + 4)}px;top:${num((metricas.fila - chip.tamano - 4) / 2)}px;${delTema?.textos.key === undefined ? '' : `opacity:1;${enLinea(delTema.textos.key, estilo)}`}`,
+              style: `right:${num(chip.derecha)}px;width:${num(chip.width)}px;font-size:${num(chip.tamano)}px;line-height:${num(chip.tamano + 4)}px;top:${num((metricas.fila - chip.tamano - 4) / 2)}px;${delTema?.textos.key === undefined ? '' : `opacity:1;${enLinea(delTema.textos.key, estilo, chip.tamano)}`}`,
             },
             hijos: [chip.texto],
           })),

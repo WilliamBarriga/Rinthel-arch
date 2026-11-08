@@ -153,6 +153,8 @@ const filaSchema = z.strictObject({
   textos: z.partialRecord(z.enum(NOMBRES_DE_TEXTO_DE_FILA as [keyof typeof TEXTOS_DE_FILA, ...Array<keyof typeof TEXTOS_DE_FILA>]), primitivaSchema).default({}),
   claves: z.partialRecord(z.enum(CLAVES_DE_FILA as [(typeof CLAVES_DE_FILA)[number], ...Array<(typeof CLAVES_DE_FILA)[number]>]), z.array(opSchema)).default({}),
   opcional: z.array(opSchema).default([]),
+  /** Parches de estado (`hover`, `seleccionado`...): solo pintan, se aplican sobre la pila de la variante de la fila. */
+  estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
 });
 
 /** Parche de una variante de Mensaje (`kind`) o de Fragmento (`op`): parches de Capa y, en Mensajes, marcadores propios. */
@@ -353,6 +355,7 @@ function validarFila(ctx: z.RefinementCtx, tema: TemaResuelto, fila: NonNullable
   const parches: Array<[Array<string | number>, readonly OpDeCapa[]]> = [
     [['alterna'], fila.alterna],
     [['opcional'], fila.opcional],
+    ...Object.entries(fila.estados).map(([estado, ops]): [Array<string | number>, readonly OpDeCapa[]] => [['estados', estado], ops ?? []]),
     ...Object.entries(fila.claves).map(([clave, ops]): [Array<string | number>, readonly OpDeCapa[]] => [['claves', clave], ops]),
   ];
   for (const [ruta, ops] of parches) {

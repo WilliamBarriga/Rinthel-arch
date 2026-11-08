@@ -39,7 +39,7 @@ view abierta { type er  include **  }
 const montar = async (vista: string) => {
   const fuente = abrirSesion({ 'main.dg': ER }).fuente!;
   const r = render(<VistaInteractiva source={fuente} view={vista} theme={TEMA_NEUTRO} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} />);
-  await waitFor(() => expect(r.container.querySelector('[data-id="clientes"]')).not.toBeNull(), { timeout: 8000 });
+  await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-id="clientes"]')).not.toBeNull(), { timeout: 8000 });
   return { ...r, fuente };
 };
 
@@ -88,7 +88,7 @@ view p { type er  include **  steps { step "Uno" { show a, b, edge b -> a }  ste
 const montarTablas = async (extra: Partial<Parameters<typeof VistaInteractiva>[0]> = {}) => {
   const fuente = abrirSesion({ 'main.dg': TABLAS }).fuente!;
   const r = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} {...extra} />);
-  await waitFor(() => expect(r.container.querySelector('[data-id="a"]')).not.toBeNull(), { timeout: 8000 });
+  await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-id="a"]')).not.toBeNull(), { timeout: 8000 });
   return r;
 };
 
@@ -155,7 +155,7 @@ describe('ER: Pasos', () => {
   it('un Paso revela tablas y FK como en arquitectura', async () => {
     const fuente = abrirSesion({ 'main.dg': TABLAS }).fuente!;
     const { container } = render(<VistaInteractiva source={fuente} view="p" theme={TEMA_NEUTRO} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} />);
-    await waitFor(() => expect(container.querySelector('[data-id="a"]')).not.toBeNull(), { timeout: 8000 });
+    await waitFor(() => expect(container.querySelector('.rd-vista[data-layout="listo"] [data-id="a"]')).not.toBeNull(), { timeout: 8000 });
     const opacidad = (id: string) => {
       const el = container.querySelector(`[data-id="${id}"], [data-edge="${id}"]`);
       const parte = el?.querySelector<HTMLElement>('[data-part]');
