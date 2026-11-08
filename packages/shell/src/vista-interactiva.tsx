@@ -30,7 +30,7 @@ import { idDeNodoBajo, useArrastre } from './arrastre';
 import { useControlado } from './controlado';
 import { conEstadosTransitorios, useSeleccion } from './seleccion';
 import { elementoBajo } from './interaccion';
-import { estadosDeRuta, moverFoco, rutaMasCorta, unirEstados } from './ruta-y-foco';
+import { estadosDeRuta, moverFoco, moverFocoEnSecuencia, rutaMasCorta, unirEstados } from './ruta-y-foco';
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
 import { useGeometria } from './geometria';
@@ -291,14 +291,18 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas, vista.type), [theme, fontFiles, medidas, vista.type]);
 
   // Ruta (en-ruta / atenuado) y foco de teclado: los calcula el shell y render solo los pinta.
+  const enSecuencia = vista.type === 'sequence';
+  const visible = (id: string): boolean => (visibility?.(id) ?? 1) > 0;
   const nodosSeleccionados = seleccion.filter((e) => e.tipo === 'nodo').map((e) => e.id);
   const ruta = useMemo(() => {
+    if (enSecuencia) return [];
     if (props.route !== undefined) return props.route;
     if (nodosSeleccionados.length !== 2) return [];
     return rutaMasCorta(vista, nodosSeleccionados[0]!, nodosSeleccionados[1]!) ?? [];
   }, [props.route, vista, nodosSeleccionados.join('\n')]);
   const [foco, fijarFoco] = useState<string | undefined>(undefined);
-  const focoVigente = foco !== undefined && vista.nodes.some((n) => n.id === foco) ? foco : undefined;
+  const focoVigente =
+    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction?.messages.some((m) => `${vista.interaction!.id}:${m.ruta}` === foco) === true)) ? foco : undefined;
   const estadosFinales = useMemo(
     () => unirEstados(unirEstados(estados, estadosDeRuta(vista, ruta)), focoVigente === undefined ? {} : { [focoVigente]: ['foco'] }),
     [estados, vista, ruta, focoVigente],
@@ -319,7 +323,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   };
 
   const alEnfocar = (evento: EventoDeFoco): void => {
-    if (evento.target === evento.currentTarget) fijarFoco((actual) => actual ?? moverFoco(vista, undefined, 'siguiente'));
+    if (evento.target === evento.currentTarget) fijarFoco((actual) => actual ?? (enSecuencia ? moverFocoEnSecuencia(vista, undefined, 'siguiente', visible) : moverFoco(vista, undefined, 'siguiente')));
   };
   const alSoltarElFoco = (evento: EventoDeFoco): void => {
     if (evento.target === evento.currentTarget) fijarFoco(undefined);
@@ -327,8 +331,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   /** Tab recorre en orden del Modelo (y suelta el foco al salirse por un extremo), flechas saltan por Aristas, Enter/Espacio colapsa o abre. */
   const alTeclear = (evento: EventoDeTecla): void => {
     if (evento.target !== evento.currentTarget) return;
-    const mover = (movimiento: Parameters<typeof moverFoco>[2]): boolean => {
-      const siguiente = moverFoco(vista, focoVigente, movimiento);
+    const mover = (movimiento: Parameters<typeof moverFoco>[2] | Parameters<typeof moverFocoEnSecuencia>[2]): boolean => {
+      const siguiente = enSecuencia ? moverFocoEnSecuencia(vista, focoVigente, movimiento as Parameters<typeof moverFocoEnSecuencia>[2], visible) : moverFoco(vista, focoVigente, movimiento as Parameters<typeof moverFoco>[2]);
       if (siguiente === undefined) return false;
       fijarFoco(siguiente);
       return true;
@@ -339,12 +343,16 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
         atendida = mover(evento.shiftKey ? 'anterior' : 'siguiente');
         break;
       case 'ArrowRight':
+        atendida = mover(enSecuencia ? 'derecha' : 'adelante');
+        break;
       case 'ArrowDown':
-        atendida = mover('adelante');
+        atendida = mover(enSecuencia ? 'abajo' : 'adelante');
         break;
       case 'ArrowLeft':
+        atendida = mover(enSecuencia ? 'izquierda' : 'atras');
+        break;
       case 'ArrowUp':
-        atendida = mover('atras');
+        atendida = mover(enSecuencia ? 'arriba' : 'atras');
         break;
       case 'Enter':
       case ' ':
@@ -363,7 +371,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     const caja = zona.current!.getBoundingClientRect();
     const k = width / camaraVigente.current.width;
     const punto = { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k };
-    return elementoBajo(mostrado.vista, mostrado.geometria, theme, punto, { tolerancia: ajustes.hitTolerance / k, atributos: detalle === 'completo' });
+    return elementoBajo(mostrado.vista, mostrado.geometria, theme, punto, { tolerancia: ajustes.hitTolerance / k, atributos: detalle === 'completo', ...(visibility !== undefined && { visibilidad: visibility }) });
   };
 
   const alMoverElRaton = (evento: EventoDeRaton): void => {
