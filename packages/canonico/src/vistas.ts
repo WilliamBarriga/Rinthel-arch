@@ -3,6 +3,8 @@
  * Pura: no modifica la Fuente. Una Vista solo selecciona, nunca define entidades.
  */
 import type { Arista, Extremo, FuenteCanonica, Nodo, OverrideDeNodo, Paso, Vista } from './esquema';
+import { resolverSecuencia } from './secuencia';
+import type { InteraccionResuelta } from './secuencia';
 
 /** Nodo visible: un Grupo colapsado se muestra como un Nodo unico con su contador. */
 export interface NodoResuelto extends Omit<Nodo, 'children'> {
@@ -39,6 +41,8 @@ export interface VistaResuelta {
   overrides: OverrideDeNodo[];
   /** Pasos de revelado de la Vista (ADR 0002), tal cual; `revealAt` los interpreta. */
   steps: Paso[];
+  /** Solo en Vistas `sequence`: la Interaccion proyectada. Sus `nodes` son las Lifelines, en orden de columna, y no hay `edges`. */
+  interaction?: InteraccionResuelta;
 }
 
 /** Estado de colapso del llamador (p. ej. el shell); gana a lo declarado en la Vista. */
@@ -114,6 +118,11 @@ export function resolveView(
       ...(enlace !== undefined && { link: enlace }),
     };
   };
+
+  if (vista.type === 'sequence') {
+    const { nodes, interaction } = resolverSecuencia(fuente.model.interactions, fuente.model.nodes, vista, excluidos, resolver);
+    return { type: vista.type, nodes, edges: [], overrides: vista.overrides, steps: vista.steps, ...(interaction !== undefined && { interaction }) };
+  }
 
   return {
     type: vista.type,

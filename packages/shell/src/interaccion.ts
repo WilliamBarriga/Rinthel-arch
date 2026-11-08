@@ -34,7 +34,8 @@ export interface OpcionesDeHitTest {
   atributos?: boolean;
 }
 
-type Geo = Pick<Geometria, 'nodes' | 'edges' | 'labels'>;
+/** Lo que el hit-test lee de la Geometria; una de secuencia no tiene `edges` ni `labels` (sus Mensajes no son seleccionables todavia). */
+type Geo = Pick<Geometria, 'nodes'> & { edges?: Record<string, { points: Punto[] }>; labels?: Record<string, CajaDeNodo>; lifelines?: Record<string, { x: number; y1: number; y2: number }>; activations?: readonly { lifeline: string; x: number; y1: number; y2: number; width: number }[] };
 
 const contiene = (caja: CajaDeNodo, p: Punto): boolean =>
   p.x >= caja.x && p.x <= caja.x + caja.width && p.y >= caja.y && p.y <= caja.y + caja.height;
@@ -73,10 +74,10 @@ export function elementoBajo(
   const estilo = resolverEstilo(tema, undefined, undefined, undefined, vista.type);
 
   // Aristas se dibujan encima de los Nodos; la ultima dibujada es la superior.
-  const aristas = vista.edges.map((arista) => ({ arista, id: idDeArista(arista), puntos: geometria.edges[idDeArista(arista)]?.points ?? [] }));
+  const aristas = vista.edges.map((arista) => ({ arista, id: idDeArista(arista), puntos: geometria.edges?.[idDeArista(arista)]?.points ?? [] }));
   const dibujadas = aristas.filter(({ puntos }) => puntos.length >= 2);
   for (const { arista, id, puntos } of [...dibujadas].reverse()) {
-    if (arista.label !== undefined && contiene(cajaDeEtiqueta(arista.label, puntos, geometria.labels[id], estilo), punto)) return { tipo: 'etiqueta', id };
+    if (arista.label !== undefined && contiene(cajaDeEtiqueta(arista.label, puntos, geometria.labels?.[id], estilo), punto)) return { tipo: 'etiqueta', id };
   }
   for (const { id, puntos } of [...dibujadas].reverse()) {
     for (let i = 1; i < puntos.length; i++) {
@@ -94,6 +95,11 @@ export function elementoBajo(
     const atributo = filas[indice];
     return atributo === undefined ? { tipo: 'nodo', id: nodo.id } : { tipo: 'atributo', id: `${nodo.id}#${atributo.name}` };
   }
+  // Secuencia: la activacion y la linea de una Lifeline cuentan como la propia Lifeline.
+  const activacion = geometria.activations?.find((a) => punto.x >= a.x && punto.x <= a.x + a.width && punto.y >= a.y1 && punto.y <= a.y2);
+  if (activacion !== undefined) return { tipo: 'nodo', id: activacion.lifeline };
+  const linea = Object.entries(geometria.lifelines ?? {}).find(([, l]) => Math.abs(punto.x - l.x) <= tolerancia && punto.y >= l.y1 && punto.y <= l.y2);
+  if (linea !== undefined) return { tipo: 'nodo', id: linea[0] };
   return undefined;
 }
 
@@ -114,10 +120,10 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
     return { x: caja.x + fila.x, y: caja.y + fila.y, width: fila.width, height: fila.height };
   }
   const arista = vista.edges.find((a) => idDeArista(a) === elemento.id);
-  const puntos = geometria.edges[elemento.id]?.points ?? [];
+  const puntos = geometria.edges?.[elemento.id]?.points ?? [];
   if (arista === undefined || puntos.length < 2) return undefined;
   if (elemento.tipo === 'etiqueta') {
-    return arista.label === undefined ? undefined : cajaDeEtiqueta(arista.label, puntos, geometria.labels[elemento.id], resolverEstilo(tema, undefined, undefined, undefined, vista.type));
+    return arista.label === undefined ? undefined : cajaDeEtiqueta(arista.label, puntos, geometria.labels?.[elemento.id], resolverEstilo(tema, undefined, undefined, undefined, vista.type));
   }
   const [xs, ys] = [puntos.map((p) => p.x), puntos.map((p) => p.y)];
   const [x, y] = [Math.min(...xs), Math.min(...ys)];

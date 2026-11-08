@@ -22,6 +22,7 @@ describe('compile: Nodos y specification', () => {
       specification: { nodeTypes: [{ name: 'servicio', description: '' }] },
       model: {
         edges: [],
+        interactions: [],
         nodes: [
           {
             id: 'api',
@@ -638,14 +639,14 @@ describe('compile: Vistas', () => {
 
     expect(issues).toEqual([]);
     expect(canonico?.views).toEqual([
-      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, overrides: [], collapsed: [], expanded: [], links: [], steps: [] },
+      { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, order: [], overrides: [], collapsed: [], expanded: [], links: [], steps: [] },
     ]);
   });
 
   it('una Vista flow solo con type; el resto queda vacio', () => {
     const { canonico } = compile({ 'main.dg': `${base} view f { type flow }` });
 
-    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], overrides: [], collapsed: [], expanded: [], links: [], steps: [] }]);
+    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], order: [], overrides: [], collapsed: [], expanded: [], links: [], steps: [] }]);
   });
 
   it('acepta `*` y `**` como selectores y varios include', () => {
@@ -1331,5 +1332,38 @@ describe('compile: Temas del ejemplo rinthel-arch', () => {
       expect(tema(nombre).nodo.tipos['paquete']?.map((op) => op.nombre)).toEqual(['acento']);
       expect(tema(nombre).nodo.tipos['externo']?.map((op) => op.nombre)).toEqual(['relleno', 'borde']);
     }
+  });
+});
+
+describe('compile: Interacciones y Vistas de secuencia', () => {
+  it('compila una Interaccion con tipos, alias, etiquetas y mensaje propio, y una Vista con interaction y order', () => {
+    const { issues, canonico } = compile({
+      'main.dg': `specification { node servicio }
+        model {
+          servicio a
+          servicio b
+          interaction flujo "Flujo" "Descripcion" {
+            primero: a -> b "ida" "detalle"
+            async b -> b
+            reply b -> a "vuelta"
+          }
+        }
+        view v { type sequence  interaction flujo  order b, a }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect(canonico?.model.interactions).toEqual([
+      {
+        id: 'flujo',
+        title: 'Flujo',
+        description: 'Descripcion',
+        items: [
+          { type: 'message', id: 'primero', kind: 'sync', from: 'a', to: 'b', label: 'ida', description: 'detalle' },
+          { type: 'message', kind: 'async', from: 'b', to: 'b' },
+          { type: 'message', kind: 'reply', from: 'b', to: 'a', label: 'vuelta' },
+        ],
+      },
+    ]);
+    expect(canonico?.views[0]).toMatchObject({ type: 'sequence', interaction: 'flujo', order: ['b', 'a'] });
   });
 });

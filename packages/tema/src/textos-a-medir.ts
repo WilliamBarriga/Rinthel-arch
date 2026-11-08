@@ -12,7 +12,7 @@ import { metricasDeHoja } from './metricas';
 import type { TablaDeMetricas } from './metricas';
 import { textosDeNodo } from './slots';
 
-export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges'>, tabla: TablaDeMetricas): TextoAMedir[] {
+export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges' | 'interaction'>, tabla: TablaDeMetricas): TextoAMedir[] {
   const vistos = new Map<string, TextoAMedir>();
   const anadir = (familia: string, tamano: number, texto: string, peso?: number): void => {
     const clave = claveDeTexto(familia, tamano, texto, peso);
@@ -25,5 +25,6 @@ export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges'>, tabl
   }
   const e = tabla.etiqueta;
   for (const arista of vista.edges) if (arista.label !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, arista.label, e.pesoDeEtiqueta);
+  for (const mensaje of vista.interaction?.messages ?? []) if (mensaje.label !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, mensaje.label, e.pesoDeEtiqueta);
   return [...vistos.values()];
 }

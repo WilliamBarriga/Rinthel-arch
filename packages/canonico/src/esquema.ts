@@ -102,10 +102,40 @@ export interface Arista {
   identifying?: boolean;
 }
 
-/** Conjunto unico de Nodos y Aristas del Proyecto documentado (CONTEXT.md). */
+/** Conjunto unico de Nodos, Aristas e Interacciones del Proyecto documentado (CONTEXT.md). */
 export interface Modelo {
   nodes: Nodo[];
   edges: Arista[];
+  interactions?: Interaccion[];
+}
+
+/** Tipos de Mensaje de una Interaccion (`create` y `destroy` llegan con su ticket). */
+export const TIPOS_DE_MENSAJE = ['sync', 'async', 'reply'] as const;
+export type TipoDeMensaje = (typeof TIPOS_DE_MENSAJE)[number];
+
+/**
+ * Mensaje de una Interaccion: de un Nodo a otro (`from == to` es un Mensaje propio). Su identidad es la
+ * posicion en la Interaccion; `id` es solo un alias opcional, unico en su Interaccion, para citarlo.
+ */
+export interface Mensaje {
+  type: 'message';
+  id?: string;
+  kind: TipoDeMensaje;
+  from: string;
+  to: string;
+  label?: string;
+  description?: string;
+}
+
+/** Item de una Interaccion; el orden de declaracion es el orden temporal. Hoy solo Mensajes. */
+export type ItemDeInteraccion = Mensaje;
+
+/** Escenario ordenado entre Nodos (Lifelines); id en un espacio de nombres propio (puede coincidir con el de un Nodo). */
+export interface Interaccion {
+  id: string;
+  title: string;
+  description: string;
+  items: ItemDeInteraccion[];
 }
 
 const referenciaOpacaSchema = z.object({ kind: z.string().min(1), ref: z.string() });
@@ -150,9 +180,27 @@ export const aristaSchema = z.object({
   identifying: z.boolean().optional(),
 });
 
+export const mensajeSchema = z.object({
+  type: z.literal('message'),
+  id: z.string().min(1).optional(),
+  kind: z.enum(TIPOS_DE_MENSAJE).default('sync'),
+  from: idDeNodoSchema,
+  to: idDeNodoSchema,
+  label: z.string().optional(),
+  description: z.string().optional(),
+});
+
+export const interaccionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  items: z.array(mensajeSchema).default([]),
+});
+
 const modeloSchema = z.object({
   nodes: z.array(nodoSchema),
   edges: z.array(aristaSchema).default([]),
+  interactions: z.array(interaccionSchema).default([]),
 });
 
 /**
@@ -169,7 +217,7 @@ export const temaSchema = z.looseObject({
 export type Tema = z.infer<typeof temaSchema>;
 
 /** Tipos de diagrama. */
-export const TIPOS_DE_VISTA = ['architecture', 'flow', 'er'] as const;
+export const TIPOS_DE_VISTA = ['architecture', 'flow', 'sequence', 'er'] as const;
 
 /**
  * Override de presentacion de un Nodo en una Vista: solo apariencia, nunca toca
@@ -217,6 +265,10 @@ export const vistaSchema = z.object({
   include: z.array(z.string().min(1)).default([]),
   exclude: z.array(z.string().min(1)).default([]),
   depth: z.number().int().min(0).optional(),
+  /** Solo en Vistas `sequence`: la Interaccion que proyecta (id de `model.interactions`). */
+  interaction: z.string().min(1).optional(),
+  /** Solo en Vistas `sequence`: orden de las Lifelines, parcial; el resto sigue por primera aparicion. */
+  order: z.array(idDeNodoSchema).default([]),
   overrides: z.array(overrideSchema).default([]),
   theme: z.string().min(1).optional(),
   /**
