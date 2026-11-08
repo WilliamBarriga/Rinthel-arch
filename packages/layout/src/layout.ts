@@ -422,6 +422,7 @@ export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Me
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
     mensajes: vista.interaction?.messages.map((m) => [m.ruta, m.kind, m.from, m.to, m.label]),
     fragmentos: vista.interaction === undefined ? undefined : claveDeFragmentos(vista.interaction.items),
+    grupos: vista.interaction?.groups?.map((g) => [g.id, g.label, g.nivel, g.lifelines]),
     metricas: claveDeMetricas(tabla),
   });
 }

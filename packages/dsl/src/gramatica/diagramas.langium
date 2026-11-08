@@ -344,7 +344,7 @@ View:
 ;
 
 ViewProperty:
-  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | ViewDrill | ViewCollapsed | ViewExpanded | ViewLink | ViewSteps | ViewInteraction | ViewOrder | NodeOverride;
+  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | ViewDrill | ViewCollapsed | ViewExpanded | ViewLink | ViewSteps | ViewInteraction | ViewOrder | ViewAutonumber | NodeOverride;
 
 ViewType:
   'type' value=Id;
@@ -380,6 +380,10 @@ ViewInteraction:
 
 ViewOrder:
   'order' targets+=Ref (',' targets+=Ref)*;
+
+// Numera los Mensajes proyectados por la Vista de secuencia.
+ViewAutonumber:
+  {infer ViewAutonumber} 'autonumber';
 
 // Pasos de revelado (ADR 0002): acumulativos; `show` revela y `hide` oculta.
 // Un item es un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`edge a -> b`, o `a -> b`).
@@ -486,7 +490,7 @@ Id returns string:
   'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
-  'model' | 'node' | 'specification' | 'interaction' | 'async' | 'reply' | 'create' | 'destroy' |
+  'model' | 'node' | 'specification' | 'interaction' | 'autonumber' | 'async' | 'reply' | 'create' | 'destroy' |
   'opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par' | 'else' | 'and' | 'note' | 'left' | 'right' | 'of' | 'ref' |
   'pk' | 'fk' | 'uk' | 'identifying' | 'height' | 'key' | 'optional' | 'alternate';
 

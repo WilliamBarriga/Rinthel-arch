@@ -17,6 +17,17 @@ export interface MensajeResuelto {
   label?: string;
   /** Rutas de los Fragmentos que lo contienen, de fuera hacia dentro; ausente si esta al nivel de la Interaccion. */
   ambito?: string[];
+  /** Numero de `autonumber` (ya incluido en `label`); ausente si la Vista no numera. */
+  numero?: number;
+}
+
+/** Grupo abierto cuyo `box` envuelve a las Lifelines de sus hijas; `lifelines` son las que contiene, en orden de columna (la del propio Grupo, si la tiene, primera). */
+export interface CajaDeGrupo {
+  id: string;
+  label: string;
+  /** Anidacion entre `box`es (0 el exterior). */
+  nivel: number;
+  lifelines: string[];
 }
 
 /** Fragmento proyectado: `ruta` es su identidad (indice del item, o `2.0.1` si esta dentro del operando 0 del item 2). */
@@ -58,6 +69,8 @@ export interface InteraccionResuelta {
   messages: MensajeResuelto[];
   /** Los mismos Mensajes con sus Fragmentos, en arbol. */
   items: ItemResuelto[];
+  /** `box` de los Grupos abiertos con Lifelines hijas, los exteriores antes que los anidados. */
+  groups?: CajaDeGrupo[];
 }
 
 /**
@@ -135,8 +148,12 @@ export function lifelinesDe(mensajes: readonly Pick<Mensaje, 'from' | 'to'>[], o
 }
 
 /**
- * Proyecta la Interaccion de `vista`: las Lifelines (Nodos resueltos, sin hijos, en orden de columna) y los Mensajes
- * sin los de una Lifeline excluida. Una Interaccion o un Nodo que no existen se omiten (`validate` los informa).
+ * Proyecta la Interaccion de `vista`: las Lifelines (Nodos resueltos, sin hijos, en orden de columna) y los Mensajes.
+ * Un extremo dentro de un Grupo colapsado (`ancestroColapsado`) se eleva al Grupo; el Mensaje que queda con ambos
+ * extremos en la misma Lifeline pasa a ser propio. `create`/`destroy` de un descendiente no crean ni destruyen el Grupo:
+ * al elevarse pasan a `async`. Un extremo excluido (o su Grupo) quita el Mensaje; un Fragmento sin Mensajes desaparece.
+ * Con `autonumber` cada Mensaje proyectado lleva su numero delante de la etiqueta. Una Interaccion o un Nodo que no
+ * existen se omiten (`validate` los informa).
  */
 export function resolverSecuencia(
   interacciones: readonly Interaccion[],
@@ -144,11 +161,13 @@ export function resolverSecuencia(
   vista: Vista,
   excluidos: ReadonlySet<string>,
   resolverNodo: (nodo: Nodo) => NodoResuelto,
+  ancestroColapsado: ReadonlyMap<string, string> = new Map(),
 ): { nodes: NodoResuelto[]; interaction?: InteraccionResuelta } {
   const interaccion = interacciones.find((candidata) => candidata.id === vista.interaction);
   if (interaccion === undefined) return { nodes: [] };
   const porId = nodosPorId(nodos);
-  const visible = (id: string): boolean => porId.has(id) && !excluidos.has(id);
+  const elevar = (id: string): string => ancestroColapsado.get(id) ?? id;
+  const visible = (id: string): boolean => porId.has(id) && !excluidos.has(id) && !excluidos.has(elevar(id));
   const mensajes: MensajeResuelto[] = [];
   const proyectar = (items: readonly ItemDeInteraccion[], prefijo: string, ambito: string[]): ItemResuelto[] =>
     items.flatMap((item, indice): ItemResuelto[] => {
@@ -164,27 +183,81 @@ export function resolverSecuencia(
         return referida === undefined ? [] : [{ type: 'ref', ruta, interaction: referida.id, title: referida.title, participantes: [...new Set(aplanarMensajes(referida.items).flatMap((m) => [m.from, m.to]))] }];
       }
       if (!visible(item.from) || !visible(item.to)) return [];
-      const mensaje: MensajeResuelto = { ruta, ...(item.id !== undefined && { id: item.id }), kind: item.kind, from: item.from, to: item.to, ...(item.label !== undefined && { label: item.label }), ...(ambito.length > 0 && { ambito }) };
+      const from = elevar(item.from);
+      const to = elevar(item.to);
+      const kind = (item.kind === 'create' || item.kind === 'destroy') && to !== item.to ? 'async' : item.kind;
+      const mensaje: MensajeResuelto = { ruta, ...(item.id !== undefined && { id: item.id }), kind, from, to, ...(item.label !== undefined && { label: item.label }), ...(ambito.length > 0 && { ambito }) };
       mensajes.push(mensaje);
       return [{ type: 'message', message: mensaje }];
     });
   const crudos = proyectar(interaccion.items, '', []);
-  const ids = lifelinesDe(mensajes, vista.order);
-  const lifelines = ids.map((id) => ({ ...resolverNodo(porId.get(id)!), children: [] }));
+  if (vista.autonumber === true) {
+    mensajes.forEach((mensaje, i) => {
+      mensaje.numero = i + 1;
+      mensaje.label = mensaje.label === undefined ? `${i + 1}` : `${i + 1}. ${mensaje.label}`;
+    });
+  }
+  const ordenadas = lifelinesDe(mensajes, vista.order.map(elevar));
+  const { orden, grupos } = agruparLifelines(ordenadas, nodos);
+  const lifelines = orden.map((id) => ({ ...resolverNodo(porId.get(id)!), children: [] }));
+  const groups = grupos.map((grupo) => ({ ...grupo, label: resolverNodo(porId.get(grupo.id)!).label }));
   // Con las Lifelines ya conocidas: una Nota sin ninguna de las suyas, o un `ref` sin Lifelines donde pintarse, no se proyectan; un Fragmento vacio desaparece.
   const podar = (items: readonly ItemResuelto[]): ItemResuelto[] =>
     items.flatMap((item): ItemResuelto[] => {
       if (item.type === 'message') return [item];
       if (item.type === 'note') {
-        const targets = item.targets.filter((id) => ids.includes(id));
+        const targets = item.targets.filter((id) => orden.includes(id));
         return targets.length === 0 ? [] : [{ ...item, targets }];
       }
-      if (item.type === 'ref') return ids.length === 0 ? [] : [{ ...item, participantes: ids.filter((id) => item.participantes.includes(id)) }];
+      if (item.type === 'ref') return orden.length === 0 ? [] : [{ ...item, participantes: orden.filter((id) => item.participantes.includes(id)) }];
       const operands = item.operands.map((operando) => ({ ...operando, items: podar(operando.items) }));
       return operands.every((operando) => operando.items.length === 0) ? [] : [{ ...item, operands }];
     });
   const items = podar(crudos);
-  return { nodes: lifelines, interaction: { id: interaccion.id, title: interaccion.title, messages: mensajes, items } };
+  return { nodes: lifelines, interaction: { id: interaccion.id, title: interaccion.title, messages: mensajes, items, ...(groups.length > 0 && { groups }) } };
+}
+
+/**
+ * Los `box` de los Grupos abiertos: un Grupo tiene `box` si alguna Lifeline es descendiente suyo. Reordena las
+ * Lifelines para que las de cada `box` sean contiguas (en el sitio de la primera aparicion) con la del propio
+ * Grupo, si la tiene, primera. Devuelve el nuevo orden y los `box` de fuera hacia dentro.
+ */
+function agruparLifelines(ids: readonly string[], raices: readonly Nodo[]): { orden: string[]; grupos: Omit<CajaDeGrupo, 'label'>[] } {
+  const padre = new Map<string, string>();
+  const registrar = (hijos: readonly Nodo[], de: string | undefined): void => {
+    for (const hijo of hijos) {
+      if (de !== undefined) padre.set(hijo.id, de);
+      registrar(hijo.children, hijo.id);
+    }
+  };
+  registrar(raices, undefined);
+  const ancestros = (id: string): string[] => {
+    const cadena: string[] = [];
+    for (let actual = padre.get(id); actual !== undefined; actual = padre.get(actual)) cadena.unshift(actual);
+    return cadena;
+  };
+  const conCaja = new Set(ids.flatMap(ancestros));
+  const cadena = (id: string): string[] => [...ancestros(id), ...(conCaja.has(id) ? [id] : [])];
+  const agrupar = (miembros: readonly string[], nivel: number): string[] => {
+    const resultado: string[] = [];
+    const vistos = new Set<string>();
+    for (const id of miembros) {
+      const clave = cadena(id)[nivel];
+      if (clave === undefined) {
+        resultado.push(id);
+      } else if (!vistos.has(clave)) {
+        vistos.add(clave);
+        const dentro = miembros.filter((m) => cadena(m)[nivel] === clave);
+        resultado.push(...agrupar([...dentro.filter((m) => m === clave), ...dentro.filter((m) => m !== clave)], nivel + 1));
+      }
+    }
+    return resultado;
+  };
+  const orden = agrupar(ids, 0);
+  const grupos = [...conCaja]
+    .map((id) => ({ id, nivel: ancestros(id).length, lifelines: orden.filter((l) => cadena(l).includes(id)) }))
+    .sort((a, b) => a.nivel - b.nivel || orden.indexOf(a.lifelines[0]!) - orden.indexOf(b.lifelines[0]!));
+  return { orden, grupos };
 }
 
 /**

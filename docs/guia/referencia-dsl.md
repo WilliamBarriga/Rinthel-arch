@@ -113,6 +113,7 @@ view paquetes {
 | `theme nombre { parche }` | Tema de la Vista, con un parche opcional solo para ella |
 | `interaction id` | Solo en `sequence` (obligatoria): la Interaccion que proyecta |
 | `order a, b` | Solo en `sequence`: orden de las Lifelines de izquierda a derecha; parcial, el resto sigue por primera aparicion |
+| `autonumber` | Solo en `sequence`: numera los Mensajes proyectados (`1. etiqueta`), tras `exclude`/`depth`; cuenta `reply`, `create`, `destroy` y propios elevados |
 | `node id { ... }` | Overrides de presentacion de un Nodo en esta Vista: `label`, `pin x,y`, `color` |
 
 Una Vista nunca define entidades nuevas ni toca el Modelo.
@@ -127,7 +128,7 @@ view compra {
 }
 ```
 
-Dibuja una columna por Lifeline y los Mensajes de arriba abajo, con las activaciones derivadas (las anidadas van desplazadas). Cualquier Tema la dibuja: `message` y `lifeline` se derivan de la Arista y `activation` del Nodo; `reply` lleva la continuidad opuesta a la del trazo base. `include` y `pin` son error en una Vista de secuencia (`E_VIEW_PROPERTY_FOR_TYPE`), igual que `interaction` y `order` fuera de ella.
+Dibuja una columna por Lifeline y los Mensajes de arriba abajo, con las activaciones derivadas (las anidadas van desplazadas). Cualquier Tema la dibuja: `message` y `lifeline` se derivan de la Arista y `activation` del Nodo; `reply` lleva la continuidad opuesta a la del trazo base. `include` y `pin` son error en una Vista de secuencia (`E_VIEW_PROPERTY_FOR_TYPE`), igual que `interaction`, `order` y `autonumber` fuera de ella. `depth`, `collapsed` y `exclude` valen: `depth`/`collapsed` funden las Lifelines hijas en la de su Grupo y sus Mensajes se elevan (dentro del mismo Grupo pasan a mensaje propio; un `create`/`destroy` de una hija pasa a `async`); con el Grupo abierto, un `box` con su nombre envuelve a sus hijas y la Lifeline propia del Grupo, si la tiene, va primera. `exclude` quita la Lifeline y sus Mensajes, y un Fragmento que queda vacio desaparece.
 
 ### Pin
 

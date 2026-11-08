@@ -220,7 +220,9 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
   });
 
   // Overrides solo sobre Nodos que la Vista muestra.
-  const visibles = new Set(resolveView(fuente, vista.id)?.nodes.map((nodo) => nodo.id));
+  // En secuencia la Vista no selecciona Nodos: vale cualquiera que no excluya (puede ser una Lifeline fundida o el `box` de un Grupo).
+  const deSecuencia = vista.type === 'sequence' ? nodosNoExcluidos(fuente.model.nodes, vista) : undefined;
+  const visibles = deSecuencia ?? new Set(resolveView(fuente, vista.id)?.nodes.map((nodo) => nodo.id));
   vista.overrides.forEach((override, i) => {
     if (!visibles.has(override.node)) {
       emitir([...ruta, 'overrides', i, 'node'], CODIGOS.E_OVERRIDE_OUTSIDE_VIEW, `Override sobre '${override.node}', que la Vista '${vista.id}' no muestra`);
@@ -229,10 +231,12 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
 
   // Drill-down: `link` a Vistas que existen; Grupos que la Vista muestra; `link` y `expanded` excluyentes.
   const grupos = new Set(
-    resolveView(
-      { ...fuente, views: [{ ...vista, collapsed: [], expanded: [], links: [], depth: undefined }] },
-      vista.id,
-    )?.nodes.filter((nodo) => nodo.childCount > 0).map((nodo) => nodo.id),
+    deSecuencia === undefined
+      ? resolveView(
+          { ...fuente, views: [{ ...vista, collapsed: [], expanded: [], links: [], depth: undefined }] },
+          vista.id,
+        )?.nodes.filter((nodo) => nodo.childCount > 0).map((nodo) => nodo.id)
+      : [...deSecuencia].filter((id) => gruposDe(fuente.model.nodes).has(id)),
   );
   const enlazados = new Set(vista.links.map(({ node }) => node));
   vista.links.forEach((enlace, i) => {
@@ -329,6 +333,9 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
     if (vista.interaction !== undefined) {
       emitirCon([...ruta, 'interaction'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'interaction' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "cambia 'type' a sequence o quita 'interaction'" });
     }
+    if (vista.autonumber === true) {
+      emitirCon([...ruta, 'autonumber'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'autonumber' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "cambia 'type' a sequence o quita 'autonumber'" });
+    }
     if (vista.order.length > 0) {
       emitirCon([...ruta, 'order', 0], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'order' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "cambia 'type' a sequence o quita 'order'" });
     }
@@ -357,6 +364,21 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
       emitirCon([...ruta, 'order', i], CODIGOS.W_ORDER_NOT_IN_INTERACTION, `'${id}' no participa en la Interaccion '${interaccion.id}'; 'order' lo ignora`, { severity: 'warning' });
     }
   });
+}
+
+/** Ids de todos los Nodos que los `exclude` de la Vista no quitan. */
+function nodosNoExcluidos(nodos: readonly Nodo[], vista: Vista): Set<string> {
+  const todos = todosLosIds(nodos);
+  return new Set(todos.filter((id) => !vista.exclude.some((selector) => matchesSelector(selector, id))));
+}
+
+/** Ids de los Nodos con hijos (Grupos). */
+function gruposDe(nodos: readonly Nodo[], destino = new Set<string>()): Set<string> {
+  for (const nodo of nodos) {
+    if (nodo.children.length > 0) destino.add(nodo.id);
+    gruposDe(nodo.children, destino);
+  }
+  return destino;
 }
 
 function todosLosIds(nodos: readonly Nodo[]): string[] {

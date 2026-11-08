@@ -72,6 +72,9 @@ const geometriaSecuenciaSchema = z.object({
       }),
     )
     .default([]),
+  groups: z
+    .array(z.object({ id: z.string(), label: z.string(), nivel: z.number().int(), x: numeroFinito, y: numeroFinito, width: numeroFinito, height: numeroFinito, title: cajaDeNodoSchema }))
+    .default([]),
   width: numeroFinito,
   height: numeroFinito,
 });

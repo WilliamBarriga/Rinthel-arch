@@ -68,6 +68,20 @@ export interface NotaColocada {
   fold: number;
 }
 
+/** `box` de un Grupo abierto: envuelve las cabeceras y Lifelines de sus hijas; `title` es la caja de su nombre (arriba a la izquierda). */
+export interface CajaDeGrupoColocada {
+  id: string;
+  /** Texto del nombre del Grupo. */
+  label: string;
+  /** Anidacion entre `box`es (0 el exterior). */
+  nivel: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  title: CajaDeNodo;
+}
+
 /** Geometria de una Vista de secuencia: `nodes` son las cabeceras de las Lifelines (todas en la misma `y`). */
 export interface GeometriaSecuencia {
   kind: 'secuencia';
@@ -81,6 +95,8 @@ export interface GeometriaSecuencia {
   fragments: MarcoDeFragmento[];
   /** Notas, en orden de declaracion. */
   notes: NotaColocada[];
+  /** `box` de los Grupos abiertos, los exteriores antes que los anidados. */
+  groups: CajaDeGrupoColocada[];
   width: number;
   height: number;
 }
@@ -106,6 +122,9 @@ const HOLGURA_DE_GUARDA = 8;
 const HUECO_DE_NOTA = 12;
 const SOBRESALE_DE_NOTA = 8;
 const ESPACIO_ENTRE_NOTAS = 8;
+const RELLENO_H_DE_GRUPO = 8;
+const RELLENO_V_DE_GRUPO = 4;
+const HOLGURA_DE_TITULO = 8;
 
 /** Niveles de Fragmentos anidados de una lista de items (0 si no hay ninguno); `destino` recibe, por Fragmento, cuantos niveles hay bajo el. */
 function profundidadDe(items: readonly ItemResuelto[], destino = new Map<string, number>()): number {
@@ -171,10 +190,23 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
     if (actual < ancho) huecos[hasta - 1] = huecos[hasta - 1]! + (ancho - actual);
   }
 
+  // `box` de Grupos abiertos: cada nivel reserva una franja de titulo sobre las cabeceras y relleno a los lados.
+  const grupos = vista.interaction?.groups ?? [];
+  const niveles = Math.max(0, ...grupos.map((g) => g.nivel + 1));
+  const titulos = new Map(grupos.map((g) => [g.id, tamanoDeEtiqueta(g.label, tabla.etiqueta)]));
+  const altoDeTitulo = Math.max(0, ...[...titulos.values()].map((t) => t.height)) + HOLGURA_DE_TITULO;
+  const relleno = (nivel: number): number => RELLENO_H_DE_GRUPO * (niveles - nivel);
+  const extremos = new Map(grupos.map((g) => [g.id, { desde: Math.min(...g.lifelines.map((id) => columna.get(id)!)), hasta: Math.max(...g.lifelines.map((id) => columna.get(id)!)) }]));
+  // El hueco entre dos columnas suma el relleno del box que termina a la izquierda y el del que empieza a la derecha.
+  for (let k = 0; k + 1 < lifelines.length; k++) {
+    const termina = Math.max(0, ...grupos.filter((g) => extremos.get(g.id)!.hasta === k).map((g) => relleno(g.nivel)));
+    const empieza = Math.max(0, ...grupos.filter((g) => extremos.get(g.id)!.desde === k + 1).map((g) => relleno(g.nivel)));
+    huecos[k] = huecos[k]! + termina + empieza;
+  }
   const centros: number[] = [];
   const nivelesBajo = new Map<string, number>();
   const profundidad = profundidadDe(vista.interaction?.items ?? [], nivelesBajo);
-  const margenIzquierdo = MARGEN + (profundidad > 0 ? RELLENO_H_DE_FRAGMENTO + SANGRIA_DE_ANIDADO * (profundidad - 1) : 0);
+  const margenIzquierdo = MARGEN + Math.max(profundidad > 0 ? RELLENO_H_DE_FRAGMENTO + SANGRIA_DE_ANIDADO * (profundidad - 1) : 0, ...grupos.filter((g) => extremos.get(g.id)!.desde === 0).map((g) => relleno(g.nivel)));
   // Lo que las Notas de la primera columna sobresalen a su izquierda.
   const saliente0 = Math.max(
     0,
@@ -186,7 +218,7 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   );
   lifelines.forEach((_, i) => centros.push(i === 0 ? margenIzquierdo + Math.max((medidas[0]?.width ?? 0) / 2, saliente0) : centros[i - 1]! + huecos[i - 1]!));
   const x = (id: string): number => Math.round(centros[columna.get(id)!]!);
-  const yCabecera = MARGEN;
+  const yCabecera = MARGEN + niveles * altoDeTitulo + (niveles > 0 ? RELLENO_V_DE_GRUPO : 0);
   const yInicio = yCabecera + altoDeCabecera + MARGEN;
 
   // Filas: la `y` de cada flecha, de arriba abajo; un Fragmento suma pestana, guarda y padding arriba, padding abajo y un divisor por operando.
@@ -407,6 +439,18 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
     lineas[nodo.id] = { x: x(nodo.id), y1: caja.y + altoDeCabecera, y2: destruccion(nodo.id) < 0 ? yFinal + RELLENO_FINAL : yFinalDe(nodo.id), ...(destruccion(nodo.id) >= 0 && { destroyed: true as const }) };
     derecha = Math.max(derecha, caja.x + width);
   });
+  // Cada box rodea las cabeceras de sus Lifelines hasta el pie de sus lineas (los exteriores sobresalen mas).
+  const pie = yFinal + RELLENO_FINAL;
+  const cajasDeGrupo: CajaDeGrupoColocada[] = grupos.map((g) => {
+    const cajas = g.lifelines.map((id) => nodes[id]!);
+    const titulo = titulos.get(g.id)!;
+    const izquierda = Math.min(...cajas.map((c) => c.x)) - relleno(g.nivel);
+    const ancho = Math.max(Math.max(...cajas.map((c) => c.x + c.width)) + relleno(g.nivel) - izquierda, titulo.width + 2 * HOLGURA_DE_TITULO);
+    const arriba = MARGEN + g.nivel * altoDeTitulo;
+    const abajo = pie + RELLENO_V_DE_GRUPO * (niveles - g.nivel);
+    derecha = Math.max(derecha, izquierda + ancho);
+    return { id: g.id, label: g.label, nivel: g.nivel, x: Math.round(izquierda), y: arriba, width: Math.round(ancho), height: abajo - arriba, title: { x: Math.round(izquierda) + HOLGURA_DE_TITULO, y: arriba + HOLGURA_DE_TITULO / 2, ...titulo } };
+  });
   const hayAlgo = lifelines.length > 0;
   return {
     kind: 'secuencia',
@@ -416,7 +460,8 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
     messages: rutas,
     fragments: marcos,
     notes: notas,
+    groups: cajasDeGrupo,
     width: hayAlgo ? derecha + MARGEN : 2 * MARGEN,
-    height: hayAlgo ? yFinal + RELLENO_FINAL + MARGEN : 2 * MARGEN,
+    height: hayAlgo ? pie + RELLENO_V_DE_GRUPO * niveles + MARGEN : 2 * MARGEN,
   };
 }

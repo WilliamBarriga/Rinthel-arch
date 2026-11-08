@@ -48,7 +48,7 @@ export const CODIGOS = Object.freeze({
   E_UNKNOWN_STEP: 'E_UNKNOWN_STEP',
   /** `type` de Vista ausente o desconocido. */
   E_UNKNOWN_VIEW_TYPE: 'E_UNKNOWN_VIEW_TYPE',
-  /** Propiedad de Vista que no vale para su Tipo de diagrama (`include`/`pin` en secuencia, `interaction`/`order` fuera de ella). */
+  /** Propiedad de Vista que no vale para su Tipo de diagrama (`include`/`pin` en secuencia, `interaction`/`order`/`autonumber` fuera de ella). */
   E_VIEW_PROPERTY_FOR_TYPE: 'E_VIEW_PROPERTY_FOR_TYPE',
   /** Vista `sequence` sin `interaction`. */
   E_SEQUENCE_WITHOUT_INTERACTION: 'E_SEQUENCE_WITHOUT_INTERACTION',
@@ -153,7 +153,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_LINK_WITH_EXPANDED: 'El mismo Nodo tiene `link` y `expanded` en la misma Vista.',
   E_UNKNOWN_STEP: 'Un Paso nombra un Nodo, selector o Arista que no existe.',
   E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture`, `flow`, `sequence` ni `er`.',
-  E_VIEW_PROPERTY_FOR_TYPE: 'Una propiedad de Vista no vale para su Tipo de diagrama (`include`/`pin` en secuencia; `interaction`/`order` fuera de ella).',
+  E_VIEW_PROPERTY_FOR_TYPE: 'Una propiedad de Vista no vale para su Tipo de diagrama (`include`/`pin` en secuencia; `interaction`/`order`/`autonumber` fuera de ella).',
   E_SEQUENCE_WITHOUT_INTERACTION: 'Una Vista `sequence` no declara `interaction`.',
   E_UNKNOWN_INTERACTION: 'El `interaction` de una Vista o un `ref` nombra una Interaccion que no existe.',
   E_DUPLICATE_INTERACTION: 'Dos Interacciones con el mismo id.',

@@ -120,7 +120,7 @@ export function resolveView(
   };
 
   if (vista.type === 'sequence') {
-    const { nodes, interaction } = resolverSecuencia(fuente.model.interactions, fuente.model.nodes, vista, excluidos, resolver);
+    const { nodes, interaction } = resolverSecuencia(fuente.model.interactions, fuente.model.nodes, vista, excluidos, resolver, ancestroColapsado);
     return { type: vista.type, nodes, edges: [], overrides: vista.overrides, steps: vista.steps, ...(interaction !== undefined && { interaction }) };
   }
 

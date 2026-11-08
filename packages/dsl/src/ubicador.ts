@@ -147,6 +147,10 @@ function deVista(datos: DatosDelUbicador, indice: number, ruta: Ruta): SitioDeTe
     const prop = props.find((p) => p.$type === 'ViewInteraction');
     return prop === undefined ? null : sitio(archivo, rangoDe(prop, 'value'));
   }
+  if (campo === 'autonumber') {
+    const prop = props.find((p) => p.$type === 'ViewAutonumber');
+    return prop?.$cstNode === undefined ? null : sitio(archivo, aRango(prop.$cstNode.range));
+  }
   if (campo === 'order') {
     let resto = i as number;
     for (const prop of props) {
