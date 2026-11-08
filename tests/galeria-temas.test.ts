@@ -57,8 +57,8 @@ describe('galeria de Temas de ejemplo', () => {
     expect(errores).toEqual([]);
   });
 
-  it('hay una Vista de cobertura y una Vista de referencia por Tema', () => {
-    const esperadas = [...TEMAS, ...TEMAS.map((t) => `${t}-referencia`)];
+  it('hay una Vista de cobertura, una de referencia, una de secuencia y una ER por Tema', () => {
+    const esperadas = [...TEMAS, ...TEMAS.map((t) => `${t}-referencia`), ...TEMAS.map((t) => `${t}-secuencia`), ...TEMAS.map((t) => `${t}-er`)];
     expect(canonico?.views.map((v) => v.id).sort()).toEqual(esperadas.sort());
   });
 
@@ -82,6 +82,18 @@ describe('galeria de Temas de ejemplo', () => {
     expect(vista.nodes).toHaveLength(22);
     expect(vista.edges).toHaveLength(36);
     expect(vista.edges.some((a) => a.label === 'memoiza por Vista')).toBe(true);
+  });
+
+  it.each(TEMAS)('%s tiene Vistas de secuencia (con Fragmento y Nota) y ER (con tres tablas) con su Tema', (tema) => {
+    const secuencia = resolveView(canonico!, `${tema}-secuencia`)!;
+    expect(secuencia.type).toBe('sequence');
+    expect(secuencia.nodes.map((n) => n.id).sort()).toEqual(['cliente', 'pasarela', 'plataforma.eventos', 'plataforma.pagos', 'plataforma.pedidos', 'proveedor']);
+    expect(secuencia.interaction?.items.map((i) => i.type)).toEqual(expect.arrayContaining(['fragment', 'note']));
+    const er = resolveView(canonico!, `${tema}-er`)!;
+    expect(er.type).toBe('er');
+    expect(er.nodes.map((n) => n.id).sort()).toEqual(['datos.clientes', 'datos.lineas', 'datos.pedidos-tabla']);
+    expect(er.edges).toHaveLength(2);
+    expect(canonico!.views.find((v) => v.id === `${tema}-er`)?.theme).toBe(tema);
   });
 
   it('el Modelo cubre Grupo abierto y colapsado, Aristas con y sin etiqueta y un Nodo por estado', () => {
@@ -115,7 +127,7 @@ describe('galeria de Temas de ejemplo', () => {
 
   it('los warnings de cada ejemplo son exactamente los declarados en su cabecera, y no hay otros', async () => {
     const warnings = (await abrirSesion(archivos).diagnosticar()).filter((i) => i.severity === 'warning');
-    const vistasDe = (nombre: string) => [`En la Vista '${nombre}'`, `En la Vista '${nombre}-referencia'`];
+    const vistasDe = (nombre: string) => ['', '-referencia', '-secuencia', '-er'].map((sufijo) => `En la Vista '${nombre}${sufijo}'`);
     const deTema = (nombre: string) => warnings.filter((i) => i.message.startsWith(`Tema '${nombre}'`) || vistasDe(nombre).some((v) => i.message.startsWith(v)));
     const lista = (nombre: string, linea: string): string[] => {
       const valor = new RegExp(`^// ${linea}:\\s*(.+)$`, 'm').exec(archivos[`${nombre}.dg`]!)?.[1]?.replace(/\.$/, '').trim();

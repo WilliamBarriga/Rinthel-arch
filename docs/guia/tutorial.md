@@ -172,6 +172,27 @@ El Tema `neon` de [`examples/tutorial/paso-5/neon.dg`](../../examples/tutorial/p
 
 Pasa el raton sobre un Nodo para ver el glow cambiar y compara con el glow pulsante del Tema `synthwave` en el [mapa del repo](../../README.md#galeria).
 
+## Paso 6 (opcional): secuencia y ER
+
+El mismo Modelo se dibuja de otras formas cambiando el `type` de la Vista. [`examples/tutorial/paso-6`](../../examples/tutorial/paso-6) suma a la tienda una **Interaccion** (un escenario ordenado entre Nodos, con un Fragmento `alt` y una Nota) y dos tablas con claves:
+
+```
+interaction comprar "Comprar" {
+  cliente -> api "POST /pedidos"
+  api -> tienda.pedidos "registrar"
+  alt "pago aprobado" {
+    tienda.pedidos -> tienda.pagos "cobrar"
+  } else "pago rechazado" {
+    reply tienda.pagos -> tienda.pedidos "rechazado"
+  }
+}
+
+view comprar-secuencia { theme tienda  type sequence  interaction comprar  autonumber }
+view tablas { theme tienda  type er  include datos.clientes, datos.pedidos-tabla }
+```
+
+Las Lifelines son los Nodos del Modelo; la Vista `er` dibuja cada Nodo hoja como tabla y las Aristas con cardinalidad (`"0..*" -> "1"`) como claves foraneas. El Tema `tienda` se aplica sin cambios: lo que no declara se deriva de `node` y `edge`. Mira todos los Temas de ejemplo en secuencia y ER en la galeria (`examples/temas/galeria`).
+
 ## Siguiente
 
 - [Personalizar con Temas](personalizar-temas.md): el modelo de Capas, estados y movimiento en detalle.

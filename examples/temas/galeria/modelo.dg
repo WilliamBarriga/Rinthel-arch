@@ -46,6 +46,42 @@ model {
     nota foco "foco"
   }
 
+  dominio datos "Datos" {
+    almacen clientes "Clientes" {
+      id: uuid pk
+      nombre: text
+      email: text? uk
+    }
+    almacen pedidos-tabla "Pedidos" {
+      id: uuid pk
+      cliente_id: uuid fk
+      total: decimal "en centavos"
+    }
+    almacen lineas "Lineas" {
+      pedido_id: uuid pk fk
+      producto: text pk
+      cantidad: int
+    }
+  }
+
+  datos.pedidos-tabla#cliente_id "0..*" -> "1" datos.clientes#id "pertenece a"
+  datos.lineas#pedido_id "1..*" -> "1" datos.pedidos-tabla#id "detalla" identifying
+
+  interaction cobro "Cobro de un pedido" {
+    pedido: cliente -> pasarela "POST /pedidos"
+    pasarela -> plataforma.pedidos "registrar"
+    alt "pago aprobado" {
+      plataforma.pedidos -> plataforma.pagos "cobrar"
+      plataforma.pagos -> proveedor "API"
+      reply proveedor -> plataforma.pagos "ok"
+      async plataforma.pedidos -> plataforma.eventos "pedido.pagado"
+    } else "pago rechazado" {
+      reply plataforma.pagos -> plataforma.pedidos "rechazado"
+    }
+    note right of proveedor "idempotente"
+    reply pasarela -> cliente "201"
+  }
+
   cliente -> pasarela "HTTPS"
   pasarela -> plataforma.pedidos
   plataforma.pedidos -> plataforma.pagos "cobra"
