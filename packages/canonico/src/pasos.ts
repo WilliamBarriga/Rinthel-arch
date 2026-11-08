@@ -7,6 +7,7 @@
 import type { AristaDePaso, Arista, ElementoDePaso } from './esquema';
 import { matchesSelector } from './vistas';
 import type { NodoResuelto, VistaResuelta } from './vistas';
+import type { ItemResuelto } from './secuencia';
 
 /**
  * Visibilidad de un Nodo (por id) o una Arista (por `idDeArista`): 0 oculto, 1 revelado.
@@ -35,6 +36,7 @@ export function revealAt(vista: VistaResuelta, position: number): Visibilidad {
   if (steps.length === 0) return () => 1;
 
   const acotada = Number.isNaN(position) ? 0 : Math.min(Math.max(position, 0), steps.length);
+  if (vista.type === 'sequence') return revelarSecuencia(vista, Math.floor(acotada));
   const reveladosTras = estadoTras(vista, Math.floor(acotada));
   return (id) => (reveladosTras.has(id) ? 1 : 0);
 }
@@ -119,4 +121,63 @@ function idsDeAristas(vista: VistaResuelta, item: AristaDePaso): string[] {
 
 function esExtremo(enVista: string, nombrado: string): boolean {
   return enVista === nombrado || nombrado.startsWith(`${enVista}.`);
+}
+
+/**
+ * Revelado de una Vista de secuencia (ADR 0009): el Paso k es un corte del tiempo en el Mensaje `corte` de su Paso.
+ * Ids: Lifeline (id del Nodo), Mensaje, Nota, `ref` y Fragmento (`<interaccion>:<ruta>`) y operando de un Fragmento
+ * (`<interaccion>:<ruta>:<k>`: su guarda y su divisor). En el Paso 0 nada esta revelado; desde el primero, todas las
+ * Lifelines salvo las nacidas con `create`, que aparecen con su Mensaje. Una Nota o `ref` aparece con el Mensaje que lo
+ * precede (los previos al primero, en el primer Paso); un Fragmento, al entrar el corte en su primer Mensaje, y cada
+ * operando, al entrar en el suyo.
+ */
+function revelarSecuencia(vista: VistaResuelta, k: number): Visibilidad {
+  const interaccion = vista.interaction;
+  const paso = vista.steps[k - 1];
+  if (interaccion === undefined || paso === undefined) return () => 0;
+  const mensajes = interaccion.messages;
+  const corte = mensajes.findIndex((mensaje) => mensaje.ruta === paso.corte);
+  const revelados = new Set<string>();
+  const prefijo = `${interaccion.id}:`;
+
+  const creada = new Map(mensajes.flatMap((mensaje, i) => (mensaje.kind === 'create' ? [[mensaje.to, i] as const] : [])));
+  for (const nodo of vista.nodes) {
+    if ((creada.get(nodo.id) ?? -1) <= corte) revelados.add(nodo.id);
+  }
+  mensajes.forEach((mensaje, i) => {
+    if (i <= corte) revelados.add(`${prefijo}${mensaje.ruta}`);
+  });
+
+  // Recorrido en orden temporal: `previo` es el indice del ultimo Mensaje visto (-1 si ninguno).
+  const primerMensaje = (items: readonly ItemResuelto[], desde: number): number => {
+    for (const item of items) {
+      if (item.type === 'message') return mensajes.indexOf(item.message);
+      if (item.type === 'fragment') {
+        for (const operando of item.operands) {
+          const dentro = primerMensaje(operando.items, -2);
+          if (dentro !== -2) return dentro;
+        }
+      }
+    }
+    return desde;
+  };
+  const recorrer = (items: readonly ItemResuelto[], previo: number): number => {
+    for (const item of items) {
+      if (item.type === 'message') {
+        previo = mensajes.indexOf(item.message);
+      } else if (item.type === 'note' || item.type === 'ref') {
+        if (previo <= corte) revelados.add(`${prefijo}${item.ruta}`);
+      } else {
+        const entra = primerMensaje([item], previo);
+        if (entra <= corte) revelados.add(`${prefijo}${item.ruta}`);
+        item.operands.forEach((operando, o) => {
+          if (primerMensaje(operando.items, previo) <= corte) revelados.add(`${prefijo}${item.ruta}:${o}`);
+          previo = recorrer(operando.items, previo);
+        });
+      }
+    }
+    return previo;
+  };
+  recorrer(interaccion.items, -1);
+  return (id) => (revelados.has(id) ? 1 : 0);
 }

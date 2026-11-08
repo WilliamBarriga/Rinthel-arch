@@ -63,7 +63,7 @@ export type { OpcionesDeValidate, RutaDeFuente, SitioDeTexto, Ubicador } from '.
 export { activacionesDe, aplanarMensajes, destinoDeRef, lifelinesDe } from './secuencia';
 export type { Activacion, CajaDeGrupo, FragmentoResuelto, InteraccionResuelta, ItemResuelto, MensajeResuelto, MensajeUbicado, NotaResuelta, RefResuelto } from './secuencia';
 export { matchesSelector, resolveView } from './vistas';
-export type { AristaResuelta, EstadoDeColapso, NodoResuelto, VistaResuelta } from './vistas';
+export type { AristaResuelta, EstadoDeColapso, NodoResuelto, PasoResuelto, VistaResuelta } from './vistas';
 export type {
   AristaDePaso,
   Arista,

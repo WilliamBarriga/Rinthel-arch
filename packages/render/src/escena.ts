@@ -393,7 +393,7 @@ export function acotar(visibilidad: number): number {
 }
 
 /** `opacity` en linea solo si no es 1. Con 0 no recibe clics. */
-function opacidad(visibilidad: number): string {
+export function opacidad(visibilidad: number): string {
   const valor = acotar(visibilidad);
   if (valor === 1) return '';
   return valor === 0 ? 'opacity:0;pointer-events:none;' : `opacity:${num(valor)};`;
