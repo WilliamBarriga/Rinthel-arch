@@ -65,3 +65,31 @@ describe('VistaInteractiva con una Vista de secuencia', () => {
     expect(seleccion.at(-1)).toEqual(['api']);
   });
 });
+
+describe('VistaInteractiva con create y destroy', () => {
+  const ciclo = `specification { node servicio }
+model {
+  servicio cliente
+  servicio db
+  interaction ciclo {
+    create cliente -> db "abrir"
+    destroy cliente -> db "cerrar"
+  }
+}
+view v { type sequence
+ interaction ciclo }
+`;
+
+  it('dibuja el marcador cross al final de la Lifeline destruida y ninguno en las demas', async () => {
+    const source = abrirSesion({ 'main.dg': ciclo }).fuente!;
+    const { container } = render(<VistaInteractiva source={source} view="v" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} />);
+    await waitFor(() => expect(container.querySelector('[data-message]')).not.toBeNull());
+
+    expect([...container.querySelectorAll('[data-message]')].map((m) => m.getAttribute('data-kind'))).toEqual(['create', 'destroy']);
+    const cruz = container.querySelectorAll('[data-lifeline="db"] [data-marker="fin"]');
+    expect(cruz).toHaveLength(1);
+    expect(cruz[0]!.querySelectorAll('path')).toHaveLength(1);
+    expect(cruz[0]!.querySelector('path')!.getAttribute('d')).toMatch(/^M .* L .* M .* L /);
+    expect(container.querySelectorAll('[data-lifeline="cliente"] [data-marker]')).toHaveLength(0);
+  });
+});

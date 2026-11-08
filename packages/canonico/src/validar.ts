@@ -15,7 +15,7 @@
  */
 import { CODIGOS } from './codigos';
 import { CARDINALIDADES_ER } from './esquema';
-import type { ElementoDePaso, FuenteCanonica, Nodo, Tema, Vista } from './esquema';
+import type { ElementoDePaso, FuenteCanonica, Mensaje, Nodo, Tema, Vista } from './esquema';
 import type { IconProvider } from './iconos';
 import type { Issue, TextRange } from './issue';
 import { candidatosCercanos } from './sugerencias';
@@ -287,6 +287,7 @@ function validarInteracciones(fuente: FuenteCanonica, emitir: Emitir, emitirCon:
           emitir([...donde, lado], CODIGOS.E_UNKNOWN_LIFELINE, `El extremo '${mensaje[lado]}' del Mensaje no es un Nodo del Modelo`, mensaje[lado], nodos);
         }
       }
+      validarCicloDeVida(mensaje, j, ruta, interaccion.items, emitirCon);
       if (mensaje.id === undefined) return;
       const otro = ids.get(mensaje.id);
       if (otro === undefined) ids.set(mensaje.id, j);
@@ -297,6 +298,23 @@ function validarInteracciones(fuente: FuenteCanonica, emitir: Emitir, emitirCon:
       emitirCon([...ruta, 'items', j, 'from'], CODIGOS.W_REPLY_WITHOUT_SYNC, `El 'reply' de '${mensaje.from}' a '${mensaje.to}' no cierra ningun 'sync' abierto`, { severity: 'warning' });
     }
   });
+}
+
+/** `create` solo en la primera aparicion del destino y ninguna aparicion despues de su `destroy` (el primero que ocurra). */
+function validarCicloDeVida(mensaje: Mensaje, j: number, ruta: (string | number)[], items: readonly Mensaje[], emitirCon: EmitirCon): void {
+  const previos = items.slice(0, j);
+  const primera = previos.findIndex((m) => m.from === mensaje.to || m.to === mensaje.to);
+  if (mensaje.kind === 'create' && primera >= 0) {
+    emitirCon([...ruta, 'items', j, 'to'], CODIGOS.E_CREATE_NOT_FIRST, `'create' sobre '${mensaje.to}', que ya aparece antes en la Interaccion`, { relacionado: { ruta: [...ruta, 'items', primera, previos[primera]!.from === mensaje.to ? 'from' : 'to'], message: `Primera aparicion de '${mensaje.to}'` } });
+    return;
+  }
+  for (const lado of ['from', 'to'] as const) {
+    const destruccion = previos.findIndex((m) => m.kind === 'destroy' && m.to === mensaje[lado]);
+    if (destruccion >= 0) {
+      emitirCon([...ruta, 'items', j, lado], CODIGOS.E_AFTER_DESTROY, `'${mensaje[lado]}' aparece despues de su 'destroy'`, { relacionado: { ruta: [...ruta, 'items', destruccion, 'to'], message: `'${mensaje[lado]}' se destruye aqui` } });
+      return;
+    }
+  }
 }
 
 /** Propiedades de Vista segun su Tipo de diagrama y la Interaccion que proyecta una Vista de secuencia. */

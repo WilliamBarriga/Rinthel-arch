@@ -171,3 +171,52 @@ describe('seam sesion: validacion de secuencia', () => {
     expect(await codigos(modelo('  interaction checkout { cliente -> api }') + vista)).toEqual([]);
   });
 });
+
+describe('seam sesion: create y destroy', () => {
+  const ciclo = `  interaction checkout {
+    cliente -> api "pedir"
+    create api -> db "abrir"
+    api -> db "consulta"
+    destroy api -> db "cerrar"
+    reply api -> cliente "listo"
+  }`;
+
+  it('la cabecera creada baja a la altura de su Mensaje, la flecha termina en ella y su linea arranca ahi', async () => {
+    const g = await geometriaDe(modelo(ciclo) + vista);
+    const y = g.messages['1']!.points[0]!.y;
+    expect(g.nodes['db']!.y).toBeGreaterThan(g.nodes['cliente']!.y);
+    expect(g.nodes['db']!.y + g.nodes['db']!.height / 2).toBe(y);
+    expect(g.lifelines['db']!.y1).toBe(g.nodes['db']!.y + g.nodes['db']!.height);
+    // La flecha termina en el borde de la cabecera (api esta a su izquierda).
+    expect(g.messages['1']!.points.at(-1)!.x).toBe(g.nodes['db']!.x);
+    // create y destroy no abren activaciones: solo el sync 'consulta' abre la de db, y se recorta en el corte.
+    const deDb = g.activations.filter((a) => a.lifeline === 'db');
+    expect(deDb.map((a) => a.y1)).toEqual([g.messages['2']!.points[0]!.y]);
+    expect(deDb[0]!.y2).toBe(g.lifelines['db']!.y2);
+  });
+
+  it('la linea de la destruida se corta en el Mensaje destroy y lo marca', async () => {
+    const g = await geometriaDe(modelo(ciclo) + vista);
+    expect(g.lifelines['db']!.y2).toBe(g.messages['3']!.points[0]!.y);
+    expect(g.lifelines['db']!.destroyed).toBe(true);
+    expect(g.lifelines['api']!.destroyed).toBeUndefined();
+    expect(g.lifelines['api']!.y2).toBeGreaterThan(g.lifelines['db']!.y2);
+    expect(g.messages['3']!.points.at(-1)!.x).toBe(g.lifelines['db']!.x);
+  });
+
+  it('E_CREATE_NOT_FIRST con related a la primera aparicion', async () => {
+    const texto = modelo('  interaction checkout {\n cliente -> db\n create api -> db\n }') + vista;
+    const res = await abrirSesion({ 'main.dg': texto }).diagnosticar();
+    expect(res.map((i) => i.code)).toEqual(['E_CREATE_NOT_FIRST']);
+    expect(res[0]!.related).toHaveLength(1);
+    expect(res[0]!.related![0]!.line).toBeLessThan(res[0]!.line);
+  });
+
+  it('E_AFTER_DESTROY con related al destroy', async () => {
+    const texto = modelo('  interaction checkout {\n destroy cliente -> db\n api -> db\n }') + vista;
+    const res = await abrirSesion({ 'main.dg': texto }).diagnosticar();
+    expect(res.map((i) => i.code)).toEqual(['E_AFTER_DESTROY']);
+    expect(res[0]!.related).toHaveLength(1);
+    expect(res[0]!.related![0]!.line).toBeLessThan(res[0]!.line);
+  });
+});

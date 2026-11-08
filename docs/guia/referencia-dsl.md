@@ -55,9 +55,20 @@ model {
 }
 ```
 
-- Un Mensaje es `[id:] [async|reply] origen -> destino ["etiqueta"] ["descripcion"]`; sin tipo es `sync`. Los extremos son Nodos de cualquier nivel (las Lifelines) y no hace falta una Arista entre ellos.
+Ciclo de vida de una Lifeline: `create origen -> destino` la hace nacer (su cabecera baja a la altura del Mensaje y la flecha termina en ella) y `destroy origen -> destino` la termina (su linea se corta en una X, el marcador `cross`).
+
+```
+  interaction sesion {
+    cliente -> api "login"
+    create api -> token "emitir"
+    destroy api -> token "revocar"
+  }
+```
+
+- Un Mensaje es `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"] ["descripcion"]`; sin tipo es `sync`. Los extremos son Nodos de cualquier nivel (las Lifelines) y no hace falta una Arista entre ellos.
 - El orden de declaracion es el orden temporal. La activacion no se escribe: un `sync` abre una en el receptor y el siguiente `reply` del receptor al emisor la cierra.
-- El id de una Interaccion tiene su propio espacio de nombres (puede coincidir con el de un Nodo); `interaction`, `async`, `reply` y `order` siguen valiendo como ids de Nodo.
+- `create` solo vale en la primera aparicion del destino (`E_CREATE_NOT_FIRST`) y ninguna Lifeline puede aparecer despues de su `destroy` (`E_AFTER_DESTROY`); ambos errores traen `related`.
+- El id de una Interaccion tiene su propio espacio de nombres (puede coincidir con el de un Nodo); `interaction`, `async`, `reply`, `create`, `destroy` y `order` siguen valiendo como ids de Nodo.
 
 ## `view`: que mostrar
 

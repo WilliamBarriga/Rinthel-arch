@@ -38,7 +38,7 @@ const geometriaGrafoSchema = z.object({
 const geometriaSecuenciaSchema = z.object({
   kind: z.literal('secuencia'),
   nodes: z.record(z.string(), cajaDeNodoSchema),
-  lifelines: z.record(z.string(), z.object({ x: numeroFinito, y1: numeroFinito, y2: numeroFinito })),
+  lifelines: z.record(z.string(), z.object({ x: numeroFinito, y1: numeroFinito, y2: numeroFinito, destroyed: z.literal(true).optional() })),
   activations: z.array(z.object({ lifeline: z.string(), nivel: z.number().int(), x: numeroFinito, y1: numeroFinito, y2: numeroFinito, width: numeroFinito })),
   messages: z.record(z.string(), z.object({ points: z.array(puntoSchema), label: cajaDeNodoSchema.optional() })),
   width: numeroFinito,

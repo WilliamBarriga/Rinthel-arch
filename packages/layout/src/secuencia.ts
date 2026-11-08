@@ -34,7 +34,7 @@ export interface GeometriaSecuencia {
   kind: 'secuencia';
   nodes: Record<string, CajaDeNodo>;
   /** Linea vertical de cada Lifeline, por id de Nodo: `x` central, desde `y1` (bajo la cabecera) hasta `y2`. */
-  lifelines: Record<string, { x: number; y1: number; y2: number }>;
+  lifelines: Record<string, { x: number; y1: number; y2: number; /** Cortada en un `destroy`: `y2` es la `y` de ese Mensaje y se pinta el marcador `end`. */ destroyed?: true }>;
   activations: CajaDeActivacion[];
   /** Ruta de cada Mensaje por su `ruta` (identidad en la Interaccion). */
   messages: Record<string, RutaDeMensaje>;
@@ -93,6 +93,8 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
 
   // Filas: la `y` de cada flecha, de arriba abajo.
   const { activaciones } = activacionesDe(mensajes);
+  const creada = (id: string): number => mensajes.findIndex((m) => m.kind === 'create' && m.to === id);
+  const destruccion = (id: string): number => mensajes.findIndex((m) => m.kind === 'destroy' && m.to === id);
   const ys: number[] = [];
   const altosDeLazo: number[] = [];
   let cursor = yInicio;
@@ -102,6 +104,10 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
       altosDeLazo[i] = Math.max(ALTO_DE_LAZO, alto);
       ys[i] = cursor + ESPACIO_ANTES_DEL_MENSAJE;
       cursor = ys[i]! + altosDeLazo[i]! + ESPACIO_DESPUES_DEL_MENSAJE;
+    } else if (mensaje.kind === 'create') {
+      // La cabecera del destino se centra en la flecha: hace falta medio alto de cabecera por encima y por debajo.
+      ys[i] = Math.max(cursor + alto + ESPACIO_ANTES_DEL_MENSAJE, cursor + altoDeCabecera / 2);
+      cursor = ys[i]! + Math.max(ESPACIO_DESPUES_DEL_MENSAJE, altoDeCabecera / 2 + ESPACIO_ANTES_DEL_MENSAJE);
     } else {
       ys[i] = cursor + alto + ESPACIO_ANTES_DEL_MENSAJE;
       cursor = ys[i]! + ESPACIO_DESPUES_DEL_MENSAJE;
@@ -109,12 +115,23 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   });
   const yFinal = cursor;
 
+  /** `y` de la cabecera de cada Lifeline: la inicial, o centrada en su Mensaje `create`. */
+  const yDeCabecera = (id: string): number => {
+    const c = creada(id);
+    return c < 0 ? yCabecera : Math.round(ys[c]! - altoDeCabecera / 2);
+  };
+  /** `y` final de la linea: el fondo, o el Mensaje `destroy` que la corta. */
+  const yFinalDe = (id: string): number => {
+    const d = destruccion(id);
+    return d < 0 ? yFinal : ys[d]!;
+  };
+
   const cajasDeActivacion: CajaDeActivacion[] = activaciones.map((a) => ({
     lifeline: a.lifeline,
     nivel: a.nivel,
     x: x(a.lifeline) + (a.nivel * ANCHO_DE_ACTIVACION) / 2 - ANCHO_DE_ACTIVACION / 2,
     y1: ys[a.desde]!,
-    y2: a.hasta === null ? yFinal : ys[a.hasta]!,
+    y2: Math.min(a.hasta === null ? yFinal : ys[a.hasta]!, yFinalDe(a.lifeline)),
     width: ANCHO_DE_ACTIVACION,
   }));
 
@@ -140,6 +157,14 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
       return;
     }
     const haciaLaDerecha = x(mensaje.to) > x(mensaje.from);
+    if (mensaje.kind === 'create' || mensaje.kind === 'destroy') {
+      const inicio = borde(mensaje.from, nivelVigente(mensaje.from, i, false), haciaLaDerecha ? 'derecho' : 'izquierdo');
+      // `create` termina en el borde de la cabecera que baja; `destroy`, en el marcador sobre la linea.
+      const fin = mensaje.kind === 'destroy' ? x(mensaje.to) : x(mensaje.to) + (haciaLaDerecha ? -1 : 1) * (medidas[columna.get(mensaje.to)!]!.width / 2);
+      const caja = etiqueta === undefined ? undefined : { x: Math.round((inicio + fin) / 2 - etiqueta.width / 2), y: y - etiqueta.height - 2, ...etiqueta };
+      rutas[mensaje.ruta] = { points: [{ x: inicio, y }, { x: fin, y }], ...(caja !== undefined && { label: caja }) };
+      return;
+    }
     const inicio = borde(mensaje.from, nivelVigente(mensaje.from, i, false), haciaLaDerecha ? 'derecho' : 'izquierdo');
     const fin = borde(mensaje.to, nivelVigente(mensaje.to, i, true), haciaLaDerecha ? 'izquierdo' : 'derecho');
     const caja = etiqueta === undefined ? undefined : { x: Math.round((inicio + fin) / 2 - etiqueta.width / 2), y: y - etiqueta.height - 2, ...etiqueta };
@@ -150,10 +175,10 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   const lineas: GeometriaSecuencia['lifelines'] = {};
   lifelines.forEach((nodo, i) => {
     const { width } = medidas[i]!;
-    const caja = { x: Math.round(x(nodo.id) - width / 2), y: yCabecera, width, height: altoDeCabecera };
+    const caja = { x: Math.round(x(nodo.id) - width / 2), y: yDeCabecera(nodo.id), width, height: altoDeCabecera };
     const m = metricasDeHoja(tabla, nodo);
     nodes[nodo.id] = { ...caja, slots: colocarEnCaja(m, contenidoDeNodo(nodo, m), width).slots };
-    lineas[nodo.id] = { x: x(nodo.id), y1: yCabecera + altoDeCabecera, y2: yFinal + RELLENO_FINAL };
+    lineas[nodo.id] = { x: x(nodo.id), y1: caja.y + altoDeCabecera, y2: destruccion(nodo.id) < 0 ? yFinal + RELLENO_FINAL : yFinalDe(nodo.id), ...(destruccion(nodo.id) >= 0 && { destroyed: true as const }) };
     derecha = Math.max(derecha, caja.x + width);
   });
   const hayAlgo = lifelines.length > 0;
