@@ -90,11 +90,14 @@ export interface PinturaDeElemento extends PinturaDeNodo {
 export interface PinturaDeFila {
   base: CapaPintada[];
   variantes: Record<string, CapaPintada[]>;
+  /** Pila de las variantes en cada estado que el Tema declara, por `claveDeFila(variante)@estado`; la que falta se pinta como en reposo. */
+  estados: Record<string, CapaPintada[]>;
   textos: Partial<Record<TextoDeFila, PrimitivaPintada>>;
 }
 
 /** Pila de Capas de una fila: la de su variante si el Tema la parchea, si no la base. */
-export const pilaDeFila = (fila: PinturaDeFila, variante: VarianteDeFila): CapaPintada[] => fila.variantes[claveDeFila(variante)] ?? fila.base;
+export const pilaDeFila = (fila: PinturaDeFila, variante: VarianteDeFila, estado?: Estado): CapaPintada[] =>
+  (estado === undefined ? undefined : fila.estados[`${claveDeFila(variante)}@${estado}`]) ?? fila.variantes[claveDeFila(variante)] ?? fila.base;
 
 /** Trazo de un elemento de secuencia (`lifeline`, `message`): pila de trazos, marcadores, etiqueta y la pila de cada variante (`kind`) que el Tema parchea. */
 export interface PinturaDeTrazoDeSecuencia {
@@ -110,6 +113,8 @@ export interface PinturaDeCajaDeSecuencia {
   capas: CapaPintada[];
   textos: Record<string, PrimitivaPintada>;
   variantes: Record<string, CapaPintada[]>;
+  /** Pila en cada estado que el Tema declara (`hover`, `seleccionado`): la base y la de cada variante (`op`) con el parche de estado encima. */
+  estados: Partial<Record<Estado, { capas: CapaPintada[]; variantes: Record<string, CapaPintada[]> }>>;
 }
 
 /**
@@ -255,20 +260,23 @@ function grupoSobrio(tema: TemaResuelto, colapsado: boolean, variable: string | 
 function pinturaDeFila(tema: TemaResuelto, variable: string | undefined): PinturaDeFila | undefined {
   const { fila } = tema;
   if (fila === undefined) return undefined;
-  const pila = (v: VarianteDeFila): CapaPintada[] => {
-    const ops: ReadonlyArray<readonly OpDeCapa[]> = [v.impar ? fila.alterna : [], ...CLAVES_DE_FILA.filter((k) => v.keys.includes(k)).map((k) => fila.claves[k] ?? []), v.opcional ? fila.opcional : []];
+  const pila = (v: VarianteDeFila, estado?: Estado): CapaPintada[] => {
+    const ops: ReadonlyArray<readonly OpDeCapa[]> = [v.impar ? fila.alterna : [], ...CLAVES_DE_FILA.filter((k) => v.keys.includes(k)).map((k) => fila.claves[k] ?? []), v.opcional ? fila.opcional : [], estado === undefined ? [] : (fila.estados[estado] ?? [])];
     const capas = ops.reduce<CapaDeTema[]>((acc, parche) => (parche.length === 0 ? acc : aplicarOps(acc, parche, tema.palette, 'parchear').pila), fila.capas as CapaDeTema[]);
     return pintar(capas, tema, undefined, variable);
   };
   const base = pila({ impar: false, keys: [], opcional: false });
   const variantes: Record<string, CapaPintada[]> = {};
+  const estados: Record<string, CapaPintada[]> = {};
+  const declarados = (Object.keys(fila.estados) as Estado[]).filter((e) => (fila.estados[e]?.length ?? 0) > 0);
   for (const v of variantesDeFila()) {
     const propia = pila(v);
     if (JSON.stringify(propia) !== JSON.stringify(base)) variantes[claveDeFila(v)] = propia;
+    for (const estado of declarados) estados[`${claveDeFila(v)}@${estado}`] = pila(v, estado);
   }
   const { paleta, contexto } = contextoDeColor(tema, undefined, variable);
   const textos = Object.fromEntries(Object.entries(fila.textos).map(([nombre, texto]) => [nombre, { tipo: texto.tipo as NombreDePrimitiva, props: resolverProps(texto, paleta, contexto) }]));
-  return { base, variantes, textos };
+  return { base, variantes, estados, textos };
 }
 
 /** Pintura de los bloques de secuencia que el Tema declara. `variable` da el color del Nodo a `COLOR` en los bloques de caja. */
@@ -321,6 +329,13 @@ function pinturaDeSecuencia(tema: TemaResuelto, variable: string | undefined): P
       textos: Object.fromEntries(Object.entries(bloque.textos).map(([clave, texto]) => [clave, { tipo: texto.tipo as NombreDePrimitiva, props: resolverProps(texto, paleta, contexto) }])),
       variantes: Object.fromEntries(
         Object.entries(bloque.parches).map(([variante, parche]) => [variante, pintar(aplicarOps(bloque.capas as CapaDeTema[], parche.ops, tema.palette, 'parchear', ubicacion).pila, tema, undefined, variable)]),
+      ),
+      estados: Object.fromEntries(
+        (Object.keys(bloque.estados) as Estado[]).sort().map((estado) => {
+          const ops = bloque.estados[estado] ?? [];
+          const con = (capas: readonly CapaDeTema[]): CapaPintada[] => pintar(aplicarOps(capas, ops, tema.palette, 'parchear', ubicacion).pila, tema, undefined, variable);
+          return [estado, { capas: con(bloque.capas as CapaDeTema[]), variantes: Object.fromEntries(Object.entries(bloque.parches).map(([variante, parche]) => [variante, con(aplicarOps(bloque.capas as CapaDeTema[], parche.ops, tema.palette, 'parchear', ubicacion).pila)])) }];
+        }),
       ),
     };
   };

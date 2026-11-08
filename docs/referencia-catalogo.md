@@ -143,6 +143,7 @@ Bloque del Tema que estiliza las filas de una Vista `er`. `height` (12 a 120) y 
 | `alternate { ... }` | Parche de las filas impares |
 | `key pk|fk|uk { ... }` | Parche de las filas con esa marca de clave, en ese orden |
 | `optional { ... }` | Parche de los Atributos opcionales, tras las claves |
+| `state hover|seleccionado|... { ... }` | Parche de estado de la fila (solo pinta), sobre la pila de su variante; el shell emite `hover` y `seleccionado` |
 | `name { ... }` | Estilo de texto con la Primitiva `text` |
 | `type { ... }` | Estilo de texto con la Primitiva `text` |
 | `key { ... }` | Estilo de texto con la Primitiva `chip` (el chip de cada marca de clave) |

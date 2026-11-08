@@ -10,7 +10,7 @@
 import type { MensajeResuelto, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada } from 'layout';
-import { RELLENO_DE_NOTA, pinturaDeMensajeConTema, primitivasDeFamilia } from 'tema';
+import { ESTADOS, RELLENO_DE_NOTA, pinturaDeMensajeConTema, primitivasDeFamilia } from 'tema';
 import type { CapaPintada, NombreDePrimitiva, PinturaDeArista, PinturaDeCajaDeSecuencia, PinturaDeSecuencia } from 'tema';
 
 import { num } from './elemento';
@@ -207,8 +207,16 @@ function grupoHtml(grupo: CajaDeGrupoColocada, contexto: Contexto): Elemento {
 }
 
 /** Pila de Capas del marco de un Fragmento: la de su `op` en el Tema, la del bloque `fragment` o la derivada del Nodo. */
-function capasDeFragmento(declarado: PinturaDeCajaDeSecuencia | undefined, operador: string): readonly CapaPintada[] | undefined {
-  return declarado === undefined ? undefined : (declarado.variantes[operador] ?? declarado.capas);
+function capasDeFragmento(declarado: PinturaDeCajaDeSecuencia | undefined, operador: string, estado?: PinturaDeCajaDeSecuencia['estados'][keyof PinturaDeCajaDeSecuencia['estados']]): readonly CapaPintada[] | undefined {
+  if (declarado === undefined) return undefined;
+  return estado === undefined ? (declarado.variantes[operador] ?? declarado.capas) : (estado.variantes[operador] ?? estado.capas);
+}
+
+/** Pila del estado que manda sobre un elemento: el ultimo de `ESTADOS` que el elemento lleva y el Tema declara (el orden de la hoja de los Nodos). */
+function pilaDeEstado(declarado: PinturaDeCajaDeSecuencia | undefined, estados: Estados | undefined, id: string): PinturaDeCajaDeSecuencia['estados'][keyof PinturaDeCajaDeSecuencia['estados']] {
+  const activos = contornos(estados?.[id]);
+  const vigente = ESTADOS.filter((estado) => activos.includes(estado) && declarado?.estados[estado] !== undefined).at(-1);
+  return vigente === undefined ? undefined : declarado?.estados[vigente];
 }
 
 /** Declaraciones CSS del trazo `divider` del Tema (`line`): `border-top` con su ancho, estilo y color; sin el, discontinuo del color del borde. */
@@ -222,7 +230,7 @@ function bordeDeDivisor(declarado: PinturaDeCajaDeSecuencia | undefined, colorDe
 /** Marco de un Fragmento: forma, relleno y borde del Nodo (o del bloque `fragment`); con su pestana y un divisor por operando a partir del segundo. */
 function fragmentoHtml(marco: MarcoDeFragmento, contexto: Contexto, interaccion: string): Elemento {
   const declarado = contexto.estilo.pintura.secuencia?.fragmento;
-  const estilos = estiloDeCajaDeNodo(contexto, capasDeFragmento(declarado, marco.operator));
+  const estilos = estiloDeCajaDeNodo(contexto, capasDeFragmento(declarado, marco.operator, pilaDeEstado(declarado, contexto.estados, `${interaccion}:${marco.ruta}`)));
   const caja = (x: number, y: number, ancho: number, alto: number): string => `position:absolute;box-sizing:border-box;left:${num(x)}px;top:${num(y)}px;width:${num(ancho)}px;height:${num(alto)}px`;
   const borde = bordeDeDivisor(declarado, contexto.estilo.borde);
   const divisores = marco.operands.flatMap((operando, k): Elemento[] =>
@@ -270,7 +278,8 @@ function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'
 function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: string, visibility: Visibilidad, estados: Estados | undefined): Elemento {
   // Con bloque `note` en el Tema: el relleno y el borde de su pila y el estilo `text`; si no, el tinte de `amber`.
   const declarada = estilo.pintura.secuencia?.nota;
-  const ultima = (familia: string): CapaPintada | undefined => declarada?.capas.filter((capa) => primitivasDeFamilia(familia as 'relleno' | 'borde').includes(capa.tipo)).at(-1);
+  const capasVigentes = pilaDeEstado(declarada, estados, `${interaccion}:${nota.ruta}`)?.capas ?? declarada?.capas;
+  const ultima = (familia: string): CapaPintada | undefined => capasVigentes?.filter((capa) => primitivasDeFamilia(familia as 'relleno' | 'borde').includes(capa.tipo)).at(-1);
   const derivado = estilo.paleta['amber'] ?? estilo.borde;
   const rellenoDeclarado = ultima('relleno');
   const bordeDeclarado = ultima('borde');

@@ -168,7 +168,8 @@ theme libreta {
     alternate { layer fondo { color gris } }            // filas impares
     key pk { layer fondo { color verde } }              // filas con esa marca (pk, fk, uk); se apilan en ese orden
     optional { layer fondo { color ambar } }            // Atributos opcionales (despues de las claves)
-    name { weight 600 }  type { color azul }            // estilo de texto
+    state seleccionado { layer fondo { color verde } }  // fila seleccionada (tambien hover); solo pinta
+    name { weight 600  size 1.1 }  type { color azul }  // estilo de texto; size (multiplo del texto del Tema) cambia el tamano medido
     key { fill azul  color papel  radius 4 }            // el chip de cada marca de clave
   }
   edge {

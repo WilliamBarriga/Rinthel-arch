@@ -5,7 +5,7 @@
  * Aqui solo se traduce el AST y se situan los errores.
  */
 import { CODIGOS } from 'canonico';
-import { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA, aplicarOps, opTocaMetricas, validarPropiedades } from 'tema';
+import { ALTO_DE_FILA, CLAVES_DE_FILA, ESTADOS, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA, aplicarOps, opTocaMetricas, parsearEstado, validarPropiedades } from 'tema';
 import type { CapaDeTema, OpDeCapa, TemaResuelto, TextoDeFila } from 'tema';
 
 import type { RowItem, ThemeLayer, ThemeUse } from './generated/ast';
@@ -19,7 +19,7 @@ type Fila = NonNullable<TemaResuelto['fila']>;
 /** Aplica los `row { ... }` de un Tema sobre `tema.fila` (heredada del padre o vacia). Sin bloques, no hace nada. */
 export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx: Contexto): void {
   if (items.length === 0) return;
-  const fila: Fila = tema.fila ?? { capas: [], alterna: [], textos: {}, claves: {}, opcional: [] };
+  const fila: Fila = tema.fila ?? { capas: [], alterna: [], textos: {}, claves: {}, opcional: [], estados: {} };
   tema.fila = fila;
 
   const delBloque = items.filter((item): item is ThemeLayer | ThemeUse => item.$type === 'ThemeLayer' || item.$type === 'ThemeUse');
@@ -69,6 +69,15 @@ export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx:
           break;
         }
         fila.claves = { ...fila.claves, [clave]: [...(fila.claves[clave] ?? []), ...parche(item.items, item)] };
+        break;
+      }
+      case 'RowState': {
+        const resultado = parsearEstado(item.name);
+        if ('error' in resultado) {
+          ctx.issues.push(issueConSugerencia({ code: resultado.error.code, message: resultado.error.message }, ctx.archivo, item, 'name', ESTADOS));
+          break;
+        }
+        fila.estados = { ...fila.estados, [resultado.estado]: [...(fila.estados[resultado.estado] ?? []), ...parche(item.items, item)] };
         break;
       }
       case 'RowText': {

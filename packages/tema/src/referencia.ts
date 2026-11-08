@@ -76,6 +76,7 @@ export function referenciaDelCatalogo(): string {
         ['`alternate { ... }`', 'Parche de las filas impares'],
         [`\`key ${CLAVES_DE_FILA.join('|')} { ... }\``, 'Parche de las filas con esa marca de clave, en ese orden'],
         ['`optional { ... }`', 'Parche de los Atributos opcionales, tras las claves'],
+        ['`state hover|seleccionado|... { ... }`', 'Parche de estado de la fila (solo pinta), sobre la pila de su variante; el shell emite `hover` y `seleccionado`'],
         ...NOMBRES_DE_TEXTO_DE_FILA.map((nombre) => [`\`${nombre} { ... }\``, `Estilo de texto con la Primitiva \`${TEXTOS_DE_FILA[nombre]}\`${nombre === 'key' ? ' (el chip de cada marca de clave)' : ''}`]),
       ],
     ),

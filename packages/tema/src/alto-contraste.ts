@@ -91,6 +91,7 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
     textos: { name: texto({ weight: 700 }), type: texto({}) },
     claves: {},
     opcional: [],
+    estados: {},
   },
   // Secuencia: los mismos elementos que `neutral`, con trazos mas gruesos y sin translucidos.
   secuencia: {

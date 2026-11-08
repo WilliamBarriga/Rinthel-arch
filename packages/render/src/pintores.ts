@@ -7,8 +7,8 @@
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
-import { LARGO_DE_MARCADOR_ER, alturaDeCabecera, capasDeAristaEr, pilaDeFila, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
-import type { ContenidoDeNodo, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
+import { ESTADOS, LARGO_DE_MARCADOR_ER, alturaDeCabecera, capasDeAristaEr, pilaDeFila, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
+import type { ContenidoDeNodo, Estado, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
 
 import { pintarMarcadores, pintarTrazos, rutaDeCapa } from './aristas';
 import { limpiarValorCss, num } from './elemento';
@@ -30,6 +30,8 @@ export interface DatosDeNodo {
   /** Texto de la etiqueta del Nodo (el titulo de un Grupo abierto; un Nodo hoja usa el que da `contenidoDeNodo`). */
   texto: string;
   icons?: IconProvider;
+  /** Estados visuales por id de elemento; los de una fila ER van bajo `nodo#atributo` y se pintan con la pila de estado de `row`. */
+  estados?: Readonly<Record<string, readonly EstadoVisual[]>>;
 }
 
 /** `left/top/width/height` en px de un rectangulo (relativo a su caja contenedora). */
@@ -76,7 +78,7 @@ const PINTORES_DE_SLOT: { readonly [S in NombreDeSlot]: (contexto: ContextoDeSlo
   footer: (contexto, rect) => pintarTexto('footer', contexto, rect),
   counter: (contexto, rect) => pintarTexto('counter', contexto, rect),
   icon: ({ datos, textos }, rect) => pintarIcono(textos, datos.nodo, datos.trazo, datos.icons, rect),
-  attrs: ({ estilo, datos, atributos, metricas }, rect) => (atributos.length === 0 ? [] : [pintarAtributos(estilo, datos.nodo.id, atributos, rect, metricas)]),
+  attrs: ({ estilo, datos, atributos, metricas }, rect) => (atributos.length === 0 ? [] : [pintarAtributos(estilo, datos.nodo.id, atributos, rect, metricas, datos.estados)]),
 };
 
 /** Cada Slot que el Tema lista para `metricas`, en su rectangulo dentro de una caja de `ancho`. `conAtributos`: si se dibujan las filas de `attrs`. */
@@ -151,6 +153,9 @@ function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo:
   return [{ tag: 'div', attrs: atributos, html: dimensionado }];
 }
 
+/** Estado que manda sobre una fila: el ultimo de `ESTADOS` que lleva (el orden de la hoja de los Nodos). */
+const estadoDeFila = (lista: readonly EstadoVisual[] | undefined): Estado | undefined => ESTADOS.filter((estado) => lista?.includes(estado) === true).at(-1);
+
 /** Estilo en linea de un texto de la fila (`name`, `type`, `key`) que el Tema declara; vacio si no. */
 const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo, tamano?: number): string =>
   texto === undefined ? '' : Object.entries({ ...declaracionesDeTexto(texto, estilo.fuenteMono), ...(tamano !== undefined && { 'font-size': `${num(tamano)}px` }) }).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
@@ -160,7 +165,7 @@ const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo, tamano?: n
  * declara `row`, la fila pinta su pila de Capas (segun si es impar, sus marcas de clave y si es opcional) y sus textos
  * `name`, `type` y `key` con el estilo del Tema.
  */
-function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect, metricasDeNodo: Metricas): Elemento {
+function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect, metricasDeNodo: Metricas, estados?: DatosDeNodo['estados']): Elemento {
   const { metricas } = estilo;
   const marcas = metricasDeNodo.marcasDeClave === true;
   const delTema = marcas ? estilo.pintura.fila : undefined;
@@ -168,7 +173,7 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atribut
     tag: 'div',
     attrs: { class: `rd-slot rd-attrs${zona.y > 0 ? ' rd-separado' : ''}`, 'data-slot': 'attrs', style: enRect(zona) },
     hijos: atributos.map((atributo, i) => {
-      const capas = delTema === undefined ? [] : pilaDeFila(delTema, { impar: i % 2 === 1, keys: atributo.keys ?? [], opcional: atributo.optional === true });
+      const capas = delTema === undefined ? [] : pilaDeFila(delTema, { impar: i % 2 === 1, keys: atributo.keys ?? [], opcional: atributo.optional === true }, estadoDeFila(estados?.[`${id}#${atributo.name}`]));
       const efectos = capas.length === 0 ? undefined : efectosDeElemento(estilo, { capas }, `${id}#${atributo.name}`);
       const caja = capas.length === 0 ? '' : Object.entries(declaracionesDeCaja(estilo, { capas, estados: {} }, capas.filter((c) => !esDeZona(c)))).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
       return {
