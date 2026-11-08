@@ -316,9 +316,15 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   }));
 
   /** Indice del Mensaje en que termina la activacion; el que cierra un Fragmento termina medio indice tras su ultimo Mensaje. */
+  const cortes = new Map<Activacion, number>();
   const corte = (a: Activacion): number => {
     if (a.cierraEn === undefined) return a.hasta ?? Infinity;
-    return Math.max(...mensajes.flatMap((m, i) => (m.ambito?.includes(a.cierraEn!) ? [i] : []))) + 0.5;
+    let c = cortes.get(a);
+    if (c === undefined) {
+      c = Math.max(...mensajes.flatMap((m, i) => (m.ambito?.includes(a.cierraEn!) ? [i] : []))) + 0.5;
+      cortes.set(a, c);
+    }
+    return c;
   };
   /** Nivel de la activacion mas anidada de `lifeline` vigente tras (`despues`) o justo antes de enviar el Mensaje `i`; -1 si no hay. */
   const nivelVigente = (lifeline: string, i: number, despues: boolean): number =>
