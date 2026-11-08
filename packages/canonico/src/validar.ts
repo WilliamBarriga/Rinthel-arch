@@ -18,6 +18,7 @@ import type { ElementoDePaso, FuenteCanonica, Nodo, Tema, Vista } from './esquem
 import type { IconProvider } from './iconos';
 import type { Issue, TextRange } from './issue';
 import { candidatosCercanos } from './sugerencias';
+import { activacionesDe } from './secuencia';
 import { matchesSelector, resolveView } from './vistas';
 
 /** Ruta de un valor dentro de la Fuente canonica, p. ej. `['views', 0, 'links', 1, 'view']`. */
@@ -45,6 +46,9 @@ const SIN_UBICAR: SitioDeTexto = {
   file: '(canonico)',
   range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } },
 };
+
+/** Issue en `ruta` con severidad y sitio relacionado (otra ruta de la Fuente) opcionales. */
+type EmitirCon = (ruta: RutaDeFuente, code: string, message: string, extra?: { severity?: 'error' | 'warning'; hint?: string; relacionado?: { ruta: RutaDeFuente; message: string } }) => void;
 
 type Emitir = (
   ruta: RutaDeFuente,
@@ -77,11 +81,27 @@ export function validate(fuente: FuenteCanonica, opciones: OpcionesDeValidate = 
     issues.push(issue);
   };
 
+  const emitirCon: EmitirCon = (ruta, code, message, extra = {}) => {
+    const sitio = ubicar === undefined ? SIN_UBICAR : ubicar(ruta);
+    if (sitio === null) return;
+    const issue: Issue = { code, severity: extra.severity ?? 'error', file: sitio.file, ...sitio.range.start, message };
+    if (extra.hint !== undefined) issue.hint = extra.hint;
+    if (extra.relacionado !== undefined) {
+      const otro = ubicar === undefined ? SIN_UBICAR : ubicar(extra.relacionado.ruta);
+      if (otro !== null) issue.related = [{ file: otro.file, ...otro.range.start, message: extra.relacionado.message }];
+    }
+    issues.push(issue);
+  };
+
   const tipos = new Set(fuente.specification.nodeTypes.map((tipo) => tipo.name));
+  validarInteracciones(fuente, emitir, emitirCon);
   validarNodos(fuente.model.nodes, ['model', 'nodes'], tipos, emitir);
   validarAristas(fuente, emitir);
   validarCatalogo(fuente, opciones.iconos, emitir);
-  fuente.views.forEach((vista, indice) => validarVista(fuente, vista, indice, emitir));
+  fuente.views.forEach((vista, indice) => {
+    validarVista(fuente, vista, indice, emitir);
+    validarVistaDeSecuencia(fuente, vista, indice, emitir, emitirCon);
+  });
 
   return issues.sort(compararIssues);
 }
@@ -208,6 +228,76 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
           emitir([...donde, 'from'], CODIGOS.E_UNKNOWN_STEP, `La Arista '${item.from} -> ${item.to}' no existe en el Modelo`, item.from, nodos);
         }
       });
+    }
+  });
+}
+
+/** Interacciones: ids unicos, extremos de Mensaje que son Nodos, ids de Mensaje unicos y `reply` sin `sync` abierto. */
+function validarInteracciones(fuente: FuenteCanonica, emitir: Emitir, emitirCon: EmitirCon): void {
+  const nodos = todosLosIds(fuente.model.nodes);
+  const vistas = new Map<string, number>();
+  fuente.model.interactions.forEach((interaccion, i) => {
+    const ruta = ['model', 'interactions', i];
+    const previa = vistas.get(interaccion.id);
+    if (previa !== undefined) {
+      emitirCon([...ruta, 'id'], CODIGOS.E_DUPLICATE_INTERACTION, `Interaccion duplicada '${interaccion.id}'`, { relacionado: { ruta: ['model', 'interactions', previa, 'id'], message: `Primera declaracion de '${interaccion.id}'` } });
+    } else {
+      vistas.set(interaccion.id, i);
+    }
+    const ids = new Map<string, number>();
+    interaccion.items.forEach((mensaje, j) => {
+      const donde = [...ruta, 'items', j];
+      for (const lado of ['from', 'to'] as const) {
+        if (!nodos.includes(mensaje[lado])) {
+          emitir([...donde, lado], CODIGOS.E_UNKNOWN_LIFELINE, `El extremo '${mensaje[lado]}' del Mensaje no es un Nodo del Modelo`, mensaje[lado], nodos);
+        }
+      }
+      if (mensaje.id === undefined) return;
+      const otro = ids.get(mensaje.id);
+      if (otro === undefined) ids.set(mensaje.id, j);
+      else emitirCon([...donde, 'id'], CODIGOS.E_DUPLICATE_MESSAGE_ID, `Mensaje duplicado '${mensaje.id}' en la Interaccion '${interaccion.id}'`, { relacionado: { ruta: [...ruta, 'items', otro, 'id'], message: `Primer Mensaje '${mensaje.id}'` } });
+    });
+    for (const j of activacionesDe(interaccion.items).respuestasSueltas) {
+      const mensaje = interaccion.items[j]!;
+      emitirCon([...ruta, 'items', j, 'from'], CODIGOS.W_REPLY_WITHOUT_SYNC, `El 'reply' de '${mensaje.from}' a '${mensaje.to}' no cierra ningun 'sync' abierto`, { severity: 'warning' });
+    }
+  });
+}
+
+/** Propiedades de Vista segun su Tipo de diagrama y la Interaccion que proyecta una Vista de secuencia. */
+function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: number, emitir: Emitir, emitirCon: EmitirCon): void {
+  const ruta = ['views', indice];
+  const interacciones = fuente.model.interactions.map(({ id }) => id);
+  if (vista.type !== 'sequence') {
+    if (vista.interaction !== undefined) {
+      emitirCon([...ruta, 'interaction'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'interaction' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "cambia 'type' a sequence o quita 'interaction'" });
+    }
+    if (vista.order.length > 0) {
+      emitirCon([...ruta, 'order', 0], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'order' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "cambia 'type' a sequence o quita 'order'" });
+    }
+    return;
+  }
+  if (vista.include.length > 0) {
+    emitirCon([...ruta, 'include'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'include' no vale en una Vista 'sequence': proyecta una Interaccion", { hint: "usa 'exclude' para quitar Lifelines" });
+  }
+  vista.overrides.forEach((override, i) => {
+    if (override.pin !== undefined) {
+      emitirCon([...ruta, 'overrides', i, 'pin'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'pin' no vale en una Vista 'sequence': las columnas siguen el orden de las Lifelines", { hint: "usa 'order' para reordenar Lifelines" });
+    }
+  });
+  const interaccion = fuente.model.interactions.find(({ id }) => id === vista.interaction);
+  if (vista.interaction === undefined) {
+    emitirCon([...ruta, 'id'], CODIGOS.E_SEQUENCE_WITHOUT_INTERACTION, `La Vista '${vista.id}' es 'sequence' y no declara 'interaction'`, interacciones.length > 0 ? { hint: `Interacciones: ${interacciones.join(', ')}` } : {});
+  } else if (interaccion === undefined) {
+    emitir([...ruta, 'interaction'], CODIGOS.E_UNKNOWN_INTERACTION, `La Interaccion '${vista.interaction}' no existe en el Modelo`, vista.interaction, interacciones);
+  }
+  const nodos = todosLosIds(fuente.model.nodes);
+  const participantes = new Set(interaccion?.items.flatMap((m) => [m.from, m.to]));
+  vista.order.forEach((id, i) => {
+    if (!nodos.includes(id)) {
+      emitir([...ruta, 'order', i], CODIGOS.E_UNKNOWN_LIFELINE, `'order' nombra '${id}', que no es un Nodo del Modelo`, id, nodos);
+    } else if (interaccion !== undefined && !participantes.has(id)) {
+      emitirCon([...ruta, 'order', i], CODIGOS.W_ORDER_NOT_IN_INTERACTION, `'${id}' no participa en la Interaccion '${interaccion.id}'; 'order' lo ignora`, { severity: 'warning' });
     }
   });
 }

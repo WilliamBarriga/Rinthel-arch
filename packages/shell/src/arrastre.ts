@@ -42,7 +42,8 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
     setDesplazado(undefined);
   }, [e.calculo]);
 
-  const arrastrable = e.alMoverNodo !== undefined;
+  // En secuencia no hay Pins: reordenar Lifelines por arrastre llega con su propia Intencion.
+  const arrastrable = e.alMoverNodo !== undefined && e.calculo?.geometria.kind !== 'secuencia';
   useEffect(() => {
     if (!arrastrable) return;
     const nodo = e.zona.current!;

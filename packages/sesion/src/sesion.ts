@@ -99,6 +99,8 @@ function avisosDePins(vista: string, geometry: Geometria, pins: readonly Posicio
   switch (geometry.kind) {
     case 'grafo':
       return avisosDePinsDeGrafo(vista, geometry, pins);
+    case 'secuencia':
+      return [];
   }
 }
 

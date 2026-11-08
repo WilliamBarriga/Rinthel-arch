@@ -7,6 +7,8 @@ import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
+import { layoutSecuencia } from './secuencia';
+import type { GeometriaSecuencia } from './secuencia';
 import { atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, contenidoDeNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
 import type { MedidasDeTexto, Metricas, Rect, TablaDeMetricas } from 'tema';
 
@@ -48,7 +50,7 @@ export interface GeometriaGrafo {
 }
 
 /** Geometria calculada de una Vista: union por `kind`; quien la lee hace switch por `kind`. */
-export type Geometria = GeometriaGrafo;
+export type Geometria = GeometriaGrafo | GeometriaSecuencia;
 
 export interface OpcionesDeLayout {
   /** Motor ELK; por defecto el empaquetado, que corre igual en Node y en Web Worker. */
@@ -101,6 +103,8 @@ export async function layoutConMetricas(
     case 'architecture':
     case 'flow':
       return layoutGrafo(vista, metricas, opciones);
+    case 'sequence':
+      return layoutSecuencia(vista, metricas);
   }
 }
 
@@ -175,6 +179,8 @@ export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tem
   switch (base.kind) {
     case 'grafo':
       return conPinsYPuertos(vista, comoTabla(metricas), base);
+    case 'secuencia':
+      return base;
   }
 }
 
@@ -194,7 +200,7 @@ function aplicarPins(
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
   labels: Record<string, CajaDeNodo>,
-): Pick<Geometria, 'nodes' | 'edges' | 'labels' | 'pinsSolapados'> {
+): Pick<GeometriaGrafo, 'nodes' | 'edges' | 'labels' | 'pinsSolapados'> {
   const pins = vista.overrides.filter((o) => o.pin !== undefined && nodes[o.node] !== undefined);
   if (pins.length === 0) return { nodes, edges, labels, pinsSolapados: [] };
   const nuevos: Record<string, CajaDeNodo> = { ...nodes };
@@ -341,7 +347,7 @@ function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
  * "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`.
  */
 export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, undefined, vista.type)): string {
-  return JSON.stringify({ tipo: vista.type, estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista) });
+  return JSON.stringify({ tipo: vista.type, estructura: claveDeEstructura(vista, tema, metricas), pins: vista.type === 'sequence' ? [] : pinsDe(vista) });
 }
 
 const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin === undefined ? [] : [[o.node, o.pin.x, o.pin.y]]));
@@ -356,6 +362,7 @@ export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Me
     tipo: vista.type,
     nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => [a.name, a.type])]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
+    mensajes: vista.interaction?.messages.map((m) => [m.ruta, m.kind, m.from, m.to, m.label]),
     metricas: claveDeMetricas(tabla),
   });
 }

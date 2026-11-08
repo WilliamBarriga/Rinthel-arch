@@ -97,6 +97,9 @@ export function interpolarGeometria(desde: Geometria, hasta: Geometria, t: numbe
   switch (hasta.kind) {
     case 'grafo':
       return desde.kind === 'grafo' ? interpolarGrafo(desde, hasta, t) : hasta;
+    case 'secuencia':
+      // La secuencia no tiene morph propio todavia (llega con el expandir/colapsar de Lifelines): salta a la nueva.
+      return hasta;
   }
 }
 
@@ -118,7 +121,8 @@ function interpolarGrafo(desde: GeometriaGrafo, hasta: GeometriaGrafo, t: number
 export function visibilidadDeMorph(desde: Geometria, hasta: Geometria, t: number, base?: Visibilidad): Visibilidad {
   return (id) => {
     const previa = base?.(id) ?? 1;
-    const nuevo = (hasta.nodes[id] !== undefined && desde.nodes[id] === undefined) || (hasta.edges[id] !== undefined && desde.edges[id] === undefined);
+    const aristaNueva = hasta.kind === 'grafo' && desde.kind === 'grafo' && hasta.edges[id] !== undefined && desde.edges[id] === undefined;
+    const nuevo = (hasta.nodes[id] !== undefined && desde.nodes[id] === undefined) || aristaNueva;
     return nuevo ? previa * t : previa;
   };
 }

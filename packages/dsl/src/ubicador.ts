@@ -5,7 +5,7 @@
  */
 import type { FuenteCanonica, SitioDeTexto, TextRange, Ubicador } from 'canonico';
 
-import type { Edge, Element, NodeTypeDecl, View } from './generated/ast';
+import type { Edge, Element, Interaction, NodeTypeDecl, View } from './generated/ast';
 import { aRango, puntoVacio, rangoDe, rangoDeIndice } from './posiciones';
 import { GrammarUtils } from 'langium';
 import type { AstNode } from 'langium';
@@ -22,6 +22,8 @@ export interface DatosDelUbicador {
   nodos: ReadonlyMap<string, { archivo: string; ast: Element }>;
   /** Aristas compiladas, en el mismo orden que `fuente.model.edges`. */
   aristas: readonly { archivo: string; ast: Edge }[];
+  /** Interacciones, en el mismo orden que `fuente.model.interactions`. */
+  interacciones: readonly { archivo: string; ast: Interaction }[];
   /** Tipos de nodo, en el mismo orden que `fuente.specification.nodeTypes`. */
   tipos: readonly { archivo: string; ast: NodeTypeDecl }[];
   /** Vistas, en el mismo orden que `fuente.views`. */
@@ -41,6 +43,7 @@ export function crearUbicador(datos: DatosDelUbicador): Ubicador {
     const [seccion, indice, ...resto] = ruta;
     if (seccion === 'model' && indice === 'nodes') return deNodo(datos, ruta);
     if (seccion === 'model' && indice === 'edges') return deArista(datos, resto);
+    if (seccion === 'model' && indice === 'interactions') return deInteraccion(datos, resto);
     if (seccion === 'specification') return deTipo(datos, resto);
     if (seccion === 'themes' && resto[0] === 'name') {
       const declarado = datos.temas.get(datos.fuente.themes[indice as number]?.name ?? '');
@@ -64,6 +67,17 @@ function deArista({ aristas }: DatosDelUbicador, [i, lado, campo]: Ruta): SitioD
   const arista = aristas[i as number];
   if (arista === undefined) return null;
   return sitio(arista.archivo, rangoDe(arista.ast[lado as 'from' | 'to'], campo as string));
+}
+
+/** `[i, 'id' | 'title']` o `[i, 'items', j, 'from' | 'to' | 'id']` de una Interaccion. */
+function deInteraccion({ interacciones }: DatosDelUbicador, [i, campo, j, propiedad]: Ruta): SitioDeTexto | null {
+  const interaccion = interacciones[i as number];
+  if (interaccion === undefined) return null;
+  if (campo === 'items') {
+    const mensaje = interaccion.ast.items[j as number];
+    return mensaje === undefined ? null : sitio(interaccion.archivo, rangoDe(mensaje, propiedad === 'id' ? 'alias' : (propiedad as string)));
+  }
+  return sitio(interaccion.archivo, rangoDe(interaccion.ast, campo === 'id' ? 'name' : (campo as string)));
 }
 
 /** Valor de la propiedad `clave` (`icon` o `color`) del `i`-esimo Tipo de nodo. */
@@ -103,6 +117,23 @@ function deVista(datos: DatosDelUbicador, indice: number, ruta: Ruta): SitioDeTe
     if (cola[0] === 'node') return sitio(archivo, rangoDe(override, 'node'));
     const color = override.props.find((prop) => prop.$type === 'OverrideColor');
     return color === undefined ? null : sitio(archivo, rangoDe(color, 'value'));
+  }
+  if (campo === 'interaction') {
+    const prop = props.find((p) => p.$type === 'ViewInteraction');
+    return prop === undefined ? null : sitio(archivo, rangoDe(prop, 'value'));
+  }
+  if (campo === 'order') {
+    let resto = i as number;
+    for (const prop of props) {
+      if (prop.$type !== 'ViewOrder') continue;
+      if (resto < prop.targets.length) return sitio(archivo, rangoDeIndice(prop, 'targets', resto));
+      resto -= prop.targets.length;
+    }
+    return null;
+  }
+  if (campo === 'include') {
+    const prop = props.find((p) => p.$type === 'ViewInclude');
+    return prop?.$cstNode === undefined ? null : sitio(archivo, aRango(prop.$cstNode.range));
   }
   if (campo === 'links') {
     const enlace = props.filter((prop) => prop.$type === 'ViewLink')[i as number];

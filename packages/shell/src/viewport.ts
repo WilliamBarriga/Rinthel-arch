@@ -39,7 +39,7 @@ export function recortarAlViewport(vista: VistaResuelta, geometria: Geometria, c
     ...vista,
     nodes: vista.nodes.filter((nodo) => dentro.has(nodo.id)).map(podar),
     edges: vista.edges.filter((arista) => {
-      const puntos = geometria.edges[idDeArista(arista)]?.points ?? [];
+      const puntos = (geometria.kind === 'grafo' ? geometria.edges[idDeArista(arista)]?.points : undefined) ?? [];
       if (puntos.length === 0) return false;
       const xs = puntos.map((p) => p.x);
       const ys = puntos.map((p) => p.y);

@@ -51,5 +51,37 @@ describe('Worker de layout empaquetado', () => {
     const tamanos = (g: Awaited<ReturnType<typeof layoutView>>): unknown =>
       Object.fromEntries(Object.entries(g.nodes).filter(([id]) => id !== 'g').map(([id, c]) => [id, { w: c.width, h: c.height, slots: c.slots }]));
     expect(tamanos(geometria as never)).toEqual(tamanos(await layoutView(vista, TEMA_NEUTRO)));
-  });
+  }, 30_000);
+
+  it('una Vista de secuencia da en el Worker la misma geometria que en Node', async () => {
+    const fuente = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio' }] },
+      model: {
+        nodes: [
+          { id: 'a', type: 'servicio', title: 'A', description: '', children: [] },
+          { id: 'b', type: 'servicio', title: 'B', description: '', children: [] },
+        ],
+        edges: [],
+        interactions: [{ id: 'i', title: 'I', items: [{ type: 'message', from: 'a', to: 'b', label: 'ida' }, { type: 'message', kind: 'reply', from: 'b', to: 'a' }] }],
+      },
+      views: [{ id: 'v', type: 'sequence', interaction: 'i' }],
+    });
+    const vista = resolveView(fuente, 'v')!;
+    const { worker } = await empaquetarShellDev();
+    const global: Record<string, unknown> & { onmessage?: (e: { data: unknown }) => void; postMessage?: (m: unknown) => void } = { setTimeout, clearTimeout, queueMicrotask, console };
+    global.self = global;
+    const respuesta = new Promise<{ geometria?: unknown; error?: string }>((ok) => {
+      global.postMessage = (m) => ok(m as never);
+    });
+    runInNewContext(worker, global);
+    const peticion = new Promise<unknown>((ok) => {
+      void adaptadorDeWorker({ postMessage: ok, onmessage: null })(vista, TEMA_NEUTRO);
+    });
+    global.onmessage!({ data: await peticion });
+
+    const { geometria, error } = await respuesta;
+    expect(error).toBeUndefined();
+    expect(geometria).toEqual(await layoutView(vista, TEMA_NEUTRO));
+    expect((geometria as { kind: string }).kind).toBe('secuencia');
+  }, 30_000);
 });

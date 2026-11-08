@@ -9,6 +9,7 @@ import type {
   ElementoDePaso,
   Extremo,
   FuenteCanonica,
+  Interaccion,
   Issue,
   Nodo,
   OverrideDeNodo,
@@ -27,7 +28,7 @@ import {
 import type { LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Attrs, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, View } from './generated/ast';
+import type { Attrs, Documento, Edge, Element, Extend, Interaction, NodeOverride, NodeTypeDecl, Source, Step, View } from './generated/ast';
 import { issueConSugerencia, rangoDe } from './posiciones';
 import { ARCHIVO_INCORPORADOS, temasIncorporados } from './incorporados';
 import { resolverTemas } from './temas';
@@ -91,7 +92,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const partesDeclaradas: DeclaracionDeParte[] = [];
   const tiposAst: { archivo: string; ast: NodeTypeDecl }[] = [];
   const vistas: { vista: Vista; archivo: string; ast: View }[] = [];
-  const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
+  const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[]; interacciones: Interaction[] }[] = [];
 
   for (const archivo of Object.keys(workspace).sort()) {
     if (archivo.endsWith('.svg')) continue;
@@ -134,6 +135,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
         elementos: modelo.elements,
         aristas: modelo.edges,
         extensiones: modelo.extensions,
+        interacciones: modelo.interactions,
       });
     }
   }
@@ -160,6 +162,17 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
   }
 
+  const interacciones: Interaccion[] = [];
+  const interaccionesAst: { archivo: string; ast: Interaction }[] = [];
+  for (const { archivo, interacciones: delArchivo } of raices) {
+    // Con sintaxis rota el AST es parcial: sus Mensajes darian falsos extremos desconocidos.
+    if (conSintaxisRota.has(archivo)) continue;
+    for (const interaccion of delArchivo) {
+      interacciones.push(compilarInteraccion(interaccion));
+      interaccionesAst.push({ archivo, ast: interaccion });
+    }
+  }
+
   const { temas, issues: delTema, parchesDeVista, origenes: origenesDeTemas } = resolverTemas(temasDeclarados, partesDeclaradas, tiposDeNodo.map(({ name }) => name));
   issues.push(...delTema);
   for (const { vista, archivo, ast } of vistas) {
@@ -172,13 +185,14 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const fuente: FuenteCanonica = {
     themes: temas,
     specification: { nodeTypes: tiposDeNodo },
-    model: { nodes: nodos, edges: aristas },
+    model: { nodes: nodos, edges: aristas, interactions: interacciones },
     views: vistas.map(({ vista }) => vista),
   };
   const ubicar = crearUbicador({
     fuente,
     nodos: new Map([...registro].map(([id, { origen, ast }]) => [id, { archivo: origen.file, ast }])),
     aristas: aristasAst,
+    interacciones: interaccionesAst,
     tipos: tiposAst,
     vistas: vistas.map(({ archivo, ast }) => ({ archivo, ast })),
     temas: new Map(temasDeclarados.map(({ archivo, ast, nombre }) => [ast.name, { archivo, nombre }])),
@@ -245,12 +259,15 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
     vista.props.flatMap((prop) => (prop.$type === clase ? prop.selectors : []));
   const profundidad = vista.props.find((prop) => prop.$type === 'ViewDepth');
   const tema = vista.props.find((prop) => prop.$type === 'ViewTheme');
+  const interaccion = vista.props.find((prop) => prop.$type === 'ViewInteraction');
   return {
     id: vista.name,
     type: tipoValido.data,
     include: selectores('ViewInclude'),
     exclude: selectores('ViewExclude'),
     ...(profundidad !== undefined && { depth: profundidad.value }),
+    ...(interaccion !== undefined && { interaction: interaccion.value }),
+    order: vista.props.flatMap((prop) => (prop.$type === 'ViewOrder' ? prop.targets : [])),
     ...(tema !== undefined && { theme: tema.value }),
     ...(vista.props.some((prop) => prop.$type === 'ViewDrill') && { drill: 'collapse' as const }),
     collapsed: vista.props.flatMap((prop) => (prop.$type === 'ViewCollapsed' ? prop.targets : [])),
@@ -392,6 +409,24 @@ function compilarArista(arista: Edge): Arista {
     ...(arista.fromCardinality !== undefined && { fromCardinality: arista.fromCardinality }),
     ...(arista.toCardinality !== undefined && { toCardinality: arista.toCardinality }),
     ...(arista.label !== undefined && { label: arista.label }),
+  };
+}
+
+/** Interaccion tal cual; que los extremos de cada Mensaje existan y que los ids no se repitan lo comprueba `validate`. */
+function compilarInteraccion(interaccion: Interaction): Interaccion {
+  return {
+    id: interaccion.name,
+    title: interaccion.title ?? interaccion.name,
+    description: interaccion.description ?? '',
+    items: interaccion.items.map((mensaje) => ({
+      type: 'message' as const,
+      ...(mensaje.alias !== undefined && { id: mensaje.alias }),
+      kind: mensaje.kind ?? 'sync',
+      from: mensaje.from,
+      to: mensaje.to,
+      ...(mensaje.label !== undefined && { label: mensaje.label }),
+      ...(mensaje.description !== undefined && { description: mensaje.description }),
+    })),
   };
 }
 
