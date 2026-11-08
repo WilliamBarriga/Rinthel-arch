@@ -46,5 +46,8 @@ export function anchoDeBorde(capas: readonly CapaPintada[]): number {
   return borde === undefined ? 0 : Number(borde.props['width']);
 }
 
+/** Si la Capa pinta solo una zona de la caja (`zone header` o `zone body`); `all` y la ausencia de `zone` cubren la caja entera. */
+export const esDeZona = (capa: CapaPintada): boolean => capa.props['zone'] === 'header' || capa.props['zone'] === 'body';
+
 /** Si la Capa se mueve o crece: va en un elemento propio y no en la caja fusionada. */
 export const estaDesplazada = (capa: CapaPintada): boolean => ['offset-x', 'offset-y', 'grow'].some((clave) => capa.props[clave] !== undefined);

@@ -16,8 +16,10 @@ import { CATALOGO } from './catalogo';
 import type { DefinicionDePrimitiva, NombreDePrimitiva, NombreDeSlot } from './catalogo';
 import { resolverColor } from './color';
 import type { ContextoDeColor } from './color';
-import { cascada } from './parches';
+import { aplicarOps, cascada } from './parches';
 import type { CapaDeTema, ElementoDeTema, Estado, OpDeCapa, TipoDeDiagrama } from './parches';
+import { CLAVES_DE_FILA, claveDeFila, variantesDeFila } from './fila';
+import type { TextoDeFila, VarianteDeFila } from './fila';
 import { resolverTema, temaParaDiagrama } from './tema';
 import type { TemaResuelto } from './tema';
 
@@ -78,6 +80,19 @@ export interface PinturaDeElemento extends PinturaDeNodo {
   tipos: Record<string, PinturaDeNodo>;
 }
 
+/**
+ * Pintura de la fila de una tabla ER (bloque `row`): la pila base, la de cada variante que difiere de ella (ver `claveDeFila`)
+ * y el estilo de los textos `name`, `type` y `key`. Solo existe en el Estilo de una Vista ER cuyo Tema declara `row`.
+ */
+export interface PinturaDeFila {
+  base: CapaPintada[];
+  variantes: Record<string, CapaPintada[]>;
+  textos: Partial<Record<TextoDeFila, PrimitivaPintada>>;
+}
+
+/** Pila de Capas de una fila: la de su variante si el Tema la parchea, si no la base. */
+export const pilaDeFila = (fila: PinturaDeFila, variante: VarianteDeFila): CapaPintada[] => fila.variantes[claveDeFila(variante)] ?? fila.base;
+
 export interface Pintura {
   /** `seed N` del Tema (token `seed`); sin el, la semilla de cada Capa sale solo del id y del nombre. */
   semilla?: number;
@@ -88,6 +103,8 @@ export interface Pintura {
   /** Reposo de la Arista y, por color de Paleta del Nodo de origen, la suya (`ORIGEN` toma ese color). */
   arista: PinturaDeArista & { origenes: Record<string, PinturaDeArista> };
   pagina: PinturaDePagina;
+  /** Fila de las tablas ER; solo en una Vista ER cuyo Tema declara `row`. */
+  fila?: PinturaDeFila;
 }
 
 /** Fuentes del Estilo resuelto: la pila `font-family` de cuerpo y mono (con la reserva declarada) y las caras que el Workspace aporta. */
@@ -199,6 +216,26 @@ function grupoSobrio(tema: TemaResuelto, colapsado: boolean, variable: string | 
   ];
 }
 
+/** Pintura del bloque `row`: la pila de cada variante de fila (impar, marcas de clave, opcional) que el Tema parchea. `COLOR` toma el color del Nodo (`variable`). */
+function pinturaDeFila(tema: TemaResuelto, variable: string | undefined): PinturaDeFila | undefined {
+  const { fila } = tema;
+  if (fila === undefined) return undefined;
+  const pila = (v: VarianteDeFila): CapaPintada[] => {
+    const ops: ReadonlyArray<readonly OpDeCapa[]> = [v.impar ? fila.alterna : [], ...CLAVES_DE_FILA.filter((k) => v.keys.includes(k)).map((k) => fila.claves[k] ?? []), v.opcional ? fila.opcional : []];
+    const capas = ops.reduce<CapaDeTema[]>((acc, parche) => (parche.length === 0 ? acc : aplicarOps(acc, parche, tema.palette, 'parchear').pila), fila.capas as CapaDeTema[]);
+    return pintar(capas, tema, undefined, variable);
+  };
+  const base = pila({ impar: false, keys: [], opcional: false });
+  const variantes: Record<string, CapaPintada[]> = {};
+  for (const v of variantesDeFila()) {
+    const propia = pila(v);
+    if (JSON.stringify(propia) !== JSON.stringify(base)) variantes[claveDeFila(v)] = propia;
+  }
+  const { paleta, contexto } = contextoDeColor(tema, undefined, variable);
+  const textos = Object.fromEntries(Object.entries(fila.textos).map(([nombre, texto]) => [nombre, { tipo: texto.tipo as NombreDePrimitiva, props: resolverProps(texto, paleta, contexto) }]));
+  return { base, variantes, textos };
+}
+
 export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): EstiloResuelto {
   const resuelto = temaParaDiagrama(resolverTema(tema), opciones.diagrama);
   const variable = opciones.colorEnVariable;
@@ -234,6 +271,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
     };
   };
   const tabla = tablaDeMetricas(tema, opciones.medidas, opciones.diagrama);
+  const fila = opciones.diagrama === 'er' ? pinturaDeFila(resuelto, variable) : undefined;
   const reserva = resuelto.fonts['fallback'];
   return {
     metricas: tabla.base,
@@ -248,6 +286,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
       nodo: elementoDe('nodo'),
       grupo: { abierto: elementoDe('grupo'), colapsado: elementoDe('grupo', true) },
       pagina: { capas: pintar(resuelto.pagina.capas as CapaDeTema[], resuelto, undefined), fijo: resuelto.pagina.fijo },
+      ...(fila !== undefined && { fila }),
       arista: {
         ...pintarArista(resuelto, undefined),
         origenes: Object.fromEntries(Object.keys(resuelto.palette).sort().map((color) => [color, pintarArista(resuelto, color)])),

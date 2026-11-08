@@ -185,8 +185,10 @@ export interface TablaDeMetricas {
 export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto, diagrama?: TipoDeDiagrama): TablaDeMetricas {
   const tabla = tablaSinMarcas(tema, medidas, diagrama);
   if (diagrama !== 'er') return tabla;
-  // Vista ER: todas las entradas dibujan marcas de clave; `claveDeMetricas` las distingue de las de arquitectura.
-  const conMarcas = (m: Metricas): Metricas => ({ ...m, marcasDeClave: true });
+  // Vista ER: todas las entradas dibujan marcas de clave (`claveDeMetricas` las distingue de las de arquitectura) y
+  // toman el alto de fila del bloque `row` del Tema, si lo declara.
+  const alto = resolverTema(tema).fila?.alto;
+  const conMarcas = (m: Metricas): Metricas => ({ ...m, ...(alto !== undefined && { fila: alto }), marcasDeClave: true });
   return { base: conMarcas(tabla.base), tipos: Object.fromEntries(Object.entries(tabla.tipos).map(([tipo, m]) => [tipo, conMarcas(m)])), grupoAbierto: conMarcas(tabla.grupoAbierto), grupoColapsado: conMarcas(tabla.grupoColapsado), etiqueta: conMarcas(tabla.etiqueta) };
 }
 

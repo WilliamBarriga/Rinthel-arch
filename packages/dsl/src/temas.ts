@@ -27,6 +27,7 @@ import type { GroupItem, GroupPadding, NodeItem, Theme, ThemeDiagram, ThemeLayer
 import { ARCHIVO_INCORPORADOS, NOMBRES_INCORPORADOS } from './incorporados';
 import { aRango, issueConSugerencia } from './posiciones';
 import { compilarArista } from './temas-arista';
+import { compilarFila } from './temas-fila';
 import { compilarSlots } from './temas-slots';
 import type { DestinoDeSlots } from './temas-slots';
 import { compilarAnimacionDeNodo } from './temas-animacion';
@@ -226,6 +227,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
         ...(origen.arista.etiqueta !== undefined && { etiqueta: { ...origen.arista.etiqueta, props: { ...origen.arista.etiqueta.props } } }),
       },
       pagina: { capas: origen.pagina.capas.map(copiarCapa), fijo: origen.pagina.fijo },
+      ...(origen.fila !== undefined && { fila: structuredClone(origen.fila) }),
     };
     const origenes = new Map(base?.origenes);
     const porTipo = copiarRegistro(base?.origen.tipos ?? {});
@@ -236,7 +238,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     const sitiosDeSlots = new Map(Object.entries(base?.origen.slots ?? {}) as Array<['nodo' | 'grupo' | 'colapsado', Sitio]>);
     const grupoPorColapso = copiarRegistro({ collapsed: base?.origen.grupo.colapsado ?? {} });
     for (const parte of declarado.ast.parts) {
-      if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeGroup' || parte.$type === 'ThemeEdge' || parte.$type === 'ThemePage') continue;
+      if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeGroup' || parte.$type === 'ThemeEdge' || parte.$type === 'ThemePage' || parte.$type === 'ThemeRow') continue;
       const destino = parte.$type === 'ThemePalette' ? tema.palette : parte.$type === 'ThemeFonts' ? tema.fonts : tema.tokens;
       for (const { key, value } of parte.entries) destino[key] = value;
     }
@@ -262,6 +264,8 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     compilarElemento('grupo', declarado.archivo, delGrupo, tema, origenesDeGrupo, { partes, tipos, issues, porTipo: grupoPorTipo, porEstado: grupoPorEstado, porColapso: grupoPorColapso, sitiosDeSlots });
     const delBordeDeArista = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeEdge' ? parte.items : []));
     compilarArista(delBordeDeArista, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
+    const delaFila = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeRow' ? parte.items : []));
+    compilarFila(delaFila, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
     const delaPagina = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemePage' ? parte.items : []));
     const origenesDePagina = new Map(Object.entries(base?.origen.pagina ?? {}));
     compilarPagina(delaPagina, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues, origenes: origenesDePagina });
@@ -273,7 +277,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       origen: {
         sitio: { file: declarado.archivo, ...declarado.nombre.start },
         extends: delPadre,
-        partes: [...new Set([...(base?.origen.partes ?? []), ...partesUsadas([...items, ...delGrupo, ...delBordeDeArista, ...delaPagina], partes)])],
+        partes: [...new Set([...(base?.origen.partes ?? []), ...partesUsadas([...items, ...delGrupo, ...delBordeDeArista, ...delaFila, ...delaPagina], partes)])],
         base: sitioDeCopia(origenes),
         tipos: Object.fromEntries(Object.entries(porTipo).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),
         estados: Object.fromEntries(Object.entries(porEstado).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),

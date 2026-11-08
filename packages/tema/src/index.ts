@@ -79,7 +79,7 @@
  * errores de catalogo; solo `resolverTema` lanza. Configuracion requerida: ninguna.
  * Solo importa `canonico`.
  */
-export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, SLOTS_DE_TEXTO, construirPrimitiva, primitivasDe, primitivasDeFamilia, resolverTokens, sugerir } from './catalogo';
+export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, SLOTS_DE_TEXTO, construirPrimitiva, primitivasDe, primitivasDeFamilia, resolverTokens, sugerir, validarPropiedades } from './catalogo';
 export { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, alineacionDe, construirDisposicion, describirDisposicion, esCaja, slotsDe } from './disposicion';
 export type { Alineacion, CajaDeSlots, Direccion, ElementoDeSlots, EntradaDeCaja, EntradaDeSlot, ErrorDeDisposicion, HojaDeSlots, PropiedadEscrita } from './disposicion';
 export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDePrimitivaEn, NombreDeSlot, NombreDeSlotDeTexto, Primitiva, UbicacionDePrimitiva } from './catalogo';
@@ -99,8 +99,10 @@ export type { CaraDeFuente, FuenteFaltante } from './fuentes';
 export { referenciaDelCatalogo } from './referencia';
 export { PUNTO_DE_TITULO_EM, alturaDeCabecera, colocarDisposicion, colocarEnCaja, colocarNodo, medirDisposicion, textoDeSlot } from './slots';
 export type { ColocacionDeNodo, MedidaDeSlot, Rect, Tamano } from './slots';
-export { estiloResuelto } from './estilo';
-export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeElemento, PinturaDeNodo, PinturaDePagina, PrimitivaPintada } from './estilo';
+export { estiloResuelto, pilaDeFila } from './estilo';
+export { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA, claveDeFila } from './fila';
+export type { TextoDeFila, VarianteDeFila } from './fila';
+export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeElemento, PinturaDeFila, PinturaDeNodo, PinturaDePagina, PrimitivaPintada } from './estilo';
 export { aplicarOps, cascada, ESTADOS, TIPOS_DE_DIAGRAMA, opTocaMetricas, parsearEstado, validarOps } from './parches';
 export type { CapaDeTema, ElementoDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa, ResultadoDeEstado, TipoDeDiagrama } from './parches';
 export { resolverColor, validarColor } from './color';

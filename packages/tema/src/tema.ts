@@ -12,6 +12,7 @@ import { DEFINICION_DE_SLOT, SLOTS, construirPrimitiva } from './catalogo';
 import type { NombreDePrimitiva, NombreDeSlot, Primitiva, UbicacionDePrimitiva } from './catalogo';
 import { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, esCaja } from './disposicion';
 import type { CajaDeSlots, ElementoDeSlots } from './disposicion';
+import { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA } from './fila';
 import { ESTADOS, TIPOS_DE_DIAGRAMA, aplicarOps, opTocaMetricas, validarOps } from './parches';
 import type { CapaDeTema, OpDeCapa, TipoDeDiagrama } from './parches';
 
@@ -137,6 +138,20 @@ const nodoSchema = z.strictObject({
   animacion: animacionDeNodoSchema.optional(),
 });
 
+/**
+ * Fila de una tabla ER (ADR 0009): pila de Capas por fila, alto (Metrica), parche de las filas impares, estilo de los
+ * textos `name`, `type` y `key` (chip) y parches por marca de clave y por Atributo opcional. Solo vale en Vistas ER;
+ * ausente, la fila usa la pintura del Slot `attrs`.
+ */
+const filaSchema = z.strictObject({
+  capas: z.array(capaSchema).default([]),
+  alto: z.number().min(ALTO_DE_FILA.min).max(ALTO_DE_FILA.max).optional(),
+  alterna: z.array(opSchema).default([]),
+  textos: z.partialRecord(z.enum(NOMBRES_DE_TEXTO_DE_FILA as [keyof typeof TEXTOS_DE_FILA, ...Array<keyof typeof TEXTOS_DE_FILA>]), primitivaSchema).default({}),
+  claves: z.partialRecord(z.enum(CLAVES_DE_FILA as [(typeof CLAVES_DE_FILA)[number], ...Array<(typeof CLAVES_DE_FILA)[number]>]), z.array(opSchema)).default({}),
+  opcional: z.array(opSchema).default([]),
+});
+
 const relleno = z.number().min(0).max(128);
 const paddingSchema = z.strictObject({ top: relleno, left: relleno, bottom: relleno, right: relleno });
 
@@ -204,6 +219,8 @@ export const temaResueltoSchema = z
     grupo: grupoSchema.default(GRUPO_POR_DEFECTO),
     arista: aristaSchema.default({ capas: [] }),
     pagina: paginaSchema.default({ capas: [], fijo: false }),
+    /** Fila de las tablas ER; ausente = sin estilo propio (no entra en los snapshots de los Temas que no la usan). */
+    fila: filaSchema.optional(),
   })
   .superRefine((tema, ctx) => {
     const validar = (primitiva: { tipo: string; props: Record<string, string | number> }, ubicacion: UbicacionDePrimitiva, path: Array<string | number>): void => {
@@ -237,7 +254,39 @@ export const temaResueltoSchema = z
     }
     validarElemento(ctx, tema, 'nodo');
     validarElemento(ctx, tema, 'grupo');
+    if (tema.fila !== undefined) validarFila(ctx, tema, tema.fila);
   });
+
+/** Valida el bloque `row`: sus Capas contra el catalogo, sus parches contra la pila base (sin tocar las Metricas) y el estilo de sus textos. */
+function validarFila(ctx: z.RefinementCtx, tema: TemaResuelto, fila: NonNullable<TemaResuelto['fila']>): void {
+  const falla = (path: Array<string | number>, message: string): void => ctx.addIssue({ code: 'custom', path: ['fila', ...path], message });
+  const vistas = new Set<string>();
+  fila.capas.forEach((capa, i) => {
+    if (vistas.has(capa.nombre)) falla(['capas', i, 'nombre'], `Capa '${capa.nombre}' repetida`);
+    vistas.add(capa.nombre);
+    const props = Object.entries(capa.primitiva.props).map(([clave, valor]) => ({ clave, valor }));
+    for (const error of construirPrimitiva(capa.primitiva.tipo, props, tema.palette).errores) falla(['capas', i, 'primitiva', ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
+  });
+  const base = fila.capas as CapaDeTema[];
+  const parches: Array<[Array<string | number>, readonly OpDeCapa[]]> = [
+    [['alterna'], fila.alterna],
+    [['opcional'], fila.opcional],
+    ...Object.entries(fila.claves).map(([clave, ops]): [Array<string | number>, readonly OpDeCapa[]] => [['claves', clave], ops]),
+  ];
+  for (const [ruta, ops] of parches) {
+    for (const e of validarOps([base], ops, tema.palette, 'parchear')) falla([...ruta, e.indice], e.mensaje);
+    ops.forEach((op, indice) => {
+      const razon = opTocaMetricas(op, [base]);
+      if (razon !== undefined) falla([...ruta, indice], `un parche de fila no puede tocar las Metricas: ${razon}`);
+    });
+  }
+  for (const [nombre, texto] of Object.entries(fila.textos)) {
+    const props = Object.entries(texto.props).map(([clave, valor]) => ({ clave, valor }));
+    for (const error of construirPrimitiva(texto.tipo, props, tema.palette, 'texto-slot').errores) falla(['textos', nombre, ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
+    const esperado = TEXTOS_DE_FILA[nombre as keyof typeof TEXTOS_DE_FILA];
+    if (texto.tipo !== esperado) falla(['textos', nombre], `el texto '${nombre}' de la fila se estiliza con la Primitiva '${esperado}', no '${texto.tipo}'`);
+  }
+}
 
 type Elemento = 'nodo' | 'grupo';
 
@@ -428,6 +477,7 @@ function conDefectos(tema: TemaResuelto): TemaResuelto {
       ...(etiqueta !== undefined && { etiqueta: completar(etiqueta, 'etiqueta') }),
     },
     pagina: { ...tema.pagina, capas: capas(tema.pagina.capas, 'capa-pagina') },
+    ...(tema.fila !== undefined && { fila: { ...tema.fila, capas: capas(tema.fila.capas, 'capa-nodo'), textos: Object.fromEntries(Object.entries(tema.fila.textos).map(([nombre, primitiva]) => [nombre, completar(primitiva, 'texto-slot')])) } }),
   };
 }
 
