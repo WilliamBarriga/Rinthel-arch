@@ -22,6 +22,7 @@ model {
   tipo id "Titulo" "Descripcion" {
     tipo hijo "Titulo"                     // un Grupo es un Nodo con hijos
     attrs { id: uuid   total: decimal "en centavos" }
+    email: text? uk "unico"                // un Atributo tambien puede ir suelto en el cuerpo (ver "Vistas `er`")
     source { file "packages/x/src/a.ts"  url "https://..." }
   }
 
@@ -62,7 +63,7 @@ model {
 
 ```
 view paquetes {
-  type architecture             // o flow, sequence
+  type architecture             // o flow, sequence, er
   theme diagrams                // opcional; defecto: neutral
   include a, b.*, c.**          // selectores
   exclude a.privado
@@ -76,7 +77,7 @@ view paquetes {
 
 | Propiedad | Efecto |
 | --- | --- |
-| `type` | `architecture`, `flow` o `sequence` |
+| `type` | `architecture`, `flow`, `sequence` o `er` |
 | `include`, `exclude` | Selectores: `a` (el Nodo), `a.*` (sus hijos directos), `a.**` (todos sus descendientes). `**` solo, todo el Modelo |
 | `depth N` | Profundidad inicial; los Grupos que la exceden aparecen colapsados |
 | `expanded`, `collapsed` | Estado inicial de los Grupos nombrados |
@@ -103,6 +104,28 @@ Dibuja una columna por Lifeline y los Mensajes de arriba abajo, con las activaci
 ### Pin
 
 `pin x,y` fija la posicion de un Nodo (relativa a su Grupo padre, o al lienzo si es raiz) y anula el auto-layout para ese Nodo. No se escribe a mano: arrastra el Nodo en el visor y el Pin se escribe en el `.dg` (o usa `dg edit --view <id> --node <id> --x N --y N`).
+
+## Vistas `er`: tablas y claves foraneas
+
+Una Vista `type er` dibuja cada Nodo hoja como una tabla (cabecera mas una fila por Atributo) y las Aristas como FK con marcadores de pie de gallo, sin flechas. Acepta lo mismo que `architecture` (`include`, `exclude`, `depth`, `expanded`, `collapsed`, `pin`, `node`, `steps`). Funciona con cualquier Tema; un Nodo `pill` o `circle` se dibuja como `rect`.
+
+```
+model {
+  tabla orders "Pedidos" {
+    id: uuid pk
+    customer_id: uuid pk fk
+    email: text? uk "unico"
+  }
+  tabla customers "Clientes" { id: uuid pk }
+  orders#customer_id "1..*" -> "1" customers#id "pertenece" identifying
+}
+view tablas { type er  include ** }
+```
+
+- Atributo: `nombre: tipo[?] [pk] [fk] [uk] ["notas"]`. El `?` pegado al tipo lo hace opcional; las marcas van en cualquier orden y repetir una es `E_DUPLICATE_KEY_MARK` (su `fix` borra la repetida). Cada marca se dibuja como un chip en la fila.
+- Arista identificante: palabra final `identifying` (linea continua; las demas van discontinuas). Un Nodo llamado `identifying` no puede abrir la declaracion que sigue justo a una Arista (se leeria como su marca); `pk`, `fk`, `uk` y `er` valen como ids en cualquier sitio.
+- Cardinalidad: en una Vista ER solo valen `0..1`, `1`, `0..*` y `1..*` (`E_ER_CARDINALITY`, con `fix` si hay un candidato cercano unico). Cada una se dibuja como su marcador (`zero-one`, `one`, `zero-many`, `many`); un Grupo colapsado con varias FK agregadas va sin marcadores.
+- Fuera de una Vista ER las marcas y `identifying` se ignoran sin aviso.
 
 ## Vistas `flow` y Pasos
 

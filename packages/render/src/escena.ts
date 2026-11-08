@@ -345,7 +345,7 @@ export function colorDeTrazo(nodo: NodoResuelto, estilo: Estilo): string {
 }
 
 /** Arista con su etiqueta. Una Arista sin ruta en la geometria (ELK no la enruto) se omite. */
-function aristaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibility, estados, coloresDeNodo }: ContextoDeGrafo): Elemento[] {
+function aristaSvg(arista: AristaResuelta, { view, geometry, estilo, onSelect, visibility, estados, coloresDeNodo }: ContextoDeGrafo): Elemento[] {
   const id = idDeArista(arista);
   const puntos = geometry.edges[id]?.points;
   if (puntos === undefined || puntos.length < 2) return [];
@@ -358,6 +358,7 @@ function aristaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibil
       ...(colorDelOrigen !== undefined && { origen: colorDelOrigen }),
       desde: arista.fromCardinality,
       hasta: arista.toCardinality,
+      ...(view.type === 'er' && { er: { identificante: arista.identifying === true } }),
       atributos: atenuado(estados, id) ? { ...v, 'data-atenuado': '' } : v,
       extra: contornos(estados?.[id]).map((e) => pintarEstadoDeRuta(estilo, e, id, puntos)),
       ...(onSelect !== undefined && { alClic: () => onSelect(id) }),

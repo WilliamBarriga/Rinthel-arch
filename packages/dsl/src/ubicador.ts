@@ -66,6 +66,8 @@ function deNodo({ fuente, nodos }: DatosDelUbicador, ruta: Ruta): SitioDeTexto |
 function deArista({ aristas }: DatosDelUbicador, [i, lado, campo]: Ruta): SitioDeTexto | null {
   const arista = aristas[i as number];
   if (arista === undefined) return null;
+  // Cardinalidades: `ruta` = [i, 'fromCardinality' | 'toCardinality'], sin `campo`.
+  if (lado === 'fromCardinality' || lado === 'toCardinality') return sitio(arista.archivo, rangoDe(arista.ast, lado));
   return sitio(arista.archivo, rangoDe(arista.ast[lado as 'from' | 'to'], campo as string));
 }
 

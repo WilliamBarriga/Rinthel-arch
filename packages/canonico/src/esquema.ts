@@ -61,11 +61,24 @@ export interface ReferenciaOpaca {
   ref: string;
 }
 
-/** Elemento estructurado y ordenado de un Nodo (columna, campo, metodo). No es un Nodo hijo. */
+/** Marcas de clave de un Atributo (ER): clave primaria, foranea y unica; combinables. */
+export const CLAVES_DE_ATRIBUTO = ['pk', 'fk', 'uk'] as const;
+/** Cardinalidades canonicas que exige una Vista ER (el Modelo guarda el texto libre). */
+export const CARDINALIDADES_ER = ['0..1', '1', '0..*', '1..*'] as const;
+export type ClaveDeAtributo = (typeof CLAVES_DE_ATRIBUTO)[number];
+
+/**
+ * Elemento estructurado y ordenado de un Nodo (columna, campo, metodo). No es un Nodo hijo.
+ * `keys` y `optional` son Modelo (ER) y se escriben siempre; solo las Vistas ER los dibujan.
+ */
 export interface Atributo {
   name: string;
   type: string;
   notes: string;
+  /** Marcas de clave sin repetir; ausente si no tiene. */
+  keys?: ClaveDeAtributo[];
+  /** El tipo admite nulo (`tipo?` en el DSL); ausente es `false`. */
+  optional?: boolean;
 }
 
 /**
@@ -85,6 +98,8 @@ export interface Arista {
   toCardinality?: string;
   /** Texto corto sobre la Arista (ej. protocolo o accion). */
   label?: string;
+  /** Relacion identificante (ER: linea continua en vez de discontinua); ausente es `false`. */
+  identifying?: boolean;
 }
 
 /** Conjunto unico de Nodos, Aristas e Interacciones del Proyecto documentado (CONTEXT.md). */
@@ -129,6 +144,8 @@ export const atributoSchema = z.object({
   name: z.string().min(1),
   type: z.string().min(1),
   notes: z.string().default(''),
+  keys: z.array(z.enum(CLAVES_DE_ATRIBUTO)).min(1).optional(),
+  optional: z.boolean().optional(),
 });
 
 /**
@@ -160,6 +177,7 @@ export const aristaSchema = z.object({
   fromCardinality: z.string().min(1).optional(),
   toCardinality: z.string().min(1).optional(),
   label: z.string().min(1).optional(),
+  identifying: z.boolean().optional(),
 });
 
 export const mensajeSchema = z.object({
@@ -198,8 +216,8 @@ export const temaSchema = z.looseObject({
 
 export type Tema = z.infer<typeof temaSchema>;
 
-/** Tipos de diagrama de la primera entrega. */
-export const TIPOS_DE_VISTA = ['architecture', 'flow', 'sequence'] as const;
+/** Tipos de diagrama. */
+export const TIPOS_DE_VISTA = ['architecture', 'flow', 'sequence', 'er'] as const;
 
 /**
  * Override de presentacion de un Nodo en una Vista: solo apariencia, nunca toca

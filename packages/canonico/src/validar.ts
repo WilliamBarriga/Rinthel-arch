@@ -14,6 +14,7 @@
  * geometria de `layout` (la emite el CLI).
  */
 import { CODIGOS } from './codigos';
+import { CARDINALIDADES_ER } from './esquema';
 import type { ElementoDePaso, FuenteCanonica, Nodo, Tema, Vista } from './esquema';
 import type { IconProvider } from './iconos';
 import type { Issue, TextRange } from './issue';
@@ -56,6 +57,10 @@ type Emitir = (
   message: string,
   escrito?: string,
   existentes?: Iterable<string>,
+  /** Texto del `fix` tal como se escribe en el DSL (p. ej. entre comillas); por defecto, el candidato tal cual. */
+  escribir?: (candidato: string) => string,
+  /** `hint` cuando no hay ningun candidato cercano. */
+  sinCandidatos?: string,
 ) => void;
 
 /** Todos los issues semanticos de la Fuente, ordenados (archivo, linea, columna, codigo). */
@@ -64,7 +69,7 @@ export function validate(fuente: FuenteCanonica, opciones: OpcionesDeValidate = 
   const { ubicar } = opciones;
 
   /** Issue de error en `ruta`; con `existentes` anade `fix` (un candidato) o `hint` (varios). */
-  const emitir: Emitir = (ruta, code, message, escrito, existentes) => {
+  const emitir: Emitir = (ruta, code, message, escrito, existentes, escribir = (candidato) => candidato, sinCandidatos) => {
     const sitio = ubicar === undefined ? SIN_UBICAR : ubicar(ruta);
     if (sitio === null) return;
     const { file, range } = sitio;
@@ -73,9 +78,11 @@ export function validate(fuente: FuenteCanonica, opciones: OpcionesDeValidate = 
       const candidatos = candidatosCercanos(escrito, existentes);
       const [unico] = candidatos;
       if (candidatos.length === 1 && unico !== undefined) {
-        if (ubicar !== undefined) issue.fix = { file, range, replacement: unico };
+        if (ubicar !== undefined) issue.fix = { file, range, replacement: escribir(unico) };
       } else if (candidatos.length > 1) {
         issue.hint = `Candidatos: ${candidatos.join(', ')}`;
+      } else if (sinCandidatos !== undefined) {
+        issue.hint = sinCandidatos;
       }
     }
     issues.push(issue);
@@ -130,9 +137,37 @@ function atributosPorNodo(nodos: readonly Nodo[], destino = new Map<string, stri
   return destino;
 }
 
+/** Indices de las Aristas del Modelo cuyos dos extremos estan incluidos en alguna Vista ER (el primer Nodo no excluido por `exclude`). */
+function aristasDeVistasEr(fuente: FuenteCanonica): Set<number> {
+  const ids = todosLosIds(fuente.model.nodes);
+  const incluidos = new Set<string>();
+  for (const vista of fuente.views) {
+    if (vista.type !== 'er') continue;
+    for (const id of ids) {
+      if (vista.include.some((selector) => matchesSelector(selector, id)) && !vista.exclude.some((selector) => matchesSelector(selector, id))) incluidos.add(`${vista.id}\0${id}`);
+    }
+  }
+  const enVista = (vista: string, id: string): boolean => incluidos.has(`${vista}\0${id}`);
+  const resultado = new Set<number>();
+  fuente.model.edges.forEach((arista, indice) => {
+    if (fuente.views.some((vista) => vista.type === 'er' && enVista(vista.id, arista.from.node) && enVista(vista.id, arista.to.node))) resultado.add(indice);
+  });
+  return resultado;
+}
+
+const entreComillas = (texto: string): string => `"${texto}"`;
+
 function validarAristas(fuente: FuenteCanonica, emitir: Emitir): void {
   const atributos = atributosPorNodo(fuente.model.nodes);
+  const enVistaEr = aristasDeVistasEr(fuente);
   fuente.model.edges.forEach((arista, indice) => {
+    if (enVistaEr.has(indice)) {
+      for (const campo of ['fromCardinality', 'toCardinality'] as const) {
+        const escrita = arista[campo];
+        if (escrita === undefined || (CARDINALIDADES_ER as readonly string[]).includes(escrita)) continue;
+        emitir(['model', 'edges', indice, campo], CODIGOS.E_ER_CARDINALITY, `Cardinalidad '${escrita}' no valida en una Vista ER (${CARDINALIDADES_ER.join(' | ')})`, escrita, CARDINALIDADES_ER, entreComillas, `Cardinalidades validas: ${CARDINALIDADES_ER.join(', ')}`);
+      }
+    }
     for (const lado of ['from', 'to'] as const) {
       const { node, attribute } = arista[lado];
       const delNodo = atributos.get(node);
