@@ -22,6 +22,18 @@ Relacion entre dos extremos del Modelo. Un extremo es un Nodo o un Atributo de u
 **Atributo**:
 Elemento estructurado y ordenado de un Nodo (columna, campo, metodo), con nombre, tipo y notas. Es direccionable como extremo de una Arista. Distinto de un Nodo hijo.
 
+**Interaccion**:
+Escenario del Modelo con id propio (espacio de nombres separado del de los Nodos), titulo y descripcion opcionales: lista ordenada de Mensajes, Notas, Fragmentos y referencias a otras Interacciones. El orden de la lista es el orden temporal. Una Vista de secuencia proyecta exactamente una. Distinta de Arista: no exige ni crea Aristas.
+
+**Lifeline**:
+Participante de una Interaccion. Es un Nodo de cualquier nivel, no una entidad aparte; su orden en la Vista es el de primera aparicion, salvo override de la Vista.
+
+**Mensaje**:
+Item de una Interaccion de un Nodo a otro (o al mismo, mensaje propio), con tipo (`sync`, `async`, `reply`, `create`, `destroy`), etiqueta y descripcion opcionales. Su identidad es su posicion en la Interaccion; puede llevar un id opcional, unico en su Interaccion, que es solo un alias para citarlo. La activacion no se declara: se deriva de los pares `sync`/`reply`.
+
+**Fragmento**:
+Item de una Interaccion que agrupa Mensajes bajo un operador (`alt`, `opt`, `loop`, `par`, `break`, `critical`) en uno o mas operandos con guarda opcional. Se anida. No es un Nodo ni un Grupo: contiene Mensajes, no entidades.
+
 **Tipo de nodo**:
 Categoria de Nodo (servicio, tabla, actor...) declarada en el catalogo del Proyecto documentado, con su icono y estilo. Un Tipo de nodo no declarado es error de validacion. Distinto de Tipo de diagrama.
 
@@ -29,7 +41,7 @@ Categoria de Nodo (servicio, tabla, actor...) declarada en el catalogo del Proye
 Lista de referencias opacas de un Nodo al Proyecto documentado (ruta de archivo, ruta y simbolo, URL, id de entidad externa), cada una con `kind` y `ref`. El nucleo las guarda sin interpretarlas.
 
 **Vista**:
-Proyeccion declarativa de un Modelo, de un Tipo de diagrama: que Nodos incluye o excluye y hasta que profundidad. Nunca define entidades nuevas. Puede sobrescribir solo presentacion (etiqueta corta, Pin, estilo, orden).
+Proyeccion declarativa de un Modelo, de un Tipo de diagrama: que Nodos incluye o excluye y hasta que profundidad (en secuencia, que Interaccion proyecta). Nunca define entidades nuevas. Puede sobrescribir solo presentacion (etiqueta corta, Pin, estilo, orden).
 
 **Tipo de diagrama**:
 Familia de notacion que fija como se dibuja una Vista. Primera entrega: arquitectura y flujo. Despues: secuencia y ER.
@@ -44,7 +56,7 @@ Arbol de Slots (mini-layout) que el Tema declara en `group` para el titulo y el 
 Grupo mostrado como un Nodo unico, con su contador de hijos y las Aristas de sus hijos elevadas a su borde. Al abrir una Vista, los Grupos que exceden su profundidad aparecen colapsados.
 
 **Enlace entre Vistas**:
-Drill-down de un Nodo hacia otra Vista. Es navegacion, no jerarquia: una Vista puede tener varios padres y los ciclos son validos. La ruta recorrida se muestra como breadcrumbs.
+Drill-down de un Nodo, o de un `ref` en secuencia, hacia otra Vista de cualquier Tipo de diagrama. Es navegacion, no jerarquia: una Vista puede tener varios padres y los ciclos son validos. La ruta recorrida se muestra como breadcrumbs.
 
 **Tema**:
 Declaracion de presentacion con la que se dibuja una Vista: Paleta, fuentes, tokens y, por cada elemento (Nodo, Arista, Grupo, fondo de pagina), una pila de Capas, mas su animacion. Se declara en el Workspace, es modular (`extends` de un padre y Partes reutilizables) y nunca toca el Modelo. Una Vista elige un solo Tema, asi que diagramas distintos pueden tener lineas visuales distintas; dentro de la Vista, la forma varia por Tipo de nodo, estado, Arista y Grupo mediante parches.
@@ -64,6 +76,9 @@ Grupo de Primitivas del mismo oficio (forma, relleno, borde (continuo, discontin
 **Slot**:
 Lugar de contenido de nombre fijo en un Nodo o Grupo (`icon`, `title`, `desc`, `badge`, `footer`, `attrs`, `counter`). El Tema decide cuales se muestran, en que orden y con que estilo. Junto con la caja, son lo unico que afecta a las Metricas.
 
+**Elemento de Tema**:
+Cada cosa que un Tema sabe dibujar con su propia pila de Capas: pagina, Nodo, Grupo y Arista, y los de secuencia y ER (Lifeline, activacion, Mensaje, Fragmento, Nota, fila de Atributo). Un Tema que no declara un Elemento lo recibe derivado de sus otros Elementos, de modo que cualquier Tema dibuja cualquier Tipo de diagrama. Lo que varia por Tipo de diagrama en Nodo, Grupo o Arista es un nivel de la cascada, no un Elemento aparte.
+
 **Movimiento**:
 Animacion continua de catalogo cerrado (`flujo`, `pulso`, `respiracion`...) que se cuelga de una Capa y puede atarse a un estado. Las reacciones a la interaccion son transiciones entre parches de estado; `enter`/`exit` animan la aparicion y salida, y un Paso solo dispara la `enter`.
 
@@ -77,7 +92,10 @@ Componente React/TS del Workspace que un Tema referencia por nombre como Capa `c
 Colores con nombre de un Tema (`blue`, `danger`). El Modelo y las Vistas solo se refieren a un color por su nombre de Paleta, nunca por valor literal.
 
 **Paso**:
-Punto ordenado de una Vista que revela Nodos y Aristas de forma acumulativa. Solo cambia visibilidad, nunca posicion. Una Vista sin Pasos se muestra completa.
+Punto ordenado de una Vista que revela Nodos y Aristas de forma acumulativa. Solo cambia visibilidad, nunca posicion. Una Vista sin Pasos se muestra completa. En secuencia, un Paso es un corte del tiempo: muestra la Interaccion hasta un Mensaje y solo avanza.
+
+**Autonumeracion**:
+Numero que una Vista de secuencia pone a cada Mensaje que proyecta, por orden de declaracion. Es presentacion de la Vista: no depende de los Pasos ni se guarda en el Modelo.
 
 **Pin**:
 Posicion manual de un elemento en una Vista que anula el auto-layout. Ancla el centro del elemento.
@@ -98,16 +116,16 @@ Estado compilado de un Workspace en un momento dado: Fuente canonica, issues y g
 Resultado de aplicar la cascada (Tema base, Tipo de nodo, estado, override de la Vista) a las pilas de Capas. Tiene dos mitades: las Metricas (las lee el layout) y la pintura (las Capas, las lee el render). Cambiar la estetica es cambiar el Tema, no la logica de dibujo.
 
 **Metricas**:
-Medidas de espacio derivadas de un Tema, por elemento (Nodo por Tipo de nodo, Grupo abierto, Grupo colapsado, etiqueta de Arista): padding, gap, tamano de Slot y caja minima de la forma. Solo la caja y los Slots las afectan. Las comparten el calculo de posiciones y el dibujo, de modo que lo reservado y lo dibujado no pueden divergir.
+Medidas de espacio derivadas de un Tema, por elemento (Nodo por Tipo de nodo, Grupo abierto, Grupo colapsado, etiqueta de Arista y, en secuencia, cabecera de Lifeline, activacion, Fragmento, Nota y etiqueta de Mensaje): padding, gap, tamano de Slot y caja minima de la forma, mas las separaciones de secuencia (entre Lifelines, entre Mensajes, lazo del mensaje propio). Solo la caja y los Slots las afectan. Las comparten el calculo de posiciones y el dibujo, de modo que lo reservado y lo dibujado no pueden divergir.
 
 **Geometria vigente**:
 Geometria cacheada de una Vista que sigue valiendo: nada de lo que influye en las posiciones (estructura, textos, fuentes, Metricas, Pins) cambio desde que se calculo. Una sola respuesta para Sesion, CLI y shell.
 
 **Intencion**:
-Cambio que el usuario pide sobre el DSL de texto, expresado en terminos del dominio (hoy: mover el Pin de un Nodo en una Vista). Aun no es una edicion de texto; un Gesto la convierte en una.
+Cambio que el usuario pide sobre el DSL de texto, expresado en terminos del dominio (mover el Pin de un Nodo en una Vista; ordenar las Lifelines de una Vista de secuencia). Aun no es una edicion de texto; un Gesto la convierte en una.
 
 **Gesto**:
 Operacion de la Sesion que recibe una Intencion, calcula la edicion minima del DSL de texto, la auto-prueba y la aplica en memoria. Quien lo invoca solo se ocupa de escribir el resultado.
 
 **Seleccion**:
-Elemento o elementos de una Vista (Nodo, Arista, Atributo) sobre los que actua el editor. Es el sujeto de las Intenciones.
+Elemento o elementos de una Vista (Nodo, Arista, Atributo; en secuencia tambien Mensaje, Fragmento y Nota) sobre los que actua el editor. Es el sujeto de las Intenciones.
