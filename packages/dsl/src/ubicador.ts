@@ -178,9 +178,18 @@ function deVista(datos: DatosDelUbicador, indice: number, ruta: Ruta): SitioDeTe
     }
     return null;
   }
+  if (campo === 'stepsEach') {
+    const prop = props.find((p) => p.$type === 'ViewSteps' && p.each);
+    return prop?.$cstNode === undefined ? null : sitio(archivo, aRango(prop.$cstNode.range));
+  }
   if (campo === 'steps') {
     const paso = props.flatMap((prop) => (prop.$type === 'ViewSteps' ? prop.steps : []))[i as number];
     const [accion, k, propiedad] = cola;
+    if (accion === 'title') return paso === undefined ? null : sitio(archivo, rangoDe(paso, 'title'));
+    if (accion === 'upto') {
+      const upto = paso?.actions.find((a) => a.$type === 'StepUpto');
+      return upto === undefined ? null : sitio(archivo, rangoDe(upto, 'target'));
+    }
     const clase = accion === 'show' ? 'StepShow' : 'StepHide';
     const item = paso?.actions.flatMap((a) => (a.$type === clase ? a.items : []))[k as number];
     return item === undefined ? null : sitio(archivo, rangoDe(item, propiedad as string));

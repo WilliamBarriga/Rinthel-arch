@@ -7,7 +7,7 @@
  * - `activation` toma solo la forma, el relleno y el borde de la pila del Nodo de su Lifeline, sin sombras ni efectos.
  * Las cabeceras de las Lifelines son los Nodos de la Vista, dibujados como cualquier Nodo.
  */
-import type { MensajeResuelto } from 'canonico';
+import type { MensajeResuelto, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada } from 'layout';
 import { RELLENO_DE_NOTA, primitivasDeFamilia } from 'tema';
@@ -16,7 +16,7 @@ import type { CapaPintada, NombreDePrimitiva, PinturaDeArista, PrimitivaPintada 
 import { num } from './elemento';
 import type { Elemento } from './elemento';
 import { resolverEstilo } from './estilo';
-import { aplanar, atenuado, cajaDeNodo, capaSvg, colorDeTrazo, contornos, marcoDeEscena, nombresAccesibles, posicionesDeEscalonado, visibilidadSvg } from './escena';
+import { aplanar, atenuado, cajaDeNodo, capaSvg, colorDeTrazo, contornos, marcoDeEscena, nombresAccesibles, opacidad, posicionesDeEscalonado, visibilidadSvg } from './escena';
 import type { Contexto, EntradaDeEscena } from './escena';
 import { declaracionesDeCaja } from './hoja';
 import { pilaDeNodo } from './pilas';
@@ -85,9 +85,16 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     ];
   });
 
-  const activaciones = geometry.activations.map((activacion) => activacionHtml(activacion, contexto));
-
   const idDe = (mensaje: MensajeResuelto): string => `${interaccion!.id}:${mensaje.ruta}`;
+  // Corte de los Pasos: la `y` del ultimo Mensaje revelado. Con todos revelados no se recorta nada.
+  const reveladas = mensajes.flatMap((mensaje) => {
+    const ruta = geometry.messages[mensaje.ruta];
+    return ruta !== undefined && visibility(idDe(mensaje)) > 0 ? [Math.max(...ruta.points.map((p) => p.y))] : [];
+  });
+  const hayOcultos = mensajes.some((mensaje) => geometry.messages[mensaje.ruta] !== undefined && visibility(idDe(mensaje)) <= 0);
+  const corte = hayOcultos ? Math.max(-Infinity, ...reveladas) : Infinity;
+  const activaciones = geometry.activations.map((activacion) => activacionHtml(activacion, contexto, corte));
+  const idDeInteraccion = interaccion?.id ?? '';
   const rutas = mensajes.flatMap((mensaje) => {
     const ruta = geometry.messages[mensaje.ruta];
     return ruta === undefined ? [] : [{ mensaje, ruta }];
@@ -109,10 +116,10 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
   });
 
   const grupos = geometry.groups.map((grupo) => grupoHtml(grupo, contexto));
-  const fragmentos = geometry.fragments.map((marco) => fragmentoHtml(marco, contexto));
+  const fragmentos = geometry.fragments.map((marco) => fragmentoHtml(marco, contexto, idDeInteraccion));
   // Las guardas (y las pestanas) llevan el color del trazo de la Arista, no el `foreground`, y van sobre las activaciones.
   const colorDeGuarda = String(base.capas[base.capas.length - 1]?.props['color'] ?? estilo.borde);
-  const textosDeFragmento = geometry.fragments.flatMap((marco) => textosDeFragmentoSvg(marco, estilo, colorDeGuarda));
+  const textosDeFragmento = geometry.fragments.flatMap((marco) => textosDeFragmentoSvg(marco, estilo, colorDeGuarda, visibility, idDeInteraccion));
 
   return marcoDeEscena(entrada, estilo, [
     { tag: 'div', attrs: { class: 'rd-capa rd-grupos', 'data-capa': 'grupos' }, hijos: grupos },
@@ -121,25 +128,29 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     { tag: 'div', attrs: { class: 'rd-capa rd-activaciones', 'data-capa': 'activaciones' }, hijos: activaciones },
     capaSvg('mensajes', geometry, [...trazos, ...etiquetas]),
     capaSvg('guardas', geometry, textosDeFragmento),
-    capaSvg('notas', geometry, geometry.notes.map((nota) => notaSvg(nota, estilo, interaccion?.id ?? ''))),
+    capaSvg('notas', geometry, geometry.notes.map((nota) => notaSvg(nota, estilo, idDeInteraccion, visibility))),
     { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: raices.map((nodo) => cajaDeNodo(nodo, contexto)) },
   ]);
 }
 
 /** Barra de activacion: la forma, el relleno y el borde del Nodo de su Lifeline, con su color. */
-function activacionHtml(activacion: CajaDeActivacion, contexto: Contexto): Elemento {
+function activacionHtml(activacion: CajaDeActivacion, contexto: Contexto, corte: number): Elemento {
   const { estilo, view, onSelect } = contexto;
   const nodo = view.nodes.find((n) => n.id === activacion.lifeline)!;
   const { pila } = pilaDeNodo(estilo.pintura, nodo);
   const capas = pila.capas.filter((capa) => FAMILIAS_DE_ACTIVACION.includes(capa.tipo));
   const declaraciones = declaracionesDeCaja(estilo, { capas, estados: {} });
   const estilos = Object.entries(declaraciones).map(([propiedad, valor]) => `${propiedad}:${valor}`).join(';');
+  // Un Paso recorta la activacion en el corte (no anuncia el `reply`); una que aun no empezo no se ve.
+  const y2 = Math.min(activacion.y2, corte);
+  const alto = Math.max(y2 - activacion.y1, 0);
+  const oculta = activacion.y1 > corte ? 'opacity:0;pointer-events:none;' : '';
   return {
     tag: 'div',
     attrs: {
       'data-activation': activacion.lifeline,
       'data-nivel': String(activacion.nivel),
-      style: `position:absolute;box-sizing:border-box;left:${num(activacion.x)}px;top:${num(activacion.y1)}px;width:${num(activacion.width)}px;height:${num(activacion.y2 - activacion.y1)}px;--trazo:${colorDeTrazo(nodo, estilo)};pointer-events:auto;${estilos}`,
+      style: `position:absolute;box-sizing:border-box;left:${num(activacion.x)}px;top:${num(activacion.y1)}px;width:${num(activacion.width)}px;height:${num(alto)}px;--trazo:${colorDeTrazo(nodo, estilo)};pointer-events:auto;${estilos}${oculta}`,
     },
     ...(onSelect !== undefined && { alClic: () => onSelect(activacion.lifeline) }),
     hijos: [],
@@ -173,26 +184,27 @@ function grupoHtml(grupo: CajaDeGrupoColocada, contexto: Contexto): Elemento {
 }
 
 /** Marco de un Fragmento: forma, relleno y borde del Nodo; con su pestana y un divisor por operando a partir del segundo. */
-function fragmentoHtml(marco: MarcoDeFragmento, contexto: Contexto): Elemento {
+function fragmentoHtml(marco: MarcoDeFragmento, contexto: Contexto, interaccion: string): Elemento {
   const estilos = estiloDeCajaDeNodo(contexto);
   const caja = (x: number, y: number, ancho: number, alto: number): string => `position:absolute;box-sizing:border-box;left:${num(x)}px;top:${num(y)}px;width:${num(ancho)}px;height:${num(alto)}px`;
   const divisores = marco.operands.flatMap((operando, k): Elemento[] =>
-    operando.divider === undefined ? [] : [{ tag: 'div', attrs: { 'data-fragment-divider': `${marco.ruta}:${k}`, style: `${caja(0, operando.divider - marco.y, marco.width, 0)};border-top:1px dashed ${contexto.estilo.borde}` }, hijos: [] }],
+    operando.divider === undefined ? [] : [{ tag: 'div', attrs: { 'data-fragment-divider': `${marco.ruta}:${k}`, style: `${caja(0, operando.divider - marco.y, marco.width, 0)};border-top:1px dashed ${contexto.estilo.borde};${opacidad(contexto.visibility(`${interaccion}:${marco.ruta}:${k}`))}` }, hijos: [] }],
   );
   return {
     tag: 'div',
-    attrs: { 'data-fragment': marco.ruta, 'data-operator': marco.operator, 'data-nivel': String(marco.nivel), style: `${caja(marco.x, marco.y, marco.width, marco.height)};pointer-events:none;${estilos}` },
+    attrs: { 'data-fragment': marco.ruta, 'data-operator': marco.operator, 'data-nivel': String(marco.nivel), style: `${caja(marco.x, marco.y, marco.width, marco.height)};pointer-events:none;${estilos};${opacidad(contexto.visibility(`${interaccion}:${marco.ruta}`))}` },
     hijos: [{ tag: 'div', attrs: { 'data-fragment-tab': marco.ruta, style: `${caja(marco.tab.x - marco.x, marco.tab.y - marco.y, marco.tab.width, marco.tab.height)};${estilos}` }, hijos: [] }, ...divisores],
   };
 }
 
 /** Texto SVG de la pestana (operador) y de cada guarda, centrados en sus cajas medidas. */
-function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'], color: string): Elemento[] {
+function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'], color: string, visibility: Visibilidad, interaccion: string): Elemento[] {
   const tamano = estilo.metricas.fontSize * estilo.metricas.escalaEtiqueta;
-  const texto = (atributos: Record<string, string>, caja: { x: number; y: number; width: number; height: number }, contenido: string, relleno: string): Elemento => ({
+  const texto = (visibilidad: number, atributos: Record<string, string>, caja: { x: number; y: number; width: number; height: number }, contenido: string, relleno: string): Elemento => ({
     tag: 'text',
     attrs: {
       ...atributos,
+      ...visibilidadSvg(visibilidad),
       x: num(caja.x + caja.width / 2),
       y: num(caja.y + caja.height / 2 + tamano * estilo.etiqueta.centradoVertical),
       'text-anchor': 'middle',
@@ -203,9 +215,9 @@ function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'
     hijos: [contenido],
   });
   return [
-    texto({ 'data-fragment-operator': marco.ruta }, marco.tab, marco.operator, estilo.texto),
-    ...(marco.title === undefined ? [] : [texto({ 'data-ref-title': marco.ruta }, marco.title.box, marco.title.text, estilo.texto)]),
-    ...marco.operands.flatMap((operando, k): Elemento[] => (operando.guard === undefined ? [] : [texto({ 'data-fragment-guard': `${marco.ruta}:${k}` }, operando.guard.box, operando.guard.text, color)])),
+    texto(visibility(`${interaccion}:${marco.ruta}`), { 'data-fragment-operator': marco.ruta }, marco.tab, marco.operator, estilo.texto),
+    ...(marco.title === undefined ? [] : [texto(visibility(`${interaccion}:${marco.ruta}`), { 'data-ref-title': marco.ruta }, marco.title.box, marco.title.text, estilo.texto)]),
+    ...marco.operands.flatMap((operando, k): Elemento[] => (operando.guard === undefined ? [] : [texto(visibility(`${interaccion}:${marco.ruta}:${k}`), { 'data-fragment-guard': `${marco.ruta}:${k}` }, operando.guard.box, operando.guard.text, color)])),
   ];
 }
 
@@ -213,7 +225,7 @@ function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'
  * Nota "papel": poligono con la esquina superior derecha doblada, tinte suave del color de nota de la Paleta (`amber`,
  * si no el borde), trazo fino y el texto ya envuelto por el layout. No es un Nodo: no lleva cabecera, icono ni insignia.
  */
-function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: string): Elemento {
+function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: string, visibility: Visibilidad): Elemento {
   const color = estilo.paleta['amber'] ?? estilo.borde;
   const { x, y, width, height, fold } = nota;
   const contorno = `M${num(x)},${num(y)} H${num(x + width - fold)} L${num(x + width)},${num(y + fold)} V${num(y + height)} H${num(x)} Z`;
@@ -226,7 +238,7 @@ function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: st
   }));
   return {
     tag: 'g',
-    attrs: { 'data-note': `${interaccion}:${nota.ruta}`, 'data-anchor': nota.anchor },
+    attrs: { 'data-note': `${interaccion}:${nota.ruta}`, 'data-anchor': nota.anchor, ...visibilidadSvg(visibility(`${interaccion}:${nota.ruta}`)) },
     hijos: [
       { tag: 'path', attrs: { 'data-note-paper': '', d: contorno, fill: color, 'fill-opacity': '0.2', stroke: color, 'stroke-width': '1' }, hijos: [] },
       { tag: 'path', attrs: { d: doblez, fill: 'none', stroke: color, 'stroke-width': '1' }, hijos: [] },

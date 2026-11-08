@@ -313,6 +313,8 @@ export const pasoSchema = z.object({
   title: z.string(),
   show: z.array(elementoDePasoSchema).default([]),
   hide: z.array(elementoDePasoSchema).default([]),
+  /** Solo en Vistas `sequence`: id del Mensaje hasta el que (incluido) se muestra la Interaccion. */
+  upto: z.string().min(1).optional(),
 });
 
 export type Paso = z.infer<typeof pasoSchema>;
@@ -352,6 +354,8 @@ export const vistaSchema = z.object({
   links: z.array(z.object({ node: idDeNodoSchema, view: z.string().min(1) })).default([]),
   /** Pasos de revelado en orden; sin pasos todo esta revelado. */
   steps: z.array(pasoSchema).default([]),
+  /** Solo en Vistas `sequence`: `steps each`, un Paso por Mensaje proyectado. Ausente = false. */
+  stepsEach: z.literal(true).optional(),
 });
 
 export type Vista = z.infer<typeof vistaSchema>;

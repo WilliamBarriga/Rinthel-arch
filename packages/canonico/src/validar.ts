@@ -15,7 +15,7 @@
  */
 import { CODIGOS } from './codigos';
 import { CARDINALIDADES_ER } from './esquema';
-import type { ElementoDePaso, FuenteCanonica, ItemDeInteraccion, Nodo, Tema, Vista } from './esquema';
+import type { ElementoDePaso, FuenteCanonica, Interaccion, ItemDeInteraccion, Nodo, Tema, Vista } from './esquema';
 import type { IconProvider } from './iconos';
 import type { Issue, TextRange } from './issue';
 import { candidatosCercanos } from './sugerencias';
@@ -258,6 +258,7 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
   // Pasos (ADR 0002): selectores y Aristas que existen en el Modelo.
   const nodos = todosLosIds(fuente.model.nodes);
   vista.steps.forEach((paso, s) => {
+    if (vista.type === 'sequence') return;
     for (const accion of ['show', 'hide'] as const) {
       paso[accion].forEach((item: ElementoDePaso, k) => {
         const donde = [...ruta, 'steps', s, accion, k];
@@ -339,6 +340,14 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
     if (vista.order.length > 0) {
       emitirCon([...ruta, 'order', 0], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'order' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "cambia 'type' a sequence o quita 'order'" });
     }
+    if (vista.stepsEach === true) {
+      emitirCon([...ruta, 'stepsEach'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'steps each' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "usa 'step { show ... }' o cambia 'type' a sequence" });
+    }
+    vista.steps.forEach((paso, s) => {
+      if (paso.upto !== undefined) {
+        emitirCon([...ruta, 'steps', s, 'upto'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'upto' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: "usa 'show'/'hide' o cambia 'type' a sequence" });
+      }
+    });
     return;
   }
   if (vista.include.length > 0) {
@@ -355,6 +364,7 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
   } else if (interaccion === undefined) {
     emitir([...ruta, 'interaction'], CODIGOS.E_UNKNOWN_INTERACTION, `La Interaccion '${vista.interaction}' no existe en el Modelo`, vista.interaction, interacciones);
   }
+  validarPasosDeSecuencia(fuente, vista, indice, interaccion, emitir, emitirCon);
   const nodos = todosLosIds(fuente.model.nodes);
   const participantes = new Set(aplanarMensajes(interaccion?.items ?? []).flatMap((m) => [m.from, m.to]));
   vista.order.forEach((id, i) => {
@@ -363,6 +373,42 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
     } else if (interaccion !== undefined && !participantes.has(id)) {
       emitirCon([...ruta, 'order', i], CODIGOS.W_ORDER_NOT_IN_INTERACTION, `'${id}' no participa en la Interaccion '${interaccion.id}'; 'order' lo ignora`, { severity: 'warning' });
     }
+  });
+}
+
+/** Pasos de secuencia: `show`/`hide` no valen; `upto` nombra un Mensaje proyectado y avanza; `steps each` no convive con `step`. */
+function validarPasosDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: number, interaccion: Interaccion | undefined, emitir: Emitir, emitirCon: EmitirCon): void {
+  const ruta = ['views', indice];
+  const mensajes = aplanarMensajes(interaccion?.items ?? []);
+  const proyectados = interaccion === undefined ? [] : (resolveView(fuente, vista.id)?.interaction?.messages ?? []);
+  const posicion = new Map(proyectados.flatMap((m, i) => (m.id === undefined ? [] : [[m.id, i] as const])));
+  const ids = mensajes.flatMap((m) => (m.id === undefined ? [] : [m.id]));
+  if (vista.stepsEach === true && vista.steps.length > 0) {
+    emitirCon([...ruta, 'steps', 0, 'title'], CODIGOS.E_STEPS_EACH_WITH_STEP, "'steps each' y 'step' explicitos no se combinan en la misma Vista", { hint: "deja solo 'steps each' o solo los 'step { upto ... }'" });
+  }
+  let previo: { indice: number; paso: number } | undefined;
+  vista.steps.forEach((paso, s) => {
+    for (const accion of ['show', 'hide'] as const) {
+      paso[accion].forEach((item: ElementoDePaso, k) => {
+        emitirCon([...ruta, 'steps', s, accion, k, 'selector' in item ? 'selector' : 'from'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'${accion}' no vale en una Vista 'sequence': un Paso es un corte del tiempo`, { hint: "usa 'step { upto <id del Mensaje> }'" });
+      });
+    }
+    if (paso.upto === undefined || interaccion === undefined) return;
+    const donde = [...ruta, 'steps', s, 'upto'];
+    if (!ids.includes(paso.upto)) {
+      emitir(donde, CODIGOS.E_UNKNOWN_STEP, `El Mensaje '${paso.upto}' no existe en la Interaccion '${interaccion.id}'`, paso.upto, ids, undefined, ids.length === 0 ? "ponle un id a un Mensaje: 'id: a -> b'" : undefined);
+      return;
+    }
+    const actual = posicion.get(paso.upto);
+    if (actual === undefined) {
+      emitirCon(donde, CODIGOS.E_STEP_NOT_PROJECTED, `El Mensaje '${paso.upto}' no esta en la Vista '${vista.id}' (lo quitan 'depth' o 'exclude')`, { hint: "elige un Mensaje que la Vista proyecte o quita el 'exclude'" });
+      return;
+    }
+    if (previo !== undefined && actual <= previo.indice) {
+      emitirCon(donde, CODIGOS.E_STEP_NOT_ADVANCING, `El Paso '${paso.title}' no avanza: '${paso.upto}' no esta despues del Paso anterior`, { hint: 'los Pasos de secuencia solo avanzan', relacionado: { ruta: [...ruta, 'steps', previo.paso, 'upto'], message: 'Paso anterior' } });
+      return;
+    }
+    previo = { indice: actual, paso: s };
   });
 }
 

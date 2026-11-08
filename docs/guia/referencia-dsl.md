@@ -114,6 +114,7 @@ view paquetes {
 | `interaction id` | Solo en `sequence` (obligatoria): la Interaccion que proyecta |
 | `order a, b` | Solo en `sequence`: orden de las Lifelines de izquierda a derecha; parcial, el resto sigue por primera aparicion |
 | `autonumber` | Solo en `sequence`: numera los Mensajes proyectados (`1. etiqueta`), tras `exclude`/`depth`; cuenta `reply`, `create`, `destroy` y propios elevados |
+| `steps each` | Solo en `sequence`: un Paso por Mensaje proyectado (ver Pasos); no se combina con `step` |
 | `node id { ... }` | Overrides de presentacion de un Nodo en esta Vista: `label`, `pin x,y`, `color` |
 
 Una Vista nunca define entidades nuevas ni toca el Modelo.
@@ -179,7 +180,17 @@ view flujo-edicion {
 }
 ```
 
-Un item es un selector de Nodos o una Arista (`a -> b`, o `edge a -> b`). En un Paso, `a.*` y `a.**` incluyen tambien al Grupo `a`. Un ejemplo completo esta en [`examples/rinthel-arch/vistas.dg`](../../examples/rinthel-arch/vistas.dg).
+Un item es un selector de Nodos o una Arista (`a -> b`, o `edge a -> b`). En un Paso, `a.*` y `a.**` incluyen tambien al Grupo `a`.
+
+En una Vista `sequence` un Paso es un **corte del tiempo**: `step "titulo" { upto <id> }` muestra la Interaccion hasta el Mensaje con ese id (incluido) y solo avanza; `steps each` da un Paso por Mensaje proyectado, titulado con su etiqueta o `from -> to`. `show` y `hide` son error ahi (`E_VIEW_PROPERTY_FOR_TYPE`, con `hint` a `upto`), igual que `upto` y `steps each` fuera de secuencia. Las Notas y `ref` aparecen con el Mensaje previo; todas las Lifelines desde el primer Paso salvo las nacidas con `create`; la activacion se recorta en el corte; el marco de un Fragmento aparece al entrar el corte y la guarda de cada operando al entrar en el. Nada cambia de posicion. Errores: `E_UNKNOWN_STEP` (con `fix` por typo), `E_STEP_NOT_PROJECTED` (`depth`/`exclude` quitan el Mensaje), `E_STEP_NOT_ADVANCING` (con `related` al Paso anterior) y `E_STEPS_EACH_WITH_STEP`.
+
+```
+view compra {
+  type sequence
+  interaction checkout
+  steps { step "Pedido" { upto pedido }  step "Fin" { upto fin } }
+}
+``` Un ejemplo completo esta en [`examples/rinthel-arch/vistas.dg`](../../examples/rinthel-arch/vistas.dg).
 
 ## `theme` y `part`
 

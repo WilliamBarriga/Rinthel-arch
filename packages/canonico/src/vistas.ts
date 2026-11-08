@@ -29,6 +29,11 @@ export interface AristaResuelta extends Arista {
   count: number;
 }
 
+/** Paso tal como lo ve quien dibuja. En secuencia `corte` es la `ruta` del Mensaje proyectado hasta el que se muestra (incluido). */
+export interface PasoResuelto extends Paso {
+  corte?: string;
+}
+
 /** Nodos y Aristas visibles de una Vista, mas lo que `layout` y `render` necesitan de ella. */
 export interface VistaResuelta {
   /** Tipo de diagrama de la Vista; elige el algoritmo de layout y entra en las claves de cache. */
@@ -40,7 +45,7 @@ export interface VistaResuelta {
   /** Overrides de presentacion de la Vista, tal cual (label, pin, order, color). */
   overrides: OverrideDeNodo[];
   /** Pasos de revelado de la Vista (ADR 0002), tal cual; `revealAt` los interpreta. */
-  steps: Paso[];
+  steps: PasoResuelto[];
   /** Solo en Vistas `sequence`: la Interaccion proyectada. Sus `nodes` son las Lifelines, en orden de columna, y no hay `edges`. */
   interaction?: InteraccionResuelta;
 }
@@ -121,7 +126,7 @@ export function resolveView(
 
   if (vista.type === 'sequence') {
     const { nodes, interaction } = resolverSecuencia(fuente.model.interactions, fuente.model.nodes, vista, excluidos, resolver, ancestroColapsado);
-    return { type: vista.type, nodes, edges: [], overrides: vista.overrides, steps: vista.steps, ...(interaction !== undefined && { interaction }) };
+    return { type: vista.type, nodes, edges: [], overrides: vista.overrides, steps: pasosDeSecuencia(vista, interaction), ...(interaction !== undefined && { interaction }) };
   }
 
   return {
@@ -131,6 +136,25 @@ export function resolveView(
     overrides: vista.overrides,
     steps: vista.steps,
   };
+}
+
+/**
+ * Pasos de una Vista de secuencia: cada `upto` se resuelve al Mensaje proyectado con ese id (un Paso cuyo Mensaje no
+ * existe o no se proyecta se omite: `validate` lo informa); `steps each` da un Paso por Mensaje proyectado, titulado con
+ * su etiqueta (sin el numero de `autonumber`) o `from -> to`.
+ */
+function pasosDeSecuencia(vista: Vista, interaccion: InteraccionResuelta | undefined): PasoResuelto[] {
+  const mensajes = interaccion?.messages ?? [];
+  if (vista.stepsEach === true && vista.steps.length === 0) {
+    return mensajes.map((mensaje) => {
+      const etiqueta = mensaje.numero === undefined ? mensaje.label : mensaje.label?.slice(`${mensaje.numero}. `.length);
+      return { title: etiqueta !== undefined && etiqueta !== '' ? etiqueta : `${mensaje.from} -> ${mensaje.to}`, show: [], hide: [], corte: mensaje.ruta };
+    });
+  }
+  return vista.steps.flatMap((paso): PasoResuelto[] => {
+    const mensaje = paso.upto === undefined ? undefined : mensajes.find((m) => m.id === paso.upto);
+    return mensaje === undefined ? [] : [{ ...paso, corte: mensaje.ruta }];
+  });
 }
 
 /** Un Nodo sin hijos nunca esta colapsado; un Grupo con `link` siempre lo esta. */
