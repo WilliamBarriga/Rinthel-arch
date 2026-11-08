@@ -26,7 +26,7 @@ import { resolverEstilo } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { compilarHoja } from './hoja';
 import { ELEMENTOS, pilaDeNodo, pinturaDeElemento } from './pilas';
-import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEstadoDeRuta, pintarEtiquetaDeArista, pintarGrupo, pintarNodo } from './pintores';
+import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEstadoDeRuta, pintarEtiquetaDeArista, pintarGrupo, pintarNodo, pintarZonas } from './pintores';
 
 export type { Elemento } from './elemento';
 
@@ -283,6 +283,7 @@ function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
         ...(onSelect !== undefined && { alClic: () => onSelect(nodo.id) }),
         hijos: [
           ...efectos.debajo,
+          ...(grupo ? [] : pintarZonas(estilo, datos, pila.capas)),
           ...pintarCapasAnimadas(pila, false),
           ...pintarCodigo(estilo, pila, codigo, false),
           ...(grupo ? pintarGrupo(estilo, datos) : pintarNodo(estilo, { ...datos, conAtributos: tieneFilas(nodo, estilo, detail) })),

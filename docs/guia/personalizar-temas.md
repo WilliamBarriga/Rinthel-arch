@@ -70,7 +70,7 @@ Las Primitivas se agrupan en familias:
 | vidrio y filtro | `glass`, `sketch` (mano alzada) |
 | decoracion | `tilt`, `tape`, `stripe`, `pins`, `fold`, `ring` |
 | trazo (Aristas) | `line` con `corner` (`sharp`, `chamfer`, `round`) y `style` |
-| marcador (Aristas) | `arrow`, `dot`, `diamond`, `square`, `bar`, `via`, `hollow`, `chevron` |
+| marcador (Aristas) | `arrow`, `dot`, `diamond`, `square`, `bar`, `via`, `hollow`, `chevron`, `cross` (una X centrada en el extremo), y los pies de gallo ER `one`, `zero-one`, `many`, `zero-many` |
 | texto y contenido | `text`, `chip`, `icon`, `label` |
 | codigo | `code`: un componente React propio, para lo que el catalogo no cubre |
 
@@ -138,6 +138,33 @@ page {
 ```
 
 El enrutado de las Aristas lo hace el layout y no depende del Tema.
+
+### Tablas ER: `row`, `zone` y marcadores
+
+Una Vista `er` dibuja cada Nodo como tabla (cabecera y una fila por Atributo). El Tema la estiliza con el bloque `row`, la propiedad `zone` de las Capas de Nodo y los marcadores de Arista (ejemplo completo en [`examples/temas/er.dg`](../../examples/temas/er.dg)):
+
+```
+node {
+  layer relleno solid { color papel }
+  layer cabecera solid { color azul  zone header }   // solo la cabecera (all, header o body)
+  slots { title attrs }
+}
+row {
+  height 26                                           // alto de cada fila: cambia el tamano de las tablas
+  layer fondo solid { color papel }
+  layer separador stripe { color gris  side bottom  width 1 }
+  alternate { layer fondo { color gris } }            // filas impares
+  key pk { layer fondo { color verde } }              // filas con esa marca (pk, fk, uk); se apilan en ese orden
+  optional { layer fondo { color ambar } }            // Atributos opcionales (despues de las claves)
+  name { weight 600 }  type { color azul }            // estilo de texto
+  key { fill azul  color papel  radius 4 }            // el chip de cada marca de clave
+}
+edge { diagram er { end arrow { size 12  color azul } } }   // solo color y size del pie de gallo
+```
+
+- `zone header` pinta de arriba hasta donde empiezan las filas (`attrs`); sin `attrs` equivale a `all`. `zone body` cubre las filas. Una Capa con `zone` pinta aparte de la caja, asi que un parche de estado no la cambia.
+- `row` solo vale en Vistas `er`; en las demas los Atributos siguen con el estilo del Slot `attrs`. El alto (`height`, 12 a 120) es una Metrica; las Capas y parches solo pintan (uno que cambie la caja es `E_THEME_STATE_TOUCHES_METRICS`).
+- El marcador de cada extremo lo fija el nucleo segun la cardinalidad (`1` a `one`, `0..1` a `zero-one`, `1..*` a `many`, `0..*` a `zero-many`); el Tema solo cambia su `color` y `size`.
 
 ## Movimiento y entrada
 

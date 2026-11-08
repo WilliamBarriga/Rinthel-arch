@@ -59,6 +59,13 @@ export const PROPIEDADES_DE_DESPLAZAMIENTO = {
   grow: { tipo: 'numero', min: -100, max: 100 },
 } as const satisfies Record<string, DefinicionDePropiedad>;
 
+/**
+ * `zone` (ADR 0009): propiedad comun de las Capas de Nodo que dice que parte de la caja pinta: `all` (ausente), `header`
+ * (los Slots anteriores a `attrs`; sin `attrs` equivale a `all`) o `body` (la zona de `attrs`). Solo pinta.
+ */
+export const ZONAS = ['all', 'header', 'body'] as const;
+export const PROPIEDAD_DE_ZONA = { zone: { tipo: 'opcion', valores: ZONAS, opcional: true } } as const satisfies Record<string, DefinicionDePropiedad>;
+
 export const CATALOGO = {
   rect: { familia: 'forma', afectaMetricas: false, propiedades: { radius: { tipo: 'numero', min: 0, max: 100, defecto: 0 } } },
   solid: { familia: 'relleno', afectaMetricas: false, propiedades: { color: { tipo: 'color' } }, fondoDeTexto: ['color'] },
@@ -192,7 +199,7 @@ export function construirPrimitiva(
     };
   }
   const base: DefinicionDePrimitiva = CATALOGO[tipo];
-  const definidas = ubicacion === 'capa-nodo' && base.abierta !== true ? { ...base.propiedades, ...PROPIEDADES_DE_DESPLAZAMIENTO } : base.propiedades;
+  const definidas = ubicacion === 'capa-nodo' && base.abierta !== true ? { ...base.propiedades, ...PROPIEDADES_DE_DESPLAZAMIENTO, ...PROPIEDAD_DE_ZONA } : base.propiedades;
   const { propiedades, errores } = validarPropiedades({ sujeto: `La Primitiva '${tipo}'`, nombre: `'${tipo}'`, propiedades: definidas, abierta: base.abierta === true }, props, paleta, ubicacion === 'capa-nodo' || ubicacion === 'texto-slot' ? 'nodo' : ubicacion === 'capa-pagina' ? 'pagina' : 'arista');
   return errores.length > 0 ? { errores } : { primitiva: { tipo, props: propiedades }, errores };
 }

@@ -85,7 +85,7 @@ Theme:
 ;
 
 ThemePart:
-  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeGroup | ThemeEdge | ThemePage;
+  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeGroup | ThemeEdge | ThemePage | ThemeRow;
 
 ThemePalette:
   'palette' '{' entries+=ThemeEntry* '}';
@@ -252,6 +252,33 @@ ThemeMarker:
 ThemeLabel:
   'label' '{' props+=LayerProp* '}';
 
+// `row { layer fondo solid { color papel }  height 28  alternate { layer fondo { color gris } }  name { weight 600 }
+//   key { fill azul }  key pk { layer fondo { color verde } }  optional { layer fondo { color gris } } }`
+// Bloque de la fila de una tabla ER (ADR 0009, Vistas ER): una pila de Capas por fila (`layer`, `use`), su alto, el
+// parche de las filas impares (`alternate`), el estilo de sus textos (`name`, `type`, `key`: un chip) y los parches
+// por marca de clave (`key pk|fk|uk`) y por Atributo opcional (`optional`). Solo pinta, salvo el alto.
+ThemeRow:
+  'row' '{' items+=RowItem* '}';
+
+RowItem:
+  ThemeLayer | ThemeUse | RowHeight | RowKeyPatch | RowOptional | RowAlternate | RowText;
+
+RowHeight:
+  'height' value=Num;
+
+RowKeyPatch:
+  'key' name=Id '{' items+=PatchItem* '}';
+
+RowOptional:
+  'optional' '{' items+=PatchItem* '}';
+
+RowAlternate:
+  'alternate' '{' items+=PatchItem* '}';
+
+// El nombre del texto (`name`, `type`, `key`) se valida al compilar para dar un `fix` por typo.
+RowText:
+  slot=Id '{' props+=LayerProp* '}';
+
 // `page { layer fondo solid { color paper }  layer puntos dots { color ink/0.1 size 22 }  fixed }`
 // Bloque del fondo de pagina (ADR 0008): pila de rellenos bajo Grupos, Aristas y Nodos.
 // Sin `fixed` el patron se mueve y escala con el pan/zoom; con `fixed` queda fijo al visor.
@@ -411,7 +438,7 @@ Id returns string:
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
   'model' | 'node' | 'specification' |
-  'pk' | 'fk' | 'uk' | 'identifying';
+  'pk' | 'fk' | 'uk' | 'identifying' | 'height' | 'key' | 'optional' | 'alternate';
 
 // -------------------------
 // Comments

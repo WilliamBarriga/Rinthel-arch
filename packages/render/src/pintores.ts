@@ -7,15 +7,18 @@
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
-import { LARGO_DE_MARCADOR_ER, alturaDeCabecera, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
+import { LARGO_DE_MARCADOR_ER, alturaDeCabecera, pilaDeFila, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
 import type { ContenidoDeNodo, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
 
 import { pintarMarcadores, pintarTrazos, rutaDeCapa } from './aristas';
 import { limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
+import { declaracionesDeCaja, declaracionesDeTexto } from './hoja';
+import { efectosDeElemento } from './efectos';
 import { aspectoDeEstado } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { pilaDeNodo } from './pilas';
+import { esDeZona } from './pintura/comun';
 
 type Punto = { x: number; y: number };
 
@@ -90,6 +93,28 @@ export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: 
 }
 
 /**
+ * Capas con `zone` (ADR 0009): cada una es un elemento propio sobre su franja de la caja. `header` va de arriba hasta donde
+ * empieza `attrs` (sin `attrs`, toda la caja); `body` cubre la zona de `attrs` hasta el pie (sin `attrs`, nada). Hereda las
+ * esquinas de la caja que toca. Solo pinta: un parche de estado no las cambia.
+ */
+export function pintarZonas(estilo: Estilo, datos: DatosDeNodo, capas: readonly PinturaDeNodo['capas'][number][]): Elemento[] {
+  const delasZonas = capas.filter(esDeZona);
+  if (delasZonas.length === 0) return [];
+  const metricas = metricasDeHoja(estilo.tabla, datos.nodo);
+  const { slots } = colocarEnCaja(metricas, contenidoDeNodo(datos.nodo, metricas), datos.caja.width);
+  const filas = slots.attrs;
+  return delasZonas.flatMap((capa): Elemento[] => {
+    const cabecera = capa.props['zone'] === 'header';
+    const desde = filas === undefined ? (cabecera ? 0 : datos.caja.height) : cabecera ? 0 : filas.y;
+    const hasta = filas === undefined || !cabecera ? datos.caja.height : filas.y;
+    if (hasta <= desde) return [];
+    const esquinas = cabecera ? 'border-top-left-radius:inherit;border-top-right-radius:inherit;' : 'border-bottom-left-radius:inherit;border-bottom-right-radius:inherit;';
+    const pintura = Object.entries(declaracionesDeCaja(estilo, { capas: [capa], estados: {} }, [capa], true)).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+    return [{ tag: 'div', attrs: { class: 'rd-zona', 'data-zona': String(capa.props['zone']), 'data-capa': capa.nombre, 'aria-hidden': 'true', style: enRect({ x: 0, y: desde, width: datos.caja.width, height: hasta - desde }, `${esquinas}${pintura}`) } }];
+  });
+}
+
+/**
  * Cabecera de un Grupo abierto: los Slots de su disposicion `group` (sus hijos son Nodos de otras capas), en la
  * franja que `layout` reservo sobre ellos; a la derecha queda el sitio del control de colapso.
  */
@@ -124,34 +149,56 @@ function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo:
   return [{ tag: 'div', attrs: atributos, html: dimensionado }];
 }
 
-/** Slot `attrs`: una fila de texto por Atributo, en orden, cada una en su rectangulo (relativo al Slot). */
+/** Estilo en linea de un texto de la fila (`name`, `type`, `key`) que el Tema declara; vacio si no. */
+const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo): string =>
+  texto === undefined ? '' : Object.entries(declaracionesDeTexto(texto, estilo.fuenteMono)).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+
+/**
+ * Slot `attrs`: una fila por Atributo, en orden, cada una en su rectangulo (relativo al Slot). En una Vista ER cuyo Tema
+ * declara `row`, la fila pinta su pila de Capas (segun si es impar, sus marcas de clave y si es opcional) y sus textos
+ * `name`, `type` y `key` con el estilo del Tema.
+ */
 function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect, metricasDeNodo: Metricas): Elemento {
   const { metricas } = estilo;
   const marcas = metricasDeNodo.marcasDeClave === true;
+  const delTema = marcas ? estilo.pintura.fila : undefined;
   return {
     tag: 'div',
     attrs: { class: `rd-slot rd-attrs${zona.y > 0 ? ' rd-separado' : ''}`, 'data-slot': 'attrs', style: enRect(zona) },
-    hijos: atributos.map((atributo, i) => ({
-      tag: 'div',
-      attrs: {
-        class: 'rd-fila',
-        'data-attribute': `${id}#${atributo.name}`,
-        style: enRect({ x: 0, y: i * metricas.fila, width: zona.width, height: metricas.fila }, `line-height:${num(metricas.fila)}px;`),
-      },
-      hijos: [
-        textoDeAtributo(atributo, marcas),
-        // Vista ER: un chip por marca de clave, pegado al borde derecho de la fila.
-        ...chipsDeClaves(atributo, metricasDeNodo).map((chip): Elemento => ({
-          tag: 'span',
-          attrs: {
-            class: 'rd-clave',
-            'data-key': chip.clave,
-            style: `right:${num(chip.derecha)}px;width:${num(chip.width)}px;font-size:${num(chip.tamano)}px;line-height:${num(chip.tamano + 4)}px;top:${num((metricas.fila - chip.tamano - 4) / 2)}px;`,
-          },
-          hijos: [chip.texto],
-        })),
-      ],
-    })),
+    hijos: atributos.map((atributo, i) => {
+      const capas = delTema === undefined ? [] : pilaDeFila(delTema, { impar: i % 2 === 1, keys: atributo.keys ?? [], opcional: atributo.optional === true });
+      const efectos = capas.length === 0 ? undefined : efectosDeElemento(estilo, { capas }, `${id}#${atributo.name}`);
+      const caja = capas.length === 0 ? '' : Object.entries(declaracionesDeCaja(estilo, { capas, estados: {} }, capas.filter((c) => !esDeZona(c)))).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+      return {
+        tag: 'div',
+        attrs: {
+          class: 'rd-fila',
+          'data-attribute': `${id}#${atributo.name}`,
+          style: enRect({ x: 0, y: i * metricas.fila, width: zona.width, height: metricas.fila }, `line-height:${num(metricas.fila)}px;${caja}`),
+        },
+        hijos: [
+          ...(efectos?.debajo ?? []),
+          ...(delTema === undefined
+            ? [textoDeAtributo(atributo, marcas)]
+            : [
+                { tag: 'span', attrs: { 'data-fila-texto': 'name', style: enLinea(delTema.textos.name, estilo) }, hijos: [atributo.name] } as Elemento,
+                ': ',
+                { tag: 'span', attrs: { 'data-fila-texto': 'type', style: enLinea(delTema.textos.type, estilo) }, hijos: [`${atributo.type}${atributo.optional === true ? '?' : ''}`] } as Elemento,
+              ]),
+          // Vista ER: un chip por marca de clave, pegado al borde derecho de la fila.
+          ...chipsDeClaves(atributo, metricasDeNodo).map((chip): Elemento => ({
+            tag: 'span',
+            attrs: {
+              class: 'rd-clave',
+              'data-key': chip.clave,
+              style: `right:${num(chip.derecha)}px;width:${num(chip.width)}px;font-size:${num(chip.tamano)}px;line-height:${num(chip.tamano + 4)}px;top:${num((metricas.fila - chip.tamano - 4) / 2)}px;${delTema?.textos.key === undefined ? '' : `opacity:1;${enLinea(delTema.textos.key, estilo)}`}`,
+            },
+            hijos: [chip.texto],
+          })),
+          ...(efectos?.encima ?? []),
+        ],
+      };
+    }),
   };
 }
 
