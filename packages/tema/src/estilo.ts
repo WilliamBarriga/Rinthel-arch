@@ -17,8 +17,8 @@ import type { DefinicionDePrimitiva, NombreDePrimitiva, NombreDeSlot } from './c
 import { resolverColor } from './color';
 import type { ContextoDeColor } from './color';
 import { cascada } from './parches';
-import type { CapaDeTema, ElementoDeTema, Estado, OpDeCapa } from './parches';
-import { resolverTema } from './tema';
+import type { CapaDeTema, ElementoDeTema, Estado, OpDeCapa, TipoDeDiagrama } from './parches';
+import { resolverTema, temaParaDiagrama } from './tema';
 import type { TemaResuelto } from './tema';
 
 /** Capa con los colores ya resueltos contra la Paleta del Tema. */
@@ -107,6 +107,8 @@ export interface EstiloResuelto {
 }
 
 export interface OpcionesDeEstilo {
+  /** Tipo de diagrama de la Vista: aplica los parches `diagram <tipo>` del Tema (Metricas y pintura) bajo la cascada de Tipo de nodo y estado. */
+  diagrama?: TipoDeDiagrama;
   /** Medidas reales de texto con las que se calculo la Geometria: las Metricas del dibujo deben ser las del layout. */
   medidas?: MedidasDeTexto;
   /** Rutas de los archivos de fuente del Workspace; de ellos salen las caras de `fuentes`. Sin ellas, ninguna. */
@@ -198,7 +200,7 @@ function grupoSobrio(tema: TemaResuelto, colapsado: boolean, variable: string | 
 }
 
 export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): EstiloResuelto {
-  const resuelto = resolverTema(tema);
+  const resuelto = temaParaDiagrama(resolverTema(tema), opciones.diagrama);
   const variable = opciones.colorEnVariable;
   /** Pintura de un elemento en el reposo y en cada estado declarado, para un Tipo (o ninguno) y, en el Grupo, abierto o colapsado. */
   const pinturaDe = (elemento: ElementoDeTema, tipo: string | undefined, color: string | undefined, colapsado = false): PinturaDeNodo => {
@@ -231,10 +233,11 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
       tipos: Object.fromEntries(tipos.map((tipo) => [tipo, pinturaDe(elemento, tipo, colores[tipo], colapsado)])),
     };
   };
+  const tabla = tablaDeMetricas(tema, opciones.medidas, opciones.diagrama);
   const reserva = resuelto.fonts['fallback'];
   return {
-    metricas: tablaDeMetricas(tema, opciones.medidas).base,
-    tabla: tablaDeMetricas(tema, opciones.medidas),
+    metricas: tabla.base,
+    tabla,
     fuentes: {
       cuerpo: pilaDeFuente(resuelto.fonts.body, reserva),
       mono: pilaDeFuente(resuelto.fonts.mono, reserva),

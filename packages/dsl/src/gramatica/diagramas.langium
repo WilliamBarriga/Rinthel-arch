@@ -112,7 +112,7 @@ ThemeNode:
   'node' '{' items+=NodeItem* '}';
 
 NodeItem:
-  ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState | ThemeTransition | ThemeEnter | ThemeExit | ThemeStagger;
+  ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState | ThemeDiagram | ThemeTransition | ThemeEnter | ThemeExit | ThemeStagger;
 
 // `group { layer caja rect { radius 16 }  slots row gap 6 { icon title }  padding 8 16 16  type ...  state collapsed { ... } }`
 // Bloque de dibujo del Grupo (ADR 0008): las mismas Capas, `type` y `state` que `node`, la cabecera (`slots`), el
@@ -126,6 +126,15 @@ GroupItem:
 
 GroupPadding:
   'padding' values+=Num+;
+
+// `diagram flow { layer ... slots ... padding ... }` (ADR 0009): parche por Tipo de diagrama dentro de `node`, `group`
+// o `edge`, entre el Tema base y el Tipo de nodo. A diferencia de `state`, puede cambiar las Metricas. El nombre se
+// valida al compilar (architecture, flow, sequence, er) para dar un `fix` por typo.
+ThemeDiagram:
+  'diagram' name=Id '{' items+=DiagramItem* '}';
+
+DiagramItem:
+  ThemeLayer | ThemeUse | ThemeSlots | GroupPadding | ThemeMarker | ThemeLabel;
 
 ThemeType:
   'type' name=Id '{' items+=PatchItem* '}';
@@ -233,7 +242,7 @@ ThemeEdge:
   'edge' '{' items+=EdgeItem* '}';
 
 EdgeItem:
-  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel;
+  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel | ThemeDiagram;
 
 // `start|end <marcador> [{ props }]` o `start|end none`.
 ThemeMarker:
@@ -394,7 +403,7 @@ Id returns string:
   'motion' | 'keyframes' | 'transition' | 'enter' | 'exit' | 'stagger' | 'delay' | 'intensity' | 'reduced' |
   'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
-  'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' |
+  'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
   'model' | 'node' | 'specification';
 
 // -------------------------

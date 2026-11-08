@@ -98,6 +98,8 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       /** Tipo y estado pedidos para resolver la cascada, si se pidieron. */
       tipo: z.string().optional(),
       estado: z.string().optional(),
+      /** Tipo de diagrama pedido (`--diagrama`): la cascada incluye los parches `diagram <tipo>` del Tema. */
+      diagrama: z.string().optional(),
       /** Pila de Capas resuelta, de abajo arriba; `origen` es el parche que la fijo. */
       capas: z.array(capaDeTemaSchema),
       /** Fondo de pagina: pila de rellenos de abajo arriba y si queda fijo al visor. */

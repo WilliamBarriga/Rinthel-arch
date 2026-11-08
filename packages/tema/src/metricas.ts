@@ -16,9 +16,9 @@ import type { MedicionDeMetricas, MedidasDeTexto } from './medicion';
 import type { NombreDeSlot } from './catalogo';
 import type { CajaDeSlots } from './disposicion';
 import { cascada } from './parches';
-import type { CapaDeTema } from './parches';
+import type { CapaDeTema, TipoDeDiagrama } from './parches';
 import { alturaDeCabecera } from './slots';
-import { resolverTema } from './tema';
+import { resolverTema, temaParaDiagrama } from './tema';
 import type { TemaResuelto } from './tema';
 
 export interface Metricas {
@@ -180,8 +180,8 @@ export interface TablaDeMetricas {
   etiqueta: Metricas;
 }
 
-export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto): TablaDeMetricas {
-  const resuelto = resolverTema(tema);
+export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto, diagrama?: TipoDeDiagrama): TablaDeMetricas {
+  const resuelto = temaParaDiagrama(resolverTema(tema), diagrama);
   const base = entradaDe(resuelto, cascada(resuelto), medidas);
   const claveBase = JSON.stringify(base);
   const tipos: Record<string, Metricas> = {};

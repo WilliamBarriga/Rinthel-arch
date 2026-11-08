@@ -107,7 +107,9 @@ node {
 }
 ```
 
-La cascada, donde gana el ultimo, es: Tema base, Tipo de nodo, estado, parche de la Vista. Los estados son `hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado` y `foco`. Un estado solo puede cambiar pintura: nunca el tamano ni los Slots (`validate` lo rechaza), asi que pasar el raton no mueve el diagrama. Un Grupo tiene ademas `state collapsed`, el aspecto del Grupo cerrado.
+La cascada, donde gana el ultimo, es: Tema base, Tipo de diagrama, Tipo de nodo, estado, parche de la Vista.
+
+`diagram <tipo> { ... }` (dentro de `node`, `group` y `edge`) distingue un Tipo de diagrama (`architecture`, `flow`, `sequence`, `er`): `node { diagram flow { slots row pad 20 { title attrs } } }` solo cambia las Vistas de flujo. Admite `layer`, `use` y `slots`; `padding` en `group`; marcadores (`start`/`end`) y `label` en `edge`. A diferencia de un estado, puede cambiar las Metricas. Un tipo desconocido es `E_THEME_UNKNOWN_DIAGRAM_TYPE`. `inspect tema <nombre> --diagrama flow` muestra la pila resultante. Los estados son `hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado` y `foco`. Un estado solo puede cambiar pintura: nunca el tamano ni los Slots (`validate` lo rechaza), asi que pasar el raton no mueve el diagrama. Un Grupo tiene ademas `state collapsed`, el aspecto del Grupo cerrado.
 
 ### Partes: parches reutilizables
 

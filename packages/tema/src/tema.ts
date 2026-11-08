@@ -12,8 +12,8 @@ import { DEFINICION_DE_SLOT, SLOTS, construirPrimitiva } from './catalogo';
 import type { NombreDePrimitiva, NombreDeSlot, Primitiva, UbicacionDePrimitiva } from './catalogo';
 import { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, esCaja } from './disposicion';
 import type { CajaDeSlots, ElementoDeSlots } from './disposicion';
-import { ESTADOS, aplicarOps, opTocaMetricas, validarOps } from './parches';
-import type { CapaDeTema, OpDeCapa } from './parches';
+import { ESTADOS, TIPOS_DE_DIAGRAMA, aplicarOps, opTocaMetricas, validarOps } from './parches';
+import type { CapaDeTema, OpDeCapa, TipoDeDiagrama } from './parches';
 
 const easingSchema = z.enum(EASINGS);
 const tiempoSchema = { duracionMs: z.number().min(1).max(60000), easing: easingSchema, retardoMs: z.number().min(0).max(10000) };
@@ -83,6 +83,13 @@ const aristaSchema = z.strictObject({
   origen: primitivaSchema.optional(),
   fin: primitivaSchema.optional(),
   etiqueta: primitivaSchema.optional(),
+  /** Parches por Tipo de diagrama (ADR 0009): parches de trazo y marcadores o etiqueta que sustituyen a los del Tema. */
+  diagramas: z
+    .partialRecord(
+      z.enum(TIPOS_DE_DIAGRAMA),
+      z.strictObject({ ops: z.array(opSchema).default([]), origen: primitivaSchema.optional(), fin: primitivaSchema.optional(), etiqueta: primitivaSchema.optional() }),
+    )
+    .optional(),
 });
 
 /** Fondo de pagina (ADR 0008): pila de rellenos bajo Grupos, Aristas y Nodos. */
@@ -110,6 +117,9 @@ const cajaSchema: z.ZodType<CajaDeSlots> = z.strictObject({
   hijos: z.array(elementoSchema),
 }) as z.ZodType<CajaDeSlots>;
 
+/** Parche de un Tipo de diagrama (ADR 0009): parches de Capa y, si el Tema lo pide, otra disposicion de Slots. A diferencia de un estado, puede cambiar las Metricas. */
+const parcheDeDiagramaSchema = z.strictObject({ ops: z.array(opSchema).default([]), slots: cajaSchema.optional() });
+
 const nodoSchema = z.strictObject({
   /** Pila de Capas, de abajo hacia arriba. */
   capas: z.array(capaSchema).default([]),
@@ -121,11 +131,14 @@ const nodoSchema = z.strictObject({
   tipos: z.record(z.string(), z.array(opSchema)).default({}),
   /** Parches por estado, aplicados sobre la pila base ya parcheada por Tipo. */
   estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
+  /** Parches por Tipo de diagrama, aplicados sobre la pila base antes que los de Tipo de nodo (ADR 0009). */
+  diagramas: z.partialRecord(z.enum(TIPOS_DE_DIAGRAMA), parcheDeDiagramaSchema).optional(),
   /** `transition`, `enter`, `exit` y `stagger` del Nodo; solo pintura. */
   animacion: animacionDeNodoSchema.optional(),
 });
 
 const relleno = z.number().min(0).max(128);
+const paddingSchema = z.strictObject({ top: relleno, left: relleno, bottom: relleno, right: relleno });
 
 /**
  * Grupo (ADR 0008): misma pila de Capas, parches por Tipo y por estado que el Nodo, mas la cabecera (un
@@ -138,9 +151,13 @@ const grupoSchema = z.strictObject({
   slots: cajaSchema.default(CABECERA_POR_DEFECTO),
   textos: z.partialRecord(z.enum(NOMBRES_DE_SLOT), primitivaSchema).default({}),
   /** Margen interior de la zona de hijos, bajo la cabecera. */
-  padding: z.strictObject({ top: relleno, left: relleno, bottom: relleno, right: relleno }).default({ top: 8, left: 16, bottom: 16, right: 16 }),
+  padding: paddingSchema.default({ top: 8, left: 16, bottom: 16, right: 16 }),
   tipos: z.record(z.string(), z.array(opSchema)).default({}),
   estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
+  /** Parches por Tipo de diagrama (ADR 0009): como los del Nodo, mas el `padding` de la zona de hijos. */
+  diagramas: z
+    .partialRecord(z.enum(TIPOS_DE_DIAGRAMA), z.strictObject({ ops: z.array(opSchema).default([]), slots: cajaSchema.optional(), padding: paddingSchema.optional() }))
+    .optional(),
   /** Grupo cerrado: parches de Capa y, si el Tema lo pide, otros Slots y estilos (puede cambiar la caja). */
   colapsado: z
     .strictObject({
@@ -210,6 +227,14 @@ export const temaResueltoSchema = z
     if (tema.arista.origen !== undefined) validar(tema.arista.origen, 'marcador', ['arista', 'origen']);
     if (tema.arista.fin !== undefined) validar(tema.arista.fin, 'marcador', ['arista', 'fin']);
     if (tema.arista.etiqueta !== undefined) validar(tema.arista.etiqueta, 'etiqueta', ['arista', 'etiqueta']);
+    for (const [diagrama, parche] of Object.entries(tema.arista.diagramas ?? {})) {
+      for (const e of validarOps([tema.arista.capas as CapaDeTema[]], parche.ops, tema.palette, 'parchear', 'capa-arista')) {
+        ctx.addIssue({ code: 'custom', path: ['arista', 'diagramas', diagrama, 'ops', e.indice], message: e.mensaje });
+      }
+      if (parche.origen !== undefined) validar(parche.origen, 'marcador', ['arista', 'diagramas', diagrama, 'origen']);
+      if (parche.fin !== undefined) validar(parche.fin, 'marcador', ['arista', 'diagramas', diagrama, 'fin']);
+      if (parche.etiqueta !== undefined) validar(parche.etiqueta, 'etiqueta', ['arista', 'diagramas', diagrama, 'etiqueta']);
+    }
     validarElemento(ctx, tema, 'nodo');
     validarElemento(ctx, tema, 'grupo');
   });
@@ -264,10 +289,17 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
       if (razon !== undefined) falla([...ruta, indice], `un parche ${que} no puede tocar las Metricas: ${razon}${que === 'de estado' ? '; hover nunca relayouta' : ''}`);
     });
   };
+  // Tipo de diagrama: nivel justo sobre la base; puede cambiar las Metricas. Los Tipos de nodo y estados lo ven debajo.
+  for (const [diagrama, parche] of Object.entries(bloque.diagramas ?? {})) {
+    for (const e of validarOps([base], parche.ops, tema.palette, 'parchear')) falla(['diagramas', diagrama, 'ops', e.indice], e.mensaje);
+    if (parche.slots !== undefined) recorrer(parche.slots, 'diagramas');
+    pilas.push(aplicarSinErrores(base, parche.ops, tema.palette));
+  }
+  const bases = [...pilas];
   for (const [tipo, ops] of Object.entries(bloque.tipos)) {
-    for (const e of validarOps([base], ops, tema.palette, 'parchear')) falla(['tipos', tipo, e.indice], e.mensaje);
-    if (elemento === 'grupo') sinMetricas(ops, [base], ['tipos', tipo], 'de Tipo');
-    pilas.push(aplicarSinErrores(base, ops, tema.palette));
+    for (const e of validarOps(bases, ops, tema.palette, 'parchear')) falla(['tipos', tipo, e.indice], e.mensaje);
+    if (elemento === 'grupo') sinMetricas(ops, bases, ['tipos', tipo], 'de Tipo');
+    pilas.push(...bases.map((pila) => aplicarSinErrores(pila, ops, tema.palette)));
   }
   if (elemento === 'grupo') {
     const colapsado = (bloque as z.output<typeof grupoSchema>).colapsado;
@@ -286,6 +318,41 @@ const aplicarSinErrores = (base: CapaDeTema[], ops: Parameters<typeof aplicarOps
   aplicarOps(base, ops, paleta, 'parchear').pila;
 
 export type TemaResuelto = z.output<typeof temaResueltoSchema>;
+
+const porDiagrama = new WeakMap<object, Map<TipoDeDiagrama, TemaResuelto>>();
+
+/**
+ * El Tema tal como se ve en un Tipo de diagrama (ADR 0009): las Capas, Slots y `padding` del base ya parcheados con
+ * `diagram <tipo>`, de modo que la cascada de Tipo de nodo y estado sigue encima sin saber de diagramas. Sin
+ * Tipo, o sin parche para el, es el mismo Tema. Pura y memoizada por Tema.
+ */
+export function temaParaDiagrama(tema: TemaResuelto, diagrama: TipoDeDiagrama | undefined): TemaResuelto {
+  if (diagrama === undefined) return tema;
+  const delNodo = tema.nodo.diagramas?.[diagrama];
+  const delGrupo = tema.grupo.diagramas?.[diagrama];
+  const delaArista = tema.arista.diagramas?.[diagrama];
+  if (delNodo === undefined && delGrupo === undefined && delaArista === undefined) return tema;
+  const hecho = porDiagrama.get(tema)?.get(diagrama);
+  if (hecho !== undefined) return hecho;
+  const parchear = (capas: TemaResuelto['nodo']['capas'], ops: readonly OpDeCapa[] | undefined, ubicacion?: UbicacionDePrimitiva): TemaResuelto['nodo']['capas'] =>
+    ops === undefined || ops.length === 0 ? capas : aplicarOps(capas as CapaDeTema[], ops, tema.palette, 'parchear', ubicacion).pila;
+  const resultado: TemaResuelto = {
+    ...tema,
+    nodo: { ...tema.nodo, capas: parchear(tema.nodo.capas, delNodo?.ops), ...(delNodo?.slots !== undefined && { slots: delNodo.slots }) },
+    grupo: { ...tema.grupo, capas: parchear(tema.grupo.capas, delGrupo?.ops), ...(delGrupo?.slots !== undefined && { slots: delGrupo.slots }), ...(delGrupo?.padding !== undefined && { padding: delGrupo.padding }) },
+    arista: {
+      ...tema.arista,
+      capas: parchear(tema.arista.capas, delaArista?.ops, 'capa-arista'),
+      ...(delaArista?.origen !== undefined && { origen: delaArista.origen }),
+      ...(delaArista?.fin !== undefined && { fin: delaArista.fin }),
+      ...(delaArista?.etiqueta !== undefined && { etiqueta: delaArista.etiqueta }),
+    },
+  };
+  const memo = porDiagrama.get(tema) ?? new Map<TipoDeDiagrama, TemaResuelto>();
+  memo.set(diagrama, resultado);
+  porDiagrama.set(tema, memo);
+  return resultado;
+}
 
 /** Tema por defecto del nucleo: siempre disponible, otros Temas pueden extenderlo. */
 export const TEMA_NEUTRO: TemaResuelto = {

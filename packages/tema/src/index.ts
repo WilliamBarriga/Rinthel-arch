@@ -84,7 +84,7 @@ export { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECT
 export type { Alineacion, CajaDeSlots, Direccion, ElementoDeSlots, EntradaDeCaja, EntradaDeSlot, ErrorDeDisposicion, HojaDeSlots, PropiedadEscrita } from './disposicion';
 export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDePrimitivaEn, NombreDeSlot, NombreDeSlotDeTexto, Primitiva, UbicacionDePrimitiva } from './catalogo';
 export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
-export { GRUPO_POR_DEFECTO, TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
+export { GRUPO_POR_DEFECTO, TEMA_NEUTRO, leerOps, resolverTema, temaParaDiagrama, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
 export { atributosVisibles, contenidoDeNodo, muestra, textoDeAtributo } from './contenido';
 export type { ContenidoDeNodo } from './contenido';
@@ -100,8 +100,8 @@ export { PUNTO_DE_TITULO_EM, alturaDeCabecera, colocarDisposicion, colocarEnCaja
 export type { ColocacionDeNodo, MedidaDeSlot, Rect, Tamano } from './slots';
 export { estiloResuelto } from './estilo';
 export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeElemento, PinturaDeNodo, PinturaDePagina, PrimitivaPintada } from './estilo';
-export { aplicarOps, cascada, ESTADOS, opTocaMetricas, parsearEstado, validarOps } from './parches';
-export type { CapaDeTema, ElementoDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa, ResultadoDeEstado } from './parches';
+export { aplicarOps, cascada, ESTADOS, TIPOS_DE_DIAGRAMA, opTocaMetricas, parsearEstado, validarOps } from './parches';
+export type { CapaDeTema, ElementoDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa, ResultadoDeEstado, TipoDeDiagrama } from './parches';
 export { resolverColor, validarColor } from './color';
 export type { ContextoDeColor, ErrorDeColor } from './color';
 export { advertenciasDeContraste, leyendaDelTema, razonDeContraste, tiposSoloColor } from './contraste';

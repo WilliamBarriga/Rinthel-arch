@@ -1,0 +1,12 @@
+specification { node servicio { color azul } }
+model { servicio api }
+theme t {
+  palette { azul "#2563eb"  verde "#16a34a" }
+  node {
+    layer forma rect { radius 4 }
+    layer relleno solid { color azul }
+    slots { title attrs }
+    diagram flow { layer relleno { color verde } }
+  }
+}
+view v { type flow  include **  theme t }

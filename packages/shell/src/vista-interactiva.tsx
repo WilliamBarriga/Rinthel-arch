@@ -288,7 +288,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const [hover, fijarHover] = useState<string | undefined>(undefined);
   const estados = useMemo(() => conEstadosTransitorios(estadosDeSeleccion, enCurso === undefined ? hover : undefined, enCurso), [estadosDeSeleccion, hover, enCurso]);
   const medidas = calculo?.medidas;
-  const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas), [theme, fontFiles, medidas]);
+  const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas, vista.type), [theme, fontFiles, medidas, vista.type]);
 
   // Ruta (en-ruta / atenuado) y foco de teclado: los calcula el shell y render solo los pinta.
   const nodosSeleccionados = seleccion.filter((e) => e.tipo === 'nodo').map((e) => e.id);
