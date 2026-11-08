@@ -144,6 +144,8 @@ const MARCADORES: { readonly [M in NombreDePrimitivaEn<'marcador'>]: Dibujo } = 
   'zero-one': (s, color, fondo) => [barra(0.4 * s, 0.45 * s, color), anillo(0.78 * s, 0.2 * s, color, fondo)],
   many: (s, color) => [pie(0.62 * s, 0.45 * s, color), barra(0.85 * s, 0.45 * s, color)],
   'zero-many': (s, color, fondo) => [pie(0.55 * s, 0.45 * s, color), anillo(0.55 * s + 0.2 * s + 0.04 * s, 0.2 * s, color, fondo)],
+  // X centrada en el extremo: marca el fin de una Lifeline destruida.
+  cross: (s, color) => [{ tag: 'path', attrs: { d: `M ${num(-s / 2)} ${num(-s / 2)} L ${num(s / 2)} ${num(s / 2)} M ${num(-s / 2)} ${num(s / 2)} L ${num(s / 2)} ${num(-s / 2)}`, stroke: color, 'stroke-width': num(Math.max(1.5, s / 6)), 'stroke-linecap': 'round', fill: 'none' } }],
   // Almohadilla de una via: centrada en el extremo (no detras de la punta), disco del color con el agujero del fondo.
   via: (s, color, fondo) => [
     { tag: 'circle', attrs: { cx: '0', cy: '0', r: num(s / 2), fill: color } },

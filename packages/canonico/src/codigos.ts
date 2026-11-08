@@ -60,6 +60,10 @@ export const CODIGOS = Object.freeze({
   E_UNKNOWN_LIFELINE: 'E_UNKNOWN_LIFELINE',
   /** Dos Mensajes con el mismo id en su Interaccion. */
   E_DUPLICATE_MESSAGE_ID: 'E_DUPLICATE_MESSAGE_ID',
+  /** `create` cuyo destino ya habia aparecido en la Interaccion. */
+  E_CREATE_NOT_FIRST: 'E_CREATE_NOT_FIRST',
+  /** Aparicion de una Lifeline despues de su `destroy`. */
+  E_AFTER_DESTROY: 'E_AFTER_DESTROY',
   /** Entrada de `order` cuyo Nodo no participa en la Interaccion que proyecta la Vista (aviso; se ignora). */
   W_ORDER_NOT_IN_INTERACTION: 'W_ORDER_NOT_IN_INTERACTION',
   /** `reply` sin un `sync` abierto del receptor al emisor (aviso). */
@@ -151,6 +155,8 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_DUPLICATE_INTERACTION: 'Dos Interacciones con el mismo id.',
   E_UNKNOWN_LIFELINE: 'El extremo de un Mensaje o una entrada de `order` no es un Nodo del Modelo.',
   E_DUPLICATE_MESSAGE_ID: 'Dos Mensajes de la misma Interaccion con el mismo id.',
+  E_CREATE_NOT_FIRST: 'Un `create` cuyo destino ya habia aparecido antes en la Interaccion.',
+  E_AFTER_DESTROY: 'Una Lifeline aparece en un Mensaje despues de su `destroy`.',
   W_ORDER_NOT_IN_INTERACTION: 'Una entrada de `order` nombra un Nodo que no participa en la Interaccion de la Vista; se ignora (aviso).',
   W_REPLY_WITHOUT_SYNC: 'Un `reply` no cierra ningun `sync` abierto del receptor al emisor (aviso).',
   W_OVERLAPPING_PINS: 'Dos Nodos con `pin` se solapan en la Vista (aviso).',

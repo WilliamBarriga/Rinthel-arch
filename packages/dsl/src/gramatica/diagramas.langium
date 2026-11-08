@@ -59,10 +59,10 @@ Interaction:
   '}'
 ;
 
-// `[id:] [async|reply] origen -> destino ["etiqueta"] ["descripcion"]`; `origen == destino` es un Mensaje propio.
-// `async` y `reply` tambien valen como id de Nodo (`reply -> otro`).
+// `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"] ["descripcion"]`; `origen == destino` es un Mensaje propio.
+// `async`, `reply`, `create` y `destroy` tambien valen como id de Nodo (`reply -> otro`).
 Message:
-  (alias=Id ':')? (kind=('async' | 'reply'))? from=Ref '->' to=Ref (label=String (description=String)?)?
+  (alias=Id ':')? (kind=('async' | 'reply' | 'create' | 'destroy'))? from=Ref '->' to=Ref (label=String (description=String)?)?
 ;
 
 // `<origen> ["card"] -> ["card"] <destino> ["etiqueta"]`; los extremos son ids cualificados.
@@ -431,7 +431,7 @@ Id returns string:
   'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
-  'model' | 'node' | 'specification' | 'interaction' | 'async' | 'reply' |
+  'model' | 'node' | 'specification' | 'interaction' | 'async' | 'reply' | 'create' | 'destroy' |
   'pk' | 'fk' | 'uk' | 'identifying';
 
 // -------------------------

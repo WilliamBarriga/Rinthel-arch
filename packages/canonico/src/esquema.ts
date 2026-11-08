@@ -110,7 +110,7 @@ export interface Modelo {
 }
 
 /** Tipos de Mensaje de una Interaccion (`create` y `destroy` llegan con su ticket). */
-export const TIPOS_DE_MENSAJE = ['sync', 'async', 'reply'] as const;
+export const TIPOS_DE_MENSAJE = ['sync', 'async', 'reply', 'create', 'destroy'] as const;
 export type TipoDeMensaje = (typeof TIPOS_DE_MENSAJE)[number];
 
 /**

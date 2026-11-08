@@ -27,7 +27,7 @@ import { pintarMarcadores, pintarTrazos } from './aristas';
 const FAMILIAS_DE_ACTIVACION: readonly string[] = [...primitivasDeFamilia('forma'), ...primitivasDeFamilia('relleno'), ...primitivasDeFamilia('borde')];
 
 /** Marcador final de cada tipo de Mensaje. */
-const MARCADOR_DE_MENSAJE: Record<MensajeResuelto['kind'], string> = { sync: 'arrow', async: 'chevron', reply: 'chevron' };
+const MARCADOR_DE_MENSAJE: Record<MensajeResuelto['kind'], string> = { sync: 'arrow', async: 'chevron', reply: 'chevron', create: 'chevron', destroy: 'arrow' };
 
 /** Estilo de trazo de la Capa principal: el de la Arista base. */
 const estiloDeTrazo = (capas: readonly CapaPintada[]): string => String(capas[capas.length - 1]?.props['style'] ?? 'solid');
@@ -35,7 +35,7 @@ const estiloDeTrazo = (capas: readonly CapaPintada[]): string => String(capas[ca
 /** Pintura derivada de la Arista para un Mensaje de ese tipo: continuidad opuesta en `reply` y el marcador del tipo. */
 export function pinturaDeMensaje(base: PinturaDeArista, kind: MensajeResuelto['kind']): PinturaDeArista {
   const continuo = estiloDeTrazo(base.capas) === 'solid';
-  const estilo = kind === 'reply' ? (continuo ? 'dashed' : 'solid') : undefined;
+  const estilo = kind === 'reply' || kind === 'create' ? (continuo ? 'dashed' : 'solid') : undefined;
   const capas: CapaPintada[] = estilo === undefined ? base.capas : base.capas.map((capa) => ({ ...capa, props: { ...capa.props, style: estilo } }));
   const principal = capas[capas.length - 1];
   const fin: PrimitivaPintada = { tipo: MARCADOR_DE_MENSAJE[kind] as NombreDePrimitiva, props: { size: Number(base.fin?.props['size'] ?? 10), color: base.fin?.props['color'] ?? principal?.props['color'] ?? '#000000' } };
@@ -44,9 +44,13 @@ export function pinturaDeMensaje(base: PinturaDeArista, kind: MensajeResuelto['k
 }
 
 /** Pintura derivada de la Arista para una Lifeline: trazo discontinuo y sin marcadores. */
-function pinturaDeLifeline(base: PinturaDeArista): PinturaDeArista {
+function pinturaDeLifeline(base: PinturaDeArista, destruida: boolean): PinturaDeArista {
   const { origen: _origen, fin: _fin, ...resto } = base;
-  return { ...resto, capas: base.capas.map((capa) => ({ ...capa, props: { ...capa.props, style: 'dashed' } })) };
+  const capas: CapaPintada[] = base.capas.map((capa) => ({ ...capa, props: { ...capa.props, style: 'dashed' } }));
+  if (!destruida) return { ...resto, capas };
+  // Una Lifeline destruida termina en `end` (defecto `cross`), del color del trazo.
+  const color = capas[capas.length - 1]?.props['color'] ?? '#000000';
+  return { ...resto, capas, fin: { tipo: 'cross' as NombreDePrimitiva, props: { size: Number(base.fin?.props['size'] ?? 10), color } } };
 }
 
 export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry: GeometriaSecuencia }): Elemento {
@@ -70,12 +74,13 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     const linea = geometry.lifelines[nodo.id];
     if (linea === undefined) return [];
     const v = visibilidadSvg(visibility(nodo.id));
+    const puntos = [{ x: linea.x, y: linea.y1 }, { x: linea.x, y: linea.y2 }];
     return [
       {
         tag: 'g',
         attrs: { 'data-lifeline': nodo.id, ...(atenuado(entrada.estados, nodo.id) ? { ...v, 'data-atenuado': '' } : v) },
         ...(entrada.onSelect !== undefined && { alClic: () => entrada.onSelect!(nodo.id) }),
-        hijos: [...pintarTrazos(pinturaDeLifeline(deOrigen(nodo.id)), [{ x: linea.x, y: linea.y1 }, { x: linea.x, y: linea.y2 }], estilo.pintura.semilla)],
+        hijos: [...pintarTrazos(pinturaDeLifeline(deOrigen(nodo.id), linea.destroyed === true), puntos, estilo.pintura.semilla), ...pintarMarcadores(estilo, pinturaDeLifeline(deOrigen(nodo.id), linea.destroyed === true), puntos)],
       },
     ];
   });

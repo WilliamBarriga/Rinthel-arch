@@ -102,6 +102,7 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | `zero-one` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `many` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `zero-many` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `cross` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 
 ### Familia texto
 

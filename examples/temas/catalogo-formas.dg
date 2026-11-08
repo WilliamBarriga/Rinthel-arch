@@ -177,6 +177,14 @@ theme marcadores-er-opcionales extends marcadores-er {
   }
 }
 
+// Marcador de fin de una Lifeline destruida (secuencia).
+theme marcador-cruz extends base-muestra {
+  edge {
+    layer linea line { color tinta }
+    end cross { size 12 }
+  }
+}
+
 view formas {
   type architecture
   theme forma-pastilla
