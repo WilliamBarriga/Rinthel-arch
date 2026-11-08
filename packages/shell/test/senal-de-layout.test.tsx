@@ -29,7 +29,7 @@ function adaptadorManual(): { layout: AdaptadorDeLayout; liberar: () => void } {
       vista.nodes.forEach((n, i) => {
         nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
       });
-      pendientes.push(() => resolver({ nodes, edges: {}, labels: {}, pinsSolapados: [], width: 300, height: 50 }));
+      pendientes.push(() => resolver({ nodes, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 300, height: 50 }));
     });
   return { layout, liberar: () => act(() => pendientes.splice(0).forEach((f) => f())) as unknown as void };
 }

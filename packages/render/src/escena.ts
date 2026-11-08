@@ -11,7 +11,7 @@
 import { idDeArista } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
-import type { CajaDeNodo, Geometria } from 'layout';
+import type { CajaDeNodo, Geometria, GeometriaGrafo } from 'layout';
 import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
 import type { Metricas } from 'tema';
 
@@ -108,6 +108,13 @@ interface Contexto extends EntradaDeEscena {
  * Tema no cumple el contrato.
  */
 export function construirEscena(entrada: EntradaDeEscena): Elemento {
+  switch (entrada.geometry.kind) {
+    case 'grafo':
+      return construirEscenaDeGrafo({ ...entrada, geometry: entrada.geometry });
+  }
+}
+
+function construirEscenaDeGrafo(entrada: EntradaDeEscena & { geometry: GeometriaGrafo }): Elemento {
   const { view, geometry, theme, width, height, camera } = entrada;
   const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.metricas);
   const { raices, cajas } = indiceDeGeometria(view, geometry);

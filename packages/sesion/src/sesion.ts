@@ -3,7 +3,7 @@ import type { FuenteCanonica, GeometriaCacheada, Issue, Tema, Ubicador, Vista } 
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, OrigenDeTema, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
-import type { Geometria } from 'layout';
+import type { Geometria, GeometriaGrafo } from 'layout';
 import { TEMA_NEUTRO, advertenciasDeContraste, estiloResuelto, leerOps, resolverFuentes, resolverTema, tiposSoloColor, usosDeCodigo } from 'tema';
 import type { EstiloResuelto, UsoDeComponente } from 'tema';
 
@@ -96,6 +96,13 @@ function temaDeVista(fuente: FuenteCanonica, vista: Vista, global: string | unde
  * texto conocida (Pin que no viene del DSL) no se avisa.
  */
 function avisosDePins(vista: string, geometry: Geometria, pins: readonly PosicionDePin[]): Issue[] {
+  switch (geometry.kind) {
+    case 'grafo':
+      return avisosDePinsDeGrafo(vista, geometry, pins);
+  }
+}
+
+function avisosDePinsDeGrafo(vista: string, geometry: GeometriaGrafo, pins: readonly PosicionDePin[]): Issue[] {
   const posicionDe = (nodo: string) => pins.find((pin) => pin.view === vista && pin.node === nodo);
   return geometry.pinsSolapados.flatMap(([a, b]) => {
     const [primero, segundo] = [posicionDe(a), posicionDe(b)];
