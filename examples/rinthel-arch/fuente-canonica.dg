@@ -1,0 +1,102 @@
+// La Fuente canonica como esquema de datos (Vista ER) y dos Interacciones del sistema (Vistas de secuencia).
+model {
+  artefacto fuente "Fuente canonica" {
+    version: int pk
+    hash: text "por archivo"
+  }
+  artefacto f-nodo "Nodo" {
+    id: text pk "cualificado con ."
+    tipo: text
+    titulo: text?
+    padre: text? fk
+  }
+  artefacto f-arista "Arista" {
+    id: text pk
+    origen: text fk
+    destino: text fk
+    etiqueta: text?
+  }
+  artefacto f-vista "Vista" {
+    id: text pk
+    tipo: text "architecture, flow, sequence, er"
+    tema: text?
+    interaccion: text? fk
+  }
+  artefacto f-paso "Paso" {
+    vista: text pk fk
+    orden: int pk
+    corte: text? "Mensaje (secuencia)"
+  }
+  artefacto f-interaccion "Interaccion" {
+    id: text pk
+    titulo: text
+  }
+  artefacto f-mensaje "Mensaje" {
+    interaccion: text pk fk
+    ruta: text pk
+    origen: text fk
+    destino: text fk
+  }
+
+  f-nodo#padre "0..1" -> "0..*" f-nodo#id "contiene"
+  f-arista#origen "0..*" -> "1" f-nodo#id "sale de"
+  f-arista#destino "0..*" -> "1" f-nodo#id "llega a"
+  f-vista#interaccion "0..*" -> "0..1" f-interaccion#id "proyecta"
+  f-paso#vista "0..*" -> "1" f-vista#id "revela" identifying
+  f-mensaje#interaccion "1..*" -> "1" f-interaccion#id "compone" identifying
+  f-mensaje#origen "0..*" -> "1" f-nodo#id "Lifeline origen"
+  f-mensaje#destino "0..*" -> "1" f-nodo#id "Lifeline destino"
+
+  interaction editar-pin "Editar un Pin" "Arrastrar un Nodo reescribe el archivo .dg" {
+    arrastre: autor -> shell.sh-seleccion "arrastra un Nodo"
+    shell.sh-seleccion -> sesion.ses-ediciones "Intencion mover-pin"
+    alt "hash vigente" {
+      sesion.ses-ediciones -> workspace "reescribe el .dg"
+      ref recompilar
+    } else "archivo cambio en disco" {
+      reply sesion.ses-ediciones -> shell.sh-seleccion "rechaza"
+    }
+    note right of workspace "ni .diagrams/ ni la Fuente se tocan a mano"
+    fin: reply shell.sh-seleccion -> autor "nueva Geometria"
+  }
+
+  interaction recompilar "Recompilar" "La Sesion recalcula solo lo necesario" {
+    sesion.ses-sesion -> dsl.dsl-compilar "compila los archivos"
+    reply dsl.dsl-compilar -> sesion.ses-sesion "Fuente canonica"
+    sesion.ses-sesion -> layout.lay-layout "layout memoizado por Vista"
+    reply layout.lay-layout -> sesion.ses-sesion "Geometria"
+  }
+}
+
+view fuente-er {
+  type er
+  theme diagrams
+  include f-nodo, f-arista, f-vista, f-paso, f-interaccion, f-mensaje, fuente
+  steps {
+    step "Nodos y Aristas" { show f-nodo, f-arista }
+    step "Vistas y Pasos" { show f-vista, f-paso }
+    step "Interacciones y Mensajes" { show f-interaccion, f-mensaje }
+  }
+}
+
+view editar-pin {
+  type sequence
+  theme diagrams
+  interaction editar-pin
+  order autor, shell.sh-seleccion, sesion.ses-ediciones, workspace
+  autonumber
+  link sesion.ses-ediciones -> sesion-detalle
+  link shell.sh-seleccion -> shell-detalle
+  steps {
+    step "El autor arrastra" { upto arrastre }
+    step "El visor recibe la nueva Geometria" { upto fin }
+  }
+}
+
+view recompilar {
+  type sequence
+  theme diagrams
+  interaction recompilar
+  order sesion.ses-sesion, dsl.dsl-compilar, layout.lay-layout
+  link layout.lay-layout -> layout-detalle
+}

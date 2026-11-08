@@ -118,9 +118,10 @@ view tablas { type er include ** }
 
 | Quiero... | Mira |
 | --- | --- |
-| El primer diagrama, paso a paso | `examples/tutorial/paso-1` a `paso-5`, y `docs/guia/tutorial.md` |
+| El primer diagrama, paso a paso | `examples/tutorial/paso-1` a `paso-6`, y `docs/guia/tutorial.md` |
 | Un Modelo grande con drill-down y Pasos | `examples/rinthel-arch/` (Vistas `paquetes`, `flujo-edicion`) |
 | Ver un Tipo de nodo en cada estado | `examples/temas/galeria/` |
+| Secuencia y ER sobre el mapa del repo | `examples/rinthel-arch/fuente-canonica.dg` (`editar-pin`, `fuente-er`) |
 | Secuencia o ER con Tema propio | `examples/temas/secuencia.dg`, `examples/temas/er.dg` |
 
 ## Consultar antes de inventar
