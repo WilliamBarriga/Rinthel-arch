@@ -1,4 +1,4 @@
-import type { Issue, IntencionDePin, MotivoDeRechazo, TextPosition, TextRange } from 'canonico';
+import type { Issue, IntencionDeOrden, IntencionDePin, MotivoDeRechazo, TextPosition, TextRange } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
 
@@ -205,4 +205,70 @@ function edicionDePinSobre(
   }
 
   return { ok: true, ediciones: [hecha] };
+}
+
+/**
+ * `orden` visible completo + las entradas de `viejo` que no se ven (ocultas por `collapsed` o `exclude`): cada
+ * una queda justo despues de la entrada que la precedia en `viejo` (o al principio si ninguna sobrevive).
+ */
+function ordenConOcultas(orden: readonly string[], viejo: readonly string[]): string[] {
+  const resultado = [...new Set(orden)];
+  viejo.forEach((id, i) => {
+    if (resultado.includes(id)) return;
+    const previo = viejo.slice(0, i).filter((p) => resultado.includes(p)).at(-1);
+    resultado.splice(previo === undefined ? 0 : resultado.indexOf(previo) + 1, 0, id);
+  });
+  return resultado;
+}
+
+/**
+ * Gesto de reordenar las Lifelines de una Vista de secuencia (ADR 0009): reescribe el `order` completo con el orden
+ * visible (las entradas ocultas conservan su posicion relativa); lo escribe aunque coincida con la primera aparicion.
+ * Misma auto-prueba que `editarPin`: un id que no es Nodo, o cualquier error nuevo, rechaza con `invalida`.
+ */
+export function ordenarLifelines(
+  archivos: ArchivosDelWorkspace,
+  intencion: IntencionDeOrden,
+): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace; ediciones: EdicionConHash[]; issues: Issue[] }> {
+  const compilado = compile(archivos);
+  const { canonico: fuente, ubicar } = compilado;
+  if (fuente === undefined || ubicar === undefined) {
+    const primero = compilado.issues.find((i) => i.severity === 'error');
+    return rechazo('invalida', `El Workspace tiene errores: ${primero?.message ?? ''}`, primero?.file);
+  }
+  const indice = fuente.views.findIndex(({ id }) => id === intencion.vista);
+  const declarada = fuente.views[indice];
+  if (declarada === undefined) return rechazo('vista-desconocida', `La Vista '${intencion.vista}' no existe`);
+  if (declarada.type !== 'sequence') return rechazo('invalida', `La Vista '${intencion.vista}' no es de secuencia`);
+
+  const total = declarada.order.length;
+  const inicio = total > 0 ? ubicar(['views', indice, 'order', 0]) : ubicar(['views', indice, 'overrides']);
+  const fin = total > 0 ? ubicar(['views', indice, 'order', total - 1]) : inicio;
+  if (inicio === null || fin === null) return rechazo('invalida', `No se encontro donde escribir el order de '${intencion.vista}'`);
+  const { file } = inicio;
+  const texto = archivos[file] as string;
+  if (intencion.hash !== hashDeContenido(texto)) {
+    return rechazo('hash-desactualizado', `El archivo '${file}' cambio desde que se leyo`, file);
+  }
+
+  const lista = ordenConOcultas(intencion.orden, declarada.order).join(', ');
+  const edicion = (range: TextRange, replacement: string): EdicionConHash => ({ file, range, replacement, hash: intencion.hash });
+  let hecha: EdicionConHash;
+  if (total > 0) {
+    hecha = edicion({ start: inicio.range.start, end: fin.range.end }, lista);
+  } else {
+    // Antes de la `}` de la Vista: en su propia linea si esa `}` esta sola, en linea si no.
+    const { range } = inicio;
+    const linea = texto.split('\n')[range.start.line - 1] ?? '';
+    const previo = linea.slice(0, range.start.column - 1);
+    if (previo.trim() === '') {
+      const principio = { line: range.start.line, column: 1 };
+      hecha = edicion({ start: principio, end: principio }, `${previo}  order ${lista}\n`);
+    } else {
+      hecha = edicion(range, `${/\s$/.test(previo) ? '' : ' '}order ${lista} `);
+    }
+  }
+  const aplicada = aplicarSobre(archivos, [hecha], erroresPorClave(compilado.issues));
+  if (!aplicada.ok) return aplicada;
+  return { ok: true, archivos: aplicada.archivos, ediciones: [hecha], issues: aplicada.issues };
 }
