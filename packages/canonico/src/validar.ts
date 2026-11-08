@@ -15,11 +15,11 @@
  */
 import { CODIGOS } from './codigos';
 import { CARDINALIDADES_ER } from './esquema';
-import type { ElementoDePaso, FuenteCanonica, Nodo, Tema, Vista } from './esquema';
+import type { ElementoDePaso, FuenteCanonica, ItemDeInteraccion, Nodo, Tema, Vista } from './esquema';
 import type { IconProvider } from './iconos';
 import type { Issue, TextRange } from './issue';
 import { candidatosCercanos } from './sugerencias';
-import { activacionesDe } from './secuencia';
+import { activacionesDe, aplanarMensajes } from './secuencia';
 import { matchesSelector, resolveView } from './vistas';
 
 /** Ruta de un valor dentro de la Fuente canonica, p. ej. `['views', 0, 'links', 1, 'view']`. */
@@ -279,9 +279,10 @@ function validarInteracciones(fuente: FuenteCanonica, emitir: Emitir, emitirCon:
     } else {
       vistas.set(interaccion.id, i);
     }
-    const ids = new Map<string, number>();
-    interaccion.items.forEach((mensaje, j) => {
-      const donde = [...ruta, 'items', j];
+    const ids = new Map<string, (string | number)[]>();
+    const mensajes = aplanarMensajes(interaccion.items);
+    mensajes.forEach((mensaje) => {
+      const donde = [...ruta, ...mensaje.ubicacion];
       for (const lado of ['from', 'to'] as const) {
         if (!nodos.includes(mensaje[lado])) {
           emitir([...donde, lado], CODIGOS.E_UNKNOWN_LIFELINE, `El extremo '${mensaje[lado]}' del Mensaje no es un Nodo del Modelo`, mensaje[lado], nodos);
@@ -289,12 +290,13 @@ function validarInteracciones(fuente: FuenteCanonica, emitir: Emitir, emitirCon:
       }
       if (mensaje.id === undefined) return;
       const otro = ids.get(mensaje.id);
-      if (otro === undefined) ids.set(mensaje.id, j);
-      else emitirCon([...donde, 'id'], CODIGOS.E_DUPLICATE_MESSAGE_ID, `Mensaje duplicado '${mensaje.id}' en la Interaccion '${interaccion.id}'`, { relacionado: { ruta: [...ruta, 'items', otro, 'id'], message: `Primer Mensaje '${mensaje.id}'` } });
+      if (otro === undefined) ids.set(mensaje.id, mensaje.ubicacion);
+      else emitirCon([...donde, 'id'], CODIGOS.E_DUPLICATE_MESSAGE_ID, `Mensaje duplicado '${mensaje.id}' en la Interaccion '${interaccion.id}'`, { relacionado: { ruta: [...ruta, ...otro, 'id'], message: `Primer Mensaje '${mensaje.id}'` } });
     });
-    for (const j of activacionesDe(interaccion.items).respuestasSueltas) {
-      const mensaje = interaccion.items[j]!;
-      emitirCon([...ruta, 'items', j, 'from'], CODIGOS.W_REPLY_WITHOUT_SYNC, `El 'reply' de '${mensaje.from}' a '${mensaje.to}' no cierra ningun 'sync' abierto`, { severity: 'warning' });
+    validarOperandos(interaccion.items, [...ruta, 'items'], emitirCon);
+    for (const j of activacionesDe(mensajes).respuestasSueltas) {
+      const mensaje = mensajes[j]!;
+      emitirCon([...ruta, ...mensaje.ubicacion, 'from'], CODIGOS.W_REPLY_WITHOUT_SYNC, `El 'reply' de '${mensaje.from}' a '${mensaje.to}' no cierra ningun 'sync' abierto`, { severity: 'warning' });
     }
   });
 }
@@ -327,7 +329,7 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
     emitir([...ruta, 'interaction'], CODIGOS.E_UNKNOWN_INTERACTION, `La Interaccion '${vista.interaction}' no existe en el Modelo`, vista.interaction, interacciones);
   }
   const nodos = todosLosIds(fuente.model.nodes);
-  const participantes = new Set(interaccion?.items.flatMap((m) => [m.from, m.to]));
+  const participantes = new Set(aplanarMensajes(interaccion?.items ?? []).flatMap((m) => [m.from, m.to]));
   vista.order.forEach((id, i) => {
     if (!nodos.includes(id)) {
       emitir([...ruta, 'order', i], CODIGOS.E_UNKNOWN_LIFELINE, `'order' nombra '${id}', que no es un Nodo del Modelo`, id, nodos);
@@ -343,4 +345,23 @@ function todosLosIds(nodos: readonly Nodo[]): string[] {
 
 function compararIssues(a: Issue, b: Issue): number {
   return a.file.localeCompare(b.file) || a.line - b.line || a.column - b.column || a.code.localeCompare(b.code);
+}
+
+/** Operandos de cada Fragmento (recursivo): `else` solo en `alt`, `and` solo en `par`; un operando en los demas operadores. */
+function validarOperandos(items: readonly ItemDeInteraccion[], ruta: RutaDeFuente, emitirCon: EmitirCon): void {
+  items.forEach((item, i) => {
+    if (item.type !== 'fragment') return;
+    const donde = [...ruta, i];
+    const esperado = item.operator === 'alt' ? 'else' : item.operator === 'par' ? 'and' : undefined;
+    item.operands.forEach((operando, k) => {
+      if (k > 0) {
+        if (esperado === undefined) {
+          emitirCon([...donde, 'operands', k, 'separator'], CODIGOS.E_INVALID_FRAGMENT_OPERAND, `'${item.operator}' tiene un solo operando; no admite '${operando.separator}'`, { hint: `quita el operando o usa 'alt { } else { }' / 'par { } and { }'` });
+        } else if (operando.separator !== esperado) {
+          emitirCon([...donde, 'operands', k, 'separator'], CODIGOS.E_INVALID_FRAGMENT_OPERAND, `'${item.operator}' separa sus operandos con '${esperado}', no con '${operando.separator}'`, { hint: `escribe '${esperado}' (\`else\` es de \`alt\`, \`and\` de \`par\`)` });
+        }
+      }
+      validarOperandos(operando.items, [...donde, 'operands', k, 'items'], emitirCon);
+    });
+  });
 }

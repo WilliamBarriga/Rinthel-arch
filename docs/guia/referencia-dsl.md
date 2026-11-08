@@ -55,8 +55,23 @@ model {
 }
 ```
 
+Fragmentos (anidables) agrupan Mensajes con un operador:
+
+```
+interaction checkout {
+  cliente -> api "pedir"
+  alt "hay stock" {
+    api -> db "reservar"
+  } else "sin stock" {
+    api -> cliente "rechazar"
+  }
+  par { api -> cola "evento" } and { api -> db "auditar" }
+}
+```
+
 - Un Mensaje es `[id:] [async|reply] origen -> destino ["etiqueta"] ["descripcion"]`; sin tipo es `sync`. Los extremos son Nodos de cualquier nivel (las Lifelines) y no hace falta una Arista entre ellos.
 - El orden de declaracion es el orden temporal. La activacion no se escribe: un `sync` abre una en el receptor y el siguiente `reply` del receptor al emisor la cierra.
+- Fragmento: `opt|loop|break|critical ["guarda"] { }` (un operando), `alt ["guarda"] { } else ["guarda"] { }` y `par { } and { }` (uno o mas). La guarda es texto libre y opcional. `else` solo vale en `alt` y `and` en `par`; otra combinacion da `E_INVALID_FRAGMENT_OPERAND`. Un `sync` sin `reply` dentro de un Fragmento deja su activacion abierta hasta el fin del Fragmento. `opt`, `loop`, `break`, `critical`, `alt`, `par`, `else` y `and` siguen valiendo como ids de Nodo.
 - El id de una Interaccion tiene su propio espacio de nombres (puede coincidir con el de un Nodo); `interaction`, `async`, `reply` y `order` siguen valiendo como ids de Nodo.
 
 ## `view`: que mostrar

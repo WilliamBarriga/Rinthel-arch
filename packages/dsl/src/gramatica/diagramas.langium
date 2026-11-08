@@ -55,8 +55,26 @@ Model:
 // Su id vive en un espacio de nombres propio. `interaction` es palabra clave solo aqui: sigue valiendo como id de Nodo.
 Interaction:
   'interaction' name=Id (title=String (description=String)?)? '{'
-    items+=Message*
+    items+=InteractionItem*
   '}'
+;
+
+InteractionItem:
+  Fragment | Message;
+
+// Fragmento (ADR 0009): `opt|loop|break|critical ["guarda"] { }`, `alt ["guarda"] { } else ["guarda"] { }`,
+// `par { } and { }`. El parser acepta cualquier operador con `else`/`and` en cualquier cantidad: `canonico`
+// emite `E_INVALID_FRAGMENT_OPERAND` (nada de esto sale como `E_SYNTAX_ERROR`).
+Fragment:
+  operator=('opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par') operands+=FirstOperand operands+=NextOperand*
+;
+
+FirstOperand:
+  (guard=String)? '{' items+=InteractionItem* '}'
+;
+
+NextOperand:
+  separator=('else' | 'and') (guard=String)? '{' items+=InteractionItem* '}'
 ;
 
 // `[id:] [async|reply] origen -> destino ["etiqueta"] ["descripcion"]`; `origen == destino` es un Mensaje propio.
@@ -432,6 +450,7 @@ Id returns string:
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
   'model' | 'node' | 'specification' | 'interaction' | 'async' | 'reply' |
+  'opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par' | 'else' | 'and' |
   'pk' | 'fk' | 'uk' | 'identifying';
 
 // -------------------------

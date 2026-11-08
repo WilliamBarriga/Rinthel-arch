@@ -3,12 +3,12 @@
  * `tamanoDeEtiqueta` miden, con la misma familia y tamano, para que el visor
  * entregue exactamente las claves que se consultaran.
  */
-import type { VistaResuelta } from 'canonico';
+import type { ItemResuelto, VistaResuelta } from 'canonico';
 
 import { claveDeTexto } from './medicion';
 import type { TextoAMedir } from './medicion';
 import { contenidoDeNodo } from './contenido';
-import { metricasDeHoja } from './metricas';
+import { metricasDeHoja, textoDeGuarda } from './metricas';
 import type { TablaDeMetricas } from './metricas';
 import { textosDeNodo } from './slots';
 
@@ -26,5 +26,17 @@ export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges' | 'int
   const e = tabla.etiqueta;
   for (const arista of vista.edges) if (arista.label !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, arista.label, e.pesoDeEtiqueta);
   for (const mensaje of vista.interaction?.messages ?? []) if (mensaje.label !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, mensaje.label, e.pesoDeEtiqueta);
+  // Pestanas y guardas de los Fragmentos (con la estimacion la pestana salia recortada).
+  const deItems = (items: readonly ItemResuelto[]): void => {
+    for (const item of items) {
+      if (item.type === 'message') continue;
+      anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, item.operator, e.pesoDeEtiqueta);
+      for (const operando of item.operands) {
+        if (operando.guard !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, textoDeGuarda(operando.guard), e.pesoDeEtiqueta);
+        deItems(operando.items);
+      }
+    }
+  };
+  deItems(vista.interaction?.items ?? []);
   return [...vistos.values()];
 }

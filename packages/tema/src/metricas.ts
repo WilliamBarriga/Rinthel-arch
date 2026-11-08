@@ -263,3 +263,6 @@ export function tamanoDeEtiqueta(texto: string, metricas: Metricas): { width: nu
  * (el Tema puede cambiar su `size`, acotado al tramo disponible).
  */
 export const LARGO_DE_MARCADOR_ER = 12;
+
+/** Texto con que se pinta (y se mide) la guarda de un operando de Fragmento: `[guarda]`. */
+export const textoDeGuarda = (guarda: string): string => `[${guarda}]`;
