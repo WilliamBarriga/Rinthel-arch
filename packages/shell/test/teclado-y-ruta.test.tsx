@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema } from 'canonico';
 import type { VistaResuelta } from 'canonico';
-import type { Geometria } from 'layout';
+import type { GeometriaGrafo } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -21,11 +21,11 @@ const fuente = fuenteCanonicaSchema.parse({
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], expanded: ['g'] }],
 });
 const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
-  const nodes: Geometria['nodes'] = {};
+  const nodes: GeometriaGrafo['nodes'] = {};
   vista.nodes.forEach((n, i) => {
     nodes[n.id] = { x: i * 60, y: 0, width: 50, height: 50 };
   });
-  const edges: Geometria['edges'] = {};
+  const edges: GeometriaGrafo['edges'] = {};
   edges['a -> b'] = { points: [{ x: 100, y: 25 }, { x: 120, y: 25 }] };
   edges['b -> c'] = { points: [{ x: 220, y: 25 }, { x: 240, y: 25 }] };
   return { nodes, edges, labels: {}, kind: 'grafo', pinsSolapados: [], width: 600, height: 50 };

@@ -2,8 +2,16 @@ import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { Tema, VistaResuelta } from 'canonico';
-import { claveDeLayout, layoutView } from 'layout';
+import { claveDeLayout, layoutView as layoutDeVista } from 'layout';
 import { TEMA_NEUTRO, claveDeTexto, metricasDe, tablaDeMetricas } from 'tema';
+
+/** `layoutView` de una Vista de grafo (architecture o flow): estas pruebas miran cajas y rutas de Aristas. */
+const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
+  const geometria = await layoutDeVista(...args);
+  if (geometria.kind !== 'grafo') throw new Error('se esperaba una Geometria de grafo');
+  return geometria;
+};
+
 
 const capas = [
   { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },

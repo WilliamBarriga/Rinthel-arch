@@ -26,6 +26,7 @@ function fuente(cambios: Record<string, unknown> = {}): FuenteCanonica {
     model: {
       nodes: [nodo('a', { children: [nodo('a.a1')] }), nodo('b', { attributes: [{ name: 'id', type: 'int', notes: '' }] })],
       edges: [{ from: { node: 'a.a1' }, to: { node: 'b', attribute: 'id' } }],
+      interactions: [],
     },
     views: [],
     themes: [TEMA_NEUTRO],
@@ -38,6 +39,7 @@ const vista = (cambios: Record<string, unknown> = {}) => ({
   type: 'architecture',
   include: ['**'],
   exclude: [],
+  order: [],
   overrides: [],
   collapsed: [],
   expanded: [],

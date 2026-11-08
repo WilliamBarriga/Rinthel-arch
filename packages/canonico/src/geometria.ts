@@ -31,12 +31,27 @@ const geometriaGrafoSchema = z.object({
 });
 
 /**
- * Geometria de una Vista: union discriminada por `kind` (hoy solo `grafo`). Una geometria
+ * Geometria de una Vista de secuencia: `nodes` son las cabeceras de las Lifelines (por id de Nodo, todas en la misma `y`),
+ * `lifelines` la linea vertical de cada una, `activations` las barras derivadas y `messages` la ruta de cada Mensaje por su
+ * identidad (`MensajeResuelto.ruta`), con la caja de su etiqueta si la tiene.
+ */
+const geometriaSecuenciaSchema = z.object({
+  kind: z.literal('secuencia'),
+  nodes: z.record(z.string(), cajaDeNodoSchema),
+  lifelines: z.record(z.string(), z.object({ x: numeroFinito, y1: numeroFinito, y2: numeroFinito })),
+  activations: z.array(z.object({ lifeline: z.string(), nivel: z.number().int(), x: numeroFinito, y1: numeroFinito, y2: numeroFinito, width: numeroFinito })),
+  messages: z.record(z.string(), z.object({ points: z.array(puntoSchema), label: cajaDeNodoSchema.optional() })),
+  width: numeroFinito,
+  height: numeroFinito,
+});
+
+/**
+ * Geometria de una Vista: union discriminada por `kind` (`grafo` o `secuencia`). Una geometria
  * escrita antes de existir `kind` se lee como `grafo`.
  */
 export const geometriaSchema = z.preprocess(
   (crudo) => (typeof crudo === 'object' && crudo !== null && !('kind' in crudo) ? { ...crudo, kind: 'grafo' } : crudo),
-  z.discriminatedUnion('kind', [geometriaGrafoSchema]),
+  z.discriminatedUnion('kind', [geometriaGrafoSchema, geometriaSecuenciaSchema]),
 );
 
 /**
