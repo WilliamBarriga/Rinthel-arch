@@ -31,7 +31,7 @@ describe('cli: ayuda', () => {
     const esperadas: Record<string, string[]> = {
       validate: ['--json', '--strict', '--max-issues', '--theme', '--theme-path'],
       dev: ['--port', '--trust-code', '--theme-path'],
-      inspect: ['--tipo', '--estado', '--catalogo', '--json'],
+      inspect: ['--tipo', '--estado', '--diagrama', '--catalogo', '--json'],
       edit: ['--view', '--node', '--x', '--y', '--edits', '--hash'],
       skill: ['--out'],
     };

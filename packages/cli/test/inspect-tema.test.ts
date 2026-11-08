@@ -180,3 +180,26 @@ describe('inspect tema', () => {
     expect(r.exitCode).toBe(1);
   });
 });
+
+describe('inspect tema --diagrama', () => {
+  const RAIZ_DIAGRAMA = resolve(__dirname, 'fixtures/tema-diagrama');
+  const relleno = (salida: Awaited<ReturnType<typeof json>>['salida']) => temaDe(salida).capas.find((c) => c.nombre === 'relleno')?.props['color'];
+
+  it('aplica los parches diagram de ese Tipo de diagrama a la cascada', async () => {
+    const sin = await json(['t'], RAIZ_DIAGRAMA);
+    const flujo = await json(['t', '--diagrama', 'flow'], RAIZ_DIAGRAMA);
+    const arquitectura = await json(['t', '--diagrama', 'architecture'], RAIZ_DIAGRAMA);
+
+    expect(relleno(sin.salida)).toBe('azul');
+    expect(relleno(arquitectura.salida)).toBe('azul');
+    expect(relleno(flujo.salida)).toBe('verde');
+    expect(temaDe(flujo.salida)).toMatchObject({ diagrama: 'flow' });
+  });
+
+  it('un Tipo de diagrama desconocido sale con codigo 1 y sugiere el cercano', async () => {
+    const r = await run(['inspect', 'tema', 't', '--diagrama', 'flo', '--workspace', RAIZ_DIAGRAMA]);
+
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toContain('flow');
+  });
+});

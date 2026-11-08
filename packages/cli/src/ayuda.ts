@@ -60,6 +60,7 @@ Opciones:
   --json               Un objeto con su propio contractVersion (independiente del de validate)
   --tipo <tipo>        (tema) resuelve la cascada para ese Tipo de nodo
   --estado <estado>    (tema) resuelve la cascada para ese estado
+  --diagrama <tipo>    (tema) aplica los parches diagram de ese Tipo de diagrama (architecture, flow, sequence, er)
   --catalogo           (tema) agrega las claves del catalogo de Primitivas y Movimientos
   ${THEME_PATH}
 

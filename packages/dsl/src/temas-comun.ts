@@ -7,11 +7,11 @@
  */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
-import { construirPrimitiva, resolverTokens } from 'tema';
-import type { ErrorDeCatalogo, Primitiva, PropiedadEscrita, UbicacionDePrimitiva } from 'tema';
+import { TIPOS_DE_DIAGRAMA, construirPrimitiva, resolverTokens } from 'tema';
+import type { ErrorDeCatalogo, Primitiva, PropiedadEscrita, TipoDeDiagrama, UbicacionDePrimitiva } from 'tema';
 
-import type { LayerProp, PartDecl } from './generated/ast';
-import { rangoDe } from './posiciones';
+import type { LayerProp, PartDecl, ThemeDiagram } from './generated/ast';
+import { issueConSugerencia, rangoDe } from './posiciones';
 
 export interface ParteDeclarada {
   archivo: string;
@@ -81,4 +81,17 @@ export function primitivaSuelta(
     ctx.issues.push(aIssue(ctx.archivo, error, prop !== undefined ? inicioDePropiedad(prop, error) : culpable));
   }
   return resueltas.errores.length === 0 && errores.length === 0 ? primitiva : undefined;
+}
+
+/** Tipo de diagrama de un bloque `diagram`, o `undefined` (con issue y `fix` por typo) si no es uno de `TIPOS_DE_DIAGRAMA`. */
+export function nombreDeDiagrama(item: ThemeDiagram, archivo: string, issues: Issue[]): TipoDeDiagrama | undefined {
+  const tipo = TIPOS_DE_DIAGRAMA.find((t) => t === item.name);
+  if (tipo !== undefined) return tipo;
+  issues.push(
+    issueConSugerencia(
+      { code: CODIGOS.E_THEME_UNKNOWN_DIAGRAM_TYPE, message: `Tipo de diagrama '${item.name}' desconocido; disponibles: ${TIPOS_DE_DIAGRAMA.join(', ')}` },
+      archivo, item, 'name', TIPOS_DE_DIAGRAMA,
+    ),
+  );
+  return undefined;
 }

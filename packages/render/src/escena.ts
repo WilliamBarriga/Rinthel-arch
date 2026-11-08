@@ -116,7 +116,7 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
 
 function construirEscenaDeGrafo(entrada: EntradaDeEscena & { geometry: GeometriaGrafo }): Elemento {
   const { view, geometry, theme, width, height, camera } = entrada;
-  const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.metricas);
+  const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.metricas, undefined, undefined, entrada.view.type);
   const { raices, cajas } = indiceDeGeometria(view, geometry);
   const visibility = entrada.visibility ?? (() => 1);
   const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));

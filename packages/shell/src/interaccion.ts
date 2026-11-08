@@ -70,7 +70,7 @@ export function elementoBajo(
   { tolerancia = AJUSTES_POR_DEFECTO.hitTolerance, atributos = true }: OpcionesDeHitTest = {},
 ): ElementoSeleccionable | undefined {
   const { cajas, raices } = indiceDeGeometria(vista, geometria);
-  const estilo = resolverEstilo(tema);
+  const estilo = resolverEstilo(tema, undefined, undefined, undefined, vista.type);
 
   // Aristas se dibujan encima de los Nodos; la ultima dibujada es la superior.
   const aristas = vista.edges.map((arista) => ({ arista, id: idDeArista(arista), puntos: geometria.edges[idDeArista(arista)]?.points ?? [] }));
@@ -102,7 +102,7 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
   const { cajas } = indiceDeGeometria(vista, geometria);
   if (elemento.tipo === 'nodo') return cajas.get(elemento.id);
   if (elemento.tipo === 'atributo') {
-    const { tabla } = resolverEstilo(tema);
+    const { tabla } = resolverEstilo(tema, undefined, undefined, undefined, vista.type);
     const [idNodo = '', nombre] = elemento.id.split('#');
     const nodo = enOrdenDeDibujo(indiceDeGeometria(vista, geometria).raices).find((n) => n.id === idNodo);
     const caja = cajas.get(idNodo);
@@ -117,7 +117,7 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
   const puntos = geometria.edges[elemento.id]?.points ?? [];
   if (arista === undefined || puntos.length < 2) return undefined;
   if (elemento.tipo === 'etiqueta') {
-    return arista.label === undefined ? undefined : cajaDeEtiqueta(arista.label, puntos, geometria.labels[elemento.id], resolverEstilo(tema));
+    return arista.label === undefined ? undefined : cajaDeEtiqueta(arista.label, puntos, geometria.labels[elemento.id], resolverEstilo(tema, undefined, undefined, undefined, vista.type));
   }
   const [xs, ys] = [puntos.map((p) => p.x), puntos.map((p) => p.y)];
   const [x, y] = [Math.min(...xs), Math.min(...ys)];

@@ -56,7 +56,7 @@ Sirve en `http://127.0.0.1:<puerto>/` (4173 por defecto, `--port 0` elige uno li
 dg inspect buscar <texto>   --workspace <ruta> [--json]
 dg inspect nodo <id>        --workspace <ruta> [--json]
 dg inspect vista <id>       --workspace <ruta> [--json]
-dg inspect tema <nombre>    --workspace <ruta> [--tipo <tipo>] [--estado <estado>] [--catalogo] [--json]
+dg inspect tema <nombre>    --workspace <ruta> [--tipo <tipo>] [--estado <estado>] [--diagrama <tipo>] [--catalogo] [--json]
 ```
 
 Cada resultado trae el id cualificado, el tipo y `archivo:linea`. `tema` muestra la cadena `extends`, las Partes, la pila de Capas con el `archivo:linea` del parche que fijo cada una (asi se sabe que editar) y las Metricas; `--catalogo` agrega las claves de Primitivas y Movimientos. `inspect tema` marca `temaConCodigo` y lista los componentes cuando el Tema usa codigo. Sale 1 si el Nodo, la Vista o el Tema no existe (stderr sugiere ids cercanos).

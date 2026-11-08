@@ -10,7 +10,7 @@ La estetica vive en el **Tema** (texto `.dg`), nunca en el Modelo: cambiar `them
 ## Bucle
 
 1. **Partir de un Tema existente**: elige el ejemplo mas cercano en `examples/rinthel-arch/temas/` (`synthwave` neon, `glass-chip` vidrio, `blueprint` plano, `pcb` circuito, `pixel-art`...) o extiende un incorporado con `theme mio extends neutral-dark { ... }` y escribe solo lo que cambia.
-2. **Saber que parche editar**: `dg inspect tema <nombre> --workspace <ruta> --tipo <tipo> --estado <estado>` muestra la pila de Capas con el `archivo:linea` de cada parche. Edita ese parche.
+2. **Saber que parche editar**: `dg inspect tema <nombre> --workspace <ruta> --tipo <tipo> --estado <estado> --diagrama <tipo>` muestra la pila de Capas con el `archivo:linea` de cada parche. Edita ese parche.
 3. **Editar** con el vocabulario cerrado del catalogo: `docs/referencia-catalogo.md` (Primitivas, Slots, Movimientos, Efectos con rangos). Un nombre fuera del catalogo es un error; `validate` propone el parecido.
 4. **Validar**: `dg validate --workspace <ruta> --json` hasta `ok: true`. Corrige contraste (`W_THEME_LOW_CONTRAST`) y `W_THEME_COLOR_ONLY` o declara en la primera linea del Tema que su estetica los exige.
 5. **Mirar**: `dg dev --workspace <ruta>` y la Vista con ese Tema (ver skill `rinthel-diagramas` para servirlo).

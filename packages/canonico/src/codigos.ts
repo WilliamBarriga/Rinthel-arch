@@ -70,6 +70,8 @@ export const CODIGOS = Object.freeze({
   E_THEME_STATE_TOUCHES_METRICS: 'E_THEME_STATE_TOUCHES_METRICS',
   /** Estado que la cascada no conoce. */
   E_THEME_UNKNOWN_STATE: 'E_THEME_UNKNOWN_STATE',
+  /** `diagram <tipo>` en un Tema con un Tipo de diagrama que no existe. */
+  E_THEME_UNKNOWN_DIAGRAM_TYPE: 'E_THEME_UNKNOWN_DIAGRAM_TYPE',
   /** `use` de una Parte de Tema que no esta declarada. */
   E_THEME_UNKNOWN_PART: 'E_THEME_UNKNOWN_PART',
   /** Movimiento, efecto de `enter`/`exit` o propiedad de `keyframes` que el catalogo de animacion no conoce. */
@@ -134,6 +136,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_THEME_PATCH_WITHOUT_PLACEMENT: 'Un parche nombra una Capa inexistente y no dice donde anadirla (`before`/`after`).',
   E_THEME_STATE_TOUCHES_METRICS: 'Un parche de estado toca las Metricas (Slots); solo el estado base puede.',
   E_THEME_UNKNOWN_STATE: 'Un bloque `state` nombra un estado que no existe.',
+  E_THEME_UNKNOWN_DIAGRAM_TYPE: 'Un bloque `diagram` nombra un Tipo de diagrama que no existe (architecture, flow, sequence, er).',
   E_THEME_UNKNOWN_PART: 'Un `use` nombra una `part` no declarada.',
   E_THEME_UNKNOWN_MOTION: 'Un Movimiento, un efecto de `enter`/`exit` o una propiedad de `keyframes` no esta en el catalogo de animacion.',
   E_DUPLICATE_PART: 'Dos `part` con el mismo nombre en el Workspace.',

@@ -321,7 +321,7 @@ function crear(
       if (datos === undefined || fuente === undefined) return undefined;
       const declarada = fuente.views.find(({ id }) => id === vista);
       const tipos = Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
-      return estiloResuelto(datos.tema, { tipos, ...(opciones.archivosDeFuente !== undefined && { archivosDeFuente: opciones.archivosDeFuente }), ...(declarada?.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
+      return estiloResuelto(datos.tema, { tipos, ...(declarada !== undefined && { diagrama: declarada.type }), ...(opciones.archivosDeFuente !== undefined && { archivosDeFuente: opciones.archivosDeFuente }), ...(declarada?.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
     },
     vistasConGeometria: () => [...memo.keys()],
     actualizar: (nuevos, cambios = {}) => crear(nuevos, { ...opciones, ...cambios }, compile(nuevos), memo),

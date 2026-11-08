@@ -6,7 +6,7 @@
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos, resolveView, salidaDeInspectSchema } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
-import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, alturaDeCabecera, cascada, componentesDeTema, describirDisposicion, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas } from 'tema';
+import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, TIPOS_DE_DIAGRAMA, alturaDeCabecera, cascada, componentesDeTema, describirDisposicion, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas, temaParaDiagrama } from 'tema';
 import type { CapaDeTema } from 'tema';
 
 type Sitio = { file: string; line: number };
@@ -135,6 +135,7 @@ interface ConsultaDeTema {
   nombre: string;
   tipo?: string;
   estado?: string;
+  diagrama?: string;
   catalogo: boolean;
 }
 
@@ -145,7 +146,7 @@ const INCORPORADO: Sitio = { file: '(incorporado)', line: 1 };
  * estado (cada Capa con el sitio del parche que la fijo), Metricas y uso de codigo. Las claves del
  * catalogo salen de las mismas tablas que validan (sin listas paralelas).
  */
-export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<string, OrigenDeTema>>, { nombre, tipo, estado, catalogo }: ConsultaDeTema): Respuesta {
+export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<string, OrigenDeTema>>, { nombre, tipo, estado, diagrama, catalogo }: ConsultaDeTema): Respuesta {
   const declarado = fuente.themes.find((t) => t.name === nombre);
   if (declarado === undefined) {
     const cerca = candidatosCercanos(nombre, fuente.themes.map((t) => t.name));
@@ -161,9 +162,14 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
     const { candidatos } = parseado.error;
     return { noEncontrado: `No existe el estado '${estado}'${candidatos.length === 0 ? '' : `. Quiza: ${candidatos.join(', ')}`}. Estados: ${ESTADOS.join(', ')}` };
   }
+  const tipoDeDiagrama = diagrama === undefined ? undefined : TIPOS_DE_DIAGRAMA.find((t) => t === diagrama);
+  if (diagrama !== undefined && tipoDeDiagrama === undefined) {
+    const cerca = candidatosCercanos(diagrama, TIPOS_DE_DIAGRAMA);
+    return { noEncontrado: `No existe el Tipo de diagrama '${diagrama}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}. Tipos: ${TIPOS_DE_DIAGRAMA.join(', ')}` };
+  }
   const estadoValido = parseado === undefined || 'error' in parseado ? undefined : parseado.estado;
 
-  const tema = resolverTema(declarado);
+  const tema = temaParaDiagrama(resolverTema(declarado), tipoDeDiagrama);
   const componentes = componentesDeTema(declarado);
   const origen = origenes[nombre];
   const sitioDe = (capa: string): Sitio => {
@@ -189,7 +195,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   };
   // Donde se escribio una disposicion de Slots; si ningun bloque la escribe, vale la del Tema (o el nucleo).
   const sitioDeSlots = (sitio: Sitio | undefined): Sitio => sitio ?? origen?.sitio ?? INCORPORADO;
-  const tabla = tablaDeMetricas(declarado);
+  const tabla = tablaDeMetricas(declarado, undefined, tipoDeDiagrama);
   const delNodo = metricasDeNodo(tabla, tipo);
   const delGrupo = origen?.grupo;
   const sitioDeGrupo = (capa: string, colapsado: boolean): Sitio => {
@@ -223,6 +229,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
         partes: origen?.partes ?? [],
         ...(tipo !== undefined && { tipo }),
         ...(estadoValido !== undefined && { estado: estadoValido }),
+        ...(tipoDeDiagrama !== undefined && { diagrama: tipoDeDiagrama }),
         capas,
         pagina,
         grupo,
@@ -266,7 +273,7 @@ export function textoLegible(salida: SalidaDeInspect): string {
     for (const v of salida.vistas) lineas.push(`  ${v.id} ${sitio(v)}`);
   } else if (salida.comando === 'tema') {
     const { tema } = salida;
-    lineas.push(`${tema.name} ${tema.file}:${tema.line}${tema.tipo === undefined ? '' : ` tipo=${tema.tipo}`}${tema.estado === undefined ? '' : ` estado=${tema.estado}`}`);
+    lineas.push(`${tema.name} ${tema.file}:${tema.line}${tema.tipo === undefined ? '' : ` tipo=${tema.tipo}`}${tema.estado === undefined ? '' : ` estado=${tema.estado}`}${tema.diagrama === undefined ? '' : ` diagrama=${tema.diagrama}`}`);
     lineas.push(`extends: ${tema.extends.length === 0 ? '(ninguno)' : tema.extends.join(' > ')}`);
     lineas.push(`partes: ${tema.partes.length === 0 ? '(ninguna)' : tema.partes.join(', ')}`);
     lineas.push('Capas:');

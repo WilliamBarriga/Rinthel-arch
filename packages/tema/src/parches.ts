@@ -1,6 +1,7 @@
 /**
- * Parches por nombre de Capa y cascada de cuatro niveles (ADR 0008): Tema base,
- * Tipo de nodo, estado y override de la Vista; el ultimo gana. Un parche
+ * Parches por nombre de Capa y cascada de cinco niveles (ADR 0008, 0009): Tema base,
+ * Tipo de diagrama (`temaParaDiagrama`, antes de la cascada), Tipo de nodo, estado y
+ * override de la Vista; el ultimo gana. Un parche
  * cambia una Capa existente, la anade (con `before`/`after`) o la quita
  * (`none`); nunca se dirige por indice. Puro y determinista.
  */
@@ -14,6 +15,10 @@ import type { Animacion } from './animacion';
 /** Estados de la cascada; `foco` y `en-ruta` los calcula la shell, el Tema solo decide como se ven. */
 export const ESTADOS = ['hover', 'seleccionado', 'fantasma', 'en-ruta', 'atenuado', 'foco'] as const;
 export type Estado = (typeof ESTADOS)[number];
+
+/** Tipos de diagrama que un Tema puede distinguir con `diagram <tipo> { ... }` (ADR 0009), aunque aun no todos tengan Vistas. */
+export const TIPOS_DE_DIAGRAMA = ['architecture', 'flow', 'sequence', 'er'] as const;
+export type TipoDeDiagrama = (typeof TIPOS_DE_DIAGRAMA)[number];
 
 /** Capa de la pila de un Nodo: instancia de una Primitiva, bajo el contenido salvo `encima`. */
 export interface CapaDeTema {

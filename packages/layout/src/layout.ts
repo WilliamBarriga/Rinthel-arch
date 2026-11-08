@@ -83,7 +83,7 @@ export async function layoutView(
   tema: Tema,
   opciones: OpcionesDeLayout = {},
 ): Promise<Geometria> {
-  return layoutConMetricas(vista, opciones.metricas ?? tablaDeMetricas(tema, opciones.medidas), opciones);
+  return layoutConMetricas(vista, opciones.metricas ?? tablaDeMetricas(tema, opciones.medidas, vista.type), opciones);
 }
 
 /**
@@ -171,7 +171,7 @@ function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<
  * (`layoutView` de la Vista sin overrides de Pin). Es el paso post-ELK de `layoutView` y da el mismo
  * resultado que un layout completo, sin volver a ejecutar ELK: mover un Pin no relayouta.
  */
-export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): Geometria {
+export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, undefined, vista.type)): Geometria {
   switch (base.kind) {
     case 'grafo':
       return conPinsYPuertos(vista, comoTabla(metricas), base);
@@ -340,7 +340,7 @@ function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
  * paleta ni los colores, que no mueven nada; del icono solo si el Nodo lo tiene (reserva su Slot). Es la unica respuesta a
  * "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`.
  */
-export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): string {
+export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, undefined, vista.type)): string {
   return JSON.stringify({ tipo: vista.type, estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista) });
 }
 
@@ -350,7 +350,7 @@ const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin =
  * Como `claveDeLayout` sin los Pins: identifica la geometria que ELK calcula (los Pins se aplican despues,
  * `aplicarPinsAGeometria`). Mover un Pin no la cambia, asi que no exige relayout de ELK.
  */
-export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): string {
+export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, undefined, vista.type)): string {
   const tabla = comoTabla(metricas);
   return JSON.stringify({
     tipo: vista.type,

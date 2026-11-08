@@ -42,6 +42,6 @@ export function adaptadorDeWorker(puerto: PuertoDeMensajes): AdaptadorDeLayout {
     new Promise<Geometria>((ok, fallo) => {
       const id = siguiente++;
       pendientes.set(id, { ok, fallo });
-      puerto.postMessage({ id, vista, metricas: tablaDeMetricas(tema, medidas) } satisfies Peticion);
+      puerto.postMessage({ id, vista, metricas: tablaDeMetricas(tema, medidas, vista.type) } satisfies Peticion);
     });
 }
