@@ -8,7 +8,7 @@ import type { ItemResuelto, VistaResuelta } from 'canonico';
 import { claveDeTexto } from './medicion';
 import type { TextoAMedir } from './medicion';
 import { contenidoDeNodo } from './contenido';
-import { metricasDeHoja, textoDeGuarda } from './metricas';
+import { estiloDeTextoDeNota, metricasDeHoja, palabrasDeNota, textoDeGuarda } from './metricas';
 import type { TablaDeMetricas } from './metricas';
 import { textosDeNodo } from './slots';
 
@@ -30,6 +30,16 @@ export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges' | 'int
   const deItems = (items: readonly ItemResuelto[]): void => {
     for (const item of items) {
       if (item.type === 'message') continue;
+      if (item.type === 'note') {
+        const { familia, tamano, peso } = estiloDeTextoDeNota(e);
+        for (const palabra of palabrasDeNota(item.text)) anadir(familia, tamano, palabra, peso);
+        continue;
+      }
+      if (item.type === 'ref') {
+        anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, 'ref', e.pesoDeEtiqueta);
+        anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, item.title, e.pesoDeEtiqueta);
+        continue;
+      }
       anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, item.operator, e.pesoDeEtiqueta);
       for (const operando of item.operands) {
         if (operando.guard !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, textoDeGuarda(operando.guard), e.pesoDeEtiqueta);

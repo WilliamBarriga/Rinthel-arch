@@ -428,5 +428,10 @@ export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Me
 
 /** Estructura de los Fragmentos (operador, guardas y a que Mensajes cubren) para la clave de layout. */
 function claveDeFragmentos(items: readonly ItemResuelto[]): unknown[] {
-  return items.flatMap((item): unknown[] => (item.type === 'message' ? [] : [[item.ruta, item.operator, item.operands.map((o) => [o.guard, o.items.map((i) => (i.type === 'message' ? i.message.ruta : claveDeFragmentos([i])))])]]));
+  return items.flatMap((item): unknown[] => {
+    if (item.type === 'message') return [];
+    if (item.type === 'note') return [[item.ruta, 'note', item.anchor, item.targets, item.text]];
+    if (item.type === 'ref') return [[item.ruta, 'ref', item.title, item.participantes]];
+    return [[item.ruta, item.operator, item.operands.map((o) => [o.guard, o.items.map((i) => (i.type === 'message' ? i.message.ruta : claveDeFragmentos([i])))])]];
+  });
 }

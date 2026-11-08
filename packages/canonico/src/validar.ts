@@ -19,7 +19,7 @@ import type { ElementoDePaso, FuenteCanonica, ItemDeInteraccion, Nodo, Tema, Vis
 import type { IconProvider } from './iconos';
 import type { Issue, TextRange } from './issue';
 import { candidatosCercanos } from './sugerencias';
-import { activacionesDe, aplanarMensajes } from './secuencia';
+import { activacionesDe, aplanarMensajes, destinoDeRef } from './secuencia';
 import type { MensajeUbicado } from './secuencia';
 import { matchesSelector, resolveView } from './vistas';
 
@@ -296,6 +296,7 @@ function validarInteracciones(fuente: FuenteCanonica, emitir: Emitir, emitirCon:
       else emitirCon([...donde, 'id'], CODIGOS.E_DUPLICATE_MESSAGE_ID, `Mensaje duplicado '${mensaje.id}' en la Interaccion '${interaccion.id}'`, { relacionado: { ruta: [...ruta, ...otro, 'id'], message: `Primer Mensaje '${mensaje.id}'` } });
     });
     validarOperandos(interaccion.items, [...ruta, 'items'], emitirCon);
+    validarNotasYRefs(interaccion.items, [...ruta, 'items'], fuente, nodos, emitir, emitirCon);
     for (const j of activacionesDe(mensajes).respuestasSueltas) {
       const mensaje = mensajes[j]!;
       emitirCon([...ruta, ...mensaje.ubicacion, 'from'], CODIGOS.W_REPLY_WITHOUT_SYNC, `El 'reply' de '${mensaje.from}' a '${mensaje.to}' no cierra ningun 'sync' abierto`, { severity: 'warning' });
@@ -364,6 +365,26 @@ function todosLosIds(nodos: readonly Nodo[]): string[] {
 
 function compararIssues(a: Issue, b: Issue): number {
   return a.file.localeCompare(b.file) || a.line - b.line || a.column - b.column || a.code.localeCompare(b.code);
+}
+
+/** Notas sobre Nodos que existen y `ref` a Interacciones que existen (`fix` por typo); un `ref` que ninguna Vista de secuencia proyecta avisa. */
+function validarNotasYRefs(items: readonly ItemDeInteraccion[], ruta: RutaDeFuente, fuente: FuenteCanonica, nodos: readonly string[], emitir: Emitir, emitirCon: EmitirCon): void {
+  items.forEach((item, i) => {
+    const donde = [...ruta, i];
+    if (item.type === 'note') {
+      item.targets.forEach((id, t) => {
+        if (!nodos.includes(id)) emitir([...donde, 'targets', t], CODIGOS.E_UNKNOWN_LIFELINE, `El objetivo '${id}' de la Nota no es un Nodo del Modelo`, id, nodos);
+      });
+    } else if (item.type === 'ref') {
+      if (!fuente.model.interactions.some(({ id }) => id === item.interaction)) {
+        emitir([...donde, 'interaction'], CODIGOS.E_UNKNOWN_INTERACTION, `La Interaccion '${item.interaction}' referida por 'ref' no existe en el Modelo`, item.interaction, fuente.model.interactions.map(({ id }) => id));
+      } else if (destinoDeRef(fuente.views, item.interaction) === undefined) {
+        emitirCon([...donde, 'interaction'], CODIGOS.W_REF_WITHOUT_VIEW, `Ninguna Vista de secuencia proyecta la Interaccion '${item.interaction}' referida por 'ref': el marco no navega`, { severity: 'warning', hint: `agrega una Vista: view ${item.interaction} { type sequence interaction ${item.interaction} }` });
+      }
+    } else if (item.type === 'fragment') {
+      item.operands.forEach((operando, k) => validarNotasYRefs(operando.items, [...donde, 'operands', k, 'items'], fuente, nodos, emitir, emitirCon));
+    }
+  });
 }
 
 /** Operandos de cada Fragmento (recursivo): `else` solo en `alt`, `and` solo en `par`; un operando en los demas operadores. */

@@ -462,6 +462,8 @@ function compilarItem(item: InteractionItem): ItemDeInteraccion {
       })),
     };
   }
+  if (item.$type === 'Note') return { type: 'note', anchor: item.anchor, targets: [...item.targets], text: item.text };
+  if (item.$type === 'InteractionRef') return { type: 'ref', interaction: item.interaction };
   return {
     type: 'message',
     ...(item.alias !== undefined && { id: item.alias }),

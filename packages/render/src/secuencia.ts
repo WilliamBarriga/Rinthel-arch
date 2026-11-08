@@ -9,8 +9,8 @@
  */
 import type { MensajeResuelto } from 'canonico';
 import { indiceDeGeometria } from 'layout';
-import type { CajaDeActivacion, GeometriaSecuencia, MarcoDeFragmento } from 'layout';
-import { primitivasDeFamilia } from 'tema';
+import type { CajaDeActivacion, GeometriaSecuencia, MarcoDeFragmento, NotaColocada } from 'layout';
+import { RELLENO_DE_NOTA, primitivasDeFamilia } from 'tema';
 import type { CapaPintada, NombreDePrimitiva, PinturaDeArista, PrimitivaPintada } from 'tema';
 
 import { num } from './elemento';
@@ -119,6 +119,7 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     { tag: 'div', attrs: { class: 'rd-capa rd-activaciones', 'data-capa': 'activaciones' }, hijos: activaciones },
     capaSvg('mensajes', geometry, [...trazos, ...etiquetas]),
     capaSvg('guardas', geometry, textosDeFragmento),
+    capaSvg('notas', geometry, geometry.notes.map((nota) => notaSvg(nota, estilo, interaccion?.id ?? ''))),
     { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: raices.map((nodo) => cajaDeNodo(nodo, contexto)) },
   ]);
 }
@@ -183,6 +184,33 @@ function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'
   });
   return [
     texto({ 'data-fragment-operator': marco.ruta }, marco.tab, marco.operator, estilo.texto),
+    ...(marco.title === undefined ? [] : [texto({ 'data-ref-title': marco.ruta }, marco.title.box, marco.title.text, estilo.texto)]),
     ...marco.operands.flatMap((operando, k): Elemento[] => (operando.guard === undefined ? [] : [texto({ 'data-fragment-guard': `${marco.ruta}:${k}` }, operando.guard.box, operando.guard.text, color)])),
   ];
+}
+
+/**
+ * Nota "papel": poligono con la esquina superior derecha doblada, tinte suave del color de nota de la Paleta (`amber`,
+ * si no el borde), trazo fino y el texto ya envuelto por el layout. No es un Nodo: no lleva cabecera, icono ni insignia.
+ */
+function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: string): Elemento {
+  const color = estilo.paleta['amber'] ?? estilo.borde;
+  const { x, y, width, height, fold } = nota;
+  const contorno = `M${num(x)},${num(y)} H${num(x + width - fold)} L${num(x + width)},${num(y + fold)} V${num(y + height)} H${num(x)} Z`;
+  const doblez = `M${num(x + width - fold)},${num(y)} V${num(y + fold)} H${num(x + width)}`;
+  const tamano = estilo.metricas.fontSize;
+  const lineas = nota.lines.map((linea, i): Elemento => ({
+    tag: 'text',
+    attrs: { x: num(x + RELLENO_DE_NOTA), y: num(y + RELLENO_DE_NOTA + i * nota.lineHeight + nota.lineHeight / 2 + tamano * estilo.etiqueta.centradoVertical), 'font-family': estilo.fuenteCuerpo, 'font-size': num(tamano), fill: estilo.texto },
+    hijos: [linea],
+  }));
+  return {
+    tag: 'g',
+    attrs: { 'data-note': `${interaccion}:${nota.ruta}`, 'data-anchor': nota.anchor },
+    hijos: [
+      { tag: 'path', attrs: { 'data-note-paper': '', d: contorno, fill: color, 'fill-opacity': '0.2', stroke: color, 'stroke-width': '1' }, hijos: [] },
+      { tag: 'path', attrs: { d: doblez, fill: 'none', stroke: color, 'stroke-width': '1' }, hijos: [] },
+      ...lineas,
+    ],
+  };
 }

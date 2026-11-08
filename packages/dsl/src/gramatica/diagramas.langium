@@ -60,7 +60,17 @@ Interaction:
 ;
 
 InteractionItem:
-  Fragment | Message;
+  Fragment | Note | InteractionRef | Message;
+
+// Nota (ADR 0009): `note left of X "t"`, `note right of X "t"`, `note over X[, Y] "t"`.
+Note:
+  'note' (anchor=('left' | 'right') 'of' targets+=Ref | anchor='over' targets+=Ref (',' targets+=Ref)*) text=String
+;
+
+// `ref <interaccion>`: referencia a otra Interaccion (los ciclos son validos; no se expande).
+InteractionRef:
+  'ref' interaction=Id
+;
 
 // Fragmento (ADR 0009): `opt|loop|break|critical ["guarda"] { }`, `alt ["guarda"] { } else ["guarda"] { }`,
 // `par { } and { }`. El parser acepta cualquier operador con `else`/`and` en cualquier cantidad: `canonico`
@@ -477,7 +487,7 @@ Id returns string:
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
   'model' | 'node' | 'specification' | 'interaction' | 'async' | 'reply' | 'create' | 'destroy' |
-  'opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par' | 'else' | 'and' |
+  'opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par' | 'else' | 'and' | 'note' | 'left' | 'right' | 'of' | 'ref' |
   'pk' | 'fk' | 'uk' | 'identifying' | 'height' | 'key' | 'optional' | 'alternate';
 
 // -------------------------

@@ -149,8 +149,26 @@ export interface Fragmento {
   operands: Operando[];
 }
 
+/** Anclaje de una Nota: a la izquierda o derecha de una Lifeline, o sobre una o dos. */
+export const ANCLAJES_DE_NOTA = ['left', 'right', 'over'] as const;
+export type AnclajeDeNota = (typeof ANCLAJES_DE_NOTA)[number];
+
+/** Nota anclada (ADR 0009): `left of X`, `right of X` (un objetivo) u `over X[, Y]` (uno o dos). No es participante. */
+export interface Nota {
+  type: 'note';
+  anchor: AnclajeDeNota;
+  targets: string[];
+  text: string;
+}
+
+/** `ref <interaccion>`: referencia a otra Interaccion (los ciclos son validos; no se expande). */
+export interface Referencia {
+  type: 'ref';
+  interaction: string;
+}
+
 /** Item de una Interaccion; el orden de declaracion es el orden temporal. */
-export type ItemDeInteraccion = Mensaje | Fragmento;
+export type ItemDeInteraccion = Mensaje | Fragmento | Nota | Referencia;
 
 /** Escenario ordenado entre Nodos (Lifelines); id en un espacio de nombres propio (puede coincidir con el de un Nodo). */
 export interface Interaccion {
@@ -226,7 +244,16 @@ export const fragmentoSchema: z.ZodType<Fragmento> = z.lazy(() =>
   }),
 ) as z.ZodType<Fragmento>;
 
-const itemSchema: z.ZodType<ItemDeInteraccion> = z.lazy(() => z.union([mensajeSchema, fragmentoSchema]));
+export const notaSchema = z.object({
+  type: z.literal('note'),
+  anchor: z.enum(ANCLAJES_DE_NOTA),
+  targets: z.array(idDeNodoSchema).min(1),
+  text: z.string(),
+});
+
+export const referenciaSchema = z.object({ type: z.literal('ref'), interaction: z.string().min(1) });
+
+const itemSchema: z.ZodType<ItemDeInteraccion> = z.lazy(() => z.union([mensajeSchema, fragmentoSchema, notaSchema, referenciaSchema]));
 
 export const interaccionSchema = z.object({
   id: z.string().min(1),

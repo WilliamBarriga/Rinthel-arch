@@ -3,7 +3,7 @@
  * activaciones. Pura. Una Vista de secuencia proyecta exactamente una Interaccion: sus Lifelines son los
  * Nodos que participan, en el orden de `order` y luego por primera aparicion.
  */
-import type { Interaccion, ItemDeInteraccion, Mensaje, Nodo, OperadorDeFragmento, TipoDeMensaje, Vista } from './esquema';
+import type { AnclajeDeNota, Interaccion, ItemDeInteraccion, Mensaje, Nodo, OperadorDeFragmento, TipoDeMensaje, Vista } from './esquema';
 import type { NodoResuelto } from './vistas';
 
 /** Mensaje proyectado por una Vista; `ruta` es su identidad (ruta de indices en la Interaccion, hoy un solo indice). */
@@ -27,8 +27,29 @@ export interface FragmentoResuelto {
   operands: { guard?: string; items: ItemResuelto[] }[];
 }
 
+/** Nota proyectada: `targets` son Lifelines de la Vista (las que no estan se descartan). */
+export interface NotaResuelta {
+  type: 'note';
+  ruta: string;
+  anchor: AnclajeDeNota;
+  targets: string[];
+  text: string;
+}
+
+/**
+ * `ref` proyectado: un Fragmento `ref` con el titulo de la Interaccion referida. `participantes` son los de esa
+ * Interaccion que son Lifelines de la Vista, en el orden de columna; vacio si no hay ninguno en comun.
+ */
+export interface RefResuelto {
+  type: 'ref';
+  ruta: string;
+  interaction: string;
+  title: string;
+  participantes: string[];
+}
+
 /** Item proyectado de una Interaccion, en orden temporal. */
-export type ItemResuelto = { type: 'message'; message: MensajeResuelto } | FragmentoResuelto;
+export type ItemResuelto = { type: 'message'; message: MensajeResuelto } | FragmentoResuelto | NotaResuelta | RefResuelto;
 
 /** Interaccion tal como la proyecta una Vista: sus Mensajes tras `exclude`, en orden temporal. */
 export interface InteraccionResuelta {
@@ -135,16 +156,43 @@ export function resolverSecuencia(
       if (item.type === 'fragment') {
         const dentro = [...ambito, ruta];
         const operandos = item.operands.map((operando, k) => ({ ...(operando.guard !== undefined && { guard: operando.guard }), items: proyectar(operando.items, `${ruta}.${k}.`, dentro) }));
-        return operandos.every((operando) => operando.items.length === 0) ? [] : [{ type: 'fragment', ruta, operator: item.operator, operands: operandos }];
+        return [{ type: 'fragment', ruta, operator: item.operator, operands: operandos }];
+      }
+      if (item.type === 'note') return [{ type: 'note', ruta, anchor: item.anchor, targets: item.targets.filter(visible), text: item.text }];
+      if (item.type === 'ref') {
+        const referida = interacciones.find((candidata) => candidata.id === item.interaction);
+        return referida === undefined ? [] : [{ type: 'ref', ruta, interaction: referida.id, title: referida.title, participantes: [...new Set(aplanarMensajes(referida.items).flatMap((m) => [m.from, m.to]))] }];
       }
       if (!visible(item.from) || !visible(item.to)) return [];
       const mensaje: MensajeResuelto = { ruta, ...(item.id !== undefined && { id: item.id }), kind: item.kind, from: item.from, to: item.to, ...(item.label !== undefined && { label: item.label }), ...(ambito.length > 0 && { ambito }) };
       mensajes.push(mensaje);
       return [{ type: 'message', message: mensaje }];
     });
-  const items = proyectar(interaccion.items, '', []);
-  const lifelines = lifelinesDe(mensajes, vista.order).map((id) => ({ ...resolverNodo(porId.get(id)!), children: [] }));
+  const crudos = proyectar(interaccion.items, '', []);
+  const ids = lifelinesDe(mensajes, vista.order);
+  const lifelines = ids.map((id) => ({ ...resolverNodo(porId.get(id)!), children: [] }));
+  // Con las Lifelines ya conocidas: una Nota sin ninguna de las suyas, o un `ref` sin Lifelines donde pintarse, no se proyectan; un Fragmento vacio desaparece.
+  const podar = (items: readonly ItemResuelto[]): ItemResuelto[] =>
+    items.flatMap((item): ItemResuelto[] => {
+      if (item.type === 'message') return [item];
+      if (item.type === 'note') {
+        const targets = item.targets.filter((id) => ids.includes(id));
+        return targets.length === 0 ? [] : [{ ...item, targets }];
+      }
+      if (item.type === 'ref') return ids.length === 0 ? [] : [{ ...item, participantes: ids.filter((id) => item.participantes.includes(id)) }];
+      const operands = item.operands.map((operando) => ({ ...operando, items: podar(operando.items) }));
+      return operands.every((operando) => operando.items.length === 0) ? [] : [{ ...item, operands }];
+    });
+  const items = podar(crudos);
   return { nodes: lifelines, interaction: { id: interaccion.id, title: interaccion.title, messages: mensajes, items } };
+}
+
+/**
+ * Destino de navegacion de un `ref`: la primera Vista de secuencia declarada que proyecta la Interaccion referida,
+ * o `undefined` si ninguna (el marco queda inerte y `validate` avisa).
+ */
+export function destinoDeRef(vistas: readonly Pick<Vista, 'id' | 'type' | 'interaction'>[], interaccion: string): string | undefined {
+  return vistas.find((vista) => vista.type === 'sequence' && vista.interaction === interaccion)?.id;
 }
 
 /** Mensaje del Modelo con su ruta en la Interaccion (`['items', 2, 'operands', 0, 'items', 1]`) y los Fragmentos que lo contienen. */
@@ -158,6 +206,7 @@ export function aplanarMensajes(items: readonly ItemDeInteraccion[], ubicacion: 
   return items.flatMap((item, indice): MensajeUbicado[] => {
     const aqui = [...ubicacion, indice];
     if (item.type === 'message') return [{ ...item, ubicacion: aqui, ambito }];
+    if (item.type !== 'fragment') return [];
     const ruta = `${prefijo}${indice}`;
     return item.operands.flatMap((operando, k) => aplanarMensajes(operando.items, [...aqui, 'operands', k, 'items'], `${ruta}.${k}.`, [...ambito, ruta]));
   });
