@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { Visibilidad } from 'canonico';
-import type { CajaDeNodo, Geometria, RutaDeArista } from 'layout';
+import type { CajaDeNodo, Geometria, GeometriaGrafo, RutaDeArista } from 'layout';
 
 /**
  * Puerto de reloj: pide un cuadro (`cuadro` recibe el tiempo en ms) y devuelve
@@ -94,6 +94,13 @@ function mezclarRuta(a: RutaDeArista, b: RutaDeArista, t: number): RutaDeArista 
  * a la nueva.
  */
 export function interpolarGeometria(desde: Geometria, hasta: Geometria, t: number): Geometria {
+  switch (hasta.kind) {
+    case 'grafo':
+      return desde.kind === 'grafo' ? interpolarGrafo(desde, hasta, t) : hasta;
+  }
+}
+
+function interpolarGrafo(desde: GeometriaGrafo, hasta: GeometriaGrafo, t: number): GeometriaGrafo {
   const nodes: Record<string, CajaDeNodo> = {};
   for (const [id, caja] of Object.entries(hasta.nodes)) {
     const previa = desde.nodes[id];

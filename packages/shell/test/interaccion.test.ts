@@ -36,6 +36,7 @@ const geometria: Geometria = {
   },
   edges: { [idArista]: { points: [{ x: 320, y: 200 }, { x: 700, y: 200 }, { x: 700, y: 125 }, { x: 1000, y: 125 }] } },
   labels: { [idArista]: { x: 480, y: 170, width: 60, height: 20 } },
+  kind: 'grafo',
   pinsSolapados: [],
   width: 1200,
   height: 400,

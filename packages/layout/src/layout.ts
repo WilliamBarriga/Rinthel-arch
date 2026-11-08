@@ -34,8 +34,9 @@ export interface RutaDeArista {
   points: Punto[];
 }
 
-/** Geometria calculada de una Vista: cajas por id de Nodo visible y rutas por `idDeArista`. */
-export interface Geometria {
+/** Geometria de grafo (ELK): cajas por id de Nodo visible y rutas por `idDeArista`. */
+export interface GeometriaGrafo {
+  kind: 'grafo';
   nodes: Record<string, CajaDeNodo>;
   edges: Record<string, RutaDeArista>;
   /** Caja (coordenadas del lienzo) que ELK reservo a la etiqueta de cada Arista que la tiene, por `idDeArista`. */
@@ -45,6 +46,9 @@ export interface Geometria {
   width: number;
   height: number;
 }
+
+/** Geometria calculada de una Vista: union por `kind`; quien la lee hace switch por `kind`. */
+export type Geometria = GeometriaGrafo;
 
 export interface OpcionesDeLayout {
   /** Motor ELK; por defecto el empaquetado, que corre igual en Node y en Web Worker. */
@@ -92,6 +96,19 @@ export async function layoutConMetricas(
   metricas: Metricas | TablaDeMetricas,
   opciones: { elk?: ELK } = {},
 ): Promise<Geometria> {
+  // Entrada unica: el algoritmo se elige por el tipo de la Vista (por ahora todas van a `grafo`).
+  switch (vista.type) {
+    case 'architecture':
+    case 'flow':
+      return layoutGrafo(vista, metricas, opciones);
+  }
+}
+
+async function layoutGrafo(
+  vista: VistaResuelta,
+  metricas: Metricas | TablaDeMetricas,
+  opciones: { elk?: ELK },
+): Promise<GeometriaGrafo> {
   // Import dinamico: quien solo usa las medidas (render) no arrastra ELK al empaquetar.
   const elk = opciones.elk ?? new (await import('elkjs/lib/elk.bundled.js')).default();
   const medidas = comoTabla(metricas);
@@ -126,13 +143,13 @@ export async function layoutConMetricas(
     if (etiqueta !== undefined) labels[arista.id] = { x: etiqueta.x ?? 0, y: etiqueta.y ?? 0, width: etiqueta.width ?? 0, height: etiqueta.height ?? 0 };
     edges[arista.id] = { points: [seccion.startPoint, ...(seccion.bendPoints ?? []), seccion.endPoint].map(({ x, y }) => ({ x, y })) };
   }
-  return conPinsYPuertos(vista, medidas, { nodes, edges, labels, pinsSolapados: [], width: resultado.width ?? 0, height: resultado.height ?? 0 });
+  return conPinsYPuertos(vista, medidas, { kind: 'grafo', nodes, edges, labels, pinsSolapados: [], width: resultado.width ?? 0, height: resultado.height ?? 0 });
 }
 
-function conPinsYPuertos(vista: VistaResuelta, medidas: TablaDeMetricas, base: Geometria): Geometria {
+function conPinsYPuertos(vista: VistaResuelta, medidas: TablaDeMetricas, base: GeometriaGrafo): GeometriaGrafo {
   const pinneada = aplicarPins(vista, base.nodes, base.edges, base.labels);
   const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
-  return { ...conPuertos, nodes: conSlots(vista, medidas, conPuertos.nodes), width: base.width, height: base.height };
+  return { ...conPuertos, kind: 'grafo', nodes: conSlots(vista, medidas, conPuertos.nodes), width: base.width, height: base.height };
 }
 
 /** Anade a cada Nodo hoja el rectangulo de sus Slots, el mismo que usa `render` para pintar. */
@@ -155,7 +172,10 @@ function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<
  * resultado que un layout completo, sin volver a ejecutar ELK: mover un Pin no relayouta.
  */
 export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): Geometria {
-  return conPinsYPuertos(vista, comoTabla(metricas), base);
+  switch (base.kind) {
+    case 'grafo':
+      return conPinsYPuertos(vista, comoTabla(metricas), base);
+  }
 }
 
 /**
@@ -321,7 +341,7 @@ function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
  * "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`.
  */
 export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): string {
-  return JSON.stringify({ estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista) });
+  return JSON.stringify({ tipo: vista.type, estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista) });
 }
 
 const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin === undefined ? [] : [[o.node, o.pin.x, o.pin.y]]));
@@ -333,6 +353,7 @@ const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin =
 export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema)): string {
   const tabla = comoTabla(metricas);
   return JSON.stringify({
+    tipo: vista.type,
     nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => [a.name, a.type])]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
     metricas: claveDeMetricas(tabla),

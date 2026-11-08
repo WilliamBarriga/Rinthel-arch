@@ -29,6 +29,8 @@ export interface AristaResuelta extends Arista {
 
 /** Nodos y Aristas visibles de una Vista, mas lo que `layout` y `render` necesitan de ella. */
 export interface VistaResuelta {
+  /** Tipo de diagrama de la Vista; elige el algoritmo de layout y entra en las claves de cache. */
+  type: Vista['type'];
   /** Nodos visibles en orden de documento. */
   nodes: NodoResuelto[];
   /** Aristas entre Nodos visibles, con las de los hijos de un Grupo colapsado elevadas a el. */
@@ -114,6 +116,7 @@ export function resolveView(
   };
 
   return {
+    type: vista.type,
     nodes: todos.filter((nodo) => visibles.has(nodo.id)).map(resolver),
     edges: elevarAristas(fuente.model.edges, visibles, ancestroColapsado),
     overrides: vista.overrides,

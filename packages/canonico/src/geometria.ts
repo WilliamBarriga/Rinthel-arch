@@ -19,8 +19,9 @@ const cajaDeNodoSchema = z.object({
 
 const puntoSchema = z.object({ x: numeroFinito, y: numeroFinito });
 
-/** Geometria de una Vista: cajas por id de Nodo, rutas por id de Arista y tamano total. */
-export const geometriaSchema = z.object({
+/** Geometria de grafo (Vistas architecture y flow): cajas por id de Nodo, rutas por id de Arista y tamano total. */
+const geometriaGrafoSchema = z.object({
+  kind: z.literal('grafo'),
   nodes: z.record(z.string(), cajaDeNodoSchema),
   edges: z.record(z.string(), z.object({ points: z.array(puntoSchema) })),
   labels: z.record(z.string(), cajaDeNodoSchema).default({}),
@@ -28,6 +29,15 @@ export const geometriaSchema = z.object({
   width: numeroFinito,
   height: numeroFinito,
 });
+
+/**
+ * Geometria de una Vista: union discriminada por `kind` (hoy solo `grafo`). Una geometria
+ * escrita antes de existir `kind` se lee como `grafo`.
+ */
+export const geometriaSchema = z.preprocess(
+  (crudo) => (typeof crudo === 'object' && crudo !== null && !('kind' in crudo) ? { ...crudo, kind: 'grafo' } : crudo),
+  z.discriminatedUnion('kind', [geometriaGrafoSchema]),
+);
 
 /**
  * Geometria cacheada de una Vista. `layoutKey` (la `claveDeLayout` de `layout`)

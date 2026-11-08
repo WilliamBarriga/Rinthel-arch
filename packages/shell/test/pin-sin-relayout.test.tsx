@@ -28,6 +28,7 @@ describe('mover un Pin en el shell', () => {
       nodes: Object.fromEntries(vista.nodes.map((n, i) => [n.id, { x: i * 200, y: 0, width: 100, height: 50 }])),
       edges: {},
       labels: {},
+      kind: 'grafo',
       pinsSolapados: [],
       width: 300,
       height: 50,
