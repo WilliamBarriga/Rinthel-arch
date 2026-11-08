@@ -32,7 +32,7 @@ const montar = async (dsl: string) => {
   const resultado = render(
     <VistaInteractiva source={fuente} view="tablas" theme={fuente.themes.find((t) => t.name === 't')!} layout={(vista, tema, medidas) => layoutView(vista, tema, { medidas })} width={900} height={600} />,
   );
-  await waitFor(() => expect(resultado.container.querySelector('[data-id="orders"]')).not.toBeNull());
+  await waitFor(() => expect(resultado.container.querySelector('.rd-vista[data-layout="listo"] [data-id="orders"]')).not.toBeNull(), { timeout: 15000 });
   return { ...resultado, sesion };
 };
 
@@ -40,11 +40,17 @@ describe('Tema ER en jsdom: zone', () => {
   it('una Capa zone header pinta solo la franja de la cabecera, hasta donde empiezan las filas', async () => {
     const { container } = await montar(tema('    layer cab solid { color azul  zone header }'));
 
+    // La tabla aparece antes de que el layout asiente sus Slots: se espera a la franja y a las filas, no solo a la caja.
+    await waitFor(() => {
+      expect(container.querySelector('[data-id="orders"] [data-zona="header"]')).not.toBeNull();
+      expect(container.querySelector('[data-id="orders"] [data-slot="attrs"]')).not.toBeNull();
+    });
     const zona = container.querySelector('[data-id="orders"] [data-zona="header"]') as HTMLElement;
     const filas = container.querySelector('[data-id="orders"] [data-slot="attrs"]') as HTMLElement;
     expect(zona).not.toBeNull();
     expect(zona.style.top).toBe('0px');
-    expect(zona.style.height).toBe(filas.style.top);
+    // La franja llega hasta donde empiezan las filas, menos el ancho del borde (--rd-borde) que corre los Slots.
+    expect(zona.getAttribute('style')).toContain(`height: calc(${filas.style.top} - var(--rd-borde, 0px))`);
     expect(zona.getAttribute('style')).toMatch(/#2563eb|rgb\(37, 99, 235\)/);
     const caja = container.querySelector('[data-id="orders"] .rd-nodo') as HTMLElement;
     expect(container.querySelector('[data-id="orders"] [data-zona="body"]')).toBeNull();

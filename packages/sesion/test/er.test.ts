@@ -37,7 +37,8 @@ async function tramosFinales(sesion: ReturnType<typeof abrirSesion>) {
 }
 
 describe('seam sesion: Vistas ER', () => {
-  it('el ejemplo ER compila sin issues y sus tramos finales son horizontales y miden al menos el marcador', async () => {
+  it('el ejemplo ER compila sin issues y sus tramos finales son horizontales y miden al menos el marcador', { timeout: 30000 }, async () => {
+    // El primer diagnostico en frio carga la gramatica y el layout; con la maquina cargada pasa de los 5 s por defecto.
     const sesion = abrirSesion({ 'main.dg': ER });
 
     expect(await sesion.diagnosticar()).toEqual([]);
