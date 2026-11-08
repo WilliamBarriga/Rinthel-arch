@@ -17,7 +17,7 @@ const montar = async (texto: string, vista: string, esperar: string, selected: s
   const r = render(
     <VistaInteractiva source={fuente} view={vista} theme={fuente.themes.find((t) => t.name === 't')!} layout={layout} width={1200} height={900} selected={selected} />,
   );
-  await waitFor(() => expect(r.container.querySelector(esperar)).not.toBeNull(), { timeout: 15000 });
+  await waitFor(() => expect(r.container.querySelector(`.rd-vista[data-layout="listo"] ${esperar}`)).not.toBeNull(), { timeout: 15000 });
   return r;
 };
 
@@ -104,6 +104,6 @@ async function montarEr(texto: string, selected: string) {
   const sesion = abrirSesion({ 'main.dg': texto });
   const fuente = sesion.fuente!;
   const r = render(<VistaInteractiva source={fuente} view="tablas" theme={fuente.themes.find((t) => t.name === 't')!} layout={layout} width={900} height={600} selected={selected} />);
-  await waitFor(() => expect(r.container.querySelector('[data-id="orders"]')).not.toBeNull(), { timeout: 15000 });
+  await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-id="orders"]')).not.toBeNull(), { timeout: 15000 });
   return { ...r, sesion };
 }

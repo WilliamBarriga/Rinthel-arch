@@ -33,7 +33,7 @@ view arq { type architecture  include ** }
 const montar = async (vista: string) => {
   const fuente = abrirSesion({ 'main.dg': ER }).fuente!;
   const resultado = render(<VistaInteractiva source={fuente} view={vista} theme={TEMA_NEUTRO} layout={(vista, tema, medidas) => layoutView(vista, tema, { medidas })} width={900} height={600} />);
-  await waitFor(() => expect(resultado.container.querySelector('[data-id="orders"]')).not.toBeNull());
+  await waitFor(() => expect(resultado.container.querySelector('.rd-vista[data-layout="listo"] [data-id="orders"]')).not.toBeNull());
   return { ...resultado, fuente };
 };
 
