@@ -109,7 +109,9 @@ export function pintarZonas(estilo: Estilo, datos: DatosDeNodo, capas: readonly 
     const hasta = filas === undefined || !cabecera ? datos.caja.height : filas.y;
     if (hasta <= desde) return [];
     const esquinas = cabecera ? 'border-top-left-radius:inherit;border-top-right-radius:inherit;' : 'border-bottom-left-radius:inherit;border-bottom-right-radius:inherit;';
-    const pintura = Object.entries(declaracionesDeCaja(estilo, { capas: [capa], estados: {} }, [capa], true)).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+    // Los Slots se corren el ancho del borde (`--rd-borde`): la franja de la zona acompana esa linea de corte.
+    const alBorde = `height:calc(${num(hasta - desde)}px - var(--rd-borde, 0px));${cabecera ? '' : 'margin-top:calc(-1 * var(--rd-borde, 0px));'}`;
+    const pintura = alBorde + Object.entries(declaracionesDeCaja(estilo, { capas: [capa], estados: {} }, [capa], true)).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
     return [{ tag: 'div', attrs: { class: 'rd-zona', 'data-zona': String(capa.props['zone']), 'data-capa': capa.nombre, 'aria-hidden': 'true', style: enRect({ x: 0, y: desde, width: datos.caja.width, height: hasta - desde }, `${esquinas}${pintura}`) } }];
   });
 }
@@ -150,8 +152,8 @@ function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo:
 }
 
 /** Estilo en linea de un texto de la fila (`name`, `type`, `key`) que el Tema declara; vacio si no. */
-const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo): string =>
-  texto === undefined ? '' : Object.entries(declaracionesDeTexto(texto, estilo.fuenteMono)).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo, tamano?: number): string =>
+  texto === undefined ? '' : Object.entries({ ...declaracionesDeTexto(texto, estilo.fuenteMono), ...(tamano !== undefined && { 'font-size': `${num(tamano)}px` }) }).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
 
 /**
  * Slot `attrs`: una fila por Atributo, en orden, cada una en su rectangulo (relativo al Slot). En una Vista ER cuyo Tema
@@ -181,9 +183,9 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atribut
           ...(delTema === undefined
             ? [textoDeAtributo(atributo, marcas)]
             : [
-                { tag: 'span', attrs: { 'data-fila-texto': 'name', style: enLinea(delTema.textos.name, estilo) }, hijos: [atributo.name] } as Elemento,
+                { tag: 'span', attrs: { 'data-fila-texto': 'name', style: enLinea(delTema.textos.name, estilo, metricasDeNodo.tamanoDeFila?.name) }, hijos: [atributo.name] } as Elemento,
                 ': ',
-                { tag: 'span', attrs: { 'data-fila-texto': 'type', style: enLinea(delTema.textos.type, estilo) }, hijos: [`${atributo.type}${atributo.optional === true ? '?' : ''}`] } as Elemento,
+                { tag: 'span', attrs: { 'data-fila-texto': 'type', style: enLinea(delTema.textos.type, estilo, metricasDeNodo.tamanoDeFila?.type) }, hijos: [`${atributo.type}${atributo.optional === true ? '?' : ''}`] } as Elemento,
               ]),
           // Vista ER: un chip por marca de clave, pegado al borde derecho de la fila.
           ...chipsDeClaves(atributo, metricasDeNodo).map((chip): Elemento => ({
@@ -191,7 +193,7 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atribut
             attrs: {
               class: 'rd-clave',
               'data-key': chip.clave,
-              style: `right:${num(chip.derecha)}px;width:${num(chip.width)}px;font-size:${num(chip.tamano)}px;line-height:${num(chip.tamano + 4)}px;top:${num((metricas.fila - chip.tamano - 4) / 2)}px;${delTema?.textos.key === undefined ? '' : `opacity:1;${enLinea(delTema.textos.key, estilo)}`}`,
+              style: `right:${num(chip.derecha)}px;width:${num(chip.width)}px;font-size:${num(chip.tamano)}px;line-height:${num(chip.tamano + 4)}px;top:${num((metricas.fila - chip.tamano - 4) / 2)}px;${delTema?.textos.key === undefined ? '' : `opacity:1;${enLinea(delTema.textos.key, estilo, chip.tamano)}`}`,
             },
             hijos: [chip.texto],
           })),

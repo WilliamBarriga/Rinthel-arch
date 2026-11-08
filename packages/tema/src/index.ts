@@ -86,7 +86,7 @@ export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, Nom
 export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
 export { GRUPO_POR_DEFECTO, TEMA_NEUTRO, leerOps, resolverTema, temaParaDiagrama, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
-export { anchoDeChips, atributosVisibles, chipsDeClaves, contenidoDeNodo, muestra, textoDeAtributo } from './contenido';
+export { anchoDeChips, atributosVisibles, chipsDeClaves, contenidoDeNodo, muestra, piezasDeAtributo, textoDeAtributo } from './contenido';
 export type { ChipDeClave } from './contenido';
 export type { ContenidoDeNodo } from './contenido';
 export { ANCHO_MAXIMO_DE_NOTA, ESQUINA_DE_NOTA, LARGO_DE_MARCADOR_ER, RELLENO_DE_NOTA, cajaDeNota, estiloDeTextoDeNota, palabrasDeNota, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeGuarda } from './metricas';

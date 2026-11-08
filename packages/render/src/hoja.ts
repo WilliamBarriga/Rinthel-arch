@@ -98,6 +98,17 @@ function declaracionesDeEstado(estilo: Estilo, estado: EstadoVisual): Declaracio
   };
 }
 
+/**
+ * Ancho del borde de la caja (px) que `reglasDeElemento` publica en `--rd-borde`: las hijas absolutas (Slots, iconos, zonas)
+ * se colocan desde el borde interior, asi que se corren esa distancia para quedar en el rectangulo que reservo `layout`
+ * (el borde grueso de un Tema ya no recorta la ultima fila).
+ */
+export const VARIABLE_DE_BORDE = '--rd-borde';
+const anchoDeBorde = (declaraciones: Declaraciones): number => {
+  const ancho = /(?:^|\s)(\d+(?:\.\d+)?)px\s+(?:solid|dashed|dotted|double)/.exec(declaraciones['border'] ?? '');
+  return ancho === null ? 0 : Number(ancho[1]);
+};
+
 /** Las tres clases de caja pintada: Nodo, Grupo abierto y Grupo colapsado. */
 const CAJAS = ELEMENTOS.map((clave) => `& .rd-${clave}`).join(', ');
 
@@ -110,7 +121,8 @@ function reglasDeElemento(estilo: Estilo, clave: (typeof ELEMENTOS)[number]): Ar
   const salida: Array<[string, Declaraciones]> = [];
   for (const { selector, caja: contenedor, pila } of pilasDeElemento(estilo.pintura, clave)) {
     const reposo = declaracionesDeCaja(estilo, pila);
-    salida.push([selector, reposo]);
+    // En toda regla de caja (tambien con 0): la variable se hereda y un Slot de un Nodo sin borde no debe tomar la de su Grupo.
+    salida.push([selector, { ...reposo, [VARIABLE_DE_BORDE]: px(anchoDeBorde(reposo)) }]);
     for (const estado of ESTADOS) {
       const deEstado = pila.estados[estado];
       if (deEstado === undefined) continue;
@@ -141,6 +153,7 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-codigo', { position: 'absolute', left: '0', top: '0', 'pointer-events': 'none', contain: 'layout style' }],
     // Capa con `zone`: franja propia de la caja (su rectangulo va en linea).
     ['& .rd-zona', { position: 'absolute', 'pointer-events': 'none', 'box-sizing': 'border-box' }],
+    ['& .rd-slot, & .rd-icono', { margin: `calc(-1 * var(${VARIABLE_DE_BORDE}, 0px))` }],
     ['& .rd-slot', { position: 'absolute', overflow: 'hidden', 'white-space': 'nowrap', 'text-overflow': 'ellipsis', 'box-sizing': 'border-box' }],
     ['& .rd-title', { 'text-align': 'center' }],
     // El titulo de un Grupo es una cabecera: se alinea a la izquierda de su Slot (un `text-align` del Tema manda).

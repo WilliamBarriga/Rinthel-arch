@@ -124,7 +124,7 @@ describe('Diagram: parches de Tipo y de estado pintados igual en Nodos y Grupos'
     expect(regla(css, '.rd-grupo[data-tipo="capa"] .rd-anim[data-anim="halo"]')).toContain('translate:4px 4px');
     expect(regla(css, '.rd-grupo[data-tipo="capa"][data-estados~="hover"]')).toBe('background:#2563eb');
     // El halo no esta fusionado en la caja del Grupo de ese Tipo.
-    expect(regla(css, '.rd-grupo[data-tipo="capa"]')).toBe('border-radius:10px;background:#6b7280');
+    expect(regla(css, '.rd-grupo[data-tipo="capa"]')).toBe('border-radius:10px;background:#6b7280;--rd-borde:0px');
   });
 
   it('un estado cambia solo lo que cambia y devuelve su valor inicial a lo que quita', async () => {

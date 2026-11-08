@@ -67,7 +67,7 @@ export function referenciaDelCatalogo(): string {
     '',
     '## Fila de tabla ER (`row`)',
     '',
-    `Bloque del Tema que estiliza las filas de una Vista \`er\`. \`height\` (${ALTO_DE_FILA.min} a ${ALTO_DE_FILA.max}) es la unica Metrica; el resto solo pinta.`,
+    `Bloque del Tema que estiliza las filas de una Vista \`er\`. \`height\` (${ALTO_DE_FILA.min} a ${ALTO_DE_FILA.max}) y el \`size\` de \`name\`, \`type\` y \`key\` (multiplo del tamano de texto del Tema, como en los Slots) cambian el tamano medido; el resto solo pinta.`,
     '',
     ...tabla(
       ['Elemento', 'Contenido'],

@@ -135,7 +135,7 @@ Y `zone` (`all`, `header`, `body`; sin ella, `all`): que parte de la caja pinta 
 
 ## Fila de tabla ER (`row`)
 
-Bloque del Tema que estiliza las filas de una Vista `er`. `height` (12 a 120) es la unica Metrica; el resto solo pinta.
+Bloque del Tema que estiliza las filas de una Vista `er`. `height` (12 a 120) y el `size` de `name`, `type` y `key` (multiplo del tamano de texto del Tema, como en los Slots) cambian el tamano medido; el resto solo pinta.
 
 | Elemento | Contenido |
 | --- | --- |

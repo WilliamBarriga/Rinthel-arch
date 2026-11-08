@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { abrirSesion } from 'sesion';
-import { pilaDeFila } from 'tema';
+import { colocarNodo, contenidoDeNodo, pilaDeFila, piezasDeAtributo } from 'tema';
 
 const ER = `specification { node tabla }
 model {
@@ -75,6 +75,23 @@ describe('seam sesion: Tema ER, bloque row', () => {
     expect(colores(sesion, 'tablas', { impar: true, keys: [], opcional: false })).toEqual(['#1f2937']);
     expect(colores(sesion, 'tablas', { impar: true, keys: ['fk', 'pk'], opcional: false })).toEqual(['#2563eb']);
     expect(colores(sesion, 'tablas', { impar: false, keys: ['pk'], opcional: true })).toEqual(['#dc2626']);
+  });
+
+  it('el size de row name y type cambia el tamano medido y el ancho de la tabla; key cambia el chip', () => {
+    const medido = (cuerpo: string) => {
+      const m = abrirSesion(FILA(cuerpo)).estilo('tablas')!.metricas;
+      const orders = { name: 'email', type: 'text', optional: true, keys: ['uk'] } as never;
+      const nodo = { id: 'orders', type: 'tabla', title: 'Pedidos', description: '', children: [], attributes: [orders], source: [] } as never;
+      return { m, piezas: piezasDeAtributo(orders, m), ancho: colocarNodo({ ...contenidoDeNodo(nodo, m), atributos: [orders] }, m).width };
+    };
+    const base = medido('    layer fondo solid { color papel }');
+    const grande = medido('    layer fondo solid { color papel }\n    name { size 2 }\n    type { size 1.5 }\n    key { size 1.2 }');
+
+    expect(base.piezas).toHaveLength(1);
+    expect(grande.piezas.map((p) => p.tamano)).toEqual([grande.m.fontSize * 2, grande.m.fontSize * grande.m.escalaAtributo, grande.m.fontSize * 1.5]);
+    expect(grande.m.fila).toBeGreaterThanOrEqual(Math.ceil(grande.m.fontSize * 2 * 1.4));
+    expect(grande.ancho).toBeGreaterThan(base.ancho);
+    expect(medido('    height 40\n    name { size 2 }').m.fila).toBe(40);
   });
 
   it('el bloque row solo vale en una Vista ER', () => {

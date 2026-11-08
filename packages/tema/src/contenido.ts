@@ -72,6 +72,29 @@ export function textoDeAtributo(atributo: Atributo, marcas = false): string {
   return `${atributo.name}: ${atributo.type}${marcas && atributo.optional === true ? '?' : ''}`;
 }
 
+/** Un trozo de la fila de un Atributo con su propio tamano de texto (px). */
+export interface PiezaDeAtributo {
+  texto: string;
+  tamano: number;
+}
+
+/**
+ * Trozos de texto de la fila de un Atributo, cada uno a su tamano: con el `size` de `row name|type` del Tema
+ * (`metricas.tamanoDeFila`) el nombre y el tipo miden distinto; sin el, una sola pieza (`textoDeAtributo`) al tamano de `attrs`.
+ * `tema` (ancho y textos a medir) y `render` (tamano pintado) leen lo mismo.
+ */
+export function piezasDeAtributo(atributo: Atributo, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): PiezaDeAtributo[] {
+  const marcas = metricas.marcasDeClave === true;
+  const base = metricas.fontSize * metricas.escalaAtributo;
+  const { name, type } = metricas.tamanoDeFila ?? {};
+  if (!marcas || (name === undefined && type === undefined)) return [{ texto: textoDeAtributo(atributo, marcas), tamano: base }];
+  return [
+    { texto: atributo.name, tamano: name ?? base },
+    { texto: ': ', tamano: base },
+    { texto: `${atributo.type}${atributo.optional === true ? '?' : ''}`, tamano: type ?? base },
+  ];
+}
+
 /** Chip de una marca de clave en una fila ER: `derecha` es su distancia al borde derecho de la fila. */
 export interface ChipDeClave {
   clave: ClaveDeAtributo;
@@ -90,16 +113,16 @@ const HOLGURA_ANTES_DE_CHIPS = 12;
  * Chips de clave de la fila de un Atributo, de izquierda a derecha en el orden de `keys`, solo en una Vista ER
  * (`metricas.marcasDeClave`). Una sola colocacion para `tema` (ancho de la fila) y `render` (dibujo).
  */
-export function chipsDeClaves(atributo: Pick<Atributo, 'keys'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave'>): ChipDeClave[] {
+export function chipsDeClaves(atributo: Pick<Atributo, 'keys'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): ChipDeClave[] {
   if (metricas.marcasDeClave !== true || atributo.keys === undefined) return [];
-  const tamano = Math.round(metricas.fontSize * metricas.escalaAtributo * 0.8 * 10) / 10;
+  const tamano = metricas.tamanoDeFila?.key ?? Math.round(metricas.fontSize * metricas.escalaAtributo * 0.8 * 10) / 10;
   const ancho = Math.ceil(2 * tamano * 0.62 + 8);
   const n = atributo.keys.length;
   return atributo.keys.map((clave, i) => ({ clave, texto: clave.toUpperCase(), derecha: MARGEN_DERECHO_DE_CHIPS + (n - 1 - i) * (ancho + SEPARACION_DE_CHIPS), width: ancho, tamano }));
 }
 
 /** Ancho que los chips de clave suman a la fila (con la holgura que los separa del texto); 0 sin chips. */
-export function anchoDeChips(atributo: Pick<Atributo, 'keys'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave'>): number {
+export function anchoDeChips(atributo: Pick<Atributo, 'keys'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): number {
   const chips = chipsDeClaves(atributo, metricas);
   return chips.length === 0 ? 0 : HOLGURA_ANTES_DE_CHIPS + Math.max(...chips.map((c) => c.derecha + c.width));
 }
