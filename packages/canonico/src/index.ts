@@ -46,6 +46,7 @@ export {
   overrideSchema,
   pasoSchema,
   temaSchema,
+  TIPOS_DE_MENSAJE,
   TIPOS_DE_VISTA,
   tipoDeNodoSchema,
   vistaSchema,
@@ -59,6 +60,8 @@ export type { Visibilidad } from './pasos';
 export { candidatosCercanos } from './sugerencias';
 export { validate } from './validar';
 export type { OpcionesDeValidate, RutaDeFuente, SitioDeTexto, Ubicador } from './validar';
+export { activacionesDe, lifelinesDe } from './secuencia';
+export type { Activacion, InteraccionResuelta, MensajeResuelto } from './secuencia';
 export { matchesSelector, resolveView } from './vistas';
 export type { AristaResuelta, EstadoDeColapso, NodoResuelto, VistaResuelta } from './vistas';
 export type {
@@ -70,12 +73,16 @@ export type {
   ElementoDePaso,
   Extremo,
   FuenteCanonica,
+  Interaccion,
+  ItemDeInteraccion,
+  Mensaje,
   Modelo,
   Nodo,
   OverrideDeNodo,
   Paso,
   ReferenciaOpaca,
   Tema,
+  TipoDeMensaje,
   TipoDeNodo,
   Vista,
 } from './esquema';

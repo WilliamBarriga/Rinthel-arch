@@ -26,6 +26,7 @@ import { resolverEstilo } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { compilarHoja } from './hoja';
 import { ELEMENTOS, pilaDeNodo, pinturaDeElemento } from './pilas';
+import { construirEscenaDeSecuencia } from './secuencia';
 import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEstadoDeRuta, pintarEtiquetaDeArista, pintarGrupo, pintarNodo } from './pintores';
 
 export type { Elemento } from './elemento';
@@ -87,7 +88,7 @@ export interface EntradaDeEscena {
   componentes?: ComponentesDeTema;
 }
 
-interface Contexto extends EntradaDeEscena {
+export interface Contexto extends EntradaDeEscena {
   visibility: Visibilidad;
   estilo: Estilo;
   /** Cajas en coordenadas del lienzo (las de la geometria son relativas al Grupo padre). */
@@ -100,6 +101,9 @@ interface Contexto extends EntradaDeEscena {
   escalonado: ReadonlyMap<string, number>;
 }
 
+/** Contexto de una escena de grafo: la Geometria es la de grafo. */
+type ContextoDeGrafo = Contexto & { geometry: GeometriaGrafo };
+
 /**
  * Construye la escena. Nodos y Grupos con el Estilo resuelto del Tema (un color es siempre
  * un nombre de Paleta resuelto contra la paleta; sin color, o con un nombre
@@ -111,16 +115,55 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
   switch (entrada.geometry.kind) {
     case 'grafo':
       return construirEscenaDeGrafo({ ...entrada, geometry: entrada.geometry });
+    case 'secuencia':
+      return construirEscenaDeSecuencia({ ...entrada, geometry: entrada.geometry });
   }
 }
 
 function construirEscenaDeGrafo(entrada: EntradaDeEscena & { geometry: GeometriaGrafo }): Elemento {
-  const { view, geometry, theme, width, height, camera } = entrada;
+  const { view, geometry, theme } = entrada;
   const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.metricas, undefined, undefined, entrada.view.type);
   const { raices, cajas } = indiceDeGeometria(view, geometry);
   const visibility = entrada.visibility ?? (() => 1);
   const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));
-  const contexto: Contexto = { ...entrada, visibility, estilo, cajas, coloresDeNodo, escalonado: posicionesDeEscalonado(raices, visibility, estilo, entrada.nuevos) };
+  const contexto: ContextoDeGrafo = { ...entrada, visibility, estilo, cajas, coloresDeNodo, escalonado: posicionesDeEscalonado(raices, visibility, estilo, entrada.nuevos) };
+  const nodos = raices.flatMap((nodo) => aplanar(nodo));
+  contexto.nombres = nombresAccesibles(view, nodos);
+
+  return marcoDeEscena(entrada, estilo, [
+    { tag: 'div', attrs: { class: 'rd-capa rd-grupos', 'data-capa': 'grupos' }, hijos: nodos.filter(esGrupo).map((nodo) => cajaDeNodo(nodo, contexto)) },
+    capaSvg('aristas', geometry, [
+      ...filtrosDeTrazo(estilo, geometry.width, geometry.height),
+      ...view.edges.flatMap((arista) => aristaSvg(arista, contexto)),
+      ...view.edges.flatMap((arista) => etiquetaSvg(arista, contexto)),
+    ]),
+    { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: nodos.filter((n) => !esGrupo(n)).map((nodo) => cajaDeNodo(nodo, contexto)) },
+  ]);
+}
+
+/** Capa SVG de trazos (Aristas, o Lifelines y Mensajes) a tamano de la geometria. */
+export function capaSvg(capa: string, geometry: { width: number; height: number }, hijos: Elemento[]): Elemento {
+  return {
+    tag: 'svg',
+    attrs: {
+      class: 'rd-capa rd-aristas',
+      'data-capa': capa,
+      xmlns: 'http://www.w3.org/2000/svg',
+      width: num(geometry.width),
+      height: num(geometry.height),
+      viewBox: `0 0 ${num(geometry.width)} ${num(geometry.height)}`,
+      'aria-hidden': 'true',
+    },
+    hijos,
+  };
+}
+
+/**
+ * Marco comun de toda escena: contenedor `[data-diagram]` con hoja de estilo, fondo de pagina y el mundo con la
+ * camara (un solo `transform`), que lleva las `capas` en orden de apilado.
+ */
+export function marcoDeEscena(entrada: EntradaDeEscena, estilo: Estilo, capas: Elemento[]): Elemento {
+  const { geometry, width, height, camera } = entrada;
   const vista = camera ?? { x: 0, y: 0, width: geometry.width, height: geometry.height };
   const hoja = compilarHoja(estilo, entrada.urlDeFuente);
 
@@ -128,8 +171,6 @@ function construirEscenaDeGrafo(entrada: EntradaDeEscena & { geometry: Geometria
   const k = Math.min(width / vista.width, height / vista.height);
   const tx = (width - vista.width * k) / 2 - vista.x * k;
   const ty = (height - vista.height * k) / 2 - vista.y * k;
-  const nodos = raices.flatMap((nodo) => aplanar(nodo));
-  contexto.nombres = nombresAccesibles(view, nodos);
 
   const { pagina } = estilo.pintura;
   // Fijo al visor: hermana del mundo. Sin fijar: dentro del mundo, con margen para cubrir el visor al alejar o desplazar.
@@ -158,28 +199,7 @@ function construirEscenaDeGrafo(entrada: EntradaDeEscena & { geometry: Geometria
           class: 'rd-mundo',
           style: `width:${num(geometry.width)}px;height:${num(geometry.height)}px;transform:translate(${num(tx)}px,${num(ty)}px) scale(${num(k)});`,
         },
-        hijos: [
-          ...paginaMovil,
-          { tag: 'div', attrs: { class: 'rd-capa rd-grupos', 'data-capa': 'grupos' }, hijos: nodos.filter(esGrupo).map((nodo) => cajaDeNodo(nodo, contexto)) },
-          {
-            tag: 'svg',
-            attrs: {
-              class: 'rd-capa rd-aristas',
-              'data-capa': 'aristas',
-              xmlns: 'http://www.w3.org/2000/svg',
-              width: num(geometry.width),
-              height: num(geometry.height),
-              viewBox: `0 0 ${num(geometry.width)} ${num(geometry.height)}`,
-              'aria-hidden': 'true',
-            },
-            hijos: [
-              ...filtrosDeTrazo(estilo, geometry.width, geometry.height),
-              ...view.edges.flatMap((arista) => aristaSvg(arista, contexto)),
-              ...view.edges.flatMap((arista) => etiquetaSvg(arista, contexto)),
-            ],
-          },
-          { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: nodos.filter((n) => !esGrupo(n)).map((nodo) => cajaDeNodo(nodo, contexto)) },
-        ],
+        hijos: [...paginaMovil, ...capas],
       },
     ],
   };
@@ -195,7 +215,7 @@ const esGrupo = (nodo: NodoResuelto): boolean => nodo.children.length > 0;
  * "viene de", con la etiqueta de la Arista). Sale solo del Modelo: el Tema no puede
  * cambiarlo. El SVG de Aristas es decorativo, asi que la relacion se anuncia aqui.
  */
-function nombresAccesibles(view: VistaResuelta, nodos: readonly NodoResuelto[]): Map<string, string> {
+export function nombresAccesibles(view: VistaResuelta, nodos: readonly NodoResuelto[]): Map<string, string> {
   const etiqueta = new Map(nodos.map((n) => [n.id, n.label]));
   const destino = (id: string, arista: AristaResuelta): string => `${etiqueta.get(id) ?? id}${arista.label === undefined ? '' : ` (${arista.label})`}`;
   return new Map(
@@ -218,7 +238,7 @@ function nombresAccesibles(view: VistaResuelta, nodos: readonly NodoResuelto[]):
  * Posicion de cada Nodo visible en el `stagger` de `enter`: en orden de dibujo, entre los
  * `nuevos` si se dan o entre todos los visibles. Vacio sin `stagger` en el Tema.
  */
-function posicionesDeEscalonado(raices: readonly NodoResuelto[], visibility: Visibilidad, estilo: Estilo, nuevos?: readonly string[]): Map<string, number> {
+export function posicionesDeEscalonado(raices: readonly NodoResuelto[], visibility: Visibilidad, estilo: Estilo, nuevos?: readonly string[]): Map<string, number> {
   const posiciones = new Map<string, number>();
   if (ELEMENTOS.every((clave) => pinturaDeElemento(estilo.pintura, clave).animacion?.escalonadoMs === undefined)) return posiciones;
   const elegidos = nuevos === undefined ? undefined : new Set(nuevos);
@@ -229,7 +249,7 @@ function posicionesDeEscalonado(raices: readonly NodoResuelto[], visibility: Vis
 }
 
 /** Nodos en preorden (un Grupo antes que sus hijos): el orden de apilado dentro de cada capa. */
-function aplanar(nodo: NodoResuelto): NodoResuelto[] {
+export function aplanar(nodo: NodoResuelto): NodoResuelto[] {
   return [nodo, ...nodo.children.flatMap(aplanar)];
 }
 
@@ -242,7 +262,7 @@ function posicion(caja: CajaDeNodo, giro = 0): string {
   return `width:${num(caja.width)}px;height:${num(caja.height)}px;transform:translate(${num(caja.x)}px,${num(caja.y)}px)${giro === 0 ? '' : ` rotate(${num(giro)}deg)`};`;
 }
 
-function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
+export function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
   const caja = contexto.cajas.get(nodo.id);
   if (caja === undefined) throw new Error(`El Nodo '${nodo.id}' no esta en la geometria`);
   const { estilo, onSelect, onToggle, icons, detail } = contexto;
@@ -312,20 +332,20 @@ function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, 
 }
 
 /** `atenuado` no tiene contorno: atenua el elemento entero (marca `data-atenuado`, estilada por la hoja). */
-const atenuado = (estados: Estados | undefined, id: string): boolean => estados?.[id]?.includes('atenuado') === true;
-const contornos = (lista: readonly EstadoVisual[] | undefined): EstadoVisual[] => (lista ?? []).filter((e) => e !== 'atenuado');
+export const atenuado = (estados: Estados | undefined, id: string): boolean => estados?.[id]?.includes('atenuado') === true;
+export const contornos = (lista: readonly EstadoVisual[] | undefined): EstadoVisual[] => (lista ?? []).filter((e) => e !== 'atenuado');
 
 function tieneFilas(nodo: NodoResuelto, estilo: Estilo, detail?: NivelDeDetalle): boolean {
   return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, metricasDeHoja(estilo.tabla, nodo)).length > 0;
 }
 
 /** Valor de la Paleta para el color del Nodo; sin color, o desconocido, el borde del Estilo. */
-function colorDeTrazo(nodo: NodoResuelto, estilo: Estilo): string {
+export function colorDeTrazo(nodo: NodoResuelto, estilo: Estilo): string {
   return (nodo.color !== undefined ? estilo.paleta[nodo.color] : undefined) ?? estilo.borde;
 }
 
 /** Arista con su etiqueta. Una Arista sin ruta en la geometria (ELK no la enruto) se omite. */
-function aristaSvg(arista: AristaResuelta, { view, geometry, estilo, onSelect, visibility, estados, coloresDeNodo }: Contexto): Elemento[] {
+function aristaSvg(arista: AristaResuelta, { view, geometry, estilo, onSelect, visibility, estados, coloresDeNodo }: ContextoDeGrafo): Elemento[] {
   const id = idDeArista(arista);
   const puntos = geometry.edges[id]?.points;
   if (puntos === undefined || puntos.length < 2) return [];
@@ -351,7 +371,7 @@ function aristaSvg(arista: AristaResuelta, { view, geometry, estilo, onSelect, v
  * ningun trazo (de esta ni de otra Arista) la tape. Hereda la visibilidad, el
  * atenuado y el clic de su Arista.
  */
-function etiquetaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibility, estados }: Contexto): Elemento[] {
+function etiquetaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibility, estados }: ContextoDeGrafo): Elemento[] {
   const id = idDeArista(arista);
   const puntos = geometry.edges[id]?.points;
   if (arista.label === undefined || puntos === undefined || puntos.length < 2) return [];
@@ -367,7 +387,7 @@ function etiquetaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visib
 }
 
 /** Visibilidad acotada a [0, 1]; un NaN cuenta como 0. */
-function acotar(visibilidad: number): number {
+export function acotar(visibilidad: number): number {
   return Number.isNaN(visibilidad) ? 0 : Math.min(Math.max(visibilidad, 0), 1);
 }
 
@@ -379,7 +399,7 @@ function opacidad(visibilidad: number): string {
 }
 
 /** Lo mismo para un elemento SVG, como atributos. */
-function visibilidadSvg(visibilidad: number): Record<string, string> {
+export function visibilidadSvg(visibilidad: number): Record<string, string> {
   const valor = acotar(visibilidad);
   if (valor === 1) return {};
   return valor === 0 ? { opacity: '0', 'pointer-events': 'none' } : { opacity: num(valor) };

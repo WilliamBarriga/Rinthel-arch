@@ -47,8 +47,22 @@ PropertyValue returns string:
 
 Model:
   name='model' '{'
-    (elements+=Element | edges+=Edge | extensions+=Extend)*
+    (interactions+=Interaction | elements+=Element | edges+=Edge | extensions+=Extend)*
   '}'
+;
+
+// `interaction <id> ["Titulo"] ["Descripcion"] { mensajes }` (ADR 0009): un escenario ordenado entre Nodos.
+// Su id vive en un espacio de nombres propio. `interaction` es palabra clave solo aqui: sigue valiendo como id de Nodo.
+Interaction:
+  'interaction' name=Id (title=String (description=String)?)? '{'
+    items+=Message*
+  '}'
+;
+
+// `[id:] [async|reply] origen -> destino ["etiqueta"] ["descripcion"]`; `origen == destino` es un Mensaje propio.
+// `async` y `reply` tambien valen como id de Nodo (`reply -> otro`).
+Message:
+  (alias=Id ':')? (kind=('async' | 'reply'))? from=Ref '->' to=Ref (label=String (description=String)?)?
 ;
 
 // `<origen> ["card"] -> ["card"] <destino> ["etiqueta"]`; los extremos son ids cualificados.
@@ -275,7 +289,7 @@ View:
 ;
 
 ViewProperty:
-  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | ViewDrill | ViewCollapsed | ViewExpanded | ViewLink | ViewSteps | NodeOverride;
+  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | ViewDrill | ViewCollapsed | ViewExpanded | ViewLink | ViewSteps | ViewInteraction | ViewOrder | NodeOverride;
 
 ViewType:
   'type' value=Id;
@@ -304,6 +318,13 @@ ViewExpanded:
 
 ViewLink:
   'link' node=Ref '->' view=Id;
+
+// Vista de secuencia: la Interaccion que proyecta y el orden (parcial) de sus Lifelines.
+ViewInteraction:
+  'interaction' value=Id;
+
+ViewOrder:
+  'order' targets+=Ref (',' targets+=Ref)*;
 
 // Pasos de revelado (ADR 0002): acumulativos; `show` revela y `hide` oculta.
 // Un item es un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`edge a -> b`, o `a -> b`).
@@ -410,7 +431,7 @@ Id returns string:
   'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
-  'model' | 'node' | 'specification' |
+  'model' | 'node' | 'specification' | 'interaction' | 'async' | 'reply' |
   'pk' | 'fk' | 'uk' | 'identifying';
 
 // -------------------------

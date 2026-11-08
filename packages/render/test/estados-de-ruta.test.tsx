@@ -2,16 +2,25 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, resolveView } from 'canonico';
-import { layoutView } from 'layout';
+import { layoutView as layoutDeVista } from 'layout';
+import type { GeometriaGrafo } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
 import { TEMA_NEUTRO } from 'tema';
 
 import { hojaDe } from './ayudas';
 
+/** `layoutView` de una Vista de grafo (architecture o flow): estas pruebas miran rutas y cajas de Aristas. */
+const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
+  const geometria = await layoutDeVista(...args);
+  if (geometria.kind !== 'grafo') throw new Error('se esperaba una Geometria de grafo');
+  return geometria;
+};
+
+
 const nodo = (id: string) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [] });
 
-async function props(extra: Partial<DiagramProps> = {}): Promise<DiagramProps> {
+async function props(extra: Partial<Omit<DiagramProps, 'geometry'>> = {}): Promise<Omit<DiagramProps, 'geometry'> & { geometry: GeometriaGrafo }> {
   const fuente = fuenteCanonicaSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: { nodes: [nodo('a'), nodo('b'), nodo('c')], edges: [{ from: { node: 'a' }, to: { node: 'b' } }, { from: { node: 'b' }, to: { node: 'c' } }] },

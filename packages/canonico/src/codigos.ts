@@ -48,6 +48,22 @@ export const CODIGOS = Object.freeze({
   E_UNKNOWN_STEP: 'E_UNKNOWN_STEP',
   /** `type` de Vista ausente o desconocido. */
   E_UNKNOWN_VIEW_TYPE: 'E_UNKNOWN_VIEW_TYPE',
+  /** Propiedad de Vista que no vale para su Tipo de diagrama (`include`/`pin` en secuencia, `interaction`/`order` fuera de ella). */
+  E_VIEW_PROPERTY_FOR_TYPE: 'E_VIEW_PROPERTY_FOR_TYPE',
+  /** Vista `sequence` sin `interaction`. */
+  E_SEQUENCE_WITHOUT_INTERACTION: 'E_SEQUENCE_WITHOUT_INTERACTION',
+  /** `interaction` de una Vista que no existe en el Modelo. */
+  E_UNKNOWN_INTERACTION: 'E_UNKNOWN_INTERACTION',
+  /** Dos Interacciones con el mismo id. */
+  E_DUPLICATE_INTERACTION: 'E_DUPLICATE_INTERACTION',
+  /** Extremo de Mensaje o entrada de `order` que no es un Nodo del Modelo. */
+  E_UNKNOWN_LIFELINE: 'E_UNKNOWN_LIFELINE',
+  /** Dos Mensajes con el mismo id en su Interaccion. */
+  E_DUPLICATE_MESSAGE_ID: 'E_DUPLICATE_MESSAGE_ID',
+  /** Entrada de `order` cuyo Nodo no participa en la Interaccion que proyecta la Vista (aviso; se ignora). */
+  W_ORDER_NOT_IN_INTERACTION: 'W_ORDER_NOT_IN_INTERACTION',
+  /** `reply` sin un `sync` abierto del receptor al emisor (aviso). */
+  W_REPLY_WITHOUT_SYNC: 'W_REPLY_WITHOUT_SYNC',
   /** Dos Pins de la Vista se solapan (warning, responsabilidad del autor). */
   W_OVERLAPPING_PINS: 'W_OVERLAPPING_PINS',
   /** Primitiva de Capa que no esta en el catalogo de Temas (ADR 0008). */
@@ -128,7 +144,15 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_INVALID_EXPANSION_TARGET: '`collapsed`/`expanded` sobre un Nodo que no es Grupo o que la Vista no muestra.',
   E_LINK_WITH_EXPANDED: 'El mismo Nodo tiene `link` y `expanded` en la misma Vista.',
   E_UNKNOWN_STEP: 'Un Paso nombra un Nodo, selector o Arista que no existe.',
-  E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture`, `flow` ni `er`.',
+  E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture`, `flow`, `sequence` ni `er`.',
+  E_VIEW_PROPERTY_FOR_TYPE: 'Una propiedad de Vista no vale para su Tipo de diagrama (`include`/`pin` en secuencia; `interaction`/`order` fuera de ella).',
+  E_SEQUENCE_WITHOUT_INTERACTION: 'Una Vista `sequence` no declara `interaction`.',
+  E_UNKNOWN_INTERACTION: 'El `interaction` de una Vista nombra una Interaccion que no existe.',
+  E_DUPLICATE_INTERACTION: 'Dos Interacciones con el mismo id.',
+  E_UNKNOWN_LIFELINE: 'El extremo de un Mensaje o una entrada de `order` no es un Nodo del Modelo.',
+  E_DUPLICATE_MESSAGE_ID: 'Dos Mensajes de la misma Interaccion con el mismo id.',
+  W_ORDER_NOT_IN_INTERACTION: 'Una entrada de `order` nombra un Nodo que no participa en la Interaccion de la Vista; se ignora (aviso).',
+  W_REPLY_WITHOUT_SYNC: 'Un `reply` no cierra ningun `sync` abierto del receptor al emisor (aviso).',
   W_OVERLAPPING_PINS: 'Dos Nodos con `pin` se solapan en la Vista (aviso).',
   E_THEME_UNKNOWN_PRIMITIVE: 'Una Capa de Tema usa una Primitiva que no esta en el catalogo.',
   E_THEME_UNKNOWN_PROPERTY: 'Una Capa de Tema usa una propiedad que su Primitiva no declara.',

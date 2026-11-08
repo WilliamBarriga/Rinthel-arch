@@ -40,4 +40,5 @@
 export { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutConMetricas, layoutView } from './layout';
 export { indiceDeGeometria } from './indice';
 export type { IndiceDeGeometria } from './indice';
+export type { CajaDeActivacion, GeometriaSecuencia, RutaDeMensaje } from './secuencia';
 export type { CajaDeNodo, Geometria, GeometriaGrafo, OpcionesDeLayout, Punto, RutaDeArista } from './layout';
