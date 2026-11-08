@@ -222,6 +222,14 @@ describe('claveDeLayout', () => {
     expect(claveDeLayout(vista(), con({ tokens: { ...TEMA_NEUTRO.tokens, fontSize: '20px' } }))).not.toBe(base);
   });
 
+  it('cambia al cambiar el tipo de la Vista (de layout y de estructura)', () => {
+    const arquitectura = vista();
+    const flujo = { ...arquitectura, type: 'flow' as const };
+
+    expect(claveDeLayout(flujo, TEMA_NEUTRO)).not.toBe(claveDeLayout(arquitectura, TEMA_NEUTRO));
+    expect(claveDeEstructura(flujo, TEMA_NEUTRO)).not.toBe(claveDeEstructura(arquitectura, TEMA_NEUTRO));
+  });
+
   it('no cambia con la paleta, los colores ni los iconos', () => {
     const base = claveDeLayout(vista(), TEMA_NEUTRO);
     const otraPaleta = con({ palette: { ...TEMA_NEUTRO.palette, blue: '#000000' }, tokens: { ...TEMA_NEUTRO.tokens, background: '#000' } });

@@ -28,7 +28,7 @@ const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
   const edges: Geometria['edges'] = {};
   edges['a -> b'] = { points: [{ x: 100, y: 25 }, { x: 120, y: 25 }] };
   edges['b -> c'] = { points: [{ x: 220, y: 25 }, { x: 240, y: 25 }] };
-  return { nodes, edges, labels: {}, pinsSolapados: [], width: 600, height: 50 };
+  return { nodes, edges, labels: {}, kind: 'grafo', pinsSolapados: [], width: 600, height: 50 };
 };
 const camara: Camara = { x: 0, y: 0, width: 800, height: 600 };
 

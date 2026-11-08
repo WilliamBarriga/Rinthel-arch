@@ -18,7 +18,7 @@ const fuente = fuenteCanonicaSchema.parse({
   model: { nodes: [{ id: 'a', type: 'servicio', title: 'a', description: '', children: [] }], edges: [] },
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
 });
-const geometria: Geometria = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, pinsSolapados: [], width: 100, height: 50 };
+const geometria: Geometria = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 100, height: 50 };
 const CAVEAT: TemaResuelto = { ...TEMA_NEUTRO, fonts: { body: 'Caveat', mono: 'Caveat', fallback: 'cursive' } };
 const ARCHIVOS = { 'fuentes/caveat-latin-400-normal.woff2': 'h400', 'fuentes/caveat-latin-700-normal.woff2': 'h700', 'fuentes/inter-latin-400-normal.woff2': 'hi' };
 const url = (ruta: string): string => `/fuentes/${ruta}`;
