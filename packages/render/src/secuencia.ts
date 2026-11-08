@@ -17,7 +17,7 @@ import { num } from './elemento';
 import type { Elemento } from './elemento';
 import { resolverEstilo } from './estilo';
 import { aplanar, atenuado, cajaDeNodo, capaSvg, colorDeTrazo, contornos, marcoDeEscena, nombresAccesibles, opacidad, posicionesDeEscalonado, visibilidadSvg } from './escena';
-import type { Contexto, EntradaDeEscena } from './escena';
+import type { Contexto, EntradaDeEscena, Estados } from './escena';
 import { declaracionesDeCaja } from './hoja';
 import { pilaDeNodo } from './pilas';
 import { pintarEtiquetaDeArista, pintarEstadoDeRuta } from './pintores';
@@ -128,7 +128,7 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     { tag: 'div', attrs: { class: 'rd-capa rd-activaciones', 'data-capa': 'activaciones' }, hijos: activaciones },
     capaSvg('mensajes', geometry, [...trazos, ...etiquetas]),
     capaSvg('guardas', geometry, textosDeFragmento),
-    capaSvg('notas', geometry, geometry.notes.map((nota) => notaSvg(nota, estilo, idDeInteraccion, visibility))),
+    capaSvg('notas', geometry, geometry.notes.map((nota) => notaSvg(nota, estilo, idDeInteraccion, visibility, entrada.estados))),
     { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: raices.map((nodo) => cajaDeNodo(nodo, contexto)) },
   ]);
 }
@@ -165,6 +165,12 @@ function estiloDeCajaDeNodo(contexto: Contexto): string {
   return Object.entries(declaracionesDeCaja(estilo, { capas, estados: {} })).map(([propiedad, valor]) => `${propiedad}:${valor}`).join(';');
 }
 
+/** Estados del elemento (`seleccionado`, `hover`) como atributo; Fragmentos y Notas no tienen Slot propio en el Tema todavia. */
+const atributoDeEstados = (estados: Estados | undefined, id: string): Record<string, string> => {
+  const lista = contornos(estados?.[id]);
+  return lista.length === 0 ? {} : { 'data-estados': lista.join(' ') };
+};
+
 /** `box` de un Grupo abierto: contorno discontinuo del color del trazo con el nombre del Grupo arriba a la izquierda. */
 function grupoHtml(grupo: CajaDeGrupoColocada, contexto: Contexto): Elemento {
   const { estilo } = contexto;
@@ -192,7 +198,7 @@ function fragmentoHtml(marco: MarcoDeFragmento, contexto: Contexto, interaccion:
   );
   return {
     tag: 'div',
-    attrs: { 'data-fragment': marco.ruta, 'data-operator': marco.operator, 'data-nivel': String(marco.nivel), style: `${caja(marco.x, marco.y, marco.width, marco.height)};pointer-events:none;${estilos};${opacidad(contexto.visibility(`${interaccion}:${marco.ruta}`))}` },
+    attrs: { 'data-fragment': marco.ruta, 'data-operator': marco.operator, 'data-nivel': String(marco.nivel), ...atributoDeEstados(contexto.estados, `${interaccion}:${marco.ruta}`), style: `${caja(marco.x, marco.y, marco.width, marco.height)};pointer-events:none;${estilos};${opacidad(contexto.visibility(`${interaccion}:${marco.ruta}`))}` },
     hijos: [{ tag: 'div', attrs: { 'data-fragment-tab': marco.ruta, style: `${caja(marco.tab.x - marco.x, marco.tab.y - marco.y, marco.tab.width, marco.tab.height)};${estilos}` }, hijos: [] }, ...divisores],
   };
 }
@@ -225,7 +231,7 @@ function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'
  * Nota "papel": poligono con la esquina superior derecha doblada, tinte suave del color de nota de la Paleta (`amber`,
  * si no el borde), trazo fino y el texto ya envuelto por el layout. No es un Nodo: no lleva cabecera, icono ni insignia.
  */
-function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: string, visibility: Visibilidad): Elemento {
+function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: string, visibility: Visibilidad, estados: Estados | undefined): Elemento {
   const color = estilo.paleta['amber'] ?? estilo.borde;
   const { x, y, width, height, fold } = nota;
   const contorno = `M${num(x)},${num(y)} H${num(x + width - fold)} L${num(x + width)},${num(y + fold)} V${num(y + height)} H${num(x)} Z`;
@@ -238,7 +244,7 @@ function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: st
   }));
   return {
     tag: 'g',
-    attrs: { 'data-note': `${interaccion}:${nota.ruta}`, 'data-anchor': nota.anchor, ...visibilidadSvg(visibility(`${interaccion}:${nota.ruta}`)) },
+    attrs: { 'data-note': `${interaccion}:${nota.ruta}`, 'data-anchor': nota.anchor, ...atributoDeEstados(estados, `${interaccion}:${nota.ruta}`), ...visibilidadSvg(visibility(`${interaccion}:${nota.ruta}`)) },
     hijos: [
       { tag: 'path', attrs: { 'data-note-paper': '', d: contorno, fill: color, 'fill-opacity': '0.2', stroke: color, 'stroke-width': '1' }, hijos: [] },
       { tag: 'path', attrs: { d: doblez, fill: 'none', stroke: color, 'stroke-width': '1' }, hijos: [] },
