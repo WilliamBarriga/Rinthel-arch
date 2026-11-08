@@ -99,7 +99,7 @@ ${EJEMPLO_DE_DSL}
 
 - Un Nodo es \`<tipo> <id> ["Titulo" ["Descripcion"]] [{ hijos, attrs, source }]\`; sus hijos lo hacen Grupo y su id completo es \`padre.hijo\`.
 - Una Arista es \`origen ["card"] -> ["card"] destino ["etiqueta"]\` (espacios alrededor de \`->\`; la etiqueta se pierde al fusionar Aristas elevadas por un Grupo colapsado); un extremo puede ser \`nodo#atributo\`.
-- Una Vista solo selecciona (\`include\`, \`exclude\`, \`depth\`; selectores \`a\`, \`a.*\`, \`a.**\`); \`type\` es \`architecture\` o \`flow\`. Sus overrides por Nodo (\`label\`, \`pin x,y\`, \`order\`, \`color\`) nunca tocan el Modelo; \`pin\` es la posicion relativa al Grupo padre y \`order\` solo se guarda (sin efecto en v1).
+- Una Vista solo selecciona (\`include\`, \`exclude\`, \`depth\`; selectores \`a\`, \`a.*\`, \`a.**\`); \`type\` es \`architecture\`, \`flow\`, \`sequence\` (con \`interaction <id>\`, un Modelo con \`interaction <id> { a -> b "msg" }\`) o \`er\` (Nodos con \`attrs\` y claves \`pk\`/\`fk\`, Aristas con cardinalidad). Sus overrides por Nodo (\`label\`, \`pin x,y\`, \`order\`, \`color\`) nunca tocan el Modelo; \`pin\` es la posicion relativa al Grupo padre y \`order\` solo se guarda (sin efecto en v1).
 - Una Vista puede declarar \`theme\`, \`collapsed\`/\`expanded\`, \`link <nodo> -> <vista>\` y \`steps\` de revelado (\`steps { step "Titulo" { show a, a -> b  hide c } }\`: acumulativos; \`show\` revela y \`hide\` oculta lo anterior; en un paso \`a.*\` revela el Grupo \`a\` y sus hijos).
 - \`extend <nodo> { ... }\` anade hijos, \`attrs\` y \`source\` a un Nodo declarado en otro archivo. Un Tipo de nodo admite \`description\`, \`icon\`, \`style\` y \`color\`; el \`icon\` es un icono generico o el nombre de un \`.svg\` del Workspace.
 
@@ -129,15 +129,17 @@ Solo lectura; nunca escribe. Cada resultado trae el id cualificado, el tipo y \`
 diagrams inspect buscar <texto> --workspace <ruta> [--json]
 diagrams inspect nodo <id> --workspace <ruta> [--json]
 diagrams inspect vista <id> --workspace <ruta> [--json]
+diagrams inspect interaccion <id> --workspace <ruta> [--json]
 diagrams inspect tema <nombre> --workspace <ruta> [--tipo <tipo>] [--estado <estado>] [--diagrama <tipo>] [--catalogo] [--json]
 \`\`\`
 
-- \`buscar\` encuentra Nodos por id parcial o titulo, y Vistas por id (sin distinguir mayusculas).
+- \`buscar\` encuentra Nodos por id parcial o titulo, Vistas por id e Interacciones por id o titulo (sin distinguir mayusculas).
 - \`nodo\` devuelve el Nodo, su padre e hijos, sus Atributos, las Aristas que entran y salen, y las Vistas que lo muestran.
-- \`vista\` devuelve los Nodos y Aristas visibles de la Vista en su estado inicial.
+- \`vista\` devuelve el tipo (\`architecture\`, \`flow\`, \`sequence\` o \`er\`) y los Nodos y Aristas visibles de la Vista en su estado inicial; en una Vista \`sequence\`, los Nodos son sus Lifelines y trae la \`interaction\` que proyecta.
+- \`interaccion\` devuelve el titulo, la cantidad de items y de Mensajes, las Lifelines (en orden de aparicion) y las Vistas \`sequence\` que la proyectan.
 - \`tema\` devuelve la cadena \`extends\`, las \`part\` usadas, la pila de Capas resuelta para el \`--tipo\`, \`--estado\` y \`--diagrama\` (architecture, flow, sequence, er) pedidos (cada Capa con el \`archivo:linea\` del parche que la fijo, para saber que parche editar), las Metricas y si el Tema usa codigo; con \`--catalogo\`, tambien las claves del catalogo de Primitivas, Movimientos y efectos.
-- Sin \`--json\` sale texto legible. Con \`--json\`, stdout es exactamente un objeto (contractVersion ${INSPECT_CONTRACT_VERSION}, independiente del de validate) con \`comando\` = \`buscar\`, \`nodo\`, \`vista\` o \`tema\`.
-- Codigos de salida: 0 hay respuesta (\`buscar\` sin coincidencias tambien), 1 el Nodo, la Vista, el Tema, el Tipo o el estado no existe (stderr sugiere ids cercanos) o el Workspace tiene errores (corrigelos con validate), 2 fallo de uso o interno.
+- Sin \`--json\` sale texto legible. Con \`--json\`, stdout es exactamente un objeto (contractVersion ${INSPECT_CONTRACT_VERSION}, independiente del de validate) con \`comando\` = \`buscar\`, \`nodo\`, \`vista\`, \`interaccion\` o \`tema\`.
+- Codigos de salida: 0 hay respuesta (\`buscar\` sin coincidencias tambien), 1 el Nodo, la Vista, la Interaccion, el Tema, el Tipo o el estado no existe (stderr sugiere ids cercanos) o el Workspace tiene errores (corrigelos con validate), 2 fallo de uso o interno.
 
 Esquema de \`inspect --json\` (JSON Schema derivado del esquema Zod):
 
