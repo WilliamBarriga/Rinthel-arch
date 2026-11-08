@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { Visibilidad } from 'canonico';
-import type { CajaDeNodo, Geometria, GeometriaGrafo, RutaDeArista } from 'layout';
+import type { CajaDeNodo, Geometria, GeometriaGrafo, GeometriaSecuencia, RutaDeArista } from 'layout';
 
 /**
  * Puerto de reloj: pide un cuadro (`cuadro` recibe el tiempo en ms) y devuelve
@@ -98,9 +98,47 @@ export function interpolarGeometria(desde: Geometria, hasta: Geometria, t: numbe
     case 'grafo':
       return desde.kind === 'grafo' ? interpolarGrafo(desde, hasta, t) : hasta;
     case 'secuencia':
-      // La secuencia no tiene morph propio todavia (llega con el expandir/colapsar de Lifelines): salta a la nueva.
-      return hasta;
+      return desde.kind === 'secuencia' ? interpolarSecuencia(desde, hasta, t) : hasta;
   }
+}
+
+/**
+ * Secuencia: las cabeceras, las lineas de las Lifelines, las activaciones (si no cambia su numero), las flechas de los
+ * Mensajes y los `box` de los Grupos se interpolan; lo demas (marcos, Notas, etiquetas) salta a la posicion final.
+ */
+function interpolarSecuencia(desde: GeometriaSecuencia, hasta: GeometriaSecuencia, t: number): GeometriaSecuencia {
+  const nodes: GeometriaSecuencia['nodes'] = {};
+  for (const [id, caja] of Object.entries(hasta.nodes)) {
+    const previa = desde.nodes[id];
+    nodes[id] = previa === undefined ? caja : mezclarCaja(previa, caja, t);
+  }
+  const lifelines: GeometriaSecuencia['lifelines'] = {};
+  for (const [id, linea] of Object.entries(hasta.lifelines)) {
+    const previa = desde.lifelines[id];
+    lifelines[id] = previa === undefined ? linea : { ...linea, x: mezcla(previa.x, linea.x, t), y1: mezcla(previa.y1, linea.y1, t), y2: mezcla(previa.y2, linea.y2, t) };
+  }
+  const activations = hasta.activations.map((activacion, i) => {
+    const previa = desde.activations[i];
+    if (desde.activations.length !== hasta.activations.length || previa === undefined || previa.lifeline !== activacion.lifeline) return activacion;
+    return { ...activacion, x: mezcla(previa.x, activacion.x, t), y1: mezcla(previa.y1, activacion.y1, t), y2: mezcla(previa.y2, activacion.y2, t) };
+  });
+  const messages: GeometriaSecuencia['messages'] = {};
+  for (const [ruta, mensaje] of Object.entries(hasta.messages)) {
+    const previo = desde.messages[ruta];
+    const mismos = previo !== undefined && previo.points.length === mensaje.points.length;
+    messages[ruta] = mismos
+      ? {
+          ...mensaje,
+          points: mensaje.points.map((p, i) => ({ x: mezcla(previo.points[i]!.x, p.x, t), y: mezcla(previo.points[i]!.y, p.y, t) })),
+          ...(mensaje.label !== undefined && previo.label !== undefined && { label: mezclarCaja(previo.label, mensaje.label, t) }),
+        }
+      : mensaje;
+  }
+  const groups = hasta.groups.map((grupo) => {
+    const previo = desde.groups.find((g) => g.id === grupo.id);
+    return previo === undefined ? grupo : { ...grupo, x: mezcla(previo.x, grupo.x, t), y: mezcla(previo.y, grupo.y, t), width: mezcla(previo.width, grupo.width, t), height: mezcla(previo.height, grupo.height, t) };
+  });
+  return { ...hasta, nodes, lifelines, activations, messages, groups, width: mezcla(desde.width, hasta.width, t), height: mezcla(desde.height, hasta.height, t) };
 }
 
 function interpolarGrafo(desde: GeometriaGrafo, hasta: GeometriaGrafo, t: number): GeometriaGrafo {

@@ -367,6 +367,16 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
   validarPasosDeSecuencia(fuente, vista, indice, interaccion, emitir, emitirCon);
   const nodos = todosLosIds(fuente.model.nodes);
   const participantes = new Set(aplanarMensajes(interaccion?.items ?? []).flatMap((m) => [m.from, m.to]));
+  if (interaccion !== undefined) {
+    // Una Lifeline es un participante, o un Grupo que contiene a uno (cuando `depth`/`collapsed` los funde en el).
+    const posibles = nodosNoExcluidos(fuente.model.nodes, vista);
+    const lifelines = new Set([...participantes].flatMap((id) => id.split('.').map((_, i, partes) => partes.slice(0, i + 1).join('.'))).filter((id) => posibles.has(id)));
+    vista.links.forEach((enlace, i) => {
+      if (!lifelines.has(enlace.node)) {
+        emitirCon([...ruta, 'links', i, 'view'], CODIGOS.E_LINK_NOT_LIFELINE, `'link ${enlace.node}': en una Vista 'sequence' solo una Lifeline puede enlazar, y '${enlace.node}' no lo es`, { hint: 'enlaza desde una Lifeline (un Nodo que participa en la Interaccion); un Mensaje, una Nota o un Fragmento no navega por link' });
+      }
+    });
+  }
   vista.order.forEach((id, i) => {
     if (!nodos.includes(id)) {
       emitir([...ruta, 'order', i], CODIGOS.E_UNKNOWN_LIFELINE, `'order' nombra '${id}', que no es un Nodo del Modelo`, id, nodos);

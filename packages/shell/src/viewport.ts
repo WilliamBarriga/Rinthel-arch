@@ -19,6 +19,12 @@ function cruzan(caja: CajaDeNodo, camara: Camara): boolean {
   );
 }
 
+/** En secuencia una Lifeline ocupa su columna entera (cabecera, linea y activaciones): si la camara ve la linea, la Lifeline se dibuja aunque su cabecera quede fuera. */
+function extension(geometria: Geometria, id: string, caja: CajaDeNodo): CajaDeNodo {
+  const linea = geometria.kind === 'secuencia' ? geometria.lifelines[id] : undefined;
+  return linea === undefined ? caja : { ...caja, height: Math.max(caja.height, linea.y2 - caja.y) };
+}
+
 /**
  * Deja solo los Nodos cuya caja cruza la camara y las Aristas cuya ruta cruza
  * la camara. Un Grupo visible conserva solo los hijos visibles. Un Nodo sin caja
@@ -29,7 +35,7 @@ export function recortarAlViewport(vista: VistaResuelta, geometria: Geometria, c
   const dentro = new Set<string>();
   for (const nodo of vista.nodes) {
     const caja = cajas.get(nodo.id);
-    if (caja === undefined || cruzan(caja, camara)) dentro.add(nodo.id);
+    if (caja === undefined || cruzan(extension(geometria, nodo.id, caja), camara)) dentro.add(nodo.id);
   }
   const podar = (nodo: NodoResuelto): NodoResuelto => ({
     ...nodo,

@@ -167,7 +167,11 @@ describe('colapso y expansion', () => {
     await waitFor(() => expect(ids(container)).toContain('g.a'));
     // Reloj propio: con `performance.now()` una maquina cargada puede tardar mas que `morphMs` entre cuadros y el morph ya habria terminado.
     let ahora = 1000;
-    const siguiente = (avanceMs: number) => act(async () => cuadros.shift()!((ahora += avanceMs)));
+    // El morph pide su primer cuadro en un efecto posterior al layout: sin esperarlo, la cola puede estar vacia (TypeError intermitente).
+    const siguiente = async (avanceMs: number) => {
+      await waitFor(() => expect(cuadros.length).toBeGreaterThan(0));
+      await act(async () => cuadros.shift()!((ahora += avanceMs)));
+    };
     await siguiente(0); // inicio
     await siguiente(40); // 40 de 100 ms
     const medio = opacidadDeNodo(container, 'g.a');
@@ -198,7 +202,11 @@ describe('colapso y expansion', () => {
     alternar(container, 'g');
     await waitFor(() => expect(ids(container)).toContain('g.a'));
     let ahora = 1000;
-    const siguiente = (avanceMs: number) => act(async () => cuadros.shift()!((ahora += avanceMs)));
+    // El morph pide su primer cuadro en un efecto posterior al layout: sin esperarlo, la cola puede estar vacia (TypeError intermitente).
+    const siguiente = async (avanceMs: number) => {
+      await waitFor(() => expect(pendientes.size).toBeGreaterThan(0));
+      await act(async () => cuadros.shift()!((ahora += avanceMs)));
+    };
     await siguiente(0); // inicio
     await siguiente(50); // cada cuadro hace setT: si el reloj cambia de identidad, el morph reinicia y nunca llega a 100 ms
     await siguiente(50);

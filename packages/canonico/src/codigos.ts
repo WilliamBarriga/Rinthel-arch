@@ -44,6 +44,8 @@ export const CODIGOS = Object.freeze({
   E_INVALID_EXPANSION_TARGET: 'E_INVALID_EXPANSION_TARGET',
   /** Mismo Nodo con `link` y `expanded` en la misma Vista. */
   E_LINK_WITH_EXPANDED: 'E_LINK_WITH_EXPANDED',
+  /** `link` en una Vista de secuencia con un origen que no es una Lifeline (Mensaje, Nota, Fragmento u otro Nodo). */
+  E_LINK_NOT_LIFELINE: 'E_LINK_NOT_LIFELINE',
   /** Paso con id o selector inexistente (ADR 0002). */
   E_UNKNOWN_STEP: 'E_UNKNOWN_STEP',
   /** `upto` de un Paso de secuencia que apunta a un Mensaje que la Vista no proyecta (`depth`/`exclude`). */
@@ -157,6 +159,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_UNKNOWN_VIEW_LINK: 'Un `link` apunta a una Vista que no existe.',
   E_INVALID_EXPANSION_TARGET: '`collapsed`/`expanded` sobre un Nodo que no es Grupo o que la Vista no muestra.',
   E_LINK_WITH_EXPANDED: 'El mismo Nodo tiene `link` y `expanded` en la misma Vista.',
+  E_LINK_NOT_LIFELINE: 'Un `link` en una Vista de secuencia nace de algo que no es una Lifeline.',
   E_UNKNOWN_STEP: 'Un Paso nombra un Nodo, selector o Arista que no existe.',
   E_STEP_NOT_PROJECTED: 'El `upto` de un Paso de secuencia nombra un Mensaje que la Vista no proyecta (`depth` o `exclude` lo quitan).',
   E_STEP_NOT_ADVANCING: 'El `upto` de un Paso de secuencia no avanza estrictamente respecto del Paso anterior.',
