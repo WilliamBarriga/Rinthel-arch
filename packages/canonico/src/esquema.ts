@@ -307,6 +307,8 @@ export const vistaSchema = z.object({
   interaction: z.string().min(1).optional(),
   /** Solo en Vistas `sequence`: orden de las Lifelines, parcial; el resto sigue por primera aparicion. */
   order: z.array(idDeNodoSchema).default([]),
+  /** Solo en Vistas `sequence`: numera los Mensajes proyectados; el numero es parte de la etiqueta. Ausente = false. */
+  autonumber: z.literal(true).optional(),
   overrides: z.array(overrideSchema).default([]),
   theme: z.string().min(1).optional(),
   /**

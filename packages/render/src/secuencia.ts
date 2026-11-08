@@ -9,7 +9,7 @@
  */
 import type { MensajeResuelto } from 'canonico';
 import { indiceDeGeometria } from 'layout';
-import type { CajaDeActivacion, GeometriaSecuencia, MarcoDeFragmento } from 'layout';
+import type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento } from 'layout';
 import { primitivasDeFamilia } from 'tema';
 import type { CapaPintada, NombreDePrimitiva, PinturaDeArista, PrimitivaPintada } from 'tema';
 
@@ -108,12 +108,14 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     return [{ tag: 'g', attrs: { 'data-edge-labels': id, ...visibilidadSvg(visibility(id)) }, hijos: [pintarEtiquetaDeArista(estilo, { id, texto: mensaje.label, puntos: ruta.points, caja: ruta.label })] }];
   });
 
+  const grupos = geometry.groups.map((grupo) => grupoHtml(grupo, contexto));
   const fragmentos = geometry.fragments.map((marco) => fragmentoHtml(marco, contexto));
   // Las guardas (y las pestanas) llevan el color del trazo de la Arista, no el `foreground`, y van sobre las activaciones.
   const colorDeGuarda = String(base.capas[base.capas.length - 1]?.props['color'] ?? estilo.borde);
   const textosDeFragmento = geometry.fragments.flatMap((marco) => textosDeFragmentoSvg(marco, estilo, colorDeGuarda));
 
   return marcoDeEscena(entrada, estilo, [
+    { tag: 'div', attrs: { class: 'rd-capa rd-grupos', 'data-capa': 'grupos' }, hijos: grupos },
     { tag: 'div', attrs: { class: 'rd-capa rd-fragmentos', 'data-capa': 'fragmentos' }, hijos: fragmentos },
     capaSvg('lifelines', geometry, lifelines),
     { tag: 'div', attrs: { class: 'rd-capa rd-activaciones', 'data-capa': 'activaciones' }, hijos: activaciones },
@@ -149,6 +151,24 @@ function estiloDeCajaDeNodo(contexto: Contexto): string {
   const { pila } = pilaDeNodo(estilo.pintura, { collapsed: false, children: [], type: '' });
   const capas = pila.capas.filter((capa) => FAMILIAS_DE_ACTIVACION.includes(capa.tipo));
   return Object.entries(declaracionesDeCaja(estilo, { capas, estados: {} })).map(([propiedad, valor]) => `${propiedad}:${valor}`).join(';');
+}
+
+/** `box` de un Grupo abierto: contorno discontinuo del color del trazo con el nombre del Grupo arriba a la izquierda. */
+function grupoHtml(grupo: CajaDeGrupoColocada, contexto: Contexto): Elemento {
+  const { estilo } = contexto;
+  const tamano = estilo.metricas.fontSize * estilo.metricas.escalaEtiqueta;
+  const caja = (x: number, y: number, ancho: number, alto: number): string => `position:absolute;box-sizing:border-box;left:${num(x)}px;top:${num(y)}px;width:${num(ancho)}px;height:${num(alto)}px`;
+  return {
+    tag: 'div',
+    attrs: { 'data-group-box': grupo.id, 'data-nivel': String(grupo.nivel), style: `${caja(grupo.x, grupo.y, grupo.width, grupo.height)};pointer-events:none;border:1px dashed ${estilo.borde}` },
+    hijos: [
+      {
+        tag: 'div',
+        attrs: { 'data-group-box-title': grupo.id, style: `${caja(grupo.title.x - grupo.x, grupo.title.y - grupo.y, grupo.title.width, grupo.title.height)};font-family:${estilo.fuenteCuerpo};font-size:${num(tamano)}px;line-height:${num(grupo.title.height)}px;color:${estilo.texto};white-space:nowrap` },
+        hijos: [grupo.label],
+      },
+    ],
+  };
 }
 
 /** Marco de un Fragmento: forma, relleno y borde del Nodo; con su pestana y un divisor por operando a partir del segundo. */

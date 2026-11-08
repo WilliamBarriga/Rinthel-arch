@@ -270,6 +270,7 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
     ...(profundidad !== undefined && { depth: profundidad.value }),
     ...(interaccion !== undefined && { interaction: interaccion.value }),
     order: vista.props.flatMap((prop) => (prop.$type === 'ViewOrder' ? prop.targets : [])),
+    ...(vista.props.some((prop) => prop.$type === 'ViewAutonumber') && { autonumber: true as const }),
     ...(tema !== undefined && { theme: tema.value }),
     ...(vista.props.some((prop) => prop.$type === 'ViewDrill') && { drill: 'collapse' as const }),
     collapsed: vista.props.flatMap((prop) => (prop.$type === 'ViewCollapsed' ? prop.targets : [])),
