@@ -127,8 +127,30 @@ export interface Mensaje {
   description?: string;
 }
 
-/** Item de una Interaccion; el orden de declaracion es el orden temporal. Hoy solo Mensajes. */
-export type ItemDeInteraccion = Mensaje;
+/** Operadores de Fragmento (ADR 0009): `opt loop break critical` tienen un operando; `alt par`, uno o mas. */
+export const OPERADORES_DE_FRAGMENTO = ['opt', 'loop', 'break', 'critical', 'alt', 'par'] as const;
+export type OperadorDeFragmento = (typeof OPERADORES_DE_FRAGMENTO)[number];
+
+/**
+ * Operando de un Fragmento: guarda de texto libre opcional y su lista de items. `separador` es la palabra que lo
+ * introdujo (`else` en `alt`, `and` en `par`); el primer operando no lo lleva. Solo lo usa `validate` para detectar
+ * operandos cruzados.
+ */
+export interface Operando {
+  guard?: string;
+  separator?: 'else' | 'and';
+  items: ItemDeInteraccion[];
+}
+
+/** Fragmento: operador con operandos; anidable. No es Nodo ni Grupo: sus Lifelines se derivan de su contenido. */
+export interface Fragmento {
+  type: 'fragment';
+  operator: OperadorDeFragmento;
+  operands: Operando[];
+}
+
+/** Item de una Interaccion; el orden de declaracion es el orden temporal. */
+export type ItemDeInteraccion = Mensaje | Fragmento;
 
 /** Escenario ordenado entre Nodos (Lifelines); id en un espacio de nombres propio (puede coincidir con el de un Nodo). */
 export interface Interaccion {
@@ -190,11 +212,27 @@ export const mensajeSchema = z.object({
   description: z.string().optional(),
 });
 
+export const fragmentoSchema: z.ZodType<Fragmento> = z.lazy(() =>
+  z.object({
+    type: z.literal('fragment'),
+    operator: z.enum(OPERADORES_DE_FRAGMENTO),
+    operands: z.array(
+      z.object({
+        guard: z.string().optional(),
+        separator: z.enum(['else', 'and']).optional(),
+        items: z.array(itemSchema).default([]),
+      }),
+    ),
+  }),
+) as z.ZodType<Fragmento>;
+
+const itemSchema: z.ZodType<ItemDeInteraccion> = z.lazy(() => z.union([mensajeSchema, fragmentoSchema]));
+
 export const interaccionSchema = z.object({
   id: z.string().min(1),
   title: z.string().min(1),
   description: z.string().default(''),
-  items: z.array(mensajeSchema).default([]),
+  items: z.array(itemSchema).default([]),
 });
 
 const modeloSchema = z.object({

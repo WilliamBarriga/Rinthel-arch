@@ -11,6 +11,7 @@ import type {
   Extremo,
   FuenteCanonica,
   Interaccion,
+  ItemDeInteraccion,
   Issue,
   Nodo,
   OverrideDeNodo,
@@ -29,7 +30,7 @@ import {
 import type { LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Attrs, Attribute, Documento, Edge, Element, Extend, Interaction, NodeOverride, NodeTypeDecl, Source, Step, View } from './generated/ast';
+import type { Attrs, Attribute, Documento, Edge, Element, Extend, Interaction, InteractionItem, NodeOverride, NodeTypeDecl, Source, Step, View } from './generated/ast';
 import { issueConSugerencia, rangoDe, rangoDeIndice } from './posiciones';
 import { ARCHIVO_INCORPORADOS, temasIncorporados } from './incorporados';
 import { resolverTemas } from './temas';
@@ -445,15 +446,30 @@ function compilarInteraccion(interaccion: Interaction): Interaccion {
     id: interaccion.name,
     title: interaccion.title ?? interaccion.name,
     description: interaccion.description ?? '',
-    items: interaccion.items.map((mensaje) => ({
-      type: 'message' as const,
-      ...(mensaje.alias !== undefined && { id: mensaje.alias }),
-      kind: mensaje.kind ?? 'sync',
-      from: mensaje.from,
-      to: mensaje.to,
-      ...(mensaje.label !== undefined && { label: mensaje.label }),
-      ...(mensaje.description !== undefined && { description: mensaje.description }),
-    })),
+    items: interaccion.items.map(compilarItem),
+  };
+}
+
+function compilarItem(item: InteractionItem): ItemDeInteraccion {
+  if (item.$type === 'Fragment') {
+    return {
+      type: 'fragment',
+      operator: item.operator,
+      operands: item.operands.map((operando) => ({
+        ...(operando.guard !== undefined && { guard: operando.guard }),
+        ...(operando.$type === 'NextOperand' && { separator: operando.separator }),
+        items: operando.items.map(compilarItem),
+      })),
+    };
+  }
+  return {
+    type: 'message',
+    ...(item.alias !== undefined && { id: item.alias }),
+    kind: item.kind ?? 'sync',
+    from: item.from,
+    to: item.to,
+    ...(item.label !== undefined && { label: item.label }),
+    ...(item.description !== undefined && { description: item.description }),
   };
 }
 

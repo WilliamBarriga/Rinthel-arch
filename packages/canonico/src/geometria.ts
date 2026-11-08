@@ -41,6 +41,21 @@ const geometriaSecuenciaSchema = z.object({
   lifelines: z.record(z.string(), z.object({ x: numeroFinito, y1: numeroFinito, y2: numeroFinito, destroyed: z.literal(true).optional() })),
   activations: z.array(z.object({ lifeline: z.string(), nivel: z.number().int(), x: numeroFinito, y1: numeroFinito, y2: numeroFinito, width: numeroFinito })),
   messages: z.record(z.string(), z.object({ points: z.array(puntoSchema), label: cajaDeNodoSchema.optional() })),
+  fragments: z
+    .array(
+      z.object({
+        ruta: z.string(),
+        operator: z.enum(['opt', 'loop', 'break', 'critical', 'alt', 'par']),
+        nivel: z.number().int(),
+        x: numeroFinito,
+        y: numeroFinito,
+        width: numeroFinito,
+        height: numeroFinito,
+        tab: cajaDeNodoSchema,
+        operands: z.array(z.object({ y1: numeroFinito, y2: numeroFinito, guard: z.object({ text: z.string(), box: cajaDeNodoSchema }).optional(), divider: numeroFinito.optional() })),
+      }),
+    )
+    .default([]),
   width: numeroFinito,
   height: numeroFinito,
 });

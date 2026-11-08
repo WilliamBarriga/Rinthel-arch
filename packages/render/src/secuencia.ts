@@ -9,7 +9,7 @@
  */
 import type { MensajeResuelto } from 'canonico';
 import { indiceDeGeometria } from 'layout';
-import type { CajaDeActivacion, GeometriaSecuencia } from 'layout';
+import type { CajaDeActivacion, GeometriaSecuencia, MarcoDeFragmento } from 'layout';
 import { primitivasDeFamilia } from 'tema';
 import type { CapaPintada, NombreDePrimitiva, PinturaDeArista, PrimitivaPintada } from 'tema';
 
@@ -108,10 +108,17 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     return [{ tag: 'g', attrs: { 'data-edge-labels': id, ...visibilidadSvg(visibility(id)) }, hijos: [pintarEtiquetaDeArista(estilo, { id, texto: mensaje.label, puntos: ruta.points, caja: ruta.label })] }];
   });
 
+  const fragmentos = geometry.fragments.map((marco) => fragmentoHtml(marco, contexto));
+  // Las guardas (y las pestanas) llevan el color del trazo de la Arista, no el `foreground`, y van sobre las activaciones.
+  const colorDeGuarda = String(base.capas[base.capas.length - 1]?.props['color'] ?? estilo.borde);
+  const textosDeFragmento = geometry.fragments.flatMap((marco) => textosDeFragmentoSvg(marco, estilo, colorDeGuarda));
+
   return marcoDeEscena(entrada, estilo, [
+    { tag: 'div', attrs: { class: 'rd-capa rd-fragmentos', 'data-capa': 'fragmentos' }, hijos: fragmentos },
     capaSvg('lifelines', geometry, lifelines),
     { tag: 'div', attrs: { class: 'rd-capa rd-activaciones', 'data-capa': 'activaciones' }, hijos: activaciones },
     capaSvg('mensajes', geometry, [...trazos, ...etiquetas]),
+    capaSvg('guardas', geometry, textosDeFragmento),
     { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: raices.map((nodo) => cajaDeNodo(nodo, contexto)) },
   ]);
 }
@@ -134,4 +141,48 @@ function activacionHtml(activacion: CajaDeActivacion, contexto: Contexto): Eleme
     ...(onSelect !== undefined && { alClic: () => onSelect(activacion.lifeline) }),
     hijos: [],
   };
+}
+
+/** Estilo en linea de una caja con la forma, el relleno y el borde del Nodo (sin decoraciones ni efectos). */
+function estiloDeCajaDeNodo(contexto: Contexto): string {
+  const { estilo } = contexto;
+  const { pila } = pilaDeNodo(estilo.pintura, { collapsed: false, children: [], type: '' });
+  const capas = pila.capas.filter((capa) => FAMILIAS_DE_ACTIVACION.includes(capa.tipo));
+  return Object.entries(declaracionesDeCaja(estilo, { capas, estados: {} })).map(([propiedad, valor]) => `${propiedad}:${valor}`).join(';');
+}
+
+/** Marco de un Fragmento: forma, relleno y borde del Nodo; con su pestana y un divisor por operando a partir del segundo. */
+function fragmentoHtml(marco: MarcoDeFragmento, contexto: Contexto): Elemento {
+  const estilos = estiloDeCajaDeNodo(contexto);
+  const caja = (x: number, y: number, ancho: number, alto: number): string => `position:absolute;box-sizing:border-box;left:${num(x)}px;top:${num(y)}px;width:${num(ancho)}px;height:${num(alto)}px`;
+  const divisores = marco.operands.flatMap((operando, k): Elemento[] =>
+    operando.divider === undefined ? [] : [{ tag: 'div', attrs: { 'data-fragment-divider': `${marco.ruta}:${k}`, style: `${caja(0, operando.divider - marco.y, marco.width, 0)};border-top:1px dashed ${contexto.estilo.borde}` }, hijos: [] }],
+  );
+  return {
+    tag: 'div',
+    attrs: { 'data-fragment': marco.ruta, 'data-operator': marco.operator, 'data-nivel': String(marco.nivel), style: `${caja(marco.x, marco.y, marco.width, marco.height)};pointer-events:none;${estilos}` },
+    hijos: [{ tag: 'div', attrs: { 'data-fragment-tab': marco.ruta, style: `${caja(marco.tab.x - marco.x, marco.tab.y - marco.y, marco.tab.width, marco.tab.height)};${estilos}` }, hijos: [] }, ...divisores],
+  };
+}
+
+/** Texto SVG de la pestana (operador) y de cada guarda, centrados en sus cajas medidas. */
+function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'], color: string): Elemento[] {
+  const tamano = estilo.metricas.fontSize * estilo.metricas.escalaEtiqueta;
+  const texto = (atributos: Record<string, string>, caja: { x: number; y: number; width: number; height: number }, contenido: string, relleno: string): Elemento => ({
+    tag: 'text',
+    attrs: {
+      ...atributos,
+      x: num(caja.x + caja.width / 2),
+      y: num(caja.y + caja.height / 2 + tamano * estilo.etiqueta.centradoVertical),
+      'text-anchor': 'middle',
+      'font-family': estilo.fuenteCuerpo,
+      'font-size': num(tamano),
+      fill: relleno,
+    },
+    hijos: [contenido],
+  });
+  return [
+    texto({ 'data-fragment-operator': marco.ruta }, marco.tab, marco.operator, estilo.texto),
+    ...marco.operands.flatMap((operando, k): Elemento[] => (operando.guard === undefined ? [] : [texto({ 'data-fragment-guard': `${marco.ruta}:${k}` }, operando.guard.box, operando.guard.text, color)])),
+  ];
 }

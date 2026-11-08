@@ -67,8 +67,23 @@ Ciclo de vida de una Lifeline: `create origen -> destino` la hace nacer (su cabe
 
 - Un Mensaje es `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"] ["descripcion"]`; sin tipo es `sync`. Los extremos son Nodos de cualquier nivel (las Lifelines) y no hace falta una Arista entre ellos.
 - El orden de declaracion es el orden temporal. La activacion no se escribe: un `sync` abre una en el receptor y el siguiente `reply` del receptor al emisor la cierra.
-- `create` solo vale en la primera aparicion del destino (`E_CREATE_NOT_FIRST`) y ninguna Lifeline puede aparecer despues de su `destroy` (`E_AFTER_DESTROY`); ambos errores traen `related`.
+- `create` solo vale en la primera aparicion del destino (`E_CREATE_NOT_FIRST`) y ninguna Lifeline puede aparecer despues de su `destroy` (`E_AFTER_DESTROY`) en orden de declaracion, tambien dentro de Fragmentos; ambos errores traen `related`.
+- Fragmento: `opt|loop|break|critical ["guarda"] { }` (un operando), `alt ["guarda"] { } else ["guarda"] { }` y `par { } and { }` (uno o mas). La guarda es texto libre y opcional. `else` solo vale en `alt` y `and` en `par`; otra combinacion da `E_INVALID_FRAGMENT_OPERAND`. Un `sync` sin `reply` dentro de un Fragmento deja su activacion abierta hasta el fin del Fragmento. `opt`, `loop`, `break`, `critical`, `alt`, `par`, `else` y `and` siguen valiendo como ids de Nodo.
 - El id de una Interaccion tiene su propio espacio de nombres (puede coincidir con el de un Nodo); `interaction`, `async`, `reply`, `create`, `destroy` y `order` siguen valiendo como ids de Nodo.
+
+Fragmentos (anidables) agrupan Mensajes con un operador:
+
+```
+interaction checkout {
+  cliente -> api "pedir"
+  alt "hay stock" {
+    api -> db "reservar"
+  } else "sin stock" {
+    api -> cliente "rechazar"
+  }
+  par { api -> cola "evento" } and { api -> db "auditar" }
+}
+```
 
 ## `view`: que mostrar
 

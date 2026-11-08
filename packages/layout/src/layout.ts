@@ -4,7 +4,7 @@
  */
 import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 import { idDeArista } from 'canonico';
-import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
+import type { ItemResuelto, NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
 import { layoutSecuencia } from './secuencia';
@@ -421,6 +421,12 @@ export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Me
     nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => (vista.type === 'er' ? [a.name, a.type, a.keys, a.optional] : [a.name, a.type]))]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
     mensajes: vista.interaction?.messages.map((m) => [m.ruta, m.kind, m.from, m.to, m.label]),
+    fragmentos: vista.interaction === undefined ? undefined : claveDeFragmentos(vista.interaction.items),
     metricas: claveDeMetricas(tabla),
   });
+}
+
+/** Estructura de los Fragmentos (operador, guardas y a que Mensajes cubren) para la clave de layout. */
+function claveDeFragmentos(items: readonly ItemResuelto[]): unknown[] {
+  return items.flatMap((item): unknown[] => (item.type === 'message' ? [] : [[item.ruta, item.operator, item.operands.map((o) => [o.guard, o.items.map((i) => (i.type === 'message' ? i.message.ruta : claveDeFragmentos([i])))])]]));
 }

@@ -64,6 +64,8 @@ export const CODIGOS = Object.freeze({
   E_CREATE_NOT_FIRST: 'E_CREATE_NOT_FIRST',
   /** Aparicion de una Lifeline despues de su `destroy`. */
   E_AFTER_DESTROY: 'E_AFTER_DESTROY',
+  /** Operandos invalidos en un Fragmento: `else`/`and` cruzados, o mas de un operando en `opt|loop|break|critical`. */
+  E_INVALID_FRAGMENT_OPERAND: 'E_INVALID_FRAGMENT_OPERAND',
   /** Entrada de `order` cuyo Nodo no participa en la Interaccion que proyecta la Vista (aviso; se ignora). */
   W_ORDER_NOT_IN_INTERACTION: 'W_ORDER_NOT_IN_INTERACTION',
   /** `reply` sin un `sync` abierto del receptor al emisor (aviso). */
@@ -157,6 +159,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_DUPLICATE_MESSAGE_ID: 'Dos Mensajes de la misma Interaccion con el mismo id.',
   E_CREATE_NOT_FIRST: 'Un `create` cuyo destino ya habia aparecido antes en la Interaccion.',
   E_AFTER_DESTROY: 'Una Lifeline aparece en un Mensaje despues de su `destroy`.',
+  E_INVALID_FRAGMENT_OPERAND: 'Un Fragmento tiene operandos invalidos: `else` es de `alt`, `and` de `par`, y `opt|loop|break|critical` tienen un solo operando.',
   W_ORDER_NOT_IN_INTERACTION: 'Una entrada de `order` nombra un Nodo que no participa en la Interaccion de la Vista; se ignora (aviso).',
   W_REPLY_WITHOUT_SYNC: 'Un `reply` no cierra ningun `sync` abierto del receptor al emisor (aviso).',
   W_OVERLAPPING_PINS: 'Dos Nodos con `pin` se solapan en la Vista (aviso).',

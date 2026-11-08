@@ -95,7 +95,7 @@ describe('seam sesion: Vista de secuencia', () => {
     const texto = modelo('  interaction order {\n  interaction -> reply "x"\n  reply reply -> interaction\n  order -> order\n  }', nodos) + 'view v { type sequence\n interaction order\n order order, reply }\n';
     const sesion = abrirSesion({ 'main.dg': texto });
     expect(await sesion.diagnosticar()).toEqual([]);
-    expect(sesion.fuente?.model.interactions[0]?.items.map((m) => [m.kind, m.from, m.to])).toEqual([
+    expect(sesion.fuente?.model.interactions[0]?.items.flatMap((m) => (m.type === 'message' ? [[m.kind, m.from, m.to]] : []))).toEqual([
       ['sync', 'interaction', 'reply'],
       ['reply', 'reply', 'interaction'],
       ['sync', 'order', 'order'],

@@ -5,7 +5,7 @@
  */
 import type { FuenteCanonica, SitioDeTexto, TextRange, Ubicador } from 'canonico';
 
-import type { Edge, Element, Interaction, NodeTypeDecl, View } from './generated/ast';
+import type { Edge, Element, Fragment, Interaction, NodeTypeDecl, View } from './generated/ast';
 import { aRango, puntoVacio, rangoDe, rangoDeIndice } from './posiciones';
 import { GrammarUtils } from 'langium';
 import type { AstNode } from 'langium';
@@ -71,13 +71,35 @@ function deArista({ aristas }: DatosDelUbicador, [i, lado, campo]: Ruta): SitioD
   return sitio(arista.archivo, rangoDe(arista.ast[lado as 'from' | 'to'], campo as string));
 }
 
-/** `[i, 'id' | 'title']` o `[i, 'items', j, 'from' | 'to' | 'id']` de una Interaccion. */
-function deInteraccion({ interacciones }: DatosDelUbicador, [i, campo, j, propiedad]: Ruta): SitioDeTexto | null {
+/**
+ * `[i, 'id' | 'title']` o `[i, 'items', j, ...]` de una Interaccion; dentro de un Fragmento el camino sigue con
+ * `'operands', k, 'items', l`, y termina en `from | to | id` (Mensaje) o `separator` (operando).
+ */
+function deInteraccion({ interacciones }: DatosDelUbicador, [i, campo, ...resto]: Ruta): SitioDeTexto | null {
   const interaccion = interacciones[i as number];
   if (interaccion === undefined) return null;
   if (campo === 'items') {
-    const mensaje = interaccion.ast.items[j as number];
-    return mensaje === undefined ? null : sitio(interaccion.archivo, rangoDe(mensaje, propiedad === 'id' ? 'alias' : (propiedad as string)));
+    let nodo: AstNode | undefined = undefined;
+    let lista: readonly AstNode[] = interaccion.ast.items;
+    let k = 0;
+    for (; k < resto.length; k++) {
+      const clave = resto[k]!;
+      if (typeof clave === 'number') {
+        nodo = lista[clave];
+        if (nodo === undefined) return null;
+      } else if (clave === 'operands') {
+        const operando: AstNode | undefined = (nodo as Fragment | undefined)?.operands[resto[++k] as number];
+        if (operando === undefined) return null;
+        nodo = operando;
+      } else if (clave === 'items') {
+        lista = (nodo as { items?: readonly AstNode[] } | undefined)?.items ?? [];
+      } else {
+        break;
+      }
+    }
+    const propiedad = resto[k] as string | undefined;
+    if (nodo === undefined) return null;
+    return sitio(interaccion.archivo, propiedad === undefined ? aRango(nodo.$cstNode?.range) : rangoDe(nodo, propiedad === 'id' ? 'alias' : propiedad));
   }
   return sitio(interaccion.archivo, rangoDe(interaccion.ast, campo === 'id' ? 'name' : (campo as string)));
 }

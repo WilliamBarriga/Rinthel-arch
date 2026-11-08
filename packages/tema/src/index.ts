@@ -89,7 +89,7 @@ export type { TemaResuelto } from './tema';
 export { anchoDeChips, atributosVisibles, chipsDeClaves, contenidoDeNodo, muestra, textoDeAtributo } from './contenido';
 export type { ChipDeClave } from './contenido';
 export type { ContenidoDeNodo } from './contenido';
-export { LARGO_DE_MARCADOR_ER, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta } from './metricas';
+export { LARGO_DE_MARCADOR_ER, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeGuarda } from './metricas';
 export type { Metricas, TablaDeMetricas } from './metricas';
 export { anchoDeTexto, claveDeTexto, hashDeFuente } from './medicion';
 export type { MedicionDeMetricas, MedidasDeTexto, TextoAMedir } from './medicion';
