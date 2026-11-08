@@ -11,7 +11,7 @@ import { ESTADOS, LARGO_DE_MARCADOR_ER, alturaDeCabecera, capasDeAristaEr, pilaD
 import type { ContenidoDeNodo, Estado, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
 
 import { pintarMarcadores, pintarTrazos, rutaDeCapa } from './aristas';
-import { limpiarValorCss, num } from './elemento';
+import { declaracionesLimpias, limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
 import { declaracionesDeCaja, declaracionesDeTexto } from './hoja';
 import { efectosDeElemento } from './efectos';
@@ -113,7 +113,7 @@ export function pintarZonas(estilo: Estilo, datos: DatosDeNodo, capas: readonly 
     const esquinas = cabecera ? 'border-top-left-radius:inherit;border-top-right-radius:inherit;' : 'border-bottom-left-radius:inherit;border-bottom-right-radius:inherit;';
     // Los Slots se corren el ancho del borde (`--rd-borde`): la franja de la zona acompana esa linea de corte.
     const alBorde = `height:calc(${num(hasta - desde)}px - var(--rd-borde, 0px));${cabecera ? '' : 'margin-top:calc(-1 * var(--rd-borde, 0px));'}`;
-    const pintura = alBorde + Object.entries(declaracionesDeCaja(estilo, { capas: [capa], estados: {} }, [capa], true)).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+    const pintura = alBorde + declaracionesLimpias(declaracionesDeCaja(estilo, { capas: [capa], estados: {} }, [capa], true));
     return [{ tag: 'div', attrs: { class: 'rd-zona', 'data-zona': String(capa.props['zone']), 'data-capa': capa.nombre, 'aria-hidden': 'true', style: enRect({ x: 0, y: desde, width: datos.caja.width, height: hasta - desde }, `${esquinas}${pintura}`) } }];
   });
 }
@@ -158,7 +158,7 @@ const estadoDeFila = (lista: readonly EstadoVisual[] | undefined): Estado | unde
 
 /** Estilo en linea de un texto de la fila (`name`, `type`, `key`) que el Tema declara; vacio si no. */
 const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo, tamano?: number): string =>
-  texto === undefined ? '' : Object.entries({ ...declaracionesDeTexto(texto, estilo.fuenteMono), ...(tamano !== undefined && { 'font-size': `${num(tamano)}px` }) }).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+  texto === undefined ? '' : declaracionesLimpias({ ...declaracionesDeTexto(texto, estilo.fuenteMono), ...(tamano !== undefined && { 'font-size': `${num(tamano)}px` }) });
 
 /**
  * Slot `attrs`: una fila por Atributo, en orden, cada una en su rectangulo (relativo al Slot). En una Vista ER cuyo Tema
@@ -175,7 +175,7 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atribut
     hijos: atributos.map((atributo, i) => {
       const capas = delTema === undefined ? [] : pilaDeFila(delTema, { impar: i % 2 === 1, keys: atributo.keys ?? [], opcional: atributo.optional === true }, estadoDeFila(estados?.[`${id}#${atributo.name}`]));
       const efectos = capas.length === 0 ? undefined : efectosDeElemento(estilo, { capas }, `${id}#${atributo.name}`);
-      const caja = capas.length === 0 ? '' : Object.entries(declaracionesDeCaja(estilo, { capas, estados: {} }, capas.filter((c) => !esDeZona(c)))).map(([k, v]) => `${k}:${limpiarValorCss(v)};`).join('');
+      const caja = capas.length === 0 ? '' : declaracionesLimpias(declaracionesDeCaja(estilo, { capas, estados: {} }, capas.filter((c) => !esDeZona(c))));
       return {
         tag: 'div',
         attrs: {

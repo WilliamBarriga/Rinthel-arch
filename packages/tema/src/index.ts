@@ -102,6 +102,7 @@ export type { ColocacionDeNodo, MedidaDeSlot, Rect, Tamano } from './slots';
 export { estiloResuelto, pilaDeFila } from './estilo';
 export { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA, claveDeFila } from './fila';
 export type { TextoDeFila, VarianteDeFila } from './fila';
+export { primitivaPintada } from './estilo';
 export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeCajaDeSecuencia, PinturaDeElemento, PinturaDeFila, PinturaDeNodo, PinturaDePagina, PinturaDeSecuencia, PinturaDeTrazoDeSecuencia, PrimitivaPintada } from './estilo';
 export { capasDeAristaEr, pinturaDeMensaje, pinturaDeMensajeConTema } from './mensajes';
 export { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA, metricasDeSecuencia } from './secuencia';

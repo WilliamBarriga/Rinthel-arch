@@ -7,13 +7,13 @@
  * - `activation` toma solo la forma, el relleno y el borde de la pila del Nodo de su Lifeline, sin sombras ni efectos.
  * Las cabeceras de las Lifelines son los Nodos de la Vista, dibujados como cualquier Nodo.
  */
-import type { MensajeResuelto, Visibilidad } from 'canonico';
+import type { MensajeResuelto, NodoResuelto, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada } from 'layout';
-import { ESTADOS, RELLENO_DE_NOTA, pinturaDeMensajeConTema, primitivasDeFamilia } from 'tema';
-import type { CapaPintada, NombreDePrimitiva, PinturaDeArista, PinturaDeCajaDeSecuencia, PinturaDeSecuencia } from 'tema';
+import { ESTADOS, RELLENO_DE_NOTA, pinturaDeMensajeConTema, primitivaPintada, primitivasDeFamilia } from 'tema';
+import type { CapaPintada, PinturaDeArista, PinturaDeCajaDeSecuencia, PinturaDeSecuencia } from 'tema';
 
-import { num } from './elemento';
+import { estiloEnLinea, num } from './elemento';
 import type { Elemento } from './elemento';
 import { resolverEstilo } from './estilo';
 import { aplanar, atenuado, cajaDeNodo, capaSvg, colorDeTrazo, contornos, marcoDeEscena, nombresAccesibles, opacidad, posicionesDeEscalonado, visibilidadSvg } from './escena';
@@ -26,6 +26,15 @@ import { pintarMarcadores, pintarTrazos } from './aristas';
 /** Capas que una activacion toma del Nodo: solo su forma, relleno y borde. */
 const FAMILIAS_DE_ACTIVACION: readonly string[] = [...primitivasDeFamilia('forma'), ...primitivasDeFamilia('relleno'), ...primitivasDeFamilia('borde')];
 
+/** Capas de `capas` que una activacion o un Fragmento toman del Nodo (forma, relleno y borde), sin decoraciones ni efectos. */
+const capasDeCajaDelNodo = (capas: readonly CapaPintada[]): CapaPintada[] => capas.filter((capa) => FAMILIAS_DE_ACTIVACION.includes(capa.tipo));
+
+/** Caja absoluta `x,y,ancho,alto` (px), con el borde dentro del tamano: el marco de todo lo de secuencia que se pinta en HTML. */
+const cajaAbsoluta = (x: number, y: number, ancho: number, alto: number): string => `position:absolute;box-sizing:border-box;left:${num(x)}px;top:${num(y)}px;width:${num(ancho)}px;height:${num(alto)}px`;
+
+/** Largo del `end` de una Lifeline destruida cuando la Arista no declara marcador (px). */
+const LARGO_DE_FIN_POR_DEFECTO = 10;
+
 /** Pintura de una Lifeline: la del bloque `lifeline` del Tema si lo declara y, si no, la derivada de la Arista (trazo discontinuo, sin marcadores). */
 function pinturaDeLifeline(base: PinturaDeArista, destruida: boolean, secuencia: PinturaDeSecuencia | undefined, color: string | undefined): PinturaDeArista {
   const declarada = secuencia?.lifeline;
@@ -36,7 +45,7 @@ function pinturaDeLifeline(base: PinturaDeArista, destruida: boolean, secuencia:
   // Una Lifeline destruida termina en `end` (defecto `cross`), del color del trazo.
   if (trazo?.fin !== undefined) return { ...resto, capas, fin: trazo.fin };
   const colorDelTrazo = capas[capas.length - 1]?.props['color'] ?? '#000000';
-  return { ...resto, capas, fin: { tipo: 'cross' as NombreDePrimitiva, props: { size: Number(base.fin?.props['size'] ?? 10), color: colorDelTrazo } } };
+  return { ...resto, capas, fin: primitivaPintada('cross', { size: Number(base.fin?.props['size'] ?? LARGO_DE_FIN_POR_DEFECTO), color: colorDelTrazo }) };
 }
 
 export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry: GeometriaSecuencia }): Elemento {
@@ -82,7 +91,11 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
   const hayOcultos = mensajes.some((mensaje) => geometry.messages[mensaje.ruta] !== undefined && visibility(idDe(mensaje)) <= 0);
   const corte = hayOcultos ? Math.max(-Infinity, ...reveladas) : Infinity;
   // Una Lifeline recortada por el viewport (su cabecera quedo fuera de la camara) no pinta sus activaciones.
-  const activaciones = geometry.activations.filter((activacion) => view.nodes.some((n) => n.id === activacion.lifeline)).map((activacion) => activacionHtml(activacion, contexto, corte));
+  const nodoPorId = new Map(view.nodes.map((nodo) => [nodo.id, nodo]));
+  const activaciones = geometry.activations.flatMap((activacion) => {
+    const nodo = nodoPorId.get(activacion.lifeline);
+    return nodo === undefined ? [] : [activacionHtml(activacion, nodo, contexto, corte)];
+  });
   const idDeInteraccion = interaccion?.id ?? '';
   const rutas = mensajes.flatMap((mensaje) => {
     const ruta = geometry.messages[mensaje.ruta];
@@ -123,15 +136,13 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
 }
 
 /** Barra de activacion: la forma, el relleno y el borde del Nodo de su Lifeline, con su color. */
-function activacionHtml(activacion: CajaDeActivacion, contexto: Contexto, corte: number): Elemento {
-  const { estilo, view, onSelect } = contexto;
-  const nodo = view.nodes.find((n) => n.id === activacion.lifeline)!;
+function activacionHtml(activacion: CajaDeActivacion, nodo: NodoResuelto, contexto: Contexto, corte: number): Elemento {
+  const { estilo, onSelect } = contexto;
   const { pila } = pilaDeNodo(estilo.pintura, nodo);
   // Con bloque `activation` en el Tema, su pila; si no, solo la forma, el relleno y el borde del Nodo de su Lifeline.
   const declarada = estilo.pintura.secuencia?.activacion;
-  const capas = declarada?.capas ?? pila.capas.filter((capa) => FAMILIAS_DE_ACTIVACION.includes(capa.tipo));
-  const declaraciones = declaracionesDeCaja(estilo, { capas, estados: {} });
-  const estilos = Object.entries(declaraciones).map(([propiedad, valor]) => `${propiedad}:${valor}`).join(';');
+  const capas = declarada?.capas ?? capasDeCajaDelNodo(pila.capas);
+  const estilos = estiloEnLinea(declaracionesDeCaja(estilo, { capas, estados: {} }));
   // Un Paso recorta la activacion en el corte (no anuncia el `reply`); una que aun no empezo no se ve.
   const y2 = Math.min(activacion.y2, corte);
   const alto = Math.max(y2 - activacion.y1, 0);
@@ -141,7 +152,7 @@ function activacionHtml(activacion: CajaDeActivacion, contexto: Contexto, corte:
     attrs: {
       'data-activation': activacion.lifeline,
       'data-nivel': String(activacion.nivel),
-      style: `position:absolute;box-sizing:border-box;left:${num(activacion.x)}px;top:${num(activacion.y1)}px;width:${num(activacion.width)}px;height:${num(alto)}px;--trazo:${colorDeTrazo(nodo, estilo)};pointer-events:auto;${estilos}${oculta}`,
+      style: `${cajaAbsoluta(activacion.x, activacion.y1, activacion.width, alto)};--trazo:${colorDeTrazo(nodo, estilo)};pointer-events:auto;${estilos}${oculta}`,
     },
     ...(onSelect !== undefined && { alClic: () => onSelect(activacion.lifeline) }),
     hijos: [],
@@ -166,9 +177,9 @@ function capasDerivadasDeFragmento(capas: readonly CapaPintada[]): CapaPintada[]
     if (FAMILIAS_DE_RELLENO.includes(capa.tipo)) {
       if (tinteColocado || colorDeRelleno === undefined) continue;
       tinteColocado = true;
-      salida.push({ ...capa, tipo: 'solid' as CapaPintada['tipo'], props: { color: `color-mix(in srgb,${String(colorDeRelleno)} ${TINTE_DE_FRAGMENTO}%,transparent)` } });
+      salida.push({ ...capa, ...primitivaPintada('solid', { color: `color-mix(in srgb,${String(colorDeRelleno)} ${TINTE_DE_FRAGMENTO}%,transparent)` }) });
     } else if (capa.tipo === 'pill' || capa.tipo === 'circle') {
-      salida.push({ ...capa, tipo: 'rect' as CapaPintada['tipo'], props: { radius: RADIO_DERIVADO } });
+      salida.push({ ...capa, ...primitivaPintada('rect', { radius: RADIO_DERIVADO }) });
     } else salida.push(capa);
   }
   return salida;
@@ -178,8 +189,8 @@ function capasDerivadasDeFragmento(capas: readonly CapaPintada[]): CapaPintada[]
 function estiloDeCajaDeNodo(contexto: Contexto, declaradas?: readonly CapaPintada[]): string {
   const { estilo } = contexto;
   const { pila } = pilaDeNodo(estilo.pintura, { collapsed: false, children: [], type: '' });
-  const capas = declaradas ?? capasDerivadasDeFragmento(pila.capas.filter((capa) => FAMILIAS_DE_ACTIVACION.includes(capa.tipo)));
-  return Object.entries(declaracionesDeCaja(estilo, { capas: [...capas], estados: {} })).map(([propiedad, valor]) => `${propiedad}:${valor}`).join(';');
+  const capas = declaradas ?? capasDerivadasDeFragmento(capasDeCajaDelNodo(pila.capas));
+  return estiloEnLinea(declaracionesDeCaja(estilo, { capas: [...capas], estados: {} }));
 }
 
 /** Estados del elemento (`seleccionado`, `hover`) como atributo; Fragmentos y Notas no tienen Slot propio en el Tema todavia. */
@@ -192,14 +203,13 @@ const atributoDeEstados = (estados: Estados | undefined, id: string): Record<str
 function grupoHtml(grupo: CajaDeGrupoColocada, contexto: Contexto): Elemento {
   const { estilo } = contexto;
   const tamano = estilo.metricas.fontSize * estilo.metricas.escalaEtiqueta;
-  const caja = (x: number, y: number, ancho: number, alto: number): string => `position:absolute;box-sizing:border-box;left:${num(x)}px;top:${num(y)}px;width:${num(ancho)}px;height:${num(alto)}px`;
   return {
     tag: 'div',
-    attrs: { 'data-group-box': grupo.id, 'data-nivel': String(grupo.nivel), style: `${caja(grupo.x, grupo.y, grupo.width, grupo.height)};pointer-events:none;border:1px dashed ${estilo.borde}` },
+    attrs: { 'data-group-box': grupo.id, 'data-nivel': String(grupo.nivel), style: `${cajaAbsoluta(grupo.x, grupo.y, grupo.width, grupo.height)};pointer-events:none;border:1px dashed ${estilo.borde}` },
     hijos: [
       {
         tag: 'div',
-        attrs: { 'data-group-box-title': grupo.id, style: `${caja(grupo.title.x - grupo.x, grupo.title.y - grupo.y, grupo.title.width, grupo.title.height)};font-family:${estilo.fuenteCuerpo};font-size:${num(tamano)}px;line-height:${num(grupo.title.height)}px;color:${estilo.texto};white-space:nowrap` },
+        attrs: { 'data-group-box-title': grupo.id, style: `${cajaAbsoluta(grupo.title.x - grupo.x, grupo.title.y - grupo.y, grupo.title.width, grupo.title.height)};font-family:${estilo.fuenteCuerpo};font-size:${num(tamano)}px;line-height:${num(grupo.title.height)}px;color:${estilo.texto};white-space:nowrap` },
         hijos: [grupo.label],
       },
     ],
@@ -231,15 +241,14 @@ function bordeDeDivisor(declarado: PinturaDeCajaDeSecuencia | undefined, colorDe
 function fragmentoHtml(marco: MarcoDeFragmento, contexto: Contexto, interaccion: string): Elemento {
   const declarado = contexto.estilo.pintura.secuencia?.fragmento;
   const estilos = estiloDeCajaDeNodo(contexto, capasDeFragmento(declarado, marco.operator, pilaDeEstado(declarado, contexto.estados, `${interaccion}:${marco.ruta}`)));
-  const caja = (x: number, y: number, ancho: number, alto: number): string => `position:absolute;box-sizing:border-box;left:${num(x)}px;top:${num(y)}px;width:${num(ancho)}px;height:${num(alto)}px`;
   const borde = bordeDeDivisor(declarado, contexto.estilo.borde);
   const divisores = marco.operands.flatMap((operando, k): Elemento[] =>
-    operando.divider === undefined ? [] : [{ tag: 'div', attrs: { 'data-fragment-divider': `${marco.ruta}:${k}`, style: `${caja(0, operando.divider - marco.y, marco.width, 0)};border-top:${borde};${opacidad(contexto.visibility(`${interaccion}:${marco.ruta}:${k}`))}` }, hijos: [] }],
+    operando.divider === undefined ? [] : [{ tag: 'div', attrs: { 'data-fragment-divider': `${marco.ruta}:${k}`, style: `${cajaAbsoluta(0, operando.divider - marco.y, marco.width, 0)};border-top:${borde};${opacidad(contexto.visibility(`${interaccion}:${marco.ruta}:${k}`))}` }, hijos: [] }],
   );
   return {
     tag: 'div',
-    attrs: { 'data-fragment': marco.ruta, 'data-operator': marco.operator, 'data-nivel': String(marco.nivel), ...atributoDeEstados(contexto.estados, `${interaccion}:${marco.ruta}`), style: `${caja(marco.x, marco.y, marco.width, marco.height)};pointer-events:none;${estilos};${opacidad(contexto.visibility(`${interaccion}:${marco.ruta}`))}` },
-    hijos: [{ tag: 'div', attrs: { 'data-fragment-tab': marco.ruta, style: `${caja(marco.tab.x - marco.x, marco.tab.y - marco.y, marco.tab.width, marco.tab.height)};${estilos}` }, hijos: [] }, ...divisores],
+    attrs: { 'data-fragment': marco.ruta, 'data-operator': marco.operator, 'data-nivel': String(marco.nivel), ...atributoDeEstados(contexto.estados, `${interaccion}:${marco.ruta}`), style: `${cajaAbsoluta(marco.x, marco.y, marco.width, marco.height)};pointer-events:none;${estilos};${opacidad(contexto.visibility(`${interaccion}:${marco.ruta}`))}` },
+    hijos: [{ tag: 'div', attrs: { 'data-fragment-tab': marco.ruta, style: `${cajaAbsoluta(marco.tab.x - marco.x, marco.tab.y - marco.y, marco.tab.width, marco.tab.height)};${estilos}` }, hijos: [] }, ...divisores],
   };
 }
 

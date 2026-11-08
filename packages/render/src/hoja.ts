@@ -12,7 +12,7 @@ import type { CapaPintada, NombreDePrimitivaEn, PinturaDeNodo, PrimitivaPintada 
 
 import { animacionDeHoja, nombresAparte } from './animacion';
 import { PINTORES_DE_EFECTOS, REGLAS_DE_EFECTOS } from './efectos';
-import { huella, num } from './elemento';
+import { estiloEnLinea, huella, num } from './elemento';
 import { aspectoDeEstado } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { PINTORES_DE_BORDE } from './pintura/borde';
@@ -85,10 +85,7 @@ function diferencia(de: Declaraciones, a: Declaraciones): Declaraciones {
   return cambios;
 }
 
-const bloque = (declaraciones: Declaraciones): string =>
-  Object.entries(declaraciones)
-    .map(([propiedad, valor]) => `${propiedad}:${valor}`)
-    .join(';');
+const bloque = estiloEnLinea;
 
 function declaracionesDeEstado(estilo: Estilo, estado: EstadoVisual): Declaraciones {
   const { color, ancho, trazo, opacidad } = aspectoDeEstado(estilo, estado);
