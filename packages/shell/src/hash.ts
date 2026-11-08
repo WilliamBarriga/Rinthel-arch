@@ -76,16 +76,26 @@ function esElementoDeInteraccion(id: string, source: FuenteCanonica): boolean {
 export const vistaPorDefecto = (source: FuenteCanonica): string | undefined => source.views[0]?.id;
 
 /**
+ * Paso con el que se entra a una Vista: en secuencia con `steps`, el primero (ADR 0009: el Paso 0 la
+ * dejaria vacia); en el resto, 0 (antes del primero, ADR 0002).
+ */
+export const pasoInicialDeVista = (source: FuenteCanonica, vista: string | undefined): number => {
+  const v = source.views.find((candidata) => candidata.id === vista);
+  return v?.type === 'sequence' && (v.steps?.length ?? 0) > 0 ? 1 : 0;
+};
+
+/**
  * Estado -> hash (sin `#`). Omite lo que vale su default, asi el estado inicial
  * da hash vacio. `vistaInicial` es la Vista por defecto con ruta `[vistaInicial]`.
  */
-export function serializarEstado(estado: EstadoDeShell, vistaInicial?: string): string {
+export function serializarEstado(estado: EstadoDeShell, vistaInicial?: string, source?: FuenteCanonica): string {
   const p = new URLSearchParams();
   if (!(estado.path.length === 1 && estado.path[0] === vistaInicial)) for (const v of estado.path) p.append('p', v);
   for (const id of estado.state.expanded ?? []) p.append('e', id);
   for (const id of estado.state.collapsed ?? []) p.append('c', id);
   if (estado.selected !== null) p.set('s', estado.selected);
-  if (estado.step !== 0) p.set('t', String(estado.step));
+  const pasoPorDefecto = source === undefined ? 0 : pasoInicialDeVista(source, estado.path[estado.path.length - 1]);
+  if (estado.step !== pasoPorDefecto) p.set('t', String(estado.step));
   if (estado.camera !== undefined) {
     const { x, y, width, height } = estado.camera;
     p.set('cam', [x, y, width, height].join(','));
@@ -126,8 +136,9 @@ export function deserializarEstado(hash: string, source: FuenteCanonica, vistaIn
   const selected = s !== null && (nodos.has(s) || esElementoDeInteraccion(s, source)) ? s : null;
 
   const t = p.get('t');
-  const n = t !== null && /^\d+$/.test(t) ? Number(t) : 0;
-  const step = n <= (activa?.steps?.length ?? 0) ? n : 0;
+  const inicial = pasoInicialDeVista(source, activa?.id);
+  const n = t !== null && /^\d+$/.test(t) ? Number(t) : inicial;
+  const step = n <= (activa?.steps?.length ?? 0) ? n : inicial;
 
   const camera = leerCamara(p.get('cam'));
   return { path, state, selected, step, ...(camera !== undefined && { camera }) };

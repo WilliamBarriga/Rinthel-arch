@@ -75,4 +75,13 @@ describe('VistaInteractiva: Pasos de secuencia', () => {
     expect(opacidad(c.querySelector('[data-fragment-guard="2:1"]'))).toBe(1);
     expect(opacidad(c.querySelector('[data-message="i:4"]'))).toBe(0);
   });
+
+  it('sin Paso controlado, la Vista entra en su primer Paso (ADR 0009), no vacia', async () => {
+    const fuente = abrirSesion({ 'main.dg': cuerpo(vista) }).fuente!;
+    const { container: c } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={1200} height={900} />);
+    await esperar(c);
+    expect(opacidad(c.querySelector('[data-message="i:0"]'))).toBe(1);
+    expect(opacidad(c.querySelector('[data-message="i:2.0.0"]'))).toBe(0);
+    expect(c.querySelector('[data-pasos]')?.textContent).toContain('Paso 1 de 3');
+  });
 });
