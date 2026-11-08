@@ -98,6 +98,10 @@ export const CODIGOS = Object.freeze({
   E_THEME_FONT_NO_FALLBACK: 'E_THEME_FONT_NO_FALLBACK',
   /** El visor no recibe `fontUrl` y el Tema declara fuentes del Workspace: se mide y se pinta con otra fuente. */
   W_THEME_FONT_NOT_SERVED: 'W_THEME_FONT_NOT_SERVED',
+  /** Marca de clave (`pk`, `fk`, `uk`) repetida en un Atributo. */
+  E_DUPLICATE_KEY_MARK: 'E_DUPLICATE_KEY_MARK',
+  /** Cardinalidad fuera de `0..1 | 1 | 0..* | 1..*` en una Arista de una Vista ER. */
+  E_ER_CARDINALITY: 'E_ER_CARDINALITY',
 } as const);
 
 /** Union de los codigos activos; `Issue.code` sigue siendo `string` (ADR 0005). */
@@ -124,7 +128,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_INVALID_EXPANSION_TARGET: '`collapsed`/`expanded` sobre un Nodo que no es Grupo o que la Vista no muestra.',
   E_LINK_WITH_EXPANDED: 'El mismo Nodo tiene `link` y `expanded` en la misma Vista.',
   E_UNKNOWN_STEP: 'Un Paso nombra un Nodo, selector o Arista que no existe.',
-  E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture` ni `flow`.',
+  E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture`, `flow` ni `er`.',
   W_OVERLAPPING_PINS: 'Dos Nodos con `pin` se solapan en la Vista (aviso).',
   E_THEME_UNKNOWN_PRIMITIVE: 'Una Capa de Tema usa una Primitiva que no esta en el catalogo.',
   E_THEME_UNKNOWN_PROPERTY: 'Una Capa de Tema usa una propiedad que su Primitiva no declara.',
@@ -149,6 +153,8 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_THEME_CODE_COMPILE: 'Un `.tsx` de un Componente de Tema no compila; `file` y `line` apuntan al error.',
   E_THEME_FONT_MISSING: 'Una familia de `fonts` de un Tema no tiene archivo de fuente (`woff2|woff|ttf|otf`) en el Workspace; las genericas CSS no lo necesitan.',
   E_THEME_FONT_NO_FALLBACK: 'Un Tema declara una familia de `fonts` que no es generica CSS y no dice con que reservarla (`fallback "sans-serif"` o una generica en la misma lista).',
+  E_DUPLICATE_KEY_MARK: 'Un Atributo repite una marca de clave (`pk`, `fk`, `uk`); el `fix` borra la repetida.',
+  E_ER_CARDINALITY: 'Una Arista incluida en una Vista ER tiene una cardinalidad que no es `0..1`, `1`, `0..*` ni `1..*`; el `fix` propone el candidato cercano unico.',
   W_THEME_FONT_NOT_SERVED: 'El visor no sabe donde pedir los archivos de fuente del Tema (falta `fontUrl`): mide y pinta con la reserva, no con la fuente declarada.',
 });
 

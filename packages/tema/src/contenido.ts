@@ -3,7 +3,7 @@
  * Modulo hoja: lo usan `metricas` y `slots` sin depender uno del otro.
  */
 
-import type { Atributo, NodoResuelto } from 'canonico';
+import type { Atributo, ClaveDeAtributo, NodoResuelto } from 'canonico';
 
 import type { NombreDeSlot } from './catalogo';
 import { slotsDe } from './disposicion';
@@ -64,7 +64,41 @@ export function contenidoDeNodo(
   };
 }
 
-/** Texto de la fila de un Atributo; `render` escribe lo mismo. */
-export function textoDeAtributo(atributo: Atributo): string {
-  return `${atributo.name}: ${atributo.type}`;
+/**
+ * Texto de la fila de un Atributo; `render` escribe lo mismo. Con `marcas` (Vista ER) el tipo lleva `?` si el
+ * Atributo es opcional; fuera de ER la marca se ignora.
+ */
+export function textoDeAtributo(atributo: Atributo, marcas = false): string {
+  return `${atributo.name}: ${atributo.type}${marcas && atributo.optional === true ? '?' : ''}`;
+}
+
+/** Chip de una marca de clave en una fila ER: `derecha` es su distancia al borde derecho de la fila. */
+export interface ChipDeClave {
+  clave: ClaveDeAtributo;
+  texto: string;
+  derecha: number;
+  width: number;
+  /** Tamano de texto del chip. */
+  tamano: number;
+}
+
+const SEPARACION_DE_CHIPS = 4;
+const MARGEN_DERECHO_DE_CHIPS = 6;
+const HOLGURA_ANTES_DE_CHIPS = 12;
+
+/**
+ * Chips de clave de la fila de un Atributo, de derecha a izquierda en el orden de `keys`, solo en una Vista ER
+ * (`metricas.marcasDeClave`). Una sola colocacion para `tema` (ancho de la fila) y `render` (dibujo).
+ */
+export function chipsDeClaves(atributo: Pick<Atributo, 'keys'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave'>): ChipDeClave[] {
+  if (metricas.marcasDeClave !== true || atributo.keys === undefined) return [];
+  const tamano = Math.round(metricas.fontSize * metricas.escalaAtributo * 0.8 * 10) / 10;
+  const ancho = Math.ceil(2 * tamano * 0.62 + 8);
+  return atributo.keys.map((clave, i) => ({ clave, texto: clave.toUpperCase(), derecha: MARGEN_DERECHO_DE_CHIPS + i * (ancho + SEPARACION_DE_CHIPS), width: ancho, tamano }));
+}
+
+/** Ancho que los chips de clave suman a la fila (con la holgura que los separa del texto); 0 sin chips. */
+export function anchoDeChips(atributo: Pick<Atributo, 'keys'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave'>): number {
+  const ultimo = chipsDeClaves(atributo, metricas).at(-1);
+  return ultimo === undefined ? 0 : HOLGURA_ANTES_DE_CHIPS + ultimo.derecha + ultimo.width;
 }

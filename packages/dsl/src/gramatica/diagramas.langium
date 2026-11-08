@@ -53,8 +53,9 @@ Model:
 
 // `<origen> ["card"] -> ["card"] <destino> ["etiqueta"]`; los extremos son ids cualificados.
 // Los espacios alrededor de `->` son obligatorios: `-` es valido dentro de un Id.
+// ER: la palabra final `identifying` marca la relacion como identificante.
 Edge:
-  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint (label=String)?
+  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint (label=String)? (identifying?='identifying')?
 ;
 
 // Nodo por id cualificado (`a.b.c`) y, opcional, uno de sus Atributos (`a.b#col`).
@@ -69,7 +70,7 @@ Ref returns string:
 // otro archivo (o en otro bloque `model`).
 Extend:
   'extend' target=Ref '{'
-    (elements+=Element | attrs+=Attrs | sources+=Source)*
+    (elements+=Element | attrs+=Attrs | attributes+=Attribute | sources+=Source)*
   '}'
 ;
 
@@ -373,11 +374,12 @@ Element:
     (description=String)?
   )?
   ('{'
-    (elements+=Element | attrs+=Attrs | sources+=Source)*
+    (elements+=Element | attrs+=Attrs | attributes+=Attribute | sources+=Source)*
   '}')?
 ;
 
-// `attrs { nombre: tipo "notas" }`; el orden se conserva.
+// `attrs { nombre: tipo "notas" }`; el orden se conserva. Un Atributo tambien puede ir suelto en el cuerpo
+// del Nodo (`nombre: tipo`), que es la forma habitual en ER.
 Attrs:
   'attrs' '{' items+=Attribute* '}'
 ;
@@ -391,9 +393,13 @@ SourceItem:
   kind=Id ref=String
 ;
 
+// ER: `?` pegado al tipo es `optional`; `pk`, `fk` y `uk` (en cualquier orden) son las marcas de clave.
 Attribute:
-  name=Id ':' type=Id (notes=String)?
+  name=Id ':' type=Id (optional?='?')? (keys+=KeyMark)* (notes=String)?
 ;
+
+KeyMark returns string:
+  'pk' | 'fk' | 'uk';
 
 Id returns string:
   IdTerminal |
@@ -404,7 +410,8 @@ Id returns string:
   'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
-  'model' | 'node' | 'specification';
+  'model' | 'node' | 'specification' |
+  'pk' | 'fk' | 'uk' | 'identifying';
 
 // -------------------------
 // Comments

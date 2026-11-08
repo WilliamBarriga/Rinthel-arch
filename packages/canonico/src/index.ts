@@ -38,6 +38,8 @@
  * cadena `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`.
  */
 export {
+  CARDINALIDADES_ER,
+  CLAVES_DE_ATRIBUTO,
   fuenteCanonicaSchema,
   idDeNodoSchema,
   nodoSchema,
@@ -64,6 +66,7 @@ export type {
   Arista,
   Atributo,
   CatalogoDeTiposDeNodo,
+  ClaveDeAtributo,
   ElementoDePaso,
   Extremo,
   FuenteCanonica,

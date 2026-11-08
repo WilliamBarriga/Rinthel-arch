@@ -55,6 +55,8 @@ export interface Metricas {
   anchoMinimo: number;
   /** Holgura tras el contenido de un Nodo hoja: el `slack` de la raiz de la disposicion o el del nucleo. */
   paddingHorizontal: number;
+  /** Vista ER: las filas de Atributo dibujan chips de clave (`pk`, `fk`, `uk`) y el `?` de los opcionales. Ausente fuera de ER. */
+  marcasDeClave?: true;
   /** Margen izquierdo del titulo y de los Atributos. */
   margenDeTexto: number;
   /** Alto del Slot `title` de un Nodo. */
@@ -181,6 +183,14 @@ export interface TablaDeMetricas {
 }
 
 export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto, diagrama?: TipoDeDiagrama): TablaDeMetricas {
+  const tabla = tablaSinMarcas(tema, medidas, diagrama);
+  if (diagrama !== 'er') return tabla;
+  // Vista ER: todas las entradas dibujan marcas de clave; `claveDeMetricas` las distingue de las de arquitectura.
+  const conMarcas = (m: Metricas): Metricas => ({ ...m, marcasDeClave: true });
+  return { base: conMarcas(tabla.base), tipos: Object.fromEntries(Object.entries(tabla.tipos).map(([tipo, m]) => [tipo, conMarcas(m)])), grupoAbierto: conMarcas(tabla.grupoAbierto), grupoColapsado: conMarcas(tabla.grupoColapsado), etiqueta: conMarcas(tabla.etiqueta) };
+}
+
+function tablaSinMarcas(tema: Tema, medidas?: MedidasDeTexto, diagrama?: TipoDeDiagrama): TablaDeMetricas {
   const resuelto = temaParaDiagrama(resolverTema(tema), diagrama);
   const base = entradaDe(resuelto, cascada(resuelto), medidas);
   const claveBase = JSON.stringify(base);
@@ -246,3 +256,10 @@ export function tamanoDeEtiqueta(texto: string, metricas: Metricas): { width: nu
     height: Math.ceil(tamano * metricas.altoDeEtiqueta) + metricas.holguraVerticalDeEtiqueta,
   };
 }
+
+/**
+ * Largo del marcador de cardinalidad (pie de gallo) de una Arista de Vista ER, en px. `layout` garantiza que el
+ * tramo final de cada Arista a una tabla mida al menos esto; `render` lo usa como tamano por defecto del marcador
+ * (el Tema puede cambiar su `size`, acotado al tramo disponible).
+ */
+export const LARGO_DE_MARCADOR_ER = 12;
