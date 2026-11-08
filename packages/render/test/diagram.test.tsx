@@ -190,6 +190,7 @@ describe('Diagram: estructura hibrida', () => {
 
       expect(hoja).toMatch(/\.rd-nodo\{[^}]*--rd-borde:4px/);
       expect(hoja).toContain('.rd-icono{margin:calc(-1 * var(--rd-borde, 0px))');
+      expect(hoja).toContain('.rd-attrs{clip-path:inset(0 var(--rd-borde, 0px) var(--rd-borde, 0px))');
     });
 
     it('el estilo de texto (alpha, text-align) y el de caja del contador salen en la hoja', async () => {

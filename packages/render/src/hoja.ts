@@ -151,6 +151,8 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     // Capa con `zone`: franja propia de la caja (su rectangulo va en linea).
     ['& .rd-zona', { position: 'absolute', 'pointer-events': 'none', 'box-sizing': 'border-box' }],
     ['& .rd-slot, & .rd-icono', { margin: `calc(-1 * var(${VARIABLE_DE_BORDE}, 0px))` }],
+    // Las filas ocupan el rectangulo que reservo `layout` (hasta el borde exterior): el relleno no tapa los lados ni el pie del borde.
+    ['& .rd-attrs', { 'clip-path': `inset(0 var(${VARIABLE_DE_BORDE}, 0px) var(${VARIABLE_DE_BORDE}, 0px))` }],
     ['& .rd-slot', { position: 'absolute', overflow: 'hidden', 'white-space': 'nowrap', 'text-overflow': 'ellipsis', 'box-sizing': 'border-box' }],
     ['& .rd-title', { 'text-align': 'center' }],
     // El titulo de un Grupo es una cabecera: se alinea a la izquierda de su Slot (un `text-align` del Tema manda).
