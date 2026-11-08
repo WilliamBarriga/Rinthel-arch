@@ -7,7 +7,7 @@ import { idDeArista } from 'canonico';
 import type { NodoResuelto, Tema, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
-import { atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, contenidoDeNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
+import { LARGO_DE_MARCADOR_ER, atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, contenidoDeNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
 import type { MedidasDeTexto, Metricas, Rect, TablaDeMetricas } from 'tema';
 
 /** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
@@ -100,6 +100,7 @@ export async function layoutConMetricas(
   switch (vista.type) {
     case 'architecture':
     case 'flow':
+    case 'er':
       return layoutGrafo(vista, metricas, opciones);
   }
 }
@@ -149,6 +150,8 @@ async function layoutGrafo(
 function conPinsYPuertos(vista: VistaResuelta, medidas: TablaDeMetricas, base: GeometriaGrafo): GeometriaGrafo {
   const pinneada = aplicarPins(vista, base.nodes, base.edges, base.labels);
   const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
+  // ER: el pie de gallo necesita un tramo final horizontal de al menos su largo; se garantiza tras puertos y Pins.
+  if (vista.type === 'er') conPuertos.edges = garantizarTramosFinalesEr(vista, indiceDeGeometria(vista, { nodes: conPuertos.nodes }).cajas, conPuertos.edges);
   return { ...conPuertos, kind: 'grafo', nodes: conSlots(vista, medidas, conPuertos.nodes), width: base.width, height: base.height };
 }
 
@@ -274,6 +277,61 @@ function ajustarAPuertosDeAtributo(
   return rutas;
 }
 
+/**
+ * Tramo final de cada extremo de cada Arista de una Vista ER: horizontal y de al menos `LARGO_DE_MARCADOR_ER`,
+ * para que el marcador de cardinalidad no se monte sobre el codo. Un extremo que llega en vertical se pasa al
+ * lado del Nodo mas cercano a la ruta; uno corto aleja el codo previo (con el tramo vertical que lo sigue).
+ */
+function garantizarTramosFinalesEr(vista: VistaResuelta, cajas: ReadonlyMap<string, CajaDeNodo>, edges: Record<string, RutaDeArista>): Record<string, RutaDeArista> {
+  const rutas = { ...edges };
+  for (const arista of vista.edges) {
+    const id = idDeArista(arista);
+    const ruta = rutas[id];
+    const [origen, destino] = [cajas.get(arista.from.node), cajas.get(arista.to.node)];
+    if (ruta === undefined || ruta.points.length < 2 || origen === undefined || destino === undefined) continue;
+    let puntos = ruta.points;
+    // Una ruta de dos puntos se parte antes: los dos extremos piden su tramo y se reparten el recorrido.
+    if (puntos.length === 2) {
+      const [a, b] = [puntos[0]!, puntos[1]!];
+      const medio = (a.x + b.x) / 2;
+      puntos = [a, { x: medio, y: a.y }, { x: medio, y: b.y }, b];
+    }
+    puntos = tramoFinal(puntos, origen, 'inicio');
+    puntos = tramoFinal(puntos, destino, 'fin');
+    rutas[id] = { points: puntos };
+  }
+  return rutas;
+}
+
+function tramoFinal(puntos: Punto[], caja: CajaDeNodo, lado: 'inicio' | 'fin'): Punto[] {
+  const p = lado === 'inicio' ? [...puntos] : [...puntos].reverse();
+  // `p[0]` es el puerto, `p[1]` el codo previo.
+  let [puerto, codo] = [p[0]!, p[1]!];
+  if (puerto.y !== codo.y) {
+    // Llega en vertical: el puerto pasa al borde lateral del Nodo del lado de la ruta, a la altura del codo (acotada al Nodo).
+    const derecha = codo.x >= caja.x + caja.width / 2;
+    const y = Math.min(Math.max(puerto.y, caja.y + 1), caja.y + caja.height - 1);
+    puerto = { x: derecha ? caja.x + caja.width : caja.x, y };
+    p.splice(0, 2, puerto, { x: codo.x, y }, codo);
+    codo = p[1]!;
+  }
+  const hacia = Math.sign(codo.x - puerto.x) || (puerto.x <= caja.x + caja.width / 2 ? -1 : 1);
+  if (Math.abs(codo.x - puerto.x) < LARGO_DE_MARCADOR_ER || Math.sign(codo.x - puerto.x) !== hacia) {
+    const x = puerto.x + hacia * LARGO_DE_MARCADOR_ER;
+    const siguiente = p[2];
+    // El tramo que sale del codo era vertical: se desplaza con el. Si no, se anade un tramo vertical.
+    if (siguiente !== undefined && siguiente.x === codo.x) {
+      p[1] = { x, y: codo.y };
+      p[2] = { x, y: siguiente.y };
+    } else if (siguiente === undefined) {
+      p[1] = { x, y: codo.y };
+    } else {
+      p.splice(1, 1, { x, y: codo.y }, { x, y: siguiente.y });
+    }
+  }
+  return lado === 'inicio' ? p : p.reverse();
+}
+
 function moverPuerto(puntos: Punto[], lado: 'inicio' | 'fin', y: number): Punto[] {
   const copia = lado === 'inicio' ? [...puntos].reverse() : [...puntos];
   const fin = copia[copia.length - 1]!;
@@ -354,7 +412,7 @@ export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Me
   const tabla = comoTabla(metricas);
   return JSON.stringify({
     tipo: vista.type,
-    nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => [a.name, a.type])]),
+    nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => (vista.type === 'er' ? [a.name, a.type, a.keys, a.optional] : [a.name, a.type]))]),
     aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
     metricas: claveDeMetricas(tabla),
   });

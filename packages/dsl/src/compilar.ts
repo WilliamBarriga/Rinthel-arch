@@ -6,6 +6,7 @@ import { CODIGOS, TIPOS_DE_VISTA, combineIconProviders, fuenteCanonicaSchema, ge
 import type {
   Arista,
   Atributo,
+  ClaveDeAtributo,
   ElementoDePaso,
   Extremo,
   FuenteCanonica,
@@ -27,8 +28,8 @@ import {
 import type { LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Attrs, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, View } from './generated/ast';
-import { issueConSugerencia, rangoDe } from './posiciones';
+import type { Attrs, Attribute, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, View } from './generated/ast';
+import { issueConSugerencia, rangoDe, rangoDeIndice } from './posiciones';
 import { ARCHIVO_INCORPORADOS, temasIncorporados } from './incorporados';
 import { resolverTemas } from './temas';
 import type { DeclaracionDeParte, OrigenDeTema, TemaDeclarado } from './temas';
@@ -317,7 +318,7 @@ function compilarElemento(
     type: elemento.type,
     title: elemento.title ?? elemento.name,
     description: elemento.description ?? '',
-    attributes: atributosDe(elemento.attrs),
+    attributes: atributosDe(elemento.attrs, elemento.attributes, archivo, issues),
     source: referenciasDe(elemento.sources),
     children: [],
   };
@@ -361,16 +362,41 @@ function compilarExtension(extension: Extend, archivo: string, contexto: Context
   const objetivo = contexto.registro.get(extension.target);
   if (objetivo === undefined) return false;
   const { nodo } = objetivo;
-  nodo.attributes.push(...atributosDe(extension.attrs));
+  nodo.attributes.push(...atributosDe(extension.attrs, extension.attributes, archivo, contexto.issues));
   nodo.source.push(...referenciasDe(extension.sources));
   nodo.children.push(...compilarHijos(extension.elements, nodo.id, archivo, contexto));
   return true;
 }
 
-function atributosDe(bloques: readonly Attrs[]): Atributo[] {
-  return bloques.flatMap((bloque) =>
-    bloque.items.map((item) => ({ name: item.name, type: item.type, notes: item.notes ?? '' })),
-  );
+/**
+ * Atributos de un Nodo: los de sus bloques `attrs` y los sueltos en el cuerpo, en ese orden.
+ * Una marca de clave repetida es `E_DUPLICATE_KEY_MARK` (con `fix` que borra la repetida) y se guarda una sola vez.
+ */
+function atributosDe(bloques: readonly Attrs[], sueltos: readonly Attribute[], archivo: string, issues: Issue[]): Atributo[] {
+  return [...bloques.flatMap((bloque) => bloque.items), ...sueltos].map((item) => {
+    const claves = [...new Set(item.keys)] as ClaveDeAtributo[];
+    item.keys.forEach((clave, i) => {
+      if (item.keys.indexOf(clave) === i) return;
+      const { start, end } = rangoDeIndice(item, 'keys', i);
+      const previo = rangoDeIndice(item, 'keys', i - 1);
+      issues.push({
+        code: CODIGOS.E_DUPLICATE_KEY_MARK,
+        severity: 'error',
+        file: archivo,
+        ...start,
+        message: `Marca de clave '${clave}' repetida en el Atributo '${item.name}'`,
+        // Se borra la repetida junto con el espacio que la separa de la marca anterior.
+        fix: { file: archivo, range: { start: previo.start.line === start.line ? previo.end : start, end }, replacement: '' },
+      });
+    });
+    return {
+      name: item.name,
+      type: item.type,
+      notes: item.notes ?? '',
+      ...(claves.length > 0 && { keys: claves }),
+      ...(item.optional && { optional: true }),
+    };
+  });
 }
 
 function referenciasDe(bloques: readonly Source[]): ReferenciaOpaca[] {
@@ -392,6 +418,7 @@ function compilarArista(arista: Edge): Arista {
     ...(arista.fromCardinality !== undefined && { fromCardinality: arista.fromCardinality }),
     ...(arista.toCardinality !== undefined && { toCardinality: arista.toCardinality }),
     ...(arista.label !== undefined && { label: arista.label }),
+    ...(arista.identifying && { identifying: true }),
   };
 }
 

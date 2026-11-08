@@ -86,9 +86,10 @@ export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, Nom
 export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
 export { GRUPO_POR_DEFECTO, TEMA_NEUTRO, leerOps, resolverTema, temaParaDiagrama, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
-export { atributosVisibles, contenidoDeNodo, muestra, textoDeAtributo } from './contenido';
+export { anchoDeChips, atributosVisibles, chipsDeClaves, contenidoDeNodo, muestra, textoDeAtributo } from './contenido';
+export type { ChipDeClave } from './contenido';
 export type { ContenidoDeNodo } from './contenido';
-export { claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta } from './metricas';
+export { LARGO_DE_MARCADOR_ER, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta } from './metricas';
 export type { Metricas, TablaDeMetricas } from './metricas';
 export { anchoDeTexto, claveDeTexto, hashDeFuente } from './medicion';
 export type { MedicionDeMetricas, MedidasDeTexto, TextoAMedir } from './medicion';

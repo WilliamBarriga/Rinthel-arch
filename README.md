@@ -84,7 +84,7 @@ Por dentro: el glosario esta en [CONTEXT.md](CONTEXT.md), las decisiones en [doc
 
 ## Estado
 
-Version 0.x, sin publicar en npm: el DSL y los contratos de los paquetes pueden cambiar entre versiones. Soporta los Tipos de diagrama `architecture` y `flow`; secuencia y ER vienen despues. El trabajo pendiente vive en los [issues](https://github.com/WilliamBarriga/Rinthel-arch/issues).
+Version 0.x, sin publicar en npm: el DSL y los contratos de los paquetes pueden cambiar entre versiones. Soporta los Tipos de diagrama `architecture`, `flow` y `er`; secuencia viene despues. El trabajo pendiente vive en los [issues](https://github.com/WilliamBarriga/Rinthel-arch/issues).
 
 ## Contribuir
 

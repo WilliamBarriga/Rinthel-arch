@@ -25,7 +25,7 @@ alias dg="node $PWD/packages/cli/dist/bin.js"
 
 ## Los conceptos en un minuto
 
-Un **Workspace** es una carpeta de archivos `.dg`. Todos se fusionan en un unico **Modelo** (los Nodos y las Aristas de tu proyecto). Una **Vista** elige que parte del Modelo se dibuja y de que **Tipo de diagrama** (`architecture` o `flow`). Un **Tema** decide como se ve. El vocabulario completo esta en [CONTEXT.md](../../CONTEXT.md).
+Un **Workspace** es una carpeta de archivos `.dg`. Todos se fusionan en un unico **Modelo** (los Nodos y las Aristas de tu proyecto). Una **Vista** elige que parte del Modelo se dibuja y de que **Tipo de diagrama** (`architecture`, `flow` o `er`). Un **Tema** decide como se ve. El vocabulario completo esta en [CONTEXT.md](../../CONTEXT.md).
 
 Un archivo `.dg` tiene hasta cinco clases de bloque:
 

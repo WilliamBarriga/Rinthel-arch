@@ -157,8 +157,9 @@ function elevarAristas(
     if (previa === undefined) {
       fusionadas.set(clave, { ...arista, from, to, count: 1 });
     } else {
-      const { fromCardinality, toCardinality, label, ...sinCardinalidad } = previa;
-      fusionadas.set(clave, { ...sinCardinalidad, count: previa.count + 1 });
+      const { fromCardinality, toCardinality, label, identifying, ...sinCardinalidad } = previa;
+      // Una linea fusionada es identificante solo si todas las Aristas que agrupa lo son.
+      fusionadas.set(clave, { ...sinCardinalidad, ...(identifying === true && arista.identifying === true && { identifying }), count: previa.count + 1 });
     }
   }
   return [...fusionadas.values()];

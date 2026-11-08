@@ -7,8 +7,8 @@
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
 import type { CajaDeNodo } from 'layout';
-import { alturaDeCabecera, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
-import type { ContenidoDeNodo, Metricas, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeNodo, Rect } from 'tema';
+import { LARGO_DE_MARCADOR_ER, alturaDeCabecera, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
+import type { ContenidoDeNodo, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
 
 import { pintarMarcadores, pintarTrazos, rutaDeCapa } from './aristas';
 import { limpiarValorCss, num } from './elemento';
@@ -73,7 +73,7 @@ const PINTORES_DE_SLOT: { readonly [S in NombreDeSlot]: (contexto: ContextoDeSlo
   footer: (contexto, rect) => pintarTexto('footer', contexto, rect),
   counter: (contexto, rect) => pintarTexto('counter', contexto, rect),
   icon: ({ datos, textos }, rect) => pintarIcono(textos, datos.nodo, datos.trazo, datos.icons, rect),
-  attrs: ({ estilo, datos, atributos }, rect) => (atributos.length === 0 ? [] : [pintarAtributos(estilo, datos.nodo.id, atributos, rect)]),
+  attrs: ({ estilo, datos, atributos, metricas }, rect) => (atributos.length === 0 ? [] : [pintarAtributos(estilo, datos.nodo.id, atributos, rect, metricas)]),
 };
 
 /** Cada Slot que el Tema lista para `metricas`, en su rectangulo dentro de una caja de `ancho`. `conAtributos`: si se dibujan las filas de `attrs`. */
@@ -125,8 +125,9 @@ function pintarIcono(textos: PinturaDeNodo['textos'], nodo: NodoResuelto, trazo:
 }
 
 /** Slot `attrs`: una fila de texto por Atributo, en orden, cada una en su rectangulo (relativo al Slot). */
-function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect): Elemento {
+function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect, metricasDeNodo: Metricas): Elemento {
   const { metricas } = estilo;
+  const marcas = metricasDeNodo.marcasDeClave === true;
   return {
     tag: 'div',
     attrs: { class: `rd-slot rd-attrs${zona.y > 0 ? ' rd-separado' : ''}`, 'data-slot': 'attrs', style: enRect(zona) },
@@ -137,7 +138,19 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atribut
         'data-attribute': `${id}#${atributo.name}`,
         style: enRect({ x: 0, y: i * metricas.fila, width: zona.width, height: metricas.fila }, `line-height:${num(metricas.fila)}px;`),
       },
-      hijos: [textoDeAtributo(atributo)],
+      hijos: [
+        textoDeAtributo(atributo, marcas),
+        // Vista ER: un chip por marca de clave, pegado al borde derecho de la fila.
+        ...chipsDeClaves(atributo, metricasDeNodo).map((chip): Elemento => ({
+          tag: 'span',
+          attrs: {
+            class: 'rd-clave',
+            'data-key': chip.clave,
+            style: `right:${num(chip.derecha)}px;width:${num(chip.width)}px;font-size:${num(chip.tamano)}px;line-height:${num(chip.tamano + 4)}px;top:${num((metricas.fila - chip.tamano - 4) / 2)}px;`,
+          },
+          hijos: [chip.texto],
+        })),
+      ],
     })),
   };
 }
@@ -163,11 +176,14 @@ export function pintarControl(estilo: Estilo, { nodo, caja, alClic }: { nodo: No
  */
 export function pintarArista(
   estilo: Estilo,
-  datos: { id: string; puntos: readonly Punto[]; origen?: string; desde?: string; hasta?: string; atributos?: Record<string, string>; extra?: Elemento[]; alClic?: () => void },
+  datos: { id: string; puntos: readonly Punto[]; origen?: string; desde?: string; hasta?: string; er?: { identificante: boolean }; atributos?: Record<string, string>; extra?: Elemento[]; alClic?: () => void },
 ): Elemento {
-  const { id, puntos, origen, desde, hasta, atributos = {}, extra = [], alClic } = datos;
+  const { id, puntos, origen, er, atributos = {}, extra = [], alClic } = datos;
   const { arista, metricas } = estilo;
-  const pintura = (origen === undefined ? undefined : estilo.pintura.arista.origenes[origen]) ?? estilo.pintura.arista;
+  const delTema = (origen === undefined ? undefined : estilo.pintura.arista.origenes[origen]) ?? estilo.pintura.arista;
+  // Vista ER: los marcadores de cardinalidad sustituyen a los del Tema y al texto de la cardinalidad.
+  const pintura = er === undefined ? delTema : pinturaEr(delTema, puntos, datos.desde, datos.hasta, er.identificante);
+  const [desde, hasta] = er === undefined ? [datos.desde, datos.hasta] : [undefined, undefined];
   const extremos = [
     ['from', desde, puntos[0]!, puntos[1]!],
     ['to', hasta, puntos[puntos.length - 1]!, puntos[puntos.length - 2]!],
@@ -202,6 +218,33 @@ export function pintarArista(
       ...extra,
     ],
   };
+}
+
+/** Marcador de pie de gallo de cada cardinalidad canonica de una Vista ER. */
+const FORMA_ER: Readonly<Record<string, NombreDePrimitiva>> = { '1': 'one', '0..1': 'zero-one', '1..*': 'many', '0..*': 'zero-many' };
+
+/**
+ * Pintura de una Arista de Vista ER (ADR 0009): linea continua si es identificante y discontinua si no; sin flechas;
+ * en cada extremo el marcador de su cardinalidad (ninguno si falta o no es canonica). Color y tamano salen del marcador
+ * del Tema (`fin`, si no `origen`) o del trazo principal; el tamano se acota al tramo final disponible.
+ */
+function pinturaEr(base: PinturaDeArista, puntos: readonly Punto[], desde: string | undefined, hasta: string | undefined, identificante: boolean): PinturaDeArista {
+  const capas = base.capas.map((capa) => {
+    const estilo = capa.props['style'];
+    return estilo === 'solid' || estilo === 'dashed' ? { ...capa, props: { ...capa.props, style: identificante ? 'solid' : 'dashed' } } : capa;
+  });
+  const delTema = base.fin ?? base.origen;
+  const color = delTema?.props['color'] ?? capas.at(-1)?.props['color'] ?? '';
+  const tamano = Number(delTema?.props['size'] ?? LARGO_DE_MARCADOR_ER);
+  const largo = (a: Punto | undefined, b: Punto | undefined): number => (a === undefined || b === undefined ? tamano : Math.hypot(a.x - b.x, a.y - b.y));
+  const marcador = (cardinalidad: string | undefined, a: Punto | undefined, b: Punto | undefined): PrimitivaPintada | undefined => {
+    const tipo = cardinalidad === undefined ? undefined : FORMA_ER[cardinalidad];
+    return tipo === undefined ? undefined : { tipo, props: { color, size: Math.min(tamano, largo(a, b)) } };
+  };
+  const [primero, segundo, penultimo, ultimo] = [puntos[0], puntos[1], puntos[puntos.length - 2], puntos[puntos.length - 1]];
+  const origen = marcador(desde, primero, segundo);
+  const fin = marcador(hasta, ultimo, penultimo);
+  return { capas, etiqueta: base.etiqueta, ...(origen !== undefined && { origen }), ...(fin !== undefined && { fin }) };
 }
 
 /** Punto de una etiqueta sin caja propia: medio del segmento mas largo de la ruta, subido `elevacionEtiquetaSinCaja`. Compartido con el hit-test del shell. */

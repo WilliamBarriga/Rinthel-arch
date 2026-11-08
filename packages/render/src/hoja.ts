@@ -146,6 +146,8 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-counter', { 'text-align': 'center', 'font-weight': '700' }],
     ['& .rd-separado', { 'border-top': '1px solid var(--trazo, currentColor)' }],
     ['& .rd-fila', { position: 'absolute', 'white-space': 'nowrap', overflow: 'hidden', 'text-overflow': 'ellipsis', 'padding-left': px(metricas.margenDeTexto), 'box-sizing': 'border-box', 'font-family': css(estilo.fuenteMono), 'font-size': px(metricas.fontSize * metricas.escalaAtributo) }],
+    // Chip de marca de clave (ER): caja con borde del color del texto, sobre el borde derecho de la fila.
+    ['& .rd-clave', { position: 'absolute', 'box-sizing': 'border-box', 'text-align': 'center', border: '1px solid currentColor', 'border-radius': '3px', opacity: '0.75', 'font-weight': '600' }],
     ['& .rd-icono', { position: 'absolute', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'box-sizing': 'border-box' }],
     // El control de colapso es chrome de interaccion, no parte del Tema: aparece al pasar por su caja o con el foco dentro.
     ['& .rd-control', { position: 'absolute', 'text-align': 'center', cursor: 'pointer', 'font-family': css(estilo.fuenteMono), opacity: '0', transition: 'opacity 120ms' }],
