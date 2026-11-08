@@ -221,6 +221,60 @@ function texto(x: number, y: number, contenido: string, estilo: Estilo, extra: R
   };
 }
 
+function envolver(t: string, max: number, porCaracter: number): string[] {
+  const lineas: string[] = [];
+  let actual = '';
+  for (const palabra of t.split(' ')) {
+    const prueba = actual === '' ? palabra : `${actual} ${palabra}`;
+    if (prueba.length * porCaracter > max && actual !== '') {
+      lineas.push(actual);
+      actual = palabra;
+    } else actual = prueba;
+  }
+  return [...lineas, actual];
+}
+
+const colorDeNota = (estilo: Estilo): string => estilo.paleta['amber'] ?? estilo.paleta['yellow'] ?? estilo.borde;
+
+/** Variante B: papel con esquina doblada, tinte suave del color de nota, texto normal. */
+function notaPapel(x: number, y: number, w: number, h: number, lineas: string[], fs: number, estilo: Estilo): Elemento {
+  const c = colorDeNota(estilo);
+  const d = 10;
+  return {
+    tag: 'g',
+    attrs: { class: 'nota-B' },
+    hijos: [
+      { tag: 'path', attrs: { d: `M ${r(x)} ${r(y)} H ${r(x + w - d)} L ${r(x + w)} ${r(y + d)} V ${r(y + h)} H ${r(x)} Z`, fill: estilo.fondo, stroke: 'none' } },
+      { tag: 'path', attrs: { d: `M ${r(x)} ${r(y)} H ${r(x + w - d)} L ${r(x + w)} ${r(y + d)} V ${r(y + h)} H ${r(x)} Z`, fill: c, 'fill-opacity': 0.16, stroke: c, 'stroke-opacity': 0.7, 'stroke-width': 1 } },
+      { tag: 'path', attrs: { d: `M ${r(x + w - d)} ${r(y)} V ${r(y + d)} H ${r(x + w)}`, fill: 'none', stroke: c, 'stroke-opacity': 0.7, 'stroke-width': 1 } },
+      ...lineas.map((l, i) => texto(x + 12, y + 9 + fs * (i + 1) * 1.2, l, estilo, { fill: estilo.texto === estilo.fondo ? c : estilo.texto })),
+    ],
+  };
+}
+
+/** Variante C: sin caja; barra de acento a la izquierda y texto en cursiva sobre un velo del fondo. */
+function notaMargen(x: number, y: number, w: number, h: number, lineas: string[], fs: number, estilo: Estilo): Elemento {
+  const c = colorDeNota(estilo);
+  return {
+    tag: 'g',
+    attrs: { class: 'nota-C' },
+    hijos: [
+      { tag: 'rect', attrs: { x: r(x), y: r(y), width: r(w), height: r(h), fill: estilo.fondo, 'fill-opacity': 0.88 } },
+      { tag: 'rect', attrs: { x: r(x), y: r(y), width: 3, height: r(h), fill: c } },
+      ...lineas.map((l, i) => texto(x + 12, y + 9 + fs * (i + 1) * 1.2, l, estilo, { 'font-style': 'italic' })),
+    ],
+  };
+}
+
+/** ER: una forma `pill` en una caja alta queda circular; la tabla la dibuja como `rect` con radio acotado. */
+function formasDeTabla(pintura: unknown): unknown {
+  if (Array.isArray(pintura)) return pintura.map(formasDeTabla);
+  if (pintura === null || typeof pintura !== 'object') return pintura;
+  const o = pintura as Record<string, unknown>;
+  if (o['tipo'] === 'pill' && typeof o['nombre'] === 'string') return { ...o, tipo: 'rect', props: { radius: 14 } };
+  return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, formasDeTabla(v)]));
+}
+
 /** Inyecta elementos en la capa SVG de Aristas de la escena (entre Grupos y Nodos, como las Aristas reales). */
 function inyectarEnAristas(escena: Elemento, extra: Elemento[]): void {
   const visitar = (e: Elemento): boolean => {
@@ -309,6 +363,7 @@ function secuencia(geoParticipantes: Geometria, vistaParticipantes: VistaResuelt
 
   const svgMensajes: Elemento[] = [];
   const svgEncima: Elemento[] = [];
+  const svgNotas: Elemento[] = [];
   const pilas = new Map<string, { inicio: number; nivel: number }[]>(orden.map((id) => [id, []]));
   const activaciones: { id: string; lifeline: string; x: number; y0: number; y1: number }[] = [];
   const fin = new Map<string, number>();
@@ -406,7 +461,13 @@ function secuencia(geoParticipantes: Geometria, vistaParticipantes: VistaResuelt
         notas.push({ id: it.id, caja: caja_ });
         hijosDe?.push(it.id);
         tocar(caja_.x, caja_.x + caja_.width);
-        y += c.height;
+        const txt = porId.get(it.id)!.label;
+        const lineas = envolver(txt, 200, fs * estilo.metricas.factorDeAncho);
+        const altoB = lineas.length * fs * 1.35 + 18;
+        const anchoB = Math.max(...lineas.map((l) => l.length)) * fs * estilo.metricas.factorDeAncho + 28;
+        const xB = it.lado === 'over' ? xc - anchoB / 2 : xc + 18;
+        svgNotas.push(notaPapel(xB, y, anchoB, altoB, lineas, fs, estilo), notaMargen(xB, y, anchoB, altoB, lineas, fs, estilo));
+        y += Math.max(c.height, altoB);
         continue;
       }
       // Fragmento
@@ -461,7 +522,7 @@ function secuencia(geoParticipantes: Geometria, vistaParticipantes: VistaResuelt
   const svgGuardas: Elemento[] = [];
   for (const f of fragmentos) {
     for (const g of f.guardas)
-      if (g.texto !== undefined) svgGuardas.push(texto(f.caja.x + 12, g.y + 4, g.texto, estilo, { 'font-style': 'italic', stroke: estilo.fondo, 'stroke-width': 4, 'paint-order': 'stroke' }));
+      if (g.texto !== undefined) svgGuardas.push(texto(f.caja.x + 12, g.y + 4, g.texto, estilo, { fill: colorTrazo, 'font-style': 'italic', stroke: estilo.fondo, 'stroke-width': 4, 'paint-order': 'stroke' }));
     for (const d of f.divisores)
       svgFragmentos.push({ tag: 'line', attrs: { x1: r(f.caja.x), y1: r(d), x2: r(f.caja.x + f.caja.width), y2: r(d), stroke: estilo.borde, 'stroke-width': 1.25, 'stroke-dasharray': '6 4' } });
   }
@@ -494,7 +555,7 @@ function secuencia(geoParticipantes: Geometria, vistaParticipantes: VistaResuelt
   const ancho = Math.max(...Object.values(geo.nodes).map((c) => c.x + c.width)) + 40;
   geo.width = ancho;
   const vista: VistaResuelta = { nodes: [...grupos, ...nodos], edges: [], overrides: [], steps: [] };
-  return { vista, geometria: geo, svg: [...svgFragmentos, ...svgLifelines, ...svgMensajes, ...svgEncima], guardas: svgGuardas, quitar, vaciar: new Set(activaciones.map((a) => a.id)), notas: new Set(notas.map((n) => n.id)) };
+  return { vista, geometria: geo, svg: [...svgFragmentos, ...svgLifelines, ...svgMensajes, ...svgEncima], guardas: [...svgGuardas, ...svgNotas], quitar, vaciar: new Set(activaciones.map((a) => a.id)), notas: new Set(notas.map((n) => n.id)) };
 }
 
 // ---------------------------------------------------------------- ER
@@ -559,14 +620,15 @@ export async function construir(): Promise<string> {
       quitarSlots(escenaS, s.notas, new Set(['badge', 'icon']));
       inyectarEnAristas(escenaS, s.svg);
       inyectarEncima(escenaS, s.guardas, s.geometria.width, s.geometria.height);
-      dibujos.push(`<h2>Secuencia: checkout</h2>${serializar(escenaS)}`);
+      dibujos.push(`<h2 style="color:${trazo(estilo.pintura.arista).color}">Secuencia: checkout</h2>${serializar(escenaS)}`);
 
       const gE = (await sesion.geometria('er'))!.geometry;
       const vE = resolveView(fuente, 'er')!;
       const e = er(vE, gE, estilo);
-      const escenaE = construirEscena({ view: e.vista, geometry: gE, theme: tema, estilo, icons: iconos, width: gE.width, height: gE.height, urlDeFuente, reducedMotion: 'on' });
+      const estiloEr = { ...estilo, pintura: formasDeTabla(estilo.pintura) as Estilo['pintura'] };
+      const escenaE = construirEscena({ view: e.vista, geometry: gE, theme: tema, estilo: estiloEr, icons: iconos, width: gE.width, height: gE.height, urlDeFuente, reducedMotion: 'on' });
       inyectarEnAristas(escenaE, e.svg);
-      dibujos.push(`<h2>ER: pedidos</h2>${serializar(escenaE)}`);
+      dibujos.push(`<h2 style="color:${trazo(estilo.pintura.arista).color}">ER: pedidos</h2>${serializar(escenaE)}`);
     } catch (error) {
       dibujos.push(`<pre>${String((error as Error).stack)}</pre>`);
     }
@@ -583,6 +645,13 @@ function pagina(nombres: string[], secciones: string[]): string {
   section.activa { display: block; }
   section h2 { font-size: 15px; font-weight: 600; margin: 18px 0 6px; opacity: .8; }
   section [data-diagram] { position: relative; overflow: hidden; }
+  /* El prototipo estima el ancho del texto (sin la fuente real): la pestana del Fragmento no se recorta. */
+  .rd-grupo .rd-title { width: auto !important; overflow: visible !important; white-space: nowrap; }
+  body:not(.nota-A) [data-id="n1"], body:not(.nota-A) [data-id="n2"] { display: none; }
+  body:not(.nota-B) .nota-B, body:not(.nota-C) .nota-C { display: none; }
+  #notas { display: flex; gap: 4px; }
+  #barra #notas button { width: auto; height: 28px; padding: 0 10px; font: 600 12px system-ui; white-space: nowrap; }
+  #notas button.on { background: #fff; color: #111; }
   .aviso { position: fixed; top: 8px; right: 12px; z-index: 10; font: 12px system-ui; background: #111; color: #fff; padding: 4px 10px; border-radius: 6px; opacity: .75; }
   #barra { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; gap: 10px; align-items: center;
     background: #111; color: #fff; font: 600 14px system-ui; padding: 8px 14px; border-radius: 999px; box-shadow: 0 6px 24px #0007; }
@@ -591,7 +660,7 @@ function pagina(nombres: string[], secciones: string[]): string {
 </style></head><body>
 <div class="aviso">PROTOTIPO, desechable: rama prototype/tipos-diagrama</div>
 ${secciones.join('\n')}
-<div id="barra"><button id="ant" aria-label="Anterior">&#8592;</button><span id="etq"></span><button id="sig" aria-label="Siguiente">&#8594;</button></div>
+<div id="barra"><button id="ant" aria-label="Anterior">&#8592;</button><span id="etq"></span><button id="sig" aria-label="Siguiente">&#8594;</button><span style="min-width:0;opacity:.7">Nota:</span><span id="notas" style="min-width:0"><button data-n="A">A nodo</button><button data-n="B">B papel</button><button data-n="C">C margen</button></span></div>
 <script>
   const variantes = ${JSON.stringify(nombres)};
   function mostrar(v) {
@@ -614,6 +683,15 @@ ${secciones.join('\n')}
     if (e.key === 'ArrowLeft') ir(-1);
     if (e.key === 'ArrowRight') ir(1);
   });
+  function nota(n) {
+    const p = new URLSearchParams(location.search);
+    p.set('nota', n);
+    history.replaceState(null, '', '?' + p);
+    document.body.className = 'nota-' + n;
+    document.querySelectorAll('#notas button').forEach((b) => b.classList.toggle('on', b.dataset.n === n));
+  }
+  document.querySelectorAll('#notas button').forEach((b) => (b.onclick = () => nota(b.dataset.n)));
+  nota(new URLSearchParams(location.search).get('nota') ?? 'B');
   mostrar(new URLSearchParams(location.search).get('variant') ?? variantes[0]);
 </script></body></html>`;
 }
