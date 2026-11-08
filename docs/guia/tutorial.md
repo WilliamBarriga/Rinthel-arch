@@ -1,6 +1,6 @@
 # Tutorial: un diagrama pequeno y su personalizacion
 
-Vas a describir una tienda en linea con cuatro piezas, verla en el visor y cambiar su estetica en tres pasos. Cada paso es un Workspace completo en [`examples/tutorial/`](../../examples/tutorial/), asi que puedes abrirlo y comparar con lo que escribes. Una prueba del repo valida los cinco, para que el tutorial no se desactualice.
+Vas a describir una tienda en linea con cuatro piezas, verla en el visor y cambiar su estetica en tres pasos. Cada paso es un Workspace completo en [`examples/tutorial/`](../../examples/tutorial/), asi que puedes abrirlo y comparar con lo que escribes. Una prueba del repo valida los seis, para que el tutorial no se desactualice.
 
 Necesitas haber hecho el [inicio rapido](inicio-rapido.md) (`pnpm install && pnpm build`); `dg` es el alias del CLI que se define alli.
 
@@ -14,7 +14,7 @@ dg dev --workspace mi-tienda
 
 Crea `mi-tienda/tienda.dg`:
 
-```
+```dg
 specification {
   node actor    { description "Quien usa el sistema"  icon user     color purple }
   node servicio { description "Pieza de logica"       icon server   color blue }
@@ -176,20 +176,51 @@ Pasa el raton sobre un Nodo para ver el glow cambiar y compara con el glow pulsa
 
 El mismo Modelo se dibuja de otras formas cambiando el `type` de la Vista. [`examples/tutorial/paso-6`](../../examples/tutorial/paso-6) suma a la tienda una **Interaccion** (un escenario ordenado entre Nodos, con un Fragmento `alt` y una Nota) y dos tablas con claves:
 
-```
-interaction comprar "Comprar" {
-  cliente -> api "POST /pedidos"
-  api -> tienda.pedidos "registrar"
-  alt "pago aprobado" {
-    tienda.pedidos -> tienda.pagos "cobrar"
-  } else "pago rechazado" {
-    reply tienda.pagos -> tienda.pedidos "rechazado"
+```dg
+specification {
+  node actor    { icon user     color purple }
+  node servicio { icon server   color blue }
+  node almacen  { icon database color green }
+}
+
+model {
+  actor cliente "Cliente"
+  servicio api "API"
+  servicio pedidos "Pedidos"
+  servicio pagos "Pagos"
+
+  almacen clientes "Clientes" {
+    id: uuid pk
+    email: text? uk
+  }
+  almacen pedidos-tabla "Pedidos" {
+    id: uuid pk
+    cliente_id: uuid fk
+    total: decimal "en centavos"
+  }
+  pedidos-tabla#cliente_id "0..*" -> "1" clientes#id "pertenece a"
+
+  interaction comprar "Comprar" {
+    cliente -> api "POST /pedidos"
+    api -> pedidos "registrar"
+    alt "pago aprobado" {
+      pedidos -> pagos "cobrar"
+    } else "pago rechazado" {
+      reply pagos -> pedidos "rechazado"
+    }
+    note right of pagos "idempotente"
+    reply api -> cliente "201"
   }
 }
 
-view comprar-secuencia { theme tienda  type sequence  interaction comprar  autonumber }
-view tablas { theme tienda  type er  include datos.clientes, datos.pedidos-tabla }
+view comprar-secuencia { type sequence  interaction comprar  autonumber }
+view tablas { type er  include clientes, pedidos-tabla }
 ```
+
+![Secuencia de la compra, con el Tema tienda](../img/tutorial/paso-6-secuencia-tienda.png)
+
+![Tablas ER, con el Tema tienda](../img/tutorial/paso-6-er-tienda.png)
+
 
 Las Lifelines son los Nodos del Modelo; la Vista `er` dibuja cada Nodo hoja como tabla y las Aristas con cardinalidad (`"0..*" -> "1"`) como claves foraneas. El Tema `tienda` se aplica sin cambios: lo que no declara se deriva de `node` y `edge`. Mira todos los Temas de ejemplo en secuencia y ER en la galeria (`examples/temas/galeria`).
 

@@ -25,7 +25,7 @@ alias dg="node $PWD/packages/cli/dist/bin.js"
 
 ## Los conceptos en un minuto
 
-Un **Workspace** es una carpeta de archivos `.dg`. Todos se fusionan en un unico **Modelo** (los Nodos y las Aristas de tu proyecto). Una **Vista** elige que parte del Modelo se dibuja y de que **Tipo de diagrama** (`architecture`, `flow` o `er`). Un **Tema** decide como se ve. El vocabulario completo esta en [CONTEXT.md](../../CONTEXT.md).
+Un **Workspace** es una carpeta de archivos `.dg`. Todos se fusionan en un unico **Modelo** (los Nodos y las Aristas de tu proyecto). Una **Vista** elige que parte del Modelo se dibuja y de que **Tipo de diagrama** (`architecture`, `flow`, `sequence` o `er`). Un **Tema** decide como se ve. El vocabulario completo esta en [CONTEXT.md](../../CONTEXT.md).
 
 Un archivo `.dg` tiene hasta cinco clases de bloque:
 
@@ -61,6 +61,28 @@ dg dev --workspace examples/temas/galeria --theme-path examples/rinthel-arch/tem
 ```
 
 En `examples/rinthel-arch` prueba la Vista `paquetes` y haz clic en un paquete (drill-down), o abre una Vista `abierto-<tema>`. La Vista `flujo-edicion` es de Tipo `flow`: avanza sus Pasos para ver como se revela el diagrama.
+
+## Secuencia y ER en un minuto
+
+El mismo Modelo se dibuja como secuencia o como tablas cambiando el `type` de la Vista. Una **Interaccion** (`interaction`) es un escenario ordenado entre Nodos del Modelo, y los Atributos con `pk`, `fk` y `uk` hacen tablas:
+
+```dg
+specification {
+  node servicio { icon server   color blue }
+  node almacen  { icon database color green }
+}
+
+model {
+  servicio api "API"
+  almacen pedidos "Pedidos" { id: uuid pk  total: decimal }
+  interaction crear { api -> pedidos "insertar"  reply pedidos -> api "ok" }
+}
+
+view flujo { type sequence  interaction crear }
+view tabla { type er  include pedidos }
+```
+
+`dg dev` abre la Vista de secuencia con `#p=flujo`. Mas en el [paso 6 del tutorial](tutorial.md#paso-6-opcional-secuencia-y-er).
 
 ## Siguiente
 

@@ -2,6 +2,7 @@
  * Regenera los PNG de la documentacion en `docs/img/` (necesita `pnpm build` y Chromium; ver `capturas.ts`):
  *   - `docs/img/temas/<tema>.png`: la Vista `abierto` de `examples/rinthel-arch` con cada uno de los 14 Temas.
  *   - `docs/img/tutorial/paso-<n>-<tema>.png`: la Vista `principal` de cada paso de `examples/tutorial`.
+ *   - `docs/img/tutorial/paso-6-{secuencia,er}-tienda.png` y `docs/img/tipos/{secuencia,er}-tienda.png`: las Vistas `sequence` y `er` del paso 6 (sin Pasos).
  * Uso: `pnpm docs:capturas`. No forma parte de `pnpm test`.
  */
 import { spawnSync } from 'node:child_process';
@@ -26,4 +27,11 @@ function capturar(args: string[]): void {
 capturar(['--workspace', 'examples/rinthel-arch', '--vista', 'abierto', '--salida', 'docs/img/temas', '--alto', '640', '--escala', '1.5', ...TEMAS]);
 for (const { paso, tema } of PASOS) {
   capturar(['--workspace', `examples/tutorial/paso-${paso}`, '--vista', 'principal', '--salida', 'docs/img/tutorial', '--ancho', '1100', '--alto', '280', '--prefijo', `paso-${paso}-`, tema]);
+}
+
+// Secuencia y ER (paso 6 del tutorial): sin Pasos, porque una Vista con Pasos captura vacia en el Paso 0.
+const PASO_6 = ['--workspace', 'examples/tutorial/paso-6', '--ancho', '1100', '--alto', '560'];
+for (const [vista, nombre] of [['comprar-secuencia', 'secuencia'], ['tablas', 'er']] as const) {
+  capturar([...PASO_6, '--vista', vista, '--salida', 'docs/img/tutorial', '--prefijo', `paso-6-${nombre}-`, 'tienda']);
+  capturar([...PASO_6, '--vista', vista, '--salida', 'docs/img/tipos', '--prefijo', `${nombre}-`, 'tienda']);
 }

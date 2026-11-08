@@ -143,23 +143,41 @@ El enrutado de las Aristas lo hace el layout y no depende del Tema.
 
 Una Vista `er` dibuja cada Nodo como tabla (cabecera y una fila por Atributo). El Tema la estiliza con el bloque `row`, la propiedad `zone` de las Capas de Nodo y los marcadores de Arista (ejemplo completo en [`examples/temas/er.dg`](../../examples/temas/er.dg)):
 
-```
-node {
-  layer relleno solid { color papel }
-  layer cabecera solid { color azul  zone header }   // solo la cabecera (all, header o body)
-  slots { title attrs }
+```dg
+specification { node tabla { icon database  color green } }
+
+model {
+  tabla clientes "Clientes" { id: uuid pk  email: text? uk }
+  tabla pedidos "Pedidos" { id: uuid pk  cliente_id: uuid fk  nota: text? }
+  pedidos#cliente_id "0..*" -> "1" clientes#id "pertenece a" identifying
 }
-row {
-  height 26                                           // alto de cada fila: cambia el tamano de las tablas
-  layer fondo solid { color papel }
-  layer separador stripe { color gris  side bottom  width 1 }
-  alternate { layer fondo { color gris } }            // filas impares
-  key pk { layer fondo { color verde } }              // filas con esa marca (pk, fk, uk); se apilan en ese orden
-  optional { layer fondo { color ambar } }            // Atributos opcionales (despues de las claves)
-  name { weight 600 }  type { color azul }            // estilo de texto
-  key { fill azul  color papel  radius 4 }            // el chip de cada marca de clave
+
+theme libreta {
+  palette { papel "#fffdf5"  tinta "#1f2937"  azul "#2457d6"  gris "#ece8dc"  verde "#d9f2dc"  ambar "#fdecc8" }
+  node {
+    layer forma rect { radius 6 }
+    layer relleno solid { color papel }
+    layer cabecera solid { color azul  zone header }   // solo la cabecera (all, header o body)
+    layer borde border { color tinta }
+    slots column { title { color papel  weight 700 }  attrs }
+  }
+  row {
+    height 26                                           // alto de cada fila: cambia el tamano de las tablas
+    layer fondo solid { color papel }
+    layer separador stripe { color gris  side bottom  width 1 }
+    alternate { layer fondo { color gris } }            // filas impares
+    key pk { layer fondo { color verde } }              // filas con esa marca (pk, fk, uk); se apilan en ese orden
+    optional { layer fondo { color ambar } }            // Atributos opcionales (despues de las claves)
+    name { weight 600 }  type { color azul }            // estilo de texto
+    key { fill azul  color papel  radius 4 }            // el chip de cada marca de clave
+  }
+  edge {
+    layer linea line { color tinta }
+    diagram er { end arrow { size 12  color azul } }   // solo color y size del pie de gallo
+  }
 }
-edge { diagram er { end arrow { size 12  color azul } } }   // solo color y size del pie de gallo
+
+view tablas { type er  theme libreta  include ** }
 ```
 
 - `zone header` pinta de arriba hasta donde empiezan las filas (`attrs`); sin `attrs` equivale a `all`. `zone body` cubre las filas. Una Capa con `zone` pinta aparte de la caja, asi que un parche de estado no la cambia.
@@ -171,20 +189,64 @@ edge { diagram er { end arrow { size 12  color azul } } }   // solo color y size
 
 Una Vista `sequence` se dibuja sola con cualquier Tema (los elementos se derivan de `edge` y `node`); para estilizarla se declaran bloques al nivel de `node` y `edge` (ejemplo completo en [`examples/temas/secuencia.dg`](../../examples/temas/secuencia.dg)). Todos admiten `layer`, `use`, `state` y, donde aplica, parches por variante, y las separaciones de secuencia son sus Metricas:
 
-```
-lifeline   { layer linea line { color gris  style dashed }  end cross { size 12 }  gap 200 }   // gap: distancia minima entre Lifelines
-activation { layer relleno solid { color azul/0.2 }  layer borde border { color azul }  width 12 }
-message {
-  layer linea line { color tinta }  end arrow { size 10 }
-  gap 40  loop-width 48  create-offset 0           // entre Mensajes, ancho del lazo propio, desplazamiento de la cabecera creada
-  kind async { layer linea { color verde }  end chevron }   // parche por tipo: sync, async, reply, create, destroy
+```dg
+specification { node pieza { icon box  color blue } }
+
+model {
+  pieza cliente
+  pieza api
+  pieza db
+  interaction pedido {
+    cliente -> api "pedir"
+    api -> db "guardar"
+    reply db -> api "ok"
+    alt "hay stock" { api -> db "reservar" }
+    note right of db "idempotente"
+    reply api -> cliente "201"
+  }
 }
-fragment {
-  layer borde border { color tinta }  operator { weight 700 }  guard { color tinta }  divider { style dashed }
-  op alt { layer borde { color azul } }            // parche por operador: opt loop break critical alt par ref
-  padding 20  padding-y 10                         // alrededor del contenido
+
+theme tinta {
+  palette { papel "#fefce8"  tinta "#1f2937"  azul "#2563eb"  verde "#16a34a"  rojo "#dc2626"  ambar "#d97706" }
+  node {
+    layer forma rect { radius 6 }
+    layer relleno solid { color papel }
+    layer borde border { color tinta }
+    slots { title }
+  }
+  edge { layer linea line { color tinta  width 1.2 } }
+  lifeline {
+    layer linea line { color tinta/0.5  width 1  style dashed }
+    end cross { size 12  color rojo }
+    gap 200                                          // distancia minima entre Lifelines
+  }
+  activation {
+    layer relleno solid { color azul/0.2 }
+    layer borde border { color azul }
+    width 12
+  }
+  message {
+    layer linea line { color tinta  width 1.5 }
+    end arrow { size 10 }
+    gap 40  loop-width 48  create-offset 0           // entre Mensajes, ancho del lazo propio, desplazamiento de la cabecera creada
+    kind async { layer linea { color verde }  end chevron { size 10  color verde } }   // parche por tipo: sync, async, reply, create, destroy
+  }
+  fragment {
+    layer forma rect { radius 8 }
+    layer relleno solid { color papel/0.6 }
+    layer borde border { color tinta/0.6 }
+    operator { color tinta  weight 700 }  guard { color tinta }  divider { color tinta/0.5  style dashed }
+    op alt { layer borde { color azul } }            // parche por operador: opt loop break critical alt par ref
+    padding 20  padding-y 10                         // alrededor del contenido
+  }
+  note {
+    layer relleno solid { color ambar/0.25 }
+    layer borde border { color ambar }
+    text { color tinta  weight 600 }
+  }
 }
-note { layer relleno solid { color ambar/0.25 }  layer borde border { color ambar }  text { weight 600 } }
+
+view pedido { type sequence  theme tinta  interaction pedido }
 ```
 
 - Que cambia con cada tipo: `message { kind async { ... } }` solo toca los Mensajes `async`. Sin parche, `reply` y `create` van con la continuidad opuesta a la del trazo base y el marcador depende del tipo.
