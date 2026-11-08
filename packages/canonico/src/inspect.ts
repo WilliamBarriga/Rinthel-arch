@@ -44,10 +44,10 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
     /** Nodos y Vistas cuyo id o titulo contiene la consulta; los ids exactos y los prefijos primero. */
     resultados: z.array(
       z.object({
-        kind: z.enum(['nodo', 'vista']),
+        kind: z.enum(['nodo', 'vista', 'interaccion']),
         /** Id cualificado (Nodo) o id de la Vista. */
         id: z.string(),
-        /** Tipo de nodo, o tipo de Vista (`architecture` o `flow`). */
+        /** Tipo de nodo, o tipo de Vista (`architecture`, `flow`, `sequence` o `er`); `interaction` para una Interaccion. */
         type: z.string(),
         /** Titulo del Nodo; igual al id en una Vista, que no lo tiene. */
         title: z.string(),
@@ -77,11 +77,31 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
     vista: z.object({
       id: z.string(),
       type: z.string(),
+      /** Solo en una Vista `sequence`: id de la Interaccion que proyecta. */
+      interaction: z.string().optional(),
       ...sitioSchema,
       /** Nodos visibles en orden de documento (los hijos de un Grupo colapsado no salen). */
       nodos: z.array(resumenDeNodoSchema),
       /** Aristas visibles; `count` es cuantas Aristas del Modelo fusiona. */
       aristas: z.array(aristaSchema.extend({ count: z.number().int().min(1) })),
+    }),
+  }),
+  z.object({
+    ...comun,
+    comando: z.literal('interaccion'),
+    interaccion: z.object({
+      id: z.string(),
+      title: z.string(),
+      description: z.string(),
+      ...sitioSchema,
+      /** Items de primer nivel (Mensajes, Fragmentos, Notas y `ref`). */
+      items: z.number().int().min(0),
+      /** Mensajes en total, contando los de dentro de Fragmentos. */
+      mensajes: z.number().int().min(0),
+      /** Ids de las Lifelines (Nodos que participan en algun Mensaje), por primera aparicion. */
+      lifelines: z.array(z.string()),
+      /** Vistas `sequence` que la proyectan. */
+      vistas: z.array(z.object({ id: z.string(), ...sitioSchema })),
     }),
   }),
   z.object({
