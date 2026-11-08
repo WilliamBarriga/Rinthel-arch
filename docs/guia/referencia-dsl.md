@@ -42,27 +42,50 @@ model {
 
 ### Interacciones
 
-```
+Un Workspace completo con una Interaccion y la Vista que la dibuja:
+
+```dg
+specification {
+  node actor    { icon user     color purple }
+  node servicio { icon server   color blue }
+  node almacen  { icon database color green }
+  node cola     { icon queue    color amber }
+}
+
 model {
+  actor cliente "Cliente"
+  servicio api "API"
+  almacen db "Base de datos"
+  cola eventos "Eventos"
+
   interaction checkout "Compra" "Flujo de pago" {
     pedido: cliente -> api "POST /orders"   // `pedido:` es un alias opcional del Mensaje
     api -> db "consulta"
     reply db -> api "filas"
-    async api -> cola "evento"
+    async api -> eventos "evento"
     api -> api "validar"                     // Mensaje propio
     reply api -> cliente "201"
   }
 }
+
+view compra { type sequence  interaction checkout }
 ```
 
 Ciclo de vida de una Lifeline: `create origen -> destino` la hace nacer (su cabecera baja a la altura del Mensaje y la flecha termina en ella) y `destroy origen -> destino` la termina (su linea se corta en una X, el marcador `cross`).
 
-```
+```dg
+specification { node pieza { icon box  color blue } }
+model {
+  pieza cliente
+  pieza api
+  pieza token
   interaction sesion {
     cliente -> api "login"
     create api -> token "emitir"
     destroy api -> token "revocar"
   }
+}
+view vida { type sequence  interaction sesion }
 ```
 
 - Un Mensaje es `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"] ["descripcion"]`; sin tipo es `sync`. Los extremos son Nodos de cualquier nivel (las Lifelines) y no hace falta una Arista entre ellos.
@@ -73,18 +96,33 @@ Ciclo de vida de una Lifeline: `create origen -> destino` la hace nacer (su cabe
 - `ref <interaccion>`: marco `ref` con el titulo de la Interaccion referida; cubre sus participantes presentes en la Vista, o todas las Lifelines si no hay ninguno en comun. Los ciclos son validos (no se expande). Una Interaccion inexistente da `E_UNKNOWN_INTERACTION` (con `fix` por typo) y una que ninguna Vista de secuencia proyecta, `W_REF_WITHOUT_VIEW`. `note`, `left`, `right`, `of` y `ref` siguen valiendo como ids de Nodo.
 - El id de una Interaccion tiene su propio espacio de nombres (puede coincidir con el de un Nodo); `interaction`, `async`, `reply`, `create`, `destroy` y `order` siguen valiendo como ids de Nodo.
 
-Fragmentos (anidables) agrupan Mensajes con un operador:
+Fragmentos (anidables), Notas y `ref` en una Interaccion; el ejemplo es completo:
 
-```
-interaction checkout {
-  cliente -> api "pedir"
-  alt "hay stock" {
-    api -> db "reservar"
-  } else "sin stock" {
-    api -> cliente "rechazar"
+```dg
+specification { node pieza { icon box  color blue } }
+
+model {
+  pieza cliente
+  pieza api
+  pieza db
+  pieza cola
+
+  interaction checkout {
+    cliente -> api "pedir"
+    alt "hay stock" {
+      api -> db "reservar"
+    } else "sin stock" {
+      api -> cliente "rechazar"
+    }
+    par { api -> cola "evento" } and { api -> db "auditar" }
+    note over cliente, api "idempotente"
+    ref auditoria
   }
-  par { api -> cola "evento" } and { api -> db "auditar" }
+  interaction auditoria { db -> cola "registrar" }
 }
+
+view compra { type sequence  interaction checkout  autonumber }
+view auditar { type sequence  interaction auditoria }
 ```
 
 ## `view`: que mostrar
@@ -139,7 +177,9 @@ Dibuja una columna por Lifeline y los Mensajes de arriba abajo, con las activaci
 
 Una Vista `type er` dibuja cada Nodo hoja como una tabla (cabecera mas una fila por Atributo) y las Aristas como FK con marcadores de pie de gallo, sin flechas. Acepta lo mismo que `architecture` (`include`, `exclude`, `depth`, `expanded`, `collapsed`, `pin`, `node`, `steps`). Funciona con cualquier Tema; un Nodo `pill` o `circle` se dibuja como `rect`.
 
-```
+```dg
+specification { node tabla { icon database  color green } }
+
 model {
   tabla orders "Pedidos" {
     id: uuid pk
@@ -184,13 +224,24 @@ Un item es un selector de Nodos o una Arista (`a -> b`, o `edge a -> b`). En un 
 
 En una Vista `sequence` un Paso es un **corte del tiempo**: `step "titulo" { upto <id> }` muestra la Interaccion hasta el Mensaje con ese id (incluido) y solo avanza; `steps each` da un Paso por Mensaje proyectado, titulado con su etiqueta o `from -> to`. `show` y `hide` son error ahi (`E_VIEW_PROPERTY_FOR_TYPE`, con `hint` a `upto`), igual que `upto` y `steps each` fuera de secuencia. Las Notas y `ref` aparecen con el Mensaje previo; todas las Lifelines desde el primer Paso salvo las nacidas con `create`; la activacion se recorta en el corte; el marco de un Fragmento aparece al entrar el corte y la guarda de cada operando al entrar en el. Nada cambia de posicion. Errores: `E_UNKNOWN_STEP` (con `fix` por typo), `E_STEP_NOT_PROJECTED` (`depth`/`exclude` quitan el Mensaje), `E_STEP_NOT_ADVANCING` (con `related` al Paso anterior) y `E_STEPS_EACH_WITH_STEP`.
 
-```
+```dg
+specification { node pieza { icon box  color blue } }
+model {
+  pieza cliente
+  pieza api
+  interaction checkout {
+    pedido: cliente -> api "pedir"
+    fin: reply api -> cliente "listo"
+  }
+}
 view compra {
   type sequence
   interaction checkout
   steps { step "Pedido" { upto pedido }  step "Fin" { upto fin } }
 }
-``` Un ejemplo completo esta en [`examples/rinthel-arch/vistas.dg`](../../examples/rinthel-arch/vistas.dg).
+```
+
+Un ejemplo completo esta en [`examples/rinthel-arch/vistas.dg`](../../examples/rinthel-arch/vistas.dg).
 
 ## `theme` y `part`
 

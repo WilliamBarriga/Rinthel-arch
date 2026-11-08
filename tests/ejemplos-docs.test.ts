@@ -78,7 +78,38 @@ describe('mapa de rinthel-arch: secuencia y ER', () => {
   });
 });
 
+/** Bloques ```dg de las guias: cada uno es un Workspace completo de un archivo y debe compilar sin errores. */
+describe('bloques .dg de las guias', () => {
+  const GUIAS = ['docs/guia/referencia-dsl.md', 'docs/guia/personalizar-temas.md', 'docs/guia/tutorial.md', 'docs/guia/inicio-rapido.md', 'README.md'];
+  const bloques = GUIAS.flatMap((guia) =>
+    [...readFileSync(resolve(RAIZ, guia), 'utf8').matchAll(/```dg\n([\s\S]*?)```/g)].map(([, texto], i) => ({ nombre: `${guia}#${i + 1}`, texto: texto! })),
+  );
+
+  it('cada guia con DSL de secuencia, ER o Temas trae ejemplos completos', () => {
+    for (const guia of GUIAS.slice(0, 3)) expect(bloques.filter((b) => b.nombre.startsWith(guia)).length, guia).toBeGreaterThanOrEqual(2);
+  });
+
+  for (const bloque of bloques) {
+    it(`${bloque.nombre} compila sin errores`, () => {
+      const { issues } = compile({ 'main.dg': bloque.texto });
+      expect(issues.filter((i) => i.severity === 'error'), bloque.texto).toEqual([]);
+    });
+  }
+
+  it('el README presenta los cuatro Tipos de diagrama con captura', () => {
+    const readme = readFileSync(resolve(RAIZ, 'README.md'), 'utf8');
+    for (const tipo of ['architecture', 'flow', 'sequence', 'er']) expect(readme, tipo).toContain(`\`${tipo}\``);
+    for (const img of ['tipos/secuencia-tienda.png', 'tipos/er-tienda.png']) expect(readme).toContain(`docs/img/${img}`);
+  });
+});
+
 describe('documentacion publica', () => {
+  it('hay capturas de secuencia y ER (tutorial paso 6 y README)', () => {
+    for (const f of ['tutorial/paso-6-secuencia-tienda.png', 'tutorial/paso-6-er-tienda.png', 'tipos/secuencia-tienda.png', 'tipos/er-tienda.png']) {
+      expect(existsSync(resolve(RAIZ, 'docs/img', f)), f).toBe(true);
+    }
+  });
+
   it('hay una captura por Tema y por paso del tutorial', () => {
     for (const t of TEMAS) expect(existsSync(resolve(RAIZ, `docs/img/temas/${t}.png`)), t).toBe(true);
     const pasos = readdirSync(resolve(RAIZ, 'docs/img/tutorial'));
