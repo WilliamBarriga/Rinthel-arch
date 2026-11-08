@@ -148,11 +148,37 @@ function activacionHtml(activacion: CajaDeActivacion, contexto: Contexto, corte:
   };
 }
 
+const FAMILIAS_DE_RELLENO: readonly string[] = primitivasDeFamilia('relleno');
+/** Radio de la caja derivada cuando la forma del Nodo es una pastilla o un circulo (ADR 0009). */
+const RADIO_DERIVADO = 8;
+/** Parte del color del relleno que queda al derivar el Fragmento: lo bastante tenue para no ocultar los Mensajes. */
+const TINTE_DE_FRAGMENTO = 14;
+
+/**
+ * Capas derivadas del Nodo para un Fragmento: `pill`/`circle` pasan a `rect` con radio acotado y el relleno (solido, degradado,
+ * patron) se reduce a un tinte tenue de su color, para que el marco no tape Mensajes ni activaciones.
+ */
+function capasDerivadasDeFragmento(capas: readonly CapaPintada[]): CapaPintada[] {
+  const colorDeRelleno = capas.filter((capa) => FAMILIAS_DE_RELLENO.includes(capa.tipo)).map((capa) => capa.props['color'] ?? capa.props['from']).filter((c) => c !== undefined).at(-1);
+  const salida: CapaPintada[] = [];
+  let tinteColocado = false;
+  for (const capa of capas) {
+    if (FAMILIAS_DE_RELLENO.includes(capa.tipo)) {
+      if (tinteColocado || colorDeRelleno === undefined) continue;
+      tinteColocado = true;
+      salida.push({ ...capa, tipo: 'solid' as CapaPintada['tipo'], props: { color: `color-mix(in srgb,${String(colorDeRelleno)} ${TINTE_DE_FRAGMENTO}%,transparent)` } });
+    } else if (capa.tipo === 'pill' || capa.tipo === 'circle') {
+      salida.push({ ...capa, tipo: 'rect' as CapaPintada['tipo'], props: { radius: RADIO_DERIVADO } });
+    } else salida.push(capa);
+  }
+  return salida;
+}
+
 /** Estilo en linea de una caja con la forma, el relleno y el borde del Nodo (sin decoraciones ni efectos), o con las `capas` del Tema. */
 function estiloDeCajaDeNodo(contexto: Contexto, declaradas?: readonly CapaPintada[]): string {
   const { estilo } = contexto;
   const { pila } = pilaDeNodo(estilo.pintura, { collapsed: false, children: [], type: '' });
-  const capas = declaradas ?? pila.capas.filter((capa) => FAMILIAS_DE_ACTIVACION.includes(capa.tipo));
+  const capas = declaradas ?? capasDerivadasDeFragmento(pila.capas.filter((capa) => FAMILIAS_DE_ACTIVACION.includes(capa.tipo)));
   return Object.entries(declaracionesDeCaja(estilo, { capas: [...capas], estados: {} })).map(([propiedad, valor]) => `${propiedad}:${valor}`).join(';');
 }
 
