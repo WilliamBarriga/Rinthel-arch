@@ -147,6 +147,26 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       metricas: z.object({ fontSize: z.number() }).catchall(z.unknown()),
       temaConCodigo: z.boolean(),
       componentes: z.array(z.string()),
+      /**
+       * Elementos de secuencia (`lifeline`, `activation`, `message`, `fragment`, `note`) y fila ER (`row`) que el Tema
+       * declara: su pila, los parches por variante (`kind`/`op`), los marcadores y las Metricas propias. Ausente si no declara ninguno.
+       */
+      elementos: z
+        .object({
+          secuencia: z
+            .record(
+              z.string(),
+              z.object({
+                capas: z.array(capaDeTemaSchema),
+                marcadores: z.record(z.string(), z.string()),
+                parches: z.record(z.string(), z.array(capaDeTemaSchema)),
+                metricas: z.record(z.string(), z.number()),
+              }),
+            )
+            .optional(),
+          fila: z.object({ alto: z.number().optional(), capas: z.array(capaDeTemaSchema) }).optional(),
+        })
+        .optional(),
       /** Con `--catalogo`: claves del catalogo de Primitivas, Movimientos y efectos. */
       catalogo: z.object({ primitivas: z.array(z.string()), movimientos: z.array(z.string()), efectos: z.array(z.string()) }).optional(),
     }),

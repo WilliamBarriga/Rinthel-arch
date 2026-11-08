@@ -17,6 +17,8 @@ import type { NombreDeSlot } from './catalogo';
 import type { CajaDeSlots } from './disposicion';
 import { cascada } from './parches';
 import type { CapaDeTema, TipoDeDiagrama } from './parches';
+import { metricasDeSecuencia } from './secuencia';
+import type { MetricasDeSecuencia } from './secuencia';
 import { alturaDeCabecera } from './slots';
 import { resolverTema, temaParaDiagrama } from './tema';
 import type { TemaResuelto } from './tema';
@@ -57,6 +59,8 @@ export interface Metricas {
   paddingHorizontal: number;
   /** Vista ER: las filas de Atributo dibujan chips de clave (`pk`, `fk`, `uk`) y el `?` de los opcionales. Ausente fuera de ER. */
   marcasDeClave?: true;
+  /** Vista de secuencia: separaciones que el Tema ajusta en `lifeline`, `message`, `activation` y `fragment`. Ausente fuera de secuencia. */
+  secuencia?: MetricasDeSecuencia;
   /** Margen izquierdo del titulo y de los Atributos. */
   margenDeTexto: number;
   /** Alto del Slot `title` de un Nodo. */
@@ -184,6 +188,12 @@ export interface TablaDeMetricas {
 
 export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto, diagrama?: TipoDeDiagrama): TablaDeMetricas {
   const tabla = tablaSinMarcas(tema, medidas, diagrama);
+  if (diagrama === 'sequence') {
+    // Vista de secuencia: todas las entradas llevan las separaciones del Tema (o los defectos del nucleo).
+    const secuencia = metricasDeSecuencia(resolverTema(tema).secuencia);
+    const con = (m: Metricas): Metricas => ({ ...m, secuencia });
+    return { base: con(tabla.base), tipos: Object.fromEntries(Object.entries(tabla.tipos).map(([tipo, m]) => [tipo, con(m)])), grupoAbierto: con(tabla.grupoAbierto), grupoColapsado: con(tabla.grupoColapsado), etiqueta: con(tabla.etiqueta) };
+  }
   if (diagrama !== 'er') return tabla;
   // Vista ER: todas las entradas dibujan marcas de clave (`claveDeMetricas` las distingue de las de arquitectura) y
   // toman el alto de fila del bloque `row` del Tema, si lo declara.
