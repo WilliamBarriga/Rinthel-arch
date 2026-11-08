@@ -14,6 +14,7 @@ Estados: vigente (rige tal cual), reescrito (otro ADR lo reemplaza y el archivo 
 | `0006` (sin archivo) | Metricas y Estilo resuelto | absorbido en el 0008 |
 | [`0007-interaccion-y-protocolo-de-edicion.md`](0007-interaccion-y-protocolo-de-edicion.md) | Intenciones, reductor puro e historial | vigente |
 | [`0008-sistema-de-temas-expresivo.md`](0008-sistema-de-temas-expresivo.md) | Temas expresivos: Capas, render hibrido y animacion | vigente |
+| [`0009-tipos-de-diagrama-secuencia-y-er.md`](0009-tipos-de-diagrama-secuencia-y-er.md) | Tipos de diagrama secuencia y ER: Interaccion, marcas ER, Elementos de Tema y Geometria por tipo | vigente |
 
 ## El hueco del 0006
 
