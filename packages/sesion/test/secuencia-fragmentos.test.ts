@@ -152,3 +152,54 @@ describe('seam sesion: Fragmentos de secuencia', () => {
     expect(issues.map((d) => [d.code, d.line])).toEqual([['E_UNKNOWN_LIFELINE', 9]]);
   });
 });
+
+describe('seam sesion: create y destroy con Fragmentos', () => {
+  const diagnosticos = (interaccion: string) => abrirSesion({ 'main.dg': modelo(interaccion) }).diagnosticar();
+
+  it('E_CREATE_NOT_FIRST si el destino aparecio antes en otro Fragmento o fuera de el', async () => {
+    const res = await diagnosticos(`  interaction i {
+    opt { cliente -> db "x" }
+    alt { create api -> db "abrir" } else { api -> cliente }
+  }`);
+    expect(res.map((i) => i.code)).toEqual(['E_CREATE_NOT_FIRST']);
+    expect(res[0]!.related![0]!.line).toBeLessThan(res[0]!.line);
+  });
+
+  it('E_AFTER_DESTROY si el destroy esta en un Fragmento y la aparicion despues, fuera o dentro', async () => {
+    const res = await diagnosticos(`  interaction i {
+    opt { destroy cliente -> db }
+    api -> db "tarde"
+    loop { db -> cola }
+  }`);
+    expect(res.map((i) => i.code)).toEqual(['E_AFTER_DESTROY', 'E_AFTER_DESTROY']);
+    expect(res[0]!.related![0]!.line).toBeLessThan(res[0]!.line);
+  });
+
+  it('create y destroy validos dentro de Fragmentos no dan issues', async () => {
+    expect(await diagnosticos(`  interaction i {
+    cliente -> api
+    opt { create api -> db "abrir" }
+    opt { destroy api -> db "cerrar" }
+  }`)).toEqual([]);
+  });
+
+  it('en un Fragmento la cabecera creada baja a su Mensaje y la linea destruida se corta en el', async () => {
+    const g = await geometriaDe(modelo(`  interaction i {
+    cliente -> api "pedir"
+    opt "nuevo" {
+      create api -> db "abrir"
+      api -> db "consulta"
+      destroy api -> db "cerrar"
+    }
+    cliente -> api "fin"
+  }`));
+    const crear = g.messages['1.0.0']!.points[0]!.y;
+    const cortar = g.messages['1.0.2']!.points[0]!.y;
+    expect(g.nodes['db']!.y).toBeGreaterThan(g.nodes['cliente']!.y);
+    expect(g.nodes['db']!.y + g.nodes['db']!.height / 2).toBe(crear);
+    expect(g.lifelines['db']!.y1).toBe(g.nodes['db']!.y + g.nodes['db']!.height);
+    expect(g.lifelines['db']!.y2).toBe(cortar);
+    expect(g.lifelines['db']!.destroyed).toBe(true);
+    expect(g.lifelines['api']!.destroyed).toBeUndefined();
+  });
+});
