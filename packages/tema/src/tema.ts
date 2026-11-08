@@ -474,6 +474,12 @@ const aplicarSinErrores = (base: CapaDeTema[], ops: Parameters<typeof aplicarOps
 
 export type TemaResuelto = z.output<typeof temaResueltoSchema>;
 
+/** Formas que no dibujan una tabla ER (recortan las filas): en `er` se derivan como `rect` con radio acotado (ADR 0009). */
+const FORMAS_DE_PASTILLA: readonly string[] = ['pill', 'circle'];
+const RADIO_DE_TABLA = 8;
+const comoTabla = (capa: TemaResuelto['nodo']['capas'][number]): TemaResuelto['nodo']['capas'][number] =>
+  FORMAS_DE_PASTILLA.includes(capa.primitiva.tipo) ? { ...capa, primitiva: { tipo: 'rect', props: { radius: RADIO_DE_TABLA } } } : capa;
+
 const porDiagrama = new WeakMap<object, Map<TipoDeDiagrama, TemaResuelto>>();
 
 /**
@@ -488,14 +494,15 @@ export function temaParaDiagrama(tema: TemaResuelto, diagrama: TipoDeDiagrama | 
   const delaArista = tema.arista.diagramas?.[diagrama];
   // El estilo `label` del bloque `message` es la etiqueta de la Arista en secuencia: asi sus Metricas son las del layout.
   const etiquetaDeMensaje = diagrama === 'sequence' ? tema.secuencia?.message?.textos['label'] : undefined;
-  if (delNodo === undefined && delGrupo === undefined && delaArista === undefined && etiquetaDeMensaje === undefined) return tema;
+  const haceTabla = diagrama === 'er' && tema.nodo.capas.some((capa) => FORMAS_DE_PASTILLA.includes(capa.primitiva.tipo));
+  if (delNodo === undefined && delGrupo === undefined && delaArista === undefined && etiquetaDeMensaje === undefined && !haceTabla) return tema;
   const hecho = porDiagrama.get(tema)?.get(diagrama);
   if (hecho !== undefined) return hecho;
   const parchear = (capas: TemaResuelto['nodo']['capas'], ops: readonly OpDeCapa[] | undefined, ubicacion?: UbicacionDePrimitiva): TemaResuelto['nodo']['capas'] =>
     ops === undefined || ops.length === 0 ? capas : aplicarOps(capas as CapaDeTema[], ops, tema.palette, 'parchear', ubicacion).pila;
   const resultado: TemaResuelto = {
     ...tema,
-    nodo: { ...tema.nodo, capas: parchear(tema.nodo.capas, delNodo?.ops), ...(delNodo?.slots !== undefined && { slots: delNodo.slots }) },
+    nodo: { ...tema.nodo, capas: parchear(diagrama === 'er' ? tema.nodo.capas.map(comoTabla) : tema.nodo.capas, delNodo?.ops), ...(delNodo?.slots !== undefined && { slots: delNodo.slots }) },
     grupo: { ...tema.grupo, capas: parchear(tema.grupo.capas, delGrupo?.ops), ...(delGrupo?.slots !== undefined && { slots: delGrupo.slots }), ...(delGrupo?.padding !== undefined && { padding: delGrupo.padding }) },
     arista: {
       ...tema.arista,
