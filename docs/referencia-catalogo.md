@@ -14,6 +14,8 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | `offset-y` | -200 a 200 |
 | `grow` | -100 a 100 |
 
+Y `zone` (`all`, `header`, `body`; sin ella, `all`): que parte de la caja pinta la Capa. `header` es la zona de los Slots anteriores a `attrs` (sin `attrs` equivale a `all`) y `body` la de `attrs`. Solo pinta, y se reparte aparte de la caja: un parche de estado no la cambia.
+
 ### Familia forma
 
 | Primitiva | Ubicacion | Propiedades | Metricas |
@@ -102,6 +104,7 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | `zero-one` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `many` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `zero-many` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `cross` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 
 ### Familia texto
 
@@ -129,6 +132,20 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | `footer` | `text` |
 | `attrs` | `text` |
 | `counter` | `chip` |
+
+## Fila de tabla ER (`row`)
+
+Bloque del Tema que estiliza las filas de una Vista `er`. `height` (12 a 120) es la unica Metrica; el resto solo pinta.
+
+| Elemento | Contenido |
+| --- | --- |
+| `layer`, `use` | Pila de Capas de cada fila (Primitivas de Nodo) |
+| `alternate { ... }` | Parche de las filas impares |
+| `key pk|fk|uk { ... }` | Parche de las filas con esa marca de clave, en ese orden |
+| `optional { ... }` | Parche de los Atributos opcionales, tras las claves |
+| `name { ... }` | Estilo de texto con la Primitiva `text` |
+| `type { ... }` | Estilo de texto con la Primitiva `text` |
+| `key { ... }` | Estilo de texto con la Primitiva `chip` (el chip de cada marca de clave) |
 
 ## Movimientos
 

@@ -177,6 +177,14 @@ theme marcadores-er-opcionales extends marcadores-er {
   }
 }
 
+// La X de una Lifeline destruida (secuencia): un marcador centrado en el extremo.
+theme marcador-cruz extends marcadores-er {
+  edge {
+    start cross { size 10 }
+    end cross { size 10 }
+  }
+}
+
 view formas {
   type architecture
   theme forma-pastilla
