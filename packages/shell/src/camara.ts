@@ -5,6 +5,8 @@
 import { zoomIdentity } from 'd3-zoom';
 import type { ZoomTransform } from 'd3-zoom';
 
+import type { VistaResuelta } from 'canonico';
+import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
 import type { Camara } from 'render';
 
@@ -34,4 +36,15 @@ export const mismaTransform = (a: ZoomTransform, b: ZoomTransform): boolean => a
  */
 export function compensarCamara(camara: Camara, antes: CajaDeNodo, despues: CajaDeNodo): Camara {
   return { ...camara, x: camara.x + despues.x - antes.x, y: camara.y + despues.y - antes.y };
+}
+
+/**
+ * Caja del Grupo `id` que se mantiene fija en pantalla al expandir o colapsar. En grafo es su caja absoluta. En secuencia
+ * es el `box` del Grupo si esta abierto o, si no, la cabecera de su Lifeline; solo cuenta el borde izquierdo, asi que
+ * la `y` queda en 0 (la camara no se desplaza en vertical).
+ */
+export function cajaDeAncla(vista: VistaResuelta, geometria: Geometria, id: string): CajaDeNodo | undefined {
+  if (geometria.kind !== 'secuencia') return indiceDeGeometria(vista, geometria).cajas.get(id);
+  const caja = geometria.groups.find((grupo) => grupo.id === id) ?? geometria.nodes[id];
+  return caja === undefined ? undefined : { ...caja, y: 0 };
 }

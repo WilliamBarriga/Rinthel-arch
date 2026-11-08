@@ -157,6 +157,20 @@ describe('seam sesion: validacion de secuencia', () => {
     expect(fuera.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE', 'E_VIEW_PROPERTY_FOR_TYPE']);
   });
 
+  it('E_LINK_NOT_LIFELINE: link desde un Mensaje o un Nodo que no es Lifeline; desde una Lifeline vale', async () => {
+    const otra = 'view otra { type architecture\n include ** }\n';
+    const base = modelo(escenario) + otra;
+    const deLifeline = await issues(base + 'view v { type sequence\n interaction checkout\n link api -> otra }\n');
+    expect(deLifeline).toEqual([]);
+    const deMensaje = await issues(base + 'view v { type sequence\n interaction checkout\n link pedido -> otra }\n');
+    expect(deMensaje.map((i) => i.code)).toEqual(['E_LINK_NOT_LIFELINE']);
+    const deNodoAjeno = await issues(modelo('  interaction checkout { cliente -> api }') + otra + 'view v { type sequence\n interaction checkout\n link db -> otra }\n');
+    expect(deNodoAjeno.map((i) => i.code)).toEqual(['E_LINK_NOT_LIFELINE']);
+    expect(deNodoAjeno[0]!.severity).toBe('error');
+    // En arquitectura el mismo link no se toca.
+    expect(await issues(base + 'view w { type architecture\n include **\n link api -> otra }\n')).toEqual([]);
+  });
+
   it('W_ORDER_NOT_IN_INTERACTION (aviso, se ignora) y W_REPLY_WITHOUT_SYNC', async () => {
     const orden = await issues(modelo('  interaction checkout { cliente -> api }') + 'view v { type sequence\n interaction checkout\n order cola, api }\n');
     expect(orden.map((i) => [i.code, i.severity])).toEqual([['W_ORDER_NOT_IN_INTERACTION', 'warning']]);

@@ -11,14 +11,13 @@ import type { D3ZoomEvent } from 'd3-zoom';
 
 import { resolveView } from 'canonico';
 import type { EstadoDeColapso, IconProvider, IssueDeDev, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
-import { indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
 import type { Camara, ComponentesDeTema } from 'render';
 import { resolverTema } from 'tema';
 import type { MedidasDeTexto, TextoAMedir } from 'tema';
 
-import { aCamara, aTransform, compensarCamara, encuadrar, mismaTransform } from './camara';
+import { aCamara, aTransform, cajaDeAncla, compensarCamara, encuadrar, mismaTransform } from './camara';
 import { Leyenda, useAltoContraste } from './accesibilidad';
 import type { ModoDeLeyenda, PropsDeAltoContraste } from './accesibilidad';
 import { PanelDeIssues, Toasts } from './avisos';
@@ -31,7 +30,7 @@ import type { AlReordenarLifelines } from './arrastre';
 import { unidadBajo } from './ordenar-lifelines';
 import { useControlado } from './controlado';
 import { conEstadosTransitorios, useSeleccion } from './seleccion';
-import { elementoBajo } from './interaccion';
+import { destinoDeNavegacionPorRef, elementoBajo } from './interaccion';
 import { estadosDeRuta, moverFoco, moverFocoEnSecuencia, rutaMasCorta, unirEstados } from './ruta-y-foco';
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
@@ -183,8 +182,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     const ancla = pendiente.current;
     pendiente.current = undefined;
     if (previo === undefined || ancla === undefined) return;
-    const antes = indiceDeGeometria(previo.vista, previo.geometria).cajas.get(ancla);
-    const despues = indiceDeGeometria(nuevo.vista, nuevo.geometria).cajas.get(ancla);
+    const antes = cajaDeAncla(previo.vista, previo.geometria, ancla);
+    const despues = cajaDeAncla(nuevo.vista, nuevo.geometria, ancla);
     if (antes === undefined || despues === undefined) return;
     fijarCamara(compensarCamara(camaraBase.current, antes, despues));
     morphador.iniciar({ desde: previo.geometria, hasta: nuevo.geometria, ancla });
@@ -291,8 +290,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   }, [calculo, morph, desplazado]);
   const camaraVista = useMemo<Camara>(() => {
     if (calculo === undefined || mostrado === undefined || morph === undefined) return camara;
-    const final = indiceDeGeometria(calculo.vista, morph.hasta).cajas.get(morph.ancla);
-    const ahora = indiceDeGeometria(mostrado.vista, mostrado.geometria).cajas.get(morph.ancla);
+    const final = cajaDeAncla(calculo.vista, morph.hasta, morph.ancla);
+    const ahora = cajaDeAncla(mostrado.vista, mostrado.geometria, morph.ancla);
     return final === undefined || ahora === undefined ? camara : { ...camara, x: camara.x - final.x + ahora.x, y: camara.y - final.y + ahora.y };
   }, [calculo, mostrado, morph, camara]);
   const visibilidadMostrada = useMemo(
@@ -345,6 +344,13 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     fijarEstado(siguiente);
   };
 
+  /** Enter o Espacio sobre un Nodo: si tiene `link` navega; si no, colapsa o abre el Grupo. */
+  const activar = (id: string): void => {
+    const destino = vista.nodes.find((n) => n.id === id)?.link;
+    if (destino !== undefined && source.views.some((v) => v.id === destino)) props.alEnlazar(destino);
+    else alternar(id);
+  };
+
   const alEnfocar = (evento: EventoDeFoco): void => {
     if (evento.target === evento.currentTarget) fijarFoco((actual) => actual ?? (enSecuencia ? moverFocoEnSecuencia(vista, undefined, 'siguiente', visible) : moverFoco(vista, undefined, 'siguiente')));
   };
@@ -379,7 +385,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
         break;
       case 'Enter':
       case ' ':
-        if (focoVigente !== undefined) alternar(focoVigente);
+        if (focoVigente !== undefined) activar(focoVigente);
         atendida = true;
         break;
     }
@@ -411,7 +417,13 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     props.onSelectionChange?.(resultado.seleccion.map((e) => e.id));
     if (!resultado.seleccionado) return;
     onSelect?.(elemento.id);
-    if (acumula || elemento.tipo !== 'nodo') return;
+    if (acumula) return;
+    if (elemento.tipo === 'fragmento') {
+      const destinoDelRef = destinoDeNavegacionPorRef(vista, view, source.views, elemento.id);
+      if (destinoDelRef !== undefined) props.alEnlazar(destinoDelRef);
+      return;
+    }
+    if (elemento.tipo !== 'nodo') return;
     const destino = vista.nodes.find((n) => n.id === elemento.id)?.link;
     if (destino !== undefined && source.views.some((v) => v.id === destino)) props.alEnlazar(destino);
   };

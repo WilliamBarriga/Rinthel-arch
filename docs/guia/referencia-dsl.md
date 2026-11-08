@@ -109,7 +109,7 @@ view paquetes {
 | `include`, `exclude` | Selectores: `a` (el Nodo), `a.*` (sus hijos directos), `a.**` (todos sus descendientes). `**` solo, todo el Modelo |
 | `depth N` | Profundidad inicial; los Grupos que la exceden aparecen colapsados |
 | `expanded`, `collapsed` | Estado inicial de los Grupos nombrados |
-| `link nodo -> vista` | Un Grupo enlazado no se expande en esta Vista: navega a la otra. Los ciclos son validos; el visor muestra las migas |
+| `link nodo -> vista` | Un Grupo enlazado no se expande en esta Vista: navega a la otra. Los ciclos son validos; el visor muestra las migas. En secuencia solo vale desde una Lifeline (clic en su cabecera o Enter con foco); desde un Mensaje, Nota o Fragmento es `E_LINK_NOT_LIFELINE`. El marco de un `ref` navega a la primera Vista de secuencia que proyecta la Interaccion referida (inerte si no hay o es la actual) |
 | `theme nombre { parche }` | Tema de la Vista, con un parche opcional solo para ella |
 | `interaction id` | Solo en `sequence` (obligatoria): la Interaccion que proyecta |
 | `order a, b` | Solo en `sequence`: orden de las Lifelines de izquierda a derecha; parcial, el resto sigue por primera aparicion |

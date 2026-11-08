@@ -9,8 +9,8 @@
  * sigue siendo hallable. Orden de arriba a abajo, como dibuja `render`: etiqueta
  * de Arista, Arista (con `tolerancia`), Atributo, Nodo (el mas anidado gana).
  */
-import { idDeArista } from 'canonico';
-import type { ItemResuelto, NodoResuelto, Tema, Visibilidad, VistaResuelta } from 'canonico';
+import { destinoDeRef, idDeArista } from 'canonico';
+import type { ItemResuelto, NodoResuelto, Tema, Vista, Visibilidad, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria, Punto } from 'layout';
 import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
@@ -230,4 +230,18 @@ function elementoDeSecuencia(vista: VistaResuelta, id: string): ElementoSeleccio
   const item = itemsAplanados(interaccion.items).find((i) => (i.type === 'message' ? i.message.ruta : i.ruta) === ruta);
   if (item === undefined) return undefined;
   return { tipo: item.type === 'message' ? 'mensaje' : item.type === 'note' ? 'nota' : 'fragmento', id };
+}
+
+/**
+ * Vista a la que navega pulsar el `ref` `id` (`interaccion:ruta`): la primera Vista de secuencia que proyecta la Interaccion
+ * referida (`destinoDeRef`). `undefined` si `id` no es un `ref`, no hay Vista destino o esa Vista es la actual (inerte, sin aviso).
+ */
+export function destinoDeNavegacionPorRef(vista: VistaResuelta, actual: string, vistas: readonly Pick<Vista, 'id' | 'type' | 'interaction'>[], id: string): string | undefined {
+  const interaccion = vista.interaction;
+  if (interaccion === undefined || !id.startsWith(`${interaccion.id}:`)) return undefined;
+  const ruta = id.slice(interaccion.id.length + 1);
+  const item = itemsAplanados(interaccion.items).find((i) => i.type === 'ref' && i.ruta === ruta);
+  if (item === undefined || item.type !== 'ref') return undefined;
+  const destino = destinoDeRef(vistas, item.interaction);
+  return destino === actual ? undefined : destino;
 }
