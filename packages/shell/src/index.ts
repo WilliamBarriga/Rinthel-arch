@@ -37,7 +37,7 @@
  * Hover y fantasma: el raton sobre un elemento lo dibuja en `hover`; el Nodo que se arrastra, en `fantasma`.
  * `issues` y `toasts` se dibujan dentro del lienzo con clases `rd-*` y las variables del Tema.
  * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con
- * `onStepChange`, o interno desde `defaultStep`, 0 por defecto; en secuencia, el primer Paso) se pasa por
+ * `onStepChange`, o interno desde `defaultStep`, 0 por defecto; en secuencia y ER, el primer Paso) se pasa por
  * `revealAt` y se dibujan controles anterior/siguiente; la geometria no cambia.
  * Una `visibility` explicita manda sobre la derivada; sin `steps` no hay controles.
  * Drill-down: un Nodo con `link` en la Vista activa, al pulsarlo, lleva a la Vista

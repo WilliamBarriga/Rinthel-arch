@@ -295,7 +295,10 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
         const tab = { x: 0, y: arriba, width: pestana.width + HOLGURA_DE_PESTANA, height: pestana.height };
         const alto = pestana.height + titulo.height + rellenoArribaDeFragmento + rellenoAbajoDeFragmento;
         marcos.push({ ruta: item.ruta, operator: 'ref', nivel, x: 0, y: arriba, width: 0, height: alto, tab, title: { text: item.title, box: { x: 0, y: arriba + pestana.height + rellenoArribaDeFragmento / 2, ...titulo } }, operands: [{ y1: arriba, y2: arriba + alto }] });
-        columnasDeRef.set(item.ruta, (item.participantes.length > 0 ? item.participantes : lifelines.map((l) => l.id)).map(xDeLifeline));
+        const columnas = (item.participantes.length > 0 ? item.participantes : lifelines.map((l) => l.id)).map(xDeLifeline);
+        columnasDeRef.set(item.ruta, columnas);
+        // El Fragmento que contiene al `ref` lo envuelve: sus extremos cuentan para el marco padre.
+        extremos.push(...columnas);
         cursor = arriba + alto + HUECO_ENTRE_FRAGMENTOS;
         altura = Math.max(altura, 1);
         continue;

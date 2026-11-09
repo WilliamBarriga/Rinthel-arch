@@ -99,6 +99,17 @@ describe('serializarEstado y deserializarEstado', () => {
     expect(deserializarEstado('', fuente).step).toBe(0);
   });
 
+  it('una Vista ER con Pasos entra en el primero: el Paso 0 la dejaria vacia', () => {
+    const er = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio' }] },
+      model: { nodes: [nodo('x'), nodo('y')], edges: [] },
+      views: [{ id: 'e', type: 'er', include: ['**'], exclude: [], steps: [{ title: 'uno', show: [{ selector: 'x' }] }] }],
+    });
+    expect(deserializarEstado('', er).step).toBe(1);
+    expect(deserializarEstado('p=e&t=0', er).step).toBe(0);
+    expect(serializarEstado({ path: ['e'], state: {}, selected: null, step: 1 }, 'e', er)).toBe('');
+  });
+
   it('el Paso se acota a los Pasos de la Vista activa', () => {
     expect(deserializarEstado('p=b&t=1', fuente).step).toBe(0);
     expect(deserializarEstado('p=a&t=-1', fuente).step).toBe(0);

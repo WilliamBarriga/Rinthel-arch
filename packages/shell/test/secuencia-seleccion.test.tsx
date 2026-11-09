@@ -135,7 +135,8 @@ describe('Secuencia: acierto', () => {
 });
 
 describe('Secuencia: teclado', () => {
-  const conFoco = (c: HTMLElement) => [...c.querySelectorAll('[data-state="foco"]')].map((e) => e.closest('[data-id]')?.getAttribute('data-id') ?? e.closest('[data-message]')?.getAttribute('data-message'));
+  // La cabecera espejo del pie repite el Nodo de cada Lifeline: se cuenta cada una una sola vez.
+  const conFoco = (c: HTMLElement) => [...new Set([...c.querySelectorAll('[data-state="foco"]')].map((e) => e.closest('[data-id]')?.getAttribute('data-id') ?? e.closest('[data-message]')?.getAttribute('data-message')))];
   const tecla = (zona: HTMLElement, key: string, init: KeyboardEventInit = {}) => act(() => void fireEvent.keyDown(zona, { key, ...init }));
 
   it('Tab recorre las Lifelines en orden de columna y las flechas laterales saltan a la vecina', async () => {

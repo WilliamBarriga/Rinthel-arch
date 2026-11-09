@@ -10,6 +10,7 @@ import { revealAt } from 'canonico';
 import type { Visibilidad, VistaResuelta } from 'canonico';
 
 import { useControlado } from './controlado';
+import { pasoInicialDeTipo } from './hash';
 
 export interface PropsDePasos {
   /** Paso actual controlado: 0 es antes del primero, k aplica los pasos 1..k. */
@@ -32,7 +33,7 @@ const acotar = (paso: number, total: number): number => Math.min(Math.max(Number
 
 export function usePasos(vista: VistaResuelta, props: PropsDePasos): PasosEnVista {
   const total = vista.steps.length;
-  const [pasoVigente, fijarPaso] = useControlado(props.step, props.defaultStep ?? (vista.type === 'sequence' && total > 0 ? 1 : 0), props.onStepChange);
+  const [pasoVigente, fijarPaso] = useControlado(props.step, props.defaultStep ?? pasoInicialDeTipo(vista.type, total), props.onStepChange);
   const paso = acotar(pasoVigente, total);
 
   const derivada = useMemo(() => (total === 0 ? undefined : revealAt(vista, paso)), [vista, total, paso]);

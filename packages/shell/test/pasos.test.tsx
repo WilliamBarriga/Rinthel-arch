@@ -59,6 +59,24 @@ const dibujado = (c: HTMLElement) => waitFor(() => expect(c.querySelector('[data
 const sinVisibilidad = (c: HTMLElement) =>
   c.querySelector('[data-diagram]')!.innerHTML.replace(/ data-oculto=""/g, '').replace(/ opacity="[^"]*"/g, '').replace(/\s*(opacity|pointer-events): [^;"]+;?/g, '').replace(/ pointer-events="[^"]*"/g, '');
 
+describe('Paso inicial por Tipo de diagrama', () => {
+  it('una Vista ER con Pasos se monta en el primero, no vacia; architecture sigue en el 0', async () => {
+    const er = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio' }] },
+      model: { nodes: [nodo('a'), nodo('b')], edges: [] },
+      views: [{ id: 'v', type: 'er', include: ['**'], exclude: [], steps: [{ title: 'Tablas', show: [{ selector: 'a' }] }] }],
+    });
+    const { container } = render(<VistaInteractiva source={er} view="v" theme={TEMA_NEUTRO} layout={enFila} width={800} height={600} camera={{ x: 0, y: 0, width: 800, height: 600 }} />);
+    await dibujado(container);
+    expect(container.querySelector('[data-pasos]')?.textContent).toContain('Paso 1 de 1: Tablas');
+    expect(opacidad(container, 'a')).toBe(1);
+    cleanup();
+    const { container: arq } = montar(pasos);
+    await dibujado(arq);
+    expect(arq.querySelector('[data-pasos]')?.textContent).toContain('Paso 0 de 2');
+  });
+});
+
 describe('Pasos anterior y siguiente', () => {
   it('sin steps no hay controles ni se oculta nada', async () => {
     const { container } = montar([]);

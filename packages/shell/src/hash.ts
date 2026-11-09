@@ -76,12 +76,15 @@ function esElementoDeInteraccion(id: string, source: FuenteCanonica): boolean {
 export const vistaPorDefecto = (source: FuenteCanonica): string | undefined => source.views[0]?.id;
 
 /**
- * Paso con el que se entra a una Vista: en secuencia con `steps`, el primero (ADR 0009: el Paso 0 la
- * dejaria vacia); en el resto, 0 (antes del primero, ADR 0002).
+ * Paso con el que se entra a una Vista de `tipo` con `total` Pasos: el primero en secuencia y ER (ADR 0009: el
+ * Paso 0 las dejaria vacias); 0 (antes del primero, ADR 0002) en architecture y flow.
  */
+export const pasoInicialDeTipo = (tipo: string, total: number): number => ((tipo === 'sequence' || tipo === 'er') && total > 0 ? 1 : 0);
+
+/** Paso con el que se entra a la Vista `vista` de la Fuente (ver `pasoInicialDeTipo`). */
 export const pasoInicialDeVista = (source: FuenteCanonica, vista: string | undefined): number => {
   const v = source.views.find((candidata) => candidata.id === vista);
-  return v?.type === 'sequence' && (v.steps?.length ?? 0) > 0 ? 1 : 0;
+  return v === undefined ? 0 : pasoInicialDeTipo(v.type, v.steps?.length ?? 0);
 };
 
 /**

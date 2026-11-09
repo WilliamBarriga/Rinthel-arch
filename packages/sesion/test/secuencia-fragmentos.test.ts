@@ -202,4 +202,19 @@ describe('seam sesion: create y destroy con Fragmentos', () => {
     expect(g.lifelines['db']!.destroyed).toBe(true);
     expect(g.lifelines['api']!.destroyed).toBeUndefined();
   });
+
+  it('un ref dentro de un alt queda contenido en el marco del alt, tambien si cubre mas Lifelines que los Mensajes del alt', async () => {
+    const g = await geometriaDe(modelo(`  interaction otra { cliente -> cola "x" }
+  interaction i {
+    cliente -> api "pedir"
+    alt "hay stock" {
+      api -> db "reservar"
+      ref otra
+    }
+  }`));
+    const alt = g.fragments.find((m) => m.operator === 'alt')!;
+    const ref = g.fragments.find((m) => m.operator === 'ref')!;
+    expect(ref.x).toBeGreaterThanOrEqual(alt.x);
+    expect(ref.x + ref.width).toBeLessThanOrEqual(alt.x + alt.width);
+  });
 });
