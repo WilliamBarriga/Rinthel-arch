@@ -44,7 +44,7 @@ Lista de referencias opacas de un Nodo al Proyecto documentado (ruta de archivo,
 Proyeccion declarativa de un Modelo, de un Tipo de diagrama: que Nodos incluye o excluye y hasta que profundidad (en secuencia, que Interaccion proyecta). Nunca define entidades nuevas. Puede sobrescribir solo presentacion (etiqueta corta, Pin, estilo, orden).
 
 **Tipo de diagrama**:
-Familia de notacion que fija como se dibuja una Vista. Primera entrega: arquitectura y flujo. Despues: secuencia y ER.
+Familia de notacion que fija como se dibuja una Vista. Hoy hay cuatro: arquitectura, flujo, secuencia y ER; todos comparten el mismo Modelo y los mismos Temas.
 
 **Drill-down**:
 Pasar de un Nodo a su detalle. Cada Vista tiene un mecanismo por defecto (colapsar o expandir el Grupo en la misma Vista) y puede anularlo por Nodo enlazando a otra Vista. Un Grupo enlazado no se expande en esa Vista.

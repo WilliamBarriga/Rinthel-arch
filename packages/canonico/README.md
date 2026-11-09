@@ -5,6 +5,7 @@ Esquema Zod de la Fuente canonica y las funciones puras que la consultan.
 ## Que hace
 - Define y valida el esquema de la Fuente canonica (Nodos, Aristas, Vistas, Pasos, Paleta); `validate` devuelve `Issue` con `hint` y `fix`.
 - `resolveView` selecciona los Nodos de una Vista; `revealAt` interpreta sus Pasos.
+- `resolverSecuencia` resuelve la Interaccion que proyecta una Vista `sequence` (Lifelines, activaciones); una Vista `er` se resuelve como `architecture`.
 - Define el vocabulario del Gesto de editar un Pin (`IntencionDePin`).
 
 ## Que NO hace

@@ -6,6 +6,7 @@ Catalogo de Primitivas y Slots, esquema del Tema resuelto y Estilo resuelto (Met
 - Define el catalogo (`CATALOGO`, `SLOTS`, `MOVIMIENTOS`, `EFECTOS`); `resolverTema` valida un Tema; `TEMA_NEUTRO` y `TEMA_ALTO_CONTRASTE` son los incorporados.
 - `estiloResuelto(tema)` entrega `{ metricas, pintura }` con cascada y parches; `colocarNodo` coloca Slots y `resolverColor` resuelve colores.
 - `temaParaDiagrama(tema, tipo)` aplica los parches `diagram <tipo>` (nivel entre el Tema base y el Tipo de nodo); `tablaDeMetricas` y `estiloResuelto` lo reciben como `diagrama`.
+- Define los Elementos de secuencia (`lifeline`, `activation`, `message`, `fragment`, `note`) y de ER (`row`); un Tema que no los declara los recibe derivados de `node` y `edge`.
 - Calcula contraste, leyenda y tablas de medicion de texto.
 
 ## Que NO hace

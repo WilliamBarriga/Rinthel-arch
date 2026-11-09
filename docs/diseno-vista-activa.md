@@ -21,6 +21,7 @@ Usos: estado de colapso (`state`/`onStateChange`), camara (`camera`/`onCameraCha
 - `colapso.ts`: Grupos. `buscarNodo`, `contarNodosVisibles`, `alternarGrupo`, tope `MAX_NODOS_VISIBLES`. Puro, sin camara ni animacion.
 - `camara.ts`: camara. `encuadrar`, conversiones `aCamara`/`aTransform` con d3-zoom, `compensarCamara`.
 - `morph.ts`: animacion. `interpolarGeometria`, `visibilidadDeMorph` (puras) y `useMorph`.
+- `ordenar-lifelines.ts` (ADR 0009, posterior a este diseno): reordenar Lifelines por arrastre de cabecera; puro, sobre la Geometria de secuencia.
 - `configuracion.ts`: `AjustesDeInteraccion` y `AJUSTES_POR_DEFECTO`.
 - `controlado.ts`: el hook anterior.
 

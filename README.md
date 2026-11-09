@@ -6,7 +6,7 @@
 
 Sistema (React + TypeScript) para escribir y renderizar diagramas grandes y detallados de cualquier proyecto. Describes tu sistema una vez en texto (`.dg`) y obtienes varias Vistas navegables, con la estetica que elijas: el mismo diagrama puede verse como tarjetas sobrias, neon, plano tecnico, post-its o placa de circuito, cambiando solo el Tema.
 
-**English:** a text DSL for large architecture and flow diagrams. You describe a system once and get several navigable views, rendered with fully themeable and animatable styles. Documentation is in Spanish for now; see the [short English overview](README.en.md).
+**English:** a text DSL for large architecture, flow, sequence and ER diagrams. You describe a system once and get several navigable views, rendered with fully themeable and animatable styles. Documentation is in Spanish for now; see the [short English overview](README.en.md).
 
 ![El mismo diagrama con el Tema synthwave](docs/img/temas/synthwave.png)
 

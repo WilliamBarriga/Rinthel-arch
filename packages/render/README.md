@@ -3,7 +3,8 @@
 Componente React `<Diagram>` que dibuja una Vista resuelta con su Geometria y el Estilo de un Tema.
 
 ## Que hace
-- Dibuja Grupos (HTML), Aristas (SVG) y Nodos (HTML) en tres capas bajo una camara de pan/zoom.
+- Dibuja Grupos (HTML), Aristas (SVG) y Nodos (HTML) en tres capas bajo una camara de pan/zoom; una Vista ER dibuja cada tabla como Nodo con filas.
+- Una Geometria `secuencia` se dibuja con `construirEscenaDeSecuencia`: Lifelines con cabecera espejo, activaciones, Mensajes, Fragmentos y Notas; sin Elementos de Tema declarados los deriva de `node` y `edge`.
 - `resolverEstilo` convierte un Tema en el `Estilo` de los pintores; `hojaDeFuentes` emite la hoja determinista.
 - Pinta Estados visuales, nivel de detalle y Pasos, anima con CSS (respeta reduced-motion) y acepta codigo solo por la prop `componentes`.
 

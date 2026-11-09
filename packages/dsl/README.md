@@ -4,7 +4,8 @@ Compilador del DSL de texto (gramatica Langium) a la Fuente canonica.
 
 ## Que hace
 - `compile` fusiona los archivos del Workspace de forma determinista y devuelve la Fuente canonica con sus `Issue` posicionados, sin lanzar excepciones.
-- Compila el bloque `theme` y valida cada Capa y Slot contra el catalogo de `tema`.
+- Compila el bloque `theme` y valida cada Capa y Slot contra el catalogo de `tema`, incluidos los Elementos de secuencia (`lifeline`, `activation`, `message`, `fragment`, `note`) y de ER (`row`).
+- Compila `interaction`, `type sequence` y `type er` a la Fuente canonica.
 - Devuelve la posicion en el texto de cada `pin` y de cada valor (`ubicar`), base de la edicion de Pins.
 
 ## Que NO hace
