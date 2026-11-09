@@ -7,7 +7,7 @@ Workspace de ejemplo en el que el sistema se documenta a si mismo: paquetes del 
 | Archivo | Que mapea |
 | --- | --- |
 | `especificacion.dg` | Tipos de nodo (actor, paquete, modulo, artefacto, salida, externo...) y Temas `diagrams` (oscuro) y `diagrams-claro`: extienden los incorporados `neutral-dark` y `neutral` con las fuentes del Workspace y dos parches por Tipo (las Partes `barra-paquete` y `borde-discontinuo`) |
-| `sistema.dg` | Los ocho paquetes con sus ~110 modulos (uno por archivo de `src`, con `source` al archivo), actores, artefactos, procesos y librerias externas. Los titulos de modulo llevan el paquete (`tema/estilo`) para distinguir homonimos |
+| `sistema.dg` | Los ocho paquetes con sus ~120 modulos (uno por archivo de `src`, con `source` al archivo), actores, artefactos, procesos y librerias externas. Los titulos de modulo llevan el paquete (`tema/estilo`) para distinguir homonimos |
 | `conexiones.dg` | Dependencias entre paquetes (de `package.json`) y entre modulos (de los imports), mas el flujo de datos con actores, servidor dev y Worker. Las Aristas solo se declaran en `model`, con ids cualificados |
 | `vistas.dg` | Vista de paquetes con drill-down a cada paquete, la Vista `abierto` (render, sesion y layout abiertos; la Vista `abierto` del prototipo aprobado) detalles por paquete (`*-detalle`, incluidos `tema-detalle` y `cli-detalle`) y cuatro Vistas de flujo con Pasos: `flujo-edicion`, `flujo-validate`, `flujo-dev` y `flujo-tema` |
 | `fuente-canonica.dg` | La Fuente canonica como esquema ER (Vista `fuente-er`, con Pasos) y dos Interacciones con Vista de secuencia: `editar-pin` (Fragmento `alt`, `ref`, Nota, Pasos y `link` a `sesion-detalle`/`shell-detalle`) y `recompilar` |
