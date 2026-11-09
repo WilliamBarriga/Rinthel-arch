@@ -42,7 +42,7 @@ describe('medirEnVisor', () => {
 });
 
 describe('VistaInteractiva con medicion real', () => {
-  const geometria: Geometria = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, pinsSolapados: [], width: 100, height: 50 };
+  const geometria: Geometria = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 100, height: 50 };
 
   it('un texto con peso se carga y se mide con ese peso, bajo su propia clave', async () => {
     const fuentes: string[] = [];

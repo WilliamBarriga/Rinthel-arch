@@ -14,6 +14,8 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | `offset-y` | -200 a 200 |
 | `grow` | -100 a 100 |
 
+Y `zone` (`all`, `header`, `body`; sin ella, `all`): que parte de la caja pinta la Capa. `header` es la zona de los Slots anteriores a `attrs` (sin `attrs` equivale a `all`) y `body` la de `attrs`. Solo pinta, y se reparte aparte de la caja: un parche de estado no la cambia.
+
 ### Familia forma
 
 | Primitiva | Ubicacion | Propiedades | Metricas |
@@ -98,6 +100,11 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | `via` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `hollow` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 | `chevron` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `one` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `zero-one` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `many` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `zero-many` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
+| `cross` | marcador | `color` color de Paleta (opcional); `size` 2 a 32 (8) | no |
 
 ### Familia texto
 
@@ -125,6 +132,35 @@ Toda Capa de Nodo o Grupo (salvo `code`) acepta ademas, sin que la Primitiva las
 | `footer` | `text` |
 | `attrs` | `text` |
 | `counter` | `chip` |
+
+## Fila de tabla ER (`row`)
+
+Bloque del Tema que estiliza las filas de una Vista `er`. `height` (12 a 120) y el `size` de `name`, `type` y `key` (multiplo del tamano de texto del Tema, como en los Slots) cambian el tamano medido; el resto solo pinta.
+
+| Elemento | Contenido |
+| --- | --- |
+| `layer`, `use` | Pila de Capas de cada fila (Primitivas de Nodo) |
+| `alternate { ... }` | Parche de las filas impares |
+| `key pk|fk|uk { ... }` | Parche de las filas con esa marca de clave, en ese orden |
+| `optional { ... }` | Parche de los Atributos opcionales, tras las claves |
+| `state hover|seleccionado|... { ... }` | Parche de estado de la fila (solo pinta), sobre la pila de su variante; el shell emite `hover` y `seleccionado` |
+| `name { ... }` | Estilo de texto con la Primitiva `text` |
+| `type { ... }` | Estilo de texto con la Primitiva `text` |
+| `key { ... }` | Estilo de texto con la Primitiva `chip` (el chip de cada marca de clave) |
+
+## Elementos de secuencia
+
+Bloques del Tema para una Vista `sequence`; sin ellos el nucleo los deriva de `edge` y `node`. Cada uno admite `layer`, `use` y `state`; las Metricas son las separaciones de secuencia (px, con su rango y defecto del nucleo).
+
+| Bloque | Capas | Marcadores | Estilos | Parches | Metricas |
+| --- | --- | --- | --- | --- | --- |
+| `lifeline` | trazos | `end` | - | - | `gap` 40 a 600 (160) |
+| `activation` | de Nodo | - | - | - | `width` 4 a 40 (10) |
+| `message` | trazos | `start`, `end` | `label` (`label`) | `kind <tipo>`: sync, async, reply, create, destroy | `gap` 12 a 120 (32); `loop-width` 12 a 120 (36); `create-offset` -40 a 40 (0) |
+| `fragment` | de Nodo | - | `operator` (`label`), `guard` (`text`), `divider` (`line`) | `op <operador>`: opt, loop, break, critical, alt, par, ref | `padding` 0 a 64 (16); `padding-y` 2 a 40 (10) |
+| `note` | de Nodo | - | `text` (`text`) | - | - |
+
+El parche `identifying { ... }` del bloque `edge` cambia el trazo de las Aristas identificantes de una Vista ER.
 
 ## Movimientos
 

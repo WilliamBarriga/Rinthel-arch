@@ -19,9 +19,9 @@ import { adaptadorDeWorker, servirLayout } from 'shell';
 import type { PuertoDeMensajes } from 'shell';
 import { build } from 'esbuild';
 
-import { generarWorkspace } from './generador.ts';
+import { generarSecuencia, generarWorkspace } from './generador.ts';
 
-const ESCENARIOS = ['build-10k', 'relayout-1k', 'relayout-slots', 'relayout-grande', 'colapso-5k', 'bundle'] as const;
+const ESCENARIOS = ['build-10k', 'relayout-1k', 'relayout-slots', 'relayout-grande', 'colapso-5k', 'secuencia-grande', 'bundle'] as const;
 type Escenario = (typeof ESCENARIOS)[number];
 
 const ms = (desde: number): number => Math.round(performance.now() - desde);
@@ -178,6 +178,23 @@ async function colapsoDe5k(): Promise<Record<string, number>> {
   };
 }
 
+/** Layout de una Interaccion de 1000 Mensajes, 50 Lifelines y Fragmentos anidados 3 niveles (mejor de 3 corridas tras una de calentamiento). */
+async function secuenciaGrande(): Promise<Record<string, number>> {
+  const { canonico, issues } = compile(generarSecuencia({ mensajes: 1000, lifelines: 50, profundidad: 3 }));
+  if (canonico === undefined) throw new Error(`La Interaccion sintetica no compila: ${JSON.stringify(issues.slice(0, 3))}`);
+  const vista = resolveView(canonico, 'secuencia')!;
+  const inicio = performance.now();
+  await layoutView(vista, TEMA);
+  const frioMs = ms(inicio);
+  const corridas: number[] = [];
+  for (let i = 0; i < 3; i++) {
+    const t = performance.now();
+    await layoutView(vista, TEMA);
+    corridas.push(ms(t));
+  }
+  return { mensajes: vista.interaction!.messages.length, lifelines: vista.nodes.length, tiempoFrioMs: frioMs, tiempoMs: Math.min(...corridas), maxRssMb: mb(process.resourceUsage().maxRSS * 1024) };
+}
+
 async function bundleDelShell(): Promise<Record<string, number>> {
   // Los dos bundles que `export --format html` incrusta (mismas opciones que `packages/cli/src/html.ts`):
   // la pagina (shell + React, sin ELK) y el Worker (layout con ELK, sin zod, tal cual los empaqueta el CLI).
@@ -226,6 +243,7 @@ const ejecutores: Record<Escenario, () => Promise<Record<string, number>>> = {
   'relayout-slots': () => relayoutConSlotsAnidados(500),
   'relayout-grande': () => relayoutConSlotsAnidados(3000),
   'colapso-5k': colapsoDe5k,
+  'secuencia-grande': secuenciaGrande,
   bundle: bundleDelShell,
 };
 const medidas = await ejecutores[escenario]();

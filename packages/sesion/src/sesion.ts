@@ -3,8 +3,8 @@ import type { FuenteCanonica, GeometriaCacheada, Issue, Tema, Ubicador, Vista } 
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, OrigenDeTema, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
-import type { Geometria } from 'layout';
-import { TEMA_NEUTRO, advertenciasDeContraste, estiloResuelto, leerOps, resolverFuentes, resolverTema, tiposSoloColor, usosDeCodigo } from 'tema';
+import type { Geometria, GeometriaGrafo } from 'layout';
+import { TEMA_NEUTRO, advertenciasDeContraste, aristaIdentificanteSoloColor, estiloResuelto, mensajesSoloColor, leerOps, resolverFuentes, resolverTema, tiposSoloColor, usosDeCodigo } from 'tema';
 import type { EstiloResuelto, UsoDeComponente } from 'tema';
 
 /** Archivos derivados, por ruta relativa a `<workspace>/.diagrams/`. */
@@ -96,6 +96,15 @@ function temaDeVista(fuente: FuenteCanonica, vista: Vista, global: string | unde
  * texto conocida (Pin que no viene del DSL) no se avisa.
  */
 function avisosDePins(vista: string, geometry: Geometria, pins: readonly PosicionDePin[]): Issue[] {
+  switch (geometry.kind) {
+    case 'grafo':
+      return avisosDePinsDeGrafo(vista, geometry, pins);
+    case 'secuencia':
+      return [];
+  }
+}
+
+function avisosDePinsDeGrafo(vista: string, geometry: GeometriaGrafo, pins: readonly PosicionDePin[]): Issue[] {
   const posicionDe = (nodo: string) => pins.find((pin) => pin.view === vista && pin.node === nodo);
   return geometry.pinsSolapados.flatMap(([a, b]) => {
     const [primero, segundo] = [posicionDe(a), posicionDe(b)];
@@ -144,7 +153,14 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
     if (resuelta === undefined || donde === null) return;
     const usados = new Set(resuelta.nodes.map((n) => n.type));
     const tipos = fuente.specification.nodeTypes.filter((t) => usados.has(t.name)).map((t) => ({ name: t.name, color: colores[t.name], icon: t.icon }));
-    for (const [a, b] of tiposSoloColor(temaDeVista(fuente, declarada, global), tipos)) {
+    const tema = temaDeVista(fuente, declarada, global);
+    const aviso = (message: string): Issue => ({ code: CODIGOS.W_THEME_COLOR_ONLY, severity: 'warning', ...donde, message, hint: 'da al Tema un trazo, un marcador o un estilo distinto; el color no basta' });
+    const tiposDeMensaje = [...new Set(resuelta.interaction?.messages.map((m) => m.kind) ?? [])];
+    for (const [a, b] of mensajesSoloColor(tema, tiposDeMensaje)) issues.push(aviso(`En la Vista '${declarada.id}', los Mensajes '${a}' y '${b}' se distinguen solo por color`));
+    if (resuelta.type === 'er' && resuelta.edges.some((e) => e.identifying === true) && aristaIdentificanteSoloColor(tema)) {
+      issues.push(aviso(`En la Vista '${declarada.id}', las Aristas identificantes y las no identificantes se distinguen solo por color`));
+    }
+    for (const [a, b] of tiposSoloColor(tema, tipos)) {
       issues.push({
         code: CODIGOS.W_THEME_COLOR_ONLY,
         severity: 'warning',
@@ -314,7 +330,7 @@ function crear(
       if (datos === undefined || fuente === undefined) return undefined;
       const declarada = fuente.views.find(({ id }) => id === vista);
       const tipos = Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
-      return estiloResuelto(datos.tema, { tipos, ...(opciones.archivosDeFuente !== undefined && { archivosDeFuente: opciones.archivosDeFuente }), ...(declarada?.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
+      return estiloResuelto(datos.tema, { tipos, ...(declarada !== undefined && { diagrama: declarada.type }), ...(opciones.archivosDeFuente !== undefined && { archivosDeFuente: opciones.archivosDeFuente }), ...(declarada?.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
     },
     vistasConGeometria: () => [...memo.keys()],
     actualizar: (nuevos, cambios = {}) => crear(nuevos, { ...opciones, ...cambios }, compile(nuevos), memo),

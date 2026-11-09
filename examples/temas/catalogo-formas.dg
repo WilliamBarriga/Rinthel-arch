@@ -154,6 +154,37 @@ theme borde-contorno extends base-muestra {
   }
 }
 
+// Marcadores de cardinalidad ER (pies de gallo). En una Vista ER el nucleo los elige segun la cardinalidad de
+// cada Arista; aqui se declaran como marcadores de extremo para mostrarlos en cualquier Tipo de diagrama.
+theme marcadores-er extends base-muestra {
+  node {
+    layer forma rect { radius 4 }
+    layer relleno solid { color papel }
+    layer borde border { color tinta }
+    slots { title attrs }
+  }
+  edge {
+    layer linea line { color tinta }
+    start one { size 12 }
+    end many { size 12 }
+  }
+}
+
+theme marcadores-er-opcionales extends marcadores-er {
+  edge {
+    start zero-one { size 12 }
+    end zero-many { size 12 }
+  }
+}
+
+// La X de una Lifeline destruida (secuencia): un marcador centrado en el extremo.
+theme marcador-cruz extends marcadores-er {
+  edge {
+    start cross { size 10 }
+    end cross { size 10 }
+  }
+}
+
 view formas {
   type architecture
   theme forma-pastilla

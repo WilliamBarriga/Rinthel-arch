@@ -199,6 +199,7 @@ model {
     expect(api.slots!['attrs']).toEqual({ x: 8, y: 8 + fila + 4, width: api.width - 16, height: 2 * metricas.fila });
     expect(api.height).toBe(8 + fila + 4 + 2 * metricas.fila + 8);
     // La Arista `api#nombre -> db` sale por la fila `nombre` (la segunda): su puerto cae en el centro de esa fila.
+    if (geometry.kind !== 'grafo') throw new Error('se esperaba una Geometria de grafo');
     const ruta = geometry.edges['api.nombre->db'] ?? Object.values(geometry.edges)[0]!;
     const centro = api.y + api.slots!['attrs']!.y + metricas.fila * 1.5;
     expect(ruta.points[0]!.y).toBe(centro);

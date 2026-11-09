@@ -37,7 +37,7 @@
  * Hover y fantasma: el raton sobre un elemento lo dibuja en `hover`; el Nodo que se arrastra, en `fantasma`.
  * `issues` y `toasts` se dibujan dentro del lienzo con clases `rd-*` y las variables del Tema.
  * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con
- * `onStepChange`, o interno desde `defaultStep`, 0 por defecto) se pasa por
+ * `onStepChange`, o interno desde `defaultStep`, 0 por defecto; en secuencia y ER, el primer Paso) se pasa por
  * `revealAt` y se dibujan controles anterior/siguiente; la geometria no cambia.
  * Una `visibility` explicita manda sobre la derivada; sin `steps` no hay controles.
  * Drill-down: un Nodo con `link` en la Vista activa, al pulsarlo, lleva a la Vista
@@ -77,6 +77,9 @@
  * soltar avisan su posicion nueva (relativa al Grupo padre, unidades de la geometria; es el
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve
  * si el aviso resuelve `false`. Sin `onMoveNode` (export estatico) no hay arrastre de Nodos.
+ * Reordenar Lifelines (solo bajo `dev`): con `onReorderLifelines({orden})`, arrastrar la cabecera de una Lifeline o el
+ * titulo de un `box` en una Vista de secuencia avisa el orden visible completo; `crearEnviadorDeIntencion(fetch)` envia
+ * cualquier Intencion a `POST /api/edit`.
  * `crearControlDeEdicion(archivos)` conecta las Intenciones y el historial de `sesion` a
  * `aplicar`, `deshacer` y `rehacer` (ADR 0007).
  * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
@@ -142,8 +145,9 @@ export type { AdaptadorDeHash, EstadoDeShell } from './hash';
 export { useEstadoEnHash } from './estado-en-hash';
 export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-hash';
 // La `IntencionDePin` vive en `canonico`; se reexporta para no renombrar la interfaz de `shell`.
-export { crearEnviadorDePin } from './enviar-pin';
-export type { EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
+export { crearEnviadorDeIntencion, crearEnviadorDePin } from './enviar-pin';
+export type { AlReordenarLifelines } from './arrastre';
+export type { EnviadorDeIntencion, EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
 export type { IntencionDePin } from 'canonico';
 export { crearControlDeEdicion } from './control-de-edicion';
 export type { ControlDeEdicion, ResultadoDeEdicion } from './control-de-edicion';

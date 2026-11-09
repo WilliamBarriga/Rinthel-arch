@@ -1,20 +1,20 @@
 // Una Vista por Tema: el mismo Modelo, el Grupo `plataforma` abierto y `persistencia` colapsado.
 // Sirve la galeria con `node packages/cli/dist/bin.js dev --workspace examples/temas/galeria --theme-path examples/rinthel-arch/temas`
 // y cambia de Vista para comparar los 14 Temas.
-view soft-card    { type architecture  theme soft-card     include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view glass-chip   { type architecture  theme glass-chip    include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view neobrutalist { type architecture  theme neobrutalist  include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view blueprint    { type architecture  theme blueprint     include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view claro-suave  { type architecture  theme claro-suave   include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view crt-terminal { type architecture  theme crt-terminal  include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view synthwave    { type architecture  theme synthwave     include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view editorial    { type architecture  theme editorial     include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view bauhaus      { type architecture  theme bauhaus       include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view sticky-notes { type architecture  theme sticky-notes  include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view keycaps      { type architecture  theme keycaps       include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view metro-map    { type architecture  theme metro-map     include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view pcb          { type architecture  theme pcb           include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
-view pixel-art    { type architecture  theme pixel-art     include **  exclude referencia, referencia.**  expanded plataforma, estados  collapsed persistencia }
+view soft-card    { type architecture  theme soft-card     include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view glass-chip   { type architecture  theme glass-chip    include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view neobrutalist { type architecture  theme neobrutalist  include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view blueprint    { type architecture  theme blueprint     include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view claro-suave  { type architecture  theme claro-suave   include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view crt-terminal { type architecture  theme crt-terminal  include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view synthwave    { type architecture  theme synthwave     include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view editorial    { type architecture  theme editorial     include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view bauhaus      { type architecture  theme bauhaus       include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view sticky-notes { type architecture  theme sticky-notes  include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view keycaps      { type architecture  theme keycaps       include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view metro-map    { type architecture  theme metro-map     include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view pcb          { type architecture  theme pcb           include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view pixel-art    { type architecture  theme pixel-art     include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
 view soft-card-referencia { type architecture  theme soft-card  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
 view glass-chip-referencia { type architecture  theme glass-chip  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
 view neobrutalist-referencia { type architecture  theme neobrutalist  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
@@ -29,3 +29,33 @@ view keycaps-referencia { type architecture  theme keycaps  include referencia.*
 view metro-map-referencia { type architecture  theme metro-map  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
 view pcb-referencia { type architecture  theme pcb  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
 view pixel-art-referencia { type architecture  theme pixel-art  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
+
+// Una Vista de secuencia y una ER por Tema: el mismo Modelo, otro Tipo de diagrama.
+view soft-card-secuencia { type sequence  theme soft-card  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view glass-chip-secuencia { type sequence  theme glass-chip  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view neobrutalist-secuencia { type sequence  theme neobrutalist  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view blueprint-secuencia { type sequence  theme blueprint  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view claro-suave-secuencia { type sequence  theme claro-suave  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view crt-terminal-secuencia { type sequence  theme crt-terminal  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view synthwave-secuencia { type sequence  theme synthwave  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view editorial-secuencia { type sequence  theme editorial  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view bauhaus-secuencia { type sequence  theme bauhaus  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view sticky-notes-secuencia { type sequence  theme sticky-notes  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view keycaps-secuencia { type sequence  theme keycaps  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view metro-map-secuencia { type sequence  theme metro-map  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view pcb-secuencia { type sequence  theme pcb  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view pixel-art-secuencia { type sequence  theme pixel-art  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view soft-card-er { type er  theme soft-card  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view glass-chip-er { type er  theme glass-chip  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view neobrutalist-er { type er  theme neobrutalist  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view blueprint-er { type er  theme blueprint  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view claro-suave-er { type er  theme claro-suave  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view crt-terminal-er { type er  theme crt-terminal  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view synthwave-er { type er  theme synthwave  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view editorial-er { type er  theme editorial  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view bauhaus-er { type er  theme bauhaus  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view sticky-notes-er { type er  theme sticky-notes  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view keycaps-er { type er  theme keycaps  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view metro-map-er { type er  theme metro-map  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view pcb-er { type er  theme pcb  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view pixel-art-er { type er  theme pixel-art  include datos.clientes, datos.pedidos-tabla, datos.lineas }

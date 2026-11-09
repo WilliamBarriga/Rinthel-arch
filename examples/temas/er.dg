@@ -1,0 +1,52 @@
+// Tema de ejemplo para tablas ER (bloque `row`, `zone` y marcadores). Cabecera de color con `zone header`, filas
+// alternas, un parche por marca de clave y los pies de gallo con otro color solo en las Vistas ER.
+specification {
+  node tabla { description "Tabla de una base de datos" icon box color blue }
+}
+
+model {
+  tabla customers "Clientes" {
+    id: uuid pk
+    name: text
+    email: text? uk
+  }
+  tabla orders "Pedidos" {
+    id: uuid pk
+    customer_id: uuid fk
+    note: text?
+  }
+  orders#customer_id "0..*" -> "1" customers#id "pertenece" identifying
+}
+
+theme er-tablas {
+  palette { papel "#fefce8"  tinta "#1f2937"  azul "#2563eb"  gris "#e5e7eb"  verde "#dcfce7"  ambar "#92400e" }
+  node {
+    layer forma rect { radius 6 }
+    layer relleno solid { color papel }
+    layer cabecera solid { color azul  zone header }
+    layer borde border { color tinta }
+    slots column { title { color papel  weight 700 }  attrs }
+  }
+  row {
+    height 26
+    layer fondo solid { color papel }
+    layer separador stripe { color gris  side bottom  width 1 }
+    alternate { layer fondo { color gris } }
+    key pk { layer fondo { color verde } }
+    optional { layer separador { color ambar } }
+    name { weight 600 }
+    type { color azul }
+    key { fill azul  color papel  radius 4 }
+  }
+  edge {
+    layer linea line { color tinta }
+    end arrow { size 12 }
+    diagram er { end arrow { size 12  color azul } }
+  }
+}
+
+view tablas {
+  type er
+  include **
+  theme er-tablas
+}

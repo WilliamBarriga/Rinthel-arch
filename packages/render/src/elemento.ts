@@ -31,6 +31,18 @@ export function limpiarValorCss(valor: string): string {
   return valor.replace(/[<>{};\\\n\r]/g, '');
 }
 
+/** Declaraciones CSS de un `style` en linea, separadas por `;` (sin limpiar: el llamador ya controla los valores). */
+export const estiloEnLinea = (declaraciones: Readonly<Record<string, string>>): string =>
+  Object.entries(declaraciones)
+    .map(([propiedad, valor]) => `${propiedad}:${valor}`)
+    .join(';');
+
+/** Declaraciones CSS con cada valor limpio (`limpiarValorCss`) y un `;` tras cada una, para encadenar mas estilo despues. */
+export const declaracionesLimpias = (declaraciones: Readonly<Record<string, string>>): string =>
+  Object.entries(declaraciones)
+    .map(([propiedad, valor]) => `${propiedad}:${limpiarValorCss(valor)};`)
+    .join('');
+
 /** FNV-1a de 32 bits, en base 36: identificador corto y estable del contenido. */
 export function huella(texto: string): string {
   let h = 0x811c9dc5;

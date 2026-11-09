@@ -11,14 +11,14 @@ import type { ReactElement } from 'react';
 
 import { urlDeFuente } from 'canonico';
 import type { EstadoDeDev, FuenteCanonica, GeometriaCacheada, IssueDeDev } from 'canonico';
-import { VistaInteractiva, adaptadorDeWorker, crearEnviadorDePin, hashDelNavegador, useEstadoEnHash } from 'shell';
+import { VistaInteractiva, adaptadorDeWorker, crearEnviadorDeIntencion, crearEnviadorDePin, hashDelNavegador, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 import type { ComponentesDeTema } from 'render';
 
 import { montar, usePropsDeDatos } from './arranque';
 import { crearCargadorDeCodigo } from './componentes';
 import { accionDeAtajo, crearAlAtajo, crearEnviadorDeHistorial } from './historial';
-import { crearAlMover } from './mover';
+import { crearAlMover, crearAlOrdenar } from './mover';
 
 /** Estado del servidor: esquema unico de `canonico` (`estadoDeDevSchema`), el mismo que produce `dev`. */
 type Estado = EstadoDeDev;
@@ -115,6 +115,7 @@ function IssuesSinVista({ issues }: { issues: readonly IssueDeDev[] }): ReactEle
 const hash = hashDelNavegador(window);
 
 const enviarPin = crearEnviadorDePin();
+const enviarIntencion = crearEnviadorDeIntencion();
 const enviarHistorial = crearEnviadorDeHistorial();
 
 interface PropsDeVista {
@@ -125,15 +126,16 @@ interface PropsDeVista {
   componentes: ComponentesDeTema | undefined;
   /** Arrastre soltado: la Vista dibujada y el Nodo; resuelve `false` si se rechazo. */
   alMover: (vista: string, mov: { id: string; x: number; y: number }) => Promise<boolean>;
+  alOrdenar: (vista: string, cambio: { orden: string[] }) => Promise<boolean>;
   /** Aviso vigente de un Pin rechazado. */
   aviso: string | undefined;
 }
 
-function Vista({ fuente, estado, geometrias, layout, componentes, alMover, aviso }: PropsDeVista): ReactElement | null {
+function Vista({ fuente, estado, geometrias, layout, componentes, alMover, alOrdenar, aviso }: PropsDeVista): ReactElement | null {
   const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
   const { icons, cachedGeometries, theme: tema, width, height } = usePropsDeDatos({ fuente, iconos: estado.iconos, geometrias }, props.view);
   if (tema === undefined) return null;
-  return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} {...(estado.fuentes !== undefined && { fontFiles: estado.fuentes, fontUrl: urlDeFuente })} icons={icons} {...(componentes !== undefined && { componentes })} width={width} height={height} cachedGeometries={cachedGeometries} onMoveNode={(mov) => alMover(props.view, mov)} issues={estado.issues} toasts={aviso === undefined ? [] : [aviso]} />;
+  return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} {...(estado.fuentes !== undefined && { fontFiles: estado.fuentes, fontUrl: urlDeFuente })} icons={icons} {...(componentes !== undefined && { componentes })} width={width} height={height} cachedGeometries={cachedGeometries} onMoveNode={(mov) => alMover(props.view, mov)} onReorderLifelines={(cambio) => alOrdenar(props.view, cambio)} issues={estado.issues} toasts={aviso === undefined ? [] : [aviso]} />;
 }
 
 function App(): ReactElement {
@@ -147,6 +149,7 @@ function App(): ReactElement {
   const vivo = useRef(estado);
   vivo.current = estado;
   const alMover = crearAlMover({ estado: () => vivo.current, enviar: enviarPin, avisar: setAviso, recargar });
+  const alOrdenar = crearAlOrdenar({ estado: () => vivo.current, enviar: enviarIntencion, avisar: setAviso, recargar });
   const alAtajo = crearAlAtajo({ enviar: enviarHistorial, avisar: setAviso, recargar });
   const alAtajoVivo = useRef(alAtajo);
   alAtajoVivo.current = alAtajo;
@@ -172,7 +175,7 @@ function App(): ReactElement {
   const componentes = useComponentes(estado);
   return (
     <>
-      {ultima === undefined ? <IssuesSinVista issues={estado?.issues ?? []} /> : <Vista {...ultima} layout={layout} componentes={componentes} alMover={alMover} aviso={aviso} />}
+      {ultima === undefined ? <IssuesSinVista issues={estado?.issues ?? []} /> : <Vista {...ultima} layout={layout} componentes={componentes} alMover={alMover} alOrdenar={alOrdenar} aviso={aviso} />}
     </>
   );
 }

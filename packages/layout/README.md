@@ -1,9 +1,10 @@
 # layout
 
-Calcula la Geometria de una Vista con ELK y aplica los Pins.
+Calcula la Geometria de una Vista (ELK para architecture, flow y er; algoritmo propio para sequence) y aplica los Pins.
 
 ## Que hace
 - `layoutView` da la caja de cada Nodo visible y la ruta ortogonal de cada Arista de una `VistaResuelta`.
+- `layoutSecuencia` coloca Lifelines (columnas) y Mensajes (filas) de una Vista `sequence`, sin ELK; `layoutView` elige por `vista.type` y la Geometria es una union por `kind` (`grafo` o `secuencia`).
 - `claveDeLayout` y `claveDeEstructura` dicen cuando relayoutar; `aplicarPinsAGeometria` aplica Pins sin ELK.
 - `indiceDeGeometria` entrega cajas absolutas, el padre de cada Nodo y las raices.
 

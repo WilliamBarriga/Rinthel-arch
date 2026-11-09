@@ -118,6 +118,13 @@ const MARGEN_DE_FILTRO = 40;
 
 type Dibujo = (lado: number, color: string, fondo: string) => Elemento[];
 
+/** Barra perpendicular a la ruta a `x` del borde de la tabla, de `semialto` a cada lado. */
+const barra = (x: number, semialto: number, color: string): Elemento => ({ tag: 'path', attrs: { d: `M ${num(-x)} ${num(-semialto)} L ${num(-x)} ${num(semialto)}`, stroke: color, 'stroke-width': '1.5', fill: 'none' } });
+/** Pie de gallo: tres puntas desde un punto de la ruta a `largo` del borde hasta el borde de la tabla. */
+const pie = (largo: number, semialto: number, color: string): Elemento => ({ tag: 'path', attrs: { d: `M ${num(-largo)} 0 L 0 ${num(-semialto)} M ${num(-largo)} 0 L 0 0 M ${num(-largo)} 0 L 0 ${num(semialto)}`, stroke: color, 'stroke-width': '1.5', fill: 'none' } });
+/** Anillo del "cero": circulo hueco (relleno del fondo) con el centro a `x` del borde. */
+const anillo = (x: number, radio: number, color: string, fondo: string): Elemento => ({ tag: 'circle', attrs: { cx: num(-x), cy: '0', r: num(radio), fill: fondo, stroke: color, 'stroke-width': '1.5' } });
+
 /** Forma de cada marcador en su marco local: la punta en el origen, mirando hacia +x (hacia fuera de la ruta). Tabla exhaustiva sobre el catalogo. */
 const MARCADORES: { readonly [M in NombreDePrimitivaEn<'marcador'>]: Dibujo } = {
   arrow: (s, color) => [{ tag: 'path', attrs: { d: `M 0 0 L ${num(-s)} ${num(-s / 2)} L ${num(-s)} ${num(s / 2)} z`, fill: color } }],
@@ -132,12 +139,22 @@ const MARCADORES: { readonly [M in NombreDePrimitivaEn<'marcador'>]: Dibujo } = 
       attrs: { d: `M ${num(-0.65 * s)} ${num(-0.35 * s)} L 0 0 L ${num(-0.65 * s)} ${num(0.35 * s)}`, fill: 'none', stroke: color, 'stroke-width': num(Math.max(1, s / 7)), 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
     },
   ],
+  // Pies de gallo de la cardinalidad ER (ver `FORMA_ER` en `pintores.ts`). El origen local es el borde de la tabla; la ruta queda hacia -x y el marcador ocupa `s`.
+  one: (s, color) => [barra(0.4 * s, 0.45 * s, color), barra(0.7 * s, 0.45 * s, color)],
+  'zero-one': (s, color, fondo) => [barra(0.4 * s, 0.45 * s, color), anillo(0.78 * s, 0.2 * s, color, fondo)],
+  many: (s, color) => [pie(0.62 * s, 0.45 * s, color), barra(0.85 * s, 0.45 * s, color)],
+  'zero-many': (s, color, fondo) => [pie(0.55 * s, 0.45 * s, color), anillo(0.55 * s + 0.2 * s + 0.04 * s, 0.2 * s, color, fondo)],
+  // X centrada en el extremo (Lifeline destruida): no es una punta, no depende de hacia donde mire.
+  cross: (s, color) => [{ tag: 'path', attrs: { d: `M ${num(-s / 2)} ${num(-s / 2)} L ${num(s / 2)} ${num(s / 2)} M ${num(-s / 2)} ${num(s / 2)} L ${num(s / 2)} ${num(-s / 2)}`, stroke: color, 'stroke-width': num(Math.max(1.5, s / 6)), fill: 'none' } }],
   // Almohadilla de una via: centrada en el extremo (no detras de la punta), disco del color con el agujero del fondo.
   via: (s, color, fondo) => [
     { tag: 'circle', attrs: { cx: '0', cy: '0', r: num(s / 2), fill: color } },
     { tag: 'circle', attrs: { cx: '0', cy: '0', r: num(s / 5), fill: fondo } },
   ],
 };
+
+/** Marcadores de cardinalidad ER: llevan `data-shape` para que el DOM diga que cardinalidad dibujan. */
+const FORMAS_ER: ReadonlySet<string> = new Set(['one', 'zero-one', 'many', 'zero-many']);
 
 function marcador(estilo: Estilo, primitiva: PrimitivaPintada | undefined, extremo: Punto, vecino: Punto, lado: 'origen' | 'fin'): Elemento[] {
   if (primitiva === undefined) return [];
@@ -146,7 +163,7 @@ function marcador(estilo: Estilo, primitiva: PrimitivaPintada | undefined, extre
   return [
     {
       tag: 'g',
-      attrs: { 'data-marker': lado, transform: `translate(${num(extremo.x)} ${num(extremo.y)}) rotate(${num(angulo)})` },
+      attrs: { 'data-marker': lado, ...(FORMAS_ER.has(primitiva.tipo) && { 'data-shape': primitiva.tipo }), transform: `translate(${num(extremo.x)} ${num(extremo.y)}) rotate(${num(angulo)})` },
       hijos: dibujo(Number(primitiva.props['size']), String(primitiva.props['color']), estilo.fondo),
     },
   ];

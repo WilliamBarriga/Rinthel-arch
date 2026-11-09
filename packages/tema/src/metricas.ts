@@ -15,10 +15,14 @@ import { anchoDeTexto } from './medicion';
 import type { MedicionDeMetricas, MedidasDeTexto } from './medicion';
 import type { NombreDeSlot } from './catalogo';
 import type { CajaDeSlots } from './disposicion';
+import { NOMBRES_DE_TEXTO_DE_FILA } from './fila';
+import type { TextoDeFila } from './fila';
 import { cascada } from './parches';
-import type { CapaDeTema } from './parches';
+import type { CapaDeTema, TipoDeDiagrama } from './parches';
+import { metricasDeSecuencia } from './secuencia';
+import type { MetricasDeSecuencia } from './secuencia';
 import { alturaDeCabecera } from './slots';
-import { resolverTema } from './tema';
+import { resolverTema, temaParaDiagrama } from './tema';
 import type { TemaResuelto } from './tema';
 
 export interface Metricas {
@@ -55,6 +59,12 @@ export interface Metricas {
   anchoMinimo: number;
   /** Holgura tras el contenido de un Nodo hoja: el `slack` de la raiz de la disposicion o el del nucleo. */
   paddingHorizontal: number;
+  /** Vista ER: las filas de Atributo dibujan chips de clave (`pk`, `fk`, `uk`) y el `?` de los opcionales. Ausente fuera de ER. */
+  marcasDeClave?: true;
+  /** Vista ER: tamano (px) que el `size` de `row name|type|key` fija a ese texto de la fila; ausente = el del Slot `attrs` (los chips, 0.8 de el). */
+  tamanoDeFila?: Partial<Record<TextoDeFila, number>>;
+  /** Vista de secuencia: separaciones que el Tema ajusta en `lifeline`, `message`, `activation` y `fragment`. Ausente fuera de secuencia. */
+  secuencia?: MetricasDeSecuencia;
   /** Margen izquierdo del titulo y de los Atributos. */
   margenDeTexto: number;
   /** Alto del Slot `title` de un Nodo. */
@@ -180,8 +190,43 @@ export interface TablaDeMetricas {
   etiqueta: Metricas;
 }
 
-export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto): TablaDeMetricas {
-  const resuelto = resolverTema(tema);
+/** Alto de fila por px de texto cuando el Tema fija `size` sin `height` (el defecto del nucleo es 1.8 sobre el tamano del Tema). */
+const ESPACIO_DE_LINEA_DE_FILA = 1.4;
+
+/** `size` de cada texto de la fila (`row name|type|key`) como px: multiplica el tamano de texto del Tema, como en los Slots. */
+function tamanosDeFila(textos: NonNullable<TemaResuelto['fila']>['textos'] | undefined, fontSize: number): Partial<Record<TextoDeFila, number>> {
+  const salida: Partial<Record<TextoDeFila, number>> = {};
+  for (const nombre of NOMBRES_DE_TEXTO_DE_FILA) {
+    const size = textos?.[nombre]?.props['size'];
+    if (typeof size === 'number') salida[nombre] = fontSize * size;
+  }
+  return salida;
+}
+
+export function tablaDeMetricas(tema: Tema, medidas?: MedidasDeTexto, diagrama?: TipoDeDiagrama): TablaDeMetricas {
+  const tabla = tablaSinMarcas(tema, medidas, diagrama);
+  if (diagrama === 'sequence') {
+    // Vista de secuencia: todas las entradas llevan las separaciones del Tema (o los defectos del nucleo).
+    const secuencia = metricasDeSecuencia(resolverTema(tema).secuencia);
+    const con = (m: Metricas): Metricas => ({ ...m, secuencia });
+    return { base: con(tabla.base), tipos: Object.fromEntries(Object.entries(tabla.tipos).map(([tipo, m]) => [tipo, con(m)])), grupoAbierto: con(tabla.grupoAbierto), grupoColapsado: con(tabla.grupoColapsado), etiqueta: con(tabla.etiqueta) };
+  }
+  if (diagrama !== 'er') return tabla;
+  // Vista ER: todas las entradas dibujan marcas de clave (`claveDeMetricas` las distingue de las de arquitectura) y
+  // toman el alto de fila del bloque `row` del Tema, si lo declara.
+  const fila = resolverTema(tema).fila;
+  const conMarcas = (m: Metricas): Metricas => {
+    const tamano = tamanosDeFila(fila?.textos, m.fontSize);
+    const mayor = Math.max(0, ...Object.values(tamano));
+    // Sin `height` declarado, un texto mayor que la linea ensancha la fila para no recortarse.
+    const alto = fila?.alto ?? (mayor > 0 ? Math.max(m.fila, Math.ceil(mayor * ESPACIO_DE_LINEA_DE_FILA)) : undefined);
+    return { ...m, ...(alto !== undefined && { fila: alto }), ...(Object.keys(tamano).length > 0 && { tamanoDeFila: tamano }), marcasDeClave: true };
+  };
+  return { base: conMarcas(tabla.base), tipos: Object.fromEntries(Object.entries(tabla.tipos).map(([tipo, m]) => [tipo, conMarcas(m)])), grupoAbierto: conMarcas(tabla.grupoAbierto), grupoColapsado: conMarcas(tabla.grupoColapsado), etiqueta: conMarcas(tabla.etiqueta) };
+}
+
+function tablaSinMarcas(tema: Tema, medidas?: MedidasDeTexto, diagrama?: TipoDeDiagrama): TablaDeMetricas {
+  const resuelto = temaParaDiagrama(resolverTema(tema), diagrama);
   const base = entradaDe(resuelto, cascada(resuelto), medidas);
   const claveBase = JSON.stringify(base);
   const tipos: Record<string, Metricas> = {};
@@ -244,5 +289,60 @@ export function tamanoDeEtiqueta(texto: string, metricas: Metricas): { width: nu
   return {
     width: Math.ceil(anchoDeTexto(metricas, metricas.fuenteDeEtiqueta, tamano, texto, metricas.pesoDeEtiqueta)) + metricas.holguraDeEtiqueta,
     height: Math.ceil(tamano * metricas.altoDeEtiqueta) + metricas.holguraVerticalDeEtiqueta,
+  };
+}
+
+/**
+ * Largo del marcador de cardinalidad (pie de gallo) de una Arista de Vista ER, en px. `layout` garantiza que el
+ * tramo final de cada Arista a una tabla mida al menos esto; `render` lo usa como tamano por defecto del marcador
+ * (el Tema puede cambiar su `size`, acotado al tramo disponible).
+ */
+export const LARGO_DE_MARCADOR_ER = 12;
+
+/** Texto con que se pinta (y se mide) la guarda de un operando de Fragmento: `[guarda]`. */
+export const textoDeGuarda = (guarda: string): string => `[${guarda}]`;
+
+/** Ancho maximo del texto de una Nota (px); un texto mas largo se envuelve por palabras. */
+export const ANCHO_MAXIMO_DE_NOTA = 200;
+/** Relleno de la caja de una Nota (px) y esquina doblada que se le recorta. */
+export const RELLENO_DE_NOTA = 8;
+export const ESQUINA_DE_NOTA = 10;
+
+/** Palabras (y el espacio) cuyo ancho necesita `cajaDeNota`: lo que `textosAMedir` pide al visor. */
+export function palabrasDeNota(texto: string): string[] {
+  return [...new Set([' ', ...texto.split(/\s+/).filter((palabra) => palabra !== '')])];
+}
+
+/** Fuente y tamano con que se mide y se pinta el texto de una Nota: el de la etiqueta, sin la escala. */
+export function estiloDeTextoDeNota(metricas: Metricas): { familia: string; tamano: number; peso?: number } {
+  return { familia: metricas.fuenteDeEtiqueta, tamano: metricas.fontSize, ...(metricas.pesoDeEtiqueta !== undefined && { peso: metricas.pesoDeEtiqueta }) };
+}
+
+/**
+ * Caja de una Nota "papel": el texto envuelto por palabras a `ANCHO_MAXIMO_DE_NOTA`, mas relleno y esquina doblada.
+ * El ancho de una linea es la suma de sus palabras medidas y los espacios entre ellas.
+ */
+export function cajaDeNota(texto: string, metricas: Metricas): { width: number; height: number; lines: string[]; lineHeight: number } {
+  const { familia, tamano, peso } = estiloDeTextoDeNota(metricas);
+  const ancho = (t: string): number => anchoDeTexto(metricas, familia, tamano, t, peso);
+  const espacio = ancho(' ');
+  const lineas: { texto: string; ancho: number }[] = [];
+  for (const palabra of texto.split(/\s+/).filter((p) => p !== '')) {
+    const w = ancho(palabra);
+    const ultima = lineas.at(-1);
+    if (ultima !== undefined && ultima.ancho + espacio + w <= ANCHO_MAXIMO_DE_NOTA) {
+      ultima.texto += ` ${palabra}`;
+      ultima.ancho += espacio + w;
+    } else {
+      lineas.push({ texto: palabra, ancho: w });
+    }
+  }
+  if (lineas.length === 0) lineas.push({ texto: '', ancho: 0 });
+  const lineHeight = Math.ceil(tamano * metricas.altoDeEtiqueta);
+  return {
+    width: Math.ceil(Math.max(...lineas.map((l) => l.ancho))) + 2 * RELLENO_DE_NOTA + ESQUINA_DE_NOTA / 2,
+    height: lineas.length * lineHeight + 2 * RELLENO_DE_NOTA,
+    lines: lineas.map((l) => l.texto),
+    lineHeight,
   };
 }

@@ -5,7 +5,7 @@
  */
 import type { FuenteCanonica, SitioDeTexto, TextRange, Ubicador } from 'canonico';
 
-import type { Edge, Element, NodeTypeDecl, View } from './generated/ast';
+import type { Edge, Element, Fragment, Interaction, NodeTypeDecl, View } from './generated/ast';
 import { aRango, puntoVacio, rangoDe, rangoDeIndice } from './posiciones';
 import { GrammarUtils } from 'langium';
 import type { AstNode } from 'langium';
@@ -22,6 +22,8 @@ export interface DatosDelUbicador {
   nodos: ReadonlyMap<string, { archivo: string; ast: Element }>;
   /** Aristas compiladas, en el mismo orden que `fuente.model.edges`. */
   aristas: readonly { archivo: string; ast: Edge }[];
+  /** Interacciones, en el mismo orden que `fuente.model.interactions`. */
+  interacciones: readonly { archivo: string; ast: Interaction }[];
   /** Tipos de nodo, en el mismo orden que `fuente.specification.nodeTypes`. */
   tipos: readonly { archivo: string; ast: NodeTypeDecl }[];
   /** Vistas, en el mismo orden que `fuente.views`. */
@@ -41,6 +43,7 @@ export function crearUbicador(datos: DatosDelUbicador): Ubicador {
     const [seccion, indice, ...resto] = ruta;
     if (seccion === 'model' && indice === 'nodes') return deNodo(datos, ruta);
     if (seccion === 'model' && indice === 'edges') return deArista(datos, resto);
+    if (seccion === 'model' && indice === 'interactions') return deInteraccion(datos, resto);
     if (seccion === 'specification') return deTipo(datos, resto);
     if (seccion === 'themes' && resto[0] === 'name') {
       const declarado = datos.temas.get(datos.fuente.themes[indice as number]?.name ?? '');
@@ -63,7 +66,43 @@ function deNodo({ fuente, nodos }: DatosDelUbicador, ruta: Ruta): SitioDeTexto |
 function deArista({ aristas }: DatosDelUbicador, [i, lado, campo]: Ruta): SitioDeTexto | null {
   const arista = aristas[i as number];
   if (arista === undefined) return null;
+  // Cardinalidades: `ruta` = [i, 'fromCardinality' | 'toCardinality'], sin `campo`.
+  if (lado === 'fromCardinality' || lado === 'toCardinality') return sitio(arista.archivo, rangoDe(arista.ast, lado));
   return sitio(arista.archivo, rangoDe(arista.ast[lado as 'from' | 'to'], campo as string));
+}
+
+/**
+ * `[i, 'id' | 'title']` o `[i, 'items', j, ...]` de una Interaccion; dentro de un Fragmento el camino sigue con
+ * `'operands', k, 'items', l`, y termina en `from | to | id` (Mensaje) o `separator` (operando).
+ */
+function deInteraccion({ interacciones }: DatosDelUbicador, [i, campo, ...resto]: Ruta): SitioDeTexto | null {
+  const interaccion = interacciones[i as number];
+  if (interaccion === undefined) return null;
+  if (campo === 'items') {
+    let nodo: AstNode | undefined = undefined;
+    let lista: readonly AstNode[] = interaccion.ast.items;
+    let k = 0;
+    for (; k < resto.length; k++) {
+      const clave = resto[k]!;
+      if (typeof clave === 'number') {
+        nodo = lista[clave];
+        if (nodo === undefined) return null;
+      } else if (clave === 'operands') {
+        const operando: AstNode | undefined = (nodo as Fragment | undefined)?.operands[resto[++k] as number];
+        if (operando === undefined) return null;
+        nodo = operando;
+      } else if (clave === 'items') {
+        lista = (nodo as { items?: readonly AstNode[] } | undefined)?.items ?? [];
+      } else {
+        break;
+      }
+    }
+    const propiedad = resto[k] as string | undefined;
+    if (nodo === undefined) return null;
+    if (propiedad === 'targets' && typeof resto[k + 1] === 'number') return sitio(interaccion.archivo, rangoDeIndice(nodo, 'targets', resto[k + 1] as number));
+    return sitio(interaccion.archivo, propiedad === undefined ? aRango(nodo.$cstNode?.range) : rangoDe(nodo, propiedad === 'id' ? 'alias' : propiedad));
+  }
+  return sitio(interaccion.archivo, rangoDe(interaccion.ast, campo === 'id' ? 'name' : (campo as string)));
 }
 
 /** Valor de la propiedad `clave` (`icon` o `color`) del `i`-esimo Tipo de nodo. */
@@ -104,6 +143,27 @@ function deVista(datos: DatosDelUbicador, indice: number, ruta: Ruta): SitioDeTe
     const color = override.props.find((prop) => prop.$type === 'OverrideColor');
     return color === undefined ? null : sitio(archivo, rangoDe(color, 'value'));
   }
+  if (campo === 'interaction') {
+    const prop = props.find((p) => p.$type === 'ViewInteraction');
+    return prop === undefined ? null : sitio(archivo, rangoDe(prop, 'value'));
+  }
+  if (campo === 'autonumber') {
+    const prop = props.find((p) => p.$type === 'ViewAutonumber');
+    return prop?.$cstNode === undefined ? null : sitio(archivo, aRango(prop.$cstNode.range));
+  }
+  if (campo === 'order') {
+    let resto = i as number;
+    for (const prop of props) {
+      if (prop.$type !== 'ViewOrder') continue;
+      if (resto < prop.targets.length) return sitio(archivo, rangoDeIndice(prop, 'targets', resto));
+      resto -= prop.targets.length;
+    }
+    return null;
+  }
+  if (campo === 'include') {
+    const prop = props.find((p) => p.$type === 'ViewInclude');
+    return prop?.$cstNode === undefined ? null : sitio(archivo, aRango(prop.$cstNode.range));
+  }
   if (campo === 'links') {
     const enlace = props.filter((prop) => prop.$type === 'ViewLink')[i as number];
     return enlace === undefined ? null : sitio(archivo, rangoDe(enlace, 'view'));
@@ -118,9 +178,18 @@ function deVista(datos: DatosDelUbicador, indice: number, ruta: Ruta): SitioDeTe
     }
     return null;
   }
+  if (campo === 'stepsEach') {
+    const prop = props.find((p) => p.$type === 'ViewSteps' && p.each);
+    return prop?.$cstNode === undefined ? null : sitio(archivo, aRango(prop.$cstNode.range));
+  }
   if (campo === 'steps') {
     const paso = props.flatMap((prop) => (prop.$type === 'ViewSteps' ? prop.steps : []))[i as number];
     const [accion, k, propiedad] = cola;
+    if (accion === 'title') return paso === undefined ? null : sitio(archivo, rangoDe(paso, 'title'));
+    if (accion === 'upto') {
+      const upto = paso?.actions.find((a) => a.$type === 'StepUpto');
+      return upto === undefined ? null : sitio(archivo, rangoDe(upto, 'target'));
+    }
     const clase = accion === 'show' ? 'StepShow' : 'StepHide';
     const item = paso?.actions.flatMap((a) => (a.$type === clase ? a.items : []))[k as number];
     return item === undefined ? null : sitio(archivo, rangoDe(item, propiedad as string));

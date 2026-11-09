@@ -180,3 +180,54 @@ describe('inspect tema', () => {
     expect(r.exitCode).toBe(1);
   });
 });
+
+describe('inspect tema --diagrama', () => {
+  const RAIZ_DIAGRAMA = resolve(__dirname, 'fixtures/tema-diagrama');
+  const relleno = (salida: Awaited<ReturnType<typeof json>>['salida']) => temaDe(salida).capas.find((c) => c.nombre === 'relleno')?.props['color'];
+
+  it('aplica los parches diagram de ese Tipo de diagrama a la cascada', async () => {
+    const sin = await json(['t'], RAIZ_DIAGRAMA);
+    const flujo = await json(['t', '--diagrama', 'flow'], RAIZ_DIAGRAMA);
+    const arquitectura = await json(['t', '--diagrama', 'architecture'], RAIZ_DIAGRAMA);
+
+    expect(relleno(sin.salida)).toBe('azul');
+    expect(relleno(arquitectura.salida)).toBe('azul');
+    expect(relleno(flujo.salida)).toBe('verde');
+    expect(temaDe(flujo.salida)).toMatchObject({ diagrama: 'flow' });
+  });
+
+  it('un Tipo de diagrama desconocido sale con codigo 1 y sugiere el cercano', async () => {
+    const r = await run(['inspect', 'tema', 't', '--diagrama', 'flo', '--workspace', RAIZ_DIAGRAMA]);
+
+    expect(r.exitCode).toBe(1);
+    expect(r.stderr).toContain('flow');
+  });
+});
+
+describe('inspect tema: elementos de secuencia y fila', () => {
+  const RAIZ_SECUENCIA = resolve(__dirname, 'fixtures/tema-secuencia');
+
+  it('muestra la pila, los parches y las Metricas de cada elemento declarado', async () => {
+    const r = await json(['t'], RAIZ_SECUENCIA);
+
+    const { elementos } = temaDe(r.salida);
+    expect(elementos?.secuencia?.['message']).toMatchObject({
+      capas: [{ nombre: 'linea', primitiva: 'line' }],
+      marcadores: { end: 'arrow' },
+      metricas: { gap: 40 },
+      parches: { reply: [{ nombre: 'linea', primitiva: 'line', props: { style: 'dashed' } }] },
+    });
+    expect(elementos?.secuencia?.['fragment']?.parches['alt']?.map((c) => c.nombre)).toEqual(['forma', 'relleno']);
+    expect(elementos?.secuencia?.['lifeline']).toBeUndefined();
+    expect(elementos?.fila).toMatchObject({ alto: 30, capas: [{ nombre: 'fondo' }] });
+  });
+
+  it('el texto legible lista los elementos y un Tema sin ellos no los menciona', async () => {
+    const con = await run(['inspect', 'tema', 't', '--workspace', RAIZ_SECUENCIA]);
+    const sin = await run(['inspect', 'tema', 'app', '--workspace', RAIZ]);
+
+    expect(con.stdout).toMatch(/Secuencia:\n {2}message:[^\n]*\n[\s\S]*kind\/op reply/);
+    expect(con.stdout).toMatch(/Fila: alto 30/);
+    expect(sin.stdout).not.toMatch(/Secuencia:|Fila:/);
+  });
+});

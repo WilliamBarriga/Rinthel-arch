@@ -6,12 +6,13 @@
 
 Sistema (React + TypeScript) para escribir y renderizar diagramas grandes y detallados de cualquier proyecto. Describes tu sistema una vez en texto (`.dg`) y obtienes varias Vistas navegables, con la estetica que elijas: el mismo diagrama puede verse como tarjetas sobrias, neon, plano tecnico, post-its o placa de circuito, cambiando solo el Tema.
 
-**English:** a text DSL for large architecture and flow diagrams. You describe a system once and get several navigable views, rendered with fully themeable and animatable styles. Documentation is in Spanish for now; see the [short English overview](README.en.md).
+**English:** a text DSL for large architecture, flow, sequence and ER diagrams. You describe a system once and get several navigable views, rendered with fully themeable and animatable styles. Documentation is in Spanish for now; see the [short English overview](README.en.md).
 
 ![El mismo diagrama con el Tema synthwave](docs/img/temas/synthwave.png)
 
 ## Que ofrece
 
+- **Cuatro Tipos de diagrama.** `architecture`, `flow`, `sequence` (Interacciones entre Lifelines, con Fragmentos, Notas y Pasos) y `er` (tablas con claves y cardinalidad) comparten el mismo Modelo y los mismos Temas.
 - **Un Modelo, muchas Vistas.** Los Nodos, Aristas y Atributos se escriben una vez; cada Vista elige que mostrar (`include`, `exclude`, `depth`) y puede enlazar a otra (drill-down) o revelarse paso a paso.
 - **La estetica es un Tema.** Un Tema es texto: Paleta, fuentes y una pila de Capas por elemento, tomadas de un catalogo cerrado (formas, rellenos, bordes, sombras, glow, vidrio, trazos, marcadores, animaciones). Hay Temas de ejemplo (ver la [galeria](docs/galeria.md)) y tres incorporados.
 - **Visor en vivo.** `dev` recompila al guardar; el visor tiene pan y zoom, colapso de Grupos y arrastre de Nodos que reescribe el `.dg`.
@@ -44,6 +45,16 @@ view principal {
 ```
 
 El [tutorial](docs/guia/tutorial.md) arma un diagrama parecido (una tienda en linea) y lo lleva, en cinco pasos, a Grupos, Vistas enlazadas y un Tema propio.
+
+## Secuencia y ER
+
+Una Interaccion (un escenario ordenado entre Nodos) se dibuja como diagrama de secuencia, y los Nodos con Atributos como tablas ER, desde el mismo Modelo y con cualquier Tema:
+
+| | |
+| --- | --- |
+| ![Vista sequence de la compra](docs/img/tipos/secuencia-tienda.png)<br>`type sequence` | ![Vista er de clientes y pedidos](docs/img/tipos/er-tienda.png)<br>`type er` |
+
+El [tutorial](docs/guia/tutorial.md#paso-6-opcional-secuencia-y-er) los arma paso a paso y la [referencia del DSL](docs/guia/referencia-dsl.md) cubre Mensajes, Fragmentos, Notas, `ref`, marcas ER y Pasos.
 
 ## Galeria
 
@@ -84,7 +95,7 @@ Por dentro: el glosario esta en [CONTEXT.md](CONTEXT.md), las decisiones en [doc
 
 ## Estado
 
-Version 0.x, sin publicar en npm: el DSL y los contratos de los paquetes pueden cambiar entre versiones. Soporta los Tipos de diagrama `architecture` y `flow`; secuencia y ER vienen despues. El trabajo pendiente vive en los [issues](https://github.com/WilliamBarriga/Rinthel-arch/issues).
+Version 0.x, sin publicar en npm: el DSL y los contratos de los paquetes pueden cambiar entre versiones. Soporta los cuatro Tipos de diagrama: `architecture`, `flow`, `sequence` y `er`. El trabajo pendiente vive en los [issues](https://github.com/WilliamBarriga/Rinthel-arch/issues).
 
 ## Contribuir
 

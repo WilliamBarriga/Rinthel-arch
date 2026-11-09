@@ -3,14 +3,14 @@
  * `nodo` y `vista`. Puro sobre una Sesion; el comando de `index.ts` solo parsea
  * argumentos y la imprime.
  */
-import { INSPECT_CONTRACT_VERSION, candidatosCercanos, resolveView, salidaDeInspectSchema } from 'canonico';
+import { INSPECT_CONTRACT_VERSION, aplanarMensajes, candidatosCercanos, lifelinesDe, resolveView, salidaDeInspectSchema } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
-import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, alturaDeCabecera, cascada, componentesDeTema, describirDisposicion, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas } from 'tema';
+import { BLOQUES_DE_SECUENCIA, CATALOGO, ESPECIFICACION_DE_SECUENCIA, EFECTOS, ESTADOS, MOVIMIENTOS, TIPOS_DE_DIAGRAMA, alturaDeCabecera, aplicarOps, cascada, componentesDeTema, describirDisposicion, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas, temaParaDiagrama } from 'tema';
 import type { CapaDeTema } from 'tema';
 
 type Sitio = { file: string; line: number };
-type Consulta = { comando: 'buscar' | 'nodo' | 'vista'; argumento: string };
+type Consulta = { comando: 'buscar' | 'nodo' | 'vista' | 'interaccion'; argumento: string };
 
 /** Resultado de consultar: la salida del contrato o el mensaje de lo que no existe. */
 export type Respuesta = { salida: SalidaDeInspect } | { noEncontrado: string };
@@ -32,6 +32,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   };
   const nodos = recorrerNodos(fuente.model.nodes).map(({ nodo, ruta }) => ({ nodo, sitio: sitioDe([...ruta, 'name']) }));
   const vistas = fuente.views.map((vista, i) => ({ vista, sitio: sitioDe(['views', i, 'id']) }));
+  const interacciones = fuente.model.interactions.map((interaccion, i) => ({ interaccion, sitio: sitioDe(['model', 'interactions', i, 'id']) }));
   const resumen = ({ nodo, sitio }: (typeof nodos)[number]) => ({ id: nodo.id, type: nodo.type, title: nodo.title, ...sitio });
   const aristaDe = (arista: Arista, i: number, sitioFijo?: Sitio) => ({
     from: arista.from.node,
@@ -53,12 +54,41 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
       ...vistas
         .filter(({ vista }) => vista.id.toLowerCase().includes(aguja))
         .map(({ vista, sitio }) => ({ kind: 'vista' as const, id: vista.id, type: vista.type, title: vista.id, ...sitio })),
+      ...interacciones
+        .filter(({ interaccion }) => interaccion.id.toLowerCase().includes(aguja) || interaccion.title.toLowerCase().includes(aguja))
+        .map(({ interaccion, sitio }) => ({ kind: 'interaccion' as const, id: interaccion.id, type: 'interaction', title: interaccion.title, ...sitio })),
     ];
     const resultados = encontrados
       .map((r, orden) => ({ r, orden }))
       .sort((a, b) => rango(a.r.id) - rango(b.r.id) || a.orden - b.orden)
       .map(({ r }) => r);
     return { salida: { contractVersion: INSPECT_CONTRACT_VERSION, comando, consulta: argumento, resultados } };
+  }
+
+  if (comando === 'interaccion') {
+    const encontrada = interacciones.find(({ interaccion }) => interaccion.id === argumento);
+    if (encontrada === undefined) {
+      const cerca = candidatosCercanos(argumento, interacciones.map(({ interaccion }) => interaccion.id));
+      return { noEncontrado: `No existe la Interaccion '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+    }
+    const { interaccion, sitio } = encontrada;
+    const mensajes = aplanarMensajes(interaccion.items);
+    return {
+      salida: {
+        contractVersion: INSPECT_CONTRACT_VERSION,
+        comando,
+        interaccion: {
+          id: interaccion.id,
+          title: interaccion.title,
+          description: interaccion.description,
+          ...sitio,
+          items: interaccion.items.length,
+          mensajes: mensajes.length,
+          lifelines: lifelinesDe(mensajes, []),
+          vistas: vistas.filter(({ vista }) => vista.type === 'sequence' && vista.interaction === interaccion.id).map(({ vista, sitio: s }) => ({ id: vista.id, ...s })),
+        },
+      },
+    };
   }
 
   if (comando === 'nodo') {
@@ -119,6 +149,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
       vista: {
         id: encontrada.vista.id,
         type: encontrada.vista.type,
+        ...(encontrada.vista.interaction === undefined ? {} : { interaction: encontrada.vista.interaction }),
         ...encontrada.sitio,
         nodos: nodos.filter(({ nodo }) => visibles.has(nodo.id)).map(resumen),
         aristas: resuelta.edges.map((arista) => {
@@ -135,6 +166,7 @@ interface ConsultaDeTema {
   nombre: string;
   tipo?: string;
   estado?: string;
+  diagrama?: string;
   catalogo: boolean;
 }
 
@@ -145,7 +177,7 @@ const INCORPORADO: Sitio = { file: '(incorporado)', line: 1 };
  * estado (cada Capa con el sitio del parche que la fijo), Metricas y uso de codigo. Las claves del
  * catalogo salen de las mismas tablas que validan (sin listas paralelas).
  */
-export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<string, OrigenDeTema>>, { nombre, tipo, estado, catalogo }: ConsultaDeTema): Respuesta {
+export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<string, OrigenDeTema>>, { nombre, tipo, estado, diagrama, catalogo }: ConsultaDeTema): Respuesta {
   const declarado = fuente.themes.find((t) => t.name === nombre);
   if (declarado === undefined) {
     const cerca = candidatosCercanos(nombre, fuente.themes.map((t) => t.name));
@@ -161,9 +193,14 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
     const { candidatos } = parseado.error;
     return { noEncontrado: `No existe el estado '${estado}'${candidatos.length === 0 ? '' : `. Quiza: ${candidatos.join(', ')}`}. Estados: ${ESTADOS.join(', ')}` };
   }
+  const tipoDeDiagrama = diagrama === undefined ? undefined : TIPOS_DE_DIAGRAMA.find((t) => t === diagrama);
+  if (diagrama !== undefined && tipoDeDiagrama === undefined) {
+    const cerca = candidatosCercanos(diagrama, TIPOS_DE_DIAGRAMA);
+    return { noEncontrado: `No existe el Tipo de diagrama '${diagrama}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}. Tipos: ${TIPOS_DE_DIAGRAMA.join(', ')}` };
+  }
   const estadoValido = parseado === undefined || 'error' in parseado ? undefined : parseado.estado;
 
-  const tema = resolverTema(declarado);
+  const tema = temaParaDiagrama(resolverTema(declarado), tipoDeDiagrama);
   const componentes = componentesDeTema(declarado);
   const origen = origenes[nombre];
   const sitioDe = (capa: string): Sitio => {
@@ -180,6 +217,30 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
     origen: sitio,
   });
   const capas = cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido }) }).map((capa: CapaDeTema) => aCapa(capa, sitioDe(capa.nombre)));
+  const sitioDelTema = origen?.sitio ?? INCORPORADO;
+  const delSitio = (capas: readonly CapaDeTema[]) => capas.map((capa) => aCapa(capa, sitioDelTema));
+  const secuencia = Object.fromEntries(
+    BLOQUES_DE_SECUENCIA.flatMap((nombre) => {
+      const bloque = tema.secuencia?.[nombre];
+      if (bloque === undefined) return [];
+      const base = bloque.capas as CapaDeTema[];
+      return [
+        [
+          nombre,
+          {
+            capas: delSitio(base),
+            marcadores: Object.fromEntries([...(bloque.origen === undefined ? [] : [['start', bloque.origen.tipo]]), ...(bloque.fin === undefined ? [] : [['end', bloque.fin.tipo]])]),
+            parches: Object.fromEntries(Object.entries(bloque.parches).map(([variante, parche]) => [variante, delSitio(aplicarOps(base, parche.ops, tema.palette, 'parchear', ESPECIFICACION_DE_SECUENCIA[nombre].capas).pila)])),
+            metricas: bloque.metricas,
+          },
+        ],
+      ];
+    }),
+  );
+  const elementos = {
+    ...(Object.keys(secuencia).length > 0 && { secuencia }),
+    ...(tema.fila !== undefined && { fila: { ...(tema.fila.alto !== undefined && { alto: tema.fila.alto }), capas: delSitio(tema.fila.capas as CapaDeTema[]) } }),
+  };
   const pagina = {
     fijo: tema.pagina.fijo,
     capas: (tema.pagina.capas as CapaDeTema[]).map((capa) => {
@@ -189,7 +250,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   };
   // Donde se escribio una disposicion de Slots; si ningun bloque la escribe, vale la del Tema (o el nucleo).
   const sitioDeSlots = (sitio: Sitio | undefined): Sitio => sitio ?? origen?.sitio ?? INCORPORADO;
-  const tabla = tablaDeMetricas(declarado);
+  const tabla = tablaDeMetricas(declarado, undefined, tipoDeDiagrama);
   const delNodo = metricasDeNodo(tabla, tipo);
   const delGrupo = origen?.grupo;
   const sitioDeGrupo = (capa: string, colapsado: boolean): Sitio => {
@@ -223,9 +284,11 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
         partes: origen?.partes ?? [],
         ...(tipo !== undefined && { tipo }),
         ...(estadoValido !== undefined && { estado: estadoValido }),
+        ...(tipoDeDiagrama !== undefined && { diagrama: tipoDeDiagrama }),
         capas,
         pagina,
         grupo,
+        ...(Object.keys(elementos).length > 0 && { elementos }),
         slots: describirDisposicion(delNodo.disposicion),
         origenDeSlots: sitioDeSlots(origen?.slots.nodo),
         // `paddingGrupo` es del Grupo: la tabla del Nodo trae el valor por defecto, que no dice nada de este Tema.
@@ -248,7 +311,7 @@ const titulo = (t: string): string => (t === '' ? '' : ` "${t}"`);
 export function textoLegible(salida: SalidaDeInspect): string {
   const lineas: string[] = [];
   if (salida.comando === 'buscar') {
-    for (const r of salida.resultados) lineas.push(r.kind === 'vista' ? `vista ${r.id} ${r.type} ${sitio(r)}` : `nodo ${r.id} ${r.type}${titulo(r.title)} ${sitio(r)}`);
+    for (const r of salida.resultados) lineas.push(r.kind === 'vista' ? `vista ${r.id} ${r.type} ${sitio(r)}` : r.kind === 'interaccion' ? `interaccion ${r.id}${titulo(r.title)} ${sitio(r)}` : `nodo ${r.id} ${r.type}${titulo(r.title)} ${sitio(r)}`);
     lineas.push(`${salida.resultados.length} ${salida.resultados.length === 1 ? 'resultado' : 'resultados'}`);
   } else if (salida.comando === 'nodo') {
     const { nodo } = salida;
@@ -264,9 +327,17 @@ export function textoLegible(salida: SalidaDeInspect): string {
     }
     lineas.push('Vistas:');
     for (const v of salida.vistas) lineas.push(`  ${v.id} ${sitio(v)}`);
+  } else if (salida.comando === 'interaccion') {
+    const { interaccion: i } = salida;
+    lineas.push(`${i.id}${titulo(i.title)} ${i.items} items ${sitio(i)}`);
+    if (i.description !== '') lineas.push(`  ${i.description}`);
+    lineas.push(`Mensajes: ${i.mensajes}`);
+    lineas.push(`Lifelines: ${i.lifelines.join(', ')}`);
+    lineas.push('Vistas:');
+    for (const v of i.vistas) lineas.push(`  ${v.id} ${sitio(v)}`);
   } else if (salida.comando === 'tema') {
     const { tema } = salida;
-    lineas.push(`${tema.name} ${tema.file}:${tema.line}${tema.tipo === undefined ? '' : ` tipo=${tema.tipo}`}${tema.estado === undefined ? '' : ` estado=${tema.estado}`}`);
+    lineas.push(`${tema.name} ${tema.file}:${tema.line}${tema.tipo === undefined ? '' : ` tipo=${tema.tipo}`}${tema.estado === undefined ? '' : ` estado=${tema.estado}`}${tema.diagrama === undefined ? '' : ` diagrama=${tema.diagrama}`}`);
     lineas.push(`extends: ${tema.extends.length === 0 ? '(ninguno)' : tema.extends.join(' > ')}`);
     lineas.push(`partes: ${tema.partes.length === 0 ? '(ninguna)' : tema.partes.join(', ')}`);
     lineas.push('Capas:');
@@ -291,6 +362,24 @@ export function textoLegible(salida: SalidaDeInspect): string {
       }
     }
     lineas.push(`  colapsado cabecera: ${grupo.colapsado.slots} ${sitio(grupo.colapsado.origenDeSlots)}`);
+    const { elementos } = tema;
+    if (elementos?.secuencia !== undefined) {
+      lineas.push('Secuencia:');
+      for (const [nombre, bloque] of Object.entries(elementos.secuencia)) {
+        const marcadores = Object.entries(bloque.marcadores).map(([lado, tipo]) => ` ${lado}=${tipo}`).join('');
+        const metricas = Object.entries(bloque.metricas).map(([clave, valor]) => ` ${clave}=${valor}`).join('');
+        lineas.push(`  ${nombre}:${marcadores}${metricas}`);
+        for (const c of bloque.capas) lineas.push(`    ${c.nombre} ${c.primitiva} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
+        for (const [variante, capas] of Object.entries(bloque.parches)) {
+          lineas.push(`    kind/op ${variante}:`);
+          for (const c of capas) lineas.push(`      ${c.nombre} ${c.primitiva} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
+        }
+      }
+    }
+    if (elementos?.fila !== undefined) {
+      lineas.push(`Fila: alto ${elementos.fila.alto ?? '(defecto)'}`);
+      for (const c of elementos.fila.capas) lineas.push(`  ${c.nombre} ${c.primitiva} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
+    }
     lineas.push(`Slots: ${tema.slots} ${sitio(tema.origenDeSlots)}`);
     lineas.push('Metricas:');
     for (const [clave, valor] of Object.entries(tema.metricas)) if (clave !== 'disposicion') lineas.push(`  ${clave}: ${typeof valor === 'object' ? JSON.stringify(valor) : String(valor)}`);
@@ -302,7 +391,7 @@ export function textoLegible(salida: SalidaDeInspect): string {
     }
   } else {
     const { vista } = salida;
-    lineas.push(`${vista.id} ${vista.type} ${sitio(vista)}`);
+    lineas.push(`${vista.id} ${vista.type}${vista.interaction === undefined ? '' : ` (interaccion ${vista.interaction})`} ${sitio(vista)}`);
     lineas.push('Nodos:');
     for (const n of vista.nodos) lineas.push(`  ${n.id} ${n.type}${titulo(n.title)} ${sitio(n)}`);
     lineas.push('Aristas:');

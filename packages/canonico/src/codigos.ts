@@ -44,10 +44,42 @@ export const CODIGOS = Object.freeze({
   E_INVALID_EXPANSION_TARGET: 'E_INVALID_EXPANSION_TARGET',
   /** Mismo Nodo con `link` y `expanded` en la misma Vista. */
   E_LINK_WITH_EXPANDED: 'E_LINK_WITH_EXPANDED',
+  /** `link` en una Vista de secuencia con un origen que no es una Lifeline (Mensaje, Nota, Fragmento u otro Nodo). */
+  E_LINK_NOT_LIFELINE: 'E_LINK_NOT_LIFELINE',
   /** Paso con id o selector inexistente (ADR 0002). */
   E_UNKNOWN_STEP: 'E_UNKNOWN_STEP',
+  /** `upto` de un Paso de secuencia que apunta a un Mensaje que la Vista no proyecta (`depth`/`exclude`). */
+  E_STEP_NOT_PROJECTED: 'E_STEP_NOT_PROJECTED',
+  /** `upto` que no avanza estrictamente respecto del Paso anterior. */
+  E_STEP_NOT_ADVANCING: 'E_STEP_NOT_ADVANCING',
+  /** `steps each` junto a `step` explicitos en la misma Vista. */
+  E_STEPS_EACH_WITH_STEP: 'E_STEPS_EACH_WITH_STEP',
   /** `type` de Vista ausente o desconocido. */
   E_UNKNOWN_VIEW_TYPE: 'E_UNKNOWN_VIEW_TYPE',
+  /** Propiedad de Vista que no vale para su Tipo de diagrama (`include`/`pin` en secuencia, `interaction`/`order`/`autonumber` fuera de ella). */
+  E_VIEW_PROPERTY_FOR_TYPE: 'E_VIEW_PROPERTY_FOR_TYPE',
+  /** Vista `sequence` sin `interaction`. */
+  E_SEQUENCE_WITHOUT_INTERACTION: 'E_SEQUENCE_WITHOUT_INTERACTION',
+  /** `interaction` de una Vista que no existe en el Modelo. */
+  E_UNKNOWN_INTERACTION: 'E_UNKNOWN_INTERACTION',
+  /** Dos Interacciones con el mismo id. */
+  E_DUPLICATE_INTERACTION: 'E_DUPLICATE_INTERACTION',
+  /** Extremo de Mensaje o entrada de `order` que no es un Nodo del Modelo. */
+  E_UNKNOWN_LIFELINE: 'E_UNKNOWN_LIFELINE',
+  /** Dos Mensajes con el mismo id en su Interaccion. */
+  E_DUPLICATE_MESSAGE_ID: 'E_DUPLICATE_MESSAGE_ID',
+  /** `create` cuyo destino ya habia aparecido en la Interaccion. */
+  E_CREATE_NOT_FIRST: 'E_CREATE_NOT_FIRST',
+  /** Aparicion de una Lifeline despues de su `destroy`. */
+  E_AFTER_DESTROY: 'E_AFTER_DESTROY',
+  /** Operandos invalidos en un Fragmento: `else`/`and` cruzados, o mas de un operando en `opt|loop|break|critical`. */
+  E_INVALID_FRAGMENT_OPERAND: 'E_INVALID_FRAGMENT_OPERAND',
+  /** Entrada de `order` cuyo Nodo no participa en la Interaccion que proyecta la Vista (aviso; se ignora). */
+  W_ORDER_NOT_IN_INTERACTION: 'W_ORDER_NOT_IN_INTERACTION',
+  /** `ref` a una Interaccion que ninguna Vista de secuencia proyecta (aviso; el marco queda inerte). */
+  W_REF_WITHOUT_VIEW: 'W_REF_WITHOUT_VIEW',
+  /** `reply` sin un `sync` abierto del receptor al emisor (aviso). */
+  W_REPLY_WITHOUT_SYNC: 'W_REPLY_WITHOUT_SYNC',
   /** Dos Pins de la Vista se solapan (warning, responsabilidad del autor). */
   W_OVERLAPPING_PINS: 'W_OVERLAPPING_PINS',
   /** Primitiva de Capa que no esta en el catalogo de Temas (ADR 0008). */
@@ -70,6 +102,8 @@ export const CODIGOS = Object.freeze({
   E_THEME_STATE_TOUCHES_METRICS: 'E_THEME_STATE_TOUCHES_METRICS',
   /** Estado que la cascada no conoce. */
   E_THEME_UNKNOWN_STATE: 'E_THEME_UNKNOWN_STATE',
+  /** `diagram <tipo>` en un Tema con un Tipo de diagrama que no existe. */
+  E_THEME_UNKNOWN_DIAGRAM_TYPE: 'E_THEME_UNKNOWN_DIAGRAM_TYPE',
   /** `use` de una Parte de Tema que no esta declarada. */
   E_THEME_UNKNOWN_PART: 'E_THEME_UNKNOWN_PART',
   /** Movimiento, efecto de `enter`/`exit` o propiedad de `keyframes` que el catalogo de animacion no conoce. */
@@ -96,6 +130,10 @@ export const CODIGOS = Object.freeze({
   E_THEME_FONT_NO_FALLBACK: 'E_THEME_FONT_NO_FALLBACK',
   /** El visor no recibe `fontUrl` y el Tema declara fuentes del Workspace: se mide y se pinta con otra fuente. */
   W_THEME_FONT_NOT_SERVED: 'W_THEME_FONT_NOT_SERVED',
+  /** Marca de clave (`pk`, `fk`, `uk`) repetida en un Atributo. */
+  E_DUPLICATE_KEY_MARK: 'E_DUPLICATE_KEY_MARK',
+  /** Cardinalidad fuera de `0..1 | 1 | 0..* | 1..*` en una Arista de una Vista ER. */
+  E_ER_CARDINALITY: 'E_ER_CARDINALITY',
 } as const);
 
 /** Union de los codigos activos; `Issue.code` sigue siendo `string` (ADR 0005). */
@@ -121,8 +159,24 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_UNKNOWN_VIEW_LINK: 'Un `link` apunta a una Vista que no existe.',
   E_INVALID_EXPANSION_TARGET: '`collapsed`/`expanded` sobre un Nodo que no es Grupo o que la Vista no muestra.',
   E_LINK_WITH_EXPANDED: 'El mismo Nodo tiene `link` y `expanded` en la misma Vista.',
+  E_LINK_NOT_LIFELINE: 'Un `link` en una Vista de secuencia nace de algo que no es una Lifeline.',
   E_UNKNOWN_STEP: 'Un Paso nombra un Nodo, selector o Arista que no existe.',
-  E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture` ni `flow`.',
+  E_STEP_NOT_PROJECTED: 'El `upto` de un Paso de secuencia nombra un Mensaje que la Vista no proyecta (`depth` o `exclude` lo quitan).',
+  E_STEP_NOT_ADVANCING: 'El `upto` de un Paso de secuencia no avanza estrictamente respecto del Paso anterior.',
+  E_STEPS_EACH_WITH_STEP: '`steps each` y `step` explicitos en la misma Vista de secuencia.',
+  E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture`, `flow`, `sequence` ni `er`.',
+  E_VIEW_PROPERTY_FOR_TYPE: 'Una propiedad de Vista no vale para su Tipo de diagrama (`include`/`pin`/`show`/`hide` en secuencia; `interaction`/`order`/`autonumber`/`upto`/`steps each` fuera de ella).',
+  E_SEQUENCE_WITHOUT_INTERACTION: 'Una Vista `sequence` no declara `interaction`.',
+  E_UNKNOWN_INTERACTION: 'El `interaction` de una Vista o un `ref` nombra una Interaccion que no existe.',
+  E_DUPLICATE_INTERACTION: 'Dos Interacciones con el mismo id.',
+  E_UNKNOWN_LIFELINE: 'El extremo de un Mensaje o una entrada de `order` no es un Nodo del Modelo.',
+  E_DUPLICATE_MESSAGE_ID: 'Dos Mensajes de la misma Interaccion con el mismo id.',
+  E_CREATE_NOT_FIRST: 'Un `create` cuyo destino ya habia aparecido antes en la Interaccion.',
+  E_AFTER_DESTROY: 'Una Lifeline aparece en un Mensaje despues de su `destroy`.',
+  E_INVALID_FRAGMENT_OPERAND: 'Un Fragmento tiene operandos invalidos: `else` es de `alt`, `and` de `par`, y `opt|loop|break|critical` tienen un solo operando.',
+  W_ORDER_NOT_IN_INTERACTION: 'Una entrada de `order` nombra un Nodo que no participa en la Interaccion de la Vista; se ignora (aviso).',
+  W_REF_WITHOUT_VIEW: 'Un `ref` nombra una Interaccion que ninguna Vista de secuencia proyecta; el marco no navega (aviso).',
+  W_REPLY_WITHOUT_SYNC: 'Un `reply` no cierra ningun `sync` abierto del receptor al emisor (aviso).',
   W_OVERLAPPING_PINS: 'Dos Nodos con `pin` se solapan en la Vista (aviso).',
   E_THEME_UNKNOWN_PRIMITIVE: 'Una Capa de Tema usa una Primitiva que no esta en el catalogo.',
   E_THEME_UNKNOWN_PROPERTY: 'Una Capa de Tema usa una propiedad que su Primitiva no declara.',
@@ -134,11 +188,12 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_THEME_PATCH_WITHOUT_PLACEMENT: 'Un parche nombra una Capa inexistente y no dice donde anadirla (`before`/`after`).',
   E_THEME_STATE_TOUCHES_METRICS: 'Un parche de estado toca las Metricas (Slots); solo el estado base puede.',
   E_THEME_UNKNOWN_STATE: 'Un bloque `state` nombra un estado que no existe.',
+  E_THEME_UNKNOWN_DIAGRAM_TYPE: 'Un bloque `diagram` nombra un Tipo de diagrama que no existe (architecture, flow, sequence, er).',
   E_THEME_UNKNOWN_PART: 'Un `use` nombra una `part` no declarada.',
   E_THEME_UNKNOWN_MOTION: 'Un Movimiento, un efecto de `enter`/`exit` o una propiedad de `keyframes` no esta en el catalogo de animacion.',
   E_DUPLICATE_PART: 'Dos `part` con el mismo nombre en el Workspace.',
   W_THEME_LOW_CONTRAST: 'Un Tipo de nodo y estado del Tema queda bajo el contraste minimo (4.5:1 texto, 3:1 graficos); aviso.',
-  W_THEME_COLOR_ONLY: 'Dos Tipos de una Vista se distinguen solo por color de Paleta (solo-color); aviso.',
+  W_THEME_COLOR_ONLY: 'Dos Tipos de una Vista, dos tipos de Mensaje de secuencia o la Arista identificante y la no identificante de ER se distinguen solo por color de Paleta (solo-color); aviso.',
   W_THEME_WITH_CODE: 'Un Tema usa la Capa `code` (Tema con codigo): corre codigo del Workspace sin sandbox, hay que revisarlo; aviso.',
   E_THEME_COMPONENT_MISSING: 'Una Capa `code` nombra un Componente de Tema que ningun `.tsx` del Workspace exporta.',
   E_THEME_COMPONENT_PARAMS: 'Los parametros de una Capa `code` no coinciden con los que declara el componente (desconocido o de otro tipo).',
@@ -146,6 +201,8 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_THEME_CODE_COMPILE: 'Un `.tsx` de un Componente de Tema no compila; `file` y `line` apuntan al error.',
   E_THEME_FONT_MISSING: 'Una familia de `fonts` de un Tema no tiene archivo de fuente (`woff2|woff|ttf|otf`) en el Workspace; las genericas CSS no lo necesitan.',
   E_THEME_FONT_NO_FALLBACK: 'Un Tema declara una familia de `fonts` que no es generica CSS y no dice con que reservarla (`fallback "sans-serif"` o una generica en la misma lista).',
+  E_DUPLICATE_KEY_MARK: 'Un Atributo repite una marca de clave (`pk`, `fk`, `uk`); el `fix` borra la repetida.',
+  E_ER_CARDINALITY: 'Una Arista incluida en una Vista ER tiene una cardinalidad que no es `0..1`, `1`, `0..*` ni `1..*`; el `fix` propone el candidato cercano unico.',
   W_THEME_FONT_NOT_SERVED: 'El visor no sabe donde pedir los archivos de fuente del Tema (falta `fontUrl`): mide y pinta con la reserva, no con la fuente declarada.',
 });
 

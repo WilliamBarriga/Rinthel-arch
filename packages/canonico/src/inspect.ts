@@ -44,10 +44,10 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
     /** Nodos y Vistas cuyo id o titulo contiene la consulta; los ids exactos y los prefijos primero. */
     resultados: z.array(
       z.object({
-        kind: z.enum(['nodo', 'vista']),
+        kind: z.enum(['nodo', 'vista', 'interaccion']),
         /** Id cualificado (Nodo) o id de la Vista. */
         id: z.string(),
-        /** Tipo de nodo, o tipo de Vista (`architecture` o `flow`). */
+        /** Tipo de nodo, o tipo de Vista (`architecture`, `flow`, `sequence` o `er`); `interaction` para una Interaccion. */
         type: z.string(),
         /** Titulo del Nodo; igual al id en una Vista, que no lo tiene. */
         title: z.string(),
@@ -77,11 +77,31 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
     vista: z.object({
       id: z.string(),
       type: z.string(),
+      /** Solo en una Vista `sequence`: id de la Interaccion que proyecta. */
+      interaction: z.string().optional(),
       ...sitioSchema,
       /** Nodos visibles en orden de documento (los hijos de un Grupo colapsado no salen). */
       nodos: z.array(resumenDeNodoSchema),
       /** Aristas visibles; `count` es cuantas Aristas del Modelo fusiona. */
       aristas: z.array(aristaSchema.extend({ count: z.number().int().min(1) })),
+    }),
+  }),
+  z.object({
+    ...comun,
+    comando: z.literal('interaccion'),
+    interaccion: z.object({
+      id: z.string(),
+      title: z.string(),
+      description: z.string(),
+      ...sitioSchema,
+      /** Items de primer nivel (Mensajes, Fragmentos, Notas y `ref`). */
+      items: z.number().int().min(0),
+      /** Mensajes en total, contando los de dentro de Fragmentos. */
+      mensajes: z.number().int().min(0),
+      /** Ids de las Lifelines (Nodos que participan en algun Mensaje), por primera aparicion. */
+      lifelines: z.array(z.string()),
+      /** Vistas `sequence` que la proyectan. */
+      vistas: z.array(z.object({ id: z.string(), ...sitioSchema })),
     }),
   }),
   z.object({
@@ -98,6 +118,8 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       /** Tipo y estado pedidos para resolver la cascada, si se pidieron. */
       tipo: z.string().optional(),
       estado: z.string().optional(),
+      /** Tipo de diagrama pedido (`--diagrama`): la cascada incluye los parches `diagram <tipo>` del Tema. */
+      diagrama: z.string().optional(),
       /** Pila de Capas resuelta, de abajo arriba; `origen` es el parche que la fijo. */
       capas: z.array(capaDeTemaSchema),
       /** Fondo de pagina: pila de rellenos de abajo arriba y si queda fijo al visor. */
@@ -125,6 +147,26 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       metricas: z.object({ fontSize: z.number() }).catchall(z.unknown()),
       temaConCodigo: z.boolean(),
       componentes: z.array(z.string()),
+      /**
+       * Elementos de secuencia (`lifeline`, `activation`, `message`, `fragment`, `note`) y fila ER (`row`) que el Tema
+       * declara: su pila, los parches por variante (`kind`/`op`), los marcadores y las Metricas propias. Ausente si no declara ninguno.
+       */
+      elementos: z
+        .object({
+          secuencia: z
+            .record(
+              z.string(),
+              z.object({
+                capas: z.array(capaDeTemaSchema),
+                marcadores: z.record(z.string(), z.string()),
+                parches: z.record(z.string(), z.array(capaDeTemaSchema)),
+                metricas: z.record(z.string(), z.number()),
+              }),
+            )
+            .optional(),
+          fila: z.object({ alto: z.number().optional(), capas: z.array(capaDeTemaSchema) }).optional(),
+        })
+        .optional(),
       /** Con `--catalogo`: claves del catalogo de Primitivas, Movimientos y efectos. */
       catalogo: z.object({ primitivas: z.array(z.string()), movimientos: z.array(z.string()), efectos: z.array(z.string()) }).optional(),
     }),

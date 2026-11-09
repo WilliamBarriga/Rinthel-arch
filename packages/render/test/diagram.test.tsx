@@ -183,6 +183,16 @@ describe('Diagram: estructura hibrida', () => {
       expect(html).not.toContain('A (2)');
     });
 
+    it('un borde grueso publica su ancho en --rd-borde y los Slots se corren esa distancia (la ultima fila no se recorta)', async () => {
+      const grueso: TemaResuelto = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'blue', width: 4 } } }] as never } };
+      const { html } = await dibujar(grueso);
+      const hoja = hojaDe(html);
+
+      expect(hoja).toMatch(/\.rd-nodo\{[^}]*--rd-borde:4px/);
+      expect(hoja).toContain('.rd-icono{margin:calc(-1 * var(--rd-borde, 0px))');
+      expect(hoja).toContain('.rd-attrs{clip-path:inset(0 var(--rd-borde, 0px) var(--rd-borde, 0px))');
+    });
+
     it('el estilo de texto (alpha, text-align) y el de caja del contador salen en la hoja', async () => {
       const { html } = await dibujar(
         conSlots(

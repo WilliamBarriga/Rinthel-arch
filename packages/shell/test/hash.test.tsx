@@ -86,6 +86,30 @@ describe('serializarEstado y deserializarEstado', () => {
     expect(deserializarEstado('p=nada', fuente).path).toEqual(['a']);
   });
 
+  it('una Vista de secuencia con Pasos entra en el primero; arquitectura conserva el 0', () => {
+    const secuencia = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio' }] },
+      model: { nodes: [nodo('x'), nodo('y')], edges: [], interactions: [{ id: 'i', title: 'i', items: [{ type: 'message', kind: 'sync', from: 'x', to: 'y' }] }] },
+      views: [{ id: 's', type: 'sequence', include: ['**'], exclude: [], interaction: 'i', steps: [{ title: 'uno', show: [] }] }],
+    });
+    expect(deserializarEstado('', secuencia).step).toBe(1);
+    expect(deserializarEstado('p=s&t=0', secuencia).step).toBe(0);
+    expect(serializarEstado({ path: ['s'], state: {}, selected: null, step: 1 }, 's', secuencia)).toBe('');
+    expect(serializarEstado({ path: ['s'], state: {}, selected: null, step: 0 }, 's', secuencia)).toBe('t=0');
+    expect(deserializarEstado('', fuente).step).toBe(0);
+  });
+
+  it('una Vista ER con Pasos entra en el primero: el Paso 0 la dejaria vacia', () => {
+    const er = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio' }] },
+      model: { nodes: [nodo('x'), nodo('y')], edges: [] },
+      views: [{ id: 'e', type: 'er', include: ['**'], exclude: [], steps: [{ title: 'uno', show: [{ selector: 'x' }] }] }],
+    });
+    expect(deserializarEstado('', er).step).toBe(1);
+    expect(deserializarEstado('p=e&t=0', er).step).toBe(0);
+    expect(serializarEstado({ path: ['e'], state: {}, selected: null, step: 1 }, 'e', er)).toBe('');
+  });
+
   it('el Paso se acota a los Pasos de la Vista activa', () => {
     expect(deserializarEstado('p=b&t=1', fuente).step).toBe(0);
     expect(deserializarEstado('p=a&t=-1', fuente).step).toBe(0);
@@ -190,7 +214,7 @@ describe('integracion con VistaInteractiva y location.hash', () => {
     vista.nodes.forEach((n, i) => {
       nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
     });
-    return { nodes, edges: {}, labels: {}, pinsSolapados: [], width: 500, height: 50 };
+    return { nodes, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 500, height: 50 };
   };
   function App() {
     const props = useEstadoEnHash({ source: fuente, hash: hashDelNavegador(window), camera: true });

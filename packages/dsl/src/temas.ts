@@ -9,7 +9,8 @@
  * bloque `node` del hijo es un parche sobre la pila heredada: una Capa con el
  * nombre de una heredada la cambia, una nueva exige `before`/`after`, y
  * `layer x none` la quita; los parches por Tipo y por estado se acumulan tras
- * los del padre; `slots` reemplaza la disposicion heredada. El bloque `group` se hereda y
+ * los del padre; `diagram <tipo>` (ADR 0009) es un parche entre la base y los Tipos de nodo, que puede
+ * cambiar Metricas; `slots` reemplaza la disposicion heredada. El bloque `group` se hereda y
  * se parchea igual que `node` (misma ruta de compilacion), mas `padding` y `state collapsed`,
  * el parche del Grupo cerrado. Un Tema sin base
  * (sin `extends`, o cuyo padre no tiene Capas) define su pila en orden.
@@ -20,15 +21,19 @@ import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
 import type { AstNode as Ast } from 'langium';
 import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, fuentesSinReserva, opTocaMetricas, parsearEstado } from 'tema';
-import type { CapaDeTema, ElementoDeTema, OpDeCapa, TemaResuelto } from 'tema';
+import type { CajaDeSlots, CapaDeTema, ElementoDeTema, OpDeCapa, TemaResuelto } from 'tema';
 
-import type { GroupItem, GroupPadding, NodeItem, Theme, ThemeLayer, ThemeSlots, ThemeState, ThemeUse } from './generated/ast';
+import type { GroupItem, GroupPadding, NodeItem, Theme, ThemeDiagram, ThemeLayer, ThemeSlots, ThemeState, ThemeUse } from './generated/ast';
 import { ARCHIVO_INCORPORADOS, NOMBRES_INCORPORADOS } from './incorporados';
 import { aRango, issueConSugerencia } from './posiciones';
 import { compilarArista } from './temas-arista';
+import { compilarFila } from './temas-fila';
+import { compilarSecuencia } from './temas-secuencia';
 import { compilarSlots } from './temas-slots';
+import type { DestinoDeSlots } from './temas-slots';
 import { compilarAnimacionDeNodo } from './temas-animacion';
 import { compilarBloque } from './temas-capas';
+import { nombreDeDiagrama } from './temas-comun';
 import { compilarPagina } from './temas-pagina';
 import type { ContextoDeBloque, Sitio } from './temas-capas';
 import type { ParteDeclarada } from './temas-comun';
@@ -201,6 +206,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
         textos: { ...origen.nodo.textos },
         tipos: Object.fromEntries(Object.entries(origen.nodo.tipos).map(([tipo, ops]) => [tipo, [...ops]])),
         estados: Object.fromEntries(Object.entries(origen.nodo.estados).map(([estado, ops]) => [estado, [...ops]])),
+        ...(origen.nodo.diagramas !== undefined && { diagramas: structuredClone(origen.nodo.diagramas) }),
         ...(origen.nodo.animacion !== undefined && { animacion: structuredClone(origen.nodo.animacion) }),
       },
       grupo: {
@@ -211,15 +217,20 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
         tipos: Object.fromEntries(Object.entries(origen.grupo.tipos).map(([tipo, ops]) => [tipo, [...ops]])),
         estados: Object.fromEntries(Object.entries(origen.grupo.estados).map(([estado, ops]) => [estado, [...ops]])),
         colapsado: structuredClone(origen.grupo.colapsado),
+        ...(origen.grupo.diagramas !== undefined && { diagramas: structuredClone(origen.grupo.diagramas) }),
         ...(origen.grupo.animacion !== undefined && { animacion: structuredClone(origen.grupo.animacion) }),
       },
       arista: {
         capas: origen.arista.capas.map(copiarCapa),
+        ...(origen.arista.diagramas !== undefined && { diagramas: structuredClone(origen.arista.diagramas) }),
+        ...(origen.arista.identificante !== undefined && { identificante: structuredClone(origen.arista.identificante) }),
         ...(origen.arista.origen !== undefined && { origen: { ...origen.arista.origen, props: { ...origen.arista.origen.props } } }),
         ...(origen.arista.fin !== undefined && { fin: { ...origen.arista.fin, props: { ...origen.arista.fin.props } } }),
         ...(origen.arista.etiqueta !== undefined && { etiqueta: { ...origen.arista.etiqueta, props: { ...origen.arista.etiqueta.props } } }),
       },
       pagina: { capas: origen.pagina.capas.map(copiarCapa), fijo: origen.pagina.fijo },
+      ...(origen.fila !== undefined && { fila: structuredClone(origen.fila) }),
+      ...(origen.secuencia !== undefined && { secuencia: structuredClone(origen.secuencia) }),
     };
     const origenes = new Map(base?.origenes);
     const porTipo = copiarRegistro(base?.origen.tipos ?? {});
@@ -230,7 +241,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     const sitiosDeSlots = new Map(Object.entries(base?.origen.slots ?? {}) as Array<['nodo' | 'grupo' | 'colapsado', Sitio]>);
     const grupoPorColapso = copiarRegistro({ collapsed: base?.origen.grupo.colapsado ?? {} });
     for (const parte of declarado.ast.parts) {
-      if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeGroup' || parte.$type === 'ThemeEdge' || parte.$type === 'ThemePage') continue;
+      if (parte.$type === 'ThemeNode' || parte.$type === 'ThemeGroup' || parte.$type === 'ThemeEdge' || parte.$type === 'ThemePage' || parte.$type === 'ThemeRow' || parte.$type === 'ThemeSequence') continue;
       const destino = parte.$type === 'ThemePalette' ? tema.palette : parte.$type === 'ThemeFonts' ? tema.fonts : tema.tokens;
       for (const { key, value } of parte.entries) destino[key] = value;
     }
@@ -256,6 +267,10 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     compilarElemento('grupo', declarado.archivo, delGrupo, tema, origenesDeGrupo, { partes, tipos, issues, porTipo: grupoPorTipo, porEstado: grupoPorEstado, porColapso: grupoPorColapso, sitiosDeSlots });
     const delBordeDeArista = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeEdge' ? parte.items : []));
     compilarArista(delBordeDeArista, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
+    const delaFila = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeRow' ? parte.items : []));
+    compilarFila(delaFila, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
+    const deSecuencia = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemeSequence' ? [parte] : []));
+    compilarSecuencia(deSecuencia, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues });
     const delaPagina = declarado.ast.parts.flatMap((parte) => (parte.$type === 'ThemePage' ? parte.items : []));
     const origenesDePagina = new Map(Object.entries(base?.origen.pagina ?? {}));
     compilarPagina(delaPagina, tema, { archivo: declarado.archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues, origenes: origenesDePagina });
@@ -267,7 +282,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       origen: {
         sitio: { file: declarado.archivo, ...declarado.nombre.start },
         extends: delPadre,
-        partes: [...new Set([...(base?.origen.partes ?? []), ...partesUsadas([...items, ...delGrupo, ...delBordeDeArista, ...delaPagina], partes)])],
+        partes: [...new Set([...(base?.origen.partes ?? []), ...partesUsadas([...items, ...delGrupo, ...delBordeDeArista, ...delaFila, ...deSecuencia.flatMap((b) => b.items), ...delaPagina], partes)])],
         base: sitioDeCopia(origenes),
         tipos: Object.fromEntries(Object.entries(porTipo).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),
         estados: Object.fromEntries(Object.entries(porEstado).map(([clave, mapa]) => [clave, sitioDeCopia(mapa)])),
@@ -327,13 +342,19 @@ const ESTADO_COLAPSADO = 'collapsed';
 /** Los estados que admite cada elemento en `state <nombre>`. */
 const ESTADOS_DE: Record<ElementoDeTema, readonly string[]> = { nodo: ESTADOS, grupo: [...ESTADOS, ESTADO_COLAPSADO] };
 
-/** La pila base y la de cada Tipo con parches, aplicados sobre ella. */
+/** La pila base y la de cada Tipo de diagrama con parches: contra cual puede valer un parche de Tipo de nodo. */
+function pilasSobreDiagramas(tema: TemaResuelto, base: CapaDeTema[], elemento: ElementoDeTema): CapaDeTema[][] {
+  return [base, ...Object.values(tema[elemento].diagramas ?? {}).map(({ ops }) => aplicarOps(base, ops, tema.palette, 'parchear').pila)];
+}
+
+/** Las pilas de `pilasSobreDiagramas` y, sobre cada una, la de cada Tipo de nodo con parches. */
 function pilasSobreTipos(tema: TemaResuelto, base: CapaDeTema[], elemento: ElementoDeTema): CapaDeTema[][] {
-  return [base, ...Object.values(tema[elemento].tipos).map((ops) => aplicarOps(base, ops, tema.palette, 'parchear').pila)];
+  const bases = pilasSobreDiagramas(tema, base, elemento);
+  return [...bases, ...Object.values(tema[elemento].tipos).flatMap((ops) => bases.map((pila) => aplicarOps(pila, ops, tema.palette, 'parchear').pila))];
 }
 
 /** `padding` del Grupo: 1 valor (todos los lados), 2 (vertical, horizontal) o 4 (arriba, derecha, abajo, izquierda), como en CSS. */
-function compilarPadding(item: GroupPadding, tema: TemaResuelto, archivo: string, issues: Issue[]): void {
+function compilarPadding(item: GroupPadding, archivo: string, issues: Issue[]): TemaResuelto['grupo']['padding'] | undefined {
   const v = item.values.map(Number);
   const [a, b, c, d] = v as [number, number, number, number];
   const lados = v.length === 1 ? { top: a, right: a, bottom: a, left: a } : v.length === 2 ? { top: a, right: b, bottom: a, left: b } : v.length === 4 ? { top: a, right: b, bottom: c, left: d } : undefined;
@@ -346,9 +367,9 @@ function compilarPadding(item: GroupPadding, tema: TemaResuelto, archivo: string
       ...aRango(item.$cstNode?.range).start,
       message: lados === undefined ? `'padding' lleva 1, 2 o 4 valores (arriba, derecha, abajo, izquierda), no ${v.length}` : `'padding' ${fuera} fuera de rango; usa de 0 a 128`,
     });
-    return;
+    return undefined;
   }
-  tema.grupo.padding = { top: lados.top, left: lados.left, bottom: lados.bottom, right: lados.right };
+  return { top: lados.top, left: lados.left, bottom: lados.bottom, right: lados.right };
 }
 
 /**
@@ -372,15 +393,21 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     if (item.$type === 'ThemeSlots') {
       entorno.sitiosDeSlots.set(elemento, { file: archivo, ...aRango(item.$cstNode?.range).start });
       compilarSlots(item, bloque, { archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues }, elemento);
-    } else if (item.$type === 'GroupPadding' && elemento === 'grupo') compilarPadding(item, tema, archivo, issues);
+    } else if (item.$type === 'GroupPadding' && elemento === 'grupo') tema.grupo.padding = compilarPadding(item, archivo, issues) ?? tema.grupo.padding;
   }
 
   // Animacion del elemento: `transition`, `enter`, `exit` y `stagger` (solo pintura, nunca Metricas).
   const animacion = compilarAnimacionDeNodo(delNodo, bloque.animacion, archivo, issues);
   if (animacion !== undefined) bloque.animacion = animacion;
 
-  // 2) Parches por Tipo de nodo, sobre la pila base.
+  // 2a) Parches por Tipo de diagrama (ADR 0009), sobre la pila base; pueden cambiar las Metricas.
   const base = bloque.capas as CapaDeTema[];
+  for (const item of delNodo) {
+    if (item.$type === 'ThemeDiagram') compilarDiagrama(item, elemento, tema, { ...contexto, entorno });
+  }
+  const sobreDiagramas = pilasSobreDiagramas(tema, base, elemento);
+
+  // 2b) Parches por Tipo de nodo, sobre la pila base y la de cada Tipo de diagrama.
   for (const item of delNodo) {
     if (item.$type !== 'ThemeType') continue;
     if (!tipos.includes(item.name)) {
@@ -393,8 +420,8 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
       continue;
     }
     const propios = new Map(origenes);
-    const ops = compilarBloque(item.items, { ...contexto, origenes: propios, modo: 'parchear', candidatas: [base] });
-    if (elemento === 'grupo') avisarSiTocaMetricas(ops, [base], item, `Un parche de Tipo del Grupo no puede tocar las Metricas`, `'${item.name}' no tiene entrada propia en la tabla; usa el bloque base o 'state collapsed'`, archivo, issues);
+    const ops = compilarBloque(item.items, { ...contexto, origenes: propios, modo: 'parchear', candidatas: sobreDiagramas });
+    if (elemento === 'grupo') avisarSiTocaMetricas(ops, sobreDiagramas, item, `Un parche de Tipo del Grupo no puede tocar las Metricas`, `'${item.name}' no tiene entrada propia en la tabla; usa el bloque base o 'state collapsed'`, archivo, issues);
     bloque.tipos[item.name] = [...(bloque.tipos[item.name] ?? []), ...ops];
     anotarOrigenes(entorno.porTipo, item.name, propios, origenes);
   }
@@ -431,6 +458,42 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     avisarSiTocaMetricas(ops, conColapso, item, `Un parche de estado no puede tocar las Metricas`, `'${estado}' nunca relayouta, cambiala en el bloque base`, archivo, issues);
     bloque.estados[estado] = [...(bloque.estados[estado] ?? []), ...ops];
   }
+}
+
+/**
+ * `diagram <tipo> { ... }` de `node` o `group` (ADR 0009): Capas (`layer`, `use`), `slots` y, solo en el Grupo,
+ * `padding`. Un tipo desconocido es `E_THEME_UNKNOWN_DIAGRAM_TYPE` con `fix` por typo. Varios bloques del mismo
+ * tipo se acumulan. Los estilos de texto de un Slot no se cambian por Tipo de diagrama: usa el bloque base.
+ */
+function compilarDiagrama(item: ThemeDiagram, elemento: ElementoDeTema, tema: TemaResuelto, ctx: Omit<ContextoDeBloque, 'modo' | 'candidatas'> & { entorno: Entorno }): void {
+  const { archivo, partes, issues } = ctx;
+  const diagrama = nombreDeDiagrama(item, archivo, issues);
+  if (diagrama === undefined) return;
+  const bloque = tema[elemento];
+  const base = bloque.capas as CapaDeTema[];
+  const previo = bloque.diagramas?.[diagrama];
+  const vigente = previo === undefined ? base : aplicarOps(base, previo.ops, tema.palette, 'parchear').pila;
+  const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');
+  const propios = new Map(ctx.origenes);
+  const ops = compilarBloque(capas, { ...ctx, origenes: propios, modo: 'parchear', candidatas: [vigente] });
+  const parche: { ops: OpDeCapa[]; slots?: CajaDeSlots; padding?: TemaResuelto['grupo']['padding'] } = { ops: [...(previo?.ops ?? []), ...ops], ...(previo?.slots !== undefined && { slots: previo.slots }) };
+  if (previo !== undefined && 'padding' in previo && previo.padding !== undefined) parche.padding = previo.padding;
+  for (const hijo of item.items) {
+    if (hijo.$type === 'ThemeSlots') {
+      const destino: DestinoDeSlots = {};
+      compilarSlots(hijo, destino, { archivo, partes, paleta: tema.palette, tokens: tema.tokens, issues }, elemento);
+      if (destino.slots !== undefined) parche.slots = destino.slots;
+    } else if (hijo.$type === 'GroupPadding') {
+      if (elemento === 'grupo') parche.padding = compilarPadding(hijo, archivo, issues) ?? parche.padding;
+      else issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: archivo, ...aRango(hijo.$cstNode?.range).start, message: "'padding' es del Grupo: ponlo en 'group { diagram ... }'" });
+    } else if (hijo.$type === 'ThemeMarker' || hijo.$type === 'ThemeLabel') {
+      issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeLabel' ? 'label' : hijo.side}' es de la Arista: ponlo en 'edge { diagram ... }'` });
+    }
+  }
+  bloque.diagramas = {
+    ...bloque.diagramas,
+    [diagrama]: elemento === 'grupo' ? parche : { ops: parche.ops, ...(parche.slots !== undefined && { slots: parche.slots }) },
+  };
 }
 
 /** Error `E_THEME_STATE_TOUCHES_METRICS` por cada parche que cambia la caja (`opTocaMetricas`). */

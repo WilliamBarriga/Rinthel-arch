@@ -70,6 +70,7 @@ describe('Sesion', () => {
 
     expect(primera).toBe(segunda);
     expect(primera).toMatchObject({ view: 'w', theme: 'neutral' });
+    expect(primera?.geometry.kind).toBe('grafo');
     expect(Object.keys(primera?.geometry.nodes ?? {})).toEqual(['a']);
     expect(sesion.vistasConGeometria()).toEqual(['w']);
     expect(await sesion.geometria('no-existe')).toBeUndefined();
@@ -81,7 +82,7 @@ describe('Sesion', () => {
     const { archivos, issues } = await sesion.construir();
 
     expect(Object.keys(archivos).sort()).toEqual(['canonico.json', 'geometria/v.json', 'geometria/w.json']);
-    expect(JSON.parse(archivos['geometria/v.json']!)).toMatchObject({ view: 'v', theme: 'neutral' });
+    expect(JSON.parse(archivos['geometria/v.json']!)).toMatchObject({ view: 'v', theme: 'neutral', geometry: { kind: 'grafo' } });
     expect(issues.map((i) => i.code)).toEqual(['W_OVERLAPPING_PINS']);
   });
 

@@ -6,7 +6,7 @@ Los Temas del prototipo hibrido (ADR 0008) como un Workspace: los Temas viven en
 node packages/cli/dist/bin.js dev --workspace examples/temas/galeria --theme-path examples/rinthel-arch/temas
 ```
 
-Cambia de Vista para comparar. El Modelo cubre todos los Tipos, un Grupo abierto (`plataforma`) y uno colapsado (`persistencia`), Aristas con y sin etiqueta, Atributos y un Nodo por estado (grupo `estados`: pasa el raton, selecciona, navega con teclado).
+Cambia de Vista para comparar. Cada Tema tiene tambien una Vista de secuencia (`<tema>-secuencia`, la Interaccion `cobro` con Fragmento y Nota) y una ER (`<tema>-er`, las tablas del Grupo `datos`); las Vistas de arquitectura excluyen `datos`. El Modelo cubre todos los Tipos, un Grupo abierto (`plataforma`) y uno colapsado (`persistencia`), Aristas con y sin etiqueta, Atributos y un Nodo por estado (grupo `estados`: pasa el raton, selecciona, navega con teclado).
 
 ## Comparar con el prototipo (uso interno de mantenedores)
 

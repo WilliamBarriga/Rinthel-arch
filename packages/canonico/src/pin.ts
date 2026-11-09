@@ -42,6 +42,22 @@ export type MotivoDeRechazo = (typeof MOTIVOS_DE_RECHAZO)[number];
  * Union de Intenciones de edicion (ADR 0007), discriminada por `tipo`: el cuerpo de
  * `POST /api/edit`. Una Intencion nueva es una variante mas aqui; el endpoint no cambia.
  */
-export const intencionSchema = z.discriminatedUnion('tipo', [intencionDePinSchema.extend({ tipo: z.literal('mover-pin') })]);
+/**
+ * Reordenar las Lifelines de una Vista de secuencia (ADR 0009): `orden` es el orden visible completo (ids de las
+ * Lifelines dibujadas, de izquierda a derecha). Las entradas de `order` hoy ocultas conservan su posicion relativa.
+ */
+export const intencionDeOrdenSchema = z.object({
+  vista: z.string(),
+  orden: z.array(z.string()).min(1),
+  /** `hashDeContenido` del archivo que contiene la Vista, tal como lo vio el llamador. */
+  hash: z.string(),
+});
+
+export type IntencionDeOrden = z.infer<typeof intencionDeOrdenSchema>;
+
+export const intencionSchema = z.discriminatedUnion('tipo', [
+  intencionDePinSchema.extend({ tipo: z.literal('mover-pin') }),
+  intencionDeOrdenSchema.extend({ tipo: z.literal('ordenar-lifelines') }),
+]);
 
 export type Intencion = z.infer<typeof intencionSchema>;

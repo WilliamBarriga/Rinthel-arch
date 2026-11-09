@@ -79,16 +79,17 @@
  * errores de catalogo; solo `resolverTema` lanza. Configuracion requerida: ninguna.
  * Solo importa `canonico`.
  */
-export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, SLOTS_DE_TEXTO, construirPrimitiva, primitivasDe, primitivasDeFamilia, resolverTokens, sugerir } from './catalogo';
+export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, SLOTS_DE_TEXTO, construirPrimitiva, primitivasDe, primitivasDeFamilia, resolverTokens, sugerir, validarPropiedades } from './catalogo';
 export { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, alineacionDe, construirDisposicion, describirDisposicion, esCaja, slotsDe } from './disposicion';
 export type { Alineacion, CajaDeSlots, Direccion, ElementoDeSlots, EntradaDeCaja, EntradaDeSlot, ErrorDeDisposicion, HojaDeSlots, PropiedadEscrita } from './disposicion';
 export type { DefinicionDePrimitiva, DefinicionDePropiedad, ErrorDeCatalogo, NombreDePrimitiva, NombreDePrimitivaEn, NombreDeSlot, NombreDeSlotDeTexto, Primitiva, UbicacionDePrimitiva } from './catalogo';
 export { crearPrng, fnv1a, giroDeCapa, semillaDeCapa } from './semilla';
-export { GRUPO_POR_DEFECTO, TEMA_NEUTRO, leerOps, resolverTema, temaResueltoSchema } from './tema';
+export { GRUPO_POR_DEFECTO, TEMA_NEUTRO, leerOps, resolverTema, temaParaDiagrama, temaResueltoSchema } from './tema';
 export type { TemaResuelto } from './tema';
-export { atributosVisibles, contenidoDeNodo, muestra, textoDeAtributo } from './contenido';
+export { anchoDeChips, atributosVisibles, chipsDeClaves, contenidoDeNodo, muestra, piezasDeAtributo, textoDeAtributo } from './contenido';
+export type { ChipDeClave } from './contenido';
 export type { ContenidoDeNodo } from './contenido';
-export { claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta } from './metricas';
+export { ANCHO_MAXIMO_DE_NOTA, ESQUINA_DE_NOTA, LARGO_DE_MARCADOR_ER, RELLENO_DE_NOTA, cajaDeNota, estiloDeTextoDeNota, palabrasDeNota, claveDeMetricas, comoTabla, metricasDe, metricasDeHoja, metricasDeNodo, tablaDeMetricas, tablaUniforme, tamanoDeEtiqueta, textoDeGuarda } from './metricas';
 export type { Metricas, TablaDeMetricas } from './metricas';
 export { anchoDeTexto, claveDeTexto, hashDeFuente } from './medicion';
 export type { MedicionDeMetricas, MedidasDeTexto, TextoAMedir } from './medicion';
@@ -98,13 +99,19 @@ export type { CaraDeFuente, FuenteFaltante } from './fuentes';
 export { referenciaDelCatalogo } from './referencia';
 export { PUNTO_DE_TITULO_EM, alturaDeCabecera, colocarDisposicion, colocarEnCaja, colocarNodo, medirDisposicion, textoDeSlot } from './slots';
 export type { ColocacionDeNodo, MedidaDeSlot, Rect, Tamano } from './slots';
-export { estiloResuelto } from './estilo';
-export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeElemento, PinturaDeNodo, PinturaDePagina, PrimitivaPintada } from './estilo';
-export { aplicarOps, cascada, ESTADOS, opTocaMetricas, parsearEstado, validarOps } from './parches';
-export type { CapaDeTema, ElementoDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa, ResultadoDeEstado } from './parches';
+export { estiloResuelto, pilaDeFila } from './estilo';
+export { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA, claveDeFila } from './fila';
+export type { TextoDeFila, VarianteDeFila } from './fila';
+export { primitivaPintada } from './estilo';
+export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeArista, PinturaDeCajaDeSecuencia, PinturaDeElemento, PinturaDeFila, PinturaDeNodo, PinturaDePagina, PinturaDeSecuencia, PinturaDeTrazoDeSecuencia, PrimitivaPintada } from './estilo';
+export { capasDeAristaEr, pinturaDeMensaje, pinturaDeMensajeConTema } from './mensajes';
+export { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA, metricasDeSecuencia } from './secuencia';
+export type { BloqueDeSecuencia, EspecificacionDeBloque, MetricaDeBloque, MetricasDeSecuencia } from './secuencia';
+export { aplicarOps, cascada, ESTADOS, TIPOS_DE_DIAGRAMA, opTocaMetricas, parsearEstado, validarOps } from './parches';
+export type { CapaDeTema, ElementoDeTema, ErrorDeOp, Estado, ModoDeParche, OpDeCapa, ResultadoDeEstado, TipoDeDiagrama } from './parches';
 export { resolverColor, validarColor } from './color';
 export type { ContextoDeColor, ErrorDeColor } from './color';
-export { advertenciasDeContraste, leyendaDelTema, razonDeContraste, tiposSoloColor } from './contraste';
+export { advertenciasDeContraste, aristaIdentificanteSoloColor, leyendaDelTema, mensajesSoloColor, razonDeContraste, tiposSoloColor } from './contraste';
 export type { AdvertenciaDeContraste, EntradaDeLeyenda, Leyenda, TipoParaLeyenda } from './contraste';
 export { TEMA_ALTO_CONTRASTE } from './alto-contraste';
 export { componentesDeTema, usosDeCodigo } from './codigo';

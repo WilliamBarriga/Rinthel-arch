@@ -39,6 +39,9 @@ model {
     modulo can-pasos "canonico/pasos" "Revelado acumulativo de Vistas flow: show y hide por Paso" {
       source { file "packages/canonico/src/pasos.ts" }
     }
+    modulo can-secuencia "canonico/secuencia" "Resolucion de una Interaccion para una Vista sequence: Lifelines (por order y primera aparicion) y activaciones" {
+      source { file "packages/canonico/src/secuencia.ts" }
+    }
     modulo can-pin "canonico/pin" "Pin: posicion fijada por el autor, relativa al Grupo padre" {
       source { file "packages/canonico/src/pin.ts" }
     }
@@ -59,7 +62,7 @@ model {
     }
   }
 
-  paquete tema "tema" "Catalogo de Primitivas, Slots, Movimientos y Efectos; Estilo resuelto y colocacion de Slots" {
+  paquete tema "tema" "Catalogo de Primitivas, Slots, Movimientos, Efectos y Elementos de secuencia y ER; Estilo resuelto y colocacion de Slots" {
     source { path "packages/tema/src" }
     modulo tem-catalogo "tema/catalogo" "Primitivas y Slots con rangos y defectos; validacion con sugerencias" {
       source { file "packages/tema/src/catalogo.ts" }
@@ -103,6 +106,15 @@ model {
     }
     modulo tem-metricas "tema/metricas" "Metricas derivadas de caja, Slots y texto medido" {
       source { file "packages/tema/src/metricas.ts" }
+    }
+    modulo tem-secuencia "tema/secuencia" "Elementos de Tema de secuencia (lifeline, activation, message, fragment, note): tabla unica de lo que admite cada bloque" {
+      source { file "packages/tema/src/secuencia.ts" }
+    }
+    modulo tem-fila "tema/fila" "Fila de tabla ER (bloque row): alto, filas alternas y parches por clave u opcional" {
+      source { file "packages/tema/src/fila.ts" }
+    }
+    modulo tem-mensajes "tema/mensajes" "Pintura de Mensajes de secuencia y Aristas ER derivada de la Arista; la comparten render y solo-color" {
+      source { file "packages/tema/src/mensajes.ts" }
     }
     modulo tem-slots "tema/slots" "Rectangulo de cada Slot dentro de la caja del Nodo" {
       source { file "packages/tema/src/slots.ts" }
@@ -156,6 +168,12 @@ model {
     modulo dsl-temas-arista "dsl/temas-arista" "Trazo y marcadores de Arista en el DSL de Temas" {
       source { file "packages/dsl/src/temas-arista.ts" }
     }
+    modulo dsl-temas-secuencia "dsl/temas-secuencia" "Elementos de secuencia en el DSL de Temas" {
+      source { file "packages/dsl/src/temas-secuencia.ts" }
+    }
+    modulo dsl-temas-fila "dsl/temas-fila" "Bloque row (filas ER) en el DSL de Temas" {
+      source { file "packages/dsl/src/temas-fila.ts" }
+    }
     modulo dsl-temas-pagina "dsl/temas-pagina" "Fondo de pagina del Tema" {
       source { file "packages/dsl/src/temas-pagina.ts" }
     }
@@ -170,10 +188,13 @@ model {
     }
   }
 
-  paquete layout "layout" "ELK y Pin; geometria cacheada y claves de invalidacion" {
+  paquete layout "layout" "ELK y Pin; layout propio de secuencia; geometria cacheada y claves de invalidacion" {
     source { path "packages/layout/src" }
     modulo lay-layout "layout/layout" "Vista resuelta a Geometria con ELK (INCLUDE_CHILDREN), Pins y etiquetas de Arista" {
       source { file "packages/layout/src/layout.ts" }
+    }
+    modulo lay-secuencia "layout/secuencia" "Layout de secuencia propio, sin ELK, determinista y sincrono: columnas de Lifelines y filas de Mensajes" {
+      source { file "packages/layout/src/secuencia.ts" }
     }
     modulo lay-indice "layout/indice" "Indice de Geometria para localizar Nodos y Aristas" {
       source { file "packages/layout/src/indice.ts" }
@@ -202,7 +223,7 @@ model {
     }
   }
 
-  paquete render "render" "SVG React puro: Geometria y Estilo a elementos pintados" {
+  paquete render "render" "SVG React puro: Geometria (grafo o secuencia) y Estilo a elementos pintados" {
     source { path "packages/render/src" }
     modulo ren-diagram "render/diagram" "Componente Diagram: Geometria y Tema a SVG" {
       source { file "packages/render/src/diagram.tsx" }
@@ -212,6 +233,9 @@ model {
     }
     modulo ren-escena "render/escena" "Geometria a lista de elementos ordenados por pila" {
       source { file "packages/render/src/escena.ts" }
+    }
+    modulo ren-secuencia "render/secuencia" "Escena de una Vista de secuencia: Lifelines, activaciones y Mensajes sobre la Geometria secuencia" {
+      source { file "packages/render/src/secuencia.ts" }
     }
     modulo ren-estilo "render/estilo" "Estilo resuelto contra el Tema, listo para pintar" {
       source { file "packages/render/src/estilo.ts" }
@@ -250,7 +274,7 @@ model {
     }
   }
 
-  paquete shell "shell" "Interaccion en el navegador: camara, seleccion, arrastre, Pasos y colapso" {
+  paquete shell "shell" "Interaccion en el navegador: camara, seleccion, arrastre (Nodos y Lifelines), Pasos y colapso" {
     source { path "packages/shell/src" }
     modulo sh-vista "shell/vista-interactiva" "Componente que une camara, seleccion, arrastre, Pasos y navegacion" {
       source { file "packages/shell/src/vista-interactiva.tsx" }
@@ -275,6 +299,9 @@ model {
     }
     modulo sh-arrastre "shell/arrastre" "Arrastre de un Nodo hasta un Pin" {
       source { file "packages/shell/src/arrastre.ts" }
+    }
+    modulo sh-ordenar-lifelines "shell/ordenar-lifelines" "Reordenar Lifelines por arrastre de cabecera (puro, sobre la Geometria de secuencia)" {
+      source { file "packages/shell/src/ordenar-lifelines.ts" }
     }
     modulo sh-enviar-pin "shell/enviar-pin" "POST /api/pin al servidor dev" {
       source { file "packages/shell/src/enviar-pin.ts" }

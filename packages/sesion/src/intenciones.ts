@@ -1,13 +1,13 @@
 import type { Intencion, Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
-import { editarPin } from './ediciones';
+import { editarPin, ordenarLifelines } from './ediciones';
 import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
 
 /**
  * Intencion de edicion: union discriminada por `tipo`, declarada en `canonico`
  * (`intencionSchema`). Cada herramienta nueva es una variante mas alla, con su rama
- * en `aplicarIntencion`. Hoy solo existe mover un Pin.
+ * en `aplicarIntencion`. Hoy: mover un Pin y ordenar las Lifelines de una secuencia.
  */
 export type { Intencion };
 
@@ -24,6 +24,10 @@ export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Inte
     case 'mover-pin': {
       const { tipo: _tipo, ...pin } = intencion;
       return editarPin(archivos, pin);
+    }
+    case 'ordenar-lifelines': {
+      const { tipo: _tipo, ...orden } = intencion;
+      return ordenarLifelines(archivos, orden);
     }
   }
 }

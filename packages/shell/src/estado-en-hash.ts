@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { EstadoDeColapso, FuenteCanonica } from 'canonico';
 import type { Camara } from 'render';
 
-import { deserializarEstado, serializarEstado, vistaPorDefecto } from './hash';
+import { deserializarEstado, pasoInicialDeVista, serializarEstado, vistaPorDefecto } from './hash';
 import type { AdaptadorDeHash, EstadoDeShell } from './hash';
 
 export interface OpcionesDeEstadoEnHash {
@@ -46,15 +46,15 @@ export function useEstadoEnHash(opciones: OpcionesDeEstadoEnHash): PropsDeEstado
   };
   const [estado, setEstado] = useState<EstadoDeShell>(leer);
   const actual = useRef(estado);
-  const ultimo = useRef({ hash, inicial, conCamara, leer });
-  ultimo.current = { hash, inicial, conCamara, leer };
+  const ultimo = useRef({ hash, inicial, conCamara, leer, source });
+  ultimo.current = { hash, inicial, conCamara, leer, source };
 
   useEffect(
     () =>
       hash.suscribir(() => {
         const nuevo = ultimo.current.leer();
         const { inicial: ini } = ultimo.current;
-        if (serializarEstado(nuevo, ini) === serializarEstado(actual.current, ini)) return;
+        if (serializarEstado(nuevo, ini, ultimo.current.source) === serializarEstado(actual.current, ini, ultimo.current.source)) return;
         actual.current = nuevo;
         setEstado(nuevo);
       }),
@@ -62,9 +62,9 @@ export function useEstadoEnHash(opciones: OpcionesDeEstadoEnHash): PropsDeEstado
   );
 
   const aplicar = (siguiente: EstadoDeShell, reemplazar: boolean): void => {
-    const { hash: h, inicial: ini } = ultimo.current;
-    const texto = serializarEstado(siguiente, ini);
-    const previo = serializarEstado(actual.current, ini);
+    const { hash: h, inicial: ini, source } = ultimo.current;
+    const texto = serializarEstado(siguiente, ini, source);
+    const previo = serializarEstado(actual.current, ini, source);
     actual.current = siguiente;
     setEstado(siguiente);
     if (texto !== previo) h.escribir(texto, { reemplazar });
@@ -80,7 +80,7 @@ export function useEstadoEnHash(opciones: OpcionesDeEstadoEnHash): PropsDeEstado
     onPathChange: (ruta) => {
       const e = actual.current;
       const cambioVista = ruta[ruta.length - 1] !== e.path[e.path.length - 1];
-      aplicar(cambioVista ? { path: ruta, state: {}, selected: null, step: 0 } : { ...e, path: ruta }, !cambioVista && ruta.length <= e.path.length);
+      aplicar(cambioVista ? { path: ruta, state: {}, selected: null, step: pasoInicialDeVista(ultimo.current.source, ruta[ruta.length - 1]) } : { ...e, path: ruta }, !cambioVista && ruta.length <= e.path.length);
     },
     onStateChange: (state) => aplicar({ ...actual.current, state }, true),
     onSelect: (selected) => aplicar({ ...actual.current, selected }, true),

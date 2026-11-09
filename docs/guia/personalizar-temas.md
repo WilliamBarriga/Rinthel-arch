@@ -70,7 +70,7 @@ Las Primitivas se agrupan en familias:
 | vidrio y filtro | `glass`, `sketch` (mano alzada) |
 | decoracion | `tilt`, `tape`, `stripe`, `pins`, `fold`, `ring` |
 | trazo (Aristas) | `line` con `corner` (`sharp`, `chamfer`, `round`) y `style` |
-| marcador (Aristas) | `arrow`, `dot`, `diamond`, `square`, `bar`, `via`, `hollow`, `chevron` |
+| marcador (Aristas) | `arrow`, `dot`, `diamond`, `square`, `bar`, `via`, `hollow`, `chevron`, `cross` (una X centrada en el extremo), y los pies de gallo ER `one`, `zero-one`, `many`, `zero-many` |
 | texto y contenido | `text`, `chip`, `icon`, `label` |
 | codigo | `code`: un componente React propio, para lo que el catalogo no cubre |
 
@@ -107,7 +107,9 @@ node {
 }
 ```
 
-La cascada, donde gana el ultimo, es: Tema base, Tipo de nodo, estado, parche de la Vista. Los estados son `hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado` y `foco`. Un estado solo puede cambiar pintura: nunca el tamano ni los Slots (`validate` lo rechaza), asi que pasar el raton no mueve el diagrama. Un Grupo tiene ademas `state collapsed`, el aspecto del Grupo cerrado.
+La cascada, donde gana el ultimo, es: Tema base, Tipo de diagrama, Tipo de nodo, estado, parche de la Vista.
+
+`diagram <tipo> { ... }` (dentro de `node`, `group` y `edge`) distingue un Tipo de diagrama (`architecture`, `flow`, `sequence`, `er`): `node { diagram flow { slots row pad 20 { title attrs } } }` solo cambia las Vistas de flujo. Admite `layer`, `use` y `slots`; `padding` en `group`; marcadores (`start`/`end`) y `label` en `edge`. A diferencia de un estado, puede cambiar las Metricas. Un tipo desconocido es `E_THEME_UNKNOWN_DIAGRAM_TYPE`. `inspect tema <nombre> --diagrama flow` muestra la pila resultante. Los estados son `hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado` y `foco`. Un estado solo puede cambiar pintura: nunca el tamano ni los Slots (`validate` lo rechaza), asi que pasar el raton no mueve el diagrama. Un Grupo tiene ademas `state collapsed`, el aspecto del Grupo cerrado.
 
 ### Partes: parches reutilizables
 
@@ -136,6 +138,122 @@ page {
 ```
 
 El enrutado de las Aristas lo hace el layout y no depende del Tema.
+
+### Tablas ER: `row`, `zone` y marcadores
+
+Una Vista `er` dibuja cada Nodo como tabla (cabecera y una fila por Atributo). El Tema la estiliza con el bloque `row`, la propiedad `zone` de las Capas de Nodo y los marcadores de Arista (ejemplo completo en [`examples/temas/er.dg`](../../examples/temas/er.dg)):
+
+```dg
+specification { node tabla { icon database  color green } }
+
+model {
+  tabla clientes "Clientes" { id: uuid pk  email: text? uk }
+  tabla pedidos "Pedidos" { id: uuid pk  cliente_id: uuid fk  nota: text? }
+  pedidos#cliente_id "0..*" -> "1" clientes#id "pertenece a" identifying
+}
+
+theme libreta {
+  palette { papel "#fffdf5"  tinta "#1f2937"  azul "#2457d6"  gris "#ece8dc"  verde "#d9f2dc"  ambar "#fdecc8" }
+  node {
+    layer forma rect { radius 6 }
+    layer relleno solid { color papel }
+    layer cabecera solid { color azul  zone header }   // solo la cabecera (all, header o body)
+    layer borde border { color tinta }
+    slots column { title { color papel  weight 700 }  attrs }
+  }
+  row {
+    height 26                                           // alto de cada fila: cambia el tamano de las tablas
+    layer fondo solid { color papel }
+    layer separador stripe { color gris  side bottom  width 1 }
+    alternate { layer fondo { color gris } }            // filas impares
+    key pk { layer fondo { color verde } }              // filas con esa marca (pk, fk, uk); se apilan en ese orden
+    optional { layer fondo { color ambar } }            // Atributos opcionales (despues de las claves)
+    state seleccionado { layer fondo { color verde } }  // fila seleccionada (tambien hover); solo pinta
+    name { weight 600  size 1.1 }  type { color azul }  // estilo de texto; size (multiplo del texto del Tema) cambia el tamano medido
+    key { fill azul  color papel  radius 4 }            // el chip de cada marca de clave
+  }
+  edge {
+    layer linea line { color tinta }
+    diagram er { end arrow { size 12  color azul } }   // solo color y size del pie de gallo
+  }
+}
+
+view tablas { type er  theme libreta  include ** }
+```
+
+- `zone header` pinta de arriba hasta donde empiezan las filas (`attrs`); sin `attrs` equivale a `all`. `zone body` cubre las filas. Una Capa con `zone` pinta aparte de la caja, asi que un parche de estado no la cambia.
+- `row` solo vale en Vistas `er`; en las demas los Atributos siguen con el estilo del Slot `attrs`. El alto (`height`, 12 a 120) es una Metrica; las Capas y parches solo pintan (uno que cambie la caja es `E_THEME_STATE_TOUCHES_METRICS`).
+- El marcador de cada extremo lo fija el nucleo segun la cardinalidad (`1` a `one`, `0..1` a `zero-one`, `1..*` a `many`, `0..*` a `zero-many`); el Tema solo cambia su `color` y `size`.
+- Las Aristas identificantes (`identifying`) van continuas y las demas discontinuas; `edge { identifying { layer linea { color azul } } }` cambia ademas el trazo de las identificantes. Si ambas quedan iguales salvo el color, `validate` avisa con `W_THEME_COLOR_ONLY`.
+
+### Secuencia: `lifeline`, `activation`, `message`, `fragment` y `note`
+
+Una Vista `sequence` se dibuja sola con cualquier Tema (los elementos se derivan de `edge` y `node`); para estilizarla se declaran bloques al nivel de `node` y `edge` (ejemplo completo en [`examples/temas/secuencia.dg`](../../examples/temas/secuencia.dg)). Todos admiten `layer`, `use`, `state` y, donde aplica, parches por variante, y las separaciones de secuencia son sus Metricas:
+
+```dg
+specification { node pieza { icon box  color blue } }
+
+model {
+  pieza cliente
+  pieza api
+  pieza db
+  interaction pedido {
+    cliente -> api "pedir"
+    api -> db "guardar"
+    reply db -> api "ok"
+    alt "hay stock" { api -> db "reservar" }
+    note right of db "idempotente"
+    reply api -> cliente "201"
+  }
+}
+
+theme tinta {
+  palette { papel "#fefce8"  tinta "#1f2937"  azul "#2563eb"  verde "#16a34a"  rojo "#dc2626"  ambar "#d97706" }
+  node {
+    layer forma rect { radius 6 }
+    layer relleno solid { color papel }
+    layer borde border { color tinta }
+    slots { title }
+  }
+  edge { layer linea line { color tinta  width 1.2 } }
+  lifeline {
+    layer linea line { color tinta/0.5  width 1  style dashed }
+    end cross { size 12  color rojo }
+    gap 200                                          // distancia minima entre Lifelines
+  }
+  activation {
+    layer relleno solid { color azul/0.2 }
+    layer borde border { color azul }
+    width 12
+  }
+  message {
+    layer linea line { color tinta  width 1.5 }
+    end arrow { size 10 }
+    gap 40  loop-width 48  create-offset 0           // entre Mensajes, ancho del lazo propio, desplazamiento de la cabecera creada
+    kind async { layer linea { color verde }  end chevron { size 10  color verde } }   // parche por tipo: sync, async, reply, create, destroy
+  }
+  fragment {
+    layer forma rect { radius 8 }
+    layer relleno solid { color papel/0.6 }
+    layer borde border { color tinta/0.6 }
+    operator { color tinta  weight 700 }  guard { color tinta }  divider { color tinta/0.5  style dashed }
+    op alt { layer borde { color azul } }            // parche por operador: opt loop break critical alt par ref
+    padding 20  padding-y 10                         // alrededor del contenido
+  }
+  note {
+    layer relleno solid { color ambar/0.25 }
+    layer borde border { color ambar }
+    text { color tinta  weight 600 }
+  }
+}
+
+view pedido { type sequence  theme tinta  interaction pedido }
+```
+
+- Que cambia con cada tipo: `message { kind async { ... } }` solo toca los Mensajes `async`. Sin parche, `reply` y `create` van con la continuidad opuesta a la del trazo base y el marcador depende del tipo.
+- `lifeline` y `message` usan trazos de Arista; `activation`, `fragment` y `note` usan Capas de Nodo. `COLOR` es el de la Lifeline. `gap`, `loop-width`, `create-offset`, `width` y `padding` son Metricas (cambian la Geometria); lo demas solo pinta. Los rangos y defectos estan en el [catalogo](../referencia-catalogo.md#elementos-de-secuencia); uno fuera de rango es un error de `validate`.
+- Si dos tipos de Mensaje (los que usa la Vista) quedan iguales salvo el color, `validate` avisa con `W_THEME_COLOR_ONLY`.
+- Los Temas incorporados declaran todos estos elementos y la fila `row`: `neutral` es el modelo de referencia, `neutral-dark` lo hereda y solo cambia la Paleta, `alto-contraste` usa trazos mas gruesos. `inspect tema <nombre>` muestra la pila, los parches y las Metricas de cada uno.
 
 ## Movimiento y entrada
 

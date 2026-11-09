@@ -232,4 +232,41 @@ model {
   cli.cli-empaquetar -> shell.sh-vista "empaqueta"
   cli.cli-cambio -> canonico.can-estado
   cli.cli-codigo -> tema.tem-codigo
+
+  // Secuencia y ER (ADR 0009)
+  canonico.can-secuencia -> canonico.can-esquema
+  canonico.can-secuencia -> canonico.can-vistas
+  tema.tem-secuencia -> tema.tem-catalogo
+  tema.tem-fila -> canonico.can-esquema
+  tema.tem-mensajes -> tema.tem-catalogo
+  tema.tem-mensajes -> tema.tem-estilo
+  tema.tem-contraste -> tema.tem-mensajes
+  dsl.dsl-temas -> dsl.dsl-temas-secuencia
+  dsl.dsl-temas -> dsl.dsl-temas-fila
+  dsl.dsl-temas-secuencia -> tema.tem-secuencia
+  dsl.dsl-temas-secuencia -> dsl.dsl-temas-comun
+  dsl.dsl-temas-secuencia -> dsl.dsl-temas-capas
+  dsl.dsl-temas-fila -> tema.tem-fila
+  dsl.dsl-temas-fila -> dsl.dsl-temas-comun
+  dsl.dsl-temas-fila -> dsl.dsl-temas-capas
+  layout.lay-layout -> layout.lay-secuencia "delega las Vistas sequence"
+  layout.lay-secuencia -> canonico.can-secuencia
+  layout.lay-secuencia -> tema.tem-secuencia
+  layout.lay-secuencia -> tema.tem-metricas
+  layout.lay-secuencia -> tema.tem-slots
+  render.ren-escena -> render.ren-secuencia "delega la Geometria secuencia"
+  render.ren-pintores -> tema.tem-mensajes
+  render.ren-secuencia -> layout.lay-secuencia
+  render.ren-secuencia -> canonico.can-secuencia
+  render.ren-secuencia -> tema.tem-mensajes
+  render.ren-secuencia -> render.ren-pilas
+  render.ren-secuencia -> render.ren-pintores
+  render.ren-secuencia -> render.ren-aristas
+  render.ren-secuencia -> render.ren-elemento
+  render.ren-secuencia -> render.ren-estilo
+  render.ren-secuencia -> render.ren-hoja
+  shell.sh-ordenar-lifelines -> canonico.can-secuencia
+  shell.sh-ordenar-lifelines -> layout.lay-secuencia
+  shell.sh-arrastre -> shell.sh-ordenar-lifelines
+  shell.sh-vista -> shell.sh-ordenar-lifelines
 }

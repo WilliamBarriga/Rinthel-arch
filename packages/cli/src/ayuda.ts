@@ -60,16 +60,20 @@ Opciones:
   --json               Un objeto con su propio contractVersion (independiente del de validate)
   --tipo <tipo>        (tema) resuelve la cascada para ese Tipo de nodo
   --estado <estado>    (tema) resuelve la cascada para ese estado
+  --diagrama <tipo>    (tema) aplica los parches diagram de ese Tipo de diagrama (architecture, flow, sequence, er)
   --catalogo           (tema) agrega las claves del catalogo de Primitivas y Movimientos
   ${THEME_PATH}
 
 Salida: 0 hay respuesta, 1 no existe el Nodo/Vista/Tema o el Workspace tiene errores, 2 fallo de uso.
 `,
-  edit: `diagrams edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --edits '<json>') [opciones]
+  edit: `diagrams edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --intent '<json>' | --edits '<json>') [opciones]
 
 Unica escritura explicita del CLI: todo o nada, solo sobre archivos .dg del Workspace.
 
   --view <id> --node <id> --x N --y N   Fija el Pin del Nodo en la Vista (lo inserta o lo reemplaza)
+  --intent '<json>'                     Intencion { tipo, ... }; hoy ademas de mover-pin:
+                                        {"tipo":"ordenar-lifelines","vista":"<id>","orden":["a","b"]} reescribe el
+                                        order completo de una Vista de secuencia (las ocultas conservan su sitio)
   --edits '<json>'                      Lista de { file, range, replacement }, por ejemplo los fix de validate
   --hash <archivo>=<hash>               Rechaza la edicion si el archivo cambio desde que lo leiste
 

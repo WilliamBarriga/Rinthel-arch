@@ -47,14 +47,57 @@ PropertyValue returns string:
 
 Model:
   name='model' '{'
-    (elements+=Element | edges+=Edge | extensions+=Extend)*
+    (interactions+=Interaction | elements+=Element | edges+=Edge | extensions+=Extend)*
   '}'
+;
+
+// `interaction <id> ["Titulo"] ["Descripcion"] { mensajes }` (ADR 0009): un escenario ordenado entre Nodos.
+// Su id vive en un espacio de nombres propio. `interaction` es palabra clave solo aqui: sigue valiendo como id de Nodo.
+Interaction:
+  'interaction' name=Id (title=String (description=String)?)? '{'
+    items+=InteractionItem*
+  '}'
+;
+
+InteractionItem:
+  Fragment | Note | InteractionRef | Message;
+
+// Nota (ADR 0009): `note left of X "t"`, `note right of X "t"`, `note over X[, Y] "t"`.
+Note:
+  'note' (anchor=('left' | 'right') 'of' targets+=Ref | anchor='over' targets+=Ref (',' targets+=Ref)*) text=String
+;
+
+// `ref <interaccion>`: referencia a otra Interaccion (los ciclos son validos; no se expande).
+InteractionRef:
+  'ref' interaction=Id
+;
+
+// Fragmento (ADR 0009): `opt|loop|break|critical ["guarda"] { }`, `alt ["guarda"] { } else ["guarda"] { }`,
+// `par { } and { }`. El parser acepta cualquier operador con `else`/`and` en cualquier cantidad: `canonico`
+// emite `E_INVALID_FRAGMENT_OPERAND` (nada de esto sale como `E_SYNTAX_ERROR`).
+Fragment:
+  operator=('opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par') operands+=FirstOperand operands+=NextOperand*
+;
+
+FirstOperand:
+  (guard=String)? '{' items+=InteractionItem* '}'
+;
+
+NextOperand:
+  separator=('else' | 'and') (guard=String)? '{' items+=InteractionItem* '}'
+;
+
+// `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"] ["descripcion"]`; `origen == destino` es un Mensaje propio.
+// `async`, `reply`, `create` y `destroy` tambien valen como id de Nodo (`reply -> otro`).
+Message:
+  (alias=Id ':')? (kind=('async' | 'reply' | 'create' | 'destroy'))? from=Ref '->' to=Ref (label=String (description=String)?)?
 ;
 
 // `<origen> ["card"] -> ["card"] <destino> ["etiqueta"]`; los extremos son ids cualificados.
 // Los espacios alrededor de `->` son obligatorios: `-` es valido dentro de un Id.
+// ER: la palabra final `identifying` marca la relacion como identificante.
 Edge:
-  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint (label=String)?
+  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint (label=String)? (identifying?='identifying')?
 ;
 
 // Nodo por id cualificado (`a.b.c`) y, opcional, uno de sus Atributos (`a.b#col`).
@@ -69,7 +112,7 @@ Ref returns string:
 // otro archivo (o en otro bloque `model`).
 Extend:
   'extend' target=Ref '{'
-    (elements+=Element | attrs+=Attrs | sources+=Source)*
+    (elements+=Element | attrs+=Attrs | attributes+=Attribute | sources+=Source)*
   '}'
 ;
 
@@ -84,7 +127,7 @@ Theme:
 ;
 
 ThemePart:
-  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeGroup | ThemeEdge | ThemePage;
+  ThemePalette | ThemeFonts | ThemeTokens | ThemeNode | ThemeGroup | ThemeEdge | ThemePage | ThemeRow | ThemeSequence;
 
 ThemePalette:
   'palette' '{' entries+=ThemeEntry* '}';
@@ -112,7 +155,7 @@ ThemeNode:
   'node' '{' items+=NodeItem* '}';
 
 NodeItem:
-  ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState | ThemeTransition | ThemeEnter | ThemeExit | ThemeStagger;
+  ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState | ThemeDiagram | ThemeTransition | ThemeEnter | ThemeExit | ThemeStagger;
 
 // `group { layer caja rect { radius 16 }  slots row gap 6 { icon title }  padding 8 16 16  type ...  state collapsed { ... } }`
 // Bloque de dibujo del Grupo (ADR 0008): las mismas Capas, `type` y `state` que `node`, la cabecera (`slots`), el
@@ -126,6 +169,15 @@ GroupItem:
 
 GroupPadding:
   'padding' values+=Num+;
+
+// `diagram flow { layer ... slots ... padding ... }` (ADR 0009): parche por Tipo de diagrama dentro de `node`, `group`
+// o `edge`, entre el Tema base y el Tipo de nodo. A diferencia de `state`, puede cambiar las Metricas. El nombre se
+// valida al compilar (architecture, flow, sequence, er) para dar un `fix` por typo.
+ThemeDiagram:
+  'diagram' name=Id '{' items+=DiagramItem* '}';
+
+DiagramItem:
+  ThemeLayer | ThemeUse | ThemeSlots | GroupPadding | ThemeMarker | ThemeLabel;
 
 ThemeType:
   'type' name=Id '{' items+=PatchItem* '}';
@@ -233,7 +285,11 @@ ThemeEdge:
   'edge' '{' items+=EdgeItem* '}';
 
 EdgeItem:
-  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel;
+  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel | ThemeDiagram | EdgeIdentifying;
+
+// `identifying { layer linea { color azul } }` (ADR 0009): parche del trazo de las Aristas identificantes de una Vista ER.
+EdgeIdentifying:
+  'identifying' '{' items+=PatchItem* '}';
 
 // `start|end <marcador> [{ props }]` o `start|end none`.
 ThemeMarker:
@@ -241,6 +297,61 @@ ThemeMarker:
 
 ThemeLabel:
   'label' '{' props+=LayerProp* '}';
+
+// `row { layer fondo solid { color papel }  height 28  alternate { layer fondo { color gris } }  name { weight 600 }
+//   key { fill azul }  key pk { layer fondo { color verde } }  optional { layer fondo { color gris } } }`
+// Bloque de la fila de una tabla ER (ADR 0009, Vistas ER): una pila de Capas por fila (`layer`, `use`), su alto, el
+// parche de las filas impares (`alternate`), el estilo de sus textos (`name`, `type`, `key`: un chip) y los parches
+// por marca de clave (`key pk|fk|uk`) y por Atributo opcional (`optional`). Solo pinta, salvo el alto.
+ThemeRow:
+  'row' '{' items+=RowItem* '}';
+
+RowItem:
+  ThemeLayer | ThemeUse | RowHeight | RowKeyPatch | RowOptional | RowAlternate | RowState | RowText;
+
+RowHeight:
+  'height' value=Num;
+
+RowKeyPatch:
+  'key' name=Id '{' items+=PatchItem* '}';
+
+RowOptional:
+  'optional' '{' items+=PatchItem* '}';
+
+RowAlternate:
+  'alternate' '{' items+=PatchItem* '}';
+
+// Parche de estado de la fila (`hover`, `seleccionado`...): solo pinta, como los de `node`.
+RowState:
+  'state' name=Id '{' items+=PatchItem* '}';
+
+// El nombre del texto (`name`, `type`, `key`) se valida al compilar para dar un `fix` por typo.
+RowText:
+  slot=Id '{' props+=LayerProp* '}';
+
+// `message { layer linea line { color tinta }  end arrow { size 9 }  gap 36  kind reply { layer linea { style dashed } } }`
+// Elementos de secuencia (ADR 0009): `lifeline`, `activation`, `message`, `fragment`, `note`. Cada uno lleva su pila de
+// Capas, marcadores (`start`/`end`), parches por variante (`kind <tipo>` en message, `op <operador>` en fragment),
+// estados, Metricas propias (`gap 36`, `width 10`...) y estilo de texto o trazo suelto (`label`, `operator`, `guard`,
+// `divider`, `text`). Que admite cada uno lo valida el catalogo de `tema`; el nombre del estilo, de la Metrica y de la
+// variante se comprueba al compilar para dar un `fix` por typo.
+ThemeSequence:
+  element=('lifeline' | 'activation' | 'message' | 'fragment' | 'note') '{' items+=SequenceItem* '}';
+
+SequenceItem:
+  ThemeLayer | ThemeUse | ThemeMarker | ThemeState | SequencePatch | SequenceMetric | SequenceText;
+
+SequencePatch:
+  word=('kind' | 'op') name=Id '{' items+=SequencePatchItem* '}';
+
+SequencePatchItem:
+  ThemeLayer | ThemeUse | ThemeMarker;
+
+SequenceMetric:
+  key=Id value=SignedNum;
+
+SequenceText:
+  slot=Id '{' props+=LayerProp* '}';
 
 // `page { layer fondo solid { color paper }  layer puntos dots { color ink/0.1 size 22 }  fixed }`
 // Bloque del fondo de pagina (ADR 0008): pila de rellenos bajo Grupos, Aristas y Nodos.
@@ -265,7 +376,7 @@ View:
 ;
 
 ViewProperty:
-  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | ViewDrill | ViewCollapsed | ViewExpanded | ViewLink | ViewSteps | NodeOverride;
+  ViewType | ViewInclude | ViewExclude | ViewDepth | ViewTheme | ViewDrill | ViewCollapsed | ViewExpanded | ViewLink | ViewSteps | ViewInteraction | ViewOrder | ViewAutonumber | NodeOverride;
 
 ViewType:
   'type' value=Id;
@@ -295,17 +406,33 @@ ViewExpanded:
 ViewLink:
   'link' node=Ref '->' view=Id;
 
+// Vista de secuencia: la Interaccion que proyecta y el orden (parcial) de sus Lifelines.
+ViewInteraction:
+  'interaction' value=Id;
+
+ViewOrder:
+  'order' targets+=Ref (',' targets+=Ref)*;
+
+// Numera los Mensajes proyectados por la Vista de secuencia.
+ViewAutonumber:
+  {infer ViewAutonumber} 'autonumber';
+
 // Pasos de revelado (ADR 0002): acumulativos; `show` revela y `hide` oculta.
 // Un item es un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`edge a -> b`, o `a -> b`).
 // En un Paso, `a.*` y `a.**` abarcan tambien al propio Grupo `a` (revelar un Grupo completo).
+// `steps each` (solo secuencia): un Paso por Mensaje proyectado.
 ViewSteps:
-  'steps' '{' steps+=Step* '}';
+  'steps' (each?='each' | '{' steps+=Step* '}');
 
 Step:
   'step' title=String '{' actions+=StepAction* '}';
 
 StepAction:
-  StepShow | StepHide;
+  StepShow | StepHide | StepUpto;
+
+// Solo secuencia: el Paso muestra la Interaccion hasta ese Mensaje (por su id), incluido.
+StepUpto:
+  'upto' target=Ref;
 
 StepShow:
   'show' items+=StepItem (',' items+=StepItem)*;
@@ -364,11 +491,12 @@ Element:
     (description=String)?
   )?
   ('{'
-    (elements+=Element | attrs+=Attrs | sources+=Source)*
+    (elements+=Element | attrs+=Attrs | attributes+=Attribute | sources+=Source)*
   '}')?
 ;
 
-// `attrs { nombre: tipo "notas" }`; el orden se conserva.
+// `attrs { nombre: tipo "notas" }`; el orden se conserva. Un Atributo tambien puede ir suelto en el cuerpo
+// del Nodo (`nombre: tipo`), que es la forma habitual en ER.
 Attrs:
   'attrs' '{' items+=Attribute* '}'
 ;
@@ -382,9 +510,13 @@ SourceItem:
   kind=Id ref=String
 ;
 
+// ER: `?` pegado al tipo es `optional`; `pk`, `fk` y `uk` (en cualquier orden) son las marcas de clave.
 Attribute:
-  name=Id ':' type=Id (notes=String)?
+  name=Id ':' type=Id (optional?='?')? (keys+=KeyMark)* (notes=String)?
 ;
+
+KeyMark returns string:
+  'pk' | 'fk' | 'uk';
 
 Id returns string:
   IdTerminal |
@@ -394,8 +526,11 @@ Id returns string:
   'motion' | 'keyframes' | 'transition' | 'enter' | 'exit' | 'stagger' | 'delay' | 'intensity' | 'reduced' |
   'linear' | 'ease' | 'ease-in' | 'ease-out' | 'ease-in-out' |
   'drill' | 'collapse' | 'collapsed' | 'expanded' | 'link' |
-  'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' |
-  'model' | 'node' | 'specification';
+  'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
+  'model' | 'node' | 'specification' | 'interaction' | 'autonumber' | 'async' | 'reply' | 'create' | 'destroy' |
+  'opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par' | 'else' | 'and' | 'note' | 'left' | 'right' | 'of' | 'ref' |
+  'upto' | 'each' | 'pk' | 'fk' | 'uk' | 'identifying' | 'height' | 'key' | 'optional' | 'alternate' |
+  'lifeline' | 'activation' | 'message' | 'fragment' | 'kind' | 'op';
 
 // -------------------------
 // Comments

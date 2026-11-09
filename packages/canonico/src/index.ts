@@ -17,6 +17,8 @@
  * `palette`); su contenido y su contrato de dibujo son del paquete `tema` (ADR 0008).
  * La geometria cacheada por Vista (`geometriaCacheadaSchema`: `{ view, theme, layoutKey,
  * geometry }`) tiene aqui su esquema para validarla al leerla del disco; la calcula `layout`.
+ * `geometry` es una union por `kind` (hoy `grafo`); sin `kind` (cache anterior) se lee como `grafo`.
+ * `VistaResuelta.type` lleva el Tipo de diagrama.
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
  * excepcion solo para fallos de uso o internos.
  * `validate(fuente, { iconos?, ubicar? })` devuelve los issues semanticos de una
@@ -36,12 +38,16 @@
  * cadena `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`.
  */
 export {
+  CARDINALIDADES_ER,
+  CLAVES_DE_ATRIBUTO,
   fuenteCanonicaSchema,
   idDeNodoSchema,
   nodoSchema,
   overrideSchema,
   pasoSchema,
   temaSchema,
+  TIPOS_DE_MENSAJE,
+  OPERADORES_DE_FRAGMENTO,
   TIPOS_DE_VISTA,
   tipoDeNodoSchema,
   vistaSchema,
@@ -55,22 +61,35 @@ export type { Visibilidad } from './pasos';
 export { candidatosCercanos } from './sugerencias';
 export { validate } from './validar';
 export type { OpcionesDeValidate, RutaDeFuente, SitioDeTexto, Ubicador } from './validar';
+export { activacionesDe, aplanarMensajes, destinoDeRef, lifelinesDe } from './secuencia';
+export type { Activacion, CajaDeGrupo, FragmentoResuelto, InteraccionResuelta, ItemResuelto, MensajeResuelto, MensajeUbicado, NotaResuelta, RefResuelto } from './secuencia';
 export { matchesSelector, resolveView } from './vistas';
-export type { AristaResuelta, EstadoDeColapso, NodoResuelto, VistaResuelta } from './vistas';
+export type { AristaResuelta, EstadoDeColapso, NodoResuelto, PasoResuelto, VistaResuelta } from './vistas';
 export type {
   AristaDePaso,
   Arista,
   Atributo,
   CatalogoDeTiposDeNodo,
+  ClaveDeAtributo,
   ElementoDePaso,
   Extremo,
   FuenteCanonica,
+  Interaccion,
+  ItemDeInteraccion,
+  Fragmento,
+  Mensaje,
+  AnclajeDeNota,
+  Nota,
+  Referencia,
+  Operando,
+  OperadorDeFragmento,
   Modelo,
   Nodo,
   OverrideDeNodo,
   Paso,
   ReferenciaOpaca,
   Tema,
+  TipoDeMensaje,
   TipoDeNodo,
   Vista,
 } from './esquema';
@@ -86,8 +105,8 @@ export type { SalidaDeEdit } from './edit';
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';
 export type { SalidaDeInspect } from './inspect';
 
-export { MOTIVOS_DE_RECHAZO, intencionDePinSchema, intencionSchema } from './pin';
-export type { Intencion, IntencionDePin, MotivoDeRechazo } from './pin';
+export { MOTIVOS_DE_RECHAZO, intencionDeOrdenSchema, intencionDePinSchema, intencionSchema } from './pin';
+export type { Intencion, IntencionDeOrden, IntencionDePin, MotivoDeRechazo } from './pin';
 export { RUTA_DE_FUENTES, TIPOS_DE_CAMBIO, estadoDeDevSchema, issueDeDevSchema, urlDeFuente } from './estado';
 export type { EstadoDeDev, IssueDeDev, TipoDeCambio } from './estado';
 

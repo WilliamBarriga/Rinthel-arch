@@ -99,7 +99,7 @@ ${EJEMPLO_DE_DSL}
 
 - Un Nodo es \`<tipo> <id> ["Titulo" ["Descripcion"]] [{ hijos, attrs, source }]\`; sus hijos lo hacen Grupo y su id completo es \`padre.hijo\`.
 - Una Arista es \`origen ["card"] -> ["card"] destino ["etiqueta"]\` (espacios alrededor de \`->\`; la etiqueta se pierde al fusionar Aristas elevadas por un Grupo colapsado); un extremo puede ser \`nodo#atributo\`.
-- Una Vista solo selecciona (\`include\`, \`exclude\`, \`depth\`; selectores \`a\`, \`a.*\`, \`a.**\`); \`type\` es \`architecture\` o \`flow\`. Sus overrides por Nodo (\`label\`, \`pin x,y\`, \`order\`, \`color\`) nunca tocan el Modelo; \`pin\` es la posicion relativa al Grupo padre y \`order\` solo se guarda (sin efecto en v1).
+- Una Vista solo selecciona (\`include\`, \`exclude\`, \`depth\`; selectores \`a\`, \`a.*\`, \`a.**\`); \`type\` es \`architecture\`, \`flow\`, \`sequence\` (con \`interaction <id>\`, un Modelo con \`interaction <id> { a -> b "msg" }\`) o \`er\` (Nodos con \`attrs\` y claves \`pk\`/\`fk\`, Aristas con cardinalidad). Sus overrides por Nodo (\`label\`, \`pin x,y\`, \`order\`, \`color\`) nunca tocan el Modelo; \`pin\` es la posicion relativa al Grupo padre y en una Vista \`sequence\`, \`order a, b\` fija el orden (parcial) de las Lifelines. Una Interaccion admite Mensajes \`async|reply|create|destroy\`, Fragmentos (\`opt loop break critical alt/else par/and\`), \`note\` y \`ref\`; la Vista admite \`autonumber\` y Pasos \`upto <id de Mensaje>\`/\`steps each\`; una Vista \`er\` marca Atributos \`pk fk uk\` y Aristas \`identifying\`.
 - Una Vista puede declarar \`theme\`, \`collapsed\`/\`expanded\`, \`link <nodo> -> <vista>\` y \`steps\` de revelado (\`steps { step "Titulo" { show a, a -> b  hide c } }\`: acumulativos; \`show\` revela y \`hide\` oculta lo anterior; en un paso \`a.*\` revela el Grupo \`a\` y sus hijos).
 - \`extend <nodo> { ... }\` anade hijos, \`attrs\` y \`source\` a un Nodo declarado en otro archivo. Un Tipo de nodo admite \`description\`, \`icon\`, \`style\` y \`color\`; el \`icon\` es un icono generico o el nombre de un \`.svg\` del Workspace.
 
@@ -129,15 +129,17 @@ Solo lectura; nunca escribe. Cada resultado trae el id cualificado, el tipo y \`
 diagrams inspect buscar <texto> --workspace <ruta> [--json]
 diagrams inspect nodo <id> --workspace <ruta> [--json]
 diagrams inspect vista <id> --workspace <ruta> [--json]
-diagrams inspect tema <nombre> --workspace <ruta> [--tipo <tipo>] [--estado <estado>] [--catalogo] [--json]
+diagrams inspect interaccion <id> --workspace <ruta> [--json]
+diagrams inspect tema <nombre> --workspace <ruta> [--tipo <tipo>] [--estado <estado>] [--diagrama <tipo>] [--catalogo] [--json]
 \`\`\`
 
-- \`buscar\` encuentra Nodos por id parcial o titulo, y Vistas por id (sin distinguir mayusculas).
+- \`buscar\` encuentra Nodos por id parcial o titulo, Vistas por id e Interacciones por id o titulo (sin distinguir mayusculas).
 - \`nodo\` devuelve el Nodo, su padre e hijos, sus Atributos, las Aristas que entran y salen, y las Vistas que lo muestran.
-- \`vista\` devuelve los Nodos y Aristas visibles de la Vista en su estado inicial.
-- \`tema\` devuelve la cadena \`extends\`, las \`part\` usadas, la pila de Capas resuelta para el \`--tipo\` y \`--estado\` pedidos (cada Capa con el \`archivo:linea\` del parche que la fijo, para saber que parche editar), las Metricas y si el Tema usa codigo; con \`--catalogo\`, tambien las claves del catalogo de Primitivas, Movimientos y efectos.
-- Sin \`--json\` sale texto legible. Con \`--json\`, stdout es exactamente un objeto (contractVersion ${INSPECT_CONTRACT_VERSION}, independiente del de validate) con \`comando\` = \`buscar\`, \`nodo\`, \`vista\` o \`tema\`.
-- Codigos de salida: 0 hay respuesta (\`buscar\` sin coincidencias tambien), 1 el Nodo, la Vista, el Tema, el Tipo o el estado no existe (stderr sugiere ids cercanos) o el Workspace tiene errores (corrigelos con validate), 2 fallo de uso o interno.
+- \`vista\` devuelve el tipo (\`architecture\`, \`flow\`, \`sequence\` o \`er\`) y los Nodos y Aristas visibles de la Vista en su estado inicial; en una Vista \`sequence\`, los Nodos son sus Lifelines y trae la \`interaction\` que proyecta.
+- \`interaccion\` devuelve el titulo, la cantidad de items y de Mensajes, las Lifelines (en orden de aparicion) y las Vistas \`sequence\` que la proyectan.
+- \`tema\` devuelve la cadena \`extends\`, las \`part\` usadas, la pila de Capas resuelta para el \`--tipo\`, \`--estado\` y \`--diagrama\` (architecture, flow, sequence, er) pedidos (cada Capa con el \`archivo:linea\` del parche que la fijo, para saber que parche editar), las Metricas y si el Tema usa codigo; con \`--catalogo\`, tambien las claves del catalogo de Primitivas, Movimientos y efectos.
+- Sin \`--json\` sale texto legible. Con \`--json\`, stdout es exactamente un objeto (contractVersion ${INSPECT_CONTRACT_VERSION}, independiente del de validate) con \`comando\` = \`buscar\`, \`nodo\`, \`vista\`, \`interaccion\` o \`tema\`.
+- Codigos de salida: 0 hay respuesta (\`buscar\` sin coincidencias tambien), 1 el Nodo, la Vista, la Interaccion, el Tema, el Tipo o el estado no existe (stderr sugiere ids cercanos) o el Workspace tiene errores (corrigelos con validate), 2 fallo de uso o interno.
 
 Esquema de \`inspect --json\` (JSON Schema derivado del esquema Zod):
 
@@ -151,11 +153,13 @@ Es la unica escritura explicita del CLI y solo escribe lo que pides; \`validate\
 
 \`\`\`text
 diagrams edit --workspace <ruta> --view <vista> --node <id cualificado> --x N --y N [--json]
+diagrams edit --workspace <ruta> --intent '{"tipo":"ordenar-lifelines","vista":"<vista>","orden":["a","b"]}' [--json]
 diagrams edit --workspace <ruta> --edits '[{"file":"main.dg","range":{"start":{"line":1,"column":1},"end":{"line":1,"column":2}},"replacement":"..."}]' [--json]
 \`\`\`
 
 - La primera forma mueve el Pin de un Nodo en una Vista: reemplaza el \`pin\` si existe y lo anade si no; no necesitas conocer la sintaxis.
-- La segunda aplica ediciones de texto ya calculadas (p. ej. el \`fix\` de un issue de \`validate\`): rangos 1-based, fin excluido.
+- La segunda aplica una Intencion por su contrato JSON (sin \`hash\` usa el del disco); \`ordenar-lifelines\` reescribe el \`order\` completo de una Vista \`sequence\` con el orden visible dado, y las entradas de \`order\` hoy ocultas (Grupo colapsado, \`exclude\`) conservan su posicion relativa.
+- La tercera aplica ediciones de texto ya calculadas (p. ej. el \`fix\` de un issue de \`validate\`): rangos 1-based, fin excluido.
 - Concurrencia: cada edicion lleva el hash del archivo que viste (\`hash\` en la edicion, o \`--hash <archivo>=<hash>\`); sin hash se usa el del disco. Si el archivo cambio, se rechaza todo sin escritura parcial.
 - Se rechaza tambien lo que introduce errores nuevos, solapa ediciones o apunta fuera del archivo.
 - Con \`--json\`, stdout es exactamente un objeto (contractVersion ${EDIT_CONTRACT_VERSION}, independiente de los otros) con \`ok\`; si es \`false\` trae \`reason\` y \`message\`.

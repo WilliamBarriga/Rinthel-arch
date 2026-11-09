@@ -8,15 +8,15 @@
  * catalogo de `tema` sin pintor aqui rompe el typecheck.
  */
 import { ESTADOS, PUNTO_DE_TITULO_EM } from 'tema';
-import type { CapaPintada, NombreDePrimitivaEn, PinturaDeNodo } from 'tema';
+import type { CapaPintada, NombreDePrimitivaEn, PinturaDeNodo, PrimitivaPintada } from 'tema';
 
 import { animacionDeHoja, nombresAparte } from './animacion';
 import { PINTORES_DE_EFECTOS, REGLAS_DE_EFECTOS } from './efectos';
-import { huella, num } from './elemento';
+import { estiloEnLinea, huella, num } from './elemento';
 import { aspectoDeEstado } from './estilo';
 import type { EstadoVisual, Estilo } from './estilo';
 import { PINTORES_DE_BORDE } from './pintura/borde';
-import { FONDOS_ACUMULABLES, css, px } from './pintura/comun';
+import { FONDOS_ACUMULABLES, css, esDeZona, px } from './pintura/comun';
 import type { Declaraciones, Pintor } from './pintura/comun';
 import { ELEMENTOS, pilasDeElemento, pinturaDeElemento } from './pilas';
 import { PINTORES_DE_FORMA } from './pintura/forma';
@@ -45,9 +45,10 @@ const SOMBRAS = 'box-shadow';
  * hacia arriba. Las Capas con elemento propio de `pila` quedan fuera; una pila sin Capas en el reposo es el aspecto
  * por defecto del Estilo.
  */
-export function declaracionesDeCaja(estilo: Estilo, pila: Pick<PinturaDeNodo, 'capas' | 'estados'>, capas: readonly CapaPintada[] = pila.capas): Declaraciones {
+export function declaracionesDeCaja(estilo: Estilo, pila: Pick<PinturaDeNodo, 'capas' | 'estados'>, capas: readonly CapaPintada[] = pila.capas, deZona = false): Declaraciones {
   const aparte = nombresAparte(pila);
-  const fusionadas = capas.filter((capa) => !aparte.has(capa.nombre));
+  // Una Capa con `zone` header o body no cubre la caja: la pinta su propio elemento (`pintarZonas`).
+  const fusionadas = capas.filter((capa) => !aparte.has(capa.nombre) && (deZona || !esDeZona(capa)));
   if (fusionadas.length === 0 && pila.capas.length === 0) {
     return {
       'border-radius': px(estilo.nodo.radio),
@@ -84,10 +85,7 @@ function diferencia(de: Declaraciones, a: Declaraciones): Declaraciones {
   return cambios;
 }
 
-const bloque = (declaraciones: Declaraciones): string =>
-  Object.entries(declaraciones)
-    .map(([propiedad, valor]) => `${propiedad}:${valor}`)
-    .join(';');
+const bloque = estiloEnLinea;
 
 function declaracionesDeEstado(estilo: Estilo, estado: EstadoVisual): Declaraciones {
   const { color, ancho, trazo, opacidad } = aspectoDeEstado(estilo, estado);
@@ -96,6 +94,17 @@ function declaracionesDeEstado(estilo: Estilo, estado: EstadoVisual): Declaracio
     ...(opacidad !== 1 && { opacity: num(opacidad) }),
   };
 }
+
+/**
+ * Ancho del borde de la caja (px) que `reglasDeElemento` publica en `--rd-borde`: las hijas absolutas (Slots, iconos, zonas)
+ * se colocan desde el borde interior, asi que se corren esa distancia para quedar en el rectangulo que reservo `layout`
+ * (el borde grueso de un Tema ya no recorta la ultima fila).
+ */
+export const VARIABLE_DE_BORDE = '--rd-borde';
+const anchoDeBorde = (declaraciones: Declaraciones): number => {
+  const ancho = /(?:^|\s)(\d+(?:\.\d+)?)px\s+(?:solid|dashed|dotted|double)/.exec(declaraciones['border'] ?? '');
+  return ancho === null ? 0 : Number(ancho[1]);
+};
 
 /** Las tres clases de caja pintada: Nodo, Grupo abierto y Grupo colapsado. */
 const CAJAS = ELEMENTOS.map((clave) => `& .rd-${clave}`).join(', ');
@@ -109,7 +118,8 @@ function reglasDeElemento(estilo: Estilo, clave: (typeof ELEMENTOS)[number]): Ar
   const salida: Array<[string, Declaraciones]> = [];
   for (const { selector, caja: contenedor, pila } of pilasDeElemento(estilo.pintura, clave)) {
     const reposo = declaracionesDeCaja(estilo, pila);
-    salida.push([selector, reposo]);
+    // En toda regla de caja (tambien con 0): la variable se hereda y un Slot de un Nodo sin borde no debe tomar la de su Grupo.
+    salida.push([selector, { ...reposo, [VARIABLE_DE_BORDE]: px(anchoDeBorde(reposo)) }]);
     for (const estado of ESTADOS) {
       const deEstado = pila.estados[estado];
       if (deEstado === undefined) continue;
@@ -138,6 +148,11 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ...REGLAS_DE_EFECTOS,
     // Capa `code`: contenedor de tamano fijo (el de la caja, en linea); el componente no puede cambiarlo.
     ['& .rd-codigo', { position: 'absolute', left: '0', top: '0', 'pointer-events': 'none', contain: 'layout style' }],
+    // Capa con `zone`: franja propia de la caja (su rectangulo va en linea).
+    ['& .rd-zona', { position: 'absolute', 'pointer-events': 'none', 'box-sizing': 'border-box' }],
+    ['& .rd-slot, & .rd-icono', { margin: `calc(-1 * var(${VARIABLE_DE_BORDE}, 0px))` }],
+    // Las filas ocupan el rectangulo que reservo `layout` (hasta el borde exterior): el relleno no tapa los lados ni el pie del borde.
+    ['& .rd-attrs', { 'clip-path': `inset(0 var(${VARIABLE_DE_BORDE}, 0px) var(${VARIABLE_DE_BORDE}, 0px))` }],
     ['& .rd-slot', { position: 'absolute', overflow: 'hidden', 'white-space': 'nowrap', 'text-overflow': 'ellipsis', 'box-sizing': 'border-box' }],
     ['& .rd-title', { 'text-align': 'center' }],
     // El titulo de un Grupo es una cabecera: se alinea a la izquierda de su Slot (un `text-align` del Tema manda).
@@ -146,6 +161,8 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-counter', { 'text-align': 'center', 'font-weight': '700' }],
     ['& .rd-separado', { 'border-top': '1px solid var(--trazo, currentColor)' }],
     ['& .rd-fila', { position: 'absolute', 'white-space': 'nowrap', overflow: 'hidden', 'text-overflow': 'ellipsis', 'padding-left': px(metricas.margenDeTexto), 'box-sizing': 'border-box', 'font-family': css(estilo.fuenteMono), 'font-size': px(metricas.fontSize * metricas.escalaAtributo) }],
+    // Chip de marca de clave (ER): caja con borde del color del texto, sobre el borde derecho de la fila.
+    ['& .rd-clave', { position: 'absolute', 'box-sizing': 'border-box', 'text-align': 'center', border: '1px solid currentColor', 'border-radius': '3px', opacity: '0.75', 'font-weight': '600' }],
     ['& .rd-icono', { position: 'absolute', display: 'flex', 'align-items': 'center', 'justify-content': 'center', 'box-sizing': 'border-box' }],
     // El control de colapso es chrome de interaccion, no parte del Tema: aparece al pasar por su caja o con el foco dentro.
     ['& .rd-control', { position: 'absolute', 'text-align': 'center', cursor: 'pointer', 'font-family': css(estilo.fuenteMono), opacity: '0', transition: 'opacity 120ms' }],
@@ -187,6 +204,28 @@ const RESPLANDOR_DE_TEXTO = 8;
 
 const ALINEACION_CSS: Record<string, string> = { start: 'left', center: 'center', end: 'right' };
 
+/** Declaraciones CSS de un estilo de texto (`text` o `chip`): color, peso, caja del chip, relleno... Solo pintura. */
+export function declaracionesDeTexto(texto: PrimitivaPintada, fuenteMono: string): Declaraciones {
+  const { weight, color, style, transform, alpha, fill, border, radius, tracking, pad, font, glow } = texto.props;
+  const contorno = border === undefined ? 'none' : `${px(texto.props['border-width'] ?? 1)} solid ${css(border)}`;
+  const alineacion = texto.props['text-align'];
+  const conCaja = fill !== undefined || border !== undefined || Number(radius) > 0;
+  return {
+    'font-weight': css(weight),
+    ...(style !== undefined && { 'font-style': css(style) }),
+    ...(font === 'mono' && { 'font-family': css(fuenteMono) }),
+    'text-transform': transform === 'uppercase' ? 'uppercase' : 'none',
+    ...(color !== undefined && { color: css(color) }),
+    ...(alpha !== undefined && { opacity: css(alpha) }),
+    ...(alineacion !== undefined && { 'text-align': ALINEACION_CSS[String(alineacion)] ?? 'left' }),
+    ...(Number(tracking) > 0 && { 'letter-spacing': `${num(Number(tracking))}em` }),
+    ...(glow !== undefined && { 'text-shadow': `0 0 ${px(RESPLANDOR_DE_TEXTO)} ${css(glow)}` }),
+    ...(texto.tipo === 'chip' && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), border: contorno }),
+    ...(texto.tipo === 'text' && conCaja && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), ...(border !== undefined && { border: contorno }) }),
+    ...(Number(pad) > 0 && { 'padding-left': px(pad), 'padding-right': px(pad) }),
+  };
+}
+
 /**
  * Estilo de texto (`text`, o `chip` en el contador) de cada Slot de un elemento que el Tema lo declara. Es pintura: el
  * tamano, el alto, la separacion entre letras, el punto y el relleno del chip ya los midio la colocacion (`textoDeSlot`).
@@ -194,30 +233,9 @@ const ALINEACION_CSS: Record<string, string> = { start: 'left', center: 'center'
 function reglasDeTexto(caja: string, textos: PinturaDeNodo['textos'], fuenteMono: string): Array<[string, Declaraciones]> {
   return Object.entries(textos).flatMap(([slot, texto]): Array<[string, Declaraciones]> => {
     if (texto.tipo !== 'text' && texto.tipo !== 'chip') return [];
-    const { weight, color, style, transform, alpha, fill, border, radius, tracking, pad, dot, font, glow } = texto.props;
-    const contorno = border === undefined ? 'none' : `${px(texto.props['border-width'] ?? 1)} solid ${css(border)}`;
-    const alineacion = texto.props['text-align'];
+    const { dot } = texto.props;
     const selector = `${caja} .rd-slot[data-slot="${slot}"]`;
-    const conCaja = fill !== undefined || border !== undefined || Number(radius) > 0;
-    const reglas: Array<[string, Declaraciones]> = [
-      [
-        selector,
-        {
-          'font-weight': css(weight),
-          ...(style !== undefined && { 'font-style': css(style) }),
-          ...(font === 'mono' && { 'font-family': css(fuenteMono) }),
-          'text-transform': transform === 'uppercase' ? 'uppercase' : 'none',
-          ...(color !== undefined && { color: css(color) }),
-          ...(alpha !== undefined && { opacity: css(alpha) }),
-          ...(alineacion !== undefined && { 'text-align': ALINEACION_CSS[String(alineacion)] ?? 'left' }),
-          ...(Number(tracking) > 0 && { 'letter-spacing': `${num(Number(tracking))}em` }),
-          ...(glow !== undefined && { 'text-shadow': `0 0 ${px(RESPLANDOR_DE_TEXTO)} ${css(glow)}` }),
-          ...(texto.tipo === 'chip' && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), border: contorno }),
-          ...(texto.tipo === 'text' && conCaja && { 'border-radius': px(radius), ...(fill !== undefined && { background: css(fill) }), ...(border !== undefined && { border: contorno }) }),
-          ...(Number(pad) > 0 && { 'padding-left': px(pad), 'padding-right': px(pad) }),
-        },
-      ],
-    ];
+    const reglas: Array<[string, Declaraciones]> = [[selector, declaracionesDeTexto(texto, fuenteMono)]];
     if (dot !== undefined) {
       reglas.push([
         `${selector}::before`,

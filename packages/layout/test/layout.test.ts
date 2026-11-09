@@ -2,9 +2,17 @@ import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { Atributo, Tema, VistaResuelta } from 'canonico';
-import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView } from 'layout';
+import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView as layoutDeVista } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
 import { TEMA_NEUTRO, metricasDe, tablaDeMetricas } from 'tema';
+
+/** `layoutView` de una Vista de grafo (architecture o flow): estas pruebas miran cajas y rutas de Aristas. */
+const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
+  const geometria = await layoutDeVista(...args);
+  if (geometria.kind !== 'grafo') throw new Error('se esperaba una Geometria de grafo');
+  return geometria;
+};
+
 
 const nodo = (id: string, children: unknown[] = []) => ({
   id,
@@ -220,6 +228,14 @@ describe('claveDeLayout', () => {
 
     expect(claveDeLayout(vista(), con({ fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter' } }))).not.toBe(base);
     expect(claveDeLayout(vista(), con({ tokens: { ...TEMA_NEUTRO.tokens, fontSize: '20px' } }))).not.toBe(base);
+  });
+
+  it('cambia al cambiar el tipo de la Vista (de layout y de estructura)', () => {
+    const arquitectura = vista();
+    const flujo = { ...arquitectura, type: 'flow' as const };
+
+    expect(claveDeLayout(flujo, TEMA_NEUTRO)).not.toBe(claveDeLayout(arquitectura, TEMA_NEUTRO));
+    expect(claveDeEstructura(flujo, TEMA_NEUTRO)).not.toBe(claveDeEstructura(arquitectura, TEMA_NEUTRO));
   });
 
   it('no cambia con la paleta, los colores ni los iconos', () => {

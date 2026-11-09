@@ -42,6 +42,13 @@ theme neutral {
     state hover { layer borde { color COLOR }  transition 120ms ease-out }
     state en-ruta { layer borde { color COLOR  width 2  motion pulso 1.2s ease-in-out intensity 0.4 } }
     state atenuado { layer sombra none }
+    // En una Vista de secuencia la cabecera de la Lifeline es mas compacta: icono y nombre, sin insignia ni contador.
+    diagram sequence {
+      slots column min-width 130 slack 22 { row gap 8 pad 8 min-height 44 { icon  title } }
+    }
+    diagram er {
+      slots column min-width 170 slack 22 { row gap 8 pad 10 min-height 38 { title } attrs }
+    }
   }
   group {
     layer forma rect { radius 16 }
@@ -64,6 +71,52 @@ theme neutral {
     start dot { size 4.4  color linea }
     end chevron { size 9 }
     label { scale 0.82  pad 10  pad-y 2.5  radius 50  fill papel  border tinta/0.16  color tinta }
+    diagram er { end arrow { size 12  color linea } }
+  }
+  // Tablas ER: la cabecera es solo el nombre (sin icono, insignia ni contador) y las filas se separan con una linea fina.
+  row {
+    height 26
+    layer fondo solid { color papel }
+    layer separador stripe { color tinta/0.08  side bottom  width 1 }
+    alternate { layer fondo { color tinta/0.03 } }
+    name { color tinta }
+    type { color tinta  alpha 0.65 }
+  }
+  // Secuencia: la Lifeline discontinua con una cruz al destruirse; los Mensajes continuos con flecha, async con chevron y
+  // reply y create discontinuos; la activacion, el Fragmento y la Nota como cajas sobrias.
+  lifeline {
+    layer linea line { color linea  width 1  style dashed }
+    end cross { size 10 }
+  }
+  activation {
+    layer forma rect { radius 2 }
+    layer relleno solid { color papel }
+    layer borde border { color COLOR }
+    width 10
+  }
+  message {
+    layer linea line { color linea  width 1.2  corner round  radius 6 }
+    end arrow { size 9 }
+    gap 32
+    kind async { end chevron { size 9 } }
+    kind reply { layer linea { style dashed }  end chevron { size 9 } }
+    kind create { layer linea { style dashed }  end chevron { size 9 } }
+    kind destroy { end arrow { size 9 } }
+  }
+  fragment {
+    layer forma rect { radius 6 }
+    layer relleno solid { color papel }
+    layer borde border { color marco }
+    operator { color tinta  weight 600 }
+    guard { color linea }
+    divider { color marco  width 1  style dashed }
+    op ref { layer relleno { color papel } }
+    padding 16
+  }
+  note {
+    layer relleno solid { color amber/0.2 }
+    layer borde border { color amber  width 1 }
+    text { color tinta }
   }
 }
 

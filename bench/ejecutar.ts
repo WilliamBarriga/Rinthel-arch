@@ -2,7 +2,7 @@
  * Benchmark de los umbrales del ADR 0003. Fuera de la suite por defecto:
  * `pnpm bench` (construye los paquetes y corre todo) o, ya construido,
  * `node bench/ejecutar.ts [escenario...]` con escenarios entre `build-10k`,
- * `relayout-1k`, `relayout-slots`, `relayout-grande`, `colapso-5k` y `bundle`. Cada escenario corre en un proceso
+ * `relayout-1k`, `relayout-slots`, `relayout-grande`, `colapso-5k`, `secuencia-grande` y `bundle`. Cada escenario corre en un proceso
  * aparte (memoria maxima propia) y el exit code es 1 si algun umbral falla.
  *
  * Los umbrales son los del ADR 0003 (con su enmienda): 2.5 GiB de RSS en el
@@ -33,6 +33,8 @@ const UMBRALES: readonly Umbral[] = [
   { escenario: 'relayout-grande', descripcion: 'relayout con 3000 Nodos con Grupos y Slots anidados (en caliente)', medida: (m) => m['tiempoCalienteMs']! / 1000, limite: 8, unidad: 's' },
   { escenario: 'colapso-5k', descripcion: 'colapso (expandir) con 5k Nodos del Modelo', medida: (m) => m['expandirMs']! / 1000, limite: 3, unidad: 's' },
   { escenario: 'colapso-5k', descripcion: 'colapso (cerrar) con 5k Nodos del Modelo', medida: (m) => m['colapsarMs']! / 1000, limite: 3, unidad: 's' },
+  { escenario: 'secuencia-grande', descripcion: 'layout de secuencia con 1000 Mensajes, 50 Lifelines y Fragmentos a 3 niveles (en frio)', medida: (m) => m['tiempoFrioMs']! / 1000, limite: 0.5, unidad: 's' },
+  { escenario: 'secuencia-grande', descripcion: 'layout de secuencia con 1000 Mensajes, 50 Lifelines y Fragmentos a 3 niveles (en caliente)', medida: (m) => m['tiempoMs']! / 1000, limite: 0.5, unidad: 's' },
   { escenario: 'bundle', descripcion: 'bundle del shell: Worker (gzip)', medida: (m) => m['workerGzipKb']!, limite: 1024, unidad: 'KiB' },
   { escenario: 'bundle', descripcion: 'bundle del shell: pagina sin ELK (gzip)', medida: (m) => m['paginaGzipKb']!, limite: 500, unidad: 'KiB' },
 ];

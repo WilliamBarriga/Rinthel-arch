@@ -1,0 +1,21 @@
+// Paso 4: un Tema propio. Parte de neutral-dark (`extends`) y cambia solo lo que quiere.
+theme tienda extends neutral-dark {
+  // La Paleta: cada color tiene nombre; el Tema padre ya define los suyos y aqui se pisan algunos.
+  palette { blue "#38bdf8"  green "#34d399"  fondo "#0b1220"  papel "#111a2e" }
+
+  // Un parche por Tipo: el servicio lleva una barra de su color a la izquierda; el externo, borde discontinuo.
+  node {
+    type servicio { use barra }
+    type externo { use discontinuo }
+  }
+
+  // Las Aristas: linea gruesa con esquinas redondeadas y punta de flecha.
+  edge {
+    layer linea line { color blue  width 2.4  corner round  radius 12 }
+    end arrow { size 11  color blue }
+  }
+}
+
+// Partes: trozos de Tema reutilizables. COLOR toma el color del Tipo del Nodo.
+part barra { layer acento shadow after borde { color COLOR  x 4  y 0  inset 1 } }
+part discontinuo { layer relleno { color fondo }  layer borde dashed { color marco } }

@@ -66,20 +66,39 @@ const idsDelModelo = (nodos: readonly Nodo[], acumulado = new Set<string>()): Se
   return acumulado;
 };
 
+/** `interaccion:ruta` (Mensaje, Fragmento o Nota de secuencia) de una Interaccion que existe en la Fuente. */
+function esElementoDeInteraccion(id: string, source: FuenteCanonica): boolean {
+  const corte = id.lastIndexOf(':');
+  return corte > 0 && /^\d+(\.\d+)*$/.test(id.slice(corte + 1)) && (source.model.interactions ?? []).some((i) => i.id === id.slice(0, corte));
+}
+
 /** Vista por defecto: la primera de la Fuente (`undefined` si no hay Vistas). */
 export const vistaPorDefecto = (source: FuenteCanonica): string | undefined => source.views[0]?.id;
+
+/**
+ * Paso con el que se entra a una Vista de `tipo` con `total` Pasos: el primero en secuencia y ER (ADR 0009: el
+ * Paso 0 las dejaria vacias); 0 (antes del primero, ADR 0002) en architecture y flow.
+ */
+export const pasoInicialDeTipo = (tipo: string, total: number): number => ((tipo === 'sequence' || tipo === 'er') && total > 0 ? 1 : 0);
+
+/** Paso con el que se entra a la Vista `vista` de la Fuente (ver `pasoInicialDeTipo`). */
+export const pasoInicialDeVista = (source: FuenteCanonica, vista: string | undefined): number => {
+  const v = source.views.find((candidata) => candidata.id === vista);
+  return v === undefined ? 0 : pasoInicialDeTipo(v.type, v.steps?.length ?? 0);
+};
 
 /**
  * Estado -> hash (sin `#`). Omite lo que vale su default, asi el estado inicial
  * da hash vacio. `vistaInicial` es la Vista por defecto con ruta `[vistaInicial]`.
  */
-export function serializarEstado(estado: EstadoDeShell, vistaInicial?: string): string {
+export function serializarEstado(estado: EstadoDeShell, vistaInicial?: string, source?: FuenteCanonica): string {
   const p = new URLSearchParams();
   if (!(estado.path.length === 1 && estado.path[0] === vistaInicial)) for (const v of estado.path) p.append('p', v);
   for (const id of estado.state.expanded ?? []) p.append('e', id);
   for (const id of estado.state.collapsed ?? []) p.append('c', id);
   if (estado.selected !== null) p.set('s', estado.selected);
-  if (estado.step !== 0) p.set('t', String(estado.step));
+  const pasoPorDefecto = source === undefined ? 0 : pasoInicialDeVista(source, estado.path[estado.path.length - 1]);
+  if (estado.step !== pasoPorDefecto) p.set('t', String(estado.step));
   if (estado.camera !== undefined) {
     const { x, y, width, height } = estado.camera;
     p.set('cam', [x, y, width, height].join(','));
@@ -117,11 +136,12 @@ export function deserializarEstado(hash: string, source: FuenteCanonica, vistaIn
   const state: EstadoDeColapso = expanded.length === 0 && collapsed.length === 0 ? {} : { expanded, collapsed };
 
   const s = p.get('s');
-  const selected = s !== null && nodos.has(s) ? s : null;
+  const selected = s !== null && (nodos.has(s) || esElementoDeInteraccion(s, source)) ? s : null;
 
   const t = p.get('t');
-  const n = t !== null && /^\d+$/.test(t) ? Number(t) : 0;
-  const step = n <= (activa?.steps?.length ?? 0) ? n : 0;
+  const inicial = pasoInicialDeVista(source, activa?.id);
+  const n = t !== null && /^\d+$/.test(t) ? Number(t) : inicial;
+  const step = n <= (activa?.steps?.length ?? 0) ? n : inicial;
 
   const camera = leerCamara(p.get('cam'));
   return { path, state, selected, step, ...(camera !== undefined && { camera }) };

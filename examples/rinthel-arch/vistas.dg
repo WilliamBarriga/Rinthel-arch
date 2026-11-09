@@ -40,7 +40,7 @@ view dsl-detalle {
 view layout-detalle {
   type architecture
   theme diagrams
-  include layout.**, elk, canonico.can-geometria, tema.tem-slots, tema.tem-metricas, sesion.ses-sesion, shell.sh-servir-layout
+  include layout.**, elk, canonico.can-geometria, canonico.can-secuencia, tema.tem-secuencia, tema.tem-slots, tema.tem-metricas, sesion.ses-sesion, shell.sh-servir-layout
   depth 2
 }
 
@@ -54,14 +54,14 @@ view sesion-detalle {
 view render-detalle {
   type architecture
   theme diagrams
-  include render.**, react, tema.tem-estilo, layout.lay-layout, shell.sh-vista
+  include render.**, react, tema.tem-estilo, tema.tem-mensajes, layout.lay-layout, layout.lay-secuencia, shell.sh-vista
   depth 3
 }
 
 view shell-detalle {
   type architecture
   theme diagrams
-  include shell.**, d3, layout.lay-layout, render, sesion.ses-intenciones, canonico.can-vistas
+  include shell.**, d3, layout.lay-layout, layout.lay-secuencia, canonico.can-secuencia, render, sesion.ses-intenciones, canonico.can-vistas
   depth 2
 }
 

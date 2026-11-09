@@ -6,9 +6,12 @@ import { CODIGOS, TIPOS_DE_VISTA, combineIconProviders, fuenteCanonicaSchema, ge
 import type {
   Arista,
   Atributo,
+  ClaveDeAtributo,
   ElementoDePaso,
   Extremo,
   FuenteCanonica,
+  Interaccion,
+  ItemDeInteraccion,
   Issue,
   Nodo,
   OverrideDeNodo,
@@ -27,8 +30,8 @@ import {
 import type { LangiumCoreServices, ParseResult } from 'langium';
 
 import { DiagramasGeneratedModule, DiagramasGeneratedSharedModule } from './generated/module';
-import type { Attrs, Documento, Edge, Element, Extend, NodeOverride, NodeTypeDecl, Source, Step, View } from './generated/ast';
-import { issueConSugerencia, rangoDe } from './posiciones';
+import type { Attrs, Attribute, Documento, Edge, Element, Extend, Interaction, InteractionItem, NodeOverride, NodeTypeDecl, Source, Step, View } from './generated/ast';
+import { issueConSugerencia, rangoDe, rangoDeIndice } from './posiciones';
 import { ARCHIVO_INCORPORADOS, temasIncorporados } from './incorporados';
 import { resolverTemas } from './temas';
 import type { DeclaracionDeParte, OrigenDeTema, TemaDeclarado } from './temas';
@@ -91,7 +94,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const partesDeclaradas: DeclaracionDeParte[] = [];
   const tiposAst: { archivo: string; ast: NodeTypeDecl }[] = [];
   const vistas: { vista: Vista; archivo: string; ast: View }[] = [];
-  const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[] }[] = [];
+  const raices: { archivo: string; elementos: Element[]; aristas: Edge[]; extensiones: Extend[]; interacciones: Interaction[] }[] = [];
 
   for (const archivo of Object.keys(workspace).sort()) {
     if (archivo.endsWith('.svg')) continue;
@@ -134,6 +137,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
         elementos: modelo.elements,
         aristas: modelo.edges,
         extensiones: modelo.extensions,
+        interacciones: modelo.interactions,
       });
     }
   }
@@ -160,6 +164,17 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     }
   }
 
+  const interacciones: Interaccion[] = [];
+  const interaccionesAst: { archivo: string; ast: Interaction }[] = [];
+  for (const { archivo, interacciones: delArchivo } of raices) {
+    // Con sintaxis rota el AST es parcial: sus Mensajes darian falsos extremos desconocidos.
+    if (conSintaxisRota.has(archivo)) continue;
+    for (const interaccion of delArchivo) {
+      interacciones.push(compilarInteraccion(interaccion));
+      interaccionesAst.push({ archivo, ast: interaccion });
+    }
+  }
+
   const { temas, issues: delTema, parchesDeVista, origenes: origenesDeTemas } = resolverTemas(temasDeclarados, partesDeclaradas, tiposDeNodo.map(({ name }) => name));
   issues.push(...delTema);
   for (const { vista, archivo, ast } of vistas) {
@@ -172,13 +187,14 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   const fuente: FuenteCanonica = {
     themes: temas,
     specification: { nodeTypes: tiposDeNodo },
-    model: { nodes: nodos, edges: aristas },
+    model: { nodes: nodos, edges: aristas, interactions: interacciones },
     views: vistas.map(({ vista }) => vista),
   };
   const ubicar = crearUbicador({
     fuente,
     nodos: new Map([...registro].map(([id, { origen, ast }]) => [id, { archivo: origen.file, ast }])),
     aristas: aristasAst,
+    interacciones: interaccionesAst,
     tipos: tiposAst,
     vistas: vistas.map(({ archivo, ast }) => ({ archivo, ast })),
     temas: new Map(temasDeclarados.map(({ archivo, ast, nombre }) => [ast.name, { archivo, nombre }])),
@@ -245,12 +261,16 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
     vista.props.flatMap((prop) => (prop.$type === clase ? prop.selectors : []));
   const profundidad = vista.props.find((prop) => prop.$type === 'ViewDepth');
   const tema = vista.props.find((prop) => prop.$type === 'ViewTheme');
+  const interaccion = vista.props.find((prop) => prop.$type === 'ViewInteraction');
   return {
     id: vista.name,
     type: tipoValido.data,
     include: selectores('ViewInclude'),
     exclude: selectores('ViewExclude'),
     ...(profundidad !== undefined && { depth: profundidad.value }),
+    ...(interaccion !== undefined && { interaction: interaccion.value }),
+    order: vista.props.flatMap((prop) => (prop.$type === 'ViewOrder' ? prop.targets : [])),
+    ...(vista.props.some((prop) => prop.$type === 'ViewAutonumber') && { autonumber: true as const }),
     ...(tema !== undefined && { theme: tema.value }),
     ...(vista.props.some((prop) => prop.$type === 'ViewDrill') && { drill: 'collapse' as const }),
     collapsed: vista.props.flatMap((prop) => (prop.$type === 'ViewCollapsed' ? prop.targets : [])),
@@ -258,6 +278,7 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
     links: vista.props.flatMap((prop) => (prop.$type === 'ViewLink' ? [{ node: prop.node, view: prop.view }] : [])),
     overrides: vista.props.flatMap((prop) => (prop.$type === 'NodeOverride' ? [overrideDe(prop)] : [])),
     steps: vista.props.flatMap((prop) => (prop.$type === 'ViewSteps' ? prop.steps.map(pasoDe) : [])),
+    ...(vista.props.some((prop) => prop.$type === 'ViewSteps' && prop.each) && { stepsEach: true as const }),
   };
 }
 
@@ -268,7 +289,8 @@ function pasoDe(paso: Step): Paso {
         ? accion.items.map((item) => (item.$type === 'StepEdge' ? { from: item.from, to: item.to } : { selector: item.selector }))
         : [],
     );
-  return { title: paso.title, show: items('StepShow'), hide: items('StepHide') };
+  const upto = paso.actions.flatMap((accion) => (accion.$type === 'StepUpto' ? [accion.target] : []))[0];
+  return { title: paso.title, show: items('StepShow'), hide: items('StepHide'), ...(upto !== undefined && { upto }) };
 }
 
 function overrideDe(declarado: NodeOverride): OverrideDeNodo {
@@ -317,7 +339,7 @@ function compilarElemento(
     type: elemento.type,
     title: elemento.title ?? elemento.name,
     description: elemento.description ?? '',
-    attributes: atributosDe(elemento.attrs),
+    attributes: atributosDe(elemento.attrs, elemento.attributes, archivo, issues),
     source: referenciasDe(elemento.sources),
     children: [],
   };
@@ -361,16 +383,41 @@ function compilarExtension(extension: Extend, archivo: string, contexto: Context
   const objetivo = contexto.registro.get(extension.target);
   if (objetivo === undefined) return false;
   const { nodo } = objetivo;
-  nodo.attributes.push(...atributosDe(extension.attrs));
+  nodo.attributes.push(...atributosDe(extension.attrs, extension.attributes, archivo, contexto.issues));
   nodo.source.push(...referenciasDe(extension.sources));
   nodo.children.push(...compilarHijos(extension.elements, nodo.id, archivo, contexto));
   return true;
 }
 
-function atributosDe(bloques: readonly Attrs[]): Atributo[] {
-  return bloques.flatMap((bloque) =>
-    bloque.items.map((item) => ({ name: item.name, type: item.type, notes: item.notes ?? '' })),
-  );
+/**
+ * Atributos de un Nodo: los de sus bloques `attrs` y los sueltos en el cuerpo, en ese orden.
+ * Una marca de clave repetida es `E_DUPLICATE_KEY_MARK` (con `fix` que borra la repetida) y se guarda una sola vez.
+ */
+function atributosDe(bloques: readonly Attrs[], sueltos: readonly Attribute[], archivo: string, issues: Issue[]): Atributo[] {
+  return [...bloques.flatMap((bloque) => bloque.items), ...sueltos].map((item) => {
+    const claves = [...new Set(item.keys)] as ClaveDeAtributo[];
+    item.keys.forEach((clave, i) => {
+      if (item.keys.indexOf(clave) === i) return;
+      const { start, end } = rangoDeIndice(item, 'keys', i);
+      const previo = rangoDeIndice(item, 'keys', i - 1);
+      issues.push({
+        code: CODIGOS.E_DUPLICATE_KEY_MARK,
+        severity: 'error',
+        file: archivo,
+        ...start,
+        message: `Marca de clave '${clave}' repetida en el Atributo '${item.name}'`,
+        // Se borra la repetida junto con el espacio que la separa de la marca anterior.
+        fix: { file: archivo, range: { start: previo.start.line === start.line ? previo.end : start, end }, replacement: '' },
+      });
+    });
+    return {
+      name: item.name,
+      type: item.type,
+      notes: item.notes ?? '',
+      ...(claves.length > 0 && { keys: claves }),
+      ...(item.optional && { optional: true }),
+    };
+  });
 }
 
 function referenciasDe(bloques: readonly Source[]): ReferenciaOpaca[] {
@@ -392,6 +439,42 @@ function compilarArista(arista: Edge): Arista {
     ...(arista.fromCardinality !== undefined && { fromCardinality: arista.fromCardinality }),
     ...(arista.toCardinality !== undefined && { toCardinality: arista.toCardinality }),
     ...(arista.label !== undefined && { label: arista.label }),
+    ...(arista.identifying && { identifying: true }),
+  };
+}
+
+/** Interaccion tal cual; que los extremos de cada Mensaje existan y que los ids no se repitan lo comprueba `validate`. */
+function compilarInteraccion(interaccion: Interaction): Interaccion {
+  return {
+    id: interaccion.name,
+    title: interaccion.title ?? interaccion.name,
+    description: interaccion.description ?? '',
+    items: interaccion.items.map(compilarItem),
+  };
+}
+
+function compilarItem(item: InteractionItem): ItemDeInteraccion {
+  if (item.$type === 'Fragment') {
+    return {
+      type: 'fragment',
+      operator: item.operator,
+      operands: item.operands.map((operando) => ({
+        ...(operando.guard !== undefined && { guard: operando.guard }),
+        ...(operando.$type === 'NextOperand' && { separator: operando.separator }),
+        items: operando.items.map(compilarItem),
+      })),
+    };
+  }
+  if (item.$type === 'Note') return { type: 'note', anchor: item.anchor, targets: [...item.targets], text: item.text };
+  if (item.$type === 'InteractionRef') return { type: 'ref', interaction: item.interaction };
+  return {
+    type: 'message',
+    ...(item.alias !== undefined && { id: item.alias }),
+    kind: item.kind ?? 'sync',
+    from: item.from,
+    to: item.to,
+    ...(item.label !== undefined && { label: item.label }),
+    ...(item.description !== undefined && { description: item.description }),
   };
 }
 

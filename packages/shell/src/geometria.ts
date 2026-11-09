@@ -47,7 +47,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   const ultimo = useRef(entrada);
   ultimo.current = entrada;
   // Medidas reales: se piden cuando cambian los textos o las fuentes y el layout espera a tenerlas.
-  const textos = entrada.medir === undefined ? undefined : textosAMedir(vista, tablaDeMetricas(theme));
+  const textos = entrada.medir === undefined ? undefined : textosAMedir(vista, tablaDeMetricas(theme, undefined, vista.type));
   const claveTextos = textos === undefined ? undefined : JSON.stringify([entrada.claveDeFuentes, textos]);
   const [medido, setMedido] = useState<{ clave: string; medidas: MedidasDeTexto }>();
   useEffect(() => {
@@ -69,7 +69,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   const medidas = claveTextos !== undefined && medido?.clave === claveTextos ? medido.medidas : undefined;
   const esperando = claveTextos !== undefined && medidas === undefined;
   // Solo lo que mueve el layout (estructura, textos, fuentes, origen de las medidas) lo repite; la paleta no.
-  const tabla = tablaDeMetricas(theme, medidas);
+  const tabla = tablaDeMetricas(theme, medidas, vista.type);
   const claveTema = claveDeLayout(vista, theme, tabla);
   const claveBase = claveDeEstructura(vista, theme, tabla);
   const mostrado = useRef<Calculo | undefined>(undefined);

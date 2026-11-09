@@ -47,8 +47,9 @@ Descartados: Aristas ordenadas (no cubren repeticiones, retornos ni etiquetas pr
 - **`ref`**: click en el marco navega, como Enlace entre Vistas con migas, a la primera Vista de secuencia declarada que proyecte la Interaccion referida. Sin ninguna, el marco es inerte y `validate` avisa (informativo). Si esa Vista es la actual (ciclo), inerte y sin aviso. Sin sintaxis para elegir destino; se podra sumar despues.
 - **`link`**: el destino puede ser una Vista de cualquier Tipo de diagrama, desde cualquier tipo. En secuencia, solo desde una Lifeline (click en su cabecera); un Grupo enlazado navega y no se expande.
 - **Expandir/colapsar en secuencia**: mismo gesto que en arquitectura. Las hijas de la Lifeline fundida aparecen en su lugar (por primera aparicion o `order`), el resto se desplaza y el `box` del Grupo las envuelve; si el Grupo tiene Mensajes propios, conserva su Lifeline como primera dentro del `box`. Relayout con el algoritmo de secuencia, compensacion de camara (el borde izquierdo del Grupo queda fijo) y morph, como el ADR 0003. El Paso actual se mantiene (los `upto` y `autonumber` no cambian al elevar).
-- **Grupo colapsado en ER**: Nodo unico con contador, no tabla. Una sola FK elevada conserva sus marcadores; varias agregadas van sin marcadores y con contador, como en arquitectura; la linea identificante solo si todas lo son.
-- Navegar a otra Vista entra en su primer Paso.
+- **Grupo colapsado en ER**: Nodo unico con contador, no tabla. Una sola FK elevada conserva sus marcadores; varias agregadas van sin marcadores, como en arquitectura (la Arista resuelta lleva `count`, pero `render` no lo dibuja en ningun Tipo); la linea identificante solo si todas lo son.
+- Navegar a otra Vista entra en su primer Paso. Una Vista `sequence` o `er` con `steps` se abre en el Paso 1 (el Paso 0 la dejaria vacia); `architecture` y `flow` siguen abriendo en el 0 (ADR 0002).
+- **Ref anidado**: el marco de un `ref` cuenta para los extremos del Fragmento que lo contiene, que siempre lo envuelve.
 
 ## Seleccion, gestos y edicion
 

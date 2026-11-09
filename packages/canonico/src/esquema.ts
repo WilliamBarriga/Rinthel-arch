@@ -61,11 +61,24 @@ export interface ReferenciaOpaca {
   ref: string;
 }
 
-/** Elemento estructurado y ordenado de un Nodo (columna, campo, metodo). No es un Nodo hijo. */
+/** Marcas de clave de un Atributo (ER): clave primaria, foranea y unica; combinables. */
+export const CLAVES_DE_ATRIBUTO = ['pk', 'fk', 'uk'] as const;
+/** Cardinalidades canonicas que exige una Vista ER (el Modelo guarda el texto libre). */
+export const CARDINALIDADES_ER = ['0..1', '1', '0..*', '1..*'] as const;
+export type ClaveDeAtributo = (typeof CLAVES_DE_ATRIBUTO)[number];
+
+/**
+ * Elemento estructurado y ordenado de un Nodo (columna, campo, metodo). No es un Nodo hijo.
+ * `keys` y `optional` son Modelo (ER) y se escriben siempre; solo las Vistas ER los dibujan.
+ */
 export interface Atributo {
   name: string;
   type: string;
   notes: string;
+  /** Marcas de clave sin repetir; ausente si no tiene. */
+  keys?: ClaveDeAtributo[];
+  /** El tipo admite nulo (`tipo?` en el DSL); ausente es `false`. */
+  optional?: boolean;
 }
 
 /**
@@ -85,12 +98,84 @@ export interface Arista {
   toCardinality?: string;
   /** Texto corto sobre la Arista (ej. protocolo o accion). */
   label?: string;
+  /** Relacion identificante (ER: linea continua en vez de discontinua); ausente es `false`. */
+  identifying?: boolean;
 }
 
-/** Conjunto unico de Nodos y Aristas del Proyecto documentado (CONTEXT.md). */
+/** Conjunto unico de Nodos, Aristas e Interacciones del Proyecto documentado (CONTEXT.md). */
 export interface Modelo {
   nodes: Nodo[];
   edges: Arista[];
+  interactions?: Interaccion[];
+}
+
+/** Tipos de Mensaje de una Interaccion (`create` y `destroy` llegan con su ticket). */
+export const TIPOS_DE_MENSAJE = ['sync', 'async', 'reply', 'create', 'destroy'] as const;
+export type TipoDeMensaje = (typeof TIPOS_DE_MENSAJE)[number];
+
+/**
+ * Mensaje de una Interaccion: de un Nodo a otro (`from == to` es un Mensaje propio). Su identidad es la
+ * posicion en la Interaccion; `id` es solo un alias opcional, unico en su Interaccion, para citarlo.
+ */
+export interface Mensaje {
+  type: 'message';
+  id?: string;
+  kind: TipoDeMensaje;
+  from: string;
+  to: string;
+  label?: string;
+  description?: string;
+}
+
+/** Operadores de Fragmento (ADR 0009): `opt loop break critical` tienen un operando; `alt par`, uno o mas. */
+export const OPERADORES_DE_FRAGMENTO = ['opt', 'loop', 'break', 'critical', 'alt', 'par'] as const;
+export type OperadorDeFragmento = (typeof OPERADORES_DE_FRAGMENTO)[number];
+
+/**
+ * Operando de un Fragmento: guarda de texto libre opcional y su lista de items. `separador` es la palabra que lo
+ * introdujo (`else` en `alt`, `and` en `par`); el primer operando no lo lleva. Solo lo usa `validate` para detectar
+ * operandos cruzados.
+ */
+export interface Operando {
+  guard?: string;
+  separator?: 'else' | 'and';
+  items: ItemDeInteraccion[];
+}
+
+/** Fragmento: operador con operandos; anidable. No es Nodo ni Grupo: sus Lifelines se derivan de su contenido. */
+export interface Fragmento {
+  type: 'fragment';
+  operator: OperadorDeFragmento;
+  operands: Operando[];
+}
+
+/** Anclaje de una Nota: a la izquierda o derecha de una Lifeline, o sobre una o dos. */
+export const ANCLAJES_DE_NOTA = ['left', 'right', 'over'] as const;
+export type AnclajeDeNota = (typeof ANCLAJES_DE_NOTA)[number];
+
+/** Nota anclada (ADR 0009): `left of X`, `right of X` (un objetivo) u `over X[, Y]` (uno o dos). No es participante. */
+export interface Nota {
+  type: 'note';
+  anchor: AnclajeDeNota;
+  targets: string[];
+  text: string;
+}
+
+/** `ref <interaccion>`: referencia a otra Interaccion (los ciclos son validos; no se expande). */
+export interface Referencia {
+  type: 'ref';
+  interaction: string;
+}
+
+/** Item de una Interaccion; el orden de declaracion es el orden temporal. */
+export type ItemDeInteraccion = Mensaje | Fragmento | Nota | Referencia;
+
+/** Escenario ordenado entre Nodos (Lifelines); id en un espacio de nombres propio (puede coincidir con el de un Nodo). */
+export interface Interaccion {
+  id: string;
+  title: string;
+  description: string;
+  items: ItemDeInteraccion[];
 }
 
 const referenciaOpacaSchema = z.object({ kind: z.string().min(1), ref: z.string() });
@@ -99,6 +184,8 @@ export const atributoSchema = z.object({
   name: z.string().min(1),
   type: z.string().min(1),
   notes: z.string().default(''),
+  keys: z.array(z.enum(CLAVES_DE_ATRIBUTO)).min(1).optional(),
+  optional: z.boolean().optional(),
 });
 
 /**
@@ -130,11 +217,55 @@ export const aristaSchema = z.object({
   fromCardinality: z.string().min(1).optional(),
   toCardinality: z.string().min(1).optional(),
   label: z.string().min(1).optional(),
+  identifying: z.boolean().optional(),
+});
+
+export const mensajeSchema = z.object({
+  type: z.literal('message'),
+  id: z.string().min(1).optional(),
+  kind: z.enum(TIPOS_DE_MENSAJE).default('sync'),
+  from: idDeNodoSchema,
+  to: idDeNodoSchema,
+  label: z.string().optional(),
+  description: z.string().optional(),
+});
+
+export const fragmentoSchema: z.ZodType<Fragmento> = z.lazy(() =>
+  z.object({
+    type: z.literal('fragment'),
+    operator: z.enum(OPERADORES_DE_FRAGMENTO),
+    operands: z.array(
+      z.object({
+        guard: z.string().optional(),
+        separator: z.enum(['else', 'and']).optional(),
+        items: z.array(itemSchema).default([]),
+      }),
+    ),
+  }),
+) as z.ZodType<Fragmento>;
+
+export const notaSchema = z.object({
+  type: z.literal('note'),
+  anchor: z.enum(ANCLAJES_DE_NOTA),
+  targets: z.array(idDeNodoSchema).min(1),
+  text: z.string(),
+});
+
+export const referenciaSchema = z.object({ type: z.literal('ref'), interaction: z.string().min(1) });
+
+const itemSchema: z.ZodType<ItemDeInteraccion> = z.lazy(() => z.union([mensajeSchema, fragmentoSchema, notaSchema, referenciaSchema]));
+
+export const interaccionSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().min(1),
+  description: z.string().default(''),
+  items: z.array(itemSchema).default([]),
 });
 
 const modeloSchema = z.object({
   nodes: z.array(nodoSchema),
   edges: z.array(aristaSchema).default([]),
+  interactions: z.array(interaccionSchema).default([]),
 });
 
 /**
@@ -150,8 +281,8 @@ export const temaSchema = z.looseObject({
 
 export type Tema = z.infer<typeof temaSchema>;
 
-/** Tipos de diagrama de la primera entrega. */
-export const TIPOS_DE_VISTA = ['architecture', 'flow'] as const;
+/** Tipos de diagrama. */
+export const TIPOS_DE_VISTA = ['architecture', 'flow', 'sequence', 'er'] as const;
 
 /**
  * Override de presentacion de un Nodo en una Vista: solo apariencia, nunca toca
@@ -182,6 +313,8 @@ export const pasoSchema = z.object({
   title: z.string(),
   show: z.array(elementoDePasoSchema).default([]),
   hide: z.array(elementoDePasoSchema).default([]),
+  /** Solo en Vistas `sequence`: id del Mensaje hasta el que (incluido) se muestra la Interaccion. */
+  upto: z.string().min(1).optional(),
 });
 
 export type Paso = z.infer<typeof pasoSchema>;
@@ -199,6 +332,12 @@ export const vistaSchema = z.object({
   include: z.array(z.string().min(1)).default([]),
   exclude: z.array(z.string().min(1)).default([]),
   depth: z.number().int().min(0).optional(),
+  /** Solo en Vistas `sequence`: la Interaccion que proyecta (id de `model.interactions`). */
+  interaction: z.string().min(1).optional(),
+  /** Solo en Vistas `sequence`: orden de las Lifelines, parcial; el resto sigue por primera aparicion. */
+  order: z.array(idDeNodoSchema).default([]),
+  /** Solo en Vistas `sequence`: numera los Mensajes proyectados; el numero es parte de la etiqueta. Ausente = false. */
+  autonumber: z.literal(true).optional(),
   overrides: z.array(overrideSchema).default([]),
   theme: z.string().min(1).optional(),
   /**
@@ -215,6 +354,8 @@ export const vistaSchema = z.object({
   links: z.array(z.object({ node: idDeNodoSchema, view: z.string().min(1) })).default([]),
   /** Pasos de revelado en orden; sin pasos todo esta revelado. */
   steps: z.array(pasoSchema).default([]),
+  /** Solo en Vistas `sequence`: `steps each`, un Paso por Mensaje proyectado. Ausente = false. */
+  stepsEach: z.literal(true).optional(),
 });
 
 export type Vista = z.infer<typeof vistaSchema>;

@@ -11,14 +11,13 @@ import type { D3ZoomEvent } from 'd3-zoom';
 
 import { resolveView } from 'canonico';
 import type { EstadoDeColapso, IconProvider, IssueDeDev, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
-import { indiceDeGeometria } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
 import type { Camara, ComponentesDeTema } from 'render';
 import { resolverTema } from 'tema';
 import type { MedidasDeTexto, TextoAMedir } from 'tema';
 
-import { aCamara, aTransform, compensarCamara, encuadrar, mismaTransform } from './camara';
+import { aCamara, aTransform, cajaDeAncla, compensarCamara, encuadrar, mismaTransform } from './camara';
 import { Leyenda, useAltoContraste } from './accesibilidad';
 import type { ModoDeLeyenda, PropsDeAltoContraste } from './accesibilidad';
 import { PanelDeIssues, Toasts } from './avisos';
@@ -27,10 +26,12 @@ import { MAX_NODOS_VISIBLES, alternarGrupo, contarNodosVisibles } from './colaps
 import { AJUSTES_POR_DEFECTO } from './configuracion';
 import type { AjustesDeInteraccion } from './configuracion';
 import { idDeNodoBajo, useArrastre } from './arrastre';
+import type { AlReordenarLifelines } from './arrastre';
+import { unidadBajo } from './ordenar-lifelines';
 import { useControlado } from './controlado';
 import { conEstadosTransitorios, useSeleccion } from './seleccion';
-import { elementoBajo } from './interaccion';
-import { estadosDeRuta, moverFoco, rutaMasCorta, unirEstados } from './ruta-y-foco';
+import { destinoDeNavegacionPorRef, elementoBajo } from './interaccion';
+import { estadosDeRuta, moverFoco, moverFocoEnSecuencia, rutaMasCorta, unirEstados } from './ruta-y-foco';
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
 import { useGeometria } from './geometria';
@@ -108,6 +109,12 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
    */
   onMoveNode?: (movimiento: { id: string; x: number; y: number }) => void | boolean | Promise<boolean | void>;
   /**
+   * Habilita reordenar Lifelines por arrastre en una Vista de secuencia (solo bajo `dev`): arrastrar la cabecera de
+   * una Lifeline, o el titulo de un `box`, avisa el orden visible completo (`orden`, ids de izquierda a derecha); una
+   * hija no sale del `box` de su Grupo y el titulo mueve el bloque. Mismo contrato de retorno que `onMoveNode`.
+   */
+  onReorderLifelines?: AlReordenarLifelines;
+  /**
    * Ruta resaltada: ids de Nodos en orden. Sus Nodos y las Aristas entre consecutivos pasan a `en-ruta` y todo lo
    * demas a `atenuado`. Sin ella, con exactamente dos Nodos seleccionados se resalta la ruta mas corta entre ellos.
    */
@@ -175,8 +182,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     const ancla = pendiente.current;
     pendiente.current = undefined;
     if (previo === undefined || ancla === undefined) return;
-    const antes = indiceDeGeometria(previo.vista, previo.geometria).cajas.get(ancla);
-    const despues = indiceDeGeometria(nuevo.vista, nuevo.geometria).cajas.get(ancla);
+    const antes = cajaDeAncla(previo.vista, previo.geometria, ancla);
+    const despues = cajaDeAncla(nuevo.vista, nuevo.geometria, ancla);
     if (antes === undefined || despues === undefined) return;
     fijarCamara(compensarCamara(camaraBase.current, antes, despues));
     morphador.iniciar({ desde: previo.geometria, hasta: nuevo.geometria, ancla });
@@ -209,14 +216,28 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const ultimo = useRef(props);
   ultimo.current = props;
   const camaraVigente = useRef(camara);
+  const geometriaVigente = useRef<Geometria | undefined>(undefined);
+  geometriaVigente.current = calculo?.geometria;
+  const vistaVigente = useRef(vista);
+  vistaVigente.current = calculo?.vista ?? vista;
   const { desplazado, arrastrando, enCurso } = useArrastre({
     zona,
     alMoverNodo: props.onMoveNode,
+    alReordenar: props.onReorderLifelines,
     calculo,
     camaraVigente,
     ancho: width,
     umbral: ajustes.dragThreshold,
   });
+
+  /** Un mousedown que agarra una cabecera o el titulo de un `box` en secuencia es un arrastre, no un pan. */
+  const agarraEnSecuencia = (evento: MouseEvent): boolean => {
+    const geometria = geometriaVigente.current;
+    if (geometria?.kind !== 'secuencia') return false;
+    const caja = zona.current!.getBoundingClientRect();
+    const k = width / camaraVigente.current.width;
+    return unidadBajo(geometria, vistaVigente.current.interaction?.groups ?? [], { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k }) !== undefined;
+  };
 
   useEffect(() => {
     const nodo = zona.current!;
@@ -224,6 +245,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     comp
       .filter((evento: Event) => {
         if (ultimo.current.onMoveNode !== undefined && evento.type === 'mousedown' && idDeNodoBajo(evento.target) !== undefined) return false;
+        if (ultimo.current.onReorderLifelines !== undefined && evento.type === 'mousedown' && agarraEnSecuencia(evento as MouseEvent)) return false;
         return (!(evento as MouseEvent).ctrlKey || evento.type === 'wheel') && !(evento as MouseEvent).button;
       })
       .extent([
@@ -268,8 +290,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   }, [calculo, morph, desplazado]);
   const camaraVista = useMemo<Camara>(() => {
     if (calculo === undefined || mostrado === undefined || morph === undefined) return camara;
-    const final = indiceDeGeometria(calculo.vista, morph.hasta).cajas.get(morph.ancla);
-    const ahora = indiceDeGeometria(mostrado.vista, mostrado.geometria).cajas.get(morph.ancla);
+    const final = cajaDeAncla(calculo.vista, morph.hasta, morph.ancla);
+    const ahora = cajaDeAncla(mostrado.vista, mostrado.geometria, morph.ancla);
     return final === undefined || ahora === undefined ? camara : { ...camara, x: camara.x - final.x + ahora.x, y: camara.y - final.y + ahora.y };
   }, [calculo, mostrado, morph, camara]);
   const visibilidadMostrada = useMemo(
@@ -288,17 +310,21 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const [hover, fijarHover] = useState<string | undefined>(undefined);
   const estados = useMemo(() => conEstadosTransitorios(estadosDeSeleccion, enCurso === undefined ? hover : undefined, enCurso), [estadosDeSeleccion, hover, enCurso]);
   const medidas = calculo?.medidas;
-  const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas), [theme, fontFiles, medidas]);
+  const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas, vista.type), [theme, fontFiles, medidas, vista.type]);
 
   // Ruta (en-ruta / atenuado) y foco de teclado: los calcula el shell y render solo los pinta.
+  const enSecuencia = vista.type === 'sequence';
+  const visible = (id: string): boolean => (visibility?.(id) ?? 1) > 0;
   const nodosSeleccionados = seleccion.filter((e) => e.tipo === 'nodo').map((e) => e.id);
   const ruta = useMemo(() => {
+    if (enSecuencia) return [];
     if (props.route !== undefined) return props.route;
     if (nodosSeleccionados.length !== 2) return [];
     return rutaMasCorta(vista, nodosSeleccionados[0]!, nodosSeleccionados[1]!) ?? [];
   }, [props.route, vista, nodosSeleccionados.join('\n')]);
   const [foco, fijarFoco] = useState<string | undefined>(undefined);
-  const focoVigente = foco !== undefined && vista.nodes.some((n) => n.id === foco) ? foco : undefined;
+  const focoVigente =
+    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction?.messages.some((m) => `${vista.interaction!.id}:${m.ruta}` === foco) === true)) ? foco : undefined;
   const estadosFinales = useMemo(
     () => unirEstados(unirEstados(estados, estadosDeRuta(vista, ruta)), focoVigente === undefined ? {} : { [focoVigente]: ['foco'] }),
     [estados, vista, ruta, focoVigente],
@@ -318,8 +344,15 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     fijarEstado(siguiente);
   };
 
+  /** Enter o Espacio sobre un Nodo: si tiene `link` navega; si no, colapsa o abre el Grupo. */
+  const activar = (id: string): void => {
+    const destino = vista.nodes.find((n) => n.id === id)?.link;
+    if (destino !== undefined && source.views.some((v) => v.id === destino)) props.alEnlazar(destino);
+    else alternar(id);
+  };
+
   const alEnfocar = (evento: EventoDeFoco): void => {
-    if (evento.target === evento.currentTarget) fijarFoco((actual) => actual ?? moverFoco(vista, undefined, 'siguiente'));
+    if (evento.target === evento.currentTarget) fijarFoco((actual) => actual ?? (enSecuencia ? moverFocoEnSecuencia(vista, undefined, 'siguiente', visible) : moverFoco(vista, undefined, 'siguiente')));
   };
   const alSoltarElFoco = (evento: EventoDeFoco): void => {
     if (evento.target === evento.currentTarget) fijarFoco(undefined);
@@ -327,8 +360,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   /** Tab recorre en orden del Modelo (y suelta el foco al salirse por un extremo), flechas saltan por Aristas, Enter/Espacio colapsa o abre. */
   const alTeclear = (evento: EventoDeTecla): void => {
     if (evento.target !== evento.currentTarget) return;
-    const mover = (movimiento: Parameters<typeof moverFoco>[2]): boolean => {
-      const siguiente = moverFoco(vista, focoVigente, movimiento);
+    const mover = (movimiento: Parameters<typeof moverFoco>[2] | Parameters<typeof moverFocoEnSecuencia>[2]): boolean => {
+      const siguiente = enSecuencia ? moverFocoEnSecuencia(vista, focoVigente, movimiento as Parameters<typeof moverFocoEnSecuencia>[2], visible) : moverFoco(vista, focoVigente, movimiento as Parameters<typeof moverFoco>[2]);
       if (siguiente === undefined) return false;
       fijarFoco(siguiente);
       return true;
@@ -339,16 +372,20 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
         atendida = mover(evento.shiftKey ? 'anterior' : 'siguiente');
         break;
       case 'ArrowRight':
+        atendida = mover(enSecuencia ? 'derecha' : 'adelante');
+        break;
       case 'ArrowDown':
-        atendida = mover('adelante');
+        atendida = mover(enSecuencia ? 'abajo' : 'adelante');
         break;
       case 'ArrowLeft':
+        atendida = mover(enSecuencia ? 'izquierda' : 'atras');
+        break;
       case 'ArrowUp':
-        atendida = mover('atras');
+        atendida = mover(enSecuencia ? 'arriba' : 'atras');
         break;
       case 'Enter':
       case ' ':
-        if (focoVigente !== undefined) alternar(focoVigente);
+        if (focoVigente !== undefined) activar(focoVigente);
         atendida = true;
         break;
     }
@@ -363,7 +400,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     const caja = zona.current!.getBoundingClientRect();
     const k = width / camaraVigente.current.width;
     const punto = { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k };
-    return elementoBajo(mostrado.vista, mostrado.geometria, theme, punto, { tolerancia: ajustes.hitTolerance / k, atributos: detalle === 'completo' });
+    return elementoBajo(mostrado.vista, mostrado.geometria, theme, punto, { tolerancia: ajustes.hitTolerance / k, atributos: detalle === 'completo', ...(visibility !== undefined && { visibilidad: visibility }) });
   };
 
   const alMoverElRaton = (evento: EventoDeRaton): void => {
@@ -380,7 +417,13 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     props.onSelectionChange?.(resultado.seleccion.map((e) => e.id));
     if (!resultado.seleccionado) return;
     onSelect?.(elemento.id);
-    if (acumula || elemento.tipo !== 'nodo') return;
+    if (acumula) return;
+    if (elemento.tipo === 'fragmento') {
+      const destinoDelRef = destinoDeNavegacionPorRef(vista, view, source.views, elemento.id);
+      if (destinoDelRef !== undefined) props.alEnlazar(destinoDelRef);
+      return;
+    }
+    if (elemento.tipo !== 'nodo') return;
     const destino = vista.nodes.find((n) => n.id === elemento.id)?.link;
     if (destino !== undefined && source.views.some((v) => v.id === destino)) props.alEnlazar(destino);
   };

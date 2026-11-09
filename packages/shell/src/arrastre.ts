@@ -5,11 +5,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
+import type { GeometriaSecuencia } from 'layout';
 import type { Camara } from 'render';
 
 import type { Calculo } from './geometria';
+import { ordenTrasArrastrar, unidadBajo } from './ordenar-lifelines';
 
 export type Movimiento = { id: string; x: number; y: number };
+export type AlReordenarLifelines = (cambio: { orden: string[] }) => void | boolean | Promise<boolean | void>;
 export type AlMoverNodo = (movimiento: Movimiento) => void | boolean | Promise<boolean | void>;
 
 /** Id del Nodo dibujado (la caja `[data-id]` mas interna) bajo un evento, si lo hay. */
@@ -21,6 +24,8 @@ export interface EntradaDeArrastre {
   zona: RefObject<HTMLElement | null>;
   /** Habilitado solo si hay aviso de movimiento. */
   alMoverNodo: AlMoverNodo | undefined;
+  /** Habilitado solo si hay aviso de reordenar; vale en Vistas de secuencia, donde no hay Pins. */
+  alReordenar?: AlReordenarLifelines | undefined;
   /** Calculo vigente (sin morph ni desplazamiento): al cambiar, el desplazamiento provisional se descarta. */
   calculo: Calculo | undefined;
   camaraVigente: RefObject<Camara>;
@@ -42,14 +47,18 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
     setDesplazado(undefined);
   }, [e.calculo]);
 
-  const arrastrable = e.alMoverNodo !== undefined;
+  // En secuencia no hay Pins: se arrastran las cabeceras y el titulo de un `box` para reordenar Lifelines.
+  const enSecuencia = e.calculo?.geometria.kind === 'secuencia';
+  const arrastrable = enSecuencia ? e.alReordenar !== undefined : e.alMoverNodo !== undefined;
   useEffect(() => {
     if (!arrastrable) return;
     const nodo = e.zona.current!;
     const alPulsar = (evento: MouseEvent): void => {
       if (evento.button !== 0 || evento.ctrlKey) return;
+      const geometria = ultimo.current.calculo?.geometria;
+      if (geometria?.kind === 'secuencia') return pulsarEnSecuencia(evento, geometria);
       const id = idDeNodoBajo(evento.target);
-      const caja = id === undefined ? undefined : ultimo.current.calculo?.geometria.nodes[id];
+      const caja = id === undefined ? undefined : geometria?.nodes[id];
       if (id === undefined || caja === undefined) return;
       const [x0, y0] = [evento.clientX, evento.clientY];
       let movido = false;
@@ -91,9 +100,52 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
       window.addEventListener('mousemove', alMover);
       window.addEventListener('mouseup', alSoltar);
     };
+    /** Reordenar Lifelines: la cabecera (o el titulo de un `box`) sigue al raton en horizontal y al soltar avisa el orden visible. */
+    const pulsarEnSecuencia = (evento: MouseEvent, geometria: GeometriaSecuencia): void => {
+      const k0 = e.ancho / e.camaraVigente.current!.width;
+      const caja = nodo.getBoundingClientRect();
+      const camara = e.camaraVigente.current!;
+      const grupos = ultimo.current.calculo!.vista.interaction?.groups ?? [];
+      const unidad = unidadBajo(geometria, grupos, { x: camara.x + (evento.clientX - caja.left) / k0, y: camara.y + (evento.clientY - caja.top) / k0 });
+      if (unidad === undefined) return;
+      const orden = ultimo.current.calculo!.vista.nodes.map((n) => n.id);
+      const [x0, y0] = [evento.clientX, evento.clientY];
+      let movido = false;
+      const desplazamiento = (m: MouseEvent): number => (m.clientX - x0) / (e.ancho / e.camaraVigente.current!.width);
+      const alMover = (m: MouseEvent): void => {
+        if (!movido && Math.hypot(m.clientX - x0, m.clientY - y0) < ultimo.current.umbral) return;
+        movido = true;
+        setEnCurso(unidad.id);
+        m.preventDefault();
+        const cabecera = geometria.nodes[unidad.id];
+        if (!unidad.bloque && cabecera !== undefined) setDesplazado({ id: unidad.id, x: Math.round(cabecera.x + desplazamiento(m)), y: cabecera.y });
+      };
+      const alSoltar = (m: MouseEvent): void => {
+        window.removeEventListener('mousemove', alMover);
+        window.removeEventListener('mouseup', alSoltar);
+        setEnCurso(undefined);
+        if (!movido) return;
+        arrastrando.current = true;
+        setTimeout(() => {
+          arrastrando.current = false;
+        }, 0);
+        const nuevo = ordenTrasArrastrar(geometria, grupos, orden, unidad, desplazamiento(m));
+        const devolver = (): void => setDesplazado((d) => (d?.id === unidad.id ? undefined : d));
+        if (nuevo.every((id, i) => id === orden[i])) return devolver();
+        try {
+          const resultado = ultimo.current.alReordenar?.({ orden: nuevo });
+          if (typeof resultado === 'object') resultado.then((ok) => ok === false && devolver(), devolver);
+          else if (resultado === false) devolver();
+        } catch {
+          devolver();
+        }
+      };
+      window.addEventListener('mousemove', alMover);
+      window.addEventListener('mouseup', alSoltar);
+    };
     nodo.addEventListener('mousedown', alPulsar);
     return () => nodo.removeEventListener('mousedown', alPulsar);
-  }, [arrastrable]);
+  }, [arrastrable, enSecuencia]);
 
   return { desplazado, arrastrando, enCurso };
 }

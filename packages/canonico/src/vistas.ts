@@ -3,6 +3,8 @@
  * Pura: no modifica la Fuente. Una Vista solo selecciona, nunca define entidades.
  */
 import type { Arista, Extremo, FuenteCanonica, Nodo, OverrideDeNodo, Paso, Vista } from './esquema';
+import { resolverSecuencia } from './secuencia';
+import type { InteraccionResuelta } from './secuencia';
 
 /** Nodo visible: un Grupo colapsado se muestra como un Nodo unico con su contador. */
 export interface NodoResuelto extends Omit<Nodo, 'children'> {
@@ -27,8 +29,15 @@ export interface AristaResuelta extends Arista {
   count: number;
 }
 
+/** Paso tal como lo ve quien dibuja. En secuencia `corte` es la `ruta` del Mensaje proyectado hasta el que se muestra (incluido). */
+export interface PasoResuelto extends Paso {
+  corte?: string;
+}
+
 /** Nodos y Aristas visibles de una Vista, mas lo que `layout` y `render` necesitan de ella. */
 export interface VistaResuelta {
+  /** Tipo de diagrama de la Vista; elige el algoritmo de layout y entra en las claves de cache. */
+  type: Vista['type'];
   /** Nodos visibles en orden de documento. */
   nodes: NodoResuelto[];
   /** Aristas entre Nodos visibles, con las de los hijos de un Grupo colapsado elevadas a el. */
@@ -36,7 +45,9 @@ export interface VistaResuelta {
   /** Overrides de presentacion de la Vista, tal cual (label, pin, order, color). */
   overrides: OverrideDeNodo[];
   /** Pasos de revelado de la Vista (ADR 0002), tal cual; `revealAt` los interpreta. */
-  steps: Paso[];
+  steps: PasoResuelto[];
+  /** Solo en Vistas `sequence`: la Interaccion proyectada. Sus `nodes` son las Lifelines, en orden de columna, y no hay `edges`. */
+  interaction?: InteraccionResuelta;
 }
 
 /** Estado de colapso del llamador (p. ej. el shell); gana a lo declarado en la Vista. */
@@ -113,12 +124,37 @@ export function resolveView(
     };
   };
 
+  if (vista.type === 'sequence') {
+    const { nodes, interaction } = resolverSecuencia(fuente.model.interactions, fuente.model.nodes, vista, excluidos, resolver, ancestroColapsado);
+    return { type: vista.type, nodes, edges: [], overrides: vista.overrides, steps: pasosDeSecuencia(vista, interaction), ...(interaction !== undefined && { interaction }) };
+  }
+
   return {
+    type: vista.type,
     nodes: todos.filter((nodo) => visibles.has(nodo.id)).map(resolver),
     edges: elevarAristas(fuente.model.edges, visibles, ancestroColapsado),
     overrides: vista.overrides,
     steps: vista.steps,
   };
+}
+
+/**
+ * Pasos de una Vista de secuencia: cada `upto` se resuelve al Mensaje proyectado con ese id (un Paso cuyo Mensaje no
+ * existe o no se proyecta se omite: `validate` lo informa); `steps each` da un Paso por Mensaje proyectado, titulado con
+ * su etiqueta (sin el numero de `autonumber`) o `from -> to`.
+ */
+function pasosDeSecuencia(vista: Vista, interaccion: InteraccionResuelta | undefined): PasoResuelto[] {
+  const mensajes = interaccion?.messages ?? [];
+  if (vista.stepsEach === true && vista.steps.length === 0) {
+    return mensajes.map((mensaje) => {
+      const etiqueta = mensaje.numero === undefined ? mensaje.label : mensaje.label?.slice(`${mensaje.numero}. `.length);
+      return { title: etiqueta !== undefined && etiqueta !== '' ? etiqueta : `${mensaje.from} -> ${mensaje.to}`, show: [], hide: [], corte: mensaje.ruta };
+    });
+  }
+  return vista.steps.flatMap((paso): PasoResuelto[] => {
+    const mensaje = paso.upto === undefined ? undefined : mensajes.find((m) => m.id === paso.upto);
+    return mensaje === undefined ? [] : [{ ...paso, corte: mensaje.ruta }];
+  });
 }
 
 /** Un Nodo sin hijos nunca esta colapsado; un Grupo con `link` siempre lo esta. */
@@ -154,8 +190,9 @@ function elevarAristas(
     if (previa === undefined) {
       fusionadas.set(clave, { ...arista, from, to, count: 1 });
     } else {
-      const { fromCardinality, toCardinality, label, ...sinCardinalidad } = previa;
-      fusionadas.set(clave, { ...sinCardinalidad, count: previa.count + 1 });
+      const { fromCardinality, toCardinality, label, identifying, ...sinCardinalidad } = previa;
+      // Una linea fusionada es identificante solo si todas las Aristas que agrupa lo son.
+      fusionadas.set(clave, { ...sinCardinalidad, ...(identifying === true && arista.identifying === true && { identifying }), count: previa.count + 1 });
     }
   }
   return [...fusionadas.values()];

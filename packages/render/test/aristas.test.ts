@@ -120,4 +120,12 @@ describe('Aristas del Tema', () => {
     expect(marcas[0]?.hijos?.[0]).toMatchObject({ tag: 'circle', attrs: { r: '3.5', fill: TEMA_NEUTRO.tokens.background, stroke: '#2563eb', 'stroke-width': '1' } });
     expect(marcas[1]?.hijos?.[0]).toMatchObject({ tag: 'path', attrs: { fill: 'none', stroke: '#2563eb', 'stroke-linecap': 'round' } });
   });
+
+  it('cross es una X centrada en el extremo, del color del trazo', () => {
+    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], fin: { tipo: 'cross', props: { size: 10 } } }));
+    const marca = todos(pintarArista(estilo, { id: 'e', puntos: L }), 'g').find((g) => g.attrs['data-marker'] === 'fin')!;
+
+    expect(marca.hijos).toHaveLength(1);
+    expect(marca.hijos?.[0]).toMatchObject({ tag: 'path', attrs: { d: 'M -5 -5 L 5 5 M -5 5 L 5 -5', stroke: '#2563eb', fill: 'none' } });
+  });
 });

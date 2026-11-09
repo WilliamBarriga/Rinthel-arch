@@ -78,5 +78,72 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
     capas: [{ nombre: 'linea', primitiva: { tipo: 'line', props: { color: 'white', width: 2, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } }],
     fin: { tipo: 'arrow', props: { size: 9 } },
     etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 6, 'pad-y': 2, fill: 'black', border: 'white', 'border-width': 1.5, color: 'white', radius: 0 } },
+    diagramas: { er: { ops: [], fin: { tipo: 'arrow', props: { size: 12, color: 'white' } } } },
+  },
+  // Filas de tabla ER: fondo negro con separador blanco grueso.
+  fila: {
+    alto: 28,
+    capas: [
+      { nombre: 'fondo', primitiva: { tipo: 'solid', props: { color: 'black' } } },
+      { nombre: 'separador', primitiva: { tipo: 'stripe', props: { color: 'white', side: 'bottom', width: 2 } } },
+    ],
+    alterna: [],
+    textos: { name: texto({ weight: 700 }), type: texto({}) },
+    claves: {},
+    opcional: [],
+    estados: {},
+  },
+  // Secuencia: los mismos elementos que `neutral`, con trazos mas gruesos y sin translucidos.
+  secuencia: {
+    lifeline: { capas: [{ nombre: 'linea', primitiva: { tipo: 'line', props: { color: 'white', width: 2, style: 'dashed' } } }], fin: { tipo: 'cross', props: { size: 14, color: 'white' } }, textos: {}, parches: {}, estados: {}, metricas: {} },
+    activation: {
+      capas: [
+        { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
+        { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'black' } } },
+        { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'COLOR', width: 3 } } },
+      ],
+      textos: {},
+      parches: {},
+      estados: {},
+      metricas: { width: 12 },
+    },
+    message: {
+      capas: [{ nombre: 'linea', primitiva: { tipo: 'line', props: { color: 'white', width: 3, style: 'solid', corner: 'sharp' } } }],
+      fin: { tipo: 'arrow', props: { size: 11 } },
+      textos: {},
+      parches: {
+        async: { ops: [], fin: { tipo: 'chevron', props: { size: 11 } } },
+        reply: { ops: [{ nombre: 'linea', props: { style: 'dashed' } }], fin: { tipo: 'chevron', props: { size: 11 } } },
+        create: { ops: [{ nombre: 'linea', props: { style: 'dashed' } }], fin: { tipo: 'chevron', props: { size: 11 } } },
+        destroy: { ops: [], fin: { tipo: 'arrow', props: { size: 11 } } },
+      },
+      estados: {},
+      metricas: {},
+    },
+    fragment: {
+      capas: [
+        { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
+        { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'black' } } },
+        { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'white', width: 3 } } },
+      ],
+      textos: {
+        operator: { tipo: 'label', props: { color: 'white', weight: 700 } },
+        guard: texto({ color: 'white' }),
+        divider: { tipo: 'line', props: { color: 'white', width: 2, style: 'dashed' } },
+      },
+      parches: {},
+      estados: {},
+      metricas: {},
+    },
+    note: {
+      capas: [
+        { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'black' } } },
+        { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'amber', width: 3 } } },
+      ],
+      textos: { text: texto({}) },
+      parches: {},
+      estados: {},
+      metricas: {},
+    },
   },
 };

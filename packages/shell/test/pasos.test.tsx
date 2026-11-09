@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista } from 'canonico';
 import type { VistaResuelta } from 'canonico';
-import type { Geometria } from 'layout';
+import type { GeometriaGrafo } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -31,17 +31,17 @@ const pasos = [
 ];
 
 const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
-  const nodes: Geometria['nodes'] = {};
+  const nodes: GeometriaGrafo['nodes'] = {};
   vista.nodes.forEach((n, i) => {
     nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
   });
-  const edges: Geometria['edges'] = {};
+  const edges: GeometriaGrafo['edges'] = {};
   for (const e of vista.edges) {
     const d = nodes[e.from.node]!;
     const h = nodes[e.to.node]!;
     edges[idDeArista(e)] = { points: [{ x: d.x + 100, y: 25 }, { x: h.x, y: 25 }] };
   }
-  return { nodes, edges, labels: {}, pinsSolapados: [], width: 500, height: 50 };
+  return { nodes, edges, labels: {}, kind: 'grafo', pinsSolapados: [], width: 500, height: 50 };
 };
 
 const montar = (steps: unknown[], extra: Partial<VistaInteractivaProps> = {}) =>
@@ -58,6 +58,24 @@ const opacidad = (c: HTMLElement, id: string): number => {
 const dibujado = (c: HTMLElement) => waitFor(() => expect(c.querySelector('[data-id="a"]')).not.toBeNull());
 const sinVisibilidad = (c: HTMLElement) =>
   c.querySelector('[data-diagram]')!.innerHTML.replace(/ data-oculto=""/g, '').replace(/ opacity="[^"]*"/g, '').replace(/\s*(opacity|pointer-events): [^;"]+;?/g, '').replace(/ pointer-events="[^"]*"/g, '');
+
+describe('Paso inicial por Tipo de diagrama', () => {
+  it('una Vista ER con Pasos se monta en el primero, no vacia; architecture sigue en el 0', async () => {
+    const er = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio' }] },
+      model: { nodes: [nodo('a'), nodo('b')], edges: [] },
+      views: [{ id: 'v', type: 'er', include: ['**'], exclude: [], steps: [{ title: 'Tablas', show: [{ selector: 'a' }] }] }],
+    });
+    const { container } = render(<VistaInteractiva source={er} view="v" theme={TEMA_NEUTRO} layout={enFila} width={800} height={600} camera={{ x: 0, y: 0, width: 800, height: 600 }} />);
+    await dibujado(container);
+    expect(container.querySelector('[data-pasos]')?.textContent).toContain('Paso 1 de 1: Tablas');
+    expect(opacidad(container, 'a')).toBe(1);
+    cleanup();
+    const { container: arq } = montar(pasos);
+    await dibujado(arq);
+    expect(arq.querySelector('[data-pasos]')?.textContent).toContain('Paso 0 de 2');
+  });
+});
 
 describe('Pasos anterior y siguiente', () => {
   it('sin steps no hay controles ni se oculta nada', async () => {

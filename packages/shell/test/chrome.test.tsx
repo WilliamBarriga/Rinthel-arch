@@ -22,7 +22,7 @@ const layout: AdaptadorDeLayout = async (vista) => {
   vista.nodes.forEach((n, i) => {
     nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
   });
-  return { nodes, edges: {}, labels: {}, pinsSolapados: [], width: 300, height: 50 };
+  return { nodes, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 300, height: 50 };
 };
 const OSCURO: TemaResuelto = {
   ...TEMA_NEUTRO,
