@@ -123,6 +123,10 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
   const colorDeGuarda = String(base.capas[base.capas.length - 1]?.props['color'] ?? estilo.borde);
   const textosDeFragmento = geometry.fragments.flatMap((marco) => textosDeFragmentoSvg(marco, estilo, colorDeGuarda, visibility, idDeInteraccion));
 
+  // Cabecera espejo al pie de cada Lifeline: el mismo Nodo, en la caja de `footers`.
+  const cajasDePie = new Map(Object.entries(geometry.footers ?? {}));
+  const pies = raices.flatMap((nodo): Elemento[] => (cajasDePie.has(nodo.id) ? [cajaDeNodo(nodo, { ...contexto, cajas: cajasDePie })] : []));
+
   return marcoDeEscena(entrada, estilo, [
     { tag: 'div', attrs: { class: 'rd-capa rd-grupos', 'data-capa': 'grupos' }, hijos: grupos },
     { tag: 'div', attrs: { class: 'rd-capa rd-fragmentos', 'data-capa': 'fragmentos' }, hijos: fragmentos },
@@ -131,7 +135,7 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     capaSvg('mensajes', geometry, [...trazos, ...etiquetas]),
     capaSvg('guardas', geometry, textosDeFragmento),
     capaSvg('notas', geometry, geometry.notes.map((nota) => notaSvg(nota, estilo, idDeInteraccion, visibility, entrada.estados))),
-    { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: raices.map((nodo) => cajaDeNodo(nodo, contexto)) },
+    { tag: 'div', attrs: { class: 'rd-capa rd-nodos', 'data-capa': 'nodos' }, hijos: [...raices.map((nodo) => cajaDeNodo(nodo, contexto)), ...pies] },
   ]);
 }
 

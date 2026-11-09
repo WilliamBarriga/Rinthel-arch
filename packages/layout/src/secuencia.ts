@@ -86,6 +86,8 @@ export interface CajaDeGrupoColocada {
 export interface GeometriaSecuencia {
   kind: 'secuencia';
   nodes: Record<string, CajaDeNodo>;
+  /** Cabecera espejo al pie de cada Lifeline no destruida (misma caja y Slots que en `nodes`, desplazada a `y2` de su linea). */
+  footers?: Record<string, CajaDeNodo>;
   /** Linea vertical de cada Lifeline, por id de Nodo: `x` central, desde `y1` (bajo la cabecera) hasta `y2`. */
   lifelines: Record<string, { x: number; y1: number; y2: number; /** Cortada en un `destroy`: `y2` es la `y` de ese Mensaje y se pinta el marcador `end`. */ destroyed?: true }>;
   activations: CajaDeActivacion[];
@@ -442,6 +444,7 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   for (const nota of notas) derecha = Math.max(derecha, nota.x + nota.width);
 
   const nodes: Record<string, CajaDeNodo> = {};
+  const footers: Record<string, CajaDeNodo> = {};
   const lineas: GeometriaSecuencia['lifelines'] = {};
   lifelines.forEach((nodo, i) => {
     const { width } = medidas[i]!;
@@ -449,10 +452,11 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
     const m = metricasDeHoja(tabla, nodo);
     nodes[nodo.id] = { ...caja, slots: colocarEnCaja(m, contenidoDeNodo(nodo, m), width).slots };
     lineas[nodo.id] = { x: xDeLifeline(nodo.id), y1: caja.y + altoDeCabecera, y2: destruccion(nodo.id) < 0 ? yFinal + RELLENO_FINAL : yFinalDe(nodo.id), ...(destruccion(nodo.id) >= 0 && { destroyed: true as const }) };
+    if (destruccion(nodo.id) < 0) footers[nodo.id] = { ...nodes[nodo.id]!, y: yFinal + RELLENO_FINAL };
     derecha = Math.max(derecha, caja.x + width);
   });
   // Cada box rodea las cabeceras de sus Lifelines hasta el pie de sus lineas (los exteriores sobresalen mas).
-  const pie = yFinal + RELLENO_FINAL;
+  const pie = yFinal + RELLENO_FINAL + (lifelines.length > 0 ? altoDeCabecera : 0);
   const cajasDeGrupo: CajaDeGrupoColocada[] = grupos.map((g) => {
     const cajas = g.lifelines.map((id) => nodes[id]!);
     const titulo = titulos.get(g.id)!;
@@ -467,6 +471,7 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   return {
     kind: 'secuencia',
     nodes,
+    footers,
     lifelines: lineas,
     activations: cajasDeActivacion,
     messages: rutas,
