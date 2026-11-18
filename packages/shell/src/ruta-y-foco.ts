@@ -9,7 +9,7 @@
  *   la direccion de las Aristas y, si no hay camino, sin ella); `estadosDeRuta`
  *   marca `en-ruta` los Nodos y Aristas de la ruta y `atenuado` todo lo demas.
  */
-import { idDeArista } from 'canonico';
+import { idDeArista, idDeElementoDeSecuencia } from 'canonico';
 import type { AristaResuelta, VistaResuelta } from 'canonico';
 import type { Estados, EstadoVisual } from 'render';
 
@@ -92,7 +92,7 @@ export type MovimientoDeFocoEnSecuencia = 'siguiente' | 'anterior' | 'izquierda'
 
 /** Id de cada Mensaje visible, en orden temporal (`interaccion:ruta`). */
 const mensajesVisibles = (vista: VistaResuelta, visible: (id: string) => boolean): string[] =>
-  (vista.interaction?.messages ?? []).map((m) => `${vista.interaction!.id}:${m.ruta}`).filter(visible);
+  (vista.interaction?.messages ?? []).map((m) => idDeElementoDeSecuencia(vista.interaction!.id, m.ruta)).filter(visible);
 
 /**
  * Foco de teclado en secuencia (ADR 0009): `siguiente`/`anterior` (Tab) recorren las Lifelines visibles en orden de
@@ -110,7 +110,7 @@ export function moverFocoEnSecuencia(vista: VistaResuelta, actual: string | unde
     if (i < 0) return (movimiento === 'abajo' ? mensajes[0] : mensajes.at(-1)) ?? actual;
     return mensajes[i + (movimiento === 'abajo' ? 1 : -1)] ?? actual;
   }
-  const propia = esMensaje ? vista.interaction!.messages.find((m) => `${vista.interaction!.id}:${m.ruta}` === actual)!.from : actual;
+  const propia = esMensaje ? vista.interaction!.messages.find((m) => idDeElementoDeSecuencia(vista.interaction!.id, m.ruta) === actual)!.from : actual;
   const i = lifelines.indexOf(propia);
   if (movimiento === 'siguiente' || movimiento === 'anterior') return lifelines[i + (movimiento === 'siguiente' ? 1 : -1)];
   return lifelines[i + (movimiento === 'derecha' ? 1 : -1)] ?? propia;

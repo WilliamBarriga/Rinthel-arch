@@ -2,6 +2,7 @@
  * Estado del shell en el hash de URL: funciones puras (serializar/deserializar)
  * y el adaptador del navegador. Sin DOM salvo en `hashDelNavegador`.
  */
+import { leerIdDeElementoDeSecuencia } from 'canonico';
 import type { EstadoDeColapso, FuenteCanonica, Nodo } from 'canonico';
 import type { Camara } from 'render';
 
@@ -68,8 +69,8 @@ const idsDelModelo = (nodos: readonly Nodo[], acumulado = new Set<string>()): Se
 
 /** `interaccion:ruta` (Mensaje, Fragmento o Nota de secuencia) de una Interaccion que existe en la Fuente. */
 function esElementoDeInteraccion(id: string, source: FuenteCanonica): boolean {
-  const corte = id.lastIndexOf(':');
-  return corte > 0 && /^\d+(\.\d+)*$/.test(id.slice(corte + 1)) && (source.model.interactions ?? []).some((i) => i.id === id.slice(0, corte));
+  const leido = leerIdDeElementoDeSecuencia(id);
+  return leido !== undefined && leido.operando === undefined && (source.model.interactions ?? []).some((i) => i.id === leido.interaccion);
 }
 
 /** Vista por defecto: la primera de la Fuente (`undefined` si no hay Vistas). */
