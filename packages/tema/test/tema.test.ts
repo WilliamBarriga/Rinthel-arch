@@ -83,10 +83,10 @@ describe('catalogo', () => {
 });
 
 describe('Metricas y colocacion de Slots', () => {
-  const metricas = metricasDe(TEMA_NEUTRO);
+  const metricas = metricasDe(TEMA_NEUTRO, 'architecture');
 
   it('una forma circle da una caja cuadrada que contiene el contenido, centrado en vertical', () => {
-    const circulo = metricasDe({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'forma', primitiva: { tipo: 'circle', props: {} } }] } });
+    const circulo = metricasDe({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'forma', primitiva: { tipo: 'circle', props: {} } }] } }, 'architecture');
     const colocado = colocarNodo({ titulo: 'API', atributos: [], icono: false }, circulo);
 
     expect(metricas.cajaCuadrada).toBe(false);
@@ -119,8 +119,8 @@ describe('Metricas y colocacion de Slots', () => {
   it('las Metricas no cambian con la pintura del Tema', () => {
     const otro = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'f', primitiva: { tipo: 'solid', props: { color: 'blue' } } }] } };
 
-    expect(estiloResuelto(otro).metricas).toEqual(estiloResuelto(TEMA_NEUTRO).metricas);
-    expect(estiloResuelto(otro).pintura).not.toEqual(estiloResuelto(TEMA_NEUTRO).pintura);
+    expect(estiloResuelto(otro, { diagrama: 'architecture' }).metricas).toEqual(estiloResuelto(TEMA_NEUTRO, { diagrama: 'architecture' }).metricas);
+    expect(estiloResuelto(otro, { diagrama: 'architecture' }).pintura).not.toEqual(estiloResuelto(TEMA_NEUTRO, { diagrama: 'architecture' }).pintura);
     expect(colocarEnCaja(metricas, { titulo: 'x', atributos: [{ name: 'a', type: 't', notes: '' }], icono: false }, 200).slots.title).toEqual({ x: 0, y: 0, width: 200, height: metricas.cabecera });
   });
 });

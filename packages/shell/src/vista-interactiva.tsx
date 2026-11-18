@@ -9,7 +9,7 @@ import { select } from 'd3-selection';
 import { zoom, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent } from 'd3-zoom';
 
-import { resolveView } from 'canonico';
+import { idDeElementoDeSecuencia, resolveView } from 'canonico';
 import type { EstadoDeColapso, IconProvider, IssueDeDev, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
@@ -310,7 +310,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const [hover, fijarHover] = useState<string | undefined>(undefined);
   const estados = useMemo(() => conEstadosTransitorios(estadosDeSeleccion, enCurso === undefined ? hover : undefined, enCurso), [estadosDeSeleccion, hover, enCurso]);
   const medidas = calculo?.medidas;
-  const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas, vista.type), [theme, fontFiles, medidas, vista.type]);
+  const estilo = useMemo(() => resolverEstilo(theme, vista.type, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas), [theme, fontFiles, medidas, vista.type]);
 
   // Ruta (en-ruta / atenuado) y foco de teclado: los calcula el shell y render solo los pinta.
   const enSecuencia = vista.type === 'sequence';
@@ -324,7 +324,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   }, [props.route, vista, nodosSeleccionados.join('\n')]);
   const [foco, fijarFoco] = useState<string | undefined>(undefined);
   const focoVigente =
-    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction?.messages.some((m) => `${vista.interaction!.id}:${m.ruta}` === foco) === true)) ? foco : undefined;
+    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction?.messages.some((m) => idDeElementoDeSecuencia(vista.interaction!.id, m.ruta) === foco) === true)) ? foco : undefined;
   const estadosFinales = useMemo(
     () => unirEstados(unirEstados(estados, estadosDeRuta(vista, ruta)), focoVigente === undefined ? {} : { [focoVigente]: ['foco'] }),
     [estados, vista, ruta, focoVigente],

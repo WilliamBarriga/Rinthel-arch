@@ -17,7 +17,7 @@
  *   un candidato. Nunca recortan.
  * - Tema: `temaResueltoSchema` (estricto: `nodeStyles`/`edgeStyles` ya no existen),
  *   `resolverTema(tema)` (lanza si no cumple el contrato), `TEMA_NEUTRO`.
- * - Estilo resuelto: `estiloResuelto(tema) -> { metricas, pintura }`. Las
+ * - Estilo resuelto: `estiloResuelto(tema, { diagrama }) -> { metricas, pintura }`. Las
  *   Metricas (`metricasDe`) solo dependen de fuentes, tamano de texto y la disposicion de Slots;
  *   la pintura (Capas con colores literales) nunca las cambia.
 
@@ -54,7 +54,7 @@
  *
  * - Medicion de texto: el ancho viene de un origen `estimado` (por caracter; CLI,
  *   Workers, pruebas) o `medido` (`MedidasDeTexto`, que el visor toma tras
- *   `document.fonts.load` y entrega como datos: `tablaDeMetricas(tema, medidas)`).
+ *   `document.fonts.load` y entrega como datos: `tablaDeMetricas(tema, diagrama, medidas)`).
  *   `textosAMedir(vista, tabla)` dice que medir. El nivel y el hash de cada fuente
  *   (`hashDeFuente`) entran en `claveDeMetricas`; los anchos no. Un texto sin
  *   medida cae a la estimacion.

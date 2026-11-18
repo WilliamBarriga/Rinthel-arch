@@ -126,6 +126,51 @@ describe('dev: recarga clasificada por tipo de cambio', () => {
     expect(empujado.cambio).toBe('estructura');
   });
 
+  it('un cambio de lifeline { gap } del Tema de una Vista de secuencia es estructura', async () => {
+    const secuencia = (gap: number) => `specification { node servicio }
+model {
+  servicio a
+  servicio b
+  interaction i "I" { a -> b "x" }
+}
+theme t {
+  palette { papel "#fefce8"  tinta "#1f2937" }
+  node { layer forma rect  layer relleno solid { color papel }  slots { title } }
+  lifeline { gap ${gap} }
+}
+view v { type sequence  interaction i  theme t }
+`;
+    const env = entorno({ 'main.dg': secuencia(100) });
+    const servidor = await arrancar(env);
+
+    const empujado = await siguiente(servidor, () => env.escribir('main.dg', secuencia(300)));
+
+    expect(empujado.cambio).toBe('estructura');
+  });
+
+  it('un cambio de row { height } del Tema de una Vista ER es estructura', async () => {
+    const er = (alto: number) => `specification { node tabla }
+model {
+  tabla t1 "T1" {
+    id: uuid pk
+    name: text
+  }
+}
+theme t {
+  palette { papel "#fefce8"  tinta "#1f2937" }
+  node { layer forma rect  layer relleno solid { color papel }  slots { title attrs } }
+  row { height ${alto} }
+}
+view v { type er  include **  theme t }
+`;
+    const env = entorno({ 'main.dg': er(20) });
+    const servidor = await arrancar(env);
+
+    const empujado = await siguiente(servidor, () => env.escribir('main.dg', er(40)));
+
+    expect(empujado.cambio).toBe('estructura');
+  });
+
   it('un cambio del Modelo es estructura', async () => {
     const env = entorno({ 'main.dg': MODELO + tema('papel') });
     const servidor = await arrancar(env);

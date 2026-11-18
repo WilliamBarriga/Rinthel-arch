@@ -33,6 +33,6 @@ describe('catalogo de formas, rellenos y bordes', () => {
   });
 
   it('cada Tema de ejemplo resuelve su Estilo sin lanzar', () => {
-    for (const tema of canonico!.themes) expect(() => estiloResuelto(tema)).not.toThrow();
+    for (const tema of canonico!.themes) expect(() => estiloResuelto(tema, { diagrama: 'architecture' })).not.toThrow();
   });
 });

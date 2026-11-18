@@ -40,7 +40,7 @@ describe('Diagram: fondo de pagina', () => {
 
     expect(html).not.toContain('data-capa="pagina"');
     expect(hojaDe(html)).toContain('background:#ffffff');
-    expect(estiloResuelto(TEMA_NEUTRO).pintura.pagina).toEqual({ capas: [], fijo: false });
+    expect(estiloResuelto(TEMA_NEUTRO, { diagrama: 'architecture' }).pintura.pagina).toEqual({ capas: [], fijo: false });
   });
 
   it('page fixed va fuera del mundo, antes de el, y debajo de Grupos, Aristas y Nodos', async () => {

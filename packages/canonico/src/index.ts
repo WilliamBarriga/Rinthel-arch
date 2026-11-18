@@ -70,7 +70,7 @@ export type {
 } from './geometria';
 export { combineIconProviders, genericIcons, hidratarIconos, resolveNodeTypeIcon, sanearIcono, serializarIconos, workspaceIcons } from './iconos';
 export type { IconProvider } from './iconos';
-export { idDeArista, revealAt } from './pasos';
+export { idDeArista, idDeElementoDeSecuencia, leerIdDeElementoDeSecuencia, revealAt } from './pasos';
 export type { Visibilidad } from './pasos';
 export { candidatosCercanos } from './sugerencias';
 export { validate } from './validar';
