@@ -20,6 +20,8 @@
  * - Estilo resuelto: `estiloResuelto(tema, { diagrama }) -> { metricas, pintura }`. Las
  *   Metricas (`metricasDe`) solo dependen de fuentes, tamano de texto y la disposicion de Slots;
  *   la pintura (Capas con colores literales) nunca las cambia.
+ * - Elementos de secuencia y fila ER descritos: `elementosDeTema(tema, diagrama, tipo?)` da los declarados tal como
+ *   los escribe el Tema y, solo en su Tipo de diagrama, los derivados marcados `derivado` (lo que lista `inspect tema`).
 
  * - Cascada y parches: `aplicarOps(pila, ops, paleta, modo)` aplica parches por
  *   nombre de Capa (cambiar, anadir con `antes`/`despues`, quitar, `encima`) y
@@ -105,6 +107,8 @@ export type { TextoDeFila, VarianteDeFila } from './fila';
 export { primitivaPintada } from './estilo';
 export type { AnimacionDeNodo, CapaPintada, EstiloResuelto, FuentesResueltas, OpcionesDeEstilo, Pintura, PinturaDeActivacion, PinturaDeArista, PinturaDeCajaDeSecuencia, PinturaDeElemento, PinturaDeFila, PinturaDeFragmento, PinturaDeNodo, PinturaDeNota, PinturaDePagina, PinturaDeSecuencia, PinturaDeTrazoDeSecuencia, PrimitivaPintada, TrazoDeVariante, TrazosDeSecuencia } from './estilo';
 export { capasDeAristaEr } from './mensajes';
+export { elementosDeTema } from './elementos';
+export type { CapaDescrita, ElementoDescrito, ElementosDescritos } from './elementos';
 export { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA, metricasDeSecuencia } from './secuencia';
 export type { BloqueDeSecuencia, EspecificacionDeBloque, MetricaDeBloque, MetricasDeSecuencia } from './secuencia';
 export { aplicarOps, cascada, ESTADOS, TIPOS_DE_DIAGRAMA, opTocaMetricas, parsearEstado, validarOps } from './parches';
