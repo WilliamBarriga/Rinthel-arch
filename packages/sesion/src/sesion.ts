@@ -7,6 +7,9 @@ import type { Geometria, GeometriaGrafo } from 'layout';
 import { TEMA_NEUTRO, advertenciasDeContraste, aristaIdentificanteSoloColor, estiloResuelto, mensajesSoloColor, leerOps, resolverFuentes, resolverTema, tiposSoloColor, usosDeCodigo } from 'tema';
 import type { EstiloResuelto, UsoDeComponente } from 'tema';
 
+import { consultar } from './consultas';
+import type { Consulta, Respuesta } from './consultas';
+
 /** Archivos derivados, por ruta relativa a `<workspace>/.diagrams/`. */
 export type SalidaDeBuild = Record<string, string>;
 
@@ -68,6 +71,11 @@ export interface Sesion {
   geometria(vista: string): Promise<GeometriaCacheada | undefined>;
   /** Estilo resuelto (Metricas y pintura) del Tema de una Vista; `undefined` si la Vista no existe. Sincrono: no necesita layout. */
   estilo(vista: string): EstiloResuelto | undefined;
+  /**
+   * Consulta de solo lectura (detalle de Nodo, busqueda, Vista, Interaccion y `archivo:linea`), la misma
+   * para `inspect` y la UI. Sincrona, sin layout; `undefined` si la Sesion no tiene Fuente.
+   */
+  consultar(consulta: Consulta): Respuesta | undefined;
   /** Ids de las Vistas cuya geometria ya se pidio (calculada o en curso). */
   vistasConGeometria(): string[];
   /**
@@ -332,6 +340,7 @@ function crear(
       const tipos = Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
       return estiloResuelto(datos.tema, { tipos, ...(declarada !== undefined && { diagrama: declarada.type }), ...(opciones.archivosDeFuente !== undefined && { archivosDeFuente: opciones.archivosDeFuente }), ...(declarada?.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
     },
+    consultar: (consulta) => (fuente === undefined || compilado.ubicar === undefined ? undefined : consultar(fuente, compilado.ubicar, consulta)),
     vistasConGeometria: () => [...memo.keys()],
     actualizar: (nuevos, cambios = {}) => crear(nuevos, { ...opciones, ...cambios }, compile(nuevos), memo),
   };

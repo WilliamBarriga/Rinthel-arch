@@ -3,7 +3,7 @@
 Estado compilado de un Workspace: compila, valida, calcula layout y edita el texto DSL sin tocar disco.
 
 ## Que hace
-- `abrirSesion` da una `Sesion` inmutable con `diagnosticar`, `construir`, `geometria`, `estilo` y `actualizar`.
+- `abrirSesion` da una `Sesion` inmutable con `diagnosticar`, `construir`, `geometria`, `estilo`, `consultar` (detalle de Nodo, busqueda, `archivo:linea`; la usa `inspect`) y `actualizar`.
 - Edita el texto: `aplicarEdiciones`, `editarPin`, `aplicarIntencion` (`mover-pin`, `ordenar-lifelines`) y `Historial`; `aplicarAlWorkspace` escribe por el puerto `PuertoDeWorkspace`.
 
 ## Que NO hace
