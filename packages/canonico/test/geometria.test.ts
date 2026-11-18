@@ -28,12 +28,11 @@ describe('geometriaCacheadaSchema', () => {
     expect(geometriaCacheadaSchema.parse({ ...anterior, geometry: { ...anterior.geometry, kind: 'grafo' } }).geometry.kind).toBe('grafo');
   });
 
-  it('conserva la cabecera espejo al pie de una Geometria de secuencia', () => {
+  it('no admite cabecera espejo al pie en una Geometria de secuencia', () => {
     const caja = { x: 0, y: 0, width: 10, height: 5 };
     const geometry = {
       kind: 'secuencia',
       nodes: { a: caja },
-      footers: { a: { ...caja, y: 50 } },
       lifelines: { a: { x: 5, y1: 5, y2: 50 } },
       activations: [],
       messages: {},
@@ -43,7 +42,9 @@ describe('geometriaCacheadaSchema', () => {
       width: 10,
       height: 60,
     };
-    expect(geometriaCacheadaSchema.parse({ ...anterior, geometry }).geometry).toEqual(geometry);
+    const leida = geometriaCacheadaSchema.parse({ ...anterior, geometry: { ...geometry, footers: { a: { ...caja, y: 50 } } } }).geometry;
+    expect(leida).toEqual(geometry);
+    expect(leida).not.toHaveProperty('footers');
   });
 
   it('rechaza un kind desconocido', () => {

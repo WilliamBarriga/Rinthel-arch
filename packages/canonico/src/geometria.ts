@@ -42,8 +42,6 @@ const geometriaGrafoSchema = z.object({
 const geometriaSecuenciaSchema = z.object({
   kind: z.literal('secuencia'),
   nodes: z.record(z.string(), cajaDeNodoSchema),
-  /** Cabecera espejo al pie de cada Lifeline no destruida. Temporal: la quita la fidelidad al ADR 0009 (#155), del esquema y de `layout` a la vez. */
-  footers: z.record(z.string(), cajaDeNodoSchema).optional(),
   lifelines: z.record(z.string(), z.object({ x: numeroFinito, y1: numeroFinito, y2: numeroFinito, destroyed: z.literal(true).optional() })),
   activations: z.array(z.object({ lifeline: z.string(), nivel: z.number().int(), x: numeroFinito, y1: numeroFinito, y2: numeroFinito, width: numeroFinito })),
   messages: z.record(z.string(), z.object({ points: z.array(puntoSchema), label: cajaDeNodoSchema.optional() })),
