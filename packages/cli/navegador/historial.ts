@@ -1,9 +1,9 @@
 /**
  * Atajos de deshacer/rehacer de la pagina de `diagrams dev` (ADR 0007), sin React ni DOM para poder
- * probarlos: traducen la tecla a una accion, la envian al servidor (que restaura el texto exacto) y
+ * probarlos: traducen la tecla a una accion, la envian al servidor por el cliente de `dev` (que restaura el texto exacto) y
  * convierten un rechazo en aviso. No es parte de la interfaz del paquete.
  */
-import type { ResultadoDeEnvioDePin } from 'shell';
+import type { ResultadoDeEnvio } from './cliente';
 
 export type AccionDeHistorial = 'deshacer' | 'rehacer';
 
@@ -28,24 +28,9 @@ export function accionDeAtajo(t: TeclaPulsada): AccionDeHistorial | undefined {
   return undefined;
 }
 
-export type EnviadorDeHistorial = (accion: AccionDeHistorial) => Promise<ResultadoDeEnvioDePin>;
-
-/** Cliente de `POST /api/deshacer` y `/api/rehacer`; nunca lanza. */
-export function crearEnviadorDeHistorial(fetchFn: typeof fetch = (...a) => fetch(...a)): EnviadorDeHistorial {
-  return async (accion) => {
-    try {
-      const res = await fetchFn(`/api/${accion}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
-      const cuerpo = (await res.json().catch(() => ({}))) as { ok?: boolean; mensaje?: string };
-      if (res.ok && cuerpo.ok === true) return { ok: true };
-      return { ok: false, desactualizado: res.status === 409, mensaje: cuerpo.mensaje ?? `Error ${res.status}` };
-    } catch (error) {
-      return { ok: false, desactualizado: false, mensaje: (error as Error).message };
-    }
-  };
-}
-
 export interface DependenciasDeAtajo {
-  enviar: EnviadorDeHistorial;
+  /** `deshacer` o `rehacer` del cliente de `dev` segun la accion. */
+  enviar: (accion: AccionDeHistorial) => Promise<ResultadoDeEnvio>;
   avisar: (texto: string) => void;
   recargar: () => Promise<void>;
 }

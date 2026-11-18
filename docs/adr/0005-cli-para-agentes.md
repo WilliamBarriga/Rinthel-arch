@@ -102,7 +102,7 @@ Los codigos de Tema (propiedad desconocida, `before`/`after` inexistente, contra
 - `estructura` (cambia la clave de estructura: Metricas, fuente): relayout;
 - `codigo` (cambia un `.tsx`): se recompila y se vuelve a registrar el componente, sin relayout.
 
-Si algo falla (DSL o compilacion) el panel de issues lo muestra y `dev` conserva el ultimo dibujo bueno.
+Si algo falla (DSL o compilacion) el panel de issues lo muestra y `dev` conserva el ultimo dibujo bueno. La pagina pide la Geometria solo de la Vista activa, y ninguna tras un cambio de `pintura` (protocolo en ADR 0007).
 
 Confianza en el codigo: `dev` no sirve `/componentes.js` mientras el usuario no confirme (el visor pregunta la primera vez que el Workspace tiene un Tema con codigo; `--trust-code` lo da de antemano) y avisa del codigo al arrancar. `/api/codigo` informa `temaConCodigo`, los componentes y si esta confirmado.
 

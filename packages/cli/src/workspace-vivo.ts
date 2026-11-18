@@ -25,7 +25,7 @@
 import { combineIconProviders, genericIcons, serializarIconos, workspaceIcons } from 'canonico';
 import type { EstadoDeDev, GeometriaCacheada, Intencion, Issue, MotivoDeRechazo, TipoDeCambio } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { abrirSesion, aplicarAlWorkspace, apilar, archivoDeVista, crearHistorial, deshacer as deshacerHistorial, hashDeContenido, rehacer as rehacerHistorial } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer as deshacerHistorial, hashDeContenido, rehacer as rehacerHistorial } from 'sesion';
 import type { Historial, PuertoDeWorkspace, Sesion, Visto } from 'sesion';
 import { componentesDeTema } from 'tema';
 
@@ -154,13 +154,6 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
       fuente,
       iconos: proveedor === undefined ? {} : serializarIconos(proveedor),
       vistas: fuente?.views.map(({ id }) => id) ?? [],
-      archivosDeVista: Object.fromEntries(
-        (fuente?.views ?? []).flatMap(({ id }) => {
-          const archivo = buena === undefined ? undefined : archivoDeVista(buena.sesion, id);
-          return archivo === undefined ? [] : [[id, archivo] as const];
-        }),
-      ),
-      hashes: versiones.get(version) ?? hashesDe(archivos),
       ...(fuentes !== undefined && { fuentes }),
       issues: issues.map((issue) => ({ ...issue, href: `vscode://file/${raiz}/${issue.file}:${issue.line}:${issue.column}` })),
     };

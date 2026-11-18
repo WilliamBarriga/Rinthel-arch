@@ -8,15 +8,14 @@ describe('estadoDeDevSchema', () => {
       version: 1,
       iconos: {},
       vistas: [],
-      archivosDeVista: {},
-      hashes: { 'main.dg': 'abc' },
+      cambio: 'estructura',
       issues: [{ file: 'main.dg', line: 1, column: 1, severity: 'error', code: 'E_X', message: 'm', href: 'vscode://file/x' }],
     };
-    expect(estadoDeDevSchema.parse(estado)).toMatchObject({ version: 1, hashes: { 'main.dg': 'abc' } });
+    expect(estadoDeDevSchema.parse(estado)).toMatchObject({ version: 1, cambio: 'estructura' });
   });
 
   it('rechaza un estado sin version', () => {
-    expect(estadoDeDevSchema.safeParse({ iconos: {}, vistas: [], archivosDeVista: {}, hashes: {}, issues: [] }).success).toBe(false);
+    expect(estadoDeDevSchema.safeParse({ iconos: {}, vistas: [], issues: [] }).success).toBe(false);
   });
 });
 

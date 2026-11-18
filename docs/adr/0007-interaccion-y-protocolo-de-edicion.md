@@ -4,7 +4,7 @@
 
 Toda edicion que nace de la interaccion es una `Intencion` (paquete `sesion`): una union discriminada por `tipo`. Hay dos variantes: `ordenar-lifelines` (ADR 0009: `{ vista, orden }`, reescribe el `order` de una Vista de secuencia) y `mover-pin`, que es la `IntencionDePin` de `canonico` (`{ vista, nodo, x, y }`, sin `hash`) mas `tipo: 'mover-pin'`. La Intencion no lleva `hash`: la comprobacion de concurrencia es un parametro aparte, `visto`, de quien aplica (ver Reductor puro). Cada herramienta futura (redimensionar, renombrar, crear Arista) se agrega como una variante nueva con su rama en el reductor; no cambia el resto del protocolo.
 
-La interfaz de red no cambia: el cuerpo de `POST /api/pin` sigue siendo `IntencionDePin` sin `tipo`, y la salida de `edit --json` y la respuesta del endpoint conservan su forma (ADR 0005). `tipo` es vocabulario interno del cliente y de `sesion`.
+En red toda Intencion viaja por `POST /api/edit` de `dev`, con su `tipo` y la `version` del estado que vio la pagina, sin `hash` (ver Protocolo de `dev`). La salida de `edit --json` y la respuesta del endpoint conservan su forma (ADR 0005). La ruta `POST /api/pin` (cuerpo `IntencionDePin` sin `tipo`) se retiro (#164).
 
 ## Reductor puro
 
@@ -16,7 +16,15 @@ La interfaz de red no cambia: el cuerpo de `POST /api/pin` sigue siendo `Intenci
 
 ## Shell
 
-`shell` no expone un control de edicion con estado: el historial puro vive en `sesion`. El servidor de `dev` escribe a disco por `POST /api/pin`, `POST /api/edit`, `POST /api/deshacer` y `POST /api/rehacer`. `dev` guarda un `Historial` del texto propio del Workspace: cada edicion lo apila (`apilar`) y deshacer/rehacer escriben el texto exacto de la instantanea. Si el disco ya no coincide con el historial (edicion externa), responden 409 `hash-desactualizado` y el historial vuelve a empezar; sin nada que deshacer o rehacer, 422. La pagina de `dev` conecta Ctrl/Cmd+Z y Ctrl/Cmd+Mayus+Z (o Ctrl+Y) a esos endpoints, salvo con el foco en un campo de texto.
+`shell` no expone un control de edicion con estado: el historial puro vive en `sesion`. El servidor de `dev` escribe a disco por `POST /api/edit`, `POST /api/deshacer` y `POST /api/rehacer`; `shell` no conoce esas rutas ni exporta clientes HTTP: avisa los Gestos (`onMoveNode`, `onReorderLifelines`) y quien escribe es la pagina de `dev`. `dev` guarda un `Historial` del texto propio del Workspace: cada edicion lo apila (`apilar`) y deshacer/rehacer escriben el texto exacto de la instantanea. Si el disco ya no coincide con el historial (edicion externa), responden 409 `hash-desactualizado` y el historial vuelve a empezar; sin nada que deshacer o rehacer, 422. La pagina de `dev` conecta Ctrl/Cmd+Z y Ctrl/Cmd+Mayus+Z (o Ctrl+Y) a esos endpoints, salvo con el foco en un campo de texto.
+
+## Protocolo de `dev` y cliente unico (#164, spec #153)
+
+La pagina de `dev` tiene un solo module cliente (`packages/cli/navegador/cliente.ts`), la unica pieza del navegador que conoce rutas:
+
+- **Estado**: `/eventos` (SSE, el estado al conectar y tras cada recompilacion) y `/api/estado`. Lleva la `version` y la clasificacion del `cambio` (`pintura` | `estructura` | `codigo`, ADR 0005); ya no lleva hashes por archivo ni el archivo de cada Vista.
+- **Escritura**: `POST /api/edit` con `{ ...intencion, version }`; `POST /api/deshacer` y `POST /api/rehacer`. Un 409 `hash-desactualizado` recarga el estado y avisa.
+- **Geometria**: `/api/vista/<id>`, validada con `geometriaCacheadaSchema` de `canonico`; una malformada se reporta y no se dibuja. La pagina pide solo la Geometria de la Vista activa, y la de otra Vista al navegar a ella. Tras un cambio `estructura` (o si se salto una version) vuelve a pedir la de la Vista activa y sigue mostrando el dibujo anterior hasta que llega; tras `pintura` o `codigo` no pide ninguna. Si una Geometria no llega, `VistaInteractiva` la calcula en el Worker.
 
 ## Consecuencias
 

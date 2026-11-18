@@ -26,7 +26,7 @@ export interface DatosDeVista {
   fuente: FuenteCanonica;
   /** Clave de icono -> SVG inline. */
   iconos: Readonly<Record<string, string>>;
-  /** Por Vista: nombre del Tema y geometria cacheada. */
+  /** Por Vista: nombre del Tema y geometria cacheada (solo las que llegaron; las demas las calcula el Worker). */
   geometrias: Readonly<Record<string, { theme: string; geometry: Geometria }>>;
 }
 
@@ -40,7 +40,8 @@ export function usePropsDeDatos(
     () => Object.fromEntries(Object.entries(geometrias).map(([id, { geometry }]) => [id, geometry])),
     [geometrias],
   );
-  const nombreDelTema = geometrias[vista]?.theme;
+  // El Tema lo declara la Vista; sin declararlo, el de su Geometria (la del servidor) o el primero.
+  const nombreDelTema = fuente.views.find(({ id }) => id === vista)?.theme ?? geometrias[vista]?.theme;
   const theme = fuente.themes.find(({ name }) => name === nombreDelTema) ?? fuente.themes[0];
   return { icons, cachedGeometries, theme, ...useTamano() };
 }

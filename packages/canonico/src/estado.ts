@@ -23,6 +23,11 @@ export const issueDeDevSchema = issueSchema.extend({
 export const TIPOS_DE_CAMBIO = ['pintura', 'estructura', 'codigo'] as const;
 export type TipoDeCambio = (typeof TIPOS_DE_CAMBIO)[number];
 
+/**
+ * Estado empujado: la `version` (la que la pagina devuelve al editar; el servidor la traduce a los hashes que
+ * vio) y la clasificacion del `cambio` (con `pintura` la pagina no pide Geometria). Sin hashes ni archivos: la
+ * concurrencia la resuelve el servidor con la version.
+ */
 export const estadoDeDevSchema = z.object({
   version: z.number().int(),
   /** Ausente en el estado inicial y cuando la recompilacion fallo (se conserva el ultimo dibujo bueno). */
@@ -31,10 +36,6 @@ export const estadoDeDevSchema = z.object({
   fuente: fuenteCanonicaSchema.optional(),
   iconos: z.record(z.string(), z.string()),
   vistas: z.array(z.string()),
-  /** Archivo en que se declara cada Vista. */
-  archivosDeVista: z.record(z.string(), z.string()),
-  /** Hash del contenido de cada archivo del Workspace. */
-  hashes: z.record(z.string(), z.string()),
   /** Archivos de fuente del Workspace (ruta relativa -> hash del contenido): `dev` los sirve en `/fuentes/<ruta>`. Ausente si el adaptador no los conoce. */
   fuentes: z.record(z.string(), z.string()).optional(),
   issues: z.array(issueDeDevSchema),

@@ -72,12 +72,8 @@
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve
  * si el aviso resuelve `false`. Sin `onMoveNode` (consumidor sin edicion) no hay arrastre de Nodos.
  * Reordenar Lifelines (solo bajo `dev`): con `onReorderLifelines({orden})`, arrastrar la cabecera de una Lifeline o el
- * titulo de un `box` en una Vista de secuencia avisa el orden visible completo; `crearEnviadorDeIntencion(fetch)` envia
- * cualquier Intencion a `POST /api/edit`.
- * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
- * `{ok:true}` o `{ok:false, desactualizado, mensaje}` (409 por hash); nunca lanza.
- * La intencion es `IntencionDePin` (`{vista, nodo, x, y}` mas un `hash` transitorio, declarada en `canonico` y
- * reexportada aqui).
+ * titulo de un `box` en una Vista de secuencia avisa el orden visible completo. `shell` no conoce rutas HTTP: quien
+ * escribe (el cliente de `dev`) recibe los avisos y envia la Intencion.
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
  *
@@ -135,10 +131,8 @@ export { deserializarEstado, hashDelNavegador, serializarEstado, vistaPorDefecto
 export type { AdaptadorDeHash, EstadoDeShell } from './hash';
 export { useEstadoEnHash } from './estado-en-hash';
 export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-hash';
-// La `IntencionDePin` vive en `canonico`; se reexporta para no renombrar la interfaz de `shell`.
-export { crearEnviadorDeIntencion, crearEnviadorDePin } from './enviar-pin';
 export type { AlReordenarLifelines } from './arrastre';
-export type { ConVersionVista, EnviadorDeIntencion, EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
+// La `IntencionDePin` vive en `canonico`; se reexporta para no renombrar la interfaz de `shell`.
 export type { IntencionDePin } from 'canonico';
 export type { Historial, Intencion } from 'sesion';
 export { adaptadorDeWorker } from './layout-en-worker';

@@ -30,7 +30,7 @@
  * detecta `dsl`) ni `W_OVERLAPPING_PINS` (necesita la geometria; lo emite el CLI).
  * `candidatosCercanos(escrito, existentes)` es la ayuda de typos para `hint`/`fix`.
  * El Gesto de editar un Pin (ADR 0005) tiene aqui su vocabulario: `IntencionDePin`
- * (el cuerpo de `POST /api/pin`, validado por `intencionDePinSchema`) y
+ * (`mover-pin` sin `tipo`, validado por `intencionDePinSchema`) y
  * `MotivoDeRechazo` (`MOTIVOS_DE_RECHAZO`), del que deriva el enum `reason` de
  * `salidaDeEditSchema`; se declaran una sola vez y `sesion` los reexporta.
  * `intencionSchema`/`Intencion` es la union de Intenciones de `POST /api/edit` (ADR 0007) y

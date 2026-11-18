@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { crearAlMover, crearAlOrdenar } from '../navegador/mover';
-import type { ResultadoDeEnvioDePin } from 'shell';
+import type { ResultadoDeEnvio } from '../navegador/cliente';
 
 const datos = { version: 7 };
 
-function armar(respuesta: ResultadoDeEnvioDePin, estadoVisto: typeof datos | null = datos) {
+function armar(respuesta: ResultadoDeEnvio, estadoVisto: typeof datos | null = datos) {
   const estado = estadoVisto ?? undefined;
   const enviar = vi.fn(() => Promise.resolve(respuesta));
   const avisar = vi.fn();
@@ -19,7 +19,7 @@ describe('alMover de dev (navegador/mover)', () => {
 
     expect(await alMover('general', { id: 'api', x: 1, y: 2 })).toBe(true);
 
-    expect(enviar).toHaveBeenCalledWith({ vista: 'general', nodo: 'api', x: 1, y: 2, version: 7 });
+    expect(enviar).toHaveBeenCalledWith({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }, 7);
     expect(avisar).not.toHaveBeenCalled();
   });
 
@@ -52,7 +52,7 @@ describe('alMover de dev (navegador/mover)', () => {
 });
 
 describe('alOrdenar de dev (navegador/mover)', () => {
-  const armarOrden = (respuesta: ResultadoDeEnvioDePin) => {
+  const armarOrden = (respuesta: ResultadoDeEnvio) => {
     const enviar = vi.fn(() => Promise.resolve(respuesta));
     const avisar = vi.fn();
     const recargar = vi.fn(() => Promise.resolve());
@@ -62,7 +62,7 @@ describe('alOrdenar de dev (navegador/mover)', () => {
   it('envia la Intencion ordenar-lifelines con la version del estado vista', async () => {
     const { alOrdenar, enviar } = armarOrden({ ok: true });
     expect(await alOrdenar('general', { orden: ['b', 'a'] })).toBe(true);
-    expect(enviar).toHaveBeenCalledWith({ tipo: 'ordenar-lifelines', vista: 'general', orden: ['b', 'a'], version: 7 });
+    expect(enviar).toHaveBeenCalledWith({ tipo: 'ordenar-lifelines', vista: 'general', orden: ['b', 'a'] }, 7);
   });
 
   it('ante un 409 avisa, recarga y resuelve false', async () => {

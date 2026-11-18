@@ -1,6 +1,6 @@
 /**
  * Tabla unica `MotivoDeRechazo -> salida` de los dos transportes de la edicion
- * estructurada (ADR 0005): el comando `edit` (codigo de salida) y `POST /api/pin`
+ * estructurada (ADR 0005): el comando `edit` (codigo de salida) y `POST /api/edit`
  * de `dev` (Estado HTTP). Los dos canales leen la misma fila; anadir un motivo a
  * `canonico` obliga a una fila nueva aqui (el `Record` lo exige al compilar).
  * `archivo-desconocido` tambien sale por la tabla cuando lo detecta el epilogo de
@@ -16,7 +16,7 @@ export interface RechazoDeEdicion {
   file?: string;
 }
 
-/** Como sale cada motivo en cada canal: codigo de `edit` y Estado HTTP de `POST /api/pin`. */
+/** Como sale cada motivo en cada canal: codigo de `edit` y Estado HTTP de las rutas de escritura de `dev`. */
 export interface SalidaDeRechazo {
   estadoHttp: 409 | 422;
   exitCode: 1;

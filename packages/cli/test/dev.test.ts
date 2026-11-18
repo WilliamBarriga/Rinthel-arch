@@ -205,7 +205,7 @@ describe('dev: seguridad', () => {
     const servidor = await arrancar(env);
     const cuerpo = { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 };
 
-    for (const ruta of ['api/edit', 'api/pin', 'api/deshacer', 'api/rehacer', 'api/confiar']) {
+    for (const ruta of ['api/edit', 'api/deshacer', 'api/rehacer', 'api/confiar']) {
       expect((await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' })).status).toBe(403);
       expect((await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' })).status).toBe(415);
       const roto = await post(servidor, ruta, 'no es json');
@@ -232,20 +232,17 @@ describe('dev: edicion, deshacer y rehacer (ADR 0005, ADR 0007)', () => {
     expect((await estado(servidor)).version).toBe(1);
   });
 
-  it('POST /api/pin acepta el cuerpo sin tipo y valida con el esquema de canonico (400 con el mensaje de siempre)', async () => {
+  it('POST /api/edit valida la Intencion con el esquema de canonico (400); /api/pin ya no existe', async () => {
     const env = entorno({ 'main.dg': BASE });
     const servidor = await arrancar(env);
 
-    for (const cuerpo of [{ vista: 'general', nodo: 'api', x: '10', y: 2 }, { vista: 'general', nodo: 7, x: 10, y: 2 }, { vista: 'general' }]) {
-      const res = await post(servidor, 'api/pin', cuerpo);
+    for (const cuerpo of [{ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: '10', y: 2 }, { tipo: 'otra', vista: 'general' }, { vista: 'general', nodo: 'api', x: 1, y: 2 }]) {
+      const res = await post(servidor, 'api/edit', cuerpo);
       expect(res.status).toBe(400);
-      expect(await res.json()).toEqual({ ok: false, mensaje: 'Se esperaba { vista, nodo, x, y }' });
+      expect(await res.json()).toEqual({ ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... }' });
     }
-    expect((await post(servidor, 'api/edit', { tipo: 'otra', vista: 'general' })).status).toBe(400);
-    expect((await post(servidor, 'api/edit', { vista: 'general', nodo: 'api', x: 1, y: 2 })).status).toBe(400);
-
-    expect((await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 10, y: 20, version: 0 })).status).toBe(200);
-    expect(env.texto('main.dg')).toContain('node api { pin 10,20 }');
+    expect((await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 10, y: 20, version: 0 })).status).toBe(404);
+    expect(env.texto('main.dg')).toBe(BASE);
   });
 
   it('traduce los rechazos con la tabla unica: 409 texto desactualizado, 422 el resto', async () => {
@@ -253,12 +250,12 @@ describe('dev: edicion, deshacer y rehacer (ADR 0005, ADR 0007)', () => {
     const servidor = await arrancar(env);
     env.escribirEdicion('/ws', 'main.dg', `${BASE}\n`);
 
-    const viejo = await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
+    const viejo = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
     expect(viejo.status).toBe(409);
     expect(await viejo.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
-    const olvidada = await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 1, y: 2, version: 99 });
+    const olvidada = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 99 });
     expect(olvidada.status).toBe(409);
-    const vista = await post(servidor, 'api/pin', { vista: 'nada', nodo: 'api', x: 1, y: 2 });
+    const vista = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'nada', nodo: 'api', x: 1, y: 2 });
     expect(vista.status).toBe(422);
     expect(await vista.json()).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
     expect(env.texto('main.dg')).toBe(`${BASE}\n`);
@@ -278,7 +275,7 @@ describe('dev: edicion, deshacer y rehacer (ADR 0005, ADR 0007)', () => {
     });
     abiertos.push(servidor);
 
-    const res = await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
+    const res = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
 
     expect(res.status).toBe(422);
     expect(await res.json()).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'vistas.dg' });

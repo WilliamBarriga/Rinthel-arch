@@ -7,19 +7,20 @@
  *
  * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),
  * `/fuentes/<ruta>` (solo los archivos de fuente `woff2|woff|ttf|otf` del Workspace, o de `--theme-path`; todo lo demas, incluido salir de la raiz, es 404),
- * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`), `POST /api/edit` (cualquier Intencion,
- * ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `POST /api/deshacer` y `POST /api/rehacer`
+ * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`: version y clasificacion del cambio),
+ * `POST /api/edit` (cualquier Intencion, ADR 0007), `POST /api/deshacer` y `POST /api/rehacer`
  * (ADR 0007; 409 si el disco cambio fuera de dev, 422 con motivo `nada-que-deshacer` / `nada-que-rehacer`),
- * `/api/vista/<id>` (Geometria cacheada), `/api/codigo`, `POST /api/confiar`, `/componentes.js` y `/eventos` (SSE:
- * el estado al conectar y tras cada recompilacion).
- * Edicion: el cuerpo de `/api/edit` y `/api/pin` lleva, ademas de la Intencion, la `version` del estado que vio la
+ * `/api/vista/<id>` (Geometria cacheada de una Vista; la pagina la pide solo para la Vista que muestra),
+ * `/api/codigo`, `POST /api/confiar`, `/componentes.js` y `/eventos` (SSE: el estado al conectar y tras cada
+ * recompilacion). El unico cliente de estas rutas es `navegador/cliente.ts`.
+ * Edicion: el cuerpo de `/api/edit` lleva, ademas de la Intencion (sin hash), la `version` del estado que vio la
  * pagina; el Workspace vivo la traduce a `visto` (una version olvidada es `hash-desactualizado`).
  *
  * `iniciarDev(OpcionesDeDev) -> ServidorDev` es la entrada programatica (el comando solo parsea y la llama).
  * Seguridad: solo escucha en 127.0.0.1 y responde 403 a cualquier peticion cuyo `Host` no sea
  * `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); las rutas POST exigen JSON y un `Origin` propio
  * (o ninguno). Las ediciones solo escriben archivos del Workspace, bajo su raiz y de forma atomica; los cuerpos se
- * validan con `intencionSchema` / `intencionDePinSchema` de `canonico` (400) y cada `MotivoDeRechazo` sale por la
+ * validan con `intencionSchema` de `canonico` (400) y cada `MotivoDeRechazo` sale por la
  * tabla unica `SALIDA_DE_RECHAZO` (409 solo `hash-desactualizado`, 422 el resto); un fallo de I/O es 500.
  * Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (sin dejar el
  * observador activo) y lanza si la lectura inicial falla. `run(['dev', ...])` los convierte en codigo 2.
@@ -31,7 +32,7 @@ import { rmSync, watch } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { RUTA_DE_FUENTES, intencionDePinSchema, intencionSchema } from 'canonico';
+import { RUTA_DE_FUENTES, intencionSchema } from 'canonico';
 import type { EstadoDeDev, Intencion } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
@@ -170,17 +171,10 @@ const PAGINA = `<!doctype html>
 
 const SIN_CODIGO: ResultadoDeCodigo = { componentes: {}, issues: [], bundle: 'return {};' };
 
+/** Cuerpo de `POST /api/edit`: una Intencion (validada con `intencionSchema`) mas la `version` vista. */
 const comoIntencion = (cuerpo: unknown): Intencion | undefined => {
   const r = intencionSchema.safeParse(cuerpo);
   return r.success ? r.data : undefined;
-};
-const comoMoverPin = (cuerpo: unknown): Intencion | undefined => {
-  const r = intencionDePinSchema.safeParse(cuerpo);
-  return r.success ? { tipo: 'mover-pin', ...r.data } : undefined;
-};
-const RUTAS_DE_EDICION: Record<string, { leer: (cuerpo: unknown) => Intencion | undefined; esperado: string }> = {
-  '/api/edit': { leer: comoIntencion, esperado: 'Se esperaba una Intencion { tipo, ... }' },
-  '/api/pin': { leer: comoMoverPin, esperado: 'Se esperaba { vista, nodo, x, y }' },
 };
 
 /** Version del estado que vio la pagina (`version` del cuerpo), si viene como entero no negativo. */
@@ -257,11 +251,10 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       return;
     }
     const ruta = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
-    const edicion = RUTAS_DE_EDICION[ruta];
-    if (edicion !== undefined) {
+    if (ruta === '/api/edit') {
       post(req, res, async (cuerpo) => {
-        const intencion = edicion.leer(cuerpo);
-        if (intencion === undefined) responder(res, 400, { ok: false, mensaje: edicion.esperado });
+        const intencion = comoIntencion(cuerpo);
+        if (intencion === undefined) responder(res, 400, { ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... }' });
         else responderResultado(res, await vivo.editar(intencion, versionVista(cuerpo)));
       });
     } else if (ruta === '/api/deshacer') {

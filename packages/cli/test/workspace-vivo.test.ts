@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { EstadoDeDev } from 'canonico';
-import { hashDeContenido } from 'sesion';
 
 import { puertoEnMemoria } from '../src/puerto-en-memoria';
 import { abrirWorkspaceVivo } from '../src/workspace-vivo';
@@ -187,7 +186,7 @@ describe('Workspace vivo: mas clasificacion y recarga', () => {
     ws.suscribir((e) => empujados.push(e.version));
 
     for (let i = 0; i < 5; i++) {
-      puerto.editarFuera('main.dg', `${MODELO + tema('papel')}\n// ${i}\n`);
+      puerto.editarFuera('main.dg', MODELO.replace('"API"', `"API ${i}"`) + tema('papel'));
       reloj.avanzar(50);
     }
     expect(empujados).toEqual([]);
@@ -197,7 +196,7 @@ describe('Workspace vivo: mas clasificacion y recarga', () => {
     await proximo;
 
     expect(empujados).toEqual([1]);
-    expect(ws.estado().hashes['main.dg']).toBe(hashDeContenido(`${MODELO + tema('papel')}\n// 4\n`));
+    expect(ws.estado().fuente?.model.nodes.find(({ id }) => id === 'api')?.title).toBe('API 4');
   });
 
   it('recargar relee el puerto sin esperar al debounce; cerrar deja de observar', async () => {
@@ -250,7 +249,6 @@ describe('Workspace vivo: Gestos con la version vista', () => {
     expect(r).toEqual({ ok: true, version: 1 });
     expect(puerto.texto('main.dg')).toContain('node api { pin 10,20 }');
     expect(ws.estado().version).toBe(1);
-    expect(ws.estado().hashes['main.dg']).toBe(hashDeContenido(puerto.texto('main.dg')!));
   });
 
   it('una version vieja aun guardada se aplica si el archivo que cambia no cambio desde entonces', async () => {

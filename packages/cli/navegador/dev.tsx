@@ -1,61 +1,67 @@
 /**
- * Entrada de navegador de `diagrams dev`: pagina viva. Pide el estado a
- * `/api/estado`, se suscribe a `/eventos` (SSE) y, cuando llega un estado
- * nuevo, pide la geometria de cada Vista a `/api/vista/<id>`. Muestra la Vista
- * elegida por el hash de URL y un panel de issues clicables. Ctrl/Cmd+Z y Ctrl/Cmd+Mayus+Z (o Ctrl+Y) piden deshacer/rehacer al servidor. Arrastrar un Nodo envia
- * `POST /api/pin` con la `version` del estado que se esta viendo; un 409 recarga el estado y avisa. No es parte de la
- * interfaz del paquete: la empaqueta `dev-shell.ts`.
+ * Entrada de navegador de `diagrams dev`: pagina viva. Toda la red pasa por el cliente unico (`cliente.ts`): se
+ * suscribe al estado (SSE), pide solo la Geometria de la Vista que muestra (y la de otra al navegar; ninguna tras
+ * un cambio de pintura, ver `geometrias.ts`), envia las Intenciones de arrastrar un Nodo u ordenar Lifelines con la
+ * `version` del estado que esta viendo, y deshace/rehace con Ctrl/Cmd+Z y Ctrl/Cmd+Mayus+Z (o Ctrl+Y). Un 409
+ * recarga el estado y avisa. Una Geometria que no llega la calcula `VistaInteractiva` en el Worker. Muestra la
+ * Vista elegida por el hash de URL y un panel de issues clicables. No es parte de la interfaz del paquete: la
+ * empaqueta `dev-shell.ts`.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 
 import { urlDeFuente } from 'canonico';
-import type { EstadoDeDev, FuenteCanonica, GeometriaCacheada, IssueDeDev } from 'canonico';
-import { VistaInteractiva, adaptadorDeWorker, crearEnviadorDeIntencion, crearEnviadorDePin, hashDelNavegador, useEstadoEnHash } from 'shell';
+import type { EstadoDeDev, IssueDeDev } from 'canonico';
+import { VistaInteractiva, adaptadorDeWorker, deserializarEstado, hashDelNavegador, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 import type { ComponentesDeTema } from 'render';
 
 import { montar, usePropsDeDatos } from './arranque';
+import { crearClienteDeDev } from './cliente';
 import { crearCargadorDeCodigo } from './componentes';
-import { leerGeometriasDeDev } from './geometria';
-import type { GeometriasLeidas } from './geometria';
-import { accionDeAtajo, crearAlAtajo, crearEnviadorDeHistorial } from './historial';
+import { crearGeometriasDeDev } from './geometrias';
+import type { Dibujable } from './geometrias';
+import { accionDeAtajo, crearAlAtajo } from './historial';
 import { crearAlMover, crearAlOrdenar } from './mover';
 
 /** Estado del servidor: esquema unico de `canonico` (`estadoDeDevSchema`), el mismo que produce `dev`. */
 type Estado = EstadoDeDev;
 
-/** Estado vigente (el inicial y cada evento SSE) y `recargar`, que lo pide de nuevo a `/api/estado`. */
+/**
+ * Adaptador unico del hash: `useEstadoEnHash` se suscribe a `hashchange`/`popstate` por el, de modo
+ * que atras/adelante o editar el hash a mano cambia la Vista; al recompilar, `Vista` no se
+ * remonta, asi que camara, colapso y seleccion se conservan.
+ */
+const hash = hashDelNavegador(window);
+
+const cliente = crearClienteDeDev({
+  fetch: (...args) => fetch(...args),
+  eventos: (url, alMensaje) => {
+    const origen = new EventSource(url);
+    origen.onmessage = (evento: MessageEvent<string>) => alMensaje(evento.data);
+    return () => origen.close();
+  },
+});
+
+/** Geometria bajo demanda: antes de dibujar, la Vista activa es la del hash. */
+const geometrias = crearGeometriasDeDev({
+  pedir: (vista) => cliente.geometria(vista),
+  vistaInicial: (fuente) => {
+    const { path } = deserializarEstado(hash.leer(), fuente);
+    return path[path.length - 1];
+  },
+});
+
+/** Estado vigente (el inicial y cada evento SSE) y `recargar`, que lo pide de nuevo; cada uno llega a la cache de Geometria. */
 function useEstado(): { estado: Estado | undefined; recargar: () => Promise<void> } {
   const [estado, setEstado] = useState<Estado>();
-  useEffect(() => {
-    const origen = new EventSource('/eventos');
-    origen.onmessage = (evento: MessageEvent<string>) => setEstado(JSON.parse(evento.data) as Estado);
-    return () => origen.close();
-  }, []);
-  const recargar = async (): Promise<void> => {
-    const nuevo = (await (await fetch('/api/estado')).json()) as Estado;
+  const recibir = (nuevo: Estado): void => {
+    geometrias.recibir(nuevo);
     setEstado((previo) => (previo === undefined || nuevo.version >= previo.version ? nuevo : previo));
   };
+  useEffect(() => cliente.suscribir(recibir), []);
+  const recargar = async (): Promise<void> => recibir(await cliente.estado());
   return { estado, recargar };
-}
-
-/** Geometria cacheada de cada Vista para la version vigente del estado, validada con el esquema de `canonico`. */
-function useGeometrias(estado: Estado | undefined): GeometriasLeidas | undefined {
-  const [geometrias, setGeometrias] = useState<{ version: number; leidas: GeometriasLeidas }>();
-  const version = estado?.version;
-  const vistas = estado?.vistas;
-  useEffect(() => {
-    if (version === undefined || vistas === undefined) return;
-    let vigente = true;
-    void Promise.all(vistas.map(async (id) => [id, (await (await fetch(`/api/vista/${encodeURIComponent(id)}`)).json()) as unknown] as const)).then((pares) => {
-      if (vigente) setGeometrias({ version, leidas: leerGeometriasDeDev(Object.fromEntries(pares)) });
-    }, () => undefined);
-    return () => {
-      vigente = false;
-    };
-  }, [version, vistas]);
-  return geometrias?.version === version ? geometrias?.leidas : undefined;
 }
 
 /**
@@ -107,21 +113,7 @@ function IssuesSinVista({ issues }: { issues: readonly IssueDeDev[] }): ReactEle
   );
 }
 
-/**
- * Adaptador unico del hash: `useEstadoEnHash` se suscribe a `hashchange`/`popstate` por el, de modo
- * que atras/adelante o editar el hash a mano cambia la Vista; al recompilar, `Vista` no se
- * remonta, asi que camara, colapso y seleccion se conservan.
- */
-const hash = hashDelNavegador(window);
-
-const enviarPin = crearEnviadorDePin();
-const enviarIntencion = crearEnviadorDeIntencion();
-const enviarHistorial = crearEnviadorDeHistorial();
-
-interface PropsDeVista {
-  fuente: FuenteCanonica;
-  estado: Estado;
-  geometrias: Record<string, GeometriaCacheada>;
+interface PropsDeVista extends Dibujable {
   layout: AdaptadorDeLayout;
   componentes: ComponentesDeTema | undefined;
   /** Arrastre soltado: la Vista dibujada y el Nodo; resuelve `false` si se rechazo. */
@@ -131,9 +123,12 @@ interface PropsDeVista {
   aviso: string | undefined;
 }
 
-function Vista({ fuente, estado, geometrias, layout, componentes, alMover, alOrdenar, aviso }: PropsDeVista): ReactElement | null {
+function Vista({ estado, geometrias: porVista, layout, componentes, alMover, alOrdenar, aviso }: PropsDeVista): ReactElement | null {
+  const fuente = estado.fuente;
   const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
-  const { icons, cachedGeometries, theme: tema, width, height } = usePropsDeDatos({ fuente, iconos: estado.iconos, geometrias }, props.view);
+  // La Vista que se muestra es la que pide su Geometria (una sola vez por estructura).
+  useEffect(() => geometrias.activar(props.view), [props.view]);
+  const { icons, cachedGeometries, theme: tema, width, height } = usePropsDeDatos({ fuente, iconos: estado.iconos, geometrias: porVista }, props.view);
   if (tema === undefined) return null;
   return <VistaInteractiva {...props} source={fuente} theme={tema} layout={layout} {...(estado.fuentes !== undefined && { fontFiles: estado.fuentes, fontUrl: urlDeFuente })} icons={icons} {...(componentes !== undefined && { componentes })} width={width} height={height} cachedGeometries={cachedGeometries} onMoveNode={(mov) => alMover(props.view, mov)} onReorderLifelines={(cambio) => alOrdenar(props.view, cambio)} issues={estado.issues} toasts={aviso === undefined ? [] : [aviso]} />;
 }
@@ -148,9 +143,10 @@ function App(): ReactElement {
   }, [aviso]);
   const vivo = useRef(estado);
   vivo.current = estado;
-  const alMover = crearAlMover({ estado: () => vivo.current, enviar: enviarPin, avisar: setAviso, recargar });
-  const alOrdenar = crearAlOrdenar({ estado: () => vivo.current, enviar: enviarIntencion, avisar: setAviso, recargar });
-  const alAtajo = crearAlAtajo({ enviar: enviarHistorial, avisar: setAviso, recargar });
+  const enviar = cliente.editar;
+  const alMover = crearAlMover({ estado: () => vivo.current, enviar, avisar: setAviso, recargar });
+  const alOrdenar = crearAlOrdenar({ estado: () => vivo.current, enviar, avisar: setAviso, recargar });
+  const alAtajo = crearAlAtajo({ enviar: (accion) => (accion === 'deshacer' ? cliente.deshacer() : cliente.rehacer()), avisar: setAviso, recargar });
   const alAtajoVivo = useRef(alAtajo);
   alAtajoVivo.current = alAtajo;
   useEffect(() => {
@@ -165,14 +161,9 @@ function App(): ReactElement {
     window.addEventListener('keydown', alTeclear);
     return () => window.removeEventListener('keydown', alTeclear);
   }, []);
-  const leidas = useGeometrias(estado);
-  const geometrias = leidas?.porVista;
-  const erroresDeGeometria = leidas?.errores ?? [];
-  // La ultima Vista dibujable se conserva mientras llega la nueva.
-  const [ultima, setUltima] = useState<{ fuente: FuenteCanonica; estado: Estado; geometrias: Record<string, GeometriaCacheada> }>();
-  useEffect(() => {
-    if (estado?.fuente !== undefined && geometrias !== undefined) setUltima({ fuente: estado.fuente, estado, geometrias });
-  }, [estado, geometrias]);
+  // Lo dibujable: tras un cambio de estructura se conserva el dibujo anterior hasta que llega la Geometria de la Vista activa.
+  const dibujable = useSyncExternalStore(geometrias.suscribir, geometrias.dibujable);
+  const erroresDeGeometria = dibujable?.errores ?? [];
   const layout = useMemo(layoutEnWorker, []);
   const componentes = useComponentes(estado);
   return (
@@ -184,7 +175,7 @@ function App(): ReactElement {
           ))}
         </ul>
       )}
-      {ultima === undefined ? <IssuesSinVista issues={estado?.issues ?? []} /> : <Vista {...ultima} layout={layout} componentes={componentes} alMover={alMover} alOrdenar={alOrdenar} aviso={aviso} />}
+      {dibujable === undefined ? <IssuesSinVista issues={estado?.issues ?? []} /> : <Vista {...dibujable} layout={layout} componentes={componentes} alMover={alMover} alOrdenar={alOrdenar} aviso={aviso} />}
     </>
   );
 }

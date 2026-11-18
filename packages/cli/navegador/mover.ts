@@ -1,10 +1,12 @@
 /**
- * Logica de "soltar un Nodo" de la pagina de `diagrams dev`, sin React ni DOM para poder probarla:
- * envia la intencion con la version del estado que vio la pagina (el servidor la traduce a `visto`) y
- * traduce el rechazo en un aviso (un 409 por texto desactualizado ademas recarga el estado). No es parte
- * de la interfaz del paquete.
+ * Gestos de la pagina de `diagrams dev` que escriben (soltar un Nodo, reordenar Lifelines), sin React ni DOM para
+ * poder probarlos: arman la Intencion, la envian con la version del estado que vio la pagina (`editar` del cliente;
+ * el servidor la traduce a `visto`) y traducen el rechazo en un aviso (un 409 por texto desactualizado ademas
+ * recarga el estado). No es parte de la interfaz del paquete.
  */
-import type { EnviadorDeIntencion, EnviadorDePin } from 'shell';
+import type { Intencion } from 'canonico';
+
+import type { ResultadoDeEnvio } from './cliente';
 
 export interface DatosParaMover {
   /** Version del estado que esta viendo la pagina. */
@@ -14,43 +16,34 @@ export interface DatosParaMover {
 export interface DependenciasDeMover {
   /** Estado vigente en el momento de soltar (no el del render). */
   estado: () => DatosParaMover | undefined;
-  enviar: EnviadorDePin;
+  /** `editar` del cliente de `dev`. */
+  enviar: (intencion: Intencion, version: number) => Promise<ResultadoDeEnvio>;
   avisar: (texto: string) => void;
   recargar: () => Promise<void>;
 }
 
-/** Devuelve el manejador de arrastre soltado; resuelve `false` si se rechazo (el Nodo vuelve a su sitio). */
-export function crearAlMover({ estado, enviar, avisar, recargar }: DependenciasDeMover) {
-  return async (vista: string, { id, x, y }: { id: string; x: number; y: number }): Promise<boolean> => {
-    const version = estado()?.version;
-    if (version === undefined) {
-      avisar('No se puede mover: aun no hay estado del Workspace');
-      return false;
-    }
-    const r = await enviar({ vista, nodo: id, x, y, version });
-    if (r.ok) return true;
-    avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `No se pudo mover el Pin: ${r.mensaje}`);
-    if (r.desactualizado) await recargar().catch(() => undefined);
+/** Envia `intencion` con la version vigente; resuelve `false` (y avisa con `fallo`) si se rechazo. */
+async function enviarGesto({ estado, enviar, avisar, recargar }: DependenciasDeMover, intencion: Intencion, sinEstado: string, fallo: string): Promise<boolean> {
+  const version = estado()?.version;
+  if (version === undefined) {
+    avisar(sinEstado);
     return false;
-  };
+  }
+  const r = await enviar(intencion, version);
+  if (r.ok) return true;
+  avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `${fallo}: ${r.mensaje}`);
+  if (r.desactualizado) await recargar().catch(() => undefined);
+  return false;
 }
 
-export interface DependenciasDeOrdenar extends Omit<DependenciasDeMover, 'enviar'> {
-  enviar: EnviadorDeIntencion;
+/** Devuelve el manejador de arrastre soltado; resuelve `false` si se rechazo (el Nodo vuelve a su sitio). */
+export function crearAlMover(dependencias: DependenciasDeMover) {
+  return (vista: string, { id, x, y }: { id: string; x: number; y: number }): Promise<boolean> =>
+    enviarGesto(dependencias, { tipo: 'mover-pin', vista, nodo: id, x, y }, 'No se puede mover: aun no hay estado del Workspace', 'No se pudo mover el Pin');
 }
 
 /** Como `crearAlMover`, para la Intencion `ordenar-lifelines` de una Vista de secuencia; resuelve `false` si se rechazo. */
-export function crearAlOrdenar({ estado, enviar, avisar, recargar }: DependenciasDeOrdenar) {
-  return async (vista: string, { orden }: { orden: string[] }): Promise<boolean> => {
-    const version = estado()?.version;
-    if (version === undefined) {
-      avisar('No se puede reordenar: aun no hay estado del Workspace');
-      return false;
-    }
-    const r = await enviar({ tipo: 'ordenar-lifelines', vista, orden, version });
-    if (r.ok) return true;
-    avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `No se pudo reordenar las Lifelines: ${r.mensaje}`);
-    if (r.desactualizado) await recargar().catch(() => undefined);
-    return false;
-  };
+export function crearAlOrdenar(dependencias: DependenciasDeMover) {
+  return (vista: string, { orden }: { orden: string[] }): Promise<boolean> =>
+    enviarGesto(dependencias, { tipo: 'ordenar-lifelines', vista, orden }, 'No se puede reordenar: aun no hay estado del Workspace', 'No se pudo reordenar las Lifelines');
 }

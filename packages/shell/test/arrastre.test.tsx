@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fuenteCanonicaSchema } from 'canonico';
 import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
-import { VistaInteractiva, crearEnviadorDePin } from 'shell';
+import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
 import { posicionDe, pulsarNodo } from './ayudas';
 import { TEMA_NEUTRO } from 'tema';
@@ -127,36 +127,5 @@ describe('arrastre de Nodos (onMoveNode)', () => {
     gesto(window, 'mousemove', 60, 30);
     await act(async () => gesto(window, 'mouseup', 60, 30));
     expect(posicionA(container)).toBe('translate(50 20)');
-  });
-});
-
-describe('crearEnviadorDePin', () => {
-  const intencion = { vista: 'v', nodo: 'a', x: 1, y: 2, version: 4 };
-  const respuesta = (estado: number, cuerpo: unknown) => Promise.resolve(new Response(JSON.stringify(cuerpo), { status: estado }));
-
-  it('envia la intencion por POST JSON a /api/pin', async () => {
-    const f = vi.fn().mockReturnValue(respuesta(200, { ok: true, version: 3 }));
-    const r = await crearEnviadorDePin(f)(intencion);
-    expect(r).toEqual({ ok: true });
-    const [url, init] = f.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/api/pin');
-    expect(init.method).toBe('POST');
-    expect(new Headers(init.headers).get('content-type')).toBe('application/json');
-    expect(JSON.parse(init.body as string)).toEqual(intencion);
-  });
-
-  it('un 409 se informa como desactualizado', async () => {
-    const f = vi.fn().mockReturnValue(respuesta(409, { ok: false, motivo: 'hash-desactualizado', mensaje: 'cambio' }));
-    expect(await crearEnviadorDePin(f)(intencion)).toEqual({ ok: false, desactualizado: true, mensaje: 'cambio' });
-  });
-
-  it('otros rechazos llevan el mensaje', async () => {
-    const f = vi.fn().mockReturnValue(respuesta(422, { ok: false, motivo: 'invalida', mensaje: 'no compila' }));
-    expect(await crearEnviadorDePin(f)(intencion)).toEqual({ ok: false, desactualizado: false, mensaje: 'no compila' });
-  });
-
-  it('un fallo de red es un rechazo, no una excepcion', async () => {
-    const f = vi.fn().mockRejectedValue(new Error('caido'));
-    expect(await crearEnviadorDePin(f)(intencion)).toEqual({ ok: false, desactualizado: false, mensaje: 'caido' });
   });
 });
