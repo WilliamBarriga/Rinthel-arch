@@ -122,7 +122,7 @@ describe('galeria de Temas de ejemplo', () => {
   it.each(TEMAS)('%s resuelve su Estilo de forma determinista', (nombre) => {
     const tema = canonico!.themes.find((t) => t.name === nombre)!;
     const otro = compile(leer()).canonico!.themes.find((t) => t.name === nombre)!;
-    expect(JSON.stringify(estiloResuelto(tema))).toBe(JSON.stringify(estiloResuelto(otro)));
+    expect(JSON.stringify(estiloResuelto(tema, { diagrama: 'architecture' }))).toBe(JSON.stringify(estiloResuelto(otro, { diagrama: 'architecture' })));
   });
 
   it('los warnings de cada ejemplo son exactamente los declarados en su cabecera, y no hay otros', async () => {

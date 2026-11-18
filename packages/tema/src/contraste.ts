@@ -91,7 +91,7 @@ function evaluar(pila: readonly CapaPintada[], fondo: Rgb, texto: Rgb): Array<{ 
  * estado solo avisa si empeora lo que ya avisaba el base.
  */
 export function advertenciasDeContraste(tema: Tema, tipos: Readonly<Record<string, string | undefined>>): AdvertenciaDeContraste[] {
-  const estilo = estiloResuelto(tema, { tipos });
+  const estilo = estiloResuelto(tema, { diagrama: 'architecture', tipos });
   const fondo = hexARgb(resolverTema(tema).tokens.background) ?? ([255, 255, 255] as const);
   const texto = hexARgb(resolverTema(tema).tokens.foreground) ?? ([0, 0, 0] as const);
   const avisos: AdvertenciaDeContraste[] = [];
@@ -140,7 +140,7 @@ const quitarColor = (capa: CapaPintada) => ({
  * insignia (`badge`, el nombre del Tipo en texto) ningun par es solo-color.
  */
 export function tiposSoloColor(tema: Tema, tipos: readonly TipoParaLeyenda[]): Array<[string, string]> {
-  const estilo = estiloResuelto(tema, { tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
+  const estilo = estiloResuelto(tema, { diagrama: 'architecture', tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
   if (muestra(estilo.metricas, 'badge')) return [];
   const firma = (t: TipoParaLeyenda) => {
     const p = estilo.pintura.nodo.tipos[t.name]!;
@@ -205,7 +205,7 @@ export interface Leyenda {
 
 /** Leyenda derivada del Tema (Tipo, forma, color) para los Tipos dados. */
 export function leyendaDelTema(tema: Tema, tipos: readonly TipoParaLeyenda[]): Leyenda {
-  const estilo = estiloResuelto(tema, { tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
+  const estilo = estiloResuelto(tema, { diagrama: 'architecture', tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
   const paleta = resolverTema(tema).palette;
   return {
     necesaria: tiposSoloColor(tema, tipos).length > 0,

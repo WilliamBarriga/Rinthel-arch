@@ -9,7 +9,7 @@ import { select } from 'd3-selection';
 import { zoom, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent } from 'd3-zoom';
 
-import { resolveView } from 'canonico';
+import { idDeElementoDeSecuencia, resolveView } from 'canonico';
 import type { EstadoDeColapso, IconProvider, IssueDeDev, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
@@ -41,8 +41,6 @@ import { interpolarGeometria, useMorph, visibilidadDeMorph } from './morph';
 import type { RelojDeCuadros } from './morph';
 import { usePasos } from './pasos';
 import type { PropsDePasos } from './pasos';
-import { useTemaVigente } from './tema-vigente';
-import type { SuscripcionDeTema } from './tema-vigente';
 import { recortarAlViewport } from './viewport';
 import { nivelDeDetalle } from './zoom-semantico';
 import type { UmbralesDeDetalle } from './zoom-semantico';
@@ -60,8 +58,6 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   componentes?: ComponentesDeTema;
   source: FuenteCanonica;
   theme: Tema;
-  /** Puerto de recarga de Tema al guardar: recolorea sin relayout salvo que cambien las fuentes. */
-  themeUpdates?: SuscripcionDeTema;
   layout: AdaptadorDeLayout;
   /** Medicion real de texto; con ella el layout espera las medidas y la clave de layout incluye el hash de fuente y el nivel `medido`. */
   measure?: MedidorDeTexto;
@@ -127,6 +123,8 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   icons?: IconProvider;
   /** Umbrales y margenes de la interaccion (arrastre, acierto de Aristas, escala, encuadre); ver `AjustesDeInteraccion`. */
   tuning?: Partial<AjustesDeInteraccion>;
+  /** Chrome del lienzo (panel de issues, toasts, leyenda, migas). Por defecto `true`; `false` lo omite para montarlo fuera. */
+  chrome?: boolean;
   /** Issues de la Fuente; se dibujan como panel clicable dentro del lienzo, con el Tema. */
   issues?: readonly IssueDeDev[];
   /** Avisos efimeros (el padre decide cuando quitarlos); se dibujan dentro del lienzo, con el Tema. */
@@ -161,7 +159,8 @@ interface PropsDeVistaActiva extends Omit<VistaInteractivaProps, 'view' | 'cache
 
 function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const { source, view, layout, width, height, onError, onSelect, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
-  const { tema: theme, interruptor, reducedMotion } = useAltoContraste(useTemaVigente(props.theme, props.themeUpdates), props);
+  const conChrome = props.chrome !== false;
+  const { tema: theme, interruptor, reducedMotion } = useAltoContraste(props.theme, props);
   const [state, fijarEstado] = useControlado<EstadoDeColapso>(props.state, {}, props.onStateChange);
   const ajustes = { ...AJUSTES_POR_DEFECTO, ...props.tuning };
   const ajustesVigentes = useRef(ajustes);
@@ -310,7 +309,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const [hover, fijarHover] = useState<string | undefined>(undefined);
   const estados = useMemo(() => conEstadosTransitorios(estadosDeSeleccion, enCurso === undefined ? hover : undefined, enCurso), [estadosDeSeleccion, hover, enCurso]);
   const medidas = calculo?.medidas;
-  const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas, vista.type), [theme, fontFiles, medidas, vista.type]);
+  const estilo = useMemo(() => resolverEstilo(theme, vista.type, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas), [theme, fontFiles, medidas, vista.type]);
 
   // Ruta (en-ruta / atenuado) y foco de teclado: los calcula el shell y render solo los pinta.
   const enSecuencia = vista.type === 'sequence';
@@ -324,7 +323,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   }, [props.route, vista, nodosSeleccionados.join('\n')]);
   const [foco, fijarFoco] = useState<string | undefined>(undefined);
   const focoVigente =
-    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction?.messages.some((m) => `${vista.interaction!.id}:${m.ruta}` === foco) === true)) ? foco : undefined;
+    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction?.messages.some((m) => idDeElementoDeSecuencia(vista.interaction!.id, m.ruta) === foco) === true)) ? foco : undefined;
   const estadosFinales = useMemo(
     () => unirEstados(unirEstados(estados, estadosDeRuta(vista, ruta)), focoVigente === undefined ? {} : { [focoVigente]: ['foco'] }),
     [estados, vista, ruta, focoVigente],
@@ -453,10 +452,10 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
       )}
       {pasos.controles}
       {interruptor}
-      <Leyenda fuente={source} vista={vista} tema={theme} modo={props.legend ?? 'auto'} />
-      {props.migas}
-      <PanelDeIssues issues={[...(props.issues ?? []), ...avisosDeFuentes]} />
-      <Toasts toasts={props.toasts ?? []} />
+      {conChrome && <Leyenda fuente={source} vista={vista} tema={theme} modo={props.legend ?? 'auto'} />}
+      {conChrome && props.migas}
+      {conChrome && <PanelDeIssues issues={[...(props.issues ?? []), ...avisosDeFuentes]} />}
+      {conChrome && <Toasts toasts={props.toasts ?? []} />}
     </div>
   );
 }

@@ -17,6 +17,21 @@ import type { ItemResuelto } from './secuencia';
 export type Visibilidad = (id: string) => number;
 
 /** Id de una Arista para `Visibilidad`: `desde -> hasta`, con `#atributo` si el extremo lo lleva. */
+/**
+ * Id de un Mensaje, Nota, `ref` o Fragmento de secuencia: `<interaccion>:<ruta>`; con `operando`, el de su guarda y
+ * su divisor: `<interaccion>:<ruta>:<k>`. Es el unico sitio que arma el formato (hash de URL, Visibilidad, Seleccion).
+ */
+export function idDeElementoDeSecuencia(interaccion: string, ruta: string, operando?: number): string {
+  return operando === undefined ? `${interaccion}:${ruta}` : `${interaccion}:${ruta}:${operando}`;
+}
+
+/** Lectura inversa de `idDeElementoDeSecuencia`; `undefined` si `id` no tiene ese formato (p. ej. el id de un Nodo). */
+export function leerIdDeElementoDeSecuencia(id: string): { interaccion: string; ruta: string; operando?: number } | undefined {
+  const m = /^(.+?):(\d+(?:\.\d+)*)(?::(\d+))?$/.exec(id);
+  if (m === null) return undefined;
+  return { interaccion: m[1]!, ruta: m[2]!, ...(m[3] !== undefined && { operando: Number(m[3]) }) };
+}
+
 export function idDeArista(arista: Pick<Arista, 'from' | 'to'>): string {
   const extremo = ({ node, attribute }: Arista['from']): string => (attribute === undefined ? node : `${node}#${attribute}`);
   return `${extremo(arista.from)} -> ${extremo(arista.to)}`;
@@ -138,14 +153,14 @@ function revelarSecuencia(vista: VistaResuelta, k: number): Visibilidad {
   const mensajes = interaccion.messages;
   const corte = mensajes.findIndex((mensaje) => mensaje.ruta === paso.corte);
   const revelados = new Set<string>();
-  const prefijo = `${interaccion.id}:`;
+  const idDe = (ruta: string, operando?: number): string => idDeElementoDeSecuencia(interaccion.id, ruta, operando);
 
   const creada = new Map(mensajes.flatMap((mensaje, i) => (mensaje.kind === 'create' ? [[mensaje.to, i] as const] : [])));
   for (const nodo of vista.nodes) {
     if ((creada.get(nodo.id) ?? -1) <= corte) revelados.add(nodo.id);
   }
   mensajes.forEach((mensaje, i) => {
-    if (i <= corte) revelados.add(`${prefijo}${mensaje.ruta}`);
+    if (i <= corte) revelados.add(idDe(mensaje.ruta));
   });
 
   // Recorrido en orden temporal: `previo` es el indice del ultimo Mensaje visto (-1 si ninguno).
@@ -166,12 +181,12 @@ function revelarSecuencia(vista: VistaResuelta, k: number): Visibilidad {
       if (item.type === 'message') {
         previo = mensajes.indexOf(item.message);
       } else if (item.type === 'note' || item.type === 'ref') {
-        if (previo <= corte) revelados.add(`${prefijo}${item.ruta}`);
+        if (previo <= corte) revelados.add(idDe(item.ruta));
       } else {
         const entra = primerMensaje([item], previo);
-        if (entra <= corte) revelados.add(`${prefijo}${item.ruta}`);
+        if (entra <= corte) revelados.add(idDe(item.ruta));
         item.operands.forEach((operando, o) => {
-          if (primerMensaje(operando.items, previo) <= corte) revelados.add(`${prefijo}${item.ruta}:${o}`);
+          if (primerMensaje(operando.items, previo) <= corte) revelados.add(idDe(item.ruta, o));
           previo = recorrer(operando.items, previo);
         });
       }

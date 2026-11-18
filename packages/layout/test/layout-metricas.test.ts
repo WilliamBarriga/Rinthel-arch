@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
 import type { Tema, VistaResuelta } from 'canonico';
-import { claveDeLayout, layoutView as layoutDeVista } from 'layout';
+import { claveDeLayout, layoutConMetricas, layoutView as layoutDeVista } from 'layout';
 import { TEMA_NEUTRO, claveDeTexto, metricasDe, tablaDeMetricas } from 'tema';
 
 /** `layoutView` de una Vista de grafo (architecture o flow): estas pruebas miran cajas y rutas de Aristas. */
@@ -58,7 +58,7 @@ describe('Metricas por Tipo y relayout por clave de estructura', () => {
       [{ from: { node: 'api' }, to: { node: 't', attribute: 'id' } }],
     );
     const g = await layoutView(v, grande);
-    const m = metricasDe(TEMA_NEUTRO);
+    const m = metricasDe(TEMA_NEUTRO, 'architecture');
     const ruta = g.edges[idDeArista(v.edges[0]!)]!.points;
 
     const caja = g.nodes['t']!;
@@ -73,7 +73,7 @@ describe('medicion de texto en el layout', () => {
   const tema = TEMA_NEUTRO as unknown as Tema;
   const una = (): VistaResuelta => vistaDe([nodo('api', 'servicio')], []);
   const medidasDe = (ancho: number, hash = 'aaaa') => {
-    const m = tablaDeMetricas(tema).base;
+    const m = tablaDeMetricas(tema, 'architecture').base;
     return { nivel: 'medido' as const, fuentes: { sans: hash }, anchos: { [claveDeTexto(TEMA_NEUTRO.fonts.body, m.fontSize, 'api')]: ancho } };
   };
 
@@ -81,16 +81,38 @@ describe('medicion de texto en el layout', () => {
     const estimada = await layoutView(una(), tema);
     const medida = await layoutView(una(), tema, { medidas: medidasDe(400) });
 
-    expect(medida.nodes['api']!.width).toBe(400 + tablaDeMetricas(tema).base.paddingHorizontal);
+    expect(medida.nodes['api']!.width).toBe(400 + tablaDeMetricas(tema, 'architecture').base.paddingHorizontal);
     expect(estimada.nodes['api']!.width).toBe(120);
   });
 
   it('la clave cambia con el origen de las medidas y con el hash de fuente, y con nada mas de la pintura', () => {
-    const clave = (m?: ReturnType<typeof medidasDe>) => claveDeLayout(una(), tema, tablaDeMetricas(tema, m));
+    const clave = (m?: ReturnType<typeof medidasDe>) => claveDeLayout(una(), tema, tablaDeMetricas(tema, 'architecture', m));
     const repintado = { ...tema, palette: { ...tema.palette, blue: '#ff0000' } } as Tema;
 
     expect(clave(medidasDe(400))).not.toBe(clave());
     expect(clave(medidasDe(400, 'bbbb'))).not.toBe(clave(medidasDe(400)));
-    expect(claveDeLayout(una(), repintado, tablaDeMetricas(repintado))).toBe(clave());
+    expect(claveDeLayout(una(), repintado, tablaDeMetricas(repintado, 'architecture'))).toBe(clave());
+  });
+});
+
+describe('layout de secuencia exige Metricas de secuencia', () => {
+  const secuencia = (): VistaResuelta => {
+    const fuente = fuenteCanonicaSchema.parse({
+      specification: { nodeTypes: [{ name: 'servicio' }] },
+      model: {
+        nodes: [nodo('a', 'servicio'), nodo('b', 'servicio')],
+        interactions: [{ id: 'i', title: 'I', items: [{ type: 'message', from: 'a', to: 'b', label: 'x', kind: 'sync' }] }],
+      },
+      views: [{ id: 'v', type: 'sequence', interaction: 'i', include: [], exclude: [] }],
+    });
+    return resolveView(fuente, 'v')!;
+  };
+
+  it('una tabla de Vista de arquitectura lanza error en vez de caer en defectos', async () => {
+    await expect(layoutConMetricas(secuencia(), tablaDeMetricas(TEMA_NEUTRO, 'architecture'))).rejects.toThrow(/secuencia/);
+  });
+
+  it('la tabla de Tipo sequence lo coloca', async () => {
+    expect((await layoutConMetricas(secuencia(), tablaDeMetricas(TEMA_NEUTRO, 'sequence'))).kind).toBe('secuencia');
   });
 });

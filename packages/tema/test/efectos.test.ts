@@ -94,11 +94,11 @@ describe('Capas pintadas y Metricas', () => {
         capas: [capa('s', 'shadow', { color: 'blue', blur: 8 }), capa('g', 'glow', { color: 'blue' }), capa('v', 'glass', {}), capa('m', 'sketch', {}), capa('t', 'tape', { color: 'blue' })],
       },
     };
-    const estilo = estiloResuelto(adornado);
+    const estilo = estiloResuelto(adornado, { diagrama: 'architecture' });
 
-    expect(estilo.metricas).toEqual(estiloResuelto(TEMA_NEUTRO).metricas);
+    expect(estilo.metricas).toEqual(estiloResuelto(TEMA_NEUTRO, { diagrama: 'architecture' }).metricas);
     expect(estilo.pintura.nodo.capas.map((c) => c.tipo)).toEqual(['shadow', 'glow', 'glass', 'sketch', 'tape']);
     expect(estilo.pintura.semilla).toBe(9);
-    expect(estiloResuelto(TEMA_NEUTRO).pintura.semilla).toBeUndefined();
+    expect(estiloResuelto(TEMA_NEUTRO, { diagrama: 'architecture' }).pintura.semilla).toBeUndefined();
   });
 });

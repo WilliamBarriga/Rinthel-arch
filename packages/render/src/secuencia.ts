@@ -7,6 +7,7 @@
  * - `activation` toma solo la forma, el relleno y el borde de la pila del Nodo de su Lifeline, sin sombras ni efectos.
  * Las cabeceras de las Lifelines son los Nodos de la Vista, dibujados como cualquier Nodo.
  */
+import { idDeElementoDeSecuencia } from 'canonico';
 import type { MensajeResuelto, NodoResuelto, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada } from 'layout';
@@ -50,7 +51,7 @@ function pinturaDeLifeline(base: PinturaDeArista, destruida: boolean, secuencia:
 
 export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry: GeometriaSecuencia }): Elemento {
   const { view, geometry, theme } = entrada;
-  const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.metricas, undefined, undefined, view.type);
+  const estilo = entrada.estilo ?? resolverEstilo(theme, view.type, entrada.metricas);
   const { raices, cajas } = indiceDeGeometria(view, geometry);
   const visibility = entrada.visibility ?? (() => 1);
   const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));
@@ -82,7 +83,7 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     ];
   });
 
-  const idDe = (mensaje: MensajeResuelto): string => `${interaccion!.id}:${mensaje.ruta}`;
+  const idDe = (mensaje: MensajeResuelto): string => idDeElementoDeSecuencia(interaccion!.id, mensaje.ruta);
   // Corte de los Pasos: la `y` del ultimo Mensaje revelado. Con todos revelados no se recorta nada.
   const reveladas = mensajes.flatMap((mensaje) => {
     const ruta = geometry.messages[mensaje.ruta];
@@ -244,14 +245,14 @@ function bordeDeDivisor(declarado: PinturaDeCajaDeSecuencia | undefined, colorDe
 /** Marco de un Fragmento: forma, relleno y borde del Nodo (o del bloque `fragment`); con su pestana y un divisor por operando a partir del segundo. */
 function fragmentoHtml(marco: MarcoDeFragmento, contexto: Contexto, interaccion: string): Elemento {
   const declarado = contexto.estilo.pintura.secuencia?.fragmento;
-  const estilos = estiloDeCajaDeNodo(contexto, capasDeFragmento(declarado, marco.operator, pilaDeEstado(declarado, contexto.estados, `${interaccion}:${marco.ruta}`)));
+  const estilos = estiloDeCajaDeNodo(contexto, capasDeFragmento(declarado, marco.operator, pilaDeEstado(declarado, contexto.estados, idDeElementoDeSecuencia(interaccion, marco.ruta))));
   const borde = bordeDeDivisor(declarado, contexto.estilo.borde);
   const divisores = marco.operands.flatMap((operando, k): Elemento[] =>
-    operando.divider === undefined ? [] : [{ tag: 'div', attrs: { 'data-fragment-divider': `${marco.ruta}:${k}`, style: `${cajaAbsoluta(0, operando.divider - marco.y, marco.width, 0)};border-top:${borde};${opacidad(contexto.visibility(`${interaccion}:${marco.ruta}:${k}`))}` }, hijos: [] }],
+    operando.divider === undefined ? [] : [{ tag: 'div', attrs: { 'data-fragment-divider': `${marco.ruta}:${k}`, style: `${cajaAbsoluta(0, operando.divider - marco.y, marco.width, 0)};border-top:${borde};${opacidad(contexto.visibility(idDeElementoDeSecuencia(interaccion, marco.ruta, k)))}` }, hijos: [] }],
   );
   return {
     tag: 'div',
-    attrs: { 'data-fragment': marco.ruta, 'data-operator': marco.operator, 'data-nivel': String(marco.nivel), ...atributoDeEstados(contexto.estados, `${interaccion}:${marco.ruta}`), style: `${cajaAbsoluta(marco.x, marco.y, marco.width, marco.height)};pointer-events:none;${estilos};${opacidad(contexto.visibility(`${interaccion}:${marco.ruta}`))}` },
+    attrs: { 'data-fragment': marco.ruta, 'data-operator': marco.operator, 'data-nivel': String(marco.nivel), ...atributoDeEstados(contexto.estados, idDeElementoDeSecuencia(interaccion, marco.ruta)), style: `${cajaAbsoluta(marco.x, marco.y, marco.width, marco.height)};pointer-events:none;${estilos};${opacidad(contexto.visibility(idDeElementoDeSecuencia(interaccion, marco.ruta)))}` },
     hijos: [{ tag: 'div', attrs: { 'data-fragment-tab': marco.ruta, style: `${cajaAbsoluta(marco.tab.x - marco.x, marco.tab.y - marco.y, marco.tab.width, marco.tab.height)};${estilos}` }, hijos: [] }, ...divisores],
   };
 }
@@ -278,9 +279,9 @@ function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'
     hijos: [contenido],
   });
   return [
-    texto(visibility(`${interaccion}:${marco.ruta}`), { 'data-fragment-operator': marco.ruta }, marco.tab, marco.operator, estilo.texto, deOperador),
-    ...(marco.title === undefined ? [] : [texto(visibility(`${interaccion}:${marco.ruta}`), { 'data-ref-title': marco.ruta }, marco.title.box, marco.title.text, estilo.texto, deGuarda)]),
-    ...marco.operands.flatMap((operando, k): Elemento[] => (operando.guard === undefined ? [] : [texto(visibility(`${interaccion}:${marco.ruta}:${k}`), { 'data-fragment-guard': `${marco.ruta}:${k}` }, operando.guard.box, operando.guard.text, color, deGuarda)])),
+    texto(visibility(idDeElementoDeSecuencia(interaccion, marco.ruta)), { 'data-fragment-operator': marco.ruta }, marco.tab, marco.operator, estilo.texto, deOperador),
+    ...(marco.title === undefined ? [] : [texto(visibility(idDeElementoDeSecuencia(interaccion, marco.ruta)), { 'data-ref-title': marco.ruta }, marco.title.box, marco.title.text, estilo.texto, deGuarda)]),
+    ...marco.operands.flatMap((operando, k): Elemento[] => (operando.guard === undefined ? [] : [texto(visibility(idDeElementoDeSecuencia(interaccion, marco.ruta, k)), { 'data-fragment-guard': `${marco.ruta}:${k}` }, operando.guard.box, operando.guard.text, color, deGuarda)])),
   ];
 }
 
@@ -291,7 +292,7 @@ function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'
 function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: string, visibility: Visibilidad, estados: Estados | undefined): Elemento {
   // Con bloque `note` en el Tema: el relleno y el borde de su pila y el estilo `text`; si no, el tinte de `amber`.
   const declarada = estilo.pintura.secuencia?.nota;
-  const capasVigentes = pilaDeEstado(declarada, estados, `${interaccion}:${nota.ruta}`)?.capas ?? declarada?.capas;
+  const capasVigentes = pilaDeEstado(declarada, estados, idDeElementoDeSecuencia(interaccion, nota.ruta))?.capas ?? declarada?.capas;
   const ultima = (familia: string): CapaPintada | undefined => capasVigentes?.filter((capa) => primitivasDeFamilia(familia as 'relleno' | 'borde').includes(capa.tipo)).at(-1);
   const derivado = estilo.paleta['amber'] ?? estilo.borde;
   const rellenoDeclarado = ultima('relleno');
@@ -312,7 +313,7 @@ function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: st
   }));
   return {
     tag: 'g',
-    attrs: { 'data-note': `${interaccion}:${nota.ruta}`, 'data-anchor': nota.anchor, ...atributoDeEstados(estados, `${interaccion}:${nota.ruta}`), ...visibilidadSvg(visibility(`${interaccion}:${nota.ruta}`)) },
+    attrs: { 'data-note': idDeElementoDeSecuencia(interaccion, nota.ruta), 'data-anchor': nota.anchor, ...atributoDeEstados(estados, idDeElementoDeSecuencia(interaccion, nota.ruta)), ...visibilidadSvg(visibility(idDeElementoDeSecuencia(interaccion, nota.ruta))) },
     hijos: [
       { tag: 'path', attrs: { 'data-note-paper': '', d: contorno, fill: relleno, 'fill-opacity': opacidadDeRelleno, stroke: color, 'stroke-width': anchoDeTrazo }, hijos: [] },
       { tag: 'path', attrs: { d: doblez, fill: 'none', stroke: color, 'stroke-width': anchoDeTrazo }, hijos: [] },
