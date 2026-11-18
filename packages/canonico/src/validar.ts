@@ -356,6 +356,9 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
   if (vista.include.length > 0) {
     emitirCon([...ruta, 'include'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'include' no vale en una Vista 'sequence': proyecta una Interaccion", { hint: "usa 'exclude' para quitar Lifelines" });
   }
+  if (vista.expanded.length > 0) {
+    emitirCon([...ruta, 'expanded', 0], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'expanded' no vale en una Vista 'sequence': las Lifelines se funden con 'collapsed' o 'depth'", { hint: "quita 'expanded'; usa 'collapsed' o 'depth' para fundir Grupos" });
+  }
   vista.overrides.forEach((override, i) => {
     if (override.pin !== undefined) {
       emitirCon([...ruta, 'overrides', i, 'pin'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'pin' no vale en una Vista 'sequence': las columnas siguen el orden de las Lifelines", { hint: "usa 'order' para reordenar Lifelines" });

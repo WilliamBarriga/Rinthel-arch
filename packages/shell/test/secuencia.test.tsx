@@ -36,8 +36,8 @@ describe('VistaInteractiva con una Vista de secuencia', () => {
     await waitFor(() => expect(container.querySelector('[data-message]')).not.toBeNull());
 
     // Cabeceras de Lifeline: un Nodo por columna.
-    // Cada Lifeline repite su cabecera al pie (espejo): arriba y abajo, mismo orden.
-    expect([...container.querySelectorAll('.rd-nodos [data-id]')].map((e) => e.getAttribute('data-id'))).toEqual(['cliente', 'api', 'db', 'cliente', 'api', 'db']);
+    // La cabecera no se repite al pie (ADR 0009).
+    expect([...container.querySelectorAll('.rd-nodos [data-id]')].map((e) => e.getAttribute('data-id'))).toEqual(['cliente', 'api', 'db']);
     expect([...container.querySelectorAll('[data-lifeline]')].map((e) => e.getAttribute('data-lifeline'))).toEqual(['cliente', 'api', 'db']);
     // Mensajes por su identidad (Interaccion:indice), con su tipo.
     const mensajes = [...container.querySelectorAll('[data-message]')];

@@ -70,7 +70,7 @@
  * Arrastre de Nodos (solo bajo `dev`): con `onMoveNode({id, x, y})` los Nodos se arrastran y al
  * soltar avisan su posicion nueva (relativa al Grupo padre, unidades de la geometria; es el
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve
- * si el aviso resuelve `false`. Sin `onMoveNode` (export estatico) no hay arrastre de Nodos.
+ * si el aviso resuelve `false`. Sin `onMoveNode` (consumidor sin edicion) no hay arrastre de Nodos.
  * Reordenar Lifelines (solo bajo `dev`): con `onReorderLifelines({orden})`, arrastrar la cabecera de una Lifeline o el
  * titulo de un `box` en una Vista de secuencia avisa el orden visible completo; `crearEnviadorDeIntencion(fetch)` envia
  * cualquier Intencion a `POST /api/edit`.
@@ -117,7 +117,7 @@
  * renderizar; un rechazo del adaptador va a `onError` o, sin el, se lanza al
  * renderizar (para un error boundary). Configuracion requerida: Fuente canonica,
  * Vista, Tema, adaptador de layout y tamano del lienzo. Peer React 18 y 19.
- * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> render -> shell`.
+ * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> sesion -> render -> shell`.
  */
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, MedidorDeTexto, VistaInteractivaProps } from './vista-interactiva';

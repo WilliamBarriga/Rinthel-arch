@@ -115,6 +115,22 @@ view sin_numero { type sequence
     const issues = await sesion.diagnosticar();
     expect(issues.map((i) => i.code)).toContain('E_VIEW_PROPERTY_FOR_TYPE');
   });
+
+  it('un ref cuyas Lifelines quedan fundidas en un Grupo colapsado enmarca solo la Lifeline del Grupo', async () => {
+    const texto = modelo(`  interaction otra { sistema.api -> sistema.db "x" }
+  interaction i {
+    cliente -> sistema.api "pedir"
+    ref otra
+    sistema.api -> cola "evento"
+  }`, 'view v { type sequence\n interaction i\n depth 1 }\n');
+    const g = (await abrirSesion({ 'main.dg': texto }).geometria('v'))!.geometry;
+    if (g.kind !== 'secuencia') throw new Error('secuencia');
+    const ref = g.fragments.find((m) => m.operator === 'ref')!;
+    expect(ref.x).toBeGreaterThan(g.lifelines['cliente']!.x);
+    expect(ref.x + ref.width).toBeLessThan(g.lifelines['cola']!.x);
+    expect(ref.x).toBeLessThan(g.lifelines['sistema']!.x);
+    expect(ref.x + ref.width).toBeGreaterThan(g.lifelines['sistema']!.x);
+  });
 });
 
 function resuelta_(texto: string, vista = 'v') {
