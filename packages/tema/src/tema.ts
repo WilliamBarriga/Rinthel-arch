@@ -13,7 +13,7 @@ import type { NombreDePrimitiva, NombreDeSlot, Primitiva, UbicacionDePrimitiva }
 import { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, esCaja } from './disposicion';
 import type { CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA } from './secuencia';
-import { FORMAS_DE_PASTILLA, RADIO_DE_TABLA } from './derivacion';
+import { RADIO_DE_TABLA, esPastilla } from './derivacion';
 import { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA } from './fila';
 import { ESTADOS, TIPOS_DE_DIAGRAMA, aplicarOps, opTocaMetricas, validarOps } from './parches';
 import type { CapaDeTema, OpDeCapa, TipoDeDiagrama } from './parches';
@@ -480,7 +480,7 @@ export type TemaResuelto = z.output<typeof temaResueltoSchema>;
 
 /** Tabla ER (ADR 0009): una forma `pill` o `circle` (recortan las filas) se deriva en `er` como `rect` con radio acotado. */
 const comoTabla = (capa: TemaResuelto['nodo']['capas'][number]): TemaResuelto['nodo']['capas'][number] =>
-  FORMAS_DE_PASTILLA.includes(capa.primitiva.tipo) ? { ...capa, primitiva: { tipo: 'rect', props: { radius: RADIO_DE_TABLA } } } : capa;
+  esPastilla(capa.primitiva.tipo) ? { ...capa, primitiva: { tipo: 'rect', props: { radius: RADIO_DE_TABLA } } } : capa;
 
 const porDiagrama = new WeakMap<object, Map<TipoDeDiagrama, TemaResuelto>>();
 
@@ -496,7 +496,7 @@ export function temaParaDiagrama(tema: TemaResuelto, diagrama: TipoDeDiagrama | 
   const delaArista = tema.arista.diagramas?.[diagrama];
   // El estilo `label` del bloque `message` es la etiqueta de la Arista en secuencia: asi sus Metricas son las del layout.
   const etiquetaDeMensaje = diagrama === 'sequence' ? tema.secuencia?.message?.textos['label'] : undefined;
-  const haceTabla = diagrama === 'er' && tema.nodo.capas.some((capa) => FORMAS_DE_PASTILLA.includes(capa.primitiva.tipo));
+  const haceTabla = diagrama === 'er' && tema.nodo.capas.some((capa) => esPastilla(capa.primitiva.tipo));
   if (delNodo === undefined && delGrupo === undefined && delaArista === undefined && etiquetaDeMensaje === undefined && !haceTabla) return tema;
   const hecho = porDiagrama.get(tema)?.get(diagrama);
   if (hecho !== undefined) return hecho;

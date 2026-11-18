@@ -31,7 +31,9 @@ import type {
 } from './estilo';
 
 /** Formas que no dibujan una tabla ER ni un marco (recortan el contenido): se derivan como `rect` con `RADIO_DE_TABLA`. */
-export const FORMAS_DE_PASTILLA: readonly string[] = ['pill', 'circle'];
+const FORMAS_DE_PASTILLA: readonly NombreDePrimitiva[] = ['pill', 'circle'];
+/** La Primitiva `tipo` es una de `FORMAS_DE_PASTILLA`. */
+export const esPastilla = (tipo: string): boolean => FORMAS_DE_PASTILLA.some((forma) => forma === tipo);
 export const RADIO_DE_TABLA = 8;
 
 /** Largo del marcador derivado (`end` de una Lifeline destruida, marcador de un Mensaje) cuando la Arista no declara uno (px). */
@@ -128,7 +130,7 @@ function capasDeFragmentoDerivado(capasDelNodo: readonly CapaPintada[]): CapaPin
       if (tinteColocado || colorDeRelleno === undefined) continue;
       tinteColocado = true;
       salida.push({ ...capa, ...primitiva('solid', { color: `color-mix(in srgb,${String(colorDeRelleno)} ${TINTE_DE_FRAGMENTO}%,transparent)` }) });
-    } else if (FORMAS_DE_PASTILLA.includes(capa.tipo)) {
+    } else if (esPastilla(capa.tipo)) {
       salida.push({ ...capa, ...primitiva('rect', { radius: RADIO_DE_TABLA }) });
     } else salida.push(capa);
   }
