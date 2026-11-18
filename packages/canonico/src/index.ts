@@ -17,7 +17,7 @@
  * `palette`); su contenido y su contrato de dibujo son del paquete `tema` (ADR 0008).
  * La geometria cacheada por Vista (`geometriaCacheadaSchema`: `{ view, theme, layoutKey,
  * geometry }`) tiene aqui su esquema para validarla al leerla del disco; la calcula `layout`.
- * `geometry` es una union por `kind` (hoy `grafo`); sin `kind` (cache anterior) se lee como `grafo`.
+ * `geometry` es una union por `kind` (`grafo` o `secuencia`; sus tipos salen de este esquema y `layout` los reexporta); sin `kind` (cache anterior) se lee como `grafo`.
  * `VistaResuelta.type` lleva el Tipo de diagrama.
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
  * excepcion solo para fallos de uso o internos.
@@ -53,7 +53,21 @@ export {
   vistaSchema,
 } from './esquema';
 export { geometriaCacheadaSchema, geometriaSchema } from './geometria';
-export type { GeometriaCacheada } from './geometria';
+export type {
+  CajaDeActivacion,
+  CajaDeGrupoColocada,
+  CajaDeNodo,
+  Geometria,
+  GeometriaCacheada,
+  GeometriaGrafo,
+  GeometriaSecuencia,
+  MarcoDeFragmento,
+  NotaColocada,
+  OperandoColocado,
+  Punto,
+  RutaDeArista,
+  RutaDeMensaje,
+} from './geometria';
 export { combineIconProviders, genericIcons, hidratarIconos, resolveNodeTypeIcon, sanearIcono, serializarIconos, workspaceIcons } from './iconos';
 export type { IconProvider } from './iconos';
 export { idDeArista, idDeElementoDeSecuencia, leerIdDeElementoDeSecuencia, revealAt } from './pasos';
