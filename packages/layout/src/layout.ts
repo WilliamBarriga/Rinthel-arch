@@ -4,53 +4,15 @@
  */
 import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 import { idDeArista } from 'canonico';
-import type { ItemResuelto, NodoResuelto, Tema, VistaResuelta } from 'canonico';
+import type { CajaDeNodo, Geometria, GeometriaGrafo, ItemResuelto, NodoResuelto, Punto, RutaDeArista, Tema, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
 import { layoutSecuencia } from './secuencia';
-import type { GeometriaSecuencia } from './secuencia';
 import { LARGO_DE_MARCADOR_ER, atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, contenidoDeNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
-import type { MedidasDeTexto, Metricas, Rect, TablaDeMetricas } from 'tema';
+import type { MedidasDeTexto, Metricas, TablaDeMetricas } from 'tema';
 
-/** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
-export interface CajaDeNodo {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  /** Rectangulo de cada Slot que el Tema muestra en este Nodo hoja, relativo a la caja (colocacion de `tema`). */
-  slots?: Record<string, Rect>;
-}
-
-export interface Punto {
-  x: number;
-  y: number;
-}
-
-/**
- * Ruta ortogonal de una Arista, en coordenadas del lienzo (no relativas a un
- * Grupo). El primer y el ultimo punto son los puertos: caen en el borde de los
- * Nodos extremo (el Grupo, si esta colapsado).
- */
-export interface RutaDeArista {
-  points: Punto[];
-}
-
-/** Geometria de grafo (ELK): cajas por id de Nodo visible y rutas por `idDeArista`. */
-export interface GeometriaGrafo {
-  kind: 'grafo';
-  nodes: Record<string, CajaDeNodo>;
-  edges: Record<string, RutaDeArista>;
-  /** Caja (coordenadas del lienzo) que ELK reservo a la etiqueta de cada Arista que la tiene, por `idDeArista`. */
-  labels: Record<string, CajaDeNodo>;
-  /** Pares de ids (orden alfabetico) de Nodos pineados cuyas cajas se solapan; el aviso `W_OVERLAPPING_PINS` lo emite quien tiene las posiciones del texto. */
-  pinsSolapados: [string, string][];
-  width: number;
-  height: number;
-}
-
-/** Geometria calculada de una Vista: union por `kind`; quien la lee hace switch por `kind`. */
-export type Geometria = GeometriaGrafo | GeometriaSecuencia;
+// La forma de la Geometria se declara una sola vez, en el esquema de `canonico`; aqui solo se reexportan sus tipos.
+export type { CajaDeNodo, Geometria, GeometriaGrafo, Punto, RutaDeArista };
 
 export interface OpcionesDeLayout {
   /** Motor ELK; por defecto el empaquetado, que corre igual en Node y en Web Worker. */

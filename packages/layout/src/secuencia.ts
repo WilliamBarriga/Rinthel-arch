@@ -7,101 +7,12 @@
  * en el borde de la activacion vigente.
  */
 import { activacionesDe } from 'canonico';
-import type { Activacion, AnclajeDeNota, ItemResuelto, MensajeResuelto, NotaResuelta, OperadorDeFragmento, VistaResuelta } from 'canonico';
+import type { Activacion, CajaDeActivacion, CajaDeGrupoColocada, CajaDeNodo, GeometriaSecuencia, ItemResuelto, MarcoDeFragmento, MensajeResuelto, NotaColocada, NotaResuelta, OperandoColocado, RutaDeMensaje, VistaResuelta } from 'canonico';
 import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, contenidoDeNodo, metricasDeHoja, metricasDeSecuencia, tamanoDeEtiqueta, textoDeGuarda } from 'tema';
 import type { Metricas, TablaDeMetricas } from 'tema';
 
-import type { CajaDeNodo, Punto } from './layout';
 
-/** Barra de activacion de una Lifeline: `x` es su borde izquierdo y `nivel` su anidacion (0 la exterior). */
-export interface CajaDeActivacion {
-  lifeline: string;
-  nivel: number;
-  x: number;
-  y1: number;
-  y2: number;
-  width: number;
-}
-
-/** Ruta de un Mensaje (2 puntos, o 4 si es propio: el lazo) y la caja de su etiqueta si la tiene. */
-export interface RutaDeMensaje {
-  points: Punto[];
-  label?: CajaDeNodo;
-}
-
-/** Operando de un Fragmento colocado: su franja vertical, su guarda (caja del texto `[guarda]`) y el divisor sobre el. */
-export interface OperandoColocado {
-  y1: number;
-  y2: number;
-  guard?: { text: string; box: CajaDeNodo };
-  /** `y` del divisor que lo separa del operando anterior; ausente en el primero. */
-  divider?: number;
-}
-
-/** Marco de un Fragmento: cubre las Lifelines de su contenido; `tab` es la caja de la pestana con el texto del operador. */
-export interface MarcoDeFragmento {
-  ruta: string;
-  operator: OperadorDeFragmento | 'ref';
-  /** Titulo de la Interaccion referida, solo en `ref`: caja del texto bajo la pestana. */
-  title?: { text: string; box: CajaDeNodo };
-  /** Profundidad de anidacion (0 el exterior). */
-  nivel: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  tab: CajaDeNodo;
-  operands: OperandoColocado[];
-}
-
-/** Nota colocada (papel): caja, texto ya envuelto (una cadena por linea) y esquina doblada. */
-export interface NotaColocada {
-  ruta: string;
-  anchor: AnclajeDeNota;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  lines: string[];
-  lineHeight: number;
-  /** Lado de la esquina doblada (arriba a la derecha). */
-  fold: number;
-}
-
-/** `box` de un Grupo abierto: envuelve las cabeceras y Lifelines de sus hijas; `title` es la caja de su nombre (arriba a la izquierda). */
-export interface CajaDeGrupoColocada {
-  id: string;
-  /** Texto del nombre del Grupo. */
-  label: string;
-  /** Anidacion entre `box`es (0 el exterior). */
-  nivel: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  title: CajaDeNodo;
-}
-
-/** Geometria de una Vista de secuencia: `nodes` son las cabeceras de las Lifelines (todas en la misma `y`). */
-export interface GeometriaSecuencia {
-  kind: 'secuencia';
-  nodes: Record<string, CajaDeNodo>;
-  /** Cabecera espejo al pie de cada Lifeline no destruida (misma caja y Slots que en `nodes`, desplazada a `y2` de su linea). */
-  footers?: Record<string, CajaDeNodo>;
-  /** Linea vertical de cada Lifeline, por id de Nodo: `x` central, desde `y1` (bajo la cabecera) hasta `y2`. */
-  lifelines: Record<string, { x: number; y1: number; y2: number; /** Cortada en un `destroy`: `y2` es la `y` de ese Mensaje y se pinta el marcador `end`. */ destroyed?: true }>;
-  activations: CajaDeActivacion[];
-  /** Ruta de cada Mensaje por su `ruta` (identidad en la Interaccion). */
-  messages: Record<string, RutaDeMensaje>;
-  /** Marcos de los Fragmentos, los exteriores antes que los anidados. */
-  fragments: MarcoDeFragmento[];
-  /** Notas, en orden de declaracion. */
-  notes: NotaColocada[];
-  /** `box` de los Grupos abiertos, los exteriores antes que los anidados. */
-  groups: CajaDeGrupoColocada[];
-  width: number;
-  height: number;
-}
+export type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada, OperandoColocado, RutaDeMensaje };
 
 /**
  * Constantes de la secuencia (px) que el Tema no ajusta. Las separaciones que si (hueco entre Lifelines y entre Mensajes,

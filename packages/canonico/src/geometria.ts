@@ -1,13 +1,16 @@
 /**
  * Esquema Zod de la capa de geometria cacheada por Vista (spec #19, ADR 0003):
  * lo que `build` escribe en `.diagrams/geometria/<vista>.json` y lo que `export`
- * y el HTML leen de vuelta. La calcula `layout`; aqui solo se describe su forma
- * para validarla al leer del disco, sin que `canonico` dependa de `layout`.
+ * y el HTML leen de vuelta. Es la unica declaracion de la forma de la Geometria:
+ * `layout` la calcula y reexporta estos tipos, que salen del esquema.
  */
 import { z } from 'zod';
 
+import { ANCLAJES_DE_NOTA, OPERADORES_DE_FRAGMENTO } from './esquema';
+
 const numeroFinito = z.number().finite();
 
+/** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
 const cajaDeNodoSchema = z.object({
   x: numeroFinito,
   y: numeroFinito,
@@ -18,12 +21,13 @@ const cajaDeNodoSchema = z.object({
 });
 
 const puntoSchema = z.object({ x: numeroFinito, y: numeroFinito });
+const rutaDeAristaSchema = z.object({ points: z.array(puntoSchema) });
 
 /** Geometria de grafo (Vistas architecture y flow): cajas por id de Nodo, rutas por id de Arista y tamano total. */
 const geometriaGrafoSchema = z.object({
   kind: z.literal('grafo'),
   nodes: z.record(z.string(), cajaDeNodoSchema),
-  edges: z.record(z.string(), z.object({ points: z.array(puntoSchema) })),
+  edges: z.record(z.string(), rutaDeAristaSchema),
   labels: z.record(z.string(), cajaDeNodoSchema).default({}),
   pinsSolapados: z.array(z.tuple([z.string(), z.string()])),
   width: numeroFinito,
@@ -38,6 +42,8 @@ const geometriaGrafoSchema = z.object({
 const geometriaSecuenciaSchema = z.object({
   kind: z.literal('secuencia'),
   nodes: z.record(z.string(), cajaDeNodoSchema),
+  /** Cabecera espejo al pie de cada Lifeline no destruida. Temporal: la quita la fidelidad al ADR 0009 (#155), del esquema y de `layout` a la vez. */
+  footers: z.record(z.string(), cajaDeNodoSchema).optional(),
   lifelines: z.record(z.string(), z.object({ x: numeroFinito, y1: numeroFinito, y2: numeroFinito, destroyed: z.literal(true).optional() })),
   activations: z.array(z.object({ lifeline: z.string(), nivel: z.number().int(), x: numeroFinito, y1: numeroFinito, y2: numeroFinito, width: numeroFinito })),
   messages: z.record(z.string(), z.object({ points: z.array(puntoSchema), label: cajaDeNodoSchema.optional() })),
@@ -45,7 +51,7 @@ const geometriaSecuenciaSchema = z.object({
     .array(
       z.object({
         ruta: z.string(),
-        operator: z.enum(['opt', 'loop', 'break', 'critical', 'alt', 'par', 'ref']),
+        operator: z.enum([...OPERADORES_DE_FRAGMENTO, 'ref']),
         title: z.object({ text: z.string(), box: cajaDeNodoSchema }).optional(),
         nivel: z.number().int(),
         x: numeroFinito,
@@ -61,7 +67,7 @@ const geometriaSecuenciaSchema = z.object({
     .array(
       z.object({
         ruta: z.string(),
-        anchor: z.enum(['left', 'right', 'over']),
+        anchor: z.enum(ANCLAJES_DE_NOTA),
         x: numeroFinito,
         y: numeroFinito,
         width: numeroFinito,
@@ -101,3 +107,16 @@ export const geometriaCacheadaSchema = z.object({
 });
 
 export type GeometriaCacheada = z.infer<typeof geometriaCacheadaSchema>;
+export type CajaDeNodo = z.infer<typeof cajaDeNodoSchema>;
+export type Punto = z.infer<typeof puntoSchema>;
+export type RutaDeArista = z.infer<typeof rutaDeAristaSchema>;
+export type GeometriaGrafo = z.infer<typeof geometriaGrafoSchema>;
+export type GeometriaSecuencia = z.infer<typeof geometriaSecuenciaSchema>;
+/** Geometria calculada de una Vista: union por `kind`; quien la lee hace switch por `kind`. */
+export type Geometria = GeometriaGrafo | GeometriaSecuencia;
+export type CajaDeActivacion = GeometriaSecuencia['activations'][number];
+export type RutaDeMensaje = GeometriaSecuencia['messages'][string];
+export type MarcoDeFragmento = GeometriaSecuencia['fragments'][number];
+export type OperandoColocado = MarcoDeFragmento['operands'][number];
+export type NotaColocada = GeometriaSecuencia['notes'][number];
+export type CajaDeGrupoColocada = GeometriaSecuencia['groups'][number];
