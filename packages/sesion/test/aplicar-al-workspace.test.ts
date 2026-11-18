@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { aplicarAlWorkspace, hashDeContenido } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, hashDeContenido, workspaceEnMemoria } from 'sesion';
 import type { Intencion, PuertoDeWorkspace } from 'sesion';
 
 const texto = `specification { node servicio }
@@ -11,18 +11,18 @@ view v {
 }
 `;
 
-/** Fake en memoria del Workspace: `propios` son los archivos escribibles; `temas` solo se leen. */
+/** El adaptador en memoria de `sesion`, anotando cada escritura. */
 function fake(propios: Record<string, string>, temas: Record<string, string> = {}) {
-  let actuales = { ...propios };
+  const ws = workspaceEnMemoria({ propios, temas });
   const escrituras: string[] = [];
   const puerto: PuertoDeWorkspace = {
-    leer: () => ({ disco: { ...temas, ...actuales }, propios: { ...actuales } }),
+    leer: () => ws.leer(),
     escribir: (ruta, nuevo) => {
       escrituras.push(ruta);
-      actuales = { ...actuales, [ruta]: nuevo };
+      ws.escribir(ruta, nuevo);
     },
   };
-  return { puerto, escrituras, texto: (ruta: string) => actuales[ruta] };
+  return { puerto, escrituras, texto: (ruta: string) => ws.texto(ruta) };
 }
 
 const mover = (_t: string, extra: Partial<Extract<Intencion, { tipo: 'mover-pin' }>> = {}): Intencion => ({
@@ -32,6 +32,22 @@ const mover = (_t: string, extra: Partial<Extract<Intencion, { tipo: 'mover-pin'
   x: 4,
   y: 6,
   ...extra,
+});
+
+describe('Workspace en memoria', () => {
+  it('lo que escribe la puerta lo ve la Sesion abierta sobre el; los Temas solo se leen y un archivo borrado desaparece', async () => {
+    const ws = workspaceEnMemoria({ propios: { 'main.dg': texto, 'nota.dg': '// nota\n' }, temas: { 'tema.dg': 'theme t {}\n' } });
+
+    expect(aplicarAlWorkspace(ws, mover(texto)).ok).toBe(true);
+    ws.borrar('nota.dg');
+
+    const { disco, propios } = ws.leer();
+    expect(Object.keys(disco).sort()).toEqual(['main.dg', 'tema.dg']);
+    expect(Object.keys(propios)).toEqual(['main.dg']);
+    const sesion = abrirSesion(disco);
+    expect(sesion.fuente?.views[0]?.overrides).toEqual([expect.objectContaining({ node: 'a', pin: { x: 4, y: 6 } })]);
+    expect(ws.texto('nota.dg')).toBeUndefined();
+  });
 });
 
 describe('aplicarAlWorkspace', () => {

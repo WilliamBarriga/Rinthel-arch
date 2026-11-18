@@ -7,7 +7,7 @@ import { aplicarIntencion } from './intenciones';
 import type { Intencion, Visto } from './intenciones';
 
 /**
- * Puerto del Workspace en disco (adaptador en `cli`; fake en memoria en las pruebas).
+ * Puerto del Workspace: adaptador de disco en `cli`, en memoria `workspaceEnMemoria`.
  * `leer` da `disco` (Workspace mas Temas de `--theme-path`, lo que se compila) y
  * `propios` (solo los archivos del Workspace, los unicos escribibles). Los fallos de
  * I/O se propagan como excepcion.
