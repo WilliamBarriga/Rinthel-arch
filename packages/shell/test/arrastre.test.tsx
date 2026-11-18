@@ -131,7 +131,7 @@ describe('arrastre de Nodos (onMoveNode)', () => {
 });
 
 describe('crearEnviadorDePin', () => {
-  const intencion = { vista: 'v', nodo: 'a', x: 1, y: 2, hash: 'h' };
+  const intencion = { vista: 'v', nodo: 'a', x: 1, y: 2, version: 4 };
   const respuesta = (estado: number, cuerpo: unknown) => Promise.resolve(new Response(JSON.stringify(cuerpo), { status: estado }));
 
   it('envia la intencion por POST JSON a /api/pin', async () => {

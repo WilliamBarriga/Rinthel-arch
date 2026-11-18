@@ -3,7 +3,7 @@
  * `/api/estado`, se suscribe a `/eventos` (SSE) y, cuando llega un estado
  * nuevo, pide la geometria de cada Vista a `/api/vista/<id>`. Muestra la Vista
  * elegida por el hash de URL y un panel de issues clicables. Ctrl/Cmd+Z y Ctrl/Cmd+Mayus+Z (o Ctrl+Y) piden deshacer/rehacer al servidor. Arrastrar un Nodo envia
- * `POST /api/pin` con el hash del archivo de la Vista; un 409 recarga el estado y avisa. No es parte de la
+ * `POST /api/pin` con la `version` del estado que se esta viendo; un 409 recarga el estado y avisa. No es parte de la
  * interfaz del paquete: la empaqueta `dev-shell.ts`.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
