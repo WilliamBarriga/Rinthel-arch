@@ -29,26 +29,43 @@ export interface AristaResuelta extends Arista {
   count: number;
 }
 
-/** Paso tal como lo ve quien dibuja. En secuencia `corte` es la `ruta` del Mensaje proyectado hasta el que se muestra (incluido). */
+/** Paso de una Vista de secuencia tal como lo ve quien dibuja: un corte del tiempo en el Mensaje proyectado `corte` (su `ruta`), incluido. */
 export interface PasoResuelto extends Paso {
-  corte?: string;
+  corte: string;
 }
 
-/** Nodos y Aristas visibles de una Vista, mas lo que `layout` y `render` necesitan de ella. */
-export interface VistaResuelta {
+/**
+ * Vista resuelta de un Tipo de diagrama de grafo (`architecture`, `flow`, `er`): Nodos y Aristas visibles, con sus Pins.
+ */
+export interface VistaDeGrafo {
   /** Tipo de diagrama de la Vista; elige el algoritmo de layout y entra en las claves de cache. */
-  type: Vista['type'];
+  type: 'architecture' | 'flow' | 'er';
   /** Nodos visibles en orden de documento. */
   nodes: NodoResuelto[];
   /** Aristas entre Nodos visibles, con las de los hijos de un Grupo colapsado elevadas a el. */
   edges: AristaResuelta[];
-  /** Overrides de presentacion de la Vista, tal cual (label, pin, order, color). */
+  /** Overrides de presentacion de la Vista, tal cual (label, pin, order, color); de aqui salen los Pins. */
   overrides: OverrideDeNodo[];
   /** Pasos de revelado de la Vista (ADR 0002), tal cual; `revealAt` los interpreta. */
-  steps: PasoResuelto[];
-  /** Solo en Vistas `sequence`: la Interaccion proyectada. Sus `nodes` son las Lifelines, en orden de columna, y no hay `edges`. */
-  interaction?: InteraccionResuelta;
+  steps: Paso[];
 }
+
+/**
+ * Vista resuelta de secuencia (ADR 0009): la Interaccion proyectada. Sus `nodes` son las Lifelines, en orden de
+ * columna. No tiene Aristas ni Pins: el layout de secuencia es determinista y el orden lo da `order`.
+ */
+export interface VistaDeSecuencia {
+  type: 'sequence';
+  /** Lifelines en orden de columna, sin hijos. */
+  nodes: NodoResuelto[];
+  /** La Interaccion proyectada; vacia (sin Mensajes) si la Vista nombra una que no existe (`validate` lo informa). */
+  interaction: InteraccionResuelta;
+  /** Pasos resueltos: cada uno es un corte del tiempo en un Mensaje proyectado. */
+  steps: PasoResuelto[];
+}
+
+/** Lo que `layout` y `render` necesitan de una Vista; una union por Tipo de diagrama: cada rama dice que campos tiene. */
+export type VistaResuelta = VistaDeGrafo | VistaDeSecuencia;
 
 /** Estado de colapso del llamador (p. ej. el shell); gana a lo declarado en la Vista. */
 export interface EstadoDeColapso {
@@ -126,7 +143,7 @@ export function resolveView(
 
   if (vista.type === 'sequence') {
     const { nodes, interaction } = resolverSecuencia(fuente.model.interactions, fuente.model.nodes, vista, excluidos, resolver, ancestroColapsado);
-    return { type: vista.type, nodes, edges: [], overrides: vista.overrides, steps: pasosDeSecuencia(vista, interaction), ...(interaction !== undefined && { interaction }) };
+    return { type: vista.type, nodes, interaction, steps: pasosDeSecuencia(vista, interaction) };
   }
 
   return {
@@ -143,8 +160,8 @@ export function resolveView(
  * existe o no se proyecta se omite: `validate` lo informa); `steps each` da un Paso por Mensaje proyectado, titulado con
  * su etiqueta (sin el numero de `autonumber`) o `from -> to`.
  */
-function pasosDeSecuencia(vista: Vista, interaccion: InteraccionResuelta | undefined): PasoResuelto[] {
-  const mensajes = interaccion?.messages ?? [];
+function pasosDeSecuencia(vista: Vista, interaccion: InteraccionResuelta): PasoResuelto[] {
+  const mensajes = interaccion.messages;
   if (vista.stepsEach === true && vista.steps.length === 0) {
     return mensajes.map((mensaje) => {
       const etiqueta = mensaje.numero === undefined ? mensaje.label : mensaje.label?.slice(`${mensaje.numero}. `.length);

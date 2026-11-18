@@ -4,7 +4,7 @@
  * padre; aqui se pasan a coordenadas del lienzo para compararlas con la camara.
  */
 import { idDeArista } from 'canonico';
-import type { NodoResuelto, VistaResuelta } from 'canonico';
+import type { AristaResuelta, NodoResuelto, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
 import type { Camara } from 'render';
@@ -41,17 +41,26 @@ export function recortarAlViewport(vista: VistaResuelta, geometria: Geometria, c
     ...nodo,
     children: nodo.children.filter((hijo) => dentro.has(hijo.id)).map(podar),
   });
-  return {
-    ...vista,
-    nodes: vista.nodes.filter((nodo) => dentro.has(nodo.id)).map(podar),
-    edges: vista.edges.filter((arista) => {
-      const puntos = (geometria.kind === 'grafo' ? geometria.edges[idDeArista(arista)]?.points : undefined) ?? [];
-      if (puntos.length === 0) return false;
-      const xs = puntos.map((p) => p.x);
-      const ys = puntos.map((p) => p.y);
-      const x = Math.min(...xs);
-      const y = Math.min(...ys);
-      return cruzan({ x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y }, camara);
-    }),
-  };
+  const nodes = vista.nodes.filter((nodo) => dentro.has(nodo.id)).map(podar);
+  switch (vista.type) {
+    case 'sequence':
+      return { ...vista, nodes };
+    case 'architecture':
+    case 'flow':
+    case 'er':
+      return { ...vista, nodes, edges: aristasEnLaCamara(vista.edges, geometria, camara) };
+  }
+}
+
+/** Aristas cuya ruta cruza la camara (una sin ruta en la geometria se descarta). */
+function aristasEnLaCamara(aristas: readonly AristaResuelta[], geometria: Geometria, camara: Camara): AristaResuelta[] {
+  return aristas.filter((arista) => {
+    const puntos = (geometria.kind === 'grafo' ? geometria.edges[idDeArista(arista)]?.points : undefined) ?? [];
+    if (puntos.length === 0) return false;
+    const xs = puntos.map((p) => p.x);
+    const ys = puntos.map((p) => p.y);
+    const x = Math.min(...xs);
+    const y = Math.min(...ys);
+    return cruzan({ x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y }, camara);
+  });
 }

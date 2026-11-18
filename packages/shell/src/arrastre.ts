@@ -105,7 +105,8 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
       const k0 = e.ancho / e.camaraVigente.current!.width;
       const caja = nodo.getBoundingClientRect();
       const camara = e.camaraVigente.current!;
-      const grupos = ultimo.current.calculo!.vista.interaction?.groups ?? [];
+      const enCurso = ultimo.current.calculo!.vista;
+      const grupos = enCurso.type === 'sequence' ? (enCurso.interaction.groups ?? []) : [];
       const unidad = unidadBajo(geometria, grupos, { x: camara.x + (evento.clientX - caja.left) / k0, y: camara.y + (evento.clientY - caja.top) / k0 });
       if (unidad === undefined) return;
       const orden = ultimo.current.calculo!.vista.nodes.map((n) => n.id);

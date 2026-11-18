@@ -3,7 +3,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { fuenteCanonicaSchema, resolveView, revealAt } from 'canonico';
-import type { VistaResuelta } from 'canonico';
+import type { VistaDeGrafo, VistaResuelta } from 'canonico';
 import { layoutView } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
@@ -17,7 +17,7 @@ import { capaDe, etiquetaCon, hojaDe, propiedad, rectDe, traslacionDe } from './
 const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
 
 /** a { a1 a2 } -> b -> c, con dos pasos: primero `a`, luego `b` y `c`. */
-function vista(estado = {}, steps: unknown[] = []): VistaResuelta {
+function vista(estado = {}, steps: unknown[] = []): VistaDeGrafo {
   const fuente = fuenteCanonicaSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: {
@@ -29,7 +29,7 @@ function vista(estado = {}, steps: unknown[] = []): VistaResuelta {
     },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], steps }],
   });
-  return resolveView(fuente, 'v', estado)!;
+  return resolveView(fuente, 'v', estado) as VistaDeGrafo;
 }
 
 const PASOS = [

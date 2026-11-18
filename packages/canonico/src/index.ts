@@ -18,7 +18,8 @@
  * La geometria cacheada por Vista (`geometriaCacheadaSchema`: `{ view, theme, layoutKey,
  * geometry }`) tiene aqui su esquema para validarla al leerla del disco; la calcula `layout`.
  * `geometry` es una union por `kind` (hoy `grafo`); sin `kind` (cache anterior) se lee como `grafo`.
- * `VistaResuelta.type` lleva el Tipo de diagrama.
+ * `VistaResuelta` es una union por `type` (Tipo de diagrama): grafo (`VistaDeGrafo`, con Aristas y
+ * Pins) o secuencia (`VistaDeSecuencia`, con la Interaccion resuelta y Pasos con corte del tiempo).
  * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
  * excepcion solo para fallos de uso o internos.
  * `validate(fuente, { iconos?, ubicar? })` devuelve los issues semanticos de una
@@ -64,7 +65,7 @@ export type { OpcionesDeValidate, RutaDeFuente, SitioDeTexto, Ubicador } from '.
 export { activacionesDe, aplanarMensajes, destinoDeRef, lifelinesDe } from './secuencia';
 export type { Activacion, CajaDeGrupo, FragmentoResuelto, InteraccionResuelta, ItemResuelto, MensajeResuelto, MensajeUbicado, NotaResuelta, RefResuelto } from './secuencia';
 export { matchesSelector, resolveView } from './vistas';
-export type { AristaResuelta, EstadoDeColapso, NodoResuelto, PasoResuelto, VistaResuelta } from './vistas';
+export type { AristaResuelta, EstadoDeColapso, NodoResuelto, PasoResuelto, VistaDeGrafo, VistaDeSecuencia, VistaResuelta } from './vistas';
 export type {
   AristaDePaso,
   Arista,

@@ -163,7 +163,7 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
     const tipos = fuente.specification.nodeTypes.filter((t) => usados.has(t.name)).map((t) => ({ name: t.name, color: colores[t.name], icon: t.icon }));
     const tema = temaDeVista(fuente, declarada, global);
     const aviso = (message: string): Issue => ({ code: CODIGOS.W_THEME_COLOR_ONLY, severity: 'warning', ...donde, message, hint: 'da al Tema un trazo, un marcador o un estilo distinto; el color no basta' });
-    const tiposDeMensaje = [...new Set(resuelta.interaction?.messages.map((m) => m.kind) ?? [])];
+    const tiposDeMensaje = resuelta.type === 'sequence' ? [...new Set(resuelta.interaction.messages.map((m) => m.kind))] : [];
     for (const [a, b] of mensajesSoloColor(tema, tiposDeMensaje)) issues.push(aviso(`En la Vista '${declarada.id}', los Mensajes '${a}' y '${b}' se distinguen solo por color`));
     if (resuelta.type === 'er' && resuelta.edges.some((e) => e.identifying === true) && aristaIdentificanteSoloColor(tema)) {
       issues.push(aviso(`En la Vista '${declarada.id}', las Aristas identificantes y las no identificantes se distinguen solo por color`));

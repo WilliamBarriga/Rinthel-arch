@@ -151,7 +151,8 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
         ...(encontrada.vista.interaction === undefined ? {} : { interaction: encontrada.vista.interaction }),
         ...encontrada.sitio,
         nodos: nodos.filter(({ nodo }) => visibles.has(nodo.id)).map(resumen),
-        aristas: resuelta.edges.map((arista) => {
+        // Una Vista de secuencia no tiene Aristas.
+        aristas: (resuelta.type === 'sequence' ? [] : resuelta.edges).map((arista) => {
           const i = indiceDeArista(arista);
           // Sin Arista del Modelo que la origine, el sitio es el de la Vista (no se inventa otra Arista).
           return i < 0 ? { ...aristaDe(arista, 0, encontrada.sitio), count: arista.count } : { ...aristaDe(arista, i), count: arista.count };

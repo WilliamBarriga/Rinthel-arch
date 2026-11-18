@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
-import type { Atributo, Tema, VistaResuelta } from 'canonico';
+import type { Atributo, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
 import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView as layoutDeVista } from 'layout';
 import type { CajaDeNodo, Geometria } from 'layout';
 import { TEMA_NEUTRO, metricasDe, tablaDeMetricas } from 'tema';
@@ -23,7 +23,7 @@ const nodo = (id: string, children: unknown[] = []) => ({
 });
 
 /** a { a1 a2 a3 }, b { b1 b2 }, c; aristas entre Grupos y a un hijo de otro Grupo. */
-function vista(vistaExtra: Record<string, unknown> = {}, estado = {}): VistaResuelta {
+function vista(vistaExtra: Record<string, unknown> = {}, estado = {}): VistaDeGrafo {
   const fuente = fuenteCanonicaSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: {
@@ -41,7 +41,7 @@ function vista(vistaExtra: Record<string, unknown> = {}, estado = {}): VistaResu
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], ...vistaExtra }],
   });
   const resuelta = resolveView(fuente, 'v', estado);
-  if (resuelta === undefined) throw new Error('Vista inexistente');
+  if (resuelta === undefined || resuelta.type === 'sequence') throw new Error('Vista inexistente o de secuencia');
   return resuelta;
 }
 
@@ -262,7 +262,7 @@ describe('claveDeLayout', () => {
 });
 
 describe('claveDeEstructura', () => {
-  const conAtributos = (atributos: Atributo[]): VistaResuelta => {
+  const conAtributos = (atributos: Atributo[]): VistaDeGrafo => {
     const base = vista();
     const marcar = (n: VistaResuelta['nodes'][number]): VistaResuelta['nodes'][number] =>
       n.id === 'c' ? { ...n, attributes: atributos } : { ...n, children: n.children.map(marcar) };

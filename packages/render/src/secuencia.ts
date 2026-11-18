@@ -8,7 +8,7 @@
  * Las cabeceras de las Lifelines son los Nodos de la Vista, dibujados como cualquier Nodo.
  */
 import { idDeElementoDeSecuencia } from 'canonico';
-import type { MensajeResuelto, NodoResuelto, Visibilidad } from 'canonico';
+import type { MensajeResuelto, NodoResuelto, VistaDeSecuencia, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada } from 'layout';
 import { ESTADOS, RELLENO_DE_NOTA, pinturaDeMensajeConTema, primitivaPintada, primitivasDeFamilia } from 'tema';
@@ -49,17 +49,18 @@ function pinturaDeLifeline(base: PinturaDeArista, destruida: boolean, secuencia:
   return { ...resto, capas, fin: primitivaPintada('cross', { size: Number(base.fin?.props['size'] ?? LARGO_DE_FIN_POR_DEFECTO), color: colorDelTrazo }) };
 }
 
-export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry: GeometriaSecuencia }): Elemento {
+export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: VistaDeSecuencia; geometry: GeometriaSecuencia }): Elemento {
   const { view, geometry, theme } = entrada;
   const estilo = entrada.estilo ?? resolverEstilo(theme, view.type, entrada.metricas);
   const { raices, cajas } = indiceDeGeometria(view, geometry);
   const visibility = entrada.visibility ?? (() => 1);
   const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));
   const contexto: Contexto = { ...entrada, visibility, estilo, cajas, coloresDeNodo, escalonado: posicionesDeEscalonado(raices, visibility, estilo, entrada.nuevos) };
-  contexto.nombres = nombresAccesibles(view, raices);
+  // Una Vista de secuencia no tiene Aristas: el nombre accesible de una Lifeline no anuncia relaciones.
+  contexto.nombres = nombresAccesibles([], raices);
 
   const interaccion = view.interaction;
-  const mensajes = interaccion === undefined ? [] : interaccion.messages;
+  const mensajes = interaccion.messages;
   const base = estilo.pintura.arista;
   const deOrigen = (id: string): PinturaDeArista => {
     const color = coloresDeNodo.get(id);
@@ -83,7 +84,7 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     ];
   });
 
-  const idDe = (mensaje: MensajeResuelto): string => idDeElementoDeSecuencia(interaccion!.id, mensaje.ruta);
+  const idDe = (mensaje: MensajeResuelto): string => idDeElementoDeSecuencia(interaccion.id, mensaje.ruta);
   // Corte de los Pasos: la `y` del ultimo Mensaje revelado. Con todos revelados no se recorta nada.
   const reveladas = mensajes.flatMap((mensaje) => {
     const ruta = geometry.messages[mensaje.ruta];
@@ -97,7 +98,7 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry
     const nodo = nodoPorId.get(activacion.lifeline);
     return nodo === undefined ? [] : [activacionHtml(activacion, nodo, contexto, corte)];
   });
-  const idDeInteraccion = interaccion?.id ?? '';
+  const idDeInteraccion = interaccion.id;
   const rutas = mensajes.flatMap((mensaje) => {
     const ruta = geometry.messages[mensaje.ruta];
     return ruta === undefined ? [] : [{ mensaje, ruta }];

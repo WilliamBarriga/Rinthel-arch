@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
-import type { IconProvider, Tema, VistaResuelta } from 'canonico';
+import type { IconProvider, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
 import { layoutView as layoutDeVista } from 'layout';
 
 import { aHtml, etiquetaCon, rectDe } from './ayudas';
@@ -25,7 +25,7 @@ const nodo = (id: string, title: string, type: string, children: unknown[] = [])
 });
 
 /** Grupo `a` con dos servicios, una base fuera y un override de color y label. */
-function vista(estado = {}): VistaResuelta {
+function vista(estado = {}): VistaDeGrafo {
   const fuente = fuenteCanonicaSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio', color: 'blue' }, { name: 'base', color: 'green' }] },
     model: {
@@ -37,7 +37,7 @@ function vista(estado = {}): VistaResuelta {
     },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], overrides: [{ node: 'db', color: 'red', label: 'Postgres' }] }],
   });
-  return resolveView(fuente, 'v', estado)!;
+  return resolveView(fuente, 'v', estado) as VistaDeGrafo;
 }
 
 const OSCURO: TemaResuelto = {
