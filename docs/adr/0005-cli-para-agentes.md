@@ -55,7 +55,7 @@ El shell y el comando envian la intencion (`{ vista, nodo, x, y }`), no rangos. 
 
 ### Concurrencia
 
-Cada edicion lleva el hash del contenido que vio quien la pide. Si el archivo en disco ya no coincide, se rechaza sin escritura parcial; el shell recarga la Vista y avisa. Esto matiza el "gana la ultima escritura" de `dev` solo para ediciones estructuradas; el resto de la reconciliacion sigue siendo de git. No hay deshacer propio: el DSL esta en git.
+Cada edicion estructurada (`--edits`) lleva el hash del contenido que vio quien la pide. Para Intenciones (`--intent`) rige `visto` (ADR 0007): el `hash` de `--intent` es opcional y se ignora. Si el archivo en disco ya no coincide, se rechaza sin escritura parcial; el shell recarga la Vista y avisa. Esto matiza el "gana la ultima escritura" de `dev` solo para ediciones estructuradas; el resto de la reconciliacion sigue siendo de git. No hay deshacer propio: el DSL esta en git.
 
 ### Alcance
 

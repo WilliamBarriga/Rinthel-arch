@@ -2,13 +2,13 @@
 
 ## Intencion: union discriminada por `tipo`
 
-Toda edicion que nace de la interaccion es una `Intencion` (paquete `sesion`): una union discriminada por `tipo`. Hay dos variantes: `ordenar-lifelines` (ADR 0009: `{ vista, orden, hash }`, reescribe el `order` de una Vista de secuencia) y `mover-pin`, que es la `IntencionDePin` de `canonico` (`{ vista, nodo, x, y, hash }`) mas `tipo: 'mover-pin'`. Cada herramienta futura (redimensionar, renombrar, crear Arista) se agrega como una variante nueva con su rama en el reductor; no cambia el resto del protocolo.
+Toda edicion que nace de la interaccion es una `Intencion` (paquete `sesion`): una union discriminada por `tipo`. Hay dos variantes: `ordenar-lifelines` (ADR 0009: `{ vista, orden }`, reescribe el `order` de una Vista de secuencia) y `mover-pin`, que es la `IntencionDePin` de `canonico` (`{ vista, nodo, x, y }`, sin `hash`) mas `tipo: 'mover-pin'`. La Intencion no lleva `hash`: la comprobacion de concurrencia es un parametro aparte, `visto`, de quien aplica (ver Reductor puro). Cada herramienta futura (redimensionar, renombrar, crear Arista) se agrega como una variante nueva con su rama en el reductor; no cambia el resto del protocolo.
 
 La interfaz de red no cambia: el cuerpo de `POST /api/pin` sigue siendo `IntencionDePin` sin `tipo`, y la salida de `edit --json` y la respuesta del endpoint conservan su forma (ADR 0005). `tipo` es vocabulario interno del cliente y de `sesion`.
 
 ## Reductor puro
 
-`aplicarIntencion(archivos, intencion)` devuelve los archivos nuevos o un rechazo con `motivo` (`MotivoDeRechazo`). Es puro: sin disco, reloj ni DOM, probado sin jsdom. `mover-pin` reutiliza `editarPin` como juntura (calculo de la edicion minima, auto-prueba y aplicacion en memoria). El texto del DSL sigue siendo la unica fuente editable (ADR 0001): una Intencion siempre se reduce a ediciones de texto.
+`aplicarIntencion(archivos, intencion, visto?)` devuelve los archivos nuevos o un rechazo con `motivo` (`MotivoDeRechazo`). Es puro: sin disco, reloj ni DOM, probado sin jsdom. `mover-pin` reutiliza `editarPin` como juntura (calculo de la edicion minima, auto-prueba y aplicacion en memoria). `visto` es un mapa archivo -> hash del texto que vio quien emite la Intencion. Se rechaza con `hash-desactualizado` solo si algun archivo que la edicion cambia difiere de `visto`; los archivos que no toca no cuentan. Sin `visto`, la Intencion se aplica sobre el texto vigente. El texto del DSL sigue siendo la unica fuente editable (ADR 0001): una Intencion siempre se reduce a ediciones de texto.
 
 ## Historial de deshacer y rehacer
 
@@ -16,11 +16,11 @@ La interfaz de red no cambia: el cuerpo de `POST /api/pin` sigue siendo `Intenci
 
 ## Shell
 
-`shell` expone `crearControlDeEdicion(archivos)` con `aplicar`, `deshacer`, `rehacer`, `puedeDeshacer` y `puedeRehacer`; es el adaptador con estado sobre el historial puro de `sesion`. El servidor de `dev` escribe a disco por `POST /api/pin`, `POST /api/edit`, `POST /api/deshacer` y `POST /api/rehacer`. `dev` guarda un `Historial` del texto propio del Workspace: cada edicion lo apila (`apilar`) y deshacer/rehacer escriben el texto exacto de la instantanea. Si el disco ya no coincide con el historial (edicion externa), responden 409 `hash-desactualizado` y el historial vuelve a empezar; sin nada que deshacer o rehacer, 422. La pagina de `dev` conecta Ctrl/Cmd+Z y Ctrl/Cmd+Mayus+Z (o Ctrl+Y) a esos endpoints, salvo con el foco en un campo de texto. `crearControlDeEdicion` sigue siendo el adaptador en memoria de `shell` para consumidores que tengan el texto en el cliente.
+`shell` no expone un control de edicion con estado: el historial puro vive en `sesion`. El servidor de `dev` escribe a disco por `POST /api/pin`, `POST /api/edit`, `POST /api/deshacer` y `POST /api/rehacer`. `dev` guarda un `Historial` del texto propio del Workspace: cada edicion lo apila (`apilar`) y deshacer/rehacer escriben el texto exacto de la instantanea. Si el disco ya no coincide con el historial (edicion externa), responden 409 `hash-desactualizado` y el historial vuelve a empezar; sin nada que deshacer o rehacer, 422. La pagina de `dev` conecta Ctrl/Cmd+Z y Ctrl/Cmd+Mayus+Z (o Ctrl+Y) a esos endpoints, salvo con el foco en un campo de texto.
 
 ## Consecuencias
 
-- El rechazo por hash desactualizado se mantiene: una Intencion se calcula contra el texto que vio quien la emite.
+- El rechazo por hash desactualizado se mantiene, pero lo decide `visto` (parametro de quien aplica), no un campo de la Intencion: una Intencion se calcula contra el texto que vio quien la emite.
 - Un historial por sesion de edicion; no persiste entre recargas.
 - Se descarta una pila de ediciones inversas (fragil ante cambios de formato del DSL) y un historial de Intenciones reproducibles (el resultado dependeria del texto base).
 
