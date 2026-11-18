@@ -8,7 +8,7 @@
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
 
-import { comoJson, consultar, consultarTema, textoLegible } from './inspect';
+import { comoJson, consultarTema, textoLegible } from './inspect';
 import { abrirSesionDe, textoDeIssues, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { leerWorkspace } from './workspace';
@@ -50,13 +50,14 @@ export async function inspeccionar(
   const abierta = abrirSesionDe(leer, parseado.values.workspace, parseado.values['theme-path']);
   if ('fallo' in abierta) return abierta.fallo;
   const { sesion } = abierta;
-  if (sesion.fuente === undefined || sesion.ubicar === undefined) {
+  if (sesion.fuente === undefined) {
     return fallo(1, `El Workspace tiene errores; corrigelos con 'validate' antes de consultar.\n${(await textoDeIssues(sesion)).trimEnd()}`);
   }
   const respuesta =
     comando === 'tema'
       ? consultarTema(sesion.fuente, sesion.origenesDeTema, { nombre: argumento, catalogo: catalogo === true, ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(diagrama !== undefined && { diagrama }) })
-      : consultar(sesion.fuente, sesion.ubicar, { comando: comando as 'buscar' | 'nodo' | 'vista', argumento });
+      : sesion.consultar({ comando: comando as 'buscar' | 'nodo' | 'vista' | 'interaccion', argumento });
+  if (respuesta === undefined) return fallo(1, 'El Workspace tiene errores; corrigelos con \'validate\' antes de consultar.');
   if ('noEncontrado' in respuesta) return fallo(1, respuesta.noEncontrado);
   return { exitCode: 0, stdout: parseado.values.json ? comoJson(respuesta.salida) : textoLegible(respuesta.salida), stderr: '' };
 }
