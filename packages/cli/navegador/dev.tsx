@@ -17,6 +17,8 @@ import type { ComponentesDeTema } from 'render';
 
 import { montar, usePropsDeDatos } from './arranque';
 import { crearCargadorDeCodigo } from './componentes';
+import { leerGeometriasDeDev } from './geometria';
+import type { GeometriasLeidas } from './geometria';
 import { accionDeAtajo, crearAlAtajo, crearEnviadorDeHistorial } from './historial';
 import { crearAlMover, crearAlOrdenar } from './mover';
 
@@ -38,24 +40,22 @@ function useEstado(): { estado: Estado | undefined; recargar: () => Promise<void
   return { estado, recargar };
 }
 
-/** Geometria cacheada de cada Vista para la version vigente del estado. */
-function useGeometrias(estado: Estado | undefined): Record<string, GeometriaCacheada> | undefined {
-  const [geometrias, setGeometrias] = useState<{ version: number; porVista: Record<string, GeometriaCacheada> }>();
+/** Geometria cacheada de cada Vista para la version vigente del estado, validada con el esquema de `canonico`. */
+function useGeometrias(estado: Estado | undefined): GeometriasLeidas | undefined {
+  const [geometrias, setGeometrias] = useState<{ version: number; leidas: GeometriasLeidas }>();
   const version = estado?.version;
   const vistas = estado?.vistas;
   useEffect(() => {
     if (version === undefined || vistas === undefined) return;
     let vigente = true;
-    void Promise.all(
-      vistas.map(async (id) => [id, (await (await fetch(`/api/vista/${encodeURIComponent(id)}`)).json()) as GeometriaCacheada] as const),
-    ).then((pares) => {
-      if (vigente) setGeometrias({ version, porVista: Object.fromEntries(pares) });
+    void Promise.all(vistas.map(async (id) => [id, (await (await fetch(`/api/vista/${encodeURIComponent(id)}`)).json()) as unknown] as const)).then((pares) => {
+      if (vigente) setGeometrias({ version, leidas: leerGeometriasDeDev(Object.fromEntries(pares)) });
     }, () => undefined);
     return () => {
       vigente = false;
     };
   }, [version, vistas]);
-  return geometrias?.version === version ? geometrias?.porVista : undefined;
+  return geometrias?.version === version ? geometrias?.leidas : undefined;
 }
 
 /**
@@ -165,7 +165,9 @@ function App(): ReactElement {
     window.addEventListener('keydown', alTeclear);
     return () => window.removeEventListener('keydown', alTeclear);
   }, []);
-  const geometrias = useGeometrias(estado);
+  const leidas = useGeometrias(estado);
+  const geometrias = leidas?.porVista;
+  const erroresDeGeometria = leidas?.errores ?? [];
   // La ultima Vista dibujable se conserva mientras llega la nueva.
   const [ultima, setUltima] = useState<{ fuente: FuenteCanonica; estado: Estado; geometrias: Record<string, GeometriaCacheada> }>();
   useEffect(() => {
@@ -175,6 +177,13 @@ function App(): ReactElement {
   const componentes = useComponentes(estado);
   return (
     <>
+      {erroresDeGeometria.length > 0 && (
+        <ul data-panel="error-geometria" role="alert">
+          {erroresDeGeometria.map((error) => (
+            <li key={error}>{error}</li>
+          ))}
+        </ul>
+      )}
       {ultima === undefined ? <IssuesSinVista issues={estado?.issues ?? []} /> : <Vista {...ultima} layout={layout} componentes={componentes} alMover={alMover} alOrdenar={alOrdenar} aviso={aviso} />}
     </>
   );
