@@ -78,6 +78,21 @@ describe('cliente unico de la pagina de dev', () => {
     expect(await cliente.geometria('caida')).toEqual({ ok: false });
   });
 
+  it('una Geometria que no llega en el plazo es un fallo sin error (la pagina cae al Worker)', async () => {
+    const colgado = vi.fn(() => new Promise<Response>(() => undefined)) as unknown as typeof fetch;
+    const cliente = crearClienteDeDev({ fetch: colgado, eventos: sinEventos, plazoDeGeometriaMs: 20 });
+
+    expect(await cliente.geometria('lenta')).toEqual({ ok: false });
+  });
+
+  it('estado() no lanza: un fallo de red o una respuesta rota dan undefined', async () => {
+    const caido = crearClienteDeDev({ fetch: servidor({ '/api/estado': new Error('red') }).fetch, eventos: sinEventos });
+    const roto = crearClienteDeDev({ fetch: servidor({ '/api/estado': { status: 500, cuerpo: { error: 'x' } } }).fetch, eventos: sinEventos });
+
+    expect(await caido.estado()).toBeUndefined();
+    expect(await roto.estado()).toBeUndefined();
+  });
+
   it('se suscribe al estado por /eventos y lo pide a /api/estado', async () => {
     const estado = { version: 3, cambio: 'pintura', iconos: {}, vistas: [], issues: [] } satisfies EstadoDeDev;
     let empujar: ((datos: string) => void) | undefined;

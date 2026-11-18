@@ -60,7 +60,10 @@ function useEstado(): { estado: Estado | undefined; recargar: () => Promise<void
     setEstado((previo) => (previo === undefined || nuevo.version >= previo.version ? nuevo : previo));
   };
   useEffect(() => cliente.suscribir(recibir), []);
-  const recargar = async (): Promise<void> => recibir(await cliente.estado());
+  const recargar = async (): Promise<void> => {
+    const nuevo = await cliente.estado();
+    if (nuevo !== undefined) recibir(nuevo);
+  };
   return { estado, recargar };
 }
 
