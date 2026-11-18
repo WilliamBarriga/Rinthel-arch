@@ -2,7 +2,7 @@
  * Comando `dev` (ADR 0005): servidor HTTP de Node, solo en 127.0.0.1, que sirve el shell, el estado del
  * Workspace y la Geometria por Vista, y empuja los cambios por Server-Sent Events. Es un adaptador fino: el
  * estado vivo (Sesion, Historial, cola de escrituras, versiones, clasificacion del cambio, confianza en el
- * codigo) es el module "Workspace vivo" (`workspace-vivo.ts`); aqui viven el adaptador de disco y watcher de
+ * codigo) es el modulo "Workspace vivo" (`workspace-vivo.ts`); aqui viven el adaptador de disco y watcher de
  * su puerto y el enrutador HTTP.
  *
  * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),

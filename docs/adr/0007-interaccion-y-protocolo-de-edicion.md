@@ -20,7 +20,7 @@ En red toda Intencion viaja por `POST /api/edit` de `dev`, con su `tipo` y la `v
 
 ## Protocolo de `dev` y cliente unico (#164, spec #153)
 
-La pagina de `dev` tiene un solo module cliente (`packages/cli/navegador/cliente.ts`), la unica pieza del navegador que conoce rutas:
+La pagina de `dev` tiene un solo modulo cliente (`packages/cli/navegador/cliente.ts`), la unica pieza del navegador que conoce rutas:
 
 - **Estado**: `/eventos` (SSE, el estado al conectar y tras cada recompilacion) y `/api/estado`. Lleva la `version` y la clasificacion del `cambio` (`pintura` | `estructura` | `codigo`, ADR 0005); ya no lleva hashes por archivo ni el archivo de cada Vista.
 - **Escritura**: `POST /api/edit` con `{ ...intencion, version }`; `POST /api/deshacer` y `POST /api/rehacer`. Un 409 `hash-desactualizado` recarga el estado y avisa.
