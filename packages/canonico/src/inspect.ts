@@ -148,8 +148,10 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       temaConCodigo: z.boolean(),
       componentes: z.array(z.string()),
       /**
-       * Elementos de secuencia (`lifeline`, `activation`, `message`, `fragment`, `note`) y fila ER (`row`) que el Tema
-       * declara: su pila, los parches por variante (`kind`/`op`), los marcadores y las Metricas propias. Ausente si no declara ninguno.
+       * Elementos de secuencia (`lifeline`, `activation`, `message`, `fragment`, `note`) y fila ER (`row`), con la misma
+       * resolucion que el dibujo: su pila, la de cada variante (`kind`/`op`), los marcadores y las Metricas propias. Sin
+       * `--diagrama`, solo los que el Tema declara; con `--diagrama sequence` (o `er`), tambien los derivados de `edge`
+       * y `node`, marcados con `derivado: true`. Ausente si no hay ninguno.
        */
       elementos: z
         .object({
@@ -161,10 +163,11 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
                 marcadores: z.record(z.string(), z.string()),
                 parches: z.record(z.string(), z.array(capaDeTemaSchema)),
                 metricas: z.record(z.string(), z.number()),
+                derivado: z.literal(true).optional(),
               }),
             )
             .optional(),
-          fila: z.object({ alto: z.number().optional(), capas: z.array(capaDeTemaSchema) }).optional(),
+          fila: z.object({ alto: z.number().optional(), capas: z.array(capaDeTemaSchema), derivado: z.literal(true).optional() }).optional(),
         })
         .optional(),
       /** Con `--catalogo`: claves del catalogo de Primitivas, Movimientos y efectos. */

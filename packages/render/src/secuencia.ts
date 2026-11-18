@@ -1,18 +1,15 @@
 /**
- * Escena de una Vista de secuencia (ADR 0009): Lifelines, activaciones y Mensajes sobre la Geometria `secuencia`.
- * Un Tema que no declara `message`, `lifeline` ni `activation` los obtiene por derivacion de `edge` y `node`:
- * - `message` y `lifeline` salen de la pila de trazos de la Arista (la Lifeline, discontinua y sin marcadores); el
- *   marcador final depende del tipo (`sync` flecha, `async` y `reply` chevron);
- * - `reply` lleva la continuidad opuesta a la del trazo base de la Arista, asi se distingue siempre de `sync`;
- * - `activation` toma solo la forma, el relleno y el borde de la pila del Nodo de su Lifeline, sin sombras ni efectos.
- * Las cabeceras de las Lifelines son los Nodos de la Vista, dibujados como cualquier Nodo.
+ * Escena de una Vista de secuencia (ADR 0009): Lifelines, activaciones, Mensajes, Fragmentos y Notas sobre la Geometria
+ * `secuencia`. Las pilas de cada Elemento llegan ya resueltas en `estilo.pintura.secuencia` (declaradas por el Tema o
+ * derivadas de `edge` y `node` en `tema`): aqui solo se leen. Las cabeceras de las Lifelines son los Nodos de la Vista,
+ * dibujados como cualquier Nodo.
  */
 import { idDeElementoDeSecuencia } from 'canonico';
 import type { MensajeResuelto, NodoResuelto, VistaDeSecuencia, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada } from 'layout';
-import { ESTADOS, RELLENO_DE_NOTA, pinturaDeMensajeConTema, primitivaPintada, primitivasDeFamilia } from 'tema';
-import type { CapaPintada, PinturaDeArista, PinturaDeCajaDeSecuencia, PinturaDeSecuencia } from 'tema';
+import { ESTADOS, RELLENO_DE_NOTA, primitivasDeFamilia } from 'tema';
+import type { CapaPintada, PinturaDeCajaDeSecuencia, PinturaDeTrazoDeSecuencia, TrazosDeSecuencia } from 'tema';
 
 import { estiloEnLinea, num } from './elemento';
 import type { Elemento } from './elemento';
@@ -24,30 +21,11 @@ import { pilaDeNodo } from './pilas';
 import { pintarEtiquetaDeArista, pintarEstadoDeRuta } from './pintores';
 import { pintarMarcadores, pintarTrazos } from './aristas';
 
-/** Capas que una activacion toma del Nodo: solo su forma, relleno y borde. */
-const FAMILIAS_DE_ACTIVACION: readonly string[] = [...primitivasDeFamilia('forma'), ...primitivasDeFamilia('relleno'), ...primitivasDeFamilia('borde')];
-
-/** Capas de `capas` que una activacion o un Fragmento toman del Nodo (forma, relleno y borde), sin decoraciones ni efectos. */
-const capasDeCajaDelNodo = (capas: readonly CapaPintada[]): CapaPintada[] => capas.filter((capa) => FAMILIAS_DE_ACTIVACION.includes(capa.tipo));
-
 /** Caja absoluta `x,y,ancho,alto` (px), con el borde dentro del tamano: el marco de todo lo de secuencia que se pinta en HTML. */
 const cajaAbsoluta = (x: number, y: number, ancho: number, alto: number): string => `position:absolute;box-sizing:border-box;left:${num(x)}px;top:${num(y)}px;width:${num(ancho)}px;height:${num(alto)}px`;
 
-/** Largo del `end` de una Lifeline destruida cuando la Arista no declara marcador (px). */
-const LARGO_DE_FIN_POR_DEFECTO = 10;
-
-/** Pintura de una Lifeline: la del bloque `lifeline` del Tema si lo declara y, si no, la derivada de la Arista (trazo discontinuo, sin marcadores). */
-function pinturaDeLifeline(base: PinturaDeArista, destruida: boolean, secuencia: PinturaDeSecuencia | undefined, color: string | undefined): PinturaDeArista {
-  const declarada = secuencia?.lifeline;
-  const trazo = declarada === undefined ? undefined : ((color === undefined ? undefined : declarada.origenes[color]) ?? declarada.base);
-  const { origen: _origen, fin: _fin, ...resto } = base;
-  const capas: CapaPintada[] = trazo?.capas ?? base.capas.map((capa) => ({ ...capa, props: { ...capa.props, style: 'dashed' } }));
-  if (!destruida) return { ...resto, capas };
-  // Una Lifeline destruida termina en `end` (defecto `cross`), del color del trazo.
-  if (trazo?.fin !== undefined) return { ...resto, capas, fin: trazo.fin };
-  const colorDelTrazo = capas[capas.length - 1]?.props['color'] ?? '#000000';
-  return { ...resto, capas, fin: primitivaPintada('cross', { size: Number(base.fin?.props['size'] ?? LARGO_DE_FIN_POR_DEFECTO), color: colorDelTrazo }) };
-}
+/** El trazo de un Elemento de secuencia para un Nodo de origen del color de Paleta `color`. */
+const deColor = (trazos: TrazosDeSecuencia, color: string | undefined): PinturaDeTrazoDeSecuencia => (color === undefined ? undefined : trazos.origenes[color]) ?? trazos.base;
 
 export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: VistaDeSecuencia; geometry: GeometriaSecuencia }): Elemento {
   const { view, geometry, theme } = entrada;
@@ -61,17 +39,14 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: Vi
 
   const interaccion = view.interaction;
   const mensajes = interaccion.messages;
-  const base = estilo.pintura.arista;
-  const deOrigen = (id: string): PinturaDeArista => {
-    const color = coloresDeNodo.get(id);
-    return (color === undefined ? undefined : base.origenes[color]) ?? base;
-  };
-
   const secuencia = estilo.pintura.secuencia;
+  if (secuencia === undefined) throw new Error('construirEscenaDeSecuencia: el Estilo no es de una Vista sequence');
   const lifelines = raices.flatMap((nodo): Elemento[] => {
     const linea = geometry.lifelines[nodo.id];
     if (linea === undefined) return [];
-    const pintura = pinturaDeLifeline(deOrigen(nodo.id), linea.destroyed === true, secuencia, coloresDeNodo.get(nodo.id));
+    // Solo una Lifeline destruida lleva su marcador final.
+    const { capas, fin } = deColor(secuencia.lifeline, coloresDeNodo.get(nodo.id));
+    const pintura = { capas, ...(linea.destroyed === true && fin !== undefined && { fin }) };
     const v = visibilidadSvg(visibility(nodo.id));
     const puntos = [{ x: linea.x, y: linea.y1 }, { x: linea.x, y: linea.y2 }];
     return [
@@ -106,7 +81,7 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: Vi
   const trazos = rutas.map(({ mensaje, ruta }): Elemento => {
     const id = idDe(mensaje);
     const v = visibilidadSvg(visibility(id));
-    const pintura = pinturaDeMensajeConTema(secuencia, deOrigen(mensaje.from), coloresDeNodo.get(mensaje.from), mensaje.kind);
+    const pintura = deColor(secuencia.mensaje, coloresDeNodo.get(mensaje.from)).tipos[mensaje.kind]!;
     return {
       tag: 'g',
       attrs: { 'data-edge': id, 'data-message': id, 'data-kind': mensaje.kind, ...(atenuado(entrada.estados, id) ? { ...v, 'data-atenuado': '' } : v) },
@@ -121,10 +96,8 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: Vi
 
   const grupos = geometry.groups.map((grupo) => grupoHtml(grupo, contexto));
   const fragmentos = geometry.fragments.map((marco) => fragmentoHtml(marco, contexto, idDeInteraccion));
-  // Las guardas (y las pestanas) llevan el color del trazo de la Arista, no el `foreground`, y van sobre las activaciones.
-  const colorDeGuarda = String(base.capas[base.capas.length - 1]?.props['color'] ?? estilo.borde);
-  const textosDeFragmento = geometry.fragments.flatMap((marco) => textosDeFragmentoSvg(marco, estilo, colorDeGuarda, visibility, idDeInteraccion));
-
+  // Las guardas van sobre las activaciones.
+  const textosDeFragmento = geometry.fragments.flatMap((marco) => textosDeFragmentoSvg(marco, estilo, visibility, idDeInteraccion));
 
   return marcoDeEscena(entrada, estilo, [
     { tag: 'div', attrs: { class: 'rd-capa rd-grupos', 'data-capa': 'grupos' }, hijos: grupos },
@@ -138,13 +111,11 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: Vi
   ]);
 }
 
-/** Barra de activacion: la forma, el relleno y el borde del Nodo de su Lifeline, con su color. */
+/** Barra de activacion: la pila de `activation` (la derivada va por el Nodo de su Lifeline), con el color de ese Nodo. */
 function activacionHtml(activacion: CajaDeActivacion, nodo: NodoResuelto, contexto: Contexto, corte: number): Elemento {
   const { estilo, onSelect } = contexto;
-  const { pila } = pilaDeNodo(estilo.pintura, nodo);
-  // Con bloque `activation` en el Tema, su pila; si no, solo la forma, el relleno y el borde del Nodo de su Lifeline.
-  const declarada = estilo.pintura.secuencia?.activacion;
-  const capas = declarada?.capas ?? capasDeCajaDelNodo(pila.capas);
+  const pintura = estilo.pintura.secuencia!.activacion;
+  const capas = pintura.porNodo === undefined ? pintura.capas : pilaDeNodo(pintura.porNodo, nodo).pila.capas;
   const estilos = estiloEnLinea(declaracionesDeCaja(estilo, { capas, estados: {} }));
   // Un Paso recorta la activacion en el corte (no anuncia el `reply`); una que aun no empezo no se ve.
   const y2 = Math.min(activacion.y2, corte);
@@ -162,39 +133,8 @@ function activacionHtml(activacion: CajaDeActivacion, nodo: NodoResuelto, contex
   };
 }
 
-const FAMILIAS_DE_RELLENO: readonly string[] = primitivasDeFamilia('relleno');
-/** Radio de la caja derivada cuando la forma del Nodo es una pastilla o un circulo (ADR 0009). */
-const RADIO_DERIVADO = 8;
-/** Parte del color del relleno que queda al derivar el Fragmento: lo bastante tenue para no ocultar los Mensajes. */
-const TINTE_DE_FRAGMENTO = 14;
-
-/**
- * Capas derivadas del Nodo para un Fragmento: `pill`/`circle` pasan a `rect` con radio acotado y el relleno (solido, degradado,
- * patron) se reduce a un tinte tenue de su color, para que el marco no tape Mensajes ni activaciones.
- */
-function capasDerivadasDeFragmento(capas: readonly CapaPintada[]): CapaPintada[] {
-  const colorDeRelleno = capas.filter((capa) => FAMILIAS_DE_RELLENO.includes(capa.tipo)).map((capa) => capa.props['color'] ?? capa.props['from']).filter((c) => c !== undefined).at(-1);
-  const salida: CapaPintada[] = [];
-  let tinteColocado = false;
-  for (const capa of capas) {
-    if (FAMILIAS_DE_RELLENO.includes(capa.tipo)) {
-      if (tinteColocado || colorDeRelleno === undefined) continue;
-      tinteColocado = true;
-      salida.push({ ...capa, ...primitivaPintada('solid', { color: `color-mix(in srgb,${String(colorDeRelleno)} ${TINTE_DE_FRAGMENTO}%,transparent)` }) });
-    } else if (capa.tipo === 'pill' || capa.tipo === 'circle') {
-      salida.push({ ...capa, ...primitivaPintada('rect', { radius: RADIO_DERIVADO }) });
-    } else salida.push(capa);
-  }
-  return salida;
-}
-
-/** Estilo en linea de una caja con la forma, el relleno y el borde del Nodo (sin decoraciones ni efectos), o con las `capas` del Tema. */
-function estiloDeCajaDeNodo(contexto: Contexto, declaradas?: readonly CapaPintada[]): string {
-  const { estilo } = contexto;
-  const { pila } = pilaDeNodo(estilo.pintura, { collapsed: false, children: [], type: '' });
-  const capas = declaradas ?? capasDerivadasDeFragmento(capasDeCajaDelNodo(pila.capas));
-  return estiloEnLinea(declaracionesDeCaja(estilo, { capas: [...capas], estados: {} }));
-}
+/** Estilo en linea de una caja con las `capas` de su Elemento de Tema. */
+const estiloDeCaja = (contexto: Contexto, capas: readonly CapaPintada[]): string => estiloEnLinea(declaracionesDeCaja(contexto.estilo, { capas: [...capas], estados: {} }));
 
 /** Estados del elemento (`seleccionado`, `hover`) como atributo; Fragmentos y Notas se estilan con sus Elementos de Tema. */
 const atributoDeEstados = (estados: Estados | undefined, id: string): Record<string, string> => {
@@ -219,10 +159,9 @@ function grupoHtml(grupo: CajaDeGrupoColocada, contexto: Contexto): Elemento {
   };
 }
 
-/** Pila de Capas del marco de un Fragmento: la de su `op` en el Tema, la del bloque `fragment` o la derivada del Nodo. */
-function capasDeFragmento(declarado: PinturaDeCajaDeSecuencia | undefined, operador: string, estado?: PinturaDeCajaDeSecuencia['estados'][keyof PinturaDeCajaDeSecuencia['estados']]): readonly CapaPintada[] | undefined {
-  if (declarado === undefined) return undefined;
-  return estado === undefined ? (declarado.variantes[operador] ?? declarado.capas) : (estado.variantes[operador] ?? estado.capas);
+/** Pila de Capas del marco de un Fragmento: la de su `op` o la del bloque `fragment`, en el estado vigente. */
+function capasDeFragmento(pintura: PinturaDeCajaDeSecuencia, operador: string, estado?: PinturaDeCajaDeSecuencia['estados'][keyof PinturaDeCajaDeSecuencia['estados']]): readonly CapaPintada[] {
+  return estado === undefined ? (pintura.variantes[operador] ?? pintura.capas) : (estado.variantes[operador] ?? estado.capas);
 }
 
 /** Pila del estado que manda sobre un elemento: el ultimo de `ESTADOS` que el elemento lleva y el Tema declara (el orden de la hoja de los Nodos). */
@@ -232,19 +171,18 @@ function pilaDeEstado(declarado: PinturaDeCajaDeSecuencia | undefined, estados: 
   return vigente === undefined ? undefined : declarado?.estados[vigente];
 }
 
-/** Declaraciones CSS del trazo `divider` del Tema (`line`): `border-top` con su ancho, estilo y color; sin el, discontinuo del color del borde. */
-function bordeDeDivisor(declarado: PinturaDeCajaDeSecuencia | undefined, colorDeBorde: string): string {
-  const divisor = declarado?.textos['divider'];
-  if (divisor === undefined) return `1px dashed ${colorDeBorde}`;
-  const estilo = String(divisor.props['style'] ?? 'solid');
-  return `${num(Number(divisor.props['width'] ?? 1))}px ${estilo === 'dashed' || estilo === 'dotted' ? estilo : 'solid'} ${String(divisor.props['color'] ?? colorDeBorde)}`;
+/** Declaracion CSS `border-top` del trazo `divider` (`line`) del Fragmento: su ancho, estilo y color. */
+function bordeDeDivisor(pintura: PinturaDeCajaDeSecuencia): string {
+  const { props } = pintura.textos['divider']!;
+  const estilo = String(props['style']);
+  return `${num(Number(props['width']))}px ${estilo === 'dashed' || estilo === 'dotted' ? estilo : 'solid'} ${String(props['color'])}`;
 }
 
-/** Marco de un Fragmento: forma, relleno y borde del Nodo (o del bloque `fragment`); con su pestana y un divisor por operando a partir del segundo. */
+/** Marco de un Fragmento con la pila de `fragment`; con su pestana y un divisor por operando a partir del segundo. */
 function fragmentoHtml(marco: MarcoDeFragmento, contexto: Contexto, interaccion: string): Elemento {
-  const declarado = contexto.estilo.pintura.secuencia?.fragmento;
-  const estilos = estiloDeCajaDeNodo(contexto, capasDeFragmento(declarado, marco.operator, pilaDeEstado(declarado, contexto.estados, idDeElementoDeSecuencia(interaccion, marco.ruta))));
-  const borde = bordeDeDivisor(declarado, contexto.estilo.borde);
+  const pintura = contexto.estilo.pintura.secuencia!.fragmento;
+  const estilos = estiloDeCaja(contexto, capasDeFragmento(pintura, marco.operator, pilaDeEstado(pintura, contexto.estados, idDeElementoDeSecuencia(interaccion, marco.ruta))));
+  const borde = bordeDeDivisor(pintura);
   const divisores = marco.operands.flatMap((operando, k): Elemento[] =>
     operando.divider === undefined ? [] : [{ tag: 'div', attrs: { 'data-fragment-divider': `${marco.ruta}:${k}`, style: `${cajaAbsoluta(0, operando.divider - marco.y, marco.width, 0)};border-top:${borde};${opacidad(contexto.visibility(idDeElementoDeSecuencia(interaccion, marco.ruta, k)))}` }, hijos: [] }],
   );
@@ -256,11 +194,12 @@ function fragmentoHtml(marco: MarcoDeFragmento, contexto: Contexto, interaccion:
 }
 
 /** Texto SVG de la pestana (operador) y de cada guarda, centrados en sus cajas medidas. `operator` y `guard` del Tema dan color y peso. */
-function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'], color: string, visibility: Visibilidad, interaccion: string): Elemento[] {
+function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'], visibility: Visibilidad, interaccion: string): Elemento[] {
   const tamano = estilo.metricas.fontSize * estilo.metricas.escalaEtiqueta;
-  const declarado = estilo.pintura.secuencia?.fragmento;
-  const deOperador = declarado?.textos['operator']?.props;
-  const deGuarda = declarado?.textos['guard']?.props;
+  const pintura = estilo.pintura.secuencia!.fragmento;
+  const deOperador = pintura.textos['operator']?.props;
+  const deGuarda = pintura.textos['guard']?.props;
+  const color = pintura.colorDeGuarda;
   const texto = (visibilidad: number, atributos: Record<string, string>, caja: { x: number; y: number; width: number; height: number }, contenido: string, relleno: string, props?: Record<string, number | string>): Elemento => ({
     tag: 'text',
     attrs: {
@@ -284,22 +223,21 @@ function textosDeFragmentoSvg(marco: MarcoDeFragmento, estilo: Contexto['estilo'
 }
 
 /**
- * Nota "papel": poligono con la esquina superior derecha doblada, tinte suave del color de nota de la Paleta (`amber`,
- * si no el borde), trazo fino y el texto ya envuelto por el layout. No es un Nodo: no lleva cabecera, icono ni insignia.
+ * Nota "papel": poligono con la esquina superior derecha doblada, el relleno y el borde de la pila de `note` (con el
+ * color y la opacidad de su papel) y el texto ya envuelto por el layout. No es un Nodo: no lleva cabecera, icono ni insignia.
  */
 function notaSvg(nota: NotaColocada, estilo: Contexto['estilo'], interaccion: string, visibility: Visibilidad, estados: Estados | undefined): Elemento {
-  // Con bloque `note` en el Tema: el relleno y el borde de su pila y el estilo `text`; si no, el tinte de `amber`.
-  const declarada = estilo.pintura.secuencia?.nota;
-  const capasVigentes = pilaDeEstado(declarada, estados, idDeElementoDeSecuencia(interaccion, nota.ruta))?.capas ?? declarada?.capas;
-  const ultima = (familia: string): CapaPintada | undefined => capasVigentes?.filter((capa) => primitivasDeFamilia(familia as 'relleno' | 'borde').includes(capa.tipo)).at(-1);
-  const derivado = estilo.paleta['amber'] ?? estilo.borde;
-  const rellenoDeclarado = ultima('relleno');
-  const bordeDeclarado = ultima('borde');
-  const color = declarada === undefined ? derivado : String(bordeDeclarado?.props['color'] ?? derivado);
-  const relleno = declarada === undefined ? derivado : rellenoDeclarado === undefined ? 'none' : String(rellenoDeclarado.props['color'] ?? derivado);
-  const opacidadDeRelleno = declarada === undefined ? '0.2' : '1';
-  const anchoDeTrazo = declarada === undefined ? '1' : num(Number(bordeDeclarado?.props['width'] ?? 1));
-  const estiloDeTexto = declarada?.textos['text']?.props;
+  const pintura = estilo.pintura.secuencia!.nota;
+  const capasVigentes = pilaDeEstado(pintura, estados, idDeElementoDeSecuencia(interaccion, nota.ruta))?.capas ?? pintura.capas;
+  const ultima = (familia: 'relleno' | 'borde'): CapaPintada | undefined => capasVigentes.filter((capa) => primitivasDeFamilia(familia).includes(capa.tipo)).at(-1);
+  const { papel } = pintura;
+  const capaDeRelleno = ultima('relleno');
+  const capaDeBorde = ultima('borde');
+  const color = String(capaDeBorde?.props['color'] ?? papel.color);
+  const relleno = capaDeRelleno === undefined ? 'none' : String(capaDeRelleno.props['color'] ?? papel.color);
+  const opacidadDeRelleno = num(papel.opacidadDeRelleno);
+  const anchoDeTrazo = num(Number(capaDeBorde?.props['width'] ?? 1));
+  const estiloDeTexto = pintura.textos['text']?.props;
   const { x, y, width, height, fold } = nota;
   const contorno = `M${num(x)},${num(y)} H${num(x + width - fold)} L${num(x + width)},${num(y + fold)} V${num(y + height)} H${num(x)} Z`;
   const doblez = `M${num(x + width - fold)},${num(y)} V${num(y + fold)} H${num(x + width)}`;

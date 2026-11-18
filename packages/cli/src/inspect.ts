@@ -3,11 +3,11 @@
  * del Modelo viven en `sesion` (`Sesion.consultar`); aqui solo el Tema y la presentacion.
  */
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos, salidaDeInspectSchema } from 'canonico';
-import type { FuenteCanonica, SalidaDeInspect } from 'canonico';
+import type { FuenteCanonica, SalidaDeInspect, Tema } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
 import type { Respuesta } from 'sesion';
-import { BLOQUES_DE_SECUENCIA, CATALOGO, ESPECIFICACION_DE_SECUENCIA, EFECTOS, ESTADOS, MOVIMIENTOS, TIPOS_DE_DIAGRAMA, alturaDeCabecera, aplicarOps, cascada, componentesDeTema, describirDisposicion, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas, temaParaDiagrama } from 'tema';
-import type { CapaDeTema } from 'tema';
+import { CATALOGO, ESPECIFICACION_DE_SECUENCIA, EFECTOS, ESTADOS, MOVIMIENTOS, TIPOS_DE_DIAGRAMA, alturaDeCabecera, cascada, componentesDeTema, describirDisposicion, estiloResuelto, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas, temaParaDiagrama } from 'tema';
+import type { BloqueDeSecuencia, CapaDeTema, CapaPintada, PinturaDeCajaDeSecuencia, PinturaDeSecuencia, TipoDeDiagrama, TrazosDeSecuencia } from 'tema';
 
 type Sitio = { file: string; line: number };
 
@@ -66,30 +66,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
     origen: sitio,
   });
   const capas = cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido }) }).map((capa: CapaDeTema) => aCapa(capa, sitioDe(capa.nombre)));
-  const sitioDelTema = origen?.sitio ?? INCORPORADO;
-  const delSitio = (capas: readonly CapaDeTema[]) => capas.map((capa) => aCapa(capa, sitioDelTema));
-  const secuencia = Object.fromEntries(
-    BLOQUES_DE_SECUENCIA.flatMap((nombre) => {
-      const bloque = tema.secuencia?.[nombre];
-      if (bloque === undefined) return [];
-      const base = bloque.capas as CapaDeTema[];
-      return [
-        [
-          nombre,
-          {
-            capas: delSitio(base),
-            marcadores: Object.fromEntries([...(bloque.origen === undefined ? [] : [['start', bloque.origen.tipo]]), ...(bloque.fin === undefined ? [] : [['end', bloque.fin.tipo]])]),
-            parches: Object.fromEntries(Object.entries(bloque.parches).map(([variante, parche]) => [variante, delSitio(aplicarOps(base, parche.ops, tema.palette, 'parchear', ESPECIFICACION_DE_SECUENCIA[nombre].capas).pila)])),
-            metricas: bloque.metricas,
-          },
-        ],
-      ];
-    }),
-  );
-  const elementos = {
-    ...(Object.keys(secuencia).length > 0 && { secuencia }),
-    ...(tema.fila !== undefined && { fila: { ...(tema.fila.alto !== undefined && { alto: tema.fila.alto }), capas: delSitio(tema.fila.capas as CapaDeTema[]) } }),
-  };
+  const elementos = elementosDeTema(declarado, origen?.sitio ?? INCORPORADO, tipoDeDiagrama, tipo);
   const pagina = {
     fijo: tema.pagina.fijo,
     capas: (tema.pagina.capas as CapaDeTema[]).map((capa) => {
@@ -147,6 +124,44 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
         ...(catalogo && { catalogo: { primitivas: Object.keys(CATALOGO), movimientos: Object.keys(MOVIMIENTOS), efectos: [...EFECTOS] } }),
       },
     },
+  };
+}
+
+type Elementos = NonNullable<Extract<SalidaDeInspect, { comando: 'tema' }>['tema']['elementos']>;
+
+/** Clave de cada Elemento de secuencia en la pintura del Estilo. */
+const EN_LA_PINTURA: Record<BloqueDeSecuencia, keyof PinturaDeSecuencia> = { lifeline: 'lifeline', message: 'mensaje', activation: 'activacion', fragment: 'fragmento', note: 'nota' };
+
+/**
+ * Elementos de secuencia y fila ER con la misma resolucion que el dibujo (`estiloResuelto`): las pilas ya derivadas,
+ * con los colores resueltos. Los derivados (el Tema no declara el bloque) solo salen si se pide su Tipo de diagrama.
+ */
+function elementosDeTema(declarado: Tema, sitio: Sitio, diagrama: TipoDeDiagrama | undefined, tipo: string | undefined): Elementos {
+  const aCapa = (capa: CapaPintada) => ({ nombre: capa.nombre, primitiva: capa.tipo, props: capa.props, encima: capa.encima === true, animada: capa.animacion !== undefined, origen: sitio });
+  const pintura = estiloResuelto(declarado, { diagrama: 'sequence' }).pintura.secuencia!;
+  const declaradas = resolverTema(declarado).secuencia;
+  const secuencia = Object.fromEntries(
+    (Object.keys(EN_LA_PINTURA) as BloqueDeSecuencia[]).flatMap((nombre) => {
+      const elemento = pintura[EN_LA_PINTURA[nombre]];
+      if (elemento.derivado === true && diagrama !== 'sequence') return [];
+      const metricas = { ...Object.fromEntries(Object.entries(ESPECIFICACION_DE_SECUENCIA[nombre].metricas).map(([clave, m]) => [clave, m.defecto])), ...declaradas?.[nombre]?.metricas };
+      const derivado = elemento.derivado === true ? { derivado: true as const } : {};
+      if ('base' in elemento) {
+        const { base } = elemento as TrazosDeSecuencia;
+        const marcadores = Object.fromEntries([...(base.origen === undefined ? [] : [['start', base.origen.tipo]]), ...(base.fin === undefined ? [] : [['end', base.fin.tipo]])]);
+        const variantes = nombre === 'message' ? base.tipos : base.variantes;
+        return [[nombre, { capas: base.capas.map(aCapa), marcadores, parches: Object.fromEntries(Object.entries(variantes).map(([v, t]) => [v, t.capas.map(aCapa)])), metricas, ...derivado }]];
+      }
+      const caja = elemento as PinturaDeCajaDeSecuencia & { porNodo?: { nodo: { tipos: Record<string, { capas: CapaPintada[] }> } } };
+      const capas = (tipo === undefined ? undefined : caja.porNodo?.nodo.tipos[tipo]?.capas) ?? caja.capas;
+      return [[nombre, { capas: capas.map(aCapa), marcadores: {}, parches: Object.fromEntries(Object.entries(caja.variantes).map(([v, c]) => [v, c.map(aCapa)])), metricas, ...derivado }]];
+    }),
+  );
+  const fila = estiloResuelto(declarado, { diagrama: 'er' }).pintura.fila;
+  const alto = resolverTema(declarado).fila?.alto;
+  return {
+    ...(Object.keys(secuencia).length > 0 && { secuencia }),
+    ...(fila !== undefined && (fila.derivado !== true || diagrama === 'er') && { fila: { ...(alto !== undefined && { alto }), capas: fila.base.map(aCapa), ...(fila.derivado === true && { derivado: true as const }) } }),
   };
 }
 
@@ -217,7 +232,7 @@ export function textoLegible(salida: SalidaDeInspect): string {
       for (const [nombre, bloque] of Object.entries(elementos.secuencia)) {
         const marcadores = Object.entries(bloque.marcadores).map(([lado, tipo]) => ` ${lado}=${tipo}`).join('');
         const metricas = Object.entries(bloque.metricas).map(([clave, valor]) => ` ${clave}=${valor}`).join('');
-        lineas.push(`  ${nombre}:${marcadores}${metricas}`);
+        lineas.push(`  ${nombre}${bloque.derivado === true ? ' (derivado)' : ''}:${marcadores}${metricas}`);
         for (const c of bloque.capas) lineas.push(`    ${c.nombre} ${c.primitiva} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
         for (const [variante, capas] of Object.entries(bloque.parches)) {
           lineas.push(`    kind/op ${variante}:`);
@@ -226,7 +241,7 @@ export function textoLegible(salida: SalidaDeInspect): string {
       }
     }
     if (elementos?.fila !== undefined) {
-      lineas.push(`Fila: alto ${elementos.fila.alto ?? '(defecto)'}`);
+      lineas.push(`Fila${elementos.fila.derivado === true ? ' (derivado)' : ''}: alto ${elementos.fila.alto ?? '(defecto)'}`);
       for (const c of elementos.fila.capas) lineas.push(`  ${c.nombre} ${c.primitiva} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
     }
     lineas.push(`Slots: ${tema.slots} ${sitio(tema.origenDeSlots)}`);

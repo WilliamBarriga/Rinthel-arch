@@ -222,6 +222,34 @@ describe('inspect tema: elementos de secuencia y fila', () => {
     expect(elementos?.fila).toMatchObject({ alto: 30, capas: [{ nombre: 'fondo' }] });
   });
 
+  it('--diagrama sequence de un Tema sin lifeline muestra el lifeline derivado de edge, discontinuo y con derivado: true', async () => {
+    const r = await json(['app', '--diagrama', 'sequence']);
+
+    const secuencia = temaDe(r.salida).elementos?.secuencia;
+    expect(secuencia?.['lifeline']).toMatchObject({ derivado: true, capas: [{ primitiva: 'line', props: { style: 'dashed' } }], marcadores: { end: 'cross' } });
+    // Los cinco Elementos de secuencia, todos derivados: el Tema no declara ninguno.
+    expect(Object.keys(secuencia ?? {}).sort()).toEqual(['activation', 'fragment', 'lifeline', 'message', 'note']);
+    expect(Object.values(secuencia ?? {}).every((e) => e.derivado === true)).toBe(true);
+    // La activacion toma solo forma, relleno y borde del Nodo; `reply` lleva la continuidad opuesta.
+    expect(secuencia?.['activation']?.capas.map((c) => c.nombre)).toEqual(['forma', 'relleno', 'borde']);
+    expect(secuencia?.['message']?.parches['reply']?.at(-1)?.props).toMatchObject({ style: 'dashed' });
+  });
+
+  it('un Elemento declarado no lleva derivado y --diagrama er deriva la fila', async () => {
+    const declarado = await json(['t', '--diagrama', 'sequence'], RAIZ_SECUENCIA);
+    const er = await json(['app', '--diagrama', 'er']);
+
+    expect(temaDe(declarado.salida).elementos?.secuencia?.['message']?.derivado).toBeUndefined();
+    expect(temaDe(declarado.salida).elementos?.secuencia?.['lifeline']?.derivado).toBe(true);
+    expect(temaDe(er.salida).elementos?.fila).toMatchObject({ derivado: true, capas: [] });
+  });
+
+  it('el texto legible marca los Elementos derivados', async () => {
+    const r = await run(['inspect', 'tema', 'app', '--diagrama', 'sequence', '--workspace', RAIZ]);
+
+    expect(r.stdout).toMatch(/Secuencia:\n {2}lifeline \(derivado\):[^\n]*end=cross/);
+  });
+
   it('el texto legible lista los elementos y un Tema sin ellos no los menciona', async () => {
     const con = await run(['inspect', 'tema', 't', '--workspace', RAIZ_SECUENCIA]);
     const sin = await run(['inspect', 'tema', 'app', '--workspace', RAIZ]);

@@ -253,7 +253,7 @@ view pedido { type sequence  theme tinta  interaction pedido }
 - Que cambia con cada tipo: `message { kind async { ... } }` solo toca los Mensajes `async`. Sin parche, `reply` y `create` van con la continuidad opuesta a la del trazo base y el marcador depende del tipo.
 - `lifeline` y `message` usan trazos de Arista; `activation`, `fragment` y `note` usan Capas de Nodo. `COLOR` es el de la Lifeline. `gap`, `loop-width`, `create-offset`, `width` y `padding` son Metricas (cambian la Geometria); lo demas solo pinta. Los rangos y defectos estan en el [catalogo](../referencia-catalogo.md#elementos-de-secuencia); uno fuera de rango es un error de `validate`.
 - Si dos tipos de Mensaje (los que usa la Vista) quedan iguales salvo el color, `validate` avisa con `W_THEME_COLOR_ONLY`.
-- Los Temas incorporados declaran todos estos elementos y la fila `row`: `neutral` es el modelo de referencia, `neutral-dark` lo hereda y solo cambia la Paleta, `alto-contraste` usa trazos mas gruesos. `inspect tema <nombre>` muestra la pila, los parches y las Metricas de cada uno.
+- Los Temas incorporados declaran todos estos elementos y la fila `row`: `neutral` es el modelo de referencia, `neutral-dark` lo hereda y solo cambia la Paleta, `alto-contraste` usa trazos mas gruesos. `inspect tema <nombre>` muestra la pila, los parches y las Metricas de cada uno; con `--diagrama sequence` (o `er`) muestra tambien los que el Tema no declara, tal como se derivan para dibujarse, marcados `(derivado)` (`derivado: true` en `--json`).
 
 ## Movimiento y entrada
 

@@ -66,6 +66,33 @@ describe('seam sesion: Tema de secuencia explicito', () => {
     expect(lazo(ajustado)).toBeGreaterThan(lazo(base));
   });
 
+  it('sin bloques de secuencia, el Estilo entrega las pilas ya derivadas de edge y node (ADR 0009)', () => {
+    const secuencia = abrir().estilo('v')!.pintura.secuencia!;
+
+    expect([secuencia.lifeline, secuencia.mensaje, secuencia.activacion, secuencia.fragmento, secuencia.nota].every((e) => e?.derivado === true)).toBe(true);
+    // Lifeline: el trazo de la Arista, discontinuo, con `cross` al final de una destruida.
+    expect(secuencia.lifeline!.base.capas.map((c) => [c.props['color'], c.props['style']])).toEqual([['#1f2937', 'dashed']]);
+    expect(secuencia.lifeline!.base.fin?.tipo).toBe('cross');
+    // Mensaje: `reply` con la continuidad opuesta y chevron; `sync` continuo con flecha.
+    expect(secuencia.mensaje!.base.tipos['reply']).toMatchObject({ capas: [{ props: { style: 'dashed' } }], fin: { tipo: 'chevron', props: { size: 8 } } });
+    expect(secuencia.mensaje!.base.tipos['sync']).toMatchObject({ capas: [{ props: { style: 'solid' } }], fin: { tipo: 'arrow' } });
+    // Activacion sobria: solo forma, relleno y borde del Nodo.
+    expect(secuencia.activacion!.capas.map((c) => c.nombre)).toEqual(['forma', 'relleno', 'borde']);
+    // Guardas con el color del trazo de la Arista; Nota "papel" sin `amber` en la Paleta: el borde del Tema.
+    expect(secuencia.fragmento!.colorDeGuarda).toBe('#1f2937');
+    expect(secuencia.nota!.papel).toMatchObject({ opacidadDeRelleno: 0.2 });
+  });
+
+  it('una tabla ER con forma pill se deriva como rect y la fila llega derivada', () => {
+    const er = abrirSesion({
+      'main.dg': `specification { node tabla }\nmodel { tabla t { id: uuid pk } }\ntheme p {\n  ${PALETA}\n  node { layer forma pill  layer relleno solid { color papel }  slots { title attrs } }\n}\nview e { type er  include **  theme p }\n`,
+    });
+
+    const pintura = er.estilo('e')!.pintura;
+    expect(pintura.nodo.capas[0]).toMatchObject({ tipo: 'rect', props: { radius: 8 } });
+    expect(pintura.fila).toMatchObject({ derivado: true, base: [] });
+  });
+
   it('un valor fuera de rango o un tipo de Mensaje desconocido son issues de Tema', async () => {
     const fuera = await abrir('  lifeline { gap 5 }').diagnosticar();
     const typo = await abrir('  message { kind asynk { layer linea { width 2 } } }').diagnosticar();

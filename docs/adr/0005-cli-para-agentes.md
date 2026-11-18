@@ -78,6 +78,7 @@ Subcomando de solo lectura, con `--json` y `contractVersion` propio como el rest
 - la cadena `extends` y las `part` usadas;
 - la pila de Capas resuelta para el Tipo y estado pedidos, cada Capa con el `archivo:linea` del parche que la fijo;
 - la tabla de Metricas;
+- los Elementos de secuencia y la fila ER (ADR 0009) con la misma resolucion que el dibujo (el Estilo resuelto de `tema`, sin parches propios del CLI): los declarados y, con `--diagrama sequence` o `er`, los derivados de `edge` y `node` con `derivado: true` (cambio aditivo; `contractVersion` sigue en 1);
 - `temaConCodigo` y la lista de componentes;
 - con `--catalogo`, las claves del catalogo de Primitivas y Movimientos, derivadas del esquema unico (sin listas paralelas).
 

@@ -161,9 +161,9 @@ const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo, tamano?: n
   texto === undefined ? '' : declaracionesLimpias({ ...declaracionesDeTexto(texto, estilo.fuenteMono), ...(tamano !== undefined && { 'font-size': `${num(tamano)}px` }) });
 
 /**
- * Slot `attrs`: una fila por Atributo, en orden, cada una en su rectangulo (relativo al Slot). En una Vista ER cuyo Tema
- * declara `row`, la fila pinta su pila de Capas (segun si es impar, sus marcas de clave y si es opcional) y sus textos
- * `name`, `type` y `key` con el estilo del Tema.
+ * Slot `attrs`: una fila por Atributo, en orden, cada una en su rectangulo (relativo al Slot). En una Vista ER la fila
+ * pinta la pila de `row` del Estilo (segun si es impar, sus marcas de clave y si es opcional) y sus textos `name`, `type`
+ * y `key` con su estilo.
  */
 function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect, metricasDeNodo: Metricas, estados?: DatosDeNodo['estados']): Elemento {
   const { metricas } = estilo;
