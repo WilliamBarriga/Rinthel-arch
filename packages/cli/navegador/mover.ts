@@ -1,15 +1,14 @@
 /**
  * Logica de "soltar un Nodo" de la pagina de `diagrams dev`, sin React ni DOM para poder probarla:
- * elige el hash del archivo de la Vista, envia la intencion y traduce el rechazo en un aviso
- * (un 409 por hash viejo ademas recarga el estado). No es parte de la interfaz del paquete.
+ * envia la intencion con la version del estado que vio la pagina (el servidor la traduce a `visto`) y
+ * traduce el rechazo en un aviso (un 409 por texto desactualizado ademas recarga el estado). No es parte
+ * de la interfaz del paquete.
  */
 import type { EnviadorDeIntencion, EnviadorDePin } from 'shell';
 
 export interface DatosParaMover {
-  /** Archivo en que se declara cada Vista. */
-  archivosDeVista: Record<string, string>;
-  /** Hash del contenido de cada archivo del Workspace. */
-  hashes: Record<string, string>;
+  /** Version del estado que esta viendo la pagina. */
+  version: number;
 }
 
 export interface DependenciasDeMover {
@@ -23,14 +22,12 @@ export interface DependenciasDeMover {
 /** Devuelve el manejador de arrastre soltado; resuelve `false` si se rechazo (el Nodo vuelve a su sitio). */
 export function crearAlMover({ estado, enviar, avisar, recargar }: DependenciasDeMover) {
   return async (vista: string, { id, x, y }: { id: string; x: number; y: number }): Promise<boolean> => {
-    const actual = estado();
-    const archivo = actual?.archivosDeVista[vista];
-    const hash = archivo === undefined ? undefined : actual?.hashes[archivo];
-    if (hash === undefined) {
-      avisar('No se puede mover: la Vista no tiene archivo conocido');
+    const version = estado()?.version;
+    if (version === undefined) {
+      avisar('No se puede mover: aun no hay estado del Workspace');
       return false;
     }
-    const r = await enviar({ vista, nodo: id, x, y, hash });
+    const r = await enviar({ vista, nodo: id, x, y, version });
     if (r.ok) return true;
     avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `No se pudo mover el Pin: ${r.mensaje}`);
     if (r.desactualizado) await recargar().catch(() => undefined);
@@ -45,14 +42,12 @@ export interface DependenciasDeOrdenar extends Omit<DependenciasDeMover, 'enviar
 /** Como `crearAlMover`, para la Intencion `ordenar-lifelines` de una Vista de secuencia; resuelve `false` si se rechazo. */
 export function crearAlOrdenar({ estado, enviar, avisar, recargar }: DependenciasDeOrdenar) {
   return async (vista: string, { orden }: { orden: string[] }): Promise<boolean> => {
-    const actual = estado();
-    const archivo = actual?.archivosDeVista[vista];
-    const hash = archivo === undefined ? undefined : actual?.hashes[archivo];
-    if (hash === undefined) {
-      avisar('No se puede reordenar: la Vista no tiene archivo conocido');
+    const version = estado()?.version;
+    if (version === undefined) {
+      avisar('No se puede reordenar: aun no hay estado del Workspace');
       return false;
     }
-    const r = await enviar({ tipo: 'ordenar-lifelines', vista, orden, hash });
+    const r = await enviar({ tipo: 'ordenar-lifelines', vista, orden, version });
     if (r.ok) return true;
     avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `No se pudo reordenar las Lifelines: ${r.mensaje}`);
     if (r.desactualizado) await recargar().catch(() => undefined);

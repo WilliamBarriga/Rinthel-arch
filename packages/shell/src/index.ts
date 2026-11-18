@@ -138,7 +138,7 @@ export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-ha
 // La `IntencionDePin` vive en `canonico`; se reexporta para no renombrar la interfaz de `shell`.
 export { crearEnviadorDeIntencion, crearEnviadorDePin } from './enviar-pin';
 export type { AlReordenarLifelines } from './arrastre';
-export type { ConHashVisto, EnviadorDeIntencion, EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
+export type { ConVersionVista, EnviadorDeIntencion, EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
 export type { IntencionDePin } from 'canonico';
 export type { Historial, Intencion } from 'sesion';
 export { adaptadorDeWorker } from './layout-en-worker';

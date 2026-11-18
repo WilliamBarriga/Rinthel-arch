@@ -1,3 +1,7 @@
+/**
+ * Humo del enrutador HTTP de `dev`: rutas, Host/Origin, SSE y la traduccion de resultados a Estados HTTP.
+ * El comportamiento (recarga, clasificacion, versiones, Historial, cola) se prueba en `workspace-vivo.test.ts`.
+ */
 import { request } from 'node:http';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -34,15 +38,15 @@ function entorno(inicial: Record<string, string>) {
         avisar = undefined;
       };
     },
+    /** Cambio externo: avisa al observador. */
     escribir(ruta: string, texto: string) {
       archivos = { ...archivos, [ruta]: texto };
       avisar?.();
     },
-    /** Escritura del endpoint de edicion: no avisa al observador (lo hace el propio servidor). */
+    /** Escritura de `dev`: no avisa al observador. */
     escribirEdicion: (_raiz: string, ruta: string, texto: string) => {
       archivos = { ...archivos, [ruta]: texto };
     },
-    /** Borrado del endpoint de deshacer/rehacer: tampoco avisa al observador. */
     borrar: (_raiz: string, ruta: string) => {
       const { [ruta]: _quitado, ...resto } = archivos;
       archivos = resto;
@@ -56,11 +60,10 @@ const shell = async () => ({ pagina: '/*pagina*/', worker: '/*worker*/' });
 
 interface Estado {
   version: number;
+  cambio?: string;
   fuente?: { model: { nodes: { id: string }[] } };
-  issues: { file: string; line: number; severity: string; code: string; href: string }[];
+  issues: unknown[];
   vistas: string[];
-  hashes: Record<string, string>;
-  archivosDeVista: Record<string, string>;
 }
 
 const abiertos: ServidorDev[] = [];
@@ -74,6 +77,9 @@ afterEach(async () => {
 });
 
 const estado = async (servidor: ServidorDev): Promise<Estado> => (await fetch(`${servidor.url}api/estado`)).json() as Promise<Estado>;
+const JSON_ = { 'content-type': 'application/json' };
+const post = (servidor: ServidorDev, ruta: string, cuerpo: unknown = {}, cabeceras: Record<string, string> = JSON_) =>
+  fetch(`${servidor.url}${ruta}`, { method: 'POST', headers: cabeceras, body: typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo) });
 
 /** Lee eventos SSE hasta que `basta` los acepte; devuelve los datos recibidos. */
 async function eventos(servidor: ServidorDev, basta: (datos: Estado[]) => boolean, alAbrir?: () => void): Promise<Estado[]> {
@@ -99,8 +105,8 @@ async function eventos(servidor: ServidorDev, basta: (datos: Estado[]) => boolea
   return datos;
 }
 
-describe('dev', () => {
-  it('escucha solo en 127.0.0.1 y sirve el shell', async () => {
+describe('dev: rutas', () => {
+  it('escucha solo en 127.0.0.1 y sirve la pagina y los bundles', async () => {
     const servidor = await arrancar(entorno({ 'main.dg': BASE }));
 
     expect(servidor.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
@@ -109,74 +115,18 @@ describe('dev', () => {
     expect(await pagina.text()).toContain('<script src="/app.js">');
     expect(await (await fetch(`${servidor.url}app.js`)).text()).toBe('/*pagina*/');
     expect(await (await fetch(`${servidor.url}worker.js`)).text()).toBe('/*worker*/');
+    expect((await fetch(`${servidor.url}nada`)).status).toBe(404);
   });
 
-  it('expone el estado inicial y la geometria de cada Vista', async () => {
+  it('sirve el estado y la Geometria de una Vista; una Vista inexistente es 404', async () => {
     const servidor = await arrancar(entorno({ 'main.dg': BASE }));
 
     const inicial = await estado(servidor);
-    expect(inicial.vistas).toEqual(['general']);
-    expect(inicial.fuente?.model.nodes.map((n) => n.id)).toEqual(['api', 'db']);
-    expect(inicial.issues).toEqual([]);
+    expect(inicial).toMatchObject({ version: 0, vistas: ['general'], issues: [] });
     const vista = (await (await fetch(`${servidor.url}api/vista/general`)).json()) as { view: string; geometry: { nodes: Record<string, unknown> } };
     expect(vista.view).toBe('general');
     expect(Object.keys(vista.geometry.nodes).sort()).toEqual(['api', 'db']);
     expect((await fetch(`${servidor.url}api/vista/no-existe`)).status).toBe(404);
-  });
-
-  it('editar un .dg empuja el estado nuevo por SSE', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env);
-
-    const recibidos = await eventos(
-      servidor,
-      (datos) => datos.some((d) => d.fuente?.model.nodes.some((n) => n.id === 'cache')),
-      () => env.escribir('main.dg', BASE.replace('api -> db', 'servicio cache "Cache"\n  api -> db')),
-    );
-
-    const ultimo = recibidos.at(-1)!;
-    expect(ultimo.fuente?.model.nodes.map((n) => n.id)).toContain('cache');
-    expect(ultimo.version).toBeGreaterThan(0);
-    const vista = (await (await fetch(`${servidor.url}api/vista/general`)).json()) as { geometry: { nodes: Record<string, unknown> } };
-    expect(Object.keys(vista.geometry.nodes)).toContain('cache');
-  });
-
-  it('un error de sintaxis o validacion sale como issue con archivo:linea y conserva la Vista previa', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env);
-
-    const recibidos = await eventos(
-      servidor,
-      (datos) => datos.some((d) => d.issues.length > 0),
-      () => env.escribir('main.dg', BASE.replace('servicio api', 'servico api')),
-    );
-
-    const roto = recibidos.find((d) => d.issues.length > 0)!;
-    expect(roto.issues[0]).toMatchObject({ file: 'main.dg', line: 6, severity: 'error' });
-    expect(roto.issues[0]!.href).toContain('main.dg:6');
-    expect(roto.fuente?.model.nodes.map((n) => n.id)).toEqual(['api', 'db']);
-    const vista = await fetch(`${servidor.url}api/vista/general`);
-    expect(vista.status).toBe(200);
-    expect(Object.keys(((await vista.json()) as { geometry: { nodes: object } }).geometry.nodes).sort()).toEqual(['api', 'db']);
-
-    // Al corregirlo, los issues desaparecen.
-    const despues = await eventos(
-      servidor,
-      (datos) => datos.some((d) => d.issues.length === 0),
-      () => env.escribir('main.dg', BASE),
-    );
-    expect(despues.at(-1)!.issues).toEqual([]);
-  });
-
-  it('agrupa varias escrituras seguidas en una sola recompilacion (debounce)', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env);
-    const antes = (await estado(servidor)).version;
-
-    for (let i = 0; i < 5; i++) env.escribir('main.dg', `${BASE}\n// ${i}\n`);
-    await new Promise((ok) => setTimeout(ok, 300));
-
-    expect((await estado(servidor)).version).toBe(antes + 1);
   });
 
   it('el shell real (sin fake) se empaqueta y se sirve', async () => {
@@ -188,27 +138,6 @@ describe('dev', () => {
     expect(app).toContain('EventSource');
     expect((await (await fetch(`${servidor.url}worker.js`)).text()).length).toBeGreaterThan(1000);
   }, 30000);
-
-  it('rechaza peticiones cuyo Host no es 127.0.0.1 o localhost con el puerto del servidor (DNS rebinding)', async () => {
-    const servidor = await arrancar(entorno({ 'main.dg': BASE }));
-    const puerto = Number(new URL(servidor.url).port);
-    const conHost = (host: string | undefined) =>
-      new Promise<number>((ok, fallo) => {
-        const req = request({ host: '127.0.0.1', port: puerto, path: '/api/estado', headers: host === undefined ? {} : { host } }, (res) => {
-          res.resume();
-          ok(res.statusCode ?? 0);
-        });
-        req.on('error', fallo);
-        req.end();
-      });
-
-    expect(await conHost(`127.0.0.1:${puerto}`)).toBe(200);
-    expect(await conHost(`localhost:${puerto}`)).toBe(200);
-    expect(await conHost(`evil.example:${puerto}`)).toBe(403);
-    expect(await conHost(`127.0.0.1.evil.example:${puerto}`)).toBe(403);
-    expect(await conHost('127.0.0.1:1')).toBe(403);
-    expect(await conHost('127.0.0.1')).toBe(403);
-  });
 
   it('--theme-path (opcion temas) aporta Temas antes del Workspace', async () => {
     const env = entorno({ 'main.dg': BASE });
@@ -230,321 +159,167 @@ describe('dev', () => {
     expect(env.observando()).toBe(false);
     await expect(fetch(servidor.url)).rejects.toThrow();
   });
+});
 
-  describe('POST /api/edit (ADR 0007)', () => {
-    const cabeceras = { 'content-type': 'application/json' };
-    const post = (servidor: ServidorDev, cuerpo: unknown) =>
-      fetch(`${servidor.url}api/edit`, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpo) });
+describe('dev: SSE', () => {
+  it('envia el estado al conectar y el nuevo, con su cambio, tras un cambio en disco', async () => {
+    const env = entorno({ 'main.dg': BASE });
+    const servidor = await arrancar(env);
 
-    it('acepta una Intencion mover-pin y responde igual que /api/pin', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      const antes = await estado(servidor);
+    const recibidos = await eventos(
+      servidor,
+      (datos) => datos.length >= 2,
+      () => env.escribir('main.dg', BASE.replace('api -> db', 'servicio cache "Cache"\n  api -> db')),
+    );
 
-      const res = await post(servidor, { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, hash: antes.hashes['main.dg'] });
+    expect(recibidos[0]!.version).toBe(0);
+    expect(recibidos[1]).toMatchObject({ version: 1, cambio: 'estructura' });
+    expect(recibidos[1]!.fuente?.model.nodes.map((n) => n.id)).toContain('cache');
+  });
+});
 
-      expect(res.status).toBe(200);
-      expect(((await res.json()) as { ok: boolean }).ok).toBe(true);
-      expect(env.texto('main.dg')).toContain('node api { pin 1,2 }');
-    });
+describe('dev: seguridad', () => {
+  it('rechaza peticiones cuyo Host no es 127.0.0.1 o localhost con el puerto del servidor (DNS rebinding)', async () => {
+    const servidor = await arrancar(entorno({ 'main.dg': BASE }));
+    const puerto = Number(new URL(servidor.url).port);
+    const conHost = (host: string | undefined) =>
+      new Promise<number>((ok, fallo) => {
+        const req = request({ host: '127.0.0.1', port: puerto, path: '/api/estado', headers: host === undefined ? {} : { host } }, (res) => {
+          res.resume();
+          ok(res.statusCode ?? 0);
+        });
+        req.on('error', fallo);
+        req.end();
+      });
 
-    it('acepta ordenar-lifelines, lo escribe y deshacer restaura el texto', async () => {
-      const secuencia = `specification { node servicio }
-model {
-  servicio a
-  servicio b
-  interaction i { a -> b "x" }
-}
-view s { type sequence
- interaction i }
-`;
-      const env = entorno({ 'main.dg': secuencia });
-      const servidor = await arrancar(env);
-      const antes = await estado(servidor);
-      const res = await post(servidor, { tipo: 'ordenar-lifelines', vista: 's', orden: ['b', 'a'], hash: antes.hashes['main.dg'] });
-      expect(res.status).toBe(200);
-      expect(env.texto('main.dg')).toContain('order b, a');
-      await fetch(`${servidor.url}api/deshacer`, { method: 'POST', headers: cabeceras, body: '{}' });
-      expect(env.texto('main.dg')).toBe(secuencia);
-    });
-
-    it('rechaza con 409 un hash desactualizado', async () => {
-      const servidor = await arrancar(entorno({ 'main.dg': BASE }));
-      const res = await post(servidor, { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, hash: 'viejo' });
-      expect(res.status).toBe(409);
-      expect(await res.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
-    });
-
-    it('responde 400 a una Intencion de tipo desconocido o sin tipo', async () => {
-      const servidor = await arrancar(entorno({ 'main.dg': BASE }));
-      const pin = { vista: 'general', nodo: 'api', x: 1, y: 2, hash: 'h' };
-      expect((await post(servidor, pin)).status).toBe(400);
-      expect((await post(servidor, { tipo: 'otra', ...pin })).status).toBe(400);
-    });
+    expect(await conHost(`127.0.0.1:${puerto}`)).toBe(200);
+    expect(await conHost(`localhost:${puerto}`)).toBe(200);
+    expect(await conHost(`evil.example:${puerto}`)).toBe(403);
+    expect(await conHost(`127.0.0.1.evil.example:${puerto}`)).toBe(403);
+    expect(await conHost('127.0.0.1:1')).toBe(403);
+    expect(await conHost('127.0.0.1')).toBe(403);
   });
 
-  describe('POST /api/deshacer y /api/rehacer (ADR 0007)', () => {
-    const cabeceras = { 'content-type': 'application/json' };
-    const post = (servidor: ServidorDev, ruta: string, cuerpo: unknown = {}) =>
-      fetch(`${servidor.url}api/${ruta}`, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpo) });
-    const moverPin = async (servidor: ServidorDev, x: number, y: number) => {
-      const hash = (await estado(servidor)).hashes['main.dg'];
-      return post(servidor, 'pin', { vista: 'general', nodo: 'api', x, y, hash });
-    };
+  it('las rutas POST rechazan Origin ajeno (403), content-type ajeno (415), JSON invalido (400) y otros metodos (405)', async () => {
+    const env = entorno({ 'main.dg': BASE });
+    const servidor = await arrancar(env);
+    const cuerpo = { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 };
 
-    it('deshacer restaura el texto exacto anterior y rehacer reaplica la edicion', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      await moverPin(servidor, 1, 2);
-      const conPin = env.texto('main.dg');
-      expect(conPin).not.toBe(BASE);
+    for (const ruta of ['api/edit', 'api/pin', 'api/deshacer', 'api/rehacer', 'api/confiar']) {
+      expect((await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' })).status).toBe(403);
+      expect((await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' })).status).toBe(415);
+      const roto = await post(servidor, ruta, 'no es json');
+      expect(roto.status).toBe(400);
+      expect(await roto.json()).toEqual({ ok: false, mensaje: 'JSON invalido' });
+      const get = await fetch(`${servidor.url}${ruta}`);
+      expect(get.status).toBe(405);
+      expect(get.headers.get('allow')).toBe('POST');
+    }
+    expect(env.texto('main.dg')).toBe(BASE);
+  });
+});
 
-      const res = await post(servidor, 'deshacer');
-      expect(res.status).toBe(200);
-      expect(env.texto('main.dg')).toBe(BASE);
+describe('dev: edicion, deshacer y rehacer (ADR 0005, ADR 0007)', () => {
+  it('POST /api/edit aplica la Intencion con la version vista y responde la version nueva', async () => {
+    const env = entorno({ 'main.dg': BASE });
+    const servidor = await arrancar(env);
 
-      expect((await post(servidor, 'rehacer')).status).toBe(200);
-      expect(env.texto('main.dg')).toBe(conPin);
-    });
+    const res = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
 
-    it('sin nada que deshacer o rehacer responde 422 y no escribe', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      expect((await post(servidor, 'deshacer')).status).toBe(422);
-      const sinDeshacer = await post(servidor, 'deshacer');
-      expect(sinDeshacer.status).toBe(422);
-      expect(await sinDeshacer.json()).toMatchObject({ ok: false, motivo: 'nada-que-deshacer' });
-      const sinRehacer = await post(servidor, 'rehacer');
-      expect(sinRehacer.status).toBe(422);
-      expect(await sinRehacer.json()).toMatchObject({ ok: false, motivo: 'nada-que-rehacer' });
-      expect(env.texto('main.dg')).toBe(BASE);
-    });
-
-    it('una edicion que no cambia el texto no apila una entrada de historial', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      await moverPin(servidor, 1, 2);
-      await moverPin(servidor, 1, 2);
-      expect((await post(servidor, 'deshacer')).status).toBe(200);
-      expect(env.texto('main.dg')).toBe(BASE);
-      expect((await post(servidor, 'deshacer')).status).toBe(422);
-    });
-
-    describe('archivos creados o borrados por la edicion y escrituras parciales', () => {
-      /** Escritura de edicion que ademas crea `extra.dg` junto a `main.dg`; `fallo.activo` hace fallar `main.dg`. */
-      const conExtra = (env: ReturnType<typeof entorno>) => {
-        const fallo = { activo: false };
-        const escribir = (raiz: string, ruta: string, texto: string): void => {
-          if (ruta === 'main.dg' && fallo.activo) throw new Error('disco lleno');
-          env.escribirEdicion(raiz, ruta, texto);
-          if (ruta === 'main.dg' && !texto.includes('// extra')) env.escribirEdicion(raiz, 'extra.dg', '// extra\n');
-        };
-        return { fallo, escribir };
-      };
-
-      it('deshacer borra el archivo que creo la edicion y rehacer lo vuelve a crear, sin 409', async () => {
-        const env = entorno({ 'main.dg': BASE });
-        const { escribir } = conExtra(env);
-        const servidor = await arrancar(env, { escribir });
-        await moverPin(servidor, 1, 2);
-        expect(env.texto('extra.dg')).toBeDefined();
-
-        expect((await post(servidor, 'deshacer')).status).toBe(200);
-        expect(env.texto('extra.dg')).toBeUndefined();
-        expect(env.texto('main.dg')).toBe(BASE);
-
-        expect((await post(servidor, 'rehacer')).status).toBe(200);
-        expect(env.texto('extra.dg')).toBe('// extra\n');
-        expect((await post(servidor, 'deshacer')).status).toBe(200);
-      });
-
-      it('si la escritura falla a mitad, revierte lo escrito y el historial sigue valido', async () => {
-        const env = entorno({ 'main.dg': BASE });
-        const { fallo, escribir } = conExtra(env);
-        const servidor = await arrancar(env, { escribir });
-        await moverPin(servidor, 1, 2);
-        const conPin = env.texto('main.dg');
-        await post(servidor, 'deshacer');
-
-        fallo.activo = true;
-        const roto = await post(servidor, 'rehacer');
-        expect(roto.status).toBe(500);
-        expect(env.texto('extra.dg')).toBeUndefined();
-        expect(env.texto('main.dg')).toBe(BASE);
-
-        fallo.activo = false;
-        expect((await post(servidor, 'rehacer')).status).toBe(200);
-        expect(env.texto('main.dg')).toBe(conPin);
-      });
-    });
-
-    it('peticiones concurrentes de deshacer se aplican una tras otra', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      await moverPin(servidor, 1, 2);
-      await moverPin(servidor, 3, 4);
-      const respuestas = await Promise.all([post(servidor, 'deshacer'), post(servidor, 'deshacer'), post(servidor, 'deshacer')]);
-      expect(respuestas.map((r) => r.status).sort()).toEqual([200, 200, 422]);
-      expect(env.texto('main.dg')).toBe(BASE);
-    });
-
-    it('si el archivo cambio en disco fuera de dev, deshacer responde 409 y no pisa el cambio', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      await moverPin(servidor, 1, 2);
-      const externo = `${env.texto('main.dg')}\n// editado a mano\n`;
-      env.escribirEdicion('/ws', 'main.dg', externo);
-
-      const res = await post(servidor, 'deshacer');
-      expect(res.status).toBe(409);
-      expect(await res.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
-      expect(env.texto('main.dg')).toBe(externo);
-    });
-
-    it('una edicion nueva descarta lo rehacible', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      await moverPin(servidor, 1, 2);
-      await post(servidor, 'deshacer');
-      await moverPin(servidor, 3, 4);
-      expect((await post(servidor, 'rehacer')).status).toBe(422);
-    });
-
-    it('solo acepta POST', async () => {
-      const servidor = await arrancar(entorno({ 'main.dg': BASE }));
-      expect((await fetch(`${servidor.url}api/deshacer`)).status).toBe(405);
-    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, version: 1 });
+    expect(env.texto('main.dg')).toContain('node api { pin 1,2 }');
+    expect((await estado(servidor)).version).toBe(1);
   });
 
-  describe('POST /api/pin (ADR 0005)', () => {
-    const post = (servidor: ServidorDev, cuerpo: unknown, cabeceras: Record<string, string> = { 'content-type': 'application/json' }) =>
-      fetch(`${servidor.url}api/pin`, { method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpo) });
+  it('POST /api/pin acepta el cuerpo sin tipo y valida con el esquema de canonico (400 con el mensaje de siempre)', async () => {
+    const env = entorno({ 'main.dg': BASE });
+    const servidor = await arrancar(env);
 
-    it('el estado expone el hash de cada archivo', async () => {
-      const servidor = await arrancar(entorno({ 'main.dg': BASE }));
-      expect(Object.keys((await estado(servidor)).hashes)).toEqual(['main.dg']);
+    for (const cuerpo of [{ vista: 'general', nodo: 'api', x: '10', y: 2 }, { vista: 'general', nodo: 7, x: 10, y: 2 }, { vista: 'general' }]) {
+      const res = await post(servidor, 'api/pin', cuerpo);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ ok: false, mensaje: 'Se esperaba { vista, nodo, x, y }' });
+    }
+    expect((await post(servidor, 'api/edit', { tipo: 'otra', vista: 'general' })).status).toBe(400);
+    expect((await post(servidor, 'api/edit', { vista: 'general', nodo: 'api', x: 1, y: 2 })).status).toBe(400);
+
+    expect((await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 10, y: 20, version: 0 })).status).toBe(200);
+    expect(env.texto('main.dg')).toContain('node api { pin 10,20 }');
+  });
+
+  it('traduce los rechazos con la tabla unica: 409 texto desactualizado, 422 el resto', async () => {
+    const env = entorno({ 'main.dg': BASE });
+    const servidor = await arrancar(env);
+    env.escribirEdicion('/ws', 'main.dg', `${BASE}\n`);
+
+    const viejo = await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
+    expect(viejo.status).toBe(409);
+    expect(await viejo.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    const olvidada = await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 1, y: 2, version: 99 });
+    expect(olvidada.status).toBe(409);
+    const vista = await post(servidor, 'api/pin', { vista: 'nada', nodo: 'api', x: 1, y: 2 });
+    expect(vista.status).toBe(422);
+    expect(await vista.json()).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
+    expect(env.texto('main.dg')).toBe(`${BASE}\n`);
+  });
+
+  it('no escribe archivos de --theme-path: 422 archivo-desconocido', async () => {
+    const [modelo, vistas] = BASE.split('\nview general');
+    const escritos: string[] = [];
+    const servidor = await iniciarDev({
+      workspace: '/ws',
+      temas: '/temas',
+      leer: (raiz): Record<string, string> => (raiz === '/temas' ? { 'vistas.dg': `view general${vistas as string}` } : { 'main.dg': modelo as string }),
+      observar: () => () => undefined,
+      escribir: (_raiz, ruta) => void escritos.push(ruta),
+      shell,
+      puerto: 0,
+    });
+    abiertos.push(servidor);
+
+    const res = await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
+
+    expect(res.status).toBe(422);
+    expect(await res.json()).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'vistas.dg' });
+    expect(escritos).toEqual([]);
+  });
+
+  it('deshacer y rehacer: 200 con la version, 422 sin nada que hacer, 409 tras una edicion externa', async () => {
+    const env = entorno({ 'main.dg': BASE });
+    const servidor = await arrancar(env);
+    expect(await (await post(servidor, 'api/deshacer')).json()).toMatchObject({ ok: false, motivo: 'nada-que-deshacer' });
+    const sinRehacer = await post(servidor, 'api/rehacer');
+    expect(sinRehacer.status).toBe(422);
+    expect(await sinRehacer.json()).toMatchObject({ ok: false, motivo: 'nada-que-rehacer' });
+
+    await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
+    const conPin = env.texto('main.dg');
+    const deshecho = await post(servidor, 'api/deshacer');
+    expect(deshecho.status).toBe(200);
+    expect(await deshecho.json()).toEqual({ ok: true, version: 2 });
+    expect(env.texto('main.dg')).toBe(BASE);
+    expect((await post(servidor, 'api/rehacer')).status).toBe(200);
+    expect(env.texto('main.dg')).toBe(conPin);
+
+    env.escribirEdicion('/ws', 'main.dg', `${conPin!}\n// a mano\n`);
+    const externo = await post(servidor, 'api/deshacer');
+    expect(externo.status).toBe(409);
+    expect(await externo.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+  });
+
+  it('un fallo de escritura responde 500 y no deja el texto a medias', async () => {
+    const env = entorno({ 'main.dg': BASE });
+    const servidor = await arrancar(env, {
+      escribir: () => {
+        throw new Error('disco lleno');
+      },
     });
 
-    it('el estado dice en que archivo esta cada Vista, para elegir el hash', async () => {
-      const servidor = await arrancar(entorno({ 'main.dg': BASE }));
-      const { archivosDeVista, hashes } = await estado(servidor);
-      expect(archivosDeVista).toEqual({ general: 'main.dg' });
-      expect(hashes[archivosDeVista['general']!]).toBeDefined();
-    });
+    const res = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
 
-    it('escribe el Pin en el .dg, recompila y responde con la version nueva', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      const antes = await estado(servidor);
-
-      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 10, y: 20, hash: antes.hashes['main.dg'] });
-
-      expect(res.status).toBe(200);
-      const cuerpo = (await res.json()) as { ok: boolean; version: number };
-      expect(cuerpo.ok).toBe(true);
-      expect(env.texto('main.dg')).toContain('node api { pin 10,20 }');
-      const despues = await estado(servidor);
-      expect(cuerpo.version).toBe(despues.version);
-      expect(despues.version).toBeGreaterThan(antes.version);
-      expect(despues.hashes['main.dg']).not.toBe(antes.hashes['main.dg']);
-    });
-
-    it('con hash desactualizado responde 409 y no escribe', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      const hash = (await estado(servidor)).hashes['main.dg'];
-      env.escribir('main.dg', BASE + '\n');
-
-      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 1, y: 2, hash });
-
-      expect(res.status).toBe(409);
-      expect(await res.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
-      expect(env.texto('main.dg')).toBe(BASE + '\n');
-    });
-
-    it('con Vista o Nodo inexistente responde 422 y no escribe', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      const hash = (await estado(servidor)).hashes['main.dg'];
-
-      const vista = await post(servidor, { vista: 'nada', nodo: 'api', x: 1, y: 2, hash });
-      const nodo = await post(servidor, { vista: 'general', nodo: 'fantasma', x: 1, y: 2, hash });
-
-      expect(vista.status).toBe(422);
-      expect(await vista.json()).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
-      expect(nodo.status).toBe(422);
-      expect(await nodo.json()).toMatchObject({ ok: false, motivo: 'invalida' });
-      expect(env.texto('main.dg')).toBe(BASE);
-    });
-
-    it('valida el cuerpo con el esquema de canonico y responde 400 con el mensaje de siempre', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-
-      const malformados = [
-        { vista: 'general', nodo: 'api', x: '10', y: 2, hash: 'h' },
-        { vista: 'general', nodo: 7, x: 10, y: 2, hash: 'h' },
-      ];
-      for (const cuerpo of malformados) {
-        const res = await post(servidor, cuerpo);
-        expect(res.status).toBe(400);
-        expect(await res.json()).toEqual({ ok: false, mensaje: 'Se esperaba { vista, nodo, x, y }' });
-      }
-
-      const json = await fetch(`${servidor.url}api/pin`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: 'no es json',
-      });
-      expect(json.status).toBe(400);
-      expect(await json.json()).toEqual({ ok: false, mensaje: 'JSON invalido' });
-      expect(env.texto('main.dg')).toBe(BASE);
-    });
-
-    it('rechaza cuerpos mal formados (400), content-type ajeno (415) y metodos distintos de POST (405)', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-
-      expect((await post(servidor, { vista: 'general', nodo: 'api', x: 'a', y: 2, hash: 'h' })).status).toBe(400);
-      expect((await post(servidor, { vista: 'general' })).status).toBe(400);
-      expect((await post(servidor, { vista: 'general', nodo: 'api', x: 1, y: 2, hash: 'h' }, { 'content-type': 'text/plain' })).status).toBe(415);
-      expect((await fetch(`${servidor.url}api/pin`)).status).toBe(405);
-      expect(env.texto('main.dg')).toBe(BASE);
-    });
-
-    it('no escribe archivos que no son del Workspace (los de --theme-path): responde 422', async () => {
-      const [modelo, vistas] = BASE.split('\nview general');
-      const propios = { 'main.dg': modelo as string };
-      const deTemas = { 'vistas.dg': `view general${vistas as string}` };
-      const escritos: string[] = [];
-      const servidor = await iniciarDev({
-        workspace: '/ws',
-        temas: '/temas',
-        leer: (raiz) => (raiz === '/temas' ? deTemas : propios),
-        observar: () => () => undefined,
-        escribir: (_raiz, ruta) => void escritos.push(ruta),
-        shell,
-        puerto: 0,
-      });
-      abiertos.push(servidor);
-      const { hashes } = await estado(servidor);
-
-      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 1, y: 2, hash: hashes['vistas.dg'] });
-
-      expect(res.status).toBe(422);
-      expect(await res.json()).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'vistas.dg' });
-      expect(escritos).toEqual([]);
-    });
-
-    it('rechaza peticiones con Origin ajeno (CSRF desde otra pagina)', async () => {
-      const env = entorno({ 'main.dg': BASE });
-      const servidor = await arrancar(env);
-      const hash = (await estado(servidor)).hashes['main.dg'];
-
-      const res = await post(servidor, { vista: 'general', nodo: 'api', x: 1, y: 2, hash }, { 'content-type': 'application/json', origin: 'http://evil.example' });
-
-      expect(res.status).toBe(403);
-      expect(env.texto('main.dg')).toBe(BASE);
-    });
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ ok: false, mensaje: 'disco lleno' });
+    expect(env.texto('main.dg')).toBe(BASE);
   });
 });
