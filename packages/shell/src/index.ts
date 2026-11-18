@@ -76,7 +76,7 @@
  * cualquier Intencion a `POST /api/edit`.
  * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
  * `{ok:true}` o `{ok:false, desactualizado, mensaje}` (409 por hash); nunca lanza.
- * La intencion es `IntencionDePin` (`{vista, nodo, x, y, hash}`, declarada en `canonico` y
+ * La intencion es `IntencionDePin` (`{vista, nodo, x, y}` mas un `hash` transitorio, declarada en `canonico` y
  * reexportada aqui).
  * Filtrado por viewport: solo se dibujan Nodos y Aristas cuya caja o ruta cruza
  * la camara; un Grupo visible conserva solo sus hijos visibles.
@@ -138,7 +138,7 @@ export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-ha
 // La `IntencionDePin` vive en `canonico`; se reexporta para no renombrar la interfaz de `shell`.
 export { crearEnviadorDeIntencion, crearEnviadorDePin } from './enviar-pin';
 export type { AlReordenarLifelines } from './arrastre';
-export type { EnviadorDeIntencion, EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
+export type { ConHashVisto, EnviadorDeIntencion, EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
 export type { IntencionDePin } from 'canonico';
 export type { Historial, Intencion } from 'sesion';
 export { adaptadorDeWorker } from './layout-en-worker';

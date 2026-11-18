@@ -6,7 +6,7 @@
  *
  * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),
  * `/fuentes/<ruta>` (solo los archivos de fuente `woff2|woff|ttf|otf` del Workspace, o de `--theme-path`; todo lo demas, incluido salir de la raiz, es 404),
- * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo, `fuentes` (ruta -> hash de cada archivo de fuente) y `archivosDeVista`: el archivo de cada Vista, cuyo hash va en `POST /api/pin`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `POST /api/deshacer` y `POST /api/rehacer` (restauran el texto exacto del historial del servidor, ADR 0007; 409 si el disco cambio fuera de dev, 422 con motivo `nada-que-deshacer` / `nada-que-rehacer` si no hay nada), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
+ * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`, con `hashes` por archivo, `fuentes` (ruta -> hash de cada archivo de fuente) y `archivosDeVista`: el archivo de cada Vista, cuyo hash viaja como `hash` en el cuerpo de las ediciones, que `dev` convierte en `visto`), `POST /api/edit` (puerta de edicion unica: cualquier Intencion, ADR 0007), `POST /api/pin` (mover un Pin, cuerpo sin `tipo`, ADR 0005), `POST /api/deshacer` y `POST /api/rehacer` (restauran el texto exacto del historial del servidor, ADR 0007; 409 si el disco cambio fuera de dev, 422 con motivo `nada-que-deshacer` / `nada-que-rehacer` si no hay nada), `/api/vista/<id>` (geometria cacheada), `/eventos` (SSE;
  * envia el estado al conectar y tras cada recompilacion).
  *
  * `iniciarDev(OpcionesDeDev) -> ServidorDev` es la entrada programatica (el comando solo parsea y la llama).
@@ -17,7 +17,7 @@
  * Seguridad: solo escucha en 127.0.0.1 y responde 403 a cualquier peticion cuyo `Host` no sea
  * `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding). Las dos rutas de edicion solo escriben archivos
  * del Workspace, bajo su raiz y de forma atomica; validan el cuerpo con `intencionSchema` / `intencionDePinSchema` de
- * `canonico` (400; `/api/pin` con `Se esperaba { vista, nodo, x, y, hash }`) y traduce cada `MotivoDeRechazo` a su
+ * `canonico` (400; `/api/pin` con `Se esperaba { vista, nodo, x, y }`; un `hash` extra en el cuerpo es el `visto` del archivo de la Vista) y traduce cada `MotivoDeRechazo` a su
  * Estado con la tabla unica `SALIDA_DE_RECHAZO` (409 solo `hash-desactualizado`, 422 el resto).
  * Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (sin dejar el
  * observador activo) y lanza si la lectura inicial falla; las lecturas fallidas posteriores se ignoran
@@ -361,6 +361,10 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       responder(res, 400, { ok: false, mensaje: esperado });
       return;
     }
+    // Transitorio (hasta el Workspace vivo): el navegador aun manda `hash`, el del archivo de la Vista, y de el sale `visto`.
+    const hashVisto = typeof (leido.cuerpo as { hash?: unknown } | null)?.hash === 'string' ? (leido.cuerpo as { hash: string }).hash : undefined;
+    const archivoVisto = buena === undefined ? undefined : archivoDeVista(buena.sesion, intencion.vista);
+    const visto = hashVisto === undefined || archivoVisto === undefined ? undefined : { [archivoVisto]: hashVisto };
     // Adaptador del Workspace: lee fresco del disco y escribe solo bajo la raiz (los Temas de `--theme-path` no se tocan).
     let resultado;
     let antes: ArchivosDelWorkspace = {};
@@ -376,6 +380,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
           },
         },
         intencion,
+        visto,
       );
     } catch (error) {
       revertir(antes, escritas);
@@ -445,7 +450,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   };
   const rutasDeEdicion = {
     '/api/edit': { leer: comoIntencion, esperado: 'Se esperaba una Intencion { tipo, ... }' },
-    '/api/pin': { leer: comoMoverPin, esperado: 'Se esperaba { vista, nodo, x, y, hash }' },
+    '/api/pin': { leer: comoMoverPin, esperado: 'Se esperaba { vista, nodo, x, y }' },
   } as const;
 
   const servidor = createServer((req, res) => {

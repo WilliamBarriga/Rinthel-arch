@@ -9,8 +9,11 @@ export type { IntencionDePin } from 'canonico';
 
 export type ResultadoDeEnvioDePin = { ok: true } | { ok: false; desactualizado: boolean; mensaje: string };
 
-export type EnviadorDePin = (intencion: IntencionDePin) => Promise<ResultadoDeEnvioDePin>;
-export type EnviadorDeIntencion = (intencion: Intencion) => Promise<ResultadoDeEnvioDePin>;
+/** Transitorio (hasta el Workspace vivo): el navegador aun anota el hash del archivo de la Vista, del que `dev` arma `visto`. */
+export type ConHashVisto<T> = T & { hash?: string };
+
+export type EnviadorDePin = (intencion: ConHashVisto<IntencionDePin>) => Promise<ResultadoDeEnvioDePin>;
+export type EnviadorDeIntencion = (intencion: ConHashVisto<Intencion>) => Promise<ResultadoDeEnvioDePin>;
 
 /** `desactualizado` es el 409 por hash: hay que recargar la Vista y avisar. Nunca lanza. */
 export function crearEnviadorDePin(fetchFn: typeof fetch = (...a) => fetch(...a)): EnviadorDePin {

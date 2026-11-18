@@ -1,6 +1,6 @@
 /**
  * Gestos: cada Intencion se reduce a "que ubicar y que texto escribir" (ADR 0007). El patron comun vive en
- * `gesto`: compilar, encontrar la Vista, describir la escritura, comprobar el hash, insertar (en linea propia
+ * `gesto`: compilar, encontrar la Vista, describir la escritura, comprobar `visto`, insertar (en linea propia
  * o en linea antes de la llave de cierre) y auto-probar. Interno: se entra por `aplicarIntencion` o la puerta.
  */
 import type { FuenteCanonica, IntencionDeOrden, IntencionDePin, Issue, TextRange, Ubicador } from 'canonico';
@@ -16,6 +16,9 @@ export type ResultadoDeGesto = ResultadoDeEdicion<{
   ediciones: EdicionConHash[];
   issues: Issue[];
 }>;
+
+/** Lo que vio quien emite una Intencion: archivo -> hash (`hashDeContenido`) de su texto. Sin entrada, se aplica sobre el vigente. */
+export type Visto = Readonly<Record<string, string>>;
 
 type Rechazo = Extract<ResultadoDeGesto, { ok: false }>;
 
@@ -33,9 +36,10 @@ interface Contexto {
   texto: (file: string) => string;
 }
 
-/** Edicion de texto de una `Escritura`, con el hash que vio quien emitio la Intencion. */
-function edicionDe(escritura: Escritura, texto: string, hash: string): EdicionConHash {
+/** Edicion de texto de una `Escritura`, con el hash del texto vigente del archivo. */
+function edicionDe(escritura: Escritura, texto: string): EdicionConHash {
   const { file } = escritura;
+  const hash = hashDeContenido(texto);
   if ('reemplazar' in escritura) return { file, range: escritura.reemplazar, replacement: escritura.por, hash };
   const { en, insertar } = escritura;
   const linea = texto.split('\n')[en.start.line - 1] ?? '';
@@ -49,12 +53,12 @@ function edicionDe(escritura: Escritura, texto: string, hash: string): EdicionCo
 
 /**
  * Patron comun de los Gestos: compila una vez, encuentra la Vista, pide a `describir` la escritura, comprueba
- * el hash del archivo que toca y la auto-prueba (todo o nada). Paga 2 compilaciones del Workspace en total.
+ * que `visto` (si lo hay) coincida con el archivo que toca y la auto-prueba (todo o nada). Paga 2 compilaciones del Workspace en total.
  */
 function gesto(
   archivos: ArchivosDelWorkspace,
   vista: string,
-  hash: string,
+  visto: Visto | undefined,
   describir: (contexto: Contexto) => Escritura | Rechazo,
 ): ResultadoDeGesto {
   const compilado = compile(archivos);
@@ -71,10 +75,11 @@ function gesto(
   const escritura = describir({ declarada, indice, ubicar, texto });
   if ('ok' in escritura) return escritura;
   const { file } = escritura;
-  if (hash !== hashDeContenido(texto(file))) {
+  const hashVisto = visto?.[file];
+  if (hashVisto !== undefined && hashVisto !== hashDeContenido(texto(file))) {
     return rechazo('hash-desactualizado', `El archivo '${file}' cambio desde que se leyo`, file);
   }
-  const edicion = edicionDe(escritura, texto(file), hash);
+  const edicion = edicionDe(escritura, texto(file));
   const aplicada = aplicarSobre(archivos, [edicion], erroresPorClave(compilado.issues));
   if (!aplicada.ok) return aplicada;
   return { ok: true, archivos: aplicada.archivos, ediciones: [edicion], issues: aplicada.issues };
@@ -88,10 +93,10 @@ const coordenadaDePin = (n: number): number => Math.min(LIMITE_DE_PIN, Math.max(
  * Mover un Pin (ADR 0005): reemplaza el `pin` del override del Nodo, lo agrega a un override sin `pin`, o
  * inserta `node <id> { pin x,y }` antes de la `}` de la Vista. Un Nodo inexistente rechaza con `invalida`.
  */
-export function moverPin(archivos: ArchivosDelWorkspace, intencion: IntencionDePin): ResultadoDeGesto {
+export function moverPin(archivos: ArchivosDelWorkspace, intencion: IntencionDePin, visto?: Visto): ResultadoDeGesto {
   const { nodo } = intencion;
   const pin = `pin ${coordenadaDePin(intencion.x)},${coordenadaDePin(intencion.y)}`;
-  return gesto(archivos, intencion.vista, intencion.hash, ({ declarada, indice, ubicar, texto }) => {
+  return gesto(archivos, intencion.vista, visto, ({ declarada, indice, ubicar, texto }) => {
     const j = declarada.overrides.findIndex((o) => o.node === nodo);
     const sitio = j >= 0 ? ubicar(['views', indice, 'overrides', j, 'pin']) : ubicar(['views', indice, 'overrides']);
     if (sitio === null) return rechazo('invalida', `No se encontro donde escribir el Pin de '${nodo}'`);
@@ -123,9 +128,9 @@ function ordenConOcultas(orden: readonly string[], viejo: readonly string[]): st
  * visible (las entradas ocultas conservan su posicion relativa) o lo inserta antes de la `}` de la Vista; lo
  * escribe aunque coincida con la primera aparicion. Un id que no es Nodo rechaza con `invalida`.
  */
-export function ordenarLifelines(archivos: ArchivosDelWorkspace, intencion: IntencionDeOrden): ResultadoDeGesto {
+export function ordenarLifelines(archivos: ArchivosDelWorkspace, intencion: IntencionDeOrden, visto?: Visto): ResultadoDeGesto {
   const { vista } = intencion;
-  return gesto(archivos, vista, intencion.hash, ({ declarada, indice, ubicar }) => {
+  return gesto(archivos, vista, visto, ({ declarada, indice, ubicar }) => {
     if (declarada.type !== 'sequence') return rechazo('invalida', `La Vista '${vista}' no es de secuencia`);
     const total = declarada.order.length;
     const inicio = total > 0 ? ubicar(['views', indice, 'order', 0]) : ubicar(['views', indice, 'overrides']);

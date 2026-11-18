@@ -25,13 +25,12 @@ function fake(propios: Record<string, string>, temas: Record<string, string> = {
   return { puerto, escrituras, texto: (ruta: string) => actuales[ruta] };
 }
 
-const mover = (t: string, extra: Partial<Extract<Intencion, { tipo: 'mover-pin' }>> = {}): Intencion => ({
+const mover = (_t: string, extra: Partial<Extract<Intencion, { tipo: 'mover-pin' }>> = {}): Intencion => ({
   tipo: 'mover-pin',
   vista: 'v',
   nodo: 'a',
   x: 4,
   y: 6,
-  hash: hashDeContenido(t),
   ...extra,
 });
 
@@ -46,9 +45,15 @@ describe('aplicarAlWorkspace', () => {
 
   it('rechaza con motivo y no escribe nada', () => {
     const ws = fake({ 'main.dg': texto });
-    const r = aplicarAlWorkspace(ws.puerto, mover(texto, { hash: 'viejo' }));
-    expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    const r = aplicarAlWorkspace(ws.puerto, mover(texto), { 'main.dg': 'viejo' });
+    expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
     expect(ws.escrituras).toEqual([]);
+  });
+
+  it('un visto desactualizado de otro archivo no impide la edicion; sin visto aplica sobre el vigente', () => {
+    const ws = fake({ 'main.dg': texto, 'otro.dg': '' });
+    expect(aplicarAlWorkspace(ws.puerto, mover(texto), { 'otro.dg': 'viejo', 'main.dg': hashDeContenido(texto) })).toMatchObject({ ok: true, cambiados: ['main.dg'] });
+    expect(aplicarAlWorkspace(ws.puerto, mover(texto, { x: 9 }))).toMatchObject({ ok: true });
   });
 
   it('no escribe un archivo que no es del Workspace (viene de un tema)', () => {

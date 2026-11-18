@@ -11,13 +11,12 @@ view v {
 ${extra}}
 `;
 
-const intencion = (texto: string, x = 5, y = -7) => ({
+const intencion = (_texto: string, x = 5, y = -7) => ({
   tipo: 'mover-pin' as const,
   vista: 'v',
   nodo: 'a',
   x,
   y,
-  hash: hashDeContenido(texto),
 });
 
 describe('Intencion mover-pin', () => {
@@ -62,9 +61,8 @@ describe('Intencion mover-pin', () => {
 
   it('un hash desactualizado rechaza la edicion y no cambia nada', () => {
     const texto = base('');
-    const obsoleto = { ...intencion(texto), hash: hashDeContenido('otra cosa') };
 
-    const r = aplicarIntencion({ 'main.dg': texto }, obsoleto);
+    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto), { 'main.dg': hashDeContenido('otra cosa') });
 
     expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
   });

@@ -5,12 +5,12 @@
  * - Intencion de Pin: `--view <id> --node <id cualificado> --x N --y N`, la Intencion `mover-pin`: el Gesto
  *   calcula la edicion minima (reemplaza el `pin` o lo inserta), la auto-prueba y la aplica en memoria.
  * - Intencion por su contrato JSON: `--intent '<json>'`, p. ej. `{"tipo":"ordenar-lifelines","vista":"flujo","orden":["a","b"]}`
- *   (ADR 0007/0009); sin `hash` se usa el del archivo de la Vista al leer.
+ *   (ADR 0007/0009); la Intencion no lleva `hash` (uno heredado en el JSON se ignora).
  * - Ediciones ya calculadas: `--edits '<json>'`, un arreglo de `{ file, range, replacement, hash? }`
  *   (p. ej. el `fix` de un issue de `validate`). Rangos 1-based, fin excluido.
  * Los tres modos escriben solo por la puerta `aplicarAlWorkspace` de `sesion`.
- * Concurrencia: cada edicion lleva el hash del archivo que vio quien la pide (`hash` en la edicion
- * o `--hash`); sin hash se usa el del disco al leer. Un hash viejo rechaza todo, sin escritura parcial.
+ * Concurrencia: `--hash <archivo>=<hash>` es el `visto` de la Intencion; cada edicion estructurada lleva su
+ * `hash` (o toma `--hash`; sin ninguno, el del disco al leer). Un hash viejo rechaza todo, sin escritura parcial.
  * Salida: con `--json`, un objeto `salidaDeEditSchema` (su propio `contractVersion`), tambien al
  * rechazar. Codigos: 0 escrito, 1 edicion rechazada o invalida (sin `--json`, mensaje en stderr y
  * stdout vacio; el codigo de cada motivo sale de la tabla unica `SALIDA_DE_RECHAZO` de `rechazos.ts`),
@@ -20,7 +20,7 @@ import { EDIT_CONTRACT_VERSION, edicionesPedidasSchema, intencionSchema, salidaD
 import type { SalidaDeEdit } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
-import { abrirSesion, aplicarAlWorkspace, archivoDeVista, hashDeContenido } from 'sesion';
+import { aplicarAlWorkspace, hashDeContenido } from 'sesion';
 import type { Aplicable } from 'sesion';
 
 import { leerConTemas, uso } from './sesion-cli';
@@ -100,8 +100,8 @@ export async function editar(
     } catch (error) {
       return uso(`--intent no es JSON: ${(error as Error).message}`);
     }
-    const vista = typeof crudo.vista === 'string' ? archivoDeVista(abrirSesion(archivos), crudo.vista) : undefined;
-    const leida = intencionSchema.safeParse({ hash: vista === undefined ? '' : hashVigente(vista), ...crudo });
+    // Un `hash` heredado en el JSON se ignora: la concurrencia de una Intencion la decide `--hash` (visto).
+    const leida = intencionSchema.safeParse(crudo);
     if (!leida.success) return uso(`--intent no es una Intencion valida: ${leida.error.message}`);
     aplicable = leida.data;
   } else {
@@ -110,8 +110,7 @@ export async function editar(
     if (v.view === undefined || v.node === undefined || v.x === undefined || v.y === undefined || !Number.isFinite(x) || !Number.isFinite(y)) {
       return uso(`El Pin requiere --view, --node, --x y --y numericos. ${USO}`);
     }
-    const file = archivoDeVista(abrirSesion(archivos), v.view);
-    aplicable = { tipo: 'mover-pin', vista: v.view, nodo: v.node, x, y, hash: file === undefined ? '' : hashVigente(file) };
+    aplicable = { tipo: 'mover-pin', vista: v.view, nodo: v.node, x, y };
   }
 
   // Puerta de escritura unica de `sesion`: todo o nada, solo en la raiz del Workspace (no en `--theme-path`).
@@ -121,6 +120,7 @@ export async function editar(
     resultado = aplicarAlWorkspace(
       { leer: () => ({ disco: archivos, propios }), escribir: (f, texto) => escribirArchivo(destinoEnWorkspace(raiz, f), texto) },
       aplicable,
+      Object.fromEntries(hashes),
     );
   } catch (error) {
     return uso(`No se pudo escribir: ${(error as Error).message}`);
