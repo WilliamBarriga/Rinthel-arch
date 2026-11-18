@@ -1,7 +1,7 @@
 /**
  * `shell` — capa interactiva sobre `render`: pan/zoom, seleccion, filtrado por
  * viewport, colapso con relayout en Worker, drill-down con breadcrumbs, Pasos,
- * zoom semantico, estado en el hash de URL y recarga de Tema.
+ * zoom semantico y estado en el hash de URL.
  *
  * Interfaz publica:
  * - `<VistaInteractiva source view theme layout width height ... />`: resuelve la
@@ -35,7 +35,8 @@
  * (`tabIndex` 0); Tab y Shift+Tab recorren Nodos y Grupos en orden del Modelo (en los extremos sueltan el foco al
  * navegador), las flechas saltan por Aristas al vecino, Enter o Espacio colapsa o abre el Grupo con foco.
  * Hover y fantasma: el raton sobre un elemento lo dibuja en `hover`; el Nodo que se arrastra, en `fantasma`.
- * `issues` y `toasts` se dibujan dentro del lienzo con clases `rd-*` y las variables del Tema.
+ * `issues`, `toasts`, la leyenda y las migas se dibujan dentro del lienzo con clases `rd-*` y las variables del
+ * Tema; `chrome={false}` los omite para montarlos fuera (por defecto `true`).
  * Pasos: si la Vista tiene `steps`, el Paso actual (`step` controlado con
  * `onStepChange`, o interno desde `defaultStep`, 0 por defecto; en secuencia y ER, el primer Paso) se pasa por
  * `revealAt` y se dibujan controles anterior/siguiente; la geometria no cambia.
@@ -56,16 +57,9 @@
  * mide con la fuente real tras `document.fonts.load`; el layout espera las medidas y las recibe como
  * tercer argumento del adaptador (viajan al Worker). Sin `measure` se estima por caracter. La clave de
  * layout incluye el nivel y el hash de fuente: cambiar el archivo de fuente relayouta, la pintura no.
- * Recarga de Tema: `themeUpdates` (`SuscripcionDeTema`) es el puerto por el que el
- * consumidor entrega el Tema resuelto al guardar el archivo de tema. La Geometria
- * solo se recalcula si cambia `claveDeLayout` (fuentes, tamano de texto); la
- * paleta recolorea sin relayout y sin recomputar la Vista (el Modelo no se
- * recompila). Quien alimenta el puerto es el consumidor: observa el archivo de
- * tema, recompila (`compile` de `dsl`), toma el Tema resuelto de la Fuente
- * canonica y lo entrega a `alCambiar`. Limitacion de v1: no hay consumidor
- * incluido (el HTML de `cli export --format html` es estatico, sin servidor ni
- * watch, y no pasa `themeUpdates`); la historia 35 queda cubierta por el puerto y
- * sus pruebas, y el watch/dev server queda fuera de alcance.
+ * Recarga de Tema: el padre pasa el `theme` nuevo; la Geometria solo se recalcula si cambia `claveDeLayout`
+ * (fuentes, tamano de texto); la paleta recolorea sin relayout ni recomputar la Vista. Quien observa el archivo
+ * de tema (`dev`) vive fuera de `shell`.
  *
  * Accesibilidad (ADR 0008): un boton "Alto contraste" (prop `highContrast` /
  * `onHighContrastChange`, por defecto `prefers-contrast: more`) reemplaza el Tema
@@ -76,12 +70,10 @@
  * Arrastre de Nodos (solo bajo `dev`): con `onMoveNode({id, x, y})` los Nodos se arrastran y al
  * soltar avisan su posicion nueva (relativa al Grupo padre, unidades de la geometria; es el
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve
- * si el aviso resuelve `false`. Sin `onMoveNode` (export estatico) no hay arrastre de Nodos.
+ * si el aviso resuelve `false`. Sin `onMoveNode` (consumidor sin edicion) no hay arrastre de Nodos.
  * Reordenar Lifelines (solo bajo `dev`): con `onReorderLifelines({orden})`, arrastrar la cabecera de una Lifeline o el
  * titulo de un `box` en una Vista de secuencia avisa el orden visible completo; `crearEnviadorDeIntencion(fetch)` envia
  * cualquier Intencion a `POST /api/edit`.
- * `crearControlDeEdicion(archivos)` conecta las Intenciones y el historial de `sesion` a
- * `aplicar`, `deshacer` y `rehacer` (ADR 0007).
  * `crearEnviadorDePin(fetch)` envia la intencion a `POST /api/pin` de dev y devuelve
  * `{ok:true}` o `{ok:false, desactualizado, mensaje}` (409 por hash); nunca lanza.
  * La intencion es `IntencionDePin` (`{vista, nodo, x, y, hash}`, declarada en `canonico` y
@@ -125,7 +117,7 @@
  * renderizar; un rechazo del adaptador va a `onError` o, sin el, se lanza al
  * renderizar (para un error boundary). Configuracion requerida: Fuente canonica,
  * Vista, Tema, adaptador de layout y tamano del lienzo. Peer React 18 y 19.
- * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> render -> shell`.
+ * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> sesion -> render -> shell`.
  */
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, MedidorDeTexto, VistaInteractivaProps } from './vista-interactiva';
@@ -135,7 +127,6 @@ export type { PropsDeNavegacion } from './navegacion';
 export type { PropsDePasos } from './pasos';
 export type { AjustesDeInteraccion } from './configuracion';
 export type { RelojDeCuadros } from './morph';
-export type { SuscripcionDeTema } from './tema-vigente';
 export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
 export type { UmbralesDeDetalle } from './zoom-semantico';
 export type { Camara, NivelDeDetalle } from 'render';
@@ -149,8 +140,6 @@ export { crearEnviadorDeIntencion, crearEnviadorDePin } from './enviar-pin';
 export type { AlReordenarLifelines } from './arrastre';
 export type { EnviadorDeIntencion, EnviadorDePin, ResultadoDeEnvioDePin } from './enviar-pin';
 export type { IntencionDePin } from 'canonico';
-export { crearControlDeEdicion } from './control-de-edicion';
-export type { ControlDeEdicion, ResultadoDeEdicion } from './control-de-edicion';
 export type { Historial, Intencion } from 'sesion';
 export { adaptadorDeWorker } from './layout-en-worker';
 export { servirLayout } from './servir-layout';

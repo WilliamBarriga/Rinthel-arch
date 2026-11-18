@@ -98,7 +98,7 @@ export async function layoutConMetricas(
   metricas: Metricas | TablaDeMetricas,
   opciones: { elk?: ELK } = {},
 ): Promise<Geometria> {
-  // Entrada unica: el algoritmo se elige por el Tipo de diagrama de la Vista.
+  // Entrada unica: el algoritmo se elige por el tipo de la Vista (`architecture`, `flow` y `er` van a `grafo`; `sequence` a `secuencia`).
   switch (vista.type) {
     case 'architecture':
     case 'flow':
