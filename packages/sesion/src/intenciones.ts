@@ -1,8 +1,9 @@
 import type { Intencion, Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
-import { editarPin, ordenarLifelines } from './ediciones';
 import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
+import { moverPin, ordenarLifelines } from './gestos';
+import type { ResultadoDeGesto } from './gestos';
 
 /**
  * Intencion de edicion: union discriminada por `tipo`, declarada en `canonico`
@@ -12,18 +13,17 @@ import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
 export type { Intencion };
 
 /** Resultado de `aplicarIntencion`: los `archivos` nuevos y las `ediciones` aplicadas, o el rechazo. */
-export type ResultadoDeIntencion = ResultadoDeEdicion<{
-  archivos: ArchivosDelWorkspace;
-  ediciones: EdicionConHash[];
-  issues: Issue[];
-}>;
+export type ResultadoDeIntencion = ResultadoDeGesto;
 
-/** Reductor puro: Intencion sobre el mapa de archivos -> mapa nuevo o rechazo con `motivo`. */
+/**
+ * Reductor puro: Intencion sobre el mapa de archivos -> mapa nuevo o rechazo con `motivo`. Cada rama es un
+ * Gesto de `gestos.ts` (que ubicar y que texto escribir); no escribe: para eso esta `aplicarAlWorkspace`.
+ */
 export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Intencion): ResultadoDeIntencion {
   switch (intencion.tipo) {
     case 'mover-pin': {
       const { tipo: _tipo, ...pin } = intencion;
-      return editarPin(archivos, pin);
+      return moverPin(archivos, pin);
     }
     case 'ordenar-lifelines': {
       const { tipo: _tipo, ...orden } = intencion;

@@ -2,12 +2,13 @@
  * Comando `edit` del CLI (ADR 0005): unica escritura explicita sobre el DSL de texto.
  * `edit --workspace <ruta> [--theme-path <carpeta>] [--json] [--hash <archivo>=<hash>]...`
  * mas una de estas tres formas:
- * - Intencion de Pin: `--view <id> --node <id cualificado> --x N --y N`. El Gesto `editarPin` de `sesion`
+ * - Intencion de Pin: `--view <id> --node <id cualificado> --x N --y N`, la Intencion `mover-pin`: el Gesto
  *   calcula la edicion minima (reemplaza el `pin` o lo inserta), la auto-prueba y la aplica en memoria.
  * - Intencion por su contrato JSON: `--intent '<json>'`, p. ej. `{"tipo":"ordenar-lifelines","vista":"flujo","orden":["a","b"]}`
- *   (ADR 0007/0009); sin `hash` se usa el del archivo de la Vista al leer. Pasa por `aplicarIntencion` de `sesion`.
+ *   (ADR 0007/0009); sin `hash` se usa el del archivo de la Vista al leer.
  * - Ediciones ya calculadas: `--edits '<json>'`, un arreglo de `{ file, range, replacement, hash? }`
  *   (p. ej. el `fix` de un issue de `validate`). Rangos 1-based, fin excluido.
+ * Los tres modos escriben solo por la puerta `aplicarAlWorkspace` de `sesion`.
  * Concurrencia: cada edicion lleva el hash del archivo que vio quien la pide (`hash` en la edicion
  * o `--hash`); sin hash se usa el del disco al leer. Un hash viejo rechaza todo, sin escritura parcial.
  * Salida: con `--json`, un objeto `salidaDeEditSchema` (su propio `contractVersion`), tambien al
@@ -19,12 +20,12 @@ import { EDIT_CONTRACT_VERSION, edicionesPedidasSchema, intencionSchema, salidaD
 import type { SalidaDeEdit } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
-import { abrirSesion, aplicarEdiciones, aplicarIntencion, archivoDeVista, editarPin, hashDeContenido } from 'sesion';
-import type { EdicionConHash } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, archivoDeVista, hashDeContenido } from 'sesion';
+import type { Aplicable } from 'sesion';
 
-import { cambiosDeEdicion, leerConTemas, uso } from './sesion-cli';
+import { leerConTemas, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
-import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
+import { SALIDA_DE_RECHAZO } from './rechazos';
 import type { RechazoDeEdicion } from './rechazos';
 import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
 
@@ -83,8 +84,7 @@ export async function editar(
   const hashVigente = (file: string) => hashes.get(file) ?? hashDeContenido(archivos[file] ?? '');
   const json = v.json === true;
 
-  let ediciones: EdicionConHash[];
-  let editados: ArchivosDelWorkspace;
+  let aplicable: Aplicable;
   if (v.edits !== undefined) {
     let pedidas;
     try {
@@ -92,10 +92,7 @@ export async function editar(
     } catch (error) {
       return uso(`--edits no es un arreglo valido de { file, range, replacement, hash? }: ${(error as Error).message}`);
     }
-    ediciones = pedidas.map((e) => ({ ...e, hash: e.hash ?? hashVigente(e.file) }));
-    const aplicada = aplicarEdiciones(archivos, ediciones);
-    if (!aplicada.ok) return rechazado(aplicada, json);
-    editados = aplicada.archivos;
+    aplicable = pedidas.map((e) => ({ ...e, hash: e.hash ?? hashVigente(e.file) }));
   } else if (v.intent !== undefined) {
     let crudo;
     try {
@@ -106,10 +103,7 @@ export async function editar(
     const vista = typeof crudo.vista === 'string' ? archivoDeVista(abrirSesion(archivos), crudo.vista) : undefined;
     const leida = intencionSchema.safeParse({ hash: vista === undefined ? '' : hashVigente(vista), ...crudo });
     if (!leida.success) return uso(`--intent no es una Intencion valida: ${leida.error.message}`);
-    const gesto = aplicarIntencion(archivos, leida.data);
-    if (!gesto.ok) return rechazado(gesto, json);
-    ediciones = gesto.ediciones;
-    editados = gesto.archivos;
+    aplicable = leida.data;
   } else {
     const x = Number(v.x);
     const y = Number(v.y);
@@ -117,29 +111,22 @@ export async function editar(
       return uso(`El Pin requiere --view, --node, --x y --y numericos. ${USO}`);
     }
     const file = archivoDeVista(abrirSesion(archivos), v.view);
-    // El Gesto de `sesion` fusiona calcular, auto-probar y aplicar en memoria; aqui solo queda el epilogo de I/O.
-    const gesto = editarPin(archivos, {
-      vista: v.view,
-      nodo: v.node,
-      x,
-      y,
-      hash: file === undefined ? '' : hashVigente(file),
-    });
-    if (!gesto.ok) return rechazado(gesto, json);
-    ediciones = gesto.ediciones;
-    editados = gesto.archivos;
+    aplicable = { tipo: 'mover-pin', vista: v.view, nodo: v.node, x, y, hash: file === undefined ? '' : hashVigente(file) };
   }
 
-  // Solo se escribe en la raiz del Workspace; los archivos de `--theme-path` no se tocan.
-  const { cambiados, fuera } = cambiosDeEdicion(archivos, editados, propios);
-  if (fuera !== undefined) {
-    return rechazado(rechazoDeEdicion('archivo-desconocido', `'${fuera}' no pertenece al Workspace`, fuera), json);
-  }
+  // Puerta de escritura unica de `sesion`: todo o nada, solo en la raiz del Workspace (no en `--theme-path`).
+  const raiz = v.workspace;
+  let resultado;
   try {
-    for (const f of cambiados) escribirArchivo(destinoEnWorkspace(v.workspace, f), editados[f] as string);
+    resultado = aplicarAlWorkspace(
+      { leer: () => ({ disco: archivos, propios }), escribir: (f, texto) => escribirArchivo(destinoEnWorkspace(raiz, f), texto) },
+      aplicable,
+    );
   } catch (error) {
     return uso(`No se pudo escribir: ${(error as Error).message}`);
   }
+  if (!resultado.ok) return rechazado(resultado, json);
+  const { ediciones, cambiados } = resultado;
   const salida: SalidaDeEdit = salidaDeEditSchema.parse({
     contractVersion: EDIT_CONTRACT_VERSION,
     ok: true,
