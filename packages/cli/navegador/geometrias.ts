@@ -1,16 +1,13 @@
 /**
- * Geometria bajo demanda de la pagina de `diagrams dev`, sin React ni DOM para poder probarla. Pide solo la
- * Geometria de la Vista activa y la de otra Vista al navegar a ella; un cambio de `pintura` o `codigo` (o un
- * estado sin `cambio`, que conserva la ultima Fuente buena) no pide nada. Tras un cambio de `estructura`, o si se
- * salto una version (no se sabe que cambio), descarta lo pedido y vuelve a pedir la Vista activa; mientras llega
- * se sigue dibujando el estado anterior. Una Geometria que no llega no se entrega: `VistaInteractiva` la calcula
- * en el Worker. Una malformada se reporta en `errores`. No es parte de la interfaz del paquete.
+ * Geometria bajo demanda de la pagina de `dev`: solo la de la Vista activa. Un cambio de `pintura` o `codigo` (o un
+ * estado sin `cambio`) no pide nada. Tras un cambio de `estructura` o una version saltada, descarta lo pedido y pide
+ * la Vista activa; mientras llega se dibuja el estado anterior. Una Geometria malformada se reporta en `errores`.
  */
 import type { EstadoDeDev, FuenteCanonica, GeometriaCacheada } from 'canonico';
 
 import type { LecturaDeGeometria } from './cliente';
 
-/** Lo que la pagina dibuja: un estado con Fuente y las Geometrias que ya llegaron para su estructura. */
+/** `geometrias`: las que ya llegaron para la estructura del estado. */
 export interface Dibujable {
   estado: EstadoDeDev & { fuente: FuenteCanonica };
   geometrias: Readonly<Record<string, GeometriaCacheada>>;
@@ -24,12 +21,11 @@ export interface DependenciasDeGeometrias {
 }
 
 export interface GeometriasDeDev {
-  /** Estado nuevo (inicial, SSE o recarga). */
   recibir(estado: EstadoDeDev): void;
-  /** La pagina muestra la Vista `vista`: pide su Geometria si aun no se pidio para la estructura vigente. */
+  /** Pide su Geometria si aun no se pidio para la estructura vigente. */
   activar(vista: string): void;
   dibujable(): Dibujable | undefined;
-  /** Avisa cada vez que cambia `dibujable()`; devuelve la baja. */
+  /** Avisa cuando cambia `dibujable()`; devuelve la baja. */
   suscribir(aviso: () => void): () => void;
 }
 
@@ -38,12 +34,11 @@ type ConFuente = EstadoDeDev & { fuente: FuenteCanonica };
 export function crearGeometriasDeDev({ pedir, vistaInicial }: DependenciasDeGeometrias): GeometriasDeDev {
   const avisos = new Set<() => void>();
   let mostrado: Dibujable | undefined;
-  /** Ultimo estado con Fuente recibido. */
   let ultimo: ConFuente | undefined;
   /** Estado de una estructura nueva que espera la Geometria de la Vista activa. */
   let esperando: { estado: ConFuente; vista: string } | undefined;
   let activa: string | undefined;
-  /** Lo pedido para la estructura vigente: se reemplaza (y lo que llegue tarde se descarta) en cada cambio de estructura. */
+  /** Se reemplaza en cada cambio de estructura; lo que llegue tarde a la ronda vieja se descarta. */
   let ronda = { pedidas: new Set<string>(), geometrias: {} as Record<string, GeometriaCacheada>, errores: [] as string[] };
 
   const avisar = (): void => {

@@ -1,17 +1,10 @@
 /**
- * Capturas lado a lado: el prototipo aprobado (`prototype/render-hibrido`) contra la galeria de Temas en `dev`.
- * Uso (necesita `pnpm build`): `pnpm capturas <tema>... [abierto|cobertura]`  o  `pnpm capturas --todos [vista]`.
- *   abierto (por defecto): Vista de referencia de la galeria (`<tema>-referencia`) contra la Vista `abierto` del prototipo.
- *   cobertura: solo la galeria (`<tema>`, el Modelo de cobertura); el prototipo no tiene Vista equivalente.
- * Otro Workspace: `pnpm capturas --workspace <ruta> --vista <id> [--prototipo <variante>] <tema>...` pinta esa Vista
- *   con cada Tema (del Workspace o incorporado) sobre una copia temporal (`capturas/workspace.ts`) y, con
- *   `--prototipo`, la pone junto a la Vista `abierto` de esa variante del prototipo (p. ej. `A`, la de soft-card).
- * Para la documentacion (`pnpm docs:capturas`): `--salida <dir>` escribe `<prefijo><tema>.png` en ese directorio (`--prefijo`,
- *   `--ancho`/`--alto` para el encuadre (1600x900 por defecto), `--escala` para el deviceScaleFactor, 2 por defecto), sin pagina de comparacion, y termina.
- * Salida: PNG y una pagina de comparacion en `$CAPTURAS_DIR` (por defecto `/tmp/rinthel-capturas`, fuera del repo),
- * servida por un mini server local que sigue vivo al terminar; imprime `http://localhost:<puerto>/salida/`.
- * Chromium: `$CHROMIUM_PATH` o la cache de Playwright (`~/.cache/ms-playwright/chromium-*`). Un solo motor fijo para
- * que las capturas sean comparables. No forma parte de `pnpm test`.
+ * Capturas lado a lado del prototipo (`prototype/render-hibrido`) contra la galeria de Temas en `dev`; necesita `pnpm build`.
+ * Uso: `pnpm capturas <tema>... [abierto|cobertura]`, `pnpm capturas --todos [vista]` o
+ * `pnpm capturas --workspace <ruta> --vista <id> [--prototipo <variante>] <tema>...` (sobre una copia temporal).
+ * `--salida <dir>` (docs): solo PNG `<prefijo><tema>.png`; encuadre 1600x900 y escala 2 por defecto.
+ * Salida: PNG y pagina de comparacion en `$CAPTURAS_DIR` (por defecto `/tmp/rinthel-capturas`), servida en un mini server
+ * que sigue vivo al terminar. Chromium: `$CHROMIUM_PATH` o la cache de Playwright; un solo motor para que sean comparables.
  */
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -27,7 +20,6 @@ import { prepararWorkspace } from './capturas/workspace.ts';
 
 const REPO = resolve(import.meta.dirname, '..');
 const GALERIA = 'examples/temas/galeria';
-/** Temas de ejemplo y sus fuentes: una sola copia, compartida con `examples/rinthel-arch`. */
 const TEMAS_DE_EJEMPLO = 'examples/rinthel-arch/temas';
 const VIEWPORT = { width: 1600, height: 900 };
 const VISTAS = ['abierto', 'cobertura'] as const;
@@ -38,20 +30,18 @@ const fallar = (mensaje: string): never => {
   return process.exit(1);
 };
 
-/** Que capturar: cada Tema con su Vista en un Workspace y, si hay, la variante del prototipo con la que se compara. */
 interface Pedido {
   workspace: string;
   /** `--theme-path` del dev: Temas y fuentes que el Workspace no trae. */
   carpetaDeTemas?: string;
   temas: string[];
-  /** Vista del Workspace que pinta cada Tema. */
   vistaDe: (tema: string) => string;
-  /** Variante del prototipo de cada Tema (Vista `abierto`); `undefined` = sin prototipo. */
+  /** `undefined` = sin prototipo. */
   varianteDe: (tema: string) => string | undefined;
   titulo: string;
-  /** Nombre del lado propio en archivos y pagina (`galeria` o `workspace`). */
+  /** `galeria` o `workspace`. */
   lado: string;
-  /** Modo documentacion (`--salida`): PNG `<prefijo><tema>.png` en `dir`, sin pagina de comparacion. */
+  /** `--salida`: sin pagina de comparacion. */
   docs?: { dir: string; prefijo: string; escala: number; encuadre: { width: number; height: number } };
 }
 
@@ -70,7 +60,7 @@ function leerArgumentos(): Pedido {
     return pedido;
   }
   if (v.vista !== undefined || v.prototipo !== undefined) return fallar(`--vista y --prototipo van con --workspace.\n${USO}`);
-  // La Vista, si se da, va al final: `pnpm capturas soft-card glass-chip cobertura`.
+  // La Vista, si se da, va al final.
   const vista = VISTAS.includes(posicionales[posicionales.length - 1] as Vista) ? (posicionales.pop() as Vista) : 'abierto';
   const nombres = Object.keys(VARIANTE_DE_TEMA);
   let temas = posicionales;
@@ -119,7 +109,7 @@ async function capturarGaleria(navegador: Browser, url: string, vista: string, d
   await pagina.goto(`${url}#p=${encodeURIComponent(vista)}`);
   await pagina.waitForSelector(`${listo}[data-vista="${vista}"]`, { timeout: 60_000 });
   await pagina.evaluate('document.fonts.ready');
-  // Las fuentes pueden pedir un layout nuevo: se vuelve a esperar la senal antes de capturar.
+  // Las fuentes pueden pedir un layout nuevo: se vuelve a esperar la senal.
   await pagina.waitForSelector(`${listo}[data-vista="${vista}"]`);
   // Fuera del cuadro lo que no es el diagrama: chrome del shell (migas, accesibilidad) y panel de issues de dev.
   await pagina.addStyleTag({ content: '.rd-chrome, [data-panel="issues"] { display: none !important }' });

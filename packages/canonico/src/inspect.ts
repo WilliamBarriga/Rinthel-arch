@@ -1,16 +1,11 @@
 /**
- * Esquema Zod de la salida de `inspect --json` (ADR 0005). Es la fuente del
- * contrato: el CLI lo usa para emitir y el skill generado para describirlo. Su
- * version es independiente de la de `validate` (ADR 0005): anadir campos no
- * rompe el contrato; quitarlos o cambiar su significado exige subir
- * `INSPECT_CONTRACT_VERSION`.
+ * Esquema Zod de la salida de `inspect --json` (ADR 0005). Version independiente de `validate`: anadir
+ * campos no rompe el contrato; quitarlos o cambiar su significado exige subir `INSPECT_CONTRACT_VERSION`.
  */
 import { z } from 'zod';
 
-/** Version entera del contrato de `inspect`, independiente de `CONTRACT_VERSION` (validate). */
 export const INSPECT_CONTRACT_VERSION = 1;
 
-/** Donde se escribio algo: `archivo:linea` segun el Ubicador. */
 const sitioSchema = { file: z.string(), line: z.number().int().min(1) };
 
 const aristaSchema = z.object({
@@ -26,7 +21,7 @@ const resumenDeNodoSchema = z.object({ id: z.string(), type: z.string(), title: 
 
 const comun = { contractVersion: z.literal(INSPECT_CONTRACT_VERSION) };
 
-/** Capa de una pila de Tema ya resuelta; `origen` es el parche que la fijo. */
+/** `origen` es el parche que fijo la Capa. */
 const capaDeTemaSchema = z.object({
   nombre: z.string(),
   primitiva: z.string(),
@@ -120,14 +115,13 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       estado: z.string().optional(),
       /** Tipo de diagrama pedido (`--diagrama`): la cascada incluye los parches `diagram <tipo>` del Tema. */
       diagrama: z.string().optional(),
-      /** Pila de Capas resuelta, de abajo arriba; `origen` es el parche que la fijo. */
+      /** De abajo arriba. */
       capas: z.array(capaDeTemaSchema),
       /** Fondo de pagina: pila de rellenos de abajo arriba y si queda fijo al visor. */
       pagina: z.object({ fijo: z.boolean(), capas: z.array(capaDeTemaSchema) }),
       /**
-       * Grupo del Tipo y estado pedidos: pila del Grupo abierto y del cerrado (de abajo arriba, cada Capa con su
-       * `origen`), la cabecera y el padding de la zona de hijos. `propio` es falso si el Tema no declara `group`:
-       * entonces las Capas salen vacias y el dibujo usa un Grupo sobrio derivado de los tokens del Tema.
+       * Grupo del Tipo y estado pedidos; pilas de abajo arriba, `padding` de la zona de hijos. `propio` es falso si el
+       * Tema no declara `group`: las Capas salen vacias y el dibujo usa un Grupo sobrio derivado de los tokens del Tema.
        */
       grupo: z.object({
         propio: z.boolean(),
@@ -148,10 +142,9 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       temaConCodigo: z.boolean(),
       componentes: z.array(z.string()),
       /**
-       * Elementos de secuencia (`lifeline`, `activation`, `message`, `fragment`, `note`) y fila ER (`row`), con la misma
-       * resolucion que el dibujo: su pila, la de cada variante (`kind`/`op`), los marcadores y las Metricas propias. Sin
-       * `--diagrama`, solo los que el Tema declara; con `--diagrama sequence` (o `er`), tambien los derivados de `edge`
-       * y `node`, marcados con `derivado: true`. Ausente si no hay ninguno.
+       * Elementos de secuencia y fila ER (`row`), resueltos como en el dibujo. Sin `--diagrama`, solo los que el Tema
+       * declara; con `--diagrama sequence` o `er`, tambien los derivados de `edge` y `node` (`derivado: true`).
+       * Ausente si no hay ninguno.
        */
       elementos: z
         .object({
@@ -178,7 +171,6 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
 
 export type SalidaDeInspect = z.infer<typeof salidaDeInspectSchema>;
 
-/** El contrato de `inspect --json` como JSON Schema, derivado del esquema Zod. */
 export function salidaDeInspectJsonSchema(): Record<string, unknown> {
   return z.toJSONSchema(salidaDeInspectSchema);
 }

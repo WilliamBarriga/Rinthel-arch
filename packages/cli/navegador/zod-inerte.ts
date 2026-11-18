@@ -1,7 +1,6 @@
 /**
- * Sustituto de `zod` para el bundle del Worker: el layout solo usa funciones de
- * `canonico` que no validan, pero `canonico` construye sus esquemas al cargarse.
- * Este objeto acepta cualquier cadena de llamadas y no hace nada (ahorra ~90 KiB gzip).
+ * Sustituto de `zod` en el bundle del Worker: `canonico` construye sus esquemas al cargarse aunque el layout no valide.
+ * Acepta cualquier cadena de llamadas y no hace nada.
  */
 const inerte: unknown = new Proxy(function () {}, {
   get: () => inerte,

@@ -1,10 +1,4 @@
-/**
- * Compilacion del bloque `slots` de un Tema (ADR 0008): traduce el arbol del
- * AST (cajas `row`/`column` anidables, Slots con `align` y estilo) a la
- * disposicion que valida `tema` (`construirDisposicion`) y deja el estilo de
- * cada Slot (Primitiva `text` o `icon`) en `nodo.textos`. Solo traduce y situa
- * los errores; las reglas son del catalogo.
- */
+/** Bloque `slots` de un Tema: disposicion validada por `construirDisposicion` de `tema` y estilo de cada Slot. */
 import { DEFINICION_DE_SLOT, construirDisposicion } from 'tema';
 import type { CajaDeSlots, ElementoDeTema, NombreDeSlot, EntradaDeCaja, EntradaDeSlot, ErrorDeCatalogo, Primitiva, PropiedadEscrita } from 'tema';
 
@@ -18,7 +12,7 @@ type Origen = ThemeSlots | SlotBox | SlotEntry | LayerProp;
 
 const esCaja = (hijo: Hijo): hijo is SlotBox => hijo.$type === 'SlotBox';
 
-/** Posicion donde situar un error: la propiedad culpable (clave o valor segun el error) o el elemento. */
+/** La propiedad culpable (clave o valor segun el error) o, si no hay, el elemento. */
 function sitio(origen: Origen, error: ErrorDeCatalogo): { line: number; column: number } {
   if (origen.$type === 'LayerProp') return inicioDePropiedad(origen, error);
   const propiedad = origen.$type === 'SlotEntry' ? 'name' : 'direction';
@@ -27,13 +21,13 @@ function sitio(origen: Origen, error: ErrorDeCatalogo): { line: number; column: 
   return rango.start.line === 1 && rango.start.column === 1 && origen.$cstNode !== undefined ? aRango(origen.$cstNode.range).start : rango.start;
 }
 
-/** Lo que un bloque `slots { ... }` fija: la disposicion y el estilo de cada Slot (el Nodo, la cabecera del Grupo o su parche `collapsed`). */
+/** El Nodo, la cabecera del Grupo o el Grupo cerrado. */
 export interface DestinoDeSlots {
   slots?: CajaDeSlots | undefined;
   textos?: Partial<Record<NombreDeSlot, Primitiva>> | undefined;
 }
 
-/** Aplica un bloque `slots { ... }` sobre `destino`: disposicion y estilo de cada Slot. Los errores quedan en `ctx.issues`. */
+/** Los errores quedan en `ctx.issues`. */
 export function compilarSlots(item: ThemeSlots, destino: DestinoDeSlots, ctx: Contexto, elemento: ElementoDeTema = 'nodo'): void {
   const errores: Array<{ error: ErrorDeCatalogo; origen: Origen }> = [];
   const props = (lista: readonly LayerProp[]): Array<PropiedadEscrita<Origen>> => {
@@ -68,5 +62,4 @@ export function compilarSlots(item: ThemeSlots, destino: DestinoDeSlots, ctx: Co
   }
 }
 
-/** Los Slots (hojas) del arbol, en orden. */
 const hojas = (hijos: readonly Hijo[]): SlotEntry[] => hijos.flatMap((hijo) => (esCaja(hijo) ? hojas(hijo.children) : [hijo]));

@@ -53,10 +53,8 @@ describe('VistaInteractiva: box de Grupo en secuencia', () => {
       expect(c.y1).toBeGreaterThan(caja.y1);
       expect(c.y2).toBeLessThan(caja.y2);
     }
-    // Fuera del box: el cliente y la cola.
     expect(cabecera('cliente').x2).toBeLessThan(caja.x1);
     expect(cabecera('cola').x1).toBeGreaterThan(caja.x2);
-    // La Lifeline del Grupo va la primera dentro del box.
     expect(cabecera('sistema').x1).toBeLessThan(cabecera('sistema.api').x1);
     expect(container.querySelector('[data-group-box="sistema"]')!.textContent).toContain('Sistema');
   });

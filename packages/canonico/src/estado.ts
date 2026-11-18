@@ -1,32 +1,25 @@
-/**
- * Esquema unico del estado que el servidor de `dev` empuja al navegador
- * (`/api/estado` y `/eventos`, ADR 0005/0007). Lo produce `cli` (servidor) y lo
- * consume el navegador: ninguno de los dos lo redeclara.
- */
+/** Estado que el servidor de `dev` empuja al navegador por `/api/estado` y `/eventos` (ADR 0007). */
 import { z } from 'zod';
 
 import { fuenteCanonicaSchema } from './esquema';
 import { issueSchema } from './salida';
 
-/** Issue tal como lo ve el navegador: el de `validate` mas el enlace que abre el editor. */
 export const issueDeDevSchema = issueSchema.extend({
   /** Enlace `vscode://file/<ruta>:<linea>:<columna>`. */
   href: z.string(),
 });
 
 /**
- * Que cambio produjo el estado empujado (enmienda de Temas del ADR 0005), para que el visor haga lo minimo:
- * `pintura` (solo Capas pintadas o animacion: se reaplica el Estilo resuelto con la Geometria vigente),
- * `estructura` (Metricas, fuentes, Modelo o Vistas: relayout) y `codigo` (un `.tsx`: se vuelve a registrar
- * el componente, sin relayout). Si cambian varios a la vez gana el mas fuerte: estructura, codigo, pintura.
+ * `pintura`: Capas o animacion, se reaplica el Estilo sobre la Geometria vigente; `estructura`: Metricas,
+ * fuentes, Modelo o Vistas, relayout; `codigo`: un `.tsx`, se re-registra el componente sin relayout.
+ * Con varios a la vez gana el mas fuerte: estructura, codigo, pintura.
  */
 export const TIPOS_DE_CAMBIO = ['pintura', 'estructura', 'codigo'] as const;
 export type TipoDeCambio = (typeof TIPOS_DE_CAMBIO)[number];
 
 /**
- * Estado empujado: la `version` (la que la pagina devuelve al editar; el servidor la traduce a los hashes que
- * vio) y la clasificacion del `cambio` (con `pintura` la pagina no pide Geometria). Sin hashes ni archivos: la
- * concurrencia la resuelve el servidor con la version.
+ * La pagina devuelve `version` al editar y el servidor la traduce a los hashes que vio (resuelve la concurrencia).
+ * Con `cambio: 'pintura'` la pagina no pide Geometria.
  */
 export const estadoDeDevSchema = z.object({
   version: z.number().int(),
@@ -36,7 +29,7 @@ export const estadoDeDevSchema = z.object({
   fuente: fuenteCanonicaSchema.optional(),
   iconos: z.record(z.string(), z.string()),
   vistas: z.array(z.string()),
-  /** Archivos de fuente del Workspace (ruta relativa -> hash del contenido): `dev` los sirve en `/fuentes/<ruta>`. Ausente si el adaptador no los conoce. */
+  /** Ruta relativa -> hash del contenido; se sirven en `/fuentes/<ruta>`. Ausente si el adaptador no los conoce. */
   fuentes: z.record(z.string(), z.string()).optional(),
   issues: z.array(issueDeDevSchema),
 });
@@ -44,8 +37,7 @@ export const estadoDeDevSchema = z.object({
 export type IssueDeDev = z.infer<typeof issueDeDevSchema>;
 export type EstadoDeDev = z.infer<typeof estadoDeDevSchema>;
 
-/** Ruta del servidor de `dev` por la que el navegador pide los archivos de fuente del Workspace. */
 export const RUTA_DE_FUENTES = '/fuentes/';
 
-/** URL (relativa al servidor de `dev`) de la fuente `ruta` del Workspace, con cada segmento codificado. */
+/** URL relativa al servidor de `dev`, con cada segmento codificado. */
 export const urlDeFuente = (ruta: string): string => RUTA_DE_FUENTES + ruta.split('/').map(encodeURIComponent).join('/');

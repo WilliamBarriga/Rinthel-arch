@@ -1,8 +1,3 @@
-/**
- * `VistaInteractiva`: la Vista de `render` con pan/zoom (d3-zoom), seleccion de
- * Nodo y filtrado por viewport. El estado de camara y seleccion es controlable
- * por props; sin ellas el componente guarda el suyo.
- */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FocusEvent as EventoDeFoco, KeyboardEvent as EventoDeTecla, MouseEvent as EventoDeRaton, ReactElement } from 'react';
 import { select } from 'd3-selection';
@@ -45,10 +40,9 @@ import { recortarAlViewport } from './viewport';
 import { nivelDeDetalle } from './zoom-semantico';
 import type { UmbralesDeDetalle } from './zoom-semantico';
 
-/** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
 export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema, medidas?: MedidasDeTexto) => Promise<Geometria>;
 
-/** Medidor de texto inyectado (ADR 0008): el visor mide con la fuente real (`medirEnVisor`); sin el se estima por caracter. */
+/** Mide textos con la fuente real (`medirEnVisor`); sin medidor el layout estima por caracter. */
 export type MedidorDeTexto = (textos: TextoAMedir[]) => Promise<MedidasDeTexto>;
 
 export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, PropsDeAltoContraste {
@@ -129,17 +123,13 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   issues?: readonly IssueDeDev[];
   /** Avisos efimeros (el padre decide cuando quitarlos); se dibujan dentro del lienzo, con el Tema. */
   toasts?: readonly string[];
-  /** Reloj del morph; por defecto `requestAnimationFrame`. Util en pruebas. */
+  /** Reloj del morph; por defecto `requestAnimationFrame`. */
   clock?: RelojDeCuadros;
   /** Fallo del adaptador de layout; sin ella el fallo se lanza al renderizar. */
   onError?: (error: Error) => void;
 }
 
-/**
- * Vista con drill-down: navega por los `link` de la Vista activa. Cada cambio de
- * Vista remonta la Vista activa, asi que el estado no controlado (colapso, camara,
- * seleccion, Paso) vuelve a su valor inicial; el controlado lo gobierna el padre.
- */
+/** Navega por los `link` de la Vista activa; cada cambio de Vista la remonta y reinicia su estado no controlado. */
 export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
   const navegacion = useNavegacion(props);
   const { vista, ir } = navegacion;
@@ -198,7 +188,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const avisosDeFuentes = useMemo(() => (fontUrl === undefined ? avisoDeFuentesSinServir(resolverTema(theme).fonts) : []), [fontUrl, theme]);
   const calculo = useGeometria({ vista, theme, layout, medir: medirConFuentes, claveDeFuentes: JSON.stringify(hashesDeFuentes), semilla, onError, alLlegar });
 
-  // Camara: controlada por el padre o propia; hasta que el usuario (o un colapso) la mueva, encuadra toda la Vista segun la primera geometria.
+  // Hasta que el usuario o un colapso la mueva, la camara encuadra toda la Vista segun la primera geometria.
   const [movida, fijarCamara] = useControlado<Camara | undefined>(props.camera, undefined, (nueva) => nueva && ultimo.current.onCameraChange?.(nueva));
   const encuadre = useRef<Camara | undefined>(undefined);
   if (encuadre.current === undefined && calculo !== undefined) encuadre.current = encuadrar(calculo.geometria, width, height, ajustes.fitMargin);
@@ -312,7 +302,6 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const medidas = calculo?.medidas;
   const estilo = useMemo(() => resolverEstilo(theme, vista.type, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas), [theme, fontFiles, medidas, vista.type]);
 
-  // Ruta (en-ruta / atenuado) y foco de teclado: los calcula el shell y render solo los pinta.
   const enSecuencia = vista.type === 'sequence';
   const visible = (id: string): boolean => (visibility?.(id) ?? 1) > 0;
   const nodosSeleccionados = seleccion.filter((e) => e.tipo === 'nodo').map((e) => e.id);
@@ -394,7 +383,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
 
   const detalle = nivelDeDetalle(width / ancho, props.detailThresholds);
 
-  /** Elemento bajo un evento de raton: el nucleo decide que hay bajo el punto, sobre la Vista completa (no la recortada). */
+  /** Elemento bajo el raton, sobre la Vista completa (no la recortada al viewport). */
   const elementoBajoElRaton = (evento: EventoDeRaton) => {
     if (mostrado === undefined || (evento.target as Element).closest('[data-diagram]') === null) return undefined;
     const caja = zona.current!.getBoundingClientRect();

@@ -2,13 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CODIGOS, CODIGOS_DEPRECADOS, DESCRIPCION_DE_CODIGO } from 'canonico';
 
-/**
- * Codigos minimos de v1: la lista del spec #19 escrita desde el spec, no desde
- * el catalogo. Anadir un codigo es un cambio de contrato que se revisa aqui.
- * `E_SYNTAX_ERROR` se anade en el ticket #22: `compile` necesita reportar texto
- * que no cumple la gramatica y el spec no lo listaba. Los `E_THEME_*` son de la
- * spec #24 (ADR 0008); `W_UNKNOWN_EDGE_STYLE_TYPE` se depreco con `edgeStyles`.
- */
+/** Escrita a mano, no desde el catalogo: anadir un codigo es un cambio de contrato que se revisa aqui. */
 const codigosDeV1 = [
   'E_SYNTAX_ERROR',
   'E_UNKNOWN_NODE_TYPE',

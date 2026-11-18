@@ -1,16 +1,11 @@
-/**
- * Uso de la Capa `code` en un Tema (ADR 0008): que Componentes de Tema nombra y con
- * que parametros. Es lo que `inspect` y `validate` marcan como "Tema con codigo".
- * Recorre la cascada completa (base, cada Tipo, cada estado y sus combinaciones),
- * asi un componente que solo aparece en un parche tambien cuenta. Puro.
- */
+/** Componentes de Tema que nombran las Capas `code`, recorriendo la cascada completa (base, Tipos, estados y combinaciones). */
 import type { Tema } from 'canonico';
 
 import { cascada, ESTADOS } from './parches';
 import type { Estado, OpDeCapa } from './parches';
 import { resolverTema } from './tema';
 
-/** Un uso de un componente: el nombre y los parametros declarados (todo menos `component`). */
+/** `parametros`: todo lo declarado menos `component`. */
 export interface UsoDeComponente {
   nombre: string;
   parametros: Readonly<Record<string, number | string>>;
@@ -23,7 +18,6 @@ export function usosDeCodigo(tema: Tema, vista?: readonly OpDeCapa[]): UsoDeComp
   for (const elemento of ['nodo', 'grupo'] as const) {
     const tipos: Array<string | undefined> = [undefined, ...Object.keys(resuelto[elemento].tipos)];
     const estados: Array<Estado | undefined> = [undefined, ...ESTADOS.filter((e) => resuelto[elemento].estados[e] !== undefined)];
-    // El Grupo cerrado es otra pila (parche `collapsed`); el Nodo no tiene esa variante.
     for (const colapsado of elemento === 'grupo' ? [false, true] : [false]) {
       for (const tipo of tipos) {
         for (const estado of estados) {
@@ -41,5 +35,4 @@ export function usosDeCodigo(tema: Tema, vista?: readonly OpDeCapa[]): UsoDeComp
   return [...usos.values()].sort((a, b) => a.nombre.localeCompare(b.nombre) || JSON.stringify(a.parametros).localeCompare(JSON.stringify(b.parametros)));
 }
 
-/** Nombres de los componentes que el Tema usa, sin repetir y ordenados; vacio si el Tema no tiene codigo. */
 export const componentesDeTema = (tema: Tema, vista?: readonly OpDeCapa[]): string[] => [...new Set(usosDeCodigo(tema, vista).map((uso) => uso.nombre))].sort();

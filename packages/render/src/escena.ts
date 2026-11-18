@@ -1,12 +1,7 @@
 /**
- * Escena de una Vista: el arbol de elementos que dibuja el componente `Diagram`.
- * Render hibrido (ADR 0008): bajo ellas, la pagina (fondo del Tema), y tres capas planas en coordenadas absolutas del
- * lienzo, en este orden de apilado (Grupos HTML, Aristas SVG, Nodos HTML), bajo un
- * unico contenedor con un solo `transform` de pan/zoom; asi HTML y SVG quedan
- * alineados a cualquier zoom. Pura: sin reloj, sin estado, sin DOM; la misma
- * entrada da el mismo arbol. Los valores de atributo van sin escapar: React los
- * escapa. Ordena y compone; el aspecto lo dan la hoja de estilo (`hoja.ts`) y los
- * pintores (`pintores.ts`) desde el Estilo resuelto.
+ * Escena de una Vista: el arbol de elementos que dibuja `Diagram`. Sobre la pagina, tres capas planas en coordenadas
+ * absolutas (Grupos HTML, Aristas SVG, Nodos HTML) bajo un solo `transform` de pan/zoom, asi HTML y SVG quedan alineados
+ * a cualquier zoom. Pura: la misma entrada da el mismo arbol. Los valores de atributo van sin escapar: React los escapa.
  */
 import { idDeArista } from 'canonico';
 import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaDeGrafo, VistaResuelta, Visibilidad } from 'canonico';
@@ -39,18 +34,14 @@ export interface Camara {
   height: number;
 }
 
-/**
- * Nivel de detalle del texto: `etiqueta` y `titulo` dibujan la etiqueta del Nodo
- * en la Vista (el `label` del override o, si no hay, su titulo; el override se
- * respeta en todos los niveles) y `completo` anade los Atributos. Solo cambia el texto: las
- * cajas, rutas y la camara son identicas en los tres.
- */
+/** Todos los niveles dibujan el `label` de la Vista; `completo` anade los Atributos. Cajas, rutas y camara no cambian. */
 export type NivelDeDetalle = 'etiqueta' | 'titulo' | 'completo';
 
 /** Estados visuales por id de elemento (Nodo, Arista o `nodo#atributo`); un elemento puede tener varios. */
 export type Estados = Readonly<Record<string, readonly EstadoVisual[]>>;
 
 export interface EntradaDeEscena {
+  /** Vista ya resuelta con su colapso (`resolveView`); render no guarda estado de colapso. */
   view: VistaResuelta;
   geometry: Geometria;
   theme: Tema;
@@ -60,31 +51,27 @@ export interface EntradaDeEscena {
   /** Visibilidad 0..1 de Nodos y Aristas; sin ella, todo vale 1. */
   visibility?: Visibilidad;
   camera?: Camara;
-  /** Nivel de detalle del texto; sin el, etiqueta de la Vista y Atributos (como `completo` pero con la etiqueta). */
+  /** Sin el, como `completo`. */
   detail?: NivelDeDetalle;
   onSelect?: (id: string) => void;
-  /** Con ella, cada Grupo (o Grupo colapsado sin enlace) lleva un control de colapso. */
+  /** Con ella, cada Grupo (o Grupo colapsado sin enlace) lleva un control de colapso; solo avisa, el colapso llega en `view`. */
   onToggle?: (id: string) => void;
   /** Metricas con las que dibujar; deben ser las del layout. Por defecto las derivadas del Tema. */
   metricas?: Metricas;
-  /** Estados visuales (seleccionado, hover, fantasma, en-ruta, atenuado, foco) que se dibujan con el Estilo resuelto; sin ellos, ninguno. */
+  /**
+   * Estados visuales por id; un id no dibujado se ignora. `atenuado` baja la opacidad sin contorno y el anillo de `foco`
+   * no baja de `ANILLO_DE_FOCO_MINIMO` px.
+   */
   estados?: Estados;
   /** Estilo resuelto con el que dibujar; por defecto el del Tema (`resolverEstilo`). */
   estilo?: Estilo;
-  /** URL con la que el navegador pide un archivo de fuente del Workspace (la entrega el shell); con ella el dibujo declara los `@font-face` de `estilo.caras`. */
+  /** URL de un archivo de fuente del Workspace; con ella el dibujo declara los `@font-face` de `estilo.caras`. */
   urlDeFuente?: (ruta: string) => string;
-  /**
-   * Interruptor manual de reduced-motion, independiente de la preferencia del sistema:
-   * `on` reduce siempre, `off` nunca; sin el, manda `prefers-reduced-motion`.
-   */
+  /** Reduced-motion: `on` reduce siempre, `off` nunca; sin el, manda `prefers-reduced-motion`. */
   reducedMotion?: 'on' | 'off';
   /** Ids recien revelados (un Paso): el `stagger` de `enter` cuenta solo entre ellos; sin ella, entre todos los visibles. */
   nuevos?: readonly string[];
-  /**
-   * Componentes de Tema (Capa `code`) por nombre: el puerto por el que entra el codigo del Workspace. `render`
-   * nunca lo importa; `dev` compila el `.tsx` y las pruebas pasan un registro en memoria. Un nombre sin
-   * componente deja su contenedor vacio.
-   */
+  /** Componentes de Tema (Capa `code`) por nombre. Un nombre sin componente deja su contenedor vacio; uno que lanza solo pierde su Capa. */
   componentes?: ComponentesDeTema;
 }
 
@@ -101,15 +88,11 @@ export interface Contexto extends EntradaDeEscena {
   escalonado: ReadonlyMap<string, number>;
 }
 
-/** Contexto de una escena de grafo: la Vista y la Geometria son las de grafo. */
 type ContextoDeGrafo = Contexto & { view: VistaDeGrafo; geometry: GeometriaGrafo };
 
 /**
- * Construye la escena. Nodos y Grupos con el Estilo resuelto del Tema (un color es siempre
- * un nombre de Paleta resuelto contra la paleta; sin color, o con un nombre
- * que el Tema no tiene, se usa el borde), y entre ambos las Aristas. Lanza si
- * un Nodo de la Vista no esta en la geometria (geometria de otra Vista), si la
- * Geometria es de otro Tipo de diagrama que la Vista o si el Tema no cumple el contrato.
+ * Lanza si un Nodo de la Vista no esta en la geometria, si la Geometria es de otro Tipo de diagrama que la Vista o si
+ * el Tema no cumple el contrato.
  */
 export function construirEscena(entrada: EntradaDeEscena): Elemento {
   const { view, geometry } = entrada;
@@ -216,9 +199,8 @@ const MARGEN_DE_PAGINA = 4000;
 const esGrupo = (nodo: NodoResuelto): boolean => nodo.children.length > 0;
 
 /**
- * Nombre accesible de cada Nodo (ADR 0008): etiqueta, Tipo y relaciones ("va a" /
- * "viene de", con la etiqueta de la Arista). Sale solo del Modelo: el Tema no puede
- * cambiarlo. El SVG de Aristas es decorativo, asi que la relacion se anuncia aqui.
+ * Nombre accesible de cada Nodo: etiqueta, Tipo y relaciones ("va a" / "viene de"). Sale solo del Modelo, nunca del
+ * Tema; el SVG de Aristas es decorativo, asi que la relacion se anuncia aqui.
  */
 export function nombresAccesibles(aristas: readonly AristaResuelta[], nodos: readonly NodoResuelto[]): Map<string, string> {
   const etiqueta = new Map(nodos.map((n) => [n.id, n.label]));

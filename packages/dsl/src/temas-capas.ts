@@ -1,10 +1,6 @@
 /**
- * Compilacion de un bloque de parches de Capa (ADR 0008): las Capas del bloque
- * `node` de un Tema, de un `type`, de un `state`, de una `part` o del override
- * de una Vista. Expande `use`, resuelve `$token`, valida contra el catalogo y
- * la pila vigente (todos los errores a la vez) y entrega los parches ya
- * validados. La semantica de aplicar parches vive en `tema`; aqui solo se
- * traduce el AST y se situan los errores en el texto.
+ * Bloque de parches de Capa (Tema, `type`, `state`, `part` u override de Vista): expande `use`, resuelve `$token`
+ * y valida contra el catalogo y la pila vigente. La semantica de aplicar parches vive en `tema`.
  */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
@@ -18,7 +14,7 @@ import type { AnimacionDeCapa } from './temas-animacion';
 import { propiedadDeClave, propiedadesResueltas } from './temas-comun';
 import type { Contexto } from './temas-comun';
 
-/** Donde se definio por ultima vez una Capa de la pila base; sirve de `related`. */
+/** Donde se definio por ultima vez una Capa; sirve de `related`. */
 export interface Sitio {
   file: string;
   line: number;
@@ -78,7 +74,7 @@ function aOp(elemento: Elemento, ctx: ContextoDeBloque): { op: OpDeCapa; errores
   return { op, errores };
 }
 
-/** El fondo de pagina no se anima (ADR 0008: la animacion es de los Nodos y Grupos): `motion` y `keyframes` en `page` son error, no se descartan en silencio. */
+/** El fondo de pagina no se anima: `motion` y `keyframes` en `page` son error. */
 function rechazarAnimacionDePagina(item: ThemeLayer, archivo: string, issues: Issue[]): AnimacionDeCapa {
   const [anim] = item.animations;
   if (anim === undefined) return { fallo: false };
@@ -93,10 +89,7 @@ function rechazarAnimacionDePagina(item: ThemeLayer, archivo: string, issues: Is
   return { fallo: true };
 }
 
-/**
- * Compila los elementos de un bloque. Devuelve los parches sin error en orden
- * de aplicacion y deja los issues en `ctx.issues`.
- */
+/** Devuelve los parches sin error en orden de aplicacion; los issues quedan en `ctx.issues`. */
 export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx: ContextoDeBloque): OpDeCapa[] {
   const elementos = expandir(items, ctx.archivo, ctx, new Set(), true);
   const base = new Map(ctx.origenes);
@@ -133,7 +126,7 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
           ? rangoDe(prop, error.codigo === CODIGOS.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value')
           : rangoDe(item, error.codigo === CODIGOS.E_THEME_UNKNOWN_PRIMITIVE ? 'primitive' : 'name');
     const origen = baseDeError === undefined ? undefined : base.get(baseDeError);
-    // Con un unico candidato cercano el arreglo es inequivoco: `fix` en vez de `hint` (ADR 0005). Los tokens van con `$` y no se arreglan aqui.
+    // Un unico candidato cercano da `fix` en vez de `hint`; los tokens (con `$`) no se arreglan.
     const arreglable = error.candidato !== undefined && error.codigo !== CODIGOS.E_THEME_UNKNOWN_TOKEN;
     return {
       code: error.codigo,

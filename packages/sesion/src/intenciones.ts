@@ -5,21 +5,14 @@ import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
 import { moverPin, ordenarLifelines } from './gestos';
 import type { ResultadoDeGesto, Visto } from './gestos';
 
-/**
- * Intencion de edicion: union discriminada por `tipo`, declarada en `canonico`
- * (`intencionSchema`). Cada herramienta nueva es una variante mas alla, con su rama
- * en `aplicarIntencion`. Hoy: mover un Pin y ordenar las Lifelines de una secuencia.
- */
 export type { Intencion };
 export type { Visto };
 
-/** Resultado de `aplicarIntencion`: los `archivos` nuevos y las `ediciones` aplicadas, o el rechazo. */
 export type ResultadoDeIntencion = ResultadoDeGesto;
 
 /**
- * Reductor puro: Intencion sobre el mapa de archivos -> mapa nuevo o rechazo con `motivo`. Cada rama es un
- * Gesto de `gestos.ts` (que ubicar y que texto escribir). `visto` (archivo -> hash del texto que vio quien emite) rechaza con
- * `hash-desactualizado` si el archivo que cambia difiere; los demas no cuentan y sin `visto` aplica sobre el vigente. No escribe: para eso esta `aplicarAlWorkspace`.
+ * Reductor puro: mapa nuevo o rechazo con `motivo`. `visto` rechaza con `hash-desactualizado` si el archivo que
+ * cambia difiere; sin `visto` aplica sobre el vigente. No escribe.
  */
 export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Intencion, visto?: Visto): ResultadoDeIntencion {
   switch (intencion.tipo) {
@@ -34,21 +27,16 @@ export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Inte
   }
 }
 
-/** Pila inmutable de deshacer/rehacer sobre el texto del Workspace: `archivos` es el vigente; `deshacer` restaura el DSL exactamente. */
+/** Pila inmutable de deshacer/rehacer sobre el texto del Workspace; `archivos` es el vigente. */
 export interface Historial {
   readonly archivos: ArchivosDelWorkspace;
   readonly pasado: readonly ArchivosDelWorkspace[];
   readonly futuro: readonly ArchivosDelWorkspace[];
 }
 
-/** Historial vacio sobre `archivos`: sin pasado ni futuro. */
 export const crearHistorial = (archivos: ArchivosDelWorkspace): Historial => ({ archivos, pasado: [], futuro: [] });
 
-/**
- * Registra `archivos` como el nuevo texto vigente cuando el llamador ya lo escribio por su cuenta (el anterior
- * pasa al pasado) y descarta el futuro. Pura; no comprueba que `archivos` difiera del vigente: evitar
- * entradas repetidas es del llamador.
- */
+/** Registra `archivos` como vigente y descarta el futuro. No comprueba que difiera del vigente. */
 export const apilar = (historial: Historial, archivos: ArchivosDelWorkspace): Historial => ({
   archivos,
   pasado: [...historial.pasado, historial.archivos],

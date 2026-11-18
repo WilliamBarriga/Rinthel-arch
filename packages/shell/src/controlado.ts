@@ -1,8 +1,3 @@
-/**
- * Mecanismo unico de props controlados: un valor que gobierna el padre cuando
- * lo da (controlado) o que guarda el componente cuando no (no controlado). Los
- * avisos al padre salen siempre, en ambos modos.
- */
 import { useReducer, useRef, useState } from 'react';
 
 /**

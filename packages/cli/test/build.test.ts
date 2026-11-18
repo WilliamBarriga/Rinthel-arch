@@ -8,7 +8,6 @@ import { run } from 'cli';
 
 const fixtures = join(import.meta.dirname, 'fixtures');
 
-/** Copia una fixture a una carpeta temporal para que `build` escriba sin ensuciar el repo. */
 function copiarFixture(nombre: string): string {
   const destino = mkdtempSync(join(tmpdir(), 'build-'));
   cpSync(join(fixtures, nombre), destino, { recursive: true });

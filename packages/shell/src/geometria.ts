@@ -1,9 +1,7 @@
 /**
- * Geometria de la Vista activa con cache por estructura (ADR 0003): el adaptador
- * de layout solo se llama en estados no cacheados. La geometria por defecto
- * (la que trae el build) entra como semilla y no cuesta relayout. La cache guarda la geometria que
- * calcula ELK sin Pins, por clave de estructura; los Pins se aplican despues de forma sincrona
- * (`aplicarPinsAGeometria`), asi mover un Pin, aun de forma continua, no vuelve a llamar al adaptador.
+ * Geometria de la Vista activa con cache por estructura: el adaptador solo se llama en estados no cacheados y la
+ * semilla (geometria del build) no cuesta relayout. La cache guarda la geometria sin Pins; los Pins se aplican despues
+ * de forma sincrona, asi mover un Pin no llama al adaptador.
  */
 import { useEffect, useRef, useState } from 'react';
 

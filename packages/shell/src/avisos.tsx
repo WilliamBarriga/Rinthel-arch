@@ -1,7 +1,4 @@
-/**
- * Issues y toasts dentro del lienzo: dibujados con clases `rd-*` y las variables CSS del chrome, asi
- * que siguen al Tema (sin estilos en linea ni colores propios).
- */
+/** Issues y toasts dentro del lienzo, con clases `rd-*` y las variables CSS del chrome (sin estilos en linea). */
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 

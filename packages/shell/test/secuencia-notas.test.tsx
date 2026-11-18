@@ -37,20 +37,16 @@ describe('VistaInteractiva: Notas y ref de secuencia', () => {
     const { container } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} measure={measure} width={1200} height={800} />);
     await waitFor(() => expect(container.querySelector('[data-note]')).not.toBeNull(), { timeout: 8000 });
 
-    // Las palabras de la Nota y el titulo del ref se pidieron al medidor.
     expect(pedidos.map((t) => t.texto)).toEqual(expect.arrayContaining(['identidad', 'login']));
     const nota = container.querySelector('[data-note="i:1"]')!;
-    // Papel: poligono con esquina doblada (un `path` con diagonal) y el texto envuelto en varias lineas.
     expect(nota.querySelector('path[data-note-paper]')!.getAttribute('d')).toMatch(/L/);
     const lineas = [...nota.querySelectorAll('text')].map((t) => t.textContent);
     expect(lineas.length).toBeGreaterThan(1);
     expect(lineas.join(' ')).toBe('sesion abierta con el servidor de identidad');
-    // No es participante: solo hay dos Lifelines y dos cabeceras, y la Nota no esta en ninguna.
     expect(container.querySelectorAll('[data-lifeline]')).toHaveLength(2);
     expect(container.querySelectorAll('[data-node-id]').length).toBeLessThanOrEqual(2);
     expect(nota.closest('[data-lifeline]')).toBeNull();
     expect(nota.querySelector('[data-slot]')).toBeNull();
-    // El ref es un marco `ref` con el titulo de la Interaccion referida.
     expect(container.querySelector('[data-fragment="2"]')!.getAttribute('data-operator')).toBe('ref');
     expect(container.querySelector('[data-ref-title="2"]')!.textContent).toBe('login');
   });

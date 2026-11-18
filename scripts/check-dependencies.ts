@@ -1,33 +1,13 @@
 /**
- * `check-dependencies` — chequeo automatizado de la arquitectura del workspace.
- *
- * Interfaz publica:
- * - `CADENA`: orden de dependencias de ADR 0004, fuente unica de verdad.
- * - `revisarWorkspace(raiz) -> Violacion[]`: escanea `packages/*` (fuente,
- *   tests, configs y `package.json`) y devuelve las violaciones en orden
- *   determinista (paquete, archivo, regla, mensaje). Vacio significa verde.
- *
+ * `revisarWorkspace(raiz) -> Violacion[]`: escanea `packages/*` (fuente, tests, configs y `package.json`) y devuelve
+ * las violaciones ordenadas por paquete, archivo, regla y mensaje; vacio es verde. Solo lee; ignora comentarios.
  * Reglas:
- * - `cadena`: el paquete existe en `packages/` y su nombre esta en `CADENA`.
- * - `orden`: solo se importa de paquetes anteriores en `CADENA`.
- * - `interno`: lo unico importable de otro paquete es su nombre y lo que
- *   declara `exports`; un import relativo no puede salir del propio paquete.
- * - `declaracion`: todo paquete del workspace importado se declara en
- *   `dependencies` o `peerDependencies`.
- * - `exports`: la superficie publica es exactamente la entrada raiz `.`.
- * - `pureza`: los paquetes de `NUCLEO` no importan modulos de Node ni usan
- *   reloj, azar, `process`, red ni DOM en su codigo fuente (los tests quedan fuera).
- *
- * Invariantes:
- * - Lee archivos, no modifica nada; las dependencias externas (no son del
- *   workspace) se ignoran, salvo las reglas anteriores.
- * - Los comentarios se ignoran: solo cuentan los import escritos en codigo.
- * - Determinista: misma entrada, misma lista de violaciones.
- *
- * Modos de error:
- * - Un `package.json` ilegible o con JSON invalido lanza `Error`; es un fallo
- *   de uso del chequeo, no una violacion de arquitectura.
- * - Un `package.json` ausente en una carpeta de `packages/` se ignora.
+ * - `cadena`: el paquete esta en `CADENA`. `orden`: solo importa de paquetes anteriores en `CADENA`.
+ * - `interno`: de otro paquete solo se importa su nombre o lo que declara `exports`; un import relativo no sale del paquete.
+ * - `declaracion`: todo paquete del workspace importado esta en `dependencies` o `peerDependencies`.
+ * - `exports`: la superficie publica es exactamente la entrada `.`.
+ * - `pureza`: el codigo fuente de `NUCLEO` no importa modulos de Node ni usa reloj, azar, `process`, red ni DOM.
+ * Errores: un `package.json` ilegible o invalido lanza; uno ausente se ignora.
  */
 import { builtinModules } from 'node:module';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -36,7 +16,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 /** Orden de dependencias (ADR 0004): un paquete solo importa de los anteriores. */
 export const CADENA = ['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli'] as const;
 
-/** Nucleo puro (CODING.md): sin I/O, sin reloj, sin estado global. layout, shell y cli son adaptadores. */
+/** Nucleo puro: sin I/O, sin reloj, sin estado global. */
 export const NUCLEO = ['canonico', 'tema', 'dsl', 'sesion', 'render'] as const;
 
 const IMPUREZAS: ReadonlyArray<readonly [RegExp, string]> = [
@@ -290,7 +270,7 @@ function extraerEspecificadores(texto: string): string[] {
   return especificadores;
 }
 
-/** Strings -> placeholders, regex elimina comentarios, placeholders -> strings. */
+/** Aparta las cadenas antes de quitar comentarios: un `//` dentro de una cadena no es comentario. */
 function sinComentarios(texto: string): string {
   const placeholders: string[] = [];
   const conPlaceholders = texto

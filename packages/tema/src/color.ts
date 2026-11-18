@@ -1,10 +1,6 @@
 /**
- * Colores del Tema (ADR 0008): siempre un nombre de Paleta, con modificadores.
- * Expresiones: `ink`, `ink/0.15` (alfa), `mix(a, b, 0.3)` (mezcla de dos
- * colores de Paleta, o de `COLOR`/`ORIGEN`: `mix(COLOR, ink, 0.3)`), y los
- * especiales `COLOR` (color del Tipo de nodo) y `ORIGEN` (color del Nodo de
- * origen de una Arista), con alfa opcional.
- * Un hex nunca aparece fuera de `palette`. Puro y determinista.
+ * Colores del Tema: siempre nombres de Paleta. Expresiones: `ink`, `ink/0.15` (alfa), `mix(a, b, 0.3)`, y los
+ * especiales `COLOR` (color del Tipo de nodo) y `ORIGEN` (color del Nodo de origen de una Arista).
  */
 import { candidatosCercanos } from 'canonico';
 
@@ -16,21 +12,15 @@ interface Expresion {
 
 export interface ErrorDeColor {
   mensaje: string;
-  /** `true` si el culpable es un nombre que no esta en la Paleta (codigo propio). */
+  /** Este error lleva codigo propio. */
   fueraDePaleta?: boolean;
   hint?: string;
 }
 
-/** Lo que `COLOR` y `ORIGEN` significan al resolver. */
 export interface ContextoDeColor {
-  /** Nombre de Paleta del color del Tipo de nodo. */
   color?: string;
-  /** Nombre de Paleta del color del Nodo de origen (solo en Aristas). */
   origen?: string;
-  /**
-   * Variable CSS que el dibujo fija por elemento con su color: `COLOR` se resuelve a `var(<variable>)`
-   * (con alfa, a un `color-mix`) en vez de a un valor, y una misma hoja sirve a todos los colores.
-   */
+  /** Si esta, `COLOR` se resuelve a `var(<variable>)` (con alfa, a un `color-mix`) y no a un valor. */
   variable?: string;
 }
 
@@ -66,10 +56,7 @@ export function hexARgb(hex: string): [number, number, number] | undefined {
   return [1, 2, 3].map((i) => Number.parseInt(largo[i] as string, 16)) as [number, number, number];
 }
 
-/**
- * Comprueba una expresion de color contra la Paleta del Tema. `ambito` decide si
- * `ORIGEN` es valido (solo en Aristas). Devuelve todos los problemas.
- */
+/** Devuelve todos los problemas; `ORIGEN` solo vale con `ambito` `arista`. */
 export function validarColor(texto: string, paleta: Readonly<Record<string, string>>, ambito: 'nodo' | 'arista' | 'pagina' = 'nodo'): ErrorDeColor[] {
   const expresion = leer(texto);
   if (expresion === undefined) return [{ mensaje: `'${texto}' no es una expresion de color valida (nombre, nombre/alfa o mix(a, b, t))` }];
@@ -86,7 +73,6 @@ export function validarColor(texto: string, paleta: Readonly<Record<string, stri
     if (nombre === 'ORIGEN' && ambito !== 'arista') errores.push({ mensaje: "'ORIGEN' solo vale en Aristas (es el color del Nodo de origen)" });
     else if (nombre === 'COLOR' && ambito === 'pagina') errores.push({ mensaje: "'COLOR' no vale en la pagina (es el color del Tipo de nodo); usa un nombre de Paleta" });
   };
-  /** Operando de un `mix`: un nombre de Paleta o uno de los especiales. */
   const operando = (nombre: string): void => (esEspecial(nombre) ? especial(nombre) : comprobar(nombre));
   const { base, alfa } = expresion;
   if (base.tipo === 'paleta') comprobar(base.nombre);
@@ -101,11 +87,7 @@ export function validarColor(texto: string, paleta: Readonly<Record<string, stri
 
 const aHex = (rgb: readonly number[]): string => `#${rgb.map((c) => Math.round(c).toString(16).padStart(2, '0')).join('')}`;
 
-/**
- * Valor de pintura de una expresion ya valida: el hex de la Paleta tal cual si
- * no hay modificadores, `#rrggbb` para un `mix` y `rgba(r, g, b, a)` con alfa.
- * Una expresion invalida se devuelve sin cambios (la validacion la rechazo antes).
- */
+/** Hex de la Paleta tal cual, `#rrggbb` para un `mix` y `rgba(r, g, b, a)` con alfa; una expresion invalida se devuelve sin cambios. */
 export function resolverColor(texto: string, paleta: Readonly<Record<string, string>>, contexto: ContextoDeColor = {}): string {
   const expresion = leer(texto);
   if (expresion === undefined) return texto;
@@ -114,11 +96,10 @@ export function resolverColor(texto: string, paleta: Readonly<Record<string, str
     const variable = `var(${contexto.variable})`;
     return alfa === undefined ? variable : `color-mix(in srgb, ${variable} ${Math.round(alfa * 10000) / 100}%, transparent)`;
   }
-  /** Nombre de Paleta de un nombre o de un especial (`COLOR`, `ORIGEN`) segun el contexto. */
   const dePaleta = (nombre: string): string | undefined => (nombre === 'COLOR' ? contexto.color : nombre === 'ORIGEN' ? contexto.origen : nombre);
   let valor: string;
   if (base.tipo === 'mix' && contexto.variable !== undefined && (base.a === 'COLOR' || base.b === 'COLOR')) {
-    // `COLOR` es una variable CSS: la mezcla la hace el navegador (`t` es la parte de `b`, como en la mezcla con hex).
+    // Con `COLOR` mezcla el navegador; `t` es la parte de `b`, como en la mezcla con hex.
     const operando = (nombre: string): string => (nombre === 'COLOR' ? `var(${contexto.variable})` : (paleta[dePaleta(nombre) ?? ''] ?? nombre));
     const mezcla = `color-mix(in srgb, ${operando(base.a)} ${Math.round((1 - base.t) * 10000) / 100}%, ${operando(base.b)})`;
     return alfa === undefined ? mezcla : `color-mix(in srgb, ${mezcla} ${Math.round(alfa * 10000) / 100}%, transparent)`;

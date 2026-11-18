@@ -79,7 +79,6 @@ describe('Diagram: Nodo, Grupo abierto y Grupo colapsado tienen cada uno su pint
     };
     const { css } = await dibujar(tema({}, grupo), {}, { collapsed: ['h'] });
 
-    // Con un Tipo con parches, la base se acota a "sin Tipo" y el Tipo trae su pila completa.
     expect(regla(css, '.rd-grupo:not([data-tipo])')).toContain('background:#6b7280');
     expect(regla(css, '.rd-grupo[data-tipo="capa"]')).toContain('background:#16a34a');
     expect(regla(css, '.rd-grupo[data-tipo="capa"]')).toContain('border-radius:20px');
@@ -104,7 +103,6 @@ describe('Diagram: parches de Tipo y de estado pintados igual en Nodos y Grupos'
     expect(regla(css, '.rd-nodo:not([data-tipo])')).toContain('border:1px solid #6b7280');
     expect(regla(css, '.rd-nodo[data-tipo="externo"]')).toContain('border:1px dashed #6b7280');
     expect(regla(css, '.rd-nodo[data-tipo="externo"]')).toContain('background:#2563eb');
-    // El halo desplazado del Tipo: un elemento propio bajo el Nodo de ese Tipo, no fusionado en la caja.
     expect(regla(css, '.rd-nodo[data-tipo="externo"] .rd-anim[data-anim="halo"]')).toContain('translate:4px 4px');
     expect(regla(css, '.rd-nodo[data-tipo="externo"]')).not.toContain('translate');
     expect(capaDe(html, 'nodos').match(/data-anim="halo"/g)).toHaveLength(2);
@@ -123,7 +121,6 @@ describe('Diagram: parches de Tipo y de estado pintados igual en Nodos y Grupos'
     expect(capaDe(html, 'grupos')).toContain('data-anim="halo"');
     expect(regla(css, '.rd-grupo[data-tipo="capa"] .rd-anim[data-anim="halo"]')).toContain('translate:4px 4px');
     expect(regla(css, '.rd-grupo[data-tipo="capa"][data-estados~="hover"]')).toBe('background:#2563eb');
-    // El halo no esta fusionado en la caja del Grupo de ese Tipo.
     expect(regla(css, '.rd-grupo[data-tipo="capa"]')).toBe('border-radius:10px;background:#6b7280;--rd-borde:0px');
   });
 
@@ -170,7 +167,6 @@ describe('Diagram: cabecera del Grupo', () => {
     expect(reglaTitulo).toContain('border-radius:50px');
     expect(reglaTitulo).toContain('padding-left:8px');
     expect(regla(css, '.rd-grupo .rd-slot[data-slot="title"]::before')).toContain('background:var(--trazo)');
-    // El estilo de un elemento no se filtra al otro.
     expect(regla(css, '.rd-nodo .rd-slot[data-slot="title"]')).toBeUndefined();
   });
 

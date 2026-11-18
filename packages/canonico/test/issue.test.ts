@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import type { Issue } from 'canonico';
 
-/** Forma exigida por el ADR 0005, escrita desde el contrato y no desde el codigo. */
+/** Escrita desde el contrato, no desde el codigo. */
 type IssueEsperado = {
   code: string;
   severity: 'error' | 'warning';

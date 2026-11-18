@@ -1,8 +1,4 @@
-/**
- * Que textos necesita medir el layout: los mismos que `colocarNodo` y
- * `tamanoDeEtiqueta` miden, con la misma familia y tamano, para que el visor
- * entregue exactamente las claves que se consultaran.
- */
+/** Textos que el layout mide (los mismos que `colocarNodo` y `tamanoDeEtiqueta`, con la misma familia y tamano), sin repetir. */
 import type { ItemResuelto, VistaResuelta } from 'canonico';
 
 import { claveDeTexto } from './medicion';
@@ -19,12 +15,10 @@ export function textosAMedir(vista: VistaResuelta, tabla: TablaDeMetricas): Text
     if (!vistos.has(clave)) vistos.set(clave, { familia, tamano, texto, ...(peso !== undefined && { peso }) });
   };
   for (const nodo of vista.nodes) {
-    // Un Grupo abierto mide su cabecera; un Nodo hoja o Grupo colapsado, sus Slots.
     const m = nodo.children.length > 0 ? tabla.grupoAbierto : metricasDeHoja(tabla, nodo);
     for (const { familia, tamano, texto, peso } of textosDeNodo(m, contenidoDeNodo(nodo, m))) anadir(familia, tamano, texto, peso);
   }
   const e = tabla.etiqueta;
-  // Pestanas y guardas de los Fragmentos (con la estimacion la pestana salia recortada).
   const deItems = (items: readonly ItemResuelto[]): void => {
     for (const item of items) {
       if (item.type === 'message') continue;
@@ -45,7 +39,6 @@ export function textosAMedir(vista: VistaResuelta, tabla: TablaDeMetricas): Text
       }
     }
   };
-  // Grafo: etiquetas de Arista; secuencia: etiquetas de Mensaje y textos de sus Fragmentos, Notas y `ref`.
   if (vista.type === 'sequence') {
     for (const mensaje of vista.interaction.messages) if (mensaje.label !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, mensaje.label, e.pesoDeEtiqueta);
     deItems(vista.interaction.items);

@@ -1,7 +1,4 @@
-/**
- * Compilador del DSL de texto: parsea cada archivo con la gramatica derivada de
- * LikeC4 (Langium) y traduce el AST a la Fuente canonica. Puro: no lee disco.
- */
+/** Parsea cada archivo con Langium y traduce el AST a la Fuente canonica. Puro: no lee disco. */
 import { CODIGOS, TIPOS_DE_VISTA, combineIconProviders, fuenteCanonicaSchema, genericIcons, validate, vistaSchema, workspaceIcons } from 'canonico';
 import type {
   Arista,
@@ -37,7 +34,7 @@ import { resolverTemas } from './temas';
 import type { DeclaracionDeParte, OrigenDeTema, TemaDeclarado } from './temas';
 import { crearUbicador } from './ubicador';
 
-/** Mapa ruta -> texto del Workspace. El nucleo no lee disco. */
+/** Mapa ruta -> texto del Workspace. */
 export type ArchivosDelWorkspace = Readonly<Record<string, string>>;
 
 /** Sitio del texto donde una Vista fija el `pin` de un Nodo. */
@@ -65,12 +62,8 @@ export interface ResultadoDeCompilacion {
 let memoServicios: LangiumCoreServices | undefined;
 
 /**
- * Servicios de Langium, construidos la primera vez que se compila. Es el unico
- * estado de modulo del paquete y se conserva a proposito: crearlos cuesta ~100 ms
- * frente a ~1 ms de compilar un Workspace chico, y `compile` se llama muchas
- * veces por proceso. Es inmutable e inobservable: solo se usa `parser.LangiumParser`,
- * que no retiene documentos ni resultados entre llamadas (cada `parse` es
- * independiente), asi que compilar con o sin memo da el mismo resultado.
+ * Servicios de Langium, memorizados: crearlos cuesta ~100 ms frente a ~1 ms de compilar.
+ * Inobservable: `parser.LangiumParser` no retiene estado entre llamadas a `parse`.
  */
 function servicios(): LangiumCoreServices {
   if (memoServicios === undefined) {
@@ -200,7 +193,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
     temas: new Map(temasDeclarados.map(({ archivo, ast, nombre }) => [ast.name, { archivo, nombre }])),
     conSintaxisRota,
   });
-  // Un Tema declarado que no se resolvio ya tiene su error (`delTema`): decir ademas que la Vista usa un Tema "no declarado" seria enganoso.
+  // Un Tema declarado que no se resolvio ya tiene su error (`delTema`); no se reporta otra vez como no declarado.
   const sinResolver = new Set(temasDeclarados.map(({ ast }) => ast.name).filter((nombre) => !temas.some((t) => t.name === nombre)));
   const sinTema = (issue: Issue): boolean => issue.code === CODIGOS.E_UNKNOWN_THEME && vistas.some(({ vista }) => vista.theme !== undefined && sinResolver.has(vista.theme) && issue.message === `Tema '${vista.theme}' no declarado`);
   issues.push(...validate(fuente, { iconos: combineIconProviders(workspaceIcons(workspace), genericIcons()), ubicar }).filter((issue) => !sinTema(issue)));
@@ -222,7 +215,6 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   };
 }
 
-/** Nodos ya compilados por id cualificado, con el sitio donde se declararon. */
 interface NodoRegistrado {
   nodo: Nodo;
   ast: Element;

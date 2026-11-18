@@ -1,18 +1,13 @@
 /**
- * Copia de un Workspace cualquiera con una Vista dada repetida una vez por Tema, para capturarla con cada Tema
- * sin tocar el repo: `prepararWorkspace(origen, vista, temas, raizDeCache)` -> `{ directorio, vistaDe }`.
- *
- * La copia vive en `raizDeCache/workspace-<nombre>` (se rehace en cada llamada; `.diagrams/` no se copia) y
- * suma un archivo `capturas.dg` con `view <vista>--<tema> { ... }`: el cuerpo de la Vista original con su
- * `theme` cambiado por el Tema (o agregado si no tenia). Sin `link` (apuntarian a Vistas que si existen, pero
- * no hacen falta para capturar). Modo de error: lanza si la Vista no esta en ningun `.dg` del Workspace.
+ * Copia de un Workspace en `raizDeCache/workspace-<nombre>` (rehecha en cada llamada, sin `.diagrams/`) con un
+ * `capturas.dg` que repite la Vista una vez por Tema: `view <vista>--<tema>`, sin `link`.
+ * Errores: lanza si la Vista no esta en ningun `.dg` del Workspace.
  */
 import { cpSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 
 export interface WorkspacePreparado {
   directorio: string;
-  /** Id de la Vista que pinta la original con cada Tema. */
   vistaDe: (tema: string) => string;
 }
 
@@ -21,7 +16,7 @@ const archivosDg = (raiz: string): string[] =>
     .filter((e) => e.isFile() && e.name.endsWith('.dg') && !relative(raiz, e.parentPath).split('/').includes('.diagrams'))
     .map((e) => join(e.parentPath, e.name));
 
-/** Cuerpo (entre llaves, sin ellas) de `view <id> { ... }`, saltando cadenas y comentarios; `undefined` si no esta. */
+/** Sin las llaves; salta cadenas y comentarios; `undefined` si no esta. */
 export function cuerpoDeVista(texto: string, id: string): string | undefined {
   const inicio = new RegExp(`(^|\\s)view\\s+${id.replace(/[-.]/g, '\\$&')}\\s*\\{`).exec(texto);
   if (inicio === null) return undefined;
@@ -41,7 +36,7 @@ export function cuerpoDeVista(texto: string, id: string): string | undefined {
   return undefined;
 }
 
-/** El cuerpo de la Vista con `theme <tema>` en lugar de su `theme` (conserva el parche `{ ... }` si lo tenia) y sin `link`. */
+/** Reemplaza (o agrega) `theme`, conserva su parche `{ ... }` y quita los `link`. */
 export function conTema(cuerpo: string, tema: string): string {
   const sinLinks = cuerpo.replace(/(^|\s)link\s+[\w.-]+\s*->\s*[\w-]+/g, '$1');
   const cambiado = sinLinks.replace(/(^|\s)theme\s+[\w-]+/, `$1theme ${tema}`);

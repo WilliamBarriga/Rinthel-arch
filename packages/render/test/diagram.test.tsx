@@ -179,7 +179,6 @@ describe('Diagram: estructura hibrida', () => {
       expect(slotDe(html, 'a', 'counter')).toBeDefined();
       expect(slotDe(html, 'b', 'counter')).toBeUndefined();
       expect(html).toContain('>2</div>');
-      // Con el contador en su Slot, el titulo no lo repite.
       expect(html).not.toContain('A (2)');
     });
 
@@ -221,7 +220,6 @@ describe('Diagram: estructura hibrida', () => {
       expect(rectDe(slotDe(html, 'b', 'icon'))).toMatchObject({ width: 7, height: 7 });
       expect(slotDe(html, 'b', 'icon')).toContain('data-variante="dot"');
       expect(slotDe(html, 'b', 'icon')).not.toContain('data-icon=');
-      // Con otra variante, un Tipo sin icon no reserva el sitio.
       expect(geometry.nodes['b']!.width).toBeGreaterThan(sinPunto.nodes['b']!.width - 1);
       expect(sinPunto.nodes['b']!.slots?.['icon']).toBeUndefined();
     });

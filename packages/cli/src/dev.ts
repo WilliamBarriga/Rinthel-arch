@@ -1,29 +1,10 @@
 /**
- * Comando `dev` (ADR 0005): servidor HTTP de Node, solo en 127.0.0.1, que sirve el shell, el estado del
- * Workspace y la Geometria por Vista, y empuja los cambios por Server-Sent Events. Es un adaptador fino: el
- * estado vivo (Sesion, Historial, cola de escrituras, versiones, clasificacion del cambio, confianza en el
- * codigo) es el modulo "Workspace vivo" (`workspace-vivo.ts`); aqui viven el adaptador de disco y watcher de
- * su puerto y el enrutador HTTP.
- *
- * Rutas: `/` (pagina), `/app.js` y `/worker.js` (bundles del shell),
- * `/fuentes/<ruta>` (solo los archivos de fuente `woff2|woff|ttf|otf` del Workspace, o de `--theme-path`; todo lo demas, incluido salir de la raiz, es 404),
- * `/api/estado` (JSON con la forma de `estadoDeDevSchema` de `canonico`: version y clasificacion del cambio),
- * `POST /api/edit` (cualquier Intencion, ADR 0007), `POST /api/deshacer` y `POST /api/rehacer`
- * (ADR 0007; 409 si el disco cambio fuera de dev, 422 con motivo `nada-que-deshacer` / `nada-que-rehacer`),
- * `/api/vista/<id>` (Geometria cacheada de una Vista; la pagina la pide solo para la Vista que muestra),
- * `/api/codigo`, `POST /api/confiar`, `/componentes.js` y `/eventos` (SSE: el estado al conectar y tras cada
- * recompilacion). El unico cliente de estas rutas es `navegador/cliente.ts`.
- * Edicion: el cuerpo de `/api/edit` lleva, ademas de la Intencion (sin hash), la `version` del estado que vio la
- * pagina; el Workspace vivo la traduce a `visto` (una version olvidada es `hash-desactualizado`).
- *
- * `iniciarDev(OpcionesDeDev) -> ServidorDev` es la entrada programatica (el comando solo parsea y la llama).
- * Seguridad: solo escucha en 127.0.0.1 y responde 403 a cualquier peticion cuyo `Host` no sea
- * `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); las rutas POST exigen JSON y un `Origin` propio
- * (o ninguno). Las ediciones solo escriben archivos del Workspace, bajo su raiz y de forma atomica; los cuerpos se
- * validan con `intencionSchema` de `canonico` (400) y cada `MotivoDeRechazo` sale por la
- * tabla unica `SALIDA_DE_RECHAZO` (409 solo `hash-desactualizado`, 422 el resto); un fallo de I/O es 500.
- * Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (sin dejar el
- * observador activo) y lanza si la lectura inicial falla. `run(['dev', ...])` los convierte en codigo 2.
+ * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve el shell, el estado y la Geometria por Vista, y empuja el estado por SSE (`/eventos`).
+ * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); las rutas POST exigen
+ * JSON y un `Origin` propio (o ninguno); `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
+ * Edicion: 400 cuerpo invalido, 409 `hash-desactualizado`, 422 el resto de rechazos, 500 fallo de I/O.
+ * Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (sin dejar el observador activo)
+ * y lanza si la lectura inicial falla; `run(['dev', ...])` los convierte en codigo 2.
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -46,41 +27,36 @@ import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos as
 import { abrirWorkspaceVivo } from './workspace-vivo';
 import type { PuertoDelWorkspaceVivo, ResultadoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
 
-/** Bundles del shell: pagina (React + shell) y codigo del Web Worker de layout. */
 export interface ShellDev {
   pagina: string;
   worker: string;
 }
 
-/** Opciones de `iniciarDev`; todo lo que no es `workspace` se inyecta en pruebas y tiene un defecto real. */
+/** Todo salvo `workspace` tiene un defecto real. */
 export interface OpcionesDeDev {
   workspace: string;
   /** Carpeta de Temas (`--theme-path`): se fusiona antes del Workspace, que gana en rutas repetidas. No se observa. */
   temas?: string;
   /** Puerto en 127.0.0.1; 0 elige uno libre. */
   puerto?: number;
-  /** Espera tras el ultimo cambio antes de recompilar (`DEBOUNCE_MS` del Workspace vivo por defecto). */
+  /** Espera en ms tras el ultimo cambio antes de recompilar; por defecto `DEBOUNCE_MS`. */
   debounceMs?: number;
   leer?: (raiz: string) => ArchivosDelWorkspace;
-  /** Hash de cada recurso vigilado (`.tsx`, fuentes) bajo `raiz`, para clasificar el cambio; por defecto lee el disco (o nada si se inyecta `leer`). */
+  /** Hash de cada recurso vigilado (`.tsx`, fuentes) bajo `raiz`; por defecto lee el disco (o nada si se inyecta `leer`). */
   leerRecursos?: (raiz: string) => Record<string, string>;
   /** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
   observar?: (raiz: string, alCambiar: () => void) => () => void;
   shell?: () => Promise<ShellDev>;
-  /** Escribe un archivo del Workspace (ruta relativa a `raiz`); lo usan las rutas de edicion y de deshacer/rehacer. */
+  /** `ruta` relativa a `raiz`. */
   escribir?: (raiz: string, ruta: string, texto: string) => void;
-  /** Borra un archivo del Workspace (ruta relativa a `raiz`); deshacer/rehacer lo usan para quitar archivos que creo una edicion. */
+  /** `ruta` relativa a `raiz`. */
   borrar?: (raiz: string, ruta: string) => void;
-  /**
-   * Los `.tsx` de los Temas ya confirmados: `dev` sirve el codigo del Workspace (`/componentes.js`) sin pedir
-   * confirmacion en el navegador (`--trust-code`). Por defecto no: abrir un Workspace ajeno exige confirmar.
-   */
+  /** `--trust-code`: sirve `/componentes.js` sin pedir confirmacion en el navegador. Por defecto `false`. */
   confiarEnCodigo?: boolean;
   /** Compila los `.tsx` del Workspace; por defecto el adaptador de esbuild (o nada si se inyecta `leer`). */
   compilarCodigo?: () => ResultadoDeCodigo;
 }
 
-/** Servidor de `dev` en marcha: `url`, estado del codigo de Temas y `cerrar()`. */
 export interface ServidorDev {
   /** `http://127.0.0.1:<puerto>/` */
   url: string;
@@ -91,7 +67,7 @@ export interface ServidorDev {
   cerrar(): Promise<void>;
 }
 
-/** Observador real: `fs.watch` recursivo, ignorando carpetas ocultas (`.diagrams/`, `.git/`). */
+/** `fs.watch` recursivo; ignora carpetas ocultas (`.diagrams/`, `.git/`) y `node_modules`. */
 function observarDisco(raiz: string, alCambiar: () => void): () => void {
   const observador = watch(raiz, { recursive: true }, (_evento, nombre) => {
     if (nombre !== null && nombre.split(/[\\/]/).some((parte) => parte.startsWith('.') || parte === 'node_modules')) return;
@@ -100,21 +76,17 @@ function observarDisco(raiz: string, alCambiar: () => void): () => void {
   return () => observador.close();
 }
 
-/** Escritura real: atomica y siempre bajo la raiz del Workspace. */
+/** Atomica y siempre bajo la raiz del Workspace. */
 function escribirEnDisco(raiz: string, ruta: string, texto: string): void {
   escribirTexto(destinoEnWorkspace(raiz, ruta), texto);
 }
 
-/** Borrado real: siempre bajo la raiz del Workspace; un archivo ya ausente no es error. */
+/** Siempre bajo la raiz del Workspace; un archivo ya ausente no es error. */
 function borrarEnDisco(raiz: string, ruta: string): void {
   rmSync(destinoEnWorkspace(raiz, ruta), { force: true });
 }
 
-/**
- * Adaptador de disco del puerto del Workspace vivo: lee el Workspace (con los Temas de `--theme-path` delante),
- * escribe y borra solo bajo la raiz del Workspace, da el hash de los recursos y observa con el watcher.
- * Con `leer` inyectado y sin `leerRecursos` no conoce los recursos (`recursos()` da `undefined`).
- */
+/** Con `leer` inyectado y sin `leerRecursos`, `recursos()` da `undefined`. */
 function puertoDeDisco(opciones: OpcionesDeDev): PuertoDelWorkspaceVivo {
   const { workspace, temas, leer = leerWorkspace, escribir = escribirEnDisco, borrar = borrarEnDisco, observar = observarDisco } = opciones;
   const conoceRecursos = opciones.leer === undefined || opciones.leerRecursos !== undefined;
@@ -150,7 +122,6 @@ const responder = (res: ServerResponse, estadoHttp: number, cuerpo: unknown): vo
   res.end(JSON.stringify(cuerpo));
 };
 
-/** Respuesta HTTP de una operacion del Workspace vivo: 200 con la version, o el rechazo por la tabla unica. */
 const responderResultado = (res: ServerResponse, r: ResultadoDelWorkspaceVivo): void =>
   r.ok ? responder(res, 200, r) : responder(res, SALIDA_DE_RECHAZO[r.motivo].estadoHttp, rechazoDeEdicion(r.motivo, r.mensaje, r.file));
 
@@ -169,27 +140,21 @@ const PAGINA = `<!doctype html>
 </html>
 `;
 
-/** Cuerpo de `POST /api/edit`: una Intencion (validada con `intencionSchema`) mas la `version` vista. */
 const comoIntencion = (cuerpo: unknown): Intencion | undefined => {
   const r = intencionSchema.safeParse(cuerpo);
   return r.success ? r.data : undefined;
 };
 
-/** Version del estado que vio la pagina (`version` del cuerpo), si viene como entero no negativo. */
+/** `version` del estado que vio la pagina, si es un entero no negativo; una version olvidada rechaza con `hash-desactualizado`. */
 const versionVista = (cuerpo: unknown): number | undefined => {
   const version = (cuerpo as { version?: unknown } | null)?.version;
   return typeof version === 'number' && Number.isInteger(version) && version >= 0 ? version : undefined;
 };
 
-/**
- * Inicia el servidor de `dev` en 127.0.0.1 (puerto 4173 por defecto) con vista previa en vivo y panel
- * de issues. Devuelve `{ url, cerrar() }`. Los Temas con codigo (`.tsx`, ADR 0008) se sirven en
- * `/componentes.js` solo tras la confirmacion (`POST /api/confiar` o `--trust-code`) y se conserva la
- * ultima version buena de cada uno. `run(['dev', ...])` convierte sus fallos en codigo 2.
- */
+/** El codigo de Temas se sirve en `/componentes.js` solo tras `POST /api/confiar` o `confiarEnCodigo`. */
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
   const { workspace, temas, puerto = 0, debounceMs, shell = empaquetarShellDev, confiarEnCodigo = false } = opciones;
-  // Con `leer` inyectado no hay disco del que compilar codigo: el Workspace vivo usa su defecto (sin codigo).
+  // Con `leer` inyectado no hay disco del que compilar codigo.
   const compilarCodigo = opciones.compilarCodigo ?? (opciones.leer === undefined ? compiladorDeCodigo(workspace).compilar : undefined);
   const bundles = await shell();
   const vivo: WorkspaceVivo = await abrirWorkspaceVivo({
@@ -206,13 +171,12 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     for (const cliente of clientes) enviarEstado(cliente, estado);
   });
 
-  /** `Host` propios del servidor (127.0.0.1 o localhost con su puerto); un `Origin` propio es `http://` mas uno de ellos. */
   const hostsPropios = (): string[] => {
     const { port } = servidor.address() as AddressInfo;
     return [`127.0.0.1:${port}`, `localhost:${port}`];
   };
 
-  /** Origen, content-type y JSON validos para cualquier ruta de escritura; si no, responde el error y devuelve `undefined`. */
+  /** Si el origen, el content-type o el JSON no valen, responde el error y devuelve `undefined`. */
   const leerCuerpoJson = async (req: IncomingMessage, res: ServerResponse): Promise<{ cuerpo: unknown } | undefined> => {
     const origen = req.headers.origin;
     if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) {
@@ -231,7 +195,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     }
   };
 
-  /** Ruta POST: valida el cuerpo y responde lo que devuelva `atender` (un fallo de I/O es 500). */
+  /** Un fallo de `atender` responde 500. */
   const post = (req: IncomingMessage, res: ServerResponse, atender: (cuerpo: unknown) => Promise<void> | void): void => {
     if (req.method !== 'POST') {
       res.setHeader('allow', 'POST');
@@ -243,7 +207,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       .catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
   };
 
-  /** Fuente pedida a `/fuentes/<ruta>`: solo archivos de fuente del Workspace (y de `--theme-path`); una ruta mal codificada o que sale de la raiz no existe. */
+  /** Una ruta mal codificada o que sale de la raiz da `undefined`. */
   const servirFuente = (rutaCodificada: string): ReturnType<typeof leerArchivoDeFuente> => {
     try {
       return leerArchivoDeFuente(temas === undefined ? [workspace] : [workspace, temas], decodeURIComponent(rutaCodificada));
@@ -253,7 +217,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   };
 
   const servidor = createServer((req, res) => {
-    // Contra DNS rebinding: solo se atiende a quien llega por 127.0.0.1 o localhost con el puerto del servidor.
+    // Contra DNS rebinding.
     if (!hostsPropios().includes(req.headers.host ?? '')) {
       cabecera(res, 'text/plain', 403);
       res.end('Host no permitido');
@@ -353,10 +317,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 }
 
 
-/**
- * `dev --workspace <ruta> [--port N] [--theme-path <carpeta>] [--trust-code]`: arranca el servidor y vuelve con la URL;
- * el servidor mantiene vivo el proceso hasta que se mata.
- */
+/** Vuelve con la URL; el servidor mantiene vivo el proceso. Puerto 4173 por defecto. */
 export async function comandoDev(
   args: readonly string[],
   dependencias: Pick<OpcionesDeDev, 'leer' | 'observar' | 'shell'> = {},

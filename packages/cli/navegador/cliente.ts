@@ -1,45 +1,37 @@
 /**
- * Cliente unico de la pagina de `diagrams dev` (ADR 0005, ADR 0007): la unica pieza del navegador que conoce las
- * rutas del servidor. Envia una Intencion con la version del estado vista (`POST /api/edit`), deshace y rehace
- * (`POST /api/deshacer`, `/api/rehacer`), se suscribe al estado (`/eventos`, SSE), lo pide (`/api/estado`) y pide
- * la Geometria de una Vista (`/api/vista/<id>`), validada con el esquema de `canonico`.
- * El `fetch` y la fuente de eventos entran como argumento. Ningun metodo lanza: los fallos son datos. Una Geometria
- * que no llega en `plazoDeGeometriaMs` es un fallo: la pagina la calcula en el Worker.
- * No es parte de la interfaz del paquete: lo empaqueta `dev-shell.ts`.
+ * Unica pieza del navegador que conoce las rutas del servidor de `dev`. Ningun metodo lanza: los fallos son datos.
+ * Una Geometria que no llega en `plazoDeGeometriaMs` es un fallo: la pagina la calcula en el Worker.
  */
 import { estadoDeDevSchema, geometriaCacheadaSchema } from 'canonico';
 import type { EstadoDeDev, GeometriaCacheada, Intencion } from 'canonico';
 
-/** Resultado de una escritura: `desactualizado` es el 409 (`hash-desactualizado`): hay que recargar y avisar. */
+/** `desactualizado` es el 409 (`hash-desactualizado`): hay que recargar y avisar. */
 export type ResultadoDeEnvio = { ok: true } | { ok: false; desactualizado: boolean; mensaje: string };
 
-/**
- * Aviso de una escritura rechazada: si el texto estaba desactualizado (409) dice que se recarga y recarga el estado;
- * si no, `fallo: mensaje`. Lo comparten los gestos y el historial de la pagina.
- */
+/** Si el texto estaba desactualizado (409) avisa y recarga el estado; si no, avisa `fallo: mensaje`. */
 export async function avisarRechazo(r: Extract<ResultadoDeEnvio, { ok: false }>, fallo: string, { avisar, recargar }: { avisar: (texto: string) => void; recargar: () => Promise<void> }): Promise<void> {
   avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `${fallo}: ${r.mensaje}`);
   if (r.desactualizado) await recargar().catch(() => undefined);
 }
 
-/** Geometria pedida: la valida, o un fallo; `error` solo si llego malformada (si no llego, no hay nada que mostrar). */
+/** `error` solo si llego malformada. */
 export type LecturaDeGeometria = { ok: true; geometria: GeometriaCacheada } | { ok: false; error?: string };
 
 export interface DependenciasDelCliente {
   fetch: typeof fetch;
-  /** Abre la suscripcion SSE a `url` (un `EventSource` en el navegador) y devuelve como cerrarla. */
+  /** Suscripcion SSE a `url` (un `EventSource` en el navegador); devuelve como cerrarla. */
   eventos: (url: string, alMensaje: (datos: string) => void) => () => void;
-  /** Espera maxima de una Geometria antes de darla por no llegada (ms). */
+  /** Espera maxima en ms de una Geometria antes de darla por no llegada. */
   plazoDeGeometriaMs?: number;
 }
 
-/** Plazo por defecto de una Geometria: pasado este, el Worker la calcula antes de lo que tardaria en llegar. */
+/** Pasado este plazo, el Worker la calcula antes de lo que tardaria en llegar. */
 const PLAZO_DE_GEOMETRIA_MS = 4000;
 
 export interface ClienteDeDev {
   /** El estado vigente; `undefined` si no llega o llega roto. */
   estado(): Promise<EstadoDeDev | undefined>;
-  /** Llama a `alEstado` con cada estado empujado (el vigente al conectar y uno por recompilacion); devuelve la baja. */
+  /** Recibe el vigente al conectar y uno por recompilacion; devuelve la baja. */
   suscribir(alEstado: (estado: EstadoDeDev) => void): () => void;
   /** `version` es la del estado que vio la pagina; el servidor la traduce a `visto`. */
   editar(intencion: Intencion, version: number): Promise<ResultadoDeEnvio>;

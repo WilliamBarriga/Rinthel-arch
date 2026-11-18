@@ -1,8 +1,4 @@
-/**
- * Umbrales y margenes de la interaccion del shell como configuracion: los
- * valores por defecto viven aqui y `VistaInteractiva` los acepta parciales por
- * la prop `tuning`.
- */
+/** Umbrales y margenes de la interaccion; `VistaInteractiva` los acepta parciales por `tuning`. */
 export interface AjustesDeInteraccion {
   /** Distancia en px de pantalla desde la que un arrastre de Nodo deja de ser un clic. */
   dragThreshold: number;

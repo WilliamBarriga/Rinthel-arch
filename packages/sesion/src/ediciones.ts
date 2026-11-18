@@ -2,7 +2,6 @@ import type { Issue, MotivoDeRechazo, TextPosition, TextRange } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace } from 'dsl';
 
-/** Edicion de texto sobre un archivo del Workspace, con el hash del contenido que vio quien la pide. */
 export interface EdicionConHash {
   file: string;
   /** Rango 1-based, fin excluido (el mismo de `IssueFix`). */
@@ -12,7 +11,7 @@ export interface EdicionConHash {
   hash: string;
 }
 
-/** Resultado de una edicion: `ok: true` con el payload `T`, o `ok: false` con `motivo` y `mensaje` (nada se escribe). */
+/** Con `ok: false` no se escribe nada. */
 export type ResultadoDeEdicion<T> =
   | ({ ok: true } & T)
   | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
@@ -48,10 +47,10 @@ export function offsetDe(texto: string, { line, column }: TextPosition): number 
   return column >= 1 && offset <= limite ? offset : undefined;
 }
 
-/** Clave estable ante cambios de mensaje o de linea: un error es el mismo si comparte codigo y archivo. */
+/** Un error es el mismo si comparte codigo y archivo, aunque cambie su mensaje o su linea. */
 const clave = (issue: Issue) => `${issue.code}|${issue.file}`;
 
-/** Conteo de errores por `clave` (codigo y archivo): los preexistentes no bloquean una edicion ajena. */
+/** Los errores preexistentes no bloquean una edicion ajena. */
 export const erroresPorClave = (issues: readonly Issue[]): Map<string, number> => {
   const conteo = new Map<string, number>();
   for (const i of issues) if (i.severity === 'error') conteo.set(clave(i), (conteo.get(clave(i)) ?? 0) + 1);
@@ -59,14 +58,9 @@ export const erroresPorClave = (issues: readonly Issue[]): Map<string, number> =
 };
 
 /**
- * Aplica ediciones `{ file, range, replacement, hash }` sobre el mapa de archivos y devuelve
- * el mapa nuevo; no toca disco ni muta la entrada. Todo o nada: si algun hash no coincide con
- * el contenido actual, un rango es invalido, dos ediciones se solapan, o el resultado
- * introduce errores que antes no estaban (se cuentan por codigo y archivo: un error
- * preexistente cuyo mensaje cambia no cuenta como nuevo, uno adicional si), no se
- * devuelve ningun archivo. Los `issues`
- * devueltos son los del Workspace resultante. `erroresAntes` es el conteo de errores
- * del mapa de entrada ya hecho por quien llama: reutiliza compilaciones pagadas.
+ * Devuelve el mapa nuevo sin mutar la entrada. Todo o nada: rechaza si un hash no coincide, un rango es invalido,
+ * dos ediciones se solapan o el resultado tiene mas errores por codigo y archivo que `erroresAntes`.
+ * Los `issues` son los del Workspace resultante.
  */
 export function aplicarSobre(
   archivos: ArchivosDelWorkspace,
@@ -113,11 +107,7 @@ export function aplicarSobre(
   return { ok: true, archivos: resultado, issues: despues };
 }
 
-/**
- * Aplica ediciones `{ file, range, replacement, hash }` sobre el mapa de archivos y devuelve
- * el mapa nuevo; no toca disco ni muta la entrada. Misma semantica todo o nada que
- * `aplicarSobre`, con su `motivo` de rechazo. Interna: se escribe por la puerta `aplicarAlWorkspace`.
- */
+/** `aplicarSobre` contando los errores previos del propio mapa. */
 export function aplicarEdiciones(
   archivos: ArchivosDelWorkspace,
   ediciones: readonly EdicionConHash[],

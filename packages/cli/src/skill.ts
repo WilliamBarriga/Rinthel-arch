@@ -10,7 +10,7 @@ import {
 } from 'canonico';
 import type { FuenteCanonica } from 'canonico';
 
-/** Celda de tabla Markdown: sin saltos de linea ni barras que rompan la fila. */
+/** Sin saltos de linea ni barras que rompan la fila Markdown. */
 const celda = (texto: string): string => (texto.trim() === '' ? '-' : texto.replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|'));
 
 const EJEMPLO_DE_DSL = `specification {
@@ -38,12 +38,7 @@ view general {
   node sistema.db { label "Datos"  color acento }
 }`;
 
-/**
- * Skill para agentes (formato `SKILL.md`) del proyecto: Tipos de nodo, Paleta y
- * Temas de su catalogo, sintaxis del DSL, contrato de `validate` (derivado del
- * esquema Zod, ADR 0005) y codigos de issue. Pura y determinista: el mismo
- * catalogo produce los mismos bytes.
- */
+/** `SKILL.md` del proyecto. Determinista: el mismo catalogo produce los mismos bytes. */
 export function generarSkill(fuente: FuenteCanonica): string {
   const tipos = fuente.specification.nodeTypes.map(
     (tipo) => `| \`${tipo.name}\` | ${celda(tipo.description)} | ${celda(tipo.icon ?? '')} | ${celda(tipo.color ?? '')} |`,

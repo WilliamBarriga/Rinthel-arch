@@ -1,20 +1,15 @@
 /**
- * Prototipo aprobado listo para capturar: extrae la rama `prototype/render-hibrido` a un directorio temporal
- * (`git archive`, sin registrar worktrees), lo instala y construye, y genera su HTML como lo hace el prototipo
- * (`node prototype-estetica/hibrido.ts`). El resultado se cachea por commit.
- *
- * Interfaz: `prepararPrototipo(raizDeCache)` -> `{ directorio, pagina }` (`pagina` es relativa a `directorio`).
- * Invariantes: no escribe dentro del repo. Modo de error: lanza con el comando que fallo; sin red solo
- * falla si faltan dependencias en la cache de pnpm.
+ * `prepararPrototipo(raizDeCache) -> { directorio, pagina }`: extrae la rama del prototipo con `git archive` (sin
+ * worktrees), la construye y genera su HTML; se cachea por commit y nunca escribe dentro del repo.
+ * Errores: lanza con el comando que fallo; sin red solo falla si faltan dependencias en la cache de pnpm.
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** Rama del prototipo aprobado. */
 export const RAMA_DEL_PROTOTIPO = 'prototype/render-hibrido';
 
-/** Variante del prototipo equivalente a cada Tema de la galeria (`T` en `prototype-estetica/hibrido.ts`). */
+/** Variante del prototipo equivalente a cada Tema de la galeria. */
 export const VARIANTE_DE_TEMA: Readonly<Record<string, string>> = {
   'soft-card': 'A',
   'glass-chip': 'D',
@@ -33,9 +28,9 @@ export const VARIANTE_DE_TEMA: Readonly<Record<string, string>> = {
 };
 
 export interface PrototipoPreparado {
-  /** Raiz extraida del prototipo (cada commit tiene la suya). */
+  /** Una por commit. */
   directorio: string;
-  /** Ruta relativa a `directorio` de la pagina generada. */
+  /** Relativa a `directorio`. */
   pagina: string;
 }
 
@@ -60,7 +55,7 @@ export function prepararPrototipo(raizDeCache: string, repo: string): PrototipoP
   ejecutar('tar', ['-x', '-C', directorio], repo, tar);
   ejecutar('pnpm', ['install', '--frozen-lockfile', '--ignore-scripts', '--prefer-offline'], directorio);
   ejecutar('pnpm', ['-r', 'build'], directorio);
-  // El prototipo lee la Fuente canonica del ejemplo; `build` la deja en `.diagrams/canonico.json`.
+  // El prototipo lee la Fuente canonica de `.diagrams/canonico.json`.
   ejecutar('node', ['packages/cli/dist/bin.js', 'build', '--workspace', 'examples/rinthel-arch'], directorio);
   ejecutar('node', ['prototype-estetica/hibrido.ts'], directorio);
   return { directorio, pagina: PAGINA };

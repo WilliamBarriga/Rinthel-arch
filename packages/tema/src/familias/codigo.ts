@@ -1,10 +1,4 @@
-/**
- * Familia codigo (ADR 0008): `code` es la via de escape. Una Capa mas de la pila
- * que nombra un Componente de Tema (modulo `.tsx` del Workspace, registrado por
- * el adaptador del render). `component` es obligatoria y el resto de propiedades
- * son los parametros declarados del Tema, pasados tal cual al componente. Solo
- * pinta: nunca afecta a las Metricas ni al tamano del elemento.
- */
+/** `code`: Capa que nombra un Componente de Tema; el resto de propiedades se pasan tal cual al componente. Solo pinta. */
 import type { DefinicionDePrimitiva } from '../catalogo';
 
 export const CODIGO = {

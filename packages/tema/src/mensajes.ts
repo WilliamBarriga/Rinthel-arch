@@ -1,11 +1,6 @@
-/**
- * Trazos de las Aristas de ER (ADR 0009) a partir de la Arista del Tema. Un solo modulo para `render` (que dibuja) y
- * para `solo-color` (que compara), asi lo avisado y lo dibujado no divergen. Los Mensajes de secuencia salen ya
- * resueltos en el Estilo (`derivacion`).
- */
 import type { CapaPintada, PinturaDeArista } from './estilo';
 
-/** Trazos de una Arista de Vista ER: continuo si es identificante y discontinuo si no (si el trazo del Tema es `solid` o `dashed`); la pila `identifying` del Tema sustituye a la base en las identificantes. */
+/** Trazos de una Arista ER: un trazo `solid`/`dashed` pasa a continuo si es identificante y a discontinuo si no; en las identificantes la pila `identifying` sustituye a la base. Lo usan `render` y el aviso de solo-color. */
 export function capasDeAristaEr(base: PinturaDeArista, identificante: boolean): CapaPintada[] {
   const capas = identificante && base.identificante !== undefined ? base.identificante : base.capas;
   return capas.map((capa) => {

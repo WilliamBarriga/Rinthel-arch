@@ -1,10 +1,7 @@
 /**
- * Layout de una Vista de secuencia (ADR 0009): algoritmo propio, sin ELK, determinista y sincrono.
- * Columnas: una por Lifeline en el orden de `vista.nodes`; la distancia entre vecinas es la mayor entre el hueco minimo,
- * lo que piden las cabeceras y la etiqueta mas ancha de un Mensaje que las cruza (o el lazo y la etiqueta de un Mensaje
- * propio). Filas: de arriba abajo, una por Mensaje, con el alto de su etiqueta mas un hueco. Las activaciones salen de la
- * pila `sync`/`reply` (`activacionesDe`); cada nivel anidado se desplaza medio ancho de activacion y las flechas terminan
- * en el borde de la activacion vigente.
+ * Layout de una Vista de secuencia, sin ELK, determinista y sincrono. Una columna por Lifeline en el orden de
+ * `vista.nodes` y una fila por Mensaje. Cada nivel de activacion anidado se desplaza medio ancho de activacion y las
+ * flechas terminan en el borde de la activacion vigente.
  */
 import { activacionesDe } from 'canonico';
 import type { Activacion, CajaDeActivacion, CajaDeGrupoColocada, CajaDeNodo, GeometriaSecuencia, ItemResuelto, MarcoDeFragmento, MensajeResuelto, NotaColocada, NotaResuelta, OperandoColocado, RutaDeMensaje, VistaDeSecuencia } from 'canonico';
@@ -14,10 +11,6 @@ import type { Metricas, TablaDeMetricas } from 'tema';
 
 export type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada, OperandoColocado, RutaDeMensaje };
 
-/**
- * Constantes de la secuencia (px) que el Tema no ajusta. Las separaciones que si (hueco entre Lifelines y entre Mensajes,
- * ancho de lazo y de activacion, padding de Fragmento, desplazamiento de `create`) son Metricas del Tema: `Metricas.secuencia`.
- */
 /** Ancho que algo pide entre las columnas `desde` y `hasta` (indices de Lifeline): una etiqueta, una Nota. */
 interface NecesidadDeAncho {
   desde: number;
@@ -25,6 +18,7 @@ interface NecesidadDeAncho {
   ancho: number;
 }
 
+// px que el Tema no ajusta; las separaciones ajustables son `Metricas.secuencia`.
 const MARGEN = 24;
 const SEPARACION_DE_CABECERAS = 24;
 const HOLGURA_DE_ETIQUETA = 24;
@@ -59,7 +53,6 @@ function profundidadDe(items: readonly ItemResuelto[], destino = new Map<string,
   );
 }
 
-/** Notas de una lista de items, anidadas incluidas. */
 function notasDe(items: readonly ItemResuelto[]): NotaResuelta[] {
   return items.flatMap((item): NotaResuelta[] => (item.type === 'note' ? [item] : item.type === 'fragment' ? item.operands.flatMap((o) => notasDe(o.items)) : []));
 }
@@ -89,7 +82,6 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
   const anchoDeEtiqueta = (mensaje: MensajeResuelto): number => (mensaje.label === undefined ? 0 : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta).width);
   const altoDeEtiqueta = (mensaje: MensajeResuelto): number => (mensaje.label === undefined ? 0 : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta).height);
 
-  // Distancia entre los centros de columnas vecinas.
   const huecos = lifelines.slice(1).map((_, i) => Math.max(huecoEntreLifelines, (medidas[i]!.width + medidas[i + 1]!.width) / 2 + SEPARACION_DE_CABECERAS));
   const necesidades = (mensaje: MensajeResuelto): NecesidadDeAncho | undefined => {
     const a = columna.get(mensaje.from);
@@ -133,7 +125,6 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
   const nivelesBajo = new Map<string, number>();
   const profundidad = profundidadDe(itemsDeLaInteraccion, nivelesBajo);
   const margenIzquierdo = MARGEN + Math.max(profundidad > 0 ? rellenoHDeFragmento + SANGRIA_DE_ANIDADO * (profundidad - 1) : 0, ...grupos.filter((g) => extremos.get(g.id)!.desde === 0).map((g) => relleno(g.nivel)));
-  // Lo que las Notas de la primera columna sobresalen a su izquierda.
   const salienteDeLaPrimeraColumna = Math.max(
     0,
     ...notasDe(itemsDeLaInteraccion).flatMap((nota) => {
@@ -178,7 +169,7 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
       cursor = ys[i]! + espacioDespuesDelMensaje;
     }
   };
-  /** Coloca los items y devuelve la profundidad de Fragmentos anidados que contienen (0 si no hay). */
+  /** Devuelve la profundidad de Fragmentos anidados que contienen (0 si no hay). */
   const colocarItems = (items: readonly ItemResuelto[], nivel: number, rutas: string[], extremos: number[]): number => {
     let altura = 0;
     for (const item of items) {

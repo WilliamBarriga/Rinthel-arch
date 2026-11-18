@@ -1,8 +1,6 @@
 /**
- * Conecta el estado controlable de `VistaInteractiva` con el hash de URL: el
- * resultado se esparce como props. Un cambio de Vista (ultimo elemento de la
- * ruta) reinicia colapso, seleccion, Paso y viewport (#48); un cambio externo
- * del hash (atras del navegador) reemplaza el estado.
+ * Props controladas de `VistaInteractiva` guardadas en el hash de URL; se esparcen tal cual. Cambiar de Vista
+ * reinicia colapso, Seleccion, Paso y camara y empuja una entrada de historial; un cambio externo del hash reemplaza el estado.
  */
 import { useEffect, useRef, useState } from 'react';
 
@@ -17,7 +15,7 @@ export interface OpcionesDeEstadoEnHash {
   hash: AdaptadorDeHash;
   /** Vista inicial cuando el hash no dice otra; por defecto la primera de la Fuente. */
   defaultView?: string;
-  /** Guarda tambien el viewport (camara) en el hash. Por defecto no. */
+  /** Guarda tambien la camara en el hash. Por defecto `false`. */
   camera?: boolean;
 }
 

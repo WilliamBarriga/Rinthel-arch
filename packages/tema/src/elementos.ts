@@ -1,7 +1,6 @@
 /**
- * Vista de los Elementos de Tema de secuencia y ER para quien los describe (`inspect tema`). Un Elemento declarado sale
- * tal como lo escribe el Tema (colores como nombre de Paleta, solo sus Metricas y sus parches `kind`/`op`); uno que el
- * Tema no declara solo sale si se pide su Tipo de diagrama, ya derivado por `estiloResuelto` y marcado `derivado`.
+ * Elementos de Tema de secuencia y ER descritos (`inspect tema`). Un declarado sale tal como lo escribe el Tema
+ * (colores como nombre de Paleta); uno no declarado solo sale en su Tipo de diagrama, derivado y marcado `derivado`.
  */
 import type { Tema } from 'canonico';
 
@@ -13,7 +12,6 @@ import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA } from './secuencia';
 import type { BloqueDeSecuencia } from './secuencia';
 import { resolverTema, temaParaDiagrama } from './tema';
 
-/** Una Capa descrita: su Primitiva, sus propiedades y si va encima o esta animada. */
 export interface CapaDescrita {
   nombre: string;
   primitiva: string;
@@ -22,7 +20,6 @@ export interface CapaDescrita {
   animada: boolean;
 }
 
-/** Un Elemento de secuencia descrito: pila base, marcadores, pila de cada variante (`kind`/`op`) y Metricas. */
 export interface ElementoDescrito {
   capas: CapaDescrita[];
   marcadores: Partial<Record<'start' | 'end', string>>;
@@ -36,7 +33,6 @@ export interface ElementosDescritos {
   fila?: { alto?: number; capas: CapaDescrita[]; derivado?: true };
 }
 
-/** Clave de cada Elemento de secuencia en la pintura del Estilo. */
 const EN_LA_PINTURA: Record<BloqueDeSecuencia, keyof PinturaDeSecuencia> = { lifeline: 'lifeline', message: 'mensaje', activation: 'activacion', fragment: 'fragmento', note: 'nota' };
 
 const deTema = (capa: CapaDeTema): CapaDescrita => ({ nombre: capa.nombre, primitiva: capa.primitiva.tipo, props: capa.primitiva.props, encima: capa.encima === true, animada: capa.animacion !== undefined });
@@ -46,13 +42,12 @@ const marcadoresDe = (origen: { tipo: string } | undefined, fin: { tipo: string 
   ...(fin !== undefined && { end: fin.tipo }),
 });
 
-/** Elemento derivado de la pintura resuelta; `tipo` elige la pila de la activacion del Nodo de ese Tipo. */
+/** `tipo` elige la pila de la activacion del Nodo de ese Tipo. */
 function derivado(nombre: BloqueDeSecuencia, pintura: PinturaDeSecuencia, tipo: string | undefined): ElementoDescrito {
   const metricas = Object.fromEntries(Object.entries(ESPECIFICACION_DE_SECUENCIA[nombre].metricas).map(([clave, m]) => [clave, m.defecto]));
   const elemento = pintura[EN_LA_PINTURA[nombre]];
   if ('base' in elemento) {
     const { base } = elemento as TrazosDeSecuencia;
-    // En `message` las variantes son los tipos de Mensaje, todos derivados.
     const variantes: Record<string, { capas: CapaPintada[]; origen?: PrimitivaPintada; fin?: PrimitivaPintada }> = nombre === 'message' ? base.tipos : base.variantes;
     return { capas: base.capas.map(pintada), marcadores: marcadoresDe(base.origen, base.fin), parches: Object.fromEntries(Object.entries(variantes).map(([v, t]) => [v, t.capas.map(pintada)])), metricas, derivado: true };
   }
@@ -61,10 +56,7 @@ function derivado(nombre: BloqueDeSecuencia, pintura: PinturaDeSecuencia, tipo: 
   return { capas: capas.map(pintada), marcadores: {}, parches: Object.fromEntries(Object.entries(caja.variantes).map(([v, c]) => [v, c.map(pintada)])), metricas, derivado: true };
 }
 
-/**
- * Elementos de secuencia y fila ER del Tema para un Tipo de diagrama (o ninguno) y, en la activacion derivada, un Tipo
- * de nodo. Los declarados, con los parches del Tipo de diagrama pedido; los derivados, solo en su Tipo de diagrama.
- */
+/** Los declarados llevan los parches de `diagrama`; `tipo` es el Tipo de Nodo de la activacion derivada. */
 export function elementosDeTema(tema: Tema, diagrama: TipoDeDiagrama | undefined, tipo?: string): ElementosDescritos {
   const resuelto = temaParaDiagrama(resolverTema(tema), diagrama);
   const pinturaDerivada = diagrama === 'sequence' ? estiloResuelto(tema, { diagrama }).pintura.secuencia : undefined;

@@ -9,7 +9,7 @@ import { abrirSesion } from 'sesion';
 import { CATALOGO, ESTADOS, estiloResuelto, resolverTema } from 'tema';
 import type { TemaResuelto } from 'tema';
 
-/** Galeria de los 14 Temas de ejemplo (ADR 0008): un `.dg` por Tema sobre un Modelo comun. */
+/** Galeria de los 14 Temas de ejemplo: un `.dg` por Tema sobre un Modelo comun. */
 const RAIZ = resolve(import.meta.dirname, '../examples/temas/galeria');
 /** Los 14 Temas y sus fuentes tienen una sola copia, en `examples/rinthel-arch/temas/`; la galeria los toma con `--theme-path`. */
 const CARPETA_DE_TEMAS = resolve(import.meta.dirname, '../examples/rinthel-arch/temas');

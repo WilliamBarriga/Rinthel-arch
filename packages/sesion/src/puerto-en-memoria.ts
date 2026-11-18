@@ -1,7 +1,3 @@
-/**
- * Adaptador en memoria de `PuertoDeWorkspace`: el par del adaptador de disco de `cli`. Guarda los archivos propios
- * del Workspace (escribibles) y los Temas de `--theme-path` (se leen, nunca se escriben).
- */
 import type { ArchivosDelWorkspace } from 'dsl';
 
 import type { PuertoDeWorkspace } from './aplicar';
@@ -19,7 +15,7 @@ export interface ContenidoEnMemoria {
   temas?: ArchivosDelWorkspace;
 }
 
-/** Workspace en memoria: `leer` da `disco` (Temas mas propios) y `propios`; `escribir` y `borrar` solo tocan los propios. */
+/** `escribir` y `borrar` solo tocan los propios. */
 export function workspaceEnMemoria({ propios, temas = {} }: ContenidoEnMemoria): WorkspaceEnMemoria {
   let archivos: Record<string, string> = { ...propios };
   return {

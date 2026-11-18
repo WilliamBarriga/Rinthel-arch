@@ -1,12 +1,4 @@
-/**
- * Entrada de navegador de `diagrams dev`: pagina viva. Toda la red pasa por el cliente unico (`cliente.ts`): se
- * suscribe al estado (SSE), pide solo la Geometria de la Vista que muestra (y la de otra al navegar; ninguna tras
- * un cambio de pintura, ver `geometrias.ts`), envia las Intenciones de arrastrar un Nodo u ordenar Lifelines con la
- * `version` del estado que esta viendo, y deshace/rehace con Ctrl/Cmd+Z y Ctrl/Cmd+Mayus+Z (o Ctrl+Y). Un 409
- * recarga el estado y avisa. Una Geometria que no llega la calcula `VistaInteractiva` en el Worker. Muestra la
- * Vista elegida por el hash de URL y un panel de issues clicables. No es parte de la interfaz del paquete: la
- * empaqueta `dev-shell.ts`.
- */
+/** Pagina viva de `dev`: toda la red pasa por `cliente.ts`; la Vista la elige el hash de URL. */
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 
@@ -24,14 +16,9 @@ import type { Dibujable } from './geometrias';
 import { accionDeAtajo, crearAlAtajo } from './historial';
 import { crearAlMover, crearAlOrdenar } from './mover';
 
-/** Estado del servidor: esquema unico de `canonico` (`estadoDeDevSchema`), el mismo que produce `dev`. */
 type Estado = EstadoDeDev;
 
-/**
- * Adaptador unico del hash: `useEstadoEnHash` se suscribe a `hashchange`/`popstate` por el, de modo
- * que atras/adelante o editar el hash a mano cambia la Vista; al recompilar, `Vista` no se
- * remonta, asi que camara, colapso y seleccion se conservan.
- */
+/** Unico adaptador del hash: al recompilar, `Vista` no se remonta y conserva camara, colapso y seleccion. */
 const hash = hashDelNavegador(window);
 
 const cliente = crearClienteDeDev({
@@ -43,7 +30,6 @@ const cliente = crearClienteDeDev({
   },
 });
 
-/** Geometria bajo demanda: antes de dibujar, la Vista activa es la del hash. */
 const geometrias = crearGeometriasDeDev({
   pedir: (vista) => cliente.geometria(vista),
   vistaInicial: (fuente) => {
@@ -52,7 +38,6 @@ const geometrias = crearGeometriasDeDev({
   },
 });
 
-/** Estado vigente (el inicial y cada evento SSE) y `recargar`, que lo pide de nuevo; cada uno llega a la cache de Geometria. */
 function useEstado(): { estado: Estado | undefined; recargar: () => Promise<void> } {
   const [estado, setEstado] = useState<Estado>();
   const recibir = (nuevo: Estado): void => {
@@ -67,10 +52,7 @@ function useEstado(): { estado: Estado | undefined; recargar: () => Promise<void
   return { estado, recargar };
 }
 
-/**
- * Componentes de Tema (Capa `code`): tras cada estado nuevo se vuelve a pedir el codigo (un cambio de `.tsx` llega como
- * estado `codigo`), con confirmacion explicita la primera vez. Si la carga falla se conserva el registro anterior.
- */
+/** Se vuelve a pedir el codigo tras cada estado nuevo; si la carga falla se conserva el registro anterior. */
 function useComponentes(estado: Estado | undefined): ComponentesDeTema | undefined {
   const cargar = useMemo(() => crearCargadorDeCodigo({ fetch: (...args) => fetch(...args), confirmar: (mensaje) => window.confirm(mensaje) }), []);
   const [componentes, setComponentes] = useState<ComponentesDeTema>();
@@ -90,7 +72,6 @@ function useComponentes(estado: Estado | undefined): ComponentesDeTema | undefin
 
 function layoutEnWorker(): AdaptadorDeLayout {
   let adaptador: Promise<AdaptadorDeLayout> | undefined;
-  // Las medidas reales de texto (fuentes del Workspace) viajan al Worker: sin ellas el layout estima por caracter.
   return (vista, tema, medidas) => {
     adaptador ??= fetch('/worker.js')
       .then((r) => r.text())
@@ -99,7 +80,7 @@ function layoutEnWorker(): AdaptadorDeLayout {
   };
 }
 
-/** Mientras no hay Vista dibujable (el Workspace nunca compilo) no hay lienzo que aloje el chrome: lista simple sin Tema. */
+/** Sin Vista dibujable (el Workspace nunca compilo) no hay lienzo que aloje el chrome: lista simple sin Tema. */
 function IssuesSinVista({ issues }: { issues: readonly IssueDeDev[] }): ReactElement | null {
   if (issues.length === 0) return null;
   return (
@@ -119,17 +100,15 @@ function IssuesSinVista({ issues }: { issues: readonly IssueDeDev[] }): ReactEle
 interface PropsDeVista extends Dibujable {
   layout: AdaptadorDeLayout;
   componentes: ComponentesDeTema | undefined;
-  /** Arrastre soltado: la Vista dibujada y el Nodo; resuelve `false` si se rechazo. */
+  /** Resuelve `false` si se rechazo. */
   alMover: (vista: string, mov: { id: string; x: number; y: number }) => Promise<boolean>;
   alOrdenar: (vista: string, cambio: { orden: string[] }) => Promise<boolean>;
-  /** Aviso vigente de un Pin rechazado. */
   aviso: string | undefined;
 }
 
 function Vista({ estado, geometrias: porVista, layout, componentes, alMover, alOrdenar, aviso }: PropsDeVista): ReactElement | null {
   const fuente = estado.fuente;
   const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
-  // La Vista que se muestra es la que pide su Geometria (una sola vez por estructura).
   useEffect(() => geometrias.activar(props.view), [props.view]);
   const { icons, cachedGeometries, theme: tema, width, height } = usePropsDeDatos({ fuente, iconos: estado.iconos, geometrias: porVista }, props.view);
   if (tema === undefined) return null;
@@ -164,7 +143,6 @@ function App(): ReactElement {
     window.addEventListener('keydown', alTeclear);
     return () => window.removeEventListener('keydown', alTeclear);
   }, []);
-  // Lo dibujable: tras un cambio de estructura se conserva el dibujo anterior hasta que llega la Geometria de la Vista activa.
   const dibujable = useSyncExternalStore(geometrias.suscribir, geometrias.dibujable);
   const erroresDeGeometria = dibujable?.errores ?? [];
   const layout = useMemo(layoutEnWorker, []);

@@ -1,8 +1,6 @@
 /**
- * Esquema Zod de la capa de geometria cacheada por Vista (spec #19, ADR 0003):
- * lo que `build` escribe en `.diagrams/geometria/<vista>.json` y lo que `export`
- * y el HTML leen de vuelta. Es la unica declaracion de la forma de la Geometria:
- * `layout` la calcula y reexporta estos tipos, que salen del esquema.
+ * Esquema Zod de la Geometria cacheada por Vista (ADR 0003), en `.diagrams/geometria/<vista>.json`.
+ * Unica declaracion de la forma de la Geometria; `layout` la calcula y reexporta estos tipos.
  */
 import { z } from 'zod';
 
@@ -83,20 +81,13 @@ const geometriaSecuenciaSchema = z.object({
   height: numeroFinito,
 });
 
-/**
- * Geometria de una Vista: union discriminada por `kind` (`grafo` o `secuencia`). Una geometria
- * escrita antes de existir `kind` se lee como `grafo`.
- */
+/** Sin `kind` se lee como `grafo`: compatibilidad con caches ya escritas. */
 export const geometriaSchema = z.preprocess(
   (crudo) => (typeof crudo === 'object' && crudo !== null && !('kind' in crudo) ? { ...crudo, kind: 'grafo' } : crudo),
   z.discriminatedUnion('kind', [geometriaGrafoSchema, geometriaSecuenciaSchema]),
 );
 
-/**
- * Geometria cacheada de una Vista. `layoutKey` (la `claveDeLayout` de `layout`)
- * dice con que Vista resuelta y Tema se calculo; quien la lee la compara con la
- * clave actual para saber si sigue vigente.
- */
+/** `layoutKey` es la `claveDeLayout` de la Vista resuelta y el Tema; si difiere de la actual, la cache no vale. */
 export const geometriaCacheadaSchema = z.object({
   view: z.string().min(1),
   theme: z.string().min(1),
@@ -110,7 +101,6 @@ export type Punto = z.infer<typeof puntoSchema>;
 export type RutaDeArista = z.infer<typeof rutaDeAristaSchema>;
 export type GeometriaGrafo = z.infer<typeof geometriaGrafoSchema>;
 export type GeometriaSecuencia = z.infer<typeof geometriaSecuenciaSchema>;
-/** Geometria calculada de una Vista: union por `kind`; quien la lee hace switch por `kind`. */
 export type Geometria = GeometriaGrafo | GeometriaSecuencia;
 export type CajaDeActivacion = GeometriaSecuencia['activations'][number];
 export type RutaDeMensaje = GeometriaSecuencia['messages'][string];

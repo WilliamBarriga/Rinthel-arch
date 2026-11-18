@@ -1,7 +1,4 @@
-/**
- * Salida de `diagrams inspect tema` y formato de toda la salida de `inspect` (ADR 0005). Las consultas
- * del Modelo viven en `sesion` (`Sesion.consultar`); aqui solo el Tema y la presentacion.
- */
+/** `inspect tema` y el formato de toda la salida de `inspect`. */
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos, salidaDeInspectSchema } from 'canonico';
 import type { FuenteCanonica, SalidaDeInspect } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
@@ -21,11 +18,7 @@ interface ConsultaDeTema {
 
 const INCORPORADO: Sitio = { file: '(incorporado)', line: 1 };
 
-/**
- * `inspect tema <nombre>`: cadena `extends`, `part` usadas, pila de Capas resuelta para un Tipo y
- * estado (cada Capa con el sitio del parche que la fijo), Metricas y uso de codigo. Las claves del
- * catalogo salen de las mismas tablas que validan (sin listas paralelas).
- */
+/** Cadena `extends`, `part` usadas, pila de Capas para un Tipo y estado (con el sitio que fijo cada Capa), Metricas y uso de codigo. */
 export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<string, OrigenDeTema>>, { nombre, tipo, estado, diagrama, catalogo }: ConsultaDeTema): Respuesta {
   const declarado = fuente.themes.find((t) => t.name === nombre);
   if (declarado === undefined) {
@@ -53,7 +46,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   const componentes = componentesDeTema(declarado);
   const origen = origenes[nombre];
   const sitioDe = (capa: string): Sitio => {
-    // El ultimo nivel de la cascada que fijo la Capa gana: estado, Tipo, base.
+    // Gana el nivel mas especifico de la cascada que fijo la Capa: estado, Tipo, base.
     const sitio = (estadoValido === undefined ? undefined : origen?.estados[estadoValido]?.[capa]) ?? (tipo === undefined ? undefined : origen?.tipos[tipo]?.[capa]) ?? origen?.base[capa];
     return sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line };
   };
@@ -83,13 +76,13 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
       return aCapa(capa, sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line });
     }),
   };
-  // Donde se escribio una disposicion de Slots; si ningun bloque la escribe, vale la del Tema (o el nucleo).
+  // Si ningun bloque escribe la disposicion de Slots, vale la del Tema (o el nucleo).
   const sitioDeSlots = (sitio: Sitio | undefined): Sitio => sitio ?? origen?.sitio ?? INCORPORADO;
   const tabla = tablaDeMetricas(declarado, tipoDeDiagrama);
   const delNodo = metricasDeNodo(tabla, tipo);
   const delGrupo = origen?.grupo;
   const sitioDeGrupo = (capa: string, colapsado: boolean): Sitio => {
-    // Mismo orden de la cascada: estado, colapsado, Tipo, base.
+    // Cascada: estado, colapsado, Tipo, base.
     const sitio =
       (estadoValido === undefined ? undefined : delGrupo?.estados[estadoValido]?.[capa]) ??
       (colapsado ? delGrupo?.colapsado[capa] : undefined) ??
@@ -136,13 +129,12 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   };
 }
 
-/** Valida contra el contrato antes de emitir. */
 export const comoJson = (salida: SalidaDeInspect): string => `${JSON.stringify(salidaDeInspectSchema.parse(salida), null, 2)}\n`;
 
 const sitio = ({ file, line }: Sitio): string => `${file}:${line}`;
 const titulo = (t: string): string => (t === '' ? '' : ` "${t}"`);
 
-/** Texto para humanos: una linea por resultado. */
+/** Una linea por resultado. */
 export function textoLegible(salida: SalidaDeInspect): string {
   const lineas: string[] = [];
   if (salida.comando === 'buscar') {

@@ -1,13 +1,9 @@
 /**
- * Contrato de salida de `validate` (ADR 0005): errores y avisos como datos.
- *
- * Posiciones 1-based (`line`, `column`). El texto de `message` y `hint` no es
- * contrato publico; `code`, `severity`, la posicion y la estructura de `fix` si
- * lo son. Los campos marcados como opcionales solo se emiten cuando aportan:
- * `fix` unicamente con un unico candidato inequivoco; con ambiguedad, `hint`.
+ * Issue de `validate` (ADR 0005). Posiciones 1-based. El texto de `message` y `hint` no es contrato;
+ * `code`, `severity`, la posicion y la forma de `fix` si. `fix` solo con un candidato inequivoco; si hay
+ * ambiguedad, `hint`.
  */
 
-/** Severidad de un issue. `0` sin errores, `1` con errores (ADR 0005). */
 export type Severity = 'error' | 'warning';
 
 /** Posicion 1-based dentro de un archivo. */
@@ -22,7 +18,7 @@ export interface TextRange {
   end: TextPosition;
 }
 
-/** Punto de referencia de otro issue relacionado (p. ej. el Nodo duplicado original). */
+/** Otro sitio relacionado (p. ej. el Nodo original de un duplicado). */
 export interface IssueRelated {
   file: string;
   line: number;
@@ -37,11 +33,7 @@ export interface IssueFix {
   replacement: string;
 }
 
-/**
- * Un issue de validacion. `code` es un string plano y no un union cerrado:
- * un consumidor debe ignorar los codigos que no conoce (ADR 0005), y un codigo
- * deprecatado sigue siendo representable.
- */
+/** `code` es un string abierto: un consumidor ignora los codigos que no conoce y un codigo deprecado sigue siendo representable. */
 export interface Issue {
   code: string;
   severity: Severity;

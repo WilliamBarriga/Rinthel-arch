@@ -1,20 +1,9 @@
 /**
- * Comando `edit` del CLI (ADR 0005): unica escritura explicita sobre el DSL de texto.
- * `edit --workspace <ruta> [--theme-path <carpeta>] [--json] [--hash <archivo>=<hash>]...`
- * mas una de estas tres formas:
- * - Intencion de Pin: `--view <id> --node <id cualificado> --x N --y N`, la Intencion `mover-pin`: el Gesto
- *   calcula la edicion minima (reemplaza el `pin` o lo inserta), la auto-prueba y la aplica en memoria.
- * - Intencion por su contrato JSON: `--intent '<json>'`, p. ej. `{"tipo":"ordenar-lifelines","vista":"flujo","orden":["a","b"]}`
- *   (ADR 0007/0009); la Intencion no lleva `hash` (uno heredado en el JSON se ignora).
- * - Ediciones ya calculadas: `--edits '<json>'`, un arreglo de `{ file, range, replacement, hash? }`
- *   (p. ej. el `fix` de un issue de `validate`). Rangos 1-based, fin excluido.
- * Los tres modos escriben solo por la puerta `aplicarAlWorkspace` de `sesion`.
- * Concurrencia: `--hash <archivo>=<hash>` es el `visto` de la Intencion; cada edicion estructurada lleva su
- * `hash` (o toma `--hash`; sin ninguno, el del disco al leer). Un hash viejo rechaza todo, sin escritura parcial.
- * Salida: con `--json`, un objeto `salidaDeEditSchema` (su propio `contractVersion`), tambien al
- * rechazar. Codigos: 0 escrito, 1 edicion rechazada o invalida (sin `--json`, mensaje en stderr y
- * stdout vacio; el codigo de cada motivo sale de la tabla unica `SALIDA_DE_RECHAZO` de `rechazos.ts`),
- * 2 fallo de uso o interno. Solo escribe lo pedido; nunca como efecto de validar.
+ * Comando `edit`: unica escritura explicita sobre el DSL; escribe solo por `aplicarAlWorkspace` y nunca al validar.
+ * Formas: Pin (`--view --node --x --y`), `--intent '<json>'` o `--edits '<json>'` (rangos 1-based, fin excluido).
+ * `--hash <archivo>=<hash>` es el `visto` de la Intencion; cada edicion lleva su `hash` (o toma `--hash`; sin ninguno,
+ * el del disco al leer). Un hash viejo rechaza todo, sin escritura parcial.
+ * Salida: con `--json`, un `salidaDeEditSchema` tambien al rechazar. Codigos: 0 escrito, 1 rechazo, 2 fallo de uso o interno.
  */
 import { EDIT_CONTRACT_VERSION, edicionesPedidasSchema, intencionSchema, salidaDeEditSchema } from 'canonico';
 import type { SalidaDeEdit } from 'canonico';
@@ -100,7 +89,7 @@ export async function editar(
     } catch (error) {
       return uso(`--intent no es JSON: ${(error as Error).message}`);
     }
-    // Un `hash` heredado en el JSON se ignora: la concurrencia de una Intencion la decide `--hash` (visto).
+    // Un `hash` en el JSON se ignora: la concurrencia de una Intencion la decide `--hash`.
     const leida = intencionSchema.safeParse(crudo);
     if (!leida.success) return uso(`--intent no es una Intencion valida: ${leida.error.message}`);
     aplicable = leida.data;
@@ -113,7 +102,7 @@ export async function editar(
     aplicable = { tipo: 'mover-pin', vista: v.view, nodo: v.node, x, y };
   }
 
-  // Puerta de escritura unica de `sesion`: todo o nada, solo en la raiz del Workspace (no en `--theme-path`).
+  // Solo escribe bajo la raiz del Workspace, nunca en `--theme-path`.
   const raiz = v.workspace;
   let resultado;
   try {

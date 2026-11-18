@@ -1,19 +1,14 @@
-/**
- * Consultas de solo lectura del Modelo (detalle de Nodo, busqueda, Vista, Interaccion y ubicacion
- * `archivo:linea`). Las comparten `inspect` (ADR 0005) y la UI futura: viven en la Sesion.
- */
 import { INSPECT_CONTRACT_VERSION, aplanarMensajes, candidatosCercanos, lifelinesDe, padreDe, resolveView } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
 
 type Sitio = { file: string; line: number };
 
-/** Que se consulta: `buscar` (texto), `nodo`, `vista` o `interaccion` (id). */
+/** `argumento` es texto para `buscar` e id para el resto. */
 export type Consulta = { comando: 'buscar' | 'nodo' | 'vista' | 'interaccion'; argumento: string };
 
-/** Resultado de consultar: la salida del contrato o el mensaje de lo que no existe. */
 export type Respuesta = { salida: SalidaDeInspect } | { noEncontrado: string };
 
-/** Nodos del Modelo con su ruta en la Fuente, en orden de documento. */
+/** En orden de documento. */
 function recorrerNodos(nodos: readonly Nodo[], ruta: RutaDeFuente = ['model', 'nodes']): { nodo: Nodo; ruta: RutaDeFuente }[] {
   return nodos.flatMap((nodo, i) => {
     const propia = [...ruta, i];
@@ -21,7 +16,6 @@ function recorrerNodos(nodos: readonly Nodo[], ruta: RutaDeFuente = ['model', 'n
   });
 }
 
-/** Responde una consulta sobre la Fuente; cada resultado trae su `archivo:linea` segun el Ubicador. */
 export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento }: Consulta): Respuesta {
   const sitioDe = (ruta: RutaDeFuente): Sitio => {
     const sitio = ubicar(ruta);
@@ -149,10 +143,9 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
         ...(encontrada.vista.interaction === undefined ? {} : { interaction: encontrada.vista.interaction }),
         ...encontrada.sitio,
         nodos: nodos.filter(({ nodo }) => visibles.has(nodo.id)).map(resumen),
-        // Una Vista de secuencia no tiene Aristas.
         aristas: (resuelta.type === 'sequence' ? [] : resuelta.edges).map((arista) => {
           const i = indiceDeArista(arista);
-          // Sin Arista del Modelo que la origine, el sitio es el de la Vista (no se inventa otra Arista).
+          // Sin Arista del Modelo que la origine, el sitio es el de la Vista.
           return i < 0 ? { ...aristaDe(arista, 0, encontrada.sitio), count: arista.count } : { ...aristaDe(arista, i), count: arista.count };
         }),
       },

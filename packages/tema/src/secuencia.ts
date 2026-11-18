@@ -1,9 +1,4 @@
-/**
- * Elementos de Tema de la secuencia (ADR 0009): `lifeline`, `activation`, `message`, `fragment` y `note`. Cada uno es
- * un bloque con una pila de Capas, parches (`kind` en `message`, `op` en `fragment`), estilo de texto y, solo en
- * algunos, Metricas propias (las separaciones de secuencia). Esta tabla es la unica fuente de lo que cada bloque
- * admite: `dsl` la usa para compilar, `tema` para validar y la referencia del catalogo para documentar.
- */
+/** Elementos de Tema de la secuencia: tabla unica de lo que admite cada bloque (la usan `dsl`, la validacion y la referencia). */
 import { OPERADORES_DE_FRAGMENTO, TIPOS_DE_MENSAJE } from 'canonico';
 
 import type { NombreDePrimitiva, UbicacionDePrimitiva } from './catalogo';
@@ -11,7 +6,7 @@ import type { NombreDePrimitiva, UbicacionDePrimitiva } from './catalogo';
 export const BLOQUES_DE_SECUENCIA = ['lifeline', 'activation', 'message', 'fragment', 'note'] as const;
 export type BloqueDeSecuencia = (typeof BLOQUES_DE_SECUENCIA)[number];
 
-/** Una Metrica del bloque: nombre en el DSL, rango y defecto del nucleo (px). */
+/** Rango y defecto del nucleo, en px. */
 export interface MetricaDeBloque {
   min: number;
   max: number;
@@ -19,15 +14,12 @@ export interface MetricaDeBloque {
 }
 
 export interface EspecificacionDeBloque {
-  /** Ubicacion de sus Capas: trazos de Arista (`lifeline`, `message`) o Capas de Nodo. */
   capas: Extract<UbicacionDePrimitiva, 'capa-arista' | 'capa-nodo'>;
-  /** Marcadores de extremo que admite (`start`, `end`). */
   marcadores: readonly ('start' | 'end')[];
-  /** Estilo de texto o trazo suelto (`operator`, `guard`...) y la Primitiva y ubicacion con que se estiliza. */
+  /** Estilos de texto o trazo sueltos (`operator`, `guard`...) por nombre del DSL. */
   textos: Readonly<Record<string, { primitiva: NombreDePrimitiva; ubicacion: UbicacionDePrimitiva }>>;
-  /** Parches por variante: la palabra del DSL (`kind`, `op`) y las variantes validas. */
   parches?: { palabra: 'kind' | 'op'; nombres: readonly string[] };
-  /** Metricas propias, por nombre del DSL. */
+  /** Por nombre del DSL. */
   metricas: Readonly<Record<string, MetricaDeBloque>>;
 }
 
@@ -59,7 +51,7 @@ export const ESPECIFICACION_DE_SECUENCIA: Readonly<Record<BloqueDeSecuencia, Esp
   note: { capas: 'capa-nodo', marcadores: [], textos: { text: { primitiva: 'text', ubicacion: 'texto-slot' } }, metricas: {} },
 };
 
-/** Separaciones de secuencia que `layout` lee de las Metricas: el Tema las ajusta en los bloques; sin ajuste, los defectos del nucleo. */
+/** Separaciones de secuencia en px; sin ajuste del Tema, los defectos del nucleo. */
 export interface MetricasDeSecuencia {
   huecoEntreLifelines: number;
   huecoEntreMensajes: number;
@@ -70,7 +62,6 @@ export interface MetricasDeSecuencia {
   rellenoVerticalDeFragmento: number;
 }
 
-/** Metricas de secuencia de un Tema: los valores de `bloques` (nombres del DSL) sobre los defectos. */
 export function metricasDeSecuencia(bloques: Partial<Record<BloqueDeSecuencia, { metricas: Readonly<Record<string, number>> } | undefined>> | undefined): MetricasDeSecuencia {
   const valor = (bloque: BloqueDeSecuencia, nombre: string): number => bloques?.[bloque]?.metricas[nombre] ?? ESPECIFICACION_DE_SECUENCIA[bloque].metricas[nombre]!.defecto;
   return {

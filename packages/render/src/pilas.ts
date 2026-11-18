@@ -1,19 +1,13 @@
 /**
- * Pilas de Capas por elemento (ADR 0008): el Nodo, el Grupo abierto y el Grupo colapsado
- * (una hoja) tienen cada uno su pintura, y cada uno puede variar por Tipo de nodo. Es
- * la unica ruta por la que la hoja de estilo, la animacion y la escena eligen que pila
- * se dibuja, asi que Nodos y Grupos se tratan con el mismo codigo y sus selectores
- * quedan separados (`.rd-nodo`, `.rd-grupo`, `.rd-colapsado`). Un Tipo con parches
- * trae su pila completa y la elige el atributo `data-tipo` del elemento; un Tipo sin
- * parches usa la del elemento.
+ * Pilas de Capas por elemento (Nodo, Grupo abierto, Grupo colapsado), con selectores `.rd-<clave>`. Un Tipo de nodo con
+ * parches trae su pila completa y la elige `data-tipo`; un Tipo sin parches usa la del elemento.
  */
 import type { NodoResuelto } from 'canonico';
 import type { Pintura, PinturaDeElemento, PinturaDeNodo } from 'tema';
 
-/** Lo que basta para elegir la pila de un Nodo: la pintura de Nodos y Grupos (la del Tema o la de la activacion derivada). */
+/** Pintura de Nodos y Grupos: la del Tema o la de la activacion derivada. */
 type PinturasDeCaja = Pick<Pintura, 'nodo' | 'grupo'>;
 
-/** La unica tabla de elementos: de ella salen la clave, el orden en que la hoja los emite y de donde sale la pintura de cada uno. */
 const PINTURA_DE = {
   nodo: (pintura: PinturasDeCaja): PinturaDeElemento => pintura.nodo,
   grupo: (pintura: PinturasDeCaja): PinturaDeElemento => pintura.grupo.abierto,

@@ -79,13 +79,11 @@ describe('Secuencia: acierto', () => {
     pulsarEn(container, activacion.x + activacion.width / 2, activacion.y1 + 2);
     expect(ultimo(ids)).toEqual(['api']);
 
-    // Interior del Fragmento: fuera de Lifelines, Mensajes y Notas, no selecciona nada.
     const marco = g.fragments[0]!;
     const antes = ids.length;
     pulsarEn(container, marco.x + 6, marco.y + marco.height / 2);
     pulsarEn(container, marco.x + marco.width / 2, marco.y + marco.tab.height + 4);
     expect(ids.length).toBe(antes);
-    // Pero lo de debajo si: la linea de una Lifeline dentro del marco.
     const linea = g.lifelines['db']!;
     pulsarEn(container, linea.x, marco.y + marco.height / 2);
     expect(ultimo(ids)).toEqual(['db']);

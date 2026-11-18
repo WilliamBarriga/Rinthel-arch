@@ -1,28 +1,22 @@
 /**
- * Generador de Workspaces sinteticos para los umbrales del ADR 0003.
- *
- * `generarWorkspace({ nodos, ... })` devuelve los archivos de un Workspace
- * (`ruta -> texto DSL`) con exactamente `nodos` Nodos: un bosque con `raices`
- * raices y `ramas` hijos por Grupo (arbol casi completo, de modo que 10k Nodos
- * dan 4-5 niveles), Aristas entre hojas (la mayoria locales, el resto largas) y una
- * Vista `todo` que incluye el Modelo entero. Generico: sin nada de ningun proyecto.
- *
+ * Workspaces sinteticos para los umbrales del ADR 0003. `generarWorkspace` da exactamente `nodos` Nodos en un bosque
+ * casi completo (10k Nodos son 4-5 niveles), Aristas entre hojas y una Vista `todo` con el Modelo entero.
  * Determinista: misma entrada, mismos archivos (PRNG con semilla, sin reloj).
  */
 export interface OpcionesDeGenerador {
-  /** Nodos totales del Modelo (Grupos y hojas), al menos 1. */
+  /** Grupos y hojas, al menos 1. */
   nodos: number;
-  /** Aristas por Nodo del Modelo (por defecto 1.5). */
+  /** Por defecto 1.5. */
   aristasPorNodo?: number;
-  /** Hijos por Grupo (por defecto 8). */
+  /** Hijos por Grupo; por defecto 8. */
   ramas?: number;
-  /** Nodos raiz (por defecto 10; nunca mas que `nodos`). */
+  /** Por defecto 10; nunca mas que `nodos`. */
   raices?: number;
-  /** Semilla del PRNG (por defecto 1). */
+  /** Por defecto 1. */
   semilla?: number;
 }
 
-/** PRNG mulberry32: una funcion pura de la semilla. */
+/** mulberry32. */
 function prng(semilla: number): () => number {
   let estado = semilla >>> 0;
   return () => {
@@ -95,21 +89,17 @@ export function generarWorkspace(opciones: OpcionesDeGenerador): Record<string, 
 }
 
 export interface OpcionesDeSecuencia {
-  /** Mensajes totales de la Interaccion (al menos 1). */
+  /** Al menos 1. */
   mensajes: number;
-  /** Lifelines (por defecto 50, al menos 2). */
+  /** Por defecto 50, al menos 2. */
   lifelines?: number;
-  /** Profundidad maxima de anidamiento de Fragmentos (por defecto 3). */
+  /** Anidamiento maximo de Fragmentos; por defecto 3. */
   profundidad?: number;
-  /** Semilla del PRNG (por defecto 1). */
+  /** Por defecto 1. */
   semilla?: number;
 }
 
-/**
- * Workspace con una Vista `sequence` de una sola Interaccion `grande`: exactamente `mensajes` Mensajes entre
- * `lifelines` Lifelines, con Fragmentos (opt, loop, alt, par) anidados hasta `profundidad` niveles.
- * Determinista: misma entrada, mismos archivos.
- */
+/** Una Vista `sequence` de la Interaccion `grande` con Fragmentos (opt, loop, alt, par) anidados. Determinista. */
 export function generarSecuencia(opciones: OpcionesDeSecuencia): Record<string, string> {
   const { mensajes, lifelines = 50, profundidad = 3, semilla = 1 } = opciones;
   const azar = prng(semilla);

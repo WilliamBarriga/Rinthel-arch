@@ -36,7 +36,7 @@ describe('intencionDePinSchema', () => {
 
 describe('MotivoDeRechazo', () => {
   it('alimenta el enum reason de la salida de edit (un solo sitio para un motivo)', () => {
-    // Los seis motivos de hoy, escritos a mano como fuente de verdad independiente.
+    // Escritos a mano como fuente de verdad independiente.
     const motivos = [
       'hash-desactualizado',
       'archivo-desconocido',

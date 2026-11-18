@@ -1,26 +1,12 @@
 /**
- * "Workspace vivo" (ADR 0005, ADR 0007): el estado vivo de `dev`, sin HTTP. Guarda la Sesion vigente, la
- * ultima Sesion buena, el Historial de deshacer/rehacer, la cola de escrituras, la version del estado con los
- * hashes por archivo de las ultimas `VERSIONES_GUARDADAS` versiones, la clasificacion del cambio y la confianza
- * en el codigo de Temas. El enrutador HTTP de `dev` es un adaptador fino encima.
- *
- * Interfaz: `abrirWorkspaceVivo(opciones) -> WorkspaceVivo` con `estado()`, `suscribir`, `editar(intencion, version?)`,
- * `deshacer()`, `rehacer()`, `geometria(vista)`, `recargar()`, `codigo()`, `confiar()` y `cerrar()`.
- * Adaptadores: el disco y el watcher entran por `PuertoDelWorkspaceVivo` (disco en `dev.ts`, memoria en
- * `puerto-en-memoria.ts`); el reloj del debounce por `Reloj`.
- *
- * Invariantes:
- * - Una edicion lleva la version del estado que vio quien la emite; se traduce a `visto` (archivo -> hash de esa
- *   version). Una version que ya no esta guardada se rechaza como `hash-desactualizado`. Sin version, se aplica
- *   sobre el texto vigente.
- * - Edicion, deshacer y rehacer se serializan en una cola; una escritura que falla a mitad se revierte.
- * - Las recompilaciones se agrupan con debounce y se serializan; si el Workspace tiene errores el estado lleva
- *   los issues pero conserva la Fuente y la Geometria de la ultima Sesion sin errores, y no trae `cambio`.
- * - Deshacer y rehacer restauran el texto exacto del Historial; si el disco cambio fuera (edicion externa)
- *   rechazan con `hash-desactualizado` y el Historial vuelve a empezar desde el disco.
- * Modos de error: rechazos como datos (`MotivoDeRechazo`); los fallos de I/O del puerto al escribir se propagan
- * (tras revertir); los de lectura al recompilar se ignoran hasta el siguiente cambio. `abrirWorkspaceVivo` lanza
- * si la lectura inicial falla.
+ * Workspace vivo: el estado de `dev` sin HTTP (Sesion vigente y ultima buena, Historial, cola de escrituras, versiones).
+ * Invariantes: una edicion con `version` usa los hashes de esa version como `visto`; una version fuera de las ultimas
+ * `VERSIONES_GUARDADAS` rechaza con `hash-desactualizado`; sin version, se aplica sobre el texto vigente.
+ * Edicion, deshacer y rehacer van en cola; una escritura que falla a mitad se revierte. Con errores, el estado lleva los
+ * issues con la Fuente y la Geometria de la ultima Sesion buena, sin `cambio`. Deshacer y rehacer tras un cambio externo
+ * rechazan con `hash-desactualizado` y el Historial vuelve a empezar desde el disco.
+ * Errores: rechazos como datos; los fallos de I/O al escribir se propagan tras revertir; los de lectura al recompilar
+ * se ignoran hasta el siguiente cambio; `abrirWorkspaceVivo` lanza si la lectura inicial falla.
  */
 import { combineIconProviders, genericIcons, serializarIconos, workspaceIcons } from 'canonico';
 import type { EstadoDeDev, GeometriaCacheada, Intencion, Issue, MotivoDeRechazo, TipoDeCambio } from 'canonico';
@@ -33,28 +19,23 @@ import { clasificarCambio } from './cambio';
 import type { ResultadoDeCodigo } from './codigo';
 import { esArchivoDeFuente } from './workspace';
 
-/** Cuantas versiones del estado se recuerdan para traducir la version vista de una edicion a `visto`. */
+/** Versiones del estado que se recuerdan para traducir la version vista a `visto`. */
 export const VERSIONES_GUARDADAS = 16;
 
-/**
- * Puerto del Workspace vivo: el de la puerta de escritura (`leer`, `escribir`) mas lo que necesita `dev`.
- * Dos adaptadores: disco (`dev.ts`) y memoria (`puerto-en-memoria.ts`).
- */
 export interface PuertoDelWorkspaceVivo extends PuertoDeWorkspace {
-  /** Borra un archivo propio del Workspace (deshacer/rehacer de una edicion que lo creo); uno ausente no es error. */
+  /** Un archivo ausente no es error. */
   borrar(ruta: string): void;
   /** Hash de cada recurso vigilado (`.tsx`, fuentes), o `undefined` si el adaptador no los conoce. */
   recursos(): Record<string, string> | undefined;
-  /** Avisa de cualquier cambio en el Workspace; devuelve como dejar de observar. */
+  /** Devuelve como dejar de observar. */
   observar(alCambiar: () => void): () => void;
 }
 
-/** Reloj del debounce: programa `fn` dentro de `ms` y devuelve como cancelarla. */
+/** `programar` devuelve como cancelar. */
 export interface Reloj {
   programar(fn: () => void, ms: number): () => void;
 }
 
-/** Reloj real: `setTimeout`. */
 export const relojReal: Reloj = {
   programar(fn, ms) {
     const t = setTimeout(fn, ms);
@@ -68,18 +49,17 @@ export interface OpcionesDelWorkspaceVivo {
   raiz: string;
   /** Por defecto `relojReal`. */
   reloj?: Reloj;
-  /** Espera tras el ultimo cambio antes de recompilar (`DEBOUNCE_MS` por defecto). */
+  /** Espera en ms tras el ultimo cambio antes de recompilar; por defecto `DEBOUNCE_MS`. */
   debounceMs?: number;
-  /** Compila los `.tsx` del Workspace; por defecto no hay codigo. */
+  /** Por defecto no hay codigo. */
   compilarCodigo?: () => ResultadoDeCodigo;
-  /** Codigo de Temas ya confirmado (`--trust-code`). */
   confiarEnCodigo?: boolean;
 }
 
-/** Resultado de una edicion, deshacer o rehacer: la version del estado tras recompilar, o el rechazo. */
+/** `version` es la del estado tras recompilar. */
 export type ResultadoDelWorkspaceVivo = { ok: true; version: number } | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
 
-/** Estado del codigo de Temas: componentes que usan los Temas de la ultima Fuente buena, confianza y bundle. */
+/** `componentes` son los que usan los Temas de la ultima Fuente buena. */
 export interface CodigoDelWorkspace {
   componentes: string[];
   confiado: boolean;
@@ -87,11 +67,10 @@ export interface CodigoDelWorkspace {
 }
 
 export interface WorkspaceVivo {
-  /** Estado vigente con la forma de `estadoDeDevSchema` de `canonico`. */
   estado(): EstadoDeDev;
-  /** Llama a `alCambiar` con cada estado nuevo (tras cada recompilacion); devuelve como dejar de escuchar. */
+  /** Devuelve como dejar de escuchar. */
   suscribir(alCambiar: (estado: EstadoDeDev) => void): () => void;
-  /** Aplica una Intencion por la puerta de `sesion`; `version` es la del estado que vio quien la emite. */
+  /** `version` es la del estado que vio quien emite la Intencion. */
   editar(intencion: Intencion, version?: number): Promise<ResultadoDelWorkspaceVivo>;
   deshacer(): Promise<ResultadoDelWorkspaceVivo>;
   rehacer(): Promise<ResultadoDelWorkspaceVivo>;
@@ -100,16 +79,14 @@ export interface WorkspaceVivo {
   /** Relee el puerto y recompila ya (sin esperar al debounce). */
   recargar(): Promise<void>;
   codigo(): CodigoDelWorkspace;
-  /** Confirma el codigo de Temas: a partir de aqui se sirve. */
+  /** A partir de aqui se sirve el codigo de Temas. */
   confiar(): void;
   /** Deja de observar y cancela el debounce pendiente. */
   cerrar(): void;
 }
 
-/** Espera por defecto tras el ultimo cambio antes de recompilar (ms). */
 export const DEBOUNCE_MS = 150;
 
-/** Sin `compilarCodigo`: un Workspace sin codigo de Temas. */
 const SIN_CODIGO: ResultadoDeCodigo = { componentes: {}, issues: [], bundle: 'return {};' };
 
 const mismoTexto = (a: ArchivosDelWorkspace, b: ArchivosDelWorkspace): boolean => {
@@ -131,21 +108,20 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
 
   let version = 0;
   let archivos = puerto.leer().disco;
-  /** Recursos (`.tsx`, fuentes) del ultimo instante bueno y tipo del ultimo cambio empujado. */
+  /** Recursos (`.tsx`, fuentes) de la ultima Sesion buena. */
   let recursos = puerto.recursos();
   let cambio: TipoDeCambio | undefined;
   let codigo = compilarCodigo();
   let confiado = opciones.confiarEnCodigo ?? false;
   let actual: Sesion = abrirSesion(archivos, { ...opcionesDeSesion(recursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
-  /** Ultima Sesion sin errores de compilacion y los archivos con que se abrio. */
+  /** Ultima Sesion sin errores de compilacion. */
   let buena: { sesion: Sesion; archivos: ArchivosDelWorkspace } | undefined = actual.fuente === undefined ? undefined : { sesion: actual, archivos };
   let issues: Issue[] = await actual.diagnosticar();
-  /** Hashes por archivo de las ultimas versiones del estado (version -> archivo -> hash). */
+  /** version -> archivo -> hash. */
   const versiones = new Map<number, Record<string, string>>([[version, hashesDe(archivos)]]);
   let estado = construirEstado();
 
   const suscriptores = new Set<(estado: EstadoDeDev) => void>();
-  /** Historial de deshacer/rehacer del texto propio del Workspace (ADR 0007); vive con el Workspace vivo. */
   let historial: Historial | undefined;
 
   function construirEstado(): EstadoDeDev {
@@ -163,7 +139,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     };
   }
 
-  // Recompilaciones serializadas: si llega un cambio durante una, se repite al terminar y quien espera, espera a las dos.
+  // Si llega un cambio durante una recompilacion, se repite al terminar y quien espera, espera a las dos.
   let enCurso: Promise<void> | undefined;
   let pendiente = false;
   const recompilarUnaVez = async (): Promise<void> => {
@@ -216,7 +192,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     cancelarDebounce?.();
     cancelarDebounce = undefined;
   };
-  /** Tras escribir: recompila ya (sin esperar al debounce que dispara la propia escritura) y da la version nueva. */
+  /** No espera al debounce que dispara la propia escritura. */
   const recompilarTrasEscribir = async (): Promise<ResultadoDelWorkspaceVivo> => {
     cancelarPendiente();
     await recompilar();
@@ -230,7 +206,6 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     }, debounceMs);
   });
 
-  /** Cola simple: edicion, deshacer y rehacer se ejecutan una tras otra. */
   let cola: Promise<unknown> = Promise.resolve();
   const enCola = <T>(tarea: () => Promise<T>): Promise<T> => {
     const resultado = cola.then(tarea, tarea);
@@ -238,18 +213,18 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     return resultado;
   };
 
-  /** Restaura, sin interrumpirse por nuevos fallos, las `rutas` al texto de `origen` (o las borra si no existian). */
+  /** Mejor esfuerzo: un fallo no interrumpe el resto de `rutas`. */
   const revertir = (origen: ArchivosDelWorkspace, rutas: readonly string[]): void => {
     for (const ruta of rutas) {
       try {
         if (ruta in origen) puerto.escribir(ruta, origen[ruta] as string);
         else puerto.borrar(ruta);
       } catch {
-        // mejor esfuerzo: si el disco sigue fallando, el siguiente deshacer/rehacer detecta la diferencia y reinicia el historial
+        // si el disco sigue fallando, el siguiente deshacer/rehacer detecta la diferencia y reinicia el historial
       }
     }
   };
-  /** Deja los archivos propios con el texto de `destino` (escribe lo distinto o nuevo, borra lo sobrante); si falla a mitad revierte y relanza. */
+  /** Si falla a mitad, revierte y relanza. */
   const dejarEnDisco = (origen: ArchivosDelWorkspace, destino: ArchivosDelWorkspace): void => {
     const tocadas: string[] = [];
     try {
@@ -299,7 +274,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
         throw error;
       }
       if (!resultado.ok) return { ok: false, motivo: resultado.motivo, mensaje: resultado.mensaje, ...(resultado.file !== undefined && { file: resultado.file }) };
-      // Si el texto ya no es el del historial (se edito fuera de dev), el historial vuelve a empezar desde ahi.
+      // Si el texto ya no es el del historial (se edito fuera de dev), el historial vuelve a empezar.
       const despues = puerto.leer().propios;
       if (!mismoTexto(antes, despues)) {
         const base = historial !== undefined && mismoTexto(historial.archivos, antes) ? historial : crearHistorial(antes);

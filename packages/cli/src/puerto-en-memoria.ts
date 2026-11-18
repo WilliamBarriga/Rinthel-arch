@@ -1,22 +1,17 @@
-/**
- * Adaptador en memoria del puerto del Workspace vivo (`PuertoDelWorkspaceVivo`): extiende `workspaceEnMemoria` de
- * `sesion` (archivos propios y Temas de `--theme-path`) con los hashes de los recursos (`.tsx`, fuentes) y los
- * observadores. Toda escritura, borrado o cambio externo avisa a los observadores, como lo haria el watcher del disco.
- */
+/** Toda escritura, borrado o cambio externo avisa a los observadores, como el watcher del disco. */
 import { workspaceEnMemoria } from 'sesion';
 import type { ContenidoEnMemoria, WorkspaceEnMemoria } from 'sesion';
 
 import type { PuertoDelWorkspaceVivo } from './workspace-vivo';
 
 export interface WorkspaceVivoEnMemoria extends PuertoDelWorkspaceVivo, WorkspaceEnMemoria {
-  /** Cambio hecho fuera de `dev` (editor, git): escribe o, con `undefined`, borra un archivo propio y avisa. */
+  /** Cambio hecho fuera de `dev`; con `undefined` borra el archivo. */
   editarFuera(ruta: string, texto: string | undefined): void;
-  /** Cambia el hash de un recurso (`.tsx`, fuente) y avisa. */
   tocarRecurso(ruta: string, hash: string): void;
 }
 
 export interface ContenidoVivoEnMemoria extends ContenidoEnMemoria {
-  /** Hash de cada recurso; sin el, el adaptador no conoce recursos (`recursos()` da `undefined`). */
+  /** Sin el, `recursos()` da `undefined`. */
   recursos?: Record<string, string>;
 }
 

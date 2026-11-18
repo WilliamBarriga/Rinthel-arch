@@ -1,9 +1,4 @@
-/**
- * Compilacion del bloque `row` de un Tema (ADR 0009): la fila de una tabla ER. La pila de Capas de la fila y los
- * parches (`alternate`, `key pk|fk|uk`, `optional`) reutilizan los parches de Capa (`compilarBloque`); `height` y el
- * estilo de los textos (`name`, `type`, `key`) se validan contra el catalogo de `tema`. Un parche de fila solo pinta.
- * Aqui solo se traduce el AST y se situan los errores.
- */
+/** Bloque `row` de un Tema (fila de tabla ER). Un parche de fila solo pinta; las reglas son del catalogo de `tema`. */
 import { CODIGOS } from 'canonico';
 import { ALTO_DE_FILA, CLAVES_DE_FILA, ESTADOS, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA, aplicarOps, opTocaMetricas, parsearEstado, validarPropiedades } from 'tema';
 import type { CapaDeTema, OpDeCapa, TemaResuelto, TextoDeFila } from 'tema';
@@ -16,7 +11,7 @@ import type { Contexto } from './temas-comun';
 
 type Fila = NonNullable<TemaResuelto['fila']>;
 
-/** Aplica los `row { ... }` de un Tema sobre `tema.fila` (heredada del padre o vacia). Sin bloques, no hace nada. */
+/** Aplica los `row { ... }` sobre `tema.fila` (heredada del padre o vacia). */
 export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx: Contexto): void {
   if (items.length === 0) return;
   const fila: Fila = tema.fila ?? { capas: [], alterna: [], textos: {}, claves: {}, opcional: [], estados: {} };
@@ -27,7 +22,7 @@ export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx:
   const ops = compilarBloque(delBloque, { ...ctx, modo, candidatas: [fila.capas as CapaDeTema[]], origenes: new Map() });
   fila.capas = aplicarOps(fila.capas as CapaDeTema[], ops, tema.palette, modo).pila;
 
-  /** Parche de fila: contra la pila base de la fila; no puede cambiar la caja. */
+  /** Se valida contra la pila base de la fila; no puede cambiar la caja. */
   const parche = (hijos: readonly (ThemeLayer | ThemeUse)[], donde: { $cstNode?: { range: Parameters<typeof aRango>[0] } }): OpDeCapa[] => {
     const propios = compilarBloque(hijos, { ...ctx, modo: 'parchear', candidatas: [fila.capas as CapaDeTema[]], origenes: new Map() });
     for (const op of propios) {

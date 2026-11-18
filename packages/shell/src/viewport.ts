@@ -1,8 +1,4 @@
-/**
- * Filtrado por viewport: recorta una Vista resuelta a lo que cae dentro de la
- * camara. Puro, sin DOM. Las cajas de la geometria son relativas al Grupo
- * padre; aqui se pasan a coordenadas del lienzo para compararlas con la camara.
- */
+/** Recorte de una Vista resuelta a lo que cae en la camara; puro. Las cajas se comparan en coordenadas del lienzo. */
 import { idDeArista } from 'canonico';
 import type { AristaResuelta, NodoResuelto, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';

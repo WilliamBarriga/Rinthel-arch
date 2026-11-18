@@ -1,18 +1,14 @@
 /**
- * Estilo resuelto: la tabla de todo lo que el dibujo necesita saber de aspecto
- * (colores, fuentes, radios, trazos, halo, glifos y las Metricas
- * compartidas con `layout`). `resolverEstilo` lo deriva del Tema, valida el
- * contrato del Tema y es el unico sitio con defaults y numeros de dibujo: los
- * pintores solo leen de aqui. Pura.
+ * Estilo resuelto: todo lo que el dibujo necesita de aspecto (colores, fuentes, radios, trazos, halo, glifos y las
+ * Metricas compartidas con `layout`). `resolverEstilo` es el unico sitio con defaults y numeros de dibujo. Puro.
  */
 import type { Tema } from 'canonico';
 import { estiloResuelto, resolverTema, tablaUniforme } from 'tema';
 import type { CaraDeFuente, Estado, MedidasDeTexto, Metricas, Pintura, TablaDeMetricas, TipoDeDiagrama } from 'tema';
 
-/** Estado visual de un elemento dibujado, ademas de su aspecto normal. */
 export type EstadoVisual = Estado;
 
-/** Grosor minimo del anillo de foco: el nucleo lo garantiza, ningun Estilo lo quita (ADR 0008). */
+/** Grosor minimo (px) del anillo de foco: ningun Estilo lo quita. */
 export const ANILLO_DE_FOCO_MINIMO = 2;
 
 /** Contorno de un estado: color, grosor, trazo discontinuo opcional y opacidad. En `atenuado` solo cuenta `opacidad`: la del elemento entero. */

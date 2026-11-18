@@ -40,17 +40,13 @@ describe('VistaInteractiva: Fragmentos de secuencia', () => {
     const { container } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} measure={measure} width={1200} height={800} />);
     await waitFor(() => expect(container.querySelector('[data-fragment]')).not.toBeNull(), { timeout: 8000 });
 
-    // La pestana y la guarda se pidieron al medidor.
     expect(pedidos.map((t) => t.texto)).toEqual(expect.arrayContaining(['critical', '[reintentar hasta tres veces]']));
-    // La pestana mide al menos el texto medido del operador.
     const pestana = container.querySelector<HTMLElement>('[data-fragment-tab="1"]')!;
     expect(Number.parseFloat(pestana.style.width)).toBeGreaterThanOrEqual('critical'.length * 20);
-    // La guarda cabe en el marco.
     const marco = container.querySelector<HTMLElement>('[data-fragment="1"]')!;
     expect(Number.parseFloat(marco.style.width)).toBeGreaterThanOrEqual('[reintentar hasta tres veces]'.length * 20);
     expect(marco.getAttribute('data-operator')).toBe('critical');
 
-    // La guarda es texto SVG con el color del trazo de la Arista y va despues (encima) de las activaciones.
     const guarda = container.querySelector('[data-fragment-guard="1:0"]')!;
     expect(guarda.textContent).toBe('[reintentar hasta tres veces]');
     const activacion = container.querySelector('[data-activation="db"]')!;

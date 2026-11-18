@@ -1,17 +1,8 @@
 /**
- * Pintores de las Familias de efectos (sombra, glow, vidrio, filtro y
- * decoracion). Dos mitades:
- *
- * - `PINTORES_DE_EFECTOS`: declaraciones CSS que valen para todos los elementos
- *   (sombra, glow, vidrio, aro); entran en la hoja de estilo como el resto de
- *   Primitivas. Las que dependen de cada elemento devuelven `{}` aqui.
- *   Ambas salen de la tabla `EFECTOS`: un efecto nuevo es una entrada.
- * - `efectosDeElemento`: lo que si depende del elemento, con la semilla
- *   FNV-1a de su id y el nombre de la Capa (`tema/semilla`): el filtro de mano
- *   alzada, el giro y la cinta. Nunca lee el tamano de la caja ni el orden de
- *   render, asi redimensionar o colapsar no cambia el trazo.
- *
- * Todo solo pinta: puede sobresalir de la caja sin tocar las Metricas.
+ * Pintores de las Familias de efectos. `PINTORES_DE_EFECTOS` da las declaraciones de hoja comunes a todos los elementos
+ * (sombra, glow, vidrio, aro; `{}` para los demas); `efectosDeElemento`, lo que depende del elemento (mano alzada, giro,
+ * cinta...) con la semilla de su id y nombre de Capa, nunca del tamano ni del orden de render. Todo solo pinta: puede
+ * sobresalir de la caja sin tocar las Metricas.
  */
 import { fnv1a, giroDeCapa, semillaDeCapa } from 'tema';
 import type { CapaPintada, NombreDePrimitiva, PinturaDeNodo } from 'tema';
@@ -39,7 +30,6 @@ export interface EfectosDeElemento {
   encima: Elemento[];
 }
 
-/** Lo que un efecto por elemento necesita saber de su Capa y su elemento. */
 interface ContextoDeEfecto {
   estilo: Estilo;
   capas: PinturaDeNodo['capas'];
@@ -60,11 +50,7 @@ const alLado = (capa: CapaPintada, resultado: EfectosDeElemento, hijo: Elemento)
   (capa.encima === true ? resultado.encima : resultado.debajo).push(hijo);
 };
 
-/**
- * La unica tabla de efectos: anadir uno es anadir una entrada. De ella salen el nombre del efecto, el pintor
- * de hoja (`PINTORES_DE_EFECTOS`), el aplicador por elemento (`efectosDeElemento`) y los selectores de los
- * hijos que pintan (`REGLAS_DE_EFECTOS`).
- */
+/** Tabla de efectos: de ella salen `PINTORES_DE_EFECTOS`, `efectosDeElemento` y `REGLAS_DE_EFECTOS`. */
 const EFECTOS = {
   // Varias sombras se apilan (ver `declaracionesDeCaja`); blur 0 da la sombra dura.
   shadow: { hoja: ({ x, y, blur, spread, inset, color }) => ({ 'box-shadow': `${Number(inset) === 1 ? 'inset ' : ''}${px(x)} ${px(y)} ${px(blur)} ${px(spread)} ${css(color)}` }) },

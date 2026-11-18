@@ -263,7 +263,7 @@ describe('inspect tema: elementos de secuencia y fila', () => {
 
 describe('inspect tema: los Elementos declarados salen como antes de la derivacion', () => {
   const RAIZ_SECUENCIA = resolve(__dirname, 'fixtures/tema-secuencia');
-  /** Salida de `main` (antes de derivar Elementos) para el mismo Workspace: la referencia independiente. */
+  /** Salida grabada sin derivacion de Elementos para el mismo Workspace: la referencia independiente. */
   const deMain = (caso: string): string => readFileSync(resolve(__dirname, `fixtures/inspect-tema-main/t-${caso}.json`), 'utf8');
 
   it.each([

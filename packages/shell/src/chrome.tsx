@@ -1,8 +1,4 @@
-/**
- * Chrome del shell (pasos, breadcrumbs): sus colores y fuente salen del Estilo
- * resuelto como variables CSS en el contenedor, y su aspecto vive en clases. Un
- * Tema nuevo cambia las variables y el chrome sigue al Tema sin tocar las clases.
- */
+/** Chrome del shell: colores y fuente salen del Estilo resuelto como variables CSS del contenedor; el aspecto vive en clases. */
 import type { CSSProperties, ReactElement } from 'react';
 
 import type { Estilo } from 'render';
@@ -10,7 +6,6 @@ import type { Estilo } from 'render';
 import { CSS_DE_ACCESIBILIDAD } from './accesibilidad';
 import { CSS_DE_AVISOS } from './avisos';
 
-/** Variables CSS del chrome derivadas del Estilo resuelto. */
 export function variablesDeChrome(estilo: Estilo): CSSProperties {
   return {
     '--rd-fondo': estilo.fondo,

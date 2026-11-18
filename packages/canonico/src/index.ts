@@ -1,42 +1,10 @@
 /**
- * `canonico` — esquema, validacion y resolucion de la Fuente canonica.
- *
- * Invariantes: ids cualificados (`a.b.c`) definen jerarquia del Modelo (`padreDe`; sin
- * hijos huerfanos); extremos de Arista siempre existentes, y `nodo#atributo`
- * solo con un Atributo declarado en ese Nodo (distinto de un Nodo hijo);
- * `type` siempre declarado en `specification.nodeTypes`;
- * una Vista (`views`) tiene `type` architecture|flow y solo selecciona Nodos
- * (`resolveView`, que devuelve `undefined` si la Vista no existe), nunca define
- * entidades; sus `overrides` (label, pin, order, color) son solo presentacion (`pin` es relativo al
- * Grupo padre; `order` solo se almacena, sin efecto en v1: ADR 0003 prohibe `considerModelOrder`); un Grupo
- * colapsado (estado, `depth`, `collapsed`/`expanded`, `link`) eleva y fusiona las
- * Aristas de sus hijos; los `steps` de una Vista los interpreta `revealAt` (ADR 0002,
- * acumulativos, con fundido entre pasos); `IconProvider` resuelve claves de icono a SVG inline (`serializarIconos`/`hidratarIconos` lo llevan al navegador y de vuelta; `sanearIcono` filtra por lista blanca los SVG externos);
- * colores son nombres de Paleta, nunca valores hex (ADR 0002); el Tema (`themes`) es
- * un objeto ya resuelto, sin herencia, del que `canonico` solo conoce el sobre (`name`,
- * `palette`); su contenido y su contrato de dibujo son del paquete `tema` (ADR 0008).
- * La geometria cacheada por Vista (`geometriaCacheadaSchema`: `{ view, theme, layoutKey,
- * geometry }`) tiene aqui su esquema para validarla al leerla del disco; la calcula `layout`.
- * `geometry` es una union por `kind` (`grafo` o `secuencia`; sus tipos salen de este esquema y `layout` los reexporta); sin `kind` (cache anterior) se lee como `grafo`.
- * `VistaResuelta` es una union por `type` (Tipo de diagrama): grafo (`VistaDeGrafo`, con Aristas y
- * Pins) o secuencia (`VistaDeSecuencia`, con la Interaccion resuelta y Pasos con corte del tiempo).
- * Modos de error: validacion devuelve `issues` (datos), nunca lanza;
- * excepcion solo para fallos de uso o internos.
- * `validate(fuente, { iconos?, ubicar? })` devuelve los issues semanticos de una
- * Fuente ya armada (tipo de nodo, Aristas colgantes, Atributos, iconos, colores
- * de Paleta, Temas de Vista, overrides, drill-down y Pasos), ordenados. La Fuente
- * no guarda posiciones: `ubicar(ruta)` las aporta (ver `validar.ts`) y sin el los
- * issues salen en `(canonico):1:1` sin `fix`. No cubre sintaxis ni fusion (las
- * detecta `dsl`) ni `W_OVERLAPPING_PINS` (necesita la geometria; lo emite el CLI).
- * `candidatosCercanos(escrito, existentes)` es la ayuda de typos para `hint`/`fix`.
- * El Gesto de editar un Pin (ADR 0005) tiene aqui su vocabulario: `IntencionDePin`
- * (`mover-pin` sin `tipo`, validado por `intencionDePinSchema`) y
- * `MotivoDeRechazo` (`MOTIVOS_DE_RECHAZO`), del que deriva el enum `reason` de
- * `salidaDeEditSchema`; se declaran una sola vez y `sesion` los reexporta.
- * `intencionSchema`/`Intencion` es la union de Intenciones de `POST /api/edit` (ADR 0007) y
- * `estadoDeDevSchema`/`EstadoDeDev` el esquema unico del estado servidor-navegador de `dev`.
- * Configuracion requerida: ninguna. Solo importa paquetes anteriores en la
- * cadena `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`.
+ * `canonico`: esquemas Zod y tipos de la Fuente canonica, la Geometria cacheada, las Intenciones de edicion y las
+ * salidas JSON del CLI; `validate`, `resolveView`, `revealAt` e iconos (ADR 0002, 0003, 0005, 0007, 0008).
+ * Invariantes: ids cualificados `a.b.c` definen la jerarquia; colores son nombres de Paleta, nunca hex; del Tema
+ * solo conoce `name` y `palette`; una Vista solo selecciona Nodos.
+ * Errores: `validate` devuelve issues ordenados y nunca lanza; solo se lanza por fallos de uso o internos.
+ * Dependencias: solo `zod`; es el primero de `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`.
  */
 export {
   CARDINALIDADES_ER,

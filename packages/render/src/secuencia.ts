@@ -1,8 +1,6 @@
 /**
  * Escena de una Vista de secuencia (ADR 0009): Lifelines, activaciones, Mensajes, Fragmentos y Notas sobre la Geometria
- * `secuencia`. Las pilas de cada Elemento llegan ya resueltas en `estilo.pintura.secuencia` (declaradas por el Tema o
- * derivadas de `edge` y `node` en `tema`): aqui solo se leen. Las cabeceras de las Lifelines son los Nodos de la Vista,
- * dibujados como cualquier Nodo.
+ * `secuencia`, con las pilas ya resueltas en `estilo.pintura.secuencia`. Las cabeceras de las Lifelines son Nodos.
  */
 import { idDeElementoDeSecuencia } from 'canonico';
 import type { MensajeResuelto, NodoResuelto, VistaDeSecuencia, Visibilidad } from 'canonico';

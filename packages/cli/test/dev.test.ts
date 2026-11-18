@@ -1,7 +1,4 @@
-/**
- * Humo del enrutador HTTP de `dev`: rutas, Host/Origin, SSE y la traduccion de resultados a Estados HTTP.
- * El comportamiento (recarga, clasificacion, versiones, Historial, cola) se prueba en `workspace-vivo.test.ts`.
- */
+/** Humo del enrutador HTTP de `dev`; el comportamiento del estado vivo se prueba en `workspace-vivo.test.ts`. */
 import { request } from 'node:http';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';

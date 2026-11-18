@@ -1,8 +1,6 @@
 /**
- * Reordenar Lifelines por arrastre (ADR 0009): puro y sobre la `GeometriaSecuencia`. `unidadBajo` dice que se
- * agarra (una Lifeline por su cabecera, o un bloque: el titulo de un `box` o la Lifeline propia de un Grupo abierto)
- * y `ordenTrasArrastrar` el orden visible que resulta de soltarla `dx` mas alla. Una unidad solo se mueve entre sus
- * hermanas, dentro del `box` que la contiene (la Lifeline propia de ese Grupo se queda primera).
+ * Reordenar Lifelines por arrastre, puro sobre la `GeometriaSecuencia`. Una unidad (Lifeline o bloque de un `box`) solo
+ * se mueve entre sus hermanas dentro del `box` que la contiene, y la Lifeline propia de ese Grupo se queda primera.
  */
 import type { CajaDeGrupo } from 'canonico';
 import type { GeometriaSecuencia } from 'layout';

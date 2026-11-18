@@ -49,7 +49,6 @@ describe('Diagram: offset y grow de una Capa', () => {
     expect(regla).toContain('translate:4px -3px');
     expect(regla).toContain('z-index:-1'); // una sombra desplazada queda bajo el relleno de la tarjeta
     expect(regla).toContain('width:calc(100% + 2px);height:calc(100% + 2px)');
-    // La Capa sin desplazamiento sigue fusionada en la caja.
     expect(css).not.toMatch(/\.rd-nodo,[^{]*\{[^}]*translate/);
     expect(sinDesplazar).not.toContain('data-anim="sombra"');
     expect(geometry).toEqual(geometriaBase);

@@ -1,8 +1,3 @@
-/**
- * Ayuda del CLI: `diagrams --help`, `diagrams help [comando]` y `diagrams <comando> --help`.
- * Pura: devuelve texto; `index.ts` decide cuando mostrarlo. Sale con codigo 0 y va a stdout.
- */
-
 const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill'] as const;
 export type ComandoConAyuda = (typeof COMANDOS)[number];
 
@@ -110,7 +105,7 @@ Codigos de salida: 0 correcto, 1 hay errores del Workspace, 2 fallo de uso o int
 Guia completa: docs/guia/cli.md
 `;
 
-/** Texto de ayuda si `argv` la pide; `undefined` si no. */
+/** `undefined` si `argv` no pide ayuda (`--help`, `-h`, `help [comando]` o sin argumentos). */
 export function ayudaPara(argv: readonly string[]): string | undefined {
   const [comando, ...resto] = argv;
   const pide = (valor: string | undefined): boolean => valor === '--help' || valor === '-h';

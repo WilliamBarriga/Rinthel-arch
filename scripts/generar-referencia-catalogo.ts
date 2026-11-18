@@ -1,10 +1,6 @@
 /**
- * Escribe `docs/referencia-catalogo.md` desde el catalogo de `tema`.
- * Uso: `pnpm docs:catalogo` (necesita `pnpm build`). La prueba
- * `tests/referencia-catalogo.test.ts` falla si el archivo se desvia del catalogo.
- *
- * Interfaz: sin argumentos. Invariantes: salida determinista. Modo de error:
- * si falta el build de `tema`, el import falla con el error de Node.
+ * Escribe `docs/referencia-catalogo.md` desde el catalogo de `tema`, de forma determinista.
+ * Uso: `pnpm docs:catalogo`; necesita `pnpm build` (sin el, falla el import).
  */
 import { writeFileSync } from 'node:fs';
 

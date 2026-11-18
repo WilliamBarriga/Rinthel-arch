@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { fuenteCanonicaSchema, resolveView } from 'canonico';
 import type { EstadoDeColapso, VistaDeGrafo } from 'canonico';
 
-/** `resolveView` de una Vista de grafo: estas pruebas leen sus Aristas. */
 const resolverGrafo = (...args: Parameters<typeof resolveView>) => resolveView(...args) as VistaDeGrafo | undefined;
 
 const nodo = (id: string, children: unknown[] = []) => ({

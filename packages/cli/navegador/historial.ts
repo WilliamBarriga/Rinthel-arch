@@ -1,8 +1,4 @@
-/**
- * Atajos de deshacer/rehacer de la pagina de `diagrams dev` (ADR 0007), sin React ni DOM para poder
- * probarlos: traducen la tecla a una accion, la envian al servidor por el cliente de `dev` (que restaura el texto exacto) y
- * convierten un rechazo en aviso. No es parte de la interfaz del paquete.
- */
+/** Atajos de deshacer/rehacer de la pagina de `dev`, sin React ni DOM. */
 import { avisarRechazo } from './cliente';
 import type { ResultadoDeEnvio } from './cliente';
 
@@ -14,9 +10,9 @@ export interface TeclaPulsada {
   metaKey: boolean;
   shiftKey: boolean;
   altKey: boolean;
-  /** Tecla mantenida pulsada (autorepeticion): no dispara el atajo. */
+  /** Autorepeticion: no dispara el atajo. */
   repeat: boolean;
-  /** El foco esta en un campo de texto: ahi manda el deshacer propio del navegador. */
+  /** En un campo de texto manda el deshacer propio del navegador. */
   enCampoDeTexto: boolean;
 }
 
@@ -30,7 +26,6 @@ export function accionDeAtajo(t: TeclaPulsada): AccionDeHistorial | undefined {
 }
 
 export interface DependenciasDeAtajo {
-  /** `deshacer` o `rehacer` del cliente de `dev` segun la accion. */
   enviar: (accion: AccionDeHistorial) => Promise<ResultadoDeEnvio>;
   avisar: (texto: string) => void;
   recargar: () => Promise<void>;

@@ -1,13 +1,7 @@
 /**
- * Nucleo de interaccion: puro, sin DOM. Responde que hay bajo un punto del lienzo
- * (`elementoBajo`), donde esta cada elemento (`cajaDeElemento`) y modela la
- * Seleccion (`seleccionar`). `VistaActiva` solo traduce eventos de raton a puntos
- * y pinta lo que este modulo decide.
- *
- * Los puntos y cajas estan en coordenadas del lienzo (las de la Geometria). El
- * hit-test recorre la Vista completa: lo que el culling del viewport no dibuja
- * sigue siendo hallable. Orden de arriba a abajo, como dibuja `render`: etiqueta
- * de Arista, Arista (con `tolerancia`), Atributo, Nodo (el mas anidado gana).
+ * Nucleo de interaccion, puro y sin DOM; puntos y cajas en coordenadas del lienzo. El hit-test recorre la Vista
+ * completa (lo que el culling no dibuja sigue siendo hallable), de arriba a abajo como dibuja `render`: etiqueta de
+ * Arista, Arista (con `tolerancia`), Atributo, Nodo (el mas anidado gana).
  */
 import { destinoDeRef, idDeArista, idDeElementoDeSecuencia, leerIdDeElementoDeSecuencia } from 'canonico';
 import type { ItemResuelto, NodoResuelto, Tema, Vista, Visibilidad, VistaDeSecuencia, VistaResuelta } from 'canonico';
@@ -36,7 +30,7 @@ export interface OpcionesDeHitTest {
   visibilidad?: Visibilidad;
 }
 
-/** Lo que el hit-test lee de la Geometria; una de secuencia no tiene `edges` ni `labels` (sus Mensajes no son seleccionables todavia). */
+/** Lo que el hit-test lee de la Geometria; una de secuencia no tiene `edges` ni `labels`. */
 type Geo = Pick<Geometria, 'nodes'> & {
   edges?: Record<string, { points: Punto[] }>;
   labels?: Record<string, CajaDeNodo>;
@@ -110,7 +104,7 @@ export function elementoBajo(
 }
 
 /**
- * Acierto en secuencia (ADR 0009), de arriba a abajo: Mensaje (flecha o etiqueta), Nota, Lifeline (cabecera, linea o
+ * Acierto en secuencia, de arriba a abajo: Mensaje (flecha o etiqueta), Nota, Lifeline (cabecera, linea o
  * activacion), Fragmento (solo pestana y borde: el interior deja pasar el click) y fondo. Lo que los Pasos no
  * revelaron (`visibilidad` 0) no se acierta.
  */
@@ -184,7 +178,7 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
   return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
 }
 
-/** Seleccion: elementos en orden de seleccion, sin repetidos. */
+/** Elementos en orden de seleccion, sin repetidos. */
 export type Seleccion = readonly ElementoSeleccionable[];
 export const SELECCION_VACIA: Seleccion = [];
 

@@ -1,14 +1,4 @@
-/**
- * Ruta y foco de teclado: puro, sin DOM. El shell calcula aqui los estados
- * `en-ruta`, `atenuado` y `foco` (ADR 0008) y los entrega a `render` por la prop
- * `estados`; el Tema solo decide como se ven.
- *
- * - Foco: Nodos y Grupos visibles en orden del Modelo (`ordenDeFoco`); `moverFoco`
- *   avanza o retrocede en ese orden, o salta por Aristas al Nodo vecino.
- * - Ruta: una secuencia de Nodos. `rutaMasCorta` la halla entre dos Nodos (siguiendo
- *   la direccion de las Aristas y, si no hay camino, sin ella); `estadosDeRuta`
- *   marca `en-ruta` los Nodos y Aristas de la ruta y `atenuado` todo lo demas.
- */
+/** Ruta y foco de teclado, puro y sin DOM: los estados `en-ruta`, `atenuado` y `foco` que `render` recibe por `estados`. */
 import { idDeArista, idDeElementoDeSecuencia } from 'canonico';
 import type { AristaResuelta, VistaDeSecuencia, VistaResuelta } from 'canonico';
 import type { Estados, EstadoVisual } from 'render';
@@ -51,7 +41,7 @@ function vecinos(aristas: readonly AristaResuelta[], id: string, sinDireccion: b
   return aristas.flatMap((a) => (a.from.node === id ? [a.to.node] : sinDireccion && a.to.node === id ? [a.from.node] : []));
 }
 
-/** Ruta mas corta de Nodos entre `desde` y `hasta` (ambos incluidos), o `undefined` si no hay camino. */
+/** Ruta mas corta de Nodos entre `desde` y `hasta` (ambos incluidos), siguiendo la direccion de las Aristas y, si no hay camino, sin ella; `undefined` si tampoco. */
 export function rutaMasCorta(vista: VistaResuelta, desde: string, hasta: string): string[] | undefined {
   for (const sinDireccion of [false, true]) {
     const previo = new Map<string, string | undefined>([[desde, undefined]]);
@@ -107,7 +97,7 @@ const mensajesVisibles = (vista: VistaDeSecuencia, visible: (id: string) => bool
   vista.interaction.messages.map((m) => idDeElementoDeSecuencia(vista.interaction.id, m.ruta)).filter(visible);
 
 /**
- * Foco de teclado en secuencia (ADR 0009): `siguiente`/`anterior` (Tab) recorren las Lifelines visibles en orden de
+ * Foco de teclado en secuencia: `siguiente`/`anterior` (Tab) recorren las Lifelines visibles en orden de
  * columna y devuelven `undefined` al salirse por un extremo; `izquierda`/`derecha` pasan a la Lifeline vecina (desde un
  * Mensaje, a partir de su emisor); `abajo`/`arriba` recorren los Mensajes visibles en orden temporal (el foco pasa al
  * Mensaje). Lo no revelado por un Paso (`visible` falso) se salta. Sin foco previo, aterriza en la primera Lifeline.

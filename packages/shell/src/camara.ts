@@ -1,7 +1,4 @@
-/**
- * Camara del shell: encuadre inicial, conversion con la transformacion de
- * d3-zoom y compensacion al cambiar la geometria (ADR 0003). Sin estado.
- */
+/** Camara del shell: encuadre, conversion con d3-zoom y compensacion al cambiar la geometria. Sin estado. */
 import { zoomIdentity } from 'd3-zoom';
 import type { ZoomTransform } from 'd3-zoom';
 

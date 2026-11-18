@@ -1,9 +1,6 @@
 /**
- * Comando `inspect` del CLI (ADR 0005): `inspect <buscar|nodo|vista|interaccion|tema> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json]`.
- * `inspect tema <nombre> [--tipo T] [--estado E] [--catalogo]` resuelve la cascada de un Tema (enmienda de Temas).
- * Solo lectura. Salida: texto legible o, con `--json`, un objeto `salidaDeInspectSchema`
- * (su propio `contractVersion`). Codigos: 0 respuesta, 1 el Nodo/Vista no existe o el
- * Workspace tiene errores (mensaje en stderr, stdout vacio), 2 fallo de uso o interno.
+ * Comando `inspect`, solo lectura. Con `--json`, un objeto `salidaDeInspectSchema`.
+ * Codigos: 0 respuesta, 1 no existe o el Workspace tiene errores (mensaje en stderr, stdout vacio), 2 fallo de uso o interno.
  */
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';

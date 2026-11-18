@@ -1,9 +1,6 @@
 /**
- * Parches por nombre de Capa y cascada de cinco niveles (ADR 0008, 0009): Tema base,
- * Tipo de diagrama (`temaParaDiagrama`, antes de la cascada), Tipo de nodo, estado y
- * override de la Vista; el ultimo gana. Un parche
- * cambia una Capa existente, la anade (con `before`/`after`) o la quita
- * (`none`); nunca se dirige por indice. Puro y determinista.
+ * Parches por nombre de Capa (nunca por indice) y cascada: Tema base, Tipo de diagrama (`temaParaDiagrama`, antes de
+ * la cascada), Tipo de nodo, estado y override de la Vista; el ultimo gana.
  */
 import { CODIGOS, TIPOS_DE_VISTA, candidatosCercanos } from 'canonico';
 
@@ -12,31 +9,29 @@ import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva, UbicacionDePrim
 import type { TemaResuelto } from './tema';
 import type { Animacion } from './animacion';
 
-/** Estados de la cascada; `foco` y `en-ruta` los calcula la shell, el Tema solo decide como se ven. */
+/** `foco` y `en-ruta` los calcula la shell. */
 export const ESTADOS = ['hover', 'seleccionado', 'fantasma', 'en-ruta', 'atenuado', 'foco'] as const;
 export type Estado = (typeof ESTADOS)[number];
-/** Tipos de diagrama que un Tema puede distinguir con `diagram <tipo> { ... }` (ADR 0009): los mismos que las Vistas, `TIPOS_DE_VISTA` de canonico. */
-/** Tipos de diagrama que un Tema puede distinguir (los mismos que las Vistas: `TIPOS_DE_VISTA` de canonico) con `diagram <tipo> { ... }` (ADR 0009), aunque aun no todos tengan Vistas. */
+/** Los que un Tema distingue con `diagram <tipo> { ... }`. */
 export const TIPOS_DE_DIAGRAMA = TIPOS_DE_VISTA;
 export type TipoDeDiagrama = (typeof TIPOS_DE_VISTA)[number];
 
-/** Capa de la pila de un Nodo: instancia de una Primitiva, bajo el contenido salvo `encima`. */
+/** Va bajo el contenido salvo `encima`. */
 export interface CapaDeTema {
   nombre: string;
   primitiva: Primitiva;
   encima?: true;
-  /** Movimiento o `keyframes` de la Capa; nunca cambia las Metricas. */
   animacion?: Animacion;
 }
 
-/** Un parche de Capa tal como se escribe: ya con `$token` resueltos y la Capa por nombre. */
+/** Con `$token` ya resueltos. */
 export interface OpDeCapa {
   nombre: string;
   quitar?: true;
-  /** Si se da, sustituye la Primitiva de la Capa; si no, `props` se mezcla sobre las vigentes. */
+  /** Sustituye la Primitiva; sin ella, `props` se mezcla sobre las vigentes. */
   primitiva?: string;
   props: Record<string, string | number>;
-  /** Animacion ya validada de la Capa; `null` la quita (`motion none`), sin la clave se conserva. */
+  /** `null` la quita (`motion none`); sin la clave se conserva. */
   animacion?: Animacion | null;
   antes?: string;
   despues?: string;
@@ -44,18 +39,13 @@ export interface OpDeCapa {
 }
 
 export interface ErrorDeOp extends ErrorDeCatalogo {
-  /** Posicion del parche en la lista aplicada. */
   indice: number;
-  /** Que parte del parche es la culpable: su nombre o el destino de `before`/`after`. */
   donde: 'nombre' | 'ubicacion' | 'propiedad';
-  /** Capa de la pila que el parche toca, para `related` (ADR 0005). */
+  /** Capa de la pila que el parche toca. */
   base?: string;
 }
 
-/**
- * `definir` deja anadir Capas nuevas al final sin ubicacion (el primer bloque de un
- * Tema sin base); `parchear` exige `before`/`after` para toda Capa nueva.
- */
+/** `definir` anade Capas nuevas al final sin ubicacion; `parchear` exige `before`/`after` para toda Capa nueva. */
 export type ModoDeParche = 'definir' | 'parchear';
 
 export function aplicarOps(
@@ -131,12 +121,7 @@ export function aplicarOps(
   return { pila: capas, errores };
 }
 
-/**
- * Valida una lista de parches contra varias pilas posibles (un parche de estado
- * o de Vista se aplica sobre la pila de cada Tipo): devuelve los errores de la
- * pila que mejor los admite, de modo que un parche valido para algun Tipo no
- * se rechaza por otro.
- */
+/** Devuelve los errores de la pila que mejor admite los parches: uno valido para algun Tipo no se rechaza por otro. */
 export function validarOps(
   candidatas: ReadonlyArray<readonly CapaDeTema[]>,
   ops: readonly OpDeCapa[],
@@ -153,14 +138,11 @@ export function validarOps(
   return mejor ?? [];
 }
 
-/** Elemento cuya pila se resuelve: el Nodo o el Grupo (cada uno con su bloque en el Tema). */
 export type ElementoDeTema = 'nodo' | 'grupo';
 
 /**
- * Pila de Capas tras la cascada: Tema base, Tipo de nodo, `colapsado` (solo del Grupo), estado, override de
- * la Vista; el ultimo gana. Un parche que no encuentra su Capa en esta pila (p. ej. una Capa que solo anade
- * otro Tipo) no aplica a ella: `validate` ya lo acepto por existir en alguna. El override de la Vista solo
- * parchea la pila del Nodo.
+ * Orden: base, Tipo de nodo, `colapsado` (solo Grupo), estado, override de la Vista (solo Nodo); el ultimo gana.
+ * Un parche cuya Capa no esta en esta pila se ignora.
  */
 export function cascada(
   tema: Pick<TemaResuelto, 'palette' | 'nodo' | 'grupo'>,
@@ -176,12 +158,7 @@ export function cascada(
   return elemento === 'nodo' ? aplicar(porEstado, nivel.vista) : porEstado;
 }
 
-/**
- * Por que un parche de estado toca las Metricas, o `undefined` si solo pinta. Toca si
- * introduce una Primitiva que afecta a las Metricas (p. ej. `circle`) o si cambia o
- * quita una Capa cuya Primitiva las afecta. `pilas` son las pilas posibles sobre las
- * que se aplica (base y una por Tipo).
- */
+/** Motivo por el que un parche de estado toca las Metricas en alguna de `pilas`, o `undefined` si solo pinta. */
 export function opTocaMetricas(op: OpDeCapa, pilas: ReadonlyArray<readonly CapaDeTema[]>): string | undefined {
   const existente = pilas.flatMap((pila) => pila.filter((capa) => capa.nombre === op.nombre))[0];
   const afecta = (tipo: string | undefined): boolean => tipo !== undefined && ((CATALOGO as Record<string, DefinicionDePrimitiva>)[tipo]?.afectaMetricas ?? false);
@@ -191,12 +168,11 @@ export function opTocaMetricas(op: OpDeCapa, pilas: ReadonlyArray<readonly CapaD
   return afecta(existente?.primitiva.tipo) ? `la Capa '${op.nombre}' sustituye una forma que define la caja` : undefined;
 }
 
-/** Resultado de `parsearEstado`: el estado o el error `E_THEME_UNKNOWN_STATE` con sus candidatos cercanos. */
 export type ResultadoDeEstado =
   | { estado: Estado }
   | { error: { code: typeof CODIGOS.E_THEME_UNKNOWN_STATE; message: string; candidatos: string[] } };
 
-/** Unica busqueda de un estado por nombre (DSL, CLI): reconoce los de `ESTADOS` o sugiere los cercanos. */
+/** Error `E_THEME_UNKNOWN_STATE` con candidatos cercanos si no es de `ESTADOS`. */
 export function parsearEstado(escrito: string): ResultadoDeEstado {
   const estado = ESTADOS.find((e) => e === escrito);
   if (estado !== undefined) return { estado };

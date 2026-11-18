@@ -1,11 +1,6 @@
-/**
- * Colapso y expansion de Grupos (ADR 0003): funciones puras sin DOM. Alternar
- * un Grupo cambia el `EstadoDeColapso`. La camara vive en `camara.ts` y la
- * animacion en `morph.ts`.
- */
+/** Colapso y expansion de Grupos: funciones puras sin DOM. */
 import type { EstadoDeColapso, NodoResuelto, VistaResuelta } from 'canonico';
 
-/** Tope de Nodos visibles a la vez (ADR 0003: ~1k). */
 export const MAX_NODOS_VISIBLES = 1000;
 
 export function buscarNodo(vista: VistaResuelta, id: string): NodoResuelto | undefined {

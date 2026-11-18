@@ -1,20 +1,8 @@
 /**
- * Adaptador de compilacion de los Componentes de Tema (ADR 0008): lee los `.tsx`
- * del Workspace y los compila con esbuild. Es el unico lugar del CLI que toca
- * codigo del Workspace, y no lo ejecuta: solo lo transforma.
- *
- * `compiladorDeCodigo(raiz).compilar()` da, en un `ResultadoDeCodigo`:
- * - `componentes`: nombre -> interfaz (los exports con nombre en mayuscula de cada
- *   `.tsx`), el registro que `sesion` usa para comprobar la interfaz en `validate`;
- * - `issues`: errores de compilacion (`E_THEME_CODE_COMPILE`, con `file` y `line`
- *   del error) y componentes repetidos (`E_THEME_COMPONENT_DUPLICATE`);
- * - `bundle`: cuerpo de una funcion `(require) => exports` con todos los modulos en
- *   CommonJS, para que el navegador (`navegador/componentes.ts`) lo registre.
- *
- * Conserva el ultimo bueno de cada archivo: si un `.tsx` deja de compilar, su version
- * anterior sigue en `componentes` y `bundle` (el visor conserva el ultimo dibujo bueno) y el
- * error sale como issue. Memoiza por hash de contenido: un Workspace igual devuelve el mismo
- * objeto. Un Workspace inexistente o sin `.tsx` no tiene componentes ni issues.
+ * Compila con esbuild los `.tsx` de Componentes de Tema del Workspace; nunca los ejecuta.
+ * `componentes`: exports con nombre en mayuscula. `bundle`: cuerpo de una funcion `(require) => exports` en CommonJS.
+ * Si un `.tsx` deja de compilar, su ultima version buena sigue en `componentes` y `bundle` y el error sale como issue.
+ * Memoiza por hash de contenido. Un Workspace inexistente o sin `.tsx` no tiene componentes ni issues.
  */
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -42,7 +30,7 @@ const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist']);
 const EXTERNOS = ['react', 'react/jsx-runtime', 'react/jsx-dev-runtime'];
 const esComponente = (nombre: string): boolean => /^[A-Z][A-Za-z0-9_]*$/.test(nombre);
 
-/** Rutas de los `.tsx` bajo `raiz` (relativas, con `/`, ordenadas); vacio si la raiz no se puede leer. */
+/** Relativas, con `/`, ordenadas; vacio si la raiz no se puede leer. */
 function rutasDeTsx(raiz: string): string[] {
   const rutas: string[] = [];
   const visitar = (carpeta: string): void => {
@@ -84,7 +72,7 @@ const issueDeEsbuild = (mensaje: Message, rutaPorDefecto: string): Issue => ({
   message: `No compila el componente: ${mensaje.text}`,
 });
 
-/** Compila un `.tsx`: sus exports con nombre (build ESM) y su CommonJS para el navegador; o los errores de esbuild. */
+/** El build ESM da los exports; el CommonJS es el que carga el navegador. */
 function compilarArchivo(raiz: string, ruta: string): { modulo: ModuloCompilado } | { errores: Issue[] } {
   try {
     const esm = buildSync({ ...comunes(raiz, ruta), format: 'esm', metafile: true });
@@ -97,7 +85,6 @@ function compilarArchivo(raiz: string, ruta: string): { modulo: ModuloCompilado 
   }
 }
 
-/** Cuerpo de una funcion `(require) => exports` que une los modulos CommonJS de cada archivo. */
 const unirModulos = (modulos: ReadonlyArray<[string, ModuloCompilado]>): string =>
   [
     'var salida = {};',
@@ -112,7 +99,6 @@ const huellaDe = (raiz: string, rutas: readonly string[]): string => {
 };
 
 export function compiladorDeCodigo(raiz: string): { compilar(): ResultadoDeCodigo } {
-  /** Ultimo modulo bueno de cada archivo. */
   const buenos = new Map<string, ModuloCompilado>();
   let ultimo: { huella: string; resultado: ResultadoDeCodigo } | undefined;
   return {

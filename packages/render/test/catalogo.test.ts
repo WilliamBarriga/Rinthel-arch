@@ -26,7 +26,6 @@ describe('pintores del catalogo de formas, rellenos y bordes', () => {
   it('las formas se traducen a su contorno CSS', () => {
     expect(caja(['pill', {}])['border-radius']).toBe('9999px');
     expect(caja(['circle', {}])['border-radius']).toBe('50%');
-    // Corte simetrico arriba a la izquierda y abajo a la derecha; el borde y la sombra siguen el corte (sin clip-path).
     expect(caja(['cut', { cut: 12 }])).toEqual({ 'border-radius': '12px 0 12px 0', 'corner-shape': 'bevel' });
   });
 

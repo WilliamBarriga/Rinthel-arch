@@ -178,7 +178,7 @@ describe('ER: Pasos', () => {
     const paso = () => fireEvent.click(screen.getByRole('button', { name: 'Paso siguiente' }));
     const idFk = idDeArista(fuente.model.edges[0]!);
     const atras = () => fireEvent.click(screen.getByRole('button', { name: 'Paso anterior' }));
-    // Entra en el Paso 1 (ADR 0009): el Paso 0 la dejaria vacia.
+    // Entra en el Paso 1: el Paso 0 la dejaria vacia.
     expect(container.querySelector('[data-pasos]')?.textContent).toContain('Paso 1 de 2');
     expect(opacidad('a')).toBe('1');
     expect(opacidad('b')).toBe('1');

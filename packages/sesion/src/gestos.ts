@@ -1,8 +1,4 @@
-/**
- * Gestos: cada Intencion se reduce a "que ubicar y que texto escribir" (ADR 0007). El patron comun vive en
- * `gesto`: compilar, encontrar la Vista, describir la escritura, comprobar `visto`, insertar (en linea propia
- * o en linea antes de la llave de cierre) y auto-probar. Interno: se entra por `aplicarIntencion` o la puerta.
- */
+/** Gestos: cada Intencion se reduce a que ubicar y que texto escribir. Interno: se entra por `aplicarIntencion`. */
 import type { FuenteCanonica, IntencionDeOrden, IntencionDePin, Issue, TextRange, Ubicador } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace } from 'dsl';
@@ -10,25 +6,23 @@ import type { ArchivosDelWorkspace } from 'dsl';
 import { aplicarSobre, erroresPorClave, hashDeContenido, offsetDe, rechazo } from './ediciones';
 import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
 
-/** Resultado de un Gesto: los `archivos` nuevos, las `ediciones` aplicadas y los issues resultantes, o el rechazo. */
 export type ResultadoDeGesto = ResultadoDeEdicion<{
   archivos: ArchivosDelWorkspace;
   ediciones: EdicionConHash[];
   issues: Issue[];
 }>;
 
-/** Lo que vio quien emite una Intencion: archivo -> hash (`hashDeContenido`) de su texto. Sin entrada, se aplica sobre el vigente. */
+/** Archivo -> `hashDeContenido` del texto que vio quien emite la Intencion. Un archivo sin entrada se aplica sobre el vigente. */
 export type Visto = Readonly<Record<string, string>>;
 
 type Rechazo = Extract<ResultadoDeGesto, { ok: false }>;
 
 /**
- * Que escribe un Gesto en un archivo: `reemplazar` un rango por `por`, o `insertar` la sentencia `linea`
- * en el sitio vacio `en` (antes de una llave de cierre): en su propia linea si esa llave esta sola, en linea si no.
+ * `reemplazar` un rango por `por`, o `insertar` una sentencia en el sitio vacio `en` (antes de una llave de cierre):
+ * en su propia linea si esa llave esta sola, en la misma linea si no.
  */
 type Escritura = { file: string } & ({ reemplazar: TextRange; por: string } | { en: TextRange; insertar: string });
 
-/** Lo que un Gesto necesita para ubicar su escritura: la Vista declarada, su indice y el Ubicador. */
 interface Contexto {
   declarada: FuenteCanonica['views'][number];
   indice: number;
@@ -36,7 +30,6 @@ interface Contexto {
   texto: (file: string) => string;
 }
 
-/** Edicion de texto de una `Escritura`, con el hash del texto vigente del archivo. */
 function edicionDe(escritura: Escritura, texto: string): EdicionConHash {
   const { file } = escritura;
   const hash = hashDeContenido(texto);
@@ -51,10 +44,7 @@ function edicionDe(escritura: Escritura, texto: string): EdicionConHash {
   return { file, range: en, replacement: `${/\s$/.test(previo) ? '' : ' '}${insertar} `, hash };
 }
 
-/**
- * Patron comun de los Gestos: compila una vez, encuentra la Vista, pide a `describir` la escritura, comprueba
- * que `visto` (si lo hay) coincida con el archivo que toca y la auto-prueba (todo o nada). Paga 2 compilaciones del Workspace en total.
- */
+/** Comprueba `visto` contra el archivo que se toca y auto-prueba la edicion (todo o nada); 2 compilaciones en total. */
 function gesto(
   archivos: ArchivosDelWorkspace,
   vista: string,
@@ -85,13 +75,13 @@ function gesto(
   return { ok: true, archivos: aplicada.archivos, ediciones: [edicion], issues: aplicada.issues };
 }
 
-/** Limite de coordenadas de un Pin: enteros dentro de este rango (formato fijo del DSL escrito). */
+/** Las coordenadas de un Pin se escriben como enteros en [-LIMITE_DE_PIN, LIMITE_DE_PIN]. */
 const LIMITE_DE_PIN = 100_000;
 const coordenadaDePin = (n: number): number => Math.min(LIMITE_DE_PIN, Math.max(-LIMITE_DE_PIN, Math.round(n))) + 0;
 
 /**
- * Mover un Pin (ADR 0005): reemplaza el `pin` del override del Nodo, lo agrega a un override sin `pin`, o
- * inserta `node <id> { pin x,y }` antes de la `}` de la Vista. Un Nodo inexistente rechaza con `invalida`.
+ * Reemplaza el `pin` del override del Nodo, lo agrega a un override sin `pin`, o inserta `node <id> { pin x,y }`
+ * antes de la `}` de la Vista. Un Nodo inexistente rechaza con `invalida`.
  */
 export function moverPin(archivos: ArchivosDelWorkspace, intencion: IntencionDePin, visto?: Visto): ResultadoDeGesto {
   const { nodo } = intencion;
@@ -124,9 +114,8 @@ function ordenConOcultas(orden: readonly string[], viejo: readonly string[]): st
 }
 
 /**
- * Reordenar las Lifelines de una Vista de secuencia (ADR 0009): reescribe el `order` completo con el orden
- * visible (las entradas ocultas conservan su posicion relativa) o lo inserta antes de la `}` de la Vista; lo
- * escribe aunque coincida con la primera aparicion. Un id que no es Nodo rechaza con `invalida`.
+ * Reescribe el `order` completo de una Vista de secuencia (las entradas ocultas conservan su posicion relativa)
+ * o lo inserta antes de la `}` de la Vista, aunque coincida con la primera aparicion. Un id que no es Nodo rechaza con `invalida`.
  */
 export function ordenarLifelines(archivos: ArchivosDelWorkspace, intencion: IntencionDeOrden, visto?: Visto): ResultadoDeGesto {
   const { vista } = intencion;

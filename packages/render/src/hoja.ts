@@ -96,9 +96,8 @@ function declaracionesDeEstado(estilo: Estilo, estado: EstadoVisual): Declaracio
 }
 
 /**
- * Ancho del borde de la caja (px) que `reglasDeElemento` publica en `--rd-borde`: las hijas absolutas (Slots, iconos, zonas)
- * se colocan desde el borde interior, asi que se corren esa distancia para quedar en el rectangulo que reservo `layout`
- * (el borde grueso de un Tema ya no recorta la ultima fila).
+ * Variable con el ancho del borde de la caja (px): las hijas absolutas (Slots, iconos, zonas) se colocan desde el borde
+ * interior, asi que se corren esa distancia para quedar en el rectangulo que reservo `layout`.
  */
 export const VARIABLE_DE_BORDE = '--rd-borde';
 const anchoDeBorde = (declaraciones: Declaraciones): number => {
@@ -112,7 +111,6 @@ const CAJAS = ELEMENTOS.map((clave) => `& .rd-${clave}`).join(', ');
 /**
  * Pintura de un elemento (Nodo, Grupo abierto o colapsado): la caja de su pila base y de la de cada Tipo con parches
  * (`data-tipo`), el cambio que trae cada estado (`data-estados`), el radio del contorno de estado y el estilo de sus Slots.
- * Una sola ruta para los tres; solo cambia la pintura de la que parten.
  */
 function reglasDeElemento(estilo: Estilo, clave: (typeof ELEMENTOS)[number]): Array<[string, Declaraciones]> {
   const salida: Array<[string, Declaraciones]> = [];
@@ -249,9 +247,8 @@ function reglasDeTexto(caja: string, textos: PinturaDeNodo['textos'], fuenteMono
 const FORMATO_DE_FUENTE: Record<string, string> = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
 
 /**
- * `@font-face` de cada cara del Estilo, con la URL que entrega el consumidor (en `dev`, la ruta de fuentes
- * del servidor). `block` evita medir y pintar con la fuente de reserva y saltar despues (research `fuentes-tema`).
- * Global, no va bajo la clase de alcance: una cara es de la pagina.
+ * `@font-face` de cada cara del Estilo. `block` evita medir y pintar con la fuente de reserva y saltar despues.
+ * Global, sin clase de alcance: una cara es de la pagina.
  */
 export function hojaDeFuentes(caras: Estilo['caras'], urlDeFuente: (ruta: string) => string): string {
   return caras

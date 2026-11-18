@@ -1,6 +1,5 @@
 /**
- * `cli` — comandos `validate`, `build`, `skill`, `inspect`, `edit` y `dev` (opciones: `docs/guia/cli.md`).
- *
+ * `cli`: comandos `validate`, `build`, `skill`, `inspect`, `edit` y `dev` (opciones: `docs/guia/cli.md`).
  * Interfaz: `run(argv, dependencias?) -> { exitCode, stdout, stderr }`; no escribe en el proceso (`bin.ts` imprime).
  * Invariantes: unico paquete con I/O de disco; `validate` nunca reescribe y devuelve todos los issues ordenados.
  * Modos de error: issues como datos; fallo de uso o interno -> stderr, stdout vacio, codigo 2.
@@ -23,14 +22,13 @@ import { escribirSalida, escribirTexto, leerWorkspace } from './workspace';
 export { iniciarDev } from './dev';
 export type { OpcionesDeDev, ServidorDev } from './dev';
 
-/** Resultado de `run`: codigo de salida y textos que el binario imprime. */
 export type { ResultadoDeEjecucion };
 
-/** Dependencias que entran como argumento; por defecto, las reales. */
+/** Por defecto, las reales. */
 export interface Dependencias {
   leer?: (raiz: string) => ArchivosDelWorkspace;
   escribir?: (raiz: string, archivos: Readonly<Record<string, string | Uint8Array>>, subcarpeta?: string) => void;
-  /** Escribe un archivo de texto (con sus carpetas); lo usa `skill --out`. */
+  /** Crea las carpetas que falten. */
   escribirArchivo?: (ruta: string, texto: string) => void;
 }
 
@@ -52,20 +50,10 @@ function leerOpciones(args: readonly string[], propias: Record<string, { type: '
 }
 
 /**
- * Ejecuta un comando del CLI. `--help`, `-h`, `help [comando]` o sin argumentos dan el uso (codigo 0).
- * `validate` y `build` salen 1 con errores (con `--strict`, tambien con avisos); `--json` imprime
- * exactamente un objeto `salidaDeValidateSchema` (ADR 0005).
- * - `validate` suma `W_OVERLAPPING_PINS` (el solape solo se conoce tras ELK): calcula el layout de las
- *   Vistas con al menos dos Pins; las Vistas sin Pins no pagan layout.
- * - `build` escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`) en
- *   `<workspace>/.diagrams/`; con errores (o avisos en `--strict`) borra la salida anterior.
- * - `--theme` es el Tema global (una Vista con `theme` propio lo anula; sin ninguno, el neutro); uno no
- *   declarado sale 2. `--theme-path` se fusiona antes del Workspace, que gana en nombres repetidos.
- * - Los Temas con codigo (`.tsx`, ADR 0008) se compilan con esbuild sin ejecutarse: `validate`, `build` e
- *   `inspect` reciben los nombres de componente y los errores `E_THEME_CODE_COMPILE` (con file y line);
- *   `inspect tema` marca `temaConCodigo`.
- * - `skill` genera el skill de agente (a stdout o `--out`); `inspect`, `edit` y `dev` delegan en
- *   `comando-inspect.ts`, `comando-edit.ts` y `dev.ts`. Un comando desconocido o una opcion invalida salen 2.
+ * `--help`, `-h`, `help [comando]` o sin argumentos dan el uso (codigo 0). `validate` y `build` salen 1 con errores
+ * (con `--strict`, tambien con avisos); `--json` imprime exactamente un objeto `salidaDeValidateSchema`.
+ * `build` escribe en `<workspace>/.diagrams/` y, si falla, borra la salida anterior. Un `--theme` no declarado,
+ * un comando desconocido o una opcion invalida salen 2. Los `.tsx` de Temas se compilan sin ejecutarse.
  */
 export async function run(
   argv: readonly string[],
@@ -116,7 +104,6 @@ async function skill(
   const abierta = abrirSesionDe(leer, opciones.workspace);
   if ('fallo' in abierta) return abierta.fallo;
   const { sesion } = abierta;
-  // Sin catalogo valido no hay skill fiable: se muestran los issues, como `validate`.
   if (sesion.fuente === undefined) return { exitCode: 1, stdout: await textoDeIssues(sesion), stderr: '' };
   const texto = generarSkill(sesion.fuente);
   if (opciones.out === undefined) return { exitCode: 0, stdout: texto, stderr: '' };
@@ -166,7 +153,7 @@ async function ejecutar(
     return uso(`Error interno: la salida no cumple el contrato (${(error as Error).message})`);
   }
   if (comando === 'build') {
-    // Un build fallido borra la salida anterior: no debe quedar geometria obsoleta.
+    // Un build fallido borra la salida anterior para no dejar geometria obsoleta.
     try {
       escribir(raiz, salida.ok ? archivosDeSalida : {});
     } catch (error) {

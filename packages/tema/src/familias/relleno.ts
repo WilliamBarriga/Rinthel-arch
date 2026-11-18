@@ -1,4 +1,3 @@
-/** Familia relleno: lo que cubre la caja de un Nodo o la pagina. `solid` vive en `catalogo.ts`; aqui gradientes, patrones y ruido. */
 import type { DefinicionDePrimitiva } from '../catalogo';
 
 export const RELLENOS = {
@@ -14,10 +13,7 @@ export const RELLENOS = {
     afectaMetricas: false,
     propiedades: { from: { tipo: 'color' }, to: { tipo: 'color' }, x: { tipo: 'numero', min: -100, max: 200, defecto: 50 }, y: { tipo: 'numero', min: -100, max: 200, defecto: 50 } },
   },
-  /**
-   * Disco de borde nitido de radio `radius` (px) centrado en `x`/`y`: porcentaje de la caja o de la pagina, o px
-   * desde su esquina superior izquierda con `unit px`. Varias Capas `disc` dibujan composiciones de formas.
-   */
+  /** Disco de radio `radius` (px) centrado en `x`/`y`: porcentaje de la caja o pagina, o px desde su esquina superior izquierda con `unit px`. */
   disc: {
     familia: 'relleno',
     afectaMetricas: false,
@@ -49,7 +45,7 @@ export const RELLENOS = {
     afectaMetricas: false,
     propiedades: { color: { tipo: 'color' }, size: { tipo: 'numero', min: 4, max: 200, defecto: 12 }, radius: { tipo: 'numero', min: 1, max: 50, defecto: 2 } },
   },
-  /** Grano fractal: gris sin `color`; con `color`, grano de ese color (de Paleta: es una imagen aparte, `COLOR` no llega). */
+  /** Grano fractal: gris sin `color`. `color` es de Paleta: el grano es una imagen aparte y `COLOR` no llega. */
   noise: {
     familia: 'relleno',
     afectaMetricas: false,

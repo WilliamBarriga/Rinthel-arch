@@ -1,10 +1,4 @@
-/**
- * Piezas comunes de la compilacion de Temas (ADR 0008): el contexto de un bloque, como leer las
- * propiedades escritas de una Capa (resolver `$token` y situar la propiedad culpable de un error)
- * y como convertir un error de catalogo en Issue. `temas-capas`, `temas-arista` y `temas-slots`
- * traducen cada uno su parte del AST con estas mismas funciones; solo traducen y situan, las
- * reglas son del catalogo de `tema`.
- */
+/** Piezas comunes de la compilacion de Temas: contexto, propiedades escritas y errores de catalogo como Issue. */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
 import { TIPOS_DE_DIAGRAMA, construirPrimitiva, resolverTokens } from 'tema';
@@ -19,7 +13,6 @@ export interface ParteDeclarada {
   nombre: TextRange;
 }
 
-/** Lo minimo para compilar cualquier parte de un Tema: de donde viene, que Partes y Tokens ve, y donde dejar los errores. */
 export interface Contexto {
   archivo: string;
   partes: ReadonlyMap<string, ParteDeclarada>;
@@ -29,10 +22,8 @@ export interface Contexto {
 }
 
 /**
- * Propiedades escritas de una Capa como pares clave-valor para el catalogo.
- * `offset x y` (dos valores) se expande a `offset-x` y `offset-y`; un segundo
- * valor en cualquier otra clave se conserva en el valor para que el catalogo
- * lo rechace con su mensaje habitual.
+ * `offset x y` se expande a `offset-x` y `offset-y`; un segundo valor en cualquier otra clave se
+ * conserva en el valor para que el catalogo lo rechace.
  */
 export function propiedadesEscritas(props: readonly LayerProp[]): Array<{ clave: string; valor: string }> {
   return props.flatMap(({ key, value, second }) => {
@@ -42,11 +33,11 @@ export function propiedadesEscritas(props: readonly LayerProp[]): Array<{ clave:
   });
 }
 
-/** La propiedad escrita que origino `clave` (`offset-x` y `offset-y` salen de `offset`); sirve para situar un error. */
+/** La propiedad escrita que origino `clave` (`offset-x` y `offset-y` salen de `offset`). */
 export const propiedadDeClave = (props: readonly LayerProp[], clave: string): LayerProp | undefined =>
   props.find(({ key, second }) => key === clave || (key === 'offset' && second !== undefined && (clave === 'offset-x' || clave === 'offset-y')));
 
-/** Las propiedades de `lista` con sus `$token` sustituidos, cada una con la propiedad escrita (`ref`) que la origino, y los errores de token. */
+/** Sustituye los `$token`; cada propiedad conserva en `ref` la escrita que la origino. */
 export function propiedadesResueltas(lista: readonly LayerProp[], tokens: Readonly<Record<string, string>>): { props: Array<PropiedadEscrita<LayerProp>>; errores: ErrorDeCatalogo[] } {
   const { props, errores } = resolverTokens(propiedadesEscritas(lista), tokens);
   return {
@@ -58,7 +49,7 @@ export function propiedadesResueltas(lista: readonly LayerProp[], tokens: Readon
   };
 }
 
-/** Inicio de la propiedad culpable de un error: su clave si la propiedad no existe, su valor si existe pero no vale. */
+/** La clave si la propiedad no existe, el valor si existe pero no vale. */
 export const inicioDePropiedad = (prop: LayerProp, error: ErrorDeCatalogo): { line: number; column: number } =>
   rangoDe(prop, error.codigo === CODIGOS.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value').start;
 
@@ -66,7 +57,7 @@ export function aIssue(archivo: string, error: ErrorDeCatalogo, inicio: { line: 
   return { code: error.codigo, severity: 'error', file: archivo, ...inicio, message: error.mensaje, ...(error.hint !== undefined && { hint: error.hint }) };
 }
 
-/** Primitiva suelta (marcador, etiqueta, estilo de Slot) desde sus props escritas; deja los errores en `ctx.issues`. */
+/** Marcador, etiqueta o estilo de Slot; deja los errores en `ctx.issues`. */
 export function primitivaSuelta(
   tipo: string,
   props: readonly LayerProp[],
@@ -83,7 +74,7 @@ export function primitivaSuelta(
   return resueltas.errores.length === 0 && errores.length === 0 ? primitiva : undefined;
 }
 
-/** Tipo de diagrama de un bloque `diagram`, o `undefined` (con issue y `fix` por typo) si no es uno de `TIPOS_DE_DIAGRAMA`. */
+/** `undefined` (con issue y `fix` por typo) si no es uno de `TIPOS_DE_DIAGRAMA`. */
 export function nombreDeDiagrama(item: ThemeDiagram, archivo: string, issues: Issue[]): TipoDeDiagrama | undefined {
   const tipo = TIPOS_DE_DIAGRAMA.find((t) => t === item.name);
   if (tipo !== undefined) return tipo;

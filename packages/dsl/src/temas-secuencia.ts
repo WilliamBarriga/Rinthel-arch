@@ -1,9 +1,4 @@
-/**
- * Compilacion de los bloques de secuencia de un Tema (ADR 0009): `lifeline`, `activation`, `message`, `fragment` y
- * `note`. Un solo traductor para los cinco: lo que cada uno admite (Capas, marcadores, estilos de texto, variantes
- * `kind`/`op`, Metricas) lo dice `ESPECIFICACION_DE_SECUENCIA` de `tema`; las Capas reutilizan los parches de Capa
- * (`compilarBloque`). Aqui solo se traduce el AST y se situan los errores.
- */
+/** Bloques de secuencia de un Tema; lo que admite cada Elemento lo dice `ESPECIFICACION_DE_SECUENCIA` de `tema`. */
 import { CODIGOS } from 'canonico';
 import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA, aplicarOps, parsearEstado } from 'tema';
 import type { BloqueDeSecuencia, CapaDeTema, OpDeCapa, Primitiva, TemaResuelto } from 'tema';
@@ -19,7 +14,7 @@ type Marcadores = { origen?: Primitiva; fin?: Primitiva };
 
 const vacio = (): Bloque => ({ capas: [], textos: {}, parches: {}, estados: {}, metricas: {} });
 
-/** Aplica los bloques de secuencia de un Tema sobre `tema.secuencia` (heredada del padre). Sin bloques, no hace nada. */
+/** Aplica los bloques sobre `tema.secuencia` (heredada del padre). */
 export function compilarSecuencia(bloques: readonly ThemeSequence[], tema: TemaResuelto, ctx: Contexto): void {
   for (const nombre of BLOQUES_DE_SECUENCIA) {
     const delNombre = bloques.filter((b) => b.element === nombre);
@@ -51,7 +46,6 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
     if (primitiva !== undefined) destino[lado] = primitiva;
   };
 
-  // Pila base: el primer bloque la define; los siguientes (y los de un Tema hijo) la parchean.
   const modo = bloque.capas.length === 0 ? 'definir' : 'parchear';
   const ops = compilarBloque(capasDe(items), { ...ctx, modo, ubicacion: espec.capas, candidatas: [bloque.capas as CapaDeTema[]], origenes: new Map() });
   bloque.capas = aplicarOps(bloque.capas as CapaDeTema[], ops, tema.palette, modo, espec.capas).pila;

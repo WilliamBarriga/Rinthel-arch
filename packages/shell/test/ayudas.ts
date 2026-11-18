@@ -27,7 +27,6 @@ export function pulsarEn(contenedor: HTMLElement, x: number, y: number, init: Mo
   fireEvent.click(dibujo, { clientX: (x - vx) * k, clientY: (y - vy) * k, ...init });
 }
 
-/** Clic en el centro de un Nodo dibujado. */
 export function pulsarNodo(contenedor: HTMLElement, id: string, init: MouseEventInit = {}): void {
   const [x, y] = posicionDe(contenedor, id)!;
   const caja = contenedor.querySelector<HTMLElement>(`[data-id="${id}"]`)!;

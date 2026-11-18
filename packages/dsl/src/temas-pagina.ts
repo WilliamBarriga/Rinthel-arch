@@ -1,10 +1,4 @@
-/**
- * Compilacion del bloque `page` de un Tema (ADR 0008): el fondo de pagina es una
- * pila de rellenos que reutiliza los parches de Capa (`layer`, `use`,
- * `before`/`after`, `none`), validados contra los rellenos del catalogo de
- * `tema`; `fixed` lo deja fijo al visor. Hereda y se parchea como la pila de
- * la Arista.
- */
+/** Bloque `page` de un Tema: pila de rellenos validada contra el catalogo de `tema`; hereda como la de la Arista. */
 import { aplicarOps } from 'tema';
 import type { CapaDeTema, TemaResuelto } from 'tema';
 
@@ -13,7 +7,7 @@ import { compilarBloque } from './temas-capas';
 import type { ContextoDeBloque } from './temas-capas';
 import type { Contexto } from './temas-comun';
 
-/** Aplica los `page { ... }` de un Tema sobre `tema.pagina` (heredada del padre o vacia). */
+/** Aplica los `page { ... }` sobre `tema.pagina` (heredada del padre o vacia). */
 export function compilarPagina(items: readonly PageItem[], tema: TemaResuelto, ctx: Contexto & Pick<ContextoDeBloque, 'origenes'>): void {
   const delBloque = items.filter((item): item is ThemeLayer | ThemeUse => item.$type === 'ThemeLayer' || item.$type === 'ThemeUse');
   const modo = tema.pagina.capas.length === 0 ? 'definir' : 'parchear';
