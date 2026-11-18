@@ -154,9 +154,16 @@ view flujo {
     expect(leer(raiz)).toBe(SEC.replace('  interaction i\n}', '  interaction i\n  order db, cliente, api\n}'));
   });
 
-  it('con hash viejo rechaza con codigo 1 y sin escribir', async () => {
+  it('ignora un hash heredado en el JSON', async () => {
     const raiz = workspace(SEC);
-    const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db'], { hash: '000' }), '--json']);
+    const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db', 'cliente', 'api'], { hash: '000' })]);
+    expect(r.exitCode).toBe(0);
+    expect(leer(raiz)).toContain('order db, cliente, api');
+  });
+
+  it('con --hash viejo del archivo rechaza con codigo 1 y sin escribir', async () => {
+    const raiz = workspace(SEC);
+    const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db']), '--hash', 'main.dg=000', '--json']);
     expect(r.exitCode).toBe(1);
     expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'hash-desactualizado' });
     expect(leer(raiz)).toBe(SEC);

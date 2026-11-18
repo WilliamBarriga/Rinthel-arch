@@ -4,7 +4,7 @@ import type { ArchivosDelWorkspace } from 'dsl';
 import { aplicarEdiciones } from './ediciones';
 import type { EdicionConHash } from './ediciones';
 import { aplicarIntencion } from './intenciones';
-import type { Intencion } from './intenciones';
+import type { Intencion, Visto } from './intenciones';
 
 /**
  * Puerto del Workspace en disco (adaptador en `cli`; fake en memoria en las pruebas).
@@ -33,16 +33,17 @@ const cambiadosEntre = (antes: ArchivosDelWorkspace, despues: ArchivosDelWorkspa
 
 /**
  * Puerta de escritura unica del Workspace (ADR 0005, ADR 0007): lee fresco por el puerto, aplica una Intencion
- * (con `aplicarIntencion`: calcular, auto-probar, aplicar en memoria) o una lista de ediciones estructuradas
- * (cada una con el hash del archivo que vio quien la pide) y escribe solo los archivos propios que cambian.
+ * (con `aplicarIntencion`: calcular, auto-probar, aplicar en memoria; `visto` opcional es el mapa archivo -> hash
+ * de lo que vio quien emite y rechaza con `hash-desactualizado` si el archivo que cambia difiere) o una lista de ediciones estructuradas
+ * (cada una con su propio hash; `visto` no aplica) y escribe solo los archivos propios que cambian.
  * Todo o nada: un rechazo no escribe nada. Un archivo ajeno al Workspace (p. ej. de `--theme-path`) que
  * cambiaria se rechaza como `archivo-desconocido`. Los fallos de I/O del puerto se propagan.
  */
-export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, aplicable: Aplicable): ResultadoDeAplicar {
+export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, aplicable: Aplicable, visto?: Visto): ResultadoDeAplicar {
   const { disco, propios } = puerto.leer();
   const r = esListaDeEdiciones(aplicable)
     ? { ...aplicarEdiciones(disco, aplicable), ediciones: [...aplicable] }
-    : aplicarIntencion(disco, aplicable);
+    : aplicarIntencion(disco, aplicable, visto);
   if (!r.ok) return { ok: false, motivo: r.motivo, mensaje: r.mensaje, ...(r.file === undefined ? {} : { file: r.file }) };
   const cambiados = cambiadosEntre(disco, r.archivos);
   const fuera = cambiados.find((f) => !(f in propios));

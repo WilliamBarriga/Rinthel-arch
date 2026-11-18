@@ -483,13 +483,12 @@ view s { type sequence
 
       const malformados = [
         { vista: 'general', nodo: 'api', x: '10', y: 2, hash: 'h' },
-        { vista: 'general', nodo: 'api', x: 10, y: 2 },
         { vista: 'general', nodo: 7, x: 10, y: 2, hash: 'h' },
       ];
       for (const cuerpo of malformados) {
         const res = await post(servidor, cuerpo);
         expect(res.status).toBe(400);
-        expect(await res.json()).toEqual({ ok: false, mensaje: 'Se esperaba { vista, nodo, x, y, hash }' });
+        expect(await res.json()).toEqual({ ok: false, mensaje: 'Se esperaba { vista, nodo, x, y }' });
       }
 
       const json = await fetch(`${servidor.url}api/pin`, {

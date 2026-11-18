@@ -18,8 +18,6 @@ export const intencionDePinSchema = z.object({
   /** Coordenada relativa al Grupo padre, como la escribe el DSL del `pin x,y`. */
   x: z.number().finite(),
   y: z.number().finite(),
-  /** `hashDeContenido` del archivo que contiene la Vista, tal como lo vio el llamador. */
-  hash: z.string(),
 });
 
 export type IntencionDePin = z.infer<typeof intencionDePinSchema>;
@@ -49,8 +47,6 @@ export type MotivoDeRechazo = (typeof MOTIVOS_DE_RECHAZO)[number];
 export const intencionDeOrdenSchema = z.object({
   vista: z.string(),
   orden: z.array(z.string()).min(1),
-  /** `hashDeContenido` del archivo que contiene la Vista, tal como lo vio el llamador. */
-  hash: z.string(),
 });
 
 export type IntencionDeOrden = z.infer<typeof intencionDeOrdenSchema>;

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { idDeArista } from 'canonico';
 import { layoutView } from 'layout';
-import { abrirSesion, crearHistorial, deshacer, editarEnHistorial, hashDeContenido } from 'sesion';
+import { abrirSesion, crearHistorial, deshacer, editarEnHistorial } from 'sesion';
 import type { Historial, Intencion } from 'sesion';
 import { VistaInteractiva } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -129,7 +129,7 @@ describe('ER: arrastrar una tabla', () => {
         return h !== undefined;
       },
     };
-    const onMoveNode = vi.fn(({ id, x, y }: { id: string; x: number; y: number }) => control.aplicar({ tipo: 'mover-pin', vista: 'v', nodo: id, x, y, hash: hashDeContenido(control.archivos()['main.dg']!) }).ok);
+    const onMoveNode = vi.fn(({ id, x, y }: { id: string; x: number; y: number }) => control.aplicar({ tipo: 'mover-pin', vista: 'v', nodo: id, x, y }).ok);
     const { container } = await montarTablas({ onMoveNode, camera: { x: 0, y: 0, width: 900, height: 600 } });
     const cabecera = container.querySelector('[data-id="a"] [data-part="nodo"]')!;
     const gesto = (d: Element | Window, tipo: string, cx: number, cy: number) => {

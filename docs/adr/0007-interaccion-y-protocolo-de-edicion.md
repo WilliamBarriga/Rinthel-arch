@@ -8,7 +8,7 @@ La interfaz de red no cambia: el cuerpo de `POST /api/pin` sigue siendo `Intenci
 
 ## Reductor puro
 
-`aplicarIntencion(archivos, intencion, visto?)` devuelve los archivos nuevos o un rechazo con `motivo` (`MotivoDeRechazo`). Es puro: sin disco, reloj ni DOM, probado sin jsdom. `mover-pin` reutiliza `editarPin` como juntura (calculo de la edicion minima, auto-prueba y aplicacion en memoria). `visto` es un mapa archivo -> hash del texto que vio quien emite la Intencion. Se rechaza con `hash-desactualizado` solo si algun archivo que la edicion cambia difiere de `visto`; los archivos que no toca no cuentan. Sin `visto`, la Intencion se aplica sobre el texto vigente. El texto del DSL sigue siendo la unica fuente editable (ADR 0001): una Intencion siempre se reduce a ediciones de texto.
+`aplicarIntencion(archivos, intencion, visto?)` devuelve los archivos nuevos o un rechazo con `motivo` (`MotivoDeRechazo`). Es puro: sin disco, reloj ni DOM, probado sin jsdom. `mover-pin` es un Gesto interno de `sesion` (calculo de la edicion minima, auto-prueba y aplicacion en memoria). `visto` es un mapa archivo -> hash del texto que vio quien emite la Intencion. Se rechaza con `hash-desactualizado` solo si algun archivo que la edicion cambia difiere de `visto`; los archivos que no toca no cuentan. Sin `visto`, la Intencion se aplica sobre el texto vigente. La puerta de escritura es `aplicarAlWorkspace(puerto, aplicable, visto?)`; hasta el Workspace vivo, `dev` arma `visto` con el `hash` que aun manda la pagina en el cuerpo y `diagrams edit` con `--hash <archivo>=<hash>`. El texto del DSL sigue siendo la unica fuente editable (ADR 0001): una Intencion siempre se reduce a ediciones de texto.
 
 ## Historial de deshacer y rehacer
 
@@ -26,4 +26,4 @@ La interfaz de red no cambia: el cuerpo de `POST /api/pin` sigue siendo `Intenci
 
 ## Enmienda: `pin x,y` es el centro del Nodo (#26, spec #24)
 
-Las coordenadas de `IntencionDePin`, de `mover-pin` y del `pin x,y` escrito en el DSL son las del **centro** del Nodo, relativas a su Grupo padre (ADR 0003, ADR 0008). El Gesto de mover (`onMoveNode` en `shell`) avisa el centro de la caja soltada; `editarPin` sigue escribiendo la `Intencion` tal cual, sin conocer tamanos. La forma de las interfaces de red y de `edit --json` no cambia.
+Las coordenadas de `IntencionDePin`, de `mover-pin` y del `pin x,y` escrito en el DSL son las del **centro** del Nodo, relativas a su Grupo padre (ADR 0003, ADR 0008). El Gesto de mover (`onMoveNode` en `shell`) avisa el centro de la caja soltada; el Gesto `mover-pin` sigue escribiendo la `Intencion` tal cual, sin conocer tamanos. La forma de las interfaces de red y de `edit --json` no cambia.

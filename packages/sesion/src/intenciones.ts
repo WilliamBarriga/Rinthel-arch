@@ -3,7 +3,7 @@ import type { ArchivosDelWorkspace } from 'dsl';
 
 import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
 import { moverPin, ordenarLifelines } from './gestos';
-import type { ResultadoDeGesto } from './gestos';
+import type { ResultadoDeGesto, Visto } from './gestos';
 
 /**
  * Intencion de edicion: union discriminada por `tipo`, declarada en `canonico`
@@ -11,23 +11,25 @@ import type { ResultadoDeGesto } from './gestos';
  * en `aplicarIntencion`. Hoy: mover un Pin y ordenar las Lifelines de una secuencia.
  */
 export type { Intencion };
+export type { Visto };
 
 /** Resultado de `aplicarIntencion`: los `archivos` nuevos y las `ediciones` aplicadas, o el rechazo. */
 export type ResultadoDeIntencion = ResultadoDeGesto;
 
 /**
  * Reductor puro: Intencion sobre el mapa de archivos -> mapa nuevo o rechazo con `motivo`. Cada rama es un
- * Gesto de `gestos.ts` (que ubicar y que texto escribir); no escribe: para eso esta `aplicarAlWorkspace`.
+ * Gesto de `gestos.ts` (que ubicar y que texto escribir). `visto` (archivo -> hash del texto que vio quien emite) rechaza con
+ * `hash-desactualizado` si el archivo que cambia difiere; los demas no cuentan y sin `visto` aplica sobre el vigente. No escribe: para eso esta `aplicarAlWorkspace`.
  */
-export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Intencion): ResultadoDeIntencion {
+export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Intencion, visto?: Visto): ResultadoDeIntencion {
   switch (intencion.tipo) {
     case 'mover-pin': {
       const { tipo: _tipo, ...pin } = intencion;
-      return moverPin(archivos, pin);
+      return moverPin(archivos, pin, visto);
     }
     case 'ordenar-lifelines': {
       const { tipo: _tipo, ...orden } = intencion;
-      return ordenarLifelines(archivos, orden);
+      return ordenarLifelines(archivos, orden, visto);
     }
   }
 }

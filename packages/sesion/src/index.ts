@@ -14,7 +14,7 @@ export { aplicarAlWorkspace } from './aplicar';
 export type { Aplicable, PuertoDeWorkspace, ResultadoDeAplicar } from './aplicar';
 export { aplicarIntencion, apilar, crearHistorial, deshacer, editarEnHistorial, rehacer } from './intenciones';
 export type { Consulta, Respuesta } from './consultas';
-export type { Historial, Intencion, ResultadoDeIntencion } from './intenciones';
+export type { Historial, Intencion, ResultadoDeIntencion, Visto } from './intenciones';
 // Vocabulario del Gesto: se declara en `canonico` y se reexporta aqui.
 export type { IntencionDePin, MotivoDeRechazo } from 'canonico';
 export type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
