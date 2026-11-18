@@ -13,6 +13,7 @@ import type { NombreDePrimitiva, NombreDeSlot, Primitiva, UbicacionDePrimitiva }
 import { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, esCaja } from './disposicion';
 import type { CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA } from './secuencia';
+import { FORMAS_DE_PASTILLA, RADIO_DE_TABLA } from './derivacion';
 import { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA } from './fila';
 import { ESTADOS, TIPOS_DE_DIAGRAMA, aplicarOps, opTocaMetricas, validarOps } from './parches';
 import type { CapaDeTema, OpDeCapa, TipoDeDiagrama } from './parches';
@@ -477,9 +478,7 @@ const aplicarSinErrores = (base: CapaDeTema[], ops: Parameters<typeof aplicarOps
 
 export type TemaResuelto = z.output<typeof temaResueltoSchema>;
 
-/** Formas que no dibujan una tabla ER (recortan las filas): en `er` se derivan como `rect` con radio acotado (ADR 0009). */
-const FORMAS_DE_PASTILLA: readonly string[] = ['pill', 'circle'];
-const RADIO_DE_TABLA = 8;
+/** Tabla ER (ADR 0009): una forma `pill` o `circle` (recortan las filas) se deriva en `er` como `rect` con radio acotado. */
 const comoTabla = (capa: TemaResuelto['nodo']['capas'][number]): TemaResuelto['nodo']['capas'][number] =>
   FORMAS_DE_PASTILLA.includes(capa.primitiva.tipo) ? { ...capa, primitiva: { tipo: 'rect', props: { radius: RADIO_DE_TABLA } } } : capa;
 

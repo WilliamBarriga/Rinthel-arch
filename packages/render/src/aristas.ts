@@ -5,7 +5,7 @@
  * Arista solo cuenta la caja de la etiqueta). Cada marcador es una forma
  * explicita girada hacia la ruta, sin `<marker>` ni ids que compartir.
  */
-import type { NombreDePrimitivaEn, PinturaDeArista, PrimitivaPintada } from 'tema';
+import type { NombreDePrimitivaEn, PrimitivaPintada, TrazoDeVariante } from 'tema';
 
 import { huella, num } from './elemento';
 import type { Elemento } from './elemento';
@@ -69,7 +69,7 @@ export function rutaDeCapa(capa: { props: Props }, puntos: readonly Punto[]): st
 }
 
 /** La pila de trazos, de abajo hacia arriba: un trazo ancho y translucido bajo el principal es el glow. */
-export function pintarTrazos(pintura: PinturaDeArista, puntos: readonly Punto[], semilla = 0): Elemento[] {
+export function pintarTrazos(pintura: TrazoDeVariante, puntos: readonly Punto[], semilla = 0): Elemento[] {
   return pintura.capas.map((capa) => {
     const { color, width, style } = capa.props as Props & { style: string };
     const grosor = Number(width);
@@ -170,7 +170,7 @@ function marcador(estilo: Estilo, primitiva: PrimitivaPintada | undefined, extre
 }
 
 /** Marcadores de origen y fin, girados segun el primer y el ultimo segmento de la ruta. */
-export function pintarMarcadores(estilo: Estilo, pintura: PinturaDeArista, puntos: readonly Punto[]): Elemento[] {
+export function pintarMarcadores(estilo: Estilo, pintura: TrazoDeVariante, puntos: readonly Punto[]): Elemento[] {
   const [primero, segundo] = [puntos[0], puntos[1]];
   const [ultimo, penultimo] = [puntos[puntos.length - 1], puntos[puntos.length - 2]];
   if (primero === undefined || segundo === undefined || ultimo === undefined || penultimo === undefined) return [];

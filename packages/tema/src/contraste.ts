@@ -9,7 +9,7 @@ import { CATALOGO, definicionDe, primitivasDeFamilia } from './catalogo';
 import type { DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
 import { hexARgb } from './color';
 import { estiloResuelto } from './estilo';
-import { capasDeAristaEr, pinturaDeMensajeConTema } from './mensajes';
+import { capasDeAristaEr } from './mensajes';
 import { muestra } from './contenido';
 import { resolverTema } from './tema';
 import type { CapaPintada, PrimitivaPintada } from './estilo';
@@ -180,7 +180,8 @@ function paresSoloColor<T extends string>(nombres: readonly T[], pintura: (nombr
  */
 export function mensajesSoloColor(tema: Tema, tipos: readonly TipoDeMensaje[]): Array<[TipoDeMensaje, TipoDeMensaje]> {
   const estilo = estiloResuelto(tema, { diagrama: 'sequence' });
-  return paresSoloColor(tipos, (kind) => pinturaDeMensajeConTema(estilo.pintura.secuencia, estilo.pintura.arista, undefined, kind));
+  const { tipos: porTipo } = estilo.pintura.secuencia!.mensaje.base;
+  return paresSoloColor(tipos, (kind) => porTipo[kind]!);
 }
 
 /** El Tema pinta las Aristas identificantes y las no identificantes de una Vista ER iguales salvo el color. */
