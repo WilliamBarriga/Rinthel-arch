@@ -9,7 +9,7 @@
  * sigue siendo hallable. Orden de arriba a abajo, como dibuja `render`: etiqueta
  * de Arista, Arista (con `tolerancia`), Atributo, Nodo (el mas anidado gana).
  */
-import { destinoDeRef, idDeArista } from 'canonico';
+import { destinoDeRef, idDeArista, idDeElementoDeSecuencia, leerIdDeElementoDeSecuencia } from 'canonico';
 import type { ItemResuelto, NodoResuelto, Tema, Vista, Visibilidad, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria, Punto } from 'layout';
@@ -117,7 +117,7 @@ export function elementoBajo(
 function elementoBajoEnSecuencia(vista: VistaResuelta, geometria: Geo, punto: Punto, tolerancia: number, visibilidad: Visibilidad): ElementoSeleccionable | undefined {
   const interaccion = vista.interaction?.id ?? '';
   const visible = (id: string): boolean => visibilidad(id) > 0;
-  const idDe = (ruta: string): string => `${interaccion}:${ruta}`;
+  const idDe = (ruta: string): string => idDeElementoDeSecuencia(interaccion, ruta);
 
   const mensajes = Object.entries(geometria.messages ?? {}).filter(([ruta]) => visible(idDe(ruta)));
   for (const [ruta, { points, label }] of mensajes.reverse()) {
@@ -165,7 +165,7 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
     return { x: caja.x + fila.x, y: caja.y + fila.y, width: fila.width, height: fila.height };
   }
   if (elemento.tipo === 'mensaje' || elemento.tipo === 'nota' || elemento.tipo === 'fragmento') {
-    const ruta = elemento.id.slice((vista.interaction?.id.length ?? 0) + 1);
+    const ruta = rutaDeElemento(vista, elemento.id) ?? '';
     if (elemento.tipo === 'nota') return geometria.notes?.find((n) => n.ruta === ruta);
     if (elemento.tipo === 'fragmento') return geometria.fragments?.find((m) => m.ruta === ruta);
     const puntos = geometria.messages?.[ruta]?.points ?? [];
@@ -218,6 +218,12 @@ export function elementoPorId(vista: VistaResuelta, id: string): ElementoSelecci
   return { tipo: id.includes('#') ? 'atributo' : 'nodo', id };
 }
 
+/** Ruta del elemento `id` dentro de la Interaccion de la Vista; `undefined` si `id` no es de esa Interaccion. */
+function rutaDeElemento(vista: VistaResuelta, id: string): string | undefined {
+  const leido = leerIdDeElementoDeSecuencia(id);
+  return leido !== undefined && leido.operando === undefined && leido.interaccion === vista.interaction?.id ? leido.ruta : undefined;
+}
+
 function itemsAplanados(items: readonly ItemResuelto[]): ItemResuelto[] {
   return items.flatMap((item) => (item.type === 'fragment' ? [item, ...item.operands.flatMap((o) => itemsAplanados(o.items))] : [item]));
 }
@@ -225,8 +231,8 @@ function itemsAplanados(items: readonly ItemResuelto[]): ItemResuelto[] {
 /** Mensaje, Fragmento (o `ref`) o Nota que nombra `interaccion:ruta` en una Vista de secuencia. */
 function elementoDeSecuencia(vista: VistaResuelta, id: string): ElementoSeleccionable | undefined {
   const interaccion = vista.interaction;
-  if (interaccion === undefined || !id.startsWith(`${interaccion.id}:`)) return undefined;
-  const ruta = id.slice(interaccion.id.length + 1);
+  const ruta = rutaDeElemento(vista, id);
+  if (interaccion === undefined || ruta === undefined) return undefined;
   const item = itemsAplanados(interaccion.items).find((i) => (i.type === 'message' ? i.message.ruta : i.ruta) === ruta);
   if (item === undefined) return undefined;
   return { tipo: item.type === 'message' ? 'mensaje' : item.type === 'note' ? 'nota' : 'fragmento', id };
@@ -238,8 +244,8 @@ function elementoDeSecuencia(vista: VistaResuelta, id: string): ElementoSeleccio
  */
 export function destinoDeNavegacionPorRef(vista: VistaResuelta, actual: string, vistas: readonly Pick<Vista, 'id' | 'type' | 'interaction'>[], id: string): string | undefined {
   const interaccion = vista.interaction;
-  if (interaccion === undefined || !id.startsWith(`${interaccion.id}:`)) return undefined;
-  const ruta = id.slice(interaccion.id.length + 1);
+  const ruta = rutaDeElemento(vista, id);
+  if (interaccion === undefined || ruta === undefined) return undefined;
   const item = itemsAplanados(interaccion.items).find((i) => i.type === 'ref' && i.ruta === ruta);
   if (item === undefined || item.type !== 'ref') return undefined;
   const destino = destinoDeRef(vistas, item.interaction);
