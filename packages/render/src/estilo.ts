@@ -71,11 +71,11 @@ export interface Estilo {
  * con un mensaje que nombra cada ruta que falta. `metricas` sustituye a las derivadas del Tema; `medidas`
  * son las medidas reales de texto con las que se calculo la Geometria (las Metricas del dibujo salen de ellas).
  */
-export function resolverEstilo(tema: Tema, metricas?: Metricas, archivosDeFuente?: readonly string[], medidas?: MedidasDeTexto, diagrama?: TipoDeDiagrama): Estilo {
+export function resolverEstilo(tema: Tema, diagrama: TipoDeDiagrama, metricas?: Metricas, archivosDeFuente?: readonly string[], medidas?: MedidasDeTexto): Estilo {
   const { tokens, palette } = resolverTema(tema);
   const acento = palette['blue'] ?? tokens.foreground;
   // `COLOR` de una Capa es la variable `--trazo` que cada Nodo y Grupo fija con su color: una hoja sirve a todos los colores.
-  const resuelto = estiloResuelto(tema, { ...(diagrama !== undefined && { diagrama }), colorEnVariable: '--trazo', ...(archivosDeFuente !== undefined && { archivosDeFuente }), ...(medidas !== undefined && { medidas }) });
+  const resuelto = estiloResuelto(tema, { diagrama, colorEnVariable: '--trazo', ...(archivosDeFuente !== undefined && { archivosDeFuente }), ...(medidas !== undefined && { medidas }) });
   const tabla = metricas === undefined ? resuelto.tabla : tablaUniforme(metricas);
   return {
     metricas: tabla.base,

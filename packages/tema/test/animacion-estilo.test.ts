@@ -32,7 +32,7 @@ describe('animacion en el Estilo resuelto', () => {
   };
 
   it('la pintura lleva el Movimiento de la Capa y el de cada estado (el parche lo cambia o lo quita)', () => {
-    const { pintura } = estiloResuelto(conAnimacion);
+    const { pintura } = estiloResuelto(conAnimacion, { diagrama: 'architecture' });
 
     expect(pintura.nodo.capas.find((c) => c.nombre === 'acento')?.animacion).toEqual(pulso);
     expect(pintura.nodo.estados.seleccionado?.find((c) => c.nombre === 'acento')?.animacion).toEqual(aura);
@@ -41,7 +41,7 @@ describe('animacion en el Estilo resuelto', () => {
   });
 
   it('nada animado afecta a las Metricas: iguales con y sin animacion', () => {
-    expect(estiloResuelto(conAnimacion).metricas).toEqual(estiloResuelto(sinAnimacion).metricas);
+    expect(estiloResuelto(conAnimacion, { diagrama: 'architecture' }).metricas).toEqual(estiloResuelto(sinAnimacion, { diagrama: 'architecture' }).metricas);
   });
 
   it('el esquema rechaza un Movimiento fuera de catalogo o con rango invalido', () => {

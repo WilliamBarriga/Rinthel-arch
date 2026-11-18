@@ -30,7 +30,7 @@ async function dibujo(tema: TemaResuelto, extra: Record<string, unknown>): Promi
 
 describe('Diagram: fuentes del Workspace', () => {
   it('declara un @font-face por cada cara de las fuentes que usa el Tema, con la URL del shell', async () => {
-    const hoja = hojaDe(await dibujo(CAVEAT, { estilo: resolverEstilo(CAVEAT, undefined, ARCHIVOS), urlDeFuente: url }));
+    const hoja = hojaDe(await dibujo(CAVEAT, { estilo: resolverEstilo(CAVEAT, 'architecture', undefined, ARCHIVOS), urlDeFuente: url }));
 
     expect(hoja).toContain('@font-face{font-family:"Caveat";font-style:normal;font-weight:400;font-display:block;src:url("/fuentes/fuentes/caveat-latin-400-normal.woff2") format("woff2")}');
     expect(hoja).toContain('font-family:"Caveat";font-style:normal;font-weight:700');
@@ -39,21 +39,21 @@ describe('Diagram: fuentes del Workspace', () => {
   });
 
   it('la fuente de reserva declarada queda en la pila de font-family', async () => {
-    const hoja = hojaDe(await dibujo(CAVEAT, { estilo: resolverEstilo(CAVEAT, undefined, ARCHIVOS), urlDeFuente: url }));
+    const hoja = hojaDe(await dibujo(CAVEAT, { estilo: resolverEstilo(CAVEAT, 'architecture', undefined, ARCHIVOS), urlDeFuente: url }));
 
     expect(hoja).toContain('font-family:"Caveat", cursive');
     expect(hoja).toContain('font-family:"Press Start 2P", cursive');
   });
 
   it('sin URL del shell no hay @font-face (export sin servidor), pero la pila se conserva', async () => {
-    const hoja = hojaDe(await dibujo(CAVEAT, { estilo: resolverEstilo(CAVEAT, undefined, ARCHIVOS) }));
+    const hoja = hojaDe(await dibujo(CAVEAT, { estilo: resolverEstilo(CAVEAT, 'architecture', undefined, ARCHIVOS) }));
 
     expect(hoja).not.toContain('@font-face');
     expect(hoja).toContain('font-family:"Caveat", cursive');
   });
 
   it('la URL de un archivo no puede salirse de la declaracion', async () => {
-    const hoja = hojaDe(await dibujo(CAVEAT, { estilo: resolverEstilo(CAVEAT, undefined, ARCHIVOS), urlDeFuente: () => 'x");}</style><script>' }));
+    const hoja = hojaDe(await dibujo(CAVEAT, { estilo: resolverEstilo(CAVEAT, 'architecture', undefined, ARCHIVOS), urlDeFuente: () => 'x");}</style><script>' }));
 
     expect(hoja).not.toContain('<script>');
     expect(hoja).not.toContain('");}');

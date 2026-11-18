@@ -16,7 +16,7 @@ const L = [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 40 }];
 
 describe('Aristas del Tema', () => {
   it('la pila de trazos se dibuja de abajo hacia arriba: el glow ancho y translucido va bajo el principal', () => {
-    const estilo = resolverEstilo(tema({ capas: [linea('glow', { color: 'ORIGEN/0.3', width: 8 }), linea('principal', { color: 'ORIGEN' })] }));
+    const estilo = resolverEstilo(tema({ capas: [linea('glow', { color: 'ORIGEN/0.3', width: 8 }), linea('principal', { color: 'ORIGEN' })] }), 'architecture');
     const rutas = todos(pintarArista(estilo, { id: 'a -> b', puntos: L, origen: 'blue' }), 'path').filter((p) => p.attrs['data-capa'] !== undefined);
 
     expect(rutas.map((r) => r.attrs['data-capa'])).toEqual(['glow', 'principal']);
@@ -26,7 +26,7 @@ describe('Aristas del Tema', () => {
 
   it('cada estilo de trazo tiene su dibujo y la esquina chaflan corta la ruta', () => {
     const dibujo = (props: Record<string, string | number>) =>
-      todos(pintarArista(resolverEstilo(tema({ capas: [linea('l', { color: 'blue', ...props })] })), { id: 'e', puntos: L }), 'path')[0]!.attrs;
+      todos(pintarArista(resolverEstilo(tema({ capas: [linea('l', { color: 'blue', ...props })] }), 'architecture'), { id: 'e', puntos: L }), 'path')[0]!.attrs;
 
     expect(dibujo({ style: 'dashed' })['stroke-dasharray']).toBe('8 4');
     expect(dibujo({ style: 'dotted' })).toMatchObject({ 'stroke-dasharray': '0 4', 'stroke-linecap': 'round' });
@@ -37,7 +37,7 @@ describe('Aristas del Tema', () => {
 
   it('cap redondea o cuadra los extremos del trazo; sin cap, el remate es el de su estilo', () => {
     const dibujo = (props: Record<string, string | number>) =>
-      todos(pintarArista(resolverEstilo(tema({ capas: [linea('l', { color: 'blue', ...props })] })), { id: 'e', puntos: L }), 'path')[0]!.attrs;
+      todos(pintarArista(resolverEstilo(tema({ capas: [linea('l', { color: 'blue', ...props })] }), 'architecture'), { id: 'e', puntos: L }), 'path')[0]!.attrs;
 
     expect(dibujo({ cap: 'round' })['stroke-linecap']).toBe('round');
     expect(dibujo({ cap: 'square' })['stroke-linecap']).toBe('square');
@@ -47,21 +47,21 @@ describe('Aristas del Tema', () => {
 
   it('la esquina round curva cada giro con un radio limitado a la mitad del segmento', () => {
     const dibujo = (props: Record<string, string | number>) =>
-      todos(pintarArista(resolverEstilo(tema({ capas: [linea('l', { color: 'blue', ...props })] })), { id: 'e', puntos: L }), 'path')[0]!.attrs['d'];
+      todos(pintarArista(resolverEstilo(tema({ capas: [linea('l', { color: 'blue', ...props })] }), 'architecture'), { id: 'e', puntos: L }), 'path')[0]!.attrs['d'];
 
     expect(dibujo({ corner: 'round', radius: 10 })).toBe('M 0 0 L 30 0 Q 40 0 40 10 L 40 40');
     expect(dibujo({ corner: 'round', radius: 60 })).toBe('M 0 0 L 20 0 Q 40 0 40 20 L 40 40');
   });
 
   it('el marcador square es un cuadrado relleno detras de la punta', () => {
-    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], origen: { tipo: 'square', props: { size: 6 } } }));
+    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], origen: { tipo: 'square', props: { size: 6 } } }), 'architecture');
     const marca = todos(pintarArista(estilo, { id: 'e', puntos: L }), 'g').find((g) => g.attrs['data-marker'] === 'origen');
 
     expect(marca?.hijos?.[0]).toMatchObject({ tag: 'rect', attrs: { x: '-6', y: '-3', width: '6', height: '6', fill: '#2563eb' } });
   });
 
   it('los marcadores de origen y fin se giran hacia la ruta', () => {
-    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], origen: { tipo: 'dot', props: { size: 6 } }, fin: { tipo: 'via', props: { size: 8 } } }));
+    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], origen: { tipo: 'dot', props: { size: 6 } }, fin: { tipo: 'via', props: { size: 8 } } }), 'architecture');
     const marcas = todos(pintarArista(estilo, { id: 'e', puntos: L }), 'g').filter((g) => g.attrs['data-marker'] !== undefined);
 
     expect(marcas.map((m) => m.attrs['data-marker'])).toEqual(['origen', 'fin']);
@@ -71,7 +71,7 @@ describe('Aristas del Tema', () => {
   });
 
   it('la via es una almohadilla centrada en el extremo: disco del color con el agujero del fondo', () => {
-    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], fin: { tipo: 'via', props: { size: 10 } } }));
+    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], fin: { tipo: 'via', props: { size: 10 } } }), 'architecture');
     const via = todos(pintarArista(estilo, { id: 'e', puntos: L }), 'g').find((g) => g.attrs['data-marker'] === 'fin');
 
     expect(via?.hijos).toEqual([
@@ -82,8 +82,8 @@ describe('Aristas del Tema', () => {
 
   it('la etiqueta con fill dibuja su caja con el radio del Tema; sin fill solo lleva halo', () => {
     const caja = { x: 10, y: 10, width: 50, height: 16 };
-    const conCaja = resolverEstilo(tema({ etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 5, fill: 'blue' } } }));
-    const sinCaja = resolverEstilo(TEMA_NEUTRO);
+    const conCaja = resolverEstilo(tema({ etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 5, fill: 'blue' } } }), 'architecture');
+    const sinCaja = resolverEstilo(TEMA_NEUTRO, 'architecture');
     const a = pintarEtiquetaDeArista(conCaja, { id: 'e', texto: 'x', puntos: L, caja });
     const b = pintarEtiquetaDeArista(sinCaja, { id: 'e', texto: 'x', puntos: L, caja });
 
@@ -94,7 +94,7 @@ describe('Aristas del Tema', () => {
   });
 
   it('el radio de la caja de la etiqueta se limita a la mitad de su alto: una pastilla, nunca una elipse', () => {
-    const estilo = resolverEstilo(tema({ etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 50, fill: 'blue' } } }));
+    const estilo = resolverEstilo(tema({ etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 50, fill: 'blue' } } }), 'architecture');
     const rect = todos(pintarEtiquetaDeArista(estilo, { id: 'e', texto: 'x', puntos: L, caja: { x: 0, y: 0, width: 60, height: 20 } }), 'rect')[0]!;
 
     expect(rect.attrs).toMatchObject({ rx: '10', ry: '10' });
@@ -102,7 +102,7 @@ describe('Aristas del Tema', () => {
 
   it('la etiqueta lleva color, peso, fuente mono, borde, sombra dura y giro del Tema', () => {
     const props = { scale: 0.85, pad: 4, radius: 3, fill: 'amber', border: 'gray', color: 'red', weight: 700, font: 'mono', 'border-width': 1.5, shadow: 'gray', rotate: -2 };
-    const estilo = resolverEstilo(tema({ etiqueta: { tipo: 'label', props } }));
+    const estilo = resolverEstilo(tema({ etiqueta: { tipo: 'label', props } }), 'architecture');
     const g = pintarEtiquetaDeArista(estilo, { id: 'e', texto: 'x', puntos: L, caja: { x: 0, y: 0, width: 60, height: 20 } });
     const [sombra, caja] = todos(g, 'rect');
     const texto = todos(g, 'text')[0]!;
@@ -114,7 +114,7 @@ describe('Aristas del Tema', () => {
   });
 
   it('chevron es una V abierta y hollow un anillo hueco del color de fondo', () => {
-    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], origen: { tipo: 'hollow', props: { size: 7 } }, fin: { tipo: 'chevron', props: { size: 9 } } }));
+    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], origen: { tipo: 'hollow', props: { size: 7 } }, fin: { tipo: 'chevron', props: { size: 9 } } }), 'architecture');
     const marcas = todos(pintarArista(estilo, { id: 'e', puntos: L }), 'g').filter((g) => g.attrs['data-marker'] !== undefined);
 
     expect(marcas[0]?.hijos?.[0]).toMatchObject({ tag: 'circle', attrs: { r: '3.5', fill: TEMA_NEUTRO.tokens.background, stroke: '#2563eb', 'stroke-width': '1' } });
@@ -122,7 +122,7 @@ describe('Aristas del Tema', () => {
   });
 
   it('cross es una X centrada en el extremo, del color del trazo', () => {
-    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], fin: { tipo: 'cross', props: { size: 10 } } }));
+    const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], fin: { tipo: 'cross', props: { size: 10 } } }), 'architecture');
     const marca = todos(pintarArista(estilo, { id: 'e', puntos: L }), 'g').find((g) => g.attrs['data-marker'] === 'fin')!;
 
     expect(marca.hijos).toHaveLength(1);

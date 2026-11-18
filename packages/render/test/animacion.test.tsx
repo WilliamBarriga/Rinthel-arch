@@ -166,7 +166,7 @@ describe('Diagram: lo animado no afecta a las Metricas ni relayouta', () => {
   });
 
   it('las Metricas del Tema son las mismas con y sin animacion', () => {
-    expect(metricasDe(animada)).toEqual(metricasDe(temaCon({}, false)));
+    expect(metricasDe(animada, 'architecture')).toEqual(metricasDe(temaCon({}, false), 'architecture'));
   });
 
   it('ningun @keyframes ni transition toca propiedades de caja o de flujo', async () => {

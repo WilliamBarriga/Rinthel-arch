@@ -99,7 +99,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   };
   // Donde se escribio una disposicion de Slots; si ningun bloque la escribe, vale la del Tema (o el nucleo).
   const sitioDeSlots = (sitio: Sitio | undefined): Sitio => sitio ?? origen?.sitio ?? INCORPORADO;
-  const tabla = tablaDeMetricas(declarado, undefined, tipoDeDiagrama);
+  const tabla = tablaDeMetricas(declarado, tipoDeDiagrama ?? 'architecture');
   const delNodo = metricasDeNodo(tabla, tipo);
   const delGrupo = origen?.grupo;
   const sitioDeGrupo = (capa: string, colapsado: boolean): Sitio => {
