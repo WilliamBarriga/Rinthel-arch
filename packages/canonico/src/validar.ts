@@ -244,7 +244,8 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
       emitir([...ruta, 'links', i, 'view'], CODIGOS.E_UNKNOWN_VIEW_LINK, `link hacia la Vista '${enlace.view}', que no existe`, enlace.view, ids);
     }
   });
-  for (const palabra of ['collapsed', 'expanded'] as const) {
+  // En secuencia `expanded` ya es E_VIEW_PROPERTY_FOR_TYPE (validarVistaDeSecuencia): ningun otro issue sobre el.
+  for (const palabra of vista.type === 'sequence' ? (['collapsed'] as const) : (['collapsed', 'expanded'] as const)) {
     vista[palabra].forEach((destino, i) => {
       const donde = [...ruta, palabra, i];
       if (!grupos.has(destino)) {

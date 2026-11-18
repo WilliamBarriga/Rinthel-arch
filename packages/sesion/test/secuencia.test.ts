@@ -164,6 +164,14 @@ describe('seam sesion: validacion de secuencia', () => {
     expect(res[0]!.hint).toBeDefined();
   });
 
+  it('expanded sobre un Nodo que no es Grupo, o con link, en secuencia solo da E_VIEW_PROPERTY_FOR_TYPE', async () => {
+    const texto = modelo(escenario.replace(/\bapi\b/g, 'equipo.api'), '  servicio cliente\n  servicio equipo {\n  servicio api\n  }\n  servicio db\n  servicio cola');
+    const noGrupo = await issues(texto + 'view v { type sequence\n interaction checkout\n expanded db }\n');
+    expect(noGrupo.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
+    const conLink = await issues(texto + 'view w { type architecture\n include ** }\nview v { type sequence\n interaction checkout\n expanded equipo\n link equipo -> w }\n');
+    expect(conLink.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
+  });
+
   it('la Geometria de secuencia no trae cajas al pie de las Lifelines', async () => {
     const g = await geometriaDe(modelo(escenario) + vista);
     expect('footers' in g).toBe(false);
