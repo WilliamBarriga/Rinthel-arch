@@ -52,4 +52,3 @@ export async function textoDeIssues(sesion: Sesion): Promise<string> {
   return textoLegible(construirSalida(await sesion.diagnosticar(), { maxIssues: MAX_ISSUES_POR_DEFECTO, strict: false }));
 }
 
-export { cambiosDeEdicion } from 'sesion';
