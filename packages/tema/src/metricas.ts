@@ -203,7 +203,7 @@ function tamanosDeFila(textos: NonNullable<TemaResuelto['fila']>['textos'] | und
   return salida;
 }
 
-export function tablaDeMetricas(tema: Tema, diagrama: TipoDeDiagrama, medidas?: MedidasDeTexto): TablaDeMetricas {
+export function tablaDeMetricas(tema: Tema, diagrama: TipoDeDiagrama | undefined, medidas?: MedidasDeTexto): TablaDeMetricas {
   const tabla = tablaSinMarcas(tema, diagrama, medidas);
   if (diagrama === 'sequence') {
     // Vista de secuencia: todas las entradas llevan las separaciones del Tema (o los defectos del nucleo).
@@ -225,7 +225,7 @@ export function tablaDeMetricas(tema: Tema, diagrama: TipoDeDiagrama, medidas?: 
   return { base: conMarcas(tabla.base), tipos: Object.fromEntries(Object.entries(tabla.tipos).map(([tipo, m]) => [tipo, conMarcas(m)])), grupoAbierto: conMarcas(tabla.grupoAbierto), grupoColapsado: conMarcas(tabla.grupoColapsado), etiqueta: conMarcas(tabla.etiqueta) };
 }
 
-function tablaSinMarcas(tema: Tema, diagrama: TipoDeDiagrama, medidas?: MedidasDeTexto): TablaDeMetricas {
+function tablaSinMarcas(tema: Tema, diagrama: TipoDeDiagrama | undefined, medidas?: MedidasDeTexto): TablaDeMetricas {
   const resuelto = temaParaDiagrama(resolverTema(tema), diagrama);
   const base = entradaDe(resuelto, cascada(resuelto), medidas);
   const claveBase = JSON.stringify(base);
@@ -257,7 +257,7 @@ function entradaDeGrupo(resuelto: TemaResuelto, colapsado: boolean, medidas?: Me
 }
 
 /** Entrada base de la tabla: las Metricas de un Nodo sin Tipo (compatibilidad con quien mide un solo Nodo). */
-export function metricasDe(tema: Tema, diagrama: TipoDeDiagrama): Metricas {
+export function metricasDe(tema: Tema, diagrama: TipoDeDiagrama | undefined): Metricas {
   return tablaDeMetricas(tema, diagrama).base;
 }
 

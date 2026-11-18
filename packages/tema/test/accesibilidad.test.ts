@@ -98,24 +98,24 @@ describe('solo color', () => {
   ];
 
   it('dos Tipos que solo difieren por color de Paleta se emparejan', () => {
-    expect(tiposSoloColor(porColor, tipos)).toEqual([['api', 'db']]);
+    expect(tiposSoloColor(porColor, undefined, tipos)).toEqual([['api', 'db']]);
   });
 
   it('otra forma, otro icono o un Tema que ignora COLOR no son solo color', () => {
-    expect(tiposSoloColor(porForma, tipos)).toEqual([]);
-    expect(tiposSoloColor(porColor, [{ ...tipos[0]!, icon: 'x' }, { ...tipos[1]!, icon: 'y' }])).toEqual([]);
+    expect(tiposSoloColor(porForma, undefined, tipos)).toEqual([]);
+    expect(tiposSoloColor(porColor, undefined, [{ ...tipos[0]!, icon: 'x' }, { ...tipos[1]!, icon: 'y' }])).toEqual([]);
     const ciego = tema({ a: '#cc0000', b: '#0000cc' }, [capa('relleno', 'solid', { color: 'a' })]);
-    expect(tiposSoloColor(ciego, tipos)).toEqual([]);
+    expect(tiposSoloColor(ciego, undefined, tipos)).toEqual([]);
   });
 
   it('la leyenda lista Tipo, forma y color, y se pide sola solo cuando hay solo color', () => {
-    expect(leyendaDelTema(porColor, tipos)).toEqual({
+    expect(leyendaDelTema(porColor, undefined, tipos)).toEqual({
       necesaria: true,
       entradas: [
         { tipo: 'api', forma: 'rect', color: '#cc0000' },
         { tipo: 'db', forma: 'rect', color: '#0000cc' },
       ],
     });
-    expect(leyendaDelTema(porForma, tipos).necesaria).toBe(false);
+    expect(leyendaDelTema(porForma, undefined, tipos).necesaria).toBe(false);
   });
 });

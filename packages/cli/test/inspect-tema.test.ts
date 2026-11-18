@@ -287,3 +287,13 @@ describe('inspect tema: los Elementos declarados salen como antes de la derivaci
     expect(salida).toEqual(JSON.parse(deMain('sequence')));
   });
 });
+
+describe('inspect tema sin --diagrama', () => {
+  it('Capas y Metricas sin parches de Tipo de diagrama, como antes (un parche diagram architecture no entra)', async () => {
+    const raiz = resolve(__dirname, 'fixtures/tema-diagrama-arquitectura');
+    const r = await run(['inspect', 'tema', 't', '--workspace', raiz, '--json']);
+
+    expect(r.stdout).toBe(readFileSync(resolve(__dirname, 'fixtures/inspect-tema-main/arquitectura-none.json'), 'utf8'));
+    expect(JSON.parse(r.stdout).tema.slots).toBe('column { title attrs }');
+  });
+});

@@ -168,7 +168,7 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
     if (resuelta.type === 'er' && resuelta.edges.some((e) => e.identifying === true) && aristaIdentificanteSoloColor(tema)) {
       issues.push(aviso(`En la Vista '${declarada.id}', las Aristas identificantes y las no identificantes se distinguen solo por color`));
     }
-    for (const [a, b] of tiposSoloColor(tema, tipos)) {
+    for (const [a, b] of tiposSoloColor(tema, resuelta.type, tipos)) {
       issues.push({
         code: CODIGOS.W_THEME_COLOR_ONLY,
         severity: 'warning',

@@ -13,7 +13,7 @@ import { capasDeAristaEr } from './mensajes';
 import { muestra } from './contenido';
 import { resolverTema } from './tema';
 import type { CapaPintada, PrimitivaPintada } from './estilo';
-import type { Estado } from './parches';
+import type { Estado, TipoDeDiagrama } from './parches';
 
 type Rgb = readonly [number, number, number];
 
@@ -88,10 +88,10 @@ function evaluar(pila: readonly CapaPintada[], fondo: Rgb, texto: Rgb): Array<{ 
  * Advertencias de contraste del Tema por Tipo de nodo y estado: el texto
  * (`tokens.foreground`) contra el relleno vigente (4.5:1) y el borde contra el
  * fondo de la pagina (3:1). `tipos` mapea cada Tipo a su color de Paleta. Un
- * estado solo avisa si empeora lo que ya avisaba el base.
+ * estado solo avisa si empeora lo que ya avisaba el base. Es por Tema, no por Vista: sin parches de Tipo de diagrama.
  */
 export function advertenciasDeContraste(tema: Tema, tipos: Readonly<Record<string, string | undefined>>): AdvertenciaDeContraste[] {
-  const estilo = estiloResuelto(tema, { diagrama: 'architecture', tipos });
+  const estilo = estiloResuelto(tema, { diagrama: undefined, tipos });
   const fondo = hexARgb(resolverTema(tema).tokens.background) ?? ([255, 255, 255] as const);
   const texto = hexARgb(resolverTema(tema).tokens.foreground) ?? ([0, 0, 0] as const);
   const avisos: AdvertenciaDeContraste[] = [];
@@ -138,9 +138,10 @@ const quitarColor = (capa: CapaPintada) => ({
  * de Capas (sin contar colores) en reposo y en cada estado, mismo icono, y
  * colores pintados distintos. Orden de declaracion. Si el Nodo muestra la
  * insignia (`badge`, el nombre del Tipo en texto) ningun par es solo-color.
+ * `diagrama` es el Tipo de diagrama de la Vista (sus parches `diagram`); `undefined`, ninguno.
  */
-export function tiposSoloColor(tema: Tema, tipos: readonly TipoParaLeyenda[]): Array<[string, string]> {
-  const estilo = estiloResuelto(tema, { diagrama: 'architecture', tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
+export function tiposSoloColor(tema: Tema, diagrama: TipoDeDiagrama | undefined, tipos: readonly TipoParaLeyenda[]): Array<[string, string]> {
+  const estilo = estiloResuelto(tema, { diagrama, tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
   if (muestra(estilo.metricas, 'badge')) return [];
   const firma = (t: TipoParaLeyenda) => {
     const p = estilo.pintura.nodo.tipos[t.name]!;
@@ -204,12 +205,12 @@ export interface Leyenda {
   necesaria: boolean;
 }
 
-/** Leyenda derivada del Tema (Tipo, forma, color) para los Tipos dados. */
-export function leyendaDelTema(tema: Tema, tipos: readonly TipoParaLeyenda[]): Leyenda {
-  const estilo = estiloResuelto(tema, { diagrama: 'architecture', tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
+/** Leyenda derivada del Tema (Tipo, forma, color) para los Tipos dados, en el Tipo de diagrama de la Vista (`undefined`, ninguno). */
+export function leyendaDelTema(tema: Tema, diagrama: TipoDeDiagrama | undefined, tipos: readonly TipoParaLeyenda[]): Leyenda {
+  const estilo = estiloResuelto(tema, { diagrama, tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
   const paleta = resolverTema(tema).palette;
   return {
-    necesaria: tiposSoloColor(tema, tipos).length > 0,
+    necesaria: tiposSoloColor(tema, diagrama, tipos).length > 0,
     entradas: tipos.map((t) => ({
       tipo: t.name,
       forma: ultima(estilo.pintura.nodo.tipos[t.name]!.capas, primitivasDeFamilia('forma'))?.tipo ?? 'rect',

@@ -206,8 +206,11 @@ export interface EstiloResuelto {
 }
 
 export interface OpcionesDeEstilo {
-  /** Tipo de diagrama de la Vista: aplica los parches `diagram <tipo>` del Tema (Metricas y pintura) bajo la cascada de Tipo de nodo y estado. */
-  diagrama: TipoDeDiagrama;
+  /**
+   * Tipo de diagrama de la Vista: aplica los parches `diagram <tipo>` del Tema (Metricas y pintura) bajo la cascada de
+   * Tipo de nodo y estado. `undefined` (explicito) cuando no hay Vista: el Tema tal como lo declara, sin esos parches.
+   */
+  diagrama: TipoDeDiagrama | undefined;
   /** Medidas reales de texto con las que se calculo la Geometria: las Metricas del dibujo deben ser las del layout. */
   medidas?: MedidasDeTexto;
   /** Rutas de los archivos de fuente del Workspace; de ellos salen las caras de `fuentes`. Sin ellas, ninguna. */

@@ -110,6 +110,24 @@ describe('leyenda derivada del Tema', () => {
   });
 });
 
+describe('leyenda por Tipo de diagrama de la Vista', () => {
+  it('una insignia que el Tema solo pone en diagram flow distingue los Tipos en la Vista de flujo, no en la de arquitectura', async () => {
+    const conInsignia = { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }] };
+    const tema = conColor({ nodo: { ...TEMA_NEUTRO.nodo, capas: [capaRelleno], diagramas: { flow: { ops: [], slots: conInsignia } } } as TemaResuelto['nodo'] });
+    const conFlujo = fuenteCanonicaSchema.parse({ ...fuente, views: [...fuente.views, { id: 'f', type: 'flow', include: ['**'], exclude: [] }] });
+    const { layout } = layoutContador();
+    const montarVista = (view: string) => render(<VistaInteractiva source={conFlujo} view={view} theme={tema} layout={layout} width={800} height={600} />);
+
+    const flujo = montarVista('f');
+    await waitFor(() => expect(flujo.container.querySelector('[data-id="x"]')).not.toBeNull());
+    expect(flujo.container.querySelector('[data-leyenda]')).toBeNull();
+    cleanup();
+    const arquitectura = montarVista('v');
+    await waitFor(() => expect(arquitectura.container.querySelector('[data-id="x"]')).not.toBeNull());
+    expect(arquitectura.container.querySelector('[data-leyenda]')).not.toBeNull();
+  });
+});
+
 describe('interruptor manual de reduced-motion', () => {
   const montar = () => render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layoutContador().layout} width={800} height={600} />);
   const marca = (c: HTMLElement) => c.querySelector('[data-reduced-motion]')?.getAttribute('data-reduced-motion');

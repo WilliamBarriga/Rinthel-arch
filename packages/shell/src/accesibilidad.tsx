@@ -92,7 +92,7 @@ export function Leyenda({ fuente, vista, tema, modo }: { fuente: FuenteCanonica;
   const tipos = fuente.specification.nodeTypes
     .filter((t) => usados.has(t.name))
     .map((t) => ({ name: t.name, color: typeof t['color'] === 'string' ? t['color'] : undefined, icon: t.icon }));
-  const leyenda = leyendaDelTema(tema, tipos);
+  const leyenda = leyendaDelTema(tema, vista.type, tipos);
   if (tipos.length === 0 || (modo === 'auto' && !leyenda.necesaria)) return null;
   return (
     <ul className="rd-chrome rd-leyenda" data-leyenda aria-label="Leyenda">
