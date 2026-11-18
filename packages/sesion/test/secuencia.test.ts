@@ -157,6 +157,18 @@ describe('seam sesion: validacion de secuencia', () => {
     expect(fuera.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE', 'E_VIEW_PROPERTY_FOR_TYPE']);
   });
 
+  it('expanded en una Vista de secuencia es E_VIEW_PROPERTY_FOR_TYPE con ayuda', async () => {
+    const texto = modelo(escenario.replace(/\bapi\b/g, 'equipo.api'), '  servicio cliente\n  servicio equipo {\n  servicio api\n  }\n  servicio db\n  servicio cola');
+    const res = await issues(texto + 'view v { type sequence\n interaction checkout\n expanded equipo }\n');
+    expect(res.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
+    expect(res[0]!.hint).toBeDefined();
+  });
+
+  it('la Geometria de secuencia no trae cajas al pie de las Lifelines', async () => {
+    const g = await geometriaDe(modelo(escenario) + vista);
+    expect('footers' in g).toBe(false);
+  });
+
   it('E_LINK_NOT_LIFELINE: link desde un Mensaje o un Nodo que no es Lifeline; desde una Lifeline vale', async () => {
     const otra = 'view otra { type architecture\n include ** }\n';
     const base = modelo(escenario) + otra;

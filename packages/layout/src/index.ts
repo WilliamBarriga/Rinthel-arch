@@ -2,7 +2,7 @@
  * `layout` — calcula la geometria de una Vista (ELK y Pin).
  *
  * `layoutView(vista, tema, opciones)` recibe una `VistaResuelta` y devuelve la
- * `Geometria` (union por `kind`; hoy solo `grafo`, elegida por `vista.type`; las claves incluyen `vista.type`): caja por Nodo visible, con `x`/`y` relativos al Grupo padre, y ruta
+ * `Geometria` (union por `kind`; `grafo` o `secuencia`, elegida por `vista.type`; las claves incluyen `vista.type`): caja por Nodo visible, con `x`/`y` relativos al Grupo padre, y ruta
  * ortogonal por Arista (`idDeArista`), en coordenadas del lienzo. Los
  * Grupos colapsados son hojas. Un Nodo hoja con Atributos mide cabecera mas una
  * fila por Atributo y las Aristas a `nodo#atributo` terminan en la fila del

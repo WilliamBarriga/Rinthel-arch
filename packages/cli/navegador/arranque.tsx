@@ -1,8 +1,6 @@
 /**
- * Arranque comun del navegador: lo que `entrada.tsx` (HTML autocontenido) y
- * `dev.tsx` (pagina viva) comparten. Las entradas solo difieren en de donde
- * sale la Fuente, la geometria y los iconos, y en el layout y las ediciones.
- * No es parte de la interfaz del paquete: la leen las dos entradas.
+ * Arranque comun del navegador: lo que usa `dev.tsx` (pagina viva): useTamano,
+ * hidratar iconos y montar la raiz. No es parte de la interfaz del paquete.
  */
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';

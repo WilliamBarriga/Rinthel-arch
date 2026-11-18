@@ -6,7 +6,7 @@
 import type { AnclajeDeNota, Interaccion, ItemDeInteraccion, Mensaje, Nodo, OperadorDeFragmento, TipoDeMensaje, Vista } from './esquema';
 import type { NodoResuelto } from './vistas';
 
-/** Mensaje proyectado por una Vista; `ruta` es su identidad (ruta de indices en la Interaccion, hoy un solo indice). */
+/** Mensaje proyectado por una Vista; `ruta` es su identidad (ruta de indices en la Interaccion, `0.1.2` dentro de Fragmentos anidados). */
 export interface MensajeResuelto {
   ruta: string;
   /** Alias opcional del Mensaje, unico en su Interaccion. */
@@ -180,7 +180,7 @@ export function resolverSecuencia(
       if (item.type === 'note') return [{ type: 'note', ruta, anchor: item.anchor, targets: item.targets.filter(visible), text: item.text }];
       if (item.type === 'ref') {
         const referida = interacciones.find((candidata) => candidata.id === item.interaction);
-        return referida === undefined ? [] : [{ type: 'ref', ruta, interaction: referida.id, title: referida.title, participantes: [...new Set(aplanarMensajes(referida.items).flatMap((m) => [m.from, m.to]))] }];
+        return referida === undefined ? [] : [{ type: 'ref', ruta, interaction: referida.id, title: referida.title, participantes: [...new Set(aplanarMensajes(referida.items).flatMap((m) => [m.from, m.to]).map(elevar))] }];
       }
       if (!visible(item.from) || !visible(item.to)) return [];
       const from = elevar(item.from);

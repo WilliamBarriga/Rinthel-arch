@@ -165,7 +165,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   E_STEP_NOT_ADVANCING: 'El `upto` de un Paso de secuencia no avanza estrictamente respecto del Paso anterior.',
   E_STEPS_EACH_WITH_STEP: '`steps each` y `step` explicitos en la misma Vista de secuencia.',
   E_UNKNOWN_VIEW_TYPE: 'El `type` de la Vista falta o no es `architecture`, `flow`, `sequence` ni `er`.',
-  E_VIEW_PROPERTY_FOR_TYPE: 'Una propiedad de Vista no vale para su Tipo de diagrama (`include`/`pin`/`show`/`hide` en secuencia; `interaction`/`order`/`autonumber`/`upto`/`steps each` fuera de ella).',
+  E_VIEW_PROPERTY_FOR_TYPE: 'Una propiedad de Vista no vale para su Tipo de diagrama (`include`/`pin`/`expanded`/`show`/`hide` en secuencia; `interaction`/`order`/`autonumber`/`upto`/`steps each` fuera de ella).',
   E_SEQUENCE_WITHOUT_INTERACTION: 'Una Vista `sequence` no declara `interaction`.',
   E_UNKNOWN_INTERACTION: 'El `interaction` de una Vista o un `ref` nombra una Interaccion que no existe.',
   E_DUPLICATE_INTERACTION: 'Dos Interacciones con el mismo id.',

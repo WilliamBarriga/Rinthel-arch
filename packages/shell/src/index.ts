@@ -62,10 +62,7 @@
  * paleta recolorea sin relayout y sin recomputar la Vista (el Modelo no se
  * recompila). Quien alimenta el puerto es el consumidor: observa el archivo de
  * tema, recompila (`compile` de `dsl`), toma el Tema resuelto de la Fuente
- * canonica y lo entrega a `alCambiar`. Limitacion de v1: no hay consumidor
- * incluido (el HTML de `cli export --format html` es estatico, sin servidor ni
- * watch, y no pasa `themeUpdates`); la historia 35 queda cubierta por el puerto y
- * sus pruebas, y el watch/dev server queda fuera de alcance.
+ * canonica y lo entrega a `alCambiar`. El consumidor real es `cli dev`, que recarga la pagina al guardar.
  *
  * Accesibilidad (ADR 0008): un boton "Alto contraste" (prop `highContrast` /
  * `onHighContrastChange`, por defecto `prefers-contrast: more`) reemplaza el Tema
@@ -76,7 +73,7 @@
  * Arrastre de Nodos (solo bajo `dev`): con `onMoveNode({id, x, y})` los Nodos se arrastran y al
  * soltar avisan su posicion nueva (relativa al Grupo padre, unidades de la geometria; es el
  * valor de un Pin). El Nodo se queda donde se solto hasta que llega otra geometria, o vuelve
- * si el aviso resuelve `false`. Sin `onMoveNode` (export estatico) no hay arrastre de Nodos.
+ * si el aviso resuelve `false`. Sin `onMoveNode` (consumidor sin edicion) no hay arrastre de Nodos.
  * Reordenar Lifelines (solo bajo `dev`): con `onReorderLifelines({orden})`, arrastrar la cabecera de una Lifeline o el
  * titulo de un `box` en una Vista de secuencia avisa el orden visible completo; `crearEnviadorDeIntencion(fetch)` envia
  * cualquier Intencion a `POST /api/edit`.
@@ -125,7 +122,7 @@
  * renderizar; un rechazo del adaptador va a `onError` o, sin el, se lanza al
  * renderizar (para un error boundary). Configuracion requerida: Fuente canonica,
  * Vista, Tema, adaptador de layout y tamano del lienzo. Peer React 18 y 19.
- * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> render -> shell`.
+ * Solo importa paquetes anteriores en la cadena `canonico -> tema -> dsl -> layout -> sesion -> render -> shell`.
  */
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, MedidorDeTexto, VistaInteractivaProps } from './vista-interactiva';
