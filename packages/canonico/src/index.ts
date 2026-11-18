@@ -1,7 +1,7 @@
 /**
  * `canonico` — esquema, validacion y resolucion de la Fuente canonica.
  *
- * Invariantes: ids cualificados (`a.b.c`) definen jerarquia del Modelo (sin
+ * Invariantes: ids cualificados (`a.b.c`) definen jerarquia del Modelo (`padreDe`; sin
  * hijos huerfanos); extremos de Arista siempre existentes, y `nodo#atributo`
  * solo con un Atributo declarado en ese Nodo (distinto de un Nodo hijo);
  * `type` siempre declarado en `specification.nodeTypes`;
@@ -45,6 +45,7 @@ export {
   idDeNodoSchema,
   nodoSchema,
   overrideSchema,
+  padreDe,
   pasoSchema,
   temaSchema,
   TIPOS_DE_MENSAJE,

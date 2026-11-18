@@ -59,7 +59,7 @@ export interface OpcionesDeDev {
   temas?: string;
   /** Puerto en 127.0.0.1; 0 elige uno libre. */
   puerto?: number;
-  /** Espera tras el ultimo cambio antes de recompilar (150 ms por defecto). */
+  /** Espera tras el ultimo cambio antes de recompilar (`DEBOUNCE_MS` del Workspace vivo por defecto). */
   debounceMs?: number;
   leer?: (raiz: string) => ArchivosDelWorkspace;
   /** Hash de cada recurso vigilado (`.tsx`, fuentes) bajo `raiz`, para clasificar el cambio; por defecto lee el disco (o nada si se inyecta `leer`). */
@@ -169,8 +169,6 @@ const PAGINA = `<!doctype html>
 </html>
 `;
 
-const SIN_CODIGO: ResultadoDeCodigo = { componentes: {}, issues: [], bundle: 'return {};' };
-
 /** Cuerpo de `POST /api/edit`: una Intencion (validada con `intencionSchema`) mas la `version` vista. */
 const comoIntencion = (cuerpo: unknown): Intencion | undefined => {
   const r = intencionSchema.safeParse(cuerpo);
@@ -190,10 +188,17 @@ const versionVista = (cuerpo: unknown): number | undefined => {
  * ultima version buena de cada uno. `run(['dev', ...])` convierte sus fallos en codigo 2.
  */
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puerto = 0, debounceMs = 150, shell = empaquetarShellDev, confiarEnCodigo = false } = opciones;
-  const compilarCodigo = opciones.compilarCodigo ?? (opciones.leer === undefined ? compiladorDeCodigo(workspace).compilar : () => SIN_CODIGO);
+  const { workspace, temas, puerto = 0, debounceMs, shell = empaquetarShellDev, confiarEnCodigo = false } = opciones;
+  // Con `leer` inyectado no hay disco del que compilar codigo: el Workspace vivo usa su defecto (sin codigo).
+  const compilarCodigo = opciones.compilarCodigo ?? (opciones.leer === undefined ? compiladorDeCodigo(workspace).compilar : undefined);
   const bundles = await shell();
-  const vivo: WorkspaceVivo = await abrirWorkspaceVivo({ puerto: puertoDeDisco(opciones), raiz: resolve(workspace), debounceMs, compilarCodigo, confiarEnCodigo });
+  const vivo: WorkspaceVivo = await abrirWorkspaceVivo({
+    puerto: puertoDeDisco(opciones),
+    raiz: resolve(workspace),
+    confiarEnCodigo,
+    ...(debounceMs !== undefined && { debounceMs }),
+    ...(compilarCodigo !== undefined && { compilarCodigo }),
+  });
 
   const clientes = new Set<ServerResponse>();
   const enviarEstado = (cliente: ServerResponse, estado: EstadoDeDev): void => void cliente.write(`data: ${JSON.stringify(estado)}\n\n`);
@@ -201,11 +206,16 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     for (const cliente of clientes) enviarEstado(cliente, estado);
   });
 
+  /** `Host` propios del servidor (127.0.0.1 o localhost con su puerto); un `Origin` propio es `http://` mas uno de ellos. */
+  const hostsPropios = (): string[] => {
+    const { port } = servidor.address() as AddressInfo;
+    return [`127.0.0.1:${port}`, `localhost:${port}`];
+  };
+
   /** Origen, content-type y JSON validos para cualquier ruta de escritura; si no, responde el error y devuelve `undefined`. */
   const leerCuerpoJson = async (req: IncomingMessage, res: ServerResponse): Promise<{ cuerpo: unknown } | undefined> => {
     const origen = req.headers.origin;
-    const { port } = servidor.address() as AddressInfo;
-    if (origen !== undefined && origen !== `http://127.0.0.1:${port}` && origen !== `http://localhost:${port}`) {
+    if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) {
       responder(res, 403, { ok: false, mensaje: 'Origen no permitido' });
       return undefined;
     }
@@ -244,8 +254,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 
   const servidor = createServer((req, res) => {
     // Contra DNS rebinding: solo se atiende a quien llega por 127.0.0.1 o localhost con el puerto del servidor.
-    const { port } = servidor.address() as AddressInfo;
-    if (req.headers.host !== `127.0.0.1:${port}` && req.headers.host !== `localhost:${port}`) {
+    if (!hostsPropios().includes(req.headers.host ?? '')) {
       cabecera(res, 'text/plain', 403);
       res.end('Host no permitido');
       return;

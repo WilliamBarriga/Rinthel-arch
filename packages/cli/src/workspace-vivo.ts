@@ -68,7 +68,7 @@ export interface OpcionesDelWorkspaceVivo {
   raiz: string;
   /** Por defecto `relojReal`. */
   reloj?: Reloj;
-  /** Espera tras el ultimo cambio antes de recompilar (150 ms por defecto). */
+  /** Espera tras el ultimo cambio antes de recompilar (`DEBOUNCE_MS` por defecto). */
   debounceMs?: number;
   /** Compila los `.tsx` del Workspace; por defecto no hay codigo. */
   compilarCodigo?: () => ResultadoDeCodigo;
@@ -106,6 +106,10 @@ export interface WorkspaceVivo {
   cerrar(): void;
 }
 
+/** Espera por defecto tras el ultimo cambio antes de recompilar (ms). */
+export const DEBOUNCE_MS = 150;
+
+/** Sin `compilarCodigo`: un Workspace sin codigo de Temas. */
 const SIN_CODIGO: ResultadoDeCodigo = { componentes: {}, issues: [], bundle: 'return {};' };
 
 const mismoTexto = (a: ArchivosDelWorkspace, b: ArchivosDelWorkspace): boolean => {
@@ -116,7 +120,7 @@ const mismoTexto = (a: ArchivosDelWorkspace, b: ArchivosDelWorkspace): boolean =
 const hashesDe = (archivos: ArchivosDelWorkspace): Record<string, string> => Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)]));
 
 export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Promise<WorkspaceVivo> {
-  const { puerto, raiz, reloj = relojReal, debounceMs = 150, compilarCodigo = () => SIN_CODIGO } = opciones;
+  const { puerto, raiz, reloj = relojReal, debounceMs = DEBOUNCE_MS, compilarCodigo = () => SIN_CODIGO } = opciones;
 
   const fuentesDe = (recursos: Record<string, string> | undefined): Record<string, string> | undefined =>
     recursos === undefined ? undefined : Object.fromEntries(Object.entries(recursos).filter(([ruta]) => esArchivoDeFuente(ruta)));
@@ -208,8 +212,18 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
   };
 
   let cancelarDebounce: (() => void) | undefined;
-  const dejarDeObservar = puerto.observar(() => {
+  const cancelarPendiente = (): void => {
     cancelarDebounce?.();
+    cancelarDebounce = undefined;
+  };
+  /** Tras escribir: recompila ya (sin esperar al debounce que dispara la propia escritura) y da la version nueva. */
+  const recompilarTrasEscribir = async (): Promise<ResultadoDelWorkspaceVivo> => {
+    cancelarPendiente();
+    await recompilar();
+    return { ok: true, version };
+  };
+  const dejarDeObservar = puerto.observar(() => {
+    cancelarPendiente();
     cancelarDebounce = reloj.programar(() => {
       cancelarDebounce = undefined;
       void recompilar().catch(() => undefined);
@@ -291,10 +305,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
         const base = historial !== undefined && mismoTexto(historial.archivos, antes) ? historial : crearHistorial(antes);
         historial = apilar(base, despues);
       }
-      cancelarDebounce?.();
-      cancelarDebounce = undefined;
-      await recompilar();
-      return { ok: true, version };
+      return recompilarTrasEscribir();
     });
 
   const restaurar = (mover: (h: Historial) => Historial | undefined, motivo: 'nada-que-deshacer' | 'nada-que-rehacer'): Promise<ResultadoDelWorkspaceVivo> =>
@@ -309,10 +320,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
       if (siguiente === undefined) return { ok: false, motivo, mensaje: motivo === 'nada-que-deshacer' ? 'Nada que deshacer' : 'Nada que rehacer' };
       dejarEnDisco(disco, siguiente.archivos);
       historial = siguiente;
-      cancelarDebounce?.();
-      cancelarDebounce = undefined;
-      await recompilar();
-      return { ok: true, version };
+      return recompilarTrasEscribir();
     });
 
   return {
@@ -331,8 +339,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
       confiado = true;
     },
     cerrar() {
-      cancelarDebounce?.();
-      cancelarDebounce = undefined;
+      cancelarPendiente();
       dejarDeObservar();
     },
   };

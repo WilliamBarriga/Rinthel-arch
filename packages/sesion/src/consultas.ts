@@ -2,7 +2,7 @@
  * Consultas de solo lectura del Modelo (detalle de Nodo, busqueda, Vista, Interaccion y ubicacion
  * `archivo:linea`). Las comparten `inspect` (ADR 0005) y la UI futura: viven en la Sesion.
  */
-import { INSPECT_CONTRACT_VERSION, aplanarMensajes, candidatosCercanos, lifelinesDe, resolveView } from 'canonico';
+import { INSPECT_CONTRACT_VERSION, aplanarMensajes, candidatosCercanos, lifelinesDe, padreDe, resolveView } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
 
 type Sitio = { file: string; line: number };
@@ -20,8 +20,6 @@ function recorrerNodos(nodos: readonly Nodo[], ruta: RutaDeFuente = ['model', 'n
     return [{ nodo, ruta: propia }, ...recorrerNodos(nodo.children, [...propia, 'children'])];
   });
 }
-
-const padreDe = (id: string): string | undefined => (id.includes('.') ? id.slice(0, id.lastIndexOf('.')) : undefined);
 
 /** Responde una consulta sobre la Fuente; cada resultado trae su `archivo:linea` segun el Ubicador. */
 export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento }: Consulta): Respuesta {
@@ -116,7 +114,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
         nodo: {
           ...resumen(encontrado),
           description: nodo.description,
-          ...(padre === undefined ? {} : { parent: padre }),
+          ...(padre === '' ? {} : { parent: padre }),
           children: nodo.children.map(({ id }) => id),
           attributes: nodo.attributes.map(({ name, type, notes }) => ({ name, type, notes })),
         },

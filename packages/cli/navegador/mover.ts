@@ -6,6 +6,7 @@
  */
 import type { Intencion } from 'canonico';
 
+import { avisarRechazo } from './cliente';
 import type { ResultadoDeEnvio } from './cliente';
 
 export interface DatosParaMover {
@@ -31,8 +32,7 @@ async function enviarGesto({ estado, enviar, avisar, recargar }: DependenciasDeM
   }
   const r = await enviar(intencion, version);
   if (r.ok) return true;
-  avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `${fallo}: ${r.mensaje}`);
-  if (r.desactualizado) await recargar().catch(() => undefined);
+  await avisarRechazo(r, fallo, { avisar, recargar });
   return false;
 }
 

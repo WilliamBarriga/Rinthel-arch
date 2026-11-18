@@ -13,6 +13,15 @@ import type { EstadoDeDev, GeometriaCacheada, Intencion } from 'canonico';
 /** Resultado de una escritura: `desactualizado` es el 409 (`hash-desactualizado`): hay que recargar y avisar. */
 export type ResultadoDeEnvio = { ok: true } | { ok: false; desactualizado: boolean; mensaje: string };
 
+/**
+ * Aviso de una escritura rechazada: si el texto estaba desactualizado (409) dice que se recarga y recarga el estado;
+ * si no, `fallo: mensaje`. Lo comparten los gestos y el historial de la pagina.
+ */
+export async function avisarRechazo(r: Extract<ResultadoDeEnvio, { ok: false }>, fallo: string, { avisar, recargar }: { avisar: (texto: string) => void; recargar: () => Promise<void> }): Promise<void> {
+  avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `${fallo}: ${r.mensaje}`);
+  if (r.desactualizado) await recargar().catch(() => undefined);
+}
+
 /** Geometria pedida: la valida, o un fallo; `error` solo si llego malformada (si no llego, no hay nada que mostrar). */
 export type LecturaDeGeometria = { ok: true; geometria: GeometriaCacheada } | { ok: false; error?: string };
 

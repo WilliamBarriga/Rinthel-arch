@@ -3,6 +3,7 @@
  * probarlos: traducen la tecla a una accion, la envian al servidor por el cliente de `dev` (que restaura el texto exacto) y
  * convierten un rechazo en aviso. No es parte de la interfaz del paquete.
  */
+import { avisarRechazo } from './cliente';
 import type { ResultadoDeEnvio } from './cliente';
 
 export type AccionDeHistorial = 'deshacer' | 'rehacer';
@@ -38,8 +39,6 @@ export interface DependenciasDeAtajo {
 export function crearAlAtajo({ enviar, avisar, recargar }: DependenciasDeAtajo) {
   return async (accion: AccionDeHistorial): Promise<void> => {
     const r = await enviar(accion);
-    if (r.ok) return;
-    avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `No se pudo ${accion}: ${r.mensaje}`);
-    if (r.desactualizado) await recargar().catch(() => undefined);
+    if (!r.ok) await avisarRechazo(r, `No se pudo ${accion}`, { avisar, recargar });
   };
 }

@@ -466,7 +466,7 @@ function recogerIds(nodos: Nodo[], destino: Map<string, Set<string>>): void {
 }
 
 /** Padre jerarquico de un id cualificado; cadena vacia si el id es raiz. */
-function padreDe(id: string): string {
+export function padreDe(id: string): string {
   const corte = id.lastIndexOf('.');
   return corte === -1 ? '' : id.slice(0, corte);
 }
