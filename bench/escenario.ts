@@ -10,7 +10,7 @@ import { performance } from 'node:perf_hooks';
 import { gzipSync } from 'node:zlib';
 
 import { resolveView } from 'canonico';
-import type { EstadoDeColapso, FuenteCanonica, Nodo, Tema } from 'canonico';
+import type { EstadoDeColapso, FuenteCanonica, Nodo, Tema, VistaDeSecuencia } from 'canonico';
 import { run } from 'cli';
 import { compile } from 'dsl';
 import { layoutView } from 'layout';
@@ -182,7 +182,7 @@ async function colapsoDe5k(): Promise<Record<string, number>> {
 async function secuenciaGrande(): Promise<Record<string, number>> {
   const { canonico, issues } = compile(generarSecuencia({ mensajes: 1000, lifelines: 50, profundidad: 3 }));
   if (canonico === undefined) throw new Error(`La Interaccion sintetica no compila: ${JSON.stringify(issues.slice(0, 3))}`);
-  const vista = resolveView(canonico, 'secuencia')!;
+  const vista = resolveView(canonico, 'secuencia') as VistaDeSecuencia;
   const inicio = performance.now();
   await layoutView(vista, TEMA);
   const frioMs = ms(inicio);
@@ -192,7 +192,7 @@ async function secuenciaGrande(): Promise<Record<string, number>> {
     await layoutView(vista, TEMA);
     corridas.push(ms(t));
   }
-  return { mensajes: vista.interaction!.messages.length, lifelines: vista.nodes.length, tiempoFrioMs: frioMs, tiempoMs: Math.min(...corridas), maxRssMb: mb(process.resourceUsage().maxRSS * 1024) };
+  return { mensajes: vista.interaction.messages.length, lifelines: vista.nodes.length, tiempoFrioMs: frioMs, tiempoMs: Math.min(...corridas), maxRssMb: mb(process.resourceUsage().maxRSS * 1024) };
 }
 
 async function bundleDelShell(): Promise<Record<string, number>> {

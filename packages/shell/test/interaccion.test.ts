@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
-import type { VistaResuelta } from 'canonico';
+import type { VistaDeGrafo } from 'canonico';
 import type { Geometria } from 'layout';
 
 import { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from '../src/interaccion';
@@ -22,7 +22,7 @@ const fuente = fuenteCanonicaSchema.parse({
   },
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
 });
-const vista = resolveView(fuente, 'v', { expanded: ['g'] }) as VistaResuelta;
+const vista = resolveView(fuente, 'v', { expanded: ['g'] }) as VistaDeGrafo;
 const arista = vista.edges[0]!;
 const idArista = idDeArista(arista);
 const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');

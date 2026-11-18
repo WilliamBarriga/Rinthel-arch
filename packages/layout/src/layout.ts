@@ -4,7 +4,7 @@
  */
 import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 import { idDeArista } from 'canonico';
-import type { CajaDeNodo, Geometria, GeometriaGrafo, ItemResuelto, NodoResuelto, Punto, RutaDeArista, Tema, VistaResuelta } from 'canonico';
+import type { CajaDeNodo, Geometria, GeometriaGrafo, ItemResuelto, NodoResuelto, OverrideDeNodo, Punto, RutaDeArista, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
 import { layoutSecuencia } from './secuencia';
@@ -72,7 +72,7 @@ export async function layoutConMetricas(
 }
 
 async function layoutGrafo(
-  vista: VistaResuelta,
+  vista: VistaDeGrafo,
   metricas: Metricas | TablaDeMetricas,
   opciones: { elk?: ELK },
 ): Promise<GeometriaGrafo> {
@@ -113,7 +113,7 @@ async function layoutGrafo(
   return conPinsYPuertos(vista, medidas, { kind: 'grafo', nodes, edges, labels, pinsSolapados: [], width: resultado.width ?? 0, height: resultado.height ?? 0 });
 }
 
-function conPinsYPuertos(vista: VistaResuelta, medidas: TablaDeMetricas, base: GeometriaGrafo): GeometriaGrafo {
+function conPinsYPuertos(vista: VistaDeGrafo, medidas: TablaDeMetricas, base: GeometriaGrafo): GeometriaGrafo {
   const pinneada = aplicarPins(vista, base.nodes, base.edges, base.labels);
   const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
   // ER: el pie de gallo necesita un tramo final horizontal de al menos su largo; se garantiza tras puertos y Pins.
@@ -141,11 +141,14 @@ function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<
  * resultado que un layout completo, sin volver a ejecutar ELK: mover un Pin no relayouta.
  */
 export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): Geometria {
-  switch (base.kind) {
-    case 'grafo':
-      return conPinsYPuertos(vista, comoTabla(metricas), base);
-    case 'secuencia':
+  switch (vista.type) {
+    case 'sequence':
+      // La Geometria de secuencia sale completa de su layout: no hay paso post-layout.
       return base;
+    case 'architecture':
+    case 'flow':
+    case 'er':
+      return base.kind === 'grafo' ? conPinsYPuertos(vista, comoTabla(metricas), base) : base;
   }
 }
 
@@ -161,17 +164,17 @@ export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tem
  * la pone sobre la nueva ruta).
  */
 function aplicarPins(
-  vista: VistaResuelta,
+  vista: VistaDeGrafo,
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
   labels: Record<string, CajaDeNodo>,
 ): Pick<GeometriaGrafo, 'nodes' | 'edges' | 'labels' | 'pinsSolapados'> {
-  const pins = vista.overrides.filter((o) => o.pin !== undefined && nodes[o.node] !== undefined);
+  const pins = pinsDe(vista).filter((o) => nodes[o.node] !== undefined);
   if (pins.length === 0) return { nodes, edges, labels, pinsSolapados: [] };
   const nuevos: Record<string, CajaDeNodo> = { ...nodes };
   for (const { node, pin } of pins) {
     const caja = nuevos[node]!;
-    nuevos[node] = { ...caja, x: pin!.x - caja.width / 2, y: pin!.y - caja.height / 2 };
+    nuevos[node] = { ...caja, x: pin.x - caja.width / 2, y: pin.y - caja.height / 2 };
   }
   const previo = indiceDeGeometria(vista, { nodes });
   const indice = indiceDeGeometria(vista, { nodes: nuevos });
@@ -218,7 +221,7 @@ function aplicarPins(
  * previo se inserta uno a mitad de camino.
  */
 function ajustarAPuertosDeAtributo(
-  vista: VistaResuelta,
+  vista: VistaDeGrafo,
   tabla: TablaDeMetricas,
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
@@ -250,7 +253,7 @@ function ajustarAPuertosDeAtributo(
  * para que el marcador de cardinalidad no se monte sobre el codo. Un extremo que llega en vertical se pasa al
  * lado del Nodo mas cercano a la ruta; uno corto aleja el codo previo (con el tramo vertical que lo sigue).
  */
-function garantizarTramosFinalesEr(vista: VistaResuelta, cajas: ReadonlyMap<string, CajaDeNodo>, edges: Record<string, RutaDeArista>): Record<string, RutaDeArista> {
+function garantizarTramosFinalesEr(vista: VistaDeGrafo, cajas: ReadonlyMap<string, CajaDeNodo>, edges: Record<string, RutaDeArista>): Record<string, RutaDeArista> {
   const rutas = { ...edges };
   for (const arista of vista.edges) {
     const id = idDeArista(arista);
@@ -367,10 +370,20 @@ function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
  * "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`.
  */
 export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): string {
-  return JSON.stringify({ tipo: vista.type, estructura: claveDeEstructura(vista, tema, metricas), pins: vista.type === 'sequence' ? [] : pinsDe(vista) });
+  return JSON.stringify({ tipo: vista.type, estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista).map((o) => [o.node, o.pin.x, o.pin.y]) });
 }
 
-const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin === undefined ? [] : [[o.node, o.pin.x, o.pin.y]]));
+/** Overrides con Pin de la Vista. Unico sitio de la regla "secuencia no tiene Pins" (ADR 0009): su orden lo da `order`. */
+function pinsDe(vista: VistaResuelta): (OverrideDeNodo & { pin: NonNullable<OverrideDeNodo['pin']> })[] {
+  switch (vista.type) {
+    case 'sequence':
+      return [];
+    case 'architecture':
+    case 'flow':
+    case 'er':
+      return vista.overrides.flatMap((o) => (o.pin === undefined ? [] : [{ ...o, pin: o.pin }]));
+  }
+}
 
 /**
  * Como `claveDeLayout` sin los Pins: identifica la geometria que ELK calcula (los Pins se aplican despues,
@@ -381,12 +394,28 @@ export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Me
   return JSON.stringify({
     tipo: vista.type,
     nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => (vista.type === 'er' ? [a.name, a.type, a.keys, a.optional] : [a.name, a.type]))]),
-    aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
-    mensajes: vista.interaction?.messages.map((m) => [m.ruta, m.kind, m.from, m.to, m.label]),
-    fragmentos: vista.interaction === undefined ? undefined : claveDeFragmentos(vista.interaction.items),
-    grupos: vista.interaction?.groups?.map((g) => [g.id, g.label, g.nivel, g.lifelines]),
+    ...claveDeConexiones(vista),
     metricas: claveDeMetricas(tabla),
   });
+}
+
+/** Lo que une a los Nodos en la clave de estructura: Aristas en un grafo; Mensajes, Fragmentos y `box` en secuencia. */
+function claveDeConexiones(vista: VistaResuelta): Record<string, unknown> {
+  switch (vista.type) {
+    case 'sequence': {
+      const { messages, items, groups } = vista.interaction;
+      return {
+        aristas: [],
+        mensajes: messages.map((m) => [m.ruta, m.kind, m.from, m.to, m.label]),
+        fragmentos: claveDeFragmentos(items),
+        grupos: groups?.map((g) => [g.id, g.label, g.nivel, g.lifelines]),
+      };
+    }
+    case 'architecture':
+    case 'flow':
+    case 'er':
+      return { aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]) };
+  }
 }
 
 /** Estructura de los Fragmentos (operador, guardas y a que Mensajes cubren) para la clave de layout. */

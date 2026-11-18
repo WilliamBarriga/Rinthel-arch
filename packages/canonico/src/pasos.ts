@@ -6,7 +6,7 @@
  */
 import type { AristaDePaso, Arista, ElementoDePaso } from './esquema';
 import { matchesSelector } from './vistas';
-import type { NodoResuelto, VistaResuelta } from './vistas';
+import type { NodoResuelto, VistaDeGrafo, VistaDeSecuencia, VistaResuelta } from './vistas';
 import type { ItemResuelto } from './secuencia';
 
 /**
@@ -51,13 +51,20 @@ export function revealAt(vista: VistaResuelta, position: number): Visibilidad {
   if (steps.length === 0) return () => 1;
 
   const acotada = Number.isNaN(position) ? 0 : Math.min(Math.max(position, 0), steps.length);
-  if (vista.type === 'sequence') return revelarSecuencia(vista, Math.floor(acotada));
-  const reveladosTras = estadoTras(vista, Math.floor(acotada));
-  return (id) => (reveladosTras.has(id) ? 1 : 0);
+  switch (vista.type) {
+    case 'sequence':
+      return revelarSecuencia(vista, Math.floor(acotada));
+    case 'architecture':
+    case 'flow':
+    case 'er': {
+      const reveladosTras = estadoTras(vista, Math.floor(acotada));
+      return (id) => (reveladosTras.has(id) ? 1 : 0);
+    }
+  }
 }
 
 /** Ids (Nodos y Aristas) revelados tras aplicar los primeros `k` pasos. */
-function estadoTras(vista: VistaResuelta, k: number): Set<string> {
+function estadoTras(vista: VistaDeGrafo, k: number): Set<string> {
   const nodos = vista.nodes;
   const nombradas = new Set(
     vista.steps.flatMap((paso) => paso.show.filter(esArista).flatMap((item) => idsDeAristas(vista, item))),
@@ -128,7 +135,7 @@ function esArista(item: ElementoDePaso): item is AristaDePaso {
  * Aristas de la Vista que une `item` (cualquier Atributo en los extremos). Un
  * extremo dentro de un Grupo colapsado corresponde al Grupo, donde se elevo.
  */
-function idsDeAristas(vista: VistaResuelta, item: AristaDePaso): string[] {
+function idsDeAristas(vista: VistaDeGrafo, item: AristaDePaso): string[] {
   return vista.edges
     .filter((arista) => esExtremo(arista.from.node, item.from) && esExtremo(arista.to.node, item.to))
     .map(idDeArista);
@@ -146,10 +153,10 @@ function esExtremo(enVista: string, nombrado: string): boolean {
  * precede (los previos al primero, en el primer Paso); un Fragmento, al entrar el corte en su primer Mensaje, y cada
  * operando, al entrar en el suyo.
  */
-function revelarSecuencia(vista: VistaResuelta, k: number): Visibilidad {
+function revelarSecuencia(vista: VistaDeSecuencia, k: number): Visibilidad {
   const interaccion = vista.interaction;
   const paso = vista.steps[k - 1];
-  if (interaccion === undefined || paso === undefined) return () => 0;
+  if (paso === undefined) return () => 0;
   const mensajes = interaccion.messages;
   const corte = mensajes.findIndex((mensaje) => mensaje.ruta === paso.corte);
   const revelados = new Set<string>();

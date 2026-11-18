@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
-import type { Tema, VistaResuelta } from 'canonico';
+import type { Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
 import { claveDeLayout, layoutConMetricas, layoutView as layoutDeVista } from 'layout';
 import { TEMA_NEUTRO, claveDeTexto, metricasDe, tablaDeMetricas } from 'tema';
 
@@ -23,13 +23,13 @@ const grande = conTipos({ db: [{ nombre: 'forma', primitiva: 'circle', props: {}
 
 const nodo = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, title: id, description: '', children: [], ...extra });
 
-function vistaDe(nodes: unknown[], edges: unknown[]): VistaResuelta {
+function vistaDe(nodes: unknown[], edges: unknown[]): VistaDeGrafo {
   const fuente = fuenteCanonicaSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }, { name: 'db' }] },
     model: { nodes, edges },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
   });
-  return resolveView(fuente, 'v')!;
+  return resolveView(fuente, 'v') as VistaDeGrafo;
 }
 const dosTipos = (): VistaResuelta => vistaDe([nodo('api', 'servicio'), nodo('datos', 'db')], [{ from: { node: 'api' }, to: { node: 'datos' }, label: 'lee' }]);
 

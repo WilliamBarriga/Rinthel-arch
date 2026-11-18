@@ -7,7 +7,7 @@
  * en el borde de la activacion vigente.
  */
 import { activacionesDe } from 'canonico';
-import type { Activacion, CajaDeActivacion, CajaDeGrupoColocada, CajaDeNodo, GeometriaSecuencia, ItemResuelto, MarcoDeFragmento, MensajeResuelto, NotaColocada, NotaResuelta, OperandoColocado, RutaDeMensaje, VistaResuelta } from 'canonico';
+import type { Activacion, CajaDeActivacion, CajaDeGrupoColocada, CajaDeNodo, GeometriaSecuencia, ItemResuelto, MarcoDeFragmento, MensajeResuelto, NotaColocada, NotaResuelta, OperandoColocado, RutaDeMensaje, VistaDeSecuencia } from 'canonico';
 import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeGuarda } from 'tema';
 import type { Metricas, TablaDeMetricas } from 'tema';
 
@@ -64,7 +64,7 @@ function notasDe(items: readonly ItemResuelto[]): NotaResuelta[] {
   return items.flatMap((item): NotaResuelta[] => (item.type === 'note' ? [item] : item.type === 'fragment' ? item.operands.flatMap((o) => notasDe(o.items)) : []));
 }
 
-export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | TablaDeMetricas): GeometriaSecuencia {
+export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | TablaDeMetricas): GeometriaSecuencia {
   const tabla = comoTabla(metricas);
   const sec = tabla.base.secuencia;
   if (sec === undefined) throw new Error('layoutSecuencia: la tabla de Metricas no trae la parte de secuencia; calculala con tablaDeMetricas(tema, \'sequence\')');
@@ -75,8 +75,8 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   const rellenoHDeFragmento = sec.rellenoDeFragmento;
   const rellenoAbajoDeFragmento = sec.rellenoVerticalDeFragmento;
   const rellenoArribaDeFragmento = Math.max(2, rellenoAbajoDeFragmento - 4);
-  const mensajes = vista.interaction?.messages ?? [];
-  const itemsDeLaInteraccion = vista.interaction?.items ?? [];
+  const mensajes = vista.interaction.messages;
+  const itemsDeLaInteraccion = vista.interaction.items;
   const lifelines = vista.nodes;
   const columna = new Map(lifelines.map((nodo, i) => [nodo.id, i]));
 
@@ -117,7 +117,7 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   }
 
   // `box` de Grupos abiertos: cada nivel reserva una franja de titulo sobre las cabeceras y relleno a los lados.
-  const grupos = vista.interaction?.groups ?? [];
+  const grupos = vista.interaction.groups ?? [];
   const niveles = Math.max(0, ...grupos.map((g) => g.nivel + 1));
   const titulos = new Map(grupos.map((g) => [g.id, tamanoDeEtiqueta(g.label, tabla.etiqueta)]));
   const altoDeTitulo = Math.max(0, ...[...titulos.values()].map((t) => t.height)) + HOLGURA_DE_TITULO;

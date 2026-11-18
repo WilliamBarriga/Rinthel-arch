@@ -235,7 +235,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     if (geometria?.kind !== 'secuencia') return false;
     const caja = zona.current!.getBoundingClientRect();
     const k = width / camaraVigente.current.width;
-    return unidadBajo(geometria, vistaVigente.current.interaction?.groups ?? [], { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k }) !== undefined;
+    const enCurso = vistaVigente.current;
+    return unidadBajo(geometria, enCurso.type === 'sequence' ? (enCurso.interaction.groups ?? []) : [], { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k }) !== undefined;
   };
 
   useEffect(() => {
@@ -323,7 +324,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   }, [props.route, vista, nodosSeleccionados.join('\n')]);
   const [foco, fijarFoco] = useState<string | undefined>(undefined);
   const focoVigente =
-    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction?.messages.some((m) => idDeElementoDeSecuencia(vista.interaction!.id, m.ruta) === foco) === true)) ? foco : undefined;
+    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction.messages.some((m) => idDeElementoDeSecuencia(vista.interaction.id, m.ruta) === foco))) ? foco : undefined;
   const estadosFinales = useMemo(
     () => unirEstados(unirEstados(estados, estadosDeRuta(vista, ruta)), focoVigente === undefined ? {} : { [focoVigente]: ['foco'] }),
     [estados, vista, ruta, focoVigente],

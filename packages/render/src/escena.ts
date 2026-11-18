@@ -9,7 +9,7 @@
  * pintores (`pintores.ts`) desde el Estilo resuelto.
  */
 import { idDeArista } from 'canonico';
-import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaResuelta, Visibilidad } from 'canonico';
+import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaDeGrafo, VistaResuelta, Visibilidad } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria, GeometriaGrafo } from 'layout';
 import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
@@ -101,26 +101,31 @@ export interface Contexto extends EntradaDeEscena {
   escalonado: ReadonlyMap<string, number>;
 }
 
-/** Contexto de una escena de grafo: la Geometria es la de grafo. */
-type ContextoDeGrafo = Contexto & { geometry: GeometriaGrafo };
+/** Contexto de una escena de grafo: la Vista y la Geometria son las de grafo. */
+type ContextoDeGrafo = Contexto & { view: VistaDeGrafo; geometry: GeometriaGrafo };
 
 /**
  * Construye la escena. Nodos y Grupos con el Estilo resuelto del Tema (un color es siempre
  * un nombre de Paleta resuelto contra la paleta; sin color, o con un nombre
  * que el Tema no tiene, se usa el borde), y entre ambos las Aristas. Lanza si
- * un Nodo de la Vista no esta en la geometria (geometria de otra Vista) o si el
- * Tema no cumple el contrato.
+ * un Nodo de la Vista no esta en la geometria (geometria de otra Vista), si la
+ * Geometria es de otro Tipo de diagrama que la Vista o si el Tema no cumple el contrato.
  */
 export function construirEscena(entrada: EntradaDeEscena): Elemento {
-  switch (entrada.geometry.kind) {
-    case 'grafo':
-      return construirEscenaDeGrafo({ ...entrada, geometry: entrada.geometry });
-    case 'secuencia':
-      return construirEscenaDeSecuencia({ ...entrada, geometry: entrada.geometry });
+  const { view, geometry } = entrada;
+  switch (view.type) {
+    case 'sequence':
+      if (geometry.kind !== 'secuencia') throw new Error(`construirEscena: la Vista es de secuencia y la Geometria es '${geometry.kind}'`);
+      return construirEscenaDeSecuencia({ ...entrada, view, geometry });
+    case 'architecture':
+    case 'flow':
+    case 'er':
+      if (geometry.kind !== 'grafo') throw new Error(`construirEscena: la Vista es '${view.type}' y la Geometria es '${geometry.kind}'`);
+      return construirEscenaDeGrafo({ ...entrada, view, geometry });
   }
 }
 
-function construirEscenaDeGrafo(entrada: EntradaDeEscena & { geometry: GeometriaGrafo }): Elemento {
+function construirEscenaDeGrafo(entrada: EntradaDeEscena & { view: VistaDeGrafo; geometry: GeometriaGrafo }): Elemento {
   const { view, geometry, theme } = entrada;
   const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.view.type, entrada.metricas);
   const { raices, cajas } = indiceDeGeometria(view, geometry);
@@ -128,7 +133,7 @@ function construirEscenaDeGrafo(entrada: EntradaDeEscena & { geometry: Geometria
   const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));
   const contexto: ContextoDeGrafo = { ...entrada, visibility, estilo, cajas, coloresDeNodo, escalonado: posicionesDeEscalonado(raices, visibility, estilo, entrada.nuevos) };
   const nodos = raices.flatMap((nodo) => aplanar(nodo));
-  contexto.nombres = nombresAccesibles(view, nodos);
+  contexto.nombres = nombresAccesibles(view.edges, nodos);
 
   return marcoDeEscena(entrada, estilo, [
     { tag: 'div', attrs: { class: 'rd-capa rd-grupos', 'data-capa': 'grupos' }, hijos: nodos.filter(esGrupo).map((nodo) => cajaDeNodo(nodo, contexto)) },
@@ -215,13 +220,13 @@ const esGrupo = (nodo: NodoResuelto): boolean => nodo.children.length > 0;
  * "viene de", con la etiqueta de la Arista). Sale solo del Modelo: el Tema no puede
  * cambiarlo. El SVG de Aristas es decorativo, asi que la relacion se anuncia aqui.
  */
-export function nombresAccesibles(view: VistaResuelta, nodos: readonly NodoResuelto[]): Map<string, string> {
+export function nombresAccesibles(aristas: readonly AristaResuelta[], nodos: readonly NodoResuelto[]): Map<string, string> {
   const etiqueta = new Map(nodos.map((n) => [n.id, n.label]));
   const destino = (id: string, arista: AristaResuelta): string => `${etiqueta.get(id) ?? id}${arista.label === undefined ? '' : ` (${arista.label})`}`;
   return new Map(
     nodos.map((nodo) => {
-      const sale = view.edges.filter((e) => e.from.node === nodo.id).map((e) => destino(e.to.node, e));
-      const entra = view.edges.filter((e) => e.to.node === nodo.id).map((e) => destino(e.from.node, e));
+      const sale = aristas.filter((e) => e.from.node === nodo.id).map((e) => destino(e.to.node, e));
+      const entra = aristas.filter((e) => e.to.node === nodo.id).map((e) => destino(e.from.node, e));
       const partes = [
         nodo.label,
         nodo.type,

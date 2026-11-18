@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
+import type { VistaDeSecuencia } from 'canonico';
 import { abrirSesion } from 'sesion';
 
 const modelo = (interaccion: string, vistas: string) => `specification { node servicio }
@@ -25,8 +26,8 @@ const escenario = `  interaction i {
 
 function resolver(texto: string, vista: string) {
   const sesion = abrirSesion({ 'main.dg': texto });
-  const vr = resolveView(sesion.fuente!, vista);
-  return { sesion, resuelta: vr!, mensajes: vr?.interaction?.messages ?? [] };
+  const vr = resolveView(sesion.fuente!, vista) as VistaDeSecuencia;
+  return { sesion, resuelta: vr, mensajes: vr.interaction.messages };
 }
 
 describe('seam sesion: depth, collapsed y exclude en secuencia', () => {
@@ -67,7 +68,7 @@ describe('seam sesion: depth, collapsed y exclude en secuencia', () => {
     const { resuelta, mensajes } = resuelta_(texto);
     expect(resuelta.nodes.map((n) => n.id)).toEqual(['cliente', 'sistema.api']);
     expect(mensajes.map((m) => m.ruta)).toEqual(['0', '2']);
-    expect(resuelta.interaction!.items.map((i) => i.type)).toEqual(['message', 'message']);
+    expect(resuelta.interaction.items.map((i) => i.type)).toEqual(['message', 'message']);
   });
 
   it('exclude de un Grupo colapsado quita tambien los Mensajes de sus hijas', () => {

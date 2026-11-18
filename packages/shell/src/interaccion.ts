@@ -10,7 +10,7 @@
  * de Arista, Arista (con `tolerancia`), Atributo, Nodo (el mas anidado gana).
  */
 import { destinoDeRef, idDeArista, idDeElementoDeSecuencia, leerIdDeElementoDeSecuencia } from 'canonico';
-import type { ItemResuelto, NodoResuelto, Tema, Vista, Visibilidad, VistaResuelta } from 'canonico';
+import type { ItemResuelto, NodoResuelto, Tema, Vista, Visibilidad, VistaDeSecuencia, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import type { CajaDeNodo, Geometria, Punto } from 'layout';
 import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
@@ -114,8 +114,8 @@ export function elementoBajo(
  * activacion), Fragmento (solo pestana y borde: el interior deja pasar el click) y fondo. Lo que los Pasos no
  * revelaron (`visibilidad` 0) no se acierta.
  */
-function elementoBajoEnSecuencia(vista: VistaResuelta, geometria: Geo, punto: Punto, tolerancia: number, visibilidad: Visibilidad): ElementoSeleccionable | undefined {
-  const interaccion = vista.interaction?.id ?? '';
+function elementoBajoEnSecuencia(vista: VistaDeSecuencia, geometria: Geo, punto: Punto, tolerancia: number, visibilidad: Visibilidad): ElementoSeleccionable | undefined {
+  const interaccion = vista.interaction.id;
   const visible = (id: string): boolean => visibilidad(id) > 0;
   const idDe = (ruta: string): string => idDeElementoDeSecuencia(interaccion, ruta);
 
@@ -173,7 +173,7 @@ export function cajaDeElemento(vista: VistaResuelta, geometria: Geo, tema: Tema,
     const [x, y] = [Math.min(...puntos.map((p) => p.x)), Math.min(...puntos.map((p) => p.y))];
     return { x, y, width: Math.max(...puntos.map((p) => p.x)) - x, height: Math.max(...puntos.map((p) => p.y)) - y };
   }
-  const arista = vista.edges.find((a) => idDeArista(a) === elemento.id);
+  const arista = vista.type === 'sequence' ? undefined : vista.edges.find((a) => idDeArista(a) === elemento.id);
   const puntos = geometria.edges?.[elemento.id]?.points ?? [];
   if (arista === undefined || puntos.length < 2) return undefined;
   if (elemento.tipo === 'etiqueta') {
@@ -214,14 +214,15 @@ export function seleccionar(seleccion: Seleccion, elemento: ElementoSeleccionabl
 export function elementoPorId(vista: VistaResuelta, id: string): ElementoSeleccionable {
   const deSecuencia = elementoDeSecuencia(vista, id);
   if (deSecuencia !== undefined) return deSecuencia;
-  if (vista.edges.some((arista) => idDeArista(arista) === id)) return { tipo: 'arista', id };
+  if (vista.type !== 'sequence' && vista.edges.some((arista) => idDeArista(arista) === id)) return { tipo: 'arista', id };
   return { tipo: id.includes('#') ? 'atributo' : 'nodo', id };
 }
 
-/** Ruta del elemento `id` dentro de la Interaccion de la Vista; `undefined` si `id` no es de esa Interaccion. */
+/** Ruta del elemento `id` dentro de la Interaccion de la Vista; `undefined` si `id` no es de esa Interaccion (o la Vista no es de secuencia). */
 function rutaDeElemento(vista: VistaResuelta, id: string): string | undefined {
+  if (vista.type !== 'sequence') return undefined;
   const leido = leerIdDeElementoDeSecuencia(id);
-  return leido !== undefined && leido.operando === undefined && leido.interaccion === vista.interaction?.id ? leido.ruta : undefined;
+  return leido !== undefined && leido.operando === undefined && leido.interaccion === vista.interaction.id ? leido.ruta : undefined;
 }
 
 function itemsAplanados(items: readonly ItemResuelto[]): ItemResuelto[] {
@@ -230,10 +231,9 @@ function itemsAplanados(items: readonly ItemResuelto[]): ItemResuelto[] {
 
 /** Mensaje, Fragmento (o `ref`) o Nota que nombra `interaccion:ruta` en una Vista de secuencia. */
 function elementoDeSecuencia(vista: VistaResuelta, id: string): ElementoSeleccionable | undefined {
-  const interaccion = vista.interaction;
   const ruta = rutaDeElemento(vista, id);
-  if (interaccion === undefined || ruta === undefined) return undefined;
-  const item = itemsAplanados(interaccion.items).find((i) => (i.type === 'message' ? i.message.ruta : i.ruta) === ruta);
+  if (vista.type !== 'sequence' || ruta === undefined) return undefined;
+  const item = itemsAplanados(vista.interaction.items).find((i) => (i.type === 'message' ? i.message.ruta : i.ruta) === ruta);
   if (item === undefined) return undefined;
   return { tipo: item.type === 'message' ? 'mensaje' : item.type === 'note' ? 'nota' : 'fragmento', id };
 }
@@ -243,10 +243,9 @@ function elementoDeSecuencia(vista: VistaResuelta, id: string): ElementoSeleccio
  * referida (`destinoDeRef`). `undefined` si `id` no es un `ref`, no hay Vista destino o esa Vista es la actual (inerte, sin aviso).
  */
 export function destinoDeNavegacionPorRef(vista: VistaResuelta, actual: string, vistas: readonly Pick<Vista, 'id' | 'type' | 'interaction'>[], id: string): string | undefined {
-  const interaccion = vista.interaction;
   const ruta = rutaDeElemento(vista, id);
-  if (interaccion === undefined || ruta === undefined) return undefined;
-  const item = itemsAplanados(interaccion.items).find((i) => i.type === 'ref' && i.ruta === ruta);
+  if (vista.type !== 'sequence' || ruta === undefined) return undefined;
+  const item = itemsAplanados(vista.interaction.items).find((i) => i.type === 'ref' && i.ruta === ruta);
   if (item === undefined || item.type !== 'ref') return undefined;
   const destino = destinoDeRef(vistas, item.interaction);
   return destino === actual ? undefined : destino;

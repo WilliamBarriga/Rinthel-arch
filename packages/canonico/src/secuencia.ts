@@ -152,8 +152,8 @@ export function lifelinesDe(mensajes: readonly Pick<Mensaje, 'from' | 'to'>[], o
  * Un extremo dentro de un Grupo colapsado (`ancestroColapsado`) se eleva al Grupo; el Mensaje que queda con ambos
  * extremos en la misma Lifeline pasa a ser propio. `create`/`destroy` de un descendiente no crean ni destruyen el Grupo:
  * al elevarse pasan a `async`. Un extremo excluido (o su Grupo) quita el Mensaje; un Fragmento sin Mensajes desaparece.
- * Con `autonumber` cada Mensaje proyectado lleva su numero delante de la etiqueta. Una Interaccion o un Nodo que no
- * existen se omiten (`validate` los informa).
+ * Con `autonumber` cada Mensaje proyectado lleva su numero delante de la etiqueta. Un Nodo que no existe se omite; una
+ * Interaccion que no existe da una Interaccion vacia con el id nombrado (`validate` los informa).
  */
 export function resolverSecuencia(
   interacciones: readonly Interaccion[],
@@ -162,9 +162,9 @@ export function resolverSecuencia(
   excluidos: ReadonlySet<string>,
   resolverNodo: (nodo: Nodo) => NodoResuelto,
   ancestroColapsado: ReadonlyMap<string, string> = new Map(),
-): { nodes: NodoResuelto[]; interaction?: InteraccionResuelta } {
+): { nodes: NodoResuelto[]; interaction: InteraccionResuelta } {
   const interaccion = interacciones.find((candidata) => candidata.id === vista.interaction);
-  if (interaccion === undefined) return { nodes: [] };
+  if (interaccion === undefined) return { nodes: [], interaction: { id: vista.interaction ?? '', title: '', messages: [], items: [] } };
   const porId = nodosPorId(nodos);
   const elevar = (id: string): string => ancestroColapsado.get(id) ?? id;
   const visible = (id: string): boolean => porId.has(id) && !excluidos.has(id) && !excluidos.has(elevar(id));

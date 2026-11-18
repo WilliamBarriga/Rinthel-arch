@@ -396,7 +396,8 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
 function validarPasosDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: number, interaccion: Interaccion | undefined, emitir: Emitir, emitirCon: EmitirCon): void {
   const ruta = ['views', indice];
   const mensajes = aplanarMensajes(interaccion?.items ?? []);
-  const proyectados = interaccion === undefined ? [] : (resolveView(fuente, vista.id)?.interaction?.messages ?? []);
+  const resuelta = interaccion === undefined ? undefined : resolveView(fuente, vista.id);
+  const proyectados = resuelta?.type === 'sequence' ? resuelta.interaction.messages : [];
   const posicion = new Map(proyectados.flatMap((m, i) => (m.id === undefined ? [] : [[m.id, i] as const])));
   const ids = mensajes.flatMap((m) => (m.id === undefined ? [] : [m.id]));
   if (vista.stepsEach === true && vista.steps.length > 0) {

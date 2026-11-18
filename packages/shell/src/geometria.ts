@@ -125,6 +125,13 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
 
 /** La Vista sin Pins: lo que se le pide al adaptador, que solo calcula la parte de ELK. */
 function sinPins(vista: VistaResuelta): VistaResuelta {
-  if (vista.overrides.every((o) => o.pin === undefined)) return vista;
-  return { ...vista, overrides: vista.overrides.map(({ pin: _pin, ...resto }) => resto) };
+  switch (vista.type) {
+    case 'sequence':
+      return vista;
+    case 'architecture':
+    case 'flow':
+    case 'er':
+      if (vista.overrides.every((o) => o.pin === undefined)) return vista;
+      return { ...vista, overrides: vista.overrides.map(({ pin: _pin, ...resto }) => resto) };
+  }
 }
