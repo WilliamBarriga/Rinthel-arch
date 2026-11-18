@@ -44,7 +44,7 @@ Humano y agente deben poder trabajar comodos, solos o juntos. Mover un Pin desde
 
 ### Nucleo comun
 
-Modulo puro `aplicarEdiciones(archivos, ediciones)` en el paquete `sesion`, que aplica ediciones `{ file, range, replacement }` sobre el mapa de archivos sin tocar disco. Tiene dos entradas que escriben el resultado:
+Puerta de escritura unica `aplicarAlWorkspace(puerto, aplicable, visto?)` en el paquete `sesion` (la aplicacion de ediciones `{ file, range, replacement }` sobre el mapa de archivos es interna, pura y sin tocar disco; solo la puerta escribe por el puerto). Tiene dos entradas:
 
 - **Shell** (`dev`): endpoint de edicion, a peticion del humano al hacer un gesto.
 - **CLI**: `diagrams edit` con `--json`, para el agente. Mismos codigos de salida que `validate` (0 correcto, 1 edicion rechazada o invalida, 2 fallo de uso o interno) y `contractVersion` propio, como `inspect`. Solo escribe ediciones que el llamador pidio; nunca como efecto de validar.
@@ -55,7 +55,7 @@ El shell y el comando envian la intencion (`{ vista, nodo, x, y }`), no rangos. 
 
 ### Concurrencia
 
-Cada edicion lleva el hash del contenido que vio quien la pide. Si el archivo en disco ya no coincide, se rechaza sin escritura parcial; el shell recarga la Vista y avisa. Esto matiza el "gana la ultima escritura" de `dev` solo para ediciones estructuradas; el resto de la reconciliacion sigue siendo de git. No hay deshacer propio: el DSL esta en git.
+Cada edicion estructurada (`--edits`) lleva el hash del contenido que vio quien la pide. Para Intenciones (`--intent`) rige `visto` (ADR 0007): el `hash` de `--intent` es opcional y se ignora. Si el archivo en disco ya no coincide, se rechaza sin escritura parcial; el shell recarga la Vista y avisa. Esto matiza el "gana la ultima escritura" de `dev` solo para ediciones estructuradas; el resto de la reconciliacion sigue siendo de git. No hay deshacer propio: el DSL esta en git.
 
 ### Alcance
 
@@ -78,6 +78,7 @@ Subcomando de solo lectura, con `--json` y `contractVersion` propio como el rest
 - la cadena `extends` y las `part` usadas;
 - la pila de Capas resuelta para el Tipo y estado pedidos, cada Capa con el `archivo:linea` del parche que la fijo;
 - la tabla de Metricas;
+- los Elementos de secuencia y la fila ER (ADR 0009) con la misma resolucion que el dibujo (el Estilo resuelto de `tema`, sin parches propios del CLI): los declarados y, con `--diagrama sequence` o `er`, los derivados de `edge` y `node` con `derivado: true` (cambio aditivo; `contractVersion` sigue en 1);
 - `temaConCodigo` y la lista de componentes;
 - con `--catalogo`, las claves del catalogo de Primitivas y Movimientos, derivadas del esquema unico (sin listas paralelas).
 
@@ -102,7 +103,7 @@ Los codigos de Tema (propiedad desconocida, `before`/`after` inexistente, contra
 - `estructura` (cambia la clave de estructura: Metricas, fuente): relayout;
 - `codigo` (cambia un `.tsx`): se recompila y se vuelve a registrar el componente, sin relayout.
 
-Si algo falla (DSL o compilacion) el panel de issues lo muestra y `dev` conserva el ultimo dibujo bueno.
+Si algo falla (DSL o compilacion) el panel de issues lo muestra y `dev` conserva el ultimo dibujo bueno. La pagina pide la Geometria solo de la Vista activa, y ninguna tras un cambio de `pintura` (protocolo en ADR 0007).
 
 Confianza en el codigo: `dev` no sirve `/componentes.js` mientras el usuario no confirme (el visor pregunta la primera vez que el Workspace tiene un Tema con codigo; `--trust-code` lo da de antemano) y avisa del codigo al arrancar. `/api/codigo` informa `temaConCodigo`, los componentes y si esta confirmado.
 

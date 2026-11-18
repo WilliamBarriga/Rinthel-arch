@@ -1,112 +1,16 @@
 /**
- * Layout de una Vista de secuencia (ADR 0009): algoritmo propio, sin ELK, determinista y sincrono.
- * Columnas: una por Lifeline en el orden de `vista.nodes`; la distancia entre vecinas es la mayor entre el hueco minimo,
- * lo que piden las cabeceras y la etiqueta mas ancha de un Mensaje que las cruza (o el lazo y la etiqueta de un Mensaje
- * propio). Filas: de arriba abajo, una por Mensaje, con el alto de su etiqueta mas un hueco. Las activaciones salen de la
- * pila `sync`/`reply` (`activacionesDe`); cada nivel anidado se desplaza medio ancho de activacion y las flechas terminan
- * en el borde de la activacion vigente.
+ * Layout de una Vista de secuencia, sin ELK, determinista y sincrono. Una columna por Lifeline en el orden de
+ * `vista.nodes` y una fila por Mensaje. Cada nivel de activacion anidado se desplaza medio ancho de activacion y las
+ * flechas terminan en el borde de la activacion vigente.
  */
 import { activacionesDe } from 'canonico';
-import type { Activacion, AnclajeDeNota, ItemResuelto, MensajeResuelto, NotaResuelta, OperadorDeFragmento, VistaResuelta } from 'canonico';
-import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, contenidoDeNodo, metricasDeHoja, metricasDeSecuencia, tamanoDeEtiqueta, textoDeGuarda } from 'tema';
+import type { Activacion, CajaDeActivacion, CajaDeGrupoColocada, CajaDeNodo, GeometriaSecuencia, ItemResuelto, MarcoDeFragmento, MensajeResuelto, NotaColocada, NotaResuelta, OperandoColocado, RutaDeMensaje, VistaDeSecuencia } from 'canonico';
+import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeGuarda } from 'tema';
 import type { Metricas, TablaDeMetricas } from 'tema';
 
-import type { CajaDeNodo, Punto } from './layout';
 
-/** Barra de activacion de una Lifeline: `x` es su borde izquierdo y `nivel` su anidacion (0 la exterior). */
-export interface CajaDeActivacion {
-  lifeline: string;
-  nivel: number;
-  x: number;
-  y1: number;
-  y2: number;
-  width: number;
-}
+export type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada, OperandoColocado, RutaDeMensaje };
 
-/** Ruta de un Mensaje (2 puntos, o 4 si es propio: el lazo) y la caja de su etiqueta si la tiene. */
-export interface RutaDeMensaje {
-  points: Punto[];
-  label?: CajaDeNodo;
-}
-
-/** Operando de un Fragmento colocado: su franja vertical, su guarda (caja del texto `[guarda]`) y el divisor sobre el. */
-export interface OperandoColocado {
-  y1: number;
-  y2: number;
-  guard?: { text: string; box: CajaDeNodo };
-  /** `y` del divisor que lo separa del operando anterior; ausente en el primero. */
-  divider?: number;
-}
-
-/** Marco de un Fragmento: cubre las Lifelines de su contenido; `tab` es la caja de la pestana con el texto del operador. */
-export interface MarcoDeFragmento {
-  ruta: string;
-  operator: OperadorDeFragmento | 'ref';
-  /** Titulo de la Interaccion referida, solo en `ref`: caja del texto bajo la pestana. */
-  title?: { text: string; box: CajaDeNodo };
-  /** Profundidad de anidacion (0 el exterior). */
-  nivel: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  tab: CajaDeNodo;
-  operands: OperandoColocado[];
-}
-
-/** Nota colocada (papel): caja, texto ya envuelto (una cadena por linea) y esquina doblada. */
-export interface NotaColocada {
-  ruta: string;
-  anchor: AnclajeDeNota;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  lines: string[];
-  lineHeight: number;
-  /** Lado de la esquina doblada (arriba a la derecha). */
-  fold: number;
-}
-
-/** `box` de un Grupo abierto: envuelve las cabeceras y Lifelines de sus hijas; `title` es la caja de su nombre (arriba a la izquierda). */
-export interface CajaDeGrupoColocada {
-  id: string;
-  /** Texto del nombre del Grupo. */
-  label: string;
-  /** Anidacion entre `box`es (0 el exterior). */
-  nivel: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  title: CajaDeNodo;
-}
-
-/** Geometria de una Vista de secuencia: `nodes` son las cabeceras de las Lifelines (todas en la misma `y`). */
-export interface GeometriaSecuencia {
-  kind: 'secuencia';
-  nodes: Record<string, CajaDeNodo>;
-  /** Cabecera espejo al pie de cada Lifeline no destruida (misma caja y Slots que en `nodes`, desplazada a `y2` de su linea). */
-  footers?: Record<string, CajaDeNodo>;
-  /** Linea vertical de cada Lifeline, por id de Nodo: `x` central, desde `y1` (bajo la cabecera) hasta `y2`. */
-  lifelines: Record<string, { x: number; y1: number; y2: number; /** Cortada en un `destroy`: `y2` es la `y` de ese Mensaje y se pinta el marcador `end`. */ destroyed?: true }>;
-  activations: CajaDeActivacion[];
-  /** Ruta de cada Mensaje por su `ruta` (identidad en la Interaccion). */
-  messages: Record<string, RutaDeMensaje>;
-  /** Marcos de los Fragmentos, los exteriores antes que los anidados. */
-  fragments: MarcoDeFragmento[];
-  /** Notas, en orden de declaracion. */
-  notes: NotaColocada[];
-  /** `box` de los Grupos abiertos, los exteriores antes que los anidados. */
-  groups: CajaDeGrupoColocada[];
-  width: number;
-  height: number;
-}
-
-/**
- * Constantes de la secuencia (px) que el Tema no ajusta. Las separaciones que si (hueco entre Lifelines y entre Mensajes,
- * ancho de lazo y de activacion, padding de Fragmento, desplazamiento de `create`) son Metricas del Tema: `Metricas.secuencia`.
- */
 /** Ancho que algo pide entre las columnas `desde` y `hasta` (indices de Lifeline): una etiqueta, una Nota. */
 interface NecesidadDeAncho {
   desde: number;
@@ -114,6 +18,7 @@ interface NecesidadDeAncho {
   ancho: number;
 }
 
+// px que el Tema no ajusta; las separaciones ajustables son `Metricas.secuencia`.
 const MARGEN = 24;
 const SEPARACION_DE_CABECERAS = 24;
 const HOLGURA_DE_ETIQUETA = 24;
@@ -148,14 +53,14 @@ function profundidadDe(items: readonly ItemResuelto[], destino = new Map<string,
   );
 }
 
-/** Notas de una lista de items, anidadas incluidas. */
 function notasDe(items: readonly ItemResuelto[]): NotaResuelta[] {
   return items.flatMap((item): NotaResuelta[] => (item.type === 'note' ? [item] : item.type === 'fragment' ? item.operands.flatMap((o) => notasDe(o.items)) : []));
 }
 
-export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | TablaDeMetricas): GeometriaSecuencia {
+export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | TablaDeMetricas): GeometriaSecuencia {
   const tabla = comoTabla(metricas);
-  const sec = tabla.base.secuencia ?? metricasDeSecuencia(undefined);
+  const sec = tabla.base.secuencia;
+  if (sec === undefined) throw new Error('layoutSecuencia: la tabla de Metricas no trae la parte de secuencia; calculala con tablaDeMetricas(tema, \'sequence\')');
   const huecoEntreLifelines = sec.huecoEntreLifelines;
   const anchoDeActivacion = sec.anchoDeActivacion;
   const anchoDeLazo = sec.anchoDeLazo;
@@ -163,8 +68,8 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   const rellenoHDeFragmento = sec.rellenoDeFragmento;
   const rellenoAbajoDeFragmento = sec.rellenoVerticalDeFragmento;
   const rellenoArribaDeFragmento = Math.max(2, rellenoAbajoDeFragmento - 4);
-  const mensajes = vista.interaction?.messages ?? [];
-  const itemsDeLaInteraccion = vista.interaction?.items ?? [];
+  const mensajes = vista.interaction.messages;
+  const itemsDeLaInteraccion = vista.interaction.items;
   const lifelines = vista.nodes;
   const columna = new Map(lifelines.map((nodo, i) => [nodo.id, i]));
 
@@ -177,7 +82,6 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   const anchoDeEtiqueta = (mensaje: MensajeResuelto): number => (mensaje.label === undefined ? 0 : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta).width);
   const altoDeEtiqueta = (mensaje: MensajeResuelto): number => (mensaje.label === undefined ? 0 : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta).height);
 
-  // Distancia entre los centros de columnas vecinas.
   const huecos = lifelines.slice(1).map((_, i) => Math.max(huecoEntreLifelines, (medidas[i]!.width + medidas[i + 1]!.width) / 2 + SEPARACION_DE_CABECERAS));
   const necesidades = (mensaje: MensajeResuelto): NecesidadDeAncho | undefined => {
     const a = columna.get(mensaje.from);
@@ -205,7 +109,7 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   }
 
   // `box` de Grupos abiertos: cada nivel reserva una franja de titulo sobre las cabeceras y relleno a los lados.
-  const grupos = vista.interaction?.groups ?? [];
+  const grupos = vista.interaction.groups ?? [];
   const niveles = Math.max(0, ...grupos.map((g) => g.nivel + 1));
   const titulos = new Map(grupos.map((g) => [g.id, tamanoDeEtiqueta(g.label, tabla.etiqueta)]));
   const altoDeTitulo = Math.max(0, ...[...titulos.values()].map((t) => t.height)) + HOLGURA_DE_TITULO;
@@ -221,7 +125,6 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   const nivelesBajo = new Map<string, number>();
   const profundidad = profundidadDe(itemsDeLaInteraccion, nivelesBajo);
   const margenIzquierdo = MARGEN + Math.max(profundidad > 0 ? rellenoHDeFragmento + SANGRIA_DE_ANIDADO * (profundidad - 1) : 0, ...grupos.filter((g) => extremos.get(g.id)!.desde === 0).map((g) => relleno(g.nivel)));
-  // Lo que las Notas de la primera columna sobresalen a su izquierda.
   const salienteDeLaPrimeraColumna = Math.max(
     0,
     ...notasDe(itemsDeLaInteraccion).flatMap((nota) => {
@@ -266,7 +169,7 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
       cursor = ys[i]! + espacioDespuesDelMensaje;
     }
   };
-  /** Coloca los items y devuelve la profundidad de Fragmentos anidados que contienen (0 si no hay). */
+  /** Devuelve la profundidad de Fragmentos anidados que contienen (0 si no hay). */
   const colocarItems = (items: readonly ItemResuelto[], nivel: number, rutas: string[], extremos: number[]): number => {
     let altura = 0;
     for (const item of items) {
@@ -447,7 +350,6 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   for (const nota of notas) derecha = Math.max(derecha, nota.x + nota.width);
 
   const nodes: Record<string, CajaDeNodo> = {};
-  const footers: Record<string, CajaDeNodo> = {};
   const lineas: GeometriaSecuencia['lifelines'] = {};
   lifelines.forEach((nodo, i) => {
     const { width } = medidas[i]!;
@@ -455,11 +357,10 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
     const m = metricasDeHoja(tabla, nodo);
     nodes[nodo.id] = { ...caja, slots: colocarEnCaja(m, contenidoDeNodo(nodo, m), width).slots };
     lineas[nodo.id] = { x: xDeLifeline(nodo.id), y1: caja.y + altoDeCabecera, y2: destruccion(nodo.id) < 0 ? yFinal + RELLENO_FINAL : yFinalDe(nodo.id), ...(destruccion(nodo.id) >= 0 && { destroyed: true as const }) };
-    if (destruccion(nodo.id) < 0) footers[nodo.id] = { ...nodes[nodo.id]!, y: yFinal + RELLENO_FINAL };
     derecha = Math.max(derecha, caja.x + width);
   });
-  // Cada box rodea las cabeceras de sus Lifelines hasta el pie de sus lineas (los exteriores sobresalen mas).
-  const pie = yFinal + RELLENO_FINAL + (lifelines.length > 0 ? altoDeCabecera : 0);
+  // Cada box rodea las cabeceras de sus Lifelines hasta el final de sus lineas (los exteriores sobresalen mas).
+  const pie = yFinal + RELLENO_FINAL;
   const cajasDeGrupo: CajaDeGrupoColocada[] = grupos.map((g) => {
     const cajas = g.lifelines.map((id) => nodes[id]!);
     const titulo = titulos.get(g.id)!;
@@ -474,7 +375,6 @@ export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | Tabla
   return {
     kind: 'secuencia',
     nodes,
-    footers,
     lifelines: lineas,
     activations: cajasDeActivacion,
     messages: rutas,

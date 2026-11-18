@@ -121,3 +121,18 @@ describe('link, breadcrumbs y atras', () => {
     expect(migas()).toEqual(['b']);
   });
 });
+
+describe('Geometria cacheada por Vista al navegar', () => {
+  it('usa la Geometria que llego para la Vista activa y calcula en el adaptador (el Worker) la que no llego', async () => {
+    const layout = vi.fn(enFila);
+    const cacheada: Geometria = { kind: 'grafo', nodes: { x: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, pinsSolapados: [], width: 100, height: 50 };
+    const { container } = montar({ defaultView: 'a', layout, cachedGeometries: { a: cacheada } });
+    await dibujado(container, 'x');
+    expect(layout).not.toHaveBeenCalled();
+
+    pulsar(container, 'x');
+    await dibujado(container, 'y');
+    expect(layout).toHaveBeenCalledTimes(1);
+    expect(layout.mock.calls[0]?.[0].nodes.map((n) => n.id)).toEqual(['y', 'z']);
+  });
+});

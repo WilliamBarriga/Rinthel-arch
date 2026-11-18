@@ -68,4 +68,30 @@ describe('chrome del shell', () => {
     expect(css).toContain('var(--rd-fondo)');
     expect(css).not.toMatch(/#[0-9a-f]{3,6}\b/i);
   });
+
+  describe('chrome opcional (issues, toasts, leyenda, migas)', () => {
+    const issue = { severity: 'error' as const, code: 'E_X', message: 'roto', file: 'main.dg', line: 1, column: 1, href: '#' };
+    const montarConChrome = (chrome?: boolean) =>
+      render(
+        <VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} legend="always" issues={[issue]} toasts={['hola']} {...(chrome !== undefined && { chrome })} />,
+      );
+
+    it('por defecto dibuja issues, toasts, leyenda y migas', async () => {
+      const { container } = montarConChrome();
+      await waitFor(() => expect(container.querySelector('[data-pasos]')).not.toBeNull());
+      expect(container.querySelector('[data-panel="issues"]')).not.toBeNull();
+      expect(container.querySelector('.rd-toast')).not.toBeNull();
+      expect(container.querySelector('[data-leyenda]')).not.toBeNull();
+      expect(container.querySelector('[data-breadcrumbs]')).not.toBeNull();
+    });
+
+    it('con chrome={false} no dibuja issues, toasts, leyenda ni migas', async () => {
+      const { container } = montarConChrome(false);
+      await waitFor(() => expect(container.querySelector('[data-id="a"]')).not.toBeNull());
+      expect(container.querySelector('[data-panel="issues"]')).toBeNull();
+      expect(container.querySelector('.rd-toast')).toBeNull();
+      expect(container.querySelector('[data-leyenda]')).toBeNull();
+      expect(container.querySelector('[data-breadcrumbs]')).toBeNull();
+    });
+  });
 });

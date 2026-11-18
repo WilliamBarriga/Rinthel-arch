@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
+import type { VistaDeSecuencia } from 'canonico';
 import { abrirSesion } from 'sesion';
 
 const modelo = (interaccion: string, vistas: string) => `specification { node servicio }
@@ -25,8 +26,8 @@ const escenario = `  interaction i {
 
 function resolver(texto: string, vista: string) {
   const sesion = abrirSesion({ 'main.dg': texto });
-  const vr = resolveView(sesion.fuente!, vista);
-  return { sesion, resuelta: vr!, mensajes: vr?.interaction?.messages ?? [] };
+  const vr = resolveView(sesion.fuente!, vista) as VistaDeSecuencia;
+  return { sesion, resuelta: vr, mensajes: vr.interaction.messages };
 }
 
 describe('seam sesion: depth, collapsed y exclude en secuencia', () => {
@@ -67,7 +68,7 @@ describe('seam sesion: depth, collapsed y exclude en secuencia', () => {
     const { resuelta, mensajes } = resuelta_(texto);
     expect(resuelta.nodes.map((n) => n.id)).toEqual(['cliente', 'sistema.api']);
     expect(mensajes.map((m) => m.ruta)).toEqual(['0', '2']);
-    expect(resuelta.interaction!.items.map((i) => i.type)).toEqual(['message', 'message']);
+    expect(resuelta.interaction.items.map((i) => i.type)).toEqual(['message', 'message']);
   });
 
   it('exclude de un Grupo colapsado quita tambien los Mensajes de sus hijas', () => {
@@ -114,6 +115,22 @@ view sin_numero { type sequence
     const sesion = abrirSesion({ 'main.dg': modelo(escenario, 'view v { type architecture\n include **\n autonumber }\n') });
     const issues = await sesion.diagnosticar();
     expect(issues.map((i) => i.code)).toContain('E_VIEW_PROPERTY_FOR_TYPE');
+  });
+
+  it('un ref cuyas Lifelines quedan fundidas en un Grupo colapsado enmarca solo la Lifeline del Grupo', async () => {
+    const texto = modelo(`  interaction otra { sistema.api -> sistema.db "x" }
+  interaction i {
+    cliente -> sistema.api "pedir"
+    ref otra
+    sistema.api -> cola "evento"
+  }`, 'view v { type sequence\n interaction i\n depth 1 }\n');
+    const g = (await abrirSesion({ 'main.dg': texto }).geometria('v'))!.geometry;
+    if (g.kind !== 'secuencia') throw new Error('secuencia');
+    const ref = g.fragments.find((m) => m.operator === 'ref')!;
+    expect(ref.x).toBeGreaterThan(g.lifelines['cliente']!.x);
+    expect(ref.x + ref.width).toBeLessThan(g.lifelines['cola']!.x);
+    expect(ref.x).toBeLessThan(g.lifelines['sistema']!.x);
+    expect(ref.x + ref.width).toBeGreaterThan(g.lifelines['sistema']!.x);
   });
 });
 

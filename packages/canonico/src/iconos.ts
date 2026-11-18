@@ -1,14 +1,9 @@
-/**
- * Puerto `IconProvider` (clave opaca -> SVG inline) y sus adaptadores: los
- * iconos genericos del nucleo y los SVG del Workspace (ADR 0002). El nucleo no
- * conoce ningun set de marcas: uno externo se enchufa como otro `IconProvider`.
- */
+/** Puerto `IconProvider` (clave opaca -> SVG inline, ADR 0002). Un set de marcas externo es otro `IconProvider`. */
 import type { TipoDeNodo } from './esquema';
 
 /** Resuelve una clave de icono a SVG inline; `undefined` si no la conoce. */
 export interface IconProvider {
   resolve(key: string): string | undefined;
-  /** Claves conocidas, para sugerir candidatos ante un typo. */
   keys(): string[];
 }
 
@@ -24,7 +19,6 @@ const GENERICOS: Readonly<Record<string, string>> = {
   cloud: svg('<path d="M7 18a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9z"/>'),
 };
 
-/** Adaptador: el set pequeno de iconos genericos propios del nucleo. */
 export function genericIcons(): IconProvider {
   return {
     resolve: (key) => GENERICOS[key],
@@ -32,10 +26,7 @@ export function genericIcons(): IconProvider {
   };
 }
 
-/**
- * Adaptador: los archivos `.svg` del Workspace (mapa ruta -> texto). La clave es
- * el nombre del archivo sin carpeta ni extension (`iconos/mi-logo.svg` -> `mi-logo`).
- */
+/** Clave: nombre del `.svg` sin carpeta ni extension (`iconos/mi-logo.svg` -> `mi-logo`); con duplicados gana la primera ruta en orden. */
 export function workspaceIcons(archivos: Readonly<Record<string, string>>): IconProvider {
   const porClave = new Map<string, string>();
   for (const ruta of Object.keys(archivos).sort()) {
@@ -59,7 +50,7 @@ export function resolveNodeTypeIcon(tipo: TipoDeNodo, iconos: IconProvider): str
   return tipo.icon === undefined ? undefined : iconos.resolve(tipo.icon);
 }
 
-/** Iconos de un proveedor como mapa clave -> SVG, con claves ordenadas (determinista); lo que viaja al navegador. */
+/** Mapa clave -> SVG con claves ordenadas (determinista), para enviarlo al navegador. */
 export function serializarIconos(proveedor: IconProvider): Record<string, string> {
   return Object.fromEntries(
     proveedor.keys().sort().flatMap((clave) => {
@@ -84,11 +75,9 @@ const ETIQUETA_SVG = /<(\/?)([a-zA-Z][\w-]*)((?:\s+[\w:-]+\s*=\s*"[^"<>]*")*)\s*
 const ATRIBUTO_SVG = /\s+([\w:-]+)\s*=\s*"([^"]*)"/g;
 
 /**
- * Saneado del icono por lista blanca: solo etiquetas de forma y atributos de
- * dibujo, entre comillas dobles, sin `url(`; sin texto suelto, sin `id` ni
- * referencias. Quita el prologo XML y los comentarios. Devuelve `undefined` si
- * hay algo fuera de la lista: el icono viene de fuera (Workspace) y el SVG
- * exportado debe ser autocontenido.
+ * Lista blanca de etiquetas de forma y atributos de dibujo entre comillas dobles, sin `url(`, texto suelto,
+ * `id` ni referencias; quita prologo XML y comentarios. `undefined` si algo queda fuera: el SVG exportado
+ * debe ser autocontenido.
  */
 export function sanearIcono(svg: string): string | undefined {
   const limpio = svg.replace(/^\s*<\?xml[^>]*\?>/, '').replace(/<!--[\s\S]*?-->/g, '').trim();

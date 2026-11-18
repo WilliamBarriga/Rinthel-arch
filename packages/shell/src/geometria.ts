@@ -1,9 +1,7 @@
 /**
- * Geometria de la Vista activa con cache por estructura (ADR 0003): el adaptador
- * de layout solo se llama en estados no cacheados. La geometria por defecto
- * (la que trae el build) entra como semilla y no cuesta relayout. La cache guarda la geometria que
- * calcula ELK sin Pins, por clave de estructura; los Pins se aplican despues de forma sincrona
- * (`aplicarPinsAGeometria`), asi mover un Pin, aun de forma continua, no vuelve a llamar al adaptador.
+ * Geometria de la Vista activa con cache por estructura: el adaptador solo se llama en estados no cacheados y la
+ * semilla (geometria del build) no cuesta relayout. La cache guarda la geometria sin Pins; los Pins se aplican despues
+ * de forma sincrona, asi mover un Pin no llama al adaptador.
  */
 import { useEffect, useRef, useState } from 'react';
 
@@ -47,7 +45,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   const ultimo = useRef(entrada);
   ultimo.current = entrada;
   // Medidas reales: se piden cuando cambian los textos o las fuentes y el layout espera a tenerlas.
-  const textos = entrada.medir === undefined ? undefined : textosAMedir(vista, tablaDeMetricas(theme, undefined, vista.type));
+  const textos = entrada.medir === undefined ? undefined : textosAMedir(vista, tablaDeMetricas(theme, vista.type));
   const claveTextos = textos === undefined ? undefined : JSON.stringify([entrada.claveDeFuentes, textos]);
   const [medido, setMedido] = useState<{ clave: string; medidas: MedidasDeTexto }>();
   useEffect(() => {
@@ -69,7 +67,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   const medidas = claveTextos !== undefined && medido?.clave === claveTextos ? medido.medidas : undefined;
   const esperando = claveTextos !== undefined && medidas === undefined;
   // Solo lo que mueve el layout (estructura, textos, fuentes, origen de las medidas) lo repite; la paleta no.
-  const tabla = tablaDeMetricas(theme, medidas, vista.type);
+  const tabla = tablaDeMetricas(theme, vista.type, medidas);
   const claveTema = claveDeLayout(vista, theme, tabla);
   const claveBase = claveDeEstructura(vista, theme, tabla);
   const mostrado = useRef<Calculo | undefined>(undefined);
@@ -125,6 +123,13 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
 
 /** La Vista sin Pins: lo que se le pide al adaptador, que solo calcula la parte de ELK. */
 function sinPins(vista: VistaResuelta): VistaResuelta {
-  if (vista.overrides.every((o) => o.pin === undefined)) return vista;
-  return { ...vista, overrides: vista.overrides.map(({ pin: _pin, ...resto }) => resto) };
+  switch (vista.type) {
+    case 'sequence':
+      return vista;
+    case 'architecture':
+    case 'flow':
+    case 'er':
+      if (vista.overrides.every((o) => o.pin === undefined)) return vista;
+      return { ...vista, overrides: vista.overrides.map(({ pin: _pin, ...resto }) => resto) };
+  }
 }

@@ -1,7 +1,4 @@
-/**
- * Lo que un Nodo aporta a la colocacion de Slots y que Slots muestra el Tema.
- * Modulo hoja: lo usan `metricas` y `slots` sin depender uno del otro.
- */
+/** Modulo hoja: lo usan `metricas` y `slots` sin depender uno del otro. */
 
 import type { Atributo, ClaveDeAtributo, NodoResuelto } from 'canonico';
 
@@ -10,14 +7,13 @@ import { slotsDe } from './disposicion';
 import type { CajaDeSlots } from './disposicion';
 import type { Metricas } from './metricas';
 
-/** Lo que un Nodo aporta a la colocacion: su titulo, sus Atributos visibles y si tiene icono. */
 export interface ContenidoDeNodo {
   titulo: string;
   atributos: readonly Atributo[];
   icono: boolean;
-  /** Tipo de nodo (Slot `badge`). */
+  /** Slot `badge`. */
   tipo?: string;
-  /** Descripcion del Nodo (Slot `desc`); vacia: el Slot no reserva espacio. */
+  /** Slot `desc`; vacia, el Slot no reserva espacio. */
   descripcion?: string;
   /** Primera fuente del Nodo (Slot `footer`). */
   fuente?: string;
@@ -25,11 +21,7 @@ export interface ContenidoDeNodo {
   cuenta?: number;
 }
 
-/**
- * Atributos que un Nodo muestra como filas: solo los de un Nodo hoja (un Grupo
- * abierto contiene Nodos; uno colapsado es hoja) y solo si el Tema lista el Slot
- * `attrs`. Una sola regla para `layout` (tamano y puertos) y `render` (dibujo).
- */
+/** Solo los de un Nodo hoja (un Grupo colapsado es hoja) y solo si el Tema lista el Slot `attrs`. */
 export function atributosVisibles(
   nodo: Pick<NodoResuelto, 'children' | 'attributes'>,
   metricas: Pick<Metricas, 'disposicion'>,
@@ -39,14 +31,13 @@ export function atributosVisibles(
 
 const listas = new WeakMap<CajaDeSlots, readonly NombreDeSlot[]>();
 
-/** Si la disposicion del Tema incluye el Slot (memoizado por disposicion: se consulta por cada Nodo). */
+/** Memoizado por disposicion. */
 export function muestra(metricas: Pick<Metricas, 'disposicion'>, slot: NombreDeSlot): boolean {
   let lista = listas.get(metricas.disposicion);
   if (lista === undefined) listas.set(metricas.disposicion, (lista = slotsDe(metricas.disposicion)));
   return lista.includes(slot);
 }
 
-/** Lo que un Nodo aporta a la colocacion de Slots; una sola regla para `layout`, `render` y `shell`. */
 export function contenidoDeNodo(
   nodo: Pick<NodoResuelto, 'children' | 'attributes' | 'label' | 'icon' | 'type' | 'description' | 'source' | 'collapsed' | 'childCount'>,
   metricas: Pick<Metricas, 'disposicion' | 'iconoEsPunto'>,
@@ -64,25 +55,18 @@ export function contenidoDeNodo(
   };
 }
 
-/**
- * Texto de la fila de un Atributo; `render` escribe lo mismo. Con `marcas` (Vista ER) el tipo lleva `?` si el
- * Atributo es opcional; fuera de ER la marca se ignora.
- */
+/** Con `marcas` (Vista ER) el tipo lleva `?` si el Atributo es opcional. */
 export function textoDeAtributo(atributo: Atributo, marcas = false): string {
   return `${atributo.name}: ${atributo.type}${marcas && atributo.optional === true ? '?' : ''}`;
 }
 
-/** Un trozo de la fila de un Atributo con su propio tamano de texto (px). */
+/** `tamano` en px. */
 export interface PiezaDeAtributo {
   texto: string;
   tamano: number;
 }
 
-/**
- * Trozos de texto de la fila de un Atributo, cada uno a su tamano: con el `size` de `row name|type` del Tema
- * (`metricas.tamanoDeFila`) el nombre y el tipo miden distinto; sin el, una sola pieza (`textoDeAtributo`) al tamano de `attrs`.
- * `tema` (ancho y textos a medir) y `render` (tamano pintado) leen lo mismo.
- */
+/** Con `metricas.tamanoDeFila` el nombre y el tipo son piezas de distinto tamano; sin el, una sola pieza al tamano de `attrs`. */
 export function piezasDeAtributo(atributo: Atributo, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): PiezaDeAtributo[] {
   const marcas = metricas.marcasDeClave === true;
   const base = metricas.fontSize * metricas.escalaAtributo;
@@ -95,13 +79,12 @@ export function piezasDeAtributo(atributo: Atributo, metricas: Pick<Metricas, 'f
   ];
 }
 
-/** Chip de una marca de clave en una fila ER: `derecha` es su distancia al borde derecho de la fila. */
+/** `derecha` es su distancia al borde derecho de la fila. */
 export interface ChipDeClave {
   clave: ClaveDeAtributo;
   texto: string;
   derecha: number;
   width: number;
-  /** Tamano de texto del chip. */
   tamano: number;
 }
 
@@ -109,10 +92,7 @@ const SEPARACION_DE_CHIPS = 4;
 const MARGEN_DERECHO_DE_CHIPS = 6;
 const HOLGURA_ANTES_DE_CHIPS = 12;
 
-/**
- * Chips de clave de la fila de un Atributo, de izquierda a derecha en el orden de `keys`, solo en una Vista ER
- * (`metricas.marcasDeClave`). Una sola colocacion para `tema` (ancho de la fila) y `render` (dibujo).
- */
+/** De izquierda a derecha en el orden de `keys`; vacio fuera de una Vista ER (`metricas.marcasDeClave`). */
 export function chipsDeClaves(atributo: Pick<Atributo, 'keys'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): ChipDeClave[] {
   if (metricas.marcasDeClave !== true || atributo.keys === undefined) return [];
   const tamano = metricas.tamanoDeFila?.key ?? Math.round(metricas.fontSize * metricas.escalaAtributo * 0.8 * 10) / 10;
@@ -121,7 +101,7 @@ export function chipsDeClaves(atributo: Pick<Atributo, 'keys'>, metricas: Pick<M
   return atributo.keys.map((clave, i) => ({ clave, texto: clave.toUpperCase(), derecha: MARGEN_DERECHO_DE_CHIPS + (n - 1 - i) * (ancho + SEPARACION_DE_CHIPS), width: ancho, tamano }));
 }
 
-/** Ancho que los chips de clave suman a la fila (con la holgura que los separa del texto); 0 sin chips. */
+/** Incluye la holgura que los separa del texto; 0 sin chips. */
 export function anchoDeChips(atributo: Pick<Atributo, 'keys'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): number {
   const chips = chipsDeClaves(atributo, metricas);
   return chips.length === 0 ? 0 : HOLGURA_ANTES_DE_CHIPS + Math.max(...chips.map((c) => c.derecha + c.width));

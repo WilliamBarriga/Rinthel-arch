@@ -33,7 +33,7 @@ const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
     nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
   });
   const edges: GeometriaGrafo['edges'] = {};
-  for (const e of vista.edges) {
+  for (const e of vista.type === 'sequence' ? [] : vista.edges) {
     const desde = nodes[e.from.node]!;
     const hasta = nodes[e.to.node]!;
     edges[idDeArista(e)] = {
@@ -159,7 +159,7 @@ describe('VistaInteractiva', () => {
       model: { nodes: [{ ...nodo('t', 'T'), attributes: [{ name: 'id', type: 'uuid' }, { name: 'mail', type: 'text' }] }], edges: [] },
       views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
     });
-    const { cabecera, fila } = metricasDe(TEMA_NEUTRO);
+    const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
     const alto: AdaptadorDeLayout = async () => ({
       nodes: { t: { x: 0, y: 0, width: 200, height: cabecera + 2 * fila } },
       edges: {},

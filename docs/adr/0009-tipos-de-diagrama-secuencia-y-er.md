@@ -32,7 +32,7 @@ Descartados: Aristas ordenadas (no cubren repeticiones, retornos ni etiquetas pr
 
 - **Tipo**: `type sequence` y `type er`, junto a `architecture` y `flow`.
 - **Vista ER**: acepta lo mismo que `architecture` (`include`, `exclude`, `depth`, `expanded`, `collapsed`, `pin`, overrides de `node`, `steps` sobre tablas y FK). Cada Nodo hoja se dibuja como tabla (cabecera mas filas del Slot `attrs`, siempre visible); los Grupos se colapsan o aplanan segun la profundidad, como en arquitectura. `link` queda como hoy.
-- **Vista de secuencia**: proyecta exactamente una Interaccion (`interaction <id>`, obligatoria); no tiene `include`. `order a, b, c` sobrescribe el orden de las Lifelines y puede ser parcial (el resto sigue por primera aparicion). Valen `depth`, `collapsed`, `exclude`, `theme`, `node id { label color }`, `steps` y `autonumber`; son error `include` y `pin`; `link` solo vale con una Lifeline como origen (error sobre Mensajes, Notas y Fragmentos). `depth`/`collapsed` funden las Lifelines hijas en la de su Grupo y elevan sus Mensajes como hoy las Aristas (dentro del mismo Grupo pasan a mensaje propio); `exclude X` quita la Lifeline y sus Mensajes; un Fragmento vacio desaparece.
+- **Vista de secuencia**: proyecta exactamente una Interaccion (`interaction <id>`, obligatoria); no tiene `include`. `order a, b, c` sobrescribe el orden de las Lifelines y puede ser parcial (el resto sigue por primera aparicion). Valen `depth`, `collapsed`, `exclude`, `theme`, `node id { label color }`, `steps` y `autonumber`; son error `include`, `pin` y `expanded`; `link` solo vale con una Lifeline como origen (error sobre Mensajes, Notas y Fragmentos). `depth`/`collapsed` funden las Lifelines hijas en la de su Grupo y elevan sus Mensajes como hoy las Aristas (dentro del mismo Grupo pasan a mensaje propio); `exclude X` quita la Lifeline y sus Mensajes; un Fragmento vacio desaparece.
 
 ### Pasos y autonumeracion en secuencia
 
@@ -118,7 +118,7 @@ El parser acepta la forma general (operandos de Fragmento, propiedades de Vista,
 
 | Regla | Codigo | Severidad | Ayuda |
 | --- | --- | --- | --- |
-| Propiedad de Vista no valida para su tipo (`include`/`link`/`pin` en secuencia, `interaction`/`order`/`autonumber` fuera de secuencia, `show`/`hide` en secuencia) | `E_VIEW_PROPERTY_FOR_TYPE` | error | `hint` con la alternativa (`show`/`hide` a `step { upto }`) |
+| Propiedad de Vista no valida para su tipo (`include`/`pin`/`expanded` en secuencia, `interaction`/`order`/`autonumber` fuera de secuencia, `show`/`hide` en secuencia) | `E_VIEW_PROPERTY_FOR_TYPE` | error | `hint` con la alternativa (`show`/`hide` a `step { upto }`) |
 | Vista de secuencia sin `interaction` | `E_SEQUENCE_WITHOUT_INTERACTION` | error | `hint` con las Interacciones existentes |
 | `interaction` de Vista o `ref` a una Interaccion inexistente | `E_UNKNOWN_INTERACTION` | error | `fix` por typo |
 | id de Interaccion duplicado | `E_DUPLICATE_INTERACTION` | error | `related` al original |

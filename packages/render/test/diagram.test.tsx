@@ -3,7 +3,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { fuenteCanonicaSchema, resolveView, revealAt } from 'canonico';
-import type { VistaResuelta } from 'canonico';
+import type { VistaDeGrafo, VistaResuelta } from 'canonico';
 import { layoutView } from 'layout';
 import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
@@ -17,7 +17,7 @@ import { capaDe, etiquetaCon, hojaDe, propiedad, rectDe, traslacionDe } from './
 const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
 
 /** a { a1 a2 } -> b -> c, con dos pasos: primero `a`, luego `b` y `c`. */
-function vista(estado = {}, steps: unknown[] = []): VistaResuelta {
+function vista(estado = {}, steps: unknown[] = []): VistaDeGrafo {
   const fuente = fuenteCanonicaSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: {
@@ -29,7 +29,7 @@ function vista(estado = {}, steps: unknown[] = []): VistaResuelta {
     },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], steps }],
   });
-  return resolveView(fuente, 'v', estado)!;
+  return resolveView(fuente, 'v', estado) as VistaDeGrafo;
 }
 
 const PASOS = [
@@ -134,7 +134,7 @@ describe('Diagram: estructura hibrida', () => {
   it('cada Slot va en el rectangulo que reservo la colocacion compartida', async () => {
     const p = await props(vista());
     const html = dibujo(p);
-    const { slots } = colocarEnCaja(metricasDe(TEMA_NEUTRO), { titulo: 'b', atributos: [], icono: false }, p.geometry.nodes['b']!.width);
+    const { slots } = colocarEnCaja(metricasDe(TEMA_NEUTRO, 'architecture'), { titulo: 'b', atributos: [], icono: false }, p.geometry.nodes['b']!.width);
     const titulo = etiquetaCon(html.slice(html.indexOf('data-id="b"')), 'data-slot="title"');
 
     expect(rectDe(titulo)).toEqual(slots.title);
@@ -179,7 +179,6 @@ describe('Diagram: estructura hibrida', () => {
       expect(slotDe(html, 'a', 'counter')).toBeDefined();
       expect(slotDe(html, 'b', 'counter')).toBeUndefined();
       expect(html).toContain('>2</div>');
-      // Con el contador en su Slot, el titulo no lo repite.
       expect(html).not.toContain('A (2)');
     });
 
@@ -221,7 +220,6 @@ describe('Diagram: estructura hibrida', () => {
       expect(rectDe(slotDe(html, 'b', 'icon'))).toMatchObject({ width: 7, height: 7 });
       expect(slotDe(html, 'b', 'icon')).toContain('data-variante="dot"');
       expect(slotDe(html, 'b', 'icon')).not.toContain('data-icon=');
-      // Con otra variante, un Tipo sin icon no reserva el sitio.
       expect(geometry.nodes['b']!.width).toBeGreaterThan(sinPunto.nodes['b']!.width - 1);
       expect(sinPunto.nodes['b']!.slots?.['icon']).toBeUndefined();
     });
@@ -381,7 +379,7 @@ describe('Diagram', () => {
 
   it('cambiar un valor del Estilo cambia lo que dibuja Diagram', async () => {
     const base = await props(vista());
-    const estilo = resolverEstilo(TEMA_NEUTRO);
+    const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
     const otro = { ...estilo, nodo: { ...estilo.nodo, radio: 13, relleno: '#fafafa' }, glifos: { expandido: 'v', colapsado: '>' } };
     const dibujar = (e: typeof estilo): string => dibujo({ ...base, onToggle: () => {}, estilo: e });
 
@@ -433,7 +431,7 @@ describe('Diagram', () => {
 
     it('un Nodo seleccionado lleva un contorno dentro de su caja, estilado por la hoja con el color del Estilo', async () => {
       const html = dibujo(await props(vista(), { estados: { b: ['seleccionado'] } }));
-      const estilo = resolverEstilo(TEMA_NEUTRO);
+      const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
       const [marca] = marcas(html, 'seleccionado');
 
       expect(marca).toContain('data-selected="b"');
@@ -456,7 +454,7 @@ describe('Diagram', () => {
     });
 
     it('el fantasma y el hover usan sus propias entradas del Estilo', async () => {
-      const estilo = resolverEstilo(TEMA_NEUTRO);
+      const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
       const otro = { ...estilo, estados: { ...estilo.estados, fantasma: { ...estilo.estados.fantasma, color: 'hotpink' } } };
       const hoja = hojaDe(dibujo(await props(vista(), { estados: { c: ['fantasma'] }, estilo: otro })));
 
@@ -473,7 +471,7 @@ describe('Diagram', () => {
       const v = resolveView(fuente, 'v')!;
       const p = await props(v, { estados: { 't#nombre': ['seleccionado'] } });
       const marca = marcas(dibujo(p), 'seleccionado')[0];
-      const m = metricasDe(TEMA_NEUTRO);
+      const m = metricasDe(TEMA_NEUTRO, 'architecture');
 
       expect(marca).toContain('data-selected="t#nombre"');
       expect(rectDe(marca)).toEqual({ x: 0, y: m.cabecera + m.fila, width: p.geometry.nodes['t']!.width, height: m.fila });

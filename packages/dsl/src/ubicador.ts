@@ -1,7 +1,6 @@
 /**
- * Ubicador de `validate` (canonico): traduce la ruta de un valor de la Fuente
- * canonica al texto del DSL que lo origino. Las listas de la Fuente conservan el
- * orden del AST, asi que el indice `i` de la Fuente es el `i`-esimo del AST.
+ * Traduce la ruta de un valor de la Fuente canonica al texto del DSL que lo origino. Invariante: las listas de
+ * la Fuente conservan el orden del AST, asi que el indice `i` de la Fuente es el `i`-esimo del AST.
  */
 import type { FuenteCanonica, SitioDeTexto, TextRange, Ubicador } from 'canonico';
 
@@ -54,7 +53,6 @@ export function crearUbicador(datos: DatosDelUbicador): Ubicador {
   };
 }
 
-/** Camina `ruta` por la Fuente hasta el Nodo y busca su declaracion por id. */
 function deNodo({ fuente, nodos }: DatosDelUbicador, ruta: Ruta): SitioDeTexto | null {
   let actual: unknown = fuente;
   for (const clave of ruta.slice(0, -1)) actual = (actual as Record<string | number, unknown>)[clave];

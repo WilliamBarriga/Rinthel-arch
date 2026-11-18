@@ -1,12 +1,6 @@
 /**
- * Benchmark de los umbrales del ADR 0003. Fuera de la suite por defecto:
- * `pnpm bench` (construye los paquetes y corre todo) o, ya construido,
- * `node bench/ejecutar.ts [escenario...]` con escenarios entre `build-10k`,
- * `relayout-1k`, `relayout-slots`, `relayout-grande`, `colapso-5k`, `secuencia-grande` y `bundle`. Cada escenario corre en un proceso
- * aparte (memoria maxima propia) y el exit code es 1 si algun umbral falla.
- *
- * Los umbrales son los del ADR 0003 (con su enmienda): 2.5 GiB de RSS en el
- * build de 10k Nodos, 1 MiB para el Worker de layout y 500 KiB para la pagina (bundle). Los tiempos dependen de la maquina y de su carga.
+ * Benchmark de los umbrales del ADR 0003, fuera de `pnpm test`: `pnpm bench` o, ya construido, `node bench/ejecutar.ts [escenario...]`.
+ * Cada escenario corre en su propio proceso; sale 1 si algun umbral falla. Los tiempos dependen de la maquina y de su carga.
  */
 import { spawnSync } from 'node:child_process';
 import { join } from 'node:path';
@@ -16,7 +10,7 @@ type Medidas = Record<string, number>;
 interface Umbral {
   escenario: string;
   descripcion: string;
-  /** Medida contra el limite, con su unidad. */
+  /** En la unidad del limite. */
   medida: (m: Medidas) => number;
   limite: number;
   unidad: string;

@@ -10,7 +10,7 @@ import {
 } from 'canonico';
 import type { FuenteCanonica } from 'canonico';
 
-/** Celda de tabla Markdown: sin saltos de linea ni barras que rompan la fila. */
+/** Sin saltos de linea ni barras que rompan la fila Markdown. */
 const celda = (texto: string): string => (texto.trim() === '' ? '-' : texto.replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|'));
 
 const EJEMPLO_DE_DSL = `specification {
@@ -38,12 +38,7 @@ view general {
   node sistema.db { label "Datos"  color acento }
 }`;
 
-/**
- * Skill para agentes (formato `SKILL.md`) del proyecto: Tipos de nodo, Paleta y
- * Temas de su catalogo, sintaxis del DSL, contrato de `validate` (derivado del
- * esquema Zod, ADR 0005) y codigos de issue. Pura y determinista: el mismo
- * catalogo produce los mismos bytes.
- */
+/** `SKILL.md` del proyecto. Determinista: el mismo catalogo produce los mismos bytes. */
 export function generarSkill(fuente: FuenteCanonica): string {
   const tipos = fuente.specification.nodeTypes.map(
     (tipo) => `| \`${tipo.name}\` | ${celda(tipo.description)} | ${celda(tipo.icon ?? '')} | ${celda(tipo.color ?? '')} |`,
@@ -158,7 +153,7 @@ diagrams edit --workspace <ruta> --edits '[{"file":"main.dg","range":{"start":{"
 \`\`\`
 
 - La primera forma mueve el Pin de un Nodo en una Vista: reemplaza el \`pin\` si existe y lo anade si no; no necesitas conocer la sintaxis.
-- La segunda aplica una Intencion por su contrato JSON (sin \`hash\` usa el del disco); \`ordenar-lifelines\` reescribe el \`order\` completo de una Vista \`sequence\` con el orden visible dado, y las entradas de \`order\` hoy ocultas (Grupo colapsado, \`exclude\`) conservan su posicion relativa.
+- La segunda aplica una Intencion por su contrato JSON (no lleva \`hash\`: uno heredado en el JSON se ignora; la concurrencia es \`--hash <archivo>=<hash>\`); \`ordenar-lifelines\` reescribe el \`order\` completo de una Vista \`sequence\` con el orden visible dado, y las entradas de \`order\` hoy ocultas (Grupo colapsado, \`exclude\`) conservan su posicion relativa.
 - La tercera aplica ediciones de texto ya calculadas (p. ej. el \`fix\` de un issue de \`validate\`): rangos 1-based, fin excluido.
 - Concurrencia: cada edicion lleva el hash del archivo que viste (\`hash\` en la edicion, o \`--hash <archivo>=<hash>\`); sin hash se usa el del disco. Si el archivo cambio, se rechaza todo sin escritura parcial.
 - Se rechaza tambien lo que introduce errores nuevos, solapa ediciones o apunta fuera del archivo.

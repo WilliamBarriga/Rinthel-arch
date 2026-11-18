@@ -7,7 +7,7 @@ import type { Elemento } from '../src/elemento';
 import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEtiquetaDeArista, pintarGrupo, pintarNodo } from '../src/pintores';
 import { TEMA_NEUTRO, alturaDeCabecera, colocarEnCaja } from 'tema';
 
-const estilo = resolverEstilo(TEMA_NEUTRO);
+const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
 const caja = { x: 0, y: 0, width: 140, height: 60 };
 const nodoBase = { id: 'n', label: 'N', collapsed: false, children: [], source: [], type: 't', attributes: [], childCount: 0 } as unknown as NodoResuelto;
 const conNodo = (parcial: Partial<NodoResuelto>): NodoResuelto => ({ ...nodoBase, ...parcial });
@@ -73,7 +73,7 @@ describe('pintores por parte', () => {
 
   it('la cabecera del Grupo sigue la disposicion que declara el Tema, no una posicion fija', () => {
     const tema = { ...TEMA_NEUTRO, grupo: { ...TEMA_NEUTRO.grupo, slots: { direccion: 'row' as const, gap: 4, pad: 2, hijos: [{ slot: 'title' as const }, { slot: 'icon' as const }] } } };
-    const propio = resolverEstilo(tema);
+    const propio = resolverEstilo(tema, 'architecture');
     const icons = { keys: () => ['box'], resolve: () => '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>' };
     const elementos = pintarGrupo(propio, { nodo: conNodo({ icon: 'box', children: [conNodo({ id: 'h' })] }), caja, trazo: 'red', texto: 'G', icons });
 

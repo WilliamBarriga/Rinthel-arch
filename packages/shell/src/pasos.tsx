@@ -1,8 +1,4 @@
-/**
- * Pasos de revelado en el shell: el Paso actual (controlable por props o
- * interno) se traduce con `revealAt` en la visibilidad que recibe `Diagram`, y
- * los controles anterior/siguiente lo cambian. La geometria no se toca.
- */
+/** Pasos de revelado: el Paso actual se traduce con `revealAt` en la visibilidad de `Diagram`; la geometria no cambia. */
 import { useMemo } from 'react';
 import type { ReactElement } from 'react';
 

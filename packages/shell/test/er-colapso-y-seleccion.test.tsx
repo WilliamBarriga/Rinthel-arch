@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { idDeArista } from 'canonico';
 import { layoutView } from 'layout';
-import { abrirSesion, hashDeContenido } from 'sesion';
+import { abrirSesion, crearHistorial, deshacer, editarEnHistorial } from 'sesion';
+import type { Historial, Intencion } from 'sesion';
 import { VistaInteractiva } from 'shell';
-import { crearControlDeEdicion } from '../src/control-de-edicion';
 import { TEMA_NEUTRO } from 'tema';
 import { posicionDe, pulsarEn } from './ayudas';
 
@@ -115,8 +115,21 @@ describe('ER: seleccion', () => {
 
 describe('ER: arrastrar una tabla', () => {
   it('escribe un Pin con mover-pin y se deshace', async () => {
-    const control = crearControlDeEdicion({ 'main.dg': TABLAS });
-    const onMoveNode = vi.fn(({ id, x, y }: { id: string; x: number; y: number }) => control.aplicar({ tipo: 'mover-pin', vista: 'v', nodo: id, x, y, hash: hashDeContenido(control.archivos()['main.dg']!) }).ok);
+    let historial: Historial = crearHistorial({ 'main.dg': TABLAS });
+    const control = {
+      archivos: () => historial.archivos,
+      aplicar(i: Intencion) {
+        const r = editarEnHistorial(historial, i);
+        if (r.ok) historial = r.historial;
+        return r;
+      },
+      deshacer() {
+        const h = deshacer(historial);
+        if (h !== undefined) historial = h;
+        return h !== undefined;
+      },
+    };
+    const onMoveNode = vi.fn(({ id, x, y }: { id: string; x: number; y: number }) => control.aplicar({ tipo: 'mover-pin', vista: 'v', nodo: id, x, y }).ok);
     const { container } = await montarTablas({ onMoveNode, camera: { x: 0, y: 0, width: 900, height: 600 } });
     const cabecera = container.querySelector('[data-id="a"] [data-part="nodo"]')!;
     const gesto = (d: Element | Window, tipo: string, cx: number, cy: number) => {
@@ -165,7 +178,7 @@ describe('ER: Pasos', () => {
     const paso = () => fireEvent.click(screen.getByRole('button', { name: 'Paso siguiente' }));
     const idFk = idDeArista(fuente.model.edges[0]!);
     const atras = () => fireEvent.click(screen.getByRole('button', { name: 'Paso anterior' }));
-    // Entra en el Paso 1 (ADR 0009): el Paso 0 la dejaria vacia.
+    // Entra en el Paso 1: el Paso 0 la dejaria vacia.
     expect(container.querySelector('[data-pasos]')?.textContent).toContain('Paso 1 de 2');
     expect(opacidad('a')).toBe('1');
     expect(opacidad('b')).toBe('1');

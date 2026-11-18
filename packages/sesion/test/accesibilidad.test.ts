@@ -57,6 +57,15 @@ describe('seam sesion: accesibilidad del Tema', () => {
     expect(issues.filter((i) => i.code === 'W_THEME_COLOR_ONLY')).toEqual([]);
   });
 
+  it('el solo-color de cada Vista usa su Tipo de diagrama: la insignia de diagram flow solo distingue en la de flujo', async () => {
+    const conInsigniaEnFlujo = tema('COLOR').replace('slots { title attrs }', 'slots { title attrs }\n    diagram flow { slots { title badge attrs } }');
+    const vistas = vista + vista.replace('view v', 'view f').replace('architecture', 'flow');
+    const issues = await abrirSesion({ 'main.dg': modelo + conInsigniaEnFlujo + vistas }).diagnosticar();
+
+    const soloColor = issues.filter((i) => i.code === 'W_THEME_COLOR_ONLY');
+    expect(soloColor.map((i) => i.message.match(/Vista '(\w+)'/)?.[1])).toEqual(['v']);
+  });
+
   it('un Tema que no usa el color del Tipo ni tiene mal contraste no avisa', async () => {
     const issues = await abrirSesion({ 'main.dg': modelo + tema('rojo').replace('rojo "#f0f0f0"', 'rojo "#ffffff"') + vista }).diagnosticar();
 

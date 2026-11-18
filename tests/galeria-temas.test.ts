@@ -3,12 +3,13 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
+import type { VistaDeGrafo, VistaDeSecuencia } from 'canonico';
 import { compile } from 'dsl';
 import { abrirSesion } from 'sesion';
 import { CATALOGO, ESTADOS, estiloResuelto, resolverTema } from 'tema';
 import type { TemaResuelto } from 'tema';
 
-/** Galeria de los 14 Temas de ejemplo (ADR 0008): un `.dg` por Tema sobre un Modelo comun. */
+/** Galeria de los 14 Temas de ejemplo: un `.dg` por Tema sobre un Modelo comun. */
 const RAIZ = resolve(import.meta.dirname, '../examples/temas/galeria');
 /** Los 14 Temas y sus fuentes tienen una sola copia, en `examples/rinthel-arch/temas/`; la galeria los toma con `--theme-path`. */
 const CARPETA_DE_TEMAS = resolve(import.meta.dirname, '../examples/rinthel-arch/temas');
@@ -70,7 +71,7 @@ describe('galeria de Temas de ejemplo', () => {
   });
 
   it.each(TEMAS)('la Vista de referencia de %s equivale a la Vista abierto del prototipo', (tema) => {
-    const vista = resolveView(canonico!, `${tema}-referencia`)!;
+    const vista = resolveView(canonico!, `${tema}-referencia`) as VistaDeGrafo;
     const abierto = (id: string) => vista.nodes.find((n) => n.id === `referencia.${id}`)!;
     // Grupos abiertos con sus modulos y Grupos colapsados con contador (4 raices, 3 abiertos).
     for (const id of ['render', 'sesion', 'layout']) expect(abierto(id).collapsed, id).toBe(false);
@@ -85,11 +86,11 @@ describe('galeria de Temas de ejemplo', () => {
   });
 
   it.each(TEMAS)('%s tiene Vistas de secuencia (con Fragmento y Nota) y ER (con tres tablas) con su Tema', (tema) => {
-    const secuencia = resolveView(canonico!, `${tema}-secuencia`)!;
+    const secuencia = resolveView(canonico!, `${tema}-secuencia`) as VistaDeSecuencia;
     expect(secuencia.type).toBe('sequence');
     expect(secuencia.nodes.map((n) => n.id).sort()).toEqual(['cliente', 'pasarela', 'plataforma.eventos', 'plataforma.pagos', 'plataforma.pedidos', 'proveedor']);
-    expect(secuencia.interaction?.items.map((i) => i.type)).toEqual(expect.arrayContaining(['fragment', 'note']));
-    const er = resolveView(canonico!, `${tema}-er`)!;
+    expect(secuencia.interaction.items.map((i) => i.type)).toEqual(expect.arrayContaining(['fragment', 'note']));
+    const er = resolveView(canonico!, `${tema}-er`) as VistaDeGrafo;
     expect(er.type).toBe('er');
     expect(er.nodes.map((n) => n.id).sort()).toEqual(['datos.clientes', 'datos.lineas', 'datos.pedidos-tabla']);
     expect(er.edges).toHaveLength(2);
@@ -122,7 +123,7 @@ describe('galeria de Temas de ejemplo', () => {
   it.each(TEMAS)('%s resuelve su Estilo de forma determinista', (nombre) => {
     const tema = canonico!.themes.find((t) => t.name === nombre)!;
     const otro = compile(leer()).canonico!.themes.find((t) => t.name === nombre)!;
-    expect(JSON.stringify(estiloResuelto(tema))).toBe(JSON.stringify(estiloResuelto(otro)));
+    expect(JSON.stringify(estiloResuelto(tema, { diagrama: 'architecture' }))).toBe(JSON.stringify(estiloResuelto(otro, { diagrama: 'architecture' })));
   });
 
   it('los warnings de cada ejemplo son exactamente los declarados en su cabecera, y no hay otros', async () => {

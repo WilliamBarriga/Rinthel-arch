@@ -157,6 +157,26 @@ describe('seam sesion: validacion de secuencia', () => {
     expect(fuera.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE', 'E_VIEW_PROPERTY_FOR_TYPE']);
   });
 
+  it('expanded en una Vista de secuencia es E_VIEW_PROPERTY_FOR_TYPE con ayuda', async () => {
+    const texto = modelo(escenario.replace(/\bapi\b/g, 'equipo.api'), '  servicio cliente\n  servicio equipo {\n  servicio api\n  }\n  servicio db\n  servicio cola');
+    const res = await issues(texto + 'view v { type sequence\n interaction checkout\n expanded equipo }\n');
+    expect(res.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
+    expect(res[0]!.hint).toBeDefined();
+  });
+
+  it('expanded sobre un Nodo que no es Grupo, o con link, en secuencia solo da E_VIEW_PROPERTY_FOR_TYPE', async () => {
+    const texto = modelo(escenario.replace(/\bapi\b/g, 'equipo.api'), '  servicio cliente\n  servicio equipo {\n  servicio api\n  }\n  servicio db\n  servicio cola');
+    const noGrupo = await issues(texto + 'view v { type sequence\n interaction checkout\n expanded db }\n');
+    expect(noGrupo.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
+    const conLink = await issues(texto + 'view w { type architecture\n include ** }\nview v { type sequence\n interaction checkout\n expanded equipo\n link equipo -> w }\n');
+    expect(conLink.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
+  });
+
+  it('la Geometria de secuencia no trae cajas al pie de las Lifelines', async () => {
+    const g = await geometriaDe(modelo(escenario) + vista);
+    expect('footers' in g).toBe(false);
+  });
+
   it('E_LINK_NOT_LIFELINE: link desde un Mensaje o un Nodo que no es Lifeline; desde una Lifeline vale', async () => {
     const otra = 'view otra { type architecture\n include ** }\n';
     const base = modelo(escenario) + otra;

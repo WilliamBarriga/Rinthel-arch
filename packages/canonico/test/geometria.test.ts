@@ -28,6 +28,25 @@ describe('geometriaCacheadaSchema', () => {
     expect(geometriaCacheadaSchema.parse({ ...anterior, geometry: { ...anterior.geometry, kind: 'grafo' } }).geometry.kind).toBe('grafo');
   });
 
+  it('no admite cabecera espejo al pie en una Geometria de secuencia', () => {
+    const caja = { x: 0, y: 0, width: 10, height: 5 };
+    const geometry = {
+      kind: 'secuencia',
+      nodes: { a: caja },
+      lifelines: { a: { x: 5, y1: 5, y2: 50 } },
+      activations: [],
+      messages: {},
+      fragments: [],
+      notes: [],
+      groups: [],
+      width: 10,
+      height: 60,
+    };
+    const leida = geometriaCacheadaSchema.parse({ ...anterior, geometry: { ...geometry, footers: { a: { ...caja, y: 50 } } } }).geometry;
+    expect(leida).toEqual(geometry);
+    expect(leida).not.toHaveProperty('footers');
+  });
+
   it('rechaza un kind desconocido', () => {
     expect(geometriaCacheadaSchema.safeParse({ ...anterior, geometry: { ...anterior.geometry, kind: 'otro' } }).success).toBe(false);
   });

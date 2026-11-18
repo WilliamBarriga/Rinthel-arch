@@ -1,8 +1,4 @@
-/**
- * Drill-down por `link` (CONTEXT.md): la Vista activa y la ruta recorrida
- * (breadcrumbs) son controlables por props o internas. No hay jerarquia de
- * Vistas: la ruta es una lista de ids que admite repetidos (ciclos).
- */
+/** Drill-down por `link`: Vista activa y ruta (breadcrumbs), controlables o internas. La ruta admite repetidos (ciclos). */
 import type { ReactElement } from 'react';
 
 import { useControlado } from './controlado';
@@ -21,7 +17,6 @@ export interface PropsDeNavegacion {
 }
 
 export interface Navegacion {
-  /** Vista activa. */
   vista: string;
   /** Ruta vigente, siempre no vacia y terminada en `vista`. */
   ruta: readonly string[];

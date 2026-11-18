@@ -1,13 +1,14 @@
 /**
- * Esquema Zod de la capa de geometria cacheada por Vista (spec #19, ADR 0003):
- * lo que `build` escribe en `.diagrams/geometria/<vista>.json` y lo que `export`
- * y el HTML leen de vuelta. La calcula `layout`; aqui solo se describe su forma
- * para validarla al leer del disco, sin que `canonico` dependa de `layout`.
+ * Esquema Zod de la Geometria cacheada por Vista (ADR 0003), en `.diagrams/geometria/<vista>.json`.
+ * Unica declaracion de la forma de la Geometria; `layout` la calcula y reexporta estos tipos.
  */
 import { z } from 'zod';
 
+import { ANCLAJES_DE_NOTA, OPERADORES_DE_FRAGMENTO } from './esquema';
+
 const numeroFinito = z.number().finite();
 
+/** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
 const cajaDeNodoSchema = z.object({
   x: numeroFinito,
   y: numeroFinito,
@@ -18,12 +19,13 @@ const cajaDeNodoSchema = z.object({
 });
 
 const puntoSchema = z.object({ x: numeroFinito, y: numeroFinito });
+const rutaDeAristaSchema = z.object({ points: z.array(puntoSchema) });
 
 /** Geometria de grafo (Vistas architecture y flow): cajas por id de Nodo, rutas por id de Arista y tamano total. */
 const geometriaGrafoSchema = z.object({
   kind: z.literal('grafo'),
   nodes: z.record(z.string(), cajaDeNodoSchema),
-  edges: z.record(z.string(), z.object({ points: z.array(puntoSchema) })),
+  edges: z.record(z.string(), rutaDeAristaSchema),
   labels: z.record(z.string(), cajaDeNodoSchema).default({}),
   pinsSolapados: z.array(z.tuple([z.string(), z.string()])),
   width: numeroFinito,
@@ -45,7 +47,7 @@ const geometriaSecuenciaSchema = z.object({
     .array(
       z.object({
         ruta: z.string(),
-        operator: z.enum(['opt', 'loop', 'break', 'critical', 'alt', 'par', 'ref']),
+        operator: z.enum([...OPERADORES_DE_FRAGMENTO, 'ref']),
         title: z.object({ text: z.string(), box: cajaDeNodoSchema }).optional(),
         nivel: z.number().int(),
         x: numeroFinito,
@@ -61,7 +63,7 @@ const geometriaSecuenciaSchema = z.object({
     .array(
       z.object({
         ruta: z.string(),
-        anchor: z.enum(['left', 'right', 'over']),
+        anchor: z.enum(ANCLAJES_DE_NOTA),
         x: numeroFinito,
         y: numeroFinito,
         width: numeroFinito,
@@ -79,20 +81,13 @@ const geometriaSecuenciaSchema = z.object({
   height: numeroFinito,
 });
 
-/**
- * Geometria de una Vista: union discriminada por `kind` (`grafo` o `secuencia`). Una geometria
- * escrita antes de existir `kind` se lee como `grafo`.
- */
+/** Sin `kind` se lee como `grafo`: compatibilidad con caches ya escritas. */
 export const geometriaSchema = z.preprocess(
   (crudo) => (typeof crudo === 'object' && crudo !== null && !('kind' in crudo) ? { ...crudo, kind: 'grafo' } : crudo),
   z.discriminatedUnion('kind', [geometriaGrafoSchema, geometriaSecuenciaSchema]),
 );
 
-/**
- * Geometria cacheada de una Vista. `layoutKey` (la `claveDeLayout` de `layout`)
- * dice con que Vista resuelta y Tema se calculo; quien la lee la compara con la
- * clave actual para saber si sigue vigente.
- */
+/** `layoutKey` es la `claveDeLayout` de la Vista resuelta y el Tema; si difiere de la actual, la cache no vale. */
 export const geometriaCacheadaSchema = z.object({
   view: z.string().min(1),
   theme: z.string().min(1),
@@ -101,3 +96,15 @@ export const geometriaCacheadaSchema = z.object({
 });
 
 export type GeometriaCacheada = z.infer<typeof geometriaCacheadaSchema>;
+export type CajaDeNodo = z.infer<typeof cajaDeNodoSchema>;
+export type Punto = z.infer<typeof puntoSchema>;
+export type RutaDeArista = z.infer<typeof rutaDeAristaSchema>;
+export type GeometriaGrafo = z.infer<typeof geometriaGrafoSchema>;
+export type GeometriaSecuencia = z.infer<typeof geometriaSecuenciaSchema>;
+export type Geometria = GeometriaGrafo | GeometriaSecuencia;
+export type CajaDeActivacion = GeometriaSecuencia['activations'][number];
+export type RutaDeMensaje = GeometriaSecuencia['messages'][string];
+export type MarcoDeFragmento = GeometriaSecuencia['fragments'][number];
+export type OperandoColocado = MarcoDeFragmento['operands'][number];
+export type NotaColocada = GeometriaSecuencia['notes'][number];
+export type CajaDeGrupoColocada = GeometriaSecuencia['groups'][number];

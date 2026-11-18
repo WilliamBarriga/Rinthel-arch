@@ -1,9 +1,6 @@
-/**
- * Atajos de deshacer/rehacer de la pagina de `diagrams dev` (ADR 0007), sin React ni DOM para poder
- * probarlos: traducen la tecla a una accion, la envian al servidor (que restaura el texto exacto) y
- * convierten un rechazo en aviso. No es parte de la interfaz del paquete.
- */
-import type { ResultadoDeEnvioDePin } from 'shell';
+/** Atajos de deshacer/rehacer de la pagina de `dev`, sin React ni DOM. */
+import { avisarRechazo } from './cliente';
+import type { ResultadoDeEnvio } from './cliente';
 
 export type AccionDeHistorial = 'deshacer' | 'rehacer';
 
@@ -13,9 +10,9 @@ export interface TeclaPulsada {
   metaKey: boolean;
   shiftKey: boolean;
   altKey: boolean;
-  /** Tecla mantenida pulsada (autorepeticion): no dispara el atajo. */
+  /** Autorepeticion: no dispara el atajo. */
   repeat: boolean;
-  /** El foco esta en un campo de texto: ahi manda el deshacer propio del navegador. */
+  /** En un campo de texto manda el deshacer propio del navegador. */
   enCampoDeTexto: boolean;
 }
 
@@ -28,24 +25,8 @@ export function accionDeAtajo(t: TeclaPulsada): AccionDeHistorial | undefined {
   return undefined;
 }
 
-export type EnviadorDeHistorial = (accion: AccionDeHistorial) => Promise<ResultadoDeEnvioDePin>;
-
-/** Cliente de `POST /api/deshacer` y `/api/rehacer`; nunca lanza. */
-export function crearEnviadorDeHistorial(fetchFn: typeof fetch = (...a) => fetch(...a)): EnviadorDeHistorial {
-  return async (accion) => {
-    try {
-      const res = await fetchFn(`/api/${accion}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
-      const cuerpo = (await res.json().catch(() => ({}))) as { ok?: boolean; mensaje?: string };
-      if (res.ok && cuerpo.ok === true) return { ok: true };
-      return { ok: false, desactualizado: res.status === 409, mensaje: cuerpo.mensaje ?? `Error ${res.status}` };
-    } catch (error) {
-      return { ok: false, desactualizado: false, mensaje: (error as Error).message };
-    }
-  };
-}
-
 export interface DependenciasDeAtajo {
-  enviar: EnviadorDeHistorial;
+  enviar: (accion: AccionDeHistorial) => Promise<ResultadoDeEnvio>;
   avisar: (texto: string) => void;
   recargar: () => Promise<void>;
 }
@@ -53,8 +34,6 @@ export interface DependenciasDeAtajo {
 export function crearAlAtajo({ enviar, avisar, recargar }: DependenciasDeAtajo) {
   return async (accion: AccionDeHistorial): Promise<void> => {
     const r = await enviar(accion);
-    if (r.ok) return;
-    avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `No se pudo ${accion}: ${r.mensaje}`);
-    if (r.desactualizado) await recargar().catch(() => undefined);
+    if (!r.ok) await avisarRechazo(r, `No se pudo ${accion}`, { avisar, recargar });
   };
 }

@@ -1,11 +1,6 @@
 /**
- * Familia marcador (ADR 0008): el adorno de un extremo de Arista (origen o fin).
- * `via` es el anillo hueco de un via de PCB, `hollow` un anillo fino del color de
- * fondo y `chevron` una punta en V abierta. `one`, `zero-one`, `many` y `zero-many`
- * son los pies de gallo de la cardinalidad ER (compuestos, porque un extremo admite
- * un solo marcador); `cross` es una X centrada en el extremo (una Lifeline destruida). El nucleo elige los de ER segun la cardinalidad de la Arista de una
- * Vista ER, el Tema solo cambia su `color` y `size`. Sin `color` toma el del primer
- * trazo. Solo pinta.
+ * Marcador de un extremo de Arista. `one`, `zero-one`, `many` y `zero-many` son los pies de gallo ER, compuestos
+ * porque un extremo admite un solo marcador; el nucleo los elige por cardinalidad. Sin `color`, el del primer trazo.
  */
 import type { DefinicionDePrimitiva } from '../catalogo';
 

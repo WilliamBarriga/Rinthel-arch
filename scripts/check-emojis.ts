@@ -1,7 +1,4 @@
-/**
- * `check-emojis`: AGENTS.md prohibe emojis unicode en docs. Falla si un `.md`
- * versionado contiene un pictograma. Sale con codigo 1 y lista archivo:linea.
- */
+/** Falla (codigo 1, con archivo:linea) si un `.md` versionado contiene un pictograma unicode. */
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 

@@ -1,54 +1,49 @@
 import type { MotivoDeRechazo } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
+import { aplicarEdiciones } from './ediciones';
+import type { EdicionConHash } from './ediciones';
 import { aplicarIntencion } from './intenciones';
-import type { Intencion } from './intenciones';
+import type { Intencion, Visto } from './intenciones';
 
 /**
- * Puerto del Workspace en disco (adaptador en `cli`; fake en memoria en las pruebas).
- * `leer` da `disco` (Workspace mas Temas de `--theme-path`, lo que se compila) y
- * `propios` (solo los archivos del Workspace, los unicos escribibles). Los fallos de
- * I/O se propagan como excepcion.
+ * `leer` da `disco` (Workspace mas Temas de `--theme-path`, lo que se compila) y `propios` (los unicos escribibles).
+ * Los fallos de I/O se propagan como excepcion.
  */
 export interface PuertoDeWorkspace {
   leer(): { disco: ArchivosDelWorkspace; propios: ArchivosDelWorkspace };
   escribir(ruta: string, texto: string): void;
 }
 
-/** Resultado de `aplicarAlWorkspace`: los archivos `cambiados`, o el rechazo con `motivo` y `mensaje`. */
+export type Aplicable = Intencion | readonly EdicionConHash[];
+
 export type ResultadoDeAplicar =
-  | { ok: true; cambiados: string[] }
+  | { ok: true; cambiados: string[]; ediciones: EdicionConHash[] }
   | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
 
-/**
- * Archivos que cambia una edicion (ordenados) y el primero que no pertenece al
- * Workspace (viene de `--theme-path`): solo se escribe en la raiz del Workspace.
- */
-export function cambiosDeEdicion(
-  antes: ArchivosDelWorkspace,
-  despues: ArchivosDelWorkspace,
-  propios: ArchivosDelWorkspace,
-): { cambiados: string[]; fuera: string | undefined } {
-  const cambiados = Object.keys(despues)
+const cambiadosEntre = (antes: ArchivosDelWorkspace, despues: ArchivosDelWorkspace): string[] =>
+  Object.keys(despues)
     .filter((f) => despues[f] !== antes[f])
     .sort();
-  return { cambiados, fuera: cambiados.find((f) => !(f in propios)) };
-}
 
 /**
- * Aplica una Intencion al Workspace: lee fresco, reduce con `aplicarIntencion`
- * (calcular, auto-probar, aplicar en memoria) y escribe solo los archivos propios
- * que cambian. Todo o nada: un rechazo no escribe nada. Un archivo de `--theme-path` que cambiaria
- * se rechaza como `archivo-desconocido`. Los fallos de I/O del puerto se propagan.
+ * Puerta de escritura unica: lee fresco por el puerto, aplica una Intencion (con `visto`) o ediciones con hash (sin `visto`)
+ * y escribe solo los archivos propios que cambian. Todo o nada. Cambiar un archivo ajeno (p. ej. de `--theme-path`)
+ * rechaza con `archivo-desconocido`. Los fallos de I/O del puerto se propagan.
  */
-export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, intencion: Intencion): ResultadoDeAplicar {
+export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, aplicable: Aplicable, visto?: Visto): ResultadoDeAplicar {
   const { disco, propios } = puerto.leer();
-  const r = aplicarIntencion(disco, intencion);
+  const r = esListaDeEdiciones(aplicable)
+    ? { ...aplicarEdiciones(disco, aplicable), ediciones: [...aplicable] }
+    : aplicarIntencion(disco, aplicable, visto);
   if (!r.ok) return { ok: false, motivo: r.motivo, mensaje: r.mensaje, ...(r.file === undefined ? {} : { file: r.file }) };
-  const { cambiados, fuera } = cambiosDeEdicion(disco, r.archivos, propios);
+  const cambiados = cambiadosEntre(disco, r.archivos);
+  const fuera = cambiados.find((f) => !(f in propios));
   if (fuera !== undefined) {
     return { ok: false, motivo: 'archivo-desconocido', mensaje: `'${fuera}' no pertenece al Workspace`, file: fuera };
   }
   for (const ruta of cambiados) puerto.escribir(ruta, r.archivos[ruta] as string);
-  return { ok: true, cambiados };
+  return { ok: true, cambiados, ediciones: r.ediciones };
 }
+
+const esListaDeEdiciones = (aplicable: Aplicable): aplicable is readonly EdicionConHash[] => Array.isArray(aplicable);

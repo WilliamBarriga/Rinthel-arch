@@ -1,10 +1,6 @@
 /**
- * Tema `alto-contraste` del nucleo (ADR 0008): fondo negro, texto blanco y bordes
- * gruesos del color del Tipo. Misma tarjeta que `neutral` (icono en caja, titulo,
- * insignia del Tipo en mayusculas, contador del Grupo cerrado), sin translucidos.
- * Lo activa un interruptor del visor o `prefers-contrast: more` y reemplaza el
- * Tema de la Vista solo en el visor, por eso va ya resuelto y no en el DSL.
- * Cero warnings de contraste.
+ * Tema `alto-contraste`: la tarjeta de `neutral` sobre fondo negro, texto blanco y bordes gruesos del color del Tipo,
+ * sin translucidos ni warnings de contraste. Va ya resuelto porque solo lo aplica el visor, en lugar del de la Vista.
  */
 import { TEMA_NEUTRO } from './tema';
 import type { Primitiva } from './catalogo';
@@ -35,7 +31,6 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
       { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'black' } } },
       { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'COLOR', width: 3 } } },
     ],
-    // Icono en caja, titulo con la insignia del Tipo debajo y, en un Grupo cerrado, el contador.
     slots: {
       direccion: 'column',
       gap: 0,
@@ -71,7 +66,6 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
     slots: { direccion: 'row', gap: 0, pad: 12, padY: 6, hijos: [{ slot: 'title' }] },
     textos: { title: texto({ dot: 'COLOR', transform: 'uppercase', size: 0.85, tracking: 0.08, weight: 700 }) },
     padding: { top: 12, left: 20, bottom: 20, right: 20 },
-    // Cerrado: la tarjeta del Nodo, con borde continuo del color del Tipo.
     colapsado: { ops: [{ nombre: 'borde', primitiva: 'border', props: { color: 'COLOR', width: 3 } }] },
   },
   arista: {
@@ -80,7 +74,6 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
     etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 6, 'pad-y': 2, fill: 'black', border: 'white', 'border-width': 1.5, color: 'white', radius: 0 } },
     diagramas: { er: { ops: [], fin: { tipo: 'arrow', props: { size: 12, color: 'white' } } } },
   },
-  // Filas de tabla ER: fondo negro con separador blanco grueso.
   fila: {
     alto: 28,
     capas: [
@@ -93,7 +86,6 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
     opcional: [],
     estados: {},
   },
-  // Secuencia: los mismos elementos que `neutral`, con trazos mas gruesos y sin translucidos.
   secuencia: {
     lifeline: { capas: [{ nombre: 'linea', primitiva: { tipo: 'line', props: { color: 'white', width: 2, style: 'dashed' } } }], fin: { tipo: 'cross', props: { size: 14, color: 'white' } }, textos: {}, parches: {}, estados: {}, metricas: {} },
     activation: {

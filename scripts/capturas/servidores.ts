@@ -1,7 +1,3 @@
-/**
- * Servidores locales del script de capturas: `dev` sobre la galeria (para capturarla) y un servidor estatico
- * desligado que sirve las capturas y la pagina de comparacion (AGENTS.md: nada de `file://`).
- */
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
@@ -14,7 +10,7 @@ export interface DevDeGaleria {
   detener: () => void;
 }
 
-/** Arranca `diagrams dev` sobre `workspace` en un puerto libre y espera su URL. Necesita `pnpm build`. */
+/** Puerto libre; necesita `pnpm build`. */
 export async function iniciarDevDeGaleria(repo: string, workspace: string, carpetaDeTemas?: string): Promise<DevDeGaleria> {
   const bin = join(repo, 'packages/cli/dist/bin.js');
   if (!existsSync(bin)) throw new Error('Falta el build del CLI: ejecuta `pnpm build` antes de `pnpm capturas`.');
@@ -45,8 +41,8 @@ async function puertoLibre(): Promise<number> {
 }
 
 /**
- * Sirve `raiz` en un puerto libre con un servidor desligado del script (sigue vivo al terminar) y devuelve su
- * origen. Un servidor anterior de la misma `raiz` se detiene antes (su pid queda en `servidor.json`).
+ * Servidor desligado del script (sigue vivo al terminar); devuelve su origen. Detiene antes el servidor anterior
+ * de la misma `raiz` (su pid queda en `servidor.json`).
  */
 export async function servirEstatico(raiz: string): Promise<string> {
   const registro = join(raiz, 'servidor.json');

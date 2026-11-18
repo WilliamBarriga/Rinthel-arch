@@ -1,7 +1,6 @@
 /**
- * Un escenario del benchmark, en su propio proceso para que `maxRSS` sea del
- * escenario y no del resto. Uso: `node bench/escenario.ts <escenario>`; imprime
- * una linea JSON `{ escenario, medidas }` en stdout. Lo lanza `bench/ejecutar.ts`.
+ * Un escenario del benchmark, en su propio proceso para que `maxRSS` sea solo suyo.
+ * Uso: `node bench/escenario.ts <escenario>`; imprime una linea JSON `{ escenario, medidas }`.
  */
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -10,7 +9,7 @@ import { performance } from 'node:perf_hooks';
 import { gzipSync } from 'node:zlib';
 
 import { resolveView } from 'canonico';
-import type { EstadoDeColapso, FuenteCanonica, Nodo, Tema } from 'canonico';
+import type { EstadoDeColapso, FuenteCanonica, Nodo, Tema, VistaDeSecuencia } from 'canonico';
 import { run } from 'cli';
 import { compile } from 'dsl';
 import { layoutView } from 'layout';
@@ -74,7 +73,6 @@ async function buildDe10k(): Promise<Record<string, number>> {
 
 const TEMA: Tema = TEMA_NEUTRO;
 
-/** Resuelve la Vista en `estado` y la pasa por el layout del Worker (puertos en memoria). */
 async function relayout(fuente: FuenteCanonica, estado: EstadoDeColapso, adaptador: ReturnType<typeof adaptadorDeWorker>, tema: Tema = TEMA) {
   const inicio = performance.now();
   const vista = resolveView(fuente, 'todo', estado)!;
@@ -102,10 +100,7 @@ async function relayoutDe1k(): Promise<Record<string, number>> {
   };
 }
 
-/**
- * Disposicion de Slots anidada tres niveles (`row`/`column` dentro de `row`/`column`, con gap, pad y `align`):
- * el peor caso razonable del mini-layout, que `colocarEnCaja` recorre por cada Nodo en cada relayout.
- */
+/** Slots anidados tres niveles: el peor caso razonable de `colocarEnCaja`, que corre por Nodo en cada relayout. */
 const SLOTS_ANIDADOS = {
   direccion: 'column',
   gap: 4,
@@ -130,7 +125,7 @@ const SLOTS_ANIDADOS = {
   ],
 } as const;
 
-/** Relayout de `nodos` Nodos del Modelo (con sus Grupos) con Slots `row/column` anidados, frente al mismo Modelo con la disposicion plana del Tema neutro. */
+/** Frente al mismo Modelo con la disposicion plana del Tema neutro. */
 async function relayoutConSlotsAnidados(nodos: number): Promise<Record<string, number>> {
   const fuente = compilar(nodos);
   const anidado = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, slots: SLOTS_ANIDADOS } } as unknown as Tema;
@@ -160,11 +155,9 @@ async function colapsoDe5k(): Promise<Record<string, number>> {
   // Estado inicial: todas las raices cerradas (un Modelo de 5k no se expande entero: el shell tope es ~1k).
   const cerrado: EstadoDeColapso = { collapsed: raices };
   const inicial = await relayout(fuente, cerrado, adaptador);
-  // Expandir la raiz mas grande, como un clic en su control de Grupo.
   const mayor = [...fuente.model.nodes].sort((a, b) => contarNodos([b]) - contarNodos([a]))[0]!;
   const abierto: EstadoDeColapso = { collapsed: raices.filter((id: string) => id !== mayor.id), expanded: [mayor.id] };
   const expandir = await relayout(fuente, abierto, adaptador);
-  // Y volver a cerrarla.
   const colapsar = await relayout(fuente, cerrado, adaptador);
   return {
     nodosDelModelo: contarNodos(fuente.model.nodes),
@@ -178,11 +171,11 @@ async function colapsoDe5k(): Promise<Record<string, number>> {
   };
 }
 
-/** Layout de una Interaccion de 1000 Mensajes, 50 Lifelines y Fragmentos anidados 3 niveles (mejor de 3 corridas tras una de calentamiento). */
+/** Mejor de 3 corridas tras una de calentamiento. */
 async function secuenciaGrande(): Promise<Record<string, number>> {
   const { canonico, issues } = compile(generarSecuencia({ mensajes: 1000, lifelines: 50, profundidad: 3 }));
   if (canonico === undefined) throw new Error(`La Interaccion sintetica no compila: ${JSON.stringify(issues.slice(0, 3))}`);
-  const vista = resolveView(canonico, 'secuencia')!;
+  const vista = resolveView(canonico, 'secuencia') as VistaDeSecuencia;
   const inicio = performance.now();
   await layoutView(vista, TEMA);
   const frioMs = ms(inicio);
@@ -192,12 +185,11 @@ async function secuenciaGrande(): Promise<Record<string, number>> {
     await layoutView(vista, TEMA);
     corridas.push(ms(t));
   }
-  return { mensajes: vista.interaction!.messages.length, lifelines: vista.nodes.length, tiempoFrioMs: frioMs, tiempoMs: Math.min(...corridas), maxRssMb: mb(process.resourceUsage().maxRSS * 1024) };
+  return { mensajes: vista.interaction.messages.length, lifelines: vista.nodes.length, tiempoFrioMs: frioMs, tiempoMs: Math.min(...corridas), maxRssMb: mb(process.resourceUsage().maxRSS * 1024) };
 }
 
 async function bundleDelShell(): Promise<Record<string, number>> {
-  // Los dos bundles que `export --format html` incrusta (mismas opciones que `packages/cli/src/html.ts`):
-  // la pagina (shell + React, sin ELK) y el Worker (layout con ELK, sin zod, tal cual los empaqueta el CLI).
+  // Los dos bundles del navegador de `dev`: la pagina (shell + React, sin ELK) y el Worker (ELK, sin zod).
   const navegador = join(import.meta.dirname, '..', 'packages', 'cli', 'navegador');
   const bundle = async (entrada: string, alias: Record<string, string> = {}): Promise<{ min: number; gzip: number }> => {
     const salida = await build({

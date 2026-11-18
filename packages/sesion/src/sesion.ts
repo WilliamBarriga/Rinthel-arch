@@ -7,48 +7,43 @@ import type { Geometria, GeometriaGrafo } from 'layout';
 import { TEMA_NEUTRO, advertenciasDeContraste, aristaIdentificanteSoloColor, estiloResuelto, mensajesSoloColor, leerOps, resolverFuentes, resolverTema, tiposSoloColor, usosDeCodigo } from 'tema';
 import type { EstiloResuelto, UsoDeComponente } from 'tema';
 
+import { consultar } from './consultas';
+import type { Consulta, Respuesta } from './consultas';
+
 /** Archivos derivados, por ruta relativa a `<workspace>/.diagrams/`. */
 export type SalidaDeBuild = Record<string, string>;
 
-/** Interfaz de un Componente de Tema tal como la conoce el adaptador (nombre exportado y, si lo declara, tipo de cada parametro). */
+/** Interfaz de un Componente de Tema segun el adaptador. */
 export interface InterfazDeComponente {
-  /** Parametros que el componente declara; sin ellos, no se comprueban. */
+  /** Tipo de cada parametro; sin el, los parametros no se comprueban. */
   parametros?: Readonly<Record<string, 'numero' | 'texto'>>;
 }
 
-/** Opciones de `abrirSesion`: Tema global, registro de Componentes de Tema e issues del adaptador. */
 export interface OpcionesDeSesion {
   /** Tema global; una Vista con `theme` propio lo anula. */
   tema?: string;
   /**
-   * Componentes de Tema que el adaptador conoce, por nombre (nombre -> `InterfazDeComponente`). Con el registro `diagnosticar` y `construir` comprueban que el componente existe y que sus parametros coinciden; sin el solo emiten `W_THEME_WITH_CODE` por Tema (o Vista) que usa la Capa `code`. `sesion` nunca importa codigo: con este
-   * registro (CLI, `dev`, pruebas) `validate` comprueba la interfaz de cada Capa `code`; sin el solo avisa
-   * de que el Tema tiene codigo.
+   * Componentes de Tema por nombre. Con el registro, `diagnosticar` y `construir` comprueban que existen y que
+   * sus parametros coinciden; sin el solo emiten `W_THEME_WITH_CODE` por Tema (o Vista) que usa la Capa `code`.
    */
   componentes?: Readonly<Record<string, InterfazDeComponente>>;
   /**
-   * Rutas (relativas al Workspace, con `/`) de los archivos de fuente que el adaptador encontro. Con ellas
-   * `diagnosticar` y `construir` exigen un archivo por cada familia de `fonts` (`E_THEME_FONT_MISSING`) y el
-   * Estilo resuelto trae las caras; sin ellas (el adaptador no las conoce) no se comprueba.
+   * Rutas (relativas al Workspace, con `/`) de los archivos de fuente. Con ellas se exige un archivo por familia
+   * de `fonts` (`E_THEME_FONT_MISSING`) y el Estilo trae las caras; sin ellas no se comprueba.
    */
   archivosDeFuente?: readonly string[];
-  /** Issues que el adaptador ya conoce (p. ej. un `.tsx` que no compila): se suman tal cual a los de `diagnosticar` y `construir`. */
+  /** Issues del adaptador (p. ej. un `.tsx` que no compila); se suman tal cual a los de `diagnosticar` y `construir`. */
   issuesDelAdaptador?: readonly Issue[];
 }
 
-/** Resultado de `Sesion.construir`: los archivos de `build` y todos los issues. */
 export interface ResultadoDeConstruir {
   /** `canonico.json` y `geometria/<vista>.json`; vacio si el Workspace tiene errores. */
   archivos: SalidaDeBuild;
-  /** Todos los issues: los de compilacion y los que solo se conocen tras el layout. */
+  /** Incluye los issues que solo se conocen tras el layout. */
   issues: Issue[];
 }
 
-/**
- * Estado compilado de un Workspace en un momento dado; valor inmutable. Es la unica tuberia
- * compilar, validar y calcular layout (la comparten `cli`, `dev` e `inspect`). Cada Sesion compila
- * todo el Workspace: no hay compilacion incremental.
- */
+/** Estado compilado de un Workspace; valor inmutable. Cada Sesion compila todo el Workspace (sin compilacion incremental). */
 export interface Sesion {
   /** Fuente canonica; ausente si la compilacion tiene errores. */
   readonly fuente: FuenteCanonica | undefined;
@@ -57,9 +52,8 @@ export interface Sesion {
   /** Origen de las Capas de cada Tema declarado en el texto (cadena `extends`, `part`, sitio de cada Capa); vacio sin Fuente. */
   readonly origenesDeTema: Readonly<Record<string, OrigenDeTema>>;
   /**
-   * Issues de compilacion, los del adaptador (`issuesDelAdaptador`), los de Tema (`W_THEME_*`, `E_THEME_FONT_MISSING`)
-   * y `W_OVERLAPPING_PINS`. Solo paga layout en Vistas con 2 o mas Pins (el solape se conoce tras ELK).
-   * Los errores del Workspace son issues, no excepciones; un fallo interno de layout rechaza la promesa.
+   * Issues de compilacion, del adaptador, de Tema y `W_OVERLAPPING_PINS`. Solo calcula layout en Vistas con 2 o mas Pins.
+   * Un fallo interno de layout rechaza la promesa.
    */
   diagnosticar(): Promise<Issue[]>;
   /** Archivos de `build` (geometria de todas las Vistas) y todos los issues. Un fallo interno de layout rechaza la promesa. */
@@ -68,6 +62,8 @@ export interface Sesion {
   geometria(vista: string): Promise<GeometriaCacheada | undefined>;
   /** Estilo resuelto (Metricas y pintura) del Tema de una Vista; `undefined` si la Vista no existe. Sincrono: no necesita layout. */
   estilo(vista: string): EstiloResuelto | undefined;
+  /** Consulta de solo lectura, sincrona y sin layout; `undefined` si la Sesion no tiene Fuente. */
+  consultar(consulta: Consulta): Respuesta | undefined;
   /** Ids de las Vistas cuya geometria ya se pidio (calculada o en curso). */
   vistasConGeometria(): string[];
   /**
@@ -91,9 +87,8 @@ function temaDeVista(fuente: FuenteCanonica, vista: Vista, global: string | unde
 }
 
 /**
- * `W_OVERLAPPING_PINS` de una Vista: un aviso por par de Pins solapados, situado
- * en el primer Pin del par y con el segundo en `related`. Un par sin posicion de
- * texto conocida (Pin que no viene del DSL) no se avisa.
+ * `W_OVERLAPPING_PINS`: un aviso por par de Pins solapados, situado en el primero y con el segundo en `related`.
+ * Un par sin posicion de texto conocida (Pin que no viene del DSL) no se avisa.
  */
 function avisosDePins(vista: string, geometry: Geometria, pins: readonly PosicionDePin[]): Issue[] {
   switch (geometry.kind) {
@@ -123,14 +118,12 @@ function avisosDePinsDeGrafo(vista: string, geometry: GeometriaGrafo, pins: read
   });
 }
 
-/** Color de Paleta de cada Tipo de nodo de la Fuente. */
 const coloresDeTipos = (fuente: FuenteCanonica): Record<string, string | undefined> =>
   Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
 
 /**
- * Warnings de accesibilidad (ADR 0008), nunca errores: `W_THEME_LOW_CONTRAST` por Tema,
- * Tipo y estado (situado en el nombre del Tema) y `W_THEME_COLOR_ONLY` por Vista cuando
- * dos de sus Tipos solo difieren por color (situado en el id de la Vista).
+ * Solo warnings: `W_THEME_LOW_CONTRAST` por Tema, Tipo y estado (en el nombre del Tema) y `W_THEME_COLOR_ONLY`
+ * por Vista cuando dos de sus Tipos solo difieren por color (en el id de la Vista).
  */
 function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefined, global: string | undefined): Issue[] {
   /** Posicion del valor en `ruta`; `null` si su archivo no es fiable (no se avisa). */
@@ -155,12 +148,12 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
     const tipos = fuente.specification.nodeTypes.filter((t) => usados.has(t.name)).map((t) => ({ name: t.name, color: colores[t.name], icon: t.icon }));
     const tema = temaDeVista(fuente, declarada, global);
     const aviso = (message: string): Issue => ({ code: CODIGOS.W_THEME_COLOR_ONLY, severity: 'warning', ...donde, message, hint: 'da al Tema un trazo, un marcador o un estilo distinto; el color no basta' });
-    const tiposDeMensaje = [...new Set(resuelta.interaction?.messages.map((m) => m.kind) ?? [])];
+    const tiposDeMensaje = resuelta.type === 'sequence' ? [...new Set(resuelta.interaction.messages.map((m) => m.kind))] : [];
     for (const [a, b] of mensajesSoloColor(tema, tiposDeMensaje)) issues.push(aviso(`En la Vista '${declarada.id}', los Mensajes '${a}' y '${b}' se distinguen solo por color`));
     if (resuelta.type === 'er' && resuelta.edges.some((e) => e.identifying === true) && aristaIdentificanteSoloColor(tema)) {
       issues.push(aviso(`En la Vista '${declarada.id}', las Aristas identificantes y las no identificantes se distinguen solo por color`));
     }
-    for (const [a, b] of tiposSoloColor(tema, tipos)) {
+    for (const [a, b] of tiposSoloColor(tema, resuelta.type, tipos)) {
       issues.push({
         code: CODIGOS.W_THEME_COLOR_ONLY,
         severity: 'warning',
@@ -174,9 +167,8 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
 }
 
 /**
- * Avisos de la via de escape en codigo (ADR 0008): `W_THEME_WITH_CODE` por Tema (y por Vista cuyo
- * override anade componentes) y, si el adaptador dio `componentes`, la comprobacion de la interfaz
- * (existe, parametros declarados y de su tipo). Nunca ejecuta ni lee codigo.
+ * `W_THEME_WITH_CODE` por Tema (y por Vista cuyo override anade componentes) y, con `componentes`,
+ * la comprobacion de su interfaz. Nunca ejecuta ni lee codigo.
  */
 function avisosDeCodigo(fuente: FuenteCanonica, ubicar: Ubicador | undefined, componentes: OpcionesDeSesion['componentes']): Issue[] {
   const sitio = (ruta: Parameters<Ubicador>[0]): { file: string; line: number; column: number } | null => {
@@ -329,20 +321,18 @@ function crear(
       const datos = claveDe(vista);
       if (datos === undefined || fuente === undefined) return undefined;
       const declarada = fuente.views.find(({ id }) => id === vista);
+      if (declarada === undefined) return undefined;
       const tipos = Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
-      return estiloResuelto(datos.tema, { tipos, ...(declarada !== undefined && { diagrama: declarada.type }), ...(opciones.archivosDeFuente !== undefined && { archivosDeFuente: opciones.archivosDeFuente }), ...(declarada?.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
+      return estiloResuelto(datos.tema, { tipos, diagrama: declarada.type, ...(opciones.archivosDeFuente !== undefined && { archivosDeFuente: opciones.archivosDeFuente }), ...(declarada.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
     },
+    consultar: (consulta) => (fuente === undefined || compilado.ubicar === undefined ? undefined : consultar(fuente, compilado.ubicar, consulta)),
     vistasConGeometria: () => [...memo.keys()],
     actualizar: (nuevos, cambios = {}) => crear(nuevos, { ...opciones, ...cambios }, compile(nuevos), memo),
   };
   return sesion;
 }
 
-/**
- * Abre una Sesion sobre el mapa de archivos del Workspace: compila una vez y deja
- * el layout bajo demanda. Pura sobre `archivos`: no lee disco ni observa cambios (eso es de los adaptadores de `cli`).
- * `sesion` nunca importa codigo (ADR 0008): `opciones.componentes` es lo unico que sabe de Capas `code`.
- */
+/** Compila una vez y deja el layout bajo demanda. Pura sobre `archivos`: no lee disco ni observa cambios. */
 export function abrirSesion(archivos: ArchivosDelWorkspace, opciones: OpcionesDeSesion = {}): Sesion {
   return crear(archivos, opciones, compile(archivos), new Map());
 }

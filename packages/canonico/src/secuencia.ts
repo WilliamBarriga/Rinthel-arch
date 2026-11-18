@@ -1,15 +1,15 @@
 /**
- * Secuencia en `canonico`: resolucion de una Interaccion para una Vista `sequence` y la derivacion de
- * activaciones. Pura. Una Vista de secuencia proyecta exactamente una Interaccion: sus Lifelines son los
- * Nodos que participan, en el orden de `order` y luego por primera aparicion.
+ * Resolucion pura de la Interaccion de una Vista `sequence` y derivacion de activaciones. Una Vista proyecta
+ * exactamente una Interaccion; sus Lifelines son los Nodos que participan, en el orden de `order` y luego por
+ * primera aparicion.
  */
 import type { AnclajeDeNota, Interaccion, ItemDeInteraccion, Mensaje, Nodo, OperadorDeFragmento, TipoDeMensaje, Vista } from './esquema';
 import type { NodoResuelto } from './vistas';
 
-/** Mensaje proyectado por una Vista; `ruta` es su identidad (ruta de indices en la Interaccion, hoy un solo indice). */
+/** Mensaje proyectado por una Vista; `ruta` es su identidad (ruta de indices en la Interaccion, `0.1.2` dentro de Fragmentos anidados). */
 export interface MensajeResuelto {
   ruta: string;
-  /** Alias opcional del Mensaje, unico en su Interaccion. */
+  /** Unico en su Interaccion. */
   id?: string;
   kind: TipoDeMensaje;
   from: string;
@@ -21,11 +21,11 @@ export interface MensajeResuelto {
   numero?: number;
 }
 
-/** Grupo abierto cuyo `box` envuelve a las Lifelines de sus hijas; `lifelines` son las que contiene, en orden de columna (la del propio Grupo, si la tiene, primera). */
+/** `box` de un Grupo abierto; `lifelines` en orden de columna, la del propio Grupo (si la tiene) primera. */
 export interface CajaDeGrupo {
   id: string;
   label: string;
-  /** Anidacion entre `box`es (0 el exterior). */
+  /** 0 el exterior. */
   nivel: number;
   lifelines: string[];
 }
@@ -74,16 +74,16 @@ export interface InteraccionResuelta {
 }
 
 /**
- * Activacion derivada: un `sync` abre una en el receptor y el siguiente `reply` del receptor al emisor la cierra
- * (pila para las anidadas). `desde` y `hasta` son indices en la lista de Mensajes; `hasta` es `null` si el `sync` no tiene
- * `reply` (dura hasta el fin de la Interaccion, o hasta el fin de su Fragmento: ver `cierraEn`). `nivel` es la profundidad de anidacion en su Lifeline (0 la exterior).
+ * Un `sync` abre una en el receptor y el siguiente `reply` del receptor al emisor la cierra (pila para las anidadas).
+ * `desde`/`hasta` son indices en la lista de Mensajes; `hasta` es `null` sin `reply` (dura hasta el fin de la
+ * Interaccion, o de su Fragmento: ver `cierraEn`). `nivel`: profundidad en su Lifeline, 0 la exterior.
  */
 export interface Activacion {
   lifeline: string;
   desde: number;
   hasta: number | null;
   nivel: number;
-  /** Ruta del Fragmento al que cierra el fin de la activacion, cuando su `sync` quedo sin `reply` dentro de un Fragmento. */
+  /** Ruta del Fragmento cuyo fin cierra la activacion de un `sync` sin `reply` dentro de el. */
   cierraEn?: string;
 }
 
@@ -131,7 +131,6 @@ export function activacionesDe(mensajes: readonly (Pick<Mensaje, 'kind' | 'from'
   return { activaciones, respuestasSueltas };
 }
 
-/** Todos los Nodos del Modelo por id, a cualquier profundidad. */
 function nodosPorId(nodos: readonly Nodo[], destino = new Map<string, Nodo>()): Map<string, Nodo> {
   for (const nodo of nodos) {
     destino.set(nodo.id, nodo);
@@ -152,8 +151,8 @@ export function lifelinesDe(mensajes: readonly Pick<Mensaje, 'from' | 'to'>[], o
  * Un extremo dentro de un Grupo colapsado (`ancestroColapsado`) se eleva al Grupo; el Mensaje que queda con ambos
  * extremos en la misma Lifeline pasa a ser propio. `create`/`destroy` de un descendiente no crean ni destruyen el Grupo:
  * al elevarse pasan a `async`. Un extremo excluido (o su Grupo) quita el Mensaje; un Fragmento sin Mensajes desaparece.
- * Con `autonumber` cada Mensaje proyectado lleva su numero delante de la etiqueta. Una Interaccion o un Nodo que no
- * existen se omiten (`validate` los informa).
+ * Con `autonumber` cada Mensaje proyectado lleva su numero delante de la etiqueta. Un Nodo que no existe se omite; una
+ * Interaccion que no existe da una Interaccion vacia con el id nombrado (`validate` los informa).
  */
 export function resolverSecuencia(
   interacciones: readonly Interaccion[],
@@ -162,9 +161,9 @@ export function resolverSecuencia(
   excluidos: ReadonlySet<string>,
   resolverNodo: (nodo: Nodo) => NodoResuelto,
   ancestroColapsado: ReadonlyMap<string, string> = new Map(),
-): { nodes: NodoResuelto[]; interaction?: InteraccionResuelta } {
+): { nodes: NodoResuelto[]; interaction: InteraccionResuelta } {
   const interaccion = interacciones.find((candidata) => candidata.id === vista.interaction);
-  if (interaccion === undefined) return { nodes: [] };
+  if (interaccion === undefined) return { nodes: [], interaction: { id: vista.interaction ?? '', title: '', messages: [], items: [] } };
   const porId = nodosPorId(nodos);
   const elevar = (id: string): string => ancestroColapsado.get(id) ?? id;
   const visible = (id: string): boolean => porId.has(id) && !excluidos.has(id) && !excluidos.has(elevar(id));
@@ -180,7 +179,7 @@ export function resolverSecuencia(
       if (item.type === 'note') return [{ type: 'note', ruta, anchor: item.anchor, targets: item.targets.filter(visible), text: item.text }];
       if (item.type === 'ref') {
         const referida = interacciones.find((candidata) => candidata.id === item.interaction);
-        return referida === undefined ? [] : [{ type: 'ref', ruta, interaction: referida.id, title: referida.title, participantes: [...new Set(aplanarMensajes(referida.items).flatMap((m) => [m.from, m.to]))] }];
+        return referida === undefined ? [] : [{ type: 'ref', ruta, interaction: referida.id, title: referida.title, participantes: [...new Set(aplanarMensajes(referida.items).flatMap((m) => [m.from, m.to]).map(elevar))] }];
       }
       if (!visible(item.from) || !visible(item.to)) return [];
       const from = elevar(item.from);
@@ -201,7 +200,7 @@ export function resolverSecuencia(
   const { orden, grupos } = agruparLifelines(ordenadas, nodos);
   const lifelines = orden.map((id) => ({ ...resolverNodo(porId.get(id)!), children: [] }));
   const groups = grupos.map((grupo) => ({ ...grupo, label: resolverNodo(porId.get(grupo.id)!).label }));
-  // Con las Lifelines ya conocidas: una Nota sin ninguna de las suyas, o un `ref` sin Lifelines donde pintarse, no se proyectan; un Fragmento vacio desaparece.
+  // Requiere las Lifelines finales: se quitan Notas sin Lifelines propias, `ref` sin Lifelines y Fragmentos vacios.
   const podar = (items: readonly ItemResuelto[]): ItemResuelto[] =>
     items.flatMap((item): ItemResuelto[] => {
       if (item.type === 'message') return [item];

@@ -1,7 +1,5 @@
-/**
- * Estado del shell en el hash de URL: funciones puras (serializar/deserializar)
- * y el adaptador del navegador. Sin DOM salvo en `hashDelNavegador`.
- */
+/** Estado del shell en el hash de URL. Sin DOM salvo en `hashDelNavegador`. */
+import { leerIdDeElementoDeSecuencia } from 'canonico';
 import type { EstadoDeColapso, FuenteCanonica, Nodo } from 'canonico';
 import type { Camara } from 'render';
 
@@ -14,7 +12,6 @@ export interface EstadoDeShell {
   camera?: Camara;
 }
 
-/** Seam del hash: `location.hash` en el navegador, un fake en memoria en pruebas. */
 export interface AdaptadorDeHash {
   /** Hash vigente, con o sin `#`. */
   leer: () => string;
@@ -24,7 +21,6 @@ export interface AdaptadorDeHash {
   suscribir: (aviso: () => void) => () => void;
 }
 
-/** Adaptador real sobre `win.location` e `history` (inyectar `window` o el de jsdom). */
 export function hashDelNavegador(win: Window): AdaptadorDeHash {
   return {
     leer: () => win.location.hash,
@@ -68,28 +64,24 @@ const idsDelModelo = (nodos: readonly Nodo[], acumulado = new Set<string>()): Se
 
 /** `interaccion:ruta` (Mensaje, Fragmento o Nota de secuencia) de una Interaccion que existe en la Fuente. */
 function esElementoDeInteraccion(id: string, source: FuenteCanonica): boolean {
-  const corte = id.lastIndexOf(':');
-  return corte > 0 && /^\d+(\.\d+)*$/.test(id.slice(corte + 1)) && (source.model.interactions ?? []).some((i) => i.id === id.slice(0, corte));
+  const leido = leerIdDeElementoDeSecuencia(id);
+  return leido !== undefined && leido.operando === undefined && (source.model.interactions ?? []).some((i) => i.id === leido.interaccion);
 }
 
-/** Vista por defecto: la primera de la Fuente (`undefined` si no hay Vistas). */
+/** La primera Vista de la Fuente; `undefined` si no hay Vistas. */
 export const vistaPorDefecto = (source: FuenteCanonica): string | undefined => source.views[0]?.id;
 
-/**
- * Paso con el que se entra a una Vista de `tipo` con `total` Pasos: el primero en secuencia y ER (ADR 0009: el
- * Paso 0 las dejaria vacias); 0 (antes del primero, ADR 0002) en architecture y flow.
- */
+/** Paso de entrada: 1 en sequence y er con Pasos (el 0 las dejaria vacias); 0 (antes del primero) en el resto. */
 export const pasoInicialDeTipo = (tipo: string, total: number): number => ((tipo === 'sequence' || tipo === 'er') && total > 0 ? 1 : 0);
 
-/** Paso con el que se entra a la Vista `vista` de la Fuente (ver `pasoInicialDeTipo`). */
 export const pasoInicialDeVista = (source: FuenteCanonica, vista: string | undefined): number => {
   const v = source.views.find((candidata) => candidata.id === vista);
   return v === undefined ? 0 : pasoInicialDeTipo(v.type, v.steps?.length ?? 0);
 };
 
 /**
- * Estado -> hash (sin `#`). Omite lo que vale su default, asi el estado inicial
- * da hash vacio. `vistaInicial` es la Vista por defecto con ruta `[vistaInicial]`.
+ * Estado -> hash (sin `#`): `p` ruta (repetido), `e`/`c` Grupos abiertos/cerrados, `s` Seleccion, `t` Paso,
+ * `cam=x,y,w,h`. Omite lo que vale su default (la ruta `[vistaInicial]`, el Paso de entrada), asi el estado inicial da hash vacio.
  */
 export function serializarEstado(estado: EstadoDeShell, vistaInicial?: string, source?: FuenteCanonica): string {
   const p = new URLSearchParams();
@@ -116,10 +108,8 @@ function leerCamara(texto: string | null): Camara | undefined {
 }
 
 /**
- * Hash -> estado valido contra la Fuente. Nunca lanza: lo que no se entiende o
- * no existe (Vista, Nodo, Paso fuera de rango, camara mal formada) cae al
- * default de ese campo. El estado de colapso trae `expanded` y `collapsed`
- * juntos, o es `{}`. `vistaInicial` por defecto es la primera Vista de la Fuente.
+ * Hash -> estado valido contra la Fuente. Nunca lanza: lo que no se entiende o no existe cae al default de ese
+ * campo. El colapso trae `expanded` y `collapsed` juntos, o es `{}`.
  */
 export function deserializarEstado(hash: string, source: FuenteCanonica, vistaInicial: string | undefined = vistaPorDefecto(source)): EstadoDeShell {
   const p = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);

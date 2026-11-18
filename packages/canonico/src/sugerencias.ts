@@ -1,9 +1,3 @@
-/**
- * Candidatos cercanos a un nombre mal escrito (typos), para `hint` y `fix`.
- * Puro: sin dependencias del resto del compilador.
- */
-
-/** Distancia de edicion de Levenshtein. */
 function distanciaLevenshtein(a: string, b: string): number {
   let anterior = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
@@ -22,9 +16,8 @@ function distanciaLevenshtein(a: string, b: string): number {
 }
 
 /**
- * Nombres de `existentes` a distancia razonable de `escrito` (hasta un tercio
- * de su longitud, minimo 1), ordenados. Un unico resultado es un candidato
- * inequivoco; varios son ambiguos.
+ * Nombres de `existentes` a distancia de Levenshtein <= max(1, len(escrito)/3), ordenados.
+ * Un unico resultado es un candidato inequivoco (`fix`); varios son ambiguos (`hint`).
  */
 export function candidatosCercanos(escrito: string, existentes: Iterable<string>): string[] {
   const maximo = Math.max(1, Math.floor(escrito.length / 3));

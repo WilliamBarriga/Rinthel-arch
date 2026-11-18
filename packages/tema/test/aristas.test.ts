@@ -73,7 +73,7 @@ describe('Familia marcador', () => {
 
 describe('pintura de la Arista', () => {
   it('un segundo trazo ancho y translucido produce glow bajo el trazo principal', () => {
-    const { capas } = estiloResuelto(GLOW).pintura.arista.origenes['blue']!;
+    const { capas } = estiloResuelto(GLOW, { diagrama: 'architecture' }).pintura.arista.origenes['blue']!;
 
     expect(capas.map((c) => c.nombre)).toEqual(['glow', 'principal']);
     expect(capas[0]?.props).toMatchObject({ color: 'rgba(37, 99, 235, 0.3)', width: 8 });
@@ -81,14 +81,14 @@ describe('pintura de la Arista', () => {
   });
 
   it('ORIGEN toma el color del Nodo de origen; sin origen conocido, el borde del Tema', () => {
-    const { arista } = estiloResuelto(GLOW).pintura;
+    const { arista } = estiloResuelto(GLOW, { diagrama: 'architecture' }).pintura;
 
     expect(arista.origenes['green']?.capas[1]?.props['color']).toBe(TEMA_NEUTRO.palette['green']);
     expect(arista.capas[1]?.props['color']).toBe(TEMA_NEUTRO.tokens.border);
   });
 
   it('sin trazos declarados hay una linea del color del borde, y el marcador sin color toma el del primer trazo', () => {
-    const { arista } = estiloResuelto(TEMA_NEUTRO).pintura;
+    const { arista } = estiloResuelto(TEMA_NEUTRO, { diagrama: 'architecture' }).pintura;
 
     expect(arista.capas).toHaveLength(1);
     expect(arista.fin).toEqual({ tipo: 'arrow', props: { size: 8, color: TEMA_NEUTRO.tokens.border } });
@@ -101,7 +101,7 @@ describe('pintura de la Arista', () => {
       nodo: { ...TEMA_NEUTRO.nodo, textos: { title: { tipo: 'text', props: { weight: 700, style: 'normal', transform: 'none', color: 'blue' } } } },
     };
 
-    expect(estiloResuelto(tema).pintura.nodo.textos.title?.props).toMatchObject({ weight: 700, color: '#2563eb' });
+    expect(estiloResuelto(tema, { diagrama: 'architecture' }).pintura.nodo.textos.title?.props).toMatchObject({ weight: 700, color: '#2563eb' });
   });
 });
 
@@ -109,33 +109,33 @@ describe('Metricas de la Arista', () => {
   it('solo la etiqueta cuenta: trazos, glow y marcadores no cambian las Metricas', () => {
     const decorada = conArista({ ...GLOW.arista, origen: { tipo: 'dot', props: { size: 12 } }, fin: { tipo: 'via', props: { size: 16 } } });
 
-    expect(metricasDe(decorada)).toEqual(metricasDe(TEMA_NEUTRO));
-    expect(estiloResuelto(decorada).metricas).toEqual(estiloResuelto(TEMA_NEUTRO).metricas);
+    expect(metricasDe(decorada, 'architecture')).toEqual(metricasDe(TEMA_NEUTRO, 'architecture'));
+    expect(estiloResuelto(decorada, { diagrama: 'architecture' }).metricas).toEqual(estiloResuelto(TEMA_NEUTRO, { diagrama: 'architecture' }).metricas);
   });
 
   it('la etiqueta cambia la caja que se reserva: escala y margen interior', () => {
     const ancha = conArista({ etiqueta: { tipo: 'label', props: { scale: 1.2, pad: 10, radius: 4 } } });
-    const base = tamanoDeEtiqueta('conecta', metricasDe(TEMA_NEUTRO));
-    const grande = tamanoDeEtiqueta('conecta', metricasDe(ancha));
+    const base = tamanoDeEtiqueta('conecta', metricasDe(TEMA_NEUTRO, 'architecture'));
+    const grande = tamanoDeEtiqueta('conecta', metricasDe(ancha, 'architecture'));
 
-    expect(metricasDe(ancha)).not.toEqual(metricasDe(TEMA_NEUTRO));
+    expect(metricasDe(ancha, 'architecture')).not.toEqual(metricasDe(TEMA_NEUTRO, 'architecture'));
     expect(grande.width).toBeGreaterThan(base.width);
     expect(grande.height).toBeGreaterThan(base.height);
   });
 
   it('pad-y agranda el alto de la caja de la etiqueta y font mono la mide con la fuente mono', () => {
-    const base = tamanoDeEtiqueta('conecta', metricasDe(TEMA_NEUTRO));
+    const base = tamanoDeEtiqueta('conecta', metricasDe(TEMA_NEUTRO, 'architecture'));
     const alta = conArista({ etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 0, 'pad-y': 3, font: 'mono' } } });
 
-    expect(tamanoDeEtiqueta('conecta', metricasDe(alta)).height).toBe(base.height + 6);
-    expect(metricasDe(alta).fuenteDeEtiqueta).toBe(TEMA_NEUTRO.fonts.mono);
-    expect(metricasDe(TEMA_NEUTRO).fuenteDeEtiqueta).toBe(TEMA_NEUTRO.fonts.body);
+    expect(tamanoDeEtiqueta('conecta', metricasDe(alta, 'architecture')).height).toBe(base.height + 6);
+    expect(metricasDe(alta, 'architecture').fuenteDeEtiqueta).toBe(TEMA_NEUTRO.fonts.mono);
+    expect(metricasDe(TEMA_NEUTRO, 'architecture').fuenteDeEtiqueta).toBe(TEMA_NEUTRO.fonts.body);
   });
 
   it('el relleno y el borde de la etiqueta son pintura: no cambian las Metricas', () => {
     const pintada = conArista({ etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 0, fill: 'blue', border: 'gray' } } });
 
-    expect(metricasDe(pintada)).toEqual(metricasDe(TEMA_NEUTRO));
+    expect(metricasDe(pintada, 'architecture')).toEqual(metricasDe(TEMA_NEUTRO, 'architecture'));
   });
 
   it('un Tema con una Arista invalida no cumple el contrato', () => {
@@ -154,7 +154,7 @@ describe('Metricas de la Arista', () => {
   it('un marcador sin color toma el del trazo principal (el ultimo de la pila), no el del halo de debajo', () => {
     const tema = { ...GLOW, arista: { ...GLOW.arista, fin: { tipo: 'arrow', props: { size: 10 } } } };
 
-    const { fin, capas } = estiloResuelto(tema).pintura.arista;
+    const { fin, capas } = estiloResuelto(tema, { diagrama: 'architecture' }).pintura.arista;
 
     expect(fin?.props['color']).toBe(capas[1]?.props['color']);
     expect(fin?.props['color']).not.toBe(capas[0]?.props['color']);

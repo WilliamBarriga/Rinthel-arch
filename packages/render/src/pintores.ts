@@ -1,8 +1,6 @@
 /**
- * Pintores por parte: cada uno dibuja una parte de la Vista leyendo solo del
- * Estilo resuelto, sin tokens ni numeros propios. Nodos y Grupos son HTML (cada
- * Slot en el rectangulo que reservo `layout`; el CSS solo pinta y recorta);
- * Aristas y sus etiquetas son SVG. Puros; la escena los ordena.
+ * Pintores por parte: leen solo del Estilo resuelto, sin numeros propios. Nodos y Grupos son HTML (cada Slot en el
+ * rectangulo que reservo `layout`; el CSS solo pinta y recorta); Aristas y sus etiquetas son SVG. Puros.
  */
 import { sanearIcono } from 'canonico';
 import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
@@ -44,7 +42,6 @@ function slotDeTexto(nombre: string, clases: string, r: Rect, texto: string, ext
   return { tag: 'div', attrs: { class: `rd-slot ${clases}`, 'data-slot': nombre, style: enRect(r, `line-height:${num(r.height)}px;${extra}`) }, hijos: [texto] };
 }
 
-/** Lo que un pintor de Slot necesita saber del Nodo que dibuja. */
 interface ContextoDeSlot {
   estilo: Estilo;
   datos: DatosDeNodo;
@@ -66,11 +63,7 @@ function pintarTexto(slot: NombreDeSlotDeTexto, { metricas, contenido, textos }:
   return [slotDeTexto(slot, `rd-${slot}`, rect, medido.texto, slot === 'counter' ? `${tamano}line-height:${num(rect.height - 2 * borde)}px;` : tamano)];
 }
 
-/**
- * Un pintor por Slot del catalogo, tabla exhaustiva: anadir un Slot a `tema` sin
- * pintor aqui rompe el typecheck. Cada pintor dibuja su Slot en el rectangulo que
- * la colocacion de `tema` le dio, sin posiciones propias.
- */
+/** Un pintor por Slot del catalogo (un Slot sin pintor rompe el typecheck), en el rectangulo que dio la colocacion de `tema`. */
 const PINTORES_DE_SLOT: { readonly [S in NombreDeSlot]: (contexto: ContextoDeSlot, rect: Rect) => Elemento[] } = {
   title: (contexto, rect) => pintarTexto('title', contexto, rect),
   badge: (contexto, rect) => pintarTexto('badge', contexto, rect),
@@ -95,7 +88,7 @@ export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: 
 }
 
 /**
- * Capas con `zone` (ADR 0009): cada una es un elemento propio sobre su franja de la caja. `header` va de arriba hasta donde
+ * Capas con `zone`: cada una es un elemento propio sobre su franja de la caja. `header` va de arriba hasta donde
  * empieza `attrs` (sin `attrs`, toda la caja); `body` cubre la zona de `attrs` hasta el pie (sin `attrs`, nada). Hereda las
  * esquinas de la caja que toca. Solo pinta: un parche de estado no las cambia.
  */
@@ -161,9 +154,9 @@ const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo, tamano?: n
   texto === undefined ? '' : declaracionesLimpias({ ...declaracionesDeTexto(texto, estilo.fuenteMono), ...(tamano !== undefined && { 'font-size': `${num(tamano)}px` }) });
 
 /**
- * Slot `attrs`: una fila por Atributo, en orden, cada una en su rectangulo (relativo al Slot). En una Vista ER cuyo Tema
- * declara `row`, la fila pinta su pila de Capas (segun si es impar, sus marcas de clave y si es opcional) y sus textos
- * `name`, `type` y `key` con el estilo del Tema.
+ * Slot `attrs`: una fila por Atributo, en orden, cada una en su rectangulo (relativo al Slot). En una Vista ER la fila
+ * pinta la pila de `row` del Estilo (segun si es impar, sus marcas de clave y si es opcional) y sus textos `name`, `type`
+ * y `key` con su estilo.
  */
 function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Atributo[], zona: Rect, metricasDeNodo: Metricas, estados?: DatosDeNodo['estados']): Elemento {
   const { metricas } = estilo;
@@ -278,7 +271,7 @@ export function pintarArista(
 const FORMA_ER: Readonly<Record<string, NombreDePrimitiva>> = { '1': 'one', '0..1': 'zero-one', '1..*': 'many', '0..*': 'zero-many' };
 
 /**
- * Pintura de una Arista de Vista ER (ADR 0009): linea continua si es identificante y discontinua si no; sin flechas;
+ * Pintura de una Arista de Vista ER: linea continua si es identificante y discontinua si no; sin flechas;
  * en cada extremo el marcador de su cardinalidad (ninguno si falta o no es canonica). Color y tamano salen del marcador
  * del Tema (`fin`, si no `origen`) o del trazo principal; el tamano se acota al tramo final disponible.
  */

@@ -1,8 +1,4 @@
-/**
- * Que textos necesita medir el layout: los mismos que `colocarNodo` y
- * `tamanoDeEtiqueta` miden, con la misma familia y tamano, para que el visor
- * entregue exactamente las claves que se consultaran.
- */
+/** Textos que el layout mide (los mismos que `colocarNodo` y `tamanoDeEtiqueta`, con la misma familia y tamano), sin repetir. */
 import type { ItemResuelto, VistaResuelta } from 'canonico';
 
 import { claveDeTexto } from './medicion';
@@ -12,21 +8,17 @@ import { estiloDeTextoDeNota, metricasDeHoja, palabrasDeNota, textoDeGuarda } fr
 import type { TablaDeMetricas } from './metricas';
 import { textosDeNodo } from './slots';
 
-export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges' | 'interaction'>, tabla: TablaDeMetricas): TextoAMedir[] {
+export function textosAMedir(vista: VistaResuelta, tabla: TablaDeMetricas): TextoAMedir[] {
   const vistos = new Map<string, TextoAMedir>();
   const anadir = (familia: string, tamano: number, texto: string, peso?: number): void => {
     const clave = claveDeTexto(familia, tamano, texto, peso);
     if (!vistos.has(clave)) vistos.set(clave, { familia, tamano, texto, ...(peso !== undefined && { peso }) });
   };
   for (const nodo of vista.nodes) {
-    // Un Grupo abierto mide su cabecera; un Nodo hoja o Grupo colapsado, sus Slots.
     const m = nodo.children.length > 0 ? tabla.grupoAbierto : metricasDeHoja(tabla, nodo);
     for (const { familia, tamano, texto, peso } of textosDeNodo(m, contenidoDeNodo(nodo, m))) anadir(familia, tamano, texto, peso);
   }
   const e = tabla.etiqueta;
-  for (const arista of vista.edges) if (arista.label !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, arista.label, e.pesoDeEtiqueta);
-  for (const mensaje of vista.interaction?.messages ?? []) if (mensaje.label !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, mensaje.label, e.pesoDeEtiqueta);
-  // Pestanas y guardas de los Fragmentos (con la estimacion la pestana salia recortada).
   const deItems = (items: readonly ItemResuelto[]): void => {
     for (const item of items) {
       if (item.type === 'message') continue;
@@ -47,6 +39,11 @@ export function textosAMedir(vista: Pick<VistaResuelta, 'nodes' | 'edges' | 'int
       }
     }
   };
-  deItems(vista.interaction?.items ?? []);
+  if (vista.type === 'sequence') {
+    for (const mensaje of vista.interaction.messages) if (mensaje.label !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, mensaje.label, e.pesoDeEtiqueta);
+    deItems(vista.interaction.items);
+  } else {
+    for (const arista of vista.edges) if (arista.label !== undefined) anadir(e.fuenteDeEtiqueta, e.fontSize * e.escalaEtiqueta, arista.label, e.pesoDeEtiqueta);
+  }
   return [...vistos.values()];
 }

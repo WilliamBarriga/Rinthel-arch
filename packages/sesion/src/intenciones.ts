@@ -1,52 +1,42 @@
 import type { Intencion, Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
-import { editarPin, ordenarLifelines } from './ediciones';
 import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
+import { moverPin, ordenarLifelines } from './gestos';
+import type { ResultadoDeGesto, Visto } from './gestos';
+
+export type { Intencion };
+export type { Visto };
+
+export type ResultadoDeIntencion = ResultadoDeGesto;
 
 /**
- * Intencion de edicion: union discriminada por `tipo`, declarada en `canonico`
- * (`intencionSchema`). Cada herramienta nueva es una variante mas alla, con su rama
- * en `aplicarIntencion`. Hoy: mover un Pin y ordenar las Lifelines de una secuencia.
+ * Reductor puro: mapa nuevo o rechazo con `motivo`. `visto` rechaza con `hash-desactualizado` si el archivo que
+ * cambia difiere; sin `visto` aplica sobre el vigente. No escribe.
  */
-export type { Intencion };
-
-/** Resultado de `aplicarIntencion`: los `archivos` nuevos y las `ediciones` aplicadas, o el rechazo. */
-export type ResultadoDeIntencion = ResultadoDeEdicion<{
-  archivos: ArchivosDelWorkspace;
-  ediciones: EdicionConHash[];
-  issues: Issue[];
-}>;
-
-/** Reductor puro: Intencion sobre el mapa de archivos -> mapa nuevo o rechazo con `motivo`. */
-export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Intencion): ResultadoDeIntencion {
+export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Intencion, visto?: Visto): ResultadoDeIntencion {
   switch (intencion.tipo) {
     case 'mover-pin': {
       const { tipo: _tipo, ...pin } = intencion;
-      return editarPin(archivos, pin);
+      return moverPin(archivos, pin, visto);
     }
     case 'ordenar-lifelines': {
       const { tipo: _tipo, ...orden } = intencion;
-      return ordenarLifelines(archivos, orden);
+      return ordenarLifelines(archivos, orden, visto);
     }
   }
 }
 
-/** Pila inmutable de deshacer/rehacer sobre el texto del Workspace: `archivos` es el vigente; `deshacer` restaura el DSL exactamente. */
+/** Pila inmutable de deshacer/rehacer sobre el texto del Workspace; `archivos` es el vigente. */
 export interface Historial {
   readonly archivos: ArchivosDelWorkspace;
   readonly pasado: readonly ArchivosDelWorkspace[];
   readonly futuro: readonly ArchivosDelWorkspace[];
 }
 
-/** Historial vacio sobre `archivos`: sin pasado ni futuro. */
 export const crearHistorial = (archivos: ArchivosDelWorkspace): Historial => ({ archivos, pasado: [], futuro: [] });
 
-/**
- * Registra `archivos` como el nuevo texto vigente cuando el llamador ya lo escribio por su cuenta (el anterior
- * pasa al pasado) y descarta el futuro. Pura; no comprueba que `archivos` difiera del vigente: evitar
- * entradas repetidas es del llamador.
- */
+/** Registra `archivos` como vigente y descarta el futuro. No comprueba que difiera del vigente. */
 export const apilar = (historial: Historial, archivos: ArchivosDelWorkspace): Historial => ({
   archivos,
   pasado: [...historial.pasado, historial.archivos],

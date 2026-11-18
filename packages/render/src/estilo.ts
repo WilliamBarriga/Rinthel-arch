@@ -1,18 +1,14 @@
 /**
- * Estilo resuelto: la tabla de todo lo que el dibujo necesita saber de aspecto
- * (colores, fuentes, radios, trazos, halo, glifos y las Metricas
- * compartidas con `layout`). `resolverEstilo` lo deriva del Tema, valida el
- * contrato del Tema y es el unico sitio con defaults y numeros de dibujo: los
- * pintores solo leen de aqui. Pura.
+ * Estilo resuelto: todo lo que el dibujo necesita de aspecto (colores, fuentes, radios, trazos, halo, glifos y las
+ * Metricas compartidas con `layout`). `resolverEstilo` es el unico sitio con defaults y numeros de dibujo. Puro.
  */
 import type { Tema } from 'canonico';
 import { estiloResuelto, resolverTema, tablaUniforme } from 'tema';
 import type { CaraDeFuente, Estado, MedidasDeTexto, Metricas, Pintura, TablaDeMetricas, TipoDeDiagrama } from 'tema';
 
-/** Estado visual de un elemento dibujado, ademas de su aspecto normal. */
 export type EstadoVisual = Estado;
 
-/** Grosor minimo del anillo de foco: el nucleo lo garantiza, ningun Estilo lo quita (ADR 0008). */
+/** Grosor minimo (px) del anillo de foco: ningun Estilo lo quita. */
 export const ANILLO_DE_FOCO_MINIMO = 2;
 
 /** Contorno de un estado: color, grosor, trazo discontinuo opcional y opacidad. En `atenuado` solo cuenta `opacidad`: la del elemento entero. */
@@ -71,11 +67,11 @@ export interface Estilo {
  * con un mensaje que nombra cada ruta que falta. `metricas` sustituye a las derivadas del Tema; `medidas`
  * son las medidas reales de texto con las que se calculo la Geometria (las Metricas del dibujo salen de ellas).
  */
-export function resolverEstilo(tema: Tema, metricas?: Metricas, archivosDeFuente?: readonly string[], medidas?: MedidasDeTexto, diagrama?: TipoDeDiagrama): Estilo {
+export function resolverEstilo(tema: Tema, diagrama: TipoDeDiagrama, metricas?: Metricas, archivosDeFuente?: readonly string[], medidas?: MedidasDeTexto): Estilo {
   const { tokens, palette } = resolverTema(tema);
   const acento = palette['blue'] ?? tokens.foreground;
   // `COLOR` de una Capa es la variable `--trazo` que cada Nodo y Grupo fija con su color: una hoja sirve a todos los colores.
-  const resuelto = estiloResuelto(tema, { ...(diagrama !== undefined && { diagrama }), colorEnVariable: '--trazo', ...(archivosDeFuente !== undefined && { archivosDeFuente }), ...(medidas !== undefined && { medidas }) });
+  const resuelto = estiloResuelto(tema, { diagrama, colorEnVariable: '--trazo', ...(archivosDeFuente !== undefined && { archivosDeFuente }), ...(medidas !== undefined && { medidas }) });
   const tabla = metricas === undefined ? resuelto.tabla : tablaUniforme(metricas);
   return {
     metricas: tabla.base,

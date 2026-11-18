@@ -1,26 +1,9 @@
 /**
- * `check-docs` — chequeo de la documentacion que se puede pudrir.
- *
- * Interfaz publica:
- * - `SECCIONES_README`: plantilla de README por paquete, fuente unica de verdad
- *   (la explica `docs/CODING.md`, "README de paquete").
- * - `revisarReadmes(raiz) -> Violacion[]`: revisa cada `packages/<paquete>/README.md`
- *   (todo paquete debe tenerlo; si falta, regla `seccion`) y devuelve las
- *   violaciones ordenadas. Vacio significa verde.
- *
- * Reglas de `revisarReadmes`:
- * - `seccion`: el README tiene un encabezado `## <seccion>` por cada entrada de la plantilla.
- * - `entrada`: la seccion "Archivo de entrada" nombra al menos una ruta entre
- *   comillas invertidas, y cada ruta existe (relativa a la raiz del repo).
- * - `probar`: la seccion "Probar" contiene `pnpm --filter <paquete> test`.
- *
- * - `revisarIndiceDeAdrs(raiz) -> Violacion[]`: cada `docs/adr/NNNN-*.md` aparece
- *   (por nombre de archivo) en `docs/adr/README.md`; regla `indice`.
- *
- * - `revisarEnlacesDeAgents(raiz) -> Violacion[]`: `AGENTS.md` nombra `docs/adr/README.md`
- *   y `docs/ramas.md`, y ambos archivos existen; regla `indice`.
- *
- * Los chequeos de indices se suman aqui con la misma forma: `revisarX(raiz) -> Violacion[]`.
+ * Chequeo de la documentacion que se puede pudrir; cada `revisarX(raiz) -> Violacion[]` devuelve violaciones ordenadas.
+ * `revisarReadmes`: cada `packages/<paquete>/README.md` existe y tiene las `SECCIONES_README` (`seccion`), sus rutas de
+ * "Archivo de entrada" existen (`entrada`) y "Probar" contiene `pnpm --filter <paquete> test` (`probar`).
+ * `revisarIndiceDeAdrs`: cada `docs/adr/NNNN-*.md` aparece en `docs/adr/README.md` (`indice`).
+ * `revisarEnlacesDeAgents`: `AGENTS.md` nombra `docs/adr/README.md` y `docs/ramas.md`, y ambos existen (`indice`).
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -90,7 +73,6 @@ export function revisarReadmes(raiz: string): Violacion[] {
   return violaciones;
 }
 
-/** Cada ADR de `docs/adr/` debe nombrarse en el indice `docs/adr/README.md`. */
 export function revisarIndiceDeAdrs(raiz: string): Violacion[] {
   const carpeta = join(raiz, 'docs/adr');
   if (!existsSync(carpeta)) return [];
@@ -115,7 +97,6 @@ export function revisarIndiceDeAdrs(raiz: string): Violacion[] {
 
 const INDICES_DE_AGENTS = ['docs/adr/README.md', 'docs/ramas.md'] as const;
 
-/** `AGENTS.md` debe enlazar el indice de ADRs y el de ramas, y ambos archivos deben existir. */
 export function revisarEnlacesDeAgents(raiz: string): Violacion[] {
   const archivo = 'AGENTS.md';
   if (!existsSync(join(raiz, archivo))) {

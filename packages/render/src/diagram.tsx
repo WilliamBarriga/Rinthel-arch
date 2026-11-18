@@ -1,8 +1,4 @@
-/**
- * Componente React de una Vista (ADR 0002, 0008). Sin estado ni efectos: pinta la
- * escena que dan sus props y avisa de lo que el usuario toca; quien lo usa (el
- * shell, slides, video) decide el colapso, la visibilidad y la camara.
- */
+/** Componente React de una Vista: sin estado ni efectos; colapso, visibilidad y camara llegan por props. */
 import { createElement } from 'react';
 import type { MouseEvent, ReactElement, ReactNode } from 'react';
 

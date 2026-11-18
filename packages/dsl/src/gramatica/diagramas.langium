@@ -7,10 +7,7 @@
 //
 // Derivado de packages/language-server/src/like-c4.langium de LikeC4
 // (https://github.com/likec4/likec4, MIT; ver LICENSE-LIKEC4 en este paquete).
-// Copia recortada y adaptada a este repo (ADR 0001): se omiten `deployment`,
-// vistas dinamicas, temas incrustados, niveles C4 fijos, imports, tags y
-// propiedades de estilo; el `kind` del Nodo pasa a ser un Tipo de nodo
-// declarado en `specification`.
+// Copia recortada y adaptada (ADR 0001).
 
 grammar Diagramas
 
@@ -51,8 +48,8 @@ Model:
   '}'
 ;
 
-// `interaction <id> ["Titulo"] ["Descripcion"] { mensajes }` (ADR 0009): un escenario ordenado entre Nodos.
-// Su id vive en un espacio de nombres propio. `interaction` es palabra clave solo aqui: sigue valiendo como id de Nodo.
+// `interaction <id> ["Titulo"] ["Descripcion"] { mensajes }`. Su id vive en un espacio de nombres propio;
+// `interaction` sigue valiendo como id de Nodo.
 Interaction:
   'interaction' name=Id (title=String (description=String)?)? '{'
     items+=InteractionItem*
@@ -62,19 +59,19 @@ Interaction:
 InteractionItem:
   Fragment | Note | InteractionRef | Message;
 
-// Nota (ADR 0009): `note left of X "t"`, `note right of X "t"`, `note over X[, Y] "t"`.
+// `note left of X "t"`, `note right of X "t"`, `note over X[, Y] "t"`.
 Note:
   'note' (anchor=('left' | 'right') 'of' targets+=Ref | anchor='over' targets+=Ref (',' targets+=Ref)*) text=String
 ;
 
-// `ref <interaccion>`: referencia a otra Interaccion (los ciclos son validos; no se expande).
+// `ref <interaccion>`: los ciclos son validos; no se expande.
 InteractionRef:
   'ref' interaction=Id
 ;
 
-// Fragmento (ADR 0009): `opt|loop|break|critical ["guarda"] { }`, `alt ["guarda"] { } else ["guarda"] { }`,
-// `par { } and { }`. El parser acepta cualquier operador con `else`/`and` en cualquier cantidad: `canonico`
-// emite `E_INVALID_FRAGMENT_OPERAND` (nada de esto sale como `E_SYNTAX_ERROR`).
+// `opt|loop|break|critical ["guarda"] { }`, `alt ["guarda"] { } else ["guarda"] { }`, `par { } and { }`.
+// El parser acepta cualquier operador con `else`/`and` en cualquier cantidad; `canonico` emite
+// `E_INVALID_FRAGMENT_OPERAND`, no `E_SYNTAX_ERROR`.
 Fragment:
   operator=('opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par') operands+=FirstOperand operands+=NextOperand*
 ;
@@ -119,7 +116,7 @@ Extend:
 // Theme -------------------------------------
 
 // `theme <nombre> [extends <padre>] { palette { azul "#00f" } fonts { ... } tokens { ... } }`
-// Un solo padre; el hex solo vive aqui (ADR 0002).
+// Un solo padre; el hex solo vive aqui.
 Theme:
   'theme' name=Id ('extends' parent=Id)? '{'
     parts+=ThemePart*
@@ -149,8 +146,7 @@ Num returns string:
   DIGITS ('.' DIGITS)?;
 
 // `node { layer fondo solid { color azul }  slots { title attrs }  type servicio { ... }  state hover { ... } }`
-// Bloque de dibujo del Nodo (ADR 0008): una pila de Capas, de abajo hacia arriba, los
-// Slots que se pintan, en orden, y parches por Tipo de nodo (`type`) y por estado (`state`).
+// Capas de abajo hacia arriba, Slots en orden y parches por Tipo de nodo (`type`) y por estado (`state`).
 ThemeNode:
   'node' '{' items+=NodeItem* '}';
 
@@ -158,9 +154,8 @@ NodeItem:
   ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState | ThemeDiagram | ThemeTransition | ThemeEnter | ThemeExit | ThemeStagger;
 
 // `group { layer caja rect { radius 16 }  slots row gap 6 { icon title }  padding 8 16 16  type ...  state collapsed { ... } }`
-// Bloque de dibujo del Grupo (ADR 0008): las mismas Capas, `type` y `state` que `node`, la cabecera (`slots`), el
-// `padding` de la zona de hijos (1, 2 o 4 valores como en CSS) y `state collapsed`, el parche del Grupo cerrado, que
-// se comporta como un Nodo hoja (puede cambiar `slots` y la caja).
+// Lo mismo que `node` mas el `padding` de la zona de hijos (1, 2 o 4 valores como en CSS). `state collapsed`
+// es el Grupo cerrado, que se comporta como un Nodo hoja (puede cambiar `slots` y la caja).
 ThemeGroup:
   'group' '{' items+=GroupItem* '}';
 
@@ -170,9 +165,8 @@ GroupItem:
 GroupPadding:
   'padding' values+=Num+;
 
-// `diagram flow { layer ... slots ... padding ... }` (ADR 0009): parche por Tipo de diagrama dentro de `node`, `group`
-// o `edge`, entre el Tema base y el Tipo de nodo. A diferencia de `state`, puede cambiar las Metricas. El nombre se
-// valida al compilar (architecture, flow, sequence, er) para dar un `fix` por typo.
+// `diagram flow { ... }`: parche por Tipo de diagrama dentro de `node`, `group` o `edge`, entre el Tema base y el
+// Tipo de nodo. Puede cambiar las Metricas. El nombre se valida al compilar.
 ThemeDiagram:
   'diagram' name=Id '{' items+=DiagramItem* '}';
 
@@ -200,16 +194,15 @@ PartDecl:
 ThemeUse:
   'use' name=Id;
 
-// Un solo verbo de Capa (ADR 0008). `layer <nombre> [<primitiva>] [before|after <otra>] [over] [{ props }]`
+// `layer <nombre> [<primitiva>] [before|after <otra>] [over] [{ props }]`
 // define, cambia o anade segun exista o no en el nivel de abajo; `layer <nombre> none` la quita.
 // La primitiva es un identificador plano (nunca una palabra clave) para no confundirla con `over`/`none`.
 ThemeLayer:
   'layer' name=Id (remove?='none' | (primitive=IdTerminal)? (placement=('before' | 'after') target=Id)? (over?='over')? ('{' (animations+=LayerAnimation | props+=LayerProp)* '}')?);
 
-// Animacion declarativa (ADR 0008). Dentro de una Capa: `motion pulso 1.2s ease-in-out intensity 0.4`,
-// `motion none` (quita el heredado) o `keyframes opacity 2s { 0 1  50 0.4  100 1 }`. En el bloque `node`:
-// `transition 120ms ease-out`, `enter fundido 300ms`, `exit escala 200ms`, `stagger 60ms`; `transition`
-// tambien dentro de un `state`. Los parametros son palabras cerradas (no colisionan con las propiedades).
+// En una Capa: `motion pulso 1.2s ease-in-out intensity 0.4`, `motion none` (quita el heredado) o
+// `keyframes opacity 2s { 0 1  50 0.4  100 1 }`. En `node`: `transition`, `enter`, `exit`, `stagger`;
+// `transition` tambien en un `state`. Los parametros son palabras cerradas (no colisionan con las propiedades).
 LayerAnimation:
   ThemeMotion | ThemeKeyframes;
 
@@ -261,9 +254,8 @@ LayerAtom returns string:
 MixValue returns string:
   'mix' '(' Id ',' Id ',' Num ')';
 
-// Mini-layout de Slots (ADR 0008): `slots [row|column] [gap N] [pad N] [align A] { hijos }`; sin direccion es una
-// columna. Un hijo es un Slot o una caja anidada (`row`/`column`). Un Slot lleva su estilo y su `align` entre llaves:
-// `slots column gap 8 { row gap 6 { icon { variant box side 24 }  title { weight 600 } }  attrs }`.
+// `slots [row|column] [gap N] [pad N] [align A] { hijos }`; sin direccion es una columna. Un hijo es un Slot
+// (con su estilo entre llaves) o una caja anidada `row`/`column`.
 ThemeSlots:
   'slots' direction=SlotDirection? props+=LayerProp* '{' children+=SlotChild* '}';
 
@@ -280,14 +272,14 @@ SlotEntry:
   name=Id ('{' props+=LayerProp* '}')?;
 
 // `edge { layer glow line { color ORIGEN/0.3 width 6 }  start dot  end arrow { size 10 }  label { pad 6 fill paper } }`
-// Bloque de dibujo de la Arista (ADR 0008): pila de trazos, marcadores de extremo y etiqueta con modelo de caja.
+// Pila de trazos, marcadores de extremo y etiqueta con modelo de caja.
 ThemeEdge:
   'edge' '{' items+=EdgeItem* '}';
 
 EdgeItem:
   ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel | ThemeDiagram | EdgeIdentifying;
 
-// `identifying { layer linea { color azul } }` (ADR 0009): parche del trazo de las Aristas identificantes de una Vista ER.
+// `identifying { ... }`: parche del trazo de las Aristas identificantes de una Vista ER.
 EdgeIdentifying:
   'identifying' '{' items+=PatchItem* '}';
 
@@ -300,9 +292,8 @@ ThemeLabel:
 
 // `row { layer fondo solid { color papel }  height 28  alternate { layer fondo { color gris } }  name { weight 600 }
 //   key { fill azul }  key pk { layer fondo { color verde } }  optional { layer fondo { color gris } } }`
-// Bloque de la fila de una tabla ER (ADR 0009, Vistas ER): una pila de Capas por fila (`layer`, `use`), su alto, el
-// parche de las filas impares (`alternate`), el estilo de sus textos (`name`, `type`, `key`: un chip) y los parches
-// por marca de clave (`key pk|fk|uk`) y por Atributo opcional (`optional`). Solo pinta, salvo el alto.
+// Fila de una tabla ER: `alternate` parchea las filas impares; `key pk|fk|uk` y `optional` parchean por marca de
+// clave y por Atributo opcional. Solo pinta, salvo `height`.
 ThemeRow:
   'row' '{' items+=RowItem* '}';
 
@@ -321,20 +312,17 @@ RowOptional:
 RowAlternate:
   'alternate' '{' items+=PatchItem* '}';
 
-// Parche de estado de la fila (`hover`, `seleccionado`...): solo pinta, como los de `node`.
+// Solo pinta, como los estados de `node`.
 RowState:
   'state' name=Id '{' items+=PatchItem* '}';
 
-// El nombre del texto (`name`, `type`, `key`) se valida al compilar para dar un `fix` por typo.
+// El nombre del texto (`name`, `type`, `key`) se valida al compilar.
 RowText:
   slot=Id '{' props+=LayerProp* '}';
 
 // `message { layer linea line { color tinta }  end arrow { size 9 }  gap 36  kind reply { layer linea { style dashed } } }`
-// Elementos de secuencia (ADR 0009): `lifeline`, `activation`, `message`, `fragment`, `note`. Cada uno lleva su pila de
-// Capas, marcadores (`start`/`end`), parches por variante (`kind <tipo>` en message, `op <operador>` en fragment),
-// estados, Metricas propias (`gap 36`, `width 10`...) y estilo de texto o trazo suelto (`label`, `operator`, `guard`,
-// `divider`, `text`). Que admite cada uno lo valida el catalogo de `tema`; el nombre del estilo, de la Metrica y de la
-// variante se comprueba al compilar para dar un `fix` por typo.
+// Elementos de secuencia. Parches por variante: `kind <tipo>` en message, `op <operador>` en fragment. Que admite
+// cada uno lo valida el catalogo de `tema`; los nombres de estilo, Metrica y variante se validan al compilar.
 ThemeSequence:
   element=('lifeline' | 'activation' | 'message' | 'fragment' | 'note') '{' items+=SequenceItem* '}';
 
@@ -354,8 +342,7 @@ SequenceText:
   slot=Id '{' props+=LayerProp* '}';
 
 // `page { layer fondo solid { color paper }  layer puntos dots { color ink/0.1 size 22 }  fixed }`
-// Bloque del fondo de pagina (ADR 0008): pila de rellenos bajo Grupos, Aristas y Nodos.
-// Sin `fixed` el patron se mueve y escala con el pan/zoom; con `fixed` queda fijo al visor.
+// Fondo de pagina, bajo Grupos, Aristas y Nodos. Sin `fixed` el patron se mueve y escala con el pan/zoom; con `fixed` queda fijo al visor.
 ThemePage:
   'page' '{' items+=PageItem* '}';
 
@@ -417,7 +404,7 @@ ViewOrder:
 ViewAutonumber:
   {infer ViewAutonumber} 'autonumber';
 
-// Pasos de revelado (ADR 0002): acumulativos; `show` revela y `hide` oculta.
+// Pasos de revelado acumulativos; `show` revela y `hide` oculta.
 // Un item es un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`edge a -> b`, o `a -> b`).
 // En un Paso, `a.*` y `a.**` abarcan tambien al propio Grupo `a` (revelar un Grupo completo).
 // `steps each` (solo secuencia): un Paso por Mensaje proyectado.
@@ -451,7 +438,7 @@ StepSelector:
 
 // Overrides de presentacion de un Nodo en esta Vista; nunca tocan el Modelo.
 // `pin x,y` es la posicion relativa al Grupo padre (al lienzo si es raiz), aplicada tras el layout;
-// `order N` se compila y se guarda, pero en v1 nada lo usa (ADR 0003: sin considerModelOrder);
+// `order N` se compila y se guarda, pero el layout no lo usa;
 // `color` es un nombre de Paleta.
 NodeOverride:
   'node' node=Ref '{' props+=OverrideProperty* '}';

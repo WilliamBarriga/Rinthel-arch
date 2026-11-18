@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
-import type { Nodo } from 'canonico';
+import type { Nodo, VistaDeSecuencia } from 'canonico';
 import { compile } from 'dsl';
 
 import { generarSecuencia, generarWorkspace } from '../bench/generador';
@@ -48,15 +48,15 @@ describe('generarSecuencia', () => {
     const { issues, canonico } = generar(mensajes);
 
     expect(issues).toEqual([]);
-    const vista = resolveView(canonico!, 'secuencia')!;
-    expect(vista.interaction!.messages).toHaveLength(mensajes);
+    const vista = resolveView(canonico!, 'secuencia') as VistaDeSecuencia;
+    expect(vista.interaction.messages).toHaveLength(mensajes);
   });
 
   it('tiene 50 Lifelines y Fragmentos anidados tres niveles', () => {
-    const vista = resolveView(generar(1000).canonico!, 'secuencia')!;
+    const vista = resolveView(generar(1000).canonico!, 'secuencia') as VistaDeSecuencia;
 
     expect(vista.nodes).toHaveLength(50);
-    const maxima = Math.max(...vista.interaction!.messages.map((m) => m.ambito?.length ?? 0));
+    const maxima = Math.max(...vista.interaction.messages.map((m) => m.ambito?.length ?? 0));
     expect(maxima).toBe(3);
   });
 

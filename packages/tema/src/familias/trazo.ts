@@ -1,8 +1,3 @@
-/**
- * Familia trazo (ADR 0008): la Capa de una Arista. La pila de trazos va de abajo
- * hacia arriba; un segundo trazo ancho y translucido sobre el principal da el
- * glow. Solo pinta: ningun trazo cambia las Metricas.
- */
 import type { DefinicionDePrimitiva } from '../catalogo';
 
 export const ESTILOS_DE_TRAZO = ['solid', 'dashed', 'dotted', 'pixel'] as const;
@@ -24,7 +19,7 @@ export const TRAZOS = {
       radius: { tipo: 'numero', min: 1, max: 64, defecto: 8 },
       /** Remate de los extremos (`butt`, `round`, `square`); sin el, el de su estilo (redondo en `dotted`, recto en el resto). */
       cap: { tipo: 'opcion', valores: ['butt', 'round', 'square'], opcional: true },
-      /** Mano alzada: cuanto desplaza el ruido el trazo (sin el, o 0, no hay filtro) y la frecuencia del ruido (0.03 sin ella). */
+      /** Mano alzada: desplazamiento del ruido (sin el, o 0, no hay filtro); `frequency` por defecto 0.03. */
       roughness: { tipo: 'numero', min: 0, max: 20, opcional: true },
       frequency: { tipo: 'numero', min: 0.001, max: 0.5, opcional: true },
     },

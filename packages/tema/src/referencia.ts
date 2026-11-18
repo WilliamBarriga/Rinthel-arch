@@ -1,9 +1,4 @@
-/**
- * Referencia del catalogo en Markdown, generada desde las mismas tablas que
- * validan (`CATALOGO`, `SLOTS`, `MOVIMIENTOS`...): la documentacion no se escribe
- * a mano y no puede desviarse del codigo. Pura y determinista; quien la escribe a
- * disco es `scripts/generar-referencia-catalogo.ts`.
- */
+/** Referencia del catalogo en Markdown, generada desde las mismas tablas que validan. */
 import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
 import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA } from './secuencia';
 import { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA } from './fila';

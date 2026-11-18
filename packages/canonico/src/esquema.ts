@@ -1,34 +1,17 @@
 /**
- * Esquema Zod de la Fuente canonica.
- *
- * Alcance: Nodos (id cualificado, `type`, titulo, descripcion, Atributos,
- * `source`, jerarquia de hijos), catalogo de Tipos de nodo, Aristas con extremo
- * Nodo o Nodo#Atributo y cardinalidad opcional, Temas ya resueltos y Vistas.
- * La geometria cacheada tiene su esquema en `geometria.ts`.
- *
- * Jerarquia: los ids cualificados (`a.b.c`) definen la jerarquia del Modelo.
- * `children` la refleja cuando el documento anida; un documento plano (todos los
- * Nodos en `model.nodes` con `children` vacio) tambien es valido, siempre que
- * las dos formas digan lo mismo (ver reglas en `index.ts`).
+ * Esquema Zod de la Fuente canonica. Los ids cualificados (`a.b.c`) definen la jerarquia del Modelo; un
+ * documento anidado (`children`) y uno plano son validos si dicen lo mismo (ver `hallazgosDeModelo`).
  */
 import { z } from 'zod';
 
-/**
- * Id de Nodo cualificado por su jerarquia: segmentos `a.b.c` con caracteres de
- * identificador (`[A-Za-z0-9_-]`). Rechaza ids vacios, espacios, segmentos
- * vacios (`a..b`, `api.`, `.api`) y cualquier prefijo jerarquico implicito.
- */
+/** Segmentos `a.b.c` de `[A-Za-z0-9_-]`; rechaza ids vacios, espacios y segmentos vacios (`a..b`, `api.`, `.api`). */
 export const idDeNodoSchema = z.string().regex(/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/, {
   message: 'id cualificado por jerarquia: segmentos a.b.c',
 });
 
 const nombreDeTipoSchema = z.string().min(1);
 
-/**
- * Tipo de nodo del catalogo (`specification`): su clave y los campos minimos
- * que define el spec #19. `color` es siempre un nombre de Paleta, nunca un
- * valor literal (ADR 0002); `icon` es una clave opaca del `IconProvider`.
- */
+/** `color` es un nombre de Paleta, nunca un valor literal; `icon` es una clave opaca del `IconProvider`. */
 export const tipoDeNodoSchema = z.object({
   name: nombreDeTipoSchema,
   description: z.string().default(''),
@@ -39,12 +22,10 @@ export const tipoDeNodoSchema = z.object({
 
 export type TipoDeNodo = z.infer<typeof tipoDeNodoSchema>;
 
-/** Catalogo de Tipos de nodo declarado por el Proyecto documentado. */
 export interface CatalogoDeTiposDeNodo {
   nodeTypes: TipoDeNodo[];
 }
 
-/** Nodo del Modelo: identidad estable, Tipo de nodo, texto semantico e hijos. */
 export interface Nodo {
   id: string;
   type: string;
@@ -61,62 +42,49 @@ export interface ReferenciaOpaca {
   ref: string;
 }
 
-/** Marcas de clave de un Atributo (ER): clave primaria, foranea y unica; combinables. */
+/** Marcas de clave ER, combinables. */
 export const CLAVES_DE_ATRIBUTO = ['pk', 'fk', 'uk'] as const;
-/** Cardinalidades canonicas que exige una Vista ER (el Modelo guarda el texto libre). */
+/** Las que exige una Vista ER; el Modelo guarda texto libre. */
 export const CARDINALIDADES_ER = ['0..1', '1', '0..*', '1..*'] as const;
 export type ClaveDeAtributo = (typeof CLAVES_DE_ATRIBUTO)[number];
 
-/**
- * Elemento estructurado y ordenado de un Nodo (columna, campo, metodo). No es un Nodo hijo.
- * `keys` y `optional` son Modelo (ER) y se escriben siempre; solo las Vistas ER los dibujan.
- */
+/** Columna, campo o metodo de un Nodo; no es un Nodo hijo. `keys` y `optional` solo se dibujan en Vistas ER. */
 export interface Atributo {
   name: string;
   type: string;
   notes: string;
-  /** Marcas de clave sin repetir; ausente si no tiene. */
+  /** Sin repetir; ausente si no tiene. */
   keys?: ClaveDeAtributo[];
   /** El tipo admite nulo (`tipo?` en el DSL); ausente es `false`. */
   optional?: boolean;
 }
 
-/**
- * Extremo de una Arista: un Nodo por su id cualificado completo y, opcional,
- * uno de sus Atributos (`nodo#atributo`; el punto queda solo para jerarquia).
- */
+/** `node` es el id cualificado completo; `attribute` se escribe `nodo#atributo` (el punto es solo jerarquia). */
 export interface Extremo {
   node: string;
   attribute?: string;
 }
 
-/** Relacion dirigida entre dos extremos, con cardinalidad opcional en cada uno. */
 export interface Arista {
   from: Extremo;
   to: Extremo;
   fromCardinality?: string;
   toCardinality?: string;
-  /** Texto corto sobre la Arista (ej. protocolo o accion). */
   label?: string;
-  /** Relacion identificante (ER: linea continua en vez de discontinua); ausente es `false`. */
+  /** ER: linea continua en vez de discontinua; ausente es `false`. */
   identifying?: boolean;
 }
 
-/** Conjunto unico de Nodos, Aristas e Interacciones del Proyecto documentado (CONTEXT.md). */
 export interface Modelo {
   nodes: Nodo[];
   edges: Arista[];
   interactions?: Interaccion[];
 }
 
-/** Tipos de Mensaje de una Interaccion (`create` y `destroy` llegan con su ticket). */
 export const TIPOS_DE_MENSAJE = ['sync', 'async', 'reply', 'create', 'destroy'] as const;
 export type TipoDeMensaje = (typeof TIPOS_DE_MENSAJE)[number];
 
-/**
- * Mensaje de una Interaccion: de un Nodo a otro (`from == to` es un Mensaje propio). Su identidad es la
- * posicion en la Interaccion; `id` es solo un alias opcional, unico en su Interaccion, para citarlo.
- */
+/** `from == to` es un Mensaje propio. Su identidad es la posicion; `id` es un alias opcional, unico en su Interaccion. */
 export interface Mensaje {
   type: 'message';
   id?: string;
@@ -127,14 +95,13 @@ export interface Mensaje {
   description?: string;
 }
 
-/** Operadores de Fragmento (ADR 0009): `opt loop break critical` tienen un operando; `alt par`, uno o mas. */
+/** `opt loop break critical` tienen un operando; `alt par`, uno o mas. */
 export const OPERADORES_DE_FRAGMENTO = ['opt', 'loop', 'break', 'critical', 'alt', 'par'] as const;
 export type OperadorDeFragmento = (typeof OPERADORES_DE_FRAGMENTO)[number];
 
 /**
- * Operando de un Fragmento: guarda de texto libre opcional y su lista de items. `separador` es la palabra que lo
- * introdujo (`else` en `alt`, `and` en `par`); el primer operando no lo lleva. Solo lo usa `validate` para detectar
- * operandos cruzados.
+ * `separador` es la palabra que introdujo el operando (`else` en `alt`, `and` en `par`); el primero no lo lleva.
+ * Solo lo usa `validate` para detectar operandos cruzados.
  */
 export interface Operando {
   guard?: string;
@@ -153,7 +120,7 @@ export interface Fragmento {
 export const ANCLAJES_DE_NOTA = ['left', 'right', 'over'] as const;
 export type AnclajeDeNota = (typeof ANCLAJES_DE_NOTA)[number];
 
-/** Nota anclada (ADR 0009): `left of X`, `right of X` (un objetivo) u `over X[, Y]` (uno o dos). No es participante. */
+/** `left of X`, `right of X` (un objetivo) u `over X[, Y]` (uno o dos). No es participante. */
 export interface Nota {
   type: 'note';
   anchor: AnclajeDeNota;
@@ -188,11 +155,7 @@ export const atributoSchema = z.object({
   optional: z.boolean().optional(),
 });
 
-/**
- * Nodo del Modelo: id cualificado, Tipo de nodo, titulo, descripcion e hijos.
- * Que su `type` este declarado en el catalogo se comprueba en
- * `fuenteCanonicaSchema`, porque el catalogo vive en la misma Fuente.
- */
+/** Que `type` este en el catalogo se comprueba en `fuenteCanonicaSchema`, donde vive el catalogo. */
 export const nodoSchema: z.ZodType<Nodo> = z.lazy(() =>
   z.object({
     id: idDeNodoSchema,
@@ -268,12 +231,7 @@ const modeloSchema = z.object({
   interactions: z.array(interaccionSchema).default([]),
 });
 
-/**
- * Sobre del Tema ya resuelto: lo unico que la Fuente canonica necesita saber de
- * el para validarse (su nombre y los nombres de Paleta que `validate` comprueba).
- * El resto del contenido (fuentes, tokens, Capas, Slots) es del paquete `tema`,
- * que lo valida con su propio esquema estricto (ADR 0008); aqui pasa tal cual.
- */
+/** Sobre del Tema ya resuelto; el resto del contenido pasa tal cual y lo valida el paquete `tema`. */
 export const temaSchema = z.looseObject({
   name: z.string().min(1),
   palette: z.record(z.string(), z.string()).default({}),
@@ -281,16 +239,12 @@ export const temaSchema = z.looseObject({
 
 export type Tema = z.infer<typeof temaSchema>;
 
-/** Tipos de diagrama. */
 export const TIPOS_DE_VISTA = ['architecture', 'flow', 'sequence', 'er'] as const;
 
 /**
- * Override de presentacion de un Nodo en una Vista: solo apariencia, nunca toca
- * el Modelo. `pin` es la posicion del centro del Nodo relativa a su Grupo padre (al lienzo
- * si es raiz), aplicada despues del layout (ADR 0003). `order` se guarda pero
- * ningun paso lo usa en v1: ELK corre sin `considerModelOrder` (ADR 0003
- * enmendado), asi que no hay ordenamiento por el que consumirlo. `color` es un
- * nombre de Paleta (`validate` lo comprueba contra la Paleta del Tema).
+ * Solo apariencia, nunca toca el Modelo. `pin`: centro del Nodo relativo a su Grupo padre (al lienzo si es raiz),
+ * aplicado tras el layout. `order` se guarda pero no tiene efecto: ELK corre sin `considerModelOrder`.
+ * `color` es un nombre de Paleta.
  */
 export const overrideSchema = z.object({
   node: idDeNodoSchema,
@@ -302,69 +256,57 @@ export const overrideSchema = z.object({
 
 export type OverrideDeNodo = z.infer<typeof overrideSchema>;
 
-/** Lo que un Paso nombra: un selector de Nodos (`a`; `a.*` y `a.**` incluyen ademas al Grupo `a`) o una Arista (`a -> b`). */
+/** Selector de Nodos (`a.*` y `a.**` incluyen al Grupo `a`) o Arista (`a -> b`). */
 const elementoDePasoSchema = z.union([
   z.object({ selector: z.string().min(1) }),
   z.object({ from: idDeNodoSchema, to: idDeNodoSchema }),
 ]);
 
-/** Paso de revelado (ADR 0002): acumulativo; `show` revela y `hide` oculta lo anterior. */
+/** Acumulativo: `show` revela y `hide` oculta lo anterior. */
 export const pasoSchema = z.object({
   title: z.string(),
   show: z.array(elementoDePasoSchema).default([]),
   hide: z.array(elementoDePasoSchema).default([]),
-  /** Solo en Vistas `sequence`: id del Mensaje hasta el que (incluido) se muestra la Interaccion. */
+  /** Solo `sequence`: id del Mensaje hasta el que (incluido) se muestra la Interaccion. */
   upto: z.string().min(1).optional(),
 });
 
 export type Paso = z.infer<typeof pasoSchema>;
 export type ElementoDePaso = z.infer<typeof elementoDePasoSchema>;
-/** Elemento de Paso que nombra una Arista (`a -> b`). */
 export type AristaDePaso = Extract<ElementoDePaso, { from: string }>;
 
-/**
- * Vista: selecciona Nodos del Modelo con `include`/`exclude`/`depth` (ver
- * `resolveView`). Nunca define entidades nuevas.
- */
+/** Selecciona Nodos del Modelo (ver `resolveView`); nunca define entidades. */
 export const vistaSchema = z.object({
   id: z.string().min(1),
   type: z.enum(TIPOS_DE_VISTA),
   include: z.array(z.string().min(1)).default([]),
   exclude: z.array(z.string().min(1)).default([]),
   depth: z.number().int().min(0).optional(),
-  /** Solo en Vistas `sequence`: la Interaccion que proyecta (id de `model.interactions`). */
+  /** Solo `sequence`: id en `model.interactions`. */
   interaction: z.string().min(1).optional(),
-  /** Solo en Vistas `sequence`: orden de las Lifelines, parcial; el resto sigue por primera aparicion. */
+  /** Solo `sequence`: orden parcial de las Lifelines; el resto sigue por primera aparicion. */
   order: z.array(idDeNodoSchema).default([]),
-  /** Solo en Vistas `sequence`: numera los Mensajes proyectados; el numero es parte de la etiqueta. Ausente = false. */
+  /** Solo `sequence`: el numero entra en la etiqueta del Mensaje. Ausente = false. */
   autonumber: z.literal(true).optional(),
   overrides: z.array(overrideSchema).default([]),
   theme: z.string().min(1).optional(),
-  /**
-   * Override de la Vista sobre el Tema (`theme t { layer ... }`): parches de Capa por nombre,
-   * ultimo nivel de la cascada. El contenido (forma de cada parche) lo valida el paquete `tema`.
-   */
+  /** Parches de Capa por nombre (`theme t { layer ... }`), ultimo nivel de la cascada; los valida `tema`. */
   themePatch: z.array(z.looseObject({ nombre: z.string().min(1) })).optional(),
-  /** Mecanismo de drill-down por defecto de la Vista (ver CONTEXT.md, Drill-down). */
   drill: z.literal('collapse').optional(),
-  /** Grupos que la Vista abre colapsados / expandidos, por encima de la regla de `depth`. */
+  /** Ganan a la regla de `depth`. */
   collapsed: z.array(idDeNodoSchema).default([]),
   expanded: z.array(idDeNodoSchema).default([]),
-  /** Drill-down por Nodo hacia otra Vista; el Grupo enlazado no se expande. */
+  /** El Grupo enlazado no se expande. */
   links: z.array(z.object({ node: idDeNodoSchema, view: z.string().min(1) })).default([]),
-  /** Pasos de revelado en orden; sin pasos todo esta revelado. */
+  /** Sin pasos todo esta revelado. */
   steps: z.array(pasoSchema).default([]),
-  /** Solo en Vistas `sequence`: `steps each`, un Paso por Mensaje proyectado. Ausente = false. */
+  /** Solo `sequence`: un Paso por Mensaje proyectado. Ausente = false. */
   stepsEach: z.literal(true).optional(),
 });
 
 export type Vista = z.infer<typeof vistaSchema>;
 
-/**
- * Fuente canonica. Aqui solo se validan la forma del documento y las reglas
- * estructurales de jerarquia documentadas en `index.ts`; la validacion semantica
- * por codigos (ADR 0005) es `validate`, en `validar.ts`.
- */
+/** Solo forma y reglas estructurales (`hallazgosDeModelo`); la validacion semantica es `validate`. */
 export const fuenteCanonicaSchema = z
   .object({
     specification: catalogoSchema,
@@ -380,18 +322,14 @@ export const fuenteCanonicaSchema = z
 
 export type FuenteCanonica = z.infer<typeof fuenteCanonicaSchema>;
 
-/** Rechazo estructural: posicion en el documento y texto explicativo. */
 interface Hallazgo {
   path: (string | number)[];
   message: string;
 }
 
 /**
- * Reglas estructurales del Modelo, sin dependencia de Zod:
- * - jerarquia por id cualificado (sin hijos huerfanos y sin anidacion
- *   incoherente entre `children` y los ids);
- * - `type` declarado en el catalogo de Tipos de nodo;
- * - extremos de Arista que existen en el Modelo (Nodo y, si lo llevan, Atributo).
+ * Jerarquia coherente con los ids (sin hijos huerfanos), `type` en el catalogo y extremos de Arista existentes
+ * (Nodo y, si lo lleva, Atributo).
  */
 function hallazgosDeModelo(fuente: {
   specification: CatalogoDeTiposDeNodo;
@@ -457,7 +395,6 @@ function hallazgosDeModelo(fuente: {
   return hallazgos;
 }
 
-/** Id de cada Nodo, a cualquier profundidad, con los nombres de sus Atributos. */
 function recogerIds(nodos: Nodo[], destino: Map<string, Set<string>>): void {
   for (const nodo of nodos) {
     destino.set(nodo.id, new Set(nodo.attributes.map((atributo) => atributo.name)));
@@ -465,8 +402,8 @@ function recogerIds(nodos: Nodo[], destino: Map<string, Set<string>>): void {
   }
 }
 
-/** Padre jerarquico de un id cualificado; cadena vacia si el id es raiz. */
-function padreDe(id: string): string {
+/** Cadena vacia si el id es raiz. */
+export function padreDe(id: string): string {
   const corte = id.lastIndexOf('.');
   return corte === -1 ? '' : id.slice(0, corte);
 }

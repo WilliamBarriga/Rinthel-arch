@@ -1,10 +1,4 @@
-/**
- * Catalogo de animacion declarativa (ADR 0008): Movimientos de Capa, `keyframes`
- * minimos, `transition` entre estados y efectos de `enter`/`exit`. Como el
- * catalogo de Primitivas, es la fuente unica de validacion y mensajes; el
- * pintor (CSS) vive en `render`. Solo se anima lo que no toca las Metricas:
- * opacidad, color, transform, desplazamiento, blur y glow. Puro.
- */
+/** Catalogo de animacion declarativa. Solo se anima lo que no toca las Metricas. */
 import { CODIGOS } from 'canonico';
 
 import { sugerir } from './catalogo';
@@ -13,7 +7,7 @@ import type { ErrorDeCatalogo } from './catalogo';
 export const EASINGS = ['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out'] as const;
 export type Easing = (typeof EASINGS)[number];
 
-/** Movimientos continuos de catalogo; `intensidad` dice si admiten el parametro. */
+/** `intensidad` dice si admiten el parametro. */
 export const MOVIMIENTOS = {
   flujo: { intensidad: false, easing: 'linear', duracionMs: 2000 },
   pulso: { intensidad: true, easing: 'ease-in-out', duracionMs: 1200 },
@@ -23,11 +17,9 @@ export const MOVIMIENTOS = {
 } as const satisfies Record<string, { intensidad: boolean; easing: Easing; duracionMs: number }>;
 export type NombreDeMovimiento = keyof typeof MOVIMIENTOS;
 
-/** Efectos de `enter`/`exit` de un Nodo (`dibujar-trazo` llega con el modelo de Arista). */
 export const EFECTOS = ['fundido', 'escala', 'deslizar'] as const;
 export type NombreDeEfecto = (typeof EFECTOS)[number];
 
-/** Propiedades que `keyframes` puede animar, con su rango. Ninguna cambia la caja. */
 export const PROPIEDADES_ANIMABLES = {
   opacity: { min: 0, max: 1 },
   scale: { min: 0, max: 4 },
@@ -46,7 +38,7 @@ interface Tiempo {
   retardoMs: number;
 }
 
-/** Movimiento continuo de una Capa; con reduced-motion queda en su fotograma estatico. */
+/** Con reduced-motion queda en su fotograma estatico. */
 export interface Movimiento extends Tiempo {
   clase: 'movimiento';
   movimiento: NombreDeMovimiento;
@@ -67,23 +59,20 @@ export interface KeyframesDeCapa extends Tiempo {
   reducido: 'still';
 }
 
-/** Animacion continua de una Capa: un Movimiento de catalogo o `keyframes` minimos. */
 export type Animacion = Movimiento | KeyframesDeCapa;
 
-/** `transition` entre parches de estado. */
 export interface Transicion {
   duracionMs: number;
   easing: Easing;
   reducido: 'fade' | 'instant';
 }
 
-/** `enter` / `exit` de un elemento. */
 export interface Efecto extends Tiempo {
   efecto: NombreDeEfecto;
   reducido: 'fade' | 'instant';
 }
 
-/** Parametro tal como llega del DSL: `duration` y `delay` ya en ms, `intensity` como texto o numero. */
+/** `duration` y `delay` ya en ms. */
 export interface ParametroDeAnimacion {
   clave: string;
   valor: string | number;
@@ -96,7 +85,7 @@ interface Resultado<T> {
 
 const UNIDADES: Record<string, number> = { ms: 1, s: 1000 };
 
-/** Duracion de `cantidad` + `unidad` (`ms` o `s`) en milisegundos; `undefined` si la unidad no existe. */
+/** `unidad` es `ms` o `s`; `undefined` si la unidad no existe. */
 export function duracionEnMs(cantidad: string, unidad: string): number | undefined {
   const factor = UNIDADES[unidad];
   return factor === undefined || Number.isNaN(Number(cantidad)) ? undefined : Math.round(Number(cantidad) * factor);
@@ -115,7 +104,6 @@ interface Especificacion {
   conRetardo: boolean;
 }
 
-/** Valida los parametros comunes (duracion, easing, retardo, intensidad, reduced) de una animacion. */
 function leerParametros(
   espec: Especificacion,
   params: readonly ParametroDeAnimacion[],
@@ -227,7 +215,7 @@ export function construirEfecto(nombre: string, params: readonly ParametroDeAnim
   return { animacion: { efecto: nombre as NombreDeEfecto, ...tiempo, reducido: reducido as 'fade' | 'instant' }, errores };
 }
 
-/** `stagger`: retardo entre elementos consecutivos, en ms. */
+/** `stagger` en ms. */
 export function construirEscalonado(ms: number): Resultado<number> {
   return ms >= 0 && ms <= 2000 ? { animacion: ms, errores: [] } : { errores: [invalido(`'stagger' debe estar entre 0 y 2000 ms, no '${ms}'`, 'duration')] };
 }

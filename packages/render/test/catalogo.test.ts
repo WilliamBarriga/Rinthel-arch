@@ -18,7 +18,7 @@ describe('grosor del borde de una pila', () => {
 });
 
 const caja = (...capas: Array<[string, Record<string, string | number>]>) => {
-  const estilo = resolverEstilo({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capas.map(([tipo, props], i) => ({ nombre: `c${i}`, primitiva: { tipo, props } })) } });
+  const estilo = resolverEstilo({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capas.map(([tipo, props], i) => ({ nombre: `c${i}`, primitiva: { tipo, props } })) } }, 'architecture');
   return declaracionesDeCaja(estilo, estilo.pintura.nodo);
 };
 
@@ -26,7 +26,6 @@ describe('pintores del catalogo de formas, rellenos y bordes', () => {
   it('las formas se traducen a su contorno CSS', () => {
     expect(caja(['pill', {}])['border-radius']).toBe('9999px');
     expect(caja(['circle', {}])['border-radius']).toBe('50%');
-    // Corte simetrico arriba a la izquierda y abajo a la derecha; el borde y la sombra siguen el corte (sin clip-path).
     expect(caja(['cut', { cut: 12 }])).toEqual({ 'border-radius': '12px 0 12px 0', 'corner-shape': 'bevel' });
   });
 

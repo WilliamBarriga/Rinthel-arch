@@ -154,9 +154,16 @@ view flujo {
     expect(leer(raiz)).toBe(SEC.replace('  interaction i\n}', '  interaction i\n  order db, cliente, api\n}'));
   });
 
-  it('con hash viejo rechaza con codigo 1 y sin escribir', async () => {
+  it('ignora un hash heredado en el JSON', async () => {
     const raiz = workspace(SEC);
-    const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db'], { hash: '000' }), '--json']);
+    const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db', 'cliente', 'api'], { hash: '000' })]);
+    expect(r.exitCode).toBe(0);
+    expect(leer(raiz)).toContain('order db, cliente, api');
+  });
+
+  it('con --hash viejo del archivo rechaza con codigo 1 y sin escribir', async () => {
+    const raiz = workspace(SEC);
+    const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db']), '--hash', 'main.dg=000', '--json']);
     expect(r.exitCode).toBe(1);
     expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'hash-desactualizado' });
     expect(leer(raiz)).toBe(SEC);
@@ -165,5 +172,60 @@ view flujo {
   it('una Intencion mal formada es un fallo de uso', async () => {
     const r = await run(['edit', '--workspace', workspace(SEC), '--intent', '{"tipo":"nada"}']);
     expect(r.exitCode).toBe(2);
+  });
+});
+
+describe('edit: puerta de escritura unica', () => {
+  const salidaJson = (r: { stdout: string }) => JSON.parse(r.stdout) as unknown;
+
+  it('los tres modos dan la misma salida de texto y JSON', async () => {
+    const pinTexto = await run(['edit', '--workspace', workspace(), ...pin('general', 'a', '30', '40')]);
+    expect(pinTexto).toEqual({ exitCode: 0, stdout: '1 archivo(s) editado(s): main.dg\n', stderr: '' });
+
+    const pinJson = await run(['edit', '--workspace', workspace(), ...pin('general', 'b', '5', '6'), '--json']);
+    expect(salidaJson(pinJson)).toEqual({
+      contractVersion: EDIT_CONTRACT_VERSION,
+      ok: true,
+      edits: [{ file: 'main.dg', range: { start: { line: 10, column: 1 }, end: { line: 10, column: 1 } }, replacement: '  node b { pin 5,6 }\n' }],
+      files: ['main.dg'],
+    });
+
+    const rango = { start: { line: 3, column: 14 }, end: { line: 3, column: 17 } };
+    const edits = await run(['edit', '--workspace', workspace(), '--edits', JSON.stringify([{ file: 'main.dg', range: rango, replacement: '"Z"' }]), '--json']);
+    expect(salidaJson(edits)).toEqual({ contractVersion: EDIT_CONTRACT_VERSION, ok: true, edits: [{ file: 'main.dg', range: rango, replacement: '"Z"' }], files: ['main.dg'] });
+
+    const intent = await run(['edit', '--workspace', workspace(), '--intent', JSON.stringify({ tipo: 'mover-pin', vista: 'general', nodo: 'a', x: 1, y: 2 }), '--json']);
+    expect(salidaJson(intent)).toEqual({
+      contractVersion: EDIT_CONTRACT_VERSION,
+      ok: true,
+      edits: [{ file: 'main.dg', range: { start: { line: 9, column: 12 }, end: { line: 9, column: 21 } }, replacement: 'pin 1,2' }],
+      files: ['main.dg'],
+    });
+
+    const rechazo = await run(['edit', '--workspace', workspace(), ...pin('nada', 'a', '1', '2')]);
+    expect(rechazo).toEqual({ exitCode: 1, stdout: '', stderr: "Edicion rechazada (vista-desconocida): La Vista 'nada' no existe\n" });
+  });
+
+  describe('no escribe archivos de --theme-path: archivo-desconocido', () => {
+    const [modelo, vistas] = DG.split('\nview general');
+    const conTemas = () => {
+      const raiz = workspace(`${modelo as string}\n`);
+      const temas = mkdtempSync(join(tmpdir(), 'edit-temas-'));
+      writeFileSync(join(temas, 'vistas.dg'), `view general${vistas as string}`);
+      return { raiz, temas, vistas: () => readFileSync(join(temas, 'vistas.dg'), 'utf8') };
+    };
+    const casos: [string, string[]][] = [
+      ['flags de Pin', pin('general', 'a', '1', '2')],
+      ['--intent', ['--intent', JSON.stringify({ tipo: 'mover-pin', vista: 'general', nodo: 'b', x: 1, y: 2 })]],
+      ['--edits', ['--edits', JSON.stringify([{ file: 'vistas.dg', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: '\n' }])]],
+    ];
+    it.each(casos)('%s', async (_modo, args) => {
+      const ws = conTemas();
+      const antes = ws.vistas();
+      const r = await run(['edit', '--workspace', ws.raiz, '--theme-path', ws.temas, ...args, '--json']);
+      expect(r.exitCode).toBe(1);
+      expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'archivo-desconocido', file: 'vistas.dg' });
+      expect(ws.vistas()).toBe(antes);
+    });
   });
 });

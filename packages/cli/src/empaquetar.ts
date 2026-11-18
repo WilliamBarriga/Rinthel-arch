@@ -1,11 +1,7 @@
-/** Empaquetado con esbuild de los bundles del navegador que sirve `dev`. */
 import { build } from 'esbuild';
 import { fileURLToPath } from 'node:url';
 
-/**
- * IIFE minificado y determinista. Se escapa `</script` y `<!--` para poder
- * ponerlo dentro de un `<script>`; solo aparecen dentro de cadenas.
- */
+/** IIFE minificado y determinista. Escapa `</script` y `<!--` (solo aparecen en cadenas) para ir dentro de un `<script>`. */
 export async function empaquetar(entrada: URL, alias: Record<string, string> = {}): Promise<string> {
   const { outputFiles } = await build({
     entryPoints: [fileURLToPath(entrada)],

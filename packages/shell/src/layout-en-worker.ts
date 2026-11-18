@@ -1,10 +1,4 @@
-/**
- * Layout detras de un Web Worker (ADR 0003). Dos mitades sobre un puerto de
- * mensajes: `adaptadorDeWorker(puerto)` (lado de la pagina, produce un
- * `AdaptadorDeLayout`) y `servirLayout(puerto)` (lado del Worker, ejecuta el
- * mismo nucleo (`layoutConMetricas`) que `layoutView` en Node). El puerto es un `Worker`, un
- * `MessagePort` o cualquier par en memoria con `postMessage` y `onmessage`.
- */
+/** Layout en un Web Worker: `adaptadorDeWorker` (pagina) habla por un `PuertoDeMensajes` con `servirLayout` (Worker). */
 import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { tablaDeMetricas } from 'tema';
@@ -42,6 +36,6 @@ export function adaptadorDeWorker(puerto: PuertoDeMensajes): AdaptadorDeLayout {
     new Promise<Geometria>((ok, fallo) => {
       const id = siguiente++;
       pendientes.set(id, { ok, fallo });
-      puerto.postMessage({ id, vista, metricas: tablaDeMetricas(tema, medidas, vista.type) } satisfies Peticion);
+      puerto.postMessage({ id, vista, metricas: tablaDeMetricas(tema, vista.type, medidas) } satisfies Peticion);
     });
 }

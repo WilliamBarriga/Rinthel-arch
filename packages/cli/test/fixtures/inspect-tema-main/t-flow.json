@@ -1,0 +1,264 @@
+{
+  "contractVersion": 1,
+  "comando": "tema",
+  "tema": {
+    "name": "t",
+    "file": "main.dg",
+    "line": 3,
+    "extends": [],
+    "partes": [],
+    "diagrama": "flow",
+    "capas": [
+      {
+        "nombre": "forma",
+        "primitiva": "rect",
+        "props": {
+          "radius": 0
+        },
+        "encima": false,
+        "animada": false,
+        "origen": {
+          "file": "main.dg",
+          "line": 5
+        }
+      },
+      {
+        "nombre": "relleno",
+        "primitiva": "solid",
+        "props": {
+          "color": "azul"
+        },
+        "encima": false,
+        "animada": false,
+        "origen": {
+          "file": "main.dg",
+          "line": 5
+        }
+      }
+    ],
+    "pagina": {
+      "fijo": false,
+      "capas": []
+    },
+    "grupo": {
+      "propio": false,
+      "cabecera": "row gap 6 pad 6 { icon title }",
+      "origenDeCabecera": {
+        "file": "main.dg",
+        "line": 3
+      },
+      "alturaDeCabecera": 36,
+      "padding": {
+        "top": 8,
+        "left": 16,
+        "bottom": 16,
+        "right": 16
+      },
+      "capas": [],
+      "colapsado": {
+        "slots": "column { title }",
+        "origenDeSlots": {
+          "file": "main.dg",
+          "line": 5
+        },
+        "capas": []
+      }
+    },
+    "slots": "column { title }",
+    "origenDeSlots": {
+      "file": "main.dg",
+      "line": 5
+    },
+    "metricas": {
+      "fontSize": 14,
+      "factorDeAncho": 0.55,
+      "fuentes": {
+        "body": "sans-serif",
+        "mono": "monospace"
+      },
+      "medicion": {
+        "nivel": "estimado",
+        "fuentes": {}
+      },
+      "disposicion": {
+        "direccion": "column",
+        "gap": 0,
+        "pad": 0,
+        "hijos": [
+          {
+            "slot": "title"
+          }
+        ]
+      },
+      "medidaDeTexto": {},
+      "cajaCuadrada": false,
+      "anchoMinimo": 120,
+      "paddingHorizontal": 32,
+      "margenDeTexto": 10,
+      "cabecera": 48,
+      "fila": 26,
+      "paddingGrupo": {
+        "top": 44,
+        "left": 16,
+        "bottom": 16,
+        "right": 16
+      },
+      "iconoLado": 14,
+      "iconoEsPunto": false,
+      "margenIcono": 6,
+      "baseDeTitulo": 22,
+      "margenDeControl": 12,
+      "titulo": {
+        "tracking": 0,
+        "mayusculas": false,
+        "relleno": 0,
+        "borde": 0,
+        "punto": false,
+        "caja": false
+      },
+      "escalaEtiqueta": 0.85,
+      "escalaAtributo": 0.85,
+      "escalaCardinalidad": 0.8,
+      "holguraDeEtiqueta": 8,
+      "altoDeEtiqueta": 1.4,
+      "holguraVerticalDeEtiqueta": 0,
+      "fuenteDeEtiqueta": "sans-serif"
+    },
+    "temaConCodigo": false,
+    "componentes": [],
+    "elementos": {
+      "secuencia": {
+        "message": {
+          "capas": [
+            {
+              "nombre": "linea",
+              "primitiva": "line",
+              "props": {
+                "color": "azul",
+                "width": 1.5,
+                "style": "solid",
+                "corner": "sharp",
+                "cut": 6,
+                "radius": 8
+              },
+              "encima": false,
+              "animada": false,
+              "origen": {
+                "file": "main.dg",
+                "line": 3
+              }
+            }
+          ],
+          "marcadores": {
+            "end": "arrow"
+          },
+          "parches": {
+            "reply": [
+              {
+                "nombre": "linea",
+                "primitiva": "line",
+                "props": {
+                  "color": "rojo",
+                  "width": 1.5,
+                  "style": "dashed",
+                  "corner": "sharp",
+                  "cut": 6,
+                  "radius": 8
+                },
+                "encima": false,
+                "animada": false,
+                "origen": {
+                  "file": "main.dg",
+                  "line": 3
+                }
+              }
+            ]
+          },
+          "metricas": {
+            "gap": 40
+          }
+        },
+        "fragment": {
+          "capas": [
+            {
+              "nombre": "forma",
+              "primitiva": "rect",
+              "props": {
+                "radius": 0
+              },
+              "encima": false,
+              "animada": false,
+              "origen": {
+                "file": "main.dg",
+                "line": 3
+              }
+            },
+            {
+              "nombre": "relleno",
+              "primitiva": "solid",
+              "props": {
+                "color": "azul/0.1"
+              },
+              "encima": false,
+              "animada": false,
+              "origen": {
+                "file": "main.dg",
+                "line": 3
+              }
+            }
+          ],
+          "marcadores": {},
+          "parches": {
+            "alt": [
+              {
+                "nombre": "forma",
+                "primitiva": "rect",
+                "props": {
+                  "radius": 0
+                },
+                "encima": false,
+                "animada": false,
+                "origen": {
+                  "file": "main.dg",
+                  "line": 3
+                }
+              },
+              {
+                "nombre": "relleno",
+                "primitiva": "solid",
+                "props": {
+                  "color": "rojo/0.1"
+                },
+                "encima": false,
+                "animada": false,
+                "origen": {
+                  "file": "main.dg",
+                  "line": 3
+                }
+              }
+            ]
+          },
+          "metricas": {}
+        }
+      },
+      "fila": {
+        "alto": 30,
+        "capas": [
+          {
+            "nombre": "fondo",
+            "primitiva": "solid",
+            "props": {
+              "color": "azul/0.05"
+            },
+            "encima": false,
+            "animada": false,
+            "origen": {
+              "file": "main.dg",
+              "line": 3
+            }
+          }
+        ]
+      }
+    }
+  }
+}

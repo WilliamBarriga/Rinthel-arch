@@ -1,13 +1,7 @@
 /**
- * Via de escape en codigo (ADR 0008): las Capas `code <Componente>` del Tema.
- *
- * `render` nunca importa codigo del Workspace: recibe un registro nombre ->
- * componente (`ComponentesDeTema`) como entrada y dibuja cada Capa `code` en un
- * contenedor absoluto de exactamente el tamano de la caja del elemento. Un
- * componente recibe solo `PropsDeCodigo` (solo lectura y serializable) y no puede
- * cambiar el tamano del elemento ni las Metricas: el contenedor tiene tamano
- * fijo y `contain: layout style`. Los adaptadores que llenan el registro viven
- * fuera (`dev` compila el `.tsx`; las pruebas usan un registro en memoria).
+ * Capas `code <Componente>` del Tema (ADR 0008). `render` nunca importa codigo del Workspace: recibe el registro
+ * `ComponentesDeTema` y dibuja cada Capa en un contenedor de tamano fijo igual a la caja del elemento, con
+ * `contain: layout style`. El componente solo ve `PropsDeCodigo` y no puede cambiar el tamano ni las Metricas.
  */
 import type { ComponentType } from 'react';
 import type { CapaPintada, PinturaDeNodo } from 'tema';

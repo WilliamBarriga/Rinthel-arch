@@ -36,7 +36,7 @@ const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
     nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
   });
   const edges: GeometriaGrafo['edges'] = {};
-  for (const e of vista.edges) {
+  for (const e of vista.type === 'sequence' ? [] : vista.edges) {
     const d = nodes[e.from.node]!;
     const h = nodes[e.to.node]!;
     edges[idDeArista(e)] = { points: [{ x: d.x + 100, y: 25 }, { x: h.x, y: 25 }] };

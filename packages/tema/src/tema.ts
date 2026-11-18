@@ -1,9 +1,4 @@
-/**
- * Esquema del Tema ya resuelto (sin herencia) y el Tema neutro del nucleo.
- * `temaResueltoSchema` es estricto: una clave desconocida (p. ej. los viejos
- * `nodeStyles`/`edgeStyles`) se rechaza, y las Capas se validan contra el
- * catalogo con `construirPrimitiva`, de modo que hay una sola fuente de reglas.
- */
+/** Esquema estricto del Tema resuelto (sin herencia; las Capas se validan con `construirPrimitiva`) y el Tema neutro. */
 import { z } from 'zod';
 import type { Tema } from 'canonico';
 
@@ -13,6 +8,7 @@ import type { NombreDePrimitiva, NombreDeSlot, Primitiva, UbicacionDePrimitiva }
 import { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, esCaja } from './disposicion';
 import type { CajaDeSlots, ElementoDeSlots } from './disposicion';
 import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA } from './secuencia';
+import { RADIO_DE_TABLA, esPastilla } from './derivacion';
 import { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA } from './fila';
 import { ESTADOS, TIPOS_DE_DIAGRAMA, aplicarOps, opTocaMetricas, validarOps } from './parches';
 import type { CapaDeTema, OpDeCapa, TipoDeDiagrama } from './parches';
@@ -20,7 +16,6 @@ import type { CapaDeTema, OpDeCapa, TipoDeDiagrama } from './parches';
 const easingSchema = z.enum(EASINGS);
 const tiempoSchema = { duracionMs: z.number().min(1).max(60000), easing: easingSchema, retardoMs: z.number().min(0).max(10000) };
 
-/** Movimiento de catalogo o `keyframes` minimos de una Capa (ver `Animacion`). */
 const animacionSchema = z.discriminatedUnion('clase', [
   z.strictObject({
     clase: z.literal('movimiento'),
@@ -55,12 +50,11 @@ const capaSchema = z.strictObject({
     tipo: z.string().min(1),
     props: z.record(z.string(), z.union([z.string(), z.number()])),
   }),
-  /** Sobre el contenido (`over`); sin ella, bajo el contenido. */
+  /** `over`; sin ella, bajo el contenido. */
   encima: z.literal(true).optional(),
   animacion: animacionSchema.optional(),
 });
 
-/** Parche de Capa por nombre (ADR 0008): ver `OpDeCapa`. */
 export const opSchema = z.strictObject({
   nombre: z.string().min(1),
   quitar: z.literal(true).optional(),
@@ -72,22 +66,21 @@ export const opSchema = z.strictObject({
   animacion: animacionSchema.nullable().optional(),
 });
 
-/** Una Primitiva suelta; el nombre se comprueba contra el catalogo en `resolverTema`, aqui solo que sea texto no vacio. */
+/** El nombre se comprueba contra el catalogo en `resolverTema`. */
 const primitivaSchema = z.strictObject({
   tipo: z.custom<NombreDePrimitiva>((valor) => typeof valor === 'string' && valor.length > 0),
   props: z.record(z.string(), z.union([z.string(), z.number()])),
 });
 
-/** Arista (ADR 0008): pila de trazos, marcadores de origen y fin, y etiqueta con modelo de caja. */
 const aristaSchema = z.strictObject({
-  /** Pila de trazos (Primitivas `line`), de abajo hacia arriba. Vacia: un trazo del color del borde. */
+  /** De abajo hacia arriba. Vacia: un trazo del color del borde. */
   capas: z.array(capaSchema).default([]),
   origen: primitivaSchema.optional(),
   fin: primitivaSchema.optional(),
   etiqueta: primitivaSchema.optional(),
-  /** Parche de trazo de las Aristas identificantes de una Vista ER (ADR 0009); ausente = el mismo trazo que las demas. */
+  /** Aristas identificantes de una Vista ER; ausente, el mismo trazo que las demas. */
   identificante: z.array(opSchema).optional(),
-  /** Parches por Tipo de diagrama (ADR 0009): parches de trazo y marcadores o etiqueta que sustituyen a los del Tema. */
+  /** Marcadores y etiqueta de un Tipo de diagrama sustituyen a los del Tema. */
   diagramas: z
     .partialRecord(
       z.enum(TIPOS_DE_DIAGRAMA),
@@ -96,17 +89,15 @@ const aristaSchema = z.strictObject({
     .optional(),
 });
 
-/** Fondo de pagina (ADR 0008): pila de rellenos bajo Grupos, Aristas y Nodos. */
 const paginaSchema = z.strictObject({
-  /** Pila de rellenos (`solid`, gradientes, patrones, ruido), de abajo hacia arriba. Vacia: solo el color `background`. */
+  /** De abajo hacia arriba. Vacia: solo el color `background`. */
   capas: z.array(capaSchema).default([]),
-  /** El patron queda fijo al visor; sin la marca, se mueve y escala con el pan/zoom. */
+  /** Fijo al visor; si no, se mueve y escala con el pan/zoom. */
   fijo: z.boolean().default(false),
 });
 
 const NOMBRES_DE_SLOT = SLOTS as [NombreDeSlot, ...NombreDeSlot[]];
 
-/** Mini-layout de Slots: cajas `row`/`column` anidables con Slots en las hojas (ver `disposicion.ts`). */
 const elementoSchema: z.ZodType<ElementoDeSlots> = z.lazy(() => z.union([hojaSchema, cajaSchema]));
 const hojaSchema = z.strictObject({ slot: z.enum(NOMBRES_DE_SLOT), align: z.enum(ALINEACIONES).optional() });
 const cajaSchema: z.ZodType<CajaDeSlots> = z.strictObject({
@@ -121,31 +112,22 @@ const cajaSchema: z.ZodType<CajaDeSlots> = z.strictObject({
   hijos: z.array(elementoSchema),
 }) as z.ZodType<CajaDeSlots>;
 
-/** Parche de un Tipo de diagrama (ADR 0009): parches de Capa y, si el Tema lo pide, otra disposicion de Slots. A diferencia de un estado, puede cambiar las Metricas. */
+/** A diferencia de un estado, puede cambiar las Metricas. */
 const parcheDeDiagramaSchema = z.strictObject({ ops: z.array(opSchema).default([]), slots: cajaSchema.optional() });
 
 const nodoSchema = z.strictObject({
-  /** Pila de Capas, de abajo hacia arriba. */
+  /** De abajo hacia arriba. */
   capas: z.array(capaSchema).default([]),
-  /** Mini-layout de los Slots: el orden del arbol es el orden visual; un Slot que no esta no se pinta. */
   slots: cajaSchema.default(DISPOSICION_POR_DEFECTO),
-  /** Estilo de los Slots que lo declaran: `text` para los de texto, `icon` para el icono. */
   textos: z.partialRecord(z.enum(NOMBRES_DE_SLOT), primitivaSchema).default({}),
-  /** Parches por Tipo de nodo, en orden de aplicacion sobre la pila base. */
   tipos: z.record(z.string(), z.array(opSchema)).default({}),
-  /** Parches por estado, aplicados sobre la pila base ya parcheada por Tipo. */
   estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
-  /** Parches por Tipo de diagrama, aplicados sobre la pila base antes que los de Tipo de nodo (ADR 0009). */
+  /** Se aplican sobre la base antes que los de Tipo de nodo. */
   diagramas: z.partialRecord(z.enum(TIPOS_DE_DIAGRAMA), parcheDeDiagramaSchema).optional(),
-  /** `transition`, `enter`, `exit` y `stagger` del Nodo; solo pintura. */
   animacion: animacionDeNodoSchema.optional(),
 });
 
-/**
- * Fila de una tabla ER (ADR 0009): pila de Capas por fila, alto (Metrica), parche de las filas impares, estilo de los
- * textos `name`, `type` y `key` (chip) y parches por marca de clave y por Atributo opcional. Solo vale en Vistas ER;
- * ausente, la fila usa la pintura del Slot `attrs`.
- */
+/** Solo vale en Vistas ER; ausente, la fila usa la pintura del Slot `attrs`. */
 const filaSchema = z.strictObject({
   capas: z.array(capaSchema).default([]),
   alto: z.number().min(ALTO_DE_FILA.min).max(ALTO_DE_FILA.max).optional(),
@@ -153,18 +135,14 @@ const filaSchema = z.strictObject({
   textos: z.partialRecord(z.enum(NOMBRES_DE_TEXTO_DE_FILA as [keyof typeof TEXTOS_DE_FILA, ...Array<keyof typeof TEXTOS_DE_FILA>]), primitivaSchema).default({}),
   claves: z.partialRecord(z.enum(CLAVES_DE_FILA as [(typeof CLAVES_DE_FILA)[number], ...Array<(typeof CLAVES_DE_FILA)[number]>]), z.array(opSchema)).default({}),
   opcional: z.array(opSchema).default([]),
-  /** Parches de estado (`hover`, `seleccionado`...): solo pintan, se aplican sobre la pila de la variante de la fila. */
+  /** Solo pintan; se aplican sobre la pila de la variante de la fila. */
   estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
 });
 
-/** Parche de una variante de Mensaje (`kind`) o de Fragmento (`op`): parches de Capa y, en Mensajes, marcadores propios. */
+/** Variante de Mensaje (`kind`) o de Fragmento (`op`); marcadores solo en Mensajes. */
 const parcheDeVarianteSchema = z.strictObject({ ops: z.array(opSchema).default([]), origen: primitivaSchema.optional(), fin: primitivaSchema.optional() });
 
-/**
- * Elemento de secuencia (ADR 0009: `lifeline`, `activation`, `message`, `fragment`, `note`): pila de Capas, marcadores,
- * estilo de texto o trazo suelto, parches por variante (`kind`/`op`), parches de estado y Metricas propias. Ausente =
- * el nucleo lo deriva de `edge` y `node`. Que admite cada uno lo dice `ESPECIFICACION_DE_SECUENCIA`.
- */
+/** Ausente, el nucleo lo deriva de `edge` y `node`; lo que admite cada uno lo dice `ESPECIFICACION_DE_SECUENCIA`. */
 const bloqueDeSecuenciaSchema = z.strictObject({
   capas: z.array(capaSchema).default([]),
   origen: primitivaSchema.optional(),
@@ -185,25 +163,21 @@ const secuenciaSchema = z.strictObject({
 const relleno = z.number().min(0).max(128);
 const paddingSchema = z.strictObject({ top: relleno, left: relleno, bottom: relleno, right: relleno });
 
-/**
- * Grupo (ADR 0008): misma pila de Capas, parches por Tipo y por estado que el Nodo, mas la cabecera (un
- * mini-layout de Slots), el padding de la zona de hijos y `colapsado`, el parche de estado con el que el Grupo
- * cerrado se comporta como un Nodo hoja. Sin Capas, el Estilo resuelto da un Grupo sobrio de la Paleta.
- */
+/** Sin Capas, el Estilo resuelto da un Grupo sobrio de la Paleta. */
 const grupoSchema = z.strictObject({
   capas: z.array(capaSchema).default([]),
-  /** Cabecera del Grupo abierto; el orden del arbol es el orden visual. */
+  /** Cabecera del Grupo abierto. */
   slots: cajaSchema.default(CABECERA_POR_DEFECTO),
   textos: z.partialRecord(z.enum(NOMBRES_DE_SLOT), primitivaSchema).default({}),
-  /** Margen interior de la zona de hijos, bajo la cabecera. */
+  /** Zona de hijos, bajo la cabecera. */
   padding: paddingSchema.default({ top: 8, left: 16, bottom: 16, right: 16 }),
   tipos: z.record(z.string(), z.array(opSchema)).default({}),
   estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).default({}),
-  /** Parches por Tipo de diagrama (ADR 0009): como los del Nodo, mas el `padding` de la zona de hijos. */
+  /** Como los del Nodo, mas `padding`. */
   diagramas: z
     .partialRecord(z.enum(TIPOS_DE_DIAGRAMA), z.strictObject({ ops: z.array(opSchema).default([]), slots: cajaSchema.optional(), padding: paddingSchema.optional() }))
     .optional(),
-  /** Grupo cerrado: parches de Capa y, si el Tema lo pide, otros Slots y estilos (puede cambiar la caja). */
+  /** Grupo cerrado, que se comporta como Nodo hoja; puede cambiar la caja. */
   colapsado: z
     .strictObject({
       ops: z.array(opSchema).default([]),
@@ -214,7 +188,6 @@ const grupoSchema = z.strictObject({
   animacion: animacionDeNodoSchema.optional(),
 });
 
-/** Grupo por defecto: sin Capas (el Estilo resuelto pone las suyas), cabecera de icono y titulo. */
 export const GRUPO_POR_DEFECTO: z.output<typeof grupoSchema> = {
   capas: [],
   slots: CABECERA_POR_DEFECTO,
@@ -249,9 +222,9 @@ export const temaResueltoSchema = z
     grupo: grupoSchema.default(GRUPO_POR_DEFECTO),
     arista: aristaSchema.default({ capas: [] }),
     pagina: paginaSchema.default({ capas: [], fijo: false }),
-    /** Fila de las tablas ER; ausente = sin estilo propio (no entra en los snapshots de los Temas que no la usan). */
+    /** Opcional para no entrar en los snapshots de los Temas que no la usan. */
     fila: filaSchema.optional(),
-    /** Elementos de secuencia; ausente = derivados de `edge` y `node` (no entra en los snapshots de los Temas que no los usan). */
+    /** Opcional para no entrar en los snapshots de los Temas que no los usan. */
     secuencia: secuenciaSchema.optional(),
   })
   .superRefine((tema, ctx) => {
@@ -295,7 +268,6 @@ export const temaResueltoSchema = z
     if (tema.secuencia !== undefined) validarSecuencia(ctx, tema, tema.secuencia);
   });
 
-/** Valida los bloques de secuencia: Capas contra el catalogo, parches contra su pila, texto y Metricas contra `ESPECIFICACION_DE_SECUENCIA`. */
 function validarSecuencia(ctx: z.RefinementCtx, tema: TemaResuelto, secuencia: NonNullable<TemaResuelto['secuencia']>): void {
   for (const nombre of BLOQUES_DE_SECUENCIA) {
     const bloque = secuencia[nombre];
@@ -341,7 +313,7 @@ function validarSecuencia(ctx: z.RefinementCtx, tema: TemaResuelto, secuencia: N
   }
 }
 
-/** Valida el bloque `row`: sus Capas contra el catalogo, sus parches contra la pila base (sin tocar las Metricas) y el estilo de sus textos. */
+/** Los parches de `row` no pueden tocar las Metricas. */
 function validarFila(ctx: z.RefinementCtx, tema: TemaResuelto, fila: NonNullable<TemaResuelto['fila']>): void {
   const falla = (path: Array<string | number>, message: string): void => ctx.addIssue({ code: 'custom', path: ['fila', ...path], message });
   const vistas = new Set<string>();
@@ -375,12 +347,7 @@ function validarFila(ctx: z.RefinementCtx, tema: TemaResuelto, fila: NonNullable
 
 type Elemento = 'nodo' | 'grupo';
 
-/**
- * Valida la pila, los Slots, los estilos de texto y los parches por Tipo y por estado de un elemento
- * (Nodo o Grupo) contra el catalogo: una sola ruta de reglas para los dos. Un parche de estado no puede
- * tocar las Metricas; en el Grupo tampoco uno de Tipo (su tabla no tiene entrada por Tipo). Solo el
- * `colapsado` del Grupo, que es una caja hoja, puede cambiarlas.
- */
+/** Un parche de estado no puede tocar las Metricas; en el Grupo tampoco uno de Tipo (sus Metricas no tienen entrada por Tipo). */
 function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Elemento): void {
   const bloque = tema[elemento];
   const falla = (path: Array<string | number>, message: string): void => ctx.addIssue({ code: 'custom', path: [elemento, ...path], message });
@@ -395,7 +362,7 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
     );
     for (const error of errores) falla(['capas', i, 'primitiva', ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
   });
-  /** Cada arbol de Slots (la cabecera, el del colapsado) repite un Slot por separado. */
+  /** Los repetidos se cuentan por arbol (cabecera, colapsado). */
   const recorrer = (caja: CajaDeSlots, ruta: string, enArbol = new Set<string>()): void => {
     for (const hijo of caja.hijos) {
       if (esCaja(hijo)) recorrer(hijo, ruta, enArbol);
@@ -423,7 +390,6 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
       if (razon !== undefined) falla([...ruta, indice], `un parche ${que} no puede tocar las Metricas: ${razon}${que === 'de estado' ? '; hover nunca relayouta' : ''}`);
     });
   };
-  // Tipo de diagrama: nivel justo sobre la base; puede cambiar las Metricas. Los Tipos de nodo y estados lo ven debajo.
   for (const [diagrama, parche] of Object.entries(bloque.diagramas ?? {})) {
     for (const e of validarOps([base], parche.ops, tema.palette, 'parchear')) falla(['diagramas', diagrama, 'ops', e.indice], e.mensaje);
     if (parche.slots !== undefined) recorrer(parche.slots, 'diagramas');
@@ -450,7 +416,6 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
 
 type Completar = <P extends { tipo: string; props: Record<string, string | number> }>(primitiva: P, ubicacion: UbicacionDePrimitiva) => P | Primitiva;
 
-/** Los bloques de secuencia con los defectos del catalogo en cada Primitiva suya. */
 function conDefectosDeSecuencia(secuencia: NonNullable<TemaResuelto['secuencia']>, completar: Completar): NonNullable<TemaResuelto['secuencia']> {
   const salida: NonNullable<TemaResuelto['secuencia']> = {};
   for (const nombre of BLOQUES_DE_SECUENCIA) {
@@ -477,27 +442,21 @@ const aplicarSinErrores = (base: CapaDeTema[], ops: Parameters<typeof aplicarOps
 
 export type TemaResuelto = z.output<typeof temaResueltoSchema>;
 
-/** Formas que no dibujan una tabla ER (recortan las filas): en `er` se derivan como `rect` con radio acotado (ADR 0009). */
-const FORMAS_DE_PASTILLA: readonly string[] = ['pill', 'circle'];
-const RADIO_DE_TABLA = 8;
+/** `pill` y `circle` recortan las filas: en `er` pasan a `rect` con radio acotado. */
 const comoTabla = (capa: TemaResuelto['nodo']['capas'][number]): TemaResuelto['nodo']['capas'][number] =>
-  FORMAS_DE_PASTILLA.includes(capa.primitiva.tipo) ? { ...capa, primitiva: { tipo: 'rect', props: { radius: RADIO_DE_TABLA } } } : capa;
+  esPastilla(capa.primitiva.tipo) ? { ...capa, primitiva: { tipo: 'rect', props: { radius: RADIO_DE_TABLA } } } : capa;
 
 const porDiagrama = new WeakMap<object, Map<TipoDeDiagrama, TemaResuelto>>();
 
-/**
- * El Tema tal como se ve en un Tipo de diagrama (ADR 0009): las Capas, Slots y `padding` del base ya parcheados con
- * `diagram <tipo>`, de modo que la cascada de Tipo de nodo y estado sigue encima sin saber de diagramas. Sin
- * Tipo, o sin parche para el, es el mismo Tema. Pura y memoizada por Tema.
- */
+/** La base ya parcheada con `diagram <tipo>`; sin Tipo o sin parche, el mismo Tema. Memoizada por Tema. */
 export function temaParaDiagrama(tema: TemaResuelto, diagrama: TipoDeDiagrama | undefined): TemaResuelto {
   if (diagrama === undefined) return tema;
   const delNodo = tema.nodo.diagramas?.[diagrama];
   const delGrupo = tema.grupo.diagramas?.[diagrama];
   const delaArista = tema.arista.diagramas?.[diagrama];
-  // El estilo `label` del bloque `message` es la etiqueta de la Arista en secuencia: asi sus Metricas son las del layout.
+  // En secuencia, `label` de `message` es la etiqueta de la Arista para que sus Metricas sean las del layout.
   const etiquetaDeMensaje = diagrama === 'sequence' ? tema.secuencia?.message?.textos['label'] : undefined;
-  const haceTabla = diagrama === 'er' && tema.nodo.capas.some((capa) => FORMAS_DE_PASTILLA.includes(capa.primitiva.tipo));
+  const haceTabla = diagrama === 'er' && tema.nodo.capas.some((capa) => esPastilla(capa.primitiva.tipo));
   if (delNodo === undefined && delGrupo === undefined && delaArista === undefined && etiquetaDeMensaje === undefined && !haceTabla) return tema;
   const hecho = porDiagrama.get(tema)?.get(diagrama);
   if (hecho !== undefined) return hecho;
@@ -522,7 +481,6 @@ export function temaParaDiagrama(tema: TemaResuelto, diagrama: TipoDeDiagrama | 
   return resultado;
 }
 
-/** Tema por defecto del nucleo: siempre disponible, otros Temas pueden extenderlo. */
 export const TEMA_NEUTRO: TemaResuelto = {
   name: 'neutral',
   palette: {
@@ -541,16 +499,12 @@ export const TEMA_NEUTRO: TemaResuelto = {
   pagina: { capas: [], fijo: false },
 };
 
-/** Parches de Capa guardados en la Fuente (p. ej. el override de una Vista), validados contra su esquema. */
+/** Lanza si los datos no cumplen el esquema. */
 export const leerOps = (datos: unknown): OpDeCapa[] => z.array(opSchema).parse(datos);
 
 const memo = new WeakMap<object, TemaResuelto>();
 
-/**
- * Tema ya resuelto de la Fuente (`Tema` de `canonico` es solo el sobre) validado
- * contra el esquema estricto. Lanza con la ruta de cada fallo si no lo cumple:
- * `dsl` entrega Temas validos, esto defiende al dibujo de uno ajeno.
- */
+/** Lanza con la ruta de cada fallo si el Tema no cumple el esquema estricto. */
 export function resolverTema(tema: Tema): TemaResuelto {
   const hecho = memo.get(tema);
   if (hecho !== undefined) return hecho;
@@ -564,11 +518,7 @@ export function resolverTema(tema: Tema): TemaResuelto {
   return completo;
 }
 
-/**
- * El Tema con los defectos del catalogo en cada Primitiva (Capas, marcadores, etiqueta y estilo de Slots): un Tema
- * de `dsl` ya los trae, uno escrito a mano puede omitirlos y el dibujo no debe leer propiedades que faltan.
- * Los parches (`tipos`, `estados`) y las Capas `code` quedan como estan.
- */
+/** Rellena defectos del catalogo para Temas escritos a mano; los parches y las Capas `code` quedan como estan. */
 function conDefectos(tema: TemaResuelto): TemaResuelto {
   const completar = <P extends { tipo: string; props: Record<string, string | number> }>(primitiva: P, ubicacion: UbicacionDePrimitiva): P | Primitiva => {
     if (primitiva.tipo === 'code') return primitiva;

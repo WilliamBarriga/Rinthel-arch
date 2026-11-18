@@ -1,15 +1,10 @@
-/**
- * `VistaInteractiva`: la Vista de `render` con pan/zoom (d3-zoom), seleccion de
- * Nodo y filtrado por viewport. El estado de camara y seleccion es controlable
- * por props; sin ellas el componente guarda el suyo.
- */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FocusEvent as EventoDeFoco, KeyboardEvent as EventoDeTecla, MouseEvent as EventoDeRaton, ReactElement } from 'react';
 import { select } from 'd3-selection';
 import { zoom, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent } from 'd3-zoom';
 
-import { resolveView } from 'canonico';
+import { idDeElementoDeSecuencia, resolveView } from 'canonico';
 import type { EstadoDeColapso, IconProvider, IssueDeDev, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
@@ -41,16 +36,13 @@ import { interpolarGeometria, useMorph, visibilidadDeMorph } from './morph';
 import type { RelojDeCuadros } from './morph';
 import { usePasos } from './pasos';
 import type { PropsDePasos } from './pasos';
-import { useTemaVigente } from './tema-vigente';
-import type { SuscripcionDeTema } from './tema-vigente';
 import { recortarAlViewport } from './viewport';
 import { nivelDeDetalle } from './zoom-semantico';
 import type { UmbralesDeDetalle } from './zoom-semantico';
 
-/** Adaptador de layout inyectado: ELK en Worker en el navegador, un fake en pruebas. */
 export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema, medidas?: MedidasDeTexto) => Promise<Geometria>;
 
-/** Medidor de texto inyectado (ADR 0008): el visor mide con la fuente real (`medirEnVisor`); sin el se estima por caracter. */
+/** Mide textos con la fuente real (`medirEnVisor`); sin medidor el layout estima por caracter. */
 export type MedidorDeTexto = (textos: TextoAMedir[]) => Promise<MedidasDeTexto>;
 
 export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, PropsDeAltoContraste {
@@ -60,8 +52,6 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   componentes?: ComponentesDeTema;
   source: FuenteCanonica;
   theme: Tema;
-  /** Puerto de recarga de Tema al guardar: recolorea sin relayout salvo que cambien las fuentes. */
-  themeUpdates?: SuscripcionDeTema;
   layout: AdaptadorDeLayout;
   /** Medicion real de texto; con ella el layout espera las medidas y la clave de layout incluye el hash de fuente y el nivel `medido`. */
   measure?: MedidorDeTexto;
@@ -127,21 +117,19 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   icons?: IconProvider;
   /** Umbrales y margenes de la interaccion (arrastre, acierto de Aristas, escala, encuadre); ver `AjustesDeInteraccion`. */
   tuning?: Partial<AjustesDeInteraccion>;
+  /** Chrome del lienzo (panel de issues, toasts, leyenda, migas). Por defecto `true`; `false` lo omite para montarlo fuera. */
+  chrome?: boolean;
   /** Issues de la Fuente; se dibujan como panel clicable dentro del lienzo, con el Tema. */
   issues?: readonly IssueDeDev[];
   /** Avisos efimeros (el padre decide cuando quitarlos); se dibujan dentro del lienzo, con el Tema. */
   toasts?: readonly string[];
-  /** Reloj del morph; por defecto `requestAnimationFrame`. Util en pruebas. */
+  /** Reloj del morph; por defecto `requestAnimationFrame`. */
   clock?: RelojDeCuadros;
   /** Fallo del adaptador de layout; sin ella el fallo se lanza al renderizar. */
   onError?: (error: Error) => void;
 }
 
-/**
- * Vista con drill-down: navega por los `link` de la Vista activa. Cada cambio de
- * Vista remonta la Vista activa, asi que el estado no controlado (colapso, camara,
- * seleccion, Paso) vuelve a su valor inicial; el controlado lo gobierna el padre.
- */
+/** Navega por los `link` de la Vista activa; cada cambio de Vista la remonta y reinicia su estado no controlado. */
 export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
   const navegacion = useNavegacion(props);
   const { vista, ir } = navegacion;
@@ -161,7 +149,8 @@ interface PropsDeVistaActiva extends Omit<VistaInteractivaProps, 'view' | 'cache
 
 function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const { source, view, layout, width, height, onError, onSelect, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
-  const { tema: theme, interruptor, reducedMotion } = useAltoContraste(useTemaVigente(props.theme, props.themeUpdates), props);
+  const conChrome = props.chrome !== false;
+  const { tema: theme, interruptor, reducedMotion } = useAltoContraste(props.theme, props);
   const [state, fijarEstado] = useControlado<EstadoDeColapso>(props.state, {}, props.onStateChange);
   const ajustes = { ...AJUSTES_POR_DEFECTO, ...props.tuning };
   const ajustesVigentes = useRef(ajustes);
@@ -199,7 +188,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const avisosDeFuentes = useMemo(() => (fontUrl === undefined ? avisoDeFuentesSinServir(resolverTema(theme).fonts) : []), [fontUrl, theme]);
   const calculo = useGeometria({ vista, theme, layout, medir: medirConFuentes, claveDeFuentes: JSON.stringify(hashesDeFuentes), semilla, onError, alLlegar });
 
-  // Camara: controlada por el padre o propia; hasta que el usuario (o un colapso) la mueva, encuadra toda la Vista segun la primera geometria.
+  // Hasta que el usuario o un colapso la mueva, la camara encuadra toda la Vista segun la primera geometria.
   const [movida, fijarCamara] = useControlado<Camara | undefined>(props.camera, undefined, (nueva) => nueva && ultimo.current.onCameraChange?.(nueva));
   const encuadre = useRef<Camara | undefined>(undefined);
   if (encuadre.current === undefined && calculo !== undefined) encuadre.current = encuadrar(calculo.geometria, width, height, ajustes.fitMargin);
@@ -236,7 +225,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     if (geometria?.kind !== 'secuencia') return false;
     const caja = zona.current!.getBoundingClientRect();
     const k = width / camaraVigente.current.width;
-    return unidadBajo(geometria, vistaVigente.current.interaction?.groups ?? [], { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k }) !== undefined;
+    const enCurso = vistaVigente.current;
+    return unidadBajo(geometria, enCurso.type === 'sequence' ? (enCurso.interaction.groups ?? []) : [], { x: camaraVigente.current.x + (evento.clientX - caja.left) / k, y: camaraVigente.current.y + (evento.clientY - caja.top) / k }) !== undefined;
   };
 
   useEffect(() => {
@@ -310,9 +300,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const [hover, fijarHover] = useState<string | undefined>(undefined);
   const estados = useMemo(() => conEstadosTransitorios(estadosDeSeleccion, enCurso === undefined ? hover : undefined, enCurso), [estadosDeSeleccion, hover, enCurso]);
   const medidas = calculo?.medidas;
-  const estilo = useMemo(() => resolverEstilo(theme, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas, vista.type), [theme, fontFiles, medidas, vista.type]);
+  const estilo = useMemo(() => resolverEstilo(theme, vista.type, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas), [theme, fontFiles, medidas, vista.type]);
 
-  // Ruta (en-ruta / atenuado) y foco de teclado: los calcula el shell y render solo los pinta.
   const enSecuencia = vista.type === 'sequence';
   const visible = (id: string): boolean => (visibility?.(id) ?? 1) > 0;
   const nodosSeleccionados = seleccion.filter((e) => e.tipo === 'nodo').map((e) => e.id);
@@ -324,7 +313,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   }, [props.route, vista, nodosSeleccionados.join('\n')]);
   const [foco, fijarFoco] = useState<string | undefined>(undefined);
   const focoVigente =
-    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction?.messages.some((m) => `${vista.interaction!.id}:${m.ruta}` === foco) === true)) ? foco : undefined;
+    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction.messages.some((m) => idDeElementoDeSecuencia(vista.interaction.id, m.ruta) === foco))) ? foco : undefined;
   const estadosFinales = useMemo(
     () => unirEstados(unirEstados(estados, estadosDeRuta(vista, ruta)), focoVigente === undefined ? {} : { [focoVigente]: ['foco'] }),
     [estados, vista, ruta, focoVigente],
@@ -394,7 +383,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
 
   const detalle = nivelDeDetalle(width / ancho, props.detailThresholds);
 
-  /** Elemento bajo un evento de raton: el nucleo decide que hay bajo el punto, sobre la Vista completa (no la recortada). */
+  /** Elemento bajo el raton, sobre la Vista completa (no la recortada al viewport). */
   const elementoBajoElRaton = (evento: EventoDeRaton) => {
     if (mostrado === undefined || (evento.target as Element).closest('[data-diagram]') === null) return undefined;
     const caja = zona.current!.getBoundingClientRect();
@@ -453,10 +442,10 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
       )}
       {pasos.controles}
       {interruptor}
-      <Leyenda fuente={source} vista={vista} tema={theme} modo={props.legend ?? 'auto'} />
-      {props.migas}
-      <PanelDeIssues issues={[...(props.issues ?? []), ...avisosDeFuentes]} />
-      <Toasts toasts={props.toasts ?? []} />
+      {conChrome && <Leyenda fuente={source} vista={vista} tema={theme} modo={props.legend ?? 'auto'} />}
+      {conChrome && props.migas}
+      {conChrome && <PanelDeIssues issues={[...(props.issues ?? []), ...avisosDeFuentes]} />}
+      {conChrome && <Toasts toasts={props.toasts ?? []} />}
     </div>
   );
 }

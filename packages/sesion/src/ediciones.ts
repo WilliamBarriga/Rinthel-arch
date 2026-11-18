@@ -1,8 +1,7 @@
-import type { Issue, IntencionDeOrden, IntencionDePin, MotivoDeRechazo, TextPosition, TextRange } from 'canonico';
+import type { Issue, MotivoDeRechazo, TextPosition, TextRange } from 'canonico';
 import { compile } from 'dsl';
-import type { ArchivosDelWorkspace, ResultadoDeCompilacion } from 'dsl';
+import type { ArchivosDelWorkspace } from 'dsl';
 
-/** Edicion de texto sobre un archivo del Workspace, con el hash del contenido que vio quien la pide. */
 export interface EdicionConHash {
   file: string;
   /** Rango 1-based, fin excluido (el mismo de `IssueFix`). */
@@ -12,7 +11,7 @@ export interface EdicionConHash {
   hash: string;
 }
 
-/** Resultado de una edicion: `ok: true` con el payload `T`, o `ok: false` con `motivo` y `mensaje` (nada se escribe). */
+/** Con `ok: false` no se escribe nada. */
 export type ResultadoDeEdicion<T> =
   | ({ ok: true } & T)
   | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
@@ -31,11 +30,11 @@ export function hashDeContenido(texto: string): string {
   return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0');
 }
 
-const rechazo = (motivo: MotivoDeRechazo, mensaje: string, file?: string) =>
+export const rechazo = (motivo: MotivoDeRechazo, mensaje: string, file?: string) =>
   ({ ok: false, motivo, mensaje, ...(file === undefined ? {} : { file }) }) as const;
 
 /** Offset de una posicion 1-based; `undefined` si cae fuera del texto. */
-function offsetDe(texto: string, { line, column }: TextPosition): number | undefined {
+export function offsetDe(texto: string, { line, column }: TextPosition): number | undefined {
   let inicio = 0;
   for (let n = 1; n < line; n++) {
     const salto = texto.indexOf('\n', inicio);
@@ -48,31 +47,22 @@ function offsetDe(texto: string, { line, column }: TextPosition): number | undef
   return column >= 1 && offset <= limite ? offset : undefined;
 }
 
-/** Clave estable ante cambios de mensaje o de linea: un error es el mismo si comparte codigo y archivo. */
+/** Un error es el mismo si comparte codigo y archivo, aunque cambie su mensaje o su linea. */
 const clave = (issue: Issue) => `${issue.code}|${issue.file}`;
 
-/** Conteo de errores por `clave` (codigo y archivo): los preexistentes no bloquean una edicion ajena. */
-const erroresPorClave = (issues: readonly Issue[]): Map<string, number> => {
+/** Los errores preexistentes no bloquean una edicion ajena. */
+export const erroresPorClave = (issues: readonly Issue[]): Map<string, number> => {
   const conteo = new Map<string, number>();
   for (const i of issues) if (i.severity === 'error') conteo.set(clave(i), (conteo.get(clave(i)) ?? 0) + 1);
   return conteo;
 };
 
-/** Limite de coordenadas de un Pin: enteros dentro de este rango (formato fijo del DSL escrito). */
-const LIMITE_DE_PIN = 100_000;
-const coordenadaDePin = (n: number): number => Math.min(LIMITE_DE_PIN, Math.max(-LIMITE_DE_PIN, Math.round(n))) + 0;
-
 /**
- * Aplica ediciones `{ file, range, replacement, hash }` sobre el mapa de archivos y devuelve
- * el mapa nuevo; no toca disco ni muta la entrada. Todo o nada: si algun hash no coincide con
- * el contenido actual, un rango es invalido, dos ediciones se solapan, o el resultado
- * introduce errores que antes no estaban (se cuentan por codigo y archivo: un error
- * preexistente cuyo mensaje cambia no cuenta como nuevo, uno adicional si), no se
- * devuelve ningun archivo. Los `issues`
- * devueltos son los del Workspace resultante. `erroresAntes` es el conteo de errores
- * del mapa de entrada ya hecho por quien llama: reutiliza compilaciones pagadas.
+ * Devuelve el mapa nuevo sin mutar la entrada. Todo o nada: rechaza si un hash no coincide, un rango es invalido,
+ * dos ediciones se solapan o el resultado tiene mas errores por codigo y archivo que `erroresAntes`.
+ * Los `issues` son los del Workspace resultante.
  */
-function aplicarSobre(
+export function aplicarSobre(
   archivos: ArchivosDelWorkspace,
   ediciones: readonly EdicionConHash[],
   erroresAntes: Map<string, number>,
@@ -117,158 +107,10 @@ function aplicarSobre(
   return { ok: true, archivos: resultado, issues: despues };
 }
 
-/**
- * Aplica ediciones `{ file, range, replacement, hash }` sobre el mapa de archivos y devuelve
- * el mapa nuevo; no toca disco ni muta la entrada. Misma semantica todo o nada que
- * `aplicarSobre`, con su `motivo` de rechazo.
- */
+/** `aplicarSobre` contando los errores previos del propio mapa. */
 export function aplicarEdiciones(
   archivos: ArchivosDelWorkspace,
   ediciones: readonly EdicionConHash[],
 ): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace; issues: Issue[] }> {
   return aplicarSobre(archivos, ediciones, erroresPorClave(compile(archivos).issues));
-}
-
-/**
- * Gesto de editar un Pin (ADR 0005): fusiona calcular la edicion minima, auto-probarla
- * una vez y aplicar en memoria. Devuelve los archivos nuevos (sin tocar disco), las
- * ediciones calculadas y los issues del Workspace resultante. Pura; reutiliza la
- * compilacion unica que localiza el Pin tambien para comparar errores, de modo que
- * un gesto paga 2 compilaciones del Workspace en total. `aplicarEdiciones` queda
- * exportada: es la entrada de las ediciones ya calculadas (`--edits`, `fix`).
- * Rechaza hash viejo, Vista desconocida y cualquier
- * intencion cuyo resultado no compile limpio (p. ej. Nodo inexistente).
- */
-export function editarPin(
-  archivos: ArchivosDelWorkspace,
-  intencion: IntencionDePin,
-): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace; ediciones: EdicionConHash[]; issues: Issue[] }> {
-  const compilado = compile(archivos);
-  const calculada = edicionDePinSobre(archivos, intencion, compilado);
-  if (!calculada.ok) return calculada;
-  const aplicada = aplicarSobre(archivos, calculada.ediciones, erroresPorClave(compilado.issues));
-  if (!aplicada.ok) return aplicada;
-  return { ok: true, archivos: aplicada.archivos, ediciones: calculada.ediciones, issues: aplicada.issues };
-}
-
-/** Calculo del Pin compartido; la auto-prueba la hace la aplicacion unica de `editarPin`. */
-function edicionDePinSobre(
-  archivos: ArchivosDelWorkspace,
-  intencion: IntencionDePin,
-  compilado: ResultadoDeCompilacion,
-): ResultadoDeEdicion<{ ediciones: EdicionConHash[] }> {
-  const { vista, nodo } = intencion;
-  const [x, y] = [coordenadaDePin(intencion.x), coordenadaDePin(intencion.y)];
-  const { canonico: fuente, ubicar } = compilado;
-  if (fuente === undefined || ubicar === undefined) {
-    const primero = compilado.issues.find((i) => i.severity === 'error');
-    return rechazo('invalida', `El Workspace tiene errores: ${primero?.message ?? ''}`, primero?.file);
-  }
-  const indice = fuente.views.findIndex(({ id }) => id === vista);
-  const declarada = fuente.views[indice];
-  if (declarada === undefined) return rechazo('vista-desconocida', `La Vista '${vista}' no existe`);
-
-  const j = declarada.overrides.findIndex((o) => o.node === nodo);
-  const sitio = j >= 0 ? ubicar(['views', indice, 'overrides', j, 'pin']) : ubicar(['views', indice, 'overrides']);
-  if (sitio === null) return rechazo('invalida', `No se encontro donde escribir el Pin de '${nodo}'`);
-  const { file, range } = sitio;
-  const texto = archivos[file] as string;
-  if (intencion.hash !== hashDeContenido(texto)) {
-    return rechazo('hash-desactualizado', `El archivo '${file}' cambio desde que se leyo`, file);
-  }
-
-  const pin = `pin ${x},${y}`;
-  const vacio = range.start.line === range.end.line && range.start.column === range.end.column;
-  const edicion = (rango: TextRange, replacement: string): EdicionConHash => ({
-    file,
-    range: rango,
-    replacement,
-    hash: intencion.hash,
-  });
-  let hecha: EdicionConHash;
-  if (!vacio) {
-    hecha = edicion(range, pin);
-  } else if (j >= 0) {
-    const sigue = texto[offsetDe(texto, range.start) ?? 0];
-    hecha = edicion(range, ` ${pin}${sigue === '}' ? ' ' : ''}`);
-  } else {
-    // Antes de la `}` de la Vista: en su propia linea si esa `}` esta sola, en linea si no.
-    const linea = texto.split('\n')[range.start.line - 1] ?? '';
-    const previo = linea.slice(0, range.start.column - 1);
-    const bloque = `node ${nodo} { ${pin} }`;
-    if (previo.trim() === '') {
-      const inicio = { line: range.start.line, column: 1 };
-      hecha = edicion({ start: inicio, end: inicio }, `${previo}  ${bloque}\n`);
-    } else {
-      hecha = edicion(range, `${/\s$/.test(previo) ? '' : ' '}${bloque} `);
-    }
-  }
-
-  return { ok: true, ediciones: [hecha] };
-}
-
-/**
- * `orden` visible completo + las entradas de `viejo` que no se ven (ocultas por `collapsed` o `exclude`): cada
- * una queda justo despues de la entrada que la precedia en `viejo` (o al principio si ninguna sobrevive).
- */
-function ordenConOcultas(orden: readonly string[], viejo: readonly string[]): string[] {
-  const resultado = [...new Set(orden)];
-  viejo.forEach((id, i) => {
-    if (resultado.includes(id)) return;
-    const previo = viejo.slice(0, i).filter((p) => resultado.includes(p)).at(-1);
-    resultado.splice(previo === undefined ? 0 : resultado.indexOf(previo) + 1, 0, id);
-  });
-  return resultado;
-}
-
-/**
- * Gesto de reordenar las Lifelines de una Vista de secuencia (ADR 0009): reescribe el `order` completo con el orden
- * visible (las entradas ocultas conservan su posicion relativa); lo escribe aunque coincida con la primera aparicion.
- * Misma auto-prueba que `editarPin`: un id que no es Nodo, o cualquier error nuevo, rechaza con `invalida`.
- */
-export function ordenarLifelines(
-  archivos: ArchivosDelWorkspace,
-  intencion: IntencionDeOrden,
-): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace; ediciones: EdicionConHash[]; issues: Issue[] }> {
-  const compilado = compile(archivos);
-  const { canonico: fuente, ubicar } = compilado;
-  if (fuente === undefined || ubicar === undefined) {
-    const primero = compilado.issues.find((i) => i.severity === 'error');
-    return rechazo('invalida', `El Workspace tiene errores: ${primero?.message ?? ''}`, primero?.file);
-  }
-  const indice = fuente.views.findIndex(({ id }) => id === intencion.vista);
-  const declarada = fuente.views[indice];
-  if (declarada === undefined) return rechazo('vista-desconocida', `La Vista '${intencion.vista}' no existe`);
-  if (declarada.type !== 'sequence') return rechazo('invalida', `La Vista '${intencion.vista}' no es de secuencia`);
-
-  const total = declarada.order.length;
-  const inicio = total > 0 ? ubicar(['views', indice, 'order', 0]) : ubicar(['views', indice, 'overrides']);
-  const fin = total > 0 ? ubicar(['views', indice, 'order', total - 1]) : inicio;
-  if (inicio === null || fin === null) return rechazo('invalida', `No se encontro donde escribir el order de '${intencion.vista}'`);
-  const { file } = inicio;
-  const texto = archivos[file] as string;
-  if (intencion.hash !== hashDeContenido(texto)) {
-    return rechazo('hash-desactualizado', `El archivo '${file}' cambio desde que se leyo`, file);
-  }
-
-  const lista = ordenConOcultas(intencion.orden, declarada.order).join(', ');
-  const edicion = (range: TextRange, replacement: string): EdicionConHash => ({ file, range, replacement, hash: intencion.hash });
-  let hecha: EdicionConHash;
-  if (total > 0) {
-    hecha = edicion({ start: inicio.range.start, end: fin.range.end }, lista);
-  } else {
-    // Antes de la `}` de la Vista: en su propia linea si esa `}` esta sola, en linea si no.
-    const { range } = inicio;
-    const linea = texto.split('\n')[range.start.line - 1] ?? '';
-    const previo = linea.slice(0, range.start.column - 1);
-    if (previo.trim() === '') {
-      const principio = { line: range.start.line, column: 1 };
-      hecha = edicion({ start: principio, end: principio }, `${previo}  order ${lista}\n`);
-    } else {
-      hecha = edicion(range, `${/\s$/.test(previo) ? '' : ' '}order ${lista} `);
-    }
-  }
-  const aplicada = aplicarSobre(archivos, [hecha], erroresPorClave(compilado.issues));
-  if (!aplicada.ok) return aplicada;
-  return { ok: true, archivos: aplicada.archivos, ediciones: [hecha], issues: aplicada.issues };
 }

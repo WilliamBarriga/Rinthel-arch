@@ -1,11 +1,4 @@
-/**
- * Compilacion del bloque `edge` de un Tema (ADR 0008). La pila de trazos
- * reutiliza los parches de Capa (`layer`, `use`, `before`/`after`, `none`)
- * validados contra la Familia trazo; los marcadores (`start`/`end`) y la
- * etiqueta (`label`) son una Primitiva suelta cada uno (`primitivaSuelta`, de
- * `temas-comun.ts`). Toda la validacion es del
- * catalogo de `tema`; aqui solo se traduce el AST y se situan los errores.
- */
+/** Bloque `edge` de un Tema: pila de trazos (Familia trazo); cada marcador y la etiqueta son una Primitiva suelta. */
 import { CODIGOS } from 'canonico';
 import { aplicarOps } from 'tema';
 import type { CapaDeTema, OpDeCapa, Primitiva, TemaResuelto } from 'tema';
@@ -16,7 +9,7 @@ import { compilarBloque } from './temas-capas';
 import { nombreDeDiagrama, primitivaSuelta } from './temas-comun';
 import type { Contexto } from './temas-comun';
 
-/** Aplica los `edge { ... }` de un Tema sobre `tema.arista` (heredada del padre o del neutro). */
+/** Aplica los `edge { ... }` sobre `tema.arista` (heredada del padre o del neutro). */
 export function compilarArista(items: readonly EdgeItem[], tema: TemaResuelto, ctx: Contexto): void {
   const delBloque = items.filter((item): item is ThemeLayer | ThemeUse => item.$type === 'ThemeLayer' || item.$type === 'ThemeUse');
   const modo = tema.arista.capas.length === 0 ? 'definir' : 'parchear';
@@ -46,7 +39,7 @@ export function compilarArista(items: readonly EdgeItem[], tema: TemaResuelto, c
 
 type ParcheDeArista = { ops: OpDeCapa[]; origen?: Primitiva; fin?: Primitiva; etiqueta?: Primitiva };
 
-/** `edge { diagram <tipo> { ... } }` (ADR 0009): parches de trazo y marcadores o etiqueta propios de ese Tipo de diagrama; varios bloques del mismo tipo se acumulan. */
+/** `edge { diagram <tipo> { ... } }`; varios bloques del mismo tipo se acumulan. */
 function compilarDiagramaDeArista(item: ThemeDiagram, tema: TemaResuelto, ctx: Contexto): void {
   const diagrama = nombreDeDiagrama(item, ctx.archivo, ctx.issues);
   if (diagrama === undefined) return;

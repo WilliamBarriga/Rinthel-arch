@@ -1,4 +1,3 @@
-/** Familia borde: contorno de la caja. `border` (continuo) vive en `catalogo.ts`; aqui los demas. */
 import type { DefinicionDePrimitiva } from '../catalogo';
 
 const GROSOR = { tipo: 'numero', min: 1, max: 16, defecto: 1 } as const;

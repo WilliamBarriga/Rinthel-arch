@@ -21,7 +21,7 @@ afterAll(() => {
   }
 });
 
-/** Repo temporal con los archivos dados (ruta relativa -> contenido). Lo reutilizan los chequeos de indices. */
+/** Repo temporal con los archivos dados (ruta relativa -> contenido). */
 function crearRepo(archivos: Record<string, string>): string {
   const raiz = mkdtempSync(join(tmpdir(), 'check-docs-'));
   temporales.push(raiz);

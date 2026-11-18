@@ -1,9 +1,4 @@
-/**
- * Compilacion de la animacion declarativa de un Tema (ADR 0008): `motion` y
- * `keyframes` dentro de una Capa, y `transition`, `enter`, `exit` y `stagger`
- * del bloque `node`. Traduce el AST a parametros y delega validacion y
- * defectos en el catalogo de `tema`; aqui solo se situan los errores en el texto.
- */
+/** Animacion de un Tema; la validacion y los defectos son del catalogo de `tema`. */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
 import { construirEfecto, construirEscalonado, construirKeyframes, construirMovimiento, construirTransicion, duracionEnMs, parsearEstado } from 'tema';
@@ -17,7 +12,7 @@ type Ast = Parameters<typeof rangoDe>[0];
 
 const aIssue = (archivo: string, error: ErrorDeCatalogo, rango: TextRange): Issue => situar(archivo, error, rango.start);
 
-/** Pasa los parametros del AST a la forma del catalogo; una unidad desconocida es un error de valor. */
+/** Una unidad desconocida es un error de valor. */
 function leerParametros(params: readonly AnimParam[], archivo: string, issues: Issue[]): ParametroDeAnimacion[] {
   const salida: ParametroDeAnimacion[] = [];
   const duracion = (clave: string, d: Duracion): void => {
@@ -36,7 +31,7 @@ function leerParametros(params: readonly AnimParam[], archivo: string, issues: I
   return salida;
 }
 
-/** Resultado de compilar la animacion de una Capa: `null` quita la heredada, `undefined` no la toca. */
+/** `null` quita la heredada, `undefined` no la toca. */
 export interface AnimacionDeCapa {
   animacion?: Animacion | null;
   /** Hubo un error: el parche entero se descarta. */
@@ -96,11 +91,7 @@ function escalonadoDe(item: ThemeStagger, archivo: string, issues: Issue[]): num
 const repetido = (archivo: string, que: string, item: Ast): Issue =>
   aIssue(archivo, { codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${que}' repetido en el mismo bloque` }, aRango(item.$cstNode?.range));
 
-/**
- * Animacion del bloque `node` (`transition`, `enter`, `exit`, `stagger`) y
- * `transition` de cada `state`, sobre la heredada. Un elemento repetido en el
- * mismo bloque es un error.
- */
+/** Sobre la heredada; un elemento repetido en el mismo bloque es un error. */
 export function compilarAnimacionDeNodo(items: ReadonlyArray<NodeItem>, heredada: AnimacionDeNodo | undefined, archivo: string, issues: Issue[]): AnimacionDeNodo | undefined {
   const resultado: AnimacionDeNodo = { ...heredada, ...(heredada?.transicionesDeEstado !== undefined && { transicionesDeEstado: { ...heredada.transicionesDeEstado } }) };
   const vistos = new Set<string>();

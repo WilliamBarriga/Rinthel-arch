@@ -1,7 +1,4 @@
-/**
- * Indice de geometria absoluta: la unica respuesta a "donde cae cada Nodo en el
- * lienzo, quien es su padre y cuales son las raices". Puro, sin DOM.
- */
+/** Indice de geometria absoluta: caja de cada Nodo en el lienzo, su padre y las raices. Puro. */
 import type { NodoResuelto, VistaResuelta } from 'canonico';
 
 import type { CajaDeNodo } from './layout';
@@ -9,18 +6,13 @@ import type { CajaDeNodo } from './layout';
 export interface IndiceDeGeometria {
   /** Caja de cada Nodo con caja en la geometria, en coordenadas del lienzo. */
   cajas: Map<string, CajaDeNodo>;
-  /** Id del Grupo que anida a cada Nodo anidado (las raices no estan). */
+  /** Las raices no estan. */
   padre: Map<string, string>;
-  /** Nodos de primer nivel: los que ningun Grupo de la Vista anida. */
+  /** Los Nodos que ningun Grupo de la Vista anida. */
   raices: NodoResuelto[];
 }
 
-/**
- * `resolveView` lista todos los Nodos visibles a plano y anida ademas los hijos;
- * las `cajas` de la geometria son relativas al Grupo padre y aqui se pasan al
- * lienzo. Un Nodo sin caja se omite (y con el su subarbol). Un Grupo colapsado
- * no tiene hijos en la Vista, asi que es una hoja.
- */
+/** Un Nodo sin caja se omite junto con su subarbol; un Grupo colapsado es una hoja. */
 export function indiceDeGeometria(vista: VistaResuelta, geometria: { nodes: Readonly<Record<string, CajaDeNodo>> }): IndiceDeGeometria {
   const padre = new Map(vista.nodes.flatMap((nodo) => nodo.children.map((hijo) => [hijo.id, nodo.id] as const)));
   const raices = vista.nodes.filter((nodo) => !padre.has(nodo.id));

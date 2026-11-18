@@ -1,17 +1,10 @@
-/**
- * Morph entre dos geometrias (ADR 0003): interpolacion pura y el hook que la
- * anima. El reloj entra como dependencia (`RelojDeCuadros`); sin reloj, o con
- * duracion 0, no hay animacion.
- */
+/** Morph entre dos geometrias: interpolacion pura y el hook que la anima; sin reloj, o con duracion 0, no hay animacion. */
 import { useCallback, useEffect, useState } from 'react';
 
 import type { Visibilidad } from 'canonico';
 import type { CajaDeNodo, Geometria, GeometriaGrafo, GeometriaSecuencia, RutaDeArista } from 'layout';
 
-/**
- * Puerto de reloj: pide un cuadro (`cuadro` recibe el tiempo en ms) y devuelve
- * la funcion que lo cancela. En el navegador es `requestAnimationFrame`.
- */
+/** Pide un cuadro (`cuadro` recibe el tiempo en ms) y devuelve la funcion que lo cancela. */
 export type RelojDeCuadros = (cuadro: (ahoraMs: number) => void) => () => void;
 
 /** Reloj de `requestAnimationFrame`, o `undefined` si el entorno no lo tiene. */

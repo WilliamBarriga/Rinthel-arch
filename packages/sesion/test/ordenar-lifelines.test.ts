@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
-import { abrirSesion, aplicarIntencion, crearHistorial, deshacer, editarEnHistorial, hashDeContenido, rehacer } from 'sesion';
+import { abrirSesion, aplicarIntencion, crearHistorial, deshacer, editarEnHistorial, rehacer } from 'sesion';
 
 const modelo = `specification { node servicio }
 model {
@@ -23,7 +23,7 @@ model {
 const con = (cuerpo: string) => `${modelo}view v {\n  type sequence\n  interaction i\n${cuerpo}}\n`;
 
 const ordenar = (texto: string, orden: string[]) =>
-  aplicarIntencion({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden, hash: hashDeContenido(texto) });
+  aplicarIntencion({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden });
 const visibles = (texto: string) => resolveView(abrirSesion({ 'main.dg': texto }).fuente!, 'v')!.nodes.map((n) => n.id);
 
 describe('Intencion ordenar-lifelines', () => {
@@ -70,14 +70,14 @@ describe('Intencion ordenar-lifelines', () => {
 
   it('rechaza un hash viejo, una Vista inexistente y un nodo desconocido', () => {
     const texto = con('');
-    expect(aplicarIntencion({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden: ['cliente'], hash: 'viejo' })).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
-    expect(aplicarIntencion({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'nada', orden: ['cliente'], hash: hashDeContenido(texto) })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
+    expect(aplicarIntencion({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden: ['cliente'] }, { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    expect(aplicarIntencion({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'nada', orden: ['cliente'] })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
     expect(ordenar(texto, ['fantasma'])).toMatchObject({ ok: false, motivo: 'invalida' });
   });
 
   it('deshacer restaura el texto exacto y rehacer lo reaplica', () => {
     const texto = con('  order cola, cliente\n');
-    const e = editarEnHistorial(crearHistorial({ 'main.dg': texto }), { tipo: 'ordenar-lifelines', vista: 'v', orden: ['aux', 'cola', 'cliente', 'sistema.api', 'sistema.db'], hash: hashDeContenido(texto) });
+    const e = editarEnHistorial(crearHistorial({ 'main.dg': texto }), { tipo: 'ordenar-lifelines', vista: 'v', orden: ['aux', 'cola', 'cliente', 'sistema.api', 'sistema.db'] });
     if (!e.ok) throw new Error(e.mensaje);
     const d = deshacer(e.historial);
     expect(d?.archivos['main.dg']).toBe(texto);

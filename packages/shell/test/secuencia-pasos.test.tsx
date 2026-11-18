@@ -51,11 +51,9 @@ describe('VistaInteractiva: Pasos de secuencia', () => {
     // La Geometria es la completa: el Mensaje 'fin' existe pero no se ve.
     expect(opacidad(c.querySelector('[data-message="i:2.0.0"]'))).toBe(1);
     expect(opacidad(c.querySelector('[data-message="i:4"]'))).toBe(0);
-    // El marco y la guarda del primer operando aparecen; la del segundo, no.
     expect(opacidad(c.querySelector('[data-fragment-guard="2:0"]'))).toBe(1);
     expect(opacidad(c.querySelector('[data-fragment-guard="2:1"]'))).toBe(0);
     expect(opacidad(c.querySelector('[data-fragment-operator="2"]'))).toBe(1);
-    // La Lifeline con 'create' posterior no se ve; las demas, si.
     expect(opacidad(c.querySelector('[data-lifeline="nuevo"]'))).toBe(0);
     expect(opacidad(c.querySelector('[data-lifeline="db"]'))).toBe(1);
     // La activacion de api (de 'pedir' a 'fin') se recorta en la flecha de 'guardar'.
@@ -64,7 +62,6 @@ describe('VistaInteractiva: Pasos de secuencia', () => {
     await esperar(completa.container);
     const final = completa.container.querySelector<HTMLElement>('[data-activation="api"]')!;
     expect(Number.parseFloat(activacion.style.height)).toBeLessThan(Number.parseFloat(final.style.height));
-    // La Nota del primer Mensaje ya aparece.
     expect(opacidad(c.querySelector('[data-note="i:1"]'))).toBe(1);
   });
 

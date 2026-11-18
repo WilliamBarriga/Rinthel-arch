@@ -35,11 +35,8 @@ describe('VistaInteractiva con una Vista de secuencia', () => {
     const { container } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} />);
     await waitFor(() => expect(container.querySelector('[data-message]')).not.toBeNull());
 
-    // Cabeceras de Lifeline: un Nodo por columna.
-    // Cada Lifeline repite su cabecera al pie (espejo): arriba y abajo, mismo orden.
-    expect([...container.querySelectorAll('.rd-nodos [data-id]')].map((e) => e.getAttribute('data-id'))).toEqual(['cliente', 'api', 'db', 'cliente', 'api', 'db']);
+    expect([...container.querySelectorAll('.rd-nodos [data-id]')].map((e) => e.getAttribute('data-id'))).toEqual(['cliente', 'api', 'db']);
     expect([...container.querySelectorAll('[data-lifeline]')].map((e) => e.getAttribute('data-lifeline'))).toEqual(['cliente', 'api', 'db']);
-    // Mensajes por su identidad (Interaccion:indice), con su tipo.
     const mensajes = [...container.querySelectorAll('[data-message]')];
     expect(mensajes.map((m) => [m.getAttribute('data-message'), m.getAttribute('data-kind')])).toEqual([
       ['checkout:0', 'sync'],
@@ -48,13 +45,11 @@ describe('VistaInteractiva con una Vista de secuencia', () => {
       ['checkout:3', 'reply'],
       ['checkout:4', 'reply'],
     ]);
-    // Activaciones: api (pedir..listo), db (consultar..filas).
     expect([...container.querySelectorAll('[data-activation]')].map((e) => e.getAttribute('data-activation'))).toEqual(['api', 'db']);
     // reply se distingue de sync por el trazo (discontinuo contra continuo en el Tema neutro).
     const trazo = (id: string) => container.querySelector(`[data-message="${id}"] path`)!.getAttribute('stroke-dasharray');
     expect(trazo('checkout:0')).toBeNull();
     expect(trazo('checkout:3')).not.toBeNull();
-    // Etiquetas de los Mensajes.
     expect([...container.querySelectorAll('[data-edge-label]')].map((e) => e.textContent)).toContain('consultar');
   });
 

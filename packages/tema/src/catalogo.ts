@@ -1,11 +1,4 @@
-/**
- * Catalogo de Primitivas y de Slots (ADR 0008): la fuente unica de la que salen
- * la validacion, los mensajes y, mas adelante, `inspect` y la tabla de docs.
- * Anadir una Primitiva es una entrada aqui (mas su pintor en `render`).
- *
- * `rect`, `solid` y `border` viven aqui; el resto de las Familias forma, relleno
- * y borde estan en `familias/`, un archivo por Familia, y se suman al registro.
- */
+/** Catalogo de Primitivas y Slots: fuente unica de la validacion, los mensajes y la referencia generada. */
 import { CODIGOS, candidatosCercanos } from 'canonico';
 
 import { CATALOGO_DE_EFECTOS } from './catalogo-efectos';
@@ -19,50 +12,38 @@ import { RELLENOS } from './familias/relleno';
 import { TEXTOS } from './familias/texto';
 import { TRAZOS } from './familias/trazo';
 
-/** Valor de una propiedad de Primitiva: numero con rango, o color (nombre de Paleta). */
 export type DefinicionDePropiedad =
   | { readonly tipo: 'numero'; readonly min: number; readonly max: number; readonly defecto?: number; readonly opcional?: true }
   | { readonly tipo: 'color'; readonly opcional?: true }
   | { readonly tipo: 'opcion'; readonly valores: readonly string[]; readonly defecto?: string; readonly opcional?: true }
-  /** Nombre de un Componente de Tema: identificador que empieza en mayuscula. */
+  /** Componente de Tema: identificador que empieza en mayuscula. */
   | { readonly tipo: 'nombre' }
-  /** Texto literal entre comillas, de a lo sumo `largo` caracteres. */
+  /** Texto entre comillas de a lo sumo `largo` caracteres. */
   | { readonly tipo: 'texto'; readonly largo: number; readonly opcional?: true };
 
-/** Donde se usa una Primitiva: Capa de Nodo (defecto), Capa de la pagina (solo las de la Familia relleno, que tambien valen en el Nodo), Capa de Arista, marcador de extremo, etiqueta de Arista o estilo de texto de un Slot. */
+/** `capa-nodo` es el defecto; `capa-pagina` admite solo la Familia relleno. */
 export type UbicacionDePrimitiva = 'capa-nodo' | 'capa-arista' | 'marcador' | 'etiqueta' | 'texto-slot' | 'capa-pagina';
 
 export interface DefinicionDePrimitiva {
   readonly familia: 'forma' | 'relleno' | 'borde' | 'trazo' | 'marcador' | 'texto' | 'codigo' | FamiliaDeEfectos;
   readonly ubicacion?: UbicacionDePrimitiva;
   readonly propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
-  /** Si cambia la caja o los Slots (Metricas). Por defecto una Primitiva solo pinta. */
   readonly afectaMetricas: boolean;
-  /** Propiedades de color que cubren la caja entera: el fondo contra el que se mide el contraste del texto. Solo en la Familia relleno. */
+  /** Propiedades de color que cubren la caja: fondo contra el que se mide el contraste del texto. Solo Familia relleno. */
   readonly fondoDeTexto?: readonly string[];
-  /** Regla de caja minima que exige la forma; sin ella, cualquier caja sirve. */
   readonly cajaMinima?: 'cuadrado';
-  /** Acepta ademas propiedades no declaradas (los parametros de un Componente de Tema): numero o texto, tal cual. */
+  /** Acepta propiedades no declaradas (parametros de un Componente de Tema), numero o texto tal cual. */
   readonly abierta?: true;
 }
 
-/**
- * Propiedades de pintura que acepta toda Capa de Nodo o Grupo sin que cada
- * Primitiva las declare: `offset x y` (el DSL las escribe juntas) mueve la Capa
- * y `grow` agranda su ancho y alto. Solo pintan: ni cambian las Metricas ni
- * provocan relayout, asi que un parche de estado puede animarlas. Sin defecto:
- * ausentes, la Capa se pinta sobre la caja.
- */
+/** Propiedades comunes a toda Capa de Nodo o Grupo: `offset x y` y `grow`. Solo pintan; sin defecto. */
 export const PROPIEDADES_DE_DESPLAZAMIENTO = {
   'offset-x': { tipo: 'numero', min: -200, max: 200 },
   'offset-y': { tipo: 'numero', min: -200, max: 200 },
   grow: { tipo: 'numero', min: -100, max: 100 },
 } as const satisfies Record<string, DefinicionDePropiedad>;
 
-/**
- * `zone` (ADR 0009): propiedad comun de las Capas de Nodo que dice que parte de la caja pinta: `all` (ausente), `header`
- * (los Slots anteriores a `attrs`; sin `attrs` equivale a `all`) o `body` (la zona de `attrs`). Solo pinta.
- */
+/** `zone` de una Capa de Nodo: `all` (ausente), `header` (Slots anteriores a `attrs`; sin `attrs`, `all`) o `body` (`attrs`). */
 export const ZONAS = ['all', 'header', 'body'] as const;
 export const PROPIEDAD_DE_ZONA = { zone: { tipo: 'opcion', valores: ZONAS, opcional: true } } as const satisfies Record<string, DefinicionDePropiedad>;
 
@@ -78,7 +59,6 @@ export const CATALOGO = {
   ...RELLENOS,
   ...BORDES,
   ...CATALOGO_DE_EFECTOS,
-  // Aristas y texto de Slot: una entrada por Familia, cada una en su archivo (`familias/`).
   ...TRAZOS,
   ...MARCADORES,
   ...TEXTOS,
@@ -87,82 +67,68 @@ export const CATALOGO = {
 
 export type NombreDePrimitiva = keyof typeof CATALOGO;
 
-/** Definicion de una Primitiva con el tipo ancho (el literal del catalogo pierde las claves opcionales). */
+/** Con el tipo ancho: el literal del catalogo pierde las claves opcionales. */
 export const definicionDe = (nombre: NombreDePrimitiva): DefinicionDePrimitiva => CATALOGO[nombre];
 
-/** Nombres de las Primitivas de una Familia, en orden de catalogo: de aqui derivan las reglas de contraste, leyenda y grosor de borde. */
+/** En orden de catalogo. */
 export const primitivasDeFamilia = (familia: DefinicionDePrimitiva['familia']): NombreDePrimitiva[] =>
   (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => definicionDe(nombre).familia === familia);
 
-/** Nombres de las Primitivas declaradas para `U`; sin `ubicacion` declarada son Capas de Nodo. Sirve para tablas de pintores exhaustivas. */
+/** Sin `ubicacion` declarada, una Primitiva es Capa de Nodo. */
 export type NombreDePrimitivaEn<U extends UbicacionDePrimitiva> = {
   [K in NombreDePrimitiva]: (typeof CATALOGO)[K] extends { readonly ubicacion: infer V } ? (V extends U ? K : never) : U extends 'capa-nodo' ? K : never;
 }[NombreDePrimitiva];
 
-/** Definicion de un Slot: con que Primitiva se estiliza, si se estira en su fila y, para los de texto, tamano y interlineado por defecto. */
 export interface DefinicionDeSlot {
   readonly estilo: 'text' | 'icon' | 'chip';
   readonly elastico: boolean;
-  /** `true`: Slot de una sola linea de texto (titulo, insignia, contador...), medido con `textoDeSlot`; no se deriva del estilo (`attrs` es `text` y no lo es, `counter` es `chip` y si). */
+  /** Slot de una sola linea de texto, medido con `textoDeSlot`; no se deriva del estilo (`attrs` es `text` y no lo es). */
   readonly texto?: true;
-  /** Tamano del texto respecto al del Tema (`size` lo cambia). */
+  /** Relativo al tamano de texto del Tema. */
   readonly escala?: number;
-  /** Alto de la linea respecto al tamano del texto (`leading` lo cambia); sin el, el alto de cabecera de las Metricas. */
+  /** Relativo al tamano del texto; sin el, el alto de cabecera de las Metricas. */
   readonly interlineado?: number;
 }
 
-/**
- * Slots que el catalogo sabe colocar. Un Slot nuevo es una entrada en
- * `DEFINICION_DE_SLOT`, su medida en `slots.ts` y su pintor en `render`; el
- * algoritmo de colocacion no cambia.
- */
 export const DEFINICION_DE_SLOT = {
-  /** Icono del Tipo de nodo: caja de lado fijo (Primitiva `icon`). */
   icon: { estilo: 'icon', elastico: false },
-  /** Titulo: texto que se estira para ocupar el espacio libre de su fila. */
   title: { estilo: 'text', elastico: true, texto: true },
-  /** Insignia: el Tipo de nodo, en texto pequeno (normalmente bajo el titulo). */
+  /** El Tipo de nodo. */
   badge: { estilo: 'text', elastico: true, texto: true, escala: 0.74, interlineado: 1.25 },
-  /** Descripcion del Nodo; no reserva espacio si no tiene. */
   desc: { estilo: 'text', elastico: true, texto: true, escala: 0.85, interlineado: 1.25 },
-  /** Pie: la fuente del Nodo (la primera `source` del Modelo); no reserva espacio si no tiene. */
+  /** La primera `source` del Nodo. */
   footer: { estilo: 'text', elastico: true, texto: true, escala: 0.75, interlineado: 1.25 },
-  /** Filas de Atributo: una por Atributo visible. */
   attrs: { estilo: 'text', elastico: true },
-  /** Contador: cuantos hijos esconde un Grupo colapsado, en una caja (Primitiva `chip`); solo existe en el colapsado. */
+  /** Hijos que esconde un Grupo colapsado. */
   counter: { estilo: 'chip', elastico: false, texto: true, escala: 0.8, interlineado: 1.25 },
 } as const satisfies Record<string, DefinicionDeSlot>;
 export type NombreDeSlot = keyof typeof DEFINICION_DE_SLOT;
 export const SLOTS = Object.keys(DEFINICION_DE_SLOT) as NombreDeSlot[];
-/** Slots de una sola linea de texto: los que declaran `texto` en su definicion. */
 export type NombreDeSlotDeTexto = { [S in NombreDeSlot]: (typeof DEFINICION_DE_SLOT)[S] extends { readonly texto: true } ? S : never }[NombreDeSlot];
 export const SLOTS_DE_TEXTO = SLOTS.filter((slot): slot is NombreDeSlotDeTexto => 'texto' in DEFINICION_DE_SLOT[slot]);
 
-/** Primitiva ya validada: propiedades completas (con defectos), colores aun como nombre de Paleta. */
+/** Ya validada: propiedades con defectos, colores aun como nombre de Paleta. */
 export interface Primitiva {
   tipo: NombreDePrimitiva;
   props: Record<string, number | string>;
 }
 
-/** Error de catalogo; `clave` situa la propiedad culpable para quien conoce las posiciones del texto. */
+/** `clave` situa la propiedad culpable. */
 export interface ErrorDeCatalogo {
   codigo: string;
   mensaje: string;
   clave?: string;
   hint?: string;
-  /** Unico candidato cercano ("quisiste decir"): el que un `fix` puede aplicar sin ambiguedad. */
+  /** Solo si hay un unico candidato cercano. */
   candidato?: string;
 }
 
 const esPrimitiva = (nombre: string): nombre is NombreDePrimitiva => Object.hasOwn(CATALOGO, nombre);
 const ubicacionDe = (nombre: NombreDePrimitiva): UbicacionDePrimitiva => definicionDe(nombre).ubicacion ?? 'capa-nodo';
-/** La pagina admite los rellenos; el resto de las ubicaciones, solo las Primitivas declaradas para ella. */
 const valeEn = (nombre: NombreDePrimitiva, ubicacion: UbicacionDePrimitiva): boolean =>
   ubicacion === 'capa-pagina' ? definicionDe(nombre).familia === 'relleno' : ubicacionDe(nombre) === ubicacion;
-/** Nombres de las Primitivas que valen en `ubicacion`. */
 export const primitivasDe = (ubicacion: UbicacionDePrimitiva): string[] =>
   (Object.keys(CATALOGO) as NombreDePrimitiva[]).filter((nombre) => valeEn(nombre, ubicacion));
-/** Ubicaciones donde vale una Primitiva (para la referencia generada). */
 export const ubicacionesDe = (nombre: NombreDePrimitiva): UbicacionDePrimitiva[] =>
   valeEn(nombre, 'capa-pagina') ? [ubicacionDe(nombre), 'capa-pagina'] : [ubicacionDe(nombre)];
 export const esSlot = (nombre: string): nombre is NombreDeSlot => Object.hasOwn(DEFINICION_DE_SLOT, nombre);
@@ -173,11 +139,7 @@ export const sugerir = (escrito: string, existentes: Iterable<string>): { hint?:
   return candidatos.length === 0 ? {} : { hint: `quisiste decir ${candidatos.map((c) => `'${c}'`).join(' o ')}`, ...(candidatos.length === 1 && unico !== undefined && { candidato: unico }) };
 };
 
-/**
- * Valida una Primitiva contra el catalogo y devuelve todos los errores a la vez.
- * Un valor fuera de rango o de otro tipo es un error, nunca se recorta. Los
- * valores llegan como se escriben en el DSL (texto) y los numeros se leen aqui.
- */
+/** Devuelve todos los errores a la vez; fuera de rango es error, nunca se recorta. Los valores llegan como texto del DSL. */
 export function construirPrimitiva(
   tipo: string,
   props: ReadonlyArray<{ clave: string; valor: string | number }>,
@@ -204,21 +166,16 @@ export function construirPrimitiva(
   return errores.length > 0 ? { errores } : { primitiva: { tipo, props: propiedades }, errores };
 }
 
-/** Lo que describe un conjunto de propiedades para `validarPropiedades`: como se nombra en los mensajes y cuales admite. */
 export interface ConjuntoDePropiedades {
-  /** Sujeto de los mensajes, p. ej. `La Primitiva 'rect'`. */
+  /** P. ej. `La Primitiva 'rect'`. */
   sujeto: string;
-  /** Nombre entre comillas para "'clave' de 'rect' debe ser ...". */
+  /** Para "'clave' de 'rect' debe ser ...". */
   nombre: string;
   propiedades: Readonly<Record<string, DefinicionDePropiedad>>;
   abierta?: boolean;
 }
 
-/**
- * Valida propiedades `clave valor` contra su definicion (la regla unica de
- * rangos, opciones, colores y defectos): Primitivas y bloques de disposicion
- * de Slots comparten estos mensajes y sugerencias.
- */
+/** Regla unica de rangos, opciones, colores y defectos, compartida por Primitivas y cajas de Slots. */
 export function validarPropiedades(
   conjunto: ConjuntoDePropiedades,
   props: ReadonlyArray<{ clave: string; valor: string | number }>,
@@ -295,10 +252,7 @@ export function validarPropiedades(
 }
 
 
-/**
- * Sustituye cada valor `$token` por el numero del bloque `tokens` del Tema. Un
- * token no declarado o no numerico es un error (nunca un valor por defecto).
- */
+/** Un token no declarado o no numerico es un error, nunca un valor por defecto. */
 export function resolverTokens(
   props: ReadonlyArray<{ clave: string; valor: string | number }>,
   tokens: Readonly<Record<string, string>>,

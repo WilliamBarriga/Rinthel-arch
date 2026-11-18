@@ -53,7 +53,7 @@ theme mio extends neutral {
 view compra { type sequence interaction compra theme mio }
 ```
 
-- Para ver la pila de un Elemento: `dg inspect tema mio --workspace <ruta> --diagrama sequence`. Referencia: `docs/guia/personalizar-temas.md` (secciones Tablas ER y Secuencia), `examples/temas/secuencia.dg`, `examples/temas/er.dg` y los rangos en `docs/referencia-catalogo.md`.
+- Para ver la pila de un Elemento: `dg inspect tema mio --workspace <ruta> --diagrama sequence` (o `er`); los que el Tema no declara salen marcados `(derivado)` (`derivado: true` en `--json`), tal como se dibujan. Referencia: `docs/guia/personalizar-temas.md` (secciones Tablas ER y Secuencia), `examples/temas/secuencia.dg`, `examples/temas/er.dg` y los rangos en `docs/referencia-catalogo.md`.
 
 ## Reglas que ahorran errores
 

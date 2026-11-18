@@ -1,7 +1,4 @@
-/**
- * Resolucion de Vistas: que Nodos y Aristas muestra una Vista del Modelo.
- * Pura: no modifica la Fuente. Una Vista solo selecciona, nunca define entidades.
- */
+/** Resolucion pura de Vistas. Una Vista solo selecciona Nodos del Modelo, nunca define entidades. */
 import type { Arista, Extremo, FuenteCanonica, Nodo, OverrideDeNodo, Paso, Vista } from './esquema';
 import { resolverSecuencia } from './secuencia';
 import type { InteraccionResuelta } from './secuencia';
@@ -10,13 +7,13 @@ import type { InteraccionResuelta } from './secuencia';
 export interface NodoResuelto extends Omit<Nodo, 'children'> {
   /** Solo los hijos visibles; vacio en un Grupo colapsado. */
   children: NodoResuelto[];
-  /** El Grupo se muestra cerrado. Un Nodo sin hijos nunca esta colapsado. */
+  /** Un Nodo sin hijos nunca esta colapsado. */
   collapsed: boolean;
-  /** Lo que se escribe en el Nodo: el `label` del override de la Vista o, si no, su titulo. */
+  /** `label` del override de la Vista o, si no, `title`. */
   label: string;
-  /** Nombre de Paleta: el del override de la Vista o, si no, el del Tipo de nodo; sin color si ninguno lo declara. */
+  /** Nombre de Paleta: el del override de la Vista o, si no, el del Tipo de nodo. */
   color?: string;
-  /** Clave de icono del Tipo de nodo (opaca; la resuelve el `IconProvider`); sin icono si el Tipo no lo declara. */
+  /** Clave opaca del Tipo de nodo; la resuelve el `IconProvider`. */
   icon?: string;
   /** Hijos directos del Nodo en el Modelo (visibles o no). */
   childCount: number;
@@ -29,49 +26,51 @@ export interface AristaResuelta extends Arista {
   count: number;
 }
 
-/** Paso tal como lo ve quien dibuja. En secuencia `corte` es la `ruta` del Mensaje proyectado hasta el que se muestra (incluido). */
+/** Paso de secuencia: corte del tiempo en el Mensaje proyectado de `ruta` `corte`, incluido. */
 export interface PasoResuelto extends Paso {
-  corte?: string;
+  corte: string;
 }
 
-/** Nodos y Aristas visibles de una Vista, mas lo que `layout` y `render` necesitan de ella. */
-export interface VistaResuelta {
-  /** Tipo de diagrama de la Vista; elige el algoritmo de layout y entra en las claves de cache. */
-  type: Vista['type'];
+export interface VistaDeGrafo {
+  /** Elige el algoritmo de layout y entra en las claves de cache. */
+  type: 'architecture' | 'flow' | 'er';
   /** Nodos visibles en orden de documento. */
   nodes: NodoResuelto[];
   /** Aristas entre Nodos visibles, con las de los hijos de un Grupo colapsado elevadas a el. */
   edges: AristaResuelta[];
-  /** Overrides de presentacion de la Vista, tal cual (label, pin, order, color). */
+  /** Tal cual en la Vista; de aqui salen los Pins. */
   overrides: OverrideDeNodo[];
-  /** Pasos de revelado de la Vista (ADR 0002), tal cual; `revealAt` los interpreta. */
-  steps: PasoResuelto[];
-  /** Solo en Vistas `sequence`: la Interaccion proyectada. Sus `nodes` son las Lifelines, en orden de columna, y no hay `edges`. */
-  interaction?: InteraccionResuelta;
+  /** Tal cual en la Vista; los interpreta `revealAt`. */
+  steps: Paso[];
 }
 
-/** Estado de colapso del llamador (p. ej. el shell); gana a lo declarado en la Vista. */
+/** Sin Aristas ni Pins: el layout de secuencia es determinista y el orden de columnas lo da `order`. */
+export interface VistaDeSecuencia {
+  type: 'sequence';
+  /** Lifelines en orden de columna, sin hijos. */
+  nodes: NodoResuelto[];
+  /** La Interaccion proyectada; vacia (sin Mensajes) si la Vista nombra una que no existe (`validate` lo informa). */
+  interaction: InteraccionResuelta;
+  steps: PasoResuelto[];
+}
+
+export type VistaResuelta = VistaDeGrafo | VistaDeSecuencia;
+
+/** Estado de colapso del llamador (p. ej. la shell); gana a lo declarado en la Vista. */
 export interface EstadoDeColapso {
   expanded?: readonly string[];
   collapsed?: readonly string[];
 }
 
 /**
- * Resuelve la Vista `viewId`: `include` (`a` un Nodo, `a.*` hijos directos,
- * `a.**` descendientes, `*` raices, `**` todo), menos `exclude`. Devuelve
- * `undefined` si la Vista no existe. Los selectores que no coinciden con ningun
- * Nodo no dan error, y `exclude` no arrastra a los descendientes del Nodo excluido.
+ * `include` (`a` un Nodo, `a.*` hijos directos, `a.**` descendientes, `*` raices, `**` todo) menos `exclude`;
+ * `undefined` si la Vista no existe. Un selector sin coincidencias no es error, y `exclude` no arrastra
+ * descendientes. `color` es un nombre de Paleta; el valor literal lo pone el Tema.
  *
- * Cada Nodo resuelto lleva su `label` y su `color` (override sobre Tipo de nodo,
- * ADR 0002); el valor literal lo pone el Tema, nunca esta capa.
- *
- * Colapso: un Grupo (Nodo con hijos) esta colapsado si tiene `link`; si no, por
- * precedencia, segun `estado`, luego `collapsed`/`expanded` de la Vista y luego
- * `depth` (el Grupo de nivel >= `depth` abre colapsado; las raices son el nivel
- * 1). Un Nodo bajo un Grupo colapsado no es visible, y las Aristas de sus
- * descendientes se elevan al Grupo y se fusionan por par de extremos (se pierde
- * el Atributo del extremo elevado; las internas al Grupo desaparecen).
- * `depth 0` no muestra nada.
+ * Un Grupo con `link` siempre esta colapsado; si no, decide por precedencia `estado`, luego `collapsed`/`expanded`
+ * de la Vista y luego `depth` (nivel >= `depth` abre colapsado; las raices son nivel 1; `depth 0` no muestra nada).
+ * Bajo un Grupo colapsado nada es visible: las Aristas de sus descendientes se elevan al Grupo y se fusionan por
+ * par de extremos (se pierde el Atributo elevado; las internas al Grupo desaparecen).
  */
 export function resolveView(
   fuente: FuenteCanonica,
@@ -126,7 +125,7 @@ export function resolveView(
 
   if (vista.type === 'sequence') {
     const { nodes, interaction } = resolverSecuencia(fuente.model.interactions, fuente.model.nodes, vista, excluidos, resolver, ancestroColapsado);
-    return { type: vista.type, nodes, edges: [], overrides: vista.overrides, steps: pasosDeSecuencia(vista, interaction), ...(interaction !== undefined && { interaction }) };
+    return { type: vista.type, nodes, interaction, steps: pasosDeSecuencia(vista, interaction) };
   }
 
   return {
@@ -139,12 +138,11 @@ export function resolveView(
 }
 
 /**
- * Pasos de una Vista de secuencia: cada `upto` se resuelve al Mensaje proyectado con ese id (un Paso cuyo Mensaje no
- * existe o no se proyecta se omite: `validate` lo informa); `steps each` da un Paso por Mensaje proyectado, titulado con
- * su etiqueta (sin el numero de `autonumber`) o `from -> to`.
+ * Un Paso cuyo `upto` no existe o no se proyecta se omite (`validate` lo informa). `steps each` da un Paso por
+ * Mensaje proyectado, titulado con su etiqueta sin el numero de `autonumber`, o `from -> to`.
  */
-function pasosDeSecuencia(vista: Vista, interaccion: InteraccionResuelta | undefined): PasoResuelto[] {
-  const mensajes = interaccion?.messages ?? [];
+function pasosDeSecuencia(vista: Vista, interaccion: InteraccionResuelta): PasoResuelto[] {
+  const mensajes = interaccion.messages;
   if (vista.stepsEach === true && vista.steps.length === 0) {
     return mensajes.map((mensaje) => {
       const etiqueta = mensaje.numero === undefined ? mensaje.label : mensaje.label?.slice(`${mensaje.numero}. `.length);
@@ -157,7 +155,6 @@ function pasosDeSecuencia(vista: Vista, interaccion: InteraccionResuelta | undef
   });
 }
 
-/** Un Nodo sin hijos nunca esta colapsado; un Grupo con `link` siempre lo esta. */
 function estaColapsado(nodo: Nodo, vista: Vista, estado: EstadoDeColapso): boolean {
   if (nodo.children.length === 0) return false;
   if (vista.links.some((enlace) => enlace.node === nodo.id)) return true;
@@ -168,11 +165,7 @@ function estaColapsado(nodo: Nodo, vista: Vista, estado: EstadoDeColapso): boole
   return vista.depth !== undefined && nivel(nodo.id) >= vista.depth;
 }
 
-/**
- * Aristas entre Nodos visibles. Un extremo dentro de un Grupo colapsado pasa a
- * ser el Grupo; las que quedan con ambos extremos iguales se descartan y las
- * que repiten par se fusionan sumando `count`.
- */
+/** Las que quedan con ambos extremos en el mismo Grupo se descartan; las que repiten par se fusionan sumando `count`. */
 function elevarAristas(
   aristas: readonly Arista[],
   visibles: ReadonlySet<string>,
@@ -203,7 +196,7 @@ function elevar(extremo: Extremo, ancestroColapsado: ReadonlyMap<string, string>
   return grupo === undefined ? extremo : { node: grupo };
 }
 
-/** Todos los Nodos a cualquier profundidad, en orden de documento. */
+/** En orden de documento. */
 function aplanar(nodos: readonly Nodo[]): Nodo[] {
   return nodos.flatMap((nodo) => [nodo, ...aplanar(nodo.children)]);
 }
@@ -212,7 +205,6 @@ function nivel(id: string): number {
   return id.split('.').length;
 }
 
-/** Si el id cae dentro de lo que designa el selector (`a`, `a.*`, `a.**`, `*`, `**`). */
 export function matchesSelector(selector: string, id: string): boolean {
   if (selector === '**') return true;
   if (selector === '*') return nivel(id) === 1;

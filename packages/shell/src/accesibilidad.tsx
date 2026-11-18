@@ -1,9 +1,4 @@
-/**
- * Accesibilidad del visor (ADR 0008): interruptor de reduced-motion, interruptor de `alto-contraste`, que sigue a
- * `prefers-contrast: more` y reemplaza el Tema solo en el visor, y la leyenda
- * derivada del Tema (Tipo, forma, color), que se muestra sola cuando dos Tipos
- * solo difieren por color. No toca el Workspace ni el Modelo.
- */
+/** Accesibilidad del visor: interruptores de reduced-motion y alto contraste, y leyenda de Tipos. No toca el Workspace ni el Modelo. */
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
@@ -67,7 +62,7 @@ export function useAltoContraste(tema: Tema, props: PropsDeAltoContraste): { tem
 const CONSULTA_MOVIMIENTO = '(prefers-reduced-motion: reduce)';
 
 /**
- * Interruptor manual de reduced-motion (ADR 0008, US39), independiente de la preferencia
+ * Interruptor manual de reduced-motion, independiente de la preferencia
  * del sistema: `reducedMotion` es `undefined` hasta tocarlo (manda `prefers-reduced-motion`);
  * despues `on`/`off` fijan la politica de `Diagram`. El boton arranca pulsado si el sistema lo pide.
  */
@@ -92,7 +87,7 @@ export function Leyenda({ fuente, vista, tema, modo }: { fuente: FuenteCanonica;
   const tipos = fuente.specification.nodeTypes
     .filter((t) => usados.has(t.name))
     .map((t) => ({ name: t.name, color: typeof t['color'] === 'string' ? t['color'] : undefined, icon: t.icon }));
-  const leyenda = leyendaDelTema(tema, tipos);
+  const leyenda = leyendaDelTema(tema, vista.type, tipos);
   if (tipos.length === 0 || (modo === 'auto' && !leyenda.necesaria)) return null;
   return (
     <ul className="rd-chrome rd-leyenda" data-leyenda aria-label="Leyenda">

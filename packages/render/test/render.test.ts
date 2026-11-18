@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
-import type { IconProvider, Tema, VistaResuelta } from 'canonico';
+import type { IconProvider, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
 import { layoutView as layoutDeVista } from 'layout';
 
 import { aHtml, etiquetaCon, rectDe } from './ayudas';
@@ -25,7 +25,7 @@ const nodo = (id: string, title: string, type: string, children: unknown[] = [])
 });
 
 /** Grupo `a` con dos servicios, una base fuera y un override de color y label. */
-function vista(estado = {}): VistaResuelta {
+function vista(estado = {}): VistaDeGrafo {
   const fuente = fuenteCanonicaSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio', color: 'blue' }, { name: 'base', color: 'green' }] },
     model: {
@@ -37,7 +37,7 @@ function vista(estado = {}): VistaResuelta {
     },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], overrides: [{ node: 'db', color: 'red', label: 'Postgres' }] }],
   });
-  return resolveView(fuente, 'v', estado)!;
+  return resolveView(fuente, 'v', estado) as VistaDeGrafo;
 }
 
 const OSCURO: TemaResuelto = {
@@ -211,7 +211,7 @@ describe('Diagram: Atributos e iconos', () => {
     const { view, icons } = tabla();
     const geometry = await layoutView(view, TEMA_NEUTRO);
     const svg = aHtml({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons });
-    const { cabecera, fila } = metricasDe(TEMA_NEUTRO);
+    const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
     const caja = geometry.nodes['usuarios']!;
     const fin = geometry.edges['api -> usuarios#email']!.points.at(-1)!;
     const slot = rectDe(etiquetaCon(svg, 'data-slot="attrs"'));
@@ -282,7 +282,7 @@ describe('Metricas compartidas: layout y dibujo', () => {
   });
   const view = resolveView(fuente, 'v')!;
 
-  async function dibujarCon(metricas = metricasDe(TEMA_NEUTRO)) {
+  async function dibujarCon(metricas = metricasDe(TEMA_NEUTRO, 'architecture')) {
     const geometry = await layoutView(view, TEMA_NEUTRO, { metricas });
     const html = aHtml({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, metricas });
     const zona = rectDe(etiquetaCon(html, 'data-slot="attrs"'));
@@ -296,7 +296,7 @@ describe('Metricas compartidas: layout y dibujo', () => {
   }
 
   it('lo dibujado cabe en lo reservado: filas dentro de la caja y texto dentro del ancho', async () => {
-    const m = metricasDe(TEMA_NEUTRO);
+    const m = metricasDe(TEMA_NEUTRO, 'architecture');
     const { caja, filas } = await dibujarCon();
 
     expect(filas).toHaveLength(2);
@@ -307,7 +307,7 @@ describe('Metricas compartidas: layout y dibujo', () => {
   });
 
   it('cambiar una Metrica mueve layout y dibujo a la vez, y lo dibujado sigue cabiendo', async () => {
-    const m = metricasDe(TEMA_NEUTRO);
+    const m = metricasDe(TEMA_NEUTRO, 'architecture');
     const base = await dibujarCon();
     const otra = await dibujarCon({ ...m, cabecera: m.cabecera + 12, fila: m.fila + 6, paddingHorizontal: m.paddingHorizontal + 16 });
 

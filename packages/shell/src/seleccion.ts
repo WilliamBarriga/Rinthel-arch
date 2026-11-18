@@ -1,7 +1,4 @@
-/**
- * Seleccion de elementos: controlada por id (`selected`) o propia (una `Seleccion` con tipo de elemento).
- * Devuelve la Seleccion vigente, los Estados para el render y la accion de pulsar un elemento.
- */
+/** Seleccion de elementos: controlada por ids (`selected`, `selection`) o propia. */
 import { useMemo, useState } from 'react';
 
 import type { VistaResuelta } from 'canonico';

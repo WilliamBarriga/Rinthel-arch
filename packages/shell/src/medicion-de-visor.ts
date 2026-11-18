@@ -1,13 +1,6 @@
 /**
- * Adaptador de medicion del visor (ADR 0008): mide con la fuente real. Antes de
- * medir cada texto espera `document.fonts.load(<fuente>, <texto>)` (`ready` y
- * `check` no bastan) y mide con el lienzo del navegador. Devuelve datos
- * (`MedidasDeTexto`) que el layout recibe como entrada, de modo que el Worker no
- * toca el DOM. Las fuentes son archivos del Workspace auto-hospedados (el
- * `@font-face` ya debe estar en la pagina: lo declara `VistaInteractiva` desde
- * `fontFiles`; aqui no hay CDN); `hashes` lleva el hash del archivo de cada familia
- * (`hashesDeFamilias`).
- * Las dos costuras del navegador (`cargar`, `ancho`) son inyectables.
+ * Medicion de texto en el visor con la fuente real: antes de medir cada texto espera `document.fonts.load(fuente, texto)`
+ * (`ready` y `check` no bastan). El `@font-face` ya debe estar en la pagina (lo declara `VistaInteractiva` desde `fontFiles`).
  */
 import { CODIGOS } from 'canonico';
 import type { IssueDeDev } from 'canonico';
@@ -63,7 +56,7 @@ function anchoConLienzo(): (fuente: string, texto: string) => number {
   };
 }
 
-/** Mide `textos` con las fuentes ya cargadas. */
+/** Mide `textos` con el lienzo del navegador, tras cargar la fuente de cada uno. */
 export async function medirEnVisor(textos: readonly TextoAMedir[], opciones: OpcionesDeMedicion = {}): Promise<MedidasDeTexto> {
   const cargar = opciones.cargar ?? ((fuente, texto) => document.fonts.load(fuente, texto));
   const ancho = opciones.ancho ?? anchoConLienzo();

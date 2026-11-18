@@ -1,19 +1,15 @@
-/**
- * Accesibilidad del Tema (ADR 0008): contraste por Tipo y estado, `solo-color`
- * y leyenda derivada. Solo calcula; que sea warning y no bloquee el render lo
- * decide quien emite el issue. Puro y determinista.
- */
+/** Accesibilidad del Tema: contraste por Tipo y estado, `solo-color` y leyenda derivada. Solo calcula. */
 import type { Tema, TipoDeMensaje } from 'canonico';
 
 import { CATALOGO, definicionDe, primitivasDeFamilia } from './catalogo';
 import type { DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
 import { hexARgb } from './color';
 import { estiloResuelto } from './estilo';
-import { capasDeAristaEr, pinturaDeMensajeConTema } from './mensajes';
+import { capasDeAristaEr } from './mensajes';
 import { muestra } from './contenido';
 import { resolverTema } from './tema';
 import type { CapaPintada, PrimitivaPintada } from './estilo';
-import type { Estado } from './parches';
+import type { Estado, TipoDeDiagrama } from './parches';
 
 type Rgb = readonly [number, number, number];
 
@@ -28,7 +24,7 @@ function leerColor(texto: string): { rgb: Rgb; alfa: number } | undefined {
   return m === null ? undefined : { rgb: [Number(m[1]), Number(m[2]), Number(m[3])], alfa: Number(m[4]) };
 }
 
-/** Color opaco: el translucido se compone sobre `fondo`. */
+/** El translucido se compone sobre `fondo`. */
 function opaco(texto: string, fondo: Rgb): Rgb | undefined {
   const color = leerColor(texto);
   if (color === undefined) return undefined;
@@ -48,18 +44,17 @@ const razon = (a: Rgb, b: Rgb): number => {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 };
 
-/** Razon de contraste WCAG entre dos colores (hex o `rgba(...)`, este sobre blanco); `undefined` si alguno no se entiende. */
+/** Razon WCAG entre hex o `rgba(...)` (compuesto sobre blanco); `undefined` si alguno no se entiende. */
 export function razonDeContraste(a: string, b: string): number | undefined {
   const [ca, cb] = [opaco(a, [255, 255, 255]), opaco(b, [255, 255, 255])];
   return ca === undefined || cb === undefined ? undefined : razon(ca, cb);
 }
 
 export interface AdvertenciaDeContraste {
-  /** Tipo de nodo evaluado. */
   tipo: string;
   estado: 'base' | Estado;
   parte: 'texto' | 'grafico';
-  /** Capa de la pila que pone el color evaluado, para `related`. */
+  /** Capa que pone el color evaluado. */
   capa: string;
   razon: number;
   minimo: number;
@@ -85,13 +80,11 @@ function evaluar(pila: readonly CapaPintada[], fondo: Rgb, texto: Rgb): Array<{ 
 }
 
 /**
- * Advertencias de contraste del Tema por Tipo de nodo y estado: el texto
- * (`tokens.foreground`) contra el relleno vigente (4.5:1) y el borde contra el
- * fondo de la pagina (3:1). `tipos` mapea cada Tipo a su color de Paleta. Un
- * estado solo avisa si empeora lo que ya avisaba el base.
+ * Texto (`tokens.foreground`) contra el relleno (4.5:1) y borde contra el fondo de pagina (3:1), por Tipo y estado.
+ * Un estado solo avisa si empeora el base. Ignora los parches de Tipo de diagrama.
  */
 export function advertenciasDeContraste(tema: Tema, tipos: Readonly<Record<string, string | undefined>>): AdvertenciaDeContraste[] {
-  const estilo = estiloResuelto(tema, { tipos });
+  const estilo = estiloResuelto(tema, { diagrama: undefined, tipos });
   const fondo = hexARgb(resolverTema(tema).tokens.background) ?? ([255, 255, 255] as const);
   const texto = hexARgb(resolverTema(tema).tokens.foreground) ?? ([0, 0, 0] as const);
   const avisos: AdvertenciaDeContraste[] = [];
@@ -121,7 +114,6 @@ export function advertenciasDeContraste(tema: Tema, tipos: Readonly<Record<strin
 
 export interface TipoParaLeyenda {
   name: string;
-  /** Nombre de Paleta del color del Tipo. */
   color?: string | undefined;
   icon?: string | undefined;
 }
@@ -134,13 +126,11 @@ const quitarColor = (capa: CapaPintada) => ({
 });
 
 /**
- * Pares de Tipos que se distinguen unicamente por color de Paleta: misma pila
- * de Capas (sin contar colores) en reposo y en cada estado, mismo icono, y
- * colores pintados distintos. Orden de declaracion. Si el Nodo muestra la
- * insignia (`badge`, el nombre del Tipo en texto) ningun par es solo-color.
+ * Pares de Tipos con la misma pila sin colores (en reposo y en cada estado) y el mismo icono, pero colores distintos;
+ * en orden de declaracion. Si el Nodo muestra `badge` no hay ninguno. `diagrama` `undefined`: sin parches de diagrama.
  */
-export function tiposSoloColor(tema: Tema, tipos: readonly TipoParaLeyenda[]): Array<[string, string]> {
-  const estilo = estiloResuelto(tema, { tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
+export function tiposSoloColor(tema: Tema, diagrama: TipoDeDiagrama | undefined, tipos: readonly TipoParaLeyenda[]): Array<[string, string]> {
+  const estilo = estiloResuelto(tema, { diagrama, tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
   if (muestra(estilo.metricas, 'badge')) return [];
   const firma = (t: TipoParaLeyenda) => {
     const p = estilo.pintura.nodo.tipos[t.name]!;
@@ -159,7 +149,6 @@ export function tiposSoloColor(tema: Tema, tipos: readonly TipoParaLeyenda[]): A
 
 const quitarColorDeMarcador = (marcador: PrimitivaPintada | undefined) => (marcador === undefined ? null : quitarColor({ nombre: '', tipo: marcador.tipo, props: marcador.props }));
 
-/** Pares de variantes (`{ capas, origen?, fin? }`) con la misma estructura de trazo y marcadores (sin contar colores) pero distinto color. */
 function paresSoloColor<T extends string>(nombres: readonly T[], pintura: (nombre: T) => { capas: readonly CapaPintada[]; origen?: PrimitivaPintada | undefined; fin?: PrimitivaPintada | undefined }): Array<[T, T]> {
   const firmas = nombres.map((nombre) => {
     const { capas, origen, fin } = pintura(nombre);
@@ -174,16 +163,13 @@ function paresSoloColor<T extends string>(nombres: readonly T[], pintura: (nombr
   return pares;
 }
 
-/**
- * Pares de tipos de Mensaje que el Tema distingue unicamente por color (ADR 0009, `solo-color`): mismo trazo y
- * marcadores salvo el color. Solo cuenta los tipos dados (los que usa la Vista); orden de aparicion.
- */
+/** Solo entre los `tipos` dados, en su orden. */
 export function mensajesSoloColor(tema: Tema, tipos: readonly TipoDeMensaje[]): Array<[TipoDeMensaje, TipoDeMensaje]> {
   const estilo = estiloResuelto(tema, { diagrama: 'sequence' });
-  return paresSoloColor(tipos, (kind) => pinturaDeMensajeConTema(estilo.pintura.secuencia, estilo.pintura.arista, undefined, kind));
+  const { tipos: porTipo } = estilo.pintura.secuencia!.mensaje.base;
+  return paresSoloColor(tipos, (kind) => porTipo[kind]!);
 }
 
-/** El Tema pinta las Aristas identificantes y las no identificantes de una Vista ER iguales salvo el color. */
 export function aristaIdentificanteSoloColor(tema: Tema): boolean {
   const { arista } = estiloResuelto(tema, { diagrama: 'er' }).pintura;
   return paresSoloColor(['identificante', 'no-identificante'] as const, (nombre) => ({ capas: capasDeAristaEr(arista, nombre === 'identificante') })).length > 0;
@@ -191,24 +177,23 @@ export function aristaIdentificanteSoloColor(tema: Tema): boolean {
 
 export interface EntradaDeLeyenda {
   tipo: string;
-  /** Primitiva de la Familia forma del Tipo (`rect` si no declara otra). */
+  /** `rect` si el Tipo no declara otra. */
   forma: string;
-  /** Color pintado del Tipo (valor de Paleta), o `undefined` si no tiene. */
+  /** Valor de Paleta. */
   color: string | undefined;
 }
 
 export interface Leyenda {
   entradas: EntradaDeLeyenda[];
-  /** Hay Tipos que solo difieren por color: la leyenda debe mostrarse sola. */
+  /** Hay Tipos que solo difieren por color. */
   necesaria: boolean;
 }
 
-/** Leyenda derivada del Tema (Tipo, forma, color) para los Tipos dados. */
-export function leyendaDelTema(tema: Tema, tipos: readonly TipoParaLeyenda[]): Leyenda {
-  const estilo = estiloResuelto(tema, { tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
+export function leyendaDelTema(tema: Tema, diagrama: TipoDeDiagrama | undefined, tipos: readonly TipoParaLeyenda[]): Leyenda {
+  const estilo = estiloResuelto(tema, { diagrama, tipos: Object.fromEntries(tipos.map((t) => [t.name, t.color])) });
   const paleta = resolverTema(tema).palette;
   return {
-    necesaria: tiposSoloColor(tema, tipos).length > 0,
+    necesaria: tiposSoloColor(tema, diagrama, tipos).length > 0,
     entradas: tipos.map((t) => ({
       tipo: t.name,
       forma: ultima(estilo.pintura.nodo.tipos[t.name]!.capas, primitivasDeFamilia('forma'))?.tipo ?? 'rect',

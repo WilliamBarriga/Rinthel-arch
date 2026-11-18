@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, resolveView } from 'canonico';
-import type { EstadoDeColapso } from 'canonico';
+import type { EstadoDeColapso, VistaDeGrafo } from 'canonico';
+
+const resolverGrafo = (...args: Parameters<typeof resolveView>) => resolveView(...args) as VistaDeGrafo | undefined;
 
 const nodo = (id: string, children: unknown[] = []) => ({
   id,
@@ -75,7 +77,7 @@ describe('resolveView', () => {
   });
 
   it('las Aristas visibles son las que tienen ambos extremos visibles', () => {
-    const vista = resolveView(fuente({ include: ['a.*', 'c'] }), 'v');
+    const vista = resolverGrafo(fuente({ include: ['a.*', 'c'] }), 'v');
 
     expect(vista?.edges).toEqual([{ from: { node: 'a.a2' }, to: { node: 'c' }, count: 1 }]);
   });
@@ -136,7 +138,7 @@ describe('resolveView: colapso de Grupos', () => {
   });
 
   it('las Aristas de los hijos se elevan al Grupo colapsado y se fusionan por par de extremos', () => {
-    const vista = resolveView(fuente({ include: ['**'], depth: 1 }), 'v');
+    const vista = resolverGrafo(fuente({ include: ['**'], depth: 1 }), 'v');
 
     expect(vista?.edges).toEqual([
       { from: { node: 'a' }, to: { node: 'b' }, count: 2 },
@@ -146,8 +148,8 @@ describe('resolveView: colapso de Grupos', () => {
 
   it('una Arista interna de un Grupo colapsado desaparece y reaparece al expandirlo', () => {
     const interna = [{ from: { node: 'a.a1' }, to: { node: 'a.a2' } }];
-    const cerrado = resolveView(fuente({ include: ['**'], depth: 1 }, interna), 'v');
-    const abierto = resolveView(fuente({ include: ['**'], depth: 1, expanded: ['a'] }, interna), 'v');
+    const cerrado = resolverGrafo(fuente({ include: ['**'], depth: 1 }, interna), 'v');
+    const abierto = resolverGrafo(fuente({ include: ['**'], depth: 1, expanded: ['a'] }, interna), 'v');
 
     expect(cerrado?.edges.some((e) => e.from.node === 'a' && e.to.node === 'a')).toBe(false);
     expect(abierto?.edges).toContainEqual({ from: { node: 'a.a1' }, to: { node: 'a.a2' }, count: 1 });
@@ -166,7 +168,7 @@ describe('resolveView: colapso de Grupos', () => {
       views: [{ id: 'v', type: 'architecture', include: ['**'], depth: 1 }],
     });
 
-    expect(resolveView(f, 'v')?.edges).toEqual([
+    expect(resolverGrafo(f, 'v')?.edges).toEqual([
       { from: { node: 'u', attribute: 'tid' }, to: { node: 't' }, toCardinality: '1', count: 1 },
     ]);
   });
@@ -179,11 +181,11 @@ describe('resolveView: colapso de Grupos', () => {
         views: [{ id: 'v', type: 'architecture', include: ['**'], depth: 1 }],
       });
 
-    expect(resolveView(f([{ from: { node: 'u' }, to: { node: 't.x' }, label: 'lee' }]), 'v')?.edges).toEqual([
+    expect(resolverGrafo(f([{ from: { node: 'u' }, to: { node: 't.x' }, label: 'lee' }]), 'v')?.edges).toEqual([
       { from: { node: 'u' }, to: { node: 't' }, label: 'lee', count: 1 },
     ]);
     expect(
-      resolveView(f([{ from: { node: 'u' }, to: { node: 't.x' }, label: 'lee' }, { from: { node: 'u' }, to: { node: 't.y' }, label: 'escribe' }]), 'v')?.edges,
+      resolverGrafo(f([{ from: { node: 'u' }, to: { node: 't.x' }, label: 'lee' }, { from: { node: 'u' }, to: { node: 't.y' }, label: 'escribe' }]), 'v')?.edges,
     ).toEqual([{ from: { node: 'u' }, to: { node: 't' }, count: 2 }]);
   });
 

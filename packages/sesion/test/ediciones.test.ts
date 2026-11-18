@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { abrirSesion, aplicarEdiciones, editarPin, hashDeContenido } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, aplicarIntencion, hashDeContenido } from 'sesion';
+import type { EdicionConHash, PuertoDeWorkspace } from 'sesion';
 
 const base = (extra: string) => `specification { node servicio }
 model { servicio a  servicio b }
@@ -10,18 +11,18 @@ view v {
 ${extra}}
 `;
 
-const intencion = (texto: string, x = 5, y = -7) => ({
+const intencion = (_texto: string, x = 5, y = -7) => ({
+  tipo: 'mover-pin' as const,
   vista: 'v',
   nodo: 'a',
   x,
   y,
-  hash: hashDeContenido(texto),
 });
 
-describe('editarPin', () => {
+describe('Intencion mover-pin', () => {
   it('inserta un override nuevo sin tocar el resto del archivo', () => {
     const texto = base('');
-    const r = editarPin({ 'main.dg': texto }, intencion(texto));
+    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto));
 
     expect(r.ok).toBe(true);
     if (r.ok) {
@@ -33,7 +34,7 @@ describe('editarPin', () => {
 
   it('anade el pin a un override existente sin pin', () => {
     const texto = base('  node a { label "A" }\n');
-    const r = editarPin({ 'main.dg': texto }, intencion(texto));
+    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto));
     if (!r.ok) throw new Error(r.mensaje);
 
     expect(r.archivos['main.dg']).toBe(base('  node a { label "A" pin 5,-7 }\n'));
@@ -41,7 +42,7 @@ describe('editarPin', () => {
 
   it('anade el pin a un override vacio', () => {
     const texto = base('  node a {}\n');
-    const r = editarPin({ 'main.dg': texto }, intencion(texto));
+    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto));
     if (!r.ok) throw new Error(r.mensaje);
 
     expect(r.archivos['main.dg']).toBe(base('  node a { pin 5,-7 }\n'));
@@ -49,7 +50,7 @@ describe('editarPin', () => {
 
   it('reemplaza un pin existente y la Sesion resultante lo refleja sin issues nuevos', async () => {
     const texto = base('  node a { label "A" pin 1,2 }\n  node b { pin 100,100 }\n');
-    const r = editarPin({ 'main.dg': texto }, intencion(texto));
+    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto));
     if (!r.ok) throw new Error(r.mensaje);
 
     expect(r.archivos['main.dg']).toBe(base('  node a { label "A" pin 5,-7 }\n  node b { pin 100,100 }\n'));
@@ -60,23 +61,22 @@ describe('editarPin', () => {
 
   it('un hash desactualizado rechaza la edicion y no cambia nada', () => {
     const texto = base('');
-    const obsoleto = { ...intencion(texto), hash: hashDeContenido('otra cosa') };
 
-    const r = editarPin({ 'main.dg': texto }, obsoleto);
+    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto), { 'main.dg': hashDeContenido('otra cosa') });
 
     expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
   });
 
   it('vista o nodo inexistente se rechazan', () => {
     const texto = base('');
-    expect(editarPin({ 'main.dg': texto }, { ...intencion(texto), vista: 'nada' })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
-    expect(editarPin({ 'main.dg': texto }, { ...intencion(texto), nodo: 'nada' })).toMatchObject({ ok: false, motivo: 'invalida' });
+    expect(aplicarIntencion({ 'main.dg': texto }, { ...intencion(texto), vista: 'nada' })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
+    expect(aplicarIntencion({ 'main.dg': texto }, { ...intencion(texto), nodo: 'nada' })).toMatchObject({ ok: false, motivo: 'invalida' });
   });
 
   it('lleva el limite de coordenadas a la salida: redondea x e y a enteros y los limita a un rango razonable', () => {
     const texto = base('');
     const pin = (x: number, y: number) => {
-      const e = editarPin({ 'main.dg': texto }, intencion(texto, x, y));
+      const e = aplicarIntencion({ 'main.dg': texto }, intencion(texto, x, y));
       return e.ok ? e.archivos['main.dg'] : e;
     };
     expect(pin(10.6, -3.4)).toBe(base('  node a { pin 11,-3 }\n'));
@@ -85,10 +85,23 @@ describe('editarPin', () => {
   });
 });
 
-describe('aplicarEdiciones', () => {
+/** Puerta de escritura sobre un Workspace en memoria: devuelve el resultado y el texto que quedo escrito. */
+function escribirEdiciones(archivos: Record<string, string>, ediciones: EdicionConHash[]) {
+  let actuales = { ...archivos };
+  const puerto: PuertoDeWorkspace = {
+    leer: () => ({ disco: actuales, propios: actuales }),
+    escribir: (ruta, texto) => {
+      actuales = { ...actuales, [ruta]: texto };
+    },
+  };
+  const r = aplicarAlWorkspace(puerto, ediciones);
+  return { ...r, archivos: actuales };
+}
+
+describe('puerta de escritura con ediciones estructuradas', () => {
   it('aplica las ediciones del Gesto ya calculadas (entradas de --edits y del fix de validate)', () => {
     const texto = base('');
-    const r = aplicarEdiciones({ 'main.dg': texto }, [
+    const r = escribirEdiciones({ 'main.dg': texto }, [
       {
         file: 'main.dg',
         range: { start: { line: 2, column: 30 }, end: { line: 2, column: 31 } },
@@ -100,13 +113,13 @@ describe('aplicarEdiciones', () => {
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.archivos['main.dg']).toBe(base('').replace('servicio b', 'servicio c'));
-      expect(r.issues.some((i) => i.severity === 'error')).toBe(false);
+      expect(r.cambiados).toEqual(['main.dg']);
     }
   });
 
   it('rechaza todo si una de varias ediciones tiene hash viejo', () => {
     const rango = { start: { line: 1, column: 1 }, end: { line: 1, column: 2 } };
-    const r = aplicarEdiciones(
+    const r = escribirEdiciones(
       { 'a.dg': 'x', 'b.dg': 'y' },
       [
         { file: 'a.dg', range: rango, replacement: 'z', hash: hashDeContenido('x') },
@@ -119,7 +132,7 @@ describe('aplicarEdiciones', () => {
   it('rechaza una edicion que introduce errores', () => {
     const texto = base('');
     const punto = { line: 1, column: 1 };
-    const r = aplicarEdiciones(
+    const r = escribirEdiciones(
       { 'main.dg': texto },
       [{ file: 'main.dg', range: { start: punto, end: punto }, replacement: '}}}', hash: hashDeContenido(texto) }],
     );
@@ -136,7 +149,7 @@ view v {
 }
 `;
     const hash = hashDeContenido(roto);
-    const r = aplicarEdiciones({ 'main.dg': roto }, [
+    const r = escribirEdiciones({ 'main.dg': roto }, [
       { file: 'main.dg', range: { start: { line: 2, column: 38 }, end: { line: 2, column: 42 } }, replacement: 'otra', hash },
     ]);
     expect(r).toMatchObject({ ok: true });
@@ -151,7 +164,7 @@ view v {
 }
 `;
     const hash = hashDeContenido(roto);
-    const r = aplicarEdiciones({ 'main.dg': roto }, [
+    const r = escribirEdiciones({ 'main.dg': roto }, [
       { file: 'main.dg', range: { start: { line: 2, column: 42 }, end: { line: 2, column: 42 } }, replacement: ' b -> fantasma', hash },
     ]);
     expect(r).toMatchObject({ ok: false, motivo: 'invalida' });

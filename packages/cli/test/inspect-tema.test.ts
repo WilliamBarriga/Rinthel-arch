@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -222,6 +223,34 @@ describe('inspect tema: elementos de secuencia y fila', () => {
     expect(elementos?.fila).toMatchObject({ alto: 30, capas: [{ nombre: 'fondo' }] });
   });
 
+  it('--diagrama sequence de un Tema sin lifeline muestra el lifeline derivado de edge, discontinuo y con derivado: true', async () => {
+    const r = await json(['app', '--diagrama', 'sequence']);
+
+    const secuencia = temaDe(r.salida).elementos?.secuencia;
+    expect(secuencia?.['lifeline']).toMatchObject({ derivado: true, capas: [{ primitiva: 'line', props: { style: 'dashed' } }], marcadores: { end: 'cross' } });
+    // Los cinco Elementos de secuencia, todos derivados: el Tema no declara ninguno.
+    expect(Object.keys(secuencia ?? {}).sort()).toEqual(['activation', 'fragment', 'lifeline', 'message', 'note']);
+    expect(Object.values(secuencia ?? {}).every((e) => e.derivado === true)).toBe(true);
+    // La activacion toma solo forma, relleno y borde del Nodo; `reply` lleva la continuidad opuesta.
+    expect(secuencia?.['activation']?.capas.map((c) => c.nombre)).toEqual(['forma', 'relleno', 'borde']);
+    expect(secuencia?.['message']?.parches['reply']?.at(-1)?.props).toMatchObject({ style: 'dashed' });
+  });
+
+  it('un Elemento declarado no lleva derivado y --diagrama er deriva la fila', async () => {
+    const declarado = await json(['t', '--diagrama', 'sequence'], RAIZ_SECUENCIA);
+    const er = await json(['app', '--diagrama', 'er']);
+
+    expect(temaDe(declarado.salida).elementos?.secuencia?.['message']?.derivado).toBeUndefined();
+    expect(temaDe(declarado.salida).elementos?.secuencia?.['lifeline']?.derivado).toBe(true);
+    expect(temaDe(er.salida).elementos?.fila).toMatchObject({ derivado: true, capas: [] });
+  });
+
+  it('el texto legible marca los Elementos derivados', async () => {
+    const r = await run(['inspect', 'tema', 'app', '--diagrama', 'sequence', '--workspace', RAIZ]);
+
+    expect(r.stdout).toMatch(/Secuencia:\n {2}lifeline \(derivado\):[^\n]*end=cross/);
+  });
+
   it('el texto legible lista los elementos y un Tema sin ellos no los menciona', async () => {
     const con = await run(['inspect', 'tema', 't', '--workspace', RAIZ_SECUENCIA]);
     const sin = await run(['inspect', 'tema', 'app', '--workspace', RAIZ]);
@@ -229,5 +258,42 @@ describe('inspect tema: elementos de secuencia y fila', () => {
     expect(con.stdout).toMatch(/Secuencia:\n {2}message:[^\n]*\n[\s\S]*kind\/op reply/);
     expect(con.stdout).toMatch(/Fila: alto 30/);
     expect(sin.stdout).not.toMatch(/Secuencia:|Fila:/);
+  });
+});
+
+describe('inspect tema: los Elementos declarados salen como antes de la derivacion', () => {
+  const RAIZ_SECUENCIA = resolve(__dirname, 'fixtures/tema-secuencia');
+  /** Salida grabada sin derivacion de Elementos para el mismo Workspace: la referencia independiente. */
+  const deMain = (caso: string): string => readFileSync(resolve(__dirname, `fixtures/inspect-tema-main/t-${caso}.json`), 'utf8');
+
+  it.each([
+    ['none', []],
+    ['er', ['--diagrama', 'er']],
+    ['flow', ['--diagrama', 'flow']],
+  ])('sin Elementos derivados (%s), la salida es exactamente la de antes', async (caso, extra) => {
+    const r = await run(['inspect', 'tema', 't', ...extra, '--workspace', RAIZ_SECUENCIA, '--json']);
+
+    expect(r.stdout).toBe(deMain(caso));
+  });
+
+  it('con --diagrama sequence, la salida es la de antes mas los Elementos derivados, marcados', async () => {
+    const r = await run(['inspect', 'tema', 't', '--diagrama', 'sequence', '--workspace', RAIZ_SECUENCIA, '--json']);
+    const salida = JSON.parse(r.stdout) as { tema: { elementos: { secuencia: Record<string, { derivado?: true }> } } };
+    const { secuencia } = salida.tema.elementos;
+    const derivados = Object.keys(secuencia).filter((nombre) => secuencia[nombre]?.derivado === true);
+    for (const nombre of derivados) delete secuencia[nombre];
+
+    expect(derivados.sort()).toEqual(['activation', 'lifeline', 'note']);
+    expect(salida).toEqual(JSON.parse(deMain('sequence')));
+  });
+});
+
+describe('inspect tema sin --diagrama', () => {
+  it('Capas y Metricas sin parches de Tipo de diagrama, como antes (un parche diagram architecture no entra)', async () => {
+    const raiz = resolve(__dirname, 'fixtures/tema-diagrama-arquitectura');
+    const r = await run(['inspect', 'tema', 't', '--workspace', raiz, '--json']);
+
+    expect(r.stdout).toBe(readFileSync(resolve(__dirname, 'fixtures/inspect-tema-main/arquitectura-none.json'), 'utf8'));
+    expect(JSON.parse(r.stdout).tema.slots).toBe('column { title attrs }');
   });
 });

@@ -1,21 +1,11 @@
 /**
- * Compilador de Temas: aplana `extends` en objetos planos (ADR 0002) y compila
- * el bloque `node` (Capas, Slots, parches por Tipo y por estado, ADR 0008)
- * validandolo contra el catalogo de `tema`. Valida nombres duplicados (de
- * `theme` y de `part`) en todo el Workspace, padres desconocidos y ciclos. El
- * Tema neutro del nucleo siempre existe y puede extenderse.
+ * Aplana `extends` en Temas planos y valida cada bloque contra el catalogo de `tema`. Nombres de `theme` y
+ * `part` unicos en el Workspace; padres desconocidos y ciclos son error. El Tema neutro siempre existe.
  *
- * Herencia: paleta, fuentes y tokens se fusionan por clave (el hijo gana). El
- * bloque `node` del hijo es un parche sobre la pila heredada: una Capa con el
- * nombre de una heredada la cambia, una nueva exige `before`/`after`, y
- * `layer x none` la quita; los parches por Tipo y por estado se acumulan tras
- * los del padre; `diagram <tipo>` (ADR 0009) es un parche entre la base y los Tipos de nodo, que puede
- * cambiar Metricas; `slots` reemplaza la disposicion heredada. El bloque `group` se hereda y
- * se parchea igual que `node` (misma ruta de compilacion), mas `padding` y `state collapsed`,
- * el parche del Grupo cerrado. Un Tema sin base
- * (sin `extends`, o cuyo padre no tiene Capas) define su pila en orden.
- * Un Tema sin `extends` parte de las fuentes, tokens y Slots del neutro, con la
- * paleta vacia, para que cumpla siempre el contrato de dibujo.
+ * Herencia: paleta, fuentes y tokens se fusionan por clave (el hijo gana). En `node`/`group` una Capa con el
+ * nombre de una heredada la cambia, una nueva exige `before`/`after` y `layer x none` la quita; los parches
+ * de Tipo y de estado se acumulan tras los del padre; `slots` reemplaza la disposicion heredada. Un Tema sin
+ * base define su pila en orden. Sin `extends`, parte de fuentes, tokens y Slots del neutro con paleta vacia.
  */
 import { CODIGOS } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
@@ -38,7 +28,6 @@ import { compilarPagina } from './temas-pagina';
 import type { ContextoDeBloque, Sitio } from './temas-capas';
 import type { ParteDeclarada } from './temas-comun';
 
-/** Un `theme` del DSL con el sitio donde se declaro. */
 export interface TemaDeclarado {
   archivo: string;
   ast: Theme;
@@ -47,18 +36,16 @@ export interface TemaDeclarado {
   padre: TextRange;
 }
 
-/** Un `part` del DSL con el sitio donde se declaro. */
 export type DeclaracionDeParte = ParteDeclarada;
 
 /** Donde se fijo cada Capa de un Tema, por nivel de la cascada; lo usa `inspect tema`. */
 export interface OrigenDeTema {
-  /** Donde se declara el Tema. */
   sitio: Sitio;
   /** Ancestros por `extends`, del padre hacia la raiz. */
   extends: string[];
   /** Partes (`part`) que usan el Tema y sus ancestros. */
   partes: string[];
-  /** Ultimo parche que fijo cada Capa en la pila base, en la de cada Tipo y en la de cada estado. */
+  /** Ultimo parche que fijo cada Capa, por pila (base, Tipo, estado). */
   base: Record<string, Sitio>;
   tipos: Record<string, Record<string, Sitio>>;
   estados: Record<string, Record<string, Sitio>>;
@@ -66,15 +53,14 @@ export interface OrigenDeTema {
   grupo: { base: Record<string, Sitio>; tipos: Record<string, Record<string, Sitio>>; estados: Record<string, Record<string, Sitio>>; colapsado: Record<string, Sitio> };
   /** Ultimo parche que fijo cada Capa del fondo de pagina. */
   pagina: Record<string, Sitio>;
-  /** Donde se escribio por ultima vez la disposicion de Slots del Nodo, de la cabecera del Grupo y del Grupo cerrado (`state collapsed`); falta el que el Tema no escribe (ni sus ancestros). */
+  /** Ultimo sitio de cada disposicion de Slots; falta la que ni el Tema ni sus ancestros escriben. */
   slots: Partial<Record<'nodo' | 'grupo' | 'colapsado', Sitio>>;
 }
 
-/** Resultado de compilar los Temas y herramienta para compilar el override de una Vista. */
 export interface TemasCompilados {
   temas: TemaResuelto[];
   issues: Issue[];
-  /** Origen de las Capas de cada Tema escrito en DSL, incorporados incluidos (archivo `<incorporados>`); `alto-contraste` no figura. */
+  /** Incluye los incorporados (archivo `<incorporados>`); `alto-contraste` no figura. */
   origenes: Record<string, OrigenDeTema>;
   /** Parches de Capa de una Vista (`theme t { layer ... }`) validados contra el Tema `tema`. */
   parchesDeVista(tema: string, items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string): { ops: OpDeCapa[]; issues: Issue[] };
@@ -98,7 +84,6 @@ interface Entorno {
   porEstado: Registro;
   /** Origen de las Capas del parche `collapsed` del Grupo (bajo la clave `collapsed`). */
   porColapso: Registro;
-  /** Donde se escribio cada disposicion de Slots (clave `nodo`, `grupo` o `colapsado`). */
   sitiosDeSlots: Map<'nodo' | 'grupo' | 'colapsado', Sitio>;
 }
 
@@ -123,8 +108,7 @@ const copiarRegistro = (registro: Record<string, Record<string, Sitio>>): Regist
 const copiarCapa = <C extends { primitiva: { props: Record<string, string | number> } }>(c: C): C => ({ ...c, primitiva: { ...c.primitiva, props: { ...c.primitiva.props } } });
 
 /**
- * Temas resueltos (el neutro primero) e issues. Los Temas con ciclo o padre
- * desconocido no se resuelven. No toca el texto: lee posiciones del CST ya construido.
+ * Temas resueltos (el neutro primero) e issues. Los Temas con ciclo o padre desconocido no se resuelven.
  * `tipos` son los Tipos de nodo declarados en `specification`.
  */
 export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclaradas: readonly DeclaracionDeParte[], tipos: readonly string[]): TemasCompilados {
@@ -245,7 +229,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       const destino = parte.$type === 'ThemePalette' ? tema.palette : parte.$type === 'ThemeFonts' ? tema.fonts : tema.tokens;
       for (const { key, value } of parte.entries) destino[key] = value;
     }
-    // Una familia no generica pide reserva explicita (historia 30): se comprueba con las `fonts` ya heredadas.
+    // Una familia no generica pide reserva explicita; se comprueba con las `fonts` ya heredadas.
     const sinReserva = fuentesSinReserva(tema.fonts);
     for (const parte of declarado.ast.parts) {
       if (parte.$type !== 'ThemeFonts') continue;
@@ -307,7 +291,6 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       .map(({ tema }) => tema)
       .sort((a, b) => (NOMBRES_INCORPORADOS.indexOf(a.name as never) + 1 || 99) - (NOMBRES_INCORPORADOS.indexOf(b.name as never) + 1 || 99)),
     issues,
-    // Tambien los incorporados: su sitio es una linea de `<incorporados>` y `inspect tema` muestra su cadena `extends`.
     origenes: Object.fromEntries([...resueltos].map(([nombre, { origen }]) => [nombre, origen])),
     parchesDeVista: (nombreDeTema, items, archivo) => {
       const delTema = resueltos.get(nombreDeTema);
@@ -328,7 +311,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
   };
 }
 
-/** Pila base, la de cada Tipo con parches y la de cada estado sobre ellas: contra cual puede valer un parche (de la Vista, que es del Nodo). */
+/** Todas las pilas del Nodo (base, por Tipo, por estado) contra las que se valida un parche de Vista. */
 function todasLasPilas(tema: TemaResuelto): CapaDeTema[][] {
   const base = tema.nodo.capas as CapaDeTema[];
   const sobreTipos = pilasSobreTipos(tema, base, 'nodo');
@@ -336,13 +319,12 @@ function todasLasPilas(tema: TemaResuelto): CapaDeTema[][] {
   return [...sobreTipos, ...porEstado];
 }
 
-/** `collapsed`: el parche del Grupo cerrado. No es un Estado de `tema` (no es de interaccion): solo el Grupo lo admite. */
+/** El Grupo cerrado. No es un Estado de `tema` (no es de interaccion): solo el Grupo lo admite. */
 const ESTADO_COLAPSADO = 'collapsed';
 
-/** Los estados que admite cada elemento en `state <nombre>`. */
 const ESTADOS_DE: Record<ElementoDeTema, readonly string[]> = { nodo: ESTADOS, grupo: [...ESTADOS, ESTADO_COLAPSADO] };
 
-/** La pila base y la de cada Tipo de diagrama con parches: contra cual puede valer un parche de Tipo de nodo. */
+/** Pilas contra las que se valida un parche de Tipo de nodo: la base y la de cada Tipo de diagrama. */
 function pilasSobreDiagramas(tema: TemaResuelto, base: CapaDeTema[], elemento: ElementoDeTema): CapaDeTema[][] {
   return [base, ...Object.values(tema[elemento].diagramas ?? {}).map(({ ops }) => aplicarOps(base, ops, tema.palette, 'parchear').pila)];
 }
@@ -353,7 +335,7 @@ function pilasSobreTipos(tema: TemaResuelto, base: CapaDeTema[], elemento: Eleme
   return [...bases, ...Object.values(tema[elemento].tipos).flatMap((ops) => bases.map((pila) => aplicarOps(pila, ops, tema.palette, 'parchear').pila))];
 }
 
-/** `padding` del Grupo: 1 valor (todos los lados), 2 (vertical, horizontal) o 4 (arriba, derecha, abajo, izquierda), como en CSS. */
+/** 1, 2 o 4 valores, como en CSS. */
 function compilarPadding(item: GroupPadding, archivo: string, issues: Issue[]): TemaResuelto['grupo']['padding'] | undefined {
   const v = item.values.map(Number);
   const [a, b, c, d] = v as [number, number, number, number];
@@ -373,9 +355,8 @@ function compilarPadding(item: GroupPadding, archivo: string, issues: Issue[]): 
 }
 
 /**
- * Compila el bloque de un elemento (`node` o `group`) sobre la pila heredada: base, luego Tipos, luego estados.
- * Una sola ruta para los dos; el Grupo anade `padding` y `state collapsed`, el parche del Grupo cerrado (puede
- * cambiar Slots y caja), y no admite parches de Tipo que toquen las Metricas.
+ * Compila `node` o `group` sobre la pila heredada en orden: base, Tipos de diagrama, Tipos de nodo, estados.
+ * El Grupo no admite parches de Tipo de nodo que toquen las Metricas.
  */
 function compilarElemento(elemento: ElementoDeTema, archivo: string, items: ReadonlyArray<GroupItem>, tema: TemaResuelto, origenes: Map<string, Sitio>, entorno: Entorno): void {
   const { partes, tipos, issues } = entorno;
@@ -384,7 +365,6 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
   const colapsable = ESTADOS_DE[elemento].includes(ESTADO_COLAPSADO);
   const delNodo = items.filter((item): item is NodeItem => item.$type !== 'GroupPadding');
 
-  // 1) Pila base: Capas y `use` del propio bloque; despues los `slots` (la cabecera, en el Grupo) y el padding.
   const delBase = items.filter((item): item is ThemeLayer | ThemeUse => item.$type === 'ThemeLayer' || item.$type === 'ThemeUse');
   const modo = bloque.capas.length === 0 ? 'definir' : 'parchear';
   const opsBase = compilarBloque(delBase, { ...contexto, modo, candidatas: [bloque.capas as CapaDeTema[]] });
@@ -396,18 +376,16 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     } else if (item.$type === 'GroupPadding' && elemento === 'grupo') tema.grupo.padding = compilarPadding(item, archivo, issues) ?? tema.grupo.padding;
   }
 
-  // Animacion del elemento: `transition`, `enter`, `exit` y `stagger` (solo pintura, nunca Metricas).
   const animacion = compilarAnimacionDeNodo(delNodo, bloque.animacion, archivo, issues);
   if (animacion !== undefined) bloque.animacion = animacion;
 
-  // 2a) Parches por Tipo de diagrama (ADR 0009), sobre la pila base; pueden cambiar las Metricas.
+  // Los parches por Tipo de diagrama pueden cambiar las Metricas.
   const base = bloque.capas as CapaDeTema[];
   for (const item of delNodo) {
     if (item.$type === 'ThemeDiagram') compilarDiagrama(item, elemento, tema, { ...contexto, entorno });
   }
   const sobreDiagramas = pilasSobreDiagramas(tema, base, elemento);
 
-  // 2b) Parches por Tipo de nodo, sobre la pila base y la de cada Tipo de diagrama.
   for (const item of delNodo) {
     if (item.$type !== 'ThemeType') continue;
     if (!tipos.includes(item.name)) {
@@ -426,7 +404,6 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     anotarOrigenes(entorno.porTipo, item.name, propios, origenes);
   }
 
-  // 3) Parches por estado, sobre la pila base o la de cualquier Tipo (y, en el Grupo, tambien cerrado).
   const sobreTipos = pilasSobreTipos(tema, base, elemento);
   const conColapso = colapsable ? [...sobreTipos, ...sobreTipos.map((pila) => aplicarOps(pila, tema.grupo.colapsado.ops, tema.palette, 'parchear').pila)] : sobreTipos;
   for (const item of delNodo) {
@@ -461,9 +438,8 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
 }
 
 /**
- * `diagram <tipo> { ... }` de `node` o `group` (ADR 0009): Capas (`layer`, `use`), `slots` y, solo en el Grupo,
- * `padding`. Un tipo desconocido es `E_THEME_UNKNOWN_DIAGRAM_TYPE` con `fix` por typo. Varios bloques del mismo
- * tipo se acumulan. Los estilos de texto de un Slot no se cambian por Tipo de diagrama: usa el bloque base.
+ * Un tipo desconocido es `E_THEME_UNKNOWN_DIAGRAM_TYPE` con `fix` por typo. Varios bloques del mismo tipo se
+ * acumulan. `padding` solo vale en el Grupo; los estilos de texto de un Slot no cambian por Tipo de diagrama.
  */
 function compilarDiagrama(item: ThemeDiagram, elemento: ElementoDeTema, tema: TemaResuelto, ctx: Omit<ContextoDeBloque, 'modo' | 'candidatas'> & { entorno: Entorno }): void {
   const { archivo, partes, issues } = ctx;
@@ -505,10 +481,7 @@ function avisarSiTocaMetricas(ops: readonly OpDeCapa[], pilas: ReadonlyArray<rea
   }
 }
 
-/**
- * `state collapsed` del Grupo: el parche del Grupo cerrado, que se comporta como un Nodo hoja. Sus Capas parchean
- * la pila (y pueden cambiar la caja); su `slots` sustituye a la cabecera como disposicion del Grupo cerrado.
- */
+/** El Grupo cerrado se comporta como un Nodo hoja: puede cambiar la caja, y su `slots` sustituye a la cabecera. */
 function compilarColapsado(item: ThemeState, tema: TemaResuelto, ctx: Omit<ContextoDeBloque, 'modo' | 'candidatas'> & { entorno: Entorno; sobreTipos: CapaDeTema[][] }): void {
   const { archivo, partes, issues, entorno } = ctx;
   const colapsado = tema.grupo.colapsado;

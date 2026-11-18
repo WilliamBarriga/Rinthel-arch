@@ -1,11 +1,4 @@
-/**
- * Disposicion de Slots (ADR 0008): el arbol del mini-layout. Una caja `row` o
- * `column` contiene Slots y otras cajas, con `gap` entre hijos, `pad` interior y
- * una alineacion opcional por hijo (`start`, `center`, `end`). El orden de los
- * hijos es el orden visual; un Slot que no aparece en el arbol no se pinta ni se
- * mide. Este modulo define la forma del arbol y valida el que escribe el Tema;
- * `slots.ts` lo coloca.
- */
+/** Arbol de Slots del Tema y su validacion. El orden de los hijos es el visual; un Slot fuera del arbol no se pinta ni se mide. */
 import { CODIGOS } from 'canonico';
 
 import { SLOTS, esSlot, sugerir, validarPropiedades } from './catalogo';
@@ -16,23 +9,22 @@ export type Alineacion = (typeof ALINEACIONES)[number];
 export const DIRECCIONES = ['row', 'column'] as const;
 export type Direccion = (typeof DIRECCIONES)[number];
 
-/** Un Slot dentro de una caja. `align` coloca su lado corto en el eje cruzado; sin el, la caja decide. */
+/** `align` coloca el Slot en el eje cruzado; sin el, la caja decide. */
 export interface HojaDeSlots {
   slot: NombreDeSlot;
   align?: Alineacion;
 }
 
-/** Caja del mini-layout: `row` reparte en horizontal, `column` en vertical. */
 export interface CajaDeSlots {
   direccion: Direccion;
   gap: number;
-  /** Margen interior a cada lado; `padY`, si esta, sustituye el de arriba y abajo. */
+  /** A cada lado; `padY`, si esta, sustituye el de arriba y abajo. */
   pad: number;
   padY?: number;
-  /** Caja minima (`min-width`, `min-height`), contando el margen interior; el contenido se reparte o centra dentro. */
+  /** Incluye el margen interior. */
   anchoMinimo?: number;
   altoMinimo?: number;
-  /** Ancho libre que la caja reserva tras su contenido (`slack`); en la raiz sustituye la holgura por defecto de las Metricas. */
+  /** `slack`: ancho libre tras el contenido; en la raiz sustituye la holgura por defecto de las Metricas. */
   holgura?: number;
   align?: Alineacion;
   hijos: ElementoDeSlots[];
@@ -42,7 +34,6 @@ export type ElementoDeSlots = HojaDeSlots | CajaDeSlots;
 
 export const esCaja = (elemento: ElementoDeSlots): elemento is CajaDeSlots => 'hijos' in elemento;
 
-/** Disposicion por defecto (Tema neutro): icono y titulo en una fila, Atributos debajo. */
 export const DISPOSICION_POR_DEFECTO: CajaDeSlots = {
   direccion: 'column',
   gap: 0,
@@ -53,13 +44,12 @@ export const DISPOSICION_POR_DEFECTO: CajaDeSlots = {
   ],
 };
 
-/** Slots que solo valen en un Nodo hoja: un Grupo no muestra Atributos en su cabecera. */
+/** Un Grupo no muestra Atributos en su cabecera. */
 export const SLOTS_SOLO_DE_NODO: readonly NombreDeSlot[] = ['attrs'];
 
-/** Cabecera por defecto de un Grupo (Tema sin `group`): icono y titulo en una fila con aire alrededor. */
 export const CABECERA_POR_DEFECTO: CajaDeSlots = { direccion: 'row', gap: 6, pad: 6, hijos: [{ slot: 'icon' }, { slot: 'title' }] };
 
-/** Los Slots de la disposicion, en orden visual (los repetidos solo cuentan una vez). */
+/** En orden visual, sin repetidos. */
 export function slotsDe(caja: CajaDeSlots): NombreDeSlot[] {
   const vistos = new Set<NombreDeSlot>();
   const recorrer = (c: CajaDeSlots): void => {
@@ -72,7 +62,7 @@ export function slotsDe(caja: CajaDeSlots): NombreDeSlot[] {
   return [...vistos];
 }
 
-/** Alineacion que el Tema fijo para un Slot (`undefined`: la de la caja que lo contiene). */
+/** `undefined`: la de la caja que lo contiene. */
 export function alineacionDe(caja: CajaDeSlots, slot: NombreDeSlot): Alineacion | undefined {
   for (const hijo of caja.hijos) {
     if (esCaja(hijo)) {
@@ -83,10 +73,7 @@ export function alineacionDe(caja: CajaDeSlots, slot: NombreDeSlot): Alineacion 
   return undefined;
 }
 
-/**
- * La disposicion en la sintaxis del DSL (`column { row gap 6 { icon title } attrs }`), solo con las
- * propiedades que difieren del defecto. Es lo que muestra `inspect tema`.
- */
+/** En sintaxis del DSL (`column { row gap 6 { icon title } attrs }`), solo con las propiedades que difieren del defecto. */
 export function describirDisposicion(caja: CajaDeSlots): string {
   const propiedades = [
     caja.gap > 0 ? `gap ${caja.gap}` : '',
@@ -115,18 +102,18 @@ const PROPIEDADES_DE_CAJA = {
   align: ALINEACION,
 } as const satisfies Record<string, DefinicionDePropiedad>;
 
-/** Propiedad `clave valor` escrita por el Tema; `ref` la situa en el texto. */
+/** `ref` la situa en el texto. */
 export interface PropiedadEscrita<R = unknown> {
   clave: string;
   valor: string | number;
   ref: R;
 }
 
-/** Entrada sin validar de una caja, tal como la escribe el Tema; `ref` vuelve en cada error para situarlo en el texto. */
+/** Entrada sin validar; `ref` vuelve en cada error para situarlo en el texto. */
 export interface EntradaDeCaja<R = unknown> {
   ref: R;
   direccion: string;
-  /** `gap`, `pad`, `pad-y`, `min-width`, `min-height`, `slack` y `align` (otra clave es error). */
+  /** `gap`, `pad`, `pad-y`, `min-width`, `min-height`, `slack` y `align`; otra clave es error. */
   props: ReadonlyArray<PropiedadEscrita<R>>;
   hijos: Array<EntradaDeCaja<R> | EntradaDeSlot<R>>;
 }
@@ -134,21 +121,16 @@ export interface EntradaDeCaja<R = unknown> {
 export interface EntradaDeSlot<R = unknown> {
   ref: R;
   slot: string;
-  /** Alineacion escrita para el Slot, si hay. */
   align?: PropiedadEscrita<R>;
 }
 
 export type ErrorDeDisposicion<R> = ErrorDeCatalogo & { ref: R };
 
-/**
- * Valida el arbol escrito por el Tema contra el catalogo (direcciones, claves
- * de caja, Slots conocidos y sin repetir, alineaciones, rangos) y devuelve la
- * disposicion con todos los errores a la vez, cada uno con sugerencia.
- */
+/** Devuelve todos los errores a la vez, cada uno con sugerencia; `disposicion` solo si no hay errores. */
 export function construirDisposicion<R>(entrada: EntradaDeCaja<R>, elemento: 'nodo' | 'grupo' = 'nodo'): { disposicion?: CajaDeSlots; errores: Array<ErrorDeDisposicion<R>> } {
   const errores: Array<ErrorDeDisposicion<R>> = [];
   const vistos = new Set<string>();
-  /** Valida `props` contra `propiedades`; los errores llevan el `ref` de la propiedad culpable o `respaldo`. */
+  /** Los errores llevan el `ref` de la propiedad culpable o `respaldo`. */
   const propiedades = (articulo: string, nombre: string, definidas: Record<string, DefinicionDePropiedad>, props: ReadonlyArray<PropiedadEscrita<R>>, respaldo: R): Record<string, number | string> => {
     const resultado = validarPropiedades({ sujeto: `${articulo} ${nombre}`, nombre, propiedades: definidas }, props, {});
     for (const e of resultado.errores) errores.push({ ...e, ref: props.find((p) => p.clave === e.clave)?.ref ?? respaldo });

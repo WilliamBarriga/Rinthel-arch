@@ -9,10 +9,8 @@ import { TEMA_NEUTRO } from 'tema';
 import { empaquetarShellDev } from '../packages/cli/src/dev-shell';
 
 /**
- * El Worker de layout no valida Temas: la pagina resuelve el Tema una vez y le manda Metricas (ADR 0003,
- * enmienda), y `dev` lo empaqueta con un zod inerte. Si algo que el Worker importa llamara a zod, el bundle
- * real fallaria aqui. Se ejecuta el bundle que sirve `dev`, tal cual, con un `self` falso. Requiere los
- * paquetes construidos.
+ * Ejecuta el bundle del Worker que sirve `dev` (con zod inerte) con un `self` falso: si algo que importa llamara a zod,
+ * fallaria aqui. Requiere los paquetes construidos.
  */
 describe('Worker de layout empaquetado', () => {
   it('calcula la misma geometria que layoutView sin validar el Tema', async () => {

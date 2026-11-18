@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
+import type { VistaDeGrafo, VistaDeSecuencia } from 'canonico';
 import { compile } from 'dsl';
 
 /** Lo que la documentacion publica promete: el tutorial valida, el mapa trae los 14 Temas, las capturas y los enlaces existen. */
@@ -55,7 +56,7 @@ describe('mapa de rinthel-arch: secuencia y ER', () => {
   const { canonico, issues } = compile(leerDg('examples/rinthel-arch'));
 
   it('la Vista ER de la Fuente canonica proyecta sus tablas y Aristas', () => {
-    const er = resolveView(canonico!, 'fuente-er')!;
+    const er = resolveView(canonico!, 'fuente-er') as VistaDeGrafo;
     expect(er.type).toBe('er');
     expect(er.nodes).toHaveLength(7);
     expect(er.edges.length).toBeGreaterThanOrEqual(8);
@@ -63,9 +64,9 @@ describe('mapa de rinthel-arch: secuencia y ER', () => {
   });
 
   it('la Interaccion editar-pin tiene Fragmento, ref, Pasos y link a arquitectura', () => {
-    const vista = resolveView(canonico!, 'editar-pin')!;
+    const vista = resolveView(canonico!, 'editar-pin') as VistaDeSecuencia;
     expect(vista.type).toBe('sequence');
-    const fragmento = vista.interaction!.items.find((i) => i.type === 'fragment') as unknown as { operands: Array<{ items: Array<{ type: string }> }> };
+    const fragmento = vista.interaction.items.find((i) => i.type === 'fragment') as unknown as { operands: Array<{ items: Array<{ type: string }> }> };
     expect(fragmento.operands[0]!.items.map((i) => i.type)).toContain('ref');
     expect(vista.steps).toHaveLength(2);
     expect(canonico!.views.find((v) => v.id === 'editar-pin')!.links?.map((l) => l.view)).toEqual(['sesion-detalle', 'shell-detalle']);

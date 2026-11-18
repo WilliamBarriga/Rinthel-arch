@@ -6,12 +6,12 @@ export interface OpcionesDeValidate {
   strict: boolean;
 }
 
-/** Orden del contrato (ADR 0005): archivo, linea, columna y codigo. */
+/** Orden del contrato: archivo, linea, columna y codigo. */
 function compararIssues(a: Issue, b: Issue): number {
   return a.file.localeCompare(b.file) || a.line - b.line || a.column - b.column || a.code.localeCompare(b.code);
 }
 
-/** Construye el objeto del contrato a partir de todos los issues, que ordena aqui para que los de varias fuentes se mezclen bien. */
+/** Ordena los issues: llegan de varias fuentes sin orden comun. */
 export function construirSalida(
   desordenados: readonly Issue[],
   { maxIssues, strict }: OpcionesDeValidate,
@@ -27,11 +27,11 @@ export function construirSalida(
   };
 }
 
-/** La pista del issue para quien lee texto: su `hint`, o el reemplazo de su `fix` como "quisiste decir". */
+/** Su `hint`, o el reemplazo de su `fix` como "quisiste decir". */
 const pista = (issue: Issue): string =>
   issue.hint !== undefined ? `; ${issue.hint}` : issue.fix !== undefined && issue.fix.replacement !== '' ? `; quisiste decir '${issue.fix.replacement}'` : '';
 
-/** Texto para humanos: una linea por issue (con su pista, si tiene) y un resumen. */
+/** Una linea por issue y un resumen. */
 export function textoLegible(salida: SalidaDeValidate): string {
   const lineas = salida.issues.map(
     (issue) =>

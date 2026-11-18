@@ -1,7 +1,4 @@
-/**
- * Elemento de la escena (HTML o SVG) y sus ayudantes. Lo comparten la escena, los
- * pintores y la hoja de estilo; ninguno depende de los otros.
- */
+/** Elemento de la escena (HTML o SVG) y ayudantes de formato CSS. */
 
 import type { ComponenteDeTema, PropsDeCodigo } from './codigo';
 
@@ -22,11 +19,7 @@ export function num(valor: number): string {
   return String(Math.round(valor * 100) / 100);
 }
 
-/**
- * Valor CSS apto para una hoja de estilo o un `style` en linea: sin los
- * caracteres que cerrarian la declaracion, la regla o el elemento `<style>`.
- * Colores y fuentes llegan del Tema, que es entrada ajena.
- */
+/** Quita los caracteres que cerrarian la declaracion, la regla o el `<style>`: el Tema es entrada ajena. */
 export function limpiarValorCss(valor: string): string {
   return valor.replace(/[<>{};\\\n\r]/g, '');
 }

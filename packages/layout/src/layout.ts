@@ -1,63 +1,21 @@
-/**
- * Layout de una Vista resuelta con ELK (ADR 0003): `INCLUDE_CHILDREN`, sin
- * `considerModelOrder` (enmienda del ADR, benchmark #13).
- */
+/** Layout de una Vista de grafo con ELK: `INCLUDE_CHILDREN`, sin `considerModelOrder`. */
 import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
 import { idDeArista } from 'canonico';
-import type { ItemResuelto, NodoResuelto, Tema, VistaResuelta } from 'canonico';
+import type { CajaDeNodo, Geometria, GeometriaGrafo, ItemResuelto, NodoResuelto, OverrideDeNodo, Punto, RutaDeArista, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
 
 import { indiceDeGeometria } from './indice';
 import { layoutSecuencia } from './secuencia';
-import type { GeometriaSecuencia } from './secuencia';
 import { LARGO_DE_MARCADOR_ER, atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, contenidoDeNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
-import type { MedidasDeTexto, Metricas, Rect, TablaDeMetricas } from 'tema';
+import type { MedidasDeTexto, Metricas, TablaDeMetricas } from 'tema';
 
-/** Caja de un Nodo: `x`/`y` relativos a su Grupo padre (al lienzo si es raiz). */
-export interface CajaDeNodo {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  /** Rectangulo de cada Slot que el Tema muestra en este Nodo hoja, relativo a la caja (colocacion de `tema`). */
-  slots?: Record<string, Rect>;
-}
-
-export interface Punto {
-  x: number;
-  y: number;
-}
-
-/**
- * Ruta ortogonal de una Arista, en coordenadas del lienzo (no relativas a un
- * Grupo). El primer y el ultimo punto son los puertos: caen en el borde de los
- * Nodos extremo (el Grupo, si esta colapsado).
- */
-export interface RutaDeArista {
-  points: Punto[];
-}
-
-/** Geometria de grafo (ELK): cajas por id de Nodo visible y rutas por `idDeArista`. */
-export interface GeometriaGrafo {
-  kind: 'grafo';
-  nodes: Record<string, CajaDeNodo>;
-  edges: Record<string, RutaDeArista>;
-  /** Caja (coordenadas del lienzo) que ELK reservo a la etiqueta de cada Arista que la tiene, por `idDeArista`. */
-  labels: Record<string, CajaDeNodo>;
-  /** Pares de ids (orden alfabetico) de Nodos pineados cuyas cajas se solapan; el aviso `W_OVERLAPPING_PINS` lo emite quien tiene las posiciones del texto. */
-  pinsSolapados: [string, string][];
-  width: number;
-  height: number;
-}
-
-/** Geometria calculada de una Vista: union por `kind`; quien la lee hace switch por `kind`. */
-export type Geometria = GeometriaGrafo | GeometriaSecuencia;
+export type { CajaDeNodo, Geometria, GeometriaGrafo, Punto, RutaDeArista };
 
 export interface OpcionesDeLayout {
-  /** Motor ELK; por defecto el empaquetado, que corre igual en Node y en Web Worker. */
+  /** Por defecto el empaquetado, que corre igual en Node y en Web Worker. */
   elk?: ELK;
-  /** Metricas con las que medir; por defecto la tabla derivada del Tema. Una sola `Metricas` se usa para todo elemento. `render` debe dibujar con las mismas. */
+  /** Por defecto la tabla derivada del Tema; una sola `Metricas` vale para todo elemento. `render` debe dibujar con las mismas. */
   metricas?: Metricas | TablaDeMetricas;
-  /** Medidas reales de texto (el visor las toma con la fuente cargada); sin ellas se estima por caracter. Se ignoran si se pasa `metricas`. */
+  /** Sin ellas el texto se estima por caracter. Se ignoran si se pasa `metricas`. */
   medidas?: MedidasDeTexto;
 }
 
@@ -70,35 +28,28 @@ const OPCIONES_RAIZ = {
   'elk.json.shapeCoords': 'PARENT',
   'elk.spacing.nodeNode': '24',
   'elk.layered.spacing.nodeNodeBetweenLayers': '48',
-  // Esfuerzo de minimizacion de cruces: 1 (el minimo) reduce a la mitad el relayout de 1k Nodos (ADR 0003, enmienda).
+  // 1 (el minimo) reduce a la mitad el relayout de 1k Nodos.
   'elk.layered.thoroughness': '1',
 };
 
 /**
- * Calcula la Geometria de `vista` con las medidas del `tema`. Determinista: la
- * misma entrada da la misma geometria. Los Grupos cerrados son Nodos hoja.
- * Sin `opciones.elk` crea un motor por llamada (unos ms; sin estado compartido).
- * Valida y resuelve el Tema (`tablaDeMetricas`) y delega en `layoutConMetricas`.
+ * Determinista. Los Grupos cerrados son Nodos hoja. Sin `opciones.elk` crea un motor por llamada.
+ * Rechaza si ELK falla.
  */
 export async function layoutView(
   vista: VistaResuelta,
   tema: Tema,
   opciones: OpcionesDeLayout = {},
 ): Promise<Geometria> {
-  return layoutConMetricas(vista, opciones.metricas ?? tablaDeMetricas(tema, opciones.medidas, vista.type), opciones);
+  return layoutConMetricas(vista, opciones.metricas ?? tablaDeMetricas(tema, vista.type, opciones.medidas), opciones);
 }
 
-/**
- * Nucleo de `layoutView` sobre Metricas ya resueltas: no valida ni conoce el Tema. Es lo que corre el
- * Worker (ADR 0003, enmienda): quien lo llama resolvio el Tema una vez (`tablaDeMetricas`) y el Worker
- * no empaqueta el esquema del Tema.
- */
+/** `layoutView` sobre Metricas ya resueltas, sin el Tema: es lo que corre el Worker, que no empaqueta el esquema del Tema. */
 export async function layoutConMetricas(
   vista: VistaResuelta,
   metricas: Metricas | TablaDeMetricas,
   opciones: { elk?: ELK } = {},
 ): Promise<Geometria> {
-  // Entrada unica: el algoritmo se elige por el tipo de la Vista (por ahora todas van a `grafo`).
   switch (vista.type) {
     case 'architecture':
     case 'flow':
@@ -110,7 +61,7 @@ export async function layoutConMetricas(
 }
 
 async function layoutGrafo(
-  vista: VistaResuelta,
+  vista: VistaDeGrafo,
   metricas: Metricas | TablaDeMetricas,
   opciones: { elk?: ELK },
 ): Promise<GeometriaGrafo> {
@@ -151,7 +102,7 @@ async function layoutGrafo(
   return conPinsYPuertos(vista, medidas, { kind: 'grafo', nodes, edges, labels, pinsSolapados: [], width: resultado.width ?? 0, height: resultado.height ?? 0 });
 }
 
-function conPinsYPuertos(vista: VistaResuelta, medidas: TablaDeMetricas, base: GeometriaGrafo): GeometriaGrafo {
+function conPinsYPuertos(vista: VistaDeGrafo, medidas: TablaDeMetricas, base: GeometriaGrafo): GeometriaGrafo {
   const pinneada = aplicarPins(vista, base.nodes, base.edges, base.labels);
   const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
   // ER: el pie de gallo necesita un tramo final horizontal de al menos su largo; se garantiza tras puertos y Pins.
@@ -162,7 +113,6 @@ function conPinsYPuertos(vista: VistaResuelta, medidas: TablaDeMetricas, base: G
 /** Anade a cada Nodo hoja el rectangulo de sus Slots, el mismo que usa `render` para pintar. */
 function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<string, CajaDeNodo>): Record<string, CajaDeNodo> {
   const resultado = { ...nodes };
-  // `vista.nodes` ya lista todos los Nodos visibles a plano.
   for (const nodo of vista.nodes) {
     const caja = resultado[nodo.id];
     if (nodo.children.length === 0 && caja !== undefined) {
@@ -174,42 +124,39 @@ function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<
 }
 
 /**
- * Aplica los Pins de `vista` a `base`, la geometria de la misma estructura calculada sin Pins
- * (`layoutView` de la Vista sin overrides de Pin). Es el paso post-ELK de `layoutView` y da el mismo
- * resultado que un layout completo, sin volver a ejecutar ELK: mover un Pin no relayouta.
+ * Aplica los Pins de `vista` a `base`, la geometria de la misma estructura calculada sin Pins. Da el mismo
+ * resultado que `layoutView` sin volver a ejecutar ELK.
  */
-export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, undefined, vista.type)): Geometria {
-  switch (base.kind) {
-    case 'grafo':
-      return conPinsYPuertos(vista, comoTabla(metricas), base);
-    case 'secuencia':
+export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): Geometria {
+  switch (vista.type) {
+    case 'sequence':
+      // La Geometria de secuencia sale completa de su layout: no hay paso post-layout.
       return base;
+    case 'architecture':
+    case 'flow':
+    case 'er':
+      return base.kind === 'grafo' ? conPinsYPuertos(vista, comoTabla(metricas), base) : base;
   }
 }
 
 /**
- * Pin post-ELK (ADR 0003): el centro de la caja del Nodo pineado pasa a `pin`,
- * relativo a su Grupo padre (la caja crece alrededor del Pin). De las Aristas, solo cambian las que tocan el subarbol movido: si
- * los dos extremos van dentro del mismo subarbol pineado se trasladan con el; si
- * no, se re-enrutan con una ruta en Z sencilla entre las cajas (pierden la ruta
- * de ELK). Un Pin sobre un Nodo que la Vista no muestra se ignora (`validate` ya
- * lo informa). No muta sus argumentos. `pinsSolapados` son los pares de Nodos
- * pineados cuyas cajas se solapan, salvo ancestro y descendiente. La etiqueta de
- * una Arista trasladada va con ella; la de una re-enrutada se descarta (`render`
- * la pone sobre la nueva ruta).
+ * El centro de la caja del Nodo pineado pasa a `pin`, relativo a su Grupo padre. Una Arista con ambos extremos
+ * en el subarbol movido se traslada con su etiqueta; una que lo cruza se re-enruta en Z y pierde la etiqueta
+ * (`render` la pone sobre la nueva ruta). Un Pin sobre un Nodo ausente se ignora. No muta sus argumentos.
+ * `pinsSolapados`: pares de Nodos pineados cuyas cajas se solapan, salvo ancestro y descendiente.
  */
 function aplicarPins(
-  vista: VistaResuelta,
+  vista: VistaDeGrafo,
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
   labels: Record<string, CajaDeNodo>,
 ): Pick<GeometriaGrafo, 'nodes' | 'edges' | 'labels' | 'pinsSolapados'> {
-  const pins = vista.overrides.filter((o) => o.pin !== undefined && nodes[o.node] !== undefined);
+  const pins = pinsDe(vista).filter((o) => nodes[o.node] !== undefined);
   if (pins.length === 0) return { nodes, edges, labels, pinsSolapados: [] };
   const nuevos: Record<string, CajaDeNodo> = { ...nodes };
   for (const { node, pin } of pins) {
     const caja = nuevos[node]!;
-    nuevos[node] = { ...caja, x: pin!.x - caja.width / 2, y: pin!.y - caja.height / 2 };
+    nuevos[node] = { ...caja, x: pin.x - caja.width / 2, y: pin.y - caja.height / 2 };
   }
   const previo = indiceDeGeometria(vista, { nodes });
   const indice = indiceDeGeometria(vista, { nodes: nuevos });
@@ -250,13 +197,11 @@ function aplicarPins(
 }
 
 /**
- * Una Arista a `nodo#atributo` termina en la fila de ese Atributo: el puerto
- * sube o baja a su altura sobre el borde del Nodo (la ruta de ELK apunta al
- * centro). Solo se ajusta un tramo final horizontal; si la ruta no tiene codo
- * previo se inserta uno a mitad de camino.
+ * Una Arista a `nodo#atributo` termina en la fila de ese Atributo (ELK apunta al centro del Nodo). Solo se
+ * ajusta un tramo final horizontal; si la ruta no tiene codo previo se inserta uno a mitad de camino.
  */
 function ajustarAPuertosDeAtributo(
-  vista: VistaResuelta,
+  vista: VistaDeGrafo,
   tabla: TablaDeMetricas,
   nodes: Record<string, CajaDeNodo>,
   edges: Record<string, RutaDeArista>,
@@ -284,11 +229,10 @@ function ajustarAPuertosDeAtributo(
 }
 
 /**
- * Tramo final de cada extremo de cada Arista de una Vista ER: horizontal y de al menos `LARGO_DE_MARCADOR_ER`,
- * para que el marcador de cardinalidad no se monte sobre el codo. Un extremo que llega en vertical se pasa al
- * lado del Nodo mas cercano a la ruta; uno corto aleja el codo previo (con el tramo vertical que lo sigue).
+ * Cada extremo de una Arista ER acaba en un tramo horizontal de al menos `LARGO_DE_MARCADOR_ER`, para que el
+ * marcador de cardinalidad no se monte sobre el codo. Un extremo vertical pasa al lado del Nodo mas cercano a la ruta.
  */
-function garantizarTramosFinalesEr(vista: VistaResuelta, cajas: ReadonlyMap<string, CajaDeNodo>, edges: Record<string, RutaDeArista>): Record<string, RutaDeArista> {
+function garantizarTramosFinalesEr(vista: VistaDeGrafo, cajas: ReadonlyMap<string, CajaDeNodo>, edges: Record<string, RutaDeArista>): Record<string, RutaDeArista> {
   const rutas = { ...edges };
   for (const arista of vista.edges) {
     const id = idDeArista(arista);
@@ -325,7 +269,7 @@ function tramoFinal(puntos: Punto[], caja: CajaDeNodo, lado: 'inicio' | 'fin'): 
   if (Math.abs(codo.x - puerto.x) < LARGO_DE_MARCADOR_ER || Math.sign(codo.x - puerto.x) !== hacia) {
     const x = puerto.x + hacia * LARGO_DE_MARCADOR_ER;
     const siguiente = p[2];
-    // El tramo que sale del codo era vertical: se desplaza con el. Si no, se anade un tramo vertical.
+    // Si el tramo que sale del codo es vertical se desplaza con el; si no, se anade uno vertical.
     if (siguiente !== undefined && siguiente.x === codo.x) {
       p[1] = { x, y: codo.y };
       p[2] = { x, y: siguiente.y };
@@ -361,7 +305,7 @@ function seSolapan(a: CajaDeNodo, b: CajaDeNodo): boolean {
   return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
-/** Ruta en Z entre los bordes de dos cajas: horizontal si estan separadas en x, si no vertical; con cajas encimadas, tambien horizontal (los puertos siguen en el borde, la ruta puede cruzar las cajas). */
+/** Ruta en Z entre los bordes de dos cajas: horizontal si estan separadas en x o encimadas, si no vertical. */
 function rutaOrtogonal(origen: CajaDeNodo, destino: CajaDeNodo): Punto[] {
   const centro = (c: CajaDeNodo): Punto => ({ x: c.x + c.width / 2, y: c.y + c.height / 2 });
   const [o, d] = [centro(origen), centro(destino)];
@@ -399,32 +343,53 @@ function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
 }
 
 /**
- * Clave de cache de la geometria: igual si y solo si el layout no cambia. Entran
- * la estructura visible, los textos, los Pins y las Metricas (fuentes, tamanos y espaciado); no la
- * paleta ni los colores, que no mueven nada; del icono solo si el Nodo lo tiene (reserva su Slot). Es la unica respuesta a
- * "esta geometria sigue vigente?" para `sesion`, `cli` y `shell`.
+ * Clave de cache de la geometria: igual si y solo si el layout no cambia. Entran estructura visible, textos, Pins,
+ * Metricas y si el Nodo tiene icono; no paleta ni colores.
  */
-export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, undefined, vista.type)): string {
-  return JSON.stringify({ tipo: vista.type, estructura: claveDeEstructura(vista, tema, metricas), pins: vista.type === 'sequence' ? [] : pinsDe(vista) });
+export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): string {
+  return JSON.stringify({ tipo: vista.type, estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista).map((o) => [o.node, o.pin.x, o.pin.y]) });
 }
 
-const pinsDe = (vista: VistaResuelta) => vista.overrides.flatMap((o) => (o.pin === undefined ? [] : [[o.node, o.pin.x, o.pin.y]]));
+/** Overrides con Pin de la Vista; una Vista de secuencia no tiene Pins (su orden lo da `order`). */
+function pinsDe(vista: VistaResuelta): (OverrideDeNodo & { pin: NonNullable<OverrideDeNodo['pin']> })[] {
+  switch (vista.type) {
+    case 'sequence':
+      return [];
+    case 'architecture':
+    case 'flow':
+    case 'er':
+      return vista.overrides.flatMap((o) => (o.pin === undefined ? [] : [{ ...o, pin: o.pin }]));
+  }
+}
 
-/**
- * Como `claveDeLayout` sin los Pins: identifica la geometria que ELK calcula (los Pins se aplican despues,
- * `aplicarPinsAGeometria`). Mover un Pin no la cambia, asi que no exige relayout de ELK.
- */
-export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, undefined, vista.type)): string {
+/** `claveDeLayout` sin los Pins: identifica la geometria que calcula ELK. */
+export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): string {
   const tabla = comoTabla(metricas);
   return JSON.stringify({
     tipo: vista.type,
     nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => (vista.type === 'er' ? [a.name, a.type, a.keys, a.optional] : [a.name, a.type]))]),
-    aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]),
-    mensajes: vista.interaction?.messages.map((m) => [m.ruta, m.kind, m.from, m.to, m.label]),
-    fragmentos: vista.interaction === undefined ? undefined : claveDeFragmentos(vista.interaction.items),
-    grupos: vista.interaction?.groups?.map((g) => [g.id, g.label, g.nivel, g.lifelines]),
+    ...claveDeConexiones(vista),
     metricas: claveDeMetricas(tabla),
   });
+}
+
+/** Lo que une a los Nodos en la clave de estructura: Aristas en un grafo; Mensajes, Fragmentos y `box` en secuencia. */
+function claveDeConexiones(vista: VistaResuelta): Record<string, unknown> {
+  switch (vista.type) {
+    case 'sequence': {
+      const { messages, items, groups } = vista.interaction;
+      return {
+        aristas: [],
+        mensajes: messages.map((m) => [m.ruta, m.kind, m.from, m.to, m.label]),
+        fragmentos: claveDeFragmentos(items),
+        grupos: groups?.map((g) => [g.id, g.label, g.nivel, g.lifelines]),
+      };
+    }
+    case 'architecture':
+    case 'flow':
+    case 'er':
+      return { aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]) };
+  }
 }
 
 /** Estructura de los Fragmentos (operador, guardas y a que Mensajes cubren) para la clave de layout. */

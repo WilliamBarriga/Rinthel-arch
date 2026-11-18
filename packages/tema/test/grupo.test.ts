@@ -13,16 +13,16 @@ const tema = (grupo: Record<string, unknown> = {}): Tema => ({ ...TEMA_NEUTRO, n
 describe('Grupo del Tema: pila propia', () => {
   it('un Tema sin group resuelve un Grupo sobrio de sus tokens, nunca las Capas del Nodo', () => {
     for (const sinGrupo of [tema(), TEMA_NEUTRO as Tema]) {
-      const { abierto, colapsado } = estiloResuelto(sinGrupo).pintura.grupo;
-      const nombresDelNodo = estiloResuelto(sinGrupo).pintura.nodo.capas.map((c) => c.nombre);
+      const { abierto, colapsado } = estiloResuelto(sinGrupo, { diagrama: 'architecture' }).pintura.grupo;
+      const nombresDelNodo = estiloResuelto(sinGrupo, { diagrama: 'architecture' }).pintura.nodo.capas.map((c) => c.nombre);
 
       expect(abierto.capas.map((c) => c.nombre)).toEqual(['caja', 'relleno', 'borde']);
       expect(abierto.capas.find((c) => c.nombre === 'relleno')?.props['color']).toContain((sinGrupo.tokens as Record<string, string>)['foreground']);
       expect(abierto.capas.find((c) => c.nombre === 'borde')?.tipo).toBe('border');
       expect(colapsado.capas.find((c) => c.nombre === 'borde')?.tipo).toBe('dashed');
-      if (nombresDelNodo.length > 0) expect(abierto.capas).not.toEqual(estiloResuelto(sinGrupo).pintura.nodo.capas);
+      if (nombresDelNodo.length > 0) expect(abierto.capas).not.toEqual(estiloResuelto(sinGrupo, { diagrama: 'architecture' }).pintura.nodo.capas);
     }
-    expect(estiloResuelto(tema()).pintura.grupo.abierto.capas.find((c) => c.nombre === 'relleno')?.props['color']).not.toBe('#dc2626');
+    expect(estiloResuelto(tema(), { diagrama: 'architecture' }).pintura.grupo.abierto.capas.find((c) => c.nombre === 'relleno')?.props['color']).not.toBe('#dc2626');
   });
 
   it('con Capas propias, la cascada del Grupo es base, Tipo, colapsado y estado, sin tocar las del Nodo', () => {
@@ -39,7 +39,7 @@ describe('Grupo del Tema: pila propia', () => {
     expect(grupo({ tipo: 'capa', colapsado: true })).toMatchObject({ color: 'blue', width: 3 });
     expect(grupo({ colapsado: true, estado: 'hover' })).toMatchObject({ color: 'green', width: 3 });
     expect(cascada(temaResueltoSchema.parse(t)).map((c) => c.nombre)).toEqual(['caja', 'relleno']);
-    const pintura = estiloResuelto(t).pintura;
+    const pintura = estiloResuelto(t, { diagrama: 'architecture' }).pintura;
     expect(pintura.grupo.abierto.tipos['capa']?.capas.find((c) => c.nombre === 'borde')?.props['color']).toBe('#2563eb');
     expect(pintura.grupo.colapsado.estados['hover']?.find((c) => c.nombre === 'borde')?.props['width']).toBe(3);
     expect(pintura.nodo.capas.map((c) => c.nombre)).toEqual(['caja', 'relleno']);
@@ -64,8 +64,8 @@ describe('Grupo del Tema: pila propia', () => {
 
 describe('Grupo del Tema: Metricas', () => {
   it('el padding superior del Grupo abierto es el alto de la cabecera mas el de la zona de hijos', () => {
-    const chico = tablaDeMetricas(tema({ padding: { top: 5, left: 7, bottom: 9, right: 11 } })).grupoAbierto;
-    const grande = tablaDeMetricas(tema({ padding: { top: 25, left: 7, bottom: 9, right: 11 } })).grupoAbierto;
+    const chico = tablaDeMetricas(tema({ padding: { top: 5, left: 7, bottom: 9, right: 11 } }), 'architecture').grupoAbierto;
+    const grande = tablaDeMetricas(tema({ padding: { top: 25, left: 7, bottom: 9, right: 11 } }), 'architecture').grupoAbierto;
     const cabecera = colocarEnCaja(chico, { titulo: '', atributos: [], icono: true }, 200);
 
     expect(chico.paddingGrupo).toMatchObject({ left: 7, bottom: 9, right: 11 });
@@ -78,8 +78,8 @@ describe('Grupo del Tema: Metricas', () => {
       slots: { direccion: 'row', gap: 6, pad: 6, hijos: [{ slot: 'icon' }, { slot: 'title' }] },
       textos: { icon: { tipo: 'icon', props: { variant: 'box', side: 40, radius: 6 } }, title: { tipo: 'text', props: { size: 2 } } },
     });
-    const normal = tablaDeMetricas(tema()).grupoAbierto;
-    const metricas = tablaDeMetricas(alta).grupoAbierto;
+    const normal = tablaDeMetricas(tema(), 'architecture').grupoAbierto;
+    const metricas = tablaDeMetricas(alta, 'architecture').grupoAbierto;
     const { slots, height } = colocarEnCaja(metricas, { titulo: 'x', atributos: [], icono: true }, 300);
 
     expect(metricas.paddingGrupo.top).toBeGreaterThan(normal.paddingGrupo.top);
@@ -89,7 +89,7 @@ describe('Grupo del Tema: Metricas', () => {
 
   it('el ancho minimo del Grupo abierto es el de su cabecera; un chip se mide a su ancho natural', () => {
     const chip = tema({ textos: { title: { tipo: 'text', props: { size: 1, fill: 'blue', pad: 10, dot: 'blue' } } } });
-    const abierto = tablaDeMetricas(chip).grupoAbierto;
+    const abierto = tablaDeMetricas(chip, 'architecture').grupoAbierto;
     const largo = colocarEnCaja(abierto, { titulo: 'plataforma', atributos: [], icono: false }, 400);
     const corto = colocarEnCaja(abierto, { titulo: 'x', atributos: [], icono: false }, 400);
 
@@ -105,14 +105,14 @@ describe('Grupo del Tema: Metricas', () => {
       colapsado: { ops: [], slots: { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }] } },
       textos: { title: { tipo: 'text', props: { transform: 'uppercase', tracking: 0.2, size: 0.8 } } },
     });
-    const tabla = tablaDeMetricas(t);
+    const tabla = tablaDeMetricas(t, 'architecture');
     const medidos = textosAMedir({ nodes: [{ id: 'g', type: 'capa', children: [{ id: 'h', children: [] }], label: 'plataforma', attributes: [], source: [], description: '', collapsed: false, childCount: 1 }], edges: [] } as never, tabla).map((m) => m.texto);
 
     expect(tabla.grupoColapsado.disposicion.hijos).toEqual([{ slot: 'title' }]);
     // Sin parche de Slots, el Grupo cerrado usa los del Nodo (una hoja), no la cabecera.
-    expect(tablaDeMetricas(tema()).grupoColapsado.disposicion).toEqual(TEMA_NEUTRO.nodo.slots);
+    expect(tablaDeMetricas(tema(), 'architecture').grupoColapsado.disposicion).toEqual(TEMA_NEUTRO.nodo.slots);
     expect(tabla.grupoAbierto.disposicion.hijos.map((h) => ('slot' in h ? h.slot : '?'))).toEqual(['icon', 'title']);
     expect(medidos).toContain('PLATAFORMA');
-    expect(tablaDeMetricas(tema()).grupoAbierto.titulo).toMatchObject({ tracking: 0, mayusculas: false });
+    expect(tablaDeMetricas(tema(), 'architecture').grupoAbierto.titulo).toMatchObject({ tracking: 0, mayusculas: false });
   });
 });

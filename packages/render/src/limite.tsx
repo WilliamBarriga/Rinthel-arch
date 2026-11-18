@@ -1,9 +1,6 @@
 /**
- * Limite de error de un Componente de Tema: si el codigo del Workspace lanza al
- * dibujar, solo desaparece su Capa; el resto del diagrama se conserva. Es el
- * unico componente de clase del paquete (React no tiene limites de error en
- * funciones). `Suspense` tambien lo rodea para que el render de servidor no
- * propague el fallo.
+ * Limite de error de un Componente de Tema: si lanza, solo desaparece su Capa. Es de clase porque React no tiene
+ * limites de error en funciones; `Suspense` evita que el render de servidor propague el fallo.
  */
 import { Component, Suspense } from 'react';
 import type { ReactNode } from 'react';

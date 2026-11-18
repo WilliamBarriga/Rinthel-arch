@@ -24,7 +24,6 @@ const mover = (texto: string, x: number, y: number, nodo = 'a'): Intencion => ({
   nodo,
   x,
   y,
-  hash: hashDeContenido(texto),
 });
 
 describe('aplicarIntencion', () => {
@@ -38,8 +37,14 @@ describe('aplicarIntencion', () => {
 
   it('rechaza con motivo', () => {
     const texto = base('');
-    const r = aplicarIntencion({ 'main.dg': texto }, { ...mover(texto, 1, 1), hash: 'viejo' });
-    expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    const r = aplicarIntencion({ 'main.dg': texto }, mover(texto, 1, 1), { 'main.dg': 'viejo' });
+    expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
+  });
+
+  it('con visto vigente aplica; un visto desactualizado de otro archivo no cuenta', () => {
+    const texto = base('');
+    const vigente = aplicarIntencion({ 'main.dg': texto, 'otro.dg': '' }, mover(texto, 1, 1), { 'main.dg': hashDeContenido(texto), 'otro.dg': 'viejo' });
+    expect(vigente.ok).toBe(true);
   });
 });
 
@@ -72,7 +77,7 @@ describe('historial de deshacer y rehacer', () => {
     if (!e2.ok) throw new Error(e2.mensaje);
     expect(rehacer(e2.historial)).toBeUndefined();
 
-    const mala = editarEnHistorial(e2.historial, { ...mover(texto, 0, 0), hash: 'viejo' });
+    const mala = editarEnHistorial(e2.historial, mover(texto, 0, 0, 'fantasma'));
     expect(mala.ok).toBe(false);
     expect(deshacer(e2.historial)?.archivos['main.dg']).toBe(texto);
   });

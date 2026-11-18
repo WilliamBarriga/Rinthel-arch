@@ -1,17 +1,8 @@
 /**
- * `validate(canonico) -> issues`: las comprobaciones semanticas que operan sobre
- * la Fuente canonica ya armada (ADR 0005). Puro; nunca lanza ni muta.
- *
- * La Fuente canonica no guarda posiciones de texto: quien las tiene (el
- * compilador del DSL) las aporta con un `Ubicador`, que traduce la ruta del
- * valor culpable dentro de la Fuente (como la `path` de Zod) a archivo y rango.
- * Sin `Ubicador` el issue se situa en `(canonico):1:1` y no lleva `fix`.
- *
- * Frontera: quedan fuera lo que no es una propiedad de la Fuente ya compilada
- * (sintaxis, `E_DUPLICATE_NODE`, `E_UNKNOWN_EXTEND_TARGET`, `E_UNKNOWN_VIEW_TYPE`,
- * Temas duplicados, con ciclo o sin padre: el compilador los detecta al fusionar
- * porque despues ya no existen) y `W_OVERLAPPING_PINS`, que necesita la
- * geometria de `layout` (la emite el CLI).
+ * Comprobaciones semanticas sobre la Fuente canonica ya armada (ADR 0005). Puro; nunca lanza ni muta.
+ * La Fuente no guarda posiciones: un `Ubicador` traduce la ruta del valor a archivo y rango; sin el, el issue
+ * sale en `(canonico):1:1` sin `fix`. Fuera de alcance: lo que la fusion del DSL hace desaparecer (sintaxis,
+ * Nodos y Temas duplicados, `extend` o `extends` sin destino, `E_UNKNOWN_VIEW_TYPE`) y `W_OVERLAPPING_PINS`.
  */
 import { CODIGOS } from './codigos';
 import { CARDINALIDADES_ER } from './esquema';
@@ -26,20 +17,16 @@ import { matchesSelector, resolveView } from './vistas';
 /** Ruta de un valor dentro de la Fuente canonica, p. ej. `['views', 0, 'links', 1, 'view']`. */
 export type RutaDeFuente = readonly (string | number)[];
 
-/** Sitio del texto que origino un valor. */
 export interface SitioDeTexto {
   file: string;
   range: TextRange;
 }
 
-/**
- * Dice donde se escribio el valor en `ruta`. `null` significa que ese valor no
- * es fiable (su archivo tiene errores de sintaxis) y no debe producir issues.
- */
+/** `null`: el valor no es fiable (su archivo tiene errores de sintaxis) y no produce issues. */
 export type Ubicador = (ruta: RutaDeFuente) => SitioDeTexto | null;
 
 export interface OpcionesDeValidate {
-  /** Resuelve las claves `icon` de los Tipos de nodo; sin el no se comprueban. */
+  /** Sin el, las claves `icon` no se comprueban. */
   iconos?: IconProvider;
   ubicar?: Ubicador;
 }
@@ -60,16 +47,16 @@ type Emitir = (
   existentes?: Iterable<string>,
   /** Texto del `fix` tal como se escribe en el DSL (p. ej. entre comillas); por defecto, el candidato tal cual. */
   escribir?: (candidato: string) => string,
-  /** `hint` cuando no hay ningun candidato cercano. */
+  /** `hint` sin ningun candidato cercano. */
   sinCandidatos?: string,
 ) => void;
 
-/** Todos los issues semanticos de la Fuente, ordenados (archivo, linea, columna, codigo). */
+/** Issues ordenados por archivo, linea, columna y codigo. */
 export function validate(fuente: FuenteCanonica, opciones: OpcionesDeValidate = {}): Issue[] {
   const issues: Issue[] = [];
   const { ubicar } = opciones;
 
-  /** Issue de error en `ruta`; con `existentes` anade `fix` (un candidato) o `hint` (varios). */
+  /** Con `existentes` anade `fix` (un candidato) o `hint` (varios). */
   const emitir: Emitir = (ruta, code, message, escrito, existentes, escribir = (candidato) => candidato, sinCandidatos) => {
     const sitio = ubicar === undefined ? SIN_UBICAR : ubicar(ruta);
     if (sitio === null) return;
@@ -207,7 +194,6 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
   const ruta = ['views', indice];
   const ids = fuente.views.map(({ id }) => id);
 
-  // Tema de la Vista y colores de sus overrides.
   const tema = fuente.themes.find((candidato) => candidato.name === vista.theme);
   if (vista.theme !== undefined && tema === undefined) {
     emitir([...ruta, 'theme'], CODIGOS.E_UNKNOWN_THEME, `Tema '${vista.theme}' no declarado`, vista.theme, fuente.themes.map(({ name }) => name));
@@ -219,8 +205,7 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
     }
   });
 
-  // Overrides solo sobre Nodos que la Vista muestra.
-  // En secuencia la Vista no selecciona Nodos: vale cualquiera que no excluya (puede ser una Lifeline fundida o el `box` de un Grupo).
+  // En secuencia la Vista no selecciona Nodos: vale cualquiera no excluido (Lifeline fundida o `box` de un Grupo).
   const deSecuencia = vista.type === 'sequence' ? nodosNoExcluidos(fuente.model.nodes, vista) : undefined;
   const visibles = deSecuencia ?? new Set(resolveView(fuente, vista.id)?.nodes.map((nodo) => nodo.id));
   vista.overrides.forEach((override, i) => {
@@ -229,7 +214,6 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
     }
   });
 
-  // Drill-down: `link` a Vistas que existen; Grupos que la Vista muestra; `link` y `expanded` excluyentes.
   const grupos = new Set(
     deSecuencia === undefined
       ? resolveView(
@@ -244,7 +228,8 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
       emitir([...ruta, 'links', i, 'view'], CODIGOS.E_UNKNOWN_VIEW_LINK, `link hacia la Vista '${enlace.view}', que no existe`, enlace.view, ids);
     }
   });
-  for (const palabra of ['collapsed', 'expanded'] as const) {
+  // En secuencia `expanded` ya da E_VIEW_PROPERTY_FOR_TYPE; no se emite otro issue sobre el.
+  for (const palabra of vista.type === 'sequence' ? (['collapsed'] as const) : (['collapsed', 'expanded'] as const)) {
     vista[palabra].forEach((destino, i) => {
       const donde = [...ruta, palabra, i];
       if (!grupos.has(destino)) {
@@ -255,7 +240,6 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
     });
   }
 
-  // Pasos (ADR 0002): selectores y Aristas que existen en el Modelo.
   const nodos = todosLosIds(fuente.model.nodes);
   vista.steps.forEach((paso, s) => {
     if (vista.type === 'sequence') return;
@@ -326,7 +310,7 @@ function validarCicloDeVida(mensaje: MensajeUbicado, j: number, ruta: (string | 
   }
 }
 
-/** Propiedad de Vista que solo vale en `sequence`: como se llama en el DSL, donde esta en la Vista (una ruta por aparicion) y que sugerir. */
+/** `donde`: una ruta por aparicion en la Vista. */
 interface PropiedadSoloDeSecuencia {
   nombre: string;
   donde: (vista: Vista) => Array<Array<string | number>>;
@@ -355,6 +339,9 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
   }
   if (vista.include.length > 0) {
     emitirCon([...ruta, 'include'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'include' no vale en una Vista 'sequence': proyecta una Interaccion", { hint: "usa 'exclude' para quitar Lifelines" });
+  }
+  if (vista.expanded.length > 0) {
+    emitirCon([...ruta, 'expanded', 0], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'expanded' no vale en una Vista 'sequence': las Lifelines se funden con 'collapsed' o 'depth'", { hint: "quita 'expanded'; usa 'collapsed' o 'depth' para fundir Grupos" });
   }
   vista.overrides.forEach((override, i) => {
     if (override.pin !== undefined) {
@@ -393,7 +380,8 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
 function validarPasosDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: number, interaccion: Interaccion | undefined, emitir: Emitir, emitirCon: EmitirCon): void {
   const ruta = ['views', indice];
   const mensajes = aplanarMensajes(interaccion?.items ?? []);
-  const proyectados = interaccion === undefined ? [] : (resolveView(fuente, vista.id)?.interaction?.messages ?? []);
+  const resuelta = interaccion === undefined ? undefined : resolveView(fuente, vista.id);
+  const proyectados = resuelta?.type === 'sequence' ? resuelta.interaction.messages : [];
   const posicion = new Map(proyectados.flatMap((m, i) => (m.id === undefined ? [] : [[m.id, i] as const])));
   const ids = mensajes.flatMap((m) => (m.id === undefined ? [] : [m.id]));
   if (vista.stepsEach === true && vista.steps.length > 0) {
@@ -425,13 +413,11 @@ function validarPasosDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
   });
 }
 
-/** Ids de todos los Nodos que los `exclude` de la Vista no quitan. */
 function nodosNoExcluidos(nodos: readonly Nodo[], vista: Vista): Set<string> {
   const todos = todosLosIds(nodos);
   return new Set(todos.filter((id) => !vista.exclude.some((selector) => matchesSelector(selector, id))));
 }
 
-/** Ids de los Nodos con hijos (Grupos). */
 function gruposDe(nodos: readonly Nodo[], destino = new Set<string>()): Set<string> {
   for (const nodo of nodos) {
     if (nodo.children.length > 0) destino.add(nodo.id);

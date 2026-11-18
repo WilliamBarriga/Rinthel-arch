@@ -1,9 +1,6 @@
 /**
- * Determinismo de los efectos pintados (ADR 0008): mano alzada, giro y
- * decoracion salen de una semilla FNV-1a de 32 bits del id del elemento mezclado
- * con el nombre de la Capa. Nunca entran el tamano de la caja, el orden de
- * render ni la Vista, asi redimensionar o colapsar no cambia el trazo. El `seed
- * N` del Tema (token `seed`) se mezcla para "tirar de nuevo". Puro: sin azar ni reloj.
+ * Semillas de los efectos pintados: dependen solo del id del elemento, el nombre de la Capa y el
+ * `seed` del Tema, nunca del tamano de la caja, el orden de render ni la Vista.
  */
 
 /** FNV-1a de 32 bits (sin signo) sobre las unidades UTF-16 del texto. */
@@ -13,13 +10,12 @@ export function fnv1a(texto: string): number {
   return h;
 }
 
-/** Semilla de una Capa de un elemento; `semillaDelTema` (el `seed N`) la cambia si esta declarado. */
 export function semillaDeCapa(idDeElemento: string, nombreDeCapa: string, semillaDelTema?: number): number {
   const clave = `${idDeElemento}\u0000${nombreDeCapa}`;
   return fnv1a(semillaDelTema === undefined ? clave : `${semillaDelTema}\u0000${clave}`);
 }
 
-/** PRNG mulberry32 sembrado una vez por Capa: devuelve numeros en [0, 1). */
+/** PRNG mulberry32: devuelve numeros en [0, 1). */
 export function crearPrng(semilla: number): () => number {
   let s = semilla >>> 0;
   return () => {
