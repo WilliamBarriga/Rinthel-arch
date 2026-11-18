@@ -417,7 +417,7 @@ describe('layoutView: Nodos con Atributos', () => {
   it('el Nodo con Atributos es mas alto, una fila por Atributo, y su tamano los cubre', async () => {
     const sin = await layoutView(conAtributos(columnas.slice(1, 2)), TEMA_NEUTRO);
     const con = await layoutView(conAtributos(columnas), TEMA_NEUTRO);
-    const { cabecera, fila } = metricasDe(TEMA_NEUTRO);
+    const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
 
     expect(con.nodes['t']!.height).toBeGreaterThanOrEqual(cabecera + columnas.length * fila);
     expect(con.nodes['t']!.height - sin.nodes['t']!.height).toBe((columnas.length - 1) * fila);
@@ -435,7 +435,7 @@ describe('layoutView: Nodos con Atributos', () => {
 
   it('una Arista a nodo#atributo termina en la fila de ese Atributo, sobre el borde', async () => {
     const { nodes, edges } = await layoutView(conAtributos(columnas), TEMA_NEUTRO);
-    const { cabecera, fila } = metricasDe(TEMA_NEUTRO);
+    const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
     const caja = nodes['t']!;
     const { points } = edges[idDeArista({ from: { node: 's' }, to: { node: 't', attribute: 'email' } })]!;
     const fin = points[points.length - 1]!;
@@ -459,24 +459,24 @@ describe('Metricas', () => {
   const largo = [{ name: 'columna_con_un_nombre_larguisimo_para_medir', type: 'varchar' }];
 
   it('se derivan del Tema: otro tamano de texto, otras Metricas', () => {
-    const base = metricasDe(TEMA_NEUTRO);
-    const grande = metricasDe(con({ tokens: { ...TEMA_NEUTRO.tokens, fontSize: '28px' } }));
+    const base = metricasDe(TEMA_NEUTRO, 'architecture');
+    const grande = metricasDe(con({ tokens: { ...TEMA_NEUTRO.tokens, fontSize: '28px' } }), 'architecture');
 
     expect(grande.cabecera).toBeGreaterThan(base.cabecera);
     expect(grande.fila).toBeGreaterThan(base.fila);
   });
 
   it('la clave de layout depende de las Metricas', () => {
-    const base = metricasDe(TEMA_NEUTRO);
+    const base = metricasDe(TEMA_NEUTRO, 'architecture');
 
     expect(claveDeLayout(vista(), TEMA_NEUTRO, { ...base, paddingHorizontal: base.paddingHorizontal + 8 })).not.toBe(
       claveDeLayout(vista(), TEMA_NEUTRO),
     );
-    expect(claveDeLayout(vista(), TEMA_NEUTRO, tablaDeMetricas(TEMA_NEUTRO))).toBe(claveDeLayout(vista(), TEMA_NEUTRO));
+    expect(claveDeLayout(vista(), TEMA_NEUTRO, tablaDeMetricas(TEMA_NEUTRO, 'architecture'))).toBe(claveDeLayout(vista(), TEMA_NEUTRO));
   });
 
   it('cambiar una Metrica mueve el layout: mas padding, Nodo mas ancho; mas fila, mas alto', async () => {
-    const base = metricasDe(TEMA_NEUTRO);
+    const base = metricasDe(TEMA_NEUTRO, 'architecture');
     const v = tabla(largo);
     const normal = (await layoutView(v, TEMA_NEUTRO)).nodes['t']!;
     const ancho = (await layoutView(v, TEMA_NEUTRO, { metricas: { ...base, paddingHorizontal: base.paddingHorizontal + 20 } })).nodes['t']!;
@@ -487,7 +487,7 @@ describe('Metricas', () => {
   });
 
   it('un Atributo se mide con la escala con que se dibuja', async () => {
-    const m = metricasDe(TEMA_NEUTRO);
+    const m = metricasDe(TEMA_NEUTRO, 'architecture');
     const texto = 'columna_con_un_nombre_larguisimo_para_medir: varchar';
     const { width } = (await layoutView(tabla(largo), TEMA_NEUTRO)).nodes['t']!;
 

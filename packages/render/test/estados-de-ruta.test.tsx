@@ -35,7 +35,7 @@ const marcas = (completo: string, atributo: string): string[] => [...completo.re
 describe('Diagram: estados de ruta y foco como selectores', () => {
   it('la hoja trae un selector por estado: en-ruta y foco con contorno, atenuado con opacidad', async () => {
     const hoja = hojaDe(dibujo(await props()));
-    const estilo = resolverEstilo(TEMA_NEUTRO);
+    const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
 
     expect(hoja).toContain(`.rd-estado[data-state="en-ruta"]{border:${estilo.estados['en-ruta'].ancho}px solid ${estilo.estados['en-ruta'].color}}`);
     expect(hoja).toContain('.rd-estado[data-state="foco"]{');
@@ -73,7 +73,7 @@ describe('Diagram: estados de ruta y foco como selectores', () => {
   });
 
   it('el anillo de foco es irremovible: un Estilo que lo deja sin grosor se dibuja con el minimo', async () => {
-    const base = resolverEstilo(TEMA_NEUTRO);
+    const base = resolverEstilo(TEMA_NEUTRO, 'architecture');
     const sinAnillo = { ...base, estados: { ...base.estados, foco: { ...base.estados.foco, ancho: 0 } } };
     const html = dibujo(await props({ estilo: sinAnillo, estados: { a: ['foco'], 'a -> b': ['foco'] } }));
 

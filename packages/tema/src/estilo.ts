@@ -169,7 +169,7 @@ export interface EstiloResuelto {
 
 export interface OpcionesDeEstilo {
   /** Tipo de diagrama de la Vista: aplica los parches `diagram <tipo>` del Tema (Metricas y pintura) bajo la cascada de Tipo de nodo y estado. */
-  diagrama?: TipoDeDiagrama;
+  diagrama: TipoDeDiagrama;
   /** Medidas reales de texto con las que se calculo la Geometria: las Metricas del dibujo deben ser las del layout. */
   medidas?: MedidasDeTexto;
   /** Rutas de los archivos de fuente del Workspace; de ellos salen las caras de `fuentes`. Sin ellas, ninguna. */
@@ -358,7 +358,7 @@ function pinturaDeSecuencia(tema: TemaResuelto, variable: string | undefined): P
   };
 }
 
-export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): EstiloResuelto {
+export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo): EstiloResuelto {
   const resuelto = temaParaDiagrama(resolverTema(tema), opciones.diagrama);
   const variable = opciones.colorEnVariable;
   /** Pintura de un elemento en el reposo y en cada estado declarado, para un Tipo (o ninguno) y, en el Grupo, abierto o colapsado. */
@@ -392,7 +392,7 @@ export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo = {}): Est
       tipos: Object.fromEntries(tipos.map((tipo) => [tipo, pinturaDe(elemento, tipo, colores[tipo], colapsado)])),
     };
   };
-  const tabla = tablaDeMetricas(tema, opciones.medidas, opciones.diagrama);
+  const tabla = tablaDeMetricas(tema, opciones.diagrama, opciones.medidas);
   const fila = opciones.diagrama === 'er' ? pinturaDeFila(resuelto, variable) : undefined;
   const secuencia = opciones.diagrama === 'sequence' ? pinturaDeSecuencia(resuelto, variable) : undefined;
   const reserva = resuelto.fonts['fallback'];

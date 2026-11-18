@@ -134,7 +134,7 @@ describe('Diagram: estructura hibrida', () => {
   it('cada Slot va en el rectangulo que reservo la colocacion compartida', async () => {
     const p = await props(vista());
     const html = dibujo(p);
-    const { slots } = colocarEnCaja(metricasDe(TEMA_NEUTRO), { titulo: 'b', atributos: [], icono: false }, p.geometry.nodes['b']!.width);
+    const { slots } = colocarEnCaja(metricasDe(TEMA_NEUTRO, 'architecture'), { titulo: 'b', atributos: [], icono: false }, p.geometry.nodes['b']!.width);
     const titulo = etiquetaCon(html.slice(html.indexOf('data-id="b"')), 'data-slot="title"');
 
     expect(rectDe(titulo)).toEqual(slots.title);
@@ -381,7 +381,7 @@ describe('Diagram', () => {
 
   it('cambiar un valor del Estilo cambia lo que dibuja Diagram', async () => {
     const base = await props(vista());
-    const estilo = resolverEstilo(TEMA_NEUTRO);
+    const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
     const otro = { ...estilo, nodo: { ...estilo.nodo, radio: 13, relleno: '#fafafa' }, glifos: { expandido: 'v', colapsado: '>' } };
     const dibujar = (e: typeof estilo): string => dibujo({ ...base, onToggle: () => {}, estilo: e });
 
@@ -433,7 +433,7 @@ describe('Diagram', () => {
 
     it('un Nodo seleccionado lleva un contorno dentro de su caja, estilado por la hoja con el color del Estilo', async () => {
       const html = dibujo(await props(vista(), { estados: { b: ['seleccionado'] } }));
-      const estilo = resolverEstilo(TEMA_NEUTRO);
+      const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
       const [marca] = marcas(html, 'seleccionado');
 
       expect(marca).toContain('data-selected="b"');
@@ -456,7 +456,7 @@ describe('Diagram', () => {
     });
 
     it('el fantasma y el hover usan sus propias entradas del Estilo', async () => {
-      const estilo = resolverEstilo(TEMA_NEUTRO);
+      const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
       const otro = { ...estilo, estados: { ...estilo.estados, fantasma: { ...estilo.estados.fantasma, color: 'hotpink' } } };
       const hoja = hojaDe(dibujo(await props(vista(), { estados: { c: ['fantasma'] }, estilo: otro })));
 
@@ -473,7 +473,7 @@ describe('Diagram', () => {
       const v = resolveView(fuente, 'v')!;
       const p = await props(v, { estados: { 't#nombre': ['seleccionado'] } });
       const marca = marcas(dibujo(p), 'seleccionado')[0];
-      const m = metricasDe(TEMA_NEUTRO);
+      const m = metricasDe(TEMA_NEUTRO, 'architecture');
 
       expect(marca).toContain('data-selected="t#nombre"');
       expect(rectDe(marca)).toEqual({ x: 0, y: m.cabecera + m.fila, width: p.geometry.nodes['t']!.width, height: m.fila });

@@ -2,7 +2,7 @@
  * Clasificador de cambios de `dev` (enmienda de Temas del ADR 0005): compara lo ultimo bueno con lo nuevo y
  * dice que debe rehacer el visor. Puro.
  *
- * - `estructura`: cambia algo que mueve el layout (Modelo, Vistas, Metricas del Tema de una Vista) o una
+ * - `estructura`: cambia algo que mueve el layout (Modelo, Vistas, Metricas del Tema de una Vista, calculadas con el Tipo de diagrama de esa Vista) o una
  *   fuente tipografica. Un cambio que solo toca `theme`/`themePatch` de una Vista con Metricas iguales no cuenta.
  * - `codigo`: cambia un `.tsx` y nada mas fuerte.
  * - `pintura`: lo demas (Capas pintadas, animacion, paleta...); el Estilo resuelto se reaplica sin relayout.
@@ -27,7 +27,7 @@ function claveDeEstructura(fuente: FuenteCanonica): string {
   return JSON.stringify({
     specification: fuente.specification,
     model: fuente.model,
-    vistas: fuente.views.map(({ theme, themePatch: _parche, ...resto }) => [resto, claveDeMetricas(tablaDeMetricas(temaDe(theme)))]),
+    vistas: fuente.views.map(({ theme, themePatch: _parche, ...resto }) => [resto, claveDeMetricas(tablaDeMetricas(temaDe(theme), resto.type))]),
   });
 }
 

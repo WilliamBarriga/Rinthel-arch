@@ -18,7 +18,7 @@ describe('grosor del borde de una pila', () => {
 });
 
 const caja = (...capas: Array<[string, Record<string, string | number>]>) => {
-  const estilo = resolverEstilo({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capas.map(([tipo, props], i) => ({ nombre: `c${i}`, primitiva: { tipo, props } })) } });
+  const estilo = resolverEstilo({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capas.map(([tipo, props], i) => ({ nombre: `c${i}`, primitiva: { tipo, props } })) } }, 'architecture');
   return declaracionesDeCaja(estilo, estilo.pintura.nodo);
 };
 

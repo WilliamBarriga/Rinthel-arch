@@ -14,7 +14,7 @@ const tema = (capas: unknown[], tipos: Record<string, OpDeCapa[]> = {}): Tema =>
 
 describe('tabla de Metricas por elemento', () => {
   it('un Tipo con caja minima propia tiene su entrada; un Tipo no mencionado usa la entrada base', () => {
-    const tabla = tablaDeMetricas(tema([forma(), relleno('blue')], { db: [circulo()] }));
+    const tabla = tablaDeMetricas(tema([forma(), relleno('blue')], { db: [circulo()] }), 'architecture');
 
     expect(colocarNodo({ titulo: 'x', atributos: [], icono: false }, metricasDeNodo(tabla, 'db'))).toMatchObject({ width: 120, height: 120 });
     expect(colocarNodo({ titulo: 'x', atributos: [], icono: false }, metricasDeNodo(tabla, 'servicio'))).toMatchObject({ width: 120 });
@@ -26,25 +26,25 @@ describe('tabla de Metricas por elemento', () => {
     const base = tema([forma(), relleno('blue')]);
     const conTipo = tema([forma(), relleno('blue')], { db: [op('relleno', { color: 'red' })] });
 
-    expect(claveDeMetricas(tablaDeMetricas(conTipo))).toBe(claveDeMetricas(tablaDeMetricas(base)));
+    expect(claveDeMetricas(tablaDeMetricas(conTipo, 'architecture'))).toBe(claveDeMetricas(tablaDeMetricas(base, 'architecture')));
   });
 
   it('cambiar solo la pintura (Capas, colores, radio) no cambia la clave de Metricas', () => {
     const a = tema([forma({ radius: 0 }), relleno('blue')]);
     const b = tema([forma({ radius: 12 }), relleno('red'), { nombre: 'aura', primitiva: { tipo: 'border', props: { color: 'red', width: 3 } } }]);
 
-    expect(claveDeMetricas(tablaDeMetricas(b))).toBe(claveDeMetricas(tablaDeMetricas(a)));
+    expect(claveDeMetricas(tablaDeMetricas(b, 'architecture'))).toBe(claveDeMetricas(tablaDeMetricas(a, 'architecture')));
   });
 
   it('cambiar la forma a una con caja minima cambia la clave', () => {
     const a = tema([forma()]);
     const b = tema([{ nombre: 'forma', primitiva: { tipo: 'circle', props: {} } }]);
 
-    expect(claveDeMetricas(tablaDeMetricas(b))).not.toBe(claveDeMetricas(tablaDeMetricas(a)));
+    expect(claveDeMetricas(tablaDeMetricas(b, 'architecture'))).not.toBe(claveDeMetricas(tablaDeMetricas(a, 'architecture')));
   });
 
   it('la tabla trae Grupo abierto, Grupo colapsado y etiqueta de Arista', () => {
-    const tabla = tablaDeMetricas(TEMA_NEUTRO);
+    const tabla = tablaDeMetricas(TEMA_NEUTRO, 'architecture');
 
     expect(tabla.grupoAbierto.paddingGrupo).toEqual({ top: 44, left: 16, bottom: 16, right: 16 });
     expect(tabla.grupoColapsado.disposicion).toEqual(TEMA_NEUTRO.nodo.slots);
@@ -64,6 +64,15 @@ describe('parches de estado y Metricas', () => {
   it('el esquema rechaza un parche de estado que cambia la caja', () => {
     const malo = { ...tema([forma()]), nodo: { ...TEMA_NEUTRO.nodo, capas: [forma()], estados: { hover: [circulo()] } } } as Tema;
 
-    expect(() => tablaDeMetricas(malo)).toThrow(/Metricas/);
+    expect(() => tablaDeMetricas(malo, 'architecture')).toThrow(/Metricas/);
+  });
+});
+
+describe('el Tipo de diagrama es obligatorio', () => {
+  it('omitirlo es error de typecheck', () => {
+    // @ts-expect-error falta el Tipo de diagrama
+    const omitido = () => tablaDeMetricas(TEMA_NEUTRO);
+
+    expect(omitido).toBeTypeOf('function');
   });
 });

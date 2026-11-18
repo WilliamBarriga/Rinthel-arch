@@ -8,7 +8,7 @@
  */
 import { activacionesDe } from 'canonico';
 import type { Activacion, AnclajeDeNota, ItemResuelto, MensajeResuelto, NotaResuelta, OperadorDeFragmento, VistaResuelta } from 'canonico';
-import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, contenidoDeNodo, metricasDeHoja, metricasDeSecuencia, tamanoDeEtiqueta, textoDeGuarda } from 'tema';
+import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeGuarda } from 'tema';
 import type { Metricas, TablaDeMetricas } from 'tema';
 
 import type { CajaDeNodo, Punto } from './layout';
@@ -155,7 +155,8 @@ function notasDe(items: readonly ItemResuelto[]): NotaResuelta[] {
 
 export function layoutSecuencia(vista: VistaResuelta, metricas: Metricas | TablaDeMetricas): GeometriaSecuencia {
   const tabla = comoTabla(metricas);
-  const sec = tabla.base.secuencia ?? metricasDeSecuencia(undefined);
+  const sec = tabla.base.secuencia;
+  if (sec === undefined) throw new Error('layoutSecuencia: la tabla de Metricas no trae la parte de secuencia; calculala con tablaDeMetricas(tema, \'sequence\')');
   const huecoEntreLifelines = sec.huecoEntreLifelines;
   const anchoDeActivacion = sec.anchoDeActivacion;
   const anchoDeLazo = sec.anchoDeLazo;

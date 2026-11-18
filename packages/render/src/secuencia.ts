@@ -50,7 +50,7 @@ function pinturaDeLifeline(base: PinturaDeArista, destruida: boolean, secuencia:
 
 export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { geometry: GeometriaSecuencia }): Elemento {
   const { view, geometry, theme } = entrada;
-  const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.metricas, undefined, undefined, view.type);
+  const estilo = entrada.estilo ?? resolverEstilo(theme, view.type, entrada.metricas);
   const { raices, cajas } = indiceDeGeometria(view, geometry);
   const visibility = entrada.visibility ?? (() => 1);
   const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));
