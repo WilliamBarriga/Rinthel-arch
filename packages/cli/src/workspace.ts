@@ -78,9 +78,11 @@ export function leerArchivoDeFuente(raices: readonly string[], ruta: string): { 
 }
 
 const CARPETA_DE_SALIDA = '.diagrams';
+/** Lo que `build` reemplaza en `.diagrams/`; el resto (el Registro de actividad) se conserva. */
+const SALIDA_DE_BUILD = ['canonico.json', 'geometria'];
 /**
- * Reemplaza `<raiz>/.diagrams/<subcarpeta>` (por defecto, todo `.diagrams/`) por `archivos` (ruta relativa a
- * `.diagrams/` con `/`): no quedan restos de una Vista que ya no existe.
+ * Reemplaza `<raiz>/.diagrams/<subcarpeta>` (por defecto, `canonico.json` y `geometria/`) por `archivos` (ruta
+ * relativa a `.diagrams/` con `/`): no quedan restos de una Vista que ya no existe.
  */
 export function escribirSalida(
   raiz: string,
@@ -88,7 +90,7 @@ export function escribirSalida(
   subcarpeta = '',
 ): void {
   const destino = join(raiz, CARPETA_DE_SALIDA);
-  rmSync(join(destino, subcarpeta), { recursive: true, force: true });
+  for (const ruta of subcarpeta === '' ? SALIDA_DE_BUILD : [subcarpeta]) rmSync(join(destino, ruta), { recursive: true, force: true });
   for (const [ruta, texto] of Object.entries(archivos)) {
     const archivo = join(destino, ...ruta.split('/'));
     mkdirSync(dirname(archivo), { recursive: true });

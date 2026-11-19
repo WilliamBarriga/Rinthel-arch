@@ -102,6 +102,8 @@ Comandos:
 
 Bucle de un agente: inspect, editar el .dg, validate --json hasta ok:true.
 Codigos de salida: 0 correcto, 1 hay errores del Workspace, 2 fallo de uso o interno.
+validate, build, inspect y edit anexan un Evento a <ruta>/.diagrams/actividad.jsonl
+(DIAGRAMS_ACTIVIDAD=0 lo apaga; DIAGRAMS_AGENTE nombra al agente).
 Guia completa: docs/guia/cli.md
 `;
 
