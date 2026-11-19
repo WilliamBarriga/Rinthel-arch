@@ -1,6 +1,6 @@
 /**
- * `canonico`: esquemas Zod y tipos de la Fuente canonica, la Geometria cacheada, las Intenciones de edicion y las
- * salidas JSON del CLI; `validate`, `resolveView`, `revealAt` e iconos (ADR 0002, 0003, 0005, 0007, 0008).
+ * `canonico`: esquemas Zod y tipos de la Fuente canonica, la Geometria cacheada, las Intenciones de edicion, las
+ * salidas JSON del CLI y el Evento de actividad; `validate`, `resolveView`, `revealAt` e iconos (ADR 0002, 0003, 0005, 0007, 0008).
  * Invariantes: ids cualificados `a.b.c` definen la jerarquia; colores son nombres de Paleta, nunca hex; del Tema
  * solo conoce `name` y `palette`; una Vista solo selecciona Nodos.
  * Errores: `validate` devuelve issues ordenados y nunca lanza; solo se lanza por fallos de uso o internos.
@@ -85,6 +85,9 @@ export type { Codigo } from './codigos';
 
 export { EDIT_CONTRACT_VERSION, edicionDeTextoSchema, edicionesPedidasSchema, salidaDeEditJsonSchema, salidaDeEditSchema } from './edit';
 export type { SalidaDeEdit } from './edit';
+
+export { ACTIVIDAD_CONTRACT_VERSION, COMANDOS_CON_ACTIVIDAD, eventoDeActividadSchema } from './actividad';
+export type { EventoDeActividad, ObjetivoDeActividad } from './actividad';
 
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';
 export type { SalidaDeInspect } from './inspect';
