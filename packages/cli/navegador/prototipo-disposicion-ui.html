@@ -1,0 +1,358 @@
+<!doctype html>
+<!--
+  PROTOTIPO DESECHABLE (ticket "Disposicion de la UI de dev", #169). No es codigo de produccion.
+  Pregunta: como se reparte la pantalla de la UI de dev y como se navega entre leer, editar y observar al agente.
+  Tres disposiciones radicalmente distintas en una sola pagina, conmutables con ?variant=A|B|C y la barra flotante (flechas o teclas).
+  Datos: nombres reales de Vistas y Nodos de examples/rinthel-arch; el lienzo usa capturas de docs/img (servir desde la raiz del repo).
+  Todo es estatico y en memoria; nada escribe.
+-->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>PROTOTIPO - Disposicion de la UI de dev</title>
+<style>
+  :root { --bg:#0f1115; --pan:#171a21; --pan2:#1e222b; --borde:#2a2f3a; --txt:#d6dae3; --tenue:#8a92a3; --acento:#6ea8fe; --ok:#5cc98a; --warn:#e6b450; --err:#f07178; --agente:#c792ea; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--txt); font:13px/1.4 system-ui, sans-serif; }
+  .app { position:fixed; inset:0; display:grid; }
+  .pan { background:var(--pan); border:1px solid var(--borde); overflow:auto; }
+  .tit { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--tenue); padding:8px 10px 4px; display:flex; justify-content:space-between; align-items:center; }
+  .item { padding:4px 10px 4px 18px; cursor:pointer; border-left:2px solid transparent; display:flex; justify-content:space-between; gap:6px; }
+  .item:hover { background:var(--pan2); }
+  .item.sel { border-left-color:var(--acento); background:var(--pan2); }
+  .grupo { padding:6px 10px 2px; color:var(--tenue); font-size:12px; }
+  .badge { font-size:10px; padding:0 5px; border-radius:8px; background:var(--pan2); color:var(--tenue); }
+  .badge.agente { background:#3a2a4a; color:var(--agente); }
+  .badge.warn { background:#3a3220; color:var(--warn); }
+  .badge.err { background:#3d2226; color:var(--err); }
+  .lienzo { position:relative; background:#f5f6f8 center/contain no-repeat; overflow:hidden; }
+  .lienzo.oscuro { background-color:#0c1a2e; }
+  .lienzo img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; }
+  .resalte { position:absolute; border:2px solid var(--agente); border-radius:6px; box-shadow:0 0 0 4px #c792ea44; animation:lat 1.4s infinite; pointer-events:none; }
+  @keyframes lat { 50% { box-shadow:0 0 0 10px #c792ea11; } }
+  .migas { position:absolute; top:8px; left:8px; background:#ffffffdd; color:#222; padding:3px 8px; border-radius:4px; font-size:12px; }
+  .ctrl { position:absolute; right:8px; bottom:8px; display:flex; gap:4px; }
+  .ctrl button, .btn { background:var(--pan2); color:var(--txt); border:1px solid var(--borde); border-radius:4px; padding:3px 8px; cursor:pointer; font:inherit; }
+  .btn.prim { background:var(--acento); color:#0b1220; border-color:var(--acento); }
+  .codigo { font:12px/1.55 ui-monospace, monospace; padding:6px 0; white-space:pre; counter-reset:l; }
+  .codigo div { padding:0 10px 0 44px; position:relative; }
+  .codigo div::before { counter-increment:l; content:counter(l); position:absolute; left:0; width:34px; text-align:right; color:#4b5263; }
+  .codigo .kw { color:#c792ea; } .codigo .st { color:#c3e88d; } .codigo .cm { color:#5c6370; }
+  .codigo .ondula { text-decoration:underline wavy var(--warn); }
+  .codigo .linea-issue { background:#3a322033; }
+  .codigo .linea-agente { background:#c792ea22; }
+  .issue { padding:6px 10px; border-bottom:1px solid var(--borde); }
+  .issue code { color:var(--warn); }
+  .issue .hint { color:var(--tenue); }
+  .act { padding:5px 10px; border-bottom:1px solid var(--borde); font:12px ui-monospace, monospace; }
+  .act .t { color:var(--tenue); } .act .c { color:var(--agente); }
+  .tabs { display:flex; border-bottom:1px solid var(--borde); background:var(--pan); }
+  .tabs span { padding:6px 10px; cursor:pointer; color:var(--tenue); border-bottom:2px solid transparent; }
+  .tabs span.sel { color:var(--txt); border-bottom-color:var(--acento); }
+  .barra-sup { display:flex; align-items:center; gap:10px; padding:0 10px; background:var(--pan); border-bottom:1px solid var(--borde); }
+  .busq { flex:0 1 340px; background:var(--pan2); border:1px solid var(--borde); border-radius:4px; padding:4px 8px; color:var(--tenue); }
+  .seg { display:flex; border:1px solid var(--borde); border-radius:5px; overflow:hidden; }
+  .seg span { padding:3px 10px; cursor:pointer; }
+  .seg span.sel { background:var(--acento); color:#0b1220; }
+  .kv { display:grid; grid-template-columns:90px 1fr; gap:3px 8px; padding:6px 10px; }
+  .kv b { color:var(--tenue); font-weight:normal; }
+  .tema { display:flex; gap:8px; padding:5px 10px; align-items:center; cursor:pointer; }
+  .tema img { width:90px; height:36px; object-fit:cover; border-radius:3px; border:1px solid var(--borde); }
+  .tema.sel { background:var(--pan2); }
+  .paleta { display:flex; gap:2px; } .paleta i { width:10px; height:10px; border-radius:2px; display:block; }
+  .hist { padding:4px 10px; display:flex; gap:6px; } .hist.fut { opacity:.45; }
+  .nota { position:fixed; bottom:60px; left:8px; z-index:50; background:#000a; color:#fff; padding:4px 8px; border-radius:4px; font-size:11px; max-width:420px; }
+  /* barra del prototipo */
+  #conmutador { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:99; display:flex; align-items:center; gap:12px; background:#fff; color:#111; border-radius:999px; padding:6px 14px; box-shadow:0 6px 24px #000a; font-weight:600; }
+  #conmutador button { border:none; background:#111; color:#fff; border-radius:50%; width:26px; height:26px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<div id="conmutador"><button id="prev">&lt;</button><span id="etiqueta"></span><button id="next">&gt;</button></div>
+<script>
+// ---------- Datos falsos pero con nombres reales del ejemplo ----------
+const IMG = '../../../docs/img/';
+const VISTAS = {
+  architecture: [
+    { id:'paquetes', enlaces:8, img:'temas/claro-suave.png' },
+    { id:'abierto', img:'temas/claro-suave.png' },
+    { id:'canonico-detalle', img:'temas/editorial.png' },
+    { id:'dsl-detalle', img:'temas/soft-card.png' },
+    { id:'sesion-detalle', img:'temas/glass-chip.png', agente:true },
+    { id:'render-detalle', img:'temas/bauhaus.png' },
+    { id:'cli-detalle', img:'temas/keycaps.png', issues:2 },
+  ],
+  flow: [
+    { id:'flujo-edicion', pasos:6, img:'temas/metro-map.png' },
+    { id:'flujo-validate', pasos:6, img:'temas/pcb.png' },
+    { id:'flujo-dev', pasos:7, img:'temas/blueprint.png', oscuro:true },
+  ],
+  sequence: [ { id:'secuencia-tienda', img:'tipos/secuencia-tienda.png' } ],
+  er: [ { id:'er-tienda', img:'tipos/er-tienda.png' } ],
+};
+const TEMAS = [
+  ['diagrams', null, ['#1d2433','#6ea8fe','#c3e88d','#f07178']],
+  ['diagrams-claro', 'diagrams', ['#ffffff','#2f6fde','#3b9b5d','#c94a4a']],
+  ['claro-suave', 'diagrams-claro', ['#f7f4ef','#8aa1c1','#b9c9a7','#e2b4a0']],
+  ['blueprint', 'diagrams', ['#0c2a4a','#9fd3ff','#ffffff','#ffd166']],
+  ['synthwave', 'diagrams', ['#1a0b2e','#ff4fd8','#3df2ff','#ffd319']],
+  ['bauhaus', 'diagrams-claro', ['#f2ede3','#d62828','#003f88','#fcbf49']],
+];
+const DG = [
+  ['cm','// Los paquetes con render, sesion y layout abiertos.'],
+  ['', '<span class="kw">view</span> abierto {'],
+  ['', '  <span class="kw">type</span> architecture'],
+  ['', '  <span class="kw">theme</span> diagrams'],
+  ['issue','  <span class="kw">include</span> autor, agente, workspace, <span class="ondula">sesion.ses-sesoin</span>, render.**'],
+  ['', '  <span class="kw">expanded</span> render, sesion, layout'],
+  ['agente', '  <span class="kw">collapsed</span> canonico, tema, dsl, shell, cli'],
+  ['', '}'],
+  ['', ''],
+  ['', '<span class="kw">view</span> sesion-detalle {'],
+  ['', '  <span class="kw">type</span> architecture'],
+  ['', '  <span class="kw">theme</span> diagrams-claro'],
+  ['', '  <span class="kw">include</span> sesion.**, dsl.dsl-compilar, canonico.can-validar'],
+  ['', '  <span class="kw">depth</span> 2'],
+  ['', '}'],
+];
+const ISSUES = [
+  { cod:'E_REF_DESCONOCIDA', sitio:'vistas.dg:22', msg:'Nodo "sesion.ses-sesoin" no existe', hint:'quisiste decir sesion.ses-sesion?', fix:true },
+  { cod:'W_PIN_HUERFANO', sitio:'vistas.dg:104', msg:'Pin de cli.cli-dev sin Nodo en la Vista cli-detalle', hint:'quitar el Pin', fix:true },
+  { cod:'W_CONTRASTE', sitio:'temas/neon.dg:12', msg:'Contraste 2.8:1 en etiquetas de Arista', hint:'subir a 4.5:1', fix:false },
+];
+const ACT = [
+  ['14:02:11','validate --json','0 errores, 3 avisos'],
+  ['14:02:19','inspect node sesion.ses-sesion','vistas: sesion-detalle, abierto'],
+  ['14:02:31','edit pin sesion.ses-sesion 420,180','Vista sesion-detalle'],
+  ['14:02:32','(cambio) vistas.dg','+1 Pin, 1 Nodo movido'],
+  ['14:02:40','edit collapse abierto dsl','Vista abierto'],
+];
+const HIST = [['hecho','mover Pin sesion.ses-sesion'],['hecho','plegar dsl en abierto'],['actual','cambiar Tema de sesion-detalle'],['fut','mover Pin layout.lay-layout']];
+
+// ---------- Piezas comunes (solo contenido; cada variante decide la disposicion) ----------
+const est = { indice:true, cajon:'vistas', vista:'abierto', tipo:'architecture', tema:'diagrams', modo:'leer', panel:'detalle', siguiendo:true, editor:true, actividad:true };
+const todas = () => Object.entries(VISTAS).flatMap(([t,vs]) => vs.map(v => ({...v, tipo:t})));
+const actual = () => todas().find(v => v.id === est.vista);
+const sel = (c) => c ? ' sel' : '';
+function indice(conMini) {
+  return Object.entries(VISTAS).map(([t,vs]) => `<div class="grupo">${t} <span class="badge">${vs.length}</span></div>` + vs.map(v =>
+    conMini
+      ? `<div class="item${sel(v.id===est.vista)}" data-vista="${v.id}" style="flex-direction:column"><img src="${IMG+v.img}" style="width:100%;height:54px;object-fit:cover;border-radius:3px;border:1px solid var(--borde)"><span>${v.id} ${marcas(v)}</span></div>`
+      : `<div class="item${sel(v.id===est.vista)}" data-vista="${v.id}"><span>${v.id}</span><span>${marcas(v)}</span></div>`
+  ).join('')).join('');
+}
+function marcas(v) {
+  return (v.agente ? '<span class="badge agente">agente</span>' : '') + (v.issues ? `<span class="badge warn">${v.issues}</span>` : '') +
+    (v.pasos ? `<span class="badge">${v.pasos} pasos</span>` : '') + (v.enlaces ? `<span class="badge">${v.enlaces} enlaces</span>` : '');
+}
+function lienzo(extra='') {
+  const v = actual();
+  return `<div class="lienzo${v.oscuro?' oscuro':''}" style="height:100%"><img src="${IMG+v.img}">
+    <div class="migas">paquetes &rsaquo; ${v.id} <span style="color:#888">(${v.tipo}, Tema ${est.tema})</span></div>
+    ${est.siguiendo && est.modo!=='editar' ? '<div class="resalte" style="left:38%;top:34%;width:16%;height:22%"></div>' : ''}
+    ${extra}
+    <div class="ctrl"><button>-</button><button>ajustar</button><button>+</button>${v.pasos?'<button>&lsaquo; paso 2/'+v.pasos+' &rsaquo;</button>':''}</div></div>`;
+}
+const editor = () => `<div class="codigo">${DG.map(([c,l]) => `<div class="${c==='issue'?'linea-issue':c==='agente'?'linea-agente':''}">${c==='cm'?'<span class="cm">'+l+'</span>':l}</div>`).join('')}</div>`;
+const issues = () => ISSUES.map(i => `<div class="issue"><code>${i.cod}</code> <a href="#" style="color:var(--acento)">${i.sitio}</a><br>${i.msg}<br><span class="hint">${i.hint}</span> ${i.fix?'<button class="btn">aplicar fix</button>':''}</div>`).join('');
+const actividad = () => ACT.map(([t,c,r]) => `<div class="act"><span class="t">${t}</span> <span class="c">diagrams ${c}</span><br>&nbsp;&nbsp;${r}</div>`).join('');
+const detalle = () => `<div class="kv"><b>Nodo</b><span>sesion.ses-sesion</span><b>Tipo</b><span>modulo</span><b>Archivo</b><a href="#" style="color:var(--acento)">sistema.dg:88</a><b>Fuente</b><span>packages/sesion/src/sesion.ts</span><b>Aristas</b><span>6 entrantes, 3 salientes</span><b>En Vistas</b><span>abierto, sesion-detalle, flujo-edicion</span><b>Pin</b><span>420, 180 (Vista sesion-detalle)</span></div>`;
+const temas = () => TEMAS.map(([n,ext,p]) => `<div class="tema${sel(n===est.tema)}" data-tema="${n}"><img src="${IMG}temas/${['diagrams','diagrams-claro'].includes(n)?'claro-suave':n}.png"><div><div>${n}</div><div style="color:var(--tenue);font-size:11px">${ext?'extends '+ext:'base'}</div><div class="paleta">${p.map(c=>`<i style="background:${c}"></i>`).join('')}</div></div></div>`).join('') +
+  `<div style="padding:8px 10px;display:flex;gap:6px"><span style="color:var(--tenue)">Previsualizando "${est.tema}" (sin escribir)</span><button class="btn prim">fijar en vistas.dg</button></div>`;
+const historial = () => HIST.map(([k,t]) => `<div class="hist${k==='fut'?' fut':''}">${k==='actual'?'&#9654;':'&nbsp;&nbsp;'} ${t}</div>`).join('') + '<div style="padding:6px 10px"><button class="btn">deshacer</button> <button class="btn">rehacer</button></div>';
+const PANELES = { detalle:['Detalle', detalle], issues:['Issues <span class="badge warn">3</span>', issues], temas:['Temas', temas], historial:['Historial', historial], actividad:['Agente <span class="badge agente">5</span>', actividad] };
+const tabs = (claves) => `<div class="tabs">${claves.map(k => `<span class="${est.panel===k?'sel':''}" data-panel="${k}">${PANELES[k][0]}</span>`).join('')}</div>`;
+const busqueda = () => `<div class="busq">Buscar Nodo, Vista o archivo:linea ... <span style="float:right">Ctrl+K</span></div>`;
+const modos = () => `<div class="seg">${['leer','editar','observar'].map(m => `<span class="${est.modo===m?'sel':''}" data-modo="${m}">${m}</span>`).join('')}</div>`;
+
+// ---------- Variante A: IDE de tres columnas, todo a la vista ----------
+function A() {
+  const panelDer = ['detalle','issues','temas','historial'].includes(est.panel) ? est.panel : 'detalle';
+  return `<div class="app" style="grid-template-rows:38px 1fr ${est.editor?'260px':'0'};grid-template-columns:230px 1fr 320px">
+    <div class="barra-sup" style="grid-column:1/-1"><b>rinthel-arch</b>${busqueda()}<span style="flex:1"></span>
+      <span class="btn" data-tg="editor">${est.editor?'ocultar':'mostrar'} editor</span><span class="badge agente">agente activo</span></div>
+    <div class="pan" style="grid-row:2/4;grid-column:1"><div class="tit">Vistas</div>${indice(false)}</div>
+    <div style="grid-column:2;grid-row:2">${lienzo()}</div>
+    <div class="pan" style="grid-row:2/4;grid-column:3;display:flex;flex-direction:column">${tabs(['detalle','issues','temas','historial'])}<div style="flex:1;overflow:auto">${PANELES[panelDer][1]()}</div>
+      <div class="tit" style="border-top:1px solid var(--borde)">Actividad del agente <label><input type="checkbox" ${est.siguiendo?'checked':''} data-tg="siguiendo"> seguir</label></div>
+      <div style="height:200px;overflow:auto">${actividad()}</div></div>
+    ${est.editor?`<div class="pan" style="grid-column:2;grid-row:3"><div class="tabs"><span class="sel">vistas.dg</span><span>sistema.dg</span><span>conexiones.dg</span></div>${editor()}</div>`:''}
+  </div><div class="nota">A: IDE. Indice fijo a la izquierda, inspector fijo a la derecha con pestanas, actividad siempre visible abajo del inspector, editor plegable abajo del lienzo. No hay modos: todo convive.</div>`;
+}
+
+// ---------- Variante B: lienzo a pantalla completa con superficies flotantes ----------
+function B() {
+  const flot = (pos, ancho, html) => `<div class="pan" style="position:absolute;${pos};width:${ancho};border-radius:8px;box-shadow:0 8px 30px #0008;max-height:70%">${html}</div>`;
+  return `<div class="app">${lienzo(`
+    <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:var(--pan);padding:6px;border-radius:8px;border:1px solid var(--borde)">
+      <select class="btn" data-sel="vista">${todas().map(v=>`<option ${v.id===est.vista?'selected':''}>${v.id}</option>`).join('')}</select>${busqueda()}
+      ${['issues','temas','historial','detalle'].map(k=>`<span class="btn${est.panel===k?' prim':''}" data-panel="${k}">${PANELES[k][0]}</span>`).join('')}
+      <span class="btn${est.editor?' prim':''}" data-tg="editor">&lt;/&gt; DSL</span></div>
+    ${flot('top:60px;right:12px','320px', `<div class="tit">${PANELES[est.panel==='actividad'?'detalle':est.panel][0]} <span data-panel="actividad" style="cursor:pointer">x</span></div>${PANELES[est.panel==='actividad'?'detalle':est.panel][1]()}`)}
+    ${est.editor ? flot('top:60px;left:12px;bottom:90px','460px', `<div class="tit">vistas.dg <span>vista previa en vivo</span></div>${editor()}`) : ''}
+    <div style="position:absolute;left:12px;right:12px;bottom:60px;display:flex;gap:6px;overflow:hidden">
+      ${ACT.map(([t,c,r],i)=>`<div class="pan" style="border-radius:6px;padding:4px 8px;flex:0 0 auto;opacity:${0.4+i*0.15};border-color:var(--agente)"><span class="c" style="color:var(--agente);font:11px ui-monospace">${c}</span> <span style="color:var(--tenue);font-size:11px">${t}</span></div>`).join('')}
+      <label class="pan" style="padding:4px 8px;border-radius:6px"><input type="checkbox" ${est.siguiendo?'checked':''} data-tg="siguiendo"> seguir al agente</label></div>
+  `)}</div><div class="nota">B: lienzo primero. El indice es un selector + Ctrl+K, los paneles flotan y se cierran, el editor es una hoja flotante, la actividad es una tira de chips abajo. Nada fijo salvo el lienzo.</div>`;
+}
+
+// ---------- Variante C: tres modos, cada uno con su propia disposicion ----------
+function C() {
+  const sup = `<div class="barra-sup" style="grid-column:1/-1"><b>rinthel-arch</b>${modos()}${busqueda()}<span style="flex:1"></span>${est.modo!=='observar'?'<span class="badge agente">agente: 5 cambios &rsaquo;</span>':''}</div>`;
+  if (est.modo === 'leer') return `<div class="app" style="grid-template-rows:38px 1fr;grid-template-columns:260px 1fr 300px">${sup}
+    <div class="pan"><div class="tit">Vistas</div>${indice(true)}</div><div>${lienzo()}</div>
+    <div class="pan">${tabs(['detalle','temas','historial'])}${PANELES[['detalle','temas','historial'].includes(est.panel)?est.panel:'detalle'][1]()}</div></div>
+    <div class="nota">C / leer: indice con miniaturas, lienzo, inspector (Detalle, Temas, Historial). Sin editor ni feed.</div>`;
+  if (est.modo === 'editar') return `<div class="app" style="grid-template-rows:38px 1fr 180px;grid-template-columns:1fr 1fr">${sup}
+    <div class="pan"><div class="tabs"><span class="sel">vistas.dg</span><span>sistema.dg</span></div>${editor()}</div><div>${lienzo()}</div>
+    <div class="pan" style="grid-column:1/-1">${tabs(['issues','historial'])}${PANELES[est.panel==='historial'?'historial':'issues'][1]()}</div></div>
+    <div class="nota">C / editar: texto | vista previa en vivo 50/50, issues e Historial abajo. El indice se reduce a la busqueda.</div>`;
+  return `<div class="app" style="grid-template-rows:38px 1fr;grid-template-columns:1fr 380px">${sup}
+    <div>${lienzo()}</div><div class="pan"><div class="tit">Actividad del agente <label><input type="checkbox" ${est.siguiendo?'checked':''} data-tg="siguiendo"> seguir la Vista que toca</label></div>${actividad()}
+    <div class="tit">Ultimo cambio</div>${editor()}</div></div>
+    <div class="nota">C / observar: lienzo grande que sigue la Vista que toca el agente, feed a la derecha y el diff del ultimo cambio.</div>`;
+}
+
+
+// ---------- Variante D: mezcla de B y C. Lienzo siempre a pantalla completa; el modo decide que superficies flotan ----------
+function D() {
+  const flot = (pos, html, extra='') => `<div class="pan" style="position:absolute;${pos};border-radius:10px;box-shadow:0 8px 30px #0008;${extra}">${html}</div>`;
+  const barra = `<div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:var(--pan);padding:6px 8px;border-radius:10px;border:1px solid var(--borde);box-shadow:0 6px 20px #0006">
+      <b>rinthel-arch</b>${modos()}${busqueda()}
+      ${est.modo!=='observar'?`<span class="badge agente" data-modo="observar" style="cursor:pointer">agente: 5 cambios &rsaquo;</span>`:''}</div>`;
+  const indiceFlot = est.indice
+    ? flot('top:60px;left:12px;bottom:120px;width:220px;overflow:auto', `<div class="tit">Vistas <span data-tg="indice" style="cursor:pointer">&laquo;</span></div>${indice(true)}`)
+    : flot('top:60px;left:12px', `<span class="btn" data-tg="indice">Vistas &raquo;</span>`, 'padding:4px');
+  const panelFlot = (claves) => {
+    const k = claves.includes(est.panel) ? est.panel : claves[0];
+    return flot('top:60px;right:12px;width:320px;max-height:70%;overflow:auto', tabs(claves) + PANELES[k][1]());
+  };
+  const chips = `<div style="position:absolute;left:12px;right:12px;bottom:60px;display:flex;gap:6px;overflow:hidden">
+      ${ACT.map(([t,c],i)=>`<div class="pan" style="border-radius:6px;padding:4px 8px;flex:0 0 auto;opacity:${0.4+i*0.15};border-color:var(--agente);font:11px ui-monospace"><span style="color:var(--agente)">${c}</span> <span style="color:var(--tenue)">${t}</span></div>`).join('')}</div>`;
+  let capas = barra;
+  if (est.modo === 'leer') capas += indiceFlot + panelFlot(['detalle','temas','historial']) + chips;
+  if (est.modo === 'editar') capas +=
+    flot('top:60px;left:12px;bottom:60px;width:44%;display:flex;flex-direction:column', `<div class="tabs"><span class="sel">vistas.dg</span><span>sistema.dg</span><span style="flex:1"></span><span>vista previa en vivo</span></div><div style="flex:1;overflow:auto">${editor()}</div>`) +
+    flot('top:60px;right:12px;width:320px;max-height:60%;overflow:auto', tabs(['issues','historial']) + PANELES[est.panel==='historial'?'historial':'issues'][1]());
+  if (est.modo === 'observar') capas +=
+    flot('top:60px;right:12px;bottom:60px;width:360px;overflow:auto', `<div class="tit">Actividad del agente <label><input type="checkbox" ${est.siguiendo?'checked':''} data-tg="siguiendo"> seguir</label></div>${actividad()}<div class="tit">Ultimo cambio</div>${editor()}`);
+  return `<div class="app">${lienzo(capas)}</div><div class="nota">D: B + C. El lienzo ocupa siempre toda la pantalla y la barra superior flotante lleva modo + busqueda. Cada modo decide que superficies flotan: leer = indice plegable con miniaturas + inspector + chips del agente; editar = hoja del DSL a la izquierda + issues/Historial; observar = feed y ultimo cambio. El chip "agente: 5 cambios" salta a observar.</div>`;
+}
+
+// ---------- Variante E: linea de tiempo + edicion en contexto ----------
+function E() {
+  const rail = [['vistas','Vistas'],['temas','Temas'],['issues','Issues 3'],['buscar','Buscar']];
+  const cajon = {
+    vistas: () => indice(false), temas: temas, issues: issues,
+    buscar: () => `<div style="padding:10px">${busqueda()}<div class="item">sesion.ses-sesion <span class="badge">sistema.dg:88</span></div><div class="item">sesion-detalle <span class="badge">vistas.dg:47</span></div></div>`,
+  };
+  const pista = [...HIST.map(([k,t]) => ({ quien:'tu', t, k })), ...ACT.map(([h,c]) => ({ quien:'agente', t:c, h }))];
+  const popover = `<div class="pan" style="position:absolute;left:55%;top:24%;width:430px;border-radius:8px;box-shadow:0 8px 30px #0009;border-color:var(--acento)">
+      <div class="tit">sesion.ses-sesion &middot; sistema.dg:88 <span>Enter aplica, Esc cierra</span></div>
+      <div class="codigo"><div><span class="kw">modulo</span> ses-sesion <span class="st">"sesion/sesion"</span> <span class="st">"Compila, valida y recalcula"</span> {</div><div>  <span class="kw">source</span> { <span class="kw">file</span> <span class="st">"packages/sesion/src/sesion.ts"</span> }</div><div>}</div></div>
+      <div class="kv" style="border-top:1px solid var(--borde)"><b>Aristas</b><span>6 entrantes, 3 salientes</span><b>En Vistas</b><span>abierto, sesion-detalle</span></div>
+      <div style="padding:6px 10px"><span class="btn">abrir archivo completo</span> <span class="btn">ir a sesion-detalle</span></div></div>`;
+  return `<div class="app" style="grid-template-columns:48px ${est.cajon?'260px':''} 1fr;grid-template-rows:1fr 120px">
+    <div class="pan" style="grid-row:1/3;display:flex;flex-direction:column;gap:4px;padding-top:8px;align-items:center">
+      ${rail.map(([k,n]) => `<span class="btn${est.cajon===k?' prim':''}" data-cajon="${k}" title="${n}" style="width:38px;text-align:center;font-size:10px;padding:6px 0">${n.split(' ')[0].slice(0,4)}</span>`).join('')}</div>
+    ${est.cajon?`<div class="pan" style="grid-row:1/3"><div class="tit">${est.cajon} <span data-cajon="" style="cursor:pointer">x</span></div>${cajon[est.cajon]()}</div>`:''}
+    <div>${lienzo(popover)}</div>
+    <div class="pan" style="position:relative">
+      <div class="tit">Linea de tiempo (Historial + agente) <span><span class="btn">deshacer</span> <span class="btn">rehacer</span> <label><input type="checkbox" ${est.siguiendo?'checked':''} data-tg="siguiendo"> seguir al agente</label></span></div>
+      <div style="display:flex;gap:6px;padding:4px 10px;overflow:auto">${pista.map(e => `<div class="pan" style="flex:0 0 150px;border-radius:6px;padding:4px 6px;font-size:11px;${e.quien==='agente'?'border-color:var(--agente)':''}${e.k==='actual'?';border-color:var(--acento);border-width:2px':''}${e.k==='fut'?';opacity:.4':''}"><span class="badge ${e.quien==='agente'?'agente':''}">${e.quien}</span> ${e.h||''}<br>${e.t}</div>`).join('')}</div>
+      <input type="range" min="0" max="${pista.length-1}" value="2" style="position:absolute;left:10px;right:10px;bottom:6px;width:calc(100% - 20px)"></div>
+  </div><div class="nota">E: sin paneles fijos ni modos. Rail de iconos a la izquierda que abre un solo cajon (Vistas, Temas, Issues, Buscar). Se edita en contexto: clic en un Nodo abre su bloque del .dg junto al Nodo. Abajo una sola linea de tiempo que mezcla tu Historial y los comandos del agente; arrastrar la barra previsualiza ese momento.</div>`;
+}
+
+
+// ---------- Variante F: marco estable, sin modos, paneles redimensionables y ocultables ----------
+// El lienzo solo cambia de tamano cuando tu redimensionas u ocultas un panel. No hay modos: la columna izquierda
+// tiene pestanas Vistas | Codigo, la derecha es un panel contextual, y "seguir al agente" es un interruptor aparte.
+const F_EVENTOS = {
+  nodo:    { txt:'Clic en el Nodo sesion.ses-sesion', hace: f => { f.der = 'detalle'; } },
+  codigo:  { txt:'Doble clic en el Nodo (o tecla E): abre su bloque del .dg', hace: f => { f.izq = 'codigo'; f.verIzq = true; f.der = 'issues'; } },
+  agente:  { txt:'Llega "diagrams edit pin" del agente', hace: f => { f.nuevos++; if (est.siguiendo) est.vista = 'sesion-detalle'; } },
+  esc:     { txt:'Esc: cierra el codigo', hace: f => { f.izq = 'vistas'; } },
+};
+function F() {
+  const f = est.f || (est.f = { izq:'vistas', der:'detalle', verIzq:true, verDer:true, wIzq:340, wDer:300, nuevos:0, ultimo:'' });
+  const izqTabs = `<div class="tabs">${[['vistas','Vistas'],['codigo','Codigo']].map(([k,n]) => `<span class="${f.izq===k?'sel':''}" data-fizq="${k}">${n}</span>`).join('')}<span style="flex:1"></span><span data-focultar="izq" title="ocultar panel (Ctrl+B)">&laquo;</span></div>`;
+  const izq = izqTabs + (f.izq === 'codigo' ? `<div class="tabs" style="font-size:11px"><span class="sel">vistas.dg</span><span>sistema.dg</span></div>${editor()}` : indice(false));
+  const derTabs = ['detalle','issues','temas','historial','actividad'];
+  const der = `<div class="tabs">${derTabs.map(k => `<span class="${f.der===k?'sel':''}" data-fder="${k}">${k==='actividad'&&f.nuevos?PANELES[k][0].replace('>5<','>'+(5+f.nuevos)+'<'):PANELES[k][0]}</span>`).join('')}<span style="flex:1"></span><span data-focultar="der" title="ocultar panel (Ctrl+J)">&raquo;</span></div>${PANELES[f.der][1]()}`;
+  const ult = ACT[ACT.length-1];
+  const asa = (lado) => `<div data-fasa="${lado}" style="grid-row:2;cursor:col-resize;background:var(--borde);width:5px"></div>`;
+  const pestanaOculta = (lado) => `<div data-fmostrar="${lado}" title="mostrar panel" style="grid-row:2;cursor:pointer;background:var(--pan);border:1px solid var(--borde);writing-mode:vertical-rl;padding:8px 2px;color:var(--tenue);font-size:11px">${lado==='izq'?'Vistas | Codigo':'Detalle | Issues | ...'}</div>`;
+  const cols = [f.verIzq?`${f.wIzq}px 5px`:'22px', '1fr', f.verDer?`5px ${f.wDer}px`:'22px'].join(' ');
+  return `<div class="app" id="fapp" style="grid-template-rows:38px 1fr;grid-template-columns:${cols}">
+    <div class="barra-sup" style="grid-column:1/-1"><b>rinthel-arch</b>${busqueda()}<span style="flex:1"></span>
+      <label style="color:var(--agente)"><input type="checkbox" ${est.siguiendo?'checked':''} data-tg="siguiendo"> seguir al agente</label>
+      <span data-fder="actividad" style="cursor:pointer;font:11px ui-monospace, monospace;color:var(--agente);max-width:340px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${f.nuevos?'+'+f.nuevos+' &middot; edit pin sesion.ses-sesion':ult[0]+' diagrams '+ult[1]}</span></div>
+    ${f.verIzq ? `<div class="pan" style="grid-row:2">${izq}</div>${asa('izq')}` : pestanaOculta('izq')}
+    <div style="grid-row:2;min-width:0">${lienzo()}</div>
+    ${f.verDer ? `${asa('der')}<div class="pan" style="grid-row:2">${der}</div>` : pestanaOculta('der')}
+  </div>
+  <div class="nota" style="bottom:60px;left:auto;right:${f.verDer?f.wDer+16:30}px;max-width:330px">F: sin modos. Izquierda: pestanas Vistas | Codigo. Derecha: panel contextual. Arrastra los bordes para redimensionar; &laquo; y &raquo; (o Ctrl+B / Ctrl+J) ocultan del todo, la pestana vertical los trae de vuelta. "Seguir al agente" es independiente: si esta activo, el lienzo salta a la Vista que toca y la resalta; si no, solo sube el contador.<br><b>Simular:</b><br>${Object.entries(F_EVENTOS).map(([k,e]) => `<span class="btn" data-fev="${k}" style="display:block;margin-top:3px">${e.txt}</span>`).join('')}${f.ultimo?`<br>Ultimo: ${f.ultimo}`:''}</div>`;
+}
+document.addEventListener('click', e => {
+  if (variante !== 'F') return;
+  const t = e.target.closest('[data-fev],[data-fizq],[data-fder],[data-focultar],[data-fmostrar]'); if (!t) return;
+  e.stopPropagation();
+  const f = est.f;
+  if (t.dataset.fev) { const ev = F_EVENTOS[t.dataset.fev]; f.ultimo = ev.txt; ev.hace(f); }
+  if (t.dataset.fizq) f.izq = t.dataset.fizq;
+  if (t.dataset.fder) { f.der = t.dataset.fder; f.verDer = true; if (f.der === 'actividad') f.nuevos = 0; }
+  if (t.dataset.focultar) f[t.dataset.focultar === 'izq' ? 'verIzq' : 'verDer'] = false;
+  if (t.dataset.fmostrar) f[t.dataset.fmostrar === 'izq' ? 'verIzq' : 'verDer'] = true;
+  pintar();
+}, true);
+addEventListener('keydown', e => {
+  if (variante !== 'F' || !e.ctrlKey) return;
+  if (e.key === 'b') { est.f.verIzq = !est.f.verIzq; e.preventDefault(); pintar(); }
+  if (e.key === 'j') { est.f.verDer = !est.f.verDer; e.preventDefault(); pintar(); }
+});
+document.addEventListener('mousedown', e => {
+  const asa = variante === 'F' && e.target.closest('[data-fasa]'); if (!asa) return;
+  e.preventDefault();
+  const lado = asa.dataset.fasa, f = est.f, x0 = e.clientX, w0 = lado === 'izq' ? f.wIzq : f.wDer;
+  const mover = ev => {
+    const d = ev.clientX - x0, w = Math.max(200, Math.min(800, lado === 'izq' ? w0 + d : w0 - d));
+    if (lado === 'izq') f.wIzq = w; else f.wDer = w;
+    document.getElementById('fapp').style.gridTemplateColumns = `${f.verIzq?f.wIzq+'px 5px':'22px'} 1fr ${f.verDer?'5px '+f.wDer+'px':'22px'}`;
+  };
+  addEventListener('mousemove', mover);
+  addEventListener('mouseup', () => { removeEventListener('mousemove', mover); pintar(); }, { once:true });
+});
+
+// ---------- Conmutador y eventos ----------
+const VARIANTES = { A:'IDE de tres columnas', B:'Lienzo con superficies flotantes', C:'Modos con disposicion propia', D:'B + C: lienzo completo con modos', E:'Linea de tiempo y edicion en contexto', F:'Marco estable sin modos, paneles redimensionables' };
+const claves = Object.keys(VARIANTES);
+let variante = new URLSearchParams(location.search).get('variant') || 'A';
+function pintar() {
+  document.getElementById('raiz').innerHTML = ({A,B,C,D,E,F})[variante]();
+  document.getElementById('etiqueta').textContent = `${variante} (${VARIANTES[variante]})`;
+}
+function mover(d) {
+  variante = claves[(claves.indexOf(variante) + d + claves.length) % claves.length];
+  const u = new URL(location); u.searchParams.set('variant', variante); history.replaceState(null, '', u); pintar();
+}
+document.getElementById('prev').onclick = () => mover(-1);
+document.getElementById('next').onclick = () => mover(1);
+addEventListener('keydown', e => { if (e.target.closest('input,textarea,select,[contenteditable]')) return; if (e.key==='ArrowLeft') mover(-1); if (e.key==='ArrowRight') mover(1); });
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-vista],[data-panel],[data-modo],[data-tema],[data-tg],[data-cajon]'); if (!t) return;
+  if (t.dataset.vista) est.vista = t.dataset.vista;
+  if (t.dataset.panel) est.panel = t.dataset.panel;
+  if (t.dataset.modo) est.modo = t.dataset.modo;
+  if (t.dataset.tema) est.tema = t.dataset.tema;
+  if ('cajon' in t.dataset) est.cajon = est.cajon === t.dataset.cajon ? '' : t.dataset.cajon;
+  if (t.dataset.tg && t.tagName !== 'INPUT') est[t.dataset.tg] = !est[t.dataset.tg];
+  if (t.tagName === 'INPUT') est[t.dataset.tg] = t.checked;
+  pintar();
+});
+document.addEventListener('change', e => { if (e.target.dataset.sel) { est.vista = e.target.value; pintar(); } });
+pintar();
+</script>
+</body>
+</html>
