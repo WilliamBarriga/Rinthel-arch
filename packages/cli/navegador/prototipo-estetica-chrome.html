@@ -1,0 +1,690 @@
+<!doctype html>
+<!--
+  PROTOTIPO DESECHABLE (ticket "Estetica del chrome de la UI", #177). No es codigo de produccion.
+  Elegido: variante G (Islas: muelle) con paleta neon, en oscuro (?variant=G&paleta=neon).
+  Pregunta: que lenguaje visual tiene el chrome de la UI de dev para que no se vea plano ni anticuado.
+  La disposicion es la F aprobada en #169 y es identica en todas las variantes; solo cambia la estetica:
+  profundidad, tipografia y densidad, color (claro / oscuro), movimiento y tratamiento del color del agente.
+  Variantes conmutables con ?variant=A|B|C|D y la barra flotante (flechas o teclas). Claro / oscuro con ?modo= o el boton de la barra.
+  CSS a mano que imita lo que darian shadcn/ui + Tailwind (tokens en .ui-chrome, no en :root), sin dependencias.
+  Servir desde la raiz del repo (el lienzo usa capturas de docs/img). Todo en memoria; nada escribe.
+-->
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>PROTOTIPO - Estetica del chrome de la UI de dev</title>
+<style>
+/* ======================= Estructura comun (disposicion F) ======================= */
+* { box-sizing:border-box; }
+html,body { margin:0; height:100%; }
+body { background:#000; }
+.ui-chrome { position:fixed; inset:0; display:grid; grid-template-rows:var(--alto-barra) 1fr; background:var(--fondo); color:var(--texto);
+  font-family:var(--fuente); font-size:var(--tam); line-height:1.45; transition:grid-template-columns var(--dur) var(--curva), background var(--dur); }
+.ui-chrome * { transition-property:background-color, border-color, color, box-shadow, opacity, transform; transition-duration:var(--dur-corta); transition-timing-function:var(--curva); }
+.barra { grid-row:1; grid-column:1/-1; display:flex; align-items:center; gap:12px; padding:0 12px; min-width:0; }
+.marca { display:flex; align-items:center; gap:8px; font-weight:600; white-space:nowrap; }
+.marca i { width:18px; height:18px; display:block; }
+.busq { flex:0 1 380px; display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--tenue); padding:0 10px; height:30px; }
+.busq kbd, kbd { margin-left:auto; font:11px var(--mono); padding:1px 5px; color:var(--tenue); }
+.flex1 { flex:1; }
+.seguir { display:flex; align-items:center; gap:8px; cursor:pointer; white-space:nowrap; user-select:none; }
+.interruptor { width:30px; height:17px; border-radius:99px; position:relative; background:var(--sutil-2); }
+.interruptor::after { content:''; position:absolute; top:2px; left:2px; width:13px; height:13px; border-radius:50%; background:#fff; transition:transform var(--dur-corta) var(--curva); box-shadow:0 1px 2px #0004; }
+.seguir.on .interruptor { background:var(--agente); }
+.seguir.on .interruptor::after { transform:translateX(13px); }
+.ultimo { font:11.5px var(--mono); color:var(--agente-texto); max-width:360px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; cursor:pointer; display:flex; align-items:center; gap:6px; }
+.punto { width:7px; height:7px; border-radius:50%; background:var(--agente); flex:none; }
+.punto.vivo { animation:latido 1.6s infinite; }
+@keyframes latido { 0%{ box-shadow:0 0 0 0 var(--agente-halo);} 70%{ box-shadow:0 0 0 7px transparent;} }
+.btn-modo { cursor:pointer; padding:4px 8px; color:var(--tenue); }
+
+.c1 { grid-column:1; } .c2 { grid-column:2; } .c3 { grid-column:3; } .c4 { grid-column:4; } .c5 { grid-column:5; }
+.hueco { grid-row:2; }
+.panel { grid-row:2; display:flex; flex-direction:column; min-width:0; min-height:0; overflow:hidden; }
+.cuerpo { overflow:auto; flex:1; min-height:0; }
+.asa { grid-row:2; cursor:col-resize; position:relative; }
+.asa::after { content:''; position:absolute; inset:0 2px; border-radius:2px; }
+.asa:hover::after { background:var(--acento); opacity:.6; }
+.oculta { grid-row:2; cursor:pointer; writing-mode:vertical-rl; padding:10px 0; font-size:11px; color:var(--tenue); display:flex; align-items:center; justify-content:flex-start; }
+.oculta:hover { color:var(--texto); }
+
+.tabs { display:flex; align-items:center; gap:2px; padding:0 6px; flex:none; position:relative; overflow-x:auto; scrollbar-width:none; }
+.tab { cursor:pointer; padding:0 10px; height:34px; display:flex; align-items:center; gap:6px; color:var(--tenue); white-space:nowrap; position:relative; }
+.tab:hover { color:var(--texto); }
+.tab.sel { color:var(--texto); }
+.tab.icono { padding:0 8px; }
+.cnt { font:10.5px var(--mono); padding:0 5px; border-radius:99px; background:var(--sutil); color:var(--tenue); line-height:16px; }
+.cnt.agente { background:var(--agente-suave); color:var(--agente-texto); }
+.cnt.warn { background:var(--warn-suave); color:var(--warn); }
+
+.grupo { padding:14px 14px 4px; font-size:11px; color:var(--tenue); display:flex; gap:6px; align-items:center; }
+.item { margin:1px 6px; padding:5px 8px; display:flex; align-items:center; gap:8px; cursor:pointer; position:relative; }
+.item .nom { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.item:hover { background:var(--hover); }
+.item.sel { background:var(--sel); color:var(--texto-fuerte); }
+.item.toca { box-shadow:inset 2px 0 0 var(--agente); }
+.glifo { width:14px; height:14px; border-radius:3px; flex:none; border:1.5px solid var(--tenue); opacity:.7; }
+.glifo.flow { border-radius:50%; } .glifo.sequence { border-style:dashed; } .glifo.er { border-radius:0; }
+
+.lienzo-marco { grid-row:2; min-width:0; min-height:0; position:relative; overflow:hidden; }
+.lienzo { position:absolute; inset:0; background:#f6f7f9; overflow:hidden; }
+.lienzo.oscuro { background:#0c1a2e; }
+.lienzo img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; transition:opacity .25s; }
+.migas { position:absolute; top:10px; left:10px; padding:4px 10px; font-size:12px; display:flex; gap:6px; align-items:center; }
+.ctrl { position:absolute; right:10px; bottom:10px; display:flex; gap:2px; padding:3px; }
+.ctrl button { border:0; background:transparent; color:inherit; font:inherit; padding:3px 8px; cursor:pointer; border-radius:var(--radio-s); }
+.ctrl button:hover { background:var(--hover); }
+.resalte { position:absolute; left:38%; top:34%; width:16%; height:22%; pointer-events:none; border-radius:10px; }
+
+.codigo { font:12.5px/1.65 var(--mono); padding:8px 0; white-space:pre; counter-reset:l; }
+.codigo div { padding:0 12px 0 46px; position:relative; }
+.codigo div::before { counter-increment:l; content:counter(l); position:absolute; left:0; width:32px; text-align:right; color:var(--tenue); opacity:.6; }
+.codigo .kw { color:var(--sint-kw); } .codigo .cm { color:var(--tenue); font-style:italic; } .codigo .id { color:var(--sint-id); }
+.codigo .ondula { text-decoration:underline wavy var(--warn); text-underline-offset:3px; }
+.codigo .l-issue { background:var(--warn-suave); }
+.codigo .l-agente { background:var(--agente-suave); }
+.archivos { display:flex; gap:2px; padding:6px 8px; font-size:12px; }
+.archivos span { padding:2px 8px; cursor:pointer; color:var(--tenue); border-radius:var(--radio-s); }
+.archivos span.sel { color:var(--texto); background:var(--sutil); }
+
+.issue { margin:8px; padding:10px 12px; display:grid; gap:4px; }
+.issue .cab { display:flex; gap:8px; align-items:center; font-size:11.5px; }
+.issue code { font:11px var(--mono); }
+.issue a, .kv a { color:var(--acento); text-decoration:none; font-family:var(--mono); font-size:11.5px; }
+.issue .hint { color:var(--tenue); font-size:12px; }
+.sev { width:8px; height:8px; border-radius:50%; flex:none; }
+.boton { font:inherit; font-size:12px; cursor:pointer; padding:4px 10px; border:1px solid var(--borde); background:var(--superficie-alta); color:var(--texto); border-radius:var(--radio-s); justify-self:start; }
+.boton:hover { background:var(--hover); }
+.boton.prim { background:var(--acento); color:var(--acento-sobre); border-color:transparent; }
+.boton.prim:hover { filter:brightness(1.08); }
+.boton:focus-visible, .tab:focus-visible, .item:focus-visible { outline:2px solid var(--acento); outline-offset:2px; }
+
+.kv { display:grid; grid-template-columns:96px 1fr; gap:8px 10px; padding:14px; font-size:12.5px; }
+.kv b { color:var(--tenue); font-weight:400; }
+.kv .tit { grid-column:1/-1; font-size:15px; font-weight:600; color:var(--texto-fuerte); display:flex; gap:8px; align-items:center; }
+.chip { font-size:11px; padding:1px 7px; border-radius:99px; background:var(--sutil); color:var(--tenue); }
+
+.tema { margin:6px 8px; padding:8px; display:flex; gap:10px; align-items:center; cursor:pointer; }
+.tema img { width:84px; height:44px; object-fit:cover; flex:none; }
+.tema .ext { font-size:11px; color:var(--tenue); }
+.paleta { display:flex; gap:3px; margin-top:4px; } .paleta i { width:11px; height:11px; border-radius:3px; display:block; box-shadow:inset 0 0 0 1px #0002; }
+.pie-temas { padding:10px 12px; display:flex; gap:8px; align-items:center; font-size:12px; color:var(--tenue); flex-wrap:wrap; }
+
+.act { padding:8px 14px; font-size:12px; display:grid; grid-template-columns:auto 1fr; gap:2px 10px; position:relative; }
+.act .t { font:11px var(--mono); color:var(--tenue); }
+.act .c { font:11.5px var(--mono); color:var(--agente-texto); }
+.act .r { grid-column:2; color:var(--tenue); }
+.act.nuevo { animation:entra .45s var(--curva) both; }
+@keyframes entra { from { opacity:0; transform:translateY(-6px); background:var(--agente-suave);} to { opacity:1; transform:none; } }
+
+.hist { padding:6px 14px; display:flex; gap:10px; align-items:center; font-size:12.5px; }
+.hist .marca-h { width:9px; height:9px; border-radius:50%; border:1.5px solid var(--tenue); flex:none; }
+.hist.actual .marca-h { background:var(--acento); border-color:var(--acento); }
+.hist.fut { opacity:.45; }
+
+/* Paleta Ctrl+K */
+.velo { position:fixed; inset:0; z-index:40; display:flex; justify-content:center; align-items:flex-start; padding-top:14vh; animation:aparece var(--dur) var(--curva); }
+.dialogo { width:560px; max-width:92vw; overflow:hidden; animation:sube var(--dur) var(--curva); }
+.dialogo input { width:100%; border:0; outline:0; background:transparent; color:var(--texto); font:inherit; font-size:15px; padding:14px 16px; }
+.dialogo .res { padding:6px; max-height:300px; overflow:auto; }
+.dialogo .r { padding:8px 10px; display:flex; gap:10px; align-items:center; cursor:pointer; border-radius:var(--radio-s); }
+.dialogo .r.sel, .dialogo .r:hover { background:var(--sel); }
+.dialogo .r small { margin-left:auto; color:var(--tenue); font:11px var(--mono); }
+.dialogo .seccion { font-size:11px; color:var(--tenue); padding:8px 10px 4px; }
+@keyframes aparece { from { opacity:0; } }
+@keyframes sube { from { opacity:0; transform:translateY(8px) scale(.98); } }
+
+/* Notas del prototipo (no son parte del diseno) */
+.nota { position:fixed; right:12px; bottom:64px; z-index:60; width:340px; max-height:calc(100vh - 90px); overflow:auto; background:#111d; color:#eee; padding:10px 12px; border-radius:8px; font:12px/1.45 system-ui, sans-serif; backdrop-filter:blur(6px); }
+.nota b { color:#fff; } .nota .s { display:block; margin-top:4px; cursor:pointer; padding:3px 8px; background:#ffffff14; border-radius:5px; }
+.nota .s:hover { background:#ffffff28; }
+.nota .min { float:right; cursor:pointer; opacity:.7; }
+#conmutador { position:fixed; bottom:14px; left:50%; transform:translateX(-50%); z-index:99; display:flex; align-items:center; gap:12px; background:#fff; color:#111; border-radius:999px; padding:6px 14px; box-shadow:0 6px 24px #000a; font:600 13px system-ui, sans-serif; }
+#conmutador button { border:none; background:#111; color:#fff; border-radius:50%; width:26px; height:26px; cursor:pointer; }
+#conmutador .modo { border-radius:99px; width:auto; padding:0 10px; background:#e8e8e8; color:#111; }
+
+/* ======================= A: Neutro shadcn (zinc) =======================
+   Lo que sale "de fabrica" de shadcn/ui: zinc, bordes de 1px, radios de 8, sombras minimas, Inter/sistema.
+   Paneles pegados al lienzo con un borde; tabs como segmentado; foco con anillo. Agente en violeta discreto. */
+[data-v="A"] {
+  --fuente: "Inter", "Geist", ui-sans-serif, system-ui, sans-serif; --mono: "Geist Mono", "JetBrains Mono", ui-monospace, monospace;
+  --tam:13px; --alto-barra:48px; --radio:8px; --radio-s:6px; --dur:.2s; --dur-corta:.15s; --curva:cubic-bezier(.2,.8,.2,1);
+}
+[data-v="A"][data-modo="claro"] { --fondo:#fff; --superficie:#fff; --superficie-alta:#fff; --texto:#18181b; --texto-fuerte:#09090b; --tenue:#71717a; --borde:#e4e4e7; --sutil:#f4f4f5; --sutil-2:#e4e4e7; --hover:#f4f4f5; --sel:#f4f4f5;
+  --acento:#18181b; --acento-sobre:#fafafa; --agente:#7c3aed; --agente-texto:#6d28d9; --agente-suave:#7c3aed14; --agente-halo:#7c3aed55; --warn:#b45309; --warn-suave:#f59e0b18; --err:#dc2626; --sint-kw:#7c3aed; --sint-id:#0369a1; }
+[data-v="A"][data-modo="oscuro"] { --fondo:#09090b; --superficie:#09090b; --superficie-alta:#18181b; --texto:#e4e4e7; --texto-fuerte:#fafafa; --tenue:#a1a1aa; --borde:#27272a; --sutil:#27272a; --sutil-2:#3f3f46; --hover:#18181b; --sel:#27272a;
+  --acento:#fafafa; --acento-sobre:#09090b; --agente:#a78bfa; --agente-texto:#c4b5fd; --agente-suave:#a78bfa1f; --agente-halo:#a78bfa66; --warn:#fbbf24; --warn-suave:#fbbf241a; --err:#f87171; --sint-kw:#c4b5fd; --sint-id:#7dd3fc; }
+[data-v="A"] .barra { border-bottom:1px solid var(--borde); }
+[data-v="A"] .marca i { background:var(--texto); border-radius:5px; }
+[data-v="A"] .busq { border:1px solid var(--borde); border-radius:var(--radio); background:var(--superficie); box-shadow:0 1px 2px #0000000d; }
+[data-v="A"] kbd { border:1px solid var(--borde); border-radius:4px; background:var(--sutil); }
+[data-v="A"] .panel { background:var(--superficie); }
+[data-v="A"] .panel.izq { border-right:1px solid var(--borde); } [data-v="A"] .panel.der { border-left:1px solid var(--borde); }
+[data-v="A"] .tabs { margin:8px; padding:3px; background:var(--sutil); border-radius:var(--radio); }
+[data-v="A"] .tab { height:28px; border-radius:var(--radio-s); flex:1; justify-content:center; }
+[data-v="A"] .tab.icono { flex:none; }
+[data-v="A"] .tab.sel { background:var(--superficie-alta); box-shadow:0 1px 3px #0000001a, 0 0 0 1px var(--borde); }
+[data-v="A"] .item { border-radius:var(--radio-s); }
+[data-v="A"] .lienzo-marco { padding:0; }
+[data-v="A"] .migas, [data-v="A"] .ctrl { background:var(--superficie-alta); color:var(--texto); border:1px solid var(--borde); border-radius:var(--radio); box-shadow:0 1px 3px #0000001a; }
+[data-v="A"] .resalte { outline:2px solid var(--agente); outline-offset:3px; animation:pulso-a 1.6s infinite; }
+@keyframes pulso-a { 50% { outline-offset:7px; outline-color:transparent; } }
+[data-v="A"] .issue { border:1px solid var(--borde); border-radius:var(--radio); }
+[data-v="A"] .tema { border:1px solid transparent; border-radius:var(--radio); } [data-v="A"] .tema:hover { background:var(--hover); }
+[data-v="A"] .tema.sel { border-color:var(--texto); }
+[data-v="A"] .tema img { border-radius:var(--radio-s); border:1px solid var(--borde); }
+[data-v="A"] .act + .act { border-top:1px solid var(--borde); }
+[data-v="A"] .velo { background:#00000059; }
+[data-v="A"] .dialogo { background:var(--superficie-alta); border:1px solid var(--borde); border-radius:12px; box-shadow:0 16px 48px #00000030; }
+[data-v="A"] .dialogo input { border-bottom:1px solid var(--borde); }
+[data-v="A"] .oculta { border-right:1px solid var(--borde); } [data-v="A"] .oculta.der { border-left:1px solid var(--borde); border-right:0; }
+
+/* ======================= B: Islas flotantes =======================
+   El lienzo ocupa todo el fondo; las zonas son tarjetas separadas por un hueco, con radio grande, sombra
+   suave y vidrio esmerilado. Profundidad por elevacion, no por bordes. Agente con halo y degradado. */
+[data-v~="B"] {
+  --fuente: "Inter", ui-sans-serif, system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  --tam:13px; --alto-barra:56px; --radio:14px; --radio-s:9px; --dur:.32s; --dur-corta:.18s; --curva:cubic-bezier(.32,.72,0,1);
+}
+[data-v~="B"][data-modo="claro"] { --fondo:#e9ecf2; --superficie:#ffffffd0; --superficie-alta:#ffffff; --texto:#1c2230; --texto-fuerte:#0b1020; --tenue:#6b7385; --borde:#dfe3ea; --sutil:#eef1f6; --sutil-2:#d5dae3; --hover:#0f172a0a; --sel:#3b5bfd14;
+  --acento:#3b5bfd; --acento-sobre:#fff; --agente:#d946ef; --agente-texto:#a21caf; --agente-suave:#d946ef17; --agente-halo:#d946ef66; --warn:#c2410c; --warn-suave:#f9731618; --err:#e11d48; --sint-kw:#a21caf; --sint-id:#3b5bfd; --sombra:0 1px 1px #0b10200a, 0 8px 24px -6px #0b10201f; }
+[data-v~="B"][data-modo="oscuro"] { --fondo:#0b0d12; --superficie:#171a22cc; --superficie-alta:#1f232d; --texto:#e3e6ee; --texto-fuerte:#fff; --tenue:#8a91a3; --borde:#ffffff12; --sutil:#ffffff0d; --sutil-2:#ffffff26; --hover:#ffffff0a; --sel:#6d8bff22;
+  --acento:#7c95ff; --acento-sobre:#0b0d12; --agente:#e879f9; --agente-texto:#f0abfc; --agente-suave:#e879f91f; --agente-halo:#e879f977; --warn:#fdba74; --warn-suave:#fb923c1c; --err:#fb7185; --sint-kw:#f0abfc; --sint-id:#a5b4fc; --sombra:0 0 0 1px #ffffff0f, 0 12px 32px -8px #000c; }
+[data-v~="B"].ui-chrome { padding:10px; gap:10px 0; }
+[data-v~="B"] .lienzo-marco { grid-row:1/3; grid-column:1/-1; margin:-10px; z-index:0; }
+[data-v~="B"] .barra, [data-v~="B"] .panel, [data-v~="B"] .oculta, [data-v~="B"] .asa { z-index:1; }
+[data-v~="B"] .barra { background:var(--superficie); backdrop-filter:blur(18px) saturate(1.6); border-radius:var(--radio); box-shadow:var(--sombra); }
+[data-v~="B"] .panel { background:var(--superficie); backdrop-filter:blur(18px) saturate(1.6); border-radius:var(--radio); box-shadow:var(--sombra); }
+[data-v~="B"] .marca i { background:conic-gradient(from 200deg, var(--acento), var(--agente), var(--acento)); border-radius:6px; }
+[data-v~="B"] .busq { background:var(--sutil); border-radius:99px; height:34px; }
+[data-v~="B"] kbd { background:var(--superficie-alta); border-radius:5px; box-shadow:var(--sombra); }
+[data-v~="B"] .tabs { padding:8px 8px 4px; }
+[data-v~="B"] .tab { height:30px; border-radius:99px; }
+[data-v~="B"] .tab.sel { background:var(--sel); color:var(--acento); }
+[data-v~="B"] .item { border-radius:var(--radio-s); }
+[data-v~="B"] .item.sel { color:var(--acento); }
+[data-v~="B"] .asa::after { inset:20% 3px; }
+[data-v~="B"] .oculta { background:var(--superficie); backdrop-filter:blur(18px); border-radius:var(--radio); box-shadow:var(--sombra); }
+[data-v~="B"] .migas { top:auto; bottom:14px; left:50%; transform:translateX(-50%); }
+[data-v~="B"] .migas, [data-v~="B"] .ctrl { background:var(--superficie); color:var(--texto); backdrop-filter:blur(18px); border-radius:99px; box-shadow:var(--sombra); }
+[data-v~="B"] .ctrl { bottom:14px; right:auto; left:calc(50% + 180px); }
+[data-v~="B"] .ctrl button { border-radius:99px; }
+[data-v~="B"] .resalte { box-shadow:0 0 0 2px var(--agente), 0 0 32px 6px var(--agente-halo); animation:pulso-b 2s infinite; border-radius:14px; }
+@keyframes pulso-b { 50% { box-shadow:0 0 0 2px var(--agente), 0 0 54px 14px transparent; } }
+[data-v~="B"] .issue { background:var(--superficie-alta); border-radius:var(--radio-s); box-shadow:var(--sombra); }
+[data-v~="B"] .tema { border-radius:var(--radio-s); } [data-v~="B"] .tema:hover { background:var(--hover); }
+[data-v~="B"] .tema.sel { background:var(--sel); box-shadow:inset 0 0 0 1.5px var(--acento); }
+[data-v~="B"] .tema img { border-radius:7px; box-shadow:var(--sombra); }
+[data-v~="B"] .act { margin:4px 8px; border-radius:var(--radio-s); }
+[data-v~="B"] .act:first-child { background:linear-gradient(90deg, var(--agente-suave), transparent); }
+[data-v~="B"] .boton { border-radius:99px; border-color:var(--borde); }
+[data-v~="B"] .velo { background:#0b10202e; backdrop-filter:blur(6px); }
+[data-v~="B"] .dialogo { background:var(--superficie); backdrop-filter:blur(24px) saturate(1.6); border-radius:18px; box-shadow:var(--sombra), 0 30px 80px -20px #0006; }
+[data-v~="B"] .dialogo input { font-size:16px; padding:18px 20px; }
+
+/* ======================= C: Herramienta densa =======================
+   Estilo editor de codigo moderno (Zed, Linear): oscuro por defecto, 12px, lineas finas, nada de sombras,
+   tabs subrayadas, mono en todo lo tecnico. Agente en cian con estela; acento ambar. Movimiento casi nulo. */
+[data-v="C"] {
+  --fuente: "IBM Plex Sans", "Inter", ui-sans-serif, system-ui, sans-serif; --mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace;
+  --tam:12px; --alto-barra:36px; --radio:3px; --radio-s:3px; --dur:.12s; --dur-corta:.08s; --curva:ease-out;
+}
+[data-v="C"][data-modo="oscuro"] { --fondo:#111214; --superficie:#16171a; --superficie-alta:#1c1d21; --texto:#c9ccd3; --texto-fuerte:#eceef2; --tenue:#7b808c; --borde:#26282d; --sutil:#22242a; --sutil-2:#3a3d44; --hover:#1d1f24; --sel:#25282f;
+  --acento:#f5a524; --acento-sobre:#111214; --agente:#22d3ee; --agente-texto:#67e8f9; --agente-suave:#22d3ee17; --agente-halo:#22d3ee55; --warn:#f5a524; --warn-suave:#f5a52414; --err:#f4525e; --sint-kw:#f5a524; --sint-id:#67e8f9; }
+[data-v="C"][data-modo="claro"] { --fondo:#f3f3f1; --superficie:#fafaf9; --superficie-alta:#fff; --texto:#2b2d31; --texto-fuerte:#111; --tenue:#7b7f88; --borde:#dcdcd8; --sutil:#ebebe8; --sutil-2:#cfcfca; --hover:#efefec; --sel:#e6e6e2;
+  --acento:#c2410c; --acento-sobre:#fff; --agente:#0891b2; --agente-texto:#0e7490; --agente-suave:#0891b214; --agente-halo:#0891b255; --warn:#b45309; --warn-suave:#f59e0b18; --err:#dc2626; --sint-kw:#c2410c; --sint-id:#0e7490; }
+[data-v="C"] .barra { background:var(--superficie); border-bottom:1px solid var(--borde); padding:0 8px; gap:10px; }
+[data-v="C"] .marca { font-family:var(--mono); font-weight:500; letter-spacing:-.01em; }
+[data-v="C"] .marca i { border:2px solid var(--acento); border-radius:2px; transform:rotate(45deg) scale(.7); }
+[data-v="C"] .busq { height:24px; border:1px solid var(--borde); background:var(--fondo); border-radius:var(--radio); font-family:var(--mono); font-size:11px; }
+[data-v="C"] .panel { background:var(--superficie); }
+[data-v="C"] .panel.izq { border-right:1px solid var(--borde); } [data-v="C"] .panel.der { border-left:1px solid var(--borde); }
+[data-v="C"] .tabs { border-bottom:1px solid var(--borde); padding:0; gap:0; }
+[data-v="C"] .tab { height:30px; text-transform:uppercase; letter-spacing:.06em; font-size:10.5px; border-right:1px solid var(--borde); }
+[data-v="C"] .tab.sel { background:var(--fondo); box-shadow:inset 0 2px 0 var(--acento); }
+[data-v="C"] .grupo { text-transform:uppercase; letter-spacing:.08em; font-size:10px; padding:10px 10px 3px; }
+[data-v="C"] .item { margin:0; padding:3px 10px 3px 14px; font-family:var(--mono); font-size:11.5px; }
+[data-v="C"] .item.sel { background:var(--sel); box-shadow:inset 2px 0 0 var(--acento); }
+[data-v="C"] .item.toca::after { content:'agente'; font-size:9.5px; color:var(--agente-texto); }
+[data-v="C"] .asa::after { inset:0 2px; }
+[data-v="C"] .oculta { background:var(--superficie); border-right:1px solid var(--borde); } [data-v="C"] .oculta.der { border-left:1px solid var(--borde); border-right:0; }
+[data-v="C"] .lienzo { background-color:#f6f7f9; background-image:radial-gradient(#0000001a 1px, transparent 1px); background-size:16px 16px; }
+[data-v="C"] .migas, [data-v="C"] .ctrl { background:var(--superficie); color:var(--texto); border:1px solid var(--borde); border-radius:var(--radio); font-family:var(--mono); font-size:11px; }
+[data-v="C"] .resalte { border:1px dashed var(--agente); border-radius:2px; background:var(--agente-suave); }
+[data-v="C"] .resalte::before { content:'agente: edit pin'; position:absolute; top:-18px; left:-1px; font:10px var(--mono); background:var(--agente); color:#111; padding:1px 5px; }
+[data-v="C"] .issue { margin:0; border-bottom:1px solid var(--borde); padding:8px 10px; }
+[data-v="C"] .kv { font-family:var(--mono); font-size:11.5px; } [data-v="C"] .kv .tit { font-family:var(--fuente); }
+[data-v="C"] .tema { margin:0; border-bottom:1px solid var(--borde); } [data-v="C"] .tema:hover { background:var(--hover); }
+[data-v="C"] .tema.sel { box-shadow:inset 2px 0 0 var(--acento); background:var(--sel); }
+[data-v="C"] .act { border-bottom:1px solid var(--borde); padding:6px 10px; border-left:2px solid transparent; }
+[data-v="C"] .act:first-child { border-left-color:var(--agente); }
+[data-v="C"] .boton { padding:2px 8px; font-size:11px; font-family:var(--mono); }
+[data-v="C"] .chip, [data-v="C"] .cnt { border-radius:2px; }
+[data-v="C"] .velo { background:#0007; padding-top:8vh; }
+[data-v="C"] .dialogo { background:var(--superficie-alta); border:1px solid var(--sutil-2); border-radius:4px; box-shadow:0 20px 50px #0008; font-family:var(--mono); font-size:12px; }
+[data-v="C"] .dialogo input { border-bottom:1px solid var(--borde); font-family:var(--mono); font-size:13px; padding:10px 12px; }
+
+/* ======================= D: Editorial calido =======================
+   Papel, tinta y serif en los titulos; mucho aire, tabs subrayadas finas, separadores de regla.
+   Profundidad por contraste de tono entre papel y lienzo, no por sombras. Agente en terracota. */
+[data-v~="D"] {
+  --fuente: "Inter", ui-sans-serif, system-ui, sans-serif; --serif: "Iowan Old Style", "Charter", "Source Serif 4", Georgia, serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  --tam:13.5px; --alto-barra:58px; --radio:4px; --radio-s:4px; --dur:.4s; --dur-corta:.22s; --curva:cubic-bezier(.65,0,.35,1);
+}
+[data-v~="D"][data-modo="claro"] { --fondo:#f4efe6; --superficie:#f8f4ec; --superficie-alta:#fffdf8; --texto:#2a2520; --texto-fuerte:#14110d; --tenue:#8a7f70; --borde:#e2d9c9; --sutil:#ece5d7; --sutil-2:#d9cfbc; --hover:#efe8da; --sel:#e9e0cf;
+  --acento:#1f3a5f; --acento-sobre:#f8f4ec; --agente:#c2410c; --agente-texto:#9a3412; --agente-suave:#c2410c14; --agente-halo:#c2410c55; --warn:#a16207; --warn-suave:#ca8a0414; --err:#b91c1c; --sint-kw:#9a3412; --sint-id:#1f3a5f; }
+[data-v~="D"][data-modo="oscuro"] { --fondo:#1b1916; --superficie:#211e1a; --superficie-alta:#2a2621; --texto:#e8e1d4; --texto-fuerte:#fff8ea; --tenue:#a39886; --borde:#3a342c; --sutil:#2e2a24; --sutil-2:#4a4339; --hover:#28241f; --sel:#322d26;
+  --acento:#e9c46a; --acento-sobre:#1b1916; --agente:#f08a5d; --agente-texto:#f4a582; --agente-suave:#f08a5d1c; --agente-halo:#f08a5d66; --warn:#e9c46a; --warn-suave:#e9c46a18; --err:#ef6f6c; --sint-kw:#f4a582; --sint-id:#e9c46a; }
+[data-v~="D"] .barra { background:var(--superficie); border-bottom:1px solid var(--borde); padding:0 20px; gap:18px; }
+[data-v~="D"] .marca { font-family:var(--serif); font-size:19px; font-weight:600; letter-spacing:-.01em; }
+[data-v~="D"] .marca i { display:none; }
+[data-v~="D"] .busq { border-bottom:1px solid var(--sutil-2); border-radius:0; padding:0 2px; font-style:italic; }
+[data-v~="D"] .panel { background:var(--superficie); }
+[data-v~="D"] .panel.izq { border-right:1px solid var(--borde); } [data-v~="D"] .panel.der { border-left:1px solid var(--borde); }
+[data-v~="D"] .tabs { padding:6px 16px 0; gap:18px; border-bottom:1px solid var(--borde); }
+[data-v~="D"] .tab { padding:0; height:36px; font-family:var(--serif); font-size:14.5px; }
+[data-v~="D"] .tab::after { content:''; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--texto-fuerte); transform:scaleX(0); transition:transform var(--dur) var(--curva); }
+[data-v~="D"] .tab.sel::after { transform:scaleX(1); }
+[data-v~="D"] .grupo { font-family:var(--serif); font-style:italic; font-size:13px; padding:18px 18px 6px; }
+[data-v~="D"] .item { margin:0 10px; padding:6px 8px; border-radius:0; border-bottom:1px solid transparent; }
+[data-v~="D"] .item.sel { background:transparent; border-bottom-color:var(--texto-fuerte); font-weight:600; }
+[data-v~="D"] .item.toca .nom::before { content:'\2022  '; color:var(--agente); }
+[data-v~="D"] .glifo { display:none; }
+[data-v~="D"] .oculta { background:var(--superficie); border-right:1px solid var(--borde); font-family:var(--serif); font-style:italic; } [data-v~="D"] .oculta.der { border-left:1px solid var(--borde); border-right:0; }
+[data-v~="D"] .lienzo-marco { background:var(--fondo); padding:18px; } [data-v~="D"] .lienzo { inset:18px; box-shadow:0 0 0 1px var(--borde); }
+[data-v~="D"] .migas { top:-1px; left:-1px; background:var(--superficie-alta); color:var(--texto); font-family:var(--serif); font-size:13px; box-shadow:0 0 0 1px var(--borde); border-radius:0; }
+[data-v~="D"] .ctrl { background:var(--superficie-alta); color:var(--texto); box-shadow:0 0 0 1px var(--borde); border-radius:0; }
+[data-v~="D"] .resalte { border:1.5px solid var(--agente); border-radius:0; }
+[data-v~="D"] .resalte::after { content:'el agente acaba de mover este Pin'; position:absolute; left:calc(100% + 10px); top:0; width:150px; font:italic 12px var(--serif); color:var(--agente-texto); background:var(--superficie-alta); padding:4px 8px; box-shadow:0 0 0 1px var(--borde); }
+[data-v~="D"] .issue { margin:0 16px; padding:14px 0; border-bottom:1px solid var(--borde); }
+[data-v~="D"] .kv { padding:20px 18px; } [data-v~="D"] .kv .tit { font-family:var(--serif); font-size:20px; font-weight:600; }
+[data-v~="D"] .tema { margin:0 16px; padding:12px 0; border-bottom:1px solid var(--borde); } [data-v~="D"] .tema .nomt { font-family:var(--serif); font-size:14.5px; }
+[data-v~="D"] .tema.sel .nomt { text-decoration:underline; text-underline-offset:4px; }
+[data-v~="D"] .tema img { box-shadow:0 0 0 1px var(--borde); }
+[data-v~="D"] .act { margin:0 16px; padding:12px 0; border-bottom:1px solid var(--borde); }
+[data-v~="D"] .act .c { font-family:var(--mono); }
+[data-v~="D"] .boton { border-radius:0; background:transparent; border-color:var(--texto); }
+[data-v~="D"] .boton.prim { background:var(--texto-fuerte); color:var(--superficie); }
+[data-v~="D"] .velo { background:#2a252066; }
+[data-v~="D"] .dialogo { background:var(--superficie-alta); box-shadow:0 0 0 1px var(--borde), 0 24px 60px #2a252040; }
+[data-v~="D"] .dialogo input { font-family:var(--serif); font-size:20px; padding:18px 20px; border-bottom:1px solid var(--borde); }
+
+/* ======================= E: Islas editoriales (B + D) =======================
+   Estructura de B (lienzo a pantalla completa, zonas flotantes con vidrio y sombra, movimiento con resorte)
+   con el alma de D (papel y tinta calidos, serif en titulos y pestanas subrayadas, agente terracota con nota al margen). */
+[data-v~="E"] { --serif: "Iowan Old Style", "Charter", "Source Serif 4", Georgia, serif; --tam:13.5px; }
+[data-v~="E"][data-modo="oscuro"] { --fondo:#141210; --superficie:#211e1ad4; --superficie-alta:#2a2621; --texto:#e8e1d4; --texto-fuerte:#fff8ea; --tenue:#a39886; --borde:#ffffff10; --sutil:#ffffff0c; --sutil-2:#ffffff24; --hover:#ffffff0a; --sel:#e9c46a1a;
+  --acento:#e9c46a; --acento-sobre:#1b1916; --agente:#f08a5d; --agente-texto:#f4a582; --agente-suave:#f08a5d1c; --agente-halo:#f08a5d77; --warn:#e9c46a; --warn-suave:#e9c46a18; --err:#ef6f6c; --sint-kw:#f4a582; --sint-id:#e9c46a; --sombra:0 0 0 1px #ffffff0d, 0 14px 36px -10px #000d; }
+[data-v~="E"][data-modo="claro"] { --fondo:#e8e1d4; --superficie:#f8f4ecd8; --superficie-alta:#fffdf8; --texto:#2a2520; --texto-fuerte:#14110d; --tenue:#8a7f70; --borde:#e2d9c9; --sutil:#ece5d7; --sutil-2:#d9cfbc; --hover:#2a25200a; --sel:#1f3a5f12;
+  --acento:#1f3a5f; --acento-sobre:#f8f4ec; --agente:#c2410c; --agente-texto:#9a3412; --agente-suave:#c2410c14; --agente-halo:#c2410c55; --warn:#a16207; --warn-suave:#ca8a0414; --err:#b91c1c; --sint-kw:#9a3412; --sint-id:#1f3a5f; --sombra:0 1px 1px #2a25200d, 0 10px 28px -8px #2a252033; }
+[data-v~="E"] .marca { font-family:var(--serif); font-size:18px; }
+[data-v~="E"] .marca i { background:conic-gradient(from 200deg, var(--acento), var(--agente), var(--acento)); }
+[data-v~="E"] .busq { font-style:italic; }
+[data-v~="E"] .tabs { padding:8px 14px 0; gap:16px; }
+[data-v~="E"] .tab { padding:0; height:32px; border-radius:0; font-family:var(--serif); font-size:14.5px; }
+[data-v~="E"] .tab.sel { background:transparent; color:var(--texto-fuerte); }
+[data-v~="E"] .tab::after { content:''; position:absolute; left:0; right:0; bottom:2px; height:1.5px; background:var(--acento); transform:scaleX(0); transition:transform var(--dur) var(--curva); }
+[data-v~="E"] .tab.sel::after { transform:scaleX(1); }
+[data-v~="E"] .tab.icono::after { display:none; }
+[data-v~="E"] .grupo { font-family:var(--serif); font-style:italic; font-size:13px; }
+[data-v~="E"] .item.sel { color:var(--texto-fuerte); }
+[data-v~="E"] .kv .tit { font-family:var(--serif); font-size:19px; }
+[data-v~="E"] .tema .nomt { font-family:var(--serif); font-size:14.5px; }
+[data-v~="E"] .resalte::after { content:'el agente acaba de mover este Pin'; position:absolute; left:calc(100% + 12px); top:0; width:150px; font:italic 12px var(--serif); color:var(--agente-texto); background:var(--superficie); backdrop-filter:blur(12px); padding:6px 10px; border-radius:10px; box-shadow:var(--sombra); }
+[data-v~="E"] .dialogo input { font-family:var(--serif); font-size:20px; }
+[data-v~="E"] .migas b { font-family:var(--serif); font-size:13.5px; }
+
+/* ======================= F: Lamina con profundidad (D + B) =======================
+   Estructura de D (chrome plano con reglas finas, lienzo enmarcado como lamina) pero la lamina flota:
+   radio, sombra larga, controles de vidrio sobre ella, halo del agente y movimiento con resorte de B. */
+[data-v~="F"] { --dur:.32s; --curva:cubic-bezier(.32,.72,0,1); }
+[data-v~="F"][data-modo="oscuro"] { --fondo:#15130f; }
+[data-v~="F"] .lienzo-marco { padding:22px; }
+[data-v~="F"] .lienzo { inset:22px; border-radius:14px; box-shadow:0 0 0 1px var(--borde), 0 24px 60px -18px #000c, 0 6px 16px -6px #0008; }
+[data-v~="F"][data-modo="claro"] .lienzo { box-shadow:0 0 0 1px var(--borde), 0 24px 60px -20px #2a252055, 0 4px 12px -6px #2a252033; }
+[data-v~="F"] .migas, [data-v~="F"] .ctrl { top:12px; left:12px; border-radius:99px; background:color-mix(in srgb, var(--superficie-alta) 82%, transparent); backdrop-filter:blur(14px); box-shadow:0 0 0 1px var(--borde), 0 8px 20px -8px #0006; }
+[data-v~="F"] .ctrl { top:auto; left:auto; bottom:12px; right:12px; }
+[data-v~="F"] .ctrl button { border-radius:99px; }
+[data-v~="F"] .resalte { border:0; border-radius:12px; box-shadow:0 0 0 1.5px var(--agente), 0 0 32px 6px var(--agente-halo); animation:pulso-b 2s infinite; }
+[data-v~="F"] .resalte::after { border-radius:8px; }
+[data-v~="F"] .velo { backdrop-filter:blur(6px); }
+[data-v~="F"] .dialogo { border-radius:14px; }
+
+/* ======================= Familia B: otras variaciones de islas (G, H, I, J) ======================= */
+
+/* G: Muelle. Las islas no ocupan todo el alto: miden lo que su contenido; la barra se parte en tres
+   pildoras sueltas (marca, busqueda, agente). Grafito frio, acento azul. Mas lienzo a la vista. */
+[data-v~="G"][data-modo="oscuro"] { --fondo:#0e1014; --superficie:#1a1d24e6; --superficie-alta:#232731; --texto:#dfe3ea; --texto-fuerte:#fff; --tenue:#8b93a3; --borde:#ffffff12; --sutil:#ffffff0d; --sutil-2:#ffffff2a; --hover:#ffffff0b; --sel:#4f8cff24;
+  --acento:#5b9bff; --acento-sobre:#0e1014; --agente:#ff7a59; --agente-texto:#ffa58e; --agente-suave:#ff7a591f; --agente-halo:#ff7a5977; --warn:#ffc35b; --warn-suave:#ffc35b1c; --err:#ff6b81; --sint-kw:#ffa58e; --sint-id:#9cc2ff; --sombra:0 0 0 1px #ffffff10, 0 18px 40px -12px #000e; }
+[data-v~="G"][data-modo="claro"] { --fondo:#dfe3ea; --superficie:#ffffffe6; --superficie-alta:#fff; --texto:#1b2230; --texto-fuerte:#0a0f1a; --tenue:#667085; --borde:#0a0f1a14; --sutil:#0a0f1a0a; --sutil-2:#0a0f1a26; --hover:#0a0f1a08; --sel:#2563eb18;
+  --acento:#2563eb; --acento-sobre:#fff; --agente:#ea580c; --agente-texto:#c2410c; --agente-suave:#ea580c16; --agente-halo:#ea580c55; --warn:#b45309; --warn-suave:#f59e0b18; --err:#e11d48; --sint-kw:#c2410c; --sint-id:#2563eb; --sombra:0 1px 1px #0a0f1a0d, 0 14px 32px -10px #0a0f1a33; }
+[data-v~="G"] .barra { background:transparent; box-shadow:none; backdrop-filter:none; padding:0; gap:10px; }
+[data-v~="G"] .barra > * { background:var(--superficie); backdrop-filter:blur(18px) saturate(1.6); box-shadow:var(--sombra); border-radius:99px; height:40px; display:flex; align-items:center; padding:0 14px; }
+[data-v~="G"] .barra > .flex1 { background:none; box-shadow:none; backdrop-filter:none; }
+[data-v~="G"] .barra .busq { flex:0 1 420px; margin:0 auto; }
+[data-v~="G"] .barra .ultimo { margin-left:auto; }
+[data-v~="G"] .barra .seguir { padding:0 14px 0 10px; }
+[data-v~="G"] .panel { align-self:start; max-height:100%; border-radius:18px; }
+[data-v~="G"] .panel .cuerpo { max-height:calc(100vh - 150px); }
+[data-v~="G"] .tabs { padding:8px; }
+[data-v~="G"] .tab { border-radius:10px; }
+[data-v~="G"] .tab.sel { background:var(--sel); color:var(--acento); }
+[data-v~="G"] .oculta { align-self:start; height:150px; border-radius:99px; }
+[data-v~="G"] .migas { bottom:16px; }
+
+/* H: Aurora. Vidrio pleno: una aurora de color detras de todo, desenfoque fuerte, radio 20,
+   brillo interior arriba de cada isla, acento en degradado violeta a cian. */
+[data-v~="H"][data-modo="oscuro"] { --fondo:#07060d; --superficie:#16132599; --superficie-alta:#221d36; --texto:#e9e6f5; --texto-fuerte:#fff; --tenue:#9a94b5; --borde:#ffffff14; --sutil:#ffffff0f; --sutil-2:#ffffff2e; --hover:#ffffff0d; --sel:#ffffff14;
+  --acento:#a78bfa; --acento-2:#22d3ee; --acento-sobre:#07060d; --agente:#22d3ee; --agente-texto:#67e8f9; --agente-suave:#22d3ee1c; --agente-halo:#22d3ee88; --warn:#fcd34d; --warn-suave:#fcd34d1a; --err:#fb7185; --sint-kw:#c4b5fd; --sint-id:#67e8f9;
+  --sombra:inset 0 1px 0 #ffffff1c, 0 0 0 1px #ffffff12, 0 20px 50px -12px #000c; }
+[data-v~="H"][data-modo="claro"] { --fondo:#eeeaf8; --superficie:#ffffffa8; --superficie-alta:#fff; --texto:#1f1b33; --texto-fuerte:#0d0a1c; --tenue:#6c6589; --borde:#1f1b3314; --sutil:#1f1b330a; --sutil-2:#1f1b3326; --hover:#1f1b3308; --sel:#7c3aed14;
+  --acento:#7c3aed; --acento-2:#0891b2; --acento-sobre:#fff; --agente:#0891b2; --agente-texto:#0e7490; --agente-suave:#0891b216; --agente-halo:#0891b266; --warn:#b45309; --warn-suave:#f59e0b18; --err:#e11d48; --sint-kw:#7c3aed; --sint-id:#0e7490;
+  --sombra:inset 0 1px 0 #ffffffcc, 0 0 0 1px #1f1b3312, 0 16px 40px -12px #1f1b3340; }
+[data-v~="H"].ui-chrome { background:radial-gradient(60% 50% at 15% 10%, #7c3aed55, transparent 70%), radial-gradient(50% 50% at 90% 90%, #06b6d444, transparent 70%), radial-gradient(40% 40% at 70% 20%, #db277733, transparent 70%), var(--fondo); }
+[data-v~="H"] .lienzo-marco { margin:0; grid-row:2; grid-column:3; z-index:0; padding:0; }
+[data-v~="H"] .lienzo { border-radius:20px; box-shadow:var(--sombra); }
+[data-v~="H"] .barra, [data-v~="H"] .panel, [data-v~="H"] .oculta { border-radius:20px; backdrop-filter:blur(30px) saturate(1.8); }
+[data-v~="H"] .marca i { background:linear-gradient(135deg, var(--acento), var(--acento-2)); border-radius:7px; }
+[data-v~="H"] .busq { border-radius:12px; box-shadow:inset 0 1px 2px #0004, 0 0 0 1px var(--borde); }
+[data-v~="H"] .tab { border-radius:12px; }
+[data-v~="H"] .tab.sel { background:linear-gradient(135deg, color-mix(in srgb, var(--acento) 28%, transparent), color-mix(in srgb, var(--acento-2) 18%, transparent)); color:var(--texto-fuerte); box-shadow:inset 0 1px 0 #ffffff22; }
+[data-v~="H"] .item.sel { background:linear-gradient(90deg, color-mix(in srgb, var(--acento) 22%, transparent), transparent); color:var(--texto-fuerte); }
+[data-v~="H"] .seguir.on .interruptor { background:linear-gradient(90deg, var(--acento), var(--acento-2)); }
+[data-v~="H"] .boton.prim { background:linear-gradient(135deg, var(--acento), var(--acento-2)); }
+[data-v~="H"] .migas, [data-v~="H"] .ctrl { backdrop-filter:blur(24px); }
+
+/* I: Islas solidas. Sin vidrio ni transparencia: tarjetas opacas de pizarra con borde interior nitido y
+   sombra en capas, radio 10, densidad compacta (12.5px), pestanas subrayadas, acento verde azulado. */
+[data-v~="I"] { --tam:12.5px; --radio:10px; --radio-s:6px; --dur:.22s; --curva:cubic-bezier(.2,.8,.2,1); --alto-barra:46px; }
+[data-v~="I"][data-modo="oscuro"] { --fondo:#0a0b0d; --superficie:#16181c; --superficie-alta:#1d2025; --texto:#d8dbe0; --texto-fuerte:#f5f6f8; --tenue:#868c97; --borde:#2a2e35; --sutil:#22252b; --sutil-2:#3a3f48; --hover:#1f2227; --sel:#14b8a61c;
+  --acento:#2dd4bf; --acento-sobre:#0a0b0d; --agente:#f472b6; --agente-texto:#f9a8d4; --agente-suave:#f472b61c; --agente-halo:#f472b677; --warn:#fbbf24; --warn-suave:#fbbf241a; --err:#f87171; --sint-kw:#f9a8d4; --sint-id:#5eead4;
+  --sombra:inset 0 0 0 1px #2a2e35, 0 1px 0 #ffffff08 inset, 0 2px 4px #0006, 0 12px 28px -8px #000a; }
+[data-v~="I"][data-modo="claro"] { --fondo:#e6e8eb; --superficie:#fff; --superficie-alta:#fff; --texto:#1d2025; --texto-fuerte:#0a0b0d; --tenue:#6b717c; --borde:#e1e3e7; --sutil:#f1f2f4; --sutil-2:#d5d8dd; --hover:#f4f5f7; --sel:#0d948814;
+  --acento:#0d9488; --acento-sobre:#fff; --agente:#db2777; --agente-texto:#be185d; --agente-suave:#db277714; --agente-halo:#db277755; --warn:#b45309; --warn-suave:#f59e0b18; --err:#dc2626; --sint-kw:#be185d; --sint-id:#0f766e;
+  --sombra:inset 0 0 0 1px #e1e3e7, 0 1px 2px #0a0b0d14, 0 10px 24px -10px #0a0b0d33; }
+[data-v~="I"].ui-chrome { padding:8px; gap:8px 0; }
+[data-v~="I"] .lienzo-marco { margin:-8px; }
+[data-v~="I"] .barra, [data-v~="I"] .panel, [data-v~="I"] .oculta, [data-v~="I"] .migas, [data-v~="I"] .ctrl { backdrop-filter:none; border-radius:var(--radio); }
+[data-v~="I"] .migas, [data-v~="I"] .ctrl { border-radius:8px; background:var(--superficie); box-shadow:var(--sombra); }
+[data-v~="I"] .ctrl button { border-radius:6px; }
+[data-v~="I"] .busq { border-radius:7px; height:30px; box-shadow:inset 0 0 0 1px var(--borde); background:var(--fondo); }
+[data-v~="I"] .marca i { background:var(--acento); border-radius:4px; }
+[data-v~="I"] .tabs { padding:0 10px; gap:14px; box-shadow:inset 0 -1px 0 var(--borde); }
+[data-v~="I"] .tab { padding:0; border-radius:0; height:36px; }
+[data-v~="I"] .tab.sel { background:transparent; color:var(--texto-fuerte); box-shadow:inset 0 -2px 0 var(--acento); }
+[data-v~="I"] .tab.icono { box-shadow:none; }
+[data-v~="I"] .item { border-radius:6px; padding:4px 8px; }
+[data-v~="I"] .item.sel { color:var(--texto-fuerte); box-shadow:inset 2px 0 0 var(--acento); border-radius:0 6px 6px 0; }
+[data-v~="I"] .issue { box-shadow:inset 0 0 0 1px var(--borde); border-radius:8px; background:var(--superficie-alta); }
+[data-v~="I"] .boton { border-radius:6px; }
+[data-v~="I"] .resalte { box-shadow:0 0 0 2px var(--agente), 0 0 0 6px var(--agente-suave); border-radius:8px; animation:none; }
+
+/* J: Negro con filo. Islas casi negras sobre negro; el borde es un degradado de 1px que se ilumina
+   en la isla con foco y en la que toca el agente. Geist, mono en etiquetas, agente verde lima. */
+[data-v~="J"] { --mono:"Geist Mono", "JetBrains Mono", ui-monospace, monospace; --fuente:"Geist", "Inter", ui-sans-serif, system-ui, sans-serif; --radio:12px; }
+[data-v~="J"][data-modo="oscuro"] { --fondo:#000; --superficie:#0a0a0a; --superficie-alta:#141414; --texto:#ededed; --texto-fuerte:#fff; --tenue:#8f8f8f; --borde:#1f1f1f; --sutil:#1a1a1a; --sutil-2:#333; --hover:#141414; --sel:#1c1c1c;
+  --acento:#ededed; --acento-sobre:#000; --agente:#a3e635; --agente-texto:#bef264; --agente-suave:#a3e6351a; --agente-halo:#a3e63566; --warn:#f5a623; --warn-suave:#f5a6231a; --err:#ff4d4f; --sint-kw:#bef264; --sint-id:#7dd3fc;
+  --sombra:0 0 0 1px #1f1f1f, 0 16px 40px -16px #000; --filo:linear-gradient(160deg, #ffffff40, #ffffff08 40%, #ffffff05 70%, #ffffff26); }
+[data-v~="J"][data-modo="claro"] { --fondo:#fafafa; --superficie:#fff; --superficie-alta:#fff; --texto:#171717; --texto-fuerte:#000; --tenue:#666; --borde:#eaeaea; --sutil:#f2f2f2; --sutil-2:#d4d4d4; --hover:#f5f5f5; --sel:#f0f0f0;
+  --acento:#171717; --acento-sobre:#fff; --agente:#4d7c0f; --agente-texto:#3f6212; --agente-suave:#65a30d14; --agente-halo:#65a30d55; --warn:#b45309; --warn-suave:#f59e0b18; --err:#e5484d; --sint-kw:#3f6212; --sint-id:#0369a1;
+  --sombra:0 0 0 1px #eaeaea, 0 12px 32px -14px #0003; --filo:linear-gradient(160deg, #0000002a, #00000008 40%, #00000005 70%, #0000001f); }
+[data-v~="J"] .barra, [data-v~="J"] .panel, [data-v~="J"] .oculta { backdrop-filter:none; position:relative; }
+[data-v~="J"] .barra::before, [data-v~="J"] .panel::before { content:''; position:absolute; inset:0; border-radius:inherit; padding:1px; background:var(--filo); pointer-events:none;
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude; }
+[data-v~="J"] .panel:focus-within::before { background:linear-gradient(160deg, var(--acento), #ffffff10 50%, var(--acento)); }
+[data-v~="J"] .panel.izq:has(.toca)::before { background:linear-gradient(160deg, var(--agente), #ffffff08 45%, #ffffff05 70%, var(--agente-halo)); }
+[data-v~="J"] .marca i { background:var(--texto-fuerte); clip-path:polygon(50% 0, 100% 100%, 0 100%); border-radius:0; }
+[data-v~="J"] .busq { border-radius:8px; background:var(--superficie-alta); box-shadow:0 0 0 1px var(--borde); font-size:12.5px; }
+[data-v~="J"] .tab { border-radius:8px; font-size:12.5px; }
+[data-v~="J"] .tab.sel { background:var(--sutil); color:var(--texto-fuerte); }
+[data-v~="J"] .grupo { font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; }
+[data-v~="J"] .item.sel { background:var(--sel); color:var(--texto-fuerte); }
+[data-v~="J"] .migas, [data-v~="J"] .ctrl { background:var(--superficie); backdrop-filter:none; border-radius:10px; box-shadow:0 0 0 1px var(--sutil-2), 0 8px 24px -8px #000; }
+[data-v~="J"] .boton { border-radius:8px; }
+[data-v~="J"] .resalte { box-shadow:0 0 0 1px var(--agente), 0 0 0 5px var(--agente-suave), 0 0 40px 4px var(--agente-halo); animation:none; border-radius:10px; }
+[data-v~="J"] .resalte::before { content:'agente'; position:absolute; top:-22px; left:0; font:10.5px var(--mono); color:#000; background:var(--agente); padding:2px 7px; border-radius:6px; }
+
+/* Redimensionado vertical y diagonal de las islas (G) */
+.panel { position:relative; }
+.asa-v, .asa-d { position:absolute; z-index:3; }
+.asa-v { left:16px; right:16px; bottom:0; height:8px; cursor:ns-resize; }
+.asa-v::after { content:''; position:absolute; left:50%; bottom:3px; width:36px; height:3px; margin-left:-18px; border-radius:2px; background:var(--sutil-2); opacity:0; transition:opacity var(--dur-corta); }
+.panel:hover .asa-v::after { opacity:1; } .asa-v:hover::after { background:var(--acento); }
+.asa-d { bottom:0; width:18px; height:18px; }
+.panel.izq .asa-d { right:0; cursor:nwse-resize; } .panel.der .asa-d { left:0; cursor:nesw-resize; }
+.asa-d::after { content:''; position:absolute; bottom:5px; width:8px; height:8px; border-bottom:2px solid var(--sutil-2); opacity:0; transition:opacity var(--dur-corta); }
+.panel.izq .asa-d::after { right:5px; border-right:2px solid var(--sutil-2); border-bottom-right-radius:4px; }
+.panel.der .asa-d::after { left:5px; border-left:2px solid var(--sutil-2); border-bottom-left-radius:4px; }
+.panel:hover .asa-d::after { opacity:1; } .asa-d:hover::after { border-color:var(--acento); }
+[data-v~="G"] .panel.alto-fijo .cuerpo { max-height:none; }
+.paletas { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px; }
+.paletas .s { display:flex; align-items:center; gap:8px; }
+.paletas .s.sel { outline:1.5px solid #fff; }
+.paletas i { width:12px; height:12px; border-radius:3px; display:block; }
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<div id="dialogo"></div>
+<div class="nota" id="nota"></div>
+<div id="conmutador"><button id="prev">&lt;</button><span id="etiqueta"></span><button id="next">&gt;</button><button class="modo" id="modo"></button></div>
+<script>
+// ---------- Datos falsos con nombres reales de examples/rinthel-arch ----------
+const IMG = '../../../docs/img/';
+const VISTAS = {
+  architecture: [
+    { id:'paquetes', enlaces:8, img:'temas/claro-suave.png' }, { id:'abierto', img:'temas/claro-suave.png' },
+    { id:'canonico-detalle', img:'temas/editorial.png' }, { id:'dsl-detalle', img:'temas/soft-card.png' },
+    { id:'sesion-detalle', img:'temas/glass-chip.png' }, { id:'render-detalle', img:'temas/bauhaus.png' },
+    { id:'cli-detalle', img:'temas/keycaps.png', issues:2 },
+  ],
+  flow: [ { id:'flujo-edicion', pasos:6, img:'temas/metro-map.png' }, { id:'flujo-validate', pasos:6, img:'temas/pcb.png' }, { id:'flujo-dev', pasos:7, img:'temas/blueprint.png', oscuro:true } ],
+  sequence: [ { id:'secuencia-tienda', img:'tipos/secuencia-tienda.png' } ],
+  er: [ { id:'er-tienda', img:'tipos/er-tienda.png' } ],
+};
+const TEMAS = [
+  ['diagrams', null, ['#1d2433','#6ea8fe','#c3e88d','#f07178'], 'claro-suave'], ['diagrams-claro', 'diagrams', ['#ffffff','#2f6fde','#3b9b5d','#c94a4a'], 'soft-card'],
+  ['claro-suave', 'diagrams-claro', ['#f7f4ef','#8aa1c1','#b9c9a7','#e2b4a0'], 'claro-suave'], ['blueprint', 'diagrams', ['#0c2a4a','#9fd3ff','#ffffff','#ffd166'], 'blueprint'],
+  ['synthwave', 'diagrams', ['#1a0b2e','#ff4fd8','#3df2ff','#ffd319'], 'synthwave'], ['bauhaus', 'diagrams-claro', ['#f2ede3','#d62828','#003f88','#fcbf49'], 'bauhaus'],
+];
+const DG = [
+  ['cm','// Los paquetes con render, sesion y layout abiertos.'],
+  ['', '<span class="kw">view</span> <span class="id">abierto</span> {'], ['', '  <span class="kw">type</span> architecture'], ['', '  <span class="kw">theme</span> diagrams'],
+  ['issue','  <span class="kw">include</span> autor, agente, workspace, <span class="ondula">sesion.ses-sesoin</span>, render.**'],
+  ['', '  <span class="kw">expanded</span> render, sesion, layout'], ['agente', '  <span class="kw">collapsed</span> canonico, tema, dsl, shell, cli'], ['', '}'], ['', ''],
+  ['', '<span class="kw">view</span> <span class="id">sesion-detalle</span> {'], ['', '  <span class="kw">type</span> architecture'], ['', '  <span class="kw">theme</span> diagrams-claro'],
+  ['', '  <span class="kw">include</span> sesion.**, dsl.dsl-compilar, canonico.can-validar'], ['', '  <span class="kw">depth</span> 2'], ['', '}'],
+];
+const ISSUES = [
+  { sev:'err', cod:'E_REF_DESCONOCIDA', sitio:'vistas.dg:22', msg:'Nodo "sesion.ses-sesoin" no existe', hint:'quisiste decir sesion.ses-sesion?', fix:true },
+  { sev:'warn', cod:'W_PIN_HUERFANO', sitio:'vistas.dg:104', msg:'Pin de cli.cli-dev sin Nodo en la Vista cli-detalle', hint:'quitar el Pin', fix:true },
+  { sev:'warn', cod:'W_CONTRASTE', sitio:'temas/neon.dg:12', msg:'Contraste 2.8:1 en etiquetas de Arista', hint:'subir a 4.5:1', fix:false },
+];
+let ACT = [
+  ['14:02:40','edit collapse abierto dsl','Vista abierto'], ['14:02:32','(cambio) vistas.dg','+1 Pin, 1 Nodo movido'],
+  ['14:02:31','edit pin sesion.ses-sesion 420,180','Vista sesion-detalle'], ['14:02:19','inspect node sesion.ses-sesion','vistas: sesion-detalle, abierto'],
+  ['14:02:11','validate --json','0 errores, 3 avisos'],
+];
+const HIST = [['hecho','mover Pin sesion.ses-sesion'],['hecho','plegar dsl en abierto'],['actual','cambiar Tema de sesion-detalle'],['fut','mover Pin layout.lay-layout']];
+
+
+// ---------- Paletas de G (oscuras). Grafito es la de la variante; las demas solo cambian tokens. ----------
+// [fondo, superficie, superficie-alta, texto, tenue, acento, agente, warn, err]
+const PALETAS = {
+  // familia morada (a partir de ciruela)
+  ciruela:    ['#110b14','#1d1422','#271b2e','#ece0f0','#a08aa8','#e879f9','#5eead4','#fcd34d','#fb7185'],
+  amatista:   ['#0f0b1a','#1a1430','#241c40','#ebe6f7','#9b92b8','#a78bfa','#34d399','#fcd34d','#fb7185'],
+  uva:        ['#140a1f','#22123a','#2d1950','#efe4fb','#a58fc2','#c084fc','#fbbf24','#fde047','#fb7185'],
+  lavanda:    ['#121018','#1d1a26','#27232f','#ece8f4','#9d97ab','#c4b5fd','#fda4af','#fcd34d','#f87171'],
+  orquidea:   ['#130a12','#22121f','#2e1929','#f5e4ef','#ad8ca2','#f472b6','#67e8f9','#fcd34d','#fb7185'],
+  indigo:     ['#0b0b1a','#15152e','#1e1e40','#e4e5fa','#9091b8','#818cf8','#f472b6','#fbbf24','#fb7185'],
+  berenjena:  ['#0f0a0f','#1b141c','#251b27','#ede4ee','#9e8fa0','#d8b4fe','#fb923c','#fcd34d','#f87171'],
+  neon:       ['#0a0612','#160d26','#20123a','#efe6ff','#9d8bbf','#a855f7','#22d3ee','#facc15','#fb7185'],
+  // otras
+  grafito:    ['#0e1014','#1a1d24','#232731','#dfe3ea','#8b93a3','#5b9bff','#ff7a59','#ffc35b','#ff6b81'],
+  medianoche: ['#070b16','#111a2e','#18233b','#dbe4f5','#8494b2','#38bdf8','#f472b6','#fbbf24','#fb7185'],
+  bosque:     ['#0a100d','#131c17','#1a261f','#dce8e0','#85998c','#34d399','#fbbf24','#facc15','#f87171'],
+  brasa:      ['#110f0d','#1c1916','#26221e','#ece4da','#a1968a','#fb923c','#60a5fa','#fcd34d','#f87171'],
+  monocromo:  ['#0b0b0c','#18181b','#222225','#e4e4e7','#8d8d95','#f4f4f5','#facc15','#fbbf24','#f87171'],
+  artico:     ['#0d1117','#161b22','#1f2630','#e6edf3','#8b949e','#79c0ff','#ff7b72','#e3b341','#ff7b72'],
+};
+const claro = (c, a) => c + a;
+document.head.insertAdjacentHTML('beforeend', '<style>' + Object.entries(PALETAS).map(([n,[f,sup,alta,tx,te,ac,ag,wa,er]]) =>
+  `[data-v~="G"][data-modo="oscuro"][data-paleta="${n}"] { --fondo:${f}; --superficie:${sup}e6; --superficie-alta:${alta}; --texto:${tx}; --texto-fuerte:#fff; --tenue:${te};
+   --borde:#ffffff12; --sutil:#ffffff0d; --sutil-2:#ffffff2a; --hover:#ffffff0b; --sel:${ac}24; --acento:${ac}; --acento-sobre:${f};
+   --agente:${ag}; --agente-texto:color-mix(in srgb, ${ag} 70%, #fff); --agente-suave:${ag}1f; --agente-halo:${ag}77;
+   --warn:${wa}; --warn-suave:${wa}1c; --err:${er}; --sint-kw:color-mix(in srgb, ${ag} 70%, #fff); --sint-id:color-mix(in srgb, ${ac} 70%, #fff); }`).join('\n') + '</style>');
+const nombresPal = Object.keys(PALETAS);
+
+// ---------- Estado ----------
+const q = new URLSearchParams(location.search);
+let paleta = nombresPal.includes(q.get('paleta')) ? q.get('paleta') : 'neon';
+const VARIANTES = { A:'Neutro shadcn', B:'Islas flotantes', C:'Herramienta densa', D:'Editorial calido', E:'Islas editoriales (B + D)', F:'Lamina con profundidad (D + B)', G:'Islas: muelle', H:'Islas: aurora', I:'Islas solidas', J:'Islas: negro con filo' };
+const ATRIB = { E:'B E', F:'D F', G:'B G', H:'B H', I:'B I', J:'B J' };
+const claves = Object.keys(VARIANTES);
+let variante = claves.includes(q.get('variant')) ? q.get('variant') : 'G';
+const MODO_DEF = { A:'claro', B:'claro', C:'oscuro', D:'claro', E:'oscuro', F:'oscuro', G:'oscuro', H:'oscuro', I:'oscuro', J:'oscuro' };
+let modo = q.get('modo') || MODO_DEF[variante];
+const est = { vista:'abierto', tema:'diagrams', izq:'vistas', der:'detalle', verIzq:true, verDer:true, wIzq:300, wDer:400, hIzq:null, hDer:null, siguiendo:true, nuevos:0, toca:'sesion-detalle', resalte:true, paleta:false, nuevo:false };
+
+// ---------- Contenido (identico en todas las variantes) ----------
+const todas = () => Object.entries(VISTAS).flatMap(([t,vs]) => vs.map(v => ({...v, tipo:t})));
+const actual = () => todas().find(v => v.id === est.vista);
+const sel = c => c ? ' sel' : '';
+const indice = () => Object.entries(VISTAS).map(([t,vs]) => `<div class="grupo">${t} <span class="cnt">${vs.length}</span></div>` + vs.map(v =>
+  `<div class="item${sel(v.id===est.vista)}${v.id===est.toca?' toca':''}" tabindex="0" data-vista="${v.id}"><span class="glifo ${t}"></span><span class="nom">${v.id}</span>${v.issues?`<span class="cnt warn">${v.issues}</span>`:''}${v.pasos?`<span class="cnt">${v.pasos} pasos</span>`:''}</div>`).join('')).join('');
+const editor = () => `<div class="archivos"><span class="sel">vistas.dg</span><span>sistema.dg</span><span>temas/neon.dg</span></div><div class="codigo">${DG.map(([c,l]) => `<div class="${c==='issue'?'l-issue':c==='agente'?'l-agente':''}">${c==='cm'?'<span class="cm">'+l+'</span>':l}</div>`).join('')}</div>`;
+const issues = () => ISSUES.map(i => `<div class="issue"><div class="cab"><span class="sev" style="background:var(--${i.sev})"></span><code>${i.cod}</code><span class="flex1"></span><a href="#">${i.sitio}</a></div><div>${i.msg}</div><div class="hint">${i.hint}</div>${i.fix?'<button class="boton">Aplicar fix</button>':''}</div>`).join('');
+const detalle = () => `<div class="kv"><div class="tit">sesion.ses-sesion <span class="chip">modulo</span></div><b>Archivo</b><a href="#">sistema.dg:88</a><b>Fuente</b><span>packages/sesion/src/sesion.ts</span><b>Aristas</b><span>6 entrantes, 3 salientes</span><b>En Vistas</b><span>abierto, sesion-detalle, flujo-edicion</span><b>Pin</b><span>420, 180 (Vista sesion-detalle)</span></div>`;
+const temas = () => TEMAS.map(([n,ext,p,img]) => `<div class="tema${sel(n===est.tema)}" data-tema="${n}"><img src="${IMG}temas/${img}.png"><div><div class="nomt">${n}</div><div class="ext">${ext?'extends '+ext:'base'}</div><div class="paleta">${p.map(c=>`<i style="background:${c}"></i>`).join('')}</div></div></div>`).join('') +
+  `<div class="pie-temas">Previsualizando "${est.tema}" sin escribir <button class="boton prim">Fijar en abierto</button></div>`;
+const historial = () => HIST.map(([k,t]) => `<div class="hist ${k}"><span class="marca-h"></span>${t}</div>`).join('') + '<div class="pie-temas"><button class="boton">Deshacer</button><button class="boton">Rehacer</button></div>';
+const actividad = () => ACT.map(([t,c,r],i) => `<div class="act${i===0&&est.nuevo?' nuevo':''}"><span class="t">${t}</span><span class="c">diagrams ${c}</span><span class="r">${r}</span></div>`).join('');
+const PANELES = { detalle:['Detalle', detalle], issues:['Issues <span class="cnt warn">3</span>', issues], temas:['Temas', temas], historial:['Historial', historial], agente:[()=>`Agente${est.nuevos?` <span class="cnt agente">${est.nuevos}</span>`:''}`, actividad] };
+const titulo = k => typeof PANELES[k][0] === 'function' ? PANELES[k][0]() : PANELES[k][0];
+
+// Color de fondo del Tema de cada captura, para que el lienzo no quede con franjas claras.
+const FONDO_IMG = { bauhaus:'#efe8d8', blueprint:'#0d3b73', 'claro-suave':'#e6e7f8', editorial:'#fbf8f1', 'glass-chip':'#161440', keycaps:'#31333f', 'metro-map':'#ffffff', pcb:'#165137', 'soft-card':'#09090b', 'er-tienda':'#09090b', 'secuencia-tienda':'#09090b' };
+function lienzo() {
+  const v = actual(), clave = v.img.split('/')[1].replace('.png','');
+  return `<div class="lienzo" style="background-color:${FONDO_IMG[clave]}"><img src="${IMG+v.img}">
+    <div class="migas">paquetes &rsaquo; <b>${v.id}</b> <span class="chip">${v.tipo}</span><span class="chip">${est.tema}</span></div>
+    ${est.resalte && est.vista===est.toca ? '<div class="resalte"></div>' : ''}
+    <div class="ctrl"><button>&minus;</button><button>Ajustar</button><button>+</button>${v.pasos?'<button>&lsaquo; Paso 2/'+v.pasos+' &rsaquo;</button>':''}</div></div>`;
+}
+const cols = () => [est.verIzq?`${est.wIzq}px 6px`:'26px 6px', 'minmax(0,1fr)', est.verDer?`6px ${est.wDer}px`:'6px 26px'].join(' ');
+
+let colsPrevias = null;
+function pintar() {
+  const ult = ACT[0];
+  const destino = cols(), desde = colsPrevias || destino; colsPrevias = destino;
+  const izq = `<div class="tabs">${[['vistas','Vistas'],['codigo','Codigo']].map(([k,n]) => `<span class="tab${sel(est.izq===k)}" tabindex="0" data-izq="${k}">${n}</span>`).join('')}<span class="flex1"></span><span class="tab icono" data-ocultar="izq" title="Ocultar (Ctrl+B)">&laquo;</span></div><div class="cuerpo">${est.izq==='codigo'?editor():indice()}</div>`;
+  const der = `<div class="tabs">${Object.keys(PANELES).map(k => `<span class="tab${sel(est.der===k)}" tabindex="0" data-der="${k}">${titulo(k)}</span>`).join('')}<span class="flex1"></span><span class="tab icono" data-ocultar="der" title="Ocultar (Ctrl+J)">&raquo;</span></div><div class="cuerpo">${PANELES[est.der][1]()}</div>`;
+  document.getElementById('raiz').innerHTML = `
+  <div class="ui-chrome" data-v="${ATRIB[variante]||variante}" data-modo="${modo}" data-paleta="${paleta}" style="grid-template-columns:${desde}">
+    <div class="barra"><span class="marca"><i></i>rinthel-arch</span>
+      <div class="busq" data-buscar>Buscar Nodo, Vista o archivo:linea<kbd>Ctrl K</kbd></div><span class="flex1"></span>
+      <span class="ultimo" data-der="agente"><span class="punto${est.siguiendo?' vivo':''}"></span>${est.nuevos?'+'+est.nuevos+' &middot; ':''}${ult[0]} diagrams ${ult[1]}</span>
+      <span class="seguir${est.siguiendo?' on':''}" data-seguir><span class="interruptor"></span>Seguir al agente</span>
+    </div>
+    ${est.verIzq ? `<div class="panel izq c1${est.hIzq?' alto-fijo':''}"${est.hIzq?` style="height:${est.hIzq}px"`:''}>${izq}<div class="asa-v" data-asa-v="izq" title="Arrastra para cambiar el alto; doble clic lo devuelve al contenido"></div><div class="asa-d" data-asa-d="izq" title="Arrastra para cambiar ancho y alto"></div></div><div class="asa c2" data-asa="izq"></div>` : `<div class="oculta c1" data-mostrar="izq">Vistas | Codigo</div><div class="hueco c2"></div>`}
+    <div class="lienzo-marco c3">${lienzo()}</div>
+    ${est.verDer ? `<div class="asa c4" data-asa="der"></div><div class="panel der c5${est.hDer?' alto-fijo':''}"${est.hDer?` style="height:${est.hDer}px"`:''}>${der}<div class="asa-v" data-asa-v="der" title="Arrastra para cambiar el alto; doble clic lo devuelve al contenido"></div><div class="asa-d" data-asa-d="der" title="Arrastra para cambiar ancho y alto"></div></div>` : `<div class="hueco c4"></div><div class="oculta der c5" data-mostrar="der">Detalle | Issues | ...</div>`}
+  </div>`;
+  document.getElementById('dialogo').innerHTML = est.paleta ? `<div class="ui-chrome" data-v="${ATRIB[variante]||variante}" data-modo="${modo}" data-paleta="${paleta}" style="position:fixed;inset:0;background:transparent;display:block;z-index:40;pointer-events:none"><div class="velo" data-cerrar style="pointer-events:auto"><div class="dialogo"><input placeholder="Buscar Nodo, Vista o archivo:linea" autofocus><div class="res">
+    <div class="seccion">Nodos</div><div class="r sel"><span class="glifo"></span>sesion.ses-sesion<small>sistema.dg:88</small></div><div class="r"><span class="glifo"></span>sesion.ses-historial<small>sistema.dg:97</small></div>
+    <div class="seccion">Vistas</div><div class="r"><span class="glifo"></span>sesion-detalle<small>vistas.dg:41</small></div><div class="r"><span class="glifo flow"></span>flujo-edicion<small>vistas.dg:120</small></div></div></div></div></div>` : '';
+  document.getElementById('etiqueta').textContent = variante === 'G' ? `G (Muelle) - paleta ${paleta}${modo==='claro'?' (claro: solo grafito)':''}` : `${variante} (${VARIANTES[variante]})`;
+  document.getElementById('modo').textContent = modo === 'claro' ? 'Claro' : 'Oscuro';
+  est.nuevo = false;
+  if (desde !== destino) { const app = document.querySelector('#raiz .ui-chrome'); app.getBoundingClientRect(); requestAnimationFrame(() => { app.style.gridTemplateColumns = destino; }); }
+  const di = document.querySelector('#dialogo input'); if (di) di.focus();
+}
+
+// ---------- Simulaciones ----------
+const EVENTOS = {
+  agente: ['Llega "diagrams edit pin" del agente', () => { ACT.unshift([new Date().toTimeString().slice(0,8),'edit pin sesion.ses-sesion 460,200','Vista sesion-detalle']); est.nuevo = true; est.resalte = true; if (est.der !== 'agente') est.nuevos++; if (est.siguiendo) est.vista = est.toca; }],
+  nodo:   ['Clic en el Nodo sesion.ses-sesion', () => { est.der = 'detalle'; est.verDer = true; }],
+  codigo: ['Doble clic en el Nodo (o E): abre el codigo', () => { est.izq = 'codigo'; est.verIzq = true; est.der = 'issues'; est.verDer = true; }],
+  esc:    ['Esc: vuelve a Vistas', () => { est.izq = 'vistas'; }],
+  paleta: ['Ctrl+K: paleta de busqueda', () => { est.paleta = true; }],
+};
+let notaMin = false; // en G se muestra para elegir paleta
+function nota() {
+  document.getElementById('nota').innerHTML = notaMin ? '<span class="min" data-nota>notas +</span>' :
+    `<span class="min" data-nota>ocultar</span><b>${variante}. ${VARIANTES[variante]}</b><br>${({
+      A:'Lo que da shadcn/ui casi de fabrica: zinc, bordes de 1px, radio 8, tabs segmentadas. Profundidad por bordes. Agente en violeta con anillo que pulsa.',
+      B:'El lienzo llena la pantalla y las zonas flotan como islas de vidrio con sombra. Profundidad por elevacion, transiciones con resorte. Agente con halo.',
+      C:'Editor de codigo moderno: oscuro, 12px, mono en lo tecnico, lineas finas y nada de sombras. Agente en cian con etiqueta en el lienzo. Movimiento minimo.',
+      D:'Papel y tinta: serif en titulos y tabs, mucho aire, reglas finas. El lienzo enmarcado como una lamina. Agente en terracota con nota al margen.',
+      E:'Estructura de B (lienzo a pantalla completa, islas de vidrio, resorte) con el alma de D: tinta calida, serif en titulos y pestanas subrayadas, agente terracota con halo y nota al margen.',
+      F:'Estructura de D (chrome plano con reglas, lienzo como lamina) pero la lamina flota con radio y sombra larga, controles de vidrio, halo del agente y resorte de B.',
+      G:'Islas de B que miden lo que su contenido (no todo el alto); la barra se parte en tres pildoras sueltas. Grafito frio, acento azul, agente coral. Mas lienzo a la vista.',
+      H:'Vidrio pleno: aurora de color detras, desenfoque fuerte, radio 20, brillo interior arriba, acento en degradado violeta a cian. El lienzo tambien es una isla.',
+      I:'Islas opacas sin vidrio: pizarra con borde interior nitido y sombra en capas, radio 10, 12.5px, pestanas subrayadas, acento verde azulado, agente rosa.',
+      J:'Negro sobre negro; cada isla tiene un filo de 1px en degradado que se ilumina con el foco y en verde lima en la isla que toca el agente. Geist y mono en etiquetas.' })[variante]}
+    ${variante==='G'?`<br><br><b>Paletas</b> (flechas o clic; todas en oscuro):<div class="paletas">${Object.entries(PALETAS).map(([n,c]) => `<span class="s${n===paleta?' sel':''}" data-paleta-sel="${n}">${[0,1,3,5,6].map(i=>`<i style="background:${c[i]}"></i>`).join('')}${n}</span>`).join('')}</div><br>Islas: arrastra el borde inferior (alto) o la esquina inferior (alto y ancho); doble clic en esas asas devuelve el alto al contenido.`:''}<br><br>Prueba: tabs, hover, Tab para foco, arrastrar bordes, Ctrl+B / Ctrl+J, boton Claro/Oscuro.<br>${Object.entries(EVENTOS).map(([k,[t]]) => `<span class="s" data-ev="${k}">${t}</span>`).join('')}`;
+}
+
+// ---------- Eventos ----------
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-vista],[data-izq],[data-der],[data-ocultar],[data-mostrar],[data-tema],[data-seguir],[data-buscar],[data-ev],[data-nota],[data-cerrar],[data-paleta-sel]');
+  if (!t) return;
+  const d = t.dataset;
+  if (d.vista) est.vista = d.vista;
+  if (d.izq) est.izq = d.izq;
+  if (d.der) { est.der = d.der; est.verDer = true; if (d.der === 'agente') est.nuevos = 0; }
+  if (d.ocultar) est[d.ocultar === 'izq' ? 'verIzq' : 'verDer'] = false;
+  if (d.mostrar) est[d.mostrar === 'izq' ? 'verIzq' : 'verDer'] = true;
+  if (d.tema) est.tema = d.tema;
+  if ('seguir' in d) est.siguiendo = !est.siguiendo;
+  if ('buscar' in d) est.paleta = true;
+  if ('cerrar' in d) { if (e.target.closest('.dialogo')) return; est.paleta = false; }
+  if (d.ev) EVENTOS[d.ev][1]();
+  if ('nota' in d) { notaMin = !notaMin; nota(); return; }
+  if (d.paletaSel) { paleta = d.paletaSel; modo = 'oscuro'; url(); nota(); }
+  pintar();
+});
+addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (est.paleta) est.paleta = false; else est.izq = 'vistas'; pintar(); return; }
+  if (e.ctrlKey && e.key === 'k') { est.paleta = true; e.preventDefault(); pintar(); return; }
+  if (e.ctrlKey && e.key === 'b') { est.verIzq = !est.verIzq; e.preventDefault(); pintar(); return; }
+  if (e.ctrlKey && e.key === 'j') { est.verDer = !est.verDer; e.preventDefault(); pintar(); return; }
+  if (e.target.closest('input,textarea,select,[contenteditable]')) return;
+  if (e.key === 'ArrowLeft') cambiar(-1); if (e.key === 'ArrowRight') cambiar(1);
+  if (e.key === 'Enter' && e.target.dataset.vista) { est.vista = e.target.dataset.vista; pintar(); }
+});
+document.addEventListener('mousedown', e => {
+  const vd = e.target.closest('[data-asa-v],[data-asa-d]'); if (!vd) return;
+  e.preventDefault(); e.stopPropagation();
+  const lado = vd.dataset.asaV || vd.dataset.asaD, diag = !!vd.dataset.asaD, panel = vd.parentElement, app = document.querySelector('#raiz .ui-chrome');
+  const x0 = e.clientX, y0 = e.clientY, h0 = panel.offsetHeight, w0 = lado === 'izq' ? est.wIzq : est.wDer, hMax = app.querySelector('.lienzo-marco').offsetHeight - 30;
+  app.style.transition = 'none'; panel.classList.add('alto-fijo');
+  const kH = lado === 'izq' ? 'hIzq' : 'hDer', kW = lado === 'izq' ? 'wIzq' : 'wDer';
+  const mover = ev => {
+    est[kH] = Math.max(140, Math.min(hMax, h0 + ev.clientY - y0)); panel.style.height = est[kH] + 'px';
+    if (diag) { const dx = ev.clientX - x0; est[kW] = Math.max(220, Math.min(760, lado === 'izq' ? w0 + dx : w0 - dx)); app.style.gridTemplateColumns = colsPrevias = cols(); }
+  };
+  addEventListener('mousemove', mover);
+  addEventListener('mouseup', () => { removeEventListener('mousemove', mover); pintar(); }, { once:true });
+}, true);
+document.addEventListener('dblclick', e => { const vd = e.target.closest('[data-asa-v],[data-asa-d]'); if (!vd) return; est[(vd.dataset.asaV || vd.dataset.asaD) === 'izq' ? 'hIzq' : 'hDer'] = null; pintar(); });
+document.addEventListener('mousedown', e => {
+  const asa = e.target.closest('[data-asa]'); if (!asa) return;
+  e.preventDefault();
+  const lado = asa.dataset.asa, x0 = e.clientX, w0 = lado === 'izq' ? est.wIzq : est.wDer, app = document.querySelector('#raiz .ui-chrome');
+  app.style.transition = 'none';
+  const mover = ev => { const dx = ev.clientX - x0, w = Math.max(220, Math.min(640, lado === 'izq' ? w0 + dx : w0 - dx)); if (lado === 'izq') est.wIzq = w; else est.wDer = w; app.style.gridTemplateColumns = colsPrevias = cols(); };
+  addEventListener('mousemove', mover);
+  addEventListener('mouseup', () => { removeEventListener('mousemove', mover); pintar(); }, { once:true });
+});
+function url() { const u = new URL(location); u.searchParams.set('variant', variante); u.searchParams.set('modo', modo); u.searchParams.set('paleta', paleta); history.replaceState(null, '', u); }
+function cambiarPaleta(d) { paleta = nombresPal[(nombresPal.indexOf(paleta) + d + nombresPal.length) % nombresPal.length]; modo = 'oscuro'; url(); pintar(); nota(); }
+function cambiar(d) { if (variante === 'G') return cambiarPaleta(d); variante = claves[(claves.indexOf(variante) + d + claves.length) % claves.length]; modo = MODO_DEF[variante]; url(); pintar(); nota(); }
+document.getElementById('prev').onclick = () => cambiar(-1);
+document.getElementById('next').onclick = () => cambiar(1);
+document.getElementById('modo').onclick = () => { modo = modo === 'claro' ? 'oscuro' : 'claro'; url(); pintar(); };
+pintar(); nota();
+</script>
+</body>
+</html>
