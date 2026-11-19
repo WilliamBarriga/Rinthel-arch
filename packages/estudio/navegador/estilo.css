@@ -1,8 +1,442 @@
-html,
-body,
-#raiz {
-  margin: 0;
-  height: 100%;
-  overflow: hidden;
-  font-family: system-ui, sans-serif;
+/*
+ * Chrome del estudio: estetica G (islas de vidrio), paleta neon, solo oscuro. Los tokens viven bajo `.ui-chrome` y no
+ * en `:root`, para no mezclarse con el Tema de la Vista (el lienzo pinta su propio fondo con `--rd-*`).
+ */
+@layer reset, chrome;
+@import './tokens.css' layer(chrome);
+
+@layer reset {
+  html,
+  body,
+  #raiz {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #0a0612;
+  }
+  .ui-chrome *,
+  .ui-chrome *::before,
+  .ui-chrome *::after {
+    box-sizing: border-box;
+  }
+  .ui-chrome button {
+    font: inherit;
+    color: inherit;
+  }
 }
+
+@layer chrome {
+  .ui-chrome {
+    position: fixed;
+    inset: 0;
+    font: var(--ui-tam) / 1.45 var(--ui-fuente);
+    color: var(--ui-texto);
+    -webkit-font-smoothing: antialiased;
+
+    & .ui-mono {
+      font-family: var(--ui-mono);
+      font-size: 12px;
+    }
+    & .ui-tenue {
+      color: var(--ui-tenue);
+    }
+    & :focus-visible {
+      outline: 2px solid var(--ui-acento);
+      outline-offset: 2px;
+    }
+  }
+
+  /* Superficie de vidrio compartida por pildoras, islas, pestanas de borde, leyenda y toasts. */
+  .ui-pildora,
+  .ui-isla,
+  .ui-pestana-borde,
+  .ui-leyenda,
+  .ui-toast {
+    background: var(--ui-superficie);
+    backdrop-filter: var(--ui-vidrio);
+    box-shadow: var(--ui-sombra);
+    border: 1px solid var(--ui-borde);
+  }
+  /* Durante un gesto (redimensionar una isla) el vidrio pasa a superficie solida: el blur no se recalcula por cuadro. */
+  .ui-chrome[data-arrastrando] :is(.ui-pildora, .ui-isla, .ui-pestana-borde, .ui-leyenda, .ui-toast) {
+    backdrop-filter: none;
+    background: var(--ui-superficie-solida);
+  }
+
+  .ui-lienzo {
+    position: absolute;
+    inset: 0;
+    background: var(--ui-fondo);
+  }
+
+  .ui-barra {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    pointer-events: none;
+    z-index: 3;
+    & > * {
+      pointer-events: auto;
+    }
+  }
+  .ui-pildora {
+    height: 40px;
+    border-radius: 99px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ui-marca {
+    font-weight: 600;
+    color: var(--ui-texto-fuerte);
+    &::before {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--ui-acento);
+      box-shadow: 0 0 12px var(--ui-acento);
+    }
+  }
+  .ui-isla {
+    position: absolute;
+    top: 64px;
+    max-height: calc(100% - 64px - 30px);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+    transition:
+      width var(--ui-dur) var(--ui-curva),
+      height var(--ui-dur) var(--ui-curva);
+    &[data-lado='izquierda'] {
+      left: 12px;
+    }
+    &[data-lado='derecha'] {
+      right: 12px;
+    }
+  }
+  .ui-chrome[data-arrastrando] .ui-isla {
+    transition: none;
+    user-select: none;
+  }
+  .ui-isla-pestanas {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+  }
+  .ui-isla-cabecera {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 8px 6px;
+    border-bottom: 1px solid var(--ui-borde);
+  }
+  .ui-isla-cuerpo {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 10px 12px 14px;
+  }
+  .ui-pestanas {
+    position: relative;
+    display: flex;
+    gap: 2px;
+    flex: 1;
+    overflow-x: auto;
+  }
+  .ui-pestana {
+    background: none;
+    border: 0;
+    padding: 6px 10px;
+    border-radius: 10px;
+    color: var(--ui-tenue);
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      background var(--ui-dur-corta) var(--ui-curva),
+      color var(--ui-dur-corta) var(--ui-curva);
+    &:hover {
+      background: var(--ui-hover);
+      color: var(--ui-texto);
+    }
+    &[aria-selected='true'] {
+      background: var(--ui-sel);
+      color: var(--ui-texto-fuerte);
+    }
+  }
+  .ui-pestanas-indicador {
+    position: absolute;
+    bottom: -7px;
+    left: var(--active-tab-left);
+    width: var(--active-tab-width);
+    height: 2px;
+    border-radius: 2px;
+    background: var(--ui-acento);
+    transition:
+      left var(--ui-dur) var(--ui-curva),
+      width var(--ui-dur) var(--ui-curva);
+  }
+  .ui-boton-icono {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--ui-radio-s);
+    border: 0;
+    background: none;
+    color: var(--ui-tenue);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    &:hover {
+      background: var(--ui-hover);
+      color: var(--ui-texto);
+    }
+  }
+
+  /* Asas: lateral (columna), inferior (alto) y esquina (los dos ejes, solo puntero). */
+  .ui-asa {
+    position: absolute;
+    touch-action: none;
+    z-index: 1;
+    border-radius: 4px;
+    transition: background var(--ui-dur-corta) var(--ui-curva);
+    &:hover,
+    &:focus-visible {
+      background: var(--ui-sel);
+    }
+  }
+  .ui-asa-h {
+    top: 18px;
+    bottom: 18px;
+    width: 8px;
+    cursor: col-resize;
+  }
+  .ui-asa-v {
+    left: 18px;
+    right: 18px;
+    bottom: -4px;
+    height: 8px;
+    cursor: ns-resize;
+  }
+  .ui-asa-d {
+    bottom: -4px;
+    width: 18px;
+    height: 18px;
+  }
+  .ui-isla[data-lado='izquierda'] {
+    & .ui-asa-h {
+      right: -4px;
+    }
+    & .ui-asa-d {
+      right: -4px;
+      cursor: nwse-resize;
+    }
+  }
+  .ui-isla[data-lado='derecha'] {
+    & .ui-asa-h {
+      left: -4px;
+    }
+    & .ui-asa-d {
+      left: -4px;
+      cursor: nesw-resize;
+    }
+  }
+
+  .ui-pestana-borde {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 150px;
+    width: 32px;
+    border-radius: 99px;
+    writing-mode: vertical-rl;
+    cursor: pointer;
+    color: var(--ui-tenue);
+    z-index: 2;
+    transition: color var(--ui-dur-corta) var(--ui-curva);
+    &:hover {
+      color: var(--ui-texto-fuerte);
+    }
+    &[data-lado='izquierda'] {
+      left: 6px;
+      transform: translateY(-50%) rotate(180deg);
+    }
+    &[data-lado='derecha'] {
+      right: 6px;
+    }
+  }
+
+  /* Indice de Vistas. */
+  .ui-indice {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    outline-offset: 4px;
+    border-radius: var(--ui-radio-s);
+  }
+  .ui-indice-titulo {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 8px 4px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ui-tenue);
+  }
+  .ui-conteo {
+    font-family: var(--ui-mono);
+  }
+  .ui-indice-vista {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    border-radius: var(--ui-radio-s);
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    transition: background var(--ui-dur-corta) var(--ui-curva);
+    &:hover {
+      background: var(--ui-hover);
+    }
+    &[aria-selected='true'] {
+      background: var(--ui-sel);
+      border-left-color: var(--ui-acento);
+      color: var(--ui-texto-fuerte);
+    }
+  }
+  .ui-enlaces {
+    font-size: 11px;
+    color: var(--ui-tenue);
+  }
+
+  /* Paneles de la isla derecha. */
+  .ui-detalle p {
+    margin: 0 0 6px;
+  }
+  .ui-detalle-titulo {
+    margin: 0 0 2px;
+    font-size: 16px;
+    color: var(--ui-texto-fuerte);
+  }
+  .ui-subtitulo {
+    margin: 14px 0 4px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ui-tenue);
+  }
+  .ui-sitio {
+    color: var(--ui-sint-id);
+  }
+  .ui-lista {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ui-enlace {
+    background: none;
+    border: 0;
+    padding: 2px 0;
+    cursor: pointer;
+    color: var(--ui-sint-id);
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  .ui-issues {
+    gap: 6px;
+    & a {
+      text-decoration: none;
+    }
+    & [data-severidad='error'] .ui-sitio {
+      color: var(--ui-err);
+    }
+    & [data-severidad='warning'] .ui-sitio {
+      color: var(--ui-warn);
+    }
+  }
+
+  /* Leyenda del shell montada fuera del lienzo. */
+  .ui-leyenda {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    border-radius: 14px;
+    padding: 8px 12px;
+    z-index: 1;
+  }
+
+  .ui-toasts {
+    position: absolute;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 4;
+  }
+  .ui-toast {
+    padding: 8px 16px;
+    border-radius: 14px;
+  }
+}
+
+/*
+ * Piezas del shell (`.rd-*`) montadas o vistas desde el chrome. Fuera de capas a proposito: el `<style>` del shell no
+ * tiene capa y ganaria a cualquier regla con capa.
+ */
+.ui-chrome .ui-lienzo .rd-pasos {
+  left: 50%;
+  top: auto;
+  bottom: 16px;
+  transform: translateX(-50%);
+}
+.ui-chrome .ui-lienzo .rd-contraste {
+  top: auto;
+  bottom: 16px;
+  right: 16px;
+}
+.ui-chrome .ui-leyenda .rd-chrome {
+  position: static;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.ui-chrome .ui-migas .rd-chrome {
+  white-space: nowrap;
+  position: static;
+  font: inherit;
+  color: inherit;
+  & button {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: var(--ui-tenue);
+    padding: 2px 6px;
+    border-radius: var(--ui-radio-s);
+    transition: background var(--ui-dur-corta) var(--ui-curva);
+    &:hover:not(:disabled) {
+      background: var(--ui-hover);
+      color: var(--ui-texto);
+    }
+    &:disabled {
+      opacity: 0.4;
+    }
+  }
+  & [aria-current='page'] {
+    font-family: var(--ui-mono);
+    color: var(--ui-texto-fuerte);
+  }
+}
+

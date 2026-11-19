@@ -39,3 +39,24 @@ export const estadoDeDevSchema = z.object({
 
 export type IssueDeDev = z.infer<typeof issueDeDevSchema>;
 export type EstadoDeDev = z.infer<typeof estadoDeDevSchema>;
+
+/**
+ * Eventos SSE de `/eventos`, cada uno con `event: <nombre>`. `estado` lleva un `EstadoDeDev` (al conectar y tras cada
+ * recompilacion). `actividad`, `diferencia` e `historial` los anaden los tickets del Registro de actividad, la Diferencia
+ * y el Historial; el cliente ignora los que no escucha.
+ */
+export const EVENTOS_DE_DEV = ['estado', 'actividad', 'diferencia', 'historial'] as const;
+export type NombreDeEventoDeDev = (typeof EVENTOS_DE_DEV)[number];
+
+/** Subcomandos de `GET /api/inspect/<comando>/<argumento>`; las opciones de `tema` van en la query. */
+export const COMANDOS_DE_INSPECT = ['buscar', 'nodo', 'vista', 'interaccion', 'tema'] as const;
+export type ComandoDeInspect = (typeof COMANDOS_DE_INSPECT)[number];
+
+/** Cuerpo de un 404 de `/api/inspect` (o 422 si el Workspace nunca compilo): el mensaje de `inspect` y los ids cercanos. */
+export const inspectNoEncontradoSchema = z.object({ ok: z.literal(false), mensaje: z.string(), cercanos: z.array(z.string()) });
+export type InspectNoEncontrado = z.infer<typeof inspectNoEncontradoSchema>;
+
+export function rutaDeInspect(comando: ComandoDeInspect, argumento: string, opciones: Readonly<Record<string, string>> = {}): string {
+  const query = new URLSearchParams(opciones).toString();
+  return `/api/inspect/${comando}/${encodeURIComponent(argumento)}${query === '' ? '' : `?${query}`}`;
+}

@@ -93,21 +93,60 @@ describe('cliente unico de la pagina de dev', () => {
     expect(await roto.estado()).toBeUndefined();
   });
 
-  it('se suscribe al estado por /eventos y lo pide a /api/estado', async () => {
+  it('se suscribe al estado (event: estado) por /eventos y lo pide a /api/estado', async () => {
     const estado = { version: 3, cambio: 'pintura', iconos: {}, vistas: [], issues: [] } satisfies EstadoDeDev;
-    let empujar: ((datos: string) => void) | undefined;
+    let empujar: ((nombre: string, datos: string) => void) | undefined;
     const cerrar = vi.fn();
-    const abrir = vi.fn((_url: string, alMensaje: (datos: string) => void) => ((empujar = alMensaje), cerrar));
+    const abrir = vi.fn((_url: string, alEvento: (nombre: string, datos: string) => void) => ((empujar = alEvento), cerrar));
     const cliente = crearClienteDeDev({ fetch: servidor({ '/api/estado': { cuerpo: estado } }).fetch, eventos: abrir });
     const recibidos: EstadoDeDev[] = [];
 
     const baja = cliente.suscribir((e) => recibidos.push(e));
-    empujar?.(JSON.stringify(estado));
+    empujar?.('estado', JSON.stringify(estado));
+    empujar?.('actividad', '{"otro":1}');
     baja();
 
     expect(abrir).toHaveBeenCalledWith('/eventos', expect.any(Function));
     expect(recibidos).toEqual([estado]);
     expect(cerrar).toHaveBeenCalled();
     expect(await cliente.estado()).toEqual(estado);
+  });
+
+  it('una sola conexion SSE para todos los oyentes; se cierra al irse el ultimo', () => {
+    let empujar: ((nombre: string, datos: string) => void) | undefined;
+    const cerrar = vi.fn();
+    const abrir = vi.fn((_url: string, alEvento: (nombre: string, datos: string) => void) => ((empujar = alEvento), cerrar));
+    const cliente = crearClienteDeDev({ fetch: servidor({}).fetch, eventos: abrir });
+    const actividad: unknown[] = [];
+    const historial: unknown[] = [];
+
+    const bajaA = cliente.escuchar('actividad', (d) => actividad.push(d));
+    const bajaH = cliente.escuchar('historial', (d) => historial.push(d));
+    empujar?.('actividad', '{"comando":"edit"}');
+    empujar?.('historial', '{"pasado":[]}');
+    empujar?.('historial', 'no es json');
+    bajaA();
+    expect(cerrar).not.toHaveBeenCalled();
+    bajaH();
+
+    expect(abrir).toHaveBeenCalledTimes(1);
+    expect(actividad).toEqual([{ comando: 'edit' }]);
+    expect(historial).toEqual([{ pasado: [] }]);
+    expect(cerrar).toHaveBeenCalledTimes(1);
+  });
+
+  it('inspecciona por GET /api/inspect: la salida, o el mensaje y los cercanos si no existe', async () => {
+    const salida = { contractVersion: 1, comando: 'nodo', nodo: { id: 'api' } };
+    const s = servidor({
+      '/api/inspect/nodo/api': { cuerpo: salida },
+      '/api/inspect/nodo/apj': { status: 404, cuerpo: { ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] } },
+      '/api/inspect/tema/neutral?tipo=servicio': { cuerpo: { comando: 'tema' } },
+    });
+    const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
+
+    expect(await cliente.inspeccionar('nodo', 'api')).toEqual({ ok: true, salida });
+    expect(await cliente.inspeccionar('nodo', 'apj')).toEqual({ ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] });
+    expect(await cliente.inspeccionar('tema', 'neutral', { tipo: 'servicio' })).toEqual({ ok: true, salida: { comando: 'tema' } });
+    expect(await crearClienteDeDev({ fetch: servidor({}).fetch, eventos: sinEventos }).inspeccionar('vista', 'x')).toMatchObject({ ok: false, cercanos: [] });
   });
 });

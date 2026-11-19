@@ -19,9 +19,11 @@ import type { Intencion } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
-import type { EstadoDeDev } from 'estudio/protocolo';
+import type { EstadoDeDev, NombreDeEventoDeDev } from 'estudio/protocolo';
 
 import { compiladorDeCodigo } from './codigo';
+import { SUBCOMANDOS_DE_INSPECT, comoSalidaDeInspect } from './inspect';
+import type { SubcomandoDeInspect } from './inspect';
 import type { ResultadoDeCodigo } from './codigo';
 import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
@@ -166,7 +168,9 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   });
 
   const clientes = new Set<ServerResponse>();
-  const enviarEstado = (cliente: ServerResponse, estado: EstadoDeDev): void => void cliente.write(`data: ${JSON.stringify(estado)}\n\n`);
+  /** Eventos SSE con nombre (`estado`, y los que declare `estudio/protocolo`). */
+  const enviar = (cliente: ServerResponse, nombre: NombreDeEventoDeDev, datos: unknown): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
+  const enviarEstado = (cliente: ServerResponse, estado: EstadoDeDev): void => enviar(cliente, 'estado', estado);
   const dejarDeEscuchar = vivo.suscribir((estado) => {
     for (const cliente of clientes) enviarEstado(cliente, estado);
   });
@@ -214,6 +218,29 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     } catch {
       return undefined;
     }
+  };
+
+  /** `/api/inspect/<comando>/<argumento>[?tipo&estado&diagrama&catalogo]`: 200 con la salida de `inspect --json`, 404 si no existe. */
+  const responderInspect = (res: ServerResponse, url: URL): void => {
+    const [comando, argumentoCodificado, ...sobra] = url.pathname.slice('/api/inspect/'.length).split('/');
+    let argumento: string | undefined;
+    try {
+      argumento = argumentoCodificado === undefined ? undefined : decodeURIComponent(argumentoCodificado);
+    } catch {
+      argumento = undefined;
+    }
+    if (comando === undefined || !(SUBCOMANDOS_DE_INSPECT as readonly string[]).includes(comando) || argumento === undefined || argumento === '' || sobra.length > 0) {
+      responder(res, 404, { ok: false, mensaje: `Ruta de inspect desconocida; se esperaba /api/inspect/<${SUBCOMANDOS_DE_INSPECT.join('|')}>/<argumento>`, cercanos: [] });
+      return;
+    }
+    const opcion = (clave: string): { [k: string]: string } => {
+      const valor = url.searchParams.get(clave);
+      return valor === null ? {} : { [clave]: valor };
+    };
+    const respuesta = vivo.consultar({ comando: comando as SubcomandoDeInspect, argumento, ...opcion('tipo'), ...opcion('estado'), ...opcion('diagrama'), ...(url.searchParams.get('catalogo') === 'true' && { catalogo: true }) });
+    if (respuesta === undefined) responder(res, 422, { ok: false, mensaje: 'El Workspace tiene errores y nunca compilo; no hay nada que consultar', cercanos: [] });
+    else if ('noEncontrado' in respuesta) responder(res, 404, { ok: false, mensaje: respuesta.noEncontrado, cercanos: respuesta.cercanos });
+    else responder(res, 200, comoSalidaDeInspect(respuesta.salida));
   };
 
   const servidor = createServer((req, res) => {
@@ -273,6 +300,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       clientes.add(res);
       res.on('close', () => clientes.delete(res));
       enviarEstado(res, vivo.estado());
+    } else if (ruta.startsWith('/api/inspect/')) {
+      responderInspect(res, new URL(req.url ?? '/', 'http://127.0.0.1'));
     } else if (ruta.startsWith('/api/vista/')) {
       const id = decodeURIComponent(ruta.slice('/api/vista/'.length));
       vivo.geometria(id).then(

@@ -109,8 +109,10 @@ async function eventos(servidor: ServidorDev, basta: (datos: Estado[]) => boolea
     const bloques = buffer.split('\n\n');
     buffer = bloques.pop() ?? '';
     for (const bloque of bloques) {
-      const linea = bloque.split('\n').find((l) => l.startsWith('data: '));
-      if (linea !== undefined) datos.push(JSON.parse(linea.slice(6)) as Estado);
+      // El estado viaja como `event: estado`; otros eventos (actividad, diferencia, historial) no cuentan aqui.
+      const lineas = bloque.split('\n');
+      const linea = lineas.find((l) => l.startsWith('data: '));
+      if (linea !== undefined && lineas.includes('event: estado')) datos.push(JSON.parse(linea.slice(6)) as Estado);
     }
   }
   await lector.cancel();
@@ -165,6 +167,23 @@ describe('dev: rutas', () => {
     expect(vista.view).toBe('general');
     expect(Object.keys(vista.geometry.nodes).sort()).toEqual(['api', 'db']);
     expect((await fetch(`${servidor.url}api/vista/no-existe`)).status).toBe(404);
+  });
+
+  it('GET /api/inspect/<comando>/<argumento> da el JSON de inspect --json; lo que no existe es 404 con los ids cercanos', async () => {
+    const servidor = await arrancar(entorno({ 'main.dg': BASE }));
+
+    const nodo = await fetch(`${servidor.url}api/inspect/nodo/api`);
+    expect(nodo.status).toBe(200);
+    expect(await nodo.json()).toMatchObject({ comando: 'nodo', nodo: { id: 'api', title: 'API', file: 'main.dg' }, vistas: [{ id: 'general' }] });
+    const buscar = (await (await fetch(`${servidor.url}api/inspect/buscar/base`)).json()) as { resultados: { id: string }[] };
+    expect(buscar.resultados.map((r) => r.id)).toEqual(['db']);
+    const tema = await fetch(`${servidor.url}api/inspect/tema/neutral?tipo=servicio`);
+    expect(await tema.json()).toMatchObject({ comando: 'tema', tema: { name: 'neutral', tipo: 'servicio' } });
+
+    const ausente = await fetch(`${servidor.url}api/inspect/nodo/apj`);
+    expect(ausente.status).toBe(404);
+    expect(await ausente.json()).toEqual({ ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] });
+    expect((await fetch(`${servidor.url}api/inspect/otro/x`)).status).toBe(404);
   });
 
   it('sin inyectar, sirve el build real de estudio', async () => {
