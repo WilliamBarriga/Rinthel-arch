@@ -1,36 +1,34 @@
 /**
- * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve el shell, el estado y la Geometria por Vista, y empuja el estado por SSE (`/eventos`).
+ * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
+ * cada peticion y con `no-store`), el estado y la Geometria por Vista, y empuja el estado por SSE (`/eventos`).
  * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); las rutas POST exigen
  * JSON y un `Origin` propio (o ninguno); `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
  * Edicion: 400 cuerpo invalido, 409 `hash-desactualizado`, 422 el resto de rechazos, 500 fallo de I/O.
- * Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (sin dejar el observador activo)
- * y lanza si la lectura inicial falla; `run(['dev', ...])` los convierte en codigo 2.
+ * Errores: `iniciarDev` rechaza si el puerto esta ocupado (sin dejar el observador activo) y lanza si la lectura
+ * inicial falla; `run(['dev', ...])` los convierte en codigo 2. Un estatico de `estudio` sin construir es 404 al pedirlo.
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { rmSync, watch } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, rmSync, watch } from 'node:fs';
+import { extname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { RUTA_DE_FUENTES, intencionSchema } from 'canonico';
-import type { EstadoDeDev, Intencion } from 'canonico';
+import type { Intencion } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
+import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
+import type { ActivosDelEstudio } from 'estudio';
+import type { EstadoDeDev } from 'estudio/protocolo';
 
 import { compiladorDeCodigo } from './codigo';
 import type { ResultadoDeCodigo } from './codigo';
-import { empaquetarShellDev } from './dev-shell';
 import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
 import { abrirWorkspaceVivo } from './workspace-vivo';
 import type { PuertoDelWorkspaceVivo, ResultadoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
-
-export interface ShellDev {
-  pagina: string;
-  worker: string;
-}
 
 /** Todo salvo `workspace` tiene un defecto real. */
 export interface OpcionesDeDev {
@@ -46,7 +44,8 @@ export interface OpcionesDeDev {
   leerRecursos?: (raiz: string) => Record<string, string>;
   /** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
   observar?: (raiz: string, alCambiar: () => void) => () => void;
-  shell?: () => Promise<ShellDev>;
+  /** Rutas de los estaticos de la app; por defecto las del build de `estudio`. Se consultan en cada peticion. */
+  estudio?: () => ActivosDelEstudio;
   /** `ruta` relativa a `raiz`. */
   escribir?: (raiz: string, ruta: string, texto: string) => void;
   /** `ruta` relativa a `raiz`. */
@@ -125,20 +124,22 @@ const responder = (res: ServerResponse, estadoHttp: number, cuerpo: unknown): vo
 const responderResultado = (res: ServerResponse, r: ResultadoDelWorkspaceVivo): void =>
   r.ok ? responder(res, 200, r) : responder(res, SALIDA_DE_RECHAZO[r.motivo].estadoHttp, rechazoDeEdicion(r.motivo, r.mensaje, r.file));
 
-const PAGINA = `<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>diagrams dev</title>
-<style>html,body,#raiz{margin:0;height:100%;overflow:hidden;font-family:system-ui,sans-serif}</style>
-</head>
-<body>
-<div id="raiz"></div>
-<script src="/app.js"></script>
-</body>
-</html>
-`;
+const TIPOS_DE_ESTATICO: Readonly<Record<string, string>> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+
+/** Lee del disco en cada peticion (un rebuild de `estudio` se ve al recargar); ausente -> 404. */
+function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
+  let bytes: Buffer;
+  try {
+    if (ruta === undefined) throw new Error('no declarado');
+    bytes = readFileSync(ruta);
+  } catch {
+    cabecera(res, 'text/plain', 404);
+    res.end('No encontrado (si falta el build de la app: pnpm --filter estudio build)');
+    return;
+  }
+  cabecera(res, TIPOS_DE_ESTATICO[extname(ruta)] ?? 'application/octet-stream');
+  res.end(bytes);
+}
 
 const comoIntencion = (cuerpo: unknown): Intencion | undefined => {
   const r = intencionSchema.safeParse(cuerpo);
@@ -153,10 +154,9 @@ const versionVista = (cuerpo: unknown): number | undefined => {
 
 /** El codigo de Temas se sirve en `/componentes.js` solo tras `POST /api/confiar` o `confiarEnCodigo`. */
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puerto = 0, debounceMs, shell = empaquetarShellDev, confiarEnCodigo = false } = opciones;
+  const { workspace, temas, puerto = 0, debounceMs, estudio = activosDelEstudio, confiarEnCodigo = false } = opciones;
   // Con `leer` inyectado no hay disco del que compilar codigo.
   const compilarCodigo = opciones.compilarCodigo ?? (opciones.leer === undefined ? compiladorDeCodigo(workspace).compilar : undefined);
-  const bundles = await shell();
   const vivo: WorkspaceVivo = await abrirWorkspaceVivo({
     puerto: puertoDeDisco(opciones),
     raiz: resolve(workspace),
@@ -240,14 +240,11 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         responder(res, 200, { ok: true });
       });
     } else if (ruta === '/') {
-      cabecera(res, 'text/html');
-      res.end(PAGINA);
-    } else if (ruta === '/app.js') {
-      cabecera(res, 'text/javascript');
-      res.end(bundles.pagina);
-    } else if (ruta === '/worker.js') {
-      cabecera(res, 'text/javascript');
-      res.end(bundles.worker);
+      servirEstatico(res, estudio().indice);
+    } else if (ruta.startsWith(RUTA_DEL_ESTUDIO)) {
+      const { archivos } = estudio();
+      const nombre = ruta.slice(RUTA_DEL_ESTUDIO.length);
+      servirEstatico(res, Object.hasOwn(archivos, nombre) ? archivos[nombre] : undefined);
     } else if (ruta === '/api/codigo') {
       const { componentes, confiado } = vivo.codigo();
       responder(res, 200, { temaConCodigo: componentes.length > 0, componentes, confiado });
@@ -320,7 +317,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 /** Vuelve con la URL; el servidor mantiene vivo el proceso. Puerto 4173 por defecto. */
 export async function comandoDev(
   args: readonly string[],
-  dependencias: Pick<OpcionesDeDev, 'leer' | 'observar' | 'shell'> = {},
+  dependencias: Pick<OpcionesDeDev, 'leer' | 'observar' | 'estudio'> = {},
 ): Promise<ResultadoDeEjecucion> {
   const uso = usoComun;
   let valores;

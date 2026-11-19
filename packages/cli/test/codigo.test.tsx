@@ -6,7 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { compiladorDeCodigo } from '../src/codigo';
-import { cargarComponentes } from '../navegador/componentes';
+import { evaluarBundle as cargarComponentes } from './evaluar-bundle';
 
 const AURORA = `export function Aurora({ id, parametros }: { id: string; parametros: { hue: number } }) {
   return <i data-aurora={id} data-hue={parametros.hue} />;

@@ -8,11 +8,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { iniciarDev } from 'cli';
 import type { ServidorDev } from 'cli';
 
-import { cargarComponentes, crearCargadorDeCodigo } from '../navegador/componentes';
 import { comandoDev } from '../src/dev';
+import { evaluarBundle as cargarComponentes } from './evaluar-bundle';
 
 const FIXTURE = resolve(__dirname, 'fixtures/tema-codigo');
-const shell = async () => ({ pagina: '', worker: '' });
 
 const carpetas: string[] = [];
 const abiertos: ServidorDev[] = [];
@@ -36,7 +35,7 @@ function observador() {
 
 async function arrancar(raiz: string, extra: { confiarEnCodigo?: boolean } = {}) {
   const obs = observador();
-  const servidor = await iniciarDev({ workspace: raiz, observar: obs.observar, shell, debounceMs: 5, puerto: 0, ...extra });
+  const servidor = await iniciarDev({ workspace: raiz, observar: obs.observar, debounceMs: 5, puerto: 0, ...extra });
   abiertos.push(servidor);
   return { servidor, cambiar: obs.cambiar };
 }
@@ -126,25 +125,8 @@ describe('dev: Temas con codigo', () => {
     expect(dibujarAurora(await (await bundle(servidor)).text())).toBe('<i data-aurora="api" data-hue="3"></i>');
   });
 
-  it('el cargador del navegador pide confirmacion una vez, registra los componentes y no insiste si se rechazo', async () => {
-    const { servidor } = await arrancar(copia());
-    const base = servidor.url.replace(/\/$/, '');
-
-    let preguntas = 0;
-    const rechaza = crearCargadorDeCodigo({ fetch, base, confirmar: () => (preguntas++, false) });
-    expect(await rechaza()).toBeUndefined();
-    expect(await rechaza()).toBeUndefined();
-    expect(preguntas).toBe(1);
-    expect((await codigo(servidor)).confiado).toBe(false);
-
-    const acepta = crearCargadorDeCodigo({ fetch, base, confirmar: () => true });
-    const registro = await acepta();
-    expect(Object.keys(registro ?? {})).toEqual(['Aurora']);
-    expect((await codigo(servidor)).confiado).toBe(true);
-  });
-
   it('el comando avisa del codigo y pide confirmacion; --trust-code la da de antemano', async () => {
-    const dependencias = { shell, observar: () => () => undefined };
+    const dependencias = { observar: () => () => undefined };
     const sin = await comandoDev(['--workspace', copia(), '--port', '0'], dependencias);
     expect(sin.exitCode).toBe(0);
     expect(sin.stdout).toContain('Aurora');

@@ -3,7 +3,9 @@
  * estado sin `cambio`) no pide nada. Tras un cambio de `estructura` o una version saltada, descarta lo pedido y pide
  * la Vista activa; mientras llega se dibuja el estado anterior. Una Geometria malformada se reporta en `errores`.
  */
-import type { EstadoDeDev, FuenteCanonica, GeometriaCacheada } from 'canonico';
+import type { FuenteCanonica, GeometriaCacheada } from 'canonico';
+
+import type { EstadoDeDev } from '../src/protocolo';
 
 import type { LecturaDeGeometria } from './cliente';
 

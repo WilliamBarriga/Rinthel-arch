@@ -5,7 +5,7 @@
  * - `cadena`: el paquete esta en `CADENA`. `orden`: solo importa de paquetes anteriores en `CADENA`.
  * - `interno`: de otro paquete solo se importa su nombre o lo que declara `exports`; un import relativo no sale del paquete.
  * - `declaracion`: todo paquete del workspace importado esta en `dependencies` o `peerDependencies`.
- * - `exports`: la superficie publica es exactamente la entrada `.`.
+ * - `exports`: la superficie publica es la entrada `.` mas, solo en los paquetes de `SUBPATHS_PERMITIDOS`, esos subpaths.
  * - `pureza`: el codigo fuente de `NUCLEO` no importa modulos de Node ni usa reloj, azar, `process`, red ni DOM.
  * Errores: un `package.json` ilegible o invalido lanza; uno ausente se ignora.
  */
@@ -14,7 +14,15 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
 /** Orden de dependencias (ADR 0004): un paquete solo importa de los anteriores. */
-export const CADENA = ['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli'] as const;
+export const CADENA = ['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'estudio', 'cli'] as const;
+
+/**
+ * Subpaths publicos ademas de `.` (ADR 0004, enmienda `estudio`): `protocolo` es el contrato de `dev` del que `cli`
+ * importa tipos sin cargar la app de navegador; `contrato` es la suite de pruebas compartida. Ningun otro paquete los tiene.
+ */
+export const SUBPATHS_PERMITIDOS: Readonly<Record<string, readonly string[]>> = {
+  estudio: ['./protocolo', './contrato'],
+};
 
 /** Nucleo puro: sin I/O, sin reloj, sin estado global. */
 export const NUCLEO = ['canonico', 'tema', 'dsl', 'sesion', 'render'] as const;
@@ -106,12 +114,14 @@ function revisarManifiesto(paquete: Paquete): Violacion[] {
     });
   }
   const claves = clavesDeExports(paquete.manifiesto);
-  if (claves.length !== 1 || claves[0] !== '.') {
+  const permitidas = ['.', ...(SUBPATHS_PERMITIDOS[nombre] ?? [])];
+  const sobrantes = claves.filter((clave) => !permitidas.includes(clave));
+  if (!claves.includes('.') || sobrantes.length > 0) {
     violaciones.push({
       paquete: nombre,
       archivo,
       regla: 'exports',
-      mensaje: `exports debe declarar solo la entrada raiz "."; declarado: ${
+      mensaje: `exports debe declarar la entrada raiz "." y solo ${permitidas.join(', ')}; declarado: ${
         claves.length > 0 ? claves.join(', ') : '(ausente)'
       }`,
     });

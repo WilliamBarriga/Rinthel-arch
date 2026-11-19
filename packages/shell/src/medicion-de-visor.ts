@@ -3,9 +3,10 @@
  * (`ready` y `check` no bastan). El `@font-face` ya debe estar en la pagina (lo declara `VistaInteractiva` desde `fontFiles`).
  */
 import { CODIGOS } from 'canonico';
-import type { IssueDeDev } from 'canonico';
 import { claveDeTexto, pilaDeFuente, resolverFuentes } from 'tema';
 import type { MedidasDeTexto, TextoAMedir } from 'tema';
+
+import type { IssueDelVisor } from './avisos';
 
 /**
  * Hash de la fuente de cada familia que el Tema declara en `fonts` (la entrada `hashes` de `medirEnVisor`):
@@ -22,7 +23,7 @@ export function hashesDeFamilias(fonts: Readonly<Record<string, string>>, archiv
  * Aviso (`W_THEME_FONT_NOT_SERVED`) de las familias no genericas que el Tema declara y el visor no puede pedir
  * por falta de `fontUrl`; vacio si todas son genericas. Es un issue de visor: su `file` es el Tema, sin enlace al editor.
  */
-export function avisoDeFuentesSinServir(fonts: Readonly<Record<string, string>>): IssueDeDev[] {
+export function avisoDeFuentesSinServir(fonts: Readonly<Record<string, string>>): IssueDelVisor[] {
   const familias = resolverFuentes(fonts, []).faltantes.map((f) => f.familia);
   if (familias.length === 0) return [];
   return [

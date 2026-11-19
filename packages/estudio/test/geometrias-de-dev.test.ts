@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import type { EstadoDeDev, GeometriaCacheada } from 'canonico';
+import type { GeometriaCacheada } from 'canonico';
 
+import type { EstadoDeDev } from '../src/protocolo';
 import type { LecturaDeGeometria } from '../navegador/cliente';
 import { crearGeometriasDeDev } from '../navegador/geometrias';
 

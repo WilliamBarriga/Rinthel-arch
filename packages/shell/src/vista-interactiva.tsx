@@ -5,7 +5,7 @@ import { zoom, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent } from 'd3-zoom';
 
 import { idDeElementoDeSecuencia, resolveView } from 'canonico';
-import type { EstadoDeColapso, IconProvider, IssueDeDev, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
+import type { EstadoDeColapso, IconProvider, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
 import type { Camara, ComponentesDeTema } from 'render';
@@ -16,6 +16,7 @@ import { aCamara, aTransform, cajaDeAncla, compensarCamara, encuadrar, mismaTran
 import { Leyenda, useAltoContraste } from './accesibilidad';
 import type { ModoDeLeyenda, PropsDeAltoContraste } from './accesibilidad';
 import { PanelDeIssues, Toasts } from './avisos';
+import type { IssueDelVisor } from './avisos';
 import { EstiloDelChrome, variablesDeChrome } from './chrome';
 import { MAX_NODOS_VISIBLES, alternarGrupo, contarNodosVisibles } from './colapso';
 import { AJUSTES_POR_DEFECTO } from './configuracion';
@@ -120,7 +121,7 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   /** Chrome del lienzo (panel de issues, toasts, leyenda, migas). Por defecto `true`; `false` lo omite para montarlo fuera. */
   chrome?: boolean;
   /** Issues de la Fuente; se dibujan como panel clicable dentro del lienzo, con el Tema. */
-  issues?: readonly IssueDeDev[];
+  issues?: readonly IssueDelVisor[];
   /** Avisos efimeros (el padre decide cuando quitarlos); se dibujan dentro del lienzo, con el Tema. */
   toasts?: readonly string[];
   /** Reloj del morph; por defecto `requestAnimationFrame`. */

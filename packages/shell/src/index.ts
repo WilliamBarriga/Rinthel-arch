@@ -6,6 +6,7 @@
  */
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, MedidorDeTexto, VistaInteractivaProps } from './vista-interactiva';
+export type { IssueDelVisor } from './avisos';
 export { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from './interaccion';
 export type { ElementoSeleccionable, ModoDeSeleccion, OpcionesDeHitTest, Seleccion, TipoDeElemento } from './interaccion';
 export type { PropsDeNavegacion } from './navegacion';

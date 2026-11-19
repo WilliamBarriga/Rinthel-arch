@@ -40,7 +40,7 @@ afterEach(async () => {
 });
 
 async function arrancar(): Promise<ServidorDev> {
-  servidor = await iniciarDev({ workspace: raiz, shell: async () => ({ pagina: '', worker: '' }), observar: () => () => undefined, puerto: 0 });
+  servidor = await iniciarDev({ workspace: raiz, observar: () => () => undefined, puerto: 0 });
   return servidor;
 }
 

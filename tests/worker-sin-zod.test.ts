@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
@@ -6,11 +7,14 @@ import { layoutView } from 'layout';
 import { adaptadorDeWorker } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
 
-import { empaquetarShellDev } from '../packages/cli/src/dev-shell';
+import { activosDelEstudio } from 'estudio';
+
+/** El bundle del Worker que produce el build de `estudio` y sirve `dev`. */
+const workerDelEstudio = (): string => readFileSync(activosDelEstudio().archivos['worker.js']!, 'utf8');
 
 /**
  * Ejecuta el bundle del Worker que sirve `dev` (con zod inerte) con un `self` falso: si algo que importa llamara a zod,
- * fallaria aqui. Requiere los paquetes construidos.
+ * fallaria aqui. Requiere los paquetes construidos (incluido `estudio`).
  */
 describe('Worker de layout empaquetado', () => {
   it('calcula la misma geometria que layoutView sin validar el Tema', async () => {
@@ -26,7 +30,7 @@ describe('Worker de layout empaquetado', () => {
       views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], collapsed: [] }],
     });
     const vista = resolveView(fuente, 'v')!;
-    const { worker } = await empaquetarShellDev();
+    const worker = workerDelEstudio();
 
     // Contexto con `self` como global, igual que un Web Worker.
     const global: Record<string, unknown> & { onmessage?: (e: { data: unknown }) => void; postMessage?: (m: unknown) => void } = { setTimeout, clearTimeout, queueMicrotask, console };
@@ -65,7 +69,7 @@ describe('Worker de layout empaquetado', () => {
       views: [{ id: 'v', type: 'sequence', interaction: 'i' }],
     });
     const vista = resolveView(fuente, 'v')!;
-    const { worker } = await empaquetarShellDev();
+    const worker = workerDelEstudio();
     const global: Record<string, unknown> & { onmessage?: (e: { data: unknown }) => void; postMessage?: (m: unknown) => void } = { setTimeout, clearTimeout, queueMicrotask, console };
     global.self = global;
     const respuesta = new Promise<{ geometria?: unknown; error?: string }>((ok) => {
