@@ -15,3 +15,13 @@ Se suma `sesion` entre `layout` y `render`/`shell`/`cli`: orden `canonico -> dsl
 Se suma `tema` (ADR 0008): orden `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`. Es puro (entra en la lista de nucleo del chequeo de pureza) e importa solo `canonico`. Es dueno del catalogo de Primitivas y Slots, del esquema estricto del Tema ya resuelto, del Estilo resuelto (Metricas y pintura) y de la colocacion de Slots que comparten `layout` y `render`.
 
 Por que despues de `canonico` y no antes: la validacion de Temas emite `Issue` con los codigos de `CODIGOS` y sugerencias de `candidatosCercanos`, que viven en `canonico`; ponerlo antes habria obligado a duplicar el tipo de error o a subir `Issue` a `tema`. Por que antes de `dsl`: el compilador de Temas (modulo propio de `dsl`) valida cada Capa y cada Slot con el catalogo. Consecuencia: la Fuente canonica solo conoce el sobre del Tema (`name`, `palette`); `canonico` ya no tiene esquema de Tema ni Metricas, y `layout` tampoco (`metricasDe` y `atributosVisibles` son de `tema`). `pnpm check:deps` cubre el paquete nuevo (cadena, exports y pureza).
+
+## Enmienda: paquete `estudio`
+
+Se suma `estudio`, el codigo de navegador de la UI de `dev`: orden `canonico -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. Todo lo que vivia en `cli/navegador/` (pagina, cliente SSE, Historial, mover, worker de layout, cargador de Componentes de Tema) se muda aqui; `cli` queda sin codigo de navegador. Los `.tsx` de Temas del Workspace se siguen compilando en `cli` al vuelo: son datos del Workspace, no codigo de la UI.
+
+Por que un paquete y no `cli` ni `shell`: `shell` es el visor reutilizable que cualquier consumidor importa y no debe arrastrar el editor ni el chrome; `cli` es el adaptador de disco y del servidor, y mezclarlo con una app de navegador lo engordaria con dependencias que solo usa la pagina. Esta fuera de `NUCLEO`: usa DOM, `fetch` y `EventSource`.
+
+Bundle en build: el build de `estudio` produce en `dist/` los estaticos (JS de pagina, JS del worker, CSS; el paso de CSS es conectable). `dev` ya no empaqueta la UI al arrancar: `estudio` exporta una entrada de Node minima con las rutas de sus activos y `cli` los sirve bajo `/_estudio/` con `no-store`, leidos del disco en cada peticion (esbuild en modo watch sobre `estudio` y recargar basta para iterar la UI).
+
+Contrato del protocolo de `dev` (eventos SSE y rutas de consulta): modulo `protocolo` de `estudio`; `cli` importa de el solo tipos. `EstadoDeDev` e `IssueDeDev` salen de `canonico`, que no carga transporte.

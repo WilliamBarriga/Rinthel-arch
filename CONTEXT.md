@@ -129,3 +129,17 @@ Operacion de la Sesion que recibe una Intencion, calcula la edicion minima del D
 
 **Seleccion**:
 Elemento o elementos de una Vista (Nodo, Arista, Atributo; en secuencia tambien Mensaje, Fragmento y Nota) sobre los que actua el editor. Es el sujeto de las Intenciones.
+
+**Registro de actividad**:
+Historial de los comandos del CLI corridos sobre un Workspace, por cualquier autor y con o sin `dev` abierto. Solo registra el CLI: lo que el humano hace en la UI de `dev` no entra. Es solo informativo: no forma parte del Modelo ni del Historial de deshacer.
+
+**Evento de actividad**:
+Una entrada del Registro de actividad: que comando corrio, quien (proceso y, si se declara, agente), sobre que objetivo nombrado (Vista, Nodo, Tema o archivos) y con que resultado.
+
+**Diferencia**:
+Lo que cambio entre dos Sesiones buenas, en terminos del dominio: Nodos, Atributos, Aristas, Interacciones, Mensajes, Vistas y Temas agregados, quitados o cambiados, y de cada cambiado que propiedades cambiaron, marcadas como de texto o de estructura. Un renombre es un quitado mas un agregado. Su origen es propio (lo escribio la UI de `dev`) o externo (un agente, otro editor, el CLI); solo la externa se resalta. No dice cuanto hay que rehacer para dibujar: eso es la clasificacion del cambio.
+_Evitar_: Cambio del Modelo (tambien abarca Vistas y Temas).
+
+**Buscador**:
+Dialogo de la UI de `dev` que encuentra y salta a Vistas, Nodos y `archivo:linea`, y ejecuta comandos de la UI por su nombre.
+_Evitar_: paleta, paleta de comandos (Paleta son los colores de un Tema).
