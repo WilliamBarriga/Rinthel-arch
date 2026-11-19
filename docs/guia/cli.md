@@ -48,7 +48,7 @@ Codigos de los Tipos de diagrama `sequence` y `er` (la lista completa, con su de
 dg build --workspace <ruta> [las opciones de validate]
 ```
 
-Escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`; `geometry.kind` es `grafo` para architecture, flow y er, y `secuencia` para una Vista `sequence`, con `lifelines`, `activations`, `messages`, `fragments`, `notes` y `groups`) en `<ruta>/.diagrams/`, reemplazandola (derivado: no se versiona ni se edita). Con errores, o con avisos en `--strict`, sale 1 y borra la salida anterior. `--theme` fija el Tema global (una Vista con `theme` propio lo anula; sin ninguno, el neutro); un Tema no declarado sale 2.
+Escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`; `geometry.kind` es `grafo` para architecture, flow y er, y `secuencia` para una Vista `sequence`, con `lifelines`, `activations`, `messages`, `fragments`, `notes` y `groups`) en `<ruta>/.diagrams/`, reemplazando solo esos dos (derivado: no se versiona ni se edita; el Registro de actividad se conserva). Con errores, o con avisos en `--strict`, sale 1 y borra la salida anterior. `--theme` fija el Tema global (una Vista con `theme` propio lo anula; sin ninguno, el neutro); un Tema no declarado sale 2.
 
 ### `dev`: visor en vivo
 
@@ -108,3 +108,12 @@ dg dev --workspace <ruta>                      # verlo
 | `--workspace <ruta>` | todos | Carpeta con los `.dg` (obligatoria) |
 | `--theme-path <dir>` | validate, build, inspect, edit, dev | Carpeta de Temas extra; se fusiona antes del Workspace, que gana en nombres repetidos |
 | `--json` | validate, build, inspect, edit | Salida de maquina |
+
+## Registro de actividad
+
+`validate`, `build`, `inspect` y `edit` anexan un Evento de actividad (una linea JSON, `eventoDeActividadSchema` de `canonico`) a `<ruta>/.diagrams/actividad.jsonl`, tambien cuando salen 1 o 2. `skill`, `dev` y la ayuda no registran, ni ningun comando cuyo `--workspace` falte o no sea una carpeta. Cada Evento lleva `ts`, `pid`, `comando`, `args` (el argv tras el comando), `exitCode`, `duracionMs`, el `objetivo` que el comando nombra (`inspect vista|nodo|tema`, la Vista y el Nodo de una Intencion de `edit`, los archivos que escribio `edit`) y, en `validate` y `build`, `resumen { errores, avisos }`; nunca stdout ni stderr. Al pasar 1 MB rota a `actividad.1.jsonl`. Un fallo al escribirlo no cambia la salida ni el codigo. Se sigue sin `dev` con `tail -f <ruta>/.diagrams/actividad.jsonl`.
+
+| Variable | Efecto |
+| --- | --- |
+| `DIAGRAMS_ACTIVIDAD=0` | Desactiva el registro (activo por defecto) |
+| `DIAGRAMS_AGENTE=<texto>` | Nombre libre del agente; llega al campo `agente` del Evento |

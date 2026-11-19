@@ -14,6 +14,7 @@ import type { Aplicable } from 'sesion';
 
 import { leerConTemas, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
+import type { ResultadoConActividad } from './actividad';
 import { SALIDA_DE_RECHAZO } from './rechazos';
 import type { RechazoDeEdicion } from './rechazos';
 import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
@@ -27,7 +28,7 @@ export async function editar(
     leer = leerWorkspace,
     escribirArchivo = escribirTexto,
   }: { leer?: (raiz: string) => ArchivosDelWorkspace; escribirArchivo?: (ruta: string, texto: string) => void },
-): Promise<ResultadoDeEjecucion> {
+): Promise<ResultadoConActividad> {
   let v;
   try {
     v = parseArgs({
@@ -102,6 +103,13 @@ export async function editar(
     aplicable = { tipo: 'mover-pin', vista: v.view, nodo: v.node, x, y };
   }
 
+  // Lo que nombra la Intencion; las ediciones de texto solo nombran los archivos que llegan a escribirse.
+  const nombrado = 'tipo' in aplicable ? { vista: aplicable.vista, ...('nodo' in aplicable && { nodo: aplicable.nodo }) } : {};
+  const conObjetivo = (r: ResultadoDeEjecucion, archivosEscritos?: string[]): ResultadoConActividad => ({
+    ...r,
+    actividad: { objetivo: { ...nombrado, ...(archivosEscritos !== undefined && { archivos: archivosEscritos }) } },
+  });
+
   // Solo escribe bajo la raiz del Workspace, nunca en `--theme-path`.
   const raiz = v.workspace;
   let resultado;
@@ -112,9 +120,9 @@ export async function editar(
       Object.fromEntries(hashes),
     );
   } catch (error) {
-    return uso(`No se pudo escribir: ${(error as Error).message}`);
+    return conObjetivo(uso(`No se pudo escribir: ${(error as Error).message}`));
   }
-  if (!resultado.ok) return rechazado(resultado, json);
+  if (!resultado.ok) return conObjetivo(rechazado(resultado, json));
   const { ediciones, cambiados } = resultado;
   const salida: SalidaDeEdit = salidaDeEditSchema.parse({
     contractVersion: EDIT_CONTRACT_VERSION,
@@ -122,11 +130,14 @@ export async function editar(
     edits: ediciones.map(({ file, range, replacement }) => ({ file, range, replacement })),
     files: cambiados,
   });
-  return {
-    exitCode: 0,
-    stdout: json ? `${JSON.stringify(salida, null, 2)}\n` : `${cambiados.length} archivo(s) editado(s): ${cambiados.join(', ')}\n`,
-    stderr: '',
-  };
+  return conObjetivo(
+    {
+      exitCode: 0,
+      stdout: json ? `${JSON.stringify(salida, null, 2)}\n` : `${cambiados.length} archivo(s) editado(s): ${cambiados.join(', ')}\n`,
+      stderr: '',
+    },
+    cambiados,
+  );
 }
 
 function rechazado(r: RechazoDeEdicion, json: boolean): ResultadoDeEjecucion {

@@ -8,6 +8,7 @@ import { parseArgs } from 'node:util';
 import { comoJson, consultarTema, textoLegible } from './inspect';
 import { abrirSesionDe, textoDeIssues, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
+import type { ResultadoConActividad } from './actividad';
 import { leerWorkspace } from './workspace';
 
 const SUBCOMANDOS = ['buscar', 'nodo', 'vista', 'interaccion', 'tema'] as const;
@@ -16,7 +17,7 @@ const fallo = (exitCode: 1 | 2, mensaje: string): ResultadoDeEjecucion => ({ ...
 export async function inspeccionar(
   args: readonly string[],
   { leer = leerWorkspace }: { leer?: (raiz: string) => ArchivosDelWorkspace },
-): Promise<ResultadoDeEjecucion> {
+): Promise<ResultadoConActividad> {
   let parseado;
   try {
     parseado = parseArgs({
@@ -43,8 +44,24 @@ export async function inspeccionar(
   const { tipo, estado, diagrama, catalogo } = parseado.values;
   if (comando !== 'tema' && (tipo !== undefined || estado !== undefined || diagrama !== undefined || catalogo === true)) return fallo(2, `--tipo, --estado, --diagrama y --catalogo solo valen con 'inspect tema'. ${uso}`);
   if (parseado.values.workspace === undefined) return fallo(2, 'Falta --workspace <ruta>');
+  const nombrado = OBJETIVO_DE_SUBCOMANDO[comando];
+  const resultado = await consultar(leer, parseado.values.workspace, parseado.values['theme-path'], comando, argumento, { tipo, estado, diagrama, catalogo, json: parseado.values.json === true });
+  return nombrado === undefined ? resultado : { ...resultado, actividad: { objetivo: { [nombrado]: argumento } } };
+}
 
-  const abierta = abrirSesionDe(leer, parseado.values.workspace, parseado.values['theme-path']);
+/** Lo que nombra cada subcomando en el Evento de actividad; `buscar` e `interaccion` no nombran Vista, Nodo ni Tema. */
+const OBJETIVO_DE_SUBCOMANDO: Readonly<Record<string, 'vista' | 'nodo' | 'tema'>> = { vista: 'vista', nodo: 'nodo', tema: 'tema' };
+
+async function consultar(
+  leer: (raiz: string) => ArchivosDelWorkspace,
+  workspace: string,
+  carpetaDeTemas: string | undefined,
+  comando: string,
+  argumento: string,
+  { tipo, estado, diagrama, catalogo, json }: { tipo?: string | undefined; estado?: string | undefined; diagrama?: string | undefined; catalogo?: boolean | undefined; json: boolean },
+): Promise<ResultadoDeEjecucion> {
+
+  const abierta = abrirSesionDe(leer, workspace, carpetaDeTemas);
   if ('fallo' in abierta) return abierta.fallo;
   const { sesion } = abierta;
   if (sesion.fuente === undefined) {
@@ -56,5 +73,5 @@ export async function inspeccionar(
       : sesion.consultar({ comando: comando as 'buscar' | 'nodo' | 'vista' | 'interaccion', argumento });
   if (respuesta === undefined) return fallo(1, 'El Workspace tiene errores; corrigelos con \'validate\' antes de consultar.');
   if ('noEncontrado' in respuesta) return fallo(1, respuesta.noEncontrado);
-  return { exitCode: 0, stdout: parseado.values.json ? comoJson(respuesta.salida) : textoLegible(respuesta.salida), stderr: '' };
+  return { exitCode: 0, stdout: json ? comoJson(respuesta.salida) : textoLegible(respuesta.salida), stderr: '' };
 }
