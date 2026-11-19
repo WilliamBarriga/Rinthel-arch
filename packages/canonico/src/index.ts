@@ -4,7 +4,7 @@
  * Invariantes: ids cualificados `a.b.c` definen la jerarquia; colores son nombres de Paleta, nunca hex; del Tema
  * solo conoce `name` y `palette`; una Vista solo selecciona Nodos.
  * Errores: `validate` devuelve issues ordenados y nunca lanza; solo se lanza por fallos de uso o internos.
- * Dependencias: solo `zod`; es el primero de `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`.
+ * Dependencias: solo `zod`; es el primero de `canonico -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`.
  */
 export {
   CARDINALIDADES_ER,
@@ -91,8 +91,7 @@ export type { SalidaDeInspect } from './inspect';
 
 export { MOTIVOS_DE_RECHAZO, intencionDeOrdenSchema, intencionDePinSchema, intencionSchema } from './pin';
 export type { Intencion, IntencionDeOrden, IntencionDePin, MotivoDeRechazo } from './pin';
-export { RUTA_DE_FUENTES, TIPOS_DE_CAMBIO, estadoDeDevSchema, issueDeDevSchema, urlDeFuente } from './estado';
-export type { EstadoDeDev, IssueDeDev, TipoDeCambio } from './estado';
+export { RUTA_DE_FUENTES, urlDeFuente } from './ruta-de-fuentes';
 
 export { CONTRACT_VERSION, issueSchema, salidaDeValidateJsonSchema, salidaDeValidateSchema } from './salida';
 export type { SalidaDeValidate } from './salida';

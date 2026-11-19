@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { EstadoDeDev } from 'canonico';
+import type { EstadoDeDev } from 'estudio/protocolo';
 
 import { puertoEnMemoria } from '../src/puerto-en-memoria';
 import { abrirWorkspaceVivo } from '../src/workspace-vivo';

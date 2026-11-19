@@ -9,7 +9,8 @@
  * se ignoran hasta el siguiente cambio; `abrirWorkspaceVivo` lanza si la lectura inicial falla.
  */
 import { combineIconProviders, genericIcons, serializarIconos, workspaceIcons } from 'canonico';
-import type { EstadoDeDev, GeometriaCacheada, Intencion, Issue, MotivoDeRechazo, TipoDeCambio } from 'canonico';
+import type { GeometriaCacheada, Intencion, Issue, MotivoDeRechazo } from 'canonico';
+import type { EstadoDeDev, TipoDeCambio } from 'estudio/protocolo';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer as deshacerHistorial, hashDeContenido, rehacer as rehacerHistorial } from 'sesion';
 import type { Historial, PuertoDeWorkspace, Sesion, Visto } from 'sesion';

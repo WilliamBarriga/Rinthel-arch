@@ -190,7 +190,7 @@ async function secuenciaGrande(): Promise<Record<string, number>> {
 
 async function bundleDelShell(): Promise<Record<string, number>> {
   // Los dos bundles del navegador de `dev`: la pagina (shell + React, sin ELK) y el Worker (ELK, sin zod).
-  const navegador = join(import.meta.dirname, '..', 'packages', 'cli', 'navegador');
+  const navegador = join(import.meta.dirname, '..', 'packages', 'estudio', 'navegador');
   const bundle = async (entrada: string, alias: Record<string, string> = {}): Promise<{ min: number; gzip: number }> => {
     const salida = await build({
       entryPoints: [join(navegador, entrada)],

@@ -4,7 +4,7 @@ Vocabulario de diseno: **Modulo**, **Interfaz**, **Seam**, **Adaptador**, **Prof
 
 ## Estructura
 
-Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico, tema, dsl, layout, sesion, render, shell, cli). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
+Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico, tema, dsl, layout, sesion, render, shell, estudio, cli). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. `exports` declara solo `.`; la unica excepcion es `estudio`, con `./protocolo` (tipos del protocolo de `dev` que `cli` importa sin cargar la app) y `./contrato` (suite de contrato de solo pruebas). Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
 
 ## Modulos profundos
 
@@ -19,7 +19,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 - **Puertos**: interfaces que define el nucleo segun lo que necesita. **Adaptadores**: sistema de archivos, ELK, d3-zoom, Web Worker, CLI; viven en el borde y dependen del nucleo, nunca al reves.
 - Un seam existe cuando algo varia a traves de el: un adaptador es un seam hipotetico, dos es uno real. Con un solo adaptador, llamada directa.
 - Las dependencias entran como argumento; las funciones devuelven resultados en vez de mutar.
-- Direccion de dependencias: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`. Un paquete solo importa de los anteriores. `tema` va tras `canonico` porque reutiliza sus `Issue` y codigos, y antes de `dsl` porque el compilador de Temas valida con su catalogo (ADR 0004, enmienda).
+- Direccion de dependencias: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. Un paquete solo importa de los anteriores. `tema` va tras `canonico` porque reutiliza sus `Issue` y codigos, y antes de `dsl` porque el compilador de Temas valida con su catalogo (ADR 0004, enmienda).
 - El nucleo es agnostico del Proyecto documentado (ver `AGENTS.md`).
 
 ## Pruebas
@@ -46,4 +46,4 @@ Modelo: `packages/canonico/README.md`. `pnpm check:docs` falla si un README exis
 
 ## Chequeos automaticos
 
-La direccion de dependencias, los imports internos entre paquetes, la superficie `exports` y la pureza del nucleo (`canonico`, `tema`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell` y `cli` son adaptadores) los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.
+La direccion de dependencias, los imports internos entre paquetes, la superficie `exports` y la pureza del nucleo (`canonico`, `tema`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell`, `estudio` y `cli` son adaptadores) los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.

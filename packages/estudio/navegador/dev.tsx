@@ -3,11 +3,12 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import type { ReactElement } from 'react';
 
 import { urlDeFuente } from 'canonico';
-import type { EstadoDeDev, IssueDeDev } from 'canonico';
 import { VistaInteractiva, adaptadorDeWorker, deserializarEstado, hashDelNavegador, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 import type { ComponentesDeTema } from 'render';
 
+import { RUTA_DEL_ESTUDIO } from '../src/rutas';
+import type { EstadoDeDev, IssueDeDev } from '../src/protocolo';
 import { montar, usePropsDeDatos } from './arranque';
 import { crearClienteDeDev } from './cliente';
 import { crearCargadorDeCodigo } from './componentes';
@@ -73,7 +74,7 @@ function useComponentes(estado: Estado | undefined): ComponentesDeTema | undefin
 function layoutEnWorker(): AdaptadorDeLayout {
   let adaptador: Promise<AdaptadorDeLayout> | undefined;
   return (vista, tema, medidas) => {
-    adaptador ??= fetch('/worker.js')
+    adaptador ??= fetch(`${RUTA_DEL_ESTUDIO}worker.js`)
       .then((r) => r.text())
       .then((codigo) => adaptadorDeWorker(new Worker(URL.createObjectURL(new Blob([codigo], { type: 'text/javascript' }))) as unknown as PuertoDeMensajes));
     return adaptador.then((layout) => layout(vista, tema, medidas));

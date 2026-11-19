@@ -1,5 +1,7 @@
 /** Humo del enrutador HTTP de `dev`; el comportamiento del estado vivo se prueba en `workspace-vivo.test.ts`. */
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -53,7 +55,19 @@ function entorno(inicial: Record<string, string>) {
   };
 }
 
-const shell = async () => ({ pagina: '/*pagina*/', worker: '/*worker*/' });
+const carpetas: string[] = [];
+
+/** `estudio` falso: sus estaticos son archivos de una carpeta temporal que la prueba puede reescribir. */
+function estudioFalso() {
+  const carpeta = mkdtempSync(join(tmpdir(), 'rinthel-estudio-falso-'));
+  carpetas.push(carpeta);
+  const ruta = (nombre: string) => join(carpeta, nombre);
+  const escribir = (nombre: string, texto: string) => writeFileSync(ruta(nombre), texto);
+  escribir('index.html', '<!doctype html><title>falso</title>');
+  escribir('pagina.js', '/*pagina*/');
+  escribir('estilo.css', '/*estilo*/');
+  return { estudio: () => ({ indice: ruta('index.html'), archivos: { 'pagina.js': ruta('pagina.js'), 'estilo.css': ruta('estilo.css'), 'ausente.js': ruta('ausente.js') } }), escribir };
+}
 
 interface Estado {
   version: number;
@@ -65,12 +79,13 @@ interface Estado {
 
 const abiertos: ServidorDev[] = [];
 async function arrancar(env: ReturnType<typeof entorno>, extra: Partial<OpcionesDeDev> = {}): Promise<ServidorDev> {
-  const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, escribir: env.escribirEdicion, borrar: env.borrar, ...extra, shell, debounceMs: 5, puerto: 0 });
+  const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, escribir: env.escribirEdicion, borrar: env.borrar, ...extra, debounceMs: 5, puerto: 0 });
   abiertos.push(servidor);
   return servidor;
 }
 afterEach(async () => {
   await Promise.all(abiertos.splice(0).map((servidor) => servidor.cerrar()));
+  for (const carpeta of carpetas.splice(0)) rmSync(carpeta, { recursive: true, force: true });
 });
 
 const estado = async (servidor: ServidorDev): Promise<Estado> => (await fetch(`${servidor.url}api/estado`)).json() as Promise<Estado>;
@@ -103,16 +118,42 @@ async function eventos(servidor: ServidorDev, basta: (datos: Estado[]) => boolea
 }
 
 describe('dev: rutas', () => {
-  it('escucha solo en 127.0.0.1 y sirve la pagina y los bundles', async () => {
-    const servidor = await arrancar(entorno({ 'main.dg': BASE }));
+  it('escucha solo en 127.0.0.1 y sirve / y /_estudio/* del estudio inyectado, sin cache', async () => {
+    const { estudio } = estudioFalso();
+    const servidor = await arrancar(entorno({ 'main.dg': BASE }), { estudio });
 
     expect(servidor.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
     const pagina = await fetch(servidor.url);
     expect(pagina.headers.get('content-type')).toContain('text/html');
-    expect(await pagina.text()).toContain('<script src="/app.js">');
-    expect(await (await fetch(`${servidor.url}app.js`)).text()).toBe('/*pagina*/');
-    expect(await (await fetch(`${servidor.url}worker.js`)).text()).toBe('/*worker*/');
+    expect(pagina.headers.get('cache-control')).toBe('no-store');
+    expect(await pagina.text()).toBe('<!doctype html><title>falso</title>');
+    const js = await fetch(`${servidor.url}_estudio/pagina.js`);
+    expect([js.headers.get('content-type'), js.headers.get('cache-control'), await js.text()]).toEqual(['text/javascript; charset=utf-8', 'no-store', '/*pagina*/']);
+    const css = await fetch(`${servidor.url}_estudio/estilo.css`);
+    expect([css.headers.get('content-type'), await css.text()]).toEqual(['text/css; charset=utf-8', '/*estilo*/']);
     expect((await fetch(`${servidor.url}nada`)).status).toBe(404);
+  });
+
+  it('lee los estaticos del disco en cada peticion: un rebuild del estudio se ve al recargar', async () => {
+    const { estudio, escribir } = estudioFalso();
+    const servidor = await arrancar(entorno({ 'main.dg': BASE }), { estudio });
+    expect(await (await fetch(`${servidor.url}_estudio/pagina.js`)).text()).toBe('/*pagina*/');
+
+    escribir('pagina.js', '/*pagina nueva*/');
+    escribir('index.html', '<p>nueva</p>');
+
+    expect(await (await fetch(`${servidor.url}_estudio/pagina.js`)).text()).toBe('/*pagina nueva*/');
+    expect(await (await fetch(servidor.url)).text()).toBe('<p>nueva</p>');
+  });
+
+  it('bajo /_estudio/ solo sirve los archivos declarados; uno que falta en disco es 404', async () => {
+    const { estudio } = estudioFalso();
+    const servidor = await arrancar(entorno({ 'main.dg': BASE }), { estudio });
+
+    expect((await fetch(`${servidor.url}_estudio/index.html`)).status).toBe(404);
+    expect((await fetch(`${servidor.url}_estudio/..%2F..%2Fetc%2Fpasswd`)).status).toBe(404);
+    expect((await fetch(`${servidor.url}_estudio/ausente.js`)).status).toBe(404);
+    expect((await fetch(`${servidor.url}app.js`)).status).toBe(404);
   });
 
   it('sirve el estado y la Geometria de una Vista; una Vista inexistente es 404', async () => {
@@ -126,20 +167,20 @@ describe('dev: rutas', () => {
     expect((await fetch(`${servidor.url}api/vista/no-existe`)).status).toBe(404);
   });
 
-  it('el shell real (sin fake) se empaqueta y se sirve', async () => {
+  it('sin inyectar, sirve el build real de estudio', async () => {
     const env = entorno({ 'main.dg': BASE });
     const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, puerto: 0 });
     abiertos.push(servidor);
 
-    const app = await (await fetch(`${servidor.url}app.js`)).text();
-    expect(app).toContain('EventSource');
-    expect((await (await fetch(`${servidor.url}worker.js`)).text()).length).toBeGreaterThan(1000);
-  }, 30000);
+    expect(await (await fetch(servidor.url)).text()).toContain('<script src="/_estudio/pagina.js">');
+    expect(await (await fetch(`${servidor.url}_estudio/pagina.js`)).text()).toContain('EventSource');
+    expect((await (await fetch(`${servidor.url}_estudio/worker.js`)).text()).length).toBeGreaterThan(1000);
+  });
 
   it('--theme-path (opcion temas) aporta Temas antes del Workspace', async () => {
     const env = entorno({ 'main.dg': BASE });
     const temas = join(import.meta.dirname, 'fixtures', 'temas-extra');
-    const servidor = await iniciarDev({ workspace: '/ws', temas, leer: (raiz) => (raiz === '/ws' ? env.leer() : leerReal(raiz)), observar: env.observar, shell, puerto: 0 });
+    const servidor = await iniciarDev({ workspace: '/ws', temas, leer: (raiz) => (raiz === '/ws' ? env.leer() : leerReal(raiz)), observar: env.observar, puerto: 0 });
     abiertos.push(servidor);
 
     const fuente = (await estado(servidor)).fuente as unknown as { themes: { name: string }[] };
@@ -267,7 +308,6 @@ describe('dev: edicion, deshacer y rehacer (ADR 0005, ADR 0007)', () => {
       leer: (raiz): Record<string, string> => (raiz === '/temas' ? { 'vistas.dg': `view general${vistas as string}` } : { 'main.dg': modelo as string }),
       observar: () => () => undefined,
       escribir: (_raiz, ruta) => void escritos.push(ruta),
-      shell,
       puerto: 0,
     });
     abiertos.push(servidor);

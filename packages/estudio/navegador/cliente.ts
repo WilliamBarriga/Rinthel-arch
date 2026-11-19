@@ -2,8 +2,11 @@
  * Unica pieza del navegador que conoce las rutas del servidor de `dev`. Ningun metodo lanza: los fallos son datos.
  * Una Geometria que no llega en `plazoDeGeometriaMs` es un fallo: la pagina la calcula en el Worker.
  */
-import { estadoDeDevSchema, geometriaCacheadaSchema } from 'canonico';
-import type { EstadoDeDev, GeometriaCacheada, Intencion } from 'canonico';
+import { geometriaCacheadaSchema } from 'canonico';
+import type { GeometriaCacheada, Intencion } from 'canonico';
+
+import { estadoDeDevSchema } from '../src/protocolo';
+import type { EstadoDeDev } from '../src/protocolo';
 
 /** `desactualizado` es el 409 (`hash-desactualizado`): hay que recargar y avisar. */
 export type ResultadoDeEnvio = { ok: true } | { ok: false; desactualizado: boolean; mensaje: string };

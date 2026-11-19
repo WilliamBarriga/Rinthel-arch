@@ -1,8 +1,11 @@
-/** Estado que el servidor de `dev` empuja al navegador por `/api/estado` y `/eventos` (ADR 0007). */
+/**
+ * `estudio/protocolo`: contrato del protocolo de `dev` entre el servidor (`cli`) y la pagina (ADR 0004, 0007).
+ * Interfaz: el estado que `dev` empuja por `/api/estado` y `/eventos` (`estadoDeDevSchema`, `EstadoDeDev`, `IssueDeDev`,
+ * `TipoDeCambio`). La pagina valida con los esquemas; `cli` importa de aqui solo tipos (`import type`).
+ * Invariantes: sin DOM ni Node; solo depende de `canonico` y `zod`, para que importarlo no arrastre la app de navegador.
+ */
+import { fuenteCanonicaSchema, issueSchema } from 'canonico';
 import { z } from 'zod';
-
-import { fuenteCanonicaSchema } from './esquema';
-import { issueSchema } from './salida';
 
 export const issueDeDevSchema = issueSchema.extend({
   /** Enlace `vscode://file/<ruta>:<linea>:<columna>`. */
@@ -36,8 +39,3 @@ export const estadoDeDevSchema = z.object({
 
 export type IssueDeDev = z.infer<typeof issueDeDevSchema>;
 export type EstadoDeDev = z.infer<typeof estadoDeDevSchema>;
-
-export const RUTA_DE_FUENTES = '/fuentes/';
-
-/** URL relativa al servidor de `dev`, con cada segmento codificado. */
-export const urlDeFuente = (ruta: string): string => RUTA_DE_FUENTES + ruta.split('/').map(encodeURIComponent).join('/');

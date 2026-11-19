@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { EstadoDeDev } from 'canonico';
+import type { EstadoDeDev } from '../src/protocolo';
 
 import { crearClienteDeDev } from '../navegador/cliente';
 
