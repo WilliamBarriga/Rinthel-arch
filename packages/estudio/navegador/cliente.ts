@@ -1,12 +1,14 @@
 /**
  * Unica pieza del navegador que conoce las rutas del servidor de `dev`. Ningun metodo lanza: los fallos son datos.
  * Una Geometria que no llega en `plazoDeGeometriaMs` es un fallo: la pagina la calcula en el Worker.
+ * SSE: una sola conexion a `/eventos` compartida por todos los oyentes (`escuchar`), abierta con el primero y cerrada
+ * con el ultimo; los datos que no son JSON se descartan.
  */
 import { geometriaCacheadaSchema } from 'canonico';
-import type { GeometriaCacheada, Intencion } from 'canonico';
+import type { GeometriaCacheada, Intencion, SalidaDeInspect } from 'canonico';
 
-import { estadoDeDevSchema } from '../src/protocolo';
-import type { EstadoDeDev } from '../src/protocolo';
+import { estadoDeDevSchema, inspectNoEncontradoSchema, rutaDeInspect } from '../src/protocolo';
+import type { ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev } from '../src/protocolo';
 
 /** `desactualizado` es el 409 (`hash-desactualizado`): hay que recargar y avisar. */
 export type ResultadoDeEnvio = { ok: true } | { ok: false; desactualizado: boolean; mensaje: string };
@@ -22,8 +24,8 @@ export type LecturaDeGeometria = { ok: true; geometria: GeometriaCacheada } | { 
 
 export interface DependenciasDelCliente {
   fetch: typeof fetch;
-  /** Suscripcion SSE a `url` (un `EventSource` en el navegador); devuelve como cerrarla. */
-  eventos: (url: string, alMensaje: (datos: string) => void) => () => void;
+  /** Suscripcion SSE a `url` que entrega cada evento con su nombre (un `EventSource` en el navegador); devuelve como cerrarla. */
+  eventos: (url: string, alEvento: (nombre: string, datos: string) => void) => () => void;
   /** Espera maxima en ms de una Geometria antes de darla por no llegada. */
   plazoDeGeometriaMs?: number;
 }
@@ -31,11 +33,18 @@ export interface DependenciasDelCliente {
 /** Pasado este plazo, el Worker la calcula antes de lo que tardaria en llegar. */
 const PLAZO_DE_GEOMETRIA_MS = 4000;
 
+/** `ok: false` lleva el mensaje de `inspect` y los ids cercanos (vacios si el fallo no es "no existe"). */
+export type LecturaDeInspect = { ok: true; salida: SalidaDeInspect } | { ok: false; mensaje: string; cercanos: string[] };
+
 export interface ClienteDeDev {
   /** El estado vigente; `undefined` si no llega o llega roto. */
   estado(): Promise<EstadoDeDev | undefined>;
   /** Recibe el vigente al conectar y uno por recompilacion; devuelve la baja. */
   suscribir(alEstado: (estado: EstadoDeDev) => void): () => void;
+  /** Oye un evento SSE por nombre con sus datos ya parseados (sin validar); devuelve la baja. */
+  escuchar(nombre: NombreDeEventoDeDev, alDatos: (datos: unknown) => void): () => void;
+  /** `GET /api/inspect/<comando>/<argumento>`; `opciones` van en la query (las de `tema`). */
+  inspeccionar(comando: ComandoDeInspect, argumento: string, opciones?: Readonly<Record<string, string>>): Promise<LecturaDeInspect>;
   /** `version` es la del estado que vio la pagina; el servidor la traduce a `visto`. */
   editar(intencion: Intencion, version: number): Promise<ResultadoDeEnvio>;
   deshacer(): Promise<ResultadoDeEnvio>;
@@ -55,7 +64,46 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
     }
   };
 
+  const oyentes = new Map<string, Set<(datos: unknown) => void>>();
+  let cerrarConexion: (() => void) | undefined;
+  const alEvento = (nombre: string, datos: string): void => {
+    const delNombre = oyentes.get(nombre);
+    if (delNombre === undefined || delNombre.size === 0) return;
+    let leido: unknown;
+    try {
+      leido = JSON.parse(datos);
+    } catch {
+      return;
+    }
+    for (const oyente of [...delNombre]) oyente(leido);
+  };
+  const escuchar = (nombre: NombreDeEventoDeDev, alDatos: (datos: unknown) => void): (() => void) => {
+    const delNombre = oyentes.get(nombre) ?? new Set();
+    oyentes.set(nombre, delNombre);
+    delNombre.add(alDatos);
+    cerrarConexion ??= eventos('/eventos', alEvento);
+    return () => {
+      delNombre.delete(alDatos);
+      if ([...oyentes.values()].every((o) => o.size === 0)) {
+        cerrarConexion?.();
+        cerrarConexion = undefined;
+      }
+    };
+  };
+
   return {
+    escuchar,
+    async inspeccionar(comando, argumento, opciones = {}) {
+      try {
+        const res = await fetchFn(rutaDeInspect(comando, argumento, opciones));
+        const cuerpo = (await res.json().catch(() => undefined)) as unknown;
+        if (res.ok) return { ok: true, salida: cuerpo as SalidaDeInspect };
+        const rechazo = inspectNoEncontradoSchema.safeParse(cuerpo);
+        return rechazo.success ? { ok: false, mensaje: rechazo.data.mensaje, cercanos: rechazo.data.cercanos } : { ok: false, mensaje: `Error ${res.status}`, cercanos: [] };
+      } catch (error) {
+        return { ok: false, mensaje: (error as Error).message, cercanos: [] };
+      }
+    },
     async estado() {
       try {
         const res = await fetchFn('/api/estado');
@@ -66,7 +114,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
         return undefined;
       }
     },
-    suscribir: (alEstado) => eventos('/eventos', (datos) => alEstado(JSON.parse(datos) as EstadoDeDev)),
+    suscribir: (alEstado) => escuchar('estado', (datos) => alEstado(datos as EstadoDeDev)),
     editar: (intencion, version) => post('/api/edit', { ...intencion, version }),
     deshacer: () => post('/api/deshacer', {}),
     rehacer: () => post('/api/rehacer', {}),

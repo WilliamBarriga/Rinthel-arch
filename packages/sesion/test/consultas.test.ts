@@ -24,7 +24,7 @@ describe('Sesion.consultar', () => {
   });
 
   it('propone candidatos cercanos si el Nodo no existe', () => {
-    expect(sesion().consultar({ comando: 'nodo', argumento: 'apj' })).toEqual({ noEncontrado: "No existe el Nodo 'apj'. Quiza: api" });
+    expect(sesion().consultar({ comando: 'nodo', argumento: 'apj' })).toEqual({ noEncontrado: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] });
   });
 
   it('es undefined si el Workspace tiene errores', () => {

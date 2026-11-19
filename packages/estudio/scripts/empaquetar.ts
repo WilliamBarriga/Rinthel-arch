@@ -19,7 +19,8 @@ export interface OpcionesDeConstruccion {
 }
 
 const cssConEsbuild: PasoDeCss = async (entrada) => {
-  const { outputFiles } = await build({ entryPoints: [entrada], bundle: true, write: false, minify: true, charset: 'ascii', logLevel: 'silent' });
+  // `target` resuelve el anidado y anade `-webkit-backdrop-filter` (research `libreria-chrome-estudio`).
+  const { outputFiles } = await build({ entryPoints: [entrada], bundle: true, write: false, minify: true, charset: 'ascii', logLevel: 'silent', target: ['chrome111', 'firefox128', 'safari16.4'] });
   return outputFiles[0]?.text ?? '';
 };
 

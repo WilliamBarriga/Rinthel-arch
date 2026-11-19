@@ -6,7 +6,8 @@ type Sitio = { file: string; line: number };
 /** `argumento` es texto para `buscar` e id para el resto. */
 export type Consulta = { comando: 'buscar' | 'nodo' | 'vista' | 'interaccion'; argumento: string };
 
-export type Respuesta = { salida: SalidaDeInspect } | { noEncontrado: string };
+/** `noEncontrado` es el mensaje (con `Quiza: ...`); `cercanos`, los ids parecidos que nombra. */
+export type Respuesta = { salida: SalidaDeInspect } | { noEncontrado: string; cercanos: string[] };
 
 /** En orden de documento. */
 function recorrerNodos(nodos: readonly Nodo[], ruta: RutaDeFuente = ['model', 'nodes']): { nodo: Nodo; ruta: RutaDeFuente }[] {
@@ -60,7 +61,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
     const encontrada = interacciones.find(({ interaccion }) => interaccion.id === argumento);
     if (encontrada === undefined) {
       const cerca = candidatosCercanos(argumento, interacciones.map(({ interaccion }) => interaccion.id));
-      return { noEncontrado: `No existe la Interaccion '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+      return { noEncontrado: `No existe la Interaccion '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`, cercanos: cerca };
     }
     const { interaccion, sitio } = encontrada;
     const mensajes = aplanarMensajes(interaccion.items);
@@ -86,7 +87,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
     const encontrado = nodos.find(({ nodo }) => nodo.id === argumento);
     if (encontrado === undefined) {
       const cerca = candidatosCercanos(argumento, nodos.map(({ nodo }) => nodo.id));
-      return { noEncontrado: `No existe el Nodo '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+      return { noEncontrado: `No existe el Nodo '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`, cercanos: cerca };
     }
     const { nodo } = encontrado;
     const padre = padreDe(nodo.id);
@@ -122,7 +123,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   const resuelta = encontrada === undefined ? undefined : resolveView(fuente, argumento);
   if (encontrada === undefined || resuelta === undefined) {
     const cerca = candidatosCercanos(argumento, vistas.map(({ vista }) => vista.id));
-    return { noEncontrado: `No existe la Vista '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+    return { noEncontrado: `No existe la Vista '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`, cercanos: cerca };
   }
   const visibles = new Set<string>();
   const marcar = (hijos: typeof resuelta.nodes): void => hijos.forEach((n) => (visibles.add(n.id), marcar(n.children)));

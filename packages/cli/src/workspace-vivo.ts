@@ -13,10 +13,12 @@ import type { GeometriaCacheada, Intencion, Issue, MotivoDeRechazo } from 'canon
 import type { EstadoDeDev, TipoDeCambio } from 'estudio/protocolo';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer as deshacerHistorial, hashDeContenido, rehacer as rehacerHistorial } from 'sesion';
-import type { Historial, PuertoDeWorkspace, Sesion, Visto } from 'sesion';
+import type { Historial, PuertoDeWorkspace, Respuesta, Sesion, Visto } from 'sesion';
 import { componentesDeTema } from 'tema';
 
 import { clasificarCambio } from './cambio';
+import { consultarInspect } from './inspect';
+import type { ConsultaDeInspect } from './inspect';
 import type { ResultadoDeCodigo } from './codigo';
 import { esArchivoDeFuente } from './workspace';
 
@@ -77,6 +79,8 @@ export interface WorkspaceVivo {
   rehacer(): Promise<ResultadoDelWorkspaceVivo>;
   /** Geometria cacheada de una Vista de la ultima Sesion buena; `undefined` si no existe. */
   geometria(vista: string): Promise<GeometriaCacheada | undefined>;
+  /** `inspect` sobre la ultima Sesion buena; `undefined` si el Workspace nunca compilo. */
+  consultar(consulta: ConsultaDeInspect): Respuesta | undefined;
   /** Relee el puerto y recompila ya (sin esperar al debounce). */
   recargar(): Promise<void>;
   codigo(): CodigoDelWorkspace;
@@ -309,6 +313,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     deshacer: () => restaurar(deshacerHistorial, 'nada-que-deshacer'),
     rehacer: () => restaurar(rehacerHistorial, 'nada-que-rehacer'),
     geometria: (vista) => buena?.sesion.geometria(vista) ?? Promise.resolve(undefined),
+    consultar: (consulta) => (buena === undefined ? undefined : consultarInspect(buena.sesion, consulta)),
     recargar: () => recompilar(),
     codigo: () => ({ componentes: [...new Set((buena?.sesion.fuente?.themes ?? []).flatMap((tema) => componentesDeTema(tema)))].sort(), confiado, bundle: codigo.bundle }),
     confiar() {

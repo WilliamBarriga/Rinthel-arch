@@ -2,11 +2,31 @@
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos, salidaDeInspectSchema } from 'canonico';
 import type { FuenteCanonica, SalidaDeInspect } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
-import type { Respuesta } from 'sesion';
+import type { Respuesta, Sesion } from 'sesion';
 import { CATALOGO, EFECTOS, ESTADOS, MOVIMIENTOS, TIPOS_DE_DIAGRAMA, alturaDeCabecera, cascada, componentesDeTema, describirDisposicion, elementosDeTema, metricasDeNodo, parsearEstado, resolverTema, tablaDeMetricas, temaParaDiagrama } from 'tema';
 import type { CapaDeTema, CapaDescrita } from 'tema';
 
 type Sitio = { file: string; line: number };
+
+export const SUBCOMANDOS_DE_INSPECT = ['buscar', 'nodo', 'vista', 'interaccion', 'tema'] as const;
+export type SubcomandoDeInspect = (typeof SUBCOMANDOS_DE_INSPECT)[number];
+
+/** Una consulta de `inspect`; `tipo`, `estado`, `diagrama` y `catalogo` solo cuentan en `tema`. */
+export interface ConsultaDeInspect {
+  comando: SubcomandoDeInspect;
+  argumento: string;
+  tipo?: string;
+  estado?: string;
+  diagrama?: string;
+  catalogo?: boolean;
+}
+
+/** Implementacion unica de `inspect` y de `GET /api/inspect`; `undefined` si la Sesion no tiene Fuente (errores). */
+export function consultarInspect(sesion: Sesion, { comando, argumento, tipo, estado, diagrama, catalogo }: ConsultaDeInspect): Respuesta | undefined {
+  if (sesion.fuente === undefined) return undefined;
+  if (comando !== 'tema') return sesion.consultar({ comando, argumento });
+  return consultarTema(sesion.fuente, sesion.origenesDeTema, { nombre: argumento, catalogo: catalogo === true, ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(diagrama !== undefined && { diagrama }) });
+}
 
 interface ConsultaDeTema {
   nombre: string;
@@ -23,22 +43,22 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   const declarado = fuente.themes.find((t) => t.name === nombre);
   if (declarado === undefined) {
     const cerca = candidatosCercanos(nombre, fuente.themes.map((t) => t.name));
-    return { noEncontrado: `No existe el Tema '${nombre}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+    return { noEncontrado: `No existe el Tema '${nombre}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`, cercanos: cerca };
   }
   const tipos = fuente.specification.nodeTypes.map((t) => t.name);
   if (tipo !== undefined && !tipos.includes(tipo)) {
     const cerca = candidatosCercanos(tipo, tipos);
-    return { noEncontrado: `No existe el Tipo de nodo '${tipo}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+    return { noEncontrado: `No existe el Tipo de nodo '${tipo}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`, cercanos: cerca };
   }
   const parseado = estado === undefined ? undefined : parsearEstado(estado);
   if (parseado !== undefined && 'error' in parseado) {
     const { candidatos } = parseado.error;
-    return { noEncontrado: `No existe el estado '${estado}'${candidatos.length === 0 ? '' : `. Quiza: ${candidatos.join(', ')}`}. Estados: ${ESTADOS.join(', ')}` };
+    return { noEncontrado: `No existe el estado '${estado}'${candidatos.length === 0 ? '' : `. Quiza: ${candidatos.join(', ')}`}. Estados: ${ESTADOS.join(', ')}`, cercanos: [...candidatos] };
   }
   const tipoDeDiagrama = diagrama === undefined ? undefined : TIPOS_DE_DIAGRAMA.find((t) => t === diagrama);
   if (diagrama !== undefined && tipoDeDiagrama === undefined) {
     const cerca = candidatosCercanos(diagrama, TIPOS_DE_DIAGRAMA);
-    return { noEncontrado: `No existe el Tipo de diagrama '${diagrama}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}. Tipos: ${TIPOS_DE_DIAGRAMA.join(', ')}` };
+    return { noEncontrado: `No existe el Tipo de diagrama '${diagrama}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}. Tipos: ${TIPOS_DE_DIAGRAMA.join(', ')}`, cercanos: cerca };
   }
   const estadoValido = parseado === undefined || 'error' in parseado ? undefined : parseado.estado;
 
@@ -129,7 +149,10 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   };
 }
 
-export const comoJson = (salida: SalidaDeInspect): string => `${JSON.stringify(salidaDeInspectSchema.parse(salida), null, 2)}\n`;
+/** La salida tal como la da `inspect --json` (validada y normalizada por el esquema). */
+export const comoSalidaDeInspect = (salida: SalidaDeInspect): SalidaDeInspect => salidaDeInspectSchema.parse(salida);
+
+export const comoJson = (salida: SalidaDeInspect): string => `${JSON.stringify(comoSalidaDeInspect(salida), null, 2)}\n`;
 
 const sitio = ({ file, line }: Sitio): string => `${file}:${line}`;
 const titulo = (t: string): string => (t === '' ? '' : ` "${t}"`);
