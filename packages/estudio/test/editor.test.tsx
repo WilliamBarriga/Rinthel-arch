@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { completionStatus, startCompletion } from '@codemirror/autocomplete';
+import { undo } from '@codemirror/commands';
 import { forEachDiagnostic } from '@codemirror/lint';
 import { EditorView } from '@codemirror/view';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -127,6 +128,26 @@ describe('editor del DSL: teclas', () => {
 
     expect(vista.state.doc.toString()).toBe(DSL);
     expect(posts.filter((p) => p.ruta === '/api/deshacer')).toEqual([]);
+  });
+
+  it('el editor sobrevive a Esc y a cambiar de pestana: conserva su historial fino', async () => {
+    await montarEstudio({ 'main.dg': DSL });
+    const { caja, vista } = await abrirCodigo();
+    escribir(vista, 'include **', '\n  // borrame');
+
+    vista.focus();
+    // El primer Esc puede cerrar el completado que abrio la escritura.
+    for (let i = 0; i < 2 && screen.getByRole('tab', { name: 'Vistas' }).getAttribute('aria-selected') !== 'true'; i++) fireEvent.keyDown(caja, { key: 'Escape' });
+    expect(screen.getByRole('tab', { name: 'Vistas' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Codigo' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Issues' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Vistas' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Codigo' }));
+
+    const actual = await editorDe('main.dg');
+    expect(actual.vista).toBe(vista);
+    expect(undo(vista)).toBe(true);
+    expect(vista.state.doc.toString()).toBe(DSL);
   });
 
   it('Esc cierra primero el completado y despues vuelve a Vistas', async () => {

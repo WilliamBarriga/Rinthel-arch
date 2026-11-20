@@ -18,11 +18,13 @@ export interface PestanaDelPanel {
   id: string;
   nombre: string;
   Contenido: ComponentType;
+  /** Sigue montada (oculta) con otra pestana activa: el editor conserva su estado y su historial fino (historia 26). */
+  conservar?: boolean;
 }
 
 export const PESTANAS_IZQUIERDAS: readonly PestanaDelPanel[] = [
   { id: 'vistas', nombre: 'Vistas', Contenido: PanelDeVistas },
-  { id: 'codigo', nombre: 'Codigo', Contenido: PanelDeCodigo },
+  { id: 'codigo', nombre: 'Codigo', Contenido: PanelDeCodigo, conservar: true },
 ];
 
 export const PESTANAS_DERECHAS: readonly PestanaDelPanel[] = [
