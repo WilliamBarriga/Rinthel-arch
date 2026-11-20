@@ -1,5 +1,6 @@
 /** Gestos: cada Intencion se reduce a que ubicar y que texto escribir. Interno: se entra por `aplicarIntencion`. */
-import type { FuenteCanonica, IntencionDeOrden, IntencionDePin, Issue, TextRange, Ubicador } from 'canonico';
+import { candidatosCercanos } from 'canonico';
+import type { FuenteCanonica, IntencionDeOrden, IntencionDePin, IntencionDeTema, Issue, TextRange, Ubicador } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace } from 'dsl';
 
@@ -18,12 +19,14 @@ export type Visto = Readonly<Record<string, string>>;
 type Rechazo = Extract<ResultadoDeGesto, { ok: false }>;
 
 /**
- * `reemplazar` un rango por `por`, o `insertar` una sentencia en el sitio vacio `en` (antes de una llave de cierre):
- * en su propia linea si esa llave esta sola, en la misma linea si no.
+ * `reemplazar` un rango por `por`; `insertar` una sentencia en el sitio vacio `en` (antes de una llave de cierre):
+ * en su propia linea si esa llave esta sola, en la misma linea si no; o insertarla en el sitio vacio `tras` una llave
+ * de apertura: como primera linea del bloque si la llave termina su linea, en la misma linea si no.
  */
-type Escritura = { file: string } & ({ reemplazar: TextRange; por: string } | { en: TextRange; insertar: string });
+type Escritura = { file: string } & ({ reemplazar: TextRange; por: string } | { en: TextRange; insertar: string } | { tras: TextRange; insertar: string });
 
 interface Contexto {
+  fuente: FuenteCanonica;
   declarada: FuenteCanonica['views'][number];
   indice: number;
   ubicar: Ubicador;
@@ -34,6 +37,14 @@ function edicionDe(escritura: Escritura, texto: string): EdicionConHash {
   const { file } = escritura;
   const hash = hashDeContenido(texto);
   if ('reemplazar' in escritura) return { file, range: escritura.reemplazar, replacement: escritura.por, hash };
+  if ('tras' in escritura) {
+    const { tras, insertar } = escritura;
+    const linea = texto.split('\n')[tras.start.line - 1] ?? '';
+    const resto = linea.slice(tras.start.column - 1);
+    const punto = { start: tras.start, end: tras.start };
+    if (resto.trim() === '') return { file, range: punto, replacement: `\n${/^\s*/.exec(linea)?.[0] ?? ''}  ${insertar}`, hash };
+    return { file, range: punto, replacement: ` ${insertar}${/^\s/.test(resto) ? '' : ' '}`, hash };
+  }
   const { en, insertar } = escritura;
   const linea = texto.split('\n')[en.start.line - 1] ?? '';
   const previo = linea.slice(0, en.start.column - 1);
@@ -62,7 +73,7 @@ function gesto(
   if (declarada === undefined) return rechazo('vista-desconocida', `La Vista '${vista}' no existe`);
 
   const texto = (file: string) => archivos[file] as string;
-  const escritura = describir({ declarada, indice, ubicar, texto });
+  const escritura = describir({ fuente, declarada, indice, ubicar, texto });
   if ('ok' in escritura) return escritura;
   const { file } = escritura;
   const hashVisto = visto?.[file];
@@ -129,5 +140,45 @@ export function ordenarLifelines(archivos: ArchivosDelWorkspace, intencion: Inte
     const { file } = inicio;
     if (total > 0) return { file, reemplazar: { start: inicio.range.start, end: fin.range.end }, por: lista };
     return { file, en: inicio.range, insertar: `order ${lista}` };
+  });
+}
+
+/** Tema al que vuelve una Vista que deja de fijar el suyo pero conserva su parche. */
+const TEMA_POR_DEFECTO = 'neutral';
+
+/** El rango de `sentencia` ampliado a su linea entera (con el salto) si no comparte la linea con otra cosa. */
+function lineaDe(texto: string, sentencia: TextRange): TextRange {
+  const lineas = texto.split('\n');
+  const { start, end } = sentencia;
+  const antes = (lineas[start.line - 1] ?? '').slice(0, start.column - 1);
+  const despues = (lineas[end.line - 1] ?? '').slice(end.column - 1);
+  if (antes.trim() !== '' || despues.trim() !== '' || end.line >= lineas.length) return sentencia;
+  return { start: { line: start.line, column: 1 }, end: { line: end.line + 1, column: 1 } };
+}
+
+/**
+ * Con `theme` en la Vista reescribe el nombre (el parche se queda); sin `theme` inserta `theme <tema>` como primera
+ * linea del cuerpo. Sin `tema` quita la sentencia, o la deja en `theme neutral { parche }` si tenia parche. Un Tema
+ * que la Fuente no declara rechaza con `tema-desconocido`.
+ */
+export function fijarTema(archivos: ArchivosDelWorkspace, intencion: IntencionDeTema, visto?: Visto): ResultadoDeGesto {
+  const { vista, tema } = intencion;
+  return gesto(archivos, vista, visto, ({ declarada, indice, ubicar, texto, fuente }) => {
+    if (tema !== undefined && !fuente.themes.some(({ name }) => name === tema)) {
+      const cerca = candidatosCercanos(tema, fuente.themes.map(({ name }) => name));
+      return rechazo('tema-desconocido', `No existe el Tema '${tema}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`);
+    }
+    if (declarada.theme === undefined) {
+      if (tema === undefined) return rechazo('invalida', `La Vista '${vista}' no fija Tema`);
+      const cuerpo = ubicar(['views', indice, 'cuerpo']);
+      if (cuerpo === null) return rechazo('invalida', `No se encontro donde escribir el Tema de '${vista}'`);
+      return { file: cuerpo.file, tras: cuerpo.range, insertar: `theme ${tema}` };
+    }
+    const nombre = ubicar(['views', indice, 'theme']);
+    const sentencia = ubicar(['views', indice, 'theme', 'sentencia']);
+    if (nombre === null || sentencia === null) return rechazo('invalida', `No se encontro el Tema de '${vista}'`);
+    if (tema !== undefined) return { file: nombre.file, reemplazar: nombre.range, por: tema };
+    if (declarada.themePatch !== undefined) return { file: nombre.file, reemplazar: nombre.range, por: TEMA_POR_DEFECTO };
+    return { file: sentencia.file, reemplazar: lineaDe(texto(sentencia.file), sentencia.range), por: '' };
   });
 }

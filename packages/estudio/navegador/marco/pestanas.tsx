@@ -9,6 +9,7 @@ import { PanelDelAgente } from '../agente/panel-del-agente';
 import { SeguirAlAgente, UltimaLineaDelAgente } from '../agente/pildoras';
 import { Detalle } from '../detalle/detalle';
 import { PanelDeIssues } from '../issues/panel-de-issues';
+import { GaleriaDeTemas } from '../temas/galeria-de-temas';
 import { PanelDeVistas } from '../vistas/panel-de-vistas';
 import { useEstudio } from './contexto';
 
@@ -43,7 +44,7 @@ export const PESTANAS_IZQUIERDAS: readonly PestanaDelPanel[] = [
 export const PESTANAS_DERECHAS: readonly PestanaDelPanel[] = [
   { id: 'detalle', nombre: 'Detalle', Contenido: Detalle },
   { id: 'issues', nombre: 'Issues', Contenido: PanelDeIssues },
-  { id: 'temas', nombre: 'Temas', Contenido: pendiente('La galeria de Temas aun no esta disponible.') },
+  { id: 'temas', nombre: 'Temas', Contenido: GaleriaDeTemas },
   { id: 'historial', nombre: 'Historial', Contenido: pendiente('El Historial aun no esta disponible.') },
   { id: 'agente', nombre: 'Agente', Contenido: PanelDelAgente },
 ];

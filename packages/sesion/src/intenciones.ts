@@ -2,7 +2,7 @@ import type { Intencion, Issue } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
 import type { EdicionConHash, ResultadoDeEdicion } from './ediciones';
-import { moverPin, ordenarLifelines } from './gestos';
+import { fijarTema, moverPin, ordenarLifelines } from './gestos';
 import type { ResultadoDeGesto, Visto } from './gestos';
 
 export type { Intencion };
@@ -23,6 +23,10 @@ export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Inte
     case 'ordenar-lifelines': {
       const { tipo: _tipo, ...orden } = intencion;
       return ordenarLifelines(archivos, orden, visto);
+    }
+    case 'fijar-tema': {
+      const { tipo: _tipo, ...tema } = intencion;
+      return fijarTema(archivos, tema, visto);
     }
   }
 }

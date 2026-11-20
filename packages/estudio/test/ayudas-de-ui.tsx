@@ -16,10 +16,10 @@ configure({ asyncUtilTimeout: 15_000 });
 /** El layout real (el del Worker en el navegador), para las Vistas cuya Geometria aun no llego del servidor. */
 export const layoutReal: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
 
-/** `actividad`: texto inicial de `.diagrams/actividad.jsonl`. */
-export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', actividad }: { hash?: string; plataforma?: Plataforma; actividad?: string } = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
+/** `temas`: archivos de `--theme-path` (solo lectura); `actividad`: texto inicial de `.diagrams/actividad.jsonl`. */
+export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas, actividad }: { hash?: string; plataforma?: Plataforma; temas?: Record<string, string>; actividad?: string } = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
   window.history.replaceState(null, '', `/${hash}`);
-  const dev = await devEnMemoria({ propios, ...(actividad !== undefined && { actividad }) });
+  const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }) });
   const { container } = render(<Estudio fetch={dev.fetch} eventos={dev.eventos} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={() => false} plataforma={plataforma} />);
   return { dev, contenedor: container };
 }

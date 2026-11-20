@@ -153,7 +153,7 @@ diagrams edit --workspace <ruta> --edits '[{"file":"main.dg","range":{"start":{"
 \`\`\`
 
 - La primera forma mueve el Pin de un Nodo en una Vista: reemplaza el \`pin\` si existe y lo anade si no; no necesitas conocer la sintaxis.
-- La segunda aplica una Intencion por su contrato JSON (no lleva \`hash\`: uno heredado en el JSON se ignora; la concurrencia es \`--hash <archivo>=<hash>\`); \`ordenar-lifelines\` reescribe el \`order\` completo de una Vista \`sequence\` con el orden visible dado, y las entradas de \`order\` hoy ocultas (Grupo colapsado, \`exclude\`) conservan su posicion relativa.
+- La segunda aplica una Intencion por su contrato JSON (no lleva \`hash\`: uno heredado en el JSON se ignora; la concurrencia es \`--hash <archivo>=<hash>\`); \`ordenar-lifelines\` reescribe el \`order\` completo de una Vista \`sequence\` con el orden visible dado, y las entradas de \`order\` hoy ocultas (Grupo colapsado, \`exclude\`) conservan su posicion relativa. \`fijar-tema\` (\`{ vista, tema? }\`) escribe \`theme <tema>\` en la Vista conservando su parche, o lo quita sin \`tema\`; un Tema no declarado rechaza con \`tema-desconocido\`.
 - La tercera aplica ediciones de texto ya calculadas (p. ej. el \`fix\` de un issue de \`validate\`): rangos 1-based, fin excluido.
 - Concurrencia: cada edicion lleva el hash del archivo que viste (\`hash\` en la edicion, o \`--hash <archivo>=<hash>\`); sin hash se usa el del disco. Si el archivo cambio, se rechaza todo sin escritura parcial.
 - Se rechaza tambien lo que introduce errores nuevos, solapa ediciones o apunta fuera del archivo.

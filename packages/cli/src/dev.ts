@@ -343,8 +343,10 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       responderInspect(res, new URL(req.url ?? '/', 'http://127.0.0.1'));
     } else if (ruta.startsWith('/api/vista/')) {
       const id = decodeURIComponent(ruta.slice('/api/vista/'.length));
-      vivo.geometria(id).then(
-        (geometria) => responder(res, geometria === undefined ? 404 : 200, geometria ?? { error: `Vista '${id}' inexistente` }),
+      // `?tema=<nombre>`: la Vista con otro Tema (previsualizar), sin cache ni Historial.
+      const tema = new URL(req.url ?? '/', 'http://127.0.0.1').searchParams.get('tema') ?? undefined;
+      vivo.geometria(id, tema === undefined ? undefined : { tema }).then(
+        (geometria) => responder(res, geometria === undefined ? 404 : 200, geometria ?? { error: tema === undefined ? `Vista '${id}' inexistente` : `Vista '${id}' o Tema '${tema}' inexistente` }),
         (error: unknown) => responder(res, 500, { error: (error as Error).message }),
       );
     } else {
