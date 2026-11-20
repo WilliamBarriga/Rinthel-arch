@@ -3,9 +3,9 @@
  * Recorre el flujo de la spec (#184) con locators por rol y nombre accesible; lo demas de la UI se prueba en jsdom
  * dentro de `estudio`. Sin Chromium falla con el comando que lo instala (`rutaDeChromium`).
  */
-import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { chromium } from 'playwright';
@@ -54,6 +54,28 @@ describe('rutaDeChromium', () => {
 
   it('toma CHROMIUM_PATH tal cual', () => {
     expect(rutaDeChromium({ CHROMIUM_PATH: '/opt/chrome' }, '/no/existe')).toBe('/opt/chrome');
+  });
+
+  it('busca el ejecutable de la ultima revision segun la plataforma', () => {
+    const cache = mkdtempSync(join(tmpdir(), 'cache-de-playwright-'));
+    const ejecutable = (revision: string, ruta: string): string => {
+      const completa = join(cache, revision, ruta);
+      mkdirSync(dirname(completa), { recursive: true });
+      writeFileSync(completa, '');
+      return completa;
+    };
+    try {
+      ejecutable('chromium-1100', 'chrome-linux64/chrome');
+      const linux = ejecutable('chromium-1200', 'chrome-linux/chrome');
+      const mac = ejecutable('chromium-1200', 'chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium');
+      const windows = ejecutable('chromium-1200', 'chrome-win64/chrome.exe');
+      expect(rutaDeChromium({}, cache, 'linux')).toBe(linux);
+      expect(rutaDeChromium({}, cache, 'darwin')).toBe(mac);
+      expect(rutaDeChromium({}, cache, 'win32')).toBe(windows);
+      expect(() => rutaDeChromium({}, cache, 'aix')).toThrow('pnpm exec playwright install chromium');
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
   });
 });
 
