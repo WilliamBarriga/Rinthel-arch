@@ -4,7 +4,7 @@
  * Toda la red pasa por el cliente que se arma con `fetch` y `eventos` inyectados (en pruebas, los de `devEnMemoria`);
  * la Vista vive en el hash (`#vista=<id>`). Sin Fuente (el Workspace nunca compilo) el lienzo queda vacio y los paneles lo dicen.
  */
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
 import { resolveView, urlDeFuente } from 'canonico';
@@ -31,13 +31,15 @@ import type { LadoDeIsla } from './marco/limites';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS, PILDORAS_DE_LA_BARRA } from './marco/pestanas';
 import { useIsla } from './marco/use-isla';
 import { crearAlMover, crearAlOrdenar } from './mover';
-import { Ayuda } from './comandos/ayuda';
-import { Buscador, PildoraDelBuscador } from './comandos/buscador';
+import { PildoraDelBuscador } from './comandos/pildora-del-buscador';
 import { abrirCodigoEnBloque, COMANDOS } from './comandos/registro';
 import { plataformaDe } from './comandos/teclas';
 import type { Plataforma } from './comandos/teclas';
 import { useAtajos } from './comandos/use-atajos';
 import { ResaltadoDelLienzo, useDiferenciasExternas } from './diferencia/resaltado';
+
+const Buscador = lazy(() => import('./comandos/buscador').then((m) => ({ default: m.Buscador })));
+const Ayuda = lazy(() => import('./comandos/ayuda').then((m) => ({ default: m.Ayuda })));
 
 export interface PropsDelEstudio {
   fetch: typeof fetch;
@@ -322,6 +324,9 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
   const [pestanas, setPestanas] = useState<Record<LadoDeIsla, string>>({ izquierda: 'vistas', derecha: 'detalle' });
   const [portales, setPortales] = useState<HTMLElement | null>(null);
   const [dialogo, setDialogo] = useState<DialogoDelEstudio>();
+  // Un dialogo se carga (trozo aparte) la primera vez que se abre y desde ahi sigue montado: Base UI cierra y devuelve el foco.
+  const [cargados, setCargados] = useState<ReadonlySet<DialogoDelEstudio>>(() => new Set());
+  if (dialogo !== undefined && !cargados.has(dialogo)) setCargados(new Set([...cargados, dialogo]));
   const [sitioDeCodigo, setSitioDeCodigo] = useState<SitioDeCodigo>();
   const guardados = useRef(new Set<() => Promise<void>>());
   const islas = { izquierda, derecha };
@@ -404,8 +409,11 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
             </div>
           </div>
         )}
-        <Buscador abierto={dialogo === 'buscador'} alCambiar={cerrarDialogo} />
-        <Ayuda abierto={dialogo === 'ayuda'} alCambiar={cerrarDialogo} />
+        {/* Los dialogos (Base UI Dialog y Autocomplete) son trozos que se cargan al abrirlos. */}
+        <Suspense fallback={null}>
+          {cargados.has('buscador') && <Buscador abierto={dialogo === 'buscador'} alCambiar={cerrarDialogo} />}
+          {cargados.has('ayuda') && <Ayuda abierto={dialogo === 'ayuda'} alCambiar={cerrarDialogo} />}
+        </Suspense>
         <div className="ui-portales" ref={setPortales} />
       </div>
     </ContextoDeEstudio.Provider>

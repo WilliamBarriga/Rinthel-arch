@@ -1,6 +1,6 @@
 /** Isla lateral de vidrio: pestanas del registro, boton de ocultar, asas de redimensionado y pestana de borde al ocultarse. */
 import { Tabs } from '@base-ui/react/tabs';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import { BotonConAtajo } from '../comandos/atajo';
@@ -51,7 +51,9 @@ export function IslaLateral({ lado, id, nombre, isla, pestanas, activa, alCambia
         </div>
         {pestanas.map(({ id: pestana, Contenido, conservar = false }) => (
           <Tabs.Panel key={pestana} value={pestana} className="ui-isla-cuerpo" keepMounted={conservar && visitadas.has(pestana)}>
-            <Contenido />
+            <Suspense fallback={<p className="ui-tenue">Cargando...</p>}>
+              <Contenido />
+            </Suspense>
           </Tabs.Panel>
         ))}
       </Tabs.Root>

@@ -194,8 +194,12 @@ describe('dev: rutas', () => {
     const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, puerto: 0 });
     abiertos.push(servidor);
 
-    expect(await (await fetch(servidor.url)).text()).toContain('<script src="/_estudio/pagina.js">');
-    expect(await (await fetch(`${servidor.url}_estudio/pagina.js`)).text()).toContain('EventSource');
+    expect(await (await fetch(servidor.url)).text()).toContain('<script type="module" src="/_estudio/pagina.js">');
+    const pagina = await (await fetch(`${servidor.url}_estudio/pagina.js`)).text();
+    const trozo = /"\.\/(trozos\/[^"]+\.js)"/.exec(pagina)?.[1];
+    expect(trozo).toBeDefined();
+    const servido = await fetch(`${servidor.url}_estudio/${trozo}`);
+    expect([servido.status, servido.headers.get('content-type')]).toEqual([200, 'text/javascript; charset=utf-8']);
     expect((await (await fetch(`${servidor.url}_estudio/worker.js`)).text()).length).toBeGreaterThan(1000);
   });
 

@@ -13,7 +13,6 @@ import type { ContextoDelEstudio } from '../marco/contexto';
 import { sitioEscrito, textoDeSitio } from '../sitio';
 import { destinoDeNodo } from '../vistas/destino';
 import { indiceDeVistas } from '../vistas/indice';
-import { BotonConAtajo } from './atajo';
 import { COMANDOS } from './registro';
 import { etiquetasDeTeclas } from './teclas';
 
@@ -133,15 +132,5 @@ export function Buscador({ abierto, alCambiar }: { abierto: boolean; alCambiar: 
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-/** Pildora de la barra que abre el Buscador y anuncia Mod+K. */
-export function PildoraDelBuscador(): ReactElement {
-  const { abrirDialogo } = useEstudio();
-  return (
-    <BotonConAtajo comando="buscador" className="ui-pildora ui-pildora-buscador" aria-label="Buscar" onClick={() => abrirDialogo('buscador')}>
-      Buscar
-    </BotonConAtajo>
   );
 }

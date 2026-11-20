@@ -3,16 +3,19 @@
  * arreglo es el de las pestanas. Un ticket que llena un panel reemplaza aqui su `Contenido` (o anade una entrada);
  * el marco no cambia. Ids estables: los usan `abrirPestana(lado, id)` y el registro de comandos.
  */
+import { lazy } from 'react';
 import type { ComponentType } from 'react';
 
 import { PanelDelAgente } from '../agente/panel-del-agente';
 import { SeguirAlAgente, UltimaLineaDelAgente } from '../agente/pildoras';
 import { Detalle } from '../detalle/detalle';
-import { PanelDeCodigo } from '../editor/panel-de-codigo';
 import { PanelDelHistorial } from '../historial/panel-del-historial';
 import { PanelDeIssues } from '../issues/panel-de-issues';
 import { GaleriaDeTemas } from '../temas/galeria-de-temas';
 import { PanelDeVistas } from '../vistas/panel-de-vistas';
+
+/** El editor (CodeMirror) es un trozo aparte: se carga la primera vez que se abre Codigo. */
+const PanelDeCodigo = lazy(() => import('../editor/panel-de-codigo').then((m) => ({ default: m.PanelDeCodigo })));
 
 export interface PestanaDelPanel {
   id: string;
