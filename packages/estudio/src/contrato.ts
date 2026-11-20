@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { EventoDeActividad } from 'canonico';
 
-import { codigoDeDevSchema, confianzaDeDevSchema, errorDeDevSchema } from './protocolo';
+import { codigoDeDevSchema, confianzaDeDevSchema, errorDeDevSchema, escrituraDeDevSchema, rechazoDeDevSchema } from './protocolo';
 import type { ActividadDeDev, DiferenciaDeDev, EstadoDeDev, HistorialDeDev } from './protocolo';
 import type { CodigoDePrueba } from './dev-en-memoria';
 import { crearLectorSse } from './sse';
@@ -235,7 +235,12 @@ export function probarContratoDeDev(crear: CrearDev): void {
     const res = await dev.fetch(ruta, init);
     return { status: res.status, cuerpo: (await res.json()) as Cuerpo };
   };
-  const post = (dev: DevDePrueba, ruta: string, cuerpo: unknown) => json(dev, ruta, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) });
+  /** `POST` con cuerpo crudo y content-type JSON (los bordes mandan cuerpos que no son JSON). */
+  const enviar = (dev: DevDePrueba, ruta: string, cuerpo: string): Promise<Response> => dev.fetch(ruta, { method: 'POST', headers: { 'content-type': 'application/json' }, body: cuerpo });
+  const post = async (dev: DevDePrueba, ruta: string, cuerpo: unknown): Promise<{ status: number; cuerpo: Cuerpo }> => {
+    const res = await enviar(dev, ruta, JSON.stringify(cuerpo));
+    return { status: res.status, cuerpo: (await res.json()) as Cuerpo };
+  };
 
   describe('contrato del protocolo de dev', () => {
     it('GET /api/estado: version, Vistas en orden de declaracion y sin issues', async () => {
@@ -453,7 +458,9 @@ export function probarContratoDeDev(crear: CrearDev): void {
         await post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 3, y: 4 });
         const conDos = (await json(dev, '/api/archivo/main.dg')).cuerpo['texto'];
 
-        expect(await post(dev, '/api/historial/saltar', { id: 0 })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        const alInicio = await post(dev, '/api/historial/saltar', { id: 0 });
+        expect(alInicio.status).toBe(200);
+        expect(escrituraDeDevSchema.parse(alInicio.cuerpo)).toMatchObject({ ok: true });
         expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(DSL);
         expect(await post(dev, '/api/historial/saltar', { id: 2 })).toMatchObject({ status: 200, cuerpo: { ok: true } });
         expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(conDos);
@@ -461,23 +468,24 @@ export function probarContratoDeDev(crear: CrearDev): void {
         expect((await post(dev, '/api/historial/saltar', { id: 'uno' })).status).toBe(400);
 
         await esperarEstado(dev, (e) => e.fuente?.model.nodes.some((n) => n.title === 'Otra') === true, () => dev.editarFuera('main.dg', String(conDos).replace('"API"', '"Otra"')));
-        expect(await post(dev, '/api/historial/saltar', { id: 1 })).toMatchObject({ status: 409, cuerpo: { ok: false, motivo: 'hash-desactualizado' } });
+        const desactualizado = await post(dev, '/api/historial/saltar', { id: 1 });
+        expect(desactualizado.status).toBe(409);
+        expect(rechazoDeDevSchema.parse(desactualizado.cuerpo)).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
       });
     });
 
     it('bordes de /api/*: ruta desconocida 404, metodo ajeno 405 con allow, JSON invalido 400; todos con { ok: false, mensaje }', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
         const error = async (res: Response) => ({ status: res.status, allow: res.headers.get('allow'), cuerpo: errorDeDevSchema.parse(await res.json()) });
-        const conJson = (ruta: string, cuerpo: string) => dev.fetch(ruta, { method: 'POST', headers: { 'content-type': 'application/json' }, body: cuerpo });
 
         expect(await error(await dev.fetch('/api/nada'))).toMatchObject({ status: 404 });
-        expect(await error(await conJson('/api/nada', '{}'))).toMatchObject({ status: 404 });
+        expect(await error(await enviar(dev, '/api/nada', '{}'))).toMatchObject({ status: 404 });
         for (const ruta of ['/api/edit', '/api/deshacer', '/api/rehacer', '/api/historial/saltar', '/api/confiar']) {
           expect(await error(await dev.fetch(ruta))).toMatchObject({ status: 405, allow: 'POST' });
-          expect(await error(await conJson(ruta, 'no es json'))).toEqual({ status: 400, allow: null, cuerpo: { ok: false, mensaje: 'JSON invalido' } });
+          expect(await error(await enviar(dev, ruta, 'no es json'))).toEqual({ status: 400, allow: null, cuerpo: { ok: false, mensaje: 'JSON invalido' } });
         }
         for (const ruta of ['/api/estado', '/api/archivos', '/api/codigo', '/api/vista/datos', '/api/inspect/nodo/api', '/api/archivo/main.dg']) {
-          expect(await error(await conJson(ruta, '{}'))).toMatchObject({ status: 405, allow: 'GET' });
+          expect(await error(await enviar(dev, ruta, '{}'))).toMatchObject({ status: 405, allow: 'GET' });
         }
         expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(DSL);
       });
@@ -487,7 +495,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
       await con(
         { 'main.dg': DSL },
         async (dev) => {
-          const res = await dev.fetch('/api/edit', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }) });
+          const res = await enviar(dev, '/api/edit', JSON.stringify({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }));
           expect({ status: res.status, cuerpo: errorDeDevSchema.parse(await res.json()) }).toEqual({ status: 500, cuerpo: { ok: false, mensaje: 'disco lleno' } });
         },
         { escrituraRota: 'disco lleno' },
@@ -518,7 +526,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           expect(despues.status).toBe(200);
           expect(despues.headers.get('content-type')).toContain('text/javascript');
           expect(await despues.text()).toBe(BUNDLE_DE_PRUEBA);
-          expect((await dev.fetch('/componentes.js', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status).toBe(405);
+          expect((await enviar(dev, '/componentes.js', '{}')).status).toBe(405);
         },
         { codigo: { componentes: ['Aurora'], bundle: BUNDLE_DE_PRUEBA } },
       );
