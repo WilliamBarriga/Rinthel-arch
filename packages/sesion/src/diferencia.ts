@@ -1,65 +1,13 @@
 /**
  * Diferencia (CONTEXT.md): lo que cambio entre dos Fuentes canonicas, elemento por elemento. Pura; aparte de
- * `clasificarCambio` de `cli`, que decide como redibujar.
- * Identidades: Nodo por `id`; Atributo por Nodo + `name`; Arista por `from` + `to` (ids de Nodo) + ordinal dentro del
- * mismo par; Interaccion por `id`; Mensaje por `id` o, sin el, por Interaccion + posicion; Vista por `id`; Tema por `name`.
+ * `clasificarCambio`, que decide como redibujar. Los tipos, la identidad (`claveDeElemento`) y el esquema viven en
+ * `canonico` (`dev.ts`), que comparten `estudio` y `cli`.
  * Invariantes: no detecta renombres (un renombre es un quitado mas un agregado); cada cambiado lleva sus propiedades
  * cambiadas etiquetadas `texto` (etiqueta, descripcion, texto del Mensaje) o `estructura` (lo demas). Orden estable:
  * por tipo de elemento y, dentro, por orden de declaracion.
  */
-import { aplanarMensajes } from 'canonico';
-import type { Arista, FuenteCanonica, Nodo } from 'canonico';
-
-export type ElementoDeDiferencia =
-  | { tipo: 'nodo'; id: string }
-  | { tipo: 'atributo'; nodo: string; name: string }
-  | { tipo: 'arista'; from: string; to: string; ordinal: number }
-  | { tipo: 'interaccion'; id: string }
-  /** `posicion`: indice entre los Mensajes de la Interaccion (aplanando Fragmentos); `ruta`: la del visor (`2.0.1`). */
-  | { tipo: 'mensaje'; interaccion: string; id?: string; posicion: number; ruta: string }
-  | { tipo: 'vista'; id: string }
-  | { tipo: 'tema'; name: string };
-
-export type TipoDeElementoDeDiferencia = ElementoDeDiferencia['tipo'];
-
-export type ClaseDePropiedad = 'texto' | 'estructura';
-
-export interface PropiedadCambiada {
-  nombre: string;
-  clase: ClaseDePropiedad;
-}
-
-export interface ElementoCambiado {
-  elemento: ElementoDeDiferencia;
-  propiedades: PropiedadCambiada[];
-}
-
-export interface Diferencia {
-  agregados: ElementoDeDiferencia[];
-  quitados: ElementoDeDiferencia[];
-  cambiados: ElementoCambiado[];
-}
-
-/** Clave de identidad de un elemento (dos elementos con la misma clave son el mismo). */
-export function claveDeElemento(elemento: ElementoDeDiferencia): string {
-  switch (elemento.tipo) {
-    case 'nodo':
-    case 'interaccion':
-    case 'vista':
-      return `${elemento.tipo}:${elemento.id}`;
-    case 'atributo':
-      return `atributo:${elemento.nodo}#${elemento.name}`;
-    case 'arista':
-      return `arista:${elemento.from}->${elemento.to}:${elemento.ordinal}`;
-    case 'mensaje':
-      return `mensaje:${elemento.interaccion}:${elemento.id ?? `#${elemento.posicion}`}`;
-    case 'tema':
-      return `tema:${elemento.name}`;
-  }
-}
-
-/** Una Diferencia sin agregados, quitados ni cambiados. */
-export const diferenciaVacia = (d: Diferencia): boolean => d.agregados.length === 0 && d.quitados.length === 0 && d.cambiados.length === 0;
+import { aplanarMensajes, claveDeElemento } from 'canonico';
+import type { Arista, Diferencia, ElementoCambiado, ElementoDeDiferencia, FuenteCanonica, Nodo, PropiedadCambiada } from 'canonico';
 
 interface Comparable {
   elemento: ElementoDeDiferencia;

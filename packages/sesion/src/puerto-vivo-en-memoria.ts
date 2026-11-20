@@ -1,6 +1,6 @@
 /** Toda escritura, borrado o cambio externo avisa a los observadores, como el watcher del disco. */
-import { workspaceEnMemoria } from 'sesion';
-import type { ContenidoEnMemoria, WorkspaceEnMemoria } from 'sesion';
+import { workspaceEnMemoria } from './puerto-en-memoria';
+import type { ContenidoEnMemoria, WorkspaceEnMemoria } from './puerto-en-memoria';
 
 import type { PuertoDelWorkspaceVivo } from './workspace-vivo';
 

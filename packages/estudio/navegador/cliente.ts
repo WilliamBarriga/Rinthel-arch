@@ -7,7 +7,7 @@
 import { geometriaCacheadaSchema } from 'canonico';
 import type { GeometriaCacheada, Intencion, SalidaDeInspect } from 'canonico';
 
-import { archivoDeDevSchema, archivosDeDevSchema, estadoDeDevSchema, inspectNoEncontradoSchema, RUTA_DE_SALTAR, rutaDeArchivo, rutaDeInspect } from '../src/protocolo';
+import { archivoDeDevSchema, archivosDeDevSchema, estadoDeDevSchema, inspectNoEncontradoSchema, rutaDeArchivo, RUTAS_DE_DEV, rutaDeInspect } from '../src/protocolo';
 import type { ArchivoDeDev, ArchivosDeDev, ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from '../src/protocolo';
 
 /**
@@ -110,7 +110,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
     const delNombre = oyentes.get(nombre) ?? new Set();
     oyentes.set(nombre, delNombre);
     delNombre.add(alDatos);
-    cerrarConexion ??= eventos('/eventos', alEvento);
+    cerrarConexion ??= eventos(RUTAS_DE_DEV.eventos, alEvento);
     return () => {
       delNombre.delete(alDatos);
       if ([...oyentes.values()].every((o) => o.size === 0)) {
@@ -135,7 +135,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
     },
     async estado() {
       try {
-        const res = await fetchFn('/api/estado');
+        const res = await fetchFn(RUTAS_DE_DEV.estado);
         if (!res.ok) return undefined;
         const leido = estadoDeDevSchema.safeParse(await res.json());
         return leido.success ? leido.data : undefined;
@@ -144,13 +144,13 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
       }
     },
     suscribir: (alEstado) => escuchar('estado', (datos) => alEstado(datos as EstadoDeDev)),
-    editar: (intencion, version) => post('/api/edit', { ...intencion, version }),
-    editarTexto: (peticion) => post('/api/edit', peticion),
-    archivos: () => leerJson('/api/archivos', archivosDeDevSchema),
+    editar: (intencion, version) => post(RUTAS_DE_DEV.edit, { ...intencion, version }),
+    editarTexto: (peticion) => post(RUTAS_DE_DEV.edit, peticion),
+    archivos: () => leerJson(RUTAS_DE_DEV.archivos, archivosDeDevSchema),
     archivo: (file) => leerJson(rutaDeArchivo(file), archivoDeDevSchema),
-    deshacer: () => post('/api/deshacer', {}),
-    rehacer: () => post('/api/rehacer', {}),
-    saltar: (id) => post(RUTA_DE_SALTAR, { id }),
+    deshacer: () => post(RUTAS_DE_DEV.deshacer, {}),
+    rehacer: () => post(RUTAS_DE_DEV.rehacer, {}),
+    saltar: (id) => post(RUTAS_DE_DEV.saltar, { id }),
     async geometria(vista, { tema } = {}) {
       const NO_LLEGO = Symbol('no-llego');
       const abortar = new AbortController();
@@ -162,7 +162,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
         }, plazoDeGeometriaMs);
       });
       const pedida = (async (): Promise<unknown> => {
-        const res = await fetchFn(`/api/vista/${encodeURIComponent(vista)}${tema === undefined ? '' : `?tema=${encodeURIComponent(tema)}`}`, { signal: abortar.signal });
+        const res = await fetchFn(`${RUTAS_DE_DEV.vista}${encodeURIComponent(vista)}${tema === undefined ? '' : `?tema=${encodeURIComponent(tema)}`}`, { signal: abortar.signal });
         return res.ok ? await res.json() : NO_LLEGO;
       })().catch(() => NO_LLEGO);
       const cruda = await Promise.race([pedida, vencida]);

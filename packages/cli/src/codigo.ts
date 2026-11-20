@@ -13,13 +13,10 @@ import type { BuildOptions, Message } from 'esbuild';
 
 import { CODIGOS } from 'canonico';
 import type { Issue } from 'canonico';
-import type { InterfazDeComponente } from 'sesion';
+import type { CodigoCompilado, InterfazDeComponente } from 'sesion';
 
-export interface ResultadoDeCodigo {
-  componentes: Readonly<Record<string, InterfazDeComponente>>;
-  issues: readonly Issue[];
-  bundle: string;
-}
+/** Lo que el Workspace vivo de `sesion` espera del compilador (`CodigoCompilado`). */
+export type ResultadoDeCodigo = CodigoCompilado;
 
 interface ModuloCompilado {
   cjs: string;

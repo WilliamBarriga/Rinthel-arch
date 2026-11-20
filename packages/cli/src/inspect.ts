@@ -1,16 +1,14 @@
 /** La consulta de `inspect` sobre una Sesion y el formato de toda su salida (JSON y legible). */
 import { salidaDeInspectSchema } from 'canonico';
-import type { SalidaDeInspect } from 'canonico';
+import type { ComandoDeInspect, SalidaDeInspect } from 'canonico';
 import type { Respuesta, Sesion } from 'sesion';
 
 type Sitio = { file: string; line: number };
 
-export const SUBCOMANDOS_DE_INSPECT = ['buscar', 'nodo', 'vista', 'interaccion', 'tema'] as const;
-export type SubcomandoDeInspect = (typeof SUBCOMANDOS_DE_INSPECT)[number];
 
 /** Una consulta de `inspect`; `tipo`, `estado`, `diagrama` y `catalogo` solo cuentan en `tema`. */
 export interface ConsultaDeInspect {
-  comando: SubcomandoDeInspect;
+  comando: ComandoDeInspect;
   argumento: string;
   tipo?: string;
   estado?: string;
@@ -18,7 +16,7 @@ export interface ConsultaDeInspect {
   catalogo?: boolean;
 }
 
-/** Implementacion unica de `inspect` y de `GET /api/inspect` (la consulta vive en `Sesion.consultar`); `undefined` si la Sesion no tiene Fuente (errores). */
+/** `inspect` de la terminal (la consulta vive en `Sesion.consultar`; `GET /api/inspect` la hace el Workspace vivo); `undefined` si la Sesion no tiene Fuente (errores). */
 export function consultarInspect(sesion: Sesion, { comando, argumento, tipo, estado, diagrama, catalogo }: ConsultaDeInspect): Respuesta | undefined {
   if (comando !== 'tema') return sesion.consultar({ comando, argumento });
   return sesion.consultar({ comando, argumento, catalogo: catalogo === true, ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(diagrama !== undefined && { diagrama }) });

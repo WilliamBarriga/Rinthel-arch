@@ -6,7 +6,7 @@ Binario `diagrams`: valida, construye, consulta, edita y sirve Workspaces desde 
 - Comandos `validate`, `build`, `skill`, `inspect`, `edit` y `dev`; `run(argv, dependencias?)` devuelve `{ exitCode, stdout, stderr }`.
 - Los cuatro Tipos de diagrama (architecture, flow, sequence, er): `build` escribe la Geometria con su `kind`; `inspect` consulta Interacciones y `inspect tema --diagrama <tipo>` los parches por Tipo; `edit --intent` acepta `ordenar-lifelines`.
 - Es el unico paquete que lee y escribe disco; `edit` es la unica escritura sobre el DSL. `--json` da un contrato por comando.
-- `dev` sirve la vista previa en vivo: la app de `estudio` (`/` y `/_estudio/*`, leida del disco en cada peticion) y compila con esbuild, sin ejecutar, los Temas con codigo (`.tsx`, en `/componentes.js`). Su estado (Sesion, Historial, cola, versiones, clasificacion del cambio) es el modulo "Workspace vivo" (`src/workspace-vivo.ts`, probado con el puerto en memoria y un reloj falso); el enrutador HTTP/SSE (`src/dev.ts`) es un adaptador fino.
+- `dev` sirve la vista previa en vivo: la app de `estudio` (`/` y `/_estudio/*`, leida del disco en cada peticion) y compila con esbuild, sin ejecutar, los Temas con codigo (`.tsx`, en `/componentes.js`). Su estado es el Workspace vivo de `sesion` (`abrirWorkspaceVivo`, `atenderApiDeDev`); `src/dev.ts` pone el puerto de disco, el watcher, el registro de actividad en disco y el servidor HTTP/SSE.
 
 ## Que NO hace
 - No compila DSL ni valida: eso es de `sesion`.

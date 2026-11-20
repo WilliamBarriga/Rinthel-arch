@@ -1,4 +1,4 @@
-/** Humo del enrutador HTTP de `dev`; el comportamiento del estado vivo se prueba en `workspace-vivo.test.ts`. */
+/** Humo del enrutador HTTP de `dev`; el comportamiento del estado vivo se prueba en `sesion/test/workspace-vivo.test.ts`. */
 import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';

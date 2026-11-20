@@ -19,19 +19,22 @@
  * Registro de actividad: si el puerto lo da, se leen los ultimos `EVENTOS_PREVIOS` al abrir y cada aviso de su observador
  * (con debounce) empuja los Eventos nuevos; un fallo de lectura o una linea rota se ignoran.
  */
-import { combineIconProviders, crearLectorDeActividad, genericIcons, serializarIconos, workspaceIcons } from 'canonico';
-import type { EventoDeActividad, GeometriaCacheada, Intencion, Issue, MotivoDeRechazo } from 'canonico';
-import type { ArchivoDeDev, ArchivosDeDev, DiferenciaDeDev, EstadoDeDev, OrigenDeDiferencia, TipoDeCambio } from 'estudio/protocolo';
+import { combineIconProviders, crearLectorDeActividad, diferenciaVacia, esArchivoDeFuente, genericIcons, salidaDeInspectSchema, serializarIconos, workspaceIcons } from 'canonico';
+import type { ArchivoDeDev, ArchivosDeDev, DiferenciaDeDev, EstadoDeDev, EventoDeActividad, GeometriaCacheada, HistorialDeDev, Intencion, Issue, MotivoDeRechazo, OrigenDeDiferencia, TipoDeCambio } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { abrirSesion, aplicarAlWorkspace, descripcionDeIntencion, descripcionDeTexto, deshacerSobre, diferenciaVacia, diferenciar, hashDeContenido, historialVacio, historialVisible, registrar, rehacerSobre, saltar } from 'sesion';
-import type { EdicionDeTexto, HistorialDeArchivos, HistorialVisible, OpcionesDeGeometria, PuertoDeWorkspace, ResultadoDeRestaurar, Respuesta, Sesion, Visto } from 'sesion';
 import { componentesDeTema } from 'tema';
 
+import { aplicarAlWorkspace } from './aplicar';
+import type { EdicionDeTexto, PuertoDeWorkspace } from './aplicar';
 import { clasificarCambio } from './cambio';
-import { consultarInspect } from './inspect';
-import type { ConsultaDeInspect } from './inspect';
-import type { ResultadoDeCodigo } from './codigo';
-import { esArchivoDeFuente } from './workspace';
+import type { Consulta, Respuesta } from './consultas';
+import { diferenciar } from './diferencia';
+import { hashDeContenido } from './ediciones';
+import { descripcionDeIntencion, descripcionDeTexto, deshacerSobre, historialVacio, historialVisible, registrar, rehacerSobre, saltar } from './historial-de-archivos';
+import type { HistorialDeArchivos, ResultadoDeRestaurar } from './historial-de-archivos';
+import type { Visto } from './intenciones';
+import { abrirSesion } from './sesion';
+import type { InterfazDeComponente, OpcionesDeGeometria, Sesion } from './sesion';
 
 /** Versiones del estado que se recuerdan para traducir la version vista a `visto`. */
 export const VERSIONES_GUARDADAS = 16;
@@ -63,26 +66,26 @@ export interface Reloj {
   programar(fn: () => void, ms: number): () => void;
 }
 
-export const relojReal: Reloj = {
-  programar(fn, ms) {
-    const t = setTimeout(fn, ms);
-    return () => clearTimeout(t);
-  },
-};
-
 export interface OpcionesDelWorkspaceVivo {
   puerto: PuertoDelWorkspaceVivo;
   /** Raiz absoluta del Workspace: solo para el `href` (`vscode://file/...`) de cada issue. */
   raiz: string;
-  /** Por defecto `relojReal`. */
-  reloj?: Reloj;
+  /** Debounce del observador y del Registro de actividad (el nucleo no tiene reloj propio). */
+  reloj: Reloj;
   /** Espera en ms tras el ultimo cambio antes de recompilar; por defecto `DEBOUNCE_MS`. */
   debounceMs?: number;
   /** Por defecto no hay codigo. */
-  compilarCodigo?: () => ResultadoDeCodigo;
+  compilarCodigo?: () => CodigoCompilado;
   confiarEnCodigo?: boolean;
-  /** Hora en ms de cada entrada del Historial; por defecto `Date.now`. */
-  ahora?: () => number;
+  /** Hora en ms de cada entrada del Historial. */
+  ahora: () => number;
+}
+
+/** Lo que da el compilador de Temas con codigo del adaptador (`cli`: esbuild sobre los `.tsx`). */
+export interface CodigoCompilado {
+  componentes: Readonly<Record<string, InterfazDeComponente>>;
+  issues: readonly Issue[];
+  bundle: string;
 }
 
 /** `version` es la del estado tras recompilar. */
@@ -111,7 +114,7 @@ export interface WorkspaceVivo {
   /** `version` es la del estado que vio quien emite la Intencion o las ediciones. */
   editar(aplicable: Intencion | EdicionesDeTexto, version?: number): Promise<ResultadoDelWorkspaceVivo>;
   /** Historial de deshacer, lo mas viejo primero, con lo alcanzable sobre el disco vigente. */
-  historial(): HistorialVisible;
+  historial(): HistorialDeDev;
   /** Lee el puerto en el momento: lo que el editor puede abrir. */
   archivos(): ArchivosDeDev;
   /** `undefined` si el archivo no existe. */
@@ -122,8 +125,8 @@ export interface WorkspaceVivo {
   saltar(id: number): Promise<ResultadoDelWorkspaceVivo>;
   /** Geometria de una Vista de la ultima Sesion buena (con `tema`, con ese Tema y sin cache); `undefined` si falta la Vista o el Tema. */
   geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<GeometriaCacheada | undefined>;
-  /** `inspect` sobre la ultima Sesion buena; `undefined` si el Workspace nunca compilo. */
-  consultar(consulta: ConsultaDeInspect): Respuesta | undefined;
+  /** `inspect` sobre la ultima Sesion buena, con la salida normalizada como `inspect --json`; `undefined` si el Workspace nunca compilo. */
+  consultar(consulta: Consulta): Respuesta | undefined;
   /** Los ultimos `EVENTOS_PREVIOS` Eventos de actividad leidos (los del arranque y los que llegaron despues). */
   actividad(): readonly EventoDeActividad[];
   /** Recibe los Eventos nuevos del registro, en orden; devuelve como dejar de escuchar. */
@@ -147,14 +150,14 @@ const BORRADO = '<borrado>';
 /** Lo externo gana: una sola escritura ajena hace externa la Diferencia. */
 const unirOrigen = (a: OrigenDeDiferencia | undefined, b: OrigenDeDiferencia | undefined): OrigenDeDiferencia | undefined => (a === 'externo' || b === 'externo' ? 'externo' : (a ?? b));
 
-const SIN_CODIGO: ResultadoDeCodigo = { componentes: {}, issues: [], bundle: 'return {};' };
+const SIN_CODIGO: CodigoCompilado = { componentes: {}, issues: [], bundle: 'return {};' };
 
 const esEdicionesDeTexto = (aplicable: Intencion | EdicionesDeTexto): aplicable is EdicionesDeTexto => 'ediciones' in aplicable;
 
 const hashesDe = (archivos: ArchivosDelWorkspace): Record<string, string> => Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)]));
 
 export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Promise<WorkspaceVivo> {
-  const { puerto, raiz, reloj = relojReal, debounceMs = DEBOUNCE_MS, compilarCodigo = () => SIN_CODIGO, ahora = Date.now } = opciones;
+  const { puerto, raiz, reloj, debounceMs = DEBOUNCE_MS, compilarCodigo = () => SIN_CODIGO, ahora } = opciones;
 
   const fuentesDe = (recursos: Record<string, string> | undefined): Record<string, string> | undefined =>
     recursos === undefined ? undefined : Object.fromEntries(Object.entries(recursos).filter(([ruta]) => esArchivoDeFuente(ruta)));
@@ -436,7 +439,10 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
       return texto === undefined ? undefined : { file: ruta, texto, hash: hashDeContenido(texto), version };
     },
     geometria: (vista, opciones) => buena?.sesion.geometria(vista, opciones) ?? Promise.resolve(undefined),
-    consultar: (consulta) => (buena === undefined ? undefined : consultarInspect(buena.sesion, consulta)),
+    consultar(consulta) {
+      const r = buena?.sesion.consultar(consulta);
+      return r === undefined || 'noEncontrado' in r ? r : { salida: salidaDeInspectSchema.parse(r.salida) };
+    },
     actividad: () => actividad,
     suscribirActividad(alEvento) {
       oyentesDeActividad.add(alEvento);

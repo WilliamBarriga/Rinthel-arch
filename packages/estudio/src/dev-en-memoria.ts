@@ -1,20 +1,18 @@
 /**
- * `devEnMemoria`: el servidor de `dev` sin red, para probar la pagina en jsdom. La Sesion, los issues, las ediciones
- * con `visto` y el Historial son reales (`sesion` sobre `workspaceEnMemoria`); solo el transporte es falso: `fetch`
- * responde las rutas del protocolo y `eventos` empuja `event: estado`, `event: historial`, `event: actividad` y
- * `event: diferencia` como `/eventos`. El origen de la Diferencia sale de quien escribe (`editarFuera` es externo; las
- * rutas, propias), no del hash.
+ * `devEnMemoria`: el servidor de `dev` sin red, para probar la pagina en jsdom. Es el Workspace vivo real de `sesion`
+ * (Sesion, issues, ediciones con `visto`, Historial, Diferencia con origen por hash, Registro de actividad) sobre
+ * `puertoEnMemoria`, con las rutas de `atenderApiDeDev`, las mismas que sirve `dev`; solo el transporte es falso: `fetch`
+ * llama a la API y `eventos` empuja `event: estado`, `historial`, `actividad` y `diferencia` como `/eventos`.
  * Invariantes: cumple `probarContratoDeDev` (la misma suite corre contra el `dev` real); una escritura (propia o
  * `editarFuera`) recompila y empuja un estado con `version` mayor; las versiones viejas se olvidan como en `dev`.
+ * Sin watcher ni debounce: `editarFuera` recompila en el acto y el Registro de actividad avisa sin espera.
  * Errores: nunca lanza por una peticion; responde el estado HTTP que daria `dev`.
  */
-import { combineIconProviders, crearLectorDeActividad, genericIcons, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
-import type { EventoDeActividad, Issue, MotivoDeRechazo } from 'canonico';
-import { abrirSesion, aplicarAlWorkspace, descripcionDeIntencion, descripcionDeTexto, deshacerSobre, diferenciaVacia, diferenciar, hashDeContenido, historialVacio, historialVisible, registrar, rehacerSobre, saltar, workspaceEnMemoria } from 'sesion';
-import type { Aplicable, Consulta, HistorialDeArchivos, ResultadoDeRestaurar, Sesion, WorkspaceEnMemoria } from 'sesion';
+import { RUTAS_DE_DEV } from 'canonico';
+import { abrirWorkspaceVivo, atenderApiDeDev, puertoEnMemoria, RUTAS_POST_DE_DEV } from 'sesion';
+import type { Reloj, WorkspaceEnMemoria } from 'sesion';
 
-import { COMANDOS_DE_INSPECT, peticionDeEdicionesSchema, peticionDeSaltoSchema, RUTA_DE_SALTAR } from './protocolo';
-import type { ActividadDeDev, ArchivoDeDev, ArchivosDeDev, ComandoDeInspect, DiferenciaDeDev, EstadoDeDev, HistorialDeDev, NombreDeEventoDeDev, OrigenDeDiferencia } from './protocolo';
+import type { ActividadDeDev, NombreDeEventoDeDev } from './protocolo';
 
 type Archivos = Readonly<Record<string, string>>;
 
@@ -25,239 +23,106 @@ export interface DevEnMemoria {
   editarFuera(ruta: string, texto: string | undefined): void;
   /** Anexa texto al Registro de actividad (como el CLI de otro proceso) y empuja los Eventos nuevos como `actividad`. */
   anexarActividad(texto: string): void;
-  /** Espera a que termine la recompilacion en curso, si la hay. */
+  /** Espera a que terminen las escrituras (POST, `editarFuera`) y sus recompilaciones. */
   asentado(): Promise<void>;
   /** El Workspace en memoria, para leer lo que quedo escrito. */
   workspace: WorkspaceEnMemoria;
   cerrar(): Promise<void>;
 }
 
-/** Igual que `EVENTOS_PREVIOS` de `dev`. */
-const EVENTOS_PREVIOS = 50;
-/** Igual que `VERSIONES_GUARDADAS` de `dev`. */
-const VERSIONES_GUARDADAS = 16;
 const RAIZ = '/memoria';
 
-const HTTP_DE_RECHAZO = (motivo: MotivoDeRechazo): number => (motivo === 'hash-desactualizado' ? 409 : 422);
-
-const hashesDe = (archivos: Archivos): Record<string, string> => Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)]));
-
-/** Una Intencion (con la descripcion de `dev`) o ediciones de texto; `undefined` es 400. */
-function leerPedidoDeEdicion(cuerpo: unknown): { aplicable: Aplicable; descripcion: string | undefined; aunqueNoCompile: boolean } | undefined {
-  if (typeof cuerpo === 'object' && cuerpo !== null && 'ediciones' in cuerpo) {
-    const texto = peticionDeEdicionesSchema.safeParse(cuerpo);
-    return texto.success ? { aplicable: texto.data.ediciones, descripcion: texto.data.descripcion, aunqueNoCompile: texto.data.aunqueNoCompile === true } : undefined;
-  }
-  const intencion = intencionSchema.safeParse(cuerpo);
-  return intencion.success ? { aplicable: intencion.data, descripcion: descripcionDeIntencion(intencion.data), aunqueNoCompile: false } : undefined;
-}
-
-/** Quita las claves `undefined` (las opciones van con `exactOptionalPropertyTypes`). */
-const dejarDefinidos = <T extends Record<string, string | undefined>>(o: T): { [K in keyof T]?: string } => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as { [K in keyof T]?: string };
+/** Sin debounce: el aviso del registro se atiende en el acto. */
+const relojInmediato: Reloj = {
+  programar(fn) {
+    fn();
+    return () => undefined;
+  },
+};
 
 const respuesta = (status: number, cuerpo: unknown): Response => new Response(JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
 
 /** `actividad`: texto inicial de `.diagrams/actividad.jsonl`; `ahora`: hora en ms de cada entrada del Historial. */
-export async function devEnMemoria({ propios, temas, actividad: registroInicial, ahora = Date.now }: { propios: Archivos; temas?: Archivos; actividad?: string; ahora?: () => number }): Promise<DevEnMemoria> {
-  const workspace = workspaceEnMemoria({ propios, ...(temas !== undefined && { temas }) });
-  let version = 0;
-  let actual: Sesion = abrirSesion(workspace.leer().disco);
-  let buena: { sesion: Sesion; archivos: Archivos } | undefined = actual.fuente === undefined ? undefined : { sesion: actual, archivos: workspace.leer().disco };
-  let issues: Issue[] = await actual.diagnosticar();
-  let cambio: EstadoDeDev['cambio'];
-  const versiones = new Map<number, Record<string, string>>([[0, hashesDe(workspace.leer().disco)]]);
-  let historial: HistorialDeArchivos = historialVacio;
-  const oyentes = new Set<(nombre: NombreDeEventoDeDev, datos: string) => void>();
-  const leerActividad = crearLectorDeActividad();
-  let registro = registroInicial;
-  let actividad: EventoDeActividad[] = leerActividad(registro).slice(-EVENTOS_PREVIOS);
+export async function devEnMemoria({ propios, temas, actividad, ahora = Date.now }: { propios: Archivos; temas?: Archivos; actividad?: string; ahora?: () => number }): Promise<DevEnMemoria> {
+  const puerto = puertoEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }) });
+  // Sin watcher: las escrituras propias recompilan al terminar y `editarFuera` pide la recompilacion.
+  const vivo = await abrirWorkspaceVivo({ puerto: { ...puerto, observar: () => () => undefined }, raiz: RAIZ, reloj: relojInmediato, ahora });
 
-  const estado = (): EstadoDeDev => {
-    const fuente = buena?.sesion.fuente;
-    return {
-      version,
-      ...(cambio !== undefined && { cambio }),
-      ...(fuente !== undefined && { fuente }),
-      iconos: buena === undefined ? {} : serializarIconos(combineIconProviders(workspaceIcons(buena.archivos), genericIcons())),
-      vistas: fuente?.views.map(({ id }) => id) ?? [],
-      issues: issues.map((issue) => ({ ...issue, href: `vscode://file${RAIZ}/${issue.file}:${issue.line}:${issue.column}` })),
-    };
-  };
-  const historialDeDev = (): HistorialDeDev => historialVisible(historial, workspace.leer().propios);
+  const oyentes = new Set<(nombre: NombreDeEventoDeDev, datos: string) => void>();
   const emitir = (nombre: NombreDeEventoDeDev, datos: unknown): void => {
     const texto = JSON.stringify(datos);
     for (const oyente of [...oyentes]) oyente(nombre, texto);
   };
+  const dejar = [
+    vivo.suscribir((estado) => {
+      emitir('estado', estado);
+      emitir('historial', vivo.historial());
+    }),
+    vivo.suscribirDiferencia((diferencia) => emitir('diferencia', diferencia)),
+    vivo.suscribirActividad((eventos) => emitir('actividad', { previos: false, eventos } satisfies ActividadDeDev)),
+  ];
 
-  let cola: Promise<unknown> = Promise.resolve();
-  const enCola = <T>(tarea: () => Promise<T>): Promise<T> => {
-    const r = cola.then(tarea, tarea);
-    cola = r.catch(() => undefined);
-    return r;
-  };
-
-  /** Origen de lo escrito desde la ultima Sesion buena (lo externo gana). */
-  let origenPendiente: OrigenDeDiferencia | undefined;
-  const recompilar = async (origen: OrigenDeDiferencia): Promise<void> => {
-    origenPendiente = origenPendiente === 'externo' ? 'externo' : origen;
-    const nuevos = workspace.leer().disco;
-    const sesion = (buena?.sesion ?? actual).actualizar(nuevos);
-    issues = await sesion.diagnosticar();
-    actual = sesion;
-    cambio = sesion.fuente === undefined ? undefined : 'estructura';
-    let diferencia: DiferenciaDeDev | undefined;
-    if (sesion.fuente !== undefined) {
-      const cambios = buena?.sesion.fuente === undefined ? undefined : diferenciar(buena.sesion.fuente, sesion.fuente);
-      if (cambios !== undefined && !diferenciaVacia(cambios)) diferencia = { version: version + 1, origen: origenPendiente, ...cambios };
-      origenPendiente = undefined;
-      buena = { sesion, archivos: nuevos };
-    }
-    version += 1;
-    versiones.set(version, hashesDe(nuevos));
-    versiones.delete(version - VERSIONES_GUARDADAS);
-    emitir('estado', estado());
-    if (diferencia !== undefined) emitir('diferencia', diferencia);
-    emitir('historial', historialDeDev());
-  };
-
-  const ok = async (): Promise<Response> => {
-    await recompilar('propio');
-    return respuesta(200, { ok: true, version });
-  };
-  const rechazo = (motivo: MotivoDeRechazo, mensaje: string, file?: string): Response => respuesta(HTTP_DE_RECHAZO(motivo), { ok: false, motivo, mensaje, ...(file !== undefined && { file }) });
-
-  const editar = (cuerpo: unknown): Promise<Response> =>
-    enCola(async () => {
-      const pedido = leerPedidoDeEdicion(cuerpo);
-      if (pedido === undefined) return respuesta(400, { ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... } o { ediciones, version, descripcion? }' });
-      const versionVista = (cuerpo as { version?: unknown }).version;
-      let visto: Record<string, string> | undefined;
-      if (typeof versionVista === 'number') {
-        visto = versiones.get(versionVista);
-        if (visto === undefined) return rechazo('hash-desactualizado', `La version ${versionVista} del estado ya no esta guardada; recarga la Vista`);
-      }
-      const antes = workspace.leer().propios;
-      const r = aplicarAlWorkspace(workspace, pedido.aplicable, visto, { aunqueNoCompile: pedido.aunqueNoCompile });
-      if (!r.ok) return rechazo(r.motivo, r.mensaje, r.file);
-      const descripcion = pedido.descripcion ?? descripcionDeTexto(r.cambiados);
-      historial = registrar(historial, descripcion, antes, workspace.leer().propios, ahora());
-      return ok();
-    });
-
-  const restaurar = (mover: (h: HistorialDeArchivos, disco: Archivos) => ResultadoDeRestaurar): Promise<Response> =>
-    enCola(async () => {
-      const disco = workspace.leer().propios;
-      const r = mover(historial, disco);
-      if (!r.ok) return rechazo(r.motivo, r.mensaje, r.file);
-      for (const ruta of r.escritos) {
-        const nuevo = r.archivos[ruta];
-        if (nuevo === undefined) workspace.borrar(ruta);
-        else workspace.escribir(ruta, nuevo);
-      }
-      historial = r.historial;
-      return ok();
-    });
-
-  const listarArchivos = (): ArchivosDeDev => {
-    const { disco, propios } = workspace.leer();
-    return {
-      version,
-      archivos: Object.keys(disco)
-        .sort()
-        .map((file) => ({ file, hash: hashDeContenido(disco[file] as string), soloLectura: !(file in propios) })),
-    };
-  };
-  const leerArchivo = (ruta: string): ArchivoDeDev | undefined => {
-    const texto = workspace.leer().disco[ruta];
-    return texto === undefined ? undefined : { file: ruta, texto, hash: hashDeContenido(texto), version };
-  };
-
-  const consultar = (url: URL): Response => {
-    const [comando, codificado, ...sobra] = url.pathname.slice('/api/inspect/'.length).split('/');
-    const argumento = codificado === undefined ? '' : decodeURIComponent(codificado);
-    if (comando === undefined || !(COMANDOS_DE_INSPECT as readonly string[]).includes(comando) || argumento === '' || sobra.length > 0) {
-      return respuesta(404, { ok: false, mensaje: `Ruta de inspect desconocida: ${url.pathname}`, cercanos: [] });
-    }
-    const opcion = (nombre: string) => url.searchParams.get(nombre) ?? undefined;
-    const consulta: Consulta =
-      comando === 'tema'
-        ? { comando, argumento, ...dejarDefinidos({ tipo: opcion('tipo'), estado: opcion('estado'), diagrama: opcion('diagrama') }), catalogo: url.searchParams.get('catalogo') === 'true' }
-        : { comando: comando as Exclude<ComandoDeInspect, 'tema'>, argumento };
-    const r = buena?.sesion.consultar(consulta);
-    if (r === undefined) return respuesta(422, { ok: false, mensaje: 'El Workspace tiene errores y nunca compilo; no hay nada que consultar', cercanos: [] });
-    if ('noEncontrado' in r) return respuesta(404, { ok: false, mensaje: r.noEncontrado, cercanos: r.cercanos });
-    return respuesta(200, r.salida);
+  let enCurso: Promise<unknown> = Promise.resolve();
+  const seguir = <T>(p: Promise<T>): Promise<T> => {
+    enCurso = Promise.all([enCurso, p.catch(() => undefined)]);
+    return p;
   };
 
   const atender = async (url: URL, init: RequestInit | undefined): Promise<Response> => {
     const metodo = init?.method ?? 'GET';
-    const ruta = url.pathname;
-    if (metodo === 'POST') {
-      let cuerpo: unknown;
+    let cuerpo: unknown;
+    if (RUTAS_POST_DE_DEV.includes(url.pathname)) {
+      if (metodo !== 'POST') return respuesta(405, { ok: false, mensaje: 'Metodo no permitido' });
       try {
         cuerpo = JSON.parse(typeof init?.body === 'string' ? init.body : '{}');
       } catch {
         return respuesta(400, { ok: false, mensaje: 'JSON invalido' });
       }
-      if (ruta === '/api/edit') return editar(cuerpo);
-      if (ruta === '/api/deshacer') return restaurar(deshacerSobre);
-      if (ruta === '/api/rehacer') return restaurar(rehacerSobre);
-      if (ruta === RUTA_DE_SALTAR) {
-        const salto = peticionDeSaltoSchema.safeParse(cuerpo);
-        if (!salto.success) return respuesta(400, { ok: false, mensaje: 'Se esperaba { id } con un entero no negativo' });
-        return restaurar((h, disco) => saltar(h, disco, salto.data.id));
-      }
-      if (ruta === '/api/confiar') return respuesta(200, { ok: true });
-      return respuesta(404, { ok: false, mensaje: 'No encontrado' });
     }
-    if (ruta === '/api/estado') return respuesta(200, estado());
-    if (ruta === '/api/archivos') return respuesta(200, listarArchivos());
-    if (ruta.startsWith('/api/archivo/')) {
-      const leido = leerArchivo(ruta.slice('/api/archivo/'.length).split('/').map(decodeURIComponent).join('/'));
-      return leido === undefined ? respuesta(404, { ok: false, mensaje: 'Archivo inexistente' }) : respuesta(200, leido);
+    try {
+      const r = await atenderApiDeDev(vivo, { metodo, url, cuerpo });
+      return r === undefined ? new Response('No encontrado', { status: 404 }) : respuesta(r.status, r.cuerpo);
+    } catch (error) {
+      return respuesta(500, { ok: false, mensaje: (error as Error).message });
     }
-    if (ruta === '/api/codigo') return respuesta(200, { temaConCodigo: false, componentes: [], confiado: false });
-    if (ruta.startsWith('/api/inspect/')) return consultar(url);
-    if (ruta.startsWith('/api/vista/')) {
-      const tema = url.searchParams.get('tema') ?? undefined;
-      const geometria = await buena?.sesion.geometria(decodeURIComponent(ruta.slice('/api/vista/'.length)), tema === undefined ? undefined : { tema });
-      return geometria === undefined ? respuesta(404, { error: 'Vista o Tema inexistente' }) : respuesta(200, geometria);
-    }
-    return new Response('No encontrado', { status: 404 });
   };
 
-  let pendiente: Promise<unknown> = Promise.resolve();
   return {
-    fetch: (async (entrada: string | URL | Request, init?: RequestInit) => atender(new URL(String(entrada instanceof Request ? entrada.url : entrada), 'http://memoria'), init)) as typeof fetch,
+    fetch: ((entrada: string | URL | Request, init?: RequestInit) => {
+      const p = atender(new URL(String(entrada instanceof Request ? entrada.url : entrada), 'http://memoria'), init);
+      // Solo las escrituras: una lectura (Geometria) puede esperar a temporizadores falsos de la prueba.
+      return init?.method === 'POST' ? seguir(p) : p;
+    }) as typeof fetch,
     eventos(url, alEvento) {
-      if (url !== '/eventos') return () => undefined;
+      if (url !== RUTAS_DE_DEV.eventos) return () => undefined;
       oyentes.add(alEvento);
-      // Como `dev`: al conectar llegan el estado vigente y los ultimos Eventos de actividad.
+      // Como `dev`: al conectar llegan el estado vigente, el Historial y los ultimos Eventos de actividad.
       queueMicrotask(() => {
         if (!oyentes.has(alEvento)) return;
-        alEvento('estado', JSON.stringify(estado()));
-        alEvento('historial', JSON.stringify(historialDeDev()));
-        alEvento('actividad', JSON.stringify({ previos: true, eventos: actividad } satisfies ActividadDeDev));
+        alEvento('estado', JSON.stringify(vivo.estado()));
+        alEvento('historial', JSON.stringify(vivo.historial()));
+        alEvento('actividad', JSON.stringify({ previos: true, eventos: [...vivo.actividad()] } satisfies ActividadDeDev));
       });
       return () => oyentes.delete(alEvento);
     },
     editarFuera(ruta, texto) {
-      if (texto === undefined) workspace.borrar(ruta);
-      else workspace.escribir(ruta, texto);
-      pendiente = enCola(() => recompilar('externo'));
+      puerto.editarFuera(ruta, texto);
+      void seguir(vivo.recargar());
     },
-    anexarActividad(texto) {
-      registro = (registro ?? '') + texto;
-      const nuevos = leerActividad(registro);
-      if (nuevos.length === 0) return;
-      actividad = [...actividad, ...nuevos].slice(-EVENTOS_PREVIOS);
-      emitir('actividad', { previos: false, eventos: nuevos } satisfies ActividadDeDev);
+    anexarActividad: (texto) => puerto.anexarActividad(texto),
+    asentado: async () => {
+      let visto: Promise<unknown> | undefined;
+      while (visto !== enCurso) {
+        visto = enCurso;
+        await visto;
+      }
     },
-    asentado: () => pendiente.then(() => cola).then(() => undefined),
-    workspace,
+    workspace: puerto,
     async cerrar() {
       oyentes.clear();
-      await cola;
+      for (const d of dejar) d();
+      await enCurso;
+      vivo.cerrar();
     },
   };
 }

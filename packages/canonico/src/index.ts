@@ -1,6 +1,6 @@
 /**
  * `canonico`: esquemas Zod y tipos de la Fuente canonica, la Geometria cacheada, las Intenciones de edicion, las
- * salidas JSON del CLI y el Evento de actividad; `validate`, `resolveView`, `revealAt` e iconos (ADR 0002, 0003, 0005, 0007, 0008).
+ * salidas JSON del CLI, el Evento de actividad y el protocolo de `dev` (rutas, estado, Diferencia, Historial); `validate`, `resolveView`, `revealAt` e iconos (ADR 0002, 0003, 0005, 0007, 0008).
  * Invariantes: ids cualificados `a.b.c` definen la jerarquia; colores son nombres de Paleta, nunca hex; del Tema
  * solo conoce `name` y `palette`; una Vista solo selecciona Nodos.
  * Errores: `validate` devuelve issues ordenados y nunca lanza; solo se lanza por fallos de uso o internos.
@@ -94,7 +94,52 @@ export type { SalidaDeInspect } from './inspect';
 
 export { MOTIVOS_DE_RECHAZO, intencionDeOrdenSchema, intencionDePinSchema, intencionDeTemaSchema, intencionSchema } from './pin';
 export type { Intencion, IntencionDeOrden, IntencionDePin, IntencionDeTema, MotivoDeRechazo } from './pin';
-export { RUTA_DE_FUENTES, urlDeFuente } from './ruta-de-fuentes';
+export { esArchivoDeFuente, RUTA_DE_FUENTES, tipoDeFuente, urlDeFuente } from './ruta-de-fuentes';
+export {
+  archivoDeDevSchema,
+  archivoDeRuta,
+  archivosDeDevSchema,
+  CLASES_DE_PROPIEDAD,
+  claveDeElemento,
+  COMANDOS_DE_INSPECT,
+  diferenciaDeDevSchema,
+  diferenciaSchema,
+  diferenciaVacia,
+  elementoDeDiferenciaSchema,
+  entradaDelHistorialDeDevSchema,
+  estadoDeDevSchema,
+  estadoHttpDeRechazo,
+  etiquetaDeElemento,
+  historialDeDevSchema,
+  INICIO_DEL_HISTORIAL_DE_DEV,
+  issueDeDevSchema,
+  ORIGENES_DE_DIFERENCIA,
+  peticionDeEdicionesSchema,
+  peticionDeSaltoSchema,
+  rutaDeArchivo,
+  rutaDeInspect,
+  RUTAS_DE_DEV,
+  TIPOS_DE_CAMBIO,
+} from './dev';
+export type {
+  ArchivoDeDev,
+  ArchivosDeDev,
+  ClaseDePropiedad,
+  ComandoDeInspect,
+  Diferencia,
+  DiferenciaDeDev,
+  ElementoCambiado,
+  ElementoDeDiferencia,
+  EntradaDelHistorialDeDev,
+  EstadoDeDev,
+  HistorialDeDev,
+  IssueDeDev,
+  OrigenDeDiferencia,
+  PeticionDeEdiciones,
+  PropiedadCambiada,
+  TipoDeCambio,
+  TipoDeElementoDeDiferencia,
+} from './dev';
 
 export { CONTRACT_VERSION, issueSchema, salidaDeValidateJsonSchema, salidaDeValidateSchema } from './salida';
 export type { SalidaDeValidate } from './salida';

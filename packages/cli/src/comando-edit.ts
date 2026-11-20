@@ -15,7 +15,7 @@ import type { Aplicable } from 'sesion';
 import { leerConTemas, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import type { ResultadoConActividad } from './actividad';
-import { SALIDA_DE_RECHAZO } from './rechazos';
+import { CODIGO_DE_RECHAZO } from './rechazos';
 import type { RechazoDeEdicion } from './rechazos';
 import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
 
@@ -141,7 +141,7 @@ export async function editar(
 }
 
 function rechazado(r: RechazoDeEdicion, json: boolean): ResultadoDeEjecucion {
-  const { exitCode } = SALIDA_DE_RECHAZO[r.motivo];
+  const exitCode = CODIGO_DE_RECHAZO;
   if (!json) return { exitCode, stdout: '', stderr: `Edicion rechazada (${r.motivo}): ${r.mensaje}\n` };
   const salida = salidaDeEditSchema.parse({
     contractVersion: EDIT_CONTRACT_VERSION,
