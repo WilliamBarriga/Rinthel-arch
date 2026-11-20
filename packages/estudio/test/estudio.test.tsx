@@ -2,10 +2,12 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { ANCHO_DEL_EDITOR } from '../navegador/marco/pestanas';
 import { lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
 
 afterEach(cleanup);
+
+/** Ancho minimo que pide la isla izquierda al abrir el editor. */
+const ANCHO_DEL_EDITOR_PX = 560;
 
 const DSL = `specification {
   node servicio
@@ -92,7 +94,7 @@ describe('marco de la UI', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Codigo' }));
 
     const maximo = Number(ancho.getAttribute('aria-valuemax'));
-    await waitFor(() => expect(Number(ancho.getAttribute('aria-valuenow'))).toBe(Math.min(Math.max(antes, ANCHO_DEL_EDITOR), maximo)));
+    await waitFor(() => expect(Number(ancho.getAttribute('aria-valuenow'))).toBe(Math.min(Math.max(antes, ANCHO_DEL_EDITOR_PX), maximo)));
     expect(Number(ancho.getAttribute('aria-valuenow'))).toBeGreaterThan(antes);
   });
 });

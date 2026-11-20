@@ -4,7 +4,7 @@ import type { FuenteCanonica } from 'canonico';
 import { abrirSesion, diferenciar } from 'sesion';
 
 import type { DiferenciaDeDev, ElementoDeDiferenciaDeDev } from '../src/protocolo';
-import { proyectarDiferencia, unirDiferencia, visitarVista, vencerResaltado, RESALTADO_VACIO } from '../navegador/diferencia/proyeccion';
+import { proyectarDiferencia, unirDiferencia, visitarVista, vencerResaltado } from '../navegador/diferencia/proyeccion';
 
 const DSL = `specification {
   node servicio
@@ -119,11 +119,14 @@ view datos {
   });
 });
 
+/** Sin nada resaltado. */
+const VACIO = { lienzo: [], indice: [], temas: [], quitados: [] };
+
 const diferencia = (version: number, extra: Partial<DiferenciaDeDev> = {}): DiferenciaDeDev => ({ version, origen: 'externo', agregados: [], quitados: [], cambiados: [], ...extra });
 
 describe('resaltado de las Diferencias externas', () => {
   it('las rafagas se unen y cada elemento tocado reinicia su tiempo; al vencer deja de resaltarse', () => {
-    let r = unirDiferencia(RESALTADO_VACIO, diferencia(1, { agregados: [nodo('api')] }), { fuente, vista: 'general', ahora: 0, duracionMs: 5000 });
+    let r = unirDiferencia(VACIO, diferencia(1, { agregados: [nodo('api')] }), { fuente, vista: 'general', ahora: 0, duracionMs: 5000 });
     r = unirDiferencia(r, diferencia(2, { cambiados: [{ elemento: nodo('db'), propiedades: [{ nombre: 'title', clase: 'texto' }] }] }), { fuente, vista: 'general', ahora: 3000, duracionMs: 5000 });
     expect(r.lienzo.map((e) => e.elemento)).toEqual([nodo('api'), nodo('db')]);
     r = vencerResaltado(r, 5000);
@@ -133,7 +136,7 @@ describe('resaltado de las Diferencias externas', () => {
   });
 
   it('lo quitado dura hasta la siguiente Diferencia externa; el indice se limpia al visitar la Vista', () => {
-    let r = unirDiferencia(RESALTADO_VACIO, diferencia(1, { quitados: [nodo('cola')], agregados: [nodo('api')] }), { fuente, vista: 'secuencia', ahora: 0, duracionMs: 5000 });
+    let r = unirDiferencia(VACIO, diferencia(1, { quitados: [nodo('cola')], agregados: [nodo('api')] }), { fuente, vista: 'secuencia', ahora: 0, duracionMs: 5000 });
     expect(r.quitados).toEqual([nodo('cola')]);
     expect(r.indice).toEqual(['general', 'plegada']);
     r = visitarVista(r, 'general');

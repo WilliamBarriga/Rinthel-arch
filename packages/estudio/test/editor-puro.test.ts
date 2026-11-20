@@ -8,8 +8,7 @@ import { abrirSesion } from 'sesion';
 import { edicionesDesdeCambios } from '../navegador/editor/cambios';
 import { opcionesDeCompletado } from '../navegador/editor/completado';
 import { diagnosticosDe } from '../navegador/editor/diagnosticos';
-import { PALABRAS_CLAVE } from '../navegador/editor/palabras-clave';
-import { palabrasClaveDeGramatica } from '../scripts/palabras-clave';
+import { moduloDePalabrasClave, palabrasClaveDeGramatica } from '../scripts/palabras-clave';
 
 const GRAMATICA = readFileSync(new URL('../../dsl/src/gramatica/diagramas.langium', import.meta.url), 'utf8');
 
@@ -18,7 +17,7 @@ describe('palabras clave del resaltado', () => {
     const extraidas = palabrasClaveDeGramatica(GRAMATICA);
     expect(extraidas).toEqual(expect.arrayContaining(['specification', 'model', 'view', 'include', 'theme', 'interaction', 'ease-in-out']));
     expect(extraidas).not.toContain('->');
-    expect(PALABRAS_CLAVE).toEqual(extraidas);
+    expect(readFileSync(new URL('../navegador/editor/palabras-clave.ts', import.meta.url), 'utf8')).toBe(moduloDePalabrasClave(extraidas));
   });
 });
 

@@ -12,13 +12,13 @@ import type { ComponentesDeTema } from 'render';
 import { Leyenda, VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, PropsDeEstadoEnHash } from 'shell';
 
-import { usePropsDeDatos } from '../arranque';
 import { abrirCodigoEnBloque } from '../comandos/registro';
 import { ResaltadoDelLienzo, useDiferenciasExternas } from '../diferencia/resaltado';
 import type { PedidoDeEscritura } from '../escritura/escritura';
-import type { Dibujable } from '../geometrias';
 import { useEstudio } from '../marco/contexto';
 import { useFuentePrevisualizada, usePrevisualizacionDeTema } from '../temas/previsualizacion';
+import { usePropsDeDatos } from './datos-de-vista';
+import type { Dibujable } from './geometrias';
 
 export interface OpcionesDelLienzo {
   dibujable: Dibujable;

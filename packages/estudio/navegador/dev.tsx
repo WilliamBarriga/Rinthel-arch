@@ -1,10 +1,11 @@
-/** Entrada de la pagina de `dev`: arma las dependencias reales del navegador y monta `<Estudio>`. */
+/** Entrada de la pagina de `dev`: arma las dependencias reales del navegador y monta `<Estudio>` en `#raiz`. */
+import { createRoot } from 'react-dom/client';
+
 import { adaptadorDeWorker, hashDelNavegador } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
 
 import { EVENTOS_DE_DEV } from '../src/protocolo';
 import { RUTA_DEL_ESTUDIO } from '../src/rutas';
-import { montar } from './arranque';
 import type { DependenciasDelCliente } from './cliente';
 import { Estudio } from './estudio';
 
@@ -28,4 +29,4 @@ function layoutEnWorker(): AdaptadorDeLayout {
 const fetchDelNavegador: typeof fetch = (...args) => fetch(...args);
 const confirmar = (mensaje: string): boolean => window.confirm(mensaje);
 
-montar(<Estudio fetch={fetchDelNavegador} eventos={eventos} hash={hashDelNavegador(window)} layout={layoutEnWorker()} confirmar={confirmar} />);
+createRoot(document.getElementById('raiz') as HTMLElement).render(<Estudio fetch={fetchDelNavegador} eventos={eventos} hash={hashDelNavegador(window)} layout={layoutEnWorker()} confirmar={confirmar} />);

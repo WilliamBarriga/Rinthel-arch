@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { EstadoDeDev } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
-import type { GeometriasDeDev } from '../geometrias';
+import type { GeometriasDeDev } from '../lienzo/geometrias';
 
 /**
  * `vigente` da el ultimo estado recibido (el que usa la Escritura), aunque el render aun no lo haya visto. Un evento

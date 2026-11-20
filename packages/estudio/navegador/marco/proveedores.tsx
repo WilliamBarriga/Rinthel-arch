@@ -1,34 +1,35 @@
 /**
  * Proveedores del estudio: arman `useEstudio()`, el canal del editor y la previsualizacion de Tema, y envuelven todo lo
  * que se dibuja (marco, paneles y lienzo), asi que el lienzo llega al contexto como cualquier panel. Son duenos del
- * estado del chrome (islas, pestanas, dialogos, aviso) y lo pasan al marco con `children(chrome)`.
+ * estado del chrome (islas, pestanas, dialogos, aviso), que el marco lee con `useChrome()` (solo dentro de `marco/`).
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { FuenteCanonica } from 'canonico';
 import type { PropsDeEstadoEnHash } from 'shell';
 
 import type { EstadoDeDev } from '../../src/protocolo';
-import { useTamano } from '../arranque';
 import type { ClienteDeDev } from '../cliente';
 import { COMANDOS } from '../comandos/registro';
 import type { Plataforma } from '../comandos/teclas';
 import { useAtajos } from '../comandos/use-atajos';
 import { crearEscritura } from '../escritura/escritura';
 import { textoDeSitio } from '../sitio';
+import type { SitioDeCodigo } from '../sitio';
 import { ContextoDePrevisualizacion, useEstadoDePrevisualizacion } from '../temas/previsualizacion';
 import { ContextoDeEstudio, ContextoDelEditor } from './contexto';
-import type { CanalDelEditor, ContextoDelEstudio, DialogoDelEstudio, SitioDeCodigo } from './contexto';
+import type { CanalDelEditor, ContextoDelEstudio, DialogoDelEstudio } from './contexto';
 import type { LadoDeIsla } from './limites';
 import { useCaducidad } from './use-caducidad';
 import { useIsla } from './use-isla';
 import type { Isla } from './use-isla';
+import { useTamano } from './use-tamano';
 
 const DURACION_DEL_AVISO_MS = 6000;
 
 /** Estado de `dev` que llega por SSE (`use-estado-de-dev.ts`) y lo que no depende de la Vista. */
-export interface BaseDelEstudio {
+interface BaseDelEstudio {
   estado: EstadoDeDev | undefined;
   /** El ultimo estado recibido (el que usa la Escritura), aunque el render aun no lo haya visto. */
   vigente: () => EstadoDeDev | undefined;
@@ -40,12 +41,12 @@ export interface BaseDelEstudio {
 }
 
 /** Un objeto por ocurrencia: el mismo mensaje dos veces se avisa dos veces. */
-export interface FalloDelEstudio {
+interface FalloDelEstudio {
   mensaje: string;
 }
 
 /** Estado del chrome que el marco dibuja. */
-export interface ChromeDelMarco {
+interface ChromeDelMarco {
   islas: Record<LadoDeIsla, Isla>;
   pestanas: Record<LadoDeIsla, string>;
   elegirPestana(lado: LadoDeIsla, pestana: string): void;
@@ -58,12 +59,22 @@ export interface ChromeDelMarco {
   alMontarPortales(nodo: HTMLElement | null): void;
 }
 
-export interface PropsDeProveedores extends BaseDelEstudio {
+interface PropsDeProveedores extends BaseDelEstudio {
   /** Sin Fuente (el Workspace nunca compilo) no hay Vista ni Seleccion. */
   fuente?: FuenteCanonica;
   /** La Vista activa, la Seleccion y la ruta, que viven en el hash. */
   hashProps?: PropsDeEstadoEnHash;
-  children(chrome: ChromeDelMarco): ReactNode;
+  /** El marco (con el lienzo, si hay Fuente). */
+  children: ReactNode;
+}
+
+const ContextoDelChrome = createContext<ChromeDelMarco | undefined>(undefined);
+
+/** El estado del chrome que dibuja el marco. */
+export function useChrome(): ChromeDelMarco {
+  const chrome = useContext(ContextoDelChrome);
+  if (chrome === undefined) throw new Error('useChrome fuera de <ProveedoresDelEstudio>');
+  return chrome;
 }
 
 /** El motivo visible por el que no hay Gestos (el primer error del estado), o `undefined`. */
@@ -154,7 +165,9 @@ export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plata
   return (
     <ContextoDeEstudio.Provider value={contexto}>
       <ContextoDelEditor.Provider value={canalDelEditor}>
-        <ContextoDePrevisualizacion.Provider value={previsualizacion}>{children(chrome)}</ContextoDePrevisualizacion.Provider>
+        <ContextoDePrevisualizacion.Provider value={previsualizacion}>
+          <ContextoDelChrome.Provider value={chrome}>{children}</ContextoDelChrome.Provider>
+        </ContextoDePrevisualizacion.Provider>
       </ContextoDelEditor.Provider>
     </ContextoDeEstudio.Provider>
   );

@@ -6,7 +6,6 @@ import { EditorView } from '@codemirror/view';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { DURACION_DEL_AVISO_MS } from '../navegador/editor/panel-de-codigo';
 import { abrirPestana, anotarPeticiones, DSL_BASICO, lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
 
 afterEach(() => {
@@ -291,7 +290,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     expect(vista.state.doc.toString()).toBe(DSL.replace('"Base de datos"', '"Postgres"'));
     expect(dev.workspace.texto('main.dg')).toBe(DSL.replace('"Base de datos"', '"Postgres"'));
 
-    act(() => vi.advanceTimersByTime(DURACION_DEL_AVISO_MS - 1));
+    act(() => vi.advanceTimersByTime(15_000 - 1));
     expect(screen.queryByRole('alert', { name: 'Escritura externa' })).not.toBeNull();
     act(() => vi.advanceTimersByTime(1));
     expect(screen.queryByRole('alert', { name: 'Escritura externa' })).toBeNull();

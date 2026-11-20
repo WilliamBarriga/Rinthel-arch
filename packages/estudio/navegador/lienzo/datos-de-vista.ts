@@ -1,19 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { ReactElement } from 'react';
-import { createRoot } from 'react-dom/client';
+/** Props de datos de `VistaInteractiva` para la Vista activa: iconos, Geometrias cacheadas, Tema y tamano. */
+import { useMemo } from 'react';
 
 import { hidratarIconos } from 'canonico';
 import type { FuenteCanonica, Geometria, IconProvider, Tema } from 'canonico';
 
-export function useTamano(): { width: number; height: number } {
-  const [tamano, setTamano] = useState({ width: window.innerWidth, height: window.innerHeight });
-  useEffect(() => {
-    const alCambiar = (): void => setTamano({ width: window.innerWidth, height: window.innerHeight });
-    window.addEventListener('resize', alCambiar);
-    return () => window.removeEventListener('resize', alCambiar);
-  }, []);
-  return tamano;
-}
+import { useTamano } from '../marco/use-tamano';
 
 export interface DatosDeVista {
   fuente: FuenteCanonica;
@@ -36,8 +27,4 @@ export function usePropsDeDatos(
   const nombreDelTema = fuente.views.find(({ id }) => id === vista)?.theme ?? geometrias[vista]?.theme;
   const theme = fuente.themes.find(({ name }) => name === nombreDelTema) ?? fuente.themes[0];
   return { icons, cachedGeometries, theme, ...useTamano() };
-}
-
-export function montar(app: ReactElement): void {
-  createRoot(document.getElementById('raiz') as HTMLElement).render(app);
 }

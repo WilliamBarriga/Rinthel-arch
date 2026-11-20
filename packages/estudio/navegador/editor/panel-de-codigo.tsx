@@ -24,10 +24,11 @@ import type { ClienteDeDev } from '../cliente';
 import { comandoPorId } from '../comandos/registro';
 import { aplicarFixes, fixDelIssue } from '../issues/aplicar-fix';
 import { useCanalDelEditor, useEstudio } from '../marco/contexto';
-import type { ContextoDelEstudio, SitioDeCodigo } from '../marco/contexto';
+import type { ContextoDelEstudio } from '../marco/contexto';
 import { useCaducidad } from '../marco/use-caducidad';
 import { useLecturaPorVersion } from '../marco/use-lectura-por-version';
 import { sitioDeSalida } from '../sitio';
+import type { SitioDeCodigo } from '../sitio';
 import { completarDsl } from './completado';
 import { diagnosticosDe } from './diagnosticos';
 import type { FixDeIssue } from './diagnosticos';
@@ -42,7 +43,7 @@ export { desdeElDisco };
 /** Cuanto quedan marcadas las lineas que trajo el disco. */
 export const DURACION_DE_LAS_MARCAS_MS = 4000;
 /** Cuanto se ofrece recuperar lo que perdio el buffer en un solape. */
-export const DURACION_DEL_AVISO_MS = 15000;
+const DURACION_DEL_AVISO_MS = 15000;
 
 const TEXTO_DEL_GUARDADO: Record<EstadoDelGuardado['tipo'], string> = { guardado: 'Guardado', 'sin-guardar': 'Sin guardar', guardando: 'Guardando...', error: 'No se guardo' };
 

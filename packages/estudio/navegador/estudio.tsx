@@ -7,7 +7,6 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 
-import type { ComponentesDeTema } from 'render';
 import { deserializarEstado, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeHash, AdaptadorDeLayout, Navegacion, PropsDeEstadoEnHash } from 'shell';
 
@@ -15,14 +14,13 @@ import { crearClienteDeDev } from './cliente';
 import type { DependenciasDelCliente } from './cliente';
 import { plataformaDe } from './comandos/teclas';
 import type { Plataforma } from './comandos/teclas';
-import { crearGeometriasDeDev } from './geometrias';
-import type { Dibujable, GeometriasDeDev } from './geometrias';
-import { hashDeEstudio } from './hash-de-estudio';
 import { historialDelCliente } from './historial/historial-visible';
+import { crearGeometriasDeDev } from './lienzo/geometrias';
+import type { Dibujable, GeometriasDeDev } from './lienzo/geometrias';
+import { hashDeEstudio } from './lienzo/hash-de-estudio';
 import { useLienzoDelEstudio } from './lienzo/lienzo';
 import { Marco } from './marco/marco';
 import { ProveedoresDelEstudio } from './marco/proveedores';
-import type { BaseDelEstudio, ChromeDelMarco, FalloDelEstudio } from './marco/proveedores';
 import { useEstadoDeDev } from './marco/use-estado-de-dev';
 import { useComponentes } from './use-componentes';
 
@@ -58,42 +56,48 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
     [cliente, hash],
   );
   // Lo que falla fuera de los proveedores (estado malformado, carga de Componentes) se avisa dentro de ellos.
-  const [fallo, setFallo] = useState<FalloDelEstudio>();
+  const [fallo, setFallo] = useState<{ mensaje: string }>();
   const reportar = useCallback((mensaje: string) => setFallo({ mensaje }), []);
   const { estado, vigente, recibir } = useEstadoDeDev(cliente, geometrias, reportar);
   const dibujable = useSyncExternalStore(geometrias.suscribir, geometrias.dibujable);
   const componentes = useComponentes(cliente, estado?.version, confirmar, reportar);
   const plataforma = props.plataforma ?? plataformaDe(typeof navigator === 'undefined' ? undefined : navigator);
-  const base: BaseDelEstudio = { estado, vigente, recibir, cliente, plataforma, fallo };
+  const base = { estado, vigente, recibir, cliente, plataforma, fallo };
 
-  if (dibujable === undefined) return <ProveedoresDelEstudio {...base}>{(chrome) => <Marco chrome={chrome} navegacion={undefined} lienzo={null} />}</ProveedoresDelEstudio>;
-  return <ConFuente base={base} dibujable={dibujable} hash={hash} geometrias={geometrias} layout={layout} componentes={componentes} />;
-}
-
-interface PropsConFuente {
-  base: BaseDelEstudio;
-  dibujable: Dibujable;
-  hash: AdaptadorDeHash;
-  geometrias: GeometriasDeDev;
-  layout: AdaptadorDeLayout;
-  componentes: ComponentesDeTema | undefined;
-}
-
-/** La Vista activa, la Seleccion y la ruta viven en el hash; los proveedores las dan al lienzo y a los paneles. */
-function ConFuente({ base, dibujable, hash, geometrias, layout, componentes }: PropsConFuente): ReactElement {
-  const fuente = dibujable.estado.fuente;
-  const hashProps = useEstadoEnHash({ source: fuente, hash, defaultView: dibujable.estado.vistas[0] ?? '', camera: true });
-  useEffect(() => geometrias.activar(hashProps.view), [geometrias, hashProps.view]);
+  if (dibujable === undefined)
+    return (
+      <ProveedoresDelEstudio {...base}>
+        <Marco navegacion={undefined} lienzo={null} />
+      </ProveedoresDelEstudio>
+    );
   return (
-    <ProveedoresDelEstudio {...base} fuente={fuente} hashProps={hashProps}>
-      {(chrome) => <MarcoConLienzo chrome={chrome} dibujable={dibujable} hashProps={hashProps} layout={layout} componentes={componentes} />}
-    </ProveedoresDelEstudio>
+    <VistaEnHash dibujable={dibujable} hash={hash} geometrias={geometrias}>
+      {(hashProps) => (
+        <ProveedoresDelEstudio {...base} fuente={dibujable.estado.fuente} hashProps={hashProps}>
+          <MarcoConLienzo dibujable={dibujable} hashProps={hashProps} layout={layout} componentes={componentes} />
+        </ProveedoresDelEstudio>
+      )}
+    </VistaEnHash>
   );
 }
 
-function MarcoConLienzo({ chrome, ...opciones }: { chrome: ChromeDelMarco } & Parameters<typeof useLienzoDelEstudio>[0]): ReactElement {
+interface PropsDeVistaEnHash {
+  dibujable: Dibujable;
+  hash: AdaptadorDeHash;
+  geometrias: GeometriasDeDev;
+  children(hashProps: PropsDeEstadoEnHash): ReactElement;
+}
+
+/** La Vista activa, la Seleccion y la ruta viven en el hash; los proveedores las dan al lienzo y a los paneles. */
+function VistaEnHash({ dibujable, hash, geometrias, children }: PropsDeVistaEnHash): ReactElement {
+  const hashProps = useEstadoEnHash({ source: dibujable.estado.fuente, hash, defaultView: dibujable.estado.vistas[0] ?? '', camera: true });
+  useEffect(() => geometrias.activar(hashProps.view), [geometrias, hashProps.view]);
+  return children(hashProps);
+}
+
+function MarcoConLienzo(opciones: Parameters<typeof useLienzoDelEstudio>[0]): ReactElement {
   const { lienzo, leyenda } = useLienzoDelEstudio(opciones);
-  return <Marco chrome={chrome} navegacion={navegacionDesde(opciones.hashProps)} lienzo={lienzo} leyenda={leyenda} />;
+  return <Marco navegacion={navegacionDesde(opciones.hashProps)} lienzo={lienzo} leyenda={leyenda} />;
 }
 
 /** Migas montadas fuera del lienzo sobre la ruta controlada por el hash. */

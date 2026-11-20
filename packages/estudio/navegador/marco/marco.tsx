@@ -13,22 +13,21 @@ import { useGestoEnLienzo } from '../lienzo/gesto';
 import { useEstudio } from './contexto';
 import { IslaLateral } from './isla';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS, PILDORAS_DE_LA_BARRA } from './pestanas';
-import type { ChromeDelMarco } from './proveedores';
+import { useChrome } from './proveedores';
 
 const Buscador = lazy(() => import('../comandos/buscador').then((m) => ({ default: m.Buscador })));
 const Ayuda = lazy(() => import('../comandos/ayuda').then((m) => ({ default: m.Ayuda })));
 
-export interface PropsDelMarco {
-  chrome: ChromeDelMarco;
+interface PropsDelMarco {
   /** Migas sobre la ruta del hash; `undefined` sin Fuente. */
   navegacion: Navegacion | undefined;
   lienzo: ReactNode;
   leyenda?: ReactNode;
 }
 
-export function Marco({ chrome, navegacion, lienzo, leyenda }: PropsDelMarco): ReactElement {
+export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElement {
   const { motivoSinGestos } = useEstudio();
-  const { islas, pestanas, elegirPestana, dialogo, cargados, cerrarDialogo, aviso, alMontarPortales } = chrome;
+  const { islas, pestanas, elegirPestana, dialogo, cargados, cerrarDialogo, aviso, alMontarPortales } = useChrome();
   const gesto = useGestoEnLienzo();
   const solido = islas.izquierda.arrastrando || islas.derecha.arrastrando || gesto.enGesto;
 
