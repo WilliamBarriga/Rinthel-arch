@@ -1,13 +1,16 @@
 /**
  * Galeria de Temas: los Temas de la Fuente (los del Workspace, los de `--theme-path` y los incorporados) en un `listbox`.
  * Elegir uno lo previsualiza en la Vista activa sin escribir y muestra su cadena `extends`, su Paleta y sus Capas (via
- * `inspect tema`). "Fijar" escribe `theme` en esa Vista con la Intencion `fijar-tema`; "Quitar" la deja sin Tema fijado.
+ * `inspect tema`). Los Temas cambiados por fuera llevan la marca de cambio externo hasta dejar la galeria. "Fijar" escribe `theme` en esa Vista con la Intencion `fijar-tema`; "Quitar" la deja sin Tema fijado.
  */
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import type { SalidaDeInspect } from 'canonico';
 
+import { diferenciasDelCliente } from '../diferencia/diferencias';
+import { verGaleria } from '../diferencia/proyeccion';
+import { MarcaExterna, useMarcasExternas } from '../diferencia/resaltado';
 import { useEstudio } from '../marco/contexto';
 
 type SalidaDeTema = Extract<SalidaDeInspect, { comando: 'tema' }>['tema'];
@@ -18,6 +21,9 @@ const idDeOpcion = (tema: string): string => `ui-tema-${tema}`;
 export function GaleriaDeTemas(): ReactElement {
   const { fuente, vista, estado, cliente, temaPrevio, previsualizarTema, avisar } = useEstudio();
   const [elegido, setElegido] = useState<string>();
+  const marcas = useMarcasExternas(cliente);
+  // Los Temas cambiados por fuera quedan marcados mientras se ve la galeria; al dejarla se dan por vistos.
+  useEffect(() => () => diferenciasDelCliente(cliente).actualizar(verGaleria), [cliente]);
   if (fuente === undefined) return <p className="ui-tenue">El Workspace aun no compila: no hay Temas que mostrar.</p>;
 
   const fijado = fuente.views.find(({ id }) => id === vista)?.theme;
@@ -48,6 +54,7 @@ export function GaleriaDeTemas(): ReactElement {
         {fuente.themes.map(({ name }) => (
           <div key={name} id={idDeOpcion(name)} role="option" aria-label={name} aria-selected={name === elegido} className="ui-indice-vista" onClick={() => elegir(name)}>
             <span className="ui-mono">{name}</span>
+            {marcas.temas.has(name) && <MarcaExterna />}
             {name === fijado && <span className="ui-enlaces">fijado</span>}
             {name === temaPrevio && <span className="ui-enlaces">previsualizando</span>}
           </div>

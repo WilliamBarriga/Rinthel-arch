@@ -5,6 +5,7 @@
 import { useMemo } from 'react';
 import type { KeyboardEvent, ReactElement } from 'react';
 
+import { MarcaExterna, useMarcasExternas } from '../diferencia/resaltado';
 import { useEstudio } from '../marco/contexto';
 import { indiceDeVistas, ordenDelIndice } from './indice';
 import type { EntradaDelIndice } from './indice';
@@ -15,7 +16,8 @@ const descripcion = ({ enlaces, entrantes }: EntradaDelIndice): string =>
 const idDeOpcion = (vista: string): string => `ui-vista-${vista}`;
 
 export function PanelDeVistas(): ReactElement {
-  const { fuente, vista: activa, irAVista } = useEstudio();
+  const { fuente, vista: activa, irAVista, cliente } = useEstudio();
+  const marcas = useMarcasExternas(cliente);
   const grupos = useMemo(() => (fuente === undefined ? [] : indiceDeVistas(fuente)), [fuente]);
   const orden = useMemo(() => ordenDelIndice(grupos), [grupos]);
   if (fuente === undefined) return <p className="ui-tenue">El Workspace aun no compila: no hay Vistas que mostrar.</p>;
@@ -43,6 +45,7 @@ export function PanelDeVistas(): ReactElement {
             return (
               <div key={entrada.id} id={idDeOpcion(entrada.id)} role="option" aria-label={entrada.id} aria-selected={entrada.id === activa} {...(texto !== '' && { 'aria-describedby': idDescripcion })} className="ui-indice-vista" onClick={() => entrada.id !== activa && irAVista(entrada.id)}>
                 <span className="ui-mono">{entrada.id}</span>
+                {marcas.vistas.has(entrada.id) && <MarcaExterna />}
                 {texto !== '' && (
                   <span id={idDescripcion} className="ui-enlaces">
                     {texto}
