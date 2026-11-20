@@ -1,17 +1,17 @@
 /**
  * `devEnMemoria`: el servidor de `dev` sin red, para probar la pagina en jsdom. La Sesion, los issues, las ediciones
  * con `visto` y el Historial son reales (`sesion` sobre `workspaceEnMemoria`); solo el transporte es falso: `fetch`
- * responde las rutas del protocolo y `eventos` empuja `event: estado` como `/eventos`.
+ * responde las rutas del protocolo y `eventos` empuja `event: estado` y `event: actividad` como `/eventos`.
  * Invariantes: cumple `probarContratoDeDev` (la misma suite corre contra el `dev` real); una escritura (propia o
  * `editarFuera`) recompila y empuja un estado con `version` mayor; las versiones viejas se olvidan como en `dev`.
  * Errores: nunca lanza por una peticion; responde el estado HTTP que daria `dev`.
  */
-import { combineIconProviders, genericIcons, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
-import type { Issue, MotivoDeRechazo } from 'canonico';
+import { combineIconProviders, crearLectorDeActividad, genericIcons, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
+import type { EventoDeActividad, Issue, MotivoDeRechazo } from 'canonico';
 import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer, hashDeContenido, rehacer, workspaceEnMemoria } from 'sesion';
 import type { Historial, Sesion, WorkspaceEnMemoria } from 'sesion';
 
-import type { EstadoDeDev, NombreDeEventoDeDev } from './protocolo';
+import type { ActividadDeDev, EstadoDeDev, NombreDeEventoDeDev } from './protocolo';
 
 type Archivos = Readonly<Record<string, string>>;
 
@@ -20,6 +20,8 @@ export interface DevEnMemoria {
   eventos: (url: string, alEvento: (nombre: string, datos: string) => void) => () => void;
   /** Escritura ajena (agente u otro editor); `undefined` borra. Recompila y empuja el estado. */
   editarFuera(ruta: string, texto: string | undefined): void;
+  /** Anexa texto al Registro de actividad (como el CLI de otro proceso) y empuja los Eventos nuevos como `actividad`. */
+  anexarActividad(texto: string): void;
   /** Espera a que termine la recompilacion en curso, si la hay. */
   asentado(): Promise<void>;
   /** El Workspace en memoria, para leer lo que quedo escrito. */
@@ -27,6 +29,8 @@ export interface DevEnMemoria {
   cerrar(): Promise<void>;
 }
 
+/** Igual que `EVENTOS_PREVIOS` de `dev`. */
+const EVENTOS_PREVIOS = 50;
 /** Igual que `VERSIONES_GUARDADAS` de `dev`. */
 const VERSIONES_GUARDADAS = 16;
 const RAIZ = '/memoria';
@@ -42,7 +46,8 @@ const hashesDe = (archivos: Archivos): Record<string, string> => Object.fromEntr
 
 const respuesta = (status: number, cuerpo: unknown): Response => new Response(JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
 
-export async function devEnMemoria({ propios, temas }: { propios: Archivos; temas?: Archivos }): Promise<DevEnMemoria> {
+/** `actividad`: texto inicial de `.diagrams/actividad.jsonl`. */
+export async function devEnMemoria({ propios, temas, actividad: registroInicial }: { propios: Archivos; temas?: Archivos; actividad?: string }): Promise<DevEnMemoria> {
   const workspace = workspaceEnMemoria({ propios, ...(temas !== undefined && { temas }) });
   let version = 0;
   let actual: Sesion = abrirSesion(workspace.leer().disco);
@@ -52,6 +57,9 @@ export async function devEnMemoria({ propios, temas }: { propios: Archivos; tema
   const versiones = new Map<number, Record<string, string>>([[0, hashesDe(workspace.leer().disco)]]);
   let historial: Historial | undefined;
   const oyentes = new Set<(nombre: NombreDeEventoDeDev, datos: string) => void>();
+  const leerActividad = crearLectorDeActividad();
+  let registro = registroInicial;
+  let actividad: EventoDeActividad[] = leerActividad(registro).slice(-EVENTOS_PREVIOS);
 
   const estado = (): EstadoDeDev => {
     const fuente = buena?.sesion.fuente;
@@ -174,9 +182,11 @@ export async function devEnMemoria({ propios, temas }: { propios: Archivos; tema
     eventos(url, alEvento) {
       if (url !== '/eventos') return () => undefined;
       oyentes.add(alEvento);
-      // Como `dev`: al conectar llega el estado vigente.
+      // Como `dev`: al conectar llegan el estado vigente y los ultimos Eventos de actividad.
       queueMicrotask(() => {
-        if (oyentes.has(alEvento)) alEvento('estado', JSON.stringify(estado()));
+        if (!oyentes.has(alEvento)) return;
+        alEvento('estado', JSON.stringify(estado()));
+        alEvento('actividad', JSON.stringify({ previos: true, eventos: actividad } satisfies ActividadDeDev));
       });
       return () => oyentes.delete(alEvento);
     },
@@ -184,6 +194,13 @@ export async function devEnMemoria({ propios, temas }: { propios: Archivos; tema
       if (texto === undefined) workspace.borrar(ruta);
       else workspace.escribir(ruta, texto);
       pendiente = enCola(recompilar);
+    },
+    anexarActividad(texto) {
+      registro = (registro ?? '') + texto;
+      const nuevos = leerActividad(registro);
+      if (nuevos.length === 0) return;
+      actividad = [...actividad, ...nuevos].slice(-EVENTOS_PREVIOS);
+      emitir('actividad', { previos: false, eventos: nuevos } satisfies ActividadDeDev);
     },
     asentado: () => pendiente.then(() => cola).then(() => undefined),
     workspace,

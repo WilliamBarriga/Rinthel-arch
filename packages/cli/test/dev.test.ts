@@ -1,9 +1,12 @@
 /** Humo del enrutador HTTP de `dev`; el comportamiento del estado vivo se prueba en `workspace-vivo.test.ts`. */
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+
+import { eventosSobreFetch } from 'estudio/contrato';
+import type { ActividadDeDev } from 'estudio/protocolo';
 
 import { iniciarDev } from 'cli';
 import { leerWorkspace as leerReal } from '../src/workspace';
@@ -374,5 +377,37 @@ describe('dev: edicion, deshacer y rehacer (ADR 0005, ADR 0007)', () => {
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ ok: false, mensaje: 'disco lleno' });
     expect(env.texto('main.dg')).toBe(BASE);
+  });
+});
+
+describe('dev: Registro de actividad en disco', () => {
+  it('observa .diagrams/actividad.jsonl aparte del Workspace: reproduce lo previo al conectar y empuja lo anexado', async () => {
+    const raiz = mkdtempSync(join(tmpdir(), 'rinthel-dev-actividad-'));
+    carpetas.push(raiz);
+    writeFileSync(join(raiz, 'main.dg'), BASE);
+    mkdirSync(join(raiz, '.diagrams'));
+    const evento = (pid: number) => ({ contractVersion: 1, ts: '2026-11-19T10:00:00.000Z', pid, comando: 'validate', args: [], exitCode: 0, duracionMs: 1 });
+    writeFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), `${JSON.stringify(evento(1))}\n`);
+    const servidor = await iniciarDev({ workspace: raiz, observar: () => () => undefined, compilarCodigo: () => ({ componentes: {}, issues: [], bundle: 'return {};' }), puerto: 0 });
+    abiertos.push(servidor);
+    const fetchDelServidor: typeof fetch = (ruta, init) => fetch(new URL(String(ruta).replace(/^\//, ''), servidor.url), init);
+
+    const recibidos = await new Promise<ActividadDeDev[]>((ok) => {
+      const lista: ActividadDeDev[] = [];
+      const cerrar = eventosSobreFetch(fetchDelServidor)('/eventos', (nombre, datos) => {
+        if (nombre !== 'actividad') return;
+        lista.push(JSON.parse(datos) as ActividadDeDev);
+        if (lista.length === 1) appendFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), `${JSON.stringify(evento(2))}\n`);
+        else {
+          cerrar();
+          ok(lista);
+        }
+      });
+    });
+
+    expect(recibidos.map((a) => [a.previos, a.eventos.map((e) => e.pid)])).toEqual([
+      [true, [1]],
+      [false, [2]],
+    ]);
   });
 });

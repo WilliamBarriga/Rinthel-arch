@@ -86,7 +86,7 @@ export type { Codigo } from './codigos';
 export { EDIT_CONTRACT_VERSION, edicionDeTextoSchema, edicionesPedidasSchema, salidaDeEditJsonSchema, salidaDeEditSchema } from './edit';
 export type { SalidaDeEdit } from './edit';
 
-export { ACTIVIDAD_CONTRACT_VERSION, COMANDOS_CON_ACTIVIDAD, eventoDeActividadSchema } from './actividad';
+export { ACTIVIDAD_CONTRACT_VERSION, COMANDOS_CON_ACTIVIDAD, crearLectorDeActividad, eventoDeActividadSchema } from './actividad';
 export type { EventoDeActividad, ObjetivoDeActividad } from './actividad';
 
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';

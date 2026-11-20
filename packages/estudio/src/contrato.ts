@@ -7,7 +7,9 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import type { EstadoDeDev } from './protocolo';
+import type { EventoDeActividad } from 'canonico';
+
+import type { ActividadDeDev, EstadoDeDev } from './protocolo';
 import { crearLectorSse } from './sse';
 
 export { devEnMemoria } from './dev-en-memoria';
@@ -25,10 +27,13 @@ export interface DevDePrueba {
   eventos: (url: string, alEvento: (nombre: string, datos: string) => void) => () => void;
   /** Escritura fuera de `dev` (un agente u otro editor); `undefined` borra. */
   editarFuera(ruta: string, texto: string | undefined): void;
+  /** Anexa texto a `.diagrams/actividad.jsonl`, como el CLI de otro proceso. */
+  anexarActividad(texto: string): void;
   cerrar(): Promise<void>;
 }
 
-export type CrearDev = (contenido: { propios: ArchivosDelWorkspace }) => Promise<DevDePrueba>;
+/** `actividad`: texto inicial de `.diagrams/actividad.jsonl` (sin el, el registro no existe). */
+export type CrearDev = (contenido: { propios: ArchivosDelWorkspace; actividad?: string }) => Promise<DevDePrueba>;
 
 /** `eventos` sobre un `fetch` que entrega el cuerpo en streaming (Node 18+); la pagina usa `EventSource`. */
 export function eventosSobreFetch(fetchFn: typeof fetch): DevDePrueba['eventos'] {
@@ -97,9 +102,41 @@ function esperarEstado(dev: DevDePrueba, basta: (e: EstadoDeDev) => boolean, alA
   });
 }
 
+/** Junta los `event: actividad` que llegan por `/eventos` hasta que `basta` los acepte. */
+function esperarActividad(dev: DevDePrueba, basta: (recibidos: ActividadDeDev[]) => boolean, alAbrir?: () => void): Promise<ActividadDeDev[]> {
+  return new Promise((ok) => {
+    const recibidos: ActividadDeDev[] = [];
+    let abierto = false;
+    const cerrar = dev.eventos('/eventos', (nombre, datos) => {
+      if (nombre === 'estado' && !abierto) {
+        abierto = true;
+        alAbrir?.();
+      }
+      if (nombre !== 'actividad') return;
+      recibidos.push(JSON.parse(datos) as ActividadDeDev);
+      if (basta(recibidos)) {
+        setTimeout(cerrar, 0);
+        ok(recibidos);
+      }
+    });
+  });
+}
+
+const eventoDePrueba = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
+  contractVersion: 1,
+  ts: '2026-11-19T10:00:00.000Z',
+  pid,
+  comando: 'edit',
+  args: ['--workspace', '.', '--intent', '{}'],
+  exitCode: 0,
+  duracionMs: 4,
+  ...extra,
+});
+const lineaDe = (evento: EventoDeActividad): string => `${JSON.stringify(evento)}\n`;
+
 export function probarContratoDeDev(crear: CrearDev): void {
-  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>): Promise<T> => {
-    const dev = await crear({ propios });
+  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, actividad?: string): Promise<T> => {
+    const dev = await crear({ propios, ...(actividad !== undefined && { actividad }) });
     try {
       return await prueba(dev);
     } finally {
@@ -140,6 +177,31 @@ export function probarContratoDeDev(crear: CrearDev): void {
           () => dev.editarFuera('main.dg', DSL.replace('"API"', '"API nueva"')),
         );
         expect(nuevo.fuente?.model.nodes.find((n) => n.id === 'api')?.title).toBe('API nueva');
+      });
+    });
+
+    it('/eventos reproduce al conectar los ultimos 50 Eventos de actividad (previos) sin las lineas rotas', async () => {
+      const registro = Array.from({ length: 55 }, (_, i) => lineaDe(eventoDePrueba(i))).join('') + '{roto\n';
+      await con(
+        { 'main.dg': DSL },
+        async (dev) => {
+          const [previos] = await esperarActividad(dev, (r) => r.length > 0);
+          expect(previos?.previos).toBe(true);
+          expect(previos?.eventos.map((e) => e.pid)).toEqual(Array.from({ length: 50 }, (_, i) => i + 5));
+        },
+        registro,
+      );
+    });
+
+    it('un Evento anexado al registro llega como event: actividad en vivo', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const nuevo = eventoDePrueba(7, { agente: 'claude', objetivo: { vista: 'datos' } });
+        const recibidos = await esperarActividad(
+          dev,
+          (r) => r.some((a) => !a.previos),
+          () => dev.anexarActividad(`no es json\n${lineaDe(nuevo)}`),
+        );
+        expect(recibidos.filter((a) => !a.previos)).toEqual([{ previos: false, eventos: [nuevo] }]);
       });
     });
 

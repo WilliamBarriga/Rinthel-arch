@@ -7,9 +7,11 @@
  * rechazan con `hash-desactualizado` y el Historial vuelve a empezar desde el disco.
  * Errores: rechazos como datos; los fallos de I/O al escribir se propagan tras revertir; los de lectura al recompilar
  * se ignoran hasta el siguiente cambio; `abrirWorkspaceVivo` lanza si la lectura inicial falla.
+ * Registro de actividad: si el puerto lo da, se leen los ultimos `EVENTOS_PREVIOS` al abrir y cada aviso de su observador
+ * (con debounce) empuja los Eventos nuevos; un fallo de lectura o una linea rota se ignoran.
  */
-import { combineIconProviders, genericIcons, serializarIconos, workspaceIcons } from 'canonico';
-import type { GeometriaCacheada, Intencion, Issue, MotivoDeRechazo } from 'canonico';
+import { combineIconProviders, crearLectorDeActividad, genericIcons, serializarIconos, workspaceIcons } from 'canonico';
+import type { EventoDeActividad, GeometriaCacheada, Intencion, Issue, MotivoDeRechazo } from 'canonico';
 import type { EstadoDeDev, TipoDeCambio } from 'estudio/protocolo';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer as deshacerHistorial, hashDeContenido, rehacer as rehacerHistorial } from 'sesion';
@@ -32,7 +34,20 @@ export interface PuertoDelWorkspaceVivo extends PuertoDeWorkspace {
   recursos(): Record<string, string> | undefined;
   /** Devuelve como dejar de observar. */
   observar(alCambiar: () => void): () => void;
+  /** Registro de actividad (`.diagrams/actividad.jsonl`) con su observador propio; sin el, no hay actividad. */
+  actividad?: RegistroDeActividad;
 }
+
+/** El watcher del Workspace ignora carpetas ocultas: el registro se observa aparte. */
+export interface RegistroDeActividad {
+  /** Texto entero del registro, o `undefined` si no existe. */
+  leer(): string | undefined;
+  /** Devuelve como dejar de observar. */
+  observar(alCambiar: () => void): () => void;
+}
+
+/** Eventos de actividad que `dev` reproduce al conectar. */
+export const EVENTOS_PREVIOS = 50;
 
 /** `programar` devuelve como cancelar. */
 export interface Reloj {
@@ -81,6 +96,10 @@ export interface WorkspaceVivo {
   geometria(vista: string): Promise<GeometriaCacheada | undefined>;
   /** `inspect` sobre la ultima Sesion buena; `undefined` si el Workspace nunca compilo. */
   consultar(consulta: ConsultaDeInspect): Respuesta | undefined;
+  /** Los ultimos `EVENTOS_PREVIOS` Eventos de actividad leidos (los del arranque y los que llegaron despues). */
+  actividad(): readonly EventoDeActividad[];
+  /** Recibe los Eventos nuevos del registro, en orden; devuelve como dejar de escuchar. */
+  suscribirActividad(alEvento: (eventos: EventoDeActividad[]) => void): () => void;
   /** Relee el puerto y recompila ya (sin esperar al debounce). */
   recargar(): Promise<void>;
   codigo(): CodigoDelWorkspace;
@@ -211,6 +230,30 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     }, debounceMs);
   });
 
+  // Registro de actividad: lectura incremental tolerante (lineas rotas, archivo acortado o rotado), con su propio debounce.
+  const leerActividad = crearLectorDeActividad();
+  const leerRegistro = (): EventoDeActividad[] => {
+    try {
+      return leerActividad(puerto.actividad?.leer());
+    } catch {
+      return []; // el siguiente aviso reintenta
+    }
+  };
+  let actividad = leerRegistro().slice(-EVENTOS_PREVIOS);
+  const oyentesDeActividad = new Set<(eventos: EventoDeActividad[]) => void>();
+  let cancelarActividad: (() => void) | undefined;
+  const dejarDeObservarActividad =
+    puerto.actividad?.observar(() => {
+      cancelarActividad?.();
+      cancelarActividad = reloj.programar(() => {
+        cancelarActividad = undefined;
+        const nuevos = leerRegistro();
+        if (nuevos.length === 0) return;
+        actividad = [...actividad, ...nuevos].slice(-EVENTOS_PREVIOS);
+        for (const oyente of [...oyentesDeActividad]) oyente(nuevos);
+      }, debounceMs);
+    }) ?? (() => undefined);
+
   let cola: Promise<unknown> = Promise.resolve();
   const enCola = <T>(tarea: () => Promise<T>): Promise<T> => {
     const resultado = cola.then(tarea, tarea);
@@ -314,6 +357,11 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     rehacer: () => restaurar(rehacerHistorial, 'nada-que-rehacer'),
     geometria: (vista) => buena?.sesion.geometria(vista) ?? Promise.resolve(undefined),
     consultar: (consulta) => (buena === undefined ? undefined : consultarInspect(buena.sesion, consulta)),
+    actividad: () => actividad,
+    suscribirActividad(alEvento) {
+      oyentesDeActividad.add(alEvento);
+      return () => oyentesDeActividad.delete(alEvento);
+    },
     recargar: () => recompilar(),
     codigo: () => ({ componentes: [...new Set((buena?.sesion.fuente?.themes ?? []).flatMap((tema) => componentesDeTema(tema)))].sort(), confiado, bundle: codigo.bundle }),
     confiar() {
@@ -322,6 +370,8 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     cerrar() {
       cancelarPendiente();
       dejarDeObservar();
+      cancelarActividad?.();
+      dejarDeObservarActividad();
     },
   };
 }
