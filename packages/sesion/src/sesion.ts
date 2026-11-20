@@ -1,9 +1,8 @@
 import { CODIGOS, candidatosCercanos, resolveView } from 'canonico';
-import type { FuenteCanonica, GeometriaCacheada, Issue, Tema, Ubicador, Vista } from 'canonico';
+import type { FuenteCanonica, Geometria, GeometriaCacheada, GeometriaGrafo, Issue, Tema, Ubicador, Vista } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, OrigenDeTema, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
-import type { Geometria, GeometriaGrafo } from 'layout';
 import { TEMA_NEUTRO, advertenciasDeContraste, aristaIdentificanteSoloColor, estiloResuelto, mensajesSoloColor, leerOps, resolverFuentes, resolverTema, tiposSoloColor, usosDeCodigo } from 'tema';
 import type { EstiloResuelto, UsoDeComponente } from 'tema';
 

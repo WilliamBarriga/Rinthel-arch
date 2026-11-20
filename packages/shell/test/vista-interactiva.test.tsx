@@ -2,8 +2,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista } from 'canonico';
-import type { VistaResuelta } from 'canonico';
-import type { Geometria, GeometriaGrafo } from 'layout';
+import type { Geometria, GeometriaGrafo, VistaResuelta } from 'canonico';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
 import { opacidadDeNodo, pulsarEn, pulsarNodo } from './ayudas';

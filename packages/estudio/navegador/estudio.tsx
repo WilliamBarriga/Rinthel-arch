@@ -4,7 +4,7 @@
  * Toda la red pasa por el cliente que se arma con `fetch` y `eventos` inyectados (en pruebas, los de `devEnMemoria`);
  * la Vista vive en el hash (`#vista=<id>`). Sin Fuente (el Workspace nunca compilo) el lienzo queda vacio y los paneles lo dicen.
  */
-import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
 import { resolveView, urlDeFuente } from 'canonico';
@@ -30,7 +30,8 @@ import { IslaLateral } from './marco/isla';
 import type { LadoDeIsla } from './marco/limites';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS, PILDORAS_DE_LA_BARRA } from './marco/pestanas';
 import { useIsla } from './marco/use-isla';
-import { crearAlMover, crearAlOrdenar } from './mover';
+import { crearEscritura } from './escritura/escritura';
+import type { PedidoDeEscritura } from './escritura/escritura';
 import { PildoraDelBuscador } from './comandos/pildora-del-buscador';
 import { abrirCodigoEnBloque, COMANDOS } from './comandos/registro';
 import { plataformaDe } from './comandos/teclas';
@@ -84,20 +85,22 @@ function useGestoEnLienzo(): { enGesto: boolean; props: { onPointerDown: () => v
   };
 }
 
-function useEstado(cliente: ClienteDeDev, geometrias: GeometriasDeDev): { estado: EstadoDeDev | undefined; recargar: () => Promise<void> } {
+/** `vigente` da el ultimo estado recibido (el que usa la Escritura), aunque el render aun no lo haya visto. */
+function useEstado(cliente: ClienteDeDev, geometrias: GeometriasDeDev): { estado: EstadoDeDev | undefined; vigente: () => EstadoDeDev | undefined; recibir: (estado: EstadoDeDev) => void } {
   const [estado, setEstado] = useState<EstadoDeDev>();
-  const recibir = (nuevo: EstadoDeDev): void => {
-    geometrias.recibir(nuevo);
-    setEstado((previo) => (previo === undefined || nuevo.version >= previo.version ? nuevo : previo));
-  };
-  const recibirVivo = useRef(recibir);
-  recibirVivo.current = recibir;
-  useEffect(() => cliente.suscribir((e) => recibirVivo.current(e)), [cliente]);
-  const recargar = async (): Promise<void> => {
-    const nuevo = await cliente.estado();
-    if (nuevo !== undefined) recibir(nuevo);
-  };
-  return { estado, recargar };
+  const ultimo = useRef<EstadoDeDev | undefined>(undefined);
+  const recibir = useCallback(
+    (nuevo: EstadoDeDev): void => {
+      if (ultimo.current !== undefined && nuevo.version < ultimo.current.version) return;
+      ultimo.current = nuevo;
+      geometrias.recibir(nuevo);
+      setEstado(nuevo);
+    },
+    [geometrias],
+  );
+  useEffect(() => cliente.suscribir(recibir), [cliente, recibir]);
+  const vigente = useCallback(() => ultimo.current, []);
+  return { estado, vigente, recibir };
 }
 
 /** Se vuelve a pedir el codigo tras cada estado nuevo; si la carga falla se conserva el registro anterior. */
@@ -144,20 +147,16 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
       }),
     [cliente, hash],
   );
-  const { estado, recargar } = useEstado(cliente, geometrias);
+  const { estado, vigente, recibir } = useEstado(cliente, geometrias);
   const [aviso, avisar] = useAviso();
   const dibujable = useSyncExternalStore(geometrias.suscribir, geometrias.dibujable);
   const componentes = useComponentes(estado, fetchFn, confirmar);
-  const vivo = useRef(estado);
-  vivo.current = estado;
-  const alMover = crearAlMover({ estado: () => vivo.current, enviar: cliente.editar, avisar, recargar });
-  const alOrdenar = crearAlOrdenar({ estado: () => vivo.current, enviar: cliente.editar, avisar, recargar });
 
   const plataforma = props.plataforma ?? plataformaDe(typeof navigator === 'undefined' ? undefined : navigator);
   const [temaPrevio, previsualizarTema] = useState<string>();
-  const marco = { estado, cliente, aviso, avisar, recargar, plataforma, temaPrevio, previsualizarTema };
+  const marco = { estado, vigente, recibir, cliente, aviso, avisar, plataforma, temaPrevio, previsualizarTema };
   if (dibujable === undefined) return <Marco {...marco} navegacion={undefined} lienzo={null} />;
-  return <ConFuente {...marco} dibujable={dibujable} hash={hash} geometrias={geometrias} layout={layout} componentes={componentes} alMover={alMover} alOrdenar={alOrdenar} />;
+  return <ConFuente {...marco} dibujable={dibujable} hash={hash} geometrias={geometrias} layout={layout} componentes={componentes} />;
 }
 
 interface PropsDelMarco {
@@ -165,7 +164,8 @@ interface PropsDelMarco {
   cliente: ClienteDeDev;
   aviso: string | undefined;
   avisar: (texto: string) => void;
-  recargar: () => Promise<void>;
+  vigente: () => EstadoDeDev | undefined;
+  recibir: (estado: EstadoDeDev) => void;
   plataforma: Plataforma;
   temaPrevio: string | undefined;
   previsualizarTema: (tema: string | undefined) => void;
@@ -177,12 +177,10 @@ interface PropsConFuente extends PropsDelMarco {
   geometrias: GeometriasDeDev;
   layout: AdaptadorDeLayout;
   componentes: ComponentesDeTema | undefined;
-  alMover: (vista: string, mov: { id: string; x: number; y: number }) => Promise<boolean>;
-  alOrdenar: (vista: string, cambio: { orden: string[] }) => Promise<boolean>;
 }
 
 /** La Vista activa, la Seleccion y la ruta viven en el hash; el lienzo y los paneles las comparten. */
-function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, alOrdenar, ...marco }: PropsConFuente): ReactElement {
+function ConFuente({ dibujable, hash, geometrias, layout, componentes, ...marco }: PropsConFuente): ReactElement {
   const { estado, geometrias: delServidor } = dibujable;
   const fuente = estado.fuente;
   const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
@@ -203,6 +201,8 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
     avisar: marco.avisar,
   });
   const tema = datos.theme;
+  /** El manejador resuelve `false` si se rechazo (el Nodo vuelve a su sitio). */
+  const escribirDesdeElLienzo = async (pedido: PedidoDeEscritura): Promise<boolean> => (await contextoVivo.current?.escribir(pedido))?.ok === true;
   const lienzo =
     tema === undefined ? null : (
       <VistaInteractiva
@@ -224,7 +224,10 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
         width={datos.width}
         height={datos.height}
         cachedGeometries={datos.cachedGeometries}
-        {...(motivoSinGestos(marco.estado) === undefined && { onMoveNode: (mov) => alMover(props.view, mov), onReorderLifelines: (cambio) => alOrdenar(props.view, cambio) })}
+        {...(motivoSinGestos(marco.estado) === undefined && {
+          onMoveNode: ({ id, x, y }) => escribirDesdeElLienzo({ intencion: { tipo: 'mover-pin', vista: props.view, nodo: id, x, y }, fallo: 'No se pudo mover el Pin' }),
+          onReorderLifelines: ({ orden }) => escribirDesdeElLienzo({ intencion: { tipo: 'ordenar-lifelines', vista: props.view, orden }, fallo: 'No se pudo reordenar las Lifelines' }),
+        })}
         chrome={false}
       />
     );
@@ -316,7 +319,7 @@ export function motivoSinGestos(estado: EstadoDeDev | undefined): string | undef
   return error === undefined ? undefined : `Gestos deshabilitados: el texto no compila (${textoDeSitio(error)} ${error.message})`;
 }
 
-function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevio, previsualizarTema, fuente, hashProps, navegacion, lienzo, leyenda, contextoVivo }: PropsDeMarcoCompleto): ReactElement {
+function Marco({ estado, vigente, recibir, cliente, aviso, avisar, plataforma, temaPrevio, previsualizarTema, fuente, hashProps, navegacion, lienzo, leyenda, contextoVivo }: PropsDeMarcoCompleto): ReactElement {
   const lienzoTamano = useTamano();
   const medidas = { ancho: lienzoTamano.width, alto: lienzoTamano.height };
   const izquierda = useIsla({ lado: 'izquierda', id: 'ui-isla-izquierda', nombre: 'panel izquierdo', lienzo: medidas, anchoInicial: 280 });
@@ -337,6 +340,11 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
     setPestanas((p) => ({ ...p, [lado]: pestana }));
   };
 
+  const vaciarGuardado = useCallback(async (): Promise<void> => {
+    await Promise.all([...guardados.current].map((guardar) => guardar()));
+  }, []);
+  const escribir = useMemo(() => crearEscritura({ cliente, vigente, recibir, avisar, vaciarGuardado }), [cliente, vigente, recibir, avisar, vaciarGuardado]);
+
   const contexto: ContextoDelEstudio = {
     estado,
     fuente,
@@ -348,16 +356,14 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
     abrirPestana,
     alternarIsla: (lado) => islas[lado].alternar(),
     avisar,
-    recargar,
+    escribir,
     abrirDialogo: setDialogo,
     abrirCodigo: (sitio) => {
       abrirPestana('izquierda', 'codigo');
       abrirPestana('derecha', 'issues');
       if (sitio !== undefined) setSitioDeCodigo(sitio);
     },
-    async vaciarGuardado() {
-      await Promise.all([...guardados.current].map((guardar) => guardar()));
-    },
+    vaciarGuardado,
     plataforma,
     portales,
   };

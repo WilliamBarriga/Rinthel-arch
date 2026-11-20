@@ -2,8 +2,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema } from 'canonico';
-import type { Tema, VistaResuelta } from 'canonico';
-import type { Geometria } from 'layout';
+import type { Geometria, Tema, VistaResuelta } from 'canonico';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { TEMA_NEUTRO } from 'tema';

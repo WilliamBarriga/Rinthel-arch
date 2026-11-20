@@ -1,7 +1,6 @@
 /** Indice de geometria absoluta: caja de cada Nodo en el lienzo, su padre y las raices. Puro. */
-import type { NodoResuelto, VistaResuelta } from 'canonico';
+import type { CajaDeNodo, NodoResuelto, VistaResuelta } from 'canonico';
 
-import type { CajaDeNodo } from './layout';
 
 export interface IndiceDeGeometria {
   /** Caja de cada Nodo con caja en la geometria, en coordenadas del lienzo. */

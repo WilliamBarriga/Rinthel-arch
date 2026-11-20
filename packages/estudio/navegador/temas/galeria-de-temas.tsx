@@ -20,7 +20,7 @@ type Lectura = { tipo: 'cargando' } | { tipo: 'tema'; tema: SalidaDeTema } | { t
 const idDeOpcion = (tema: string): string => `ui-tema-${tema}`;
 
 export function GaleriaDeTemas(): ReactElement {
-  const { fuente, vista, estado, cliente, avisar } = useEstudio();
+  const { fuente, vista, cliente, escribir } = useEstudio();
   const { temaPrevio, previsualizarTema } = usePrevisualizacionDeTema();
   const [elegido, setElegido] = useState<string>();
   const marcas = useMarcasExternas(cliente);
@@ -30,10 +30,9 @@ export function GaleriaDeTemas(): ReactElement {
 
   const fijado = fuente.views.find(({ id }) => id === vista)?.theme;
   const fijar = async (tema: string | undefined): Promise<void> => {
-    if (vista === undefined || estado === undefined) return;
-    const r = await cliente.editar({ tipo: 'fijar-tema', vista, ...(tema !== undefined && { tema }) }, estado.version);
+    if (vista === undefined) return;
+    const r = await escribir({ intencion: { tipo: 'fijar-tema', vista, ...(tema !== undefined && { tema }) }, fallo: `No se pudo ${tema === undefined ? 'quitar' : 'fijar'} el Tema` });
     if (r.ok) previsualizarTema(undefined);
-    else avisar(`No se pudo ${tema === undefined ? 'quitar' : 'fijar'} el Tema: ${r.mensaje}`);
   };
   const elegir = (tema: string): void => {
     setElegido(tema);
