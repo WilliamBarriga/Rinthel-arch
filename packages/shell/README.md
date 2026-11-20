@@ -1,13 +1,11 @@
 # shell
-
 Capa interactiva en React sobre `render`: pan/zoom, Seleccion, navegacion entre Vistas y edicion de Pins.
 
 ## Que hace
-- `VistaInteractiva` resuelve una Vista, pide la Geometria al adaptador de `layout` y la dibuja con `render`.
-- Camara con pan y zoom, Seleccion, ruta mas corta, foco, hover, colapso de Grupos con relayout en Worker y Pasos con drill-down.
-- Arrastre de Nodos que emite el Gesto de mover un Pin, con deshacer y rehacer (`sesion`), y recarga de Tema cuando el padre pasa un `theme` nuevo.
-- Chrome del lienzo (issues, toasts, leyenda, migas) desactivable con `chrome={false}`.
-- En Vistas `sequence`: seleccion por Mensaje, Nota, Lifeline y Fragmento, teclado, `ref` y `link` entre Vistas, y arrastre de cabecera que emite la Intencion `ordenar-lifelines`.
+- `VistaInteractiva` resuelve una Vista, pide la Geometria al adaptador de layout (`adaptadorDeWorker` en la pagina, `servirLayout` dentro del Worker) y la dibuja con `render`; mide texto con la fuente real (`medirEnVisor`).
+- Camara con pan y zoom, Seleccion, ruta mas corta, foco, hover, colapso de Grupos con relayout y morph, Pasos con drill-down y zoom semantico (en `sequence`, Seleccion por Mensaje, Nota, Lifeline y Fragmento, teclado y `ref`/`link` entre Vistas); cada estado es controlado por props o interno, y `useEstadoEnHash` lo lleva al hash de la URL (`AdaptadorDeHash` permite renombrar claves, como hace `estudio`).
+- Solo bajo `dev`, arrastres que avisan al padre sin escribir: `onMoveNode` (centro nuevo del Nodo, como un Pin) y `onReorderLifelines` (orden visible completo); si la promesa resuelve `false` el elemento vuelve a su sitio. Construir la Intencion, deshacer y rehacer es del padre (`estudio`).
+- Chrome del lienzo (issues, toasts, leyenda, migas) desactivable con `chrome={false}`; `Leyenda` y `Migas` se exportan para montarlo fuera.
 
 ## Que NO hace
 - No dibuja SVG ni calcula posiciones: eso es de `render` y `layout`.

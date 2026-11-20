@@ -7,12 +7,12 @@ Workspace de ejemplo en el que el sistema se documenta a si mismo: paquetes del 
 | Archivo | Que mapea |
 | --- | --- |
 | `especificacion.dg` | Tipos de nodo (actor, paquete, modulo, artefacto, salida, externo...) y Temas `diagrams` (oscuro) y `diagrams-claro`: extienden los incorporados `neutral-dark` y `neutral` con las fuentes del Workspace y dos parches por Tipo (las Partes `barra-paquete` y `borde-discontinuo`) |
-| `sistema.dg` | Los ocho paquetes con sus ~120 modulos (uno por archivo de `src`, con `source` al archivo), actores, artefactos, procesos y librerias externas. Los titulos de modulo llevan el paquete (`tema/estilo`) para distinguir homonimos |
-| `conexiones.dg` | Dependencias entre paquetes (de `package.json`) y entre modulos (de los imports), mas el flujo de datos con actores, servidor dev y Worker. Las Aristas solo se declaran en `model`, con ids cualificados |
-| `vistas.dg` | Vista de paquetes con drill-down a cada paquete, la Vista `abierto` (render, sesion y layout abiertos; la Vista `abierto` del prototipo aprobado) detalles por paquete (`*-detalle`, incluidos `tema-detalle` y `cli-detalle`) y cuatro Vistas de flujo con Pasos: `flujo-edicion`, `flujo-validate`, `flujo-dev` y `flujo-tema` |
-| `fuente-canonica.dg` | La Fuente canonica como esquema ER (Vista `fuente-er`, con Pasos) y dos Interacciones con Vista de secuencia: `editar-pin` (Fragmento `alt`, `ref`, Nota, Pasos y `link` a `sesion-detalle`/`shell-detalle`) y `recompilar` |
+| `sistema.dg` | Los nueve paquetes con sus modulos (uno por archivo de `src`, con `source` al archivo; `estudio/navegador` agrupado por feature), actores, artefactos (incluido el Registro de actividad), procesos y librerias externas. Los titulos de modulo llevan el paquete o la feature (`tema/estilo`, `editor/guardado`) para distinguir homonimos |
+| `conexiones.dg` | Dependencias entre paquetes (de `package.json`) y entre modulos: dentro de un paquete, todos los imports; entre paquetes, solo las costuras que explican el mapa. Mas el flujo de datos con actores, servidor dev, SSE y Worker. Las Aristas solo se declaran en `model`, con ids cualificados |
+| `vistas.dg` | Vista de paquetes con drill-down a cada paquete, la Vista `abierto` (render y layout abiertos; la Vista `abierto` del prototipo aprobado), un detalle por paquete (`*-detalle`, incluido `estudio-detalle`) y cinco Vistas de flujo con Pasos: `flujo-edicion` (arrastrar un Nodo en la UI de dev), `flujo-validate`, `flujo-dev`, `flujo-agente` (del comando al panel Agente) y `flujo-tema` |
+| `fuente-canonica.dg` | La Fuente canonica como esquema ER (Vista `fuente-er`, con Pasos) y dos Interacciones con Vista de secuencia: `editar-pin` (del arrastre a la Escritura, `/api/edit` y el Workspace vivo, con el 409; Fragmento `alt`, `ref`, Notas, Pasos y `link` a `sesion-detalle`, `shell-detalle` y `estudio-detalle`) y `recompilar` (Sesion, Diferencia y clasificacion del cambio) |
 | `temas/` | Los Temas aprobados y, en `temas/fuentes/`, sus familias en `woff2` con licencias `OFL-<familia>.txt`. Es la unica copia: la galeria los usa con `--theme-path` |
-| `vistas-temas.dg` | Una Vista `abierto-<tema>` por Tema: el mismo diagrama de la Vista `abierto` con cada estetica. Sus capturas estan en el README de la raiz |
+| `vistas-temas.dg` | Una Vista `abierto-<tema>` por Tema: el mismo diagrama de la Vista `abierto` con cada estetica. Sus capturas estan en la [galeria](../../docs/galeria.md) |
 | `fuentes/` | DejaVu Sans y Mono (licencia en `LICENCIA-DejaVu.txt`) |
 
 ## Uso
@@ -23,7 +23,7 @@ node packages/cli/dist/bin.js build    --workspace examples/rinthel-arch
 node packages/cli/dist/bin.js dev      --workspace examples/rinthel-arch
 ```
 
-Para regenerar las capturas del README: `pnpm docs:capturas`. Para ver una Vista con otro Tema sin tocar el ejemplo (necesita `pnpm build`):
+Para regenerar las capturas de `docs/img/`: `pnpm docs:capturas`. Para ver una Vista con otro Tema sin tocar el ejemplo (necesita `pnpm build`):
 
 ```
 pnpm capturas --workspace examples/rinthel-arch --vista abierto --prototipo A neutral neutral-dark

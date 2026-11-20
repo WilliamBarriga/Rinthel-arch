@@ -109,6 +109,9 @@ Sintaxis legible para humanos y agentes, y unica fuente que se edita y versiona.
 **Workspace**:
 Carpeta de archivos de DSL de texto que se fusionan en el Modelo unico de un Proyecto documentado. Cada archivo puede aportar Nodos, Aristas y Vistas.
 
+**Issue**:
+Hallazgo de la validacion de un Workspace: codigo estable, severidad (`error` o `warning`), `archivo:linea`, mensaje y, opcionales, una pista y un `fix` (el reemplazo de texto que lo corrige cuando hay un unico candidato). Es dato, nunca excepcion.
+
 **Sesion**:
 Estado compilado de un Workspace en un momento dado: Fuente canonica, issues y geometria por Vista (calculada bajo demanda). Es un valor inmutable; un cambio de archivos produce otra Sesion. Lo consumen el CLI, `dev` y `inspect`.
 
@@ -122,7 +125,7 @@ Medidas de espacio derivadas de un Tema, por elemento (Nodo por Tipo de nodo, Gr
 Geometria cacheada de una Vista que sigue valiendo: nada de lo que influye en las posiciones (estructura, textos, fuentes, Metricas, Pins) cambio desde que se calculo. Una sola respuesta para Sesion, CLI y shell.
 
 **Intencion**:
-Cambio que el usuario pide sobre el DSL de texto, expresado en terminos del dominio (mover el Pin de un Nodo en una Vista; ordenar las Lifelines de una Vista de secuencia). Aun no es una edicion de texto; un Gesto la convierte en una.
+Cambio que el usuario pide sobre el DSL de texto, expresado en terminos del dominio (mover el Pin de un Nodo en una Vista; ordenar las Lifelines de una Vista de secuencia; fijar o quitar el Tema de una Vista). Aun no es una edicion de texto; un Gesto la convierte en una.
 
 **Gesto**:
 Operacion de la Sesion que recibe una Intencion, calcula la edicion minima del DSL de texto, la auto-prueba y la aplica en memoria. Quien lo invoca solo se ocupa de escribir el resultado.
@@ -134,6 +137,9 @@ _Evitar_: Historial a secas para el de `dev` (ese es el Historial de archivos).
 **Historial de archivos**:
 Historial de deshacer de `dev`: cada entrada guarda, por archivo, el texto antes y despues de una escritura de la UI (Intencion, guardado del editor, `fix`), con una descripcion y su hora. Deshacer, rehacer y saltar a una entrada se rechazan solo si cambio por fuera un archivo que la entrada restaura; una escritura externa no lo reinicia. La UI ve de el el Historial visible: cada entrada con si es alcanzable sobre el disco vigente.
 
+**UI de dev**:
+App de navegador que sirve `dev` (paquete `estudio`) para mirar, editar y seguir un Workspace: lienzo con la Vista activa, editor del DSL de texto, Issues, galeria de Temas, Detalle, Historial de archivos y feed del Registro de actividad. Toda escritura pasa por el Workspace vivo; no toca disco.
+
 **Workspace vivo**:
 El estado de `dev` sin transporte: la Sesion vigente y la ultima buena, el Historial de archivos, la cola de escrituras, las versiones que vio la UI, la Diferencia con su origen y, compuesto, el Registro de actividad vivo (modulo propio que lee y empuja la actividad). Es el unico dueno de la secuencia de eventos del protocolo de `dev`: al conectar, estado, Historial de archivos y actividad previa; tras cada estado, su Historial de archivos y su Diferencia. El servidor de `dev` y su fake de pruebas solo la transportan.
 
@@ -141,7 +147,7 @@ El estado de `dev` sin transporte: la Sesion vigente y la ultima buena, el Histo
 Elemento o elementos de una Vista (Nodo, Arista, Atributo; en secuencia tambien Mensaje, Fragmento y Nota) sobre los que actua el editor. Es el sujeto de las Intenciones.
 
 **Registro de actividad**:
-Historial de los comandos del CLI corridos sobre un Workspace, por cualquier autor y con o sin `dev` abierto. Solo registra el CLI: lo que el humano hace en la UI de `dev` no entra. Es solo informativo: no forma parte del Modelo, del Historial ni del Historial de archivos.
+Historial de los comandos del CLI que leen o escriben el Workspace (`validate`, `build`, `inspect`, `edit`), por cualquier autor y con o sin `dev` abierto. Solo registra el CLI: lo que el humano hace en la UI de `dev` no entra. Es solo informativo: no forma parte del Modelo, del Historial ni del Historial de archivos.
 
 **Evento de actividad**:
 Una entrada del Registro de actividad: que comando corrio, quien (proceso y, si se declara, agente), sobre que objetivo nombrado (Vista, Nodo, Tema o archivos) y con que resultado.

@@ -31,9 +31,10 @@ Opciones: las de validate (--json, --strict, --max-issues, --theme, --theme-path
 `,
   dev: `diagrams dev --workspace <ruta> [opciones]
 
-Visor en vivo en http://127.0.0.1:<puerto>/ (solo escucha en localhost). Recompila al guardar y
-muestra un panel de issues. La Vista se elige con el hash de la URL (#p=<vista>).
-Arrastrar un Nodo fija su Pin y reescribe el .dg.
+UI de dev en http://127.0.0.1:<puerto>/ (solo escucha en localhost): lienzo, editor del DSL, Issues,
+Temas, Historial de archivos y feed del Registro de actividad. Recompila al guardar. La Vista activa
+va en el hash de la URL (#vista=<id>). Arrastrar un Nodo fija su Pin y reescribe el .dg.
+Guia: docs/guia/ui-de-dev.md.
 
 Opciones:
   ${WORKSPACE}
@@ -43,13 +44,14 @@ Opciones:
 
 Es un proceso largo: lanzalo en segundo plano y espera la linea con la URL.
 `,
-  inspect: `diagrams inspect <buscar|nodo|vista|tema> <argumento> --workspace <ruta> [opciones]
+  inspect: `diagrams inspect <buscar|nodo|vista|interaccion|tema> <argumento> --workspace <ruta> [opciones]
 
 Consultas de solo lectura sobre el Modelo; cada resultado trae id cualificado, tipo y archivo:linea.
 
   inspect buscar <texto>      Nodos por id parcial o titulo, Vistas por id
   inspect nodo <id>           Nodo, padre e hijos, Atributos, Aristas y Vistas que lo muestran
   inspect vista <id>          Nodos y Aristas visibles de la Vista en su estado inicial
+  inspect interaccion <id>    Lifelines en orden, Mensajes y Vistas que proyectan la Interaccion
   inspect tema <nombre>       Cadena extends, Partes, pila de Capas con archivo:linea, Metricas
 
 Opciones:
@@ -100,8 +102,8 @@ Uso: diagrams <comando> --workspace <ruta> [opciones]
 Comandos:
   validate   Compila y valida; lista issues con archivo, linea y fix (solo lectura)
   build      Escribe la Fuente canonica y la geometria en <ruta>/${CARPETA_DE_SALIDA}/
-  dev        Visor en vivo en http://127.0.0.1:4173/ con panel de issues
-  inspect    Consulta el Modelo: buscar, nodo, vista, tema (solo lectura)
+  dev        UI de dev en http://127.0.0.1:4173/: mirar, editar y seguir el Workspace
+  inspect    Consulta el Modelo: buscar, nodo, vista, interaccion, tema (solo lectura)
   edit       Fija un Pin o aplica ediciones estructuradas al .dg
   skill      Genera la skill de agente de un Workspace
 

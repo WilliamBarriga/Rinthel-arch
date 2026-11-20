@@ -4,7 +4,7 @@ Complementa el ADR 0007. Describe como queda el shell tras la limpieza; no cambi
 
 ## Estado de partida
 
-`VistaActiva` (en `packages/shell/src/vista-interactiva.tsx`) sigue siendo el adaptador entre d3-zoom/DOM y el nucleo (`interaccion.ts`, `colapso.ts`, `geometria.ts`). El nucleo de intenciones e historial (#100) vive en `sesion` y `control-de-edicion.ts`, fuera de `VistaActiva`. Lo que queda dentro del componente: camara d3, arrastre de Nodos, seleccion, colapso con morph, pasos y navegacion por hooks.
+`VistaActiva` (en `packages/shell/src/vista-interactiva.tsx`) sigue siendo el adaptador entre d3-zoom/DOM y el nucleo (`interaccion.ts`, `colapso.ts`, `geometria.ts`). El nucleo de intenciones e historial (#100) vive en `sesion` (`intenciones.ts`), fuera de `VistaActiva`; `control-de-edicion.ts` se retiro de `shell` en #165 (ADR 0007, seccion Shell). Lo que queda dentro del componente: camara d3, arrastre de Nodos, seleccion, colapso con morph, pasos y navegacion por hooks.
 
 ## Un mecanismo para props controlados: `useControlado`
 
@@ -14,7 +14,7 @@ Complementa el ADR 0007. Describe como queda el shell tras la limpieza; no cambi
 - `fijar(nuevo)` guarda el valor propio solo en modo no controlado, avisa `alCambiar` siempre, y en modo controlado re-renderiza para que d3 reconcilie un cambio que el padre ignoro.
 - `fijar` lee refs, no su cierre: es seguro desde efectos y callbacks de larga vida (zoom de d3, `alLlegar` de `useGeometria`).
 
-Usos: estado de colapso (`state`/`onStateChange`), camara (`camera`/`onCameraChange`, con `undefined` propio hasta el primer movimiento y el encuadre como respaldo), Paso (`step`/`onStepChange`) y ruta de navegacion (`path`/`onPathChange` + `onViewChange`). La seleccion no lo usa: su prop es un id (`string | null`) y su estado propio es una `Seleccion` con tipo de elemento; son representaciones distintas, no el mismo valor.
+Usos: estado de colapso (`state`/`onStateChange`), camara (`camera`/`onCameraChange`, con `undefined` propio hasta el primer movimiento y el encuadre como respaldo), Paso (`step`/`onStepChange`) y ruta de navegacion (`path`/`onPathChange` + `onViewChange`). La seleccion no lo usa: su prop es un id (`selected`, `string | null`, o la lista `selection` en seleccion multiple) y su estado propio es una `Seleccion` con tipo de elemento; son representaciones distintas, no el mismo valor.
 
 ## Responsabilidades por archivo
 
@@ -35,7 +35,7 @@ Umbral de arrastre (3 px), tolerancia de acierto de Aristas (4 px), escala minim
 
 ## Alias retirado
 
-`IntencionDePinEnviada` (alias de `IntencionDePin`) se elimina de `enviar-pin.ts` y de `index.ts`. Nadie en el repo lo usa; `IntencionDePin` sigue reexportada desde `shell`.
+`IntencionDePinEnviada` (alias de `IntencionDePin`) se elimina de `enviar-pin.ts` y de `index.ts`. Nadie en el repo lo usa; `IntencionDePin` sigue reexportada desde `shell`. Despues, #167 borro `enviar-pin.ts`: `shell` ya no exporta clientes HTTP.
 
 ## Hooks de arrastre y seleccion (ticket #109)
 
@@ -46,4 +46,4 @@ Umbral de arrastre (3 px), tolerancia de acierto de Aristas (4 px), escala minim
 
 ## Fuera de alcance
 
-Recortar el comentario de `index.ts` que duplica el JSDoc de los props no se hace aqui.
+Recortar el comentario de `index.ts` que duplica el JSDoc de los props no se hace aqui (hecho despues: la cabecera de `index.ts` solo resume la interfaz, `docs/CODING.md`).

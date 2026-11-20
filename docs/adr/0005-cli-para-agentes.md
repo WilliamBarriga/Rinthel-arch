@@ -154,7 +154,7 @@ Al pasar 1 MB, quien escribe rota a `actividad.1.jsonl` (una sola generacion ant
 
 Feed del panel Agente: una linea por evento (hora, agente o pid, comando, objetivo clicable, marca de resultado: ok, errores, avisos o fallo de uso); los `args` al expandir. Sin filtros en la primera entrega.
 
-Seguir al agente (interruptor): `objetivo.vista` lleva a esa Vista; `objetivo.nodo` se queda en la Vista activa si lo contiene y si no salta a la primera Vista, en orden de declaracion, que lo contenga, y lo selecciona; `objetivo.archivos` no mueve por si solo. `dev` resuelve con la Sesion vigente. Resaltar lo que cambio es del diff de Sesiones, no de este registro.
+Seguir al agente (interruptor): `objetivo.vista` lleva a esa Vista; `objetivo.nodo` se queda en la Vista activa si lo contiene y si no salta a la primera Vista, en orden de declaracion, que lo contenga, y lo selecciona; `objetivo.archivos` no mueve por si solo. La pagina de `dev` lo resuelve con la Fuente del estado vigente (`destinoDelObjetivo` en `estudio`). Resaltar lo que cambio es del diff de Sesiones, no de este registro.
 
 ## Enmienda: Intencion `fijar-tema` y motivo `tema-desconocido` (#176, mapa #168)
 

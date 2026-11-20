@@ -46,7 +46,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 5. `ADR relacionado`: el ADR del contrato del paquete.
 6. `Probar`: `pnpm --filter <paquete> test`.
 
-Modelo: `packages/canonico/README.md`. `pnpm check:docs` falla si un README existente pierde una seccion, nombra un archivo de entrada inexistente o no da el comando de `Probar`.
+Modelo: `packages/canonico/README.md`. `pnpm check:docs` falla si un paquete no tiene README o si este pierde una seccion, nombra un archivo de entrada inexistente o no da el comando de `Probar`.
 
 ## Chequeos automaticos
 

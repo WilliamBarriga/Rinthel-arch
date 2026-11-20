@@ -16,7 +16,7 @@ Sigue el camino de lectura de [AGENTS.md](AGENTS.md#camino-de-lectura): glosario
 ```
 pnpm install
 pnpm exec playwright install chromium   # una vez: lo usan la punta a punta de pnpm test y pnpm docs:capturas
-pnpm check   # typecheck, lint, orden de paquetes y emojis: rapido, para iterar
+pnpm check   # typecheck, lint, orden de paquetes, docs y emojis: rapido, para iterar
 pnpm test    # compuerta completa: build, typecheck y todas las pruebas
 ```
 
@@ -34,16 +34,18 @@ No hay CI: las pruebas se corren en local. El hook de pre-commit corre `pnpm che
 
 | Ruta | Contenido |
 | --- | --- |
-| `packages/canonico` | Esquema de la Fuente canonica (Zod), validacion y resolucion de Vistas |
+| `packages/canonico` | Esquema de la Fuente canonica (Zod), validacion, resolucion de Vistas y contratos versionados (Intenciones, `--json`, Evento de actividad, protocolo de `dev`) |
 | `packages/tema` | Catalogo de Primitivas y Slots, Estilo resuelto y Metricas |
 | `packages/dsl` | Gramatica (Langium) y compilador del texto `.dg` |
 | `packages/layout` | Layout con ELK y Pins; geometria cacheada |
-| `packages/sesion` | Tuberia compartida: compilar, validar y calcular geometria |
+| `packages/sesion` | Tuberia compartida: compilar, validar, calcular geometria y editar el texto; el Workspace vivo de `dev` sin transporte |
 | `packages/render` | Dibujo puro en React (Nodos y Grupos en HTML/CSS, Aristas en SVG) |
 | `packages/shell` | Visor interactivo: pan/zoom, colapso, arrastre |
-| `packages/cli` | `validate`, `build`, `dev`, `inspect`, `edit`, `skill` |
+| `packages/estudio` | App de navegador de `dev` (la [UI de dev](docs/guia/ui-de-dev.md)): lienzo, editor, Issues, Temas, Historial de archivos y feed del agente |
+| `packages/cli` | `validate`, `build`, `dev`, `inspect`, `edit`, `skill`; unico paquete que toca disco y servidor de `dev` |
 | `examples/tutorial` | El tutorial, un Workspace por paso |
 | `examples/rinthel-arch` | Este repo documentado con su propio DSL, con sus Temas de ejemplo |
+| `examples/temas` | Temas sueltos de muestra (catalogo de formas, Capa `code`, secuencia, ER) |
 | `examples/temas/galeria` | Un Modelo comun para los Temas de ejemplo (de `examples/rinthel-arch/temas`, via `--theme-path`), y estados de cada Nodo |
 
 ## Ramas de research y prototipos
