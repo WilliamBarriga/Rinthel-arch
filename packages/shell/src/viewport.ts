@@ -1,8 +1,7 @@
 /** Recorte de una Vista resuelta a lo que cae en la camara; puro. Las cajas se comparan en coordenadas del lienzo. */
 import { idDeArista } from 'canonico';
-import type { AristaResuelta, NodoResuelto, VistaResuelta } from 'canonico';
+import type { AristaResuelta, CajaDeNodo, Geometria, NodoResuelto, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
-import type { CajaDeNodo, Geometria } from 'layout';
 import type { Camara } from 'render';
 
 /** Cruce con borde incluido, para que una ruta recta (alto o ancho 0) cuente. */

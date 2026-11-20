@@ -13,7 +13,7 @@ import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
 import type { Browser } from 'playwright';
 
-import { rutaDeChromium } from '../packages/cli/test/chromium.ts';
+import { rutaDeChromium } from '../tests/ayudas/chromium.ts';
 import { VARIANTE_DE_TEMA, prepararPrototipo } from './capturas/prototipo.ts';
 import { iniciarDevDeGaleria, servirEstatico } from './capturas/servidores.ts';
 import { prepararWorkspace } from './capturas/workspace.ts';

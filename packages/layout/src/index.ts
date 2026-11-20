@@ -8,5 +8,4 @@
 export { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutConMetricas, layoutView } from './layout';
 export { indiceDeGeometria } from './indice';
 export type { IndiceDeGeometria } from './indice';
-export type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada, OperandoColocado, RutaDeMensaje } from './secuencia';
-export type { CajaDeNodo, Geometria, GeometriaGrafo, OpcionesDeLayout, Punto, RutaDeArista } from './layout';
+export type { OpcionesDeLayout } from './layout';

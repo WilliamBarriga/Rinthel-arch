@@ -1,9 +1,8 @@
 import { CODIGOS, candidatosCercanos, resolveView } from 'canonico';
-import type { FuenteCanonica, GeometriaCacheada, Issue, Tema, Ubicador, Vista } from 'canonico';
+import type { FuenteCanonica, Geometria, GeometriaCacheada, GeometriaGrafo, Issue, Tema, Ubicador, Vista } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, OrigenDeTema, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
-import type { Geometria, GeometriaGrafo } from 'layout';
 import { TEMA_NEUTRO, advertenciasDeContraste, aristaIdentificanteSoloColor, estiloResuelto, mensajesSoloColor, leerOps, resolverFuentes, resolverTema, tiposSoloColor, usosDeCodigo } from 'tema';
 import type { EstiloResuelto, UsoDeComponente } from 'tema';
 
@@ -81,12 +80,6 @@ export interface Sesion {
    * `layoutKey`, su Tema y sus Pins no cambian. `cambios` renueva `componentes`, `issuesDelAdaptador` y `archivosDeFuente`.
    */
   actualizar(archivos: ArchivosDelWorkspace, cambios?: Pick<OpcionesDeSesion, 'componentes' | 'issuesDelAdaptador' | 'archivosDeFuente'>): Sesion;
-}
-
-/** Archivo en que se declara una Vista; `undefined` si no existe o la Sesion no tiene Fuente. */
-export function archivoDeVista(sesion: Pick<Sesion, 'fuente' | 'ubicar'>, vista: string): string | undefined {
-  const indice = sesion.fuente?.views.findIndex(({ id }) => id === vista) ?? -1;
-  return indice < 0 ? undefined : sesion.ubicar?.(['views', indice, 'id'])?.file;
 }
 
 const json = (valor: unknown): string => `${JSON.stringify(valor, null, 2)}\n`;

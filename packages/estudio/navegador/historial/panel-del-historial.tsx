@@ -1,14 +1,13 @@
 /**
  * Panel Historial: las entradas del Historial de `dev`, lo mas reciente arriba (el futuro atenuado, luego la posicion
  * actual y el pasado) y al final Inicio. Un clic salta a la entrada; las no alcanzables quedan deshabilitadas con su
- * motivo. Antes de saltar se vacia el guardado pendiente del editor (`moverElHistorial`).
+ * motivo. Saltar pasa por la Escritura (`escribir`), que antes vacia el guardado pendiente del editor.
  */
 import { useEffect, useId, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import type { EntradaDelHistorialDeDev } from '../../src/protocolo';
 import { useEstudio } from '../marco/contexto';
-import { moverElHistorial } from './acciones';
 import { horaRelativa, useHistorialVisible } from './historial-visible';
 
 /** Cada cuanto se rehace la hora relativa. */
@@ -52,7 +51,7 @@ export function PanelDelHistorial(): ReactElement {
     { id: 0, alcanzable: inicio.alcanzable, ...(inicio.motivo !== undefined && { motivo: inicio.motivo }), futuro: false, actual: ultima === undefined },
   ];
   const saltar = (fila: Fila): void => {
-    if (!fila.actual) void moverElHistorial(estudio, { saltar: fila.id });
+    if (!fila.actual) void estudio.escribir({ historial: { saltar: fila.id } });
   };
 
   return (

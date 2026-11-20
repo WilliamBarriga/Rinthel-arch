@@ -10,11 +10,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { EventoDeActividad } from 'canonico';
 
+import { codigoDeDevSchema, confianzaDeDevSchema, errorDeDevSchema, escrituraDeDevSchema, rechazoDeDevSchema } from './protocolo';
 import type { ActividadDeDev, DiferenciaDeDev, EstadoDeDev, HistorialDeDev } from './protocolo';
+import type { ContenidoDeDevDePrueba } from './dev-en-memoria';
 import { crearLectorSse } from './sse';
 
 export { devEnMemoria } from './dev-en-memoria';
-export type { DevEnMemoria } from './dev-en-memoria';
+export type { CodigoDePrueba, ContenidoDeDevDePrueba, DevEnMemoria } from './dev-en-memoria';
 export { crearLectorSse } from './sse';
 
 /** Ruta relativa -> texto, como `ArchivosDelWorkspace` de `dsl`. */
@@ -33,8 +35,8 @@ export interface DevDePrueba {
   cerrar(): Promise<void>;
 }
 
-/** `temas` son los de `--theme-path` (se compilan pero no se escriben); `actividad`, el texto inicial de `.diagrams/actividad.jsonl` (sin el, el registro no existe). */
-export type CrearDev = (contenido: { propios: ArchivosDelWorkspace; temas?: ArchivosDelWorkspace; actividad?: string }) => Promise<DevDePrueba>;
+/** Abre un `dev` de prueba con ese contenido (`ContenidoDeDevDePrueba`, la misma forma que `devEnMemoria`). */
+export type CrearDev = (contenido: ContenidoDeDevDePrueba) => Promise<DevDePrueba>;
 
 /** `eventos` sobre un `fetch` que entrega el cuerpo en streaming (Node 18+); la pagina usa `EventSource`. */
 export function eventosSobreFetch(fetchFn: typeof fetch): DevDePrueba['eventos'] {
@@ -80,6 +82,34 @@ theme claro extends neutral {
   palette { acento "#0ea5e9" }
 }
 `;
+
+/** Un Tema con una Capa `code` que usa el Componente `Aurora`. */
+export const CON_CODIGO = `specification {
+  node servicio
+}
+
+model {
+  servicio api "API"
+}
+
+theme neon {
+  node {
+    layer forma rect { radius 8 }
+    layer aura code over { component Aurora }
+    slots { title }
+  }
+}
+
+view general {
+  type architecture
+  include **
+  theme neon
+}
+`;
+
+/** Bundle CommonJS como el que compila `cli`: `Aurora` dibuja `<i data-aurora={id}>`. */
+export const BUNDLE_DE_PRUEBA = `var j = require('react/jsx-runtime');
+return { Aurora: function (p) { return j.jsx('i', { 'data-aurora': p.id }); } };`;
 
 const CON_ERROR = DSL.replace('include db', 'include db\n  nada-de-esto');
 
@@ -181,7 +211,7 @@ export const eventoDeActividad = (pid: number, extra: Partial<EventoDeActividad>
 export const lineasDeActividad = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
 
 export function probarContratoDeDev(crear: CrearDev): void {
-  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, extra: { temas?: ArchivosDelWorkspace; actividad?: string } = {}): Promise<T> => {
+  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, extra: Omit<ContenidoDeDevDePrueba, 'propios'> = {}): Promise<T> => {
     const dev = await crear({ propios, ...extra });
     try {
       return await prueba(dev);
@@ -193,7 +223,12 @@ export function probarContratoDeDev(crear: CrearDev): void {
     const res = await dev.fetch(ruta, init);
     return { status: res.status, cuerpo: (await res.json()) as Cuerpo };
   };
-  const post = (dev: DevDePrueba, ruta: string, cuerpo: unknown) => json(dev, ruta, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) });
+  /** `POST` con cuerpo crudo y content-type JSON (los bordes mandan cuerpos que no son JSON). */
+  const enviar = (dev: DevDePrueba, ruta: string, cuerpo: string): Promise<Response> => dev.fetch(ruta, { method: 'POST', headers: { 'content-type': 'application/json' }, body: cuerpo });
+  const post = async (dev: DevDePrueba, ruta: string, cuerpo: unknown): Promise<{ status: number; cuerpo: Cuerpo }> => {
+    const res = await enviar(dev, ruta, JSON.stringify(cuerpo));
+    return { status: res.status, cuerpo: (await res.json()) as Cuerpo };
+  };
 
   describe('contrato del protocolo de dev', () => {
     it('GET /api/estado: version, Vistas en orden de declaracion y sin issues', async () => {
@@ -212,6 +247,42 @@ export function probarContratoDeDev(crear: CrearDev): void {
         const issues = cuerpo['issues'] as Array<{ severity: string; file: string; href: string }>;
         expect(issues.some((i) => i.severity === 'error' && i.file === 'main.dg' && i.href.length > 0)).toBe(true);
       });
+    });
+
+    it('/eventos: al conectar estado, historial y actividad con previos; tras cada estado su historial y despues su diferencia', async () => {
+      await con(
+        { 'main.dg': DSL },
+        async (dev) => {
+          const recibidos = await new Promise<[string, unknown][]>((ok) => {
+            const lista: [string, unknown][] = [];
+            const cerrar = dev.eventos('/eventos', (nombre, datos) => {
+              lista.push([nombre, JSON.parse(datos)]);
+              if (lista.length === 3) dev.editarFuera('main.dg', DSL.replace('"API"', '"API nueva"'));
+              if (nombre !== 'diferencia') return;
+              if ((JSON.parse(datos) as DiferenciaDeDev).origen === 'externo') void post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 });
+              else {
+                setTimeout(cerrar, 0);
+                ok(lista);
+              }
+            });
+          });
+          const nombres = recibidos.map(([nombre]) => nombre);
+          expect(nombres.slice(0, 3)).toEqual(['estado', 'historial', 'actividad']);
+          expect(recibidos[2]?.[1]).toEqual({ previos: true, eventos: [eventoDeActividad(1)] });
+          const resto = nombres.slice(3);
+          // Un eco del watcher puede sumar un estado sin Diferencia: lo que importa es el orden de cada tanda.
+          resto.forEach((nombre, i) => {
+            if (nombre === 'estado') expect(resto[i + 1]).toBe('historial');
+            if (nombre === 'historial') expect(resto[i - 1]).toBe('estado');
+            if (nombre === 'diferencia') {
+              expect(resto[i - 1]).toBe('historial');
+              expect((recibidos[i + 3 - 2]?.[1] as EstadoDeDev).version).toBe((recibidos[i + 3]?.[1] as DiferenciaDeDev).version);
+            }
+          });
+          expect(resto.filter((n) => n === 'diferencia')).toHaveLength(2);
+        },
+        { actividad: lineasDeActividad(eventoDeActividad(1)) },
+      );
     });
 
     it('/eventos manda event: estado al conectar y otro, con version mayor, tras una escritura externa', async () => {
@@ -375,7 +446,9 @@ export function probarContratoDeDev(crear: CrearDev): void {
         await post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 3, y: 4 });
         const conDos = (await json(dev, '/api/archivo/main.dg')).cuerpo['texto'];
 
-        expect(await post(dev, '/api/historial/saltar', { id: 0 })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        const alInicio = await post(dev, '/api/historial/saltar', { id: 0 });
+        expect(alInicio.status).toBe(200);
+        expect(escrituraDeDevSchema.parse(alInicio.cuerpo)).toMatchObject({ ok: true });
         expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(DSL);
         expect(await post(dev, '/api/historial/saltar', { id: 2 })).toMatchObject({ status: 200, cuerpo: { ok: true } });
         expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(conDos);
@@ -383,8 +456,68 @@ export function probarContratoDeDev(crear: CrearDev): void {
         expect((await post(dev, '/api/historial/saltar', { id: 'uno' })).status).toBe(400);
 
         await esperarEstado(dev, (e) => e.fuente?.model.nodes.some((n) => n.title === 'Otra') === true, () => dev.editarFuera('main.dg', String(conDos).replace('"API"', '"Otra"')));
-        expect(await post(dev, '/api/historial/saltar', { id: 1 })).toMatchObject({ status: 409, cuerpo: { ok: false, motivo: 'hash-desactualizado' } });
+        const desactualizado = await post(dev, '/api/historial/saltar', { id: 1 });
+        expect(desactualizado.status).toBe(409);
+        expect(rechazoDeDevSchema.parse(desactualizado.cuerpo)).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
       });
+    });
+
+    it('bordes de /api/*: ruta desconocida 404, metodo ajeno 405 con allow, JSON invalido 400; todos con { ok: false, mensaje }', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const error = async (res: Response) => ({ status: res.status, allow: res.headers.get('allow'), cuerpo: errorDeDevSchema.parse(await res.json()) });
+
+        expect(await error(await dev.fetch('/api/nada'))).toMatchObject({ status: 404 });
+        expect(await error(await enviar(dev, '/api/nada', '{}'))).toMatchObject({ status: 404 });
+        for (const ruta of ['/api/edit', '/api/deshacer', '/api/rehacer', '/api/historial/saltar', '/api/confiar']) {
+          expect(await error(await dev.fetch(ruta))).toMatchObject({ status: 405, allow: 'POST' });
+          expect(await error(await enviar(dev, ruta, 'no es json'))).toEqual({ status: 400, allow: null, cuerpo: { ok: false, mensaje: 'JSON invalido' } });
+        }
+        for (const ruta of ['/api/estado', '/api/archivos', '/api/codigo', '/api/vista/datos', '/api/inspect/nodo/api', '/api/archivo/main.dg']) {
+          expect(await error(await enviar(dev, ruta, '{}'))).toMatchObject({ status: 405, allow: 'GET' });
+        }
+        expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(DSL);
+      });
+    });
+
+    it('un fallo de I/O del puerto al escribir es 500 con el mensaje del fallo', async () => {
+      await con(
+        { 'main.dg': DSL },
+        async (dev) => {
+          const res = await enviar(dev, '/api/edit', JSON.stringify({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }));
+          expect({ status: res.status, cuerpo: errorDeDevSchema.parse(await res.json()) }).toEqual({ status: 500, cuerpo: { ok: false, mensaje: 'disco lleno' } });
+        },
+        { escrituraRota: 'disco lleno' },
+      );
+    });
+
+    it('GET /api/codigo dice si hay Temas con codigo y si ya se confia; POST /api/confiar lo confirma', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const codigo = async () => codigoDeDevSchema.parse((await json(dev, '/api/codigo')).cuerpo);
+        expect(await codigo()).toEqual({ temaConCodigo: false, componentes: [], confiado: false });
+        const confiar = await post(dev, '/api/confiar', {});
+        expect(confiar.status).toBe(200);
+        expect(confianzaDeDevSchema.parse(confiar.cuerpo)).toEqual({ ok: true });
+        expect(await codigo()).toEqual({ temaConCodigo: false, componentes: [], confiado: true });
+      });
+    });
+
+    it('/componentes.js sirve el bundle de los Temas con codigo solo tras confiar; antes es 403', async () => {
+      await con(
+        { 'main.dg': CON_CODIGO },
+        async (dev) => {
+          expect(codigoDeDevSchema.parse((await json(dev, '/api/codigo')).cuerpo)).toEqual({ temaConCodigo: true, componentes: ['Aurora'], confiado: false });
+          const antes = await dev.fetch('/componentes.js');
+          expect({ status: antes.status, cuerpo: errorDeDevSchema.parse(await antes.json()) }).toMatchObject({ status: 403, cuerpo: { ok: false } });
+
+          expect((await post(dev, '/api/confiar', {})).status).toBe(200);
+          const despues = await dev.fetch('/componentes.js');
+          expect(despues.status).toBe(200);
+          expect(despues.headers.get('content-type')).toContain('text/javascript');
+          expect(await despues.text()).toBe(BUNDLE_DE_PRUEBA);
+          expect((await enviar(dev, '/componentes.js', '{}')).status).toBe(405);
+        },
+        { codigo: { componentes: ['Aurora'], bundle: BUNDLE_DE_PRUEBA } },
+      );
     });
 
     const TEMA = 'theme claro extends neutral {}\n';

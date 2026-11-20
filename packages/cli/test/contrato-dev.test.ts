@@ -4,18 +4,14 @@ import { eventosSobreFetch, probarContratoDeDev } from 'estudio/contrato';
 import { iniciarDev } from 'cli';
 import { puertoEnMemoria } from 'sesion';
 
-probarContratoDeDev(async ({ propios, temas, actividad }) => {
-  const puerto = puertoEnMemoria({ propios, ...(actividad !== undefined && { actividad }) });
+probarContratoDeDev(async ({ propios, temas, actividad, escrituraRota, codigo }) => {
+  const puerto = puertoEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }), ...(escrituraRota !== undefined && { escrituraRota }) });
   const servidor = await iniciarDev({
     workspace: '/ws',
-    ...(temas !== undefined && { temas: '/temas' }),
-    leer: (raiz) => (raiz === '/temas' ? (temas ?? {}) : puerto.leer().propios),
-    escribir: (_raiz, ruta, texto) => puerto.escribir(ruta, texto),
-    borrar: (_raiz, ruta) => puerto.borrar(ruta),
-    observar: (_raiz, alCambiar) => puerto.observar(alCambiar),
-    actividad: () => puerto.actividad,
+    puerto,
+    ...(codigo !== undefined && { compilarCodigo: () => ({ componentes: Object.fromEntries(codigo.componentes.map((nombre) => [nombre, {}])), issues: [], bundle: codigo.bundle }) }),
     debounceMs: 5,
-    puerto: 0,
+    puertoHttp: 0,
   });
   const fetchDelServidor: typeof fetch = (ruta, init) => fetch(new URL(String(ruta).replace(/^\//, ''), servidor.url), init);
   return {

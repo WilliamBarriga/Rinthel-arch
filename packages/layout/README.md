@@ -4,7 +4,7 @@ Calcula la Geometria de una Vista (ELK para architecture, flow y er; algoritmo p
 
 ## Que hace
 - `layoutView` da la caja de cada Nodo visible y la ruta ortogonal de cada Arista de una `VistaResuelta`.
-- `layoutSecuencia` coloca Lifelines (columnas) y Mensajes (filas) de una Vista `sequence`, sin ELK; `layoutView` elige por `vista.type` y la Geometria es una union por `kind` (`grafo` o `secuencia`). Los tipos de Geometria no se declaran aqui: salen del esquema de `canonico` (`geometriaSchema`) y `layout` los reexporta.
+- `layoutSecuencia` coloca Lifelines (columnas) y Mensajes (filas) de una Vista `sequence`, sin ELK; `layoutView` elige por `vista.type` y la Geometria es una union por `kind` (`grafo` o `secuencia`). Los tipos de Geometria no se declaran aqui: salen del esquema de `canonico` (`geometriaSchema`) y se importan de `canonico`.
 - `claveDeLayout` y `claveDeEstructura` dicen cuando relayoutar; `aplicarPinsAGeometria` aplica Pins sin ELK.
 - `indiceDeGeometria` entrega cajas absolutas, el padre de cada Nodo y las raices.
 

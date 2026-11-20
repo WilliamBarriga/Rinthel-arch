@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { LIMITES_DE_ISLA, rangoDeIsla, tamanoPorTeclado, tamanoTrasArrastre } from '../navegador/marco/limites';
+import { rangoDeIsla, tamanoPorTeclado, tamanoTrasArrastre } from '../navegador/marco/limites';
 
 const lienzo = { ancho: 1400, alto: 900 };
 
@@ -9,7 +9,6 @@ describe('limites del redimensionado de las islas', () => {
     expect(rangoDeIsla(lienzo)).toEqual({ ancho: { min: 220, max: 640 }, alto: { min: 140, max: 836 } });
     // En un lienzo estrecho el maximo baja, pero nunca por debajo del minimo.
     expect(rangoDeIsla({ ancho: 500, alto: 100 })).toEqual({ ancho: { min: 220, max: 250 }, alto: { min: 140, max: 140 } });
-    expect(LIMITES_DE_ISLA.anchoMin).toBe(220);
   });
 
   it('arrastrar el asa lateral de la isla izquierda hacia la derecha la ensancha; en la derecha la estrecha', () => {

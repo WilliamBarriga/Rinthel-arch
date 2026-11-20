@@ -1,43 +1,41 @@
 /**
- * Galeria de Temas: los Temas de la Fuente (los del Workspace, los de `--theme-path` y los incorporados) en un `listbox`.
- * Elegir uno lo previsualiza en la Vista activa sin escribir y muestra su cadena `extends`, su Paleta y sus Capas (via
+ * Galeria de Temas: los Temas de la Fuente (los del Workspace, los de `--theme-path` y los incorporados) en un `listbox`
+ * (`marco/use-listbox.ts`: flechas y Enter, o clic). Elegir uno lo previsualiza en la Vista activa sin escribir y muestra su cadena `extends`, su Paleta y sus Capas (via
  * `inspect tema`). Los Temas cambiados por fuera llevan la marca de cambio externo hasta dejar la galeria. "Fijar" escribe `theme` en esa Vista con la Intencion `fijar-tema`; "Quitar" la deja sin Tema fijado.
  */
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
-import type { SalidaDeInspect } from 'canonico';
-
 import { diferenciasDelCliente } from '../diferencia/diferencias';
 import { verGaleria } from '../diferencia/proyeccion';
 import { MarcaExterna, useMarcasExternas } from '../diferencia/resaltado';
-import { useEstudio, usePrevisualizacionDeTema } from '../marco/contexto';
+import { AvisoDeLectura } from '../marco/aviso-de-lectura';
+import { useEstudio } from '../marco/contexto';
+import { useInspectPorVersion } from '../marco/use-lectura-por-version';
+import { useListbox } from '../marco/use-listbox';
 import { textoDeSitio } from '../sitio';
-
-type SalidaDeTema = Extract<SalidaDeInspect, { comando: 'tema' }>['tema'];
-type Lectura = { tipo: 'cargando' } | { tipo: 'tema'; tema: SalidaDeTema } | { tipo: 'fallo'; mensaje: string };
-
-const idDeOpcion = (tema: string): string => `ui-tema-${tema}`;
+import { usePrevisualizacionDeTema } from './previsualizacion';
 
 export function GaleriaDeTemas(): ReactElement {
-  const { fuente, vista, estado, cliente, avisar } = useEstudio();
+  const { fuente, vista, cliente, escribir } = useEstudio();
   const { temaPrevio, previsualizarTema } = usePrevisualizacionDeTema();
   const [elegido, setElegido] = useState<string>();
   const marcas = useMarcasExternas(cliente);
+  const temas = fuente?.themes ?? [];
+  const elegir = (tema: string): void => {
+    setElegido(tema);
+    previsualizarTema(tema);
+  };
+  const lista = useListbox({ nombre: 'Temas', prefijo: 'ui-tema', orden: temas.map(({ name }) => name), elegida: elegido, elegir });
   // Los Temas cambiados por fuera quedan marcados mientras se ve la galeria; al dejarla se dan por vistos.
   useEffect(() => () => diferenciasDelCliente(cliente).actualizar(verGaleria), [cliente]);
   if (fuente === undefined) return <p className="ui-tenue">El Workspace aun no compila: no hay Temas que mostrar.</p>;
 
   const fijado = fuente.views.find(({ id }) => id === vista)?.theme;
   const fijar = async (tema: string | undefined): Promise<void> => {
-    if (vista === undefined || estado === undefined) return;
-    const r = await cliente.editar({ tipo: 'fijar-tema', vista, ...(tema !== undefined && { tema }) }, estado.version);
+    if (vista === undefined) return;
+    const r = await escribir({ intencion: { tipo: 'fijar-tema', vista, ...(tema !== undefined && { tema }) }, fallo: `No se pudo ${tema === undefined ? 'quitar' : 'fijar'} el Tema` });
     if (r.ok) previsualizarTema(undefined);
-    else avisar(`No se pudo ${tema === undefined ? 'quitar' : 'fijar'} el Tema: ${r.mensaje}`);
-  };
-  const elegir = (tema: string): void => {
-    setElegido(tema);
-    previsualizarTema(tema);
   };
 
   return (
@@ -52,9 +50,9 @@ export function GaleriaDeTemas(): ReactElement {
           )}
         </p>
       )}
-      <div role="listbox" aria-label="Temas" tabIndex={0} className="ui-indice" {...(elegido !== undefined && { 'aria-activedescendant': idDeOpcion(elegido) })}>
-        {fuente.themes.map(({ name }) => (
-          <div key={name} id={idDeOpcion(name)} role="option" aria-label={name} aria-selected={name === elegido} className="ui-indice-vista" onClick={() => elegir(name)}>
+      <div {...lista.listbox} className="ui-indice">
+        {temas.map(({ name }) => (
+          <div key={name} {...lista.opcion(name)} className="ui-indice-vista">
             <span className="ui-mono">{name}</span>
             {marcas.temas.has(name) && <MarcaExterna />}
             {name === fijado && <span className="ui-enlaces">fijado</span>}
@@ -79,20 +77,8 @@ interface PropsDeFicha {
 
 function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, alSoltar }: PropsDeFicha): ReactElement {
   const { cliente, estado } = useEstudio();
-  const [lectura, setLectura] = useState<Lectura>({ tipo: 'cargando' });
-  const version = estado?.version;
-  useEffect(() => {
-    let vigente = true;
-    setLectura({ tipo: 'cargando' });
-    void cliente.inspeccionar('tema', nombre).then((r) => {
-      if (!vigente) return;
-      if (r.ok && r.salida.comando === 'tema') setLectura({ tipo: 'tema', tema: r.salida.tema });
-      else setLectura({ tipo: 'fallo', mensaje: r.ok ? 'Respuesta inesperada de inspect' : r.mensaje });
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [nombre, version, cliente]);
+  const lectura = useInspectPorVersion(cliente, estado?.version, 'tema', nombre);
+  const tema = lectura.tipo === 'dato' ? lectura.dato.tema : undefined;
 
   return (
     <section aria-label={`Tema ${nombre}`} className="ui-detalle">
@@ -109,19 +95,13 @@ function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, 
           </button>
         )}
       </div>
-      {lectura.tipo === 'cargando' ? (
-        <p className="ui-tenue" role="status">
-          Cargando {nombre}...
-        </p>
-      ) : lectura.tipo === 'fallo' ? (
-        <p className="ui-tenue" role="status">
-          {lectura.mensaje}
-        </p>
+      {tema === undefined ? (
+        <AvisoDeLectura lectura={lectura} que={nombre} />
       ) : (
         <>
-          <p className="ui-mono ui-sitio">{textoDeSitio(lectura.tema)}</p>
+          <p className="ui-mono ui-sitio">{textoDeSitio(tema)}</p>
           <h3 className="ui-subtitulo">Cadena extends</h3>
-          <p className="ui-mono">{[nombre, ...lectura.tema.extends].join(' > ')}</p>
+          <p className="ui-mono">{[nombre, ...tema.extends].join(' > ')}</p>
         </>
       )}
       <h3 className="ui-subtitulo">Paleta</h3>
@@ -133,11 +113,11 @@ function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, 
           </li>
         ))}
       </ul>
-      {lectura.tipo === 'tema' && (
+      {tema !== undefined && (
         <>
           <h3 className="ui-subtitulo">Capas</h3>
           <ul aria-label="Capas" className="ui-lista">
-            {lectura.tema.capas.map((capa) => (
+            {tema.capas.map((capa) => (
               <li key={capa.nombre} className="ui-mono">
                 {capa.nombre} {capa.primitiva}
                 {capa.encima ? ' [encima]' : ''}

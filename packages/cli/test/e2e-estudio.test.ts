@@ -14,7 +14,7 @@ import type { Browser, Page } from 'playwright';
 import { iniciarDev, run } from 'cli';
 import type { ServidorDev } from 'cli';
 
-import { rutaDeChromium } from './chromium';
+import { rutaDeChromium } from '../../../tests/ayudas/chromium';
 
 const PLAZO_MS = 60_000;
 const ESPERA = { timeout: 15_000 };
@@ -26,7 +26,7 @@ let navegador: Browser;
 beforeAll(async () => {
   workspace = mkdtempSync(join(tmpdir(), 'e2e-estudio-'));
   cpSync(join(import.meta.dirname, 'fixtures', 'mediano'), workspace, { recursive: true });
-  servidor = await iniciarDev({ workspace, puerto: 0 });
+  servidor = await iniciarDev({ workspace, puertoHttp: 0 });
   navegador = await chromium.launch({ executablePath: rutaDeChromium(), headless: true });
 }, PLAZO_MS);
 

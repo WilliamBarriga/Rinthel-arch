@@ -4,13 +4,13 @@
  * Arista, Arista (con `tolerancia`), Atributo, Nodo (el mas anidado gana).
  */
 import { destinoDeRef, idDeArista, idDeElementoDeSecuencia, leerIdDeElementoDeSecuencia } from 'canonico';
-import type { ItemResuelto, NodoResuelto, Tema, Vista, Visibilidad, VistaDeSecuencia, VistaResuelta } from 'canonico';
+import type { CajaDeNodo, Geometria, ItemResuelto, NodoResuelto, Punto, Tema, Visibilidad, Vista, VistaDeSecuencia, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
-import type { CajaDeNodo, Geometria, Punto } from 'layout';
 import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
 import { centroDeEtiquetaSinCaja, resolverEstilo } from 'render';
 import type { Estilo } from 'render';
 
+import { contiene } from './caja';
 import { AJUSTES_POR_DEFECTO } from './configuracion';
 
 export type TipoDeElemento = 'nodo' | 'arista' | 'etiqueta' | 'atributo' | 'mensaje' | 'fragmento' | 'nota';
@@ -40,9 +40,6 @@ type Geo = Pick<Geometria, 'nodes'> & {
   notes?: readonly (CajaDeNodo & { ruta: string })[];
   fragments?: readonly (CajaDeNodo & { ruta: string; nivel: number; tab: CajaDeNodo })[];
 };
-
-const contiene = (caja: CajaDeNodo, p: Punto): boolean =>
-  p.x >= caja.x && p.x <= caja.x + caja.width && p.y >= caja.y && p.y <= caja.y + caja.height;
 
 function distanciaASegmento(p: Punto, a: Punto, b: Punto): number {
   const [dx, dy] = [b.x - a.x, b.y - a.y];
@@ -135,9 +132,8 @@ function elementoBajoEnSecuencia(vista: VistaDeSecuencia, geometria: Geo, punto:
   // Fragmentos: el mas anidado gana; solo cuentan la pestana y el borde.
   const marcos = [...(geometria.fragments ?? [])].filter((m) => visible(idDe(m.ruta))).sort((a, b) => b.nivel - a.nivel);
   const marco = marcos.find((m) => {
-    const dentro = (t: number): boolean => punto.x >= m.x - t && punto.x <= m.x + m.width + t && punto.y >= m.y - t && punto.y <= m.y + m.height + t;
     const interior = punto.x > m.x + tolerancia && punto.x < m.x + m.width - tolerancia && punto.y > m.y + tolerancia && punto.y < m.y + m.height - tolerancia;
-    return contiene(m.tab, punto) || (dentro(tolerancia) && !interior);
+    return contiene(m.tab, punto) || (contiene(m, punto, tolerancia) && !interior);
   });
   return marco === undefined ? undefined : { tipo: 'fragmento', id: idDe(marco.ruta) };
 }

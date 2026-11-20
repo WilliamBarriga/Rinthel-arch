@@ -16,7 +16,7 @@ import { lintKeymap, setDiagnostics } from '@codemirror/lint';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { EditorState } from '@codemirror/state';
 import { EditorView, drawSelection, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import type { ArchivosDeDev, IssueDeDev } from '../../src/protocolo';
@@ -24,9 +24,11 @@ import type { ClienteDeDev } from '../cliente';
 import { comandoPorId } from '../comandos/registro';
 import { aplicarFixes, fixDelIssue } from '../issues/aplicar-fix';
 import { useCanalDelEditor, useEstudio } from '../marco/contexto';
-import type { ContextoDelEstudio, SitioDeCodigo } from '../marco/contexto';
+import type { ContextoDelEstudio } from '../marco/contexto';
 import { useCaducidad } from '../marco/use-caducidad';
+import { useLecturaPorVersion } from '../marco/use-lectura-por-version';
 import { sitioDeSalida } from '../sitio';
+import type { SitioDeCodigo } from '../sitio';
 import { completarDsl } from './completado';
 import { diagnosticosDe } from './diagnosticos';
 import type { FixDeIssue } from './diagnosticos';
@@ -41,7 +43,7 @@ export { desdeElDisco };
 /** Cuanto quedan marcadas las lineas que trajo el disco. */
 export const DURACION_DE_LAS_MARCAS_MS = 4000;
 /** Cuanto se ofrece recuperar lo que perdio el buffer en un solape. */
-export const DURACION_DEL_AVISO_MS = 15000;
+const DURACION_DEL_AVISO_MS = 15000;
 
 const TEXTO_DEL_GUARDADO: Record<EstadoDelGuardado['tipo'], string> = { guardado: 'Guardado', 'sin-guardar': 'Sin guardar', guardando: 'Guardando...', error: 'No se guardo' };
 
@@ -49,21 +51,16 @@ export function PanelDeCodigo(): ReactElement {
   const estudio = useEstudio();
   const { cliente, estado } = estudio;
   const { sitio: sitioDeCodigo } = useCanalDelEditor();
-  const [listado, setListado] = useState<ArchivosDeDev>();
+  // Si el listado falla se conserva el anterior: el editor abierto no se desmonta por un error de red.
+  const lectura = useLecturaPorVersion<ArchivosDeDev>(cliente, estado?.version, {
+    clave: 'archivos',
+    conservarAnteFallo: true,
+    pedir: (c) => c.archivos(),
+  });
+  const listado = lectura.tipo === 'dato' ? lectura.dato : undefined;
   const lista = listado?.archivos;
   const [elegido, setElegido] = useState<string>();
   const [guardado, setGuardado] = useState<EstadoDelGuardado>({ tipo: 'guardado' });
-
-  const version = estado?.version;
-  useEffect(() => {
-    let vigente = true;
-    void cliente.archivos().then((leidos) => {
-      if (vigente && leidos !== undefined) setListado(leidos);
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [cliente, version]);
   useEffect(() => {
     if (sitioDeCodigo !== undefined) setElegido(sitioDeCodigo.file);
   }, [sitioDeCodigo]);
@@ -108,10 +105,13 @@ interface PropsDelEditor {
 function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado }: PropsDelEditor): ReactElement {
   const estudio = useEstudio();
   const canalDelEditor = useCanalDelEditor();
+  // CodeMirror y el guardador llaman al estudio fuera de React: leen el contexto del ultimo render confirmado.
   const vivo = useRef(estudio);
-  vivo.current = estudio;
   const canal = useRef(canalDelEditor);
-  canal.current = canalDelEditor;
+  useLayoutEffect(() => {
+    vivo.current = estudio;
+    canal.current = canalDelEditor;
+  });
   const anfitrion = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<{ vista: EditorView; guardador: Guardador }>();
   const [estadoDelGuardado, setEstadoDelGuardado] = useState<EstadoDelGuardado>({ tipo: 'guardado' });
@@ -225,7 +225,7 @@ function recuperarPerdidos(vista: EditorView, perdidos: readonly FragmentoPerdid
 
 /**
  * Un `fix` del mismo archivo entra al buffer (y se guarda con el resto); uno de otro archivo va directo a `dev` con la
- * misma logica que el boton del panel Issues (`aplicarFixes`: version vista, 409 con reintento, aviso con motivo).
+ * misma logica que el boton del panel Issues (`aplicarFixes`: version vigente, 409 con reintento, aviso con motivo).
  */
 function aplicarFix(vista: EditorView, file: string, fix: FixDeIssue, issue: IssueDeDev, estudio: ContextoDelEstudio): void {
   if (fix.file === file && !vista.state.readOnly) {

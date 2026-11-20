@@ -9,7 +9,6 @@ import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, con
 import type { Metricas, TablaDeMetricas } from 'tema';
 
 
-export type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada, OperandoColocado, RutaDeMensaje };
 
 /** Ancho que algo pide entre las columnas `desde` y `hasta` (indices de Lifeline): una etiqueta, una Nota. */
 interface NecesidadDeAncho {

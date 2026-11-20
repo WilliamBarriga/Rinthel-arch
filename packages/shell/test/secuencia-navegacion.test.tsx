@@ -3,12 +3,12 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
 import { layoutView } from 'layout';
-import type { GeometriaSecuencia } from 'layout';
+import type { GeometriaSecuencia } from 'canonico';
 import { abrirSesion } from 'sesion';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
-import { pulsarEn } from './ayudas';
+import { camaraDe, pulsarEn } from './ayudas';
 
 afterEach(cleanup);
 
@@ -104,7 +104,7 @@ view cerrada { type sequence
  step "tres" { upto m3 } } }
 `;
 const centroDe = (c: { x: number; y: number; width: number; height: number }) => ({ x: c.x + c.width / 2, y: c.y + c.height / 2 });
-const camaraX = (c: HTMLElement) => Number(c.querySelector('[data-diagram]')!.getAttribute('data-camara')!.split(' ')[0]);
+const camaraX = (c: HTMLElement) => Number(camaraDe(c)!.split(' ')[0]);
 const xDe = (el: HTMLElement) => {
   const t = /translate\(([-\d.]+)px/.exec(el.style.transform);
   return t === null ? Number.parseFloat(el.style.left) : Number(t[1]);

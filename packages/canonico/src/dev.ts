@@ -1,14 +1,16 @@
 /**
- * Protocolo de `dev` que comparten el Workspace vivo (`sesion`), el servidor (`cli`) y la pagina (`estudio`): rutas,
- * esquemas de lo que el Workspace vivo produce (estado, Diferencia, Historial, archivos) y de las peticiones de escritura,
- * la identidad de los elementos de una Diferencia y la traduccion de un rechazo a estado HTTP (ADR 0004, 0007).
- * `estudio/protocolo` reexporta todo esto y suma lo que solo conoce la pagina (eventos SSE, `inspect` no encontrado).
- * Invariantes: sin I/O; un valor de aqui (ruta, comando, estado HTTP) es el unico que usan el servidor real y `devEnMemoria`.
+ * Protocolo de `dev`, con un solo dueno, que comparten el Workspace vivo (`sesion`), el servidor (`cli`) y la pagina
+ * (`estudio`): rutas, eventos SSE con nombre, esquemas de lo que el Workspace vivo produce (estado, Diferencia, Historial de archivos,
+ * actividad, archivos, `inspect` no encontrado) y de las peticiones de escritura, la identidad de los elementos de una
+ * Diferencia y la traduccion de un rechazo a estado HTTP (ADR 0004, 0007). `estudio/protocolo` lo reexporta para la pagina.
+ * Invariantes: sin I/O; un valor de aqui (ruta, evento, comando, estado HTTP) es el unico que usan el servidor real y `devEnMemoria`.
  */
 import { z } from 'zod';
 
+import { eventoDeActividadSchema } from './actividad';
 import { edicionDeTextoSchema } from './edit';
 import { fuenteCanonicaSchema } from './esquema';
+import { MOTIVOS_DE_RECHAZO } from './pin';
 import type { MotivoDeRechazo } from './pin';
 import { RUTA_DE_FUENTES } from './ruta-de-fuentes';
 import { issueSchema } from './salida';
@@ -157,7 +159,7 @@ export const diferenciaDeDevSchema = diferenciaSchema.extend({ version: z.number
 export type DiferenciaDeDev = z.infer<typeof diferenciaDeDevSchema>;
 
 /**
- * Datos de `event: historial` (al conectar y tras cada recompilacion): el Historial de deshacer de `dev`, `pasado` de la
+ * Datos de `event: historial` (al conectar y tras cada recompilacion): el Historial de archivos de `dev`, `pasado` de la
  * entrada mas vieja a la mas reciente y `futuro` desde la siguiente a rehacer. `id` es un contador estable del proceso
  * (`0` es Inicio), `cuando` la hora en ms y `descripcion` la arma el servidor. `alcanzable: false` (con `motivo`) si
  * saltar a ella restauraria un archivo que cambio por fuera.
@@ -205,7 +207,7 @@ export function archivoDeRuta(resto: string): string | undefined {
 
 /**
  * `POST /api/edit` con texto (ADR 0007): la misma forma y puerta que `edit --edits`, con la `version` que vio la pagina
- * (el servidor la traduce a `visto`). `descripcion` nombra la entrada del Historial (por defecto "texto de <archivo>").
+ * (el servidor la traduce a `visto`). `descripcion` nombra la entrada del Historial de archivos (por defecto "texto de <archivo>").
  * `aunqueNoCompile` (guardado del editor, historia 21) escribe aunque el texto introduzca errores; sin el, un error nuevo
  * rechaza con `invalida` (`fix` y "Aplicar N fix", todo o nada).
  */
@@ -216,3 +218,49 @@ export const peticionDeEdicionesSchema = z.object({
   aunqueNoCompile: z.boolean().optional(),
 });
 export type PeticionDeEdiciones = z.infer<typeof peticionDeEdicionesSchema>;
+
+/** `GET /api/codigo`: si los Temas del Workspace usan Componentes con codigo, cuales, y si ya se sirven (`/componentes.js`). */
+export const codigoDeDevSchema = z.object({ temaConCodigo: z.boolean(), componentes: z.array(z.string()), confiado: z.boolean() });
+export type CodigoDeDev = z.infer<typeof codigoDeDevSchema>;
+
+/** `POST /api/confiar`: desde aqui el codigo de los Temas se sirve. */
+export const confianzaDeDevSchema = z.object({ ok: z.literal(true) });
+
+/** Cuerpo de los bordes de `/api/*`: 400 (JSON o forma invalida), 404 (ruta o recurso), 405 (metodo, con `allow`) y 500 (fallo de I/O). */
+export const errorDeDevSchema = z.object({ ok: z.literal(false), mensaje: z.string() });
+export type ErrorDeDev = z.infer<typeof errorDeDevSchema>;
+
+/** `POST /api/edit`, `/api/deshacer`, `/api/rehacer` y `/api/historial/saltar` aceptados: la `version` del estado tras escribir. */
+export const escrituraDeDevSchema = z.object({ ok: z.literal(true), version: z.number().int() });
+export type EscrituraDeDev = z.infer<typeof escrituraDeDevSchema>;
+
+/** Un borde (`errorDeDevSchema`) o el rechazo de una escritura (409/422), que trae ademas `motivo` y, si lo hay, `file`. */
+export const rechazoDeDevSchema = errorDeDevSchema.extend({ motivo: z.enum(MOTIVOS_DE_RECHAZO).optional(), file: z.string().optional() });
+export type RechazoDeDev = z.infer<typeof rechazoDeDevSchema>;
+
+/** Cuerpo de un 404 de `/api/inspect` (o 422 si el Workspace nunca compilo): el mensaje de `inspect` y los ids cercanos. */
+export const inspectNoEncontradoSchema = z.object({ ok: z.literal(false), mensaje: z.string(), cercanos: z.array(z.string()) });
+export type InspectNoEncontrado = z.infer<typeof inspectNoEncontradoSchema>;
+
+/**
+ * Eventos SSE de `/eventos`, cada uno con `event: <nombre>` y los datos en JSON. Al conectar llegan `estado`,
+ * `historial` y `actividad` con `previos: true`; tras cada `estado`, el `historial` y, si la hay, la `diferencia` de esa
+ * `version`; y una `actividad` con `previos: false` por cada tanda que se anexa al registro. Quien decide la secuencia
+ * es el Workspace vivo (`conexion` y `escuchar` en `sesion`); el servidor real y `devEnMemoria` solo la serializan.
+ */
+export const EVENTOS_DE_DEV = ['estado', 'actividad', 'diferencia', 'historial'] as const;
+export type NombreDeEventoDeDev = (typeof EVENTOS_DE_DEV)[number];
+
+/**
+ * Datos de `event: actividad`: Eventos del Registro de actividad en orden. Al conectar llega uno con `previos: true` y
+ * los ultimos 50 del registro (quiza ninguno); despues, uno con `previos: false` por cada tanda que el CLI anexa.
+ */
+export const actividadDeDevSchema = z.object({ previos: z.boolean(), eventos: z.array(eventoDeActividadSchema) });
+export type ActividadDeDev = z.infer<typeof actividadDeDevSchema>;
+
+/** Un evento de `/eventos` con su nombre y sus datos. */
+export type EventoDeDev =
+  | { nombre: 'estado'; datos: EstadoDeDev }
+  | { nombre: 'historial'; datos: HistorialDeDev }
+  | { nombre: 'actividad'; datos: ActividadDeDev }
+  | { nombre: 'diferencia'; datos: DiferenciaDeDev };

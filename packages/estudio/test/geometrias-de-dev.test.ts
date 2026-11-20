@@ -4,7 +4,7 @@ import type { GeometriaCacheada } from 'canonico';
 
 import type { EstadoDeDev } from '../src/protocolo';
 import type { LecturaDeGeometria } from '../navegador/cliente';
-import { crearGeometriasDeDev } from '../navegador/geometrias';
+import { crearGeometriasDeDev } from '../navegador/lienzo/geometrias';
 
 const geometria = (view: string): GeometriaCacheada => ({ view, theme: 't', layoutKey: 'k', geometry: { kind: 'grafo', nodes: {}, edges: {}, labels: {}, pinsSolapados: [], width: 1, height: 1 } });
 

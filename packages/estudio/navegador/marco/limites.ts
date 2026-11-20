@@ -26,7 +26,7 @@ export interface Lienzo {
   alto: number;
 }
 
-export const LIMITES_DE_ISLA = {
+const LIMITES_DE_ISLA = {
   anchoMin: 220,
   anchoMax: 640,
   /** Una isla no pasa de esta fraccion del ancho del lienzo. */

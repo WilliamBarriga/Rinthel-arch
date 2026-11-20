@@ -3,14 +3,18 @@
  * las violaciones ordenadas por paquete, archivo, regla y mensaje; vacio es verde. Solo lee; ignora comentarios.
  * Reglas:
  * - `cadena`: el paquete esta en `CADENA`. `orden`: solo importa de paquetes anteriores en `CADENA`.
- * - `interno`: de otro paquete solo se importa su nombre o lo que declara `exports`; un import relativo no sale del paquete.
+ * - `interno`: de otro paquete solo se importa su nombre o lo que declara `exports`; un import relativo no sale del paquete,
+ *   salvo desde las pruebas hacia las ayudas compartidas de `AYUDAS_DE_PRUEBA`.
  * - `declaracion`: todo paquete del workspace importado esta en `dependencies` o `peerDependencies`.
  * - `exports`: la superficie publica es la entrada `.` mas, solo en los paquetes de `SUBPATHS_PERMITIDOS`, esos subpaths.
  * - `pureza`: el codigo fuente de `NUCLEO` no importa modulos de Node ni usa reloj, azar, `process`, red ni DOM.
+ * - `reexporte`: ningun archivo hace `export ... from` de otro paquete del workspace, salvo los de `REEXPORTES_PERMITIDOS`.
+ * Ademas revisa las carpetas de `CARPETAS_DE_RAIZ` (paquete `(raiz)`) con la regla `interno`: de un paquete solo usan
+ * su nombre o lo que declara `exports`, nunca un archivo suyo por ruta relativa.
  * Errores: un `package.json` ilegible o invalido lanza; uno ausente se ignora.
  */
 import { builtinModules } from 'node:module';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
 /** Orden de dependencias (ADR 0004): un paquete solo importa de los anteriores. */
@@ -18,11 +22,28 @@ export const CADENA = ['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 
 
 /**
  * Subpaths publicos ademas de `.` (ADR 0004, enmienda `estudio`): `protocolo` es el contrato de `dev` del que `cli`
- * importa tipos sin cargar la app de navegador; `contrato` es la suite de pruebas compartida. Ningun otro paquete los tiene.
+ * importa tipos sin cargar la app de navegador; `contrato` es la suite de pruebas compartida; `construir` arma el bundle
+ * de la app (lo usa el bench). Ningun otro paquete los tiene.
  */
 export const SUBPATHS_PERMITIDOS: Readonly<Record<string, readonly string[]>> = {
-  estudio: ['./protocolo', './contrato'],
+  estudio: ['./protocolo', './contrato', './construir'],
 };
+
+/**
+ * Archivos que pueden reexportar de otro paquete (ruta relativa a la raiz del repo): `estudio/protocolo` junta el
+ * contrato de `dev` para la app y `cli`; la fachada publica de `shell` ofrece a sus consumidores los tipos de su interfaz.
+ * Fuera de ellos, cada nombre se importa del paquete dueno, sin segundos caminos.
+ */
+export const REEXPORTES_PERMITIDOS: readonly string[] = ['packages/estudio/src/protocolo.ts', 'packages/shell/src/index.ts'];
+
+/** Carpeta raiz (relativa al repo) de las ayudas de prueba compartidas entre paquetes; solo la importan pruebas. */
+export const AYUDAS_DE_PRUEBA = 'tests/ayudas';
+
+/** Carpetas raiz (relativas al repo) que consumen paquetes como un cliente mas: solo por su interfaz declarada. */
+export const CARPETAS_DE_RAIZ = ['scripts', 'bench'] as const;
+
+/** Nombre con el que se reportan las violaciones de `CARPETAS_DE_RAIZ`. */
+const RAIZ = '(raiz)';
 
 /** Nucleo puro: sin I/O, sin reloj, sin estado global. */
 export const NUCLEO = ['canonico', 'tema', 'dsl', 'sesion', 'render'] as const;
@@ -37,7 +58,7 @@ const IMPUREZAS: ReadonlyArray<readonly [RegExp, string]> = [
 
 const MODULOS_DE_NODE = new Set(builtinModules);
 
-export type Regla = 'cadena' | 'orden' | 'interno' | 'declaracion' | 'exports' | 'pureza';
+export type Regla = 'cadena' | 'orden' | 'interno' | 'declaracion' | 'exports' | 'pureza' | 'reexporte';
 
 export interface Violacion {
   readonly paquete: string;
@@ -62,6 +83,7 @@ interface Paquete {
 const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist', 'coverage', '.git']);
 const ARCHIVOS_IGNORADOS = /^tsup\.config\.|^vitest\.config\./;
 const EXTENSIONES_DE_CODIGO = ['.ts', '.tsx', '.mts', '.cts'];
+const RE_REEXPORTE = /\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*(['"])([^'"\n]+)\1/g;
 const RE_ESPECIFICADOR = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/g;
 
 export function revisarWorkspace(raiz: string): Violacion[] {
@@ -71,6 +93,44 @@ export function revisarWorkspace(raiz: string): Violacion[] {
     violaciones.push(...revisarManifiesto(paquete));
     for (const archivo of archivosDe(paquete.carpeta)) {
       violaciones.push(...revisarArchivo(raiz, paquete, archivo, paquetes));
+    }
+  }
+  for (const carpeta of CARPETAS_DE_RAIZ) {
+    if (!existsSync(join(raiz, carpeta))) continue;
+    for (const archivo of archivosDe(join(raiz, carpeta))) {
+      violaciones.push(...revisarArchivoDeRaiz(raiz, archivo, paquetes));
+    }
+  }
+  return violaciones;
+}
+
+/** Un archivo de `CARPETAS_DE_RAIZ`: ningun import relativo entra a un paquete y ningun subpath sale de su `exports`. */
+function revisarArchivoDeRaiz(raiz: string, archivo: string, paquetes: Paquete[]): Violacion[] {
+  const relativo = relative(raiz, archivo).split('\\').join('/');
+  const violaciones: Violacion[] = [];
+  for (const especificador of extraerEspecificadores(sinComentarios(readFileSync(archivo, 'utf8')))) {
+    if (especificador.startsWith('.')) {
+      const dueno = paquetes.find((otro) => dentroDe(resolve(dirname(archivo), especificador), otro.carpeta));
+      if (dueno !== undefined) {
+        violaciones.push({
+          paquete: RAIZ,
+          archivo: relativo,
+          regla: 'interno',
+          mensaje: `import relativo "${especificador}" entra a ${dueno.nombre}; importalo por su nombre o por lo que declara su exports`,
+        });
+      }
+      continue;
+    }
+    const importado = nombreDePaquete(especificador);
+    const destino = paquetes.find((otro) => otro.nombre === importado);
+    const subpath = especificador.slice(importado.length);
+    if (destino !== undefined && subpath !== '' && !clavesDeExports(destino.manifiesto).includes(`.${subpath}`)) {
+      violaciones.push({
+        paquete: RAIZ,
+        archivo: relativo,
+        regla: 'interno',
+        mensaje: `importa "${especificador}"; de ${importado} solo se importa por nombre y por lo que declara su exports`,
+      });
     }
   }
   return violaciones;
@@ -166,7 +226,8 @@ function revisarArchivo(
     if (especificador.startsWith('.')) {
       const destino = resolve(dirname(archivo), especificador);
       const dueno = paquetes.find((otro) => dentroDe(destino, otro.carpeta));
-      if (dueno === undefined || dueno.nombre !== paquete.nombre) {
+      const ayudaDePrueba = esDeTest(relativo) && dentroDe(destino, join(raiz, AYUDAS_DE_PRUEBA));
+      if (!ayudaDePrueba && (dueno === undefined || dueno.nombre !== paquete.nombre)) {
         violaciones.push({
           paquete: nombre,
           archivo: relativo,
@@ -215,6 +276,20 @@ function revisarArchivo(
         regla: 'declaracion',
         mensaje: `importa ${importado} sin declararlo en dependencies o peerDependencies`,
       });
+    }
+  }
+
+  if (!REEXPORTES_PERMITIDOS.includes(relativo.split('\\').join('/'))) {
+    for (const coincidencia of texto.matchAll(RE_REEXPORTE)) {
+      const importado = nombreDePaquete(coincidencia[2]);
+      if (importado !== nombre && paquetes.some((otro) => otro.nombre === importado)) {
+        violaciones.push({
+          paquete: nombre,
+          archivo: relativo,
+          regla: 'reexporte',
+          mensaje: `reexporta de ${importado}; quien lo usa lo importa de ${importado} directamente`,
+        });
+      }
     }
   }
 

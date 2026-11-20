@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { abrirSesion, aplicarAlWorkspace, hashDeContenido, workspaceEnMemoria } from 'sesion';
-import type { Intencion, PuertoDeWorkspace } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, hashDeContenido, puertoEnMemoria } from 'sesion';
+import type { Intencion } from 'sesion';
+
+type PuertoDeWorkspace = Parameters<typeof aplicarAlWorkspace>[0];
 
 const texto = `specification { node servicio }
 model { servicio a }
@@ -13,7 +15,7 @@ view v {
 
 /** El adaptador en memoria de `sesion`, anotando cada escritura. */
 function fake(propios: Record<string, string>, temas: Record<string, string> = {}) {
-  const ws = workspaceEnMemoria({ propios, temas });
+  const ws = puertoEnMemoria({ propios, temas });
   const escrituras: string[] = [];
   const puerto: PuertoDeWorkspace = {
     leer: () => ws.leer(),
@@ -36,7 +38,7 @@ const mover = (_t: string, extra: Partial<Extract<Intencion, { tipo: 'mover-pin'
 
 describe('Workspace en memoria', () => {
   it('lo que escribe la puerta lo ve la Sesion abierta sobre el; los Temas solo se leen y un archivo borrado desaparece', async () => {
-    const ws = workspaceEnMemoria({ propios: { 'main.dg': texto, 'nota.dg': '// nota\n' }, temas: { 'tema.dg': 'theme t {}\n' } });
+    const ws = puertoEnMemoria({ propios: { 'main.dg': texto, 'nota.dg': '// nota\n' }, temas: { 'tema.dg': 'theme t {}\n' } });
 
     expect(aplicarAlWorkspace(ws, mover(texto)).ok).toBe(true);
     ws.borrar('nota.dg');

@@ -1,3 +1,5 @@
+import { CARPETA_DE_SALIDA } from './workspace';
+
 const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill'] as const;
 export type ComandoConAyuda = (typeof COMANDOS)[number];
 
@@ -22,7 +24,7 @@ Cada issue trae code estable, file, line, column y, si hay un unico candidato, f
 `,
   build: `diagrams build --workspace <ruta> [opciones]
 
-Valida y escribe la Fuente canonica y la geometria en <ruta>/.diagrams/ (derivado, no se versiona).
+Valida y escribe la Fuente canonica y la geometria en <ruta>/${CARPETA_DE_SALIDA}/ (derivado, no se versiona).
 Con errores sale 1 y borra la salida anterior.
 
 Opciones: las de validate (--json, --strict, --max-issues, --theme, --theme-path).
@@ -97,7 +99,7 @@ Uso: diagrams <comando> --workspace <ruta> [opciones]
 
 Comandos:
   validate   Compila y valida; lista issues con archivo, linea y fix (solo lectura)
-  build      Escribe la Fuente canonica y la geometria en <ruta>/.diagrams/
+  build      Escribe la Fuente canonica y la geometria en <ruta>/${CARPETA_DE_SALIDA}/
   dev        Visor en vivo en http://127.0.0.1:4173/ con panel de issues
   inspect    Consulta el Modelo: buscar, nodo, vista, tema (solo lectura)
   edit       Fija un Pin o aplica ediciones estructuradas al .dg
@@ -105,7 +107,7 @@ Comandos:
 
 Bucle de un agente: inspect, editar el .dg, validate --json hasta ok:true.
 Codigos de salida: 0 correcto, 1 hay errores del Workspace, 2 fallo de uso o interno.
-validate, build, inspect y edit anexan un Evento a <ruta>/.diagrams/actividad.jsonl
+validate, build, inspect y edit anexan un Evento a <ruta>/${CARPETA_DE_SALIDA}/actividad.jsonl
 (DIAGRAMS_ACTIVIDAD=0 lo apaga; DIAGRAMS_AGENTE nombra al agente).
 Guia completa: docs/guia/cli.md
 `;

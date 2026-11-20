@@ -65,7 +65,7 @@ async function empaquetar(entrada: string, alias: Record<string, string> = {}): 
 export async function construirEstudio({ salida, css = cssConEsbuild }: OpcionesDeConstruccion): Promise<void> {
   const [pagina, worker, hoja] = await Promise.all([
     empaquetarPagina(navegador('dev.tsx'), salida),
-    empaquetar(navegador('worker.ts'), { zod: navegador('zod-inerte.ts') }),
+    empaquetar(navegador('worker/worker.ts'), { zod: navegador('worker/zod-inerte.ts') }),
     css(navegador('estilo.css')),
   ]);
   mkdirSync(salida, { recursive: true });

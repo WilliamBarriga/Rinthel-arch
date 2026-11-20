@@ -127,11 +127,21 @@ Cambio que el usuario pide sobre el DSL de texto, expresado en terminos del domi
 **Gesto**:
 Operacion de la Sesion que recibe una Intencion, calcula la edicion minima del DSL de texto, la auto-prueba y la aplica en memoria. Quien lo invoca solo se ocupa de escribir el resultado.
 
+**Historial**:
+Pila inmutable de deshacer y rehacer de las Intenciones (ADR 0007): cada Intencion aplicada apila el texto del Workspace que deja, sin I/O. Es el del reductor puro, sin disco de por medio.
+_Evitar_: Historial a secas para el de `dev` (ese es el Historial de archivos).
+
+**Historial de archivos**:
+Historial de deshacer de `dev`: cada entrada guarda, por archivo, el texto antes y despues de una escritura de la UI (Intencion, guardado del editor, `fix`), con una descripcion y su hora. Deshacer, rehacer y saltar a una entrada se rechazan solo si cambio por fuera un archivo que la entrada restaura; una escritura externa no lo reinicia. La UI ve de el el Historial visible: cada entrada con si es alcanzable sobre el disco vigente.
+
+**Workspace vivo**:
+El estado de `dev` sin transporte: la Sesion vigente y la ultima buena, el Historial de archivos, la cola de escrituras, las versiones que vio la UI, la Diferencia con su origen y, compuesto, el Registro de actividad vivo (modulo propio que lee y empuja la actividad). Es el unico dueno de la secuencia de eventos del protocolo de `dev`: al conectar, estado, Historial de archivos y actividad previa; tras cada estado, su Historial de archivos y su Diferencia. El servidor de `dev` y su fake de pruebas solo la transportan.
+
 **Seleccion**:
 Elemento o elementos de una Vista (Nodo, Arista, Atributo; en secuencia tambien Mensaje, Fragmento y Nota) sobre los que actua el editor. Es el sujeto de las Intenciones.
 
 **Registro de actividad**:
-Historial de los comandos del CLI corridos sobre un Workspace, por cualquier autor y con o sin `dev` abierto. Solo registra el CLI: lo que el humano hace en la UI de `dev` no entra. Es solo informativo: no forma parte del Modelo ni del Historial de deshacer.
+Historial de los comandos del CLI corridos sobre un Workspace, por cualquier autor y con o sin `dev` abierto. Solo registra el CLI: lo que el humano hace en la UI de `dev` no entra. Es solo informativo: no forma parte del Modelo, del Historial ni del Historial de archivos.
 
 **Evento de actividad**:
 Una entrada del Registro de actividad: que comando corrio, quien (proceso y, si se declara, agente), sobre que objetivo nombrado (Vista, Nodo, Tema o archivos) y con que resultado.

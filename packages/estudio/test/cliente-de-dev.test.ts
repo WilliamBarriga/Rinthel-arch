@@ -7,7 +7,7 @@ import { crearClienteDeDev } from '../navegador/cliente';
 const buena = { view: 'v', theme: 't', layoutKey: 'k', geometry: { kind: 'grafo', nodes: { a: { x: 0, y: 0, width: 1, height: 1 } }, edges: {}, pinsSolapados: [], width: 1, height: 1 } };
 
 /** `fetch` falso: responde por ruta y anota cada peticion. */
-function servidor(rutas: Record<string, { status?: number; cuerpo?: unknown } | Error>) {
+function servidor(rutas: Record<string, { status?: number; cuerpo?: unknown; texto?: string; tipo?: string } | Error>) {
   const peticiones: Array<{ url: string; init?: RequestInit }> = [];
   const fetchFalso = vi.fn((url: string | URL | Request, init?: RequestInit) => {
     const ruta = String(url);
@@ -15,7 +15,7 @@ function servidor(rutas: Record<string, { status?: number; cuerpo?: unknown } | 
     const r = rutas[ruta];
     if (r instanceof Error) return Promise.reject(r);
     if (r === undefined) return Promise.resolve(new Response('No encontrado', { status: 404 }));
-    return Promise.resolve(new Response(JSON.stringify(r.cuerpo ?? {}), { status: r.status ?? 200, headers: { 'content-type': 'application/json' } }));
+    return Promise.resolve(new Response(r.texto ?? JSON.stringify(r.cuerpo ?? {}), { status: r.status ?? 200, headers: { 'content-type': r.tipo ?? 'application/json' } }));
   }) as unknown as typeof fetch;
   return { fetch: fetchFalso, peticiones };
 }
@@ -136,17 +136,61 @@ describe('cliente unico de la pagina de dev', () => {
   });
 
   it('inspecciona por GET /api/inspect: la salida, o el mensaje y los cercanos si no existe', async () => {
-    const salida = { contractVersion: 1, comando: 'nodo', nodo: { id: 'api' } };
+    const salida = { contractVersion: 1, comando: 'buscar', consulta: 'api', resultados: [] };
+    const deTema = { contractVersion: 1, comando: 'buscar', consulta: 'neutral', resultados: [] };
     const s = servidor({
-      '/api/inspect/nodo/api': { cuerpo: salida },
+      '/api/inspect/buscar/api': { cuerpo: salida },
       '/api/inspect/nodo/apj': { status: 404, cuerpo: { ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] } },
-      '/api/inspect/tema/neutral?tipo=servicio': { cuerpo: { comando: 'tema' } },
+      '/api/inspect/tema/neutral?tipo=servicio': { cuerpo: deTema },
     });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
-    expect(await cliente.inspeccionar('nodo', 'api')).toEqual({ ok: true, salida });
+    expect(await cliente.inspeccionar('buscar', 'api')).toEqual({ ok: true, salida });
     expect(await cliente.inspeccionar('nodo', 'apj')).toEqual({ ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] });
-    expect(await cliente.inspeccionar('tema', 'neutral', { tipo: 'servicio' })).toEqual({ ok: true, salida: { comando: 'tema' } });
+    expect(await cliente.inspeccionar('tema', 'neutral', { tipo: 'servicio' })).toEqual({ ok: true, salida: deTema });
     expect(await crearClienteDeDev({ fetch: servidor({}).fetch, eventos: sinEventos }).inspeccionar('vista', 'x')).toMatchObject({ ok: false, cercanos: [] });
+  });
+
+  it('una escritura aceptada con una respuesta que no es la del protocolo es un fallo, no un exito', async () => {
+    const s = servidor({ '/api/edit': { cuerpo: { ok: 'si' } }, '/api/confiar': { cuerpo: { aceptado: true } }, '/api/rehacer': { cuerpo: { ok: true } } });
+    const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
+
+    expect(await cliente.editar({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }, 3)).toMatchObject({ ok: false, desactualizado: false, mensaje: expect.stringContaining('Respuesta malformada de /api/edit') });
+    expect(await cliente.confiar()).toMatchObject({ ok: false, mensaje: expect.stringContaining('Respuesta malformada de /api/confiar') });
+    expect(await cliente.rehacer()).toMatchObject({ ok: false, mensaje: expect.stringContaining('Respuesta malformada de /api/rehacer') });
+  });
+
+  it('un rechazo con un cuerpo fuera del protocolo da el estado y la ruta, y su motivo no se cuela', async () => {
+    const s = servidor({ '/api/edit': { status: 422, cuerpo: { ok: false, mensaje: 7, motivo: 'inventado' } }, '/api/historial/saltar': { status: 409, cuerpo: { error: 'x' } } });
+    const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
+
+    expect(await cliente.editarTexto({ ediciones: [{ file: 'a.dg', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: 'x' }] })).toEqual({ ok: false, desactualizado: false, mensaje: 'Error 422 en /api/edit' });
+    expect(await cliente.saltar(2)).toEqual({ ok: false, desactualizado: true, mensaje: 'Error 409 en /api/historial/saltar' });
+  });
+
+  it('el bundle de Componentes solo vale con 200 y content-type de JavaScript', async () => {
+    const bundle = 'module.exports = {}';
+    const bueno = crearClienteDeDev({ fetch: servidor({ '/componentes.js': { texto: bundle, tipo: 'text/javascript; charset=utf-8' } }).fetch, eventos: sinEventos });
+    const html = crearClienteDeDev({ fetch: servidor({ '/componentes.js': { texto: '<html></html>', tipo: 'text/html' } }).fetch, eventos: sinEventos });
+    const prohibido = crearClienteDeDev({ fetch: servidor({ '/componentes.js': { status: 403, cuerpo: { ok: false, mensaje: 'El codigo del Workspace no esta confirmado' } } }).fetch, eventos: sinEventos });
+
+    expect(await bueno.bundleDeComponentes()).toEqual({ ok: true, valor: bundle });
+    expect(await html.bundleDeComponentes()).toEqual({ ok: false, mensaje: expect.stringContaining('text/html') });
+    expect(await prohibido.bundleDeComponentes()).toEqual({ ok: false, mensaje: 'El codigo del Workspace no esta confirmado' });
+  });
+
+  it('GET /api/codigo y /api/archivos malformados son fallos con su motivo', async () => {
+    const s = servidor({ '/api/codigo': { cuerpo: { temaConCodigo: 'si' } }, '/api/archivos': { cuerpo: { version: 1 } } });
+    const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
+
+    expect(await cliente.codigo()).toEqual({ ok: false, mensaje: expect.stringContaining('Respuesta malformada de /api/codigo') });
+    expect(await cliente.archivos()).toEqual({ ok: false, mensaje: expect.stringContaining('Respuesta malformada de /api/archivos') });
+  });
+
+  it('una salida de inspect que no cumple el esquema es un fallo', async () => {
+    const s = servidor({ '/api/inspect/buscar/api': { cuerpo: { contractVersion: 1, comando: 'buscar', consulta: 'api', resultados: 'muchos' } } });
+    const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
+
+    expect(await cliente.inspeccionar('buscar', 'api')).toEqual({ ok: false, mensaje: expect.stringContaining('Respuesta malformada de /api/inspect/buscar/api'), cercanos: [] });
   });
 });

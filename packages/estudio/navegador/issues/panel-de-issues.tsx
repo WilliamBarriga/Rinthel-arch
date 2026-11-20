@@ -2,7 +2,7 @@
  * Panel Issues: los issues del ultimo estado de `dev` con filtro (texto y severidad). Cada issue salta a su
  * `archivo:linea` en el editor y, si trae `fix`, lo aplica con un boton. "Aplicar N fix" junta los `fix` de los
  * issues visibles con el filtro activo (cualquier severidad) en una peticion. La logica de aplicar (version vista,
- * 409 con reintento, avisos) es `aplicar-fix.ts`, compartida con la accion en linea del editor.
+ * 409 con reintento, avisos) es `aplicar-fix.ts` sobre la Escritura, compartida con la accion en linea del editor.
  */
 import { useState } from 'react';
 import type { ReactElement } from 'react';

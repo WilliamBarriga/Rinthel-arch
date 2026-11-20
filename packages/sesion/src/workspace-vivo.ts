@@ -1,5 +1,8 @@
 /**
  * Workspace vivo: el estado de `dev` sin HTTP (Sesion vigente y ultima buena, Historial, cola de escrituras, versiones).
+ * Eventos: es el unico dueno de la secuencia de eventos SSE del protocolo (`EventoDeDev` de `canonico`): `conexion()` da
+ * lo que recibe un cliente al conectar (estado, Historial y actividad con previos) y `escuchar` el flujo (tras cada
+ * estado, su Historial y su Diferencia; la actividad nueva). Los adaptadores (servidor real, `devEnMemoria`) solo serializan.
  * Invariantes: una edicion con `version` usa los hashes de esa version como `visto`; una version fuera de las ultimas
  * `VERSIONES_GUARDADAS` rechaza con `hash-desactualizado`; sin version, se aplica sobre el texto vigente.
  * Edicion, deshacer y rehacer van en cola; una escritura que falla a mitad se revierte. Con errores, el estado lleva los
@@ -12,15 +15,15 @@
  * `escribirPropio`/`borrarPropio`, el punto unico que marca el origen `propio` de la Diferencia.
  * Errores: rechazos como datos; los fallos de I/O al escribir se propagan tras revertir; los de lectura al recompilar
  * se ignoran hasta el siguiente cambio; `abrirWorkspaceVivo` lanza si la lectura inicial falla.
- * Diferencia: cada Sesion sin errores se compara con la ultima buena y, si cambio algo, se empuja tras el estado. Es
+ * Diferencia: cada Sesion sin errores se compara con la ultima buena y, si cambio algo, se emite tras el estado. Es
  * `propia` si todos los archivos que cambiaron coinciden por hash con lo que escribio la UI (Intencion, deshacer,
  * rehacer, saltar y lo que se revierte); si no, `externa`. Con Sesiones con errores entre medias, la Diferencia es una sola
  * y es externa si alguna escritura intermedia lo fue.
- * Registro de actividad: si el puerto lo da, se leen los ultimos `EVENTOS_PREVIOS` al abrir y cada aviso de su observador
- * (con debounce) empuja los Eventos nuevos; un fallo de lectura o una linea rota se ignoran.
+ * Registro de actividad: si el puerto lo da, el Workspace vivo compone un Registro de actividad vivo
+ * (`registro-de-actividad-vivo.ts`, con el mismo reloj y debounce) y lo emite tras el estado y el Historial.
  */
-import { combineIconProviders, crearLectorDeActividad, diferenciaVacia, esArchivoDeFuente, genericIcons, salidaDeInspectSchema, serializarIconos, workspaceIcons } from 'canonico';
-import type { ArchivoDeDev, ArchivosDeDev, DiferenciaDeDev, EstadoDeDev, EventoDeActividad, GeometriaCacheada, HistorialDeDev, Intencion, Issue, MotivoDeRechazo, OrigenDeDiferencia, TipoDeCambio } from 'canonico';
+import { combineIconProviders, diferenciaVacia, esArchivoDeFuente, genericIcons, salidaDeInspectSchema, serializarIconos, workspaceIcons } from 'canonico';
+import type { ArchivoDeDev, ArchivosDeDev, DiferenciaDeDev, EstadoDeDev, EventoDeDev, GeometriaCacheada, HistorialDeDev, Intencion, Issue, MotivoDeRechazo, OrigenDeDiferencia, TipoDeCambio } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { componentesDeTema } from 'tema';
 
@@ -33,6 +36,10 @@ import { hashDeContenido } from './ediciones';
 import { descripcionDeIntencion, descripcionDeTexto, deshacerSobre, historialVacio, historialVisible, registrar, rehacerSobre, saltar } from './historial-de-archivos';
 import type { HistorialDeArchivos, ResultadoDeRestaurar } from './historial-de-archivos';
 import type { Visto } from './intenciones';
+import { abrirRegistroDeActividadVivo } from './registro-de-actividad-vivo';
+import type { RegistroDeActividad } from './registro-de-actividad-vivo';
+import { debounce } from './reloj';
+import type { Reloj } from './reloj';
 import { abrirSesion } from './sesion';
 import type { InterfazDeComponente, OpcionesDeGeometria, Sesion } from './sesion';
 
@@ -48,22 +55,6 @@ export interface PuertoDelWorkspaceVivo extends PuertoDeWorkspace {
   observar(alCambiar: () => void): () => void;
   /** Registro de actividad (`.diagrams/actividad.jsonl`) con su observador propio; sin el, no hay actividad. */
   actividad?: RegistroDeActividad;
-}
-
-/** El watcher del Workspace ignora carpetas ocultas: el registro se observa aparte. */
-export interface RegistroDeActividad {
-  /** Texto entero del registro, o `undefined` si no existe. */
-  leer(): string | undefined;
-  /** Devuelve como dejar de observar. */
-  observar(alCambiar: () => void): () => void;
-}
-
-/** Eventos de actividad que `dev` reproduce al conectar. */
-export const EVENTOS_PREVIOS = 50;
-
-/** `programar` devuelve como cancelar. */
-export interface Reloj {
-  programar(fn: () => void, ms: number): () => void;
 }
 
 export interface OpcionesDelWorkspaceVivo {
@@ -109,8 +100,12 @@ export interface CodigoDelWorkspace {
 
 export interface WorkspaceVivo {
   estado(): EstadoDeDev;
-  /** Devuelve como dejar de escuchar. */
-  suscribir(alCambiar: (estado: EstadoDeDev) => void): () => void;
+  /**
+   * Flujo de eventos con nombre del protocolo, en orden: tras cada recompilacion, `estado` y su `historial` y, si la
+   * Fuente cambio, la `diferencia` de esa `version`; por cada tanda anexada al Registro de actividad (con debounce),
+   * `actividad` con `previos: false`. Devuelve como dejar de escuchar.
+   */
+  escuchar(alEvento: (evento: EventoDeDev) => void): () => void;
   /** `version` es la del estado que vio quien emite la Intencion o las ediciones. */
   editar(aplicable: Intencion | EdicionesDeTexto, version?: number): Promise<ResultadoDelWorkspaceVivo>;
   /** Historial de deshacer, lo mas viejo primero, con lo alcanzable sobre el disco vigente. */
@@ -127,12 +122,11 @@ export interface WorkspaceVivo {
   geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<GeometriaCacheada | undefined>;
   /** `inspect` sobre la ultima Sesion buena, con la salida normalizada como `inspect --json`; `undefined` si el Workspace nunca compilo. */
   consultar(consulta: Consulta): Respuesta | undefined;
-  /** Los ultimos `EVENTOS_PREVIOS` Eventos de actividad leidos (los del arranque y los que llegaron despues). */
-  actividad(): readonly EventoDeActividad[];
-  /** Recibe los Eventos nuevos del registro, en orden; devuelve como dejar de escuchar. */
-  suscribirActividad(alEvento: (eventos: EventoDeActividad[]) => void): () => void;
-  /** Recibe cada Diferencia no vacia, despues del estado de su `version`; devuelve como dejar de escuchar. */
-  suscribirDiferencia(alDiferencia: (diferencia: DiferenciaDeDev) => void): () => void;
+  /**
+   * Instantanea de conexion: lo que recibe un cliente de `/eventos` al conectar, en orden: `estado`, `historial` y la
+   * `actividad` con `previos: true` del Registro de actividad vivo.
+   */
+  conexion(): EventoDeDev[];
   /** Relee el puerto y recompila ya (sin esperar al debounce). */
   recargar(): Promise<void>;
   codigo(): CodigoDelWorkspace;
@@ -181,9 +175,13 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
   const versiones = new Map<number, Record<string, string>>([[version, hashesDe(archivos)]]);
   let estado = construirEstado();
 
-  const suscriptores = new Set<(estado: EstadoDeDev) => void>();
-  const oyentesDeDiferencia = new Set<(diferencia: DiferenciaDeDev) => void>();
+  const oyentes = new Set<(evento: EventoDeDev) => void>();
+  const emitir = (evento: EventoDeDev): void => {
+    for (const oyente of [...oyentes]) oyente(evento);
+  };
   let historial: HistorialDeArchivos = historialVacio;
+  /** El alcance se calcula sobre el disco del momento. */
+  const historialDeDev = (): HistorialDeDev => historialVisible(historial, puerto.leer().propios);
   /** Ruta -> hash de lo que escribio la UI (`BORRADO` si lo borro) y aun no vio una recompilacion: asi se reconoce su eco. */
   const escritosPropios = new Map<string, string>();
   /** Origen de lo cambiado desde la ultima Sesion buena; `undefined` si no cambio ningun archivo. */
@@ -238,8 +236,10 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     versiones.set(version, hashesDe(nuevos));
     versiones.delete(version - VERSIONES_GUARDADAS);
     estado = construirEstado();
-    for (const suscriptor of suscriptores) suscriptor(estado);
-    if (diferencia !== undefined) for (const oyente of [...oyentesDeDiferencia]) oyente(diferencia);
+    // Toda escritura (propia o externa) recompila: el Historial y su alcance viajan con cada estado.
+    emitir({ nombre: 'estado', datos: estado });
+    emitir({ nombre: 'historial', datos: historialDeDev() });
+    if (diferencia !== undefined) emitir({ nombre: 'diferencia', datos: diferencia });
   };
   /** `propio` si cada archivo que cambio es un eco por hash de una escritura de la UI (y lo consume). */
   function origenDe(previos: ArchivosDelWorkspace, nuevos: ArchivosDelWorkspace): OrigenDeDiferencia | undefined {
@@ -285,48 +285,18 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     return enCurso;
   };
 
-  let cancelarDebounce: (() => void) | undefined;
-  const cancelarPendiente = (): void => {
-    cancelarDebounce?.();
-    cancelarDebounce = undefined;
-  };
+  const recompilacion = debounce(reloj, debounceMs);
+  const cancelarPendiente = recompilacion.cancelar;
   /** No espera al debounce que dispara la propia escritura. */
   const recompilarTrasEscribir = async (): Promise<ResultadoDelWorkspaceVivo> => {
     cancelarPendiente();
     await recompilar();
     return { ok: true, version };
   };
-  const dejarDeObservar = puerto.observar(() => {
-    cancelarPendiente();
-    cancelarDebounce = reloj.programar(() => {
-      cancelarDebounce = undefined;
-      void recompilar().catch(() => undefined);
-    }, debounceMs);
-  });
+  const dejarDeObservar = puerto.observar(() => recompilacion.programar(() => void recompilar().catch(() => undefined)));
 
-  // Registro de actividad: lectura incremental tolerante (lineas rotas, archivo acortado o rotado), con su propio debounce.
-  const leerActividad = crearLectorDeActividad();
-  const leerRegistro = (): EventoDeActividad[] => {
-    try {
-      return leerActividad(puerto.actividad?.leer());
-    } catch {
-      return []; // el siguiente aviso reintenta
-    }
-  };
-  let actividad = leerRegistro().slice(-EVENTOS_PREVIOS);
-  const oyentesDeActividad = new Set<(eventos: EventoDeActividad[]) => void>();
-  let cancelarActividad: (() => void) | undefined;
-  const dejarDeObservarActividad =
-    puerto.actividad?.observar(() => {
-      cancelarActividad?.();
-      cancelarActividad = reloj.programar(() => {
-        cancelarActividad = undefined;
-        const nuevos = leerRegistro();
-        if (nuevos.length === 0) return;
-        actividad = [...actividad, ...nuevos].slice(-EVENTOS_PREVIOS);
-        for (const oyente of [...oyentesDeActividad]) oyente(nuevos);
-      }, debounceMs);
-    }) ?? (() => undefined);
+  const actividad = abrirRegistroDeActividadVivo({ ...(puerto.actividad !== undefined && { registro: puerto.actividad }), reloj, debounceMs });
+  const dejarDeEscucharActividad = actividad.escuchar(emitir);
 
   let cola: Promise<unknown> = Promise.resolve();
   const enCola = <T>(tarea: () => Promise<T>): Promise<T> => {
@@ -424,15 +394,15 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
 
   return {
     estado: () => estado,
-    suscribir(alCambiar) {
-      suscriptores.add(alCambiar);
-      return () => suscriptores.delete(alCambiar);
+    escuchar(alEvento) {
+      oyentes.add(alEvento);
+      return () => void oyentes.delete(alEvento);
     },
     editar,
     deshacer: () => restaurar(deshacerSobre),
     rehacer: () => restaurar(rehacerSobre),
     saltar: (id) => restaurar((h, disco) => saltar(h, disco, id)),
-    historial: () => historialVisible(historial, puerto.leer().propios),
+    historial: historialDeDev,
     archivos: listarArchivos,
     archivo(ruta) {
       const texto = puerto.leer().disco[ruta];
@@ -443,15 +413,11 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
       const r = buena?.sesion.consultar(consulta);
       return r === undefined || 'noEncontrado' in r ? r : { salida: salidaDeInspectSchema.parse(r.salida) };
     },
-    actividad: () => actividad,
-    suscribirActividad(alEvento) {
-      oyentesDeActividad.add(alEvento);
-      return () => oyentesDeActividad.delete(alEvento);
-    },
-    suscribirDiferencia(alDiferencia) {
-      oyentesDeDiferencia.add(alDiferencia);
-      return () => oyentesDeDiferencia.delete(alDiferencia);
-    },
+    conexion: () => [
+      { nombre: 'estado', datos: estado },
+      { nombre: 'historial', datos: historialDeDev() },
+      actividad.conexion(),
+    ],
     recargar: () => recompilar(),
     codigo: () => ({ componentes: [...new Set((buena?.sesion.fuente?.themes ?? []).flatMap((tema) => componentesDeTema(tema)))].sort(), confiado, bundle: codigo.bundle }),
     confiar() {
@@ -460,8 +426,8 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     cerrar() {
       cancelarPendiente();
       dejarDeObservar();
-      cancelarActividad?.();
-      dejarDeObservarActividad();
+      dejarDeEscucharActividad();
+      actividad.cerrar();
     },
   };
 }

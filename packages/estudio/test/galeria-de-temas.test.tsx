@@ -73,6 +73,33 @@ describe('galeria de Temas', () => {
     await waitFor(() => expect(fondoDelLienzo(contenedor)).toBe(fondoOriginal));
   });
 
+  it('se recorre con las flechas y Enter elige el Tema, como el indice de Vistas', async () => {
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
+    const galeria = await abrirGaleria(contenedor);
+    const nombres = within(galeria).getAllByRole('option').map((o) => o.getAttribute('aria-label') ?? '');
+    const activa = (): string | null | undefined => {
+      const id = galeria.getAttribute('aria-activedescendant');
+      return id === null ? null : document.getElementById(id)?.getAttribute('aria-label');
+    };
+
+    fireEvent.keyDown(galeria, { key: 'ArrowDown' });
+    expect(activa()).toBe(nombres[0]);
+    fireEvent.keyDown(galeria, { key: 'ArrowDown' });
+    expect(activa()).toBe(nombres[1]);
+    // Moverse no elige: la ficha aparece al pulsar Enter.
+    expect(screen.queryByRole('region', { name: `Tema ${nombres[1]}` })).toBeNull();
+    fireEvent.keyDown(galeria, { key: 'Enter' });
+    expect(await screen.findByRole('region', { name: `Tema ${nombres[1]}` })).toBeTruthy();
+    expect(within(galeria).getByRole('option', { name: nombres[1] }).getAttribute('aria-selected')).toBe('true');
+
+    fireEvent.keyDown(galeria, { key: 'End' });
+    expect(activa()).toBe(nombres[nombres.length - 1]);
+    fireEvent.keyDown(galeria, { key: 'Home' });
+    expect(activa()).toBe(nombres[0]);
+    fireEvent.keyDown(galeria, { key: 'ArrowUp' });
+    expect(activa()).toBe(nombres[0]);
+  });
+
   it('fijar escribe theme en la Vista activa y quitar lo borra', async () => {
     const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
     const galeria = await abrirGaleria(contenedor);

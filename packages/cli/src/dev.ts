@@ -1,36 +1,36 @@
 /**
  * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
- * cada peticion y con `no-store`), el estado y la Geometria por Vista, y empuja por SSE (`/eventos`) el estado, el
- * Historial (al conectar y tras cada recompilacion), los Eventos del Registro de actividad (al conectar, los ultimos 50
- * con `previos: true`) y cada Diferencia con su origen. `POST /api/historial/saltar { id }` lleva el Workspace a una
- * entrada del Historial.
- * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); las rutas POST exigen
- * JSON y un `Origin` propio (o ninguno); `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
- * Edicion: 400 cuerpo invalido, 409 `hash-desactualizado`, 422 el resto de rechazos, 500 fallo de I/O.
- * Errores: `iniciarDev` rechaza si el puerto esta ocupado (sin dejar el observador activo) y lanza si la lectura
+ * cada peticion y con `no-store`), el estado y la Geometria por Vista, y serializa por SSE (`/eventos`) la instantanea de
+ * conexion y el flujo de eventos del Workspace vivo (la secuencia es de `sesion`; el protocolo, de `canonico`).
+ * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); todo POST exige
+ * un `Origin` propio (o ninguno, si no 403) y `application/json` (si no 415); un cuerpo de mas de 64 KiB es 413;
+ * `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
+ * `/api/*` y toda ruta no servida aqui: la respuesta completa de `atenderApiDeDev` (ruteo, 400, 404, 405, 409, 422, 500).
+ * Puertos: `puertoHttp` es el TCP; `puerto` es el `PuertoDelWorkspaceVivo` (por defecto `puertoDeDisco`: el disco del
+ * Workspace y de `--theme-path`, `fs.watch` y el Registro de actividad de `registro-en-disco.ts`).
+ * Errores: `iniciarDev` rechaza si el puerto TCP esta ocupado (sin dejar el observador activo) y lanza si la lectura
  * inicial falla; `run(['dev', ...])` los convierte en codigo 2. Un estatico de `estudio` sin construir es 404 al pedirlo.
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { readFileSync, rmSync, unwatchFile, watch, watchFile } from 'node:fs';
-import { extname, join, resolve } from 'node:path';
+import { readFileSync, rmSync, watch } from 'node:fs';
+import { extname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { RUTAS_DE_DEV } from 'canonico';
-import type { EstadoDeDev } from 'canonico';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { EventoDeDev } from 'canonico';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
-import type { ActividadDeDev, NombreDeEventoDeDev } from 'estudio/protocolo';
-import { RUTAS_POST_DE_DEV, abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
-import type { PuertoDelWorkspaceVivo, RegistroDeActividad, Reloj, WorkspaceVivo } from 'sesion';
+import { abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
+import type { PuertoDelWorkspaceVivo, Reloj, WorkspaceVivo } from 'sesion';
 
 import { compiladorDeCodigo } from './codigo';
 import type { ResultadoDeCodigo } from './codigo';
+import { registroEnDisco } from './registro-en-disco';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
-import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
+import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos, leerWorkspace } from './workspace';
 
 /** `setTimeout` como reloj del Workspace vivo. */
 export const relojReal: Reloj = {
@@ -45,26 +45,17 @@ export interface OpcionesDeDev {
   workspace: string;
   /** Carpeta de Temas (`--theme-path`): se fusiona antes del Workspace, que gana en rutas repetidas. No se observa. */
   temas?: string;
-  /** Puerto en 127.0.0.1; 0 elige uno libre. */
-  puerto?: number;
-  /** Espera en ms tras el ultimo cambio antes de recompilar; por defecto `DEBOUNCE_MS`. */
+  /** Puerto TCP en 127.0.0.1 (`--port`); 0 elige uno libre. */
+  puertoHttp?: number;
+  /** Por donde el Workspace vivo lee, escribe, observa y sigue el Registro de actividad; por defecto `puertoDeDisco(workspace, { temas })`. */
+  puerto?: PuertoDelWorkspaceVivo;
+  /** Espera en ms tras el ultimo cambio antes de recompilar; por defecto la del Workspace vivo. */
   debounceMs?: number;
-  leer?: (raiz: string) => ArchivosDelWorkspace;
-  /** Hash de cada recurso vigilado (`.tsx`, fuentes) bajo `raiz`; por defecto lee el disco (o nada si se inyecta `leer`). */
-  leerRecursos?: (raiz: string) => Record<string, string>;
-  /** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
-  observar?: (raiz: string, alCambiar: () => void) => () => void;
-  /** Registro de actividad de `raiz`; por defecto `.diagrams/actividad.jsonl` del disco (o ninguno si se inyecta `leer`). */
-  actividad?: (raiz: string) => RegistroDeActividad | undefined;
   /** Rutas de los estaticos de la app; por defecto las del build de `estudio`. Se consultan en cada peticion. */
   estudio?: () => ActivosDelEstudio;
-  /** `ruta` relativa a `raiz`. */
-  escribir?: (raiz: string, ruta: string, texto: string) => void;
-  /** `ruta` relativa a `raiz`. */
-  borrar?: (raiz: string, ruta: string) => void;
   /** `--trust-code`: sirve `/componentes.js` sin pedir confirmacion en el navegador. Por defecto `false`. */
   confiarEnCodigo?: boolean;
-  /** Compila los `.tsx` del Workspace; por defecto el adaptador de esbuild (o nada si se inyecta `leer`). */
+  /** Compila los `.tsx` de `workspace`; por defecto el adaptador de esbuild (un Workspace inexistente no tiene codigo). */
   compilarCodigo?: () => ResultadoDeCodigo;
 }
 
@@ -87,64 +78,39 @@ function observarDisco(raiz: string, alCambiar: () => void): () => void {
   return () => observador.close();
 }
 
-/** Cada cuanto se mira el registro de actividad en disco. */
-const INTERVALO_DEL_REGISTRO_MS = 250;
+/** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
+export type Observador = (raiz: string, alCambiar: () => void) => () => void;
 
 /**
- * `.diagrams/actividad.jsonl` con un observador propio (el watcher del Workspace ignora carpetas ocultas). Se sondea con
- * `fs.watchFile`, que funciona aunque el archivo aun no exista y ve la rotacion (otro inodo, otro tamano).
+ * El Workspace vivo sobre el disco: los `.dg` de `workspace` (propios) fusionados tras los de `temas`, escritura atomica
+ * bajo la raiz, recursos (`.tsx`, fuentes) de ambas carpetas, el observador (`fs.watch` recursivo por defecto) y el
+ * Registro de actividad de `registro-en-disco.ts`.
  */
-function registroEnDisco(raiz: string): RegistroDeActividad {
-  const ruta = join(raiz, '.diagrams', 'actividad.jsonl');
+export function puertoDeDisco(workspace: string, { temas, observar = observarDisco }: { temas?: string; observar?: Observador } = {}): PuertoDelWorkspaceVivo {
   return {
-    leer() {
-      try {
-        return readFileSync(ruta, 'utf8');
-      } catch {
-        return undefined;
-      }
-    },
-    observar(alCambiar) {
-      const oyente = (): void => alCambiar();
-      watchFile(ruta, { interval: INTERVALO_DEL_REGISTRO_MS, persistent: false }, oyente);
-      return () => unwatchFile(ruta, oyente);
-    },
-  };
-}
-
-/** Atomica y siempre bajo la raiz del Workspace. */
-function escribirEnDisco(raiz: string, ruta: string, texto: string): void {
-  escribirTexto(destinoEnWorkspace(raiz, ruta), texto);
-}
-
-/** Siempre bajo la raiz del Workspace; un archivo ya ausente no es error. */
-function borrarEnDisco(raiz: string, ruta: string): void {
-  rmSync(destinoEnWorkspace(raiz, ruta), { force: true });
-}
-
-/** Con `leer` inyectado y sin `leerRecursos`, `recursos()` da `undefined`. */
-function puertoDeDisco(opciones: OpcionesDeDev): PuertoDelWorkspaceVivo {
-  const { workspace, temas, leer = leerWorkspace, escribir = escribirEnDisco, borrar = borrarEnDisco, observar = observarDisco } = opciones;
-  const conoceRecursos = opciones.leer === undefined || opciones.leerRecursos !== undefined;
-  const leerRecursos = opciones.leerRecursos ?? leerRecursosReal;
-  const actividad = (opciones.actividad ?? (opciones.leer === undefined ? registroEnDisco : () => undefined))(workspace);
-  return {
-    ...(actividad !== undefined && { actividad }),
-    leer: () => ({ propios: leer(workspace), disco: leerConTemas(leer, workspace, temas) }),
-    escribir: (ruta, texto) => escribir(workspace, ruta, texto),
-    borrar: (ruta) => borrar(workspace, ruta),
-    recursos: () => (conoceRecursos ? { ...(temas === undefined ? {} : leerRecursos(temas)), ...leerRecursos(workspace) } : undefined),
+    actividad: registroEnDisco(workspace),
+    leer: () => ({ propios: leerWorkspace(workspace), disco: leerConTemas(leerWorkspace, workspace, temas) }),
+    escribir: (ruta, texto) => escribirTexto(destinoEnWorkspace(workspace, ruta), texto),
+    borrar: (ruta) => rmSync(destinoEnWorkspace(workspace, ruta), { force: true }),
+    recursos: () => ({ ...(temas === undefined ? {} : leerRecursos(temas)), ...leerRecursos(workspace) }),
     observar: (alCambiar) => observar(workspace, alCambiar),
   };
 }
 
-function leerCuerpo(req: IncomingMessage): Promise<string> {
+const LIMITE_DEL_CUERPO = 64 * 1024;
+
+/** `undefined` si pasa de `LIMITE_DEL_CUERPO`; rechaza si la conexion falla. */
+function leerCuerpo(req: IncomingMessage): Promise<string | undefined> {
   return new Promise((ok, fallo) => {
     let texto = '';
     req.setEncoding('utf8');
     req.on('data', (trozo: string) => {
       texto += trozo;
-      if (texto.length > 64 * 1024) fallo(new Error('Cuerpo demasiado grande'));
+      if (texto.length > LIMITE_DEL_CUERPO) {
+        req.removeAllListeners('data');
+        req.resume();
+        ok(undefined);
+      }
     });
     req.on('end', () => ok(texto));
     req.on('error', fallo);
@@ -179,91 +145,51 @@ function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
 
 /** El codigo de Temas se sirve en `/componentes.js` solo tras `POST /api/confiar` o `confiarEnCodigo`. */
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puerto = 0, debounceMs, estudio = activosDelEstudio, confiarEnCodigo = false } = opciones;
-  // Con `leer` inyectado no hay disco del que compilar codigo.
-  const compilarCodigo = opciones.compilarCodigo ?? (opciones.leer === undefined ? compiladorDeCodigo(workspace).compilar : undefined);
+  const { workspace, temas, puertoHttp = 0, debounceMs, estudio = activosDelEstudio, confiarEnCodigo = false } = opciones;
+  const { puerto = puertoDeDisco(workspace, temas === undefined ? {} : { temas }), compilarCodigo = compiladorDeCodigo(workspace).compilar } = opciones;
   const vivo: WorkspaceVivo = await abrirWorkspaceVivo({
-    puerto: puertoDeDisco(opciones),
+    puerto,
     raiz: resolve(workspace),
     reloj: relojReal,
     ahora: Date.now,
     confiarEnCodigo,
     ...(debounceMs !== undefined && { debounceMs }),
-    ...(compilarCodigo !== undefined && { compilarCodigo }),
+    compilarCodigo,
   });
 
   const clientes = new Set<ServerResponse>();
-  /** Eventos SSE con nombre (`estado`, y los que declare `estudio/protocolo`). */
-  const enviar = (cliente: ServerResponse, nombre: NombreDeEventoDeDev, datos: unknown): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
-  const enviarEstado = (cliente: ServerResponse, estado: EstadoDeDev): void => enviar(cliente, 'estado', estado);
-  const enviarActividad = (cliente: ServerResponse, actividad: ActividadDeDev): void => enviar(cliente, 'actividad', actividad);
-  const enviarHistorial = (cliente: ServerResponse): void => enviar(cliente, 'historial', vivo.historial());
-  // Toda escritura (propia o externa) recompila: el Historial y su alcance viajan con cada estado.
-  const dejarDeEscucharEstado = vivo.suscribir((estado) => {
-    for (const cliente of clientes) {
-      enviarEstado(cliente, estado);
-      enviarHistorial(cliente);
-    }
+  /** La secuencia de eventos es del Workspace vivo; aqui solo se serializa como SSE. */
+  const enviar = (cliente: ServerResponse, { nombre, datos }: EventoDeDev): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
+  const dejarDeEscuchar = vivo.escuchar((evento) => {
+    for (const cliente of clientes) enviar(cliente, evento);
   });
-  const dejarDeEscucharActividad = vivo.suscribirActividad((eventos) => {
-    for (const cliente of clientes) enviarActividad(cliente, { previos: false, eventos });
-  });
-  const dejarDeEscucharDiferencia = vivo.suscribirDiferencia((diferencia) => {
-    for (const cliente of clientes) enviar(cliente, 'diferencia', diferencia);
-  });
-  const dejarDeEscuchar = (): void => {
-    dejarDeEscucharEstado();
-    dejarDeEscucharActividad();
-    dejarDeEscucharDiferencia();
-  };
 
   const hostsPropios = (): string[] => {
     const { port } = servidor.address() as AddressInfo;
     return [`127.0.0.1:${port}`, `localhost:${port}`];
   };
 
-  /** Si el origen, el content-type o el JSON no valen, responde el error y devuelve `undefined`. */
-  const leerCuerpoJson = async (req: IncomingMessage, res: ServerResponse): Promise<{ cuerpo: unknown } | undefined> => {
+  /** Controles del transporte de un POST: `Origin` propio (o ninguno) y JSON; si fallan, el estado y el mensaje. */
+  const rechazoDelPost = (req: IncomingMessage): [number, string] | undefined => {
     const origen = req.headers.origin;
-    if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) {
-      responder(res, 403, { ok: false, mensaje: 'Origen no permitido' });
-      return undefined;
-    }
-    if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) {
-      responder(res, 415, { ok: false, mensaje: 'Se esperaba application/json' });
-      return undefined;
-    }
-    try {
-      return { cuerpo: JSON.parse(await leerCuerpo(req)) as unknown };
-    } catch {
-      responder(res, 400, { ok: false, mensaje: 'JSON invalido' });
-      return undefined;
-    }
+    if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) return [403, 'Origen no permitido'];
+    if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return [415, 'Se esperaba application/json'];
+    return undefined;
   };
 
-  /** Un fallo de la API (I/O del puerto) responde 500. */
-  const api = (res: ServerResponse, peticion: Parameters<typeof atenderApiDeDev>[1]): void => {
-    void atenderApiDeDev(vivo, peticion)
-      .then((r) => {
-        if (r === undefined) {
-          cabecera(res, 'text/plain', 404);
-          res.end('No encontrado');
-        } else responder(res, r.status, r.cuerpo);
-      })
-      .catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
-  };
-
-  /** Las rutas POST exigen POST, un `Origin` propio y JSON (si no, responde el error). */
-  const post = (req: IncomingMessage, res: ServerResponse, url: URL): void => {
-    if (req.method !== 'POST') {
-      res.setHeader('allow', 'POST');
-      responder(res, 405, { ok: false, mensaje: 'Metodo no permitido' });
-      return;
+  /** La API responde completo; aqui solo se controla y se lee el transporte. */
+  const api = async (req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> => {
+    const metodo = req.method ?? 'GET';
+    let cuerpo: string | undefined;
+    if (metodo === 'POST') {
+      const rechazo = rechazoDelPost(req);
+      if (rechazo !== undefined) return responder(res, rechazo[0], { ok: false, mensaje: rechazo[1] });
+      cuerpo = await leerCuerpo(req);
+      if (cuerpo === undefined) return responder(res, 413, { ok: false, mensaje: 'Cuerpo demasiado grande' });
     }
-    void leerCuerpoJson(req, res).then(
-      (leido) => (leido === undefined ? undefined : api(res, { metodo: 'POST', url, cuerpo: leido.cuerpo })),
-      (error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }),
-    );
+    const respuesta = await atenderApiDeDev(vivo, { metodo, url, ...(cuerpo !== undefined && { cuerpo }) });
+    res.writeHead(respuesta.status, respuesta.cabeceras);
+    res.end(respuesta.cuerpo);
   };
 
   /** Una ruta mal codificada o que sale de la raiz da `undefined`. */
@@ -284,23 +210,12 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     }
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     const ruta = url.pathname;
-    if (RUTAS_POST_DE_DEV.includes(ruta)) {
-      post(req, res, url);
-    } else if (ruta === '/') {
+    if (ruta === '/') {
       servirEstatico(res, estudio().indice);
     } else if (ruta.startsWith(RUTA_DEL_ESTUDIO)) {
       const { archivos } = estudio();
       const nombre = ruta.slice(RUTA_DEL_ESTUDIO.length);
       servirEstatico(res, Object.hasOwn(archivos, nombre) ? archivos[nombre] : undefined);
-    } else if (ruta === RUTAS_DE_DEV.componentes) {
-      const { confiado, bundle } = vivo.codigo();
-      if (!confiado) {
-        cabecera(res, 'text/plain', 403);
-        res.end('El codigo del Workspace no esta confirmado');
-      } else {
-        cabecera(res, 'text/javascript');
-        res.end(bundle);
-      }
     } else if (ruta.startsWith(RUTAS_DE_DEV.fuentes)) {
       const fuente = servirFuente(ruta.slice(RUTAS_DE_DEV.fuentes.length));
       if (fuente === undefined) {
@@ -314,11 +229,10 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       clientes.add(res);
       res.on('close', () => clientes.delete(res));
-      enviarEstado(res, vivo.estado());
-      enviarHistorial(res);
-      enviarActividad(res, { previos: true, eventos: [...vivo.actividad()] });
+      for (const evento of vivo.conexion()) enviar(res, evento);
     } else {
-      api(res, { metodo: req.method ?? 'GET', url });
+      // Una conexion que se corta al leer el cuerpo no tiene a quien responder.
+      api(req, res, url).catch(() => res.destroy());
     }
   });
 
@@ -328,7 +242,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   };
   await new Promise<void>((ok, fallo) => {
     servidor.once('error', fallo);
-    servidor.listen(puerto, '127.0.0.1', () => ok());
+    servidor.listen(puertoHttp, '127.0.0.1', () => ok());
   }).catch((error: unknown) => {
     detener();
     throw error;
@@ -351,10 +265,10 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 }
 
 
-/** Vuelve con la URL; el servidor mantiene vivo el proceso. Puerto 4173 por defecto. */
+/** Vuelve con la URL; el servidor mantiene vivo el proceso. Puerto TCP 4173 por defecto. `observar` reemplaza a `fs.watch`. */
 export async function comandoDev(
   args: readonly string[],
-  dependencias: Pick<OpcionesDeDev, 'leer' | 'observar' | 'estudio'> = {},
+  dependencias: Pick<OpcionesDeDev, 'estudio'> & { observar?: Observador } = {},
 ): Promise<ResultadoDeEjecucion> {
   const uso = usoComun;
   let valores;
@@ -364,10 +278,20 @@ export async function comandoDev(
     return uso((error as Error).message);
   }
   if (valores.workspace === undefined) return uso('Falta --workspace <ruta>');
-  const puerto = Number(valores.port ?? 4173);
-  if (!Number.isInteger(puerto) || puerto < 0 || puerto > 65535) return uso('--port debe ser un entero entre 0 y 65535');
+  const puertoHttp = Number(valores.port ?? 4173);
+  if (!Number.isInteger(puertoHttp) || puertoHttp < 0 || puertoHttp > 65535) return uso('--port debe ser un entero entre 0 y 65535');
+  const { observar, estudio } = dependencias;
+  const workspace = valores.workspace;
+  const temas = valores['theme-path'];
   try {
-    const servidor = await iniciarDev({ ...dependencias, workspace: valores.workspace, puerto, ...(valores['trust-code'] === true && { confiarEnCodigo: true }), ...(valores['theme-path'] === undefined ? {} : { temas: valores['theme-path'] }) });
+    const servidor = await iniciarDev({
+      workspace,
+      puertoHttp,
+      ...(estudio !== undefined && { estudio }),
+      ...(temas !== undefined && { temas }),
+      ...(observar !== undefined && { puerto: puertoDeDisco(workspace, { ...(temas !== undefined && { temas }), observar }) }),
+      ...(valores['trust-code'] === true && { confiarEnCodigo: true }),
+    });
     const aviso =
       servidor.conCodigo.length === 0
         ? ''

@@ -5,6 +5,12 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { esArchivoDeFuente, tipoDeFuente } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
+/** Nombre de la carpeta de salida derivada del Workspace (build y Registro de actividad). */
+export const CARPETA_DE_SALIDA = '.diagrams';
+
+/** `<raiz>/.diagrams` */
+export const carpetaDeSalida = (raiz: string): string => join(raiz, CARPETA_DE_SALIDA);
+
 const EXTENSION = '.dg';
 const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist']);
 
@@ -74,7 +80,6 @@ export function leerArchivoDeFuente(raices: readonly string[], ruta: string): { 
   return undefined;
 }
 
-const CARPETA_DE_SALIDA = '.diagrams';
 /** Lo que `build` reemplaza en `.diagrams/`; el resto (el Registro de actividad) se conserva. */
 const SALIDA_DE_BUILD = ['canonico.json', 'geometria'];
 /**
@@ -86,7 +91,7 @@ export function escribirSalida(
   archivos: Readonly<Record<string, string | Uint8Array>>,
   subcarpeta = '',
 ): void {
-  const destino = join(raiz, CARPETA_DE_SALIDA);
+  const destino = carpetaDeSalida(raiz);
   for (const ruta of subcarpeta === '' ? SALIDA_DE_BUILD : [subcarpeta]) rmSync(join(destino, ruta), { recursive: true, force: true });
   for (const [ruta, texto] of Object.entries(archivos)) {
     const archivo = join(destino, ...ruta.split('/'));
