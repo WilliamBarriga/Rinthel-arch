@@ -17,23 +17,28 @@ import { readFileSync, rmSync, unwatchFile, watch, watchFile } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { RUTA_DE_FUENTES, edicionDeTextoSchema, intencionSchema } from 'canonico';
-import type { Intencion } from 'canonico';
+import { RUTAS_DE_DEV } from 'canonico';
+import type { EstadoDeDev } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
-import type { ActividadDeDev, ArchivoDeDev, ArchivosDeDev, EstadoDeDev, HistorialDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from 'estudio/protocolo';
+import type { ActividadDeDev, NombreDeEventoDeDev } from 'estudio/protocolo';
+import { RUTAS_POST_DE_DEV, abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
+import type { PuertoDelWorkspaceVivo, RegistroDeActividad, Reloj, WorkspaceVivo } from 'sesion';
 
 import { compiladorDeCodigo } from './codigo';
-import { SUBCOMANDOS_DE_INSPECT, comoSalidaDeInspect } from './inspect';
-import type { SubcomandoDeInspect } from './inspect';
 import type { ResultadoDeCodigo } from './codigo';
-import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
-import { abrirWorkspaceVivo } from './workspace-vivo';
-import type { EdicionesDeTexto, PuertoDelWorkspaceVivo, RegistroDeActividad, ResultadoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
+
+/** `setTimeout` como reloj del Workspace vivo. */
+export const relojReal: Reloj = {
+  programar(fn, ms) {
+    const t = setTimeout(fn, ms);
+    return () => clearTimeout(t);
+  },
+};
 
 /** Todo salvo `workspace` tiene un defecto real. */
 export interface OpcionesDeDev {
@@ -155,9 +160,6 @@ const responder = (res: ServerResponse, estadoHttp: number, cuerpo: unknown): vo
   res.end(JSON.stringify(cuerpo));
 };
 
-const responderResultado = (res: ServerResponse, r: ResultadoDelWorkspaceVivo): void =>
-  r.ok ? responder(res, 200, r) : responder(res, SALIDA_DE_RECHAZO[r.motivo].estadoHttp, rechazoDeEdicion(r.motivo, r.mensaje, r.file));
-
 const TIPOS_DE_ESTATICO: Readonly<Record<string, string>> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 
 /** Lee del disco en cada peticion (un rebuild de `estudio` se ve al recargar); ausente -> 404. */
@@ -175,29 +177,6 @@ function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
   res.end(bytes);
 }
 
-const listaDeEdiciones = edicionDeTextoSchema.array().min(1);
-
-/**
- * Una Intencion o `{ ediciones, version, descripcion?, aunqueNoCompile? }` (`PeticionDeEdiciones` de `estudio/protocolo`,
- * ADR 0007); `undefined` es 400. `cli` solo importa tipos del protocolo, asi que valida con el esquema de `canonico`.
- */
-const comoAplicable = (cuerpo: unknown): Intencion | EdicionesDeTexto | undefined => {
-  if (typeof cuerpo === 'object' && cuerpo !== null && 'ediciones' in cuerpo) {
-    const { ediciones, descripcion, aunqueNoCompile } = cuerpo as Partial<Record<keyof PeticionDeEdiciones, unknown>>;
-    const lista = listaDeEdiciones.safeParse(ediciones);
-    if (!lista.success || !['string', 'undefined'].includes(typeof descripcion) || !['boolean', 'undefined'].includes(typeof aunqueNoCompile)) return undefined;
-    return { ediciones: lista.data, ...(typeof descripcion === 'string' && { descripcion }), ...(aunqueNoCompile === true && { aunqueNoCompile }) };
-  }
-  const r = intencionSchema.safeParse(cuerpo);
-  return r.success ? r.data : undefined;
-};
-
-/** `version` del estado que vio la pagina, si es un entero no negativo; una version olvidada rechaza con `hash-desactualizado`. */
-const versionVista = (cuerpo: unknown): number | undefined => {
-  const version = (cuerpo as { version?: unknown } | null)?.version;
-  return typeof version === 'number' && Number.isInteger(version) && version >= 0 ? version : undefined;
-};
-
 /** El codigo de Temas se sirve en `/componentes.js` solo tras `POST /api/confiar` o `confiarEnCodigo`. */
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
   const { workspace, temas, puerto = 0, debounceMs, estudio = activosDelEstudio, confiarEnCodigo = false } = opciones;
@@ -206,6 +185,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   const vivo: WorkspaceVivo = await abrirWorkspaceVivo({
     puerto: puertoDeDisco(opciones),
     raiz: resolve(workspace),
+    reloj: relojReal,
+    ahora: Date.now,
     confiarEnCodigo,
     ...(debounceMs !== undefined && { debounceMs }),
     ...(compilarCodigo !== undefined && { compilarCodigo }),
@@ -216,7 +197,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   const enviar = (cliente: ServerResponse, nombre: NombreDeEventoDeDev, datos: unknown): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
   const enviarEstado = (cliente: ServerResponse, estado: EstadoDeDev): void => enviar(cliente, 'estado', estado);
   const enviarActividad = (cliente: ServerResponse, actividad: ActividadDeDev): void => enviar(cliente, 'actividad', actividad);
-  const enviarHistorial = (cliente: ServerResponse): void => enviar(cliente, 'historial', vivo.historial() satisfies HistorialDeDev);
+  const enviarHistorial = (cliente: ServerResponse): void => enviar(cliente, 'historial', vivo.historial());
   // Toda escritura (propia o externa) recompila: el Historial y su alcance viajan con cada estado.
   const dejarDeEscucharEstado = vivo.suscribir((estado) => {
     for (const cliente of clientes) {
@@ -260,16 +241,29 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     }
   };
 
-  /** Un fallo de `atender` responde 500. */
-  const post = (req: IncomingMessage, res: ServerResponse, atender: (cuerpo: unknown) => Promise<void> | void): void => {
+  /** Un fallo de la API (I/O del puerto) responde 500. */
+  const api = (res: ServerResponse, peticion: Parameters<typeof atenderApiDeDev>[1]): void => {
+    void atenderApiDeDev(vivo, peticion)
+      .then((r) => {
+        if (r === undefined) {
+          cabecera(res, 'text/plain', 404);
+          res.end('No encontrado');
+        } else responder(res, r.status, r.cuerpo);
+      })
+      .catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
+  };
+
+  /** Las rutas POST exigen POST, un `Origin` propio y JSON (si no, responde el error). */
+  const post = (req: IncomingMessage, res: ServerResponse, url: URL): void => {
     if (req.method !== 'POST') {
       res.setHeader('allow', 'POST');
       responder(res, 405, { ok: false, mensaje: 'Metodo no permitido' });
       return;
     }
-    void leerCuerpoJson(req, res)
-      .then((leido) => (leido === undefined ? undefined : atender(leido.cuerpo)))
-      .catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
+    void leerCuerpoJson(req, res).then(
+      (leido) => (leido === undefined ? undefined : api(res, { metodo: 'POST', url, cuerpo: leido.cuerpo })),
+      (error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }),
+    );
   };
 
   /** Una ruta mal codificada o que sale de la raiz da `undefined`. */
@@ -281,29 +275,6 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     }
   };
 
-  /** `/api/inspect/<comando>/<argumento>[?tipo&estado&diagrama&catalogo]`: 200 con la salida de `inspect --json`, 404 si no existe. */
-  const responderInspect = (res: ServerResponse, url: URL): void => {
-    const [comando, argumentoCodificado, ...sobra] = url.pathname.slice('/api/inspect/'.length).split('/');
-    let argumento: string | undefined;
-    try {
-      argumento = argumentoCodificado === undefined ? undefined : decodeURIComponent(argumentoCodificado);
-    } catch {
-      argumento = undefined;
-    }
-    if (comando === undefined || !(SUBCOMANDOS_DE_INSPECT as readonly string[]).includes(comando) || argumento === undefined || argumento === '' || sobra.length > 0) {
-      responder(res, 404, { ok: false, mensaje: `Ruta de inspect desconocida; se esperaba /api/inspect/<${SUBCOMANDOS_DE_INSPECT.join('|')}>/<argumento>`, cercanos: [] });
-      return;
-    }
-    const opcion = (clave: string): { [k: string]: string } => {
-      const valor = url.searchParams.get(clave);
-      return valor === null ? {} : { [clave]: valor };
-    };
-    const respuesta = vivo.consultar({ comando: comando as SubcomandoDeInspect, argumento, ...opcion('tipo'), ...opcion('estado'), ...opcion('diagrama'), ...(url.searchParams.get('catalogo') === 'true' && { catalogo: true }) });
-    if (respuesta === undefined) responder(res, 422, { ok: false, mensaje: 'El Workspace tiene errores y nunca compilo; no hay nada que consultar', cercanos: [] });
-    else if ('noEncontrado' in respuesta) responder(res, 404, { ok: false, mensaje: respuesta.noEncontrado, cercanos: respuesta.cercanos });
-    else responder(res, 200, comoSalidaDeInspect(respuesta.salida));
-  };
-
   const servidor = createServer((req, res) => {
     // Contra DNS rebinding.
     if (!hostsPropios().includes(req.headers.host ?? '')) {
@@ -311,38 +282,17 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       res.end('Host no permitido');
       return;
     }
-    const ruta = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
-    if (ruta === '/api/edit') {
-      post(req, res, async (cuerpo) => {
-        const aplicable = comoAplicable(cuerpo);
-        if (aplicable === undefined) responder(res, 400, { ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... } o { ediciones, version, descripcion? }' });
-        else responderResultado(res, await vivo.editar(aplicable, versionVista(cuerpo)));
-      });
-    } else if (ruta === '/api/deshacer') {
-      post(req, res, async () => responderResultado(res, await vivo.deshacer()));
-    } else if (ruta === '/api/rehacer') {
-      post(req, res, async () => responderResultado(res, await vivo.rehacer()));
-    } else if (ruta === '/api/historial/saltar') {
-      post(req, res, async (cuerpo) => {
-        const id = (cuerpo as { id?: unknown } | null)?.id;
-        if (typeof id !== 'number' || !Number.isInteger(id) || id < 0) responder(res, 400, { ok: false, mensaje: 'Se esperaba { id } con un entero no negativo' });
-        else responderResultado(res, await vivo.saltar(id));
-      });
-    } else if (ruta === '/api/confiar') {
-      post(req, res, () => {
-        vivo.confiar();
-        responder(res, 200, { ok: true });
-      });
+    const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+    const ruta = url.pathname;
+    if (RUTAS_POST_DE_DEV.includes(ruta)) {
+      post(req, res, url);
     } else if (ruta === '/') {
       servirEstatico(res, estudio().indice);
     } else if (ruta.startsWith(RUTA_DEL_ESTUDIO)) {
       const { archivos } = estudio();
       const nombre = ruta.slice(RUTA_DEL_ESTUDIO.length);
       servirEstatico(res, Object.hasOwn(archivos, nombre) ? archivos[nombre] : undefined);
-    } else if (ruta === '/api/codigo') {
-      const { componentes, confiado } = vivo.codigo();
-      responder(res, 200, { temaConCodigo: componentes.length > 0, componentes, confiado });
-    } else if (ruta === '/componentes.js') {
+    } else if (ruta === RUTAS_DE_DEV.componentes) {
       const { confiado, bundle } = vivo.codigo();
       if (!confiado) {
         cabecera(res, 'text/plain', 403);
@@ -351,8 +301,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         cabecera(res, 'text/javascript');
         res.end(bundle);
       }
-    } else if (ruta.startsWith(RUTA_DE_FUENTES)) {
-      const fuente = servirFuente(ruta.slice(RUTA_DE_FUENTES.length));
+    } else if (ruta.startsWith(RUTAS_DE_DEV.fuentes)) {
+      const fuente = servirFuente(ruta.slice(RUTAS_DE_DEV.fuentes.length));
       if (fuente === undefined) {
         cabecera(res, 'text/plain', 404);
         res.end('No encontrado');
@@ -360,38 +310,15 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         res.writeHead(200, { 'content-type': fuente.tipo, 'cache-control': 'no-store', 'content-length': fuente.bytes.length });
         res.end(fuente.bytes);
       }
-    } else if (ruta === '/api/estado') {
-      responder(res, 200, vivo.estado());
-    } else if (ruta === '/api/archivos') {
-      responder(res, 200, vivo.archivos() satisfies ArchivosDeDev);
-    } else if (ruta.startsWith('/api/archivo/')) {
-      let leido: ArchivoDeDev | undefined;
-      try {
-        leido = vivo.archivo(ruta.slice('/api/archivo/'.length).split('/').map(decodeURIComponent).join('/'));
-      } catch {
-        leido = undefined;
-      }
-      responder(res, leido === undefined ? 404 : 200, leido ?? { ok: false, mensaje: 'Archivo inexistente' });
-    } else if (ruta === '/eventos') {
+    } else if (ruta === RUTAS_DE_DEV.eventos) {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       clientes.add(res);
       res.on('close', () => clientes.delete(res));
       enviarEstado(res, vivo.estado());
       enviarHistorial(res);
       enviarActividad(res, { previos: true, eventos: [...vivo.actividad()] });
-    } else if (ruta.startsWith('/api/inspect/')) {
-      responderInspect(res, new URL(req.url ?? '/', 'http://127.0.0.1'));
-    } else if (ruta.startsWith('/api/vista/')) {
-      const id = decodeURIComponent(ruta.slice('/api/vista/'.length));
-      // `?tema=<nombre>`: la Vista con otro Tema (previsualizar), sin cache ni Historial.
-      const tema = new URL(req.url ?? '/', 'http://127.0.0.1').searchParams.get('tema') ?? undefined;
-      vivo.geometria(id, tema === undefined ? undefined : { tema }).then(
-        (geometria) => responder(res, geometria === undefined ? 404 : 200, geometria ?? { error: tema === undefined ? `Vista '${id}' inexistente` : `Vista '${id}' o Tema '${tema}' inexistente` }),
-        (error: unknown) => responder(res, 500, { error: (error as Error).message }),
-      );
     } else {
-      cabecera(res, 'text/plain', 404);
-      res.end('No encontrado');
+      api(res, { metodo: req.method ?? 'GET', url });
     }
   });
 

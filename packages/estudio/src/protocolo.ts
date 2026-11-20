@@ -1,44 +1,47 @@
 /**
  * `estudio/protocolo`: contrato del protocolo de `dev` entre el servidor (`cli`) y la pagina (ADR 0004, 0007).
- * Interfaz: el estado que `dev` empuja por `/api/estado` y `/eventos` (`estadoDeDevSchema`, `EstadoDeDev`, `IssueDeDev`,
- * `TipoDeCambio`), las lecturas del editor (`/api/archivos`, `/api/archivo/<ruta>`) y las ediciones de texto de `/api/edit`. La pagina valida con los esquemas; `cli` importa de aqui solo tipos (`import type`).
+ * Interfaz: reexporta de `canonico` (`dev.ts`) las rutas (`RUTAS_DE_DEV`), los esquemas de lo que produce el Workspace
+ * vivo (`estadoDeDevSchema`, `diferenciaDeDevSchema`, `historialDeDevSchema`, archivos) y de las peticiones, y suma lo que
+ * solo conoce la pagina: los eventos SSE con nombre, `actividadDeDevSchema` y el 404 de `inspect`. La pagina valida con
+ * los esquemas; `cli` importa de aqui solo tipos (los valores los toma de `canonico`).
  * Invariantes: sin DOM ni Node; solo depende de `canonico` y `zod`, para que importarlo no arrastre la app de navegador.
  */
-import { edicionDeTextoSchema, eventoDeActividadSchema, fuenteCanonicaSchema, issueSchema } from 'canonico';
+import { eventoDeActividadSchema } from 'canonico';
 import { z } from 'zod';
 
-export const issueDeDevSchema = issueSchema.extend({
-  /** Enlace `vscode://file/<ruta>:<linea>:<columna>`. */
-  href: z.string(),
-});
-
-/**
- * `pintura`: Capas o animacion, se reaplica el Estilo sobre la Geometria vigente; `estructura`: Metricas,
- * fuentes, Modelo o Vistas, relayout; `codigo`: un `.tsx`, se re-registra el componente sin relayout.
- * Con varios a la vez gana el mas fuerte: estructura, codigo, pintura.
- */
-export const TIPOS_DE_CAMBIO = ['pintura', 'estructura', 'codigo'] as const;
-export type TipoDeCambio = (typeof TIPOS_DE_CAMBIO)[number];
-
-/**
- * La pagina devuelve `version` al editar y el servidor la traduce a los hashes que vio (resuelve la concurrencia).
- * Con `cambio: 'pintura'` la pagina no pide Geometria.
- */
-export const estadoDeDevSchema = z.object({
-  version: z.number().int(),
-  /** Ausente en el estado inicial y cuando la recompilacion fallo (se conserva el ultimo dibujo bueno). */
-  cambio: z.enum(TIPOS_DE_CAMBIO).optional(),
-  /** Ausente mientras el Workspace nunca compilo sin errores. */
-  fuente: fuenteCanonicaSchema.optional(),
-  iconos: z.record(z.string(), z.string()),
-  vistas: z.array(z.string()),
-  /** Ruta relativa -> hash del contenido; se sirven en `/fuentes/<ruta>`. Ausente si el adaptador no los conoce. */
-  fuentes: z.record(z.string(), z.string()).optional(),
-  issues: z.array(issueDeDevSchema),
-});
-
-export type IssueDeDev = z.infer<typeof issueDeDevSchema>;
-export type EstadoDeDev = z.infer<typeof estadoDeDevSchema>;
+export {
+  archivoDeDevSchema,
+  archivosDeDevSchema,
+  COMANDOS_DE_INSPECT,
+  diferenciaDeDevSchema,
+  elementoDeDiferenciaSchema,
+  entradaDelHistorialDeDevSchema,
+  estadoDeDevSchema,
+  historialDeDevSchema,
+  INICIO_DEL_HISTORIAL_DE_DEV,
+  issueDeDevSchema,
+  ORIGENES_DE_DIFERENCIA,
+  peticionDeEdicionesSchema,
+  peticionDeSaltoSchema,
+  rutaDeArchivo,
+  rutaDeInspect,
+  RUTAS_DE_DEV,
+  TIPOS_DE_CAMBIO,
+} from 'canonico';
+export type {
+  ArchivoDeDev,
+  ArchivosDeDev,
+  ComandoDeInspect,
+  DiferenciaDeDev,
+  ElementoDeDiferencia as ElementoDeDiferenciaDeDev,
+  EntradaDelHistorialDeDev,
+  EstadoDeDev,
+  HistorialDeDev,
+  IssueDeDev,
+  OrigenDeDiferencia,
+  PeticionDeEdiciones,
+  TipoDeCambio,
+} from 'canonico';
 
 /**
  * Eventos SSE de `/eventos`, cada uno con `event: <nombre>`. `estado` lleva un `EstadoDeDev` (al conectar y tras cada
@@ -55,91 +58,6 @@ export type NombreDeEventoDeDev = (typeof EVENTOS_DE_DEV)[number];
 export const actividadDeDevSchema = z.object({ previos: z.boolean(), eventos: z.array(eventoDeActividadSchema) });
 export type ActividadDeDev = z.infer<typeof actividadDeDevSchema>;
 
-/** Elemento de una Diferencia con su identidad (la de `diferenciar` de `sesion`). */
-export const elementoDeDiferenciaSchema = z.discriminatedUnion('tipo', [
-  z.object({ tipo: z.literal('nodo'), id: z.string() }),
-  z.object({ tipo: z.literal('atributo'), nodo: z.string(), name: z.string() }),
-  z.object({ tipo: z.literal('arista'), from: z.string(), to: z.string(), ordinal: z.number().int() }),
-  z.object({ tipo: z.literal('interaccion'), id: z.string() }),
-  z.object({ tipo: z.literal('mensaje'), interaccion: z.string(), id: z.string().optional(), posicion: z.number().int(), ruta: z.string() }),
-  z.object({ tipo: z.literal('vista'), id: z.string() }),
-  z.object({ tipo: z.literal('tema'), name: z.string() }),
-]);
-export type ElementoDeDiferenciaDeDev = z.infer<typeof elementoDeDiferenciaSchema>;
-
-/**
- * `propio`: la produjo una escritura de la UI (Intencion, ediciones de texto, `fix`, deshacer, rehacer, saltar),
- * reconocida por el hash de lo escrito; `externo`: cualquier otra (agente, otro editor, CLI).
- */
-export const ORIGENES_DE_DIFERENCIA = ['propio', 'externo'] as const;
-export type OrigenDeDiferencia = (typeof ORIGENES_DE_DIFERENCIA)[number];
-
-/**
- * Datos de `event: diferencia`: la Diferencia de la Fuente contra la ultima Sesion buena, empujada tras el `estado` de
- * la misma `version` y solo si no es vacia. Varias Sesiones con errores seguidas dan una sola al volver a compilar
- * (externa si alguna de las escrituras intermedias lo fue). La pagina no recalcula: solo proyecta.
- */
-export const diferenciaDeDevSchema = z.object({
-  version: z.number().int(),
-  origen: z.enum(ORIGENES_DE_DIFERENCIA),
-  agregados: z.array(elementoDeDiferenciaSchema),
-  quitados: z.array(elementoDeDiferenciaSchema),
-  cambiados: z.array(z.object({ elemento: elementoDeDiferenciaSchema, propiedades: z.array(z.object({ nombre: z.string(), clase: z.enum(['texto', 'estructura']) })) })),
-});
-export type DiferenciaDeDev = z.infer<typeof diferenciaDeDevSchema>;
-/**
- * Datos de `event: historial` (al conectar y tras cada recompilacion): el Historial de deshacer de `dev`, `pasado` de la
- * entrada mas vieja a la mas reciente y `futuro` desde la siguiente a rehacer. `id` es un contador estable del proceso
- * (`0` es Inicio), `cuando` la hora en ms y `descripcion` la arma el servidor. `alcanzable: false` (con `motivo`) si
- * saltar a ella restauraria un archivo que cambio por fuera.
- */
-const alcanceSchema = { alcanzable: z.boolean(), motivo: z.string().optional() };
-export const entradaDelHistorialDeDevSchema = z.object({ id: z.number().int().positive(), descripcion: z.string(), archivos: z.array(z.string()), cuando: z.number(), ...alcanceSchema });
-export const historialDeDevSchema = z.object({ pasado: z.array(entradaDelHistorialDeDevSchema), futuro: z.array(entradaDelHistorialDeDevSchema), inicio: z.object(alcanceSchema) });
-export type EntradaDelHistorialDeDev = z.infer<typeof entradaDelHistorialDeDevSchema>;
-export type HistorialDeDev = z.infer<typeof historialDeDevSchema>;
-
-/** `POST /api/historial/saltar { id }`: 200 tras escribir el destino, 409 si cambio por fuera, 422 `entrada-desconocida`. */
-export const RUTA_DE_SALTAR = '/api/historial/saltar';
-export const peticionDeSaltoSchema = z.object({ id: z.number().int().nonnegative() });
-export const INICIO_DEL_HISTORIAL_DE_DEV = 0;
-
-/** Subcomandos de `GET /api/inspect/<comando>/<argumento>`; las opciones de `tema` van en la query. */
-export const COMANDOS_DE_INSPECT = ['buscar', 'nodo', 'vista', 'interaccion', 'tema'] as const;
-export type ComandoDeInspect = (typeof COMANDOS_DE_INSPECT)[number];
-
 /** Cuerpo de un 404 de `/api/inspect` (o 422 si el Workspace nunca compilo): el mensaje de `inspect` y los ids cercanos. */
 export const inspectNoEncontradoSchema = z.object({ ok: z.literal(false), mensaje: z.string(), cercanos: z.array(z.string()) });
 export type InspectNoEncontrado = z.infer<typeof inspectNoEncontradoSchema>;
-
-export function rutaDeInspect(comando: ComandoDeInspect, argumento: string, opciones: Readonly<Record<string, string>> = {}): string {
-  const query = new URLSearchParams(opciones).toString();
-  return `/api/inspect/${comando}/${encodeURIComponent(argumento)}${query === '' ? '' : `?${query}`}`;
-}
-
-/** `GET /api/archivos`: los `.dg` del Workspace y los de `--theme-path` (`soloLectura: true`), ordenados por ruta. */
-export const archivosDeDevSchema = z.object({
-  version: z.number().int(),
-  archivos: z.array(z.object({ file: z.string(), hash: z.string(), soloLectura: z.boolean() })),
-});
-export type ArchivosDeDev = z.infer<typeof archivosDeDevSchema>;
-
-/** `GET /api/archivo/<ruta>` (404 si no existe): la `version` es la base de la siguiente edicion del editor. */
-export const archivoDeDevSchema = z.object({ file: z.string(), texto: z.string(), hash: z.string(), version: z.number().int() });
-export type ArchivoDeDev = z.infer<typeof archivoDeDevSchema>;
-
-export const rutaDeArchivo = (file: string): string => `/api/archivo/${file.split('/').map(encodeURIComponent).join('/')}`;
-
-/**
- * `POST /api/edit` con texto (ADR 0007): la misma forma y puerta que `edit --edits`, con la `version` que vio la pagina
- * (el servidor la traduce a `visto`). `descripcion` nombra la entrada del Historial (por defecto "texto de <archivo>").
- * `aunqueNoCompile` (guardado del editor, historia 21) escribe aunque el texto introduzca errores; sin el, un error nuevo
- * rechaza con `invalida` (`fix` y "Aplicar N fix", todo o nada).
- */
-export const peticionDeEdicionesSchema = z.object({
-  ediciones: z.array(edicionDeTextoSchema).min(1),
-  version: z.number().int().nonnegative().optional(),
-  descripcion: z.string().optional(),
-  aunqueNoCompile: z.boolean().optional(),
-});
-export type PeticionDeEdiciones = z.infer<typeof peticionDeEdicionesSchema>;

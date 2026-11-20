@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { EventoDeActividad, FuenteCanonica } from 'canonico';
 import { abrirSesion } from 'sesion';
 
+import { eventoDeActividad } from '../src/contrato';
 import { destinoDelObjetivo, marcaDelEvento, resumenDelEvento } from '../navegador/agente/actividad';
 
 const DSL = `specification {
@@ -34,16 +35,7 @@ view solo-cache {
 
 const fuente = abrirSesion({ 'main.dg': DSL }).fuente as FuenteCanonica;
 
-const evento = (extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
-  contractVersion: 1,
-  ts: '2026-11-19T10:00:00.000Z',
-  pid: 7,
-  comando: 'edit',
-  args: [],
-  exitCode: 0,
-  duracionMs: 2,
-  ...extra,
-});
+const evento = (extra: Partial<EventoDeActividad> = {}): EventoDeActividad => eventoDeActividad(7, { args: [], ...extra });
 
 describe('seguir al agente: destino de un objetivo', () => {
   it('objetivo.vista navega a esa Vista; si ademas nombra un Nodo que contiene, lo selecciona', () => {

@@ -1,12 +1,14 @@
 /**
- * `construirEstudio({ salida, css? })`: escribe en `salida` los estaticos de la app (`index.html`, `pagina.js`,
- * `worker.js`, `estilo.css`). JS con esbuild: IIFE minificado, determinista, para navegador. El paso de CSS es
+ * `construirEstudio({ salida, css? })`: escribe en `salida` los estaticos de la app (`index.html`, `pagina.js` con sus
+ * trozos en `trozos/`, `worker.js`, `estilo.css`). JS con esbuild, minificado y determinista: la pagina es un modulo ES
+ * partido (`splitting`), y lo que se importa con `import()` (el editor con CodeMirror, el Buscador) va en trozos que se
+ * piden bajo demanda; el Worker es un IIFE (se carga por Blob). El paso de CSS es
  * conectable (`css`): recibe la ruta de `navegador/estilo.css` y devuelve la hoja; por defecto la empaqueta esbuild.
  * Errores: un fallo de esbuild o de escritura rechaza.
  */
 import { build } from 'esbuild';
-import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { copyFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const navegador = (archivo: string): string => fileURLToPath(new URL(`../navegador/${archivo}`, import.meta.url));
@@ -24,22 +26,35 @@ const cssConEsbuild: PasoDeCss = async (entrada) => {
   return outputFiles[0]?.text ?? '';
 };
 
-async function empaquetar(entrada: string, alias: Record<string, string> = {}): Promise<string> {
+/** Opciones comunes de JS para navegador (la pagina y el Worker). */
+const COMUNES = {
+  bundle: true,
+  write: false,
+  minify: true,
+  platform: 'browser',
+  target: 'es2020',
+  charset: 'ascii',
+  legalComments: 'none',
+  jsx: 'automatic',
+  logLevel: 'silent',
+  define: { 'process.env.NODE_ENV': '"production"' },
+} as const;
+
+/** La pagina como modulo ES con trozos: ruta relativa a `salida` -> contenido. */
+async function empaquetarPagina(entrada: string, salida: string): Promise<Record<string, Uint8Array>> {
   const { outputFiles } = await build({
-    entryPoints: [entrada],
-    bundle: true,
-    write: false,
-    minify: true,
-    format: 'iife',
-    platform: 'browser',
-    target: 'es2020',
-    charset: 'ascii',
-    legalComments: 'none',
-    jsx: 'automatic',
-    logLevel: 'silent',
-    alias,
-    define: { 'process.env.NODE_ENV': '"production"' },
+    ...COMUNES,
+    entryPoints: { pagina: entrada },
+    format: 'esm',
+    splitting: true,
+    outdir: salida,
+    chunkNames: 'trozos/[name]-[hash]',
   });
+  return Object.fromEntries(outputFiles.map((f) => [relative(resolve(salida), f.path).split(sep).join('/'), f.contents]));
+}
+
+async function empaquetar(entrada: string, alias: Record<string, string> = {}): Promise<string> {
+  const { outputFiles } = await build({ ...COMUNES, entryPoints: [entrada], format: 'iife', alias });
   return outputFiles[0]?.text ?? '';
 }
 
@@ -49,12 +64,17 @@ async function empaquetar(entrada: string, alias: Record<string, string> = {}): 
  */
 export async function construirEstudio({ salida, css = cssConEsbuild }: OpcionesDeConstruccion): Promise<void> {
   const [pagina, worker, hoja] = await Promise.all([
-    empaquetar(navegador('dev.tsx')),
+    empaquetarPagina(navegador('dev.tsx'), salida),
     empaquetar(navegador('worker.ts'), { zod: navegador('zod-inerte.ts') }),
     css(navegador('estilo.css')),
   ]);
   mkdirSync(salida, { recursive: true });
-  writeFileSync(join(salida, 'pagina.js'), pagina);
+  // Trozos de un build anterior (otro hash) no deben quedar servibles.
+  rmSync(join(salida, 'trozos'), { recursive: true, force: true });
+  for (const [ruta, contenido] of Object.entries(pagina)) {
+    mkdirSync(dirname(join(salida, ruta)), { recursive: true });
+    writeFileSync(join(salida, ruta), contenido);
+  }
   writeFileSync(join(salida, 'worker.js'), worker);
   writeFileSync(join(salida, 'estilo.css'), hoja);
   copyFileSync(navegador('index.html'), join(salida, 'index.html'));

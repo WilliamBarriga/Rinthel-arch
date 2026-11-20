@@ -94,10 +94,15 @@ export function diferenciaMinima(antes: string, despues: string): ChangeSet {
   return ChangeSet.of(cambios, antes.length);
 }
 
-/** Lo que el buffer tenia en un tramo que gano el disco: sus lineas enteras y la linea (1-based) donde cae en `texto`. */
+/**
+ * Lo que el buffer tenia en un tramo que gano el disco: sus lineas enteras, la linea (1-based) donde cae en `texto` y
+ * cuantas lineas de `texto` (desde `linea`) son la version del disco de ese tramo; 0 si el buffer solo inserto lineas.
+ * Recuperarlo es poner `texto` en lugar de esas `reemplaza` lineas.
+ */
 export interface FragmentoPerdido {
   texto: string;
   linea: number;
+  reemplaza: number;
 }
 
 export interface Fusion {
@@ -163,7 +168,13 @@ export function fusionarTresVias(base: string, disco: string, buffer: string): F
       const primera = docDelBuffer.lineAt(t.desdeB);
       const ultima = docDelBuffer.lineAt(t.hastaB > t.desdeB && docDelBuffer.lineAt(t.hastaB).from === t.hastaB ? t.hastaB - 1 : t.hastaB);
       const enUnido = pendiente.mapPos(delDisco.mapPos(t.desde, -1), -1);
-      return { texto: docDelBuffer.sliceString(primera.from, ultima.to), linea: unido.lineAt(enUnido).number };
+      const linea = unido.lineAt(enUnido).number;
+      const [desde, hasta] = lineasQueToca(t, docBase);
+      // Un intervalo impar es un borde entre lineas: el buffer solo inserto lineas enteras, no hay version del disco que quitar.
+      if (desde % 2 === 1) return { texto: docDelBuffer.sliceString(primera.from, ultima.to), linea, reemplaza: 0 };
+      const finEnBase = docBase.line(hasta / 2).to;
+      const finEnUnido = pendiente.mapPos(delDisco.mapPos(finEnBase, 1), 1);
+      return { texto: docDelBuffer.sliceString(primera.from, ultima.to), linea, reemplaza: unido.lineAt(finEnUnido).number - linea + 1 };
     });
   return { texto, alBuffer: diferenciaMinima(buffer, texto), pendiente, perdidos };
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { FuenteCanonica } from 'canonico';
-import { abrirSesion } from 'sesion';
+import { abrirSesion, diferenciar } from 'sesion';
 
 import type { DiferenciaDeDev, ElementoDeDiferenciaDeDev } from '../src/protocolo';
 import { proyectarDiferencia, unirDiferencia, visitarVista, vencerResaltado, RESALTADO_VACIO } from '../navegador/diferencia/proyeccion';
@@ -75,6 +75,43 @@ describe('proyectarDiferencia', () => {
   it('un cambio de Tema marca la galeria y, si es el de la Vista activa, lo dice', () => {
     expect(proyectarDiferencia([{ tipo: 'tema', name: 'claro' }], fuente, { vista: 'general' })).toMatchObject({ temas: ['claro'], temaDeLaVista: 'claro' });
     expect(proyectarDiferencia([{ tipo: 'tema', name: 'claro' }], fuente, { vista: 'plegada' })).toMatchObject({ temas: ['claro'], temaDeLaVista: undefined });
+  });
+
+  it('el aviso de Tema cubre el efectivo: neutral en una Vista sin theme', () => {
+    expect(proyectarDiferencia([{ tipo: 'tema', name: 'neutral' }], fuente, { vista: 'plegada' })).toMatchObject({ temaDeLaVista: 'neutral' });
+    expect(proyectarDiferencia([{ tipo: 'tema', name: 'neutral' }], fuente, { vista: 'general' })).toMatchObject({ temaDeLaVista: undefined });
+  });
+
+  it('el aviso de Tema cubre la cadena extends: cambiar el padre avisa en la Vista del hijo', () => {
+    const conPadre = (acento: string) =>
+      abrirSesion({ 'main.dg': DSL.replace('theme claro extends neutral {', `theme base extends neutral {\n  palette { acento "${acento}" }\n}\n\ntheme claro extends base {`).replace('  palette { acento "#0ea5e9" }\n', '') }).fuente!;
+    const antes = conPadre('#111111');
+    const despues = conPadre('#222222');
+    const { cambiados } = diferenciar(antes, despues);
+    expect(proyectarDiferencia(cambiados.map((c) => c.elemento), despues, { vista: 'general' })).toMatchObject({ temaDeLaVista: 'claro' });
+  });
+
+  it('una Arista se proyecta por su ordinal dentro del par de Nodos', () => {
+    const er = abrirSesion({
+      'er.dg': `specification { node tabla }
+model {
+  tabla pedidos "Pedidos" {
+    cliente_id: uuid fk
+    vendedor_id: uuid fk
+  }
+  tabla personas "Personas" { id: uuid pk }
+  pedidos#cliente_id "0..*" -> "1" personas#id
+  pedidos#vendedor_id "0..*" -> "1" personas#id
+}
+view datos {
+  type er
+  include **
+}
+`,
+    }).fuente!;
+    const arista = (ordinal: number): ElementoDeDiferenciaDeDev => ({ tipo: 'arista', from: 'pedidos', to: 'personas', ordinal });
+    expect(proyectarDiferencia([arista(0)], er, { vista: 'datos' }).lienzo).toEqual(['pedidos#cliente_id -> personas#id']);
+    expect(proyectarDiferencia([arista(1)], er, { vista: 'datos' }).lienzo).toEqual(['pedidos#vendedor_id -> personas#id']);
   });
 
   it('una Vista cambiada se marca en el indice salvo que sea la activa', () => {

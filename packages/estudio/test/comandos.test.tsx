@@ -3,7 +3,7 @@ import { EditorView } from '@codemirror/view';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
+import { dobleClicEnNodo, lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
 
 afterEach(cleanup);
 
@@ -102,6 +102,26 @@ describe('E abre Codigo', () => {
     teclear('e');
     await waitFor(() => expect(lineaDelEditor('main.dg')).toBe(7));
   });
+
+  it('el doble clic en un Nodo abre Codigo en su bloque', async () => {
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL });
+    await lienzoListo(contenedor, 'mapa');
+
+    dobleClicEnNodo(contenedor, 'db');
+
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true'));
+    await waitFor(() => expect(lineaDelEditor('main.dg')).toBe(7));
+  });
+
+  it('abrir Codigo abre tambien Issues en la isla derecha', async () => {
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL });
+    await lienzoListo(contenedor, 'mapa');
+
+    teclear('e');
+
+    expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Issues' }).getAttribute('aria-selected')).toBe('true');
+  });
 });
 
 const buscador = async () => {
@@ -112,12 +132,12 @@ const buscador = async () => {
 const escribir = (campo: HTMLElement, texto: string) => fireEvent.change(campo, { target: { value: texto } });
 
 describe('Buscador', () => {
-  it('Mod+K lo abre dentro del nodo de portales del chrome; Escape lo cierra', async () => {
+  it('Mod+K lo abre dentro del chrome (no en el body, donde perderia sus tokens); Escape lo cierra', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL });
     await screen.findByRole('listbox', { name: 'Vistas' });
 
     const { dialogo, campo } = await buscador();
-    expect(contenedor.querySelector('.ui-chrome .ui-portales')!.contains(dialogo)).toBe(true);
+    expect(contenedor.contains(dialogo)).toBe(true);
     fireEvent.keyDown(campo, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Buscador' })).toBeNull());
   });
@@ -148,6 +168,25 @@ describe('Buscador', () => {
     await waitFor(() => expect(window.location.hash).toContain('s=db'));
     const detalle = screen.getByRole('region', { name: 'Detalle' });
     expect(await within(detalle).findByRole('heading', { name: 'Base de datos' })).toBeTruthy();
+  });
+
+  it('un Nodo que la Vista activa no muestra lleva a la primera Vista que si y queda seleccionado', async () => {
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL });
+    await lienzoListo(contenedor, 'mapa');
+    const primero = await buscador();
+    escribir(primero.campo, 'otr');
+    fireEvent.click(await within(primero.dialogo).findByRole('option', { name: /^otra/ }));
+    await lienzoListo(contenedor, 'otra');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Buscador' })).toBeNull());
+    const { dialogo, campo } = await buscador();
+
+    escribir(campo, 'API');
+    fireEvent.click(await within(dialogo).findByRole('option', { name: /^API/ }));
+
+    await lienzoListo(contenedor, 'mapa');
+    await waitFor(() => expect(window.location.hash).toContain('s=api'));
+    const detalle = screen.getByRole('region', { name: 'Detalle' });
+    expect(await within(detalle).findByRole('heading', { name: 'API' })).toBeTruthy();
   });
 
   it('salta a archivo:linea en Codigo', async () => {

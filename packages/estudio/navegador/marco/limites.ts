@@ -32,8 +32,8 @@ export const LIMITES_DE_ISLA = {
   /** Una isla no pasa de esta fraccion del ancho del lienzo. */
   fraccionMax: 0.5,
   altoMin: 140,
-  /** Hueco que queda bajo la isla mas alta. */
-  margenInferior: 30,
+  /** Hueco que queda bajo la isla mas alta (franja de leyenda, Pasos y accesibilidad; ver `.ui-isla` en `estilo.css`). */
+  margenInferior: 64,
   /** Paso de las flechas en el separador. */
   paso: 16,
 } as const;

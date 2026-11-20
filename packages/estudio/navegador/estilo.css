@@ -105,7 +105,8 @@
   .ui-isla {
     position: absolute;
     top: 64px;
-    max-height: calc(100% - 64px - 30px);
+    /* Deja libre la franja de abajo: leyenda, Pasos y Alto contraste / Reducir movimiento no quedan bajo las islas. */
+    max-height: calc(100% - 64px - 64px);
     border-radius: 18px;
     display: flex;
     flex-direction: column;
@@ -705,6 +706,10 @@
     border-radius: 14px;
     padding: 8px 12px;
     z-index: 1;
+    /* La Leyenda del shell en modo auto puede no dibujar nada: sin ella no queda una pildora vacia. */
+    &:empty {
+      display: none;
+    }
   }
 
   .ui-toasts {
@@ -771,13 +776,24 @@
     font-family: var(--ui-mono);
     color: var(--ui-texto-fuerte);
   }
+}
 
+/* Paneles de las islas que llegaron despues (Codigo, Diferencia): en la misma capa que el resto del chrome. */
+@layer chrome {
   /* Pestana Codigo: editor CodeMirror 6 del DSL (#190). */
   .ui-codigo {
     display: flex;
     flex-direction: column;
     gap: 8px;
     min-height: 0;
+    min-width: 0;
+  }
+  /* El editor no crece mas que la isla: las lineas largas se desplazan dentro de CodeMirror. */
+  .ui-editor {
+    min-width: 0;
+    & .cm-editor {
+      width: 100%;
+    }
   }
   .ui-codigo-cabecera {
     display: flex;
@@ -794,6 +810,14 @@
       font-family: var(--ui-mono);
     }
   }
+  /* La lista desplegable nativa de un select tambien con los tokens del chrome (oscuro); si no, sale blanca. */
+  .ui-isla select {
+    color-scheme: dark;
+    & option {
+      background: var(--ui-superficie-solida);
+      color: var(--ui-texto);
+    }
+  }
   .ui-guardado {
     font-size: 11px;
     color: var(--ui-tenue);
@@ -801,50 +825,7 @@
       color: var(--ui-err);
     }
   }
-  .ui-editor .cm-editor {
-    font-family: var(--ui-mono);
-    font-size: 12px;
-    background: transparent;
-    color: var(--ui-texto);
-    border-radius: var(--ui-radio-s);
-    max-height: calc(100vh - 220px);
-    &.cm-focused {
-      outline: 1px solid var(--ui-sutil-2);
-    }
-    & .cm-scroller {
-      font-family: var(--ui-mono);
-    }
-    & .cm-gutters {
-      background: transparent;
-      color: var(--ui-tenue);
-      border: 0;
-    }
-    & .cm-activeLine,
-    & .cm-activeLineGutter {
-      background: var(--ui-hover);
-    }
-    & .cm-cursor {
-      border-left-color: var(--ui-texto-fuerte);
-    }
-    & .cm-selectionBackground,
-    &.cm-focused .cm-selectionBackground {
-      background: var(--ui-sel);
-    }
-    & .cm-tooltip {
-      background: var(--ui-superficie-solida);
-      border: 1px solid var(--ui-borde);
-      color: var(--ui-texto);
-    }
-    & .cm-panels {
-      background: var(--ui-superficie-alta);
-      color: var(--ui-texto);
-    }
-  }
-  /* Escrituras externas (#191): lineas que trajo el disco y aviso de solape. */
-  .ui-editor .cm-line.ui-linea-del-disco {
-    background: var(--ui-agente-suave);
-    box-shadow: inset 2px 0 0 var(--ui-agente);
-  }
+  /* Aviso de solape con una escritura externa (#191). */
   .ui-aviso-del-disco {
     display: flex;
     flex-wrap: wrap;
@@ -899,4 +880,52 @@
     clip-path: inset(50%);
     white-space: nowrap;
   }
+}
+
+/*
+ * CodeMirror inyecta su tema base sin capa: estas reglas tambien van sin capa (como las piezas del shell) para ganarle
+ * (fondo de los numeros de linea, cursor, seleccion) y para las lineas que trajo el disco (#191).
+ */
+.ui-chrome .ui-editor .cm-editor {
+  font-family: var(--ui-mono);
+  font-size: 12px;
+  background: transparent;
+  color: var(--ui-texto);
+  border-radius: var(--ui-radio-s);
+  max-height: calc(100vh - 220px);
+  &.cm-focused {
+    outline: 1px solid var(--ui-sutil-2);
+  }
+  & .cm-scroller {
+    font-family: var(--ui-mono);
+  }
+  & .cm-gutters {
+    background: transparent;
+    color: var(--ui-tenue);
+    border: 0;
+  }
+  & .cm-activeLine,
+  & .cm-activeLineGutter {
+    background: var(--ui-hover);
+  }
+  & .cm-cursor {
+    border-left-color: var(--ui-texto-fuerte);
+  }
+  & .cm-selectionBackground,
+  &.cm-focused .cm-selectionBackground {
+    background: var(--ui-sel);
+  }
+  & .cm-tooltip {
+    background: var(--ui-superficie-solida);
+    border: 1px solid var(--ui-borde);
+    color: var(--ui-texto);
+  }
+  & .cm-panels {
+    background: var(--ui-superficie-alta);
+    color: var(--ui-texto);
+  }
+}
+.ui-chrome .ui-editor .cm-line.ui-linea-del-disco {
+  background: var(--ui-agente-suave);
+  box-shadow: inset 2px 0 0 var(--ui-agente);
 }

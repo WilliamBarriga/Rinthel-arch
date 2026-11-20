@@ -1,11 +1,11 @@
-/** Humo del enrutador HTTP de `dev`; el comportamiento del estado vivo se prueba en `workspace-vivo.test.ts`. */
+/** Humo del enrutador HTTP de `dev`; el comportamiento del estado vivo se prueba en `sesion/test/workspace-vivo.test.ts`. */
 import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { eventosSobreFetch } from 'estudio/contrato';
+import { eventoDeActividad, eventosSobreFetch, lineasDeActividad } from 'estudio/contrato';
 import type { ActividadDeDev } from 'estudio/protocolo';
 
 import { iniciarDev } from 'cli';
@@ -194,8 +194,12 @@ describe('dev: rutas', () => {
     const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, puerto: 0 });
     abiertos.push(servidor);
 
-    expect(await (await fetch(servidor.url)).text()).toContain('<script src="/_estudio/pagina.js">');
-    expect(await (await fetch(`${servidor.url}_estudio/pagina.js`)).text()).toContain('EventSource');
+    expect(await (await fetch(servidor.url)).text()).toContain('<script type="module" src="/_estudio/pagina.js">');
+    const pagina = await (await fetch(`${servidor.url}_estudio/pagina.js`)).text();
+    const trozo = /"\.\/(trozos\/[^"]+\.js)"/.exec(pagina)?.[1];
+    expect(trozo).toBeDefined();
+    const servido = await fetch(`${servidor.url}_estudio/${trozo}`);
+    expect([servido.status, servido.headers.get('content-type')]).toEqual([200, 'text/javascript; charset=utf-8']);
     expect((await (await fetch(`${servidor.url}_estudio/worker.js`)).text()).length).toBeGreaterThan(1000);
   });
 
@@ -386,8 +390,7 @@ describe('dev: Registro de actividad en disco', () => {
     carpetas.push(raiz);
     writeFileSync(join(raiz, 'main.dg'), BASE);
     mkdirSync(join(raiz, '.diagrams'));
-    const evento = (pid: number) => ({ contractVersion: 1, ts: '2026-11-19T10:00:00.000Z', pid, comando: 'validate', args: [], exitCode: 0, duracionMs: 1 });
-    writeFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), `${JSON.stringify(evento(1))}\n`);
+    writeFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), lineasDeActividad(eventoDeActividad(1)));
     const servidor = await iniciarDev({ workspace: raiz, observar: () => () => undefined, compilarCodigo: () => ({ componentes: {}, issues: [], bundle: 'return {};' }), puerto: 0 });
     abiertos.push(servidor);
     const fetchDelServidor: typeof fetch = (ruta, init) => fetch(new URL(String(ruta).replace(/^\//, ''), servidor.url), init);
@@ -397,7 +400,7 @@ describe('dev: Registro de actividad en disco', () => {
       const cerrar = eventosSobreFetch(fetchDelServidor)('/eventos', (nombre, datos) => {
         if (nombre !== 'actividad') return;
         lista.push(JSON.parse(datos) as ActividadDeDev);
-        if (lista.length === 1) appendFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), `${JSON.stringify(evento(2))}\n`);
+        if (lista.length === 1) appendFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), lineasDeActividad(eventoDeActividad(2)));
         else {
           cerrar();
           ok(lista);

@@ -6,9 +6,9 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
+import { etiquetaDeElemento } from 'canonico';
 import type { EventoDeActividad } from 'canonico';
 
-import type { ElementoDeDiferenciaDeDev } from '../../src/protocolo';
 import { useDiferencias } from '../diferencia/diferencias';
 import { useEstudio } from '../marco/contexto';
 import { destinoDelObjetivo, marcaDelEvento, quienDelEvento, useActividadDelAgente } from './actividad';
@@ -36,7 +36,7 @@ export function PanelDelAgente(): ReactElement {
           <p className="ui-tenue">Quitado por fuera</p>
           <ul aria-label="Quitado por fuera" className="ui-lista">
             {quitados.map((elemento) => {
-              const { tipo, id } = describirElemento(elemento);
+              const { tipo, id } = etiquetaDeElemento(elemento);
               return (
                 <li key={`${tipo}:${id}`}>
                   <span className="ui-tenue">{tipo}</span> <span className="ui-mono">{id}</span>
@@ -57,26 +57,6 @@ export function PanelDelAgente(): ReactElement {
       )}
     </section>
   );
-}
-
-/** Tipo y nombre legibles de un elemento de la Diferencia. */
-export function describirElemento(elemento: ElementoDeDiferenciaDeDev): { tipo: string; id: string } {
-  switch (elemento.tipo) {
-    case 'nodo':
-      return { tipo: 'Nodo', id: elemento.id };
-    case 'atributo':
-      return { tipo: 'Atributo', id: `${elemento.nodo}#${elemento.name}` };
-    case 'arista':
-      return { tipo: 'Arista', id: `${elemento.from} -> ${elemento.to}${elemento.ordinal > 0 ? ` (${elemento.ordinal + 1})` : ''}` };
-    case 'interaccion':
-      return { tipo: 'Interaccion', id: elemento.id };
-    case 'mensaje':
-      return { tipo: 'Mensaje', id: `${elemento.interaccion}:${elemento.id ?? `#${elemento.posicion + 1}`}` };
-    case 'vista':
-      return { tipo: 'Vista', id: elemento.id };
-    case 'tema':
-      return { tipo: 'Tema', id: elemento.name };
-  }
 }
 
 function LineaDelFeed({ evento }: { evento: EventoDeActividad }): ReactElement {

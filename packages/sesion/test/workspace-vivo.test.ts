@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { EventoDeActividad } from 'canonico';
-import type { DiferenciaDeDev, EstadoDeDev } from 'estudio/protocolo';
+import type { DiferenciaDeDev, EstadoDeDev } from 'canonico';
 
-import { puertoEnMemoria } from '../src/puerto-en-memoria';
+import { puertoEnMemoria } from '../src/puerto-vivo-en-memoria';
 import { abrirWorkspaceVivo } from '../src/workspace-vivo';
 import type { OpcionesDelWorkspaceVivo, Reloj, WorkspaceVivo } from '../src/workspace-vivo';
 
@@ -36,7 +36,7 @@ afterEach(() => {
 
 async function abrir(puerto: ReturnType<typeof puertoEnMemoria>, extra: Partial<OpcionesDelWorkspaceVivo> = {}) {
   const reloj = relojFalso();
-  const ws = await abrirWorkspaceVivo({ puerto, reloj, debounceMs: 100, raiz: '/ws', ...extra });
+  const ws = await abrirWorkspaceVivo({ puerto, reloj, debounceMs: 100, raiz: '/ws', ahora: () => 0, ...extra });
   abiertos.push(ws);
   return { ws, reloj };
 }

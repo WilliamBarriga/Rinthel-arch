@@ -19,19 +19,31 @@ function temporal(): string {
 }
 
 describe('construirEstudio', () => {
-  it('escribe el HTML, el JS de pagina, el JS del worker y el CSS; el HTML los pide bajo /_estudio/', async () => {
+  it('escribe el HTML, el JS de pagina (modulo) con sus trozos, el JS del worker y el CSS; el HTML los pide bajo /_estudio/', async () => {
     const salida = temporal();
 
     await construirEstudio({ salida });
 
-    expect(readdirSync(salida).sort()).toEqual(['estilo.css', 'index.html', 'pagina.js', 'worker.js']);
+    expect(readdirSync(salida).sort()).toEqual(['estilo.css', 'index.html', 'pagina.js', 'trozos', 'worker.js']);
     const html = readFileSync(join(salida, 'index.html'), 'utf8');
-    expect(html).toContain(`<script src="${RUTA_DEL_ESTUDIO}pagina.js"></script>`);
+    expect(html).toContain(`<script type="module" src="${RUTA_DEL_ESTUDIO}pagina.js"></script>`);
     expect(html).toContain(`<link rel="stylesheet" href="${RUTA_DEL_ESTUDIO}estilo.css">`);
     const pagina = readFileSync(join(salida, 'pagina.js'), 'utf8');
     expect(pagina.includes('EventSource') && pagina.includes(RUTA_DEL_ESTUDIO) && pagina.includes('worker.js')).toBe(true);
     expect(readFileSync(join(salida, 'worker.js'), 'utf8').length).toBeGreaterThan(1000);
     expect(readFileSync(join(salida, 'estilo.css'), 'utf8')).toContain('#raiz');
+  }, 60_000);
+
+  it('CodeMirror va en un trozo que se carga al abrir Codigo, no en la pagina', async () => {
+    const salida = temporal();
+
+    await construirEstudio({ salida });
+
+    const pagina = readFileSync(join(salida, 'pagina.js'), 'utf8');
+    const trozos = readdirSync(join(salida, 'trozos')).map((t) => readFileSync(join(salida, 'trozos', t), 'utf8'));
+    expect(pagina.includes('cm-scroller')).toBe(false);
+    expect(trozos.some((t) => t.includes('cm-scroller'))).toBe(true);
+    expect(pagina).toContain('./trozos/');
   }, 60_000);
 
   it('el paso de CSS es conectable: recibe la entrada y su salida es la hoja servida', async () => {
@@ -56,7 +68,9 @@ describe('activosDelEstudio', () => {
     const { indice, archivos } = activosDelEstudio();
 
     expect(indice.endsWith(`${sep}dist${sep}estudio${sep}index.html`)).toBe(true);
-    expect(Object.keys(archivos).sort()).toEqual(['estilo.css', 'pagina.js', 'worker.js']);
-    for (const [nombre, ruta] of Object.entries(archivos)) expect(ruta).toBe(join(indice, '..', nombre));
+    const trozos = readdirSync(join(indice, '..', 'trozos')).map((t) => `trozos/${t}`);
+    expect(trozos.length).toBeGreaterThan(0);
+    expect(Object.keys(archivos).sort()).toEqual(['estilo.css', 'pagina.js', ...trozos, 'worker.js'].sort());
+    for (const [nombre, ruta] of Object.entries(archivos)) expect(ruta).toBe(join(indice, '..', ...nombre.split('/')));
   });
 });

@@ -9,7 +9,7 @@ El lienzo ocupa toda la pagina. Arriba va la barra (Vista actual con su ruta, Bu
 ## Panel izquierdo
 
 - **Vistas**: el indice agrupado por Tipo de diagrama, con las Vistas que enlazan o son enlazadas. Clic o flechas cambian de Vista. Un punto marca las Vistas que cambiaron por fuera y aun no visitaste.
-- **Codigo**: editor del DSL. Guarda solo (unos 400 ms despues de dejar de teclear, al perder el foco o con Ctrl/Cmd+S), aunque el texto no compile: el lienzo conserva el ultimo dibujo bueno y los arrastres se deshabilitan con el motivo a la vista. Issues en linea con su `fix`, completado de palabras clave e ids, F12 a la definicion; Esc vuelve a Vistas. Si otro programa escribe el mismo archivo, el editor mezcla su texto con el tuyo (gana el disco donde chocan), marca lo que llego de fuera y ofrece recuperar lo que se perdio. Los archivos de `--theme-path` se abren en solo lectura.
+- **Codigo**: editor del DSL; se abre tambien con doble clic en un Nodo (en su bloque) y abre a la vez Issues en la isla derecha. Guarda solo (unos 400 ms despues de dejar de teclear, al perder el foco o con Ctrl/Cmd+S), aunque el texto no compile: el lienzo conserva el ultimo dibujo bueno y los arrastres se deshabilitan con el motivo a la vista. Issues en linea con su `fix`, completado de palabras clave e ids, F12 a la definicion; Esc vuelve a Vistas. Si otro programa escribe el mismo archivo, el editor mezcla su texto con el tuyo (gana el disco donde chocan), marca lo que llego de fuera y ofrece recuperar lo que se perdio. Los archivos de `--theme-path` se abren en solo lectura.
 
 ![Editor del DSL y galeria de Temas](../img/estudio/codigo-y-temas.png)
 
@@ -36,7 +36,7 @@ dg validate --workspace <ruta> --json
 
 - El panel **Agente** muestra los ultimos 50 Eventos al abrir y los nuevos en vivo: hora, agente, comando, objetivo clicable (Vista, Nodo, archivo) y resultado; "Ver args" despliega el argv. La pildora de la barra resume la ultima linea y cuenta las que no viste.
 - Todo lo que cambia por fuera de la pagina (el CLI, un agente que edita el `.dg` a mano u otro editor) se resalta unos 5 s en el lienzo, marca en el indice las otras Vistas que lo muestran y en la galeria los Temas cambiados; lo quitado se lista en el panel Agente hasta el siguiente cambio externo. Lo que escribe la propia UI no se resalta.
-- Con **seguir** activo, la UI salta a la Vista o al Nodo que nombra cada Evento; si un cambio llega sin Evento, va a la primera Vista que lo toca.
+- Con **seguir** activo, la UI salta a la Vista o al Nodo que nombra cada Evento; un cambio sin Evento no mueve la Vista: solo se resalta y marca en el indice las Vistas que toca.
 
 ## Buscador y atajos
 

@@ -2,7 +2,7 @@
 import { eventosSobreFetch, probarContratoDeDev } from 'estudio/contrato';
 
 import { iniciarDev } from 'cli';
-import { puertoEnMemoria } from '../src/puerto-en-memoria';
+import { puertoEnMemoria } from 'sesion';
 
 probarContratoDeDev(async ({ propios, temas, actividad }) => {
   const puerto = puertoEnMemoria({ propios, ...(actividad !== undefined && { actividad }) });

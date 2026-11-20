@@ -23,8 +23,10 @@ import type { ArchivosDeDev, IssueDeDev } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
 import { comandoPorId } from '../comandos/registro';
 import { aplicarFixes, fixDelIssue } from '../issues/aplicar-fix';
-import { useEstudio } from '../marco/contexto';
+import { useCanalDelEditor, useEstudio } from '../marco/contexto';
 import type { ContextoDelEstudio, SitioDeCodigo } from '../marco/contexto';
+import { useCaducidad } from '../marco/use-caducidad';
+import { sitioDeSalida } from '../sitio';
 import { completarDsl } from './completado';
 import { diagnosticosDe } from './diagnosticos';
 import type { FixDeIssue } from './diagnosticos';
@@ -45,7 +47,8 @@ const TEXTO_DEL_GUARDADO: Record<EstadoDelGuardado['tipo'], string> = { guardado
 
 export function PanelDeCodigo(): ReactElement {
   const estudio = useEstudio();
-  const { cliente, sitioDeCodigo, estado } = estudio;
+  const { cliente, estado } = estudio;
+  const { sitio: sitioDeCodigo } = useCanalDelEditor();
   const [listado, setListado] = useState<ArchivosDeDev>();
   const lista = listado?.archivos;
   const [elegido, setElegido] = useState<string>();
@@ -104,8 +107,11 @@ interface PropsDelEditor {
 
 function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado }: PropsDelEditor): ReactElement {
   const estudio = useEstudio();
+  const canalDelEditor = useCanalDelEditor();
   const vivo = useRef(estudio);
   vivo.current = estudio;
+  const canal = useRef(canalDelEditor);
+  canal.current = canalDelEditor;
   const anfitrion = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<{ vista: EditorView; guardador: Guardador }>();
   const [estadoDelGuardado, setEstadoDelGuardado] = useState<EstadoDelGuardado>({ tipo: 'guardado' });
@@ -155,24 +161,16 @@ function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado 
   useEffect(() => {
     if (editor === undefined) return;
     alCambiarGuardado(editor.guardador.estado());
-    return vivo.current.registrarGuardado(() => editor.guardador.guardar());
+    return canal.current.registrarGuardado(() => editor.guardador.guardar());
   }, [editor, alCambiarGuardado]);
 
   useEffect(() => {
-    if (editor !== undefined && enDisco !== undefined && !soloLectura) void editor.guardador.sincronizar(enDisco);
-  }, [editor, enDisco, soloLectura]);
+    // Tambien en solo lectura (--theme-path): sin cambios propios, la fusion es aplicar el diff limpio del disco.
+    if (editor !== undefined && enDisco !== undefined) void editor.guardador.sincronizar(enDisco);
+  }, [editor, enDisco]);
 
-  useEffect(() => {
-    if (editor === undefined || marcado === 0) return;
-    const temporizador = setTimeout(() => editor.vista.dispatch({ effects: limpiarMarcasDelDisco.of(null) }), DURACION_DE_LAS_MARCAS_MS);
-    return () => clearTimeout(temporizador);
-  }, [editor, marcado]);
-
-  useEffect(() => {
-    if (perdidos.length === 0) return;
-    const temporizador = setTimeout(() => setPerdidos([]), DURACION_DEL_AVISO_MS);
-    return () => clearTimeout(temporizador);
-  }, [perdidos]);
+  useCaducidad(editor === undefined || marcado === 0 ? undefined : DURACION_DE_LAS_MARCAS_MS, () => editor?.vista.dispatch({ effects: limpiarMarcasDelDisco.of(null) }), `${marcado}`);
+  useCaducidad(perdidos.length === 0 ? undefined : DURACION_DEL_AVISO_MS, () => setPerdidos([]), perdidos);
 
   // Issues en linea: solo con el buffer igual al disco, para que las posiciones coincidan.
   const issues = estudio.estado?.issues;
@@ -214,9 +212,13 @@ function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado 
 }
 
 /** Reinserta cada fragmento perdido antes de su linea, como una edicion del usuario (se guarda y se deshace con Mod+Z). */
+/** Pone lo mio en lugar de la version del disco de cada tramo (o lo inserta, si solo eran lineas nuevas): sin duplicar. */
 function recuperarPerdidos(vista: EditorView, perdidos: readonly FragmentoPerdido[]): void {
   const doc = vista.state.doc;
-  const cambios = perdidos.map((p) => ({ from: doc.line(Math.min(Math.max(p.linea, 1), doc.lines)).from, insert: `${p.texto}\n` }));
+  const linea = (n: number) => doc.line(Math.min(Math.max(n, 1), doc.lines));
+  const cambios = perdidos.map((p) =>
+    p.reemplaza === 0 ? { from: linea(p.linea).from, insert: `${p.texto}\n` } : { from: linea(p.linea).from, to: linea(p.linea + p.reemplaza - 1).to, insert: p.texto },
+  );
   vista.dispatch({ changes: cambios, userEvent: 'input' });
   vista.focus();
 }
@@ -251,10 +253,9 @@ async function irADefinicion(id: string, cliente: ClienteDeDev, estudio: Context
   for (const comando of ['nodo', 'vista', 'interaccion'] as const) {
     const r = await cliente.inspeccionar(comando, id);
     if (!r.ok) continue;
-    const s = r.salida;
-    const sitio = s.comando === 'nodo' ? s.nodo : s.comando === 'vista' ? s.vista : s.comando === 'interaccion' ? s.interaccion : undefined;
+    const sitio = sitioDeSalida(r.salida);
     if (sitio !== undefined) {
-      estudio.abrirCodigo({ file: sitio.file, line: sitio.line });
+      estudio.abrirCodigo(sitio);
       return;
     }
   }

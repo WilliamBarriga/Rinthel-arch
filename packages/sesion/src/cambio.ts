@@ -5,8 +5,7 @@
  * - `codigo`: cambia un `.tsx` y nada mas fuerte.
  * - `pintura`: lo demas; el Estilo se reaplica sin relayout.
  */
-import type { FuenteCanonica } from 'canonico';
-import type { TipoDeCambio } from 'estudio/protocolo';
+import type { FuenteCanonica, TipoDeCambio } from 'canonico';
 import { TEMA_NEUTRO, claveDeMetricas, tablaDeMetricas } from 'tema';
 
 /** `recursos`: hash de cada `.tsx` y fuente. */

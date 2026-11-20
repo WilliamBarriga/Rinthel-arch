@@ -1,5 +1,6 @@
 /** Isla lateral de vidrio: pestanas del registro, boton de ocultar, asas de redimensionado y pestana de borde al ocultarse. */
 import { Tabs } from '@base-ui/react/tabs';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import { BotonConAtajo } from '../comandos/atajo';
@@ -21,6 +22,16 @@ export interface PropsDeIsla {
 const mayuscula = (texto: string): string => texto.charAt(0).toUpperCase() + texto.slice(1);
 
 export function IslaLateral({ lado, id, nombre, isla, pestanas, activa, alCambiarPestana }: PropsDeIsla): ReactElement {
+  // Una pestana que `conservar` se monta la primera vez que se abre y desde ahi sigue montada aunque no este activa.
+  const [visitadas, setVisitadas] = useState<ReadonlySet<string>>(() => new Set([activa]));
+  if (!visitadas.has(activa)) setVisitadas(new Set([...visitadas, activa]));
+  const anchoMinimo = pestanas.find((p) => p.id === activa)?.anchoMinimo;
+  // Solo al cambiar de pestana (la referencia a la isla cambia en cada render): despues se puede estrechar a mano.
+  const ensanchar = useRef(isla.ensanchar);
+  ensanchar.current = isla.ensanchar;
+  useEffect(() => {
+    if (anchoMinimo !== undefined) ensanchar.current(anchoMinimo);
+  }, [activa, anchoMinimo]);
   if (isla.oculta) {
     return (
       <BotonConAtajo comando={`isla-${lado}`} className="ui-pestana-borde" data-lado={lado} aria-label={`Mostrar ${nombre}`} aria-controls={id} aria-expanded={false} onClick={isla.mostrar}>
@@ -45,9 +56,11 @@ export function IslaLateral({ lado, id, nombre, isla, pestanas, activa, alCambia
             {lado === 'izquierda' ? '‹' : '›'}
           </BotonConAtajo>
         </div>
-        {pestanas.map(({ id: pestana, Contenido }) => (
-          <Tabs.Panel key={pestana} value={pestana} className="ui-isla-cuerpo">
-            <Contenido />
+        {pestanas.map(({ id: pestana, Contenido, conservar = false }) => (
+          <Tabs.Panel key={pestana} value={pestana} className="ui-isla-cuerpo" keepMounted={conservar && visitadas.has(pestana)}>
+            <Suspense fallback={<p className="ui-tenue">Cargando...</p>}>
+              <Contenido />
+            </Suspense>
           </Tabs.Panel>
         ))}
       </Tabs.Root>

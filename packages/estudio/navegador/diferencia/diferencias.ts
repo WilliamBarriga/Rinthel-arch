@@ -4,11 +4,10 @@
  * Lo une al `Resaltado` quien conoce la Vista activa (`useDiferenciasExternas` en el marco); el indice, la galeria y el
  * panel Agente solo leen.
  */
-import { useSyncExternalStore } from 'react';
-
 import { diferenciaDeDevSchema } from '../../src/protocolo';
 import type { DiferenciaDeDev } from '../../src/protocolo';
-import type { ClienteDeDev } from '../cliente';
+import { almacenPorCliente, crearValor, escucharValidado, useObservable } from '../almacen';
+import type { ClienteQueEscucha, Observable } from '../almacen';
 import { RESALTADO_VACIO } from './proyeccion';
 import type { Resaltado } from './proyeccion';
 
@@ -18,57 +17,39 @@ export interface InstantaneaDeDiferencias {
   pendientes: readonly DiferenciaDeDev[];
 }
 
-export interface AlmacenDeDiferencias {
-  instantanea(): InstantaneaDeDiferencias;
-  suscribir(alCambiar: () => void): () => void;
+export interface AlmacenDeDiferencias extends Observable<InstantaneaDeDiferencias> {
   /** Saca las pendientes con `version <= hasta` (las que ya tienen su estado). */
   tomarPendientes(hasta: number): DiferenciaDeDev[];
   actualizar(cambio: (resaltado: Resaltado) => Resaltado): void;
 }
 
-export function crearAlmacenDeDiferencias(cliente: Pick<ClienteDeDev, 'escuchar'>): AlmacenDeDiferencias {
-  let actual: InstantaneaDeDiferencias = { resaltado: RESALTADO_VACIO, pendientes: [] };
-  const oyentes = new Set<() => void>();
-  const cambiar = (siguiente: InstantaneaDeDiferencias): void => {
-    actual = siguiente;
-    for (const oyente of [...oyentes]) oyente();
-  };
-  cliente.escuchar('diferencia', (datos) => {
-    const leida = diferenciaDeDevSchema.safeParse(datos);
-    if (!leida.success || leida.data.origen !== 'externo') return;
-    cambiar({ ...actual, pendientes: [...actual.pendientes, leida.data] });
+export function crearAlmacenDeDiferencias(cliente: ClienteQueEscucha): AlmacenDeDiferencias {
+  const valor = crearValor<InstantaneaDeDiferencias>({ resaltado: RESALTADO_VACIO, pendientes: [] });
+  escucharValidado(cliente, 'diferencia', diferenciaDeDevSchema, (diferencia) => {
+    if (diferencia.origen !== 'externo') return;
+    const actual = valor.instantanea();
+    valor.cambiar({ ...actual, pendientes: [...actual.pendientes, diferencia] });
   });
   return {
-    instantanea: () => actual,
-    suscribir(alCambiar) {
-      oyentes.add(alCambiar);
-      return () => oyentes.delete(alCambiar);
-    },
+    instantanea: valor.instantanea,
+    suscribir: valor.suscribir,
     tomarPendientes(hasta) {
+      const actual = valor.instantanea();
       const listas = actual.pendientes.filter((d) => d.version <= hasta);
-      if (listas.length > 0) cambiar({ ...actual, pendientes: actual.pendientes.filter((d) => d.version > hasta) });
+      if (listas.length > 0) valor.cambiar({ ...actual, pendientes: actual.pendientes.filter((d) => d.version > hasta) });
       return listas;
     },
     actualizar(cambio) {
+      const actual = valor.instantanea();
       const resaltado = cambio(actual.resaltado);
-      if (resaltado !== actual.resaltado) cambiar({ ...actual, resaltado });
+      if (resaltado !== actual.resaltado) valor.cambiar({ ...actual, resaltado });
     },
   };
 }
 
-const porCliente = new WeakMap<Pick<ClienteDeDev, 'escuchar'>, AlmacenDeDiferencias>();
+export const diferenciasDelCliente = almacenPorCliente(crearAlmacenDeDiferencias);
 
-export function diferenciasDelCliente(cliente: Pick<ClienteDeDev, 'escuchar'>): AlmacenDeDiferencias {
-  let almacen = porCliente.get(cliente);
-  if (almacen === undefined) {
-    almacen = crearAlmacenDeDiferencias(cliente);
-    porCliente.set(cliente, almacen);
-  }
-  return almacen;
-}
-
-export function useDiferencias(cliente: Pick<ClienteDeDev, 'escuchar'>): { almacen: AlmacenDeDiferencias; instantanea: InstantaneaDeDiferencias } {
+export function useDiferencias(cliente: ClienteQueEscucha): { almacen: AlmacenDeDiferencias; instantanea: InstantaneaDeDiferencias } {
   const almacen = diferenciasDelCliente(cliente);
-  const instantanea = useSyncExternalStore(almacen.suscribir, almacen.instantanea);
-  return { almacen, instantanea };
+  return { almacen, instantanea: useObservable(almacen) };
 }

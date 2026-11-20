@@ -75,7 +75,7 @@ describe('guardador frente a escrituras externas', () => {
     await f.guardador.guardar();
     expect(f.disco.texto).toBe(BASE.replace('"Base"', '"MySQL"'));
     expect(f.buffer()).toBe(f.disco.texto);
-    expect(f.fusiones.flatMap((x) => x.perdidos)).toEqual([{ texto: '  servicio db "Postgres"', linea: 3 }]);
+    expect(f.fusiones.flatMap((x) => x.perdidos)).toEqual([{ texto: '  servicio db "Postgres"', linea: 3, reemplaza: 1 }]);
     expect(f.guardador.sucio()).toBe(false);
   });
 

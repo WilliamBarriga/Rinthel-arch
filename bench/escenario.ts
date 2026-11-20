@@ -2,9 +2,9 @@
  * Un escenario del benchmark, en su propio proceso para que `maxRSS` sea solo suyo.
  * Uso: `node bench/escenario.ts <escenario>`; imprime una linea JSON `{ escenario, medidas }`.
  */
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { gzipSync } from 'node:zlib';
 
@@ -16,8 +16,8 @@ import { layoutView } from 'layout';
 import { TEMA_NEUTRO } from 'tema';
 import { adaptadorDeWorker, servirLayout } from 'shell';
 import type { PuertoDeMensajes } from 'shell';
-import { build } from 'esbuild';
 
+import { construirEstudio } from '../packages/estudio/scripts/empaquetar.ts';
 import { generarSecuencia, generarWorkspace } from './generador.ts';
 
 const ESCENARIOS = ['build-10k', 'relayout-1k', 'relayout-slots', 'relayout-grande', 'colapso-5k', 'secuencia-grande', 'bundle'] as const;
@@ -188,40 +188,44 @@ async function secuenciaGrande(): Promise<Record<string, number>> {
   return { mensajes: vista.interaction.messages.length, lifelines: vista.nodes.length, tiempoFrioMs: frioMs, tiempoMs: Math.min(...corridas), maxRssMb: mb(process.resourceUsage().maxRSS * 1024) };
 }
 
+/** Imports estaticos (`import ... from"./x.js"`) de un modulo ES del build, como rutas relativas a `raiz`. */
+function importsEstaticos(raiz: string, archivo: string): string[] {
+  const texto = readFileSync(join(raiz, archivo), 'utf8');
+  return [...texto.matchAll(/(?:^|;)import\s*(?:\{[^}]*\}\s*from\s*)?"\.\/([^"]+)"/g)].map((m) => join(dirname(archivo), m[1]!));
+}
+
+/** `archivo` y todo lo que importa estaticamente (lo que el navegador baja antes de ejecutarlo). */
+function cierre(raiz: string, archivo: string, visto = new Set<string>()): Set<string> {
+  if (visto.has(archivo)) return visto;
+  visto.add(archivo);
+  for (const otro of importsEstaticos(raiz, archivo)) cierre(raiz, otro, visto);
+  return visto;
+}
+
 async function bundleDelShell(): Promise<Record<string, number>> {
-  // Los dos bundles del navegador de `dev`: la pagina (shell + React, sin ELK) y el Worker (ELK, sin zod).
-  const navegador = join(import.meta.dirname, '..', 'packages', 'estudio', 'navegador');
-  const bundle = async (entrada: string, alias: Record<string, string> = {}): Promise<{ min: number; gzip: number }> => {
-    const salida = await build({
-      entryPoints: [join(navegador, entrada)],
-      bundle: true,
-      write: false,
-      minify: true,
-      format: 'iife',
-      platform: 'browser',
-      target: 'es2020',
-      charset: 'ascii',
-      legalComments: 'none',
-      jsx: 'automatic',
-      logLevel: 'error',
-      alias,
-      define: { 'process.env.NODE_ENV': '"production"' },
-    });
-    const texto = salida.outputFiles[0]!.contents;
-    return { min: texto.length, gzip: gzipSync(texto, { level: 9 }).length };
-  };
-  const pagina = await bundle('arranque.tsx');
-  const worker = await bundle('worker.ts', { zod: join(navegador, 'zod-inerte.ts') });
-  // Suelo: lo que pesa elkjs separado en api (pagina) + worker, sin nada nuestro.
-  const lib = join(import.meta.dirname, '..', 'packages', 'layout', 'node_modules', 'elkjs', 'lib');
-  const elkApi = gzipSync(readFileSync(join(lib, 'elk-api.js')), { level: 9 }).length;
-  const elkWorker = gzipSync(readFileSync(join(lib, 'elk-worker.min.js')), { level: 9 }).length;
-  return {
-    paginaGzipKb: kb(pagina.gzip),
-    workerGzipKb: kb(worker.gzip),
-    totalGzipKb: kb(pagina.gzip + worker.gzip),
-    elkApiMasWorkerGzipKb: kb(elkApi + elkWorker),
-  };
+  // La pagina real de `dev` tal como la construye `estudio` (`dev.tsx`, modulo ES con trozos) y el Worker (ELK, sin zod).
+  const salida = mkdtempSync(join(tmpdir(), 'rinthel-bundle-'));
+  try {
+    await construirEstudio({ salida });
+    const gzip = (archivos: Iterable<string>): number => [...archivos].reduce((total, a) => total + gzipSync(readFileSync(join(salida, a)), { level: 9 }).length, 0);
+    const inicial = cierre(salida, 'pagina.js');
+    const codigo = readdirSync(join(salida, 'trozos')).find((t) => t.startsWith('panel-de-codigo-'));
+    const delEditor = codigo === undefined ? [] : [...cierre(salida, `trozos/${codigo}`)].filter((a) => !inicial.has(a));
+    const worker = gzip(['worker.js']);
+    // Suelo: lo que pesa elkjs separado en api (pagina) + worker, sin nada nuestro.
+    const lib = join(import.meta.dirname, '..', 'packages', 'layout', 'node_modules', 'elkjs', 'lib');
+    const elkApi = gzipSync(readFileSync(join(lib, 'elk-api.js')), { level: 9 }).length;
+    const elkWorker = gzipSync(readFileSync(join(lib, 'elk-worker.min.js')), { level: 9 }).length;
+    return {
+      paginaGzipKb: kb(gzip(inicial)),
+      editorGzipKb: kb(gzip(delEditor)),
+      workerGzipKb: kb(worker),
+      totalGzipKb: kb(gzip(inicial) + worker),
+      elkApiMasWorkerGzipKb: kb(elkApi + elkWorker),
+    };
+  } finally {
+    rmSync(salida, { recursive: true, force: true });
+  }
 }
 
 const escenario = process.argv[2] as Escenario | undefined;

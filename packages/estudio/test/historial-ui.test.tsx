@@ -3,7 +3,7 @@ import { EditorView } from '@codemirror/view';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { montarEstudio } from './ayudas-de-ui';
+import { abrirPestana, DSL_BASICO, montarEstudio } from './ayudas-de-ui';
 import type { OpcionesDeMontaje } from './ayudas-de-ui';
 import type { DevEnMemoria } from '../src/contrato';
 
@@ -12,31 +12,15 @@ afterEach(() => {
   cleanup();
 });
 
-const DSL = `specification {
-  node servicio
-}
-
-model {
-  servicio api "API"
-  servicio db "Base de datos"
-  api -> db "lee"
-}
-
-view mapa {
-  type architecture
-  include **
-}
-`;
+const DSL = DSL_BASICO;
 
 const moverPin = async (dev: DevEnMemoria, nodo: string, x: number): Promise<void> => {
   const res = await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'mover-pin', vista: 'mapa', nodo, x, y: 0 }) });
   expect(res.status).toBe(200);
 };
 
-/** El marco se monta de nuevo al llegar la primera Fuente: se espera al lienzo antes de elegir la pestana. */
 async function abrirHistorial(): Promise<HTMLElement> {
-  await waitFor(() => expect(document.querySelector('.rd-vista[data-vista]')).not.toBeNull());
-  fireEvent.click(await screen.findByRole('tab', { name: 'Historial' }));
+  await abrirPestana('Historial');
   return screen.findByRole('list', { name: 'Historial de cambios' });
 }
 

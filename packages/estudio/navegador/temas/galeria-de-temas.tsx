@@ -11,7 +11,8 @@ import type { SalidaDeInspect } from 'canonico';
 import { diferenciasDelCliente } from '../diferencia/diferencias';
 import { verGaleria } from '../diferencia/proyeccion';
 import { MarcaExterna, useMarcasExternas } from '../diferencia/resaltado';
-import { useEstudio } from '../marco/contexto';
+import { useEstudio, usePrevisualizacionDeTema } from '../marco/contexto';
+import { textoDeSitio } from '../sitio';
 
 type SalidaDeTema = Extract<SalidaDeInspect, { comando: 'tema' }>['tema'];
 type Lectura = { tipo: 'cargando' } | { tipo: 'tema'; tema: SalidaDeTema } | { tipo: 'fallo'; mensaje: string };
@@ -19,7 +20,8 @@ type Lectura = { tipo: 'cargando' } | { tipo: 'tema'; tema: SalidaDeTema } | { t
 const idDeOpcion = (tema: string): string => `ui-tema-${tema}`;
 
 export function GaleriaDeTemas(): ReactElement {
-  const { fuente, vista, estado, cliente, temaPrevio, previsualizarTema, avisar } = useEstudio();
+  const { fuente, vista, estado, cliente, avisar } = useEstudio();
+  const { temaPrevio, previsualizarTema } = usePrevisualizacionDeTema();
   const [elegido, setElegido] = useState<string>();
   const marcas = useMarcasExternas(cliente);
   // Los Temas cambiados por fuera quedan marcados mientras se ve la galeria; al dejarla se dan por vistos.
@@ -117,7 +119,7 @@ function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, 
         </p>
       ) : (
         <>
-          <p className="ui-mono ui-sitio">{`${lectura.tema.file}:${lectura.tema.line}`}</p>
+          <p className="ui-mono ui-sitio">{textoDeSitio(lectura.tema)}</p>
           <h3 className="ui-subtitulo">Cadena extends</h3>
           <p className="ui-mono">{[nombre, ...lectura.tema.extends].join(' > ')}</p>
         </>

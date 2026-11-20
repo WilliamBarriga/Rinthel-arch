@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { ANCHO_DEL_EDITOR } from '../navegador/marco/pestanas';
 import { lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
 
 afterEach(cleanup);
@@ -82,6 +83,18 @@ describe('marco de la UI', () => {
     fireEvent.doubleClick(alto);
     expect(alto.getAttribute('aria-valuetext')).toBe('alto del contenido');
   });
+
+  it('abrir Codigo ensancha la isla izquierda para que el editor no corte el texto (sin pasar del maximo)', async () => {
+    await montarEstudio({ 'main.dg': DSL });
+    const ancho = await screen.findByRole('separator', { name: 'Ancho del panel izquierdo' });
+    const antes = Number(ancho.getAttribute('aria-valuenow'));
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Codigo' }));
+
+    const maximo = Number(ancho.getAttribute('aria-valuemax'));
+    await waitFor(() => expect(Number(ancho.getAttribute('aria-valuenow'))).toBe(Math.min(Math.max(antes, ANCHO_DEL_EDITOR), maximo)));
+    expect(Number(ancho.getAttribute('aria-valuenow'))).toBeGreaterThan(antes);
+  });
 });
 
 describe('vidrio durante un gesto', () => {
@@ -89,16 +102,17 @@ describe('vidrio durante un gesto', () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL });
     await lienzoListo(contenedor, 'mapa');
     const lienzo = screen.getByRole('main', { name: 'Lienzo' });
-    const chrome = contenedor.querySelector('.ui-chrome')!;
+    // El gesto marca `data-arrastrando` en la raiz del chrome, que contiene las islas.
+    const solido = (): boolean => screen.getByRole('complementary', { name: 'Panel izquierdo' }).closest('[data-arrastrando]') !== null;
 
     fireEvent.pointerDown(lienzo);
-    expect(chrome.hasAttribute('data-arrastrando')).toBe(true);
+    expect(solido()).toBe(true);
     fireEvent.pointerUp(lienzo);
-    expect(chrome.hasAttribute('data-arrastrando')).toBe(false);
+    expect(solido()).toBe(false);
 
     fireEvent.wheel(lienzo);
-    expect(chrome.hasAttribute('data-arrastrando')).toBe(true);
-    await waitFor(() => expect(chrome.hasAttribute('data-arrastrando')).toBe(false));
+    expect(solido()).toBe(true);
+    await waitFor(() => expect(solido()).toBe(false));
   });
 });
 

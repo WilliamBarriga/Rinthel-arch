@@ -6,7 +6,7 @@ const lienzo = { ancho: 1400, alto: 900 };
 
 describe('limites del redimensionado de las islas', () => {
   it('el ancho y el alto quedan entre los minimos y lo que deja el lienzo', () => {
-    expect(rangoDeIsla(lienzo)).toEqual({ ancho: { min: 220, max: 640 }, alto: { min: 140, max: 870 } });
+    expect(rangoDeIsla(lienzo)).toEqual({ ancho: { min: 220, max: 640 }, alto: { min: 140, max: 836 } });
     // En un lienzo estrecho el maximo baja, pero nunca por debajo del minimo.
     expect(rangoDeIsla({ ancho: 500, alto: 100 })).toEqual({ ancho: { min: 220, max: 250 }, alto: { min: 140, max: 140 } });
     expect(LIMITES_DE_ISLA.anchoMin).toBe(220);
@@ -39,7 +39,7 @@ describe('limites del redimensionado de las islas', () => {
     expect(tamanoPorTeclado('ArrowRight', actual, { lado: 'derecha', eje: 'horizontal' }, lienzo)).toEqual({ ancho: 284, alto: 300 });
     expect(tamanoPorTeclado('ArrowDown', actual, { lado: 'derecha', eje: 'vertical' }, lienzo)).toEqual({ ancho: 300, alto: 316 });
     expect(tamanoPorTeclado('Home', actual, { lado: 'izquierda', eje: 'horizontal' }, lienzo)).toEqual({ ancho: 220, alto: 300 });
-    expect(tamanoPorTeclado('End', actual, { lado: 'izquierda', eje: 'vertical' }, lienzo)).toEqual({ ancho: 300, alto: 870 });
+    expect(tamanoPorTeclado('End', actual, { lado: 'izquierda', eje: 'vertical' }, lienzo)).toEqual({ ancho: 300, alto: 836 });
     expect(tamanoPorTeclado('a', actual, { lado: 'izquierda', eje: 'vertical' }, lienzo)).toBeUndefined();
   });
 });

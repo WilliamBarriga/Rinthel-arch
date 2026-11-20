@@ -1,46 +1,22 @@
 // @vitest-environment jsdom
 import { completionStatus, startCompletion } from '@codemirror/autocomplete';
+import { undo } from '@codemirror/commands';
 import { forEachDiagnostic } from '@codemirror/lint';
 import { EditorView } from '@codemirror/view';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DURACION_DEL_AVISO_MS } from '../navegador/editor/panel-de-codigo';
-import { lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
-import type { OpcionesDeMontaje } from './ayudas-de-ui';
+import { abrirPestana, anotarPeticiones, DSL_BASICO, lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
 
 afterEach(() => {
   vi.useRealTimers();
   cleanup();
 });
 
-const DSL = `specification {
-  node servicio
-}
+const DSL = DSL_BASICO;
 
-model {
-  servicio api "API"
-  servicio db "Base de datos"
-  api -> db "lee"
-}
-
-view mapa {
-  type architecture
-  include **
-}
-`;
-
-/** Anota el cuerpo y la ruta de cada POST que la pagina manda a `dev`. */
-function anotarPosts(): { posts: { ruta: string; cuerpo: unknown }[]; envolverFetch: NonNullable<OpcionesDeMontaje['envolverFetch']> } {
-  const posts: { ruta: string; cuerpo: unknown }[] = [];
-  return {
-    posts,
-    envolverFetch: (f) => (async (entrada: string | URL | Request, init?: RequestInit) => {
-      if (init?.method === 'POST') posts.push({ ruta: String(entrada), cuerpo: JSON.parse(String(init.body)) });
-      return f(entrada, init);
-    }) as typeof fetch,
-  };
-}
+const anotarPosts = () => anotarPeticiones();
 
 /** Abre la pestana Codigo y espera el editor de `archivo` con su texto cargado. */
 async function abrirCodigo(archivo = 'main.dg'): Promise<{ caja: HTMLElement; vista: EditorView }> {
@@ -48,11 +24,7 @@ async function abrirCodigo(archivo = 'main.dg'): Promise<{ caja: HTMLElement; vi
   return editorDe(archivo);
 }
 
-/** El marco se monta de nuevo al llegar la primera Fuente: se espera al lienzo antes de elegir la pestana. */
-async function pulsarCodigo(): Promise<void> {
-  await waitFor(() => expect(document.querySelector('.rd-vista[data-vista]')).not.toBeNull());
-  fireEvent.click(await screen.findByRole('tab', { name: 'Codigo' }));
-}
+const pulsarCodigo = (): Promise<void> => abrirPestana('Codigo');
 
 async function editorDe(archivo: string): Promise<{ caja: HTMLElement; vista: EditorView }> {
   const caja = await screen.findByRole('textbox', { name: new RegExp(`^Codigo de ${archivo.replace('.', '\\.')}`) });
@@ -126,7 +98,7 @@ describe('editor del DSL: guardado', () => {
     const motivo = await screen.findByRole('status', { name: 'Gestos' });
     expect(motivo.textContent).toMatch(/Gestos deshabilitados/);
     expect(motivo.textContent).toMatch(/main\.dg:9/);
-    expect(contenedor.querySelector('.rd-vista[data-vista="mapa"]')).not.toBeNull();
+    expect(await lienzoListo(contenedor, 'mapa')).toBeTruthy();
   });
 
   it('antes de deshacer en dev se vacia el guardado pendiente', async () => {
@@ -156,6 +128,26 @@ describe('editor del DSL: teclas', () => {
 
     expect(vista.state.doc.toString()).toBe(DSL);
     expect(posts.filter((p) => p.ruta === '/api/deshacer')).toEqual([]);
+  });
+
+  it('el editor sobrevive a Esc y a cambiar de pestana: conserva su historial fino', async () => {
+    await montarEstudio({ 'main.dg': DSL });
+    const { caja, vista } = await abrirCodigo();
+    escribir(vista, 'include **', '\n  // borrame');
+
+    vista.focus();
+    // El primer Esc puede cerrar el completado que abrio la escritura.
+    for (let i = 0; i < 2 && screen.getByRole('tab', { name: 'Vistas' }).getAttribute('aria-selected') !== 'true'; i++) fireEvent.keyDown(caja, { key: 'Escape' });
+    expect(screen.getByRole('tab', { name: 'Vistas' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Codigo' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Issues' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Vistas' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Codigo' }));
+
+    const actual = await editorDe('main.dg');
+    expect(actual.vista).toBe(vista);
+    expect(undo(vista)).toBe(true);
+    expect(vista.state.doc.toString()).toBe(DSL);
   });
 
   it('Esc cierra primero el completado y despues vuelve a Vistas', async () => {
@@ -222,6 +214,19 @@ describe('editor del DSL: issues y solo lectura', () => {
     const { caja, vista } = await editorDe('tema.dg');
     expect(caja.getAttribute('aria-label')).toBe('Codigo de tema.dg (solo lectura)');
     expect(vista.state.readOnly).toBe(true);
+  });
+
+  it('un archivo de --theme-path abierto en solo lectura recibe las escrituras externas', async () => {
+    const { posts, envolverFetch } = anotarPosts();
+    const { dev } = await montarEstudio({ 'main.dg': DSL }, { temas: { 'tema.dg': 'theme claro extends neutral {}\n' }, envolverFetch });
+    await pulsarCodigo();
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Archivo' }), { target: { value: 'tema.dg' } });
+    const { vista } = await editorDe('tema.dg');
+
+    dev.editarTemaFuera('tema.dg', 'theme claro extends neutral {\n  palette { acento "#f43f5e" }\n}\n');
+
+    await waitFor(() => expect(vista.state.doc.toString()).toContain('#f43f5e'));
+    expect(posts).toEqual([]);
   });
 });
 
@@ -292,7 +297,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     expect(screen.queryByRole('alert', { name: 'Escritura externa' })).toBeNull();
   });
 
-  it('recuperar reinserta lo perdido como una edicion propia que se guarda', async () => {
+  it('recuperar pone lo mio en lugar de lo que gano el disco, sin duplicar la linea, y se guarda', async () => {
     const { envolverFetch } = retenerListados();
     const { dev } = await montarEstudio({ 'main.dg': DSL }, { envolverFetch });
     const { vista } = await abrirCodigo();
@@ -306,7 +311,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     fireEvent.click(within(aviso).getByRole('button', { name: 'Recuperar lo mio' }));
     fireEvent.blur(vista.contentDOM);
 
-    const recuperado = DSL.replace('  servicio db "Base de datos"', '  servicio db "Base de datos (mia)"\n  servicio db "Postgres"');
+    const recuperado = DSL.replace('"Base de datos"', '"Base de datos (mia)"');
     expect(vista.state.doc.toString()).toBe(recuperado);
     await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(recuperado));
     expect(screen.queryByRole('alert', { name: 'Escritura externa' })).toBeNull();
@@ -348,6 +353,7 @@ function retenerListados(): ReturnType<typeof anotarPosts> & { soltar(): void } 
   let retener = false;
   return {
     posts: anotados.posts,
+    cuerpos: anotados.cuerpos,
     soltar() {
       retener = false;
       for (const r of retenidas.splice(0)) r();

@@ -1,0 +1,20 @@
+/** `archivo:linea`: como se escribe, se lee y se saca de una salida de `inspect`. Puro. */
+import type { SalidaDeInspect } from 'canonico';
+
+import type { SitioDeCodigo } from './marco/contexto';
+
+/** `main.dg:12`. */
+export const textoDeSitio = ({ file, line }: SitioDeCodigo): string => `${file}:${line}`;
+
+/** `main.dg:12` -> sitio; cualquier otra cosa, `undefined`. */
+export function sitioEscrito(consulta: string): SitioDeCodigo | undefined {
+  const m = /^(\S+):(\d+)$/.exec(consulta.trim());
+  if (m === null || Number(m[2]) < 1) return undefined;
+  return { file: m[1]!, line: Number(m[2]) };
+}
+
+/** Donde se declara lo consultado (Nodo, Vista o Interaccion); `undefined` para `buscar` y `tema`. */
+export function sitioDeSalida(salida: SalidaDeInspect): SitioDeCodigo | undefined {
+  const s = salida.comando === 'nodo' ? salida.nodo : salida.comando === 'vista' ? salida.vista : salida.comando === 'interaccion' ? salida.interaccion : undefined;
+  return s === undefined ? undefined : { file: s.file, line: s.line };
+}

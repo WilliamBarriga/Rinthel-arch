@@ -3,9 +3,9 @@
  * Recorre el flujo de la spec (#184) con locators por rol y nombre accesible; lo demas de la UI se prueba en jsdom
  * dentro de `estudio`. Sin Chromium falla con el comando que lo instala (`rutaDeChromium`).
  */
-import { cpSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { chromium } from 'playwright';
@@ -54,6 +54,28 @@ describe('rutaDeChromium', () => {
 
   it('toma CHROMIUM_PATH tal cual', () => {
     expect(rutaDeChromium({ CHROMIUM_PATH: '/opt/chrome' }, '/no/existe')).toBe('/opt/chrome');
+  });
+
+  it('busca el ejecutable de la ultima revision segun la plataforma', () => {
+    const cache = mkdtempSync(join(tmpdir(), 'cache-de-playwright-'));
+    const ejecutable = (revision: string, ruta: string): string => {
+      const completa = join(cache, revision, ruta);
+      mkdirSync(dirname(completa), { recursive: true });
+      writeFileSync(completa, '');
+      return completa;
+    };
+    try {
+      ejecutable('chromium-1100', 'chrome-linux64/chrome');
+      const linux = ejecutable('chromium-1200', 'chrome-linux/chrome');
+      const mac = ejecutable('chromium-1200', 'chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium');
+      const windows = ejecutable('chromium-1200', 'chrome-win64/chrome.exe');
+      expect(rutaDeChromium({}, cache, 'linux')).toBe(linux);
+      expect(rutaDeChromium({}, cache, 'darwin')).toBe(mac);
+      expect(rutaDeChromium({}, cache, 'win32')).toBe(windows);
+      expect(() => rutaDeChromium({}, cache, 'aix')).toThrow('pnpm exec playwright install chromium');
+    } finally {
+      rmSync(cache, { recursive: true, force: true });
+    }
   });
 });
 
@@ -120,9 +142,15 @@ describe('e2e: la UI de dev en Chromium', () => {
     expect(enDisco()).toContain('"Clientes"');
     await expect.poll(() => historial.getByRole('listitem').nth(1).getByRole('button').getAttribute('aria-current'), ESPERA).toBe('step');
 
-    // Arrastrar el borde del panel izquierdo lo ensancha.
+    // Arrastrar el borde del panel izquierdo lo ensancha (desde el minimo: abrir Codigo ya lo ensancho).
+    const separador = izquierdo.getByRole('separator', { name: 'Ancho del panel izquierdo' });
+    await separador.focus();
+    await pagina.keyboard.press('Home');
+    await expect.poll(async () => separador.getAttribute('aria-valuenow'), ESPERA).toBe(await separador.getAttribute('aria-valuemin'));
+    // La isla anima su ancho: se espera a que llegue al minimo antes de medir.
+    await expect.poll(async () => (await izquierdo.boundingBox())!.width, ESPERA).toBeLessThan(Number(await separador.getAttribute('aria-valuemin')) + 4);
     const ancho = (await izquierdo.boundingBox())!.width;
-    const borde = (await izquierdo.getByRole('separator', { name: 'Ancho del panel izquierdo' }).boundingBox())!;
+    const borde = (await separador.boundingBox())!;
     const y = borde.y + borde.height / 2;
     await pagina.mouse.move(borde.x + borde.width / 2, y);
     await pagina.mouse.down();

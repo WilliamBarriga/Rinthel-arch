@@ -9,9 +9,10 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import { useEstudio } from '../marco/contexto';
-import type { ContextoDelEstudio, SitioDeCodigo } from '../marco/contexto';
+import type { ContextoDelEstudio } from '../marco/contexto';
+import { sitioEscrito, textoDeSitio } from '../sitio';
+import { destinoDeNodo } from '../vistas/destino';
 import { indiceDeVistas } from '../vistas/indice';
-import { BotonConAtajo } from './atajo';
 import { COMANDOS } from './registro';
 import { etiquetasDeTeclas } from './teclas';
 
@@ -28,24 +29,13 @@ interface Grupo {
   items: Entrada[];
 }
 
-/** `main.dg:12` -> sitio; cualquier otra cosa, `undefined`. */
-export function sitioEscrito(consulta: string): SitioDeCodigo | undefined {
-  const m = /^(\S+):(\d+)$/.exec(consulta.trim());
-  if (m === null || Number(m[2]) < 1) return undefined;
-  return { file: m[1]!, line: Number(m[2]) };
-}
 
 const contiene = (texto: string, consulta: string): boolean => texto.toLowerCase().includes(consulta.toLowerCase());
 
 /** Un Nodo elegido: se selecciona y se abre su Detalle. Si la Vista activa no lo muestra, primero se va a la primera que si. */
-async function irANodo(e: ContextoDelEstudio, id: string): Promise<void> {
-  const r = await e.cliente.inspeccionar('nodo', id);
-  const vistas = r.ok && r.salida.comando === 'nodo' ? r.salida.vistas.map((v) => v.id) : [];
-  const destino = vistas[0];
-  if (e.vista !== undefined && !vistas.includes(e.vista) && destino !== undefined) {
-    e.irAVista(destino);
-    return;
-  }
+function irANodo(e: ContextoDelEstudio, id: string): void {
+  const destino = e.fuente === undefined ? undefined : destinoDeNodo(e.fuente, id, e.vista);
+  if (destino !== undefined && destino.vista !== e.vista) e.irAVista(destino.vista);
   e.seleccionar(id);
   e.abrirPestana('derecha', 'detalle');
 }
@@ -64,7 +54,7 @@ function useNodos(consulta: string): Entrada[] {
       if (!vigente || !r.ok || r.salida.comando !== 'buscar') return;
       const entradas = r.salida.resultados
         .filter((n) => n.kind === 'nodo')
-        .map((n) => ({ value: `nodo:${n.id}`, label: n.title, detalle: `${n.id} · ${n.file}:${n.line}`, ejecutar: (e: ContextoDelEstudio) => irANodo(e, n.id) }));
+        .map((n) => ({ value: `nodo:${n.id}`, label: n.title, detalle: `${n.id} · ${textoDeSitio(n)}`, ejecutar: (e: ContextoDelEstudio) => irANodo(e, n.id) }));
       setNodos({ consulta, entradas });
     });
     return () => {
@@ -83,7 +73,7 @@ function Contenido({ alElegir }: { alElegir: () => void }): ReactElement {
 
   const sitio = sitioEscrito(consulta);
   const todos: Grupo[] = [
-    { value: 'Archivo', items: sitio === undefined ? [] : [{ value: `sitio:${sitio.file}:${sitio.line}`, label: `Abrir ${sitio.file}:${sitio.line}`, ejecutar: (e) => e.abrirCodigo(sitio) }] },
+    { value: 'Archivo', items: sitio === undefined ? [] : [{ value: `sitio:${textoDeSitio(sitio)}`, label: `Abrir ${textoDeSitio(sitio)}`, ejecutar: (e) => e.abrirCodigo(sitio) }] },
     {
       value: 'Comandos',
       items: COMANDOS.filter((c) => c.enBuscador !== false && contiene(c.nombre, consulta.trim())).map((c) => ({ value: `comando:${c.id}`, label: c.nombre, teclas: etiquetasDeTeclas(c, plataforma), ejecutar: c.ejecutar })),
@@ -142,15 +132,5 @@ export function Buscador({ abierto, alCambiar }: { abierto: boolean; alCambiar: 
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-/** Pildora de la barra que abre el Buscador y anuncia Mod+K. */
-export function PildoraDelBuscador(): ReactElement {
-  const { abrirDialogo } = useEstudio();
-  return (
-    <BotonConAtajo comando="buscador" className="ui-pildora ui-pildora-buscador" aria-label="Buscar" onClick={() => abrirDialogo('buscador')}>
-      Buscar
-    </BotonConAtajo>
   );
 }

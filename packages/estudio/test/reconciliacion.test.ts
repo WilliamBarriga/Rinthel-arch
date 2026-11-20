@@ -79,7 +79,7 @@ describe('merge de 3 vias (base, disco, buffer)', () => {
     expect(f.texto).toBe(disco.replace('model {', 'model  {'));
     expect(aplicar(f.alBuffer, buffer)).toBe(f.texto);
     expect(aplicar(f.pendiente, disco)).toBe(f.texto);
-    expect(f.perdidos).toEqual([{ texto: '  servicio db "MySQL"', linea: 3 }]);
+    expect(f.perdidos).toEqual([{ texto: '  servicio db "MySQL"', linea: 3, reemplaza: 1 }]);
   });
 
   it('dos cambios en la misma linea solapan aunque no pisen los mismos caracteres', () => {
@@ -87,7 +87,7 @@ describe('merge de 3 vias (base, disco, buffer)', () => {
     const buffer = BASE.replace('servicio db', 'servicio datos');
     const f = fusionarTresVias(BASE, disco, buffer);
     expect(f.texto).toBe(disco);
-    expect(f.perdidos).toEqual([{ texto: '  servicio datos "Base"', linea: 3 }]);
+    expect(f.perdidos).toEqual([{ texto: '  servicio datos "Base"', linea: 3, reemplaza: 1 }]);
   });
 
   it('dos inserciones en el mismo punto solapan', () => {
@@ -96,7 +96,7 @@ describe('merge de 3 vias (base, disco, buffer)', () => {
     const f = fusionarTresVias(BASE, disco, buffer);
     expect(f.texto).toBe(disco);
     expect(f.pendiente.empty).toBe(true);
-    expect(f.perdidos).toEqual([{ texto: '  cola -> api', linea: 6 }]);
+    expect(f.perdidos).toEqual([{ texto: '  cola -> api', linea: 6, reemplaza: 0 }]);
   });
 
   it('con el disco igual a la base el buffer queda intacto y todo sigue pendiente', () => {

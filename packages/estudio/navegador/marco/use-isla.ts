@@ -27,6 +27,8 @@ export interface Isla {
   alternar(): void;
   mostrar(): void;
   ocultar(): void;
+  /** Ensancha la isla hasta `minimo` (recortado al maximo del lienzo); si ya es mas ancha, no cambia. */
+  ensanchar(minimo: number): void;
   /** Para medir el alto del contenido al empezar un gesto. */
   ref: (elemento: HTMLElement | null) => void;
   /** Props del asa de un eje: separador accesible para `horizontal` y `vertical`; la esquina es solo de puntero. */
@@ -101,6 +103,7 @@ export function useIsla({ lado, id, nombre, lienzo, anchoInicial }: OpcionesDeIs
     alternar: () => setOculta((o) => !o),
     mostrar: () => setOculta(false),
     ocultar: () => setOculta(true),
+    ensanchar: (minimo) => setTamano((t) => (t.ancho >= minimo ? t : { ...t, ancho: Math.max(t.ancho, Math.min(minimo, rango.ancho.max)) })),
     ref: (el) => {
       elemento.current = el;
     },

@@ -9,6 +9,7 @@ import type { ReactElement } from 'react';
 
 import type { IssueDeDev } from '../../src/protocolo';
 import { useEstudio } from '../marco/contexto';
+import { textoDeSitio } from '../sitio';
 import { aplicarFixes, fixDelIssue } from './aplicar-fix';
 import type { EleccionDeFix } from './aplicar-fix';
 
@@ -22,7 +23,7 @@ interface FiltroDeIssues {
 /** El texto busca, sin distinguir mayusculas, en archivo, codigo y mensaje. */
 function visibles(issues: readonly IssueDeDev[], { texto, severidad }: FiltroDeIssues): IssueDeDev[] {
   const buscado = texto.trim().toLowerCase();
-  return issues.filter((i) => (severidad === 'todas' || i.severity === severidad) && (buscado === '' || `${i.file}:${i.line} ${i.code} ${i.message}`.toLowerCase().includes(buscado)));
+  return issues.filter((i) => (severidad === 'todas' || i.severity === severidad) && (buscado === '' || `${textoDeSitio(i)} ${i.code} ${i.message}`.toLowerCase().includes(buscado)));
 }
 
 /** Los `fix` de los issues visibles, recalculados sobre el estado que toque (el visto o el recargado tras un 409). */
@@ -62,7 +63,7 @@ export function PanelDeIssues(): ReactElement {
       </div>
       <ul aria-label="Issues" className="ui-lista ui-issues">
         {lista.map((issue, i) => {
-          const sitio = `${issue.file}:${issue.line}`;
+          const sitio = textoDeSitio(issue);
           return (
             <li key={i} data-severidad={issue.severity}>
               <button type="button" className="ui-enlace ui-mono ui-sitio" onClick={() => estudio.abrirCodigo({ file: issue.file, line: issue.line })}>

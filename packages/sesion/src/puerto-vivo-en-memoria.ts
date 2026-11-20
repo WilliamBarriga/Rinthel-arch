@@ -1,12 +1,14 @@
 /** Toda escritura, borrado o cambio externo avisa a los observadores, como el watcher del disco. */
-import { workspaceEnMemoria } from 'sesion';
-import type { ContenidoEnMemoria, WorkspaceEnMemoria } from 'sesion';
+import { workspaceEnMemoria } from './puerto-en-memoria';
+import type { ContenidoEnMemoria, WorkspaceEnMemoria } from './puerto-en-memoria';
 
 import type { PuertoDelWorkspaceVivo } from './workspace-vivo';
 
 export interface WorkspaceVivoEnMemoria extends PuertoDelWorkspaceVivo, WorkspaceEnMemoria {
   /** Cambio hecho fuera de `dev`; con `undefined` borra el archivo. */
   editarFuera(ruta: string, texto: string | undefined): void;
+  /** Cambio hecho fuera de `dev` en un archivo de `--theme-path`; avisa como el watcher. */
+  editarTemaFuera(ruta: string, texto: string | undefined): void;
   tocarRecurso(ruta: string, hash: string): void;
   /** Anexa texto al Registro de actividad (como el CLI de otro proceso) y avisa a su observador. */
   anexarActividad(texto: string): void;
@@ -52,6 +54,10 @@ export function puertoEnMemoria({ recursos, actividad, ...contenido }: Contenido
       return () => observadores.delete(alCambiar);
     },
     editarFuera: (ruta, texto) => (texto === undefined ? borrar(ruta) : escribir(ruta, texto)),
+    editarTemaFuera(ruta, texto) {
+      base.escribirTema(ruta, texto);
+      avisar();
+    },
     actividad: {
       leer: () => registro,
       observar(alCambiar) {

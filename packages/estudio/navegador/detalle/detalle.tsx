@@ -5,6 +5,7 @@ import type { ReactElement } from 'react';
 import type { SalidaDeInspect } from 'canonico';
 
 import { useEstudio } from '../marco/contexto';
+import { textoDeSitio } from '../sitio';
 
 type SalidaDeNodo = Extract<SalidaDeInspect, { comando: 'nodo' }>;
 type Lectura = { tipo: 'cargando' } | { tipo: 'nodo'; salida: SalidaDeNodo } | { tipo: 'fallo'; mensaje: string };
@@ -54,7 +55,7 @@ function FichaDeNodo({ salida: { nodo, aristas, vistas }, irAVista }: { salida: 
         {nodo.id} · {nodo.type}
       </p>
       {nodo.description !== '' && <p>{nodo.description}</p>}
-      <p className="ui-mono ui-sitio">{`${nodo.file}:${nodo.line}`}</p>
+      <p className="ui-mono ui-sitio">{textoDeSitio(nodo)}</p>
       {nodo.parent !== undefined && <p className="ui-mono">Padre: {nodo.parent}</p>}
       {nodo.children.length > 0 && <p className="ui-mono">Hijos: {nodo.children.join(', ')}</p>}
       {nodo.attributes.length > 0 && (

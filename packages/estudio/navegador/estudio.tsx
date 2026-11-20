@@ -4,7 +4,7 @@
  * Toda la red pasa por el cliente que se arma con `fetch` y `eventos` inyectados (en pruebas, los de `devEnMemoria`);
  * la Vista vive en el hash (`#vista=<id>`). Sin Fuente (el Workspace nunca compilo) el lienzo queda vacio y los paneles lo dicen.
  */
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
 import { resolveView, urlDeFuente } from 'canonico';
@@ -18,24 +18,28 @@ import { usePropsDeDatos, useTamano } from './arranque';
 import { crearClienteDeDev } from './cliente';
 import { historialDelCliente } from './historial/historial-visible';
 import type { ClienteDeDev, DependenciasDelCliente } from './cliente';
+import { textoDeSitio } from './sitio';
+import { useCaducidad } from './marco/use-caducidad';
 import { crearCargadorDeCodigo } from './componentes';
 import { crearGeometriasDeDev } from './geometrias';
 import type { Dibujable, GeometriasDeDev } from './geometrias';
 import { hashDeEstudio } from './hash-de-estudio';
-import { ContextoDeEstudio } from './marco/contexto';
-import type { ContextoDelEstudio, DialogoDelEstudio, SitioDeCodigo } from './marco/contexto';
+import { ContextoDeEstudio, ContextoDelEditor, ContextoDePrevisualizacion } from './marco/contexto';
+import type { CanalDelEditor, ContextoDelEstudio, DialogoDelEstudio, PrevisualizacionDeTema, SitioDeCodigo } from './marco/contexto';
 import { IslaLateral } from './marco/isla';
 import type { LadoDeIsla } from './marco/limites';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS, PILDORAS_DE_LA_BARRA } from './marco/pestanas';
 import { useIsla } from './marco/use-isla';
 import { crearAlMover, crearAlOrdenar } from './mover';
-import { Ayuda } from './comandos/ayuda';
-import { Buscador, PildoraDelBuscador } from './comandos/buscador';
-import { COMANDOS } from './comandos/registro';
+import { PildoraDelBuscador } from './comandos/pildora-del-buscador';
+import { abrirCodigoEnBloque, COMANDOS } from './comandos/registro';
 import { plataformaDe } from './comandos/teclas';
 import type { Plataforma } from './comandos/teclas';
 import { useAtajos } from './comandos/use-atajos';
 import { ResaltadoDelLienzo, useDiferenciasExternas } from './diferencia/resaltado';
+
+const Buscador = lazy(() => import('./comandos/buscador').then((m) => ({ default: m.Buscador })));
+const Ayuda = lazy(() => import('./comandos/ayuda').then((m) => ({ default: m.Ayuda })));
 
 export interface PropsDelEstudio {
   fetch: typeof fetch;
@@ -119,11 +123,7 @@ function useComponentes(estado: EstadoDeDev | undefined, fetchFn: typeof fetch, 
 
 function useAviso(): [string | undefined, (texto: string) => void] {
   const [aviso, setAviso] = useState<string>();
-  useEffect(() => {
-    if (aviso === undefined) return;
-    const t = setTimeout(() => setAviso(undefined), DURACION_DEL_AVISO_MS);
-    return () => clearTimeout(t);
-  }, [aviso]);
+  useCaducidad(aviso === undefined ? undefined : DURACION_DEL_AVISO_MS, () => setAviso(undefined), aviso);
   return [aviso, setAviso];
 }
 
@@ -191,7 +191,7 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
   useEffect(() => previsualizarTema(undefined), [props.view, previsualizarTema]);
   const { fuente: dibujada, geometrias: porVista } = usePrevisualizacion(marco.cliente, fuente, delServidor, props.view, marco.temaPrevio, estado.version);
   const datos = usePropsDeDatos({ fuente: dibujada, iconos: estado.iconos, geometrias: porVista }, props.view);
-  const abrirDetalle = useRef<(() => void) | undefined>(undefined);
+  const contextoVivo = useRef<ContextoDelEstudio | undefined>(undefined);
   const navegacion = navegacionDesde(props);
   const resaltados = useDiferenciasExternas({
     cliente: marco.cliente,
@@ -200,7 +200,6 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
     vista: props.view,
     estado: props.state,
     paso: props.step,
-    irAVista: (vista) => props.onPathChange([vista]),
     avisar: marco.avisar,
   });
   const tema = datos.theme;
@@ -210,7 +209,11 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
         {...props}
         onSelect={(id) => {
           props.onSelect(id);
-          abrirDetalle.current?.();
+          contextoVivo.current?.abrirPestana('derecha', 'detalle');
+        }}
+        onOpen={(elemento) => {
+          const e = contextoVivo.current;
+          if (e !== undefined && elemento.tipo === 'nodo') void abrirCodigoEnBloque(e, 'nodo', elemento.id);
         }}
         source={dibujada}
         theme={tema}
@@ -232,7 +235,7 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
     </>
   );
   const leyenda = tema === undefined ? null : <LeyendaDeVista fuente={fuente} props={props} tema={tema} />;
-  return <Marco {...marco} fuente={fuente} hashProps={props} navegacion={navegacion} lienzo={conResaltado} leyenda={leyenda} alAbrirDetalle={abrirDetalle} />;
+  return <Marco {...marco} fuente={fuente} hashProps={props} navegacion={navegacion} lienzo={conResaltado} leyenda={leyenda} contextoVivo={contextoVivo} />;
 }
 
 /**
@@ -300,7 +303,8 @@ interface PropsDeMarcoCompleto extends PropsDelMarco {
   lienzo: ReactNode;
   leyenda?: ReactNode;
   /** El marco publica aqui como abrir el Detalle (un clic en un Nodo lo llama). */
-  alAbrirDetalle?: { current: (() => void) | undefined };
+  /** Recibe el contexto vigente del marco, para los gestos del lienzo (que se monta fuera del proveedor). */
+  contextoVivo?: { current: ContextoDelEstudio | undefined };
 }
 
 /**
@@ -309,10 +313,10 @@ interface PropsDeMarcoCompleto extends PropsDelMarco {
  */
 export function motivoSinGestos(estado: EstadoDeDev | undefined): string | undefined {
   const error = estado?.issues.find((i) => i.severity === 'error');
-  return error === undefined ? undefined : `Gestos deshabilitados: el texto no compila (${error.file}:${error.line} ${error.message})`;
+  return error === undefined ? undefined : `Gestos deshabilitados: el texto no compila (${textoDeSitio(error)} ${error.message})`;
 }
 
-function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevio, previsualizarTema, fuente, hashProps, navegacion, lienzo, leyenda, alAbrirDetalle }: PropsDeMarcoCompleto): ReactElement {
+function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevio, previsualizarTema, fuente, hashProps, navegacion, lienzo, leyenda, contextoVivo }: PropsDeMarcoCompleto): ReactElement {
   const lienzoTamano = useTamano();
   const medidas = { ancho: lienzoTamano.width, alto: lienzoTamano.height };
   const izquierda = useIsla({ lado: 'izquierda', id: 'ui-isla-izquierda', nombre: 'panel izquierdo', lienzo: medidas, anchoInicial: 280 });
@@ -320,6 +324,9 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
   const [pestanas, setPestanas] = useState<Record<LadoDeIsla, string>>({ izquierda: 'vistas', derecha: 'detalle' });
   const [portales, setPortales] = useState<HTMLElement | null>(null);
   const [dialogo, setDialogo] = useState<DialogoDelEstudio>();
+  // Un dialogo se carga (trozo aparte) la primera vez que se abre y desde ahi sigue montado: Base UI cierra y devuelve el foco.
+  const [cargados, setCargados] = useState<ReadonlySet<DialogoDelEstudio>>(() => new Set());
+  if (dialogo !== undefined && !cargados.has(dialogo)) setCargados(new Set([...cargados, dialogo]));
   const [sitioDeCodigo, setSitioDeCodigo] = useState<SitioDeCodigo>();
   const guardados = useRef(new Set<() => Promise<void>>());
   const islas = { izquierda, derecha };
@@ -329,7 +336,6 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
     islas[lado].mostrar();
     setPestanas((p) => ({ ...p, [lado]: pestana }));
   };
-  if (alAbrirDetalle !== undefined) alAbrirDetalle.current = () => abrirPestana('derecha', 'detalle');
 
   const contexto: ContextoDelEstudio = {
     estado,
@@ -341,26 +347,32 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
     seleccionar: (id) => hashProps?.onSelect(id),
     abrirPestana,
     alternarIsla: (lado) => islas[lado].alternar(),
-    temaPrevio,
-    previsualizarTema,
     avisar,
     recargar,
     abrirDialogo: setDialogo,
     abrirCodigo: (sitio) => {
       abrirPestana('izquierda', 'codigo');
+      abrirPestana('derecha', 'issues');
       if (sitio !== undefined) setSitioDeCodigo(sitio);
     },
-    sitioDeCodigo,
     async vaciarGuardado() {
       await Promise.all([...guardados.current].map((guardar) => guardar()));
-    },
-    registrarGuardado(guardar) {
-      guardados.current.add(guardar);
-      return () => guardados.current.delete(guardar);
     },
     plataforma,
     portales,
   };
+  if (contextoVivo !== undefined) contextoVivo.current = contexto;
+  const canalDelEditor = useMemo<CanalDelEditor>(
+    () => ({
+      sitio: sitioDeCodigo,
+      registrarGuardado(guardar) {
+        guardados.current.add(guardar);
+        return () => guardados.current.delete(guardar);
+      },
+    }),
+    [sitioDeCodigo],
+  );
+  const previsualizacion = useMemo<PrevisualizacionDeTema>(() => ({ temaPrevio, previsualizarTema }), [temaPrevio, previsualizarTema]);
   useAtajos(COMANDOS, contexto);
   const cerrarDialogo = (abierto: boolean): void => {
     if (!abierto) setDialogo(undefined);
@@ -368,6 +380,8 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
 
   return (
     <ContextoDeEstudio.Provider value={contexto}>
+      <ContextoDelEditor.Provider value={canalDelEditor}>
+      <ContextoDePrevisualizacion.Provider value={previsualizacion}>
       <div className="ui-chrome" data-arrastrando={izquierda.arrastrando || derecha.arrastrando || gesto.enGesto ? '' : undefined}>
         <main className="ui-lienzo" aria-label="Lienzo" {...gesto.props}>
           {lienzo}
@@ -401,10 +415,15 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
             </div>
           </div>
         )}
-        <Buscador abierto={dialogo === 'buscador'} alCambiar={cerrarDialogo} />
-        <Ayuda abierto={dialogo === 'ayuda'} alCambiar={cerrarDialogo} />
+        {/* Los dialogos (Base UI Dialog y Autocomplete) son trozos que se cargan al abrirlos. */}
+        <Suspense fallback={null}>
+          {cargados.has('buscador') && <Buscador abierto={dialogo === 'buscador'} alCambiar={cerrarDialogo} />}
+          {cargados.has('ayuda') && <Ayuda abierto={dialogo === 'ayuda'} alCambiar={cerrarDialogo} />}
+        </Suspense>
         <div className="ui-portales" ref={setPortales} />
       </div>
+      </ContextoDePrevisualizacion.Provider>
+      </ContextoDelEditor.Provider>
     </ContextoDeEstudio.Provider>
   );
 }

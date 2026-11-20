@@ -8,6 +8,7 @@ import { actividadDelCliente } from '../agente/actividad';
 import { moverElHistorial } from '../historial/acciones';
 import type { ContextoDelEstudio } from '../marco/contexto';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS } from '../marco/pestanas';
+import { sitioDeSalida } from '../sitio';
 import type { DeclaracionDeTeclas } from './teclas';
 
 export interface Comando extends DeclaracionDeTeclas {
@@ -20,15 +21,20 @@ export interface Comando extends DeclaracionDeTeclas {
 
 const historial = (accion: 'deshacer' | 'rehacer') => (e: ContextoDelEstudio) => moverElHistorial(e, accion);
 
-/** Codigo en el bloque del Nodo seleccionado o, sin seleccion, en el de la Vista activa. */
-async function abrirCodigoAqui(e: ContextoDelEstudio): Promise<void> {
-  const consulta = e.seleccion !== null ? e.cliente.inspeccionar('nodo', e.seleccion) : e.vista !== undefined ? e.cliente.inspeccionar('vista', e.vista) : undefined;
+/** Abre Codigo y, cuando `inspect` responde, salta al bloque del Nodo o de la Vista `id`. */
+export async function abrirCodigoEnBloque(e: ContextoDelEstudio, comando: 'nodo' | 'vista', id: string): Promise<void> {
+  const consulta = e.cliente.inspeccionar(comando, id);
   e.abrirCodigo();
   const r = await consulta;
-  if (r?.ok !== true) return;
-  const s = r.salida;
-  if (s.comando === 'nodo') e.abrirCodigo({ file: s.nodo.file, line: s.nodo.line });
-  else if (s.comando === 'vista') e.abrirCodigo({ file: s.vista.file, line: s.vista.line });
+  const sitio = r.ok ? sitioDeSalida(r.salida) : undefined;
+  if (sitio !== undefined) e.abrirCodigo(sitio);
+}
+
+/** Codigo en el bloque del Nodo seleccionado o, sin seleccion, en el de la Vista activa. */
+async function abrirCodigoAqui(e: ContextoDelEstudio): Promise<void> {
+  if (e.seleccion !== null) await abrirCodigoEnBloque(e, 'nodo', e.seleccion);
+  else if (e.vista !== undefined) await abrirCodigoEnBloque(e, 'vista', e.vista);
+  else e.abrirCodigo();
 }
 
 /** Vuelve a la pestana Vistas con el foco en el lienzo. */
