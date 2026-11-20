@@ -33,6 +33,8 @@
   --ui-sel: #a855f724;
   --ui-sint-kw: color-mix(in srgb, #22d3ee 70%, #fff);
   --ui-sint-id: color-mix(in srgb, #a855f7 70%, #fff);
+  --ui-sint-cadena: color-mix(in srgb, #facc15 60%, #fff);
+  --ui-sint-numero: color-mix(in srgb, #fb7185 70%, #fff);
 
   --ui-sombra: 0 0 0 1px #ffffff10, 0 18px 40px -12px #000e;
   --ui-vidrio: blur(18px) saturate(1.6);

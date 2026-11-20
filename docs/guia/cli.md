@@ -60,6 +60,7 @@ Sirve en `http://127.0.0.1:<puerto>/` (4173 por defecto, `--port 0` elige uno li
 
 - **Temas con codigo (`.tsx`)**: `dev` no los sirve hasta que lo confirmes en el visor; `--trust-code` lo da de antemano. Usalo solo con Workspaces que conoces.
 - **Arrastrar un Nodo** fija su Pin y reescribe el `.dg` (mismo nucleo que `edit`). En una Vista `sequence`, arrastrar en horizontal la cabecera de una Lifeline (o el titulo de un `box`, que mueve el bloque) reescribe el `order` completo; una hija no sale del `box` de su Grupo.
+- **Pestana Codigo**: editor del DSL que guarda solo (unos 400 ms despues de dejar de teclear, al perder el foco o con Ctrl/Cmd+S), aunque el texto no compile: el lienzo conserva el ultimo dibujo bueno y los arrastres quedan deshabilitados con el motivo a la vista. Muestra los issues en linea, completa palabras clave e ids y salta a la definicion con F12; Ctrl/Cmd+Z dentro del editor deshace lo tecleado y Esc vuelve a Vistas. Los archivos de `--theme-path` se abren en solo lectura. Cada guardado es una entrada del deshacer de `dev`, que ya no se borra cuando otro programa edita el Workspace.
 - **Como proceso**: es de larga vida. Lanzalo en segundo plano y espera la linea con la URL; el puerto ocupado es un error (`--port` otro).
 
 ### `inspect`: consultar el Modelo (solo lectura)

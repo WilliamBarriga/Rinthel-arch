@@ -7,11 +7,14 @@
 import { geometriaCacheadaSchema } from 'canonico';
 import type { GeometriaCacheada, Intencion, SalidaDeInspect } from 'canonico';
 
-import { estadoDeDevSchema, inspectNoEncontradoSchema, rutaDeInspect } from '../src/protocolo';
-import type { ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev } from '../src/protocolo';
+import { archivoDeDevSchema, archivosDeDevSchema, estadoDeDevSchema, inspectNoEncontradoSchema, rutaDeArchivo, rutaDeInspect } from '../src/protocolo';
+import type { ArchivoDeDev, ArchivosDeDev, ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from '../src/protocolo';
 
-/** `desactualizado` es el 409 (`hash-desactualizado`): hay que recargar y avisar. */
-export type ResultadoDeEnvio = { ok: true } | { ok: false; desactualizado: boolean; mensaje: string };
+/**
+ * `desactualizado` es el 409 (`hash-desactualizado`): hay que recargar y avisar. `version` (si `dev` la da) es la del
+ * estado tras la escritura; `motivo` y `file`, los del rechazo.
+ */
+export type ResultadoDeEnvio = { ok: true; version?: number } | { ok: false; desactualizado: boolean; mensaje: string; motivo?: string; file?: string };
 
 /** Si el texto estaba desactualizado (409) avisa y recarga el estado; si no, avisa `fallo: mensaje`. */
 export async function avisarRechazo(r: Extract<ResultadoDeEnvio, { ok: false }>, fallo: string, { avisar, recargar }: { avisar: (texto: string) => void; recargar: () => Promise<void> }): Promise<void> {
@@ -47,6 +50,12 @@ export interface ClienteDeDev {
   inspeccionar(comando: ComandoDeInspect, argumento: string, opciones?: Readonly<Record<string, string>>): Promise<LecturaDeInspect>;
   /** `version` es la del estado que vio la pagina; el servidor la traduce a `visto`. */
   editar(intencion: Intencion, version: number): Promise<ResultadoDeEnvio>;
+  /** Ediciones de texto (`POST /api/edit { ediciones, version, descripcion?, aunqueNoCompile? }`): editor, `fix` y "Aplicar N fix". */
+  editarTexto(peticion: PeticionDeEdiciones): Promise<ResultadoDeEnvio>;
+  /** `GET /api/archivos`; `undefined` si falla. */
+  archivos(): Promise<ArchivosDeDev | undefined>;
+  /** `GET /api/archivo/<ruta>`; `undefined` si no existe o falla. */
+  archivo(file: string): Promise<ArchivoDeDev | undefined>;
   deshacer(): Promise<ResultadoDeEnvio>;
   rehacer(): Promise<ResultadoDeEnvio>;
   geometria(vista: string): Promise<LecturaDeGeometria>;
@@ -56,11 +65,28 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
   const post = async (ruta: string, cuerpo: unknown): Promise<ResultadoDeEnvio> => {
     try {
       const res = await fetchFn(ruta, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) });
-      const leido = (await res.json().catch(() => ({}))) as { ok?: boolean; mensaje?: string };
-      if (res.ok && leido.ok === true) return { ok: true };
-      return { ok: false, desactualizado: res.status === 409, mensaje: leido.mensaje ?? `Error ${res.status}` };
+      const leido = (await res.json().catch(() => ({}))) as { ok?: boolean; mensaje?: string; version?: unknown; motivo?: unknown; file?: unknown };
+      if (res.ok && leido.ok === true) return typeof leido.version === 'number' ? { ok: true, version: leido.version } : { ok: true };
+      return {
+        ok: false,
+        desactualizado: res.status === 409,
+        mensaje: leido.mensaje ?? `Error ${res.status}`,
+        ...(typeof leido.motivo === 'string' && { motivo: leido.motivo }),
+        ...(typeof leido.file === 'string' && { file: leido.file }),
+      };
     } catch (error) {
       return { ok: false, desactualizado: false, mensaje: (error as Error).message };
+    }
+  };
+
+  const leerJson = async <T>(ruta: string, esquema: { safeParse(x: unknown): { success: true; data: T } | { success: false } }): Promise<T | undefined> => {
+    try {
+      const res = await fetchFn(ruta);
+      if (!res.ok) return undefined;
+      const leido = esquema.safeParse(await res.json());
+      return leido.success ? leido.data : undefined;
+    } catch {
+      return undefined;
     }
   };
 
@@ -116,6 +142,9 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
     },
     suscribir: (alEstado) => escuchar('estado', (datos) => alEstado(datos as EstadoDeDev)),
     editar: (intencion, version) => post('/api/edit', { ...intencion, version }),
+    editarTexto: (peticion) => post('/api/edit', peticion),
+    archivos: () => leerJson('/api/archivos', archivosDeDevSchema),
+    archivo: (file) => leerJson(rutaDeArchivo(file), archivoDeDevSchema),
     deshacer: () => post('/api/deshacer', {}),
     rehacer: () => post('/api/rehacer', {}),
     async geometria(vista) {

@@ -39,6 +39,13 @@ export interface ContextoDelEstudio {
   abrirCodigo(sitio?: SitioDeCodigo): void;
   /** Ultimo `archivo:linea` pedido con `abrirCodigo`; lo lee el editor. */
   sitioDeCodigo: SitioDeCodigo | undefined;
+  /**
+   * Manda ya el guardado pendiente del editor y espera a que termine. Llamarlo antes de deshacer, rehacer o saltar en el
+   * Historial de `dev` (y con Mod+S), para no operar sobre un estado viejo.
+   */
+  vaciarGuardado(): Promise<void>;
+  /** El editor publica aqui su `guardar`; devuelve la baja. */
+  registrarGuardado(guardar: () => Promise<void>): () => void;
   /** Plataforma del navegador: decide como se escriben las teclas (`Cmd` o `Ctrl`). */
   plataforma: Plataforma;
   /** Nodo dentro de `.ui-chrome` para los portales de Base UI (`container`), con los tokens del chrome. */

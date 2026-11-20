@@ -201,8 +201,7 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
         width={datos.width}
         height={datos.height}
         cachedGeometries={datos.cachedGeometries}
-        onMoveNode={(mov) => alMover(props.view, mov)}
-        onReorderLifelines={(cambio) => alOrdenar(props.view, cambio)}
+        {...(motivoSinGestos(marco.estado) === undefined && { onMoveNode: (mov) => alMover(props.view, mov), onReorderLifelines: (cambio) => alOrdenar(props.view, cambio) })}
         chrome={false}
       />
     );
@@ -246,6 +245,15 @@ interface PropsDeMarcoCompleto extends PropsDelMarco {
   alAbrirDetalle?: { current: (() => void) | undefined };
 }
 
+/**
+ * Con errores (p. ej. un guardado del editor que no compila) el lienzo conserva la ultima Fuente buena y los Gestos
+ * se deshabilitan: escribirian sobre un texto que no es el dibujado. Devuelve el motivo visible, o `undefined`.
+ */
+export function motivoSinGestos(estado: EstadoDeDev | undefined): string | undefined {
+  const error = estado?.issues.find((i) => i.severity === 'error');
+  return error === undefined ? undefined : `Gestos deshabilitados: el texto no compila (${error.file}:${error.line} ${error.message})`;
+}
+
 function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, fuente, hashProps, navegacion, lienzo, leyenda, alAbrirDetalle }: PropsDeMarcoCompleto): ReactElement {
   const lienzoTamano = useTamano();
   const medidas = { ancho: lienzoTamano.width, alto: lienzoTamano.height };
@@ -255,6 +263,7 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, fuente, h
   const [portales, setPortales] = useState<HTMLElement | null>(null);
   const [dialogo, setDialogo] = useState<DialogoDelEstudio>();
   const [sitioDeCodigo, setSitioDeCodigo] = useState<SitioDeCodigo>();
+  const guardados = useRef(new Set<() => Promise<void>>());
   const islas = { izquierda, derecha };
   const gesto = useGestoEnLienzo();
 
@@ -282,6 +291,13 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, fuente, h
       if (sitio !== undefined) setSitioDeCodigo(sitio);
     },
     sitioDeCodigo,
+    async vaciarGuardado() {
+      await Promise.all([...guardados.current].map((guardar) => guardar()));
+    },
+    registrarGuardado(guardar) {
+      guardados.current.add(guardar);
+      return () => guardados.current.delete(guardar);
+    },
     plataforma,
     portales,
   };
@@ -304,6 +320,11 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, fuente, h
             </div>
           )}
           <PildoraDelBuscador />
+          {motivoSinGestos(estado) !== undefined && (
+            <div role="status" aria-label="Gestos" className="ui-pildora ui-aviso-gestos">
+              {motivoSinGestos(estado)}
+            </div>
+          )}
           {PILDORAS_DE_LA_BARRA.map(({ id, Contenido }) => (
             <div key={id} className="ui-pildora">
               <Contenido />
