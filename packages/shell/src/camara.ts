@@ -2,9 +2,8 @@
 import { zoomIdentity } from 'd3-zoom';
 import type { ZoomTransform } from 'd3-zoom';
 
-import type { VistaResuelta } from 'canonico';
+import type { CajaDeNodo, Geometria, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
-import type { CajaDeNodo, Geometria } from 'layout';
 import type { Camara } from 'render';
 
 /** Camara que muestra toda la geometria, centrada y con margen; no amplia por encima de 1:1. */

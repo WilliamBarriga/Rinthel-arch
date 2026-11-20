@@ -1,8 +1,7 @@
 /** Morph entre dos geometrias: interpolacion pura y el hook que la anima; sin reloj, o con duracion 0, no hay animacion. */
 import { useCallback, useEffect, useState } from 'react';
 
-import type { Visibilidad } from 'canonico';
-import type { CajaDeNodo, Geometria, GeometriaGrafo, GeometriaSecuencia, RutaDeArista } from 'layout';
+import type { CajaDeNodo, Geometria, GeometriaGrafo, GeometriaSecuencia, RutaDeArista, Visibilidad } from 'canonico';
 
 /** Pide un cuadro (`cuadro` recibe el tiempo en ms) y devuelve la funcion que lo cancela. */
 export type RelojDeCuadros = (cuadro: (ahoraMs: number) => void) => () => void;

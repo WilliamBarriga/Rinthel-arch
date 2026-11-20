@@ -5,9 +5,8 @@
  */
 import { useEffect, useRef, useState } from 'react';
 
-import type { Tema, VistaResuelta } from 'canonico';
+import type { Geometria, Tema, VistaResuelta } from 'canonico';
 import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout } from 'layout';
-import type { Geometria } from 'layout';
 import { tablaDeMetricas, textosAMedir } from 'tema';
 import type { MedidasDeTexto } from 'tema';
 

@@ -1,6 +1,5 @@
 /** Layout en un Web Worker: `adaptadorDeWorker` (pagina) habla por un `PuertoDeMensajes` con `servirLayout` (Worker). */
-import type { VistaResuelta } from 'canonico';
-import type { Geometria } from 'layout';
+import type { Geometria, VistaResuelta } from 'canonico';
 import { tablaDeMetricas } from 'tema';
 import type { TablaDeMetricas } from 'tema';
 

@@ -3,8 +3,7 @@
  * rectangulo que reservo `layout`; el CSS solo pinta y recorta); Aristas y sus etiquetas son SVG. Puros.
  */
 import { sanearIcono } from 'canonico';
-import type { Atributo, IconProvider, NodoResuelto } from 'canonico';
-import type { CajaDeNodo } from 'layout';
+import type { Atributo, CajaDeNodo, IconProvider, NodoResuelto } from 'canonico';
 import { ESTADOS, LARGO_DE_MARCADOR_ER, alturaDeCabecera, capasDeAristaEr, pilaDeFila, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
 import type { ContenidoDeNodo, Estado, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
 
