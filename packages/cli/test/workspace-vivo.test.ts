@@ -515,6 +515,44 @@ describe('Workspace vivo: ediciones de texto del editor', () => {
   });
 });
 
+describe('Workspace vivo: fix y "Aplicar N fix"', () => {
+  const COLGANTES = {
+    'main.dg': BASE.replace('  api -> db\n', '  api -> dbb\n'),
+    'mas.dg': 'model {\n  db -> apii\n}\n',
+  };
+  const fixesDe = (ws: WorkspaceVivo) => ws.estado().issues.flatMap((i) => (i.fix === undefined ? [] : [i.fix]));
+
+  it('los fix de varios archivos van en una peticion: se escriben juntos y quedan como una sola entrada del Historial', async () => {
+    const puerto = puertoEnMemoria({ propios: COLGANTES });
+    const { ws } = await abrir(puerto);
+    const fixes = fixesDe(ws);
+    expect(fixes.map((f) => f.file).sort()).toEqual(['main.dg', 'mas.dg']);
+
+    const r = await ws.editar({ ediciones: fixes, descripcion: 'Aplicar 2 fix' }, ws.estado().version);
+
+    expect(r.ok).toBe(true);
+    expect(puerto.texto('main.dg')).toContain('  api -> db\n');
+    expect(puerto.texto('mas.dg')).toBe('model {\n  db -> api\n}\n');
+    expect(ws.estado().issues).toEqual([]);
+    expect(ws.historial().pasado).toEqual([{ descripcion: 'Aplicar 2 fix', archivos: ['main.dg', 'mas.dg'] }]);
+    expect((await ws.deshacer()).ok).toBe(true);
+    expect([puerto.texto('main.dg'), puerto.texto('mas.dg')]).toEqual([COLGANTES['main.dg'], COLGANTES['mas.dg']]);
+  });
+
+  it('si dos fix se solapan no escribe nada, dice motivo y archivo y no toca el Historial', async () => {
+    const puerto = puertoEnMemoria({ propios: COLGANTES });
+    const { ws } = await abrir(puerto);
+    const fixes = fixesDe(ws);
+    const enMain = fixes.find((f) => f.file === 'main.dg')!;
+
+    const r = await ws.editar({ ediciones: [...fixes, { ...enMain, replacement: 'otro' }], descripcion: 'Aplicar 3 fix' }, ws.estado().version);
+
+    expect(r).toMatchObject({ ok: false, motivo: 'ediciones-solapadas', file: 'main.dg' });
+    expect([puerto.texto('main.dg'), puerto.texto('mas.dg')]).toEqual([COLGANTES['main.dg'], COLGANTES['mas.dg']]);
+    expect(ws.historial().pasado).toEqual([]);
+  });
+});
+
 describe('Workspace vivo: lectura de archivos para el editor', () => {
   it('lista los .dg del Workspace y los de --theme-path (estos de solo lectura) con su hash y la version', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, temas: { 'tema.dg': 'theme t {}\n' } });
