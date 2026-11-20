@@ -1,4 +1,4 @@
-import { CARPETA_DE_SALIDA } from './registro-en-disco';
+import { CARPETA_DE_SALIDA } from './workspace';
 
 const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill'] as const;
 export type ComandoConAyuda = (typeof COMANDOS)[number];

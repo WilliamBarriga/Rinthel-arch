@@ -5,7 +5,11 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { esArchivoDeFuente, tipoDeFuente } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
-import { carpetaDeSalida } from './registro-en-disco';
+/** Nombre de la carpeta de salida derivada del Workspace (build y Registro de actividad). */
+export const CARPETA_DE_SALIDA = '.diagrams';
+
+/** `<raiz>/.diagrams` */
+export const carpetaDeSalida = (raiz: string): string => join(raiz, CARPETA_DE_SALIDA);
 
 const EXTENSION = '.dg';
 const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist']);

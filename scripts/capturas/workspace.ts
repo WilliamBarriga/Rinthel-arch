@@ -6,6 +6,8 @@
 import { cpSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, join, relative } from 'node:path';
 
+import { CARPETA_DE_SALIDA } from 'cli';
+
 export interface WorkspacePreparado {
   directorio: string;
   vistaDe: (tema: string) => string;
@@ -13,7 +15,7 @@ export interface WorkspacePreparado {
 
 const archivosDg = (raiz: string): string[] =>
   readdirSync(raiz, { recursive: true, withFileTypes: true })
-    .filter((e) => e.isFile() && e.name.endsWith('.dg') && !relative(raiz, e.parentPath).split('/').includes('.diagrams'))
+    .filter((e) => e.isFile() && e.name.endsWith('.dg') && !relative(raiz, e.parentPath).split('/').includes(CARPETA_DE_SALIDA))
     .map((e) => join(e.parentPath, e.name));
 
 /** Sin las llaves; salta cadenas y comentarios; `undefined` si no esta. */
@@ -46,7 +48,7 @@ export function conTema(cuerpo: string, tema: string): string {
 export function prepararWorkspace(origen: string, vista: string, temas: readonly string[], raizDeCache: string): WorkspacePreparado {
   const directorio = join(raizDeCache, `workspace-${basename(origen)}`);
   rmSync(directorio, { recursive: true, force: true });
-  cpSync(origen, directorio, { recursive: true, filter: (ruta) => basename(ruta) !== '.diagrams' });
+  cpSync(origen, directorio, { recursive: true, filter: (ruta) => basename(ruta) !== CARPETA_DE_SALIDA });
   const cuerpo = archivosDg(directorio)
     .map((archivo) => cuerpoDeVista(readFileSync(archivo, 'utf8'), vista))
     .find((c) => c !== undefined);

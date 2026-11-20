@@ -10,7 +10,7 @@ import {
 } from 'canonico';
 import type { FuenteCanonica } from 'canonico';
 
-import { CARPETA_DE_SALIDA } from './registro-en-disco';
+import { CARPETA_DE_SALIDA } from './workspace';
 
 /** Sin saltos de linea ni barras que rompan la fila Markdown. */
 const celda = (texto: string): string => (texto.trim() === '' ? '-' : texto.replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|'));

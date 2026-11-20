@@ -1,6 +1,6 @@
 /**
- * Registro en disco: unico dueno en `cli` de la carpeta de salida (`<workspace>/.diagrams/`) y del Registro de actividad
- * que vive en ella (`actividad.jsonl`): el anexado con rotacion (lo usan `validate`, `build`, `inspect` y `edit`) y la
+ * Registro en disco: unico dueno en `cli` del Registro de actividad, que vive en la carpeta de salida de `workspace.ts`
+ * (`<workspace>/.diagrams/actividad.jsonl`): el anexado con rotacion (lo usan `validate`, `build`, `inspect` y `edit`) y la
  * observacion (la usa `dev`). El esquema y el lector puro del registro son de `canonico`.
  * Invariantes: una linea por anexado, escrita con un solo `write` en modo append; al pasar 1 MB rota a
  * `actividad.1.jsonl` (una generacion). La observacion sondea con `fs.watchFile`, que funciona aunque el archivo aun no
@@ -12,11 +12,7 @@ import { join } from 'node:path';
 
 import type { RegistroDeActividad } from 'sesion';
 
-/** Nombre de la carpeta de salida derivada del Workspace. */
-export const CARPETA_DE_SALIDA = '.diagrams';
-
-/** `<raiz>/.diagrams` */
-export const carpetaDeSalida = (raiz: string): string => join(raiz, CARPETA_DE_SALIDA);
+import { carpetaDeSalida } from './workspace';
 
 const ARCHIVO_DEL_REGISTRO = 'actividad.jsonl';
 const ARCHIVO_ROTADO = 'actividad.1.jsonl';

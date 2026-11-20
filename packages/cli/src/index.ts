@@ -16,14 +16,14 @@ import { ayudaPara } from './ayuda';
 import { editar } from './comando-edit';
 import { inspeccionar } from './comando-inspect';
 import { comandoDev } from './dev';
-import { CARPETA_DE_SALIDA } from './registro-en-disco';
 import { MAX_ISSUES_POR_DEFECTO, abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { generarSkill } from './skill';
 import { construirSalida, textoLegible } from './validate';
-import { escribirSalida, escribirTexto, leerWorkspace } from './workspace';
+import { CARPETA_DE_SALIDA, escribirSalida, escribirTexto, leerWorkspace } from './workspace';
 
 export { iniciarDev } from './dev';
+export { CARPETA_DE_SALIDA } from './workspace';
 export type { OpcionesDeDev, ServidorDev } from './dev';
 
 export type { ResultadoDeEjecucion };
