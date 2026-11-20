@@ -5,21 +5,8 @@ import { iniciarDev } from 'cli';
 import { puertoEnMemoria } from 'sesion';
 
 probarContratoDeDev(async ({ propios, temas, actividad, escrituraRota }) => {
-  const puerto = puertoEnMemoria({ propios, ...(actividad !== undefined && { actividad }) });
-  const servidor = await iniciarDev({
-    workspace: '/ws',
-    ...(temas !== undefined && { temas: '/temas' }),
-    leer: (raiz) => (raiz === '/temas' ? (temas ?? {}) : puerto.leer().propios),
-    escribir: (_raiz, ruta, texto) => {
-      if (escrituraRota !== undefined) throw new Error(escrituraRota);
-      puerto.escribir(ruta, texto);
-    },
-    borrar: (_raiz, ruta) => puerto.borrar(ruta),
-    observar: (_raiz, alCambiar) => puerto.observar(alCambiar),
-    actividad: () => puerto.actividad,
-    debounceMs: 5,
-    puerto: 0,
-  });
+  const puerto = puertoEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }), ...(escrituraRota !== undefined && { escrituraRota }) });
+  const servidor = await iniciarDev({ workspace: '/ws', puerto, debounceMs: 5, puertoHttp: 0 });
   const fetchDelServidor: typeof fetch = (ruta, init) => fetch(new URL(String(ruta).replace(/^\//, ''), servidor.url), init);
   return {
     fetch: fetchDelServidor,

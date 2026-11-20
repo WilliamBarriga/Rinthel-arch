@@ -19,11 +19,11 @@
  * `propia` si todos los archivos que cambiaron coinciden por hash con lo que escribio la UI (Intencion, deshacer,
  * rehacer, saltar y lo que se revierte); si no, `externa`. Con Sesiones con errores entre medias, la Diferencia es una sola
  * y es externa si alguna escritura intermedia lo fue.
- * Registro de actividad: si el puerto lo da, se leen los ultimos `EVENTOS_PREVIOS` al abrir y cada aviso de su observador
- * (con debounce) emite los Eventos nuevos; un fallo de lectura o una linea rota se ignoran.
+ * Registro de actividad: si el puerto lo da, el Workspace vivo compone un Registro de actividad vivo
+ * (`registro-de-actividad-vivo.ts`, con el mismo reloj y debounce) y lo emite tras el estado y el Historial.
  */
-import { combineIconProviders, crearLectorDeActividad, diferenciaVacia, esArchivoDeFuente, genericIcons, salidaDeInspectSchema, serializarIconos, workspaceIcons } from 'canonico';
-import type { ArchivoDeDev, ArchivosDeDev, DiferenciaDeDev, EstadoDeDev, EventoDeActividad, EventoDeDev, GeometriaCacheada, HistorialDeDev, Intencion, Issue, MotivoDeRechazo, OrigenDeDiferencia, TipoDeCambio } from 'canonico';
+import { combineIconProviders, diferenciaVacia, esArchivoDeFuente, genericIcons, salidaDeInspectSchema, serializarIconos, workspaceIcons } from 'canonico';
+import type { ArchivoDeDev, ArchivosDeDev, DiferenciaDeDev, EstadoDeDev, EventoDeDev, GeometriaCacheada, HistorialDeDev, Intencion, Issue, MotivoDeRechazo, OrigenDeDiferencia, TipoDeCambio } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { componentesDeTema } from 'tema';
 
@@ -36,6 +36,9 @@ import { hashDeContenido } from './ediciones';
 import { descripcionDeIntencion, descripcionDeTexto, deshacerSobre, historialVacio, historialVisible, registrar, rehacerSobre, saltar } from './historial-de-archivos';
 import type { HistorialDeArchivos, ResultadoDeRestaurar } from './historial-de-archivos';
 import type { Visto } from './intenciones';
+import { abrirRegistroDeActividadVivo } from './registro-de-actividad-vivo';
+import type { RegistroDeActividad } from './registro-de-actividad-vivo';
+import type { Reloj } from './reloj';
 import { abrirSesion } from './sesion';
 import type { InterfazDeComponente, OpcionesDeGeometria, Sesion } from './sesion';
 
@@ -51,22 +54,6 @@ export interface PuertoDelWorkspaceVivo extends PuertoDeWorkspace {
   observar(alCambiar: () => void): () => void;
   /** Registro de actividad (`.diagrams/actividad.jsonl`) con su observador propio; sin el, no hay actividad. */
   actividad?: RegistroDeActividad;
-}
-
-/** El watcher del Workspace ignora carpetas ocultas: el registro se observa aparte. */
-export interface RegistroDeActividad {
-  /** Texto entero del registro, o `undefined` si no existe. */
-  leer(): string | undefined;
-  /** Devuelve como dejar de observar. */
-  observar(alCambiar: () => void): () => void;
-}
-
-/** Eventos de actividad que `dev` reproduce al conectar. */
-export const EVENTOS_PREVIOS = 50;
-
-/** `programar` devuelve como cancelar. */
-export interface Reloj {
-  programar(fn: () => void, ms: number): () => void;
 }
 
 export interface OpcionesDelWorkspaceVivo {
@@ -135,8 +122,8 @@ export interface WorkspaceVivo {
   /** `inspect` sobre la ultima Sesion buena, con la salida normalizada como `inspect --json`; `undefined` si el Workspace nunca compilo. */
   consultar(consulta: Consulta): Respuesta | undefined;
   /**
-   * Instantanea de conexion: lo que recibe un cliente de `/eventos` al conectar, en orden: `estado`, `historial` y
-   * `actividad` con `previos: true` y los ultimos `EVENTOS_PREVIOS` Eventos leidos.
+   * Instantanea de conexion: lo que recibe un cliente de `/eventos` al conectar, en orden: `estado`, `historial` y la
+   * `actividad` con `previos: true` del Registro de actividad vivo.
    */
   conexion(): EventoDeDev[];
   /** Relee el puerto y recompila ya (sin esperar al debounce). */
@@ -316,28 +303,8 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     }, debounceMs);
   });
 
-  // Registro de actividad: lectura incremental tolerante (lineas rotas, archivo acortado o rotado), con su propio debounce.
-  const leerActividad = crearLectorDeActividad();
-  const leerRegistro = (): EventoDeActividad[] => {
-    try {
-      return leerActividad(puerto.actividad?.leer());
-    } catch {
-      return []; // el siguiente aviso reintenta
-    }
-  };
-  let actividad = leerRegistro().slice(-EVENTOS_PREVIOS);
-  let cancelarActividad: (() => void) | undefined;
-  const dejarDeObservarActividad =
-    puerto.actividad?.observar(() => {
-      cancelarActividad?.();
-      cancelarActividad = reloj.programar(() => {
-        cancelarActividad = undefined;
-        const nuevos = leerRegistro();
-        if (nuevos.length === 0) return;
-        actividad = [...actividad, ...nuevos].slice(-EVENTOS_PREVIOS);
-        emitir({ nombre: 'actividad', datos: { previos: false, eventos: nuevos } });
-      }, debounceMs);
-    }) ?? (() => undefined);
+  const actividad = abrirRegistroDeActividadVivo({ ...(puerto.actividad !== undefined && { registro: puerto.actividad }), reloj, debounceMs });
+  const dejarDeEscucharActividad = actividad.escuchar(emitir);
 
   let cola: Promise<unknown> = Promise.resolve();
   const enCola = <T>(tarea: () => Promise<T>): Promise<T> => {
@@ -457,7 +424,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     conexion: () => [
       { nombre: 'estado', datos: estado },
       { nombre: 'historial', datos: historialDeDev() },
-      { nombre: 'actividad', datos: { previos: true, eventos: [...actividad] } },
+      actividad.conexion(),
     ],
     recargar: () => recompilar(),
     codigo: () => ({ componentes: [...new Set((buena?.sesion.fuente?.themes ?? []).flatMap((tema) => componentesDeTema(tema)))].sort(), confiado, bundle: codigo.bundle }),
@@ -467,8 +434,8 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     cerrar() {
       cancelarPendiente();
       dejarDeObservar();
-      cancelarActividad?.();
-      dejarDeObservarActividad();
+      dejarDeEscucharActividad();
+      actividad.cerrar();
     },
   };
 }

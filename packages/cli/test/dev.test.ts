@@ -12,8 +12,11 @@ import { eventoDeActividad, eventosSobreFetch, lineasDeActividad } from 'estudio
 import type { ActividadDeDev } from 'estudio/protocolo';
 
 import { iniciarDev } from 'cli';
-import { leerWorkspace as leerReal } from '../src/workspace';
 import type { OpcionesDeDev, ServidorDev } from 'cli';
+import { puertoEnMemoria } from 'sesion';
+import type { PuertoDelWorkspaceVivo } from 'sesion';
+
+import { puertoDeDisco } from '../src/dev';
 
 const BASE = `specification {
   node servicio
@@ -33,18 +36,24 @@ view general {
 
 /** Workspace en memoria con un observador que se puede consultar. */
 function entorno(inicial: Record<string, string>) {
-  let avisar: (() => void) | undefined;
-  return {
-    leer: () => ({ ...inicial }),
-    observar: (_raiz: string, alCambiar: () => void) => {
-      avisar = alCambiar;
+  const base = puertoEnMemoria({ propios: inicial });
+  let observadores = 0;
+  const puerto: PuertoDelWorkspaceVivo = {
+    ...base,
+    observar(alCambiar) {
+      observadores += 1;
+      const dejar = base.observar(alCambiar);
       return () => {
-        avisar = undefined;
+        observadores -= 1;
+        dejar();
       };
     },
-    observando: () => avisar !== undefined,
   };
+  return { puerto, observando: () => observadores > 0 };
 }
+
+/** El disco real sin `fs.watch`: las pruebas no dependen del watcher del sistema. */
+const disco = (raiz: string) => puertoDeDisco(raiz, { observar: () => () => undefined });
 
 const carpetas: string[] = [];
 
@@ -74,7 +83,7 @@ const respuesta = async (res: Response) => ({ status: res.status, cuerpo: (await
 
 const abiertos: ServidorDev[] = [];
 async function arrancar(env: ReturnType<typeof entorno>, extra: Partial<OpcionesDeDev> = {}): Promise<ServidorDev> {
-  const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, ...extra, debounceMs: 5, puerto: 0 });
+  const servidor = await iniciarDev({ workspace: '/ws', puerto: env.puerto, ...extra, debounceMs: 5, puertoHttp: 0 });
   abiertos.push(servidor);
   return servidor;
 }
@@ -128,7 +137,7 @@ describe('dev: rutas', () => {
 
   it('sin inyectar, sirve el build real de estudio', async () => {
     const env = entorno({ 'main.dg': BASE });
-    const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, puerto: 0 });
+    const servidor = await iniciarDev({ workspace: '/ws', puerto: env.puerto, puertoHttp: 0 });
     abiertos.push(servidor);
 
     expect(await (await fetch(servidor.url)).text()).toContain('<script type="module" src="/_estudio/pagina.js">');
@@ -141,9 +150,8 @@ describe('dev: rutas', () => {
   });
 
   it('--theme-path (opcion temas) aporta Temas antes del Workspace', async () => {
-    const env = entorno({ 'main.dg': BASE });
     const temas = join(import.meta.dirname, 'fixtures', 'temas-extra');
-    const servidor = await iniciarDev({ workspace: '/ws', temas, leer: (raiz) => (raiz === '/ws' ? env.leer() : leerReal(raiz)), observar: env.observar, puerto: 0 });
+    const servidor = await iniciarDev({ workspace: workspaceEnDisco(), temas, compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
 
     const fuente = ((await (await fetch(`${servidor.url}api/estado`)).json()) as { fuente: { themes: { name: string }[] } }).fuente;
@@ -186,7 +194,7 @@ describe('dev: seguridad', () => {
 
   it('todo POST exige Origin propio (403) y JSON (415), y limita el cuerpo (413), antes de llegar a la API', async () => {
     const raiz = workspaceEnDisco();
-    const servidor = await iniciarDev({ workspace: raiz, observar: () => () => undefined, compilarCodigo: sinCodigo, puerto: 0 });
+    const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
     const cuerpo = { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 };
 
@@ -203,7 +211,7 @@ describe('dev: seguridad', () => {
 describe('dev: disco y Registro de actividad', () => {
   it('POST /api/edit escribe en el disco del Workspace y deshacer lo restaura', async () => {
     const raiz = workspaceEnDisco();
-    const servidor = await iniciarDev({ workspace: raiz, observar: () => () => undefined, compilarCodigo: sinCodigo, puerto: 0 });
+    const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
 
     expect((await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 })).status).toBe(200);
@@ -218,7 +226,7 @@ describe('dev: disco y Registro de actividad', () => {
     writeFileSync(join(raiz, 'main.dg'), BASE);
     mkdirSync(join(raiz, '.diagrams'));
     writeFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), lineasDeActividad(eventoDeActividad(1)));
-    const servidor = await iniciarDev({ workspace: raiz, observar: () => () => undefined, compilarCodigo: () => ({ componentes: {}, issues: [], bundle: 'return {};' }), puerto: 0 });
+    const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
     const fetchDelServidor: typeof fetch = (ruta, init) => fetch(new URL(String(ruta).replace(/^\//, ''), servidor.url), init);
 

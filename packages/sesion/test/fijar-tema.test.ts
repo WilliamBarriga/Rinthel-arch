@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { aplicarIntencion, hashDeContenido } from 'sesion';
+import { hashDeContenido } from 'sesion';
 import type { Intencion } from 'sesion';
+
+import { aplicarIntencion } from '../src/intenciones';
 
 const ws = (vista: string) => `specification { node servicio }
 model { servicio a  servicio b }

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { abrirSesion, aplicarAlWorkspace, aplicarIntencion, hashDeContenido } from 'sesion';
-import type { EdicionConHash, PuertoDeWorkspace } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, hashDeContenido } from 'sesion';
+
+import type { PuertoDeWorkspace } from '../src/aplicar';
+import type { EdicionConHash } from '../src/ediciones';
+import { aplicarIntencion } from '../src/intenciones';
 
 const base = (extra: string) => `specification { node servicio }
 model { servicio a  servicio b }

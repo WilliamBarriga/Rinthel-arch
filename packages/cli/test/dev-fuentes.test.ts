@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { iniciarDev } from 'cli';
 import type { ServidorDev } from 'cli';
 
+import { puertoDeDisco } from '../src/dev';
+
 const modelo = (fonts: string) => `specification { node servicio }
 model { servicio api "API" }
 theme t {
@@ -40,7 +42,7 @@ afterEach(async () => {
 });
 
 async function arrancar(): Promise<ServidorDev> {
-  servidor = await iniciarDev({ workspace: raiz, observar: () => () => undefined, puerto: 0 });
+  servidor = await iniciarDev({ workspace: raiz, puerto: puertoDeDisco(raiz, { observar: () => () => undefined }), puertoHttp: 0 });
   return servidor;
 }
 

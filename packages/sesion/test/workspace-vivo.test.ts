@@ -5,7 +5,8 @@ import type { DiferenciaDeDev, EstadoDeDev, EventoDeDev } from 'canonico';
 
 import { puertoEnMemoria } from '../src/puerto-vivo-en-memoria';
 import { abrirWorkspaceVivo } from '../src/workspace-vivo';
-import type { OpcionesDelWorkspaceVivo, Reloj, WorkspaceVivo } from '../src/workspace-vivo';
+import type { Reloj } from '../src/reloj';
+import type { OpcionesDelWorkspaceVivo, WorkspaceVivo } from '../src/workspace-vivo';
 
 /** Reloj falso: las tareas programadas solo corren al `avanzar`. */
 function relojFalso(): Reloj & { avanzar(ms: number): void; pendientes(): number } {
@@ -48,9 +49,6 @@ const alEvento = <N extends EventoDeDev['nombre']>(ws: WorkspaceVivo, nombre: N,
   ws.escuchar((evento) => {
     if (evento.nombre === nombre) fn(evento.datos as DatosDe<N>);
   });
-
-/** Los Eventos de actividad que recibiria un cliente al conectar. */
-const previos = (ws: WorkspaceVivo): EventoDeActividad[] => ws.conexion().flatMap((e) => (e.nombre === 'actividad' ? e.datos.eventos : []));
 
 /** Promesa del siguiente estado del flujo de eventos. */
 const siguiente = (ws: WorkspaceVivo): Promise<EstadoDeDev> =>
@@ -480,6 +478,56 @@ describe('Workspace vivo: Historial visible y salto (#193)', () => {
     expect(ws.historial().pasado.map((e) => e.id)).toEqual([1, 2, 3]);
   });
 
+  it('cada entrada nombra solo los archivos que cambio y lleva un id creciente que no se reutiliza al descartar el futuro', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE, 'otro.dg': '// otro\n' } });
+    const { ws } = await abrir(puerto);
+    await ws.editar(pin(1, 2));
+    await ws.editar(pin(3, 4));
+    await ws.editar(pin(5, 6));
+    await ws.deshacer();
+
+    await ws.editar(pin(7, 8));
+
+    expect(ws.historial().pasado.map(({ id, archivos }) => [id, archivos])).toEqual([
+      [1, ['main.dg']],
+      [2, ['main.dg']],
+      [4, ['main.dg']],
+    ]);
+    expect(ws.historial().futuro).toEqual([]);
+  });
+
+  it('saltar a una entrada del futuro rehace hasta ella y conserva lo que queda despues', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const { ws } = await abrir(puerto);
+    await ws.editar(pin(1, 2));
+    await ws.editar(pin(3, 4));
+    const conDos = puerto.texto('main.dg');
+    await ws.editar(pin(5, 6));
+    await ws.saltar(0);
+
+    expect((await ws.saltar(2)).ok).toBe(true);
+
+    expect(puerto.texto('main.dg')).toBe(conDos);
+    expect(ws.historial().pasado.map((e) => e.id)).toEqual([1, 2]);
+    expect(ws.historial().futuro.map((e) => e.id)).toEqual([3]);
+  });
+
+  it('saltar no escribe un archivo que cambia y vuelve en el camino', async () => {
+    const base = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const escritos: string[] = [];
+    const puerto = { ...base, escribir: (ruta: string, texto: string) => (escritos.push(ruta), base.escribir(ruta, texto)) };
+    const { ws } = await abrir(puerto as typeof base);
+    await ws.editar({ ediciones: [{ file: 'main.dg', range: { start: punto(1, 1), end: punto(1, 1) }, replacement: '// x\n' }] });
+    await ws.editar({ ediciones: [{ file: 'main.dg', range: { start: punto(1, 1), end: punto(2, 1) }, replacement: '' }] });
+    escritos.length = 0;
+
+    expect((await ws.saltar(0)).ok).toBe(true);
+
+    expect(escritos).toEqual([]);
+    expect(base.texto('main.dg')).toBe(BASE);
+    expect(ws.historial().futuro).toHaveLength(2);
+  });
+
   it('una escritura externa deja no alcanzables, con motivo, las entradas que restaurarian ese archivo; saltar a ellas es 409', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws, reloj } = await abrir(puerto);
@@ -620,61 +668,6 @@ describe('Workspace vivo: lectura de archivos para el editor', () => {
     const { ws } = await abrir(puerto);
     expect(ws.archivo('main.dg')).toMatchObject({ file: 'main.dg', texto: BASE, version: 0 });
     expect(ws.archivo('nada.dg')).toBeUndefined();
-  });
-});
-
-describe('Workspace vivo: Registro de actividad', () => {
-  const evento = (n: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
-    contractVersion: 1,
-    ts: `2026-11-19T10:00:${String(n % 60).padStart(2, '0')}.000Z`,
-    pid: n,
-    comando: 'validate',
-    args: [],
-    exitCode: 0,
-    duracionMs: 1,
-    ...extra,
-  });
-  const lineas = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
-
-  it('al abrir reproduce los ultimos 50 eventos del registro', async () => {
-    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, actividad: lineas(...Array.from({ length: 60 }, (_, i) => evento(i))) });
-    const { ws } = await abrir(puerto);
-    const leidos = previos(ws);
-    expect(leidos).toHaveLength(50);
-    expect(leidos[0]?.pid).toBe(10);
-    expect(leidos[49]?.pid).toBe(59);
-  });
-
-  it('empuja los eventos anexados tras el debounce, sin las lineas rotas', async () => {
-    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
-    const { ws, reloj } = await abrir(puerto);
-    const empujados: EventoDeActividad[][] = [];
-    alEvento(ws, 'actividad', ({ eventos }) => empujados.push(eventos));
-
-    puerto.anexarActividad(lineas(evento(1, { comando: 'edit', objetivo: { vista: 'v' } })));
-    puerto.anexarActividad('{esto no es json\n');
-    puerto.anexarActividad(lineas(evento(2)));
-    expect(empujados).toEqual([]);
-    reloj.avanzar(100);
-
-    expect(empujados).toEqual([[evento(1, { comando: 'edit', objetivo: { vista: 'v' } }), evento(2)]]);
-    expect(previos(ws).map((e) => e.pid)).toEqual([1, 2]);
-  });
-
-  it('un registro acortado o rotado se vuelve a leer desde el principio', async () => {
-    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, actividad: lineas(evento(1), evento(2), evento(3)) });
-    const { ws, reloj } = await abrir(puerto);
-    const empujados: number[] = [];
-    alEvento(ws, 'actividad', ({ eventos }) => empujados.push(...eventos.map((e) => e.pid)));
-
-    puerto.reescribirActividad(lineas(evento(4)));
-    reloj.avanzar(100);
-    puerto.reescribirActividad(undefined);
-    reloj.avanzar(100);
-    puerto.anexarActividad(lineas(evento(5)));
-    reloj.avanzar(100);
-
-    expect(empujados).toEqual([4, 5]);
   });
 });
 

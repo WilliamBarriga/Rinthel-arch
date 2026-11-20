@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
-import { abrirSesion, aplicarIntencion, crearHistorial, deshacer, editarEnHistorial, rehacer } from 'sesion';
+import { abrirSesion, crearHistorial, deshacer, editarEnHistorial } from 'sesion';
+
+import { aplicarIntencion, rehacer } from '../src/intenciones';
 
 const modelo = `specification { node servicio }
 model {

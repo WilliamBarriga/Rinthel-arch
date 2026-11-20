@@ -57,13 +57,9 @@ export async function devEnMemoria({
   escrituraRota?: string;
   ahora?: () => number;
 }): Promise<DevEnMemoria> {
-  const puerto = puertoEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }) });
+  const puerto = puertoEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }), ...(escrituraRota !== undefined && { escrituraRota }) });
   // Sin watcher: las escrituras propias recompilan al terminar y `editarFuera` pide la recompilacion.
-  const escribir: typeof puerto.escribir = (ruta, texto) => {
-    if (escrituraRota !== undefined) throw new Error(escrituraRota);
-    puerto.escribir(ruta, texto);
-  };
-  const vivo = await abrirWorkspaceVivo({ puerto: { ...puerto, escribir, observar: () => () => undefined }, raiz: RAIZ, reloj: relojInmediato, ahora });
+  const vivo = await abrirWorkspaceVivo({ puerto: { ...puerto, observar: () => () => undefined }, raiz: RAIZ, reloj: relojInmediato, ahora });
 
   const oyentes = new Set<(nombre: string, datos: string) => void>();
   const dejarDeEscuchar = vivo.escuchar(({ nombre, datos }) => {
