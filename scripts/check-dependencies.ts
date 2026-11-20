@@ -3,7 +3,8 @@
  * las violaciones ordenadas por paquete, archivo, regla y mensaje; vacio es verde. Solo lee; ignora comentarios.
  * Reglas:
  * - `cadena`: el paquete esta en `CADENA`. `orden`: solo importa de paquetes anteriores en `CADENA`.
- * - `interno`: de otro paquete solo se importa su nombre o lo que declara `exports`; un import relativo no sale del paquete.
+ * - `interno`: de otro paquete solo se importa su nombre o lo que declara `exports`; un import relativo no sale del paquete,
+ *   salvo desde las pruebas hacia las ayudas compartidas de `AYUDAS_DE_PRUEBA`.
  * - `declaracion`: todo paquete del workspace importado esta en `dependencies` o `peerDependencies`.
  * - `exports`: la superficie publica es la entrada `.` mas, solo en los paquetes de `SUBPATHS_PERMITIDOS`, esos subpaths.
  * - `pureza`: el codigo fuente de `NUCLEO` no importa modulos de Node ni usa reloj, azar, `process`, red ni DOM.
@@ -31,6 +32,9 @@ export const SUBPATHS_PERMITIDOS: Readonly<Record<string, readonly string[]>> = 
  * Fuera de ellos, cada nombre se importa del paquete dueno, sin segundos caminos.
  */
 export const REEXPORTES_PERMITIDOS: readonly string[] = ['packages/estudio/src/protocolo.ts', 'packages/shell/src/index.ts'];
+
+/** Carpeta raiz (relativa al repo) de las ayudas de prueba compartidas entre paquetes; solo la importan pruebas. */
+export const AYUDAS_DE_PRUEBA = 'tests/ayudas';
 
 /** Nucleo puro: sin I/O, sin reloj, sin estado global. */
 export const NUCLEO = ['canonico', 'tema', 'dsl', 'sesion', 'render'] as const;
@@ -175,7 +179,8 @@ function revisarArchivo(
     if (especificador.startsWith('.')) {
       const destino = resolve(dirname(archivo), especificador);
       const dueno = paquetes.find((otro) => dentroDe(destino, otro.carpeta));
-      if (dueno === undefined || dueno.nombre !== paquete.nombre) {
+      const ayudaDePrueba = esDeTest(relativo) && dentroDe(destino, join(raiz, AYUDAS_DE_PRUEBA));
+      if (!ayudaDePrueba && (dueno === undefined || dueno.nombre !== paquete.nombre)) {
         violaciones.push({
           paquete: nombre,
           archivo: relativo,

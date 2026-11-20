@@ -191,6 +191,21 @@ describe('revisarWorkspace', () => {
     expect(revisarWorkspace(raiz)).toEqual([]);
   });
 
+  it('las pruebas de un paquete importan las ayudas compartidas de tests/ayudas; el codigo fuente no', () => {
+    const raiz = crearWorkspace({
+      'tests/ayudas/lienzo.ts': 'export const ayuda = 1;\n',
+      'packages/shell/package.json': manifiesto('shell'),
+      'packages/shell/src/index.ts': "import { ayuda } from '../../../tests/ayudas/lienzo';\nexport const propio = ayuda;\n",
+      'packages/shell/test/ayudas.ts': "import { ayuda } from '../../../tests/ayudas/lienzo';\nexport const otra = ayuda;\n",
+      'packages/shell/test/otra.test.ts': "import { x } from '../../../tests/dependencias.test';\nexport const y = x;\n",
+    });
+
+    expect(revisarWorkspace(raiz).map((v) => [v.archivo, v.regla])).toEqual([
+      ['packages/shell/src/index.ts', 'interno'],
+      ['packages/shell/test/otra.test.ts', 'interno'],
+    ]);
+  });
+
   it('falla si un paquete reexporta nombres de otro paquete, tambien en bloques de varias lineas', () => {
     const raiz = crearWorkspace({
       'packages/canonico/package.json': manifiesto('canonico'),
