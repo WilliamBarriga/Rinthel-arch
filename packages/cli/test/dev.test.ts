@@ -1,5 +1,8 @@
-/** Humo del enrutador HTTP de `dev`; el comportamiento del estado vivo se prueba en `sesion/test/workspace-vivo.test.ts`. */
-import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+/**
+ * Lo propio del adaptador HTTP de `dev`: estaticos, seguridad del transporte (Host, Origin, content-type, tamano), disco y
+ * cierre. Las rutas `/api/*`, sus bordes y los eventos SSE los cubre `probarContratoDeDev` (`contrato-dev.test.ts`).
+ */
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -28,32 +31,17 @@ view general {
 }
 `;
 
-/** Workspace en memoria con un observador que se dispara a mano. */
+/** Workspace en memoria con un observador que se puede consultar. */
 function entorno(inicial: Record<string, string>) {
-  let archivos = { ...inicial };
   let avisar: (() => void) | undefined;
   return {
-    leer: () => ({ ...archivos }),
+    leer: () => ({ ...inicial }),
     observar: (_raiz: string, alCambiar: () => void) => {
       avisar = alCambiar;
       return () => {
         avisar = undefined;
       };
     },
-    /** Cambio externo: avisa al observador. */
-    escribir(ruta: string, texto: string) {
-      archivos = { ...archivos, [ruta]: texto };
-      avisar?.();
-    },
-    /** Escritura de `dev`: no avisa al observador. */
-    escribirEdicion: (_raiz: string, ruta: string, texto: string) => {
-      archivos = { ...archivos, [ruta]: texto };
-    },
-    borrar: (_raiz: string, ruta: string) => {
-      const { [ruta]: _quitado, ...resto } = archivos;
-      archivos = resto;
-    },
-    texto: (ruta: string) => archivos[ruta],
     observando: () => avisar !== undefined,
   };
 }
@@ -72,17 +60,21 @@ function estudioFalso() {
   return { estudio: () => ({ indice: ruta('index.html'), archivos: { 'pagina.js': ruta('pagina.js'), 'estilo.css': ruta('estilo.css'), 'ausente.js': ruta('ausente.js') } }), escribir };
 }
 
-interface Estado {
-  version: number;
-  cambio?: string;
-  fuente?: { model: { nodes: { id: string }[] } };
-  issues: unknown[];
-  vistas: string[];
+/** Workspace real en una carpeta temporal, con `main.dg` = `BASE`. */
+function workspaceEnDisco(): string {
+  const raiz = mkdtempSync(join(tmpdir(), 'rinthel-dev-'));
+  carpetas.push(raiz);
+  writeFileSync(join(raiz, 'main.dg'), BASE);
+  return raiz;
 }
+
+const sinCodigo: OpcionesDeDev['compilarCodigo'] = () => ({ componentes: {}, issues: [], bundle: 'return {};' });
+
+const respuesta = async (res: Response) => ({ status: res.status, cuerpo: (await res.json()) as unknown });
 
 const abiertos: ServidorDev[] = [];
 async function arrancar(env: ReturnType<typeof entorno>, extra: Partial<OpcionesDeDev> = {}): Promise<ServidorDev> {
-  const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, escribir: env.escribirEdicion, borrar: env.borrar, ...extra, debounceMs: 5, puerto: 0 });
+  const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, ...extra, debounceMs: 5, puerto: 0 });
   abiertos.push(servidor);
   return servidor;
 }
@@ -91,36 +83,9 @@ afterEach(async () => {
   for (const carpeta of carpetas.splice(0)) rmSync(carpeta, { recursive: true, force: true });
 });
 
-const estado = async (servidor: ServidorDev): Promise<Estado> => (await fetch(`${servidor.url}api/estado`)).json() as Promise<Estado>;
 const JSON_ = { 'content-type': 'application/json' };
 const post = (servidor: ServidorDev, ruta: string, cuerpo: unknown = {}, cabeceras: Record<string, string> = JSON_) =>
   fetch(`${servidor.url}${ruta}`, { method: 'POST', headers: cabeceras, body: typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo) });
-
-/** Lee eventos SSE hasta que `basta` los acepte; devuelve los datos recibidos. */
-async function eventos(servidor: ServidorDev, basta: (datos: Estado[]) => boolean, alAbrir?: () => void): Promise<Estado[]> {
-  const respuesta = await fetch(`${servidor.url}eventos`);
-  expect(respuesta.headers.get('content-type')).toContain('text/event-stream');
-  const lector = respuesta.body!.getReader();
-  const decodificador = new TextDecoder();
-  const datos: Estado[] = [];
-  let buffer = '';
-  alAbrir?.();
-  while (!basta(datos)) {
-    const { value, done } = await lector.read();
-    if (done) break;
-    buffer += decodificador.decode(value);
-    const bloques = buffer.split('\n\n');
-    buffer = bloques.pop() ?? '';
-    for (const bloque of bloques) {
-      // El estado viaja como `event: estado`; otros eventos (actividad, diferencia, historial) no cuentan aqui.
-      const lineas = bloque.split('\n');
-      const linea = lineas.find((l) => l.startsWith('data: '));
-      if (linea !== undefined && lineas.includes('event: estado')) datos.push(JSON.parse(linea.slice(6)) as Estado);
-    }
-  }
-  await lector.cancel();
-  return datos;
-}
 
 describe('dev: rutas', () => {
   it('escucha solo en 127.0.0.1 y sirve / y /_estudio/* del estudio inyectado, sin cache', async () => {
@@ -161,34 +126,6 @@ describe('dev: rutas', () => {
     expect((await fetch(`${servidor.url}app.js`)).status).toBe(404);
   });
 
-  it('sirve el estado y la Geometria de una Vista; una Vista inexistente es 404', async () => {
-    const servidor = await arrancar(entorno({ 'main.dg': BASE }));
-
-    const inicial = await estado(servidor);
-    expect(inicial).toMatchObject({ version: 0, vistas: ['general'], issues: [] });
-    const vista = (await (await fetch(`${servidor.url}api/vista/general`)).json()) as { view: string; geometry: { nodes: Record<string, unknown> } };
-    expect(vista.view).toBe('general');
-    expect(Object.keys(vista.geometry.nodes).sort()).toEqual(['api', 'db']);
-    expect((await fetch(`${servidor.url}api/vista/no-existe`)).status).toBe(404);
-  });
-
-  it('GET /api/inspect/<comando>/<argumento> da el JSON de inspect --json; lo que no existe es 404 con los ids cercanos', async () => {
-    const servidor = await arrancar(entorno({ 'main.dg': BASE }));
-
-    const nodo = await fetch(`${servidor.url}api/inspect/nodo/api`);
-    expect(nodo.status).toBe(200);
-    expect(await nodo.json()).toMatchObject({ comando: 'nodo', nodo: { id: 'api', title: 'API', file: 'main.dg' }, vistas: [{ id: 'general' }] });
-    const buscar = (await (await fetch(`${servidor.url}api/inspect/buscar/base`)).json()) as { resultados: { id: string }[] };
-    expect(buscar.resultados.map((r) => r.id)).toEqual(['db']);
-    const tema = await fetch(`${servidor.url}api/inspect/tema/neutral?tipo=servicio`);
-    expect(await tema.json()).toMatchObject({ comando: 'tema', tema: { name: 'neutral', tipo: 'servicio' } });
-
-    const ausente = await fetch(`${servidor.url}api/inspect/nodo/apj`);
-    expect(ausente.status).toBe(404);
-    expect(await ausente.json()).toEqual({ ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] });
-    expect((await fetch(`${servidor.url}api/inspect/otro/x`)).status).toBe(404);
-  });
-
   it('sin inyectar, sirve el build real de estudio', async () => {
     const env = entorno({ 'main.dg': BASE });
     const servidor = await iniciarDev({ workspace: '/ws', leer: env.leer, observar: env.observar, puerto: 0 });
@@ -209,7 +146,7 @@ describe('dev: rutas', () => {
     const servidor = await iniciarDev({ workspace: '/ws', temas, leer: (raiz) => (raiz === '/ws' ? env.leer() : leerReal(raiz)), observar: env.observar, puerto: 0 });
     abiertos.push(servidor);
 
-    const fuente = (await estado(servidor)).fuente as unknown as { themes: { name: string }[] };
+    const fuente = ((await (await fetch(`${servidor.url}api/estado`)).json()) as { fuente: { themes: { name: string }[] } }).fuente;
     expect(fuente.themes.map(({ name }) => name)).toContain('corporativo');
   });
 
@@ -222,23 +159,6 @@ describe('dev: rutas', () => {
 
     expect(env.observando()).toBe(false);
     await expect(fetch(servidor.url)).rejects.toThrow();
-  });
-});
-
-describe('dev: SSE', () => {
-  it('envia el estado al conectar y el nuevo, con su cambio, tras un cambio en disco', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env);
-
-    const recibidos = await eventos(
-      servidor,
-      (datos) => datos.length >= 2,
-      () => env.escribir('main.dg', BASE.replace('api -> db', 'servicio cache "Cache"\n  api -> db')),
-    );
-
-    expect(recibidos[0]!.version).toBe(0);
-    expect(recibidos[1]).toMatchObject({ version: 1, cambio: 'estructura' });
-    expect(recibidos[1]!.fuente?.model.nodes.map((n) => n.id)).toContain('cache');
   });
 });
 
@@ -264,127 +184,34 @@ describe('dev: seguridad', () => {
     expect(await conHost('127.0.0.1')).toBe(403);
   });
 
-  it('las rutas POST rechazan Origin ajeno (403), content-type ajeno (415), JSON invalido (400) y otros metodos (405)', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env);
-    const cuerpo = { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 };
+  it('todo POST exige Origin propio (403) y JSON (415), y limita el cuerpo (413), antes de llegar a la API', async () => {
+    const raiz = workspaceEnDisco();
+    const servidor = await iniciarDev({ workspace: raiz, observar: () => () => undefined, compilarCodigo: sinCodigo, puerto: 0 });
+    abiertos.push(servidor);
+    const cuerpo = { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 };
 
-    for (const ruta of ['api/edit', 'api/deshacer', 'api/rehacer', 'api/confiar']) {
-      expect((await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' })).status).toBe(403);
-      expect((await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' })).status).toBe(415);
-      const roto = await post(servidor, ruta, 'no es json');
-      expect(roto.status).toBe(400);
-      expect(await roto.json()).toEqual({ ok: false, mensaje: 'JSON invalido' });
-      const get = await fetch(`${servidor.url}${ruta}`);
-      expect(get.status).toBe(405);
-      expect(get.headers.get('allow')).toBe('POST');
+    for (const ruta of ['api/edit', 'api/deshacer', 'api/rehacer', 'api/historial/saltar', 'api/confiar', 'api/nada']) {
+      expect(await respuesta(await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' }))).toEqual({ status: 403, cuerpo: { ok: false, mensaje: 'Origen no permitido' } });
+      expect(await respuesta(await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' }))).toEqual({ status: 415, cuerpo: { ok: false, mensaje: 'Se esperaba application/json' } });
     }
-    expect(env.texto('main.dg')).toBe(BASE);
+    expect(await respuesta(await post(servidor, 'api/edit', { ...cuerpo, relleno: 'x'.repeat(70 * 1024) }))).toEqual({ status: 413, cuerpo: { ok: false, mensaje: 'Cuerpo demasiado grande' } });
+    expect((await post(servidor, 'api/edit', cuerpo, { ...JSON_, origin: servidor.url.replace(/\/$/, '') })).status).toBe(200);
+    expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toContain('node api { pin 1,2 }');
   });
 });
 
-describe('dev: edicion, deshacer y rehacer (ADR 0005, ADR 0007)', () => {
-  it('POST /api/edit aplica la Intencion con la version vista y responde la version nueva', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env);
-
-    const res = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
-
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true, version: 1 });
-    expect(env.texto('main.dg')).toContain('node api { pin 1,2 }');
-    expect((await estado(servidor)).version).toBe(1);
-  });
-
-  it('POST /api/edit valida la Intencion o las ediciones con el esquema de canonico (400); /api/pin ya no existe', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env);
-
-    for (const cuerpo of [{ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: '10', y: 2 }, { tipo: 'otra', vista: 'general' }, { vista: 'general', nodo: 'api', x: 1, y: 2 }]) {
-      const res = await post(servidor, 'api/edit', cuerpo);
-      expect(res.status).toBe(400);
-      expect(await res.json()).toEqual({ ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... } o { ediciones, version, descripcion? }' });
-    }
-    expect((await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 10, y: 20, version: 0 })).status).toBe(404);
-    expect(env.texto('main.dg')).toBe(BASE);
-  });
-
-  it('traduce los rechazos con la tabla unica: 409 texto desactualizado, 422 el resto', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env);
-    env.escribirEdicion('/ws', 'main.dg', `${BASE}\n`);
-
-    const viejo = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
-    expect(viejo.status).toBe(409);
-    expect(await viejo.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
-    const olvidada = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 99 });
-    expect(olvidada.status).toBe(409);
-    const vista = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'nada', nodo: 'api', x: 1, y: 2 });
-    expect(vista.status).toBe(422);
-    expect(await vista.json()).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
-    expect(env.texto('main.dg')).toBe(`${BASE}\n`);
-  });
-
-  it('no escribe archivos de --theme-path: 422 archivo-desconocido', async () => {
-    const [modelo, vistas] = BASE.split('\nview general');
-    const escritos: string[] = [];
-    const servidor = await iniciarDev({
-      workspace: '/ws',
-      temas: '/temas',
-      leer: (raiz): Record<string, string> => (raiz === '/temas' ? { 'vistas.dg': `view general${vistas as string}` } : { 'main.dg': modelo as string }),
-      observar: () => () => undefined,
-      escribir: (_raiz, ruta) => void escritos.push(ruta),
-      puerto: 0,
-    });
+describe('dev: disco y Registro de actividad', () => {
+  it('POST /api/edit escribe en el disco del Workspace y deshacer lo restaura', async () => {
+    const raiz = workspaceEnDisco();
+    const servidor = await iniciarDev({ workspace: raiz, observar: () => () => undefined, compilarCodigo: sinCodigo, puerto: 0 });
     abiertos.push(servidor);
 
-    const res = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
-
-    expect(res.status).toBe(422);
-    expect(await res.json()).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'vistas.dg' });
-    expect(escritos).toEqual([]);
+    expect((await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 })).status).toBe(200);
+    expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toContain('node api { pin 1,2 }');
+    expect((await post(servidor, 'api/deshacer')).status).toBe(200);
+    expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toBe(BASE);
   });
 
-  it('deshacer y rehacer: 200 con la version, 422 sin nada que hacer, 409 tras una edicion externa', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env);
-    expect(await (await post(servidor, 'api/deshacer')).json()).toMatchObject({ ok: false, motivo: 'nada-que-deshacer' });
-    const sinRehacer = await post(servidor, 'api/rehacer');
-    expect(sinRehacer.status).toBe(422);
-    expect(await sinRehacer.json()).toMatchObject({ ok: false, motivo: 'nada-que-rehacer' });
-
-    await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
-    const conPin = env.texto('main.dg');
-    const deshecho = await post(servidor, 'api/deshacer');
-    expect(deshecho.status).toBe(200);
-    expect(await deshecho.json()).toEqual({ ok: true, version: 2 });
-    expect(env.texto('main.dg')).toBe(BASE);
-    expect((await post(servidor, 'api/rehacer')).status).toBe(200);
-    expect(env.texto('main.dg')).toBe(conPin);
-
-    env.escribirEdicion('/ws', 'main.dg', `${conPin!}\n// a mano\n`);
-    const externo = await post(servidor, 'api/deshacer');
-    expect(externo.status).toBe(409);
-    expect(await externo.json()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
-  });
-
-  it('un fallo de escritura responde 500 y no deja el texto a medias', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env, {
-      escribir: () => {
-        throw new Error('disco lleno');
-      },
-    });
-
-    const res = await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 0 });
-
-    expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ ok: false, mensaje: 'disco lleno' });
-    expect(env.texto('main.dg')).toBe(BASE);
-  });
-});
-
-describe('dev: Registro de actividad en disco', () => {
   it('observa .diagrams/actividad.jsonl aparte del Workspace: reproduce lo previo al conectar y empuja lo anexado', async () => {
     const raiz = mkdtempSync(join(tmpdir(), 'rinthel-dev-actividad-'));
     carpetas.push(raiz);

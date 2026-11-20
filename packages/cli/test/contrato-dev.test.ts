@@ -4,13 +4,16 @@ import { eventosSobreFetch, probarContratoDeDev } from 'estudio/contrato';
 import { iniciarDev } from 'cli';
 import { puertoEnMemoria } from 'sesion';
 
-probarContratoDeDev(async ({ propios, temas, actividad }) => {
+probarContratoDeDev(async ({ propios, temas, actividad, escrituraRota }) => {
   const puerto = puertoEnMemoria({ propios, ...(actividad !== undefined && { actividad }) });
   const servidor = await iniciarDev({
     workspace: '/ws',
     ...(temas !== undefined && { temas: '/temas' }),
     leer: (raiz) => (raiz === '/temas' ? (temas ?? {}) : puerto.leer().propios),
-    escribir: (_raiz, ruta, texto) => puerto.escribir(ruta, texto),
+    escribir: (_raiz, ruta, texto) => {
+      if (escrituraRota !== undefined) throw new Error(escrituraRota);
+      puerto.escribir(ruta, texto);
+    },
     borrar: (_raiz, ruta) => puerto.borrar(ruta),
     observar: (_raiz, alCambiar) => puerto.observar(alCambiar),
     actividad: () => puerto.actividad,

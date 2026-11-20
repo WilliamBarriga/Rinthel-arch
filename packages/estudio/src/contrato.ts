@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { EventoDeActividad } from 'canonico';
 
+import { codigoDeDevSchema, confianzaDeDevSchema, errorDeDevSchema } from './protocolo';
 import type { ActividadDeDev, DiferenciaDeDev, EstadoDeDev, HistorialDeDev } from './protocolo';
 import { crearLectorSse } from './sse';
 
@@ -33,8 +34,18 @@ export interface DevDePrueba {
   cerrar(): Promise<void>;
 }
 
-/** `temas` son los de `--theme-path` (se compilan pero no se escriben); `actividad`, el texto inicial de `.diagrams/actividad.jsonl` (sin el, el registro no existe). */
-export type CrearDev = (contenido: { propios: ArchivosDelWorkspace; temas?: ArchivosDelWorkspace; actividad?: string }) => Promise<DevDePrueba>;
+/**
+ * `temas` son los de `--theme-path` (se compilan pero no se escriben); `actividad`, el texto inicial de
+ * `.diagrams/actividad.jsonl` (sin el, el registro no existe); `escrituraRota`, si esta, hace que toda escritura del
+ * puerto lance un `Error` con ese mensaje (un fallo de I/O).
+ */
+export interface ContenidoDeDevDePrueba {
+  propios: ArchivosDelWorkspace;
+  temas?: ArchivosDelWorkspace;
+  actividad?: string;
+  escrituraRota?: string;
+}
+export type CrearDev = (contenido: ContenidoDeDevDePrueba) => Promise<DevDePrueba>;
 
 /** `eventos` sobre un `fetch` que entrega el cuerpo en streaming (Node 18+); la pagina usa `EventSource`. */
 export function eventosSobreFetch(fetchFn: typeof fetch): DevDePrueba['eventos'] {
@@ -181,7 +192,7 @@ export const eventoDeActividad = (pid: number, extra: Partial<EventoDeActividad>
 export const lineasDeActividad = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
 
 export function probarContratoDeDev(crear: CrearDev): void {
-  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, extra: { temas?: ArchivosDelWorkspace; actividad?: string } = {}): Promise<T> => {
+  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, extra: Omit<ContenidoDeDevDePrueba, 'propios'> = {}): Promise<T> => {
     const dev = await crear({ propios, ...extra });
     try {
       return await prueba(dev);
@@ -384,6 +395,46 @@ export function probarContratoDeDev(crear: CrearDev): void {
 
         await esperarEstado(dev, (e) => e.fuente?.model.nodes.some((n) => n.title === 'Otra') === true, () => dev.editarFuera('main.dg', String(conDos).replace('"API"', '"Otra"')));
         expect(await post(dev, '/api/historial/saltar', { id: 1 })).toMatchObject({ status: 409, cuerpo: { ok: false, motivo: 'hash-desactualizado' } });
+      });
+    });
+
+    it('bordes de /api/*: ruta desconocida 404, metodo ajeno 405 con allow, JSON invalido 400; todos con { ok: false, mensaje }', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const error = async (res: Response) => ({ status: res.status, allow: res.headers.get('allow'), cuerpo: errorDeDevSchema.parse(await res.json()) });
+        const conJson = (ruta: string, cuerpo: string) => dev.fetch(ruta, { method: 'POST', headers: { 'content-type': 'application/json' }, body: cuerpo });
+
+        expect(await error(await dev.fetch('/api/nada'))).toMatchObject({ status: 404 });
+        expect(await error(await conJson('/api/nada', '{}'))).toMatchObject({ status: 404 });
+        for (const ruta of ['/api/edit', '/api/deshacer', '/api/rehacer', '/api/historial/saltar', '/api/confiar']) {
+          expect(await error(await dev.fetch(ruta))).toMatchObject({ status: 405, allow: 'POST' });
+          expect(await error(await conJson(ruta, 'no es json'))).toEqual({ status: 400, allow: null, cuerpo: { ok: false, mensaje: 'JSON invalido' } });
+        }
+        for (const ruta of ['/api/estado', '/api/archivos', '/api/codigo', '/api/vista/datos', '/api/inspect/nodo/api', '/api/archivo/main.dg']) {
+          expect(await error(await conJson(ruta, '{}'))).toMatchObject({ status: 405, allow: 'GET' });
+        }
+        expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(DSL);
+      });
+    });
+
+    it('un fallo de I/O del puerto al escribir es 500 con el mensaje del fallo', async () => {
+      await con(
+        { 'main.dg': DSL },
+        async (dev) => {
+          const res = await dev.fetch('/api/edit', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }) });
+          expect({ status: res.status, cuerpo: errorDeDevSchema.parse(await res.json()) }).toEqual({ status: 500, cuerpo: { ok: false, mensaje: 'disco lleno' } });
+        },
+        { escrituraRota: 'disco lleno' },
+      );
+    });
+
+    it('GET /api/codigo dice si hay Temas con codigo y si ya se confia; POST /api/confiar lo confirma', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const codigo = async () => codigoDeDevSchema.parse((await json(dev, '/api/codigo')).cuerpo);
+        expect(await codigo()).toEqual({ temaConCodigo: false, componentes: [], confiado: false });
+        const confiar = await post(dev, '/api/confiar', {});
+        expect(confiar.status).toBe(200);
+        expect(confianzaDeDevSchema.parse(confiar.cuerpo)).toEqual({ ok: true });
+        expect(await codigo()).toEqual({ temaConCodigo: false, componentes: [], confiado: true });
       });
     });
 

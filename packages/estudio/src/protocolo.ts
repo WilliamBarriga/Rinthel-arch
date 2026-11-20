@@ -1,7 +1,7 @@
 /**
  * `estudio/protocolo`: contrato del protocolo de `dev` entre el servidor (`cli`) y la pagina (ADR 0004, 0007).
  * Interfaz: reexporta de `canonico` (`dev.ts`) las rutas (`RUTAS_DE_DEV`), los esquemas de lo que produce el Workspace
- * vivo (`estadoDeDevSchema`, `diferenciaDeDevSchema`, `historialDeDevSchema`, archivos) y de las peticiones, y suma lo que
+ * vivo (`estadoDeDevSchema`, `diferenciaDeDevSchema`, `historialDeDevSchema`, archivos, codigo, errores) y de las peticiones, y suma lo que
  * solo conoce la pagina: los eventos SSE con nombre, `actividadDeDevSchema` y el 404 de `inspect`. La pagina valida con
  * los esquemas; `cli` importa de aqui solo tipos (los valores los toma de `canonico`).
  * Invariantes: sin DOM ni Node; solo depende de `canonico` y `zod`, para que importarlo no arrastre la app de navegador.
@@ -12,10 +12,13 @@ import { z } from 'zod';
 export {
   archivoDeDevSchema,
   archivosDeDevSchema,
+  codigoDeDevSchema,
   COMANDOS_DE_INSPECT,
+  confianzaDeDevSchema,
   diferenciaDeDevSchema,
   elementoDeDiferenciaSchema,
   entradaDelHistorialDeDevSchema,
+  errorDeDevSchema,
   estadoDeDevSchema,
   historialDeDevSchema,
   INICIO_DEL_HISTORIAL_DE_DEV,
@@ -31,10 +34,12 @@ export {
 export type {
   ArchivoDeDev,
   ArchivosDeDev,
+  CodigoDeDev,
   ComandoDeInspect,
   DiferenciaDeDev,
   ElementoDeDiferencia as ElementoDeDiferenciaDeDev,
   EntradaDelHistorialDeDev,
+  ErrorDeDev,
   EstadoDeDev,
   HistorialDeDev,
   IssueDeDev,
