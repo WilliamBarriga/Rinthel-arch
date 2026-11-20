@@ -225,7 +225,7 @@ function recuperarPerdidos(vista: EditorView, perdidos: readonly FragmentoPerdid
 
 /**
  * Un `fix` del mismo archivo entra al buffer (y se guarda con el resto); uno de otro archivo va directo a `dev` con la
- * misma logica que el boton del panel Issues (`aplicarFixes`: version vista, 409 con reintento, aviso con motivo).
+ * misma logica que el boton del panel Issues (`aplicarFixes`: version vigente, 409 con reintento, aviso con motivo).
  */
 function aplicarFix(vista: EditorView, file: string, fix: FixDeIssue, issue: IssueDeDev, estudio: ContextoDelEstudio): void {
   if (fix.file === file && !vista.state.readOnly) {

@@ -11,16 +11,10 @@ import { archivoDeDevSchema, archivosDeDevSchema, estadoDeDevSchema, inspectNoEn
 import type { ArchivoDeDev, ArchivosDeDev, ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from '../src/protocolo';
 
 /**
- * `desactualizado` es el 409 (`hash-desactualizado`): hay que recargar y avisar. `version` (si `dev` la da) es la del
- * estado tras la escritura; `motivo` y `file`, los del rechazo.
+ * `desactualizado` es el 409 (`hash-desactualizado`; lo resuelve `escritura/escritura.ts`). `version` (si `dev` la da)
+ * es la del estado tras la escritura; `motivo` y `file`, los del rechazo.
  */
 export type ResultadoDeEnvio = { ok: true; version?: number } | { ok: false; desactualizado: boolean; mensaje: string; motivo?: string; file?: string };
-
-/** Si el texto estaba desactualizado (409) avisa y recarga el estado; si no, avisa `fallo: mensaje`. */
-export async function avisarRechazo(r: Extract<ResultadoDeEnvio, { ok: false }>, fallo: string, { avisar, recargar }: { avisar: (texto: string) => void; recargar: () => Promise<void> }): Promise<void> {
-  avisar(r.desactualizado ? `El archivo cambio en disco; se recargo la Vista (${r.mensaje})` : `${fallo}: ${r.mensaje}`);
-  if (r.desactualizado) await recargar().catch(() => undefined);
-}
 
 /** `error` solo si llego malformada. */
 export type LecturaDeGeometria = { ok: true; geometria: GeometriaCacheada } | { ok: false; error?: string };

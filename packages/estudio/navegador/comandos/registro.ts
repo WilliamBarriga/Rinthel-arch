@@ -5,7 +5,6 @@
  * recibe el contexto del estudio (`useEstudio()`). Las reglas de teclas y ambitos estan en `teclas.ts`.
  */
 import { actividadDelCliente } from '../agente/actividad';
-import { moverElHistorial } from '../historial/acciones';
 import type { ContextoDelEstudio } from '../marco/contexto';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS } from '../marco/pestanas';
 import { sitioDeSalida } from '../sitio';
@@ -19,7 +18,7 @@ export interface Comando extends DeclaracionDeTeclas {
   ejecutar(estudio: ContextoDelEstudio): void | Promise<void>;
 }
 
-const historial = (accion: 'deshacer' | 'rehacer') => (e: ContextoDelEstudio) => moverElHistorial(e, accion);
+const historial = (accion: 'deshacer' | 'rehacer') => async (e: ContextoDelEstudio): Promise<void> => void (await e.escribir({ historial: accion }));
 
 /** Abre Codigo y, cuando `inspect` responde, salta al bloque del Nodo o de la Vista `id`. */
 export async function abrirCodigoEnBloque(e: ContextoDelEstudio, comando: 'nodo' | 'vista', id: string): Promise<void> {
