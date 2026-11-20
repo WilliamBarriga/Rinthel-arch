@@ -215,6 +215,19 @@ describe('editor del DSL: issues y solo lectura', () => {
     expect(caja.getAttribute('aria-label')).toBe('Codigo de tema.dg (solo lectura)');
     expect(vista.state.readOnly).toBe(true);
   });
+
+  it('un archivo de --theme-path abierto en solo lectura recibe las escrituras externas', async () => {
+    const { posts, envolverFetch } = anotarPosts();
+    const { dev } = await montarEstudio({ 'main.dg': DSL }, { temas: { 'tema.dg': 'theme claro extends neutral {}\n' }, envolverFetch });
+    await pulsarCodigo();
+    fireEvent.change(await screen.findByRole('combobox', { name: 'Archivo' }), { target: { value: 'tema.dg' } });
+    const { vista } = await editorDe('tema.dg');
+
+    dev.editarTemaFuera('tema.dg', 'theme claro extends neutral {\n  palette { acento "#f43f5e" }\n}\n');
+
+    await waitFor(() => expect(vista.state.doc.toString()).toContain('#f43f5e'));
+    expect(posts).toEqual([]);
+  });
 });
 
 describe('editor del DSL frente a escrituras externas', () => {

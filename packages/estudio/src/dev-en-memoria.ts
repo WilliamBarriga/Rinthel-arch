@@ -21,6 +21,8 @@ export interface DevEnMemoria {
   eventos: (url: string, alEvento: (nombre: string, datos: string) => void) => () => void;
   /** Escritura ajena (agente u otro editor); `undefined` borra. Recompila y empuja el estado. */
   editarFuera(ruta: string, texto: string | undefined): void;
+  /** Escritura ajena a un archivo de `--theme-path`; `undefined` lo borra. Recompila y empuja el estado. */
+  editarTemaFuera(ruta: string, texto: string | undefined): void;
   /** Anexa texto al Registro de actividad (como el CLI de otro proceso) y empuja los Eventos nuevos como `actividad`. */
   anexarActividad(texto: string): void;
   /** Espera a que terminen las escrituras (POST, `editarFuera`) y sus recompilaciones. */
@@ -107,6 +109,10 @@ export async function devEnMemoria({ propios, temas, actividad, ahora = Date.now
     },
     editarFuera(ruta, texto) {
       puerto.editarFuera(ruta, texto);
+      void seguir(vivo.recargar());
+    },
+    editarTemaFuera(ruta, texto) {
+      puerto.editarTemaFuera(ruta, texto);
       void seguir(vivo.recargar());
     },
     anexarActividad: (texto) => puerto.anexarActividad(texto),

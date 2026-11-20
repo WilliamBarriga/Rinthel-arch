@@ -7,6 +7,8 @@ export interface WorkspaceEnMemoria extends PuertoDeWorkspace {
   borrar(ruta: string): void;
   /** Texto vigente de un archivo propio (`undefined` si no existe). */
   texto(ruta: string): string | undefined;
+  /** Escritura ajena a un archivo de `--theme-path` (para pruebas); `undefined` lo borra. Nunca lo usa `aplicarAlWorkspace`. */
+  escribirTema(ruta: string, texto: string | undefined): void;
 }
 
 export interface ContenidoEnMemoria {
@@ -16,8 +18,9 @@ export interface ContenidoEnMemoria {
 }
 
 /** `escribir` y `borrar` solo tocan los propios. */
-export function workspaceEnMemoria({ propios, temas = {} }: ContenidoEnMemoria): WorkspaceEnMemoria {
+export function workspaceEnMemoria({ propios, temas: temasIniciales = {} }: ContenidoEnMemoria): WorkspaceEnMemoria {
   let archivos: Record<string, string> = { ...propios };
+  let temas: Record<string, string> = { ...temasIniciales };
   return {
     leer: () => ({ disco: { ...temas, ...archivos }, propios: { ...archivos } }),
     escribir(ruta, texto) {
@@ -28,5 +31,9 @@ export function workspaceEnMemoria({ propios, temas = {} }: ContenidoEnMemoria):
       archivos = resto;
     },
     texto: (ruta) => archivos[ruta],
+    escribirTema(ruta, texto) {
+      const { [ruta]: _previo, ...resto } = temas;
+      temas = texto === undefined ? resto : { ...resto, [ruta]: texto };
+    },
   };
 }

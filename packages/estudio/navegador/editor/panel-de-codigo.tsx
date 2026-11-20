@@ -161,8 +161,9 @@ function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado 
   }, [editor, alCambiarGuardado]);
 
   useEffect(() => {
-    if (editor !== undefined && enDisco !== undefined && !soloLectura) void editor.guardador.sincronizar(enDisco);
-  }, [editor, enDisco, soloLectura]);
+    // Tambien en solo lectura (--theme-path): sin cambios propios, la fusion es aplicar el diff limpio del disco.
+    if (editor !== undefined && enDisco !== undefined) void editor.guardador.sincronizar(enDisco);
+  }, [editor, enDisco]);
 
   useCaducidad(editor === undefined || marcado === 0 ? undefined : DURACION_DE_LAS_MARCAS_MS, () => editor?.vista.dispatch({ effects: limpiarMarcasDelDisco.of(null) }), `${marcado}`);
   useCaducidad(perdidos.length === 0 ? undefined : DURACION_DEL_AVISO_MS, () => setPerdidos([]), perdidos);
