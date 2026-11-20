@@ -6,8 +6,9 @@
  * principio); no comparte estado con la Sesion. Errores: un fallo de lectura se ignora y el siguiente aviso reintenta.
  */
 import { crearLectorDeActividad } from 'canonico';
-import type { ActividadDeDev, EventoDeActividad } from 'canonico';
+import type { EventoDeActividad, EventoDeDev } from 'canonico';
 
+import { debounce } from './reloj';
 import type { Reloj } from './reloj';
 
 /** El registro en el adaptador, con su observador propio (el watcher del Workspace ignora carpetas ocultas). */
@@ -21,10 +22,8 @@ export interface RegistroDeActividad {
 /** Eventos de actividad que `dev` reproduce al conectar. */
 const EVENTOS_PREVIOS = 50;
 
-export interface EventoDeActividadDeDev {
-  nombre: 'actividad';
-  datos: ActividadDeDev;
-}
+/** La rama `actividad` de los eventos de `/eventos`. */
+export type EventoDeActividadDeDev = Extract<EventoDeDev, { nombre: 'actividad' }>;
 
 export interface OpcionesDelRegistroDeActividadVivo {
   /** Sin el, no hay actividad: conecta sin Eventos y nunca empuja. */
@@ -54,19 +53,17 @@ export function abrirRegistroDeActividadVivo({ registro, reloj, debounceMs }: Op
   };
   let previos = leer().slice(-EVENTOS_PREVIOS);
   const oyentes = new Set<(evento: EventoDeActividadDeDev) => void>();
-  let cancelar: (() => void) | undefined;
+  const lectura = debounce(reloj, debounceMs);
   const dejarDeObservar =
-    registro?.observar(() => {
-      cancelar?.();
-      cancelar = reloj.programar(() => {
-        cancelar = undefined;
+    registro?.observar(() =>
+      lectura.programar(() => {
         const nuevos = leer();
         if (nuevos.length === 0) return;
         previos = [...previos, ...nuevos].slice(-EVENTOS_PREVIOS);
         const evento: EventoDeActividadDeDev = { nombre: 'actividad', datos: { previos: false, eventos: nuevos } };
         for (const oyente of [...oyentes]) oyente(evento);
-      }, debounceMs);
-    }) ?? (() => undefined);
+      }),
+    ) ?? (() => undefined);
 
   return {
     conexion: () => ({ nombre: 'actividad', datos: { previos: true, eventos: [...previos] } }),
@@ -75,8 +72,7 @@ export function abrirRegistroDeActividadVivo({ registro, reloj, debounceMs }: Op
       return () => void oyentes.delete(alEvento);
     },
     cerrar() {
-      cancelar?.();
-      cancelar = undefined;
+      lectura.cancelar();
       dejarDeObservar();
     },
   };

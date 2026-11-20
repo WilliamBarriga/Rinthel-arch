@@ -38,6 +38,7 @@ import type { HistorialDeArchivos, ResultadoDeRestaurar } from './historial-de-a
 import type { Visto } from './intenciones';
 import { abrirRegistroDeActividadVivo } from './registro-de-actividad-vivo';
 import type { RegistroDeActividad } from './registro-de-actividad-vivo';
+import { debounce } from './reloj';
 import type { Reloj } from './reloj';
 import { abrirSesion } from './sesion';
 import type { InterfazDeComponente, OpcionesDeGeometria, Sesion } from './sesion';
@@ -284,24 +285,15 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     return enCurso;
   };
 
-  let cancelarDebounce: (() => void) | undefined;
-  const cancelarPendiente = (): void => {
-    cancelarDebounce?.();
-    cancelarDebounce = undefined;
-  };
+  const recompilacion = debounce(reloj, debounceMs);
+  const cancelarPendiente = recompilacion.cancelar;
   /** No espera al debounce que dispara la propia escritura. */
   const recompilarTrasEscribir = async (): Promise<ResultadoDelWorkspaceVivo> => {
     cancelarPendiente();
     await recompilar();
     return { ok: true, version };
   };
-  const dejarDeObservar = puerto.observar(() => {
-    cancelarPendiente();
-    cancelarDebounce = reloj.programar(() => {
-      cancelarDebounce = undefined;
-      void recompilar().catch(() => undefined);
-    }, debounceMs);
-  });
+  const dejarDeObservar = puerto.observar(() => recompilacion.programar(() => void recompilar().catch(() => undefined)));
 
   const actividad = abrirRegistroDeActividadVivo({ ...(puerto.actividad !== undefined && { registro: puerto.actividad }), reloj, debounceMs });
   const dejarDeEscucharActividad = actividad.escuchar(emitir);
