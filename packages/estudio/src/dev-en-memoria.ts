@@ -1,18 +1,18 @@
 /**
  * `devEnMemoria`: el servidor de `dev` sin red, para probar la pagina en jsdom. La Sesion, los issues, las ediciones
  * con `visto` y el Historial son reales (`sesion` sobre `workspaceEnMemoria`); solo el transporte es falso: `fetch`
- * responde las rutas del protocolo y `eventos` empuja `event: estado` y `event: actividad` como `/eventos`.
+ * responde las rutas del protocolo y `eventos` empuja `event: estado`, `event: historial` y `event: actividad` como `/eventos`.
  * Invariantes: cumple `probarContratoDeDev` (la misma suite corre contra el `dev` real); una escritura (propia o
  * `editarFuera`) recompila y empuja un estado con `version` mayor; las versiones viejas se olvidan como en `dev`.
  * Errores: nunca lanza por una peticion; responde el estado HTTP que daria `dev`.
  */
 import { combineIconProviders, crearLectorDeActividad, genericIcons, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
 import type { EventoDeActividad, Issue, MotivoDeRechazo } from 'canonico';
-import { abrirSesion, aplicarAlWorkspace, deshacerSobre, hashDeContenido, historialVacio, registrar, rehacerSobre, workspaceEnMemoria } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, descripcionDeIntencion, descripcionDeTexto, deshacerSobre, hashDeContenido, historialVacio, historialVisible, registrar, rehacerSobre, saltar, workspaceEnMemoria } from 'sesion';
 import type { Aplicable, Consulta, HistorialDeArchivos, ResultadoDeRestaurar, Sesion, WorkspaceEnMemoria } from 'sesion';
 
-import { COMANDOS_DE_INSPECT, peticionDeEdicionesSchema } from './protocolo';
-import type { ActividadDeDev, ArchivoDeDev, ArchivosDeDev, ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev } from './protocolo';
+import { COMANDOS_DE_INSPECT, peticionDeEdicionesSchema, peticionDeSaltoSchema, RUTA_DE_SALTAR } from './protocolo';
+import type { ActividadDeDev, ArchivoDeDev, ArchivosDeDev, ComandoDeInspect, EstadoDeDev, HistorialDeDev, NombreDeEventoDeDev } from './protocolo';
 
 type Archivos = Readonly<Record<string, string>>;
 
@@ -40,14 +40,14 @@ const HTTP_DE_RECHAZO = (motivo: MotivoDeRechazo): number => (motivo === 'hash-d
 
 const hashesDe = (archivos: Archivos): Record<string, string> => Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)]));
 
-/** Una Intencion (se describe por su tipo; las descripciones finas las arma `dev`) o ediciones de texto; `undefined` es 400. */
+/** Una Intencion (con la descripcion de `dev`) o ediciones de texto; `undefined` es 400. */
 function leerPedidoDeEdicion(cuerpo: unknown): { aplicable: Aplicable; descripcion: string | undefined; aunqueNoCompile: boolean } | undefined {
   if (typeof cuerpo === 'object' && cuerpo !== null && 'ediciones' in cuerpo) {
     const texto = peticionDeEdicionesSchema.safeParse(cuerpo);
     return texto.success ? { aplicable: texto.data.ediciones, descripcion: texto.data.descripcion, aunqueNoCompile: texto.data.aunqueNoCompile === true } : undefined;
   }
   const intencion = intencionSchema.safeParse(cuerpo);
-  return intencion.success ? { aplicable: intencion.data, descripcion: intencion.data.tipo, aunqueNoCompile: false } : undefined;
+  return intencion.success ? { aplicable: intencion.data, descripcion: descripcionDeIntencion(intencion.data), aunqueNoCompile: false } : undefined;
 }
 
 /** Quita las claves `undefined` (las opciones van con `exactOptionalPropertyTypes`). */
@@ -55,8 +55,8 @@ const dejarDefinidos = <T extends Record<string, string | undefined>>(o: T): { [
 
 const respuesta = (status: number, cuerpo: unknown): Response => new Response(JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
 
-/** `actividad`: texto inicial de `.diagrams/actividad.jsonl`. */
-export async function devEnMemoria({ propios, temas, actividad: registroInicial }: { propios: Archivos; temas?: Archivos; actividad?: string }): Promise<DevEnMemoria> {
+/** `actividad`: texto inicial de `.diagrams/actividad.jsonl`; `ahora`: hora en ms de cada entrada del Historial. */
+export async function devEnMemoria({ propios, temas, actividad: registroInicial, ahora = Date.now }: { propios: Archivos; temas?: Archivos; actividad?: string; ahora?: () => number }): Promise<DevEnMemoria> {
   const workspace = workspaceEnMemoria({ propios, ...(temas !== undefined && { temas }) });
   let version = 0;
   let actual: Sesion = abrirSesion(workspace.leer().disco);
@@ -81,6 +81,7 @@ export async function devEnMemoria({ propios, temas, actividad: registroInicial 
       issues: issues.map((issue) => ({ ...issue, href: `vscode://file${RAIZ}/${issue.file}:${issue.line}:${issue.column}` })),
     };
   };
+  const historialDeDev = (): HistorialDeDev => historialVisible(historial, workspace.leer().propios);
   const emitir = (nombre: NombreDeEventoDeDev, datos: unknown): void => {
     const texto = JSON.stringify(datos);
     for (const oyente of [...oyentes]) oyente(nombre, texto);
@@ -104,6 +105,7 @@ export async function devEnMemoria({ propios, temas, actividad: registroInicial 
     versiones.set(version, hashesDe(nuevos));
     versiones.delete(version - VERSIONES_GUARDADAS);
     emitir('estado', estado());
+    emitir('historial', historialDeDev());
   };
 
   const ok = async (): Promise<Response> => {
@@ -125,8 +127,8 @@ export async function devEnMemoria({ propios, temas, actividad: registroInicial 
       const antes = workspace.leer().propios;
       const r = aplicarAlWorkspace(workspace, pedido.aplicable, visto, { aunqueNoCompile: pedido.aunqueNoCompile });
       if (!r.ok) return rechazo(r.motivo, r.mensaje, r.file);
-      const descripcion = pedido.descripcion ?? `texto de ${r.cambiados.join(', ')}`;
-      historial = registrar(historial, descripcion, antes, workspace.leer().propios);
+      const descripcion = pedido.descripcion ?? descripcionDeTexto(r.cambiados);
+      historial = registrar(historial, descripcion, antes, workspace.leer().propios, ahora());
       return ok();
     });
 
@@ -188,6 +190,11 @@ export async function devEnMemoria({ propios, temas, actividad: registroInicial 
       if (ruta === '/api/edit') return editar(cuerpo);
       if (ruta === '/api/deshacer') return restaurar(deshacerSobre);
       if (ruta === '/api/rehacer') return restaurar(rehacerSobre);
+      if (ruta === RUTA_DE_SALTAR) {
+        const salto = peticionDeSaltoSchema.safeParse(cuerpo);
+        if (!salto.success) return respuesta(400, { ok: false, mensaje: 'Se esperaba { id } con un entero no negativo' });
+        return restaurar((h, disco) => saltar(h, disco, salto.data.id));
+      }
       if (ruta === '/api/confiar') return respuesta(200, { ok: true });
       return respuesta(404, { ok: false, mensaje: 'No encontrado' });
     }
@@ -217,6 +224,7 @@ export async function devEnMemoria({ propios, temas, actividad: registroInicial 
       queueMicrotask(() => {
         if (!oyentes.has(alEvento)) return;
         alEvento('estado', JSON.stringify(estado()));
+        alEvento('historial', JSON.stringify(historialDeDev()));
         alEvento('actividad', JSON.stringify({ previos: true, eventos: actividad } satisfies ActividadDeDev));
       });
       return () => oyentes.delete(alEvento);

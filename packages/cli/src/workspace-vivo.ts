@@ -6,7 +6,10 @@
  * issues con la Fuente y la Geometria de la ultima Sesion buena, sin `cambio`. El Historial es por archivo
  * (`HistorialDeArchivos`): una escritura externa no lo reinicia; deshacer y rehacer rechazan con `hash-desactualizado`
  * solo si cambio por fuera un archivo que la entrada restaura. Las ediciones de texto (editor, `fix`) usan la misma
- * puerta que las Intenciones; con `aunqueNoCompile` se escriben aunque introduzcan errores.
+ * puerta que las Intenciones; con `aunqueNoCompile` se escriben aunque introduzcan errores. Saltar (#193) escribe una
+ * sola vez la instantanea destino, sin apilar, con la misma regla de rechazo; `historial()` dice que entradas son
+ * alcanzables sobre el disco vigente. Toda escritura propia (edicion, deshacer, rehacer, saltar, revertir) pasa por
+ * `escrituraPropia`.
  * Errores: rechazos como datos; los fallos de I/O al escribir se propagan tras revertir; los de lectura al recompilar
  * se ignoran hasta el siguiente cambio; `abrirWorkspaceVivo` lanza si la lectura inicial falla.
  * Registro de actividad: si el puerto lo da, se leen los ultimos `EVENTOS_PREVIOS` al abrir y cada aviso de su observador
@@ -16,8 +19,8 @@ import { combineIconProviders, crearLectorDeActividad, genericIcons, serializarI
 import type { EventoDeActividad, GeometriaCacheada, Intencion, Issue, MotivoDeRechazo } from 'canonico';
 import type { ArchivoDeDev, ArchivosDeDev, EstadoDeDev, TipoDeCambio } from 'estudio/protocolo';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { abrirSesion, aplicarAlWorkspace, deshacerSobre, hashDeContenido, historialVacio, registrar, rehacerSobre } from 'sesion';
-import type { EdicionDeTexto, HistorialDeArchivos, OpcionesDeGeometria, PuertoDeWorkspace, ResultadoDeRestaurar, Respuesta, Sesion, Visto } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, descripcionDeIntencion, descripcionDeTexto, deshacerSobre, hashDeContenido, historialVacio, historialVisible, registrar, rehacerSobre, saltar } from 'sesion';
+import type { EdicionDeTexto, HistorialDeArchivos, HistorialVisible, OpcionesDeGeometria, PuertoDeWorkspace, ResultadoDeRestaurar, Respuesta, Sesion, Visto } from 'sesion';
 import { componentesDeTema } from 'tema';
 
 import { clasificarCambio } from './cambio';
@@ -74,6 +77,8 @@ export interface OpcionesDelWorkspaceVivo {
   /** Por defecto no hay codigo. */
   compilarCodigo?: () => ResultadoDeCodigo;
   confiarEnCodigo?: boolean;
+  /** Hora en ms de cada entrada del Historial; por defecto `Date.now`. */
+  ahora?: () => number;
 }
 
 /** `version` es la del estado tras recompilar. */
@@ -86,12 +91,6 @@ export interface EdicionesDeTexto {
   descripcion?: string;
   /** Guardado del editor: se escribe aunque introduzca errores (ADR 0007). Sin el, un error nuevo rechaza con `invalida`. */
   aunqueNoCompile?: boolean;
-}
-
-/** Entrada del Historial tal como se muestra (`id`, `cuando` y `alcanzable` los anade el Historial visible). */
-export interface EntradaVisibleDelHistorial {
-  descripcion: string;
-  archivos: string[];
 }
 
 /** `componentes` son los que usan los Temas de la ultima Fuente buena. */
@@ -107,14 +106,16 @@ export interface WorkspaceVivo {
   suscribir(alCambiar: (estado: EstadoDeDev) => void): () => void;
   /** `version` es la del estado que vio quien emite la Intencion o las ediciones. */
   editar(aplicable: Intencion | EdicionesDeTexto, version?: number): Promise<ResultadoDelWorkspaceVivo>;
-  /** Historial de deshacer, lo mas viejo primero. */
-  historial(): { pasado: EntradaVisibleDelHistorial[]; futuro: EntradaVisibleDelHistorial[] };
+  /** Historial de deshacer, lo mas viejo primero, con lo alcanzable sobre el disco vigente. */
+  historial(): HistorialVisible;
   /** Lee el puerto en el momento: lo que el editor puede abrir. */
   archivos(): ArchivosDeDev;
   /** `undefined` si el archivo no existe. */
   archivo(ruta: string): ArchivoDeDev | undefined;
   deshacer(): Promise<ResultadoDelWorkspaceVivo>;
   rehacer(): Promise<ResultadoDelWorkspaceVivo>;
+  /** Lleva el Workspace a la entrada `id` (0: Inicio) sin apilar; `entrada-desconocida` si no existe. */
+  saltar(id: number): Promise<ResultadoDelWorkspaceVivo>;
   /** Geometria de una Vista de la ultima Sesion buena (con `tema`, con ese Tema y sin cache); `undefined` si falta la Vista o el Tema. */
   geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<GeometriaCacheada | undefined>;
   /** `inspect` sobre la ultima Sesion buena; `undefined` si el Workspace nunca compilo. */
@@ -136,26 +137,12 @@ export const DEBOUNCE_MS = 150;
 
 const SIN_CODIGO: ResultadoDeCodigo = { componentes: {}, issues: [], bundle: 'return {};' };
 
-/** Descripcion de una Intencion en el Historial. */
-const describirIntencion = (intencion: Intencion): string => {
-  switch (intencion.tipo) {
-    case 'mover-pin':
-      return `mover ${intencion.nodo} en ${intencion.vista}`;
-    case 'ordenar-lifelines':
-      return `ordenar Lifelines de ${intencion.vista}`;
-    case 'fijar-tema':
-      return intencion.tema === undefined ? `quitar el Tema de ${intencion.vista}` : `fijar el Tema ${intencion.tema} en ${intencion.vista}`;
-  }
-};
-
 const esEdicionesDeTexto = (aplicable: Intencion | EdicionesDeTexto): aplicable is EdicionesDeTexto => 'ediciones' in aplicable;
-
-const visible = ({ descripcion, cambios }: HistorialDeArchivos['pasado'][number]): EntradaVisibleDelHistorial => ({ descripcion, archivos: Object.keys(cambios) });
 
 const hashesDe = (archivos: ArchivosDelWorkspace): Record<string, string> => Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)]));
 
 export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Promise<WorkspaceVivo> {
-  const { puerto, raiz, reloj = relojReal, debounceMs = DEBOUNCE_MS, compilarCodigo = () => SIN_CODIGO } = opciones;
+  const { puerto, raiz, reloj = relojReal, debounceMs = DEBOUNCE_MS, compilarCodigo = () => SIN_CODIGO, ahora = Date.now } = opciones;
 
   const fuentesDe = (recursos: Record<string, string> | undefined): Record<string, string> | undefined =>
     recursos === undefined ? undefined : Object.fromEntries(Object.entries(recursos).filter(([ruta]) => esArchivoDeFuente(ruta)));
@@ -295,12 +282,18 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     return resultado;
   };
 
+  /** Punto unico de escritura propia de `dev` (la UI): lo que no pasa por aqui es externo. */
+  const escrituraPropia = {
+    escribir: (ruta: string, texto: string): void => puerto.escribir(ruta, texto),
+    borrar: (ruta: string): void => puerto.borrar(ruta),
+  };
+
   /** Mejor esfuerzo: un fallo no interrumpe el resto de `rutas`. */
   const revertir = (origen: ArchivosDelWorkspace, rutas: readonly string[]): void => {
     for (const ruta of rutas) {
       try {
-        if (ruta in origen) puerto.escribir(ruta, origen[ruta] as string);
-        else puerto.borrar(ruta);
+        if (ruta in origen) escrituraPropia.escribir(ruta, origen[ruta] as string);
+        else escrituraPropia.borrar(ruta);
       } catch {
         // si el disco sigue fallando, el siguiente deshacer/rehacer detecta la diferencia y reinicia el historial
       }
@@ -312,11 +305,11 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     try {
       for (const ruta of Object.keys(destino).filter((r) => destino[r] !== origen[r]).sort()) {
         tocadas.push(ruta);
-        puerto.escribir(ruta, destino[ruta] as string);
+        escrituraPropia.escribir(ruta, destino[ruta] as string);
       }
       for (const ruta of Object.keys(origen).filter((r) => !(r in destino)).sort()) {
         tocadas.push(ruta);
-        puerto.borrar(ruta);
+        escrituraPropia.borrar(ruta);
       }
     } catch (error) {
       revertir(origen, tocadas);
@@ -345,7 +338,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
             leer: () => puerto.leer(),
             escribir: (ruta, texto) => {
               escritas.push(ruta);
-              puerto.escribir(ruta, texto);
+              escrituraPropia.escribir(ruta, texto);
             },
           },
           esEdicionesDeTexto(aplicable) ? aplicable.ediciones : aplicable,
@@ -357,8 +350,8 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
         throw error;
       }
       if (!resultado.ok) return { ok: false, motivo: resultado.motivo, mensaje: resultado.mensaje, ...(resultado.file !== undefined && { file: resultado.file }) };
-      const descripcion = !esEdicionesDeTexto(aplicable) ? describirIntencion(aplicable) : (aplicable.descripcion ?? `texto de ${resultado.cambiados.join(', ')}`);
-      historial = registrar(historial, descripcion, antes, puerto.leer().propios);
+      const descripcion = !esEdicionesDeTexto(aplicable) ? descripcionDeIntencion(aplicable) : (aplicable.descripcion ?? descripcionDeTexto(resultado.cambiados));
+      historial = registrar(historial, descripcion, antes, puerto.leer().propios, ahora());
       return recompilarTrasEscribir();
     });
 
@@ -391,7 +384,8 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     editar,
     deshacer: () => restaurar(deshacerSobre),
     rehacer: () => restaurar(rehacerSobre),
-    historial: () => ({ pasado: historial.pasado.map(visible), futuro: historial.futuro.map(visible) }),
+    saltar: (id) => restaurar((h, disco) => saltar(h, disco, id)),
+    historial: () => historialVisible(historial, puerto.leer().propios),
     archivos: listarArchivos,
     archivo(ruta) {
       const texto = puerto.leer().disco[ruta];

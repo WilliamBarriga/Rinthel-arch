@@ -446,6 +446,44 @@ describe('Workspace vivo: deshacer, rehacer y cola de escrituras', () => {
   });
 });
 
+describe('Workspace vivo: Historial visible y salto (#193)', () => {
+  it('saltar a una entrada del pasado deja el texto justo despues de ella, conserva el futuro y lo muestra con ids y hora', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    let ahora = 1000;
+    const { ws } = await abrir(puerto, { ahora: () => (ahora += 1000) });
+    await ws.editar(pin(1, 2));
+    const conUno = puerto.texto('main.dg');
+    await ws.editar(pin(3, 4));
+    await ws.editar(pin(5, 6));
+
+    expect(await ws.saltar(1)).toMatchObject({ ok: true });
+    expect(puerto.texto('main.dg')).toBe(conUno);
+    const h = ws.historial();
+    expect(h.pasado).toEqual([{ id: 1, descripcion: 'mover api en general', archivos: ['main.dg'], cuando: 2000, alcanzable: true }]);
+    expect(h.futuro.map((e) => e.id)).toEqual([2, 3]);
+    expect(h.inicio).toEqual({ alcanzable: true });
+
+    expect((await ws.saltar(0)).ok).toBe(true);
+    expect(puerto.texto('main.dg')).toBe(BASE);
+    expect((await ws.saltar(3)).ok).toBe(true);
+    expect(ws.historial().pasado.map((e) => e.id)).toEqual([1, 2, 3]);
+  });
+
+  it('una escritura externa deja no alcanzables, con motivo, las entradas que restaurarian ese archivo; saltar a ellas es 409', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const { ws, reloj } = await abrir(puerto);
+    await ws.editar(pin(1, 2));
+    await ws.editar(pin(3, 4));
+    await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', `${puerto.texto('main.dg')}\n`));
+
+    const h = ws.historial();
+    expect(h.pasado[0]).toMatchObject({ id: 1, alcanzable: false, motivo: expect.stringContaining('main.dg') });
+    expect(h.pasado[1]).toMatchObject({ id: 2, alcanzable: true });
+    expect(await ws.saltar(1)).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
+    expect(await ws.saltar(42)).toMatchObject({ ok: false, motivo: 'entrada-desconocida' });
+  });
+});
+
 describe('Workspace vivo: confianza en el codigo', () => {
   it('no confia en el codigo hasta confiar(), salvo que se diga de antemano', async () => {
     const codigo = { componentes: {}, issues: [], bundle: 'return { A: 1 };' };
@@ -469,10 +507,10 @@ describe('Workspace vivo: ediciones de texto del editor', () => {
 
     expect(r).toEqual({ ok: true, version: 1 });
     expect(puerto.texto('main.dg')).toContain('servicio db "Base de datos" "Datos"');
-    expect(ws.historial()).toEqual({ pasado: [{ descripcion: 'texto de main.dg', archivos: ['main.dg'] }], futuro: [] });
+    expect(ws.historial()).toMatchObject({ pasado: [{ descripcion: 'texto de main.dg', archivos: ['main.dg'] }], futuro: [] });
     expect((await ws.deshacer()).ok).toBe(true);
     expect(puerto.texto('main.dg')).toBe(BASE);
-    expect(ws.historial()).toEqual({ pasado: [], futuro: [{ descripcion: 'texto de main.dg', archivos: ['main.dg'] }] });
+    expect(ws.historial()).toMatchObject({ pasado: [], futuro: [{ descripcion: 'texto de main.dg', archivos: ['main.dg'] }] });
   });
 
   it('la descripcion de la peticion gana; una Intencion se describe sola', async () => {

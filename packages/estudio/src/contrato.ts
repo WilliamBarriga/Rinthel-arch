@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { EventoDeActividad } from 'canonico';
 
-import type { ActividadDeDev, EstadoDeDev } from './protocolo';
+import type { ActividadDeDev, EstadoDeDev, HistorialDeDev } from './protocolo';
 import { crearLectorSse } from './sse';
 
 export { devEnMemoria } from './dev-en-memoria';
@@ -121,6 +121,25 @@ function esperarActividad(dev: DevDePrueba, basta: (recibidos: ActividadDeDev[])
       if (basta(recibidos)) {
         setTimeout(cerrar, 0);
         ok(recibidos);
+      }
+    });
+  });
+}
+
+/** Espera al primer `event: historial` que cumpla `basta`. */
+function esperarHistorial(dev: DevDePrueba, basta: (h: HistorialDeDev) => boolean, alAbrir?: () => void): Promise<HistorialDeDev> {
+  return new Promise((ok) => {
+    let abierto = false;
+    const cerrar = dev.eventos('/eventos', (nombre, datos) => {
+      if (nombre !== 'historial') return;
+      const historial = JSON.parse(datos) as HistorialDeDev;
+      if (!abierto) {
+        abierto = true;
+        alAbrir?.();
+      }
+      if (basta(historial)) {
+        setTimeout(cerrar, 0);
+        ok(historial);
       }
     });
   });
@@ -286,6 +305,37 @@ export function probarContratoDeDev(crear: CrearDev): void {
         expect(await post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'nada', nodo: 'api', x: 1, y: 1 })).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'vista-desconocida' } });
         expect((await post(dev, '/api/edit', { tipo: 'otra-cosa' })).status).toBe(400);
         expect(await post(dev, '/api/deshacer', {})).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'nada-que-deshacer' } });
+      });
+    });
+
+    it('/eventos manda event: historial al conectar y tras cada entrada, con id, descripcion del servidor, archivos, hora y alcance', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const inicial = await esperarHistorial(dev, () => true);
+        expect(inicial).toEqual({ pasado: [], futuro: [], inicio: { alcanzable: true } });
+        const conUna = await esperarHistorial(
+          dev,
+          (h) => h.pasado.length === 1,
+          () => void post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }),
+        );
+        expect(conUna.pasado).toEqual([{ id: 1, descripcion: 'mover api en general', archivos: ['main.dg'], cuando: expect.any(Number), alcanzable: true }]);
+      });
+    });
+
+    it('POST /api/historial/saltar lleva a la entrada sin apilar y conserva el futuro; id inexistente 422; archivo cambiado por fuera 409', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        await post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 });
+        await post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 3, y: 4 });
+        const conDos = (await json(dev, '/api/archivo/main.dg')).cuerpo['texto'];
+
+        expect(await post(dev, '/api/historial/saltar', { id: 0 })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(DSL);
+        expect(await post(dev, '/api/historial/saltar', { id: 2 })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(conDos);
+        expect(await post(dev, '/api/historial/saltar', { id: 99 })).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'entrada-desconocida' } });
+        expect((await post(dev, '/api/historial/saltar', { id: 'uno' })).status).toBe(400);
+
+        await esperarEstado(dev, (e) => e.fuente?.model.nodes.some((n) => n.title === 'Otra') === true, () => dev.editarFuera('main.dg', String(conDos).replace('"API"', '"Otra"')));
+        expect(await post(dev, '/api/historial/saltar', { id: 1 })).toMatchObject({ status: 409, cuerpo: { ok: false, motivo: 'hash-desactualizado' } });
       });
     });
 
