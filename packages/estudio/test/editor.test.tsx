@@ -5,6 +5,7 @@ import { EditorView } from '@codemirror/view';
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { DURACION_DEL_AVISO_MS } from '../navegador/editor/panel-de-codigo';
 import { lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
 import type { OpcionesDeMontaje } from './ayudas-de-ui';
 
@@ -223,3 +224,142 @@ describe('editor del DSL: issues y solo lectura', () => {
     expect(vista.state.readOnly).toBe(true);
   });
 });
+
+describe('editor del DSL frente a escrituras externas', () => {
+  it('con el buffer limpio aplica el cambio del disco conservando cursor, seleccion y scroll, y marca las lineas cambiadas', async () => {
+    const { posts, envolverFetch } = anotarPosts();
+    const { dev } = await montarEstudio({ 'main.dg': DSL }, { envolverFetch });
+    const { vista } = await abrirCodigo();
+    const desde = vista.state.doc.toString().indexOf('include');
+    vista.dispatch({ selection: { anchor: desde, head: desde + 'include'.length } });
+    vista.scrollDOM.scrollTop = 40;
+    const scroll = vista.scrollDOM.scrollTop;
+
+    dev.editarFuera('main.dg', DSL.replace('specification {', '// del agente\nspecification {').replace('"API"', '"API publica"'));
+
+    await waitFor(() => expect(vista.state.doc.toString()).toContain('"API publica"'));
+    expect(vista.state.doc.toString()).toBe(dev.workspace.texto('main.dg'));
+    const { from, to } = vista.state.selection.main;
+    expect(vista.state.sliceDoc(from, to)).toBe('include');
+    expect(vista.scrollDOM.scrollTop).toBe(scroll);
+    const marcadas = [...document.querySelectorAll('.cm-line.ui-linea-del-disco')].map((l) => l.textContent);
+    expect(marcadas).toEqual(['// del agente', '  servicio api "API publica"']);
+    expect(posts).toEqual([]);
+    expect(estadoDelGuardado().textContent).toMatch(/^Guardado/);
+  });
+
+  it('con el buffer sucio un 409 se mergea con el disco y el guardado se reintenta', async () => {
+    const { posts, envolverFetch, soltar } = retenerListados();
+    const { dev } = await montarEstudio({ 'main.dg': DSL }, { envolverFetch });
+    const { vista } = await abrirCodigo();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+
+    escribir(vista, 'include **', '\n  // mio');
+    dev.editarFuera('main.dg', DSL.replace('"API"', '"API publica"'));
+    await act(async () => dev.asentado());
+    vi.advanceTimersByTime(400);
+    vi.useRealTimers();
+
+    const unido = DSL.replace('"API"', '"API publica"').replace('include **', 'include **\n  // mio');
+    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(unido));
+    expect(posts.filter((p) => p.ruta === '/api/edit')).toHaveLength(2);
+    await waitFor(() => expect(estadoDelGuardado().textContent).toMatch(/^Guardado/));
+    expect(vista.state.doc.toString()).toBe(unido);
+    soltar();
+  });
+
+  it('si solapa gana el disco y un aviso ofrece recuperar el fragmento perdido hasta que vence', async () => {
+    const { envolverFetch } = retenerListados();
+    const { dev } = await montarEstudio({ 'main.dg': DSL }, { envolverFetch });
+    const { vista } = await abrirCodigo();
+
+    escribir(vista, '"Base de datos', ' (mia)');
+    dev.editarFuera('main.dg', DSL.replace('"Base de datos"', '"Postgres"'));
+    await act(async () => dev.asentado());
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    fireEvent.blur(vista.contentDOM);
+
+    // El 409, la lectura del disco y el reintento son promesas sin temporizadores: basta con vaciar la cola.
+    for (let i = 0; i < 50 && screen.queryByRole('alert', { name: 'Escritura externa' }) === null; i++) await act(() => vi.advanceTimersByTimeAsync(0));
+    const aviso = screen.getByRole('alert', { name: 'Escritura externa' });
+    expect(aviso.textContent).toMatch(/gano el disco en un lugar \(linea 7\)/);
+    expect(vista.state.doc.toString()).toBe(DSL.replace('"Base de datos"', '"Postgres"'));
+    expect(dev.workspace.texto('main.dg')).toBe(DSL.replace('"Base de datos"', '"Postgres"'));
+
+    act(() => vi.advanceTimersByTime(DURACION_DEL_AVISO_MS - 1));
+    expect(screen.queryByRole('alert', { name: 'Escritura externa' })).not.toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByRole('alert', { name: 'Escritura externa' })).toBeNull();
+  });
+
+  it('recuperar reinserta lo perdido como una edicion propia que se guarda', async () => {
+    const { envolverFetch } = retenerListados();
+    const { dev } = await montarEstudio({ 'main.dg': DSL }, { envolverFetch });
+    const { vista } = await abrirCodigo();
+
+    escribir(vista, '"Base de datos', ' (mia)');
+    dev.editarFuera('main.dg', DSL.replace('"Base de datos"', '"Postgres"'));
+    await act(async () => dev.asentado());
+    fireEvent.blur(vista.contentDOM);
+    const aviso = await screen.findByRole('alert', { name: 'Escritura externa' });
+
+    fireEvent.click(within(aviso).getByRole('button', { name: 'Recuperar lo mio' }));
+    fireEvent.blur(vista.contentDOM);
+
+    const recuperado = DSL.replace('  servicio db "Base de datos"', '  servicio db "Base de datos (mia)"\n  servicio db "Postgres"');
+    expect(vista.state.doc.toString()).toBe(recuperado);
+    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(recuperado));
+    expect(screen.queryByRole('alert', { name: 'Escritura externa' })).toBeNull();
+  });
+
+  it('el eco del watcher de un guardado propio se reconoce por hash y no relee ni toca el buffer', async () => {
+    const lecturas: string[] = [];
+    const { dev } = await montarEstudio(
+      { 'main.dg': DSL },
+      {
+        envolverFetch: (f) => (async (entrada: string | URL | Request, init?: RequestInit) => {
+          if (String(entrada).startsWith('/api/archivo/')) lecturas.push(String(entrada));
+          return f(entrada, init);
+        }) as typeof fetch,
+      },
+    );
+    const { caja, vista } = await abrirCodigo();
+    const lineasDelDisco: number[] = [];
+    vista.dispatch({ selection: { anchor: 0 } });
+
+    escribir(vista, 'include **', '\n  // mio');
+    fireEvent.keyDown(caja, { key: 's', ctrlKey: true });
+    await waitFor(() => expect(dev.workspace.texto('main.dg')).toContain('// mio'));
+    await act(async () => dev.asentado());
+    await waitFor(() => expect(estadoDelGuardado().textContent).toMatch(/^Guardado/));
+    await act(async () => new Promise((r) => setTimeout(r, 50)));
+
+    expect(lecturas).toEqual(['/api/archivo/main.dg']);
+    for (const l of document.querySelectorAll('.cm-line.ui-linea-del-disco')) lineasDelDisco.push(Number(l.textContent));
+    expect(lineasDelDisco).toEqual([]);
+    expect(vista.state.doc.toString()).toBe(dev.workspace.texto('main.dg'));
+  });
+});
+
+/** Anota los POST y retiene las respuestas de `/api/archivos` (el editor no se entera del cambio hasta el 409). */
+function retenerListados(): ReturnType<typeof anotarPosts> & { soltar(): void } {
+  const anotados = anotarPosts();
+  const retenidas: (() => void)[] = [];
+  let retener = false;
+  return {
+    posts: anotados.posts,
+    soltar() {
+      retener = false;
+      for (const r of retenidas.splice(0)) r();
+    },
+    envolverFetch: (f) => {
+      const conPosts = anotados.envolverFetch(f);
+      return (async (entrada: string | URL | Request, init?: RequestInit) => {
+        if (String(entrada) === '/api/archivos' && retener) await new Promise<void>((r) => retenidas.push(r));
+        // El primer listado (al abrir) pasa; desde ahi se retienen.
+        if (String(entrada) === '/api/archivos') retener = true;
+        return conPosts(entrada, init);
+      }) as typeof fetch;
+    },
+  };
+}

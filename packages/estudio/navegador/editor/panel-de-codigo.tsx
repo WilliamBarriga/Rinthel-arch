@@ -3,6 +3,9 @@
  * Guarda solo (`guardado.ts`), pinta los issues del estado en linea (`diagnosticos.ts`), completa palabras clave e ids
  * (`completado.ts`) y salta a la definicion con F12 (consulta `inspect` de `dev`). Responde a `sitioDeCodigo`
  * (E, el Buscador, F12, un issue) abriendo el archivo y llevando el cursor a la linea.
+ * Escrituras externas (#191): con cada `version` el panel relee `/api/archivos` y pasa el hash del archivo al guardador,
+ * que reconcilia el buffer (`reconciliacion.ts`); el texto del disco entra anotado `desdeElDisco` con sus lineas
+ * marcadas, y si gano el disco en un solape un aviso ofrece recuperar lo perdido durante `DURACION_DEL_AVISO_MS`.
  * Teclas: Mod+S, deshacer y rehacer de `dev` viven en el registro de comandos; Mod+Z, Mod+F y las capas de Esc
  * (completado, busqueda, seleccion multiple) son de CodeMirror; el ultimo Esc vuelve a Vistas con el foco en el lienzo.
  */
@@ -11,9 +14,9 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirro
 import { bracketMatching, indentOnInput } from '@codemirror/language';
 import { lintKeymap, setDiagnostics } from '@codemirror/lint';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
-import { Annotation, EditorState } from '@codemirror/state';
+import { EditorState } from '@codemirror/state';
 import { EditorView, drawSelection, highlightActiveLine, keymap, lineNumbers } from '@codemirror/view';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import type { ArchivosDeDev, IssueDeDev } from '../../src/protocolo';
@@ -28,19 +31,23 @@ import type { FixDeIssue } from './diagnosticos';
 import { crearGuardador } from './guardado';
 import type { EstadoDelGuardado, Guardador } from './guardado';
 import { lenguajeDelDsl } from './lenguaje';
+import { desdeElDisco, limpiarMarcasDelDisco, marcasDelDisco } from './marcas-del-disco';
+import type { Fusion, FragmentoPerdido } from './reconciliacion';
 
-/**
- * Marca las transacciones que traen texto del disco (la reconciliacion con escrituras externas, #191): no se guardan.
- * Seam: `vista.dispatch({ changes, annotations: desdeElDisco.of(true) })`.
- */
-export const desdeElDisco = Annotation.define<boolean>();
+export { desdeElDisco };
+
+/** Cuanto quedan marcadas las lineas que trajo el disco. */
+export const DURACION_DE_LAS_MARCAS_MS = 4000;
+/** Cuanto se ofrece recuperar lo que perdio el buffer en un solape. */
+export const DURACION_DEL_AVISO_MS = 15000;
 
 const TEXTO_DEL_GUARDADO: Record<EstadoDelGuardado['tipo'], string> = { guardado: 'Guardado', 'sin-guardar': 'Sin guardar', guardando: 'Guardando...', error: 'No se guardo' };
 
 export function PanelDeCodigo(): ReactElement {
   const estudio = useEstudio();
   const { cliente, sitioDeCodigo, estado } = estudio;
-  const [lista, setLista] = useState<ArchivosDeDev['archivos']>();
+  const [listado, setListado] = useState<ArchivosDeDev>();
+  const lista = listado?.archivos;
   const [elegido, setElegido] = useState<string>();
   const [guardado, setGuardado] = useState<EstadoDelGuardado>({ tipo: 'guardado' });
 
@@ -48,7 +55,7 @@ export function PanelDeCodigo(): ReactElement {
   useEffect(() => {
     let vigente = true;
     void cliente.archivos().then((leidos) => {
-      if (vigente && leidos !== undefined) setLista(leidos.archivos);
+      if (vigente && leidos !== undefined) setListado(leidos);
     });
     return () => {
       vigente = false;
@@ -59,7 +66,11 @@ export function PanelDeCodigo(): ReactElement {
   }, [sitioDeCodigo]);
 
   const archivo = elegido ?? lista?.find((a) => !a.soloLectura)?.file ?? lista?.[0]?.file;
-  const soloLectura = lista?.find((a) => a.file === archivo)?.soloLectura ?? false;
+  const delArchivo = lista?.find((a) => a.file === archivo);
+  const soloLectura = delArchivo?.soloLectura ?? false;
+  const hashEnDisco = delArchivo?.hash;
+  const versionDelListado = listado?.version;
+  const enDisco = useMemo(() => (hashEnDisco === undefined || versionDelListado === undefined ? undefined : { hash: hashEnDisco, version: versionDelListado }), [hashEnDisco, versionDelListado]);
   const textoDelGuardado = soloLectura ? 'Solo lectura' : guardado.tipo === 'error' ? `${TEXTO_DEL_GUARDADO.error}: ${guardado.mensaje}` : TEXTO_DEL_GUARDADO[guardado.tipo];
 
   return (
@@ -76,7 +87,7 @@ export function PanelDeCodigo(): ReactElement {
           {textoDelGuardado}
         </span>
       </div>
-      {archivo !== undefined && <EditorDeArchivo key={archivo} file={archivo} soloLectura={soloLectura} sitio={sitioDeCodigo?.file === archivo ? sitioDeCodigo : undefined} alCambiarGuardado={setGuardado} />}
+      {archivo !== undefined && <EditorDeArchivo key={archivo} file={archivo} soloLectura={soloLectura} sitio={sitioDeCodigo?.file === archivo ? sitioDeCodigo : undefined} enDisco={enDisco} alCambiarGuardado={setGuardado} />}
     </div>
   );
 }
@@ -86,20 +97,30 @@ interface PropsDelEditor {
   soloLectura: boolean;
   /** Linea a la que llevar el cursor (cada objeto nuevo es un salto nuevo). */
   sitio: SitioDeCodigo | undefined;
+  /** Hash del archivo en disco segun `dev` y la `version` del listado que lo dio. */
+  enDisco: { hash: string; version: number } | undefined;
   alCambiarGuardado(estado: EstadoDelGuardado): void;
 }
 
-function EditorDeArchivo({ file, soloLectura, sitio, alCambiarGuardado }: PropsDelEditor): ReactElement {
+function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado }: PropsDelEditor): ReactElement {
   const estudio = useEstudio();
   const vivo = useRef(estudio);
   vivo.current = estudio;
   const anfitrion = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<{ vista: EditorView; guardador: Guardador }>();
   const [estadoDelGuardado, setEstadoDelGuardado] = useState<EstadoDelGuardado>({ tipo: 'guardado' });
+  const [perdidos, setPerdidos] = useState<FragmentoPerdido[]>([]);
+  const [marcado, setMarcado] = useState(0);
 
   useEffect(() => {
     let vigente = true;
     let creado: { vista: EditorView; guardador: Guardador } | undefined;
+    const alReconciliar = (fusion: Fusion): void => {
+      if (creado === undefined) return;
+      creado.vista.dispatch({ changes: fusion.alBuffer, annotations: desdeElDisco.of(true) });
+      if (!fusion.alBuffer.empty) setMarcado((n) => n + 1);
+      if (fusion.perdidos.length > 0) setPerdidos(fusion.perdidos);
+    };
     void estudio.cliente.archivo(file).then((leido) => {
       if (!vigente || leido === undefined || anfitrion.current === null) return;
       const guardador = crearGuardador({
@@ -107,6 +128,11 @@ function EditorDeArchivo({ file, soloLectura, sitio, alCambiarGuardado }: PropsD
         base: leido.texto,
         version: leido.version,
         enviar: (peticion) => vivo.current.cliente.editarTexto(peticion),
+        leerDisco: async () => {
+          const disco = await vivo.current.cliente.archivo(file);
+          return disco === undefined ? undefined : { texto: disco.texto, version: disco.version };
+        },
+        alReconciliar,
         alCambiarEstado: (e) => {
           setEstadoDelGuardado(e);
           alCambiarGuardado(e);
@@ -132,6 +158,22 @@ function EditorDeArchivo({ file, soloLectura, sitio, alCambiarGuardado }: PropsD
     return vivo.current.registrarGuardado(() => editor.guardador.guardar());
   }, [editor, alCambiarGuardado]);
 
+  useEffect(() => {
+    if (editor !== undefined && enDisco !== undefined && !soloLectura) void editor.guardador.sincronizar(enDisco);
+  }, [editor, enDisco, soloLectura]);
+
+  useEffect(() => {
+    if (editor === undefined || marcado === 0) return;
+    const temporizador = setTimeout(() => editor.vista.dispatch({ effects: limpiarMarcasDelDisco.of(null) }), DURACION_DE_LAS_MARCAS_MS);
+    return () => clearTimeout(temporizador);
+  }, [editor, marcado]);
+
+  useEffect(() => {
+    if (perdidos.length === 0) return;
+    const temporizador = setTimeout(() => setPerdidos([]), DURACION_DEL_AVISO_MS);
+    return () => clearTimeout(temporizador);
+  }, [perdidos]);
+
   // Issues en linea: solo con el buffer igual al disco, para que las posiciones coincidan.
   const issues = estudio.estado?.issues;
   useEffect(() => {
@@ -148,7 +190,35 @@ function EditorDeArchivo({ file, soloLectura, sitio, alCambiarGuardado }: PropsD
     vista.focus();
   }, [editor, sitio]);
 
-  return <div ref={anfitrion} className="ui-editor" />;
+  const recuperar = (): void => {
+    if (editor !== undefined) recuperarPerdidos(editor.vista, perdidos);
+    setPerdidos([]);
+  };
+
+  return (
+    <>
+      {perdidos.length > 0 && (
+        <div role="alert" aria-label="Escritura externa" className="ui-aviso-del-disco">
+          <span>{`El archivo cambio en disco y gano el disco en ${perdidos.length === 1 ? 'un lugar' : `${perdidos.length} lugares`} (${perdidos.map((p) => `linea ${p.linea}`).join(', ')}).`}</span>
+          <button type="button" onClick={recuperar}>
+            Recuperar lo mio
+          </button>
+          <button type="button" onClick={() => setPerdidos([])}>
+            Descartar
+          </button>
+        </div>
+      )}
+      <div ref={anfitrion} className="ui-editor" />
+    </>
+  );
+}
+
+/** Reinserta cada fragmento perdido antes de su linea, como una edicion del usuario (se guarda y se deshace con Mod+Z). */
+function recuperarPerdidos(vista: EditorView, perdidos: readonly FragmentoPerdido[]): void {
+  const doc = vista.state.doc;
+  const cambios = perdidos.map((p) => ({ from: doc.line(Math.min(Math.max(p.linea, 1), doc.lines)).from, insert: `${p.texto}\n` }));
+  vista.dispatch({ changes: cambios, userEvent: 'input' });
+  vista.focus();
 }
 
 /**
@@ -220,6 +290,7 @@ function extensiones(file: string, soloLectura: boolean, guardador: Guardador, e
     highlightActiveLine(),
     highlightSelectionMatches(),
     lenguajeDelDsl(),
+    marcasDelDisco(),
     autocompletion({ override: [completarDsl(() => estudio.current.fuente)] }),
     keymap.of([...closeBracketsKeymap, ...completionKeymap, ...searchKeymap, ...historyKeymap, ...lintKeymap, ...defaultKeymap, indentWithTab]),
     propias,

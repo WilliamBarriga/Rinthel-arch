@@ -786,6 +786,33 @@
       color: var(--ui-texto);
     }
   }
+  /* Escrituras externas (#191): lineas que trajo el disco y aviso de solape. */
+  .ui-editor .cm-line.ui-linea-del-disco {
+    background: var(--ui-agente-suave);
+    box-shadow: inset 2px 0 0 var(--ui-agente);
+  }
+  .ui-aviso-del-disco {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--ui-warn);
+    background: var(--ui-warn-suave);
+    border-radius: var(--ui-radio-s);
+    & span {
+      flex: 1 1 100%;
+    }
+    & button {
+      background: var(--ui-sutil);
+      color: var(--ui-texto);
+      border: 1px solid var(--ui-borde);
+      border-radius: var(--ui-radio-s);
+      padding: 2px 8px;
+      cursor: pointer;
+    }
+  }
   .ui-aviso-gestos {
     color: var(--ui-warn);
     border-color: var(--ui-warn-suave);

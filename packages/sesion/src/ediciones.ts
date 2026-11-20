@@ -1,6 +1,10 @@
+import { hashDeContenido } from 'canonico';
 import type { Issue, MotivoDeRechazo, TextPosition, TextRange } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace } from 'dsl';
+
+/** Vive en `canonico` (puro, lo usa tambien el editor del navegador); se reexporta por compatibilidad. */
+export { hashDeContenido };
 
 export interface EdicionConHash {
   file: string;
@@ -15,20 +19,6 @@ export interface EdicionConHash {
 export type ResultadoDeEdicion<T> =
   | ({ ok: true } & T)
   | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
-
-/** Hash estable (53 bits, hex) del contenido de un archivo; no criptografico. Puro, sin `node:crypto`. */
-export function hashDeContenido(texto: string): string {
-  let h1 = 0xdeadbeef;
-  let h2 = 0x41c6ce57;
-  for (let i = 0; i < texto.length; i++) {
-    const c = texto.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 2654435761);
-    h2 = Math.imul(h2 ^ c, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0');
-}
 
 export const rechazo = (motivo: MotivoDeRechazo, mensaje: string, file?: string) =>
   ({ ok: false, motivo, mensaje, ...(file === undefined ? {} : { file }) }) as const;

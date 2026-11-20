@@ -83,7 +83,7 @@ export type { Issue, IssueFix, IssueRelated, Severity, TextPosition, TextRange }
 export { CODIGOS, CODIGOS_DEPRECADOS, DESCRIPCION_DE_CODIGO } from './codigos';
 export type { Codigo } from './codigos';
 
-export { EDIT_CONTRACT_VERSION, edicionDeTextoSchema, edicionesPedidasSchema, salidaDeEditJsonSchema, salidaDeEditSchema } from './edit';
+export { EDIT_CONTRACT_VERSION, edicionDeTextoSchema, hashDeContenido, edicionesPedidasSchema, salidaDeEditJsonSchema, salidaDeEditSchema } from './edit';
 export type { SalidaDeEdit } from './edit';
 
 export { ACTIVIDAD_CONTRACT_VERSION, COMANDOS_CON_ACTIVIDAD, crearLectorDeActividad, eventoDeActividadSchema } from './actividad';
