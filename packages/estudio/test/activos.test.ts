@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { construirEstudio } from '../scripts/empaquetar';
+import { construirEstudio } from '../src/construir';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from '../src/index';
 
 const carpetas: string[] = [];

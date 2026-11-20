@@ -14,7 +14,7 @@ import type { Browser, Page } from 'playwright';
 import { iniciarDev, run } from 'cli';
 import type { ServidorDev } from 'cli';
 
-import { rutaDeChromium } from './chromium';
+import { rutaDeChromium } from '../../../tests/ayudas/chromium';
 
 const PLAZO_MS = 60_000;
 const ESPERA = { timeout: 15_000 };
