@@ -333,6 +333,35 @@
   .ui-sitio {
     color: var(--ui-sint-id);
   }
+
+  /* Galeria de Temas: lista de Temas, acciones y muestras de la Paleta. */
+  .ui-galeria {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ui-galeria > p button,
+  .ui-acciones button {
+    margin-left: 6px;
+  }
+  .ui-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0;
+  }
+  .ui-paleta li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ui-muestra {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--ui-borde, currentColor);
+    flex: none;
+  }
   .ui-lista {
     margin: 0;
     padding: 0;

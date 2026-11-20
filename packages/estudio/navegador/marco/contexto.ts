@@ -28,6 +28,10 @@ export interface ContextoDelEstudio {
   abrirPestana(lado: LadoDeIsla, pestana: string): void;
   /** Oculta o recupera una isla (los atajos Mod+B y Mod+J los registra el registro de comandos). */
   alternarIsla(lado: LadoDeIsla): void;
+  /** Tema con que se previsualiza la Vista activa sin escribir (galeria de Temas); `undefined` si no hay previsualizacion. */
+  temaPrevio: string | undefined;
+  /** Previsualiza la Vista activa con otro Tema, o vuelve al suyo con `undefined`. Cambiar de Vista la descarta. */
+  previsualizarTema(tema: string | undefined): void;
   /** Toast efimero del marco. */
   avisar(texto: string): void;
   /** Nodo dentro de `.ui-chrome` para los portales de Base UI (`container`), con los tokens del chrome. */

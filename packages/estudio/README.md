@@ -4,8 +4,8 @@ App de navegador de `dev`: la pagina que `diagrams dev` sirve en `/` y `/_estudi
 
 ## Que hace
 - `navegador/estudio.tsx` (`<Estudio fetch eventos hash layout confirmar>`): marco F con lienzo `VistaInteractiva` (`chrome={false}`), barra de pildoras e islas de vidrio (estetica G neon, tokens `--ui-*` bajo `.ui-chrome` en `tokens.css`). Vista en `#vista=<id>` (`hash-de-estudio.ts`).
-- Seams para los paneles: registro `marco/pestanas.tsx` (`PESTANAS_IZQUIERDAS`, `PESTANAS_DERECHAS`, `PILDORAS_DE_LA_BARRA`; componentes sin props) y `useEstudio()` de `marco/contexto.ts` (estado, cliente, Vista, Seleccion, `irAVista`, `abrirPestana`, `alternarIsla`, `avisar`, `portales` para Base UI). Islas: `marco/use-isla.ts` con limites puros en `marco/limites.ts`.
-- `navegador/cliente.ts`: unica pieza con rutas; una conexion SSE con eventos con nombre (`escuchar(nombre, fn)`, `EVENTOS_DE_DEV`), `inspeccionar`, ediciones y Geometria bajo demanda.
+- Seams para los paneles: registro `marco/pestanas.tsx` (`PESTANAS_IZQUIERDAS`, `PESTANAS_DERECHAS`, `PILDORAS_DE_LA_BARRA`; componentes sin props) y `useEstudio()` de `marco/contexto.ts` (estado, cliente, Vista, Seleccion, `irAVista`, `abrirPestana`, `alternarIsla`, `previsualizarTema` (Tema previo de la Vista activa, lo usa la galeria `temas/`), `avisar`, `portales` para Base UI). Islas: `marco/use-isla.ts` con limites puros en `marco/limites.ts`.
+- `navegador/cliente.ts`: unica pieza con rutas; una conexion SSE con eventos con nombre (`escuchar(nombre, fn)`, `EVENTOS_DE_DEV`), `inspeccionar`, ediciones y Geometria bajo demanda (`?tema=` para previsualizar).
 - `estudio/protocolo`: estado SSE, nombres de eventos y `/api/inspect`. `estudio/contrato` (solo pruebas): `probarContratoDeDev(crear)`, `devEnMemoria` (Sesion real, transporte falso) y `eventosSobreFetch`.
 - Build (`tsup` + `scripts/construir.ts`): `dist/estudio/` con `index.html`, `pagina.js`, `worker.js` (sin zod) y `estilo.css` (paso de CSS conectable); `activosDelEstudio()` da sus rutas.
 
