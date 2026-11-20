@@ -17,7 +17,7 @@ import { TEMA_NEUTRO } from 'tema';
 import { adaptadorDeWorker, servirLayout } from 'shell';
 import type { PuertoDeMensajes } from 'shell';
 
-import { construirEstudio } from '../packages/estudio/scripts/empaquetar.ts';
+import { construirEstudio } from 'estudio/construir';
 import { generarSecuencia, generarWorkspace } from './generador.ts';
 
 const ESCENARIOS = ['build-10k', 'relayout-1k', 'relayout-slots', 'relayout-grande', 'colapso-5k', 'secuencia-grande', 'bundle'] as const;

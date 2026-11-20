@@ -13,7 +13,7 @@ import { parseArgs } from 'node:util';
 import { chromium } from 'playwright';
 import type { Page } from 'playwright';
 
-import { rutaDeChromium } from '../packages/cli/test/chromium.ts';
+import { rutaDeChromium } from '../tests/ayudas/chromium.ts';
 import { iniciarDevDeGaleria } from './capturas/servidores.ts';
 
 const REPO = resolve(import.meta.dirname, '..');

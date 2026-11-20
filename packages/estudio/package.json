@@ -15,6 +15,10 @@
     "./contrato": {
       "types": "./dist/contrato.d.ts",
       "import": "./dist/contrato.js"
+    },
+    "./construir": {
+      "types": "./dist/construir.d.ts",
+      "import": "./dist/construir.js"
     }
   },
   "scripts": {
