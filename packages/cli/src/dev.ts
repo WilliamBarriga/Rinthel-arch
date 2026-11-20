@@ -1,36 +1,44 @@
 /**
- * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve el shell, el estado y la Geometria por Vista, y empuja el estado por SSE (`/eventos`).
+ * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
+ * cada peticion y con `no-store`), el estado y la Geometria por Vista, y empuja por SSE (`/eventos`) el estado, el
+ * Historial (al conectar y tras cada recompilacion), los Eventos del Registro de actividad (al conectar, los ultimos 50
+ * con `previos: true`) y cada Diferencia con su origen. `POST /api/historial/saltar { id }` lleva el Workspace a una
+ * entrada del Historial.
  * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); las rutas POST exigen
  * JSON y un `Origin` propio (o ninguno); `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
  * Edicion: 400 cuerpo invalido, 409 `hash-desactualizado`, 422 el resto de rechazos, 500 fallo de I/O.
- * Errores: `iniciarDev` rechaza si el puerto esta ocupado o el shell no se empaqueta (sin dejar el observador activo)
- * y lanza si la lectura inicial falla; `run(['dev', ...])` los convierte en codigo 2.
+ * Errores: `iniciarDev` rechaza si el puerto esta ocupado (sin dejar el observador activo) y lanza si la lectura
+ * inicial falla; `run(['dev', ...])` los convierte en codigo 2. Un estatico de `estudio` sin construir es 404 al pedirlo.
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { rmSync, watch } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, rmSync, unwatchFile, watch, watchFile } from 'node:fs';
+import { extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { RUTA_DE_FUENTES, intencionSchema } from 'canonico';
-import type { EstadoDeDev, Intencion } from 'canonico';
+import { RUTAS_DE_DEV } from 'canonico';
+import type { EstadoDeDev } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
+import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
+import type { ActivosDelEstudio } from 'estudio';
+import type { ActividadDeDev, NombreDeEventoDeDev } from 'estudio/protocolo';
+import { RUTAS_POST_DE_DEV, abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
+import type { PuertoDelWorkspaceVivo, RegistroDeActividad, Reloj, WorkspaceVivo } from 'sesion';
 
 import { compiladorDeCodigo } from './codigo';
 import type { ResultadoDeCodigo } from './codigo';
-import { empaquetarShellDev } from './dev-shell';
-import { SALIDA_DE_RECHAZO, rechazoDeEdicion } from './rechazos';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
-import { abrirWorkspaceVivo } from './workspace-vivo';
-import type { PuertoDelWorkspaceVivo, ResultadoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
 
-export interface ShellDev {
-  pagina: string;
-  worker: string;
-}
+/** `setTimeout` como reloj del Workspace vivo. */
+export const relojReal: Reloj = {
+  programar(fn, ms) {
+    const t = setTimeout(fn, ms);
+    return () => clearTimeout(t);
+  },
+};
 
 /** Todo salvo `workspace` tiene un defecto real. */
 export interface OpcionesDeDev {
@@ -46,7 +54,10 @@ export interface OpcionesDeDev {
   leerRecursos?: (raiz: string) => Record<string, string>;
   /** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
   observar?: (raiz: string, alCambiar: () => void) => () => void;
-  shell?: () => Promise<ShellDev>;
+  /** Registro de actividad de `raiz`; por defecto `.diagrams/actividad.jsonl` del disco (o ninguno si se inyecta `leer`). */
+  actividad?: (raiz: string) => RegistroDeActividad | undefined;
+  /** Rutas de los estaticos de la app; por defecto las del build de `estudio`. Se consultan en cada peticion. */
+  estudio?: () => ActivosDelEstudio;
   /** `ruta` relativa a `raiz`. */
   escribir?: (raiz: string, ruta: string, texto: string) => void;
   /** `ruta` relativa a `raiz`. */
@@ -76,6 +87,31 @@ function observarDisco(raiz: string, alCambiar: () => void): () => void {
   return () => observador.close();
 }
 
+/** Cada cuanto se mira el registro de actividad en disco. */
+const INTERVALO_DEL_REGISTRO_MS = 250;
+
+/**
+ * `.diagrams/actividad.jsonl` con un observador propio (el watcher del Workspace ignora carpetas ocultas). Se sondea con
+ * `fs.watchFile`, que funciona aunque el archivo aun no exista y ve la rotacion (otro inodo, otro tamano).
+ */
+function registroEnDisco(raiz: string): RegistroDeActividad {
+  const ruta = join(raiz, '.diagrams', 'actividad.jsonl');
+  return {
+    leer() {
+      try {
+        return readFileSync(ruta, 'utf8');
+      } catch {
+        return undefined;
+      }
+    },
+    observar(alCambiar) {
+      const oyente = (): void => alCambiar();
+      watchFile(ruta, { interval: INTERVALO_DEL_REGISTRO_MS, persistent: false }, oyente);
+      return () => unwatchFile(ruta, oyente);
+    },
+  };
+}
+
 /** Atomica y siempre bajo la raiz del Workspace. */
 function escribirEnDisco(raiz: string, ruta: string, texto: string): void {
   escribirTexto(destinoEnWorkspace(raiz, ruta), texto);
@@ -91,7 +127,9 @@ function puertoDeDisco(opciones: OpcionesDeDev): PuertoDelWorkspaceVivo {
   const { workspace, temas, leer = leerWorkspace, escribir = escribirEnDisco, borrar = borrarEnDisco, observar = observarDisco } = opciones;
   const conoceRecursos = opciones.leer === undefined || opciones.leerRecursos !== undefined;
   const leerRecursos = opciones.leerRecursos ?? leerRecursosReal;
+  const actividad = (opciones.actividad ?? (opciones.leer === undefined ? registroEnDisco : () => undefined))(workspace);
   return {
+    ...(actividad !== undefined && { actividad }),
     leer: () => ({ propios: leer(workspace), disco: leerConTemas(leer, workspace, temas) }),
     escribir: (ruta, texto) => escribir(workspace, ruta, texto),
     borrar: (ruta) => borrar(workspace, ruta),
@@ -122,54 +160,62 @@ const responder = (res: ServerResponse, estadoHttp: number, cuerpo: unknown): vo
   res.end(JSON.stringify(cuerpo));
 };
 
-const responderResultado = (res: ServerResponse, r: ResultadoDelWorkspaceVivo): void =>
-  r.ok ? responder(res, 200, r) : responder(res, SALIDA_DE_RECHAZO[r.motivo].estadoHttp, rechazoDeEdicion(r.motivo, r.mensaje, r.file));
+const TIPOS_DE_ESTATICO: Readonly<Record<string, string>> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 
-const PAGINA = `<!doctype html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>diagrams dev</title>
-<style>html,body,#raiz{margin:0;height:100%;overflow:hidden;font-family:system-ui,sans-serif}</style>
-</head>
-<body>
-<div id="raiz"></div>
-<script src="/app.js"></script>
-</body>
-</html>
-`;
-
-const comoIntencion = (cuerpo: unknown): Intencion | undefined => {
-  const r = intencionSchema.safeParse(cuerpo);
-  return r.success ? r.data : undefined;
-};
-
-/** `version` del estado que vio la pagina, si es un entero no negativo; una version olvidada rechaza con `hash-desactualizado`. */
-const versionVista = (cuerpo: unknown): number | undefined => {
-  const version = (cuerpo as { version?: unknown } | null)?.version;
-  return typeof version === 'number' && Number.isInteger(version) && version >= 0 ? version : undefined;
-};
+/** Lee del disco en cada peticion (un rebuild de `estudio` se ve al recargar); ausente -> 404. */
+function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
+  let bytes: Buffer;
+  try {
+    if (ruta === undefined) throw new Error('no declarado');
+    bytes = readFileSync(ruta);
+  } catch {
+    cabecera(res, 'text/plain', 404);
+    res.end('No encontrado (si falta el build de la app: pnpm --filter estudio build)');
+    return;
+  }
+  cabecera(res, TIPOS_DE_ESTATICO[extname(ruta)] ?? 'application/octet-stream');
+  res.end(bytes);
+}
 
 /** El codigo de Temas se sirve en `/componentes.js` solo tras `POST /api/confiar` o `confiarEnCodigo`. */
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puerto = 0, debounceMs, shell = empaquetarShellDev, confiarEnCodigo = false } = opciones;
+  const { workspace, temas, puerto = 0, debounceMs, estudio = activosDelEstudio, confiarEnCodigo = false } = opciones;
   // Con `leer` inyectado no hay disco del que compilar codigo.
   const compilarCodigo = opciones.compilarCodigo ?? (opciones.leer === undefined ? compiladorDeCodigo(workspace).compilar : undefined);
-  const bundles = await shell();
   const vivo: WorkspaceVivo = await abrirWorkspaceVivo({
     puerto: puertoDeDisco(opciones),
     raiz: resolve(workspace),
+    reloj: relojReal,
+    ahora: Date.now,
     confiarEnCodigo,
     ...(debounceMs !== undefined && { debounceMs }),
     ...(compilarCodigo !== undefined && { compilarCodigo }),
   });
 
   const clientes = new Set<ServerResponse>();
-  const enviarEstado = (cliente: ServerResponse, estado: EstadoDeDev): void => void cliente.write(`data: ${JSON.stringify(estado)}\n\n`);
-  const dejarDeEscuchar = vivo.suscribir((estado) => {
-    for (const cliente of clientes) enviarEstado(cliente, estado);
+  /** Eventos SSE con nombre (`estado`, y los que declare `estudio/protocolo`). */
+  const enviar = (cliente: ServerResponse, nombre: NombreDeEventoDeDev, datos: unknown): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
+  const enviarEstado = (cliente: ServerResponse, estado: EstadoDeDev): void => enviar(cliente, 'estado', estado);
+  const enviarActividad = (cliente: ServerResponse, actividad: ActividadDeDev): void => enviar(cliente, 'actividad', actividad);
+  const enviarHistorial = (cliente: ServerResponse): void => enviar(cliente, 'historial', vivo.historial());
+  // Toda escritura (propia o externa) recompila: el Historial y su alcance viajan con cada estado.
+  const dejarDeEscucharEstado = vivo.suscribir((estado) => {
+    for (const cliente of clientes) {
+      enviarEstado(cliente, estado);
+      enviarHistorial(cliente);
+    }
   });
+  const dejarDeEscucharActividad = vivo.suscribirActividad((eventos) => {
+    for (const cliente of clientes) enviarActividad(cliente, { previos: false, eventos });
+  });
+  const dejarDeEscucharDiferencia = vivo.suscribirDiferencia((diferencia) => {
+    for (const cliente of clientes) enviar(cliente, 'diferencia', diferencia);
+  });
+  const dejarDeEscuchar = (): void => {
+    dejarDeEscucharEstado();
+    dejarDeEscucharActividad();
+    dejarDeEscucharDiferencia();
+  };
 
   const hostsPropios = (): string[] => {
     const { port } = servidor.address() as AddressInfo;
@@ -195,16 +241,29 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     }
   };
 
-  /** Un fallo de `atender` responde 500. */
-  const post = (req: IncomingMessage, res: ServerResponse, atender: (cuerpo: unknown) => Promise<void> | void): void => {
+  /** Un fallo de la API (I/O del puerto) responde 500. */
+  const api = (res: ServerResponse, peticion: Parameters<typeof atenderApiDeDev>[1]): void => {
+    void atenderApiDeDev(vivo, peticion)
+      .then((r) => {
+        if (r === undefined) {
+          cabecera(res, 'text/plain', 404);
+          res.end('No encontrado');
+        } else responder(res, r.status, r.cuerpo);
+      })
+      .catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
+  };
+
+  /** Las rutas POST exigen POST, un `Origin` propio y JSON (si no, responde el error). */
+  const post = (req: IncomingMessage, res: ServerResponse, url: URL): void => {
     if (req.method !== 'POST') {
       res.setHeader('allow', 'POST');
       responder(res, 405, { ok: false, mensaje: 'Metodo no permitido' });
       return;
     }
-    void leerCuerpoJson(req, res)
-      .then((leido) => (leido === undefined ? undefined : atender(leido.cuerpo)))
-      .catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
+    void leerCuerpoJson(req, res).then(
+      (leido) => (leido === undefined ? undefined : api(res, { metodo: 'POST', url, cuerpo: leido.cuerpo })),
+      (error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }),
+    );
   };
 
   /** Una ruta mal codificada o que sale de la raiz da `undefined`. */
@@ -223,35 +282,17 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       res.end('Host no permitido');
       return;
     }
-    const ruta = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
-    if (ruta === '/api/edit') {
-      post(req, res, async (cuerpo) => {
-        const intencion = comoIntencion(cuerpo);
-        if (intencion === undefined) responder(res, 400, { ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... }' });
-        else responderResultado(res, await vivo.editar(intencion, versionVista(cuerpo)));
-      });
-    } else if (ruta === '/api/deshacer') {
-      post(req, res, async () => responderResultado(res, await vivo.deshacer()));
-    } else if (ruta === '/api/rehacer') {
-      post(req, res, async () => responderResultado(res, await vivo.rehacer()));
-    } else if (ruta === '/api/confiar') {
-      post(req, res, () => {
-        vivo.confiar();
-        responder(res, 200, { ok: true });
-      });
+    const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+    const ruta = url.pathname;
+    if (RUTAS_POST_DE_DEV.includes(ruta)) {
+      post(req, res, url);
     } else if (ruta === '/') {
-      cabecera(res, 'text/html');
-      res.end(PAGINA);
-    } else if (ruta === '/app.js') {
-      cabecera(res, 'text/javascript');
-      res.end(bundles.pagina);
-    } else if (ruta === '/worker.js') {
-      cabecera(res, 'text/javascript');
-      res.end(bundles.worker);
-    } else if (ruta === '/api/codigo') {
-      const { componentes, confiado } = vivo.codigo();
-      responder(res, 200, { temaConCodigo: componentes.length > 0, componentes, confiado });
-    } else if (ruta === '/componentes.js') {
+      servirEstatico(res, estudio().indice);
+    } else if (ruta.startsWith(RUTA_DEL_ESTUDIO)) {
+      const { archivos } = estudio();
+      const nombre = ruta.slice(RUTA_DEL_ESTUDIO.length);
+      servirEstatico(res, Object.hasOwn(archivos, nombre) ? archivos[nombre] : undefined);
+    } else if (ruta === RUTAS_DE_DEV.componentes) {
       const { confiado, bundle } = vivo.codigo();
       if (!confiado) {
         cabecera(res, 'text/plain', 403);
@@ -260,8 +301,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         cabecera(res, 'text/javascript');
         res.end(bundle);
       }
-    } else if (ruta.startsWith(RUTA_DE_FUENTES)) {
-      const fuente = servirFuente(ruta.slice(RUTA_DE_FUENTES.length));
+    } else if (ruta.startsWith(RUTAS_DE_DEV.fuentes)) {
+      const fuente = servirFuente(ruta.slice(RUTAS_DE_DEV.fuentes.length));
       if (fuente === undefined) {
         cabecera(res, 'text/plain', 404);
         res.end('No encontrado');
@@ -269,22 +310,15 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
         res.writeHead(200, { 'content-type': fuente.tipo, 'cache-control': 'no-store', 'content-length': fuente.bytes.length });
         res.end(fuente.bytes);
       }
-    } else if (ruta === '/api/estado') {
-      responder(res, 200, vivo.estado());
-    } else if (ruta === '/eventos') {
+    } else if (ruta === RUTAS_DE_DEV.eventos) {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       clientes.add(res);
       res.on('close', () => clientes.delete(res));
       enviarEstado(res, vivo.estado());
-    } else if (ruta.startsWith('/api/vista/')) {
-      const id = decodeURIComponent(ruta.slice('/api/vista/'.length));
-      vivo.geometria(id).then(
-        (geometria) => responder(res, geometria === undefined ? 404 : 200, geometria ?? { error: `Vista '${id}' inexistente` }),
-        (error: unknown) => responder(res, 500, { error: (error as Error).message }),
-      );
+      enviarHistorial(res);
+      enviarActividad(res, { previos: true, eventos: [...vivo.actividad()] });
     } else {
-      cabecera(res, 'text/plain', 404);
-      res.end('No encontrado');
+      api(res, { metodo: req.method ?? 'GET', url });
     }
   });
 
@@ -320,7 +354,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 /** Vuelve con la URL; el servidor mantiene vivo el proceso. Puerto 4173 por defecto. */
 export async function comandoDev(
   args: readonly string[],
-  dependencias: Pick<OpcionesDeDev, 'leer' | 'observar' | 'shell'> = {},
+  dependencias: Pick<OpcionesDeDev, 'leer' | 'observar' | 'estudio'> = {},
 ): Promise<ResultadoDeEjecucion> {
   const uso = usoComun;
   let valores;

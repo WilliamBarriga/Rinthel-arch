@@ -68,7 +68,10 @@ Unica escritura explicita del CLI: todo o nada, solo sobre archivos .dg del Work
   --view <id> --node <id> --x N --y N   Fija el Pin del Nodo en la Vista (lo inserta o lo reemplaza)
   --intent '<json>'                     Intencion { tipo, ... }; hoy ademas de mover-pin:
                                         {"tipo":"ordenar-lifelines","vista":"<id>","orden":["a","b"]} reescribe el
-                                        order completo de una Vista de secuencia (las ocultas conservan su sitio)
+                                        order completo de una Vista de secuencia (las ocultas conservan su sitio);
+                                        {"tipo":"fijar-tema","vista":"<id>","tema":"<nombre>"} escribe theme en la
+                                        Vista (conserva el parche); sin "tema" lo quita. Un Tema no declarado
+                                        rechaza con tema-desconocido
   --edits '<json>'                      Lista de { file, range, replacement }, por ejemplo los fix de validate
   --hash <archivo>=<hash>               Rechaza la edicion si el archivo cambio desde que lo leiste
 
@@ -102,6 +105,8 @@ Comandos:
 
 Bucle de un agente: inspect, editar el .dg, validate --json hasta ok:true.
 Codigos de salida: 0 correcto, 1 hay errores del Workspace, 2 fallo de uso o interno.
+validate, build, inspect y edit anexan un Evento a <ruta>/.diagrams/actividad.jsonl
+(DIAGRAMS_ACTIVIDAD=0 lo apaga; DIAGRAMS_AGENTE nombra al agente).
 Guia completa: docs/guia/cli.md
 `;
 

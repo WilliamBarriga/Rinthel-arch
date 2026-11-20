@@ -3,10 +3,13 @@ import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubica
 
 type Sitio = { file: string; line: number };
 
-/** `argumento` es texto para `buscar` e id para el resto. */
-export type Consulta = { comando: 'buscar' | 'nodo' | 'vista' | 'interaccion'; argumento: string };
+import type { OpcionesDeConsultaDeTema } from './consulta-de-tema';
 
-export type Respuesta = { salida: SalidaDeInspect } | { noEncontrado: string };
+/** `argumento` es texto para `buscar`, nombre para `tema` e id para el resto; las opciones de `tema` ajustan su cascada. */
+export type Consulta = { comando: 'buscar' | 'nodo' | 'vista' | 'interaccion'; argumento: string } | ({ comando: 'tema'; argumento: string } & OpcionesDeConsultaDeTema);
+
+/** `noEncontrado` es el mensaje (con `Quiza: ...`); `cercanos`, los ids parecidos que nombra. */
+export type Respuesta = { salida: SalidaDeInspect } | { noEncontrado: string; cercanos: string[] };
 
 /** En orden de documento. */
 function recorrerNodos(nodos: readonly Nodo[], ruta: RutaDeFuente = ['model', 'nodes']): { nodo: Nodo; ruta: RutaDeFuente }[] {
@@ -16,7 +19,7 @@ function recorrerNodos(nodos: readonly Nodo[], ruta: RutaDeFuente = ['model', 'n
   });
 }
 
-export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento }: Consulta): Respuesta {
+export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento }: Exclude<Consulta, { comando: 'tema' }>): Respuesta {
   const sitioDe = (ruta: RutaDeFuente): Sitio => {
     const sitio = ubicar(ruta);
     return { file: sitio?.file ?? '(desconocido)', line: sitio?.range.start.line ?? 1 };
@@ -60,7 +63,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
     const encontrada = interacciones.find(({ interaccion }) => interaccion.id === argumento);
     if (encontrada === undefined) {
       const cerca = candidatosCercanos(argumento, interacciones.map(({ interaccion }) => interaccion.id));
-      return { noEncontrado: `No existe la Interaccion '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+      return { noEncontrado: `No existe la Interaccion '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`, cercanos: cerca };
     }
     const { interaccion, sitio } = encontrada;
     const mensajes = aplanarMensajes(interaccion.items);
@@ -86,7 +89,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
     const encontrado = nodos.find(({ nodo }) => nodo.id === argumento);
     if (encontrado === undefined) {
       const cerca = candidatosCercanos(argumento, nodos.map(({ nodo }) => nodo.id));
-      return { noEncontrado: `No existe el Nodo '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+      return { noEncontrado: `No existe el Nodo '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`, cercanos: cerca };
     }
     const { nodo } = encontrado;
     const padre = padreDe(nodo.id);
@@ -122,7 +125,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
   const resuelta = encontrada === undefined ? undefined : resolveView(fuente, argumento);
   if (encontrada === undefined || resuelta === undefined) {
     const cerca = candidatosCercanos(argumento, vistas.map(({ vista }) => vista.id));
-    return { noEncontrado: `No existe la Vista '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}` };
+    return { noEncontrado: `No existe la Vista '${argumento}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`, cercanos: cerca };
   }
   const visibles = new Set<string>();
   const marcar = (hijos: typeof resuelta.nodes): void => hijos.forEach((n) => (visibles.add(n.id), marcar(n.children)));

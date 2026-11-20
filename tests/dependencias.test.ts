@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { CADENA, revisarWorkspace } from '../scripts/check-dependencies';
+import { CADENA, NUCLEO, SUBPATHS_PERMITIDOS, revisarWorkspace } from '../scripts/check-dependencies';
 
 const raizDelRepo = resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const temporales: string[] = [];
@@ -44,7 +44,11 @@ function crearWorkspace(archivos: Record<string, string>): string {
 
 describe('revisarWorkspace', () => {
   it('usa la cadena de dependencias de ADR 0004', () => {
-    expect(CADENA).toEqual(['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli']);
+    expect(CADENA).toEqual(['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'estudio', 'cli']);
+  });
+
+  it('estudio queda fuera del nucleo puro (usa DOM, fetch y EventSource)', () => {
+    expect(NUCLEO).not.toContain('estudio');
   });
 
   it('falla si un paquete importa de uno posterior en la cadena', () => {
@@ -102,6 +106,26 @@ describe('revisarWorkspace', () => {
     expect(revisarWorkspace(raiz)).toContainEqual(
       expect.objectContaining({ paquete: 'canonico', regla: 'exports' }),
     );
+  });
+
+  it('acepta en estudio los subpaths del protocolo y del contrato, y rechaza cualquier otro', () => {
+    const raiz = crearWorkspace({
+      'packages/estudio/package.json': manifiesto('estudio', {
+        exports: {
+          '.': { types: './dist/index.d.ts', import: './dist/index.js' },
+          './protocolo': './dist/protocolo.js',
+          './contrato': './dist/contrato.js',
+          './interno': './dist/interno.js',
+        },
+      }),
+      'packages/estudio/src/index.ts': 'export const algo = 1;\n',
+      'packages/cli/package.json': manifiesto('cli', { dependencies: { estudio: 'workspace:*' } }),
+      'packages/cli/src/index.ts': "import type { Algo } from 'estudio/protocolo';\nexport type Propio = Algo;\n",
+    });
+
+    const violaciones = revisarWorkspace(raiz);
+
+    expect(violaciones).toEqual([expect.objectContaining({ paquete: 'estudio', regla: 'exports', mensaje: expect.stringContaining('./interno') })]);
   });
 
   it('falla si un paquete no declara exports', () => {
@@ -173,14 +197,15 @@ describe('revisarWorkspace', () => {
 });
 
 describe('manifiestos de este workspace', () => {
-  it('cada paquete declara exports con solo la entrada raiz', () => {
-    const nombres = ['canonico', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'cli'];
-    for (const nombre of nombres) {
+  it('cada paquete declara exports con la entrada raiz y solo los subpaths que permite el chequeo', () => {
+    for (const nombre of CADENA) {
       const ruta = resolve(raizDelRepo, 'packages', nombre, 'package.json');
       const manifiestoLeido = JSON.parse(readFileSync(ruta, 'utf8')) as {
         exports: Record<string, unknown>;
       };
-      expect(Object.keys(manifiestoLeido.exports), nombre).toEqual(['.']);
+      const permitidos = ['.', ...((SUBPATHS_PERMITIDOS as Record<string, readonly string[]>)[nombre] ?? [])];
+      expect(Object.keys(manifiestoLeido.exports)[0], nombre).toBe('.');
+      for (const clave of Object.keys(manifiestoLeido.exports)) expect(permitidos, `${nombre} ${clave}`).toContain(clave);
     }
   });
 

@@ -2,10 +2,10 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema } from 'canonico';
-import type { IssueDeDev, VistaResuelta } from 'canonico';
+import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
-import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
+import type { AdaptadorDeLayout, Camara, IssueDelVisor, VistaInteractivaProps } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
 
 afterEach(cleanup);
@@ -71,9 +71,9 @@ describe('fantasma de arrastre', () => {
 });
 
 describe('chrome de issues y toasts', () => {
-  const issues: IssueDeDev[] = [{ severity: 'error', code: 'E1', message: 'roto', file: 'a.dg', line: 3, column: 1, href: 'vscode://a.dg:3' }] as IssueDeDev[];
+  const issues: IssueDelVisor[] = [{ severity: 'error', code: 'E1', message: 'roto', file: 'a.dg', line: 3, column: 1, href: 'vscode://a.dg:3' }] as IssueDelVisor[];
 
-  const aviso = { severity: 'warning', code: 'W1', message: 'dudoso', file: 'b.dg', line: 7, column: 2, href: 'vscode://b.dg:7' } as IssueDeDev;
+  const aviso = { severity: 'warning', code: 'W1', message: 'dudoso', file: 'b.dg', line: 7, column: 2, href: 'vscode://b.dg:7' } as IssueDelVisor;
   const desplegar = (c: HTMLElement) => fireEvent.click(c.querySelector('[data-panel="issues"] button')!);
 
   it('arranca plegado con el conteo de errores y warnings, sin lista', async () => {

@@ -1,7 +1,8 @@
 /**
  * `cli`: comandos `validate`, `build`, `skill`, `inspect`, `edit` y `dev` (opciones: `docs/guia/cli.md`).
  * Interfaz: `run(argv, dependencias?) -> { exitCode, stdout, stderr }`; no escribe en el proceso (`bin.ts` imprime).
- * Invariantes: unico paquete con I/O de disco; `validate` nunca reescribe y devuelve todos los issues ordenados.
+ * Invariantes: unico paquete con I/O de disco; `validate` nunca reescribe y devuelve todos los issues ordenados;
+ * su unico efecto lateral es el Registro de actividad en `.diagrams/actividad.jsonl`.
  * Modos de error: issues como datos; fallo de uso o interno -> stderr, stdout vacio, codigo 2.
  * Codigos de salida: 0 correcto, 1 errores del Workspace o edicion rechazada, 2 fallo de uso o interno.
  */
@@ -9,6 +10,8 @@ import { salidaDeValidateSchema } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
 
+import { conActividad } from './actividad';
+import type { Entorno, ResultadoConActividad } from './actividad';
 import { ayudaPara } from './ayuda';
 import { editar } from './comando-edit';
 import { inspeccionar } from './comando-inspect';
@@ -30,6 +33,8 @@ export interface Dependencias {
   escribir?: (raiz: string, archivos: Readonly<Record<string, string | Uint8Array>>, subcarpeta?: string) => void;
   /** Crea las carpetas que falten. */
   escribirArchivo?: (ruta: string, texto: string) => void;
+  /** Variables `DIAGRAMS_ACTIVIDAD` y `DIAGRAMS_AGENTE` del Registro de actividad; por defecto `process.env`. */
+  entorno?: Entorno;
 }
 
 type OpcionesParseadas = ReturnType<typeof leerOpciones>;
@@ -52,7 +57,8 @@ function leerOpciones(args: readonly string[], propias: Record<string, { type: '
 /**
  * `--help`, `-h`, `help [comando]` o sin argumentos dan el uso (codigo 0). `validate` y `build` salen 1 con errores
  * (con `--strict`, tambien con avisos); `--json` imprime exactamente un objeto `salidaDeValidateSchema`.
- * `build` escribe en `<workspace>/.diagrams/` y, si falla, borra la salida anterior. Un `--theme` no declarado,
+ * `build` reemplaza `canonico.json` y `geometria/` en `<workspace>/.diagrams/` y, si falla, los borra. `validate`,
+ * `build`, `inspect` y `edit` anexan un Evento al Registro de actividad (`actividad.ts`), salvo `DIAGRAMS_ACTIVIDAD=0`. Un `--theme` no declarado,
  * un comando desconocido o una opcion invalida salen 2. Los `.tsx` de Temas se compilan sin ejecutarse.
  */
 export async function run(
@@ -61,6 +67,10 @@ export async function run(
 ): Promise<ResultadoDeEjecucion> {
   const ayuda = ayudaPara(argv);
   if (ayuda !== undefined) return { exitCode: 0, stdout: ayuda, stderr: '' };
+  return conActividad(argv, dependencias.entorno ?? process.env, () => despachar(argv, dependencias));
+}
+
+async function despachar(argv: readonly string[], dependencias: Dependencias): Promise<ResultadoConActividad> {
   const [comando, ...resto] = argv;
   if (comando === 'edit') return editar(resto, dependencias);
   if (comando === 'inspect') return inspeccionar(resto, dependencias);
@@ -120,7 +130,7 @@ async function ejecutar(
   opciones: OpcionesParseadas,
   maxIssues: number,
   { leer = leerWorkspace, escribir = escribirSalida }: Dependencias,
-): Promise<ResultadoDeEjecucion> {
+): Promise<ResultadoConActividad> {
   const raiz = opciones['workspace'] as string;
   const carpetaDeTemas = opciones['theme-path'] as string | undefined;
   const tema = opciones['theme'] as string | undefined;
@@ -164,5 +174,6 @@ async function ejecutar(
     exitCode: salida.ok ? 0 : 1,
     stdout: opciones['json'] === true ? `${JSON.stringify(salida, null, 2)}\n` : textoLegible(salida),
     stderr: '',
+    actividad: { resumen: { errores: salida.summary.errors, avisos: salida.summary.warnings } },
   };
 }

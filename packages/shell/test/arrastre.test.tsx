@@ -6,7 +6,7 @@ import type { VistaResuelta } from 'canonico';
 import type { Geometria } from 'layout';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
-import { posicionDe, pulsarNodo } from './ayudas';
+import { dobleClicEnNodo, posicionDe, pulsarNodo } from './ayudas';
 import { TEMA_NEUTRO } from 'tema';
 
 afterEach(cleanup);
@@ -80,6 +80,13 @@ describe('arrastre de Nodos (onMoveNode)', () => {
     pulsarNodo(container, 'a');
     expect(onMoveNode).not.toHaveBeenCalled();
     expect(onSelect).toHaveBeenCalledWith('a');
+  });
+
+  it('el doble clic sobre un Nodo avisa onOpen con su tipo e id', async () => {
+    const onOpen = vi.fn();
+    const { container } = await montar({ onOpen });
+    dobleClicEnNodo(container, 'a');
+    expect(onOpen).toHaveBeenCalledWith({ tipo: 'nodo', id: 'a' });
   });
 
   it('arrastrar no selecciona', async () => {

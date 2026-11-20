@@ -6,6 +6,12 @@
  */
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, MedidorDeTexto, VistaInteractivaProps } from './vista-interactiva';
+export type { IssueDelVisor } from './avisos';
+/** Piezas del chrome del lienzo para montarlas fuera con `chrome={false}` (la app de `dev` en `estudio`). */
+export { Leyenda } from './accesibilidad';
+export type { ModoDeLeyenda } from './accesibilidad';
+export { Migas } from './navegacion';
+export type { Navegacion } from './navegacion';
 export { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from './interaccion';
 export type { ElementoSeleccionable, ModoDeSeleccion, OpcionesDeHitTest, Seleccion, TipoDeElemento } from './interaccion';
 export type { PropsDeNavegacion } from './navegacion';

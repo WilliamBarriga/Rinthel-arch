@@ -24,10 +24,29 @@ describe('Sesion.consultar', () => {
   });
 
   it('propone candidatos cercanos si el Nodo no existe', () => {
-    expect(sesion().consultar({ comando: 'nodo', argumento: 'apj' })).toEqual({ noEncontrado: "No existe el Nodo 'apj'. Quiza: api" });
+    expect(sesion().consultar({ comando: 'nodo', argumento: 'apj' })).toEqual({ noEncontrado: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] });
   });
 
   it('es undefined si el Workspace tiene errores', () => {
     expect(abrirSesion({ 'main.dg': 'model {' }).consultar({ comando: 'buscar', argumento: 'a' })).toBeUndefined();
+  });
+});
+
+describe('Sesion.consultar tema', () => {
+  const conTemas = () =>
+    abrirSesion({
+      'main.dg': 'specification { node servicio }\nmodel { servicio a }\nview v { type architecture  include ** }\n',
+      'temas.dg': 'theme base extends neutral { palette { acento "#0ea5e9" } }\ntheme hijo extends base { }\n',
+    });
+
+  it('da la cadena extends, el sitio y las Capas del Tema, como inspect tema', () => {
+    const r = conTemas().consultar({ comando: 'tema', argumento: 'hijo' });
+    if (r === undefined || !('salida' in r) || r.salida.comando !== 'tema') throw new Error('sin salida de tema');
+    expect(r.salida.tema).toMatchObject({ name: 'hijo', file: 'temas.dg', line: 2, extends: ['base', 'neutral'] });
+    expect(r.salida.tema.capas.length).toBeGreaterThan(0);
+  });
+
+  it('un Tema inexistente propone los cercanos', () => {
+    expect(conTemas().consultar({ comando: 'tema', argumento: 'hija' })).toEqual({ noEncontrado: "No existe el Tema 'hija'. Quiza: hijo", cercanos: ['hijo'] });
   });
 });

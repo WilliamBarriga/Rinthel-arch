@@ -27,6 +27,16 @@ export function pulsarEn(contenedor: HTMLElement, x: number, y: number, init: Mo
   fireEvent.click(dibujo, { clientX: (x - vx) * k, clientY: (y - vy) * k, ...init });
 }
 
+/** Doble clic (solo el `dblclick`) en el centro de un Nodo. */
+export function dobleClicEnNodo(contenedor: HTMLElement, id: string): void {
+  const [x, y] = posicionDe(contenedor, id)!;
+  const caja = contenedor.querySelector<HTMLElement>(`[data-id="${id}"]`)!;
+  const dibujo = dibujoDe(contenedor);
+  const [vx, vy, vw] = dibujo.getAttribute('data-camara')!.split(' ').map(Number) as [number, number, number, number];
+  const k = Number.parseFloat(dibujo.style.width) / vw;
+  fireEvent.doubleClick(dibujo, { clientX: (x + Number.parseFloat(caja.style.width) / 2 - vx) * k, clientY: (y + Number.parseFloat(caja.style.height) / 2 - vy) * k });
+}
+
 export function pulsarNodo(contenedor: HTMLElement, id: string, init: MouseEventInit = {}): void {
   const [x, y] = posicionDe(contenedor, id)!;
   const caja = contenedor.querySelector<HTMLElement>(`[data-id="${id}"]`)!;

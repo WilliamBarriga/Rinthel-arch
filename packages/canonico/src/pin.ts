@@ -26,6 +26,8 @@ export const MOTIVOS_DE_RECHAZO = [
   'invalida',
   'nada-que-deshacer',
   'nada-que-rehacer',
+  'tema-desconocido',
+  'entrada-desconocida',
 ] as const;
 
 export type MotivoDeRechazo = (typeof MOTIVOS_DE_RECHAZO)[number];
@@ -41,10 +43,22 @@ export const intencionDeOrdenSchema = z.object({
 
 export type IntencionDeOrden = z.infer<typeof intencionDeOrdenSchema>;
 
+/**
+ * Fija el Tema de una Vista (`theme <tema>` conservando el parche); sin `tema` quita el fijado. Un Tema no declarado
+ * rechaza con `tema-desconocido`.
+ */
+export const intencionDeTemaSchema = z.object({
+  vista: z.string(),
+  tema: z.string().min(1).optional(),
+});
+
+export type IntencionDeTema = z.infer<typeof intencionDeTemaSchema>;
+
 /** Cuerpo de `POST /api/edit`, discriminado por `tipo`. */
 export const intencionSchema = z.discriminatedUnion('tipo', [
   intencionDePinSchema.extend({ tipo: z.literal('mover-pin') }),
   intencionDeOrdenSchema.extend({ tipo: z.literal('ordenar-lifelines') }),
+  intencionDeTemaSchema.extend({ tipo: z.literal('fijar-tema') }),
 ]);
 
 export type Intencion = z.infer<typeof intencionSchema>;

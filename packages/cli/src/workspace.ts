@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
+import { esArchivoDeFuente, tipoDeFuente } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
 const EXTENSION = '.dg';
@@ -47,11 +48,7 @@ export function leerRecursos(raiz: string): Record<string, string> {
   return recorrer(raiz, (nombre) => EXTENSIONES_DE_RECURSO.some((extension) => nombre.endsWith(extension)), (ruta) => createHash('sha256').update(readFileSync(ruta)).digest('hex'));
 }
 
-const TIPOS_DE_FUENTE: Readonly<Record<string, string>> = { '.woff2': 'font/woff2', '.woff': 'font/woff', '.ttf': 'font/ttf', '.otf': 'font/otf' };
-const tipoDeFuente = (ruta: string): string | undefined => TIPOS_DE_FUENTE[extname(ruta).toLowerCase()];
-
-/** Por su extension. */
-export const esArchivoDeFuente = (ruta: string): boolean => tipoDeFuente(ruta) !== undefined;
+export { esArchivoDeFuente };
 
 /** Rutas relativas a `raiz`, con `/`. */
 export function leerFuentes(raiz: string): string[] {
@@ -78,9 +75,11 @@ export function leerArchivoDeFuente(raices: readonly string[], ruta: string): { 
 }
 
 const CARPETA_DE_SALIDA = '.diagrams';
+/** Lo que `build` reemplaza en `.diagrams/`; el resto (el Registro de actividad) se conserva. */
+const SALIDA_DE_BUILD = ['canonico.json', 'geometria'];
 /**
- * Reemplaza `<raiz>/.diagrams/<subcarpeta>` (por defecto, todo `.diagrams/`) por `archivos` (ruta relativa a
- * `.diagrams/` con `/`): no quedan restos de una Vista que ya no existe.
+ * Reemplaza `<raiz>/.diagrams/<subcarpeta>` (por defecto, `canonico.json` y `geometria/`) por `archivos` (ruta
+ * relativa a `.diagrams/` con `/`): no quedan restos de una Vista que ya no existe.
  */
 export function escribirSalida(
   raiz: string,
@@ -88,7 +87,7 @@ export function escribirSalida(
   subcarpeta = '',
 ): void {
   const destino = join(raiz, CARPETA_DE_SALIDA);
-  rmSync(join(destino, subcarpeta), { recursive: true, force: true });
+  for (const ruta of subcarpeta === '' ? SALIDA_DE_BUILD : [subcarpeta]) rmSync(join(destino, ruta), { recursive: true, force: true });
   for (const [ruta, texto] of Object.entries(archivos)) {
     const archivo = join(destino, ...ruta.split('/'));
     mkdirSync(dirname(archivo), { recursive: true });

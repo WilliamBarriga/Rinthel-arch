@@ -1,6 +1,10 @@
+import { hashDeContenido } from 'canonico';
 import type { Issue, MotivoDeRechazo, TextPosition, TextRange } from 'canonico';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace } from 'dsl';
+
+/** Vive en `canonico` (puro, lo usa tambien el editor del navegador); se reexporta por compatibilidad. */
+export { hashDeContenido };
 
 export interface EdicionConHash {
   file: string;
@@ -15,20 +19,6 @@ export interface EdicionConHash {
 export type ResultadoDeEdicion<T> =
   | ({ ok: true } & T)
   | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
-
-/** Hash estable (53 bits, hex) del contenido de un archivo; no criptografico. Puro, sin `node:crypto`. */
-export function hashDeContenido(texto: string): string {
-  let h1 = 0xdeadbeef;
-  let h2 = 0x41c6ce57;
-  for (let i = 0; i < texto.length; i++) {
-    const c = texto.charCodeAt(i);
-    h1 = Math.imul(h1 ^ c, 2654435761);
-    h2 = Math.imul(h2 ^ c, 1597334677);
-  }
-  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
-  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16).padStart(14, '0');
-}
 
 export const rechazo = (motivo: MotivoDeRechazo, mensaje: string, file?: string) =>
   ({ ok: false, motivo, mensaje, ...(file === undefined ? {} : { file }) }) as const;
@@ -67,6 +57,26 @@ export function aplicarSobre(
   ediciones: readonly EdicionConHash[],
   erroresAntes: Map<string, number>,
 ): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace; issues: Issue[] }> {
+  const r = reemplazarTexto(archivos, ediciones);
+  if (!r.ok) return r;
+  const resultado = r.archivos;
+  const despues = compile(resultado).issues;
+  const conteo = new Map(erroresAntes);
+  const nuevo = despues.find((i) => {
+    if (i.severity !== 'error') return false;
+    const restantes = conteo.get(clave(i)) ?? 0;
+    conteo.set(clave(i), restantes - 1);
+    return restantes <= 0;
+  });
+  if (nuevo !== undefined) return rechazo('invalida', `La edicion introduce un error: ${nuevo.message}`, nuevo.file);
+  return { ok: true, archivos: resultado, issues: despues };
+}
+
+/**
+ * Como `aplicarSobre` pero sin la auto-prueba de errores: rechaza solo por archivo, hash, rango o solape. Es la de los
+ * guardados del editor, que se escriben aunque no compilen (ADR 0007).
+ */
+export function reemplazarTexto(archivos: ArchivosDelWorkspace, ediciones: readonly EdicionConHash[]): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace }> {
   const porArchivo = new Map<string, { inicio: number; fin: number; texto: string }[]>();
   for (const { file, range, replacement, hash } of ediciones) {
     const actual = archivos[file];
@@ -94,17 +104,7 @@ export function aplicarSobre(
     }
     resultado[file] = texto;
   }
-
-  const despues = compile(resultado).issues;
-  const conteo = new Map(erroresAntes);
-  const nuevo = despues.find((i) => {
-    if (i.severity !== 'error') return false;
-    const restantes = conteo.get(clave(i)) ?? 0;
-    conteo.set(clave(i), restantes - 1);
-    return restantes <= 0;
-  });
-  if (nuevo !== undefined) return rechazo('invalida', `La edicion introduce un error: ${nuevo.message}`, nuevo.file);
-  return { ok: true, archivos: resultado, issues: despues };
+  return { ok: true, archivos: resultado };
 }
 
 /** `aplicarSobre` contando los errores previos del propio mapa. */

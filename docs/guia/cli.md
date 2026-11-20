@@ -48,7 +48,7 @@ Codigos de los Tipos de diagrama `sequence` y `er` (la lista completa, con su de
 dg build --workspace <ruta> [las opciones de validate]
 ```
 
-Escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`; `geometry.kind` es `grafo` para architecture, flow y er, y `secuencia` para una Vista `sequence`, con `lifelines`, `activations`, `messages`, `fragments`, `notes` y `groups`) en `<ruta>/.diagrams/`, reemplazandola (derivado: no se versiona ni se edita). Con errores, o con avisos en `--strict`, sale 1 y borra la salida anterior. `--theme` fija el Tema global (una Vista con `theme` propio lo anula; sin ninguno, el neutro); un Tema no declarado sale 2.
+Escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`; `geometry.kind` es `grafo` para architecture, flow y er, y `secuencia` para una Vista `sequence`, con `lifelines`, `activations`, `messages`, `fragments`, `notes` y `groups`) en `<ruta>/.diagrams/`, reemplazando solo esos dos (derivado: no se versiona ni se edita; el Registro de actividad se conserva). Con errores, o con avisos en `--strict`, sale 1 y borra la salida anterior. `--theme` fija el Tema global (una Vista con `theme` propio lo anula; sin ninguno, el neutro); un Tema no declarado sale 2.
 
 ### `dev`: visor en vivo
 
@@ -56,10 +56,10 @@ Escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, g
 dg dev --workspace <ruta> [--port N] [--trust-code] [--theme-path <dir>]
 ```
 
-Sirve en `http://127.0.0.1:<puerto>/` (4173 por defecto, `--port 0` elige uno libre; solo escucha en localhost). Sirve los cuatro Tipos de diagrama (architecture, flow, sequence y er). Recompila al guardar y muestra un panel de issues clicables; si una edicion rompe el DSL conserva el ultimo dibujo bueno. La Vista se elige con el hash (`#p=<vista>`).
+Sirve en `http://127.0.0.1:<puerto>/` (4173 por defecto, `--port 0` elige uno libre; solo escucha en localhost) la [UI de dev](ui-de-dev.md): lienzo con los cuatro Tipos de diagrama, indice de Vistas, editor del DSL, Issues, galeria de Temas, Historial y feed del agente. Recompila al guardar y, si una edicion rompe el DSL, conserva el ultimo dibujo bueno. La Vista se elige con el hash (`#vista=<id>`).
 
-- **Temas con codigo (`.tsx`)**: `dev` no los sirve hasta que lo confirmes en el visor; `--trust-code` lo da de antemano. Usalo solo con Workspaces que conoces.
-- **Arrastrar un Nodo** fija su Pin y reescribe el `.dg` (mismo nucleo que `edit`). En una Vista `sequence`, arrastrar en horizontal la cabecera de una Lifeline (o el titulo de un `box`, que mueve el bloque) reescribe el `order` completo; una hija no sale del `box` de su Grupo.
+- **Temas con codigo (`.tsx`)**: `dev` no los sirve hasta que lo confirmes en la UI; `--trust-code` lo da de antemano. Usalo solo con Workspaces que conoces.
+- **Escrituras**: arrastrar un Nodo fija su Pin; en una Vista `sequence`, arrastrar en horizontal la cabecera de una Lifeline (o el titulo de un `box`, que mueve el bloque) reescribe el `order` completo y una hija no sale del `box` de su Grupo. El editor, los `fix` y la galeria tambien escriben el `.dg` con el mismo nucleo que `edit`; cada escritura es una entrada del Historial de `dev`, que sobrevive a las ediciones de otros programas.
 - **Como proceso**: es de larga vida. Lanzalo en segundo plano y espera la linea con la URL; el puerto ocupado es un error (`--port` otro).
 
 ### `inspect`: consultar el Modelo (solo lectura)
@@ -82,7 +82,9 @@ dg edit --workspace <ruta> --intent '<json>' [--hash <archivo>=<hash>] [--json]
 dg edit --workspace <ruta> --edits '<json>' [--hash <archivo>=<hash>] [--json]
 ```
 
-Todo o nada: si una edicion falla no se escribe nada. Con `--hash`, rechaza la edicion si el archivo cambio desde que se leyo. Solo toca `.dg` del Workspace. `--intent` aplica una Intencion por su contrato JSON (no lleva `hash`: uno heredado en el JSON se ignora; la concurrencia es `--hash <archivo>=<hash>`, que rechaza si ese archivo cambio, y sin `--hash` aplica sobre el texto vigente); hoy ademas de `mover-pin` existe `{"tipo":"ordenar-lifelines","vista":"flujo","orden":["cliente","api","db"]}`: reescribe el `order` completo de una Vista `sequence` con el orden visible dado, aunque coincida con la primera aparicion; las entradas de `order` hoy ocultas (hijas de un Grupo colapsado, excluidas) conservan su posicion relativa. Sirve para fijar Pins y para aplicar los `fix` de `validate`; el resto de cambios se editan a mano en el `.dg` y se revalidan.
+Todo o nada: si una edicion falla no se escribe nada. Con `--hash`, rechaza la edicion si el archivo cambio desde que se leyo. Solo toca `.dg` del Workspace. `--intent` aplica una Intencion por su contrato JSON (no lleva `hash`: uno heredado en el JSON se ignora; la concurrencia es `--hash <archivo>=<hash>`, que rechaza si ese archivo cambio, y sin `--hash` aplica sobre el texto vigente); hoy ademas de `mover-pin` existe `{"tipo":"ordenar-lifelines","vista":"flujo","orden":["cliente","api","db"]}`: reescribe el `order` completo de una Vista `sequence` con el orden visible dado, aunque coincida con la primera aparicion; las entradas de `order` hoy ocultas (hijas de un Grupo colapsado, excluidas) conservan su posicion relativa. `{"tipo":"fijar-tema","vista":"general","tema":"claro"}` fija el Tema de una Vista: reescribe el nombre de su `theme` conservando el parche, o inserta `theme claro` como primera linea del cuerpo si no tenia; sin `"tema"` quita la linea (si habia parche escribe `theme neutral { parche }`). Un Tema no declarado (ni en el Workspace ni en `--theme-path`) rechaza con `tema-desconocido` (salida 1). Sirve para fijar Pins y para aplicar los `fix` de `validate`; el resto de cambios se editan a mano en el `.dg` y se revalidan.
+
+De donde sale el `--hash`: es el `hashDeContenido` de `canonico` del texto que leiste (53 bits en hexadecimal, no un SHA), y es opcional: sin el, `edit` aplica sobre el texto vigente. Con `dev` corriendo, `GET http://127.0.0.1:<puerto>/api/archivo/<ruta>` da `{ file, texto, hash, version }` y `GET /api/archivos` el `hash` de cada `.dg` (por ejemplo `curl -s http://127.0.0.1:4173/api/archivo/main.dg`); lee el texto y su `hash` de la misma respuesta y pasalo tal cual: `--hash main.dg=<hash>`. Si el archivo cambio entre medias, `edit` rechaza con `hash-desactualizado` (salida 1): vuelve a leer y reintenta.
 
 ### `skill`: skill de agente de un Workspace
 
@@ -108,3 +110,12 @@ dg dev --workspace <ruta>                      # verlo
 | `--workspace <ruta>` | todos | Carpeta con los `.dg` (obligatoria) |
 | `--theme-path <dir>` | validate, build, inspect, edit, dev | Carpeta de Temas extra; se fusiona antes del Workspace, que gana en nombres repetidos |
 | `--json` | validate, build, inspect, edit | Salida de maquina |
+
+## Registro de actividad
+
+`validate`, `build`, `inspect` y `edit` anexan un Evento de actividad (una linea JSON, `eventoDeActividadSchema` de `canonico`) a `<ruta>/.diagrams/actividad.jsonl`, tambien cuando salen 1 o 2. `skill`, `dev` y la ayuda no registran, ni ningun comando cuyo `--workspace` falte o no sea una carpeta. Cada Evento lleva `ts`, `pid`, `comando`, `args` (el argv tras el comando), `exitCode`, `duracionMs`, el `objetivo` que el comando nombra (`inspect vista|nodo|tema`, la Vista y el Nodo de una Intencion de `edit`, los archivos que escribio `edit`) y, en `validate` y `build`, `resumen { errores, avisos }`; nunca stdout ni stderr. Al pasar 1 MB rota a `actividad.1.jsonl`. Un fallo al escribirlo no cambia la salida ni el codigo. Se sigue sin `dev` con `tail -f <ruta>/.diagrams/actividad.jsonl`. `dev` lo observa aparte del Workspace (ignora lineas rotas y vuelve a leer un registro acortado o rotado) y lo muestra en el panel Agente con los ultimos 50 Eventos; que hace la UI con ellos y con los cambios externos: [Seguir a un agente](ui-de-dev.md#seguir-a-un-agente).
+
+| Variable | Efecto |
+| --- | --- |
+| `DIAGRAMS_ACTIVIDAD=0` | Desactiva el registro (activo por defecto) |
+| `DIAGRAMS_AGENTE=<texto>` | Nombre libre del agente; llega al campo `agente` del Evento |

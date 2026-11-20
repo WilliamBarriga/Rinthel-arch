@@ -1,0 +1,931 @@
+/*
+ * Chrome del estudio: estetica G (islas de vidrio), paleta neon, solo oscuro. Los tokens viven bajo `.ui-chrome` y no
+ * en `:root`, para no mezclarse con el Tema de la Vista (el lienzo pinta su propio fondo con `--rd-*`).
+ */
+@layer reset, chrome;
+@import './tokens.css' layer(chrome);
+
+@layer reset {
+  html,
+  body,
+  #raiz {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #0a0612;
+  }
+  .ui-chrome *,
+  .ui-chrome *::before,
+  .ui-chrome *::after {
+    box-sizing: border-box;
+  }
+  .ui-chrome button {
+    font: inherit;
+    color: inherit;
+  }
+}
+
+@layer chrome {
+  .ui-chrome {
+    position: fixed;
+    inset: 0;
+    font: var(--ui-tam) / 1.45 var(--ui-fuente);
+    color: var(--ui-texto);
+    -webkit-font-smoothing: antialiased;
+
+    & .ui-mono {
+      font-family: var(--ui-mono);
+      font-size: 12px;
+    }
+    & .ui-tenue {
+      color: var(--ui-tenue);
+    }
+    & :focus-visible {
+      outline: 2px solid var(--ui-acento);
+      outline-offset: 2px;
+    }
+  }
+
+  /* Superficie de vidrio compartida por pildoras, islas, pestanas de borde, leyenda y toasts. */
+  .ui-pildora,
+  .ui-isla,
+  .ui-pestana-borde,
+  .ui-leyenda,
+  .ui-toast {
+    background: var(--ui-superficie);
+    backdrop-filter: var(--ui-vidrio);
+    box-shadow: var(--ui-sombra);
+    border: 1px solid var(--ui-borde);
+  }
+  /* Durante un gesto (redimensionar una isla) el vidrio pasa a superficie solida: el blur no se recalcula por cuadro. */
+  .ui-chrome[data-arrastrando] :is(.ui-pildora, .ui-isla, .ui-pestana-borde, .ui-leyenda, .ui-toast) {
+    backdrop-filter: none;
+    background: var(--ui-superficie-solida);
+  }
+
+  .ui-lienzo {
+    position: absolute;
+    inset: 0;
+    background: var(--ui-fondo);
+  }
+
+  .ui-barra {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    gap: 8px;
+    pointer-events: none;
+    z-index: 3;
+    & > * {
+      pointer-events: auto;
+    }
+  }
+  .ui-pildora {
+    height: 40px;
+    border-radius: 99px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ui-marca {
+    font-weight: 600;
+    color: var(--ui-texto-fuerte);
+    &::before {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--ui-acento);
+      box-shadow: 0 0 12px var(--ui-acento);
+    }
+  }
+  .ui-isla {
+    position: absolute;
+    top: 64px;
+    /* Deja libre la franja de abajo: leyenda, Pasos y Alto contraste / Reducir movimiento no quedan bajo las islas. */
+    max-height: calc(100% - 64px - 64px);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    z-index: 2;
+    transition:
+      width var(--ui-dur) var(--ui-curva),
+      height var(--ui-dur) var(--ui-curva);
+    &[data-lado='izquierda'] {
+      left: 12px;
+    }
+    &[data-lado='derecha'] {
+      right: 12px;
+    }
+  }
+  .ui-chrome[data-arrastrando] .ui-isla {
+    transition: none;
+    user-select: none;
+  }
+  .ui-isla-pestanas {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+  }
+  .ui-isla-cabecera {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 8px 6px;
+    border-bottom: 1px solid var(--ui-borde);
+  }
+  .ui-isla-cuerpo {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 10px 12px 14px;
+  }
+  .ui-pestanas {
+    position: relative;
+    display: flex;
+    gap: 2px;
+    flex: 1;
+    overflow-x: auto;
+  }
+  .ui-pestana {
+    background: none;
+    border: 0;
+    padding: 6px 10px;
+    border-radius: 10px;
+    color: var(--ui-tenue);
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      background var(--ui-dur-corta) var(--ui-curva),
+      color var(--ui-dur-corta) var(--ui-curva);
+    &:hover {
+      background: var(--ui-hover);
+      color: var(--ui-texto);
+    }
+    &[aria-selected='true'] {
+      background: var(--ui-sel);
+      color: var(--ui-texto-fuerte);
+    }
+  }
+  .ui-pestanas-indicador {
+    position: absolute;
+    bottom: -7px;
+    left: var(--active-tab-left);
+    width: var(--active-tab-width);
+    height: 2px;
+    border-radius: 2px;
+    background: var(--ui-acento);
+    transition:
+      left var(--ui-dur) var(--ui-curva),
+      width var(--ui-dur) var(--ui-curva);
+  }
+  .ui-boton-icono {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--ui-radio-s);
+    border: 0;
+    background: none;
+    color: var(--ui-tenue);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    &:hover {
+      background: var(--ui-hover);
+      color: var(--ui-texto);
+    }
+  }
+
+  /* Asas: lateral (columna), inferior (alto) y esquina (los dos ejes, solo puntero). */
+  .ui-asa {
+    position: absolute;
+    touch-action: none;
+    z-index: 1;
+    border-radius: 4px;
+    transition: background var(--ui-dur-corta) var(--ui-curva);
+    &:hover,
+    &:focus-visible {
+      background: var(--ui-sel);
+    }
+  }
+  .ui-asa-h {
+    top: 18px;
+    bottom: 18px;
+    width: 8px;
+    cursor: col-resize;
+  }
+  .ui-asa-v {
+    left: 18px;
+    right: 18px;
+    bottom: -4px;
+    height: 8px;
+    cursor: ns-resize;
+  }
+  .ui-asa-d {
+    bottom: -4px;
+    width: 18px;
+    height: 18px;
+  }
+  .ui-isla[data-lado='izquierda'] {
+    & .ui-asa-h {
+      right: -4px;
+    }
+    & .ui-asa-d {
+      right: -4px;
+      cursor: nwse-resize;
+    }
+  }
+  .ui-isla[data-lado='derecha'] {
+    & .ui-asa-h {
+      left: -4px;
+    }
+    & .ui-asa-d {
+      left: -4px;
+      cursor: nesw-resize;
+    }
+  }
+
+  .ui-pestana-borde {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 150px;
+    width: 32px;
+    border-radius: 99px;
+    writing-mode: vertical-rl;
+    cursor: pointer;
+    color: var(--ui-tenue);
+    z-index: 2;
+    transition: color var(--ui-dur-corta) var(--ui-curva);
+    &:hover {
+      color: var(--ui-texto-fuerte);
+    }
+    &[data-lado='izquierda'] {
+      left: 6px;
+      transform: translateY(-50%) rotate(180deg);
+    }
+    &[data-lado='derecha'] {
+      right: 6px;
+    }
+  }
+
+  /* Indice de Vistas. */
+  .ui-indice {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    outline-offset: 4px;
+    border-radius: var(--ui-radio-s);
+  }
+  .ui-indice-titulo {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 8px 4px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ui-tenue);
+  }
+  .ui-conteo {
+    font-family: var(--ui-mono);
+  }
+  .ui-indice-vista {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    border-radius: var(--ui-radio-s);
+    border-left: 2px solid transparent;
+    cursor: pointer;
+    transition: background var(--ui-dur-corta) var(--ui-curva);
+    &:hover {
+      background: var(--ui-hover);
+    }
+    &[aria-selected='true'] {
+      background: var(--ui-sel);
+      border-left-color: var(--ui-acento);
+      color: var(--ui-texto-fuerte);
+    }
+  }
+  .ui-enlaces {
+    font-size: 11px;
+    color: var(--ui-tenue);
+  }
+
+  /* Paneles de la isla derecha. */
+  .ui-detalle p {
+    margin: 0 0 6px;
+  }
+  .ui-detalle-titulo {
+    margin: 0 0 2px;
+    font-size: 16px;
+    color: var(--ui-texto-fuerte);
+  }
+  .ui-subtitulo {
+    margin: 14px 0 4px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ui-tenue);
+  }
+  .ui-sitio {
+    color: var(--ui-sint-id);
+  }
+
+  /* Galeria de Temas: lista de Temas, acciones y muestras de la Paleta. */
+  .ui-galeria {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ui-galeria > p button,
+  .ui-acciones button {
+    margin-left: 6px;
+  }
+  .ui-acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 6px 0;
+  }
+  .ui-paleta li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ui-muestra {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid var(--ui-borde, currentColor);
+    flex: none;
+  }
+  .ui-lista {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ui-enlace {
+    background: none;
+    border: 0;
+    padding: 2px 0;
+    cursor: pointer;
+    color: var(--ui-sint-id);
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  .ui-panel-issues {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ui-filtro-issues {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    & input,
+    & select {
+      min-width: 0;
+      background: var(--ui-sutil);
+      color: var(--ui-texto);
+      border: 1px solid var(--ui-borde);
+      border-radius: var(--ui-radio-s);
+      padding: 4px 6px;
+    }
+    & input {
+      flex: 1;
+    }
+  }
+  .ui-issues {
+    gap: 6px;
+    & li > .ui-boton {
+      margin-left: 6px;
+    }
+    & [data-severidad='error'] .ui-sitio {
+      color: var(--ui-err);
+    }
+    & [data-severidad='warning'] .ui-sitio {
+      color: var(--ui-warn);
+    }
+  }
+
+  /* Agente: ultima linea y "seguir al agente" en la barra, feed en el panel. */
+  .ui-ultima-linea {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 320px;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    color: var(--ui-agente-texto);
+    &::before {
+      content: '';
+      flex: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ui-agente);
+      box-shadow: 0 0 10px var(--ui-agente-halo);
+    }
+  }
+  .ui-ultima-linea-texto {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ui-contador {
+    min-width: 18px;
+    padding: 0 5px;
+    border-radius: 99px;
+    background: var(--ui-agente);
+    color: var(--ui-acento-sobre);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .ui-seguir {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ui-tenue);
+    cursor: pointer;
+  }
+  .ui-interruptor {
+    position: relative;
+    width: 30px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 99px;
+    background: var(--ui-sutil-2);
+    cursor: pointer;
+    transition: background var(--ui-dur-corta) var(--ui-curva);
+    &[data-checked] {
+      background: var(--ui-agente);
+    }
+  }
+  .ui-interruptor-pulgar {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ui-texto-fuerte);
+    transition: transform var(--ui-dur-corta) var(--ui-curva);
+    &[data-checked] {
+      transform: translateX(12px);
+    }
+  }
+  .ui-feed {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ui-feed-linea {
+    padding: 4px 6px;
+    border-radius: var(--ui-radio-s);
+    &:hover {
+      background: var(--ui-hover);
+    }
+  }
+  .ui-feed-cabecera {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .ui-feed-quien {
+    color: var(--ui-agente-texto);
+  }
+  .ui-feed-marca {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--ui-tenue);
+    &[data-marca='ok'] {
+      color: var(--ui-agente-texto);
+    }
+    &[data-marca='avisos'] {
+      color: var(--ui-warn);
+    }
+    &[data-marca='errores'],
+    &[data-marca='fallo'] {
+      color: var(--ui-err);
+    }
+  }
+  .ui-feed-args {
+    display: block;
+    margin-top: 4px;
+    padding: 4px 6px;
+    border-radius: var(--ui-radio-s);
+    background: var(--ui-sutil);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  /* Historial: lo mas reciente arriba, el futuro atenuado, la posicion actual marcada. */
+  .ui-historial-lista {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ui-historial-fila {
+    &[data-futuro='true'] {
+      opacity: 0.55;
+    }
+  }
+  .ui-historial-boton {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    width: 100%;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: var(--ui-radio-s);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    &:hover:not(:disabled) {
+      background: var(--ui-hover);
+    }
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    &[aria-current='step'] {
+      background: var(--ui-sutil);
+      cursor: default;
+    }
+  }
+  .ui-historial-marca {
+    color: var(--ui-acento);
+  }
+  .ui-historial-actual {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--ui-acento);
+  }
+  .ui-historial-motivo {
+    margin: 0 6px 4px 22px;
+    font-size: 11px;
+    color: var(--ui-err);
+  }
+  /* Buscador, ayuda de atajos y tooltips (portales de Base UI en `.ui-portales`). */
+  .ui-pildora-buscador {
+    color: var(--ui-tenue);
+    cursor: pointer;
+    min-width: 180px;
+    &:hover {
+      color: var(--ui-texto);
+    }
+  }
+  .ui-fondo-dialogo {
+    position: fixed;
+    inset: 0;
+    background: #0008;
+    z-index: 10;
+  }
+  .ui-dialogo {
+    position: fixed;
+    top: 72px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(560px, calc(100vw - 32px));
+    max-height: calc(100vh - 120px);
+    overflow: auto;
+    padding: 12px;
+    border-radius: 18px;
+    border: 1px solid var(--ui-borde);
+    background: var(--ui-superficie);
+    backdrop-filter: var(--ui-vidrio-dialogo);
+    box-shadow: var(--ui-sombra);
+    z-index: 11;
+    transition: opacity var(--ui-dur-corta) var(--ui-curva);
+    &[data-starting-style],
+    &[data-ending-style] {
+      opacity: 0;
+    }
+  }
+  .ui-dialogo-titulo {
+    margin: 0 0 4px;
+    font-size: 15px;
+    color: var(--ui-texto-fuerte);
+  }
+  .ui-buscador-campo {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: var(--ui-radio-s);
+    border: 1px solid var(--ui-borde);
+    background: var(--ui-sutil);
+    color: var(--ui-texto);
+    font: inherit;
+    outline: none;
+  }
+  .ui-buscador-lista {
+    margin-top: 8px;
+  }
+  .ui-buscador-grupo {
+    margin-bottom: 6px;
+  }
+  .ui-buscador-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--ui-radio-s);
+    cursor: pointer;
+    & .ui-tecla:first-of-type {
+      margin-left: auto;
+    }
+    &[data-highlighted] {
+      background: var(--ui-sel);
+      color: var(--ui-texto-fuerte);
+    }
+  }
+  .ui-tecla {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--ui-sutil-2);
+    font: 11px var(--ui-mono);
+    color: var(--ui-tenue);
+  }
+  .ui-atajos {
+    margin: 0;
+    & .ui-atajo {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+    & dd {
+      margin: 0;
+    }
+  }
+  .ui-tooltip {
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--ui-superficie-alta);
+    box-shadow: var(--ui-sombra);
+    font-size: 12px;
+    z-index: 12;
+  }
+  .ui-boton {
+    margin-top: 12px;
+    padding: 6px 12px;
+    border-radius: var(--ui-radio-s);
+    border: 1px solid var(--ui-borde);
+    background: var(--ui-sutil);
+    color: var(--ui-texto);
+    cursor: pointer;
+  }
+
+  /* Leyenda del shell montada fuera del lienzo. */
+  .ui-leyenda {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    border-radius: 14px;
+    padding: 8px 12px;
+    z-index: 1;
+    /* La Leyenda del shell en modo auto puede no dibujar nada: sin ella no queda una pildora vacia. */
+    &:empty {
+      display: none;
+    }
+  }
+
+  .ui-toasts {
+    position: absolute;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 4;
+  }
+  .ui-toast {
+    padding: 8px 16px;
+    border-radius: 14px;
+  }
+}
+
+/*
+ * Piezas del shell (`.rd-*`) montadas o vistas desde el chrome. Fuera de capas a proposito: el `<style>` del shell no
+ * tiene capa y ganaria a cualquier regla con capa.
+ */
+.ui-chrome .ui-lienzo .rd-pasos {
+  left: 50%;
+  top: auto;
+  bottom: 16px;
+  transform: translateX(-50%);
+}
+.ui-chrome .ui-lienzo .rd-contraste {
+  top: auto;
+  bottom: 16px;
+  right: 16px;
+}
+.ui-chrome .ui-leyenda .rd-chrome {
+  position: static;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.ui-chrome .ui-migas .rd-chrome {
+  white-space: nowrap;
+  position: static;
+  font: inherit;
+  color: inherit;
+  & button {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: var(--ui-tenue);
+    padding: 2px 6px;
+    border-radius: var(--ui-radio-s);
+    transition: background var(--ui-dur-corta) var(--ui-curva);
+    &:hover:not(:disabled) {
+      background: var(--ui-hover);
+      color: var(--ui-texto);
+    }
+    &:disabled {
+      opacity: 0.4;
+    }
+  }
+  & [aria-current='page'] {
+    font-family: var(--ui-mono);
+    color: var(--ui-texto-fuerte);
+  }
+}
+
+/* Paneles de las islas que llegaron despues (Codigo, Diferencia): en la misma capa que el resto del chrome. */
+@layer chrome {
+  /* Pestana Codigo: editor CodeMirror 6 del DSL (#190). */
+  .ui-codigo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+    min-width: 0;
+  }
+  /* El editor no crece mas que la isla: las lineas largas se desplazan dentro de CodeMirror. */
+  .ui-editor {
+    min-width: 0;
+    & .cm-editor {
+      width: 100%;
+    }
+  }
+  .ui-codigo-cabecera {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    & select {
+      flex: 1;
+      min-width: 0;
+      background: var(--ui-sutil);
+      color: var(--ui-texto);
+      border: 1px solid var(--ui-borde);
+      border-radius: var(--ui-radio-s);
+      padding: 4px 6px;
+      font-family: var(--ui-mono);
+    }
+  }
+  /* La lista desplegable nativa de un select tambien con los tokens del chrome (oscuro); si no, sale blanca. */
+  .ui-isla select {
+    color-scheme: dark;
+    & option {
+      background: var(--ui-superficie-solida);
+      color: var(--ui-texto);
+    }
+  }
+  .ui-guardado {
+    font-size: 11px;
+    color: var(--ui-tenue);
+    &[data-estado='error'] {
+      color: var(--ui-err);
+    }
+  }
+  /* Aviso de solape con una escritura externa (#191). */
+  .ui-aviso-del-disco {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    font-size: 12px;
+    color: var(--ui-warn);
+    background: var(--ui-warn-suave);
+    border-radius: var(--ui-radio-s);
+    & span {
+      flex: 1 1 100%;
+    }
+    & button {
+      background: var(--ui-sutil);
+      color: var(--ui-texto);
+      border: 1px solid var(--ui-borde);
+      border-radius: var(--ui-radio-s);
+      padding: 2px 8px;
+      cursor: pointer;
+    }
+  }
+  .ui-aviso-gestos {
+    color: var(--ui-warn);
+    border-color: var(--ui-warn-suave);
+  }
+  /* Diferencia externa: punto en el indice y la galeria, lista de lo quitado y anuncio del halo (solo lector). */
+  .ui-marca-externa {
+    display: inline-block;
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-left: 6px;
+    border-radius: 50%;
+    background: var(--ui-agente);
+    box-shadow: 0 0 8px var(--ui-agente-halo);
+  }
+  .ui-quitados {
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--ui-agente-suave);
+    & li {
+      text-decoration: line-through;
+    }
+  }
+  .ui-solo-lector {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/*
+ * CodeMirror inyecta su tema base sin capa: estas reglas tambien van sin capa (como las piezas del shell) para ganarle
+ * (fondo de los numeros de linea, cursor, seleccion) y para las lineas que trajo el disco (#191).
+ */
+.ui-chrome .ui-editor .cm-editor {
+  font-family: var(--ui-mono);
+  font-size: 12px;
+  background: transparent;
+  color: var(--ui-texto);
+  border-radius: var(--ui-radio-s);
+  max-height: calc(100vh - 220px);
+  &.cm-focused {
+    outline: 1px solid var(--ui-sutil-2);
+  }
+  & .cm-scroller {
+    font-family: var(--ui-mono);
+  }
+  & .cm-gutters {
+    background: transparent;
+    color: var(--ui-tenue);
+    border: 0;
+  }
+  & .cm-activeLine,
+  & .cm-activeLineGutter {
+    background: var(--ui-hover);
+  }
+  & .cm-cursor {
+    border-left-color: var(--ui-texto-fuerte);
+  }
+  & .cm-selectionBackground,
+  &.cm-focused .cm-selectionBackground {
+    background: var(--ui-sel);
+  }
+  & .cm-tooltip {
+    background: var(--ui-superficie-solida);
+    border: 1px solid var(--ui-borde);
+    color: var(--ui-texto);
+  }
+  & .cm-panels {
+    background: var(--ui-superficie-alta);
+    color: var(--ui-texto);
+  }
+}
+.ui-chrome .ui-editor .cm-line.ui-linea-del-disco {
+  background: var(--ui-agente-suave);
+  box-shadow: inset 2px 0 0 var(--ui-agente);
+}

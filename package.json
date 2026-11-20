@@ -30,6 +30,7 @@
     "dsl": "workspace:*",
     "esbuild": "^0.28.1",
     "eslint": "^10.14.0",
+    "estudio": "workspace:*",
     "layout": "workspace:*",
     "playwright": "^1.64.0",
     "render": "workspace:*",

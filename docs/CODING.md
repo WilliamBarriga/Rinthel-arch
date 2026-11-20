@@ -4,7 +4,7 @@ Vocabulario de diseno: **Modulo**, **Interfaz**, **Seam**, **Adaptador**, **Prof
 
 ## Estructura
 
-Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico, tema, dsl, layout, sesion, render, shell, cli). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
+Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico, tema, dsl, layout, sesion, render, shell, estudio, cli). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. `exports` declara solo `.`; la unica excepcion es `estudio`, con `./protocolo` (tipos del protocolo de `dev` que `cli` importa sin cargar la app) y `./contrato` (suite de contrato de solo pruebas). Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
 
 ## Modulos profundos
 
@@ -19,7 +19,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 - **Puertos**: interfaces que define el nucleo segun lo que necesita. **Adaptadores**: sistema de archivos, ELK, d3-zoom, Web Worker, CLI; viven en el borde y dependen del nucleo, nunca al reves.
 - Un seam existe cuando algo varia a traves de el: un adaptador es un seam hipotetico, dos es uno real. Con un solo adaptador, llamada directa.
 - Las dependencias entran como argumento; las funciones devuelven resultados en vez de mutar.
-- Direccion de dependencias: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell / cli`. Un paquete solo importa de los anteriores. `tema` va tras `canonico` porque reutiliza sus `Issue` y codigos, y antes de `dsl` porque el compilador de Temas valida con su catalogo (ADR 0004, enmienda).
+- Direccion de dependencias: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. Un paquete solo importa de los anteriores. `tema` va tras `canonico` porque reutiliza sus `Issue` y codigos, y antes de `dsl` porque el compilador de Temas valida con su catalogo (ADR 0004, enmienda).
 - El nucleo es agnostico del Proyecto documentado (ver `AGENTS.md`).
 
 ## Pruebas
@@ -28,6 +28,10 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 - Entradas y salidas observables. Un refactor interno deja todos los tests en verde.
 - Fakes en memoria (adaptadores reales de bajo costo) antes que mocks; mock solo para I/O que no se puede simular.
 - Compilador: texto DSL entra, Fuente canonica sale; se compara contra la salida publica.
+- Protocolo cliente-servidor: el fake va sobre el transporte, no sobre el dominio. `devEnMemoria` (`estudio/contrato`) es el Workspace vivo real de `sesion` (con `atenderApiDeDev`, las mismas rutas que `dev`) sobre `puertoEnMemoria`; solo el HTTP y el SSE son falsos. La app recibe `fetch` y la fabrica de eventos inyectados (sin polyfills de `EventSource` ni MSW) y los errores de red se inyectan envolviendo `fetch`.
+- Contrato compartido entre fake y real: una suite (`probarContratoDeDev(crear)`) corre contra el fake en el paquete que lo define y contra el adaptador real en el que lo implementa. Una ruta nueva entra a la vez al contrato, al fake y al real.
+- Interfaz de usuario: se consulta por rol y nombre accesible (prueba tambien la accesibilidad), nunca componentes ni estado interno; se espera con `findBy*`/`waitFor` y el tiempo (debounce, avisos) con timers falsos. Las islas y los componentes no son seams: se prueban a traves de la app montada en jsdom. Excepcion, solo donde no hay rol que consultar: el lienzo (`data-id`, `data-vista`, `data-layout` y las variables `--rd-*` del dibujo; `lienzoListo` y `pulsarNodo` de `test/ayudas-de-ui.tsx`) y las decoraciones de CodeMirror (clases `cm-*` y las marcas que el editor pone en sus lineas); un atributo de estado del chrome (`data-arrastrando`) se busca como ancestro de un elemento consultado por rol.
+- Una sola punta a punta en navegador real, dentro de `pnpm test` (`packages/cli/test/e2e-estudio.test.ts`): `dev` real, Chromium headless de Playwright, locators y plazo de 60 s. Cubre solo lo que jsdom no puede (escritura en disco, CodeMirror, scroll, arrastres); lo demas va a jsdom. Busca Chromium con `packages/cli/test/chromium.ts`, el mismo helper que `pnpm capturas`; sin Chromium falla pidiendo `pnpm exec playwright install chromium`. Sin regresion visual automatica: la estetica se revisa a mano con `pnpm docs:capturas` servido por `localhost`.
 - Documentacion derivada: lo que sale de un esquema se genera, no se escribe a mano. `docs/referencia-catalogo.md` sale del catalogo de `tema` (`pnpm docs:catalogo`); `tests/referencia-catalogo.test.ts` falla si se desvia. Una Primitiva nueva: una entrada en el catalogo, su pintor y regenerar la referencia.
 - Runner de pruebas: Vitest. Build de paquetes: tsup. Gestor: pnpm workspaces, sin orquestador de tareas.
 
@@ -46,4 +50,4 @@ Modelo: `packages/canonico/README.md`. `pnpm check:docs` falla si un README exis
 
 ## Chequeos automaticos
 
-La direccion de dependencias, los imports internos entre paquetes, la superficie `exports` y la pureza del nucleo (`canonico`, `tema`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell` y `cli` son adaptadores) los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.
+La direccion de dependencias, los imports internos entre paquetes, la superficie `exports` y la pureza del nucleo (`canonico`, `tema`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell`, `estudio` y `cli` son adaptadores) los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.

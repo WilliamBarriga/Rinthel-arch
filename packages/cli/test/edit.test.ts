@@ -175,6 +175,38 @@ view flujo {
   });
 });
 
+describe('edit --intent (fijar-tema)', () => {
+  const fijar = (tema?: string) => JSON.stringify({ tipo: 'fijar-tema', vista: 'general', ...(tema !== undefined && { tema }) });
+
+  it('escribe theme como primera linea de la Vista con un Tema de --theme-path, y sin tema lo quita', async () => {
+    const raiz = workspace();
+    const temas = mkdtempSync(join(tmpdir(), 'temas-'));
+    writeFileSync(join(temas, 'claro.dg'), 'theme claro extends neutral { palette { acento "#0ea5e9" } }\n');
+
+    const r = await run(['edit', '--workspace', raiz, '--theme-path', temas, '--intent', fijar('claro'), '--json']);
+    expect(r.exitCode).toBe(0);
+    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: true, files: ['main.dg'] });
+    expect(leer(raiz)).toBe(DG.replace('view general {\n', 'view general {\n  theme claro\n'));
+
+    expect((await run(['edit', '--workspace', raiz, '--theme-path', temas, '--intent', fijar()])).exitCode).toBe(0);
+    expect(leer(raiz)).toBe(DG);
+  });
+
+  it('un Tema no declarado sale con 1 y reason tema-desconocido, sin escribir', async () => {
+    const raiz = workspace();
+    const r = await run(['edit', '--workspace', raiz, '--intent', fijar('neutro'), '--json']);
+    expect(r.exitCode).toBe(1);
+    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'tema-desconocido' });
+    expect(leer(raiz)).toBe(DG);
+  });
+
+  it('--help nombra la Intencion fijar-tema y su rechazo', async () => {
+    const r = await run(['edit', '--help']);
+    expect(r.stdout).toContain('"tipo":"fijar-tema"');
+    expect(r.stdout).toContain('tema-desconocido');
+  });
+});
+
 describe('edit: puerta de escritura unica', () => {
   const salidaJson = (r: { stdout: string }) => JSON.parse(r.stdout) as unknown;
 

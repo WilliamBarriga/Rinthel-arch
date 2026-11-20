@@ -110,3 +110,52 @@ Confianza en el codigo: `dev` no sirve `/componentes.js` mientras el usuario no 
 ### Queda como implementacion
 
 El subcomando `inspect tema`, los codigos de Tema en `validate`, el clasificador de cambios (`pintura` | `estructura` | `codigo`) y el watcher de fuentes y `.tsx`.
+
+## Enmienda: Registro de actividad
+
+La UI de `dev` muestra en tiempo real lo que hace un agente con el CLI desde otro proceso. Opciones comparadas en `research/actividad-cli-dev` (rama `research/actividad-cli-dev`).
+
+### Canal
+
+El CLI escribe un log append-only por Workspace, `resolve(--workspace)/.diagrams/actividad.jsonl`, con un Evento de actividad JSON por linea. `dev` lo observa con un observador propio (el watcher del Workspace sigue ignorando carpetas ocultas). Es el unico canal: funciona sin `dev`, con varios agentes y varios `dev`, sirve a otros consumidores (`tail -f`, pruebas, capturas) y no abre superficie de red. El POST al `dev` vivo con el mismo esquema queda como posible transporte de menor latencia, sin ruta reservada. Se descarta ejecutar los comandos a traves de `dev` (dos caminos de ejecucion, endpoint que ejecuta escrituras, estado compartido).
+
+`build` deja de borrar `.diagrams/` entero: reemplaza solo `canonico.json` y `geometria/`.
+
+### Que se registra
+
+Registran `validate`, `build`, `inspect` y `edit`, tambien cuando salen 1 o 2. No registran `skill`, `dev` ni la ayuda. Si `--workspace` falta o no resuelve, no hay donde escribir y no se registra. Lo que el humano hace desde la UI de `dev` (Gestos, guardar desde el editor) no entra en el registro.
+
+`validate` e `inspect` siguen sin tocar el DSL ni las salidas de `build`; su unico efecto lateral nuevo es este rastro. Activo por defecto; `DIAGRAMS_ACTIVIDAD=0` lo desactiva. Un fallo al escribir el log se ignora: nunca cambia stdout, stderr ni el codigo de salida.
+
+El emisor es un solo punto del CLI (envoltorio de `run` o dependencia inyectable), no cada comando; `sesion` sigue pura.
+
+### Evento
+
+```
+{ contractVersion: 1, ts, pid, agente?, comando, args, exitCode, duracionMs,
+  objetivo?: { vista?, nodo?, tema?, archivos? },
+  resumen?: { errores, avisos } }
+```
+
+- `agente`: texto libre de `DIAGRAMS_AGENTE`, si alguien lo fija; el sistema no conoce ningun harness.
+- `args`: el argv tras el comando, completo.
+- `objetivo`: solo lo que el comando nombra (`inspect vista|nodo|tema`, la Vista o Nodo de una Intencion de `edit`, los `files` que escribio `edit`). El CLI no deduce nada.
+- `resumen`: de `validate` y `build`. No se guardan stdout ni stderr.
+
+Lineas cortas escritas con un solo `write` en modo append; el lector descarta las lineas que no parsean. Esquema Zod `eventoDeActividadSchema` en `canonico`, con `contractVersion` propio y las reglas de compatibilidad de `validate`.
+
+### Retencion
+
+Al pasar 1 MB, quien escribe rota a `actividad.1.jsonl` (una sola generacion anterior). El lector tolera que el archivo se acorte.
+
+### En `dev` y la UI
+
+`dev` reproduce los ultimos 50 eventos al arrancar y luego sigue en vivo. Los empuja por SSE como evento con nombre (`event: actividad`), separado de `EstadoDeDev`.
+
+Feed del panel Agente: una linea por evento (hora, agente o pid, comando, objetivo clicable, marca de resultado: ok, errores, avisos o fallo de uso); los `args` al expandir. Sin filtros en la primera entrega.
+
+Seguir al agente (interruptor): `objetivo.vista` lleva a esa Vista; `objetivo.nodo` se queda en la Vista activa si lo contiene y si no salta a la primera Vista, en orden de declaracion, que lo contenga, y lo selecciona; `objetivo.archivos` no mueve por si solo. `dev` resuelve con la Sesion vigente. Resaltar lo que cambio es del diff de Sesiones, no de este registro.
+
+## Enmienda: Intencion `fijar-tema` y motivo `tema-desconocido` (#176, mapa #168)
+
+`diagrams edit --intent` acepta la Intencion `fijar-tema` `{ vista, tema? }` (ADR 0007). El enum `reason` de `edit --json` suma `tema-desconocido` (salida 1; 422 en `dev`), paralelo a `vista-desconocida`. El resto de la salida de `edit` no cambia.

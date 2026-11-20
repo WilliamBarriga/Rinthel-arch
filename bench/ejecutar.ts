@@ -30,7 +30,8 @@ const UMBRALES: readonly Umbral[] = [
   { escenario: 'secuencia-grande', descripcion: 'layout de secuencia con 1000 Mensajes, 50 Lifelines y Fragmentos a 3 niveles (en frio)', medida: (m) => m['tiempoFrioMs']! / 1000, limite: 0.5, unidad: 's' },
   { escenario: 'secuencia-grande', descripcion: 'layout de secuencia con 1000 Mensajes, 50 Lifelines y Fragmentos a 3 niveles (en caliente)', medida: (m) => m['tiempoMs']! / 1000, limite: 0.5, unidad: 's' },
   { escenario: 'bundle', descripcion: 'bundle del shell: Worker (gzip)', medida: (m) => m['workerGzipKb']!, limite: 1024, unidad: 'KiB' },
-  { escenario: 'bundle', descripcion: 'bundle del shell: pagina sin ELK (gzip)', medida: (m) => m['paginaGzipKb']!, limite: 500, unidad: 'KiB' },
+  { escenario: 'bundle', descripcion: 'pagina de dev: carga inicial sin ELK ni editor (gzip)', medida: (m) => m['paginaGzipKb']!, limite: 500, unidad: 'KiB' },
+  { escenario: 'bundle', descripcion: 'pagina de dev: trozo del editor, al abrir Codigo (gzip)', medida: (m) => m['editorGzipKb']!, limite: 200, unidad: 'KiB' },
 ];
 
 const TODOS = [...new Set(UMBRALES.map((u) => u.escenario))];

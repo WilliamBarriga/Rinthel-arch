@@ -2,7 +2,10 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 
-import type { IssueDeDev } from 'canonico';
+import type { Issue } from 'canonico';
+
+/** Issue que muestra el visor: con `href`, su `archivo:linea` enlaza al editor (en `dev`, `vscode://file/...`). */
+export type IssueDelVisor = Issue & { href?: string };
 
 export const CSS_DE_AVISOS = `
 .rd-issues { left: 0; right: 0; bottom: 0; max-height: 35%; overflow: auto; margin: 0; padding: 4px 16px; display: block; background: var(--rd-fondo); border-top: 1px solid var(--rd-borde); }
@@ -17,7 +20,7 @@ export const CSS_DE_AVISOS = `
 const plural = (n: number, singular: string): string => `${n} ${singular}${n === 1 ? '' : 's'}`;
 
 /** Barra plegada por defecto con el conteo de errores y warnings; al desplegarla lista todos los issues. */
-export function PanelDeIssues({ issues }: { issues: readonly IssueDeDev[] }): ReactElement | null {
+export function PanelDeIssues({ issues }: { issues: readonly IssueDelVisor[] }): ReactElement | null {
   const [abierto, setAbierto] = useState(false);
   if (issues.length === 0) return null;
   const errores = issues.filter((i) => i.severity === 'error').length;
