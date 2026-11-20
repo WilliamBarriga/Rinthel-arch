@@ -12,8 +12,6 @@ import { RUTAS_DE_DEV } from 'canonico';
 import { abrirWorkspaceVivo, atenderApiDeDev, puertoEnMemoria } from 'sesion';
 import type { Reloj, WorkspaceEnMemoria } from 'sesion';
 
-type Archivos = Readonly<Record<string, string>>;
-
 export interface DevEnMemoria {
   fetch: typeof fetch;
   eventos: (url: string, alEvento: (nombre: string, datos: string) => void) => () => void;
@@ -36,6 +34,13 @@ export interface CodigoDePrueba {
   bundle: string;
 }
 
+/**
+ * Lo que necesita un `dev` de prueba (el de memoria o el real): el contenido de `puertoEnMemoria` (`propios`, `temas`
+ * de `--theme-path`, `actividad` inicial y `escrituraRota`, toda escritura lanza con ese mensaje) y `codigo`, Temas con
+ * codigo ya compilados (lo que daria el compilador de `.tsx` del adaptador; sin el, no hay codigo).
+ */
+export type ContenidoDeDevDePrueba = Pick<Parameters<typeof puertoEnMemoria>[0], 'propios' | 'temas' | 'actividad' | 'escrituraRota'> & { codigo?: CodigoDePrueba };
+
 const RAIZ = '/memoria';
 
 /** Sin debounce: el aviso del registro se atiende en el acto. */
@@ -46,27 +51,9 @@ const relojInmediato: Reloj = {
   },
 };
 
-/**
- * `actividad`: texto inicial de `.diagrams/actividad.jsonl`; `escrituraRota`: toda escritura lanza un `Error` con ese
- * mensaje (fallo de I/O); `ahora`: hora en ms de cada entrada del Historial; `codigo`: Temas con codigo ya compilados
- * (sin el, no hay codigo), servidos en `/componentes.js` tras `POST /api/confiar`.
- */
-export async function devEnMemoria({
-  propios,
-  temas,
-  actividad,
-  escrituraRota,
-  codigo,
-  ahora = Date.now,
-}: {
-  propios: Archivos;
-  temas?: Archivos;
-  actividad?: string;
-  escrituraRota?: string;
-  codigo?: CodigoDePrueba;
-  ahora?: () => number;
-}): Promise<DevEnMemoria> {
-  const puerto = puertoEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }), ...(escrituraRota !== undefined && { escrituraRota }) });
+/** `ahora`: hora en ms de cada entrada del Historial de archivos; `codigo` se sirve en `/componentes.js` tras `POST /api/confiar`. */
+export async function devEnMemoria({ codigo, ahora = Date.now, ...contenido }: ContenidoDeDevDePrueba & { ahora?: () => number }): Promise<DevEnMemoria> {
+  const puerto = puertoEnMemoria(contenido);
   // Sin watcher: las escrituras propias recompilan al terminar y `editarFuera` pide la recompilacion.
   const vivo = await abrirWorkspaceVivo({
     puerto: { ...puerto, observar: () => () => undefined },

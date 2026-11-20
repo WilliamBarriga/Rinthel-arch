@@ -12,11 +12,11 @@ import type { EventoDeActividad } from 'canonico';
 
 import { codigoDeDevSchema, confianzaDeDevSchema, errorDeDevSchema, escrituraDeDevSchema, rechazoDeDevSchema } from './protocolo';
 import type { ActividadDeDev, DiferenciaDeDev, EstadoDeDev, HistorialDeDev } from './protocolo';
-import type { CodigoDePrueba } from './dev-en-memoria';
+import type { ContenidoDeDevDePrueba } from './dev-en-memoria';
 import { crearLectorSse } from './sse';
 
 export { devEnMemoria } from './dev-en-memoria';
-export type { CodigoDePrueba, DevEnMemoria } from './dev-en-memoria';
+export type { CodigoDePrueba, ContenidoDeDevDePrueba, DevEnMemoria } from './dev-en-memoria';
 export { crearLectorSse } from './sse';
 
 /** Ruta relativa -> texto, como `ArchivosDelWorkspace` de `dsl`. */
@@ -35,19 +35,7 @@ export interface DevDePrueba {
   cerrar(): Promise<void>;
 }
 
-/**
- * `temas` son los de `--theme-path` (se compilan pero no se escriben); `actividad`, el texto inicial de
- * `.diagrams/actividad.jsonl` (sin el, el registro no existe); `escrituraRota`, si esta, hace que toda escritura del
- * puerto lance un `Error` con ese mensaje (un fallo de I/O).
- */
-export interface ContenidoDeDevDePrueba {
-  propios: ArchivosDelWorkspace;
-  temas?: ArchivosDelWorkspace;
-  actividad?: string;
-  escrituraRota?: string;
-  /** Temas con codigo ya compilados (lo que daria el compilador de `.tsx` del adaptador): Componentes y bundle de `/componentes.js`. */
-  codigo?: CodigoDePrueba;
-}
+/** Abre un `dev` de prueba con ese contenido (`ContenidoDeDevDePrueba`, la misma forma que `devEnMemoria`). */
 export type CrearDev = (contenido: ContenidoDeDevDePrueba) => Promise<DevDePrueba>;
 
 /** `eventos` sobre un `fetch` que entrega el cuerpo en streaming (Node 18+); la pagina usa `EventSource`. */
