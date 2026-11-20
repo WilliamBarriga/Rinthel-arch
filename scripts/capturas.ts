@@ -6,14 +6,14 @@
  * Salida: PNG y pagina de comparacion en `$CAPTURAS_DIR` (por defecto `/tmp/rinthel-capturas`), servida en un mini server
  * que sigue vivo al terminar. Chromium: `$CHROMIUM_PATH` o la cache de Playwright; un solo motor para que sean comparables.
  */
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { chromium } from 'playwright';
 import type { Browser } from 'playwright';
 
+import { rutaDeChromium } from '../packages/cli/test/chromium.ts';
 import { VARIANTE_DE_TEMA, prepararPrototipo } from './capturas/prototipo.ts';
 import { iniciarDevDeGaleria, servirEstatico } from './capturas/servidores.ts';
 import { prepararWorkspace } from './capturas/workspace.ts';
@@ -91,15 +91,12 @@ function pedidoDeWorkspace(ruta: string, vista: string | undefined, variante: st
   return { workspace: copia.directorio, temas, vistaDe: copia.vistaDe, varianteDe: () => variante, titulo: `${ruta}, Vista ${vista}${comparada}`, lado: 'workspace' };
 }
 
-/** Chromium de la cache de Playwright (la revision instalada puede no ser la que espera la version de Playwright). */
-function rutaDeChromium(): string {
-  const configurada = process.env['CHROMIUM_PATH'];
-  if (configurada !== undefined) return configurada;
-  const cache = join(homedir(), '.cache/ms-playwright');
-  const revisiones = existsSync(cache) ? readdirSync(cache).filter((d) => /^chromium-\d+$/.test(d)).sort() : [];
-  const ultima = revisiones[revisiones.length - 1];
-  if (ultima === undefined) return fallar(`No hay Chromium en ${cache}. Define CHROMIUM_PATH o ejecuta \`pnpm exec playwright install chromium\`.`);
-  return join(cache, ultima, 'chrome-linux64/chrome');
+function chromiumOFallar(): string {
+  try {
+    return rutaDeChromium();
+  } catch (error) {
+    return fallar((error as Error).message);
+  }
 }
 
 async function capturarGaleria(navegador: Browser, url: string, vista: string, destino: string, escala = 2, encuadre = VIEWPORT): Promise<void> {
@@ -111,8 +108,8 @@ async function capturarGaleria(navegador: Browser, url: string, vista: string, d
   await pagina.evaluate('document.fonts.ready');
   // Las fuentes pueden pedir un layout nuevo: se vuelve a esperar la senal.
   await pagina.waitForSelector(`${listo}[data-vista="${vista}"]`);
-  // Fuera del cuadro lo que no es el diagrama: chrome del shell (migas, accesibilidad) y panel de issues de dev.
-  await pagina.addStyleTag({ content: '.rd-chrome, [data-panel="issues"] { display: none !important }' });
+  // Fuera del cuadro lo que no es el diagrama: chrome del shell (migas, accesibilidad) y barra, islas, leyenda y avisos de la UI.
+  await pagina.addStyleTag({ content: '.rd-chrome, .ui-barra, .ui-isla, .ui-leyenda, .ui-toasts { display: none !important }' });
   await pagina.locator('.rd-vista').screenshot({ path: destino, animations: 'disabled' });
   await contexto.close();
 }
@@ -155,7 +152,7 @@ async function principal(): Promise<void> {
   const prototipo = pedido.temas.some((t) => pedido.varianteDe(t) !== undefined) ? prepararPrototipo(cache, REPO) : undefined;
   const origen = await servirEstatico(cache);
   const galeria = await iniciarDevDeGaleria(REPO, pedido.workspace, pedido.carpetaDeTemas);
-  const navegador = await chromium.launch({ executablePath: rutaDeChromium(), headless: true });
+  const navegador = await chromium.launch({ executablePath: chromiumOFallar(), headless: true });
   try {
     for (const tema of pedido.temas) {
       const archivo = pedido.docs === undefined ? `${tema}-${pedido.lado}.png` : `${pedido.docs.prefijo}${tema}.png`;
