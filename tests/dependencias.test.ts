@@ -242,6 +242,30 @@ describe('revisarWorkspace', () => {
     expect(revisarWorkspace(raiz)).toEqual([]);
   });
 
+  it('scripts/ y bench/ solo usan interfaces declaradas de los paquetes', () => {
+    const raiz = crearWorkspace({
+      'packages/cli/package.json': manifiesto('cli'),
+      'packages/cli/src/index.ts': 'export const run = 1;\n',
+      'packages/cli/test/chromium.ts': 'export const ruta = 1;\n',
+      'packages/estudio/package.json': manifiesto('estudio', {
+        exports: { '.': './dist/index.js', './protocolo': './dist/protocolo.js' },
+      }),
+      'packages/estudio/src/index.ts': 'export const app = 1;\n',
+      'packages/estudio/scripts/empaquetar.ts': 'export const construir = 1;\n',
+      'tests/ayudas/chromium.ts': 'export const ruta = 1;\n',
+      'scripts/capturas.ts':
+        "import { run } from 'cli';\nimport type { X } from 'estudio/protocolo';\nimport { ruta } from '../tests/ayudas/chromium.ts';\nimport { ruta as otra } from '../packages/cli/test/chromium.ts';\nexport const y = [run, ruta, otra] as unknown as X;\n",
+      'scripts/capturas/servidores.ts': "import { app } from 'estudio/src/index';\nexport const s = app;\n",
+      'bench/escenario.ts': "import { construir } from '../packages/estudio/scripts/empaquetar.ts';\nexport const b = construir;\n",
+    });
+
+    expect(revisarWorkspace(raiz).map((v) => [v.paquete, v.archivo, v.regla])).toEqual([
+      ['(raiz)', 'scripts/capturas.ts', 'interno'],
+      ['(raiz)', 'scripts/capturas/servidores.ts', 'interno'],
+      ['(raiz)', 'bench/escenario.ts', 'interno'],
+    ]);
+  });
+
   it('este workspace no tiene violaciones', () => {
     expect(revisarWorkspace(raizDelRepo)).toEqual([]);
   });

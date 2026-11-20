@@ -4,7 +4,7 @@
  * modificador ganen tambien dentro del editor (Mod+/ antes que CodeMirror); lo que no resuelve sigue su curso
  * (CodeMirror, el navegador, `VistaInteractiva`).
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import type { ContextoDelEstudio } from '../marco/contexto';
 import type { Comando } from './registro';
@@ -21,8 +21,11 @@ export function ambitoDelFoco(elemento: EventTarget | null): Ambito {
 }
 
 export function useAtajos(comandos: readonly Comando[], contexto: ContextoDelEstudio): void {
+  // El listener lee el contexto del ultimo render confirmado.
   const vivo = useRef(contexto);
-  vivo.current = contexto;
+  useLayoutEffect(() => {
+    vivo.current = contexto;
+  });
   useEffect(() => {
     const alTeclear = (e: KeyboardEvent): void => {
       const comando = resolverTecla(comandos, e, ambitoDelFoco(e.target), vivo.current.plataforma);
