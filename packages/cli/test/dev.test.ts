@@ -292,14 +292,14 @@ describe('dev: edicion, deshacer y rehacer (ADR 0005, ADR 0007)', () => {
     expect((await estado(servidor)).version).toBe(1);
   });
 
-  it('POST /api/edit valida la Intencion con el esquema de canonico (400); /api/pin ya no existe', async () => {
+  it('POST /api/edit valida la Intencion o las ediciones con el esquema de canonico (400); /api/pin ya no existe', async () => {
     const env = entorno({ 'main.dg': BASE });
     const servidor = await arrancar(env);
 
     for (const cuerpo of [{ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: '10', y: 2 }, { tipo: 'otra', vista: 'general' }, { vista: 'general', nodo: 'api', x: 1, y: 2 }]) {
       const res = await post(servidor, 'api/edit', cuerpo);
       expect(res.status).toBe(400);
-      expect(await res.json()).toEqual({ ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... }' });
+      expect(await res.json()).toEqual({ ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... } o { ediciones, version, descripcion? }' });
     }
     expect((await post(servidor, 'api/pin', { vista: 'general', nodo: 'api', x: 10, y: 20, version: 0 })).status).toBe(404);
     expect(env.texto('main.dg')).toBe(BASE);

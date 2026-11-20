@@ -695,5 +695,77 @@
     font-family: var(--ui-mono);
     color: var(--ui-texto-fuerte);
   }
-}
 
+  /* Pestana Codigo: editor CodeMirror 6 del DSL (#190). */
+  .ui-codigo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 0;
+  }
+  .ui-codigo-cabecera {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    & select {
+      flex: 1;
+      min-width: 0;
+      background: var(--ui-sutil);
+      color: var(--ui-texto);
+      border: 1px solid var(--ui-borde);
+      border-radius: var(--ui-radio-s);
+      padding: 4px 6px;
+      font-family: var(--ui-mono);
+    }
+  }
+  .ui-guardado {
+    font-size: 11px;
+    color: var(--ui-tenue);
+    &[data-estado='error'] {
+      color: var(--ui-err);
+    }
+  }
+  .ui-editor .cm-editor {
+    font-family: var(--ui-mono);
+    font-size: 12px;
+    background: transparent;
+    color: var(--ui-texto);
+    border-radius: var(--ui-radio-s);
+    max-height: calc(100vh - 220px);
+    &.cm-focused {
+      outline: 1px solid var(--ui-sutil-2);
+    }
+    & .cm-scroller {
+      font-family: var(--ui-mono);
+    }
+    & .cm-gutters {
+      background: transparent;
+      color: var(--ui-tenue);
+      border: 0;
+    }
+    & .cm-activeLine,
+    & .cm-activeLineGutter {
+      background: var(--ui-hover);
+    }
+    & .cm-cursor {
+      border-left-color: var(--ui-texto-fuerte);
+    }
+    & .cm-selectionBackground,
+    &.cm-focused .cm-selectionBackground {
+      background: var(--ui-sel);
+    }
+    & .cm-tooltip {
+      background: var(--ui-superficie-solida);
+      border: 1px solid var(--ui-borde);
+      color: var(--ui-texto);
+    }
+    & .cm-panels {
+      background: var(--ui-superficie-alta);
+      color: var(--ui-texto);
+    }
+  }
+  .ui-aviso-gestos {
+    color: var(--ui-warn);
+    border-color: var(--ui-warn-suave);
+  }
+}

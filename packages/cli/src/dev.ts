@@ -15,12 +15,12 @@ import { readFileSync, rmSync, unwatchFile, watch, watchFile } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { RUTA_DE_FUENTES, intencionSchema } from 'canonico';
+import { RUTA_DE_FUENTES, edicionDeTextoSchema, intencionSchema } from 'canonico';
 import type { Intencion } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
-import type { ActividadDeDev, EstadoDeDev, NombreDeEventoDeDev } from 'estudio/protocolo';
+import type { ActividadDeDev, ArchivoDeDev, ArchivosDeDev, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from 'estudio/protocolo';
 
 import { compiladorDeCodigo } from './codigo';
 import { SUBCOMANDOS_DE_INSPECT, comoSalidaDeInspect } from './inspect';
@@ -31,7 +31,7 @@ import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
 import { abrirWorkspaceVivo } from './workspace-vivo';
-import type { PuertoDelWorkspaceVivo, RegistroDeActividad, ResultadoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
+import type { EdicionesDeTexto, PuertoDelWorkspaceVivo, RegistroDeActividad, ResultadoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
 
 /** Todo salvo `workspace` tiene un defecto real. */
 export interface OpcionesDeDev {
@@ -173,7 +173,19 @@ function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
   res.end(bytes);
 }
 
-const comoIntencion = (cuerpo: unknown): Intencion | undefined => {
+const listaDeEdiciones = edicionDeTextoSchema.array().min(1);
+
+/**
+ * Una Intencion o `{ ediciones, version, descripcion?, aunqueNoCompile? }` (`PeticionDeEdiciones` de `estudio/protocolo`,
+ * ADR 0007); `undefined` es 400. `cli` solo importa tipos del protocolo, asi que valida con el esquema de `canonico`.
+ */
+const comoAplicable = (cuerpo: unknown): Intencion | EdicionesDeTexto | undefined => {
+  if (typeof cuerpo === 'object' && cuerpo !== null && 'ediciones' in cuerpo) {
+    const { ediciones, descripcion, aunqueNoCompile } = cuerpo as Partial<Record<keyof PeticionDeEdiciones, unknown>>;
+    const lista = listaDeEdiciones.safeParse(ediciones);
+    if (!lista.success || !['string', 'undefined'].includes(typeof descripcion) || !['boolean', 'undefined'].includes(typeof aunqueNoCompile)) return undefined;
+    return { ediciones: lista.data, ...(typeof descripcion === 'string' && { descripcion }), ...(aunqueNoCompile === true && { aunqueNoCompile }) };
+  }
   const r = intencionSchema.safeParse(cuerpo);
   return r.success ? r.data : undefined;
 };
@@ -295,9 +307,9 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     const ruta = new URL(req.url ?? '/', 'http://127.0.0.1').pathname;
     if (ruta === '/api/edit') {
       post(req, res, async (cuerpo) => {
-        const intencion = comoIntencion(cuerpo);
-        if (intencion === undefined) responder(res, 400, { ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... }' });
-        else responderResultado(res, await vivo.editar(intencion, versionVista(cuerpo)));
+        const aplicable = comoAplicable(cuerpo);
+        if (aplicable === undefined) responder(res, 400, { ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... } o { ediciones, version, descripcion? }' });
+        else responderResultado(res, await vivo.editar(aplicable, versionVista(cuerpo)));
       });
     } else if (ruta === '/api/deshacer') {
       post(req, res, async () => responderResultado(res, await vivo.deshacer()));
@@ -337,6 +349,16 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       }
     } else if (ruta === '/api/estado') {
       responder(res, 200, vivo.estado());
+    } else if (ruta === '/api/archivos') {
+      responder(res, 200, vivo.archivos() satisfies ArchivosDeDev);
+    } else if (ruta.startsWith('/api/archivo/')) {
+      let leido: ArchivoDeDev | undefined;
+      try {
+        leido = vivo.archivo(ruta.slice('/api/archivo/'.length).split('/').map(decodeURIComponent).join('/'));
+      } catch {
+        leido = undefined;
+      }
+      responder(res, leido === undefined ? 404 : 200, leido ?? { ok: false, mensaje: 'Archivo inexistente' });
     } else if (ruta === '/eventos') {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       clientes.add(res);
