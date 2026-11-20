@@ -4,7 +4,7 @@
 
 - Node 20 o superior.
 - pnpm.
-- Para regenerar las capturas de la documentacion (opcional): Chromium, desde la cache de Playwright o con `CHROMIUM_PATH`.
+- Para `pnpm test` y para regenerar las capturas de la documentacion: Chromium, desde la cache de Playwright (`pnpm exec playwright install chromium`) o con `CHROMIUM_PATH`.
 
 El paquete aun no esta publicado en npm, asi que el sistema se usa desde un clon del repo.
 
@@ -45,12 +45,12 @@ Detalle de cada uno en la [guia del CLI](cli.md), o `dg <comando> --help`. Todos
 | --- | --- |
 | `dg validate --workspace <ruta>` | Compila y valida; lista errores y avisos con archivo y linea. `--json` da el mismo resultado estructurado |
 | `dg build --workspace <ruta>` | Escribe la Fuente canonica y la geometria en `<ruta>/.diagrams/` (no se versiona) |
-| `dg dev --workspace <ruta>` | Visor en vivo en `http://127.0.0.1:4173/`; recompila al guardar |
+| `dg dev --workspace <ruta>` | UI en vivo en `http://127.0.0.1:4173/` ([UI de dev](ui-de-dev.md)); recompila al guardar |
 | `dg inspect buscar <texto>`<br>`dg inspect nodo <id>`<br>`dg inspect vista <id>`<br>`dg inspect tema <nombre>` | Consultas de solo lectura sobre el Modelo, con `archivo:linea` |
 | `dg edit` | Escribe sobre el `.dg`: fija un Pin (`--view <id> --node <id> --x N --y N`) o aplica una Intencion (`--intent '<json>'`, p. ej. `ordenar-lifelines` en secuencia) o ediciones estructuradas (`--edits '<json>'`, por ejemplo los `fix` de `validate`). Es lo que usa el visor al arrastrar un Nodo |
 | `dg skill` | Imprime una skill (Markdown) para que un agente escriba y corrija `.dg` con el bucle inspect, editar, validate |
 
-En el visor, la Vista se elige con el hash de la URL (`#p=<vista>`), y los enlaces de drill-down y las migas navegan entre Vistas. Arrastrar un Nodo fija su Pin y reescribe el archivo `.dg`.
+En la UI, la Vista se elige en el panel Vistas o con el hash de la URL (`#vista=<id>`), y los enlaces de drill-down y las migas navegan entre Vistas. Arrastrar un Nodo fija su Pin y reescribe el archivo `.dg`.
 
 ## Recorrer los ejemplos
 
@@ -82,7 +82,7 @@ view flujo { type sequence  interaction crear }
 view tabla { type er  include pedidos }
 ```
 
-`dg dev` abre la Vista de secuencia con `#p=flujo`. Mas en el [paso 6 del tutorial](tutorial.md#paso-6-opcional-secuencia-y-er).
+`dg dev` abre la Vista de secuencia con `#vista=flujo`. Mas en el [paso 6 del tutorial](tutorial.md#paso-6-opcional-secuencia-y-er).
 
 ## Siguiente
 

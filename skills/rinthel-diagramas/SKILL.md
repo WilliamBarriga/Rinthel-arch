@@ -109,8 +109,9 @@ view tablas { type er include ** }
 
 ## Servir y mostrar
 
-- `dg dev --workspace <ruta> --port <N>` sirve el visor en `http://127.0.0.1:<N>/#p=<vista>`. Lanzalo en segundo plano, espera la linea con la URL con Monitor y entrega esa URL al usuario.
-- `dev` recompila al guardar: edita el `.dg` y el visor se actualiza solo. Arrastrar un Nodo en el visor reescribe su `pin` en el `.dg` (en una Vista `sequence`, arrastrar una cabecera de Lifeline reescribe el `order`); vuelve a leer el archivo antes de editarlo.
+- `dg dev --workspace <ruta> --port <N>` sirve la UI de dev en `http://127.0.0.1:<N>/#vista=<id>`. Lanzalo en segundo plano, espera la linea con la URL con Monitor y entrega esa URL al usuario.
+- `dev` recompila al guardar: edita el `.dg` y la UI se actualiza sola. El usuario tambien escribe desde la UI (editor, arrastres, `fix`, galeria de Temas) y puede deshacer desde su Historial: vuelve a leer el archivo antes de editarlo.
+- La UI muestra en su panel Agente cada `validate`, `build`, `inspect` y `edit` que corres y resalta lo que cambias. Exporta `DIAGRAMS_AGENTE=<tu nombre>` para que el usuario sepa quien fue; no pongas `DIAGRAMS_ACTIVIDAD=0` salvo que te lo pidan. Guia: `docs/guia/ui-de-dev.md`.
 - Imagen de una Vista: captura el visor de `dev` con un navegador headless y entrega al usuario una URL servida por un servidor local (`http://localhost:<puerto>/...`), no una ruta de archivo. En el repo rinthel-arch, `pnpm capturas --workspace <ruta> --vista <id> <tema>...` lo hace (necesita `pnpm build` y Chromium).
 - Un Workspace con Tema de codigo (`.tsx`) exige `--trust-code` o confirmar en el visor; confia solo en Workspaces propios.
 
