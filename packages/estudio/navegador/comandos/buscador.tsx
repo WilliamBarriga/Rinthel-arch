@@ -5,11 +5,12 @@
  */
 import { Autocomplete } from '@base-ui/react/autocomplete';
 import { Dialog } from '@base-ui/react/dialog';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import { useEstudio } from '../marco/contexto';
 import type { ContextoDelEstudio } from '../marco/contexto';
+import { useInspectPorVersion } from '../marco/use-lectura-por-version';
 import { sitioEscrito, textoDeSitio } from '../sitio';
 import { destinoDeNodo } from '../vistas/destino';
 import { indiceDeVistas } from '../vistas/indice';
@@ -40,28 +41,20 @@ function irANodo(e: ContextoDelEstudio, id: string): void {
   e.abrirPestana('derecha', 'detalle');
 }
 
-type Nodos = { consulta: string; entradas: Entrada[] };
-
+/** Los Nodos de `inspect buscar`; mientras no llegan los de la consulta vigente (o si falla), ninguno. */
 function useNodos(consulta: string): Entrada[] {
   const { cliente, estado } = useEstudio();
-  const [nodos, setNodos] = useState<Nodos>({ consulta: '', entradas: [] });
-  const version = estado?.version;
-  useEffect(() => {
-    const limpia = consulta.trim();
-    if (limpia === '' || sitioEscrito(limpia) !== undefined) return;
-    let vigente = true;
-    void cliente.inspeccionar('buscar', limpia).then((r) => {
-      if (!vigente || !r.ok || r.salida.comando !== 'buscar') return;
-      const entradas = r.salida.resultados
-        .filter((n) => n.kind === 'nodo')
-        .map((n) => ({ value: `nodo:${n.id}`, label: n.title, detalle: `${n.id} · ${textoDeSitio(n)}`, ejecutar: (e: ContextoDelEstudio) => irANodo(e, n.id) }));
-      setNodos({ consulta, entradas });
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [consulta, cliente, version]);
-  return nodos.consulta === consulta ? nodos.entradas : [];
+  const limpia = consulta.trim();
+  const lectura = useInspectPorVersion(cliente, estado?.version, 'buscar', limpia === '' || sitioEscrito(limpia) !== undefined ? undefined : limpia);
+  return useMemo(
+    () =>
+      lectura.tipo !== 'dato'
+        ? []
+        : lectura.dato.resultados
+            .filter((n) => n.kind === 'nodo')
+            .map((n) => ({ value: `nodo:${n.id}`, label: n.title, detalle: `${n.id} · ${textoDeSitio(n)}`, ejecutar: (e: ContextoDelEstudio) => irANodo(e, n.id) })),
+    [lectura],
+  );
 }
 
 function Contenido({ alElegir }: { alElegir: () => void }): ReactElement {

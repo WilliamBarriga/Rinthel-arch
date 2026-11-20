@@ -1,47 +1,27 @@
 /** Panel Detalle: el Nodo seleccionado tal como lo da `inspect nodo` (`GET /api/inspect/nodo/<id>`), releido en cada version. */
-import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import type { SalidaDeInspect } from 'canonico';
 
+import { AvisoDeLectura } from '../marco/aviso-de-lectura';
 import { useEstudio } from '../marco/contexto';
+import { useInspectPorVersion } from '../marco/use-lectura-por-version';
 import { textoDeSitio } from '../sitio';
 
 type SalidaDeNodo = Extract<SalidaDeInspect, { comando: 'nodo' }>;
-type Lectura = { tipo: 'cargando' } | { tipo: 'nodo'; salida: SalidaDeNodo } | { tipo: 'fallo'; mensaje: string };
 
 export function Detalle(): ReactElement {
   const { seleccion, cliente, estado, irAVista } = useEstudio();
-  const [lectura, setLectura] = useState<Lectura>({ tipo: 'cargando' });
-  const version = estado?.version;
-  useEffect(() => {
-    if (seleccion === null) return;
-    let vigente = true;
-    setLectura({ tipo: 'cargando' });
-    void cliente.inspeccionar('nodo', seleccion).then((r) => {
-      if (!vigente) return;
-      if (r.ok && r.salida.comando === 'nodo') setLectura({ tipo: 'nodo', salida: r.salida });
-      else setLectura({ tipo: 'fallo', mensaje: r.ok ? 'Respuesta inesperada de inspect' : r.mensaje });
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [seleccion, version, cliente]);
+  const lectura = useInspectPorVersion(cliente, estado?.version, 'nodo', seleccion ?? undefined);
 
   return (
     <section aria-label="Detalle" className="ui-detalle">
       {seleccion === null ? (
         <p className="ui-tenue">Selecciona un Nodo en el lienzo para ver su detalle.</p>
-      ) : lectura.tipo === 'cargando' ? (
-        <p className="ui-tenue" role="status">
-          Cargando {seleccion}...
-        </p>
-      ) : lectura.tipo === 'fallo' ? (
-        <p className="ui-tenue" role="status">
-          {lectura.mensaje}
-        </p>
+      ) : lectura.tipo === 'dato' ? (
+        <FichaDeNodo salida={lectura.dato} irAVista={irAVista} />
       ) : (
-        <FichaDeNodo salida={lectura.salida} irAVista={irAVista} />
+        <AvisoDeLectura lectura={lectura} que={seleccion} />
       )}
     </section>
   );
