@@ -98,7 +98,7 @@ describe('editor del DSL: guardado', () => {
     const motivo = await screen.findByRole('status', { name: 'Gestos' });
     expect(motivo.textContent).toMatch(/Gestos deshabilitados/);
     expect(motivo.textContent).toMatch(/main\.dg:9/);
-    expect(contenedor.querySelector('.rd-vista[data-vista="mapa"]')).not.toBeNull();
+    expect(await lienzoListo(contenedor, 'mapa')).toBeTruthy();
   });
 
   it('antes de deshacer en dev se vacia el guardado pendiente', async () => {

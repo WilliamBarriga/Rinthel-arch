@@ -132,12 +132,12 @@ const buscador = async () => {
 const escribir = (campo: HTMLElement, texto: string) => fireEvent.change(campo, { target: { value: texto } });
 
 describe('Buscador', () => {
-  it('Mod+K lo abre dentro del nodo de portales del chrome; Escape lo cierra', async () => {
+  it('Mod+K lo abre dentro del chrome (no en el body, donde perderia sus tokens); Escape lo cierra', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL });
     await screen.findByRole('listbox', { name: 'Vistas' });
 
     const { dialogo, campo } = await buscador();
-    expect(contenedor.querySelector('.ui-chrome .ui-portales')!.contains(dialogo)).toBe(true);
+    expect(contenedor.contains(dialogo)).toBe(true);
     fireEvent.keyDown(campo, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Buscador' })).toBeNull());
   });

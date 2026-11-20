@@ -89,16 +89,17 @@ describe('vidrio durante un gesto', () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL });
     await lienzoListo(contenedor, 'mapa');
     const lienzo = screen.getByRole('main', { name: 'Lienzo' });
-    const chrome = contenedor.querySelector('.ui-chrome')!;
+    // El gesto marca `data-arrastrando` en la raiz del chrome, que contiene las islas.
+    const solido = (): boolean => screen.getByRole('complementary', { name: 'Panel izquierdo' }).closest('[data-arrastrando]') !== null;
 
     fireEvent.pointerDown(lienzo);
-    expect(chrome.hasAttribute('data-arrastrando')).toBe(true);
+    expect(solido()).toBe(true);
     fireEvent.pointerUp(lienzo);
-    expect(chrome.hasAttribute('data-arrastrando')).toBe(false);
+    expect(solido()).toBe(false);
 
     fireEvent.wheel(lienzo);
-    expect(chrome.hasAttribute('data-arrastrando')).toBe(true);
-    await waitFor(() => expect(chrome.hasAttribute('data-arrastrando')).toBe(false));
+    expect(solido()).toBe(true);
+    await waitFor(() => expect(solido()).toBe(false));
   });
 });
 
