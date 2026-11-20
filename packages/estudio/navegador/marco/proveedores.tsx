@@ -3,7 +3,7 @@
  * que se dibuja (marco, paneles y lienzo), asi que el lienzo llega al contexto como cualquier panel. Son duenos del
  * estado del chrome (islas, pestanas, dialogos, aviso), que el marco lee con `useChrome()` (solo dentro de `marco/`).
  */
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
 import type { FuenteCanonica } from 'canonico';
@@ -36,6 +36,13 @@ interface BaseDelEstudio {
   recibir: (estado: EstadoDeDev) => void;
   cliente: ClienteDeDev;
   plataforma: Plataforma;
+  /** Ultimo fallo de lo que llega fuera de los proveedores (evento `estado` malformado, carga de Componentes): se avisa una vez por objeto. */
+  fallo?: FalloDelEstudio | undefined;
+}
+
+/** Un objeto por ocurrencia: el mismo mensaje dos veces se avisa dos veces. */
+interface FalloDelEstudio {
+  mensaje: string;
 }
 
 /** Estado del chrome que el marco dibuja. */
@@ -76,7 +83,7 @@ function motivoSinGestos(estado: EstadoDeDev | undefined): string | undefined {
   return error === undefined ? undefined : `Gestos deshabilitados: el texto no compila (${textoDeSitio(error)} ${error.message})`;
 }
 
-export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plataforma, fuente, hashProps, children }: PropsDeProveedores): ReactElement {
+export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plataforma, fallo, fuente, hashProps, children }: PropsDeProveedores): ReactElement {
   const tamano = useTamano();
   const medidas = { ancho: tamano.width, alto: tamano.height };
   const izquierda = useIsla({ lado: 'izquierda', id: 'ui-isla-izquierda', nombre: 'panel izquierdo', lienzo: medidas, anchoInicial: 280 });
@@ -91,6 +98,9 @@ export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plata
   const [sitioDeCodigo, setSitioDeCodigo] = useState<SitioDeCodigo>();
   const [aviso, avisar] = useState<string>();
   useCaducidad(aviso === undefined ? undefined : DURACION_DEL_AVISO_MS, () => avisar(undefined), aviso);
+  useEffect(() => {
+    if (fallo !== undefined) avisar(fallo.mensaje);
+  }, [fallo]);
   const guardados = useRef(new Set<() => Promise<void>>());
 
   const elegirPestana = (lado: LadoDeIsla, pestana: string): void => setPestanas((p) => ({ ...p, [lado]: pestana }));

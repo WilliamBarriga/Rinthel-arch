@@ -4,7 +4,7 @@
  * (`marco/proveedores.tsx`), que envuelven al marco y al lienzo. La Vista vive en el hash (`#vista=<id>`). Sin Fuente
  * (el Workspace nunca compilo) el lienzo queda vacio y los paneles lo dicen.
  */
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 
 import { deserializarEstado, useEstadoEnHash } from 'shell';
@@ -55,11 +55,14 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
       }),
     [cliente, hash],
   );
-  const { estado, vigente, recibir } = useEstadoDeDev(cliente, geometrias);
+  // Lo que falla fuera de los proveedores (estado malformado, carga de Componentes) se avisa dentro de ellos.
+  const [fallo, setFallo] = useState<{ mensaje: string }>();
+  const reportar = useCallback((mensaje: string) => setFallo({ mensaje }), []);
+  const { estado, vigente, recibir } = useEstadoDeDev(cliente, geometrias, reportar);
   const dibujable = useSyncExternalStore(geometrias.suscribir, geometrias.dibujable);
-  const componentes = useComponentes(cliente, estado?.version, fetchFn, confirmar);
+  const componentes = useComponentes(cliente, estado?.version, confirmar, reportar);
   const plataforma = props.plataforma ?? plataformaDe(typeof navigator === 'undefined' ? undefined : navigator);
-  const base = { estado, vigente, recibir, cliente, plataforma };
+  const base = { estado, vigente, recibir, cliente, plataforma, fallo };
 
   if (dibujable === undefined)
     return (

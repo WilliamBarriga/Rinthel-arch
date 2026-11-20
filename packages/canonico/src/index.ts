@@ -1,6 +1,6 @@
 /**
  * `canonico`: esquemas Zod y tipos de la Fuente canonica, la Geometria cacheada, las Intenciones de edicion, las
- * salidas JSON del CLI, el Evento de actividad y el protocolo de `dev` (rutas, estado, Diferencia, Historial); `validate`, `resolveView`, `revealAt` e iconos (ADR 0002, 0003, 0005, 0007, 0008).
+ * salidas JSON del CLI, el Evento de actividad y el protocolo de `dev`, del que es el unico dueno (rutas, eventos SSE, estado, Diferencia, Historial); `validate`, `resolveView`, `revealAt` e iconos (ADR 0002, 0003, 0005, 0007, 0008).
  * Invariantes: ids cualificados `a.b.c` definen la jerarquia; colores son nombres de Paleta, nunca hex; del Tema
  * solo conoce `name` y `palette`; una Vista solo selecciona Nodos.
  * Errores: `validate` devuelve issues ordenados y nunca lanza; solo se lanza por fallos de uso o internos.
@@ -96,6 +96,7 @@ export { MOTIVOS_DE_RECHAZO, intencionDeOrdenSchema, intencionDePinSchema, inten
 export type { Intencion, IntencionDeOrden, IntencionDePin, IntencionDeTema, MotivoDeRechazo } from './pin';
 export { esArchivoDeFuente, RUTA_DE_FUENTES, tipoDeFuente, urlDeFuente } from './ruta-de-fuentes';
 export {
+  actividadDeDevSchema,
   archivoDeDevSchema,
   archivoDeRuta,
   archivosDeDevSchema,
@@ -113,8 +114,10 @@ export {
   estadoDeDevSchema,
   estadoHttpDeRechazo,
   etiquetaDeElemento,
+  EVENTOS_DE_DEV,
   historialDeDevSchema,
   INICIO_DEL_HISTORIAL_DE_DEV,
+  inspectNoEncontradoSchema,
   issueDeDevSchema,
   ORIGENES_DE_DIFERENCIA,
   peticionDeEdicionesSchema,
@@ -125,6 +128,7 @@ export {
   TIPOS_DE_CAMBIO,
 } from './dev';
 export type {
+  ActividadDeDev,
   ArchivoDeDev,
   ArchivosDeDev,
   ClaseDePropiedad,
@@ -137,8 +141,11 @@ export type {
   EntradaDelHistorialDeDev,
   ErrorDeDev,
   EstadoDeDev,
+  EventoDeDev,
   HistorialDeDev,
+  InspectNoEncontrado,
   IssueDeDev,
+  NombreDeEventoDeDev,
   OrigenDeDiferencia,
   PeticionDeEdiciones,
   PropiedadCambiada,

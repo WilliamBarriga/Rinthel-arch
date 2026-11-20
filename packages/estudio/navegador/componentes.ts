@@ -1,14 +1,18 @@
 /**
- * Evalua el bundle de `/componentes.js` con el mismo React de la pagina (si no, los hooks del componente fallan).
- * Corre codigo del Workspace sin sandbox: solo se llama tras la confirmacion del usuario.
+ * Carga de los Componentes de Tema de la pagina: consulta el codigo, pide confianza y evalua el bundle, todo por el
+ * cliente de `dev`. El bundle se evalua con el mismo React de la pagina (si no, los hooks del componente fallan).
+ * Corre codigo del Workspace sin sandbox: solo tras la confirmacion del usuario. Nunca lanza: los fallos son datos.
  */
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import type { ComponentesDeTema } from 'render';
 
+import type { ClienteDeDev } from './cliente';
+
 const MODULOS: Record<string, unknown> = { react: React, 'react/jsx-runtime': jsxRuntime, 'react/jsx-dev-runtime': jsxRuntime };
 
-export function cargarComponentes(bundle: string): ComponentesDeTema {
+/** Registra solo los exports con nombre en mayuscula que son funciones; lanza si el bundle importa otro modulo. */
+function evaluarBundle(bundle: string): ComponentesDeTema {
   const requerir = (nombre: string): unknown => {
     if (!Object.hasOwn(MODULOS, nombre)) throw new Error(`Un componente de Tema no puede importar '${nombre}'`);
     return MODULOS[nombre];
@@ -17,33 +21,35 @@ export function cargarComponentes(bundle: string): ComponentesDeTema {
   return Object.fromEntries(Object.entries(exportados).filter(([nombre, valor]) => /^[A-Z]/.test(nombre) && typeof valor === 'function')) as ComponentesDeTema;
 }
 
-export interface PuertoDeCodigo {
-  fetch: typeof fetch;
-  /** Prefijo de las rutas de `dev`; vacio en la pagina. */
-  base?: string;
-  confirmar(mensaje: string): boolean;
-}
+/** `componentes` ausente: no hay codigo o se rechazo la confirmacion. `ok: false` lleva el motivo visible. */
+export type CargaDeComponentes = { ok: true; componentes?: ComponentesDeTema } | { ok: false; mensaje: string };
 
 /**
- * Pide confirmacion la primera vez que hay codigo (no vuelve a preguntar si se rechazo). Resuelve `undefined` si no
- * hay codigo o se rechazo; lanza si la carga falla.
+ * Pide confirmacion la primera vez que hay codigo sin confianza (no vuelve a preguntar si se rechazo) y carga el
+ * bundle. Cada llamada vuelve a consultar el codigo (se llama tras cada estado nuevo).
  */
-export function crearCargadorDeCodigo({ fetch: pedir, base = '', confirmar }: PuertoDeCodigo): () => Promise<ComponentesDeTema | undefined> {
+export function crearCargadorDeComponentes(cliente: ClienteDeDev, confirmar: (mensaje: string) => boolean): () => Promise<CargaDeComponentes> {
   let rechazado = false;
   return async () => {
-    if (rechazado) return undefined;
-    const info = (await (await pedir(`${base}/api/codigo`)).json()) as { temaConCodigo: boolean; componentes: string[]; confiado: boolean };
-    if (!info.temaConCodigo) return undefined;
-    if (!info.confiado) {
-      if (!confirmar(`Los Temas de este Workspace cargan codigo (${info.componentes.join(', ')}) que corre en tu navegador sin sandbox. Cargalo solo si confias en el Workspace. Cargar el codigo?`)) {
+    if (rechazado) return { ok: true };
+    const codigo = await cliente.codigo();
+    if (!codigo.ok) return codigo;
+    const { temaConCodigo, componentes, confiado } = codigo.valor;
+    if (!temaConCodigo) return { ok: true };
+    if (!confiado) {
+      if (!confirmar(`Los Temas de este Workspace cargan codigo (${componentes.join(', ')}) que corre en tu navegador sin sandbox. Cargalo solo si confias en el Workspace. Cargar el codigo?`)) {
         rechazado = true;
-        return undefined;
+        return { ok: true };
       }
-      const confirmado = await pedir(`${base}/api/confiar`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
-      if (!confirmado.ok) throw new Error('dev no acepto la confirmacion');
+      const confirmado = await cliente.confiar();
+      if (!confirmado.ok) return { ok: false, mensaje: `dev no acepto la confirmacion: ${confirmado.mensaje}` };
     }
-    const bundle = await pedir(`${base}/componentes.js`);
-    if (!bundle.ok) throw new Error('dev no sirve el codigo');
-    return cargarComponentes(await bundle.text());
+    const bundle = await cliente.bundleDeComponentes();
+    if (!bundle.ok) return bundle;
+    try {
+      return { ok: true, componentes: evaluarBundle(bundle.valor) };
+    } catch (error) {
+      return { ok: false, mensaje: (error as Error).message };
+    }
   };
 }

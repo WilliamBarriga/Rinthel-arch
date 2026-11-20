@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { deshacerSobre, historialVacio, historialVisible, INICIO_DEL_HISTORIAL, registrar, rehacerSobre, saltar } from 'sesion';
+import { INICIO_DEL_HISTORIAL_DE_DEV } from 'canonico';
+
+import { deshacerSobre, historialVacio, historialVisible, registrar, rehacerSobre, saltar } from 'sesion';
 import type { HistorialDeArchivos } from 'sesion';
 
 const v0 = { 'a.dg': 'a0', 'b.dg': 'b0' };
@@ -78,7 +80,7 @@ describe('saltar en el Historial (#193)', () => {
   });
 
   it('a una entrada del futuro rehace hasta ella; a Inicio deja el texto previo a la primera', () => {
-    const inicio = saltar(tres(), { 'a.dg': 'a3' }, INICIO_DEL_HISTORIAL);
+    const inicio = saltar(tres(), { 'a.dg': 'a3' }, INICIO_DEL_HISTORIAL_DE_DEV);
     expect(inicio).toMatchObject({ ok: true, archivos: { 'a.dg': 'a0' } });
     if (!inicio.ok) return;
     expect(inicio.historial.pasado).toEqual([]);
@@ -95,7 +97,7 @@ describe('saltar en el Historial (#193)', () => {
   it('un archivo que cambia y vuelve en el camino no se escribe', () => {
     let h = registrar(historialVacio, 'cambia', { 'a.dg': 'a0' }, { 'a.dg': 'a1' });
     h = registrar(h, 'vuelve', { 'a.dg': 'a1' }, { 'a.dg': 'a0' });
-    expect(saltar(h, { 'a.dg': 'a0' }, INICIO_DEL_HISTORIAL)).toMatchObject({ ok: true, escritos: [] });
+    expect(saltar(h, { 'a.dg': 'a0' }, INICIO_DEL_HISTORIAL_DE_DEV)).toMatchObject({ ok: true, escritos: [] });
   });
 });
 

@@ -12,10 +12,11 @@ import type { EventoDeActividad } from 'canonico';
 
 import { codigoDeDevSchema, confianzaDeDevSchema, errorDeDevSchema } from './protocolo';
 import type { ActividadDeDev, DiferenciaDeDev, EstadoDeDev, HistorialDeDev } from './protocolo';
+import type { CodigoDePrueba } from './dev-en-memoria';
 import { crearLectorSse } from './sse';
 
 export { devEnMemoria } from './dev-en-memoria';
-export type { DevEnMemoria } from './dev-en-memoria';
+export type { CodigoDePrueba, DevEnMemoria } from './dev-en-memoria';
 export { crearLectorSse } from './sse';
 
 /** Ruta relativa -> texto, como `ArchivosDelWorkspace` de `dsl`. */
@@ -44,6 +45,8 @@ export interface ContenidoDeDevDePrueba {
   temas?: ArchivosDelWorkspace;
   actividad?: string;
   escrituraRota?: string;
+  /** Temas con codigo ya compilados (lo que daria el compilador de `.tsx` del adaptador): Componentes y bundle de `/componentes.js`. */
+  codigo?: CodigoDePrueba;
 }
 export type CrearDev = (contenido: ContenidoDeDevDePrueba) => Promise<DevDePrueba>;
 
@@ -91,6 +94,34 @@ theme claro extends neutral {
   palette { acento "#0ea5e9" }
 }
 `;
+
+/** Un Tema con una Capa `code` que usa el Componente `Aurora`. */
+export const CON_CODIGO = `specification {
+  node servicio
+}
+
+model {
+  servicio api "API"
+}
+
+theme neon {
+  node {
+    layer forma rect { radius 8 }
+    layer aura code over { component Aurora }
+    slots { title }
+  }
+}
+
+view general {
+  type architecture
+  include **
+  theme neon
+}
+`;
+
+/** Bundle CommonJS como el que compila `cli`: `Aurora` dibuja `<i data-aurora={id}>`. */
+export const BUNDLE_DE_PRUEBA = `var j = require('react/jsx-runtime');
+return { Aurora: function (p) { return j.jsx('i', { 'data-aurora': p.id }); } };`;
 
 const CON_ERROR = DSL.replace('include db', 'include db\n  nada-de-esto');
 
@@ -223,6 +254,42 @@ export function probarContratoDeDev(crear: CrearDev): void {
         const issues = cuerpo['issues'] as Array<{ severity: string; file: string; href: string }>;
         expect(issues.some((i) => i.severity === 'error' && i.file === 'main.dg' && i.href.length > 0)).toBe(true);
       });
+    });
+
+    it('/eventos: al conectar estado, historial y actividad con previos; tras cada estado su historial y despues su diferencia', async () => {
+      await con(
+        { 'main.dg': DSL },
+        async (dev) => {
+          const recibidos = await new Promise<[string, unknown][]>((ok) => {
+            const lista: [string, unknown][] = [];
+            const cerrar = dev.eventos('/eventos', (nombre, datos) => {
+              lista.push([nombre, JSON.parse(datos)]);
+              if (lista.length === 3) dev.editarFuera('main.dg', DSL.replace('"API"', '"API nueva"'));
+              if (nombre !== 'diferencia') return;
+              if ((JSON.parse(datos) as DiferenciaDeDev).origen === 'externo') void post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 });
+              else {
+                setTimeout(cerrar, 0);
+                ok(lista);
+              }
+            });
+          });
+          const nombres = recibidos.map(([nombre]) => nombre);
+          expect(nombres.slice(0, 3)).toEqual(['estado', 'historial', 'actividad']);
+          expect(recibidos[2]?.[1]).toEqual({ previos: true, eventos: [eventoDeActividad(1)] });
+          const resto = nombres.slice(3);
+          // Un eco del watcher puede sumar un estado sin Diferencia: lo que importa es el orden de cada tanda.
+          resto.forEach((nombre, i) => {
+            if (nombre === 'estado') expect(resto[i + 1]).toBe('historial');
+            if (nombre === 'historial') expect(resto[i - 1]).toBe('estado');
+            if (nombre === 'diferencia') {
+              expect(resto[i - 1]).toBe('historial');
+              expect((recibidos[i + 3 - 2]?.[1] as EstadoDeDev).version).toBe((recibidos[i + 3]?.[1] as DiferenciaDeDev).version);
+            }
+          });
+          expect(resto.filter((n) => n === 'diferencia')).toHaveLength(2);
+        },
+        { actividad: lineasDeActividad(eventoDeActividad(1)) },
+      );
     });
 
     it('/eventos manda event: estado al conectar y otro, con version mayor, tras una escritura externa', async () => {
@@ -436,6 +503,25 @@ export function probarContratoDeDev(crear: CrearDev): void {
         expect(confianzaDeDevSchema.parse(confiar.cuerpo)).toEqual({ ok: true });
         expect(await codigo()).toEqual({ temaConCodigo: false, componentes: [], confiado: true });
       });
+    });
+
+    it('/componentes.js sirve el bundle de los Temas con codigo solo tras confiar; antes es 403', async () => {
+      await con(
+        { 'main.dg': CON_CODIGO },
+        async (dev) => {
+          expect(codigoDeDevSchema.parse((await json(dev, '/api/codigo')).cuerpo)).toEqual({ temaConCodigo: true, componentes: ['Aurora'], confiado: false });
+          const antes = await dev.fetch('/componentes.js');
+          expect({ status: antes.status, cuerpo: errorDeDevSchema.parse(await antes.json()) }).toMatchObject({ status: 403, cuerpo: { ok: false } });
+
+          expect((await post(dev, '/api/confiar', {})).status).toBe(200);
+          const despues = await dev.fetch('/componentes.js');
+          expect(despues.status).toBe(200);
+          expect(despues.headers.get('content-type')).toContain('text/javascript');
+          expect(await despues.text()).toBe(BUNDLE_DE_PRUEBA);
+          expect((await dev.fetch('/componentes.js', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status).toBe(405);
+        },
+        { codigo: { componentes: ['Aurora'], bundle: BUNDLE_DE_PRUEBA } },
+      );
     });
 
     const TEMA = 'theme claro extends neutral {}\n';

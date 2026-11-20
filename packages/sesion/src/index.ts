@@ -1,7 +1,7 @@
 /**
  * `sesion`: estado compilado de un Workspace (Sesion en CONTEXT.md).
- * Interfaz: `abrirSesion(archivos, { tema? }) -> Sesion` (compilar, validar, layout, Estilo, `consultar` incluido `inspect tema`); escritura unica `aplicarAlWorkspace`, `diferenciar(antes, despues)` (Diferencia pura entre Fuentes), reductor `aplicarIntencion`, `Historial`, `HistorialDeArchivos` (el de `dev`, por archivo) y `workspaceEnMemoria` como `PuertoDeWorkspace`.
- * Workspace vivo (el estado de `dev` sin transporte): `abrirWorkspaceVivo` sobre un `PuertoDelWorkspaceVivo` con reloj y hora
+ * Interfaz: `abrirSesion(archivos, { tema? }) -> Sesion` (compilar, validar, layout, Estilo, `consultar` incluido `inspect tema`); escritura unica `aplicarAlWorkspace`, `diferenciar(antes, despues)` (Diferencia pura entre Fuentes), reductor `aplicarIntencion`, `Historial`, `HistorialDeArchivos` (el Historial de archivos de `dev`) y `workspaceEnMemoria` como `PuertoDeWorkspace`.
+ * Workspace vivo (el estado de `dev` sin transporte, dueno de la secuencia de eventos: `conexion` y `escuchar`): `abrirWorkspaceVivo` sobre un `PuertoDelWorkspaceVivo` con reloj y hora
  * inyectados, `atenderApiDeDev` (las rutas `/api/*` como peticion -> estado HTTP y cuerpo) y `puertoEnMemoria` (fake del puerto).
  * Invariantes: pura sobre `ArchivosDelWorkspace` (sin disco); una Sesion es inmutable; nunca importa codigo (ADR 0008).
  * Errores: los del Workspace son issues; las ediciones rechazadas traen `motivo`; los fallos de layout y de I/O del puerto se propagan.
@@ -22,8 +22,8 @@ export { aplicarAlWorkspace } from './aplicar';
 export type { Aplicable, EdicionDeTexto, OpcionesDeAplicar, PuertoDeWorkspace, ResultadoDeAplicar } from './aplicar';
 export { workspaceEnMemoria } from './puerto-en-memoria';
 export type { ContenidoEnMemoria, WorkspaceEnMemoria } from './puerto-en-memoria';
-export { descripcionDeIntencion, descripcionDeTexto, deshacerSobre, historialVacio, historialVisible, INICIO_DEL_HISTORIAL, registrar, rehacerSobre, saltar } from './historial-de-archivos';
-export type { CambioDeArchivo, EntradaDelHistorial, EntradaVisibleDelHistorial, HistorialDeArchivos, HistorialVisible, ResultadoDeRestaurar } from './historial-de-archivos';
+export { descripcionDeIntencion, descripcionDeTexto, deshacerSobre, historialVacio, historialVisible, registrar, rehacerSobre, saltar } from './historial-de-archivos';
+export type { CambioDeArchivo, EntradaDelHistorial, HistorialDeArchivos, ResultadoDeRestaurar } from './historial-de-archivos';
 export { aplicarIntencion, apilar, crearHistorial, deshacer, editarEnHistorial, rehacer } from './intenciones';
 export type { Consulta, Respuesta } from './consultas';
 export type { OpcionesDeConsultaDeTema } from './consulta-de-tema';
