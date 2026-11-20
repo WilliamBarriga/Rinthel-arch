@@ -2,6 +2,7 @@
 import { Tabs } from '@base-ui/react/tabs';
 import type { ReactElement } from 'react';
 
+import { BotonConAtajo } from '../comandos/atajo';
 import type { Isla } from './use-isla';
 import type { PestanaDelPanel } from './pestanas';
 import type { LadoDeIsla } from './limites';
@@ -22,9 +23,9 @@ const mayuscula = (texto: string): string => texto.charAt(0).toUpperCase() + tex
 export function IslaLateral({ lado, id, nombre, isla, pestanas, activa, alCambiarPestana }: PropsDeIsla): ReactElement {
   if (isla.oculta) {
     return (
-      <button type="button" className="ui-pestana-borde" data-lado={lado} aria-label={`Mostrar ${nombre}`} aria-controls={id} aria-expanded={false} onClick={isla.mostrar}>
+      <BotonConAtajo comando={`isla-${lado}`} className="ui-pestana-borde" data-lado={lado} aria-label={`Mostrar ${nombre}`} aria-controls={id} aria-expanded={false} onClick={isla.mostrar}>
         {pestanas.find((p) => p.id === activa)?.nombre ?? mayuscula(nombre)}
-      </button>
+      </BotonConAtajo>
     );
   }
   const { ancho, alto } = isla.tamano;
@@ -40,9 +41,9 @@ export function IslaLateral({ lado, id, nombre, isla, pestanas, activa, alCambia
             ))}
             <Tabs.Indicator className="ui-pestanas-indicador" />
           </Tabs.List>
-          <button type="button" className="ui-boton-icono" aria-label={`Ocultar ${nombre}`} aria-controls={id} aria-expanded onClick={isla.ocultar}>
+          <BotonConAtajo comando={`isla-${lado}`} className="ui-boton-icono" aria-label={`Ocultar ${nombre}`} aria-controls={id} aria-expanded onClick={isla.ocultar}>
             {lado === 'izquierda' ? '‹' : '›'}
-          </button>
+          </BotonConAtajo>
         </div>
         {pestanas.map(({ id: pestana, Contenido }) => (
           <Tabs.Panel key={pestana} value={pestana} className="ui-isla-cuerpo">

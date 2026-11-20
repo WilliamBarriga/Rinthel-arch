@@ -1,28 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { accionDeAtajo, crearAlAtajo } from '../navegador/historial';
-
-const tecla = (o: Partial<Parameters<typeof accionDeAtajo>[0]>) => ({ key: 'z', ctrlKey: true, metaKey: false, shiftKey: false, altKey: false, enCampoDeTexto: false, repeat: false, ...o });
-
-describe('accionDeAtajo', () => {
-  it.each([
-    [{ key: 'z', ctrlKey: true }, 'deshacer'],
-    [{ key: 'Z', metaKey: true, ctrlKey: false }, 'deshacer'],
-    [{ key: 'Z', ctrlKey: true, shiftKey: true }, 'rehacer'],
-    [{ key: 'z', metaKey: true, ctrlKey: false, shiftKey: true }, 'rehacer'],
-    [{ key: 'y', ctrlKey: true }, 'rehacer'],
-  ] as const)('%j -> %s', (o, esperado) => {
-    expect(accionDeAtajo(tecla(o))).toBe(esperado);
-  });
-
-  it('ignora teclas sin modificador, con alt, otras letras y campos de texto', () => {
-    expect(accionDeAtajo(tecla({ ctrlKey: false }))).toBeUndefined();
-    expect(accionDeAtajo(tecla({ altKey: true }))).toBeUndefined();
-    expect(accionDeAtajo(tecla({ key: 'a' }))).toBeUndefined();
-    expect(accionDeAtajo(tecla({ enCampoDeTexto: true }))).toBeUndefined();
-    expect(accionDeAtajo(tecla({ repeat: true }))).toBeUndefined();
-  });
-});
+import { crearAlAtajo } from '../navegador/historial';
 
 describe('crearAlAtajo', () => {
   it('envia la accion; si se rechaza avisa con el mensaje y recarga solo ante un 409', async () => {

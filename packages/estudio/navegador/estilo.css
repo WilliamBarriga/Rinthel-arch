@@ -364,6 +364,117 @@
     }
   }
 
+  /* Buscador, ayuda de atajos y tooltips (portales de Base UI en `.ui-portales`). */
+  .ui-pildora-buscador {
+    color: var(--ui-tenue);
+    cursor: pointer;
+    min-width: 180px;
+    &:hover {
+      color: var(--ui-texto);
+    }
+  }
+  .ui-fondo-dialogo {
+    position: fixed;
+    inset: 0;
+    background: #0008;
+    z-index: 10;
+  }
+  .ui-dialogo {
+    position: fixed;
+    top: 72px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(560px, calc(100vw - 32px));
+    max-height: calc(100vh - 120px);
+    overflow: auto;
+    padding: 12px;
+    border-radius: 18px;
+    border: 1px solid var(--ui-borde);
+    background: var(--ui-superficie);
+    backdrop-filter: var(--ui-vidrio-dialogo);
+    box-shadow: var(--ui-sombra);
+    z-index: 11;
+    transition: opacity var(--ui-dur-corta) var(--ui-curva);
+    &[data-starting-style],
+    &[data-ending-style] {
+      opacity: 0;
+    }
+  }
+  .ui-dialogo-titulo {
+    margin: 0 0 4px;
+    font-size: 15px;
+    color: var(--ui-texto-fuerte);
+  }
+  .ui-buscador-campo {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    border-radius: var(--ui-radio-s);
+    border: 1px solid var(--ui-borde);
+    background: var(--ui-sutil);
+    color: var(--ui-texto);
+    font: inherit;
+    outline: none;
+  }
+  .ui-buscador-lista {
+    margin-top: 8px;
+  }
+  .ui-buscador-grupo {
+    margin-bottom: 6px;
+  }
+  .ui-buscador-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--ui-radio-s);
+    cursor: pointer;
+    & .ui-tecla:first-of-type {
+      margin-left: auto;
+    }
+    &[data-highlighted] {
+      background: var(--ui-sel);
+      color: var(--ui-texto-fuerte);
+    }
+  }
+  .ui-tecla {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--ui-sutil-2);
+    font: 11px var(--ui-mono);
+    color: var(--ui-tenue);
+  }
+  .ui-atajos {
+    margin: 0;
+    & .ui-atajo {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+    & dd {
+      margin: 0;
+    }
+  }
+  .ui-tooltip {
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--ui-superficie-alta);
+    box-shadow: var(--ui-sombra);
+    font-size: 12px;
+    z-index: 12;
+  }
+  .ui-boton {
+    margin-top: 12px;
+    padding: 6px 12px;
+    border-radius: var(--ui-radio-s);
+    border: 1px solid var(--ui-borde);
+    background: var(--ui-sutil);
+    color: var(--ui-texto);
+    cursor: pointer;
+  }
+
   /* Leyenda del shell montada fuera del lienzo. */
   .ui-leyenda {
     position: absolute;
