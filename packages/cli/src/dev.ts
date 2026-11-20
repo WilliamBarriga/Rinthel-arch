@@ -1,7 +1,7 @@
 /**
  * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
  * cada peticion y con `no-store`), el estado y la Geometria por Vista, y empuja por SSE (`/eventos`) el estado y los
- * Eventos del Registro de actividad (al conectar, los ultimos 50 con `previos: true`).
+ * Eventos del Registro de actividad (al conectar, los ultimos 50 con `previos: true`) y cada Diferencia con su origen.
  * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); las rutas POST exigen
  * JSON y un `Origin` propio (o ninguno); `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
  * Edicion: 400 cuerpo invalido, 409 `hash-desactualizado`, 422 el resto de rechazos, 500 fallo de I/O.
@@ -220,9 +220,13 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   const dejarDeEscucharActividad = vivo.suscribirActividad((eventos) => {
     for (const cliente of clientes) enviarActividad(cliente, { previos: false, eventos });
   });
+  const dejarDeEscucharDiferencia = vivo.suscribirDiferencia((diferencia) => {
+    for (const cliente of clientes) enviar(cliente, 'diferencia', diferencia);
+  });
   const dejarDeEscuchar = (): void => {
     dejarDeEscucharEstado();
     dejarDeEscucharActividad();
+    dejarDeEscucharDiferencia();
   };
 
   const hostsPropios = (): string[] => {

@@ -34,6 +34,7 @@ import { COMANDOS } from './comandos/registro';
 import { plataformaDe } from './comandos/teclas';
 import type { Plataforma } from './comandos/teclas';
 import { useAtajos } from './comandos/use-atajos';
+import { ResaltadoDelLienzo, useDiferenciasExternas } from './diferencia/resaltado';
 
 export interface PropsDelEstudio {
   fetch: typeof fetch;
@@ -189,6 +190,16 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
   const datos = usePropsDeDatos({ fuente: dibujada, iconos: estado.iconos, geometrias: porVista }, props.view);
   const abrirDetalle = useRef<(() => void) | undefined>(undefined);
   const navegacion = navegacionDesde(props);
+  const resaltados = useDiferenciasExternas({
+    cliente: marco.cliente,
+    fuente,
+    version: estado.version,
+    vista: props.view,
+    estado: props.state,
+    paso: props.step,
+    irAVista: (vista) => props.onPathChange([vista]),
+    avisar: marco.avisar,
+  });
   const tema = datos.theme;
   const lienzo =
     tema === undefined ? null : (
@@ -211,8 +222,14 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
         chrome={false}
       />
     );
+  const conResaltado = (
+    <>
+      {lienzo}
+      <ResaltadoDelLienzo ids={resaltados} />
+    </>
+  );
   const leyenda = tema === undefined ? null : <LeyendaDeVista fuente={fuente} props={props} tema={tema} />;
-  return <Marco {...marco} fuente={fuente} hashProps={props} navegacion={navegacion} lienzo={lienzo} leyenda={leyenda} alAbrirDetalle={abrirDetalle} />;
+  return <Marco {...marco} fuente={fuente} hashProps={props} navegacion={navegacion} lienzo={conResaltado} leyenda={leyenda} alAbrirDetalle={abrirDetalle} />;
 }
 
 /**

@@ -1,12 +1,14 @@
 /**
  * `sesion`: estado compilado de un Workspace (Sesion en CONTEXT.md).
- * Interfaz: `abrirSesion(archivos, { tema? }) -> Sesion` (compilar, validar, layout, Estilo, `consultar` incluido `inspect tema`); escritura unica `aplicarAlWorkspace`, reductor `aplicarIntencion`, `Historial`, `HistorialDeArchivos` (el de `dev`, por archivo) y `workspaceEnMemoria` como `PuertoDeWorkspace`.
+ * Interfaz: `abrirSesion(archivos, { tema? }) -> Sesion` (compilar, validar, layout, Estilo, `consultar` incluido `inspect tema`); escritura unica `aplicarAlWorkspace`, `diferenciar(antes, despues)` (Diferencia pura entre Fuentes), reductor `aplicarIntencion`, `Historial`, `HistorialDeArchivos` (el de `dev`, por archivo) y `workspaceEnMemoria` como `PuertoDeWorkspace`.
  * Invariantes: pura sobre `ArchivosDelWorkspace` (sin disco); una Sesion es inmutable; nunca importa codigo (ADR 0008).
  * Errores: los del Workspace son issues; las ediciones rechazadas traen `motivo`; los fallos de layout y de I/O del puerto se propagan.
  * Dependencias: `canonico`, `tema`, `dsl` y `layout`.
  */
 export { abrirSesion, archivoDeVista } from './sesion';
 export { hashDeContenido } from './ediciones';
+export { claveDeElemento, diferenciaVacia, diferenciar } from './diferencia';
+export type { ClaseDePropiedad, Diferencia, ElementoCambiado, ElementoDeDiferencia, PropiedadCambiada, TipoDeElementoDeDiferencia } from './diferencia';
 export { aplicarAlWorkspace } from './aplicar';
 export type { Aplicable, EdicionDeTexto, OpcionesDeAplicar, PuertoDeWorkspace, ResultadoDeAplicar } from './aplicar';
 export { workspaceEnMemoria } from './puerto-en-memoria';

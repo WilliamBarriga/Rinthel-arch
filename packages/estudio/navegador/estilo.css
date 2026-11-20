@@ -790,4 +790,32 @@
     color: var(--ui-warn);
     border-color: var(--ui-warn-suave);
   }
+  /* Diferencia externa: punto en el indice y la galeria, lista de lo quitado y anuncio del halo (solo lector). */
+  .ui-marca-externa {
+    display: inline-block;
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-left: 6px;
+    border-radius: 50%;
+    background: var(--ui-agente);
+    box-shadow: 0 0 8px var(--ui-agente-halo);
+  }
+  .ui-quitados {
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--ui-agente-suave);
+    & li {
+      text-decoration: line-through;
+    }
+  }
+  .ui-solo-lector {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }

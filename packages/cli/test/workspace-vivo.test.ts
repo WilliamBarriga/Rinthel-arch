@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { EventoDeActividad } from 'canonico';
-import type { EstadoDeDev } from 'estudio/protocolo';
+import type { DiferenciaDeDev, EstadoDeDev } from 'estudio/protocolo';
 
 import { puertoEnMemoria } from '../src/puerto-en-memoria';
 import { abrirWorkspaceVivo } from '../src/workspace-vivo';
@@ -626,5 +626,106 @@ describe('Workspace vivo: Registro de actividad', () => {
     reloj.avanzar(100);
 
     expect(empujados).toEqual([4, 5]);
+  });
+});
+
+describe('Workspace vivo: Diferencia', () => {
+  const recoger = (ws: WorkspaceVivo): DiferenciaDeDev[] => {
+    const recibidas: DiferenciaDeDev[] = [];
+    ws.suscribirDiferencia((d) => recibidas.push(d));
+    return recibidas;
+  };
+
+  it('una escritura externa empuja la Diferencia contra la Sesion anterior, con origen externo y la version del estado', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const { ws, reloj } = await abrir(puerto);
+    const recibidas = recoger(ws);
+
+    const estado = await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', BASE.replace('servicio db "Base de datos"', 'servicio db "Datos"\n  servicio cola "Cola"')));
+
+    expect(recibidas).toEqual([
+      {
+        version: estado.version,
+        origen: 'externo',
+        agregados: [{ tipo: 'nodo', id: 'cola' }],
+        quitados: [],
+        cambiados: [{ elemento: { tipo: 'nodo', id: 'db' }, propiedades: [{ nombre: 'title', clase: 'texto' }] }],
+      },
+    ]);
+  });
+
+  it('las escrituras de la UI (Intencion, deshacer, rehacer) son propias y su eco no empuja otra Diferencia', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const { ws, reloj } = await abrir(puerto);
+    const recibidas = recoger(ws);
+
+    await ws.editar(pin(1, 2), 0);
+    await ws.deshacer();
+    await ws.rehacer();
+    reloj.avanzar(100);
+    await ws.recargar();
+
+    expect(recibidas.map((d) => [d.origen, d.version])).toEqual([
+      ['propio', 1],
+      ['propio', 2],
+      ['propio', 3],
+    ]);
+    expect(recibidas[0]?.cambiados).toEqual([{ elemento: { tipo: 'vista', id: 'general' }, propiedades: [{ nombre: 'overrides', clase: 'estructura' }] }]);
+  });
+
+  it('una escritura de la UI que se recompila junto a una externa en otro archivo es externa', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE, 'otro.dg': 'model {\n  servicio x "X"\n}\n' } });
+    const { ws } = await abrir(puerto);
+    const recibidas = recoger(ws);
+
+    puerto.editarFuera('otro.dg', 'model {\n  servicio x "X nuevo"\n}\n');
+    await ws.editar(pin(1, 2), 0);
+
+    expect(recibidas.map((d) => d.origen)).toEqual(['externo']);
+    expect(recibidas[0]?.cambiados.map((c) => c.elemento)).toEqual([
+      { tipo: 'nodo', id: 'x' },
+      { tipo: 'vista', id: 'general' },
+    ]);
+  });
+
+  it('varias Sesiones con errores seguidas dan una sola Diferencia contra la ultima Sesion buena', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const { ws, reloj } = await abrir(puerto);
+    const recibidas = recoger(ws);
+
+    await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', BASE.replace('servicio api', 'servico api')));
+    await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', BASE.replace('servicio api "API"', 'servico api "API 2"')));
+    expect(recibidas).toEqual([]);
+    const arreglado = await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', BASE.replace('"API"', '"API 3"')));
+
+    expect(recibidas).toEqual([
+      { version: arreglado.version, origen: 'externo', agregados: [], quitados: [], cambiados: [{ elemento: { tipo: 'nodo', id: 'api' }, propiedades: [{ nombre: 'title', clase: 'texto' }] }] },
+    ]);
+  });
+
+  it('las ediciones de texto de la UI, aun guardadas sin compilar con aunqueNoCompile, dan una sola Diferencia propia', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const { ws } = await abrir(puerto);
+    const recibidas = recoger(ws);
+    const insertar = (texto: string) => ({ ediciones: [{ file: 'main.dg', range: { start: punto(6, 18), end: punto(6, 18) }, replacement: texto }], aunqueNoCompile: true });
+
+    await ws.editar(insertar(' "Atiende'));
+    expect(recibidas).toEqual([]);
+    await ws.editar(insertar('"'));
+
+    expect(recibidas.map((d) => [d.origen, d.cambiados.map((c) => c.elemento)])).toEqual([['propio', [{ tipo: 'nodo', id: 'api' }]]]);
+  });
+
+  it('volver a la ultima Sesion buena no empuja nada y la siguiente escritura propia ya no hereda el origen externo', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE, 'otro.dg': '// otro\n' } });
+    const { ws, reloj } = await abrir(puerto);
+    const recibidas = recoger(ws);
+
+    await cambiarFuera(ws, reloj, () => puerto.editarFuera('otro.dg', 'model { roto'));
+    await cambiarFuera(ws, reloj, () => puerto.editarFuera('otro.dg', '// otro\n'));
+    expect(recibidas).toEqual([]);
+    await ws.editar(pin(1, 2));
+
+    expect(recibidas.map((d) => d.origen)).toEqual(['propio']);
   });
 });

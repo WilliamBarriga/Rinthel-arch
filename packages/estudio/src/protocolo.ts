@@ -55,6 +55,39 @@ export type NombreDeEventoDeDev = (typeof EVENTOS_DE_DEV)[number];
 export const actividadDeDevSchema = z.object({ previos: z.boolean(), eventos: z.array(eventoDeActividadSchema) });
 export type ActividadDeDev = z.infer<typeof actividadDeDevSchema>;
 
+/** Elemento de una Diferencia con su identidad (la de `diferenciar` de `sesion`). */
+export const elementoDeDiferenciaSchema = z.discriminatedUnion('tipo', [
+  z.object({ tipo: z.literal('nodo'), id: z.string() }),
+  z.object({ tipo: z.literal('atributo'), nodo: z.string(), name: z.string() }),
+  z.object({ tipo: z.literal('arista'), from: z.string(), to: z.string(), ordinal: z.number().int() }),
+  z.object({ tipo: z.literal('interaccion'), id: z.string() }),
+  z.object({ tipo: z.literal('mensaje'), interaccion: z.string(), id: z.string().optional(), posicion: z.number().int(), ruta: z.string() }),
+  z.object({ tipo: z.literal('vista'), id: z.string() }),
+  z.object({ tipo: z.literal('tema'), name: z.string() }),
+]);
+export type ElementoDeDiferenciaDeDev = z.infer<typeof elementoDeDiferenciaSchema>;
+
+/**
+ * `propio`: la produjo una escritura de la UI (Intencion, ediciones de texto, `fix`, deshacer, rehacer, saltar),
+ * reconocida por el hash de lo escrito; `externo`: cualquier otra (agente, otro editor, CLI).
+ */
+export const ORIGENES_DE_DIFERENCIA = ['propio', 'externo'] as const;
+export type OrigenDeDiferencia = (typeof ORIGENES_DE_DIFERENCIA)[number];
+
+/**
+ * Datos de `event: diferencia`: la Diferencia de la Fuente contra la ultima Sesion buena, empujada tras el `estado` de
+ * la misma `version` y solo si no es vacia. Varias Sesiones con errores seguidas dan una sola al volver a compilar
+ * (externa si alguna de las escrituras intermedias lo fue). La pagina no recalcula: solo proyecta.
+ */
+export const diferenciaDeDevSchema = z.object({
+  version: z.number().int(),
+  origen: z.enum(ORIGENES_DE_DIFERENCIA),
+  agregados: z.array(elementoDeDiferenciaSchema),
+  quitados: z.array(elementoDeDiferenciaSchema),
+  cambiados: z.array(z.object({ elemento: elementoDeDiferenciaSchema, propiedades: z.array(z.object({ nombre: z.string(), clase: z.enum(['texto', 'estructura']) })) })),
+});
+export type DiferenciaDeDev = z.infer<typeof diferenciaDeDevSchema>;
+
 /** Subcomandos de `GET /api/inspect/<comando>/<argumento>`; las opciones de `tema` van en la query. */
 export const COMANDOS_DE_INSPECT = ['buscar', 'nodo', 'vista', 'interaccion', 'tema'] as const;
 export type ComandoDeInspect = (typeof COMANDOS_DE_INSPECT)[number];

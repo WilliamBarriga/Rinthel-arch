@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { EventoDeActividad } from 'canonico';
 
-import type { ActividadDeDev, EstadoDeDev } from './protocolo';
+import type { ActividadDeDev, DiferenciaDeDev, EstadoDeDev } from './protocolo';
 import { crearLectorSse } from './sse';
 
 export { devEnMemoria } from './dev-en-memoria';
@@ -126,7 +126,26 @@ function esperarActividad(dev: DevDePrueba, basta: (recibidos: ActividadDeDev[])
   });
 }
 
-const eventoDePrueba = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
+/** Junta todos los eventos de `/eventos` (nombre y datos ya parseados) hasta que `basta` los acepte. */
+function esperarEventos(dev: DevDePrueba, basta: (recibidos: [string, unknown][]) => boolean, alAbrir: () => void): Promise<[string, unknown][]> {
+  return new Promise((ok) => {
+    const recibidos: [string, unknown][] = [];
+    let abierto = false;
+    const cerrar = dev.eventos('/eventos', (nombre, datos) => {
+      recibidos.push([nombre, JSON.parse(datos)]);
+      if (nombre === 'estado' && !abierto) {
+        abierto = true;
+        alAbrir();
+      }
+      if (basta(recibidos)) {
+        setTimeout(cerrar, 0);
+        ok(recibidos);
+      }
+    });
+  });
+}
+
+const eventoDePrueba =(pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
   contractVersion: 1,
   ts: '2026-11-19T10:00:00.000Z',
   pid,
@@ -206,6 +225,31 @@ export function probarContratoDeDev(crear: CrearDev): void {
           () => dev.anexarActividad(`no es json\n${lineaDe(nuevo)}`),
         );
         expect(recibidos.filter((a) => !a.previos)).toEqual([{ previos: false, eventos: [nuevo] }]);
+      });
+    });
+
+    it('una escritura externa llega como event: diferencia externa, despues del estado de su misma version', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const recibidos = await esperarEventos(
+          dev,
+          (r) => r.some(([nombre]) => nombre === 'diferencia'),
+          () => dev.editarFuera('main.dg', DSL.replace('servicio db "Base de datos"', 'servicio db "Datos"\n  servicio cola "Cola"')),
+        );
+        const diferencia = recibidos.find(([nombre]) => nombre === 'diferencia')?.[1] as DiferenciaDeDev;
+        expect(diferencia).toMatchObject({ origen: 'externo', agregados: [{ tipo: 'nodo', id: 'cola' }], quitados: [], cambiados: [{ elemento: { tipo: 'nodo', id: 'db' }, propiedades: [{ nombre: 'title', clase: 'texto' }] }] });
+        const estados = recibidos.filter(([nombre]) => nombre === 'estado').map(([, datos]) => (datos as EstadoDeDev).version);
+        expect(estados[estados.length - 1]).toBe(diferencia.version);
+      });
+    });
+
+    it('una Intencion por POST /api/edit da event: diferencia propia', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const recibidos = await esperarEventos(
+          dev,
+          (r) => r.some(([nombre]) => nombre === 'diferencia'),
+          () => void post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos', tema: 'claro' }),
+        );
+        expect(recibidos.find(([nombre]) => nombre === 'diferencia')?.[1]).toMatchObject({ origen: 'propio', cambiados: [{ elemento: { tipo: 'vista', id: 'datos' }, propiedades: [{ nombre: 'theme', clase: 'estructura' }] }] });
       });
     });
 
