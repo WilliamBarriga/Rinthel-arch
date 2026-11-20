@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { abrirSesion, archivoDeVista } from 'sesion';
+import { abrirSesion } from 'sesion';
+
+import { archivoDeVista } from '../src/sesion';
 
 describe('archivoDeVista', () => {
   it('devuelve el archivo en que se declara la Vista', () => {

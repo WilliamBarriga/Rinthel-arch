@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { abrirSesion, aplicarAlWorkspace, hashDeContenido, workspaceEnMemoria } from 'sesion';
-import type { Intencion, PuertoDeWorkspace } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, hashDeContenido } from 'sesion';
+import type { Intencion } from 'sesion';
+
+import type { PuertoDeWorkspace } from '../src/aplicar';
+import { workspaceEnMemoria } from '../src/puerto-en-memoria';
 
 const texto = `specification { node servicio }
 model { servicio a }

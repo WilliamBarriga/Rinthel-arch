@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { iniciarDev } from 'cli';
 import type { ServidorDev } from 'cli';
 
-import { comandoDev } from '../src/dev';
+import { comandoDev, puertoDeDisco } from '../src/dev';
 import { evaluarBundle as cargarComponentes } from './evaluar-bundle';
 
 const FIXTURE = resolve(__dirname, 'fixtures/tema-codigo');
@@ -35,7 +35,7 @@ function observador() {
 
 async function arrancar(raiz: string, extra: { confiarEnCodigo?: boolean } = {}) {
   const obs = observador();
-  const servidor = await iniciarDev({ workspace: raiz, observar: obs.observar, debounceMs: 5, puerto: 0, ...extra });
+  const servidor = await iniciarDev({ workspace: raiz, puerto: puertoDeDisco(raiz, { observar: obs.observar }), debounceMs: 5, puertoHttp: 0, ...extra });
   abiertos.push(servidor);
   return { servidor, cambiar: obs.cambiar };
 }

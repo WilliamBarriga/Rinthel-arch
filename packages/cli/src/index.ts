@@ -16,6 +16,7 @@ import { ayudaPara } from './ayuda';
 import { editar } from './comando-edit';
 import { inspeccionar } from './comando-inspect';
 import { comandoDev } from './dev';
+import { CARPETA_DE_SALIDA } from './registro-en-disco';
 import { MAX_ISSUES_POR_DEFECTO, abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { generarSkill } from './skill';
@@ -74,7 +75,7 @@ async function despachar(argv: readonly string[], dependencias: Dependencias): P
   const [comando, ...resto] = argv;
   if (comando === 'edit') return editar(resto, dependencias);
   if (comando === 'inspect') return inspeccionar(resto, dependencias);
-  if (comando === 'dev') return comandoDev(resto, dependencias);
+  if (comando === 'dev') return comandoDev(resto);
   if (comando !== 'validate' && comando !== 'build' && comando !== 'skill') {
     return uso(
       `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|skill|inspect|edit|dev> --workspace <ruta> (diagrams --help para el detalle)`,
@@ -167,7 +168,7 @@ async function ejecutar(
     try {
       escribir(raiz, salida.ok ? archivosDeSalida : {});
     } catch (error) {
-      return uso(`No se pudo escribir .diagrams/: ${(error as Error).message}`);
+      return uso(`No se pudo escribir ${CARPETA_DE_SALIDA}/: ${(error as Error).message}`);
     }
   }
   return {

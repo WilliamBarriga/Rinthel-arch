@@ -135,7 +135,7 @@ _Evitar_: Historial a secas para el de `dev` (ese es el Historial de archivos).
 Historial de deshacer de `dev`: cada entrada guarda, por archivo, el texto antes y despues de una escritura de la UI (Intencion, guardado del editor, `fix`), con una descripcion y su hora. Deshacer, rehacer y saltar a una entrada se rechazan solo si cambio por fuera un archivo que la entrada restaura; una escritura externa no lo reinicia. La UI ve de el el Historial visible: cada entrada con si es alcanzable sobre el disco vigente.
 
 **Workspace vivo**:
-El estado de `dev` sin transporte: la Sesion vigente y la ultima buena, el Historial de archivos, la cola de escrituras, las versiones que vio la UI, la Diferencia con su origen y el Registro de actividad leido. Es el unico dueno de la secuencia de eventos del protocolo de `dev`: al conectar, estado, Historial de archivos y actividad previa; tras cada estado, su Historial de archivos y su Diferencia. El servidor de `dev` y su fake de pruebas solo la transportan.
+El estado de `dev` sin transporte: la Sesion vigente y la ultima buena, el Historial de archivos, la cola de escrituras, las versiones que vio la UI, la Diferencia con su origen y, compuesto, el Registro de actividad vivo (modulo propio que lee y empuja la actividad). Es el unico dueno de la secuencia de eventos del protocolo de `dev`: al conectar, estado, Historial de archivos y actividad previa; tras cada estado, su Historial de archivos y su Diferencia. El servidor de `dev` y su fake de pruebas solo la transportan.
 
 **Seleccion**:
 Elemento o elementos de una Vista (Nodo, Arista, Atributo; en secuencia tambien Mensaje, Fragmento y Nota) sobre los que actua el editor. Es el sujeto de las Intenciones.

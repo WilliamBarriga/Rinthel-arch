@@ -1,15 +1,15 @@
 /**
- * Registro de actividad (ADR 0005): unico punto del CLI que anexa un Evento de actividad a
- * `<workspace>/.diagrams/actividad.jsonl` tras `validate`, `build`, `inspect` y `edit`, salgan como salgan.
- * Invariantes: una linea por Evento, escrita con un solo `write` en modo append; al pasar 1 MB rota a
- * `actividad.1.jsonl` (una generacion). Sin `--workspace` que resuelva a una carpeta no se registra.
+ * Registro de actividad (ADR 0005): unico punto del CLI que arma el Evento de actividad de `validate`, `build`,
+ * `inspect` y `edit`, salgan como salgan, y lo anexa con `registro-en-disco.ts` (dueno del archivo y de su rotacion).
+ * Invariantes: un Evento por comando. Sin `--workspace` que resuelva a una carpeta no se registra.
  * Modos de error: ninguno visible; un fallo al escribir se ignora y no cambia stdout, stderr ni el codigo.
  */
 import { ACTIVIDAD_CONTRACT_VERSION, COMANDOS_CON_ACTIVIDAD } from 'canonico';
 import type { EventoDeActividad, ObjetivoDeActividad } from 'canonico';
-import { appendFileSync, mkdirSync, renameSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { statSync } from 'node:fs';
+import { resolve } from 'node:path';
 
+import { anexarAlRegistro } from './registro-en-disco';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 
 /** Lo que el comando nombra y, en `validate` y `build`, el recuento de issues. */
@@ -22,8 +22,6 @@ export interface DatosDeActividad {
 export type ResultadoConActividad = ResultadoDeEjecucion & { actividad?: DatosDeActividad };
 
 export type Entorno = Readonly<Record<string, string | undefined>>;
-
-const LIMITE_DE_BYTES = 1024 * 1024;
 
 const registra = (comando: string | undefined): comando is EventoDeActividad['comando'] =>
   (COMANDOS_CON_ACTIVIDAD as readonly string[]).includes(comando ?? '');
@@ -75,22 +73,9 @@ export async function conActividad(
     ...(actividad?.resumen !== undefined && { resumen: actividad.resumen }),
   };
   try {
-    anexar(join(carpeta, '.diagrams'), `${JSON.stringify(evento)}\n`);
+    anexarAlRegistro(carpeta, `${JSON.stringify(evento)}\n`);
   } catch {
     // El registro es un rastro auxiliar: nunca altera la salida del comando.
   }
   return resultado;
-}
-
-function anexar(carpeta: string, linea: string): void {
-  mkdirSync(carpeta, { recursive: true });
-  const ruta = join(carpeta, 'actividad.jsonl');
-  let tamano = 0;
-  try {
-    tamano = statSync(ruta).size;
-  } catch {
-    // aun no existe
-  }
-  if (tamano > LIMITE_DE_BYTES) renameSync(ruta, join(carpeta, 'actividad.1.jsonl'));
-  appendFileSync(ruta, linea);
 }

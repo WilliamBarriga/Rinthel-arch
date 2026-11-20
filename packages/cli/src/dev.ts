@@ -6,29 +6,31 @@
  * un `Origin` propio (o ninguno, si no 403) y `application/json` (si no 415); un cuerpo de mas de 64 KiB es 413;
  * `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
  * `/api/*` y toda ruta no servida aqui: la respuesta completa de `atenderApiDeDev` (ruteo, 400, 404, 405, 409, 422, 500).
- * Errores: `iniciarDev` rechaza si el puerto esta ocupado (sin dejar el observador activo) y lanza si la lectura
+ * Puertos: `puertoHttp` es el TCP; `puerto` es el `PuertoDelWorkspaceVivo` (por defecto `puertoDeDisco`: el disco del
+ * Workspace y de `--theme-path`, `fs.watch` y el Registro de actividad de `registro-en-disco.ts`).
+ * Errores: `iniciarDev` rechaza si el puerto TCP esta ocupado (sin dejar el observador activo) y lanza si la lectura
  * inicial falla; `run(['dev', ...])` los convierte en codigo 2. Un estatico de `estudio` sin construir es 404 al pedirlo.
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { readFileSync, rmSync, unwatchFile, watch, watchFile } from 'node:fs';
-import { extname, join, resolve } from 'node:path';
+import { readFileSync, rmSync, watch } from 'node:fs';
+import { extname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { RUTAS_DE_DEV } from 'canonico';
 import type { EventoDeDev } from 'canonico';
-import type { ArchivosDelWorkspace } from 'dsl';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
 import { abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
-import type { PuertoDelWorkspaceVivo, RegistroDeActividad, Reloj, WorkspaceVivo } from 'sesion';
+import type { PuertoDelWorkspaceVivo, Reloj, WorkspaceVivo } from 'sesion';
 
 import { compiladorDeCodigo } from './codigo';
 import type { ResultadoDeCodigo } from './codigo';
+import { registroEnDisco } from './registro-en-disco';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
-import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
+import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos, leerWorkspace } from './workspace';
 
 /** `setTimeout` como reloj del Workspace vivo. */
 export const relojReal: Reloj = {
@@ -43,26 +45,17 @@ export interface OpcionesDeDev {
   workspace: string;
   /** Carpeta de Temas (`--theme-path`): se fusiona antes del Workspace, que gana en rutas repetidas. No se observa. */
   temas?: string;
-  /** Puerto en 127.0.0.1; 0 elige uno libre. */
-  puerto?: number;
-  /** Espera en ms tras el ultimo cambio antes de recompilar; por defecto `DEBOUNCE_MS`. */
+  /** Puerto TCP en 127.0.0.1 (`--port`); 0 elige uno libre. */
+  puertoHttp?: number;
+  /** Por donde el Workspace vivo lee, escribe, observa y sigue el Registro de actividad; por defecto `puertoDeDisco(workspace, { temas })`. */
+  puerto?: PuertoDelWorkspaceVivo;
+  /** Espera en ms tras el ultimo cambio antes de recompilar; por defecto la del Workspace vivo. */
   debounceMs?: number;
-  leer?: (raiz: string) => ArchivosDelWorkspace;
-  /** Hash de cada recurso vigilado (`.tsx`, fuentes) bajo `raiz`; por defecto lee el disco (o nada si se inyecta `leer`). */
-  leerRecursos?: (raiz: string) => Record<string, string>;
-  /** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
-  observar?: (raiz: string, alCambiar: () => void) => () => void;
-  /** Registro de actividad de `raiz`; por defecto `.diagrams/actividad.jsonl` del disco (o ninguno si se inyecta `leer`). */
-  actividad?: (raiz: string) => RegistroDeActividad | undefined;
   /** Rutas de los estaticos de la app; por defecto las del build de `estudio`. Se consultan en cada peticion. */
   estudio?: () => ActivosDelEstudio;
-  /** `ruta` relativa a `raiz`. */
-  escribir?: (raiz: string, ruta: string, texto: string) => void;
-  /** `ruta` relativa a `raiz`. */
-  borrar?: (raiz: string, ruta: string) => void;
   /** `--trust-code`: sirve `/componentes.js` sin pedir confirmacion en el navegador. Por defecto `false`. */
   confiarEnCodigo?: boolean;
-  /** Compila los `.tsx` del Workspace; por defecto el adaptador de esbuild (o nada si se inyecta `leer`). */
+  /** Compila los `.tsx` de `workspace`; por defecto el adaptador de esbuild (un Workspace inexistente no tiene codigo). */
   compilarCodigo?: () => ResultadoDeCodigo;
 }
 
@@ -85,53 +78,21 @@ function observarDisco(raiz: string, alCambiar: () => void): () => void {
   return () => observador.close();
 }
 
-/** Cada cuanto se mira el registro de actividad en disco. */
-const INTERVALO_DEL_REGISTRO_MS = 250;
+/** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
+export type Observador = (raiz: string, alCambiar: () => void) => () => void;
 
 /**
- * `.diagrams/actividad.jsonl` con un observador propio (el watcher del Workspace ignora carpetas ocultas). Se sondea con
- * `fs.watchFile`, que funciona aunque el archivo aun no exista y ve la rotacion (otro inodo, otro tamano).
+ * El Workspace vivo sobre el disco: los `.dg` de `workspace` (propios) fusionados tras los de `temas`, escritura atomica
+ * bajo la raiz, recursos (`.tsx`, fuentes) de ambas carpetas, el observador (`fs.watch` recursivo por defecto) y el
+ * Registro de actividad de `registro-en-disco.ts`.
  */
-function registroEnDisco(raiz: string): RegistroDeActividad {
-  const ruta = join(raiz, '.diagrams', 'actividad.jsonl');
+export function puertoDeDisco(workspace: string, { temas, observar = observarDisco }: { temas?: string; observar?: Observador } = {}): PuertoDelWorkspaceVivo {
   return {
-    leer() {
-      try {
-        return readFileSync(ruta, 'utf8');
-      } catch {
-        return undefined;
-      }
-    },
-    observar(alCambiar) {
-      const oyente = (): void => alCambiar();
-      watchFile(ruta, { interval: INTERVALO_DEL_REGISTRO_MS, persistent: false }, oyente);
-      return () => unwatchFile(ruta, oyente);
-    },
-  };
-}
-
-/** Atomica y siempre bajo la raiz del Workspace. */
-function escribirEnDisco(raiz: string, ruta: string, texto: string): void {
-  escribirTexto(destinoEnWorkspace(raiz, ruta), texto);
-}
-
-/** Siempre bajo la raiz del Workspace; un archivo ya ausente no es error. */
-function borrarEnDisco(raiz: string, ruta: string): void {
-  rmSync(destinoEnWorkspace(raiz, ruta), { force: true });
-}
-
-/** Con `leer` inyectado y sin `leerRecursos`, `recursos()` da `undefined`. */
-function puertoDeDisco(opciones: OpcionesDeDev): PuertoDelWorkspaceVivo {
-  const { workspace, temas, leer = leerWorkspace, escribir = escribirEnDisco, borrar = borrarEnDisco, observar = observarDisco } = opciones;
-  const conoceRecursos = opciones.leer === undefined || opciones.leerRecursos !== undefined;
-  const leerRecursos = opciones.leerRecursos ?? leerRecursosReal;
-  const actividad = (opciones.actividad ?? (opciones.leer === undefined ? registroEnDisco : () => undefined))(workspace);
-  return {
-    ...(actividad !== undefined && { actividad }),
-    leer: () => ({ propios: leer(workspace), disco: leerConTemas(leer, workspace, temas) }),
-    escribir: (ruta, texto) => escribir(workspace, ruta, texto),
-    borrar: (ruta) => borrar(workspace, ruta),
-    recursos: () => (conoceRecursos ? { ...(temas === undefined ? {} : leerRecursos(temas)), ...leerRecursos(workspace) } : undefined),
+    actividad: registroEnDisco(workspace),
+    leer: () => ({ propios: leerWorkspace(workspace), disco: leerConTemas(leerWorkspace, workspace, temas) }),
+    escribir: (ruta, texto) => escribirTexto(destinoEnWorkspace(workspace, ruta), texto),
+    borrar: (ruta) => rmSync(destinoEnWorkspace(workspace, ruta), { force: true }),
+    recursos: () => ({ ...(temas === undefined ? {} : leerRecursos(temas)), ...leerRecursos(workspace) }),
     observar: (alCambiar) => observar(workspace, alCambiar),
   };
 }
@@ -184,17 +145,16 @@ function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
 
 /** El codigo de Temas se sirve en `/componentes.js` solo tras `POST /api/confiar` o `confiarEnCodigo`. */
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puerto = 0, debounceMs, estudio = activosDelEstudio, confiarEnCodigo = false } = opciones;
-  // Con `leer` inyectado no hay disco del que compilar codigo.
-  const compilarCodigo = opciones.compilarCodigo ?? (opciones.leer === undefined ? compiladorDeCodigo(workspace).compilar : undefined);
+  const { workspace, temas, puertoHttp = 0, debounceMs, estudio = activosDelEstudio, confiarEnCodigo = false } = opciones;
+  const { puerto = puertoDeDisco(workspace, temas === undefined ? {} : { temas }), compilarCodigo = compiladorDeCodigo(workspace).compilar } = opciones;
   const vivo: WorkspaceVivo = await abrirWorkspaceVivo({
-    puerto: puertoDeDisco(opciones),
+    puerto,
     raiz: resolve(workspace),
     reloj: relojReal,
     ahora: Date.now,
     confiarEnCodigo,
     ...(debounceMs !== undefined && { debounceMs }),
-    ...(compilarCodigo !== undefined && { compilarCodigo }),
+    compilarCodigo,
   });
 
   const clientes = new Set<ServerResponse>();
@@ -282,7 +242,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   };
   await new Promise<void>((ok, fallo) => {
     servidor.once('error', fallo);
-    servidor.listen(puerto, '127.0.0.1', () => ok());
+    servidor.listen(puertoHttp, '127.0.0.1', () => ok());
   }).catch((error: unknown) => {
     detener();
     throw error;
@@ -305,10 +265,10 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 }
 
 
-/** Vuelve con la URL; el servidor mantiene vivo el proceso. Puerto 4173 por defecto. */
+/** Vuelve con la URL; el servidor mantiene vivo el proceso. Puerto TCP 4173 por defecto. `observar` reemplaza a `fs.watch`. */
 export async function comandoDev(
   args: readonly string[],
-  dependencias: Pick<OpcionesDeDev, 'leer' | 'observar' | 'estudio'> = {},
+  dependencias: Pick<OpcionesDeDev, 'estudio'> & { observar?: Observador } = {},
 ): Promise<ResultadoDeEjecucion> {
   const uso = usoComun;
   let valores;
@@ -318,10 +278,20 @@ export async function comandoDev(
     return uso((error as Error).message);
   }
   if (valores.workspace === undefined) return uso('Falta --workspace <ruta>');
-  const puerto = Number(valores.port ?? 4173);
-  if (!Number.isInteger(puerto) || puerto < 0 || puerto > 65535) return uso('--port debe ser un entero entre 0 y 65535');
+  const puertoHttp = Number(valores.port ?? 4173);
+  if (!Number.isInteger(puertoHttp) || puertoHttp < 0 || puertoHttp > 65535) return uso('--port debe ser un entero entre 0 y 65535');
+  const { observar, estudio } = dependencias;
+  const workspace = valores.workspace;
+  const temas = valores['theme-path'];
   try {
-    const servidor = await iniciarDev({ ...dependencias, workspace: valores.workspace, puerto, ...(valores['trust-code'] === true && { confiarEnCodigo: true }), ...(valores['theme-path'] === undefined ? {} : { temas: valores['theme-path'] }) });
+    const servidor = await iniciarDev({
+      workspace,
+      puertoHttp,
+      ...(estudio !== undefined && { estudio }),
+      ...(temas !== undefined && { temas }),
+      ...(observar !== undefined && { puerto: puertoDeDisco(workspace, { ...(temas !== undefined && { temas }), observar }) }),
+      ...(valores['trust-code'] === true && { confiarEnCodigo: true }),
+    });
     const aviso =
       servidor.conCodigo.length === 0
         ? ''

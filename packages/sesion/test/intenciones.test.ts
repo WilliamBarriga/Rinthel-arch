@@ -1,14 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  aplicarIntencion,
-  crearHistorial,
-  deshacer,
-  editarEnHistorial,
-  hashDeContenido,
-  rehacer,
-} from 'sesion';
+import { crearHistorial, deshacer, editarEnHistorial, hashDeContenido } from 'sesion';
 import type { Intencion } from 'sesion';
+
+import { aplicarIntencion, rehacer } from '../src/intenciones';
 
 const base = (extra: string) => `specification { node servicio }
 model { servicio a  servicio b }

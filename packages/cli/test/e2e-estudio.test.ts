@@ -26,7 +26,7 @@ let navegador: Browser;
 beforeAll(async () => {
   workspace = mkdtempSync(join(tmpdir(), 'e2e-estudio-'));
   cpSync(join(import.meta.dirname, 'fixtures', 'mediano'), workspace, { recursive: true });
-  servidor = await iniciarDev({ workspace, puerto: 0 });
+  servidor = await iniciarDev({ workspace, puertoHttp: 0 });
   navegador = await chromium.launch({ executablePath: rutaDeChromium(), headless: true });
 }, PLAZO_MS);
 

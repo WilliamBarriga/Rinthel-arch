@@ -21,9 +21,11 @@ export interface ContenidoVivoEnMemoria extends ContenidoEnMemoria {
   recursos?: Record<string, string>;
   /** Texto inicial de `.diagrams/actividad.jsonl`; sin el, el registro no existe todavia. */
   actividad?: string;
+  /** Toda escritura propia lanza un `Error` con este mensaje (fallo de I/O); `editarFuera` sigue escribiendo. */
+  escrituraRota?: string;
 }
 
-export function puertoEnMemoria({ recursos, actividad, ...contenido }: ContenidoVivoEnMemoria): WorkspaceVivoEnMemoria {
+export function puertoEnMemoria({ recursos, actividad, escrituraRota, ...contenido }: ContenidoVivoEnMemoria): WorkspaceVivoEnMemoria {
   const base = workspaceEnMemoria(contenido);
   let registro = actividad;
   const observadoresDelRegistro = new Set<() => void>();
@@ -36,9 +38,13 @@ export function puertoEnMemoria({ recursos, actividad, ...contenido }: Contenido
   const avisar = (): void => {
     for (const alCambiar of [...observadores]) alCambiar();
   };
-  const escribir = (ruta: string, texto: string): void => {
+  const escribirFuera = (ruta: string, texto: string): void => {
     base.escribir(ruta, texto);
     avisar();
+  };
+  const escribir = (ruta: string, texto: string): void => {
+    if (escrituraRota !== undefined) throw new Error(escrituraRota);
+    escribirFuera(ruta, texto);
   };
   const borrar = (ruta: string): void => {
     base.borrar(ruta);
@@ -53,7 +59,7 @@ export function puertoEnMemoria({ recursos, actividad, ...contenido }: Contenido
       observadores.add(alCambiar);
       return () => observadores.delete(alCambiar);
     },
-    editarFuera: (ruta, texto) => (texto === undefined ? borrar(ruta) : escribir(ruta, texto)),
+    editarFuera: (ruta, texto) => (texto === undefined ? borrar(ruta) : escribirFuera(ruta, texto)),
     editarTemaFuera(ruta, texto) {
       base.escribirTema(ruta, texto);
       avisar();
