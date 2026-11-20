@@ -21,14 +21,19 @@ import { crearCargadorDeCodigo } from './componentes';
 import { crearGeometriasDeDev } from './geometrias';
 import type { Dibujable, GeometriasDeDev } from './geometrias';
 import { hashDeEstudio } from './hash-de-estudio';
-import { accionDeAtajo, crearAlAtajo } from './historial';
 import { ContextoDeEstudio } from './marco/contexto';
-import type { ContextoDelEstudio } from './marco/contexto';
+import type { ContextoDelEstudio, DialogoDelEstudio, SitioDeCodigo } from './marco/contexto';
 import { IslaLateral } from './marco/isla';
 import type { LadoDeIsla } from './marco/limites';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS, PILDORAS_DE_LA_BARRA } from './marco/pestanas';
 import { useIsla } from './marco/use-isla';
 import { crearAlMover, crearAlOrdenar } from './mover';
+import { Ayuda } from './comandos/ayuda';
+import { Buscador, PildoraDelBuscador } from './comandos/buscador';
+import { COMANDOS } from './comandos/registro';
+import { plataformaDe } from './comandos/teclas';
+import type { Plataforma } from './comandos/teclas';
+import { useAtajos } from './comandos/use-atajos';
 
 export interface PropsDelEstudio {
   fetch: typeof fetch;
@@ -40,6 +45,8 @@ export interface PropsDelEstudio {
   layout: AdaptadorDeLayout;
   /** Confirmacion antes de cargar Componentes de Tema con codigo. */
   confirmar: (mensaje: string) => boolean;
+  /** Como se escriben las teclas (`Cmd` o `Ctrl`); por defecto, la de `navigator`. */
+  plataforma?: Plataforma;
 }
 
 const DURACION_DEL_AVISO_MS = 6000;
@@ -118,25 +125,6 @@ function useAviso(): [string | undefined, (texto: string) => void] {
   return [aviso, setAviso];
 }
 
-/** Deshacer y rehacer del Historial de `dev` con Ctrl/Cmd+Z (el registro de comandos lo absorbera). */
-function useAtajosDeHistorial(cliente: ClienteDeDev, avisar: (texto: string) => void, recargar: () => Promise<void>): void {
-  const alAtajo = crearAlAtajo({ enviar: (accion) => (accion === 'deshacer' ? cliente.deshacer() : cliente.rehacer()), avisar, recargar });
-  const vivo = useRef(alAtajo);
-  vivo.current = alAtajo;
-  useEffect(() => {
-    const alTeclear = (e: KeyboardEvent): void => {
-      const destino = e.target instanceof HTMLElement ? e.target : undefined;
-      const enCampoDeTexto = destino !== undefined && (destino.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(destino.tagName));
-      const accion = accionDeAtajo({ key: e.key, ctrlKey: e.ctrlKey, metaKey: e.metaKey, shiftKey: e.shiftKey, altKey: e.altKey, repeat: e.repeat, enCampoDeTexto });
-      if (accion === undefined) return;
-      e.preventDefault();
-      void vivo.current(accion);
-    };
-    window.addEventListener('keydown', alTeclear);
-    return () => window.removeEventListener('keydown', alTeclear);
-  }, []);
-}
-
 export function Estudio(props: PropsDelEstudio): ReactElement {
   const { fetch: fetchFn, eventos, layout, confirmar } = props;
   const hash = useMemo(() => hashDeEstudio(props.hash), [props.hash]);
@@ -154,7 +142,6 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
   );
   const { estado, recargar } = useEstado(cliente, geometrias);
   const [aviso, avisar] = useAviso();
-  useAtajosDeHistorial(cliente, avisar, recargar);
   const dibujable = useSyncExternalStore(geometrias.suscribir, geometrias.dibujable);
   const componentes = useComponentes(estado, fetchFn, confirmar);
   const vivo = useRef(estado);
@@ -162,7 +149,8 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
   const alMover = crearAlMover({ estado: () => vivo.current, enviar: cliente.editar, avisar, recargar });
   const alOrdenar = crearAlOrdenar({ estado: () => vivo.current, enviar: cliente.editar, avisar, recargar });
 
-  const marco = { estado, cliente, aviso, avisar };
+  const plataforma = props.plataforma ?? plataformaDe(typeof navigator === 'undefined' ? undefined : navigator);
+  const marco = { estado, cliente, aviso, avisar, recargar, plataforma };
   if (dibujable === undefined) return <Marco {...marco} navegacion={undefined} lienzo={null} />;
   return <ConFuente {...marco} dibujable={dibujable} hash={hash} geometrias={geometrias} layout={layout} componentes={componentes} alMover={alMover} alOrdenar={alOrdenar} />;
 }
@@ -172,6 +160,8 @@ interface PropsDelMarco {
   cliente: ClienteDeDev;
   aviso: string | undefined;
   avisar: (texto: string) => void;
+  recargar: () => Promise<void>;
+  plataforma: Plataforma;
 }
 
 interface PropsConFuente extends PropsDelMarco {
@@ -256,13 +246,15 @@ interface PropsDeMarcoCompleto extends PropsDelMarco {
   alAbrirDetalle?: { current: (() => void) | undefined };
 }
 
-function Marco({ estado, cliente, aviso, avisar, fuente, hashProps, navegacion, lienzo, leyenda, alAbrirDetalle }: PropsDeMarcoCompleto): ReactElement {
+function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, fuente, hashProps, navegacion, lienzo, leyenda, alAbrirDetalle }: PropsDeMarcoCompleto): ReactElement {
   const lienzoTamano = useTamano();
   const medidas = { ancho: lienzoTamano.width, alto: lienzoTamano.height };
   const izquierda = useIsla({ lado: 'izquierda', id: 'ui-isla-izquierda', nombre: 'panel izquierdo', lienzo: medidas, anchoInicial: 280 });
   const derecha = useIsla({ lado: 'derecha', id: 'ui-isla-derecha', nombre: 'panel derecho', lienzo: medidas, anchoInicial: 400 });
   const [pestanas, setPestanas] = useState<Record<LadoDeIsla, string>>({ izquierda: 'vistas', derecha: 'detalle' });
   const [portales, setPortales] = useState<HTMLElement | null>(null);
+  const [dialogo, setDialogo] = useState<DialogoDelEstudio>();
+  const [sitioDeCodigo, setSitioDeCodigo] = useState<SitioDeCodigo>();
   const islas = { izquierda, derecha };
   const gesto = useGestoEnLienzo();
 
@@ -283,7 +275,19 @@ function Marco({ estado, cliente, aviso, avisar, fuente, hashProps, navegacion, 
     abrirPestana,
     alternarIsla: (lado) => islas[lado].alternar(),
     avisar,
+    recargar,
+    abrirDialogo: setDialogo,
+    abrirCodigo: (sitio) => {
+      abrirPestana('izquierda', 'codigo');
+      if (sitio !== undefined) setSitioDeCodigo(sitio);
+    },
+    sitioDeCodigo,
+    plataforma,
     portales,
+  };
+  useAtajos(COMANDOS, contexto);
+  const cerrarDialogo = (abierto: boolean): void => {
+    if (!abierto) setDialogo(undefined);
   };
 
   return (
@@ -299,6 +303,7 @@ function Marco({ estado, cliente, aviso, avisar, fuente, hashProps, navegacion, 
               <Migas navegacion={navegacion} />
             </div>
           )}
+          <PildoraDelBuscador />
           {PILDORAS_DE_LA_BARRA.map(({ id, Contenido }) => (
             <div key={id} className="ui-pildora">
               <Contenido />
@@ -315,6 +320,8 @@ function Marco({ estado, cliente, aviso, avisar, fuente, hashProps, navegacion, 
             </div>
           </div>
         )}
+        <Buscador abierto={dialogo === 'buscador'} alCambiar={cerrarDialogo} />
+        <Ayuda abierto={dialogo === 'ayuda'} alCambiar={cerrarDialogo} />
         <div className="ui-portales" ref={setPortales} />
       </div>
     </ContextoDeEstudio.Provider>

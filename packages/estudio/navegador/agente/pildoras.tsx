@@ -56,14 +56,20 @@ export function SeguirAlAgente(): ReactElement {
   );
 
   useEffect(() => {
-    if (pendiente === undefined || fuente === undefined) return;
+    if (pendiente === undefined) return;
+    // Apagado (desde el interruptor o el Buscador) descarta lo que esperaba.
+    if (!instantanea.siguiendo) {
+      setPendiente(undefined);
+      return;
+    }
+    if (fuente === undefined) return;
     const destino = destinoDelObjetivo(pendiente.objetivo, fuente, vista);
     if (destino === undefined) return;
     setPendiente(undefined);
     if (destino.vista !== vista) irAVista(destino.vista);
     if (destino.seleccion !== undefined) seleccionar(destino.seleccion);
-    // Solo al llegar un objetivo nuevo o una Fuente nueva; la Vista activa se lee de este render.
-  }, [pendiente, fuente]);
+    // Solo al llegar un objetivo nuevo, una Fuente nueva o al apagar; la Vista activa se lee de este render.
+  }, [pendiente, fuente, instantanea.siguiendo]);
 
   return (
     <label className="ui-seguir">
@@ -71,10 +77,7 @@ export function SeguirAlAgente(): ReactElement {
         className="ui-interruptor"
         aria-label="Seguir al agente"
         checked={instantanea.siguiendo}
-        onCheckedChange={(siguiendo) => {
-          almacen.seguir(siguiendo);
-          if (!siguiendo) setPendiente(undefined);
-        }}
+        onCheckedChange={(siguiendo) => almacen.seguir(siguiendo)}
       >
         <Switch.Thumb className="ui-interruptor-pulgar" />
       </Switch.Root>

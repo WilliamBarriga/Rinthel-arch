@@ -150,6 +150,22 @@ describe('seguir al agente', () => {
     await waitFor(() => expect(window.location.hash).toBe('#vista=otra&s=cache'));
   });
 
+  it('el Buscador lo activa y lo desactiva con "Seguir al agente: activar" y "Seguir al agente: desactivar"', async () => {
+    await montarEstudio({ 'main.dg': DSL });
+    await screen.findByRole('listbox', { name: 'Vistas' });
+    const ejecutar = async (nombre: string) => {
+      fireEvent.keyDown(document.body, { key: 'k', ctrlKey: true });
+      const dialogo = await screen.findByRole('dialog', { name: 'Buscador' });
+      fireEvent.change(within(dialogo).getByRole('combobox', { name: 'Buscar' }), { target: { value: 'seguir' } });
+      fireEvent.click(await within(dialogo).findByRole('option', { name: new RegExp(nombre) }));
+    };
+
+    await ejecutar('Seguir al agente: activar');
+    await waitFor(() => expect(interruptor().getAttribute('aria-checked')).toBe('true'));
+    await ejecutar('Seguir al agente: desactivar');
+    await waitFor(() => expect(interruptor().getAttribute('aria-checked')).toBe('false'));
+  });
+
   it('apagado no mueve el lienzo', async () => {
     const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL });
     await lienzoListo(contenedor, 'mapa');
