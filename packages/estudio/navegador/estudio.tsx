@@ -24,8 +24,8 @@ import { crearCargadorDeCodigo } from './componentes';
 import { crearGeometriasDeDev } from './geometrias';
 import type { Dibujable, GeometriasDeDev } from './geometrias';
 import { hashDeEstudio } from './hash-de-estudio';
-import { ContextoDeEstudio } from './marco/contexto';
-import type { ContextoDelEstudio, DialogoDelEstudio, SitioDeCodigo } from './marco/contexto';
+import { ContextoDeEstudio, ContextoDelEditor, ContextoDePrevisualizacion } from './marco/contexto';
+import type { CanalDelEditor, ContextoDelEstudio, DialogoDelEstudio, PrevisualizacionDeTema, SitioDeCodigo } from './marco/contexto';
 import { IslaLateral } from './marco/isla';
 import type { LadoDeIsla } from './marco/limites';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS, PILDORAS_DE_LA_BARRA } from './marco/pestanas';
@@ -347,8 +347,6 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
     seleccionar: (id) => hashProps?.onSelect(id),
     abrirPestana,
     alternarIsla: (lado) => islas[lado].alternar(),
-    temaPrevio,
-    previsualizarTema,
     avisar,
     recargar,
     abrirDialogo: setDialogo,
@@ -357,18 +355,24 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
       abrirPestana('derecha', 'issues');
       if (sitio !== undefined) setSitioDeCodigo(sitio);
     },
-    sitioDeCodigo,
     async vaciarGuardado() {
       await Promise.all([...guardados.current].map((guardar) => guardar()));
-    },
-    registrarGuardado(guardar) {
-      guardados.current.add(guardar);
-      return () => guardados.current.delete(guardar);
     },
     plataforma,
     portales,
   };
   if (contextoVivo !== undefined) contextoVivo.current = contexto;
+  const canalDelEditor = useMemo<CanalDelEditor>(
+    () => ({
+      sitio: sitioDeCodigo,
+      registrarGuardado(guardar) {
+        guardados.current.add(guardar);
+        return () => guardados.current.delete(guardar);
+      },
+    }),
+    [sitioDeCodigo],
+  );
+  const previsualizacion = useMemo<PrevisualizacionDeTema>(() => ({ temaPrevio, previsualizarTema }), [temaPrevio, previsualizarTema]);
   useAtajos(COMANDOS, contexto);
   const cerrarDialogo = (abierto: boolean): void => {
     if (!abierto) setDialogo(undefined);
@@ -376,6 +380,8 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
 
   return (
     <ContextoDeEstudio.Provider value={contexto}>
+      <ContextoDelEditor.Provider value={canalDelEditor}>
+      <ContextoDePrevisualizacion.Provider value={previsualizacion}>
       <div className="ui-chrome" data-arrastrando={izquierda.arrastrando || derecha.arrastrando || gesto.enGesto ? '' : undefined}>
         <main className="ui-lienzo" aria-label="Lienzo" {...gesto.props}>
           {lienzo}
@@ -416,6 +422,8 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
         </Suspense>
         <div className="ui-portales" ref={setPortales} />
       </div>
+      </ContextoDePrevisualizacion.Provider>
+      </ContextoDelEditor.Provider>
     </ContextoDeEstudio.Provider>
   );
 }

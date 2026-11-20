@@ -23,7 +23,7 @@ import type { ArchivosDeDev, IssueDeDev } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
 import { comandoPorId } from '../comandos/registro';
 import { aplicarFixes, fixDelIssue } from '../issues/aplicar-fix';
-import { useEstudio } from '../marco/contexto';
+import { useCanalDelEditor, useEstudio } from '../marco/contexto';
 import type { ContextoDelEstudio, SitioDeCodigo } from '../marco/contexto';
 import { useCaducidad } from '../marco/use-caducidad';
 import { sitioDeSalida } from '../sitio';
@@ -47,7 +47,8 @@ const TEXTO_DEL_GUARDADO: Record<EstadoDelGuardado['tipo'], string> = { guardado
 
 export function PanelDeCodigo(): ReactElement {
   const estudio = useEstudio();
-  const { cliente, sitioDeCodigo, estado } = estudio;
+  const { cliente, estado } = estudio;
+  const { sitio: sitioDeCodigo } = useCanalDelEditor();
   const [listado, setListado] = useState<ArchivosDeDev>();
   const lista = listado?.archivos;
   const [elegido, setElegido] = useState<string>();
@@ -106,8 +107,11 @@ interface PropsDelEditor {
 
 function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado }: PropsDelEditor): ReactElement {
   const estudio = useEstudio();
+  const canalDelEditor = useCanalDelEditor();
   const vivo = useRef(estudio);
   vivo.current = estudio;
+  const canal = useRef(canalDelEditor);
+  canal.current = canalDelEditor;
   const anfitrion = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<{ vista: EditorView; guardador: Guardador }>();
   const [estadoDelGuardado, setEstadoDelGuardado] = useState<EstadoDelGuardado>({ tipo: 'guardado' });
@@ -157,7 +161,7 @@ function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado 
   useEffect(() => {
     if (editor === undefined) return;
     alCambiarGuardado(editor.guardador.estado());
-    return vivo.current.registrarGuardado(() => editor.guardador.guardar());
+    return canal.current.registrarGuardado(() => editor.guardador.guardar());
   }, [editor, alCambiarGuardado]);
 
   useEffect(() => {
