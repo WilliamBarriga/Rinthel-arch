@@ -225,6 +225,42 @@ export function probarContratoDeDev(crear: CrearDev): void {
       });
     });
 
+    it('/eventos: al conectar estado, historial y actividad con previos; tras cada estado su historial y despues su diferencia', async () => {
+      await con(
+        { 'main.dg': DSL },
+        async (dev) => {
+          const recibidos = await new Promise<[string, unknown][]>((ok) => {
+            const lista: [string, unknown][] = [];
+            const cerrar = dev.eventos('/eventos', (nombre, datos) => {
+              lista.push([nombre, JSON.parse(datos)]);
+              if (lista.length === 3) dev.editarFuera('main.dg', DSL.replace('"API"', '"API nueva"'));
+              if (nombre !== 'diferencia') return;
+              if ((JSON.parse(datos) as DiferenciaDeDev).origen === 'externo') void post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 });
+              else {
+                setTimeout(cerrar, 0);
+                ok(lista);
+              }
+            });
+          });
+          const nombres = recibidos.map(([nombre]) => nombre);
+          expect(nombres.slice(0, 3)).toEqual(['estado', 'historial', 'actividad']);
+          expect(recibidos[2]?.[1]).toEqual({ previos: true, eventos: [eventoDeActividad(1)] });
+          const resto = nombres.slice(3);
+          // Un eco del watcher puede sumar un estado sin Diferencia: lo que importa es el orden de cada tanda.
+          resto.forEach((nombre, i) => {
+            if (nombre === 'estado') expect(resto[i + 1]).toBe('historial');
+            if (nombre === 'historial') expect(resto[i - 1]).toBe('estado');
+            if (nombre === 'diferencia') {
+              expect(resto[i - 1]).toBe('historial');
+              expect((recibidos[i + 3 - 2]?.[1] as EstadoDeDev).version).toBe((recibidos[i + 3]?.[1] as DiferenciaDeDev).version);
+            }
+          });
+          expect(resto.filter((n) => n === 'diferencia')).toHaveLength(2);
+        },
+        { actividad: lineasDeActividad(eventoDeActividad(1)) },
+      );
+    });
+
     it('/eventos manda event: estado al conectar y otro, con version mayor, tras una escritura externa', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
         const inicial = (await json(dev, '/api/estado')).cuerpo['version'] as number;

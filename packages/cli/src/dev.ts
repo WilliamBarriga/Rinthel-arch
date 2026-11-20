@@ -1,9 +1,7 @@
 /**
  * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
- * cada peticion y con `no-store`), el estado y la Geometria por Vista, y empuja por SSE (`/eventos`) el estado, el
- * Historial (al conectar y tras cada recompilacion), los Eventos del Registro de actividad (al conectar, los ultimos 50
- * con `previos: true`) y cada Diferencia con su origen. `POST /api/historial/saltar { id }` lleva el Workspace a una
- * entrada del Historial.
+ * cada peticion y con `no-store`), el estado y la Geometria por Vista, y serializa por SSE (`/eventos`) la instantanea de
+ * conexion y el flujo de eventos del Workspace vivo (la secuencia es de `sesion`; el protocolo, de `canonico`).
  * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); todo POST exige
  * un `Origin` propio (o ninguno, si no 403) y `application/json` (si no 415); un cuerpo de mas de 64 KiB es 413;
  * `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
@@ -19,11 +17,10 @@ import { extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { RUTAS_DE_DEV } from 'canonico';
-import type { EstadoDeDev } from 'canonico';
+import type { EventoDeDev } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
-import type { ActividadDeDev, NombreDeEventoDeDev } from 'estudio/protocolo';
 import { abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
 import type { PuertoDelWorkspaceVivo, RegistroDeActividad, Reloj, WorkspaceVivo } from 'sesion';
 
@@ -201,29 +198,11 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   });
 
   const clientes = new Set<ServerResponse>();
-  /** Eventos SSE con nombre (`estado`, y los que declare `estudio/protocolo`). */
-  const enviar = (cliente: ServerResponse, nombre: NombreDeEventoDeDev, datos: unknown): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
-  const enviarEstado = (cliente: ServerResponse, estado: EstadoDeDev): void => enviar(cliente, 'estado', estado);
-  const enviarActividad = (cliente: ServerResponse, actividad: ActividadDeDev): void => enviar(cliente, 'actividad', actividad);
-  const enviarHistorial = (cliente: ServerResponse): void => enviar(cliente, 'historial', vivo.historial());
-  // Toda escritura (propia o externa) recompila: el Historial y su alcance viajan con cada estado.
-  const dejarDeEscucharEstado = vivo.suscribir((estado) => {
-    for (const cliente of clientes) {
-      enviarEstado(cliente, estado);
-      enviarHistorial(cliente);
-    }
+  /** La secuencia de eventos es del Workspace vivo; aqui solo se serializa como SSE. */
+  const enviar = (cliente: ServerResponse, { nombre, datos }: EventoDeDev): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
+  const dejarDeEscuchar = vivo.escuchar((evento) => {
+    for (const cliente of clientes) enviar(cliente, evento);
   });
-  const dejarDeEscucharActividad = vivo.suscribirActividad((eventos) => {
-    for (const cliente of clientes) enviarActividad(cliente, { previos: false, eventos });
-  });
-  const dejarDeEscucharDiferencia = vivo.suscribirDiferencia((diferencia) => {
-    for (const cliente of clientes) enviar(cliente, 'diferencia', diferencia);
-  });
-  const dejarDeEscuchar = (): void => {
-    dejarDeEscucharEstado();
-    dejarDeEscucharActividad();
-    dejarDeEscucharDiferencia();
-  };
 
   const hostsPropios = (): string[] => {
     const { port } = servidor.address() as AddressInfo;
@@ -299,9 +278,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       clientes.add(res);
       res.on('close', () => clientes.delete(res));
-      enviarEstado(res, vivo.estado());
-      enviarHistorial(res);
-      enviarActividad(res, { previos: true, eventos: [...vivo.actividad()] });
+      for (const evento of vivo.conexion()) enviar(res, evento);
     } else {
       // Una conexion que se corta al leer el cuerpo no tiene a quien responder.
       api(req, res, url).catch(() => res.destroy());

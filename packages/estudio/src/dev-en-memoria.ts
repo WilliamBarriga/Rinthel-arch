@@ -2,7 +2,7 @@
  * `devEnMemoria`: el servidor de `dev` sin red, para probar la pagina en jsdom. Es el Workspace vivo real de `sesion`
  * (Sesion, issues, ediciones con `visto`, Historial, Diferencia con origen por hash, Registro de actividad) sobre
  * `puertoEnMemoria`, con las rutas de `atenderApiDeDev`, las mismas que sirve `dev`; solo el transporte es falso: `fetch`
- * llama a la API y `eventos` empuja `event: estado`, `historial`, `actividad` y `diferencia` como `/eventos`.
+ * llama a la API y `eventos` serializa la instantanea de conexion y el flujo de eventos del Workspace vivo como `/eventos`.
  * Invariantes: cumple `probarContratoDeDev` (la misma suite corre contra el `dev` real); una escritura (propia o
  * `editarFuera`) recompila y empuja un estado con `version` mayor; las versiones viejas se olvidan como en `dev`.
  * Sin watcher ni debounce: `editarFuera` recompila en el acto y el Registro de actividad avisa sin espera.
@@ -11,8 +11,6 @@
 import { RUTAS_DE_DEV } from 'canonico';
 import { abrirWorkspaceVivo, atenderApiDeDev, puertoEnMemoria } from 'sesion';
 import type { Reloj, WorkspaceEnMemoria } from 'sesion';
-
-import type { ActividadDeDev, NombreDeEventoDeDev } from './protocolo';
 
 type Archivos = Readonly<Record<string, string>>;
 
@@ -67,19 +65,11 @@ export async function devEnMemoria({
   };
   const vivo = await abrirWorkspaceVivo({ puerto: { ...puerto, escribir, observar: () => () => undefined }, raiz: RAIZ, reloj: relojInmediato, ahora });
 
-  const oyentes = new Set<(nombre: NombreDeEventoDeDev, datos: string) => void>();
-  const emitir = (nombre: NombreDeEventoDeDev, datos: unknown): void => {
+  const oyentes = new Set<(nombre: string, datos: string) => void>();
+  const dejarDeEscuchar = vivo.escuchar(({ nombre, datos }) => {
     const texto = JSON.stringify(datos);
     for (const oyente of [...oyentes]) oyente(nombre, texto);
-  };
-  const dejar = [
-    vivo.suscribir((estado) => {
-      emitir('estado', estado);
-      emitir('historial', vivo.historial());
-    }),
-    vivo.suscribirDiferencia((diferencia) => emitir('diferencia', diferencia)),
-    vivo.suscribirActividad((eventos) => emitir('actividad', { previos: false, eventos } satisfies ActividadDeDev)),
-  ];
+  });
 
   let enCurso: Promise<unknown> = Promise.resolve();
   const seguir = <T>(p: Promise<T>): Promise<T> => {
@@ -101,12 +91,9 @@ export async function devEnMemoria({
     eventos(url, alEvento) {
       if (url !== RUTAS_DE_DEV.eventos) return () => undefined;
       oyentes.add(alEvento);
-      // Como `dev`: al conectar llegan el estado vigente, el Historial y los ultimos Eventos de actividad.
       queueMicrotask(() => {
         if (!oyentes.has(alEvento)) return;
-        alEvento('estado', JSON.stringify(vivo.estado()));
-        alEvento('historial', JSON.stringify(vivo.historial()));
-        alEvento('actividad', JSON.stringify({ previos: true, eventos: [...vivo.actividad()] } satisfies ActividadDeDev));
+        for (const { nombre, datos } of vivo.conexion()) alEvento(nombre, JSON.stringify(datos));
       });
       return () => oyentes.delete(alEvento);
     },
@@ -129,7 +116,7 @@ export async function devEnMemoria({
     workspace: puerto,
     async cerrar() {
       oyentes.clear();
-      for (const d of dejar) d();
+      dejarDeEscuchar();
       await enCurso;
       vivo.cerrar();
     },
