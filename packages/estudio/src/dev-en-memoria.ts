@@ -1,18 +1,19 @@
 /**
  * `devEnMemoria`: el servidor de `dev` sin red, para probar la pagina en jsdom. La Sesion, los issues, las ediciones
  * con `visto` y el Historial son reales (`sesion` sobre `workspaceEnMemoria`); solo el transporte es falso: `fetch`
- * responde las rutas del protocolo y `eventos` empuja `event: estado` y `event: actividad` como `/eventos`.
+ * responde las rutas del protocolo y `eventos` empuja `event: estado`, `event: actividad` y `event: diferencia` como
+ * `/eventos`. El origen de la Diferencia sale de quien escribe (`editarFuera` es externo; las rutas, propias), no del hash.
  * Invariantes: cumple `probarContratoDeDev` (la misma suite corre contra el `dev` real); una escritura (propia o
  * `editarFuera`) recompila y empuja un estado con `version` mayor; las versiones viejas se olvidan como en `dev`.
  * Errores: nunca lanza por una peticion; responde el estado HTTP que daria `dev`.
  */
 import { combineIconProviders, crearLectorDeActividad, genericIcons, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
 import type { EventoDeActividad, Issue, MotivoDeRechazo } from 'canonico';
-import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer, hashDeContenido, rehacer, workspaceEnMemoria } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer, diferenciaVacia, diferenciar, hashDeContenido, rehacer, workspaceEnMemoria } from 'sesion';
 import type { Consulta, Historial, Sesion, WorkspaceEnMemoria } from 'sesion';
 
 import { COMANDOS_DE_INSPECT } from './protocolo';
-import type { ActividadDeDev, ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev } from './protocolo';
+import type { ActividadDeDev, ComandoDeInspect, DiferenciaDeDev, EstadoDeDev, NombreDeEventoDeDev, OrigenDeDiferencia } from './protocolo';
 
 type Archivos = Readonly<Record<string, string>>;
 
@@ -88,21 +89,31 @@ export async function devEnMemoria({ propios, temas, actividad: registroInicial 
     return r;
   };
 
-  const recompilar = async (): Promise<void> => {
+  /** Origen de lo escrito desde la ultima Sesion buena (lo externo gana). */
+  let origenPendiente: OrigenDeDiferencia | undefined;
+  const recompilar = async (origen: OrigenDeDiferencia): Promise<void> => {
+    origenPendiente = origenPendiente === 'externo' ? 'externo' : origen;
     const nuevos = workspace.leer().disco;
     const sesion = (buena?.sesion ?? actual).actualizar(nuevos);
     issues = await sesion.diagnosticar();
     actual = sesion;
     cambio = sesion.fuente === undefined ? undefined : 'estructura';
-    if (sesion.fuente !== undefined) buena = { sesion, archivos: nuevos };
+    let diferencia: DiferenciaDeDev | undefined;
+    if (sesion.fuente !== undefined) {
+      const cambios = buena?.sesion.fuente === undefined ? undefined : diferenciar(buena.sesion.fuente, sesion.fuente);
+      if (cambios !== undefined && !diferenciaVacia(cambios)) diferencia = { version: version + 1, origen: origenPendiente, ...cambios };
+      origenPendiente = undefined;
+      buena = { sesion, archivos: nuevos };
+    }
     version += 1;
     versiones.set(version, hashesDe(nuevos));
     versiones.delete(version - VERSIONES_GUARDADAS);
     emitir('estado', estado());
+    if (diferencia !== undefined) emitir('diferencia', diferencia);
   };
 
   const ok = async (): Promise<Response> => {
-    await recompilar();
+    await recompilar('propio');
     return respuesta(200, { ok: true, version });
   };
   const rechazo = (motivo: MotivoDeRechazo, mensaje: string, file?: string): Response => respuesta(HTTP_DE_RECHAZO(motivo), { ok: false, motivo, mensaje, ...(file !== undefined && { file }) });
@@ -202,7 +213,7 @@ export async function devEnMemoria({ propios, temas, actividad: registroInicial 
     editarFuera(ruta, texto) {
       if (texto === undefined) workspace.borrar(ruta);
       else workspace.escribir(ruta, texto);
-      pendiente = enCola(recompilar);
+      pendiente = enCola(() => recompilar('externo'));
     },
     anexarActividad(texto) {
       registro = (registro ?? '') + texto;

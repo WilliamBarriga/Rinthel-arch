@@ -7,14 +7,18 @@
  * rechazan con `hash-desactualizado` y el Historial vuelve a empezar desde el disco.
  * Errores: rechazos como datos; los fallos de I/O al escribir se propagan tras revertir; los de lectura al recompilar
  * se ignoran hasta el siguiente cambio; `abrirWorkspaceVivo` lanza si la lectura inicial falla.
+ * Diferencia: cada Sesion sin errores se compara con la ultima buena y, si cambio algo, se empuja tras el estado. Es
+ * `propia` si todos los archivos que cambiaron coinciden por hash con lo que escribio la UI (Intencion, deshacer,
+ * rehacer y lo que se revierte); si no, `externa`. Con Sesiones con errores entre medias, la Diferencia es una sola
+ * y es externa si alguna escritura intermedia lo fue.
  * Registro de actividad: si el puerto lo da, se leen los ultimos `EVENTOS_PREVIOS` al abrir y cada aviso de su observador
  * (con debounce) empuja los Eventos nuevos; un fallo de lectura o una linea rota se ignoran.
  */
 import { combineIconProviders, crearLectorDeActividad, genericIcons, serializarIconos, workspaceIcons } from 'canonico';
 import type { EventoDeActividad, GeometriaCacheada, Intencion, Issue, MotivoDeRechazo } from 'canonico';
-import type { EstadoDeDev, TipoDeCambio } from 'estudio/protocolo';
+import type { DiferenciaDeDev, EstadoDeDev, OrigenDeDiferencia, TipoDeCambio } from 'estudio/protocolo';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer as deshacerHistorial, hashDeContenido, rehacer as rehacerHistorial } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer as deshacerHistorial, diferenciaVacia, diferenciar, hashDeContenido, rehacer as rehacerHistorial } from 'sesion';
 import type { Historial, OpcionesDeGeometria, PuertoDeWorkspace, Respuesta, Sesion, Visto } from 'sesion';
 import { componentesDeTema } from 'tema';
 
@@ -100,6 +104,8 @@ export interface WorkspaceVivo {
   actividad(): readonly EventoDeActividad[];
   /** Recibe los Eventos nuevos del registro, en orden; devuelve como dejar de escuchar. */
   suscribirActividad(alEvento: (eventos: EventoDeActividad[]) => void): () => void;
+  /** Recibe cada Diferencia no vacia, despues del estado de su `version`; devuelve como dejar de escuchar. */
+  suscribirDiferencia(alDiferencia: (diferencia: DiferenciaDeDev) => void): () => void;
   /** Relee el puerto y recompila ya (sin esperar al debounce). */
   recargar(): Promise<void>;
   codigo(): CodigoDelWorkspace;
@@ -110,6 +116,12 @@ export interface WorkspaceVivo {
 }
 
 export const DEBOUNCE_MS = 150;
+
+/** Marca de un archivo que la UI borro (no es un hash posible). */
+const BORRADO = '<borrado>';
+
+/** Lo externo gana: una sola escritura ajena hace externa la Diferencia. */
+const unirOrigen = (a: OrigenDeDiferencia | undefined, b: OrigenDeDiferencia | undefined): OrigenDeDiferencia | undefined => (a === 'externo' || b === 'externo' ? 'externo' : (a ?? b));
 
 const SIN_CODIGO: ResultadoDeCodigo = { componentes: {}, issues: [], bundle: 'return {};' };
 
@@ -146,7 +158,12 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
   let estado = construirEstado();
 
   const suscriptores = new Set<(estado: EstadoDeDev) => void>();
+  const oyentesDeDiferencia = new Set<(diferencia: DiferenciaDeDev) => void>();
   let historial: Historial | undefined;
+  /** Ruta -> hash de lo que escribio la UI (`BORRADO` si lo borro) y aun no vio una recompilacion: asi se reconoce su eco. */
+  const escritosPropios = new Map<string, string>();
+  /** Origen de lo cambiado desde la ultima Sesion buena; `undefined` si no cambio ningun archivo. */
+  let origenPendiente: OrigenDeDiferencia | undefined;
 
   function construirEstado(): EstadoDeDev {
     const fuente = buena?.sesion.fuente;
@@ -175,6 +192,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     } catch {
       return; // lectura a medias (archivo en reescritura): el siguiente evento reintenta
     }
+    origenPendiente = unirOrigen(origenPendiente, origenDe(archivos, nuevos));
     codigo = compilarCodigo();
     const sesion = (buena?.sesion ?? actual).actualizar(nuevos, { ...opcionesDeSesion(nuevosRecursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
     const nuevosIssues = await sesion.diagnosticar();
@@ -182,7 +200,12 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     archivos = nuevos;
     // Con errores se conserva el ultimo dibujo bueno (y sus recursos de referencia): no hay cambio que dibujar.
     cambio = sesion.fuente === undefined ? undefined : clasificarCambio({ fuente: buena?.sesion.fuente, recursos: recursos ?? {} }, { fuente: sesion.fuente, recursos: nuevosRecursos ?? {} });
+    let diferencia: DiferenciaDeDev | undefined;
     if (sesion.fuente !== undefined) {
+      const cambios = buena?.sesion.fuente === undefined ? undefined : diferenciar(buena.sesion.fuente, sesion.fuente);
+      // Un cambio sin archivos tocados (recursos) no tiene autor conocido: externo.
+      if (cambios !== undefined && !diferenciaVacia(cambios)) diferencia = { version: version + 1, origen: origenPendiente ?? 'externo', ...cambios };
+      origenPendiente = undefined;
       buena = { sesion, archivos: nuevos };
       recursos = nuevosRecursos;
     }
@@ -192,6 +215,32 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     versiones.delete(version - VERSIONES_GUARDADAS);
     estado = construirEstado();
     for (const suscriptor of suscriptores) suscriptor(estado);
+    if (diferencia !== undefined) for (const oyente of [...oyentesDeDiferencia]) oyente(diferencia);
+  };
+  /** `propio` si cada archivo que cambio es un eco por hash de una escritura de la UI (y lo consume). */
+  function origenDe(previos: ArchivosDelWorkspace, nuevos: ArchivosDelWorkspace): OrigenDeDiferencia | undefined {
+    const cambiados = [...new Set([...Object.keys(previos), ...Object.keys(nuevos)])].filter((ruta) => previos[ruta] !== nuevos[ruta]);
+    if (cambiados.length === 0) return undefined;
+    let origen: OrigenDeDiferencia = 'propio';
+    for (const ruta of cambiados) {
+      const texto = nuevos[ruta];
+      if (escritosPropios.get(ruta) === (texto === undefined ? BORRADO : hashDeContenido(texto))) escritosPropios.delete(ruta);
+      else origen = 'externo';
+    }
+    // Una escritura propia que no cambio el texto no deja eco: se olvida para no confundir una escritura ajena futura.
+    for (const [ruta, hash] of escritosPropios) {
+      const texto = nuevos[ruta];
+      if ((texto === undefined ? BORRADO : hashDeContenido(texto)) === hash) escritosPropios.delete(ruta);
+    }
+    return origen;
+  }
+  const escribirPropio = (ruta: string, texto: string): void => {
+    escritosPropios.set(ruta, hashDeContenido(texto));
+    puerto.escribir(ruta, texto);
+  };
+  const borrarPropio = (ruta: string): void => {
+    escritosPropios.set(ruta, BORRADO);
+    puerto.borrar(ruta);
   };
   const recompilar = (): Promise<void> => {
     if (enCurso !== undefined) {
@@ -265,8 +314,8 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
   const revertir = (origen: ArchivosDelWorkspace, rutas: readonly string[]): void => {
     for (const ruta of rutas) {
       try {
-        if (ruta in origen) puerto.escribir(ruta, origen[ruta] as string);
-        else puerto.borrar(ruta);
+        if (ruta in origen) escribirPropio(ruta, origen[ruta] as string);
+        else borrarPropio(ruta);
       } catch {
         // si el disco sigue fallando, el siguiente deshacer/rehacer detecta la diferencia y reinicia el historial
       }
@@ -278,11 +327,11 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     try {
       for (const ruta of Object.keys(destino).filter((r) => destino[r] !== origen[r]).sort()) {
         tocadas.push(ruta);
-        puerto.escribir(ruta, destino[ruta] as string);
+        escribirPropio(ruta, destino[ruta] as string);
       }
       for (const ruta of Object.keys(origen).filter((r) => !(r in destino)).sort()) {
         tocadas.push(ruta);
-        puerto.borrar(ruta);
+        borrarPropio(ruta);
       }
     } catch (error) {
       revertir(origen, tocadas);
@@ -311,7 +360,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
             leer: () => puerto.leer(),
             escribir: (ruta, texto) => {
               escritas.push(ruta);
-              puerto.escribir(ruta, texto);
+              escribirPropio(ruta, texto);
             },
           },
           intencion,
@@ -361,6 +410,10 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     suscribirActividad(alEvento) {
       oyentesDeActividad.add(alEvento);
       return () => oyentesDeActividad.delete(alEvento);
+    },
+    suscribirDiferencia(alDiferencia) {
+      oyentesDeDiferencia.add(alDiferencia);
+      return () => oyentesDeDiferencia.delete(alDiferencia);
     },
     recargar: () => recompilar(),
     codigo: () => ({ componentes: [...new Set((buena?.sesion.fuente?.themes ?? []).flatMap((tema) => componentesDeTema(tema)))].sort(), confiado, bundle: codigo.bundle }),
