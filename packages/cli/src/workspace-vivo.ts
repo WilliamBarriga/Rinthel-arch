@@ -9,13 +9,15 @@
  * puerta que las Intenciones; con `aunqueNoCompile` se escriben aunque introduzcan errores.
  * Errores: rechazos como datos; los fallos de I/O al escribir se propagan tras revertir; los de lectura al recompilar
  * se ignoran hasta el siguiente cambio; `abrirWorkspaceVivo` lanza si la lectura inicial falla.
+ * Registro de actividad: si el puerto lo da, se leen los ultimos `EVENTOS_PREVIOS` al abrir y cada aviso de su observador
+ * (con debounce) empuja los Eventos nuevos; un fallo de lectura o una linea rota se ignoran.
  */
-import { combineIconProviders, genericIcons, serializarIconos, workspaceIcons } from 'canonico';
-import type { GeometriaCacheada, Intencion, Issue, MotivoDeRechazo } from 'canonico';
+import { combineIconProviders, crearLectorDeActividad, genericIcons, serializarIconos, workspaceIcons } from 'canonico';
+import type { EventoDeActividad, GeometriaCacheada, Intencion, Issue, MotivoDeRechazo } from 'canonico';
 import type { ArchivoDeDev, ArchivosDeDev, EstadoDeDev, TipoDeCambio } from 'estudio/protocolo';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion, aplicarAlWorkspace, deshacerSobre, hashDeContenido, historialVacio, registrar, rehacerSobre } from 'sesion';
-import type { EdicionDeTexto, HistorialDeArchivos, PuertoDeWorkspace, ResultadoDeRestaurar, Respuesta, Sesion, Visto } from 'sesion';
+import type { EdicionDeTexto, HistorialDeArchivos, OpcionesDeGeometria, PuertoDeWorkspace, ResultadoDeRestaurar, Respuesta, Sesion, Visto } from 'sesion';
 import { componentesDeTema } from 'tema';
 
 import { clasificarCambio } from './cambio';
@@ -34,7 +36,20 @@ export interface PuertoDelWorkspaceVivo extends PuertoDeWorkspace {
   recursos(): Record<string, string> | undefined;
   /** Devuelve como dejar de observar. */
   observar(alCambiar: () => void): () => void;
+  /** Registro de actividad (`.diagrams/actividad.jsonl`) con su observador propio; sin el, no hay actividad. */
+  actividad?: RegistroDeActividad;
 }
+
+/** El watcher del Workspace ignora carpetas ocultas: el registro se observa aparte. */
+export interface RegistroDeActividad {
+  /** Texto entero del registro, o `undefined` si no existe. */
+  leer(): string | undefined;
+  /** Devuelve como dejar de observar. */
+  observar(alCambiar: () => void): () => void;
+}
+
+/** Eventos de actividad que `dev` reproduce al conectar. */
+export const EVENTOS_PREVIOS = 50;
 
 /** `programar` devuelve como cancelar. */
 export interface Reloj {
@@ -100,10 +115,14 @@ export interface WorkspaceVivo {
   archivo(ruta: string): ArchivoDeDev | undefined;
   deshacer(): Promise<ResultadoDelWorkspaceVivo>;
   rehacer(): Promise<ResultadoDelWorkspaceVivo>;
-  /** Geometria cacheada de una Vista de la ultima Sesion buena; `undefined` si no existe. */
-  geometria(vista: string): Promise<GeometriaCacheada | undefined>;
+  /** Geometria de una Vista de la ultima Sesion buena (con `tema`, con ese Tema y sin cache); `undefined` si falta la Vista o el Tema. */
+  geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<GeometriaCacheada | undefined>;
   /** `inspect` sobre la ultima Sesion buena; `undefined` si el Workspace nunca compilo. */
   consultar(consulta: ConsultaDeInspect): Respuesta | undefined;
+  /** Los ultimos `EVENTOS_PREVIOS` Eventos de actividad leidos (los del arranque y los que llegaron despues). */
+  actividad(): readonly EventoDeActividad[];
+  /** Recibe los Eventos nuevos del registro, en orden; devuelve como dejar de escuchar. */
+  suscribirActividad(alEvento: (eventos: EventoDeActividad[]) => void): () => void;
   /** Relee el puerto y recompila ya (sin esperar al debounce). */
   recargar(): Promise<void>;
   codigo(): CodigoDelWorkspace;
@@ -124,6 +143,8 @@ const describirIntencion = (intencion: Intencion): string => {
       return `mover ${intencion.nodo} en ${intencion.vista}`;
     case 'ordenar-lifelines':
       return `ordenar Lifelines de ${intencion.vista}`;
+    case 'fijar-tema':
+      return intencion.tema === undefined ? `quitar el Tema de ${intencion.vista}` : `fijar el Tema ${intencion.tema} en ${intencion.vista}`;
   }
 };
 
@@ -243,6 +264,30 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     }, debounceMs);
   });
 
+  // Registro de actividad: lectura incremental tolerante (lineas rotas, archivo acortado o rotado), con su propio debounce.
+  const leerActividad = crearLectorDeActividad();
+  const leerRegistro = (): EventoDeActividad[] => {
+    try {
+      return leerActividad(puerto.actividad?.leer());
+    } catch {
+      return []; // el siguiente aviso reintenta
+    }
+  };
+  let actividad = leerRegistro().slice(-EVENTOS_PREVIOS);
+  const oyentesDeActividad = new Set<(eventos: EventoDeActividad[]) => void>();
+  let cancelarActividad: (() => void) | undefined;
+  const dejarDeObservarActividad =
+    puerto.actividad?.observar(() => {
+      cancelarActividad?.();
+      cancelarActividad = reloj.programar(() => {
+        cancelarActividad = undefined;
+        const nuevos = leerRegistro();
+        if (nuevos.length === 0) return;
+        actividad = [...actividad, ...nuevos].slice(-EVENTOS_PREVIOS);
+        for (const oyente of [...oyentesDeActividad]) oyente(nuevos);
+      }, debounceMs);
+    }) ?? (() => undefined);
+
   let cola: Promise<unknown> = Promise.resolve();
   const enCola = <T>(tarea: () => Promise<T>): Promise<T> => {
     const resultado = cola.then(tarea, tarea);
@@ -352,8 +397,13 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
       const texto = puerto.leer().disco[ruta];
       return texto === undefined ? undefined : { file: ruta, texto, hash: hashDeContenido(texto), version };
     },
-    geometria: (vista) => buena?.sesion.geometria(vista) ?? Promise.resolve(undefined),
+    geometria: (vista, opciones) => buena?.sesion.geometria(vista, opciones) ?? Promise.resolve(undefined),
     consultar: (consulta) => (buena === undefined ? undefined : consultarInspect(buena.sesion, consulta)),
+    actividad: () => actividad,
+    suscribirActividad(alEvento) {
+      oyentesDeActividad.add(alEvento);
+      return () => oyentesDeActividad.delete(alEvento);
+    },
     recargar: () => recompilar(),
     codigo: () => ({ componentes: [...new Set((buena?.sesion.fuente?.themes ?? []).flatMap((tema) => componentesDeTema(tema)))].sort(), confiado, bundle: codigo.bundle }),
     confiar() {
@@ -362,6 +412,8 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     cerrar() {
       cancelarPendiente();
       dejarDeObservar();
+      cancelarActividad?.();
+      dejarDeObservarActividad();
     },
   };
 }

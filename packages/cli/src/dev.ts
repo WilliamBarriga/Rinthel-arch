@@ -1,6 +1,7 @@
 /**
  * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
- * cada peticion y con `no-store`), el estado y la Geometria por Vista, y empuja el estado por SSE (`/eventos`).
+ * cada peticion y con `no-store`), el estado y la Geometria por Vista, y empuja por SSE (`/eventos`) el estado y los
+ * Eventos del Registro de actividad (al conectar, los ultimos 50 con `previos: true`).
  * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); las rutas POST exigen
  * JSON y un `Origin` propio (o ninguno); `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
  * Edicion: 400 cuerpo invalido, 409 `hash-desactualizado`, 422 el resto de rechazos, 500 fallo de I/O.
@@ -10,8 +11,8 @@
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { readFileSync, rmSync, watch } from 'node:fs';
-import { extname, resolve } from 'node:path';
+import { readFileSync, rmSync, unwatchFile, watch, watchFile } from 'node:fs';
+import { extname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { RUTA_DE_FUENTES, edicionDeTextoSchema, intencionSchema } from 'canonico';
@@ -19,7 +20,7 @@ import type { Intencion } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
-import type { ArchivoDeDev, ArchivosDeDev, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from 'estudio/protocolo';
+import type { ActividadDeDev, ArchivoDeDev, ArchivosDeDev, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from 'estudio/protocolo';
 
 import { compiladorDeCodigo } from './codigo';
 import { SUBCOMANDOS_DE_INSPECT, comoSalidaDeInspect } from './inspect';
@@ -30,7 +31,7 @@ import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos as leerRecursosReal, leerWorkspace } from './workspace';
 import { abrirWorkspaceVivo } from './workspace-vivo';
-import type { EdicionesDeTexto, PuertoDelWorkspaceVivo, ResultadoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
+import type { EdicionesDeTexto, PuertoDelWorkspaceVivo, RegistroDeActividad, ResultadoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
 
 /** Todo salvo `workspace` tiene un defecto real. */
 export interface OpcionesDeDev {
@@ -46,6 +47,8 @@ export interface OpcionesDeDev {
   leerRecursos?: (raiz: string) => Record<string, string>;
   /** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
   observar?: (raiz: string, alCambiar: () => void) => () => void;
+  /** Registro de actividad de `raiz`; por defecto `.diagrams/actividad.jsonl` del disco (o ninguno si se inyecta `leer`). */
+  actividad?: (raiz: string) => RegistroDeActividad | undefined;
   /** Rutas de los estaticos de la app; por defecto las del build de `estudio`. Se consultan en cada peticion. */
   estudio?: () => ActivosDelEstudio;
   /** `ruta` relativa a `raiz`. */
@@ -77,6 +80,31 @@ function observarDisco(raiz: string, alCambiar: () => void): () => void {
   return () => observador.close();
 }
 
+/** Cada cuanto se mira el registro de actividad en disco. */
+const INTERVALO_DEL_REGISTRO_MS = 250;
+
+/**
+ * `.diagrams/actividad.jsonl` con un observador propio (el watcher del Workspace ignora carpetas ocultas). Se sondea con
+ * `fs.watchFile`, que funciona aunque el archivo aun no exista y ve la rotacion (otro inodo, otro tamano).
+ */
+function registroEnDisco(raiz: string): RegistroDeActividad {
+  const ruta = join(raiz, '.diagrams', 'actividad.jsonl');
+  return {
+    leer() {
+      try {
+        return readFileSync(ruta, 'utf8');
+      } catch {
+        return undefined;
+      }
+    },
+    observar(alCambiar) {
+      const oyente = (): void => alCambiar();
+      watchFile(ruta, { interval: INTERVALO_DEL_REGISTRO_MS, persistent: false }, oyente);
+      return () => unwatchFile(ruta, oyente);
+    },
+  };
+}
+
 /** Atomica y siempre bajo la raiz del Workspace. */
 function escribirEnDisco(raiz: string, ruta: string, texto: string): void {
   escribirTexto(destinoEnWorkspace(raiz, ruta), texto);
@@ -92,7 +120,9 @@ function puertoDeDisco(opciones: OpcionesDeDev): PuertoDelWorkspaceVivo {
   const { workspace, temas, leer = leerWorkspace, escribir = escribirEnDisco, borrar = borrarEnDisco, observar = observarDisco } = opciones;
   const conoceRecursos = opciones.leer === undefined || opciones.leerRecursos !== undefined;
   const leerRecursos = opciones.leerRecursos ?? leerRecursosReal;
+  const actividad = (opciones.actividad ?? (opciones.leer === undefined ? registroEnDisco : () => undefined))(workspace);
   return {
+    ...(actividad !== undefined && { actividad }),
     leer: () => ({ propios: leer(workspace), disco: leerConTemas(leer, workspace, temas) }),
     escribir: (ruta, texto) => escribir(workspace, ruta, texto),
     borrar: (ruta) => borrar(workspace, ruta),
@@ -183,9 +213,17 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   /** Eventos SSE con nombre (`estado`, y los que declare `estudio/protocolo`). */
   const enviar = (cliente: ServerResponse, nombre: NombreDeEventoDeDev, datos: unknown): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
   const enviarEstado = (cliente: ServerResponse, estado: EstadoDeDev): void => enviar(cliente, 'estado', estado);
-  const dejarDeEscuchar = vivo.suscribir((estado) => {
+  const enviarActividad = (cliente: ServerResponse, actividad: ActividadDeDev): void => enviar(cliente, 'actividad', actividad);
+  const dejarDeEscucharEstado = vivo.suscribir((estado) => {
     for (const cliente of clientes) enviarEstado(cliente, estado);
   });
+  const dejarDeEscucharActividad = vivo.suscribirActividad((eventos) => {
+    for (const cliente of clientes) enviarActividad(cliente, { previos: false, eventos });
+  });
+  const dejarDeEscuchar = (): void => {
+    dejarDeEscucharEstado();
+    dejarDeEscucharActividad();
+  };
 
   const hostsPropios = (): string[] => {
     const { port } = servidor.address() as AddressInfo;
@@ -322,12 +360,15 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       clientes.add(res);
       res.on('close', () => clientes.delete(res));
       enviarEstado(res, vivo.estado());
+      enviarActividad(res, { previos: true, eventos: [...vivo.actividad()] });
     } else if (ruta.startsWith('/api/inspect/')) {
       responderInspect(res, new URL(req.url ?? '/', 'http://127.0.0.1'));
     } else if (ruta.startsWith('/api/vista/')) {
       const id = decodeURIComponent(ruta.slice('/api/vista/'.length));
-      vivo.geometria(id).then(
-        (geometria) => responder(res, geometria === undefined ? 404 : 200, geometria ?? { error: `Vista '${id}' inexistente` }),
+      // `?tema=<nombre>`: la Vista con otro Tema (previsualizar), sin cache ni Historial.
+      const tema = new URL(req.url ?? '/', 'http://127.0.0.1').searchParams.get('tema') ?? undefined;
+      vivo.geometria(id, tema === undefined ? undefined : { tema }).then(
+        (geometria) => responder(res, geometria === undefined ? 404 : 200, geometria ?? { error: tema === undefined ? `Vista '${id}' inexistente` : `Vista '${id}' o Tema '${tema}' inexistente` }),
         (error: unknown) => responder(res, 500, { error: (error as Error).message }),
       );
     } else {

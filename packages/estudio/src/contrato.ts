@@ -7,7 +7,9 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import type { EstadoDeDev } from './protocolo';
+import type { EventoDeActividad } from 'canonico';
+
+import type { ActividadDeDev, EstadoDeDev } from './protocolo';
 import { crearLectorSse } from './sse';
 
 export { devEnMemoria } from './dev-en-memoria';
@@ -25,11 +27,13 @@ export interface DevDePrueba {
   eventos: (url: string, alEvento: (nombre: string, datos: string) => void) => () => void;
   /** Escritura fuera de `dev` (un agente u otro editor); `undefined` borra. */
   editarFuera(ruta: string, texto: string | undefined): void;
+  /** Anexa texto a `.diagrams/actividad.jsonl`, como el CLI de otro proceso. */
+  anexarActividad(texto: string): void;
   cerrar(): Promise<void>;
 }
 
-/** `temas` son los de `--theme-path`: se compilan pero no se escriben. */
-export type CrearDev = (contenido: { propios: ArchivosDelWorkspace; temas?: ArchivosDelWorkspace }) => Promise<DevDePrueba>;
+/** `temas` son los de `--theme-path` (se compilan pero no se escriben); `actividad`, el texto inicial de `.diagrams/actividad.jsonl` (sin el, el registro no existe). */
+export type CrearDev = (contenido: { propios: ArchivosDelWorkspace; temas?: ArchivosDelWorkspace; actividad?: string }) => Promise<DevDePrueba>;
 
 /** `eventos` sobre un `fetch` que entrega el cuerpo en streaming (Node 18+); la pagina usa `EventSource`. */
 export function eventosSobreFetch(fetchFn: typeof fetch): DevDePrueba['eventos'] {
@@ -70,6 +74,10 @@ view datos {
   type architecture
   include db
 }
+
+theme claro extends neutral {
+  palette { acento "#0ea5e9" }
+}
 `;
 
 const CON_ERROR = DSL.replace('include db', 'include db\n  nada-de-esto');
@@ -98,9 +106,41 @@ function esperarEstado(dev: DevDePrueba, basta: (e: EstadoDeDev) => boolean, alA
   });
 }
 
+/** Junta los `event: actividad` que llegan por `/eventos` hasta que `basta` los acepte. */
+function esperarActividad(dev: DevDePrueba, basta: (recibidos: ActividadDeDev[]) => boolean, alAbrir?: () => void): Promise<ActividadDeDev[]> {
+  return new Promise((ok) => {
+    const recibidos: ActividadDeDev[] = [];
+    let abierto = false;
+    const cerrar = dev.eventos('/eventos', (nombre, datos) => {
+      if (nombre === 'estado' && !abierto) {
+        abierto = true;
+        alAbrir?.();
+      }
+      if (nombre !== 'actividad') return;
+      recibidos.push(JSON.parse(datos) as ActividadDeDev);
+      if (basta(recibidos)) {
+        setTimeout(cerrar, 0);
+        ok(recibidos);
+      }
+    });
+  });
+}
+
+const eventoDePrueba = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
+  contractVersion: 1,
+  ts: '2026-11-19T10:00:00.000Z',
+  pid,
+  comando: 'edit',
+  args: ['--workspace', '.', '--intent', '{}'],
+  exitCode: 0,
+  duracionMs: 4,
+  ...extra,
+});
+const lineaDe = (evento: EventoDeActividad): string => `${JSON.stringify(evento)}\n`;
+
 export function probarContratoDeDev(crear: CrearDev): void {
-  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, temas?: ArchivosDelWorkspace): Promise<T> => {
-    const dev = await crear({ propios, ...(temas !== undefined && { temas }) });
+  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, extra: { temas?: ArchivosDelWorkspace; actividad?: string } = {}): Promise<T> => {
+    const dev = await crear({ propios, ...extra });
     try {
       return await prueba(dev);
     } finally {
@@ -144,6 +184,31 @@ export function probarContratoDeDev(crear: CrearDev): void {
       });
     });
 
+    it('/eventos reproduce al conectar los ultimos 50 Eventos de actividad (previos) sin las lineas rotas', async () => {
+      const registro = Array.from({ length: 55 }, (_, i) => lineaDe(eventoDePrueba(i))).join('') + '{roto\n';
+      await con(
+        { 'main.dg': DSL },
+        async (dev) => {
+          const [previos] = await esperarActividad(dev, (r) => r.length > 0);
+          expect(previos?.previos).toBe(true);
+          expect(previos?.eventos.map((e) => e.pid)).toEqual(Array.from({ length: 50 }, (_, i) => i + 5));
+        },
+        { actividad: registro },
+      );
+    });
+
+    it('un Evento anexado al registro llega como event: actividad en vivo', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const nuevo = eventoDePrueba(7, { agente: 'claude', objetivo: { vista: 'datos' } });
+        const recibidos = await esperarActividad(
+          dev,
+          (r) => r.some((a) => !a.previos),
+          () => dev.anexarActividad(`no es json\n${lineaDe(nuevo)}`),
+        );
+        expect(recibidos.filter((a) => !a.previos)).toEqual([{ previos: false, eventos: [nuevo] }]);
+      });
+    });
+
     it('GET /api/vista/<id> da la Geometria de la Vista; una Vista inexistente es 404', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
         const { status, cuerpo } = await json(dev, '/api/vista/datos');
@@ -167,6 +232,35 @@ export function probarContratoDeDev(crear: CrearDev): void {
         const ausente = await json(dev, '/api/inspect/nodo/apj');
         expect(ausente).toEqual({ status: 404, cuerpo: { ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] } });
         expect((await dev.fetch('/api/inspect/nada/x')).status).toBe(404);
+      });
+    });
+
+    it('GET /api/vista/<id>?tema=<nombre> da la Geometria con otro Tema sin cachearla; 404 si falta la Vista o el Tema', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        expect(await json(dev, '/api/vista/datos?tema=claro')).toMatchObject({ status: 200, cuerpo: { view: 'datos', theme: 'claro' } });
+        expect(await json(dev, '/api/vista/datos')).toMatchObject({ status: 200, cuerpo: { view: 'datos', theme: 'neutral' } });
+        expect((await dev.fetch('/api/vista/datos?tema=nada')).status).toBe(404);
+        expect((await dev.fetch('/api/vista/nada?tema=claro')).status).toBe(404);
+      });
+    });
+
+    it('GET /api/inspect/tema/<nombre> da la cadena extends y las Capas; un Tema inexistente es 404 con los cercanos', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const { status, cuerpo } = await json(dev, '/api/inspect/tema/claro');
+        expect(status).toBe(200);
+        expect(cuerpo).toMatchObject({ comando: 'tema', tema: { name: 'claro', file: 'main.dg', extends: ['neutral'] } });
+        expect(await json(dev, '/api/inspect/tema/clara')).toEqual({ status: 404, cuerpo: { ok: false, mensaje: "No existe el Tema 'clara'. Quiza: claro", cercanos: ['claro'] } });
+      });
+    });
+
+    it('POST /api/edit con fijar-tema escribe theme en la Vista; sin tema lo quita; un Tema no declarado es 422 tema-desconocido', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const temaDe = async (vista: string) => ((await json(dev, '/api/estado')).cuerpo['fuente'] as EstadoDeDev['fuente'])?.views.find((v) => v.id === vista)?.theme;
+        expect(await post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos', tema: 'claro' })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        expect(await temaDe('datos')).toBe('claro');
+        expect(await post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos' })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        expect(await temaDe('datos')).toBeUndefined();
+        expect(await post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos', tema: 'clara' })).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'tema-desconocido' } });
       });
     });
 
@@ -213,7 +307,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           ]);
           expect(archivos.every((a) => a.hash.length > 0)).toBe(true);
         },
-        { 'tema.dg': TEMA },
+        { temas: { 'tema.dg': TEMA } },
       );
     });
 
@@ -269,7 +363,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           });
           expect((await post(dev, '/api/edit', { ediciones: [{ file: 1 }] })).status).toBe(400);
         },
-        { 'tema.dg': TEMA },
+        { temas: { 'tema.dg': TEMA } },
       );
     });
   });

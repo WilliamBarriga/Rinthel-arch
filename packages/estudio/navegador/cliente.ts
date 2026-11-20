@@ -58,7 +58,8 @@ export interface ClienteDeDev {
   archivo(file: string): Promise<ArchivoDeDev | undefined>;
   deshacer(): Promise<ResultadoDeEnvio>;
   rehacer(): Promise<ResultadoDeEnvio>;
-  geometria(vista: string): Promise<LecturaDeGeometria>;
+  /** Con `tema`, la Vista dibujada con ese Tema (`?tema=`, sin cache en el servidor): previsualizar sin escribir. */
+  geometria(vista: string, opciones?: { tema?: string }): Promise<LecturaDeGeometria>;
 }
 
 export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs = PLAZO_DE_GEOMETRIA_MS }: DependenciasDelCliente): ClienteDeDev {
@@ -147,7 +148,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
     archivo: (file) => leerJson(rutaDeArchivo(file), archivoDeDevSchema),
     deshacer: () => post('/api/deshacer', {}),
     rehacer: () => post('/api/rehacer', {}),
-    async geometria(vista) {
+    async geometria(vista, { tema } = {}) {
       const NO_LLEGO = Symbol('no-llego');
       const abortar = new AbortController();
       let plazo: ReturnType<typeof setTimeout> | undefined;
@@ -158,7 +159,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
         }, plazoDeGeometriaMs);
       });
       const pedida = (async (): Promise<unknown> => {
-        const res = await fetchFn(`/api/vista/${encodeURIComponent(vista)}`, { signal: abortar.signal });
+        const res = await fetchFn(`/api/vista/${encodeURIComponent(vista)}${tema === undefined ? '' : `?tema=${encodeURIComponent(tema)}`}`, { signal: abortar.signal });
         return res.ok ? await res.json() : NO_LLEGO;
       })().catch(() => NO_LLEGO);
       const cruda = await Promise.race([pedida, vencida]);

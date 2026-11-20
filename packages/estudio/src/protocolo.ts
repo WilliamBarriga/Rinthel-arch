@@ -4,7 +4,7 @@
  * `TipoDeCambio`), las lecturas del editor (`/api/archivos`, `/api/archivo/<ruta>`) y las ediciones de texto de `/api/edit`. La pagina valida con los esquemas; `cli` importa de aqui solo tipos (`import type`).
  * Invariantes: sin DOM ni Node; solo depende de `canonico` y `zod`, para que importarlo no arrastre la app de navegador.
  */
-import { edicionDeTextoSchema, fuenteCanonicaSchema, issueSchema } from 'canonico';
+import { edicionDeTextoSchema, eventoDeActividadSchema, fuenteCanonicaSchema, issueSchema } from 'canonico';
 import { z } from 'zod';
 
 export const issueDeDevSchema = issueSchema.extend({
@@ -47,6 +47,13 @@ export type EstadoDeDev = z.infer<typeof estadoDeDevSchema>;
  */
 export const EVENTOS_DE_DEV = ['estado', 'actividad', 'diferencia', 'historial'] as const;
 export type NombreDeEventoDeDev = (typeof EVENTOS_DE_DEV)[number];
+
+/**
+ * Datos de `event: actividad`: Eventos del Registro de actividad en orden. Al conectar llega uno con `previos: true` y
+ * los ultimos 50 del registro (quiza ninguno); despues, uno con `previos: false` por cada tanda que el CLI anexa.
+ */
+export const actividadDeDevSchema = z.object({ previos: z.boolean(), eventos: z.array(eventoDeActividadSchema) });
+export type ActividadDeDev = z.infer<typeof actividadDeDevSchema>;
 
 /** Subcomandos de `GET /api/inspect/<comando>/<argumento>`; las opciones de `tema` van en la query. */
 export const COMANDOS_DE_INSPECT = ['buscar', 'nodo', 'vista', 'interaccion', 'tema'] as const;

@@ -119,9 +119,17 @@ function deVista(datos: DatosDelUbicador, indice: number, ruta: Ruta): SitioDeTe
   const props = ast.props;
 
   if (campo === 'id') return sitio(archivo, rangoDe(ast, 'name'));
+  if (campo === 'cuerpo') {
+    // `['views', n, 'cuerpo']`: punto vacio justo tras la `{` de la Vista (donde va su primera sentencia).
+    const llave = GrammarUtils.findNodesForKeyword(ast.$cstNode, '{')[0];
+    return llave === undefined ? null : sitio(archivo, puntoVacio(llave.range.end));
+  }
   if (campo === 'theme') {
     const tema = props.find((prop) => prop.$type === 'ViewTheme');
-    return tema === undefined ? null : sitio(archivo, rangoDe(tema, 'value'));
+    if (tema === undefined) return null;
+    // `['views', n, 'theme', 'sentencia']`: la sentencia `theme <nombre> { parche }` completa; sin cola, el nombre.
+    if (i === 'sentencia') return tema.$cstNode === undefined ? null : sitio(archivo, aRango(tema.$cstNode.range));
+    return sitio(archivo, rangoDe(tema, 'value'));
   }
   if (campo === 'overrides') {
     // `['views', n, 'overrides']` sin indice: donde insertar un override nuevo (antes del `}` de la Vista).

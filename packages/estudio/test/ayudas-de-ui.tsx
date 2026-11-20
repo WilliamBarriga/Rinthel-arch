@@ -28,13 +28,15 @@ export interface OpcionesDeMontaje {
   plataforma?: Plataforma;
   /** Archivos de `--theme-path` (solo lectura). */
   temas?: Record<string, string>;
+  /** Texto inicial de `.diagrams/actividad.jsonl`. */
+  actividad?: string;
   /** Envuelve el `fetch` del fake (para anotar peticiones o inyectar fallos de red). */
   envolverFetch?: (fetchDelFake: typeof fetch) => typeof fetch;
 }
 
-export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas, envolverFetch = (f) => f }: OpcionesDeMontaje = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
+export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas, actividad, envolverFetch = (f) => f }: OpcionesDeMontaje = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
   window.history.replaceState(null, '', `/${hash}`);
-  const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }) });
+  const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }) });
   const { container } = render(<Estudio fetch={envolverFetch(dev.fetch)} eventos={dev.eventos} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={() => false} plataforma={plataforma} />);
   return { dev, contenedor: container };
 }

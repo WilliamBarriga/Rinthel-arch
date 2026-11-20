@@ -4,6 +4,7 @@
  * Buscador), teclas (`Mod+K`, `E`, `?`; vacio si solo se llega por el Buscador), ambito del foco y `ejecutar`, que
  * recibe el contexto del estudio (`useEstudio()`). Las reglas de teclas y ambitos estan en `teclas.ts`.
  */
+import { actividadDelCliente } from '../agente/actividad';
 import { crearAlAtajo } from '../historial';
 import type { AccionDeHistorial } from '../historial';
 import type { ContextoDelEstudio } from '../marco/contexto';
@@ -54,6 +55,8 @@ const PROPIOS: readonly Comando[] = [
   // Esc del editor: tecla sin modificador en ambito editor, asi que `resolverTecla` nunca la resuelve y cede a las capas
   // efimeras de CodeMirror (completado, busqueda, seleccion multiple); la ejecuta la ultima capa del keymap del editor.
   { id: 'salir-del-editor', nombre: 'Volver a Vistas desde el editor', teclas: ['Escape'], ambito: 'editor', enBuscador: false, ejecutar: volverAVistas },
+  { id: 'seguir-al-agente-activar', nombre: 'Seguir al agente: activar', teclas: [], ambito: 'global', ejecutar: (e) => actividadDelCliente(e.cliente).seguir(true) },
+  { id: 'seguir-al-agente-desactivar', nombre: 'Seguir al agente: desactivar', teclas: [], ambito: 'global', ejecutar: (e) => actividadDelCliente(e.cliente).seguir(false) },
 ];
 
 /** "Abrir <pestana>" por cada pestana de las islas que no tenga ya un comando propio. */
