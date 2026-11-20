@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 /**
- * Politica de Escritura ante un rechazo por version (409), en la app montada: toda accion que escribe recarga el
- * estado y avisa. Los eventos `estado` e `historial` se retienen tras montar, asi el estado nuevo solo llega si la
+ * Politica de Escritura ante un rechazo por version (409), en la app montada: toda accion que escribe (fijar Tema,
+ * mover, ordenar, deshacer, rehacer, saltar) recarga el estado y avisa; aplicar un fix reintenta una vez. Los eventos `estado` e `historial` se retienen tras montar, asi el estado nuevo solo llega si la
  * pagina lo vuelve a pedir.
  */
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { DSL_BASICO, lienzoListo, montarEstudio } from './ayudas-de-ui';
+import { DSL_BASICO, lienzoListo, montarEstudio, posicionDe } from './ayudas-de-ui';
 import type { OpcionesDeMontaje } from './ayudas-de-ui';
 import type { DevEnMemoria } from '../src/contrato';
 
@@ -51,6 +51,45 @@ async function esperarRecargaYAviso(contenedor: HTMLElement): Promise<void> {
   await waitFor(() => expect(contenedor.querySelector('[data-id="cache"]')).not.toBeNull());
 }
 
+const DSL_SECUENCIA = `specification {
+  node servicio
+}
+
+model {
+  servicio api "API"
+  servicio db "Base de datos"
+  interaction i {
+    api -> db "lee"
+  }
+}
+
+view sec {
+  type sequence
+  interaction i
+}
+`;
+
+/** La escritura externa agrega la Lifeline `cache` a la Interaccion. */
+const conCacheEnSecuencia = (texto: string): string => conCache(texto).replace('    api -> db "lee"\n', '    api -> db "lee"\n    db -> cache "guarda"\n');
+
+/** Arrastra la cabecera de la Lifeline `id` hasta pasar el centro de `hasta`, en pantalla segun la camara dibujada. */
+function arrastrarCabecera(contenedor: HTMLElement, id: string, hasta: string): void {
+  const dibujo = contenedor.querySelector<HTMLElement>('[data-diagram]')!;
+  const [vx, vy, vw] = dibujo.getAttribute('data-camara')!.split(' ').map(Number) as [number, number, number];
+  const k = Number.parseFloat(dibujo.style.width) / vw;
+  const centro = (de: string): [number, number] => {
+    const caja = contenedor.querySelector<HTMLElement>(`[data-id="${de}"]`)!;
+    const [x, y] = posicionDe(contenedor, de)!;
+    return [(x + Number.parseFloat(caja.style.width) / 2 - vx) * k, (y + Number.parseFloat(caja.style.height) / 2 - vy) * k];
+  };
+  const [x, y] = centro(id);
+  const destino = centro(hasta)[0] + 20;
+  gesto(contenedor.querySelector(`[data-id="${id}"]`)!, 'mousedown', x, y);
+  gesto(window, 'mousemove', (x + destino) / 2, y);
+  gesto(window, 'mousemove', destino, y);
+  gesto(window, 'mouseup', destino, y);
+}
+
 function gesto(destino: Element | Window, tipo: string, clientX: number, clientY: number): void {
   const evento = new MouseEvent(tipo, { bubbles: true, cancelable: true, clientX, clientY, button: 0, buttons: tipo === 'mouseup' ? 0 : 1 });
   Object.defineProperty(evento, 'view', { value: window });
@@ -89,6 +128,30 @@ describe('Escritura ante un 409', () => {
     await esperarRecargaYAviso(contenedor);
   });
 
+  it('rehacer recarga la Vista y avisa', async () => {
+    const { contenedor } = await montarYEscribirFuera(async (dev) => {
+      await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'mover-pin', vista: 'mapa', nodo: 'api', x: 10, y: 0 }) });
+      await dev.fetch('/api/deshacer', { method: 'POST', body: '{}' });
+    });
+
+    fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true, shiftKey: true });
+
+    await esperarRecargaYAviso(contenedor);
+  });
+
+  it('ordenar las Lifelines recarga la Vista y avisa', async () => {
+    const { retenidos, envolverEventos } = retenerEventos();
+    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL_SECUENCIA }, { hash: '#vista=sec', envolverEventos });
+    await waitFor(() => expect(contenedor.querySelector('.rd-vista[data-layout="listo"] [data-lifeline="db"]')).not.toBeNull(), { timeout: 15000 });
+    retenidos.activo = true;
+    dev.editarFuera('main.dg', conCacheEnSecuencia(dev.workspace.texto('main.dg')!));
+    await dev.asentado();
+
+    arrastrarCabecera(contenedor, 'api', 'db');
+
+    await esperarRecargaYAviso(contenedor);
+  });
+
   it('saltar en el Historial recarga la Vista y avisa', async () => {
     const { contenedor } = await montarYEscribirFuera(async (dev) => {
       await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'mover-pin', vista: 'mapa', nodo: 'api', x: 10, y: 0 }) });
@@ -102,6 +165,8 @@ describe('Escritura ante un 409', () => {
     await esperarRecargaYAviso(contenedor);
   });
 
+  // Excepcion a "recarga y avisa" (#203): aplicar un fix conserva su reintento. Recarga, rearma la edicion sobre el
+  // estado nuevo y, si el reintento escribe, no hay aviso porque la accion se cumplio.
   it('aplicar un fix reintenta sobre el estado recargado y escribe sin avisar', async () => {
     const { retenidos, envolverEventos } = retenerEventos();
     const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverEventos });

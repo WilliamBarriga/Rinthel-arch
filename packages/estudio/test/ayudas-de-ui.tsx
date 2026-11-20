@@ -114,4 +114,4 @@ export const lienzoListo = (contenedor: HTMLElement, vista: string): Promise<HTM
   });
 
 /** Clic y doble clic en el centro de un Nodo dibujado; la unica copia vive en `tests/ayudas/lienzo.ts`. */
-export const { dobleClicEnNodo, pulsarNodo } = ayudasDeLienzo(fireEvent);
+export const { dobleClicEnNodo, posicionDe, pulsarNodo } = ayudasDeLienzo(fireEvent);
