@@ -207,9 +207,13 @@ function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado 
 }
 
 /** Reinserta cada fragmento perdido antes de su linea, como una edicion del usuario (se guarda y se deshace con Mod+Z). */
+/** Pone lo mio en lugar de la version del disco de cada tramo (o lo inserta, si solo eran lineas nuevas): sin duplicar. */
 function recuperarPerdidos(vista: EditorView, perdidos: readonly FragmentoPerdido[]): void {
   const doc = vista.state.doc;
-  const cambios = perdidos.map((p) => ({ from: doc.line(Math.min(Math.max(p.linea, 1), doc.lines)).from, insert: `${p.texto}\n` }));
+  const linea = (n: number) => doc.line(Math.min(Math.max(n, 1), doc.lines));
+  const cambios = perdidos.map((p) =>
+    p.reemplaza === 0 ? { from: linea(p.linea).from, insert: `${p.texto}\n` } : { from: linea(p.linea).from, to: linea(p.linea + p.reemplaza - 1).to, insert: p.texto },
+  );
   vista.dispatch({ changes: cambios, userEvent: 'input' });
   vista.focus();
 }

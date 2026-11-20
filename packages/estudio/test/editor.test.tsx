@@ -284,7 +284,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     expect(screen.queryByRole('alert', { name: 'Escritura externa' })).toBeNull();
   });
 
-  it('recuperar reinserta lo perdido como una edicion propia que se guarda', async () => {
+  it('recuperar pone lo mio en lugar de lo que gano el disco, sin duplicar la linea, y se guarda', async () => {
     const { envolverFetch } = retenerListados();
     const { dev } = await montarEstudio({ 'main.dg': DSL }, { envolverFetch });
     const { vista } = await abrirCodigo();
@@ -298,7 +298,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     fireEvent.click(within(aviso).getByRole('button', { name: 'Recuperar lo mio' }));
     fireEvent.blur(vista.contentDOM);
 
-    const recuperado = DSL.replace('  servicio db "Base de datos"', '  servicio db "Base de datos (mia)"\n  servicio db "Postgres"');
+    const recuperado = DSL.replace('"Base de datos"', '"Base de datos (mia)"');
     expect(vista.state.doc.toString()).toBe(recuperado);
     await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(recuperado));
     expect(screen.queryByRole('alert', { name: 'Escritura externa' })).toBeNull();
