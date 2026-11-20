@@ -142,9 +142,15 @@ describe('e2e: la UI de dev en Chromium', () => {
     expect(enDisco()).toContain('"Clientes"');
     await expect.poll(() => historial.getByRole('listitem').nth(1).getByRole('button').getAttribute('aria-current'), ESPERA).toBe('step');
 
-    // Arrastrar el borde del panel izquierdo lo ensancha.
+    // Arrastrar el borde del panel izquierdo lo ensancha (desde el minimo: abrir Codigo ya lo ensancho).
+    const separador = izquierdo.getByRole('separator', { name: 'Ancho del panel izquierdo' });
+    await separador.focus();
+    await pagina.keyboard.press('Home');
+    await expect.poll(async () => separador.getAttribute('aria-valuenow'), ESPERA).toBe(await separador.getAttribute('aria-valuemin'));
+    // La isla anima su ancho: se espera a que llegue al minimo antes de medir.
+    await expect.poll(async () => (await izquierdo.boundingBox())!.width, ESPERA).toBeLessThan(Number(await separador.getAttribute('aria-valuemin')) + 4);
     const ancho = (await izquierdo.boundingBox())!.width;
-    const borde = (await izquierdo.getByRole('separator', { name: 'Ancho del panel izquierdo' }).boundingBox())!;
+    const borde = (await separador.boundingBox())!;
     const y = borde.y + borde.height / 2;
     await pagina.mouse.move(borde.x + borde.width / 2, y);
     await pagina.mouse.down();
