@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
-import { abrirSesion, crearHistorial, deshacer, editarEnHistorial } from 'sesion';
+import { abrirSesion, crearHistorial, deshacer, editarEnHistorial, rehacer } from 'sesion';
 
-import { aplicarIntencion, rehacer } from '../src/intenciones';
+import { aplicarEnMemoria } from './ayudas';
 
 const modelo = `specification { node servicio }
 model {
@@ -25,7 +25,7 @@ model {
 const con = (cuerpo: string) => `${modelo}view v {\n  type sequence\n  interaction i\n${cuerpo}}\n`;
 
 const ordenar = (texto: string, orden: string[]) =>
-  aplicarIntencion({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden });
+  aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden });
 const visibles = (texto: string) => resolveView(abrirSesion({ 'main.dg': texto }).fuente!, 'v')!.nodes.map((n) => n.id);
 
 describe('Intencion ordenar-lifelines', () => {
@@ -72,8 +72,8 @@ describe('Intencion ordenar-lifelines', () => {
 
   it('rechaza un hash viejo, una Vista inexistente y un nodo desconocido', () => {
     const texto = con('');
-    expect(aplicarIntencion({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden: ['cliente'] }, { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
-    expect(aplicarIntencion({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'nada', orden: ['cliente'] })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden: ['cliente'] }, { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'nada', orden: ['cliente'] })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
     expect(ordenar(texto, ['fantasma'])).toMatchObject({ ok: false, motivo: 'invalida' });
   });
 

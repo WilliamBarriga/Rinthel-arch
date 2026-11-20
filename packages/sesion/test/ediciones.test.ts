@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import { abrirSesion, aplicarAlWorkspace, hashDeContenido } from 'sesion';
+import type { Aplicable } from 'sesion';
 
-import type { PuertoDeWorkspace } from '../src/aplicar';
-import type { EdicionConHash } from '../src/ediciones';
-import { aplicarIntencion } from '../src/intenciones';
+import { aplicarEnMemoria } from './ayudas';
+
+type PuertoDeWorkspace = Parameters<typeof aplicarAlWorkspace>[0];
+type EdicionConHash = Extract<Aplicable, readonly unknown[]>[number] & { hash: string };
 
 const base = (extra: string) => `specification { node servicio }
 model { servicio a  servicio b }
@@ -23,21 +25,21 @@ const intencion = (_texto: string, x = 5, y = -7) => ({
 });
 
 describe('Intencion mover-pin', () => {
-  it('inserta un override nuevo sin tocar el resto del archivo', () => {
+  it('inserta un override nuevo sin tocar el resto del archivo', async () => {
     const texto = base('');
-    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto));
+    const r = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto));
 
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.archivos['main.dg']).toBe(base('  node a { pin 5,-7 }\n'));
       expect(r.ediciones).toHaveLength(1);
-      expect(r.issues.some((i) => i.severity === 'error')).toBe(false);
+      expect((await abrirSesion(r.archivos).diagnosticar()).some((i) => i.severity === 'error')).toBe(false);
     }
   });
 
   it('anade el pin a un override existente sin pin', () => {
     const texto = base('  node a { label "A" }\n');
-    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto));
+    const r = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto));
     if (!r.ok) throw new Error(r.mensaje);
 
     expect(r.archivos['main.dg']).toBe(base('  node a { label "A" pin 5,-7 }\n'));
@@ -45,7 +47,7 @@ describe('Intencion mover-pin', () => {
 
   it('anade el pin a un override vacio', () => {
     const texto = base('  node a {}\n');
-    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto));
+    const r = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto));
     if (!r.ok) throw new Error(r.mensaje);
 
     expect(r.archivos['main.dg']).toBe(base('  node a { pin 5,-7 }\n'));
@@ -53,7 +55,7 @@ describe('Intencion mover-pin', () => {
 
   it('reemplaza un pin existente y la Sesion resultante lo refleja sin issues nuevos', async () => {
     const texto = base('  node a { label "A" pin 1,2 }\n  node b { pin 100,100 }\n');
-    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto));
+    const r = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto));
     if (!r.ok) throw new Error(r.mensaje);
 
     expect(r.archivos['main.dg']).toBe(base('  node a { label "A" pin 5,-7 }\n  node b { pin 100,100 }\n'));
@@ -65,21 +67,21 @@ describe('Intencion mover-pin', () => {
   it('un hash desactualizado rechaza la edicion y no cambia nada', () => {
     const texto = base('');
 
-    const r = aplicarIntencion({ 'main.dg': texto }, intencion(texto), { 'main.dg': hashDeContenido('otra cosa') });
+    const r = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto), { 'main.dg': hashDeContenido('otra cosa') });
 
     expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
   });
 
   it('vista o nodo inexistente se rechazan', () => {
     const texto = base('');
-    expect(aplicarIntencion({ 'main.dg': texto }, { ...intencion(texto), vista: 'nada' })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
-    expect(aplicarIntencion({ 'main.dg': texto }, { ...intencion(texto), nodo: 'nada' })).toMatchObject({ ok: false, motivo: 'invalida' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, { ...intencion(texto), vista: 'nada' })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, { ...intencion(texto), nodo: 'nada' })).toMatchObject({ ok: false, motivo: 'invalida' });
   });
 
   it('lleva el limite de coordenadas a la salida: redondea x e y a enteros y los limita a un rango razonable', () => {
     const texto = base('');
     const pin = (x: number, y: number) => {
-      const e = aplicarIntencion({ 'main.dg': texto }, intencion(texto, x, y));
+      const e = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto, x, y));
       return e.ok ? e.archivos['main.dg'] : e;
     };
     expect(pin(10.6, -3.4)).toBe(base('  node a { pin 11,-3 }\n'));

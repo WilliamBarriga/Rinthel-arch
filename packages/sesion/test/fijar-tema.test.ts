@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { hashDeContenido } from 'sesion';
 import type { Intencion } from 'sesion';
 
-import { aplicarIntencion } from '../src/intenciones';
+import { aplicarEnMemoria } from './ayudas';
 
 const ws = (vista: string) => `specification { node servicio }
 model { servicio a  servicio b }
@@ -14,7 +14,7 @@ ${vista}
 const fijar = (tema?: string, vista = 'v'): Intencion => ({ tipo: 'fijar-tema', vista, ...(tema !== undefined && { tema }) });
 
 const aplicar = (texto: string, intencion: Intencion): string => {
-  const r = aplicarIntencion({ 'main.dg': texto }, intencion);
+  const r = aplicarEnMemoria({ 'main.dg': texto }, intencion);
   if (!r.ok) throw new Error(`${r.motivo}: ${r.mensaje}`);
   return r.archivos['main.dg'] as string;
 };
@@ -83,7 +83,7 @@ describe('Intencion fijar-tema', () => {
   type architecture
   include **
 }`);
-    const r = aplicarIntencion({ 'main.dg': texto }, fijar('clar'));
+    const r = aplicarEnMemoria({ 'main.dg': texto }, fijar('clar'));
     expect(r).toMatchObject({ ok: false, motivo: 'tema-desconocido' });
     expect(!r.ok && r.mensaje).toContain('claro');
   });
@@ -93,8 +93,8 @@ describe('Intencion fijar-tema', () => {
   type architecture
   include **
 }`);
-    expect(aplicarIntencion({ 'main.dg': texto }, fijar('claro', 'nada'))).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
-    expect(aplicarIntencion({ 'main.dg': texto }, fijar('claro'), { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
-    expect(aplicarIntencion({ 'main.dg': texto }, fijar('claro'), { 'main.dg': hashDeContenido(texto) }).ok).toBe(true);
+    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro', 'nada'))).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro'), { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro'), { 'main.dg': hashDeContenido(texto) }).ok).toBe(true);
   });
 });

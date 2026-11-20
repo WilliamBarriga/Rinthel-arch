@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { crearHistorial, deshacer, editarEnHistorial, hashDeContenido } from 'sesion';
+import { crearHistorial, deshacer, editarEnHistorial, hashDeContenido, rehacer } from 'sesion';
 import type { Intencion } from 'sesion';
 
-import { aplicarIntencion, rehacer } from '../src/intenciones';
+import { aplicarEnMemoria } from './ayudas';
 
 const base = (extra: string) => `specification { node servicio }
 model { servicio a  servicio b }
@@ -21,10 +21,10 @@ const mover = (texto: string, x: number, y: number, nodo = 'a'): Intencion => ({
   y,
 });
 
-describe('aplicarIntencion', () => {
+describe('aplicar una Intencion', () => {
   it('mover Pin produce el mismo texto que escribir el pin a mano', () => {
     const texto = base('');
-    const r = aplicarIntencion({ 'main.dg': texto }, mover(texto, 5, -7));
+    const r = aplicarEnMemoria({ 'main.dg': texto }, mover(texto, 5, -7));
     if (!r.ok) throw new Error(r.mensaje);
     expect(r.archivos['main.dg']).toBe(base('  node a { pin 5,-7 }\n'));
     expect(r.ediciones).toHaveLength(1);
@@ -32,13 +32,13 @@ describe('aplicarIntencion', () => {
 
   it('rechaza con motivo', () => {
     const texto = base('');
-    const r = aplicarIntencion({ 'main.dg': texto }, mover(texto, 1, 1), { 'main.dg': 'viejo' });
+    const r = aplicarEnMemoria({ 'main.dg': texto }, mover(texto, 1, 1), { 'main.dg': 'viejo' });
     expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
   });
 
   it('con visto vigente aplica; un visto desactualizado de otro archivo no cuenta', () => {
     const texto = base('');
-    const vigente = aplicarIntencion({ 'main.dg': texto, 'otro.dg': '' }, mover(texto, 1, 1), { 'main.dg': hashDeContenido(texto), 'otro.dg': 'viejo' });
+    const vigente = aplicarEnMemoria({ 'main.dg': texto, 'otro.dg': '' }, mover(texto, 1, 1), { 'main.dg': hashDeContenido(texto), 'otro.dg': 'viejo' });
     expect(vigente.ok).toBe(true);
   });
 });

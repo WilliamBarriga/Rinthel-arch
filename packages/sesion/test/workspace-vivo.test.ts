@@ -1,34 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { EventoDeActividad } from 'canonico';
 import type { DiferenciaDeDev, EstadoDeDev, EventoDeDev } from 'canonico';
 
-import { puertoEnMemoria } from '../src/puerto-vivo-en-memoria';
-import { abrirWorkspaceVivo } from '../src/workspace-vivo';
-import type { Reloj } from '../src/reloj';
-import type { OpcionesDelWorkspaceVivo, WorkspaceVivo } from '../src/workspace-vivo';
+import { abrirWorkspaceVivo, puertoEnMemoria } from 'sesion';
+import type { WorkspaceVivo } from 'sesion';
 
-/** Reloj falso: las tareas programadas solo corren al `avanzar`. */
-function relojFalso(): Reloj & { avanzar(ms: number): void; pendientes(): number } {
-  let ahora = 0;
-  let tareas: { en: number; fn: () => void }[] = [];
-  return {
-    programar(fn, ms) {
-      const tarea = { en: ahora + ms, fn };
-      tareas.push(tarea);
-      return () => {
-        tareas = tareas.filter((t) => t !== tarea);
-      };
-    },
-    avanzar(ms) {
-      ahora += ms;
-      const vencidas = tareas.filter((t) => t.en <= ahora);
-      tareas = tareas.filter((t) => t.en > ahora);
-      for (const t of vencidas) t.fn();
-    },
-    pendientes: () => tareas.length,
-  };
-}
+import { eventoDeActividad, lineasDeActividad } from '../../../tests/ayudas/actividad';
+import { relojFalso } from '../../../tests/ayudas/reloj';
+import type { RelojFalso } from '../../../tests/ayudas/reloj';
+
+type OpcionesDelWorkspaceVivo = Parameters<typeof abrirWorkspaceVivo>[0];
 
 const abiertos: WorkspaceVivo[] = [];
 afterEach(() => {
@@ -60,7 +41,7 @@ const siguiente = (ws: WorkspaceVivo): Promise<EstadoDeDev> =>
   });
 
 /** Edicion externa seguida del debounce completo: resuelve con el estado empujado. */
-async function cambiarFuera(ws: WorkspaceVivo, reloj: ReturnType<typeof relojFalso>, cambiar: () => void): Promise<EstadoDeDev> {
+async function cambiarFuera(ws: WorkspaceVivo, reloj: RelojFalso, cambiar: () => void): Promise<EstadoDeDev> {
   const proximo = siguiente(ws);
   cambiar();
   reloj.avanzar(100);
@@ -789,10 +770,9 @@ describe('Workspace vivo: Diferencia', () => {
 });
 
 describe('Workspace vivo: protocolo de eventos', () => {
-  const actividadDe = (pid: number): EventoDeActividad => ({ contractVersion: 1, ts: '2026-11-19T10:00:00.000Z', pid, comando: 'validate', args: [], exitCode: 0, duracionMs: 1 });
 
   it('la instantanea de conexion da estado, Historial y la actividad con previos, en ese orden', async () => {
-    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, actividad: `${JSON.stringify(actividadDe(3))}\n` });
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, actividad: lineasDeActividad(eventoDeActividad(3)) });
     const { ws } = await abrir(puerto);
     await ws.editar(pin(1, 2));
 
@@ -801,7 +781,7 @@ describe('Workspace vivo: protocolo de eventos', () => {
     expect(conexion.map(({ nombre }) => nombre)).toEqual(['estado', 'historial', 'actividad']);
     expect(conexion[0]?.datos).toMatchObject({ version: 1 });
     expect(conexion[1]?.datos).toMatchObject({ pasado: [{ id: 1, descripcion: 'mover api en general', archivos: ['main.dg'] }], futuro: [] });
-    expect(conexion[2]?.datos).toEqual({ previos: true, eventos: [actividadDe(3)] });
+    expect(conexion[2]?.datos).toEqual({ previos: true, eventos: [eventoDeActividad(3)] });
   });
 
   it('tras cada estado llega su Historial y despues su Diferencia; la actividad anexada llega sola tras el debounce', async () => {
@@ -812,7 +792,7 @@ describe('Workspace vivo: protocolo de eventos', () => {
 
     await ws.editar(pin(1, 2), 0);
     await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', BASE.replace('"API"', '"API nueva"')));
-    puerto.anexarActividad(`${JSON.stringify(actividadDe(9))}\n`);
+    puerto.anexarActividad(lineasDeActividad(eventoDeActividad(9)));
     expect(recibidos.map(({ nombre }) => nombre)).toEqual(['estado', 'historial', 'diferencia', 'estado', 'historial', 'diferencia']);
     reloj.avanzar(100);
 
@@ -823,7 +803,7 @@ describe('Workspace vivo: protocolo de eventos', () => {
       ['propio', 1],
       ['externo', 2],
     ]);
-    expect(recibidos[6]?.datos).toEqual({ previos: false, eventos: [actividadDe(9)] });
+    expect(recibidos[6]?.datos).toEqual({ previos: false, eventos: [eventoDeActividad(9)] });
   });
 
   it('dejar de escuchar corta el flujo', async () => {
