@@ -191,6 +191,42 @@ describe('revisarWorkspace', () => {
     expect(revisarWorkspace(raiz)).toEqual([]);
   });
 
+  it('falla si un paquete reexporta nombres de otro paquete, tambien en bloques de varias lineas', () => {
+    const raiz = crearWorkspace({
+      'packages/canonico/package.json': manifiesto('canonico'),
+      'packages/canonico/src/index.ts': 'export const algo = 1;\nexport type Caja = { x: number };\n',
+      'packages/layout/package.json': manifiesto('layout', { dependencies: { canonico: 'workspace:*' } }),
+      'packages/layout/src/index.ts': "export { algo } from 'canonico';\n",
+      'packages/layout/src/tipos.ts': "export type {\n  Caja,\n} from 'canonico';\n",
+      'packages/layout/src/todo.ts': "export * from 'canonico';\n",
+    });
+
+    const reexportes = revisarWorkspace(raiz).filter((v) => v.regla === 'reexporte');
+    expect(reexportes.map((v) => [v.paquete, v.archivo])).toEqual([
+      ['layout', 'packages/layout/src/index.ts'],
+      ['layout', 'packages/layout/src/tipos.ts'],
+      ['layout', 'packages/layout/src/todo.ts'],
+    ]);
+  });
+
+  it('acepta reexportes propios y los de las excepciones: estudio/protocolo y la fachada de shell', () => {
+    const raiz = crearWorkspace({
+      'packages/canonico/package.json': manifiesto('canonico'),
+      'packages/canonico/src/index.ts': "export { algo } from './algo';\n",
+      'packages/canonico/src/algo.ts': 'export const algo = 1;\n',
+      'packages/shell/package.json': manifiesto('shell', { dependencies: { canonico: 'workspace:*' } }),
+      'packages/shell/src/index.ts': "export { algo } from 'canonico';\n",
+      'packages/estudio/package.json': manifiesto('estudio', {
+        dependencies: { canonico: 'workspace:*' },
+        exports: { '.': './dist/index.js', './protocolo': './dist/protocolo.js' },
+      }),
+      'packages/estudio/src/index.ts': 'export const app = 1;\n',
+      'packages/estudio/src/protocolo.ts': "export type { algo } from 'canonico';\n",
+    });
+
+    expect(revisarWorkspace(raiz)).toEqual([]);
+  });
+
   it('este workspace no tiene violaciones', () => {
     expect(revisarWorkspace(raizDelRepo)).toEqual([]);
   });

@@ -7,6 +7,7 @@
  * - `declaracion`: todo paquete del workspace importado esta en `dependencies` o `peerDependencies`.
  * - `exports`: la superficie publica es la entrada `.` mas, solo en los paquetes de `SUBPATHS_PERMITIDOS`, esos subpaths.
  * - `pureza`: el codigo fuente de `NUCLEO` no importa modulos de Node ni usa reloj, azar, `process`, red ni DOM.
+ * - `reexporte`: ningun archivo hace `export ... from` de otro paquete del workspace, salvo los de `REEXPORTES_PERMITIDOS`.
  * Errores: un `package.json` ilegible o invalido lanza; uno ausente se ignora.
  */
 import { builtinModules } from 'node:module';
@@ -24,6 +25,13 @@ export const SUBPATHS_PERMITIDOS: Readonly<Record<string, readonly string[]>> = 
   estudio: ['./protocolo', './contrato'],
 };
 
+/**
+ * Archivos que pueden reexportar de otro paquete (ruta relativa a la raiz del repo): `estudio/protocolo` junta el
+ * contrato de `dev` para la app y `cli`; la fachada publica de `shell` ofrece a sus consumidores los tipos de su interfaz.
+ * Fuera de ellos, cada nombre se importa del paquete dueno, sin segundos caminos.
+ */
+export const REEXPORTES_PERMITIDOS: readonly string[] = ['packages/estudio/src/protocolo.ts', 'packages/shell/src/index.ts'];
+
 /** Nucleo puro: sin I/O, sin reloj, sin estado global. */
 export const NUCLEO = ['canonico', 'tema', 'dsl', 'sesion', 'render'] as const;
 
@@ -37,7 +45,7 @@ const IMPUREZAS: ReadonlyArray<readonly [RegExp, string]> = [
 
 const MODULOS_DE_NODE = new Set(builtinModules);
 
-export type Regla = 'cadena' | 'orden' | 'interno' | 'declaracion' | 'exports' | 'pureza';
+export type Regla = 'cadena' | 'orden' | 'interno' | 'declaracion' | 'exports' | 'pureza' | 'reexporte';
 
 export interface Violacion {
   readonly paquete: string;
@@ -62,6 +70,7 @@ interface Paquete {
 const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist', 'coverage', '.git']);
 const ARCHIVOS_IGNORADOS = /^tsup\.config\.|^vitest\.config\./;
 const EXTENSIONES_DE_CODIGO = ['.ts', '.tsx', '.mts', '.cts'];
+const RE_REEXPORTE = /\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*(['"])([^'"\n]+)\1/g;
 const RE_ESPECIFICADOR = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/g;
 
 export function revisarWorkspace(raiz: string): Violacion[] {
@@ -215,6 +224,20 @@ function revisarArchivo(
         regla: 'declaracion',
         mensaje: `importa ${importado} sin declararlo en dependencies o peerDependencies`,
       });
+    }
+  }
+
+  if (!REEXPORTES_PERMITIDOS.includes(relativo.split('\\').join('/'))) {
+    for (const coincidencia of texto.matchAll(RE_REEXPORTE)) {
+      const importado = nombreDePaquete(coincidencia[2]);
+      if (importado !== nombre && paquetes.some((otro) => otro.nombre === importado)) {
+        violaciones.push({
+          paquete: nombre,
+          archivo: relativo,
+          regla: 'reexporte',
+          mensaje: `reexporta de ${importado}; quien lo usa lo importa de ${importado} directamente`,
+        });
+      }
     }
   }
 
