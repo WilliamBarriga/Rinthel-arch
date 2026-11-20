@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { EditorView } from '@codemirror/view';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -26,6 +27,13 @@ view otra {
   include db
 }
 `;
+
+/** Linea del cursor del editor de `archivo` (la pestana Codigo salta a `archivo:linea`). */
+function lineaDelEditor(archivo: string): number | undefined {
+  const caja = screen.queryByRole('textbox', { name: `Codigo de ${archivo}` });
+  const vista = caja === null ? null : EditorView.findFromDOM(caja);
+  return vista === null ? undefined : vista.state.doc.lineAt(vista.state.selection.main.head).number;
+}
 
 const teclear = (key: string, o: Record<string, boolean> = {}, destino: Element = document.body) => fireEvent.keyDown(destino, { key, ...o });
 
@@ -87,13 +95,12 @@ describe('E abre Codigo', () => {
 
     teclear('e');
     expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true');
-    const izquierda = screen.getByRole('complementary', { name: 'Panel izquierdo' });
-    expect(await within(izquierda).findByText(/main\.dg:11/)).toBeTruthy();
+    await waitFor(() => expect(lineaDelEditor('main.dg')).toBe(11));
 
     pulsarNodo(contenedor, 'db');
     await waitFor(() => expect(window.location.hash).toContain('s=db'));
     teclear('e');
-    expect(await within(izquierda).findByText(/main\.dg:7/)).toBeTruthy();
+    await waitFor(() => expect(lineaDelEditor('main.dg')).toBe(7));
   });
 });
 
@@ -152,7 +159,7 @@ describe('Buscador', () => {
     fireEvent.click(await within(dialogo).findByRole('option', { name: /main\.dg:12/ }));
 
     expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true');
-    expect(within(screen.getByRole('complementary', { name: 'Panel izquierdo' })).getByText(/main\.dg:12/)).toBeTruthy();
+    await waitFor(() => expect(lineaDelEditor('main.dg')).toBe(12));
   });
 
   it('ejecuta comandos del registro y muestra su atajo', async () => {

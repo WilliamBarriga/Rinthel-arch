@@ -19,8 +19,11 @@ export interface Comando extends DeclaracionDeTeclas {
   ejecutar(estudio: ContextoDelEstudio): void | Promise<void>;
 }
 
-const historial = (accion: AccionDeHistorial) => (e: ContextoDelEstudio) =>
-  crearAlAtajo({ enviar: (a) => (a === 'deshacer' ? e.cliente.deshacer() : e.cliente.rehacer()), avisar: e.avisar, recargar: e.recargar })(accion);
+/** Antes de deshacer o rehacer en `dev` se vacia el guardado pendiente del editor. */
+const historial = (accion: AccionDeHistorial) => async (e: ContextoDelEstudio) => {
+  await e.vaciarGuardado();
+  await crearAlAtajo({ enviar: (a) => (a === 'deshacer' ? e.cliente.deshacer() : e.cliente.rehacer()), avisar: e.avisar, recargar: e.recargar })(accion);
+};
 
 /** Codigo en el bloque del Nodo seleccionado o, sin seleccion, en el de la Vista activa. */
 async function abrirCodigoAqui(e: ContextoDelEstudio): Promise<void> {
@@ -33,6 +36,12 @@ async function abrirCodigoAqui(e: ContextoDelEstudio): Promise<void> {
   else if (s.comando === 'vista') e.abrirCodigo({ file: s.vista.file, line: s.vista.line });
 }
 
+/** Vuelve a la pestana Vistas con el foco en el lienzo. */
+function volverAVistas(e: ContextoDelEstudio): void {
+  e.abrirPestana('izquierda', 'vistas');
+  document.querySelector<HTMLElement>('.ui-lienzo [tabindex]')?.focus();
+}
+
 const PROPIOS: readonly Comando[] = [
   { id: 'buscador', nombre: 'Buscar', teclas: ['Mod+K'], ambito: 'global', enBuscador: false, ejecutar: (e) => e.abrirDialogo('buscador') },
   { id: 'ayuda', nombre: 'Atajos de teclado', teclas: ['?', 'Mod+/'], ambito: 'global', ejecutar: (e) => e.abrirDialogo('ayuda') },
@@ -41,6 +50,11 @@ const PROPIOS: readonly Comando[] = [
   { id: 'deshacer', nombre: 'Deshacer', teclas: ['Mod+Z'], ambito: 'global', enTexto: false, ejecutar: historial('deshacer') },
   { id: 'rehacer', nombre: 'Rehacer', teclas: ['Mod+Shift+Z', { combinacion: 'Ctrl+Y', soloEn: 'otras' }], ambito: 'global', enTexto: false, ejecutar: historial('rehacer') },
   { id: 'abrir-codigo', nombre: 'Abrir Codigo', teclas: ['E'], ambito: 'global', ejecutar: abrirCodigoAqui },
+  // Global con modificador (spec #184): gana tambien en el editor y nunca abre el dialogo "Guardar pagina" del navegador.
+  { id: 'guardar', nombre: 'Guardar el texto', teclas: ['Mod+S'], ambito: 'global', ejecutar: (e) => e.vaciarGuardado() },
+  // Esc del editor: tecla sin modificador en ambito editor, asi que `resolverTecla` nunca la resuelve y cede a las capas
+  // efimeras de CodeMirror (completado, busqueda, seleccion multiple); la ejecuta la ultima capa del keymap del editor.
+  { id: 'salir-del-editor', nombre: 'Volver a Vistas desde el editor', teclas: ['Escape'], ambito: 'editor', enBuscador: false, ejecutar: volverAVistas },
   { id: 'seguir-al-agente-activar', nombre: 'Seguir al agente: activar', teclas: [], ambito: 'global', ejecutar: (e) => actividadDelCliente(e.cliente).seguir(true) },
   { id: 'seguir-al-agente-desactivar', nombre: 'Seguir al agente: desactivar', teclas: [], ambito: 'global', ejecutar: (e) => actividadDelCliente(e.cliente).seguir(false) },
 ];

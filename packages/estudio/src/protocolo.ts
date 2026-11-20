@@ -1,10 +1,10 @@
 /**
  * `estudio/protocolo`: contrato del protocolo de `dev` entre el servidor (`cli`) y la pagina (ADR 0004, 0007).
  * Interfaz: el estado que `dev` empuja por `/api/estado` y `/eventos` (`estadoDeDevSchema`, `EstadoDeDev`, `IssueDeDev`,
- * `TipoDeCambio`). La pagina valida con los esquemas; `cli` importa de aqui solo tipos (`import type`).
+ * `TipoDeCambio`), las lecturas del editor (`/api/archivos`, `/api/archivo/<ruta>`) y las ediciones de texto de `/api/edit`. La pagina valida con los esquemas; `cli` importa de aqui solo tipos (`import type`).
  * Invariantes: sin DOM ni Node; solo depende de `canonico` y `zod`, para que importarlo no arrastre la app de navegador.
  */
-import { eventoDeActividadSchema, fuenteCanonicaSchema, issueSchema } from 'canonico';
+import { edicionDeTextoSchema, eventoDeActividadSchema, fuenteCanonicaSchema, issueSchema } from 'canonico';
 import { z } from 'zod';
 
 export const issueDeDevSchema = issueSchema.extend({
@@ -67,3 +67,30 @@ export function rutaDeInspect(comando: ComandoDeInspect, argumento: string, opci
   const query = new URLSearchParams(opciones).toString();
   return `/api/inspect/${comando}/${encodeURIComponent(argumento)}${query === '' ? '' : `?${query}`}`;
 }
+
+/** `GET /api/archivos`: los `.dg` del Workspace y los de `--theme-path` (`soloLectura: true`), ordenados por ruta. */
+export const archivosDeDevSchema = z.object({
+  version: z.number().int(),
+  archivos: z.array(z.object({ file: z.string(), hash: z.string(), soloLectura: z.boolean() })),
+});
+export type ArchivosDeDev = z.infer<typeof archivosDeDevSchema>;
+
+/** `GET /api/archivo/<ruta>` (404 si no existe): la `version` es la base de la siguiente edicion del editor. */
+export const archivoDeDevSchema = z.object({ file: z.string(), texto: z.string(), hash: z.string(), version: z.number().int() });
+export type ArchivoDeDev = z.infer<typeof archivoDeDevSchema>;
+
+export const rutaDeArchivo = (file: string): string => `/api/archivo/${file.split('/').map(encodeURIComponent).join('/')}`;
+
+/**
+ * `POST /api/edit` con texto (ADR 0007): la misma forma y puerta que `edit --edits`, con la `version` que vio la pagina
+ * (el servidor la traduce a `visto`). `descripcion` nombra la entrada del Historial (por defecto "texto de <archivo>").
+ * `aunqueNoCompile` (guardado del editor, historia 21) escribe aunque el texto introduzca errores; sin el, un error nuevo
+ * rechaza con `invalida` (`fix` y "Aplicar N fix", todo o nada).
+ */
+export const peticionDeEdicionesSchema = z.object({
+  ediciones: z.array(edicionDeTextoSchema).min(1),
+  version: z.number().int().nonnegative().optional(),
+  descripcion: z.string().optional(),
+  aunqueNoCompile: z.boolean().optional(),
+});
+export type PeticionDeEdiciones = z.infer<typeof peticionDeEdicionesSchema>;

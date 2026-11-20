@@ -29,7 +29,7 @@ describe('cliente unico de la pagina de dev', () => {
 
     const r = await cliente.editar({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }, 3);
 
-    expect(r).toEqual({ ok: true });
+    expect(r).toEqual({ ok: true, version: 4 });
     expect(s.peticiones).toHaveLength(1);
     expect(s.peticiones[0]?.url).toBe('/api/edit');
     expect(s.peticiones[0]?.init?.method).toBe('POST');
@@ -42,7 +42,7 @@ describe('cliente unico de la pagina de dev', () => {
     const rechazo = crearClienteDeDev({ fetch: servidor({ '/api/edit': { status: 422, cuerpo: { ok: false, mensaje: 'no compila' } } }).fetch, eventos: sinEventos });
     const caido = crearClienteDeDev({ fetch: servidor({ '/api/edit': new Error('caido') }).fetch, eventos: sinEventos });
 
-    expect(await desactualizado.editar(intencion, 0)).toEqual({ ok: false, desactualizado: true, mensaje: 'cambio' });
+    expect(await desactualizado.editar(intencion, 0)).toEqual({ ok: false, desactualizado: true, mensaje: 'cambio', motivo: 'hash-desactualizado' });
     expect(await rechazo.editar(intencion, 0)).toEqual({ ok: false, desactualizado: false, mensaje: 'no compila' });
     expect(await caido.editar(intencion, 0)).toEqual({ ok: false, desactualizado: false, mensaje: 'caido' });
   });
@@ -51,7 +51,7 @@ describe('cliente unico de la pagina de dev', () => {
     const s = servidor({ '/api/deshacer': { cuerpo: { ok: true, version: 2 } }, '/api/rehacer': { status: 422, cuerpo: { ok: false, mensaje: 'Nada que rehacer' } } });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
-    expect(await cliente.deshacer()).toEqual({ ok: true });
+    expect(await cliente.deshacer()).toEqual({ ok: true, version: 2 });
     expect(await cliente.rehacer()).toEqual({ ok: false, desactualizado: false, mensaje: 'Nada que rehacer' });
     expect(s.peticiones.map(({ url, init }) => [url, init?.method])).toEqual([
       ['/api/deshacer', 'POST'],

@@ -10,17 +10,34 @@ import type { DevEnMemoria } from '../src/contrato';
 import { Estudio } from '../navegador/estudio';
 import type { Plataforma } from '../navegador/comandos/teclas';
 
+// jsdom no mide rangos de texto: CodeMirror los pide al dibujar el cursor y la seleccion. Sin geometria (cajas vacias);
+// la posicion de marcadores y el scroll se prueban en Chromium.
+if (typeof Range !== 'undefined' && !('getClientRects' in Range.prototype)) {
+  const vacio = { x: 0, y: 0, width: 0, height: 0, top: 0, left: 0, right: 0, bottom: 0, toJSON: () => ({}) };
+  Object.assign(Range.prototype, { getClientRects: () => Object.assign([], { item: () => null }), getBoundingClientRect: () => vacio });
+}
+
 // La primera Geometria pasa por ELK en frio (mas de 1 s en una maquina cargada).
 configure({ asyncUtilTimeout: 15_000 });
 
 /** El layout real (el del Worker en el navegador), para las Vistas cuya Geometria aun no llego del servidor. */
 export const layoutReal: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
 
-/** `temas`: archivos de `--theme-path` (solo lectura); `actividad`: texto inicial de `.diagrams/actividad.jsonl`. */
-export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas, actividad }: { hash?: string; plataforma?: Plataforma; temas?: Record<string, string>; actividad?: string } = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
+export interface OpcionesDeMontaje {
+  hash?: string;
+  plataforma?: Plataforma;
+  /** Archivos de `--theme-path` (solo lectura). */
+  temas?: Record<string, string>;
+  /** Texto inicial de `.diagrams/actividad.jsonl`. */
+  actividad?: string;
+  /** Envuelve el `fetch` del fake (para anotar peticiones o inyectar fallos de red). */
+  envolverFetch?: (fetchDelFake: typeof fetch) => typeof fetch;
+}
+
+export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas, actividad, envolverFetch = (f) => f }: OpcionesDeMontaje = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
   window.history.replaceState(null, '', `/${hash}`);
   const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }) });
-  const { container } = render(<Estudio fetch={dev.fetch} eventos={dev.eventos} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={() => false} plataforma={plataforma} />);
+  const { container } = render(<Estudio fetch={envolverFetch(dev.fetch)} eventos={dev.eventos} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={() => false} plataforma={plataforma} />);
   return { dev, contenedor: container };
 }
 
