@@ -6,7 +6,7 @@
  * El resaltado (`Resaltado`) es un valor: las rafagas se unen y cada elemento tocado reinicia su tiempo; lo quitado
  * dura hasta la siguiente Diferencia externa; el indice se limpia al visitar la Vista; la galeria, al verla.
  */
-import { idDeArista, idDeElementoDeSecuencia, padreDe, resolveView, revealAt } from 'canonico';
+import { claveDeElemento, idDeArista, idDeElementoDeSecuencia, padreDe, resolveView, revealAt } from 'canonico';
 import type { EstadoDeColapso, FuenteCanonica, NodoResuelto, VistaResuelta } from 'canonico';
 
 import type { DiferenciaDeDev, ElementoDeDiferenciaDeDev } from '../../src/protocolo';
@@ -150,15 +150,13 @@ export const RESALTADO_VACIO: Resaltado = { lienzo: [], indice: [], temas: [], q
 /** Duracion por defecto del resaltado en el lienzo (la fija el chrome, no el contrato). */
 export const DURACION_DEL_RESALTADO_MS = 5000;
 
-const clave = (e: ElementoDeDiferenciaDeDev): string => JSON.stringify(e.tipo === 'mensaje' ? { ...e, posicion: undefined, ruta: e.id === undefined ? e.ruta : undefined } : e);
-
 /** Une una Diferencia externa: cada elemento tocado reinicia su tiempo, el indice y la galeria acumulan, lo quitado se reemplaza. */
 export function unirDiferencia(resaltado: Resaltado, diferencia: DiferenciaDeDev, opciones: ContextoDeProyeccion & { fuente: FuenteCanonica; ahora: number; duracionMs: number }): Resaltado {
   const { fuente, ahora, duracionMs, ...contexto } = opciones;
   const tocados = tocadosDe(diferencia);
   const p = proyectarDiferencia(tocados, fuente, contexto);
-  const nuevos = new Map(tocados.filter((e) => e.tipo !== 'tema' && e.tipo !== 'vista' && e.tipo !== 'interaccion').map((e) => [clave(e), e]));
-  const sinRenovar = resaltado.lienzo.filter(({ elemento }) => !nuevos.has(clave(elemento)));
+  const nuevos = new Map(tocados.filter((e) => e.tipo !== 'tema' && e.tipo !== 'vista' && e.tipo !== 'interaccion').map((e) => [claveDeElemento(e), e]));
+  const sinRenovar = resaltado.lienzo.filter(({ elemento }) => !nuevos.has(claveDeElemento(elemento)));
   const sinRepetir = (a: readonly string[], b: readonly string[]): string[] => [...new Set([...a, ...b])];
   const { temaDeLaVista: _anterior, ...resto } = resaltado;
   return {

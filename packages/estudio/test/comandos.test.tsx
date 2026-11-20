@@ -150,6 +150,25 @@ describe('Buscador', () => {
     expect(await within(detalle).findByRole('heading', { name: 'Base de datos' })).toBeTruthy();
   });
 
+  it('un Nodo que la Vista activa no muestra lleva a la primera Vista que si y queda seleccionado', async () => {
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL });
+    await lienzoListo(contenedor, 'mapa');
+    const primero = await buscador();
+    escribir(primero.campo, 'otr');
+    fireEvent.click(await within(primero.dialogo).findByRole('option', { name: /^otra/ }));
+    await lienzoListo(contenedor, 'otra');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Buscador' })).toBeNull());
+    const { dialogo, campo } = await buscador();
+
+    escribir(campo, 'API');
+    fireEvent.click(await within(dialogo).findByRole('option', { name: /^API/ }));
+
+    await lienzoListo(contenedor, 'mapa');
+    await waitFor(() => expect(window.location.hash).toContain('s=api'));
+    const detalle = screen.getByRole('region', { name: 'Detalle' });
+    expect(await within(detalle).findByRole('heading', { name: 'API' })).toBeTruthy();
+  });
+
   it('salta a archivo:linea en Codigo', async () => {
     await montarEstudio({ 'main.dg': DSL });
     await screen.findByRole('listbox', { name: 'Vistas' });

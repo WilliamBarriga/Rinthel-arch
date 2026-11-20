@@ -10,6 +10,7 @@ import type { ReactElement } from 'react';
 
 import { useEstudio } from '../marco/contexto';
 import type { ContextoDelEstudio, SitioDeCodigo } from '../marco/contexto';
+import { destinoDeNodo } from '../vistas/destino';
 import { indiceDeVistas } from '../vistas/indice';
 import { BotonConAtajo } from './atajo';
 import { COMANDOS } from './registro';
@@ -38,14 +39,9 @@ export function sitioEscrito(consulta: string): SitioDeCodigo | undefined {
 const contiene = (texto: string, consulta: string): boolean => texto.toLowerCase().includes(consulta.toLowerCase());
 
 /** Un Nodo elegido: se selecciona y se abre su Detalle. Si la Vista activa no lo muestra, primero se va a la primera que si. */
-async function irANodo(e: ContextoDelEstudio, id: string): Promise<void> {
-  const r = await e.cliente.inspeccionar('nodo', id);
-  const vistas = r.ok && r.salida.comando === 'nodo' ? r.salida.vistas.map((v) => v.id) : [];
-  const destino = vistas[0];
-  if (e.vista !== undefined && !vistas.includes(e.vista) && destino !== undefined) {
-    e.irAVista(destino);
-    return;
-  }
+function irANodo(e: ContextoDelEstudio, id: string): void {
+  const destino = e.fuente === undefined ? undefined : destinoDeNodo(e.fuente, id, e.vista);
+  if (destino !== undefined && destino.vista !== e.vista) e.irAVista(destino.vista);
   e.seleccionar(id);
   e.abrirPestana('derecha', 'detalle');
 }

@@ -7,11 +7,11 @@
  */
 import { useSyncExternalStore } from 'react';
 
-import { resolveView } from 'canonico';
 import type { EventoDeActividad, FuenteCanonica, ObjetivoDeActividad } from 'canonico';
 
 import { actividadDeDevSchema } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
+import { destinoDeNodo, vistaMuestra } from '../vistas/destino';
 
 export type TipoDeMarca = 'ok' | 'errores' | 'avisos' | 'fallo';
 
@@ -38,12 +38,6 @@ export function textoDelObjetivo(objetivo: ObjetivoDeActividad | undefined): str
 /** "quien comando objetivo": la ultima linea del agente en la barra. */
 export const resumenDelEvento = (evento: EventoDeActividad): string => [quienDelEvento(evento), evento.comando, textoDelObjetivo(evento.objetivo)].filter((p) => p !== '').join(' ');
 
-const contiene = (fuente: FuenteCanonica, vista: string, nodo: string): boolean => {
-  const resuelta = resolveView(fuente, vista);
-  const visible = (nodos: readonly { id: string; children: readonly unknown[] }[]): boolean => nodos.some((n) => n.id === nodo || visible(n.children as typeof nodos));
-  return resuelta !== undefined && visible(resuelta.nodes);
-};
-
 export interface DestinoDelAgente {
   vista: string;
   /** Nodo a seleccionar en `vista`. */
@@ -60,12 +54,9 @@ export function destinoDelObjetivo(objetivo: ObjetivoDeActividad | undefined, fu
   const { vista, nodo } = objetivo;
   if (vista !== undefined) {
     if (!fuente.views.some((v) => v.id === vista)) return undefined;
-    return nodo !== undefined && contiene(fuente, vista, nodo) ? { vista, seleccion: nodo } : { vista };
+    return nodo !== undefined && vistaMuestra(fuente, vista, nodo) ? { vista, seleccion: nodo } : { vista };
   }
-  if (nodo === undefined) return undefined;
-  if (vistaActiva !== undefined && contiene(fuente, vistaActiva, nodo)) return { vista: vistaActiva, seleccion: nodo };
-  const primera = fuente.views.find((v) => contiene(fuente, v.id, nodo));
-  return primera === undefined ? undefined : { vista: primera.id, seleccion: nodo };
+  return nodo === undefined ? undefined : destinoDeNodo(fuente, nodo, vistaActiva);
 }
 
 /** Eventos que guarda el feed (los 50 previos mas los que llegan). */
