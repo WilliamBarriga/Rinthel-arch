@@ -22,7 +22,7 @@ import { useLienzoDelEstudio } from './lienzo/lienzo';
 import { Marco } from './marco/marco';
 import { ProveedoresDelEstudio } from './marco/proveedores';
 import { useEstadoDeDev } from './marco/use-estado-de-dev';
-import { useComponentes } from './use-componentes';
+import { useComponentes } from './temas/use-componentes';
 
 export interface PropsDelEstudio {
   fetch: typeof fetch;

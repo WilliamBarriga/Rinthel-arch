@@ -6,9 +6,9 @@ import { useMemo } from 'react';
 
 import type { ComponentesDeTema } from 'render';
 
-import type { ClienteDeDev } from './cliente';
+import type { ClienteDeDev } from '../cliente';
 import { crearCargadorDeComponentes } from './componentes';
-import { useLecturaPorVersion } from './marco/use-lectura-por-version';
+import { useLecturaPorVersion } from '../marco/use-lectura-por-version';
 
 export function useComponentes(cliente: ClienteDeDev, version: number | undefined, confirmar: (mensaje: string) => boolean, reportar: (mensaje: string) => void): ComponentesDeTema | undefined {
   const cargar = useMemo(() => crearCargadorDeComponentes(cliente, confirmar), [cliente, confirmar]);

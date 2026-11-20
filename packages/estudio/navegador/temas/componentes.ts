@@ -7,7 +7,7 @@ import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import type { ComponentesDeTema } from 'render';
 
-import type { ClienteDeDev, Lectura } from './cliente';
+import type { ClienteDeDev, Lectura } from '../cliente';
 
 const MODULOS: Record<string, unknown> = { react: React, 'react/jsx-runtime': jsxRuntime, 'react/jsx-dev-runtime': jsxRuntime };
 
