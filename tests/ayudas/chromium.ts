@@ -1,6 +1,6 @@
 /**
- * Chromium para Playwright, compartido por la punta a punta de la UI (`e2e-estudio.test.ts`) y `scripts/capturas.ts`
- * (que lo importa por ruta: vive aqui porque un paquete no puede importar fuera de su carpeta). Un solo motor para que
+ * Chromium para Playwright, compartido por la punta a punta de la UI (`packages/cli/test/e2e-estudio.test.ts`) y las
+ * capturas (`scripts/capturas.ts`, `scripts/capturas-estudio.ts`); todos lo importan por ruta. Un solo motor para que
  * pruebas y capturas vean lo mismo.
  * Orden: `$CHROMIUM_PATH` tal cual, o el ejecutable de la ultima revision `chromium-<rev>` de la cache de Playwright
  * (`$PLAYWRIGHT_BROWSERS_PATH` o la de la plataforma) que tenga uno de los nombres de la plataforma (Linux, macOS o

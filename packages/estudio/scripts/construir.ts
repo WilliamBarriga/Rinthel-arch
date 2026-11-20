@@ -4,7 +4,7 @@
  */
 import { fileURLToPath } from 'node:url';
 
-import { construirEstudio } from './empaquetar.ts';
+import { construirEstudio } from '../src/construir.ts';
 import { generarPalabrasClave } from './palabras-clave.ts';
 
 generarPalabrasClave();
