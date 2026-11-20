@@ -18,6 +18,8 @@ import { usePropsDeDatos, useTamano } from './arranque';
 import { crearClienteDeDev } from './cliente';
 import { historialDelCliente } from './historial/historial-visible';
 import type { ClienteDeDev, DependenciasDelCliente } from './cliente';
+import { textoDeSitio } from './sitio';
+import { useCaducidad } from './marco/use-caducidad';
 import { crearCargadorDeCodigo } from './componentes';
 import { crearGeometriasDeDev } from './geometrias';
 import type { Dibujable, GeometriasDeDev } from './geometrias';
@@ -119,11 +121,7 @@ function useComponentes(estado: EstadoDeDev | undefined, fetchFn: typeof fetch, 
 
 function useAviso(): [string | undefined, (texto: string) => void] {
   const [aviso, setAviso] = useState<string>();
-  useEffect(() => {
-    if (aviso === undefined) return;
-    const t = setTimeout(() => setAviso(undefined), DURACION_DEL_AVISO_MS);
-    return () => clearTimeout(t);
-  }, [aviso]);
+  useCaducidad(aviso === undefined ? undefined : DURACION_DEL_AVISO_MS, () => setAviso(undefined), aviso);
   return [aviso, setAviso];
 }
 
@@ -200,7 +198,6 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
     vista: props.view,
     estado: props.state,
     paso: props.step,
-    irAVista: (vista) => props.onPathChange([vista]),
     avisar: marco.avisar,
   });
   const tema = datos.theme;
@@ -309,7 +306,7 @@ interface PropsDeMarcoCompleto extends PropsDelMarco {
  */
 export function motivoSinGestos(estado: EstadoDeDev | undefined): string | undefined {
   const error = estado?.issues.find((i) => i.severity === 'error');
-  return error === undefined ? undefined : `Gestos deshabilitados: el texto no compila (${error.file}:${error.line} ${error.message})`;
+  return error === undefined ? undefined : `Gestos deshabilitados: el texto no compila (${textoDeSitio(error)} ${error.message})`;
 }
 
 function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevio, previsualizarTema, fuente, hashProps, navegacion, lienzo, leyenda, alAbrirDetalle }: PropsDeMarcoCompleto): ReactElement {

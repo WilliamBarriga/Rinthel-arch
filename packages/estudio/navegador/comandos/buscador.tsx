@@ -9,7 +9,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import { useEstudio } from '../marco/contexto';
-import type { ContextoDelEstudio, SitioDeCodigo } from '../marco/contexto';
+import type { ContextoDelEstudio } from '../marco/contexto';
+import { sitioEscrito, textoDeSitio } from '../sitio';
 import { destinoDeNodo } from '../vistas/destino';
 import { indiceDeVistas } from '../vistas/indice';
 import { BotonConAtajo } from './atajo';
@@ -29,12 +30,6 @@ interface Grupo {
   items: Entrada[];
 }
 
-/** `main.dg:12` -> sitio; cualquier otra cosa, `undefined`. */
-export function sitioEscrito(consulta: string): SitioDeCodigo | undefined {
-  const m = /^(\S+):(\d+)$/.exec(consulta.trim());
-  if (m === null || Number(m[2]) < 1) return undefined;
-  return { file: m[1]!, line: Number(m[2]) };
-}
 
 const contiene = (texto: string, consulta: string): boolean => texto.toLowerCase().includes(consulta.toLowerCase());
 
@@ -60,7 +55,7 @@ function useNodos(consulta: string): Entrada[] {
       if (!vigente || !r.ok || r.salida.comando !== 'buscar') return;
       const entradas = r.salida.resultados
         .filter((n) => n.kind === 'nodo')
-        .map((n) => ({ value: `nodo:${n.id}`, label: n.title, detalle: `${n.id} · ${n.file}:${n.line}`, ejecutar: (e: ContextoDelEstudio) => irANodo(e, n.id) }));
+        .map((n) => ({ value: `nodo:${n.id}`, label: n.title, detalle: `${n.id} · ${textoDeSitio(n)}`, ejecutar: (e: ContextoDelEstudio) => irANodo(e, n.id) }));
       setNodos({ consulta, entradas });
     });
     return () => {
@@ -79,7 +74,7 @@ function Contenido({ alElegir }: { alElegir: () => void }): ReactElement {
 
   const sitio = sitioEscrito(consulta);
   const todos: Grupo[] = [
-    { value: 'Archivo', items: sitio === undefined ? [] : [{ value: `sitio:${sitio.file}:${sitio.line}`, label: `Abrir ${sitio.file}:${sitio.line}`, ejecutar: (e) => e.abrirCodigo(sitio) }] },
+    { value: 'Archivo', items: sitio === undefined ? [] : [{ value: `sitio:${textoDeSitio(sitio)}`, label: `Abrir ${textoDeSitio(sitio)}`, ejecutar: (e) => e.abrirCodigo(sitio) }] },
     {
       value: 'Comandos',
       items: COMANDOS.filter((c) => c.enBuscador !== false && contiene(c.nombre, consulta.trim())).map((c) => ({ value: `comando:${c.id}`, label: c.nombre, teclas: etiquetasDeTeclas(c, plataforma), ejecutar: c.ejecutar })),

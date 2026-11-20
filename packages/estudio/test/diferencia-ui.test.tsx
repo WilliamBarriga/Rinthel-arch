@@ -117,11 +117,13 @@ describe('Diferencia externa en la pagina', () => {
     expect(marcada(opcion)).toBe(true);
   });
 
-  it('con "seguir al agente" y sin Evento, lleva a la primera Vista que toca la Diferencia', async () => {
+  it('con "seguir al agente", una Diferencia sin Evento no mueve la Vista: solo marca el indice', async () => {
     const { dev } = await abrir('#vista=detalle');
     fireEvent.click(screen.getByRole('switch', { name: 'Seguir al agente' }));
     act(() => dev.editarFuera('main.dg', DSL.replace('"Cola"', '"Cola nueva"')));
 
-    await waitFor(() => expect(window.location.hash).toBe('#vista=otra'), { timeout: 5000 });
+    await waitFor(() => expect(marcada(opcionDeVista('otra'))).toBe(true));
+    await act(async () => new Promise((r) => setTimeout(r, 1200)));
+    expect(window.location.hash).toBe('#vista=detalle');
   });
 });

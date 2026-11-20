@@ -5,12 +5,11 @@
  * mueven nada); solo los Eventos en vivo suben el contador (si no se sigue al agente) y llegan a `alEnVivo`.
  * Seams para la Diferencia (#196): `alEnVivo` (cada tanda nueva) y `siguiendo` (el interruptor).
  */
-import { useSyncExternalStore } from 'react';
-
 import type { EventoDeActividad, FuenteCanonica, ObjetivoDeActividad } from 'canonico';
 
 import { actividadDeDevSchema } from '../../src/protocolo';
-import type { ClienteDeDev } from '../cliente';
+import { almacenPorCliente, crearValor, escucharValidado, useObservable } from '../almacen';
+import type { ClienteQueEscucha, Observable } from '../almacen';
 import { destinoDeNodo, vistaMuestra } from '../vistas/destino';
 
 export type TipoDeMarca = 'ok' | 'errores' | 'avisos' | 'fallo';
@@ -71,10 +70,7 @@ export interface InstantaneaDelAgente {
   siguiendo: boolean;
 }
 
-export interface ActividadDelAgente {
-  instantanea(): InstantaneaDelAgente;
-  /** Para `useSyncExternalStore`: avisa en cada cambio de la instantanea. */
-  suscribir(alCambiar: () => void): () => void;
+export interface ActividadDelAgente extends Observable<InstantaneaDelAgente> {
   /** Cada tanda en vivo (no los `previos`), tras actualizar la instantanea; devuelve la baja. */
   alEnVivo(alEventos: (eventos: readonly EventoDeActividad[]) => void): () => void;
   /** Encender pone el contador a cero. */
@@ -83,21 +79,15 @@ export interface ActividadDelAgente {
   marcarVisto(): void;
 }
 
-export function crearActividadDelAgente(cliente: Pick<ClienteDeDev, 'escuchar'>): ActividadDelAgente {
-  let actual: InstantaneaDelAgente = { eventos: [], sinVer: 0, siguiendo: false };
-  const oyentes = new Set<() => void>();
+export function crearActividadDelAgente(cliente: ClienteQueEscucha): ActividadDelAgente {
+  const valor = crearValor<InstantaneaDelAgente>({ eventos: [], sinVer: 0, siguiendo: false });
   const enVivo = new Set<(eventos: readonly EventoDeActividad[]) => void>();
-  const cambiar = (siguiente: InstantaneaDelAgente): void => {
-    actual = siguiente;
-    for (const oyente of [...oyentes]) oyente();
-  };
-  cliente.escuchar('actividad', (datos) => {
-    const leido = actividadDeDevSchema.safeParse(datos);
-    if (!leido.success || leido.data.eventos.length === 0) return;
-    const { previos, eventos } = leido.data;
+  escucharValidado(cliente, 'actividad', actividadDeDevSchema, ({ previos, eventos }) => {
+    if (eventos.length === 0) return;
+    const actual = valor.instantanea();
     // Una reconexion vuelve a mandar los previos: reemplazan el feed en lugar de duplicarlo.
     const base = previos ? [] : actual.eventos;
-    cambiar({
+    valor.cambiar({
       ...actual,
       eventos: [...base, ...eventos].slice(-EVENTOS_EN_EL_FEED),
       sinVer: previos || actual.siguiendo ? actual.sinVer : actual.sinVer + eventos.length,
@@ -105,37 +95,24 @@ export function crearActividadDelAgente(cliente: Pick<ClienteDeDev, 'escuchar'>)
     if (!previos) for (const oyente of [...enVivo]) oyente(eventos);
   });
   return {
-    instantanea: () => actual,
-    suscribir(alCambiar) {
-      oyentes.add(alCambiar);
-      return () => oyentes.delete(alCambiar);
-    },
+    instantanea: valor.instantanea,
+    suscribir: valor.suscribir,
     alEnVivo(alEventos) {
       enVivo.add(alEventos);
       return () => enVivo.delete(alEventos);
     },
-    seguir: (siguiendo) => cambiar({ ...actual, siguiendo, sinVer: siguiendo ? 0 : actual.sinVer }),
+    seguir: (siguiendo) => valor.cambiar({ ...valor.instantanea(), siguiendo, sinVer: siguiendo ? 0 : valor.instantanea().sinVer }),
     marcarVisto() {
-      if (actual.sinVer !== 0) cambiar({ ...actual, sinVer: 0 });
+      if (valor.instantanea().sinVer !== 0) valor.cambiar({ ...valor.instantanea(), sinVer: 0 });
     },
   };
 }
 
 /** Un almacen por cliente: lo comparten el panel Agente y las pildoras de la barra sin pasar por el contexto del marco. */
-const porCliente = new WeakMap<Pick<ClienteDeDev, 'escuchar'>, ActividadDelAgente>();
-
-export function actividadDelCliente(cliente: Pick<ClienteDeDev, 'escuchar'>): ActividadDelAgente {
-  let almacen = porCliente.get(cliente);
-  if (almacen === undefined) {
-    almacen = crearActividadDelAgente(cliente);
-    porCliente.set(cliente, almacen);
-  }
-  return almacen;
-}
+export const actividadDelCliente = almacenPorCliente(crearActividadDelAgente);
 
 /** El almacen del cliente y su instantanea vigente. */
-export function useActividadDelAgente(cliente: Pick<ClienteDeDev, 'escuchar'>): { almacen: ActividadDelAgente; instantanea: InstantaneaDelAgente } {
+export function useActividadDelAgente(cliente: ClienteQueEscucha): { almacen: ActividadDelAgente; instantanea: InstantaneaDelAgente } {
   const almacen = actividadDelCliente(cliente);
-  const instantanea = useSyncExternalStore(almacen.suscribir, almacen.instantanea);
-  return { almacen, instantanea };
+  return { almacen, instantanea: useObservable(almacen) };
 }

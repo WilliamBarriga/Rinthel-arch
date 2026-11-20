@@ -12,6 +12,7 @@ import { diferenciasDelCliente } from '../diferencia/diferencias';
 import { verGaleria } from '../diferencia/proyeccion';
 import { MarcaExterna, useMarcasExternas } from '../diferencia/resaltado';
 import { useEstudio } from '../marco/contexto';
+import { textoDeSitio } from '../sitio';
 
 type SalidaDeTema = Extract<SalidaDeInspect, { comando: 'tema' }>['tema'];
 type Lectura = { tipo: 'cargando' } | { tipo: 'tema'; tema: SalidaDeTema } | { tipo: 'fallo'; mensaje: string };
@@ -117,7 +118,7 @@ function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, 
         </p>
       ) : (
         <>
-          <p className="ui-mono ui-sitio">{`${lectura.tema.file}:${lectura.tema.line}`}</p>
+          <p className="ui-mono ui-sitio">{textoDeSitio(lectura.tema)}</p>
           <h3 className="ui-subtitulo">Cadena extends</h3>
           <p className="ui-mono">{[nombre, ...lectura.tema.extends].join(' > ')}</p>
         </>

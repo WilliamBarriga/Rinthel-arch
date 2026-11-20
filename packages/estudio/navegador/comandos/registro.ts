@@ -8,6 +8,7 @@ import { actividadDelCliente } from '../agente/actividad';
 import { moverElHistorial } from '../historial/acciones';
 import type { ContextoDelEstudio } from '../marco/contexto';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS } from '../marco/pestanas';
+import { sitioDeSalida } from '../sitio';
 import type { DeclaracionDeTeclas } from './teclas';
 
 export interface Comando extends DeclaracionDeTeclas {
@@ -26,9 +27,8 @@ async function abrirCodigoAqui(e: ContextoDelEstudio): Promise<void> {
   e.abrirCodigo();
   const r = await consulta;
   if (r?.ok !== true) return;
-  const s = r.salida;
-  if (s.comando === 'nodo') e.abrirCodigo({ file: s.nodo.file, line: s.nodo.line });
-  else if (s.comando === 'vista') e.abrirCodigo({ file: s.vista.file, line: s.vista.line });
+  const sitio = sitioDeSalida(r.salida);
+  if (sitio !== undefined) e.abrirCodigo(sitio);
 }
 
 /** Vuelve a la pestana Vistas con el foco en el lienzo. */

@@ -36,7 +36,7 @@ dg validate --workspace <ruta> --json
 
 - El panel **Agente** muestra los ultimos 50 Eventos al abrir y los nuevos en vivo: hora, agente, comando, objetivo clicable (Vista, Nodo, archivo) y resultado; "Ver args" despliega el argv. La pildora de la barra resume la ultima linea y cuenta las que no viste.
 - Todo lo que cambia por fuera de la pagina (el CLI, un agente que edita el `.dg` a mano u otro editor) se resalta unos 5 s en el lienzo, marca en el indice las otras Vistas que lo muestran y en la galeria los Temas cambiados; lo quitado se lista en el panel Agente hasta el siguiente cambio externo. Lo que escribe la propia UI no se resalta.
-- Con **seguir** activo, la UI salta a la Vista o al Nodo que nombra cada Evento; si un cambio llega sin Evento, va a la primera Vista que lo toca.
+- Con **seguir** activo, la UI salta a la Vista o al Nodo que nombra cada Evento; un cambio sin Evento no mueve la Vista: solo se resalta y marca en el indice las Vistas que toca.
 
 ## Buscador y atajos
 

@@ -25,6 +25,8 @@ import { comandoPorId } from '../comandos/registro';
 import { aplicarFixes, fixDelIssue } from '../issues/aplicar-fix';
 import { useEstudio } from '../marco/contexto';
 import type { ContextoDelEstudio, SitioDeCodigo } from '../marco/contexto';
+import { useCaducidad } from '../marco/use-caducidad';
+import { sitioDeSalida } from '../sitio';
 import { completarDsl } from './completado';
 import { diagnosticosDe } from './diagnosticos';
 import type { FixDeIssue } from './diagnosticos';
@@ -162,17 +164,8 @@ function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado 
     if (editor !== undefined && enDisco !== undefined && !soloLectura) void editor.guardador.sincronizar(enDisco);
   }, [editor, enDisco, soloLectura]);
 
-  useEffect(() => {
-    if (editor === undefined || marcado === 0) return;
-    const temporizador = setTimeout(() => editor.vista.dispatch({ effects: limpiarMarcasDelDisco.of(null) }), DURACION_DE_LAS_MARCAS_MS);
-    return () => clearTimeout(temporizador);
-  }, [editor, marcado]);
-
-  useEffect(() => {
-    if (perdidos.length === 0) return;
-    const temporizador = setTimeout(() => setPerdidos([]), DURACION_DEL_AVISO_MS);
-    return () => clearTimeout(temporizador);
-  }, [perdidos]);
+  useCaducidad(editor === undefined || marcado === 0 ? undefined : DURACION_DE_LAS_MARCAS_MS, () => editor?.vista.dispatch({ effects: limpiarMarcasDelDisco.of(null) }), `${marcado}`);
+  useCaducidad(perdidos.length === 0 ? undefined : DURACION_DEL_AVISO_MS, () => setPerdidos([]), perdidos);
 
   // Issues en linea: solo con el buffer igual al disco, para que las posiciones coincidan.
   const issues = estudio.estado?.issues;
@@ -251,10 +244,9 @@ async function irADefinicion(id: string, cliente: ClienteDeDev, estudio: Context
   for (const comando of ['nodo', 'vista', 'interaccion'] as const) {
     const r = await cliente.inspeccionar(comando, id);
     if (!r.ok) continue;
-    const s = r.salida;
-    const sitio = s.comando === 'nodo' ? s.nodo : s.comando === 'vista' ? s.vista : s.comando === 'interaccion' ? s.interaccion : undefined;
+    const sitio = sitioDeSalida(r.salida);
     if (sitio !== undefined) {
-      estudio.abrirCodigo({ file: sitio.file, line: sitio.line });
+      estudio.abrirCodigo(sitio);
       return;
     }
   }
