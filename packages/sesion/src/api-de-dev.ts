@@ -1,11 +1,12 @@
 /**
- * Rutas `/api/*` de `dev` sobre un Workspace vivo, sin transporte: entra una peticion (metodo, URL y cuerpo crudo) y sale
- * siempre una respuesta completa (estado HTTP, cuerpo JSON ya serializado y cabeceras). La usan el servidor real (`cli`)
+ * Rutas `/api/*` y `/componentes.js` de `dev` sobre un Workspace vivo, sin transporte: entra una peticion (metodo, URL y
+ * cuerpo crudo) y sale siempre una respuesta completa (estado HTTP, cuerpo ya serializado y cabeceras). La usan el servidor real (`cli`)
  * y `devEnMemoria` (`estudio/contrato`), asi que el ruteo, la validacion y los bordes son unos solos (ADR 0007).
  * Bordes: ruta desconocida 404; metodo ajeno 405 con `allow`; JSON o forma invalida 400; rechazos `estadoHttpDeRechazo`
- * (409/422); una excepcion (fallo de I/O del puerto) 500 con su mensaje. Todos con `{ ok: false, mensaje }`.
+ * (409/422); el bundle de Componentes sin confianza 403; una excepcion (fallo de I/O del puerto) 500 con su mensaje.
+ * Todos con `{ ok: false, mensaje }`. El bundle es lo unico que no es JSON (`text/javascript`).
  * Invariantes: nunca rechaza. Al adaptador le quedan solo el transporte y su seguridad (Host, Origin, content-type) y
- * lo que no es `/api/*` (estaticos, `/eventos`, fuentes, `/componentes.js`).
+ * lo demas (estaticos, `/eventos`, fuentes).
  */
 import { archivoDeRuta, COMANDOS_DE_INSPECT, estadoHttpDeRechazo, intencionSchema, peticionDeEdicionesSchema, peticionDeSaltoSchema, RUTAS_DE_DEV } from 'canonico';
 import type { ComandoDeInspect, Intencion } from 'canonico';
@@ -22,7 +23,7 @@ export interface PeticionDeDev {
 
 export interface RespuestaDeDev {
   status: number;
-  /** JSON serializado. */
+  /** JSON serializado, salvo el bundle de `/componentes.js` (JavaScript). */
   cuerpo: string;
   cabeceras: Readonly<Record<string, string>>;
 }
@@ -30,14 +31,15 @@ export interface RespuestaDeDev {
 /** Rutas POST de la API (exactas). */
 const RUTAS_POST: readonly string[] = [RUTAS_DE_DEV.edit, RUTAS_DE_DEV.deshacer, RUTAS_DE_DEV.rehacer, RUTAS_DE_DEV.saltar, RUTAS_DE_DEV.confiar];
 /** Rutas GET de la API: exactas y prefijos (`<prefijo><argumento>`). */
-const RUTAS_GET: readonly string[] = [RUTAS_DE_DEV.estado, RUTAS_DE_DEV.archivos, RUTAS_DE_DEV.codigo];
+const RUTAS_GET: readonly string[] = [RUTAS_DE_DEV.estado, RUTAS_DE_DEV.archivos, RUTAS_DE_DEV.codigo, RUTAS_DE_DEV.componentes];
 const PREFIJOS_GET: readonly string[] = [RUTAS_DE_DEV.archivo, RUTAS_DE_DEV.inspect, RUTAS_DE_DEV.vista];
 const esRutaGet = (ruta: string): boolean => RUTAS_GET.includes(ruta) || PREFIJOS_GET.some((prefijo) => ruta.startsWith(prefijo));
 
-/** Respuesta interna antes de serializar. */
+/** Respuesta interna antes de serializar; `javascript` va tal cual en vez de `cuerpo`. */
 interface Respuesta {
   status: number;
-  cuerpo: unknown;
+  cuerpo?: unknown;
+  javascript?: string;
   cabeceras?: Record<string, string>;
 }
 
@@ -112,6 +114,10 @@ async function get(vivo: WorkspaceVivo, url: URL): Promise<Respuesta | undefined
     const { componentes, confiado } = vivo.codigo();
     return json(200, { temaConCodigo: componentes.length > 0, componentes, confiado });
   }
+  if (ruta === RUTAS_DE_DEV.componentes) {
+    const { confiado, bundle } = vivo.codigo();
+    return confiado ? { status: 200, javascript: bundle } : error(403, 'El codigo del Workspace no esta confirmado');
+  }
   if (ruta.startsWith(RUTAS_DE_DEV.inspect)) {
     const consulta = consultaDeRuta(url);
     if (consulta === undefined) return json(404, { ok: false, mensaje: `Ruta de inspect desconocida; se esperaba ${RUTAS_DE_DEV.inspect}<${COMANDOS_DE_INSPECT.join('|')}>/<argumento>`, cercanos: [] });
@@ -134,7 +140,8 @@ async function get(vivo: WorkspaceVivo, url: URL): Promise<Respuesta | undefined
   return undefined;
 }
 
-function serializar({ status, cuerpo, cabeceras }: Respuesta): RespuestaDeDev {
+function serializar({ status, cuerpo, javascript, cabeceras }: Respuesta): RespuestaDeDev {
+  if (javascript !== undefined) return { status, cuerpo: javascript, cabeceras: { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store', ...cabeceras } };
   return { status, cuerpo: JSON.stringify(cuerpo), cabeceras: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...cabeceras } };
 }
 

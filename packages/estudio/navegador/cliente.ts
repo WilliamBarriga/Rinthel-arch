@@ -2,13 +2,14 @@
  * Unica pieza del navegador que conoce las rutas del servidor de `dev`. Ningun metodo lanza: los fallos son datos.
  * Una Geometria que no llega en `plazoDeGeometriaMs` es un fallo: la pagina la calcula en el Worker.
  * SSE: una sola conexion a `/eventos` compartida por todos los oyentes (`escuchar`), abierta con el primero y cerrada
- * con el ultimo; los datos que no son JSON se descartan.
+ * con el ultimo; los datos que no son JSON se descartan. El evento `estado` se valida como `GET /api/estado`: uno
+ * malformado no llega a `suscribir` y se reporta a `alMalformado`.
  */
 import { geometriaCacheadaSchema } from 'canonico';
 import type { GeometriaCacheada, Intencion, SalidaDeInspect } from 'canonico';
 
-import { archivoDeDevSchema, archivosDeDevSchema, estadoDeDevSchema, inspectNoEncontradoSchema, rutaDeArchivo, RUTAS_DE_DEV, rutaDeInspect } from '../src/protocolo';
-import type { ArchivoDeDev, ArchivosDeDev, ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from '../src/protocolo';
+import { archivoDeDevSchema, archivosDeDevSchema, codigoDeDevSchema, estadoDeDevSchema, inspectNoEncontradoSchema, rutaDeArchivo, RUTAS_DE_DEV, rutaDeInspect } from '../src/protocolo';
+import type { ArchivoDeDev, ArchivosDeDev, CodigoDeDev, ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from '../src/protocolo';
 
 /**
  * `desactualizado` es el 409 (`hash-desactualizado`; lo resuelve `escritura/escritura.ts`). `version` (si `dev` la da)
@@ -33,11 +34,17 @@ const PLAZO_DE_GEOMETRIA_MS = 4000;
 /** `ok: false` lleva el mensaje de `inspect` y los ids cercanos (vacios si el fallo no es "no existe"). */
 export type LecturaDeInspect = { ok: true; salida: SalidaDeInspect } | { ok: false; mensaje: string; cercanos: string[] };
 
+/** Lectura que puede fallar con un motivo visible (red, estado HTTP o respuesta malformada). */
+export type Lectura<T> = { ok: true; valor: T } | { ok: false; mensaje: string };
+
 export interface ClienteDeDev {
   /** El estado vigente; `undefined` si no llega o llega roto. */
   estado(): Promise<EstadoDeDev | undefined>;
-  /** Recibe el vigente al conectar y uno por recompilacion; devuelve la baja. */
-  suscribir(alEstado: (estado: EstadoDeDev) => void): () => void;
+  /**
+   * Recibe el vigente al conectar y uno por recompilacion, ya validados; uno malformado se descarta y va a
+   * `alMalformado` con el motivo. Devuelve la baja.
+   */
+  suscribir(alEstado: (estado: EstadoDeDev) => void, alMalformado?: (mensaje: string) => void): () => void;
   /** Oye un evento SSE por nombre con sus datos ya parseados (sin validar); devuelve la baja. */
   escuchar(nombre: NombreDeEventoDeDev, alDatos: (datos: unknown) => void): () => void;
   /** `GET /api/inspect/<comando>/<argumento>`; `opciones` van en la query (las de `tema`). */
@@ -54,6 +61,12 @@ export interface ClienteDeDev {
   rehacer(): Promise<ResultadoDeEnvio>;
   /** `POST /api/historial/saltar { id }` (0: Inicio). */
   saltar(id: number): Promise<ResultadoDeEnvio>;
+  /** `GET /api/codigo`: si los Temas usan Componentes con codigo, cuales y si ya se confia. */
+  codigo(): Promise<Lectura<CodigoDeDev>>;
+  /** `POST /api/confiar`: desde aqui `dev` sirve el bundle de Componentes. */
+  confiar(): Promise<ResultadoDeEnvio>;
+  /** `GET /componentes.js`: el bundle CommonJS de los Componentes de Tema (403 hasta confiar). */
+  bundleDeComponentes(): Promise<Lectura<string>>;
   /** Con `tema`, la Vista dibujada con ese Tema (`?tema=`, sin cache en el servidor): previsualizar sin escribir. */
   geometria(vista: string, opciones?: { tema?: string }): Promise<LecturaDeGeometria>;
 }
@@ -85,6 +98,12 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
     } catch {
       return undefined;
     }
+  };
+
+  /** Primer problema de un esquema, legible. */
+  const motivo = (error: { issues: ReadonlyArray<{ path: readonly PropertyKey[]; message: string }> }): string => {
+    const primero = error.issues[0];
+    return `${primero?.path.map(String).join('.') ?? ''} ${primero?.message ?? ''}`.trim();
   };
 
   const oyentes = new Map<string, Set<(datos: unknown) => void>>();
@@ -137,7 +156,31 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
         return undefined;
       }
     },
-    suscribir: (alEstado) => escuchar('estado', (datos) => alEstado(datos as EstadoDeDev)),
+    suscribir: (alEstado, alMalformado) =>
+      escuchar('estado', (datos) => {
+        const leido = estadoDeDevSchema.safeParse(datos);
+        if (leido.success) alEstado(leido.data);
+        else alMalformado?.(`Evento estado malformado (${motivo(leido.error)})`);
+      }),
+    async codigo() {
+      try {
+        const res = await fetchFn(RUTAS_DE_DEV.codigo);
+        if (!res.ok) return { ok: false, mensaje: `Error ${res.status} en ${RUTAS_DE_DEV.codigo}` };
+        const leido = codigoDeDevSchema.safeParse(await res.json());
+        return leido.success ? { ok: true, valor: leido.data } : { ok: false, mensaje: `Respuesta malformada de ${RUTAS_DE_DEV.codigo} (${motivo(leido.error)})` };
+      } catch (error) {
+        return { ok: false, mensaje: (error as Error).message };
+      }
+    },
+    confiar: () => post(RUTAS_DE_DEV.confiar, {}),
+    async bundleDeComponentes() {
+      try {
+        const res = await fetchFn(RUTAS_DE_DEV.componentes);
+        return res.ok ? { ok: true, valor: await res.text() } : { ok: false, mensaje: `Error ${res.status} en ${RUTAS_DE_DEV.componentes}` };
+      } catch (error) {
+        return { ok: false, mensaje: (error as Error).message };
+      }
+    },
     editar: (intencion, version) => post(RUTAS_DE_DEV.edit, { ...intencion, version }),
     editarTexto: (peticion) => post(RUTAS_DE_DEV.edit, peticion),
     archivos: () => leerJson(RUTAS_DE_DEV.archivos, archivosDeDevSchema),
@@ -164,8 +207,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
       if (cruda === NO_LLEGO) return { ok: false };
       const leida = geometriaCacheadaSchema.safeParse(cruda);
       if (leida.success) return { ok: true, geometria: leida.data };
-      const primero = leida.error.issues[0];
-      return { ok: false, error: `Geometria malformada en la Vista ${vista}: ${primero?.path.join('.') ?? ''} ${primero?.message ?? ''}`.trim() };
+      return { ok: false, error: `Geometria malformada en la Vista ${vista}: ${motivo(leida.error)}`.trim() };
     },
   };
 }

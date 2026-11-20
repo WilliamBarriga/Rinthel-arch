@@ -5,8 +5,11 @@ import type { EstadoDeDev } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
 import type { GeometriasDeDev } from '../geometrias';
 
-/** `vigente` da el ultimo estado recibido (el que usa la Escritura), aunque el render aun no lo haya visto. */
-export function useEstadoDeDev(cliente: ClienteDeDev, geometrias: GeometriasDeDev): { estado: EstadoDeDev | undefined; vigente: () => EstadoDeDev | undefined; recibir: (estado: EstadoDeDev) => void } {
+/**
+ * `vigente` da el ultimo estado recibido (el que usa la Escritura), aunque el render aun no lo haya visto. Un evento
+ * `estado` malformado no lo reemplaza: va a `reportar`.
+ */
+export function useEstadoDeDev(cliente: ClienteDeDev, geometrias: GeometriasDeDev, reportar: (mensaje: string) => void): { estado: EstadoDeDev | undefined; vigente: () => EstadoDeDev | undefined; recibir: (estado: EstadoDeDev) => void } {
   const [estado, setEstado] = useState<EstadoDeDev>();
   const ultimo = useRef<EstadoDeDev | undefined>(undefined);
   const recibir = useCallback(
@@ -18,7 +21,7 @@ export function useEstadoDeDev(cliente: ClienteDeDev, geometrias: GeometriasDeDe
     },
     [geometrias],
   );
-  useEffect(() => cliente.suscribir(recibir), [cliente, recibir]);
+  useEffect(() => cliente.suscribir(recibir, (mensaje) => reportar(`${mensaje}; se conserva el estado vigente`)), [cliente, recibir, reportar]);
   const vigente = useCallback(() => ultimo.current, []);
   return { estado, vigente, recibir };
 }

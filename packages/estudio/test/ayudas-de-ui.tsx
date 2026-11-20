@@ -7,7 +7,7 @@ import type { AdaptadorDeLayout } from 'shell';
 
 import { ayudasDeLienzo } from '../../../tests/ayudas/lienzo';
 import { devEnMemoria } from '../src/contrato';
-import type { DevEnMemoria } from '../src/contrato';
+import type { CodigoDePrueba, DevEnMemoria } from '../src/contrato';
 import { Estudio } from '../navegador/estudio';
 import type { Plataforma } from '../navegador/comandos/teclas';
 
@@ -31,16 +31,20 @@ export interface OpcionesDeMontaje {
   temas?: Record<string, string>;
   /** Texto inicial de `.diagrams/actividad.jsonl`. */
   actividad?: string;
+  /** Temas con codigo ya compilados (Componentes y bundle de `/componentes.js`). */
+  codigo?: CodigoDePrueba;
+  /** Respuesta a la confirmacion de cargar codigo; por defecto la rechaza. */
+  confirmar?: (mensaje: string) => boolean;
   /** Envuelve el `fetch` del fake (para anotar peticiones o inyectar fallos de red). */
   envolverFetch?: (fetchDelFake: typeof fetch) => typeof fetch;
   /** Envuelve la fabrica SSE del fake (para retener eventos). */
   envolverEventos?: (eventosDelFake: DevEnMemoria['eventos']) => DevEnMemoria['eventos'];
 }
 
-export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas, actividad, envolverFetch = (f) => f, envolverEventos = (e) => e }: OpcionesDeMontaje = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
+export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas, actividad, codigo, confirmar = () => false, envolverFetch = (f) => f, envolverEventos = (e) => e }: OpcionesDeMontaje = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
   window.history.replaceState(null, '', `/${hash}`);
-  const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }) });
-  const { container } = render(<Estudio fetch={envolverFetch(dev.fetch)} eventos={envolverEventos(dev.eventos)} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={() => false} plataforma={plataforma} />);
+  const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }), ...(codigo !== undefined && { codigo }) });
+  const { container } = render(<Estudio fetch={envolverFetch(dev.fetch)} eventos={envolverEventos(dev.eventos)} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={confirmar} plataforma={plataforma} />);
   return { dev, contenedor: container };
 }
 
