@@ -3,44 +3,18 @@ import { EditorView } from '@codemirror/view';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { lienzoListo, montarEstudio } from './ayudas-de-ui';
+import { anotarPeticiones, DSL_BASICO, lienzoListo, montarEstudio } from './ayudas-de-ui';
 import type { OpcionesDeMontaje } from './ayudas-de-ui';
 
 afterEach(cleanup);
 
-const DSL = `specification {
-  node servicio
-}
-
-model {
-  servicio api "API"
-  servicio db "Base de datos"
-  api -> db "lee"
-}
-
-view mapa {
-  type architecture
-  include **
-}
-`;
+const DSL = DSL_BASICO;
 
 /** Dos Aristas colgantes, cada una con un `fix` de un unico candidato (lineas 8 y 9 de main.dg). */
 const COLGANTES = DSL.replace('  api -> db "lee"\n', '  api -> dbb "lee"\n  db -> apii "escribe"\n');
 
-/** Anota el cuerpo de cada POST a `/api/edit`; `antes` corre antes de reenviarlo al fake (para provocar carreras). */
-function anotarEdiciones(antes?: (n: number) => void): { cuerpos: unknown[]; envolverFetch: NonNullable<OpcionesDeMontaje['envolverFetch']> } {
-  const cuerpos: unknown[] = [];
-  return {
-    cuerpos,
-    envolverFetch: (f) => (async (entrada: string | URL | Request, init?: RequestInit) => {
-      if (init?.method === 'POST' && String(entrada) === '/api/edit') {
-        cuerpos.push(JSON.parse(String(init.body)));
-        antes?.(cuerpos.length);
-      }
-      return f(entrada, init);
-    }) as typeof fetch,
-  };
-}
+/** Los cuerpos de cada POST a `/api/edit`; `antes` corre antes de reenviarlo al fake (para provocar carreras). */
+const anotarEdiciones = (antes?: (n: number) => void) => anotarPeticiones({ ruta: '/api/edit', ...(antes !== undefined && { antes }) });
 
 /** Monta con un Workspace bueno (para tener lienzo), lo rompe por fuera y abre la pestana Issues. */
 async function montarConIssues(texto: string, opciones: OpcionesDeMontaje = {}) {

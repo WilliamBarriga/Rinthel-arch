@@ -1,7 +1,8 @@
 /**
  * `estudio/contrato` (solo pruebas): `probarContratoDeDev(crear)` es la suite que corre igual contra `devEnMemoria`
  * (aqui) y contra el `dev` real con `puertoEnMemoria` (en `cli`), para que el fake no mienta. Tambien exporta
- * `devEnMemoria` y `eventosSobreFetch` (transporte SSE sobre `fetch`, para Node).
+ * `devEnMemoria`, `eventosSobreFetch` (transporte SSE sobre `fetch`, para Node) y la fabrica de Eventos de actividad de
+ * prueba (`eventoDeActividad`, `lineasDeActividad`).
  * Invariantes: las entradas son DSL de texto; las rutas se piden relativas (`/api/estado`); no entra al bundle del navegador.
  * Depende de `vitest` (peerDependency opcional), `sesion` y `canonico`.
  */
@@ -164,7 +165,8 @@ function esperarHistorial(dev: DevDePrueba, basta: (h: HistorialDeDev) => boolea
   });
 }
 
-const eventoDePrueba = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
+/** Evento de actividad de prueba (un `edit` exitoso del proceso `pid`); `extra` pisa cualquier campo. */
+export const eventoDeActividad = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
   contractVersion: 1,
   ts: '2026-11-19T10:00:00.000Z',
   pid,
@@ -174,7 +176,9 @@ const eventoDePrueba = (pid: number, extra: Partial<EventoDeActividad> = {}): Ev
   duracionMs: 4,
   ...extra,
 });
-const lineaDe = (evento: EventoDeActividad): string => `${JSON.stringify(evento)}\n`;
+
+/** Las lineas de `.diagrams/actividad.jsonl` con esos Eventos. */
+export const lineasDeActividad = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
 
 export function probarContratoDeDev(crear: CrearDev): void {
   const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, extra: { temas?: ArchivosDelWorkspace; actividad?: string } = {}): Promise<T> => {
@@ -223,7 +227,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
     });
 
     it('/eventos reproduce al conectar los ultimos 50 Eventos de actividad (previos) sin las lineas rotas', async () => {
-      const registro = Array.from({ length: 55 }, (_, i) => lineaDe(eventoDePrueba(i))).join('') + '{roto\n';
+      const registro = Array.from({ length: 55 }, (_, i) => lineasDeActividad(eventoDeActividad(i))).join('') + '{roto\n';
       await con(
         { 'main.dg': DSL },
         async (dev) => {
@@ -237,11 +241,11 @@ export function probarContratoDeDev(crear: CrearDev): void {
 
     it('un Evento anexado al registro llega como event: actividad en vivo', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
-        const nuevo = eventoDePrueba(7, { agente: 'claude', objetivo: { vista: 'datos' } });
+        const nuevo = eventoDeActividad(7, { agente: 'claude', objetivo: { vista: 'datos' } });
         const recibidos = await esperarActividad(
           dev,
           (r) => r.some((a) => !a.previos),
-          () => dev.anexarActividad(`no es json\n${lineaDe(nuevo)}`),
+          () => dev.anexarActividad(`no es json\n${lineasDeActividad(nuevo)}`),
         );
         expect(recibidos.filter((a) => !a.previos)).toEqual([{ previos: false, eventos: [nuevo] }]);
       });

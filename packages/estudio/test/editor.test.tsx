@@ -6,41 +6,16 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-libra
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DURACION_DEL_AVISO_MS } from '../navegador/editor/panel-de-codigo';
-import { lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
-import type { OpcionesDeMontaje } from './ayudas-de-ui';
+import { abrirPestana, anotarPeticiones, DSL_BASICO, lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
 
 afterEach(() => {
   vi.useRealTimers();
   cleanup();
 });
 
-const DSL = `specification {
-  node servicio
-}
+const DSL = DSL_BASICO;
 
-model {
-  servicio api "API"
-  servicio db "Base de datos"
-  api -> db "lee"
-}
-
-view mapa {
-  type architecture
-  include **
-}
-`;
-
-/** Anota el cuerpo y la ruta de cada POST que la pagina manda a `dev`. */
-function anotarPosts(): { posts: { ruta: string; cuerpo: unknown }[]; envolverFetch: NonNullable<OpcionesDeMontaje['envolverFetch']> } {
-  const posts: { ruta: string; cuerpo: unknown }[] = [];
-  return {
-    posts,
-    envolverFetch: (f) => (async (entrada: string | URL | Request, init?: RequestInit) => {
-      if (init?.method === 'POST') posts.push({ ruta: String(entrada), cuerpo: JSON.parse(String(init.body)) });
-      return f(entrada, init);
-    }) as typeof fetch,
-  };
-}
+const anotarPosts = () => anotarPeticiones();
 
 /** Abre la pestana Codigo y espera el editor de `archivo` con su texto cargado. */
 async function abrirCodigo(archivo = 'main.dg'): Promise<{ caja: HTMLElement; vista: EditorView }> {
@@ -48,11 +23,7 @@ async function abrirCodigo(archivo = 'main.dg'): Promise<{ caja: HTMLElement; vi
   return editorDe(archivo);
 }
 
-/** El marco se monta de nuevo al llegar la primera Fuente: se espera al lienzo antes de elegir la pestana. */
-async function pulsarCodigo(): Promise<void> {
-  await waitFor(() => expect(document.querySelector('.rd-vista[data-vista]')).not.toBeNull());
-  fireEvent.click(await screen.findByRole('tab', { name: 'Codigo' }));
-}
+const pulsarCodigo = (): Promise<void> => abrirPestana('Codigo');
 
 async function editorDe(archivo: string): Promise<{ caja: HTMLElement; vista: EditorView }> {
   const caja = await screen.findByRole('textbox', { name: new RegExp(`^Codigo de ${archivo.replace('.', '\\.')}`) });
@@ -348,6 +319,7 @@ function retenerListados(): ReturnType<typeof anotarPosts> & { soltar(): void } 
   let retener = false;
   return {
     posts: anotados.posts,
+    cuerpos: anotados.cuerpos,
     soltar() {
       retener = false;
       for (const r of retenidas.splice(0)) r();

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { EventoDeActividad } from 'canonico';
 
+import { eventoDeActividad, lineasDeActividad } from '../src/contrato';
 import { lienzoListo, montarEstudio } from './ayudas-de-ui';
 
 afterEach(cleanup);
@@ -34,17 +35,9 @@ view otra {
 }
 `;
 
-const evento = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
-  contractVersion: 1,
-  ts: '2026-11-19T10:00:00.000Z',
-  pid,
-  comando: 'edit',
-  args: ['--workspace', '.', '--intent', '{"tipo":"mover-pin"}'],
-  exitCode: 0,
-  duracionMs: 4,
-  ...extra,
-});
-const lineas = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
+const ARGS = ['--workspace', '.', '--intent', '{"tipo":"mover-pin"}'];
+const evento = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => eventoDeActividad(pid, { args: ARGS, ...extra });
+const lineas = lineasDeActividad;
 
 const feed = () => screen.getByRole('list', { name: 'Actividad del agente' });
 const ultimaLinea = () => screen.getByRole('button', { name: /^Ultima linea del agente/ });
