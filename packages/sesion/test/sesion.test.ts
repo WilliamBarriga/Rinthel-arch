@@ -108,6 +108,21 @@ view w { type architecture  include *  theme neutral }
     expect((await sesion.geometria('w'))?.theme).toBe('neutral');
   });
 
+  it('geometria con otro Tema: la Vista con ese Tema, sin tocar la memoizada; undefined si falta la Vista o el Tema', async () => {
+    const fuente = `specification { node servicio }
+theme claro extends neutral { palette { acento "#0ea5e9" } }
+model { servicio a }
+view v { type architecture  include * }
+`;
+    const sesion = abrirSesion({ 'main.dg': fuente });
+
+    expect((await sesion.geometria('v', { tema: 'claro' }))?.theme).toBe('claro');
+    expect(sesion.vistasConGeometria()).toEqual([]);
+    expect((await sesion.geometria('v'))?.theme).toBe('neutral');
+    expect(await sesion.geometria('v', { tema: 'nada' })).toBeUndefined();
+    expect(await sesion.geometria('nada', { tema: 'claro' })).toBeUndefined();
+  });
+
   it('actualizar devuelve otra Sesion sin mutar la anterior', async () => {
     const antes = abrirSesion({ 'main.dg': base() });
     await antes.geometria('w');

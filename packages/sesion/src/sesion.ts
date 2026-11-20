@@ -7,6 +7,7 @@ import type { Geometria, GeometriaGrafo } from 'layout';
 import { TEMA_NEUTRO, advertenciasDeContraste, aristaIdentificanteSoloColor, estiloResuelto, mensajesSoloColor, leerOps, resolverFuentes, resolverTema, tiposSoloColor, usosDeCodigo } from 'tema';
 import type { EstiloResuelto, UsoDeComponente } from 'tema';
 
+import { consultarTema } from './consulta-de-tema';
 import { consultar } from './consultas';
 import type { Consulta, Respuesta } from './consultas';
 
@@ -36,6 +37,11 @@ export interface OpcionesDeSesion {
   issuesDelAdaptador?: readonly Issue[];
 }
 
+export interface OpcionesDeGeometria {
+  /** Otro Tema declarado con el que dibujar la Vista (previsualizar sin escribir). */
+  tema?: string;
+}
+
 export interface ResultadoDeConstruir {
   /** `canonico.json` y `geometria/<vista>.json`; vacio si el Workspace tiene errores. */
   archivos: SalidaDeBuild;
@@ -58,8 +64,12 @@ export interface Sesion {
   diagnosticar(): Promise<Issue[]>;
   /** Archivos de `build` (geometria de todas las Vistas) y todos los issues. Un fallo interno de layout rechaza la promesa. */
   construir(): Promise<ResultadoDeConstruir>;
-  /** Geometria cacheable de una Vista, perezosa y memoizada por Vista; `undefined` si la Vista no existe. Un fallo interno de layout rechaza la promesa. */
-  geometria(vista: string): Promise<GeometriaCacheada | undefined>;
+  /**
+   * Geometria cacheable de una Vista, perezosa y memoizada por Vista; `undefined` si la Vista no existe. Con `tema`, la
+   * de la Vista dibujada con ese Tema declarado, sin memoizar (`undefined` si el Tema no existe). Un fallo interno de
+   * layout rechaza la promesa.
+   */
+  geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<GeometriaCacheada | undefined>;
   /** Estilo resuelto (Metricas y pintura) del Tema de una Vista; `undefined` si la Vista no existe. Sincrono: no necesita layout. */
   estilo(vista: string): EstiloResuelto | undefined;
   /** Consulta de solo lectura, sincrona y sin layout; `undefined` si la Sesion no tiene Fuente. */
@@ -268,7 +278,15 @@ function crear(
     return { clave: JSON.stringify([tema.name, claveDeLayout(resuelta, tema)]), tema, resuelta };
   };
 
-  const geometria = (vista: string): Promise<GeometriaCacheada | undefined> => {
+  const geometriaConTema = (vista: string, nombre: string): Promise<GeometriaCacheada | undefined> => {
+    const resuelta = fuente === undefined ? undefined : resolveView(fuente, vista);
+    const tema = fuente?.themes.find(({ name }) => name === nombre);
+    if (resuelta === undefined || tema === undefined) return Promise.resolve(undefined);
+    return layoutView(resuelta, tema).then((geometry) => ({ view: vista, theme: tema.name, layoutKey: claveDeLayout(resuelta, tema), geometry }));
+  };
+
+  const geometria = (vista: string, { tema }: OpcionesDeGeometria = {}): Promise<GeometriaCacheada | undefined> => {
+    if (tema !== undefined) return geometriaConTema(vista, tema);
     const datos = claveDe(vista);
     if (datos === undefined) return Promise.resolve(undefined);
     const existente = memo.get(vista);
@@ -325,7 +343,12 @@ function crear(
       const tipos = Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
       return estiloResuelto(datos.tema, { tipos, diagrama: declarada.type, ...(opciones.archivosDeFuente !== undefined && { archivosDeFuente: opciones.archivosDeFuente }), ...(declarada.themePatch !== undefined && { vista: leerOps(declarada.themePatch) }) });
     },
-    consultar: (consulta) => (fuente === undefined || compilado.ubicar === undefined ? undefined : consultar(fuente, compilado.ubicar, consulta)),
+    consultar: (consulta) => {
+      if (fuente === undefined || compilado.ubicar === undefined) return undefined;
+      if (consulta.comando !== 'tema') return consultar(fuente, compilado.ubicar, consulta);
+      const { argumento, comando: _comando, ...opciones } = consulta;
+      return consultarTema(fuente, compilado.origenesDeTemas ?? {}, argumento, opciones);
+    },
     vistasConGeometria: () => [...memo.keys()],
     actualizar: (nuevos, cambios = {}) => crear(nuevos, { ...opciones, ...cambios }, compile(nuevos), memo),
   };

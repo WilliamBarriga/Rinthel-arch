@@ -69,6 +69,10 @@ view datos {
   type architecture
   include db
 }
+
+theme claro extends neutral {
+  palette { acento "#0ea5e9" }
+}
 `;
 
 const CON_ERROR = DSL.replace('include db', 'include db\n  nada-de-esto');
@@ -166,6 +170,35 @@ export function probarContratoDeDev(crear: CrearDev): void {
         const ausente = await json(dev, '/api/inspect/nodo/apj');
         expect(ausente).toEqual({ status: 404, cuerpo: { ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] } });
         expect((await dev.fetch('/api/inspect/nada/x')).status).toBe(404);
+      });
+    });
+
+    it('GET /api/vista/<id>?tema=<nombre> da la Geometria con otro Tema sin cachearla; 404 si falta la Vista o el Tema', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        expect(await json(dev, '/api/vista/datos?tema=claro')).toMatchObject({ status: 200, cuerpo: { view: 'datos', theme: 'claro' } });
+        expect(await json(dev, '/api/vista/datos')).toMatchObject({ status: 200, cuerpo: { view: 'datos', theme: 'neutral' } });
+        expect((await dev.fetch('/api/vista/datos?tema=nada')).status).toBe(404);
+        expect((await dev.fetch('/api/vista/nada?tema=claro')).status).toBe(404);
+      });
+    });
+
+    it('GET /api/inspect/tema/<nombre> da la cadena extends y las Capas; un Tema inexistente es 404 con los cercanos', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const { status, cuerpo } = await json(dev, '/api/inspect/tema/claro');
+        expect(status).toBe(200);
+        expect(cuerpo).toMatchObject({ comando: 'tema', tema: { name: 'claro', file: 'main.dg', extends: ['neutral'] } });
+        expect(await json(dev, '/api/inspect/tema/clara')).toEqual({ status: 404, cuerpo: { ok: false, mensaje: "No existe el Tema 'clara'. Quiza: claro", cercanos: ['claro'] } });
+      });
+    });
+
+    it('POST /api/edit con fijar-tema escribe theme en la Vista; sin tema lo quita; un Tema no declarado es 422 tema-desconocido', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const temaDe = async (vista: string) => ((await json(dev, '/api/estado')).cuerpo['fuente'] as EstadoDeDev['fuente'])?.views.find((v) => v.id === vista)?.theme;
+        expect(await post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos', tema: 'claro' })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        expect(await temaDe('datos')).toBe('claro');
+        expect(await post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos' })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        expect(await temaDe('datos')).toBeUndefined();
+        expect(await post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos', tema: 'clara' })).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'tema-desconocido' } });
       });
     });
 

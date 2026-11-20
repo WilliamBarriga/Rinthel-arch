@@ -13,7 +13,7 @@ import type { GeometriaCacheada, Intencion, Issue, MotivoDeRechazo } from 'canon
 import type { EstadoDeDev, TipoDeCambio } from 'estudio/protocolo';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer as deshacerHistorial, hashDeContenido, rehacer as rehacerHistorial } from 'sesion';
-import type { Historial, PuertoDeWorkspace, Respuesta, Sesion, Visto } from 'sesion';
+import type { Historial, OpcionesDeGeometria, PuertoDeWorkspace, Respuesta, Sesion, Visto } from 'sesion';
 import { componentesDeTema } from 'tema';
 
 import { clasificarCambio } from './cambio';
@@ -77,8 +77,8 @@ export interface WorkspaceVivo {
   editar(intencion: Intencion, version?: number): Promise<ResultadoDelWorkspaceVivo>;
   deshacer(): Promise<ResultadoDelWorkspaceVivo>;
   rehacer(): Promise<ResultadoDelWorkspaceVivo>;
-  /** Geometria cacheada de una Vista de la ultima Sesion buena; `undefined` si no existe. */
-  geometria(vista: string): Promise<GeometriaCacheada | undefined>;
+  /** Geometria de una Vista de la ultima Sesion buena (con `tema`, con ese Tema y sin cache); `undefined` si falta la Vista o el Tema. */
+  geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<GeometriaCacheada | undefined>;
   /** `inspect` sobre la ultima Sesion buena; `undefined` si el Workspace nunca compilo. */
   consultar(consulta: ConsultaDeInspect): Respuesta | undefined;
   /** Relee el puerto y recompila ya (sin esperar al debounce). */
@@ -312,7 +312,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     editar,
     deshacer: () => restaurar(deshacerHistorial, 'nada-que-deshacer'),
     rehacer: () => restaurar(rehacerHistorial, 'nada-que-rehacer'),
-    geometria: (vista) => buena?.sesion.geometria(vista) ?? Promise.resolve(undefined),
+    geometria: (vista, opciones) => buena?.sesion.geometria(vista, opciones) ?? Promise.resolve(undefined),
     consultar: (consulta) => (buena === undefined ? undefined : consultarInspect(buena.sesion, consulta)),
     recargar: () => recompilar(),
     codigo: () => ({ componentes: [...new Set((buena?.sesion.fuente?.themes ?? []).flatMap((tema) => componentesDeTema(tema)))].sort(), confiado, bundle: codigo.bundle }),
