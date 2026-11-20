@@ -9,6 +9,7 @@ import type { FuenteCanonica } from 'canonico';
 
 import type { EstadoDeDev } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
+import type { Escribir } from '../escritura/escritura';
 import type { Plataforma } from '../comandos/teclas';
 import type { LadoDeIsla } from './limites';
 
@@ -32,8 +33,8 @@ export interface ContextoDelEstudio {
   alternarIsla(lado: LadoDeIsla): void;
   /** Toast efimero del marco. */
   avisar(texto: string): void;
-  /** Vuelve a pedir el estado a `dev` (tras un 409). */
-  recargar(): Promise<void>;
+  /** Unico camino de las acciones que escriben en `dev` (version vigente, 409 y aviso): `escritura/escritura.ts`. */
+  escribir: Escribir;
   /** Abre el Buscador o la ayuda de atajos (dialogos del marco). */
   abrirDialogo(dialogo: DialogoDelEstudio): void;
   /** Abre la pestana Codigo (y Issues); con `sitio`, el editor salta a `archivo:linea` (lo publica `useCanalDelEditor`). */

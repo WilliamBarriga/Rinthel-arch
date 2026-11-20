@@ -32,12 +32,14 @@ export interface OpcionesDeMontaje {
   actividad?: string;
   /** Envuelve el `fetch` del fake (para anotar peticiones o inyectar fallos de red). */
   envolverFetch?: (fetchDelFake: typeof fetch) => typeof fetch;
+  /** Envuelve la fabrica SSE del fake (para retener eventos). */
+  envolverEventos?: (eventosDelFake: DevEnMemoria['eventos']) => DevEnMemoria['eventos'];
 }
 
-export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas, actividad, envolverFetch = (f) => f }: OpcionesDeMontaje = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
+export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas, actividad, envolverFetch = (f) => f, envolverEventos = (e) => e }: OpcionesDeMontaje = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
   window.history.replaceState(null, '', `/${hash}`);
   const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }) });
-  const { container } = render(<Estudio fetch={envolverFetch(dev.fetch)} eventos={dev.eventos} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={() => false} plataforma={plataforma} />);
+  const { container } = render(<Estudio fetch={envolverFetch(dev.fetch)} eventos={envolverEventos(dev.eventos)} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={() => false} plataforma={plataforma} />);
   return { dev, contenedor: container };
 }
 
