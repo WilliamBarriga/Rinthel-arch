@@ -1,6 +1,6 @@
 /**
- * Galeria de Temas: los Temas de la Fuente (los del Workspace, los de `--theme-path` y los incorporados) en un `listbox`.
- * Elegir uno lo previsualiza en la Vista activa sin escribir y muestra su cadena `extends`, su Paleta y sus Capas (via
+ * Galeria de Temas: los Temas de la Fuente (los del Workspace, los de `--theme-path` y los incorporados) en un `listbox`
+ * (`marco/use-listbox.ts`: flechas y Enter, o clic). Elegir uno lo previsualiza en la Vista activa sin escribir y muestra su cadena `extends`, su Paleta y sus Capas (via
  * `inspect tema`). Los Temas cambiados por fuera llevan la marca de cambio externo hasta dejar la galeria. "Fijar" escribe `theme` en esa Vista con la Intencion `fijar-tema`; "Quitar" la deja sin Tema fijado.
  */
 import { useEffect, useState } from 'react';
@@ -12,16 +12,21 @@ import { MarcaExterna, useMarcasExternas } from '../diferencia/resaltado';
 import { AvisoDeLectura } from '../marco/aviso-de-lectura';
 import { useEstudio } from '../marco/contexto';
 import { useInspectPorVersion } from '../marco/use-lectura-por-version';
+import { useListbox } from '../marco/use-listbox';
 import { textoDeSitio } from '../sitio';
 import { usePrevisualizacionDeTema } from './previsualizacion';
-
-const idDeOpcion = (tema: string): string => `ui-tema-${tema}`;
 
 export function GaleriaDeTemas(): ReactElement {
   const { fuente, vista, cliente, escribir } = useEstudio();
   const { temaPrevio, previsualizarTema } = usePrevisualizacionDeTema();
   const [elegido, setElegido] = useState<string>();
   const marcas = useMarcasExternas(cliente);
+  const temas = fuente?.themes ?? [];
+  const elegir = (tema: string): void => {
+    setElegido(tema);
+    previsualizarTema(tema);
+  };
+  const lista = useListbox({ nombre: 'Temas', prefijo: 'ui-tema', orden: temas.map(({ name }) => name), elegida: elegido, elegir });
   // Los Temas cambiados por fuera quedan marcados mientras se ve la galeria; al dejarla se dan por vistos.
   useEffect(() => () => diferenciasDelCliente(cliente).actualizar(verGaleria), [cliente]);
   if (fuente === undefined) return <p className="ui-tenue">El Workspace aun no compila: no hay Temas que mostrar.</p>;
@@ -31,10 +36,6 @@ export function GaleriaDeTemas(): ReactElement {
     if (vista === undefined) return;
     const r = await escribir({ intencion: { tipo: 'fijar-tema', vista, ...(tema !== undefined && { tema }) }, fallo: `No se pudo ${tema === undefined ? 'quitar' : 'fijar'} el Tema` });
     if (r.ok) previsualizarTema(undefined);
-  };
-  const elegir = (tema: string): void => {
-    setElegido(tema);
-    previsualizarTema(tema);
   };
 
   return (
@@ -49,9 +50,9 @@ export function GaleriaDeTemas(): ReactElement {
           )}
         </p>
       )}
-      <div role="listbox" aria-label="Temas" tabIndex={0} className="ui-indice" {...(elegido !== undefined && { 'aria-activedescendant': idDeOpcion(elegido) })}>
-        {fuente.themes.map(({ name }) => (
-          <div key={name} id={idDeOpcion(name)} role="option" aria-label={name} aria-selected={name === elegido} className="ui-indice-vista" onClick={() => elegir(name)}>
+      <div {...lista.listbox} className="ui-indice">
+        {temas.map(({ name }) => (
+          <div key={name} {...lista.opcion(name)} className="ui-indice-vista">
             <span className="ui-mono">{name}</span>
             {marcas.temas.has(name) && <MarcaExterna />}
             {name === fijado && <span className="ui-enlaces">fijado</span>}

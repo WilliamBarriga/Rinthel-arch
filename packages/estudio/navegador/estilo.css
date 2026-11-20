@@ -310,6 +310,11 @@
       color: var(--ui-texto-fuerte);
     }
   }
+  /* La opcion activa del listbox (`aria-activedescendant`) se ve solo con el foco de teclado en la lista. */
+  .ui-indice:focus-visible .ui-indice-vista[data-activa] {
+    outline: 2px solid var(--ui-acento);
+    outline-offset: -2px;
+  }
   .ui-enlaces {
     font-size: 11px;
     color: var(--ui-tenue);

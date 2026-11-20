@@ -12,6 +12,7 @@ import type { EstadoDeDev } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
 import type { Escribir } from '../escritura/escritura';
 import type { Plataforma } from '../comandos/teclas';
+import type { SitioDeCodigo } from '../sitio';
 import type { LadoDeIsla } from './limites';
 
 export interface ContextoDelEstudio {
@@ -57,12 +58,6 @@ export interface ContextoDelEstudio {
 }
 
 export type DialogoDelEstudio = 'buscador' | 'ayuda';
-
-/** Mismo par que `inspect` (`file`, `line`); `line` empieza en 1. */
-export interface SitioDeCodigo {
-  file: string;
-  line: number;
-}
 
 export const ContextoDeEstudio = createContext<ContextoDelEstudio | undefined>(undefined);
 

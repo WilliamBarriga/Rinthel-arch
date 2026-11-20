@@ -5,9 +5,9 @@
  */
 import type { FuenteCanonica, GeometriaCacheada } from 'canonico';
 
-import type { EstadoDeDev } from '../src/protocolo';
+import type { EstadoDeDev } from '../../src/protocolo';
 
-import type { LecturaDeGeometria } from './cliente';
+import type { LecturaDeGeometria } from '../cliente';
 
 /** `geometrias`: las que ya llegaron para la estructura del estado. */
 export interface Dibujable {

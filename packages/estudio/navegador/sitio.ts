@@ -1,7 +1,11 @@
-/** `archivo:linea`: como se escribe, se lee y se saca de una salida de `inspect`. Puro. */
+/** Sitio de codigo `archivo:linea`: su tipo, como se escribe, se lee y se saca de una salida de `inspect`. Puro. */
 import type { SalidaDeInspect } from 'canonico';
 
-import type { SitioDeCodigo } from './marco/contexto';
+/** Mismo par que `inspect` (`file`, `line`); `line` empieza en 1. */
+export interface SitioDeCodigo {
+  file: string;
+  line: number;
+}
 
 /** `main.dg:12`. */
 export const textoDeSitio = ({ file, line }: SitioDeCodigo): string => `${file}:${line}`;

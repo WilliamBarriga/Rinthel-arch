@@ -8,7 +8,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { FuenteCanonica, GeometriaCacheada } from 'canonico';
 
 import type { ClienteDeDev } from '../cliente';
-import type { Dibujable } from '../geometrias';
+import type { Dibujable } from '../lienzo/geometrias';
 import { useLecturaPorVersion } from '../marco/use-lectura-por-version';
 
 export interface PrevisualizacionDeTema {

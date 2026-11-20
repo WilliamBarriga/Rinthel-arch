@@ -28,7 +28,7 @@ export interface PestanaDelPanel {
 }
 
 /** Ancho con el que el editor muestra lineas de DSL tipicas sin cortarlas. */
-export const ANCHO_DEL_EDITOR = 560;
+const ANCHO_DEL_EDITOR = 560;
 
 export const PESTANAS_IZQUIERDAS: readonly PestanaDelPanel[] = [
   { id: 'vistas', nombre: 'Vistas', Contenido: PanelDeVistas },

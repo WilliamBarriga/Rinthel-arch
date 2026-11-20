@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { FuenteCanonica } from 'canonico';
 import { abrirSesion } from 'sesion';
 
-import { aHashDeEstudio, deHashDeEstudio, hashDeEstudio } from '../navegador/hash-de-estudio';
+import { aHashDeEstudio, deHashDeEstudio, hashDeEstudio } from '../navegador/lienzo/hash-de-estudio';
 import { indiceDeVistas } from '../navegador/vistas/indice';
 import { crearLectorSse } from '../src/sse';
 
