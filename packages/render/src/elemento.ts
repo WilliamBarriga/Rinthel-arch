@@ -1,5 +1,7 @@
 /** Elemento de la escena (HTML o SVG) y ayudantes de formato CSS. */
 
+import { fnv1a } from 'tema';
+
 import type { ComponenteDeTema, PropsDeCodigo } from './codigo';
 
 /** Elemento HTML o SVG: atributos, y como contenido hijos, texto o marcado inline (iconos, hoja de estilo). */
@@ -38,7 +40,5 @@ export const declaracionesLimpias = (declaraciones: Readonly<Record<string, stri
 
 /** FNV-1a de 32 bits, en base 36: identificador corto y estable del contenido. */
 export function huella(texto: string): string {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < texto.length; i++) h = Math.imul(h ^ texto.charCodeAt(i), 0x01000193) >>> 0;
-  return h.toString(36);
+  return fnv1a(texto).toString(36);
 }

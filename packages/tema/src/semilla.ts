@@ -3,11 +3,16 @@
  * `seed` del Tema, nunca del tamano de la caja, el orden de render ni la Vista.
  */
 
+/** Nucleo de FNV-1a de 32 bits (sin signo) sobre `longitud` unidades leidas con `unidad(i)`. */
+export function fnv1aDeUnidades(longitud: number, unidad: (i: number) => number): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < longitud; i++) h = Math.imul(h ^ unidad(i), 0x01000193) >>> 0;
+  return h;
+}
+
 /** FNV-1a de 32 bits (sin signo) sobre las unidades UTF-16 del texto. */
 export function fnv1a(texto: string): number {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < texto.length; i++) h = Math.imul(h ^ texto.charCodeAt(i), 0x01000193) >>> 0;
-  return h;
+  return fnv1aDeUnidades(texto.length, (i) => texto.charCodeAt(i));
 }
 
 export function semillaDeCapa(idDeElemento: string, nombreDeCapa: string, semillaDelTema?: number): number {
