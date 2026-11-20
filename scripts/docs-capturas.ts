@@ -1,6 +1,6 @@
 /**
  * Regenera los PNG de `docs/img/` (`pnpm docs:capturas`; necesita `pnpm build` y Chromium): Temas, pasos del
- * tutorial y Vistas `sequence`/`er` del paso 6.
+ * tutorial, Vistas `sequence`/`er` del paso 6 y la UI de `dev` (`scripts/capturas-estudio.ts`).
  */
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
@@ -16,8 +16,8 @@ const PASOS = [
   { paso: 5, tema: 'neon' },
 ];
 
-function capturar(args: string[]): void {
-  const r = spawnSync(process.execPath, [resolve(REPO, 'scripts/capturas.ts'), ...args], { cwd: REPO, stdio: 'inherit' });
+function capturar(args: string[], script = 'scripts/capturas.ts'): void {
+  const r = spawnSync(process.execPath, [resolve(REPO, script), ...args], { cwd: REPO, stdio: 'inherit' });
   if (r.status !== 0) process.exit(r.status ?? 1);
 }
 
@@ -32,3 +32,5 @@ for (const [vista, nombre] of [['comprar-secuencia', 'secuencia'], ['tablas', 'e
   capturar([...PASO_6, '--vista', vista, '--salida', 'docs/img/tutorial', '--prefijo', `paso-6-${nombre}-`, 'tienda']);
   capturar([...PASO_6, '--vista', vista, '--salida', 'docs/img/tipos', '--prefijo', `${nombre}-`, 'tienda']);
 }
+
+capturar(['--salida', 'docs/img/estudio'], 'scripts/capturas-estudio.ts');

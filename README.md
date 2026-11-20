@@ -15,7 +15,7 @@ Sistema (React + TypeScript) para escribir y renderizar diagramas grandes y deta
 - **Cuatro Tipos de diagrama.** `architecture`, `flow`, `sequence` (Interacciones entre Lifelines, con Fragmentos, Notas y Pasos) y `er` (tablas con claves y cardinalidad) comparten el mismo Modelo y los mismos Temas.
 - **Un Modelo, muchas Vistas.** Los Nodos, Aristas y Atributos se escriben una vez; cada Vista elige que mostrar (`include`, `exclude`, `depth`) y puede enlazar a otra (drill-down) o revelarse paso a paso.
 - **La estetica es un Tema.** Un Tema es texto: Paleta, fuentes y una pila de Capas por elemento, tomadas de un catalogo cerrado (formas, rellenos, bordes, sombras, glow, vidrio, trazos, marcadores, animaciones). Hay Temas de ejemplo (ver la [galeria](docs/galeria.md)) y tres incorporados.
-- **Visor en vivo.** `dev` recompila al guardar; el visor tiene pan y zoom, colapso de Grupos y arrastre de Nodos que reescribe el `.dg`.
+- **UI en vivo.** `dev` recompila al guardar y abre una UI con el lienzo (pan, zoom, colapso de Grupos, arrastre de Nodos que reescribe el `.dg`), editor del DSL, Issues con `fix`, galeria de Temas, Historial y el feed de lo que hace un agente por el CLI.
 - **Pensado para humanos y agentes.** `validate` devuelve issues estructurados con sugerencias, `inspect` consulta el Modelo y `skill` explica el flujo a un agente.
 
 ## Un vistazo al DSL
@@ -87,6 +87,7 @@ node packages/cli/dist/bin.js dev --workspace examples/rinthel-arch
 | [Inicio rapido](docs/guia/inicio-rapido.md) | Instalar, correr el CLI y recorrer los ejemplos |
 | [Tutorial](docs/guia/tutorial.md) | Crear un diagrama pequeno y personalizarlo en cinco pasos |
 | [CLI](docs/guia/cli.md) | Comandos, opciones, codigos de salida y salida `--json` |
+| [UI de dev](docs/guia/ui-de-dev.md) | Paneles, editor, Historial, atajos y seguir a un agente |
 | [Personalizar con Temas](docs/guia/personalizar-temas.md) | Paleta, Capas, parches por Tipo y estado, Partes, movimiento |
 | [Referencia del DSL](docs/guia/referencia-dsl.md) | Sintaxis de Modelo, Vistas y Pasos |
 | [Catalogo de Temas](docs/referencia-catalogo.md) | Todas las Primitivas, Slots, Movimientos y Efectos con sus rangos |

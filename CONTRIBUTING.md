@@ -15,6 +15,7 @@ Sigue el camino de lectura de [AGENTS.md](AGENTS.md#camino-de-lectura): glosario
 
 ```
 pnpm install
+pnpm exec playwright install chromium   # una vez: lo usan la punta a punta de pnpm test y pnpm docs:capturas
 pnpm check   # typecheck, lint, orden de paquetes y emojis: rapido, para iterar
 pnpm test    # compuerta completa: build, typecheck y todas las pruebas
 ```
@@ -26,7 +27,7 @@ No hay CI: las pruebas se corren en local. El hook de pre-commit corre `pnpm che
 - El nucleo es agnostico del proyecto documentado: lo especifico de un proyecto va como ejemplo en `examples/`.
 - Docs y mensajes en espanol, sin emojis unicode (`pnpm check:emojis` lo verifica).
 - `docs/referencia-catalogo.md` se genera con `pnpm docs:catalogo`; no se edita a mano.
-- Las capturas de `docs/img/` se regeneran con `pnpm docs:capturas` (necesita `pnpm build` y Chromium) cuando cambia un Tema o un ejemplo.
+- Las capturas de `docs/img/` se regeneran con `pnpm docs:capturas` (necesita `pnpm build` y Chromium) cuando cambia un Tema, un ejemplo o la UI de `dev`.
 - Antes de adoptar una dependencia nueva, investigala (licencia, mantenimiento, encaje) y deja el research escrito; la adopcion se decide en un issue o ADR.
 
 ## Mapa del repo
