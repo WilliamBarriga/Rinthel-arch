@@ -6,11 +6,11 @@ A React + TypeScript system for writing and rendering large, detailed diagrams o
 
 ## Highlights
 
-- **One Model, many Views.** Nodes, Edges and Attributes are written once; each View picks what to show and can link to another (drill-down) or reveal itself step by step.
-- **Four diagram types.** `architecture`, `flow`, `sequence` (Interactions between Lifelines, with Fragments, Notes and Steps) and `er` (tables with keys and cardinality) share the same Model, Themes and viewer.
-- **Aesthetics are a Theme.** A Theme is text: a Palette, fonts and a stack of Layers per element, drawn from a closed catalog (shapes, fills, borders, shadows, glow, glass, strokes, markers, animations). Example Themes ship with the repo; see the [gallery](docs/galeria.md).
-- **Live viewer.** `dev` rebuilds on save; the viewer has pan and zoom, Group collapse, and node dragging that rewrites the `.dg`.
-- **Built for humans and agents.** `validate` returns structured issues with suggestions, `inspect` queries the Model, `skill` explains the workflow to an agent.
+- **Four diagram types.** `architecture`, `flow`, `sequence` (Interactions between Lifelines, with Fragments, Notes and Steps) and `er` (tables with keys and cardinality) share the same Model and the same Themes.
+- **One Model, many Views.** Nodes, Edges and Attributes are written once; each View picks what to show (`include`, `exclude`, `depth`) and can link to another (drill-down) or reveal itself step by step.
+- **Aesthetics are a Theme.** A Theme is text: a Palette, fonts and a stack of Layers per element, drawn from a closed catalog (shapes, fills, borders, shadows, glow, glass, strokes, markers, animations). There are example Themes (see the [gallery](docs/galeria.md)) and three built-in ones.
+- **Live UI.** `dev` rebuilds on save and serves the [dev UI](docs/guia/ui-de-dev.md): a canvas (pan, zoom, Group collapse, node dragging that rewrites the `.dg`), a DSL editor, Issues with `fix`, a Theme gallery, the file History (undo and redo) and the Activity Log feed: what an agent does through the CLI.
+- **Built for humans and agents.** `validate` returns structured issues with suggestions, `inspect` queries the Model and `skill` generates the agent skill for a Workspace.
 
 ## Getting started
 
@@ -24,11 +24,11 @@ pnpm build
 node packages/cli/dist/bin.js dev --workspace examples/rinthel-arch
 ```
 
-Open the URL `dev` prints (`http://127.0.0.1:4173/`).
+`dev` prints a URL (`http://127.0.0.1:4173/`). If the UI loads there, everything works; switch to the `abierto-<tema>` Views to see the example Themes. For your own diagram, point `--workspace` at a folder with your `.dg` files.
 
 ## Status and documentation
 
-Version 0.x: the DSL and package contracts may change. Supports four diagram types: `architecture`, `flow`, `sequence` and `er`.
+Version 0.x, not published on npm: the DSL and package contracts may change between versions. Supports four diagram types: `architecture`, `flow`, `sequence` and `er`.
 
 The documentation is in Spanish for now. Start with the [Spanish README](README.md), the [tutorial](docs/guia/tutorial.md) and the [DSL reference](docs/guia/referencia-dsl.md); the code, CLI output and examples are usable regardless. Issues in English are welcome.
 

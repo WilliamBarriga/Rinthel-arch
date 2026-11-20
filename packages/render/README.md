@@ -1,11 +1,10 @@
 # render
-
 Componente React `<Diagram>` que dibuja una Vista resuelta con su Geometria y el Estilo de un Tema.
 
 ## Que hace
 - Dibuja Grupos (HTML), Aristas (SVG) y Nodos (HTML) en tres capas bajo una camara de pan/zoom; una Vista ER dibuja cada tabla como Nodo con filas.
 - Una Geometria `secuencia` se dibuja con `construirEscenaDeSecuencia`: Lifelines con cabecera espejo, activaciones, Mensajes, Fragmentos y Notas; lee las pilas de esos Elementos de Tema ya resueltas (declaradas o derivadas) del Estilo de `tema`, sin reglas de derivacion propias.
-- `resolverEstilo` convierte un Tema en el `Estilo` de los pintores; `hojaDeFuentes` emite la hoja determinista.
+- `resolverEstilo` convierte un Tema en el `Estilo` de los pintores; `hojaDeFuentes` emite la hoja determinista. `PINTORES` (`src/hoja.ts`) es la tabla exhaustiva Primitiva -> pintor: una Primitiva nueva en `tema` sin pintor aqui rompe el typecheck.
 - Pinta Estados visuales, nivel de detalle y Pasos, anima con CSS (respeta reduced-motion) y acepta codigo solo por la prop `componentes`.
 
 ## Que NO hace

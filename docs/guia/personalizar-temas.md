@@ -44,7 +44,7 @@ tokens  { background "#13001f"  foreground "#fdf4ff"  border "#ff2bd6" }
 
 - El hex solo existe en `palette`. En todo el resto, un color es un **nombre de Paleta**, con modificadores: `rosa/0.4` (opacidad) o los especiales `COLOR` (el color del Tipo del Nodo, el que declaraste en `specification`) y `ORIGEN` (en Aristas, el color del Nodo de origen).
 - Los nombres `blue`, `green`, `amber`, `red`, `purple` y `gray` son los colores que usan los Tipos de nodo; define los que uses.
-- Las fuentes se **autohospedan**: pon los archivos en una carpeta `fuentes/` del Workspace (`woff2` o `ttf`, uno por familia y peso) y nombra la familia en `fonts`. No hay CDN. `fallback` es la familia generica de reserva. Los ejemplos traen sus fuentes y licencias en `examples/rinthel-arch/temas/fuentes/`.
+- Las fuentes se **autohospedan**: pon los archivos en el Workspace, por ejemplo en una carpeta `fuentes/` (`woff2`, `woff`, `ttf` u `otf`, uno por familia y peso; la convencion de nombres esta en la [galeria de ejemplo](../../examples/temas/galeria/README.md#fuentes)) y nombra la familia en `fonts`. No hay CDN. `fallback` es la familia generica de reserva. Los ejemplos traen sus fuentes y licencias en `examples/rinthel-arch/temas/fuentes/`.
 
 ### Capas y Primitivas
 
@@ -64,7 +64,7 @@ Las Primitivas se agrupan en familias:
 | Familia | Ejemplos |
 | --- | --- |
 | forma | `rect`, `pill`, `cut` (esquina cortada), `circle` |
-| relleno | `solid`, `gradient`, `radial`, `grid`, `lines`, `dots`, `noise` |
+| relleno | `solid`, `gradient`, `radial`, `disc`, `grid`, `lines`, `dots`, `noise` |
 | borde | `border`, `dashed`, `dotted`, `outline` |
 | sombra y glow | `shadow`, `glow` |
 | vidrio y filtro | `glass`, `sketch` (mano alzada) |
@@ -265,10 +265,10 @@ Los rangos y easings estan en el [catalogo](../referencia-catalogo.md#movimiento
 
 ## Contraste y accesibilidad
 
-`validate` mide el contraste de cada Tipo y estado (texto 4.5:1 y partes graficas 3:1) y avisa con `W_THEME_LOW_CONTRAST`. Si dos Tipos solo se distinguen por color, avisa con `W_THEME_COLOR_ONLY` y el visor muestra una leyenda. Algunos Temas de ejemplo (`glass-chip`, `soft-card`, `pixel-art`...) los emiten a proposito, porque su estetica lo pide: la primera linea de su archivo lo declara. El Tema incorporado `alto-contraste` reemplaza al de la Vista, solo en el visor, para quien lo necesite.
+`validate` mide el contraste de cada Tipo y estado (texto 4.5:1 y partes graficas 3:1) y avisa con `W_THEME_LOW_CONTRAST`. Si dos Tipos solo se distinguen por color, avisa con `W_THEME_COLOR_ONLY` y el visor muestra una leyenda. Algunos Temas de ejemplo (`glass-chip`, `soft-card`, `pixel-art`...) los emiten a proposito, porque su estetica lo pide: la primera linea de su archivo lo declara. El Tema incorporado `alto-contraste` reemplaza al de la Vista, solo en el visor, para quien lo necesite: con el boton "Alto contraste" del lienzo o, si no se toca, cuando el sistema pide `prefers-contrast: more`.
 
 ## Inspeccionar y depurar un Tema
 
 - `dg inspect tema <nombre> --workspace <ruta>` imprime el Tema resuelto (su padre, sus Partes, las Capas y su `archivo:linea`). Con `extends`, es la forma de ver que heredas.
 - `dg validate` lista errores con sugerencias: una Primitiva mal escrita propone la mas parecida.
-- Para estudiar un efecto concreto, busca el Tema de ejemplo que lo usa: `synthwave` (neon y rejilla), `glass-chip` (vidrio), `sticky-notes` (mano alzada y cinta), `keycaps` (teclas 3D), `pcb` (pines y trazos ortogonales), `metro-map` (trazos con `corner chamfer`), `pixel-art` (`style pixel`).
+- Para estudiar un efecto concreto, busca el Tema de ejemplo que lo usa: `synthwave` (neon y rejilla), `glass-chip` (vidrio), `sticky-notes` (mano alzada y cinta), `keycaps` (teclas 3D), `pcb` (pines y trazos con `corner chamfer`), `metro-map` (trazos del color del origen, `ORIGEN`), `pixel-art` (`style pixel`).

@@ -18,8 +18,8 @@ Pruebas de un solo paquete: `pnpm --filter <paquete> test`.
 - Decisiones y trabajo pendiente: GitHub Issues de este repo (`gh`, `WilliamBarriga/Rinthel-arch`); cada ticket es un issue con label `wayfinder:<tipo>`.
 - Reglas de codigo (estructura de paquetes, modulos profundos, hexagonal, pruebas): `docs/CODING.md`.
 - Research: indice con una conclusion por rama en `docs/ramas.md`; `research/<nombre>.md` en ramas `research/<nombre>`, no en `main`; listarlas con `git branch -a -l '*research/*'` y leer el archivo con `git show research/<nombre>:research/<nombre>.md` antes de re-investigar.
-- Guias de usuario (README, `docs/guia/`, `CONTRIBUTING.md`): al cambiar el DSL, un Tema de ejemplo o el CLI, actualizarlas; `pnpm docs:capturas` regenera las imagenes de `docs/img/`.
-- ADRs de contrato (dsl, render, layout, paquetes, cli): indice en `docs/adr/README.md`. Leer el ADR del modulo antes de cambiar su interfaz.
+- Guias de usuario (README, `docs/guia/`, `CONTRIBUTING.md`): al cambiar el DSL, un Tema de ejemplo, el CLI o la UI de dev (`packages/estudio`), actualizarlas; `pnpm docs:capturas` regenera las imagenes de `docs/img/`.
+- ADRs de contrato: indice en `docs/adr/README.md`. Leer el ADR del modulo antes de cambiar su interfaz.
 - Catalogo de Temas (Primitivas, Slots, Movimientos, Efectos con rangos y defectos): `docs/referencia-catalogo.md`, generado desde `packages/tema` con `pnpm docs:catalogo`; no editar a mano (una prueba falla si se desvia).
 
 ## Skills del repo
@@ -39,7 +39,7 @@ Antes de adoptar una dependencia, investigarla (licencia, mantenimiento, encaje 
 
 ## Verificacion
 
-- Iterar con `pnpm check` (typecheck, lint con ESLint, orden de paquetes, emojis); el hook pre-commit lo corre. `pnpm test` es la compuerta completa (build + tests).
+- Iterar con `pnpm check` (typecheck, lint, orden de paquetes, plantilla de docs, emojis); el hook pre-commit lo corre. `pnpm test` es la compuerta completa (build + tests).
 - No hay CI: todo se prueba en local. No agregar workflows de GitHub Actions.
 - Esperar procesos largos con Monitor, no con `sleep`.
 - Todo HTML que se quiera mostrar al usuario (reportes, previews, exports) se sirve desde un mini server local (ej. `python3 -m http.server` en el directorio del archivo, o `dev`) y se entrega la URL `http://localhost:<puerto>/...`. Firefox no ve este disco, asi que `xdg-open` de un archivo o una ruta `file://` no sirve.

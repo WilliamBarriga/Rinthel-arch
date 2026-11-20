@@ -8,7 +8,7 @@ El render es una funcion pura de geometria y Estilo resuelto a una vista React, 
 
 ### Contrato del componente
 
-Props: `geometry` (salida del layout de una Vista), `width` y `height` en px, el Tema ya resuelto, `visibility: (id) => number` para Nodos y Aristas (0 oculto, 1 revelado; ver la decision de `visibility` en Pasos de revelado), `camera`/`viewBox` controlado, `onToggle` y `onSelect`. Sin dependencia de Next, Tailwind ni json-render; peer React 18 y 19.
+Props: `geometry` (salida del layout de una Vista), `width` y `height` en px, el Tema ya resuelto, `visibility: (id) => number` para Nodos y Aristas (0 oculto, 1 revelado; ver la decision de `visibility` en Pasos de revelado), `camera` controlada, `onToggle` y `onSelect`. Sin dependencia de Next, Tailwind ni json-render; peer React 18 y 19.
 
 - **Colapso por `view`, no por `expanded`**: el estado de colapso vive en la Vista resuelta (`resolveView(fuente, id, { expanded, collapsed })`), que decide que Nodos existen y con que Aristas elevadas. Duplicarlo en una prop daria dos fuentes de verdad. `onToggle(id)` solo avisa de que se pulso el control de un Grupo (que se dibuja si hay `onToggle`); quien controla el estado vuelve a resolver la Vista y a calcular el layout.
 - El culling con miles de Nodos se resuelve con colapso y filtrado por viewport en el shell.

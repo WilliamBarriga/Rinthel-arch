@@ -46,7 +46,7 @@ Detalle de cada uno en la [guia del CLI](cli.md), o `dg <comando> --help`. Todos
 | `dg validate --workspace <ruta>` | Compila y valida; lista errores y avisos con archivo y linea. `--json` da el mismo resultado estructurado |
 | `dg build --workspace <ruta>` | Escribe la Fuente canonica y la geometria en `<ruta>/.diagrams/` (no se versiona) |
 | `dg dev --workspace <ruta>` | UI en vivo en `http://127.0.0.1:4173/` ([UI de dev](ui-de-dev.md)); recompila al guardar |
-| `dg inspect buscar <texto>`<br>`dg inspect nodo <id>`<br>`dg inspect vista <id>`<br>`dg inspect tema <nombre>` | Consultas de solo lectura sobre el Modelo, con `archivo:linea` |
+| `dg inspect buscar <texto>`<br>`dg inspect nodo <id>`<br>`dg inspect vista <id>`<br>`dg inspect interaccion <id>`<br>`dg inspect tema <nombre>` | Consultas de solo lectura sobre el Modelo, con `archivo:linea` |
 | `dg edit` | Escribe sobre el `.dg`: fija un Pin (`--view <id> --node <id> --x N --y N`) o aplica una Intencion (`--intent '<json>'`, p. ej. `ordenar-lifelines` en secuencia) o ediciones estructuradas (`--edits '<json>'`, por ejemplo los `fix` de `validate`). Es lo que usa el visor al arrastrar un Nodo |
 | `dg skill` | Imprime una skill (Markdown) para que un agente escriba y corrija `.dg` con el bucle inspect, editar, validate |
 

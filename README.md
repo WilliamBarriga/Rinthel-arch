@@ -15,8 +15,8 @@ Sistema (React + TypeScript) para escribir y renderizar diagramas grandes y deta
 - **Cuatro Tipos de diagrama.** `architecture`, `flow`, `sequence` (Interacciones entre Lifelines, con Fragmentos, Notas y Pasos) y `er` (tablas con claves y cardinalidad) comparten el mismo Modelo y los mismos Temas.
 - **Un Modelo, muchas Vistas.** Los Nodos, Aristas y Atributos se escriben una vez; cada Vista elige que mostrar (`include`, `exclude`, `depth`) y puede enlazar a otra (drill-down) o revelarse paso a paso.
 - **La estetica es un Tema.** Un Tema es texto: Paleta, fuentes y una pila de Capas por elemento, tomadas de un catalogo cerrado (formas, rellenos, bordes, sombras, glow, vidrio, trazos, marcadores, animaciones). Hay Temas de ejemplo (ver la [galeria](docs/galeria.md)) y tres incorporados.
-- **UI en vivo.** `dev` recompila al guardar y abre una UI con el lienzo (pan, zoom, colapso de Grupos, arrastre de Nodos que reescribe el `.dg`), editor del DSL, Issues con `fix`, galeria de Temas, Historial y el feed de lo que hace un agente por el CLI.
-- **Pensado para humanos y agentes.** `validate` devuelve issues estructurados con sugerencias, `inspect` consulta el Modelo y `skill` explica el flujo a un agente.
+- **UI en vivo.** `dev` recompila al guardar y sirve la [UI de dev](docs/guia/ui-de-dev.md): lienzo (pan, zoom, colapso de Grupos, arrastre de Nodos que reescribe el `.dg`), editor del DSL, Issues con `fix`, galeria de Temas, Historial de archivos (deshacer y rehacer) y el feed del Registro de actividad: lo que hace un agente por el CLI.
+- **Pensado para humanos y agentes.** `validate` devuelve issues estructurados con sugerencias, `inspect` consulta el Modelo y `skill` genera la skill de agente de un Workspace.
 
 ## Un vistazo al DSL
 
@@ -78,7 +78,7 @@ pnpm build
 node packages/cli/dist/bin.js dev --workspace examples/rinthel-arch
 ```
 
-`dev` imprime una URL (`http://127.0.0.1:4173/`). Si el visor carga ahi, todo funciona; cambia a las Vistas `abierto-<tema>` para ver los Temas de ejemplo. Para tu propio diagrama, apunta `--workspace` a una carpeta con tus `.dg`.
+`dev` imprime una URL (`http://127.0.0.1:4173/`). Si la UI carga ahi, todo funciona; cambia a las Vistas `abierto-<tema>` para ver los Temas de ejemplo. Para tu propio diagrama, apunta `--workspace` a una carpeta con tus `.dg`.
 
 ## Documentacion
 

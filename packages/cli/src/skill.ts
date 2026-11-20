@@ -170,7 +170,7 @@ ${JSON.stringify(salidaDeEditJsonSchema(), null, 2)}
 
 ## Bucle en vivo (dev)
 
-\`diagrams dev --workspace <ruta>\` levanta un servidor local (solo en 127.0.0.1, puerto 4173 por defecto; \`--port N\` lo cambia) que sirve el shell. Observa el Workspace y, ante cada cambio en los \`.dg\` (con un debounce de ~150 ms), recompila y empuja al navegador la Vista y los issues por Server-Sent Events. La pantalla muestra la Vista elegida por el hash de la URL (\`#<vista>\`) y un panel de issues clicables (\`archivo:linea\`). Un agente no necesita abrirlo: usa inspect y validate; \`dev\` es para que la persona vea el resultado en vivo. No hay bloqueos de edicion ni estado compartido: el DSL en git es el unico punto de coordinacion.
+\`diagrams dev --workspace <ruta>\` levanta un servidor local (solo en 127.0.0.1, puerto 4173 por defecto; \`--port N\` lo cambia) que sirve la UI de dev. Observa el Workspace y, ante cada cambio en los \`.dg\` (con un debounce de ~150 ms), recompila y empuja a la pagina la Vista, los issues y la actividad por Server-Sent Events. La UI muestra la Vista activa del hash de la URL (\`#vista=<id>\`), un editor del DSL, los issues clicables (\`archivo:linea\`), la galeria de Temas, el Historial de archivos y un feed con cada \`validate\`, \`build\`, \`inspect\` y \`edit\` que corres (exporta \`DIAGRAMS_AGENTE=<nombre>\` para firmarlos). Un agente no necesita abrirla: usa inspect y validate; \`dev\` es para que la persona vea el resultado en vivo y edite. La persona tambien escribe los \`.dg\` desde la UI: relee el archivo antes de editarlo y pasa \`edit --hash <archivo>=<hash>\` para no pisar un cambio suyo.
 
 ## Codigos de issue
 
