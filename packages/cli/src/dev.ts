@@ -4,9 +4,10 @@
  * Historial (al conectar y tras cada recompilacion), los Eventos del Registro de actividad (al conectar, los ultimos 50
  * con `previos: true`) y cada Diferencia con su origen. `POST /api/historial/saltar { id }` lleva el Workspace a una
  * entrada del Historial.
- * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); las rutas POST exigen
- * JSON y un `Origin` propio (o ninguno); `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
- * Edicion: 400 cuerpo invalido, 409 `hash-desactualizado`, 422 el resto de rechazos, 500 fallo de I/O.
+ * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); todo POST exige
+ * un `Origin` propio (o ninguno, si no 403) y `application/json` (si no 415); un cuerpo de mas de 64 KiB es 413;
+ * `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
+ * `/api/*` y toda ruta no servida aqui: la respuesta completa de `atenderApiDeDev` (ruteo, 400, 404, 405, 409, 422, 500).
  * Errores: `iniciarDev` rechaza si el puerto esta ocupado (sin dejar el observador activo) y lanza si la lectura
  * inicial falla; `run(['dev', ...])` los convierte en codigo 2. Un estatico de `estudio` sin construir es 404 al pedirlo.
  */
@@ -23,7 +24,7 @@ import type { ArchivosDelWorkspace } from 'dsl';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
 import type { ActividadDeDev, NombreDeEventoDeDev } from 'estudio/protocolo';
-import { RUTAS_POST_DE_DEV, abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
+import { abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
 import type { PuertoDelWorkspaceVivo, RegistroDeActividad, Reloj, WorkspaceVivo } from 'sesion';
 
 import { compiladorDeCodigo } from './codigo';
@@ -138,13 +139,20 @@ function puertoDeDisco(opciones: OpcionesDeDev): PuertoDelWorkspaceVivo {
   };
 }
 
-function leerCuerpo(req: IncomingMessage): Promise<string> {
+const LIMITE_DEL_CUERPO = 64 * 1024;
+
+/** `undefined` si pasa de `LIMITE_DEL_CUERPO`; rechaza si la conexion falla. */
+function leerCuerpo(req: IncomingMessage): Promise<string | undefined> {
   return new Promise((ok, fallo) => {
     let texto = '';
     req.setEncoding('utf8');
     req.on('data', (trozo: string) => {
       texto += trozo;
-      if (texto.length > 64 * 1024) fallo(new Error('Cuerpo demasiado grande'));
+      if (texto.length > LIMITE_DEL_CUERPO) {
+        req.removeAllListeners('data');
+        req.resume();
+        ok(undefined);
+      }
     });
     req.on('end', () => ok(texto));
     req.on('error', fallo);
@@ -222,48 +230,27 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     return [`127.0.0.1:${port}`, `localhost:${port}`];
   };
 
-  /** Si el origen, el content-type o el JSON no valen, responde el error y devuelve `undefined`. */
-  const leerCuerpoJson = async (req: IncomingMessage, res: ServerResponse): Promise<{ cuerpo: unknown } | undefined> => {
+  /** Controles del transporte de un POST: `Origin` propio (o ninguno) y JSON; si fallan, el estado y el mensaje. */
+  const rechazoDelPost = (req: IncomingMessage): [number, string] | undefined => {
     const origen = req.headers.origin;
-    if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) {
-      responder(res, 403, { ok: false, mensaje: 'Origen no permitido' });
-      return undefined;
-    }
-    if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) {
-      responder(res, 415, { ok: false, mensaje: 'Se esperaba application/json' });
-      return undefined;
-    }
-    try {
-      return { cuerpo: JSON.parse(await leerCuerpo(req)) as unknown };
-    } catch {
-      responder(res, 400, { ok: false, mensaje: 'JSON invalido' });
-      return undefined;
-    }
+    if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) return [403, 'Origen no permitido'];
+    if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return [415, 'Se esperaba application/json'];
+    return undefined;
   };
 
-  /** Un fallo de la API (I/O del puerto) responde 500. */
-  const api = (res: ServerResponse, peticion: Parameters<typeof atenderApiDeDev>[1]): void => {
-    void atenderApiDeDev(vivo, peticion)
-      .then((r) => {
-        if (r === undefined) {
-          cabecera(res, 'text/plain', 404);
-          res.end('No encontrado');
-        } else responder(res, r.status, r.cuerpo);
-      })
-      .catch((error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }));
-  };
-
-  /** Las rutas POST exigen POST, un `Origin` propio y JSON (si no, responde el error). */
-  const post = (req: IncomingMessage, res: ServerResponse, url: URL): void => {
-    if (req.method !== 'POST') {
-      res.setHeader('allow', 'POST');
-      responder(res, 405, { ok: false, mensaje: 'Metodo no permitido' });
-      return;
+  /** La API responde completo; aqui solo se controla y se lee el transporte. */
+  const api = async (req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> => {
+    const metodo = req.method ?? 'GET';
+    let cuerpo: string | undefined;
+    if (metodo === 'POST') {
+      const rechazo = rechazoDelPost(req);
+      if (rechazo !== undefined) return responder(res, rechazo[0], { ok: false, mensaje: rechazo[1] });
+      cuerpo = await leerCuerpo(req);
+      if (cuerpo === undefined) return responder(res, 413, { ok: false, mensaje: 'Cuerpo demasiado grande' });
     }
-    void leerCuerpoJson(req, res).then(
-      (leido) => (leido === undefined ? undefined : api(res, { metodo: 'POST', url, cuerpo: leido.cuerpo })),
-      (error: unknown) => responder(res, 500, { ok: false, mensaje: (error as Error).message }),
-    );
+    const respuesta = await atenderApiDeDev(vivo, { metodo, url, ...(cuerpo !== undefined && { cuerpo }) });
+    res.writeHead(respuesta.status, respuesta.cabeceras);
+    res.end(respuesta.cuerpo);
   };
 
   /** Una ruta mal codificada o que sale de la raiz da `undefined`. */
@@ -284,9 +271,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     }
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     const ruta = url.pathname;
-    if (RUTAS_POST_DE_DEV.includes(ruta)) {
-      post(req, res, url);
-    } else if (ruta === '/') {
+    if (ruta === '/') {
       servirEstatico(res, estudio().indice);
     } else if (ruta.startsWith(RUTA_DEL_ESTUDIO)) {
       const { archivos } = estudio();
@@ -318,7 +303,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       enviarHistorial(res);
       enviarActividad(res, { previos: true, eventos: [...vivo.actividad()] });
     } else {
-      api(res, { metodo: req.method ?? 'GET', url });
+      // Una conexion que se corta al leer el cuerpo no tiene a quien responder.
+      api(req, res, url).catch(() => res.destroy());
     }
   });
 

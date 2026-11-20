@@ -9,7 +9,7 @@
  * Errores: nunca lanza por una peticion; responde el estado HTTP que daria `dev`.
  */
 import { RUTAS_DE_DEV } from 'canonico';
-import { abrirWorkspaceVivo, atenderApiDeDev, puertoEnMemoria, RUTAS_POST_DE_DEV } from 'sesion';
+import { abrirWorkspaceVivo, atenderApiDeDev, puertoEnMemoria } from 'sesion';
 import type { Reloj, WorkspaceEnMemoria } from 'sesion';
 
 import type { ActividadDeDev, NombreDeEventoDeDev } from './protocolo';
@@ -42,13 +42,30 @@ const relojInmediato: Reloj = {
   },
 };
 
-const respuesta = (status: number, cuerpo: unknown): Response => new Response(JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
-
-/** `actividad`: texto inicial de `.diagrams/actividad.jsonl`; `ahora`: hora en ms de cada entrada del Historial. */
-export async function devEnMemoria({ propios, temas, actividad, ahora = Date.now }: { propios: Archivos; temas?: Archivos; actividad?: string; ahora?: () => number }): Promise<DevEnMemoria> {
+/**
+ * `actividad`: texto inicial de `.diagrams/actividad.jsonl`; `escrituraRota`: toda escritura lanza un `Error` con ese
+ * mensaje (fallo de I/O); `ahora`: hora en ms de cada entrada del Historial.
+ */
+export async function devEnMemoria({
+  propios,
+  temas,
+  actividad,
+  escrituraRota,
+  ahora = Date.now,
+}: {
+  propios: Archivos;
+  temas?: Archivos;
+  actividad?: string;
+  escrituraRota?: string;
+  ahora?: () => number;
+}): Promise<DevEnMemoria> {
   const puerto = puertoEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }) });
   // Sin watcher: las escrituras propias recompilan al terminar y `editarFuera` pide la recompilacion.
-  const vivo = await abrirWorkspaceVivo({ puerto: { ...puerto, observar: () => () => undefined }, raiz: RAIZ, reloj: relojInmediato, ahora });
+  const escribir: typeof puerto.escribir = (ruta, texto) => {
+    if (escrituraRota !== undefined) throw new Error(escrituraRota);
+    puerto.escribir(ruta, texto);
+  };
+  const vivo = await abrirWorkspaceVivo({ puerto: { ...puerto, escribir, observar: () => () => undefined }, raiz: RAIZ, reloj: relojInmediato, ahora });
 
   const oyentes = new Set<(nombre: NombreDeEventoDeDev, datos: string) => void>();
   const emitir = (nombre: NombreDeEventoDeDev, datos: unknown): void => {
@@ -71,22 +88,8 @@ export async function devEnMemoria({ propios, temas, actividad, ahora = Date.now
   };
 
   const atender = async (url: URL, init: RequestInit | undefined): Promise<Response> => {
-    const metodo = init?.method ?? 'GET';
-    let cuerpo: unknown;
-    if (RUTAS_POST_DE_DEV.includes(url.pathname)) {
-      if (metodo !== 'POST') return respuesta(405, { ok: false, mensaje: 'Metodo no permitido' });
-      try {
-        cuerpo = JSON.parse(typeof init?.body === 'string' ? init.body : '{}');
-      } catch {
-        return respuesta(400, { ok: false, mensaje: 'JSON invalido' });
-      }
-    }
-    try {
-      const r = await atenderApiDeDev(vivo, { metodo, url, cuerpo });
-      return r === undefined ? new Response('No encontrado', { status: 404 }) : respuesta(r.status, r.cuerpo);
-    } catch (error) {
-      return respuesta(500, { ok: false, mensaje: (error as Error).message });
-    }
+    const { status, cuerpo, cabeceras } = await atenderApiDeDev(vivo, { metodo: init?.method ?? 'GET', url, ...(typeof init?.body === 'string' && { cuerpo: init.body }) });
+    return new Response(cuerpo, { status, headers: cabeceras });
   };
 
   return {

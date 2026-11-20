@@ -16,7 +16,7 @@ export { clasificarCambio } from './cambio';
 export type { InstanteDeDev } from './cambio';
 export { abrirWorkspaceVivo, DEBOUNCE_MS, EVENTOS_PREVIOS, VERSIONES_GUARDADAS } from './workspace-vivo';
 export type { CodigoCompilado, CodigoDelWorkspace, EdicionesDeTexto, OpcionesDelWorkspaceVivo, PuertoDelWorkspaceVivo, RegistroDeActividad, Reloj, ResultadoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
-export { atenderApiDeDev, consultaDeRuta, pedidoDeEdicion, RUTAS_POST_DE_DEV } from './api-de-dev';
+export { atenderApiDeDev, consultaDeRuta, pedidoDeEdicion } from './api-de-dev';
 export type { PeticionDeDev, RespuestaDeDev } from './api-de-dev';
 export { puertoEnMemoria } from './puerto-vivo-en-memoria';
 export type { ContenidoVivoEnMemoria, WorkspaceVivoEnMemoria } from './puerto-vivo-en-memoria';
