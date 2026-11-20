@@ -2,6 +2,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { ANCHO_DEL_EDITOR } from '../navegador/marco/pestanas';
 import { lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
 
 afterEach(cleanup);
@@ -81,6 +82,18 @@ describe('marco de la UI', () => {
     expect(alto.getAttribute('aria-valuenow')).toBe(alto.getAttribute('aria-valuemax'));
     fireEvent.doubleClick(alto);
     expect(alto.getAttribute('aria-valuetext')).toBe('alto del contenido');
+  });
+
+  it('abrir Codigo ensancha la isla izquierda para que el editor no corte el texto (sin pasar del maximo)', async () => {
+    await montarEstudio({ 'main.dg': DSL });
+    const ancho = await screen.findByRole('separator', { name: 'Ancho del panel izquierdo' });
+    const antes = Number(ancho.getAttribute('aria-valuenow'));
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Codigo' }));
+
+    const maximo = Number(ancho.getAttribute('aria-valuemax'));
+    await waitFor(() => expect(Number(ancho.getAttribute('aria-valuenow'))).toBe(Math.min(Math.max(antes, ANCHO_DEL_EDITOR), maximo)));
+    expect(Number(ancho.getAttribute('aria-valuenow'))).toBeGreaterThan(antes);
   });
 });
 

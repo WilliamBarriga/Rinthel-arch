@@ -23,11 +23,16 @@ export interface PestanaDelPanel {
   Contenido: ComponentType;
   /** Sigue montada (oculta) con otra pestana activa: el editor conserva su estado y su historial fino (historia 26). */
   conservar?: boolean;
+  /** Al activarla, la isla se ensancha hasta este ancho (si es mas angosta y el lienzo lo permite). */
+  anchoMinimo?: number;
 }
+
+/** Ancho con el que el editor muestra lineas de DSL tipicas sin cortarlas. */
+export const ANCHO_DEL_EDITOR = 560;
 
 export const PESTANAS_IZQUIERDAS: readonly PestanaDelPanel[] = [
   { id: 'vistas', nombre: 'Vistas', Contenido: PanelDeVistas },
-  { id: 'codigo', nombre: 'Codigo', Contenido: PanelDeCodigo, conservar: true },
+  { id: 'codigo', nombre: 'Codigo', Contenido: PanelDeCodigo, conservar: true, anchoMinimo: ANCHO_DEL_EDITOR },
 ];
 
 export const PESTANAS_DERECHAS: readonly PestanaDelPanel[] = [
