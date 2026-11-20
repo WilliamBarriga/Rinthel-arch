@@ -22,7 +22,7 @@ export function useComponentes(cliente: ClienteDeDev, version: number | undefine
           conservarAnteFallo: true,
           pedir: async () => {
             const carga = await cargar();
-            if (carga.ok) return { ok: true, dato: carga.componentes };
+            if (carga.ok) return carga;
             const mensaje = `No se pudieron cargar los Componentes de Tema: ${carga.mensaje}`;
             reportar(mensaje);
             return { ok: false, mensaje };

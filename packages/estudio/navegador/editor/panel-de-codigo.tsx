@@ -55,10 +55,7 @@ export function PanelDeCodigo(): ReactElement {
   const lectura = useLecturaPorVersion<ArchivosDeDev>(cliente, estado?.version, {
     clave: 'archivos',
     conservarAnteFallo: true,
-    pedir: async (c) => {
-      const leidos = await c.archivos();
-      return leidos === undefined ? { ok: false, mensaje: 'No se pudo leer /api/archivos' } : { ok: true, dato: leidos };
-    },
+    pedir: (c) => c.archivos(),
   });
   const listado = lectura.tipo === 'dato' ? lectura.dato : undefined;
   const lista = listado?.archivos;

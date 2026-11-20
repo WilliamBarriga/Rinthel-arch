@@ -7,7 +7,7 @@ import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import type { ComponentesDeTema } from 'render';
 
-import type { ClienteDeDev } from './cliente';
+import type { ClienteDeDev, Lectura } from './cliente';
 
 const MODULOS: Record<string, unknown> = { react: React, 'react/jsx-runtime': jsxRuntime, 'react/jsx-dev-runtime': jsxRuntime };
 
@@ -21,8 +21,8 @@ function evaluarBundle(bundle: string): ComponentesDeTema {
   return Object.fromEntries(Object.entries(exportados).filter(([nombre, valor]) => /^[A-Z]/.test(nombre) && typeof valor === 'function')) as ComponentesDeTema;
 }
 
-/** `componentes` ausente: no hay codigo o se rechazo la confirmacion. `ok: false` lleva el motivo visible. */
-export type CargaDeComponentes = { ok: true; componentes?: ComponentesDeTema } | { ok: false; mensaje: string };
+/** `valor` ausente: no hay codigo o se rechazo la confirmacion. `ok: false` lleva el motivo visible. */
+export type CargaDeComponentes = Lectura<ComponentesDeTema | undefined>;
 
 /**
  * Pide confirmacion la primera vez que hay codigo sin confianza (no vuelve a preguntar si se rechazo) y carga el
@@ -31,15 +31,15 @@ export type CargaDeComponentes = { ok: true; componentes?: ComponentesDeTema } |
 export function crearCargadorDeComponentes(cliente: ClienteDeDev, confirmar: (mensaje: string) => boolean): () => Promise<CargaDeComponentes> {
   let rechazado = false;
   return async () => {
-    if (rechazado) return { ok: true };
+    if (rechazado) return { ok: true, valor: undefined };
     const codigo = await cliente.codigo();
     if (!codigo.ok) return codigo;
     const { temaConCodigo, componentes, confiado } = codigo.valor;
-    if (!temaConCodigo) return { ok: true };
+    if (!temaConCodigo) return { ok: true, valor: undefined };
     if (!confiado) {
       if (!confirmar(`Los Temas de este Workspace cargan codigo (${componentes.join(', ')}) que corre en tu navegador sin sandbox. Cargalo solo si confias en el Workspace. Cargar el codigo?`)) {
         rechazado = true;
-        return { ok: true };
+        return { ok: true, valor: undefined };
       }
       const confirmado = await cliente.confiar();
       if (!confirmado.ok) return { ok: false, mensaje: `dev no acepto la confirmacion: ${confirmado.mensaje}` };
@@ -47,7 +47,7 @@ export function crearCargadorDeComponentes(cliente: ClienteDeDev, confirmar: (me
     const bundle = await cliente.bundleDeComponentes();
     if (!bundle.ok) return bundle;
     try {
-      return { ok: true, componentes: evaluarBundle(bundle.valor) };
+      return { ok: true, valor: evaluarBundle(bundle.valor) };
     } catch (error) {
       return { ok: false, mensaje: (error as Error).message };
     }

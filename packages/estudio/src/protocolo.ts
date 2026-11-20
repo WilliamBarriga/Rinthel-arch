@@ -2,7 +2,7 @@
  * `estudio/protocolo`: el protocolo de `dev` entre el servidor (`cli`) y la pagina, tal como lo ve la pagina (ADR 0004, 0007).
  * Interfaz: reexporta de `canonico` (`dev.ts`, el unico dueno del protocolo) las rutas (`RUTAS_DE_DEV`), los eventos SSE
  * con nombre (`EVENTOS_DE_DEV`), los esquemas de lo que produce el Workspace vivo (estado, Diferencia, Historial,
- * actividad, archivos, codigo, errores, `inspect` no encontrado) y los de las peticiones. La pagina valida con ellos;
+ * actividad, archivos, codigo, escrituras aceptadas, errores y rechazos, `inspect` no encontrado) y los de las peticiones. La pagina valida con ellos;
  * `cli` importa de aqui solo tipos (los valores los toma de `canonico`).
  * Invariantes: sin DOM ni Node; solo reexporta de `canonico`, para que importarlo no arrastre la app de navegador.
  */
@@ -17,6 +17,7 @@ export {
   elementoDeDiferenciaSchema,
   entradaDelHistorialDeDevSchema,
   errorDeDevSchema,
+  escrituraDeDevSchema,
   estadoDeDevSchema,
   EVENTOS_DE_DEV,
   historialDeDevSchema,
@@ -26,6 +27,7 @@ export {
   ORIGENES_DE_DIFERENCIA,
   peticionDeEdicionesSchema,
   peticionDeSaltoSchema,
+  rechazoDeDevSchema,
   rutaDeArchivo,
   rutaDeInspect,
   RUTAS_DE_DEV,
@@ -41,6 +43,7 @@ export type {
   ElementoDeDiferencia as ElementoDeDiferenciaDeDev,
   EntradaDelHistorialDeDev,
   ErrorDeDev,
+  EscrituraDeDev,
   EstadoDeDev,
   EventoDeDev,
   HistorialDeDev,
@@ -49,5 +52,6 @@ export type {
   NombreDeEventoDeDev,
   OrigenDeDiferencia,
   PeticionDeEdiciones,
+  RechazoDeDev,
   TipoDeCambio,
 } from 'canonico';

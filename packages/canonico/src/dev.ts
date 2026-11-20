@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { eventoDeActividadSchema } from './actividad';
 import { edicionDeTextoSchema } from './edit';
 import { fuenteCanonicaSchema } from './esquema';
+import { MOTIVOS_DE_RECHAZO } from './pin';
 import type { MotivoDeRechazo } from './pin';
 import { RUTA_DE_FUENTES } from './ruta-de-fuentes';
 import { issueSchema } from './salida';
@@ -228,6 +229,14 @@ export const confianzaDeDevSchema = z.object({ ok: z.literal(true) });
 /** Cuerpo de los bordes de `/api/*`: 400 (JSON o forma invalida), 404 (ruta o recurso), 405 (metodo, con `allow`) y 500 (fallo de I/O). */
 export const errorDeDevSchema = z.object({ ok: z.literal(false), mensaje: z.string() });
 export type ErrorDeDev = z.infer<typeof errorDeDevSchema>;
+
+/** `POST /api/edit`, `/api/deshacer`, `/api/rehacer` y `/api/historial/saltar` aceptados: la `version` del estado tras escribir. */
+export const escrituraDeDevSchema = z.object({ ok: z.literal(true), version: z.number().int() });
+export type EscrituraDeDev = z.infer<typeof escrituraDeDevSchema>;
+
+/** Un borde (`errorDeDevSchema`) o el rechazo de una escritura (409/422), que trae ademas `motivo` y, si lo hay, `file`. */
+export const rechazoDeDevSchema = errorDeDevSchema.extend({ motivo: z.enum(MOTIVOS_DE_RECHAZO).optional(), file: z.string().optional() });
+export type RechazoDeDev = z.infer<typeof rechazoDeDevSchema>;
 
 /** Cuerpo de un 404 de `/api/inspect` (o 422 si el Workspace nunca compilo): el mensaje de `inspect` y los ids cercanos. */
 export const inspectNoEncontradoSchema = z.object({ ok: z.literal(false), mensaje: z.string(), cercanos: z.array(z.string()) });
