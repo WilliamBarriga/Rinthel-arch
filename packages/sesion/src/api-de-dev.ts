@@ -1,10 +1,11 @@
 /**
- * Rutas `/api/*` de `dev` sobre un Workspace vivo, sin transporte: una peticion ya leida (metodo, URL, cuerpo JSON)
- * entra y sale el estado HTTP con su cuerpo. La usan el servidor real (`cli`) y `devEnMemoria` (`estudio/contrato`), asi
- * que las rutas, la validacion y la traduccion de rechazos a HTTP son unas solas (ADR 0007).
- * Invariantes: `undefined` si la ruta no es de la API (el adaptador sirve estaticos, `/eventos`, fuentes y codigo);
- * un POST a una ruta de lectura no se atiende aqui (el adaptador decide el 405). Los cuerpos invalidos dan 400; los
- * rechazos, `estadoHttpDeRechazo`; los fallos de I/O del puerto se propagan (el adaptador responde 500).
+ * Rutas `/api/*` de `dev` sobre un Workspace vivo, sin transporte: entra una peticion (metodo, URL y cuerpo crudo) y sale
+ * siempre una respuesta completa (estado HTTP, cuerpo JSON ya serializado y cabeceras). La usan el servidor real (`cli`)
+ * y `devEnMemoria` (`estudio/contrato`), asi que el ruteo, la validacion y los bordes son unos solos (ADR 0007).
+ * Bordes: ruta desconocida 404; metodo ajeno 405 con `allow`; JSON o forma invalida 400; rechazos `estadoHttpDeRechazo`
+ * (409/422); una excepcion (fallo de I/O del puerto) 500 con su mensaje. Todos con `{ ok: false, mensaje }`.
+ * Invariantes: nunca rechaza. Al adaptador le quedan solo el transporte y su seguridad (Host, Origin, content-type) y
+ * lo que no es `/api/*` (estaticos, `/eventos`, fuentes, `/componentes.js`).
  */
 import { archivoDeRuta, COMANDOS_DE_INSPECT, estadoHttpDeRechazo, intencionSchema, peticionDeEdicionesSchema, peticionDeSaltoSchema, RUTAS_DE_DEV } from 'canonico';
 import type { ComandoDeInspect, Intencion } from 'canonico';
@@ -15,21 +16,35 @@ import type { EdicionesDeTexto, ResultadoDelWorkspaceVivo, WorkspaceVivo } from 
 export interface PeticionDeDev {
   metodo: string;
   url: URL;
-  /** JSON ya parseado (solo POST). */
-  cuerpo?: unknown;
+  /** Cuerpo crudo (texto); solo lo leen las rutas POST. */
+  cuerpo?: string;
 }
 
 export interface RespuestaDeDev {
   status: number;
-  cuerpo: unknown;
+  /** JSON serializado. */
+  cuerpo: string;
+  cabeceras: Readonly<Record<string, string>>;
 }
 
-/** Rutas POST de la API: el adaptador lee su cuerpo JSON (y aplica sus controles de origen) antes de atender. */
-export const RUTAS_POST_DE_DEV: readonly string[] = [RUTAS_DE_DEV.edit, RUTAS_DE_DEV.deshacer, RUTAS_DE_DEV.rehacer, RUTAS_DE_DEV.saltar, RUTAS_DE_DEV.confiar];
+/** Rutas POST de la API (exactas). */
+const RUTAS_POST: readonly string[] = [RUTAS_DE_DEV.edit, RUTAS_DE_DEV.deshacer, RUTAS_DE_DEV.rehacer, RUTAS_DE_DEV.saltar, RUTAS_DE_DEV.confiar];
+/** Rutas GET de la API: exactas y prefijos (`<prefijo><argumento>`). */
+const RUTAS_GET: readonly string[] = [RUTAS_DE_DEV.estado, RUTAS_DE_DEV.archivos, RUTAS_DE_DEV.codigo];
+const PREFIJOS_GET: readonly string[] = [RUTAS_DE_DEV.archivo, RUTAS_DE_DEV.inspect, RUTAS_DE_DEV.vista];
+const esRutaGet = (ruta: string): boolean => RUTAS_GET.includes(ruta) || PREFIJOS_GET.some((prefijo) => ruta.startsWith(prefijo));
 
-const json = (status: number, cuerpo: unknown): RespuestaDeDev => ({ status, cuerpo });
+/** Respuesta interna antes de serializar. */
+interface Respuesta {
+  status: number;
+  cuerpo: unknown;
+  cabeceras?: Record<string, string>;
+}
 
-const resultado = (r: ResultadoDelWorkspaceVivo): RespuestaDeDev =>
+const json = (status: number, cuerpo: unknown): Respuesta => ({ status, cuerpo });
+const error = (status: number, mensaje: string): Respuesta => json(status, { ok: false, mensaje });
+
+const resultado = (r: ResultadoDelWorkspaceVivo): Respuesta =>
   r.ok ? json(200, r) : json(estadoHttpDeRechazo(r.motivo), { ok: false, motivo: r.motivo, mensaje: r.mensaje, ...(r.file !== undefined && { file: r.file }) });
 
 /** Una Intencion o `{ ediciones, version?, descripcion?, aunqueNoCompile? }` (`PeticionDeEdiciones`); `undefined` es 400. */
@@ -64,7 +79,7 @@ export function consultaDeRuta(url: URL): Consulta | undefined {
   return { comando, argumento, ...opcion('tipo'), ...opcion('estado'), ...opcion('diagrama'), catalogo: url.searchParams.get('catalogo') === 'true' };
 }
 
-async function post(vivo: WorkspaceVivo, ruta: string, cuerpo: unknown): Promise<RespuestaDeDev | undefined> {
+async function post(vivo: WorkspaceVivo, ruta: string, cuerpo: unknown): Promise<Respuesta | undefined> {
   if (ruta === RUTAS_DE_DEV.edit) {
     const pedido = pedidoDeEdicion(cuerpo);
     if (pedido === undefined) return json(400, { ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... } o { ediciones, version, descripcion? }' });
@@ -84,14 +99,14 @@ async function post(vivo: WorkspaceVivo, ruta: string, cuerpo: unknown): Promise
   return undefined;
 }
 
-async function get(vivo: WorkspaceVivo, url: URL): Promise<RespuestaDeDev | undefined> {
+async function get(vivo: WorkspaceVivo, url: URL): Promise<Respuesta | undefined> {
   const ruta = url.pathname;
   if (ruta === RUTAS_DE_DEV.estado) return json(200, vivo.estado());
   if (ruta === RUTAS_DE_DEV.archivos) return json(200, vivo.archivos());
   if (ruta.startsWith(RUTAS_DE_DEV.archivo)) {
     const file = archivoDeRuta(ruta.slice(RUTAS_DE_DEV.archivo.length));
     const leido = file === undefined ? undefined : vivo.archivo(file);
-    return leido === undefined ? json(404, { ok: false, mensaje: 'Archivo inexistente' }) : json(200, leido);
+    return leido === undefined ? error(404, 'Archivo inexistente') : json(200, leido);
   }
   if (ruta === RUTAS_DE_DEV.codigo) {
     const { componentes, confiado } = vivo.codigo();
@@ -109,17 +124,43 @@ async function get(vivo: WorkspaceVivo, url: URL): Promise<RespuestaDeDev | unde
     try {
       id = decodeURIComponent(ruta.slice(RUTAS_DE_DEV.vista.length));
     } catch {
-      return json(404, { error: 'Vista inexistente' });
+      return error(404, 'Vista inexistente');
     }
     // `?tema=<nombre>`: la Vista con otro Tema (previsualizar), sin cache ni Historial.
     const tema = url.searchParams.get('tema') ?? undefined;
     const geometria = await vivo.geometria(id, tema === undefined ? undefined : { tema });
-    return geometria === undefined ? json(404, { error: tema === undefined ? `Vista '${id}' inexistente` : `Vista '${id}' o Tema '${tema}' inexistente` }) : json(200, geometria);
+    return geometria === undefined ? error(404, tema === undefined ? `Vista '${id}' inexistente` : `Vista '${id}' o Tema '${tema}' inexistente`) : json(200, geometria);
   }
   return undefined;
 }
 
-/** Atiende una ruta de la API; `undefined` si no lo es. */
-export function atenderApiDeDev(vivo: WorkspaceVivo, { metodo, url, cuerpo }: PeticionDeDev): Promise<RespuestaDeDev | undefined> {
-  return metodo === 'POST' ? post(vivo, url.pathname, cuerpo) : get(vivo, url);
+function serializar({ status, cuerpo, cabeceras }: Respuesta): RespuestaDeDev {
+  return { status, cuerpo: JSON.stringify(cuerpo), cabeceras: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...cabeceras } };
+}
+
+const metodoAjeno = (permitido: 'GET' | 'POST'): Respuesta => ({ ...error(405, 'Metodo no permitido'), cabeceras: { allow: permitido } });
+
+async function atender(vivo: WorkspaceVivo, { metodo, url, cuerpo }: PeticionDeDev): Promise<Respuesta> {
+  if (RUTAS_POST.includes(url.pathname)) {
+    if (metodo !== 'POST') return metodoAjeno('POST');
+    let leido: unknown;
+    try {
+      leido = JSON.parse(cuerpo ?? '');
+    } catch {
+      return error(400, 'JSON invalido');
+    }
+    return (await post(vivo, url.pathname, leido)) ?? error(404, 'No encontrado');
+  }
+  if (!esRutaGet(url.pathname)) return error(404, 'No encontrado');
+  if (metodo !== 'GET' && metodo !== 'HEAD') return metodoAjeno('GET');
+  return (await get(vivo, url)) ?? error(404, 'No encontrado');
+}
+
+/** Atiende cualquier peticion como ruta de la API; nunca rechaza (una excepcion es 500). */
+export async function atenderApiDeDev(vivo: WorkspaceVivo, peticion: PeticionDeDev): Promise<RespuestaDeDev> {
+  try {
+    return serializar(await atender(vivo, peticion));
+  } catch (e) {
+    return serializar(error(500, e instanceof Error ? e.message : String(e)));
+  }
 }
