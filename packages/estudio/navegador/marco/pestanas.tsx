@@ -5,6 +5,8 @@
  */
 import type { ComponentType, ReactElement } from 'react';
 
+import { PanelDelAgente } from '../agente/panel-del-agente';
+import { SeguirAlAgente, UltimaLineaDelAgente } from '../agente/pildoras';
 import { Detalle } from '../detalle/detalle';
 import { PanelDeIssues } from '../issues/panel-de-issues';
 import { PanelDeVistas } from '../vistas/panel-de-vistas';
@@ -31,11 +33,14 @@ export const PESTANAS_DERECHAS: readonly PestanaDelPanel[] = [
   { id: 'issues', nombre: 'Issues', Contenido: PanelDeIssues },
   { id: 'temas', nombre: 'Temas', Contenido: pendiente('La galeria de Temas aun no esta disponible.') },
   { id: 'historial', nombre: 'Historial', Contenido: pendiente('El Historial aun no esta disponible.') },
-  { id: 'agente', nombre: 'Agente', Contenido: pendiente('La actividad del agente aun no esta disponible.') },
+  { id: 'agente', nombre: 'Agente', Contenido: PanelDelAgente },
 ];
 
 /**
  * Pildoras de la barra superior despues de la marca y las migas (Buscador, ultima linea del agente, "seguir al
  * agente"). Mismo contrato que los paneles: componentes sin props que leen `useEstudio()`.
  */
-export const PILDORAS_DE_LA_BARRA: readonly { id: string; Contenido: ComponentType }[] = [];
+export const PILDORAS_DE_LA_BARRA: readonly { id: string; Contenido: ComponentType }[] = [
+  { id: 'ultima-linea-del-agente', Contenido: UltimaLineaDelAgente },
+  { id: 'seguir-al-agente', Contenido: SeguirAlAgente },
+];

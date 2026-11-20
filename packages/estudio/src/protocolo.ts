@@ -50,7 +50,7 @@ export type NombreDeEventoDeDev = (typeof EVENTOS_DE_DEV)[number];
 
 /**
  * Datos de `event: actividad`: Eventos del Registro de actividad en orden. Al conectar llega uno con `previos: true` y
- * los ultimos 50 del registro (si los hay); despues, uno con `previos: false` por cada tanda que el CLI anexa.
+ * los ultimos 50 del registro (quiza ninguno); despues, uno con `previos: false` por cada tanda que el CLI anexa.
  */
 export const actividadDeDevSchema = z.object({ previos: z.boolean(), eventos: z.array(eventoDeActividadSchema) });
 export type ActividadDeDev = z.infer<typeof actividadDeDevSchema>;
