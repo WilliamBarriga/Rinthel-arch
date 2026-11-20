@@ -380,10 +380,32 @@
       text-decoration: underline;
     }
   }
+  .ui-panel-issues {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ui-filtro-issues {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    & input,
+    & select {
+      min-width: 0;
+      background: var(--ui-sutil);
+      color: var(--ui-texto);
+      border: 1px solid var(--ui-borde);
+      border-radius: var(--ui-radio-s);
+      padding: 4px 6px;
+    }
+    & input {
+      flex: 1;
+    }
+  }
   .ui-issues {
     gap: 6px;
-    & a {
-      text-decoration: none;
+    & li > .ui-boton {
+      margin-left: 6px;
     }
     & [data-severidad='error'] .ui-sitio {
       color: var(--ui-err);
