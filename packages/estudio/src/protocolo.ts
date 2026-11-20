@@ -87,6 +87,22 @@ export const diferenciaDeDevSchema = z.object({
   cambiados: z.array(z.object({ elemento: elementoDeDiferenciaSchema, propiedades: z.array(z.object({ nombre: z.string(), clase: z.enum(['texto', 'estructura']) })) })),
 });
 export type DiferenciaDeDev = z.infer<typeof diferenciaDeDevSchema>;
+/**
+ * Datos de `event: historial` (al conectar y tras cada recompilacion): el Historial de deshacer de `dev`, `pasado` de la
+ * entrada mas vieja a la mas reciente y `futuro` desde la siguiente a rehacer. `id` es un contador estable del proceso
+ * (`0` es Inicio), `cuando` la hora en ms y `descripcion` la arma el servidor. `alcanzable: false` (con `motivo`) si
+ * saltar a ella restauraria un archivo que cambio por fuera.
+ */
+const alcanceSchema = { alcanzable: z.boolean(), motivo: z.string().optional() };
+export const entradaDelHistorialDeDevSchema = z.object({ id: z.number().int().positive(), descripcion: z.string(), archivos: z.array(z.string()), cuando: z.number(), ...alcanceSchema });
+export const historialDeDevSchema = z.object({ pasado: z.array(entradaDelHistorialDeDevSchema), futuro: z.array(entradaDelHistorialDeDevSchema), inicio: z.object(alcanceSchema) });
+export type EntradaDelHistorialDeDev = z.infer<typeof entradaDelHistorialDeDevSchema>;
+export type HistorialDeDev = z.infer<typeof historialDeDevSchema>;
+
+/** `POST /api/historial/saltar { id }`: 200 tras escribir el destino, 409 si cambio por fuera, 422 `entrada-desconocida`. */
+export const RUTA_DE_SALTAR = '/api/historial/saltar';
+export const peticionDeSaltoSchema = z.object({ id: z.number().int().nonnegative() });
+export const INICIO_DEL_HISTORIAL_DE_DEV = 0;
 
 /** Subcomandos de `GET /api/inspect/<comando>/<argumento>`; las opciones de `tema` van en la query. */
 export const COMANDOS_DE_INSPECT = ['buscar', 'nodo', 'vista', 'interaccion', 'tema'] as const;

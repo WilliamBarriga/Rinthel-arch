@@ -7,7 +7,7 @@
 import { geometriaCacheadaSchema } from 'canonico';
 import type { GeometriaCacheada, Intencion, SalidaDeInspect } from 'canonico';
 
-import { archivoDeDevSchema, archivosDeDevSchema, estadoDeDevSchema, inspectNoEncontradoSchema, rutaDeArchivo, rutaDeInspect } from '../src/protocolo';
+import { archivoDeDevSchema, archivosDeDevSchema, estadoDeDevSchema, inspectNoEncontradoSchema, RUTA_DE_SALTAR, rutaDeArchivo, rutaDeInspect } from '../src/protocolo';
 import type { ArchivoDeDev, ArchivosDeDev, ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from '../src/protocolo';
 
 /**
@@ -58,6 +58,8 @@ export interface ClienteDeDev {
   archivo(file: string): Promise<ArchivoDeDev | undefined>;
   deshacer(): Promise<ResultadoDeEnvio>;
   rehacer(): Promise<ResultadoDeEnvio>;
+  /** `POST /api/historial/saltar { id }` (0: Inicio). */
+  saltar(id: number): Promise<ResultadoDeEnvio>;
   /** Con `tema`, la Vista dibujada con ese Tema (`?tema=`, sin cache en el servidor): previsualizar sin escribir. */
   geometria(vista: string, opciones?: { tema?: string }): Promise<LecturaDeGeometria>;
 }
@@ -148,6 +150,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
     archivo: (file) => leerJson(rutaDeArchivo(file), archivoDeDevSchema),
     deshacer: () => post('/api/deshacer', {}),
     rehacer: () => post('/api/rehacer', {}),
+    saltar: (id) => post(RUTA_DE_SALTAR, { id }),
     async geometria(vista, { tema } = {}) {
       const NO_LLEGO = Symbol('no-llego');
       const abortar = new AbortController();

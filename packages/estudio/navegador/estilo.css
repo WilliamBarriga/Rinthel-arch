@@ -532,6 +532,60 @@
     background: var(--ui-sutil);
     white-space: pre-wrap;
     word-break: break-all;
+  }
+  /* Historial: lo mas reciente arriba, el futuro atenuado, la posicion actual marcada. */
+  .ui-historial-lista {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ui-historial-fila {
+    &[data-futuro='true'] {
+      opacity: 0.55;
+    }
+  }
+  .ui-historial-boton {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px;
+    width: 100%;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: var(--ui-radio-s);
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    &:hover:not(:disabled) {
+      background: var(--ui-hover);
+    }
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    &[aria-current='step'] {
+      background: var(--ui-sutil);
+      cursor: default;
+    }
+  }
+  .ui-historial-marca {
+    color: var(--ui-acento);
+  }
+  .ui-historial-actual {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--ui-acento);
+  }
+  .ui-historial-motivo {
+    margin: 0 6px 4px 22px;
+    font-size: 11px;
+    color: var(--ui-err);
+  }
   /* Buscador, ayuda de atajos y tooltips (portales de Base UI en `.ui-portales`). */
   .ui-pildora-buscador {
     color: var(--ui-tenue);

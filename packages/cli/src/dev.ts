@@ -1,7 +1,9 @@
 /**
  * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
- * cada peticion y con `no-store`), el estado y la Geometria por Vista, y empuja por SSE (`/eventos`) el estado y los
- * Eventos del Registro de actividad (al conectar, los ultimos 50 con `previos: true`) y cada Diferencia con su origen.
+ * cada peticion y con `no-store`), el estado y la Geometria por Vista, y empuja por SSE (`/eventos`) el estado, el
+ * Historial (al conectar y tras cada recompilacion), los Eventos del Registro de actividad (al conectar, los ultimos 50
+ * con `previos: true`) y cada Diferencia con su origen. `POST /api/historial/saltar { id }` lleva el Workspace a una
+ * entrada del Historial.
  * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); las rutas POST exigen
  * JSON y un `Origin` propio (o ninguno); `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
  * Edicion: 400 cuerpo invalido, 409 `hash-desactualizado`, 422 el resto de rechazos, 500 fallo de I/O.
@@ -20,7 +22,7 @@ import type { Intencion } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
-import type { ActividadDeDev, ArchivoDeDev, ArchivosDeDev, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from 'estudio/protocolo';
+import type { ActividadDeDev, ArchivoDeDev, ArchivosDeDev, EstadoDeDev, HistorialDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from 'estudio/protocolo';
 
 import { compiladorDeCodigo } from './codigo';
 import { SUBCOMANDOS_DE_INSPECT, comoSalidaDeInspect } from './inspect';
@@ -214,8 +216,13 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   const enviar = (cliente: ServerResponse, nombre: NombreDeEventoDeDev, datos: unknown): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
   const enviarEstado = (cliente: ServerResponse, estado: EstadoDeDev): void => enviar(cliente, 'estado', estado);
   const enviarActividad = (cliente: ServerResponse, actividad: ActividadDeDev): void => enviar(cliente, 'actividad', actividad);
+  const enviarHistorial = (cliente: ServerResponse): void => enviar(cliente, 'historial', vivo.historial() satisfies HistorialDeDev);
+  // Toda escritura (propia o externa) recompila: el Historial y su alcance viajan con cada estado.
   const dejarDeEscucharEstado = vivo.suscribir((estado) => {
-    for (const cliente of clientes) enviarEstado(cliente, estado);
+    for (const cliente of clientes) {
+      enviarEstado(cliente, estado);
+      enviarHistorial(cliente);
+    }
   });
   const dejarDeEscucharActividad = vivo.suscribirActividad((eventos) => {
     for (const cliente of clientes) enviarActividad(cliente, { previos: false, eventos });
@@ -315,6 +322,12 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       post(req, res, async () => responderResultado(res, await vivo.deshacer()));
     } else if (ruta === '/api/rehacer') {
       post(req, res, async () => responderResultado(res, await vivo.rehacer()));
+    } else if (ruta === '/api/historial/saltar') {
+      post(req, res, async (cuerpo) => {
+        const id = (cuerpo as { id?: unknown } | null)?.id;
+        if (typeof id !== 'number' || !Number.isInteger(id) || id < 0) responder(res, 400, { ok: false, mensaje: 'Se esperaba { id } con un entero no negativo' });
+        else responderResultado(res, await vivo.saltar(id));
+      });
     } else if (ruta === '/api/confiar') {
       post(req, res, () => {
         vivo.confiar();
@@ -364,6 +377,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       clientes.add(res);
       res.on('close', () => clientes.delete(res));
       enviarEstado(res, vivo.estado());
+      enviarHistorial(res);
       enviarActividad(res, { previos: true, eventos: [...vivo.actividad()] });
     } else if (ruta.startsWith('/api/inspect/')) {
       responderInspect(res, new URL(req.url ?? '/', 'http://127.0.0.1'));

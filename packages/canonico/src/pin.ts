@@ -27,6 +27,7 @@ export const MOTIVOS_DE_RECHAZO = [
   'nada-que-deshacer',
   'nada-que-rehacer',
   'tema-desconocido',
+  'entrada-desconocida',
 ] as const;
 
 export type MotivoDeRechazo = (typeof MOTIVOS_DE_RECHAZO)[number];
