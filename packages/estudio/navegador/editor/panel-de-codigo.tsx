@@ -16,9 +16,10 @@ import { EditorView, drawSelection, highlightActiveLine, keymap, lineNumbers } f
 import { useEffect, useRef, useState } from 'react';
 import type { ReactElement } from 'react';
 
-import type { ArchivosDeDev } from '../../src/protocolo';
+import type { ArchivosDeDev, IssueDeDev } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
 import { comandoPorId } from '../comandos/registro';
+import { aplicarFixes, fixDelIssue } from '../issues/aplicar-fix';
 import { useEstudio } from '../marco/contexto';
 import type { ContextoDelEstudio, SitioDeCodigo } from '../marco/contexto';
 import { completarDsl } from './completado';
@@ -136,7 +137,7 @@ function EditorDeArchivo({ file, soloLectura, sitio, alCambiarGuardado }: PropsD
   useEffect(() => {
     if (editor === undefined || issues === undefined || editor.guardador.sucio()) return;
     const { vista } = editor;
-    vista.dispatch(setDiagnostics(vista.state, diagnosticosDe(vista.state.doc, file, issues, (fix) => aplicarFix(vista, file, fix, vivo.current))));
+    vista.dispatch(setDiagnostics(vista.state, diagnosticosDe(vista.state.doc, file, issues, (fix, issue) => aplicarFix(vista, file, fix, issue, vivo.current))));
   }, [editor, issues, estadoDelGuardado, file]);
 
   useEffect(() => {
@@ -150,17 +151,18 @@ function EditorDeArchivo({ file, soloLectura, sitio, alCambiarGuardado }: PropsD
   return <div ref={anfitrion} className="ui-editor" />;
 }
 
-/** Un `fix` del mismo archivo entra al buffer (y se guarda con el resto); uno de otro archivo va directo a `dev`. */
-function aplicarFix(vista: EditorView, file: string, fix: FixDeIssue, estudio: ContextoDelEstudio): void {
+/**
+ * Un `fix` del mismo archivo entra al buffer (y se guarda con el resto); uno de otro archivo va directo a `dev` con la
+ * misma logica que el boton del panel Issues (`aplicarFixes`: version vista, 409 con reintento, aviso con motivo).
+ */
+function aplicarFix(vista: EditorView, file: string, fix: FixDeIssue, issue: IssueDeDev, estudio: ContextoDelEstudio): void {
   if (fix.file === file && !vista.state.readOnly) {
     const doc = vista.state.doc;
     const offset = ({ line, column }: { line: number; column: number }): number => doc.line(line).from + column - 1;
     vista.dispatch({ changes: { from: offset(fix.range.start), to: offset(fix.range.end), insert: fix.replacement }, userEvent: 'input' });
     return;
   }
-  void estudio.cliente.editarTexto({ ediciones: [fix], ...(estudio.estado !== undefined && { version: estudio.estado.version }) }).then((r) => {
-    if (!r.ok) estudio.avisar(`No se aplico el fix: ${r.mensaje}`);
-  });
+  void aplicarFixes(estudio, fixDelIssue(issue));
 }
 
 /** Id bajo el cursor (con `.` y `-`, como los ids del DSL). */
