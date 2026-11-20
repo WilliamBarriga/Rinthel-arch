@@ -1,6 +1,7 @@
 /**
  * Issues en linea: los `IssueDeDev` del estado (SSE) de un archivo se vuelven `Diagnostic` de `@codemirror/lint` en su
- * posicion, con el `fix` como accion "Aplicar fix". El panel Issues (#192) usa el mismo `aplicarFix`. Puro.
+ * posicion, con el `fix` como accion "Aplicar fix" (`aplicarFix` recibe el `fix` y su issue; quien lo aplica contra
+ * `dev` usa `issues/aplicar-fix.ts`, el mismo que el panel Issues). Puro.
  */
 import type { Diagnostic } from '@codemirror/lint';
 import type { Text } from '@codemirror/state';
@@ -14,7 +15,7 @@ const offset = (doc: Text, line: number, column: number): number => {
   return Math.min(linea.from + column - 1, linea.to);
 };
 
-export function diagnosticosDe(doc: Text, file: string, issues: readonly IssueDeDev[], aplicarFix: (fix: FixDeIssue) => void): Diagnostic[] {
+export function diagnosticosDe(doc: Text, file: string, issues: readonly IssueDeDev[], aplicarFix: (fix: FixDeIssue, issue: IssueDeDev) => void): Diagnostic[] {
   return issues
     .filter((i) => i.file === file)
     .map((issue) => {
@@ -27,7 +28,7 @@ export function diagnosticosDe(doc: Text, file: string, issues: readonly IssueDe
         severity: issue.severity,
         message: issue.hint === undefined ? issue.message : `${issue.message} (${issue.hint})`,
         source: issue.code,
-        ...(fix !== undefined && { actions: [{ name: 'Aplicar fix', apply: () => aplicarFix(fix) }] }),
+        ...(fix !== undefined && { actions: [{ name: 'Aplicar fix', apply: () => aplicarFix(fix, issue) }] }),
       };
     });
 }
