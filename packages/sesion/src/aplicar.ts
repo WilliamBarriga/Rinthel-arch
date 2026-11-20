@@ -1,7 +1,7 @@
 import type { MotivoDeRechazo } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
-import { aplicarEdiciones } from './ediciones';
+import { aplicarEdiciones, hashDeContenido, reemplazarTexto } from './ediciones';
 import type { EdicionConHash } from './ediciones';
 import { aplicarIntencion } from './intenciones';
 import type { Intencion, Visto } from './intenciones';
@@ -15,7 +15,21 @@ export interface PuertoDeWorkspace {
   escribir(ruta: string, texto: string): void;
 }
 
-export type Aplicable = Intencion | readonly EdicionConHash[];
+/**
+ * Edicion de texto `{ file, range, replacement }` con `hash` opcional: sin el, la concurrencia la decide `visto[file]`
+ * (la `version` que vio la UI traducida a hashes) y, sin ninguno, se aplica sobre el texto vigente.
+ */
+export type EdicionDeTexto = Omit<EdicionConHash, 'hash'> & { hash?: string };
+
+export type Aplicable = Intencion | readonly EdicionDeTexto[];
+
+export interface OpcionesDeAplicar {
+  /**
+   * Solo para listas de ediciones: escribe aunque el resultado tenga errores nuevos (guardado del editor, ADR 0007).
+   * Por defecto `false`: una edicion que introduce un error se rechaza con `invalida` (`edit --edits`, `fix`).
+   */
+  aunqueNoCompile?: boolean;
+}
 
 export type ResultadoDeAplicar =
   | { ok: true; cambiados: string[]; ediciones: EdicionConHash[] }
@@ -27,15 +41,19 @@ const cambiadosEntre = (antes: ArchivosDelWorkspace, despues: ArchivosDelWorkspa
     .sort();
 
 /**
- * Puerta de escritura unica: lee fresco por el puerto, aplica una Intencion (con `visto`) o ediciones con hash (sin `visto`)
- * y escribe solo los archivos propios que cambian. Todo o nada. Cambiar un archivo ajeno (p. ej. de `--theme-path`)
- * rechaza con `archivo-desconocido`. Los fallos de I/O del puerto se propagan.
+ * Puerta de escritura unica: lee fresco por el puerto, aplica una Intencion o ediciones de texto (las dos con `visto`;
+ * una edicion con `hash` propio lo usa antes que `visto`) y escribe solo los archivos propios que cambian. Todo o nada.
+ * Cambiar un archivo ajeno (p. ej. de `--theme-path`) rechaza con `archivo-desconocido`. Los fallos de I/O del puerto se propagan.
  */
-export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, aplicable: Aplicable, visto?: Visto): ResultadoDeAplicar {
+export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, aplicable: Aplicable, visto?: Visto, opciones: OpcionesDeAplicar = {}): ResultadoDeAplicar {
   const { disco, propios } = puerto.leer();
-  const r = esListaDeEdiciones(aplicable)
-    ? { ...aplicarEdiciones(disco, aplicable), ediciones: [...aplicable] }
-    : aplicarIntencion(disco, aplicable, visto);
+  let r;
+  if (esListaDeEdiciones(aplicable)) {
+    const ediciones = aplicable.map((e) => ({ ...e, hash: e.hash ?? visto?.[e.file] ?? hashDeContenido(disco[e.file] ?? '') }));
+    r = { ...(opciones.aunqueNoCompile === true ? reemplazarTexto(disco, ediciones) : aplicarEdiciones(disco, ediciones)), ediciones };
+  } else {
+    r = aplicarIntencion(disco, aplicable, visto);
+  }
   if (!r.ok) return { ok: false, motivo: r.motivo, mensaje: r.mensaje, ...(r.file === undefined ? {} : { file: r.file }) };
   const cambiados = cambiadosEntre(disco, r.archivos);
   const fuera = cambiados.find((f) => !(f in propios));
@@ -46,4 +64,4 @@ export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, aplicable: Aplicab
   return { ok: true, cambiados, ediciones: r.ediciones };
 }
 
-const esListaDeEdiciones = (aplicable: Aplicable): aplicable is readonly EdicionConHash[] => Array.isArray(aplicable);
+const esListaDeEdiciones = (aplicable: Aplicable): aplicable is readonly EdicionDeTexto[] => Array.isArray(aplicable);

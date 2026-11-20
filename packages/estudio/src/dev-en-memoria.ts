@@ -8,10 +8,11 @@
  */
 import { combineIconProviders, genericIcons, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
 import type { Issue, MotivoDeRechazo } from 'canonico';
-import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer, hashDeContenido, rehacer, workspaceEnMemoria } from 'sesion';
-import type { Historial, Sesion, WorkspaceEnMemoria } from 'sesion';
+import { abrirSesion, aplicarAlWorkspace, deshacerSobre, hashDeContenido, historialVacio, registrar, rehacerSobre, workspaceEnMemoria } from 'sesion';
+import type { Aplicable, HistorialDeArchivos, ResultadoDeRestaurar, Sesion, WorkspaceEnMemoria } from 'sesion';
 
-import type { EstadoDeDev, NombreDeEventoDeDev } from './protocolo';
+import { peticionDeEdicionesSchema } from './protocolo';
+import type { ArchivoDeDev, ArchivosDeDev, EstadoDeDev, NombreDeEventoDeDev } from './protocolo';
 
 type Archivos = Readonly<Record<string, string>>;
 
@@ -33,12 +34,17 @@ const RAIZ = '/memoria';
 
 const HTTP_DE_RECHAZO = (motivo: MotivoDeRechazo): number => (motivo === 'hash-desactualizado' ? 409 : 422);
 
-const iguales = (a: Archivos, b: Archivos): boolean => {
-  const claves = Object.keys(a);
-  return claves.length === Object.keys(b).length && claves.every((k) => a[k] === b[k]);
-};
-
 const hashesDe = (archivos: Archivos): Record<string, string> => Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)]));
+
+/** Una Intencion (se describe por su tipo; las descripciones finas las arma `dev`) o ediciones de texto; `undefined` es 400. */
+function leerPedidoDeEdicion(cuerpo: unknown): { aplicable: Aplicable; descripcion: string | undefined; aunqueNoCompile: boolean } | undefined {
+  if (typeof cuerpo === 'object' && cuerpo !== null && 'ediciones' in cuerpo) {
+    const texto = peticionDeEdicionesSchema.safeParse(cuerpo);
+    return texto.success ? { aplicable: texto.data.ediciones, descripcion: texto.data.descripcion, aunqueNoCompile: texto.data.aunqueNoCompile === true } : undefined;
+  }
+  const intencion = intencionSchema.safeParse(cuerpo);
+  return intencion.success ? { aplicable: intencion.data, descripcion: intencion.data.tipo, aunqueNoCompile: false } : undefined;
+}
 
 const respuesta = (status: number, cuerpo: unknown): Response => new Response(JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
 
@@ -50,7 +56,7 @@ export async function devEnMemoria({ propios, temas }: { propios: Archivos; tema
   let issues: Issue[] = await actual.diagnosticar();
   let cambio: EstadoDeDev['cambio'];
   const versiones = new Map<number, Record<string, string>>([[0, hashesDe(workspace.leer().disco)]]);
-  let historial: Historial | undefined;
+  let historial: HistorialDeArchivos = historialVacio;
   const oyentes = new Set<(nombre: NombreDeEventoDeDev, datos: string) => void>();
 
   const estado = (): EstadoDeDev => {
@@ -97,8 +103,8 @@ export async function devEnMemoria({ propios, temas }: { propios: Archivos; tema
 
   const editar = (cuerpo: unknown): Promise<Response> =>
     enCola(async () => {
-      const intencion = intencionSchema.safeParse(cuerpo);
-      if (!intencion.success) return respuesta(400, { ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... }' });
+      const pedido = leerPedidoDeEdicion(cuerpo);
+      if (pedido === undefined) return respuesta(400, { ok: false, mensaje: 'Se esperaba una Intencion { tipo, ... } o { ediciones, version, descripcion? }' });
       const versionVista = (cuerpo as { version?: unknown }).version;
       let visto: Record<string, string> | undefined;
       if (typeof versionVista === 'number') {
@@ -106,28 +112,40 @@ export async function devEnMemoria({ propios, temas }: { propios: Archivos; tema
         if (visto === undefined) return rechazo('hash-desactualizado', `La version ${versionVista} del estado ya no esta guardada; recarga la Vista`);
       }
       const antes = workspace.leer().propios;
-      const r = aplicarAlWorkspace(workspace, intencion.data, visto);
+      const r = aplicarAlWorkspace(workspace, pedido.aplicable, visto, { aunqueNoCompile: pedido.aunqueNoCompile });
       if (!r.ok) return rechazo(r.motivo, r.mensaje, r.file);
-      const despues = workspace.leer().propios;
-      if (!iguales(antes, despues)) historial = apilar(historial !== undefined && iguales(historial.archivos, antes) ? historial : crearHistorial(antes), despues);
+      const descripcion = pedido.descripcion ?? `texto de ${r.cambiados.join(', ')}`;
+      historial = registrar(historial, descripcion, antes, workspace.leer().propios);
       return ok();
     });
 
-  const restaurar = (mover: (h: Historial) => Historial | undefined, motivo: 'nada-que-deshacer' | 'nada-que-rehacer'): Promise<Response> =>
+  const restaurar = (mover: (h: HistorialDeArchivos, disco: Archivos) => ResultadoDeRestaurar): Promise<Response> =>
     enCola(async () => {
       const disco = workspace.leer().propios;
-      historial ??= crearHistorial(disco);
-      if (!iguales(historial.archivos, disco)) {
-        historial = crearHistorial(disco);
-        return rechazo('hash-desactualizado', 'El Workspace cambio fuera de dev; no hay historial que restaurar');
+      const r = mover(historial, disco);
+      if (!r.ok) return rechazo(r.motivo, r.mensaje, r.file);
+      for (const ruta of r.escritos) {
+        const nuevo = r.archivos[ruta];
+        if (nuevo === undefined) workspace.borrar(ruta);
+        else workspace.escribir(ruta, nuevo);
       }
-      const siguiente = mover(historial);
-      if (siguiente === undefined) return rechazo(motivo, motivo === 'nada-que-deshacer' ? 'Nada que deshacer' : 'Nada que rehacer');
-      for (const [ruta, texto] of Object.entries(siguiente.archivos)) if (disco[ruta] !== texto) workspace.escribir(ruta, texto);
-      for (const ruta of Object.keys(disco)) if (!(ruta in siguiente.archivos)) workspace.borrar(ruta);
-      historial = siguiente;
+      historial = r.historial;
       return ok();
     });
+
+  const listarArchivos = (): ArchivosDeDev => {
+    const { disco, propios } = workspace.leer();
+    return {
+      version,
+      archivos: Object.keys(disco)
+        .sort()
+        .map((file) => ({ file, hash: hashDeContenido(disco[file] as string), soloLectura: !(file in propios) })),
+    };
+  };
+  const leerArchivo = (ruta: string): ArchivoDeDev | undefined => {
+    const texto = workspace.leer().disco[ruta];
+    return texto === undefined ? undefined : { file: ruta, texto, hash: hashDeContenido(texto), version };
+  };
 
   const consultar = (url: URL): Response => {
     const [comando, codificado, ...sobra] = url.pathname.slice('/api/inspect/'.length).split('/');
@@ -153,12 +171,17 @@ export async function devEnMemoria({ propios, temas }: { propios: Archivos; tema
         return respuesta(400, { ok: false, mensaje: 'JSON invalido' });
       }
       if (ruta === '/api/edit') return editar(cuerpo);
-      if (ruta === '/api/deshacer') return restaurar(deshacer, 'nada-que-deshacer');
-      if (ruta === '/api/rehacer') return restaurar(rehacer, 'nada-que-rehacer');
+      if (ruta === '/api/deshacer') return restaurar(deshacerSobre);
+      if (ruta === '/api/rehacer') return restaurar(rehacerSobre);
       if (ruta === '/api/confiar') return respuesta(200, { ok: true });
       return respuesta(404, { ok: false, mensaje: 'No encontrado' });
     }
     if (ruta === '/api/estado') return respuesta(200, estado());
+    if (ruta === '/api/archivos') return respuesta(200, listarArchivos());
+    if (ruta.startsWith('/api/archivo/')) {
+      const leido = leerArchivo(ruta.slice('/api/archivo/'.length).split('/').map(decodeURIComponent).join('/'));
+      return leido === undefined ? respuesta(404, { ok: false, mensaje: 'Archivo inexistente' }) : respuesta(200, leido);
+    }
     if (ruta === '/api/codigo') return respuesta(200, { temaConCodigo: false, componentes: [], confiado: false });
     if (ruta.startsWith('/api/inspect/')) return consultar(url);
     if (ruta.startsWith('/api/vista/')) {

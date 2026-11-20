@@ -28,7 +28,8 @@ export interface DevDePrueba {
   cerrar(): Promise<void>;
 }
 
-export type CrearDev = (contenido: { propios: ArchivosDelWorkspace }) => Promise<DevDePrueba>;
+/** `temas` son los de `--theme-path`: se compilan pero no se escriben. */
+export type CrearDev = (contenido: { propios: ArchivosDelWorkspace; temas?: ArchivosDelWorkspace }) => Promise<DevDePrueba>;
 
 /** `eventos` sobre un `fetch` que entrega el cuerpo en streaming (Node 18+); la pagina usa `EventSource`. */
 export function eventosSobreFetch(fetchFn: typeof fetch): DevDePrueba['eventos'] {
@@ -98,8 +99,8 @@ function esperarEstado(dev: DevDePrueba, basta: (e: EstadoDeDev) => boolean, alA
 }
 
 export function probarContratoDeDev(crear: CrearDev): void {
-  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>): Promise<T> => {
-    const dev = await crear({ propios });
+  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, temas?: ArchivosDelWorkspace): Promise<T> => {
+    const dev = await crear({ propios, ...(temas !== undefined && { temas }) });
     try {
       return await prueba(dev);
     } finally {
@@ -192,6 +193,84 @@ export function probarContratoDeDev(crear: CrearDev): void {
         expect((await post(dev, '/api/edit', { tipo: 'otra-cosa' })).status).toBe(400);
         expect(await post(dev, '/api/deshacer', {})).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'nada-que-deshacer' } });
       });
+    });
+
+    const TEMA = 'theme claro extends neutral {}\n';
+    const enLinea = (line: number, column: number) => ({ start: { line, column }, end: { line, column } });
+    const leerTexto = async (dev: DevDePrueba, ruta: string) => (await json(dev, `/api/archivo/${ruta}`)).cuerpo['texto'];
+
+    it('GET /api/archivos lista los del Workspace y los de --theme-path (soloLectura) con hash y version', async () => {
+      await con(
+        { 'main.dg': DSL },
+        async (dev) => {
+          const { status, cuerpo } = await json(dev, '/api/archivos');
+          expect(status).toBe(200);
+          expect(typeof cuerpo['version']).toBe('number');
+          const archivos = cuerpo['archivos'] as Array<{ file: string; hash: string; soloLectura: boolean }>;
+          expect(archivos.map(({ file, soloLectura }) => ({ file, soloLectura }))).toEqual([
+            { file: 'main.dg', soloLectura: false },
+            { file: 'tema.dg', soloLectura: true },
+          ]);
+          expect(archivos.every((a) => a.hash.length > 0)).toBe(true);
+        },
+        { 'tema.dg': TEMA },
+      );
+    });
+
+    it('GET /api/archivo/<ruta> da { file, texto, hash, version }; uno inexistente es 404', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const { status, cuerpo } = await json(dev, '/api/archivo/main.dg');
+        expect(status).toBe(200);
+        expect(cuerpo).toMatchObject({ file: 'main.dg', texto: DSL, version: expect.any(Number), hash: expect.any(String) });
+        expect((await dev.fetch('/api/archivo/nada.dg')).status).toBe(404);
+      });
+    });
+
+    it('POST /api/edit { ediciones, version } escribe el texto y deshacer lo quita', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const { version } = (await json(dev, '/api/archivo/main.dg')).cuerpo;
+        const editado = await post(dev, '/api/edit', { ediciones: [{ file: 'main.dg', range: enLinea(1, 1), replacement: '// hola\n' }], version });
+        expect(editado).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        expect(await leerTexto(dev, 'main.dg')).toBe(`// hola\n${DSL}`);
+        expect((await post(dev, '/api/deshacer', {})).status).toBe(200);
+        expect(await leerTexto(dev, 'main.dg')).toBe(DSL);
+      });
+    });
+
+    it('un texto que no compila: 422 invalida por defecto; con aunqueNoCompile se guarda y el estado trae los issues', async () => {
+      await con({ 'main.dg': DSL }, async (dev) => {
+        const rota = { ediciones: [{ file: 'main.dg', range: enLinea(8, 3), replacement: 'fantasma -> ' }] };
+        expect(await post(dev, '/api/edit', rota)).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'invalida' } });
+        expect(await post(dev, '/api/edit', { ...rota, aunqueNoCompile: true })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        expect(await leerTexto(dev, 'main.dg')).toContain('fantasma -> api -> db');
+        const estado = (await json(dev, '/api/estado')).cuerpo as unknown as EstadoDeDev;
+        expect(estado.issues.some((i) => i.severity === 'error')).toBe(true);
+        expect(estado.vistas).toEqual(['general', 'datos']);
+      });
+    });
+
+    it('rechazos de ediciones: archivo de --theme-path 422, archivo cambiado por fuera 409, forma invalida 400', async () => {
+      await con(
+        { 'main.dg': DSL },
+        async (dev) => {
+          const { version } = (await json(dev, '/api/archivo/main.dg')).cuerpo;
+          expect(await post(dev, '/api/edit', { ediciones: [{ file: 'tema.dg', range: enLinea(1, 1), replacement: '// x\n' }], aunqueNoCompile: true })).toMatchObject({
+            status: 422,
+            cuerpo: { ok: false, motivo: 'archivo-desconocido' },
+          });
+          await esperarEstado(
+            dev,
+            (e) => e.version > (version as number),
+            () => dev.editarFuera('main.dg', `${DSL}\n`),
+          );
+          expect(await post(dev, '/api/edit', { ediciones: [{ file: 'main.dg', range: enLinea(1, 1), replacement: '// x\n' }], version })).toMatchObject({
+            status: 409,
+            cuerpo: { ok: false, motivo: 'hash-desactualizado' },
+          });
+          expect((await post(dev, '/api/edit', { ediciones: [{ file: 1 }] })).status).toBe(400);
+        },
+        { 'tema.dg': TEMA },
+      );
     });
   });
 }

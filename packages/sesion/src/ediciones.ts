@@ -67,6 +67,26 @@ export function aplicarSobre(
   ediciones: readonly EdicionConHash[],
   erroresAntes: Map<string, number>,
 ): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace; issues: Issue[] }> {
+  const r = reemplazarTexto(archivos, ediciones);
+  if (!r.ok) return r;
+  const resultado = r.archivos;
+  const despues = compile(resultado).issues;
+  const conteo = new Map(erroresAntes);
+  const nuevo = despues.find((i) => {
+    if (i.severity !== 'error') return false;
+    const restantes = conteo.get(clave(i)) ?? 0;
+    conteo.set(clave(i), restantes - 1);
+    return restantes <= 0;
+  });
+  if (nuevo !== undefined) return rechazo('invalida', `La edicion introduce un error: ${nuevo.message}`, nuevo.file);
+  return { ok: true, archivos: resultado, issues: despues };
+}
+
+/**
+ * Como `aplicarSobre` pero sin la auto-prueba de errores: rechaza solo por archivo, hash, rango o solape. Es la de los
+ * guardados del editor, que se escriben aunque no compilen (ADR 0007).
+ */
+export function reemplazarTexto(archivos: ArchivosDelWorkspace, ediciones: readonly EdicionConHash[]): ResultadoDeEdicion<{ archivos: ArchivosDelWorkspace }> {
   const porArchivo = new Map<string, { inicio: number; fin: number; texto: string }[]>();
   for (const { file, range, replacement, hash } of ediciones) {
     const actual = archivos[file];
@@ -94,17 +114,7 @@ export function aplicarSobre(
     }
     resultado[file] = texto;
   }
-
-  const despues = compile(resultado).issues;
-  const conteo = new Map(erroresAntes);
-  const nuevo = despues.find((i) => {
-    if (i.severity !== 'error') return false;
-    const restantes = conteo.get(clave(i)) ?? 0;
-    conteo.set(clave(i), restantes - 1);
-    return restantes <= 0;
-  });
-  if (nuevo !== undefined) return rechazo('invalida', `La edicion introduce un error: ${nuevo.message}`, nuevo.file);
-  return { ok: true, archivos: resultado, issues: despues };
+  return { ok: true, archivos: resultado };
 }
 
 /** `aplicarSobre` contando los errores previos del propio mapa. */
