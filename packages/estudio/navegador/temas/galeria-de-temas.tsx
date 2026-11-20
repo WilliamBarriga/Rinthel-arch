@@ -6,16 +6,14 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
-import type { SalidaDeInspect } from 'canonico';
-
 import { diferenciasDelCliente } from '../diferencia/diferencias';
 import { verGaleria } from '../diferencia/proyeccion';
 import { MarcaExterna, useMarcasExternas } from '../diferencia/resaltado';
-import { useEstudio, usePrevisualizacionDeTema } from '../marco/contexto';
+import { AvisoDeLectura } from '../marco/aviso-de-lectura';
+import { useEstudio } from '../marco/contexto';
+import { useInspectPorVersion } from '../marco/use-lectura-por-version';
 import { textoDeSitio } from '../sitio';
-
-type SalidaDeTema = Extract<SalidaDeInspect, { comando: 'tema' }>['tema'];
-type Lectura = { tipo: 'cargando' } | { tipo: 'tema'; tema: SalidaDeTema } | { tipo: 'fallo'; mensaje: string };
+import { usePrevisualizacionDeTema } from './previsualizacion';
 
 const idDeOpcion = (tema: string): string => `ui-tema-${tema}`;
 
@@ -78,20 +76,8 @@ interface PropsDeFicha {
 
 function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, alSoltar }: PropsDeFicha): ReactElement {
   const { cliente, estado } = useEstudio();
-  const [lectura, setLectura] = useState<Lectura>({ tipo: 'cargando' });
-  const version = estado?.version;
-  useEffect(() => {
-    let vigente = true;
-    setLectura({ tipo: 'cargando' });
-    void cliente.inspeccionar('tema', nombre).then((r) => {
-      if (!vigente) return;
-      if (r.ok && r.salida.comando === 'tema') setLectura({ tipo: 'tema', tema: r.salida.tema });
-      else setLectura({ tipo: 'fallo', mensaje: r.ok ? 'Respuesta inesperada de inspect' : r.mensaje });
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [nombre, version, cliente]);
+  const lectura = useInspectPorVersion(cliente, estado?.version, 'tema', nombre);
+  const tema = lectura.tipo === 'dato' ? lectura.dato.tema : undefined;
 
   return (
     <section aria-label={`Tema ${nombre}`} className="ui-detalle">
@@ -108,19 +94,13 @@ function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, 
           </button>
         )}
       </div>
-      {lectura.tipo === 'cargando' ? (
-        <p className="ui-tenue" role="status">
-          Cargando {nombre}...
-        </p>
-      ) : lectura.tipo === 'fallo' ? (
-        <p className="ui-tenue" role="status">
-          {lectura.mensaje}
-        </p>
+      {tema === undefined ? (
+        <AvisoDeLectura lectura={lectura} que={nombre} />
       ) : (
         <>
-          <p className="ui-mono ui-sitio">{textoDeSitio(lectura.tema)}</p>
+          <p className="ui-mono ui-sitio">{textoDeSitio(tema)}</p>
           <h3 className="ui-subtitulo">Cadena extends</h3>
-          <p className="ui-mono">{[nombre, ...lectura.tema.extends].join(' > ')}</p>
+          <p className="ui-mono">{[nombre, ...tema.extends].join(' > ')}</p>
         </>
       )}
       <h3 className="ui-subtitulo">Paleta</h3>
@@ -132,11 +112,11 @@ function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, 
           </li>
         ))}
       </ul>
-      {lectura.tipo === 'tema' && (
+      {tema !== undefined && (
         <>
           <h3 className="ui-subtitulo">Capas</h3>
           <ul aria-label="Capas" className="ui-lista">
-            {lectura.tema.capas.map((capa) => (
+            {tema.capas.map((capa) => (
               <li key={capa.nombre} className="ui-mono">
                 {capa.nombre} {capa.primitiva}
                 {capa.encima ? ' [encima]' : ''}

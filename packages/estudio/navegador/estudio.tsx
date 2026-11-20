@@ -1,46 +1,30 @@
 /**
- * `<Estudio>`: la app de `dev` (marco F). Lienzo a pantalla completa (`VistaInteractiva` con `chrome={false}`) y encima
- * la barra de pildoras, las islas laterales con las pestanas del registro (`marco/pestanas.tsx`), la leyenda y los toasts.
- * Toda la red pasa por el cliente que se arma con `fetch` y `eventos` inyectados (en pruebas, los de `devEnMemoria`);
- * la Vista vive en el hash (`#vista=<id>`). Sin Fuente (el Workspace nunca compilo) el lienzo queda vacio y los paneles lo dicen.
+ * `<Estudio>`: la app de `dev`. Solo ensambla: el cliente (con `fetch` y `eventos` inyectados; en pruebas, los de
+ * `devEnMemoria`), el estado por SSE, las Geometrias y los Componentes de Tema, y encima los proveedores del estudio
+ * (`marco/proveedores.tsx`), que envuelven al marco y al lienzo. La Vista vive en el hash (`#vista=<id>`). Sin Fuente
+ * (el Workspace nunca compilo) el lienzo queda vacio y los paneles lo dicen.
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import type { ReactElement, ReactNode } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import type { ReactElement } from 'react';
 
-import { resolveView, urlDeFuente } from 'canonico';
-import type { FuenteCanonica, GeometriaCacheada } from 'canonico';
 import type { ComponentesDeTema } from 'render';
-import { Leyenda, Migas, VistaInteractiva, deserializarEstado, useEstadoEnHash } from 'shell';
+import { deserializarEstado, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeHash, AdaptadorDeLayout, Navegacion, PropsDeEstadoEnHash } from 'shell';
 
-import type { EstadoDeDev } from '../src/protocolo';
-import { usePropsDeDatos, useTamano } from './arranque';
 import { crearClienteDeDev } from './cliente';
-import { historialDelCliente } from './historial/historial-visible';
-import type { ClienteDeDev, DependenciasDelCliente } from './cliente';
-import { textoDeSitio } from './sitio';
-import { useCaducidad } from './marco/use-caducidad';
-import { crearCargadorDeCodigo } from './componentes';
+import type { DependenciasDelCliente } from './cliente';
+import { plataformaDe } from './comandos/teclas';
+import type { Plataforma } from './comandos/teclas';
 import { crearGeometriasDeDev } from './geometrias';
 import type { Dibujable, GeometriasDeDev } from './geometrias';
 import { hashDeEstudio } from './hash-de-estudio';
-import { ContextoDeEstudio, ContextoDelEditor, ContextoDePrevisualizacion } from './marco/contexto';
-import type { CanalDelEditor, ContextoDelEstudio, DialogoDelEstudio, PrevisualizacionDeTema, SitioDeCodigo } from './marco/contexto';
-import { IslaLateral } from './marco/isla';
-import type { LadoDeIsla } from './marco/limites';
-import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS, PILDORAS_DE_LA_BARRA } from './marco/pestanas';
-import { useIsla } from './marco/use-isla';
-import { crearEscritura } from './escritura/escritura';
-import type { PedidoDeEscritura } from './escritura/escritura';
-import { PildoraDelBuscador } from './comandos/pildora-del-buscador';
-import { abrirCodigoEnBloque, COMANDOS } from './comandos/registro';
-import { plataformaDe } from './comandos/teclas';
-import type { Plataforma } from './comandos/teclas';
-import { useAtajos } from './comandos/use-atajos';
-import { ResaltadoDelLienzo, useDiferenciasExternas } from './diferencia/resaltado';
-
-const Buscador = lazy(() => import('./comandos/buscador').then((m) => ({ default: m.Buscador })));
-const Ayuda = lazy(() => import('./comandos/ayuda').then((m) => ({ default: m.Ayuda })));
+import { historialDelCliente } from './historial/historial-visible';
+import { useLienzoDelEstudio } from './lienzo/lienzo';
+import { Marco } from './marco/marco';
+import { ProveedoresDelEstudio } from './marco/proveedores';
+import type { BaseDelEstudio, ChromeDelMarco } from './marco/proveedores';
+import { useEstadoDeDev } from './marco/use-estado-de-dev';
+import { useComponentes } from './use-componentes';
 
 export interface PropsDelEstudio {
   fetch: typeof fetch;
@@ -54,80 +38,6 @@ export interface PropsDelEstudio {
   confirmar: (mensaje: string) => boolean;
   /** Como se escriben las teclas (`Cmd` o `Ctrl`); por defecto, la de `navigator`. */
   plataforma?: Plataforma;
-}
-
-const DURACION_DEL_AVISO_MS = 6000;
-/** Tras el ultimo evento de rueda, el zoom se da por terminado. */
-const FIN_DE_RUEDA_MS = 200;
-
-/**
- * Gesto en curso sobre el lienzo (arrastre, pan o zoom con rueda). Medido en Chromium sobre `examples/rinthel-arch`:
- * con `backdrop-filter` el pan sube el p95 de cuadro de ~17 ms a ~33 ms; sin el, 17 ms. Por eso durante el gesto el
- * marco pasa a superficie solida (`data-arrastrando`).
- */
-function useGestoEnLienzo(): { enGesto: boolean; props: { onPointerDown: () => void; onPointerUp: () => void; onPointerCancel: () => void; onWheel: () => void } } {
-  const [puntero, setPuntero] = useState(false);
-  const [rueda, setRueda] = useState(false);
-  const fin = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(fin.current), []);
-  return {
-    enGesto: puntero || rueda,
-    props: {
-      onPointerDown: () => setPuntero(true),
-      onPointerUp: () => setPuntero(false),
-      onPointerCancel: () => setPuntero(false),
-      onWheel: () => {
-        setRueda(true);
-        clearTimeout(fin.current);
-        fin.current = setTimeout(() => setRueda(false), FIN_DE_RUEDA_MS);
-      },
-    },
-  };
-}
-
-/** `vigente` da el ultimo estado recibido (el que usa la Escritura), aunque el render aun no lo haya visto. */
-function useEstado(cliente: ClienteDeDev, geometrias: GeometriasDeDev): { estado: EstadoDeDev | undefined; vigente: () => EstadoDeDev | undefined; recibir: (estado: EstadoDeDev) => void } {
-  const [estado, setEstado] = useState<EstadoDeDev>();
-  const ultimo = useRef<EstadoDeDev | undefined>(undefined);
-  const recibir = useCallback(
-    (nuevo: EstadoDeDev): void => {
-      if (ultimo.current !== undefined && nuevo.version < ultimo.current.version) return;
-      ultimo.current = nuevo;
-      geometrias.recibir(nuevo);
-      setEstado(nuevo);
-    },
-    [geometrias],
-  );
-  useEffect(() => cliente.suscribir(recibir), [cliente, recibir]);
-  const vigente = useCallback(() => ultimo.current, []);
-  return { estado, vigente, recibir };
-}
-
-/** Se vuelve a pedir el codigo tras cada estado nuevo; si la carga falla se conserva el registro anterior. */
-function useComponentes(estado: EstadoDeDev | undefined, fetchFn: typeof fetch, confirmar: (mensaje: string) => boolean): ComponentesDeTema | undefined {
-  const cargar = useMemo(() => crearCargadorDeCodigo({ fetch: fetchFn, confirmar }), [fetchFn, confirmar]);
-  const [componentes, setComponentes] = useState<ComponentesDeTema>();
-  const version = estado?.version;
-  useEffect(() => {
-    if (version === undefined) return;
-    let vigente = true;
-    void cargar().then(
-      (registro) => {
-        if (vigente) setComponentes(registro);
-      },
-      () => undefined,
-    );
-    return () => {
-      vigente = false;
-    };
-  }, [version, cargar]);
-  return componentes;
-}
-
-function useAviso(): [string | undefined, (texto: string) => void] {
-  const [aviso, setAviso] = useState<string>();
-  useCaducidad(aviso === undefined ? undefined : DURACION_DEL_AVISO_MS, () => setAviso(undefined), aviso);
-  return [aviso, setAviso];
 }
 
 export function Estudio(props: PropsDelEstudio): ReactElement {
@@ -147,31 +57,18 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
       }),
     [cliente, hash],
   );
-  const { estado, vigente, recibir } = useEstado(cliente, geometrias);
-  const [aviso, avisar] = useAviso();
+  const { estado, vigente, recibir } = useEstadoDeDev(cliente, geometrias);
   const dibujable = useSyncExternalStore(geometrias.suscribir, geometrias.dibujable);
-  const componentes = useComponentes(estado, fetchFn, confirmar);
-
+  const componentes = useComponentes(cliente, estado?.version, fetchFn, confirmar);
   const plataforma = props.plataforma ?? plataformaDe(typeof navigator === 'undefined' ? undefined : navigator);
-  const [temaPrevio, previsualizarTema] = useState<string>();
-  const marco = { estado, vigente, recibir, cliente, aviso, avisar, plataforma, temaPrevio, previsualizarTema };
-  if (dibujable === undefined) return <Marco {...marco} navegacion={undefined} lienzo={null} />;
-  return <ConFuente {...marco} dibujable={dibujable} hash={hash} geometrias={geometrias} layout={layout} componentes={componentes} />;
+  const base: BaseDelEstudio = { estado, vigente, recibir, cliente, plataforma };
+
+  if (dibujable === undefined) return <ProveedoresDelEstudio {...base}>{(chrome) => <Marco chrome={chrome} navegacion={undefined} lienzo={null} />}</ProveedoresDelEstudio>;
+  return <ConFuente base={base} dibujable={dibujable} hash={hash} geometrias={geometrias} layout={layout} componentes={componentes} />;
 }
 
-interface PropsDelMarco {
-  estado: EstadoDeDev | undefined;
-  cliente: ClienteDeDev;
-  aviso: string | undefined;
-  avisar: (texto: string) => void;
-  vigente: () => EstadoDeDev | undefined;
-  recibir: (estado: EstadoDeDev) => void;
-  plataforma: Plataforma;
-  temaPrevio: string | undefined;
-  previsualizarTema: (tema: string | undefined) => void;
-}
-
-interface PropsConFuente extends PropsDelMarco {
+interface PropsConFuente {
+  base: BaseDelEstudio;
   dibujable: Dibujable;
   hash: AdaptadorDeHash;
   geometrias: GeometriasDeDev;
@@ -179,108 +76,21 @@ interface PropsConFuente extends PropsDelMarco {
   componentes: ComponentesDeTema | undefined;
 }
 
-/** La Vista activa, la Seleccion y la ruta viven en el hash; el lienzo y los paneles las comparten. */
-function ConFuente({ dibujable, hash, geometrias, layout, componentes, ...marco }: PropsConFuente): ReactElement {
-  const { estado, geometrias: delServidor } = dibujable;
-  const fuente = estado.fuente;
-  const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
-  useEffect(() => geometrias.activar(props.view), [geometrias, props.view]);
-  const { previsualizarTema } = marco;
-  useEffect(() => previsualizarTema(undefined), [props.view, previsualizarTema]);
-  const { fuente: dibujada, geometrias: porVista } = usePrevisualizacion(marco.cliente, fuente, delServidor, props.view, marco.temaPrevio, estado.version);
-  const datos = usePropsDeDatos({ fuente: dibujada, iconos: estado.iconos, geometrias: porVista }, props.view);
-  const contextoVivo = useRef<ContextoDelEstudio | undefined>(undefined);
-  const navegacion = navegacionDesde(props);
-  const resaltados = useDiferenciasExternas({
-    cliente: marco.cliente,
-    fuente,
-    version: estado.version,
-    vista: props.view,
-    estado: props.state,
-    paso: props.step,
-    avisar: marco.avisar,
-  });
-  const tema = datos.theme;
-  /** El manejador resuelve `false` si se rechazo (el Nodo vuelve a su sitio). */
-  const escribirDesdeElLienzo = async (pedido: PedidoDeEscritura): Promise<boolean> => (await contextoVivo.current?.escribir(pedido))?.ok === true;
-  const lienzo =
-    tema === undefined ? null : (
-      <VistaInteractiva
-        {...props}
-        onSelect={(id) => {
-          props.onSelect(id);
-          contextoVivo.current?.abrirPestana('derecha', 'detalle');
-        }}
-        onOpen={(elemento) => {
-          const e = contextoVivo.current;
-          if (e !== undefined && elemento.tipo === 'nodo') void abrirCodigoEnBloque(e, 'nodo', elemento.id);
-        }}
-        source={dibujada}
-        theme={tema}
-        layout={layout}
-        {...(estado.fuentes !== undefined && { fontFiles: estado.fuentes, fontUrl: urlDeFuente })}
-        icons={datos.icons}
-        {...(componentes !== undefined && { componentes })}
-        width={datos.width}
-        height={datos.height}
-        cachedGeometries={datos.cachedGeometries}
-        {...(motivoSinGestos(marco.estado) === undefined && {
-          onMoveNode: ({ id, x, y }) => escribirDesdeElLienzo({ intencion: { tipo: 'mover-pin', vista: props.view, nodo: id, x, y }, fallo: 'No se pudo mover el Pin' }),
-          onReorderLifelines: ({ orden }) => escribirDesdeElLienzo({ intencion: { tipo: 'ordenar-lifelines', vista: props.view, orden }, fallo: 'No se pudo reordenar las Lifelines' }),
-        })}
-        chrome={false}
-      />
-    );
-  const conResaltado = (
-    <>
-      {lienzo}
-      <ResaltadoDelLienzo ids={resaltados} />
-    </>
-  );
-  const leyenda = tema === undefined ? null : <LeyendaDeVista fuente={fuente} props={props} tema={tema} />;
-  return <Marco {...marco} fuente={fuente} hashProps={props} navegacion={navegacion} lienzo={conResaltado} leyenda={leyenda} contextoVivo={contextoVivo} />;
-}
-
-/**
- * Con `tema`, la Vista activa se dibuja con ese Tema sin escribir: su `theme` se sustituye en la Fuente dibujada y su
- * Geometria se pide con `?tema=` (mientras no llega, la calcula el Worker). Sin `tema`, todo pasa tal cual.
- */
-function usePrevisualizacion(
-  cliente: ClienteDeDev,
-  fuente: FuenteCanonica,
-  geometrias: Dibujable['geometrias'],
-  vista: string,
-  tema: string | undefined,
-  version: number,
-): { fuente: FuenteCanonica; geometrias: Dibujable['geometrias'] } {
-  const [previa, setPrevia] = useState<{ vista: string; tema: string; geometria: GeometriaCacheada }>();
-  useEffect(() => {
-    if (tema === undefined) return;
-    let vigente = true;
-    void cliente.geometria(vista, { tema }).then((r) => {
-      if (vigente && r.ok) setPrevia({ vista, tema, geometria: r.geometria });
-    });
-    return () => {
-      vigente = false;
-    };
-  }, [cliente, vista, tema, version]);
-  return useMemo(() => {
-    if (tema === undefined) return { fuente, geometrias };
-    const conTema = { ...fuente, views: fuente.views.map((v) => (v.id === vista ? { ...v, theme: tema } : v)) };
-    const { [vista]: _delTemaPropio, ...resto } = geometrias;
-    const llego = previa !== undefined && previa.vista === vista && previa.tema === tema;
-    return { fuente: conTema, geometrias: llego ? { ...resto, [vista]: previa.geometria } : resto };
-  }, [fuente, geometrias, vista, tema, previa]);
-}
-
-function LeyendaDeVista({ fuente, props, tema }: { fuente: FuenteCanonica; props: PropsDeEstadoEnHash; tema: Parameters<typeof Leyenda>[0]['tema'] }): ReactElement | null {
-  const vista = useMemo(() => resolveView(fuente, props.view, props.state), [fuente, props.view, props.state]);
-  if (vista === undefined) return null;
+/** La Vista activa, la Seleccion y la ruta viven en el hash; los proveedores las dan al lienzo y a los paneles. */
+function ConFuente({ base, dibujable, hash, geometrias, layout, componentes }: PropsConFuente): ReactElement {
+  const fuente = dibujable.estado.fuente;
+  const hashProps = useEstadoEnHash({ source: fuente, hash, defaultView: dibujable.estado.vistas[0] ?? '', camera: true });
+  useEffect(() => geometrias.activar(hashProps.view), [geometrias, hashProps.view]);
   return (
-    <div className="ui-leyenda">
-      <Leyenda fuente={fuente} vista={vista} tema={tema} modo="auto" />
-    </div>
+    <ProveedoresDelEstudio {...base} fuente={fuente} hashProps={hashProps}>
+      {(chrome) => <MarcoConLienzo chrome={chrome} dibujable={dibujable} hashProps={hashProps} layout={layout} componentes={componentes} />}
+    </ProveedoresDelEstudio>
   );
+}
+
+function MarcoConLienzo({ chrome, ...opciones }: { chrome: ChromeDelMarco } & Parameters<typeof useLienzoDelEstudio>[0]): ReactElement {
+  const { lienzo, leyenda } = useLienzoDelEstudio(opciones);
+  return <Marco chrome={chrome} navegacion={navegacionDesde(opciones.hashProps)} lienzo={lienzo} leyenda={leyenda} />;
 }
 
 /** Migas montadas fuera del lienzo sobre la ruta controlada por el hash. */
@@ -297,139 +107,4 @@ function navegacionDesde(props: PropsDeEstadoEnHash): Navegacion {
       if (indice >= 0 && indice < ruta.length - 1) props.onPathChange(ruta.slice(0, indice + 1));
     },
   };
-}
-
-interface PropsDeMarcoCompleto extends PropsDelMarco {
-  fuente?: FuenteCanonica;
-  hashProps?: PropsDeEstadoEnHash;
-  navegacion: Navegacion | undefined;
-  lienzo: ReactNode;
-  leyenda?: ReactNode;
-  /** El marco publica aqui como abrir el Detalle (un clic en un Nodo lo llama). */
-  /** Recibe el contexto vigente del marco, para los gestos del lienzo (que se monta fuera del proveedor). */
-  contextoVivo?: { current: ContextoDelEstudio | undefined };
-}
-
-/**
- * Con errores (p. ej. un guardado del editor que no compila) el lienzo conserva la ultima Fuente buena y los Gestos
- * se deshabilitan: escribirian sobre un texto que no es el dibujado. Devuelve el motivo visible, o `undefined`.
- */
-export function motivoSinGestos(estado: EstadoDeDev | undefined): string | undefined {
-  const error = estado?.issues.find((i) => i.severity === 'error');
-  return error === undefined ? undefined : `Gestos deshabilitados: el texto no compila (${textoDeSitio(error)} ${error.message})`;
-}
-
-function Marco({ estado, vigente, recibir, cliente, aviso, avisar, plataforma, temaPrevio, previsualizarTema, fuente, hashProps, navegacion, lienzo, leyenda, contextoVivo }: PropsDeMarcoCompleto): ReactElement {
-  const lienzoTamano = useTamano();
-  const medidas = { ancho: lienzoTamano.width, alto: lienzoTamano.height };
-  const izquierda = useIsla({ lado: 'izquierda', id: 'ui-isla-izquierda', nombre: 'panel izquierdo', lienzo: medidas, anchoInicial: 280 });
-  const derecha = useIsla({ lado: 'derecha', id: 'ui-isla-derecha', nombre: 'panel derecho', lienzo: medidas, anchoInicial: 400 });
-  const [pestanas, setPestanas] = useState<Record<LadoDeIsla, string>>({ izquierda: 'vistas', derecha: 'detalle' });
-  const [portales, setPortales] = useState<HTMLElement | null>(null);
-  const [dialogo, setDialogo] = useState<DialogoDelEstudio>();
-  // Un dialogo se carga (trozo aparte) la primera vez que se abre y desde ahi sigue montado: Base UI cierra y devuelve el foco.
-  const [cargados, setCargados] = useState<ReadonlySet<DialogoDelEstudio>>(() => new Set());
-  if (dialogo !== undefined && !cargados.has(dialogo)) setCargados(new Set([...cargados, dialogo]));
-  const [sitioDeCodigo, setSitioDeCodigo] = useState<SitioDeCodigo>();
-  const guardados = useRef(new Set<() => Promise<void>>());
-  const islas = { izquierda, derecha };
-  const gesto = useGestoEnLienzo();
-
-  const abrirPestana = (lado: LadoDeIsla, pestana: string): void => {
-    islas[lado].mostrar();
-    setPestanas((p) => ({ ...p, [lado]: pestana }));
-  };
-
-  const vaciarGuardado = useCallback(async (): Promise<void> => {
-    await Promise.all([...guardados.current].map((guardar) => guardar()));
-  }, []);
-  const escribir = useMemo(() => crearEscritura({ cliente, vigente, recibir, avisar, vaciarGuardado }), [cliente, vigente, recibir, avisar, vaciarGuardado]);
-
-  const contexto: ContextoDelEstudio = {
-    estado,
-    fuente,
-    cliente,
-    vista: hashProps?.view,
-    seleccion: hashProps?.selected ?? null,
-    irAVista: (vista) => hashProps?.onPathChange([vista]),
-    seleccionar: (id) => hashProps?.onSelect(id),
-    abrirPestana,
-    alternarIsla: (lado) => islas[lado].alternar(),
-    avisar,
-    escribir,
-    abrirDialogo: setDialogo,
-    abrirCodigo: (sitio) => {
-      abrirPestana('izquierda', 'codigo');
-      abrirPestana('derecha', 'issues');
-      if (sitio !== undefined) setSitioDeCodigo(sitio);
-    },
-    vaciarGuardado,
-    plataforma,
-    portales,
-  };
-  if (contextoVivo !== undefined) contextoVivo.current = contexto;
-  const canalDelEditor = useMemo<CanalDelEditor>(
-    () => ({
-      sitio: sitioDeCodigo,
-      registrarGuardado(guardar) {
-        guardados.current.add(guardar);
-        return () => guardados.current.delete(guardar);
-      },
-    }),
-    [sitioDeCodigo],
-  );
-  const previsualizacion = useMemo<PrevisualizacionDeTema>(() => ({ temaPrevio, previsualizarTema }), [temaPrevio, previsualizarTema]);
-  useAtajos(COMANDOS, contexto);
-  const cerrarDialogo = (abierto: boolean): void => {
-    if (!abierto) setDialogo(undefined);
-  };
-
-  return (
-    <ContextoDeEstudio.Provider value={contexto}>
-      <ContextoDelEditor.Provider value={canalDelEditor}>
-      <ContextoDePrevisualizacion.Provider value={previsualizacion}>
-      <div className="ui-chrome" data-arrastrando={izquierda.arrastrando || derecha.arrastrando || gesto.enGesto ? '' : undefined}>
-        <main className="ui-lienzo" aria-label="Lienzo" {...gesto.props}>
-          {lienzo}
-        </main>
-        <header className="ui-barra">
-          <span className="ui-pildora ui-marca">rinthel-arch</span>
-          {navegacion !== undefined && (
-            <div className="ui-pildora ui-migas">
-              <Migas navegacion={navegacion} />
-            </div>
-          )}
-          <PildoraDelBuscador />
-          {motivoSinGestos(estado) !== undefined && (
-            <div role="status" aria-label="Gestos" className="ui-pildora ui-aviso-gestos">
-              {motivoSinGestos(estado)}
-            </div>
-          )}
-          {PILDORAS_DE_LA_BARRA.map(({ id, Contenido }) => (
-            <div key={id} className="ui-pildora">
-              <Contenido />
-            </div>
-          ))}
-        </header>
-        <IslaLateral lado="izquierda" id="ui-isla-izquierda" nombre="panel izquierdo" isla={izquierda} pestanas={PESTANAS_IZQUIERDAS} activa={pestanas.izquierda} alCambiarPestana={(p) => setPestanas((v) => ({ ...v, izquierda: p }))} />
-        <IslaLateral lado="derecha" id="ui-isla-derecha" nombre="panel derecho" isla={derecha} pestanas={PESTANAS_DERECHAS} activa={pestanas.derecha} alCambiarPestana={(p) => setPestanas((v) => ({ ...v, derecha: p }))} />
-        {leyenda}
-        {aviso !== undefined && (
-          <div className="ui-toasts">
-            <div role="alert" className="ui-toast">
-              {aviso}
-            </div>
-          </div>
-        )}
-        {/* Los dialogos (Base UI Dialog y Autocomplete) son trozos que se cargan al abrirlos. */}
-        <Suspense fallback={null}>
-          {cargados.has('buscador') && <Buscador abierto={dialogo === 'buscador'} alCambiar={cerrarDialogo} />}
-          {cargados.has('ayuda') && <Ayuda abierto={dialogo === 'ayuda'} alCambiar={cerrarDialogo} />}
-        </Suspense>
-        <div className="ui-portales" ref={setPortales} />
-      </div>
-      </ContextoDePrevisualizacion.Provider>
-      </ContextoDelEditor.Provider>
-    </ContextoDeEstudio.Provider>
-  );
 }

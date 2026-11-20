@@ -1,7 +1,8 @@
 /**
  * Contextos que reciben los paneles de las islas (`pestanas.tsx`): `useEstudio()` da el estado de `dev`, el cliente y
  * las acciones del marco (lo que tambien reciben los comandos); `useCanalDelEditor()` (solo Codigo) y
- * `usePrevisualizacionDeTema()` (solo la galeria) van aparte. Un panel nuevo no recibe props.
+ * `usePrevisualizacionDeTema()` (`temas/previsualizacion.ts`, solo la galeria) van aparte. Los arma
+ * `ProveedoresDelEstudio` (`proveedores.tsx`), que envuelve tambien al lienzo. Un panel nuevo no recibe props.
  */
 import { createContext, useContext } from 'react';
 
@@ -31,6 +32,11 @@ export interface ContextoDelEstudio {
   abrirPestana(lado: LadoDeIsla, pestana: string): void;
   /** Oculta o recupera una isla (Mod+B y Mod+J en `comandos/registro.ts`). */
   alternarIsla(lado: LadoDeIsla): void;
+  /**
+   * Con errores (p. ej. un guardado del editor que no compila) el lienzo conserva la ultima Fuente buena y los Gestos se
+   * deshabilitan: escribirian sobre un texto que no es el dibujado. El motivo visible, o `undefined` si hay Gestos.
+   */
+  motivoSinGestos: string | undefined;
   /** Toast efimero del marco. */
   avisar(texto: string): void;
   /** Unico camino de las acciones que escriben en `dev` (version vigente, 409 y aviso): `escritura/escritura.ts`. */
@@ -77,14 +83,3 @@ export interface CanalDelEditor {
 
 export const ContextoDelEditor = createContext<CanalDelEditor | undefined>(undefined);
 export const useCanalDelEditor = (): CanalDelEditor => leer(useContext(ContextoDelEditor), 'useCanalDelEditor');
-
-/** Previsualizacion de Temas de la galeria: el lienzo dibuja la Vista activa con `temaPrevio` sin escribir. */
-export interface PrevisualizacionDeTema {
-  /** `undefined` si no hay previsualizacion. */
-  temaPrevio: string | undefined;
-  /** Previsualiza la Vista activa con otro Tema, o vuelve al suyo con `undefined`. Cambiar de Vista la descarta. */
-  previsualizarTema(tema: string | undefined): void;
-}
-
-export const ContextoDePrevisualizacion = createContext<PrevisualizacionDeTema | undefined>(undefined);
-export const usePrevisualizacionDeTema = (): PrevisualizacionDeTema => leer(useContext(ContextoDePrevisualizacion), 'usePrevisualizacionDeTema');
