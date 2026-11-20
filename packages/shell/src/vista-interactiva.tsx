@@ -27,6 +27,7 @@ import { unidadBajo } from './ordenar-lifelines';
 import { useControlado } from './controlado';
 import { conEstadosTransitorios, useSeleccion } from './seleccion';
 import { destinoDeNavegacionPorRef, elementoBajo } from './interaccion';
+import type { ElementoSeleccionable } from './interaccion';
 import { estadosDeRuta, moverFoco, moverFocoEnSecuencia, rutaMasCorta, unirEstados } from './ruta-y-foco';
 import { Migas, useNavegacion } from './navegacion';
 import type { PropsDeNavegacion } from './navegacion';
@@ -88,6 +89,8 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   selected?: string | null;
   /** Se selecciono un elemento: su id (Nodo, Arista o etiqueta por `idDeArista`, Atributo como `nodo#atributo`). */
   onSelect?: (id: string) => void;
+  /** Doble clic sobre un elemento (Nodo, Arista, Atributo, Mensaje...): su tipo y su id, como en `onSelect`; ese doble clic no hace zoom. */
+  onOpen?: (elemento: ElementoSeleccionable) => void;
   /** Seleccion multiple controlada (ids como en `selected`); manda sobre `selected` y la interna. */
   selection?: readonly string[];
   /** La Seleccion cambio (al pulsar, acumular o quitar): todos sus ids en orden de seleccion; `[]` si queda vacia. */
@@ -393,6 +396,15 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     return elementoBajo(mostrado.vista, mostrado.geometria, theme, punto, { tolerancia: ajustes.hitTolerance / k, atributos: detalle === 'completo', ...(visibility !== undefined && { visibilidad: visibility }) });
   };
 
+  /** En captura: sobre un elemento, el doble clic lo abre y no llega al zoom de d3 (que lo detiene en el dibujo). */
+  const alAbrir = (evento: EventoDeRaton): void => {
+    if (arrastrando.current || props.onOpen === undefined) return;
+    const elemento = elementoBajoElRaton(evento);
+    if (elemento === undefined) return;
+    evento.stopPropagation();
+    props.onOpen({ tipo: elemento.tipo, id: elemento.id });
+  };
+
   const alMoverElRaton = (evento: EventoDeRaton): void => {
     if (enCurso !== undefined) return;
     fijarHover(elementoBajoElRaton(evento)?.id);
@@ -419,7 +431,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   };
 
   return (
-    <div ref={zona} onClick={alPulsar} onMouseMove={alMoverElRaton} onMouseLeave={() => fijarHover(undefined)} className="rd-vista" data-vista={view} data-layout={calculo !== undefined && calculo.vista === vista && morph === undefined ? 'listo' : 'calculando'} tabIndex={0} onKeyDown={alTeclear} onFocus={alEnfocar} onBlur={alSoltarElFoco} style={{ ...variablesDeChrome(estilo), width, height }}>
+    <div ref={zona} onClick={alPulsar} onDoubleClickCapture={alAbrir} onMouseMove={alMoverElRaton} onMouseLeave={() => fijarHover(undefined)} className="rd-vista" data-vista={view} data-layout={calculo !== undefined && calculo.vista === vista && morph === undefined ? 'listo' : 'calculando'} tabIndex={0} onKeyDown={alTeclear} onFocus={alEnfocar} onBlur={alSoltarElFoco} style={{ ...variablesDeChrome(estilo), width, height }}>
       <EstiloDelChrome />
       {fontUrl !== undefined && estilo.caras.length > 0 && <style data-fuentes="">{hojaDeFuentes(estilo.caras, fontUrl)}</style>}
       {mostrado !== undefined && recortada !== undefined && (

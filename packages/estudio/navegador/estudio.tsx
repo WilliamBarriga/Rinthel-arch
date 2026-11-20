@@ -33,7 +33,7 @@ import { useIsla } from './marco/use-isla';
 import { crearAlMover, crearAlOrdenar } from './mover';
 import { Ayuda } from './comandos/ayuda';
 import { Buscador, PildoraDelBuscador } from './comandos/buscador';
-import { COMANDOS } from './comandos/registro';
+import { abrirCodigoEnBloque, COMANDOS } from './comandos/registro';
 import { plataformaDe } from './comandos/teclas';
 import type { Plataforma } from './comandos/teclas';
 import { useAtajos } from './comandos/use-atajos';
@@ -189,7 +189,7 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
   useEffect(() => previsualizarTema(undefined), [props.view, previsualizarTema]);
   const { fuente: dibujada, geometrias: porVista } = usePrevisualizacion(marco.cliente, fuente, delServidor, props.view, marco.temaPrevio, estado.version);
   const datos = usePropsDeDatos({ fuente: dibujada, iconos: estado.iconos, geometrias: porVista }, props.view);
-  const abrirDetalle = useRef<(() => void) | undefined>(undefined);
+  const contextoVivo = useRef<ContextoDelEstudio | undefined>(undefined);
   const navegacion = navegacionDesde(props);
   const resaltados = useDiferenciasExternas({
     cliente: marco.cliente,
@@ -207,7 +207,11 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
         {...props}
         onSelect={(id) => {
           props.onSelect(id);
-          abrirDetalle.current?.();
+          contextoVivo.current?.abrirPestana('derecha', 'detalle');
+        }}
+        onOpen={(elemento) => {
+          const e = contextoVivo.current;
+          if (e !== undefined && elemento.tipo === 'nodo') void abrirCodigoEnBloque(e, 'nodo', elemento.id);
         }}
         source={dibujada}
         theme={tema}
@@ -229,7 +233,7 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
     </>
   );
   const leyenda = tema === undefined ? null : <LeyendaDeVista fuente={fuente} props={props} tema={tema} />;
-  return <Marco {...marco} fuente={fuente} hashProps={props} navegacion={navegacion} lienzo={conResaltado} leyenda={leyenda} alAbrirDetalle={abrirDetalle} />;
+  return <Marco {...marco} fuente={fuente} hashProps={props} navegacion={navegacion} lienzo={conResaltado} leyenda={leyenda} contextoVivo={contextoVivo} />;
 }
 
 /**
@@ -297,7 +301,8 @@ interface PropsDeMarcoCompleto extends PropsDelMarco {
   lienzo: ReactNode;
   leyenda?: ReactNode;
   /** El marco publica aqui como abrir el Detalle (un clic en un Nodo lo llama). */
-  alAbrirDetalle?: { current: (() => void) | undefined };
+  /** Recibe el contexto vigente del marco, para los gestos del lienzo (que se monta fuera del proveedor). */
+  contextoVivo?: { current: ContextoDelEstudio | undefined };
 }
 
 /**
@@ -309,7 +314,7 @@ export function motivoSinGestos(estado: EstadoDeDev | undefined): string | undef
   return error === undefined ? undefined : `Gestos deshabilitados: el texto no compila (${textoDeSitio(error)} ${error.message})`;
 }
 
-function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevio, previsualizarTema, fuente, hashProps, navegacion, lienzo, leyenda, alAbrirDetalle }: PropsDeMarcoCompleto): ReactElement {
+function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevio, previsualizarTema, fuente, hashProps, navegacion, lienzo, leyenda, contextoVivo }: PropsDeMarcoCompleto): ReactElement {
   const lienzoTamano = useTamano();
   const medidas = { ancho: lienzoTamano.width, alto: lienzoTamano.height };
   const izquierda = useIsla({ lado: 'izquierda', id: 'ui-isla-izquierda', nombre: 'panel izquierdo', lienzo: medidas, anchoInicial: 280 });
@@ -326,7 +331,6 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
     islas[lado].mostrar();
     setPestanas((p) => ({ ...p, [lado]: pestana }));
   };
-  if (alAbrirDetalle !== undefined) alAbrirDetalle.current = () => abrirPestana('derecha', 'detalle');
 
   const contexto: ContextoDelEstudio = {
     estado,
@@ -345,6 +349,7 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
     abrirDialogo: setDialogo,
     abrirCodigo: (sitio) => {
       abrirPestana('izquierda', 'codigo');
+      abrirPestana('derecha', 'issues');
       if (sitio !== undefined) setSitioDeCodigo(sitio);
     },
     sitioDeCodigo,
@@ -358,6 +363,7 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevi
     plataforma,
     portales,
   };
+  if (contextoVivo !== undefined) contextoVivo.current = contexto;
   useAtajos(COMANDOS, contexto);
   const cerrarDialogo = (abierto: boolean): void => {
     if (!abierto) setDialogo(undefined);

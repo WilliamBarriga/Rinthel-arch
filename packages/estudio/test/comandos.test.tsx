@@ -3,7 +3,7 @@ import { EditorView } from '@codemirror/view';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
+import { dobleClicEnNodo, lienzoListo, montarEstudio, pulsarNodo } from './ayudas-de-ui';
 
 afterEach(cleanup);
 
@@ -101,6 +101,26 @@ describe('E abre Codigo', () => {
     await waitFor(() => expect(window.location.hash).toContain('s=db'));
     teclear('e');
     await waitFor(() => expect(lineaDelEditor('main.dg')).toBe(7));
+  });
+
+  it('el doble clic en un Nodo abre Codigo en su bloque', async () => {
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL });
+    await lienzoListo(contenedor, 'mapa');
+
+    dobleClicEnNodo(contenedor, 'db');
+
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true'));
+    await waitFor(() => expect(lineaDelEditor('main.dg')).toBe(7));
+  });
+
+  it('abrir Codigo abre tambien Issues en la isla derecha', async () => {
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL });
+    await lienzoListo(contenedor, 'mapa');
+
+    teclear('e');
+
+    expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Issues' }).getAttribute('aria-selected')).toBe('true');
   });
 });
 
