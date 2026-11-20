@@ -16,6 +16,7 @@ import type { AdaptadorDeHash, AdaptadorDeLayout, Navegacion, PropsDeEstadoEnHas
 import type { EstadoDeDev } from '../src/protocolo';
 import { usePropsDeDatos, useTamano } from './arranque';
 import { crearClienteDeDev } from './cliente';
+import { historialDelCliente } from './historial/historial-visible';
 import type { ClienteDeDev, DependenciasDelCliente } from './cliente';
 import { crearCargadorDeCodigo } from './componentes';
 import { crearGeometriasDeDev } from './geometrias';
@@ -129,6 +130,8 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
   const { fetch: fetchFn, eventos, layout, confirmar } = props;
   const hash = useMemo(() => hashDeEstudio(props.hash), [props.hash]);
   const cliente = useMemo(() => crearClienteDeDev({ fetch: fetchFn, eventos }), [fetchFn, eventos]);
+  // El panel Historial puede montarse despues de conectar: el almacen escucha desde el principio.
+  useEffect(() => void historialDelCliente(cliente), [cliente]);
   const geometrias = useMemo(
     () =>
       crearGeometriasDeDev({

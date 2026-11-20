@@ -3,12 +3,13 @@
  * arreglo es el de las pestanas. Un ticket que llena un panel reemplaza aqui su `Contenido` (o anade una entrada);
  * el marco no cambia. Ids estables: los usan `abrirPestana(lado, id)` y el registro de comandos.
  */
-import type { ComponentType, ReactElement } from 'react';
+import type { ComponentType } from 'react';
 
 import { PanelDelAgente } from '../agente/panel-del-agente';
 import { SeguirAlAgente, UltimaLineaDelAgente } from '../agente/pildoras';
 import { Detalle } from '../detalle/detalle';
 import { PanelDeCodigo } from '../editor/panel-de-codigo';
+import { PanelDelHistorial } from '../historial/panel-del-historial';
 import { PanelDeIssues } from '../issues/panel-de-issues';
 import { GaleriaDeTemas } from '../temas/galeria-de-temas';
 import { PanelDeVistas } from '../vistas/panel-de-vistas';
@@ -19,12 +20,6 @@ export interface PestanaDelPanel {
   Contenido: ComponentType;
 }
 
-/** Panel aun sin contenido: lo llena el ticket que se nombra. */
-const pendiente = (texto: string): ComponentType =>
-  function Pendiente(): ReactElement {
-    return <p className="ui-tenue">{texto}</p>;
-  };
-
 export const PESTANAS_IZQUIERDAS: readonly PestanaDelPanel[] = [
   { id: 'vistas', nombre: 'Vistas', Contenido: PanelDeVistas },
   { id: 'codigo', nombre: 'Codigo', Contenido: PanelDeCodigo },
@@ -34,7 +29,7 @@ export const PESTANAS_DERECHAS: readonly PestanaDelPanel[] = [
   { id: 'detalle', nombre: 'Detalle', Contenido: Detalle },
   { id: 'issues', nombre: 'Issues', Contenido: PanelDeIssues },
   { id: 'temas', nombre: 'Temas', Contenido: GaleriaDeTemas },
-  { id: 'historial', nombre: 'Historial', Contenido: pendiente('El Historial aun no esta disponible.') },
+  { id: 'historial', nombre: 'Historial', Contenido: PanelDelHistorial },
   { id: 'agente', nombre: 'Agente', Contenido: PanelDelAgente },
 ];
 

@@ -5,8 +5,7 @@
  * recibe el contexto del estudio (`useEstudio()`). Las reglas de teclas y ambitos estan en `teclas.ts`.
  */
 import { actividadDelCliente } from '../agente/actividad';
-import { crearAlAtajo } from '../historial';
-import type { AccionDeHistorial } from '../historial';
+import { moverElHistorial } from '../historial/acciones';
 import type { ContextoDelEstudio } from '../marco/contexto';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS } from '../marco/pestanas';
 import type { DeclaracionDeTeclas } from './teclas';
@@ -19,11 +18,7 @@ export interface Comando extends DeclaracionDeTeclas {
   ejecutar(estudio: ContextoDelEstudio): void | Promise<void>;
 }
 
-/** Antes de deshacer o rehacer en `dev` se vacia el guardado pendiente del editor. */
-const historial = (accion: AccionDeHistorial) => async (e: ContextoDelEstudio) => {
-  await e.vaciarGuardado();
-  await crearAlAtajo({ enviar: (a) => (a === 'deshacer' ? e.cliente.deshacer() : e.cliente.rehacer()), avisar: e.avisar, recargar: e.recargar })(accion);
-};
+const historial = (accion: 'deshacer' | 'rehacer') => (e: ContextoDelEstudio) => moverElHistorial(e, accion);
 
 /** Codigo en el bloque del Nodo seleccionado o, sin seleccion, en el de la Vista activa. */
 async function abrirCodigoAqui(e: ContextoDelEstudio): Promise<void> {

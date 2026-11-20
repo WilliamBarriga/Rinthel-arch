@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { crearAlAtajo } from '../navegador/historial';
+import { crearAlAtajo } from '../navegador/historial/acciones';
 
 describe('crearAlAtajo', () => {
   it('envia la accion; si se rechaza avisa con el mensaje y recarga solo ante un 409', async () => {
