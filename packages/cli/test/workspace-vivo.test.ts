@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import type { EventoDeActividad } from 'canonico';
 import type { EstadoDeDev } from 'estudio/protocolo';
 
 import { puertoEnMemoria } from '../src/puerto-en-memoria';
@@ -444,5 +445,60 @@ describe('Workspace vivo: confianza en el codigo', () => {
 
     const { ws: confiado } = await abrir(puertoEnMemoria({ propios: { 'main.dg': BASE } }), { confiarEnCodigo: true });
     expect(confiado.codigo().confiado).toBe(true);
+  });
+});
+
+describe('Workspace vivo: Registro de actividad', () => {
+  const evento = (n: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
+    contractVersion: 1,
+    ts: `2026-11-19T10:00:${String(n % 60).padStart(2, '0')}.000Z`,
+    pid: n,
+    comando: 'validate',
+    args: [],
+    exitCode: 0,
+    duracionMs: 1,
+    ...extra,
+  });
+  const lineas = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
+
+  it('al abrir reproduce los ultimos 50 eventos del registro', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, actividad: lineas(...Array.from({ length: 60 }, (_, i) => evento(i))) });
+    const { ws } = await abrir(puerto);
+    const previos = ws.actividad();
+    expect(previos).toHaveLength(50);
+    expect(previos[0]?.pid).toBe(10);
+    expect(previos[49]?.pid).toBe(59);
+  });
+
+  it('empuja los eventos anexados tras el debounce, sin las lineas rotas', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const { ws, reloj } = await abrir(puerto);
+    const empujados: EventoDeActividad[][] = [];
+    ws.suscribirActividad((eventos) => empujados.push(eventos));
+
+    puerto.anexarActividad(lineas(evento(1, { comando: 'edit', objetivo: { vista: 'v' } })));
+    puerto.anexarActividad('{esto no es json\n');
+    puerto.anexarActividad(lineas(evento(2)));
+    expect(empujados).toEqual([]);
+    reloj.avanzar(100);
+
+    expect(empujados).toEqual([[evento(1, { comando: 'edit', objetivo: { vista: 'v' } }), evento(2)]]);
+    expect(ws.actividad().map((e) => e.pid)).toEqual([1, 2]);
+  });
+
+  it('un registro acortado o rotado se vuelve a leer desde el principio', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, actividad: lineas(evento(1), evento(2), evento(3)) });
+    const { ws, reloj } = await abrir(puerto);
+    const empujados: number[] = [];
+    ws.suscribirActividad((eventos) => empujados.push(...eventos.map((e) => e.pid)));
+
+    puerto.reescribirActividad(lineas(evento(4)));
+    reloj.avanzar(100);
+    puerto.reescribirActividad(undefined);
+    reloj.avanzar(100);
+    puerto.anexarActividad(lineas(evento(5)));
+    reloj.avanzar(100);
+
+    expect(empujados).toEqual([4, 5]);
   });
 });

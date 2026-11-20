@@ -4,6 +4,7 @@
  * Buscador), teclas (`Mod+K`, `E`, `?`; vacio si solo se llega por el Buscador), ambito del foco y `ejecutar`, que
  * recibe el contexto del estudio (`useEstudio()`). Las reglas de teclas y ambitos estan en `teclas.ts`.
  */
+import { actividadDelCliente } from '../agente/actividad';
 import { crearAlAtajo } from '../historial';
 import type { AccionDeHistorial } from '../historial';
 import type { ContextoDelEstudio } from '../marco/contexto';
@@ -40,6 +41,8 @@ const PROPIOS: readonly Comando[] = [
   { id: 'deshacer', nombre: 'Deshacer', teclas: ['Mod+Z'], ambito: 'global', enTexto: false, ejecutar: historial('deshacer') },
   { id: 'rehacer', nombre: 'Rehacer', teclas: ['Mod+Shift+Z', { combinacion: 'Ctrl+Y', soloEn: 'otras' }], ambito: 'global', enTexto: false, ejecutar: historial('rehacer') },
   { id: 'abrir-codigo', nombre: 'Abrir Codigo', teclas: ['E'], ambito: 'global', ejecutar: abrirCodigoAqui },
+  { id: 'seguir-al-agente-activar', nombre: 'Seguir al agente: activar', teclas: [], ambito: 'global', ejecutar: (e) => actividadDelCliente(e.cliente).seguir(true) },
+  { id: 'seguir-al-agente-desactivar', nombre: 'Seguir al agente: desactivar', teclas: [], ambito: 'global', ejecutar: (e) => actividadDelCliente(e.cliente).seguir(false) },
 ];
 
 /** "Abrir <pestana>" por cada pestana de las islas que no tenga ya un comando propio. */

@@ -37,3 +37,30 @@ export const eventoDeActividadSchema = z.object({
 
 export type EventoDeActividad = z.infer<typeof eventoDeActividadSchema>;
 export type ObjetivoDeActividad = NonNullable<EventoDeActividad['objetivo']>;
+
+/**
+ * Lector incremental de `actividad.jsonl` (puro: recibe el texto entero del archivo, `undefined` si no existe).
+ * Cada llamada devuelve los Eventos de las lineas completas que aun no habia dado. Omite las lineas que no parsean o no
+ * cumplen `eventoDeActividadSchema`; una linea sin `\n` final espera a la siguiente lectura. Si el texto ya no empieza
+ * por lo leido (archivo acortado o rotado) o falta, vuelve a leer desde el principio.
+ */
+export function crearLectorDeActividad(): (texto: string | undefined) => EventoDeActividad[] {
+  let leido = '';
+  return (texto) => {
+    if (texto === undefined || !texto.startsWith(leido)) leido = '';
+    if (texto === undefined) return [];
+    const fin = texto.lastIndexOf('\n') + 1;
+    if (fin <= leido.length) return [];
+    const nuevas = texto.slice(leido.length, fin);
+    leido = texto.slice(0, fin);
+    return nuevas.split('\n').flatMap((linea) => {
+      if (linea.trim() === '') return [];
+      try {
+        const r = eventoDeActividadSchema.safeParse(JSON.parse(linea));
+        return r.success ? [r.data] : [];
+      } catch {
+        return [];
+      }
+    });
+  };
+}

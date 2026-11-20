@@ -393,6 +393,123 @@
     }
   }
 
+  /* Agente: ultima linea y "seguir al agente" en la barra, feed en el panel. */
+  .ui-ultima-linea {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 320px;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    color: var(--ui-agente-texto);
+    &::before {
+      content: '';
+      flex: none;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ui-agente);
+      box-shadow: 0 0 10px var(--ui-agente-halo);
+    }
+  }
+  .ui-ultima-linea-texto {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ui-contador {
+    min-width: 18px;
+    padding: 0 5px;
+    border-radius: 99px;
+    background: var(--ui-agente);
+    color: var(--ui-acento-sobre);
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .ui-seguir {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ui-tenue);
+    cursor: pointer;
+  }
+  .ui-interruptor {
+    position: relative;
+    width: 30px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 99px;
+    background: var(--ui-sutil-2);
+    cursor: pointer;
+    transition: background var(--ui-dur-corta) var(--ui-curva);
+    &[data-checked] {
+      background: var(--ui-agente);
+    }
+  }
+  .ui-interruptor-pulgar {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--ui-texto-fuerte);
+    transition: transform var(--ui-dur-corta) var(--ui-curva);
+    &[data-checked] {
+      transform: translateX(12px);
+    }
+  }
+  .ui-feed {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .ui-feed-linea {
+    padding: 4px 6px;
+    border-radius: var(--ui-radio-s);
+    &:hover {
+      background: var(--ui-hover);
+    }
+  }
+  .ui-feed-cabecera {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .ui-feed-quien {
+    color: var(--ui-agente-texto);
+  }
+  .ui-feed-marca {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--ui-tenue);
+    &[data-marca='ok'] {
+      color: var(--ui-agente-texto);
+    }
+    &[data-marca='avisos'] {
+      color: var(--ui-warn);
+    }
+    &[data-marca='errores'],
+    &[data-marca='fallo'] {
+      color: var(--ui-err);
+    }
+  }
+  .ui-feed-args {
+    display: block;
+    margin-top: 4px;
+    padding: 4px 6px;
+    border-radius: var(--ui-radio-s);
+    background: var(--ui-sutil);
+    white-space: pre-wrap;
+    word-break: break-all;
   /* Buscador, ayuda de atajos y tooltips (portales de Base UI en `.ui-portales`). */
   .ui-pildora-buscador {
     color: var(--ui-tenue);

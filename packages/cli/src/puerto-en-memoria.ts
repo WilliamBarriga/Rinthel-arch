@@ -8,15 +8,27 @@ export interface WorkspaceVivoEnMemoria extends PuertoDelWorkspaceVivo, Workspac
   /** Cambio hecho fuera de `dev`; con `undefined` borra el archivo. */
   editarFuera(ruta: string, texto: string | undefined): void;
   tocarRecurso(ruta: string, hash: string): void;
+  /** Anexa texto al Registro de actividad (como el CLI de otro proceso) y avisa a su observador. */
+  anexarActividad(texto: string): void;
+  /** Reemplaza el registro entero (acortado o rotado); `undefined` lo borra. */
+  reescribirActividad(texto: string | undefined): void;
 }
 
 export interface ContenidoVivoEnMemoria extends ContenidoEnMemoria {
   /** Sin el, `recursos()` da `undefined`. */
   recursos?: Record<string, string>;
+  /** Texto inicial de `.diagrams/actividad.jsonl`; sin el, el registro no existe todavia. */
+  actividad?: string;
 }
 
-export function puertoEnMemoria({ recursos, ...contenido }: ContenidoVivoEnMemoria): WorkspaceVivoEnMemoria {
+export function puertoEnMemoria({ recursos, actividad, ...contenido }: ContenidoVivoEnMemoria): WorkspaceVivoEnMemoria {
   const base = workspaceEnMemoria(contenido);
+  let registro = actividad;
+  const observadoresDelRegistro = new Set<() => void>();
+  const cambiarRegistro = (texto: string | undefined): void => {
+    registro = texto;
+    for (const alCambiar of [...observadoresDelRegistro]) alCambiar();
+  };
   let hashes = recursos === undefined ? undefined : { ...recursos };
   const observadores = new Set<() => void>();
   const avisar = (): void => {
@@ -40,6 +52,15 @@ export function puertoEnMemoria({ recursos, ...contenido }: ContenidoVivoEnMemor
       return () => observadores.delete(alCambiar);
     },
     editarFuera: (ruta, texto) => (texto === undefined ? borrar(ruta) : escribir(ruta, texto)),
+    actividad: {
+      leer: () => registro,
+      observar(alCambiar) {
+        observadoresDelRegistro.add(alCambiar);
+        return () => observadoresDelRegistro.delete(alCambiar);
+      },
+    },
+    anexarActividad: (texto) => cambiarRegistro((registro ?? '') + texto),
+    reescribirActividad: cambiarRegistro,
     tocarRecurso(ruta, hash) {
       hashes = { ...hashes, [ruta]: hash };
       avisar();
