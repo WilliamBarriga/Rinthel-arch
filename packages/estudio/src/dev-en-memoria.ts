@@ -9,9 +9,10 @@
 import { combineIconProviders, genericIcons, intencionSchema, serializarIconos, workspaceIcons } from 'canonico';
 import type { Issue, MotivoDeRechazo } from 'canonico';
 import { abrirSesion, aplicarAlWorkspace, apilar, crearHistorial, deshacer, hashDeContenido, rehacer, workspaceEnMemoria } from 'sesion';
-import type { Historial, Sesion, WorkspaceEnMemoria } from 'sesion';
+import type { Consulta, Historial, Sesion, WorkspaceEnMemoria } from 'sesion';
 
-import type { EstadoDeDev, NombreDeEventoDeDev } from './protocolo';
+import { COMANDOS_DE_INSPECT } from './protocolo';
+import type { ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev } from './protocolo';
 
 type Archivos = Readonly<Record<string, string>>;
 
@@ -39,6 +40,9 @@ const iguales = (a: Archivos, b: Archivos): boolean => {
 };
 
 const hashesDe = (archivos: Archivos): Record<string, string> => Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)]));
+
+/** Quita las claves `undefined` (las opciones van con `exactOptionalPropertyTypes`). */
+const dejarDefinidos = <T extends Record<string, string | undefined>>(o: T): { [K in keyof T]?: string } => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as { [K in keyof T]?: string };
 
 const respuesta = (status: number, cuerpo: unknown): Response => new Response(JSON.stringify(cuerpo), { status, headers: { 'content-type': 'application/json' } });
 
@@ -132,11 +136,15 @@ export async function devEnMemoria({ propios, temas }: { propios: Archivos; tema
   const consultar = (url: URL): Response => {
     const [comando, codificado, ...sobra] = url.pathname.slice('/api/inspect/'.length).split('/');
     const argumento = codificado === undefined ? '' : decodeURIComponent(codificado);
-    if (comando === undefined || !['buscar', 'nodo', 'vista', 'interaccion'].includes(comando) || argumento === '' || sobra.length > 0) {
-      // `tema` vive en `cli` (consultarTema); el fake no lo responde todavia.
+    if (comando === undefined || !(COMANDOS_DE_INSPECT as readonly string[]).includes(comando) || argumento === '' || sobra.length > 0) {
       return respuesta(404, { ok: false, mensaje: `Ruta de inspect desconocida: ${url.pathname}`, cercanos: [] });
     }
-    const r = buena?.sesion.consultar({ comando: comando as 'buscar' | 'nodo' | 'vista' | 'interaccion', argumento });
+    const opcion = (nombre: string) => url.searchParams.get(nombre) ?? undefined;
+    const consulta: Consulta =
+      comando === 'tema'
+        ? { comando, argumento, ...dejarDefinidos({ tipo: opcion('tipo'), estado: opcion('estado'), diagrama: opcion('diagrama') }), catalogo: url.searchParams.get('catalogo') === 'true' }
+        : { comando: comando as Exclude<ComandoDeInspect, 'tema'>, argumento };
+    const r = buena?.sesion.consultar(consulta);
     if (r === undefined) return respuesta(422, { ok: false, mensaje: 'El Workspace tiene errores y nunca compilo; no hay nada que consultar', cercanos: [] });
     if ('noEncontrado' in r) return respuesta(404, { ok: false, mensaje: r.noEncontrado, cercanos: r.cercanos });
     return respuesta(200, r.salida);
@@ -162,8 +170,9 @@ export async function devEnMemoria({ propios, temas }: { propios: Archivos; tema
     if (ruta === '/api/codigo') return respuesta(200, { temaConCodigo: false, componentes: [], confiado: false });
     if (ruta.startsWith('/api/inspect/')) return consultar(url);
     if (ruta.startsWith('/api/vista/')) {
-      const geometria = await buena?.sesion.geometria(decodeURIComponent(ruta.slice('/api/vista/'.length)));
-      return geometria === undefined ? respuesta(404, { error: 'Vista inexistente' }) : respuesta(200, geometria);
+      const tema = url.searchParams.get('tema') ?? undefined;
+      const geometria = await buena?.sesion.geometria(decodeURIComponent(ruta.slice('/api/vista/'.length)), tema === undefined ? undefined : { tema });
+      return geometria === undefined ? respuesta(404, { error: 'Vista o Tema inexistente' }) : respuesta(200, geometria);
     }
     return new Response('No encontrado', { status: 404 });
   };

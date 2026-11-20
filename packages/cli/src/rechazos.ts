@@ -22,6 +22,7 @@ export const SALIDA_DE_RECHAZO: Record<MotivoDeRechazo, SalidaDeRechazo> = {
   invalida: { estadoHttp: 422, exitCode: 1 },
   'nada-que-deshacer': { estadoHttp: 422, exitCode: 1 },
   'nada-que-rehacer': { estadoHttp: 422, exitCode: 1 },
+  'tema-desconocido': { estadoHttp: 422, exitCode: 1 },
 };
 
 export function rechazoDeEdicion(motivo: MotivoDeRechazo, mensaje: string, file?: string): RechazoDeEdicion {

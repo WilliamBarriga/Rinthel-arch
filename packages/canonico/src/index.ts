@@ -92,8 +92,8 @@ export type { EventoDeActividad, ObjetivoDeActividad } from './actividad';
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';
 export type { SalidaDeInspect } from './inspect';
 
-export { MOTIVOS_DE_RECHAZO, intencionDeOrdenSchema, intencionDePinSchema, intencionSchema } from './pin';
-export type { Intencion, IntencionDeOrden, IntencionDePin, MotivoDeRechazo } from './pin';
+export { MOTIVOS_DE_RECHAZO, intencionDeOrdenSchema, intencionDePinSchema, intencionDeTemaSchema, intencionSchema } from './pin';
+export type { Intencion, IntencionDeOrden, IntencionDePin, IntencionDeTema, MotivoDeRechazo } from './pin';
 export { RUTA_DE_FUENTES, urlDeFuente } from './ruta-de-fuentes';
 
 export { CONTRACT_VERSION, issueSchema, salidaDeValidateJsonSchema, salidaDeValidateSchema } from './salida';

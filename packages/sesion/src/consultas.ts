@@ -3,8 +3,10 @@ import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubica
 
 type Sitio = { file: string; line: number };
 
-/** `argumento` es texto para `buscar` e id para el resto. */
-export type Consulta = { comando: 'buscar' | 'nodo' | 'vista' | 'interaccion'; argumento: string };
+import type { OpcionesDeConsultaDeTema } from './consulta-de-tema';
+
+/** `argumento` es texto para `buscar`, nombre para `tema` e id para el resto; las opciones de `tema` ajustan su cascada. */
+export type Consulta = { comando: 'buscar' | 'nodo' | 'vista' | 'interaccion'; argumento: string } | ({ comando: 'tema'; argumento: string } & OpcionesDeConsultaDeTema);
 
 /** `noEncontrado` es el mensaje (con `Quiza: ...`); `cercanos`, los ids parecidos que nombra. */
 export type Respuesta = { salida: SalidaDeInspect } | { noEncontrado: string; cercanos: string[] };
@@ -17,7 +19,7 @@ function recorrerNodos(nodos: readonly Nodo[], ruta: RutaDeFuente = ['model', 'n
   });
 }
 
-export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento }: Consulta): Respuesta {
+export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento }: Exclude<Consulta, { comando: 'tema' }>): Respuesta {
   const sitioDe = (ruta: RutaDeFuente): Sitio => {
     const sitio = ubicar(ruta);
     return { file: sitio?.file ?? '(desconocido)', line: sitio?.range.start.line ?? 1 };

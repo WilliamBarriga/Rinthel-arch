@@ -8,7 +8,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import type { ReactElement, ReactNode } from 'react';
 
 import { resolveView, urlDeFuente } from 'canonico';
-import type { FuenteCanonica } from 'canonico';
+import type { FuenteCanonica, GeometriaCacheada } from 'canonico';
 import type { ComponentesDeTema } from 'render';
 import { Leyenda, Migas, VistaInteractiva, deserializarEstado, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeHash, AdaptadorDeLayout, Navegacion, PropsDeEstadoEnHash } from 'shell';
@@ -150,7 +150,8 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
   const alOrdenar = crearAlOrdenar({ estado: () => vivo.current, enviar: cliente.editar, avisar, recargar });
 
   const plataforma = props.plataforma ?? plataformaDe(typeof navigator === 'undefined' ? undefined : navigator);
-  const marco = { estado, cliente, aviso, avisar, recargar, plataforma };
+  const [temaPrevio, previsualizarTema] = useState<string>();
+  const marco = { estado, cliente, aviso, avisar, recargar, plataforma, temaPrevio, previsualizarTema };
   if (dibujable === undefined) return <Marco {...marco} navegacion={undefined} lienzo={null} />;
   return <ConFuente {...marco} dibujable={dibujable} hash={hash} geometrias={geometrias} layout={layout} componentes={componentes} alMover={alMover} alOrdenar={alOrdenar} />;
 }
@@ -162,6 +163,8 @@ interface PropsDelMarco {
   avisar: (texto: string) => void;
   recargar: () => Promise<void>;
   plataforma: Plataforma;
+  temaPrevio: string | undefined;
+  previsualizarTema: (tema: string | undefined) => void;
 }
 
 interface PropsConFuente extends PropsDelMarco {
@@ -176,11 +179,14 @@ interface PropsConFuente extends PropsDelMarco {
 
 /** La Vista activa, la Seleccion y la ruta viven en el hash; el lienzo y los paneles las comparten. */
 function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, alOrdenar, ...marco }: PropsConFuente): ReactElement {
-  const { estado, geometrias: porVista } = dibujable;
+  const { estado, geometrias: delServidor } = dibujable;
   const fuente = estado.fuente;
   const props = useEstadoEnHash({ source: fuente, hash, defaultView: estado.vistas[0] ?? '', camera: true });
   useEffect(() => geometrias.activar(props.view), [geometrias, props.view]);
-  const datos = usePropsDeDatos({ fuente, iconos: estado.iconos, geometrias: porVista }, props.view);
+  const { previsualizarTema } = marco;
+  useEffect(() => previsualizarTema(undefined), [props.view, previsualizarTema]);
+  const { fuente: dibujada, geometrias: porVista } = usePrevisualizacion(marco.cliente, fuente, delServidor, props.view, marco.temaPrevio, estado.version);
+  const datos = usePropsDeDatos({ fuente: dibujada, iconos: estado.iconos, geometrias: porVista }, props.view);
   const abrirDetalle = useRef<(() => void) | undefined>(undefined);
   const navegacion = navegacionDesde(props);
   const tema = datos.theme;
@@ -192,7 +198,7 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
           props.onSelect(id);
           abrirDetalle.current?.();
         }}
-        source={fuente}
+        source={dibujada}
         theme={tema}
         layout={layout}
         {...(estado.fuentes !== undefined && { fontFiles: estado.fuentes, fontUrl: urlDeFuente })}
@@ -208,6 +214,38 @@ function ConFuente({ dibujable, hash, geometrias, layout, componentes, alMover, 
     );
   const leyenda = tema === undefined ? null : <LeyendaDeVista fuente={fuente} props={props} tema={tema} />;
   return <Marco {...marco} fuente={fuente} hashProps={props} navegacion={navegacion} lienzo={lienzo} leyenda={leyenda} alAbrirDetalle={abrirDetalle} />;
+}
+
+/**
+ * Con `tema`, la Vista activa se dibuja con ese Tema sin escribir: su `theme` se sustituye en la Fuente dibujada y su
+ * Geometria se pide con `?tema=` (mientras no llega, la calcula el Worker). Sin `tema`, todo pasa tal cual.
+ */
+function usePrevisualizacion(
+  cliente: ClienteDeDev,
+  fuente: FuenteCanonica,
+  geometrias: Dibujable['geometrias'],
+  vista: string,
+  tema: string | undefined,
+  version: number,
+): { fuente: FuenteCanonica; geometrias: Dibujable['geometrias'] } {
+  const [previa, setPrevia] = useState<{ vista: string; tema: string; geometria: GeometriaCacheada }>();
+  useEffect(() => {
+    if (tema === undefined) return;
+    let vigente = true;
+    void cliente.geometria(vista, { tema }).then((r) => {
+      if (vigente && r.ok) setPrevia({ vista, tema, geometria: r.geometria });
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [cliente, vista, tema, version]);
+  return useMemo(() => {
+    if (tema === undefined) return { fuente, geometrias };
+    const conTema = { ...fuente, views: fuente.views.map((v) => (v.id === vista ? { ...v, theme: tema } : v)) };
+    const { [vista]: _delTemaPropio, ...resto } = geometrias;
+    const llego = previa !== undefined && previa.vista === vista && previa.tema === tema;
+    return { fuente: conTema, geometrias: llego ? { ...resto, [vista]: previa.geometria } : resto };
+  }, [fuente, geometrias, vista, tema, previa]);
 }
 
 function LeyendaDeVista({ fuente, props, tema }: { fuente: FuenteCanonica; props: PropsDeEstadoEnHash; tema: Parameters<typeof Leyenda>[0]['tema'] }): ReactElement | null {
@@ -246,7 +284,7 @@ interface PropsDeMarcoCompleto extends PropsDelMarco {
   alAbrirDetalle?: { current: (() => void) | undefined };
 }
 
-function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, fuente, hashProps, navegacion, lienzo, leyenda, alAbrirDetalle }: PropsDeMarcoCompleto): ReactElement {
+function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, temaPrevio, previsualizarTema, fuente, hashProps, navegacion, lienzo, leyenda, alAbrirDetalle }: PropsDeMarcoCompleto): ReactElement {
   const lienzoTamano = useTamano();
   const medidas = { ancho: lienzoTamano.width, alto: lienzoTamano.height };
   const izquierda = useIsla({ lado: 'izquierda', id: 'ui-isla-izquierda', nombre: 'panel izquierdo', lienzo: medidas, anchoInicial: 280 });
@@ -274,6 +312,8 @@ function Marco({ estado, cliente, aviso, avisar, recargar, plataforma, fuente, h
     seleccionar: (id) => hashProps?.onSelect(id),
     abrirPestana,
     alternarIsla: (lado) => islas[lado].alternar(),
+    temaPrevio,
+    previsualizarTema,
     avisar,
     recargar,
     abrirDialogo: setDialogo,
