@@ -1,6 +1,6 @@
 /**
  * Protocolo de `dev`, con un solo dueno, que comparten el Workspace vivo (`sesion`), el servidor (`cli`) y la pagina
- * (`estudio`): rutas, eventos SSE con nombre, esquemas de lo que el Workspace vivo produce (estado, Diferencia, Historial,
+ * (`estudio`): rutas, eventos SSE con nombre, esquemas de lo que el Workspace vivo produce (estado, Diferencia, Historial de archivos,
  * actividad, archivos, `inspect` no encontrado) y de las peticiones de escritura, la identidad de los elementos de una
  * Diferencia y la traduccion de un rechazo a estado HTTP (ADR 0004, 0007). `estudio/protocolo` lo reexporta para la pagina.
  * Invariantes: sin I/O; un valor de aqui (ruta, evento, comando, estado HTTP) es el unico que usan el servidor real y `devEnMemoria`.
@@ -159,7 +159,7 @@ export const diferenciaDeDevSchema = diferenciaSchema.extend({ version: z.number
 export type DiferenciaDeDev = z.infer<typeof diferenciaDeDevSchema>;
 
 /**
- * Datos de `event: historial` (al conectar y tras cada recompilacion): el Historial de deshacer de `dev`, `pasado` de la
+ * Datos de `event: historial` (al conectar y tras cada recompilacion): el Historial de archivos de `dev`, `pasado` de la
  * entrada mas vieja a la mas reciente y `futuro` desde la siguiente a rehacer. `id` es un contador estable del proceso
  * (`0` es Inicio), `cuando` la hora en ms y `descripcion` la arma el servidor. `alcanzable: false` (con `motivo`) si
  * saltar a ella restauraria un archivo que cambio por fuera.
@@ -207,7 +207,7 @@ export function archivoDeRuta(resto: string): string | undefined {
 
 /**
  * `POST /api/edit` con texto (ADR 0007): la misma forma y puerta que `edit --edits`, con la `version` que vio la pagina
- * (el servidor la traduce a `visto`). `descripcion` nombra la entrada del Historial (por defecto "texto de <archivo>").
+ * (el servidor la traduce a `visto`). `descripcion` nombra la entrada del Historial de archivos (por defecto "texto de <archivo>").
  * `aunqueNoCompile` (guardado del editor, historia 21) escribe aunque el texto introduzca errores; sin el, un error nuevo
  * rechaza con `invalida` (`fix` y "Aplicar N fix", todo o nada).
  */
