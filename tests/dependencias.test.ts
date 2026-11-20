@@ -191,6 +191,81 @@ describe('revisarWorkspace', () => {
     expect(revisarWorkspace(raiz)).toEqual([]);
   });
 
+  it('las pruebas de un paquete importan las ayudas compartidas de tests/ayudas; el codigo fuente no', () => {
+    const raiz = crearWorkspace({
+      'tests/ayudas/lienzo.ts': 'export const ayuda = 1;\n',
+      'packages/shell/package.json': manifiesto('shell'),
+      'packages/shell/src/index.ts': "import { ayuda } from '../../../tests/ayudas/lienzo';\nexport const propio = ayuda;\n",
+      'packages/shell/test/ayudas.ts': "import { ayuda } from '../../../tests/ayudas/lienzo';\nexport const otra = ayuda;\n",
+      'packages/shell/test/otra.test.ts': "import { x } from '../../../tests/dependencias.test';\nexport const y = x;\n",
+    });
+
+    expect(revisarWorkspace(raiz).map((v) => [v.archivo, v.regla])).toEqual([
+      ['packages/shell/src/index.ts', 'interno'],
+      ['packages/shell/test/otra.test.ts', 'interno'],
+    ]);
+  });
+
+  it('falla si un paquete reexporta nombres de otro paquete, tambien en bloques de varias lineas', () => {
+    const raiz = crearWorkspace({
+      'packages/canonico/package.json': manifiesto('canonico'),
+      'packages/canonico/src/index.ts': 'export const algo = 1;\nexport type Caja = { x: number };\n',
+      'packages/layout/package.json': manifiesto('layout', { dependencies: { canonico: 'workspace:*' } }),
+      'packages/layout/src/index.ts': "export { algo } from 'canonico';\n",
+      'packages/layout/src/tipos.ts': "export type {\n  Caja,\n} from 'canonico';\n",
+      'packages/layout/src/todo.ts': "export * from 'canonico';\n",
+    });
+
+    const reexportes = revisarWorkspace(raiz).filter((v) => v.regla === 'reexporte');
+    expect(reexportes.map((v) => [v.paquete, v.archivo])).toEqual([
+      ['layout', 'packages/layout/src/index.ts'],
+      ['layout', 'packages/layout/src/tipos.ts'],
+      ['layout', 'packages/layout/src/todo.ts'],
+    ]);
+  });
+
+  it('acepta reexportes propios y los de las excepciones: estudio/protocolo y la fachada de shell', () => {
+    const raiz = crearWorkspace({
+      'packages/canonico/package.json': manifiesto('canonico'),
+      'packages/canonico/src/index.ts': "export { algo } from './algo';\n",
+      'packages/canonico/src/algo.ts': 'export const algo = 1;\n',
+      'packages/shell/package.json': manifiesto('shell', { dependencies: { canonico: 'workspace:*' } }),
+      'packages/shell/src/index.ts': "export { algo } from 'canonico';\n",
+      'packages/estudio/package.json': manifiesto('estudio', {
+        dependencies: { canonico: 'workspace:*' },
+        exports: { '.': './dist/index.js', './protocolo': './dist/protocolo.js' },
+      }),
+      'packages/estudio/src/index.ts': 'export const app = 1;\n',
+      'packages/estudio/src/protocolo.ts': "export type { algo } from 'canonico';\n",
+    });
+
+    expect(revisarWorkspace(raiz)).toEqual([]);
+  });
+
+  it('scripts/ y bench/ solo usan interfaces declaradas de los paquetes', () => {
+    const raiz = crearWorkspace({
+      'packages/cli/package.json': manifiesto('cli'),
+      'packages/cli/src/index.ts': 'export const run = 1;\n',
+      'packages/cli/test/chromium.ts': 'export const ruta = 1;\n',
+      'packages/estudio/package.json': manifiesto('estudio', {
+        exports: { '.': './dist/index.js', './protocolo': './dist/protocolo.js' },
+      }),
+      'packages/estudio/src/index.ts': 'export const app = 1;\n',
+      'packages/estudio/scripts/empaquetar.ts': 'export const construir = 1;\n',
+      'tests/ayudas/chromium.ts': 'export const ruta = 1;\n',
+      'scripts/capturas.ts':
+        "import { run } from 'cli';\nimport type { X } from 'estudio/protocolo';\nimport { ruta } from '../tests/ayudas/chromium.ts';\nimport { ruta as otra } from '../packages/cli/test/chromium.ts';\nexport const y = [run, ruta, otra] as unknown as X;\n",
+      'scripts/capturas/servidores.ts': "import { app } from 'estudio/src/index';\nexport const s = app;\n",
+      'bench/escenario.ts': "import { construir } from '../packages/estudio/scripts/empaquetar.ts';\nexport const b = construir;\n",
+    });
+
+    expect(revisarWorkspace(raiz).map((v) => [v.paquete, v.archivo, v.regla])).toEqual([
+      ['(raiz)', 'scripts/capturas.ts', 'interno'],
+      ['(raiz)', 'scripts/capturas/servidores.ts', 'interno'],
+      ['(raiz)', 'bench/escenario.ts', 'interno'],
+    ]);
+  });
+
   it('este workspace no tiene violaciones', () => {
     expect(revisarWorkspace(raizDelRepo)).toEqual([]);
   });

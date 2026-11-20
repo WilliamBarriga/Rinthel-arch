@@ -5,6 +5,7 @@ import { layoutView } from 'layout';
 import { hashDelNavegador } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 
+import { ayudasDeLienzo } from '../../../tests/ayudas/lienzo';
 import { devEnMemoria } from '../src/contrato';
 import type { DevEnMemoria } from '../src/contrato';
 import { Estudio } from '../navegador/estudio';
@@ -108,28 +109,5 @@ export const lienzoListo = (contenedor: HTMLElement, vista: string): Promise<HTM
     return lienzo;
   });
 
-/** Clic en el centro de un Nodo dibujado, traducido a pantalla con la camara (como haria el raton). */
-export function pulsarNodo(contenedor: HTMLElement, id: string): void {
-  const { dibujo, punto } = centroDeNodo(contenedor, id);
-  fireEvent.click(dibujo, punto);
-}
-
-/** Doble clic en el centro de un Nodo dibujado (dos clics y el `dblclick`, como el raton). */
-export function dobleClicEnNodo(contenedor: HTMLElement, id: string): void {
-  // Cada clic puede volver a dibujar el lienzo: el destino se busca de nuevo antes de cada evento.
-  const en = () => centroDeNodo(contenedor, id);
-  fireEvent.click(en().dibujo, { ...en().punto, detail: 1 });
-  fireEvent.click(en().dibujo, { ...en().punto, detail: 2 });
-  fireEvent.doubleClick(en().dibujo, en().punto);
-}
-
-function centroDeNodo(contenedor: HTMLElement, id: string): { dibujo: HTMLElement; punto: { clientX: number; clientY: number } } {
-  const dibujo = contenedor.querySelector<HTMLElement>('[data-diagram]')!;
-  const caja = contenedor.querySelector<HTMLElement>(`[data-id="${id}"]`)!;
-  const t = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(caja.style.transform)!;
-  const x = Number(t[1]) + Number.parseFloat(caja.style.width) / 2;
-  const y = Number(t[2]) + Number.parseFloat(caja.style.height) / 2;
-  const [vx, vy, vw] = dibujo.getAttribute('data-camara')!.split(' ').map(Number) as [number, number, number, number];
-  const k = Number.parseFloat(dibujo.style.width) / vw;
-  return { dibujo, punto: { clientX: (x - vx) * k, clientY: (y - vy) * k } };
-}
+/** Clic y doble clic en el centro de un Nodo dibujado; la unica copia vive en `tests/ayudas/lienzo.ts`. */
+export const { dobleClicEnNodo, pulsarNodo } = ayudasDeLienzo(fireEvent);

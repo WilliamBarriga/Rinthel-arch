@@ -2,8 +2,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
-import type { VistaDeGrafo } from 'canonico';
-import type { Geometria } from 'layout';
+import type { Geometria, VistaDeGrafo } from 'canonico';
 
 import { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from '../src/interaccion';
 import { TEMA_NEUTRO, metricasDe } from 'tema';

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
-import type { Atributo, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
+import type { Atributo, CajaDeNodo, Geometria, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
 import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView as layoutDeVista } from 'layout';
-import type { CajaDeNodo, Geometria } from 'layout';
 import { TEMA_NEUTRO, metricasDe, tablaDeMetricas } from 'tema';
 
 /** `layoutView` de una Vista de grafo (architecture o flow): estas pruebas miran cajas y rutas de Aristas. */

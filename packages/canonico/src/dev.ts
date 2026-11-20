@@ -216,3 +216,14 @@ export const peticionDeEdicionesSchema = z.object({
   aunqueNoCompile: z.boolean().optional(),
 });
 export type PeticionDeEdiciones = z.infer<typeof peticionDeEdicionesSchema>;
+
+/** `GET /api/codigo`: si los Temas del Workspace usan Componentes con codigo, cuales, y si ya se sirven (`/componentes.js`). */
+export const codigoDeDevSchema = z.object({ temaConCodigo: z.boolean(), componentes: z.array(z.string()), confiado: z.boolean() });
+export type CodigoDeDev = z.infer<typeof codigoDeDevSchema>;
+
+/** `POST /api/confiar`: desde aqui el codigo de los Temas se sirve. */
+export const confianzaDeDevSchema = z.object({ ok: z.literal(true) });
+
+/** Cuerpo de los bordes de `/api/*`: 400 (JSON o forma invalida), 404 (ruta o recurso), 405 (metodo, con `allow`) y 500 (fallo de I/O). */
+export const errorDeDevSchema = z.object({ ok: z.literal(false), mensaje: z.string() });
+export type ErrorDeDev = z.infer<typeof errorDeDevSchema>;

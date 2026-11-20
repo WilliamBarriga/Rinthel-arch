@@ -2,8 +2,7 @@ import { act, cleanup, render, renderHook, waitFor } from '@testing-library/reac
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema } from 'canonico';
-import type { VistaResuelta } from 'canonico';
-import type { Geometria } from 'layout';
+import type { Geometria, VistaResuelta } from 'canonico';
 import { VistaInteractiva, deserializarEstado, hashDelNavegador, serializarEstado, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeHash, AdaptadorDeLayout, EstadoDeShell } from 'shell';
 import { pulsarNodo } from './ayudas';

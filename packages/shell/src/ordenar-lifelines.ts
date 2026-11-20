@@ -2,8 +2,9 @@
  * Reordenar Lifelines por arrastre, puro sobre la `GeometriaSecuencia`. Una unidad (Lifeline o bloque de un `box`) solo
  * se mueve entre sus hermanas dentro del `box` que la contiene, y la Lifeline propia de ese Grupo se queda primera.
  */
-import type { CajaDeGrupo } from 'canonico';
-import type { GeometriaSecuencia } from 'layout';
+import type { CajaDeGrupo, GeometriaSecuencia } from 'canonico';
+
+import { contiene } from './caja';
 
 export interface UnidadArrastrada {
   /** Lifeline (o Grupo, si `bloque`) que se agarro. */
@@ -11,15 +12,12 @@ export interface UnidadArrastrada {
   bloque: boolean;
 }
 
-const dentro = (c: { x: number; y: number; width: number; height: number }, p: { x: number; y: number }): boolean =>
-  p.x >= c.x && p.x <= c.x + c.width && p.y >= c.y && p.y <= c.y + c.height;
-
 /** Que se agarra en `punto`: la cabecera de una Lifeline o el titulo de un `box`; nada si no cae en ninguno. */
 export function unidadBajo(g: GeometriaSecuencia, grupos: readonly CajaDeGrupo[], punto: { x: number; y: number }): UnidadArrastrada | undefined {
   for (const [id, caja] of Object.entries(g.nodes)) {
-    if (dentro(caja, punto)) return { id, bloque: grupos.some((grupo) => grupo.id === id) };
+    if (contiene(caja, punto)) return { id, bloque: grupos.some((grupo) => grupo.id === id) };
   }
-  const titulo = g.groups.find((grupo) => dentro(grupo.title, punto));
+  const titulo = g.groups.find((grupo) => contiene(grupo.title, punto));
   return titulo === undefined ? undefined : { id: titulo.id, bloque: true };
 }
 

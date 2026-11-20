@@ -3,6 +3,8 @@
  * El nivel y los hashes de fuente entran en la clave de estructura; los anchos no (dependen de textos y fuentes).
  */
 
+import { fnv1aDeUnidades } from './semilla';
+
 export interface MedicionDeMetricas {
   nivel: 'estimado' | 'medido';
   /** Hash del archivo de cada familia declarada por el Tema; vacio al estimar. */
@@ -41,7 +43,7 @@ export function anchoDeTexto(
 
 /** FNV-1a de 32 bits en hex, estable entre motores. */
 export function hashDeFuente(bytes: Uint8Array): string {
-  let h = 0x811c9dc5;
-  for (const byte of bytes) h = Math.imul(h ^ byte, 0x01000193) >>> 0;
-  return h.toString(16).padStart(8, '0');
+  return fnv1aDeUnidades(bytes.length, (i) => bytes[i] ?? 0)
+    .toString(16)
+    .padStart(8, '0');
 }

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { fuenteCanonicaSchema, resolveView } from 'canonico';
 import { layoutView as layoutDeVista } from 'layout';
-import type { GeometriaGrafo } from 'layout';
+import type { GeometriaGrafo } from 'canonico';
 import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
 import { TEMA_NEUTRO } from 'tema';

@@ -3,9 +3,8 @@ import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { fuenteCanonicaSchema, resolveView, revealAt } from 'canonico';
-import type { VistaDeGrafo, VistaResuelta } from 'canonico';
+import type { Geometria, VistaDeGrafo, VistaResuelta } from 'canonico';
 import { layoutView } from 'layout';
-import type { Geometria } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
 import { TEMA_NEUTRO, colocarEnCaja, metricasDe, primitivasDe } from 'tema';
