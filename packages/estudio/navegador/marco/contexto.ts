@@ -8,6 +8,7 @@ import type { FuenteCanonica } from 'canonico';
 
 import type { EstadoDeDev } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
+import type { Plataforma } from '../comandos/teclas';
 import type { LadoDeIsla } from './limites';
 
 export interface ContextoDelEstudio {
@@ -26,7 +27,7 @@ export interface ContextoDelEstudio {
   seleccionar(id: string): void;
   /** Muestra la isla y activa una de sus pestanas (por `id` del registro). */
   abrirPestana(lado: LadoDeIsla, pestana: string): void;
-  /** Oculta o recupera una isla (los atajos Mod+B y Mod+J los registra el registro de comandos). */
+  /** Oculta o recupera una isla (Mod+B y Mod+J en `comandos/registro.ts`). */
   alternarIsla(lado: LadoDeIsla): void;
   /** Tema con que se previsualiza la Vista activa sin escribir (galeria de Temas); `undefined` si no hay previsualizacion. */
   temaPrevio: string | undefined;
@@ -34,8 +35,26 @@ export interface ContextoDelEstudio {
   previsualizarTema(tema: string | undefined): void;
   /** Toast efimero del marco. */
   avisar(texto: string): void;
+  /** Vuelve a pedir el estado a `dev` (tras un 409). */
+  recargar(): Promise<void>;
+  /** Abre el Buscador o la ayuda de atajos (dialogos del marco). */
+  abrirDialogo(dialogo: DialogoDelEstudio): void;
+  /** Abre la pestana Codigo; con `sitio`, el editor salta a `archivo:linea` (lo publica `sitioDeCodigo`). */
+  abrirCodigo(sitio?: SitioDeCodigo): void;
+  /** Ultimo `archivo:linea` pedido con `abrirCodigo`; lo lee el editor. */
+  sitioDeCodigo: SitioDeCodigo | undefined;
+  /** Plataforma del navegador: decide como se escriben las teclas (`Cmd` o `Ctrl`). */
+  plataforma: Plataforma;
   /** Nodo dentro de `.ui-chrome` para los portales de Base UI (`container`), con los tokens del chrome. */
   portales: HTMLElement | null;
+}
+
+export type DialogoDelEstudio = 'buscador' | 'ayuda';
+
+/** Mismo par que `inspect` (`file`, `line`); `line` empieza en 1. */
+export interface SitioDeCodigo {
+  file: string;
+  line: number;
 }
 
 export const ContextoDeEstudio = createContext<ContextoDelEstudio | undefined>(undefined);

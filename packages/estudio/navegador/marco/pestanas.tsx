@@ -9,6 +9,7 @@ import { Detalle } from '../detalle/detalle';
 import { PanelDeIssues } from '../issues/panel-de-issues';
 import { GaleriaDeTemas } from '../temas/galeria-de-temas';
 import { PanelDeVistas } from '../vistas/panel-de-vistas';
+import { useEstudio } from './contexto';
 
 export interface PestanaDelPanel {
   id: string;
@@ -22,9 +23,20 @@ const pendiente = (texto: string): ComponentType =>
     return <p className="ui-tenue">{texto}</p>;
   };
 
+/** Hasta que llegue el editor (#190): dice a que `archivo:linea` saltaria (`useEstudio().sitioDeCodigo`). */
+function CodigoPendiente(): ReactElement {
+  const { sitioDeCodigo } = useEstudio();
+  return (
+    <p className="ui-tenue">
+      El editor del DSL aun no esta disponible.
+      {sitioDeCodigo !== undefined && <span className="ui-mono ui-sitio">{` ${sitioDeCodigo.file}:${sitioDeCodigo.line}`}</span>}
+    </p>
+  );
+}
+
 export const PESTANAS_IZQUIERDAS: readonly PestanaDelPanel[] = [
   { id: 'vistas', nombre: 'Vistas', Contenido: PanelDeVistas },
-  { id: 'codigo', nombre: 'Codigo', Contenido: pendiente('El editor del DSL aun no esta disponible.') },
+  { id: 'codigo', nombre: 'Codigo', Contenido: CodigoPendiente },
 ];
 
 export const PESTANAS_DERECHAS: readonly PestanaDelPanel[] = [

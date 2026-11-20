@@ -8,6 +8,7 @@ import type { AdaptadorDeLayout } from 'shell';
 import { devEnMemoria } from '../src/contrato';
 import type { DevEnMemoria } from '../src/contrato';
 import { Estudio } from '../navegador/estudio';
+import type { Plataforma } from '../navegador/comandos/teclas';
 
 // La primera Geometria pasa por ELK en frio (mas de 1 s en una maquina cargada).
 configure({ asyncUtilTimeout: 15_000 });
@@ -16,10 +17,10 @@ configure({ asyncUtilTimeout: 15_000 });
 export const layoutReal: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
 
 /** `temas`: archivos de `--theme-path` (solo lectura). */
-export async function montarEstudio(propios: Record<string, string>, { hash = '', temas }: { hash?: string; temas?: Record<string, string> } = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
+export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas }: { hash?: string; plataforma?: Plataforma; temas?: Record<string, string> } = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
   window.history.replaceState(null, '', `/${hash}`);
   const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }) });
-  const { container } = render(<Estudio fetch={dev.fetch} eventos={dev.eventos} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={() => false} />);
+  const { container } = render(<Estudio fetch={dev.fetch} eventos={dev.eventos} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={() => false} plataforma={plataforma} />);
   return { dev, contenedor: container };
 }
 
