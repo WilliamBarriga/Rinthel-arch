@@ -2,8 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { fuenteCanonicaSchema, idDeArista } from 'canonico';
-import type { VistaResuelta } from 'canonico';
-import type { GeometriaGrafo } from 'layout';
+import type { GeometriaGrafo, VistaResuelta } from 'canonico';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
 import { TEMA_NEUTRO } from 'tema';

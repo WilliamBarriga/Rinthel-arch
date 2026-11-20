@@ -8,7 +8,6 @@ import { layoutSecuencia } from './secuencia';
 import { LARGO_DE_MARCADOR_ER, atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, contenidoDeNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
 import type { MedidasDeTexto, Metricas, TablaDeMetricas } from 'tema';
 
-export type { CajaDeNodo, Geometria, GeometriaGrafo, Punto, RutaDeArista };
 
 export interface OpcionesDeLayout {
   /** Por defecto el empaquetado, que corre igual en Node y en Web Worker. */

@@ -4,9 +4,8 @@
  * a cualquier zoom. Pura: la misma entrada da el mismo arbol. Los valores de atributo van sin escapar: React los escapa.
  */
 import { idDeArista } from 'canonico';
-import type { AristaResuelta, IconProvider, NodoResuelto, Tema, VistaDeGrafo, VistaResuelta, Visibilidad } from 'canonico';
+import type { AristaResuelta, CajaDeNodo, Geometria, GeometriaGrafo, IconProvider, NodoResuelto, Tema, Visibilidad, VistaDeGrafo, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
-import type { CajaDeNodo, Geometria, GeometriaGrafo } from 'layout';
 import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
 import type { Metricas } from 'tema';
 

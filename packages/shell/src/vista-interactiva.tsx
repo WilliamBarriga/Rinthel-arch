@@ -5,8 +5,7 @@ import { zoom, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent } from 'd3-zoom';
 
 import { idDeElementoDeSecuencia, resolveView } from 'canonico';
-import type { EstadoDeColapso, IconProvider, FuenteCanonica, Tema, Visibilidad, VistaResuelta } from 'canonico';
-import type { Geometria } from 'layout';
+import type { EstadoDeColapso, FuenteCanonica, Geometria, IconProvider, Tema, Visibilidad, VistaResuelta } from 'canonico';
 import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
 import type { Camara, ComponentesDeTema } from 'render';
 import { resolverTema } from 'tema';

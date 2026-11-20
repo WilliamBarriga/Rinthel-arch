@@ -3,9 +3,8 @@
  * `secuencia`, con las pilas ya resueltas en `estilo.pintura.secuencia`. Las cabeceras de las Lifelines son Nodos.
  */
 import { idDeElementoDeSecuencia } from 'canonico';
-import type { MensajeResuelto, NodoResuelto, VistaDeSecuencia, Visibilidad } from 'canonico';
+import type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, MensajeResuelto, NodoResuelto, NotaColocada, Visibilidad, VistaDeSecuencia } from 'canonico';
 import { indiceDeGeometria } from 'layout';
-import type { CajaDeActivacion, CajaDeGrupoColocada, GeometriaSecuencia, MarcoDeFragmento, NotaColocada } from 'layout';
 import { ESTADOS, RELLENO_DE_NOTA, primitivasDeFamilia } from 'tema';
 import type { CapaPintada, PinturaDeCajaDeSecuencia, PinturaDeTrazoDeSecuencia, TrazosDeSecuencia } from 'tema';
 

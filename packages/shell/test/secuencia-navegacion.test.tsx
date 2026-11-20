@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
 import { layoutView } from 'layout';
-import type { GeometriaSecuencia } from 'layout';
+import type { GeometriaSecuencia } from 'canonico';
 import { abrirSesion } from 'sesion';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';

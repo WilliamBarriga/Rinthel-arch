@@ -3,8 +3,7 @@ import type { ReactElement } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { hidratarIconos } from 'canonico';
-import type { FuenteCanonica, IconProvider, Tema } from 'canonico';
-import type { Geometria } from 'layout';
+import type { FuenteCanonica, Geometria, IconProvider, Tema } from 'canonico';
 
 export function useTamano(): { width: number; height: number } {
   const [tamano, setTamano] = useState({ width: window.innerWidth, height: window.innerHeight });

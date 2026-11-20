@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
-import type { GeometriaSecuencia } from 'layout';
+import type { GeometriaSecuencia } from 'canonico';
 import type { Camara } from 'render';
 
 import type { Calculo } from './geometria';
