@@ -20,7 +20,7 @@ import { historialDelCliente } from './historial/historial-visible';
 import type { ClienteDeDev, DependenciasDelCliente } from './cliente';
 import { textoDeSitio } from './sitio';
 import { useCaducidad } from './marco/use-caducidad';
-import { crearCargadorDeCodigo } from './componentes';
+import { crearCargadorDeComponentes } from './componentes';
 import { crearGeometriasDeDev } from './geometrias';
 import type { Dibujable, GeometriasDeDev } from './geometrias';
 import { hashDeEstudio } from './hash-de-estudio';
@@ -85,8 +85,11 @@ function useGestoEnLienzo(): { enGesto: boolean; props: { onPointerDown: () => v
   };
 }
 
-/** `vigente` da el ultimo estado recibido (el que usa la Escritura), aunque el render aun no lo haya visto. */
-function useEstado(cliente: ClienteDeDev, geometrias: GeometriasDeDev): { estado: EstadoDeDev | undefined; vigente: () => EstadoDeDev | undefined; recibir: (estado: EstadoDeDev) => void } {
+/**
+ * `vigente` da el ultimo estado recibido (el que usa la Escritura), aunque el render aun no lo haya visto. Un evento
+ * `estado` malformado no lo reemplaza: se avisa.
+ */
+function useEstado(cliente: ClienteDeDev, geometrias: GeometriasDeDev, avisar: (texto: string) => void): { estado: EstadoDeDev | undefined; vigente: () => EstadoDeDev | undefined; recibir: (estado: EstadoDeDev) => void } {
   const [estado, setEstado] = useState<EstadoDeDev>();
   const ultimo = useRef<EstadoDeDev | undefined>(undefined);
   const recibir = useCallback(
@@ -98,29 +101,28 @@ function useEstado(cliente: ClienteDeDev, geometrias: GeometriasDeDev): { estado
     },
     [geometrias],
   );
-  useEffect(() => cliente.suscribir(recibir), [cliente, recibir]);
+  useEffect(() => cliente.suscribir(recibir, (mensaje) => avisar(`${mensaje}; se conserva el estado vigente`)), [cliente, recibir, avisar]);
   const vigente = useCallback(() => ultimo.current, []);
   return { estado, vigente, recibir };
 }
 
-/** Se vuelve a pedir el codigo tras cada estado nuevo; si la carga falla se conserva el registro anterior. */
-function useComponentes(estado: EstadoDeDev | undefined, fetchFn: typeof fetch, confirmar: (mensaje: string) => boolean): ComponentesDeTema | undefined {
-  const cargar = useMemo(() => crearCargadorDeCodigo({ fetch: fetchFn, confirmar }), [fetchFn, confirmar]);
+/** Se vuelve a pedir el codigo tras cada estado nuevo; si la carga falla se avisa y se conserva el registro anterior. */
+function useComponentes(estado: EstadoDeDev | undefined, cliente: ClienteDeDev, confirmar: (mensaje: string) => boolean, avisar: (texto: string) => void): ComponentesDeTema | undefined {
+  const cargar = useMemo(() => crearCargadorDeComponentes(cliente, confirmar), [cliente, confirmar]);
   const [componentes, setComponentes] = useState<ComponentesDeTema>();
   const version = estado?.version;
   useEffect(() => {
     if (version === undefined) return;
     let vigente = true;
-    void cargar().then(
-      (registro) => {
-        if (vigente) setComponentes(registro);
-      },
-      () => undefined,
-    );
+    void cargar().then((carga) => {
+      if (!vigente) return;
+      if (carga.ok) setComponentes(carga.componentes);
+      else avisar(`No se pudieron cargar los Componentes de Tema: ${carga.mensaje}`);
+    });
     return () => {
       vigente = false;
     };
-  }, [version, cargar]);
+  }, [version, cargar, avisar]);
   return componentes;
 }
 
@@ -147,10 +149,10 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
       }),
     [cliente, hash],
   );
-  const { estado, vigente, recibir } = useEstado(cliente, geometrias);
   const [aviso, avisar] = useAviso();
+  const { estado, vigente, recibir } = useEstado(cliente, geometrias, avisar);
   const dibujable = useSyncExternalStore(geometrias.suscribir, geometrias.dibujable);
-  const componentes = useComponentes(estado, fetchFn, confirmar);
+  const componentes = useComponentes(estado, cliente, confirmar, avisar);
 
   const plataforma = props.plataforma ?? plataformaDe(typeof navigator === 'undefined' ? undefined : navigator);
   const [temaPrevio, previsualizarTema] = useState<string>();

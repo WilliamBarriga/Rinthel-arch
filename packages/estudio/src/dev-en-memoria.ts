@@ -32,6 +32,12 @@ export interface DevEnMemoria {
   cerrar(): Promise<void>;
 }
 
+/** Temas con codigo ya compilados: `componentes`, los nombres exportados; `bundle`, el cuerpo CommonJS `(require) => exports` que compila `cli`. */
+export interface CodigoDePrueba {
+  componentes: readonly string[];
+  bundle: string;
+}
+
 const RAIZ = '/memoria';
 
 /** Sin debounce: el aviso del registro se atiende en el acto. */
@@ -44,19 +50,22 @@ const relojInmediato: Reloj = {
 
 /**
  * `actividad`: texto inicial de `.diagrams/actividad.jsonl`; `escrituraRota`: toda escritura lanza un `Error` con ese
- * mensaje (fallo de I/O); `ahora`: hora en ms de cada entrada del Historial.
+ * mensaje (fallo de I/O); `ahora`: hora en ms de cada entrada del Historial; `codigo`: Temas con codigo ya compilados
+ * (sin el, no hay codigo), servidos en `/componentes.js` tras `POST /api/confiar`.
  */
 export async function devEnMemoria({
   propios,
   temas,
   actividad,
   escrituraRota,
+  codigo,
   ahora = Date.now,
 }: {
   propios: Archivos;
   temas?: Archivos;
   actividad?: string;
   escrituraRota?: string;
+  codigo?: CodigoDePrueba;
   ahora?: () => number;
 }): Promise<DevEnMemoria> {
   const puerto = puertoEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }) });
@@ -65,7 +74,13 @@ export async function devEnMemoria({
     if (escrituraRota !== undefined) throw new Error(escrituraRota);
     puerto.escribir(ruta, texto);
   };
-  const vivo = await abrirWorkspaceVivo({ puerto: { ...puerto, escribir, observar: () => () => undefined }, raiz: RAIZ, reloj: relojInmediato, ahora });
+  const vivo = await abrirWorkspaceVivo({
+    puerto: { ...puerto, escribir, observar: () => () => undefined },
+    raiz: RAIZ,
+    reloj: relojInmediato,
+    ahora,
+    ...(codigo !== undefined && { compilarCodigo: () => ({ componentes: Object.fromEntries(codigo.componentes.map((nombre) => [nombre, {}])), issues: [], bundle: codigo.bundle }) }),
+  });
 
   const oyentes = new Set<(nombre: NombreDeEventoDeDev, datos: string) => void>();
   const emitir = (nombre: NombreDeEventoDeDev, datos: unknown): void => {
