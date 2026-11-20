@@ -1,10 +1,10 @@
 /**
  * Escritura: unico camino de la UI que escribe en `dev` por una accion (mover, ordenar, deshacer, rehacer, saltar en el
- * Historial, fijar Tema y aplicar `fix`). Es el unico dueno de la version vigente, del rechazo por version (409) y del
+ * Historial de archivos, fijar Tema y aplicar `fix`). Es el unico dueno de la version vigente, del rechazo por version (409) y del
  * aviso: envia con la `version` del ultimo estado recibido (no el del render); ante un 409 recarga el estado y avisa;
  * solo reintenta (una vez, sobre el estado recargado) si el pedido lo pide con `reintentar`. Otro rechazo avisa
- * `fallo: mensaje` (las ediciones de texto nombran ademas motivo y archivo). Antes de mover el Historial vacia el
- * guardado pendiente del editor, para no operar sobre un estado viejo. Nunca lanza: el resultado es un dato.
+ * `fallo: mensaje` (las ediciones de texto nombran ademas motivo y archivo). Antes de mover el Historial de archivos
+ * vacia el guardado pendiente del editor, para no operar sobre un estado viejo. Nunca lanza: el resultado es un dato.
  * El guardado del editor no pasa por aqui: reconcilia con el disco a su manera (`editor/guardado.ts`).
  */
 import type { Intencion } from 'canonico';
@@ -12,7 +12,7 @@ import type { Intencion } from 'canonico';
 import type { EstadoDeDev, PeticionDeEdiciones } from '../../src/protocolo';
 import type { ClienteDeDev, ResultadoDeEnvio } from '../cliente';
 
-/** Un paso del Historial: deshacer, rehacer o saltar a la entrada `id` (0: Inicio). */
+/** Un paso del Historial de archivos: deshacer, rehacer o saltar a la entrada `id` (0: Inicio). */
 export type MovimientoDelHistorial = 'deshacer' | 'rehacer' | { saltar: number };
 
 /** Que ediciones mandar sobre un estado (el vigente o el recargado tras un 409); `undefined` si no queda ninguna. */
@@ -38,6 +38,53 @@ export interface DependenciasDeEscritura {
 
 const rechazo = (mensaje: string): Extract<ResultadoDeEnvio, { ok: false }> => ({ ok: false, desactualizado: false, mensaje });
 
+type Cliente = DependenciasDeEscritura['cliente'];
+
+/** Lo que cada clase de pedido decide; el unico sitio que distingue Intencion, ediciones y Historial de archivos. */
+interface Plan {
+  /** Mover el Historial de archivos vacia antes el guardado pendiente del editor. */
+  vaciarGuardado: boolean;
+  reintentar: boolean;
+  /** Una peticion sobre `estado` (el vigente o el recargado). */
+  enviar(estado: EstadoDeDev | undefined): Promise<ResultadoDeEnvio>;
+  aviso(r: Extract<ResultadoDeEnvio, { ok: false }>): string;
+}
+
+const SIN_ESTADO = rechazo('aun no hay estado del Workspace');
+
+function planDe(pedido: PedidoDeEscritura, cliente: Cliente): Plan {
+  if ('historial' in pedido) {
+    const { historial } = pedido;
+    return {
+      vaciarGuardado: true,
+      reintentar: false,
+      enviar: () => (historial === 'deshacer' ? cliente.deshacer() : historial === 'rehacer' ? cliente.rehacer() : cliente.saltar(historial.saltar)),
+      aviso: (r) => `No se pudo ${typeof historial === 'object' ? 'saltar' : historial}: ${r.mensaje}`,
+    };
+  }
+  if ('intencion' in pedido) {
+    return {
+      vaciarGuardado: false,
+      reintentar: false,
+      enviar: async (estado) => (estado === undefined ? SIN_ESTADO : cliente.editar(pedido.intencion, estado.version)),
+      aviso: (r) => `${pedido.fallo}: ${r.mensaje}`,
+    };
+  }
+  return {
+    vaciarGuardado: false,
+    reintentar: pedido.reintentar === true,
+    async enviar(estado) {
+      if (estado === undefined) return SIN_ESTADO;
+      const peticion = pedido.ediciones(estado);
+      return peticion === undefined ? rechazo('no queda nada que aplicar') : cliente.editarTexto({ ...peticion, version: estado.version });
+    },
+    aviso(r) {
+      const motivo = [r.motivo, r.file === undefined ? undefined : `en ${r.file}`].filter((x) => x !== undefined).join(' ');
+      return `${pedido.fallo}${motivo === '' ? '' : ` (${motivo})`}: ${r.mensaje}`;
+    },
+  };
+}
+
 export function crearEscritura({ cliente, vigente, recibir, avisar, vaciarGuardado }: DependenciasDeEscritura): Escribir {
   const recargar = async (): Promise<EstadoDeDev | undefined> => {
     const nuevo = await cliente.estado();
@@ -45,36 +92,16 @@ export function crearEscritura({ cliente, vigente, recibir, avisar, vaciarGuarda
     return nuevo;
   };
 
-  /** Una peticion sobre `estado`; sin estado no se envia nada. */
-  const enviar = async (pedido: PedidoDeEscritura, estado: EstadoDeDev | undefined): Promise<ResultadoDeEnvio> => {
-    if ('historial' in pedido) {
-      const { historial } = pedido;
-      if (historial === 'deshacer') return cliente.deshacer();
-      if (historial === 'rehacer') return cliente.rehacer();
-      return cliente.saltar(historial.saltar);
-    }
-    if (estado === undefined) return rechazo('aun no hay estado del Workspace');
-    if ('intencion' in pedido) return cliente.editar(pedido.intencion, estado.version);
-    const peticion = pedido.ediciones(estado);
-    return peticion === undefined ? rechazo('no queda nada que aplicar') : cliente.editarTexto({ ...peticion, version: estado.version });
-  };
-
   return async (pedido) => {
-    if ('historial' in pedido) await vaciarGuardado();
-    let r = await enviar(pedido, vigente());
-    if (!r.ok && r.desactualizado && 'reintentar' in pedido && pedido.reintentar === true) r = await enviar(pedido, await recargar());
+    const plan = planDe(pedido, cliente);
+    if (plan.vaciarGuardado) await vaciarGuardado();
+    let r = await plan.enviar(vigente());
+    if (!r.ok && r.desactualizado && plan.reintentar) r = await plan.enviar(await recargar());
     if (r.ok) return r;
     if (r.desactualizado) {
       avisar(`El archivo cambio en disco; se recargo la Vista (${r.mensaje})`);
       await recargar();
-    } else avisar(avisoDeRechazo(pedido, r));
+    } else avisar(plan.aviso(r));
     return r;
   };
-}
-
-function avisoDeRechazo(pedido: PedidoDeEscritura, r: Extract<ResultadoDeEnvio, { ok: false }>): string {
-  if ('historial' in pedido) return `No se pudo ${typeof pedido.historial === 'object' ? 'saltar' : pedido.historial}: ${r.mensaje}`;
-  if ('intencion' in pedido) return `${pedido.fallo}: ${r.mensaje}`;
-  const motivo = [r.motivo, r.file === undefined ? undefined : `en ${r.file}`].filter((x) => x !== undefined).join(' ');
-  return `${pedido.fallo}${motivo === '' ? '' : ` (${motivo})`}: ${r.mensaje}`;
 }
