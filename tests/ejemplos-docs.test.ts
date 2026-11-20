@@ -69,7 +69,7 @@ describe('mapa de rinthel-arch: secuencia y ER', () => {
     const fragmento = vista.interaction.items.find((i) => i.type === 'fragment') as unknown as { operands: Array<{ items: Array<{ type: string }> }> };
     expect(fragmento.operands[0]!.items.map((i) => i.type)).toContain('ref');
     expect(vista.steps).toHaveLength(2);
-    expect(canonico!.views.find((v) => v.id === 'editar-pin')!.links?.map((l) => l.view)).toEqual(['sesion-detalle', 'shell-detalle']);
+    expect(canonico!.views.find((v) => v.id === 'editar-pin')!.links?.map((l) => l.view)).toEqual(['sesion-detalle', 'shell-detalle', 'estudio-detalle']);
     expect(canonico!.views.map((v) => v.id)).toContain('recompilar');
   });
 

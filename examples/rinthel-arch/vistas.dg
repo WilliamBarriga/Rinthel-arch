@@ -2,7 +2,7 @@
 view paquetes {
   type architecture
   theme diagrams
-  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, estudio, cli
   depth 1
   link canonico -> canonico-detalle
   link tema -> tema-detalle
@@ -11,105 +11,118 @@ view paquetes {
   link sesion -> sesion-detalle
   link render -> render-detalle
   link shell -> shell-detalle
+  link estudio -> estudio-detalle
   link cli -> cli-detalle
 }
 
-// Los paquetes con render, sesion y layout abiertos y los demas cerrados (la Vista `abierto` del prototipo aprobado).
+// Los paquetes con render y layout abiertos y los demas cerrados (la Vista `abierto` del prototipo aprobado; sesion se cerro al crecer a 16 modulos).
 view abierto {
   type architecture
   theme diagrams
-  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, cli, render.**, sesion.**, layout.**, elk, react
-  expanded render, sesion, layout
-  collapsed canonico, tema, dsl, shell, cli, render.ren-pintura
+  include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, estudio, cli, render.**, sesion.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonico, tema, dsl, sesion, shell, estudio, cli, render.ren-pintura
 }
 
 view canonico-detalle {
   type architecture
   theme diagrams
-  include canonico.**, zod, dsl.dsl-compilar, sesion.ses-sesion, cli.cli-inspect, shell.sh-colapso, shell.sh-pasos
+  include canonico.**, zod, dsl.dsl-compilar, sesion.ses-workspace-vivo, sesion.ses-api-dev, sesion.ses-registro-vivo, estudio.est-protocolo, cli.cli-inspect, cli.cli-actividad, shell.sh-pasos, layout.lay-secuencia
   depth 2
 }
 
 view dsl-detalle {
   type architecture
   theme diagrams
-  include dsl.**, langium, canonico.can-esquema, tema.tem-catalogo, sesion.ses-sesion
+  include dsl.**, langium, canonico.can-esquema, tema.tem-catalogo, tema.tem-parches, sesion.ses-sesion
   depth 2
 }
 
 view layout-detalle {
   type architecture
   theme diagrams
-  include layout.**, elk, canonico.can-geometria, canonico.can-secuencia, tema.tem-secuencia, tema.tem-slots, tema.tem-metricas, sesion.ses-sesion, shell.sh-servir-layout
+  include layout.**, elk, canonico.can-geometria, canonico.can-secuencia, tema.tem-secuencia, tema.tem-slots, tema.tem-metricas, sesion.ses-sesion, shell.sh-servir-layout, shell.sh-geometria
   depth 2
 }
 
 view sesion-detalle {
   type architecture
   theme diagrams-claro
-  include sesion.**, dsl.dsl-compilar, dsl.dsl-ubicador, canonico.can-validar, layout.lay-layout
+  include sesion.**, dsl.dsl-compilar, dsl.dsl-temas, layout.lay-layout, canonico.can-dev, cli.cli-dev, estudio.est-dev-memoria
   depth 2
 }
 
 view render-detalle {
   type architecture
   theme diagrams
-  include render.**, react, tema.tem-estilo, tema.tem-mensajes, layout.lay-layout, layout.lay-secuencia, shell.sh-vista
+  include render.**, react, tema.tem-estilo, tema.tem-mensajes, layout.lay-indice, layout.lay-secuencia, shell.sh-vista
   depth 3
 }
 
 view shell-detalle {
   type architecture
   theme diagrams
-  include shell.**, d3, layout.lay-layout, layout.lay-secuencia, canonico.can-secuencia, render, sesion.ses-intenciones, canonico.can-vistas
+  include shell.**, d3, layout.lay-layout, layout.lay-indice, render.ren-escena, render.ren-diagram, render.ren-estilo, canonico.can-pasos, canonico.can-secuencia, estudio.est-nav.nav-lienzo.lie-lienzo
   depth 2
 }
 
-view flujo-edicion {
-  type flow
+// La UI de dev: cada feature del navegador como Grupo cerrado; abrir uno muestra sus archivos.
+view estudio-detalle {
+  type architecture
   theme diagrams
-  include autor, shell.sh-seleccion, sesion.ses-intenciones, sesion.ses-ediciones, dsl.dsl-ubicador, workspace, sesion.ses-sesion, layout.lay-layout, render.ren-diagram
-  steps {
-    step "El autor arrastra un Pin en el shell" {
-      show autor, shell.sh-seleccion
-    }
-    step "El gesto se traduce en una Intencion" {
-      show sesion.ses-intenciones
-    }
-    step "La edicion estructurada ubica el texto a cambiar" {
-      show sesion.ses-ediciones, dsl.dsl-ubicador
-    }
-    step "Se reescribe el archivo .dg" {
-      show workspace
-    }
-    step "La Sesion recompila y recalcula solo lo necesario" {
-      show sesion.ses-sesion, layout.lay-layout
-    }
-    step "El shell vuelve a dibujar la Vista" {
-      show render.ren-diagram
-    }
-  }
+  include estudio.**, react, codemirror, base-ui, esbuild, canonico.can-dev, sesion.ses-api-dev, sesion.ses-workspace-vivo, shell.sh-vista, render.ren-codigo, servidor-dev
+  depth 3
 }
 
 view tema-detalle {
   type architecture
   theme diagrams
-  include tema.**, zod, canonico.can-esquema, dsl.dsl-temas, layout.lay-layout, render.ren-estilo
+  include tema.**, zod, canonico.can-esquema, dsl.dsl-temas, layout.lay-layout, render.ren-estilo, sesion.ses-consulta-tema
   depth 3
 }
 
 view cli-detalle {
   type architecture
   theme diagrams
-  include cli.**, esbuild, node-http, servidor-dev, workspace, sesion.ses-sesion, sesion.ses-ediciones, sesion.ses-historial, canonico.can-inspect, shell.sh-vista
+  include cli.**, esbuild, node-http, servidor-dev, workspace, registro-actividad, sesion.ses-sesion, sesion.ses-workspace-vivo, sesion.ses-api-dev, sesion.ses-aplicar, sesion.ses-registro-vivo, canonico.can-inspect, canonico.can-dev, estudio.est-index
   depth 2
+}
+
+// Que ocurre cuando el autor arrastra un Nodo en la UI de dev: del gesto al .dg y de vuelta al lienzo.
+view flujo-edicion {
+  type flow
+  theme diagrams
+  include autor, shell.sh-arrastre, estudio.est-nav.nav-lienzo.lie-lienzo, estudio.est-nav.nav-escritura, estudio.est-nav.nav-cliente, cli.cli-dev, sesion.ses-api-dev, sesion.ses-workspace-vivo, sesion.ses-aplicar, sesion.ses-intenciones, workspace, sesion.ses-sesion, shell.sh-vista, render.ren-diagram
+  steps {
+    step "El autor arrastra un Nodo en el lienzo" {
+      show autor, shell.sh-arrastre, estudio.est-nav.nav-lienzo.lie-lienzo
+    }
+    step "La Escritura envia la Intencion con la version vigente" {
+      show estudio.est-nav.nav-escritura, estudio.est-nav.nav-cliente
+    }
+    step "dev delega /api/edit en atenderApiDeDev" {
+      show cli.cli-dev, sesion.ses-api-dev
+    }
+    step "El Workspace vivo aplica por la puerta de escritura unica" {
+      show sesion.ses-workspace-vivo, sesion.ses-aplicar, sesion.ses-intenciones
+    }
+    step "Se reescribe el archivo .dg" {
+      show workspace
+    }
+    step "La Sesion recompila y el estado nuevo llega por SSE" {
+      show sesion.ses-sesion
+    }
+    step "El lienzo vuelve a dibujar la Vista" {
+      show shell.sh-vista, render.ren-diagram
+    }
+  }
 }
 
 // Que ocurre cuando el agente corre `dg validate` (o `build`).
 view flujo-validate {
   type flow
   theme diagrams
-  include agente, cli.cli-index, cli.cli-workspace, workspace, cli.cli-sesion, sesion.ses-sesion, dsl.dsl-compilar, canonico.can-validar, cli.cli-validate
+  include agente, cli.cli-index, cli.cli-workspace, workspace, cli.cli-sesion, sesion.ses-sesion, dsl.dsl-compilar, canonico.can-validar, cli.cli-validate, cli.cli-actividad, cli.cli-registro-disco, registro-actividad
   steps {
     step "El agente invoca dg validate --json" {
       show agente, cli.cli-index
@@ -129,35 +142,62 @@ view flujo-validate {
     step "Se imprime el resumen y el codigo de salida" {
       show cli.cli-validate
     }
+    step "Se anexa un Evento al Registro de actividad" {
+      show cli.cli-actividad, cli.cli-registro-disco, registro-actividad
+    }
   }
 }
 
-// Que ocurre desde que se guarda un .dg hasta que el visor se actualiza en `dg dev`.
+// Que ocurre desde que se guarda un .dg hasta que la UI de dev se actualiza.
 view flujo-dev {
   type flow
   theme diagrams
-  include autor, workspace, cli.cli-dev, cli.cli-cambio, sesion.ses-sesion, layout.lay-layout, servidor-dev, visor-html, shell.sh-vista, shell.sh-worker, render.ren-diagram
+  include autor, workspace, cli.cli-dev, sesion.ses-workspace-vivo, sesion.ses-sesion, sesion.ses-diferencia, sesion.ses-cambio, servidor-dev, estudio.est-nav.nav-marco.mar-estado-dev, estudio.est-nav.nav-lienzo.lie-geometrias, shell.sh-worker, worker-layout, estudio.est-nav.nav-lienzo.lie-lienzo, shell.sh-vista, render.ren-diagram
   steps {
-    step "El autor guarda un .dg" {
+    step "El autor (o el agente) guarda un .dg" {
       show autor, workspace
     }
-    step "El observador de disco detecta el cambio (con debounce)" {
-      show cli.cli-dev
+    step "El observador de disco de dev avisa al Workspace vivo" {
+      show cli.cli-dev, sesion.ses-workspace-vivo
     }
     step "La Sesion recompila y valida" {
       show sesion.ses-sesion
     }
-    step "Se clasifica el cambio: pintura, estructura o codigo" {
-      show cli.cli-cambio
+    step "Se calcula la Diferencia y se clasifica el cambio: pintura, estructura o codigo" {
+      show sesion.ses-diferencia, sesion.ses-cambio
     }
-    step "El servidor empuja el estado por SSE" {
-      show servidor-dev, visor-html
+    step "El servidor empuja estado, Diferencia e Historial por SSE" {
+      show servidor-dev, estudio.est-nav.nav-marco.mar-estado-dev
     }
-    step "Si cambio la estructura, el Worker recalcula el layout" {
-      show shell.sh-worker, layout.lay-layout
+    step "Si cambio la estructura, el Worker recalcula la Geometria de la Vista activa" {
+      show estudio.est-nav.nav-lienzo.lie-geometrias, shell.sh-worker, worker-layout
     }
-    step "El shell vuelve a dibujar la Vista" {
-      show shell.sh-vista, render.ren-diagram
+    step "El lienzo vuelve a dibujar la Vista y resalta lo que cambio" {
+      show estudio.est-nav.nav-lienzo.lie-lienzo, shell.sh-vista, render.ren-diagram
+    }
+  }
+}
+
+// Como ve el autor lo que hace el agente: del comando al panel Agente de la UI de dev.
+view flujo-agente {
+  type flow
+  theme diagrams
+  include agente, cli.cli-index, cli.cli-actividad, cli.cli-registro-disco, registro-actividad, sesion.ses-registro-vivo, sesion.ses-workspace-vivo, servidor-dev, estudio.est-nav.nav-agente.age-actividad, estudio.est-nav.nav-agente.age-panel, estudio.est-nav.nav-agente.age-pildoras, autor
+  steps {
+    step "El agente corre validate, inspect o edit" {
+      show agente, cli.cli-index
+    }
+    step "El CLI arma un Evento y lo anexa con rotacion" {
+      show cli.cli-actividad, cli.cli-registro-disco, registro-actividad
+    }
+    step "dev observa el registro y lee lo nuevo con debounce" {
+      show sesion.ses-registro-vivo, sesion.ses-workspace-vivo
+    }
+    step "El servidor empuja event: actividad" {
+      show servidor-dev, estudio.est-nav.nav-agente.age-actividad
+    }
+    step "El panel Agente y las pildoras lo muestran al autor" {
+      show estudio.est-nav.nav-agente.age-panel, estudio.est-nav.nav-agente.age-pildoras, autor
     }
   }
 }
@@ -166,13 +206,13 @@ view flujo-dev {
 view flujo-tema {
   type flow
   theme diagrams
-  include workspace, dsl.dsl-temas, tema.tem-catalogo, tema.tem-tema, tema.tem-contraste, tema.tem-estilo, tema.tem-metricas, layout.lay-layout, render.ren-estilo, render.ren-hoja, render.ren-diagram
+  include workspace, dsl.dsl-temas, dsl.dsl-temas-capas, tema.tem-catalogo, tema.tem-tema, tema.tem-contraste, tema.tem-estilo, tema.tem-metricas, layout.lay-layout, render.ren-estilo, render.ren-hoja, render.ren-diagram
   steps {
     step "El Tema se escribe en un .dg" {
       show workspace
     }
     step "El compilador de Temas lo valida contra el catalogo" {
-      show dsl.dsl-temas, tema.tem-catalogo
+      show dsl.dsl-temas, dsl.dsl-temas-capas, tema.tem-catalogo
     }
     step "Se resuelve el Tema: Paleta, Capas y Slots" {
       show tema.tem-tema

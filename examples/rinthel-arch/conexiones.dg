@@ -1,19 +1,30 @@
-// Dependencias entre paquetes (orden: canonico -> tema -> dsl / layout -> sesion -> render -> shell -> cli), entre modulos y flujo de datos.
-// Las Aristas se declaran solo aqui, con ids cualificados. Las de paquete salen de package.json; las de modulo, de los imports.
+// Dependencias entre paquetes (orden: canonico -> tema -> dsl / layout -> sesion -> render -> shell -> estudio -> cli),
+// entre modulos y flujo de datos. Las Aristas se declaran solo aqui, con ids cualificados. Las de paquete salen de
+// package.json; las de modulo, de los imports de cada archivo (las de otro paquete, resueltas al modulo que define el
+// simbolo; entre paquetes solo las costuras que explican el mapa: se omiten los tipos base de canonico y los cruces
+// repetidos que no anaden lectura).
 model {
-  // Actores y artefactos
+  // Actores, artefactos y procesos
   autor -> workspace "escribe .dg"
-  autor -> visor-html "mira y arrastra Pins"
+  autor -> visor-html "edita, arrastra y revisa"
   agente -> cli.cli-index "validate / inspect / edit"
+  cli.cli-bin -> cli.cli-index
   cli.cli-workspace -> workspace "lee"
   cli.cli-workspace -> fuentes-ws "lee"
-  cli.cli-codigo -> dg-tema-codigo "carga si hay confianza"
-  cli.cli-dev -> workspace "reescribe de forma atomica"
+  cli.cli-codigo -> dg-tema-codigo "compila si hay confianza"
+  cli.cli-dev -> workspace "escribe de forma atomica"
   cli.cli-validate -> salida-derivada "escribe (build)"
+  cli.cli-registro-disco -> registro-actividad "anexa y observa"
   cli.cli-dev -> servidor-dev "levanta"
-  servidor-dev -> visor-html "sirve"
-  visor-html -> shell.sh-vista "monta"
+  servidor-dev -> visor-html "sirve el estudio y empuja SSE"
+  visor-html -> estudio.est-nav.nav-dev "arranca"
+  estudio.est-construir -> visor-html "produce dist/estudio/"
+  estudio.est-nav.nav-cliente -> servidor-dev "/api/* y SSE"
   shell.sh-worker -> worker-layout "crea"
+  worker-layout -> estudio.est-nav.nav-worker.wrk-worker "ejecuta"
+  shell.sh-arrastre -> estudio.est-nav.nav-lienzo.lie-lienzo "onMoveNode"
+  servidor-dev -> estudio.est-nav.nav-marco.mar-estado-dev "event: estado"
+  servidor-dev -> estudio.est-nav.nav-agente.age-actividad "event: actividad"
 
   // Paquetes
   tema -> canonico
@@ -33,240 +44,645 @@ model {
   shell -> render
   shell -> sesion
   shell -> tema
+  estudio -> canonico
+  estudio -> layout
+  estudio -> render
+  estudio -> sesion
+  estudio -> shell
   cli -> canonico
   cli -> dsl
+  cli -> estudio
   cli -> layout
-  cli -> render
   cli -> sesion
-  cli -> shell
   cli -> tema
 
-  // canonico
-  canonico.can-validar -> canonico.can-esquema
-  canonico.can-validar -> canonico.can-codigos
-  canonico.can-validar -> canonico.can-issue
-  canonico.can-validar -> canonico.can-sugerencias
-  canonico.can-validar -> canonico.can-iconos
-  canonico.can-validar -> canonico.can-vistas
-  canonico.can-iconos -> canonico.can-esquema
-  canonico.can-vistas -> canonico.can-esquema
-  canonico.can-pasos -> canonico.can-vistas
-  canonico.can-pasos -> canonico.can-esquema
-  canonico.can-edit -> canonico.can-pin
-  canonico.can-estado -> canonico.can-esquema
-  canonico.can-estado -> canonico.can-salida
-  canonico.can-salida -> canonico.can-issue
+  // Librerias externas
   canonico.can-esquema -> zod
-
-  // tema
-  tema.tem-catalogo -> tema.tem-catalogo-efectos
-  tema.tem-catalogo -> tema.tem-familias
-  tema.tem-catalogo -> tema.tem-color
-  tema.tem-familias.tem-fam-forma -> tema.tem-catalogo
-  tema.tem-familias.tem-fam-relleno -> tema.tem-catalogo
-  tema.tem-familias.tem-fam-borde -> tema.tem-catalogo
-  tema.tem-familias.tem-fam-trazo -> tema.tem-catalogo
-  tema.tem-familias.tem-fam-marcador -> tema.tem-catalogo
-  tema.tem-familias.tem-fam-texto -> tema.tem-catalogo
-  tema.tem-familias.tem-fam-codigo -> tema.tem-catalogo
-  tema.tem-catalogo-efectos -> tema.tem-catalogo
-  tema.tem-tema -> tema.tem-catalogo
-  tema.tem-tema -> tema.tem-animacion
-  tema.tem-tema -> tema.tem-disposicion
-  tema.tem-tema -> tema.tem-parches
-  tema.tem-parches -> tema.tem-tema
-  tema.tem-animacion -> tema.tem-catalogo
-  tema.tem-disposicion -> tema.tem-catalogo
-  tema.tem-contenido -> tema.tem-disposicion
-  tema.tem-contenido -> tema.tem-metricas
-  tema.tem-metricas -> tema.tem-medicion
-  tema.tem-metricas -> tema.tem-contenido
-  tema.tem-metricas -> tema.tem-slots
-  tema.tem-slots -> tema.tem-metricas
-  tema.tem-slots -> tema.tem-contenido
-  tema.tem-textos-a-medir -> tema.tem-contenido
-  tema.tem-textos-a-medir -> tema.tem-metricas
-  tema.tem-estilo -> tema.tem-tema
-  tema.tem-estilo -> tema.tem-metricas
-  tema.tem-estilo -> tema.tem-animacion
-  tema.tem-estilo -> tema.tem-fuentes
-  tema.tem-estilo -> tema.tem-color
-  tema.tem-contraste -> tema.tem-estilo
-  tema.tem-contraste -> tema.tem-color
-  tema.tem-alto-contraste -> tema.tem-tema
-  tema.tem-codigo -> tema.tem-tema
-  tema.tem-codigo -> tema.tem-parches
-  tema.tem-referencia -> tema.tem-catalogo
-  tema.tem-referencia -> tema.tem-animacion
   tema.tem-catalogo -> zod
-
-  // dsl
   dsl.dsl-gramatica -> langium
-  dsl.dsl-compilar -> dsl.dsl-gramatica
-  dsl.dsl-compilar -> dsl.dsl-incorporados
-  dsl.dsl-compilar -> dsl.dsl-temas
-  dsl.dsl-compilar -> dsl.dsl-ubicador
-  dsl.dsl-compilar -> dsl.dsl-posiciones
-  dsl.dsl-temas -> dsl.dsl-incorporados
-  dsl.dsl-temas -> dsl.dsl-temas-capas
-  dsl.dsl-temas -> dsl.dsl-temas-slots
-  dsl.dsl-temas -> dsl.dsl-temas-animacion
-  dsl.dsl-temas -> dsl.dsl-temas-arista
-  dsl.dsl-temas -> dsl.dsl-temas-pagina
-  dsl.dsl-temas -> dsl.dsl-temas-comun
-  dsl.dsl-temas-capas -> dsl.dsl-temas-comun
-  dsl.dsl-temas-slots -> dsl.dsl-temas-comun
-  dsl.dsl-temas-animacion -> dsl.dsl-temas-comun
-  dsl.dsl-temas-arista -> dsl.dsl-temas-capas
-  dsl.dsl-temas-pagina -> dsl.dsl-temas-capas
-  dsl.dsl-temas-comun -> dsl.dsl-posiciones
-  dsl.dsl-ubicador -> dsl.dsl-posiciones
-  dsl.dsl-temas -> tema.tem-catalogo "valida contra el catalogo"
-  dsl.dsl-compilar -> canonico.can-esquema "produce la Fuente"
-
-  // layout
   layout.lay-layout -> elk
-  layout.lay-layout -> tema.tem-slots
-  layout.lay-layout -> tema.tem-metricas
-  layout.lay-layout -> canonico.can-geometria
-  layout.lay-indice -> layout.lay-layout
-  layout.lay-claves -> layout.lay-layout
-
-  // sesion
-  sesion.ses-sesion -> dsl.dsl-compilar
-  sesion.ses-sesion -> canonico.can-validar
-  sesion.ses-sesion -> layout.lay-layout "memoiza por Vista"
-  sesion.ses-sesion -> tema.tem-estilo
-  sesion.ses-ediciones -> dsl.dsl-ubicador
-  sesion.ses-intenciones -> sesion.ses-ediciones
-  sesion.ses-intenciones -> canonico.can-pin
-  sesion.ses-aplicar -> sesion.ses-intenciones
-  sesion.ses-historial -> sesion.ses-aplicar
-
-  // render
   render.ren-diagram -> react
-  render.ren-diagram -> render.ren-escena
-  render.ren-diagram -> render.ren-limite
-  render.ren-escena -> render.ren-hoja
-  render.ren-escena -> render.ren-pintores
-  render.ren-escena -> render.ren-aristas
-  render.ren-escena -> render.ren-efectos
-  render.ren-escena -> render.ren-animacion
-  render.ren-escena -> render.ren-pilas
-  render.ren-escena -> render.ren-codigo
-  render.ren-escena -> render.ren-elemento
-  render.ren-escena -> render.ren-estilo
-  render.ren-hoja -> render.ren-pintura
-  render.ren-hoja -> render.ren-efectos
-  render.ren-hoja -> render.ren-animacion
-  render.ren-pintores -> render.ren-aristas
-  render.ren-pintores -> render.ren-pilas
-  render.ren-aristas -> render.ren-estilo
-  render.ren-efectos -> render.ren-estilo
-  render.ren-animacion -> render.ren-estilo
-  render.ren-codigo -> render.ren-estilo
-  render.ren-pintura.ren-pin-forma -> render.ren-pintura.ren-pin-comun
-  render.ren-pintura.ren-pin-borde -> render.ren-pintura.ren-pin-comun
-  render.ren-pintura.ren-pin-relleno -> render.ren-pintura.ren-pin-comun
-  render.ren-pintura.ren-pin-pagina -> render.ren-pintura.ren-pin-relleno
-  render.ren-pintura.ren-pin-comun -> render.ren-elemento
-  render.ren-estilo -> tema.tem-estilo "consume el Estilo resuelto"
-  render.ren-escena -> layout.lay-layout "lee la Geometria"
-
-  // shell
-  shell.sh-vista -> shell.sh-camara
-  shell.sh-vista -> shell.sh-colapso
-  shell.sh-vista -> shell.sh-seleccion
-  shell.sh-vista -> shell.sh-interaccion
-  shell.sh-vista -> shell.sh-arrastre
-  shell.sh-vista -> shell.sh-navegacion
-  shell.sh-vista -> shell.sh-pasos
-  shell.sh-vista -> shell.sh-morph
-  shell.sh-vista -> shell.sh-viewport
-  shell.sh-vista -> shell.sh-zoom-semantico
-  shell.sh-vista -> shell.sh-tema-vigente
-  shell.sh-vista -> shell.sh-accesibilidad
-  shell.sh-vista -> shell.sh-avisos
-  shell.sh-vista -> shell.sh-medicion
-  shell.sh-vista -> render.ren-diagram "dibuja"
   shell.sh-camara -> d3
-  shell.sh-seleccion -> shell.sh-interaccion
-  shell.sh-arrastre -> shell.sh-enviar-pin
-  shell.sh-enviar-pin -> servidor-dev "POST /api/pin"
-  shell.sh-control-edicion -> servidor-dev "POST /api/edit"
-  shell.sh-control-edicion -> sesion.ses-historial "estado de deshacer"
-  shell.sh-hash -> shell.sh-navegacion
-  shell.sh-worker -> shell.sh-servir-layout "mensajes"
-  shell.sh-servir-layout -> layout.lay-layout
-  shell.sh-colapso -> canonico.can-vistas
-  shell.sh-pasos -> canonico.can-pasos
-  shell.sh-medicion -> tema.tem-medicion
-
-  // cli
-  cli.cli-index -> cli.cli-ayuda
-  cli.cli-index -> cli.cli-workspace
-  cli.cli-index -> cli.cli-sesion
-  cli.cli-index -> cli.cli-validate
-  cli.cli-index -> cli.cli-comando-inspect
-  cli.cli-index -> cli.cli-edit
-  cli.cli-index -> cli.cli-dev
-  cli.cli-index -> cli.cli-skill
-  cli.cli-sesion -> sesion.ses-sesion
-  cli.cli-sesion -> cli.cli-validate
-  cli.cli-sesion -> cli.cli-codigo
-  cli.cli-comando-inspect -> cli.cli-inspect
-  cli.cli-inspect -> canonico.can-inspect
-  cli.cli-edit -> sesion.ses-ediciones
-  cli.cli-edit -> cli.cli-rechazos
-  cli.cli-edit -> cli.cli-workspace
-  cli.cli-validate -> canonico.can-issue
-  cli.cli-dev -> cli.cli-cambio
-  cli.cli-dev -> cli.cli-dev-shell
-  cli.cli-dev -> cli.cli-rechazos
-  cli.cli-dev -> cli.cli-sesion
-  cli.cli-dev -> cli.cli-workspace
-  cli.cli-dev -> sesion.ses-historial "deshacer y rehacer"
+  estudio.est-nav.nav-estudio -> react
+  estudio.est-nav.nav-editor.ed-panel -> codemirror
+  estudio.est-nav.nav-marco.mar-isla -> base-ui
+  estudio.est-nav.nav-comandos.cmd-buscador -> base-ui
+  estudio.est-construir -> esbuild "empaqueta la pagina y el Worker"
+  cli.cli-codigo -> esbuild "compila Temas .tsx"
   cli.cli-dev -> node-http
-  cli.cli-dev-shell -> cli.cli-empaquetar
-  cli.cli-empaquetar -> esbuild
-  cli.cli-empaquetar -> shell.sh-vista "empaqueta"
-  cli.cli-cambio -> canonico.can-estado
-  cli.cli-codigo -> tema.tem-codigo
 
-  // Secuencia y ER (ADR 0009)
+  // canonico
+  canonico.can-dev -> canonico.can-actividad
+  canonico.can-dev -> canonico.can-edit
+  canonico.can-dev -> canonico.can-esquema
+  canonico.can-dev -> canonico.can-pin
+  canonico.can-dev -> canonico.can-ruta-fuentes
+  canonico.can-dev -> canonico.can-salida
+  canonico.can-edit -> canonico.can-pin
+  canonico.can-geometria -> canonico.can-esquema
+  canonico.can-iconos -> canonico.can-esquema
+  canonico.can-pasos -> canonico.can-esquema
+  canonico.can-pasos -> canonico.can-secuencia
+  canonico.can-pasos -> canonico.can-vistas
+  canonico.can-salida -> canonico.can-issue
   canonico.can-secuencia -> canonico.can-esquema
   canonico.can-secuencia -> canonico.can-vistas
-  tema.tem-secuencia -> tema.tem-catalogo
-  tema.tem-fila -> canonico.can-esquema
-  tema.tem-mensajes -> tema.tem-catalogo
-  tema.tem-mensajes -> tema.tem-estilo
+  canonico.can-validar -> canonico.can-codigos
+  canonico.can-validar -> canonico.can-esquema
+  canonico.can-validar -> canonico.can-iconos
+  canonico.can-validar -> canonico.can-issue
+  canonico.can-validar -> canonico.can-secuencia
+  canonico.can-validar -> canonico.can-sugerencias
+  canonico.can-validar -> canonico.can-vistas
+  canonico.can-vistas -> canonico.can-esquema
+  canonico.can-vistas -> canonico.can-secuencia
+
+  // tema
+  tema.tem-alto-contraste -> tema.tem-catalogo
+  tema.tem-alto-contraste -> tema.tem-tema
+  tema.tem-animacion -> tema.tem-catalogo
+  tema.tem-catalogo-efectos -> tema.tem-catalogo
+  tema.tem-catalogo -> tema.tem-catalogo-efectos
+  tema.tem-catalogo -> tema.tem-color
+  tema.tem-catalogo -> tema.tem-familias.tem-fam-borde
+  tema.tem-catalogo -> tema.tem-familias.tem-fam-codigo
+  tema.tem-catalogo -> tema.tem-familias.tem-fam-forma
+  tema.tem-catalogo -> tema.tem-familias.tem-fam-marcador
+  tema.tem-catalogo -> tema.tem-familias.tem-fam-relleno
+  tema.tem-catalogo -> tema.tem-familias.tem-fam-texto
+  tema.tem-catalogo -> tema.tem-familias.tem-fam-trazo
+  tema.tem-codigo -> tema.tem-parches
+  tema.tem-codigo -> tema.tem-tema
+  tema.tem-contenido -> tema.tem-catalogo
+  tema.tem-contenido -> tema.tem-disposicion
+  tema.tem-contenido -> tema.tem-metricas
+  tema.tem-contraste -> tema.tem-catalogo
+  tema.tem-contraste -> tema.tem-color
+  tema.tem-contraste -> tema.tem-contenido
+  tema.tem-contraste -> tema.tem-estilo
   tema.tem-contraste -> tema.tem-mensajes
-  dsl.dsl-temas -> dsl.dsl-temas-secuencia
-  dsl.dsl-temas -> dsl.dsl-temas-fila
-  dsl.dsl-temas-secuencia -> tema.tem-secuencia
-  dsl.dsl-temas-secuencia -> dsl.dsl-temas-comun
-  dsl.dsl-temas-secuencia -> dsl.dsl-temas-capas
-  dsl.dsl-temas-fila -> tema.tem-fila
-  dsl.dsl-temas-fila -> dsl.dsl-temas-comun
+  tema.tem-contraste -> tema.tem-parches
+  tema.tem-contraste -> tema.tem-tema
+  tema.tem-derivacion -> tema.tem-catalogo
+  tema.tem-derivacion -> tema.tem-estilo
+  tema.tem-disposicion -> tema.tem-catalogo
+  tema.tem-elementos -> tema.tem-estilo
+  tema.tem-elementos -> tema.tem-parches
+  tema.tem-elementos -> tema.tem-secuencia
+  tema.tem-elementos -> tema.tem-tema
+  tema.tem-estilo -> tema.tem-animacion
+  tema.tem-estilo -> tema.tem-catalogo
+  tema.tem-estilo -> tema.tem-color
+  tema.tem-estilo -> tema.tem-derivacion
+  tema.tem-estilo -> tema.tem-fila
+  tema.tem-estilo -> tema.tem-fuentes
+  tema.tem-estilo -> tema.tem-medicion
+  tema.tem-estilo -> tema.tem-metricas
+  tema.tem-estilo -> tema.tem-parches
+  tema.tem-estilo -> tema.tem-secuencia
+  tema.tem-estilo -> tema.tem-tema
+  tema.tem-medicion -> tema.tem-semilla
+  tema.tem-mensajes -> tema.tem-estilo
+  tema.tem-metricas -> tema.tem-catalogo
+  tema.tem-metricas -> tema.tem-disposicion
+  tema.tem-metricas -> tema.tem-fila
+  tema.tem-metricas -> tema.tem-medicion
+  tema.tem-metricas -> tema.tem-parches
+  tema.tem-metricas -> tema.tem-secuencia
+  tema.tem-metricas -> tema.tem-slots
+  tema.tem-metricas -> tema.tem-tema
+  tema.tem-parches -> tema.tem-animacion
+  tema.tem-parches -> tema.tem-catalogo
+  tema.tem-parches -> tema.tem-tema
+  tema.tem-referencia -> tema.tem-animacion
+  tema.tem-referencia -> tema.tem-catalogo
+  tema.tem-referencia -> tema.tem-fila
+  tema.tem-referencia -> tema.tem-secuencia
+  tema.tem-secuencia -> tema.tem-catalogo
+  tema.tem-slots -> tema.tem-catalogo
+  tema.tem-slots -> tema.tem-contenido
+  tema.tem-slots -> tema.tem-disposicion
+  tema.tem-slots -> tema.tem-medicion
+  tema.tem-slots -> tema.tem-metricas
+  tema.tem-tema -> tema.tem-animacion
+  tema.tem-tema -> tema.tem-catalogo
+  tema.tem-tema -> tema.tem-derivacion
+  tema.tem-tema -> tema.tem-disposicion
+  tema.tem-tema -> tema.tem-fila
+  tema.tem-tema -> tema.tem-parches
+  tema.tem-tema -> tema.tem-secuencia
+  tema.tem-textos-a-medir -> tema.tem-contenido
+  tema.tem-textos-a-medir -> tema.tem-medicion
+  tema.tem-textos-a-medir -> tema.tem-metricas
+  tema.tem-textos-a-medir -> tema.tem-slots
+  tema.tem-familias.tem-fam-borde -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-codigo -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-forma -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-marcador -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-relleno -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-texto -> tema.tem-catalogo
+  tema.tem-familias.tem-fam-trazo -> tema.tem-catalogo
+
+  // dsl
+  dsl.dsl-compilar -> dsl.dsl-gramatica
+  dsl.dsl-incorporados -> dsl.dsl-gramatica
+  dsl.dsl-temas-animacion -> dsl.dsl-gramatica
+  dsl.dsl-temas-arista -> dsl.dsl-gramatica
+  dsl.dsl-temas-capas -> dsl.dsl-gramatica
+  dsl.dsl-temas-comun -> dsl.dsl-gramatica
+  dsl.dsl-temas-fila -> dsl.dsl-gramatica
+  dsl.dsl-temas-pagina -> dsl.dsl-gramatica
+  dsl.dsl-temas-secuencia -> dsl.dsl-gramatica
+  dsl.dsl-temas-slots -> dsl.dsl-gramatica
+  dsl.dsl-temas -> dsl.dsl-gramatica
+  dsl.dsl-ubicador -> dsl.dsl-gramatica
+  dsl.dsl-compilar -> dsl.dsl-incorporados
+  dsl.dsl-compilar -> dsl.dsl-posiciones
+  dsl.dsl-compilar -> dsl.dsl-temas
+  dsl.dsl-compilar -> dsl.dsl-ubicador
+  dsl.dsl-temas-animacion -> dsl.dsl-posiciones
+  dsl.dsl-temas-animacion -> dsl.dsl-temas-comun
+  dsl.dsl-temas-arista -> dsl.dsl-posiciones
+  dsl.dsl-temas-arista -> dsl.dsl-temas-capas
+  dsl.dsl-temas-arista -> dsl.dsl-temas-comun
+  dsl.dsl-temas-capas -> dsl.dsl-posiciones
+  dsl.dsl-temas-capas -> dsl.dsl-temas-animacion
+  dsl.dsl-temas-capas -> dsl.dsl-temas-comun
+  dsl.dsl-temas-comun -> dsl.dsl-posiciones
+  dsl.dsl-temas-fila -> dsl.dsl-posiciones
   dsl.dsl-temas-fila -> dsl.dsl-temas-capas
+  dsl.dsl-temas-fila -> dsl.dsl-temas-comun
+  dsl.dsl-temas-pagina -> dsl.dsl-temas-capas
+  dsl.dsl-temas-pagina -> dsl.dsl-temas-comun
+  dsl.dsl-temas-secuencia -> dsl.dsl-posiciones
+  dsl.dsl-temas-secuencia -> dsl.dsl-temas-capas
+  dsl.dsl-temas-secuencia -> dsl.dsl-temas-comun
+  dsl.dsl-temas-slots -> dsl.dsl-posiciones
+  dsl.dsl-temas-slots -> dsl.dsl-temas-comun
+  dsl.dsl-temas -> dsl.dsl-incorporados
+  dsl.dsl-temas -> dsl.dsl-posiciones
+  dsl.dsl-temas -> dsl.dsl-temas-animacion
+  dsl.dsl-temas -> dsl.dsl-temas-arista
+  dsl.dsl-temas -> dsl.dsl-temas-capas
+  dsl.dsl-temas -> dsl.dsl-temas-comun
+  dsl.dsl-temas -> dsl.dsl-temas-fila
+  dsl.dsl-temas -> dsl.dsl-temas-pagina
+  dsl.dsl-temas -> dsl.dsl-temas-secuencia
+  dsl.dsl-temas -> dsl.dsl-temas-slots
+  dsl.dsl-ubicador -> dsl.dsl-posiciones
+  dsl.dsl-temas-fila -> tema.tem-fila
+  dsl.dsl-temas-secuencia -> tema.tem-secuencia
+
+  // layout
+  layout.lay-layout -> layout.lay-indice
   layout.lay-layout -> layout.lay-secuencia "delega las Vistas sequence"
+  layout.lay-layout -> tema.tem-metricas
+  layout.lay-layout -> tema.tem-slots
   layout.lay-secuencia -> canonico.can-secuencia
-  layout.lay-secuencia -> tema.tem-secuencia
   layout.lay-secuencia -> tema.tem-metricas
   layout.lay-secuencia -> tema.tem-slots
+
+  // sesion
+  sesion.ses-api-dev -> sesion.ses-consultas
+  sesion.ses-api-dev -> sesion.ses-workspace-vivo
+  sesion.ses-aplicar -> sesion.ses-ediciones
+  sesion.ses-aplicar -> sesion.ses-intenciones
+  sesion.ses-consulta-tema -> sesion.ses-consultas
+  sesion.ses-consultas -> sesion.ses-consulta-tema
+  sesion.ses-gestos -> sesion.ses-ediciones
+  sesion.ses-intenciones -> sesion.ses-ediciones
+  sesion.ses-intenciones -> sesion.ses-gestos
+  sesion.ses-puerto-memoria -> sesion.ses-aplicar
+  sesion.ses-puerto-vivo-memoria -> sesion.ses-puerto-memoria
+  sesion.ses-puerto-vivo-memoria -> sesion.ses-workspace-vivo
+  sesion.ses-registro-vivo -> sesion.ses-reloj
+  sesion.ses-sesion -> sesion.ses-consulta-tema
+  sesion.ses-sesion -> sesion.ses-consultas
+  sesion.ses-workspace-vivo -> sesion.ses-aplicar "escritura unica"
+  sesion.ses-workspace-vivo -> sesion.ses-cambio
+  sesion.ses-workspace-vivo -> sesion.ses-consultas
+  sesion.ses-workspace-vivo -> sesion.ses-diferencia
+  sesion.ses-workspace-vivo -> sesion.ses-ediciones
+  sesion.ses-workspace-vivo -> sesion.ses-historial-archivos
+  sesion.ses-workspace-vivo -> sesion.ses-intenciones
+  sesion.ses-workspace-vivo -> sesion.ses-registro-vivo
+  sesion.ses-workspace-vivo -> sesion.ses-reloj
+  sesion.ses-workspace-vivo -> sesion.ses-sesion
+  sesion.ses-api-dev -> canonico.can-dev "rutas y esquemas"
+  sesion.ses-api-dev -> canonico.can-pin
+  sesion.ses-cambio -> canonico.can-dev
+  sesion.ses-cambio -> tema.tem-metricas
+  sesion.ses-cambio -> tema.tem-tema
+  sesion.ses-consulta-tema -> canonico.can-inspect
+  sesion.ses-consulta-tema -> dsl.dsl-temas
+  sesion.ses-consulta-tema -> tema.tem-animacion
+  sesion.ses-consulta-tema -> tema.tem-catalogo
+  sesion.ses-consulta-tema -> tema.tem-codigo
+  sesion.ses-consulta-tema -> tema.tem-disposicion
+  sesion.ses-consulta-tema -> tema.tem-elementos
+  sesion.ses-consulta-tema -> tema.tem-metricas
+  sesion.ses-consulta-tema -> tema.tem-parches
+  sesion.ses-consulta-tema -> tema.tem-slots
+  sesion.ses-consulta-tema -> tema.tem-tema
+  sesion.ses-consultas -> canonico.can-inspect
+  sesion.ses-consultas -> canonico.can-secuencia
+  sesion.ses-consultas -> canonico.can-validar
+  sesion.ses-diferencia -> canonico.can-dev
+  sesion.ses-diferencia -> canonico.can-secuencia
+  sesion.ses-gestos -> canonico.can-pin
+  sesion.ses-gestos -> canonico.can-validar
+  sesion.ses-gestos -> dsl.dsl-compilar
+  sesion.ses-historial-archivos -> canonico.can-dev
+  sesion.ses-historial-archivos -> canonico.can-pin
+  sesion.ses-historial-archivos -> dsl.dsl-compilar
+  sesion.ses-intenciones -> canonico.can-pin
+  sesion.ses-puerto-memoria -> dsl.dsl-compilar
+  sesion.ses-registro-vivo -> canonico.can-actividad
+  sesion.ses-registro-vivo -> canonico.can-dev
+  sesion.ses-sesion -> canonico.can-validar
+  sesion.ses-sesion -> dsl.dsl-compilar
+  sesion.ses-sesion -> layout.lay-layout "memoiza por Vista"
+  sesion.ses-sesion -> tema.tem-estilo
+  sesion.ses-workspace-vivo -> canonico.can-dev "emite eventos del protocolo"
+  sesion.ses-workspace-vivo -> canonico.can-inspect
+  sesion.ses-workspace-vivo -> canonico.can-pin
+  sesion.ses-workspace-vivo -> canonico.can-ruta-fuentes
+  sesion.ses-workspace-vivo -> dsl.dsl-compilar
+  sesion.ses-workspace-vivo -> tema.tem-codigo
+
+  // render
+  render.ren-animacion -> render.ren-elemento
+  render.ren-animacion -> render.ren-estilo
+  render.ren-animacion -> render.ren-pilas
+  render.ren-animacion -> render.ren-pintura.ren-pin-comun
+  render.ren-aristas -> render.ren-elemento
+  render.ren-aristas -> render.ren-estilo
+  render.ren-codigo -> render.ren-elemento
+  render.ren-codigo -> render.ren-estilo
+  render.ren-diagram -> render.ren-escena
+  render.ren-diagram -> render.ren-limite
+  render.ren-efectos -> render.ren-elemento
+  render.ren-efectos -> render.ren-estilo
+  render.ren-efectos -> render.ren-pintura.ren-pin-comun
+  render.ren-elemento -> render.ren-codigo
+  render.ren-escena -> render.ren-animacion
+  render.ren-escena -> render.ren-aristas
+  render.ren-escena -> render.ren-codigo
+  render.ren-escena -> render.ren-efectos
+  render.ren-escena -> render.ren-elemento
+  render.ren-escena -> render.ren-estilo
+  render.ren-escena -> render.ren-hoja
+  render.ren-escena -> render.ren-pilas
+  render.ren-escena -> render.ren-pintores
   render.ren-escena -> render.ren-secuencia "delega la Geometria secuencia"
-  render.ren-pintores -> tema.tem-mensajes
-  render.ren-secuencia -> layout.lay-secuencia
-  render.ren-secuencia -> canonico.can-secuencia
-  render.ren-secuencia -> tema.tem-mensajes
-  render.ren-secuencia -> render.ren-pilas
-  render.ren-secuencia -> render.ren-pintores
+  render.ren-hoja -> render.ren-animacion
+  render.ren-hoja -> render.ren-efectos
+  render.ren-hoja -> render.ren-elemento
+  render.ren-hoja -> render.ren-estilo
+  render.ren-hoja -> render.ren-pilas
+  render.ren-hoja -> render.ren-pintura.ren-pin-borde
+  render.ren-hoja -> render.ren-pintura.ren-pin-comun
+  render.ren-hoja -> render.ren-pintura.ren-pin-forma
+  render.ren-hoja -> render.ren-pintura.ren-pin-pagina
+  render.ren-hoja -> render.ren-pintura.ren-pin-relleno
+  render.ren-pintores -> render.ren-aristas
+  render.ren-pintores -> render.ren-efectos
+  render.ren-pintores -> render.ren-elemento
+  render.ren-pintores -> render.ren-estilo
+  render.ren-pintores -> render.ren-hoja
+  render.ren-pintores -> render.ren-pilas
+  render.ren-pintores -> render.ren-pintura.ren-pin-comun
   render.ren-secuencia -> render.ren-aristas
   render.ren-secuencia -> render.ren-elemento
+  render.ren-secuencia -> render.ren-escena
   render.ren-secuencia -> render.ren-estilo
   render.ren-secuencia -> render.ren-hoja
-  shell.sh-ordenar-lifelines -> canonico.can-secuencia
-  shell.sh-ordenar-lifelines -> layout.lay-secuencia
+  render.ren-secuencia -> render.ren-pilas
+  render.ren-secuencia -> render.ren-pintores
+  render.ren-pintura.ren-pin-borde -> render.ren-pintura.ren-pin-comun
+  render.ren-pintura.ren-pin-comun -> render.ren-elemento
+  render.ren-pintura.ren-pin-forma -> render.ren-pintura.ren-pin-comun
+  render.ren-pintura.ren-pin-pagina -> render.ren-pintura.ren-pin-comun
+  render.ren-pintura.ren-pin-pagina -> render.ren-pintura.ren-pin-relleno
+  render.ren-pintura.ren-pin-relleno -> render.ren-pintura.ren-pin-comun
+  render.ren-estilo -> tema.tem-estilo "consume el Estilo resuelto"
+  render.ren-pintores -> tema.tem-mensajes
+  render.ren-secuencia -> canonico.can-secuencia
+
+  // shell
+  shell.sh-arrastre -> shell.sh-geometria
   shell.sh-arrastre -> shell.sh-ordenar-lifelines
+  shell.sh-chrome -> shell.sh-accesibilidad
+  shell.sh-chrome -> shell.sh-avisos
+  shell.sh-estado-hash -> shell.sh-hash
+  shell.sh-geometria -> shell.sh-vista
+  shell.sh-interaccion -> shell.sh-caja
+  shell.sh-interaccion -> shell.sh-configuracion
+  shell.sh-worker -> shell.sh-vista
+  shell.sh-medicion -> shell.sh-avisos
+  shell.sh-navegacion -> shell.sh-controlado
+  shell.sh-ordenar-lifelines -> shell.sh-caja
+  shell.sh-pasos -> shell.sh-controlado
+  shell.sh-pasos -> shell.sh-hash
+  shell.sh-seleccion -> shell.sh-interaccion
+  shell.sh-servir-layout -> shell.sh-worker
+  shell.sh-vista -> shell.sh-accesibilidad
+  shell.sh-vista -> shell.sh-arrastre
+  shell.sh-vista -> shell.sh-avisos
+  shell.sh-vista -> shell.sh-camara
+  shell.sh-vista -> shell.sh-chrome
+  shell.sh-vista -> shell.sh-colapso
+  shell.sh-vista -> shell.sh-configuracion
+  shell.sh-vista -> shell.sh-controlado
+  shell.sh-vista -> shell.sh-geometria
+  shell.sh-vista -> shell.sh-interaccion
+  shell.sh-vista -> shell.sh-medicion
+  shell.sh-vista -> shell.sh-morph
+  shell.sh-vista -> shell.sh-navegacion
   shell.sh-vista -> shell.sh-ordenar-lifelines
+  shell.sh-vista -> shell.sh-pasos
+  shell.sh-vista -> shell.sh-ruta-foco
+  shell.sh-vista -> shell.sh-seleccion
+  shell.sh-vista -> shell.sh-viewport
+  shell.sh-vista -> shell.sh-zoom-semantico
+  shell.sh-chrome -> render.ren-estilo
+  shell.sh-estado-hash -> render.ren-escena
+  shell.sh-geometria -> layout.lay-layout
+  shell.sh-geometria -> tema.tem-medicion
+  shell.sh-geometria -> tema.tem-metricas
+  shell.sh-geometria -> tema.tem-textos-a-medir
+  shell.sh-medicion -> tema.tem-medicion
+  shell.sh-ordenar-lifelines -> canonico.can-secuencia
+  shell.sh-pasos -> canonico.can-pasos
+  shell.sh-ruta-foco -> canonico.can-pasos
+  shell.sh-ruta-foco -> render.ren-escena
+  shell.sh-ruta-foco -> render.ren-estilo
+  shell.sh-servir-layout -> layout.lay-layout
+  shell.sh-vista -> render.ren-diagram "dibuja"
+
+  // estudio
+  estudio.est-contrato -> estudio.est-dev-memoria
+  estudio.est-contrato -> estudio.est-protocolo
+  estudio.est-contrato -> estudio.est-sse
+  estudio.est-index -> estudio.est-rutas
+  estudio.est-nav.nav-almacen -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-almacen -> estudio.est-protocolo
+  estudio.est-nav.nav-cliente -> estudio.est-protocolo
+  estudio.est-nav.nav-dev -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-dev -> estudio.est-nav.nav-estudio
+  estudio.est-nav.nav-dev -> estudio.est-protocolo
+  estudio.est-nav.nav-dev -> estudio.est-rutas
+  estudio.est-nav.nav-estudio -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-estudio -> estudio.est-nav.nav-comandos.cmd-teclas
+  estudio.est-nav.nav-estudio -> estudio.est-nav.nav-historial.his-visible
+  estudio.est-nav.nav-estudio -> estudio.est-nav.nav-lienzo.lie-geometrias
+  estudio.est-nav.nav-estudio -> estudio.est-nav.nav-lienzo.lie-hash
+  estudio.est-nav.nav-estudio -> estudio.est-nav.nav-lienzo.lie-lienzo
+  estudio.est-nav.nav-estudio -> estudio.est-nav.nav-marco.mar-marco
+  estudio.est-nav.nav-estudio -> estudio.est-nav.nav-marco.mar-proveedores
+  estudio.est-nav.nav-estudio -> estudio.est-nav.nav-marco.mar-estado-dev
+  estudio.est-nav.nav-estudio -> estudio.est-nav.nav-temas.tms-use-componentes
+  estudio.est-nav.nav-diferencia.dif-almacen -> estudio.est-nav.nav-almacen
+  estudio.est-nav.nav-diferencia.dif-almacen -> estudio.est-nav.nav-diferencia.dif-proyeccion
+  estudio.est-nav.nav-diferencia.dif-almacen -> estudio.est-protocolo
+  estudio.est-nav.nav-diferencia.dif-proyeccion -> estudio.est-protocolo
+  estudio.est-nav.nav-diferencia.dif-resaltado -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-diferencia.dif-resaltado -> estudio.est-nav.nav-diferencia.dif-almacen
+  estudio.est-nav.nav-diferencia.dif-resaltado -> estudio.est-nav.nav-diferencia.dif-proyeccion
+  estudio.est-nav.nav-diferencia.dif-resaltado -> estudio.est-nav.nav-marco.mar-caducidad
+  estudio.est-nav.nav-agente.age-actividad -> estudio.est-nav.nav-almacen
+  estudio.est-nav.nav-agente.age-actividad -> estudio.est-nav.nav-vistas.vis-destino
+  estudio.est-nav.nav-agente.age-actividad -> estudio.est-protocolo
+  estudio.est-nav.nav-agente.age-panel -> estudio.est-nav.nav-agente.age-actividad
+  estudio.est-nav.nav-agente.age-panel -> estudio.est-nav.nav-diferencia.dif-almacen
+  estudio.est-nav.nav-agente.age-panel -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-agente.age-pildoras -> estudio.est-nav.nav-agente.age-actividad
+  estudio.est-nav.nav-agente.age-pildoras -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-temas.tms-componentes -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-temas.tms-galeria -> estudio.est-nav.nav-diferencia.dif-almacen
+  estudio.est-nav.nav-temas.tms-galeria -> estudio.est-nav.nav-diferencia.dif-proyeccion
+  estudio.est-nav.nav-temas.tms-galeria -> estudio.est-nav.nav-diferencia.dif-resaltado
+  estudio.est-nav.nav-temas.tms-galeria -> estudio.est-nav.nav-marco.mar-aviso-lectura
+  estudio.est-nav.nav-temas.tms-galeria -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-temas.tms-galeria -> estudio.est-nav.nav-marco.mar-lectura
+  estudio.est-nav.nav-temas.tms-galeria -> estudio.est-nav.nav-marco.mar-listbox
+  estudio.est-nav.nav-temas.tms-galeria -> estudio.est-nav.nav-sitio
+  estudio.est-nav.nav-temas.tms-galeria -> estudio.est-nav.nav-temas.tms-previsualizacion
+  estudio.est-nav.nav-temas.tms-previsualizacion -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-temas.tms-previsualizacion -> estudio.est-nav.nav-lienzo.lie-geometrias
+  estudio.est-nav.nav-temas.tms-previsualizacion -> estudio.est-nav.nav-marco.mar-lectura
+  estudio.est-nav.nav-temas.tms-use-componentes -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-temas.tms-use-componentes -> estudio.est-nav.nav-marco.mar-lectura
+  estudio.est-nav.nav-temas.tms-use-componentes -> estudio.est-nav.nav-temas.tms-componentes
+  estudio.est-nav.nav-vistas.vis-panel -> estudio.est-nav.nav-diferencia.dif-resaltado
+  estudio.est-nav.nav-vistas.vis-panel -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-vistas.vis-panel -> estudio.est-nav.nav-marco.mar-listbox
+  estudio.est-nav.nav-vistas.vis-panel -> estudio.est-nav.nav-vistas.vis-indice
+  estudio.est-nav.nav-issues.iss-fix -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-issues.iss-fix -> estudio.est-nav.nav-editor.ed-diagnosticos
+  estudio.est-nav.nav-issues.iss-fix -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-issues.iss-fix -> estudio.est-protocolo
+  estudio.est-nav.nav-issues.iss-panel -> estudio.est-nav.nav-issues.iss-fix
+  estudio.est-nav.nav-issues.iss-panel -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-issues.iss-panel -> estudio.est-nav.nav-sitio
+  estudio.est-nav.nav-issues.iss-panel -> estudio.est-protocolo
+  estudio.est-nav.nav-historial.his-visible -> estudio.est-nav.nav-almacen
+  estudio.est-nav.nav-historial.his-visible -> estudio.est-protocolo
+  estudio.est-nav.nav-historial.his-panel -> estudio.est-nav.nav-historial.his-visible
+  estudio.est-nav.nav-historial.his-panel -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-historial.his-panel -> estudio.est-protocolo
+  estudio.est-nav.nav-editor -> estudio.est-protocolo
+  estudio.est-nav.nav-editor.ed-completado -> estudio.est-nav.nav-editor.ed-palabras
+  estudio.est-nav.nav-editor.ed-diagnosticos -> estudio.est-protocolo
+  estudio.est-nav.nav-editor.ed-guardado -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-editor.ed-guardado -> estudio.est-nav.nav-editor
+  estudio.est-nav.nav-editor.ed-guardado -> estudio.est-nav.nav-editor.ed-reconciliacion
+  estudio.est-nav.nav-editor.ed-guardado -> estudio.est-protocolo
+  estudio.est-nav.nav-editor.ed-lenguaje -> estudio.est-nav.nav-editor.ed-palabras
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-comandos.cmd-registro
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-editor.ed-completado
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-editor.ed-diagnosticos
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-editor.ed-guardado
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-editor.ed-lenguaje
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-editor.ed-marcas
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-editor.ed-reconciliacion
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-issues.iss-fix
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-marco.mar-caducidad
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-marco.mar-lectura
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-nav.nav-sitio
+  estudio.est-nav.nav-editor.ed-panel -> estudio.est-protocolo
+  estudio.est-nav.nav-comandos.cmd-atajo -> estudio.est-nav.nav-comandos.cmd-registro
+  estudio.est-nav.nav-comandos.cmd-atajo -> estudio.est-nav.nav-comandos.cmd-teclas
+  estudio.est-nav.nav-comandos.cmd-atajo -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-comandos.cmd-ayuda -> estudio.est-nav.nav-comandos.cmd-registro
+  estudio.est-nav.nav-comandos.cmd-ayuda -> estudio.est-nav.nav-comandos.cmd-teclas
+  estudio.est-nav.nav-comandos.cmd-ayuda -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-comandos.cmd-buscador -> estudio.est-nav.nav-comandos.cmd-registro
+  estudio.est-nav.nav-comandos.cmd-buscador -> estudio.est-nav.nav-comandos.cmd-teclas
+  estudio.est-nav.nav-comandos.cmd-buscador -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-comandos.cmd-buscador -> estudio.est-nav.nav-marco.mar-lectura
+  estudio.est-nav.nav-comandos.cmd-buscador -> estudio.est-nav.nav-sitio
+  estudio.est-nav.nav-comandos.cmd-buscador -> estudio.est-nav.nav-vistas.vis-destino
+  estudio.est-nav.nav-comandos.cmd-buscador -> estudio.est-nav.nav-vistas.vis-indice
+  estudio.est-nav.nav-comandos.cmd-pildora -> estudio.est-nav.nav-comandos.cmd-atajo
+  estudio.est-nav.nav-comandos.cmd-pildora -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-comandos.cmd-registro -> estudio.est-nav.nav-agente.age-actividad
+  estudio.est-nav.nav-comandos.cmd-registro -> estudio.est-nav.nav-comandos.cmd-teclas
+  estudio.est-nav.nav-comandos.cmd-registro -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-comandos.cmd-registro -> estudio.est-nav.nav-marco.mar-pestanas
+  estudio.est-nav.nav-comandos.cmd-registro -> estudio.est-nav.nav-sitio
+  estudio.est-nav.nav-comandos.cmd-use-atajos -> estudio.est-nav.nav-comandos.cmd-registro
+  estudio.est-nav.nav-comandos.cmd-use-atajos -> estudio.est-nav.nav-comandos.cmd-teclas
+  estudio.est-nav.nav-comandos.cmd-use-atajos -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-lienzo.lie-datos -> estudio.est-nav.nav-marco.mar-tamano
+  estudio.est-nav.nav-lienzo.lie-geometrias -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-lienzo.lie-geometrias -> estudio.est-protocolo
+  estudio.est-nav.nav-lienzo.lie-lienzo -> estudio.est-nav.nav-comandos.cmd-registro
+  estudio.est-nav.nav-lienzo.lie-lienzo -> estudio.est-nav.nav-diferencia.dif-resaltado
+  estudio.est-nav.nav-lienzo.lie-lienzo -> estudio.est-nav.nav-escritura
+  estudio.est-nav.nav-lienzo.lie-lienzo -> estudio.est-nav.nav-lienzo.lie-datos
+  estudio.est-nav.nav-lienzo.lie-lienzo -> estudio.est-nav.nav-lienzo.lie-geometrias
+  estudio.est-nav.nav-lienzo.lie-lienzo -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-lienzo.lie-lienzo -> estudio.est-nav.nav-temas.tms-previsualizacion
+  estudio.est-nav.nav-escritura -> estudio.est-nav.nav-cliente "POST con la version vigente"
+  estudio.est-nav.nav-escritura -> estudio.est-protocolo
+  estudio.est-nav.nav-detalle -> estudio.est-nav.nav-marco.mar-aviso-lectura
+  estudio.est-nav.nav-detalle -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-detalle -> estudio.est-nav.nav-marco.mar-lectura
+  estudio.est-nav.nav-detalle -> estudio.est-nav.nav-sitio
+  estudio.est-nav.nav-marco.mar-aviso-lectura -> estudio.est-nav.nav-marco.mar-lectura
+  estudio.est-nav.nav-marco.mar-contexto -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-marco.mar-contexto -> estudio.est-nav.nav-comandos.cmd-teclas
+  estudio.est-nav.nav-marco.mar-contexto -> estudio.est-nav.nav-escritura
+  estudio.est-nav.nav-marco.mar-contexto -> estudio.est-nav.nav-marco.mar-limites
+  estudio.est-nav.nav-marco.mar-contexto -> estudio.est-nav.nav-sitio
+  estudio.est-nav.nav-marco.mar-contexto -> estudio.est-protocolo
+  estudio.est-nav.nav-marco.mar-isla -> estudio.est-nav.nav-comandos.cmd-atajo
+  estudio.est-nav.nav-marco.mar-isla -> estudio.est-nav.nav-marco.mar-limites
+  estudio.est-nav.nav-marco.mar-isla -> estudio.est-nav.nav-marco.mar-pestanas
+  estudio.est-nav.nav-marco.mar-isla -> estudio.est-nav.nav-marco.mar-use-isla
+  estudio.est-nav.nav-marco.mar-marco -> estudio.est-nav.nav-comandos.cmd-ayuda
+  estudio.est-nav.nav-marco.mar-marco -> estudio.est-nav.nav-comandos.cmd-buscador
+  estudio.est-nav.nav-marco.mar-marco -> estudio.est-nav.nav-comandos.cmd-pildora
+  estudio.est-nav.nav-marco.mar-marco -> estudio.est-nav.nav-lienzo.lie-gesto
+  estudio.est-nav.nav-marco.mar-marco -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-marco.mar-marco -> estudio.est-nav.nav-marco.mar-isla
+  estudio.est-nav.nav-marco.mar-marco -> estudio.est-nav.nav-marco.mar-pestanas
+  estudio.est-nav.nav-marco.mar-marco -> estudio.est-nav.nav-marco.mar-proveedores
+  estudio.est-nav.nav-marco.mar-pestanas -> estudio.est-nav.nav-agente.age-panel
+  estudio.est-nav.nav-marco.mar-pestanas -> estudio.est-nav.nav-agente.age-pildoras
+  estudio.est-nav.nav-marco.mar-pestanas -> estudio.est-nav.nav-detalle
+  estudio.est-nav.nav-marco.mar-pestanas -> estudio.est-nav.nav-editor.ed-panel
+  estudio.est-nav.nav-marco.mar-pestanas -> estudio.est-nav.nav-historial.his-panel
+  estudio.est-nav.nav-marco.mar-pestanas -> estudio.est-nav.nav-issues.iss-panel
+  estudio.est-nav.nav-marco.mar-pestanas -> estudio.est-nav.nav-temas.tms-galeria
+  estudio.est-nav.nav-marco.mar-pestanas -> estudio.est-nav.nav-vistas.vis-panel
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-comandos.cmd-registro
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-comandos.cmd-teclas
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-comandos.cmd-use-atajos
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-escritura
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-marco.mar-contexto
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-marco.mar-limites
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-marco.mar-caducidad
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-marco.mar-use-isla
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-marco.mar-tamano
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-sitio
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-nav.nav-temas.tms-previsualizacion
+  estudio.est-nav.nav-marco.mar-proveedores -> estudio.est-protocolo
+  estudio.est-nav.nav-marco.mar-estado-dev -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-marco.mar-estado-dev -> estudio.est-nav.nav-lienzo.lie-geometrias
+  estudio.est-nav.nav-marco.mar-estado-dev -> estudio.est-protocolo
+  estudio.est-nav.nav-marco.mar-use-isla -> estudio.est-nav.nav-marco.mar-limites
+  estudio.est-nav.nav-marco.mar-lectura -> estudio.est-nav.nav-cliente
+  estudio.est-nav.nav-marco.mar-lectura -> estudio.est-protocolo
+  estudio.est-nav.nav-agente.age-actividad -> canonico.can-actividad
+  estudio.est-nav.nav-agente.age-panel -> canonico.can-actividad
+  estudio.est-nav.nav-agente.age-panel -> canonico.can-dev
+  estudio.est-nav.nav-agente.age-pildoras -> canonico.can-actividad
+  estudio.est-nav.nav-cliente -> canonico.can-inspect
+  estudio.est-nav.nav-cliente -> canonico.can-pin
+  estudio.est-nav.nav-detalle -> canonico.can-inspect
+  estudio.est-nav.nav-dev -> shell.sh-hash
+  estudio.est-nav.nav-dev -> shell.sh-worker "adaptador de layout"
+  estudio.est-nav.nav-dev -> shell.sh-vista
+  estudio.est-nav.nav-diferencia.dif-proyeccion -> canonico.can-dev
+  estudio.est-nav.nav-diferencia.dif-proyeccion -> canonico.can-pasos
+  estudio.est-nav.nav-editor.ed-guardado -> canonico.can-edit
+  estudio.est-nav.nav-escritura -> canonico.can-pin
+  estudio.est-nav.nav-estudio -> shell.sh-estado-hash
+  estudio.est-nav.nav-estudio -> shell.sh-hash
+  estudio.est-nav.nav-estudio -> shell.sh-navegacion
+  estudio.est-nav.nav-estudio -> shell.sh-vista
+  estudio.est-nav.nav-lienzo.lie-hash -> shell.sh-hash
+  estudio.est-nav.nav-lienzo.lie-lienzo -> canonico.can-ruta-fuentes
+  estudio.est-nav.nav-lienzo.lie-lienzo -> render.ren-codigo
+  estudio.est-nav.nav-lienzo.lie-lienzo -> shell.sh-accesibilidad
+  estudio.est-nav.nav-lienzo.lie-lienzo -> shell.sh-estado-hash
+  estudio.est-nav.nav-lienzo.lie-lienzo -> shell.sh-vista "dibuja"
+  estudio.est-nav.nav-marco.mar-marco -> shell.sh-navegacion
+  estudio.est-nav.nav-marco.mar-proveedores -> shell.sh-estado-hash
+  estudio.est-nav.nav-marco.mar-lectura -> canonico.can-inspect
+  estudio.est-nav.nav-sitio -> canonico.can-inspect
+  estudio.est-nav.nav-temas.tms-componentes -> render.ren-codigo
+  estudio.est-nav.nav-temas.tms-use-componentes -> render.ren-codigo
+  estudio.est-nav.nav-worker.wrk-worker -> shell.sh-worker
+  estudio.est-nav.nav-worker.wrk-worker -> shell.sh-servir-layout "sirve el layout"
+  estudio.est-contrato -> canonico.can-actividad
+  estudio.est-dev-memoria -> canonico.can-dev
+  estudio.est-dev-memoria -> sesion.ses-api-dev "las mismas rutas"
+  estudio.est-dev-memoria -> sesion.ses-puerto-memoria
+  estudio.est-dev-memoria -> sesion.ses-puerto-vivo-memoria "fake del disco"
+  estudio.est-dev-memoria -> sesion.ses-reloj
+  estudio.est-dev-memoria -> sesion.ses-workspace-vivo
+
+  // cli
+  cli.cli-actividad -> cli.cli-registro-disco
+  cli.cli-actividad -> cli.cli-sesion
+  cli.cli-ayuda -> cli.cli-workspace
+  cli.cli-bin -> cli.cli-index
+  cli.cli-edit -> cli.cli-actividad
+  cli.cli-edit -> cli.cli-rechazos
+  cli.cli-edit -> cli.cli-sesion
+  cli.cli-edit -> cli.cli-workspace
+  cli.cli-comando-inspect -> cli.cli-actividad
+  cli.cli-comando-inspect -> cli.cli-inspect
+  cli.cli-comando-inspect -> cli.cli-sesion
+  cli.cli-comando-inspect -> cli.cli-workspace
+  cli.cli-dev -> cli.cli-codigo
+  cli.cli-dev -> cli.cli-registro-disco
+  cli.cli-dev -> cli.cli-sesion
+  cli.cli-dev -> cli.cli-workspace
+  cli.cli-index -> cli.cli-actividad
+  cli.cli-index -> cli.cli-ayuda
+  cli.cli-index -> cli.cli-edit
+  cli.cli-index -> cli.cli-comando-inspect
+  cli.cli-index -> cli.cli-dev
+  cli.cli-index -> cli.cli-sesion
+  cli.cli-index -> cli.cli-skill
+  cli.cli-index -> cli.cli-validate
+  cli.cli-index -> cli.cli-workspace
+  cli.cli-registro-disco -> cli.cli-workspace
+  cli.cli-sesion -> cli.cli-codigo
+  cli.cli-sesion -> cli.cli-validate
+  cli.cli-sesion -> cli.cli-workspace
+  cli.cli-skill -> cli.cli-workspace
+  cli.cli-actividad -> canonico.can-actividad
+  cli.cli-codigo -> sesion.ses-workspace-vivo
+  cli.cli-edit -> sesion.ses-ediciones
+  cli.cli-comando-inspect -> canonico.can-dev
+  cli.cli-dev -> canonico.can-dev
+  cli.cli-dev -> estudio.est-index "sirve los estaticos"
+  cli.cli-dev -> estudio.est-rutas
+  cli.cli-dev -> sesion.ses-api-dev "delega /api/*"
+  cli.cli-dev -> sesion.ses-reloj
+  cli.cli-dev -> sesion.ses-workspace-vivo "abre sobre el puerto de disco"
+  cli.cli-inspect -> canonico.can-dev
+  cli.cli-inspect -> canonico.can-inspect
+  cli.cli-inspect -> sesion.ses-consultas
+  cli.cli-registro-disco -> sesion.ses-registro-vivo "observa para dev"
+  cli.cli-sesion -> sesion.ses-sesion
+  cli.cli-workspace -> canonico.can-ruta-fuentes
 }

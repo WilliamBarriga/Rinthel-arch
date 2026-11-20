@@ -47,24 +47,37 @@ model {
   f-mensaje#origen "0..*" -> "1" f-nodo#id "Lifeline origen"
   f-mensaje#destino "0..*" -> "1" f-nodo#id "Lifeline destino"
 
-  interaction editar-pin "Editar un Pin" "Arrastrar un Nodo reescribe el archivo .dg" {
-    arrastre: autor -> shell.sh-seleccion "arrastra un Nodo"
-    shell.sh-seleccion -> sesion.ses-ediciones "Intencion mover-pin"
-    alt "hash vigente" {
-      sesion.ses-ediciones -> workspace "reescribe el .dg"
+  interaction editar-pin "Editar un Pin" "Arrastrar un Nodo en la UI de dev reescribe el archivo .dg" {
+    arrastre: autor -> shell.sh-arrastre "arrastra un Nodo"
+    shell.sh-arrastre -> estudio.est-nav.nav-lienzo.lie-lienzo "onMoveNode(centro)"
+    estudio.est-nav.nav-lienzo.lie-lienzo -> estudio.est-nav.nav-escritura "Intencion mover-pin"
+    estudio.est-nav.nav-escritura -> cli.cli-dev "POST /api/edit con version"
+    note over cli.cli-dev "delega en atenderApiDeDev"
+    cli.cli-dev -> sesion.ses-workspace-vivo "aplicar la Intencion"
+    alt "version vigente" {
+      async sesion.ses-workspace-vivo -> workspace "reescribe el .dg"
       ref recompilar
     } else "archivo cambio en disco" {
-      reply sesion.ses-ediciones -> shell.sh-seleccion "rechaza"
+      note over sesion.ses-workspace-vivo "rechaza con hash-desactualizado"
     }
+    reply sesion.ses-workspace-vivo -> cli.cli-dev "nueva version o rechazo"
+    reply cli.cli-dev -> estudio.est-nav.nav-escritura "200 o 409"
+    reply estudio.est-nav.nav-escritura -> estudio.est-nav.nav-lienzo.lie-lienzo "ante 409 recarga y avisa"
+    reply estudio.est-nav.nav-lienzo.lie-lienzo -> shell.sh-arrastre "true o false"
     note right of workspace "ni .diagrams/ ni la Fuente se tocan a mano"
-    fin: reply shell.sh-seleccion -> autor "nueva Geometria"
+    fin: reply shell.sh-arrastre -> autor "el Nodo queda o vuelve a su sitio"
   }
 
-  interaction recompilar "Recompilar" "La Sesion recalcula solo lo necesario" {
+  interaction recompilar "Recompilar" "El Workspace vivo recompila y decide que debe rehacer el visor" {
+    sesion.ses-workspace-vivo -> sesion.ses-sesion "actualizar"
     sesion.ses-sesion -> dsl.dsl-compilar "compila los archivos"
     reply dsl.dsl-compilar -> sesion.ses-sesion "Fuente canonica"
-    sesion.ses-sesion -> layout.lay-layout "layout memoizado por Vista"
-    reply layout.lay-layout -> sesion.ses-sesion "Geometria"
+    reply sesion.ses-sesion -> sesion.ses-workspace-vivo "Sesion nueva"
+    sesion.ses-workspace-vivo -> sesion.ses-diferencia "diferenciar"
+    reply sesion.ses-diferencia -> sesion.ses-workspace-vivo "Diferencia"
+    sesion.ses-workspace-vivo -> sesion.ses-cambio "clasificarCambio"
+    reply sesion.ses-cambio -> sesion.ses-workspace-vivo "pintura, estructura o codigo"
+    note right of sesion.ses-cambio "la Geometria se pide despues, por Vista y bajo demanda"
   }
 }
 
@@ -83,13 +96,14 @@ view editar-pin {
   type sequence
   theme diagrams
   interaction editar-pin
-  order autor, shell.sh-seleccion, sesion.ses-ediciones, workspace
+  order autor, shell.sh-arrastre, estudio.est-nav.nav-lienzo.lie-lienzo, estudio.est-nav.nav-escritura, cli.cli-dev, sesion.ses-workspace-vivo, workspace
   autonumber
-  link sesion.ses-ediciones -> sesion-detalle
-  link shell.sh-seleccion -> shell-detalle
+  link sesion.ses-workspace-vivo -> sesion-detalle
+  link shell.sh-arrastre -> shell-detalle
+  link estudio.est-nav.nav-lienzo.lie-lienzo -> estudio-detalle
   steps {
     step "El autor arrastra" { upto arrastre }
-    step "El visor recibe la nueva Geometria" { upto fin }
+    step "El Nodo queda en su sitio o vuelve" { upto fin }
   }
 }
 
@@ -97,6 +111,6 @@ view recompilar {
   type sequence
   theme diagrams
   interaction recompilar
-  order sesion.ses-sesion, dsl.dsl-compilar, layout.lay-layout
-  link layout.lay-layout -> layout-detalle
+  order sesion.ses-workspace-vivo, sesion.ses-sesion, dsl.dsl-compilar, sesion.ses-diferencia, sesion.ses-cambio
+  link sesion.ses-sesion -> sesion-detalle
 }
