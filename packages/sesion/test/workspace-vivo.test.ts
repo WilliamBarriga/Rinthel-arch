@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
 import type { EventoDeActividad } from 'canonico';
-import type { DiferenciaDeDev, EstadoDeDev } from 'canonico';
+import type { DiferenciaDeDev, EstadoDeDev, EventoDeDev } from 'canonico';
 
 import { puertoEnMemoria } from '../src/puerto-vivo-en-memoria';
 import { abrirWorkspaceVivo } from '../src/workspace-vivo';
@@ -41,10 +41,21 @@ async function abrir(puerto: ReturnType<typeof puertoEnMemoria>, extra: Partial<
   return { ws, reloj };
 }
 
-/** Promesa del siguiente estado empujado a los suscriptores. */
+type DatosDe<N extends EventoDeDev['nombre']> = Extract<EventoDeDev, { nombre: N }>['datos'];
+
+/** Escucha solo los eventos `nombre` del flujo; devuelve como dejar de escuchar. */
+const alEvento = <N extends EventoDeDev['nombre']>(ws: WorkspaceVivo, nombre: N, fn: (datos: DatosDe<N>) => void): (() => void) =>
+  ws.escuchar((evento) => {
+    if (evento.nombre === nombre) fn(evento.datos as DatosDe<N>);
+  });
+
+/** Los Eventos de actividad que recibiria un cliente al conectar. */
+const previos = (ws: WorkspaceVivo): EventoDeActividad[] => ws.conexion().flatMap((e) => (e.nombre === 'actividad' ? e.datos.eventos : []));
+
+/** Promesa del siguiente estado del flujo de eventos. */
 const siguiente = (ws: WorkspaceVivo): Promise<EstadoDeDev> =>
   new Promise((ok) => {
-    const dejar = ws.suscribir((estado) => {
+    const dejar = alEvento(ws, 'estado', (estado) => {
       dejar();
       ok(estado);
     });
@@ -184,7 +195,7 @@ describe('Workspace vivo: mas clasificacion y recarga', () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': MODELO + tema('papel') } });
     const { ws, reloj } = await abrir(puerto);
     const empujados: number[] = [];
-    ws.suscribir((e) => empujados.push(e.version));
+    alEvento(ws, 'estado', (e) => empujados.push(e.version));
 
     for (let i = 0; i < 5; i++) {
       puerto.editarFuera('main.dg', MODELO.replace('"API"', `"API ${i}"`) + tema('papel'));
@@ -628,17 +639,17 @@ describe('Workspace vivo: Registro de actividad', () => {
   it('al abrir reproduce los ultimos 50 eventos del registro', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, actividad: lineas(...Array.from({ length: 60 }, (_, i) => evento(i))) });
     const { ws } = await abrir(puerto);
-    const previos = ws.actividad();
-    expect(previos).toHaveLength(50);
-    expect(previos[0]?.pid).toBe(10);
-    expect(previos[49]?.pid).toBe(59);
+    const leidos = previos(ws);
+    expect(leidos).toHaveLength(50);
+    expect(leidos[0]?.pid).toBe(10);
+    expect(leidos[49]?.pid).toBe(59);
   });
 
   it('empuja los eventos anexados tras el debounce, sin las lineas rotas', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws, reloj } = await abrir(puerto);
     const empujados: EventoDeActividad[][] = [];
-    ws.suscribirActividad((eventos) => empujados.push(eventos));
+    alEvento(ws, 'actividad', ({ eventos }) => empujados.push(eventos));
 
     puerto.anexarActividad(lineas(evento(1, { comando: 'edit', objetivo: { vista: 'v' } })));
     puerto.anexarActividad('{esto no es json\n');
@@ -647,14 +658,14 @@ describe('Workspace vivo: Registro de actividad', () => {
     reloj.avanzar(100);
 
     expect(empujados).toEqual([[evento(1, { comando: 'edit', objetivo: { vista: 'v' } }), evento(2)]]);
-    expect(ws.actividad().map((e) => e.pid)).toEqual([1, 2]);
+    expect(previos(ws).map((e) => e.pid)).toEqual([1, 2]);
   });
 
   it('un registro acortado o rotado se vuelve a leer desde el principio', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, actividad: lineas(evento(1), evento(2), evento(3)) });
     const { ws, reloj } = await abrir(puerto);
     const empujados: number[] = [];
-    ws.suscribirActividad((eventos) => empujados.push(...eventos.map((e) => e.pid)));
+    alEvento(ws, 'actividad', ({ eventos }) => empujados.push(...eventos.map((e) => e.pid)));
 
     puerto.reescribirActividad(lineas(evento(4)));
     reloj.avanzar(100);
@@ -670,7 +681,7 @@ describe('Workspace vivo: Registro de actividad', () => {
 describe('Workspace vivo: Diferencia', () => {
   const recoger = (ws: WorkspaceVivo): DiferenciaDeDev[] => {
     const recibidas: DiferenciaDeDev[] = [];
-    ws.suscribirDiferencia((d) => recibidas.push(d));
+    alEvento(ws, 'diferencia', (d) => recibidas.push(d));
     return recibidas;
   };
 
@@ -781,5 +792,56 @@ describe('Workspace vivo: Diferencia', () => {
     await ws.editar(pin(1, 2));
 
     expect(recibidas.map((d) => d.origen)).toEqual(['propio']);
+  });
+});
+
+describe('Workspace vivo: protocolo de eventos', () => {
+  const actividadDe = (pid: number): EventoDeActividad => ({ contractVersion: 1, ts: '2026-11-19T10:00:00.000Z', pid, comando: 'validate', args: [], exitCode: 0, duracionMs: 1 });
+
+  it('la instantanea de conexion da estado, Historial y la actividad con previos, en ese orden', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, actividad: `${JSON.stringify(actividadDe(3))}\n` });
+    const { ws } = await abrir(puerto);
+    await ws.editar(pin(1, 2));
+
+    const conexion = ws.conexion();
+
+    expect(conexion.map(({ nombre }) => nombre)).toEqual(['estado', 'historial', 'actividad']);
+    expect(conexion[0]?.datos).toMatchObject({ version: 1 });
+    expect(conexion[1]?.datos).toMatchObject({ pasado: [{ id: 1, descripcion: 'mover api en general', archivos: ['main.dg'] }], futuro: [] });
+    expect(conexion[2]?.datos).toEqual({ previos: true, eventos: [actividadDe(3)] });
+  });
+
+  it('tras cada estado llega su Historial y despues su Diferencia; la actividad anexada llega sola tras el debounce', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const { ws, reloj } = await abrir(puerto);
+    const recibidos: EventoDeDev[] = [];
+    ws.escuchar((evento) => recibidos.push(evento));
+
+    await ws.editar(pin(1, 2), 0);
+    await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', BASE.replace('"API"', '"API nueva"')));
+    puerto.anexarActividad(`${JSON.stringify(actividadDe(9))}\n`);
+    expect(recibidos.map(({ nombre }) => nombre)).toEqual(['estado', 'historial', 'diferencia', 'estado', 'historial', 'diferencia']);
+    reloj.avanzar(100);
+
+    expect(recibidos.map(({ nombre }) => nombre).slice(6)).toEqual(['actividad']);
+    expect(recibidos[1]?.datos).toMatchObject({ pasado: [{ id: 1 }], inicio: { alcanzable: true } });
+    expect(recibidos[4]?.datos).toMatchObject({ pasado: [{ id: 1 }], inicio: { alcanzable: false } });
+    expect(recibidos.map((e) => (e.nombre === 'diferencia' ? [e.datos.origen, e.datos.version] : undefined)).filter(Boolean)).toEqual([
+      ['propio', 1],
+      ['externo', 2],
+    ]);
+    expect(recibidos[6]?.datos).toEqual({ previos: false, eventos: [actividadDe(9)] });
+  });
+
+  it('dejar de escuchar corta el flujo', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const { ws } = await abrir(puerto);
+    const recibidos: EventoDeDev[] = [];
+    const dejar = ws.escuchar((evento) => recibidos.push(evento));
+
+    dejar();
+    await ws.editar(pin(1, 2), 0);
+
+    expect(recibidos).toEqual([]);
   });
 });

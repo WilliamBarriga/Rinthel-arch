@@ -3,10 +3,11 @@
  * texto antes y despues de cada archivo que cambio. Deshacer o rehacer escribe solo esos archivos y se rechaza con
  * `hash-desactualizado` si alguno cambio por fuera (la regla de `visto`); una escritura externa en otro archivo no lo
  * invalida ni lo reinicia. Puro e inmutable: quien lo usa escribe `escritos` en el disco.
- * Saltar (#193): `saltar` lleva el disco a cualquier entrada (o a `INICIO_DEL_HISTORIAL`) componiendo deshacer o rehacer
+ * Saltar (#193): `saltar` lleva el disco a cualquier entrada (o a `INICIO_DEL_HISTORIAL_DE_DEV`) componiendo deshacer o rehacer
  * con la misma regla de rechazo; no apila y conserva el futuro. Cada entrada lleva un `id` creciente que no se reutiliza.
  */
-import type { Intencion } from 'canonico';
+import { INICIO_DEL_HISTORIAL_DE_DEV } from 'canonico';
+import type { EntradaDelHistorialDeDev, HistorialDeDev, Intencion } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 
 /** `undefined`: el archivo no existia (antes) o se borro (despues). */
@@ -35,8 +36,6 @@ export interface HistorialDeArchivos {
 
 export const historialVacio: HistorialDeArchivos = { pasado: [], futuro: [], siguiente: 1 };
 
-/** Destino de `saltar` que deja el texto previo a la primera entrada. */
-export const INICIO_DEL_HISTORIAL = 0;
 
 export type ResultadoDeRestaurar =
   | { ok: true; historial: HistorialDeArchivos; archivos: ArchivosDelWorkspace; escritos: string[] }
@@ -102,12 +101,12 @@ export function rehacerSobre(historial: HistorialDeArchivos, disco: ArchivosDelW
 
 /**
  * Lleva el disco a la entrada `id`: del pasado, al estado justo despues de ella; del futuro, rehaciendo hasta ella;
- * `INICIO_DEL_HISTORIAL`, al texto previo a la primera. `escritos` son solo los archivos que difieren del disco.
+ * `INICIO_DEL_HISTORIAL_DE_DEV`, al texto previo a la primera. `escritos` son solo los archivos que difieren del disco.
  */
 export function saltar(historial: HistorialDeArchivos, disco: ArchivosDelWorkspace, id: number): ResultadoDeRestaurar {
-  const haciaAtras = id === INICIO_DEL_HISTORIAL || historial.pasado.some((e) => e.id === id);
+  const haciaAtras = id === INICIO_DEL_HISTORIAL_DE_DEV || historial.pasado.some((e) => e.id === id);
   if (!haciaAtras && !historial.futuro.some((e) => e.id === id)) return { ok: false, motivo: 'entrada-desconocida', mensaje: `No hay una entrada ${id} en el Historial` };
-  const llego = (h: HistorialDeArchivos): boolean => (id === INICIO_DEL_HISTORIAL ? h.pasado.length === 0 : h.pasado[h.pasado.length - 1]?.id === id);
+  const llego = (h: HistorialDeArchivos): boolean => (id === INICIO_DEL_HISTORIAL_DE_DEV ? h.pasado.length === 0 : h.pasado[h.pasado.length - 1]?.id === id);
   let h = historial;
   let archivos = disco;
   while (!llego(h)) {
@@ -119,29 +118,15 @@ export function saltar(historial: HistorialDeArchivos, disco: ArchivosDelWorkspa
   return { ok: true, historial: h, archivos, escritos: rutasCambiadas(disco, archivos) };
 }
 
-/** Una entrada tal como la ve la UI: `motivo` solo si no es alcanzable. */
-export interface EntradaVisibleDelHistorial {
-  id: number;
-  descripcion: string;
-  archivos: string[];
-  cuando: number;
-  alcanzable: boolean;
-  motivo?: string;
-}
-
-/** `pasado` de la mas vieja a la mas reciente; `inicio` es el destino previo a la primera entrada. */
-export interface HistorialVisible {
-  pasado: EntradaVisibleDelHistorial[];
-  futuro: EntradaVisibleDelHistorial[];
-  inicio: { alcanzable: boolean; motivo?: string };
-}
-
-/** Cada destino es alcanzable si `saltar` a el no se rechaza sobre `disco` (la regla de deshacer). */
-export function historialVisible(historial: HistorialDeArchivos, disco: ArchivosDelWorkspace): HistorialVisible {
-  const alcance = (id: number): { alcanzable: boolean; motivo?: string } => {
+/**
+ * El Historial tal como lo ve la UI (`HistorialDeDev` de `canonico`): cada destino es alcanzable si `saltar` a el no se
+ * rechaza sobre `disco` (la regla de deshacer); `motivo` solo si no lo es.
+ */
+export function historialVisible(historial: HistorialDeArchivos, disco: ArchivosDelWorkspace): HistorialDeDev {
+  const alcance = (id: number): HistorialDeDev['inicio'] => {
     const r = saltar(historial, disco, id);
     return r.ok ? { alcanzable: true } : { alcanzable: false, motivo: r.mensaje };
   };
-  const visible = ({ id, descripcion, cuando, cambios }: EntradaDelHistorial): EntradaVisibleDelHistorial => ({ id, descripcion, archivos: Object.keys(cambios), cuando, ...alcance(id) });
-  return { pasado: historial.pasado.map(visible), futuro: historial.futuro.map(visible), inicio: alcance(INICIO_DEL_HISTORIAL) };
+  const visible = ({ id, descripcion, cuando, cambios }: EntradaDelHistorial): EntradaDelHistorialDeDev => ({ id, descripcion, archivos: Object.keys(cambios), cuando, ...alcance(id) });
+  return { pasado: historial.pasado.map(visible), futuro: historial.futuro.map(visible), inicio: alcance(INICIO_DEL_HISTORIAL_DE_DEV) };
 }
