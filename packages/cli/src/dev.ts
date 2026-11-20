@@ -216,15 +216,6 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       const { archivos } = estudio();
       const nombre = ruta.slice(RUTA_DEL_ESTUDIO.length);
       servirEstatico(res, Object.hasOwn(archivos, nombre) ? archivos[nombre] : undefined);
-    } else if (ruta === RUTAS_DE_DEV.componentes) {
-      const { confiado, bundle } = vivo.codigo();
-      if (!confiado) {
-        cabecera(res, 'text/plain', 403);
-        res.end('El codigo del Workspace no esta confirmado');
-      } else {
-        cabecera(res, 'text/javascript');
-        res.end(bundle);
-      }
     } else if (ruta.startsWith(RUTAS_DE_DEV.fuentes)) {
       const fuente = servirFuente(ruta.slice(RUTAS_DE_DEV.fuentes.length));
       if (fuente === undefined) {

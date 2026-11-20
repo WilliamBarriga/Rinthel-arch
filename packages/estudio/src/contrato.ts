@@ -12,10 +12,11 @@ import type { EventoDeActividad } from 'canonico';
 
 import { codigoDeDevSchema, confianzaDeDevSchema, errorDeDevSchema } from './protocolo';
 import type { ActividadDeDev, DiferenciaDeDev, EstadoDeDev, HistorialDeDev } from './protocolo';
+import type { CodigoDePrueba } from './dev-en-memoria';
 import { crearLectorSse } from './sse';
 
 export { devEnMemoria } from './dev-en-memoria';
-export type { DevEnMemoria } from './dev-en-memoria';
+export type { CodigoDePrueba, DevEnMemoria } from './dev-en-memoria';
 export { crearLectorSse } from './sse';
 
 /** Ruta relativa -> texto, como `ArchivosDelWorkspace` de `dsl`. */
@@ -44,6 +45,8 @@ export interface ContenidoDeDevDePrueba {
   temas?: ArchivosDelWorkspace;
   actividad?: string;
   escrituraRota?: string;
+  /** Temas con codigo ya compilados (lo que daria el compilador de `.tsx` del adaptador): Componentes y bundle de `/componentes.js`. */
+  codigo?: CodigoDePrueba;
 }
 export type CrearDev = (contenido: ContenidoDeDevDePrueba) => Promise<DevDePrueba>;
 
@@ -91,6 +94,34 @@ theme claro extends neutral {
   palette { acento "#0ea5e9" }
 }
 `;
+
+/** Un Tema con una Capa `code` que usa el Componente `Aurora`. */
+export const CON_CODIGO = `specification {
+  node servicio
+}
+
+model {
+  servicio api "API"
+}
+
+theme neon {
+  node {
+    layer forma rect { radius 8 }
+    layer aura code over { component Aurora }
+    slots { title }
+  }
+}
+
+view general {
+  type architecture
+  include **
+  theme neon
+}
+`;
+
+/** Bundle CommonJS como el que compila `cli`: `Aurora` dibuja `<i data-aurora={id}>`. */
+export const BUNDLE_DE_PRUEBA = `var j = require('react/jsx-runtime');
+return { Aurora: function (p) { return j.jsx('i', { 'data-aurora': p.id }); } };`;
 
 const CON_ERROR = DSL.replace('include db', 'include db\n  nada-de-esto');
 
@@ -472,6 +503,25 @@ export function probarContratoDeDev(crear: CrearDev): void {
         expect(confianzaDeDevSchema.parse(confiar.cuerpo)).toEqual({ ok: true });
         expect(await codigo()).toEqual({ temaConCodigo: false, componentes: [], confiado: true });
       });
+    });
+
+    it('/componentes.js sirve el bundle de los Temas con codigo solo tras confiar; antes es 403', async () => {
+      await con(
+        { 'main.dg': CON_CODIGO },
+        async (dev) => {
+          expect(codigoDeDevSchema.parse((await json(dev, '/api/codigo')).cuerpo)).toEqual({ temaConCodigo: true, componentes: ['Aurora'], confiado: false });
+          const antes = await dev.fetch('/componentes.js');
+          expect({ status: antes.status, cuerpo: errorDeDevSchema.parse(await antes.json()) }).toMatchObject({ status: 403, cuerpo: { ok: false } });
+
+          expect((await post(dev, '/api/confiar', {})).status).toBe(200);
+          const despues = await dev.fetch('/componentes.js');
+          expect(despues.status).toBe(200);
+          expect(despues.headers.get('content-type')).toContain('text/javascript');
+          expect(await despues.text()).toBe(BUNDLE_DE_PRUEBA);
+          expect((await dev.fetch('/componentes.js', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status).toBe(405);
+        },
+        { codigo: { componentes: ['Aurora'], bundle: BUNDLE_DE_PRUEBA } },
+      );
     });
 
     const TEMA = 'theme claro extends neutral {}\n';

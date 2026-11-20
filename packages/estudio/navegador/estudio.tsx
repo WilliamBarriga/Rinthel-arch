@@ -4,7 +4,7 @@
  * (`marco/proveedores.tsx`), que envuelven al marco y al lienzo. La Vista vive en el hash (`#vista=<id>`). Sin Fuente
  * (el Workspace nunca compilo) el lienzo queda vacio y los paneles lo dicen.
  */
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 
 import type { ComponentesDeTema } from 'render';
@@ -22,7 +22,7 @@ import { historialDelCliente } from './historial/historial-visible';
 import { useLienzoDelEstudio } from './lienzo/lienzo';
 import { Marco } from './marco/marco';
 import { ProveedoresDelEstudio } from './marco/proveedores';
-import type { BaseDelEstudio, ChromeDelMarco } from './marco/proveedores';
+import type { BaseDelEstudio, ChromeDelMarco, FalloDelEstudio } from './marco/proveedores';
 import { useEstadoDeDev } from './marco/use-estado-de-dev';
 import { useComponentes } from './use-componentes';
 
@@ -57,11 +57,14 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
       }),
     [cliente, hash],
   );
-  const { estado, vigente, recibir } = useEstadoDeDev(cliente, geometrias);
+  // Lo que falla fuera de los proveedores (estado malformado, carga de Componentes) se avisa dentro de ellos.
+  const [fallo, setFallo] = useState<FalloDelEstudio>();
+  const reportar = useCallback((mensaje: string) => setFallo({ mensaje }), []);
+  const { estado, vigente, recibir } = useEstadoDeDev(cliente, geometrias, reportar);
   const dibujable = useSyncExternalStore(geometrias.suscribir, geometrias.dibujable);
-  const componentes = useComponentes(cliente, estado?.version, fetchFn, confirmar);
+  const componentes = useComponentes(cliente, estado?.version, confirmar, reportar);
   const plataforma = props.plataforma ?? plataformaDe(typeof navigator === 'undefined' ? undefined : navigator);
-  const base: BaseDelEstudio = { estado, vigente, recibir, cliente, plataforma };
+  const base: BaseDelEstudio = { estado, vigente, recibir, cliente, plataforma, fallo };
 
   if (dibujable === undefined) return <ProveedoresDelEstudio {...base}>{(chrome) => <Marco chrome={chrome} navegacion={undefined} lienzo={null} />}</ProveedoresDelEstudio>;
   return <ConFuente base={base} dibujable={dibujable} hash={hash} geometrias={geometrias} layout={layout} componentes={componentes} />;
