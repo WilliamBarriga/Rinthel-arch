@@ -44,7 +44,7 @@ Las coordenadas de `IntencionDePin`, de `mover-pin` y del `pin x,y` escrito en e
 
 ## Enmienda: Rutas y escrituras de la UI (#176, mapa #168)
 
-Los tipos de estas rutas y eventos viven en `estudio/protocolo` (ADR 0004); `cli` importa de alli solo tipos. Desde #184 las rutas, los esquemas y la traduccion de rechazos a HTTP salen de `canonico` y el Workspace vivo con sus rutas `/api/*` (`atenderApiDeDev`) de `sesion`, de modo que `dev` y `devEnMemoria` comparten el mismo codigo y solo difiere el transporte. El cliente unico de la seccion Protocolo de `dev` se muda de `packages/cli/navegador/` a `estudio` y sigue siendo la unica pieza del navegador que conoce rutas.
+Las rutas, los eventos y sus esquemas tienen un solo dueno, `canonico` (ADR 0004, enmienda #201), y `estudio/protocolo` los reexporta para la pagina. Desde #184 la traduccion de rechazos a HTTP sale de `canonico` y el Workspace vivo con sus rutas `/api/*` (`atenderApiDeDev`) de `sesion`, de modo que `dev` y `devEnMemoria` comparten el mismo codigo y solo difiere el transporte. El cliente unico de la seccion Protocolo de `dev` se muda de `packages/cli/navegador/` a `estudio` y sigue siendo la unica pieza del navegador que conoce rutas.
 
 ### Escritura
 

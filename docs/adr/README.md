@@ -9,7 +9,7 @@ Estados: vigente (rige tal cual), reescrito (otro ADR lo reemplaza y el archivo 
 | [`0001-dsl-fuente-editable.md`](0001-dsl-fuente-editable.md) | DSL de texto como unica fuente editable | vigente |
 | [`0002-render-tema-y-revelado.md`](0002-render-tema-y-revelado.md) | Contrato puro del render, Paleta, iconos y Pasos de revelado | reescrito por el 0008 |
 | [`0003-layout-elk-geometria-cacheada.md`](0003-layout-elk-geometria-cacheada.md) | Layout con ELK y geometria cacheada | vigente |
-| [`0004-monorepo-pnpm-y-paquetes.md`](0004-monorepo-pnpm-y-paquetes.md) | Monorepo pnpm, paquetes e independencia de consumidores (enmienda: paquete `estudio`) | vigente |
+| [`0004-monorepo-pnpm-y-paquetes.md`](0004-monorepo-pnpm-y-paquetes.md) | Monorepo pnpm, paquetes e independencia de consumidores (enmiendas: paquete `estudio`, protocolo de `dev` con un solo dueno) | vigente |
 | [`0005-cli-para-agentes.md`](0005-cli-para-agentes.md) | CLI: `validate`, `dev`/`inspect` y `edit` (enmiendas: Registro de actividad, `fijar-tema`) | vigente |
 | `0006` (sin archivo) | Metricas y Estilo resuelto | absorbido en el 0008 |
 | [`0007-interaccion-y-protocolo-de-edicion.md`](0007-interaccion-y-protocolo-de-edicion.md) | Intenciones, reductor puro e historial (enmiendas: rutas y escrituras de la UI, Historial visible y salto) | vigente |
