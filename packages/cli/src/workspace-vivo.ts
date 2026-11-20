@@ -9,12 +9,12 @@
  * puerta que las Intenciones; con `aunqueNoCompile` se escriben aunque introduzcan errores. Saltar (#193) escribe una
  * sola vez la instantanea destino, sin apilar, con la misma regla de rechazo; `historial()` dice que entradas son
  * alcanzables sobre el disco vigente. Toda escritura propia (edicion, deshacer, rehacer, saltar, revertir) pasa por
- * `escrituraPropia`.
+ * `escribirPropio`/`borrarPropio`, el punto unico que marca el origen `propio` de la Diferencia.
  * Errores: rechazos como datos; los fallos de I/O al escribir se propagan tras revertir; los de lectura al recompilar
  * se ignoran hasta el siguiente cambio; `abrirWorkspaceVivo` lanza si la lectura inicial falla.
  * Diferencia: cada Sesion sin errores se compara con la ultima buena y, si cambio algo, se empuja tras el estado. Es
  * `propia` si todos los archivos que cambiaron coinciden por hash con lo que escribio la UI (Intencion, deshacer,
- * rehacer y lo que se revierte); si no, `externa`. Con Sesiones con errores entre medias, la Diferencia es una sola
+ * rehacer, saltar y lo que se revierte); si no, `externa`. Con Sesiones con errores entre medias, la Diferencia es una sola
  * y es externa si alguna escritura intermedia lo fue.
  * Registro de actividad: si el puerto lo da, se leen los ultimos `EVENTOS_PREVIOS` al abrir y cada aviso de su observador
  * (con debounce) empuja los Eventos nuevos; un fallo de lectura o una linea rota se ignoran.
@@ -255,6 +255,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     }
     return origen;
   }
+  /** Punto unico de escritura propia de `dev` (la UI: edicion, deshacer, rehacer, saltar, revertir); lo demas es externo. */
   const escribirPropio = (ruta: string, texto: string): void => {
     escritosPropios.set(ruta, hashDeContenido(texto));
     puerto.escribir(ruta, texto);
@@ -331,18 +332,12 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     return resultado;
   };
 
-  /** Punto unico de escritura propia de `dev` (la UI): lo que no pasa por aqui es externo. */
-  const escrituraPropia = {
-    escribir: escribirPropio,
-    borrar: borrarPropio,
-  };
-
   /** Mejor esfuerzo: un fallo no interrumpe el resto de `rutas`. */
   const revertir = (origen: ArchivosDelWorkspace, rutas: readonly string[]): void => {
     for (const ruta of rutas) {
       try {
-        if (ruta in origen) escrituraPropia.escribir(ruta, origen[ruta] as string);
-        else escrituraPropia.borrar(ruta);
+        if (ruta in origen) escribirPropio(ruta, origen[ruta] as string);
+        else borrarPropio(ruta);
       } catch {
         // si el disco sigue fallando, el siguiente deshacer/rehacer detecta la diferencia y reinicia el historial
       }
@@ -354,11 +349,11 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     try {
       for (const ruta of Object.keys(destino).filter((r) => destino[r] !== origen[r]).sort()) {
         tocadas.push(ruta);
-        escrituraPropia.escribir(ruta, destino[ruta] as string);
+        escribirPropio(ruta, destino[ruta] as string);
       }
       for (const ruta of Object.keys(origen).filter((r) => !(r in destino)).sort()) {
         tocadas.push(ruta);
-        escrituraPropia.borrar(ruta);
+        borrarPropio(ruta);
       }
     } catch (error) {
       revertir(origen, tocadas);
@@ -387,7 +382,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
             leer: () => puerto.leer(),
             escribir: (ruta, texto) => {
               escritas.push(ruta);
-              escrituraPropia.escribir(ruta, texto);
+              escribirPropio(ruta, texto);
             },
           },
           esEdicionesDeTexto(aplicable) ? aplicable.ediciones : aplicable,

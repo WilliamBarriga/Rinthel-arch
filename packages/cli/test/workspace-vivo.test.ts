@@ -572,7 +572,7 @@ describe('Workspace vivo: fix y "Aplicar N fix"', () => {
     expect(puerto.texto('main.dg')).toContain('  api -> db\n');
     expect(puerto.texto('mas.dg')).toBe('model {\n  db -> api\n}\n');
     expect(ws.estado().issues).toEqual([]);
-    expect(ws.historial().pasado).toEqual([{ descripcion: 'Aplicar 2 fix', archivos: ['main.dg', 'mas.dg'] }]);
+    expect(ws.historial().pasado).toMatchObject([{ descripcion: 'Aplicar 2 fix', archivos: ['main.dg', 'mas.dg'] }]);
     expect((await ws.deshacer()).ok).toBe(true);
     expect([puerto.texto('main.dg'), puerto.texto('mas.dg')]).toEqual([COLGANTES['main.dg'], COLGANTES['mas.dg']]);
   });
@@ -708,6 +708,22 @@ describe('Workspace vivo: Diferencia', () => {
       ['propio', 2],
       ['propio', 3],
     ]);
+    expect(recibidas[0]?.cambiados).toEqual([{ elemento: { tipo: 'vista', id: 'general' }, propiedades: [{ nombre: 'overrides', clase: 'estructura' }] }]);
+  });
+
+  it('saltar en el Historial es una escritura propia: su Diferencia sale con origen propio y su eco no empuja otra', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
+    const { ws, reloj } = await abrir(puerto);
+    await ws.editar(pin(1, 2));
+    await ws.editar(pin(3, 4));
+    const recibidas = recoger(ws);
+
+    expect(await ws.saltar(0)).toMatchObject({ ok: true });
+    expect((await ws.saltar(2)).ok).toBe(true);
+    reloj.avanzar(100);
+    await ws.recargar();
+
+    expect(recibidas.map((d) => d.origen)).toEqual(['propio', 'propio']);
     expect(recibidas[0]?.cambiados).toEqual([{ elemento: { tipo: 'vista', id: 'general' }, propiedades: [{ nombre: 'overrides', clase: 'estructura' }] }]);
   });
 
