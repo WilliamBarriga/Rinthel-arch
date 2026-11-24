@@ -58,7 +58,7 @@ export interface EntradaDeEscena {
   /** Metricas con las que dibujar; deben ser las del layout. Por defecto las derivadas del Tema. */
   metricas?: Metricas;
   /**
-   * Estados visuales por id; un id no dibujado se ignora. `atenuado` baja la opacidad sin contorno y el anillo de `foco`
+   * Estados visuales por id; un id no dibujado se ignora. `dimmed` baja la opacidad sin contorno y el anillo de `focus`
    * no baja de `ANILLO_DE_FOCO_MINIMO` px.
    */
   estados?: Estados;
@@ -318,9 +318,9 @@ function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, 
   return [...propios, ...filas];
 }
 
-/** `atenuado` no tiene contorno: atenua el elemento entero (marca `data-atenuado`, estilada por la hoja). */
-export const atenuado = (estados: Estados | undefined, id: string): boolean => estados?.[id]?.includes('atenuado') === true;
-export const contornos = (lista: readonly EstadoVisual[] | undefined): EstadoVisual[] => (lista ?? []).filter((e) => e !== 'atenuado');
+/** `dimmed` no tiene contorno: atenua el elemento entero (marca `data-atenuado`, estilada por la hoja). */
+export const atenuado = (estados: Estados | undefined, id: string): boolean => estados?.[id]?.includes('dimmed') === true;
+export const contornos = (lista: readonly EstadoVisual[] | undefined): EstadoVisual[] => (lista ?? []).filter((e) => e !== 'dimmed');
 
 function tieneFilas(nodo: NodoResuelto, estilo: Estilo, detail?: NivelDeDetalle): boolean {
   return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, metricasDeHoja(estilo.tabla, nodo)).length > 0;

@@ -61,7 +61,7 @@ describe('inspect theme', () => {
     const tema = temaDe(r.salida);
     expect(tema.file).toBe('<incorporados>');
     expect(tema.catalog?.primitives).toEqual(expect.arrayContaining(['rect', 'solid', 'border', 'circle']));
-    expect(tema.catalog?.motions).toEqual(expect.arrayContaining(['pulso']));
+    expect(tema.catalog?.motions).toEqual(expect.arrayContaining(['pulse']));
     expect(tema.catalog?.effects.length).toBeGreaterThan(0);
     expect(temaDe((await json(['neutral'])).salida).catalog).toBeUndefined();
   });

@@ -166,8 +166,8 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-control', { position: 'absolute', 'text-align': 'center', cursor: 'pointer', 'font-family': css(estilo.fuenteMono), opacity: '0', transition: 'opacity 120ms' }],
     ['& .rd-caja:hover .rd-control, & .rd-caja:focus-within .rd-control', { opacity: '1' }],
     ['& .rd-estado', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'none' }],
-    ['& [data-atenuado]', { opacity: num(estilo.estados.atenuado.opacidad) }],
-    ...(Object.keys(estilo.estados) as EstadoVisual[]).filter((estado) => estado !== 'atenuado').map((estado): [string, Declaraciones] => [`& .rd-estado[data-state="${estado}"]`, declaracionesDeEstado(estilo, estado)]),
+    ['& [data-atenuado]', { opacity: num(estilo.estados.dimmed.opacidad) }],
+    ...(Object.keys(estilo.estados) as EstadoVisual[]).filter((estado) => estado !== 'dimmed').map((estado): [string, Declaraciones] => [`& .rd-estado[data-state="${estado}"]`, declaracionesDeEstado(estilo, estado)]),
   ];
 }
 

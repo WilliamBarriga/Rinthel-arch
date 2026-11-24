@@ -31,8 +31,8 @@ theme neobrutalist {
     type externo { layer forma cut { cut 12 }  layer tinte gradient after relleno { from COLOR/0.35  to COLOR/0.35 } }
     type artefacto { layer doblez fold after borde { color COLOR  size 14  shadow texto } }
     state hover { layer sombra { x 7  y 7 }  transition 100ms ease-out }
-    state en-ruta { layer relleno { color sticker } }
-    state atenuado { layer sombra none }
+    state on-path { layer relleno { color sticker } }
+    state dimmed { layer sombra none }
   }
   group {
     layer forma rect { radius 8 }

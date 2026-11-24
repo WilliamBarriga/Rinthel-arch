@@ -15,7 +15,7 @@ export const VARIANTE_DE_TEMA: Readonly<Record<string, string>> = {
   'glass-chip': 'D',
   neobrutalist: 'G',
   blueprint: 'H',
-  'claro-suave': 'I',
+  'soft-light': 'I',
   'crt-terminal': 'J',
   synthwave: 'K',
   editorial: 'L',

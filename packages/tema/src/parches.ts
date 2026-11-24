@@ -4,13 +4,13 @@
  */
 import { CODIGOS, TIPOS_DE_VISTA, candidatosCercanos } from 'canonico';
 
-import { CATALOGO, construirPrimitiva, sugerir } from './catalogo';
+import { CATALOGO, construirPrimitiva, errorDeValorAntiguo, sugerir } from './catalogo';
 import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva, UbicacionDePrimitiva } from './catalogo';
 import type { TemaResuelto } from './tema';
 import type { Animacion } from './animacion';
 
-/** `foco` y `en-ruta` los calcula la shell. */
-export const ESTADOS = ['hover', 'seleccionado', 'fantasma', 'en-ruta', 'atenuado', 'foco'] as const;
+/** `focus` y `on-path` los calcula la shell. */
+export const ESTADOS = ['hover', 'selected', 'ghost', 'on-path', 'dimmed', 'focus'] as const;
 export type Estado = (typeof ESTADOS)[number];
 /** Los que un Tema distingue con `diagram <tipo> { ... }`. */
 export const TIPOS_DE_DIAGRAMA = TIPOS_DE_VISTA;
@@ -170,12 +170,14 @@ export function opTocaMetricas(op: OpDeCapa, pilas: ReadonlyArray<readonly CapaD
 
 export type ResultadoDeEstado =
   | { estado: Estado }
-  | { error: { code: typeof CODIGOS.E_THEME_UNKNOWN_STATE; message: string; candidatos: string[] } };
+  | { error: { code: typeof CODIGOS.E_THEME_UNKNOWN_STATE | typeof CODIGOS.E_OLD_CATALOG_VALUE; message: string; candidatos: string[] } };
 
-/** Error `theme-unknown-state` con candidatos cercanos si no es de `ESTADOS`. */
+/** Error `theme-unknown-state` con candidatos cercanos si no es de `ESTADOS`; un nombre antiguo es `old-catalog-value` con el nuevo como unico candidato. */
 export function parsearEstado(escrito: string): ResultadoDeEstado {
   const estado = ESTADOS.find((e) => e === escrito);
   if (estado !== undefined) return { estado };
+  const antiguo = errorDeValorAntiguo('state', escrito);
+  if (antiguo?.candidato !== undefined) return { error: { code: CODIGOS.E_OLD_CATALOG_VALUE, message: antiguo.mensaje, candidatos: [antiguo.candidato] } };
   return {
     error: {
       code: CODIGOS.E_THEME_UNKNOWN_STATE,

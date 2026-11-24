@@ -107,7 +107,7 @@ Completo en [`examples/tutorial/paso-2`](../../examples/tutorial/paso-2).
 
 ## Paso 3: cambiar de Tema
 
-Hay tres Temas incorporados: `neutral` (claro, el defecto), `neutral-dark` y `alto-contraste`. Se elige en la Vista:
+Hay tres Temas incorporados: `neutral` (claro, el defecto), `neutral-dark` y `high-contrast`. Se elige en la Vista:
 
 ```
 view principal {
@@ -164,7 +164,7 @@ Completo en [`examples/tutorial/paso-4`](../../examples/tutorial/paso-4). Si te 
 Sin `extends`, un Tema declara todo lo que quiere ver: la Paleta, las fuentes, el fondo de pagina (`page`), las Capas de `node`, `group` y `edge`, y el reparto de los Slots (icono, titulo, insignia...). Ademas de Capas estaticas puede llevar:
 
 - **Estados** (`state hover { ... }`) que cambian la pintura al pasar el raton, seleccionar o estar en una ruta.
-- **Movimiento** (`motion aura 2s`) colgado de una Capa, y efectos de entrada (`enter fundido 300ms`).
+- **Movimiento** (`motion aura 2s`) colgado de una Capa, y efectos de entrada (`enter fade 300ms`).
 
 El Tema `neon` de [`examples/tutorial/paso-5/neon.dg`](../../examples/tutorial/paso-5/neon.dg) usa todo eso en unas 40 lineas:
 

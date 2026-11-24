@@ -16,7 +16,7 @@ const leerDg = (dir: string): Record<string, string> =>
   );
 
 const TEMAS = [
-  'soft-card', 'glass-chip', 'neobrutalist', 'blueprint', 'claro-suave', 'crt-terminal', 'synthwave',
+  'soft-card', 'glass-chip', 'neobrutalist', 'blueprint', 'soft-light', 'crt-terminal', 'synthwave',
   'editorial', 'bauhaus', 'sticky-notes', 'keycaps', 'metro-map', 'pcb', 'pixel-art',
 ];
 

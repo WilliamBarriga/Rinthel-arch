@@ -17,7 +17,7 @@ const leerDg = (raiz: string): [string, string][] => readdirSync(raiz).filter((f
 const leer = (): Record<string, string> => Object.fromEntries([...leerDg(CARPETA_DE_TEMAS), ...leerDg(RAIZ)]);
 
 const TEMAS = [
-  'soft-card', 'glass-chip', 'neobrutalist', 'blueprint', 'claro-suave', 'crt-terminal', 'synthwave',
+  'soft-card', 'glass-chip', 'neobrutalist', 'blueprint', 'soft-light', 'crt-terminal', 'synthwave',
   'editorial', 'bauhaus', 'sticky-notes', 'keycaps', 'metro-map', 'pcb', 'pixel-art',
 ];
 

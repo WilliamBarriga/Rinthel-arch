@@ -28,8 +28,8 @@ theme soft-card {
     type paquete { use acento }
     type externo { layer relleno { color fondo }  layer borde dashed { color texto/0.45 } }
     state hover { layer borde { color COLOR/0.7 }  transition 120ms ease-out }
-    state en-ruta { layer borde { color COLOR  width 2 } }
-    state atenuado { layer relleno none }
+    state on-path { layer borde { color COLOR  width 2 } }
+    state dimmed { layer relleno none }
   }
   group {
     layer caja rect { radius 16 }

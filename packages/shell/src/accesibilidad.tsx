@@ -38,7 +38,7 @@ export interface PropsDeAltoContraste {
   onHighContrastChange?: (activo: boolean) => void;
 }
 
-/** Tema efectivo del visor y el interruptor: `alto-contraste` reemplaza al Tema solo aqui. */
+/** Tema efectivo del visor y el interruptor: `high-contrast` reemplaza al Tema solo aqui. */
 export function useAltoContraste(tema: Tema, props: PropsDeAltoContraste): { tema: Tema; activo: boolean; interruptor: ReactElement; reducedMotion: 'on' | 'off' | undefined } {
   const { reducedMotion, interruptor: movimiento } = useReducedMotion();
   const sistema = usePrefiereAltoContraste();

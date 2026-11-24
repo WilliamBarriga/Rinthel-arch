@@ -32,8 +32,8 @@ theme synthwave {
     }
     type externo { layer glow { color cian/0.4  radius 12 }  layer degradado solid { color cian/0.6 } }
     state hover { layer glow { color cian/0.8  radius 28 }  transition 140ms ease-out }
-    state en-ruta { layer glow { motion aura 2s ease-in-out intensity 0.6 } }
-    state atenuado { layer glow none }
+    state on-path { layer glow { motion aura 2s ease-in-out intensity 0.6 } }
+    state dimmed { layer glow none }
   }
   group {
     layer glow glow { color cian/0.15  radius 20 }

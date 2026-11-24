@@ -133,7 +133,7 @@ function activacionHtml(activacion: CajaDeActivacion, nodo: NodoResuelto, contex
 /** Estilo en linea de una caja con las `capas` de su Elemento de Tema. */
 const estiloDeCaja = (contexto: Contexto, capas: readonly CapaPintada[]): string => estiloEnLinea(declaracionesDeCaja(contexto.estilo, { capas: [...capas], estados: {} }));
 
-/** Estados del elemento (`seleccionado`, `hover`) como atributo; Fragmentos y Notas se estilan con sus Elementos de Tema. */
+/** Estados del elemento (`selected`, `hover`) como atributo; Fragmentos y Notas se estilan con sus Elementos de Tema. */
 const atributoDeEstados = (estados: Estados | undefined, id: string): Record<string, string> => {
   const lista = contornos(estados?.[id]);
   return lista.length === 0 ? {} : { 'data-estados': lista.join(' ') };

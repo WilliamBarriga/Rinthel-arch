@@ -26,8 +26,8 @@ theme editorial {
     type paquete { layer regla-sup { color COLOR  y 3 } }
     type externo { layer regla-sup { color texto/0.35 } }
     state hover { layer regla-inf { color COLOR  y -2 }  transition 150ms ease }
-    state en-ruta { layer regla-sup { color COLOR  y 3 } }
-    state atenuado { layer regla-inf none }
+    state on-path { layer regla-sup { color COLOR  y 3 } }
+    state dimmed { layer regla-inf none }
   }
   group {
     layer forma rect

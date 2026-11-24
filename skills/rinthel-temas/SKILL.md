@@ -5,7 +5,7 @@ description: Personalizar la estetica de un diagrama con Temas (Paleta, fuentes,
 
 # Temas: personalizar la estetica
 
-La estetica vive en el **Tema** (texto `.dg`), nunca en el Modelo: cambiar `theme <nombre>` en una Vista cambia el aspecto sin tocar Nodos ni Aristas. Una Vista usa un Tema; los incorporados son `neutral`, `neutral-dark` y `alto-contraste`.
+La estetica vive en el **Tema** (texto `.dg`), nunca en el Modelo: cambiar `theme <nombre>` en una Vista cambia el aspecto sin tocar Nodos ni Aristas. Una Vista usa un Tema; los incorporados son `neutral`, `neutral-dark` y `high-contrast`.
 
 ## Bucle
 
@@ -58,7 +58,7 @@ view compra { type sequence interaction compra theme mio }
 ## Reglas que ahorran errores
 
 - El hex solo existe en `palette`; en todo lo demas un color es un nombre de Paleta, con `nombre/0.4` para opacidad, o `COLOR` (color del Tipo del Nodo) y `ORIGEN` (en Aristas).
-- La cascada, donde gana el ultimo: Tema base, Tipo de nodo, estado, parche de la Vista. Los estados (`hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado`, `foco`) solo cambian pintura: tamano y Slots quedan fijos.
+- La cascada, donde gana el ultimo: Tema base, Tipo de nodo, estado, parche de la Vista. Los estados (`hover`, `selected`, `ghost`, `on-path`, `dimmed`, `focus`) solo cambian pintura: tamano y Slots quedan fijos. Un nombre antiguo (espanol) de un valor de catalogo es el error `old-catalog-value` y su `fix` lo reescribe: aplicalo con `edit`.
 - Fuentes autohospedadas: archivos `woff2` o `ttf` en `fuentes/` del Workspace, nombrados en `fonts`. Licencia junto al archivo (ejemplos en `examples/rinthel-arch/temas/fuentes/`).
 - Ajuste solo para una Vista: `theme <nombre> { layer borde { color amber } }` dentro de la `view`.
 - Cambiar el Tema de una Vista sin tocar su parche: `dg edit --workspace <ruta> --intent '{"type":"set-theme","view":"<id>","theme":"<nombre>"}'` (sin `theme` lo quita). En `dev`, la pestana Temas previsualiza y fija.

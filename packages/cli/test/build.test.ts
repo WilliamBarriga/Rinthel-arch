@@ -78,7 +78,7 @@ describe('build', () => {
 
     expect(resultado.exitCode).toBe(2);
     expect(resultado.stderr).toContain("'nada'");
-    expect(resultado.stderr).toContain('neutral, neutral-dark, alto-contraste, grande');
+    expect(resultado.stderr).toContain('neutral, neutral-dark, high-contrast, grande');
     expect(existsSync(join(workspace, '.diagrams'))).toBe(false);
   });
 

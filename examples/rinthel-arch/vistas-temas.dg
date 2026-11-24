@@ -28,9 +28,9 @@ view abierto-blueprint {
   expanded render, layout
   collapsed canonico, tema, dsl, sesion, shell, estudio, cli, render.ren-pintura
 }
-view abierto-claro-suave {
+view abierto-soft-light {
   type architecture
-  theme claro-suave
+  theme soft-light
   include autor, agente, workspace, salida-derivada, canonico, tema, dsl, layout, sesion, render, shell, estudio, cli, render.**, sesion.**, layout.**, elk, react
   expanded render, layout
   collapsed canonico, tema, dsl, sesion, shell, estudio, cli, render.ren-pintura

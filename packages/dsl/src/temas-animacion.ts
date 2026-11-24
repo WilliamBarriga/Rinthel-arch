@@ -1,5 +1,5 @@
 /** Animacion de un Tema; la validacion y los defectos son del catalogo de `tema`. */
-import { CODIGOS } from 'canonico';
+import { CODIGOS, issueDeRenombre } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
 import { construirEfecto, construirEscalonado, construirKeyframes, construirMovimiento, construirTransicion, duracionEnMs, parsearEstado } from 'tema';
 import type { Animacion, AnimacionDeNodo, ErrorDeCatalogo, ParametroDeAnimacion } from 'tema';
@@ -10,7 +10,11 @@ import { aIssue as situar } from './temas-comun';
 
 type Ast = Parameters<typeof rangoDe>[0];
 
-const aIssue = (archivo: string, error: ErrorDeCatalogo, rango: TextRange): Issue => situar(archivo, error, rango.start);
+const aIssue = (archivo: string, error: ErrorDeCatalogo, rango: TextRange): Issue =>
+  error.codigo === CODIGOS.E_OLD_CATALOG_VALUE && error.candidato !== undefined ? issueDeRenombre(error.codigo, error.mensaje, archivo, rango, error.candidato) : situar(archivo, error, rango.start);
+
+/** Un nombre desconocido o antiguo se situa en el nombre; el resto, en todo el elemento. */
+const esErrorDeNombre = (error: ErrorDeCatalogo): boolean => error.codigo === CODIGOS.E_THEME_UNKNOWN_MOTION || error.codigo === CODIGOS.E_OLD_CATALOG_VALUE;
 
 /** Una unidad desconocida es un error de valor. */
 function leerParametros(params: readonly AnimParam[], archivo: string, issues: Issue[]): ParametroDeAnimacion[] {
@@ -50,14 +54,14 @@ export function compilarAnimacionDeCapa(item: ThemeLayer, archivo: string, issue
     else {
       const params = leerParametros(anim.params, archivo, issues);
       const { animacion: hecha, errores } = construirMovimiento(anim.name ?? '', params);
-      for (const e of errores) issues.push(aIssue(archivo, e, e.codigo === CODIGOS.E_THEME_UNKNOWN_MOTION ? rangoDe(anim, 'name') : aRango(anim.$cstNode?.range)));
+      for (const e of errores) issues.push(aIssue(archivo, e, esErrorDeNombre(e) ? rangoDe(anim, 'name') : aRango(anim.$cstNode?.range)));
       animacion = hecha;
     }
   } else if (anim?.$type === 'ThemeKeyframes') {
     const params = leerParametros(anim.params, archivo, issues);
     const pasos = anim.steps.map((paso) => ({ en: Number(paso.at), valor: Number(paso.value) }));
     const { animacion: hecha, errores } = construirKeyframes(anim.property, params, pasos);
-    for (const e of errores) issues.push(aIssue(archivo, e, e.codigo === CODIGOS.E_THEME_UNKNOWN_MOTION ? rangoDe(anim, 'property') : aRango(anim.$cstNode?.range)));
+    for (const e of errores) issues.push(aIssue(archivo, e, esErrorDeNombre(e) ? rangoDe(anim, 'property') : aRango(anim.$cstNode?.range)));
     animacion = hecha;
   }
   return { ...(animacion !== undefined && { animacion }), fallo: issues.length > antes };
@@ -73,7 +77,7 @@ function transicionDe(item: ThemeTransition, archivo: string, issues: Issue[]) {
 function efectoDe(item: ThemeEnter | ThemeExit, archivo: string, issues: Issue[]) {
   const params = leerParametros(item.params, archivo, issues);
   const { animacion, errores } = construirEfecto(item.effect, params);
-  for (const e of errores) issues.push(aIssue(archivo, e, e.codigo === CODIGOS.E_THEME_UNKNOWN_MOTION ? rangoDe(item, 'effect') : aRango(item.$cstNode?.range)));
+  for (const e of errores) issues.push(aIssue(archivo, e, esErrorDeNombre(e) ? rangoDe(item, 'effect') : aRango(item.$cstNode?.range)));
   return animacion;
 }
 

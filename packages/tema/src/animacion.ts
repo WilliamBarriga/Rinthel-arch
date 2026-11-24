@@ -1,7 +1,7 @@
 /** Catalogo de animacion declarativa. Solo se anima lo que no toca las Metricas. */
 import { CODIGOS } from 'canonico';
 
-import { sugerir } from './catalogo';
+import { errorDeValorAntiguo, sugerir } from './catalogo';
 import type { ErrorDeCatalogo } from './catalogo';
 
 export const EASINGS = ['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out'] as const;
@@ -9,15 +9,15 @@ export type Easing = (typeof EASINGS)[number];
 
 /** `intensidad` dice si admiten el parametro. */
 export const MOVIMIENTOS = {
-  flujo: { intensidad: false, easing: 'linear', duracionMs: 2000 },
-  pulso: { intensidad: true, easing: 'ease-in-out', duracionMs: 1200 },
-  respiracion: { intensidad: true, easing: 'ease-in-out', duracionMs: 3000 },
-  giro: { intensidad: false, easing: 'linear', duracionMs: 2000 },
+  stream: { intensidad: false, easing: 'linear', duracionMs: 2000 },
+  pulse: { intensidad: true, easing: 'ease-in-out', duracionMs: 1200 },
+  breathe: { intensidad: true, easing: 'ease-in-out', duracionMs: 3000 },
+  spin: { intensidad: false, easing: 'linear', duracionMs: 2000 },
   aura: { intensidad: true, easing: 'ease-in-out', duracionMs: 2000 },
 } as const satisfies Record<string, { intensidad: boolean; easing: Easing; duracionMs: number }>;
 export type NombreDeMovimiento = keyof typeof MOVIMIENTOS;
 
-export const EFECTOS = ['fundido', 'escala', 'deslizar'] as const;
+export const EFECTOS = ['fade', 'zoom', 'slide'] as const;
 export type NombreDeEfecto = (typeof EFECTOS)[number];
 
 export const PROPIEDADES_ANIMABLES = {
@@ -143,6 +143,8 @@ function leerParametros(
 
 export function construirMovimiento(nombre: string, params: readonly ParametroDeAnimacion[]): Resultado<Movimiento> {
   if (!Object.hasOwn(MOVIMIENTOS, nombre)) {
+    const antiguo = errorDeValorAntiguo('motion', nombre);
+    if (antiguo !== undefined) return { errores: [antiguo] };
     return {
       errores: [
         {
@@ -200,6 +202,8 @@ export function construirTransicion(params: readonly ParametroDeAnimacion[]): Re
 
 export function construirEfecto(nombre: string, params: readonly ParametroDeAnimacion[]): Resultado<Efecto> {
   if (!(EFECTOS as readonly string[]).includes(nombre)) {
+    const antiguo = errorDeValorAntiguo('effect', nombre);
+    if (antiguo !== undefined) return { errores: [antiguo] };
     return {
       errores: [
         {

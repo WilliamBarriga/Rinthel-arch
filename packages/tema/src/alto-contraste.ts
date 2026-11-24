@@ -1,5 +1,5 @@
 /**
- * Tema `alto-contraste`: la tarjeta de `neutral` sobre fondo negro, texto blanco y bordes gruesos del color del Tipo,
+ * Tema `high-contrast`: la tarjeta de `neutral` sobre fondo negro, texto blanco y bordes gruesos del color del Tipo,
  * sin translucidos ni warnings de contraste. Va ya resuelto porque solo lo aplica el visor, en lugar del de la Vista.
  */
 import { TEMA_NEUTRO } from './tema';
@@ -10,7 +10,7 @@ const texto = (props: Record<string, string | number>) : Primitiva => ({ tipo: '
 
 export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
   ...TEMA_NEUTRO,
-  name: 'alto-contraste',
+  name: 'high-contrast',
   palette: {
     white: '#ffffff',
     black: '#000000',
@@ -54,7 +54,7 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
       counter: { tipo: 'chip', props: { fill: 'black', border: 'white', 'border-width': 2, color: 'white', weight: 700, radius: 50 } },
       attrs: texto({}),
     },
-    estados: { seleccionado: [{ nombre: 'borde', props: { width: 6 } }] },
+    estados: { selected: [{ nombre: 'borde', props: { width: 6 } }] },
   },
   grupo: {
     ...TEMA_NEUTRO.grupo,

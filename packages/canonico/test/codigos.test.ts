@@ -64,6 +64,7 @@ const codigosDeV1 = [
   'theme-font-not-served',
   'duplicate-key-mark',
   'er-cardinality',
+  'old-catalog-value',
 ];
 
 describe('catalogo de codigos de issue', () => {

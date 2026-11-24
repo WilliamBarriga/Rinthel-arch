@@ -46,8 +46,8 @@ theme pcb {
     }
     type artefacto { layer forma { radius 2 }  layer chip gradient { from mix(estano, chip, 0.65)  to mix(estano, chip, 0.8)  angle 180 } }
     state hover { layer resplandor glow after sombra { color COLOR/0.6  radius 14 }  transition 100ms linear }
-    state en-ruta { layer resplandor glow after sombra { color COLOR  radius 18 } }
-    state atenuado { layer sombra none }
+    state on-path { layer resplandor glow after sombra { color COLOR  radius 18 } }
+    state dimmed { layer sombra none }
   }
   group {
     // Contorno de serigrafia con una zona discontinua por dentro.

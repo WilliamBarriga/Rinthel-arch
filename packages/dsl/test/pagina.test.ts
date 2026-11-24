@@ -70,7 +70,7 @@ describe('compile: bloque page del Tema', () => {
   });
 
   it('una Capa de page con motion o keyframes es error: la pagina no se anima', () => {
-    const resultado = tema(`page { layer puntos dots { color ink/0.1  motion pulso 1s } }`);
+    const resultado = tema(`page { layer puntos dots { color ink/0.1  motion pulse 1s } }`);
     const keyframes = tema(`page { layer puntos dots { color ink/0.1  keyframes opacity 1s { 0 1  100 0.5 } } }`);
 
     for (const r of [resultado, keyframes]) {

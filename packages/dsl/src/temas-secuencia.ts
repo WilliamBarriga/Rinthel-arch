@@ -1,10 +1,10 @@
 /** Bloques de secuencia de un Tema; lo que admite cada Elemento lo dice `ESPECIFICACION_DE_SECUENCIA` de `tema`. */
 import { CODIGOS } from 'canonico';
-import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA, aplicarOps, parsearEstado } from 'tema';
+import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA, ESTADOS, aplicarOps, parsearEstado } from 'tema';
 import type { BloqueDeSecuencia, CapaDeTema, OpDeCapa, Primitiva, TemaResuelto } from 'tema';
 
 import type { SequenceItem, ThemeMarker, ThemeSequence } from './generated/ast';
-import { aRango, issueConSugerencia, rangoDe } from './posiciones';
+import { aRango, baseDeErrorDeEstado, issueConSugerencia, rangoDe } from './posiciones';
 import { compilarBloque } from './temas-capas';
 import { primitivaSuelta } from './temas-comun';
 import type { Contexto } from './temas-comun';
@@ -60,7 +60,7 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
       case 'ThemeState': {
         const resultado = parsearEstado(item.name);
         if ('error' in resultado) {
-          ctx.issues.push(issueConSugerencia({ code: resultado.error.code, message: resultado.error.message }, ctx.archivo, item, 'name', ['hover', 'seleccionado', 'fantasma', 'en-ruta', 'atenuado', 'foco']));
+          ctx.issues.push(issueConSugerencia(baseDeErrorDeEstado(resultado.error), ctx.archivo, item, 'name', ESTADOS));
           break;
         }
         for (const hijo of item.items) {

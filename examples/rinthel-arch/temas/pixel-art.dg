@@ -38,8 +38,8 @@ theme pixel-art {
     }
     type externo { layer bloque grid { color negro/0.25  size 4 } }
     state hover { layer bloque { color mix(COLOR, luz, 0.25) }  transition 60ms linear }
-    state en-ruta { layer aro ring after bisel-claro { color luz  width 2  offset 6 } }
-    state atenuado { layer sombra none }
+    state on-path { layer aro ring after bisel-claro { color luz  width 2  offset 6 } }
+    state dimmed { layer sombra none }
   }
   group {
     // Marco oscuro con contorno claro de 4 px.

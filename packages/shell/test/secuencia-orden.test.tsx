@@ -82,7 +82,7 @@ describe('VistaInteractiva: ordenar Lifelines por arrastre', () => {
     const [x, y] = centro(container, 'cliente');
     gesto(container.querySelector('[data-id="cliente"]')!, 'mousedown', x, y);
     gesto(window, 'mousemove', x + 60, y);
-    expect(container.querySelector('[data-id="cliente"]')!.getAttribute('data-estados') ?? container.querySelector('[data-id="cliente"] [data-estados]')?.getAttribute('data-estados')).toContain('fantasma');
+    expect(container.querySelector('[data-id="cliente"]')!.getAttribute('data-estados') ?? container.querySelector('[data-id="cliente"] [data-estados]')?.getAttribute('data-estados')).toContain('ghost');
     gesto(window, 'mouseup', x + 60, y);
   });
 

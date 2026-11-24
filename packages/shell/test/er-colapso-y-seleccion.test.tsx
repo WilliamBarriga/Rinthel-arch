@@ -107,9 +107,9 @@ describe('ER: seleccion', () => {
 
   it('dos tablas seleccionadas muestran la ruta mas corta sobre las FK', async () => {
     const { container } = await montarTablas({ selection: ['a', 'c'] });
-    const enRuta = [...container.querySelectorAll('.rd-caja [data-state="en-ruta"]')].map((e) => e.closest('[data-id]')!.getAttribute('data-id')).sort();
+    const enRuta = [...container.querySelectorAll('.rd-caja [data-state="on-path"]')].map((e) => e.closest('[data-id]')!.getAttribute('data-id')).sort();
     expect(enRuta).toEqual(['a', 'b', 'c']);
-    expect(container.querySelectorAll('path[data-state="en-ruta"]').length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelectorAll('path[data-state="on-path"]').length).toBeGreaterThanOrEqual(2);
   });
 });
 

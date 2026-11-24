@@ -4,7 +4,7 @@ La estetica de un diagrama vive en el **Tema**, nunca en el Modelo: el mismo Mod
 
 ## Elegir un Tema
 
-- Los incorporados: `neutral` (defecto), `neutral-dark` y `alto-contraste`.
+- Los incorporados: `neutral` (defecto), `neutral-dark` y `high-contrast`.
 - Los de ejemplo, un `.dg` por Tema en [`examples/rinthel-arch/temas/`](../../examples/rinthel-arch/temas/): el listado, con una imagen cada uno, esta en la [galeria](../galeria.md). Copia el `.dg` de uno a tu Workspace (y sus fuentes, ver abajo) y usalo en una Vista.
 - El tuyo: un bloque `theme` en cualquier `.dg` del Workspace.
 
@@ -109,7 +109,7 @@ node {
 
 La cascada, donde gana el ultimo, es: Tema base, Tipo de diagrama, Tipo de nodo, estado, parche de la Vista.
 
-`diagram <tipo> { ... }` (dentro de `node`, `group` y `edge`) distingue un Tipo de diagrama (`architecture`, `flow`, `sequence`, `er`): `node { diagram flow { slots row pad 20 { title attrs } } }` solo cambia las Vistas de flujo. Admite `layer`, `use` y `slots`; `padding` en `group`; marcadores (`start`/`end`) y `label` en `edge`. A diferencia de un estado, puede cambiar las Metricas. Un tipo desconocido es `theme-unknown-diagram-type`. `inspect theme <nombre> --diagram flow` muestra la pila resultante. Los estados son `hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado` y `foco`. Un estado solo puede cambiar pintura: nunca el tamano ni los Slots (`validate` lo rechaza), asi que pasar el raton no mueve el diagrama. Un Grupo tiene ademas `state collapsed`, el aspecto del Grupo cerrado.
+`diagram <tipo> { ... }` (dentro de `node`, `group` y `edge`) distingue un Tipo de diagrama (`architecture`, `flow`, `sequence`, `er`): `node { diagram flow { slots row pad 20 { title attrs } } }` solo cambia las Vistas de flujo. Admite `layer`, `use` y `slots`; `padding` en `group`; marcadores (`start`/`end`) y `label` en `edge`. A diferencia de un estado, puede cambiar las Metricas. Un tipo desconocido es `theme-unknown-diagram-type`. `inspect theme <nombre> --diagram flow` muestra la pila resultante. Los estados son `hover`, `selected`, `ghost`, `on-path`, `dimmed` y `focus`. Un estado solo puede cambiar pintura: nunca el tamano ni los Slots (`validate` lo rechaza), asi que pasar el raton no mueve el diagrama. Un Grupo tiene ademas `state collapsed`, el aspecto del Grupo cerrado.
 
 ### Partes: parches reutilizables
 
@@ -168,7 +168,7 @@ theme libreta {
     alternate { layer fondo { color gris } }            // filas impares
     key pk { layer fondo { color verde } }              // filas con esa marca (pk, fk, uk); se apilan en ese orden
     optional { layer fondo { color ambar } }            // Atributos opcionales (despues de las claves)
-    state seleccionado { layer fondo { color verde } }  // fila seleccionada (tambien hover); solo pinta
+    state selected { layer fondo { color verde } }  // fila seleccionada (tambien hover); solo pinta
     name { weight 600  size 1.1 }  type { color azul }  // estilo de texto; size (multiplo del texto del Tema) cambia el tamano medido
     key { fill azul  color papel  radius 4 }            // el chip de cada marca de clave
   }
@@ -253,19 +253,19 @@ view pedido { type sequence  theme tinta  interaction pedido }
 - Que cambia con cada tipo: `message { kind async { ... } }` solo toca los Mensajes `async`. Sin parche, `reply` y `create` van con la continuidad opuesta a la del trazo base y el marcador depende del tipo.
 - `lifeline` y `message` usan trazos de Arista; `activation`, `fragment` y `note` usan Capas de Nodo. `COLOR` es el de la Lifeline. `gap`, `loop-width`, `create-offset`, `width` y `padding` son Metricas (cambian la Geometria); lo demas solo pinta. Los rangos y defectos estan en el [catalogo](../referencia-catalogo.md#elementos-de-secuencia); uno fuera de rango es un error de `validate`.
 - Si dos tipos de Mensaje (los que usa la Vista) quedan iguales salvo el color, `validate` avisa con `theme-color-only`.
-- Los Temas incorporados declaran todos estos elementos y la fila `row`: `neutral` es el modelo de referencia, `neutral-dark` lo hereda y solo cambia la Paleta, `alto-contraste` usa trazos mas gruesos. `inspect theme <nombre>` muestra la pila, los parches y las Metricas de cada uno; con `--diagram sequence` (o `er`) muestra tambien los que el Tema no declara, tal como se derivan para dibujarse, marcados `(derivado)` (`derivado: true` en `--json`).
+- Los Temas incorporados declaran todos estos elementos y la fila `row`: `neutral` es el modelo de referencia, `neutral-dark` lo hereda y solo cambia la Paleta, `high-contrast` usa trazos mas gruesos. `inspect theme <nombre>` muestra la pila, los parches y las Metricas de cada uno; con `--diagram sequence` (o `er`) muestra tambien los que el Tema no declara, tal como se derivan para dibujarse, marcados `(derivado)` (`derivado: true` en `--json`).
 
 ## Movimiento y entrada
 
-- **Movimientos** (catalogo cerrado): `flujo`, `pulso`, `respiracion`, `giro` y `aura`, colgados de una Capa: `layer glow { motion aura 2s ease-in-out intensity 0.6 }`. Se pueden atar a un estado.
+- **Movimientos** (catalogo cerrado): `stream`, `pulse`, `breathe`, `spin` y `aura`, colgados de una Capa: `layer glow { motion aura 2s ease-in-out intensity 0.6 }`. Se pueden atar a un estado.
 - **Keyframes** para propiedades animables (`opacity`, `scale`, `rotate`, `shift-x`, `shift-y`, `blur`): `keyframes opacity 2s { 0 1  50 0.4  100 1 }`.
-- **Transiciones y entradas**: `transition 140ms ease-out` entre estados; `enter fundido 300ms`, `exit escala 200ms` (`fundido`, `escala`, `deslizar`) y `stagger 60ms` para escalonar.
+- **Transiciones y entradas**: `transition 140ms ease-out` entre estados; `enter fade 300ms`, `exit zoom 200ms` (`fade`, `zoom`, `slide`) y `stagger 60ms` para escalonar.
 
 Los rangos y easings estan en el [catalogo](../referencia-catalogo.md#movimientos).
 
 ## Contraste y accesibilidad
 
-`validate` mide el contraste de cada Tipo y estado (texto 4.5:1 y partes graficas 3:1) y avisa con `theme-low-contrast`. Si dos Tipos solo se distinguen por color, avisa con `theme-color-only` y el visor muestra una leyenda. Algunos Temas de ejemplo (`glass-chip`, `soft-card`, `pixel-art`...) los emiten a proposito, porque su estetica lo pide: la primera linea de su archivo lo declara. El Tema incorporado `alto-contraste` reemplaza al de la Vista, solo en el visor, para quien lo necesite: con el boton "Alto contraste" del lienzo o, si no se toca, cuando el sistema pide `prefers-contrast: more`.
+`validate` mide el contraste de cada Tipo y estado (texto 4.5:1 y partes graficas 3:1) y avisa con `theme-low-contrast`. Si dos Tipos solo se distinguen por color, avisa con `theme-color-only` y el visor muestra una leyenda. Algunos Temas de ejemplo (`glass-chip`, `soft-card`, `pixel-art`...) los emiten a proposito, porque su estetica lo pide: la primera linea de su archivo lo declara. El Tema incorporado `high-contrast` reemplaza al de la Vista, solo en el visor, para quien lo necesite: con el boton "Alto contraste" del lienzo o, si no se toca, cuando el sistema pide `prefers-contrast: more`.
 
 ## Inspeccionar y depurar un Tema
 

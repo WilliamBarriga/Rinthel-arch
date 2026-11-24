@@ -5,7 +5,7 @@ import { TEMA_NEUTRO, construirMovimiento, estiloResuelto, temaResueltoSchema } 
 const p = (clave: string, valor: string | number) => ({ clave, valor });
 
 describe('animacion en el Estilo resuelto', () => {
-  const pulso = construirMovimiento('pulso', [p('duration', 1200)]).animacion!;
+  const pulso = construirMovimiento('pulse', [p('duration', 1200)]).animacion!;
   const aura = construirMovimiento('aura', []).animacion!;
   const conAnimacion = {
     ...TEMA_NEUTRO,
@@ -17,7 +17,7 @@ describe('animacion en el Estilo resuelto', () => {
       ],
       slots: TEMA_NEUTRO.nodo.slots,
       tipos: {},
-      estados: { seleccionado: [{ nombre: 'acento', props: {}, animacion: aura }], hover: [{ nombre: 'acento', props: {}, animacion: null }] },
+      estados: { selected: [{ nombre: 'acento', props: {}, animacion: aura }], hover: [{ nombre: 'acento', props: {}, animacion: null }] },
       animacion: { transicion: { duracionMs: 120, easing: 'ease-out', reducido: 'fade' }, escalonadoMs: 60 },
     },
   };
@@ -27,7 +27,7 @@ describe('animacion en el Estilo resuelto', () => {
       capas: conAnimacion.nodo.capas.map(({ animacion: _a, ...capa }) => capa),
       slots: conAnimacion.nodo.slots,
       tipos: {},
-      estados: { seleccionado: [{ nombre: 'acento', props: {} }] },
+      estados: { selected: [{ nombre: 'acento', props: {} }] },
     },
   };
 
@@ -35,7 +35,7 @@ describe('animacion en el Estilo resuelto', () => {
     const { pintura } = estiloResuelto(conAnimacion, { diagrama: 'architecture' });
 
     expect(pintura.nodo.capas.find((c) => c.nombre === 'acento')?.animacion).toEqual(pulso);
-    expect(pintura.nodo.estados.seleccionado?.find((c) => c.nombre === 'acento')?.animacion).toEqual(aura);
+    expect(pintura.nodo.estados.selected?.find((c) => c.nombre === 'acento')?.animacion).toEqual(aura);
     expect(pintura.nodo.estados.hover?.find((c) => c.nombre === 'acento')?.animacion).toBeUndefined();
     expect(pintura.nodo.animacion).toEqual({ transicion: { duracionMs: 120, easing: 'ease-out', reducido: 'fade' }, escalonadoMs: 60 });
   });

@@ -143,7 +143,7 @@ Bloque del Tema que estiliza las filas de una Vista `er`. `height` (12 a 120) y 
 | `alternate { ... }` | Parche de las filas impares |
 | `key pk|fk|uk { ... }` | Parche de las filas con esa marca de clave, en ese orden |
 | `optional { ... }` | Parche de los Atributos opcionales, tras las claves |
-| `state hover|seleccionado|... { ... }` | Parche de estado de la fila (solo pinta), sobre la pila de su variante; el shell emite `hover` y `seleccionado` |
+| `state hover|seleccionado|... { ... }` | Parche de estado de la fila (solo pinta), sobre la pila de su variante; el shell emite `hover` y `selected` |
 | `name { ... }` | Estilo de texto con la Primitiva `text` |
 | `type { ... }` | Estilo de texto con la Primitiva `text` |
 | `key { ... }` | Estilo de texto con la Primitiva `chip` (el chip de cada marca de clave) |
@@ -166,10 +166,10 @@ El parche `identifying { ... }` del bloque `edge` cambia el trazo de las Aristas
 
 | Movimiento | Intensidad | Easing | Duracion (ms) |
 | --- | --- | --- | --- |
-| `flujo` | no | linear | 2000 |
-| `pulso` | si | ease-in-out | 1200 |
-| `respiracion` | si | ease-in-out | 3000 |
-| `giro` | no | linear | 2000 |
+| `stream` | no | linear | 2000 |
+| `pulse` | si | ease-in-out | 1200 |
+| `breathe` | si | ease-in-out | 3000 |
+| `spin` | no | linear | 2000 |
 | `aura` | si | ease-in-out | 2000 |
 
 Easings: `linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`.
@@ -178,9 +178,9 @@ Easings: `linear`, `ease`, `ease-in`, `ease-out`, `ease-in-out`.
 
 | Efecto |
 | --- |
-| `fundido` |
-| `escala` |
-| `deslizar` |
+| `fade` |
+| `zoom` |
+| `slide` |
 
 ## Propiedades animables con keyframes
 

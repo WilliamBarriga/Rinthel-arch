@@ -43,22 +43,22 @@ ${bloques}
 `;
 
 describe('Estados del Tema pintados en secuencia', () => {
-  it('un Fragmento seleccionado pinta la pila de su state seleccionado', async () => {
-    const { container } = await montar(SECUENCIA('  fragment { layer caja solid { color papel }  layer borde border { color tinta width 1 }  state seleccionado { layer caja { color verde } } }'), 'v', '[data-fragment]', 'i:0');
+  it('un Fragmento seleccionado pinta la pila de su state selected', async () => {
+    const { container } = await montar(SECUENCIA('  fragment { layer caja solid { color papel }  layer borde border { color tinta width 1 }  state selected { layer caja { color verde } } }'), 'v', '[data-fragment]', 'i:0');
 
     const marco = container.querySelector('[data-fragment="0"]')!;
-    expect(marco.getAttribute('data-estados')).toBe('seleccionado');
+    expect(marco.getAttribute('data-estados')).toBe('selected');
     expect(marco.getAttribute('style')).toMatch(/#16a34a|rgb\(22, 163, 74\)/);
   });
 
   it('un Fragmento sin ese estado se pinta como en reposo', async () => {
-    const { container } = await montar(SECUENCIA('  fragment { layer caja solid { color papel }  layer borde border { color tinta width 1 }  state seleccionado { layer caja { color verde } } }'), 'v', '[data-fragment]', 'i:1');
+    const { container } = await montar(SECUENCIA('  fragment { layer caja solid { color papel }  layer borde border { color tinta width 1 }  state selected { layer caja { color verde } } }'), 'v', '[data-fragment]', 'i:1');
 
     expect(container.querySelector('[data-fragment="0"]')!.getAttribute('style')).not.toMatch(/#16a34a|rgb\(22, 163, 74\)/);
   });
 
-  it('una Nota seleccionada pinta el relleno de su state seleccionado', async () => {
-    const { container } = await montar(SECUENCIA('  note { layer papel solid { color gris }  layer borde border { color tinta width 1 }  state seleccionado { layer papel { color rojo } } }'), 'v', '[data-note]', 'i:1');
+  it('una Nota seleccionada pinta el relleno de su state selected', async () => {
+    const { container } = await montar(SECUENCIA('  note { layer papel solid { color gris }  layer borde border { color tinta width 1 }  state selected { layer papel { color rojo } } }'), 'v', '[data-note]', 'i:1');
 
     const papel = container.querySelector('[data-note="i:1"] [data-note-paper]')!;
     expect(papel.getAttribute('fill')).toBe('#dc2626');
@@ -83,8 +83,8 @@ ${fila}
 `;
 
 describe('Estados del Tema pintados en ER', () => {
-  it('una fila seleccionada pinta la pila de row state seleccionado; las demas siguen en reposo', async () => {
-    const { container, sesion } = await montarEr(ER('    layer fondo solid { color papel }\n    state seleccionado { layer fondo { color verde } }\n    state hover { layer fondo { color azul } }'), 'orders#id');
+  it('una fila seleccionada pinta la pila de row state selected; las demas siguen en reposo', async () => {
+    const { container, sesion } = await montarEr(ER('    layer fondo solid { color papel }\n    state selected { layer fondo { color verde } }\n    state hover { layer fondo { color azul } }'), 'orders#id');
 
     const fila = (a: string) => container.querySelector(`[data-attribute="orders#${a}"]`)!.getAttribute('style');
     expect(fila('id')).toMatch(/#16a34a|rgb\(22, 163, 74\)/);

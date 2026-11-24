@@ -6,6 +6,7 @@
  */
 import { CODIGOS } from './codigos';
 import { CARDINALIDADES_ER } from './esquema';
+import { VALORES_DE_CATALOGO_ANTIGUOS, mensajeDeValorAntiguo, renombreAntiguo } from './nombres-antiguos';
 import type { ElementoDePaso, FuenteCanonica, Interaccion, ItemDeInteraccion, Nodo, Tema, Vista } from './esquema';
 import type { IconProvider } from './iconos';
 import type { Issue, TextRange } from './issue';
@@ -37,7 +38,7 @@ const SIN_UBICAR: SitioDeTexto = {
 };
 
 /** Issue en `ruta` con severidad y sitio relacionado (otra ruta de la Fuente) opcionales. */
-type EmitirCon = (ruta: RutaDeFuente, code: string, message: string, extra?: { severity?: 'error' | 'warning'; hint?: string; relacionado?: { ruta: RutaDeFuente; message: string } }) => void;
+type EmitirCon = (ruta: RutaDeFuente, code: string, message: string, extra?: { severity?: 'error' | 'warning'; hint?: string; /** Reemplazo del texto situado en `ruta` (un `fix` que lo reescribe). */ reemplazo?: string; relacionado?: { ruta: RutaDeFuente; message: string } }) => void;
 
 type Emitir = (
   ruta: RutaDeFuente,
@@ -81,6 +82,7 @@ export function validate(fuente: FuenteCanonica, opciones: OpcionesDeValidate = 
     if (sitio === null) return;
     const issue: Issue = { code, severity: extra.severity ?? 'error', file: sitio.file, ...sitio.range.start, message };
     if (extra.hint !== undefined) issue.hint = extra.hint;
+    if (extra.reemplazo !== undefined && ubicar !== undefined) issue.fix = { file: sitio.file, range: sitio.range, replacement: extra.reemplazo };
     if (extra.relacionado !== undefined) {
       const otro = ubicar === undefined ? SIN_UBICAR : ubicar(extra.relacionado.ruta);
       if (otro !== null) issue.related = [{ file: otro.file, ...otro.range.start, message: extra.relacionado.message }];
@@ -94,7 +96,7 @@ export function validate(fuente: FuenteCanonica, opciones: OpcionesDeValidate = 
   validarAristas(fuente, emitir);
   validarCatalogo(fuente, opciones.iconos, emitir);
   fuente.views.forEach((vista, indice) => {
-    validarVista(fuente, vista, indice, emitir);
+    validarVista(fuente, vista, indice, emitir, emitirCon);
     validarVistaDeSecuencia(fuente, vista, indice, emitir, emitirCon);
   });
 
@@ -190,12 +192,15 @@ function validarCatalogo(fuente: FuenteCanonica, iconos: IconProvider | undefine
   });
 }
 
-function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emitir: Emitir): void {
+function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emitir: Emitir, emitirCon: EmitirCon): void {
   const ruta = ['views', indice];
   const ids = fuente.views.map(({ id }) => id);
 
   const tema = fuente.themes.find((candidato) => candidato.name === vista.theme);
-  if (vista.theme !== undefined && tema === undefined) {
+  const nuevoTema = vista.theme === undefined ? undefined : renombreAntiguo(VALORES_DE_CATALOGO_ANTIGUOS, 'theme', vista.theme);
+  if (vista.theme !== undefined && tema === undefined && nuevoTema !== undefined && fuente.themes.some(({ name }) => name === nuevoTema)) {
+    emitirCon([...ruta, 'theme'], CODIGOS.E_OLD_CATALOG_VALUE, mensajeDeValorAntiguo('theme', vista.theme, nuevoTema), { reemplazo: nuevoTema });
+  } else if (vista.theme !== undefined && tema === undefined) {
     emitir([...ruta, 'theme'], CODIGOS.E_UNKNOWN_THEME, `Theme '${vista.theme}' is not declared`, vista.theme, fuente.themes.map(({ name }) => name));
   }
   const paleta = nombresDePaleta(tema ? [tema] : fuente.themes);

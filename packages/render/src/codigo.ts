@@ -17,7 +17,7 @@ export interface PropsDeCodigo {
   readonly id: string;
   /** Caja del elemento en px; el componente no puede cambiarla. */
   readonly caja: { readonly ancho: number; readonly alto: number };
-  /** Estados visuales vigentes (`hover`, `seleccionado`...); vacio en reposo. */
+  /** Estados visuales vigentes (`hover`, `selected`...); vacio en reposo. */
   readonly estado: readonly string[];
   /** Colores ya resueltos de la Paleta: el trazo del Tipo, el texto y el fondo del Tema. */
   readonly colores: { readonly trazo: string; readonly texto: string; readonly fondo: string };

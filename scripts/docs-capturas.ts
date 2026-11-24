@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
 const REPO = resolve(import.meta.dirname, '..');
-const TEMAS = ['soft-card', 'glass-chip', 'neobrutalist', 'blueprint', 'claro-suave', 'crt-terminal', 'synthwave', 'editorial', 'bauhaus', 'sticky-notes', 'keycaps', 'metro-map', 'pcb', 'pixel-art'];
+const TEMAS = ['soft-card', 'glass-chip', 'neobrutalist', 'blueprint', 'soft-light', 'crt-terminal', 'synthwave', 'editorial', 'bauhaus', 'sticky-notes', 'keycaps', 'metro-map', 'pcb', 'pixel-art'];
 // Cada paso se captura con el Tema que declara (los dos primeros, el incorporado `neutral`).
 const PASOS = [
   { paso: 1, tema: 'neutral' },

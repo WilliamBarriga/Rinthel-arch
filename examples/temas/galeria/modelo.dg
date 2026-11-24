@@ -3,8 +3,8 @@
 //
 // Cubre: todos los Tipos de nodo, un Grupo abierto (plataforma) y uno colapsado (persistencia),
 // Aristas con y sin etiqueta, Atributos y un Nodo por estado del ADR 0008 (grupo `estados`):
-// pasa el raton por `hover`, haz clic en `seleccionado` o en cualquiera para ver `en-ruta` y
-// `atenuado`, y navega con teclado para ver `foco`.
+// pasa el raton por `hover`, haz clic en `selected` o en cualquiera para ver `on-path` y
+// `dimmed`, y navega con teclado para ver `focus`.
 specification {
   node actor    { description "Persona o agente que usa el sistema"  icon user    color purple }
   node servicio { description "Pieza de logica en ejecucion"          icon server     color blue }
