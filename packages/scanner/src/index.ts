@@ -1,6 +1,7 @@
 /**
  * `scanner`: reads a codebase, without running it, into a Scan draft `rinthel/scan@1` (ADR 0010).
- * Interface: `scan(root, options?) -> Promise<ScanDraft>` and `serializeDraft(draft) -> string` (what `scan` writes).
+ * Interface: `scan(root, options?) -> Promise<ScanDraft>` and `serializeDraft(draft) -> string` (what `scan` writes);
+ * for refreshing a Workspace, `diffDrafts(previous, current)` and `idMatcher(patterns)` (`.rinthel/scan-ignore`).
  * Invariants: never executes, installs or imports project code (git state is read from `.git` files, not `git`);
  * same files, same draft byte for byte (sorted arrays, fixed key order, ids from paths and names, no clock).
  * Honors `.gitignore` and `EXCLUDED_FOLDERS`; stops at `maxFiles` and marks `limits.truncated` instead of failing.
@@ -38,6 +39,8 @@ export type {
   UnitKind,
 } from './draft';
 export { EXCLUDED_FOLDERS } from './files';
+export { diffDrafts, idMatcher } from './refresh';
+export type { DraftChanges, IdChanges } from './refresh';
 export { SPLIT_MIN_FILES } from './units';
 
 /** Version written in `scanner`; it follows `packages/scanner/package.json`. */

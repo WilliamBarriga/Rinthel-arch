@@ -99,15 +99,22 @@ Reads a codebase without running it and writes a Scan draft (rinthel/scan@1): un
 externals, database tables from Prisma schemas and SQL DDL, and limits. Prints a compact summary that
 ends with the next step. Never writes .dg files.
 
+With a Workspace (--workspace, or the shallowest folder under <root> with .dg files) it adds Scan
+coverage: units and tables no Node cites as a Source path ref, orphan refs, and columns missing or extra
+versus Attributes. Ids matching <root>/.rinthel/scan-ignore (gitignore-style, versioned) are left out
+of coverage, not of the draft. The previous draft rotates to scan.prev.json next to --out and the
+summary lists the units, dependencies, externals, tables and columns added or removed since then.
+
 Options:
   <root>               Folder to scan (current folder by default)
   --out <file>         Where to write the draft (<root>/.rinthel/scan.json by default, not versioned)
   --json               stdout is exactly one summary object with its own contractVersion
   --depth <N>          Folder levels a large manifest is split into (2 by default; 0 never splits)
   --max-files <N>      Files read at most (20000 by default); beyond it limits.truncated is true
+  --workspace <path>   Workspace to report Scan coverage against (found under <root> by default)
 
 Honors .gitignore and always skips node_modules, dist, build, .venv and vendored code.
-Exit: 0 draft written, 2 usage or internal failure (message on stderr).
+Exit: 0 draft written (coverage gaps included), 2 usage or internal failure (message on stderr).
 `,
   export: `diagrams export --workspace <path> --out <file>.html [options]
 
