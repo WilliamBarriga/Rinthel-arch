@@ -10,6 +10,7 @@ import type { Navegacion } from 'shell';
 
 import { PildoraDelBuscador } from '../comandos/pildora-del-buscador';
 import { useGestoEnLienzo } from '../lienzo/gesto';
+import { PildoraDelTour } from '../tour/pildora-del-tour';
 import { useEstudio } from './contexto';
 import { IslaLateral } from './isla';
 import { disponiblesEn } from './modo';
@@ -18,6 +19,7 @@ import { useChrome } from './proveedores';
 
 const Buscador = lazy(() => import('../comandos/buscador').then((m) => ({ default: m.Buscador })));
 const Ayuda = lazy(() => import('../comandos/ayuda').then((m) => ({ default: m.Ayuda })));
+const Tour = lazy(() => import('../tour/tour').then((m) => ({ default: m.Tour })));
 
 interface PropsDelMarco {
   /** Migas sobre la ruta del hash; `undefined` sin Fuente. */
@@ -46,6 +48,7 @@ export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElem
           </div>
         )}
         <PildoraDelBuscador />
+        <PildoraDelTour />
         {motivoSinGestos !== undefined && (
           <div role="status" aria-label="Gestures" className="ui-pildora ui-aviso-gestos">
             {motivoSinGestos}
@@ -71,6 +74,7 @@ export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElem
       <Suspense fallback={null}>
         {cargados.has('buscador') && <Buscador abierto={dialogo === 'buscador'} alCambiar={cerrarDialogo} />}
         {cargados.has('ayuda') && <Ayuda abierto={dialogo === 'ayuda'} alCambiar={cerrarDialogo} />}
+        {cargados.has('tour') && <Tour abierto={dialogo === 'tour'} alCambiar={cerrarDialogo} />}
       </Suspense>
       <div className="ui-portales" ref={alMontarPortales} />
     </div>

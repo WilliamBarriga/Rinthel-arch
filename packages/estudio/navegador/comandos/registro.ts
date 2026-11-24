@@ -46,6 +46,7 @@ function volverAVistas(e: ContextoDelEstudio): void {
 
 const PROPIOS: readonly Comando[] = [
   { id: 'buscador', nombre: 'Search', teclas: ['Mod+K'], ambito: 'global', enBuscador: false, ejecutar: (e) => e.abrirDialogo('buscador') },
+  { id: 'ver-tour', nombre: 'View tour', teclas: [], ambito: 'global', ejecutar: (e) => e.abrirDialogo('tour') },
   { id: 'ayuda', nombre: 'Keyboard shortcuts', teclas: ['?', 'Mod+/'], ambito: 'global', ejecutar: (e) => e.abrirDialogo('ayuda') },
   { id: 'isla-izquierda', nombre: 'Toggle the left panel', teclas: ['Mod+B'], ambito: 'global', ejecutar: (e) => e.alternarIsla('izquierda') },
   { id: 'isla-derecha', nombre: 'Toggle the right panel', teclas: ['Mod+J'], ambito: 'global', ejecutar: (e) => e.alternarIsla('derecha') },

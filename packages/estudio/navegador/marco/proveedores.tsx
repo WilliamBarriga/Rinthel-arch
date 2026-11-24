@@ -137,6 +137,7 @@ export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plata
     vista: hashProps?.view,
     seleccion: hashProps?.selected ?? null,
     irAVista: (vista) => hashProps?.onPathChange([vista]),
+    irAPaso: (paso) => hashProps?.onStepChange(paso),
     seleccionar: (id) => hashProps?.onSelect(id),
     abrirPestana,
     alternarIsla: (lado) => islas[lado].alternar(),

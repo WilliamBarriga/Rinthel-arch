@@ -1,0 +1,110 @@
+/**
+ * "Start here" tour (dialog `tour` of the marco, opened with `abrirDialogo('tour')`): modal coachmarks that dim the UI,
+ * highlight the real area of each stop and move the UI there, with Skip, Back and Next. The script is `paradas.tsx`;
+ * it is read from the Workspace each time the tour opens.
+ */
+import { Dialog } from '@base-ui/react/dialog';
+import { useEffect, useLayoutEffect, useState } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
+
+import { useEstudio } from '../marco/contexto';
+import { paradasDelTour } from './paradas';
+import type { ParadaDelTour } from './paradas';
+import { marcarTourVisto } from './visto';
+
+const MARGEN = 8;
+const ANCHO_DE_LA_TARJETA = 340;
+const MEDIR_CADA_MS = 250;
+
+interface Caja {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/** The highlighted area of `zona` (with a margin), measured again while the panels move; `null` without one. */
+function useHueco(zona: string | undefined): Caja | null {
+  const [caja, setCaja] = useState<Caja | null>(null);
+  useLayoutEffect(() => {
+    if (zona === undefined) return setCaja(null);
+    const medir = (): void => {
+      const r = document.querySelector(zona)?.getBoundingClientRect();
+      setCaja((previa) => {
+        if (r === undefined) return null;
+        const nueva = { left: r.left - MARGEN, top: r.top - MARGEN, width: r.width + 2 * MARGEN, height: r.height + 2 * MARGEN };
+        return previa !== null && Object.entries(nueva).every(([k, v]) => previa[k as keyof Caja] === v) ? previa : nueva;
+      });
+    };
+    medir();
+    const intervalo = window.setInterval(medir, MEDIR_CADA_MS);
+    return () => window.clearInterval(intervalo);
+  }, [zona]);
+  return caja;
+}
+
+/** The card goes beside the highlighted area, below a wide one, or in the center without one. */
+function posicionDeLaTarjeta(h: Caja | null): CSSProperties {
+  if (h === null || h.width === 0) return { left: '50%', top: '40%', transform: 'translate(-50%, -50%)' };
+  const ancho = window.innerWidth;
+  if (h.width > ancho * 0.6) return { left: '50%', bottom: 90, transform: 'translateX(-50%)' };
+  if (h.top > window.innerHeight / 2) return { left: Math.min(ancho - ANCHO_DE_LA_TARJETA - 16, Math.max(16, h.left)), bottom: window.innerHeight - h.top + 12 };
+  if (h.left + h.width + ANCHO_DE_LA_TARJETA + 24 < ancho) return { left: h.left + h.width + 16, top: Math.max(16, h.top) };
+  return { left: Math.max(16, h.left - ANCHO_DE_LA_TARJETA - 16), top: Math.max(16, h.top) };
+}
+
+export function Tour({ abierto, alCambiar }: { abierto: boolean; alCambiar: (abierto: boolean) => void }): ReactElement {
+  const estudio = useEstudio();
+  const [paradas, setParadas] = useState<readonly ParadaDelTour[]>([]);
+  const [indice, setIndice] = useState(0);
+  // The script is read when the tour opens: moving between Views during the tour does not rewrite the next stops.
+  useEffect(() => {
+    if (!abierto) return;
+    marcarTourVisto();
+    setParadas(paradasDelTour(estudio.fuente, estudio.vista, estudio.modo));
+    setIndice(0);
+    // Only on opening.
+  }, [abierto]);
+  const parada = abierto ? paradas[indice] : undefined;
+  useEffect(() => {
+    parada?.preparar?.(estudio);
+    // Once per stop.
+  }, [parada]);
+  const hueco = useHueco(parada?.zona);
+  const ultima = indice + 1 >= paradas.length;
+
+  return (
+    <Dialog.Root open={abierto && parada !== undefined} onOpenChange={alCambiar}>
+      <Dialog.Portal container={estudio.portales}>
+        {hueco === null || hueco.width === 0 ? <div className="ui-tour-velo" /> : <div className="ui-tour-hueco" style={hueco} />}
+        <Dialog.Popup className="ui-dialogo ui-tour" aria-label="Tour" style={posicionDeLaTarjeta(hueco)}>
+          {parada !== undefined && (
+            <>
+              <small className="ui-tenue">
+                {indice + 1} of {paradas.length}
+              </small>
+              <h3 className="ui-dialogo-titulo">{parada.titulo}</h3>
+              <p>{parada.texto}</p>
+              <div className="ui-tour-fila">
+                <Dialog.Close className="ui-boton">Skip</Dialog.Close>
+                <span />
+                {indice > 0 && (
+                  <button type="button" className="ui-boton" onClick={() => setIndice(indice - 1)}>
+                    Back
+                  </button>
+                )}
+                {ultima ? (
+                  <Dialog.Close className="ui-boton ui-boton-primario">Done</Dialog.Close>
+                ) : (
+                  <button type="button" className="ui-boton ui-boton-primario" onClick={() => setIndice(indice + 1)}>
+                    Next
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}
