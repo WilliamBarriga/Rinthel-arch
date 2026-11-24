@@ -1,0 +1,11 @@
+{
+  "name": "rinthel-arch",
+  "displayName": "rinthel-arch",
+  "version": "0.1.0",
+  "description": "Skills to write, validate and serve rinthel-arch diagrams (.dg) and customize their Themes. The skills run the CLI with npx -y -p rinthel-arch.",
+  "author": { "name": "WilliamBarriga", "url": "https://github.com/WilliamBarriga" },
+  "homepage": "https://github.com/WilliamBarriga/Rinthel-arch#readme",
+  "repository": "https://github.com/WilliamBarriga/Rinthel-arch",
+  "license": "MIT",
+  "keywords": ["diagrams", "architecture", "dsl", "skills"]
+}
