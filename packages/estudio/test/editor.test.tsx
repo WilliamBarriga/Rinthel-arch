@@ -23,10 +23,10 @@ async function abrirCodigo(archivo = 'main.dg'): Promise<{ caja: HTMLElement; vi
   return editorDe(archivo);
 }
 
-const pulsarCodigo = (): Promise<void> => abrirPestana('Codigo');
+const pulsarCodigo = (): Promise<void> => abrirPestana('Code');
 
 async function editorDe(archivo: string): Promise<{ caja: HTMLElement; vista: EditorView }> {
-  const caja = await screen.findByRole('textbox', { name: new RegExp(`^Codigo de ${archivo.replace('.', '\\.')}`) });
+  const caja = await screen.findByRole('textbox', { name: new RegExp(`^Code of ${archivo.replace('.', '\\.')}`) });
   const vista = EditorView.findFromDOM(caja);
   if (vista === null) throw new Error('sin EditorView');
   await waitFor(() => expect(vista.state.doc.length).toBeGreaterThan(0));
@@ -39,7 +39,7 @@ const escribir = (vista: EditorView, despuesDe: string, texto: string): void => 
 };
 
 const lineaDelCursor = (vista: EditorView): number => vista.state.doc.lineAt(vista.state.selection.main.head).number;
-const estadoDelGuardado = () => screen.getByRole('status', { name: 'Guardado del editor' });
+const estadoDelGuardado = () => screen.getByRole('status', { name: 'Editor save state' });
 
 describe('editor del DSL: guardado', () => {
   it('guarda ~400 ms despues de dejar de teclear, solo con los cambios minimos, y el lienzo se actualiza', async () => {
@@ -53,7 +53,7 @@ describe('editor del DSL: guardado', () => {
     vi.advanceTimersByTime(399);
     await act(async () => undefined);
     expect(posts).toEqual([]);
-    expect(estadoDelGuardado().textContent).toMatch(/Sin guardar/);
+    expect(estadoDelGuardado().textContent).toMatch(/Unsaved/);
     vi.advanceTimersByTime(1);
     vi.useRealTimers();
 
@@ -64,8 +64,8 @@ describe('editor del DSL: guardado', () => {
         cuerpo: { ediciones: [{ file: 'main.dg', range: { start: { line: 6, column: 20 }, end: { line: 6, column: 20 } }, replacement: ' nueva' }], version: expect.any(Number), aunqueNoCompile: true },
       },
     ]);
-    await waitFor(() => expect(estadoDelGuardado().textContent).toMatch(/^Guardado/));
-    expect(await within(screen.getByRole('main', { name: 'Lienzo' })).findByText('API nueva')).toBeTruthy();
+    await waitFor(() => expect(estadoDelGuardado().textContent).toMatch(/^Saved/));
+    expect(await within(screen.getByRole('main', { name: 'Canvas' })).findByText('API nueva')).toBeTruthy();
   });
 
   it('Mod+S guarda ya sin el dialogo del navegador; perder el foco tambien guarda', async () => {
@@ -94,8 +94,8 @@ describe('editor del DSL: guardado', () => {
     fireEvent.keyDown(caja, { key: 's', ctrlKey: true });
 
     await waitFor(() => expect(dev.workspace.texto('main.dg')).toContain('fantasma -> api'));
-    const motivo = await screen.findByRole('status', { name: 'Gestos' });
-    expect(motivo.textContent).toMatch(/Gestos deshabilitados/);
+    const motivo = await screen.findByRole('status', { name: 'Gestures' });
+    expect(motivo.textContent).toMatch(/Gestures disabled/);
     expect(motivo.textContent).toMatch(/main\.dg:9/);
     expect(await lienzoListo(contenedor, 'mapa')).toBeTruthy();
   });
@@ -136,12 +136,12 @@ describe('editor del DSL: teclas', () => {
 
     vista.focus();
     // El primer Esc puede cerrar el completado que abrio la escritura.
-    for (let i = 0; i < 2 && screen.getByRole('tab', { name: 'Vistas' }).getAttribute('aria-selected') !== 'true'; i++) fireEvent.keyDown(caja, { key: 'Escape' });
-    expect(screen.getByRole('tab', { name: 'Vistas' }).getAttribute('aria-selected')).toBe('true');
-    fireEvent.click(screen.getByRole('tab', { name: 'Codigo' }));
+    for (let i = 0; i < 2 && screen.getByRole('tab', { name: 'Views' }).getAttribute('aria-selected') !== 'true'; i++) fireEvent.keyDown(caja, { key: 'Escape' });
+    expect(screen.getByRole('tab', { name: 'Views' }).getAttribute('aria-selected')).toBe('true');
+    fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Issues' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Vistas' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Codigo' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Views' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Code' }));
 
     const actual = await editorDe('main.dg');
     expect(actual.vista).toBe(vista);
@@ -159,17 +159,17 @@ describe('editor del DSL: teclas', () => {
 
     fireEvent.keyDown(caja, { key: 'Escape' });
     expect(completionStatus(vista.state)).toBeNull();
-    expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Code' }).getAttribute('aria-selected')).toBe('true');
 
     fireEvent.keyDown(caja, { key: 'Escape' });
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Vistas' }).getAttribute('aria-selected')).toBe('true'));
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Views' }).getAttribute('aria-selected')).toBe('true'));
   });
 
   it('F12 salta a la definicion de un id, tambien en otro archivo', async () => {
     const [modelo, vistas] = DSL.split('\nview mapa');
     await montarEstudio({ 'main.dg': modelo as string, 'vistas.dg': `view mapa${(vistas as string).replace('include **', 'include db')}` });
     await pulsarCodigo();
-    fireEvent.change(await screen.findByRole('combobox', { name: 'Archivo' }), { target: { value: 'vistas.dg' } });
+    fireEvent.change(await screen.findByRole('combobox', { name: 'File' }), { target: { value: 'vistas.dg' } });
     const { caja, vista } = await editorDe('vistas.dg');
 
     vista.dispatch({ selection: { anchor: vista.state.doc.toString().indexOf('include db') + 'include d'.length } });
@@ -195,7 +195,7 @@ describe('editor del DSL: issues y solo lectura', () => {
   it('los issues del archivo aparecen en linea desde el estado', async () => {
     // Sin Fuente buena nunca hay lienzo (ni remontaje del marco): la pestana se pulsa directamente.
     await montarEstudio({ 'main.dg': DSL.replace('api -> db "lee"', 'api -> fantasma') });
-    fireEvent.click(await screen.findByRole('tab', { name: 'Codigo' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Code' }));
     const { vista } = await editorDe('main.dg');
 
     await waitFor(() => {
@@ -208,10 +208,10 @@ describe('editor del DSL: issues y solo lectura', () => {
   it('un archivo de --theme-path se abre en solo lectura', async () => {
     await montarEstudio({ 'main.dg': DSL }, { temas: { 'tema.dg': 'theme claro extends neutral {}\n' } });
     await pulsarCodigo();
-    fireEvent.change(await screen.findByRole('combobox', { name: 'Archivo' }), { target: { value: 'tema.dg' } });
+    fireEvent.change(await screen.findByRole('combobox', { name: 'File' }), { target: { value: 'tema.dg' } });
 
     const { caja, vista } = await editorDe('tema.dg');
-    expect(caja.getAttribute('aria-label')).toBe('Codigo de tema.dg (solo lectura)');
+    expect(caja.getAttribute('aria-label')).toBe('Code of tema.dg (read-only)');
     expect(vista.state.readOnly).toBe(true);
   });
 
@@ -219,7 +219,7 @@ describe('editor del DSL: issues y solo lectura', () => {
     const { posts, envolverFetch } = anotarPosts();
     const { dev } = await montarEstudio({ 'main.dg': DSL }, { temas: { 'tema.dg': 'theme claro extends neutral {}\n' }, envolverFetch });
     await pulsarCodigo();
-    fireEvent.change(await screen.findByRole('combobox', { name: 'Archivo' }), { target: { value: 'tema.dg' } });
+    fireEvent.change(await screen.findByRole('combobox', { name: 'File' }), { target: { value: 'tema.dg' } });
     const { vista } = await editorDe('tema.dg');
 
     dev.editarTemaFuera('tema.dg', 'theme claro extends neutral {\n  palette { acento "#f43f5e" }\n}\n');
@@ -249,7 +249,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     const marcadas = [...document.querySelectorAll('.cm-line.ui-linea-del-disco')].map((l) => l.textContent);
     expect(marcadas).toEqual(['// del agente', '  servicio api "API publica"']);
     expect(posts).toEqual([]);
-    expect(estadoDelGuardado().textContent).toMatch(/^Guardado/);
+    expect(estadoDelGuardado().textContent).toMatch(/^Saved/);
   });
 
   it('con el buffer sucio un 409 se mergea con el disco y el guardado se reintenta', async () => {
@@ -267,7 +267,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     const unido = DSL.replace('"API"', '"API publica"').replace('include **', 'include **\n  // mio');
     await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(unido));
     expect(posts.filter((p) => p.ruta === '/api/edit')).toHaveLength(2);
-    await waitFor(() => expect(estadoDelGuardado().textContent).toMatch(/^Guardado/));
+    await waitFor(() => expect(estadoDelGuardado().textContent).toMatch(/^Saved/));
     expect(vista.state.doc.toString()).toBe(unido);
     soltar();
   });
@@ -284,16 +284,16 @@ describe('editor del DSL frente a escrituras externas', () => {
     fireEvent.blur(vista.contentDOM);
 
     // El 409, la lectura del disco y el reintento son promesas sin temporizadores: basta con vaciar la cola.
-    for (let i = 0; i < 50 && screen.queryByRole('alert', { name: 'Escritura externa' }) === null; i++) await act(() => vi.advanceTimersByTimeAsync(0));
-    const aviso = screen.getByRole('alert', { name: 'Escritura externa' });
-    expect(aviso.textContent).toMatch(/gano el disco en un lugar \(linea 7\)/);
+    for (let i = 0; i < 50 && screen.queryByRole('alert', { name: 'External write' }) === null; i++) await act(() => vi.advanceTimersByTimeAsync(0));
+    const aviso = screen.getByRole('alert', { name: 'External write' });
+    expect(aviso.textContent).toMatch(/the disk won in one place \(line 7\)/);
     expect(vista.state.doc.toString()).toBe(DSL.replace('"Base de datos"', '"Postgres"'));
     expect(dev.workspace.texto('main.dg')).toBe(DSL.replace('"Base de datos"', '"Postgres"'));
 
     act(() => vi.advanceTimersByTime(15_000 - 1));
-    expect(screen.queryByRole('alert', { name: 'Escritura externa' })).not.toBeNull();
+    expect(screen.queryByRole('alert', { name: 'External write' })).not.toBeNull();
     act(() => vi.advanceTimersByTime(1));
-    expect(screen.queryByRole('alert', { name: 'Escritura externa' })).toBeNull();
+    expect(screen.queryByRole('alert', { name: 'External write' })).toBeNull();
   });
 
   it('recuperar pone lo mio en lugar de lo que gano el disco, sin duplicar la linea, y se guarda', async () => {
@@ -305,15 +305,15 @@ describe('editor del DSL frente a escrituras externas', () => {
     dev.editarFuera('main.dg', DSL.replace('"Base de datos"', '"Postgres"'));
     await act(async () => dev.asentado());
     fireEvent.blur(vista.contentDOM);
-    const aviso = await screen.findByRole('alert', { name: 'Escritura externa' });
+    const aviso = await screen.findByRole('alert', { name: 'External write' });
 
-    fireEvent.click(within(aviso).getByRole('button', { name: 'Recuperar lo mio' }));
+    fireEvent.click(within(aviso).getByRole('button', { name: 'Restore mine' }));
     fireEvent.blur(vista.contentDOM);
 
     const recuperado = DSL.replace('"Base de datos"', '"Base de datos (mia)"');
     expect(vista.state.doc.toString()).toBe(recuperado);
     await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(recuperado));
-    expect(screen.queryByRole('alert', { name: 'Escritura externa' })).toBeNull();
+    expect(screen.queryByRole('alert', { name: 'External write' })).toBeNull();
   });
 
   it('el eco del watcher de un guardado propio se reconoce por hash y no relee ni toca el buffer', async () => {
@@ -335,7 +335,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     fireEvent.keyDown(caja, { key: 's', ctrlKey: true });
     await waitFor(() => expect(dev.workspace.texto('main.dg')).toContain('// mio'));
     await act(async () => dev.asentado());
-    await waitFor(() => expect(estadoDelGuardado().textContent).toMatch(/^Guardado/));
+    await waitFor(() => expect(estadoDelGuardado().textContent).toMatch(/^Saved/));
     await act(async () => new Promise((r) => setTimeout(r, 50)));
 
     expect(lecturas).toEqual(['/api/archivo/main.dg']);

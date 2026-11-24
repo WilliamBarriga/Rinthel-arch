@@ -44,9 +44,9 @@ theme claro extends neutral {
 }
 `;
 
-const resaltado = () => screen.getByRole('status', { name: 'Resaltado del lienzo' });
-const opcionDeVista = (vista: string) => within(screen.getByRole('listbox', { name: 'Vistas' })).getByRole('option', { name: vista });
-const marcada = (opcion: HTMLElement) => within(opcion).queryByRole('img', { name: 'cambio externo' }) !== null;
+const resaltado = () => screen.getByRole('status', { name: 'Canvas highlight' });
+const opcionDeVista = (vista: string) => within(screen.getByRole('listbox', { name: 'Views' })).getByRole('option', { name: vista });
+const marcada = (opcion: HTMLElement) => within(opcion).queryByRole('img', { name: 'external change' }) !== null;
 
 async function abrir(hash = '#vista=mapa') {
   const montado = await montarEstudio({ 'main.dg': DSL }, { hash });
@@ -98,13 +98,13 @@ describe('Diferencia externa en la pagina', () => {
 
   it('lo quitado por fuera se lista en el panel Agente hasta la siguiente Diferencia externa', async () => {
     const { dev } = await abrir();
-    fireEvent.click(await screen.findByRole('tab', { name: 'Agente' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Agent' }));
     act(() => dev.editarFuera('main.dg', DSL.replace('  servicio cola "Cola"\n', '').replace('include db, cola', 'include db')));
 
-    const quitado = await screen.findByRole('list', { name: 'Quitado por fuera' });
+    const quitado = await screen.findByRole('list', { name: 'Removed externally' });
     expect(within(quitado).getByText('cola')).toBeTruthy();
     act(() => dev.editarFuera('main.dg', DSL.replace('  servicio cola "Cola"\n', '').replace('include db, cola', 'include db').replace('"API"', '"API 2"')));
-    await waitFor(() => expect(screen.queryByRole('list', { name: 'Quitado por fuera' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('list', { name: 'Removed externally' })).toBeNull());
   });
 
   it('un cambio de Tema marca la galeria y, si es el de la Vista activa, avisa en el marco', async () => {
@@ -112,14 +112,14 @@ describe('Diferencia externa en la pagina', () => {
     act(() => dev.editarFuera('main.dg', DSL.replace('#0ea5e9', '#f43f5e')));
 
     expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('claro'));
-    fireEvent.click(screen.getByRole('tab', { name: 'Temas' }));
-    const opcion = within(screen.getByRole('listbox', { name: 'Temas' })).getByRole('option', { name: 'claro' });
+    fireEvent.click(screen.getByRole('tab', { name: 'Themes' }));
+    const opcion = within(screen.getByRole('listbox', { name: 'Themes' })).getByRole('option', { name: 'claro' });
     expect(marcada(opcion)).toBe(true);
   });
 
   it('con "seguir al agente", una Diferencia sin Evento no mueve la Vista: solo marca el indice', async () => {
     const { dev } = await abrir('#vista=detalle');
-    fireEvent.click(screen.getByRole('switch', { name: 'Seguir al agente' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Follow the agent' }));
     act(() => dev.editarFuera('main.dg', DSL.replace('"Cola"', '"Cola nueva"')));
 
     await waitFor(() => expect(marcada(opcionDeVista('otra'))).toBe(true));

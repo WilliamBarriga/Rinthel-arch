@@ -65,7 +65,7 @@ describe('Componentes de Tema en la app', () => {
     const codigo = reemplazar('/api/codigo', () => Response.json({ temaConCodigo: 'si' }));
     const { contenedor } = await montarEstudio({ 'main.dg': CON_CODIGO }, { codigo: CODIGO, confirmar: () => (preguntas++, true), envolverFetch: codigo.envolverFetch });
 
-    expect((await screen.findByRole('alert')).textContent).toContain('No se pudieron cargar los Componentes de Tema');
+    expect((await screen.findByRole('alert')).textContent).toContain('Could not load the Theme components');
     await lienzoListo(contenedor, 'general');
     expect(preguntas).toBe(0);
     expect(contenedor.querySelector('[data-aurora]')).toBeNull();
@@ -74,7 +74,7 @@ describe('Componentes de Tema en la app', () => {
   it('un bundle que importa otro modulo que React se avisa como fallo', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': CON_CODIGO }, { codigo: { componentes: ['Aurora'], bundle: "require('fs'); return {};" }, confirmar: () => true });
 
-    expect((await screen.findByRole('alert')).textContent).toContain("no puede importar 'fs'");
+    expect((await screen.findByRole('alert')).textContent).toContain("cannot import 'fs'");
     await lienzoListo(contenedor, 'general');
     expect(contenedor.querySelector('[data-aurora]')).toBeNull();
   });
@@ -96,7 +96,7 @@ describe('evento estado malformado', () => {
 
     // Con una `version` enorme: si se aceptara, los estados reales siguientes se descartarian por viejos.
     inyectar.enviar?.('estado', JSON.stringify({ version: 999_999, vistas: 'general' }));
-    expect((await screen.findByRole('alert')).textContent).toContain('estado malformado');
+    expect((await screen.findByRole('alert')).textContent).toContain('Malformed state event');
     expect(contenedor.querySelector('[data-id="api"]')?.textContent).toContain('API');
 
     dev.editarFuera('main.dg', CON_CODIGO.replace('"API"', '"API nueva"'));

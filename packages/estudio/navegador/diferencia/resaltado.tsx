@@ -46,7 +46,7 @@ export function useDiferenciasExternas(opciones: OpcionesDeDiferenciasExternas):
         tema = unido.temaDeLaVista;
         return unido;
       });
-      if (tema !== undefined) vivas.current.avisar(`El Tema ${tema} de esta Vista cambio por fuera`);
+      if (tema !== undefined) vivas.current.avisar(`Theme ${tema} of this View changed externally`);
     }
     // Solo cuando hay Diferencias listas; la Vista y el Paso se leen de este render.
   }, [hayPendientes, version, almacen]);
@@ -70,7 +70,7 @@ export function ResaltadoDelLienzo({ ids }: { ids: readonly string[] }): ReactEl
   return (
     <>
       {ids.length > 0 && <style data-resaltado-externo="">{`${css} { filter: drop-shadow(0 0 4px var(--ui-agente)) drop-shadow(0 0 10px var(--ui-agente-halo)); }`}</style>}
-      <div role="status" aria-label="Resaltado del lienzo" className="ui-solo-lector">
+      <div role="status" aria-label="Canvas highlight" className="ui-solo-lector">
         <ul>
           {ids.map((id) => (
             <li key={id}>{id}</li>
@@ -83,7 +83,7 @@ export function ResaltadoDelLienzo({ ids }: { ids: readonly string[] }): ReactEl
 
 /** Punto "cambio externo" del indice y la galeria. */
 export function MarcaExterna(): ReactElement {
-  return <span role="img" aria-label="cambio externo" title="Cambio externo" className="ui-marca-externa" />;
+  return <span role="img" aria-label="external change" title="External change" className="ui-marca-externa" />;
 }
 
 /** Vistas marcadas en el indice y Temas en la galeria (solo lectura). */

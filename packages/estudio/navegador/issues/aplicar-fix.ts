@@ -27,7 +27,7 @@ export function aplicarFixes({ escribir }: Pick<ContextoDelEstudio, 'escribir'>,
       const { fixes, descripcion } = elegir(estado);
       return fixes.length === 0 ? undefined : { ediciones: fixes, ...(descripcion !== undefined && { descripcion }) };
     },
-    fallo: 'No se aplico ningun fix',
+    fallo: 'No fix was applied',
     reintentar: true,
   });
 }
