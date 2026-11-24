@@ -14,8 +14,8 @@ import type { ResultadoDeEjecucion } from './sesion-cli';
 
 /** Lo que el comando nombra y, en `validate` y `build`, el recuento de issues. */
 export interface DatosDeActividad {
-  objetivo?: ObjetivoDeActividad;
-  resumen?: { errores: number; avisos: number };
+  target?: ObjetivoDeActividad;
+  summary?: { errors: number; warnings: number };
 }
 
 /** Un comando que registra devuelve, ademas, sus datos de actividad; `run` los quita antes de responder. */
@@ -23,7 +23,7 @@ export type ResultadoConActividad = ResultadoDeEjecucion & { actividad?: DatosDe
 
 export type Entorno = Readonly<Record<string, string | undefined>>;
 
-const registra = (comando: string | undefined): comando is EventoDeActividad['comando'] =>
+const registra = (comando: string | undefined): comando is EventoDeActividad['command'] =>
   (COMANDOS_CON_ACTIVIDAD as readonly string[]).includes(comando ?? '');
 
 /** Valor de `--workspace <ruta>` o `--workspace=<ruta>`, como lo leeria `parseArgs`. */
@@ -64,13 +64,13 @@ export async function conActividad(
     contractVersion: ACTIVIDAD_CONTRACT_VERSION,
     ts: new Date(inicio).toISOString(),
     pid: process.pid,
-    ...(agente !== undefined && agente !== '' && { agente }),
-    comando,
+    ...(agente !== undefined && agente !== '' && { agent: agente }),
+    command: comando,
     args,
     exitCode: resultado.exitCode,
-    duracionMs: Date.now() - inicio,
-    ...(actividad?.objetivo !== undefined && Object.keys(actividad.objetivo).length > 0 && { objetivo: actividad.objetivo }),
-    ...(actividad?.resumen !== undefined && { resumen: actividad.resumen }),
+    durationMs: Date.now() - inicio,
+    ...(actividad?.target !== undefined && Object.keys(actividad.target).length > 0 && { target: actividad.target }),
+    ...(actividad?.summary !== undefined && { summary: actividad.summary }),
   };
   try {
     anexarAlRegistro(carpeta, `${JSON.stringify(evento)}\n`);

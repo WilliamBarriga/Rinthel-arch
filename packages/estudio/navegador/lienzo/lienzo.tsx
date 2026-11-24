@@ -56,7 +56,7 @@ export function useLienzoDelEstudio({ dibujable, hashProps: props, layout, compo
           estudio.abrirPestana('derecha', 'detalle');
         }}
         onOpen={(elemento) => {
-          if (modo === 'dev' && elemento.tipo === 'nodo') void abrirCodigoEnBloque(estudio, 'nodo', elemento.id);
+          if (modo === 'dev' && elemento.tipo === 'nodo') void abrirCodigoEnBloque(estudio, 'node', elemento.id);
         }}
         source={dibujada.fuente}
         theme={tema}
@@ -68,8 +68,8 @@ export function useLienzoDelEstudio({ dibujable, hashProps: props, layout, compo
         height={datos.height}
         cachedGeometries={datos.cachedGeometries}
         {...(conGestos && {
-          onMoveNode: ({ id, x, y }) => escribirDesdeElLienzo({ intencion: { tipo: 'mover-pin', vista: props.view, nodo: id, x, y }, fallo: 'Could not move the Pin' }),
-          onReorderLifelines: ({ orden }) => escribirDesdeElLienzo({ intencion: { tipo: 'ordenar-lifelines', vista: props.view, orden }, fallo: 'Could not reorder the Lifelines' }),
+          onMoveNode: ({ id, x, y }) => escribirDesdeElLienzo({ intencion: { type: 'move-pin', view: props.view, node: id, x, y }, fallo: 'Could not move the Pin' }),
+          onReorderLifelines: ({ orden }) => escribirDesdeElLienzo({ intencion: { type: 'reorder-lifelines', view: props.view, order: orden }, fallo: 'Could not reorder the Lifelines' }),
         })}
         chrome={false}
       />

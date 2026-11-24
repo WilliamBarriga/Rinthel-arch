@@ -56,12 +56,12 @@ Descartados: Aristas ordenadas (no cubren repeticiones, retornos ni etiquetas pr
 - **Seleccionables en secuencia**: Lifeline (cabecera y linea, con el id de su Nodo), Mensaje, Fragmento y Nota; `TipoDeElemento` suma `mensaje | fragmento | nota`. La activacion no se selecciona: el click cae en su Lifeline. Un `ref` se selecciona como Fragmento y ademas navega. Lo que el Paso actual no revelo no se selecciona.
 - **Acierto**: Mensaje (flecha o etiqueta), Nota, Lifeline o activacion, Fragmento (solo pestana y borde; el interior deja pasar el click), fondo.
 - **Id de seleccion de un Mensaje**: siempre su ruta de indices, con la Interaccion (`checkout:2.0.1`), tambien en el estado del hash; el alias no se usa. Tras una edicion externa la seleccion puede correrse a otro Mensaje: aceptado.
-- **Arrastre en secuencia**: arrastrar en horizontal la cabecera de una Lifeline emite la Intencion `ordenar-lifelines` (ADR 0007), que reescribe el `order` completo de la Vista; la Lifeline arrastrada va en `fantasma`. Se escribe el orden visible y las entradas de `order` hoy ocultas (hijas de un Grupo colapsado, excluidas) conservan su posicion relativa; se escribe aunque coincida con la primera aparicion. Una hija dentro del `box` de su Grupo solo se mueve dentro del `box`; arrastrar la cabecera del `box` mueve el bloque, escrito como hijas consecutivas en `order`. Mensajes, Notas y Fragmentos no se arrastran: reordenar la Interaccion es editar el Modelo y se hace en el texto.
-- **ER**: como arquitectura. Tabla = Nodo, fila = `atributo`, FK = Arista; arrastrar una tabla emite `mover-pin`; las filas no se arrastran.
+- **Arrastre en secuencia**: arrastrar en horizontal la cabecera de una Lifeline emite la Intencion `reorder-lifelines` (ADR 0007), que reescribe el `order` completo de la Vista; la Lifeline arrastrada va en `fantasma`. Se escribe el orden visible y las entradas de `order` hoy ocultas (hijas de un Grupo colapsado, excluidas) conservan su posicion relativa; se escribe aunque coincida con la primera aparicion. Una hija dentro del `box` de su Grupo solo se mueve dentro del `box`; arrastrar la cabecera del `box` mueve el bloque, escrito como hijas consecutivas en `order`. Mensajes, Notas y Fragmentos no se arrastran: reordenar la Interaccion es editar el Modelo y se hace en el texto.
+- **ER**: como arquitectura. Tabla = Nodo, fila = `atributo`, FK = Arista; arrastrar una tabla emite `move-pin`; las filas no se arrastran.
 - **Ruta mas corta**: en ER como en arquitectura (sobre las FK). En secuencia no hay ruta ni resaltado derivado: dos Lifelines seleccionadas son solo seleccion multiple.
 - **Teclado en secuencia**: Tab recorre las Lifelines en orden de columna; izquierda/derecha saltan a la Lifeline vecina; abajo/arriba recorren los Mensajes visibles en orden temporal (el foco pasa al Mensaje); Enter sobre una Lifeline de Grupo colapsa o abre, sobre una con `link` navega. En ER, como en arquitectura.
 - **Estados que emite el shell**: `lifeline` y su cabecera `hover seleccionado foco fantasma`; `activation` refleja los de su Lifeline; `message` `hover seleccionado foco`; `fragment` y `note` `hover seleccionado`; `row` `hover seleccionado`. En secuencia nadie emite `en-ruta` ni `atenuado`; el Tema puede declararlos igual.
-- **Fuera de alcance**: edicion en el lugar (renombrar, crear Mensajes, cambiar `kind`), reordenar Mensajes y Atributos. La unica Intencion nueva es `ordenar-lifelines`.
+- **Fuera de alcance**: edicion en el lugar (renombrar, crear Mensajes, cambiar `kind`), reordenar Mensajes y Atributos. La unica Intencion nueva es `reorder-lifelines`.
 
 ## Sintaxis DSL
 
@@ -114,30 +114,30 @@ Severidades y codigos fijados aqui (codigos en "Codigos de issue").
 
 ### Codigos de issue
 
-El parser acepta la forma general (operandos de Fragmento, propiedades de Vista, `show`/`hide`, `link`) y `canonico` emite el codigo especifico; nada de esto sale como `E_SYNTAX_ERROR`. `fix` solo con un candidato unico (ADR 0005); si no, `hint`.
+El parser acepta la forma general (operandos de Fragmento, propiedades de Vista, `show`/`hide`, `link`) y `canonico` emite el codigo especifico; nada de esto sale como `syntax-error`. `fix` solo con un candidato unico (ADR 0005); si no, `hint`.
 
 | Regla | Codigo | Severidad | Ayuda |
 | --- | --- | --- | --- |
-| Propiedad de Vista no valida para su tipo (`include`/`pin`/`expanded` en secuencia, `interaction`/`order`/`autonumber` fuera de secuencia, `show`/`hide` en secuencia) | `E_VIEW_PROPERTY_FOR_TYPE` | error | `hint` con la alternativa (`show`/`hide` a `step { upto }`) |
-| Vista de secuencia sin `interaction` | `E_SEQUENCE_WITHOUT_INTERACTION` | error | `hint` con las Interacciones existentes |
-| `interaction` de Vista o `ref` a una Interaccion inexistente | `E_UNKNOWN_INTERACTION` | error | `fix` por typo |
-| id de Interaccion duplicado | `E_DUPLICATE_INTERACTION` | error | `related` al original |
-| Lifeline, extremo de Mensaje o entrada de `order` que no es un Nodo | `E_UNKNOWN_LIFELINE` | error | `fix` por typo |
-| `create` que no es la primera aparicion del destino | `E_CREATE_NOT_FIRST` | error | `related` a la primera aparicion |
-| Aparicion despues de `destroy` | `E_AFTER_DESTROY` | error | `related` al `destroy` |
-| Marca de clave repetida | `E_DUPLICATE_KEY_MARK` | error | `fix`: borrar la repetida |
-| Operandos invalidos en un Fragmento | `E_INVALID_FRAGMENT_OPERAND` | error | `hint` (`else` es de `alt`, `and` de `par`) |
-| id de Mensaje duplicado en su Interaccion | `E_DUPLICATE_MESSAGE_ID` | error | `related` |
-| `upto` a un id inexistente | `E_UNKNOWN_STEP` (reusado) | error | `fix` por typo |
-| `upto` a un Mensaje no proyectado (`depth`/`exclude`) | `E_STEP_NOT_PROJECTED` | error | `hint` |
-| `upto` que no avanza estrictamente | `E_STEP_NOT_ADVANCING` | error | `related` al Paso anterior |
-| `steps each` junto a `step` | `E_STEPS_EACH_WITH_STEP` | error | - |
-| `link` en secuencia con origen que no es una Lifeline | `E_LINK_NOT_LIFELINE` | error | - |
-| Cardinalidad fuera de `0..1 \| 1 \| 0..* \| 1..*` en una Arista de Vista ER | `E_ER_CARDINALITY` | error | `fix` con candidato cercano unico, si no `hint` con las cuatro |
-| `reply` sin `sync` abierto | `W_REPLY_WITHOUT_SYNC` | warning | - |
-| `ref` a una Interaccion que ninguna Vista de secuencia proyecta | `W_REF_WITHOUT_VIEW` | warning | `hint`: agregar una Vista |
-| Nodo de `order` que no participa en la Interaccion proyectada (se ignora en el layout) | `W_ORDER_NOT_IN_INTERACTION` | warning | - |
-| `solo-color` en tipos de Mensaje o Arista identificante | `W_THEME_COLOR_ONLY` (reusado, descripcion ampliada) | warning | - |
+| Propiedad de Vista no valida para su tipo (`include`/`pin`/`expanded` en secuencia, `interaction`/`order`/`autonumber` fuera de secuencia, `show`/`hide` en secuencia) | `view-property-for-type` | error | `hint` con la alternativa (`show`/`hide` a `step { upto }`) |
+| Vista de secuencia sin `interaction` | `sequence-without-interaction` | error | `hint` con las Interacciones existentes |
+| `interaction` de Vista o `ref` a una Interaccion inexistente | `unknown-interaction` | error | `fix` por typo |
+| id de Interaccion duplicado | `duplicate-interaction` | error | `related` al original |
+| Lifeline, extremo de Mensaje o entrada de `order` que no es un Nodo | `unknown-lifeline` | error | `fix` por typo |
+| `create` que no es la primera aparicion del destino | `create-not-first` | error | `related` a la primera aparicion |
+| Aparicion despues de `destroy` | `after-destroy` | error | `related` al `destroy` |
+| Marca de clave repetida | `duplicate-key-mark` | error | `fix`: borrar la repetida |
+| Operandos invalidos en un Fragmento | `invalid-fragment-operand` | error | `hint` (`else` es de `alt`, `and` de `par`) |
+| id de Mensaje duplicado en su Interaccion | `duplicate-message-id` | error | `related` |
+| `upto` a un id inexistente | `unknown-step` (reusado) | error | `fix` por typo |
+| `upto` a un Mensaje no proyectado (`depth`/`exclude`) | `step-not-projected` | error | `hint` |
+| `upto` que no avanza estrictamente | `step-not-advancing` | error | `related` al Paso anterior |
+| `steps each` junto a `step` | `steps-each-with-step` | error | - |
+| `link` en secuencia con origen que no es una Lifeline | `link-not-lifeline` | error | - |
+| Cardinalidad fuera de `0..1 \| 1 \| 0..* \| 1..*` en una Arista de Vista ER | `er-cardinality` | error | `fix` con candidato cercano unico, si no `hint` con las cuatro |
+| `reply` sin `sync` abierto | `reply-without-sync` | warning | - |
+| `ref` a una Interaccion que ninguna Vista de secuencia proyecta | `ref-without-view` | warning | `hint`: agregar una Vista |
+| Nodo de `order` que no participa en la Interaccion proyectada (se ignora en el layout) | `order-not-in-interaction` | warning | - |
+| `solo-color` en tipos de Mensaje o Arista identificante | `theme-color-only` (reusado, descripcion ampliada) | warning | - |
 
 Sin severidad `info`: el `ref` sin Vista es warning y `--strict` lo hace fallar a proposito. Sin avisos de coherencia entre Mensajes y Aristas: un Mensaje entre dos Nodos sin Arista es valido (los Mensajes son independientes de las Aristas), y tampoco se avisa de una Interaccion sin Vista.
 
@@ -145,7 +145,7 @@ Sin severidad `info`: el `ref` sin Vista es warning y `--strict` lo hace fallar 
 
 Todo reutiliza Capas, Primitivas, Slots y Paleta (ADR 0008); no hay Familia nueva.
 
-- **Elementos de Tema nuevos**: bloques al nivel de `node` y `edge`: `lifeline`, `activation`, `message`, `fragment`, `note` y `row`. La cabecera de la Lifeline y la tabla ER se dibujan con `node`. Admiten `extends`, `part`, `use` y los mismos estados que Nodo y Arista (un estado solo pinta); `inspect tema` muestra sus pilas.
+- **Elementos de Tema nuevos**: bloques al nivel de `node` y `edge`: `lifeline`, `activation`, `message`, `fragment`, `note` y `row`. La cabecera de la Lifeline y la tabla ER se dibujan con `node`. Admiten `extends`, `part`, `use` y los mismos estados que Nodo y Arista (un estado solo pinta); `inspect theme` muestra sus pilas.
 - **Cascada por Tipo de diagrama**: `diagram <tipo> { ... }` dentro de `node`, `edge` y `group`, para los cuatro tipos. Orden: Tema base, Tipo de diagrama, Tipo de nodo, estado, Vista. A diferencia de un estado, puede cambiar las Metricas.
 - **`message`**: el modelo de `edge` (pila de trazos, `start`/`end`, `label`) con parches `kind <tipo>`. Defectos: `sync` continuo con `arrow`; `async` continuo con `chevron`; `reply` discontinuo con `chevron`; `create` discontinuo con `chevron`, terminando en la cabecera; `destroy` continuo con `arrow`.
 - **`lifeline`**: pila de trazos mas `end`, el marcador al final de una Lifeline destruida (defecto `cross`). La cabecera no se repite al pie.

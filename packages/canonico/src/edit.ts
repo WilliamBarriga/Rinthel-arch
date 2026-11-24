@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { MOTIVOS_DE_RECHAZO } from './pin';
 
-export const EDIT_CONTRACT_VERSION = 1;
+export const EDIT_CONTRACT_VERSION = 2;
 
 /** Hash estable (53 bits, hex) del contenido de un archivo; no criptografico. Puro, sin `node:crypto`. */
 export function hashDeContenido(texto: string): string {

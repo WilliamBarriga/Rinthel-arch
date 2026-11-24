@@ -116,7 +116,7 @@ describe('dev: ruta de fuentes del Workspace', () => {
     const estado = (await (await fetch(`${url}api/estado`)).json()) as { fuentes: Record<string, string>; issues: { code: string }[] };
 
     expect(Object.keys(estado.fuentes).sort()).toEqual(['fuentes/Con Espacios.woff2', 'fuentes/caveat-latin-400-normal.woff2', 'fuentes/enlace.woff2'].sort());
-    expect(estado.issues.map((i) => i.code)).not.toContain('E_THEME_FONT_MISSING');
+    expect(estado.issues.map((i) => i.code)).not.toContain('theme-font-missing');
   });
 
   it('una fuente declarada sin archivo es un error en el estado, con posicion', async () => {
@@ -125,6 +125,6 @@ describe('dev: ruta de fuentes del Workspace', () => {
 
     const estado = (await (await fetch(`${url}api/estado`)).json()) as { issues: { code: string; file: string; line: number }[] };
 
-    expect(estado.issues).toContainEqual(expect.objectContaining({ code: 'E_THEME_FONT_MISSING', file: 'main.dg', line: 3 }));
+    expect(estado.issues).toContainEqual(expect.objectContaining({ code: 'theme-font-missing', file: 'main.dg', line: 3 }));
   });
 });

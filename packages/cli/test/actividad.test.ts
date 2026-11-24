@@ -60,12 +60,12 @@ describe('Registro de actividad', () => {
     expect(evento).toMatchObject({
       contractVersion: ACTIVIDAD_CONTRACT_VERSION,
       pid: process.pid,
-      comando: 'validate',
+      command: 'validate',
       args: ['--workspace', raiz, '--json'],
       exitCode: 0,
-      resumen: { errores: 0, avisos: 0 },
+      summary: { errors: 0, warnings: 0 },
     });
-    expect(evento?.duracionMs).toBeGreaterThanOrEqual(0);
+    expect(evento?.durationMs).toBeGreaterThanOrEqual(0);
     expect(Number.isNaN(Date.parse(evento?.ts ?? ''))).toBe(false);
     expect(evento).not.toHaveProperty('agente');
     expect(evento).not.toHaveProperty('objetivo');
@@ -78,9 +78,9 @@ describe('Registro de actividad', () => {
     expect((await run(['validate', '--workspace', raiz, '--max-issues', '0'], activo)).exitCode).toBe(2);
 
     const [build, uso] = eventos(raiz);
-    expect(build).toMatchObject({ comando: 'build', exitCode: 1 });
-    expect(build?.resumen?.errores).toBeGreaterThan(0);
-    expect(uso).toMatchObject({ comando: 'validate', exitCode: 2, args: ['--workspace', raiz, '--max-issues', '0'] });
+    expect(build).toMatchObject({ command: 'build', exitCode: 1 });
+    expect(build?.summary?.errors).toBeGreaterThan(0);
+    expect(uso).toMatchObject({ command: 'validate', exitCode: 2, args: ['--workspace', raiz, '--max-issues', '0'] });
     expect(uso).not.toHaveProperty('resumen');
   });
 
@@ -102,21 +102,21 @@ describe('Registro de actividad', () => {
     await run(['validate', '--workspace', raiz], { entorno: { DIAGRAMS_ACTIVIDAD: '0' } });
     expect(eventos(raiz)).toEqual([]);
     await run(['validate', '--workspace', raiz], { entorno: { DIAGRAMS_AGENTE: 'revisor' } });
-    expect(eventos(raiz).map((e) => e.agente)).toEqual(['revisor']);
+    expect(eventos(raiz).map((e) => e.agent)).toEqual(['revisor']);
   });
 
   it('inspect lleva en objetivo la Vista, el Nodo o el Tema que nombra; buscar no', async () => {
     const raiz = workspace();
-    await run(['inspect', 'vista', 'general', '--workspace', raiz], activo);
-    await run(['inspect', 'nodo', 'zzz', '--workspace', raiz], activo);
-    await run(['inspect', 'tema', 'neutral', '--workspace', raiz], activo);
-    await run(['inspect', 'buscar', 'a', '--workspace', raiz], activo);
+    await run(['inspect', 'view', 'general', '--workspace', raiz], activo);
+    await run(['inspect', 'node', 'zzz', '--workspace', raiz], activo);
+    await run(['inspect', 'theme', 'neutral', '--workspace', raiz], activo);
+    await run(['inspect', 'search', 'a', '--workspace', raiz], activo);
 
-    expect(eventos(raiz).map(({ exitCode, objetivo }) => ({ exitCode, objetivo }))).toEqual([
-      { exitCode: 0, objetivo: { vista: 'general' } },
-      { exitCode: 1, objetivo: { nodo: 'zzz' } },
-      { exitCode: 0, objetivo: { tema: 'neutral' } },
-      { exitCode: 0, objetivo: undefined },
+    expect(eventos(raiz).map(({ exitCode, target }) => ({ exitCode, target }))).toEqual([
+      { exitCode: 0, target: { view: 'general' } },
+      { exitCode: 1, target: { node: 'zzz' } },
+      { exitCode: 0, target: { theme: 'neutral' } },
+      { exitCode: 0, target: undefined },
     ]);
   });
 
@@ -124,17 +124,17 @@ describe('Registro de actividad', () => {
     const raiz = workspace();
     const pin = ['--view', 'general', '--node', 'a', '--x', '1', '--y', '2'];
     expect((await run(['edit', '--workspace', raiz, ...pin], activo)).exitCode).toBe(0);
-    const orden = JSON.stringify({ tipo: 'ordenar-lifelines', vista: 'nada', orden: ['a'] });
+    const orden = JSON.stringify({ type: 'reorder-lifelines', view: 'nada', order: ['a'] });
     expect((await run(['edit', '--workspace', raiz, '--intent', orden], activo)).exitCode).toBe(1);
     const ediciones = JSON.stringify([
       { file: 'main.dg', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: '// hola\n' },
     ]);
     expect((await run(['edit', '--workspace', raiz, '--edits', ediciones], activo)).exitCode).toBe(0);
 
-    expect(eventos(raiz).map(({ exitCode, objetivo }) => ({ exitCode, objetivo }))).toEqual([
-      { exitCode: 0, objetivo: { vista: 'general', nodo: 'a', archivos: ['main.dg'] } },
-      { exitCode: 1, objetivo: { vista: 'nada' } },
-      { exitCode: 0, objetivo: { archivos: ['main.dg'] } },
+    expect(eventos(raiz).map(({ exitCode, target }) => ({ exitCode, target }))).toEqual([
+      { exitCode: 0, target: { view: 'general', node: 'a', files: ['main.dg'] } },
+      { exitCode: 1, target: { view: 'nada' } },
+      { exitCode: 0, target: { files: ['main.dg'] } },
     ]);
   });
 
@@ -152,7 +152,7 @@ describe('Registro de actividad', () => {
     writeFileSync(registro(raiz), viejo);
     await run(['validate', '--workspace', raiz], activo);
     expect(readFileSync(join(raiz, '.diagrams', 'actividad.1.jsonl'), 'utf8')).toBe(viejo);
-    expect(eventos(raiz).map((e) => e.comando)).toEqual(['validate']);
+    expect(eventos(raiz).map((e) => e.command)).toEqual(['validate']);
   });
 
   it('build reemplaza canonico.json y geometria/ y conserva el registro', async () => {
@@ -165,6 +165,6 @@ describe('Registro de actividad', () => {
 
     expect(existsSync(join(raiz, '.diagrams', 'canonico.json'))).toBe(false);
     expect(existsSync(join(raiz, '.diagrams', 'geometria'))).toBe(false);
-    expect(eventos(raiz).map((e) => [e.comando, e.exitCode])).toEqual([['validate', 0], ['build', 0], ['build', 1]]);
+    expect(eventos(raiz).map((e) => [e.command, e.exitCode])).toEqual([['validate', 0], ['build', 0], ['build', 1]]);
   });
 });

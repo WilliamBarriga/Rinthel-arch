@@ -15,9 +15,9 @@ El lienzo ocupa toda la pagina. Arriba va la barra (Vista actual con su ruta, Bu
 
 ## Panel derecho
 
-- **Detalle**: el Nodo seleccionado en el lienzo, como lo da `inspect nodo`: descripcion, `archivo:linea`, padre, hijos, Atributos, Aristas y las Vistas que lo muestran (clic para ir).
+- **Detalle**: el Nodo seleccionado en el lienzo, como lo da `inspect node`: descripcion, `archivo:linea`, padre, hijos, Atributos, Aristas y las Vistas que lo muestran (clic para ir).
 - **Issues**: los issues del ultimo estado con filtro por texto y severidad. Cada uno salta a su `archivo:linea`; los que traen `fix` lo aplican con un boton y "Aplicar N fix" aplica de una vez los visibles.
-- **Temas**: la galeria. Clic, o flechas y Enter, eligen un Tema; elegirlo lo previsualiza en la Vista activa sin escribir (con su cadena `extends`, Paleta y Capas) hasta "Dejar de previsualizar"; "Fijar" escribe `theme` en la Vista y "Quitar" lo borra (la Intencion `fijar-tema` de `edit`).
+- **Temas**: la galeria. Clic, o flechas y Enter, eligen un Tema; elegirlo lo previsualiza en la Vista activa sin escribir (con su cadena `extends`, Paleta y Capas) hasta "Dejar de previsualizar"; "Fijar" escribe `theme` en la Vista y "Quitar" lo borra (la Intencion `set-theme` de `edit`).
 - **Historial**: el Historial de archivos; cada guardado, Gesto, `fix` o Tema fijado es una entrada, la mas reciente arriba y al final Inicio. Clic en una entrada lleva el Workspace a ese punto (Ctrl/Cmd+Z y Ctrl/Cmd+Shift+Z mueven de a una). Una entrada cuyo archivo cambio fuera de la UI queda deshabilitada con el motivo: restaurarla pisaria ese cambio.
 - **Agente**: el feed del Registro de actividad (ver abajo).
 

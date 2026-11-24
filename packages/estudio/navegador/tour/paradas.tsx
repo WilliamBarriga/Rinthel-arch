@@ -171,7 +171,7 @@ export function paradasDelTour(fuente: FuenteCanonica | undefined, vistaActiva: 
       if (activa === undefined) e.abrirCodigo();
       else {
         e.irAVista(activa.id);
-        void abrirCodigoEnBloque(e, 'vista', activa.id);
+        void abrirCodigoEnBloque(e, 'view', activa.id);
       }
     },
   });

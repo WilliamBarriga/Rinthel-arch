@@ -9,7 +9,7 @@ describe('compile: reserva de las fuentes del Tema', () => {
   it('una familia no generica sin reserva es error con codigo y posicion de la entrada', () => {
     const { issues } = conFonts('fonts { body "Inter"  mono "monospace" }');
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_FONT_NO_FALLBACK']);
+    expect(issues.map((i) => i.code)).toEqual(['theme-font-no-fallback']);
     expect(issues[0]).toMatchObject({ file: 'main.dg', line: 3, message: expect.stringContaining('fonts.body'), hint: expect.stringContaining('fallback') });
   });
 

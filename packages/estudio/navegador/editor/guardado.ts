@@ -102,7 +102,7 @@ export function crearGuardador(opciones: OpcionesDelGuardador): Guardador {
       fijar(pendiente.empty ? { tipo: 'guardado' } : { tipo: 'sin-guardar' });
     } else {
       pendiente = enviado.compose(pendiente);
-      fijar({ tipo: 'error', mensaje: r.mensaje, desactualizado: r.desactualizado });
+      fijar({ tipo: 'error', mensaje: r.message, desactualizado: r.desactualizado });
     }
     return r;
   };

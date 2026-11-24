@@ -63,7 +63,7 @@ describe('Familias de efectos del catalogo', () => {
 
   it('el giro rechaza (sin recortar) mas de 3 grados', () => {
     expect(ok('tilt', [{ clave: 'degrees', valor: 3 }]).errores).toEqual([]);
-    expect(ok('tilt', [{ clave: 'degrees', valor: 4 }]).errores.map((e) => e.codigo)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(ok('tilt', [{ clave: 'degrees', valor: 4 }]).errores.map((e) => e.codigo)).toEqual(['theme-invalid-value']);
   });
 
   it('exige color en glow, shadow y tape, y valida el resto de Primitivas', () => {

@@ -40,68 +40,68 @@ async function json(args: string[], raiz = workspace()) {
   return { ...r, salida: r.stdout === '' ? undefined : salidaDeInspectSchema.parse(JSON.parse(r.stdout)) };
 }
 
-describe('inspect buscar', () => {
+describe('inspect search', () => {
   it('encuentra Nodos por id parcial y por titulo, con id cualificado, tipo y archivo:linea', async () => {
-    const porId = await json(['buscar', 'db']);
+    const porId = await json(['search', 'db']);
     expect(porId.exitCode).toBe(0);
     expect(porId.salida).toMatchObject({
       contractVersion: INSPECT_CONTRACT_VERSION,
-      comando: 'buscar',
-      resultados: [{ kind: 'nodo', id: 'sistema.db', type: 'dato', title: 'Base de datos', file: 'main.dg', line: 5 }],
+      command: 'search',
+      results: [{ kind: 'node', id: 'sistema.db', type: 'dato', title: 'Base de datos', file: 'main.dg', line: 5 }],
     });
 
-    const porTitulo = await json(['buscar', 'pagos']);
-    expect(porTitulo.salida).toMatchObject({ resultados: [{ id: 'sistema.api', line: 4 }] });
+    const porTitulo = await json(['search', 'pagos']);
+    expect(porTitulo.salida).toMatchObject({ results: [{ id: 'sistema.api', line: 4 }] });
   });
 
   it('tambien encuentra Vistas y no distingue mayusculas', async () => {
-    const { salida } = await json(['buscar', 'DATOS']);
-    expect(salida).toMatchObject({ comando: 'buscar' });
-    const resultados = (salida as { resultados: { kind: string; id: string; line: number }[] }).resultados;
-    expect(resultados).toContainEqual(expect.objectContaining({ kind: 'vista', id: 'datos', line: 17 }));
-    expect(resultados).toContainEqual(expect.objectContaining({ kind: 'nodo', id: 'sistema.db' }));
+    const { salida } = await json(['search', 'DATOS']);
+    expect(salida).toMatchObject({ command: 'search' });
+    const resultados = (salida as { results: { kind: string; id: string; line: number }[] }).results;
+    expect(resultados).toContainEqual(expect.objectContaining({ kind: 'view', id: 'datos', line: 17 }));
+    expect(resultados).toContainEqual(expect.objectContaining({ kind: 'node', id: 'sistema.db' }));
   });
 
   it('texto legible por defecto: una linea por resultado', async () => {
-    const r = await run(['inspect', 'buscar', 'cola', '--workspace', workspace()]);
+    const r = await run(['inspect', 'search', 'cola', '--workspace', workspace()]);
     expect(r.exitCode).toBe(0);
-    expect(r.stdout).toBe('nodo cola servicio "Cola" main.dg:9\n1 resultado\n');
+    expect(r.stdout).toBe('node cola servicio "Cola" main.dg:9\n1 result\n');
   });
 
   it('sin coincidencias sale 0 con lista vacia', async () => {
-    const { exitCode, salida } = await json(['buscar', 'zzz']);
+    const { exitCode, salida } = await json(['search', 'zzz']);
     expect(exitCode).toBe(0);
-    expect(salida).toMatchObject({ resultados: [] });
+    expect(salida).toMatchObject({ results: [] });
   });
 });
 
-describe('inspect nodo', () => {
+describe('inspect node', () => {
   it('devuelve las Aristas y las Vistas que incluyen al Nodo', async () => {
-    const { exitCode, salida } = await json(['nodo', 'sistema.api']);
+    const { exitCode, salida } = await json(['node', 'sistema.api']);
     expect(exitCode).toBe(0);
     expect(salida).toMatchObject({
-      comando: 'nodo',
-      nodo: { id: 'sistema.api', type: 'servicio', title: 'API de pagos', file: 'main.dg', line: 4, parent: 'sistema', children: [] },
-      aristas: [
+      command: 'node',
+      node: { id: 'sistema.api', type: 'servicio', title: 'API de pagos', file: 'main.dg', line: 4, parent: 'sistema', children: [] },
+      edges: [
         { from: 'sistema.api', to: 'sistema.db', direction: 'out', label: 'lee', file: 'main.dg', line: 10 },
         { from: 'cola', to: 'sistema.api', direction: 'in', file: 'main.dg', line: 11 },
       ],
-      vistas: [{ id: 'general', file: 'main.dg', line: 13 }],
+      views: [{ id: 'general', file: 'main.dg', line: 13 }],
     });
   });
 
   it('lista los hijos, los Atributos y varias Vistas', async () => {
-    const { salida } = await json(['nodo', 'sistema.db']);
+    const { salida } = await json(['node', 'sistema.db']);
     expect(salida).toMatchObject({
-      nodo: { attributes: [{ name: 'id' }] },
-      vistas: [{ id: 'general' }, { id: 'datos' }],
+      node: { attributes: [{ name: 'id' }] },
+      views: [{ id: 'general' }, { id: 'datos' }],
     });
-    const padre = await json(['nodo', 'sistema']);
-    expect(padre.salida).toMatchObject({ nodo: { children: ['sistema.api', 'sistema.db'] } });
+    const padre = await json(['node', 'sistema']);
+    expect(padre.salida).toMatchObject({ node: { children: ['sistema.api', 'sistema.db'] } });
   });
 
   it('texto legible por defecto', async () => {
-    const r = await run(['inspect', 'nodo', 'sistema.api', '--workspace', workspace()]);
+    const r = await run(['inspect', 'node', 'sistema.api', '--workspace', workspace()]);
     expect(r.stdout).toContain('sistema.api servicio "API de pagos" main.dg:4');
     expect(r.stdout).toContain('-> sistema.db "lee" main.dg:10');
     expect(r.stdout).toContain('<- cola main.dg:11');
@@ -109,44 +109,44 @@ describe('inspect nodo', () => {
   });
 
   it('un Nodo inexistente sale 1 sugiriendo ids cercanos', async () => {
-    const r = await run(['inspect', 'nodo', 'sistema.dv', '--workspace', workspace()]);
+    const r = await run(['inspect', 'node', 'sistema.dv', '--workspace', workspace()]);
     expect(r.exitCode).toBe(1);
     expect(r.stdout).toBe('');
-    expect(r.stderr).toContain("No existe el Nodo 'sistema.dv'");
+    expect(r.stderr).toContain("No such Node 'sistema.dv'");
     expect(r.stderr).toContain('sistema.db');
   });
 });
 
-describe('inspect vista', () => {
+describe('inspect view', () => {
   it('lista los Nodos y Aristas visibles de la Vista', async () => {
-    const { salida } = await json(['vista', 'datos']);
+    const { salida } = await json(['view', 'datos']);
     expect(salida).toMatchObject({
-      comando: 'vista',
-      vista: { id: 'datos', type: 'architecture', file: 'main.dg', line: 17, nodos: [{ id: 'sistema.db', type: 'dato', line: 5 }], aristas: [] },
+      command: 'view',
+      view: { id: 'datos', type: 'architecture', file: 'main.dg', line: 17, nodes: [{ id: 'sistema.db', type: 'dato', line: 5 }], edges: [] },
     });
-    const general = await json(['vista', 'general']);
-    const vista = (general.salida as { vista: { nodos: { id: string }[]; aristas: unknown[] } }).vista;
-    expect(vista.nodos.map(({ id }) => id)).toEqual(['sistema', 'sistema.api', 'sistema.db', 'cola']);
-    expect(vista.aristas).toHaveLength(2);
+    const general = await json(['view', 'general']);
+    const vista = (general.salida as { view: { nodes: { id: string }[]; edges: unknown[] } }).view;
+    expect(vista.nodes.map(({ id }) => id)).toEqual(['sistema', 'sistema.api', 'sistema.db', 'cola']);
+    expect(vista.edges).toHaveLength(2);
   });
 
-  it('una Vista inexistente sale 1', async () => {
-    const r = await run(['inspect', 'vista', 'nada', '--workspace', workspace()]);
+  it('una View not found sale 1', async () => {
+    const r = await run(['inspect', 'view', 'nada', '--workspace', workspace()]);
     expect(r.exitCode).toBe(1);
-    expect(r.stderr).toContain("No existe la Vista 'nada'");
+    expect(r.stderr).toContain("No such View 'nada'");
   });
 });
 
 describe('inspect --theme-path', () => {
   it('acepta --theme-path como validate y build', async () => {
     const temas = join(import.meta.dirname, 'fixtures', 'temas-extra');
-    const r = await run(['inspect', 'buscar', 'db', '--workspace', workspace(), '--theme-path', temas]);
+    const r = await run(['inspect', 'search', 'db', '--workspace', workspace(), '--theme-path', temas]);
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain('sistema.db');
   });
 });
 
-describe('inspect vista: sitio de Aristas elevadas', () => {
+describe('inspect view: sitio de Aristas elevadas', () => {
   it('una Arista elevada por un Grupo colapsado apunta a una Arista del Modelo que fusiona, no a la primera', async () => {
     const texto = `specification { node servicio }
 model {
@@ -164,8 +164,8 @@ view v {
   collapsed grupo
 }
 `;
-    const { salida } = await json(['vista', 'v'], workspace(texto));
-    const aristas = (salida as { vista: { aristas: { from: string; to: string; line: number }[] } }).vista.aristas;
+    const { salida } = await json(['view', 'v'], workspace(texto));
+    const aristas = (salida as { view: { edges: { from: string; to: string; line: number }[] } }).view.edges;
     const elevada = aristas.find(({ to }) => to === 'grupo');
     expect(elevada?.line).toBe(9);
   });
@@ -174,7 +174,7 @@ view v {
 describe('inspect errores de uso', () => {
   it('sin subcomando, subcomando desconocido, sin argumento o sin --workspace sale 2', async () => {
     const raiz = workspace();
-    for (const args of [['inspect', '--workspace', raiz], ['inspect', 'foo', 'x', '--workspace', raiz], ['inspect', 'nodo', '--workspace', raiz], ['inspect', 'nodo', 'a']]) {
+    for (const args of [['inspect', '--workspace', raiz], ['inspect', 'foo', 'x', '--workspace', raiz], ['inspect', 'node', '--workspace', raiz], ['inspect', 'node', 'a']]) {
       const r = await run(args);
       expect(r.exitCode, args.join(' ')).toBe(2);
       expect(r.stdout).toBe('');
@@ -182,10 +182,10 @@ describe('inspect errores de uso', () => {
   });
 
   it('un Workspace con errores de compilacion sale 1 con los issues en stderr', async () => {
-    const r = await run(['inspect', 'buscar', 'a', '--workspace', workspace('specification { node s }\nmodel { s a  a -> zz }')]);
+    const r = await run(['inspect', 'search', 'a', '--workspace', workspace('specification { node s }\nmodel { s a  a -> zz }')]);
     expect(r.exitCode).toBe(1);
     expect(r.stdout).toBe('');
-    expect(r.stderr).toContain('E_DANGLING_EDGE');
+    expect(r.stderr).toContain('dangling-edge');
   });
 });
 
@@ -199,7 +199,7 @@ describe('inspect rendimiento', () => {
     };
     await medir(['validate', '--workspace', raiz]); // calienta modulos y caches de arranque
     const validate = Math.min((await medir(['validate', '--workspace', raiz])).ms, (await medir(['validate', '--workspace', raiz])).ms);
-    const inspect = await medir(['inspect', 'buscar', 'a', '--workspace', raiz]);
+    const inspect = await medir(['inspect', 'search', 'a', '--workspace', raiz]);
 
     expect(inspect.exitCode).toBe(0);
     // Holgado: inspect no paga layout, asi que no debe pasar de ~3x validate (mas un margen fijo contra ruido).

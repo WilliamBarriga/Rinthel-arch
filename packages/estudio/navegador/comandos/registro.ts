@@ -23,7 +23,7 @@ export interface Comando extends DeclaracionDeTeclas, ConModo {
 const historial = (accion: 'deshacer' | 'rehacer') => async (e: ContextoDelEstudio): Promise<void> => void (await e.escribir({ historial: accion }));
 
 /** Abre Codigo y, cuando `inspect` responde, salta al bloque del Nodo o de la Vista `id`. */
-export async function abrirCodigoEnBloque(e: ContextoDelEstudio, comando: 'nodo' | 'vista', id: string): Promise<void> {
+export async function abrirCodigoEnBloque(e: ContextoDelEstudio, comando: 'node' | 'view', id: string): Promise<void> {
   const consulta = e.cliente.inspeccionar(comando, id);
   e.abrirCodigo();
   const r = await consulta;
@@ -33,8 +33,8 @@ export async function abrirCodigoEnBloque(e: ContextoDelEstudio, comando: 'nodo'
 
 /** Codigo en el bloque del Nodo seleccionado o, sin seleccion, en el de la Vista activa. */
 async function abrirCodigoAqui(e: ContextoDelEstudio): Promise<void> {
-  if (e.seleccion !== null) await abrirCodigoEnBloque(e, 'nodo', e.seleccion);
-  else if (e.vista !== undefined) await abrirCodigoEnBloque(e, 'vista', e.vista);
+  if (e.seleccion !== null) await abrirCodigoEnBloque(e, 'node', e.seleccion);
+  else if (e.vista !== undefined) await abrirCodigoEnBloque(e, 'view', e.vista);
   else e.abrirCodigo();
 }
 

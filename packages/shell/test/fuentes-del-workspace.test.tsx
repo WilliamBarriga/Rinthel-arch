@@ -73,7 +73,7 @@ describe('VistaInteractiva con fuentes del Workspace', () => {
     const panel = container.querySelector('[data-panel="issues"]');
     expect(panel?.textContent).toContain('1 warning');
     (panel?.querySelector('button') as HTMLButtonElement).click();
-    await waitFor(() => expect(panel?.textContent).toContain('W_THEME_FONT_NOT_SERVED'));
+    await waitFor(() => expect(panel?.textContent).toContain('theme-font-not-served'));
     expect(panel?.textContent).toContain('Caveat');
   });
 

@@ -6,13 +6,13 @@ import type { EventoDeActividad } from 'canonico';
 
 /** Un `validate` exitoso del proceso `pid`, con la hora derivada de `pid`; `extra` pisa cualquier campo. */
 export const eventoDeActividad = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
-  contractVersion: 1,
+  contractVersion: 2,
   ts: `2026-11-19T10:00:${String(pid % 60).padStart(2, '0')}.000Z`,
   pid,
-  comando: 'validate',
+  command: 'validate',
   args: [],
   exitCode: 0,
-  duracionMs: 1,
+  durationMs: 1,
   ...extra,
 });
 

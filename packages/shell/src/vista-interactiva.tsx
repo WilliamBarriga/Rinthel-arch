@@ -160,7 +160,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   ajustesVigentes.current = ajustes;
   const vista = useMemo(() => {
     const resuelta = resolveView(source, view, state);
-    if (resuelta === undefined) throw new Error(`La Vista '${view}' no existe en la Fuente canonica`);
+    if (resuelta === undefined) throw new Error(`View '${view}' does not exist in the canonical Source`);
     return resuelta;
   }, [source, view, state]);
 

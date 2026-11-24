@@ -23,7 +23,7 @@ describe('validate', () => {
     expect(resultado.exitCode).toBe(0);
     expect(resultado.stderr).toBe('');
     expect(JSON.parse(resultado.stdout)).toEqual({
-      contractVersion: 1,
+      contractVersion: 2,
       ok: true,
       summary: { errors: 0, warnings: 0, truncated: false },
       issues: [],
@@ -38,14 +38,14 @@ describe('validate', () => {
     expect(salida.ok).toBe(false);
     expect(salida.summary).toEqual({ errors: 2, warnings: 0, truncated: false });
     expect(salida.issues.map((i) => [i.file, i.line, i.column, i.code])).toEqual([
-      ['main.dg', 6, 3, 'E_UNKNOWN_NODE_TYPE'],
-      ['main.dg', 8, 1, 'E_SYNTAX_ERROR'],
+      ['main.dg', 6, 3, 'unknown-node-type'],
+      ['main.dg', 8, 1, 'syntax-error'],
     ]);
     // `message` no es contrato: el snapshot fija solo lo que si lo es.
     expect({ ...salida, issues: salida.issues.map(({ message, ...resto }) => resto) }).toMatchSnapshot();
   });
 
-  it('en texto, cada issue con candidato dice "quisiste decir" (de su fix o de su hint), como en --json', async () => {
+  it('en texto, cada issue con candidato dice "did you mean" (de su fix o de su hint), como en --json', async () => {
     const raiz = mkdtempSync(join(tmpdir(), 'validate-hint-'));
     writeFileSync(
       join(raiz, 'main.dg'),
@@ -61,18 +61,18 @@ theme otro extends neutral { node { layer relleno { color margo } } }
 
     expect(resultado.exitCode).toBe(1);
     const lineas = resultado.stdout.split('\n');
-    expect(lineas.find((l) => l.includes("'neutral-drak'"))).toContain("quisiste decir 'neutral-dark'");
-    expect(lineas.find((l) => l.includes('E_UNKNOWN_PALETTE_COLOR'))).toContain("quisiste decir 'marco'");
+    expect(lineas.find((l) => l.includes("'neutral-drak'"))).toContain("did you mean 'neutral-dark'");
+    expect(lineas.find((l) => l.includes('unknown-palette-color'))).toContain("did you mean 'marco'");
   });
 
-  it('una Arista colgante sale con E_DANGLING_EDGE, posicion y fix de un unico candidato', async () => {
+  it('una Arista colgante sale con dangling-edge, posicion y fix de un unico candidato', async () => {
     const resultado = await run(['validate', '--workspace', join(fixtures, 'arista-colgante'), '--json']);
 
     expect(resultado.exitCode).toBe(1);
     const salida = salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
     expect(salida.issues).toHaveLength(1);
     expect(salida.issues[0]).toMatchObject({
-      code: 'E_DANGLING_EDGE',
+      code: 'dangling-edge',
       severity: 'error',
       file: 'main.dg',
       line: 9,
@@ -85,7 +85,7 @@ theme otro extends neutral { node { layer relleno { color margo } } }
     });
   });
 
-  it('un Atributo inexistente en una Arista sale con E_UNKNOWN_ATTRIBUTE por validate', async () => {
+  it('un Atributo inexistente en una Arista sale con unknown-attribute por validate', async () => {
     const resultado = await run(
       ['validate', '--workspace', join(fixtures, 'atributo-inexistente'), '--json'],
     );
@@ -93,7 +93,7 @@ theme otro extends neutral { node { layer relleno { color margo } } }
     expect(resultado.exitCode).toBe(1);
     const salida = salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
     expect(salida.issues.map((i) => [i.line, i.column, i.code])).toEqual([
-      [9, 23, 'E_UNKNOWN_ATTRIBUTE'],
+      [9, 23, 'unknown-attribute'],
     ]);
   });
 
@@ -136,8 +136,8 @@ view v {
   it('sin --json imprime texto legible con posicion', async () => {
     const resultado = await run(['validate', '--workspace', join(fixtures, 'con-errores')]);
 
-    expect(resultado.stdout).toContain('main.dg:6:3 error E_UNKNOWN_NODE_TYPE');
-    expect(resultado.stdout).toContain('2 errores, 0 avisos');
+    expect(resultado.stdout).toContain('main.dg:6:3 error unknown-node-type');
+    expect(resultado.stdout).toContain('2 errors, 0 warnings');
   });
 
   it.each([
@@ -190,7 +190,7 @@ view v {
     const resultado = await run(['validate', '--workspace', copia, '--json']);
 
     expect(resultado.exitCode).toBe(1);
-    expect(JSON.parse(resultado.stdout).issues[0]).toMatchObject({ code: 'E_SYNTAX_ERROR', line: 3 });
+    expect(JSON.parse(resultado.stdout).issues[0]).toMatchObject({ code: 'syntax-error', line: 3 });
   });
 });
 
@@ -216,7 +216,7 @@ describe('validate: bucle validate/fix', () => {
 
     const antes = await validar(raiz);
     expect(readFileSync(archivo, 'utf8')).toBe(original);
-    expect(antes.issues.map((i) => i.code)).toEqual(['E_UNKNOWN_NODE_TYPE']);
+    expect(antes.issues.map((i) => i.code)).toEqual(['unknown-node-type']);
 
     const fix = antes.issues[0]?.fix;
     expect(fix?.file).toBe('main.dg');
@@ -252,7 +252,7 @@ describe('validate: bucle validate/fix', () => {
     expect(new Set(archivos)).toEqual(new Set(['a.dg', 'b.dg']));
   });
 
-  describe('W_OVERLAPPING_PINS', () => {
+  describe('overlapping-pins', () => {
     const conPinsSolapados = (): string => {
       const workspace = mkdtempSync(join(tmpdir(), 'validate-'));
       writeFileSync(
@@ -281,12 +281,12 @@ view v {
       expect(salida.summary).toEqual({ errors: 0, warnings: 1, truncated: false });
       expect(salida.issues).toEqual([
         expect.objectContaining({
-          code: 'W_OVERLAPPING_PINS',
+          code: 'overlapping-pins',
           severity: 'warning',
           file: 'main.dg',
           line: 6,
           column: 8,
-          related: [{ file: 'main.dg', line: 7, column: 8, message: "Pin de 'b'" }],
+          related: [{ file: 'main.dg', line: 7, column: 8, message: "Pin of 'b'" }],
         }),
       ]);
       expect(readdirSync(workspace)).toEqual(['main.dg']);
@@ -296,7 +296,7 @@ view v {
       const resultado = await run(['validate', '--workspace', conPinsSolapados(), '--strict']);
 
       expect(resultado.exitCode).toBe(1);
-      expect(resultado.stdout).toContain('W_OVERLAPPING_PINS');
+      expect(resultado.stdout).toContain('overlapping-pins');
     });
 
     it('Pins que no se solapan no avisan', async () => {
@@ -314,7 +314,7 @@ view v {
 
       const resultado = await run(['validate', '--workspace', workspace, '--json']);
 
-      expect(JSON.parse(resultado.stdout).issues.map((i: { code: string }) => i.code)).toEqual(['E_SYNTAX_ERROR']);
+      expect(JSON.parse(resultado.stdout).issues.map((i: { code: string }) => i.code)).toEqual(['syntax-error']);
     });
   });
 
@@ -335,7 +335,7 @@ view v {
       const sin = await run(['validate', '--workspace', workspace, '--json']);
       const con = await run(['validate', '--workspace', workspace, '--theme-path', join(fixtures, 'temas-extra'), '--json']);
 
-      expect(JSON.parse(sin.stdout).issues.map((i: { code: string }) => i.code)).toEqual(['E_UNKNOWN_THEME']);
+      expect(JSON.parse(sin.stdout).issues.map((i: { code: string }) => i.code)).toEqual(['unknown-theme']);
       expect(con.exitCode).toBe(0);
     });
 

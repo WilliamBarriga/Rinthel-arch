@@ -1,5 +1,5 @@
 /**
- * Elementos de Tema de secuencia y ER descritos (`inspect tema`). Un declarado sale tal como lo escribe el Tema
+ * Elementos de Tema de secuencia y ER descritos (`inspect theme`). Un declarado sale tal como lo escribe el Tema
  * (colores como nombre de Paleta); uno no declarado solo sale en su Tipo de diagrama, derivado y marcado `derivado`.
  */
 import type { Tema } from 'canonico';

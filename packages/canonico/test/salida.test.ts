@@ -3,12 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { salidaDeValidateJsonSchema, salidaDeValidateSchema } from 'canonico';
 
 const valida = {
-  contractVersion: 1,
+  contractVersion: 2,
   ok: false,
   summary: { errors: 1, warnings: 0, truncated: false },
   issues: [
     {
-      code: 'E_UNKNOWN_NODE_TYPE',
+      code: 'unknown-node-type',
       severity: 'error',
       file: 'main.dg',
       line: 3,
@@ -25,7 +25,7 @@ describe('salida de validate (ADR 0005)', () => {
   });
 
   it('rechaza otra version del contrato y severidades desconocidas', () => {
-    expect(salidaDeValidateSchema.safeParse({ ...valida, contractVersion: 2 }).success).toBe(false);
+    expect(salidaDeValidateSchema.safeParse({ ...valida, contractVersion: 1 }).success).toBe(false);
     const fatal = { ...valida, issues: [{ ...valida.issues[0], severity: 'fatal' }] };
     expect(salidaDeValidateSchema.safeParse(fatal).success).toBe(false);
   });

@@ -51,13 +51,13 @@ function compilarDiagramaDeArista(item: ThemeDiagram, tema: TemaResuelto, ctx: C
   for (const hijo of item.items) {
     if (hijo.$type === 'ThemeMarker') {
       if (hijo.remove === true) {
-        ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.side} none' no vale en 'diagram': quitar un marcador se hace en el bloque base` });
+        ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.side} none' is not valid in 'diagram': removing a marker is done in the base block` });
       } else compilarMarcador(hijo, parche, ctx);
     } else if (hijo.$type === 'ThemeLabel') {
       const etiqueta = primitivaSuelta('label', hijo.props, 'etiqueta', ctx, aRango(hijo.$cstNode?.range).start);
       if (etiqueta !== undefined) parche.etiqueta = etiqueta;
     } else if (hijo.$type === 'ThemeSlots' || hijo.$type === 'GroupPadding') {
-      ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeSlots' ? 'slots' : 'padding'}' no es de la Arista: ponlo en 'node' o 'group'` });
+      ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeSlots' ? 'slots' : 'padding'}' does not belong to the Edge: put it in 'node' or 'group'` });
     }
   }
   tema.arista.diagramas = { ...tema.arista.diagramas, [diagrama]: parche };

@@ -42,7 +42,7 @@ describe('seam sesion: Tema ER, zone', () => {
   it('zone admite all, header y body; otro valor es un issue de Tema', async () => {
     const issues = await abrirSesion(tema('layer cab solid { color azul  zone pie }')).diagnosticar();
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(issues.map((i) => i.code)).toEqual(['theme-invalid-value']);
   });
 });
 
@@ -129,16 +129,16 @@ describe('seam sesion: Tema ER, bloque row', () => {
     const clave = await abrirSesion(FILA('    layer fondo solid { color papel }\n    key pq { layer fondo { color verde } }')).diagnosticar();
     const texto = await abrirSesion(FILA('    names { color tinta }')).diagnosticar();
 
-    expect(alto.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
-    expect(clave.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(alto.map((i) => i.code)).toEqual(['theme-invalid-value']);
+    expect(clave.map((i) => i.code)).toEqual(['theme-invalid-value']);
     expect(clave[0]!.fix?.replacement).toBe('pk');
-    expect(texto.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(texto.map((i) => i.code)).toEqual(['theme-invalid-value']);
     expect(texto[0]!.fix?.replacement).toBe('name');
   });
 
   it('un parche de fila no puede cambiar la caja', async () => {
     const issues = await abrirSesion(FILA('    layer fondo solid { color papel }\n    key pk { layer fondo circle }')).diagnosticar();
 
-    expect(issues.map((i) => i.code)).toContain('E_THEME_STATE_TOUCHES_METRICS');
+    expect(issues.map((i) => i.code)).toContain('theme-state-touches-metrics');
   });
 });

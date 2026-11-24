@@ -27,26 +27,26 @@ function elementosDe(fuente: FuenteCanonica): Comparable[] {
     const ordinal = porPar.get(par) ?? 0;
     porPar.set(par, ordinal + 1);
     return {
-      elemento: { tipo: 'arista', from: a.from.node, to: a.to.node, ordinal },
+      elemento: { kind: 'edge', from: a.from.node, to: a.to.node, ordinal },
       valores: { label: a.label, from: a.from.attribute, to: a.to.attribute, fromCardinality: a.fromCardinality, toCardinality: a.toCardinality, identifying: a.identifying },
     };
   };
   const interacciones = fuente.model.interactions ?? [];
   return [
-    ...nodos.map((n): Comparable => ({ elemento: { tipo: 'nodo', id: n.id }, valores: { type: n.type, title: n.title, description: n.description, source: n.source } })),
+    ...nodos.map((n): Comparable => ({ elemento: { kind: 'node', id: n.id }, valores: { type: n.type, title: n.title, description: n.description, source: n.source } })),
     ...nodos.flatMap((n) =>
-      n.attributes.map((a): Comparable => ({ elemento: { tipo: 'atributo', nodo: n.id, name: a.name }, valores: { type: a.type, notes: a.notes, keys: a.keys, optional: a.optional } })),
+      n.attributes.map((a): Comparable => ({ elemento: { kind: 'attribute', node: n.id, name: a.name }, valores: { type: a.type, notes: a.notes, keys: a.keys, optional: a.optional } })),
     ),
     ...fuente.model.edges.map(arista),
-    ...interacciones.map((i): Comparable => ({ elemento: { tipo: 'interaccion', id: i.id }, valores: { title: i.title, description: i.description } })),
+    ...interacciones.map((i): Comparable => ({ elemento: { kind: 'interaction', id: i.id }, valores: { title: i.title, description: i.description } })),
     ...interacciones.flatMap((i) =>
       aplanarMensajes(i.items).map((m, posicion): Comparable => ({
-        elemento: { tipo: 'mensaje', interaccion: i.id, ...(m.id !== undefined && { id: m.id }), posicion, ruta: m.ubicacion.filter((p) => typeof p === 'number').join('.') },
+        elemento: { kind: 'message', interaction: i.id, ...(m.id !== undefined && { id: m.id }), position: posicion, path: m.ubicacion.filter((p) => typeof p === 'number').join('.') },
         valores: { kind: m.kind, from: m.from, to: m.to, label: m.label, description: m.description },
       })),
     ),
-    ...fuente.views.map(({ id, ...resto }): Comparable => ({ elemento: { tipo: 'vista', id }, valores: resto })),
-    ...fuente.themes.map(({ name, ...resto }): Comparable => ({ elemento: { tipo: 'tema', name }, valores: resto })),
+    ...fuente.views.map(({ id, ...resto }): Comparable => ({ elemento: { kind: 'view', id }, valores: resto })),
+    ...fuente.themes.map(({ name, ...resto }): Comparable => ({ elemento: { kind: 'theme', name }, valores: resto })),
   ];
 }
 

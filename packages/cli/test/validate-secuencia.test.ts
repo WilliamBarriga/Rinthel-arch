@@ -27,11 +27,11 @@ describe('validate: Vistas de secuencia', () => {
     expect(resultado.exitCode).toBe(0);
   });
 
-  it('un extremo desconocido es E_UNKNOWN_LIFELINE con su correccion, nunca un error de sintaxis', async () => {
+  it('un extremo desconocido es unknown-lifeline con su correccion, nunca un error de sintaxis', async () => {
     const resultado = await run(['validate', '--workspace', workspace(modelo('interaction checkout { cliente -> apii }')), '--json']);
     expect(resultado.exitCode).toBe(1);
     const { issues } = JSON.parse(resultado.stdout) as { issues: { code: string; fix?: { replacement: string } }[] };
-    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_LIFELINE']);
+    expect(issues.map((i) => i.code)).toEqual(['unknown-lifeline']);
     expect(issues[0]!.fix?.replacement).toBe('api');
   });
 
@@ -47,20 +47,20 @@ describe('validate: Vistas de secuencia', () => {
       return { exitCode: resultado.exitCode, issues: (JSON.parse(resultado.stdout) as { issues: { code: string; severity: string; hint?: string; fix?: { replacement: string } }[] }).issues };
     };
 
-    it('un ref a una Interaccion inexistente es E_UNKNOWN_INTERACTION con fix por typo', async () => {
+    it('un ref a una Interaccion inexistente es unknown-interaction con fix por typo', async () => {
       const { exitCode, issues } = await issuesDe(modelo('interaction login { cliente -> api }\n interaction checkout { cliente -> api "pedir"\n ref logn }'));
       expect(exitCode).toBe(1);
-      const unknown = issues.filter((i) => i.code === 'E_UNKNOWN_INTERACTION');
+      const unknown = issues.filter((i) => i.code === 'unknown-interaction');
       expect(unknown).toHaveLength(1);
       expect(unknown[0]!.fix?.replacement).toBe('login');
     });
 
-    it('un ref a una Interaccion que ninguna Vista de secuencia proyecta es W_REF_WITHOUT_VIEW con hint', async () => {
+    it('un ref a una Interaccion que ninguna Vista de secuencia proyecta es ref-without-view con hint', async () => {
       const { exitCode, issues } = await issuesDe(modelo('interaction login { cliente -> api }\n interaction checkout { cliente -> api "pedir"\n ref login }'));
       expect(exitCode).toBe(0);
-      expect(issues.map((i) => i.code)).toEqual(['W_REF_WITHOUT_VIEW']);
+      expect(issues.map((i) => i.code)).toEqual(['ref-without-view']);
       expect(issues[0]!.severity).toBe('warning');
-      expect(issues[0]!.hint).toContain('Vista');
+      expect(issues[0]!.hint).toContain('View');
     });
 
     it('un ref en ciclo hacia la propia Interaccion proyectada no da issue', async () => {
@@ -69,9 +69,9 @@ describe('validate: Vistas de secuencia', () => {
       expect(issues).toEqual([]);
     });
 
-    it('una Nota sobre un Nodo desconocido es E_UNKNOWN_LIFELINE', async () => {
+    it('una Nota sobre un Nodo desconocido es unknown-lifeline', async () => {
       const { issues } = await issuesDe(modelo('interaction checkout { cliente -> api "pedir"\n note over cliente, apii "x" }'));
-      expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_LIFELINE']);
+      expect(issues.map((i) => i.code)).toEqual(['unknown-lifeline']);
       expect(issues[0]!.fix?.replacement).toBe('api');
     });
   });

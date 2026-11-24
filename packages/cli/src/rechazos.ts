@@ -6,8 +6,8 @@ import type { MotivoDeRechazo } from 'canonico';
 
 export interface RechazoDeEdicion {
   ok: false;
-  motivo: MotivoDeRechazo;
-  mensaje: string;
+  reason: MotivoDeRechazo;
+  message: string;
   file?: string;
 }
 

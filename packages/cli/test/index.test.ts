@@ -7,7 +7,7 @@ describe('cli', () => {
     const { exitCode, stdout, stderr } = await run(['inexistente']);
     expect(exitCode).toBe(2);
     expect(stdout).toBe('');
-    expect(stderr).toContain('Comando desconocido');
+    expect(stderr).toContain('Unknown command');
   });
 });
 
@@ -31,7 +31,7 @@ describe('cli: ayuda', () => {
     const esperadas: Record<string, string[]> = {
       validate: ['--json', '--strict', '--max-issues', '--theme', '--theme-path'],
       dev: ['--port', '--trust-code', '--theme-path'],
-      inspect: ['--tipo', '--estado', '--diagrama', '--catalogo', '--json'],
+      inspect: ['--kind', '--state', '--diagram', '--catalog', '--json'],
       edit: ['--view', '--node', '--x', '--y', '--edits', '--hash'],
       skill: ['--out'],
       scan: ['--out', '--json', '--depth', '--max-files'],

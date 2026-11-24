@@ -53,7 +53,7 @@ describe('Temas incorporados', () => {
 
   it('un Tema del usuario no puede llamarse como un incorporado', () => {
     const resultado = compile({ 'main.dg': `${modelo}theme neutral-dark { }\n` });
-    expect(resultado.issues.map((i) => i.code)).toContain('E_DUPLICATE_THEME');
+    expect(resultado.issues.map((i) => i.code)).toContain('duplicate-theme');
   });
 
   it.each(['neutral', 'neutral-dark', 'alto-contraste'])('%s cumple el contraste: texto 4.5:1 y partes graficas 3:1', (nombre) => {

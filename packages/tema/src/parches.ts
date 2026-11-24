@@ -68,7 +68,7 @@ export function aplicarOps(
 
     if (op.quitar === true) {
       if (actual < 0) {
-        falla({ codigo: CODIGOS.E_THEME_UNKNOWN_LAYER, mensaje: `No se puede quitar la Capa '${op.nombre}': no existe`, ...sugerir(op.nombre, nombres()) }, 'nombre');
+        falla({ codigo: CODIGOS.E_THEME_UNKNOWN_LAYER, mensaje: `Cannot remove Layer '${op.nombre}': it does not exist`, ...sugerir(op.nombre, nombres()) }, 'nombre');
       } else capas.splice(actual, 1);
       return;
     }
@@ -79,7 +79,7 @@ export function aplicarOps(
       falla(
         {
           codigo: CODIGOS.E_THEME_UNKNOWN_LAYER,
-          mensaje: destino === op.nombre ? `La Capa '${op.nombre}' no puede ubicarse respecto de si misma` : `${lado === 'antes' ? 'before' : 'after'} '${destino}': esa Capa no existe`,
+          mensaje: destino === op.nombre ? `Layer '${op.nombre}' cannot be placed relative to itself` : `${lado === 'antes' ? 'before' : 'after'} '${destino}': that Layer does not exist`,
           ...sugerir(destino, nombres().filter((n) => n !== op.nombre)),
         },
         'ubicacion',
@@ -93,7 +93,7 @@ export function aplicarOps(
       falla(
         {
           codigo: CODIGOS.E_THEME_PATCH_WITHOUT_PLACEMENT,
-          mensaje: `La Capa '${op.nombre}' no existe; para anadirla indica 'before' o 'after' de otra Capa`,
+          mensaje: `Layer '${op.nombre}' does not exist; to add it, give 'before' or 'after' another Layer`,
           ...sugerir(op.nombre, nombres()),
         },
         'nombre',
@@ -101,7 +101,7 @@ export function aplicarOps(
       return;
     }
     if (existente === undefined && op.primitiva === undefined) {
-      falla({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `La Capa nueva '${op.nombre}' exige una Primitiva` }, 'nombre');
+      falla({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `The new Layer '${op.nombre}' requires a Primitive` }, 'nombre');
       return;
     }
 
@@ -162,24 +162,24 @@ export function cascada(
 export function opTocaMetricas(op: OpDeCapa, pilas: ReadonlyArray<readonly CapaDeTema[]>): string | undefined {
   const existente = pilas.flatMap((pila) => pila.filter((capa) => capa.nombre === op.nombre))[0];
   const afecta = (tipo: string | undefined): boolean => tipo !== undefined && ((CATALOGO as Record<string, DefinicionDePrimitiva>)[tipo]?.afectaMetricas ?? false);
-  if (op.quitar === true) return afecta(existente?.primitiva.tipo) ? `la Capa '${op.nombre}' define la caja y no puede quitarse` : undefined;
+  if (op.quitar === true) return afecta(existente?.primitiva.tipo) ? `Layer '${op.nombre}' defines the box and cannot be removed` : undefined;
   const nuevo = op.primitiva ?? existente?.primitiva.tipo;
-  if (afecta(nuevo)) return `la Capa '${op.nombre}' usa '${nuevo}', que afecta a las Metricas`;
-  return afecta(existente?.primitiva.tipo) ? `la Capa '${op.nombre}' sustituye una forma que define la caja` : undefined;
+  if (afecta(nuevo)) return `Layer '${op.nombre}' uses '${nuevo}', which affects the Metrics`;
+  return afecta(existente?.primitiva.tipo) ? `Layer '${op.nombre}' replaces a shape that defines the box` : undefined;
 }
 
 export type ResultadoDeEstado =
   | { estado: Estado }
   | { error: { code: typeof CODIGOS.E_THEME_UNKNOWN_STATE; message: string; candidatos: string[] } };
 
-/** Error `E_THEME_UNKNOWN_STATE` con candidatos cercanos si no es de `ESTADOS`. */
+/** Error `theme-unknown-state` con candidatos cercanos si no es de `ESTADOS`. */
 export function parsearEstado(escrito: string): ResultadoDeEstado {
   const estado = ESTADOS.find((e) => e === escrito);
   if (estado !== undefined) return { estado };
   return {
     error: {
       code: CODIGOS.E_THEME_UNKNOWN_STATE,
-      message: `Estado '${escrito}' desconocido; disponibles: ${ESTADOS.join(', ')}`,
+      message: `Unknown state '${escrito}'; available: ${ESTADOS.join(', ')}`,
       candidatos: candidatosCercanos(escrito, ESTADOS),
     },
   };

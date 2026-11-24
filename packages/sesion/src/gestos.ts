@@ -66,11 +66,11 @@ function gesto(
   const { canonico: fuente, ubicar } = compilado;
   if (fuente === undefined || ubicar === undefined) {
     const primero = compilado.issues.find((i) => i.severity === 'error');
-    return rechazo('invalida', `El Workspace tiene errores: ${primero?.message ?? ''}`, primero?.file);
+    return rechazo('invalid', `The Workspace has errors: ${primero?.message ?? ''}`, primero?.file);
   }
   const indice = fuente.views.findIndex(({ id }) => id === vista);
   const declarada = fuente.views[indice];
-  if (declarada === undefined) return rechazo('vista-desconocida', `La Vista '${vista}' no existe`);
+  if (declarada === undefined) return rechazo('unknown-view', `View '${vista}' does not exist`);
 
   const texto = (file: string) => archivos[file] as string;
   const escritura = describir({ fuente, declarada, indice, ubicar, texto });
@@ -78,7 +78,7 @@ function gesto(
   const { file } = escritura;
   const hashVisto = visto?.[file];
   if (hashVisto !== undefined && hashVisto !== hashDeContenido(texto(file))) {
-    return rechazo('hash-desactualizado', `El archivo '${file}' cambio desde que se leyo`, file);
+    return rechazo('stale-hash', `File '${file}' changed since it was read`, file);
   }
   const edicion = edicionDe(escritura, texto(file));
   const aplicada = aplicarSobre(archivos, [edicion], erroresPorClave(compilado.issues));
@@ -92,15 +92,15 @@ const coordenadaDePin = (n: number): number => Math.min(LIMITE_DE_PIN, Math.max(
 
 /**
  * Reemplaza el `pin` del override del Nodo, lo agrega a un override sin `pin`, o inserta `node <id> { pin x,y }`
- * antes de la `}` de la Vista. Un Nodo inexistente rechaza con `invalida`.
+ * antes de la `}` de la Vista. Un Nodo inexistente rechaza con `invalid`.
  */
 export function moverPin(archivos: ArchivosDelWorkspace, intencion: IntencionDePin, visto?: Visto): ResultadoDeGesto {
-  const { nodo } = intencion;
+  const { node: nodo } = intencion;
   const pin = `pin ${coordenadaDePin(intencion.x)},${coordenadaDePin(intencion.y)}`;
-  return gesto(archivos, intencion.vista, visto, ({ declarada, indice, ubicar, texto }) => {
+  return gesto(archivos, intencion.view, visto, ({ declarada, indice, ubicar, texto }) => {
     const j = declarada.overrides.findIndex((o) => o.node === nodo);
     const sitio = j >= 0 ? ubicar(['views', indice, 'overrides', j, 'pin']) : ubicar(['views', indice, 'overrides']);
-    if (sitio === null) return rechazo('invalida', `No se encontro donde escribir el Pin de '${nodo}'`);
+    if (sitio === null) return rechazo('invalid', `Could not find where to write the Pin of '${nodo}'`);
     const { file, range } = sitio;
     const vacio = range.start.line === range.end.line && range.start.column === range.end.column;
     if (!vacio) return { file, reemplazar: range, por: pin };
@@ -126,17 +126,17 @@ function ordenConOcultas(orden: readonly string[], viejo: readonly string[]): st
 
 /**
  * Reescribe el `order` completo de una Vista de secuencia (las entradas ocultas conservan su posicion relativa)
- * o lo inserta antes de la `}` de la Vista, aunque coincida con la primera aparicion. Un id que no es Nodo rechaza con `invalida`.
+ * o lo inserta antes de la `}` de la Vista, aunque coincida con la primera aparicion. Un id que no es Nodo rechaza con `invalid`.
  */
 export function ordenarLifelines(archivos: ArchivosDelWorkspace, intencion: IntencionDeOrden, visto?: Visto): ResultadoDeGesto {
-  const { vista } = intencion;
+  const { view: vista } = intencion;
   return gesto(archivos, vista, visto, ({ declarada, indice, ubicar }) => {
-    if (declarada.type !== 'sequence') return rechazo('invalida', `La Vista '${vista}' no es de secuencia`);
+    if (declarada.type !== 'sequence') return rechazo('invalid', `View '${vista}' is not a sequence View`);
     const total = declarada.order.length;
     const inicio = total > 0 ? ubicar(['views', indice, 'order', 0]) : ubicar(['views', indice, 'overrides']);
     const fin = total > 0 ? ubicar(['views', indice, 'order', total - 1]) : inicio;
-    if (inicio === null || fin === null) return rechazo('invalida', `No se encontro donde escribir el order de '${vista}'`);
-    const lista = ordenConOcultas(intencion.orden, declarada.order).join(', ');
+    if (inicio === null || fin === null) return rechazo('invalid', `Could not find where to write the order of '${vista}'`);
+    const lista = ordenConOcultas(intencion.order, declarada.order).join(', ');
     const { file } = inicio;
     if (total > 0) return { file, reemplazar: { start: inicio.range.start, end: fin.range.end }, por: lista };
     return { file, en: inicio.range, insertar: `order ${lista}` };
@@ -159,24 +159,24 @@ function lineaDe(texto: string, sentencia: TextRange): TextRange {
 /**
  * Con `theme` en la Vista reescribe el nombre (el parche se queda); sin `theme` inserta `theme <tema>` como primera
  * linea del cuerpo. Sin `tema` quita la sentencia, o la deja en `theme neutral { parche }` si tenia parche. Un Tema
- * que la Fuente no declara rechaza con `tema-desconocido`.
+ * que la Fuente no declara rechaza con `unknown-theme`.
  */
 export function fijarTema(archivos: ArchivosDelWorkspace, intencion: IntencionDeTema, visto?: Visto): ResultadoDeGesto {
-  const { vista, tema } = intencion;
+  const { view: vista, theme: tema } = intencion;
   return gesto(archivos, vista, visto, ({ declarada, indice, ubicar, texto, fuente }) => {
     if (tema !== undefined && !fuente.themes.some(({ name }) => name === tema)) {
       const cerca = candidatosCercanos(tema, fuente.themes.map(({ name }) => name));
-      return rechazo('tema-desconocido', `No existe el Tema '${tema}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`);
+      return rechazo('unknown-theme', `No such Theme '${tema}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}`);
     }
     if (declarada.theme === undefined) {
-      if (tema === undefined) return rechazo('invalida', `La Vista '${vista}' no fija Tema`);
+      if (tema === undefined) return rechazo('invalid', `View '${vista}' does not set a Theme`);
       const cuerpo = ubicar(['views', indice, 'cuerpo']);
-      if (cuerpo === null) return rechazo('invalida', `No se encontro donde escribir el Tema de '${vista}'`);
+      if (cuerpo === null) return rechazo('invalid', `Could not find where to write the Theme of '${vista}'`);
       return { file: cuerpo.file, tras: cuerpo.range, insertar: `theme ${tema}` };
     }
     const nombre = ubicar(['views', indice, 'theme']);
     const sentencia = ubicar(['views', indice, 'theme', 'sentencia']);
-    if (nombre === null || sentencia === null) return rechazo('invalida', `No se encontro el Tema de '${vista}'`);
+    if (nombre === null || sentencia === null) return rechazo('invalid', `Could not find the Theme of '${vista}'`);
     if (tema !== undefined) return { file: nombre.file, reemplazar: nombre.range, por: tema };
     if (declarada.themePatch !== undefined) return { file: nombre.file, reemplazar: nombre.range, por: TEMA_POR_DEFECTO };
     return { file: sentencia.file, reemplazar: lineaDe(texto(sentencia.file), sentencia.range), por: '' };

@@ -34,8 +34,8 @@ describe('Diagram: contenido accesible', () => {
     const html = renderToStaticMarkup(<Diagram {...await props(TEMA_NEUTRO)} />);
 
     expect(etiquetaDe(html, 'api')).toBe('API de pagos, servicio, va a Base de pagos (consulta)');
-    expect(etiquetaDe(html, 'db')).toBe('Base de pagos, base, viene de API de pagos (consulta)');
-    expect(etiquetaDe(html, 'g')).toBe('Grupo, servicio, grupo con 1 hijos');
+    expect(etiquetaDe(html, 'db')).toBe('Base de pagos, base, comes from API de pagos (consulta)');
+    expect(etiquetaDe(html, 'g')).toBe('Grupo, servicio, group with 1 children');
   });
 
   it('el nombre accesible no depende del Tema y el SVG de Aristas es decorativo', async () => {

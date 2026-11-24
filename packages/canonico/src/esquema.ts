@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 /** Segmentos `a.b.c` de `[A-Za-z0-9_-]`; rechaza ids vacios, espacios y segmentos vacios (`a..b`, `api.`, `.api`). */
 export const idDeNodoSchema = z.string().regex(/^[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/, {
-  message: 'id cualificado por jerarquia: segmentos a.b.c',
+  message: 'id qualified by hierarchy: segments a.b.c',
 });
 
 const nombreDeTipoSchema = z.string().min(1);
@@ -353,19 +353,19 @@ function hallazgosDeModelo(fuente: {
       if (!tipos.has(nodo.type)) {
         hallazgos.push({
           path: [...aqui, 'type'],
-          message: `Tipo de nodo '${nodo.type}' no declarado en el catalogo`,
+          message: `Node kind '${nodo.type}' is not declared in the catalog`,
         });
       }
 
       if (padre !== '' && !ids.has(padre)) {
         hallazgos.push({
           path: aqui,
-          message: `Hijo huerfano: el padre '${padre}' del Nodo '${nodo.id}' no existe en el Modelo`,
+          message: `Orphan child: parent '${padre}' of Node '${nodo.id}' does not exist in the Model`,
         });
       } else if (contenedor !== undefined && contenedor !== padre) {
         hallazgos.push({
           path: aqui,
-          message: `Jerarquia incoherente: '${nodo.id}' esta anidado bajo '${contenedor}' pero su padre es '${padre || 'ninguno'}'`,
+          message: `Inconsistent hierarchy: '${nodo.id}' is nested under '${contenedor}' but its parent is '${padre || 'none'}'`,
         });
       }
 
@@ -381,12 +381,12 @@ function hallazgosDeModelo(fuente: {
       if (atributos === undefined) {
         hallazgos.push({
           path: ['model', 'edges', indice, lado, 'node'],
-          message: `Arista colgante: el Nodo '${node}' no existe en el Modelo`,
+          message: `Dangling Edge: Node '${node}' does not exist in the Model`,
         });
       } else if (attribute !== undefined && !atributos.has(attribute)) {
         hallazgos.push({
           path: ['model', 'edges', indice, lado, 'attribute'],
-          message: `El Nodo '${node}' no tiene el Atributo '${attribute}'`,
+          message: `Node '${node}' has no Attribute '${attribute}'`,
         });
       }
     }

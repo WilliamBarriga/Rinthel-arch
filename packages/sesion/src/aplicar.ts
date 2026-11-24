@@ -26,14 +26,14 @@ export type Aplicable = Intencion | readonly EdicionDeTexto[];
 export interface OpcionesDeAplicar {
   /**
    * Solo para listas de ediciones: escribe aunque el resultado tenga errores nuevos (guardado del editor, ADR 0007).
-   * Por defecto `false`: una edicion que introduce un error se rechaza con `invalida` (`edit --edits`, `fix`).
+   * Por defecto `false`: una edicion que introduce un error se rechaza con `invalid` (`edit --edits`, `fix`).
    */
   aunqueNoCompile?: boolean;
 }
 
 export type ResultadoDeAplicar =
   | { ok: true; cambiados: string[]; ediciones: EdicionConHash[] }
-  | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
+  | { ok: false; reason: MotivoDeRechazo; message: string; file?: string };
 
 const cambiadosEntre = (antes: ArchivosDelWorkspace, despues: ArchivosDelWorkspace): string[] =>
   Object.keys(despues)
@@ -43,7 +43,7 @@ const cambiadosEntre = (antes: ArchivosDelWorkspace, despues: ArchivosDelWorkspa
 /**
  * Puerta de escritura unica: lee fresco por el puerto, aplica una Intencion o ediciones de texto (las dos con `visto`;
  * una edicion con `hash` propio lo usa antes que `visto`) y escribe solo los archivos propios que cambian. Todo o nada.
- * Cambiar un archivo ajeno (p. ej. de `--theme-path`) rechaza con `archivo-desconocido`. Los fallos de I/O del puerto se propagan.
+ * Cambiar un archivo ajeno (p. ej. de `--theme-path`) rechaza con `unknown-file`. Los fallos de I/O del puerto se propagan.
  */
 export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, aplicable: Aplicable, visto?: Visto, opciones: OpcionesDeAplicar = {}): ResultadoDeAplicar {
   const { disco, propios } = puerto.leer();
@@ -54,11 +54,11 @@ export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, aplicable: Aplicab
   } else {
     r = aplicarIntencion(disco, aplicable, visto);
   }
-  if (!r.ok) return { ok: false, motivo: r.motivo, mensaje: r.mensaje, ...(r.file === undefined ? {} : { file: r.file }) };
+  if (!r.ok) return { ok: false, reason: r.reason, message: r.message, ...(r.file === undefined ? {} : { file: r.file }) };
   const cambiados = cambiadosEntre(disco, r.archivos);
   const fuera = cambiados.find((f) => !(f in propios));
   if (fuera !== undefined) {
-    return { ok: false, motivo: 'archivo-desconocido', mensaje: `'${fuera}' no pertenece al Workspace`, file: fuera };
+    return { ok: false, reason: 'unknown-file', message: `'${fuera}' does not belong to the Workspace`, file: fuera };
   }
   for (const ruta of cambiados) puerto.escribir(ruta, r.archivos[ruta] as string);
   return { ok: true, cambiados, ediciones: r.ediciones };

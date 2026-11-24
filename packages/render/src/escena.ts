@@ -90,19 +90,19 @@ export interface Contexto extends EntradaDeEscena {
 type ContextoDeGrafo = Contexto & { view: VistaDeGrafo; geometry: GeometriaGrafo };
 
 /**
- * Lanza si un Nodo de la Vista no esta en la geometria, si la Geometria es de otro Tipo de diagrama que la Vista o si
+ * Lanza si un Nodo de la Vista is not in the geometry, si la Geometria es de otro Tipo de diagrama que la Vista o si
  * el Tema no cumple el contrato.
  */
 export function construirEscena(entrada: EntradaDeEscena): Elemento {
   const { view, geometry } = entrada;
   switch (view.type) {
     case 'sequence':
-      if (geometry.kind !== 'secuencia') throw new Error(`construirEscena: la Vista es de secuencia y la Geometria es '${geometry.kind}'`);
+      if (geometry.kind !== 'secuencia') throw new Error(`construirEscena: the View is a sequence and the Geometry is '${geometry.kind}'`);
       return construirEscenaDeSecuencia({ ...entrada, view, geometry });
     case 'architecture':
     case 'flow':
     case 'er':
-      if (geometry.kind !== 'grafo') throw new Error(`construirEscena: la Vista es '${view.type}' y la Geometria es '${geometry.kind}'`);
+      if (geometry.kind !== 'grafo') throw new Error(`construirEscena: the View is '${view.type}' and the Geometry is '${geometry.kind}'`);
       return construirEscenaDeGrafo({ ...entrada, view, geometry });
   }
 }
@@ -211,9 +211,9 @@ export function nombresAccesibles(aristas: readonly AristaResuelta[], nodos: rea
       const partes = [
         nodo.label,
         nodo.type,
-        ...(nodo.childCount > 0 ? [`grupo con ${nodo.childCount} hijos${nodo.collapsed ? ', colapsado' : ''}`] : []),
+        ...(nodo.childCount > 0 ? [`group with ${nodo.childCount} children${nodo.collapsed ? ', collapsed' : ''}`] : []),
         ...(sale.length > 0 ? [`va a ${sale.join(', ')}`] : []),
-        ...(entra.length > 0 ? [`viene de ${entra.join(', ')}`] : []),
+        ...(entra.length > 0 ? [`comes from ${entra.join(', ')}`] : []),
       ];
       return [nodo.id, partes.join(', ')];
     }),
@@ -250,7 +250,7 @@ function posicion(caja: CajaDeNodo, giro = 0): string {
 
 export function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
   const caja = contexto.cajas.get(nodo.id);
-  if (caja === undefined) throw new Error(`El Nodo '${nodo.id}' no esta en la geometria`);
+  if (caja === undefined) throw new Error(`Node '${nodo.id}' is not in the geometry`);
   const { estilo, onSelect, onToggle, icons, detail } = contexto;
   const grupo = esGrupo(nodo);
   const { clave, tipo, pila } = pilaDeNodo(estilo.pintura, nodo);

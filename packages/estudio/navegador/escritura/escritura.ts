@@ -36,7 +36,7 @@ export interface DependenciasDeEscritura {
   vaciarGuardado: () => Promise<void>;
 }
 
-const rechazo = (mensaje: string): Extract<ResultadoDeEnvio, { ok: false }> => ({ ok: false, desactualizado: false, mensaje });
+const rechazo = (mensaje: string): Extract<ResultadoDeEnvio, { ok: false }> => ({ ok: false, desactualizado: false, message: mensaje });
 
 type Cliente = DependenciasDeEscritura['cliente'];
 
@@ -59,7 +59,7 @@ function planDe(pedido: PedidoDeEscritura, cliente: Cliente): Plan {
       vaciarGuardado: true,
       reintentar: false,
       enviar: () => (historial === 'deshacer' ? cliente.deshacer() : historial === 'rehacer' ? cliente.rehacer() : cliente.saltar(historial.saltar)),
-      aviso: (r) => `Could not ${typeof historial === 'object' ? 'jump' : historial === 'deshacer' ? 'undo' : 'redo'}: ${r.mensaje}`,
+      aviso: (r) => `Could not ${typeof historial === 'object' ? 'jump' : historial === 'deshacer' ? 'undo' : 'redo'}: ${r.message}`,
     };
   }
   if ('intencion' in pedido) {
@@ -67,7 +67,7 @@ function planDe(pedido: PedidoDeEscritura, cliente: Cliente): Plan {
       vaciarGuardado: false,
       reintentar: false,
       enviar: async (estado) => (estado === undefined ? SIN_ESTADO : cliente.editar(pedido.intencion, estado.version)),
-      aviso: (r) => `${pedido.fallo}: ${r.mensaje}`,
+      aviso: (r) => `${pedido.fallo}: ${r.message}`,
     };
   }
   return {
@@ -79,8 +79,8 @@ function planDe(pedido: PedidoDeEscritura, cliente: Cliente): Plan {
       return peticion === undefined ? rechazo('nothing left to apply') : cliente.editarTexto({ ...peticion, version: estado.version });
     },
     aviso(r) {
-      const motivo = [r.motivo, r.file === undefined ? undefined : `in ${r.file}`].filter((x) => x !== undefined).join(' ');
-      return `${pedido.fallo}${motivo === '' ? '' : ` (${motivo})`}: ${r.mensaje}`;
+      const motivo = [r.reason, r.file === undefined ? undefined : `in ${r.file}`].filter((x) => x !== undefined).join(' ');
+      return `${pedido.fallo}${motivo === '' ? '' : ` (${motivo})`}: ${r.message}`;
     },
   };
 }
@@ -99,7 +99,7 @@ export function crearEscritura({ cliente, vigente, recibir, avisar, vaciarGuarda
     if (!r.ok && r.desactualizado && plan.reintentar) r = await plan.enviar(await recargar());
     if (r.ok) return r;
     if (r.desactualizado) {
-      avisar(`The file changed on disk; the View was reloaded (${r.mensaje})`);
+      avisar(`The file changed on disk; the View was reloaded (${r.message})`);
       await recargar();
     } else avisar(plan.aviso(r));
     return r;

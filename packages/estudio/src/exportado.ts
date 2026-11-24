@@ -54,7 +54,7 @@ export async function capturarExportado({ fetch: fetchFn, leerFuente }: FuentesD
   const estado = await leerJson(fetchFn, RUTAS_DE_DEV.estado, estadoDeDevSchema);
   if (estado.fuente === undefined) throw new Error('The Workspace does not compile: nothing to export');
   const temas: DatosDeExportado['temas'] = {};
-  for (const { name } of estado.fuente.themes) temas[name] = await leerJson(fetchFn, rutaDeInspect('tema', name), salidaDeInspectSchema);
+  for (const { name } of estado.fuente.themes) temas[name] = await leerJson(fetchFn, rutaDeInspect('theme', name), salidaDeInspectSchema);
   const fuentes: DatosDeExportado['fuentes'] = {};
   for (const ruta of Object.keys(estado.fuentes ?? {}).sort()) {
     const leida = leerFuente(ruta);

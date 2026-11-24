@@ -26,47 +26,47 @@ describe('seam sesion: Pasos de secuencia', () => {
     expect(await codigos(texto)).toEqual([]);
   });
 
-  it('E_UNKNOWN_STEP con fix por typo en upto', async () => {
+  it('unknown-step con fix por typo en upto', async () => {
     const res = await abrirSesion({ 'main.dg': vista('steps { step "a" { upto pedidoo } }') }).diagnosticar();
-    expect(res.map((i) => i.code)).toEqual(['E_UNKNOWN_STEP']);
+    expect(res.map((i) => i.code)).toEqual(['unknown-step']);
     expect(res[0]!.fix?.replacement).toBe('pedido');
   });
 
-  it('E_STEP_NOT_PROJECTED con hint si un exclude quita el Mensaje', async () => {
+  it('step-not-projected con hint si un exclude quita el Mensaje', async () => {
     const res = await abrirSesion({ 'main.dg': vista('steps { step "a" { upto pedido } }', ' exclude cliente') }).diagnosticar();
-    expect(res.map((i) => i.code)).toEqual(['E_STEP_NOT_PROJECTED']);
+    expect(res.map((i) => i.code)).toEqual(['step-not-projected']);
     expect(res[0]!.hint).toBeTruthy();
   });
 
-  it('E_STEP_NOT_ADVANCING con related al Paso anterior', async () => {
+  it('step-not-advancing con related al Paso anterior', async () => {
     const res = await abrirSesion({ 'main.dg': vista('steps { step "a" { upto final }\n step "b" { upto pedido } }') }).diagnosticar();
-    expect(res.map((i) => i.code)).toEqual(['E_STEP_NOT_ADVANCING']);
+    expect(res.map((i) => i.code)).toEqual(['step-not-advancing']);
     expect(res[0]!.related).toHaveLength(1);
     expect(res[0]!.related![0]!.line).toBeLessThan(res[0]!.line);
   });
 
-  it('E_STEP_NOT_ADVANCING si repite el mismo Mensaje', async () => {
-    expect(await codigos(vista('steps { step "a" { upto pedido }\n step "b" { upto pedido } }'))).toEqual(['E_STEP_NOT_ADVANCING']);
+  it('step-not-advancing si repite el mismo Mensaje', async () => {
+    expect(await codigos(vista('steps { step "a" { upto pedido }\n step "b" { upto pedido } }'))).toEqual(['step-not-advancing']);
   });
 
-  it('E_STEPS_EACH_WITH_STEP', async () => {
-    expect(await codigos(vista('steps each\n steps { step "a" { upto pedido } }'))).toEqual(['E_STEPS_EACH_WITH_STEP']);
+  it('steps-each-with-step', async () => {
+    expect(await codigos(vista('steps each\n steps { step "a" { upto pedido } }'))).toEqual(['steps-each-with-step']);
   });
 
   it('steps each solo compila sin issues', async () => {
     expect(await codigos(vista('steps each'))).toEqual([]);
   });
 
-  it('show y hide en secuencia: E_VIEW_PROPERTY_FOR_TYPE con hint a step { upto }', async () => {
+  it('show y hide en secuencia: view-property-for-type con hint a step { upto }', async () => {
     const res = await abrirSesion({ 'main.dg': vista('steps { step "a" { show cliente\n hide api } }') }).diagnosticar();
-    expect(res.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE', 'E_VIEW_PROPERTY_FOR_TYPE']);
+    expect(res.map((i) => i.code)).toEqual(['view-property-for-type', 'view-property-for-type']);
     expect(res[0]!.hint).toContain('upto');
   });
 
-  it('upto y steps each fuera de secuencia: E_VIEW_PROPERTY_FOR_TYPE', async () => {
+  it('upto y steps each fuera de secuencia: view-property-for-type', async () => {
     const arq = `specification { node servicio }\nmodel { servicio a }\n`;
-    expect(await codigos(`${arq}view v { type architecture\n include **\n steps { step "a" { upto x } } }\n`)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
-    expect(await codigos(`${arq}view v { type architecture\n include **\n steps each }\n`)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
+    expect(await codigos(`${arq}view v { type architecture\n include **\n steps { step "a" { upto x } } }\n`)).toEqual(['view-property-for-type']);
+    expect(await codigos(`${arq}view v { type architecture\n include **\n steps each }\n`)).toEqual(['view-property-for-type']);
   });
 
   it('steps each con exclude da un Paso por Mensaje proyectado, titulado con la etiqueta o from -> to', async () => {

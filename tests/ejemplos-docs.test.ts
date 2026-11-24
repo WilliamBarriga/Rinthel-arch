@@ -75,7 +75,7 @@ describe('mapa de rinthel-arch: secuencia y ER', () => {
 
   it('no agrega issues propios (solo los avisos deliberados de los Temas)', () => {
     expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
-    expect(issues.filter((i) => !i.code.startsWith('W_THEME_'))).toEqual([]);
+    expect(issues.filter((i) => !(i.severity === 'warning' && i.code.startsWith('theme-')))).toEqual([]);
   });
 });
 

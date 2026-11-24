@@ -18,10 +18,10 @@ export interface EdicionConHash {
 /** Con `ok: false` no se escribe nada. */
 export type ResultadoDeEdicion<T> =
   | ({ ok: true } & T)
-  | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
+  | { ok: false; reason: MotivoDeRechazo; message: string; file?: string };
 
-export const rechazo = (motivo: MotivoDeRechazo, mensaje: string, file?: string) =>
-  ({ ok: false, motivo, mensaje, ...(file === undefined ? {} : { file }) }) as const;
+export const rechazo = (reason: MotivoDeRechazo, message: string, file?: string) =>
+  ({ ok: false, reason, message, ...(file === undefined ? {} : { file }) }) as const;
 
 /** Offset de una posicion 1-based; `undefined` si cae fuera del texto. */
 export function offsetDe(texto: string, { line, column }: TextPosition): number | undefined {
@@ -37,7 +37,7 @@ export function offsetDe(texto: string, { line, column }: TextPosition): number 
   return column >= 1 && offset <= limite ? offset : undefined;
 }
 
-/** Un error es el mismo si comparte codigo y archivo, aunque cambie su mensaje o su linea. */
+/** Un error es el mismo si comparte codigo y archivo, aunque cambie su message o su linea. */
 const clave = (issue: Issue) => `${issue.code}|${issue.file}`;
 
 /** Los errores preexistentes no bloquean una edicion ajena. */
@@ -68,7 +68,7 @@ export function aplicarSobre(
     conteo.set(clave(i), restantes - 1);
     return restantes <= 0;
   });
-  if (nuevo !== undefined) return rechazo('invalida', `La edicion introduce un error: ${nuevo.message}`, nuevo.file);
+  if (nuevo !== undefined) return rechazo('invalid', `The edit introduces an error: ${nuevo.message}`, nuevo.file);
   return { ok: true, archivos: resultado, issues: despues };
 }
 
@@ -80,14 +80,14 @@ export function reemplazarTexto(archivos: ArchivosDelWorkspace, ediciones: reado
   const porArchivo = new Map<string, { inicio: number; fin: number; texto: string }[]>();
   for (const { file, range, replacement, hash } of ediciones) {
     const actual = archivos[file];
-    if (actual === undefined) return rechazo('archivo-desconocido', `El archivo '${file}' no existe`, file);
+    if (actual === undefined) return rechazo('unknown-file', `File '${file}' does not exist`, file);
     if (hash !== hashDeContenido(actual)) {
-      return rechazo('hash-desactualizado', `El archivo '${file}' cambio desde que se leyo`, file);
+      return rechazo('stale-hash', `File '${file}' changed since it was read`, file);
     }
     const inicio = offsetDe(actual, range.start);
     const fin = offsetDe(actual, range.end);
     if (inicio === undefined || fin === undefined || fin < inicio) {
-      return rechazo('rango-invalido', `Rango fuera del archivo '${file}'`, file);
+      return rechazo('invalid-range', `Range outside file '${file}'`, file);
     }
     porArchivo.set(file, [...(porArchivo.get(file) ?? []), { inicio, fin, texto: replacement }]);
   }
@@ -98,7 +98,7 @@ export function reemplazarTexto(archivos: ArchivosDelWorkspace, ediciones: reado
     let texto = archivos[file] as string;
     let limite = Infinity;
     for (const { inicio, fin, texto: nuevo } of orden) {
-      if (fin > limite) return rechazo('ediciones-solapadas', `Ediciones solapadas en '${file}'`, file);
+      if (fin > limite) return rechazo('overlapping-edits', `Overlapping edits in '${file}'`, file);
       texto = texto.slice(0, inicio) + nuevo + texto.slice(fin);
       limite = inicio;
     }

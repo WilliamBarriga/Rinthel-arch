@@ -17,25 +17,25 @@ export type TipoDeMarca = 'ok' | 'errores' | 'avisos' | 'fallo';
 const plural = (n: number, singular: string, varios: string): string => `${n} ${n === 1 ? singular : varios}`;
 
 /** `fallo` es la salida 2 (fallo de uso); `errores`, la salida 1 o un `resumen` con errores; `avisos`, un `resumen` solo con avisos. */
-export function marcaDelEvento({ exitCode, resumen }: EventoDeActividad): { tipo: TipoDeMarca; texto: string } {
+export function marcaDelEvento({ exitCode, summary: resumen }: EventoDeActividad): { tipo: TipoDeMarca; texto: string } {
   if (exitCode === 2) return { tipo: 'fallo', texto: 'usage failure' };
-  if (resumen !== undefined && resumen.errores > 0) return { tipo: 'errores', texto: plural(resumen.errores, 'error', 'errors') };
+  if (resumen !== undefined && resumen.errors > 0) return { tipo: 'errores', texto: plural(resumen.errors, 'error', 'errors') };
   if (exitCode === 1) return { tipo: 'errores', texto: 'error' };
-  if (resumen !== undefined && resumen.avisos > 0) return { tipo: 'avisos', texto: plural(resumen.avisos, 'warning', 'warnings') };
+  if (resumen !== undefined && resumen.warnings > 0) return { tipo: 'avisos', texto: plural(resumen.warnings, 'warning', 'warnings') };
   return { tipo: 'ok', texto: 'ok' };
 }
 
 /** Quien (agente o `pid <n>`). */
-export const quienDelEvento = ({ agente, pid }: EventoDeActividad): string => agente ?? `pid ${pid}`;
+export const quienDelEvento = ({ agent: agente, pid }: EventoDeActividad): string => agente ?? `pid ${pid}`;
 
 /** Lo que nombra el objetivo, en una linea (vacio si no nombra nada). */
 export function textoDelObjetivo(objetivo: ObjetivoDeActividad | undefined): string {
   if (objetivo === undefined) return '';
-  return [objetivo.vista, objetivo.nodo, objetivo.tema, objetivo.archivos?.join(', ')].filter((p) => p !== undefined && p !== '').join(' ');
+  return [objetivo.view, objetivo.node, objetivo.theme, objetivo.files?.join(', ')].filter((p) => p !== undefined && p !== '').join(' ');
 }
 
 /** "quien comando objetivo": la ultima linea del agente en la barra. */
-export const resumenDelEvento = (evento: EventoDeActividad): string => [quienDelEvento(evento), evento.comando, textoDelObjetivo(evento.objetivo)].filter((p) => p !== '').join(' ');
+export const resumenDelEvento = (evento: EventoDeActividad): string => [quienDelEvento(evento), evento.command, textoDelObjetivo(evento.target)].filter((p) => p !== '').join(' ');
 
 export interface DestinoDelAgente {
   vista: string;
@@ -50,7 +50,7 @@ export interface DestinoDelAgente {
  */
 export function destinoDelObjetivo(objetivo: ObjetivoDeActividad | undefined, fuente: FuenteCanonica, vistaActiva: string | undefined): DestinoDelAgente | undefined {
   if (objetivo === undefined) return undefined;
-  const { vista, nodo } = objetivo;
+  const { view: vista, node: nodo } = objetivo;
   if (vista !== undefined) {
     if (!fuente.views.some((v) => v.id === vista)) return undefined;
     return nodo !== undefined && vistaMuestra(fuente, vista, nodo) ? { vista, seleccion: nodo } : { vista };

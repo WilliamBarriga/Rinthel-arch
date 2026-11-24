@@ -27,10 +27,10 @@ import {
 import type { ArchivoDeDev, ArchivosDeDev, CodigoDeDev, ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from '../src/protocolo';
 
 /**
- * `desactualizado` es el 409 (`hash-desactualizado`; lo resuelve `escritura/escritura.ts`). `version` (si `dev` la da)
+ * `desactualizado` es el 409 (`stale-hash`; lo resuelve `escritura/escritura.ts`). `version` (si `dev` la da)
  * es la del estado tras la escritura; `motivo` y `file`, los del rechazo.
  */
-export type ResultadoDeEnvio = { ok: true; version?: number } | { ok: false; desactualizado: boolean; mensaje: string; motivo?: MotivoDeRechazo; file?: string };
+export type ResultadoDeEnvio = { ok: true; version?: number } | { ok: false; desactualizado: boolean; message: string; reason?: MotivoDeRechazo; file?: string };
 
 /** `error` solo si llego malformada. */
 export type LecturaDeGeometria = { ok: true; geometria: GeometriaCacheada } | { ok: false; error?: string };
@@ -58,10 +58,10 @@ function motivo(error: { issues: ReadonlyArray<{ path: readonly PropertyKey[]; m
 const PLAZO_DE_GEOMETRIA_MS = 4000;
 
 /** `ok: false` lleva el mensaje de `inspect` y los ids cercanos (vacios si el fallo no es "no existe"). */
-export type LecturaDeInspect = { ok: true; salida: SalidaDeInspect } | { ok: false; mensaje: string; cercanos: string[] };
+export type LecturaDeInspect = { ok: true; salida: SalidaDeInspect } | { ok: false; message: string; suggestions: string[] };
 
 /** Lectura que puede fallar con un motivo visible (red, estado HTTP o respuesta malformada). */
-export type Lectura<T> = { ok: true; valor: T } | { ok: false; mensaje: string };
+export type Lectura<T> = { ok: true; valor: T } | { ok: false; message: string };
 
 export interface ClienteDeDev {
   /** El estado vigente; `undefined` si no llega o llega roto. */
@@ -70,7 +70,7 @@ export interface ClienteDeDev {
    * Recibe el vigente al conectar y uno por recompilacion, ya validados; uno malformado se descarta y va a
    * `alMalformado` con el motivo. Devuelve la baja.
    */
-  suscribir(alEstado: (estado: EstadoDeDev) => void, alMalformado?: (mensaje: string) => void): () => void;
+  suscribir(alEstado: (estado: EstadoDeDev) => void, alMalformado?: (message: string) => void): () => void;
   /** Oye un evento SSE por nombre con sus datos ya parseados (sin validar); devuelve la baja. */
   escuchar(nombre: NombreDeEventoDeDev, alDatos: (datos: unknown) => void): () => void;
   /** `GET /api/inspect/<comando>/<argumento>`; `opciones` van en la query (las de `tema`). */
@@ -101,13 +101,13 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
   /** El cuerpo de un 2xx contra su esquema; malformado es un fallo con el primer problema. */
   const validar = <T>(ruta: string, esquema: Esquema<T>, cuerpo: unknown): Lectura<T> => {
     const leido = esquema.safeParse(cuerpo);
-    return leido.success ? { ok: true, valor: leido.data } : { ok: false, mensaje: `Malformed response from ${ruta} (${motivo(leido.error)})` };
+    return leido.success ? { ok: true, valor: leido.data } : { ok: false, message: `Malformed response from ${ruta} (${motivo(leido.error)})` };
   };
 
   /** Mensaje de un no-2xx: el del protocolo si el cuerpo lo cumple; si no, el estado y la ruta. */
   const mensajeDeError = (status: number, ruta: string, cuerpo: unknown): string => {
     const leido = errorDeDevSchema.safeParse(cuerpo);
-    return leido.success ? leido.data.mensaje : `Error ${status} at ${ruta}`;
+    return leido.success ? leido.data.message : `Error ${status} at ${ruta}`;
   };
 
   /** `GET` de JSON validado; red, estado HTTP o forma dan un fallo con motivo. */
@@ -115,9 +115,9 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
     try {
       const res = await fetchFn(ruta);
       const cuerpo: unknown = await res.json().catch(() => undefined);
-      return res.ok ? validar(ruta, esquema, cuerpo) : { ok: false, mensaje: mensajeDeError(res.status, ruta, cuerpo) };
+      return res.ok ? validar(ruta, esquema, cuerpo) : { ok: false, message: mensajeDeError(res.status, ruta, cuerpo) };
     } catch (error) {
-      return { ok: false, mensaje: (error as Error).message };
+      return { ok: false, message: (error as Error).message };
     }
   };
 
@@ -130,16 +130,16 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
       const leido: unknown = await res.json().catch(() => undefined);
       if (res.ok) {
         const r = validar(ruta, aceptada, leido);
-        if (!r.ok) return { ok: false, desactualizado: false, mensaje: r.mensaje };
+        if (!r.ok) return { ok: false, desactualizado: false, message: r.message };
         return r.valor.version === undefined ? { ok: true } : { ok: true, version: r.valor.version };
       }
       const desactualizado = res.status === 409;
       const rechazo = rechazoDeDevSchema.safeParse(leido);
-      if (!rechazo.success) return { ok: false, desactualizado, mensaje: `Error ${res.status} at ${ruta}` };
-      const { mensaje, motivo: porque, file } = rechazo.data;
-      return { ok: false, desactualizado, mensaje, ...(porque !== undefined && { motivo: porque }), ...(file !== undefined && { file }) };
+      if (!rechazo.success) return { ok: false, desactualizado, message: `Error ${res.status} at ${ruta}` };
+      const { message: mensaje, reason: porque, file } = rechazo.data;
+      return { ok: false, desactualizado, message: mensaje, ...(porque !== undefined && { reason: porque }), ...(file !== undefined && { file }) };
     } catch (error) {
-      return { ok: false, desactualizado: false, mensaje: (error as Error).message };
+      return { ok: false, desactualizado: false, message: (error as Error).message };
     }
   };
 
@@ -179,12 +179,12 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
         const cuerpo: unknown = await res.json().catch(() => undefined);
         if (res.ok) {
           const leida = validar(ruta, salidaDeInspectSchema, cuerpo);
-          return leida.ok ? { ok: true, salida: leida.valor } : { ok: false, mensaje: leida.mensaje, cercanos: [] };
+          return leida.ok ? { ok: true, salida: leida.valor } : { ok: false, message: leida.message, suggestions: [] };
         }
         const rechazo = inspectNoEncontradoSchema.safeParse(cuerpo);
-        return rechazo.success ? { ok: false, mensaje: rechazo.data.mensaje, cercanos: rechazo.data.cercanos } : { ok: false, mensaje: `Error ${res.status}`, cercanos: [] };
+        return rechazo.success ? { ok: false, message: rechazo.data.message, suggestions: rechazo.data.suggestions } : { ok: false, message: `Error ${res.status}`, suggestions: [] };
       } catch (error) {
-        return { ok: false, mensaje: (error as Error).message, cercanos: [] };
+        return { ok: false, message: (error as Error).message, suggestions: [] };
       }
     },
     estado: async () => valorDe(await leer(RUTAS_DE_DEV.estado, estadoDeDevSchema)),
@@ -200,11 +200,11 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
       const ruta = RUTAS_DE_DEV.componentes;
       try {
         const res = await fetchFn(ruta);
-        if (!res.ok) return { ok: false, mensaje: mensajeDeError(res.status, ruta, await res.json().catch(() => undefined)) };
+        if (!res.ok) return { ok: false, message: mensajeDeError(res.status, ruta, await res.json().catch(() => undefined)) };
         const tipo = res.headers.get('content-type') ?? '';
-        return /javascript/i.test(tipo) ? { ok: true, valor: await res.text() } : { ok: false, mensaje: `Malformed response from ${ruta} (content-type '${tipo}', expected JavaScript)` };
+        return /javascript/i.test(tipo) ? { ok: true, valor: await res.text() } : { ok: false, message: `Malformed response from ${ruta} (content-type '${tipo}', expected JavaScript)` };
       } catch (error) {
-        return { ok: false, mensaje: (error as Error).message };
+        return { ok: false, message: (error as Error).message };
       }
     },
     editar: (intencion, version) => post(RUTAS_DE_DEV.edit, { ...intencion, version }),

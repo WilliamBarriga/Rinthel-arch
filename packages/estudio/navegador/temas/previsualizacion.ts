@@ -52,7 +52,7 @@ export function useFuentePrevisualizada(cliente: ClienteDeDev, version: number, 
           clave: JSON.stringify([vista, tema]),
           pedir: async (c) => {
             const r = await c.geometria(vista, { tema });
-            return r.ok ? { ok: true, valor: r.geometria } : { ok: false, mensaje: r.error ?? 'The geometry did not arrive' };
+            return r.ok ? { ok: true, valor: r.geometria } : { ok: false, message: r.error ?? 'The geometry did not arrive' };
           },
         },
   );

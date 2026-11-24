@@ -156,29 +156,29 @@ describe('seam sesion: validacion estricta de la cascada', () => {
     const issues = await abrirSesion(trabajoT(temaT('    type servicio { layer barra rect after rellno }'))).diagnosticar();
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_THEME_UNKNOWN_LAYER', severity: 'error', file: 'main.dg', fix: expect.objectContaining({ replacement: 'relleno' }) });
+    expect(issues[0]).toMatchObject({ code: 'theme-unknown-layer', severity: 'error', file: 'main.dg', fix: expect.objectContaining({ replacement: 'relleno' }) });
     expect(issues[0]!.message).toContain("'rellno'");
   });
 
   it('un parche a una Capa inexistente sin ubicacion es un error; quitar una inexistente tambien', async () => {
     const dsl = temaT('    type servicio { layer barra rect { radius 1 } }\n    type tabla { layer nada none }');
 
-    expect(await codigos(trabajoT(dsl))).toEqual(['E_THEME_PATCH_WITHOUT_PLACEMENT', 'E_THEME_UNKNOWN_LAYER']);
+    expect(await codigos(trabajoT(dsl))).toEqual(['theme-patch-without-placement', 'theme-unknown-layer']);
   });
 
   it('anadir una Capa nueva en un Tema que extiende exige before/after', async () => {
     const hijo = `theme hijo extends t { node { layer extra rect } }\n`;
 
-    expect(await codigos(trabajoT(temaT('') + hijo))).toEqual(['E_THEME_PATCH_WITHOUT_PLACEMENT']);
+    expect(await codigos(trabajoT(temaT('') + hijo))).toEqual(['theme-patch-without-placement']);
   });
 
   it('un token no declarado es un error con sugerencia; un token no numerico tambien', async () => {
     const issues = await abrirSesion(trabajoT(temaT('    type servicio { layer forma { radius $radia } }', 'tokens { radio 12 }'))).diagnosticar();
     const noNumerico = await codigos(trabajoT(temaT('    type servicio { layer forma { radius $nombre } }', 'tokens { nombre "x" }')));
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_UNKNOWN_TOKEN']);
+    expect(issues.map((i) => i.code)).toEqual(['theme-unknown-token']);
     expect(issues[0]!.hint).toContain("'radio'");
-    expect(noNumerico).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(noNumerico).toEqual(['theme-invalid-value']);
   });
 
   it('colores: fuera de Paleta, alfa o mix fuera de rango y ORIGEN en un Nodo (tambien dentro de mix) son errores', async () => {
@@ -188,7 +188,7 @@ describe('seam sesion: validacion estricta de la cascada', () => {
     layer d solid after forma { color ORIGEN }
     layer e solid after forma { color mix(ORIGEN, rojo, 0.5) }`);
 
-    expect(await codigos(trabajoT(dsl))).toEqual(['E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_UNKNOWN_PALETTE_COLOR']);
+    expect(await codigos(trabajoT(dsl))).toEqual(['theme-invalid-value', 'theme-invalid-value', 'theme-invalid-value', 'theme-invalid-value', 'unknown-palette-color']);
   });
 
   it('los issues de un parche traen related a la Capa base', async () => {
@@ -196,15 +196,15 @@ describe('seam sesion: validacion estricta de la cascada', () => {
     const [issue] = await abrirSesion(trabajoT(dsl)).diagnosticar();
     const lineaBase = (modeloTipos + dsl).split('\n').findIndex((l) => l.includes('layer relleno solid')) + 1;
 
-    expect(issue).toMatchObject({ code: 'E_THEME_UNKNOWN_PROPERTY', related: [{ file: 'main.dg', line: lineaBase }] });
+    expect(issue).toMatchObject({ code: 'theme-unknown-property', related: [{ file: 'main.dg', line: lineaBase }] });
   });
 
   it('un parche de estado que toca los Slots es un error: hover nunca relayouta', async () => {
-    expect(await codigos(trabajoT(temaT('    state hover { slots { title } }')))).toEqual(['E_THEME_STATE_TOUCHES_METRICS']);
+    expect(await codigos(trabajoT(temaT('    state hover { slots { title } }')))).toEqual(['theme-state-touches-metrics']);
   });
 
   it('un parche de estado que cambia la forma por una que define la caja es un error; uno de pintura no', async () => {
-    expect(await codigos(trabajoT(temaT('    state hover { layer forma circle }')))).toEqual(['E_THEME_STATE_TOUCHES_METRICS']);
+    expect(await codigos(trabajoT(temaT('    state hover { layer forma circle }')))).toEqual(['theme-state-touches-metrics']);
     expect(await codigos(trabajoT(temaT('    state hover { layer forma { radius 8 } }')))).toEqual([]);
   });
 
@@ -212,12 +212,12 @@ describe('seam sesion: validacion estricta de la cascada', () => {
     const dsl = temaT('    state hovr { layer borde { width 2 } }\n    type servicio { use resalte }\n    type servico { layer borde { width 2 } }');
     const issues = await abrirSesion(trabajoT(dsl)).diagnosticar();
 
-    expect(issues.map((i) => i.code).sort()).toEqual(['E_THEME_UNKNOWN_PART', 'E_THEME_UNKNOWN_STATE', 'E_UNKNOWN_NODE_TYPE']);
-    expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_STATE')!.fix?.replacement).toBe('hover');
+    expect(issues.map((i) => i.code).sort()).toEqual(['theme-unknown-part', 'theme-unknown-state', 'unknown-node-type']);
+    expect(issues.find((i) => i.code === 'theme-unknown-state')!.fix?.replacement).toBe('hover');
   });
 
   it('un valor fuera de rango en un parche no se recorta', async () => {
-    expect(await codigos(trabajoT(temaT('    type servicio { layer borde { width 99 } }')))).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(await codigos(trabajoT(temaT('    type servicio { layer borde { width 99 } }')))).toEqual(['theme-invalid-value']);
   });
 
   it('un theme o part repetido en el Workspace es un error de duplicado con related, nunca una fusion', async () => {
@@ -227,7 +227,7 @@ describe('seam sesion: validacion estricta de la cascada', () => {
     };
     const issues = await abrirSesion(archivos).diagnosticar();
 
-    expect(issues.map((i) => i.code).sort()).toEqual(['E_DUPLICATE_PART', 'E_DUPLICATE_THEME']);
+    expect(issues.map((i) => i.code).sort()).toEqual(['duplicate-part', 'duplicate-theme']);
     for (const issue of issues) expect(issue).toMatchObject({ file: 'b.dg', related: [{ file: 'a.dg' }] });
   });
 
@@ -237,15 +237,15 @@ describe('seam sesion: validacion estricta de la cascada', () => {
     type tabla { layer forma { radius $x } }`);
 
     expect(await codigos(trabajoT(dsl))).toEqual([
-      'E_THEME_INVALID_VALUE',
-      'E_THEME_STATE_TOUCHES_METRICS',
-      'E_THEME_UNKNOWN_LAYER',
-      'E_THEME_UNKNOWN_PROPERTY',
-      'E_THEME_UNKNOWN_TOKEN',
+      'theme-invalid-value',
+      'theme-state-touches-metrics',
+      'theme-unknown-layer',
+      'theme-unknown-property',
+      'theme-unknown-token',
     ]);
   });
 
   it('un parche de Vista con errores se informa igual', async () => {
-    expect(await codigos(trabajoT(temaT(''), vista('  theme t { layer barra rect after nada }\n')))).toEqual(['E_THEME_UNKNOWN_LAYER']);
+    expect(await codigos(trabajoT(temaT(''), vista('  theme t { layer barra rect after nada }\n')))).toEqual(['theme-unknown-layer']);
   });
 });

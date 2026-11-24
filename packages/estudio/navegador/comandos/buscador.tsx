@@ -1,6 +1,6 @@
 /**
  * Buscador (Mod+K): dialogo de Base UI con Autocomplete. Encuentra comandos del registro (con su atajo), Vistas (de
- * la Fuente), Nodos (`inspect buscar`, con su `archivo:linea`) y un `archivo:linea` escrito tal cual, que abre Codigo.
+ * la Fuente), Nodos (`inspect search`, con su `archivo:linea`) y un `archivo:linea` escrito tal cual, que abre Codigo.
  * El filtrado es propio (`filter={null}`): los Nodos llegan del servidor y descartan respuestas viejas.
  */
 import { Autocomplete } from '@base-ui/react/autocomplete';
@@ -41,17 +41,17 @@ function irANodo(e: ContextoDelEstudio, id: string): void {
   e.abrirPestana('derecha', 'detalle');
 }
 
-/** Los Nodos de `inspect buscar`; mientras no llegan los de la consulta vigente (o si falla), ninguno. */
+/** Los Nodos de `inspect search`; mientras no llegan los de la consulta vigente (o si falla), ninguno. */
 function useNodos(consulta: string): Entrada[] {
   const { cliente, estado } = useEstudio();
   const limpia = consulta.trim();
-  const lectura = useInspectPorVersion(cliente, estado?.version, 'buscar', limpia === '' || sitioEscrito(limpia) !== undefined ? undefined : limpia);
+  const lectura = useInspectPorVersion(cliente, estado?.version, 'search', limpia === '' || sitioEscrito(limpia) !== undefined ? undefined : limpia);
   return useMemo(
     () =>
       lectura.tipo !== 'dato'
         ? []
-        : lectura.dato.resultados
-            .filter((n) => n.kind === 'nodo')
+        : lectura.dato.results
+            .filter((n) => n.kind === 'node')
             .map((n) => ({ value: `nodo:${n.id}`, label: n.title, detalle: `${n.id} · ${textoDeSitio(n)}`, ejecutar: (e: ContextoDelEstudio) => irANodo(e, n.id) })),
     [lectura],
   );

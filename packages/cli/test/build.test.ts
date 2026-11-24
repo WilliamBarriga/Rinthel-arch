@@ -118,7 +118,7 @@ describe('build', () => {
     expect(readdirSync(join(workspace, '.diagrams', 'geometria'))).toEqual(['general.json']);
   });
 
-  it('un par de Pins solapados sale como W_OVERLAPPING_PINS con posicion y related', async () => {
+  it('un par de Pins solapados sale como overlapping-pins con posicion y related', async () => {
     const workspace = mkdtempSync(join(tmpdir(), 'build-'));
     writeFileSync(
       join(workspace, 'main.dg'),
@@ -139,12 +139,12 @@ view v {
     const { issues } = JSON.parse(resultado.stdout) as { issues: Record<string, unknown>[] };
     expect(issues).toEqual([
       expect.objectContaining({
-        code: 'W_OVERLAPPING_PINS',
+        code: 'overlapping-pins',
         severity: 'warning',
         file: 'main.dg',
         line: 6,
         column: 8,
-        related: [{ file: 'main.dg', line: 7, column: 8, message: "Pin de 'b'" }],
+        related: [{ file: 'main.dg', line: 7, column: 8, message: "Pin of 'b'" }],
       }),
     ]);
     expect(existsSync(join(workspace, '.diagrams', 'canonico.json'))).toBe(true);

@@ -20,13 +20,13 @@ describe('validate: codigos de Tema', () => {
 
     expect(exitCode).toBe(1);
     expect(salida.contractVersion).toBe(CONTRACT_VERSION);
-    expect(CONTRACT_VERSION).toBe(1);
+    expect(CONTRACT_VERSION).toBe(2);
     expect(salida.issues.map((i) => [i.code, i.line])).toEqual([
-      ['E_THEME_UNKNOWN_PROPERTY', 20],
-      ['E_THEME_UNKNOWN_PROPERTY', 26],
-      ['E_THEME_UNKNOWN_LAYER', 27],
-      ['E_THEME_PATCH_WITHOUT_PLACEMENT', 28],
-      ['E_THEME_STATE_TOUCHES_METRICS', 29],
+      ['theme-unknown-property', 20],
+      ['theme-unknown-property', 26],
+      ['theme-unknown-layer', 27],
+      ['theme-patch-without-placement', 28],
+      ['theme-state-touches-metrics', 29],
     ]);
   });
 
@@ -51,6 +51,6 @@ describe('validate: codigos de Tema', () => {
     const r = await run(['edit', '--workspace', raiz, '--edits', JSON.stringify(fixes)]);
     expect(r.exitCode, r.stderr).toBe(0);
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).not.toBe(antes);
-    expect((await validar(raiz)).salida.issues.map((i) => i.code)).not.toContain('E_THEME_UNKNOWN_PROPERTY');
+    expect((await validar(raiz)).salida.issues.map((i) => i.code)).not.toContain('theme-unknown-property');
   });
 });

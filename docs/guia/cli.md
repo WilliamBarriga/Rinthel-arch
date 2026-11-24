@@ -28,19 +28,19 @@ Con `--json`, stdout es exactamente un objeto, sin texto extra. `validate`/`buil
 dg validate --workspace <ruta> [--json] [--strict] [--max-issues N] [--theme <nombre>] [--theme-path <dir>]
 ```
 
-Lista todos los issues en una pasada, ordenados por archivo, linea, columna y codigo. Sin errores de compilacion calcula el layout de las Vistas con al menos dos Pins y avisa `W_OVERLAPPING_PINS` por cada par solapado (con `--strict` hace fallar); las Vistas sin Pins no pagan layout. Si un Tema trae codigo (`.tsx`) que no compila, el error es `E_THEME_CODE_COMPILE`, con archivo y linea. `--max-issues` (100 por defecto) corta la lista y marca `summary.truncated`. Un issue puede traer `fix` (`{ file, range, replacement }`) cuando hay un unico candidato, o `hint` si hay varios. `validate` nunca reescribe archivos.
+Lista todos los issues en una pasada, ordenados por archivo, linea, columna y codigo. Sin errores de compilacion calcula el layout de las Vistas con al menos dos Pins y avisa `overlapping-pins` por cada par solapado (con `--strict` hace fallar); las Vistas sin Pins no pagan layout. Si un Tema trae codigo (`.tsx`) que no compila, el error es `theme-code-compile`, con archivo y linea. `--max-issues` (100 por defecto) corta la lista y marca `summary.truncated`. Un issue puede traer `fix` (`{ file, range, replacement }`) cuando hay un unico candidato, o `hint` si hay varios. `validate` nunca reescribe archivos.
 
 Codigos de los Tipos de diagrama `sequence` y `er` (la lista completa, con su descripcion, sale en `dg skill`):
 
 | Codigo | Cuando |
 | --- | --- |
-| `E_UNKNOWN_VIEW_TYPE`, `E_VIEW_PROPERTY_FOR_TYPE` | El `type` de la Vista no existe, o una propiedad no vale para su Tipo (`include`/`pin` en secuencia; `interaction`/`order`/`autonumber`/`upto` fuera de ella) |
-| `E_SEQUENCE_WITHOUT_INTERACTION`, `E_UNKNOWN_INTERACTION`, `E_DUPLICATE_INTERACTION` | La Vista `sequence` no declara `interaction`, o una Interaccion (de una Vista o un `ref`) no existe o esta repetida |
-| `E_UNKNOWN_LIFELINE`, `E_DUPLICATE_MESSAGE_ID` | Un extremo de Mensaje, una Nota u `order` no es un Nodo; id de Mensaje repetido |
-| `E_CREATE_NOT_FIRST`, `E_AFTER_DESTROY`, `E_INVALID_FRAGMENT_OPERAND` | Ciclo de vida de la Lifeline y operandos de Fragmento invalidos |
-| `E_STEP_NOT_PROJECTED`, `E_STEP_NOT_ADVANCING` | Un `upto` apunta a un Mensaje que la Vista no proyecta o no avanza |
-| `W_ORDER_NOT_IN_INTERACTION`, `W_REF_WITHOUT_VIEW`, `W_REPLY_WITHOUT_SYNC` | Avisos (solo fallan con `--strict`) |
-| `E_ER_CARDINALITY`, `E_DUPLICATE_KEY_MARK` | Cardinalidad ER invalida (con `fix`) y marca de clave repetida (`pk`, `fk`, `uk`) |
+| `unknown-view-type`, `view-property-for-type` | El `type` de la Vista no existe, o una propiedad no vale para su Tipo (`include`/`pin` en secuencia; `interaction`/`order`/`autonumber`/`upto` fuera de ella) |
+| `sequence-without-interaction`, `unknown-interaction`, `duplicate-interaction` | La Vista `sequence` no declara `interaction`, o una Interaccion (de una Vista o un `ref`) no existe o esta repetida |
+| `unknown-lifeline`, `duplicate-message-id` | Un extremo de Mensaje, una Nota u `order` no es un Nodo; id de Mensaje repetido |
+| `create-not-first`, `after-destroy`, `invalid-fragment-operand` | Ciclo de vida de la Lifeline y operandos de Fragmento invalidos |
+| `step-not-projected`, `step-not-advancing` | Un `upto` apunta a un Mensaje que la Vista no proyecta o no avanza |
+| `order-not-in-interaction`, `ref-without-view`, `reply-without-sync` | Avisos (solo fallan con `--strict`) |
+| `er-cardinality`, `duplicate-key-mark` | Cardinalidad ER invalida (con `fix`) y marca de clave repetida (`pk`, `fk`, `uk`) |
 
 ### `build`: escribir la geometria
 
@@ -65,14 +65,14 @@ Sirve en `http://127.0.0.1:<puerto>/` (4173 por defecto, `--port 0` elige uno li
 ### `inspect`: consultar el Modelo (solo lectura)
 
 ```
-dg inspect buscar <texto>   --workspace <ruta> [--json]
-dg inspect nodo <id>        --workspace <ruta> [--json]
-dg inspect vista <id>       --workspace <ruta> [--json]
-dg inspect interaccion <id> --workspace <ruta> [--json]
-dg inspect tema <nombre>    --workspace <ruta> [--tipo <tipo>] [--estado <estado>] [--diagrama <tipo>] [--catalogo] [--json]
+dg inspect search <texto>   --workspace <ruta> [--json]
+dg inspect node <id>        --workspace <ruta> [--json]
+dg inspect view <id>       --workspace <ruta> [--json]
+dg inspect interaction <id> --workspace <ruta> [--json]
+dg inspect theme <nombre>    --workspace <ruta> [--kind <tipo>] [--state <estado>] [--diagram <tipo>] [--catalog] [--json]
 ```
 
-Cada resultado trae el id cualificado, el tipo y `archivo:linea`. `buscar` tambien halla Interacciones (por id o titulo); `vista` da el tipo de la Vista (`architecture`, `flow`, `sequence`, `er`) y, en secuencia, sus Lifelines como Nodos y la `interaction` que proyecta; `interaccion` da titulo, cantidad de items (primer nivel) y de Mensajes, Lifelines en orden de aparicion y las Vistas que la proyectan. `tema` muestra la cadena `extends`, las Partes, la pila de Capas con el `archivo:linea` del parche que fijo cada una (asi se sabe que editar) y las Metricas; tambien los Elementos de secuencia y la fila ER con la misma resolucion que el dibujo: los declarados y, con `--diagrama sequence` o `--diagrama er`, los derivados de `edge` y `node` (`derivado: true` en `--json`); `--catalogo` agrega las claves de Primitivas y Movimientos. `inspect tema` marca `temaConCodigo` y lista los componentes cuando el Tema usa codigo. Sale 1 si el Nodo, la Vista, la Interaccion o el Tema no existe (stderr sugiere ids cercanos).
+Cada resultado trae el id cualificado, el tipo y `archivo:linea`. `search` tambien halla Interacciones (por id o titulo); `view` da el tipo de la Vista (`architecture`, `flow`, `sequence`, `er`) y, en secuencia, sus Lifelines como Nodos y la `interaction` que proyecta; `interaction` da titulo, cantidad de items (primer nivel) y de Mensajes, Lifelines en orden de aparicion y las Vistas que la proyectan. `theme` muestra la cadena `extends`, las Partes, la pila de Capas con el `archivo:linea` del parche que fijo cada una (asi se sabe que editar) y las Metricas; tambien los Elementos de secuencia y la fila ER con la misma resolucion que el dibujo: los declarados y, con `--diagram sequence` o `--diagram er`, los derivados de `edge` y `node` (`derived: true` en `--json`); `--catalog` agrega las claves de Primitivas y Movimientos. `inspect theme` marca `hasCode` y lista los componentes cuando el Tema usa codigo. Sale 1 si el Nodo, la Vista, la Interaccion o el Tema no existe (stderr sugiere ids cercanos).
 
 ### `edit`: la unica escritura explicita
 
@@ -82,9 +82,9 @@ dg edit --workspace <ruta> --intent '<json>' [--hash <archivo>=<hash>] [--json]
 dg edit --workspace <ruta> --edits '<json>' [--hash <archivo>=<hash>] [--json]
 ```
 
-Todo o nada: si una edicion falla no se escribe nada. Con `--hash`, rechaza la edicion si el archivo cambio desde que se leyo. Solo toca `.dg` del Workspace. `--intent` aplica una Intencion por su contrato JSON (no lleva `hash`: uno heredado en el JSON se ignora; la concurrencia es `--hash <archivo>=<hash>`, que rechaza si ese archivo cambio, y sin `--hash` aplica sobre el texto vigente); hoy ademas de `mover-pin` existe `{"tipo":"ordenar-lifelines","vista":"flujo","orden":["cliente","api","db"]}`: reescribe el `order` completo de una Vista `sequence` con el orden visible dado, aunque coincida con la primera aparicion; las entradas de `order` hoy ocultas (hijas de un Grupo colapsado, excluidas) conservan su posicion relativa. `{"tipo":"fijar-tema","vista":"general","tema":"claro"}` fija el Tema de una Vista: reescribe el nombre de su `theme` conservando el parche, o inserta `theme claro` como primera linea del cuerpo si no tenia; sin `"tema"` quita la linea (si habia parche escribe `theme neutral { parche }`). Un Tema no declarado (ni en el Workspace ni en `--theme-path`) rechaza con `tema-desconocido` (salida 1). Sirve para fijar Pins y para aplicar los `fix` de `validate`; el resto de cambios se editan a mano en el `.dg` y se revalidan.
+Todo o nada: si una edicion falla no se escribe nada. Con `--hash`, rechaza la edicion si el archivo cambio desde que se leyo. Solo toca `.dg` del Workspace. `--intent` aplica una Intencion por su contrato JSON (no lleva `hash`: uno heredado en el JSON se ignora; la concurrencia es `--hash <archivo>=<hash>`, que rechaza si ese archivo cambio, y sin `--hash` aplica sobre el texto vigente); hoy ademas de `move-pin` existe `{"type":"reorder-lifelines","view":"flujo","order":["cliente","api","db"]}`: reescribe el `order` completo de una Vista `sequence` con el orden visible dado, aunque coincida con la primera aparicion; las entradas de `order` hoy ocultas (hijas de un Grupo colapsado, excluidas) conservan su posicion relativa. `{"type":"set-theme","view":"general","theme":"claro"}` fija el Tema de una Vista: reescribe el nombre de su `theme` conservando el parche, o inserta `theme claro` como primera linea del cuerpo si no tenia; sin `"theme"` quita la linea (si habia parche escribe `theme neutral { parche }`). Un Tema no declarado (ni en el Workspace ni en `--theme-path`) rechaza con `unknown-theme` (salida 1). Sirve para fijar Pins y para aplicar los `fix` de `validate`; el resto de cambios se editan a mano en el `.dg` y se revalidan.
 
-De donde sale el `--hash`: es el `hashDeContenido` de `canonico` del texto que leiste (53 bits en hexadecimal, no un SHA), y es opcional: sin el, `edit` aplica sobre el texto vigente. Con `dev` corriendo, `GET http://127.0.0.1:<puerto>/api/archivo/<ruta>` da `{ file, texto, hash, version }` y `GET /api/archivos` el `hash` de cada `.dg` (por ejemplo `curl -s http://127.0.0.1:4173/api/archivo/main.dg`); lee el texto y su `hash` de la misma respuesta y pasalo tal cual: `--hash main.dg=<hash>`. Si el archivo cambio entre medias, `edit` rechaza con `hash-desactualizado` (salida 1): vuelve a leer y reintenta.
+De donde sale el `--hash`: es el `hashDeContenido` de `canonico` del texto que leiste (53 bits en hexadecimal, no un SHA), y es opcional: sin el, `edit` aplica sobre el texto vigente. Con `dev` corriendo, `GET http://127.0.0.1:<puerto>/api/archivo/<ruta>` da `{ file, texto, hash, version }` y `GET /api/archivos` el `hash` de cada `.dg` (por ejemplo `curl -s http://127.0.0.1:4173/api/archivo/main.dg`); lee el texto y su `hash` de la misma respuesta y pasalo tal cual: `--hash main.dg=<hash>`. Si el archivo cambio entre medias, `edit` rechaza con `stale-hash` (salida 1): vuelve a leer y reintenta.
 
 ### `skill`: skill de agente de un Workspace
 
@@ -131,7 +131,7 @@ Escribe la [UI de dev](ui-de-dev.md) del Workspace como **un solo archivo HTML d
 ## Bucle de trabajo
 
 ```
-dg inspect buscar <texto> --workspace <ruta>   # que existe y donde esta escrito
+dg inspect search <texto> --workspace <ruta>   # que existe y donde esta escrito
 # editar el .dg
 dg validate --workspace <ruta> --json          # repetir hasta ok: true
 dg dev --workspace <ruta>                      # verlo
@@ -147,7 +147,7 @@ dg dev --workspace <ruta>                      # verlo
 
 ## Registro de actividad
 
-`validate`, `build`, `inspect` y `edit` anexan un Evento de actividad (una linea JSON, `eventoDeActividadSchema` de `canonico`) a `<ruta>/.diagrams/actividad.jsonl`, tambien cuando salen 1 o 2. `skill`, `dev` y la ayuda no registran, ni ningun comando cuyo `--workspace` falte o no sea una carpeta. Cada Evento lleva `ts`, `pid`, `comando`, `args` (el argv tras el comando), `exitCode`, `duracionMs`, el `objetivo` que el comando nombra (`inspect vista|nodo|tema`, la Vista y el Nodo de una Intencion de `edit`, los archivos que escribio `edit`) y, en `validate` y `build`, `resumen { errores, avisos }`; nunca stdout ni stderr. Al pasar 1 MB rota a `actividad.1.jsonl`. Un fallo al escribirlo no cambia la salida ni el codigo. Se sigue sin `dev` con `tail -f <ruta>/.diagrams/actividad.jsonl`. `dev` lo observa aparte del Workspace (ignora lineas rotas y vuelve a leer un registro acortado o rotado) y lo muestra en el panel Agente con los ultimos 50 Eventos; que hace la UI con ellos y con los cambios externos: [Seguir a un agente](ui-de-dev.md#seguir-a-un-agente).
+`validate`, `build`, `inspect` y `edit` anexan un Evento de actividad (una linea JSON, `eventoDeActividadSchema` de `canonico`) a `<ruta>/.diagrams/actividad.jsonl`, tambien cuando salen 1 o 2. `skill`, `dev` y la ayuda no registran, ni ningun comando cuyo `--workspace` falte o no sea una carpeta. Cada Evento lleva `ts`, `pid`, `command`, `args` (el argv tras el comando), `exitCode`, `durationMs`, el `target` que el comando nombra (`inspect view|node|theme`, la Vista y el Nodo de una Intencion de `edit`, los archivos que escribio `edit`) y, en `validate` y `build`, `summary { errors, warnings }`; nunca stdout ni stderr. Al pasar 1 MB rota a `actividad.1.jsonl`. Un fallo al escribirlo no cambia la salida ni el codigo. Se sigue sin `dev` con `tail -f <ruta>/.diagrams/actividad.jsonl`. `dev` lo observa aparte del Workspace (ignora lineas rotas y vuelve a leer un registro acortado o rotado) y lo muestra en el panel Agente con los ultimos 50 Eventos; que hace la UI con ellos y con los cambios externos: [Seguir a un agente](ui-de-dev.md#seguir-a-un-agente).
 
 | Variable | Efecto |
 | --- | --- |

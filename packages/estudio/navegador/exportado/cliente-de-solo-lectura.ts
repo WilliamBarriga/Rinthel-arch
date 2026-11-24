@@ -10,7 +10,7 @@ import type { ClienteDeDev, ResultadoDeEnvio } from '../cliente';
 const SOLO_LECTURA = 'This is a read-only export';
 
 export function crearClienteDeSoloLectura(datos: DatosDeExportado): ClienteDeDev {
-  const rechazo = async (): Promise<ResultadoDeEnvio> => ({ ok: false, desactualizado: false, mensaje: SOLO_LECTURA });
+  const rechazo = async (): Promise<ResultadoDeEnvio> => ({ ok: false, desactualizado: false, message: SOLO_LECTURA });
   const { estado, temas, componentes } = datos;
   return {
     estado: async () => estado,
@@ -25,19 +25,19 @@ export function crearClienteDeSoloLectura(datos: DatosDeExportado): ClienteDeDev
     },
     escuchar: () => () => undefined,
     async inspeccionar(comando, argumento) {
-      const salida = comando === 'tema' ? temas[argumento] : undefined;
-      return salida === undefined ? { ok: false, mensaje: `${SOLO_LECTURA}: inspect ${comando} is not available`, cercanos: [] } : { ok: true, salida };
+      const salida = comando === 'theme' ? temas[argumento] : undefined;
+      return salida === undefined ? { ok: false, message: `${SOLO_LECTURA}: inspect ${comando} is not available`, suggestions: [] } : { ok: true, salida };
     },
     editar: rechazo,
     editarTexto: rechazo,
-    archivos: async () => ({ ok: false, mensaje: SOLO_LECTURA }),
+    archivos: async () => ({ ok: false, message: SOLO_LECTURA }),
     archivo: async () => undefined,
     deshacer: rechazo,
     rehacer: rechazo,
     saltar: rechazo,
     codigo: async () => ({ ok: true, valor: { temaConCodigo: componentes !== undefined, componentes: componentes?.nombres ?? [], confiado: true } }),
     confiar: async () => ({ ok: true }),
-    bundleDeComponentes: async () => (componentes === undefined ? { ok: false, mensaje: 'The Themes of this export load no code' } : { ok: true, valor: componentes.bundle }),
+    bundleDeComponentes: async () => (componentes === undefined ? { ok: false, message: 'The Themes of this export load no code' } : { ok: true, valor: componentes.bundle }),
     geometria: async () => ({ ok: false }),
   };
 }

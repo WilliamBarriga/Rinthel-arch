@@ -1,4 +1,4 @@
-/** Panel Detalle: el Nodo seleccionado tal como lo da `inspect nodo` (`GET /api/inspect/nodo/<id>`), releido en cada version. */
+/** Panel Detalle: el Nodo seleccionado tal como lo da `inspect node` (`GET /api/inspect/node/<id>`), releido en cada version. */
 import type { ReactElement } from 'react';
 
 import type { SalidaDeInspect } from 'canonico';
@@ -8,11 +8,11 @@ import { useEstudio } from '../marco/contexto';
 import { useInspectPorVersion } from '../marco/use-lectura-por-version';
 import { textoDeSitio } from '../sitio';
 
-type SalidaDeNodo = Extract<SalidaDeInspect, { comando: 'nodo' }>;
+type SalidaDeNodo = Extract<SalidaDeInspect, { command: 'node' }>;
 
 export function Detalle(): ReactElement {
   const { seleccion, cliente, estado, irAVista } = useEstudio();
-  const lectura = useInspectPorVersion(cliente, estado?.version, 'nodo', seleccion ?? undefined);
+  const lectura = useInspectPorVersion(cliente, estado?.version, 'node', seleccion ?? undefined);
 
   return (
     <section aria-label="Details" className="ui-detalle">
@@ -27,7 +27,7 @@ export function Detalle(): ReactElement {
   );
 }
 
-function FichaDeNodo({ salida: { nodo, aristas, vistas }, irAVista }: { salida: SalidaDeNodo; irAVista: (vista: string) => void }): ReactElement {
+function FichaDeNodo({ salida: { node: nodo, edges: aristas, views: vistas }, irAVista }: { salida: SalidaDeNodo; irAVista: (vista: string) => void }): ReactElement {
   return (
     <>
       <h2 className="ui-detalle-titulo">{nodo.title}</h2>

@@ -2,7 +2,7 @@
  * Comprobaciones semanticas sobre la Fuente canonica ya armada (ADR 0005). Puro; nunca lanza ni muta.
  * La Fuente no guarda posiciones: un `Ubicador` traduce la ruta del valor a archivo y rango; sin el, el issue
  * sale en `(canonico):1:1` sin `fix`. Fuera de alcance: lo que la fusion del DSL hace desaparecer (sintaxis,
- * Nodos y Temas duplicados, `extend` o `extends` sin destino, `E_UNKNOWN_VIEW_TYPE`) y `W_OVERLAPPING_PINS`.
+ * Nodos y Temas duplicados, `extend` o `extends` sin destino, `unknown-view-type`) y `overlapping-pins`.
  */
 import { CODIGOS } from './codigos';
 import { CARDINALIDADES_ER } from './esquema';
@@ -68,7 +68,7 @@ export function validate(fuente: FuenteCanonica, opciones: OpcionesDeValidate = 
       if (candidatos.length === 1 && unico !== undefined) {
         if (ubicar !== undefined) issue.fix = { file, range, replacement: escribir(unico) };
       } else if (candidatos.length > 1) {
-        issue.hint = `Candidatos: ${candidatos.join(', ')}`;
+        issue.hint = `Candidates: ${candidatos.join(', ')}`;
       } else if (sinCandidatos !== undefined) {
         issue.hint = sinCandidatos;
       }
@@ -108,7 +108,7 @@ function validarNodos(nodos: readonly Nodo[], ruta: RutaDeFuente, tipos: Readonl
       emitir(
         [...aqui, 'type'],
         CODIGOS.E_UNKNOWN_NODE_TYPE,
-        `Tipo de nodo '${nodo.type}' no declarado en specification`,
+        `Node kind '${nodo.type}' is not declared in specification`,
         nodo.type,
         tipos,
       );
@@ -153,7 +153,7 @@ function validarAristas(fuente: FuenteCanonica, emitir: Emitir): void {
       for (const campo of ['fromCardinality', 'toCardinality'] as const) {
         const escrita = arista[campo];
         if (escrita === undefined || (CARDINALIDADES_ER as readonly string[]).includes(escrita)) continue;
-        emitir(['model', 'edges', indice, campo], CODIGOS.E_ER_CARDINALITY, `Cardinalidad '${escrita}' no valida en una Vista ER (${CARDINALIDADES_ER.join(' | ')})`, escrita, CARDINALIDADES_ER, entreComillas, `Cardinalidades validas: ${CARDINALIDADES_ER.join(', ')}`);
+        emitir(['model', 'edges', indice, campo], CODIGOS.E_ER_CARDINALITY, `Cardinality '${escrita}' is not valid in an ER View (${CARDINALIDADES_ER.join(' | ')})`, escrita, CARDINALIDADES_ER, entreComillas, `Cardinalidades validas: ${CARDINALIDADES_ER.join(', ')}`);
       }
     }
     for (const lado of ['from', 'to'] as const) {
@@ -161,9 +161,9 @@ function validarAristas(fuente: FuenteCanonica, emitir: Emitir): void {
       const delNodo = atributos.get(node);
       const ruta = ['model', 'edges', indice, lado];
       if (delNodo === undefined) {
-        emitir([...ruta, 'node'], CODIGOS.E_DANGLING_EDGE, `Arista colgante: el Nodo '${node}' no existe en el Modelo`, node, atributos.keys());
+        emitir([...ruta, 'node'], CODIGOS.E_DANGLING_EDGE, `Dangling Edge: Node '${node}' does not exist in the Model`, node, atributos.keys());
       } else if (attribute !== undefined && !delNodo.includes(attribute)) {
-        emitir([...ruta, 'attribute'], CODIGOS.E_UNKNOWN_ATTRIBUTE, `El Nodo '${node}' no tiene el Atributo '${attribute}'`, attribute, delNodo);
+        emitir([...ruta, 'attribute'], CODIGOS.E_UNKNOWN_ATTRIBUTE, `Node '${node}' has no Attribute '${attribute}'`, attribute, delNodo);
       }
     }
   });
@@ -179,13 +179,13 @@ function validarCatalogo(fuente: FuenteCanonica, iconos: IconProvider | undefine
       emitir(
         [...ruta, 'icon'],
         CODIGOS.E_UNKNOWN_ICON,
-        `Icono '${tipo.icon}' no existe (ni generico ni SVG del Workspace)`,
+        `Icon '${tipo.icon}' does not exist (neither a generic icon nor an SVG in the Workspace)`,
         tipo.icon,
         iconos.keys(),
       );
     }
     if (tipo.color !== undefined && !paleta.includes(tipo.color)) {
-      emitir([...ruta, 'color'], CODIGOS.E_UNKNOWN_PALETTE_COLOR, `Color '${tipo.color}' no es un nombre de Paleta del Tema`, tipo.color, new Set(paleta));
+      emitir([...ruta, 'color'], CODIGOS.E_UNKNOWN_PALETTE_COLOR, `Color '${tipo.color}' is not a Palette name of the Theme`, tipo.color, new Set(paleta));
     }
   });
 }
@@ -196,12 +196,12 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
 
   const tema = fuente.themes.find((candidato) => candidato.name === vista.theme);
   if (vista.theme !== undefined && tema === undefined) {
-    emitir([...ruta, 'theme'], CODIGOS.E_UNKNOWN_THEME, `Tema '${vista.theme}' no declarado`, vista.theme, fuente.themes.map(({ name }) => name));
+    emitir([...ruta, 'theme'], CODIGOS.E_UNKNOWN_THEME, `Theme '${vista.theme}' is not declared`, vista.theme, fuente.themes.map(({ name }) => name));
   }
   const paleta = nombresDePaleta(tema ? [tema] : fuente.themes);
   vista.overrides.forEach((override, i) => {
     if (override.color !== undefined && !paleta.includes(override.color)) {
-      emitir([...ruta, 'overrides', i, 'color'], CODIGOS.E_UNKNOWN_PALETTE_COLOR, `Color '${override.color}' no es un nombre de Paleta del Tema`, override.color, new Set(paleta));
+      emitir([...ruta, 'overrides', i, 'color'], CODIGOS.E_UNKNOWN_PALETTE_COLOR, `Color '${override.color}' is not a Palette name of the Theme`, override.color, new Set(paleta));
     }
   });
 
@@ -210,7 +210,7 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
   const visibles = deSecuencia ?? new Set(resolveView(fuente, vista.id)?.nodes.map((nodo) => nodo.id));
   vista.overrides.forEach((override, i) => {
     if (!visibles.has(override.node)) {
-      emitir([...ruta, 'overrides', i, 'node'], CODIGOS.E_OVERRIDE_OUTSIDE_VIEW, `Override sobre '${override.node}', que la Vista '${vista.id}' no muestra`);
+      emitir([...ruta, 'overrides', i, 'node'], CODIGOS.E_OVERRIDE_OUTSIDE_VIEW, `Override on '${override.node}', which View '${vista.id}' does not show`);
     }
   });
 
@@ -225,17 +225,17 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
   const enlazados = new Set(vista.links.map(({ node }) => node));
   vista.links.forEach((enlace, i) => {
     if (!ids.includes(enlace.view)) {
-      emitir([...ruta, 'links', i, 'view'], CODIGOS.E_UNKNOWN_VIEW_LINK, `link hacia la Vista '${enlace.view}', que no existe`, enlace.view, ids);
+      emitir([...ruta, 'links', i, 'view'], CODIGOS.E_UNKNOWN_VIEW_LINK, `link to View '${enlace.view}', which does not exist`, enlace.view, ids);
     }
   });
-  // En secuencia `expanded` ya da E_VIEW_PROPERTY_FOR_TYPE; no se emite otro issue sobre el.
+  // En secuencia `expanded` ya da view-property-for-type; no se emite otro issue sobre el.
   for (const palabra of vista.type === 'sequence' ? (['collapsed'] as const) : (['collapsed', 'expanded'] as const)) {
     vista[palabra].forEach((destino, i) => {
       const donde = [...ruta, palabra, i];
       if (!grupos.has(destino)) {
-        emitir(donde, CODIGOS.E_INVALID_EXPANSION_TARGET, `'${palabra} ${destino}': no es un Grupo que la Vista '${vista.id}' muestre`);
+        emitir(donde, CODIGOS.E_INVALID_EXPANSION_TARGET, `'${palabra} ${destino}': not a Group that View '${vista.id}' shows`);
       } else if (palabra === 'expanded' && enlazados.has(destino)) {
-        emitir(donde, CODIGOS.E_LINK_WITH_EXPANDED, `'${destino}' lleva 'link' y 'expanded': un Grupo con link no se expande`);
+        emitir(donde, CODIGOS.E_LINK_WITH_EXPANDED, `'${destino}' has both 'link' and 'expanded': a Group with a link is not expanded`);
       }
     });
   }
@@ -248,16 +248,16 @@ function validarVista(fuente: FuenteCanonica, vista: Vista, indice: number, emit
         const donde = [...ruta, 'steps', s, accion, k];
         if ('selector' in item) {
           if (nodos.some((id) => matchesSelector(item.selector, id))) return;
-          emitir([...donde, 'selector'], CODIGOS.E_UNKNOWN_STEP, `El selector '${item.selector}' no coincide con ningun Nodo del Modelo`, item.selector, nodos);
+          emitir([...donde, 'selector'], CODIGOS.E_UNKNOWN_STEP, `Selector '${item.selector}' matches no Node in the Model`, item.selector, nodos);
         } else if (!fuente.model.edges.some((arista) => arista.from.node === item.from && arista.to.node === item.to)) {
-          emitir([...donde, 'from'], CODIGOS.E_UNKNOWN_STEP, `La Arista '${item.from} -> ${item.to}' no existe en el Modelo`, item.from, nodos);
+          emitir([...donde, 'from'], CODIGOS.E_UNKNOWN_STEP, `Edge '${item.from} -> ${item.to}' does not exist in the Model`, item.from, nodos);
         }
       });
     }
   });
 }
 
-/** Interacciones: ids unicos, extremos de Mensaje que son Nodos, ids de Mensaje unicos y `reply` sin `sync` abierto. */
+/** Interactions: unique ids, Message ends that are Nodes, unique Message ids and `reply` without an open `sync`. */
 function validarInteracciones(fuente: FuenteCanonica, emitir: Emitir, emitirCon: EmitirCon): void {
   const nodos = todosLosIds(fuente.model.nodes);
   const vistas = new Map<string, number>();
@@ -265,7 +265,7 @@ function validarInteracciones(fuente: FuenteCanonica, emitir: Emitir, emitirCon:
     const ruta = ['model', 'interactions', i];
     const previa = vistas.get(interaccion.id);
     if (previa !== undefined) {
-      emitirCon([...ruta, 'id'], CODIGOS.E_DUPLICATE_INTERACTION, `Interaccion duplicada '${interaccion.id}'`, { relacionado: { ruta: ['model', 'interactions', previa, 'id'], message: `Primera declaracion de '${interaccion.id}'` } });
+      emitirCon([...ruta, 'id'], CODIGOS.E_DUPLICATE_INTERACTION, `Duplicate Interaction '${interaccion.id}'`, { relacionado: { ruta: ['model', 'interactions', previa, 'id'], message: `First declaration of '${interaccion.id}'` } });
     } else {
       vistas.set(interaccion.id, i);
     }
@@ -275,20 +275,20 @@ function validarInteracciones(fuente: FuenteCanonica, emitir: Emitir, emitirCon:
       const donde = [...ruta, ...mensaje.ubicacion];
       for (const lado of ['from', 'to'] as const) {
         if (!nodos.includes(mensaje[lado])) {
-          emitir([...donde, lado], CODIGOS.E_UNKNOWN_LIFELINE, `El extremo '${mensaje[lado]}' del Mensaje no es un Nodo del Modelo`, mensaje[lado], nodos);
+          emitir([...donde, lado], CODIGOS.E_UNKNOWN_LIFELINE, `The end '${mensaje[lado]}' of the Message is not a Node of the Model`, mensaje[lado], nodos);
         }
       }
       validarCicloDeVida(mensaje, j, ruta, mensajes, emitirCon);
       if (mensaje.id === undefined) return;
       const otro = ids.get(mensaje.id);
       if (otro === undefined) ids.set(mensaje.id, mensaje.ubicacion);
-      else emitirCon([...donde, 'id'], CODIGOS.E_DUPLICATE_MESSAGE_ID, `Mensaje duplicado '${mensaje.id}' en la Interaccion '${interaccion.id}'`, { relacionado: { ruta: [...ruta, ...otro, 'id'], message: `Primer Mensaje '${mensaje.id}'` } });
+      else emitirCon([...donde, 'id'], CODIGOS.E_DUPLICATE_MESSAGE_ID, `Duplicate Message '${mensaje.id}' in Interaction '${interaccion.id}'`, { relacionado: { ruta: [...ruta, ...otro, 'id'], message: `First Message '${mensaje.id}'` } });
     });
     validarOperandos(interaccion.items, [...ruta, 'items'], emitirCon);
     validarNotasYRefs(interaccion.items, [...ruta, 'items'], fuente, nodos, emitir, emitirCon);
     for (const j of activacionesDe(mensajes).respuestasSueltas) {
       const mensaje = mensajes[j]!;
-      emitirCon([...ruta, ...mensaje.ubicacion, 'from'], CODIGOS.W_REPLY_WITHOUT_SYNC, `El 'reply' de '${mensaje.from}' a '${mensaje.to}' no cierra ningun 'sync' abierto`, { severity: 'warning' });
+      emitirCon([...ruta, ...mensaje.ubicacion, 'from'], CODIGOS.W_REPLY_WITHOUT_SYNC, `The 'reply' from '${mensaje.from}' to '${mensaje.to}' closes no open 'sync'`, { severity: 'warning' });
     }
   });
 }
@@ -298,13 +298,13 @@ function validarCicloDeVida(mensaje: MensajeUbicado, j: number, ruta: (string | 
   const previos = mensajes.slice(0, j);
   const primera = previos.findIndex((m) => m.from === mensaje.to || m.to === mensaje.to);
   if (mensaje.kind === 'create' && primera >= 0) {
-    emitirCon([...ruta, ...mensaje.ubicacion, 'to'], CODIGOS.E_CREATE_NOT_FIRST, `'create' sobre '${mensaje.to}', que ya aparece antes en la Interaccion`, { relacionado: { ruta: [...ruta, ...previos[primera]!.ubicacion, previos[primera]!.from === mensaje.to ? 'from' : 'to'], message: `Primera aparicion de '${mensaje.to}'` } });
+    emitirCon([...ruta, ...mensaje.ubicacion, 'to'], CODIGOS.E_CREATE_NOT_FIRST, `'create' on '${mensaje.to}', which already appears earlier in the Interaction`, { relacionado: { ruta: [...ruta, ...previos[primera]!.ubicacion, previos[primera]!.from === mensaje.to ? 'from' : 'to'], message: `First appearance of '${mensaje.to}'` } });
     return;
   }
   for (const lado of ['from', 'to'] as const) {
     const destruccion = previos.find((m) => m.kind === 'destroy' && m.to === mensaje[lado]);
     if (destruccion !== undefined) {
-      emitirCon([...ruta, ...mensaje.ubicacion, lado], CODIGOS.E_AFTER_DESTROY, `'${mensaje[lado]}' aparece despues de su 'destroy'`, { relacionado: { ruta: [...ruta, ...destruccion.ubicacion, 'to'], message: `'${mensaje[lado]}' se destruye aqui` } });
+      emitirCon([...ruta, ...mensaje.ubicacion, lado], CODIGOS.E_AFTER_DESTROY, `'${mensaje[lado]}' appears after its 'destroy'`, { relacionado: { ruta: [...ruta, ...destruccion.ubicacion, 'to'], message: `'${mensaje[lado]}' is destroyed here` } });
       return;
     }
   }
@@ -318,11 +318,11 @@ interface PropiedadSoloDeSecuencia {
 }
 
 const PROPIEDADES_SOLO_DE_SECUENCIA: readonly PropiedadSoloDeSecuencia[] = [
-  { nombre: 'interaction', donde: (v) => (v.interaction === undefined ? [] : [['interaction']]), hint: "cambia 'type' a sequence o quita 'interaction'" },
-  { nombre: 'autonumber', donde: (v) => (v.autonumber === true ? [['autonumber']] : []), hint: "cambia 'type' a sequence o quita 'autonumber'" },
-  { nombre: 'order', donde: (v) => (v.order.length > 0 ? [['order', 0]] : []), hint: "cambia 'type' a sequence o quita 'order'" },
-  { nombre: 'steps each', donde: (v) => (v.stepsEach === true ? [['stepsEach']] : []), hint: "usa 'step { show ... }' o cambia 'type' a sequence" },
-  { nombre: 'upto', donde: (v) => v.steps.flatMap((paso, s) => (paso.upto === undefined ? [] : [['steps', s, 'upto']])), hint: "usa 'show'/'hide' o cambia 'type' a sequence" },
+  { nombre: 'interaction', donde: (v) => (v.interaction === undefined ? [] : [['interaction']]), hint: "change 'type' to sequence or remove 'interaction'" },
+  { nombre: 'autonumber', donde: (v) => (v.autonumber === true ? [['autonumber']] : []), hint: "change 'type' to sequence or remove 'autonumber'" },
+  { nombre: 'order', donde: (v) => (v.order.length > 0 ? [['order', 0]] : []), hint: "change 'type' to sequence or remove 'order'" },
+  { nombre: 'steps each', donde: (v) => (v.stepsEach === true ? [['stepsEach']] : []), hint: "use 'step { show ... }' or change 'type' to sequence" },
+  { nombre: 'upto', donde: (v) => v.steps.flatMap((paso, s) => (paso.upto === undefined ? [] : [['steps', s, 'upto']])), hint: "use 'show'/'hide' or change 'type' to sequence" },
 ];
 
 /** Propiedades de Vista segun su Tipo de diagrama y la Interaccion que proyecta una Vista de secuencia. */
@@ -332,27 +332,27 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
   if (vista.type !== 'sequence') {
     for (const propiedad of PROPIEDADES_SOLO_DE_SECUENCIA) {
       for (const donde of propiedad.donde(vista)) {
-        emitirCon([...ruta, ...donde], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'${propiedad.nombre}' solo vale en una Vista 'sequence', no en '${vista.type}'`, { hint: propiedad.hint });
+        emitirCon([...ruta, ...donde], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'${propiedad.nombre}' is only valid in a 'sequence' View, not in '${vista.type}'`, { hint: propiedad.hint });
       }
     }
     return;
   }
   if (vista.include.length > 0) {
-    emitirCon([...ruta, 'include'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'include' no vale en una Vista 'sequence': proyecta una Interaccion", { hint: "usa 'exclude' para quitar Lifelines" });
+    emitirCon([...ruta, 'include'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'include' is not valid in a 'sequence' View: it projects an Interaction", { hint: "use 'exclude' to remove Lifelines" });
   }
   if (vista.expanded.length > 0) {
-    emitirCon([...ruta, 'expanded', 0], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'expanded' no vale en una Vista 'sequence': las Lifelines se funden con 'collapsed' o 'depth'", { hint: "quita 'expanded'; usa 'collapsed' o 'depth' para fundir Grupos" });
+    emitirCon([...ruta, 'expanded', 0], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'expanded' is not valid in a 'sequence' View: Lifelines are merged with 'collapsed' or 'depth'", { hint: "remove 'expanded'; use 'collapsed' or 'depth' to merge Groups" });
   }
   vista.overrides.forEach((override, i) => {
     if (override.pin !== undefined) {
-      emitirCon([...ruta, 'overrides', i, 'pin'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'pin' no vale en una Vista 'sequence': las columnas siguen el orden de las Lifelines", { hint: "usa 'order' para reordenar Lifelines" });
+      emitirCon([...ruta, 'overrides', i, 'pin'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, "'pin' is not valid in a 'sequence' View: columns follow the order of the Lifelines", { hint: "use 'order' to reorder Lifelines" });
     }
   });
   const interaccion = fuente.model.interactions.find(({ id }) => id === vista.interaction);
   if (vista.interaction === undefined) {
-    emitirCon([...ruta, 'id'], CODIGOS.E_SEQUENCE_WITHOUT_INTERACTION, `La Vista '${vista.id}' es 'sequence' y no declara 'interaction'`, interacciones.length > 0 ? { hint: `Interacciones: ${interacciones.join(', ')}` } : {});
+    emitirCon([...ruta, 'id'], CODIGOS.E_SEQUENCE_WITHOUT_INTERACTION, `View '${vista.id}' is 'sequence' and does not declare 'interaction'`, interacciones.length > 0 ? { hint: `Interactions: ${interacciones.join(', ')}` } : {});
   } else if (interaccion === undefined) {
-    emitir([...ruta, 'interaction'], CODIGOS.E_UNKNOWN_INTERACTION, `La Interaccion '${vista.interaction}' no existe en el Modelo`, vista.interaction, interacciones);
+    emitir([...ruta, 'interaction'], CODIGOS.E_UNKNOWN_INTERACTION, `Interaction '${vista.interaction}' does not exist in the Model`, vista.interaction, interacciones);
   }
   validarPasosDeSecuencia(fuente, vista, indice, interaccion, emitir, emitirCon);
   const nodos = todosLosIds(fuente.model.nodes);
@@ -363,15 +363,15 @@ function validarVistaDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
     const lifelines = new Set([...participantes].flatMap((id) => id.split('.').map((_, i, partes) => partes.slice(0, i + 1).join('.'))).filter((id) => posibles.has(id)));
     vista.links.forEach((enlace, i) => {
       if (!lifelines.has(enlace.node)) {
-        emitirCon([...ruta, 'links', i, 'view'], CODIGOS.E_LINK_NOT_LIFELINE, `'link ${enlace.node}': en una Vista 'sequence' solo una Lifeline puede enlazar, y '${enlace.node}' no lo es`, { hint: 'enlaza desde una Lifeline (un Nodo que participa en la Interaccion); un Mensaje, una Nota o un Fragmento no navega por link' });
+        emitirCon([...ruta, 'links', i, 'view'], CODIGOS.E_LINK_NOT_LIFELINE, `'link ${enlace.node}': in a 'sequence' View only a Lifeline can link, and '${enlace.node}' is not one`, { hint: 'link from a Lifeline (a Node that takes part in the Interaction); a Message, Note or Fragment does not navigate by link' });
       }
     });
   }
   vista.order.forEach((id, i) => {
     if (!nodos.includes(id)) {
-      emitir([...ruta, 'order', i], CODIGOS.E_UNKNOWN_LIFELINE, `'order' nombra '${id}', que no es un Nodo del Modelo`, id, nodos);
+      emitir([...ruta, 'order', i], CODIGOS.E_UNKNOWN_LIFELINE, `'order' names '${id}', which is not a Node of the Model`, id, nodos);
     } else if (interaccion !== undefined && !participantes.has(id)) {
-      emitirCon([...ruta, 'order', i], CODIGOS.W_ORDER_NOT_IN_INTERACTION, `'${id}' no participa en la Interaccion '${interaccion.id}'; 'order' lo ignora`, { severity: 'warning' });
+      emitirCon([...ruta, 'order', i], CODIGOS.W_ORDER_NOT_IN_INTERACTION, `'${id}' does not take part in Interaction '${interaccion.id}'; 'order' ignores it`, { severity: 'warning' });
     }
   });
 }
@@ -385,28 +385,28 @@ function validarPasosDeSecuencia(fuente: FuenteCanonica, vista: Vista, indice: n
   const posicion = new Map(proyectados.flatMap((m, i) => (m.id === undefined ? [] : [[m.id, i] as const])));
   const ids = mensajes.flatMap((m) => (m.id === undefined ? [] : [m.id]));
   if (vista.stepsEach === true && vista.steps.length > 0) {
-    emitirCon([...ruta, 'steps', 0, 'title'], CODIGOS.E_STEPS_EACH_WITH_STEP, "'steps each' y 'step' explicitos no se combinan en la misma Vista", { hint: "deja solo 'steps each' o solo los 'step { upto ... }'" });
+    emitirCon([...ruta, 'steps', 0, 'title'], CODIGOS.E_STEPS_EACH_WITH_STEP, "explicit 'steps each' and 'step' cannot be combined in the same View", { hint: "keep only 'steps each' or only the 'step { upto ... }' blocks" });
   }
   let previo: { indice: number; paso: number } | undefined;
   vista.steps.forEach((paso, s) => {
     for (const accion of ['show', 'hide'] as const) {
       paso[accion].forEach((item: ElementoDePaso, k) => {
-        emitirCon([...ruta, 'steps', s, accion, k, 'selector' in item ? 'selector' : 'from'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'${accion}' no vale en una Vista 'sequence': un Paso es un corte del tiempo`, { hint: "usa 'step { upto <id del Mensaje> }'" });
+        emitirCon([...ruta, 'steps', s, accion, k, 'selector' in item ? 'selector' : 'from'], CODIGOS.E_VIEW_PROPERTY_FOR_TYPE, `'${accion}' is not valid in a 'sequence' View: a Step is a cut in time`, { hint: "use 'step { upto <Message id> }'" });
       });
     }
     if (paso.upto === undefined || interaccion === undefined) return;
     const donde = [...ruta, 'steps', s, 'upto'];
     if (!ids.includes(paso.upto)) {
-      emitir(donde, CODIGOS.E_UNKNOWN_STEP, `El Mensaje '${paso.upto}' no existe en la Interaccion '${interaccion.id}'`, paso.upto, ids, undefined, ids.length === 0 ? "ponle un id a un Mensaje: 'id: a -> b'" : undefined);
+      emitir(donde, CODIGOS.E_UNKNOWN_STEP, `Message '${paso.upto}' does not exist in Interaction '${interaccion.id}'`, paso.upto, ids, undefined, ids.length === 0 ? "give a Message an id: 'id: a -> b'" : undefined);
       return;
     }
     const actual = posicion.get(paso.upto);
     if (actual === undefined) {
-      emitirCon(donde, CODIGOS.E_STEP_NOT_PROJECTED, `El Mensaje '${paso.upto}' no esta en la Vista '${vista.id}' (lo quitan 'depth' o 'exclude')`, { hint: "elige un Mensaje que la Vista proyecte o quita el 'exclude'" });
+      emitirCon(donde, CODIGOS.E_STEP_NOT_PROJECTED, `Message '${paso.upto}' is not in View '${vista.id}' ('depth' or 'exclude' removes it)`, { hint: "pick a Message the View projects or remove the 'exclude'" });
       return;
     }
     if (previo !== undefined && actual <= previo.indice) {
-      emitirCon(donde, CODIGOS.E_STEP_NOT_ADVANCING, `El Paso '${paso.title}' no avanza: '${paso.upto}' no esta despues del Paso anterior`, { hint: 'los Pasos de secuencia solo avanzan', relacionado: { ruta: [...ruta, 'steps', previo.paso, 'upto'], message: 'Paso anterior' } });
+      emitirCon(donde, CODIGOS.E_STEP_NOT_ADVANCING, `Step '${paso.title}' does not advance: '${paso.upto}' is not after the previous Step`, { hint: 'sequence Steps only move forward', relacionado: { ruta: [...ruta, 'steps', previo.paso, 'upto'], message: 'Previous Step' } });
       return;
     }
     previo = { indice: actual, paso: s };
@@ -440,13 +440,13 @@ function validarNotasYRefs(items: readonly ItemDeInteraccion[], ruta: RutaDeFuen
     const donde = [...ruta, i];
     if (item.type === 'note') {
       item.targets.forEach((id, t) => {
-        if (!nodos.includes(id)) emitir([...donde, 'targets', t], CODIGOS.E_UNKNOWN_LIFELINE, `El objetivo '${id}' de la Nota no es un Nodo del Modelo`, id, nodos);
+        if (!nodos.includes(id)) emitir([...donde, 'targets', t], CODIGOS.E_UNKNOWN_LIFELINE, `The target '${id}' of the Note is not a Node of the Model`, id, nodos);
       });
     } else if (item.type === 'ref') {
       if (!fuente.model.interactions.some(({ id }) => id === item.interaction)) {
-        emitir([...donde, 'interaction'], CODIGOS.E_UNKNOWN_INTERACTION, `La Interaccion '${item.interaction}' referida por 'ref' no existe en el Modelo`, item.interaction, fuente.model.interactions.map(({ id }) => id));
+        emitir([...donde, 'interaction'], CODIGOS.E_UNKNOWN_INTERACTION, `Interaction '${item.interaction}' referenced by 'ref' does not exist in the Model`, item.interaction, fuente.model.interactions.map(({ id }) => id));
       } else if (destinoDeRef(fuente.views, item.interaction) === undefined) {
-        emitirCon([...donde, 'interaction'], CODIGOS.W_REF_WITHOUT_VIEW, `Ninguna Vista de secuencia proyecta la Interaccion '${item.interaction}' referida por 'ref': el marco no navega`, { severity: 'warning', hint: `agrega una Vista: view ${item.interaction} { type sequence interaction ${item.interaction} }` });
+        emitirCon([...donde, 'interaction'], CODIGOS.W_REF_WITHOUT_VIEW, `No sequence View projects Interaction '${item.interaction}' referenced by 'ref': the frame does not navigate`, { severity: 'warning', hint: `add a View: view ${item.interaction} { type sequence interaction ${item.interaction} }` });
       }
     } else if (item.type === 'fragment') {
       item.operands.forEach((operando, k) => validarNotasYRefs(operando.items, [...donde, 'operands', k, 'items'], fuente, nodos, emitir, emitirCon));
@@ -463,9 +463,9 @@ function validarOperandos(items: readonly ItemDeInteraccion[], ruta: RutaDeFuent
     item.operands.forEach((operando, k) => {
       if (k > 0) {
         if (esperado === undefined) {
-          emitirCon([...donde, 'operands', k, 'separator'], CODIGOS.E_INVALID_FRAGMENT_OPERAND, `'${item.operator}' tiene un solo operando; no admite '${operando.separator}'`, { hint: `quita el operando o usa 'alt { } else { }' / 'par { } and { }'` });
+          emitirCon([...donde, 'operands', k, 'separator'], CODIGOS.E_INVALID_FRAGMENT_OPERAND, `'${item.operator}' has a single operand; it does not accept '${operando.separator}'`, { hint: `remove the operand or use 'alt { } else { }' / 'par { } and { }'` });
         } else if (operando.separator !== esperado) {
-          emitirCon([...donde, 'operands', k, 'separator'], CODIGOS.E_INVALID_FRAGMENT_OPERAND, `'${item.operator}' separa sus operandos con '${esperado}', no con '${operando.separator}'`, { hint: `escribe '${esperado}' (\`else\` es de \`alt\`, \`and\` de \`par\`)` });
+          emitirCon([...donde, 'operands', k, 'separator'], CODIGOS.E_INVALID_FRAGMENT_OPERAND, `'${item.operator}' separates its operands with '${esperado}', not with '${operando.separator}'`, { hint: `write '${esperado}' (\`else\` belongs to \`alt\`, \`and\` to \`par\`)` });
         }
       }
       validarOperandos(operando.items, [...donde, 'operands', k, 'items'], emitirCon);

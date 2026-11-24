@@ -136,7 +136,7 @@ export const esSlot = (nombre: string): nombre is NombreDeSlot => Object.hasOwn(
 export const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string; candidato?: string } => {
   const candidatos = candidatosCercanos(escrito, existentes);
   const [unico] = candidatos;
-  return candidatos.length === 0 ? {} : { hint: `quisiste decir ${candidatos.map((c) => `'${c}'`).join(' o ')}`, ...(candidatos.length === 1 && unico !== undefined && { candidato: unico }) };
+  return candidatos.length === 0 ? {} : { hint: `did you mean ${candidatos.map((c) => `'${c}'`).join(' or ')}`, ...(candidatos.length === 1 && unico !== undefined && { candidato: unico }) };
 };
 
 /** Devuelve todos los errores a la vez; fuera de rango es error, nunca se recorta. Los valores llegan como texto del DSL. */
@@ -153,8 +153,8 @@ export function construirPrimitiva(
         {
           codigo: CODIGOS.E_THEME_UNKNOWN_PRIMITIVE,
           mensaje: esPrimitiva(tipo)
-            ? `La Primitiva '${tipo}' no vale aqui (es de ${ubicacionesDe(tipo).join(' y ')}); disponibles: ${validas.join(', ')}`
-            : `Primitiva '${tipo}' desconocida; disponibles: ${validas.join(', ')}`,
+            ? `Primitive '${tipo}' is not valid here (it belongs to ${ubicacionesDe(tipo).join(' and ')}); available: ${validas.join(', ')}`
+            : `Unknown Primitive '${tipo}'; available: ${validas.join(', ')}`,
           ...sugerir(tipo, validas),
         },
       ],
@@ -162,7 +162,7 @@ export function construirPrimitiva(
   }
   const base: DefinicionDePrimitiva = CATALOGO[tipo];
   const definidas = ubicacion === 'capa-nodo' && base.abierta !== true ? { ...base.propiedades, ...PROPIEDADES_DE_DESPLAZAMIENTO, ...PROPIEDAD_DE_ZONA } : base.propiedades;
-  const { propiedades, errores } = validarPropiedades({ sujeto: `La Primitiva '${tipo}'`, nombre: `'${tipo}'`, propiedades: definidas, abierta: base.abierta === true }, props, paleta, ubicacion === 'capa-nodo' || ubicacion === 'texto-slot' ? 'nodo' : ubicacion === 'capa-pagina' ? 'pagina' : 'arista');
+  const { propiedades, errores } = validarPropiedades({ sujeto: `Primitive '${tipo}'`, nombre: `'${tipo}'`, propiedades: definidas, abierta: base.abierta === true }, props, paleta, ubicacion === 'capa-nodo' || ubicacion === 'texto-slot' ? 'nodo' : ubicacion === 'capa-pagina' ? 'pagina' : 'arista');
   return errores.length > 0 ? { errores } : { primitiva: { tipo, props: propiedades }, errores };
 }
 
@@ -193,7 +193,7 @@ export function validarPropiedades(
     } else if (propiedad === undefined) {
       errores.push({
         codigo: CODIGOS.E_THEME_UNKNOWN_PROPERTY,
-        mensaje: `${sujeto} no tiene la propiedad '${clave}'; disponibles: ${Object.keys(definidas).join(', ')}`,
+        mensaje: `${sujeto} has no property '${clave}'; available: ${Object.keys(definidas).join(', ')}`,
         clave,
         ...sugerir(clave, Object.keys(definidas)),
       });
@@ -211,17 +211,17 @@ export function validarPropiedades(
       }
     } else if (propiedad.tipo === 'nombre') {
       if (/^[A-Z][A-Za-z0-9_]*$/.test(String(valor))) resultado[clave] = String(valor);
-      else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' de ${nombre} debe ser un nombre de Componente (empieza en mayuscula, p. ej. Aurora), no '${valor}'`, clave });
+      else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' of ${nombre} must be a Component name (starts with an uppercase letter, e.g. Aurora), not '${valor}'`, clave });
     } else if (propiedad.tipo === 'texto') {
       const texto = String(valor);
       if (texto.length <= propiedad.largo) resultado[clave] = texto;
-      else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' de ${nombre} debe ser un texto de a lo sumo ${propiedad.largo} caracteres, no '${texto}'`, clave });
+      else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${clave}' of ${nombre} must be text of at most ${propiedad.largo} characters, not '${texto}'`, clave });
     } else if (propiedad.tipo === 'opcion') {
       if (propiedad.valores.includes(String(valor))) resultado[clave] = String(valor);
       else {
         errores.push({
           codigo: CODIGOS.E_THEME_INVALID_VALUE,
-          mensaje: `'${clave}' de ${nombre} debe ser uno de ${propiedad.valores.join(', ')}, no '${valor}'`,
+          mensaje: `'${clave}' of ${nombre} must be one of ${propiedad.valores.join(', ')}, not '${valor}'`,
           clave,
           ...sugerir(String(valor), propiedad.valores),
         });
@@ -231,7 +231,7 @@ export function validarPropiedades(
       if (Number.isNaN(numero) || numero < propiedad.min || numero > propiedad.max) {
         errores.push({
           codigo: CODIGOS.E_THEME_INVALID_VALUE,
-          mensaje: `'${clave}' de ${nombre} debe ser un numero entre ${propiedad.min} y ${propiedad.max}, no '${valor}'`,
+          mensaje: `'${clave}' of ${nombre} must be a number between ${propiedad.min} and ${propiedad.max}, not '${valor}'`,
           clave,
         });
       } else resultado[clave] = numero;
@@ -246,7 +246,7 @@ export function validarPropiedades(
     else if (propiedad.tipo === 'opcion' && propiedad.defecto !== undefined) resultado[clave] = propiedad.defecto;
     else if (propiedad.tipo === 'opcion' && propiedad.opcional === true) continue;
     else if ((propiedad.tipo === 'color' || propiedad.tipo === 'texto') && propiedad.opcional === true) continue;
-    else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `${sujeto} exige la propiedad '${clave}'`, clave });
+    else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `${sujeto} requires the property '${clave}'`, clave });
   }
   return { propiedades: resultado, errores };
 }
@@ -268,7 +268,7 @@ export function resolverTokens(
     if (!Object.hasOwn(tokens, nombre)) {
       errores.push({
         codigo: CODIGOS.E_THEME_UNKNOWN_TOKEN,
-        mensaje: `Token '${valor}' no declarado en 'tokens' del Tema`,
+        mensaje: `Token '${valor}' is not declared in the Theme's 'tokens'`,
         clave,
         ...sugerir(nombre, Object.keys(tokens)),
       });
@@ -276,7 +276,7 @@ export function resolverTokens(
     }
     const numero = Number(tokens[nombre]);
     if (Number.isFinite(numero)) resueltas.push({ clave, valor: numero });
-    else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `El token '${valor}' no es un numero ('${tokens[nombre]}')`, clave });
+    else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Token '${valor}' is not a number ('${tokens[nombre]}')`, clave });
   }
   return { props: resueltas, errores };
 }

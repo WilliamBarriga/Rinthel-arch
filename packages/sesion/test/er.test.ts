@@ -62,7 +62,7 @@ describe('seam sesion: Vistas ER', () => {
     }
   });
 
-  it('E_DUPLICATE_KEY_MARK senala la marca repetida y su fix la borra', async () => {
+  it('duplicate-key-mark senala la marca repetida y su fix la borra', async () => {
     const texto = `specification { node tabla }
 model {
   tabla t {
@@ -73,13 +73,13 @@ model {
     const issues = await abrirSesion({ 'main.dg': texto }).diagnosticar();
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_DUPLICATE_KEY_MARK', severity: 'error', file: 'main.dg', line: 4, column: 20 });
+    expect(issues[0]).toMatchObject({ code: 'duplicate-key-mark', severity: 'error', file: 'main.dg', line: 4, column: 20 });
     const { range, replacement } = issues[0]!.fix!;
     const linea = texto.split('\n')[3]!;
     expect(linea.slice(0, range.start.column - 1) + replacement + linea.slice(range.end.column - 1)).toBe('    id: uuid pk fk');
   });
 
-  describe('E_ER_CARDINALITY', () => {
+  describe('er-cardinality', () => {
     const modelo = (cardinalidad: string, vista: string) => `specification { node tabla }
 model {
   tabla a { id: int pk }
@@ -94,7 +94,7 @@ view v { type ${vista}  include ** }
       const issues = await abrirSesion({ 'main.dg': texto }).diagnosticar();
 
       expect(issues).toHaveLength(1);
-      expect(issues[0]).toMatchObject({ code: 'E_ER_CARDINALITY', severity: 'error', line: 5 });
+      expect(issues[0]).toMatchObject({ code: 'er-cardinality', severity: 'error', line: 5 });
       const { range, replacement } = issues[0]!.fix!;
       expect(replacement).toBe('"1..*"');
       expect(texto.split('\n')[4]!.slice(range.start.column - 1, range.end.column - 1)).toBe('"1.*"');
@@ -103,7 +103,7 @@ view v { type ${vista}  include ** }
     it('una cardinalidad lejana lleva hint con las cuatro validas y sin fix', async () => {
       const [issue] = await abrirSesion({ 'main.dg': modelo('muchos', 'er') }).diagnosticar();
 
-      expect(issue).toMatchObject({ code: 'E_ER_CARDINALITY' });
+      expect(issue).toMatchObject({ code: 'er-cardinality' });
       expect(issue!.fix).toBeUndefined();
       for (const valida of ['0..1', '1', '0..*', '1..*']) expect(issue!.hint).toContain(valida);
     });

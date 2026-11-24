@@ -168,7 +168,7 @@ describe('indice de Vistas', () => {
 });
 
 describe('Detalle', () => {
-  it('clic en un Nodo abre Detalle con lo que da inspect nodo', async () => {
+  it('clic en un Nodo abre Detalle con lo que da inspect node', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL });
     await lienzoListo(contenedor, 'mapa');
     fireEvent.click(screen.getByRole('tab', { name: 'Issues' }));

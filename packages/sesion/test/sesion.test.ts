@@ -35,13 +35,13 @@ describe('Sesion', () => {
     expect(sesion.vistasConGeometria()).toEqual([]);
   });
 
-  it('diagnosticar emite W_OVERLAPPING_PINS con posicion y solo paga layout en Vistas con 2 o mas Pins', async () => {
+  it('diagnosticar emite overlapping-pins con posicion y solo paga layout en Vistas con 2 o mas Pins', async () => {
     const sesion = abrirSesion({ 'main.dg': conPinsSolapados });
 
     const issues = await sesion.diagnosticar();
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'W_OVERLAPPING_PINS', severity: 'warning', file: 'main.dg' });
+    expect(issues[0]).toMatchObject({ code: 'overlapping-pins', severity: 'warning', file: 'main.dg' });
     expect(issues[0]?.related).toHaveLength(1);
     expect(sesion.vistasConGeometria()).toEqual(['v']);
   });
@@ -67,7 +67,7 @@ describe('Sesion', () => {
 
     expect(Object.keys(archivos).sort()).toEqual(['canonico.json', 'geometria/v.json', 'geometria/w.json']);
     expect(JSON.parse(archivos['geometria/v.json']!)).toMatchObject({ view: 'v', theme: 'neutral', geometry: { kind: 'grafo' } });
-    expect(issues.map((i) => i.code)).toEqual(['W_OVERLAPPING_PINS']);
+    expect(issues.map((i) => i.code)).toEqual(['overlapping-pins']);
   });
 
   it('construir con errores no produce archivos', async () => {
