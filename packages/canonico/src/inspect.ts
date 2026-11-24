@@ -4,7 +4,7 @@
  */
 import { z } from 'zod';
 
-export const INSPECT_CONTRACT_VERSION = 1;
+export const INSPECT_CONTRACT_VERSION = 2;
 
 const sitioSchema = { file: z.string(), line: z.number().int().min(1) };
 
@@ -34,12 +34,12 @@ const capaDeTemaSchema = z.object({
 export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
   z.object({
     ...comun,
-    comando: z.literal('buscar'),
+    comando: z.literal('search'),
     consulta: z.string(),
     /** Nodos y Vistas cuyo id o titulo contiene la consulta; los ids exactos y los prefijos primero. */
     resultados: z.array(
       z.object({
-        kind: z.enum(['nodo', 'vista', 'interaccion']),
+        kind: z.enum(['node', 'view', 'interaction']),
         /** Id cualificado (Nodo) o id de la Vista. */
         id: z.string(),
         /** Tipo de nodo, o tipo de Vista (`architecture`, `flow`, `sequence` o `er`); `interaction` para una Interaccion. */
@@ -52,7 +52,7 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
   }),
   z.object({
     ...comun,
-    comando: z.literal('nodo'),
+    comando: z.literal('node'),
     nodo: resumenDeNodoSchema.extend({
       description: z.string(),
       /** Id del Grupo padre; ausente en un Nodo raiz. */
@@ -68,7 +68,7 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
   }),
   z.object({
     ...comun,
-    comando: z.literal('vista'),
+    comando: z.literal('view'),
     vista: z.object({
       id: z.string(),
       type: z.string(),
@@ -83,7 +83,7 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
   }),
   z.object({
     ...comun,
-    comando: z.literal('interaccion'),
+    comando: z.literal('interaction'),
     interaccion: z.object({
       id: z.string(),
       title: z.string(),
@@ -101,7 +101,7 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
   }),
   z.object({
     ...comun,
-    comando: z.literal('tema'),
+    comando: z.literal('theme'),
     tema: z.object({
       name: z.string(),
       /** Donde se declara; `(incorporado)` para un Tema del nucleo. */
@@ -113,7 +113,7 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       /** Tipo y estado pedidos para resolver la cascada, si se pidieron. */
       tipo: z.string().optional(),
       estado: z.string().optional(),
-      /** Tipo de diagrama pedido (`--diagrama`): la cascada incluye los parches `diagram <tipo>` del Tema. */
+      /** Tipo de diagrama pedido (`--diagram`): la cascada incluye los parches `diagram <tipo>` del Tema. */
       diagrama: z.string().optional(),
       /** De abajo arriba. */
       capas: z.array(capaDeTemaSchema),
@@ -142,8 +142,8 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
       temaConCodigo: z.boolean(),
       componentes: z.array(z.string()),
       /**
-       * Elementos de secuencia y fila ER (`row`), resueltos como en el dibujo. Sin `--diagrama`, solo los que el Tema
-       * declara; con `--diagrama sequence` o `er`, tambien los derivados de `edge` y `node` (`derivado: true`).
+       * Elementos de secuencia y fila ER (`row`), resueltos como en el dibujo. Sin `--diagram`, solo los que el Tema
+       * declara; con `--diagram sequence` o `er`, tambien los derivados de `edge` y `node` (`derivado: true`).
        * Ausente si no hay ninguno.
        */
       elementos: z
@@ -163,7 +163,7 @@ export const salidaDeInspectSchema = z.discriminatedUnion('comando', [
           fila: z.object({ alto: z.number().optional(), capas: z.array(capaDeTemaSchema), derivado: z.literal(true).optional() }).optional(),
         })
         .optional(),
-      /** Con `--catalogo`: claves del catalogo de Primitivas, Movimientos y efectos. */
+      /** Con `--catalog`: claves del catalogo de Primitivas, Movimientos y efectos. */
       catalogo: z.object({ primitivas: z.array(z.string()), movimientos: z.array(z.string()), efectos: z.array(z.string()) }).optional(),
     }),
   }),

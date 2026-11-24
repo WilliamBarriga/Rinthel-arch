@@ -3,7 +3,7 @@
  * linea del editor cuando el `fix` cae en otro archivo. Cada `fix` viaja como su `IssueFix` por la Escritura
  * (`escritura/escritura.ts`); varios van en una sola peticion (todo o nada, una entrada del Historial de archivos). Es el unico
  * pedido que reintenta: ante un 409 vuelve a elegir los `fix` sobre el estado recargado y reintenta una vez. Ante otro
- * rechazo (`ediciones-solapadas`, `invalida`...) no se escribio nada y el aviso da motivo y archivo.
+ * rechazo (`overlapping-edits`, `invalid`...) no se escribio nada y el aviso da motivo y archivo.
  */
 import type { EstadoDeDev, IssueDeDev } from '../../src/protocolo';
 import type { ResultadoDeEnvio } from '../cliente';

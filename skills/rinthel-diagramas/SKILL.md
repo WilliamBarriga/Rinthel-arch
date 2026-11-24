@@ -11,7 +11,7 @@ El CLI es `diagrams` (abreviado `dg`; si no esta instalado, `node <rinthel-arch>
 
 ## Bucle
 
-1. **Ubicar**: `dg inspect buscar <texto> --workspace <ruta>` da ids cualificados y `archivo:linea`. Usa ids que `inspect` devolvio.
+1. **Ubicar**: `dg inspect search <texto> --workspace <ruta>` da ids cualificados y `archivo:linea`. Usa ids que `inspect` devolvio.
 2. **Editar** el `.dg`. Sintaxis en `docs/guia/referencia-dsl.md`; ejemplo vivo: `examples/rinthel-arch/`.
 3. **Validar**: `dg validate --workspace <ruta> --json`. Aplica primero cada `fix` (por `dg edit --edits '<json>'` o a mano), lee `hint` cuando no hay `fix`, y guiate por `code` (estable; `message` cambia).
 4. **Cerrar** cuando `ok` es `true` y el resumen no trae errores. Con `--strict`, tambien sin avisos.
@@ -58,7 +58,7 @@ view compra { type sequence interaction compra order cliente, api autonumber }
 - Mensaje: `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"]`. El orden de declaracion es el orden temporal; las activaciones se derivan (un `sync` abre, el `reply` cierra).
 - Fragmentos `opt loop break critical`, `alt { } else { }`, `par { } and { }`; Notas `note left|right of X`, `note over X, Y`; `ref otra-interaccion` (declara tambien una Vista que proyecte la referida).
 - Vista `sequence`: `interaction` obligatoria; `order` opcional; `depth`, `collapsed`, `exclude`, `autonumber`. `include` y `pin` no valen. Pasos: `step "titulo" { upto <id de Mensaje> }` o `steps each`; ponle `id:` a los Mensajes que un Paso corta.
-- `dg inspect interaccion <id> --workspace <ruta>` da sus Lifelines en orden, cuantos Mensajes tiene y las Vistas que la proyectan.
+- `dg inspect interaction <id> --workspace <ruta>` da sus Lifelines en orden, cuantos Mensajes tiene y las Vistas que la proyectan.
 
 ### Codigos de secuencia y ER al validar
 
@@ -81,7 +81,7 @@ La lista completa de codigos sale de `dg skill --workspace <ruta>`.
 Arrastrar una cabecera en el visor reescribe `order`. Por CLI, con el orden visible completo:
 
 ```
-dg edit --workspace <ruta> --intent '{"tipo":"ordenar-lifelines","vista":"compra","orden":["api","cliente","db"]}'
+dg edit --workspace <ruta> --intent '{"tipo":"reorder-lifelines","vista":"compra","orden":["api","cliente","db"]}'
 ```
 
 ## ER
@@ -111,7 +111,7 @@ view tablas { type er include ** }
 ## Servir y mostrar
 
 - `dg dev --workspace <ruta> --port <N>` sirve la UI de dev en `http://127.0.0.1:<N>/#vista=<id>`. Es un proceso largo: lanzalo en segundo plano, vigila su salida hasta la linea con la URL y entrega esa URL al usuario.
-- `dev` recompila al guardar: edita el `.dg` y la UI se actualiza sola. El usuario tambien escribe desde la UI (editor, arrastres, `fix`, galeria de Temas) y puede deshacer desde el Historial de archivos: vuelve a leer el archivo antes de editarlo. Para que `dg edit` no pise un cambio suyo, pasale `--hash <archivo>=<hash>` con el `hash` de `GET /api/archivo/<ruta>` (rechaza con `hash-desactualizado`: relee y reintenta; detalle en `docs/guia/cli.md`).
+- `dev` recompila al guardar: edita el `.dg` y la UI se actualiza sola. El usuario tambien escribe desde la UI (editor, arrastres, `fix`, galeria de Temas) y puede deshacer desde el Historial de archivos: vuelve a leer el archivo antes de editarlo. Para que `dg edit` no pise un cambio suyo, pasale `--hash <archivo>=<hash>` con el `hash` de `GET /api/archivo/<ruta>` (rechaza con `stale-hash`: relee y reintenta; detalle en `docs/guia/cli.md`).
 - La UI muestra en su panel Agente cada `validate`, `build`, `inspect` y `edit` que corres y resalta lo que cambias. Exporta `DIAGRAMS_AGENTE=<tu nombre>` para que el usuario sepa quien fue; no pongas `DIAGRAMS_ACTIVIDAD=0` salvo que te lo pidan. Guia: `docs/guia/ui-de-dev.md`.
 - Imagen de una Vista: captura el visor de `dev` con un navegador headless y entrega al usuario una URL servida por un servidor local (`http://localhost:<puerto>/...`), no una ruta de archivo. En el repo rinthel-arch, `pnpm capturas --workspace <ruta> --vista <id> <tema>...` lo hace (necesita `pnpm build` y Chromium).
 - Un Workspace con Tema de codigo (`.tsx`) exige `--trust-code` o confirmar en el visor; confia solo en Workspaces propios.

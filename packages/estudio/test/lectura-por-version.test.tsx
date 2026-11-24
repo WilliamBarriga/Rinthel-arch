@@ -39,7 +39,7 @@ async function dejarLlegarLaVieja(): Promise<void> {
 
 describe('respuestas viejas', () => {
   it('en Detalle, la de un Nodo que se dejo de seleccionar no pisa la del Nodo nuevo', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverFetch: retrasar('/api/inspect/nodo/api') });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverFetch: retrasar('/api/inspect/node/api') });
     await lienzoListo(contenedor, 'mapa');
 
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
@@ -53,7 +53,7 @@ describe('respuestas viejas', () => {
   });
 
   it('en la ficha de Tema, la del Tema elegido antes no pisa la del elegido despues', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverFetch: retrasar('/api/inspect/tema/oscuro') });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverFetch: retrasar('/api/inspect/theme/oscuro') });
     await lienzoListo(contenedor, 'mapa');
     fireEvent.click(await screen.findByRole('tab', { name: 'Themes' }));
     const galeria = await screen.findByRole('listbox', { name: 'Themes' });
@@ -88,7 +88,7 @@ describe('estados de carga y fallo', () => {
   it('la ficha de Tema anuncia la carga y el fallo por rol igual que Detalle', async () => {
     const caido: NonNullable<OpcionesDeMontaje['envolverFetch']> = (f) =>
       (async (entrada: string | URL | Request, init?: RequestInit) => {
-        if (String(entrada).includes('/api/inspect/tema/')) throw new Error('Sin red');
+        if (String(entrada).includes('/api/inspect/theme/')) throw new Error('Sin red');
         return f(entrada, init);
       }) as typeof fetch;
     const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverFetch: caido });

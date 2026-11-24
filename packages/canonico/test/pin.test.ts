@@ -38,23 +38,23 @@ describe('MotivoDeRechazo', () => {
   it('alimenta el enum reason de la salida de edit (un solo sitio para un motivo)', () => {
     // Escritos a mano como fuente de verdad independiente.
     const motivos = [
-      'hash-desactualizado',
-      'archivo-desconocido',
-      'rango-invalido',
-      'ediciones-solapadas',
-      'vista-desconocida',
-      'invalida',
-      'nada-que-deshacer',
-      'nada-que-rehacer',
-      'tema-desconocido',
-      'entrada-desconocida',
+      'stale-hash',
+      'unknown-file',
+      'invalid-range',
+      'overlapping-edits',
+      'unknown-view',
+      'invalid',
+      'nothing-to-undo',
+      'nothing-to-redo',
+      'unknown-theme',
+      'unknown-entry',
     ] as const;
 
     for (const reason of motivos) {
-      const salida = salidaDeEditSchema.safeParse({ contractVersion: 1, ok: false, reason, message: 'x' });
+      const salida = salidaDeEditSchema.safeParse({ contractVersion: 2, ok: false, reason, message: 'x' });
 
       expect(salida.success, reason).toBe(true);
     }
-    expect(salidaDeEditSchema.safeParse({ contractVersion: 1, ok: false, reason: 'futuro', message: 'x' }).success).toBe(false);
+    expect(salidaDeEditSchema.safeParse({ contractVersion: 2, ok: false, reason: 'futuro', message: 'x' }).success).toBe(false);
   });
 });

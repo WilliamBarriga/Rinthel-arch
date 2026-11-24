@@ -44,25 +44,23 @@ Options:
 
 This is a long-running process: start it in the background and wait for the line with the URL.
 `,
-  inspect: `diagrams inspect <buscar|nodo|vista|interaccion|tema> <argument> --workspace <path> [options]
+  inspect: `diagrams inspect <search|node|view|interaction|theme> <argument> --workspace <path> [options]
 
 Read-only queries over the Model; each result carries the qualified id, kind and file:line.
-(The query names are the literal words you type: buscar = search, nodo = Node, vista = View,
-interaccion = Interaction, tema = Theme.)
 
-  inspect buscar <text>       Nodes by partial id or title, Views by id
-  inspect nodo <id>           Node, parent and children, Attributes, Edges and the Views that show it
-  inspect vista <id>          Visible Nodes and Edges of the View in its initial state
-  inspect interaccion <id>    Lifelines in order, Messages and the Views that project the Interaction
-  inspect tema <name>         extends chain, Parts, Layer stack with file:line, Metrics
+  inspect search <text>       Nodes by partial id or title, Views by id
+  inspect node <id>           Node, parent and children, Attributes, Edges and the Views that show it
+  inspect view <id>           Visible Nodes and Edges of the View in its initial state
+  inspect interaction <id>    Lifelines in order, Messages and the Views that project the Interaction
+  inspect theme <name>        extends chain, Parts, Layer stack with file:line, Metrics
 
 Options:
   ${WORKSPACE}
   --json               One object with its own contractVersion (independent from validate)
-  --tipo <kind>        (tema) resolves the cascade for that Node kind
-  --estado <state>     (tema) resolves the cascade for that state
-  --diagrama <type>    (tema) applies the diagram patches of that Diagram type (architecture, flow, sequence, er)
-  --catalogo           (tema) adds the keys of the Primitive and Motion catalog
+  --kind <kind>        (theme) resolves the cascade for that Node kind
+  --state <state>      (theme) resolves the cascade for that state
+  --diagram <type>     (theme) applies the diagram patches of that Diagram type (architecture, flow, sequence, er)
+  --catalog            (theme) adds the keys of the Primitive and Motion catalog
   ${THEME_PATH}
 
 Exit: 0 there is an answer, 1 the Node/View/Theme does not exist or the Workspace has errors, 2 usage failure.
@@ -72,12 +70,12 @@ Exit: 0 there is an answer, 1 the Node/View/Theme does not exist or the Workspac
 The CLI's only explicit write: all or nothing, only on .dg files of the Workspace.
 
   --view <id> --node <id> --x N --y N   Sets the Node Pin in the View (inserts or replaces it)
-  --intent '<json>'                     Intent { tipo, ... }; today, besides mover-pin:
-                                        {"tipo":"ordenar-lifelines","vista":"<id>","orden":["a","b"]} rewrites the
+  --intent '<json>'                     Intent { tipo, ... }; today, besides move-pin:
+                                        {"tipo":"reorder-lifelines","vista":"<id>","orden":["a","b"]} rewrites the
                                         whole order of a sequence View (hidden ones keep their place);
-                                        {"tipo":"fijar-tema","vista":"<id>","tema":"<name>"} writes theme in the
+                                        {"tipo":"set-theme","vista":"<id>","tema":"<name>"} writes theme in the
                                         View (keeps the patch); without "tema" it removes it. An undeclared Theme
-                                        is rejected with tema-desconocido
+                                        is rejected with unknown-theme
   --edits '<json>'                      List of { file, range, replacement }, for example the fix of validate
   --hash <file>=<hash>                  Rejects the edit if the file changed since you read it
 
@@ -121,7 +119,7 @@ Commands:
   validate   Compiles and validates; lists issues with file, line and fix (read-only)
   build      Writes the canonical Source and the geometry to <path>/${CARPETA_DE_SALIDA}/
   dev        Dev UI at http://127.0.0.1:4173/: view, edit and follow the Workspace
-  inspect    Queries the Model: buscar, nodo, vista, interaccion, tema (read-only)
+  inspect    Queries the Model: search, node, view, interaction, theme (read-only)
   edit       Sets a Pin or applies structured edits to the .dg
   skill      Generates the agent skill of a Workspace
   scan       Reads a codebase into a Scan draft for an agent to diagram (diagrams scan [<root>])

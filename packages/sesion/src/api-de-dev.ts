@@ -56,7 +56,7 @@ export function pedidoDeEdicion(cuerpo: unknown): { aplicable: Intencion | Edici
   return { aplicable: r.data, ...(typeof version === 'number' && Number.isInteger(version) && version >= 0 && { version }) };
 }
 
-/** `/api/inspect/<comando>/<argumento>[?tipo&estado&diagrama&catalogo]` como Consulta; `undefined` si no encaja. */
+/** `/api/inspect/<comando>/<argumento>[?kind&state&diagram&catalog]` como Consulta; `undefined` si no encaja. */
 export function consultaDeRuta(url: URL): Consulta | undefined {
   const [comando, codificado, ...sobra] = url.pathname.slice(RUTAS_DE_DEV.inspect.length).split('/');
   let argumento: string | undefined;
@@ -66,12 +66,12 @@ export function consultaDeRuta(url: URL): Consulta | undefined {
     argumento = undefined;
   }
   if (comando === undefined || !(COMANDOS_DE_INSPECT as readonly string[]).includes(comando) || argumento === undefined || argumento === '' || sobra.length > 0) return undefined;
-  if (comando !== 'tema') return { comando: comando as Exclude<ComandoDeInspect, 'tema'>, argumento };
-  const opcion = (clave: 'tipo' | 'estado' | 'diagrama'): { [k: string]: string } => {
-    const valor = url.searchParams.get(clave);
+  if (comando !== 'theme') return { comando: comando as Exclude<ComandoDeInspect, 'theme'>, argumento };
+  const opcion = (parametro: 'kind' | 'state' | 'diagram', clave: 'tipo' | 'estado' | 'diagrama'): { [k: string]: string } => {
+    const valor = url.searchParams.get(parametro);
     return valor === null ? {} : { [clave]: valor };
   };
-  return { comando, argumento, ...opcion('tipo'), ...opcion('estado'), ...opcion('diagrama'), catalogo: url.searchParams.get('catalogo') === 'true' };
+  return { comando, argumento, ...opcion('kind', 'tipo'), ...opcion('state', 'estado'), ...opcion('diagram', 'diagrama'), catalogo: url.searchParams.get('catalog') === 'true' };
 }
 
 /** Una ruta de la API: exacta, o prefijo (`<prefijo><argumento>`) si termina en `/`; `cuerpo` es el JSON ya leido (POST). */

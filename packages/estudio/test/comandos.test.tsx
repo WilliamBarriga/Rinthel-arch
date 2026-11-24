@@ -155,7 +155,7 @@ describe('Buscador', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Finder' })).toBeNull());
   });
 
-  it('encuentra Nodos con inspect buscar (con su archivo:linea) y abre su Detalle', async () => {
+  it('encuentra Nodos con inspect search (con su archivo:linea) y abre su Detalle', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL });
     await lienzoListo(contenedor, 'mapa');
     const { dialogo, campo } = await buscador();

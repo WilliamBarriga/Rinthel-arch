@@ -61,32 +61,32 @@ describe('CLI con secuencia y ER', () => {
     expect(existsSync(join(dir, '.diagrams', 'canonico.json'))).toBe(true);
   });
 
-  it('inspect interaccion da id, titulo, items, Lifelines y Vistas', async () => {
-    const r = await run(['inspect', 'interaccion', 'checkout', '--workspace', workspace(), '--json']);
+  it('inspect interaction da id, titulo, items, Lifelines y Vistas', async () => {
+    const r = await run(['inspect', 'interaction', 'checkout', '--workspace', workspace(), '--json']);
     expect(r.exitCode).toBe(0);
     const salida = salidaDeInspectSchema.parse(JSON.parse(r.stdout));
-    if (salida.comando !== 'interaccion') throw new Error('comando');
+    if (salida.comando !== 'interaction') throw new Error('comando');
     expect(salida.interaccion).toMatchObject({ id: 'checkout', title: 'Checkout', items: 4, mensajes: 4, lifelines: ['cliente', 'api', 'db'] });
     expect(salida.interaccion.vistas.map((v) => v.id)).toEqual(['flujo']);
   });
 
-  it('inspect interaccion en texto y con id inexistente sugiere', async () => {
-    const texto = await run(['inspect', 'interaccion', 'checkout', '--workspace', workspace()]);
+  it('inspect interaction en texto y con id inexistente sugiere', async () => {
+    const texto = await run(['inspect', 'interaction', 'checkout', '--workspace', workspace()]);
     expect(texto.stdout).toContain('checkout "Checkout" 4 items');
     expect(texto.stdout).toContain('Lifelines: cliente, api, db');
-    const malo = await run(['inspect', 'interaccion', 'chekout', '--workspace', workspace()]);
+    const malo = await run(['inspect', 'interaction', 'chekout', '--workspace', workspace()]);
     expect(malo.exitCode).toBe(1);
     expect(malo.stderr).toContain('checkout');
   });
 
-  it('inspect buscar encuentra Interacciones y vista muestra su Interaccion', async () => {
-    const b = await run(['inspect', 'buscar', 'check', '--workspace', workspace(), '--json']);
+  it('inspect search encuentra Interacciones y vista muestra su Interaccion', async () => {
+    const b = await run(['inspect', 'search', 'check', '--workspace', workspace(), '--json']);
     const sb = salidaDeInspectSchema.parse(JSON.parse(b.stdout));
-    if (sb.comando !== 'buscar') throw new Error('comando');
-    expect(sb.resultados.map((x) => `${x.kind}:${x.id}`)).toContain('interaccion:checkout');
-    const v = await run(['inspect', 'vista', 'flujo', '--workspace', workspace(), '--json']);
+    if (sb.comando !== 'search') throw new Error('comando');
+    expect(sb.resultados.map((x) => `${x.kind}:${x.id}`)).toContain('interaction:checkout');
+    const v = await run(['inspect', 'view', 'flujo', '--workspace', workspace(), '--json']);
     const sv = salidaDeInspectSchema.parse(JSON.parse(v.stdout));
-    if (sv.comando !== 'vista') throw new Error('comando');
+    if (sv.comando !== 'view') throw new Error('comando');
     expect(sv.vista.type).toBe('sequence');
     expect(sv.vista.interaction).toBe('checkout');
     expect(sv.vista.nodos.map((n) => n.id)).toEqual(['cliente', 'api', 'db']);
@@ -94,7 +94,7 @@ describe('CLI con secuencia y ER', () => {
 
   it('skill documenta interaccion, secuencia y ER', async () => {
     const r = await run(['skill', '--workspace', workspace()]);
-    expect(r.stdout).toContain('inspect interaccion');
+    expect(r.stdout).toContain('inspect interaction');
     expect(r.stdout).toContain('er-cardinality');
     expect(r.stdout).toContain('sequence');
   });

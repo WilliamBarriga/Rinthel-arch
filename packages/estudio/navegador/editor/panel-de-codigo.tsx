@@ -250,7 +250,7 @@ function idBajoElCursor(state: EditorState): string | undefined {
 
 /** Busca el id como Nodo, Vista o Interaccion (la consulta `archivo:linea` de `inspect`) y abre ese sitio. */
 async function irADefinicion(id: string, cliente: ClienteDeDev, estudio: ContextoDelEstudio): Promise<void> {
-  for (const comando of ['nodo', 'vista', 'interaccion'] as const) {
+  for (const comando of ['node', 'view', 'interaction'] as const) {
     const r = await cliente.inspeccionar(comando, id);
     if (!r.ok) continue;
     const sitio = sitioDeSalida(r.salida);

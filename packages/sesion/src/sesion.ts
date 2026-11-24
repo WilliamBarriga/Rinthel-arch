@@ -338,7 +338,7 @@ function crear(
     },
     consultar: (consulta) => {
       if (fuente === undefined || compilado.ubicar === undefined) return undefined;
-      if (consulta.comando !== 'tema') return consultar(fuente, compilado.ubicar, consulta);
+      if (consulta.comando !== 'theme') return consultar(fuente, compilado.ubicar, consulta);
       const { argumento, comando: _comando, ...opciones } = consulta;
       return consultarTema(fuente, compilado.origenesDeTemas ?? {}, argumento, opciones);
     },

@@ -35,7 +35,7 @@ view otra {
 }
 `;
 
-const ARGS = ['--workspace', '.', '--intent', '{"tipo":"mover-pin"}'];
+const ARGS = ['--workspace', '.', '--intent', '{"tipo":"move-pin"}'];
 const evento = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => eventoDeActividad(pid, { args: ARGS, ...extra });
 const lineas = lineasDeActividad;
 
@@ -67,7 +67,7 @@ describe('feed del agente', () => {
 
     expect(within(nuevo).queryByText(/--intent/)).toBeNull();
     fireEvent.click(within(nuevo).getByRole('button', { name: 'Show args' }));
-    expect(within(nuevo).getByText(`diagrams edit --workspace . --intent {"tipo":"mover-pin"}`)).toBeTruthy();
+    expect(within(nuevo).getByText(`diagrams edit --workspace . --intent {"tipo":"move-pin"}`)).toBeTruthy();
   });
 
   it('el objetivo es clicable y lleva a la Vista que nombra', async () => {

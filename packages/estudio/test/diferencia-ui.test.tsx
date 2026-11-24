@@ -87,7 +87,7 @@ describe('Diferencia externa en la pagina', () => {
 
   it('las escrituras propias de la UI no se resaltan', async () => {
     const { dev } = await abrir();
-    const r = await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'mover-pin', vista: 'mapa', nodo: 'db', x: 10, y: 10 }) });
+    const r = await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'move-pin', vista: 'mapa', nodo: 'db', x: 10, y: 10 }) });
     expect(r.status).toBe(200);
     await dev.asentado();
     act(() => void vi.advanceTimersByTime(100));

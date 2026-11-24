@@ -28,7 +28,7 @@ Comando de `cli` con un servidor HTTP de Node sin dependencias nuevas, que escuc
 
 ### `diagrams inspect`
 
-Subcomandos de solo lectura: `buscar <texto>`, `nodo <id>`, `vista <id>`. Texto legible por defecto; `--json` imprime un objeto con su propio `contractVersion`, independiente del de `validate`. Cada resultado trae id cualificado, tipo y `archivo:linea` del Ubicador.
+Subcomandos de solo lectura: `search <texto>`, `node <id>`, `view <id>`. Texto legible por defecto; `--json` imprime un objeto con su propio `contractVersion`, independiente del de `validate`. Cada resultado trae id cualificado, tipo y `archivo:linea` del Ubicador.
 
 ### Skill para agentes
 
@@ -71,16 +71,16 @@ La primera entrega cubre solo arrastrar Pins. El modulo es generico: cada gesto 
 
 Un Tema es texto del DSL como cualquier otro bloque, asi que el CLI no gana un modo nuevo. Solo se acotan cuatro puntos; el detalle de cada Tema, Capa y codigo vive en el ADR 0008.
 
-### `inspect tema <nombre>`
+### `inspect theme <nombre>`
 
-Subcomando de solo lectura, con `--json` y `contractVersion` propio como el resto de `inspect`. Opciones `--tipo <tipo>` y `--estado <estado>` para resolver la cascada de un caso. La salida trae:
+Subcomando de solo lectura, con `--json` y `contractVersion` propio como el resto de `inspect`. Opciones `--kind <tipo>` y `--state <estado>` para resolver la cascada de un caso. La salida trae:
 
 - la cadena `extends` y las `part` usadas;
 - la pila de Capas resuelta para el Tipo y estado pedidos, cada Capa con el `archivo:linea` del parche que la fijo;
 - la tabla de Metricas;
-- los Elementos de secuencia y la fila ER (ADR 0009) con la misma resolucion que el dibujo (el Estilo resuelto de `tema`, sin parches propios del CLI): los declarados y, con `--diagrama sequence` o `er`, los derivados de `edge` y `node` con `derivado: true` (cambio aditivo; `contractVersion` sigue en 1);
+- los Elementos de secuencia y la fila ER (ADR 0009) con la misma resolucion que el dibujo (el Estilo resuelto de `tema`, sin parches propios del CLI): los declarados y, con `--diagram sequence` o `er`, los derivados de `edge` y `node` con `derivado: true` (cambio aditivo; `contractVersion` sigue en 1);
 - `temaConCodigo` y la lista de componentes;
-- con `--catalogo`, las claves del catalogo de Primitivas y Movimientos, derivadas del esquema unico (sin listas paralelas).
+- con `--catalog`, las claves del catalogo de Primitivas y Movimientos, derivadas del esquema unico (sin listas paralelas).
 
 Sirve al agente para saber que parche tocar antes de editar.
 
@@ -109,7 +109,7 @@ Confianza en el codigo: `dev` no sirve `/componentes.js` mientras el usuario no 
 
 ### Queda como implementacion
 
-El subcomando `inspect tema`, los codigos de Tema en `validate`, el clasificador de cambios (`pintura` | `estructura` | `codigo`) y el watcher de fuentes y `.tsx`.
+El subcomando `inspect theme`, los codigos de Tema en `validate`, el clasificador de cambios (`pintura` | `estructura` | `codigo`) y el watcher de fuentes y `.tsx`.
 
 ## Enmienda: Registro de actividad
 
@@ -139,7 +139,7 @@ El emisor es un solo punto del CLI (envoltorio de `run` o dependencia inyectable
 
 - `agente`: texto libre de `DIAGRAMS_AGENTE`, si alguien lo fija; el sistema no conoce ningun harness.
 - `args`: el argv tras el comando, completo.
-- `objetivo`: solo lo que el comando nombra (`inspect vista|nodo|tema`, la Vista o Nodo de una Intencion de `edit`, los `files` que escribio `edit`). El CLI no deduce nada.
+- `objetivo`: solo lo que el comando nombra (`inspect view|nodo|tema`, la Vista o Nodo de una Intencion de `edit`, los `files` que escribio `edit`). El CLI no deduce nada.
 - `resumen`: de `validate` y `build`. No se guardan stdout ni stderr.
 
 Lineas cortas escritas con un solo `write` en modo append; el lector descarta las lineas que no parsean. Esquema Zod `eventoDeActividadSchema` en `canonico`, con `contractVersion` propio y las reglas de compatibilidad de `validate`.
@@ -156,6 +156,6 @@ Feed del panel Agente: una linea por evento (hora, agente o pid, comando, objeti
 
 Seguir al agente (interruptor): `objetivo.vista` lleva a esa Vista; `objetivo.nodo` se queda en la Vista activa si lo contiene y si no salta a la primera Vista, en orden de declaracion, que lo contenga, y lo selecciona; `objetivo.archivos` no mueve por si solo. La pagina de `dev` lo resuelve con la Fuente del estado vigente (`destinoDelObjetivo` en `estudio`). Resaltar lo que cambio es del diff de Sesiones, no de este registro.
 
-## Enmienda: Intencion `fijar-tema` y motivo `tema-desconocido` (#176, mapa #168)
+## Enmienda: Intencion `set-theme` y motivo `unknown-theme` (#176, mapa #168)
 
-`diagrams edit --intent` acepta la Intencion `fijar-tema` `{ vista, tema? }` (ADR 0007). El enum `reason` de `edit --json` suma `tema-desconocido` (salida 1; 422 en `dev`), paralelo a `vista-desconocida`. El resto de la salida de `edit` no cambia.
+`diagrams edit --intent` acepta la Intencion `set-theme` `{ vista, tema? }` (ADR 0007). El enum `reason` de `edit --json` suma `unknown-theme` (salida 1; 422 en `dev`), paralelo a `unknown-view`. El resto de la salida de `edit` no cambia.

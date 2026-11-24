@@ -120,7 +120,7 @@ describe('Escritura ante un 409', () => {
 
   it('deshacer recarga la Vista y avisa', async () => {
     const { contenedor } = await montarYEscribirFuera(async (dev) => {
-      await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'mover-pin', vista: 'mapa', nodo: 'api', x: 10, y: 0 }) });
+      await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'move-pin', vista: 'mapa', nodo: 'api', x: 10, y: 0 }) });
     });
 
     fireEvent.keyDown(document.body, { key: 'z', ctrlKey: true });
@@ -130,7 +130,7 @@ describe('Escritura ante un 409', () => {
 
   it('rehacer recarga la Vista y avisa', async () => {
     const { contenedor } = await montarYEscribirFuera(async (dev) => {
-      await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'mover-pin', vista: 'mapa', nodo: 'api', x: 10, y: 0 }) });
+      await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'move-pin', vista: 'mapa', nodo: 'api', x: 10, y: 0 }) });
       await dev.fetch('/api/deshacer', { method: 'POST', body: '{}' });
     });
 
@@ -154,7 +154,7 @@ describe('Escritura ante un 409', () => {
 
   it('saltar en el Historial recarga la Vista y avisa', async () => {
     const { contenedor } = await montarYEscribirFuera(async (dev) => {
-      await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'mover-pin', vista: 'mapa', nodo: 'api', x: 10, y: 0 }) });
+      await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'move-pin', vista: 'mapa', nodo: 'api', x: 10, y: 0 }) });
       fireEvent.click(await screen.findByRole('tab', { name: 'Undo history' }));
       const lista = await screen.findByRole('list', { name: 'Change history' });
       await waitFor(() => expect(within(lista).getAllByRole('listitem')).toHaveLength(2));

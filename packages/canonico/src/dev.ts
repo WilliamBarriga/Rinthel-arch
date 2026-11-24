@@ -34,7 +34,7 @@ export const RUTAS_DE_DEV = {
 } as const;
 
 /** 409 si lo que vio quien escribe ya no esta en disco; 422 el resto (ADR 0007). */
-export const estadoHttpDeRechazo = (motivo: MotivoDeRechazo): 409 | 422 => (motivo === 'hash-desactualizado' ? 409 : 422);
+export const estadoHttpDeRechazo = (motivo: MotivoDeRechazo): 409 | 422 => (motivo === 'stale-hash' ? 409 : 422);
 
 export const issueDeDevSchema = issueSchema.extend({
   /** Enlace `vscode://file/<ruta>:<linea>:<columna>`. */
@@ -170,12 +170,12 @@ export const historialDeDevSchema = z.object({ pasado: z.array(entradaDelHistori
 export type EntradaDelHistorialDeDev = z.infer<typeof entradaDelHistorialDeDevSchema>;
 export type HistorialDeDev = z.infer<typeof historialDeDevSchema>;
 
-/** `POST /api/historial/saltar { id }`: 200 tras escribir el destino, 409 si cambio por fuera, 422 `entrada-desconocida`. */
+/** `POST /api/historial/saltar { id }`: 200 tras escribir el destino, 409 si cambio por fuera, 422 `unknown-entry`. */
 export const peticionDeSaltoSchema = z.object({ id: z.number().int().nonnegative() });
 export const INICIO_DEL_HISTORIAL_DE_DEV = 0;
 
 /** Subcomandos de `inspect` y de `GET /api/inspect/<comando>/<argumento>`; las opciones de `tema` van en la query. */
-export const COMANDOS_DE_INSPECT = ['buscar', 'nodo', 'vista', 'interaccion', 'tema'] as const;
+export const COMANDOS_DE_INSPECT = ['search', 'node', 'view', 'interaction', 'theme'] as const;
 export type ComandoDeInspect = (typeof COMANDOS_DE_INSPECT)[number];
 
 export function rutaDeInspect(comando: ComandoDeInspect, argumento: string, opciones: Readonly<Record<string, string>> = {}): string {
@@ -209,7 +209,7 @@ export function archivoDeRuta(resto: string): string | undefined {
  * `POST /api/edit` con texto (ADR 0007): la misma forma y puerta que `edit --edits`, con la `version` que vio la pagina
  * (el servidor la traduce a `visto`). `descripcion` nombra la entrada del Historial de archivos (por defecto "texto de <archivo>").
  * `aunqueNoCompile` (guardado del editor, historia 21) escribe aunque el texto introduzca errores; sin el, un error nuevo
- * rechaza con `invalida` (`fix` y "Aplicar N fix", todo o nada).
+ * rechaza con `invalid` (`fix` y "Aplicar N fix", todo o nada).
  */
 export const peticionDeEdicionesSchema = z.object({
   ediciones: z.array(edicionDeTextoSchema).min(1),

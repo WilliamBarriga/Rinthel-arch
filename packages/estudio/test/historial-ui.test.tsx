@@ -15,7 +15,7 @@ afterEach(() => {
 const DSL = DSL_BASICO;
 
 const moverPin = async (dev: DevEnMemoria, nodo: string, x: number): Promise<void> => {
-  const res = await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'mover-pin', vista: 'mapa', nodo, x, y: 0 }) });
+  const res = await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'move-pin', vista: 'mapa', nodo, x, y: 0 }) });
   expect(res.status).toBe(200);
 };
 
@@ -68,7 +68,7 @@ describe('isla de Historial', () => {
 
     dev.editarFuera('main.dg', `${dev.workspace.texto('main.dg')}\n// fuera\n`);
     await waitFor(() => expect(boton(lista, /Start/).disabled).toBe(true));
-    expect(filas(lista)[1]?.textContent).toMatch(/main\.dg.*cambio fuera de dev/);
+    expect(filas(lista)[1]?.textContent).toMatch(/main\.dg.*changed outside dev/);
     expect(boton(lista, /move api in mapa/).disabled).toBe(false);
   });
 

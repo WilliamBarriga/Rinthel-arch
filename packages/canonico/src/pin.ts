@@ -18,16 +18,16 @@ export type IntencionDePin = z.infer<typeof intencionDePinSchema>;
 
 /** Mismo orden que el enum `reason` del contrato. */
 export const MOTIVOS_DE_RECHAZO = [
-  'hash-desactualizado',
-  'archivo-desconocido',
-  'rango-invalido',
-  'ediciones-solapadas',
-  'vista-desconocida',
-  'invalida',
-  'nada-que-deshacer',
-  'nada-que-rehacer',
-  'tema-desconocido',
-  'entrada-desconocida',
+  'stale-hash',
+  'unknown-file',
+  'invalid-range',
+  'overlapping-edits',
+  'unknown-view',
+  'invalid',
+  'nothing-to-undo',
+  'nothing-to-redo',
+  'unknown-theme',
+  'unknown-entry',
 ] as const;
 
 export type MotivoDeRechazo = (typeof MOTIVOS_DE_RECHAZO)[number];
@@ -45,7 +45,7 @@ export type IntencionDeOrden = z.infer<typeof intencionDeOrdenSchema>;
 
 /**
  * Fija el Tema de una Vista (`theme <tema>` conservando el parche); sin `tema` quita el fijado. Un Tema no declarado
- * rechaza con `tema-desconocido`.
+ * rechaza con `unknown-theme`.
  */
 export const intencionDeTemaSchema = z.object({
   vista: z.string(),
@@ -56,9 +56,9 @@ export type IntencionDeTema = z.infer<typeof intencionDeTemaSchema>;
 
 /** Cuerpo de `POST /api/edit`, discriminado por `tipo`. */
 export const intencionSchema = z.discriminatedUnion('tipo', [
-  intencionDePinSchema.extend({ tipo: z.literal('mover-pin') }),
-  intencionDeOrdenSchema.extend({ tipo: z.literal('ordenar-lifelines') }),
-  intencionDeTemaSchema.extend({ tipo: z.literal('fijar-tema') }),
+  intencionDePinSchema.extend({ tipo: z.literal('move-pin') }),
+  intencionDeOrdenSchema.extend({ tipo: z.literal('reorder-lifelines') }),
+  intencionDeTemaSchema.extend({ tipo: z.literal('set-theme') }),
 ]);
 
 export type Intencion = z.infer<typeof intencionSchema>;

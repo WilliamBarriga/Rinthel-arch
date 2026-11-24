@@ -1,6 +1,6 @@
 /**
  * `sesion`: estado compilado de un Workspace (Sesion en CONTEXT.md).
- * Interfaz: `abrirSesion(archivos, { tema? }) -> Sesion` (compilar, validar, layout, Estilo, `consultar` incluido `inspect tema`); escritura unica `aplicarAlWorkspace`, `diferenciar(antes, despues)` (Diferencia pura entre Fuentes), `hashDeContenido` y el `Historial` de Intenciones (`crearHistorial`, `editarEnHistorial`, `deshacer`, `rehacer`).
+ * Interfaz: `abrirSesion(archivos, { tema? }) -> Sesion` (compilar, validar, layout, Estilo, `consultar` incluido `inspect theme`); escritura unica `aplicarAlWorkspace`, `diferenciar(antes, despues)` (Diferencia pura entre Fuentes), `hashDeContenido` y el `Historial` de Intenciones (`crearHistorial`, `editarEnHistorial`, `deshacer`, `rehacer`).
  * Workspace vivo (el estado de `dev` sin transporte, dueno de la secuencia de eventos: `conexion` y `escuchar`; compone el Historial de archivos y el Registro de actividad vivo): `abrirWorkspaceVivo` sobre un `PuertoDelWorkspaceVivo` con reloj y hora
  * inyectados, `atenderApiDeDev` (las rutas `/api/*` como peticion -> respuesta completa) y `puertoEnMemoria` (fake del puerto).
  * Solo se exporta lo que usa otro paquete; lo demas es interno.

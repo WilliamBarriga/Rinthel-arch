@@ -107,10 +107,10 @@ describe('Registro de actividad', () => {
 
   it('inspect lleva en objetivo la Vista, el Nodo o el Tema que nombra; buscar no', async () => {
     const raiz = workspace();
-    await run(['inspect', 'vista', 'general', '--workspace', raiz], activo);
-    await run(['inspect', 'nodo', 'zzz', '--workspace', raiz], activo);
-    await run(['inspect', 'tema', 'neutral', '--workspace', raiz], activo);
-    await run(['inspect', 'buscar', 'a', '--workspace', raiz], activo);
+    await run(['inspect', 'view', 'general', '--workspace', raiz], activo);
+    await run(['inspect', 'node', 'zzz', '--workspace', raiz], activo);
+    await run(['inspect', 'theme', 'neutral', '--workspace', raiz], activo);
+    await run(['inspect', 'search', 'a', '--workspace', raiz], activo);
 
     expect(eventos(raiz).map(({ exitCode, objetivo }) => ({ exitCode, objetivo }))).toEqual([
       { exitCode: 0, objetivo: { vista: 'general' } },
@@ -124,7 +124,7 @@ describe('Registro de actividad', () => {
     const raiz = workspace();
     const pin = ['--view', 'general', '--node', 'a', '--x', '1', '--y', '2'];
     expect((await run(['edit', '--workspace', raiz, ...pin], activo)).exitCode).toBe(0);
-    const orden = JSON.stringify({ tipo: 'ordenar-lifelines', vista: 'nada', orden: ['a'] });
+    const orden = JSON.stringify({ tipo: 'reorder-lifelines', vista: 'nada', orden: ['a'] });
     expect((await run(['edit', '--workspace', raiz, '--intent', orden], activo)).exitCode).toBe(1);
     const ediciones = JSON.stringify([
       { file: 'main.dg', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: '// hola\n' },

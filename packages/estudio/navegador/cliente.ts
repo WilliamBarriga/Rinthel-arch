@@ -27,7 +27,7 @@ import {
 import type { ArchivoDeDev, ArchivosDeDev, CodigoDeDev, ComandoDeInspect, EstadoDeDev, NombreDeEventoDeDev, PeticionDeEdiciones } from '../src/protocolo';
 
 /**
- * `desactualizado` es el 409 (`hash-desactualizado`; lo resuelve `escritura/escritura.ts`). `version` (si `dev` la da)
+ * `desactualizado` es el 409 (`stale-hash`; lo resuelve `escritura/escritura.ts`). `version` (si `dev` la da)
  * es la del estado tras la escritura; `motivo` y `file`, los del rechazo.
  */
 export type ResultadoDeEnvio = { ok: true; version?: number } | { ok: false; desactualizado: boolean; mensaje: string; motivo?: MotivoDeRechazo; file?: string };

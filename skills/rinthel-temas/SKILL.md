@@ -10,7 +10,7 @@ La estetica vive en el **Tema** (texto `.dg`), nunca en el Modelo: cambiar `them
 ## Bucle
 
 1. **Partir de un Tema existente**: elige el ejemplo mas cercano en `examples/rinthel-arch/temas/` (`synthwave` neon, `glass-chip` vidrio, `blueprint` plano, `pcb` circuito, `pixel-art`...) o extiende un incorporado con `theme mio extends neutral-dark { ... }` y escribe solo lo que cambia.
-2. **Saber que parche editar**: `dg inspect tema <nombre> --workspace <ruta> --tipo <tipo> --estado <estado> --diagrama <tipo>` muestra la pila de Capas con el `archivo:linea` de cada parche. Edita ese parche.
+2. **Saber que parche editar**: `dg inspect theme <nombre> --workspace <ruta> --kind <tipo> --state <estado> --diagram <tipo>` muestra la pila de Capas con el `archivo:linea` de cada parche. Edita ese parche.
 3. **Editar** con el vocabulario cerrado del catalogo: `docs/referencia-catalogo.md` (Primitivas, Slots, Movimientos, Efectos con rangos). Un nombre fuera del catalogo es un error; `validate` propone el parecido.
 4. **Validar**: `dg validate --workspace <ruta> --json` hasta `ok: true`. Corrige contraste (`theme-low-contrast`) y `theme-color-only`; si la estetica los exige, dejalo dicho en un comentario en la primera linea del archivo (`// Contraste: <tipos>`, como los Temas de ejemplo): el aviso sigue saliendo, asi que ese Tema no pasa `--strict`.
 5. **Mirar**: `dg dev --workspace <ruta>` y la Vista con ese Tema (ver skill `rinthel-diagramas` para servirlo).
@@ -53,7 +53,7 @@ theme mio extends neutral {
 view compra { type sequence interaction compra theme mio }
 ```
 
-- Para ver la pila de un Elemento: `dg inspect tema mio --workspace <ruta> --diagrama sequence` (o `er`); los que el Tema no declara salen marcados `(derivado)` (`derivado: true` en `--json`), tal como se dibujan. Referencia: `docs/guia/personalizar-temas.md` (secciones Tablas ER y Secuencia), `examples/temas/secuencia.dg`, `examples/temas/er.dg` y los rangos en `docs/referencia-catalogo.md`.
+- Para ver la pila de un Elemento: `dg inspect theme mio --workspace <ruta> --diagram sequence` (o `er`); los que el Tema no declara salen marcados `(derivado)` (`derivado: true` en `--json`), tal como se dibujan. Referencia: `docs/guia/personalizar-temas.md` (secciones Tablas ER y Secuencia), `examples/temas/secuencia.dg`, `examples/temas/er.dg` y los rangos en `docs/referencia-catalogo.md`.
 
 ## Reglas que ahorran errores
 
@@ -61,7 +61,7 @@ view compra { type sequence interaction compra theme mio }
 - La cascada, donde gana el ultimo: Tema base, Tipo de nodo, estado, parche de la Vista. Los estados (`hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado`, `foco`) solo cambian pintura: tamano y Slots quedan fijos.
 - Fuentes autohospedadas: archivos `woff2` o `ttf` en `fuentes/` del Workspace, nombrados en `fonts`. Licencia junto al archivo (ejemplos en `examples/rinthel-arch/temas/fuentes/`).
 - Ajuste solo para una Vista: `theme <nombre> { layer borde { color amber } }` dentro de la `view`.
-- Cambiar el Tema de una Vista sin tocar su parche: `dg edit --workspace <ruta> --intent '{"tipo":"fijar-tema","vista":"<id>","tema":"<nombre>"}'` (sin `tema` lo quita). En `dev`, la pestana Temas previsualiza y fija.
+- Cambiar el Tema de una Vista sin tocar su parche: `dg edit --workspace <ruta> --intent '{"tipo":"set-theme","vista":"<id>","tema":"<nombre>"}'` (sin `tema` lo quita). En `dev`, la pestana Temas previsualiza y fija.
 - Parte reutilizable: `part <nombre> { ... }` y `use <nombre>` en un parche; el nombre es unico en el Workspace.
 - El trazado de las Aristas es del layout; el Tema pinta, no enruta.
 - Un Tema con componentes `.tsx` ejecuta codigo en el visor: `dev` pide confirmacion o `--trust-code`.

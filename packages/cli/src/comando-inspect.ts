@@ -28,10 +28,10 @@ export async function inspeccionar(
         workspace: { type: 'string' },
         'theme-path': { type: 'string' },
         json: { type: 'boolean', default: false },
-        tipo: { type: 'string' },
-        estado: { type: 'string' },
-        diagrama: { type: 'string' },
-        catalogo: { type: 'boolean', default: false },
+        kind: { type: 'string' },
+        state: { type: 'string' },
+        diagram: { type: 'string' },
+        catalog: { type: 'boolean', default: false },
       },
       allowPositionals: true,
       strict: true,
@@ -40,19 +40,19 @@ export async function inspeccionar(
     return fallo(2, (error as Error).message);
   }
   const [comando, argumento, ...sobrantes] = parseado.positionals;
-  const uso = 'Uso: diagrams inspect <buscar|nodo|vista|interaccion|tema> <argumento> --workspace <ruta> [--theme-path <carpeta>] [--json] (tema admite --tipo <tipo> --estado <estado> --diagrama <tipo> --catalogo)';
+  const uso = 'Usage: diagrams inspect <search|node|view|interaction|theme> <argument> --workspace <path> [--theme-path <folder>] [--json] (theme accepts --kind <kind> --state <state> --diagram <type> --catalog)';
   if (comando === undefined || !(COMANDOS_DE_INSPECT as readonly string[]).includes(comando)) return fallo(2, `Unknown or missing inspect subcommand. ${uso}`);
   if (argumento === undefined || sobrantes.length > 0) return fallo(2, `inspect ${comando} requires exactly one argument. ${uso}`);
-  const { tipo, estado, diagrama, catalogo } = parseado.values;
-  if (comando !== 'tema' && (tipo !== undefined || estado !== undefined || diagrama !== undefined || catalogo === true)) return fallo(2, `--tipo, --estado, --diagrama y --catalogo only apply to 'inspect tema'. ${uso}`);
-  if (parseado.values.workspace === undefined) return fallo(2, 'Falta --workspace <ruta>');
+  const { kind: tipo, state: estado, diagram: diagrama, catalog: catalogo } = parseado.values;
+  if (comando !== 'theme' && (tipo !== undefined || estado !== undefined || diagrama !== undefined || catalogo === true)) return fallo(2, `--kind, --state, --diagram and --catalog only apply to 'inspect theme'. ${uso}`);
+  if (parseado.values.workspace === undefined) return fallo(2, 'Missing --workspace <path>');
   const nombrado = OBJETIVO_DE_SUBCOMANDO[comando];
   const resultado = await consultar(leer, parseado.values.workspace, parseado.values['theme-path'], comando, argumento, { tipo, estado, diagrama, catalogo, json: parseado.values.json === true });
   return nombrado === undefined ? resultado : { ...resultado, actividad: { objetivo: { [nombrado]: argumento } } };
 }
 
-/** Lo que nombra cada subcomando en el Evento de actividad; `buscar` e `interaccion` no nombran Vista, Nodo ni Tema. */
-const OBJETIVO_DE_SUBCOMANDO: Readonly<Record<string, 'vista' | 'nodo' | 'tema'>> = { vista: 'vista', nodo: 'nodo', tema: 'tema' };
+/** Lo que nombra cada subcomando en el Evento de actividad; `search` e `interaction` no nombran Vista, Nodo ni Tema. */
+const OBJETIVO_DE_SUBCOMANDO: Readonly<Record<string, 'vista' | 'nodo' | 'tema'>> = { view: 'vista', node: 'nodo', theme: 'tema' };
 
 async function consultar(
   leer: (raiz: string) => ArchivosDelWorkspace,

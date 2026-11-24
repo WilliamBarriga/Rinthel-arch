@@ -1,4 +1,4 @@
-/** `inspect tema`: la consulta de un Tema (cadena `extends`, Capas, Grupo, Elementos, Slots y Metricas). Pura. */
+/** `inspect theme`: la consulta de un Tema (cadena `extends`, Capas, Grupo, Elementos, Slots y Metricas). Pura. */
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos } from 'canonico';
 import type { FuenteCanonica } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
@@ -9,7 +9,7 @@ import type { Respuesta } from './consultas';
 
 type Sitio = { file: string; line: number };
 
-/** Opciones de `inspect tema`: Tipo de nodo, estado y Tipo de diagrama de la cascada, y si se adjunta el catalogo. */
+/** Opciones de `inspect theme`: Tipo de nodo, estado y Tipo de diagrama de la cascada, y si se adjunta el catalogo. */
 export interface OpcionesDeConsultaDeTema {
   tipo?: string;
   estado?: string;
@@ -105,7 +105,7 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   return {
     salida: {
       contractVersion: INSPECT_CONTRACT_VERSION,
-      comando: 'tema',
+      comando: 'theme',
       tema: {
         name: nombre,
         ...(origen === undefined ? INCORPORADO : { file: origen.sitio.file, line: origen.sitio.line }),

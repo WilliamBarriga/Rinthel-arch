@@ -19,6 +19,6 @@ export function sitioEscrito(consulta: string): SitioDeCodigo | undefined {
 
 /** Donde se declara lo consultado (Nodo, Vista o Interaccion); `undefined` para `buscar` y `tema`. */
 export function sitioDeSalida(salida: SalidaDeInspect): SitioDeCodigo | undefined {
-  const s = salida.comando === 'nodo' ? salida.nodo : salida.comando === 'vista' ? salida.vista : salida.comando === 'interaccion' ? salida.interaccion : undefined;
+  const s = salida.comando === 'node' ? salida.nodo : salida.comando === 'view' ? salida.vista : salida.comando === 'interaction' ? salida.interaccion : undefined;
   return s === undefined ? undefined : { file: s.file, line: s.line };
 }

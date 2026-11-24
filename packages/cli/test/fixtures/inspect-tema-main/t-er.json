@@ -1,6 +1,6 @@
 {
-  "contractVersion": 1,
-  "comando": "tema",
+  "contractVersion": 2,
+  "comando": "theme",
   "tema": {
     "name": "t",
     "file": "main.dg",

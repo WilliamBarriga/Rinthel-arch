@@ -109,7 +109,7 @@ node {
 
 La cascada, donde gana el ultimo, es: Tema base, Tipo de diagrama, Tipo de nodo, estado, parche de la Vista.
 
-`diagram <tipo> { ... }` (dentro de `node`, `group` y `edge`) distingue un Tipo de diagrama (`architecture`, `flow`, `sequence`, `er`): `node { diagram flow { slots row pad 20 { title attrs } } }` solo cambia las Vistas de flujo. Admite `layer`, `use` y `slots`; `padding` en `group`; marcadores (`start`/`end`) y `label` en `edge`. A diferencia de un estado, puede cambiar las Metricas. Un tipo desconocido es `theme-unknown-diagram-type`. `inspect tema <nombre> --diagrama flow` muestra la pila resultante. Los estados son `hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado` y `foco`. Un estado solo puede cambiar pintura: nunca el tamano ni los Slots (`validate` lo rechaza), asi que pasar el raton no mueve el diagrama. Un Grupo tiene ademas `state collapsed`, el aspecto del Grupo cerrado.
+`diagram <tipo> { ... }` (dentro de `node`, `group` y `edge`) distingue un Tipo de diagrama (`architecture`, `flow`, `sequence`, `er`): `node { diagram flow { slots row pad 20 { title attrs } } }` solo cambia las Vistas de flujo. Admite `layer`, `use` y `slots`; `padding` en `group`; marcadores (`start`/`end`) y `label` en `edge`. A diferencia de un estado, puede cambiar las Metricas. Un tipo desconocido es `theme-unknown-diagram-type`. `inspect theme <nombre> --diagram flow` muestra la pila resultante. Los estados son `hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado` y `foco`. Un estado solo puede cambiar pintura: nunca el tamano ni los Slots (`validate` lo rechaza), asi que pasar el raton no mueve el diagrama. Un Grupo tiene ademas `state collapsed`, el aspecto del Grupo cerrado.
 
 ### Partes: parches reutilizables
 
@@ -253,7 +253,7 @@ view pedido { type sequence  theme tinta  interaction pedido }
 - Que cambia con cada tipo: `message { kind async { ... } }` solo toca los Mensajes `async`. Sin parche, `reply` y `create` van con la continuidad opuesta a la del trazo base y el marcador depende del tipo.
 - `lifeline` y `message` usan trazos de Arista; `activation`, `fragment` y `note` usan Capas de Nodo. `COLOR` es el de la Lifeline. `gap`, `loop-width`, `create-offset`, `width` y `padding` son Metricas (cambian la Geometria); lo demas solo pinta. Los rangos y defectos estan en el [catalogo](../referencia-catalogo.md#elementos-de-secuencia); uno fuera de rango es un error de `validate`.
 - Si dos tipos de Mensaje (los que usa la Vista) quedan iguales salvo el color, `validate` avisa con `theme-color-only`.
-- Los Temas incorporados declaran todos estos elementos y la fila `row`: `neutral` es el modelo de referencia, `neutral-dark` lo hereda y solo cambia la Paleta, `alto-contraste` usa trazos mas gruesos. `inspect tema <nombre>` muestra la pila, los parches y las Metricas de cada uno; con `--diagrama sequence` (o `er`) muestra tambien los que el Tema no declara, tal como se derivan para dibujarse, marcados `(derivado)` (`derivado: true` en `--json`).
+- Los Temas incorporados declaran todos estos elementos y la fila `row`: `neutral` es el modelo de referencia, `neutral-dark` lo hereda y solo cambia la Paleta, `alto-contraste` usa trazos mas gruesos. `inspect theme <nombre>` muestra la pila, los parches y las Metricas de cada uno; con `--diagram sequence` (o `er`) muestra tambien los que el Tema no declara, tal como se derivan para dibujarse, marcados `(derivado)` (`derivado: true` en `--json`).
 
 ## Movimiento y entrada
 
@@ -269,6 +269,6 @@ Los rangos y easings estan en el [catalogo](../referencia-catalogo.md#movimiento
 
 ## Inspeccionar y depurar un Tema
 
-- `dg inspect tema <nombre> --workspace <ruta>` imprime el Tema resuelto (su padre, sus Partes, las Capas y su `archivo:linea`). Con `extends`, es la forma de ver que heredas.
+- `dg inspect theme <nombre> --workspace <ruta>` imprime el Tema resuelto (su padre, sus Partes, las Capas y su `archivo:linea`). Con `extends`, es la forma de ver que heredas.
 - `dg validate` lista errores con sugerencias: una Primitiva mal escrita propone la mas parecida.
 - Para estudiar un efecto concreto, busca el Tema de ejemplo que lo usa: `synthwave` (neon y rejilla), `glass-chip` (vidrio), `sticky-notes` (mano alzada y cinta), `keycaps` (teclas 3D), `pcb` (pines y trazos con `corner chamfer`), `metro-map` (trazos del color del origen, `ORIGEN`), `pixel-art` (`style pixel`).

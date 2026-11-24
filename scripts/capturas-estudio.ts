@@ -74,7 +74,7 @@ async function principal(): Promise<void> {
     // Un agente edita por fuera: feed, resaltado e Historial del Workspace.
     await izquierdo.getByRole('tab', { name: 'Views' }).click();
     await derecho.getByRole('tab', { name: 'Agent' }).click();
-    cli(workspace, 'edit', '--intent', JSON.stringify({ tipo: 'fijar-tema', vista: VISTA, tema: 'neutral-dark' }));
+    cli(workspace, 'edit', '--intent', JSON.stringify({ tipo: 'set-theme', vista: VISTA, tema: 'neutral-dark' }));
     await derecho.getByRole('list', { name: 'Agent activity' }).getByRole('listitem').filter({ hasText: 'edit' }).waitFor();
     await esperarLienzo(pagina);
     await capturar(pagina, 'agente');

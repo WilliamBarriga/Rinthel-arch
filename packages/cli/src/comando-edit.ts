@@ -20,7 +20,7 @@ import type { RechazoDeEdicion } from './rechazos';
 import { destinoEnWorkspace, escribirTexto, leerWorkspace } from './workspace';
 
 const USO =
-  "Uso: diagrams edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --intent '<json>' | --edits '<json>') [--hash <archivo>=<hash>] [--theme-path <carpeta>] [--json]";
+  "Usage: diagrams edit --workspace <path> (--view <id> --node <id> --x N --y N | --intent '<json>' | --edits '<json>') [--hash <file>=<hash>] [--theme-path <folder>] [--json]";
 
 export async function editar(
   args: readonly string[],
@@ -50,7 +50,7 @@ export async function editar(
   } catch (error) {
     return uso(`${(error as Error).message}. ${USO}`);
   }
-  if (v.workspace === undefined) return uso(`Falta --workspace <ruta>. ${USO}`);
+  if (v.workspace === undefined) return uso(`Missing --workspace <path>. ${USO}`);
   const hayPin = [v.view, v.node, v.x, v.y].some((o) => o !== undefined);
   if ([hayPin, v.edits !== undefined, v.intent !== undefined].filter(Boolean).length !== 1) {
     return uso(`Give a Pin intent (--view --node --x --y), --intent or --edits, only one. ${USO}`);
@@ -59,7 +59,7 @@ export async function editar(
   const hashes = new Map<string, string>();
   for (const par of v.hash ?? []) {
     const i = par.lastIndexOf('=');
-    if (i < 1) return uso(`--hash espera <archivo>=<hash>, recibido '${par}'`);
+    if (i < 1) return uso(`--hash expects <file>=<hash>, got '${par}'`);
     hashes.set(par.slice(0, i), par.slice(i + 1));
   }
 
@@ -100,7 +100,7 @@ export async function editar(
     if (v.view === undefined || v.node === undefined || v.x === undefined || v.y === undefined || !Number.isFinite(x) || !Number.isFinite(y)) {
       return uso(`The Pin requires --view, --node, --x and --y as numbers. ${USO}`);
     }
-    aplicable = { tipo: 'mover-pin', vista: v.view, nodo: v.node, x, y };
+    aplicable = { tipo: 'move-pin', vista: v.view, nodo: v.node, x, y };
   }
 
   // Lo que nombra la Intencion; las ediciones de texto solo nombran los archivos que llegan a escribirse.

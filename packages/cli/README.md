@@ -2,7 +2,7 @@
 Binario `diagrams`: valida, construye, consulta, edita y sirve Workspaces desde la terminal.
 
 ## Que hace
-- Comandos `validate`, `build`, `skill`, `inspect` (`buscar`, `nodo`, `vista`, `interaccion`, `tema`), `edit` y `dev`; `run(argv, dependencias?)` devuelve `{ exitCode, stdout, stderr }` y no escribe en el proceso (`bin.ts` imprime). El `--help` de cada comando vive en `src/ayuda.ts`; las opciones, en `docs/guia/cli.md`.
+- Comandos `validate`, `build`, `skill`, `inspect` (`search`, `node`, `view`, `interaction`, `theme`), `edit` y `dev`; `run(argv, dependencias?)` devuelve `{ exitCode, stdout, stderr }` y no escribe en el proceso (`bin.ts` imprime). El `--help` de cada comando vive en `src/ayuda.ts`; las opciones, en `docs/guia/cli.md`.
 - Es el unico paquete que lee y escribe el Workspace en disco; `edit` es la unica escritura sobre el DSL. `--json` da un contrato por comando (esquemas en `canonico`).
 - Registro de actividad: `validate`, `build`, `inspect` y `edit` anexan un Evento (`src/actividad.ts`; `DIAGRAMS_ACTIVIDAD=0` lo apaga, `DIAGRAMS_AGENTE` nombra al agente). `src/registro-en-disco.ts` es su unico dueno en disco: `.diagrams/actividad.jsonl` (`CARPETA_DE_SALIDA` de `workspace.ts`), anexado con rotacion a 1 MB y observacion para `dev`.
 - `dev` (`src/dev.ts`) sirve la app de `estudio` (`/` y `/_estudio/*`, leida del disco en cada peticion: un rebuild se ve al recargar) y delega `/api/*` en `atenderApiDeDev` sobre el Workspace vivo de `sesion`; aqui solo viven el puerto de disco (`puertoDeDisco`, reemplazable con la opcion `puerto`; el TCP es `puertoHttp`), el watcher, el SSE y la seguridad HTTP (Host, Origin, tamano). `src/codigo.ts` compila con esbuild, sin ejecutar, los Temas con codigo (`.tsx`).

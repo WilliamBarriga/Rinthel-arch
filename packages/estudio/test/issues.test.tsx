@@ -90,8 +90,8 @@ describe('panel Issues', () => {
   });
 
   it.each([
-    ['ediciones-solapadas', "Ediciones solapadas en 'main.dg'"],
-    ['invalida', 'La edicion introduce un error: x'],
+    ['overlapping-edits', "Ediciones solapadas en 'main.dg'"],
+    ['invalid', 'La edicion introduce un error: x'],
   ])('ante %s no se escribe nada y un aviso da motivo y archivo', async (motivo, mensaje) => {
     const rechazo = new Response(JSON.stringify({ ok: false, motivo, mensaje, file: 'main.dg' }), { status: 422 });
     const { dev } = await montarConIssues(COLGANTES, {

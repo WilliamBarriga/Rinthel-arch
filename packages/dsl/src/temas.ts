@@ -38,7 +38,7 @@ export interface TemaDeclarado {
 
 export type DeclaracionDeParte = ParteDeclarada;
 
-/** Donde se fijo cada Capa de un Tema, por nivel de la cascada; lo usa `inspect tema`. */
+/** Donde se fijo cada Capa de un Tema, por nivel de la cascada; lo usa `inspect theme`. */
 export interface OrigenDeTema {
   sitio: Sitio;
   /** Ancestros por `extends`, del padre hacia la raiz. */

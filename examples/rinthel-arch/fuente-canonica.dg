@@ -50,7 +50,7 @@ model {
   interaction editar-pin "Editar un Pin" "Arrastrar un Nodo en la UI de dev reescribe el archivo .dg" {
     arrastre: autor -> shell.sh-arrastre "arrastra un Nodo"
     shell.sh-arrastre -> estudio.est-nav.nav-lienzo.lie-lienzo "onMoveNode(centro)"
-    estudio.est-nav.nav-lienzo.lie-lienzo -> estudio.est-nav.nav-escritura "Intencion mover-pin"
+    estudio.est-nav.nav-lienzo.lie-lienzo -> estudio.est-nav.nav-escritura "Intencion move-pin"
     estudio.est-nav.nav-escritura -> cli.cli-dev "POST /api/edit con version"
     note over cli.cli-dev "delega en atenderApiDeDev"
     cli.cli-dev -> sesion.ses-workspace-vivo "aplicar la Intencion"
@@ -58,7 +58,7 @@ model {
       async sesion.ses-workspace-vivo -> workspace "reescribe el .dg"
       ref recompilar
     } else "archivo cambio en disco" {
-      note over sesion.ses-workspace-vivo "rechaza con hash-desactualizado"
+      note over sesion.ses-workspace-vivo "rechaza con stale-hash"
     }
     reply sesion.ses-workspace-vivo -> cli.cli-dev "nueva version o rechazo"
     reply cli.cli-dev -> estudio.est-nav.nav-escritura "200 o 409"

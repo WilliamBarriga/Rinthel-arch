@@ -123,22 +123,20 @@ ${JSON.stringify(salidaDeValidateJsonSchema(), null, 2)}
 Read-only; never writes. Every result carries the qualified id, the kind and the \`file:line\` where it was written.
 
 \`\`\`text
-diagrams inspect buscar <text> --workspace <path> [--json]
-diagrams inspect nodo <id> --workspace <path> [--json]
-diagrams inspect vista <id> --workspace <path> [--json]
-diagrams inspect interaccion <id> --workspace <path> [--json]
-diagrams inspect tema <name> --workspace <path> [--tipo <kind>] [--estado <state>] [--diagrama <type>] [--catalogo] [--json]
+diagrams inspect search <text> --workspace <path> [--json]
+diagrams inspect node <id> --workspace <path> [--json]
+diagrams inspect view <id> --workspace <path> [--json]
+diagrams inspect interaction <id> --workspace <path> [--json]
+diagrams inspect theme <name> --workspace <path> [--kind <kind>] [--state <state>] [--diagram <type>] [--catalog] [--json]
 \`\`\`
 
-The query names are the literal words you type (\`buscar\` = search, \`nodo\` = Node, \`vista\` = View, \`interaccion\` = Interaction, \`tema\` = Theme).
-
-- \`buscar\` finds Nodes by partial id or title, Views by id and Interactions by id or title (case-insensitive).
-- \`nodo\` returns the Node, its parent and children, its Attributes, the Edges in and out, and the Views that show it.
-- \`vista\` returns the type (\`architecture\`, \`flow\`, \`sequence\` or \`er\`) and the visible Nodes and Edges of the View in its initial state; in a \`sequence\` View the Nodes are its Lifelines and it includes the \`interaction\` it projects.
-- \`interaccion\` returns the title, the number of items and Messages, the Lifelines (in order of appearance) and the \`sequence\` Views that project it.
-- \`tema\` returns the \`extends\` chain, the \`part\` used, the Layer stack resolved for the requested \`--tipo\`, \`--estado\` and \`--diagrama\` (architecture, flow, sequence, er) (each Layer with the \`file:line\` of the patch that set it, so you know which patch to edit), the Metrics and whether the Theme uses code; with \`--catalogo\`, also the keys of the Primitive, Motion and effect catalog.
-- Without \`--json\` the output is readable text. With \`--json\`, stdout is exactly one object (contractVersion ${INSPECT_CONTRACT_VERSION}, independent from validate) with \`comando\` = \`buscar\`, \`nodo\`, \`vista\`, \`interaccion\` or \`tema\`.
-- Exit codes: 0 there is an answer (\`buscar\` with no matches too), 1 the Node, View, Interaction, Theme, kind or state does not exist (stderr suggests nearby ids) or the Workspace has errors (fix them with validate), 2 usage or internal failure.
+- \`search\` finds Nodes by partial id or title, Views by id and Interactions by id or title (case-insensitive).
+- \`node\` returns the Node, its parent and children, its Attributes, the Edges in and out, and the Views that show it.
+- \`view\` returns the type (\`architecture\`, \`flow\`, \`sequence\` or \`er\`) and the visible Nodes and Edges of the View in its initial state; in a \`sequence\` View the Nodes are its Lifelines and it includes the \`interaction\` it projects.
+- \`interaction\` returns the title, the number of items and Messages, the Lifelines (in order of appearance) and the \`sequence\` Views that project it.
+- \`theme\` returns the \`extends\` chain, the \`part\` used, the Layer stack resolved for the requested \`--kind\`, \`--state\` and \`--diagram\` (architecture, flow, sequence, er) (each Layer with the \`file:line\` of the patch that set it, so you know which patch to edit), the Metrics and whether the Theme uses code; with \`--catalog\`, also the keys of the Primitive, Motion and effect catalog.
+- Without \`--json\` the output is readable text. With \`--json\`, stdout is exactly one object (contractVersion ${INSPECT_CONTRACT_VERSION}, independent from validate) with \`comando\` = \`search\`, \`node\`, \`view\`, \`interaction\` or \`theme\`.
+- Exit codes: 0 there is an answer (\`search\` with no matches too), 1 the Node, View, Interaction, Theme, kind or state does not exist (stderr suggests nearby ids) or the Workspace has errors (fix them with validate), 2 usage or internal failure.
 
 \`inspect --json\` schema (JSON Schema derived from the Zod schema):
 
@@ -152,12 +150,12 @@ It is the CLI's only explicit write and it writes only what you ask for; \`valid
 
 \`\`\`text
 diagrams edit --workspace <path> --view <view> --node <qualified id> --x N --y N [--json]
-diagrams edit --workspace <path> --intent '{"tipo":"ordenar-lifelines","vista":"<view>","orden":["a","b"]}' [--json]
+diagrams edit --workspace <path> --intent '{"tipo":"reorder-lifelines","vista":"<view>","orden":["a","b"]}' [--json]
 diagrams edit --workspace <path> --edits '[{"file":"main.dg","range":{"start":{"line":1,"column":1},"end":{"line":1,"column":2}},"replacement":"..."}]' [--json]
 \`\`\`
 
 - The first form moves the Pin of a Node in a View: it replaces the \`pin\` if it exists and adds it if not; you do not need to know the syntax.
-- The second applies an Intent through its JSON contract (it carries no \`hash\`: one inherited in the JSON is ignored; concurrency is \`--hash <file>=<hash>\`); \`ordenar-lifelines\` rewrites the whole \`order\` of a \`sequence\` View with the given visible order, and the \`order\` entries that are hidden today (collapsed Group, \`exclude\`) keep their relative position. \`fijar-tema\` (\`{ vista, tema? }\`) writes \`theme <theme>\` in the View keeping its patch, or removes it without \`tema\`; an undeclared Theme is rejected with \`tema-desconocido\`.
+- The second applies an Intent through its JSON contract (it carries no \`hash\`: one inherited in the JSON is ignored; concurrency is \`--hash <file>=<hash>\`); \`reorder-lifelines\` rewrites the whole \`order\` of a \`sequence\` View with the given visible order, and the \`order\` entries that are hidden today (collapsed Group, \`exclude\`) keep their relative position. \`set-theme\` (\`{ vista, tema? }\`) writes \`theme <theme>\` in the View keeping its patch, or removes it without \`tema\`; an undeclared Theme is rejected with \`unknown-theme\`.
 - The third applies already computed text edits (e.g. the \`fix\` of a \`validate\` issue): 1-based ranges, end excluded.
 - Concurrency: every edit carries the hash of the file you saw (\`hash\` in the edit, or \`--hash <file>=<hash>\`); without a hash the one on disk is used. If the file changed, everything is rejected with no partial write.
 - Also rejected: anything that introduces new errors, overlaps edits or points outside the file.

@@ -277,7 +277,7 @@ export async function comandoDev(
   } catch (error) {
     return uso((error as Error).message);
   }
-  if (valores.workspace === undefined) return uso('Falta --workspace <ruta>');
+  if (valores.workspace === undefined) return uso('Missing --workspace <path>');
   const puertoHttp = Number(valores.port ?? 4173);
   if (!Number.isInteger(puertoHttp) || puertoHttp < 0 || puertoHttp > 65535) return uso('--port must be an integer between 0 and 65535');
   const { observar, estudio } = dependencias;

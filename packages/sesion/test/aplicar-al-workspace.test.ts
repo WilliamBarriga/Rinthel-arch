@@ -27,8 +27,8 @@ function fake(propios: Record<string, string>, temas: Record<string, string> = {
   return { puerto, escrituras, texto: (ruta: string) => ws.texto(ruta) };
 }
 
-const mover = (_t: string, extra: Partial<Extract<Intencion, { tipo: 'mover-pin' }>> = {}): Intencion => ({
-  tipo: 'mover-pin',
+const mover = (_t: string, extra: Partial<Extract<Intencion, { tipo: 'move-pin' }>> = {}): Intencion => ({
+  tipo: 'move-pin',
   vista: 'v',
   nodo: 'a',
   x: 4,
@@ -64,7 +64,7 @@ describe('aplicarAlWorkspace', () => {
   it('rechaza con motivo y no escribe nada', () => {
     const ws = fake({ 'main.dg': texto });
     const r = aplicarAlWorkspace(ws.puerto, mover(texto), { 'main.dg': 'viejo' });
-    expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
+    expect(r).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
     expect(ws.escrituras).toEqual([]);
   });
 
@@ -77,7 +77,7 @@ describe('aplicarAlWorkspace', () => {
   it('no escribe un archivo que no es del Workspace (viene de un tema)', () => {
     const ws = fake({}, { 'main.dg': texto });
     const r = aplicarAlWorkspace(ws.puerto, mover(texto));
-    expect(r).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'main.dg' });
+    expect(r).toMatchObject({ ok: false, motivo: 'unknown-file', file: 'main.dg' });
     expect(ws.escrituras).toEqual([]);
   });
 
@@ -90,7 +90,7 @@ describe('aplicarAlWorkspace', () => {
     expect(ws.texto('main.dg')).toContain('servicio a  servicio b }');
 
     const vieja = aplicarAlWorkspace(ws.puerto, [{ file: 'otro.dg', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: '\n', hash: hashDeContenido('x') }, edicion]);
-    expect(vieja).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
+    expect(vieja).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
     expect(ws.escrituras).toEqual(['main.dg']);
   });
 
@@ -98,7 +98,7 @@ describe('aplicarAlWorkspace', () => {
     const ws = fake({ 'main.dg': texto }, { 'tema.dg': 'theme t {}\n' });
     const punto = { line: 1, column: 1 };
     const r = aplicarAlWorkspace(ws.puerto, [{ file: 'tema.dg', range: { start: punto, end: punto }, replacement: '\n', hash: hashDeContenido('theme t {}\n') }]);
-    expect(r).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'tema.dg' });
+    expect(r).toMatchObject({ ok: false, motivo: 'unknown-file', file: 'tema.dg' });
     expect(ws.escrituras).toEqual([]);
   });
 });
@@ -109,7 +109,7 @@ describe('ediciones de texto del editor (sin hash, con visto)', () => {
 
   it('sin hash propio, la concurrencia la decide visto: el hash que vio quien edita', () => {
     const ws = fake({ 'main.dg': texto });
-    expect(aplicarAlWorkspace(ws.puerto, [agregarB], { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
+    expect(aplicarAlWorkspace(ws.puerto, [agregarB], { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
     expect(ws.escrituras).toEqual([]);
     expect(aplicarAlWorkspace(ws.puerto, [agregarB], { 'main.dg': hashDeContenido(texto) })).toMatchObject({ ok: true, cambiados: ['main.dg'] });
     expect(ws.texto('main.dg')).toContain('servicio a  servicio b }');
@@ -123,7 +123,7 @@ describe('ediciones de texto del editor (sin hash, con visto)', () => {
   it('por defecto rechaza un texto que introduce un error; con aunqueNoCompile lo escribe igual', () => {
     const ws = fake({ 'main.dg': texto });
     const rota = { ...agregarB, replacement: ' -> fantasma' };
-    expect(aplicarAlWorkspace(ws.puerto, [rota])).toMatchObject({ ok: false, motivo: 'invalida' });
+    expect(aplicarAlWorkspace(ws.puerto, [rota])).toMatchObject({ ok: false, motivo: 'invalid' });
     expect(ws.escrituras).toEqual([]);
 
     expect(aplicarAlWorkspace(ws.puerto, [rota], undefined, { aunqueNoCompile: true })).toMatchObject({ ok: true, cambiados: ['main.dg'] });
@@ -133,9 +133,9 @@ describe('ediciones de texto del editor (sin hash, con visto)', () => {
   it('aunqueNoCompile no salta los demas rechazos: rango invalido y archivo de un tema', () => {
     const ws = fake({ 'main.dg': texto }, { 'tema.dg': 'theme t {}\n' });
     const fuera = { file: 'main.dg', range: { start: { line: 99, column: 1 }, end: { line: 99, column: 1 } }, replacement: 'x' };
-    expect(aplicarAlWorkspace(ws.puerto, [fuera], undefined, { aunqueNoCompile: true })).toMatchObject({ ok: false, motivo: 'rango-invalido' });
+    expect(aplicarAlWorkspace(ws.puerto, [fuera], undefined, { aunqueNoCompile: true })).toMatchObject({ ok: false, motivo: 'invalid-range' });
     const enTema = { file: 'tema.dg', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: '\n' };
-    expect(aplicarAlWorkspace(ws.puerto, [enTema], undefined, { aunqueNoCompile: true })).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'tema.dg' });
+    expect(aplicarAlWorkspace(ws.puerto, [enTema], undefined, { aunqueNoCompile: true })).toMatchObject({ ok: false, motivo: 'unknown-file', file: 'tema.dg' });
     expect(ws.escrituras).toEqual([]);
   });
 });

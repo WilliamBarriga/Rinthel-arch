@@ -59,10 +59,10 @@ describe('validate: Tema con codigo', () => {
     expect(compilacion).toMatchObject({ severity: 'error', file: 'componentes/aurora.tsx', line: 2 });
   });
 
-  it('inspect tema marca el Tema con codigo y lista sus componentes', async () => {
-    const r = await run(['inspect', 'tema', 'neon', '--workspace', FIXTURE, '--json']);
+  it('inspect theme marca el Tema con codigo y lista sus componentes', async () => {
+    const r = await run(['inspect', 'theme', 'neon', '--workspace', FIXTURE, '--json']);
 
     const salida = salidaDeInspectSchema.parse(JSON.parse(r.stdout));
-    expect(salida.comando === 'tema' && salida.tema).toMatchObject({ temaConCodigo: true, componentes: ['Aurora'] });
+    expect(salida.comando === 'theme' && salida.tema).toMatchObject({ temaConCodigo: true, componentes: ['Aurora'] });
   });
 });

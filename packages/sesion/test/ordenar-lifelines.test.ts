@@ -25,10 +25,10 @@ model {
 const con = (cuerpo: string) => `${modelo}view v {\n  type sequence\n  interaction i\n${cuerpo}}\n`;
 
 const ordenar = (texto: string, orden: string[]) =>
-  aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden });
+  aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'reorder-lifelines', vista: 'v', orden });
 const visibles = (texto: string) => resolveView(abrirSesion({ 'main.dg': texto }).fuente!, 'v')!.nodes.map((n) => n.id);
 
-describe('Intencion ordenar-lifelines', () => {
+describe('Intencion reorder-lifelines', () => {
   it('sin order previo escribe el orden visible completo', () => {
     const texto = con('');
     const r = ordenar(texto, ['cola', 'cliente', 'sistema.api', 'sistema.db', 'aux']);
@@ -72,14 +72,14 @@ describe('Intencion ordenar-lifelines', () => {
 
   it('rechaza un hash viejo, una View not found y un nodo desconocido', () => {
     const texto = con('');
-    expect(aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden: ['cliente'] }, { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
-    expect(aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'nada', orden: ['cliente'] })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
-    expect(ordenar(texto, ['fantasma'])).toMatchObject({ ok: false, motivo: 'invalida' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'reorder-lifelines', vista: 'v', orden: ['cliente'] }, { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'stale-hash' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'reorder-lifelines', vista: 'nada', orden: ['cliente'] })).toMatchObject({ ok: false, motivo: 'unknown-view' });
+    expect(ordenar(texto, ['fantasma'])).toMatchObject({ ok: false, motivo: 'invalid' });
   });
 
   it('deshacer restaura el texto exacto y rehacer lo reaplica', () => {
     const texto = con('  order cola, cliente\n');
-    const e = editarEnHistorial(crearHistorial({ 'main.dg': texto }), { tipo: 'ordenar-lifelines', vista: 'v', orden: ['aux', 'cola', 'cliente', 'sistema.api', 'sistema.db'] });
+    const e = editarEnHistorial(crearHistorial({ 'main.dg': texto }), { tipo: 'reorder-lifelines', vista: 'v', orden: ['aux', 'cola', 'cliente', 'sistema.api', 'sistema.db'] });
     if (!e.ok) throw new Error(e.mensaje);
     const d = deshacer(e.historial);
     expect(d?.archivos['main.dg']).toBe(texto);

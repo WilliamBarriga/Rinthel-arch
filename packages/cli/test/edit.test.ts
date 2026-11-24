@@ -48,7 +48,7 @@ describe('edit pin', () => {
     const raiz = workspace();
     const r = await run(['edit', '--workspace', raiz, ...pin('general', 'a', '1', '2'), '--hash', 'main.dg=000', '--json']);
     expect(r.exitCode).toBe(1);
-    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'hash-desactualizado' });
+    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'stale-hash' });
     expect(leer(raiz)).toBe(DG);
   });
 
@@ -97,7 +97,7 @@ describe('edit --edits', () => {
     const raiz = workspace();
     const r = await run(['edit', '--workspace', raiz, '--edits', JSON.stringify([edicion('{{{')]), '--json']);
     expect(r.exitCode).toBe(1);
-    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'invalida' });
+    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'invalid' });
     expect(leer(raiz)).toBe(DG);
   });
 
@@ -113,9 +113,9 @@ describe('edit --edits', () => {
   it('cada motivo de rechazo restante (archivo, rango, solape) sale con codigo 1, su reason y sin escribir', async () => {
     const raiz = workspace();
     const casos: [string, unknown[]][] = [
-      ['archivo-desconocido', [edicion('x', { file: 'otro.dg' })]],
-      ['rango-invalido', [edicion('x', { range: { start: { line: 99, column: 1 }, end: { line: 99, column: 2 } } })]],
-      ['ediciones-solapadas', [edicion('"Y"'), edicion('"Z"')]],
+      ['unknown-file', [edicion('x', { file: 'otro.dg' })]],
+      ['invalid-range', [edicion('x', { range: { start: { line: 99, column: 1 }, end: { line: 99, column: 2 } } })]],
+      ['overlapping-edits', [edicion('"Y"'), edicion('"Z"')]],
     ];
 
     for (const [reason, ediciones] of casos) {
@@ -128,7 +128,7 @@ describe('edit --edits', () => {
   });
 });
 
-describe('edit --intent (ordenar-lifelines)', () => {
+describe('edit --intent (reorder-lifelines)', () => {
   const SEC = `specification { node servicio }
 model {
   servicio cliente
@@ -144,7 +144,7 @@ view flujo {
   interaction i
 }
 `;
-  const intent = (orden: string[], extra: object = {}) => JSON.stringify({ tipo: 'ordenar-lifelines', vista: 'flujo', orden, ...extra });
+  const intent = (orden: string[], extra: object = {}) => JSON.stringify({ tipo: 'reorder-lifelines', vista: 'flujo', orden, ...extra });
 
   it('aplica la Intencion por su contrato JSON y escribe el order', async () => {
     const raiz = workspace(SEC);
@@ -165,7 +165,7 @@ view flujo {
     const raiz = workspace(SEC);
     const r = await run(['edit', '--workspace', raiz, '--intent', intent(['db']), '--hash', 'main.dg=000', '--json']);
     expect(r.exitCode).toBe(1);
-    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'hash-desactualizado' });
+    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'stale-hash' });
     expect(leer(raiz)).toBe(SEC);
   });
 
@@ -175,8 +175,8 @@ view flujo {
   });
 });
 
-describe('edit --intent (fijar-tema)', () => {
-  const fijar = (tema?: string) => JSON.stringify({ tipo: 'fijar-tema', vista: 'general', ...(tema !== undefined && { tema }) });
+describe('edit --intent (set-theme)', () => {
+  const fijar = (tema?: string) => JSON.stringify({ tipo: 'set-theme', vista: 'general', ...(tema !== undefined && { tema }) });
 
   it('escribe theme como primera linea de la Vista con un Tema de --theme-path, y sin tema lo quita', async () => {
     const raiz = workspace();
@@ -192,18 +192,18 @@ describe('edit --intent (fijar-tema)', () => {
     expect(leer(raiz)).toBe(DG);
   });
 
-  it('un Tema no declarado sale con 1 y reason tema-desconocido, sin escribir', async () => {
+  it('un Tema no declarado sale con 1 y reason unknown-theme, sin escribir', async () => {
     const raiz = workspace();
     const r = await run(['edit', '--workspace', raiz, '--intent', fijar('neutro'), '--json']);
     expect(r.exitCode).toBe(1);
-    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'tema-desconocido' });
+    expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'unknown-theme' });
     expect(leer(raiz)).toBe(DG);
   });
 
-  it('--help nombra la Intencion fijar-tema y su rechazo', async () => {
+  it('--help nombra la Intencion set-theme y su rechazo', async () => {
     const r = await run(['edit', '--help']);
-    expect(r.stdout).toContain('"tipo":"fijar-tema"');
-    expect(r.stdout).toContain('tema-desconocido');
+    expect(r.stdout).toContain('"tipo":"set-theme"');
+    expect(r.stdout).toContain('unknown-theme');
   });
 });
 
@@ -226,7 +226,7 @@ describe('edit: puerta de escritura unica', () => {
     const edits = await run(['edit', '--workspace', workspace(), '--edits', JSON.stringify([{ file: 'main.dg', range: rango, replacement: '"Z"' }]), '--json']);
     expect(salidaJson(edits)).toEqual({ contractVersion: EDIT_CONTRACT_VERSION, ok: true, edits: [{ file: 'main.dg', range: rango, replacement: '"Z"' }], files: ['main.dg'] });
 
-    const intent = await run(['edit', '--workspace', workspace(), '--intent', JSON.stringify({ tipo: 'mover-pin', vista: 'general', nodo: 'a', x: 1, y: 2 }), '--json']);
+    const intent = await run(['edit', '--workspace', workspace(), '--intent', JSON.stringify({ tipo: 'move-pin', vista: 'general', nodo: 'a', x: 1, y: 2 }), '--json']);
     expect(salidaJson(intent)).toEqual({
       contractVersion: EDIT_CONTRACT_VERSION,
       ok: true,
@@ -235,10 +235,10 @@ describe('edit: puerta de escritura unica', () => {
     });
 
     const rechazo = await run(['edit', '--workspace', workspace(), ...pin('nada', 'a', '1', '2')]);
-    expect(rechazo).toEqual({ exitCode: 1, stdout: '', stderr: "Edit rejected (vista-desconocida): View 'nada' does not exist\n" });
+    expect(rechazo).toEqual({ exitCode: 1, stdout: '', stderr: "Edit rejected (unknown-view): View 'nada' does not exist\n" });
   });
 
-  describe('no escribe archivos de --theme-path: archivo-desconocido', () => {
+  describe('no escribe archivos de --theme-path: unknown-file', () => {
     const [modelo, vistas] = DG.split('\nview general');
     const conTemas = () => {
       const raiz = workspace(`${modelo as string}\n`);
@@ -248,7 +248,7 @@ describe('edit: puerta de escritura unica', () => {
     };
     const casos: [string, string[]][] = [
       ['flags de Pin', pin('general', 'a', '1', '2')],
-      ['--intent', ['--intent', JSON.stringify({ tipo: 'mover-pin', vista: 'general', nodo: 'b', x: 1, y: 2 })]],
+      ['--intent', ['--intent', JSON.stringify({ tipo: 'move-pin', vista: 'general', nodo: 'b', x: 1, y: 2 })]],
       ['--edits', ['--edits', JSON.stringify([{ file: 'vistas.dg', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: '\n' }])]],
     ];
     it.each(casos)('%s', async (_modo, args) => {
@@ -256,7 +256,7 @@ describe('edit: puerta de escritura unica', () => {
       const antes = ws.vistas();
       const r = await run(['edit', '--workspace', ws.raiz, '--theme-path', ws.temas, ...args, '--json']);
       expect(r.exitCode).toBe(1);
-      expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'archivo-desconocido', file: 'vistas.dg' });
+      expect(salidaDeEditSchema.parse(JSON.parse(r.stdout))).toMatchObject({ ok: false, reason: 'unknown-file', file: 'vistas.dg' });
       expect(ws.vistas()).toBe(antes);
     });
   });

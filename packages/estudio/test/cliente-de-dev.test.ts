@@ -27,22 +27,22 @@ describe('cliente unico de la pagina de dev', () => {
     const s = servidor({ '/api/edit': { cuerpo: { ok: true, version: 4 } } });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
-    const r = await cliente.editar({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }, 3);
+    const r = await cliente.editar({ tipo: 'move-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }, 3);
 
     expect(r).toEqual({ ok: true, version: 4 });
     expect(s.peticiones).toHaveLength(1);
     expect(s.peticiones[0]?.url).toBe('/api/edit');
     expect(s.peticiones[0]?.init?.method).toBe('POST');
-    expect(JSON.parse(String(s.peticiones[0]?.init?.body))).toEqual({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 3 });
+    expect(JSON.parse(String(s.peticiones[0]?.init?.body))).toEqual({ tipo: 'move-pin', vista: 'general', nodo: 'api', x: 1, y: 2, version: 3 });
   });
 
   it('un 409 es desactualizado; otro rechazo o un fallo de red no, y nunca lanza', async () => {
-    const intencion = { tipo: 'ordenar-lifelines' as const, vista: 's', orden: ['a', 'b'] };
-    const desactualizado = crearClienteDeDev({ fetch: servidor({ '/api/edit': { status: 409, cuerpo: { ok: false, motivo: 'hash-desactualizado', mensaje: 'cambio' } } }).fetch, eventos: sinEventos });
+    const intencion = { tipo: 'reorder-lifelines' as const, vista: 's', orden: ['a', 'b'] };
+    const desactualizado = crearClienteDeDev({ fetch: servidor({ '/api/edit': { status: 409, cuerpo: { ok: false, motivo: 'stale-hash', mensaje: 'cambio' } } }).fetch, eventos: sinEventos });
     const rechazo = crearClienteDeDev({ fetch: servidor({ '/api/edit': { status: 422, cuerpo: { ok: false, mensaje: 'no compila' } } }).fetch, eventos: sinEventos });
     const caido = crearClienteDeDev({ fetch: servidor({ '/api/edit': new Error('caido') }).fetch, eventos: sinEventos });
 
-    expect(await desactualizado.editar(intencion, 0)).toEqual({ ok: false, desactualizado: true, mensaje: 'cambio', motivo: 'hash-desactualizado' });
+    expect(await desactualizado.editar(intencion, 0)).toEqual({ ok: false, desactualizado: true, mensaje: 'cambio', motivo: 'stale-hash' });
     expect(await rechazo.editar(intencion, 0)).toEqual({ ok: false, desactualizado: false, mensaje: 'no compila' });
     expect(await caido.editar(intencion, 0)).toEqual({ ok: false, desactualizado: false, mensaje: 'caido' });
   });
@@ -136,26 +136,26 @@ describe('cliente unico de la pagina de dev', () => {
   });
 
   it('inspecciona por GET /api/inspect: la salida, o el mensaje y los cercanos si no existe', async () => {
-    const salida = { contractVersion: 1, comando: 'buscar', consulta: 'api', resultados: [] };
-    const deTema = { contractVersion: 1, comando: 'buscar', consulta: 'neutral', resultados: [] };
+    const salida = { contractVersion: 2, comando: 'search', consulta: 'api', resultados: [] };
+    const deTema = { contractVersion: 2, comando: 'search', consulta: 'neutral', resultados: [] };
     const s = servidor({
-      '/api/inspect/buscar/api': { cuerpo: salida },
-      '/api/inspect/nodo/apj': { status: 404, cuerpo: { ok: false, mensaje: "No such Node 'apj'. Did you mean: api", cercanos: ['api'] } },
-      '/api/inspect/tema/neutral?tipo=servicio': { cuerpo: deTema },
+      '/api/inspect/search/api': { cuerpo: salida },
+      '/api/inspect/node/apj': { status: 404, cuerpo: { ok: false, mensaje: "No such Node 'apj'. Did you mean: api", cercanos: ['api'] } },
+      '/api/inspect/theme/neutral?tipo=servicio': { cuerpo: deTema },
     });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
-    expect(await cliente.inspeccionar('buscar', 'api')).toEqual({ ok: true, salida });
-    expect(await cliente.inspeccionar('nodo', 'apj')).toEqual({ ok: false, mensaje: "No such Node 'apj'. Did you mean: api", cercanos: ['api'] });
-    expect(await cliente.inspeccionar('tema', 'neutral', { tipo: 'servicio' })).toEqual({ ok: true, salida: deTema });
-    expect(await crearClienteDeDev({ fetch: servidor({}).fetch, eventos: sinEventos }).inspeccionar('vista', 'x')).toMatchObject({ ok: false, cercanos: [] });
+    expect(await cliente.inspeccionar('search', 'api')).toEqual({ ok: true, salida });
+    expect(await cliente.inspeccionar('node', 'apj')).toEqual({ ok: false, mensaje: "No such Node 'apj'. Did you mean: api", cercanos: ['api'] });
+    expect(await cliente.inspeccionar('theme', 'neutral', { tipo: 'servicio' })).toEqual({ ok: true, salida: deTema });
+    expect(await crearClienteDeDev({ fetch: servidor({}).fetch, eventos: sinEventos }).inspeccionar('view', 'x')).toMatchObject({ ok: false, cercanos: [] });
   });
 
   it('una escritura aceptada con una respuesta que no es la del protocolo es un fallo, no un exito', async () => {
     const s = servidor({ '/api/edit': { cuerpo: { ok: 'si' } }, '/api/confiar': { cuerpo: { aceptado: true } }, '/api/rehacer': { cuerpo: { ok: true } } });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
-    expect(await cliente.editar({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }, 3)).toMatchObject({ ok: false, desactualizado: false, mensaje: expect.stringContaining('Malformed response from /api/edit') });
+    expect(await cliente.editar({ tipo: 'move-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }, 3)).toMatchObject({ ok: false, desactualizado: false, mensaje: expect.stringContaining('Malformed response from /api/edit') });
     expect(await cliente.confiar()).toMatchObject({ ok: false, mensaje: expect.stringContaining('Malformed response from /api/confiar') });
     expect(await cliente.rehacer()).toMatchObject({ ok: false, mensaje: expect.stringContaining('Malformed response from /api/rehacer') });
   });
@@ -188,9 +188,9 @@ describe('cliente unico de la pagina de dev', () => {
   });
 
   it('una salida de inspect que no cumple el esquema es un fallo', async () => {
-    const s = servidor({ '/api/inspect/buscar/api': { cuerpo: { contractVersion: 1, comando: 'buscar', consulta: 'api', resultados: 'muchos' } } });
+    const s = servidor({ '/api/inspect/search/api': { cuerpo: { contractVersion: 2, comando: 'search', consulta: 'api', resultados: 'muchos' } } });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
-    expect(await cliente.inspeccionar('buscar', 'api')).toEqual({ ok: false, mensaje: expect.stringContaining('Malformed response from /api/inspect/buscar/api'), cercanos: [] });
+    expect(await cliente.inspeccionar('search', 'api')).toEqual({ ok: false, mensaje: expect.stringContaining('Malformed response from /api/inspect/search/api'), cercanos: [] });
   });
 });

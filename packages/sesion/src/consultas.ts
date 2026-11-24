@@ -6,7 +6,7 @@ type Sitio = { file: string; line: number };
 import type { OpcionesDeConsultaDeTema } from './consulta-de-tema';
 
 /** `argumento` es texto para `buscar`, nombre para `tema` e id para el resto; las opciones de `tema` ajustan su cascada. */
-export type Consulta = { comando: 'buscar' | 'nodo' | 'vista' | 'interaccion'; argumento: string } | ({ comando: 'tema'; argumento: string } & OpcionesDeConsultaDeTema);
+export type Consulta = { comando: 'search' | 'node' | 'view' | 'interaction'; argumento: string } | ({ comando: 'theme'; argumento: string } & OpcionesDeConsultaDeTema);
 
 /** `noEncontrado` es el mensaje (con `Quiza: ...`); `cercanos`, los ids parecidos que nombra. */
 export type Respuesta = { salida: SalidaDeInspect } | { noEncontrado: string; cercanos: string[] };
@@ -19,7 +19,7 @@ function recorrerNodos(nodos: readonly Nodo[], ruta: RutaDeFuente = ['model', 'n
   });
 }
 
-export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento }: Exclude<Consulta, { comando: 'tema' }>): Respuesta {
+export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento }: Exclude<Consulta, { comando: 'theme' }>): Respuesta {
   const sitioDe = (ruta: RutaDeFuente): Sitio => {
     const sitio = ubicar(ruta);
     return { file: sitio?.file ?? '(unknown)', line: sitio?.range.start.line ?? 1 };
@@ -37,20 +37,20 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
     ...(sitioFijo ?? sitioDe(['model', 'edges', i, 'from', 'node'])),
   });
 
-  if (comando === 'buscar') {
+  if (comando === 'search') {
     const aguja = argumento.toLowerCase();
     // Orden: id exacto, id (o ultimo tramo) que empieza por la consulta, el resto; dentro, por id.
     const rango = (id: string) => (id.toLowerCase() === aguja ? 0 : id.toLowerCase().startsWith(aguja) || id.slice(id.lastIndexOf('.') + 1).toLowerCase().startsWith(aguja) ? 1 : 2);
     const encontrados = [
       ...nodos
         .filter(({ nodo }) => nodo.id.toLowerCase().includes(aguja) || nodo.title.toLowerCase().includes(aguja))
-        .map((n) => ({ kind: 'nodo' as const, ...resumen(n) })),
+        .map((n) => ({ kind: 'node' as const, ...resumen(n) })),
       ...vistas
         .filter(({ vista }) => vista.id.toLowerCase().includes(aguja))
-        .map(({ vista, sitio }) => ({ kind: 'vista' as const, id: vista.id, type: vista.type, title: vista.id, ...sitio })),
+        .map(({ vista, sitio }) => ({ kind: 'view' as const, id: vista.id, type: vista.type, title: vista.id, ...sitio })),
       ...interacciones
         .filter(({ interaccion }) => interaccion.id.toLowerCase().includes(aguja) || interaccion.title.toLowerCase().includes(aguja))
-        .map(({ interaccion, sitio }) => ({ kind: 'interaccion' as const, id: interaccion.id, type: 'interaction', title: interaccion.title, ...sitio })),
+        .map(({ interaccion, sitio }) => ({ kind: 'interaction' as const, id: interaccion.id, type: 'interaction', title: interaccion.title, ...sitio })),
     ];
     const resultados = encontrados
       .map((r, orden) => ({ r, orden }))
@@ -59,7 +59,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
     return { salida: { contractVersion: INSPECT_CONTRACT_VERSION, comando, consulta: argumento, resultados } };
   }
 
-  if (comando === 'interaccion') {
+  if (comando === 'interaction') {
     const encontrada = interacciones.find(({ interaccion }) => interaccion.id === argumento);
     if (encontrada === undefined) {
       const cerca = candidatosCercanos(argumento, interacciones.map(({ interaccion }) => interaccion.id));
@@ -85,7 +85,7 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
     };
   }
 
-  if (comando === 'nodo') {
+  if (comando === 'node') {
     const encontrado = nodos.find(({ nodo }) => nodo.id === argumento);
     if (encontrado === undefined) {
       const cerca = candidatosCercanos(argumento, nodos.map(({ nodo }) => nodo.id));

@@ -68,7 +68,7 @@ export function aplicarSobre(
     conteo.set(clave(i), restantes - 1);
     return restantes <= 0;
   });
-  if (nuevo !== undefined) return rechazo('invalida', `The edit introduces an error: ${nuevo.message}`, nuevo.file);
+  if (nuevo !== undefined) return rechazo('invalid', `The edit introduces an error: ${nuevo.message}`, nuevo.file);
   return { ok: true, archivos: resultado, issues: despues };
 }
 
@@ -80,14 +80,14 @@ export function reemplazarTexto(archivos: ArchivosDelWorkspace, ediciones: reado
   const porArchivo = new Map<string, { inicio: number; fin: number; texto: string }[]>();
   for (const { file, range, replacement, hash } of ediciones) {
     const actual = archivos[file];
-    if (actual === undefined) return rechazo('archivo-desconocido', `File '${file}' does not exist`, file);
+    if (actual === undefined) return rechazo('unknown-file', `File '${file}' does not exist`, file);
     if (hash !== hashDeContenido(actual)) {
-      return rechazo('hash-desactualizado', `File '${file}' changed since it was read`, file);
+      return rechazo('stale-hash', `File '${file}' changed since it was read`, file);
     }
     const inicio = offsetDe(actual, range.start);
     const fin = offsetDe(actual, range.end);
     if (inicio === undefined || fin === undefined || fin < inicio) {
-      return rechazo('rango-invalido', `Range outside file '${file}'`, file);
+      return rechazo('invalid-range', `Range outside file '${file}'`, file);
     }
     porArchivo.set(file, [...(porArchivo.get(file) ?? []), { inicio, fin, texto: replacement }]);
   }
@@ -98,7 +98,7 @@ export function reemplazarTexto(archivos: ArchivosDelWorkspace, ediciones: reado
     let texto = archivos[file] as string;
     let limite = Infinity;
     for (const { inicio, fin, texto: nuevo } of orden) {
-      if (fin > limite) return rechazo('ediciones-solapadas', `Overlapping edits in '${file}'`, file);
+      if (fin > limite) return rechazo('overlapping-edits', `Overlapping edits in '${file}'`, file);
       texto = texto.slice(0, inicio) + nuevo + texto.slice(fin);
       limite = inicio;
     }

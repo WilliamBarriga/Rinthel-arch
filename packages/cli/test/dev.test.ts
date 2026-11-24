@@ -196,7 +196,7 @@ describe('dev: seguridad', () => {
     const raiz = workspaceEnDisco();
     const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
-    const cuerpo = { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 };
+    const cuerpo = { tipo: 'move-pin', vista: 'general', nodo: 'api', x: 1, y: 2 };
 
     for (const ruta of ['api/edit', 'api/deshacer', 'api/rehacer', 'api/historial/saltar', 'api/confiar', 'api/nada']) {
       expect(await respuesta(await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' }))).toEqual({ status: 403, cuerpo: { ok: false, mensaje: 'Origin not allowed' } });
@@ -214,7 +214,7 @@ describe('dev: disco y Registro de actividad', () => {
     const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
 
-    expect((await post(servidor, 'api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 })).status).toBe(200);
+    expect((await post(servidor, 'api/edit', { tipo: 'move-pin', vista: 'general', nodo: 'api', x: 1, y: 2 })).status).toBe(200);
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toContain('node api { pin 1,2 }');
     expect((await post(servidor, 'api/deshacer')).status).toBe(200);
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toBe(BASE);

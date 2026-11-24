@@ -14,7 +14,7 @@ ${extra}}
 `;
 
 const mover = (texto: string, x: number, y: number, nodo = 'a'): Intencion => ({
-  tipo: 'mover-pin',
+  tipo: 'move-pin',
   vista: 'v',
   nodo,
   x,
@@ -33,7 +33,7 @@ describe('aplicar una Intencion', () => {
   it('rechaza con motivo', () => {
     const texto = base('');
     const r = aplicarEnMemoria({ 'main.dg': texto }, mover(texto, 1, 1), { 'main.dg': 'viejo' });
-    expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
+    expect(r).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
   });
 
   it('con visto vigente aplica; un visto desactualizado de otro archivo no cuenta', () => {

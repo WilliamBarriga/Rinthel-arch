@@ -114,7 +114,7 @@ describe('ER: seleccion', () => {
 });
 
 describe('ER: arrastrar una tabla', () => {
-  it('escribe un Pin con mover-pin y se deshace', async () => {
+  it('escribe un Pin con move-pin y se deshace', async () => {
     let historial: Historial = crearHistorial({ 'main.dg': TABLAS });
     const control = {
       archivos: () => historial.archivos,
@@ -129,7 +129,7 @@ describe('ER: arrastrar una tabla', () => {
         return h !== undefined;
       },
     };
-    const onMoveNode = vi.fn(({ id, x, y }: { id: string; x: number; y: number }) => control.aplicar({ tipo: 'mover-pin', vista: 'v', nodo: id, x, y }).ok);
+    const onMoveNode = vi.fn(({ id, x, y }: { id: string; x: number; y: number }) => control.aplicar({ tipo: 'move-pin', vista: 'v', nodo: id, x, y }).ok);
     const { container } = await montarTablas({ onMoveNode, camera: { x: 0, y: 0, width: 900, height: 600 } });
     const cabecera = container.querySelector('[data-id="a"] [data-part="nodo"]')!;
     const gesto = (d: Element | Window, tipo: string, cx: number, cy: number) => {

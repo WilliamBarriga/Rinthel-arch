@@ -228,7 +228,7 @@ view general {
 }
 `;
 
-const pin = (x: number, y: number) => ({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x, y }) as const;
+const pin = (x: number, y: number) => ({ tipo: 'move-pin', vista: 'general', nodo: 'api', x, y }) as const;
 
 describe('Workspace vivo: Gestos con la version vista', () => {
   it('con la version vigente escribe la edicion, recompila y responde la version nueva', async () => {
@@ -263,20 +263,20 @@ describe('Workspace vivo: Gestos con la version vista', () => {
     expect(puerto.texto('otro.dg')).toBe('// otro editado\n');
   });
 
-  it('un cambio externo en el mismo archivo se rechaza como hash-desactualizado y no escribe', async () => {
+  it('un cambio externo en el mismo archivo se rechaza como stale-hash y no escribe', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws, reloj } = await abrir(puerto);
     const vista = ws.estado().version;
     puerto.editarFuera('main.dg', `${BASE}\n`);
 
-    expect(await ws.editar(pin(1, 2), vista)).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    expect(await ws.editar(pin(1, 2), vista)).toMatchObject({ ok: false, motivo: 'stale-hash' });
     // Tambien tras recompilar: la version vieja sigue guardada, pero su hash ya no es el del disco.
     await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', `${BASE}\n\n`));
-    expect(await ws.editar(pin(1, 2), vista)).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    expect(await ws.editar(pin(1, 2), vista)).toMatchObject({ ok: false, motivo: 'stale-hash' });
     expect(puerto.texto('main.dg')).toBe(`${BASE}\n\n`);
   });
 
-  it('una version ya olvidada (mas de 16 versiones atras) se rechaza como hash-desactualizado', async () => {
+  it('una version ya olvidada (mas de 16 versiones atras) se rechaza como stale-hash', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE, 'otro.dg': '// 0\n' } });
     const { ws, reloj } = await abrir(puerto);
     for (let i = 1; i <= 15; i++) await cambiarFuera(ws, reloj, () => puerto.editarFuera('otro.dg', `// ${i}\n`));
@@ -286,7 +286,7 @@ describe('Workspace vivo: Gestos con la version vista', () => {
     await cambiarFuera(ws, reloj, () => puerto.editarFuera('otro.dg', '// 17\n'));
     const r = await ws.editar(pin(3, 4), 0);
 
-    expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    expect(r).toMatchObject({ ok: false, motivo: 'stale-hash' });
     expect(puerto.texto('main.dg')).toContain('pin 1,2');
   });
 
@@ -303,18 +303,18 @@ describe('Workspace vivo: Gestos con la version vista', () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': modelo as string }, temas: { 'vistas.dg': `view general${vistas as string}` } });
     const { ws } = await abrir(puerto);
 
-    expect(await ws.editar({ ...pin(1, 2), vista: 'nada' }, 0)).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
-    expect(await ws.editar({ ...pin(1, 2), nodo: 'fantasma' }, 0)).toMatchObject({ ok: false, motivo: 'invalida' });
-    expect(await ws.editar(pin(1, 2), 0)).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'vistas.dg' });
+    expect(await ws.editar({ ...pin(1, 2), vista: 'nada' }, 0)).toMatchObject({ ok: false, motivo: 'unknown-view' });
+    expect(await ws.editar({ ...pin(1, 2), nodo: 'fantasma' }, 0)).toMatchObject({ ok: false, motivo: 'invalid' });
+    expect(await ws.editar(pin(1, 2), 0)).toMatchObject({ ok: false, motivo: 'unknown-file', file: 'vistas.dg' });
     expect(puerto.leer().propios).toEqual({ 'main.dg': modelo });
     expect(ws.estado().version).toBe(0);
   });
 
-  it('ordenar-lifelines se escribe con la version vista', async () => {
+  it('reorder-lifelines se escribe con la version vista', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': secuencia(100) } });
     const { ws } = await abrir(puerto);
 
-    expect((await ws.editar({ tipo: 'ordenar-lifelines', vista: 'v', orden: ['b', 'a'] }, 0)).ok).toBe(true);
+    expect((await ws.editar({ tipo: 'reorder-lifelines', vista: 'v', orden: ['b', 'a'] }, 0)).ok).toBe(true);
     expect(puerto.texto('main.dg')).toContain('order b, a');
   });
 });
@@ -336,8 +336,8 @@ describe('Workspace vivo: deshacer, rehacer y cola de escrituras', () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws } = await abrir(puerto);
 
-    expect(await ws.deshacer()).toMatchObject({ ok: false, motivo: 'nada-que-deshacer' });
-    expect(await ws.rehacer()).toMatchObject({ ok: false, motivo: 'nada-que-rehacer' });
+    expect(await ws.deshacer()).toMatchObject({ ok: false, motivo: 'nothing-to-undo' });
+    expect(await ws.rehacer()).toMatchObject({ ok: false, motivo: 'nothing-to-redo' });
     expect(puerto.texto('main.dg')).toBe(BASE);
   });
 
@@ -351,7 +351,7 @@ describe('Workspace vivo: deshacer, rehacer y cola de escrituras', () => {
     expect((await ws.deshacer()).ok).toBe(false);
 
     await ws.editar(pin(3, 4));
-    expect(await ws.rehacer()).toMatchObject({ ok: false, motivo: 'nada-que-rehacer' });
+    expect(await ws.rehacer()).toMatchObject({ ok: false, motivo: 'nothing-to-redo' });
   });
 
   it('una escritura externa no reinicia el Historial: deshacer da 409 solo si cambio por fuera un archivo que la entrada restaura', async () => {
@@ -370,8 +370,8 @@ describe('Workspace vivo: deshacer, rehacer y cola de escrituras', () => {
     // Fuera de dev cambia el archivo que la entrada restaura: 409 sin pisarlo, y el Historial sigue ahi.
     const externo = `${conPin}\n// editado a mano\n`;
     await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', externo));
-    expect(await ws.deshacer()).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
-    expect(await ws.deshacer()).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    expect(await ws.deshacer()).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
+    expect(await ws.deshacer()).toMatchObject({ ok: false, motivo: 'stale-hash' });
     expect(puerto.texto('main.dg')).toBe(externo);
     expect(ws.historial().pasado).toHaveLength(1);
 
@@ -432,7 +432,7 @@ describe('Workspace vivo: deshacer, rehacer y cola de escrituras', () => {
     // Dos ediciones con la misma version vista: la segunda ve el texto que escribio la primera y se rechaza.
     const [a, b] = await Promise.all([ws.editar(pin(7, 8), ws.estado().version), ws.editar(pin(9, 9), ws.estado().version)]);
     expect(a.ok).toBe(true);
-    expect(b).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    expect(b).toMatchObject({ ok: false, motivo: 'stale-hash' });
   });
 });
 
@@ -519,8 +519,8 @@ describe('Workspace vivo: Historial visible y salto (#193)', () => {
     const h = ws.historial();
     expect(h.pasado[0]).toMatchObject({ id: 1, alcanzable: false, motivo: expect.stringContaining('main.dg') });
     expect(h.pasado[1]).toMatchObject({ id: 2, alcanzable: true });
-    expect(await ws.saltar(1)).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
-    expect(await ws.saltar(42)).toMatchObject({ ok: false, motivo: 'entrada-desconocida' });
+    expect(await ws.saltar(1)).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
+    expect(await ws.saltar(42)).toMatchObject({ ok: false, motivo: 'unknown-entry' });
   });
 });
 
@@ -562,14 +562,14 @@ describe('Workspace vivo: ediciones de texto del editor', () => {
     expect(ws.historial().pasado.map((e) => e.descripcion)).toEqual(['move api in general', 'Apply 1 fix']);
   });
 
-  it('si el archivo cambio por fuera desde la version vista, rechaza con hash-desactualizado sin escribir', async () => {
+  it('si el archivo cambio por fuera desde la version vista, rechaza con stale-hash sin escribir', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws } = await abrir(puerto);
     const vista = ws.estado().version;
     puerto.editarFuera('main.dg', `${BASE}\n`);
 
     const r = await ws.editar({ ediciones: [{ file: 'main.dg', range: { start: punto(1, 1), end: punto(1, 1) }, replacement: '// x\n' }] }, vista);
-    expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'main.dg' });
+    expect(r).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
     expect(puerto.texto('main.dg')).toBe(`${BASE}\n`);
   });
 
@@ -578,18 +578,18 @@ describe('Workspace vivo: ediciones de texto del editor', () => {
     const { ws } = await abrir(puerto);
     const rota = { ediciones: [{ file: 'main.dg', range: { start: punto(8, 3), end: punto(8, 3) }, replacement: 'fantasma -> ' }] };
 
-    expect(await ws.editar(rota, 0)).toMatchObject({ ok: false, motivo: 'invalida' });
+    expect(await ws.editar(rota, 0)).toMatchObject({ ok: false, motivo: 'invalid' });
     expect(await ws.editar({ ...rota, aunqueNoCompile: true }, 0)).toMatchObject({ ok: true });
     expect(puerto.texto('main.dg')).toContain('fantasma -> api -> db');
     expect(ws.estado().fuente?.views.map((v) => v.id)).toEqual(['general']);
     expect(ws.estado().issues.some((i) => i.severity === 'error')).toBe(true);
   });
 
-  it('escribir en un archivo de --theme-path da archivo-desconocido', async () => {
+  it('escribir en un archivo de --theme-path da unknown-file', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, temas: { 'tema.dg': 'theme t {}\n' } });
     const { ws } = await abrir(puerto);
     const r = await ws.editar({ ediciones: [{ file: 'tema.dg', range: { start: punto(1, 1), end: punto(1, 1) }, replacement: '// x\n' }], aunqueNoCompile: true }, 0);
-    expect(r).toMatchObject({ ok: false, motivo: 'archivo-desconocido', file: 'tema.dg' });
+    expect(r).toMatchObject({ ok: false, motivo: 'unknown-file', file: 'tema.dg' });
   });
 });
 
@@ -625,7 +625,7 @@ describe('Workspace vivo: fix y "Aplicar N fix"', () => {
 
     const r = await ws.editar({ ediciones: [...fixes, { ...enMain, replacement: 'otro' }], descripcion: 'Aplicar 3 fix' }, ws.estado().version);
 
-    expect(r).toMatchObject({ ok: false, motivo: 'ediciones-solapadas', file: 'main.dg' });
+    expect(r).toMatchObject({ ok: false, motivo: 'overlapping-edits', file: 'main.dg' });
     expect([puerto.texto('main.dg'), puerto.texto('mas.dg')]).toEqual([COLGANTES['main.dg'], COLGANTES['mas.dg']]);
     expect(ws.historial().pasado).toEqual([]);
   });

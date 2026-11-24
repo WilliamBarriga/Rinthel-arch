@@ -18,7 +18,7 @@ export interface ConsultaDeInspect {
 
 /** `inspect` de la terminal (la consulta vive en `Sesion.consultar`; `GET /api/inspect` la hace el Workspace vivo); `undefined` si la Sesion no tiene Fuente (errores). */
 export function consultarInspect(sesion: Sesion, { comando, argumento, tipo, estado, diagrama, catalogo }: ConsultaDeInspect): Respuesta | undefined {
-  if (comando !== 'tema') return sesion.consultar({ comando, argumento });
+  if (comando !== 'theme') return sesion.consultar({ comando, argumento });
   return sesion.consultar({ comando, argumento, catalogo: catalogo === true, ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(diagrama !== undefined && { diagrama }) });
 }
 
@@ -33,10 +33,10 @@ const titulo = (t: string): string => (t === '' ? '' : ` "${t}"`);
 /** Una linea por resultado. */
 export function textoLegible(salida: SalidaDeInspect): string {
   const lineas: string[] = [];
-  if (salida.comando === 'buscar') {
-    for (const r of salida.resultados) lineas.push(r.kind === 'vista' ? `view ${r.id} ${r.type} ${sitio(r)}` : r.kind === 'interaccion' ? `interaction ${r.id}${titulo(r.title)} ${sitio(r)}` : `node ${r.id} ${r.type}${titulo(r.title)} ${sitio(r)}`);
+  if (salida.comando === 'search') {
+    for (const r of salida.resultados) lineas.push(r.kind === 'view' ? `view ${r.id} ${r.type} ${sitio(r)}` : r.kind === 'interaction' ? `interaction ${r.id}${titulo(r.title)} ${sitio(r)}` : `node ${r.id} ${r.type}${titulo(r.title)} ${sitio(r)}`);
     lineas.push(`${salida.resultados.length} ${salida.resultados.length === 1 ? 'result' : 'results'}`);
-  } else if (salida.comando === 'nodo') {
+  } else if (salida.comando === 'node') {
     const { nodo } = salida;
     lineas.push(`${nodo.id} ${nodo.type}${titulo(nodo.title)} ${sitio(nodo)}`);
     if (nodo.description !== '') lineas.push(`  ${nodo.description}`);
@@ -50,7 +50,7 @@ export function textoLegible(salida: SalidaDeInspect): string {
     }
     lineas.push('Views:');
     for (const v of salida.vistas) lineas.push(`  ${v.id} ${sitio(v)}`);
-  } else if (salida.comando === 'interaccion') {
+  } else if (salida.comando === 'interaction') {
     const { interaccion: i } = salida;
     lineas.push(`${i.id}${titulo(i.title)} ${i.items} items ${sitio(i)}`);
     if (i.description !== '') lineas.push(`  ${i.description}`);
@@ -58,9 +58,9 @@ export function textoLegible(salida: SalidaDeInspect): string {
     lineas.push(`Lifelines: ${i.lifelines.join(', ')}`);
     lineas.push('Views:');
     for (const v of i.vistas) lineas.push(`  ${v.id} ${sitio(v)}`);
-  } else if (salida.comando === 'tema') {
+  } else if (salida.comando === 'theme') {
     const { tema } = salida;
-    lineas.push(`${tema.name} ${tema.file}:${tema.line}${tema.tipo === undefined ? '' : ` tipo=${tema.tipo}`}${tema.estado === undefined ? '' : ` estado=${tema.estado}`}${tema.diagrama === undefined ? '' : ` diagrama=${tema.diagrama}`}`);
+    lineas.push(`${tema.name} ${tema.file}:${tema.line}${tema.tipo === undefined ? '' : ` kind=${tema.tipo}`}${tema.estado === undefined ? '' : ` state=${tema.estado}`}${tema.diagrama === undefined ? '' : ` diagram=${tema.diagrama}`}`);
     lineas.push(`extends: ${tema.extends.length === 0 ? '(none)' : tema.extends.join(' > ')}`);
     lineas.push(`parts: ${tema.partes.length === 0 ? '(none)' : tema.partes.join(', ')}`);
     lineas.push('Layers:');

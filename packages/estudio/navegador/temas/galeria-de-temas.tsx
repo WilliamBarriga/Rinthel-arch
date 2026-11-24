@@ -1,7 +1,7 @@
 /**
  * Galeria de Temas: los Temas de la Fuente (los del Workspace, los de `--theme-path` y los incorporados) en un `listbox`
  * (`marco/use-listbox.ts`: flechas y Enter, o clic). Elegir uno lo previsualiza en la Vista activa sin escribir y muestra su cadena `extends`, su Paleta y sus Capas (via
- * `inspect tema`). Los Temas cambiados por fuera llevan la marca de cambio externo hasta dejar la galeria. "Fijar" escribe `theme` en esa Vista con la Intencion `fijar-tema`; "Quitar" la deja sin Tema fijado.
+ * `inspect theme`). Los Temas cambiados por fuera llevan la marca de cambio externo hasta dejar la galeria. "Fijar" escribe `theme` en esa Vista con la Intencion `set-theme`; "Quitar" la deja sin Tema fijado.
  */
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
@@ -34,7 +34,7 @@ export function GaleriaDeTemas(): ReactElement {
   const fijado = fuente.views.find(({ id }) => id === vista)?.theme;
   const fijar = async (tema: string | undefined): Promise<void> => {
     if (vista === undefined) return;
-    const r = await escribir({ intencion: { tipo: 'fijar-tema', vista, ...(tema !== undefined && { tema }) }, fallo: `Could not ${tema === undefined ? 'unpin' : 'pin'} the Theme` });
+    const r = await escribir({ intencion: { tipo: 'set-theme', vista, ...(tema !== undefined && { tema }) }, fallo: `Could not ${tema === undefined ? 'unpin' : 'pin'} the Theme` });
     if (r.ok) previsualizarTema(undefined);
   };
 
@@ -77,7 +77,7 @@ interface PropsDeFicha {
 
 function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, alSoltar }: PropsDeFicha): ReactElement {
   const { cliente, estado } = useEstudio();
-  const lectura = useInspectPorVersion(cliente, estado?.version, 'tema', nombre);
+  const lectura = useInspectPorVersion(cliente, estado?.version, 'theme', nombre);
   const tema = lectura.tipo === 'dato' ? lectura.dato.tema : undefined;
 
   return (

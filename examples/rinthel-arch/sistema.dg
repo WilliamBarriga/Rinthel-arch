@@ -127,7 +127,7 @@ model {
     modulo tem-derivacion "tema/derivacion" "Elementos de secuencia y ER que el Tema no declara, derivados de la pintura de node y edge" {
       source { file "packages/tema/src/derivacion.ts" }
     }
-    modulo tem-elementos "tema/elementos" "Elementos de secuencia y ER descritos para inspect tema (declarados o derivados)" {
+    modulo tem-elementos "tema/elementos" "Elementos de secuencia y ER descritos para inspect theme (declarados o derivados)" {
       source { file "packages/tema/src/elementos.ts" }
     }
     modulo tem-slots "tema/slots" "Rectangulo de cada Slot dentro de la caja del Nodo" {
@@ -220,10 +220,10 @@ model {
     modulo ses-sesion "sesion/sesion" "abrirSesion: diagnosticar, construir, geometria, estilo y consultar, memoizando layout por Vista" {
       source { file "packages/sesion/src/sesion.ts" }
     }
-    modulo ses-consultas "sesion/consultas" "inspect buscar, nodo, vista e interaccion sobre la Fuente, con cercanos si no encuentra" {
+    modulo ses-consultas "sesion/consultas" "inspect search, nodo, vista e interaccion sobre la Fuente, con cercanos si no encuentra" {
       source { file "packages/sesion/src/consultas.ts" }
     }
-    modulo ses-consulta-tema "sesion/consulta-de-tema" "inspect tema: cadena extends, Capas, Elementos, Slots y Metricas" {
+    modulo ses-consulta-tema "sesion/consulta-de-tema" "inspect theme: cadena extends, Capas, Elementos, Slots y Metricas" {
       source { file "packages/sesion/src/consulta-de-tema.ts" }
     }
     modulo ses-aplicar "sesion/aplicar" "aplicarAlWorkspace: la puerta de escritura unica (Intencion o ediciones con hash, todo o nada)" {
@@ -523,7 +523,7 @@ model {
         modulo vis-destino "vistas/destino" "Que Vista muestra un Nodo; puro" { source { file "packages/estudio/navegador/vistas/destino.ts" } }
       }
 
-      modulo nav-detalle "navegador/detalle" "Panel Detalle: el Nodo seleccionado segun inspect nodo" {
+      modulo nav-detalle "navegador/detalle" "Panel Detalle: el Nodo seleccionado segun inspect node" {
         source { file "packages/estudio/navegador/detalle/detalle.tsx" }
       }
 
