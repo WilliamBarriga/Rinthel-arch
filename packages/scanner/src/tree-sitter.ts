@@ -2,7 +2,10 @@
  * The only door to `web-tree-sitter` (WASM, no native build). The runtime starts once per process and each grammar
  * loads on first use, so a repo without files of a language never pays for its grammar.
  */
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { basename } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { Language, Parser, Query } from 'web-tree-sitter';
 
@@ -19,7 +22,13 @@ export interface Capture {
 
 let runtime: Promise<void> | undefined;
 const grammars = new Map<string, Promise<Grammar>>();
-const resolveFile = createRequire(import.meta.url).resolve;
+const requireFrom = createRequire(import.meta.url);
+
+/** The bundled npm package ships each grammar `.wasm` next to its JS; in the workspace, the grammar package has it. */
+function resolveFile(wasm: string): string {
+  const bundled = fileURLToPath(new URL(basename(wasm), import.meta.url));
+  return existsSync(bundled) ? bundled : requireFrom.resolve(wasm);
+}
 
 /**
  * `wasm`: module path of the grammar's `.wasm`, resolved from this package (for example
