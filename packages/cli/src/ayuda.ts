@@ -96,7 +96,8 @@ Regenerala cuando cambien los Tipos de nodo, los Temas o los codigos.
 
 Reads a codebase without running it and writes a Scan draft (rinthel/scan@1): units from manifests
 (package.json, pyproject.toml, go.mod, Cargo.toml), dependencies between them from TS/JS imports,
-externals and limits. Prints a compact summary that ends with the next step. Never writes .dg files.
+externals, database tables from Prisma schemas and SQL DDL, and limits. Prints a compact summary that
+ends with the next step. Never writes .dg files.
 
 Options:
   <root>               Folder to scan (current folder by default)

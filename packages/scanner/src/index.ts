@@ -11,13 +11,14 @@ import { readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
 import { SCAN_DRAFT_SCHEMA } from './draft';
-import type { Confidence, LanguageCount, ScanDependency, ScanDraft, ScanExternal, ScanTable, Source } from './draft';
+import type { Confidence, LanguageCount, ScanDependency, ScanDraft, ScanExternal, Source } from './draft';
 import { byCodeUnit, listFiles } from './files';
 import { readCommit } from './git';
 import { IMPORT_EXTRACTORS } from './imports';
 import type { FoundImport } from './imports';
 import { languageOf } from './languages';
-import { TABLE_EXTRACTORS } from './tables';
+import { TABLE_EXTRACTORS, identifyTables } from './tables';
+import type { FoundTable } from './tables';
 import { buildUnits } from './units';
 
 export { SCAN_DRAFT_SCHEMA } from './draft';
@@ -129,15 +130,16 @@ export async function scan(root: string, options: ScanOptions = {}): Promise<Sca
     }
   }
 
-  const tables: ScanTable[] = [];
+  const tables: (FoundTable & { unit: string })[] = [];
   for (const extractor of TABLE_EXTRACTORS) {
-    const own = files.filter((path) => extractor.matches(path));
+    const own = files.filter((path) => extractor.matches(path)).sort(byCodeUnit);
     if (own.length === 0) continue;
     const read = await extractor.load();
-    for (const path of own) {
+    const schemas = own.flatMap((path) => {
       const text = parseable(path);
-      if (text !== undefined) tables.push(...read(path, text).map((table) => ({ ...table, unit: unitOfFile(path) })));
-    }
+      return text === undefined ? [] : [{ path, text }];
+    });
+    tables.push(...read(schemas, { files: fileSet }).map((table) => ({ ...table, unit: unitOfFile(table.source.file) })));
   }
 
   const covered = new Set(IMPORT_EXTRACTORS.flatMap((extractor) => extractor.languages));
@@ -177,7 +179,7 @@ export async function scan(root: string, options: ScanOptions = {}): Promise<Sca
         confidence,
       }),
     ),
-    tables: tables.sort((a, b) => byCodeUnit(a.id, b.id)),
+    tables: identifyTables(tables),
   };
 }
 

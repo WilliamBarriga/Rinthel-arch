@@ -73,8 +73,48 @@ describe('scan', () => {
         { id: 'npm:react', weight: 1 },
         { id: 'npm:stripe', weight: 1 },
       ],
-      next: expect.stringContaining('diagrams validate --workspace'),
+      tables: [],
+      next: expect.not.stringContaining('er View'),
     });
+  });
+
+  it('lists the tables found in Prisma and SQL schemas and suggests an er View', async () => {
+    const root = repo('scan-tables');
+
+    const { exitCode, stdout } = await run(['scan', root]);
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain(
+      [
+        '',
+        'Tables (by id):',
+        '  Post       prisma  2 columns  1 relation',
+        '  User       prisma  2 columns  0 relations',
+        '  audit_log  sql     3 columns  1 relation',
+        '',
+        'Next: read the draft and write the Workspace .dg files: a Node per unit worth showing, citing its unit id as a',
+        'Source path ref, then run diagrams validate --workspace <workspace>. Guide: skill rinthel-diagramas, "Import from code".',
+        'Tables: add an er View with a Node per table citing its table id as a Source path ref, its columns as Attributes',
+        '(pk fk uk, ? when optional) and its relations as Edges with their cardinality.',
+        '',
+      ].join('\n'),
+    );
+    const draft = JSON.parse(readFileSync(join(root, '.rinthel/scan.json'), 'utf8'));
+    expect(draft.tables.find(({ id }: { id: string }) => id === 'audit_log').relations).toEqual([
+      { from: 'audit_log#user_id', to: 'User#id', cardinality: ['0..*', '0..1'], confidence: 'extracted' },
+    ]);
+  });
+
+  it('--json lists the tables and adds the er View to the next step', async () => {
+    const summary = JSON.parse((await run(['scan', repo('scan-tables'), '--json'])).stdout);
+
+    expect(summary.counts.tables).toBe(3);
+    expect(summary.tables).toEqual([
+      { id: 'Post', name: 'Post', origin: 'prisma', columns: 2, relations: 1 },
+      { id: 'User', name: 'User', origin: 'prisma', columns: 2, relations: 0 },
+      { id: 'audit_log', name: 'audit_log', origin: 'sql', columns: 3, relations: 1 },
+    ]);
+    expect(summary.next).toContain('Tables: add an er View');
   });
 
   it('reports languages without import support, --max-files truncation and --out', async () => {
