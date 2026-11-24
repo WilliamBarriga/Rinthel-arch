@@ -22,7 +22,7 @@ const TECLAS_DEL_LIENZO: readonly { nombre: string; teclas: string[] }[] = [
 ];
 
 export function Ayuda({ abierto, alCambiar }: { abierto: boolean; alCambiar: (abierto: boolean) => void }): ReactElement {
-  const { plataforma, portales, modo } = useEstudio();
+  const { plataforma, portales, modo, abrirDialogo } = useEstudio();
   const grupos = GRUPOS.map(({ ambito, nombre }) => ({
     nombre,
     filas: [
@@ -57,7 +57,12 @@ export function Ayuda({ abierto, alCambiar }: { abierto: boolean; alCambiar: (ab
               </dl>
             </section>
           ))}
-          <Dialog.Close className="ui-boton">Close</Dialog.Close>
+          <div className="ui-tour-fila">
+            <Dialog.Close className="ui-boton">Close</Dialog.Close>
+            <button type="button" className="ui-boton" onClick={() => abrirDialogo('tour')}>
+              View tour
+            </button>
+          </div>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
