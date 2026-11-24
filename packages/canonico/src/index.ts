@@ -80,6 +80,8 @@ export type {
 
 export type { Issue, IssueFix, IssueRelated, Severity, TextPosition, TextRange } from './issue';
 
+export { CONVENCIONES_RENOMBRADAS, convencionesObsoletas } from './convenciones';
+export type { ConvencionRenombrada } from './convenciones';
 export { CODIGOS, CODIGOS_DEPRECADOS, DESCRIPCION_DE_CODIGO } from './codigos';
 export type { Codigo } from './codigos';
 
