@@ -26,6 +26,11 @@ const NEXT_STEP =
   'Next: read the draft and write the Workspace .dg files: a Node per unit worth showing, citing its unit id as a\n' +
   'Source path ref, then run diagrams validate --workspace <workspace>. Guide: skill rinthel-diagramas, "Import from code".';
 
+/** Added to the next step when the draft has tables. */
+const ER_STEP =
+  'Tables: add an er View with a Node per table citing its table id as a Source path ref, its columns as Attributes\n' +
+  '(pk fk uk, ? when optional) and its relations as Edges with their cardinality.';
+
 export interface DependenciasDeScan {
   /** Creates missing folders. */
   escribirArchivo?: (ruta: string, texto: string) => void;
@@ -102,7 +107,10 @@ function summarize(draft: ScanDraft, out: string) {
     units: units.slice(0, SUMMARY_ROWS).map(({ id, name, kind, files }) => ({ id, name, kind, files })),
     dependencies: dependencies.slice(0, SUMMARY_ROWS).map(({ id, from, to, weight }) => ({ id, from, to, weight })),
     externals: externals.slice(0, SUMMARY_ROWS).map(({ id, weight }) => ({ id, weight })),
-    next: NEXT_STEP.replace('\n', ' '),
+    tables: draft.tables
+      .slice(0, SUMMARY_ROWS)
+      .map(({ id, name, origin, columns, relations }) => ({ id, name, origin, columns: columns.length, relations: relations.length })),
+    next: nextStep(draft.tables.length).replaceAll('\n', ' '),
   };
 }
 
@@ -121,6 +129,11 @@ function text(summary: Summary): string {
   section('Units (most files first)', counts.units, summary.units.map((unit) => [unit.id, unit.name, unit.kind, plural(unit.files, 'file')]));
   section('Dependencies (heaviest first)', counts.dependencies, summary.dependencies.map((dep) => [`${dep.from} -> ${dep.to}`, `weight ${dep.weight}`]));
   section('Externals (most imported first)', counts.externals, summary.externals.map((external) => [external.id, `weight ${external.weight}`]));
+  section(
+    'Tables (by id)',
+    counts.tables,
+    summary.tables.map((table) => [table.id, table.origin, plural(table.columns, 'column'), plural(table.relations, 'relation')]),
+  );
 
   const notes = [
     ...(limits.truncated ? [`stopped at --max-files ${limits.maxFiles} (truncated)`] : []),
@@ -131,9 +144,11 @@ function text(summary: Summary): string {
     ...(limits.largeFilesSkipped > 0 ? [`${plural(limits.largeFilesSkipped, 'large file')} not parsed`] : []),
   ];
   if (notes.length > 0) lines.push('', `Limits: ${notes.join('; ')}.`);
-  lines.push('', NEXT_STEP, '');
+  lines.push('', nextStep(counts.tables), '');
   return lines.join('\n');
 }
+
+const nextStep = (tables: number): string => (tables > 0 ? `${NEXT_STEP}\n${ER_STEP}` : NEXT_STEP);
 
 /** Left-aligned columns, two spaces apart, indented by two. */
 function table(rows: string[][]): string[] {
