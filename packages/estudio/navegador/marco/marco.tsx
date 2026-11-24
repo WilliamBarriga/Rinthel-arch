@@ -33,7 +33,7 @@ export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElem
 
   return (
     <div className="ui-chrome" data-arrastrando={solido ? '' : undefined}>
-      <main className="ui-lienzo" aria-label="Lienzo" {...gesto.props}>
+      <main className="ui-lienzo" aria-label="Canvas" {...gesto.props}>
         {lienzo}
       </main>
       <header className="ui-barra">
@@ -45,7 +45,7 @@ export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElem
         )}
         <PildoraDelBuscador />
         {motivoSinGestos !== undefined && (
-          <div role="status" aria-label="Gestos" className="ui-pildora ui-aviso-gestos">
+          <div role="status" aria-label="Gestures" className="ui-pildora ui-aviso-gestos">
             {motivoSinGestos}
           </div>
         )}
@@ -55,8 +55,8 @@ export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElem
           </div>
         ))}
       </header>
-      <IslaLateral lado="izquierda" id="ui-isla-izquierda" nombre="panel izquierdo" isla={islas.izquierda} pestanas={PESTANAS_IZQUIERDAS} activa={pestanas.izquierda} alCambiarPestana={(p) => elegirPestana('izquierda', p)} />
-      <IslaLateral lado="derecha" id="ui-isla-derecha" nombre="panel derecho" isla={islas.derecha} pestanas={PESTANAS_DERECHAS} activa={pestanas.derecha} alCambiarPestana={(p) => elegirPestana('derecha', p)} />
+      <IslaLateral lado="izquierda" id="ui-isla-izquierda" nombre="left panel" isla={islas.izquierda} pestanas={PESTANAS_IZQUIERDAS} activa={pestanas.izquierda} alCambiarPestana={(p) => elegirPestana('izquierda', p)} />
+      <IslaLateral lado="derecha" id="ui-isla-derecha" nombre="right panel" isla={islas.derecha} pestanas={PESTANAS_DERECHAS} activa={pestanas.derecha} alCambiarPestana={(p) => elegirPestana('derecha', p)} />
       {leyenda}
       {aviso !== undefined && (
         <div className="ui-toasts">

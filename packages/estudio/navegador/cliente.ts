@@ -101,13 +101,13 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
   /** El cuerpo de un 2xx contra su esquema; malformado es un fallo con el primer problema. */
   const validar = <T>(ruta: string, esquema: Esquema<T>, cuerpo: unknown): Lectura<T> => {
     const leido = esquema.safeParse(cuerpo);
-    return leido.success ? { ok: true, valor: leido.data } : { ok: false, mensaje: `Respuesta malformada de ${ruta} (${motivo(leido.error)})` };
+    return leido.success ? { ok: true, valor: leido.data } : { ok: false, mensaje: `Malformed response from ${ruta} (${motivo(leido.error)})` };
   };
 
   /** Mensaje de un no-2xx: el del protocolo si el cuerpo lo cumple; si no, el estado y la ruta. */
   const mensajeDeError = (status: number, ruta: string, cuerpo: unknown): string => {
     const leido = errorDeDevSchema.safeParse(cuerpo);
-    return leido.success ? leido.data.mensaje : `Error ${status} en ${ruta}`;
+    return leido.success ? leido.data.mensaje : `Error ${status} at ${ruta}`;
   };
 
   /** `GET` de JSON validado; red, estado HTTP o forma dan un fallo con motivo. */
@@ -135,7 +135,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
       }
       const desactualizado = res.status === 409;
       const rechazo = rechazoDeDevSchema.safeParse(leido);
-      if (!rechazo.success) return { ok: false, desactualizado, mensaje: `Error ${res.status} en ${ruta}` };
+      if (!rechazo.success) return { ok: false, desactualizado, mensaje: `Error ${res.status} at ${ruta}` };
       const { mensaje, motivo: porque, file } = rechazo.data;
       return { ok: false, desactualizado, mensaje, ...(porque !== undefined && { motivo: porque }), ...(file !== undefined && { file }) };
     } catch (error) {
@@ -192,7 +192,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
       escuchar('estado', (datos) => {
         const leido = estadoDeDevSchema.safeParse(datos);
         if (leido.success) alEstado(leido.data);
-        else alMalformado?.(`Evento estado malformado (${motivo(leido.error)})`);
+        else alMalformado?.(`Malformed state event (${motivo(leido.error)})`);
       }),
     codigo: () => leer(RUTAS_DE_DEV.codigo, codigoDeDevSchema),
     confiar: () => post(RUTAS_DE_DEV.confiar, {}, confianzaDeDevSchema),
@@ -202,7 +202,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
         const res = await fetchFn(ruta);
         if (!res.ok) return { ok: false, mensaje: mensajeDeError(res.status, ruta, await res.json().catch(() => undefined)) };
         const tipo = res.headers.get('content-type') ?? '';
-        return /javascript/i.test(tipo) ? { ok: true, valor: await res.text() } : { ok: false, mensaje: `Respuesta malformada de ${ruta} (content-type '${tipo}', se esperaba JavaScript)` };
+        return /javascript/i.test(tipo) ? { ok: true, valor: await res.text() } : { ok: false, mensaje: `Malformed response from ${ruta} (content-type '${tipo}', expected JavaScript)` };
       } catch (error) {
         return { ok: false, mensaje: (error as Error).message };
       }
@@ -233,7 +233,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
       if (cruda === NO_LLEGO) return { ok: false };
       const leida = geometriaCacheadaSchema.safeParse(cruda);
       if (leida.success) return { ok: true, geometria: leida.data };
-      return { ok: false, error: `Geometria malformada en la Vista ${vista}: ${motivo(leida.error)}`.trim() };
+      return { ok: false, error: `Malformed geometry in View ${vista}: ${motivo(leida.error)}`.trim() };
     },
   };
 }

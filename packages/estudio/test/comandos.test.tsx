@@ -30,7 +30,7 @@ view otra {
 
 /** Linea del cursor del editor de `archivo` (la pestana Codigo salta a `archivo:linea`). */
 function lineaDelEditor(archivo: string): number | undefined {
-  const caja = screen.queryByRole('textbox', { name: `Codigo de ${archivo}` });
+  const caja = screen.queryByRole('textbox', { name: `Code of ${archivo}` });
   const vista = caja === null ? null : EditorView.findFromDOM(caja);
   return vista === null ? undefined : vista.state.doc.lineAt(vista.state.selection.main.head).number;
 }
@@ -40,25 +40,25 @@ const teclear = (key: string, o: Record<string, boolean> = {}, destino: Element 
 describe('atajos de las islas', () => {
   it('Mod+B oculta y recupera la isla izquierda; Mod+J la derecha', async () => {
     await montarEstudio({ 'main.dg': DSL });
-    await screen.findByRole('listbox', { name: 'Vistas' });
+    await screen.findByRole('listbox', { name: 'Views' });
 
     teclear('b', { ctrlKey: true });
-    expect(screen.queryByRole('listbox', { name: 'Vistas' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Mostrar panel izquierdo' })).toBeTruthy();
+    expect(screen.queryByRole('listbox', { name: 'Views' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Show left panel' })).toBeTruthy();
     teclear('b', { ctrlKey: true });
-    expect(screen.getByRole('listbox', { name: 'Vistas' })).toBeTruthy();
+    expect(screen.getByRole('listbox', { name: 'Views' })).toBeTruthy();
 
     teclear('j', { ctrlKey: true });
-    expect(screen.queryByRole('tablist', { name: 'Panel derecho' })).toBeNull();
+    expect(screen.queryByRole('tablist', { name: 'Right panel' })).toBeNull();
     teclear('j', { ctrlKey: true });
-    expect(screen.getByRole('tablist', { name: 'Panel derecho' })).toBeTruthy();
+    expect(screen.getByRole('tablist', { name: 'Right panel' })).toBeTruthy();
   });
 
   it('los botones de ocultar declaran su atajo', async () => {
     await montarEstudio({ 'main.dg': DSL });
 
-    expect((await screen.findByRole('button', { name: 'Ocultar panel izquierdo' })).getAttribute('aria-keyshortcuts')).toBe('Control+B');
-    expect(screen.getByRole('button', { name: 'Ocultar panel derecho' }).getAttribute('aria-keyshortcuts')).toBe('Control+J');
+    expect((await screen.findByRole('button', { name: 'Hide left panel' })).getAttribute('aria-keyshortcuts')).toBe('Control+B');
+    expect(screen.getByRole('button', { name: 'Hide right panel' }).getAttribute('aria-keyshortcuts')).toBe('Control+J');
   });
 });
 
@@ -75,7 +75,7 @@ describe('deshacer y rehacer por el registro', () => {
 
   it('en un campo de texto Ctrl+Z es del navegador: no llega a `dev`', async () => {
     await montarEstudio({ 'main.dg': DSL });
-    await screen.findByRole('listbox', { name: 'Vistas' });
+    await screen.findByRole('listbox', { name: 'Views' });
     const campo = document.createElement('input');
     document.body.append(campo);
     campo.focus();
@@ -94,7 +94,7 @@ describe('E abre Codigo', () => {
     await lienzoListo(contenedor, 'mapa');
 
     teclear('e');
-    expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Code' }).getAttribute('aria-selected')).toBe('true');
     await waitFor(() => expect(lineaDelEditor('main.dg')).toBe(11));
 
     pulsarNodo(contenedor, 'db');
@@ -109,7 +109,7 @@ describe('E abre Codigo', () => {
 
     dobleClicEnNodo(contenedor, 'db');
 
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true'));
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Code' }).getAttribute('aria-selected')).toBe('true'));
     await waitFor(() => expect(lineaDelEditor('main.dg')).toBe(7));
   });
 
@@ -119,27 +119,27 @@ describe('E abre Codigo', () => {
 
     teclear('e');
 
-    expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Code' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('tab', { name: 'Issues' }).getAttribute('aria-selected')).toBe('true');
   });
 });
 
 const buscador = async () => {
   teclear('k', { ctrlKey: true });
-  const dialogo = await screen.findByRole('dialog', { name: 'Buscador' });
-  return { dialogo, campo: within(dialogo).getByRole('combobox', { name: 'Buscar' }) };
+  const dialogo = await screen.findByRole('dialog', { name: 'Finder' });
+  return { dialogo, campo: within(dialogo).getByRole('combobox', { name: 'Search' }) };
 };
 const escribir = (campo: HTMLElement, texto: string) => fireEvent.change(campo, { target: { value: texto } });
 
 describe('Buscador', () => {
   it('Mod+K lo abre dentro del chrome (no en el body, donde perderia sus tokens); Escape lo cierra', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL });
-    await screen.findByRole('listbox', { name: 'Vistas' });
+    await screen.findByRole('listbox', { name: 'Views' });
 
     const { dialogo, campo } = await buscador();
     expect(contenedor.contains(dialogo)).toBe(true);
     fireEvent.keyDown(campo, { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Buscador' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Finder' })).toBeNull());
   });
 
   it('encuentra Vistas y salta a la elegida', async () => {
@@ -152,7 +152,7 @@ describe('Buscador', () => {
 
     await lienzoListo(contenedor, 'otra');
     expect(window.location.hash).toBe('#vista=otra');
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Buscador' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Finder' })).toBeNull());
   });
 
   it('encuentra Nodos con inspect buscar (con su archivo:linea) y abre su Detalle', async () => {
@@ -166,7 +166,7 @@ describe('Buscador', () => {
     fireEvent.click(nodo);
 
     await waitFor(() => expect(window.location.hash).toContain('s=db'));
-    const detalle = screen.getByRole('region', { name: 'Detalle' });
+    const detalle = screen.getByRole('region', { name: 'Details' });
     expect(await within(detalle).findByRole('heading', { name: 'Base de datos' })).toBeTruthy();
   });
 
@@ -177,7 +177,7 @@ describe('Buscador', () => {
     escribir(primero.campo, 'otr');
     fireEvent.click(await within(primero.dialogo).findByRole('option', { name: /^otra/ }));
     await lienzoListo(contenedor, 'otra');
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Buscador' })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Finder' })).toBeNull());
     const { dialogo, campo } = await buscador();
 
     escribir(campo, 'API');
@@ -185,65 +185,65 @@ describe('Buscador', () => {
 
     await lienzoListo(contenedor, 'mapa');
     await waitFor(() => expect(window.location.hash).toContain('s=api'));
-    const detalle = screen.getByRole('region', { name: 'Detalle' });
+    const detalle = screen.getByRole('region', { name: 'Details' });
     expect(await within(detalle).findByRole('heading', { name: 'API' })).toBeTruthy();
   });
 
   it('salta a archivo:linea en Codigo', async () => {
     await montarEstudio({ 'main.dg': DSL });
-    await screen.findByRole('listbox', { name: 'Vistas' });
+    await screen.findByRole('listbox', { name: 'Views' });
     const { dialogo, campo } = await buscador();
 
     escribir(campo, 'main.dg:12');
     fireEvent.click(await within(dialogo).findByRole('option', { name: /main\.dg:12/ }));
 
-    expect(screen.getByRole('tab', { name: 'Codigo' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Code' }).getAttribute('aria-selected')).toBe('true');
     await waitFor(() => expect(lineaDelEditor('main.dg')).toBe(12));
   });
 
   it('ejecuta comandos del registro y muestra su atajo', async () => {
     await montarEstudio({ 'main.dg': DSL });
-    await screen.findByRole('listbox', { name: 'Vistas' });
+    await screen.findByRole('listbox', { name: 'Views' });
     const { dialogo, campo } = await buscador();
 
-    escribir(campo, 'panel izq');
-    expect((await within(dialogo).findByRole('option', { name: /panel izquierdo/ })).textContent).toContain('Ctrl+B');
-    escribir(campo, 'historial');
-    fireEvent.click(await within(dialogo).findByRole('option', { name: /Abrir Historial/ }));
+    escribir(campo, 'left pan');
+    expect((await within(dialogo).findByRole('option', { name: /left panel/ })).textContent).toContain('Ctrl+B');
+    escribir(campo, 'undo hist');
+    fireEvent.click(await within(dialogo).findByRole('option', { name: /Open Undo history/ }));
 
-    expect(screen.getByRole('tab', { name: 'Historial' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Undo history' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('la pildora de la barra lo abre y anuncia Mod+K', async () => {
     await montarEstudio({ 'main.dg': DSL });
-    const pildora = await screen.findByRole('button', { name: 'Buscar' });
+    const pildora = await screen.findByRole('button', { name: 'Search' });
     expect(pildora.getAttribute('aria-keyshortcuts')).toBe('Control+K');
 
     fireEvent.click(pildora);
-    expect(await screen.findByRole('dialog', { name: 'Buscador' })).toBeTruthy();
+    expect(await screen.findByRole('dialog', { name: 'Finder' })).toBeTruthy();
   });
 });
 
 describe('ayuda de atajos', () => {
   it('`?` la abre agrupada por ambito con las teclas de la plataforma', async () => {
     await montarEstudio({ 'main.dg': DSL });
-    await screen.findByRole('listbox', { name: 'Vistas' });
+    await screen.findByRole('listbox', { name: 'Views' });
 
     teclear('?', { shiftKey: true });
-    const ayuda = await screen.findByRole('dialog', { name: 'Atajos de teclado' });
+    const ayuda = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
     const global = within(ayuda).getByRole('region', { name: 'Global' });
-    expect(within(global).getByText('Deshacer').parentElement!.textContent).toContain('Ctrl+Z');
-    expect(within(global).getByText('Rehacer').parentElement!.textContent).toContain('Ctrl+Y');
-    expect(within(ayuda).getByRole('region', { name: 'Lienzo' })).toBeTruthy();
+    expect(within(global).getByText('Undo').parentElement!.textContent).toContain('Ctrl+Z');
+    expect(within(global).getByText('Redo').parentElement!.textContent).toContain('Ctrl+Y');
+    expect(within(ayuda).getByRole('region', { name: 'Canvas' })).toBeTruthy();
   });
 
   it('en mac las teclas se escriben con Cmd y Ctrl+Y no aparece', async () => {
     await montarEstudio({ 'main.dg': DSL }, { plataforma: 'mac' });
-    await screen.findByRole('listbox', { name: 'Vistas' });
+    await screen.findByRole('listbox', { name: 'Views' });
 
     teclear('/', { metaKey: true });
-    const ayuda = await screen.findByRole('dialog', { name: 'Atajos de teclado' });
-    const rehacer = within(ayuda).getByText('Rehacer').parentElement!.textContent;
+    const ayuda = await screen.findByRole('dialog', { name: 'Keyboard shortcuts' });
+    const rehacer = within(ayuda).getByText('Redo').parentElement!.textContent;
     expect(rehacer).toContain('Cmd+Shift+Z');
     expect(rehacer).not.toContain('Ctrl+Y');
   });

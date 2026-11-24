@@ -7,8 +7,8 @@ import { BotonConAtajo } from './atajo';
 export function PildoraDelBuscador(): ReactElement {
   const { abrirDialogo } = useEstudio();
   return (
-    <BotonConAtajo comando="buscador" className="ui-pildora ui-pildora-buscador" aria-label="Buscar" onClick={() => abrirDialogo('buscador')}>
-      Buscar
+    <BotonConAtajo comando="buscador" className="ui-pildora ui-pildora-buscador" aria-label="Search" onClick={() => abrirDialogo('buscador')}>
+      Search
     </BotonConAtajo>
   );
 }

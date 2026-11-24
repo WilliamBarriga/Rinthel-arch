@@ -47,7 +47,7 @@ describe('respuestas viejas', () => {
     pulsarNodo(contenedor, 'db');
     await dejarLlegarLaVieja();
 
-    const detalle = screen.getByRole('region', { name: 'Detalle' });
+    const detalle = screen.getByRole('region', { name: 'Details' });
     expect(await within(detalle).findByRole('heading', { name: 'Base de datos' })).toBeTruthy();
     expect(within(detalle).queryByRole('heading', { name: 'API' })).toBeNull();
   });
@@ -55,18 +55,18 @@ describe('respuestas viejas', () => {
   it('en la ficha de Tema, la del Tema elegido antes no pisa la del elegido despues', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverFetch: retrasar('/api/inspect/tema/oscuro') });
     await lienzoListo(contenedor, 'mapa');
-    fireEvent.click(await screen.findByRole('tab', { name: 'Temas' }));
-    const galeria = await screen.findByRole('listbox', { name: 'Temas' });
+    fireEvent.click(await screen.findByRole('tab', { name: 'Themes' }));
+    const galeria = await screen.findByRole('listbox', { name: 'Themes' });
 
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     fireEvent.click(within(galeria).getByRole('option', { name: 'oscuro' }));
     fireEvent.click(within(galeria).getByRole('option', { name: 'neutral' }));
     await dejarLlegarLaVieja();
 
-    const ficha = screen.getByRole('region', { name: 'Tema neutral' });
+    const ficha = screen.getByRole('region', { name: 'Theme neutral' });
     await waitFor(() => expect(within(ficha).queryByRole('status')).toBeNull());
     // `neutral` no extiende a nadie: la cadena de `oscuro` (`neutral`) no debe aparecer detras de su nombre.
-    expect(within(ficha).getByRole('heading', { name: 'Cadena extends' }).nextElementSibling?.textContent).toBe('neutral');
+    expect(within(ficha).getByRole('heading', { name: 'Extends chain' }).nextElementSibling?.textContent).toBe('neutral');
   });
 });
 
@@ -75,7 +75,7 @@ describe('estados de carga y fallo', () => {
     const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
     await lienzoListo(contenedor, 'mapa');
     pulsarNodo(contenedor, 'db');
-    const detalle = screen.getByRole('region', { name: 'Detalle' });
+    const detalle = screen.getByRole('region', { name: 'Details' });
     expect(await within(detalle).findByRole('heading', { name: 'Base de datos' })).toBeTruthy();
 
     dev.editarFuera('main.dg', DSL.replace('  servicio db "Base de datos"\n', '').replace('  api -> db "lee"\n', ''));
@@ -93,11 +93,11 @@ describe('estados de carga y fallo', () => {
       }) as typeof fetch;
     const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverFetch: caido });
     await lienzoListo(contenedor, 'mapa');
-    fireEvent.click(await screen.findByRole('tab', { name: 'Temas' }));
-    fireEvent.click(within(await screen.findByRole('listbox', { name: 'Temas' })).getByRole('option', { name: 'oscuro' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Themes' }));
+    fireEvent.click(within(await screen.findByRole('listbox', { name: 'Themes' })).getByRole('option', { name: 'oscuro' }));
 
-    const ficha = screen.getByRole('region', { name: 'Tema oscuro' });
-    expect(within(ficha).getByRole('status').textContent).toBe('Cargando oscuro...');
+    const ficha = screen.getByRole('region', { name: 'Theme oscuro' });
+    expect(within(ficha).getByRole('status').textContent).toBe('Loading oscuro...');
     await waitFor(() => expect(within(ficha).getByRole('status').textContent).toBe('Sin red'));
   });
 });

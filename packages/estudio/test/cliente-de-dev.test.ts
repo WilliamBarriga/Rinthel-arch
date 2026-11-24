@@ -155,17 +155,17 @@ describe('cliente unico de la pagina de dev', () => {
     const s = servidor({ '/api/edit': { cuerpo: { ok: 'si' } }, '/api/confiar': { cuerpo: { aceptado: true } }, '/api/rehacer': { cuerpo: { ok: true } } });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
-    expect(await cliente.editar({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }, 3)).toMatchObject({ ok: false, desactualizado: false, mensaje: expect.stringContaining('Respuesta malformada de /api/edit') });
-    expect(await cliente.confiar()).toMatchObject({ ok: false, mensaje: expect.stringContaining('Respuesta malformada de /api/confiar') });
-    expect(await cliente.rehacer()).toMatchObject({ ok: false, mensaje: expect.stringContaining('Respuesta malformada de /api/rehacer') });
+    expect(await cliente.editar({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }, 3)).toMatchObject({ ok: false, desactualizado: false, mensaje: expect.stringContaining('Malformed response from /api/edit') });
+    expect(await cliente.confiar()).toMatchObject({ ok: false, mensaje: expect.stringContaining('Malformed response from /api/confiar') });
+    expect(await cliente.rehacer()).toMatchObject({ ok: false, mensaje: expect.stringContaining('Malformed response from /api/rehacer') });
   });
 
   it('un rechazo con un cuerpo fuera del protocolo da el estado y la ruta, y su motivo no se cuela', async () => {
     const s = servidor({ '/api/edit': { status: 422, cuerpo: { ok: false, mensaje: 7, motivo: 'inventado' } }, '/api/historial/saltar': { status: 409, cuerpo: { error: 'x' } } });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
-    expect(await cliente.editarTexto({ ediciones: [{ file: 'a.dg', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: 'x' }] })).toEqual({ ok: false, desactualizado: false, mensaje: 'Error 422 en /api/edit' });
-    expect(await cliente.saltar(2)).toEqual({ ok: false, desactualizado: true, mensaje: 'Error 409 en /api/historial/saltar' });
+    expect(await cliente.editarTexto({ ediciones: [{ file: 'a.dg', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: 'x' }] })).toEqual({ ok: false, desactualizado: false, mensaje: 'Error 422 at /api/edit' });
+    expect(await cliente.saltar(2)).toEqual({ ok: false, desactualizado: true, mensaje: 'Error 409 at /api/historial/saltar' });
   });
 
   it('el bundle de Componentes solo vale con 200 y content-type de JavaScript', async () => {
@@ -183,14 +183,14 @@ describe('cliente unico de la pagina de dev', () => {
     const s = servidor({ '/api/codigo': { cuerpo: { temaConCodigo: 'si' } }, '/api/archivos': { cuerpo: { version: 1 } } });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
-    expect(await cliente.codigo()).toEqual({ ok: false, mensaje: expect.stringContaining('Respuesta malformada de /api/codigo') });
-    expect(await cliente.archivos()).toEqual({ ok: false, mensaje: expect.stringContaining('Respuesta malformada de /api/archivos') });
+    expect(await cliente.codigo()).toEqual({ ok: false, mensaje: expect.stringContaining('Malformed response from /api/codigo') });
+    expect(await cliente.archivos()).toEqual({ ok: false, mensaje: expect.stringContaining('Malformed response from /api/archivos') });
   });
 
   it('una salida de inspect que no cumple el esquema es un fallo', async () => {
     const s = servidor({ '/api/inspect/buscar/api': { cuerpo: { contractVersion: 1, comando: 'buscar', consulta: 'api', resultados: 'muchos' } } });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
-    expect(await cliente.inspeccionar('buscar', 'api')).toEqual({ ok: false, mensaje: expect.stringContaining('Respuesta malformada de /api/inspect/buscar/api'), cercanos: [] });
+    expect(await cliente.inspeccionar('buscar', 'api')).toEqual({ ok: false, mensaje: expect.stringContaining('Malformed response from /api/inspect/buscar/api'), cercanos: [] });
   });
 });

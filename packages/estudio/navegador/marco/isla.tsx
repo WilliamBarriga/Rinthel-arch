@@ -34,7 +34,7 @@ export function IslaLateral({ lado, id, nombre, isla, pestanas, activa, alCambia
   }, [activa, anchoMinimo]);
   if (isla.oculta) {
     return (
-      <BotonConAtajo comando={`isla-${lado}`} className="ui-pestana-borde" data-lado={lado} aria-label={`Mostrar ${nombre}`} aria-controls={id} aria-expanded={false} onClick={isla.mostrar}>
+      <BotonConAtajo comando={`isla-${lado}`} className="ui-pestana-borde" data-lado={lado} aria-label={`Show ${nombre}`} aria-controls={id} aria-expanded={false} onClick={isla.mostrar}>
         {pestanas.find((p) => p.id === activa)?.nombre ?? mayuscula(nombre)}
       </BotonConAtajo>
     );
@@ -52,13 +52,13 @@ export function IslaLateral({ lado, id, nombre, isla, pestanas, activa, alCambia
             ))}
             <Tabs.Indicator className="ui-pestanas-indicador" />
           </Tabs.List>
-          <BotonConAtajo comando={`isla-${lado}`} className="ui-boton-icono" aria-label={`Ocultar ${nombre}`} aria-controls={id} aria-expanded onClick={isla.ocultar}>
+          <BotonConAtajo comando={`isla-${lado}`} className="ui-boton-icono" aria-label={`Hide ${nombre}`} aria-controls={id} aria-expanded onClick={isla.ocultar}>
             {lado === 'izquierda' ? '‹' : '›'}
           </BotonConAtajo>
         </div>
         {pestanas.map(({ id: pestana, Contenido, conservar = false }) => (
           <Tabs.Panel key={pestana} value={pestana} className="ui-isla-cuerpo" keepMounted={conservar && visitadas.has(pestana)}>
-            <Suspense fallback={<p className="ui-tenue">Cargando...</p>}>
+            <Suspense fallback={<p className="ui-tenue">Loading...</p>}>
               <Contenido />
             </Suspense>
           </Tabs.Panel>

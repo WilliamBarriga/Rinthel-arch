@@ -62,7 +62,7 @@ export function useInspectPorVersion<C extends ComandoDeInspect>(cliente: Client
           pedir: async (c) => {
             const r = await c.inspeccionar(comando, argumento);
             if (!r.ok) return r;
-            return r.salida.comando === comando ? { ok: true, valor: r.salida as SalidaDe<C> } : { ok: false, mensaje: 'Respuesta inesperada de inspect' };
+            return r.salida.comando === comando ? { ok: true, valor: r.salida as SalidaDe<C> } : { ok: false, mensaje: 'Unexpected response from inspect' };
           },
         },
   );

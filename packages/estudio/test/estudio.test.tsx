@@ -51,26 +51,26 @@ describe('marco de la UI', () => {
   it('isla izquierda con Vistas y Codigo, isla derecha con Detalle, Issues, Temas, Historial y Agente', async () => {
     await montarEstudio({ 'main.dg': DSL });
 
-    const izquierda = await screen.findByRole('tablist', { name: 'Panel izquierdo' });
-    expect(within(izquierda).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Vistas', 'Codigo']);
-    const derecha = screen.getByRole('tablist', { name: 'Panel derecho' });
-    expect(within(derecha).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Detalle', 'Issues', 'Temas', 'Historial', 'Agente']);
-    expect(screen.getByRole('tab', { name: 'Vistas' }).getAttribute('aria-selected')).toBe('true');
+    const izquierda = await screen.findByRole('tablist', { name: 'Left panel' });
+    expect(within(izquierda).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Views', 'Code']);
+    const derecha = screen.getByRole('tablist', { name: 'Right panel' });
+    expect(within(derecha).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Details', 'Issues', 'Themes', 'Undo history', 'Agent']);
+    expect(screen.getByRole('tab', { name: 'Views' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('las islas se ocultan y se recuperan desde la pestana del borde', async () => {
     await montarEstudio({ 'main.dg': DSL });
-    await screen.findByRole('listbox', { name: 'Vistas' });
+    await screen.findByRole('listbox', { name: 'Views' });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Ocultar panel izquierdo' }));
-    expect(screen.queryByRole('listbox', { name: 'Vistas' })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Mostrar panel izquierdo' }));
-    expect(screen.getByRole('listbox', { name: 'Vistas' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Hide left panel' }));
+    expect(screen.queryByRole('listbox', { name: 'Views' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show left panel' }));
+    expect(screen.getByRole('listbox', { name: 'Views' })).toBeTruthy();
   });
 
   it('el ancho y el alto de una isla se cambian con el teclado del separador; doble clic vuelve al alto del contenido', async () => {
     await montarEstudio({ 'main.dg': DSL });
-    const ancho = await screen.findByRole('separator', { name: 'Ancho del panel izquierdo' });
+    const ancho = await screen.findByRole('separator', { name: 'Width of the left panel' });
     const antes = Number(ancho.getAttribute('aria-valuenow'));
 
     fireEvent.keyDown(ancho, { key: 'ArrowRight' });
@@ -78,20 +78,20 @@ describe('marco de la UI', () => {
     fireEvent.keyDown(ancho, { key: 'Home' });
     expect(ancho.getAttribute('aria-valuenow')).toBe(ancho.getAttribute('aria-valuemin'));
 
-    const alto = screen.getByRole('separator', { name: 'Alto del panel izquierdo' });
-    expect(alto.getAttribute('aria-valuetext')).toBe('alto del contenido');
+    const alto = screen.getByRole('separator', { name: 'Height of the left panel' });
+    expect(alto.getAttribute('aria-valuetext')).toBe('content height');
     fireEvent.keyDown(alto, { key: 'End' });
     expect(alto.getAttribute('aria-valuenow')).toBe(alto.getAttribute('aria-valuemax'));
     fireEvent.doubleClick(alto);
-    expect(alto.getAttribute('aria-valuetext')).toBe('alto del contenido');
+    expect(alto.getAttribute('aria-valuetext')).toBe('content height');
   });
 
   it('abrir Codigo ensancha la isla izquierda para que el editor no corte el texto (sin pasar del maximo)', async () => {
     await montarEstudio({ 'main.dg': DSL });
-    const ancho = await screen.findByRole('separator', { name: 'Ancho del panel izquierdo' });
+    const ancho = await screen.findByRole('separator', { name: 'Width of the left panel' });
     const antes = Number(ancho.getAttribute('aria-valuenow'));
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Codigo' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Code' }));
 
     const maximo = Number(ancho.getAttribute('aria-valuemax'));
     await waitFor(() => expect(Number(ancho.getAttribute('aria-valuenow'))).toBe(Math.min(Math.max(antes, ANCHO_DEL_EDITOR_PX), maximo)));
@@ -103,9 +103,9 @@ describe('vidrio durante un gesto', () => {
   it('mientras se arrastra o se hace zoom en el lienzo el chrome usa superficie solida (costo de backdrop-filter)', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL });
     await lienzoListo(contenedor, 'mapa');
-    const lienzo = screen.getByRole('main', { name: 'Lienzo' });
+    const lienzo = screen.getByRole('main', { name: 'Canvas' });
     // El gesto marca `data-arrastrando` en la raiz del chrome, que contiene las islas.
-    const solido = (): boolean => screen.getByRole('complementary', { name: 'Panel izquierdo' }).closest('[data-arrastrando]') !== null;
+    const solido = (): boolean => screen.getByRole('complementary', { name: 'Left panel' }).closest('[data-arrastrando]') !== null;
 
     fireEvent.pointerDown(lienzo);
     expect(solido()).toBe(true);
@@ -122,11 +122,11 @@ describe('indice de Vistas', () => {
   it('agrupa las Vistas por Tipo de diagrama, marca la activa y muestra los Enlaces', async () => {
     await montarEstudio({ 'main.dg': DSL });
 
-    const indice = await screen.findByRole('listbox', { name: 'Vistas' });
+    const indice = await screen.findByRole('listbox', { name: 'Views' });
     expect(within(indice).getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['architecture', 'flow', 'sequence']);
     expect(within(screen.getByRole('group', { name: 'architecture' })).getAllByRole('option').map((o) => o.getAttribute('aria-label'))).toEqual(['mapa', 'otra']);
     expect(opcion('mapa').getAttribute('aria-selected')).toBe('true');
-    expect(screen.getByRole('option', { name: 'mapa', description: 'enlaza a detalle; enlazada desde otra' })).toBeTruthy();
+    expect(screen.getByRole('option', { name: 'mapa', description: 'links to detalle; linked from otra' })).toBeTruthy();
   });
 
   it('elegir una Vista cambia el lienzo y la URL a #vista=<id>; atras en el navegador vuelve', async () => {
@@ -146,7 +146,7 @@ describe('indice de Vistas', () => {
 
   it('se recorre con las flechas: cada flecha abre la Vista siguiente o anterior', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL });
-    const indice = await screen.findByRole('listbox', { name: 'Vistas' });
+    const indice = await screen.findByRole('listbox', { name: 'Views' });
 
     fireEvent.keyDown(indice, { key: 'ArrowDown' });
     await waitFor(() => expect(opcion('otra').getAttribute('aria-selected')).toBe('true'));
@@ -176,14 +176,14 @@ describe('Detalle', () => {
     pulsarNodo(contenedor, 'db');
     await waitFor(() => expect(window.location.hash).toContain('s=db'));
 
-    expect(screen.getByRole('tab', { name: 'Detalle' }).getAttribute('aria-selected')).toBe('true');
-    const detalle = screen.getByRole('region', { name: 'Detalle' });
+    expect(screen.getByRole('tab', { name: 'Details' }).getAttribute('aria-selected')).toBe('true');
+    const detalle = screen.getByRole('region', { name: 'Details' });
     expect(await within(detalle).findByRole('heading', { name: 'Base de datos' })).toBeTruthy();
     expect(within(detalle).getByText('Guarda las cuentas')).toBeTruthy();
     expect(within(detalle).getByText('main.dg:7')).toBeTruthy();
-    expect(within(detalle).getByRole('list', { name: 'Aristas' }).textContent).toBe('<- api "lee"');
+    expect(within(detalle).getByRole('list', { name: 'Edges' }).textContent).toBe('<- api "lee"');
     // Desde el Detalle se salta a otra Vista que contiene el Nodo.
-    const vistas = within(detalle).getByRole('list', { name: 'Vistas del Nodo' });
+    const vistas = within(detalle).getByRole('list', { name: 'Views of the Node' });
     expect(within(vistas).getAllByRole('button').map((b) => b.textContent)).toEqual(['mapa', 'flujo', 'otra']);
     fireEvent.click(within(vistas).getByRole('button', { name: 'otra' }));
     await lienzoListo(contenedor, 'otra');
@@ -192,8 +192,8 @@ describe('Detalle', () => {
   it('sin seleccion, el Detalle lo dice', async () => {
     await montarEstudio({ 'main.dg': DSL });
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Detalle' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Details' }));
 
-    expect(within(screen.getByRole('region', { name: 'Detalle' })).getByText(/Selecciona un Nodo/)).toBeTruthy();
+    expect(within(screen.getByRole('region', { name: 'Details' })).getByText(/Select a Node/)).toBeTruthy();
   });
 });

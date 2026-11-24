@@ -298,7 +298,7 @@ describe('Workspace vivo: Gestos con la version vista', () => {
     expect((await ws.editar(pin(1, 2))).ok).toBe(true);
   });
 
-  it('una View not found, un Nodo inexistente o un archivo de --theme-path se rechazan sin escribir', async () => {
+  it('una Vista inexistente, un Nodo inexistente o un archivo de --theme-path se rechazan sin escribir', async () => {
     const [modelo, vistas] = BASE.split('\nview general');
     const puerto = puertoEnMemoria({ propios: { 'main.dg': modelo as string }, temas: { 'vistas.dg': `view general${vistas as string}` } });
     const { ws } = await abrir(puerto);
@@ -540,7 +540,7 @@ describe('Workspace vivo: confianza en el codigo', () => {
 const punto = (line: number, column: number) => ({ line, column });
 
 describe('Workspace vivo: ediciones de texto del editor', () => {
-  it('aplica las ediciones con la version vista y deja una entrada "text of <archivo>" en el Historial', async () => {
+  it('aplica las ediciones con la version vista y deja una entrada "text of <file>" en el Historial', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws } = await abrir(puerto);
     const r = await ws.editar({ ediciones: [{ file: 'main.dg', range: { start: punto(7, 30), end: punto(7, 30) }, replacement: ' "Datos"' }] }, ws.estado().version);
@@ -557,9 +557,9 @@ describe('Workspace vivo: ediciones de texto del editor', () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws } = await abrir(puerto);
     await ws.editar(pin(1, 2));
-    await ws.editar({ ediciones: [{ file: 'main.dg', range: { start: punto(1, 1), end: punto(1, 1) }, replacement: '// hola\n' }], descripcion: 'Aplicar 1 fix' });
+    await ws.editar({ ediciones: [{ file: 'main.dg', range: { start: punto(1, 1), end: punto(1, 1) }, replacement: '// hola\n' }], descripcion: 'Apply 1 fix' });
 
-    expect(ws.historial().pasado.map((e) => e.descripcion)).toEqual(['move api in general', 'Aplicar 1 fix']);
+    expect(ws.historial().pasado.map((e) => e.descripcion)).toEqual(['move api in general', 'Apply 1 fix']);
   });
 
   it('si el archivo cambio por fuera desde la version vista, rechaza con hash-desactualizado sin escribir', async () => {
@@ -742,7 +742,7 @@ describe('Workspace vivo: Diferencia', () => {
     ]);
   });
 
-  it('las ediciones de text of la UI, aun guardadas sin compilar con aunqueNoCompile, dan una sola Diferencia propia', async () => {
+  it('las ediciones de texto de la UI, aun guardadas sin compilar con aunqueNoCompile, dan una sola Diferencia propia', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws } = await abrir(puerto);
     const recibidas = recoger(ws);

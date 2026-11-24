@@ -20,8 +20,8 @@ const moverPin = async (dev: DevEnMemoria, nodo: string, x: number): Promise<voi
 };
 
 async function abrirHistorial(): Promise<HTMLElement> {
-  await abrirPestana('Historial');
-  return screen.findByRole('list', { name: 'Historial de cambios' });
+  await abrirPestana('Undo history');
+  return screen.findByRole('list', { name: 'Change history' });
 }
 
 const filas = (lista: HTMLElement): HTMLElement[] => within(lista).getAllByRole('listitem');
@@ -35,7 +35,7 @@ describe('isla de Historial', () => {
     const lista = await abrirHistorial();
 
     await waitFor(() => expect(filas(lista)).toHaveLength(3));
-    expect(filas(lista).map((f) => f.textContent)).toEqual([expect.stringMatching(/move db in mapa.*main\.dg.*(ahora|hace)/), expect.stringMatching(/move api in mapa/), expect.stringMatching(/Inicio/)]);
+    expect(filas(lista).map((f) => f.textContent)).toEqual([expect.stringMatching(/move db in mapa.*main\.dg.*(now|ago)/), expect.stringMatching(/move api in mapa/), expect.stringMatching(/Start/)]);
     expect(boton(lista, /move db in mapa/).getAttribute('aria-current')).toBe('step');
     expect(boton(lista, /move api in mapa/).getAttribute('aria-current')).toBeNull();
   });
@@ -54,7 +54,7 @@ describe('isla de Historial', () => {
     expect(filas(lista)).toHaveLength(3);
     expect(filas(lista)[0]?.getAttribute('data-futuro')).toBe('true');
 
-    fireEvent.click(boton(lista, /Inicio/));
+    fireEvent.click(boton(lista, /Start/));
     await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(DSL));
     fireEvent.click(boton(lista, /move db in mapa/));
     await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(conDos));
@@ -67,8 +67,8 @@ describe('isla de Historial', () => {
     await waitFor(() => expect(filas(lista)).toHaveLength(2));
 
     dev.editarFuera('main.dg', `${dev.workspace.texto('main.dg')}\n// fuera\n`);
-    await waitFor(() => expect(boton(lista, /Inicio/).disabled).toBe(true));
-    expect(filas(lista)[1]?.textContent).toMatch(/main\.dg.*changed outside dev/);
+    await waitFor(() => expect(boton(lista, /Start/).disabled).toBe(true));
+    expect(filas(lista)[1]?.textContent).toMatch(/main\.dg.*cambio fuera de dev/);
     expect(boton(lista, /move api in mapa/).disabled).toBe(false);
   });
 
@@ -82,14 +82,14 @@ describe('isla de Historial', () => {
     const { dev } = await montarEstudio({ 'main.dg': DSL }, { envolverFetch });
     await moverPin(dev, 'api', 10);
     const lista = await abrirHistorial();
-    fireEvent.click(await screen.findByRole('tab', { name: 'Codigo' }));
-    const caja = await screen.findByRole('textbox', { name: /^Codigo de main\.dg/ });
+    fireEvent.click(await screen.findByRole('tab', { name: 'Code' }));
+    const caja = await screen.findByRole('textbox', { name: /^Code of main\.dg/ });
     const vista = EditorView.findFromDOM(caja)!;
     await waitFor(() => expect(vista.state.doc.toString()).toBe(dev.workspace.texto('main.dg')));
 
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     vista.dispatch({ changes: { from: vista.state.doc.length, insert: '// pendiente\n' }, userEvent: 'input.type' });
-    fireEvent.click(boton(lista, /Inicio/));
+    fireEvent.click(boton(lista, /Start/));
     vi.useRealTimers();
 
     await waitFor(() => expect(posts).toEqual(['/api/edit', '/api/historial/saltar']));
