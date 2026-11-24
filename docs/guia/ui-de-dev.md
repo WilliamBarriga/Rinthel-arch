@@ -53,3 +53,7 @@ Ctrl/Cmd+K abre el Buscador: Vistas, Nodos (con su `archivo:linea`), comandos y 
 | Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z (Ctrl+Y fuera de macOS) | Deshacer, rehacer en el Historial (dentro del editor, el texto) |
 | Ctrl/Cmd+S | Guardar el texto ya |
 | Esc | Salir del editor |
+
+## Export de solo lectura
+
+`dg export --workspace <ruta> --out <archivo>.html` escribe esta misma UI en un solo archivo HTML para mandar a quien no tiene la herramienta ([CLI](cli.md#export-un-html-autocontenido-para-mandar-a-cualquiera)). Quedan el panel Vistas, la galeria de Temas (previsualizar, sin "Pin"), el lienzo con Pasos, `link` y colapso, y el Buscador con Vistas y comandos; no estan Codigo, Detalle, Issues, Historial ni Agente, ni los atajos que escriben. La barra muestra "Read-only".

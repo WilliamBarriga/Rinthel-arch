@@ -12,7 +12,8 @@ import { PildoraDelBuscador } from '../comandos/pildora-del-buscador';
 import { useGestoEnLienzo } from '../lienzo/gesto';
 import { useEstudio } from './contexto';
 import { IslaLateral } from './isla';
-import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS, PILDORAS_DE_LA_BARRA } from './pestanas';
+import { disponiblesEn } from './modo';
+import { PILDORAS_DE_LA_BARRA } from './pestanas';
 import { useChrome } from './proveedores';
 
 const Buscador = lazy(() => import('../comandos/buscador').then((m) => ({ default: m.Buscador })));
@@ -26,8 +27,8 @@ interface PropsDelMarco {
 }
 
 export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElement {
-  const { motivoSinGestos } = useEstudio();
-  const { islas, pestanas, elegirPestana, dialogo, cargados, cerrarDialogo, aviso, alMontarPortales } = useChrome();
+  const { motivoSinGestos, modo } = useEstudio();
+  const { islas, disponibles, pestanas, elegirPestana, dialogo, cargados, cerrarDialogo, aviso, alMontarPortales } = useChrome();
   const gesto = useGestoEnLienzo();
   const solido = islas.izquierda.arrastrando || islas.derecha.arrastrando || gesto.enGesto;
 
@@ -38,6 +39,7 @@ export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElem
       </main>
       <header className="ui-barra">
         <span className="ui-pildora ui-marca">rinthel-arch</span>
+        {modo === 'export' && <span className="ui-pildora ui-tenue">Read-only</span>}
         {navegacion !== undefined && (
           <div className="ui-pildora ui-migas">
             <Migas navegacion={navegacion} />
@@ -49,14 +51,14 @@ export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElem
             {motivoSinGestos}
           </div>
         )}
-        {PILDORAS_DE_LA_BARRA.map(({ id, Contenido }) => (
+        {disponiblesEn(PILDORAS_DE_LA_BARRA, modo).map(({ id, Contenido }) => (
           <div key={id} className="ui-pildora">
             <Contenido />
           </div>
         ))}
       </header>
-      <IslaLateral lado="izquierda" id="ui-isla-izquierda" nombre="left panel" isla={islas.izquierda} pestanas={PESTANAS_IZQUIERDAS} activa={pestanas.izquierda} alCambiarPestana={(p) => elegirPestana('izquierda', p)} />
-      <IslaLateral lado="derecha" id="ui-isla-derecha" nombre="right panel" isla={islas.derecha} pestanas={PESTANAS_DERECHAS} activa={pestanas.derecha} alCambiarPestana={(p) => elegirPestana('derecha', p)} />
+      <IslaLateral lado="izquierda" id="ui-isla-izquierda" nombre="left panel" isla={islas.izquierda} pestanas={disponibles.izquierda} activa={pestanas.izquierda} alCambiarPestana={(p) => elegirPestana('izquierda', p)} />
+      <IslaLateral lado="derecha" id="ui-isla-derecha" nombre="right panel" isla={islas.derecha} pestanas={disponibles.derecha} activa={pestanas.derecha} alCambiarPestana={(p) => elegirPestana('derecha', p)} />
       {leyenda}
       {aviso !== undefined && (
         <div className="ui-toasts">

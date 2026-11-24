@@ -14,6 +14,7 @@ import type { Escribir } from '../escritura/escritura';
 import type { Plataforma } from '../comandos/teclas';
 import type { SitioDeCodigo } from '../sitio';
 import type { LadoDeIsla } from './limites';
+import type { ModoDelEstudio } from './modo';
 
 export interface ContextoDelEstudio {
   /** `undefined` hasta que llega el primer estado. */
@@ -55,6 +56,8 @@ export interface ContextoDelEstudio {
   plataforma: Plataforma;
   /** Nodo dentro de `.ui-chrome` para los portales de Base UI (`container`), con los tokens del chrome. */
   portales: HTMLElement | null;
+  /** `export`: read-only Dev UI written by `diagrams export` (`modo.ts`); `dev` otherwise. */
+  modo: ModoDelEstudio;
 }
 
 export type DialogoDelEstudio = 'buscador' | 'ayuda';

@@ -109,6 +109,18 @@ Lee la codebase de `<raiz>` (la carpeta actual por defecto) sin ejecutar nada y 
 
 Cada item lleva `source {file, line}` (linea 0: la carpeta misma) y `confidence` (`extracted` o `inferred`). Respeta los `.gitignore` y siempre salta `node_modules`, `dist`, `build`, `.venv`, `venv`, `vendor`, `third_party`, `__pycache__`, `.git`, `.rinthel` y `.diagrams`. Con el mismo commit, el Borrador es identico byte a byte. stdout es un resumen compacto que termina con el siguiente paso; con `--json`, ese resumen como un objeto con su propio `contractVersion` (`draft`, `schema`, `commit`, `counts`, `limits` y las 15 primeras `units`, `dependencies` y `externals`). Sale 0 si escribio el Borrador y 2 en un fallo de uso.
 
+### `export`: un HTML autocontenido para mandar a cualquiera
+
+```
+dg export --workspace <ruta> --out <archivo>.html [--theme-path <dir>]
+```
+
+Escribe la [UI de dev](ui-de-dev.md) del Workspace como **un solo archivo HTML de solo lectura**: se abre con doble clic (`file://`) o desde cualquier servidor estatico, sin pedir nada a la red. Funcionan el indice de Vistas, los Pasos, los `link` (drill-down), el colapso de Grupos, la Seleccion, el Buscador (Vistas y comandos) y la galeria de Temas para previsualizar otro Tema; no estan el editor, Issues, Detalle, Historial, el feed del agente, las Diferencias ni nada que escriba (arrastrar Nodos, fijar Tema, `fix`). La barra lo marca con "Read-only".
+
+- **Dentro del archivo**: la pagina, el motor de layout (ELK, en un Worker que arranca desde un Blob o, si el navegador no deja crearlo, en el hilo principal) y las fuentes de los Temas (del Workspace y de `--theme-path`). El ejemplo `examples/rinthel-arch` (33 Vistas, 15 Temas) pesa unos 5 MB, 2.1 MB con gzip.
+- **Temas con codigo (`.tsx`)**: van dentro y corren en el navegador de quien abra el archivo, sin confirmacion; el comando lo avisa en stdout.
+- No escribe nada junto al Workspace. Sale 0 si escribio el archivo, 1 si el Workspace tiene errores (los lista y no escribe) y 2 en un fallo de uso.
+
 ## Bucle de trabajo
 
 ```
