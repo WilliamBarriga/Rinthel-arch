@@ -63,9 +63,44 @@ const pyproject: ManifestReader = {
   read(text) {
     const sections = tomlSections(text);
     const name = sections.get('project')?.get('name') ?? sections.get('tool.poetry')?.get('name');
-    return { ...(name !== undefined && { name }), kind: 'package', declares: [], readable: true };
+    return { ...(name !== undefined && { name }), kind: 'package', declares: pyprojectDeclares(text), readable: true };
   },
 };
+
+/** Canonical package name: PEP 503 for `pypi` (case-insensitive, runs of `-_.` equal), unchanged elsewhere. */
+export function normalizePackage(ecosystem: string, name: string): string {
+  return ecosystem === 'pypi' ? name.toLowerCase().replace(/[-_.]+/g, '-') : name;
+}
+
+/** `project.dependencies` and optional-dependencies arrays (PEP 508 strings), plus Poetry's dependency tables. */
+function pyprojectDeclares(text: string): string[] {
+  const names: string[] = [];
+  let section = '';
+  let inArray = false;
+  for (const line of text.split('\n')) {
+    const header = /^\s*\[\[?\s*([^\]]+?)\s*\]\]?\s*(?:#.*)?$/.exec(line);
+    if (!inArray && header !== null) {
+      section = header[1] as string;
+      continue;
+    }
+    const wanted = section === 'project' || section === 'project.optional-dependencies';
+    const start = /^\s*(?:dependencies|[\w.-]+)\s*=\s*\[(.*)$/.exec(line);
+    if (wanted && !inArray && start !== null && (section === 'project.optional-dependencies' || /^\s*dependencies\b/.test(line))) {
+      inArray = true;
+      collect(start[1] as string);
+    } else if (inArray) collect(line);
+    if (inArray && line.includes(']')) inArray = false;
+    if (/^tool\.poetry\.(?:group\.[\w-]+\.)?(?:dev-)?dependencies$/.test(section)) {
+      const key = /^\s*([A-Za-z0-9][A-Za-z0-9._-]*)\s*=/.exec(line)?.[1];
+      if (key !== undefined && key.toLowerCase() !== 'python') names.push(key);
+    }
+  }
+  return names;
+
+  function collect(fragment: string): void {
+    for (const match of fragment.replace(/#.*/, '').matchAll(/["']\s*([A-Za-z0-9][A-Za-z0-9._-]*)/g)) names.push(match[1] as string);
+  }
+}
 
 const goMod: ManifestReader = {
   file: 'go.mod',
