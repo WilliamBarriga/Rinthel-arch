@@ -10,6 +10,7 @@ import type { Navegacion } from 'shell';
 
 import { PildoraDelBuscador } from '../comandos/pildora-del-buscador';
 import { useGestoEnLienzo } from '../lienzo/gesto';
+import { PrototipoTour } from '../prototipo-tour/prototipo-tour';
 import { useEstudio } from './contexto';
 import { IslaLateral } from './isla';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS, PILDORAS_DE_LA_BARRA } from './pestanas';
@@ -71,6 +72,8 @@ export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElem
         {cargados.has('ayuda') && <Ayuda abierto={dialogo === 'ayuda'} alCambiar={cerrarDialogo} />}
       </Suspense>
       <div className="ui-portales" ref={alMontarPortales} />
+      {/* PROTOTIPO DESECHABLE (#224): tour Empieza aqui, solo con ?tour=A|B|C. No va a main. */}
+      <PrototipoTour />
     </div>
   );
 }
