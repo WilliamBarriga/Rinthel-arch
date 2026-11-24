@@ -73,6 +73,7 @@ view compra { type sequence interaction compra order cliente, api autonumber }
 | `er-cardinality` | Solo `0..1`, `1`, `0..*`, `1..*` en Vista `er`; aplica el `fix` |
 | `old-catalog-value` | Nombre antiguo (espanol) de un Movimiento, efecto, estado o Tema incorporado; aplica el `fix` |
 | `duplicate-key-mark` | Aplica el `fix` (borra la marca repetida) |
+| `old-workspace-convention` | Renombra el archivo o carpeta a la ruta de `fix.rename` (`theme.dg`, `themes/`, `fonts/`) y revalida |
 | `reply-without-sync`, `order-not-in-interaction`, `ref-without-view` | Avisos: revisa el orden de los Mensajes, el `order` o agrega la Vista de la Interaccion referida |
 
 La lista completa de codigos sale de `dg skill --workspace <ruta>`.

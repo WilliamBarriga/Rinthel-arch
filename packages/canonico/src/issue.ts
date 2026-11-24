@@ -26,11 +26,15 @@ export interface IssueRelated {
   message: string;
 }
 
-/** Edicion estructurada sobre el DSL de texto; nunca sobre el JSON canonico. */
+/**
+ * Edicion estructurada sobre el DSL de texto; nunca sobre el JSON canonico. Con `rename`, el `fix` renombra
+ * `file` (archivo o carpeta del Workspace) a esa ruta; `range` y `replacement` son entonces una edicion vacia.
+ */
 export interface IssueFix {
   file: string;
   range: TextRange;
   replacement: string;
+  rename?: string;
 }
 
 /** `code` es un string abierto: un consumidor ignora los codigos que no conoce y un codigo deprecado sigue siendo representable. */

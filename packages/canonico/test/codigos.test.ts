@@ -65,6 +65,7 @@ const codigosDeV1 = [
   'duplicate-key-mark',
   'er-cardinality',
   'old-catalog-value',
+  'old-workspace-convention',
 ];
 
 describe('catalogo de codigos de issue', () => {

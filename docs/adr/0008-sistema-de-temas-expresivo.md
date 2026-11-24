@@ -127,7 +127,7 @@ Se conserva del ADR 0006 el principio de que layout y render leen las mismas Met
 
 ## Temas de ejemplo y Tema por defecto
 
-- Los 14 Temas del prototipo (`soft-card`, `glass-chip`, `neobrutalist`, `blueprint`, `crt-terminal`, `synthwave`, `editorial`, `bauhaus`, `sticky-notes`, `keycaps`, `metro-map`, `pcb`, `pixel-art` y el claro suave) viven en `examples/rinthel-arch/temas/`, un `.dg` cada uno, con un Workspace de galeria (`examples/temas/galeria/`, que los toma con `--theme-path`) y un Modelo propio y agnostico que cubre todos los Tipos, Grupo abierto y colapsado, Aristas con y sin etiqueta y un Nodo por estado. Cubren las once familias. Los ejemplos que necesitan fuente propia incluyen el archivo OFL en `examples/rinthel-arch/temas/fuentes/`; nada de CDN.
+- Los 14 Temas del prototipo (`soft-card`, `glass-chip`, `neobrutalist`, `blueprint`, `crt-terminal`, `synthwave`, `editorial`, `bauhaus`, `sticky-notes`, `keycaps`, `metro-map`, `pcb`, `pixel-art` y el claro suave) viven en `examples/rinthel-arch/themes/`, un `.dg` cada uno, con un Workspace de galeria (`examples/temas/galeria/`, que los toma con `--theme-path`) y un Modelo propio y agnostico que cubre todos los Tipos, Grupo abierto y colapsado, Aristas con y sin etiqueta y un Nodo por estado. Cubren las once familias. Los ejemplos que necesitan fuente propia incluyen el archivo OFL en `examples/rinthel-arch/themes/fonts/`; nada de CDN.
 - Tema por defecto: **`neutral`**, incorporado en el nucleo, claro, escrito en el mismo DSL que cualquier Tema como modelo de referencia, con fuentes del sistema, sin Capas `code`, solo Primitivas simples (sin vidrio ni mano alzada), animacion minima (`hover`, `on-path`) y cero warnings. Lo acompanan `neutral-dark` (un Tema es un solo modo) y `high-contrast`: tres incorporados. Una Vista sin Tema usa `neutral`.
 - Aceptacion: todo ejemplo valida sin errores; los tres incorporados, sin warnings; los demas pueden conservar warnings de contraste deliberados, listados en un comentario al inicio del archivo, sin sintaxis de supresion. Las pruebas son estructurales (cargan, resuelven, validan; Estilo resuelto determinista; Metricas solo cambian con la clave de estructura), sin capturas de pixeles; la revision visual la hace una persona en la galeria.
 
@@ -143,6 +143,10 @@ Se conserva del ADR 0006 el principio de que layout y render leen las mismas Met
 - **Language**: user-facing guide prose is bilingual (English primary, Spanish secondary, each guide paired with its translation). Every message an agent or user reads from the CLI (`validate` and `fix` messages, errors, `--help`) is in English, using the English canonical terms of `CONTEXT.md`. The DSL keywords were already English.
 - **`planned` Theme state**: a new paint-only state, like `fantasma`; it never changes Metrics. The default Theme draws it with a dashed border and low opacity, any Theme may restyle it, and without its own patch it inherits the default Theme's. Mark semantics live in ADR 0011.
 - **Export is no longer out of scope**: the statement "static SVG, PNG and export in general are out" in "Render hibrido" is superseded. A self-contained static HTML export of a Workspace is part of the map; PNG and static SVG remain out, and there is still no per-Primitive exportability mark.
+
+## English catalog names (spec #226)
+
+- **Catalog values in English, no aliases**: Motions `stream`, `pulse`, `breathe`, `spin` (and `aura`); effects `fade`, `slide`, `zoom`; states `selected`, `dimmed`, `focus`, `ghost`, `on-path`; built-in Theme `high-contrast` and gallery Theme `soft-light`. An old Spanish name (`flujo`, `pulso`, `respiracion`, `giro`, `fundido`, `deslizar`, `escala`, `seleccionado`, `atenuado`, `foco`, `fantasma`, `en-ruta`, `high-contrast`, `claro-suave`) is an `error` Issue `old-catalog-value` whose `fix` rewrites it. The old-to-new table is `packages/canonico/src/nombres-antiguos.ts`.
 
 ## English catalog names (spec #226)
 

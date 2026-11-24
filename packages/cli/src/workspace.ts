@@ -43,6 +43,11 @@ export function leerWorkspace(raiz: string): ArchivosDelWorkspace {
   return recorrer(raiz, (nombre) => nombre.endsWith(EXTENSION) || nombre.endsWith('.svg'), (ruta) => readFileSync(ruta, 'utf8'));
 }
 
+/** Rutas relativas con `/` de todos los archivos bajo `raiz` (para revisar las convenciones de nombres). */
+export function leerRutas(raiz: string): string[] {
+  return Object.keys(recorrer(raiz, () => true, () => ''));
+}
+
 const EXTENSIONES_DE_RECURSO = ['.tsx', '.ttf', '.otf', '.woff', '.woff2'];
 
 /**

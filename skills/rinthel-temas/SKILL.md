@@ -9,7 +9,7 @@ La estetica vive en el **Tema** (texto `.dg`), nunca en el Modelo: cambiar `them
 
 ## Bucle
 
-1. **Partir de un Tema existente**: elige el ejemplo mas cercano en `examples/rinthel-arch/temas/` (`synthwave` neon, `glass-chip` vidrio, `blueprint` plano, `pcb` circuito, `pixel-art`...) o extiende un incorporado con `theme mio extends neutral-dark { ... }` y escribe solo lo que cambia.
+1. **Partir de un Tema existente**: elige el ejemplo mas cercano en `examples/rinthel-arch/themes/` (`synthwave` neon, `glass-chip` vidrio, `blueprint` plano, `pcb` circuito, `pixel-art`...) o extiende un incorporado con `theme mio extends neutral-dark { ... }` y escribe solo lo que cambia.
 2. **Saber que parche editar**: `dg inspect theme <nombre> --workspace <ruta> --kind <tipo> --state <estado> --diagram <tipo>` muestra la pila de Capas con el `archivo:linea` de cada parche. Edita ese parche.
 3. **Editar** con el vocabulario cerrado del catalogo: `docs/referencia-catalogo.md` (Primitivas, Slots, Movimientos, Efectos con rangos). Un nombre fuera del catalogo es un error; `validate` propone el parecido.
 4. **Validar**: `dg validate --workspace <ruta> --json` hasta `ok: true`. Corrige contraste (`theme-low-contrast`) y `theme-color-only`; si la estetica los exige, dejalo dicho en un comentario en la primera linea del archivo (`// Contraste: <tipos>`, como los Temas de ejemplo): el aviso sigue saliendo, asi que ese Tema no pasa `--strict`.
@@ -59,7 +59,7 @@ view compra { type sequence interaction compra theme mio }
 
 - El hex solo existe en `palette`; en todo lo demas un color es un nombre de Paleta, con `nombre/0.4` para opacidad, o `COLOR` (color del Tipo del Nodo) y `ORIGEN` (en Aristas).
 - La cascada, donde gana el ultimo: Tema base, Tipo de nodo, estado, parche de la Vista. Los estados (`hover`, `selected`, `ghost`, `on-path`, `dimmed`, `focus`) solo cambian pintura: tamano y Slots quedan fijos. Un nombre antiguo (espanol) de un valor de catalogo es el error `old-catalog-value` y su `fix` lo reescribe: aplicalo con `edit`.
-- Fuentes autohospedadas: archivos `woff2` o `ttf` en `fuentes/` del Workspace, nombrados en `fonts`. Licencia junto al archivo (ejemplos en `examples/rinthel-arch/temas/fuentes/`).
+- Fuentes autohospedadas: archivos `woff2` o `ttf` en `fonts/` del Workspace, nombrados en `fonts`. Licencia junto al archivo (ejemplos en `examples/rinthel-arch/themes/fonts/`).
 - Ajuste solo para una Vista: `theme <nombre> { layer borde { color amber } }` dentro de la `view`.
 - Cambiar el Tema de una Vista sin tocar su parche: `dg edit --workspace <ruta> --intent '{"type":"set-theme","view":"<id>","theme":"<nombre>"}'` (sin `theme` lo quita). En `dev`, la pestana Temas previsualiza y fija.
 - Parte reutilizable: `part <nombre> { ... }` y `use <nombre>` en un parche; el nombre es unico en el Workspace.
@@ -70,4 +70,4 @@ view compra { type sequence interaction compra theme mio }
 
 - Tutorial de Temas con ejemplos: `docs/guia/personalizar-temas.md`.
 - Contrato y razones: `docs/adr/0008-sistema-de-temas-expresivo.md`.
-- Un Tema de ejemplo nuevo o modificado: `pnpm docs:capturas` regenera `docs/img/`; `examples/rinthel-arch/temas/` es la unica copia (la galeria la toma con `--theme-path`); no dupliques Temas ni fuentes.
+- Un Tema de ejemplo nuevo o modificado: `pnpm docs:capturas` regenera `docs/img/`; `examples/rinthel-arch/themes/` es la unica copia (la galeria la toma con `--theme-path`); no dupliques Temas ni fuentes.

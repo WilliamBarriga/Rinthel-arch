@@ -11,9 +11,9 @@ Workspace de ejemplo en el que el sistema se documenta a si mismo: paquetes del 
 | `conexiones.dg` | Dependencias entre paquetes (de `package.json`) y entre modulos: dentro de un paquete, todos los imports; entre paquetes, solo las costuras que explican el mapa. Mas el flujo de datos con actores, servidor dev, SSE y Worker. Las Aristas solo se declaran en `model`, con ids cualificados |
 | `vistas.dg` | Vista de paquetes con drill-down a cada paquete, la Vista `abierto` (render y layout abiertos; la Vista `abierto` del prototipo aprobado), un detalle por paquete (`*-detalle`, incluido `estudio-detalle`) y cinco Vistas de flujo con Pasos: `flujo-edicion` (arrastrar un Nodo en la UI de dev), `flujo-validate`, `flujo-dev`, `flujo-agente` (del comando al panel Agente) y `flujo-tema` |
 | `fuente-canonica.dg` | La Fuente canonica como esquema ER (Vista `fuente-er`, con Pasos) y dos Interacciones con Vista de secuencia: `editar-pin` (del arrastre a la Escritura, `/api/edit` y el Workspace vivo, con el 409; Fragmento `alt`, `ref`, Notas, Pasos y `link` a `sesion-detalle`, `shell-detalle` y `estudio-detalle`) y `recompilar` (Sesion, Diferencia y clasificacion del cambio) |
-| `temas/` | Los Temas aprobados y, en `temas/fuentes/`, sus familias en `woff2` con licencias `OFL-<familia>.txt`. Es la unica copia: la galeria los usa con `--theme-path` |
+| `themes/` | Los Temas aprobados y, en `themes/fonts/`, sus familias en `woff2` con licencias `OFL-<familia>.txt`. Es la unica copia: la galeria los usa con `--theme-path` |
 | `vistas-temas.dg` | Una Vista `abierto-<tema>` por Tema: el mismo diagrama de la Vista `abierto` con cada estetica. Sus capturas estan en la [galeria](../../docs/galeria.md) |
-| `fuentes/` | DejaVu Sans y Mono (licencia en `LICENCIA-DejaVu.txt`) |
+| `fonts/` | DejaVu Sans y Mono (licencia en `LICENCIA-DejaVu.txt`) |
 
 ## Uso
 

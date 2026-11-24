@@ -39,11 +39,11 @@ model {
 
   dominio estados "Estados" {
     nota hover "hover"
-    nota seleccionado "seleccionado"
-    nota fantasma "fantasma"
-    nota en-ruta "en-ruta"
-    nota atenuado "atenuado"
-    nota foco "foco"
+    nota selected "selected"
+    nota ghost "ghost"
+    nota on-path "on-path"
+    nota dimmed "dimmed"
+    nota focus "focus"
   }
 
   dominio datos "Datos" {
@@ -89,9 +89,9 @@ model {
   plataforma.pagos -> proveedor "API"
   plataforma.pedidos -> persistencia.base "guarda"
   plataforma.eventos -> persistencia.cache
-  estados.hover -> estados.seleccionado
-  estados.seleccionado -> estados.fantasma
-  estados.fantasma -> estados.en-ruta
-  estados.en-ruta -> estados.atenuado
-  estados.atenuado -> estados.foco
+  estados.hover -> estados.selected
+  estados.selected -> estados.ghost
+  estados.ghost -> estados.on-path
+  estados.on-path -> estados.dimmed
+  estados.dimmed -> estados.focus
 }

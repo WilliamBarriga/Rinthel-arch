@@ -1,9 +1,9 @@
 # Galeria de Temas de ejemplo
 
-Los Temas del prototipo hibrido (ADR 0008) como un Workspace: los Temas viven en `examples/rinthel-arch/temas/` (una sola copia, que la galeria toma con `--theme-path`), un Modelo comun (`modelo.dg`) y una Vista por Tema (`vistas.dg`). Todo lo que cambia entre Vistas sale del Tema.
+Los Temas del prototipo hibrido (ADR 0008) como un Workspace: los Temas viven en `examples/rinthel-arch/themes/` (una sola copia, que la galeria toma con `--theme-path`), un Modelo comun (`modelo.dg`) y una Vista por Tema (`vistas.dg`). Todo lo que cambia entre Vistas sale del Tema.
 
 ```
-node packages/cli/dist/bin.js dev --workspace examples/temas/galeria --theme-path examples/rinthel-arch/temas
+node packages/cli/dist/bin.js dev --workspace examples/temas/galeria --theme-path examples/rinthel-arch/themes
 ```
 
 Cambia de Vista para comparar. Cada Tema tiene tambien una Vista de secuencia (`<tema>-secuencia`, la Interaccion `cobro` con Fragmento y Nota) y una ER (`<tema>-er`, las tablas del Grupo `datos`); las Vistas de arquitectura excluyen `datos`. El Modelo cubre todos los Tipos, un Grupo abierto (`plataforma`) y uno colapsado (`persistencia`), Aristas con y sin etiqueta, Atributos y un Nodo por estado (grupo `estados`: pasa el raton, selecciona, navega con teclado).
@@ -32,7 +32,7 @@ Temas: `soft-card`, `glass-chip`, `neobrutalist`, `blueprint`, `soft-light`, `cr
 
 ## Fuentes
 
-`examples/rinthel-arch/temas/fuentes/` trae, en `woff2`, todas las familias que usa el prototipo en todos los Temas, auto-hospedadas y sin CDN (ADR 0008): Caveat (400, 500, 700), Press Start 2P (400), JetBrains Mono (400, 700), Space Mono (400, 700), Outfit (400, 700), Nunito (600, 800) e Inter (400, 500, 600, 800), mas Gelasio (400, 400 cursiva, 600, 700) en lugar de Georgia. Georgia es una fuente del sistema con licencia propietaria que no se puede incluir; Gelasio (de Eben Sorkin) es su sustituta libre con metricas compatibles, y es la que usa `editorial`. Futura, Helvetica, SF Pro y los demas del prototipo son fuentes del sistema: un Tema las expresa con una familia generica (`serif`, `sans-serif`...) o con `fallback`.
+`examples/rinthel-arch/themes/fonts/` trae, en `woff2`, todas las familias que usa el prototipo en todos los Temas, auto-hospedadas y sin CDN (ADR 0008): Caveat (400, 500, 700), Press Start 2P (400), JetBrains Mono (400, 700), Space Mono (400, 700), Outfit (400, 700), Nunito (600, 800) e Inter (400, 500, 600, 800), mas Gelasio (400, 400 cursiva, 600, 700) en lugar de Georgia. Georgia es una fuente del sistema con licencia propietaria que no se puede incluir; Gelasio (de Eben Sorkin) es su sustituta libre con metricas compatibles, y es la que usa `editorial`. Futura, Helvetica, SF Pro y los demas del prototipo son fuentes del sistema: un Tema las expresa con una familia generica (`serif`, `sans-serif`...) o con `fallback`.
 
 Origen: archivos `latin` de [Fontsource](https://fontsource.org) 5.3.0 (`@fontsource/<familia>`, licencia OFL-1.1), tal cual, sin subsetear ni renombrar la fuente; descargados el 2026-10-23 (Gelasio, el 2026-10-24) de `https://cdn.jsdelivr.net/fontsource/fonts/<familia>@latest/latin-<peso>-normal.woff2`, que sirve los mismos archivos del paquete npm. Cada familia trae su licencia, copiada de `@fontsource/<familia>/LICENSE`, en `OFL-<familia>.txt` (copyright de sus autores: Caveat, Press Start 2P, JetBrains Mono, Space Mono, Outfit, Nunito, Inter, Gelasio). Repos de los autores: [googlefonts/caveat](https://github.com/googlefonts/caveat), [JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono), [googlefonts/spacemono](https://github.com/googlefonts/spacemono), [Outfitio/Outfit-Fonts](https://github.com/Outfitio/Outfit-Fonts), [googlefonts/nunito](https://github.com/googlefonts/nunito), [rsms/inter](https://github.com/rsms/inter), [SorkinType/Gelasio](https://github.com/SorkinType/Gelasio); Press Start 2P es de Cody "CodeMan38" Boisclair (Reserved Font Name "Press Start 2P").
 
