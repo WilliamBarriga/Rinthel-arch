@@ -42,7 +42,7 @@ export function PanelDelHistorial(): ReactElement {
   }, []);
   useEffect(() => setAhora(Date.now()), [historial]);
 
-  if (historial === undefined) return <p className="ui-tenue">Esperando el Historial de dev.</p>;
+  if (historial === undefined) return <p className="ui-tenue">Waiting for the dev Undo history.</p>;
   const { pasado, futuro, inicio } = historial;
   const ultima = pasado[pasado.length - 1];
   const filas: Fila[] = [
@@ -55,9 +55,9 @@ export function PanelDelHistorial(): ReactElement {
   };
 
   return (
-    <section aria-label="Historial" className="ui-historial">
-      {pasado.length === 0 && futuro.length === 0 && <p className="ui-tenue">Sin cambios todavia. Cada Gesto, guardado o fix sera una entrada.</p>}
-      <ol className="ui-historial-lista" aria-label="Historial de cambios">
+    <section aria-label="Undo history" className="ui-historial">
+      {pasado.length === 0 && futuro.length === 0 && <p className="ui-tenue">No changes yet. Every Gesture, save or fix will be an entry.</p>}
+      <ol className="ui-historial-lista" aria-label="Change history">
         {filas.map((fila) => (
           <FilaDelHistorial key={fila.id} fila={fila} ahora={ahora} alSaltar={saltar} />
         ))}
@@ -83,7 +83,7 @@ function FilaDelHistorial({ fila, ahora, alSaltar }: { fila: Fila; ahora: number
           {fila.actual ? '●' : '○'}
         </span>
         {entrada === undefined ? (
-          <span className="ui-historial-descripcion">Inicio</span>
+          <span className="ui-historial-descripcion">Start</span>
         ) : (
           <>
             <span className="ui-historial-descripcion">{entrada.descripcion}</span>

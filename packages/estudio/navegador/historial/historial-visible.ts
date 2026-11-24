@@ -19,12 +19,12 @@ export const historialDelCliente = almacenPorCliente((cliente): AlmacenDelHistor
 
 export const useHistorialVisible = (cliente: ClienteQueEscucha): HistorialDeDev | undefined => useObservable(historialDelCliente(cliente));
 
-/** "ahora", "hace 12 s", "hace 3 min", "hace 2 h" o "hace 4 d"; `cuando` y `ahora` en ms. */
+/** "now", "12 s ago", "3 min ago", "2 h ago" or "4 d ago"; `cuando` y `ahora` en ms. */
 export function horaRelativa(cuando: number, ahora: number): string {
   const s = Math.max(0, Math.floor((ahora - cuando) / 1000));
-  if (s < 5) return 'ahora';
-  if (s < 60) return `hace ${s} s`;
-  if (s < 3600) return `hace ${Math.floor(s / 60)} min`;
-  if (s < 86_400) return `hace ${Math.floor(s / 3600)} h`;
-  return `hace ${Math.floor(s / 86_400)} d`;
+  if (s < 5) return 'now';
+  if (s < 60) return `${s} s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86_400) return `${Math.floor(s / 3600)} h ago`;
+  return `${Math.floor(s / 86_400)} d ago`;
 }

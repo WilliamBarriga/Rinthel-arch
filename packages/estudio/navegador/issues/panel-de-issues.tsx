@@ -31,7 +31,7 @@ const fixesVisibles =
   (filtro: FiltroDeIssues): EleccionDeFix =>
   (estado) => {
     const fixes = visibles(estado.issues, filtro).flatMap((i) => (i.fix === undefined ? [] : [i.fix]));
-    return { fixes, descripcion: `Aplicar ${fixes.length} fix` };
+    return { fixes, descripcion: `Apply ${fixes.length} fix` };
   };
 
 export function PanelDeIssues(): ReactElement {
@@ -39,7 +39,7 @@ export function PanelDeIssues(): ReactElement {
   const issues = estudio.estado?.issues ?? [];
   const [filtro, setFiltro] = useState<FiltroDeIssues>({ texto: '', severidad: 'todas' });
   const [aplicando, setAplicando] = useState(false);
-  if (issues.length === 0) return <p className="ui-tenue">Sin issues.</p>;
+  if (issues.length === 0) return <p className="ui-tenue">No issues.</p>;
 
   const lista = visibles(issues, filtro);
   const conFix = lista.filter((i) => i.fix !== undefined).length;
@@ -51,14 +51,14 @@ export function PanelDeIssues(): ReactElement {
   return (
     <div className="ui-panel-issues">
       <div className="ui-filtro-issues">
-        <input type="search" aria-label="Filtrar issues" placeholder="Filtrar" value={filtro.texto} onChange={(e) => setFiltro((f) => ({ ...f, texto: e.target.value }))} />
-        <select aria-label="Severidad" value={filtro.severidad} onChange={(e) => setFiltro((f) => ({ ...f, severidad: e.target.value as Severidad }))}>
-          <option value="todas">Todas</option>
-          <option value="error">Errores</option>
-          <option value="warning">Avisos</option>
+        <input type="search" aria-label="Filter issues" placeholder="Filter" value={filtro.texto} onChange={(e) => setFiltro((f) => ({ ...f, texto: e.target.value }))} />
+        <select aria-label="Severity" value={filtro.severidad} onChange={(e) => setFiltro((f) => ({ ...f, severidad: e.target.value as Severidad }))}>
+          <option value="todas">All</option>
+          <option value="error">Errors</option>
+          <option value="warning">Warnings</option>
         </select>
         <button type="button" className="ui-boton" disabled={aplicando || conFix === 0} onClick={() => aplicar(fixesVisibles(filtro))}>
-          {`Aplicar ${conFix} fix`}
+          {`Apply ${conFix} fix`}
         </button>
       </div>
       <ul aria-label="Issues" className="ui-lista ui-issues">
@@ -71,8 +71,8 @@ export function PanelDeIssues(): ReactElement {
               </button>{' '}
               <span className="ui-mono">{issue.code}</span> {issue.message}
               {issue.fix !== undefined && (
-                <button type="button" className="ui-boton" aria-label={`Aplicar fix de ${sitio}`} disabled={aplicando} onClick={() => aplicar(fixDelIssue(issue))}>
-                  Aplicar fix
+                <button type="button" className="ui-boton" aria-label={`Apply fix for ${sitio}`} disabled={aplicando} onClick={() => aplicar(fixDelIssue(issue))}>
+                  Apply fix
                 </button>
               )}
             </li>

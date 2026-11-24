@@ -57,12 +57,12 @@ describe('seguir al agente: destino de un objetivo', () => {
 });
 
 describe('linea del feed', () => {
-  it('marca ok, errores, avisos o fallo de uso', () => {
+  it('marks ok, errors, warnings or usage failure', () => {
     expect(marcaDelEvento(evento())).toEqual({ tipo: 'ok', texto: 'ok' });
-    expect(marcaDelEvento(evento({ comando: 'validate', exitCode: 1, resumen: { errores: 3, avisos: 1 } }))).toEqual({ tipo: 'errores', texto: '3 errores' });
+    expect(marcaDelEvento(evento({ comando: 'validate', exitCode: 1, resumen: { errores: 3, avisos: 1 } }))).toEqual({ tipo: 'errores', texto: '3 errors' });
     expect(marcaDelEvento(evento({ exitCode: 1 }))).toEqual({ tipo: 'errores', texto: 'error' });
-    expect(marcaDelEvento(evento({ comando: 'build', resumen: { errores: 0, avisos: 1 } }))).toEqual({ tipo: 'avisos', texto: '1 aviso' });
-    expect(marcaDelEvento(evento({ exitCode: 2 }))).toEqual({ tipo: 'fallo', texto: 'fallo de uso' });
+    expect(marcaDelEvento(evento({ comando: 'build', resumen: { errores: 0, avisos: 1 } }))).toEqual({ tipo: 'avisos', texto: '1 warning' });
+    expect(marcaDelEvento(evento({ exitCode: 2 }))).toEqual({ tipo: 'fallo', texto: 'usage failure' });
   });
 
   it('resume quien, comando y objetivo en una linea', () => {

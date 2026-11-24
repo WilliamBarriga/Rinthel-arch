@@ -28,7 +28,7 @@ export function diagnosticosDe(doc: Text, file: string, issues: readonly IssueDe
         severity: issue.severity,
         message: issue.hint === undefined ? issue.message : `${issue.message} (${issue.hint})`,
         source: issue.code,
-        ...(fix !== undefined && { actions: [{ name: 'Aplicar fix', apply: () => aplicarFix(fix, issue) }] }),
+        ...(fix !== undefined && { actions: [{ name: 'Apply fix', apply: () => aplicarFix(fix, issue) }] }),
       };
     });
 }
