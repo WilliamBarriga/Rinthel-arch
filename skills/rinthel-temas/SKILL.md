@@ -1,73 +1,72 @@
 ---
 name: rinthel-temas
-description: Personalizar la estetica de un diagrama con Temas (Paleta, fuentes, Capas, Slots, Movimientos, Partes, y los Elementos de secuencia y ER). Usalo al crear o ajustar un Tema, estilizar una Vista sequence o er, cambiar colores o fuentes, animar, o corregir issues de Tema de validate.
+description: Customize the look of a rinthel-arch diagram with Themes (Palette, fonts, Layers, Slots, Motions, Parts, plus sequence and ER elements). Use when creating or tweaking a Theme, styling a sequence or er View, changing colors or fonts, animating, or fixing Theme issues from validate.
+compatibility: Requires Node 22 or newer and the `diagrams` CLI (npm package rinthel-arch). Use `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams`.
 ---
 
-# Temas: personalizar la estetica
+# Themes: customize the look
 
-La estetica vive en el **Tema** (texto `.dg`), nunca en el Modelo: cambiar `theme <nombre>` en una Vista cambia el aspecto sin tocar Nodos ni Aristas. Una Vista usa un Tema; los incorporados son `neutral`, `neutral-dark` y `high-contrast`.
+The look lives in the **Theme** (`.dg` text), never in the Model: changing `theme <name>` in a View changes the appearance without touching Nodes or Edges. A View uses one Theme; the built-in ones are `neutral`, `neutral-dark` and `high-contrast`.
 
-## Bucle
+Below, `dg` stands for the CLI: `diagrams` when on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams`. `dg <command> --help` lists the options. The `rinthel-diagramas` skill covers writing the Model and serving it.
 
-1. **Partir de un Tema existente**: elige el ejemplo mas cercano en `examples/rinthel-arch/themes/` (`synthwave` neon, `glass-chip` vidrio, `blueprint` plano, `pcb` circuito, `pixel-art`...) o extiende un incorporado con `theme mio extends neutral-dark { ... }` y escribe solo lo que cambia.
-2. **Saber que parche editar**: `dg inspect theme <nombre> --workspace <ruta> --kind <tipo> --state <estado> --diagram <tipo>` muestra la pila de Capas con el `archivo:linea` de cada parche. Edita ese parche.
-3. **Editar** con el vocabulario cerrado del catalogo: `docs/referencia-catalogo.md` (Primitivas, Slots, Movimientos, Efectos con rangos). Un nombre fuera del catalogo es un error; `validate` propone el parecido.
-4. **Validar**: `dg validate --workspace <ruta> --json` hasta `ok: true`. Corrige contraste (`theme-low-contrast`) y `theme-color-only`; si la estetica los exige, dejalo dicho en un comentario en la primera linea del archivo (`// Contraste: <tipos>`, como los Temas de ejemplo): el aviso sigue saliendo, asi que ese Tema no pasa `--strict`.
-5. **Mirar**: `dg dev --workspace <ruta>` y la Vista con ese Tema (ver skill `rinthel-diagramas` para servirlo).
+## Loop
 
-`dg` es el CLI `diagrams` (ver `rinthel-diagramas`). Las rutas `docs/` y `examples/` son del repo rinthel-arch.
+1. **Start from an existing Theme**: extend a built-in with `theme mine extends neutral-dark { ... }` and write only what changes, or inspect a Theme the Workspace already has.
+2. **Find the patch to edit**: `dg inspect theme <name> --workspace <path> --kind <kind> --state <state> --diagram <type>` shows the Layer stack with the `file:line` of each patch. Edit that patch.
+3. **Edit** with the closed catalog vocabulary: `references/theme-catalog.md` (Primitives, Slots, Motions, effects with ranges). A name outside the catalog is an error; `validate` proposes the closest one.
+4. **Validate**: `dg validate --workspace <path> --json` until `ok: true`. Fix contrast (`theme-low-contrast`) and `theme-color-only`; if the aesthetic requires them, say so in a comment on the first line of the file (`// Contrast: <kinds>`): the warning still shows, so that Theme does not pass `--strict`.
+5. **Look**: `dg dev --workspace <path>` and open the View with that Theme (serving: skill `rinthel-diagramas`).
 
-## Secuencia, ER y Tipo de diagrama
+Anatomy, Slots, patches, Parts, ER and sequence blocks, motion and accessibility: `references/theme-guide.md`. Read it before writing a Theme from scratch.
 
-Si el Tema no declara estos Elementos, se derivan de `edge` y `node`: una Vista `sequence` o `er` se dibuja bien con cualquier Tema, asi que declara solo lo que quieras distinto. `neutral` los declara todos y es el modelo de referencia.
+## Sequence, ER and Diagram type
 
-| Elemento | Se declara en | Se deriva de |
+When the Theme does not declare these elements they derive from `edge` and `node`: a `sequence` or `er` View draws well with any Theme, so declare only what you want different. `neutral` declares them all and is the reference model.
+
+| Element | Declared at | Derived from |
 | --- | --- | --- |
-| `lifeline`, `message` (parches `kind <tipo>`) | nivel de `edge` | `edge` |
-| `activation`, `fragment` (parches `op <operador>`), `note` | nivel de `node` | `node` |
-| `row` (tabla ER: `alternate`, `key pk`, `optional`, `name`, `type`) | nivel de `node` | Slot `attrs` |
-| `zone header`, `body` o `all` en una Capa de Nodo | dentro de `layer` | `all` |
-| `diagram <tipo> { ... }` en `node`, `group`, `edge` | cualquier bloque | el parche solo aplica a ese Tipo |
-| marcadores `cross`, `one`, `zero-one`, `many`, `zero-many` | `end`/`start` de una Arista | la cardinalidad y el tipo de Mensaje |
+| `lifeline`, `message` (patches `kind <type>`) | `edge` level | `edge` |
+| `activation`, `fragment` (patches `op <operator>`), `note` | `node` level | `node` |
+| `row` (ER table: `alternate`, `key pk`, `optional`, `name`, `type`) | `node` level | Slot `attrs` |
+| `zone header`, `body` or `all` on a Node Layer | inside `layer` | `all` |
+| `diagram <type> { ... }` in `node`, `group`, `edge` | any block | the patch applies only to that Diagram type |
+| markers `cross`, `one`, `zero-one`, `many`, `zero-many` | `end`/`start` of an Edge | the cardinality and the Message kind |
 
-- Las separaciones de secuencia son Metricas del Tema (`gap`, `loop-width`, `create-offset`, `width`, `padding`) y `row { height }` lo es de ER: cambian la Geometria. Capas y colores solo pintan.
-- Los marcadores ER los elige el nucleo segun la cardinalidad; el Tema cambia solo su `color` y `size`.
-- Este Tema valida tal cual y estiliza una secuencia y una tabla:
+- Sequence gaps are Theme Metrics (`gap`, `loop-width`, `create-offset`, `width`, `padding`) and `row { height }` is the ER one: they change Geometry. Layers and colors only paint.
+- The core picks ER markers by cardinality; the Theme changes only their `color` and `size`.
+- This Theme validates as is and styles a sequence and a table:
 
 ```
-specification { node servicio { description "Un servicio" icon box color blue } }
+specification { node service { description "A service" icon box color blue } }
 model {
-  servicio cliente "Cliente"
-  servicio api "API"
-  interaction compra "Compra" {
-    cliente -> api "POST /pedidos"
-    reply api -> cliente "201"
+  service client "Client"
+  service api "API"
+  interaction purchase "Purchase" {
+    client -> api "POST /orders"
+    reply api -> client "201"
   }
 }
-theme mio extends neutral {
-  node { diagram er { layer cabecera solid after borde { color blue  zone header } } }
-  message { kind reply { layer linea { style dashed } } }
+theme mine extends neutral {
+  palette { blue "#2457d6" }
   lifeline { gap 220 }
+  message { gap 40  loop-width 48 }
   row { height 30 }
 }
-view compra { type sequence interaction compra theme mio }
+view purchase { type sequence interaction purchase theme mine }
 ```
 
-- Para ver la pila de un Elemento: `dg inspect theme mio --workspace <ruta> --diagram sequence` (o `er`); los que el Tema no declara salen marcados `(derivado)` (`derivado: true` en `--json`), tal como se dibujan. Referencia: `docs/guia/personalizar-temas.md` (secciones Tablas ER y Secuencia), `examples/temas/secuencia.dg`, `examples/temas/er.dg` y los rangos en `docs/referencia-catalogo.md`.
+- To see the stack of one element: `dg inspect theme mine --workspace <path> --diagram sequence` (or `er`); those the Theme does not declare appear marked `(derived)` (`derived: true` in `--json`), as they are drawn.
 
-## Reglas que ahorran errores
+## Rules that save errors
 
-- El hex solo existe en `palette`; en todo lo demas un color es un nombre de Paleta, con `nombre/0.4` para opacidad, o `COLOR` (color del Tipo del Nodo) y `ORIGEN` (en Aristas).
-- La cascada, donde gana el ultimo: Tema base, Tipo de nodo, estado, parche de la Vista. Los estados (`hover`, `selected`, `ghost`, `on-path`, `dimmed`, `focus`) solo cambian pintura: tamano y Slots quedan fijos. Un nombre antiguo (espanol) de un valor de catalogo es el error `old-catalog-value` y su `fix` lo reescribe: aplicalo con `edit`.
-- Fuentes autohospedadas: archivos `woff2` o `ttf` en `fonts/` del Workspace, nombrados en `fonts`. Licencia junto al archivo (ejemplos en `examples/rinthel-arch/themes/fonts/`).
-- Ajuste solo para una Vista: `theme <nombre> { layer borde { color amber } }` dentro de la `view`.
-- Cambiar el Tema de una Vista sin tocar su parche: `dg edit --workspace <ruta> --intent '{"type":"set-theme","view":"<id>","theme":"<nombre>"}'` (sin `theme` lo quita). En `dev`, la pestana Temas previsualiza y fija.
-- Parte reutilizable: `part <nombre> { ... }` y `use <nombre>` en un parche; el nombre es unico en el Workspace.
-- El trazado de las Aristas es del layout; el Tema pinta, no enruta.
-- Un Tema con componentes `.tsx` ejecuta codigo en el visor: `dev` pide confirmacion o `--trust-code`.
-
-## Referencias
-
-- Tutorial de Temas con ejemplos: `docs/guia/personalizar-temas.md`.
-- Contrato y razones: `docs/adr/0008-sistema-de-temas-expresivo.md`.
-- Un Tema de ejemplo nuevo o modificado: `pnpm docs:capturas` regenera `docs/img/`; `examples/rinthel-arch/themes/` es la unica copia (la galeria la toma con `--theme-path`); no dupliques Temas ni fuentes.
+- An inherited Layer is patched by the name `dg inspect theme` shows for it; a Layer that does not exist yet needs `before` or `after` another Layer (otherwise `theme-patch-without-placement`).
+- Hex exists only in `palette`; everywhere else a color is a Palette name, with `name/0.4` for opacity, or `COLOR` (the Node kind's color) and `ORIGIN` (on Edges).
+- Cascade, last wins: base Theme, Node kind, state, View patch. States (`hover`, `selected`, `ghost`, `on-path`, `dimmed`, `focus`, `planned`) only change paint: size and Slots stay fixed. An old (Spanish) catalog name is the error `old-catalog-value`, and its `fix` rewrites it: apply it with `edit`.
+- Self-hosted fonts: `woff2` or `ttf` files in the Workspace `fonts/` folder, named in `fonts`. Keep the license next to the file.
+- A Theme for one View only: `theme <name> { layer outline { color amber } }` inside the `view`.
+- Change a View's Theme without touching its patch: `dg edit --workspace <path> --intent '{"type":"set-theme","view":"<id>","theme":"<name>"}'` (without `theme` it removes it). In `dev`, the Themes tab previews and pins.
+- Reusable piece: `part <name> { ... }` and `use <name>` in a patch; the name is unique in the Workspace.
+- Edge routing belongs to the layout; the Theme paints, it does not route.
+- A Theme with `.tsx` components runs code in the viewer: `dev` asks for confirmation or `--trust-code`; trust only your own Workspaces.
+- Keep Themes and fonts in the Workspace (`theme.dg` or `themes/`, and `fonts/`); do not copy the same Theme twice.
