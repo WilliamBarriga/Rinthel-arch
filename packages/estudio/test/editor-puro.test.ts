@@ -94,7 +94,7 @@ describe('issues en linea', () => {
     expect(diagnosticos).toHaveLength(1);
     const [d] = diagnosticos;
     expect(d).toMatchObject({ from: doc.line(6).from + 2, severity: 'warning', message: 'aviso', source: 'x' });
-    expect(d?.actions?.map((a) => a.name)).toEqual(['Aplicar fix']);
+    expect(d?.actions?.map((a) => a.name)).toEqual(['Apply fix']);
     d?.actions?.[0]?.apply(undefined as never, 0, 0);
     expect(aplicados).toEqual([issue.fix]);
   });

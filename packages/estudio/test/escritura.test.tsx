@@ -47,7 +47,7 @@ async function montarYEscribirFuera(antes: (dev: DevEnMemoria) => Promise<void> 
 }
 
 async function esperarRecargaYAviso(contenedor: HTMLElement): Promise<void> {
-  expect((await screen.findByRole('alert')).textContent).toContain('se recargo la Vista');
+  expect((await screen.findByRole('alert')).textContent).toContain('the View was reloaded');
   await waitFor(() => expect(contenedor.querySelector('[data-id="cache"]')).not.toBeNull());
 }
 
@@ -99,10 +99,10 @@ function gesto(destino: Element | Window, tipo: string, clientX: number, clientY
 describe('Escritura ante un 409', () => {
   it('fijar un Tema recarga la Vista y avisa', async () => {
     const { contenedor } = await montarYEscribirFuera();
-    fireEvent.click(await screen.findByRole('tab', { name: 'Temas' }));
-    fireEvent.click(within(await screen.findByRole('listbox', { name: 'Temas' })).getByRole('option', { name: 'oscuro' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Themes' }));
+    fireEvent.click(within(await screen.findByRole('listbox', { name: 'Themes' })).getByRole('option', { name: 'oscuro' }));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Fijar oscuro en mapa' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pin oscuro to mapa' }));
 
     await esperarRecargaYAviso(contenedor);
   });
@@ -155,12 +155,12 @@ describe('Escritura ante un 409', () => {
   it('saltar en el Historial recarga la Vista y avisa', async () => {
     const { contenedor } = await montarYEscribirFuera(async (dev) => {
       await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'mover-pin', vista: 'mapa', nodo: 'api', x: 10, y: 0 }) });
-      fireEvent.click(await screen.findByRole('tab', { name: 'Historial' }));
-      const lista = await screen.findByRole('list', { name: 'Historial de cambios' });
+      fireEvent.click(await screen.findByRole('tab', { name: 'Undo history' }));
+      const lista = await screen.findByRole('list', { name: 'Change history' });
       await waitFor(() => expect(within(lista).getAllByRole('listitem')).toHaveLength(2));
     });
 
-    fireEvent.click(within(screen.getByRole('list', { name: 'Historial de cambios' })).getByRole('button', { name: /Inicio/ }));
+    fireEvent.click(within(screen.getByRole('list', { name: 'Change history' })).getByRole('button', { name: /Start/ }));
 
     await esperarRecargaYAviso(contenedor);
   });
@@ -174,7 +174,7 @@ describe('Escritura ante un 409', () => {
     dev.editarFuera('main.dg', DSL.replace('  api -> db "lee"\n', '  api -> dbb "lee"\n'));
     await dev.asentado();
     fireEvent.click(screen.getByRole('tab', { name: 'Issues' }));
-    const boton = await screen.findByRole('button', { name: 'Aplicar fix de main.dg:8' });
+    const boton = await screen.findByRole('button', { name: 'Apply fix for main.dg:8' });
     retenidos.activo = true;
     dev.editarFuera('main.dg', `// agente\n${dev.workspace.texto('main.dg')!}`);
     await dev.asentado();

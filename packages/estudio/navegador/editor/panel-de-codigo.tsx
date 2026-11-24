@@ -45,7 +45,7 @@ export const DURACION_DE_LAS_MARCAS_MS = 4000;
 /** Cuanto se ofrece recuperar lo que perdio el buffer en un solape. */
 const DURACION_DEL_AVISO_MS = 15000;
 
-const TEXTO_DEL_GUARDADO: Record<EstadoDelGuardado['tipo'], string> = { guardado: 'Guardado', 'sin-guardar': 'Sin guardar', guardando: 'Guardando...', error: 'No se guardo' };
+const TEXTO_DEL_GUARDADO: Record<EstadoDelGuardado['tipo'], string> = { guardado: 'Saved', 'sin-guardar': 'Unsaved', guardando: 'Saving...', error: 'Not saved' };
 
 export function PanelDeCodigo(): ReactElement {
   const estudio = useEstudio();
@@ -71,19 +71,19 @@ export function PanelDeCodigo(): ReactElement {
   const hashEnDisco = delArchivo?.hash;
   const versionDelListado = listado?.version;
   const enDisco = useMemo(() => (hashEnDisco === undefined || versionDelListado === undefined ? undefined : { hash: hashEnDisco, version: versionDelListado }), [hashEnDisco, versionDelListado]);
-  const textoDelGuardado = soloLectura ? 'Solo lectura' : guardado.tipo === 'error' ? `${TEXTO_DEL_GUARDADO.error}: ${guardado.mensaje}` : TEXTO_DEL_GUARDADO[guardado.tipo];
+  const textoDelGuardado = soloLectura ? 'Read-only' : guardado.tipo === 'error' ? `${TEXTO_DEL_GUARDADO.error}: ${guardado.mensaje}` : TEXTO_DEL_GUARDADO[guardado.tipo];
 
   return (
     <div className="ui-codigo">
       <div className="ui-codigo-cabecera">
-        <select aria-label="Archivo" value={archivo ?? ''} onChange={(e) => setElegido(e.target.value)}>
+        <select aria-label="File" value={archivo ?? ''} onChange={(e) => setElegido(e.target.value)}>
           {(lista ?? []).map((a) => (
             <option key={a.file} value={a.file}>
-              {a.soloLectura ? `${a.file} (solo lectura)` : a.file}
+              {a.soloLectura ? `${a.file} (read-only)` : a.file}
             </option>
           ))}
         </select>
-        <span role="status" aria-label="Guardado del editor" className="ui-guardado" data-estado={guardado.tipo}>
+        <span role="status" aria-label="Editor save state" className="ui-guardado" data-estado={guardado.tipo}>
           {textoDelGuardado}
         </span>
       </div>
@@ -196,13 +196,13 @@ function EditorDeArchivo({ file, soloLectura, sitio, enDisco, alCambiarGuardado 
   return (
     <>
       {perdidos.length > 0 && (
-        <div role="alert" aria-label="Escritura externa" className="ui-aviso-del-disco">
-          <span>{`El archivo cambio en disco y gano el disco en ${perdidos.length === 1 ? 'un lugar' : `${perdidos.length} lugares`} (${perdidos.map((p) => `linea ${p.linea}`).join(', ')}).`}</span>
+        <div role="alert" aria-label="External write" className="ui-aviso-del-disco">
+          <span>{`The file changed on disk and the disk won in ${perdidos.length === 1 ? 'one place' : `${perdidos.length} places`} (${perdidos.map((p) => `line ${p.linea}`).join(', ')}).`}</span>
           <button type="button" onClick={recuperar}>
-            Recuperar lo mio
+            Restore mine
           </button>
           <button type="button" onClick={() => setPerdidos([])}>
-            Descartar
+            Dismiss
           </button>
         </div>
       )}
@@ -259,7 +259,7 @@ async function irADefinicion(id: string, cliente: ClienteDeDev, estudio: Context
       return;
     }
   }
-  estudio.avisar(`Sin definicion para '${id}'`);
+  estudio.avisar(`No definition for '${id}'`);
 }
 
 function extensiones(file: string, soloLectura: boolean, guardador: Guardador, estudio: { current: ContextoDelEstudio }) {
@@ -297,7 +297,7 @@ function extensiones(file: string, soloLectura: boolean, guardador: Guardador, e
     propias,
     EditorState.readOnly.of(soloLectura),
     EditorView.editable.of(!soloLectura),
-    EditorView.contentAttributes.of({ 'aria-label': `Codigo de ${file}${soloLectura ? ' (solo lectura)' : ''}` }),
+    EditorView.contentAttributes.of({ 'aria-label': `Code of ${file}${soloLectura ? ' (read-only)' : ''}` }),
     EditorView.updateListener.of((u) => {
       if (u.docChanged && !u.transactions.some((t) => t.annotation(desdeElDisco) === true)) guardador.cambiar(u.changes);
     }),

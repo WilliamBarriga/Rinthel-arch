@@ -45,16 +45,16 @@ export type ResultadoDeRestaurar =
 export function descripcionDeIntencion(intencion: Intencion): string {
   switch (intencion.tipo) {
     case 'mover-pin':
-      return `mover ${intencion.nodo} en ${intencion.vista}`;
+      return `move ${intencion.nodo} in ${intencion.vista}`;
     case 'ordenar-lifelines':
-      return `ordenar Lifelines de ${intencion.vista}`;
+      return `reorder Lifelines of ${intencion.vista}`;
     case 'fijar-tema':
-      return intencion.tema === undefined ? `quitar el Tema de ${intencion.vista}` : `fijar el Tema ${intencion.tema} en ${intencion.vista}`;
+      return intencion.tema === undefined ? `unpin the Theme of ${intencion.vista}` : `pin the Theme ${intencion.tema} to ${intencion.vista}`;
   }
 }
 
 /** Descripcion de un guardado de texto sin `descripcion` propia. */
-export const descripcionDeTexto = (archivos: readonly string[]): string => `texto de ${archivos.join(', ')}`;
+export const descripcionDeTexto = (archivos: readonly string[]): string => `text of ${archivos.join(', ')}`;
 
 const rutasCambiadas = (antes: ArchivosDelWorkspace, despues: ArchivosDelWorkspace): string[] =>
   [...new Set([...Object.keys(antes), ...Object.keys(despues)])].filter((r) => antes[r] !== despues[r]).sort();

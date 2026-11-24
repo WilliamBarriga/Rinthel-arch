@@ -12,18 +12,18 @@ import { indiceDeVistas, ordenDelIndice } from './indice';
 import type { EntradaDelIndice } from './indice';
 
 const descripcion = ({ enlaces, entrantes }: EntradaDelIndice): string =>
-  [enlaces.length > 0 ? `enlaza a ${enlaces.join(', ')}` : '', entrantes.length > 0 ? `enlazada desde ${entrantes.join(', ')}` : ''].filter((t) => t !== '').join('; ');
+  [enlaces.length > 0 ? `links to ${enlaces.join(', ')}` : '', entrantes.length > 0 ? `linked from ${entrantes.join(', ')}` : ''].filter((t) => t !== '').join('; ');
 
 export function PanelDeVistas(): ReactElement {
   const { fuente, vista: activa, irAVista, cliente } = useEstudio();
   const marcas = useMarcasExternas(cliente);
   const grupos = useMemo(() => (fuente === undefined ? [] : indiceDeVistas(fuente)), [fuente]);
   const orden = useMemo(() => ordenDelIndice(grupos), [grupos]);
-  const lista = useListbox({ nombre: 'Vistas', prefijo: 'ui-vista', orden, elegida: activa, elegir: (vista) => {
+  const lista = useListbox({ nombre: 'Views', prefijo: 'ui-vista', orden, elegida: activa, elegir: (vista) => {
       if (vista !== activa) irAVista(vista);
     },
     eligeAlMover: true });
-  if (fuente === undefined) return <p className="ui-tenue">El Workspace aun no compila: no hay Vistas que mostrar.</p>;
+  if (fuente === undefined) return <p className="ui-tenue">The Workspace does not compile yet: no Views to show.</p>;
 
   return (
     <div {...lista.listbox} className="ui-indice">

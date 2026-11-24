@@ -449,7 +449,7 @@ describe('Workspace vivo: Historial visible y salto (#193)', () => {
     expect(await ws.saltar(1)).toMatchObject({ ok: true });
     expect(puerto.texto('main.dg')).toBe(conUno);
     const h = ws.historial();
-    expect(h.pasado).toEqual([{ id: 1, descripcion: 'mover api en general', archivos: ['main.dg'], cuando: 2000, alcanzable: true }]);
+    expect(h.pasado).toEqual([{ id: 1, descripcion: 'move api in general', archivos: ['main.dg'], cuando: 2000, alcanzable: true }]);
     expect(h.futuro.map((e) => e.id)).toEqual([2, 3]);
     expect(h.inicio).toEqual({ alcanzable: true });
 
@@ -540,26 +540,26 @@ describe('Workspace vivo: confianza en el codigo', () => {
 const punto = (line: number, column: number) => ({ line, column });
 
 describe('Workspace vivo: ediciones de texto del editor', () => {
-  it('aplica las ediciones con la version vista y deja una entrada "texto de <archivo>" en el Historial', async () => {
+  it('aplica las ediciones con la version vista y deja una entrada "text of <file>" en el Historial', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws } = await abrir(puerto);
     const r = await ws.editar({ ediciones: [{ file: 'main.dg', range: { start: punto(7, 30), end: punto(7, 30) }, replacement: ' "Datos"' }] }, ws.estado().version);
 
     expect(r).toEqual({ ok: true, version: 1 });
     expect(puerto.texto('main.dg')).toContain('servicio db "Base de datos" "Datos"');
-    expect(ws.historial()).toMatchObject({ pasado: [{ descripcion: 'texto de main.dg', archivos: ['main.dg'] }], futuro: [] });
+    expect(ws.historial()).toMatchObject({ pasado: [{ descripcion: 'text of main.dg', archivos: ['main.dg'] }], futuro: [] });
     expect((await ws.deshacer()).ok).toBe(true);
     expect(puerto.texto('main.dg')).toBe(BASE);
-    expect(ws.historial()).toMatchObject({ pasado: [], futuro: [{ descripcion: 'texto de main.dg', archivos: ['main.dg'] }] });
+    expect(ws.historial()).toMatchObject({ pasado: [], futuro: [{ descripcion: 'text of main.dg', archivos: ['main.dg'] }] });
   });
 
   it('la descripcion de la peticion gana; una Intencion se describe sola', async () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws } = await abrir(puerto);
     await ws.editar(pin(1, 2));
-    await ws.editar({ ediciones: [{ file: 'main.dg', range: { start: punto(1, 1), end: punto(1, 1) }, replacement: '// hola\n' }], descripcion: 'Aplicar 1 fix' });
+    await ws.editar({ ediciones: [{ file: 'main.dg', range: { start: punto(1, 1), end: punto(1, 1) }, replacement: '// hola\n' }], descripcion: 'Apply 1 fix' });
 
-    expect(ws.historial().pasado.map((e) => e.descripcion)).toEqual(['mover api en general', 'Aplicar 1 fix']);
+    expect(ws.historial().pasado.map((e) => e.descripcion)).toEqual(['move api in general', 'Apply 1 fix']);
   });
 
   it('si el archivo cambio por fuera desde la version vista, rechaza con hash-desactualizado sin escribir', async () => {
@@ -780,7 +780,7 @@ describe('Workspace vivo: protocolo de eventos', () => {
 
     expect(conexion.map(({ nombre }) => nombre)).toEqual(['estado', 'historial', 'actividad']);
     expect(conexion[0]?.datos).toMatchObject({ version: 1 });
-    expect(conexion[1]?.datos).toMatchObject({ pasado: [{ id: 1, descripcion: 'mover api en general', archivos: ['main.dg'] }], futuro: [] });
+    expect(conexion[1]?.datos).toMatchObject({ pasado: [{ id: 1, descripcion: 'move api in general', archivos: ['main.dg'] }], futuro: [] });
     expect(conexion[2]?.datos).toEqual({ previos: true, eventos: [eventoDeActividad(3)] });
   });
 
