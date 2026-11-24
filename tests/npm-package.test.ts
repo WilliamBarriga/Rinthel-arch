@@ -81,6 +81,17 @@ describe('the rinthel-arch npm package', () => {
     expect(notices).toContain('## react');
   });
 
+  it('ships the skills tree that the pi field points at (a Pi package)', () => {
+    const installed = join(APP, 'node_modules', 'rinthel-arch');
+    const manifest = JSON.parse(readFileSync(join(installed, 'package.json'), 'utf8')) as { keywords: string[]; pi: { skills: string[] } };
+    expect(manifest.keywords).toContain('pi-package');
+    for (const path of manifest.pi.skills) {
+      const skills = readdirSync(join(installed, path));
+      expect(skills).toEqual(expect.arrayContaining(['rinthel-diagramas', 'rinthel-temas']));
+      for (const skill of skills) expect(statSync(join(installed, path, skill, 'SKILL.md')).isFile()).toBe(true);
+    }
+  });
+
   it('ships ELK once for the browser and once for Node, not three times', () => {
     const chunks = join(APP, 'node_modules', 'rinthel-arch', 'dist', 'estudio', 'trozos');
     expect(readdirSync(chunks).filter((t) => t.startsWith('elk'))).toEqual([]);

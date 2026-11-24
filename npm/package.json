@@ -10,8 +10,14 @@
     "dsl",
     "cli",
     "sequence-diagram",
-    "er-diagram"
+    "er-diagram",
+    "pi-package"
   ],
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
   "homepage": "https://github.com/WilliamBarriga/Rinthel-arch#readme",
   "bugs": {
     "url": "https://github.com/WilliamBarriga/Rinthel-arch/issues"
@@ -29,6 +35,7 @@
   },
   "files": [
     "dist",
+    "skills",
     "LICENSE-LIKEC4",
     "THIRD-PARTY-NOTICES.md"
   ],

@@ -1,0 +1,12 @@
+{
+  "name": "rinthel-arch",
+  "description": "rinthel-arch skills for Claude Code",
+  "owner": { "name": "WilliamBarriga", "url": "https://github.com/WilliamBarriga" },
+  "plugins": [
+    {
+      "name": "rinthel-arch",
+      "source": "./",
+      "description": "Write, validate and serve architecture, flow, sequence and ER diagrams as text, and customize their Themes."
+    }
+  ]
+}
