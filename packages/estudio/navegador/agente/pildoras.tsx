@@ -49,8 +49,8 @@ export function SeguirAlAgente(): ReactElement {
     () =>
       almacen.alEnVivo((eventos) => {
         if (!almacen.instantanea().siguiendo) return;
-        const ultimo = [...eventos].reverse().find(({ objetivo }) => objetivo?.vista !== undefined || objetivo?.nodo !== undefined);
-        if (ultimo?.objetivo !== undefined) setPendiente({ objetivo: ultimo.objetivo });
+        const ultimo = [...eventos].reverse().find(({ target: objetivo }) => objetivo?.view !== undefined || objetivo?.node !== undefined);
+        if (ultimo?.target !== undefined) setPendiente({ objetivo: ultimo.target });
       }),
     [almacen],
   );

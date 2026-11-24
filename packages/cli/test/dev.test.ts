@@ -196,13 +196,13 @@ describe('dev: seguridad', () => {
     const raiz = workspaceEnDisco();
     const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
-    const cuerpo = { tipo: 'move-pin', vista: 'general', nodo: 'api', x: 1, y: 2 };
+    const cuerpo = { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 };
 
     for (const ruta of ['api/edit', 'api/deshacer', 'api/rehacer', 'api/historial/saltar', 'api/confiar', 'api/nada']) {
-      expect(await respuesta(await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' }))).toEqual({ status: 403, cuerpo: { ok: false, mensaje: 'Origin not allowed' } });
-      expect(await respuesta(await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' }))).toEqual({ status: 415, cuerpo: { ok: false, mensaje: 'Se esperaba application/json' } });
+      expect(await respuesta(await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' }))).toEqual({ status: 403, cuerpo: { ok: false, message: 'Origin not allowed' } });
+      expect(await respuesta(await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' }))).toEqual({ status: 415, cuerpo: { ok: false, message: 'Se esperaba application/json' } });
     }
-    expect(await respuesta(await post(servidor, 'api/edit', { ...cuerpo, relleno: 'x'.repeat(70 * 1024) }))).toEqual({ status: 413, cuerpo: { ok: false, mensaje: 'Cuerpo demasiado grande' } });
+    expect(await respuesta(await post(servidor, 'api/edit', { ...cuerpo, relleno: 'x'.repeat(70 * 1024) }))).toEqual({ status: 413, cuerpo: { ok: false, message: 'Request body too large' } });
     expect((await post(servidor, 'api/edit', cuerpo, { ...JSON_, origin: servidor.url.replace(/\/$/, '') })).status).toBe(200);
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toContain('node api { pin 1,2 }');
   });
@@ -214,7 +214,7 @@ describe('dev: disco y Registro de actividad', () => {
     const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
 
-    expect((await post(servidor, 'api/edit', { tipo: 'move-pin', vista: 'general', nodo: 'api', x: 1, y: 2 })).status).toBe(200);
+    expect((await post(servidor, 'api/edit', { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 })).status).toBe(200);
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toContain('node api { pin 1,2 }');
     expect((await post(servidor, 'api/deshacer')).status).toBe(200);
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toBe(BASE);

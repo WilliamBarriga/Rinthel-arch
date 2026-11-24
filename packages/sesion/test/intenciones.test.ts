@@ -14,9 +14,9 @@ ${extra}}
 `;
 
 const mover = (texto: string, x: number, y: number, nodo = 'a'): Intencion => ({
-  tipo: 'move-pin',
-  vista: 'v',
-  nodo,
+  type: 'move-pin',
+  view: 'v',
+  node: nodo,
   x,
   y,
 });
@@ -25,7 +25,7 @@ describe('aplicar una Intencion', () => {
   it('mover Pin produce el mismo texto que escribir el pin a mano', () => {
     const texto = base('');
     const r = aplicarEnMemoria({ 'main.dg': texto }, mover(texto, 5, -7));
-    if (!r.ok) throw new Error(r.mensaje);
+    if (!r.ok) throw new Error(r.message);
     expect(r.archivos['main.dg']).toBe(base('  node a { pin 5,-7 }\n'));
     expect(r.ediciones).toHaveLength(1);
   });
@@ -33,7 +33,7 @@ describe('aplicar una Intencion', () => {
   it('rechaza con motivo', () => {
     const texto = base('');
     const r = aplicarEnMemoria({ 'main.dg': texto }, mover(texto, 1, 1), { 'main.dg': 'viejo' });
-    expect(r).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
+    expect(r).toMatchObject({ ok: false, reason: 'stale-hash', file: 'main.dg' });
   });
 
   it('con visto vigente aplica; un visto desactualizado de otro archivo no cuenta', () => {
@@ -47,7 +47,7 @@ describe('historial de deshacer y rehacer', () => {
   it('mover un Pin y deshacer restaura el texto exactamente; rehacer lo reaplica', () => {
     const texto = base('  node b { label "B" }\n');
     const e = editarEnHistorial(crearHistorial({ 'main.dg': texto }), mover(texto, 3, 4));
-    if (!e.ok) throw new Error(e.mensaje);
+    if (!e.ok) throw new Error(e.message);
     expect(e.historial.archivos['main.dg']).not.toBe(texto);
 
     const d = deshacer(e.historial);
@@ -65,11 +65,11 @@ describe('historial de deshacer y rehacer', () => {
   it('una edicion nueva descarta el futuro y un rechazo no altera el historial', () => {
     const texto = base('');
     const e1 = editarEnHistorial(crearHistorial({ 'main.dg': texto }), mover(texto, 1, 1));
-    if (!e1.ok) throw new Error(e1.mensaje);
+    if (!e1.ok) throw new Error(e1.message);
     const d = deshacer(e1.historial);
     if (!d) throw new Error('sin deshacer');
     const e2 = editarEnHistorial(d, mover(texto, 9, 9));
-    if (!e2.ok) throw new Error(e2.mensaje);
+    if (!e2.ok) throw new Error(e2.message);
     expect(rehacer(e2.historial)).toBeUndefined();
 
     const mala = editarEnHistorial(e2.historial, mover(texto, 0, 0, 'fantasma'));
@@ -80,10 +80,10 @@ describe('historial de deshacer y rehacer', () => {
   it('dos ediciones se deshacen en orden inverso', () => {
     const t0 = base('');
     const e1 = editarEnHistorial(crearHistorial({ 'main.dg': t0 }), mover(t0, 1, 1));
-    if (!e1.ok) throw new Error(e1.mensaje);
+    if (!e1.ok) throw new Error(e1.message);
     const t1 = e1.historial.archivos['main.dg'] as string;
     const e2 = editarEnHistorial(e1.historial, mover(t1, 2, 2));
-    if (!e2.ok) throw new Error(e2.mensaje);
+    if (!e2.ok) throw new Error(e2.message);
     const d1 = deshacer(e2.historial);
     expect(d1?.archivos['main.dg']).toBe(t1);
     expect(d1 && deshacer(d1)?.archivos['main.dg']).toBe(t0);

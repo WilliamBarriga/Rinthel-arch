@@ -50,7 +50,7 @@ function useNodos(consulta: string): Entrada[] {
     () =>
       lectura.tipo !== 'dato'
         ? []
-        : lectura.dato.resultados
+        : lectura.dato.results
             .filter((n) => n.kind === 'node')
             .map((n) => ({ value: `nodo:${n.id}`, label: n.title, detalle: `${n.id} · ${textoDeSitio(n)}`, ejecutar: (e: ContextoDelEstudio) => irANodo(e, n.id) })),
     [lectura],

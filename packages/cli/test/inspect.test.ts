@@ -46,18 +46,18 @@ describe('inspect search', () => {
     expect(porId.exitCode).toBe(0);
     expect(porId.salida).toMatchObject({
       contractVersion: INSPECT_CONTRACT_VERSION,
-      comando: 'search',
-      resultados: [{ kind: 'node', id: 'sistema.db', type: 'dato', title: 'Base de datos', file: 'main.dg', line: 5 }],
+      command: 'search',
+      results: [{ kind: 'node', id: 'sistema.db', type: 'dato', title: 'Base de datos', file: 'main.dg', line: 5 }],
     });
 
     const porTitulo = await json(['search', 'pagos']);
-    expect(porTitulo.salida).toMatchObject({ resultados: [{ id: 'sistema.api', line: 4 }] });
+    expect(porTitulo.salida).toMatchObject({ results: [{ id: 'sistema.api', line: 4 }] });
   });
 
   it('tambien encuentra Vistas y no distingue mayusculas', async () => {
     const { salida } = await json(['search', 'DATOS']);
-    expect(salida).toMatchObject({ comando: 'search' });
-    const resultados = (salida as { resultados: { kind: string; id: string; line: number }[] }).resultados;
+    expect(salida).toMatchObject({ command: 'search' });
+    const resultados = (salida as { results: { kind: string; id: string; line: number }[] }).results;
     expect(resultados).toContainEqual(expect.objectContaining({ kind: 'view', id: 'datos', line: 17 }));
     expect(resultados).toContainEqual(expect.objectContaining({ kind: 'node', id: 'sistema.db' }));
   });
@@ -71,7 +71,7 @@ describe('inspect search', () => {
   it('sin coincidencias sale 0 con lista vacia', async () => {
     const { exitCode, salida } = await json(['search', 'zzz']);
     expect(exitCode).toBe(0);
-    expect(salida).toMatchObject({ resultados: [] });
+    expect(salida).toMatchObject({ results: [] });
   });
 });
 
@@ -80,24 +80,24 @@ describe('inspect node', () => {
     const { exitCode, salida } = await json(['node', 'sistema.api']);
     expect(exitCode).toBe(0);
     expect(salida).toMatchObject({
-      comando: 'node',
-      nodo: { id: 'sistema.api', type: 'servicio', title: 'API de pagos', file: 'main.dg', line: 4, parent: 'sistema', children: [] },
-      aristas: [
+      command: 'node',
+      node: { id: 'sistema.api', type: 'servicio', title: 'API de pagos', file: 'main.dg', line: 4, parent: 'sistema', children: [] },
+      edges: [
         { from: 'sistema.api', to: 'sistema.db', direction: 'out', label: 'lee', file: 'main.dg', line: 10 },
         { from: 'cola', to: 'sistema.api', direction: 'in', file: 'main.dg', line: 11 },
       ],
-      vistas: [{ id: 'general', file: 'main.dg', line: 13 }],
+      views: [{ id: 'general', file: 'main.dg', line: 13 }],
     });
   });
 
   it('lista los hijos, los Atributos y varias Vistas', async () => {
     const { salida } = await json(['node', 'sistema.db']);
     expect(salida).toMatchObject({
-      nodo: { attributes: [{ name: 'id' }] },
-      vistas: [{ id: 'general' }, { id: 'datos' }],
+      node: { attributes: [{ name: 'id' }] },
+      views: [{ id: 'general' }, { id: 'datos' }],
     });
     const padre = await json(['node', 'sistema']);
-    expect(padre.salida).toMatchObject({ nodo: { children: ['sistema.api', 'sistema.db'] } });
+    expect(padre.salida).toMatchObject({ node: { children: ['sistema.api', 'sistema.db'] } });
   });
 
   it('texto legible por defecto', async () => {
@@ -121,13 +121,13 @@ describe('inspect view', () => {
   it('lista los Nodos y Aristas visibles de la Vista', async () => {
     const { salida } = await json(['view', 'datos']);
     expect(salida).toMatchObject({
-      comando: 'view',
-      vista: { id: 'datos', type: 'architecture', file: 'main.dg', line: 17, nodos: [{ id: 'sistema.db', type: 'dato', line: 5 }], aristas: [] },
+      command: 'view',
+      view: { id: 'datos', type: 'architecture', file: 'main.dg', line: 17, nodes: [{ id: 'sistema.db', type: 'dato', line: 5 }], edges: [] },
     });
     const general = await json(['view', 'general']);
-    const vista = (general.salida as { vista: { nodos: { id: string }[]; aristas: unknown[] } }).vista;
-    expect(vista.nodos.map(({ id }) => id)).toEqual(['sistema', 'sistema.api', 'sistema.db', 'cola']);
-    expect(vista.aristas).toHaveLength(2);
+    const vista = (general.salida as { view: { nodes: { id: string }[]; edges: unknown[] } }).view;
+    expect(vista.nodes.map(({ id }) => id)).toEqual(['sistema', 'sistema.api', 'sistema.db', 'cola']);
+    expect(vista.edges).toHaveLength(2);
   });
 
   it('una View not found sale 1', async () => {
@@ -165,7 +165,7 @@ view v {
 }
 `;
     const { salida } = await json(['view', 'v'], workspace(texto));
-    const aristas = (salida as { vista: { aristas: { from: string; to: string; line: number }[] } }).vista.aristas;
+    const aristas = (salida as { view: { edges: { from: string; to: string; line: number }[] } }).view.edges;
     const elevada = aristas.find(({ to }) => to === 'grupo');
     expect(elevada?.line).toBe(9);
   });

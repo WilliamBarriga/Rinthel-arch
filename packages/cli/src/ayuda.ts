@@ -70,11 +70,11 @@ Exit: 0 there is an answer, 1 the Node/View/Theme does not exist or the Workspac
 The CLI's only explicit write: all or nothing, only on .dg files of the Workspace.
 
   --view <id> --node <id> --x N --y N   Sets the Node Pin in the View (inserts or replaces it)
-  --intent '<json>'                     Intent { tipo, ... }; today, besides move-pin:
-                                        {"tipo":"reorder-lifelines","vista":"<id>","orden":["a","b"]} rewrites the
+  --intent '<json>'                     Intent { type, ... }; today, besides move-pin:
+                                        {"type":"reorder-lifelines","view":"<id>","order":["a","b"]} rewrites the
                                         whole order of a sequence View (hidden ones keep their place);
-                                        {"tipo":"set-theme","vista":"<id>","tema":"<name>"} writes theme in the
-                                        View (keeps the patch); without "tema" it removes it. An undeclared Theme
+                                        {"type":"set-theme","view":"<id>","theme":"<name>"} writes theme in the
+                                        View (keeps the patch); without "theme" it removes it. An undeclared Theme
                                         is rejected with unknown-theme
   --edits '<json>'                      List of { file, range, replacement }, for example the fix of validate
   --hash <file>=<hash>                  Rejects the edit if the file changed since you read it

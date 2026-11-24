@@ -11,11 +11,11 @@ theme claro extends neutral { palette { acento "#0ea5e9" } }
 ${vista}
 `;
 
-const fijar = (tema?: string, vista = 'v'): Intencion => ({ tipo: 'set-theme', vista, ...(tema !== undefined && { tema }) });
+const fijar = (tema?: string, vista = 'v'): Intencion => ({ type: 'set-theme', view: vista, ...(tema !== undefined && { theme: tema }) });
 
 const aplicar = (texto: string, intencion: Intencion): string => {
   const r = aplicarEnMemoria({ 'main.dg': texto }, intencion);
-  if (!r.ok) throw new Error(`${r.motivo}: ${r.mensaje}`);
+  if (!r.ok) throw new Error(`${r.reason}: ${r.message}`);
   return r.archivos['main.dg'] as string;
 };
 
@@ -84,8 +84,8 @@ describe('Intencion set-theme', () => {
   include **
 }`);
     const r = aplicarEnMemoria({ 'main.dg': texto }, fijar('clar'));
-    expect(r).toMatchObject({ ok: false, motivo: 'unknown-theme' });
-    expect(!r.ok && r.mensaje).toContain('claro');
+    expect(r).toMatchObject({ ok: false, reason: 'unknown-theme' });
+    expect(!r.ok && r.message).toContain('claro');
   });
 
   it('una View not found rechaza con unknown-view y un visto viejo con stale-hash', () => {
@@ -93,8 +93,8 @@ describe('Intencion set-theme', () => {
   type architecture
   include **
 }`);
-    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro', 'nada'))).toMatchObject({ ok: false, motivo: 'unknown-view' });
-    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro'), { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'stale-hash' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro', 'nada'))).toMatchObject({ ok: false, reason: 'unknown-view' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro'), { 'main.dg': 'viejo' })).toMatchObject({ ok: false, reason: 'stale-hash' });
     expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro'), { 'main.dg': hashDeContenido(texto) }).ok).toBe(true);
   });
 });

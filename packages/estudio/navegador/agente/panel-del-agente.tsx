@@ -63,7 +63,7 @@ function LineaDelFeed({ evento }: { evento: EventoDeActividad }): ReactElement {
   const { fuente, vista, irAVista, seleccionar } = useEstudio();
   const [abierta, setAbierta] = useState(false);
   const marca = marcaDelEvento(evento);
-  const { objetivo } = evento;
+  const { target: objetivo } = evento;
   const ir = (destino: Parameters<typeof destinoDelObjetivo>[0]): void => {
     if (fuente === undefined) return;
     const d = destinoDelObjetivo(destino, fuente, vista);
@@ -78,19 +78,19 @@ function LineaDelFeed({ evento }: { evento: EventoDeActividad }): ReactElement {
           {hora(evento.ts)}
         </time>
         <span className="ui-feed-quien">{quienDelEvento(evento)}</span>
-        <span className="ui-mono">{evento.comando}</span>
-        {objetivo?.vista !== undefined && (
-          <button type="button" className="ui-enlace ui-mono" onClick={() => ir({ vista: objetivo.vista })}>
-            {objetivo.vista}
+        <span className="ui-mono">{evento.command}</span>
+        {objetivo?.view !== undefined && (
+          <button type="button" className="ui-enlace ui-mono" onClick={() => ir({ view: objetivo.view })}>
+            {objetivo.view}
           </button>
         )}
-        {objetivo?.nodo !== undefined && (
-          <button type="button" className="ui-enlace ui-mono" onClick={() => ir({ nodo: objetivo.nodo })}>
-            {objetivo.nodo}
+        {objetivo?.node !== undefined && (
+          <button type="button" className="ui-enlace ui-mono" onClick={() => ir({ node: objetivo.node })}>
+            {objetivo.node}
           </button>
         )}
-        {objetivo?.tema !== undefined && <span className="ui-mono">{objetivo.tema}</span>}
-        {objetivo?.archivos !== undefined && <span className="ui-mono ui-tenue">{objetivo.archivos.join(', ')}</span>}
+        {objetivo?.theme !== undefined && <span className="ui-mono">{objetivo.theme}</span>}
+        {objetivo?.files !== undefined && <span className="ui-mono ui-tenue">{objetivo.files.join(', ')}</span>}
         <span className="ui-feed-marca" data-marca={marca.tipo}>
           {marca.texto}
         </span>
@@ -98,7 +98,7 @@ function LineaDelFeed({ evento }: { evento: EventoDeActividad }): ReactElement {
           {abierta ? '▾' : '▸'}
         </button>
       </div>
-      {abierta && <code className="ui-feed-args ui-mono">{['diagrams', evento.comando, ...evento.args].join(' ')}</code>}
+      {abierta && <code className="ui-feed-args ui-mono">{['diagrams', evento.command, ...evento.args].join(' ')}</code>}
     </li>
   );
 }

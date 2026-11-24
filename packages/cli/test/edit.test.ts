@@ -144,7 +144,7 @@ view flujo {
   interaction i
 }
 `;
-  const intent = (orden: string[], extra: object = {}) => JSON.stringify({ tipo: 'reorder-lifelines', vista: 'flujo', orden, ...extra });
+  const intent = (order: string[], extra: object = {}) => JSON.stringify({ type: 'reorder-lifelines', view: 'flujo', order, ...extra });
 
   it('aplica la Intencion por su contrato JSON y escribe el order', async () => {
     const raiz = workspace(SEC);
@@ -176,7 +176,7 @@ view flujo {
 });
 
 describe('edit --intent (set-theme)', () => {
-  const fijar = (tema?: string) => JSON.stringify({ tipo: 'set-theme', vista: 'general', ...(tema !== undefined && { tema }) });
+  const fijar = (tema?: string) => JSON.stringify({ type: 'set-theme', view: 'general', ...(tema !== undefined && { theme: tema }) });
 
   it('escribe theme como primera linea de la Vista con un Tema de --theme-path, y sin tema lo quita', async () => {
     const raiz = workspace();
@@ -202,7 +202,7 @@ describe('edit --intent (set-theme)', () => {
 
   it('--help nombra la Intencion set-theme y su rechazo', async () => {
     const r = await run(['edit', '--help']);
-    expect(r.stdout).toContain('"tipo":"set-theme"');
+    expect(r.stdout).toContain('"type":"set-theme"');
     expect(r.stdout).toContain('unknown-theme');
   });
 });
@@ -212,7 +212,7 @@ describe('edit: puerta de escritura unica', () => {
 
   it('los tres modos dan la misma salida de texto y JSON', async () => {
     const pinTexto = await run(['edit', '--workspace', workspace(), ...pin('general', 'a', '30', '40')]);
-    expect(pinTexto).toEqual({ exitCode: 0, stdout: '1 archivo(s) editado(s): main.dg\n', stderr: '' });
+    expect(pinTexto).toEqual({ exitCode: 0, stdout: '1 file(s) edited: main.dg\n', stderr: '' });
 
     const pinJson = await run(['edit', '--workspace', workspace(), ...pin('general', 'b', '5', '6'), '--json']);
     expect(salidaJson(pinJson)).toEqual({
@@ -226,7 +226,7 @@ describe('edit: puerta de escritura unica', () => {
     const edits = await run(['edit', '--workspace', workspace(), '--edits', JSON.stringify([{ file: 'main.dg', range: rango, replacement: '"Z"' }]), '--json']);
     expect(salidaJson(edits)).toEqual({ contractVersion: EDIT_CONTRACT_VERSION, ok: true, edits: [{ file: 'main.dg', range: rango, replacement: '"Z"' }], files: ['main.dg'] });
 
-    const intent = await run(['edit', '--workspace', workspace(), '--intent', JSON.stringify({ tipo: 'move-pin', vista: 'general', nodo: 'a', x: 1, y: 2 }), '--json']);
+    const intent = await run(['edit', '--workspace', workspace(), '--intent', JSON.stringify({ type: 'move-pin', view: 'general', node: 'a', x: 1, y: 2 }), '--json']);
     expect(salidaJson(intent)).toEqual({
       contractVersion: EDIT_CONTRACT_VERSION,
       ok: true,
@@ -248,7 +248,7 @@ describe('edit: puerta de escritura unica', () => {
     };
     const casos: [string, string[]][] = [
       ['flags de Pin', pin('general', 'a', '1', '2')],
-      ['--intent', ['--intent', JSON.stringify({ tipo: 'move-pin', vista: 'general', nodo: 'b', x: 1, y: 2 })]],
+      ['--intent', ['--intent', JSON.stringify({ type: 'move-pin', view: 'general', node: 'b', x: 1, y: 2 })]],
       ['--edits', ['--edits', JSON.stringify([{ file: 'vistas.dg', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: '\n' }])]],
     ];
     it.each(casos)('%s', async (_modo, args) => {

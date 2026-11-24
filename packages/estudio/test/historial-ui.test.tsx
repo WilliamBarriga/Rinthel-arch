@@ -15,7 +15,7 @@ afterEach(() => {
 const DSL = DSL_BASICO;
 
 const moverPin = async (dev: DevEnMemoria, nodo: string, x: number): Promise<void> => {
-  const res = await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ tipo: 'move-pin', vista: 'mapa', nodo, x, y: 0 }) });
+  const res = await dev.fetch('/api/edit', { method: 'POST', body: JSON.stringify({ type: 'move-pin', view: 'mapa', node: nodo, x, y: 0 }) });
   expect(res.status).toBe(200);
 };
 

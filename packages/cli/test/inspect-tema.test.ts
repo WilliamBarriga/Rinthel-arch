@@ -13,45 +13,45 @@ async function json(args: string[], raiz = RAIZ) {
 }
 
 const temaDe = (salida: Awaited<ReturnType<typeof json>>['salida']) => {
-  if (salida?.comando !== 'theme') throw new Error('se esperaba la salida de tema');
-  return salida.tema;
+  if (salida?.command !== 'theme') throw new Error('se esperaba la salida de tema');
+  return salida.theme;
 };
 const origenes = (salida: Awaited<ReturnType<typeof json>>['salida']) =>
-  Object.fromEntries(temaDe(salida).capas.map((c) => [c.nombre, `${c.origen.file}:${c.origen.line}`]));
+  Object.fromEntries(temaDe(salida).layers.map((c) => [c.name, `${c.origin.file}:${c.origin.line}`]));
 
 describe('inspect theme', () => {
   it('da la cadena extends, las Capas resueltas con el archivo:linea del parche que las fijo y las Metricas', async () => {
     const r = await json(['app']);
 
     expect(r.exitCode).toBe(0);
-    expect(r.salida).toMatchObject({ contractVersion: INSPECT_CONTRACT_VERSION, comando: 'theme' });
+    expect(r.salida).toMatchObject({ contractVersion: INSPECT_CONTRACT_VERSION, command: 'theme' });
     const tema = temaDe(r.salida);
-    expect(tema).toMatchObject({ name: 'app', file: 'app.dg', line: 1, extends: ['base'], partes: ['resalte'], temaConCodigo: false, componentes: [] });
-    expect(tema.capas.map((c) => [c.nombre, c.primitiva])).toEqual([
+    expect(tema).toMatchObject({ name: 'app', file: 'app.dg', line: 1, extends: ['base'], parts: ['resalte'], hasCode: false, components: [] });
+    expect(tema.layers.map((c) => [c.name, c.primitive])).toEqual([
       ['forma', 'rect'],
       ['relleno', 'solid'],
       ['borde', 'border'],
     ]);
     // `borde` lo fijo el parche del hijo; el resto viene del padre.
     expect(origenes(r.salida)).toEqual({ forma: 'base.dg:8', relleno: 'base.dg:9', borde: 'app.dg:3' });
-    expect(tema.capas[2]?.props).toMatchObject({ width: 2 });
-    expect(tema.metricas.fontSize).toBeGreaterThan(0);
+    expect(tema.layers[2]?.props).toMatchObject({ width: 2 });
+    expect(tema.metrics.fontSize).toBeGreaterThan(0);
     expect(tema.slots).toBe('column { title attrs }');
-    expect(`${tema.origenDeSlots.file}:${tema.origenDeSlots.line}`).toBe('base.dg:11');
+    expect(`${tema.slotsOrigin.file}:${tema.slotsOrigin.line}`).toBe('base.dg:11');
   });
 
   it('--kind y --state resuelven la cascada de un caso, con las part usadas', async () => {
     const tipo = await json(['app', '--kind', 'servicio']);
     expect(tipo.exitCode).toBe(0);
-    expect(temaDe(tipo.salida)).toMatchObject({ tipo: 'servicio', partes: ['resalte'] });
-    expect(temaDe(tipo.salida).capas.map((c) => c.nombre)).toEqual(['forma', 'brillo', 'relleno', 'borde']);
+    expect(temaDe(tipo.salida)).toMatchObject({ kind: 'servicio', parts: ['resalte'] });
+    expect(temaDe(tipo.salida).layers.map((c) => c.name)).toEqual(['forma', 'brillo', 'relleno', 'borde']);
     expect(origenes(tipo.salida)).toMatchObject({ brillo: 'base.dg:2', relleno: 'app.dg:5' });
-    expect(temaDe(tipo.salida).capas[1]).toMatchObject({ encima: true });
+    expect(temaDe(tipo.salida).layers[1]).toMatchObject({ above: true });
 
     const estado = await json(['app', '--kind', 'servicio', '--state', 'hover']);
-    expect(temaDe(estado.salida)).toMatchObject({ tipo: 'servicio', estado: 'hover' });
+    expect(temaDe(estado.salida)).toMatchObject({ kind: 'servicio', state: 'hover' });
     expect(origenes(estado.salida)).toMatchObject({ borde: 'app.dg:8', relleno: 'app.dg:5' });
-    expect(temaDe(estado.salida).capas.find((c) => c.nombre === 'borde')?.props).toMatchObject({ width: 4 });
+    expect(temaDe(estado.salida).layers.find((c) => c.name === 'borde')?.props).toMatchObject({ width: 4 });
   });
 
   it('un Tema incorporado sale marcado como tal; con --catalog trae las claves del catalogo', async () => {
@@ -60,10 +60,10 @@ describe('inspect theme', () => {
     expect(r.exitCode).toBe(0);
     const tema = temaDe(r.salida);
     expect(tema.file).toBe('<incorporados>');
-    expect(tema.catalogo?.primitivas).toEqual(expect.arrayContaining(['rect', 'solid', 'border', 'circle']));
-    expect(tema.catalogo?.movimientos).toEqual(expect.arrayContaining(['pulso']));
-    expect(tema.catalogo?.efectos.length).toBeGreaterThan(0);
-    expect(temaDe((await json(['neutral'])).salida).catalogo).toBeUndefined();
+    expect(tema.catalog?.primitives).toEqual(expect.arrayContaining(['rect', 'solid', 'border', 'circle']));
+    expect(tema.catalog?.motions).toEqual(expect.arrayContaining(['pulso']));
+    expect(tema.catalog?.effects.length).toBeGreaterThan(0);
+    expect(temaDe((await json(['neutral'])).salida).catalog).toBeUndefined();
   });
 
   it('un incorporado que extiende a otro da su cadena extends y el sitio de cada Capa en el texto incorporado', async () => {
@@ -71,7 +71,7 @@ describe('inspect theme', () => {
 
     expect(tema.extends).toEqual(['neutral']);
     // neutral-dark solo cambia la Paleta: todas sus Capas las fijo neutral, en lineas distintas del texto incorporado.
-    const sitios = tema.capas.map((c) => c.origen);
+    const sitios = tema.layers.map((c) => c.origin);
     expect(sitios.every((s) => s.file === '<incorporados>' && s.line > 1)).toBe(true);
     expect(new Set(sitios.map((s) => s.line)).size).toBe(sitios.length);
   });
@@ -108,13 +108,13 @@ describe('inspect theme', () => {
     const r = await json(['hijo'], raiz);
 
     expect(r.exitCode).toBe(0);
-    const { pagina } = temaDe(r.salida);
-    expect(pagina.fijo).toBe(true);
-    expect(pagina.capas.map((c) => [c.nombre, c.primitiva, `${c.origen.file}:${c.origen.line}`])).toEqual([
+    const { page: pagina } = temaDe(r.salida);
+    expect(pagina.fixed).toBe(true);
+    expect(pagina.layers.map((c) => [c.name, c.primitive, `${c.origin.file}:${c.origin.line}`])).toEqual([
       ['fondo', 'solid', 'main.dg:8'],
       ['puntos', 'dots', 'main.dg:15'],
     ]);
-    expect(pagina.capas[1]?.props).toMatchObject({ size: 30 });
+    expect(pagina.layers[1]?.props).toMatchObject({ size: 30 });
 
     const texto = await run(['inspect', 'theme', 'hijo', '--workspace', raiz]);
     expect(texto.stdout).toContain('Page: (fixed to the viewer)');
@@ -123,22 +123,22 @@ describe('inspect theme', () => {
 
   it('muestra la pila de group, la del Grupo cerrado y la cabecera, cada Capa con el parche que la fijo', async () => {
     const raiz = resolve(__dirname, 'fixtures/tema-grupo');
-    const abierto = temaDe((await json(['hijo'], raiz)).salida).grupo;
-    const porTipo = temaDe((await json(['hijo', '--kind', 'capa', '--state', 'hover'], raiz)).salida).grupo;
-    const origen = (capas: typeof abierto.capas) => Object.fromEntries(capas.map((c) => [c.nombre, `${c.origen.file}:${c.origen.line}`]));
+    const abierto = temaDe((await json(['hijo'], raiz)).salida).group;
+    const porTipo = temaDe((await json(['hijo', '--kind', 'capa', '--state', 'hover'], raiz)).salida).group;
+    const origen = (capas: typeof abierto.layers) => Object.fromEntries(capas.map((c) => [c.name, `${c.origin.file}:${c.origin.line}`]));
 
-    expect(abierto).toMatchObject({ propio: true, cabecera: 'row gap 6 pad 6 { icon title }', padding: { top: 12, left: 12, bottom: 12, right: 12 } });
-    expect(abierto.alturaDeCabecera).toBeGreaterThan(0);
-    expect(abierto.capas.map((c) => c.nombre)).toEqual(['caja', 'borde']);
+    expect(abierto).toMatchObject({ own: true, header: 'row gap 6 pad 6 { icon title }', padding: { top: 12, left: 12, bottom: 12, right: 12 } });
+    expect(abierto.headerHeight).toBeGreaterThan(0);
+    expect(abierto.layers.map((c) => c.name)).toEqual(['caja', 'borde']);
     // `borde` lo fijo el parche del hijo (ancho); el resto viene del padre.
-    expect(origen(abierto.capas)).toEqual({ caja: 'main.dg:8', borde: 'main.dg:19' });
-    expect(abierto.capas[1]?.props).toMatchObject({ width: 2, color: 'tinta' });
+    expect(origen(abierto.layers)).toEqual({ caja: 'main.dg:8', borde: 'main.dg:19' });
+    expect(abierto.layers[1]?.props).toMatchObject({ width: 2, color: 'tinta' });
     // Cerrado: otra pila, con la Capa que anade `state collapsed` del padre.
-    expect(abierto.colapsado.capas.map((c) => c.nombre)).toEqual(['caja', 'relleno', 'borde']);
-    expect(origen(abierto.colapsado.capas)['relleno']).toBe('main.dg:14');
-    // Con Tipo y estado: gana el ultimo nivel que fijo la Capa.
-    expect(origen(porTipo.capas)['borde']).toBe('main.dg:13');
-    expect(porTipo.capas.find((c) => c.nombre === 'borde')?.props).toMatchObject({ color: 'azul', width: 3 });
+    expect(abierto.collapsed.layers.map((c) => c.name)).toEqual(['caja', 'relleno', 'borde']);
+    expect(origen(abierto.collapsed.layers)['relleno']).toBe('main.dg:14');
+    // Con Tipo y state: gana el ultimo nivel que fijo la Capa.
+    expect(origen(porTipo.layers)['borde']).toBe('main.dg:13');
+    expect(porTipo.layers.find((c) => c.name === 'borde')?.props).toMatchObject({ color: 'azul', width: 3 });
 
     const texto = await run(['inspect', 'theme', 'hijo', '--workspace', raiz]);
     expect(texto.stdout).toContain('Grupo:');
@@ -148,12 +148,12 @@ describe('inspect theme', () => {
 
   it('muestra donde se escribio la disposicion de Slots del Nodo, de la cabecera del Grupo y del Grupo cerrado', async () => {
     const raiz = resolve(__dirname, 'fixtures/tema-grupo');
-    const { grupo, origenDeSlots } = temaDe((await json(['hijo'], raiz)).salida);
+    const { group: grupo, slotsOrigin: origenDeSlots } = temaDe((await json(['hijo'], raiz)).salida);
     const sitio = ({ file, line }: { file: string; line: number }) => `${file}:${line}`;
 
     // El Tema `hijo` hereda de `base` su cabecera; el Grupo cerrado y el Nodo no escriben `slots`: valen la linea del Tema.
-    expect(sitio(grupo.origenDeCabecera)).toBe('main.dg:10');
-    expect(sitio(grupo.colapsado.origenDeSlots)).toBe(sitio(origenDeSlots));
+    expect(sitio(grupo.headerOrigin)).toBe('main.dg:10');
+    expect(sitio(grupo.collapsed.slotsOrigin)).toBe(sitio(origenDeSlots));
     expect(sitio(origenDeSlots)).toBe('main.dg:18');
 
     const texto = (await run(['inspect', 'theme', 'hijo', '--workspace', raiz])).stdout;
@@ -163,16 +163,16 @@ describe('inspect theme', () => {
 
   it('las Metricas traen el padding efectivo del Grupo (cabecera mas padding), no el por defecto del Nodo', async () => {
     const raiz = resolve(__dirname, 'fixtures/tema-grupo');
-    const { metricas, grupo } = temaDe((await json(['hijo'], raiz)).salida);
+    const { metrics: metricas, group: grupo } = temaDe((await json(['hijo'], raiz)).salida);
 
-    expect(metricas['paddingGrupo']).toEqual({ top: grupo.alturaDeCabecera + 12, left: 12, bottom: 12, right: 12 });
+    expect(metricas['paddingGrupo']).toEqual({ top: grupo.headerHeight + 12, left: 12, bottom: 12, right: 12 });
   });
 
   it('un Tema sin group lo dice: pila sobria de los tokens y no las Capas del Nodo', async () => {
     const raiz = resolve(__dirname, 'fixtures/tema-grupo');
-    const { grupo } = temaDe((await json(['sobrio'], raiz)).salida);
+    const { group: grupo } = temaDe((await json(['sobrio'], raiz)).salida);
 
-    expect(grupo).toMatchObject({ propio: false, capas: [] });
+    expect(grupo).toMatchObject({ own: false, layers: [] });
     expect((await run(['inspect', 'theme', 'sobrio', '--workspace', raiz])).stdout).toContain('Group: (no group: sober stack derived from the Theme tokens, not the Node Layers)');
   });
 
@@ -184,7 +184,7 @@ describe('inspect theme', () => {
 
 describe('inspect theme --diagram', () => {
   const RAIZ_DIAGRAMA = resolve(__dirname, 'fixtures/tema-diagrama');
-  const relleno = (salida: Awaited<ReturnType<typeof json>>['salida']) => temaDe(salida).capas.find((c) => c.nombre === 'relleno')?.props['color'];
+  const relleno = (salida: Awaited<ReturnType<typeof json>>['salida']) => temaDe(salida).layers.find((c) => c.name === 'relleno')?.props['color'];
 
   it('aplica los parches diagram de ese Tipo de diagrama a la cascada', async () => {
     const sin = await json(['t'], RAIZ_DIAGRAMA);
@@ -194,7 +194,7 @@ describe('inspect theme --diagram', () => {
     expect(relleno(sin.salida)).toBe('azul');
     expect(relleno(arquitectura.salida)).toBe('azul');
     expect(relleno(flujo.salida)).toBe('verde');
-    expect(temaDe(flujo.salida)).toMatchObject({ diagrama: 'flow' });
+    expect(temaDe(flujo.salida)).toMatchObject({ diagram: 'flow' });
   });
 
   it('un Tipo de diagrama desconocido sale con codigo 1 y sugiere el cercano', async () => {
@@ -211,38 +211,38 @@ describe('inspect theme: elementos de secuencia y fila', () => {
   it('muestra la pila, los parches y las Metricas de cada elemento declarado', async () => {
     const r = await json(['t'], RAIZ_SECUENCIA);
 
-    const { elementos } = temaDe(r.salida);
-    expect(elementos?.secuencia?.['message']).toMatchObject({
-      capas: [{ nombre: 'linea', primitiva: 'line' }],
-      marcadores: { end: 'arrow' },
-      metricas: { gap: 40 },
-      parches: { reply: [{ nombre: 'linea', primitiva: 'line', props: { style: 'dashed' } }] },
+    const { elements: elementos } = temaDe(r.salida);
+    expect(elementos?.sequence?.['message']).toMatchObject({
+      layers: [{ name: 'linea', primitive: 'line' }],
+      markers: { end: 'arrow' },
+      metrics: { gap: 40 },
+      patches: { reply: [{ name: 'linea', primitive: 'line', props: { style: 'dashed' } }] },
     });
-    expect(elementos?.secuencia?.['fragment']?.parches['alt']?.map((c) => c.nombre)).toEqual(['forma', 'relleno']);
-    expect(elementos?.secuencia?.['lifeline']).toBeUndefined();
-    expect(elementos?.fila).toMatchObject({ alto: 30, capas: [{ nombre: 'fondo' }] });
+    expect(elementos?.sequence?.['fragment']?.patches['alt']?.map((c) => c.name)).toEqual(['forma', 'relleno']);
+    expect(elementos?.sequence?.['lifeline']).toBeUndefined();
+    expect(elementos?.row).toMatchObject({ height: 30, layers: [{ name: 'fondo' }] });
   });
 
-  it('--diagram sequence de un Tema sin lifeline muestra el lifeline derivado de edge, discontinuo y con derivado: true', async () => {
+  it('--diagram sequence de un Tema sin lifeline muestra el lifeline derivado de edge, discontinuo y con derived: true', async () => {
     const r = await json(['app', '--diagram', 'sequence']);
 
-    const secuencia = temaDe(r.salida).elementos?.secuencia;
-    expect(secuencia?.['lifeline']).toMatchObject({ derivado: true, capas: [{ primitiva: 'line', props: { style: 'dashed' } }], marcadores: { end: 'cross' } });
+    const secuencia = temaDe(r.salida).elements?.sequence;
+    expect(secuencia?.['lifeline']).toMatchObject({ derived: true, layers: [{ primitive: 'line', props: { style: 'dashed' } }], markers: { end: 'cross' } });
     // Los cinco Elementos de secuencia, todos derivados: el Tema no declara ninguno.
     expect(Object.keys(secuencia ?? {}).sort()).toEqual(['activation', 'fragment', 'lifeline', 'message', 'note']);
-    expect(Object.values(secuencia ?? {}).every((e) => e.derivado === true)).toBe(true);
+    expect(Object.values(secuencia ?? {}).every((e) => e.derived === true)).toBe(true);
     // La activacion toma solo forma, relleno y borde del Nodo; `reply` lleva la continuidad opuesta.
-    expect(secuencia?.['activation']?.capas.map((c) => c.nombre)).toEqual(['forma', 'relleno', 'borde']);
-    expect(secuencia?.['message']?.parches['reply']?.at(-1)?.props).toMatchObject({ style: 'dashed' });
+    expect(secuencia?.['activation']?.layers.map((c) => c.name)).toEqual(['forma', 'relleno', 'borde']);
+    expect(secuencia?.['message']?.patches['reply']?.at(-1)?.props).toMatchObject({ style: 'dashed' });
   });
 
   it('un Elemento declarado no lleva derivado y --diagram er deriva la fila', async () => {
     const declarado = await json(['t', '--diagram', 'sequence'], RAIZ_SECUENCIA);
     const er = await json(['app', '--diagram', 'er']);
 
-    expect(temaDe(declarado.salida).elementos?.secuencia?.['message']?.derivado).toBeUndefined();
-    expect(temaDe(declarado.salida).elementos?.secuencia?.['lifeline']?.derivado).toBe(true);
-    expect(temaDe(er.salida).elementos?.fila).toMatchObject({ derivado: true, capas: [] });
+    expect(temaDe(declarado.salida).elements?.sequence?.['message']?.derived).toBeUndefined();
+    expect(temaDe(declarado.salida).elements?.sequence?.['lifeline']?.derived).toBe(true);
+    expect(temaDe(er.salida).elements?.row).toMatchObject({ derived: true, layers: [] });
   });
 
   it('el texto legible marca los Elementos derivados', async () => {
@@ -255,7 +255,7 @@ describe('inspect theme: elementos de secuencia y fila', () => {
     const con = await run(['inspect', 'theme', 't', '--workspace', RAIZ_SECUENCIA]);
     const sin = await run(['inspect', 'theme', 'app', '--workspace', RAIZ]);
 
-    expect(con.stdout).toMatch(/Sequence:\n {2}message:[^\n]*\n[\s\S]*kind\/op reply/);
+    expect(con.stdout).toMatch(/Sequence:\n {2}message:[^\n]*\n[\s\S]*patch reply/);
     expect(con.stdout).toMatch(/Row: height 30/);
     expect(sin.stdout).not.toMatch(/Sequence:|Row:/);
   });
@@ -278,9 +278,9 @@ describe('inspect theme: los Elementos declarados salen como antes de la derivac
 
   it('con --diagram sequence, la salida es la de antes mas los Elementos derivados, marcados', async () => {
     const r = await run(['inspect', 'theme', 't', '--diagram', 'sequence', '--workspace', RAIZ_SECUENCIA, '--json']);
-    const salida = JSON.parse(r.stdout) as { tema: { elementos: { secuencia: Record<string, { derivado?: true }> } } };
-    const { secuencia } = salida.tema.elementos;
-    const derivados = Object.keys(secuencia).filter((nombre) => secuencia[nombre]?.derivado === true);
+    const salida = JSON.parse(r.stdout) as { theme: { elements: { sequence: Record<string, { derived?: true }> } } };
+    const { sequence: secuencia } = salida.theme.elements;
+    const derivados = Object.keys(secuencia).filter((nombre) => secuencia[nombre]?.derived === true);
     for (const nombre of derivados) delete secuencia[nombre];
 
     expect(derivados.sort()).toEqual(['activation', 'lifeline', 'note']);
@@ -294,6 +294,6 @@ describe('inspect theme sin --diagram', () => {
     const r = await run(['inspect', 'theme', 't', '--workspace', raiz, '--json']);
 
     expect(r.stdout).toBe(readFileSync(resolve(__dirname, 'fixtures/inspect-tema-main/arquitectura-none.json'), 'utf8'));
-    expect(JSON.parse(r.stdout).tema.slots).toBe('column { title attrs }');
+    expect(JSON.parse(r.stdout).theme.slots).toBe('column { title attrs }');
   });
 });

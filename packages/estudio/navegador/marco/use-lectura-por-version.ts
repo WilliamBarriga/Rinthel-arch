@@ -38,7 +38,7 @@ export function useLecturaPorVersion<T>(cliente: ClienteDeDev, version: number |
       setLeida((previa) => (lectura.tipo === 'fallo' && actual.conservarAnteFallo === true && previa?.clave === actual.clave && previa.lectura.tipo === 'dato' ? previa : { clave: actual.clave, lectura }));
     };
     actual.pedir(cliente).then(
-      (r) => guardar(r.ok ? { tipo: 'dato', dato: r.valor } : { tipo: 'fallo', mensaje: r.mensaje }),
+      (r) => guardar(r.ok ? { tipo: 'dato', dato: r.valor } : { tipo: 'fallo', mensaje: r.message }),
       (error: unknown) => guardar({ tipo: 'fallo', mensaje: error instanceof Error ? error.message : String(error) }),
     );
     return () => {
@@ -48,7 +48,7 @@ export function useLecturaPorVersion<T>(cliente: ClienteDeDev, version: number |
   return leida !== undefined && leida.clave === clave ? leida.lectura : CARGANDO;
 }
 
-type SalidaDe<C extends ComandoDeInspect> = Extract<SalidaDeInspect, { comando: C }>;
+type SalidaDe<C extends ComandoDeInspect> = Extract<SalidaDeInspect, { command: C }>;
 
 /** `inspect <comando> <argumento>` por version, con la salida ya estrechada a ese comando; sin `argumento` no pide nada. */
 export function useInspectPorVersion<C extends ComandoDeInspect>(cliente: ClienteDeDev, version: number | undefined, comando: C, argumento: string | undefined): EstadoDeLectura<SalidaDe<C>> {
@@ -62,7 +62,7 @@ export function useInspectPorVersion<C extends ComandoDeInspect>(cliente: Client
           pedir: async (c) => {
             const r = await c.inspeccionar(comando, argumento);
             if (!r.ok) return r;
-            return r.salida.comando === comando ? { ok: true, valor: r.salida as SalidaDe<C> } : { ok: false, mensaje: 'Unexpected response from inspect' };
+            return r.salida.command === comando ? { ok: true, valor: r.salida as SalidaDe<C> } : { ok: false, message: 'Unexpected response from inspect' };
           },
         },
   );

@@ -8,7 +8,7 @@ import { useEstudio } from '../marco/contexto';
 import { useInspectPorVersion } from '../marco/use-lectura-por-version';
 import { textoDeSitio } from '../sitio';
 
-type SalidaDeNodo = Extract<SalidaDeInspect, { comando: 'node' }>;
+type SalidaDeNodo = Extract<SalidaDeInspect, { command: 'node' }>;
 
 export function Detalle(): ReactElement {
   const { seleccion, cliente, estado, irAVista } = useEstudio();
@@ -27,7 +27,7 @@ export function Detalle(): ReactElement {
   );
 }
 
-function FichaDeNodo({ salida: { nodo, aristas, vistas }, irAVista }: { salida: SalidaDeNodo; irAVista: (vista: string) => void }): ReactElement {
+function FichaDeNodo({ salida: { node: nodo, edges: aristas, views: vistas }, irAVista }: { salida: SalidaDeNodo; irAVista: (vista: string) => void }): ReactElement {
   return (
     <>
       <h2 className="ui-detalle-titulo">{nodo.title}</h2>

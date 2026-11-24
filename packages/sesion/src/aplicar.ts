@@ -33,7 +33,7 @@ export interface OpcionesDeAplicar {
 
 export type ResultadoDeAplicar =
   | { ok: true; cambiados: string[]; ediciones: EdicionConHash[] }
-  | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
+  | { ok: false; reason: MotivoDeRechazo; message: string; file?: string };
 
 const cambiadosEntre = (antes: ArchivosDelWorkspace, despues: ArchivosDelWorkspace): string[] =>
   Object.keys(despues)
@@ -54,11 +54,11 @@ export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, aplicable: Aplicab
   } else {
     r = aplicarIntencion(disco, aplicable, visto);
   }
-  if (!r.ok) return { ok: false, motivo: r.motivo, mensaje: r.mensaje, ...(r.file === undefined ? {} : { file: r.file }) };
+  if (!r.ok) return { ok: false, reason: r.reason, message: r.message, ...(r.file === undefined ? {} : { file: r.file }) };
   const cambiados = cambiadosEntre(disco, r.archivos);
   const fuera = cambiados.find((f) => !(f in propios));
   if (fuera !== undefined) {
-    return { ok: false, motivo: 'unknown-file', mensaje: `'${fuera}' does not belong to the Workspace`, file: fuera };
+    return { ok: false, reason: 'unknown-file', message: `'${fuera}' does not belong to the Workspace`, file: fuera };
   }
   for (const ruta of cambiados) puerto.escribir(ruta, r.archivos[ruta] as string);
   return { ok: true, cambiados, ediciones: r.ediciones };

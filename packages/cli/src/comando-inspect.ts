@@ -48,11 +48,11 @@ export async function inspeccionar(
   if (parseado.values.workspace === undefined) return fallo(2, 'Missing --workspace <path>');
   const nombrado = OBJETIVO_DE_SUBCOMANDO[comando];
   const resultado = await consultar(leer, parseado.values.workspace, parseado.values['theme-path'], comando, argumento, { tipo, estado, diagrama, catalogo, json: parseado.values.json === true });
-  return nombrado === undefined ? resultado : { ...resultado, actividad: { objetivo: { [nombrado]: argumento } } };
+  return nombrado === undefined ? resultado : { ...resultado, actividad: { target: { [nombrado]: argumento } } };
 }
 
 /** Lo que nombra cada subcomando en el Evento de actividad; `search` e `interaction` no nombran Vista, Nodo ni Tema. */
-const OBJETIVO_DE_SUBCOMANDO: Readonly<Record<string, 'vista' | 'nodo' | 'tema'>> = { view: 'vista', node: 'nodo', theme: 'tema' };
+const OBJETIVO_DE_SUBCOMANDO: Readonly<Record<string, 'view' | 'node' | 'theme'>> = { view: 'view', node: 'node', theme: 'theme' };
 
 async function consultar(
   leer: (raiz: string) => ArchivosDelWorkspace,

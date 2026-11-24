@@ -72,55 +72,55 @@ export type EstadoDeDev = z.infer<typeof estadoDeDevSchema>;
 /**
  * Elemento de una Diferencia con su identidad: Nodo por `id`; Atributo por Nodo + `name`; Arista por `from` + `to`
  * (ids de Nodo) + ordinal dentro del mismo par; Interaccion por `id`; Mensaje por `id` o, sin el, por Interaccion +
- * `posicion` (indice entre sus Mensajes, aplanando Fragmentos; `ruta` es la del visor, `2.0.1`); Vista por `id`; Tema por `name`.
+ * `position` (indice entre sus Mensajes, aplanando Fragmentos; `path` es la del visor, `2.0.1`); Vista por `id`; Tema por `name`.
  */
-export const elementoDeDiferenciaSchema = z.discriminatedUnion('tipo', [
-  z.object({ tipo: z.literal('nodo'), id: z.string() }),
-  z.object({ tipo: z.literal('atributo'), nodo: z.string(), name: z.string() }),
-  z.object({ tipo: z.literal('arista'), from: z.string(), to: z.string(), ordinal: z.number().int() }),
-  z.object({ tipo: z.literal('interaccion'), id: z.string() }),
-  z.object({ tipo: z.literal('mensaje'), interaccion: z.string(), id: z.string().optional(), posicion: z.number().int(), ruta: z.string() }),
-  z.object({ tipo: z.literal('vista'), id: z.string() }),
-  z.object({ tipo: z.literal('tema'), name: z.string() }),
+export const elementoDeDiferenciaSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('node'), id: z.string() }),
+  z.object({ kind: z.literal('attribute'), node: z.string(), name: z.string() }),
+  z.object({ kind: z.literal('edge'), from: z.string(), to: z.string(), ordinal: z.number().int() }),
+  z.object({ kind: z.literal('interaction'), id: z.string() }),
+  z.object({ kind: z.literal('message'), interaction: z.string(), id: z.string().optional(), position: z.number().int(), path: z.string() }),
+  z.object({ kind: z.literal('view'), id: z.string() }),
+  z.object({ kind: z.literal('theme'), name: z.string() }),
 ]);
 export type ElementoDeDiferencia = z.infer<typeof elementoDeDiferenciaSchema>;
-export type TipoDeElementoDeDiferencia = ElementoDeDiferencia['tipo'];
+export type TipoDeElementoDeDiferencia = ElementoDeDiferencia['kind'];
 
 /** Clave de identidad de un elemento (dos elementos con la misma clave son el mismo). */
 export function claveDeElemento(elemento: ElementoDeDiferencia): string {
-  switch (elemento.tipo) {
-    case 'nodo':
-    case 'interaccion':
-    case 'vista':
-      return `${elemento.tipo}:${elemento.id}`;
-    case 'atributo':
-      return `atributo:${elemento.nodo}#${elemento.name}`;
-    case 'arista':
-      return `arista:${elemento.from}->${elemento.to}:${elemento.ordinal}`;
-    case 'mensaje':
-      return `mensaje:${elemento.interaccion}:${elemento.id ?? `#${elemento.posicion}`}`;
-    case 'tema':
-      return `tema:${elemento.name}`;
+  switch (elemento.kind) {
+    case 'node':
+    case 'interaction':
+    case 'view':
+      return `${elemento.kind}:${elemento.id}`;
+    case 'attribute':
+      return `attribute:${elemento.node}#${elemento.name}`;
+    case 'edge':
+      return `edge:${elemento.from}->${elemento.to}:${elemento.ordinal}`;
+    case 'message':
+      return `message:${elemento.interaction}:${elemento.id ?? `#${elemento.position}`}`;
+    case 'theme':
+      return `theme:${elemento.name}`;
   }
 }
 
 /** Tipo (en CONTEXT.md) y nombre legibles de un elemento; ordinales y posiciones desde 1. */
 export function etiquetaDeElemento(elemento: ElementoDeDiferencia): { tipo: string; id: string } {
-  switch (elemento.tipo) {
-    case 'nodo':
-      return { tipo: 'Nodo', id: elemento.id };
-    case 'atributo':
-      return { tipo: 'Atributo', id: `${elemento.nodo}#${elemento.name}` };
-    case 'arista':
-      return { tipo: 'Arista', id: `${elemento.from} -> ${elemento.to}${elemento.ordinal > 0 ? ` (${elemento.ordinal + 1})` : ''}` };
-    case 'interaccion':
-      return { tipo: 'Interaccion', id: elemento.id };
-    case 'mensaje':
-      return { tipo: 'Mensaje', id: `${elemento.interaccion}:${elemento.id ?? `#${elemento.posicion + 1}`}` };
-    case 'vista':
-      return { tipo: 'Vista', id: elemento.id };
-    case 'tema':
-      return { tipo: 'Tema', id: elemento.name };
+  switch (elemento.kind) {
+    case 'node':
+      return { tipo: 'Node', id: elemento.id };
+    case 'attribute':
+      return { tipo: 'Attribute', id: `${elemento.node}#${elemento.name}` };
+    case 'edge':
+      return { tipo: 'Edge', id: `${elemento.from} -> ${elemento.to}${elemento.ordinal > 0 ? ` (${elemento.ordinal + 1})` : ''}` };
+    case 'interaction':
+      return { tipo: 'Interaction', id: elemento.id };
+    case 'message':
+      return { tipo: 'Message', id: `${elemento.interaction}:${elemento.id ?? `#${elemento.position + 1}`}` };
+    case 'view':
+      return { tipo: 'View', id: elemento.id };
+    case 'theme':
+      return { tipo: 'Theme', id: elemento.name };
   }
 }
 
@@ -164,7 +164,7 @@ export type DiferenciaDeDev = z.infer<typeof diferenciaDeDevSchema>;
  * (`0` es Inicio), `cuando` la hora en ms y `descripcion` la arma el servidor. `alcanzable: false` (con `motivo`) si
  * saltar a ella restauraria un archivo que cambio por fuera.
  */
-const alcanceSchema = { alcanzable: z.boolean(), motivo: z.string().optional() };
+const alcanceSchema = { alcanzable: z.boolean(), reason: z.string().optional() };
 export const entradaDelHistorialDeDevSchema = z.object({ id: z.number().int().positive(), descripcion: z.string(), archivos: z.array(z.string()), cuando: z.number(), ...alcanceSchema });
 export const historialDeDevSchema = z.object({ pasado: z.array(entradaDelHistorialDeDevSchema), futuro: z.array(entradaDelHistorialDeDevSchema), inicio: z.object(alcanceSchema) });
 export type EntradaDelHistorialDeDev = z.infer<typeof entradaDelHistorialDeDevSchema>;
@@ -227,7 +227,7 @@ export type CodigoDeDev = z.infer<typeof codigoDeDevSchema>;
 export const confianzaDeDevSchema = z.object({ ok: z.literal(true) });
 
 /** Cuerpo de los bordes de `/api/*`: 400 (JSON o forma invalida), 404 (ruta o recurso), 405 (metodo, con `allow`) y 500 (fallo de I/O). */
-export const errorDeDevSchema = z.object({ ok: z.literal(false), mensaje: z.string() });
+export const errorDeDevSchema = z.object({ ok: z.literal(false), message: z.string() });
 export type ErrorDeDev = z.infer<typeof errorDeDevSchema>;
 
 /** `POST /api/edit`, `/api/deshacer`, `/api/rehacer` y `/api/historial/saltar` aceptados: la `version` del estado tras escribir. */
@@ -235,11 +235,11 @@ export const escrituraDeDevSchema = z.object({ ok: z.literal(true), version: z.n
 export type EscrituraDeDev = z.infer<typeof escrituraDeDevSchema>;
 
 /** Un borde (`errorDeDevSchema`) o el rechazo de una escritura (409/422), que trae ademas `motivo` y, si lo hay, `file`. */
-export const rechazoDeDevSchema = errorDeDevSchema.extend({ motivo: z.enum(MOTIVOS_DE_RECHAZO).optional(), file: z.string().optional() });
+export const rechazoDeDevSchema = errorDeDevSchema.extend({ reason: z.enum(MOTIVOS_DE_RECHAZO).optional(), file: z.string().optional() });
 export type RechazoDeDev = z.infer<typeof rechazoDeDevSchema>;
 
 /** Cuerpo de un 404 de `/api/inspect` (o 422 si el Workspace nunca compilo): el mensaje de `inspect` y los ids cercanos. */
-export const inspectNoEncontradoSchema = z.object({ ok: z.literal(false), mensaje: z.string(), cercanos: z.array(z.string()) });
+export const inspectNoEncontradoSchema = z.object({ ok: z.literal(false), message: z.string(), suggestions: z.array(z.string()) });
 export type InspectNoEncontrado = z.infer<typeof inspectNoEncontradoSchema>;
 
 /**

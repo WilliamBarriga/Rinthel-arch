@@ -63,6 +63,6 @@ describe('validate: Tema con codigo', () => {
     const r = await run(['inspect', 'theme', 'neon', '--workspace', FIXTURE, '--json']);
 
     const salida = salidaDeInspectSchema.parse(JSON.parse(r.stdout));
-    expect(salida.comando === 'theme' && salida.tema).toMatchObject({ temaConCodigo: true, componentes: ['Aurora'] });
+    expect(salida.command === 'theme' && salida.theme).toMatchObject({ hasCode: true, components: ['Aurora'] });
   });
 });

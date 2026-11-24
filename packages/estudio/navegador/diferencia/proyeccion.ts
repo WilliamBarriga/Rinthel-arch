@@ -58,12 +58,12 @@ function representante(mapa: Map<string, NodoResuelto>, id: string): string | un
 /** Id del elemento en el lienzo de la Vista resuelta, o `undefined` si no esta en ella. */
 function idEnVista(elemento: ElementoDeDiferenciaDeDev, resuelta: VistaResuelta): string | undefined {
   const mapa = visibles(resuelta.nodes);
-  switch (elemento.tipo) {
-    case 'nodo':
+  switch (elemento.kind) {
+    case 'node':
       return representante(mapa, elemento.id);
-    case 'atributo':
-      return representante(mapa, elemento.nodo);
-    case 'arista': {
+    case 'attribute':
+      return representante(mapa, elemento.node);
+    case 'edge': {
       if (resuelta.type === 'sequence') return undefined;
       const desde = representante(mapa, elemento.from);
       const hasta = representante(mapa, elemento.to);
@@ -73,10 +73,10 @@ function idEnVista(elemento: ElementoDeDiferenciaDeDev, resuelta: VistaResuelta)
       const arista = elevada ? delPar[0] : delPar[elemento.ordinal];
       return arista === undefined ? undefined : idDeArista(arista);
     }
-    case 'mensaje': {
-      if (resuelta.type !== 'sequence' || resuelta.interaction.id !== elemento.interaccion) return undefined;
-      const mensaje = resuelta.interaction.messages.find((m) => m.ruta === elemento.ruta);
-      return mensaje === undefined ? undefined : idDeElementoDeSecuencia(elemento.interaccion, mensaje.ruta);
+    case 'message': {
+      if (resuelta.type !== 'sequence' || resuelta.interaction.id !== elemento.interaction) return undefined;
+      const mensaje = resuelta.interaction.messages.find((m) => m.ruta === elemento.path);
+      return mensaje === undefined ? undefined : idDeElementoDeSecuencia(elemento.interaction, mensaje.ruta);
     }
     default:
       return undefined;
@@ -85,9 +85,9 @@ function idEnVista(elemento: ElementoDeDiferenciaDeDev, resuelta: VistaResuelta)
 
 /** Vistas que muestran el elemento sin estar en el lienzo (Interaccion, Vista); `undefined` si se proyecta por id. */
 function vistasSinLienzo(elemento: ElementoDeDiferenciaDeDev, fuente: FuenteCanonica): string[] | undefined {
-  if (elemento.tipo === 'interaccion') return fuente.views.filter((v) => v.type === 'sequence' && v.interaction === elemento.id).map((v) => v.id);
-  if (elemento.tipo === 'vista') return fuente.views.some((v) => v.id === elemento.id) ? [elemento.id] : [];
-  if (elemento.tipo === 'tema') return [];
+  if (elemento.kind === 'interaction') return fuente.views.filter((v) => v.type === 'sequence' && v.interaction === elemento.id).map((v) => v.id);
+  if (elemento.kind === 'view') return fuente.views.some((v) => v.id === elemento.id) ? [elemento.id] : [];
+  if (elemento.kind === 'theme') return [];
   return undefined;
 }
 
@@ -116,7 +116,7 @@ export function proyectarDiferencia(elementos: readonly ElementoDeDiferenciaDeDe
   const marcadas = new Set<string>();
   const temas = new Set<string>();
   for (const elemento of elementos) {
-    if (elemento.tipo === 'tema') temas.add(elemento.name);
+    if (elemento.kind === 'theme') temas.add(elemento.name);
     const sinLienzo = vistasSinLienzo(elemento, fuente);
     if (sinLienzo !== undefined) {
       for (const v of sinLienzo) {
@@ -167,7 +167,7 @@ export function unirDiferencia(resaltado: Resaltado, diferencia: DiferenciaDeDev
   const { fuente, ahora, duracionMs, ...contexto } = opciones;
   const tocados = tocadosDe(diferencia);
   const p = proyectarDiferencia(tocados, fuente, contexto);
-  const nuevos = new Map(tocados.filter((e) => e.tipo !== 'tema' && e.tipo !== 'vista' && e.tipo !== 'interaccion').map((e) => [claveDeElemento(e), e]));
+  const nuevos = new Map(tocados.filter((e) => e.kind !== 'theme' && e.kind !== 'view' && e.kind !== 'interaction').map((e) => [claveDeElemento(e), e]));
   const sinRenovar = resaltado.lienzo.filter(({ elemento }) => !nuevos.has(claveDeElemento(elemento)));
   const sinRepetir = (a: readonly string[], b: readonly string[]): string[] => [...new Set([...a, ...b])];
   const { temaDeLaVista: _anterior, ...resto } = resaltado;

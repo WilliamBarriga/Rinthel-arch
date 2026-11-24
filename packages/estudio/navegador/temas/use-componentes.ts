@@ -23,9 +23,9 @@ export function useComponentes(cliente: ClienteDeDev, version: number | undefine
           pedir: async () => {
             const carga = await cargar();
             if (carga.ok) return carga;
-            const mensaje = `Could not load the Theme components: ${carga.mensaje}`;
+            const mensaje = `Could not load the Theme components: ${carga.message}`;
             reportar(mensaje);
-            return { ok: false, mensaje };
+            return { ok: false, message: mensaje };
           },
         },
   );

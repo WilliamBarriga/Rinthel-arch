@@ -6,9 +6,9 @@ import { z } from 'zod';
 
 /** El servidor calcula el texto del DSL; el llamador no conoce la sintaxis. */
 export const intencionDePinSchema = z.object({
-  vista: z.string(),
+  view: z.string(),
   /** Id cualificado del Nodo. */
-  nodo: z.string(),
+  node: z.string(),
   /** Relativa al Grupo padre, como `pin x,y` en el DSL. */
   x: z.number().finite(),
   y: z.number().finite(),
@@ -37,8 +37,8 @@ export type MotivoDeRechazo = (typeof MOTIVOS_DE_RECHAZO)[number];
  * conservan su posicion relativa.
  */
 export const intencionDeOrdenSchema = z.object({
-  vista: z.string(),
-  orden: z.array(z.string()).min(1),
+  view: z.string(),
+  order: z.array(z.string()).min(1),
 });
 
 export type IntencionDeOrden = z.infer<typeof intencionDeOrdenSchema>;
@@ -48,17 +48,17 @@ export type IntencionDeOrden = z.infer<typeof intencionDeOrdenSchema>;
  * rechaza con `unknown-theme`.
  */
 export const intencionDeTemaSchema = z.object({
-  vista: z.string(),
-  tema: z.string().min(1).optional(),
+  view: z.string(),
+  theme: z.string().min(1).optional(),
 });
 
 export type IntencionDeTema = z.infer<typeof intencionDeTemaSchema>;
 
-/** Cuerpo de `POST /api/edit`, discriminado por `tipo`. */
-export const intencionSchema = z.discriminatedUnion('tipo', [
-  intencionDePinSchema.extend({ tipo: z.literal('move-pin') }),
-  intencionDeOrdenSchema.extend({ tipo: z.literal('reorder-lifelines') }),
-  intencionDeTemaSchema.extend({ tipo: z.literal('set-theme') }),
+/** Cuerpo de `POST /api/edit`, discriminado por `type`. */
+export const intencionSchema = z.discriminatedUnion('type', [
+  intencionDePinSchema.extend({ type: z.literal('move-pin') }),
+  intencionDeOrdenSchema.extend({ type: z.literal('reorder-lifelines') }),
+  intencionDeTemaSchema.extend({ type: z.literal('set-theme') }),
 ]);
 
 export type Intencion = z.infer<typeof intencionSchema>;

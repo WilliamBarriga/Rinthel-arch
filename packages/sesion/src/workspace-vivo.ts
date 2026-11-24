@@ -80,7 +80,7 @@ export interface CodigoCompilado {
 }
 
 /** `version` es la del estado tras recompilar. */
-export type ResultadoDelWorkspaceVivo = { ok: true; version: number } | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
+export type ResultadoDelWorkspaceVivo = { ok: true; version: number } | { ok: false; reason: MotivoDeRechazo; message: string; file?: string };
 
 /** Ediciones de texto de la UI (`POST /api/edit { ediciones }`): guardado del editor, un `fix` o "Aplicar N fix". */
 export interface EdicionesDeTexto {
@@ -344,7 +344,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     enCola(async () => {
       const traducido = vistoDe(versionVista);
       if (traducido === undefined) {
-        return { ok: false, motivo: 'stale-hash', mensaje: `State version ${versionVista} is no longer stored; reload the View` };
+        return { ok: false, reason: 'stale-hash', message: `State version ${versionVista} is no longer stored; reload the View` };
       }
       const antes = puerto.leer().propios;
       const escritas: string[] = [];
@@ -366,7 +366,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
         revertir(antes, escritas);
         throw error;
       }
-      if (!resultado.ok) return { ok: false, motivo: resultado.motivo, mensaje: resultado.mensaje, ...(resultado.file !== undefined && { file: resultado.file }) };
+      if (!resultado.ok) return { ok: false, reason: resultado.reason, message: resultado.message, ...(resultado.file !== undefined && { file: resultado.file }) };
       const descripcion = !esEdicionesDeTexto(aplicable) ? descripcionDeIntencion(aplicable) : (aplicable.descripcion ?? descripcionDeTexto(resultado.cambiados));
       historial = registrar(historial, descripcion, antes, puerto.leer().propios, ahora());
       return recompilarTrasEscribir();

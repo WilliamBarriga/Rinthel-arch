@@ -183,9 +183,9 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     let cuerpo: string | undefined;
     if (metodo === 'POST') {
       const rechazo = rechazoDelPost(req);
-      if (rechazo !== undefined) return responder(res, rechazo[0], { ok: false, mensaje: rechazo[1] });
+      if (rechazo !== undefined) return responder(res, rechazo[0], { ok: false, message: rechazo[1] });
       cuerpo = await leerCuerpo(req);
-      if (cuerpo === undefined) return responder(res, 413, { ok: false, mensaje: 'Cuerpo demasiado grande' });
+      if (cuerpo === undefined) return responder(res, 413, { ok: false, message: 'Request body too large' });
     }
     const respuesta = await atenderApiDeDev(vivo, { metodo, url, ...(cuerpo !== undefined && { cuerpo }) });
     res.writeHead(respuesta.status, respuesta.cabeceras);

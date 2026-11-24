@@ -18,10 +18,10 @@ export interface EdicionConHash {
 /** Con `ok: false` no se escribe nada. */
 export type ResultadoDeEdicion<T> =
   | ({ ok: true } & T)
-  | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
+  | { ok: false; reason: MotivoDeRechazo; message: string; file?: string };
 
-export const rechazo = (motivo: MotivoDeRechazo, mensaje: string, file?: string) =>
-  ({ ok: false, motivo, mensaje, ...(file === undefined ? {} : { file }) }) as const;
+export const rechazo = (reason: MotivoDeRechazo, message: string, file?: string) =>
+  ({ ok: false, reason, message, ...(file === undefined ? {} : { file }) }) as const;
 
 /** Offset de una posicion 1-based; `undefined` si cae fuera del texto. */
 export function offsetDe(texto: string, { line, column }: TextPosition): number | undefined {
@@ -37,7 +37,7 @@ export function offsetDe(texto: string, { line, column }: TextPosition): number 
   return column >= 1 && offset <= limite ? offset : undefined;
 }
 
-/** Un error es el mismo si comparte codigo y archivo, aunque cambie su mensaje o su linea. */
+/** Un error es el mismo si comparte codigo y archivo, aunque cambie su message o su linea. */
 const clave = (issue: Issue) => `${issue.code}|${issue.file}`;
 
 /** Los errores preexistentes no bloquean una edicion ajena. */

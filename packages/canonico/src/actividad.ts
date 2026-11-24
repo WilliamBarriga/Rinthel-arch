@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 
-export const ACTIVIDAD_CONTRACT_VERSION = 1;
+export const ACTIVIDAD_CONTRACT_VERSION = 2;
 
 /** Comandos del CLI que registran actividad. */
 export const COMANDOS_CON_ACTIVIDAD = ['validate', 'build', 'inspect', 'edit'] as const;
@@ -16,27 +16,27 @@ export const eventoDeActividadSchema = z.object({
   ts: z.string(),
   pid: z.number().int(),
   /** Texto libre de `DIAGRAMS_AGENTE`. */
-  agente: z.string().optional(),
-  comando: z.enum(COMANDOS_CON_ACTIVIDAD),
+  agent: z.string().optional(),
+  command: z.enum(COMANDOS_CON_ACTIVIDAD),
   /** El argv tras el comando, completo. */
   args: z.array(z.string()),
   exitCode: z.union([z.literal(0), z.literal(1), z.literal(2)]),
-  duracionMs: z.number().min(0),
+  durationMs: z.number().min(0),
   /** Solo lo que el comando nombra; el CLI no deduce nada. */
-  objetivo: z
+  target: z
     .object({
-      vista: z.string().optional(),
-      nodo: z.string().optional(),
-      tema: z.string().optional(),
-      archivos: z.array(z.string()).optional(),
+      view: z.string().optional(),
+      node: z.string().optional(),
+      theme: z.string().optional(),
+      files: z.array(z.string()).optional(),
     })
     .optional(),
   /** Solo `validate` y `build`. */
-  resumen: z.object({ errores: z.number().int().min(0), avisos: z.number().int().min(0) }).optional(),
+  summary: z.object({ errors: z.number().int().min(0), warnings: z.number().int().min(0) }).optional(),
 });
 
 export type EventoDeActividad = z.infer<typeof eventoDeActividadSchema>;
-export type ObjetivoDeActividad = NonNullable<EventoDeActividad['objetivo']>;
+export type ObjetivoDeActividad = NonNullable<EventoDeActividad['target']>;
 
 /**
  * Lector incremental de `actividad.jsonl` (puro: recibe el texto entero del archivo, `undefined` si no existe).

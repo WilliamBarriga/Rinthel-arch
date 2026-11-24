@@ -65,9 +65,9 @@ describe('CLI con secuencia y ER', () => {
     const r = await run(['inspect', 'interaction', 'checkout', '--workspace', workspace(), '--json']);
     expect(r.exitCode).toBe(0);
     const salida = salidaDeInspectSchema.parse(JSON.parse(r.stdout));
-    if (salida.comando !== 'interaction') throw new Error('comando');
-    expect(salida.interaccion).toMatchObject({ id: 'checkout', title: 'Checkout', items: 4, mensajes: 4, lifelines: ['cliente', 'api', 'db'] });
-    expect(salida.interaccion.vistas.map((v) => v.id)).toEqual(['flujo']);
+    if (salida.command !== 'interaction') throw new Error('comando');
+    expect(salida.interaction).toMatchObject({ id: 'checkout', title: 'Checkout', items: 4, messages: 4, lifelines: ['cliente', 'api', 'db'] });
+    expect(salida.interaction.views.map((v) => v.id)).toEqual(['flujo']);
   });
 
   it('inspect interaction en texto y con id inexistente sugiere', async () => {
@@ -82,14 +82,14 @@ describe('CLI con secuencia y ER', () => {
   it('inspect search encuentra Interacciones y vista muestra su Interaccion', async () => {
     const b = await run(['inspect', 'search', 'check', '--workspace', workspace(), '--json']);
     const sb = salidaDeInspectSchema.parse(JSON.parse(b.stdout));
-    if (sb.comando !== 'search') throw new Error('comando');
-    expect(sb.resultados.map((x) => `${x.kind}:${x.id}`)).toContain('interaction:checkout');
+    if (sb.command !== 'search') throw new Error('comando');
+    expect(sb.results.map((x) => `${x.kind}:${x.id}`)).toContain('interaction:checkout');
     const v = await run(['inspect', 'view', 'flujo', '--workspace', workspace(), '--json']);
     const sv = salidaDeInspectSchema.parse(JSON.parse(v.stdout));
-    if (sv.comando !== 'view') throw new Error('comando');
-    expect(sv.vista.type).toBe('sequence');
-    expect(sv.vista.interaction).toBe('checkout');
-    expect(sv.vista.nodos.map((n) => n.id)).toEqual(['cliente', 'api', 'db']);
+    if (sv.command !== 'view') throw new Error('comando');
+    expect(sv.view.type).toBe('sequence');
+    expect(sv.view.interaction).toBe('checkout');
+    expect(sv.view.nodes.map((n) => n.id)).toEqual(['cliente', 'api', 'db']);
   });
 
   it('skill documenta interaccion, secuencia y ER', async () => {

@@ -34,7 +34,7 @@ export function GaleriaDeTemas(): ReactElement {
   const fijado = fuente.views.find(({ id }) => id === vista)?.theme;
   const fijar = async (tema: string | undefined): Promise<void> => {
     if (vista === undefined) return;
-    const r = await escribir({ intencion: { tipo: 'set-theme', vista, ...(tema !== undefined && { tema }) }, fallo: `Could not ${tema === undefined ? 'unpin' : 'pin'} the Theme` });
+    const r = await escribir({ intencion: { type: 'set-theme', view: vista, ...(tema !== undefined && { theme: tema }) }, fallo: `Could not ${tema === undefined ? 'unpin' : 'pin'} the Theme` });
     if (r.ok) previsualizarTema(undefined);
   };
 
@@ -78,7 +78,7 @@ interface PropsDeFicha {
 function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, alSoltar }: PropsDeFicha): ReactElement {
   const { cliente, estado } = useEstudio();
   const lectura = useInspectPorVersion(cliente, estado?.version, 'theme', nombre);
-  const tema = lectura.tipo === 'dato' ? lectura.dato.tema : undefined;
+  const tema = lectura.tipo === 'dato' ? lectura.dato.theme : undefined;
 
   return (
     <section aria-label={`Theme ${nombre}`} className="ui-detalle">
@@ -117,11 +117,11 @@ function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, 
         <>
           <h3 className="ui-subtitulo">Layers</h3>
           <ul aria-label="Layers" className="ui-lista">
-            {tema.capas.map((capa) => (
-              <li key={capa.nombre} className="ui-mono">
-                {capa.nombre} {capa.primitiva}
-                {capa.encima ? ' [on top]' : ''}
-                {capa.animada ? ' [animated]' : ''}
+            {tema.layers.map((capa) => (
+              <li key={capa.name} className="ui-mono">
+                {capa.name} {capa.primitive}
+                {capa.above ? ' [on top]' : ''}
+                {capa.animated ? ' [animated]' : ''}
               </li>
             ))}
           </ul>

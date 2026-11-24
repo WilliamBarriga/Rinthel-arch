@@ -64,8 +64,8 @@ export function useLienzoDelEstudio({ dibujable, hashProps: props, layout, compo
         height={datos.height}
         cachedGeometries={datos.cachedGeometries}
         {...(motivoSinGestos === undefined && {
-          onMoveNode: ({ id, x, y }) => escribirDesdeElLienzo({ intencion: { tipo: 'move-pin', vista: props.view, nodo: id, x, y }, fallo: 'Could not move the Pin' }),
-          onReorderLifelines: ({ orden }) => escribirDesdeElLienzo({ intencion: { tipo: 'reorder-lifelines', vista: props.view, orden }, fallo: 'Could not reorder the Lifelines' }),
+          onMoveNode: ({ id, x, y }) => escribirDesdeElLienzo({ intencion: { type: 'move-pin', view: props.view, node: id, x, y }, fallo: 'Could not move the Pin' }),
+          onReorderLifelines: ({ orden }) => escribirDesdeElLienzo({ intencion: { type: 'reorder-lifelines', view: props.view, order: orden }, fallo: 'Could not reorder the Lifelines' }),
         })}
         chrome={false}
       />

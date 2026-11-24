@@ -47,7 +47,7 @@ describe('feed del agente', () => {
   it('al abrir muestra los Eventos previos, el mas nuevo arriba, con hora, quien, comando, objetivo y marca; args al expandir', async () => {
     await montarEstudio(
       { 'main.dg': DSL },
-      { actividad: lineas(evento(11, { comando: 'validate', exitCode: 1, resumen: { errores: 2, avisos: 0 } }), evento(12, { agente: 'claude', objetivo: { vista: 'otra' } })) },
+      { actividad: lineas(evento(11, { command: 'validate', exitCode: 1, summary: { errors: 2, warnings: 0 } }), evento(12, { agent: 'claude', target: { view: 'otra' } })) },
     );
     fireEvent.click(await screen.findByRole('tab', { name: 'Agent' }));
 
@@ -71,7 +71,7 @@ describe('feed del agente', () => {
   });
 
   it('el objetivo es clicable y lleva a la Vista que nombra', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { actividad: lineas(evento(1, { objetivo: { vista: 'otra' } })) });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { actividad: lineas(evento(1, { target: { view: 'otra' } })) });
     await lienzoListo(contenedor, 'mapa');
     fireEvent.click(screen.getByRole('tab', { name: 'Agent' }));
 
@@ -88,7 +88,7 @@ describe('ultima linea del agente', () => {
     await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toBe('Agent last line: pid 1 edit'));
 
     act(() => {
-      dev.anexarActividad(lineas(evento(2, { agente: 'claude', objetivo: { vista: 'otra' } }), evento(3, { agente: 'claude', objetivo: { nodo: 'db' } })));
+      dev.anexarActividad(lineas(evento(2, { agent: 'claude', target: { view: 'otra' } }), evento(3, { agent: 'claude', target: { node: 'db' } })));
     });
 
     await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toBe('Agent last line: claude edit db, 2 unseen'));
@@ -103,7 +103,7 @@ describe('ultima linea del agente', () => {
 
 describe('seguir al agente', () => {
   it('objetivo.vista navega; objetivo.nodo se queda si la Vista lo contiene o va a la primera que lo contiene; archivos no mueve; las islas no cambian', async () => {
-    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { actividad: lineas(evento(1, { objetivo: { vista: 'detalle' } })) });
+    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { actividad: lineas(evento(1, { target: { view: 'detalle' } })) });
     await lienzoListo(contenedor, 'mapa');
     fireEvent.click(interruptor());
     expect(interruptor().getAttribute('aria-checked')).toBe('true');
@@ -113,18 +113,18 @@ describe('seguir al agente', () => {
     const activaDerecha = () => within(derecha).getAllByRole('tab').find((t) => t.getAttribute('aria-selected') === 'true')?.textContent;
     expect(activaDerecha()).toBe('Details');
 
-    act(() => dev.anexarActividad(lineas(evento(2, { objetivo: { vista: 'otra' } }))));
+    act(() => dev.anexarActividad(lineas(evento(2, { target: { view: 'otra' } }))));
     await waitFor(() => expect(window.location.hash).toBe('#vista=otra'));
 
-    act(() => dev.anexarActividad(lineas(evento(3, { objetivo: { nodo: 'db' } }))));
+    act(() => dev.anexarActividad(lineas(evento(3, { target: { node: 'db' } }))));
     await waitFor(() => expect(window.location.hash).toBe('#vista=otra&s=db'));
 
-    act(() => dev.anexarActividad(lineas(evento(4, { objetivo: { nodo: 'api' } }))));
+    act(() => dev.anexarActividad(lineas(evento(4, { target: { node: 'api' } }))));
     // `mapa` es la Vista por defecto: el hash la omite.
     await waitFor(() => expect(window.location.hash).toBe('#s=api'));
     expect(screen.getByRole('option', { name: 'mapa' }).getAttribute('aria-selected')).toBe('true');
 
-    act(() => dev.anexarActividad(lineas(evento(5, { objetivo: { archivos: ['main.dg'] } }))));
+    act(() => dev.anexarActividad(lineas(evento(5, { target: { files: ['main.dg'] } }))));
     await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toBe('Agent last line: pid 5 edit main.dg'));
     expect(window.location.hash).toBe('#s=api');
 
@@ -137,7 +137,7 @@ describe('seguir al agente', () => {
     await lienzoListo(contenedor, 'mapa');
     fireEvent.click(interruptor());
 
-    act(() => dev.anexarActividad(lineas(evento(2, { objetivo: { nodo: 'cache' } }))));
+    act(() => dev.anexarActividad(lineas(evento(2, { target: { node: 'cache' } }))));
     act(() => dev.editarFuera('main.dg', DSL.replace('include db', 'include db, cache').replace('servicio db "Base de datos"', 'servicio db "Base de datos"\n  servicio cache "Cache"').replace('include **', 'include api, db')));
 
     await waitFor(() => expect(window.location.hash).toBe('#vista=otra&s=cache'));
@@ -163,7 +163,7 @@ describe('seguir al agente', () => {
     const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL });
     await lienzoListo(contenedor, 'mapa');
 
-    act(() => dev.anexarActividad(lineas(evento(2, { objetivo: { vista: 'otra' } }))));
+    act(() => dev.anexarActividad(lineas(evento(2, { target: { view: 'otra' } }))));
 
     await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toContain('1 unseen'));
     expect(window.location.hash).not.toContain('otra');

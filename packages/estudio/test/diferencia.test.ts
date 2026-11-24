@@ -46,7 +46,7 @@ theme claro extends neutral {
 
 const fuente: FuenteCanonica = abrirSesion({ 'main.dg': DSL }).fuente!;
 
-const nodo = (id: string): ElementoDeDiferenciaDeDev => ({ tipo: 'nodo', id });
+const nodo = (id: string): ElementoDeDiferenciaDeDev => ({ kind: 'node', id });
 
 describe('proyectarDiferencia', () => {
   it('en la Vista activa, lo agregado o cambiado que se ve se resalta; las otras Vistas que lo muestran se marcan en el indice', () => {
@@ -56,7 +56,7 @@ describe('proyectarDiferencia', () => {
   });
 
   it('un elemento dentro de un Grupo colapsado sube al Grupo, tambien su Arista', () => {
-    const p = proyectarDiferencia([nodo('db.tabla'), { tipo: 'arista', from: 'api', to: 'db.tabla', ordinal: 0 }, { tipo: 'atributo', nodo: 'db.tabla', name: 'id' }], fuente, { vista: 'plegada' });
+    const p = proyectarDiferencia([nodo('db.tabla'), { kind: 'edge', from: 'api', to: 'db.tabla', ordinal: 0 }, { kind: 'attribute', node: 'db.tabla', name: 'id' }], fuente, { vista: 'plegada' });
     expect(p.lienzo).toEqual(['db', 'api -> db']);
   });
 
@@ -67,19 +67,19 @@ describe('proyectarDiferencia', () => {
   });
 
   it('un Mensaje se resalta en la Vista de secuencia que proyecta su Interaccion', () => {
-    const p = proyectarDiferencia([{ tipo: 'mensaje', interaccion: 'compra', posicion: 0, ruta: '0' }], fuente, { vista: 'secuencia' });
+    const p = proyectarDiferencia([{ kind: 'message', interaction: 'compra', position: 0, path: '0' }], fuente, { vista: 'secuencia' });
     expect(p.lienzo).toEqual(['compra:0']);
-    expect(proyectarDiferencia([{ tipo: 'interaccion', id: 'compra' }], fuente, { vista: 'general' }).indice).toEqual(['secuencia']);
+    expect(proyectarDiferencia([{ kind: 'interaction', id: 'compra' }], fuente, { vista: 'general' }).indice).toEqual(['secuencia']);
   });
 
   it('un cambio de Tema marca la galeria y, si es el de la Vista activa, lo dice', () => {
-    expect(proyectarDiferencia([{ tipo: 'tema', name: 'claro' }], fuente, { vista: 'general' })).toMatchObject({ temas: ['claro'], temaDeLaVista: 'claro' });
-    expect(proyectarDiferencia([{ tipo: 'tema', name: 'claro' }], fuente, { vista: 'plegada' })).toMatchObject({ temas: ['claro'], temaDeLaVista: undefined });
+    expect(proyectarDiferencia([{ kind: 'theme', name: 'claro' }], fuente, { vista: 'general' })).toMatchObject({ temas: ['claro'], temaDeLaVista: 'claro' });
+    expect(proyectarDiferencia([{ kind: 'theme', name: 'claro' }], fuente, { vista: 'plegada' })).toMatchObject({ temas: ['claro'], temaDeLaVista: undefined });
   });
 
   it('el aviso de Tema cubre el efectivo: neutral en una Vista sin theme', () => {
-    expect(proyectarDiferencia([{ tipo: 'tema', name: 'neutral' }], fuente, { vista: 'plegada' })).toMatchObject({ temaDeLaVista: 'neutral' });
-    expect(proyectarDiferencia([{ tipo: 'tema', name: 'neutral' }], fuente, { vista: 'general' })).toMatchObject({ temaDeLaVista: undefined });
+    expect(proyectarDiferencia([{ kind: 'theme', name: 'neutral' }], fuente, { vista: 'plegada' })).toMatchObject({ temaDeLaVista: 'neutral' });
+    expect(proyectarDiferencia([{ kind: 'theme', name: 'neutral' }], fuente, { vista: 'general' })).toMatchObject({ temaDeLaVista: undefined });
   });
 
   it('el aviso de Tema cubre la cadena extends: cambiar el padre avisa en la Vista del hijo', () => {
@@ -109,13 +109,13 @@ view datos {
 }
 `,
     }).fuente!;
-    const arista = (ordinal: number): ElementoDeDiferenciaDeDev => ({ tipo: 'arista', from: 'pedidos', to: 'personas', ordinal });
+    const arista = (ordinal: number): ElementoDeDiferenciaDeDev => ({ kind: 'edge', from: 'pedidos', to: 'personas', ordinal });
     expect(proyectarDiferencia([arista(0)], er, { vista: 'datos' }).lienzo).toEqual(['pedidos#cliente_id -> personas#id']);
     expect(proyectarDiferencia([arista(1)], er, { vista: 'datos' }).lienzo).toEqual(['pedidos#vendedor_id -> personas#id']);
   });
 
   it('una Vista cambiada se marca en el indice salvo que sea la activa', () => {
-    expect(proyectarDiferencia([{ tipo: 'vista', id: 'plegada' }, { tipo: 'vista', id: 'general' }], fuente, { vista: 'general' }).indice).toEqual(['plegada']);
+    expect(proyectarDiferencia([{ kind: 'view', id: 'plegada' }, { kind: 'view', id: 'general' }], fuente, { vista: 'general' }).indice).toEqual(['plegada']);
   });
 });
 

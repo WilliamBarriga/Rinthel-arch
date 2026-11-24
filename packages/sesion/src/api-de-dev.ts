@@ -3,8 +3,8 @@
  * cuerpo crudo) y sale siempre una respuesta completa (estado HTTP, cuerpo ya serializado y cabeceras). La usan el servidor real (`cli`)
  * y `devEnMemoria` (`estudio/contrato`), asi que el ruteo, la validacion y los bordes son unos solos (ADR 0007).
  * Bordes: ruta desconocida 404; metodo ajeno 405 con `allow`; JSON o forma invalida 400; rechazos `estadoHttpDeRechazo`
- * (409/422); el bundle de Componentes sin confianza 403; una excepcion (fallo de I/O del puerto) 500 con su mensaje.
- * Todos con `{ ok: false, mensaje }`. El bundle es lo unico que no es JSON (`text/javascript`).
+ * (409/422); el bundle de Componentes sin confianza 403; una excepcion (fallo de I/O del puerto) 500 con su message.
+ * Todos con `{ ok: false, message }`. El bundle es lo unico que no es JSON (`text/javascript`).
  * Invariantes: nunca rechaza. Al adaptador le quedan solo el transporte y su seguridad (Host, Origin, content-type) y
  * lo demas (estaticos, `/eventos`, fuentes).
  */
@@ -37,10 +37,10 @@ interface Respuesta {
 }
 
 const json = (status: number, cuerpo: unknown): Respuesta => ({ status, cuerpo });
-const error = (status: number, mensaje: string): Respuesta => json(status, { ok: false, mensaje });
+const error = (status: number, message: string): Respuesta => json(status, { ok: false, message });
 
 const resultado = (r: ResultadoDelWorkspaceVivo): Respuesta =>
-  r.ok ? json(200, r) : json(estadoHttpDeRechazo(r.motivo), { ok: false, motivo: r.motivo, mensaje: r.mensaje, ...(r.file !== undefined && { file: r.file }) });
+  r.ok ? json(200, r) : json(estadoHttpDeRechazo(r.reason), { ok: false, reason: r.reason, message: r.message, ...(r.file !== undefined && { file: r.file }) });
 
 /** Una Intencion o `{ ediciones, version?, descripcion?, aunqueNoCompile? }` (`PeticionDeEdiciones`); `undefined` es 400. */
 export function pedidoDeEdicion(cuerpo: unknown): { aplicable: Intencion | EdicionesDeTexto; version?: number } | undefined {
@@ -143,10 +143,10 @@ const RUTAS: readonly Ruta[] = [
     ruta: RUTAS_DE_DEV.inspect,
     atender(vivo, url) {
       const consulta = consultaDeRuta(url);
-      if (consulta === undefined) return json(404, { ok: false, mensaje: `Unknown inspect route; expected ${RUTAS_DE_DEV.inspect}<${COMANDOS_DE_INSPECT.join('|')}>/<argumento>`, cercanos: [] });
+      if (consulta === undefined) return json(404, { ok: false, message: `Unknown inspect route; expected ${RUTAS_DE_DEV.inspect}<${COMANDOS_DE_INSPECT.join('|')}>/<argumento>`, suggestions: [] });
       const r = vivo.consultar(consulta);
-      if (r === undefined) return json(422, { ok: false, mensaje: 'The Workspace has errors and never compiled; there is nothing to query', cercanos: [] });
-      return 'noEncontrado' in r ? json(404, { ok: false, mensaje: r.noEncontrado, cercanos: r.cercanos }) : json(200, r.salida);
+      if (r === undefined) return json(422, { ok: false, message: 'The Workspace has errors and never compiled; there is nothing to query', suggestions: [] });
+      return 'noEncontrado' in r ? json(404, { ok: false, message: r.noEncontrado, suggestions: r.suggestions }) : json(200, r.salida);
     },
   },
   {

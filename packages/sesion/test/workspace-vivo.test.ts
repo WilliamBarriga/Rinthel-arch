@@ -228,7 +228,7 @@ view general {
 }
 `;
 
-const pin = (x: number, y: number) => ({ tipo: 'move-pin', vista: 'general', nodo: 'api', x, y }) as const;
+const pin = (x: number, y: number) => ({ type: 'move-pin', view: 'general', node: 'api', x, y }) as const;
 
 describe('Workspace vivo: Gestos con la version vista', () => {
   it('con la version vigente escribe la edicion, recompila y responde la version nueva', async () => {
@@ -269,10 +269,10 @@ describe('Workspace vivo: Gestos con la version vista', () => {
     const vista = ws.estado().version;
     puerto.editarFuera('main.dg', `${BASE}\n`);
 
-    expect(await ws.editar(pin(1, 2), vista)).toMatchObject({ ok: false, motivo: 'stale-hash' });
+    expect(await ws.editar(pin(1, 2), vista)).toMatchObject({ ok: false, reason: 'stale-hash' });
     // Tambien tras recompilar: la version vieja sigue guardada, pero su hash ya no es el del disco.
     await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', `${BASE}\n\n`));
-    expect(await ws.editar(pin(1, 2), vista)).toMatchObject({ ok: false, motivo: 'stale-hash' });
+    expect(await ws.editar(pin(1, 2), vista)).toMatchObject({ ok: false, reason: 'stale-hash' });
     expect(puerto.texto('main.dg')).toBe(`${BASE}\n\n`);
   });
 
@@ -286,7 +286,7 @@ describe('Workspace vivo: Gestos con la version vista', () => {
     await cambiarFuera(ws, reloj, () => puerto.editarFuera('otro.dg', '// 17\n'));
     const r = await ws.editar(pin(3, 4), 0);
 
-    expect(r).toMatchObject({ ok: false, motivo: 'stale-hash' });
+    expect(r).toMatchObject({ ok: false, reason: 'stale-hash' });
     expect(puerto.texto('main.dg')).toContain('pin 1,2');
   });
 
@@ -303,9 +303,9 @@ describe('Workspace vivo: Gestos con la version vista', () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': modelo as string }, temas: { 'vistas.dg': `view general${vistas as string}` } });
     const { ws } = await abrir(puerto);
 
-    expect(await ws.editar({ ...pin(1, 2), vista: 'nada' }, 0)).toMatchObject({ ok: false, motivo: 'unknown-view' });
-    expect(await ws.editar({ ...pin(1, 2), nodo: 'fantasma' }, 0)).toMatchObject({ ok: false, motivo: 'invalid' });
-    expect(await ws.editar(pin(1, 2), 0)).toMatchObject({ ok: false, motivo: 'unknown-file', file: 'vistas.dg' });
+    expect(await ws.editar({ ...pin(1, 2), view: 'nada' }, 0)).toMatchObject({ ok: false, reason: 'unknown-view' });
+    expect(await ws.editar({ ...pin(1, 2), node: 'fantasma' }, 0)).toMatchObject({ ok: false, reason: 'invalid' });
+    expect(await ws.editar(pin(1, 2), 0)).toMatchObject({ ok: false, reason: 'unknown-file', file: 'vistas.dg' });
     expect(puerto.leer().propios).toEqual({ 'main.dg': modelo });
     expect(ws.estado().version).toBe(0);
   });
@@ -314,7 +314,7 @@ describe('Workspace vivo: Gestos con la version vista', () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': secuencia(100) } });
     const { ws } = await abrir(puerto);
 
-    expect((await ws.editar({ tipo: 'reorder-lifelines', vista: 'v', orden: ['b', 'a'] }, 0)).ok).toBe(true);
+    expect((await ws.editar({ type: 'reorder-lifelines', view: 'v', order: ['b', 'a'] }, 0)).ok).toBe(true);
     expect(puerto.texto('main.dg')).toContain('order b, a');
   });
 });
@@ -336,8 +336,8 @@ describe('Workspace vivo: deshacer, rehacer y cola de escrituras', () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE } });
     const { ws } = await abrir(puerto);
 
-    expect(await ws.deshacer()).toMatchObject({ ok: false, motivo: 'nothing-to-undo' });
-    expect(await ws.rehacer()).toMatchObject({ ok: false, motivo: 'nothing-to-redo' });
+    expect(await ws.deshacer()).toMatchObject({ ok: false, reason: 'nothing-to-undo' });
+    expect(await ws.rehacer()).toMatchObject({ ok: false, reason: 'nothing-to-redo' });
     expect(puerto.texto('main.dg')).toBe(BASE);
   });
 
@@ -351,7 +351,7 @@ describe('Workspace vivo: deshacer, rehacer y cola de escrituras', () => {
     expect((await ws.deshacer()).ok).toBe(false);
 
     await ws.editar(pin(3, 4));
-    expect(await ws.rehacer()).toMatchObject({ ok: false, motivo: 'nothing-to-redo' });
+    expect(await ws.rehacer()).toMatchObject({ ok: false, reason: 'nothing-to-redo' });
   });
 
   it('una escritura externa no reinicia el Historial: deshacer da 409 solo si cambio por fuera un archivo que la entrada restaura', async () => {
@@ -370,8 +370,8 @@ describe('Workspace vivo: deshacer, rehacer y cola de escrituras', () => {
     // Fuera de dev cambia el archivo que la entrada restaura: 409 sin pisarlo, y el Historial sigue ahi.
     const externo = `${conPin}\n// editado a mano\n`;
     await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', externo));
-    expect(await ws.deshacer()).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
-    expect(await ws.deshacer()).toMatchObject({ ok: false, motivo: 'stale-hash' });
+    expect(await ws.deshacer()).toMatchObject({ ok: false, reason: 'stale-hash', file: 'main.dg' });
+    expect(await ws.deshacer()).toMatchObject({ ok: false, reason: 'stale-hash' });
     expect(puerto.texto('main.dg')).toBe(externo);
     expect(ws.historial().pasado).toHaveLength(1);
 
@@ -432,7 +432,7 @@ describe('Workspace vivo: deshacer, rehacer y cola de escrituras', () => {
     // Dos ediciones con la misma version vista: la segunda ve el texto que escribio la primera y se rechaza.
     const [a, b] = await Promise.all([ws.editar(pin(7, 8), ws.estado().version), ws.editar(pin(9, 9), ws.estado().version)]);
     expect(a.ok).toBe(true);
-    expect(b).toMatchObject({ ok: false, motivo: 'stale-hash' });
+    expect(b).toMatchObject({ ok: false, reason: 'stale-hash' });
   });
 });
 
@@ -517,10 +517,10 @@ describe('Workspace vivo: Historial visible y salto (#193)', () => {
     await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', `${puerto.texto('main.dg')}\n`));
 
     const h = ws.historial();
-    expect(h.pasado[0]).toMatchObject({ id: 1, alcanzable: false, motivo: expect.stringContaining('main.dg') });
+    expect(h.pasado[0]).toMatchObject({ id: 1, alcanzable: false, reason: expect.stringContaining('main.dg') });
     expect(h.pasado[1]).toMatchObject({ id: 2, alcanzable: true });
-    expect(await ws.saltar(1)).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
-    expect(await ws.saltar(42)).toMatchObject({ ok: false, motivo: 'unknown-entry' });
+    expect(await ws.saltar(1)).toMatchObject({ ok: false, reason: 'stale-hash', file: 'main.dg' });
+    expect(await ws.saltar(42)).toMatchObject({ ok: false, reason: 'unknown-entry' });
   });
 });
 
@@ -569,7 +569,7 @@ describe('Workspace vivo: ediciones de texto del editor', () => {
     puerto.editarFuera('main.dg', `${BASE}\n`);
 
     const r = await ws.editar({ ediciones: [{ file: 'main.dg', range: { start: punto(1, 1), end: punto(1, 1) }, replacement: '// x\n' }] }, vista);
-    expect(r).toMatchObject({ ok: false, motivo: 'stale-hash', file: 'main.dg' });
+    expect(r).toMatchObject({ ok: false, reason: 'stale-hash', file: 'main.dg' });
     expect(puerto.texto('main.dg')).toBe(`${BASE}\n`);
   });
 
@@ -578,7 +578,7 @@ describe('Workspace vivo: ediciones de texto del editor', () => {
     const { ws } = await abrir(puerto);
     const rota = { ediciones: [{ file: 'main.dg', range: { start: punto(8, 3), end: punto(8, 3) }, replacement: 'fantasma -> ' }] };
 
-    expect(await ws.editar(rota, 0)).toMatchObject({ ok: false, motivo: 'invalid' });
+    expect(await ws.editar(rota, 0)).toMatchObject({ ok: false, reason: 'invalid' });
     expect(await ws.editar({ ...rota, aunqueNoCompile: true }, 0)).toMatchObject({ ok: true });
     expect(puerto.texto('main.dg')).toContain('fantasma -> api -> db');
     expect(ws.estado().fuente?.views.map((v) => v.id)).toEqual(['general']);
@@ -589,7 +589,7 @@ describe('Workspace vivo: ediciones de texto del editor', () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE }, temas: { 'tema.dg': 'theme t {}\n' } });
     const { ws } = await abrir(puerto);
     const r = await ws.editar({ ediciones: [{ file: 'tema.dg', range: { start: punto(1, 1), end: punto(1, 1) }, replacement: '// x\n' }], aunqueNoCompile: true }, 0);
-    expect(r).toMatchObject({ ok: false, motivo: 'unknown-file', file: 'tema.dg' });
+    expect(r).toMatchObject({ ok: false, reason: 'unknown-file', file: 'tema.dg' });
   });
 });
 
@@ -625,7 +625,7 @@ describe('Workspace vivo: fix y "Aplicar N fix"', () => {
 
     const r = await ws.editar({ ediciones: [...fixes, { ...enMain, replacement: 'otro' }], descripcion: 'Aplicar 3 fix' }, ws.estado().version);
 
-    expect(r).toMatchObject({ ok: false, motivo: 'overlapping-edits', file: 'main.dg' });
+    expect(r).toMatchObject({ ok: false, reason: 'overlapping-edits', file: 'main.dg' });
     expect([puerto.texto('main.dg'), puerto.texto('mas.dg')]).toEqual([COLGANTES['main.dg'], COLGANTES['mas.dg']]);
     expect(ws.historial().pasado).toEqual([]);
   });
@@ -670,9 +670,9 @@ describe('Workspace vivo: Diferencia', () => {
       {
         version: estado.version,
         origen: 'externo',
-        agregados: [{ tipo: 'nodo', id: 'cola' }],
+        agregados: [{ kind: 'node', id: 'cola' }],
         quitados: [],
-        cambiados: [{ elemento: { tipo: 'nodo', id: 'db' }, propiedades: [{ nombre: 'title', clase: 'texto' }] }],
+        cambiados: [{ elemento: { kind: 'node', id: 'db' }, propiedades: [{ nombre: 'title', clase: 'texto' }] }],
       },
     ]);
   });
@@ -693,7 +693,7 @@ describe('Workspace vivo: Diferencia', () => {
       ['propio', 2],
       ['propio', 3],
     ]);
-    expect(recibidas[0]?.cambiados).toEqual([{ elemento: { tipo: 'vista', id: 'general' }, propiedades: [{ nombre: 'overrides', clase: 'estructura' }] }]);
+    expect(recibidas[0]?.cambiados).toEqual([{ elemento: { kind: 'view', id: 'general' }, propiedades: [{ nombre: 'overrides', clase: 'estructura' }] }]);
   });
 
   it('saltar en el Historial es una escritura propia: su Diferencia sale con origen propio y su eco no empuja otra', async () => {
@@ -709,7 +709,7 @@ describe('Workspace vivo: Diferencia', () => {
     await ws.recargar();
 
     expect(recibidas.map((d) => d.origen)).toEqual(['propio', 'propio']);
-    expect(recibidas[0]?.cambiados).toEqual([{ elemento: { tipo: 'vista', id: 'general' }, propiedades: [{ nombre: 'overrides', clase: 'estructura' }] }]);
+    expect(recibidas[0]?.cambiados).toEqual([{ elemento: { kind: 'view', id: 'general' }, propiedades: [{ nombre: 'overrides', clase: 'estructura' }] }]);
   });
 
   it('una escritura de la UI que se recompila junto a una externa en otro archivo es externa', async () => {
@@ -722,8 +722,8 @@ describe('Workspace vivo: Diferencia', () => {
 
     expect(recibidas.map((d) => d.origen)).toEqual(['externo']);
     expect(recibidas[0]?.cambiados.map((c) => c.elemento)).toEqual([
-      { tipo: 'nodo', id: 'x' },
-      { tipo: 'vista', id: 'general' },
+      { kind: 'node', id: 'x' },
+      { kind: 'view', id: 'general' },
     ]);
   });
 
@@ -738,7 +738,7 @@ describe('Workspace vivo: Diferencia', () => {
     const arreglado = await cambiarFuera(ws, reloj, () => puerto.editarFuera('main.dg', BASE.replace('"API"', '"API 3"')));
 
     expect(recibidas).toEqual([
-      { version: arreglado.version, origen: 'externo', agregados: [], quitados: [], cambiados: [{ elemento: { tipo: 'nodo', id: 'api' }, propiedades: [{ nombre: 'title', clase: 'texto' }] }] },
+      { version: arreglado.version, origen: 'externo', agregados: [], quitados: [], cambiados: [{ elemento: { kind: 'node', id: 'api' }, propiedades: [{ nombre: 'title', clase: 'texto' }] }] },
     ]);
   });
 
@@ -752,7 +752,7 @@ describe('Workspace vivo: Diferencia', () => {
     expect(recibidas).toEqual([]);
     await ws.editar(insertar('"'));
 
-    expect(recibidas.map((d) => [d.origen, d.cambiados.map((c) => c.elemento)])).toEqual([['propio', [{ tipo: 'nodo', id: 'api' }]]]);
+    expect(recibidas.map((d) => [d.origen, d.cambiados.map((c) => c.elemento)])).toEqual([['propio', [{ kind: 'node', id: 'api' }]]]);
   });
 
   it('volver a la ultima Sesion buena no empuja nada y la siguiente escritura propia ya no hereda el origen externo', async () => {

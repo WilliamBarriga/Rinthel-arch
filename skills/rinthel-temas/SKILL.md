@@ -61,7 +61,7 @@ view compra { type sequence interaction compra theme mio }
 - La cascada, donde gana el ultimo: Tema base, Tipo de nodo, estado, parche de la Vista. Los estados (`hover`, `seleccionado`, `fantasma`, `en-ruta`, `atenuado`, `foco`) solo cambian pintura: tamano y Slots quedan fijos.
 - Fuentes autohospedadas: archivos `woff2` o `ttf` en `fuentes/` del Workspace, nombrados en `fonts`. Licencia junto al archivo (ejemplos en `examples/rinthel-arch/temas/fuentes/`).
 - Ajuste solo para una Vista: `theme <nombre> { layer borde { color amber } }` dentro de la `view`.
-- Cambiar el Tema de una Vista sin tocar su parche: `dg edit --workspace <ruta> --intent '{"tipo":"set-theme","vista":"<id>","tema":"<nombre>"}'` (sin `tema` lo quita). En `dev`, la pestana Temas previsualiza y fija.
+- Cambiar el Tema de una Vista sin tocar su parche: `dg edit --workspace <ruta> --intent '{"type":"set-theme","view":"<id>","theme":"<nombre>"}'` (sin `theme` lo quita). En `dev`, la pestana Temas previsualiza y fija.
 - Parte reutilizable: `part <nombre> { ... }` y `use <nombre>` en un parche; el nombre es unico en el Workspace.
 - El trazado de las Aristas es del layout; el Tema pinta, no enruta.
 - Un Tema con componentes `.tsx` ejecuta codigo en el visor: `dev` pide confirmacion o `--trust-code`.

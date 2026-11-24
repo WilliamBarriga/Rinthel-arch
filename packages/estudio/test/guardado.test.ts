@@ -23,7 +23,7 @@ function discoFalso(texto: string) {
     esperaMs: 1_000_000,
     async enviar(peticion): Promise<ResultadoDeEnvio> {
       enviados.push(peticion);
-      if (peticion.version !== disco.version) return { ok: false, desactualizado: true, mensaje: 'stale-hash', motivo: 'stale-hash' };
+      if (peticion.version !== disco.version) return { ok: false, desactualizado: true, message: 'stale-hash', reason: 'stale-hash' };
       const doc = Text.of(disco.texto.split('\n'));
       const cambios = ChangeSet.of(
         peticion.ediciones.map((e) => ({ from: doc.line(e.range.start.line).from + e.range.start.column - 1, to: doc.line(e.range.end.line).from + e.range.end.column - 1, insert: e.replacement })),

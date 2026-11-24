@@ -79,7 +79,7 @@ Subcomando de solo lectura, con `--json` y `contractVersion` propio como el rest
 - la pila de Capas resuelta para el Tipo y estado pedidos, cada Capa con el `archivo:linea` del parche que la fijo;
 - la tabla de Metricas;
 - los Elementos de secuencia y la fila ER (ADR 0009) con la misma resolucion que el dibujo (el Estilo resuelto de `tema`, sin parches propios del CLI): los declarados y, con `--diagram sequence` o `er`, los derivados de `edge` y `node` con `derivado: true` (cambio aditivo; `contractVersion` sigue en 1);
-- `temaConCodigo` y la lista de componentes;
+- `hasCode` y la lista de componentes;
 - con `--catalog`, las claves del catalogo de Primitivas y Movimientos, derivadas del esquema unico (sin listas paralelas).
 
 Sirve al agente para saber que parche tocar antes de editar.
@@ -90,7 +90,7 @@ Sirve al agente para saber que parche tocar antes de editar.
 
 ### `validate`: sin enmienda estructural
 
-Los codigos de Tema (propiedad desconocida, `before`/`after` inexistente, contraste, `solo-color`, `temaConCodigo`, errores de compilacion de `.tsx`...) son codigos nuevos: anadir codigos no rompe el contrato y `contractVersion` sigue en 1. Convenciones para ellos:
+Los codigos de Tema (propiedad desconocida, `before`/`after` inexistente, contraste, `solo-color`, `hasCode`, errores de compilacion de `.tsx`...) son codigos nuevos: anadir codigos no rompe el contrato y `contractVersion` sigue en 1. Convenciones para ellos:
 
 - el `fix` con "quisiste decir" se emite solo con un unico candidato cercano; si hay mas, queda `hint`;
 - los issues de un parche de Tema traen `related` apuntando a la Capa base que parchea.
@@ -105,7 +105,7 @@ Los codigos de Tema (propiedad desconocida, `before`/`after` inexistente, contra
 
 Si algo falla (DSL o compilacion) el panel de issues lo muestra y `dev` conserva el ultimo dibujo bueno. La pagina pide la Geometria solo de la Vista activa, y ninguna tras un cambio de `pintura` (protocolo en ADR 0007).
 
-Confianza en el codigo: `dev` no sirve `/componentes.js` mientras el usuario no confirme (el visor pregunta la primera vez que el Workspace tiene un Tema con codigo; `--trust-code` lo da de antemano) y avisa del codigo al arrancar. `/api/codigo` informa `temaConCodigo`, los componentes y si esta confirmado.
+Confianza en el codigo: `dev` no sirve `/componentes.js` mientras el usuario no confirme (el visor pregunta la primera vez que el Workspace tiene un Tema con codigo; `--trust-code` lo da de antemano) y avisa del codigo al arrancar. `/api/codigo` informa `hasCode`, los componentes y si esta confirmado.
 
 ### Queda como implementacion
 
@@ -132,15 +132,15 @@ El emisor es un solo punto del CLI (envoltorio de `run` o dependencia inyectable
 ### Evento
 
 ```
-{ contractVersion: 1, ts, pid, agente?, comando, args, exitCode, duracionMs,
-  objetivo?: { vista?, nodo?, tema?, archivos? },
-  resumen?: { errores, avisos } }
+{ contractVersion: 2, ts, pid, agent?, command, args, exitCode, durationMs,
+  target?: { view?, node?, theme?, files? },
+  summary?: { errors, warnings } }
 ```
 
-- `agente`: texto libre de `DIAGRAMS_AGENTE`, si alguien lo fija; el sistema no conoce ningun harness.
+- `agent`: texto libre de `DIAGRAMS_AGENTE`, si alguien lo fija; el sistema no conoce ningun harness.
 - `args`: el argv tras el comando, completo.
-- `objetivo`: solo lo que el comando nombra (`inspect view|nodo|tema`, la Vista o Nodo de una Intencion de `edit`, los `files` que escribio `edit`). El CLI no deduce nada.
-- `resumen`: de `validate` y `build`. No se guardan stdout ni stderr.
+- `target`: solo lo que el comando nombra (`inspect view|node|theme`, la Vista o Nodo de una Intencion de `edit`, los `files` que escribio `edit`). El CLI no deduce nada.
+- `summary`: de `validate` y `build`. No se guardan stdout ni stderr.
 
 Lineas cortas escritas con un solo `write` en modo append; el lector descarta las lineas que no parsean. Esquema Zod `eventoDeActividadSchema` en `canonico`, con `contractVersion` propio y las reglas de compatibilidad de `validate`.
 
@@ -154,7 +154,7 @@ Al pasar 1 MB, quien escribe rota a `actividad.1.jsonl` (una sola generacion ant
 
 Feed del panel Agente: una linea por evento (hora, agente o pid, comando, objetivo clicable, marca de resultado: ok, errores, avisos o fallo de uso); los `args` al expandir. Sin filtros en la primera entrega.
 
-Seguir al agente (interruptor): `objetivo.vista` lleva a esa Vista; `objetivo.nodo` se queda en la Vista activa si lo contiene y si no salta a la primera Vista, en orden de declaracion, que lo contenga, y lo selecciona; `objetivo.archivos` no mueve por si solo. La pagina de `dev` lo resuelve con la Fuente del estado vigente (`destinoDelObjetivo` en `estudio`). Resaltar lo que cambio es del diff de Sesiones, no de este registro.
+Seguir al agente (interruptor): `target.view` lleva a esa Vista; `target.node` se queda en la Vista activa si lo contiene y si no salta a la primera Vista, en orden de declaracion, que lo contenga, y lo selecciona; `objetivo.archivos` no mueve por si solo. La pagina de `dev` lo resuelve con la Fuente del estado vigente (`destinoDelObjetivo` en `estudio`). Resaltar lo que cambio es del diff de Sesiones, no de este registro.
 
 ## Enmienda: Intencion `set-theme` y motivo `unknown-theme` (#176, mapa #168)
 

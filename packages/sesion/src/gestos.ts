@@ -95,9 +95,9 @@ const coordenadaDePin = (n: number): number => Math.min(LIMITE_DE_PIN, Math.max(
  * antes de la `}` de la Vista. Un Nodo inexistente rechaza con `invalid`.
  */
 export function moverPin(archivos: ArchivosDelWorkspace, intencion: IntencionDePin, visto?: Visto): ResultadoDeGesto {
-  const { nodo } = intencion;
+  const { node: nodo } = intencion;
   const pin = `pin ${coordenadaDePin(intencion.x)},${coordenadaDePin(intencion.y)}`;
-  return gesto(archivos, intencion.vista, visto, ({ declarada, indice, ubicar, texto }) => {
+  return gesto(archivos, intencion.view, visto, ({ declarada, indice, ubicar, texto }) => {
     const j = declarada.overrides.findIndex((o) => o.node === nodo);
     const sitio = j >= 0 ? ubicar(['views', indice, 'overrides', j, 'pin']) : ubicar(['views', indice, 'overrides']);
     if (sitio === null) return rechazo('invalid', `Could not find where to write the Pin of '${nodo}'`);
@@ -129,14 +129,14 @@ function ordenConOcultas(orden: readonly string[], viejo: readonly string[]): st
  * o lo inserta antes de la `}` de la Vista, aunque coincida con la primera aparicion. Un id que no es Nodo rechaza con `invalid`.
  */
 export function ordenarLifelines(archivos: ArchivosDelWorkspace, intencion: IntencionDeOrden, visto?: Visto): ResultadoDeGesto {
-  const { vista } = intencion;
+  const { view: vista } = intencion;
   return gesto(archivos, vista, visto, ({ declarada, indice, ubicar }) => {
     if (declarada.type !== 'sequence') return rechazo('invalid', `View '${vista}' is not a sequence View`);
     const total = declarada.order.length;
     const inicio = total > 0 ? ubicar(['views', indice, 'order', 0]) : ubicar(['views', indice, 'overrides']);
     const fin = total > 0 ? ubicar(['views', indice, 'order', total - 1]) : inicio;
     if (inicio === null || fin === null) return rechazo('invalid', `Could not find where to write the order of '${vista}'`);
-    const lista = ordenConOcultas(intencion.orden, declarada.order).join(', ');
+    const lista = ordenConOcultas(intencion.order, declarada.order).join(', ');
     const { file } = inicio;
     if (total > 0) return { file, reemplazar: { start: inicio.range.start, end: fin.range.end }, por: lista };
     return { file, en: inicio.range, insertar: `order ${lista}` };
@@ -162,7 +162,7 @@ function lineaDe(texto: string, sentencia: TextRange): TextRange {
  * que la Fuente no declara rechaza con `unknown-theme`.
  */
 export function fijarTema(archivos: ArchivosDelWorkspace, intencion: IntencionDeTema, visto?: Visto): ResultadoDeGesto {
-  const { vista, tema } = intencion;
+  const { view: vista, theme: tema } = intencion;
   return gesto(archivos, vista, visto, ({ declarada, indice, ubicar, texto, fuente }) => {
     if (tema !== undefined && !fuente.themes.some(({ name }) => name === tema)) {
       const cerca = candidatosCercanos(tema, fuente.themes.map(({ name }) => name));

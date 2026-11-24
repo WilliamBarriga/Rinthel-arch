@@ -42,14 +42,14 @@ export function crearCargadorDeComponentes(cliente: ClienteDeDev, confirmar: (me
         return { ok: true, valor: undefined };
       }
       const confirmado = await cliente.confiar();
-      if (!confirmado.ok) return { ok: false, mensaje: `dev did not accept the confirmation: ${confirmado.mensaje}` };
+      if (!confirmado.ok) return { ok: false, message: `dev did not accept the confirmation: ${confirmado.message}` };
     }
     const bundle = await cliente.bundleDeComponentes();
     if (!bundle.ok) return bundle;
     try {
       return { ok: true, valor: evaluarBundle(bundle.valor) };
     } catch (error) {
-      return { ok: false, mensaje: (error as Error).message };
+      return { ok: false, message: (error as Error).message };
     }
   };
 }

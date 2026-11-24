@@ -5,7 +5,7 @@
  * inyectados, `atenderApiDeDev` (las rutas `/api/*` como peticion -> respuesta completa) y `puertoEnMemoria` (fake del puerto).
  * Solo se exporta lo que usa otro paquete; lo demas es interno.
  * Invariantes: pura sobre `ArchivosDelWorkspace` (sin disco); una Sesion es inmutable; nunca importa codigo (ADR 0008).
- * Errores: los del Workspace son issues; las ediciones rechazadas traen `motivo`; los fallos de layout y de I/O del puerto se propagan.
+ * Errores: los del Workspace son issues; las ediciones rechazadas traen `reason`; los fallos de layout y de I/O del puerto se propagan.
  * Dependencias: `canonico`, `tema`, `dsl` y `layout`.
  */
 export { abrirSesion } from './sesion';

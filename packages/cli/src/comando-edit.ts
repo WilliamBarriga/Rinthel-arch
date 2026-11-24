@@ -100,14 +100,14 @@ export async function editar(
     if (v.view === undefined || v.node === undefined || v.x === undefined || v.y === undefined || !Number.isFinite(x) || !Number.isFinite(y)) {
       return uso(`The Pin requires --view, --node, --x and --y as numbers. ${USO}`);
     }
-    aplicable = { tipo: 'move-pin', vista: v.view, nodo: v.node, x, y };
+    aplicable = { type: 'move-pin', view: v.view, node: v.node, x, y };
   }
 
   // Lo que nombra la Intencion; las ediciones de texto solo nombran los archivos que llegan a escribirse.
-  const nombrado = 'tipo' in aplicable ? { vista: aplicable.vista, ...('nodo' in aplicable && { nodo: aplicable.nodo }) } : {};
+  const nombrado = 'type' in aplicable ? { view: aplicable.view, ...('node' in aplicable && { node: aplicable.node }) } : {};
   const conObjetivo = (r: ResultadoDeEjecucion, archivosEscritos?: string[]): ResultadoConActividad => ({
     ...r,
-    actividad: { objetivo: { ...nombrado, ...(archivosEscritos !== undefined && { archivos: archivosEscritos }) } },
+    actividad: { target: { ...nombrado, ...(archivosEscritos !== undefined && { files: archivosEscritos }) } },
   });
 
   // Solo escribe bajo la raiz del Workspace, nunca en `--theme-path`.
@@ -133,7 +133,7 @@ export async function editar(
   return conObjetivo(
     {
       exitCode: 0,
-      stdout: json ? `${JSON.stringify(salida, null, 2)}\n` : `${cambiados.length} archivo(s) editado(s): ${cambiados.join(', ')}\n`,
+      stdout: json ? `${JSON.stringify(salida, null, 2)}\n` : `${cambiados.length} file(s) edited: ${cambiados.join(', ')}\n`,
       stderr: '',
     },
     cambiados,
@@ -142,12 +142,12 @@ export async function editar(
 
 function rechazado(r: RechazoDeEdicion, json: boolean): ResultadoDeEjecucion {
   const exitCode = CODIGO_DE_RECHAZO;
-  if (!json) return { exitCode, stdout: '', stderr: `Edit rejected (${r.motivo}): ${r.mensaje}\n` };
+  if (!json) return { exitCode, stdout: '', stderr: `Edit rejected (${r.reason}): ${r.message}\n` };
   const salida = salidaDeEditSchema.parse({
     contractVersion: EDIT_CONTRACT_VERSION,
     ok: false,
-    reason: r.motivo,
-    message: r.mensaje,
+    reason: r.reason,
+    message: r.message,
     ...(r.file === undefined ? {} : { file: r.file }),
   });
   return { exitCode, stdout: `${JSON.stringify(salida, null, 2)}\n`, stderr: '' };

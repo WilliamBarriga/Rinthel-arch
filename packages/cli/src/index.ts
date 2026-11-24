@@ -178,6 +178,6 @@ async function ejecutar(
     exitCode: salida.ok ? 0 : 1,
     stdout: opciones['json'] === true ? `${JSON.stringify(salida, null, 2)}\n` : textoLegible(salida),
     stderr: '',
-    actividad: { resumen: { errores: salida.summary.errors, avisos: salida.summary.warnings } },
+    actividad: { summary: { errors: salida.summary.errors, warnings: salida.summary.warnings } },
   };
 }

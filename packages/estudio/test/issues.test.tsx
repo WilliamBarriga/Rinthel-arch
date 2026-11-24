@@ -93,7 +93,7 @@ describe('panel Issues', () => {
     ['overlapping-edits', "Ediciones solapadas en 'main.dg'"],
     ['invalid', 'La edicion introduce un error: x'],
   ])('ante %s no se escribe nada y un aviso da motivo y archivo', async (motivo, mensaje) => {
-    const rechazo = new Response(JSON.stringify({ ok: false, motivo, mensaje, file: 'main.dg' }), { status: 422 });
+    const rechazo = new Response(JSON.stringify({ ok: false, reason: motivo, message: mensaje, file: 'main.dg' }), { status: 422 });
     const { dev } = await montarConIssues(COLGANTES, {
       envolverFetch: (f) => ((entrada: string | URL | Request, init?: RequestInit) => (String(entrada) === '/api/edit' ? Promise.resolve(rechazo) : f(entrada, init))) as typeof fetch,
     });

@@ -81,7 +81,7 @@ La lista completa de codigos sale de `dg skill --workspace <ruta>`.
 Arrastrar una cabecera en el visor reescribe `order`. Por CLI, con el orden visible completo:
 
 ```
-dg edit --workspace <ruta> --intent '{"tipo":"reorder-lifelines","vista":"compra","orden":["api","cliente","db"]}'
+dg edit --workspace <ruta> --intent '{"type":"reorder-lifelines","view":"compra","order":["api","cliente","db"]}'
 ```
 
 ## ER
