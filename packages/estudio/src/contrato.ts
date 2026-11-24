@@ -436,7 +436,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           (h) => h.pasado.length === 1,
           () => void post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }),
         );
-        expect(conUna.pasado).toEqual([{ id: 1, descripcion: 'mover api en general', archivos: ['main.dg'], cuando: expect.any(Number), alcanzable: true }]);
+        expect(conUna.pasado).toEqual([{ id: 1, descripcion: 'move api in general', archivos: ['main.dg'], cuando: expect.any(Number), alcanzable: true }]);
       });
     });
 

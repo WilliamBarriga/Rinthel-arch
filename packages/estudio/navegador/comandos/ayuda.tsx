@@ -9,16 +9,16 @@ import type { Ambito } from './teclas';
 
 const GRUPOS: readonly { ambito: Ambito; nombre: string }[] = [
   { ambito: 'global', nombre: 'Global' },
-  { ambito: 'lienzo', nombre: 'Lienzo' },
+  { ambito: 'lienzo', nombre: 'Canvas' },
   { ambito: 'editor', nombre: 'Editor' },
-  { ambito: 'texto', nombre: 'Campo de texto' },
+  { ambito: 'texto', nombre: 'Text field' },
 ];
 
 /** Teclas propias de `VistaInteractiva` con el foco en el lienzo: no son comandos del registro, pero se documentan. */
 const TECLAS_DEL_LIENZO: readonly { nombre: string; teclas: string[] }[] = [
-  { nombre: 'Recorrer los elementos', teclas: ['Tab', 'Shift+Tab'] },
-  { nombre: 'Moverse entre elementos', teclas: ['Flechas'] },
-  { nombre: 'Seleccionar o entrar', teclas: ['Enter', 'Espacio'] },
+  { nombre: 'Cycle through elements', teclas: ['Tab', 'Shift+Tab'] },
+  { nombre: 'Move between elements', teclas: ['Arrows'] },
+  { nombre: 'Select or enter', teclas: ['Enter', 'Space'] },
 ];
 
 export function Ayuda({ abierto, alCambiar }: { abierto: boolean; alCambiar: (abierto: boolean) => void }): ReactElement {
@@ -37,7 +37,7 @@ export function Ayuda({ abierto, alCambiar }: { abierto: boolean; alCambiar: (ab
       <Dialog.Portal container={portales}>
         <Dialog.Backdrop className="ui-fondo-dialogo" />
         <Dialog.Popup className="ui-dialogo ui-ayuda">
-          <Dialog.Title className="ui-dialogo-titulo">Atajos de teclado</Dialog.Title>
+          <Dialog.Title className="ui-dialogo-titulo">Keyboard shortcuts</Dialog.Title>
           {grupos.map((g) => (
             <section key={g.nombre} aria-label={g.nombre}>
               <h3 className="ui-subtitulo">{g.nombre}</h3>
@@ -57,7 +57,7 @@ export function Ayuda({ abierto, alCambiar }: { abierto: boolean; alCambiar: (ab
               </dl>
             </section>
           ))}
-          <Dialog.Close className="ui-boton">Cerrar</Dialog.Close>
+          <Dialog.Close className="ui-boton">Close</Dialog.Close>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>
