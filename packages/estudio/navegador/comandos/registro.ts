@@ -5,6 +5,7 @@
  * recibe el contexto del estudio (`useEstudio()`). Las reglas de teclas y ambitos estan en `teclas.ts`.
  */
 import { actividadDelCliente } from '../agente/actividad';
+import { abrirTourDelPrototipo } from '../prototipo-tour/prototipo-tour';
 import type { ContextoDelEstudio } from '../marco/contexto';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS } from '../marco/pestanas';
 import { sitioDeSalida } from '../sitio';
@@ -43,6 +44,8 @@ function volverAVistas(e: ContextoDelEstudio): void {
 }
 
 const PROPIOS: readonly Comando[] = [
+  // PROTOTIPO DESECHABLE (#224): el tour a pedido.
+  { id: 'ver-tour', nombre: 'Ver tour', teclas: [], ambito: 'global', ejecutar: abrirTourDelPrototipo },
   { id: 'buscador', nombre: 'Buscar', teclas: ['Mod+K'], ambito: 'global', enBuscador: false, ejecutar: (e) => e.abrirDialogo('buscador') },
   { id: 'ayuda', nombre: 'Atajos de teclado', teclas: ['?', 'Mod+/'], ambito: 'global', ejecutar: (e) => e.abrirDialogo('ayuda') },
   { id: 'isla-izquierda', nombre: 'Ocultar o mostrar el panel izquierdo', teclas: ['Mod+B'], ambito: 'global', ejecutar: (e) => e.alternarIsla('izquierda') },
