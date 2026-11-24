@@ -6,7 +6,7 @@
  * Modos de error: issues como datos; fallo de uso o interno -> stderr, stdout vacio, codigo 2.
  * Codigos de salida: 0 correcto, 1 errores del Workspace o edicion rechazada, 2 fallo de uso o interno.
  */
-import { salidaDeValidateSchema } from 'canonico';
+import { convencionesObsoletas, salidaDeValidateSchema } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { parseArgs } from 'node:util';
 
@@ -22,7 +22,7 @@ import type { ResultadoDeEjecucion } from './sesion-cli';
 import { comandoScan } from './scan';
 import { generarSkill } from './skill';
 import { construirSalida, textoLegible } from './validate';
-import { CARPETA_DE_SALIDA, escribirSalida, escribirTexto, leerWorkspace } from './workspace';
+import { CARPETA_DE_SALIDA, escribirSalida, escribirTexto, leerRutas, leerWorkspace } from './workspace';
 
 export { iniciarDev } from './dev';
 export { CARPETA_DE_SALIDA } from './workspace';
@@ -34,6 +34,8 @@ export type { ResultadoDeEjecucion };
 /** Por defecto, las reales. */
 export interface Dependencias {
   leer?: (raiz: string) => ArchivosDelWorkspace;
+  /** Rutas de todos los archivos del Workspace (convenciones de nombres); con `leer` inyectado, sus claves. */
+  listar?: (raiz: string) => string[];
   escribir?: (raiz: string, archivos: Readonly<Record<string, string | Uint8Array>>, subcarpeta?: string) => void;
   /** Crea las carpetas que falten. */
   escribirArchivo?: (ruta: string, texto: string) => void;
@@ -135,7 +137,7 @@ async function ejecutar(
   comando: 'validate' | 'build',
   opciones: OpcionesParseadas,
   maxIssues: number,
-  { leer = leerWorkspace, escribir = escribirSalida }: Dependencias,
+  { leer = leerWorkspace, escribir = escribirSalida, listar = leer === leerWorkspace ? leerRutas : (r) => Object.keys(leer(r)) }: Dependencias,
 ): Promise<ResultadoConActividad> {
   const raiz = opciones['workspace'] as string;
   const carpetaDeTemas = opciones['theme-path'] as string | undefined;
@@ -163,7 +165,7 @@ async function ejecutar(
   let salida;
   try {
     salida = salidaDeValidateSchema.parse(
-      construirSalida(issues, { maxIssues, strict: opciones['strict'] === true }),
+      construirSalida([...issues, ...convencionesObsoletas(listar(raiz))], { maxIssues, strict: opciones['strict'] === true }),
     );
   } catch (error) {
     return uso(`Internal error: the output does not meet the contract (${(error as Error).message})`);

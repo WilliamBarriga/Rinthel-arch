@@ -8,7 +8,7 @@
 { contractVersion: 2, ok, summary: { errors, warnings, truncated }, issues: [...] }
 ```
 
-Cada issue: `code` estable, `severity` (`error` | `warning`), `file`, `line`, `column`, `message`, y opcionales `hint` (texto), `related: [{file,line,column,message}]` (p. ej. el Nodo duplicado original) y `fix`. El `fix` es una edicion estructurada del DSL de texto (`{ file, range, replacement }`) y solo se emite en casos inequivocos (un unico candidato); si hay ambiguedad queda `hint`. Nunca edita el JSON canonico (ADR 0001).
+Cada issue: `code` estable, `severity` (`error` | `warning`), `file`, `line`, `column`, `message`, y opcionales `hint` (texto), `related: [{file,line,column,message}]` (p. ej. el Nodo duplicado original) y `fix`. El `fix` es una edicion estructurada del DSL de texto (`{ file, range, replacement }`; con `rename` renombra `file`, un archivo o carpeta del Workspace, a esa ruta y el rango es una edicion vacia) y solo se emite en casos inequivocos (un unico candidato); si hay ambiguedad queda `hint`. Nunca edita el JSON canonico (ADR 0001).
 
 Codigos de salida: `0` sin errores (warnings permitidos), `1` hay errores, `2` fallo de uso o interno. `--strict` trata warnings como exit 1.
 

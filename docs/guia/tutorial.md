@@ -127,7 +127,7 @@ Completo en [`examples/tutorial/paso-3`](../../examples/tutorial/paso-3).
 
 ## Paso 4: tu propio Tema
 
-Un Tema es texto, igual que el Modelo. La forma mas corta de hacer uno propio es **extender** uno existente y cambiar solo lo que quieras. Crea `mi-tienda/tema.dg`:
+Un Tema es texto, igual que el Modelo. La forma mas corta de hacer uno propio es **extender** uno existente y cambiar solo lo que quieras. Crea `mi-tienda/theme.dg`:
 
 ```
 theme tienda extends neutral-dark {

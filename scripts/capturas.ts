@@ -20,7 +20,7 @@ import { prepararWorkspace } from './capturas/workspace.ts';
 
 const REPO = resolve(import.meta.dirname, '..');
 const GALERIA = 'examples/temas/galeria';
-const TEMAS_DE_EJEMPLO = 'examples/rinthel-arch/temas';
+const TEMAS_DE_EJEMPLO = 'examples/rinthel-arch/themes';
 const VIEWPORT = { width: 1600, height: 900 };
 const VISTAS = ['abierto', 'cobertura'] as const;
 type Vista = (typeof VISTAS)[number];

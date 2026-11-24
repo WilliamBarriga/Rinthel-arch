@@ -29,6 +29,7 @@ export const issueSchema = z.object({
       file: z.string(),
       range: z.object({ start: posicionSchema, end: posicionSchema }),
       replacement: z.string(),
+      rename: z.string().optional(),
     })
     .optional(),
 }) satisfies z.ZodType<Issue>;

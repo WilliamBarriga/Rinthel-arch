@@ -16,6 +16,7 @@ type IssueEsperado = {
     file: string;
     range: { start: { line: number; column: number }; end: { line: number; column: number } };
     replacement: string;
+    rename?: string;
   };
 };
 
