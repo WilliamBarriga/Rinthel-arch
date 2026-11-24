@@ -9,6 +9,8 @@
  * - `exports`: la superficie publica es la entrada `.` mas, solo en los paquetes de `SUBPATHS_PERMITIDOS`, esos subpaths.
  * - `pureza`: el codigo fuente de `NUCLEO` no importa modulos de Node ni usa reloj, azar, `process`, red ni DOM.
  * - `reexporte`: ningun archivo hace `export ... from` de otro paquete del workspace, salvo los de `REEXPORTES_PERMITIDOS`.
+ * - `aislado`: un paquete de `AISLADOS` queda fuera de `CADENA`, no importa ningun paquete del workspace y solo lo
+ *   importan los paquetes que `AISLADOS` le asigna.
  * Ademas revisa las carpetas de `CARPETAS_DE_RAIZ` (paquete `(raiz)`) con la regla `interno`: de un paquete solo usan
  * su nombre o lo que declara `exports`, nunca un archivo suyo por ruta relativa.
  * Errores: un `package.json` ilegible o invalido lanza; uno ausente se ignora.
@@ -36,6 +38,14 @@ export const SUBPATHS_PERMITIDOS: Readonly<Record<string, readonly string[]>> = 
  */
 export const REEXPORTES_PERMITIDOS: readonly string[] = ['packages/estudio/src/protocolo.ts', 'packages/shell/src/index.ts'];
 
+/**
+ * Packages outside `CADENA` (ADR 0010): they import no workspace package and only the listed packages import them.
+ * `scanner` reads a codebase without knowing the core; only `cli` uses it.
+ */
+export const AISLADOS: Readonly<Record<string, readonly string[]>> = {
+  scanner: ['cli'],
+};
+
 /** Carpeta raiz (relativa al repo) de las ayudas de prueba compartidas entre paquetes; solo la importan pruebas. */
 export const AYUDAS_DE_PRUEBA = 'tests/ayudas';
 
@@ -58,7 +68,7 @@ const IMPUREZAS: ReadonlyArray<readonly [RegExp, string]> = [
 
 const MODULOS_DE_NODE = new Set(builtinModules);
 
-export type Regla = 'cadena' | 'orden' | 'interno' | 'declaracion' | 'exports' | 'pureza' | 'reexporte';
+export type Regla = 'cadena' | 'orden' | 'interno' | 'declaracion' | 'exports' | 'pureza' | 'reexporte' | 'aislado';
 
 export interface Violacion {
   readonly paquete: string;
@@ -165,7 +175,7 @@ function revisarManifiesto(paquete: Paquete): Violacion[] {
   const violaciones: Violacion[] = [];
   const nombre = paquete.manifiesto.name ?? paquete.nombre;
   const archivo = 'package.json';
-  if (!(CADENA as readonly string[]).includes(nombre)) {
+  if (!(CADENA as readonly string[]).includes(nombre) && !(nombre in AISLADOS)) {
     violaciones.push({
       paquete: nombre,
       archivo,
@@ -242,6 +252,24 @@ function revisarArchivo(
     const destino = paquetes.find((otro) => otro.nombre === importado);
     if (destino === undefined) {
       continue;
+    }
+
+    if (importado !== nombre && nombre in AISLADOS) {
+      violaciones.push({
+        paquete: nombre,
+        archivo: relativo,
+        regla: 'aislado',
+        mensaje: `${nombre} is outside the chain and imports no workspace package; it imports ${importado}`,
+      });
+    }
+    const importadores = AISLADOS[importado];
+    if (importado !== nombre && importadores !== undefined && !importadores.includes(nombre)) {
+      violaciones.push({
+        paquete: nombre,
+        archivo: relativo,
+        regla: 'aislado',
+        mensaje: `${nombre} imports ${importado}; only ${importadores.join(', ')} may import it`,
+      });
     }
 
     const mia = (CADENA as readonly string[]).indexOf(nombre);
