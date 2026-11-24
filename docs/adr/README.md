@@ -15,6 +15,8 @@ Estados: vigente (rige tal cual), reescrito (otro ADR lo reemplaza y el archivo 
 | [`0007-interaccion-y-protocolo-de-edicion.md`](0007-interaccion-y-protocolo-de-edicion.md) | Intenciones, reductor puro e historial (enmiendas: `pin` en el centro del Nodo, Historial ante escrituras externas y editor de texto, rutas y escrituras de la UI, `atenderApiDeDev` con respuesta completa y bundle de Componentes, Historial visible, fix masivo y salto) | vigente |
 | [`0008-sistema-de-temas-expresivo.md`](0008-sistema-de-temas-expresivo.md) | Temas expresivos: Capas, render hibrido y animacion | vigente |
 | [`0009-tipos-de-diagrama-secuencia-y-er.md`](0009-tipos-de-diagrama-secuencia-y-er.md) | Tipos de diagrama secuencia y ER: Interaccion, marcas ER, Elementos de Tema y Geometria por tipo | vigente |
+| [`0010-importador-de-codebases.md`](0010-importador-de-codebases.md) | Importador de codebases: Escaner fuera del nucleo, `diagrams scan` y Borrador de escaneo `rinthel/scan@1` | vigente |
+| [`0011-marca-planeado.md`](0011-marca-planeado.md) | Marca Planeado (`planned`) para Blueprints desde un PRD, estado de Tema `planned` y paso a codigo real | vigente |
 
 ## El hueco del 0006
 
