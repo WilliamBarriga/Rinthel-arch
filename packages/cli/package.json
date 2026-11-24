@@ -29,6 +29,7 @@
     "esbuild": "0.28.1",
     "estudio": "workspace:*",
     "layout": "workspace:*",
+    "scanner": "workspace:*",
     "sesion": "workspace:*",
     "tema": "workspace:*"
   },

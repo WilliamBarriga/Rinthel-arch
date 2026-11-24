@@ -1,5 +1,5 @@
 /**
- * `cli`: comandos `validate`, `build`, `skill`, `inspect`, `edit` y `dev` (opciones: `docs/guia/cli.md`).
+ * `cli`: comandos `validate`, `build`, `skill`, `inspect`, `edit`, `dev` y `scan` (opciones: `docs/guia/cli.md`).
  * Interfaz: `run(argv, dependencias?) -> { exitCode, stdout, stderr }`; no escribe en el proceso (`bin.ts` imprime).
  * Invariantes: unico paquete con I/O de disco; `validate` nunca reescribe y devuelve todos los issues ordenados;
  * su unico efecto lateral es el Registro de actividad en `.diagrams/actividad.jsonl`.
@@ -18,12 +18,14 @@ import { inspeccionar } from './comando-inspect';
 import { comandoDev } from './dev';
 import { MAX_ISSUES_POR_DEFECTO, abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
+import { comandoScan } from './scan';
 import { generarSkill } from './skill';
 import { construirSalida, textoLegible } from './validate';
 import { CARPETA_DE_SALIDA, escribirSalida, escribirTexto, leerWorkspace } from './workspace';
 
 export { iniciarDev } from './dev';
 export { CARPETA_DE_SALIDA } from './workspace';
+export { DRAFT_PATH, SCAN_CONTRACT_VERSION } from './scan';
 export type { OpcionesDeDev, ServidorDev } from './dev';
 
 export type { ResultadoDeEjecucion };
@@ -76,9 +78,10 @@ async function despachar(argv: readonly string[], dependencias: Dependencias): P
   if (comando === 'edit') return editar(resto, dependencias);
   if (comando === 'inspect') return inspeccionar(resto, dependencias);
   if (comando === 'dev') return comandoDev(resto);
+  if (comando === 'scan') return comandoScan(resto, dependencias);
   if (comando !== 'validate' && comando !== 'build' && comando !== 'skill') {
     return uso(
-      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|skill|inspect|edit|dev> --workspace <ruta> (diagrams --help para el detalle)`,
+      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|skill|inspect|edit|dev|scan> --workspace <ruta> (diagrams --help para el detalle)`,
     );
   }
   if (comando === 'skill') return skill(resto, dependencias);
