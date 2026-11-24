@@ -1,7 +1,7 @@
 /**
  * Temas incorporados `neutral` (el de una Vista sin Tema) y `neutral-dark`, en DSL y compilados con el Workspace
  * como un archivo mas. Invariante: cero warnings de contraste (texto 4.5:1, partes graficas 3:1).
- * `alto-contraste` lo define `tema` (el visor lo necesita sin compilar); `resolverTemas` lo anade a la Fuente.
+ * `high-contrast` lo define `tema` (el visor lo necesita sin compilar); `resolverTemas` lo anade a la Fuente.
  */
 import type { Documento, Theme } from './generated/ast';
 
@@ -36,8 +36,8 @@ theme neutral {
       attrs { color tinta }
     }
     state hover { layer borde { color COLOR }  transition 120ms ease-out }
-    state en-ruta { layer borde { color COLOR  width 2  motion pulso 1.2s ease-in-out intensity 0.4 } }
-    state atenuado { layer sombra none }
+    state on-path { layer borde { color COLOR  width 2  motion pulse 1.2s ease-in-out intensity 0.4 } }
+    state dimmed { layer sombra none }
     // En una Vista de secuencia la cabecera de la Lifeline es mas compacta: icono y nombre, sin insignia ni contador.
     diagram sequence {
       slots column min-width 130 slack 22 { row gap 8 pad 8 min-height 44 { icon  title } }
@@ -126,7 +126,7 @@ theme neutral-dark extends neutral {
 }
 `;
 
-export const NOMBRES_INCORPORADOS = ['neutral', 'neutral-dark', 'alto-contraste'] as const;
+export const NOMBRES_INCORPORADOS = ['neutral', 'neutral-dark', 'high-contrast'] as const;
 
 
 export const temasIncorporados = (parse: (texto: string) => Documento): Theme[] => parse(FUENTE_INCORPORADOS).themes;

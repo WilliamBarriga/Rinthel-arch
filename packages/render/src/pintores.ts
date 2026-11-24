@@ -372,7 +372,7 @@ export function pintarEstadoDeCaja(estado: EstadoVisual, id: string, rect?: Rect
     attrs: {
       class: 'rd-estado',
       'data-state': estado,
-      ...(estado === 'seleccionado' && { 'data-selected': id }),
+      ...(estado === 'selected' && { 'data-selected': id }),
       ...(rect !== undefined && { style: enRect(rect) }),
     },
   };
@@ -389,7 +389,7 @@ export function pintarEstadoDeRuta(estilo: Estilo, estado: EstadoVisual, id: str
     attrs: {
       d: ruta,
       'data-state': estado,
-      ...(estado === 'seleccionado' && { 'data-selected': id }),
+      ...(estado === 'selected' && { 'data-selected': id }),
       fill: 'none',
       stroke: color,
       'stroke-width': num(ancho),

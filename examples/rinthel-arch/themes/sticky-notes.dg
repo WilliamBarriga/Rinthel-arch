@@ -43,8 +43,8 @@ theme sticky-notes {
       layer trazo sketch after borde { roughness 3.5  frequency 0.035 }
     }
     state hover { layer sombra { color texto/0.25  x 2  y 18  blur 24 }  transition 150ms ease-out }
-    state en-ruta { layer sombra { color tinta/0.3 } }
-    state atenuado { layer sombra none }
+    state on-path { layer sombra { color tinta/0.3 } }
+    state dimmed { layer sombra none }
   }
   group {
     // Recuadro de tinta a mano alzada, sin relleno, con el nombre escrito encima.

@@ -4,7 +4,7 @@ import { ALTO_DE_FILA, CLAVES_DE_FILA, ESTADOS, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS
 import type { CapaDeTema, OpDeCapa, TemaResuelto, TextoDeFila } from 'tema';
 
 import type { RowItem, ThemeLayer, ThemeUse } from './generated/ast';
-import { aRango, issueConSugerencia, rangoDe } from './posiciones';
+import { aRango, baseDeErrorDeEstado, issueConSugerencia, rangoDe } from './posiciones';
 import { compilarBloque } from './temas-capas';
 import { aIssue, primitivaSuelta } from './temas-comun';
 import type { Contexto } from './temas-comun';
@@ -69,7 +69,7 @@ export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx:
       case 'RowState': {
         const resultado = parsearEstado(item.name);
         if ('error' in resultado) {
-          ctx.issues.push(issueConSugerencia({ code: resultado.error.code, message: resultado.error.message }, ctx.archivo, item, 'name', ESTADOS));
+          ctx.issues.push(issueConSugerencia(baseDeErrorDeEstado(resultado.error), ctx.archivo, item, 'name', ESTADOS));
           break;
         }
         fila.estados = { ...fila.estados, [resultado.estado]: [...(fila.estados[resultado.estado] ?? []), ...parche(item.items, item)] };

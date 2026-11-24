@@ -30,17 +30,17 @@ const contraste = (a: string, b: string): number => {
 
 describe('Temas incorporados', () => {
   it('estan siempre en la Fuente, el neutro primero, y compilan sin issues', () => {
-    expect(compilar().themes.map((t) => t.name)).toEqual(['neutral', 'neutral-dark', 'alto-contraste']);
+    expect(compilar().themes.map((t) => t.name)).toEqual(['neutral', 'neutral-dark', 'high-contrast']);
   });
 
   it('el neutro dibuja con Capas, Slots, estados y animacion minima', () => {
     const neutro = resolverTema(compilar().themes[0]!);
     expect(neutro.nodo.capas.map((c) => c.nombre)).toEqual(['forma', 'relleno', 'borde', 'sombra']);
-    expect(Object.keys(neutro.nodo.estados).sort()).toEqual(['atenuado', 'en-ruta', 'hover']);
+    expect(Object.keys(neutro.nodo.estados).sort()).toEqual(['dimmed', 'hover', 'on-path']);
     expect(neutro.nodo.animacion?.transicionesDeEstado?.hover).toBeDefined();
   });
 
-  it.each(['neutral', 'neutral-dark', 'alto-contraste'])('%s usa los Slots de tarjeta, el Grupo propio y el fondo de pagina', (nombre) => {
+  it.each(['neutral', 'neutral-dark', 'high-contrast'])('%s usa los Slots de tarjeta, el Grupo propio y el fondo de pagina', (nombre) => {
     const tema = resolverTema(compilar().themes.find((t) => t.name === nombre)!);
     const slots = JSON.stringify(tema.nodo.slots);
     for (const slot of ['icon', 'title', 'badge', 'counter', 'attrs']) expect(slots).toContain(`"slot":"${slot}"`);
@@ -56,7 +56,7 @@ describe('Temas incorporados', () => {
     expect(resultado.issues.map((i) => i.code)).toContain('duplicate-theme');
   });
 
-  it.each(['neutral', 'neutral-dark', 'alto-contraste'])('%s cumple el contraste: texto 4.5:1 y partes graficas 3:1', (nombre) => {
+  it.each(['neutral', 'neutral-dark', 'high-contrast'])('%s cumple el contraste: texto 4.5:1 y partes graficas 3:1', (nombre) => {
     const tema = resolverTema(compilar().themes.find((t) => t.name === nombre)!);
     const { palette: p, tokens } = tema;
     expect(contraste(tokens.foreground, tokens.background)).toBeGreaterThanOrEqual(4.5);

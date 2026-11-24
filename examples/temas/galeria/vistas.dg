@@ -5,7 +5,7 @@ view soft-card    { type architecture  theme soft-card     include **  exclude r
 view glass-chip   { type architecture  theme glass-chip    include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
 view neobrutalist { type architecture  theme neobrutalist  include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
 view blueprint    { type architecture  theme blueprint     include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
-view claro-suave  { type architecture  theme claro-suave   include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
+view soft-light  { type architecture  theme soft-light   include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
 view crt-terminal { type architecture  theme crt-terminal  include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
 view synthwave    { type architecture  theme synthwave     include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
 view editorial    { type architecture  theme editorial     include **  exclude referencia, referencia.**, datos, datos.**  expanded plataforma, estados  collapsed persistencia }
@@ -19,7 +19,7 @@ view soft-card-referencia { type architecture  theme soft-card  include referenc
 view glass-chip-referencia { type architecture  theme glass-chip  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
 view neobrutalist-referencia { type architecture  theme neobrutalist  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
 view blueprint-referencia { type architecture  theme blueprint  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
-view claro-suave-referencia { type architecture  theme claro-suave  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
+view soft-light-referencia { type architecture  theme soft-light  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
 view crt-terminal-referencia { type architecture  theme crt-terminal  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
 view synthwave-referencia { type architecture  theme synthwave  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
 view editorial-referencia { type architecture  theme editorial  include referencia.*, referencia.render.**, referencia.sesion.**, referencia.layout.**  expanded referencia.render, referencia.sesion, referencia.layout  collapsed referencia.canonico, referencia.dsl, referencia.shell, referencia.cli }
@@ -35,7 +35,7 @@ view soft-card-secuencia { type sequence  theme soft-card  interaction cobro  or
 view glass-chip-secuencia { type sequence  theme glass-chip  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
 view neobrutalist-secuencia { type sequence  theme neobrutalist  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
 view blueprint-secuencia { type sequence  theme blueprint  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
-view claro-suave-secuencia { type sequence  theme claro-suave  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
+view soft-light-secuencia { type sequence  theme soft-light  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
 view crt-terminal-secuencia { type sequence  theme crt-terminal  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
 view synthwave-secuencia { type sequence  theme synthwave  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
 view editorial-secuencia { type sequence  theme editorial  interaction cobro  order cliente, pasarela, plataforma.pedidos, plataforma.pagos, proveedor, plataforma.eventos  autonumber }
@@ -49,7 +49,7 @@ view soft-card-er { type er  theme soft-card  include datos.clientes, datos.pedi
 view glass-chip-er { type er  theme glass-chip  include datos.clientes, datos.pedidos-tabla, datos.lineas }
 view neobrutalist-er { type er  theme neobrutalist  include datos.clientes, datos.pedidos-tabla, datos.lineas }
 view blueprint-er { type er  theme blueprint  include datos.clientes, datos.pedidos-tabla, datos.lineas }
-view claro-suave-er { type er  theme claro-suave  include datos.clientes, datos.pedidos-tabla, datos.lineas }
+view soft-light-er { type er  theme soft-light  include datos.clientes, datos.pedidos-tabla, datos.lineas }
 view crt-terminal-er { type er  theme crt-terminal  include datos.clientes, datos.pedidos-tabla, datos.lineas }
 view synthwave-er { type er  theme synthwave  include datos.clientes, datos.pedidos-tabla, datos.lineas }
 view editorial-er { type er  theme editorial  include datos.clientes, datos.pedidos-tabla, datos.lineas }

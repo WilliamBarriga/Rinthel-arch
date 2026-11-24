@@ -268,8 +268,8 @@ describe('Diagram: hoja de estilo', () => {
     const hoja = hojaDe(dibujo(p));
 
     expect(hojaDe(dibujo(p))).toBe(hoja);
-    for (const estado of ['seleccionado', 'hover', 'fantasma']) expect(hoja).toContain(`.rd-estado[data-state="${estado}"]{`);
-    expect(hoja).toContain('.rd-estado[data-state="fantasma"]{border:2px dashed #9ca3af;opacity:0.7}');
+    for (const estado of ['selected', 'hover', 'ghost']) expect(hoja).toContain(`.rd-estado[data-state="${estado}"]{`);
+    expect(hoja).toContain('.rd-estado[data-state="ghost"]{border:2px dashed #9ca3af;opacity:0.7}');
   });
 
   it('sin Capas en el Tema se usa el aspecto por defecto del Estilo', async () => {
@@ -429,14 +429,14 @@ describe('Diagram', () => {
     const marcas = (html: string, estado: string): string[] => [...html.matchAll(new RegExp(`<[^>]*data-state="${estado}"[^>]*>`, 'g'))].map((m) => m[0]);
 
     it('un Nodo seleccionado lleva un contorno dentro de su caja, estilado por la hoja con el color del Estilo', async () => {
-      const html = dibujo(await props(vista(), { estados: { b: ['seleccionado'] } }));
+      const html = dibujo(await props(vista(), { estados: { b: ['selected'] } }));
       const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
-      const [marca] = marcas(html, 'seleccionado');
+      const [marca] = marcas(html, 'selected');
 
       expect(marca).toContain('data-selected="b"');
       expect(marca).toContain('class="rd-estado"');
-      expect(html.slice(html.indexOf('data-id="b"'), html.indexOf('data-id="c"'))).toContain('data-state="seleccionado"');
-      expect(hojaDe(html)).toContain(`.rd-estado[data-state="seleccionado"]{border:3px solid ${estilo.estados.seleccionado.color}}`);
+      expect(html.slice(html.indexOf('data-id="b"'), html.indexOf('data-id="c"'))).toContain('data-state="selected"');
+      expect(hojaDe(html)).toContain(`.rd-estado[data-state="selected"]{border:3px solid ${estilo.estados.selected.color}}`);
     });
 
     it('sin estados no se dibuja ninguna marca', async () => {
@@ -444,20 +444,20 @@ describe('Diagram', () => {
     });
 
     it('una Arista marcada se dibuja en su capa SVG; un Atributo que no se muestra, no', async () => {
-      const estados = { 'b -> c': ['hover'], 'a#x': ['seleccionado'] } as const;
+      const estados = { 'b -> c': ['hover'], 'a#x': ['selected'] } as const;
       const html = dibujo(await props(vista(), { estados }));
 
       expect(marcas(capaDe(html, 'aristas'), 'hover')).toHaveLength(1);
       expect(marcas(capaDe(html, 'aristas'), 'hover')[0]).toContain('<path');
-      expect(marcas(html, 'seleccionado')).toHaveLength(0);
+      expect(marcas(html, 'selected')).toHaveLength(0);
     });
 
     it('el fantasma y el hover usan sus propias entradas del Estilo', async () => {
       const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
-      const otro = { ...estilo, estados: { ...estilo.estados, fantasma: { ...estilo.estados.fantasma, color: 'hotpink' } } };
-      const hoja = hojaDe(dibujo(await props(vista(), { estados: { c: ['fantasma'] }, estilo: otro })));
+      const otro = { ...estilo, estados: { ...estilo.estados, ghost: { ...estilo.estados.ghost, color: 'hotpink' } } };
+      const hoja = hojaDe(dibujo(await props(vista(), { estados: { c: ['ghost'] }, estilo: otro })));
 
-      expect(hoja).toContain('.rd-estado[data-state="fantasma"]{border:2px dashed hotpink;opacity:0.7}');
+      expect(hoja).toContain('.rd-estado[data-state="ghost"]{border:2px dashed hotpink;opacity:0.7}');
       expect(hoja).toContain(`.rd-estado[data-state="hover"]{border:2px solid ${estilo.estados.hover.color};opacity:0.6}`);
     });
 
@@ -468,8 +468,8 @@ describe('Diagram', () => {
         views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
       });
       const v = resolveView(fuente, 'v')!;
-      const p = await props(v, { estados: { 't#nombre': ['seleccionado'] } });
-      const marca = marcas(dibujo(p), 'seleccionado')[0];
+      const p = await props(v, { estados: { 't#nombre': ['selected'] } });
+      const marca = marcas(dibujo(p), 'selected')[0];
       const m = metricasDe(TEMA_NEUTRO, 'architecture');
 
       expect(marca).toContain('data-selected="t#nombre"');

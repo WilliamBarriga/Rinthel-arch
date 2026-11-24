@@ -36,9 +36,9 @@ async function montar(extra: Partial<VistaInteractivaProps> = {}) {
   await waitFor(() => expect(r.container.querySelector('[data-id="a"]')).not.toBeNull());
   return { ...r, zona: r.container.querySelector<HTMLElement>('.rd-vista')! };
 }
-const conFoco = (c: HTMLElement) => [...c.querySelectorAll('[data-state="foco"]')].map((e) => e.closest('[data-id]')?.getAttribute('data-id') ?? e.getAttribute('data-selected'));
+const conFoco = (c: HTMLElement) => [...c.querySelectorAll('[data-state="focus"]')].map((e) => e.closest('[data-id]')?.getAttribute('data-id') ?? e.getAttribute('data-selected'));
 const atenuados = (c: HTMLElement) => [...c.querySelectorAll('[data-atenuado]')].map((e) => e.getAttribute('data-id') ?? e.getAttribute('data-edge'));
-const enRuta = (c: HTMLElement) => [...c.querySelectorAll('.rd-caja [data-state="en-ruta"]')].map((e) => e.closest('[data-id]')!.getAttribute('data-id'));
+const enRuta = (c: HTMLElement) => [...c.querySelectorAll('.rd-caja [data-state="on-path"]')].map((e) => e.closest('[data-id]')!.getAttribute('data-id'));
 const tecla = (zona: HTMLElement, key: string, init: KeyboardEventInit = {}) => fireEvent.keyDown(zona, { key, ...init });
 
 describe('teclado', () => {
@@ -102,7 +102,7 @@ describe('ruta', () => {
 
     expect(enRuta(container).sort()).toEqual(['a', 'b', 'c']);
     expect(atenuados(container).sort()).toEqual(['g', 'g.x']);
-    expect(container.querySelectorAll('path[data-state="en-ruta"]')).toHaveLength(2);
+    expect(container.querySelectorAll('path[data-state="on-path"]')).toHaveLength(2);
   });
 
   it('dos Nodos seleccionados resaltan la ruta mas corta entre ellos', async () => {

@@ -72,7 +72,7 @@ describe('seam sesion: accesibilidad del Tema', () => {
     expect(issues).toEqual([]);
   });
 
-  it.each(['', 'neutral', 'neutral-dark', 'alto-contraste'])('el Tema incorporado %j no da ningun warning, con Grupos abiertos y cerrados', async (nombre) => {
+  it.each(['', 'neutral', 'neutral-dark', 'high-contrast'])('el Tema incorporado %j no da ningun warning, con Grupos abiertos y cerrados', async (nombre) => {
     // Un .dg minimo como lo empieza una persona: Tipos con color e icono, un Grupo abierto, uno cerrado y Aristas.
     const colores = `specification {
   node servicio { color blue  icon server }  node base { color green  icon database }

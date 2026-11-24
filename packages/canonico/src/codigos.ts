@@ -63,6 +63,7 @@ export const CODIGOS = Object.freeze({
   W_THEME_FONT_NOT_SERVED: 'theme-font-not-served',
   E_DUPLICATE_KEY_MARK: 'duplicate-key-mark',
   E_ER_CARDINALITY: 'er-cardinality',
+  E_OLD_CATALOG_VALUE: 'old-catalog-value',
   E_OLD_WORKSPACE_CONVENTION: 'old-workspace-convention',
 } as const);
 
@@ -130,6 +131,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   'theme-font-no-fallback': 'A Theme declares a `fonts` family that is not a CSS generic and does not say what to fall back to (`fallback "sans-serif"` or a generic in the same list).',
   'duplicate-key-mark': 'An Attribute repeats a key mark (`pk`, `fk`, `uk`); the `fix` removes the repeated one.',
   'er-cardinality': 'An Edge included in an ER View has a cardinality that is not `0..1`, `1`, `0..*` or `1..*`; the `fix` proposes the single close candidate.',
+  'old-catalog-value': 'A Motion, effect, state or built-in Theme is written with its old Spanish name; the `fix` rewrites it to the English one (no aliases).',
   'old-workspace-convention': 'A Workspace file or folder uses an old Spanish convention name (`tema.dg`, `temas/`, `fuentes/`); the `fix` renames it (`theme.dg`, `themes/`, `fonts/`).',
   'theme-font-not-served': 'The viewer does not know where to request the Theme font files (`fontUrl` is missing): it measures and paints with the fallback, not the declared font.',
 });

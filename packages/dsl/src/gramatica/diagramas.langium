@@ -200,7 +200,7 @@ ThemeUse:
 ThemeLayer:
   'layer' name=Id (remove?='none' | (primitive=IdTerminal)? (placement=('before' | 'after') target=Id)? (over?='over')? ('{' (animations+=LayerAnimation | props+=LayerProp)* '}')?);
 
-// En una Capa: `motion pulso 1.2s ease-in-out intensity 0.4`, `motion none` (quita el heredado) o
+// En una Capa: `motion pulse 1.2s ease-in-out intensity 0.4`, `motion none` (quita el heredado) o
 // `keyframes opacity 2s { 0 1  50 0.4  100 1 }`. En `node`: `transition`, `enter`, `exit`, `stagger`;
 // `transition` tambien en un `state`. Los parametros son palabras cerradas (no colisionan con las propiedades).
 LayerAnimation:

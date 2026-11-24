@@ -304,7 +304,7 @@ describe('Workspace vivo: Gestos con la version vista', () => {
     const { ws } = await abrir(puerto);
 
     expect(await ws.editar({ ...pin(1, 2), view: 'nada' }, 0)).toMatchObject({ ok: false, reason: 'unknown-view' });
-    expect(await ws.editar({ ...pin(1, 2), node: 'fantasma' }, 0)).toMatchObject({ ok: false, reason: 'invalid' });
+    expect(await ws.editar({ ...pin(1, 2), node: 'ghost' }, 0)).toMatchObject({ ok: false, reason: 'invalid' });
     expect(await ws.editar(pin(1, 2), 0)).toMatchObject({ ok: false, reason: 'unknown-file', file: 'vistas.dg' });
     expect(puerto.leer().propios).toEqual({ 'main.dg': modelo });
     expect(ws.estado().version).toBe(0);

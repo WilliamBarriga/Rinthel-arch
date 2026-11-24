@@ -35,7 +35,7 @@ const capas = (animacion?: object) => [
 const temaCon = (nodoExtra: Record<string, unknown> = {}, conAnimacion = true): TemaResuelto =>
   ({
     ...TEMA_NEUTRO,
-    nodo: { slots: TEMA_NEUTRO.nodo.slots, tipos: {}, estados: {}, capas: capas(conAnimacion ? ok(construirMovimiento('pulso', [p('duration', 1200), p('intensity', '0.4')])) : undefined), ...nodoExtra },
+    nodo: { slots: TEMA_NEUTRO.nodo.slots, tipos: {}, estados: {}, capas: capas(conAnimacion ? ok(construirMovimiento('pulse', [p('duration', 1200), p('intensity', '0.4')])) : undefined), ...nodoExtra },
   }) as unknown as TemaResuelto;
 
 async function dibujar(theme: TemaResuelto, extra: Partial<DiagramProps> = {}): Promise<string> {
@@ -59,12 +59,12 @@ describe('Diagram: Movimientos de Capa', () => {
     expect(html.match(/class="rd-anim" data-anim="acento"/g)).toHaveLength(3);
     expect(css).toMatch(/\.rd-nodo\{[^}]*border-radius:8px/);
     expect(css).not.toMatch(/\.rd-nodo\{[^}]*border:2px/);
-    expect(css).toMatch(/\.rd-anim\[data-anim="acento"\]\{[^}]*border:2px solid[^}]*animation:rd-mov-pulso 1200ms ease-in-out 0ms infinite[^}]*--rd-i:0\.4/);
-    expect(css).toMatch(/@keyframes rd-mov-pulso\{/);
+    expect(css).toMatch(/\.rd-anim\[data-anim="acento"\]\{[^}]*border:2px solid[^}]*animation:rd-mov-pulse 1200ms ease-in-out 0ms infinite[^}]*--rd-i:0\.4/);
+    expect(css).toMatch(/@keyframes rd-mov-pulse\{/);
   });
 
   it('todos los Movimientos del catalogo compilan a CSS nativo', async () => {
-    for (const nombre of ['flujo', 'pulso', 'respiracion', 'giro', 'aura']) {
+    for (const nombre of ['stream', 'pulse', 'breathe', 'spin', 'aura']) {
       const css = hojaDe(await dibujar(temaCon({ capas: capas(ok(construirMovimiento(nombre, []))) })));
 
       expect(css, nombre).toContain(`@keyframes rd-mov-${nombre}{`);
@@ -73,14 +73,14 @@ describe('Diagram: Movimientos de Capa', () => {
 
   it('un Movimiento atado a un estado solo corre con ese estado', async () => {
     const aura = ok(construirMovimiento('aura', []));
-    const tema = temaCon({ capas: capas(), estados: { seleccionado: [{ nombre: 'acento', props: {}, animacion: aura }] } }, false);
+    const tema = temaCon({ capas: capas(), estados: { selected: [{ nombre: 'acento', props: {}, animacion: aura }] } }, false);
     const sinEstado = await dibujar(tema);
-    const seleccionado = await dibujar(tema, { estados: { a: ['seleccionado'] } });
+    const seleccionado = await dibujar(tema, { estados: { a: ['selected'] } });
     const css = hojaDe(seleccionado);
 
     expect(sinEstado).not.toContain('data-estados="');
-    expect(seleccionado).toMatch(/data-id="a"[^>]*><div[^>]*data-part="nodo"[^>]*data-estados="seleccionado"/);
-    expect(css).toMatch(/\[data-estados~="seleccionado"\] \.rd-anim\[data-anim="acento"\]\{[^}]*animation:rd-mov-aura/);
+    expect(seleccionado).toMatch(/data-id="a"[^>]*><div[^>]*data-part="nodo"[^>]*data-estados="selected"/);
+    expect(css).toMatch(/\[data-estados~="selected"\] \.rd-anim\[data-anim="acento"\]\{[^}]*animation:rd-mov-aura/);
     expect(css).not.toMatch(/^\.[\w-]+ \.rd-anim\[data-anim="acento"\]\{[^}]*animation:/m);
   });
 
@@ -97,8 +97,8 @@ describe('Diagram: transition, enter, exit y stagger', () => {
   const animacion = {
     transicion: ok(construirTransicion([p('duration', 120), p('easing', 'ease-out')])),
     transicionesDeEstado: { hover: ok(construirTransicion([p('duration', 60)])) },
-    entrada: ok(construirEfecto('escala', [p('duration', 300)])),
-    salida: ok(construirEfecto('fundido', [p('duration', 200), p('reduced', 'instant')])),
+    entrada: ok(construirEfecto('zoom', [p('duration', 300)])),
+    salida: ok(construirEfecto('fade', [p('duration', 200), p('reduced', 'instant')])),
     escalonadoMs: 80,
   };
   const tema = temaCon({ animacion }, false);
@@ -115,8 +115,8 @@ describe('Diagram: transition, enter, exit y stagger', () => {
     const css = hojaDe(await dibujar(tema));
     const html = await dibujar(tema, { visibility: (id) => (id === 'b' ? 0 : 1) });
 
-    expect(css).toContain('@keyframes rd-in-escala{');
-    expect(css).toMatch(/\.rd-nodo:not\(\[data-oculto\]\)\{animation:rd-in-escala 300ms ease-out calc\(0ms \+ var\(--rd-n, 0\) \* 80ms\) backwards/);
+    expect(css).toContain('@keyframes rd-in-zoom{');
+    expect(css).toMatch(/\.rd-nodo:not\(\[data-oculto\]\)\{animation:rd-in-zoom 300ms ease-out calc\(0ms \+ var\(--rd-n, 0\) \* 80ms\) backwards/);
     expect(css).toMatch(/\.rd-nodo\[data-oculto\]\{transition:[^;}]*opacity 200ms ease-out/);
     expect(html.match(/data-oculto=""/g)).toHaveLength(1);
     expect(html).toMatch(/data-id="a"[^>]*>(?:<div[^>]*--rd-n:0)/);
@@ -132,7 +132,7 @@ describe('Diagram: transition, enter, exit y stagger', () => {
 
 describe('Diagram: reduced-motion', () => {
   const tema = temaCon({
-    animacion: { entrada: ok(construirEfecto('fundido', [])), salida: ok(construirEfecto('escala', [p('reduced', 'instant')])), transicion: ok(construirTransicion([p('reduced', 'instant')])) },
+    animacion: { entrada: ok(construirEfecto('fade', [])), salida: ok(construirEfecto('zoom', [p('reduced', 'instant')])), transicion: ok(construirTransicion([p('reduced', 'instant')])) },
   });
 
   it('una sola politica: media query del sistema y atributo manual, con los Movimientos en su fotograma estatico', async () => {
@@ -146,7 +146,7 @@ describe('Diagram: reduced-motion', () => {
   it('enter fade reduce a un fundido corto; instant lo elimina', async () => {
     const css = hojaDe(await dibujar(tema));
 
-    expect(css).toMatch(/\[data-reduced-motion="on"\] \.rd-nodo:not\(\[data-oculto\]\)\{animation-name:rd-in-fundido!important;animation-duration:100ms!important/);
+    expect(css).toMatch(/\[data-reduced-motion="on"\] \.rd-nodo:not\(\[data-oculto\]\)\{animation-name:rd-in-fade!important;animation-duration:100ms!important/);
     expect(css).toMatch(/\[data-reduced-motion="on"\] \.rd-nodo\[data-oculto\]\{transition:none!important/);
     expect(css).toMatch(/\[data-reduced-motion="on"\] \.rd-nodo,[^{]*\{transition:none!important/);
   });
@@ -162,7 +162,7 @@ describe('Diagram: reduced-motion', () => {
 
 describe('Diagram: lo animado no afecta a las Metricas ni relayouta', () => {
   const animada = temaCon({
-    animacion: { transicion: ok(construirTransicion([])), entrada: ok(construirEfecto('deslizar', [])), salida: ok(construirEfecto('escala', [])), escalonadoMs: 50 },
+    animacion: { transicion: ok(construirTransicion([])), entrada: ok(construirEfecto('slide', [])), salida: ok(construirEfecto('zoom', [])), escalonadoMs: 50 },
   });
 
   it('las Metricas del Tema son las mismas con y sin animacion', () => {

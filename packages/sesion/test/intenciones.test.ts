@@ -72,7 +72,7 @@ describe('historial de deshacer y rehacer', () => {
     if (!e2.ok) throw new Error(e2.message);
     expect(rehacer(e2.historial)).toBeUndefined();
 
-    const mala = editarEnHistorial(e2.historial, mover(texto, 0, 0, 'fantasma'));
+    const mala = editarEnHistorial(e2.historial, mover(texto, 0, 0, 'ghost'));
     expect(mala.ok).toBe(false);
     expect(deshacer(e2.historial)?.archivos['main.dg']).toBe(texto);
   });

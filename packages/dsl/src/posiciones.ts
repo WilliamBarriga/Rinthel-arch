@@ -1,5 +1,5 @@
 /** Posiciones del texto en el AST de Langium y issues con sugerencia. Puro. */
-import { candidatosCercanos } from 'canonico';
+import { CODIGOS, candidatosCercanos } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
 import { GrammarUtils } from 'langium';
 import type { AstNode } from 'langium';
@@ -36,15 +36,16 @@ export function aRango(rango: RangoDeLangium | undefined): TextRange {
  * un unico candidato cercano entre `existentes` y `hint` si hay varios.
  */
 export function issueConSugerencia<T extends AstNode>(
-  base: { code: string; message: string },
+  base: { code: string; message: string; /** Candidatos ya decididos (un nombre antiguo); sin ellos se buscan entre `existentes`. */ candidatos?: readonly string[] },
   archivo: string,
   nodo: T,
   propiedad: Extract<keyof T, string>,
   existentes: Iterable<string>,
 ): Issue {
   const { start: inicio, end: fin } = rangoDe(nodo, propiedad);
-  const issue: Issue = { ...base, severity: 'error', file: archivo, ...inicio };
-  const candidatos = candidatosCercanos(nodo[propiedad] as string, existentes);
+  const { candidatos: decididos, ...resto } = base;
+  const issue: Issue = { ...resto, severity: 'error', file: archivo, ...inicio };
+  const candidatos = decididos ?? candidatosCercanos(nodo[propiedad] as string, existentes);
   const [unico] = candidatos;
   if (candidatos.length === 1 && unico !== undefined) {
     issue.fix = { file: archivo, range: { start: inicio, end: fin }, replacement: unico };
@@ -52,4 +53,9 @@ export function issueConSugerencia<T extends AstNode>(
     issue.hint = `Candidates: ${candidatos.join(', ')}`;
   }
   return issue;
+}
+
+/** Base de issue de un error de `parsearEstado`: un nombre antiguo (`old-catalog-value`) lleva su candidato ya decidido. */
+export function baseDeErrorDeEstado(error: { code: string; message: string; candidatos: readonly string[] }): { code: string; message: string; candidatos?: readonly string[] } {
+  return error.code === CODIGOS.E_OLD_CATALOG_VALUE ? error : { code: error.code, message: error.message };
 }

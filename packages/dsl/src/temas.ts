@@ -7,7 +7,7 @@
  * de Tipo y de estado se acumulan tras los del padre; `slots` reemplaza la disposicion heredada. Un Tema sin
  * base define su pila en orden. Sin `extends`, parte de fuentes, tokens y Slots del neutro con paleta vacia.
  */
-import { CODIGOS } from 'canonico';
+import { CODIGOS, VALORES_DE_CATALOGO_ANTIGUOS, issueDeRenombre, mensajeDeValorAntiguo, renombreAntiguo } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
 import type { AstNode as Ast } from 'langium';
 import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, fuentesSinReserva, opTocaMetricas, parsearEstado } from 'tema';
@@ -15,7 +15,7 @@ import type { CajaDeSlots, CapaDeTema, ElementoDeTema, OpDeCapa, TemaResuelto } 
 
 import type { GroupItem, GroupPadding, NodeItem, Theme, ThemeDiagram, ThemeLayer, ThemeSlots, ThemeState, ThemeUse } from './generated/ast';
 import { ARCHIVO_INCORPORADOS, NOMBRES_INCORPORADOS } from './incorporados';
-import { aRango, issueConSugerencia } from './posiciones';
+import { aRango, baseDeErrorDeEstado, issueConSugerencia, rangoDe } from './posiciones';
 import { compilarArista } from './temas-arista';
 import { compilarFila } from './temas-fila';
 import { compilarSecuencia } from './temas-secuencia';
@@ -60,7 +60,7 @@ export interface OrigenDeTema {
 export interface TemasCompilados {
   temas: TemaResuelto[];
   issues: Issue[];
-  /** Incluye los incorporados (archivo `<incorporados>`); `alto-contraste` no figura. */
+  /** Incluye los incorporados (archivo `<incorporados>`); `high-contrast` no figura. */
   origenes: Record<string, OrigenDeTema>;
   /** Parches de Capa de una Vista (`theme t { layer ... }`) validados contra el Tema `tema`. */
   parchesDeVista(tema: string, items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string): { ops: OpDeCapa[]; issues: Issue[] };
@@ -88,6 +88,13 @@ interface Entorno {
 }
 
 /** Nombres de las `part` que usa un bloque, incluidas las que usan esas partes. */
+/** El `extends` de un Tema apunta a uno no declarado; un nombre antiguo de Tema incorporado es `old-catalog-value` si el nuevo existe. */
+function temaPadreNoDeclarado(parent: string, archivo: string, ast: Theme, existentes: readonly string[]): Issue {
+  const nuevo = renombreAntiguo(VALORES_DE_CATALOGO_ANTIGUOS, 'theme', parent);
+  if (nuevo !== undefined && existentes.includes(nuevo)) return issueDeRenombre(CODIGOS.E_OLD_CATALOG_VALUE, mensajeDeValorAntiguo('theme', parent, nuevo), archivo, rangoDe(ast, 'parent'), nuevo);
+  return issueConSugerencia({ code: CODIGOS.E_UNKNOWN_THEME, message: `Theme '${parent}' is not declared` }, archivo, ast, 'parent', existentes);
+}
+
 function partesUsadas(items: ReadonlyArray<{ $type: string }>, partes: ReadonlyMap<string, ParteDeclarada>, vistas = new Set<string>()): string[] {
   for (const item of items) {
     if (item.$type === 'ThemeUse') {
@@ -170,7 +177,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
         issues.push(
           padre !== undefined
             ? { code: CODIGOS.E_EXTENDS_CYCLE, severity: 'error', file: declarado.archivo, ...declarado.padre.start, message: `extends cycle: '${name}' extends '${parent}', which depends on it` }
-            : issueConSugerencia({ code: CODIGOS.E_UNKNOWN_THEME, message: `Theme '${parent}' is not declared` }, declarado.archivo, declarado.ast, 'parent', [...porNombre.keys(), TEMA_ALTO_CONTRASTE.name]),
+            : temaPadreNoDeclarado(parent, declarado.archivo, declarado.ast, [...porNombre.keys(), TEMA_ALTO_CONTRASTE.name]),
         );
         enCurso.delete(name);
         fallidos.add(name);
@@ -286,7 +293,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
   for (const declarado of porNombre.values()) resolver(declarado);
 
   return {
-    // Los incorporados primero y en su orden; `alto-contraste` lo define `tema`.
+    // Los incorporados primero y en su orden; `high-contrast` lo define `tema`.
     temas: [...resueltos.values(), altoContraste]
       .map(({ tema }) => tema)
       .sort((a, b) => (NOMBRES_INCORPORADOS.indexOf(a.name as never) + 1 || 99) - (NOMBRES_INCORPORADOS.indexOf(b.name as never) + 1 || 99)),
@@ -414,7 +421,7 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     }
     const parseado = parsearEstado(item.name);
     if ('error' in parseado) {
-      issues.push(issueConSugerencia({ code: parseado.error.code, message: parseado.error.message }, archivo, item, 'name', ESTADOS_DE[elemento]));
+      issues.push(issueConSugerencia(baseDeErrorDeEstado(parseado.error), archivo, item, 'name', ESTADOS_DE[elemento]));
       continue;
     }
     const { estado } = parseado;

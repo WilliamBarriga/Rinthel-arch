@@ -74,7 +74,7 @@ describe('Intencion reorder-lifelines', () => {
     const texto = con('');
     expect(aplicarEnMemoria({ 'main.dg': texto }, { type: 'reorder-lifelines', view: 'v', order: ['cliente'] }, { 'main.dg': 'viejo' })).toMatchObject({ ok: false, reason: 'stale-hash' });
     expect(aplicarEnMemoria({ 'main.dg': texto }, { type: 'reorder-lifelines', view: 'nada', order: ['cliente'] })).toMatchObject({ ok: false, reason: 'unknown-view' });
-    expect(ordenar(texto, ['fantasma'])).toMatchObject({ ok: false, reason: 'invalid' });
+    expect(ordenar(texto, ['ghost'])).toMatchObject({ ok: false, reason: 'invalid' });
   });
 
   it('deshacer restaura el texto exacto y rehacer lo reaplica', () => {

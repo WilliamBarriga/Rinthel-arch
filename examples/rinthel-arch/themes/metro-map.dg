@@ -25,8 +25,8 @@ theme metro-map {
     }
     type externo { layer borde dashed { color texto  width 4 } }
     state hover { layer relleno { color COLOR/0.12 }  layer borde { color COLOR }  transition 120ms ease-out }
-    state en-ruta { layer borde { color COLOR  width 6 } }
-    state atenuado { layer borde { color gray } }
+    state on-path { layer borde { color COLOR  width 6 } }
+    state dimmed { layer borde { color gray } }
   }
   group {
     // Zona de tarifa: un area tenue del color del Tipo, sin borde.

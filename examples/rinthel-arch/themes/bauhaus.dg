@@ -34,8 +34,8 @@ theme bauhaus {
     type actor { layer forma pill }
     type externo { layer bloque none  layer forma cut { cut 18 }  layer tinte gradient after relleno { from COLOR/0.25  to COLOR/0.25 } }
     state hover { layer bloque { offset -11 -11 }  transition 100ms linear }
-    state en-ruta { layer relleno { color amarillo } }
-    state atenuado { layer bloque none }
+    state on-path { layer relleno { color amarillo } }
+    state dimmed { layer bloque none }
   }
   group {
     layer forma rect

@@ -11,7 +11,7 @@ export function variablesDeChrome(estilo: Estilo): CSSProperties {
     '--rd-fondo': estilo.fondo,
     '--rd-texto': estilo.texto,
     '--rd-borde': estilo.borde,
-    '--rd-acento': estilo.estados.seleccionado.color,
+    '--rd-acento': estilo.estados.selected.color,
     '--rd-fuente': estilo.fuenteCuerpo,
     '--rd-error': estilo.colorDeError,
   } as CSSProperties;

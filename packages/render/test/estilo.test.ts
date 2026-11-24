@@ -22,7 +22,7 @@ describe('resolverEstilo', () => {
 
     expect(propio.colorDeError).toBe('#aa0000');
     expect(porDefecto.colorDeError).toBe('#dc2626');
-    expect(porDefecto.colorDeError).not.toBe(porDefecto.estados.fantasma.color);
+    expect(porDefecto.colorDeError).not.toBe(porDefecto.estados.ghost.color);
   });
 
   it('trae los defaults de dibujo en un solo sitio', () => {

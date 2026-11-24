@@ -1,5 +1,6 @@
 /** Catalogo de Primitivas y Slots: fuente unica de la validacion, los mensajes y la referencia generada. */
-import { CODIGOS, candidatosCercanos } from 'canonico';
+import { CODIGOS, VALORES_DE_CATALOGO_ANTIGUOS, candidatosCercanos, mensajeDeValorAntiguo, renombreAntiguo } from 'canonico';
+import type { CategoriaDeCatalogo } from 'canonico';
 
 import { CATALOGO_DE_EFECTOS } from './catalogo-efectos';
 import type { FamiliaDeEfectos } from './catalogo-efectos';
@@ -279,4 +280,11 @@ export function resolverTokens(
     else errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Token '${valor}' is not a number ('${tokens[nombre]}')`, clave });
   }
   return { props: resueltas, errores };
+}
+
+/** Un nombre antiguo (espanol) de `categoria` es el error `old-catalog-value` con el nuevo como `candidato` (el `fix`); `undefined` si no lo es. */
+export function errorDeValorAntiguo(categoria: CategoriaDeCatalogo, escrito: string): ErrorDeCatalogo | undefined {
+  const nuevo = renombreAntiguo(VALORES_DE_CATALOGO_ANTIGUOS, categoria, escrito);
+  if (nuevo === undefined) return undefined;
+  return { codigo: CODIGOS.E_OLD_CATALOG_VALUE, mensaje: mensajeDeValorAntiguo(categoria, escrito, nuevo), candidato: nuevo };
 }

@@ -41,6 +41,7 @@ Codigos de los Tipos de diagrama `sequence` y `er` (la lista completa, con su de
 | `step-not-projected`, `step-not-advancing` | Un `upto` apunta a un Mensaje que la Vista no proyecta o no avanza |
 | `order-not-in-interaction`, `ref-without-view`, `reply-without-sync` | Avisos (solo fallan con `--strict`) |
 | `er-cardinality`, `duplicate-key-mark` | Cardinalidad ER invalida (con `fix`) y marca de clave repetida (`pk`, `fk`, `uk`) |
+| `old-catalog-value` | Un Movimiento, efecto, estado o Tema incorporado escrito con su nombre antiguo en espanol; el `fix` lo reescribe al nombre en ingles |
 | `old-workspace-convention` | Un archivo o carpeta del Workspace usa un nombre viejo (`tema.dg`, `temas/`, `fuentes/`); el `fix` lleva `rename` a `theme.dg`, `themes/`, `fonts/`. Renombra de fuera hacia dentro y revalida |
 
 ### `build`: escribir la geometria

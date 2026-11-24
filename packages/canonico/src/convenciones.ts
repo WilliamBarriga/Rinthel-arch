@@ -3,14 +3,10 @@
  * or folder; there are no aliases. The table is data: a later rename adds a row.
  */
 import type { Issue } from './issue';
+import type { Renombre } from './nombres-antiguos';
 
-export interface ConvencionRenombrada {
-  /** Old name: a file basename (`tema.dg`) or a folder name (`temas`), at any depth. */
-  old: string;
-  /** Name that replaces it. */
-  new: string;
-  kind: 'file' | 'folder';
-}
+/** Old name: a file basename (`tema.dg`) or a folder name (`temas`), at any depth. Same row shape as the catalog table (`nombres-antiguos.ts`). */
+export type ConvencionRenombrada = Renombre<'file' | 'folder'>;
 
 export const CONVENCIONES_RENOMBRADAS: readonly ConvencionRenombrada[] = Object.freeze([
   { old: 'tema.dg', new: 'theme.dg', kind: 'file' },

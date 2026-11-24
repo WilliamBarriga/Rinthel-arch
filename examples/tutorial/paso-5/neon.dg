@@ -25,8 +25,8 @@ theme neon {
     }
     type externo { layer glow { color cian/0.4  radius 12 }  layer borde dashed { color cian } }
     state hover { layer glow { color cian/0.8  radius 28 }  transition 140ms ease-out }
-    state en-ruta { layer glow { motion aura 2s ease-in-out intensity 0.6 } }
-    enter fundido 300ms
+    state on-path { layer glow { motion aura 2s ease-in-out intensity 0.6 } }
+    enter fade 300ms
   }
   group {
     layer forma rect { radius 18 }
@@ -38,7 +38,7 @@ theme neon {
   edge {
     layer halo line { color rosa/0.18  width 8  corner round  radius 14 }
     layer linea line { color cian  width 1.8  corner round  radius 14 }
-    layer flujo line over { color texto  width 1.8  motion flujo 2s }
+    layer flujo line over { color texto  width 1.8  motion stream 2s }
     end arrow { size 10  color cian }
   }
 }

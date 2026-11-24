@@ -66,15 +66,15 @@ describe('seam sesion: parches por nombre de Capa y cascada', () => {
     const dsl = temaT(
       `    type servicio { layer relleno { color rojo } }
     state hover { layer relleno { color azul } }
-    state seleccionado { layer borde { width 4 } }`,
+    state selected { layer borde { width 4 } }`,
     );
     const sesion = abrirSesion(trabajoT(dsl));
     const conVista = abrirSesion(trabajoT(dsl, vista('  theme t { layer relleno { color tinta } }\n')));
 
     expect(capasDe(sesion, 'servicio', 'hover')).toContain('relleno:{"color":"#2563eb"}');
     expect(capasDe(sesion, 'tabla', 'hover')).toContain('relleno:{"color":"#2563eb"}');
-    expect(capasDe(sesion, 'servicio', 'seleccionado')).toContain('relleno:{"color":"#dc2626"}');
-    expect(capasDe(sesion, 'servicio', 'seleccionado')).toContain('borde:{"color":"#1f2937","width":4}');
+    expect(capasDe(sesion, 'servicio', 'selected')).toContain('relleno:{"color":"#dc2626"}');
+    expect(capasDe(sesion, 'servicio', 'selected')).toContain('borde:{"color":"#1f2937","width":4}');
     // La Vista pisa a todos los niveles, incluidos los de estado.
     expect(capasDe(conVista, 'servicio')).toContain('relleno:{"color":"#1f2937"}');
     expect(capasDe(conVista, 'servicio', 'hover')).toContain('relleno:{"color":"#1f2937"}');

@@ -40,8 +40,8 @@ theme keycaps {
     }
     // Pulsada: la tecla baja y solo queda el primer canto.
     state hover { layer canto-8 none  layer canto-6 none  layer canto-4 none  layer suelo { color texto/0.5  y 4  blur 8 }  transition 80ms ease-out }
-    state en-ruta { layer borde { color luz  width 2 } }
-    state atenuado { layer suelo none }
+    state on-path { layer borde { color luz  width 2 } }
+    state dimmed { layer suelo none }
   }
   group {
     // Bandeja oscura con un filo de luz arriba.

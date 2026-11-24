@@ -66,7 +66,7 @@ Drill-down de un Nodo, o de un `ref` en secuencia, hacia otra Vista de cualquier
 Declaracion de presentacion con la que se dibuja una Vista: Paleta, fuentes, tokens y, por cada elemento (Nodo, Arista, Grupo, fondo de pagina), una pila de Capas, mas su animacion. Se declara en el Workspace, es modular (`extends` de un padre y Partes reutilizables) y nunca toca el Modelo. Una Vista elige un solo Tema, asi que diagramas distintos pueden tener lineas visuales distintas; dentro de la Vista, la forma varia por Tipo de nodo, estado, Arista y Grupo mediante parches.
 
 **Tema por defecto** (en: **Default theme**):
-Tema incorporado que usa una Vista sin Tema: `neutral` (claro). Lo acompanan `neutral-dark` y `alto-contraste`. Escrito en el mismo DSL que cualquier Tema.
+Tema incorporado que usa una Vista sin Tema: `neutral` (claro). Lo acompanan `neutral-dark` y `high-contrast`. Escrito en el mismo DSL que cualquier Tema.
 
 **Capa** (en: **Layer**):
 Unidad con nombre de la pila que dibuja un elemento; es una instancia de una Primitiva, va bajo el contenido (defecto) o sobre el, y puede animarse. La variacion por Tipo, estado o Vista se expresa como parche por nombre de Capa (cambiar, anadir con `before`/`after`, quitar con `none`). Un componente de codigo del Tema tambien es una Capa (Componente de Tema).
@@ -84,7 +84,7 @@ Lugar de contenido de nombre fijo en un Nodo o Grupo (`icon`, `title`, `desc`, `
 Cada cosa que un Tema sabe dibujar con su propia pila de Capas: pagina, Nodo, Grupo y Arista, y los de secuencia y ER (Lifeline, activacion, Mensaje, Fragmento, Nota, fila de Atributo). Un Tema que no declara un Elemento lo recibe derivado de sus otros Elementos, de modo que cualquier Tema dibuja cualquier Tipo de diagrama. Lo que varia por Tipo de diagrama en Nodo, Grupo o Arista es un nivel de la cascada, no un Elemento aparte.
 
 **Movimiento** (en: **Motion**):
-Animacion continua de catalogo cerrado (`flujo`, `pulso`, `respiracion`...) que se cuelga de una Capa y puede atarse a un estado. Las reacciones a la interaccion son transiciones entre parches de estado; `enter`/`exit` animan la aparicion y salida, y un Paso solo dispara la `enter`.
+Animacion continua de catalogo cerrado (`stream`, `pulse`, `breathe`...) que se cuelga de una Capa y puede atarse a un estado. Las reacciones a la interaccion son transiciones entre parches de estado; `enter`/`exit` animan la aparicion y salida, y un Paso solo dispara la `enter`.
 
 **Parte de Tema** (en: **Theme part**):
 Parche reutilizable sin Tema (`part`), incluido con `use` dentro de un elemento.

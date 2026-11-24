@@ -89,9 +89,9 @@ describe('pintores por parte', () => {
   });
 
   it('el contorno de estado es una marca sin estilo propio: lo da la hoja', () => {
-    const marca = pintarEstadoDeCaja('seleccionado', 'n');
+    const marca = pintarEstadoDeCaja('selected', 'n');
 
-    expect(marca.attrs).toEqual({ class: 'rd-estado', 'data-state': 'seleccionado', 'data-selected': 'n' });
+    expect(marca.attrs).toEqual({ class: 'rd-estado', 'data-state': 'selected', 'data-selected': 'n' });
     expect(pintarEstadoDeCaja('hover', 'n').attrs['data-selected']).toBeUndefined();
   });
 

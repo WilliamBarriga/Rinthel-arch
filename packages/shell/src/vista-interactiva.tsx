@@ -108,8 +108,8 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
    */
   onReorderLifelines?: AlReordenarLifelines;
   /**
-   * Ruta resaltada: ids de Nodos en orden. Sus Nodos y las Aristas entre consecutivos pasan a `en-ruta` y todo lo
-   * demas a `atenuado`. Sin ella, con exactamente dos Nodos seleccionados se resalta la ruta mas corta entre ellos.
+   * Ruta resaltada: ids de Nodos en orden. Sus Nodos y las Aristas entre consecutivos pasan a `on-path` y todo lo
+   * demas a `dimmed`. Sin ella, con exactamente dos Nodos seleccionados se resalta la ruta mas corta entre ellos.
    */
   route?: readonly string[];
   /** Visibilidad 0..1 de Nodos y Aristas; si se da, manda sobre la derivada de los Pasos. */
@@ -318,7 +318,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const focoVigente =
     foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction.messages.some((m) => idDeElementoDeSecuencia(vista.interaction.id, m.ruta) === foco))) ? foco : undefined;
   const estadosFinales = useMemo(
-    () => unirEstados(unirEstados(estados, estadosDeRuta(vista, ruta)), focoVigente === undefined ? {} : { [focoVigente]: ['foco'] }),
+    () => unirEstados(unirEstados(estados, estadosDeRuta(vista, ruta)), focoVigente === undefined ? {} : { [focoVigente]: ['focus'] }),
     [estados, vista, ruta, focoVigente],
   );
 

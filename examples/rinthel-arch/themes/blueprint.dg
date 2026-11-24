@@ -32,8 +32,8 @@ theme blueprint {
     }
     type externo { layer borde dashed { color texto/0.8  width 1.5 }  layer interior none }
     state hover { layer relleno { color texto/0.08 }  transition 100ms linear }
-    state en-ruta { layer borde { color COLOR } }
-    state atenuado { layer interior none }
+    state on-path { layer borde { color COLOR } }
+    state dimmed { layer interior none }
   }
   group {
     layer forma rect

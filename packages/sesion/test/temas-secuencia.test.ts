@@ -122,11 +122,11 @@ model {
 const conTema = (tema: string) => abrirSesion({ 'main.dg': `${AMBOS}view s { type sequence  interaction i  theme ${tema} }\nview e { type er  include orders, customers  theme ${tema} }\n` });
 
 describe('seam sesion: Temas incorporados y secuencia/ER', () => {
-  it.each(['neutral', 'neutral-dark', 'alto-contraste'])('%s dibuja secuencia y ER sin warnings ni errores', async (tema) => {
+  it.each(['neutral', 'neutral-dark', 'high-contrast'])('%s dibuja secuencia y ER sin warnings ni errores', async (tema) => {
     expect(await conTema(tema).diagnosticar()).toEqual([]);
   });
 
-  it.each(['neutral', 'alto-contraste'])('%s declara de forma explicita todos los Elementos nuevos', (tema) => {
+  it.each(['neutral', 'high-contrast'])('%s declara de forma explicita todos los Elementos nuevos', (tema) => {
     const sesion = conTema(tema);
     const secuencia = sesion.estilo('s')!.pintura.secuencia!;
     expect(Object.keys(secuencia).sort()).toEqual(['activacion', 'fragmento', 'lifeline', 'mensaje', 'nota']);
@@ -142,9 +142,9 @@ describe('seam sesion: Temas incorporados y secuencia/ER', () => {
     expect(oscuro.mensaje!.base.capas[0]!.props['color']).not.toBe(claro.mensaje!.base.capas[0]!.props['color']);
   });
 
-  it('alto-contraste usa trazos mas gruesos que neutral', () => {
+  it('high-contrast usa trazos mas gruesos que neutral', () => {
     const grosor = (tema: string) => Number(conTema(tema).estilo('s')!.pintura.secuencia!.mensaje!.base.capas.at(-1)!.props['width']);
-    expect(grosor('alto-contraste')).toBeGreaterThan(grosor('neutral'));
+    expect(grosor('high-contrast')).toBeGreaterThan(grosor('neutral'));
   });
 });
 

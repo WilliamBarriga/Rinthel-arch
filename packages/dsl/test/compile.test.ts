@@ -789,7 +789,7 @@ describe('compile: Tema', () => {
     const { canonico, issues } = compile({ 'main.dg': base });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.map((t) => t.name)).toEqual(['neutral', 'neutral-dark', 'alto-contraste']);
+    expect(canonico?.themes.map((t) => t.name)).toEqual(['neutral', 'neutral-dark', 'high-contrast']);
   });
 
   it('compila palette, fonts y tokens a un objeto plano', () => {
