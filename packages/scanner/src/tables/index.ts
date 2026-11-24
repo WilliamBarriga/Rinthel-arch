@@ -5,8 +5,11 @@
  */
 import type { Confidence, ScanTable, Source } from '../draft';
 import { byCodeUnit } from '../files';
+import { django } from './django';
+import { drizzle } from './drizzle';
 import { prisma } from './prisma';
 import { sql } from './sql';
+import { sqlalchemy } from './sqlalchemy';
 
 export interface SchemaFile {
   /** Relative to the scan root, `/`-separated. */
@@ -46,7 +49,7 @@ export interface TableExtractor {
   load(): Promise<(files: readonly SchemaFile[], context: SchemaContext) => FoundTable[]>;
 }
 
-export const TABLE_EXTRACTORS: readonly TableExtractor[] = [prisma, sql];
+export const TABLE_EXTRACTORS: readonly TableExtractor[] = [prisma, sql, drizzle, django, sqlalchemy];
 
 /**
  * Gives each table its id and points relations at ids. The id is the table name; when several tables share a name
