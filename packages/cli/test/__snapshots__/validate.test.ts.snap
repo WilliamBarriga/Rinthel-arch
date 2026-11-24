@@ -2,10 +2,10 @@
 
 exports[`validate > con errores sale con codigo 1 y un snapshot estable del contrato 1`] = `
 {
-  "contractVersion": 1,
+  "contractVersion": 2,
   "issues": [
     {
-      "code": "E_UNKNOWN_NODE_TYPE",
+      "code": "unknown-node-type",
       "column": 3,
       "file": "main.dg",
       "fix": {
@@ -26,7 +26,7 @@ exports[`validate > con errores sale con codigo 1 y un snapshot estable del cont
       "severity": "error",
     },
     {
-      "code": "E_SYNTAX_ERROR",
+      "code": "syntax-error",
       "column": 1,
       "file": "main.dg",
       "line": 8,

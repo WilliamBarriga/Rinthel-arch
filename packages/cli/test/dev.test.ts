@@ -199,7 +199,7 @@ describe('dev: seguridad', () => {
     const cuerpo = { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 };
 
     for (const ruta of ['api/edit', 'api/deshacer', 'api/rehacer', 'api/historial/saltar', 'api/confiar', 'api/nada']) {
-      expect(await respuesta(await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' }))).toEqual({ status: 403, cuerpo: { ok: false, mensaje: 'Origen no permitido' } });
+      expect(await respuesta(await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' }))).toEqual({ status: 403, cuerpo: { ok: false, mensaje: 'Origin not allowed' } });
       expect(await respuesta(await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' }))).toEqual({ status: 415, cuerpo: { ok: false, mensaje: 'Se esperaba application/json' } });
     }
     expect(await respuesta(await post(servidor, 'api/edit', { ...cuerpo, relleno: 'x'.repeat(70 * 1024) }))).toEqual({ status: 413, cuerpo: { ok: false, mensaje: 'Cuerpo demasiado grande' } });

@@ -3,115 +3,117 @@ import { CARPETA_DE_SALIDA } from './workspace';
 const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill'] as const;
 export type ComandoConAyuda = (typeof COMANDOS)[number];
 
-const WORKSPACE = '--workspace <ruta>   Carpeta con los archivos .dg (obligatorio)';
-const THEME_PATH = '--theme-path <dir>  Carpeta de Temas extra; se fusiona antes del Workspace (gana el Workspace)';
+const WORKSPACE = '--workspace <path>  Folder with the .dg files (required)';
+const THEME_PATH = '--theme-path <dir>  Extra Theme folder; merged before the Workspace (the Workspace wins)';
 
 const AYUDA_DE_COMANDO: Record<ComandoConAyuda, string> = {
-  validate: `diagrams validate --workspace <ruta> [opciones]
+  validate: `diagrams validate --workspace <path> [options]
 
-Compila y valida. Solo lectura: nunca reescribe archivos.
+Compiles and validates. Read-only: never rewrites files.
 
-Opciones:
+Options:
   ${WORKSPACE}
-  --json               stdout es exactamente un objeto { contractVersion, ok, summary, issues }
-  --strict             los avisos tambien fallan (exit 1)
-  --max-issues <N>     tope de issues listados (100 por defecto; summary.truncated lo indica)
-  --theme <nombre>     Tema con el que se miden los Pins solapados
+  --json               stdout is exactly one object { contractVersion, ok, summary, issues }
+  --strict             warnings fail too (exit 1)
+  --max-issues <N>     cap on listed issues (100 by default; summary.truncated reports it)
+  --theme <name>       Theme used to measure overlapping Pins
   ${THEME_PATH}
 
-Salida: 0 sin errores, 1 hay errores, 2 fallo de uso o interno (mensaje en stderr).
-Cada issue trae code estable, file, line, column y, si hay un unico candidato, fix.
+Exit: 0 no errors, 1 errors found, 2 usage or internal failure (message on stderr).
+Every issue carries a stable code, file, line, column and, when there is a single candidate, a fix.
 `,
-  build: `diagrams build --workspace <ruta> [opciones]
+  build: `diagrams build --workspace <path> [options]
 
-Valida y escribe la Fuente canonica y la geometria en <ruta>/${CARPETA_DE_SALIDA}/ (derivado, no se versiona).
-Con errores sale 1 y borra la salida anterior.
+Validates and writes the canonical Source and the geometry to <path>/${CARPETA_DE_SALIDA}/ (derived, not versioned).
+With errors it exits 1 and deletes the previous output.
 
-Opciones: las de validate (--json, --strict, --max-issues, --theme, --theme-path).
+Options: those of validate (--json, --strict, --max-issues, --theme, --theme-path).
 `,
-  dev: `diagrams dev --workspace <ruta> [opciones]
+  dev: `diagrams dev --workspace <path> [options]
 
-UI de dev en http://127.0.0.1:<puerto>/ (solo escucha en localhost): lienzo, editor del DSL, Issues,
-Temas, Historial de archivos y feed del Registro de actividad. Recompila al guardar. La Vista activa
-va en el hash de la URL (#vista=<id>). Arrastrar un Nodo fija su Pin y reescribe el .dg.
-Guia: docs/guia/ui-de-dev.md.
+Dev UI at http://127.0.0.1:<port>/ (listens on localhost only): canvas, DSL editor, Issues, Themes,
+file History and the activity log feed. Recompiles on save. The active View lives in the URL hash
+(#vista=<id>). Dragging a Node sets its Pin and rewrites the .dg.
+Guide: docs/guia/ui-de-dev.md.
 
-Opciones:
+Options:
   ${WORKSPACE}
-  --port <N>           Puerto (4173 por defecto; 0 elige uno libre)
-  --trust-code         Confia de antemano en los Temas con codigo (.tsx) del Workspace
+  --port <N>           Port (4173 by default; 0 picks a free one)
+  --trust-code         Trust in advance the Workspace Themes with code (.tsx)
   ${THEME_PATH}
 
-Es un proceso largo: lanzalo en segundo plano y espera la linea con la URL.
+This is a long-running process: start it in the background and wait for the line with the URL.
 `,
-  inspect: `diagrams inspect <buscar|nodo|vista|interaccion|tema> <argumento> --workspace <ruta> [opciones]
+  inspect: `diagrams inspect <buscar|nodo|vista|interaccion|tema> <argument> --workspace <path> [options]
 
-Consultas de solo lectura sobre el Modelo; cada resultado trae id cualificado, tipo y archivo:linea.
+Read-only queries over the Model; each result carries the qualified id, kind and file:line.
+(The query names are the literal words you type: buscar = search, nodo = Node, vista = View,
+interaccion = Interaction, tema = Theme.)
 
-  inspect buscar <texto>      Nodos por id parcial o titulo, Vistas por id
-  inspect nodo <id>           Nodo, padre e hijos, Atributos, Aristas y Vistas que lo muestran
-  inspect vista <id>          Nodos y Aristas visibles de la Vista en su estado inicial
-  inspect interaccion <id>    Lifelines en orden, Mensajes y Vistas que proyectan la Interaccion
-  inspect tema <nombre>       Cadena extends, Partes, pila de Capas con archivo:linea, Metricas
+  inspect buscar <text>       Nodes by partial id or title, Views by id
+  inspect nodo <id>           Node, parent and children, Attributes, Edges and the Views that show it
+  inspect vista <id>          Visible Nodes and Edges of the View in its initial state
+  inspect interaccion <id>    Lifelines in order, Messages and the Views that project the Interaction
+  inspect tema <name>         extends chain, Parts, Layer stack with file:line, Metrics
 
-Opciones:
+Options:
   ${WORKSPACE}
-  --json               Un objeto con su propio contractVersion (independiente del de validate)
-  --tipo <tipo>        (tema) resuelve la cascada para ese Tipo de nodo
-  --estado <estado>    (tema) resuelve la cascada para ese estado
-  --diagrama <tipo>    (tema) aplica los parches diagram de ese Tipo de diagrama (architecture, flow, sequence, er)
-  --catalogo           (tema) agrega las claves del catalogo de Primitivas y Movimientos
+  --json               One object with its own contractVersion (independent from validate)
+  --tipo <kind>        (tema) resolves the cascade for that Node kind
+  --estado <state>     (tema) resolves the cascade for that state
+  --diagrama <type>    (tema) applies the diagram patches of that Diagram type (architecture, flow, sequence, er)
+  --catalogo           (tema) adds the keys of the Primitive and Motion catalog
   ${THEME_PATH}
 
-Salida: 0 hay respuesta, 1 no existe el Nodo/Vista/Tema o el Workspace tiene errores, 2 fallo de uso.
+Exit: 0 there is an answer, 1 the Node/View/Theme does not exist or the Workspace has errors, 2 usage failure.
 `,
-  edit: `diagrams edit --workspace <ruta> (--view <id> --node <id> --x N --y N | --intent '<json>' | --edits '<json>') [opciones]
+  edit: `diagrams edit --workspace <path> (--view <id> --node <id> --x N --y N | --intent '<json>' | --edits '<json>') [options]
 
-Unica escritura explicita del CLI: todo o nada, solo sobre archivos .dg del Workspace.
+The CLI's only explicit write: all or nothing, only on .dg files of the Workspace.
 
-  --view <id> --node <id> --x N --y N   Fija el Pin del Nodo en la Vista (lo inserta o lo reemplaza)
-  --intent '<json>'                     Intencion { tipo, ... }; hoy ademas de mover-pin:
-                                        {"tipo":"ordenar-lifelines","vista":"<id>","orden":["a","b"]} reescribe el
-                                        order completo de una Vista de secuencia (las ocultas conservan su sitio);
-                                        {"tipo":"fijar-tema","vista":"<id>","tema":"<nombre>"} escribe theme en la
-                                        Vista (conserva el parche); sin "tema" lo quita. Un Tema no declarado
-                                        rechaza con tema-desconocido
-  --edits '<json>'                      Lista de { file, range, replacement }, por ejemplo los fix de validate
-  --hash <archivo>=<hash>               Rechaza la edicion si el archivo cambio desde que lo leiste
+  --view <id> --node <id> --x N --y N   Sets the Node Pin in the View (inserts or replaces it)
+  --intent '<json>'                     Intent { tipo, ... }; today, besides mover-pin:
+                                        {"tipo":"ordenar-lifelines","vista":"<id>","orden":["a","b"]} rewrites the
+                                        whole order of a sequence View (hidden ones keep their place);
+                                        {"tipo":"fijar-tema","vista":"<id>","tema":"<name>"} writes theme in the
+                                        View (keeps the patch); without "tema" it removes it. An undeclared Theme
+                                        is rejected with tema-desconocido
+  --edits '<json>'                      List of { file, range, replacement }, for example the fix of validate
+  --hash <file>=<hash>                  Rejects the edit if the file changed since you read it
 
-Opciones:
+Options:
   ${WORKSPACE}
-  --json               Resultado estructurado con su propio contractVersion
+  --json               Structured result with its own contractVersion
   ${THEME_PATH}
 
-Salida: 0 aplicado, 1 edicion rechazada o invalida (sin escritura parcial), 2 fallo de uso.
+Exit: 0 applied, 1 edit rejected or invalid (no partial write), 2 usage failure.
 `,
-  skill: `diagrams skill --workspace <ruta> [--out <archivo>]
+  skill: `diagrams skill --workspace <path> [--out <file>]
 
-Genera una skill (SKILL.md) para que un agente escriba y corrija los .dg de ESE Workspace: sus Tipos de
-nodo, Temas, sintaxis, contrato de validate/inspect/edit y codigos de issue. Va a stdout o a --out.
-Regenerala cuando cambien los Tipos de nodo, los Temas o los codigos.
+Generates a skill (SKILL.md) so an agent can write and fix the .dg files of THAT Workspace: its Node kinds,
+Themes, syntax, the validate/inspect/edit contract and issue codes. It goes to stdout or to --out.
+Regenerate it when the Node kinds, the Themes or the codes change.
 `,
 };
 
-const AYUDA_GENERAL = `diagrams: CLI para escribir, validar y ver diagramas .dg
+const AYUDA_GENERAL = `diagrams: CLI to write, validate and view .dg diagrams
 
-Uso: diagrams <comando> --workspace <ruta> [opciones]
-     diagrams <comando> --help
+Usage: diagrams <command> --workspace <path> [options]
+       diagrams <command> --help
 
-Comandos:
-  validate   Compila y valida; lista issues con archivo, linea y fix (solo lectura)
-  build      Escribe la Fuente canonica y la geometria en <ruta>/${CARPETA_DE_SALIDA}/
-  dev        UI de dev en http://127.0.0.1:4173/: mirar, editar y seguir el Workspace
-  inspect    Consulta el Modelo: buscar, nodo, vista, interaccion, tema (solo lectura)
-  edit       Fija un Pin o aplica ediciones estructuradas al .dg
-  skill      Genera la skill de agente de un Workspace
+Commands:
+  validate   Compiles and validates; lists issues with file, line and fix (read-only)
+  build      Writes the canonical Source and the geometry to <path>/${CARPETA_DE_SALIDA}/
+  dev        Dev UI at http://127.0.0.1:4173/: view, edit and follow the Workspace
+  inspect    Queries the Model: buscar, nodo, vista, interaccion, tema (read-only)
+  edit       Sets a Pin or applies structured edits to the .dg
+  skill      Generates the agent skill of a Workspace
 
-Bucle de un agente: inspect, editar el .dg, validate --json hasta ok:true.
-Codigos de salida: 0 correcto, 1 hay errores del Workspace, 2 fallo de uso o interno.
-validate, build, inspect y edit anexan un Evento a <ruta>/${CARPETA_DE_SALIDA}/actividad.jsonl
-(DIAGRAMS_ACTIVIDAD=0 lo apaga; DIAGRAMS_AGENTE nombra al agente).
-Guia completa: docs/guia/cli.md
+Agent loop: inspect, edit the .dg, validate --json until ok:true.
+Exit codes: 0 success, 1 Workspace errors, 2 usage or internal failure.
+validate, build, inspect and edit append an Event to <path>/${CARPETA_DE_SALIDA}/actividad.jsonl
+(DIAGRAMS_ACTIVIDAD=0 turns it off; DIAGRAMS_AGENTE names the agent).
+Full guide: docs/guia/cli.md
 `;
 
 /** `undefined` si `argv` no pide ayuda (`--help`, `-h`, `help [comando]` o sin argumentos). */

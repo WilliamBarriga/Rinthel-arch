@@ -21,9 +21,9 @@ describe('destinoEnWorkspace', () => {
   });
 
   it('rechaza rutas que escapan de la raiz', () => {
-    expect(() => destinoEnWorkspace('/ws', '../fuera.dg')).toThrow(/fuera del Workspace/);
-    expect(() => destinoEnWorkspace('/ws', 'a/../../fuera.dg')).toThrow(/fuera del Workspace/);
-    expect(() => destinoEnWorkspace('/ws', '/otra/ruta.dg')).toThrow(/fuera del Workspace/);
+    expect(() => destinoEnWorkspace('/ws', '../fuera.dg')).toThrow(/outside the Workspace/);
+    expect(() => destinoEnWorkspace('/ws', 'a/../../fuera.dg')).toThrow(/outside the Workspace/);
+    expect(() => destinoEnWorkspace('/ws', '/otra/ruta.dg')).toThrow(/outside the Workspace/);
   });
 });
 

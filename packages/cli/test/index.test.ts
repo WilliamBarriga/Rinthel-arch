@@ -7,7 +7,7 @@ describe('cli', () => {
     const { exitCode, stdout, stderr } = await run(['inexistente']);
     expect(exitCode).toBe(2);
     expect(stdout).toBe('');
-    expect(stderr).toContain('Comando desconocido');
+    expect(stderr).toContain('Unknown command');
   });
 });
 

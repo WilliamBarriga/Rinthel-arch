@@ -81,7 +81,7 @@ describe('estados de carga y fallo', () => {
     dev.editarFuera('main.dg', DSL.replace('  servicio db "Base de datos"\n', '').replace('  api -> db "lee"\n', ''));
     await dev.asentado();
 
-    expect((await within(detalle).findByRole('status')).textContent).toContain("No existe el Nodo 'db'");
+    expect((await within(detalle).findByRole('status')).textContent).toContain("No such Node 'db'");
     expect(within(detalle).queryByRole('heading', { name: 'Base de datos' })).toBeNull();
   });
 

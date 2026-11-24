@@ -43,14 +43,14 @@ describe('catalogo', () => {
   it('rellena los defectos y rechaza sin recortar', () => {
     expect(construirPrimitiva('rect', [], {}).primitiva).toEqual({ tipo: 'rect', props: { radius: 0 } });
     expect(construirPrimitiva('border', [{ clave: 'color', valor: 'a' }], { a: '#000' }).primitiva).toEqual({ tipo: 'border', props: { color: 'a', width: 1 } });
-    expect(construirPrimitiva('rect', [{ clave: 'radius', valor: '101' }], {}).errores.map((e) => e.codigo)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(construirPrimitiva('rect', [{ clave: 'radius', valor: '101' }], {}).errores.map((e) => e.codigo)).toEqual(['theme-invalid-value']);
     expect(construirPrimitiva('rect', [{ clave: 'radius', valor: 'x' }], {}).primitiva).toBeUndefined();
   });
 
   it('sugiere el candidato cercano en una Primitiva mal escrita', () => {
     const [error] = construirPrimitiva('sollid', [], {}).errores;
 
-    expect(error).toMatchObject({ codigo: 'E_THEME_UNKNOWN_PRIMITIVE', hint: "quisiste decir 'solid'" });
+    expect(error).toMatchObject({ codigo: 'theme-unknown-primitive', hint: "did you mean 'solid'" });
   });
 
   it('solo circle y los estilos de texto de Slot y etiqueta afectan a las Metricas y pide una caja cuadrada', () => {
@@ -78,7 +78,7 @@ describe('catalogo', () => {
     const { primitiva, errores } = construirPrimitiva(tipo, [...colores, { clave, valor }], paleta);
 
     expect(primitiva).toBeUndefined();
-    expect(errores.map((e) => e.codigo)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(errores.map((e) => e.codigo)).toEqual(['theme-invalid-value']);
   });
 });
 

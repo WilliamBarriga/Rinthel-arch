@@ -344,7 +344,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     enCola(async () => {
       const traducido = vistoDe(versionVista);
       if (traducido === undefined) {
-        return { ok: false, motivo: 'hash-desactualizado', mensaje: `La version ${versionVista} del estado ya no esta guardada; recarga la Vista` };
+        return { ok: false, motivo: 'hash-desactualizado', mensaje: `State version ${versionVista} is no longer stored; reload the View` };
       }
       const antes = puerto.leer().propios;
       const escritas: string[] = [];

@@ -212,10 +212,10 @@ export const temaResueltoSchema = z
       .catchall(z.string())
       .superRefine((tokens, ctx) => {
         if (tokens.fontSize !== undefined && !/^\d+(\.\d+)?px$/.test(tokens.fontSize)) {
-          ctx.addIssue({ code: 'custom', path: ['fontSize'], message: 'debe ser un tamano en px, p. ej. "14px"' });
+          ctx.addIssue({ code: 'custom', path: ['fontSize'], message: 'must be a size in px, e.g. "14px"' });
         }
         if (tokens.seed !== undefined && !/^\d+$/.test(tokens.seed)) {
-          ctx.addIssue({ code: 'custom', path: ['seed'], message: '`seed` debe ser un entero no negativo, p. ej. 7' });
+          ctx.addIssue({ code: 'custom', path: ['seed'], message: '`seed` must be a non-negative integer, e.g. 7' });
         }
       }),
     nodo: nodoSchema.default({ capas: [], slots: DISPOSICION_POR_DEFECTO, textos: {}, tipos: {}, estados: {} }),
@@ -236,13 +236,13 @@ export const temaResueltoSchema = z
     };
     const rellenos = new Set<string>();
     tema.pagina.capas.forEach((capa, i) => {
-      if (rellenos.has(capa.nombre)) ctx.addIssue({ code: 'custom', path: ['pagina', 'capas', i, 'nombre'], message: `Capa '${capa.nombre}' repetida` });
+      if (rellenos.has(capa.nombre)) ctx.addIssue({ code: 'custom', path: ['pagina', 'capas', i, 'nombre'], message: `Duplicate Layer '${capa.nombre}'` });
       rellenos.add(capa.nombre);
       validar(capa.primitiva, 'capa-pagina', ['pagina', 'capas', i, 'primitiva']);
     });
     const trazos = new Set<string>();
     tema.arista.capas.forEach((capa, i) => {
-      if (trazos.has(capa.nombre)) ctx.addIssue({ code: 'custom', path: ['arista', 'capas', i, 'nombre'], message: `Capa '${capa.nombre}' repetida` });
+      if (trazos.has(capa.nombre)) ctx.addIssue({ code: 'custom', path: ['arista', 'capas', i, 'nombre'], message: `Duplicate Layer '${capa.nombre}'` });
       trazos.add(capa.nombre);
       validar(capa.primitiva, 'capa-arista', ['arista', 'capas', i, 'primitiva']);
     });
@@ -280,29 +280,29 @@ function validarSecuencia(ctx: z.RefinementCtx, tema: TemaResuelto, secuencia: N
     };
     const vistas = new Set<string>();
     bloque.capas.forEach((capa, i) => {
-      if (vistas.has(capa.nombre)) falla(['capas', i, 'nombre'], `Capa '${capa.nombre}' repetida`);
+      if (vistas.has(capa.nombre)) falla(['capas', i, 'nombre'], `Duplicate Layer '${capa.nombre}'`);
       vistas.add(capa.nombre);
       primitiva(capa.primitiva, espec.capas, ['capas', i, 'primitiva']);
     });
     for (const [lado, p] of [['origen', bloque.origen], ['fin', bloque.fin]] as const) {
       if (p === undefined) continue;
-      if (!espec.marcadores.includes(lado === 'origen' ? 'start' : 'end')) falla([lado], `'${nombre}' no admite el marcador '${lado === 'origen' ? 'start' : 'end'}'`);
+      if (!espec.marcadores.includes(lado === 'origen' ? 'start' : 'end')) falla([lado], `'${nombre}' does not support the marker '${lado === 'origen' ? 'start' : 'end'}'`);
       else primitiva(p, 'marcador', [lado]);
     }
     for (const [clave, texto] of Object.entries(bloque.textos)) {
       const permitido = espec.textos[clave];
-      if (permitido === undefined) falla(['textos', clave], `'${nombre}' no tiene el estilo '${clave}'`);
-      else if (texto.tipo !== permitido.primitiva) falla(['textos', clave], `el estilo '${clave}' de '${nombre}' usa la Primitiva '${permitido.primitiva}', no '${texto.tipo}'`);
+      if (permitido === undefined) falla(['textos', clave], `'${nombre}' has no style '${clave}'`);
+      else if (texto.tipo !== permitido.primitiva) falla(['textos', clave], `style '${clave}' of '${nombre}' uses Primitive '${permitido.primitiva}', not '${texto.tipo}'`);
       else primitiva(texto, permitido.ubicacion, ['textos', clave]);
     }
     for (const [clave, valor] of Object.entries(bloque.metricas)) {
       const rango = espec.metricas[clave];
-      if (rango === undefined) falla(['metricas', clave], `'${nombre}' no tiene la Metrica '${clave}'`);
-      else if (valor < rango.min || valor > rango.max) falla(['metricas', clave], `'${clave}' de '${nombre}' va de ${rango.min} a ${rango.max}`);
+      if (rango === undefined) falla(['metricas', clave], `'${nombre}' has no Metric '${clave}'`);
+      else if (valor < rango.min || valor > rango.max) falla(['metricas', clave], `'${clave}' of '${nombre}' ranges from ${rango.min} to ${rango.max}`);
     }
     const base = bloque.capas as CapaDeTema[];
     for (const [variante, parche] of Object.entries(bloque.parches)) {
-      if (espec.parches === undefined || !espec.parches.nombres.includes(variante)) falla(['parches', variante], `'${variante}' no es una variante de '${nombre}'`);
+      if (espec.parches === undefined || !espec.parches.nombres.includes(variante)) falla(['parches', variante], `'${variante}' is not a variant of '${nombre}'`);
       for (const e of validarOps([base], parche.ops, tema.palette, 'parchear', espec.capas)) falla(['parches', variante, 'ops', e.indice], e.mensaje);
       if (parche.origen !== undefined) primitiva(parche.origen, 'marcador', ['parches', variante, 'origen']);
       if (parche.fin !== undefined) primitiva(parche.fin, 'marcador', ['parches', variante, 'fin']);
@@ -318,7 +318,7 @@ function validarFila(ctx: z.RefinementCtx, tema: TemaResuelto, fila: NonNullable
   const falla = (path: Array<string | number>, message: string): void => ctx.addIssue({ code: 'custom', path: ['fila', ...path], message });
   const vistas = new Set<string>();
   fila.capas.forEach((capa, i) => {
-    if (vistas.has(capa.nombre)) falla(['capas', i, 'nombre'], `Capa '${capa.nombre}' repetida`);
+    if (vistas.has(capa.nombre)) falla(['capas', i, 'nombre'], `Duplicate Layer '${capa.nombre}'`);
     vistas.add(capa.nombre);
     const props = Object.entries(capa.primitiva.props).map(([clave, valor]) => ({ clave, valor }));
     for (const error of construirPrimitiva(capa.primitiva.tipo, props, tema.palette).errores) falla(['capas', i, 'primitiva', ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
@@ -334,14 +334,14 @@ function validarFila(ctx: z.RefinementCtx, tema: TemaResuelto, fila: NonNullable
     for (const e of validarOps([base], ops, tema.palette, 'parchear')) falla([...ruta, e.indice], e.mensaje);
     ops.forEach((op, indice) => {
       const razon = opTocaMetricas(op, [base]);
-      if (razon !== undefined) falla([...ruta, indice], `un parche de fila no puede tocar las Metricas: ${razon}`);
+      if (razon !== undefined) falla([...ruta, indice], `a row patch cannot touch the Metrics: ${razon}`);
     });
   }
   for (const [nombre, texto] of Object.entries(fila.textos)) {
     const props = Object.entries(texto.props).map(([clave, valor]) => ({ clave, valor }));
     for (const error of construirPrimitiva(texto.tipo, props, tema.palette, 'texto-slot').errores) falla(['textos', nombre, ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
     const esperado = TEXTOS_DE_FILA[nombre as keyof typeof TEXTOS_DE_FILA];
-    if (texto.tipo !== esperado) falla(['textos', nombre], `el texto '${nombre}' de la fila se estiliza con la Primitiva '${esperado}', no '${texto.tipo}'`);
+    if (texto.tipo !== esperado) falla(['textos', nombre], `row text '${nombre}' is styled with Primitive '${esperado}', not '${texto.tipo}'`);
   }
 }
 
@@ -353,7 +353,7 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
   const falla = (path: Array<string | number>, message: string): void => ctx.addIssue({ code: 'custom', path: [elemento, ...path], message });
   const vistas = new Set<string>();
   bloque.capas.forEach((capa, i) => {
-    if (vistas.has(capa.nombre)) falla(['capas', i, 'nombre'], `Capa '${capa.nombre}' repetida`);
+    if (vistas.has(capa.nombre)) falla(['capas', i, 'nombre'], `Duplicate Layer '${capa.nombre}'`);
     vistas.add(capa.nombre);
     const { errores } = construirPrimitiva(
       capa.primitiva.tipo,
@@ -366,8 +366,8 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
   const recorrer = (caja: CajaDeSlots, ruta: string, enArbol = new Set<string>()): void => {
     for (const hijo of caja.hijos) {
       if (esCaja(hijo)) recorrer(hijo, ruta, enArbol);
-      else if (enArbol.has(hijo.slot)) falla([ruta], `Slot '${hijo.slot}' repetido`);
-      else if (elemento === 'grupo' && SLOTS_SOLO_DE_NODO.includes(hijo.slot)) falla([ruta], `el Slot '${hijo.slot}' no vale en un Grupo: solo en un Nodo hoja`);
+      else if (enArbol.has(hijo.slot)) falla([ruta], `Duplicate Slot '${hijo.slot}'`);
+      else if (elemento === 'grupo' && SLOTS_SOLO_DE_NODO.includes(hijo.slot)) falla([ruta], `Slot '${hijo.slot}' is not valid in a Group: only in a leaf Node`);
       else enArbol.add(hijo.slot);
     }
   };
@@ -377,7 +377,7 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
       const props = Object.entries(texto.props).map(([clave, valor]) => ({ clave, valor }));
       for (const error of construirPrimitiva(texto.tipo, props, tema.palette, 'texto-slot').errores) falla([...ruta, slot, ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
       const esperado = DEFINICION_DE_SLOT[slot as NombreDeSlot].estilo;
-      if (texto.tipo !== esperado) falla([...ruta, slot], `el Slot '${slot}' se estiliza con la Primitiva '${esperado}', no '${texto.tipo}'`);
+      if (texto.tipo !== esperado) falla([...ruta, slot], `Slot '${slot}' is styled with Primitive '${esperado}', not '${texto.tipo}'`);
     }
   };
   estiloDeSlot(bloque.textos, ['textos']);
@@ -387,7 +387,7 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
   const sinMetricas = (ops: readonly OpDeCapa[], candidatas: ReadonlyArray<readonly CapaDeTema[]>, ruta: Array<string | number>, que: string): void => {
     ops.forEach((op, indice) => {
       const razon = opTocaMetricas(op, candidatas);
-      if (razon !== undefined) falla([...ruta, indice], `un parche ${que} no puede tocar las Metricas: ${razon}${que === 'de estado' ? '; hover nunca relayouta' : ''}`);
+      if (razon !== undefined) falla([...ruta, indice], `a ${que} patch cannot touch the Metrics: ${razon}${que === 'state' ? '; hover never re-lays out' : ''}`);
     });
   };
   for (const [diagrama, parche] of Object.entries(bloque.diagramas ?? {})) {
@@ -398,7 +398,7 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
   const bases = [...pilas];
   for (const [tipo, ops] of Object.entries(bloque.tipos)) {
     for (const e of validarOps(bases, ops, tema.palette, 'parchear')) falla(['tipos', tipo, e.indice], e.mensaje);
-    if (elemento === 'grupo') sinMetricas(ops, bases, ['tipos', tipo], 'de Tipo');
+    if (elemento === 'grupo') sinMetricas(ops, bases, ['tipos', tipo], 'Group kind');
     pilas.push(...bases.map((pila) => aplicarSinErrores(pila, ops, tema.palette)));
   }
   if (elemento === 'grupo') {
@@ -410,7 +410,7 @@ function validarElemento(ctx: z.RefinementCtx, tema: TemaResuelto, elemento: Ele
   }
   for (const [estado, ops] of Object.entries(bloque.estados)) {
     for (const e of validarOps(pilas, ops, tema.palette, 'parchear')) falla(['estados', estado, e.indice], e.mensaje);
-    sinMetricas(ops, pilas, ['estados', estado], 'de estado');
+    sinMetricas(ops, pilas, ['estados', estado], 'state');
   }
 }
 
@@ -511,7 +511,7 @@ export function resolverTema(tema: Tema): TemaResuelto {
   const leido = temaResueltoSchema.safeParse(tema);
   if (!leido.success) {
     const detalle = leido.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
-    throw new Error(`El Tema '${tema.name}' no cumple el contrato: ${detalle}`);
+    throw new Error(`Theme '${tema.name}' does not meet the contract: ${detalle}`);
   }
   const completo = conDefectos(leido.data);
   memo.set(tema, completo);

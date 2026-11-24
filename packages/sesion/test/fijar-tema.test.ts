@@ -88,7 +88,7 @@ describe('Intencion fijar-tema', () => {
     expect(!r.ok && r.mensaje).toContain('claro');
   });
 
-  it('una Vista inexistente rechaza con vista-desconocida y un visto viejo con hash-desactualizado', () => {
+  it('una View not found rechaza con vista-desconocida y un visto viejo con hash-desactualizado', () => {
     const texto = ws(`view v {
   type architecture
   include **

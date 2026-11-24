@@ -43,11 +43,11 @@ export function usePasos(vista: VistaResuelta, props: PropsDePasos): PasosEnVist
       className="rd-chrome rd-pasos"
       data-pasos
     >
-      <button type="button" aria-label="Paso anterior" disabled={paso <= 0} onClick={() => ir(paso - 1)}>
+      <button type="button" aria-label="Previous step" disabled={paso <= 0} onClick={() => ir(paso - 1)}>
         &lt;
       </button>
-      <span>{actual === undefined ? `Paso 0 de ${total}` : `Paso ${paso} de ${total}: ${actual.title}`}</span>
-      <button type="button" aria-label="Paso siguiente" disabled={paso >= total} onClick={() => ir(paso + 1)}>
+      <span>{actual === undefined ? `Step 0 of ${total}` : `Step ${paso} of ${total}: ${actual.title}`}</span>
+      <button type="button" aria-label="Next step" disabled={paso >= total} onClick={() => ir(paso + 1)}>
         &gt;
       </button>
     </div>

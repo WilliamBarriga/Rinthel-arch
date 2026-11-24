@@ -59,7 +59,7 @@ function notasDe(items: readonly ItemResuelto[]): NotaResuelta[] {
 export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | TablaDeMetricas): GeometriaSecuencia {
   const tabla = comoTabla(metricas);
   const sec = tabla.base.secuencia;
-  if (sec === undefined) throw new Error('layoutSecuencia: la tabla de Metricas no trae la parte de secuencia; calculala con tablaDeMetricas(tema, \'sequence\')');
+  if (sec === undefined) throw new Error('layoutSecuencia: the Metrics table has no sequence part; compute it with tablaDeMetricas(tema, \'sequence\')');
   const huecoEntreLifelines = sec.huecoEntreLifelines;
   const anchoDeActivacion = sec.anchoDeActivacion;
   const anchoDeLazo = sec.anchoDeLazo;

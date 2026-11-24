@@ -31,7 +31,7 @@ describe('Issue (ADR 0005)', () => {
 
   it('admite un issue completo y uno minimo', () => {
     const completo: Issue = {
-      code: 'E_UNKNOWN_NODE_TYPE',
+      code: 'unknown-node-type',
       severity: 'error',
       file: 'dsl/api.model',
       line: 12,
@@ -49,7 +49,7 @@ describe('Issue (ADR 0005)', () => {
       },
     };
     const minimo: Issue = {
-      code: 'W_OVERLAPPING_PINS',
+      code: 'overlapping-pins',
       severity: 'warning',
       file: 'dsl/vista.view',
       line: 4,

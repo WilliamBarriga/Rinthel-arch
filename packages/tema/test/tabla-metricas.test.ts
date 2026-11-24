@@ -64,7 +64,7 @@ describe('parches de estado y Metricas', () => {
   it('el esquema rechaza un parche de estado que cambia la caja', () => {
     const malo = { ...tema([forma()]), nodo: { ...TEMA_NEUTRO.nodo, capas: [forma()], estados: { hover: [circulo()] } } } as Tema;
 
-    expect(() => tablaDeMetricas(malo, 'architecture')).toThrow(/Metricas/);
+    expect(() => tablaDeMetricas(malo, 'architecture')).toThrow(/Metrics/);
   });
 });
 

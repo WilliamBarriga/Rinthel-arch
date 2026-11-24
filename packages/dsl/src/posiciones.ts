@@ -49,7 +49,7 @@ export function issueConSugerencia<T extends AstNode>(
   if (candidatos.length === 1 && unico !== undefined) {
     issue.fix = { file: archivo, range: { start: inicio, end: fin }, replacement: unico };
   } else if (candidatos.length > 1) {
-    issue.hint = `Candidatos: ${candidatos.join(', ')}`;
+    issue.hint = `Candidates: ${candidatos.join(', ')}`;
   }
   return issue;
 }

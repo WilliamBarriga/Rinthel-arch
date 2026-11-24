@@ -29,7 +29,7 @@ describe('validate: Tema con codigo', () => {
     const { exitCode, salida } = await validar(FIXTURE);
 
     expect(exitCode).toBe(0);
-    expect(salida.issues.map((i) => i.code)).toEqual(['W_THEME_WITH_CODE']);
+    expect(salida.issues.map((i) => i.code)).toEqual(['theme-with-code']);
     expect(salida.issues[0]).toMatchObject({ severity: 'warning', file: 'main.dg', message: expect.stringContaining('Aurora') });
   });
 
@@ -45,7 +45,7 @@ describe('validate: Tema con codigo', () => {
     const { exitCode, salida } = await validar(raiz);
 
     expect(exitCode).toBe(1);
-    expect(salida.issues.map((i) => i.code)).toEqual(['E_THEME_COMPONENT_MISSING', 'W_THEME_WITH_CODE']);
+    expect(salida.issues.map((i) => i.code)).toEqual(['theme-component-missing', 'theme-with-code']);
   });
 
   it('un error de compilacion del .tsx aparece como issue con file y line', async () => {
@@ -55,7 +55,7 @@ describe('validate: Tema con codigo', () => {
     const { exitCode, salida } = await validar(raiz);
 
     expect(exitCode).toBe(1);
-    const compilacion = salida.issues.find((i) => i.code === 'E_THEME_CODE_COMPILE');
+    const compilacion = salida.issues.find((i) => i.code === 'theme-code-compile');
     expect(compilacion).toMatchObject({ severity: 'error', file: 'componentes/aurora.tsx', line: 2 });
   });
 

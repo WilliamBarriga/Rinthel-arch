@@ -45,7 +45,7 @@ function leer(texto: string): Expresion | undefined {
 
 const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string } => {
   const candidatos = candidatosCercanos(escrito, existentes);
-  return candidatos.length === 0 ? {} : { hint: `quisiste decir ${candidatos.map((c) => `'${c}'`).join(' o ')}` };
+  return candidatos.length === 0 ? {} : { hint: `did you mean ${candidatos.map((c) => `'${c}'`).join(' or ')}` };
 };
 
 export function hexARgb(hex: string): [number, number, number] | undefined {
@@ -59,19 +59,19 @@ export function hexARgb(hex: string): [number, number, number] | undefined {
 /** Devuelve todos los problemas; `ORIGEN` solo vale con `ambito` `arista`. */
 export function validarColor(texto: string, paleta: Readonly<Record<string, string>>, ambito: 'nodo' | 'arista' | 'pagina' = 'nodo'): ErrorDeColor[] {
   const expresion = leer(texto);
-  if (expresion === undefined) return [{ mensaje: `'${texto}' no es una expresion de color valida (nombre, nombre/alfa o mix(a, b, t))` }];
+  if (expresion === undefined) return [{ mensaje: `'${texto}' is not a valid color expression (name, name/alpha or mix(a, b, t))` }];
   const errores: ErrorDeColor[] = [];
   const necesitaHex = expresion.alfa !== undefined || expresion.base.tipo === 'mix';
   const comprobar = (nombre: string): void => {
     if (!Object.hasOwn(paleta, nombre)) {
-      errores.push({ mensaje: `Color '${nombre}' no es un nombre de Paleta del Tema`, fueraDePaleta: true, ...sugerir(nombre, Object.keys(paleta)) });
+      errores.push({ mensaje: `Color '${nombre}' is not a Palette name of the Theme`, fueraDePaleta: true, ...sugerir(nombre, Object.keys(paleta)) });
     } else if (necesitaHex && hexARgb(paleta[nombre] as string) === undefined) {
-      errores.push({ mensaje: `El color '${nombre}' de la Paleta no es un hex (#rgb o #rrggbb); alfa y mix lo necesitan` });
+      errores.push({ mensaje: `Palette color '${nombre}' is not a hex (#rgb or #rrggbb); alpha and mix need one` });
     }
   };
   const especial = (nombre: 'COLOR' | 'ORIGEN'): void => {
-    if (nombre === 'ORIGEN' && ambito !== 'arista') errores.push({ mensaje: "'ORIGEN' solo vale en Aristas (es el color del Nodo de origen)" });
-    else if (nombre === 'COLOR' && ambito === 'pagina') errores.push({ mensaje: "'COLOR' no vale en la pagina (es el color del Tipo de nodo); usa un nombre de Paleta" });
+    if (nombre === 'ORIGEN' && ambito !== 'arista') errores.push({ mensaje: "'ORIGEN' is only valid on Edges (it is the color of the source Node)" });
+    else if (nombre === 'COLOR' && ambito === 'pagina') errores.push({ mensaje: "'COLOR' is not valid on the page (it is the Node kind color); use a Palette name" });
   };
   const operando = (nombre: string): void => (esEspecial(nombre) ? especial(nombre) : comprobar(nombre));
   const { base, alfa } = expresion;
@@ -79,9 +79,9 @@ export function validarColor(texto: string, paleta: Readonly<Record<string, stri
   else if (base.tipo === 'mix') {
     operando(base.a);
     operando(base.b);
-    if (base.t < 0 || base.t > 1) errores.push({ mensaje: `El factor de mix debe estar entre 0 y 1, no ${base.t}` });
+    if (base.t < 0 || base.t > 1) errores.push({ mensaje: `The mix factor must be between 0 and 1, not ${base.t}` });
   } else especial(base.nombre);
-  if (alfa !== undefined && (alfa < 0 || alfa > 1)) errores.push({ mensaje: `El alfa debe estar entre 0 y 1, no ${alfa}` });
+  if (alfa !== undefined && (alfa < 0 || alfa > 1)) errores.push({ mensaje: `The alpha must be between 0 and 1, not ${alfa}` });
   return errores;
 }
 

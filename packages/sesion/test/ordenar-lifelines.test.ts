@@ -70,7 +70,7 @@ describe('Intencion ordenar-lifelines', () => {
     expect(visibles(r.archivos['main.dg']!)).toEqual(['cola', 'cliente', 'sistema.api', 'sistema.db']);
   });
 
-  it('rechaza un hash viejo, una Vista inexistente y un nodo desconocido', () => {
+  it('rechaza un hash viejo, una View not found y un nodo desconocido', () => {
     const texto = con('');
     expect(aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'v', orden: ['cliente'] }, { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
     expect(aplicarEnMemoria({ 'main.dg': texto }, { tipo: 'ordenar-lifelines', vista: 'nada', orden: ['cliente'] })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });

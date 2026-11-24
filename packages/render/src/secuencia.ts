@@ -37,7 +37,7 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: Vi
   const interaccion = view.interaction;
   const mensajes = interaccion.messages;
   const secuencia = estilo.pintura.secuencia;
-  if (secuencia === undefined) throw new Error('construirEscenaDeSecuencia: el Estilo no es de una Vista sequence');
+  if (secuencia === undefined) throw new Error('construirEscenaDeSecuencia: the Style is not from a sequence View');
   const lifelines = raices.flatMap((nodo): Elemento[] => {
     const linea = geometry.lifelines[nodo.id];
     if (linea === undefined) return [];

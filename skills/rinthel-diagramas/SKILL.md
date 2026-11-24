@@ -64,15 +64,15 @@ view compra { type sequence interaction compra order cliente, api autonumber }
 
 | `code` | Accion |
 | --- | --- |
-| `E_UNKNOWN_LIFELINE`, `E_UNKNOWN_INTERACTION`, `E_UNKNOWN_STEP` | Aplica el `fix` (typo) o elige un id de la lista del `hint` |
-| `E_SEQUENCE_WITHOUT_INTERACTION` | Agrega `interaction <id>` a la Vista |
-| `E_VIEW_PROPERTY_FOR_TYPE` | Quita la propiedad o cambia `type`; el `hint` dice cual |
-| `E_CREATE_NOT_FIRST`, `E_AFTER_DESTROY` | Mueve el `create` a la primera aparicion o saca los Mensajes posteriores al `destroy`; `related` apunta al otro extremo |
-| `E_INVALID_FRAGMENT_OPERAND` | `else` solo en `alt`, `and` solo en `par`; `opt/loop/break/critical` tienen un operando |
-| `E_STEP_NOT_ADVANCING`, `E_STEP_NOT_PROJECTED`, `E_STEPS_EACH_WITH_STEP` | Pasos que solo avanzan, sobre Mensajes proyectados; no mezcles `steps each` con `step` |
-| `E_ER_CARDINALITY` | Solo `0..1`, `1`, `0..*`, `1..*` en Vista `er`; aplica el `fix` |
-| `E_DUPLICATE_KEY_MARK` | Aplica el `fix` (borra la marca repetida) |
-| `W_REPLY_WITHOUT_SYNC`, `W_ORDER_NOT_IN_INTERACTION`, `W_REF_WITHOUT_VIEW` | Avisos: revisa el orden de los Mensajes, el `order` o agrega la Vista de la Interaccion referida |
+| `unknown-lifeline`, `unknown-interaction`, `unknown-step` | Aplica el `fix` (typo) o elige un id de la lista del `hint` |
+| `sequence-without-interaction` | Agrega `interaction <id>` a la Vista |
+| `view-property-for-type` | Quita la propiedad o cambia `type`; el `hint` dice cual |
+| `create-not-first`, `after-destroy` | Mueve el `create` a la primera aparicion o saca los Mensajes posteriores al `destroy`; `related` apunta al otro extremo |
+| `invalid-fragment-operand` | `else` solo en `alt`, `and` solo en `par`; `opt/loop/break/critical` tienen un operando |
+| `step-not-advancing`, `step-not-projected`, `steps-each-with-step` | Pasos que solo avanzan, sobre Mensajes proyectados; no mezcles `steps each` con `step` |
+| `er-cardinality` | Solo `0..1`, `1`, `0..*`, `1..*` en Vista `er`; aplica el `fix` |
+| `duplicate-key-mark` | Aplica el `fix` (borra la marca repetida) |
+| `reply-without-sync`, `order-not-in-interaction`, `ref-without-view` | Avisos: revisa el orden de los Mensajes, el `order` o agrega la Vista de la Interaccion referida |
 
 La lista completa de codigos sale de `dg skill --workspace <ruta>`.
 

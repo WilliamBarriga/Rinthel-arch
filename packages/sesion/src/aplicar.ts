@@ -58,7 +58,7 @@ export function aplicarAlWorkspace(puerto: PuertoDeWorkspace, aplicable: Aplicab
   const cambiados = cambiadosEntre(disco, r.archivos);
   const fuera = cambiados.find((f) => !(f in propios));
   if (fuera !== undefined) {
-    return { ok: false, motivo: 'archivo-desconocido', mensaje: `'${fuera}' no pertenece al Workspace`, file: fuera };
+    return { ok: false, motivo: 'archivo-desconocido', mensaje: `'${fuera}' does not belong to the Workspace`, file: fuera };
   }
   for (const ruta of cambiados) puerto.escribir(ruta, r.archivos[ruta] as string);
   return { ok: true, cambiados, ediciones: r.ediciones };

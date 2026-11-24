@@ -71,7 +71,7 @@ InteractionRef:
 
 // `opt|loop|break|critical ["guarda"] { }`, `alt ["guarda"] { } else ["guarda"] { }`, `par { } and { }`.
 // El parser acepta cualquier operador con `else`/`and` en cualquier cantidad; `canonico` emite
-// `E_INVALID_FRAGMENT_OPERAND`, no `E_SYNTAX_ERROR`.
+// `invalid-fragment-operand`, no `syntax-error`.
 Fragment:
   operator=('opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par') operands+=FirstOperand operands+=NextOperand*
 ;
@@ -177,7 +177,7 @@ ThemeType:
   'type' name=Id '{' items+=PatchItem* '}';
 
 // Los parches de estado no pueden tocar las Metricas; `slots` se acepta aqui solo para
-// que el catalogo lo rechace con un error claro (E_THEME_STATE_TOUCHES_METRICS).
+// que el catalogo lo rechace con un error claro (theme-state-touches-metrics).
 ThemeState:
   'state' name=Id '{' items+=StateItem* '}';
 

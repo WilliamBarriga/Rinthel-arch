@@ -39,20 +39,20 @@ describe('Familia trazo', () => {
 
     expect(ok.errores).toEqual([]);
     expect(ok.primitiva?.props).toMatchObject({ corner: 'round', radius: 12 });
-    expect(mal.errores[0]?.codigo).toBe('E_THEME_INVALID_VALUE');
+    expect(mal.errores[0]?.codigo).toBe('theme-invalid-value');
   });
 
   it('rechaza un estilo desconocido con sugerencia y un grosor fuera de rango sin recortar', () => {
     const [estilo] = construirPrimitiva('line', [{ clave: 'color', valor: 'blue' }, { clave: 'style', valor: 'dashd' }], paleta, 'capa-arista').errores;
     const [grosor] = construirPrimitiva('line', [{ clave: 'color', valor: 'blue' }, { clave: 'width', valor: 99 }], paleta, 'capa-arista').errores;
 
-    expect(estilo).toMatchObject({ codigo: 'E_THEME_INVALID_VALUE', hint: "quisiste decir 'dashed'" });
-    expect(grosor?.codigo).toBe('E_THEME_INVALID_VALUE');
+    expect(estilo).toMatchObject({ codigo: 'theme-invalid-value', hint: "did you mean 'dashed'" });
+    expect(grosor?.codigo).toBe('theme-invalid-value');
   });
 
   it('un trazo no vale como Capa de Nodo ni una Capa de Nodo como trazo', () => {
-    expect(construirPrimitiva('line', [], paleta).errores[0]).toMatchObject({ codigo: 'E_THEME_UNKNOWN_PRIMITIVE' });
-    expect(construirPrimitiva('solid', [], paleta, 'capa-arista').errores[0]).toMatchObject({ codigo: 'E_THEME_UNKNOWN_PRIMITIVE' });
+    expect(construirPrimitiva('line', [], paleta).errores[0]).toMatchObject({ codigo: 'theme-unknown-primitive' });
+    expect(construirPrimitiva('solid', [], paleta, 'capa-arista').errores[0]).toMatchObject({ codigo: 'theme-unknown-primitive' });
     expect(temaResueltoSchema.safeParse(conArista({ capas: [{ nombre: 'x', primitiva: { tipo: 'solid', props: { color: 'blue' } } }] })).success).toBe(false);
   });
 

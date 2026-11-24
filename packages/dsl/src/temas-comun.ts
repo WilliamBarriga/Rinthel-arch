@@ -80,7 +80,7 @@ export function nombreDeDiagrama(item: ThemeDiagram, archivo: string, issues: Is
   if (tipo !== undefined) return tipo;
   issues.push(
     issueConSugerencia(
-      { code: CODIGOS.E_THEME_UNKNOWN_DIAGRAM_TYPE, message: `Tipo de diagrama '${item.name}' desconocido; disponibles: ${TIPOS_DE_DIAGRAMA.join(', ')}` },
+      { code: CODIGOS.E_THEME_UNKNOWN_DIAGRAM_TYPE, message: `Unknown Diagram type '${item.name}'; available: ${TIPOS_DE_DIAGRAMA.join(', ')}` },
       archivo, item, 'name', TIPOS_DE_DIAGRAMA,
     ),
   );

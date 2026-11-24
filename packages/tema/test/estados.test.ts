@@ -9,7 +9,7 @@ describe('parsearEstado', () => {
 
   it('un estado desconocido da el codigo, el mensaje con los disponibles y los candidatos cercanos', () => {
     const r = parsearEstado('hovr');
-    expect(r).toMatchObject({ error: { code: 'E_THEME_UNKNOWN_STATE', candidatos: ['hover'] } });
-    expect('error' in r && r.error.message).toContain(`disponibles: ${ESTADOS.join(', ')}`);
+    expect(r).toMatchObject({ error: { code: 'theme-unknown-state', candidatos: ['hover'] } });
+    expect('error' in r && r.error.message).toContain(`available: ${ESTADOS.join(', ')}`);
   });
 });

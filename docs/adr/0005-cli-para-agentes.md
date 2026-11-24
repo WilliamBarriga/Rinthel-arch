@@ -5,7 +5,7 @@
 `validate` es de solo lectura y reporta todos los issues en una pasada (tope `--max-issues`, 100 por defecto; `truncated: true` si se corta). Con `--json` imprime un unico objeto a stdout, sin texto extra, ordenado de forma determinista (archivo, linea, columna, codigo):
 
 ```
-{ contractVersion: 1, ok, summary: { errors, warnings, truncated }, issues: [...] }
+{ contractVersion: 2, ok, summary: { errors, warnings, truncated }, issues: [...] }
 ```
 
 Cada issue: `code` estable, `severity` (`error` | `warning`), `file`, `line`, `column`, `message`, y opcionales `hint` (texto), `related: [{file,line,column,message}]` (p. ej. el Nodo duplicado original) y `fix`. El `fix` es una edicion estructurada del DSL de texto (`{ file, range, replacement }`) y solo se emite en casos inequivocos (un unico candidato); si hay ambiguedad queda `hint`. Nunca edita el JSON canonico (ADR 0001).

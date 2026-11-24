@@ -80,7 +80,7 @@ describe('inspect tema', () => {
     const tema = await run(['inspect', 'tema', 'ap', '--workspace', RAIZ]);
     expect(tema.exitCode).toBe(1);
     expect(tema.stdout).toBe('');
-    expect(tema.stderr).toContain("No existe el Tema 'ap'");
+    expect(tema.stderr).toContain("No such Theme 'ap'");
     expect(tema.stderr).toContain('app');
 
     const tipo = await run(['inspect', 'tema', 'app', '--tipo', 'servicioo', '--workspace', RAIZ]);
@@ -98,9 +98,9 @@ describe('inspect tema', () => {
     expect(r.exitCode).toBe(0);
     expect(r.stdout).toContain('app app.dg:1');
     expect(r.stdout).toContain('extends: base');
-    expect(r.stdout).toContain('partes: resalte');
+    expect(r.stdout).toContain('parts: resalte');
     expect(r.stdout).toMatch(/relleno solid .*app\.dg:5/);
-    expect(r.stdout).toContain('Metricas:');
+    expect(r.stdout).toContain('Metrics:');
   });
 
   it('muestra el fondo de pagina con el parche que fijo cada Capa y si queda fijo', async () => {
@@ -117,7 +117,7 @@ describe('inspect tema', () => {
     expect(pagina.capas[1]?.props).toMatchObject({ size: 30 });
 
     const texto = await run(['inspect', 'tema', 'hijo', '--workspace', raiz]);
-    expect(texto.stdout).toContain('Pagina: (fija al visor)');
+    expect(texto.stdout).toContain('Page: (fixed to the viewer)');
     expect(texto.stdout).toMatch(/puntos dots .*main\.dg:15/);
   });
 
@@ -142,7 +142,7 @@ describe('inspect tema', () => {
 
     const texto = await run(['inspect', 'tema', 'hijo', '--workspace', raiz]);
     expect(texto.stdout).toContain('Grupo:');
-    expect(texto.stdout).toContain('cabecera: row gap 6 pad 6 { icon title }');
+    expect(texto.stdout).toContain('header: row gap 6 pad 6 { icon title }');
     expect(texto.stdout).toMatch(/borde dashed .*main\.dg:19/);
   });
 
@@ -157,7 +157,7 @@ describe('inspect tema', () => {
     expect(sitio(origenDeSlots)).toBe('main.dg:18');
 
     const texto = (await run(['inspect', 'tema', 'hijo', '--workspace', raiz])).stdout;
-    expect(texto).toMatch(/cabecera: row gap 6 pad 6 \{ icon title \} \(alto \d+\) main\.dg:10/);
+    expect(texto).toMatch(/header: row gap 6 pad 6 \{ icon title \} \(height \d+\) main\.dg:10/);
     expect(texto).toMatch(/^Slots: .* main\.dg:18$/m);
   });
 
@@ -173,7 +173,7 @@ describe('inspect tema', () => {
     const { grupo } = temaDe((await json(['sobrio'], raiz)).salida);
 
     expect(grupo).toMatchObject({ propio: false, capas: [] });
-    expect((await run(['inspect', 'tema', 'sobrio', '--workspace', raiz])).stdout).toContain('Grupo: (sin group: pila sobria derivada de los tokens del Tema, no las Capas del Nodo)');
+    expect((await run(['inspect', 'tema', 'sobrio', '--workspace', raiz])).stdout).toContain('Group: (no group: sober stack derived from the Theme tokens, not the Node Layers)');
   });
 
   it('un Workspace con errores no se consulta (codigo 1)', async () => {
@@ -248,16 +248,16 @@ describe('inspect tema: elementos de secuencia y fila', () => {
   it('el texto legible marca los Elementos derivados', async () => {
     const r = await run(['inspect', 'tema', 'app', '--diagrama', 'sequence', '--workspace', RAIZ]);
 
-    expect(r.stdout).toMatch(/Secuencia:\n {2}lifeline \(derivado\):[^\n]*end=cross/);
+    expect(r.stdout).toMatch(/Sequence:\n {2}lifeline \(derived\):[^\n]*end=cross/);
   });
 
   it('el texto legible lista los elementos y un Tema sin ellos no los menciona', async () => {
     const con = await run(['inspect', 'tema', 't', '--workspace', RAIZ_SECUENCIA]);
     const sin = await run(['inspect', 'tema', 'app', '--workspace', RAIZ]);
 
-    expect(con.stdout).toMatch(/Secuencia:\n {2}message:[^\n]*\n[\s\S]*kind\/op reply/);
-    expect(con.stdout).toMatch(/Fila: alto 30/);
-    expect(sin.stdout).not.toMatch(/Secuencia:|Fila:/);
+    expect(con.stdout).toMatch(/Sequence:\n {2}message:[^\n]*\n[\s\S]*kind\/op reply/);
+    expect(con.stdout).toMatch(/Row: height 30/);
+    expect(sin.stdout).not.toMatch(/Sequence:|Row:/);
   });
 });
 

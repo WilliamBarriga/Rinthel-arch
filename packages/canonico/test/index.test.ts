@@ -13,6 +13,6 @@ describe('canonico', () => {
     const vista = resolveView(fuente, 'v');
     expect(vista?.nodes.map((nodo) => nodo.id)).toEqual(['a']);
     expect(revealAt(vista!, 0)('a')).toBe(1);
-    expect(CODIGOS.E_SYNTAX_ERROR).toBe('E_SYNTAX_ERROR');
+    expect(CODIGOS.E_SYNTAX_ERROR).toBe('syntax-error');
   });
 });

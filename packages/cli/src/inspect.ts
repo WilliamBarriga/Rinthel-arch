@@ -34,64 +34,64 @@ const titulo = (t: string): string => (t === '' ? '' : ` "${t}"`);
 export function textoLegible(salida: SalidaDeInspect): string {
   const lineas: string[] = [];
   if (salida.comando === 'buscar') {
-    for (const r of salida.resultados) lineas.push(r.kind === 'vista' ? `vista ${r.id} ${r.type} ${sitio(r)}` : r.kind === 'interaccion' ? `interaccion ${r.id}${titulo(r.title)} ${sitio(r)}` : `nodo ${r.id} ${r.type}${titulo(r.title)} ${sitio(r)}`);
-    lineas.push(`${salida.resultados.length} ${salida.resultados.length === 1 ? 'resultado' : 'resultados'}`);
+    for (const r of salida.resultados) lineas.push(r.kind === 'vista' ? `view ${r.id} ${r.type} ${sitio(r)}` : r.kind === 'interaccion' ? `interaction ${r.id}${titulo(r.title)} ${sitio(r)}` : `node ${r.id} ${r.type}${titulo(r.title)} ${sitio(r)}`);
+    lineas.push(`${salida.resultados.length} ${salida.resultados.length === 1 ? 'result' : 'results'}`);
   } else if (salida.comando === 'nodo') {
     const { nodo } = salida;
     lineas.push(`${nodo.id} ${nodo.type}${titulo(nodo.title)} ${sitio(nodo)}`);
     if (nodo.description !== '') lineas.push(`  ${nodo.description}`);
-    if (nodo.parent !== undefined) lineas.push(`Padre: ${nodo.parent}`);
-    if (nodo.children.length > 0) lineas.push(`Hijos: ${nodo.children.join(', ')}`);
-    if (nodo.attributes.length > 0) lineas.push(`Atributos: ${nodo.attributes.map((a) => `${a.name}: ${a.type}`).join(', ')}`);
-    lineas.push('Aristas:');
+    if (nodo.parent !== undefined) lineas.push(`Parent: ${nodo.parent}`);
+    if (nodo.children.length > 0) lineas.push(`Children: ${nodo.children.join(', ')}`);
+    if (nodo.attributes.length > 0) lineas.push(`Attributes: ${nodo.attributes.map((a) => `${a.name}: ${a.type}`).join(', ')}`);
+    lineas.push('Edges:');
     for (const a of salida.aristas) {
       const otro = a.direction === 'out' ? a.to : a.from;
       lineas.push(`  ${a.direction === 'out' ? '->' : '<-'} ${otro}${a.label === undefined ? '' : ` "${a.label}"`} ${sitio(a)}`);
     }
-    lineas.push('Vistas:');
+    lineas.push('Views:');
     for (const v of salida.vistas) lineas.push(`  ${v.id} ${sitio(v)}`);
   } else if (salida.comando === 'interaccion') {
     const { interaccion: i } = salida;
     lineas.push(`${i.id}${titulo(i.title)} ${i.items} items ${sitio(i)}`);
     if (i.description !== '') lineas.push(`  ${i.description}`);
-    lineas.push(`Mensajes: ${i.mensajes}`);
+    lineas.push(`Messages: ${i.mensajes}`);
     lineas.push(`Lifelines: ${i.lifelines.join(', ')}`);
-    lineas.push('Vistas:');
+    lineas.push('Views:');
     for (const v of i.vistas) lineas.push(`  ${v.id} ${sitio(v)}`);
   } else if (salida.comando === 'tema') {
     const { tema } = salida;
     lineas.push(`${tema.name} ${tema.file}:${tema.line}${tema.tipo === undefined ? '' : ` tipo=${tema.tipo}`}${tema.estado === undefined ? '' : ` estado=${tema.estado}`}${tema.diagrama === undefined ? '' : ` diagrama=${tema.diagrama}`}`);
-    lineas.push(`extends: ${tema.extends.length === 0 ? '(ninguno)' : tema.extends.join(' > ')}`);
-    lineas.push(`partes: ${tema.partes.length === 0 ? '(ninguna)' : tema.partes.join(', ')}`);
-    lineas.push('Capas:');
+    lineas.push(`extends: ${tema.extends.length === 0 ? '(none)' : tema.extends.join(' > ')}`);
+    lineas.push(`parts: ${tema.partes.length === 0 ? '(none)' : tema.partes.join(', ')}`);
+    lineas.push('Layers:');
     for (const c of tema.capas) {
       const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
-      lineas.push(`  ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`}${c.encima ? ' [encima]' : ''}${c.animada ? ' [animada]' : ''} ${sitio(c.origen)}`);
+      lineas.push(`  ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`}${c.encima ? ' [above]' : ''}${c.animada ? ' [animated]' : ''} ${sitio(c.origen)}`);
     }
-    lineas.push(`Pagina:${tema.pagina.capas.length === 0 ? ' (solo el color background)' : tema.pagina.fijo ? ' (fija al visor)' : ' (se mueve con la camara)'}`);
+    lineas.push(`Page:${tema.pagina.capas.length === 0 ? ' (only the background color)' : tema.pagina.fijo ? ' (fixed to the viewer)' : ' (moves with the camera)'}`);
     for (const c of tema.pagina.capas) {
       const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
       lineas.push(`  ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`} ${sitio(c.origen)}`);
     }
     const { grupo } = tema;
-    lineas.push(`Grupo:${grupo.propio ? '' : ' (sin group: pila sobria derivada de los tokens del Tema, no las Capas del Nodo)'}`);
-    lineas.push(`  cabecera: ${grupo.cabecera} (alto ${grupo.alturaDeCabecera}) ${sitio(grupo.origenDeCabecera)}`);
+    lineas.push(`Group:${grupo.propio ? '' : ' (no group: sober stack derived from the Theme tokens, not the Node Layers)'}`);
+    lineas.push(`  header: ${grupo.cabecera} (height ${grupo.alturaDeCabecera}) ${sitio(grupo.origenDeCabecera)}`);
     lineas.push(`  padding: ${grupo.padding.top} ${grupo.padding.right} ${grupo.padding.bottom} ${grupo.padding.left}`);
     for (const [titulo, capas] of [['abierto', grupo.capas], ['colapsado', grupo.colapsado.capas]] as const) {
       if (capas.length > 0) lineas.push(`  ${titulo}:`);
       for (const c of capas) {
         const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
-        lineas.push(`    ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`}${c.encima ? ' [encima]' : ''}${c.animada ? ' [animada]' : ''} ${sitio(c.origen)}`);
+        lineas.push(`    ${c.nombre} ${c.primitiva}${props === '' ? '' : ` ${props}`}${c.encima ? ' [above]' : ''}${c.animada ? ' [animated]' : ''} ${sitio(c.origen)}`);
       }
     }
-    lineas.push(`  colapsado cabecera: ${grupo.colapsado.slots} ${sitio(grupo.colapsado.origenDeSlots)}`);
+    lineas.push(`  collapsed header: ${grupo.colapsado.slots} ${sitio(grupo.colapsado.origenDeSlots)}`);
     const { elementos } = tema;
     if (elementos?.secuencia !== undefined) {
-      lineas.push('Secuencia:');
+      lineas.push('Sequence:');
       for (const [nombre, bloque] of Object.entries(elementos.secuencia)) {
         const marcadores = Object.entries(bloque.marcadores).map(([lado, tipo]) => ` ${lado}=${tipo}`).join('');
         const metricas = Object.entries(bloque.metricas).map(([clave, valor]) => ` ${clave}=${valor}`).join('');
-        lineas.push(`  ${nombre}${bloque.derivado === true ? ' (derivado)' : ''}:${marcadores}${metricas}`);
+        lineas.push(`  ${nombre}${bloque.derivado === true ? ' (derived)' : ''}:${marcadores}${metricas}`);
         for (const c of bloque.capas) lineas.push(`    ${c.nombre} ${c.primitiva} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
         for (const [variante, capas] of Object.entries(bloque.parches)) {
           lineas.push(`    kind/op ${variante}:`);
@@ -100,24 +100,24 @@ export function textoLegible(salida: SalidaDeInspect): string {
       }
     }
     if (elementos?.fila !== undefined) {
-      lineas.push(`Fila${elementos.fila.derivado === true ? ' (derivado)' : ''}: alto ${elementos.fila.alto ?? '(defecto)'}`);
+      lineas.push(`Row${elementos.fila.derivado === true ? ' (derived)' : ''}: height ${elementos.fila.alto ?? '(default)'}`);
       for (const c of elementos.fila.capas) lineas.push(`  ${c.nombre} ${c.primitiva} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
     }
     lineas.push(`Slots: ${tema.slots} ${sitio(tema.origenDeSlots)}`);
-    lineas.push('Metricas:');
+    lineas.push('Metrics:');
     for (const [clave, valor] of Object.entries(tema.metricas)) if (clave !== 'disposicion') lineas.push(`  ${clave}: ${typeof valor === 'object' ? JSON.stringify(valor) : String(valor)}`);
-    lineas.push(tema.temaConCodigo ? `con codigo: ${tema.componentes.join(', ')}` : 'sin codigo');
+    lineas.push(tema.temaConCodigo ? `with code: ${tema.componentes.join(', ')}` : 'no code');
     if (tema.catalogo !== undefined) {
-      lineas.push(`Primitivas: ${tema.catalogo.primitivas.join(', ')}`);
-      lineas.push(`Movimientos: ${tema.catalogo.movimientos.join(', ')}`);
-      lineas.push(`Efectos: ${tema.catalogo.efectos.join(', ')}`);
+      lineas.push(`Primitives: ${tema.catalogo.primitivas.join(', ')}`);
+      lineas.push(`Motions: ${tema.catalogo.movimientos.join(', ')}`);
+      lineas.push(`Effects: ${tema.catalogo.efectos.join(', ')}`);
     }
   } else {
     const { vista } = salida;
-    lineas.push(`${vista.id} ${vista.type}${vista.interaction === undefined ? '' : ` (interaccion ${vista.interaction})`} ${sitio(vista)}`);
-    lineas.push('Nodos:');
+    lineas.push(`${vista.id} ${vista.type}${vista.interaction === undefined ? '' : ` (interaction ${vista.interaction})`} ${sitio(vista)}`);
+    lineas.push('Nodes:');
     for (const n of vista.nodos) lineas.push(`  ${n.id} ${n.type}${titulo(n.title)} ${sitio(n)}`);
-    lineas.push('Aristas:');
+    lineas.push('Edges:');
     for (const a of vista.aristas) lineas.push(`  ${a.from} -> ${a.to}${a.label === undefined ? '' : ` "${a.label}"`}${a.count > 1 ? ` (x${a.count})` : ''} ${sitio(a)}`);
   }
   return `${lineas.join('\n')}\n`;

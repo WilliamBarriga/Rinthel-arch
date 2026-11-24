@@ -53,7 +53,7 @@ export async function editar(
   if (v.workspace === undefined) return uso(`Falta --workspace <ruta>. ${USO}`);
   const hayPin = [v.view, v.node, v.x, v.y].some((o) => o !== undefined);
   if ([hayPin, v.edits !== undefined, v.intent !== undefined].filter(Boolean).length !== 1) {
-    return uso(`Indica una intencion de Pin (--view --node --x --y), --intent o --edits, solo una. ${USO}`);
+    return uso(`Give a Pin intent (--view --node --x --y), --intent or --edits, only one. ${USO}`);
   }
 
   const hashes = new Map<string, string>();
@@ -69,7 +69,7 @@ export async function editar(
     propios = leer(v.workspace);
     archivos = leerConTemas(leer, v.workspace, v['theme-path']);
   } catch (error) {
-    return uso(`No se pudo leer el Workspace: ${(error as Error).message}`);
+    return uso(`Could not read the Workspace: ${(error as Error).message}`);
   }
   const hashVigente = (file: string) => hashes.get(file) ?? hashDeContenido(archivos[file] ?? '');
   const json = v.json === true;
@@ -80,7 +80,7 @@ export async function editar(
     try {
       pedidas = edicionesPedidasSchema.parse(JSON.parse(v.edits));
     } catch (error) {
-      return uso(`--edits no es un arreglo valido de { file, range, replacement, hash? }: ${(error as Error).message}`);
+      return uso(`--edits is not a valid array of { file, range, replacement, hash? }: ${(error as Error).message}`);
     }
     aplicable = pedidas.map((e) => ({ ...e, hash: e.hash ?? hashVigente(e.file) }));
   } else if (v.intent !== undefined) {
@@ -88,17 +88,17 @@ export async function editar(
     try {
       crudo = JSON.parse(v.intent) as Record<string, unknown>;
     } catch (error) {
-      return uso(`--intent no es JSON: ${(error as Error).message}`);
+      return uso(`--intent is not JSON: ${(error as Error).message}`);
     }
     // Un `hash` en el JSON se ignora: la concurrencia de una Intencion la decide `--hash`.
     const leida = intencionSchema.safeParse(crudo);
-    if (!leida.success) return uso(`--intent no es una Intencion valida: ${leida.error.message}`);
+    if (!leida.success) return uso(`--intent is not a valid Intent: ${leida.error.message}`);
     aplicable = leida.data;
   } else {
     const x = Number(v.x);
     const y = Number(v.y);
     if (v.view === undefined || v.node === undefined || v.x === undefined || v.y === undefined || !Number.isFinite(x) || !Number.isFinite(y)) {
-      return uso(`El Pin requiere --view, --node, --x y --y numericos. ${USO}`);
+      return uso(`The Pin requires --view, --node, --x and --y as numbers. ${USO}`);
     }
     aplicable = { tipo: 'mover-pin', vista: v.view, nodo: v.node, x, y };
   }
@@ -120,7 +120,7 @@ export async function editar(
       Object.fromEntries(hashes),
     );
   } catch (error) {
-    return conObjetivo(uso(`No se pudo escribir: ${(error as Error).message}`));
+    return conObjetivo(uso(`Could not write: ${(error as Error).message}`));
   }
   if (!resultado.ok) return conObjetivo(rechazado(resultado, json));
   const { ediciones, cambiados } = resultado;
@@ -142,7 +142,7 @@ export async function editar(
 
 function rechazado(r: RechazoDeEdicion, json: boolean): ResultadoDeEjecucion {
   const exitCode = CODIGO_DE_RECHAZO;
-  if (!json) return { exitCode, stdout: '', stderr: `Edicion rechazada (${r.motivo}): ${r.mensaje}\n` };
+  if (!json) return { exitCode, stdout: '', stderr: `Edit rejected (${r.motivo}): ${r.mensaje}\n` };
   const salida = salidaDeEditSchema.parse({
     contractVersion: EDIT_CONTRACT_VERSION,
     ok: false,

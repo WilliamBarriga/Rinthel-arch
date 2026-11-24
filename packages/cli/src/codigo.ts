@@ -66,7 +66,7 @@ const issueDeEsbuild = (mensaje: Message, rutaPorDefecto: string): Issue => ({
   file: mensaje.location?.file.split(sep).join('/') ?? rutaPorDefecto,
   line: mensaje.location?.line ?? 1,
   column: (mensaje.location?.column ?? 0) + 1,
-  message: `No compila el componente: ${mensaje.text}`,
+  message: `The component does not compile: ${mensaje.text}`,
 });
 
 /** El build ESM da los exports; el CommonJS es el que carga el navegador. */
@@ -78,7 +78,7 @@ function compilarArchivo(raiz: string, ruta: string): { modulo: ModuloCompilado 
     return { modulo: { cjs, exportados: (salida?.exports ?? []).filter(esComponente) } };
   } catch (error) {
     const mensajes = (error as { errors?: Message[] }).errors;
-    return { errores: mensajes === undefined || mensajes.length === 0 ? [{ code: CODIGOS.E_THEME_CODE_COMPILE, severity: 'error', file: ruta, line: 1, column: 1, message: `No compila el componente: ${(error as Error).message}` }] : mensajes.map((m) => issueDeEsbuild(m, ruta)) };
+    return { errores: mensajes === undefined || mensajes.length === 0 ? [{ code: CODIGOS.E_THEME_CODE_COMPILE, severity: 'error', file: ruta, line: 1, column: 1, message: `The component does not compile: ${(error as Error).message}` }] : mensajes.map((m) => issueDeEsbuild(m, ruta)) };
   }
 }
 
@@ -123,7 +123,7 @@ export function compiladorDeCodigo(raiz: string): { compilar(): ResultadoDeCodig
         for (const nombre of exportados) {
           const previo = dueno.get(nombre);
           if (previo !== undefined) {
-            issues.push({ code: CODIGOS.E_THEME_COMPONENT_DUPLICATE, severity: 'error', file: ruta, line: 1, column: 1, message: `El componente '${nombre}' ya lo exporta '${previo}'`, related: [{ file: previo, line: 1, column: 1, message: `Primer '${nombre}'` }] });
+            issues.push({ code: CODIGOS.E_THEME_COMPONENT_DUPLICATE, severity: 'error', file: ruta, line: 1, column: 1, message: `Component '${nombre}' is already exported by '${previo}'`, related: [{ file: previo, line: 1, column: 1, message: `First '${nombre}'` }] });
             continue;
           }
           dueno.set(nombre, ruta);

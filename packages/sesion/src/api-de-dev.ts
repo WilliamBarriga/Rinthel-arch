@@ -88,7 +88,7 @@ const RUTAS: readonly Ruta[] = [
     ruta: RUTAS_DE_DEV.edit,
     async atender(vivo, _url, cuerpo) {
       const pedido = pedidoDeEdicion(cuerpo);
-      if (pedido === undefined) return error(400, 'Se esperaba una Intencion { tipo, ... } o { ediciones, version, descripcion? }');
+      if (pedido === undefined) return error(400, 'Expected an Intent { tipo, ... } or { ediciones, version, descripcion? }');
       return resultado(await vivo.editar(pedido.aplicable, pedido.version));
     },
   },
@@ -99,7 +99,7 @@ const RUTAS: readonly Ruta[] = [
     ruta: RUTAS_DE_DEV.saltar,
     async atender(vivo, _url, cuerpo) {
       const salto = peticionDeSaltoSchema.safeParse(cuerpo);
-      if (!salto.success) return error(400, 'Se esperaba { id } con un entero no negativo');
+      if (!salto.success) return error(400, 'Expected { id } with a non-negative integer');
       return resultado(await vivo.saltar(salto.data.id));
     },
   },
@@ -135,7 +135,7 @@ const RUTAS: readonly Ruta[] = [
     ruta: RUTAS_DE_DEV.componentes,
     atender(vivo) {
       const { confiado, bundle } = vivo.codigo();
-      return confiado ? { status: 200, javascript: bundle } : error(403, 'El codigo del Workspace no esta confirmado');
+      return confiado ? { status: 200, javascript: bundle } : error(403, 'The Workspace code is not confirmed');
     },
   },
   {
@@ -143,9 +143,9 @@ const RUTAS: readonly Ruta[] = [
     ruta: RUTAS_DE_DEV.inspect,
     atender(vivo, url) {
       const consulta = consultaDeRuta(url);
-      if (consulta === undefined) return json(404, { ok: false, mensaje: `Ruta de inspect desconocida; se esperaba ${RUTAS_DE_DEV.inspect}<${COMANDOS_DE_INSPECT.join('|')}>/<argumento>`, cercanos: [] });
+      if (consulta === undefined) return json(404, { ok: false, mensaje: `Unknown inspect route; expected ${RUTAS_DE_DEV.inspect}<${COMANDOS_DE_INSPECT.join('|')}>/<argumento>`, cercanos: [] });
       const r = vivo.consultar(consulta);
-      if (r === undefined) return json(422, { ok: false, mensaje: 'El Workspace tiene errores y nunca compilo; no hay nada que consultar', cercanos: [] });
+      if (r === undefined) return json(422, { ok: false, mensaje: 'The Workspace has errors and never compiled; there is nothing to query', cercanos: [] });
       return 'noEncontrado' in r ? json(404, { ok: false, mensaje: r.noEncontrado, cercanos: r.cercanos }) : json(200, r.salida);
     },
   },
@@ -157,12 +157,12 @@ const RUTAS: readonly Ruta[] = [
       try {
         id = decodeURIComponent(url.pathname.slice(RUTAS_DE_DEV.vista.length));
       } catch {
-        return error(404, 'Vista inexistente');
+        return error(404, 'View not found');
       }
       // `?tema=<nombre>`: la Vista con otro Tema (previsualizar), sin cache ni Historial.
       const tema = url.searchParams.get('tema') ?? undefined;
       const geometria = await vivo.geometria(id, tema === undefined ? undefined : { tema });
-      return geometria === undefined ? error(404, tema === undefined ? `Vista '${id}' inexistente` : `Vista '${id}' o Tema '${tema}' inexistente`) : json(200, geometria);
+      return geometria === undefined ? error(404, tema === undefined ? `View '${id}' not found` : `View '${id}' or Theme '${tema}' not found`) : json(200, geometria);
     },
   },
 ];
@@ -174,7 +174,7 @@ function serializar({ status, cuerpo, javascript, cabeceras }: Respuesta): Respu
   return { status, cuerpo: JSON.stringify(cuerpo), cabeceras: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...cabeceras } };
 }
 
-const metodoAjeno = (permitido: 'GET' | 'POST'): Respuesta => ({ ...error(405, 'Metodo no permitido'), cabeceras: { allow: permitido } });
+const metodoAjeno = (permitido: 'GET' | 'POST'): Respuesta => ({ ...error(405, 'Method not allowed'), cabeceras: { allow: permitido } });
 
 async function atender(vivo: WorkspaceVivo, { metodo, url, cuerpo }: PeticionDeDev): Promise<Respuesta> {
   const ruta = rutaDe(url.pathname);

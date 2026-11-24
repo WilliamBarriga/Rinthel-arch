@@ -120,7 +120,7 @@ describe('dev: Temas con codigo', () => {
     cambiar();
     const roto = await esperarEstado(servidor, antes.version + 1);
 
-    expect(roto.issues).toContainEqual(expect.objectContaining({ code: 'E_THEME_CODE_COMPILE', file: 'componentes/aurora.tsx', line: 2 }));
+    expect(roto.issues).toContainEqual(expect.objectContaining({ code: 'theme-code-compile', file: 'componentes/aurora.tsx', line: 2 }));
     expect(roto.fuente).toEqual(antes.fuente);
     expect(dibujarAurora(await (await bundle(servidor)).text())).toBe('<i data-aurora="api" data-hue="3"></i>');
   });
@@ -130,10 +130,10 @@ describe('dev: Temas con codigo', () => {
     const sin = await comandoDev(['--workspace', copia(), '--port', '0'], dependencias);
     expect(sin.exitCode).toBe(0);
     expect(sin.stdout).toContain('Aurora');
-    expect(sin.stdout).toContain('confirmacion');
+    expect(sin.stdout).toContain('confirmation');
 
     const con = await comandoDev(['--workspace', copia(), '--port', '0', '--trust-code'], dependencias);
     expect(con.exitCode).toBe(0);
-    expect(con.stdout).not.toContain('confirmacion');
+    expect(con.stdout).not.toContain('confirmation');
   });
 });

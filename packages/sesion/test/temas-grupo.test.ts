@@ -128,7 +128,7 @@ describe('seam sesion: bloque group del Tema', () => {
     expect(await ancho(chip)).toBeGreaterThanOrEqual(chip.estilo('v')!.tabla.grupoAbierto.margenDeControl * 2 + titulo.length * 8);
   });
 
-  it('errores a la vez, con codigo y "quisiste decir": Capa, estado, Slot attrs, padding y Metricas de un Tipo', async () => {
+  it('errores a la vez, con codigo y "did you mean": Capa, estado, Slot attrs, padding y Metricas de un Tipo', async () => {
     const sesion = abrir(
       tema(`  group {
     layer caja rect { radius 16 }
@@ -143,10 +143,10 @@ describe('seam sesion: bloque group del Tema', () => {
     const codigos = issues.map((i) => i.code).sort();
 
     expect(codigos).toEqual(
-      expect.arrayContaining(['E_THEME_UNKNOWN_STATE', 'E_THEME_UNKNOWN_PROPERTY', 'E_THEME_UNKNOWN_SLOT', 'E_THEME_INVALID_VALUE', 'E_THEME_STATE_TOUCHES_METRICS']),
+      expect.arrayContaining(['theme-unknown-state', 'theme-unknown-property', 'theme-unknown-slot', 'theme-invalid-value', 'theme-state-touches-metrics']),
     );
-    expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_STATE')?.fix?.replacement).toBe('hover');
-    expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_PROPERTY')?.fix?.replacement).toBe('radius');
+    expect(issues.find((i) => i.code === 'theme-unknown-state')?.fix?.replacement).toBe('hover');
+    expect(issues.find((i) => i.code === 'theme-unknown-property')?.fix?.replacement).toBe('radius');
     expect(issues.every((i) => i.line > 0)).toBe(true);
   });
 
@@ -158,7 +158,7 @@ describe('seam sesion: bloque group del Tema', () => {
     );
     const m = bueno.estilo('v')!.tabla;
 
-    expect((await malo.diagnosticar()).map((i) => i.code)).toEqual(['E_THEME_STATE_TOUCHES_METRICS']);
+    expect((await malo.diagnosticar()).map((i) => i.code)).toEqual(['theme-state-touches-metrics']);
     expect(await bueno.diagnosticar()).toEqual([]);
     expect(m.grupoColapsado.cajaCuadrada).toBe(true);
     expect(m.grupoAbierto.cajaCuadrada).toBe(false);

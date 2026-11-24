@@ -34,11 +34,11 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
   const marcador = (item: ThemeMarker, destino: Marcadores, enParche: boolean): void => {
     const lado = item.side === 'start' ? 'origen' : 'fin';
     if (!espec.marcadores.includes(item.side)) {
-      error(item, `'${nombre}' no admite el marcador '${item.side}'${espec.marcadores.length > 0 ? `; admite ${espec.marcadores.join(', ')}` : ''}`);
+      error(item, `'${nombre}' does not accept marker '${item.side}'${espec.marcadores.length > 0 ? `; accepts ${espec.marcadores.join(', ')}` : ''}`);
       return;
     }
     if (item.remove === true) {
-      if (enParche) error(item, `'${item.side} none' no vale en un parche: quitar un marcador se hace en el bloque base`);
+      if (enParche) error(item, `'${item.side} none' is not valid in a patch: removing a marker is done in the base block`);
       else delete destino[lado];
       return;
     }
@@ -64,20 +64,20 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
           break;
         }
         for (const hijo of item.items) {
-          if (hijo.$type === 'ThemeSlots') error(hijo, `'slots' no vale en un estado de '${nombre}'`);
+          if (hijo.$type === 'ThemeSlots') error(hijo, `'slots' is not valid in a state of '${nombre}'`);
         }
         bloque.estados = { ...bloque.estados, [resultado.estado]: [...(bloque.estados[resultado.estado] ?? []), ...parche(item.items as SequenceItem[])] };
         break;
       }
       case 'SequencePatch': {
         if (espec.parches === undefined || espec.parches.palabra !== item.word) {
-          error(item, espec.parches === undefined ? `'${nombre}' no tiene parches por variante` : `En '${nombre}' el parche por variante se escribe '${espec.parches.palabra} <nombre> { ... }'`);
+          error(item, espec.parches === undefined ? `'${nombre}' has no per-variant patches` : `In '${nombre}' the per-variant patch is written '${espec.parches.palabra} <name> { ... }'`);
           break;
         }
         if (!espec.parches.nombres.includes(item.name)) {
           ctx.issues.push(
             issueConSugerencia(
-              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.name}' no es una variante de '${nombre}'; disponibles: ${espec.parches.nombres.join(', ')}` },
+              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.name}' is not a variant of '${nombre}'; available: ${espec.parches.nombres.join(', ')}` },
               ctx.archivo, item, 'name', espec.parches.nombres,
             ),
           );
@@ -95,7 +95,7 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
           const disponibles = Object.keys(espec.metricas);
           ctx.issues.push(
             issueConSugerencia(
-              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.key}' no es una Metrica de '${nombre}'${disponibles.length > 0 ? `; disponibles: ${disponibles.join(', ')}` : ''}` },
+              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.key}' is not a Metric of '${nombre}'${disponibles.length > 0 ? `; available: ${disponibles.join(', ')}` : ''}` },
               ctx.archivo, item, 'key', disponibles,
             ),
           );
@@ -103,7 +103,7 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
         }
         const valor = Number(item.value);
         if (!Number.isFinite(valor) || valor < rango.min || valor > rango.max) {
-          ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...rangoDe(item, 'value').start, message: `'${item.key}' de '${nombre}' va de ${rango.min} a ${rango.max}, no ${item.value}` });
+          ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...rangoDe(item, 'value').start, message: `'${item.key}' of '${nombre}' ranges from ${rango.min} to ${rango.max}, not ${item.value}` });
         } else bloque.metricas = { ...bloque.metricas, [item.key]: valor };
         break;
       }
@@ -113,7 +113,7 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
           const disponibles = Object.keys(espec.textos);
           ctx.issues.push(
             issueConSugerencia(
-              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.slot}' no es un estilo de '${nombre}'${disponibles.length > 0 ? `; disponibles: ${disponibles.join(', ')}` : ''}` },
+              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.slot}' is not a style of '${nombre}'${disponibles.length > 0 ? `; available: ${disponibles.join(', ')}` : ''}` },
               ctx.archivo, item, 'slot', disponibles,
             ),
           );

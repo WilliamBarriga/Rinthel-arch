@@ -139,7 +139,7 @@ model {
     modulo tem-estilo "tema/estilo" "Estilo resuelto: Metricas, pintura y animacion contra el Tema" {
       source { file "packages/tema/src/estilo.ts" }
     }
-    modulo tem-contraste "tema/contraste" "Avisos W_THEME_LOW_CONTRAST por relacion de contraste" {
+    modulo tem-contraste "tema/contraste" "Avisos theme-low-contrast por relacion de contraste" {
       source { file "packages/tema/src/contraste.ts" }
     }
     modulo tem-alto-contraste "tema/alto-contraste" "Variante de alto contraste de un Tema" {

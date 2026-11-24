@@ -140,13 +140,13 @@ describe('cliente unico de la pagina de dev', () => {
     const deTema = { contractVersion: 1, comando: 'buscar', consulta: 'neutral', resultados: [] };
     const s = servidor({
       '/api/inspect/buscar/api': { cuerpo: salida },
-      '/api/inspect/nodo/apj': { status: 404, cuerpo: { ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] } },
+      '/api/inspect/nodo/apj': { status: 404, cuerpo: { ok: false, mensaje: "No such Node 'apj'. Did you mean: api", cercanos: ['api'] } },
       '/api/inspect/tema/neutral?tipo=servicio': { cuerpo: deTema },
     });
     const cliente = crearClienteDeDev({ fetch: s.fetch, eventos: sinEventos });
 
     expect(await cliente.inspeccionar('buscar', 'api')).toEqual({ ok: true, salida });
-    expect(await cliente.inspeccionar('nodo', 'apj')).toEqual({ ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] });
+    expect(await cliente.inspeccionar('nodo', 'apj')).toEqual({ ok: false, mensaje: "No such Node 'apj'. Did you mean: api", cercanos: ['api'] });
     expect(await cliente.inspeccionar('tema', 'neutral', { tipo: 'servicio' })).toEqual({ ok: true, salida: deTema });
     expect(await crearClienteDeDev({ fetch: servidor({}).fetch, eventos: sinEventos }).inspeccionar('vista', 'x')).toMatchObject({ ok: false, cercanos: [] });
   });

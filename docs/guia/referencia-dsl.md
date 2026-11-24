@@ -90,10 +90,10 @@ view vida { type sequence  interaction sesion }
 
 - Un Mensaje es `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"] ["descripcion"]`; sin tipo es `sync`. Los extremos son Nodos de cualquier nivel (las Lifelines) y no hace falta una Arista entre ellos.
 - El orden de declaracion es el orden temporal. La activacion no se escribe: un `sync` abre una en el receptor y el siguiente `reply` del receptor al emisor la cierra.
-- `create` solo vale en la primera aparicion del destino (`E_CREATE_NOT_FIRST`) y ninguna Lifeline puede aparecer despues de su `destroy` (`E_AFTER_DESTROY`) en orden de declaracion, tambien dentro de Fragmentos; ambos errores traen `related`.
-- Fragmento: `opt|loop|break|critical ["guarda"] { }` (un operando), `alt ["guarda"] { } else ["guarda"] { }` y `par { } and { }` (uno o mas). La guarda es texto libre y opcional. `else` solo vale en `alt` y `and` en `par`; otra combinacion da `E_INVALID_FRAGMENT_OPERAND`. Un `sync` sin `reply` dentro de un Fragmento deja su activacion abierta hasta el fin del Fragmento. `opt`, `loop`, `break`, `critical`, `alt`, `par`, `else` y `and` siguen valiendo como ids de Nodo.
-- Nota: `note left of X "texto"`, `note right of X "texto"` y `note over X[, Y] "texto"`. Se dibuja como papel (esquina doblada, texto envuelto a un ancho maximo) y no es una Lifeline; `over X, Y` ensancha la separacion entre X e Y si hace falta. Un objetivo que no es un Nodo da `E_UNKNOWN_LIFELINE`.
-- `ref <interaccion>`: marco `ref` con el titulo de la Interaccion referida; cubre sus participantes presentes en la Vista, o todas las Lifelines si no hay ninguno en comun. Los ciclos son validos (no se expande). Una Interaccion inexistente da `E_UNKNOWN_INTERACTION` (con `fix` por typo) y una que ninguna Vista de secuencia proyecta, `W_REF_WITHOUT_VIEW`. `note`, `left`, `right`, `of` y `ref` siguen valiendo como ids de Nodo.
+- `create` solo vale en la primera aparicion del destino (`create-not-first`) y ninguna Lifeline puede aparecer despues de su `destroy` (`after-destroy`) en orden de declaracion, tambien dentro de Fragmentos; ambos errores traen `related`.
+- Fragmento: `opt|loop|break|critical ["guarda"] { }` (un operando), `alt ["guarda"] { } else ["guarda"] { }` y `par { } and { }` (uno o mas). La guarda es texto libre y opcional. `else` solo vale en `alt` y `and` en `par`; otra combinacion da `invalid-fragment-operand`. Un `sync` sin `reply` dentro de un Fragmento deja su activacion abierta hasta el fin del Fragmento. `opt`, `loop`, `break`, `critical`, `alt`, `par`, `else` y `and` siguen valiendo como ids de Nodo.
+- Nota: `note left of X "texto"`, `note right of X "texto"` y `note over X[, Y] "texto"`. Se dibuja como papel (esquina doblada, texto envuelto a un ancho maximo) y no es una Lifeline; `over X, Y` ensancha la separacion entre X e Y si hace falta. Un objetivo que no es un Nodo da `unknown-lifeline`.
+- `ref <interaccion>`: marco `ref` con el titulo de la Interaccion referida; cubre sus participantes presentes en la Vista, o todas las Lifelines si no hay ninguno en comun. Los ciclos son validos (no se expande). Una Interaccion inexistente da `unknown-interaction` (con `fix` por typo) y una que ninguna Vista de secuencia proyecta, `ref-without-view`. `note`, `left`, `right`, `of` y `ref` siguen valiendo como ids de Nodo.
 - El id de una Interaccion tiene su propio espacio de nombres (puede coincidir con el de un Nodo); `interaction`, `async`, `reply`, `create`, `destroy` y `order` siguen valiendo como ids de Nodo.
 
 Fragmentos (anidables), Notas y `ref` en una Interaccion; el ejemplo es completo:
@@ -147,7 +147,7 @@ view paquetes {
 | `include`, `exclude` | Selectores: `a` (el Nodo), `a.*` (sus hijos directos), `a.**` (todos sus descendientes). `**` solo, todo el Modelo |
 | `depth N` | Profundidad inicial; los Grupos que la exceden aparecen colapsados |
 | `expanded`, `collapsed` | Estado inicial de los Grupos nombrados |
-| `link nodo -> vista` | Un Grupo enlazado no se expande en esta Vista: navega a la otra. Los ciclos son validos; el visor muestra las migas. En secuencia solo vale desde una Lifeline (clic en su cabecera o Enter con foco); desde un Mensaje, Nota o Fragmento es `E_LINK_NOT_LIFELINE`. El marco de un `ref` navega a la primera Vista de secuencia que proyecta la Interaccion referida (inerte si no hay o es la actual) |
+| `link nodo -> vista` | Un Grupo enlazado no se expande en esta Vista: navega a la otra. Los ciclos son validos; el visor muestra las migas. En secuencia solo vale desde una Lifeline (clic en su cabecera o Enter con foco); desde un Mensaje, Nota o Fragmento es `link-not-lifeline`. El marco de un `ref` navega a la primera Vista de secuencia que proyecta la Interaccion referida (inerte si no hay o es la actual) |
 | `theme nombre { parche }` | Tema de la Vista, con un parche opcional solo para ella |
 | `interaction id` | Solo en `sequence` (obligatoria): la Interaccion que proyecta |
 | `order a, b` | Solo en `sequence`: orden de las Lifelines de izquierda a derecha; parcial, el resto sigue por primera aparicion |
@@ -167,7 +167,7 @@ view compra {
 }
 ```
 
-Dibuja una columna por Lifeline y los Mensajes de arriba abajo, con las activaciones derivadas (las anidadas van desplazadas). Cualquier Tema la dibuja: `message` y `lifeline` se derivan de la Arista y `activation` del Nodo; `reply` lleva la continuidad opuesta a la del trazo base. `include` y `pin` son error en una Vista de secuencia (`E_VIEW_PROPERTY_FOR_TYPE`), igual que `interaction`, `order` y `autonumber` fuera de ella. `depth`, `collapsed` y `exclude` valen: `depth`/`collapsed` funden las Lifelines hijas en la de su Grupo y sus Mensajes se elevan (dentro del mismo Grupo pasan a mensaje propio; un `create`/`destroy` de una hija pasa a `async`); con el Grupo abierto, un `box` con su nombre envuelve a sus hijas y la Lifeline propia del Grupo, si la tiene, va primera. `exclude` quita la Lifeline y sus Mensajes, y un Fragmento que queda vacio desaparece.
+Dibuja una columna por Lifeline y los Mensajes de arriba abajo, con las activaciones derivadas (las anidadas van desplazadas). Cualquier Tema la dibuja: `message` y `lifeline` se derivan de la Arista y `activation` del Nodo; `reply` lleva la continuidad opuesta a la del trazo base. `include` y `pin` son error en una Vista de secuencia (`view-property-for-type`), igual que `interaction`, `order` y `autonumber` fuera de ella. `depth`, `collapsed` y `exclude` valen: `depth`/`collapsed` funden las Lifelines hijas en la de su Grupo y sus Mensajes se elevan (dentro del mismo Grupo pasan a mensaje propio; un `create`/`destroy` de una hija pasa a `async`); con el Grupo abierto, un `box` con su nombre envuelve a sus hijas y la Lifeline propia del Grupo, si la tiene, va primera. `exclude` quita la Lifeline y sus Mensajes, y un Fragmento que queda vacio desaparece.
 
 ### Pin
 
@@ -192,9 +192,9 @@ model {
 view tablas { type er  include ** }
 ```
 
-- Atributo: `nombre: tipo[?] [pk] [fk] [uk] ["notas"]`. El `?` pegado al tipo lo hace opcional; las marcas van en cualquier orden y repetir una es `E_DUPLICATE_KEY_MARK` (su `fix` borra la repetida). Cada marca se dibuja como un chip en la fila.
+- Atributo: `nombre: tipo[?] [pk] [fk] [uk] ["notas"]`. El `?` pegado al tipo lo hace opcional; las marcas van en cualquier orden y repetir una es `duplicate-key-mark` (su `fix` borra la repetida). Cada marca se dibuja como un chip en la fila.
 - Arista identificante: palabra final `identifying` (linea continua; las demas van discontinuas). Un Nodo llamado `identifying` no puede abrir la declaracion que sigue justo a una Arista (se leeria como su marca); `pk`, `fk`, `uk` y `er` valen como ids en cualquier sitio.
-- Cardinalidad: en una Vista ER solo valen `0..1`, `1`, `0..*` y `1..*` (`E_ER_CARDINALITY`, con `fix` si hay un candidato cercano unico). Cada una se dibuja como su marcador (`zero-one`, `one`, `zero-many`, `many`); un Grupo colapsado con varias FK agregadas va sin marcadores.
+- Cardinalidad: en una Vista ER solo valen `0..1`, `1`, `0..*` y `1..*` (`er-cardinality`, con `fix` si hay un candidato cercano unico). Cada una se dibuja como su marcador (`zero-one`, `one`, `zero-many`, `many`); un Grupo colapsado con varias FK agregadas va sin marcadores.
 - Fuera de una Vista ER las marcas y `identifying` se ignoran sin aviso.
 
 ## Vistas `flow` y Pasos
@@ -222,7 +222,7 @@ view flujo-edicion {
 
 Un item es un selector de Nodos o una Arista (`a -> b`, o `edge a -> b`). En un Paso, `a.*` y `a.**` incluyen tambien al Grupo `a`.
 
-En una Vista `sequence` un Paso es un **corte del tiempo**: `step "titulo" { upto <id> }` muestra la Interaccion hasta el Mensaje con ese id (incluido) y solo avanza; `steps each` da un Paso por Mensaje proyectado, titulado con su etiqueta o `from -> to`. `show` y `hide` son error ahi (`E_VIEW_PROPERTY_FOR_TYPE`, con `hint` a `upto`), igual que `upto` y `steps each` fuera de secuencia. Las Notas y `ref` aparecen con el Mensaje previo; todas las Lifelines desde el primer Paso salvo las nacidas con `create`; la activacion se recorta en el corte; el marco de un Fragmento aparece al entrar el corte y la guarda de cada operando al entrar en el. Nada cambia de posicion. Errores: `E_UNKNOWN_STEP` (con `fix` por typo), `E_STEP_NOT_PROJECTED` (`depth`/`exclude` quitan el Mensaje), `E_STEP_NOT_ADVANCING` (con `related` al Paso anterior) y `E_STEPS_EACH_WITH_STEP`.
+En una Vista `sequence` un Paso es un **corte del tiempo**: `step "titulo" { upto <id> }` muestra la Interaccion hasta el Mensaje con ese id (incluido) y solo avanza; `steps each` da un Paso por Mensaje proyectado, titulado con su etiqueta o `from -> to`. `show` y `hide` son error ahi (`view-property-for-type`, con `hint` a `upto`), igual que `upto` y `steps each` fuera de secuencia. Las Notas y `ref` aparecen con el Mensaje previo; todas las Lifelines desde el primer Paso salvo las nacidas con `create`; la activacion se recorta en el corte; el marco de un Fragmento aparece al entrar el corte y la guarda de cada operando al entrar en el. Nada cambia de posicion. Errores: `unknown-step` (con `fix` por typo), `step-not-projected` (`depth`/`exclude` quitan el Mensaje), `step-not-advancing` (con `related` al Paso anterior) y `steps-each-with-step`.
 
 ```dg
 specification { node pieza { icon box  color blue } }
@@ -254,4 +254,4 @@ Detalle en [Personalizar con Temas](personalizar-temas.md) y en el [catalogo](..
 
 ## Errores y avisos
 
-`dg validate` imprime `archivo:linea:columna severidad codigo mensaje`, con `hint` o una correccion (`fix`) cuando hay un unico candidato. Con `--json` el resultado es un objeto con `contractVersion`, para agentes y herramientas ([ADR 0005](../adr/0005-cli-para-agentes.md)). Los codigos son estables (`E_DUPLICATE_PART`, `W_THEME_LOW_CONTRAST`, `E_UNKNOWN_LIFELINE`, `W_REPLY_WITHOUT_SYNC`...); los que empiezan con `E_` bloquean y los `W_` avisan.
+`dg validate` imprime `archivo:linea:columna severidad codigo mensaje`, con `hint` o una correccion (`fix`) cuando hay un unico candidato. Con `--json` el resultado es un objeto con `contractVersion`, para agentes y herramientas ([ADR 0005](../adr/0005-cli-para-agentes.md)). Los codigos son estables (`duplicate-part`, `theme-low-contrast`, `unknown-lifeline`, `reply-without-sync`...); los que empiezan con `E_` bloquean y los `W_` avisan.

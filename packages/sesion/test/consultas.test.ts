@@ -24,7 +24,7 @@ describe('Sesion.consultar', () => {
   });
 
   it('propone candidatos cercanos si el Nodo no existe', () => {
-    expect(sesion().consultar({ comando: 'nodo', argumento: 'apj' })).toEqual({ noEncontrado: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] });
+    expect(sesion().consultar({ comando: 'nodo', argumento: 'apj' })).toEqual({ noEncontrado: "No such Node 'apj'. Did you mean: api", cercanos: ['api'] });
   });
 
   it('es undefined si el Workspace tiene errores', () => {
@@ -47,6 +47,6 @@ describe('Sesion.consultar tema', () => {
   });
 
   it('un Tema inexistente propone los cercanos', () => {
-    expect(conTemas().consultar({ comando: 'tema', argumento: 'hija' })).toEqual({ noEncontrado: "No existe el Tema 'hija'. Quiza: hijo", cercanos: ['hijo'] });
+    expect(conTemas().consultar({ comando: 'tema', argumento: 'hija' })).toEqual({ noEncontrado: "No such Theme 'hija'. Did you mean: hijo", cercanos: ['hijo'] });
   });
 });

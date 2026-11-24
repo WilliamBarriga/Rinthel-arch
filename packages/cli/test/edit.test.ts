@@ -235,7 +235,7 @@ describe('edit: puerta de escritura unica', () => {
     });
 
     const rechazo = await run(['edit', '--workspace', workspace(), ...pin('nada', 'a', '1', '2')]);
-    expect(rechazo).toEqual({ exitCode: 1, stdout: '', stderr: "Edicion rechazada (vista-desconocida): La Vista 'nada' no existe\n" });
+    expect(rechazo).toEqual({ exitCode: 1, stdout: '', stderr: "Edit rejected (vista-desconocida): View 'nada' does not exist\n" });
   });
 
   describe('no escribe archivos de --theme-path: archivo-desconocido', () => {

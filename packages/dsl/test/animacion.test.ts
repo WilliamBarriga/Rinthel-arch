@@ -76,9 +76,9 @@ describe('compile: animacion declarativa del Tema', () => {
         stagger 9000ms
       }`);
 
-    expect(issues.map((i) => i.code).sort()).toEqual(['E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_MOTION', 'E_THEME_UNKNOWN_MOTION']);
+    expect(issues.map((i) => i.code).sort()).toEqual(['theme-invalid-value', 'theme-invalid-value', 'theme-unknown-motion', 'theme-unknown-motion']);
     const motion = issues.find((i) => i.message.includes('pulsso'));
-    expect(motion).toMatchObject({ file: 'main.dg', line: 6, hint: "quisiste decir 'pulso'" });
+    expect(motion).toMatchObject({ file: 'main.dg', line: 6, hint: "did you mean 'pulso'" });
   });
 
   it('valores fuera de rango no se recortan', () => {
@@ -86,13 +86,13 @@ describe('compile: animacion declarativa del Tema', () => {
       node { ${CAPAS.replace('width 2 }', 'width 2  motion pulso intensity 7 }')} }`);
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_THEME_INVALID_VALUE', severity: 'error' });
+    expect(issues[0]).toMatchObject({ code: 'theme-invalid-value', severity: 'error' });
   });
 
   it('dos transition en el mismo bloque es un error, no un ultimo-gana silencioso', () => {
     const { issues } = tema('node { transition 100ms  transition 200ms }');
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(issues.map((i) => i.code)).toEqual(['theme-invalid-value']);
   });
 
   it('motion, delay y compania siguen siendo identificadores validos en el Modelo', () => {

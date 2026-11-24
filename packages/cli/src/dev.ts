@@ -132,11 +132,11 @@ const TIPOS_DE_ESTATICO: Readonly<Record<string, string>> = { '.html': 'text/htm
 function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
   let bytes: Buffer;
   try {
-    if (ruta === undefined) throw new Error('no declarado');
+    if (ruta === undefined) throw new Error('not declared');
     bytes = readFileSync(ruta);
   } catch {
     cabecera(res, 'text/plain', 404);
-    res.end('No encontrado (si falta el build de la app: pnpm --filter estudio build)');
+    res.end('Not found (if the app build is missing: pnpm --filter estudio build)');
     return;
   }
   cabecera(res, TIPOS_DE_ESTATICO[extname(ruta)] ?? 'application/octet-stream');
@@ -172,7 +172,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   /** Controles del transporte de un POST: `Origin` propio (o ninguno) y JSON; si fallan, el estado y el mensaje. */
   const rechazoDelPost = (req: IncomingMessage): [number, string] | undefined => {
     const origen = req.headers.origin;
-    if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) return [403, 'Origen no permitido'];
+    if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) return [403, 'Origin not allowed'];
     if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return [415, 'Se esperaba application/json'];
     return undefined;
   };
@@ -205,7 +205,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     // Contra DNS rebinding.
     if (!hostsPropios().includes(req.headers.host ?? '')) {
       cabecera(res, 'text/plain', 403);
-      res.end('Host no permitido');
+      res.end('Host not allowed');
       return;
     }
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
@@ -248,7 +248,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     throw error;
   });
   const direccion = servidor.address();
-  if (direccion === null || typeof direccion === 'string') throw new Error('El servidor no tiene puerto');
+  if (direccion === null || typeof direccion === 'string') throw new Error('The server has no port');
   const { componentes, confiado } = vivo.codigo();
 
   return {
@@ -279,7 +279,7 @@ export async function comandoDev(
   }
   if (valores.workspace === undefined) return uso('Falta --workspace <ruta>');
   const puertoHttp = Number(valores.port ?? 4173);
-  if (!Number.isInteger(puertoHttp) || puertoHttp < 0 || puertoHttp > 65535) return uso('--port debe ser un entero entre 0 y 65535');
+  if (!Number.isInteger(puertoHttp) || puertoHttp < 0 || puertoHttp > 65535) return uso('--port must be an integer between 0 and 65535');
   const { observar, estudio } = dependencias;
   const workspace = valores.workspace;
   const temas = valores['theme-path'];
@@ -296,10 +296,10 @@ export async function comandoDev(
       servidor.conCodigo.length === 0
         ? ''
         : servidor.confiado
-          ? `AVISO: los Temas del Workspace cargan codigo (${servidor.conCodigo.join(', ')}); confirmado con --trust-code.\n`
-          : `AVISO: los Temas del Workspace cargan codigo (${servidor.conCodigo.join(', ')}) que corre en tu navegador sin sandbox. El visor pedira confirmacion antes de cargarlo; usa --trust-code solo en un Workspace propio.\n`;
-    return { exitCode: 0, stdout: `${aviso}diagrams dev escuchando en ${servidor.url}\n`, stderr: '' };
+          ? `WARNING: the Workspace Themes load code (${servidor.conCodigo.join(', ')}); confirmed with --trust-code.\n`
+          : `WARNING: the Workspace Themes load code (${servidor.conCodigo.join(', ')}) that runs in your browser without a sandbox. The viewer will ask for confirmation before loading it; use --trust-code only on a Workspace you own.\n`;
+    return { exitCode: 0, stdout: `${aviso}diagrams dev listening on ${servidor.url}\n`, stderr: '' };
   } catch (error) {
-    return uso(`No se pudo iniciar dev: ${(error as Error).message}`);
+    return uso(`Could not start dev: ${(error as Error).message}`);
   }
 }

@@ -68,9 +68,9 @@ describe('deshacer y rehacer por el registro', () => {
     await lienzoListo(contenedor, 'mapa');
 
     teclear('z', { ctrlKey: true });
-    expect((await screen.findByRole('alert')).textContent).toContain('Nada que deshacer');
+    expect((await screen.findByRole('alert')).textContent).toContain('Nothing to undo');
     teclear('y', { ctrlKey: true });
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Nada que rehacer'));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Nothing to redo'));
   });
 
   it('en un campo de texto Ctrl+Z es del navegador: no llega a `dev`', async () => {

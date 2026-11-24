@@ -32,7 +32,7 @@ describe('compile: bloque page del Tema', () => {
 
     expect(fuera.issues).toEqual([]);
     expect(paginaDe(fuera)).toMatchObject({ capas: [{ primitiva: { props: { x: 50, y: 115 } } }] });
-    expect(lejos.issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(lejos.issues.map((i) => i.code)).toEqual(['theme-invalid-value']);
   });
 
   it('un Tema sin page tiene la pagina vacia y movil', () => {
@@ -64,7 +64,7 @@ describe('compile: bloque page del Tema', () => {
       layer c dots { color ink  size 1 }
     }`);
 
-    expect(resultado.issues.map((i) => i.code)).toEqual(['E_THEME_UNKNOWN_PRIMITIVE', 'E_UNKNOWN_PALETTE_COLOR', 'E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE']);
+    expect(resultado.issues.map((i) => i.code)).toEqual(['theme-unknown-primitive', 'unknown-palette-color', 'theme-invalid-value', 'theme-invalid-value']);
     expect(resultado.issues[1]?.hint ?? resultado.issues[1]?.fix?.replacement).toMatch(/ink/);
     expect(resultado.issues[0]?.message).toContain('rect');
   });
@@ -74,7 +74,7 @@ describe('compile: bloque page del Tema', () => {
     const keyframes = tema(`page { layer puntos dots { color ink/0.1  keyframes opacity 1s { 0 1  100 0.5 } } }`);
 
     for (const r of [resultado, keyframes]) {
-      expect(r.issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+      expect(r.issues.map((i) => i.code)).toEqual(['theme-invalid-value']);
       expect(r.issues[0]).toMatchObject({ file: 'main.dg', line: 3, message: expect.stringContaining("'page'") });
       expect(r.issues[0]?.hint).toContain('node');
     }

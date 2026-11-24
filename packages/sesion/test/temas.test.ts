@@ -107,23 +107,23 @@ describe('seam sesion: Temas con Capas y Slots', () => {
     const issues = await abrirSesion(trabajo(malo)).diagnosticar();
 
     expect(issues.map((i) => i.code).sort()).toEqual(
-      ['E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_PRIMITIVE', 'E_THEME_UNKNOWN_PROPERTY', 'E_THEME_UNKNOWN_SLOT'].sort(),
+      ['theme-invalid-value', 'theme-invalid-value', 'theme-unknown-primitive', 'theme-unknown-property', 'theme-unknown-slot'].sort(),
     );
-    expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_PRIMITIVE')).toMatchObject({ severity: 'error', file: 'main.dg', line: 10, fix: expect.objectContaining({ replacement: 'rect' }) });
-    expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_PROPERTY')!.fix?.replacement).toBe('color');
-    expect(issues.find((i) => i.code === 'E_THEME_UNKNOWN_SLOT')!.message).toContain("'titulo'");
+    expect(issues.find((i) => i.code === 'theme-unknown-primitive')).toMatchObject({ severity: 'error', file: 'main.dg', line: 10, fix: expect.objectContaining({ replacement: 'rect' }) });
+    expect(issues.find((i) => i.code === 'theme-unknown-property')!.fix?.replacement).toBe('color');
+    expect(issues.find((i) => i.code === 'theme-unknown-slot')!.message).toContain("'titulo'");
   });
 
   it('un valor fuera de rango es un error y no se recorta; un color fuera de la Paleta tambien', async () => {
     const issues = await abrirSesion(trabajo(tema(`    layer borde border { color azul width 99 }`))).diagnosticar();
 
-    expect(issues.map((i) => i.code).sort()).toEqual(['E_THEME_INVALID_VALUE', 'E_UNKNOWN_PALETTE_COLOR']);
+    expect(issues.map((i) => i.code).sort()).toEqual(['theme-invalid-value', 'unknown-palette-color']);
   });
 
   it('una Capa repetida en el mismo bloque es un error', async () => {
     const issues = await abrirSesion(trabajo(tema(`    layer a rect\n    layer a rect`))).diagnosticar();
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_DUPLICATE_LAYER']);
+    expect(issues.map((i) => i.code)).toEqual(['theme-duplicate-layer']);
   });
 
   it('extends: una Capa del mismo nombre se parchea por nombre y una nueva exige ubicacion', () => {
@@ -153,9 +153,9 @@ describe('seam sesion: Temas con Capas y Slots', () => {
     const viejo = `theme viejo extends neutral { nodeStyles { servicio { fill "#fff" } } }\n`;
     const issues = await abrirSesion({ 'main.dg': modelo + viejo + vista() }).diagnosticar();
 
-    expect(issues.map((i) => i.code)).toContain('E_SYNTAX_ERROR');
+    expect(issues.map((i) => i.code)).toContain('syntax-error');
     const bordes = await abrirSesion({ 'main.dg': modelo + 'theme viejo extends neutral { edgeStyles { default { stroke red } } }\n' + vista() }).diagnosticar();
-    expect(bordes.map((i) => i.code)).toContain('E_SYNTAX_ERROR');
+    expect(bordes.map((i) => i.code)).toContain('syntax-error');
   });
 
   it('una Vista sin Tema usa el neutro, que muestra titulo y Atributos', async () => {
@@ -230,10 +230,10 @@ model {
     const sesion = abrirSesion({ 'main.dg': conIconos + tema('    slots row gapp 4 { icn  title { align centro }  title }') + vista('  theme t\n') });
     const issues = await sesion.diagnosticar();
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_UNKNOWN_PROPERTY', 'E_THEME_UNKNOWN_SLOT', 'E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_SLOT']);
-    expect(issues[0]!.hint).toBe("quisiste decir 'gap'");
-    expect(issues[1]!.hint).toBe("quisiste decir 'icon'");
-    expect(issues[2]!.hint).toBe("quisiste decir 'center'");
+    expect(issues.map((i) => i.code)).toEqual(['theme-unknown-property', 'theme-unknown-slot', 'theme-invalid-value', 'theme-unknown-slot']);
+    expect(issues[0]!.hint).toBe("did you mean 'gap'");
+    expect(issues[1]!.hint).toBe("did you mean 'icon'");
+    expect(issues[2]!.hint).toBe("did you mean 'center'");
   });
 
   it('cambiar la disposicion cambia la clave de layout; el icono de un Nodo tambien', async () => {
@@ -319,10 +319,10 @@ model {
     const sesion = abrir('slots column { title { text-align centro }  badge { alpa 0.5 }  counter { fil rojo } }');
     const issues = await sesion.diagnosticar();
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_PROPERTY', 'E_THEME_UNKNOWN_PROPERTY']);
-    expect(issues[0]!.hint).toBe("quisiste decir 'center'");
-    expect(issues[1]!.hint).toBe("quisiste decir 'alpha'");
-    expect(issues[2]!.hint).toBe("quisiste decir 'fill'");
+    expect(issues.map((i) => i.code)).toEqual(['theme-invalid-value', 'theme-unknown-property', 'theme-unknown-property']);
+    expect(issues[0]!.hint).toBe("did you mean 'center'");
+    expect(issues[1]!.hint).toBe("did you mean 'alpha'");
+    expect(issues[2]!.hint).toBe("did you mean 'fill'");
   });
 
   it('el estilo del contador es una caja (chip): relleno, borde y radio', async () => {
@@ -373,7 +373,7 @@ model {
     const sesion = abrirSesion({ 'main.dg': fuente + tema('    slots row min-widht 10 min-height 9999 { title }') + vista('  theme t\n') });
     const issues = await sesion.diagnosticar();
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_UNKNOWN_PROPERTY', 'E_THEME_INVALID_VALUE']);
+    expect(issues.map((i) => i.code)).toEqual(['theme-unknown-property', 'theme-invalid-value']);
     expect(issues[0]!.hint).toContain("'min-width'");
   });
 });

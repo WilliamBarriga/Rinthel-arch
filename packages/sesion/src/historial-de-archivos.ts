@@ -45,16 +45,16 @@ export type ResultadoDeRestaurar =
 export function descripcionDeIntencion(intencion: Intencion): string {
   switch (intencion.tipo) {
     case 'mover-pin':
-      return `mover ${intencion.nodo} en ${intencion.vista}`;
+      return `move ${intencion.nodo} in ${intencion.vista}`;
     case 'ordenar-lifelines':
-      return `ordenar Lifelines de ${intencion.vista}`;
+      return `reorder Lifelines of ${intencion.vista}`;
     case 'fijar-tema':
-      return intencion.tema === undefined ? `quitar el Tema de ${intencion.vista}` : `fijar el Tema ${intencion.tema} en ${intencion.vista}`;
+      return intencion.tema === undefined ? `remove the Theme of ${intencion.vista}` : `set Theme ${intencion.tema} in ${intencion.vista}`;
   }
 }
 
 /** Descripcion de un guardado de texto sin `descripcion` propia. */
-export const descripcionDeTexto = (archivos: readonly string[]): string => `texto de ${archivos.join(', ')}`;
+export const descripcionDeTexto = (archivos: readonly string[]): string => `text of ${archivos.join(', ')}`;
 
 const rutasCambiadas = (antes: ArchivosDelWorkspace, despues: ArchivosDelWorkspace): string[] =>
   [...new Set([...Object.keys(antes), ...Object.keys(despues)])].filter((r) => antes[r] !== despues[r]).sort();
@@ -81,11 +81,11 @@ function mover(entrada: EntradaDelHistorial, disco: ArchivosDelWorkspace, sentid
   return { ok: true, archivos, escritos };
 }
 
-const fuera = (file: string) => ({ ok: false, motivo: 'hash-desactualizado', mensaje: `'${file}' cambio fuera de dev; no se puede restaurar esta entrada`, file }) as const;
+const fuera = (file: string) => ({ ok: false, motivo: 'hash-desactualizado', mensaje: `'${file}' changed outside dev; this entry cannot be restored`, file }) as const;
 
 export function deshacerSobre(historial: HistorialDeArchivos, disco: ArchivosDelWorkspace): ResultadoDeRestaurar {
   const entrada = historial.pasado[historial.pasado.length - 1];
-  if (entrada === undefined) return { ok: false, motivo: 'nada-que-deshacer', mensaje: 'Nada que deshacer' };
+  if (entrada === undefined) return { ok: false, motivo: 'nada-que-deshacer', mensaje: 'Nothing to undo' };
   const r = mover(entrada, disco, 'deshacer');
   if (!r.ok) return fuera(r.file);
   return { ...r, historial: { ...historial, pasado: historial.pasado.slice(0, -1), futuro: [entrada, ...historial.futuro] } };
@@ -93,7 +93,7 @@ export function deshacerSobre(historial: HistorialDeArchivos, disco: ArchivosDel
 
 export function rehacerSobre(historial: HistorialDeArchivos, disco: ArchivosDelWorkspace): ResultadoDeRestaurar {
   const [entrada, ...resto] = historial.futuro;
-  if (entrada === undefined) return { ok: false, motivo: 'nada-que-rehacer', mensaje: 'Nada que rehacer' };
+  if (entrada === undefined) return { ok: false, motivo: 'nada-que-rehacer', mensaje: 'Nothing to redo' };
   const r = mover(entrada, disco, 'rehacer');
   if (!r.ok) return fuera(r.file);
   return { ...r, historial: { ...historial, pasado: [...historial.pasado, entrada], futuro: resto } };
@@ -105,7 +105,7 @@ export function rehacerSobre(historial: HistorialDeArchivos, disco: ArchivosDelW
  */
 export function saltar(historial: HistorialDeArchivos, disco: ArchivosDelWorkspace, id: number): ResultadoDeRestaurar {
   const haciaAtras = id === INICIO_DEL_HISTORIAL_DE_DEV || historial.pasado.some((e) => e.id === id);
-  if (!haciaAtras && !historial.futuro.some((e) => e.id === id)) return { ok: false, motivo: 'entrada-desconocida', mensaje: `No hay una entrada ${id} en el Historial` };
+  if (!haciaAtras && !historial.futuro.some((e) => e.id === id)) return { ok: false, motivo: 'entrada-desconocida', mensaje: `There is no entry ${id} in the History` };
   const llego = (h: HistorialDeArchivos): boolean => (id === INICIO_DEL_HISTORIAL_DE_DEV ? h.pasado.length === 0 : h.pasado[h.pasado.length - 1]?.id === id);
   let h = historial;
   let archivos = disco;

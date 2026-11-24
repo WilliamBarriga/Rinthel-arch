@@ -56,17 +56,17 @@ describe('seam sesion: Capa code', () => {
     const con = await abrirSesion(trabajo(CON_CODIGO)).diagnosticar();
     const sin = await abrirSesion(trabajo('')).diagnosticar();
 
-    expect(con.filter((i) => i.code === 'W_THEME_WITH_CODE')).toEqual([
+    expect(con.filter((i) => i.code === 'theme-with-code')).toEqual([
       expect.objectContaining({ severity: 'warning', file: 'main.dg', message: expect.stringContaining('Aurora') }),
     ]);
-    expect(sin.filter((i) => i.code === 'W_THEME_WITH_CODE')).toEqual([]);
+    expect(sin.filter((i) => i.code === 'theme-with-code')).toEqual([]);
   });
 
   it('con el registro de componentes, uno inexistente es un error', async () => {
     const sesion = abrirSesion(trabajo(CON_CODIGO), { componentes: {} });
 
     const issues = await sesion.diagnosticar();
-    expect(issues.filter((i) => i.code === 'E_THEME_COMPONENT_MISSING')).toEqual([
+    expect(issues.filter((i) => i.code === 'theme-component-missing')).toEqual([
       expect.objectContaining({ severity: 'error', message: expect.stringContaining('Aurora') }),
     ]);
   });
@@ -76,8 +76,8 @@ describe('seam sesion: Capa code', () => {
     const tipo = await abrirSesion(trabajo(CON_CODIGO), { componentes: { Aurora: { parametros: { hue: 'texto' } } } }).diagnosticar();
     const bien = await abrirSesion(trabajo(CON_CODIGO), { componentes: { Aurora: { parametros: { hue: 'numero' } } } }).diagnosticar();
 
-    expect(desconocido.filter((i) => i.code === 'E_THEME_COMPONENT_PARAMS')).toHaveLength(1);
-    expect(tipo.filter((i) => i.code === 'E_THEME_COMPONENT_PARAMS')).toHaveLength(1);
+    expect(desconocido.filter((i) => i.code === 'theme-component-params')).toHaveLength(1);
+    expect(tipo.filter((i) => i.code === 'theme-component-params')).toHaveLength(1);
     expect(bien.filter((i) => i.severity === 'error')).toEqual([]);
   });
 

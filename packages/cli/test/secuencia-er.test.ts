@@ -41,12 +41,12 @@ describe('CLI con secuencia y ER', () => {
   it('validate --json informa un codigo nuevo de secuencia', async () => {
     const r = await run(['validate', '--workspace', workspace(DG.replace('api -> db', 'api -> dbb')), '--json']);
     expect(r.exitCode).toBe(1);
-    expect((JSON.parse(r.stdout) as { issues: { code: string }[] }).issues.map((i) => i.code)).toContain('E_UNKNOWN_LIFELINE');
+    expect((JSON.parse(r.stdout) as { issues: { code: string }[] }).issues.map((i) => i.code)).toContain('unknown-lifeline');
   });
 
   it('validate --json informa un codigo nuevo de ER', async () => {
     const r = await run(['validate', '--workspace', workspace(DG.replace('"0..*"', '"0..n"')), '--json']);
-    expect((JSON.parse(r.stdout) as { issues: { code: string }[] }).issues.map((i) => i.code)).toContain('E_ER_CARDINALITY');
+    expect((JSON.parse(r.stdout) as { issues: { code: string }[] }).issues.map((i) => i.code)).toContain('er-cardinality');
   });
 
   it('build escribe geometria grafo (ER) y secuencia', async () => {
@@ -95,7 +95,7 @@ describe('CLI con secuencia y ER', () => {
   it('skill documenta interaccion, secuencia y ER', async () => {
     const r = await run(['skill', '--workspace', workspace()]);
     expect(r.stdout).toContain('inspect interaccion');
-    expect(r.stdout).toContain('E_ER_CARDINALITY');
+    expect(r.stdout).toContain('er-cardinality');
     expect(r.stdout).toContain('sequence');
   });
 });

@@ -195,7 +195,7 @@ export function compile(workspace: ArchivosDelWorkspace): ResultadoDeCompilacion
   });
   // Un Tema declarado que no se resolvio ya tiene su error (`delTema`); no se reporta otra vez como no declarado.
   const sinResolver = new Set(temasDeclarados.map(({ ast }) => ast.name).filter((nombre) => !temas.some((t) => t.name === nombre)));
-  const sinTema = (issue: Issue): boolean => issue.code === CODIGOS.E_UNKNOWN_THEME && vistas.some(({ vista }) => vista.theme !== undefined && sinResolver.has(vista.theme) && issue.message === `Tema '${vista.theme}' no declarado`);
+  const sinTema = (issue: Issue): boolean => issue.code === CODIGOS.E_UNKNOWN_THEME && vistas.some(({ vista }) => vista.theme !== undefined && sinResolver.has(vista.theme) && issue.message === `Theme '${vista.theme}' is not declared`);
   issues.push(...validate(fuente, { iconos: combineIconProviders(workspaceIcons(workspace), genericIcons()), ubicar }).filter((issue) => !sinTema(issue)));
 
   const pins: PosicionDePin[] = [];
@@ -226,7 +226,7 @@ interface Contexto {
   issues: Issue[];
 }
 
-/** Compila una Vista; sin `type` valido es `E_UNKNOWN_VIEW_TYPE` y no hay Vista. */
+/** Compila una Vista; sin `type` valido es `unknown-view-type` y no hay Vista. */
 function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | undefined {
   const tipo = vista.props.find((prop) => prop.$type === 'ViewType');
   if (tipo === undefined) {
@@ -235,7 +235,7 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
       severity: 'error',
       file: archivo,
       ...rangoDe(vista, 'name').start,
-      message: `La Vista '${vista.name}' no declara 'type' (${TIPOS_DE_VISTA.join(' | ')})`,
+      message: `View '${vista.name}' does not declare 'type' (${TIPOS_DE_VISTA.join(' | ')})`,
     });
     return undefined;
   }
@@ -243,7 +243,7 @@ function compilarVista(vista: View, archivo: string, issues: Issue[]): Vista | u
   if (!tipoValido.success) {
     issues.push(
       issueConSugerencia(
-        { code: CODIGOS.E_UNKNOWN_VIEW_TYPE, message: `Tipo de Vista '${tipo.value}' desconocido (${TIPOS_DE_VISTA.join(' | ')})` },
+        { code: CODIGOS.E_UNKNOWN_VIEW_TYPE, message: `Unknown View type '${tipo.value}' (${TIPOS_DE_VISTA.join(' | ')})` },
         archivo, tipo, 'value', TIPOS_DE_VISTA,
       ),
     );
@@ -304,7 +304,7 @@ function posicionesDePin(vista: Vista, ast: View, archivo: string): PosicionDePi
   );
 }
 
-/** Compila un Elemento; un id ya declarado es `E_DUPLICATE_NODE` y el duplicado se descarta. */
+/** Compila un Elemento; un id ya declarado es `duplicate-node` y el duplicado se descarta. */
 function compilarElemento(
   elemento: Element,
   prefijo: string,
@@ -321,8 +321,8 @@ function compilarElemento(
       severity: 'error',
       file: archivo,
       ...sitio,
-      message: `Nodo duplicado '${id}'; para ampliarlo desde otro archivo usa 'extend ${id} { ... }'`,
-      related: [{ ...original.origen, message: `Primera declaracion de '${id}'` }],
+      message: `Duplicate Node '${id}'; to extend it from another file use 'extend ${id} { ... }'`,
+      related: [{ ...original.origen, message: `First declaration of '${id}'` }],
     });
     return undefined;
   }
@@ -347,7 +347,7 @@ function compilarHijos(elementos: readonly Element[], prefijo: string, archivo: 
 /**
  * Aplica los `extend` en pasadas: un `extend` puede apuntar a un Nodo que crea otro
  * `extend` (de cualquier archivo), asi que se repite mientras alguna pasada avance.
- * Los que quedan sin objetivo son `E_UNKNOWN_EXTEND_TARGET`.
+ * Los que quedan sin objetivo son `unknown-extend-target`.
  */
 function aplicarExtensiones(
   extensiones: readonly { archivo: string; extension: Extend }[],
@@ -365,7 +365,7 @@ function aplicarExtensiones(
       severity: 'error',
       file: archivo,
       ...rangoDe(extension, 'target').start,
-      message: `'extend' sobre el Nodo '${extension.target}', que no existe en el Modelo`,
+      message: `'extend' on Node '${extension.target}', which does not exist in the Model`,
     });
   }
 }
@@ -383,7 +383,7 @@ function compilarExtension(extension: Extend, archivo: string, contexto: Context
 
 /**
  * Atributos de un Nodo: los de sus bloques `attrs` y los sueltos en el cuerpo, en ese orden.
- * Una marca de clave repetida es `E_DUPLICATE_KEY_MARK` (con `fix` que borra la repetida) y se guarda una sola vez.
+ * Una marca de clave repetida es `duplicate-key-mark` (con `fix` que borra la repetida) y se guarda una sola vez.
  */
 function atributosDe(bloques: readonly Attrs[], sueltos: readonly Attribute[], archivo: string, issues: Issue[]): Atributo[] {
   return [...bloques.flatMap((bloque) => bloque.items), ...sueltos].map((item) => {
@@ -397,7 +397,7 @@ function atributosDe(bloques: readonly Attrs[], sueltos: readonly Attribute[], a
         severity: 'error',
         file: archivo,
         ...start,
-        message: `Marca de clave '${clave}' repetida en el Atributo '${item.name}'`,
+        message: `Key mark '${clave}' repeated in Attribute '${item.name}'`,
         // Se borra la repetida junto con el espacio que la separa de la marca anterior.
         fix: { file: archivo, range: { start: previo.start.line === start.line ? previo.end : start, end }, replacement: '' },
       });

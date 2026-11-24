@@ -65,7 +65,7 @@ describe('inspect buscar', () => {
   it('texto legible por defecto: una linea por resultado', async () => {
     const r = await run(['inspect', 'buscar', 'cola', '--workspace', workspace()]);
     expect(r.exitCode).toBe(0);
-    expect(r.stdout).toBe('nodo cola servicio "Cola" main.dg:9\n1 resultado\n');
+    expect(r.stdout).toBe('node cola servicio "Cola" main.dg:9\n1 result\n');
   });
 
   it('sin coincidencias sale 0 con lista vacia', async () => {
@@ -112,7 +112,7 @@ describe('inspect nodo', () => {
     const r = await run(['inspect', 'nodo', 'sistema.dv', '--workspace', workspace()]);
     expect(r.exitCode).toBe(1);
     expect(r.stdout).toBe('');
-    expect(r.stderr).toContain("No existe el Nodo 'sistema.dv'");
+    expect(r.stderr).toContain("No such Node 'sistema.dv'");
     expect(r.stderr).toContain('sistema.db');
   });
 });
@@ -130,10 +130,10 @@ describe('inspect vista', () => {
     expect(vista.aristas).toHaveLength(2);
   });
 
-  it('una Vista inexistente sale 1', async () => {
+  it('una View not found sale 1', async () => {
     const r = await run(['inspect', 'vista', 'nada', '--workspace', workspace()]);
     expect(r.exitCode).toBe(1);
-    expect(r.stderr).toContain("No existe la Vista 'nada'");
+    expect(r.stderr).toContain("No such View 'nada'");
   });
 });
 
@@ -185,7 +185,7 @@ describe('inspect errores de uso', () => {
     const r = await run(['inspect', 'buscar', 'a', '--workspace', workspace('specification { node s }\nmodel { s a  a -> zz }')]);
     expect(r.exitCode).toBe(1);
     expect(r.stdout).toBe('');
-    expect(r.stderr).toContain('E_DANGLING_EDGE');
+    expect(r.stderr).toContain('dangling-edge');
   });
 });
 

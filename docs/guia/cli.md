@@ -28,19 +28,19 @@ Con `--json`, stdout es exactamente un objeto, sin texto extra. `validate`/`buil
 dg validate --workspace <ruta> [--json] [--strict] [--max-issues N] [--theme <nombre>] [--theme-path <dir>]
 ```
 
-Lista todos los issues en una pasada, ordenados por archivo, linea, columna y codigo. Sin errores de compilacion calcula el layout de las Vistas con al menos dos Pins y avisa `W_OVERLAPPING_PINS` por cada par solapado (con `--strict` hace fallar); las Vistas sin Pins no pagan layout. Si un Tema trae codigo (`.tsx`) que no compila, el error es `E_THEME_CODE_COMPILE`, con archivo y linea. `--max-issues` (100 por defecto) corta la lista y marca `summary.truncated`. Un issue puede traer `fix` (`{ file, range, replacement }`) cuando hay un unico candidato, o `hint` si hay varios. `validate` nunca reescribe archivos.
+Lista todos los issues en una pasada, ordenados por archivo, linea, columna y codigo. Sin errores de compilacion calcula el layout de las Vistas con al menos dos Pins y avisa `overlapping-pins` por cada par solapado (con `--strict` hace fallar); las Vistas sin Pins no pagan layout. Si un Tema trae codigo (`.tsx`) que no compila, el error es `theme-code-compile`, con archivo y linea. `--max-issues` (100 por defecto) corta la lista y marca `summary.truncated`. Un issue puede traer `fix` (`{ file, range, replacement }`) cuando hay un unico candidato, o `hint` si hay varios. `validate` nunca reescribe archivos.
 
 Codigos de los Tipos de diagrama `sequence` y `er` (la lista completa, con su descripcion, sale en `dg skill`):
 
 | Codigo | Cuando |
 | --- | --- |
-| `E_UNKNOWN_VIEW_TYPE`, `E_VIEW_PROPERTY_FOR_TYPE` | El `type` de la Vista no existe, o una propiedad no vale para su Tipo (`include`/`pin` en secuencia; `interaction`/`order`/`autonumber`/`upto` fuera de ella) |
-| `E_SEQUENCE_WITHOUT_INTERACTION`, `E_UNKNOWN_INTERACTION`, `E_DUPLICATE_INTERACTION` | La Vista `sequence` no declara `interaction`, o una Interaccion (de una Vista o un `ref`) no existe o esta repetida |
-| `E_UNKNOWN_LIFELINE`, `E_DUPLICATE_MESSAGE_ID` | Un extremo de Mensaje, una Nota u `order` no es un Nodo; id de Mensaje repetido |
-| `E_CREATE_NOT_FIRST`, `E_AFTER_DESTROY`, `E_INVALID_FRAGMENT_OPERAND` | Ciclo de vida de la Lifeline y operandos de Fragmento invalidos |
-| `E_STEP_NOT_PROJECTED`, `E_STEP_NOT_ADVANCING` | Un `upto` apunta a un Mensaje que la Vista no proyecta o no avanza |
-| `W_ORDER_NOT_IN_INTERACTION`, `W_REF_WITHOUT_VIEW`, `W_REPLY_WITHOUT_SYNC` | Avisos (solo fallan con `--strict`) |
-| `E_ER_CARDINALITY`, `E_DUPLICATE_KEY_MARK` | Cardinalidad ER invalida (con `fix`) y marca de clave repetida (`pk`, `fk`, `uk`) |
+| `unknown-view-type`, `view-property-for-type` | El `type` de la Vista no existe, o una propiedad no vale para su Tipo (`include`/`pin` en secuencia; `interaction`/`order`/`autonumber`/`upto` fuera de ella) |
+| `sequence-without-interaction`, `unknown-interaction`, `duplicate-interaction` | La Vista `sequence` no declara `interaction`, o una Interaccion (de una Vista o un `ref`) no existe o esta repetida |
+| `unknown-lifeline`, `duplicate-message-id` | Un extremo de Mensaje, una Nota u `order` no es un Nodo; id de Mensaje repetido |
+| `create-not-first`, `after-destroy`, `invalid-fragment-operand` | Ciclo de vida de la Lifeline y operandos de Fragmento invalidos |
+| `step-not-projected`, `step-not-advancing` | Un `upto` apunta a un Mensaje que la Vista no proyecta o no avanza |
+| `order-not-in-interaction`, `ref-without-view`, `reply-without-sync` | Avisos (solo fallan con `--strict`) |
+| `er-cardinality`, `duplicate-key-mark` | Cardinalidad ER invalida (con `fix`) y marca de clave repetida (`pk`, `fk`, `uk`) |
 
 ### `build`: escribir la geometria
 

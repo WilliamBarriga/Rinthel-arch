@@ -28,7 +28,7 @@ export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx:
     for (const op of propios) {
       const razon = opTocaMetricas(op, [fila.capas as CapaDeTema[]]);
       if (razon !== undefined) {
-        ctx.issues.push({ code: CODIGOS.E_THEME_STATE_TOUCHES_METRICS, severity: 'error', file: ctx.archivo, ...aRango(donde.$cstNode?.range).start, message: `Un parche de fila no puede tocar las Metricas: ${razon}` });
+        ctx.issues.push({ code: CODIGOS.E_THEME_STATE_TOUCHES_METRICS, severity: 'error', file: ctx.archivo, ...aRango(donde.$cstNode?.range).start, message: `A row patch cannot touch Metrics: ${razon}` });
       }
     }
     return propios;
@@ -38,7 +38,7 @@ export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx:
     switch (item.$type) {
       case 'RowHeight': {
         const { propiedades, errores } = validarPropiedades(
-          { sujeto: "El bloque 'row'", nombre: "'row'", propiedades: { height: { tipo: 'numero', min: ALTO_DE_FILA.min, max: ALTO_DE_FILA.max } } },
+          { sujeto: "The 'row' block", nombre: "'row'", propiedades: { height: { tipo: 'numero', min: ALTO_DE_FILA.min, max: ALTO_DE_FILA.max } } },
           [{ clave: 'height', valor: item.value }],
           tema.palette,
         );
@@ -57,7 +57,7 @@ export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx:
         if (clave === undefined) {
           ctx.issues.push(
             issueConSugerencia(
-              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `Marca de clave '${item.name}' desconocida en 'row'; disponibles: ${CLAVES_DE_FILA.join(', ')}` },
+              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `Unknown key mark '${item.name}' in 'row'; available: ${CLAVES_DE_FILA.join(', ')}` },
               ctx.archivo, item, 'name', CLAVES_DE_FILA,
             ),
           );
@@ -80,7 +80,7 @@ export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx:
         if (nombre === undefined) {
           ctx.issues.push(
             issueConSugerencia(
-              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.slot}' no es un texto de la fila ni un parche de 'row'; disponibles: ${NOMBRES_DE_TEXTO_DE_FILA.join(', ')}, layer, use, height, alternate, key, optional` },
+              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.slot}' is neither a row text nor a 'row' patch; available: ${NOMBRES_DE_TEXTO_DE_FILA.join(', ')}, layer, use, height, alternate, key, optional` },
               ctx.archivo, item, 'slot', NOMBRES_DE_TEXTO_DE_FILA,
             ),
           );

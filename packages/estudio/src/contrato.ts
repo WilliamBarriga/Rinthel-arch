@@ -368,7 +368,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
         expect(vista.cuerpo).toMatchObject({ comando: 'vista', vista: { id: 'datos', nodos: [{ id: 'db' }] } });
 
         const ausente = await json(dev, '/api/inspect/nodo/apj');
-        expect(ausente).toEqual({ status: 404, cuerpo: { ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] } });
+        expect(ausente).toEqual({ status: 404, cuerpo: { ok: false, mensaje: "No such Node 'apj'. Did you mean: api", cercanos: ['api'] } });
         expect((await dev.fetch('/api/inspect/nada/x')).status).toBe(404);
       });
     });
@@ -387,7 +387,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
         const { status, cuerpo } = await json(dev, '/api/inspect/tema/claro');
         expect(status).toBe(200);
         expect(cuerpo).toMatchObject({ comando: 'tema', tema: { name: 'claro', file: 'main.dg', extends: ['neutral'] } });
-        expect(await json(dev, '/api/inspect/tema/clara')).toEqual({ status: 404, cuerpo: { ok: false, mensaje: "No existe el Tema 'clara'. Quiza: claro", cercanos: ['claro'] } });
+        expect(await json(dev, '/api/inspect/tema/clara')).toEqual({ status: 404, cuerpo: { ok: false, mensaje: "No such Theme 'clara'. Did you mean: claro", cercanos: ['claro'] } });
       });
     });
 
@@ -436,7 +436,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           (h) => h.pasado.length === 1,
           () => void post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }),
         );
-        expect(conUna.pasado).toEqual([{ id: 1, descripcion: 'mover api en general', archivos: ['main.dg'], cuando: expect.any(Number), alcanzable: true }]);
+        expect(conUna.pasado).toEqual([{ id: 1, descripcion: 'move api in general', archivos: ['main.dg'], cuando: expect.any(Number), alcanzable: true }]);
       });
     });
 

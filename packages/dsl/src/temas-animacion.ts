@@ -18,7 +18,7 @@ function leerParametros(params: readonly AnimParam[], archivo: string, issues: I
   const duracion = (clave: string, d: Duracion): void => {
     const ms = duracionEnMs(d.amount, d.unit);
     if (ms === undefined) {
-      issues.push(aIssue(archivo, { codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Unidad '${d.unit}' desconocida en '${d.amount}${d.unit}'; usa 'ms' o 's'` }, rangoDe(d, 'unit')));
+      issues.push(aIssue(archivo, { codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Unknown unit '${d.unit}' in '${d.amount}${d.unit}'; use 'ms' or 's'` }, rangoDe(d, 'unit')));
     } else salida.push({ clave, valor: ms });
   };
   for (const param of params) {
@@ -42,7 +42,7 @@ export function compilarAnimacionDeCapa(item: ThemeLayer, archivo: string, issue
   const antes = issues.length;
   let animacion: Animacion | null | undefined;
   if (item.animations.length > 1) {
-    issues.push(aIssue(archivo, { codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `La Capa '${item.name}' admite un solo 'motion' o 'keyframes'` }, aRango(item.animations[1]?.$cstNode?.range)));
+    issues.push(aIssue(archivo, { codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Layer '${item.name}' accepts a single 'motion' or 'keyframes'` }, aRango(item.animations[1]?.$cstNode?.range)));
   }
   const [anim] = item.animations;
   if (anim?.$type === 'ThemeMotion') {
@@ -80,7 +80,7 @@ function efectoDe(item: ThemeEnter | ThemeExit, archivo: string, issues: Issue[]
 function escalonadoDe(item: ThemeStagger, archivo: string, issues: Issue[]): number | undefined {
   const ms = duracionEnMs(item.amount.amount, item.amount.unit);
   if (ms === undefined) {
-    issues.push(aIssue(archivo, { codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Unidad '${item.amount.unit}' desconocida; usa 'ms' o 's'` }, rangoDe(item.amount, 'unit')));
+    issues.push(aIssue(archivo, { codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Unknown unit '${item.amount.unit}'; use 'ms' or 's'` }, rangoDe(item.amount, 'unit')));
     return undefined;
   }
   const { animacion, errores } = construirEscalonado(ms);
@@ -89,7 +89,7 @@ function escalonadoDe(item: ThemeStagger, archivo: string, issues: Issue[]): num
 }
 
 const repetido = (archivo: string, que: string, item: Ast): Issue =>
-  aIssue(archivo, { codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${que}' repetido en el mismo bloque` }, aRango(item.$cstNode?.range));
+  aIssue(archivo, { codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `'${que}' repeated in the same block` }, aRango(item.$cstNode?.range));
 
 /** Sobre la heredada; un elemento repetido en el mismo bloque es un error. */
 export function compilarAnimacionDeNodo(items: ReadonlyArray<NodeItem>, heredada: AnimacionDeNodo | undefined, archivo: string, issues: Issue[]): AnimacionDeNodo | undefined {

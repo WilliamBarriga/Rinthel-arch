@@ -61,7 +61,7 @@ describe('seam sesion: offset y grow de una Capa', () => {
   it('un valor fuera de rango es un error con posicion, nunca se recorta', async () => {
     const issues = await abrir(tema('offset 999 0  grow -999')).diagnosticar();
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE']);
+    expect(issues.map((i) => i.code)).toEqual(['theme-invalid-value', 'theme-invalid-value']);
     expect(issues[0]!.message).toContain("'offset-x'");
     expect(issues[0]!.line).toBeGreaterThan(0);
   });

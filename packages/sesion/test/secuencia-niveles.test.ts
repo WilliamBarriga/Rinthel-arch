@@ -111,10 +111,10 @@ view sin_numero { type sequence
     expect(con.layoutKey).not.toBe(sin.layoutKey);
   });
 
-  it('autonumber fuera de una Vista de secuencia es E_VIEW_PROPERTY_FOR_TYPE', async () => {
+  it('autonumber fuera de una Vista de secuencia es view-property-for-type', async () => {
     const sesion = abrirSesion({ 'main.dg': modelo(escenario, 'view v { type architecture\n include **\n autonumber }\n') });
     const issues = await sesion.diagnosticar();
-    expect(issues.map((i) => i.code)).toContain('E_VIEW_PROPERTY_FOR_TYPE');
+    expect(issues.map((i) => i.code)).toContain('view-property-for-type');
   });
 
   it('un ref cuyas Lifelines quedan fundidas en un Grupo colapsado enmarca solo la Lifeline del Grupo', async () => {

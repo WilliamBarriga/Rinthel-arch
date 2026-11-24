@@ -38,7 +38,7 @@ describe('seam sesion: fuentes del Workspace', () => {
 
     const errores = (await sesion.diagnosticar()).filter((x) => x.severity === 'error');
     expect(errores).toHaveLength(1);
-    expect(errores[0]).toMatchObject({ code: 'E_THEME_FONT_MISSING', file: 'main.dg', line: 7, column: 7 });
+    expect(errores[0]).toMatchObject({ code: 'theme-font-missing', file: 'main.dg', line: 7, column: 7 });
     expect(errores[0]!.message).toContain("'Cavet'");
     expect(errores[0]!.message).toContain('fonts.body');
     expect(errores[0]!.hint).toContain("'caveat'");
@@ -47,7 +47,7 @@ describe('seam sesion: fuentes del Workspace', () => {
   it('el error tambien sale de construir', async () => {
     const { issues } = await abrirSesion(trabajo('fonts { body "Caveat"  mono "monospace"  fallback "sans-serif" }'), { archivosDeFuente: [] }).construir();
 
-    expect(issues.map((x) => x.code)).toContain('E_THEME_FONT_MISSING');
+    expect(issues.map((x) => x.code)).toContain('theme-font-missing');
   });
 
   it('con el archivo en el Workspace no hay error y el Estilo resuelto trae las caras y la reserva declarada', async () => {
@@ -78,8 +78,8 @@ describe('seam sesion: fuentes del Workspace', () => {
     const sin = abrirSesion(trabajo(CON_CAVEAT), { archivosDeFuente: [] });
     const con = sin.actualizar(trabajo(CON_CAVEAT), { archivosDeFuente: CAVEAT });
 
-    expect((await sin.diagnosticar()).map((x) => x.code)).toContain('E_THEME_FONT_MISSING');
-    expect((await con.diagnosticar()).map((x) => x.code)).not.toContain('E_THEME_FONT_MISSING');
-    expect((await sin.actualizar(trabajo(CON_CAVEAT)).diagnosticar()).map((x) => x.code)).toContain('E_THEME_FONT_MISSING');
+    expect((await sin.diagnosticar()).map((x) => x.code)).toContain('theme-font-missing');
+    expect((await con.diagnosticar()).map((x) => x.code)).not.toContain('theme-font-missing');
+    expect((await sin.actualizar(trabajo(CON_CAVEAT)).diagnosticar()).map((x) => x.code)).toContain('theme-font-missing');
   });
 });

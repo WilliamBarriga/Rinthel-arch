@@ -78,7 +78,7 @@ async function despachar(argv: readonly string[], dependencias: Dependencias): P
   if (comando === 'dev') return comandoDev(resto);
   if (comando !== 'validate' && comando !== 'build' && comando !== 'skill') {
     return uso(
-      `Comando desconocido '${comando ?? ''}'. Uso: diagrams <validate|build|skill|inspect|edit|dev> --workspace <ruta> (diagrams --help para el detalle)`,
+      `Unknown command '${comando ?? ''}'. Usage: diagrams <validate|build|skill|inspect|edit|dev> --workspace <path> (diagrams --help for details)`,
     );
   }
   if (comando === 'skill') return skill(resto, dependencias);
@@ -89,9 +89,9 @@ async function despachar(argv: readonly string[], dependencias: Dependencias): P
   } catch (error) {
     return uso((error as Error).message);
   }
-  if (opciones['workspace'] === undefined) return uso('Falta --workspace <ruta>');
+  if (opciones['workspace'] === undefined) return uso('Missing --workspace <path>');
   const maxIssues = Number(opciones['max-issues'] ?? MAX_ISSUES_POR_DEFECTO);
-  if (!Number.isInteger(maxIssues) || maxIssues < 1) return uso('--max-issues debe ser un entero >= 1');
+  if (!Number.isInteger(maxIssues) || maxIssues < 1) return uso('--max-issues must be an integer >= 1');
 
   return ejecutar(comando, opciones, maxIssues, dependencias);
 }
@@ -110,7 +110,7 @@ async function skill(
   } catch (error) {
     return uso((error as Error).message);
   }
-  if (opciones.workspace === undefined) return uso('Falta --workspace <ruta>');
+  if (opciones.workspace === undefined) return uso('Missing --workspace <path>');
 
   const abierta = abrirSesionDe(leer, opciones.workspace);
   if ('fallo' in abierta) return abierta.fallo;
@@ -121,9 +121,9 @@ async function skill(
   try {
     escribirArchivo(opciones.out, texto);
   } catch (error) {
-    return uso(`No se pudo escribir '${opciones.out}': ${(error as Error).message}`);
+    return uso(`Could not write '${opciones.out}': ${(error as Error).message}`);
   }
-  return { exitCode: 0, stdout: `Skill escrito en ${opciones.out}\n`, stderr: '' };
+  return { exitCode: 0, stdout: `Skill written to ${opciones.out}\n`, stderr: '' };
 }
 
 async function ejecutar(
@@ -143,7 +143,7 @@ async function ejecutar(
   let archivosDeSalida: Record<string, string> = {};
   if (sesion.fuente !== undefined && tema !== undefined && !sesion.fuente.themes.some(({ name }) => name === tema)) {
     const disponibles = sesion.fuente.themes.map(({ name }) => name).join(', ');
-    return uso(`Tema '${tema}' no declarado. Disponibles: ${disponibles}`);
+    return uso(`Theme '${tema}' is not declared. Available: ${disponibles}`);
   }
   try {
     if (comando === 'build') {
@@ -152,7 +152,7 @@ async function ejecutar(
       issues = await sesion.diagnosticar();
     }
   } catch (error) {
-    return uso(`Error interno al calcular la geometria: ${(error as Error).message}`);
+    return uso(`Internal error while computing the geometry: ${(error as Error).message}`);
   }
 
   let salida;
@@ -161,14 +161,14 @@ async function ejecutar(
       construirSalida(issues, { maxIssues, strict: opciones['strict'] === true }),
     );
   } catch (error) {
-    return uso(`Error interno: la salida no cumple el contrato (${(error as Error).message})`);
+    return uso(`Internal error: the output does not meet the contract (${(error as Error).message})`);
   }
   if (comando === 'build') {
     // Un build fallido borra la salida anterior para no dejar geometria obsoleta.
     try {
       escribir(raiz, salida.ok ? archivosDeSalida : {});
     } catch (error) {
-      return uso(`No se pudo escribir ${CARPETA_DE_SALIDA}/: ${(error as Error).message}`);
+      return uso(`Could not write ${CARPETA_DE_SALIDA}/: ${(error as Error).message}`);
     }
   }
   return {

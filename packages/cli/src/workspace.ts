@@ -37,9 +37,9 @@ function recorrer(
   return archivos;
 }
 
-/** Archivos `.dg` y `.svg` (iconos) bajo `raiz`. Lanza si la raiz no existe o no es una carpeta. */
+/** Archivos `.dg` y `.svg` (iconos) bajo `raiz`. Lanza si la raiz no existe o is not a folder. */
 export function leerWorkspace(raiz: string): ArchivosDelWorkspace {
-  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' no es una carpeta`);
+  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' is not a folder`);
   return recorrer(raiz, (nombre) => nombre.endsWith(EXTENSION) || nombre.endsWith('.svg'), (ruta) => readFileSync(ruta, 'utf8'));
 }
 
@@ -47,10 +47,10 @@ const EXTENSIONES_DE_RECURSO = ['.tsx', '.ttf', '.otf', '.woff', '.woff2'];
 
 /**
  * Componentes `.tsx` y fuentes tipograficas bajo `raiz`: ruta relativa con `/` -> SHA-256 del contenido.
- * Lanza si la raiz no existe o no es una carpeta.
+ * Lanza si la raiz no existe o is not a folder.
  */
 export function leerRecursos(raiz: string): Record<string, string> {
-  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' no es una carpeta`);
+  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' is not a folder`);
   return recorrer(raiz, (nombre) => EXTENSIONES_DE_RECURSO.some((extension) => nombre.endsWith(extension)), (ruta) => createHash('sha256').update(readFileSync(ruta)).digest('hex'));
 }
 
@@ -118,7 +118,7 @@ export function destinoEnWorkspace(raiz: string, ruta: string): string {
   const base = resolve(raiz);
   const destino = resolve(base, ...ruta.split('/'));
   if (ruta.startsWith('/') || isAbsolute(ruta) || !destino.startsWith(base + sep)) {
-    throw new Error(`'${ruta}' queda fuera del Workspace`);
+    throw new Error(`'${ruta}' is outside the Workspace`);
   }
   return destino;
 }

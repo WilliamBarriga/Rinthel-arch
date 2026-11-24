@@ -239,7 +239,7 @@ describe('integracion con VistaInteractiva y location.hash', () => {
     const { container } = render(<App />);
     await dibujado(container, 'x');
     expect(container.querySelector('[data-selected="g"]')).not.toBeNull();
-    expect(container.textContent).toContain('Paso 1 de 2');
+    expect(container.textContent).toContain('Step 1 of 2');
   });
 
   it('hash invalido no rompe', async () => {

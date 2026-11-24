@@ -128,24 +128,24 @@ describe('galeria de Temas de ejemplo', () => {
 
   it('los warnings de cada ejemplo son exactamente los declarados en su cabecera, y no hay otros', async () => {
     const warnings = (await abrirSesion(archivos).diagnosticar()).filter((i) => i.severity === 'warning');
-    const vistasDe = (nombre: string) => ['', '-referencia', '-secuencia', '-er'].map((sufijo) => `En la Vista '${nombre}${sufijo}'`);
-    const deTema = (nombre: string) => warnings.filter((i) => i.message.startsWith(`Tema '${nombre}'`) || vistasDe(nombre).some((v) => i.message.startsWith(v)));
+    const vistasDe = (nombre: string) => ['', '-referencia', '-secuencia', '-er'].map((sufijo) => `In View '${nombre}${sufijo}'`);
+    const deTema = (nombre: string) => warnings.filter((i) => i.message.startsWith(`Theme '${nombre}'`) || vistasDe(nombre).some((v) => i.message.startsWith(v)));
     const lista = (nombre: string, linea: string): string[] => {
       const valor = new RegExp(`^// ${linea}:\\s*(.+)$`, 'm').exec(archivos[`${nombre}.dg`]!)?.[1]?.replace(/\.$/, '').trim();
       return valor === undefined || valor === 'ninguno' ? [] : valor.split(',').map((t) => t.trim()).sort();
     };
     for (const nombre of TEMAS) {
       expect(archivos[`${nombre}.dg`], `${nombre}: falta la linea "// Contraste: ..." al inicio`).toMatch(/^\/\/ Contraste:/);
-      const contraste = deTema(nombre).filter((i) => i.code === 'W_THEME_LOW_CONTRAST');
-      const reales = [...new Set(contraste.map((i) => /Tipo '([^']+)'/.exec(i.message)![1]!))].sort();
+      const contraste = deTema(nombre).filter((i) => i.code === 'theme-low-contrast');
+      const reales = [...new Set(contraste.map((i) => /of kind '([^']+)'/.exec(i.message)![1]!))].sort();
       expect(reales, nombre).toEqual(lista(nombre, 'Contraste'));
       // `// Solo color: a/b, ...` declara los pares de Tipos que el Tema distingue solo por color (como el prototipo).
-      const soloColor = deTema(nombre).filter((i) => i.code === 'W_THEME_COLOR_ONLY').map((i) => /'([^']+)' y '([^']+)'/.exec(i.message)!.slice(1).join('/'));
+      const soloColor = deTema(nombre).filter((i) => i.code === 'theme-color-only').map((i) => /kinds '([^']+)' and '([^']+)'/.exec(i.message)!.slice(1).join('/'));
       expect([...new Set(soloColor)].sort(), nombre).toEqual(lista(nombre, 'Solo color'));
       // Cualquier otro warning del Tema no esta declarado en la cabecera: es un defecto del ejemplo.
-      expect(deTema(nombre).filter((i) => i.code !== 'W_THEME_LOW_CONTRAST' && i.code !== 'W_THEME_COLOR_ONLY').map((i) => `${i.code}: ${i.message}`), nombre).toEqual([]);
+      expect(deTema(nombre).filter((i) => i.code !== 'theme-low-contrast' && i.code !== 'theme-color-only').map((i) => `${i.code}: ${i.message}`), nombre).toEqual([]);
     }
-    expect(warnings.filter((i) => !TEMAS.some((n) => i.message.startsWith(`Tema '${n}'`) || vistasDe(n).some((v) => i.message.startsWith(v)))).map((i) => `${i.code}: ${i.message}`), 'warnings sin Tema').toEqual([]);
+    expect(warnings.filter((i) => !TEMAS.some((n) => i.message.startsWith(`Theme '${n}'`) || vistasDe(n).some((v) => i.message.startsWith(v)))).map((i) => `${i.code}: ${i.message}`), 'warnings sin Tema').toEqual([]);
   });
 
   it('las fuentes incluidas son archivos OFL del Workspace, cada familia con su licencia, sin CDN', () => {
@@ -158,7 +158,7 @@ describe('galeria de Temas de ejemplo', () => {
 
   it('toda fuente que declara un Tema de la galeria tiene archivo en el Workspace', async () => {
     const archivosDeFuente = readdirSync(resolve(CARPETA_DE_TEMAS, 'fuentes')).map((f) => `fuentes/${f}`);
-    const faltantes = (await abrirSesion(archivos, { archivosDeFuente }).diagnosticar()).filter((i) => i.code === 'E_THEME_FONT_MISSING');
+    const faltantes = (await abrirSesion(archivos, { archivosDeFuente }).diagnosticar()).filter((i) => i.code === 'theme-font-missing');
     expect(faltantes.map((i) => i.message)).toEqual([]);
   });
 });

@@ -46,7 +46,7 @@ function expandir(items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string, 
     if (parte === undefined) {
       ctx.issues.push(
         issueConSugerencia(
-          { code: CODIGOS.E_THEME_UNKNOWN_PART, message: `Parte '${item.name}' no declarada; usa 'part ${item.name} { ... }'` },
+          { code: CODIGOS.E_THEME_UNKNOWN_PART, message: `Part '${item.name}' is not declared; use 'part ${item.name} { ... }'` },
           archivo, item, 'name', ctx.partes.keys(),
         ),
       );
@@ -83,8 +83,8 @@ function rechazarAnimacionDePagina(item: ThemeLayer, archivo: string, issues: Is
     severity: 'error',
     file: archivo,
     ...aRango(anim.$cstNode?.range).start,
-    message: `La Capa '${item.name}' de 'page' no admite '${anim.$type === 'ThemeMotion' ? 'motion' : 'keyframes'}': el fondo de pagina no se anima`,
-    hint: "Anima las Capas de 'node' o 'group'; 'page' es solo pintura estatica",
+    message: `Layer '${item.name}' of 'page' does not accept '${anim.$type === 'ThemeMotion' ? 'motion' : 'keyframes'}': the page background is not animated`,
+    hint: "Animate the Layers of 'node' or 'group'; 'page' is static paint only",
   });
   return { fallo: true };
 }
@@ -105,7 +105,7 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
       severity: 'error',
       file: archivo,
       ...rangoDe(item, 'name').start,
-      message: `Capa '${item.name}' repetida en el mismo bloque`,
+      message: `Layer '${item.name}' repeated in the same block`,
     });
     return false;
   });
@@ -135,7 +135,7 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
       ...rango.start,
       message: error.mensaje,
       ...(arreglable ? { fix: { file: archivo, range: rango, replacement: error.candidato as string } } : error.hint !== undefined && { hint: error.hint }),
-      ...(origen !== undefined && { related: [{ ...origen, message: `Capa base '${baseDeError}' que este parche modifica` }] }),
+      ...(origen !== undefined && { related: [{ ...origen, message: `base Layer '${baseDeError}' that this patch modifies` }] }),
     };
   };
 
