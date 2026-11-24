@@ -1,6 +1,6 @@
 import { CARPETA_DE_SALIDA } from './workspace';
 
-const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill', 'scan'] as const;
+const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill', 'scan', 'export'] as const;
 export type ComandoConAyuda = (typeof COMANDOS)[number];
 
 const WORKSPACE = '--workspace <ruta>   Carpeta con los archivos .dg (obligatorio)';
@@ -109,6 +109,21 @@ Options:
 Honors .gitignore and always skips node_modules, dist, build, .venv and vendored code.
 Exit: 0 draft written, 2 usage or internal failure (message on stderr).
 `,
+  export: `diagrams export --workspace <path> --out <file>.html [options]
+
+Writes the Dev UI of the Workspace as one self-contained, read-only HTML file to send to anyone:
+Views, Steps, links, collapsing, selection and Theme switching work; editing, Undo history, agent
+activity and Diffs are left out. Layout engine (ELK) and Theme fonts go inside; it opens from disk
+(file://) or from any static server, with no network requests. Writes nothing next to the Workspace.
+
+Options:
+  --workspace <path>   Folder with the .dg files (required)
+  --out <file>         The HTML file to write (required; missing folders are created)
+  --theme-path <dir>   Extra Themes folder; merged before the Workspace (the Workspace wins)
+
+Themes with code (.tsx components) go inside and run in the browser of whoever opens the file.
+Exit: 0 written, 1 the Workspace has errors (nothing written), 2 usage or internal failure.
+`,
 };
 
 const AYUDA_GENERAL = `diagrams: CLI para escribir, validar y ver diagramas .dg
@@ -124,6 +139,7 @@ Comandos:
   edit       Fija un Pin o aplica ediciones estructuradas al .dg
   skill      Genera la skill de agente de un Workspace
   scan       Reads a codebase into a Scan draft for an agent to diagram (diagrams scan [<root>])
+  export     Writes the Dev UI as one self-contained, read-only HTML file (--out <file>.html)
 
 Bucle de un agente: inspect, editar el .dg, validate --json hasta ok:true.
 Codigos de salida: 0 correcto, 1 hay errores del Workspace, 2 fallo de uso o interno.

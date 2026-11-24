@@ -14,7 +14,7 @@ import { useInspectPorVersion } from '../marco/use-lectura-por-version';
 import { sitioEscrito, textoDeSitio } from '../sitio';
 import { destinoDeNodo } from '../vistas/destino';
 import { indiceDeVistas } from '../vistas/indice';
-import { COMANDOS } from './registro';
+import { comandosDe } from './registro';
 import { etiquetasDeTeclas } from './teclas';
 
 interface Entrada {
@@ -59,17 +59,17 @@ function useNodos(consulta: string): Entrada[] {
 
 function Contenido({ alElegir }: { alElegir: () => void }): ReactElement {
   const estudio = useEstudio();
-  const { fuente, plataforma } = estudio;
+  const { fuente, plataforma, modo } = estudio;
   const [consulta, setConsulta] = useState('');
   const vistas = useMemo(() => (fuente === undefined ? [] : indiceDeVistas(fuente).flatMap((g) => g.vistas)), [fuente]);
   const nodos = useNodos(consulta);
 
   const sitio = sitioEscrito(consulta);
   const todos: Grupo[] = [
-    { value: 'File', items: sitio === undefined ? [] : [{ value: `sitio:${textoDeSitio(sitio)}`, label: `Open ${textoDeSitio(sitio)}`, ejecutar: (e) => e.abrirCodigo(sitio) }] },
+    { value: 'File', items: sitio === undefined || modo !== 'dev' ? [] : [{ value: `sitio:${textoDeSitio(sitio)}`, label: `Open ${textoDeSitio(sitio)}`, ejecutar: (e) => e.abrirCodigo(sitio) }] },
     {
       value: 'Commands',
-      items: COMANDOS.filter((c) => c.enBuscador !== false && contiene(c.nombre, consulta.trim())).map((c) => ({ value: `comando:${c.id}`, label: c.nombre, teclas: etiquetasDeTeclas(c, plataforma), ejecutar: c.ejecutar })),
+      items: comandosDe(modo).filter((c) => c.enBuscador !== false && contiene(c.nombre, consulta.trim())).map((c) => ({ value: `comando:${c.id}`, label: c.nombre, teclas: etiquetasDeTeclas(c, plataforma), ejecutar: c.ejecutar })),
     },
     {
       value: 'Views',

@@ -3,7 +3,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import type { ReactElement } from 'react';
 
 import { useEstudio } from '../marco/contexto';
-import { COMANDOS } from './registro';
+import { comandosDe } from './registro';
 import { etiquetasDeTeclas } from './teclas';
 import type { Ambito } from './teclas';
 
@@ -22,11 +22,11 @@ const TECLAS_DEL_LIENZO: readonly { nombre: string; teclas: string[] }[] = [
 ];
 
 export function Ayuda({ abierto, alCambiar }: { abierto: boolean; alCambiar: (abierto: boolean) => void }): ReactElement {
-  const { plataforma, portales } = useEstudio();
+  const { plataforma, portales, modo } = useEstudio();
   const grupos = GRUPOS.map(({ ambito, nombre }) => ({
     nombre,
     filas: [
-      ...COMANDOS.filter((c) => c.ambito === ambito)
+      ...comandosDe(modo).filter((c) => c.ambito === ambito)
         .map((c) => ({ nombre: c.nombre, teclas: etiquetasDeTeclas(c, plataforma) }))
         .filter((f) => f.teclas.length > 0),
       ...(ambito === 'lienzo' ? TECLAS_DEL_LIENZO : []),
