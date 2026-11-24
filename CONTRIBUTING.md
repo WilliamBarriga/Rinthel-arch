@@ -42,7 +42,8 @@ No hay CI: las pruebas se corren en local. El hook de pre-commit corre `pnpm che
 | `packages/render` | Dibujo puro en React (Nodos y Grupos en HTML/CSS, Aristas en SVG) |
 | `packages/shell` | Visor interactivo: pan/zoom, colapso, arrastre |
 | `packages/estudio` | App de navegador de `dev` (la [UI de dev](docs/guia/ui-de-dev.md)): lienzo, editor, Issues, Temas, Historial de archivos y feed del agente |
-| `packages/cli` | `validate`, `build`, `dev`, `inspect`, `edit`, `skill`; unico paquete que toca disco y servidor de `dev` |
+| `packages/cli` | `validate`, `build`, `dev`, `inspect`, `edit`, `skill`, `scan`; unico paquete que toca disco y servidor de `dev` |
+| `packages/scanner` | Scanner: reads a codebase, without running it, into a Scan draft; outside the core, only `cli` imports it |
 | `examples/tutorial` | El tutorial, un Workspace por paso |
 | `examples/rinthel-arch` | Este repo documentado con su propio DSL, con sus Temas de ejemplo |
 | `examples/temas` | Temas sueltos de muestra (catalogo de formas, Capa `code`, secuencia, ER) |

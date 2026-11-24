@@ -16,10 +16,10 @@ describe('cli: ayuda', () => {
     const { exitCode, stdout, stderr } = await run(argv);
     expect(exitCode).toBe(0);
     expect(stderr).toBe('');
-    for (const comando of ['validate', 'build', 'dev', 'inspect', 'edit', 'skill']) expect(stdout).toContain(comando);
+    for (const comando of ['validate', 'build', 'dev', 'inspect', 'edit', 'skill', 'scan']) expect(stdout).toContain(comando);
   });
 
-  it.each(['validate', 'build', 'dev', 'inspect', 'edit', 'skill'])('%s --help y help %s explican sus opciones sin exigir --workspace', async (comando) => {
+  it.each(['validate', 'build', 'dev', 'inspect', 'edit', 'skill', 'scan'])('%s --help y help %s explican sus opciones sin exigir --workspace', async (comando) => {
     const directa = await run([comando, '--help']);
     const indirecta = await run(['help', comando]);
     expect(directa.exitCode).toBe(0);
@@ -34,6 +34,7 @@ describe('cli: ayuda', () => {
       inspect: ['--tipo', '--estado', '--diagrama', '--catalogo', '--json'],
       edit: ['--view', '--node', '--x', '--y', '--edits', '--hash'],
       skill: ['--out'],
+      scan: ['--out', '--json', '--depth', '--max-files'],
     };
     for (const [comando, opciones] of Object.entries(esperadas)) {
       const { stdout } = await run([comando, '--help']);
