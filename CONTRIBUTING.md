@@ -44,10 +44,15 @@ No hay CI: las pruebas se corren en local. El hook de pre-commit corre `pnpm che
 | `packages/estudio` | App de navegador de `dev` (la [UI de dev](docs/guia/ui-de-dev.md)): lienzo, editor, Issues, Temas, Historial de archivos y feed del agente |
 | `packages/cli` | `validate`, `build`, `dev`, `inspect`, `edit`, `skill`, `scan`; unico paquete que toca disco y servidor de `dev` |
 | `packages/scanner` | Scanner: reads a codebase, without running it, into a Scan draft; outside the core, only `cli` imports it |
+| `npm` | The publishable `rinthel-arch` npm package: manifest and README; `pnpm npm:package` fills `dist/`, the licenses and the third-party notice |
 | `examples/tutorial` | El tutorial, un Workspace por paso |
 | `examples/rinthel-arch` | Este repo documentado con su propio DSL, con sus Temas de ejemplo |
 | `examples/temas` | Temas sueltos de muestra (catalogo de formas, Capa `code`, secuencia, ER) |
 | `examples/temas/galeria` | Un Modelo comun para los Temas de ejemplo (de `examples/rinthel-arch/temas`, via `--theme-path`), y estados de cada Nodo |
+
+## npm package
+
+`rinthel-arch` on npm is one package that bundles the whole CLI (`npm/`, outside the pnpm workspace). After `pnpm build`, `pnpm npm:package` writes `npm/dist/` (the esbuild bundle `bin.js`, the Dev UI assets in `estudio/` and the Scanner's `.wasm`), `LICENSE`, `LICENSE-LIKEC4` and `THIRD-PARTY-NOTICES.md` (generated from `pnpm licenses list`); then `npm pack` in `npm/` builds the tarball. `tests/npm-package.test.ts`, part of `pnpm test`, packs it, installs it in an empty folder and runs `validate`, `scan` and `dev`. elkjs is redistributed under EPL-2.0: the notice carries its license text and where to get its source. Publishing is manual, with interactive 2FA, and not part of any test.
 
 ## Ramas de research y prototipos
 

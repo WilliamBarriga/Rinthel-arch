@@ -46,6 +46,17 @@ describe('construirEstudio', () => {
     expect(pagina).toContain('./trozos/');
   }, 60_000);
 
+  it('ELK ships once, in the Worker: no page chunk carries a copy', async () => {
+    const salida = temporal();
+
+    await construirEstudio({ salida });
+
+    const elk = (archivo: string): boolean => readFileSync(join(salida, archivo), 'utf8').includes('org.eclipse.elk');
+    const pagina = ['pagina.js', ...readdirSync(join(salida, 'trozos')).map((t) => join('trozos', t))];
+    expect(pagina.filter(elk)).toEqual([]);
+    expect(elk('worker.js')).toBe(true);
+  }, 60_000);
+
   it('el paso de CSS es conectable: recibe la entrada y su salida es la hoja servida', async () => {
     const salida = temporal();
     const entradas: string[] = [];
