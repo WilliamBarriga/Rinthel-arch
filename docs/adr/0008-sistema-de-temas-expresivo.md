@@ -137,3 +137,9 @@ Se conserva del ADR 0006 el principio de que layout y render leen las mismas Met
 - Vocabulario nuevo en `CONTEXT.md`: Capa, Primitiva, Familia, Slot, Movimiento, Parte de Tema, Componente de Tema y Tema por defecto.
 - El contrato del CLI para Temas (`inspect tema`, `validate`, recarga de `dev`) esta en la enmienda del ADR 0005; `edit` no cambia.
 - Fuera de alcance: la integracion con slides, video u otros consumidores, y mezclar Temas completos dentro de una Vista.
+
+## Amendment (map #211, ticket #227): language, `planned` state and export
+
+- **Language**: user-facing guide prose is bilingual (English primary, Spanish secondary, each guide paired with its translation). Every message an agent or user reads from the CLI (`validate` and `fix` messages, errors, `--help`) is in English, using the English canonical terms of `CONTEXT.md`. The DSL keywords were already English.
+- **`planned` Theme state**: a new paint-only state, like `fantasma`; it never changes Metrics. The default Theme draws it with a dashed border and low opacity, any Theme may restyle it, and without its own patch it inherits the default Theme's. Mark semantics live in ADR 0011.
+- **Export is no longer out of scope**: the statement "static SVG, PNG and export in general are out" in "Render hibrido" is superseded. A self-contained static HTML export of a Workspace is part of the map; PNG and static SVG remain out, and there is still no per-Primitive exportability mark.

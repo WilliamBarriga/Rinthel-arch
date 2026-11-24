@@ -35,7 +35,7 @@ Antes de adoptar una dependencia, investigarla (licencia, mantenimiento, encaje 
 - El nucleo es agnostico del proyecto documentado; todo lo especifico de un proyecto vive como ejemplo o caso de uso.
 - Este repo es independiente: no depende de ningun repo consumidor. Integrar el sistema en un repo consumidor (slides, video u otro) es trabajo de ese repo, fuera de este. Slides, video y los demas son casos de uso del contrato de `render`.
 - Eraser DSL y Archify estan descartados; no reintroducirlos.
-- Docs y respuestas en espanol. Sin emojis unicode (`pnpm check:emojis` lo verifica).
+- Language: the whole repo is written in English (code, docs, commit messages, CLI messages). Spanish is secondary and lives only in `README.es.md` and the Spanish guides (`docs/guia/`); touching a guide means touching its pair in the other language. Answer the user in Spanish. No unicode emojis (`pnpm check:emojis` verifies it).
 
 ## Verificacion
 
