@@ -44,17 +44,29 @@ const COMUNES = {
   define: { 'process.env.NODE_ENV': '"production"' },
 } as const;
 
-/** La pagina como modulo ES con trozos: ruta relativa a `salida` -> contenido. */
+/**
+ * La pagina como modulo ES con trozos: ruta relativa a `salida` -> contenido. Only chunks reachable from `pagina.js`
+ * are kept: esbuild still emits a chunk for a dynamic `import()` whose caller was tree-shaken (ELK's
+ * `elk.bundled.js` from `layout`, which the page never runs because layout happens in the Worker).
+ */
 async function empaquetarPagina(entrada: string, salida: string): Promise<Record<string, Uint8Array>> {
-  const { outputFiles } = await build({
+  const { outputFiles, metafile } = await build({
     ...COMUNES,
     entryPoints: { pagina: entrada },
     format: 'esm',
     splitting: true,
+    metafile: true,
     outdir: salida,
     chunkNames: 'trozos/[name]-[hash]',
   });
-  return Object.fromEntries(outputFiles.map((f) => [relative(resolve(salida), f.path).split(sep).join('/'), f.contents]));
+  const alcanzables = new Set<string>();
+  const pendientes = Object.keys(metafile.outputs).filter((ruta) => resolve(ruta) === resolve(salida, 'pagina.js'));
+  for (let ruta = pendientes.pop(); ruta !== undefined; ruta = pendientes.pop()) {
+    if (alcanzables.has(resolve(ruta))) continue;
+    alcanzables.add(resolve(ruta));
+    pendientes.push(...(metafile.outputs[ruta]?.imports ?? []).filter((i) => !i.external).map((i) => i.path));
+  }
+  return Object.fromEntries(outputFiles.filter((f) => alcanzables.has(resolve(f.path))).map((f) => [relative(resolve(salida), f.path).split(sep).join('/'), f.contents]));
 }
 
 async function empaquetar(entrada: string, alias: Record<string, string> = {}, plugins: Plugin[] = []): Promise<string> {
