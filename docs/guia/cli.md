@@ -6,7 +6,7 @@ El CLI es `packages/cli/dist/bin.js` (tras `pnpm build`). En esta guia se abrevi
 alias dg="node $PWD/packages/cli/dist/bin.js"
 ```
 
-`dg --help` lista los comandos y `dg <comando> --help` da las opciones de cada uno (la ayuda sale en stdout, codigo 0). Todos salvo `scan` piden `--workspace <ruta>`, la carpeta con los `.dg`. Contrato de diseno: [ADR 0005](../adr/0005-cli-para-agentes.md).
+`dg --help` lista los comandos y `dg <comando> --help` da las opciones de cada uno (la ayuda sale en stdout, codigo 0). Todos salvo `scan` piden `--workspace <ruta>` (en `scan` es opcional), la carpeta con los `.dg`. Contrato de diseno: [ADR 0005](../adr/0005-cli-para-agentes.md).
 
 ## Codigos de salida
 
@@ -97,7 +97,7 @@ Genera un `SKILL.md` con los Tipos de nodo, Temas, sintaxis, contratos y codigos
 ### `scan`: Borrador de escaneo de una codebase
 
 ```
-dg scan [<raiz>] [--out <archivo>] [--json] [--depth <N>] [--max-files <N>]
+dg scan [<raiz>] [--out <archivo>] [--json] [--depth <N>] [--max-files <N>] [--workspace <ruta>]
 ```
 
 Lee la codebase de `<raiz>` (la carpeta actual por defecto) sin ejecutar nada y escribe el Borrador de escaneo `rinthel/scan@1` en `<raiz>/.rinthel/scan.json` (o en `--out`; no se versiona). No usa `--workspace` ni escribe `.dg`: el agente lee el Borrador y escribe el Workspace, que se valida con `validate`. Contrato: [ADR 0010](../adr/0010-importador-de-codebases.md).
@@ -109,6 +109,12 @@ Lee la codebase de `<raiz>` (la carpeta actual por defecto) sin ejecutar nada y 
 - **Limites** (`limits`): archivos leidos, `truncated` si se llego a `--max-files` (20000 por defecto; no falla), imports sin resolver (alias, URLs), archivos de mas de 1 MB sin parsear y los lenguajes cuyos imports esta version no lee (dan unidades sin dependencias).
 
 Cada item lleva `source {file, line}` (linea 0: la carpeta misma) y `confidence` (`extracted` o `inferred`). Respeta los `.gitignore` y siempre salta `node_modules`, `dist`, `build`, `.venv`, `venv`, `vendor`, `third_party`, `__pycache__`, `.git`, `.rinthel` y `.diagrams`. Con el mismo commit, el Borrador es identico byte a byte. stdout es un resumen compacto que termina con el siguiente paso; con `--json`, ese resumen como un objeto con su propio `contractVersion` (`draft`, `schema`, `commit`, `counts`, `limits` y las 15 primeras `units`, `dependencies`, `externals` y `tables`). Si hay tablas, el siguiente paso sugiere una Vista `er`. Sale 0 si escribio el Borrador y 2 en un fallo de uso.
+
+Refrescar un Workspace ya escrito ([ADR 0010](../adr/0010-importador-de-codebases.md), enmienda "refresh incremental"):
+
+- **Cobertura de escaneo** (`coverage`): si hay un Workspace (`--workspace <ruta>`, o la carpeta menos profunda bajo `<raiz>`, hasta 4 niveles, que tenga archivos `.dg`), `scan` lo compila sin ejecutar nada y lo compara con el Borrador solo por las Sources `path` de sus Nodos: unidades y tablas que ningun Nodo cita (`units.uncovered`, `tables.uncovered`), refs que no son ningun id del Borrador (`orphanRefs`, por Nodo) y, en los Nodos que citan una tabla, columnas sin Atributo (`missing`) y Atributos sin columna (`extra`). Es informativa: no son Issues y la salida sigue en 0. Si hay dos o mas Workspaces a la misma profundidad o el Workspace no compila, `coverage` trae `error` y el texto lo dice. Sin Workspace, `coverage` es `null`. Con cobertura, el siguiente paso pasa a ser refrescar el Workspace.
+- **`.rinthel/scan-ignore`** (se versiona): patrones estilo `.gitignore` sobre ids de unidad, de tabla y refs (`packages/legacy-*`, `audit_log`; la unidad raiz solo con una linea `.`). Lo que casa sale de la cobertura (y se cuenta en `ignored`), no del Borrador.
+- **Cambios desde el escaneo anterior** (`changes`): antes de escribir, `scan` rota el Borrador previo a `scan.prev.json` junto a `--out` (`.rinthel/scan.prev.json` por defecto, no se versiona) y lista por id las unidades, dependencias, externos, tablas y columnas (`<tabla>#<columna>`, solo de tablas que siguen) agregados o quitados, con los dos commits. Una tabla cuyo id se cualifico porque aparecio otra con el mismo nombre sale como quitada y agregada. Sin Borrador previo, `changes` es `null`.
 
 ### `export`: un HTML autocontenido para mandar a cualquiera
 

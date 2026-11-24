@@ -1,0 +1,5 @@
+{
+  "name": "@acme/api",
+  "main": "src/index.ts",
+  "dependencies": { "stripe": "^1.0.0" }
+}

@@ -5,10 +5,11 @@ The Scanner: reads a codebase, without running it, into a Scan draft `rinthel/sc
 - `scan(root, { depth, maxFiles })` lists files (`.gitignore`, `EXCLUDED_FOLDERS`, `maxFiles` cap), finds units from manifests (`src/manifests.ts`), splits large leaf units into `folder` sub-units (`src/units.ts`), reads imports per language (`src/imports/`: TS/JS and Python, via `web-tree-sitter`) and aggregates them into `dependencies` and `externals`. `serializeDraft` gives the exact bytes `diagrams scan` writes.
 - Deterministic: sorted output, ids from paths and names, no clock; the commit is read from `.git` files, never by running `git`.
 - Reads database tables statically (`src/tables/`): Prisma schemas and SQL DDL with hand-written readers (no parser dependency), and Drizzle, Django and SQLAlchemy models read from the TypeScript and Python syntax trees (never imported or run; what cannot be read lowers `confidence`), table ids and relation targets resolved across extractors.
+- For refreshing a Workspace (`src/refresh.ts`): `diffDrafts(previous, current)` gives the ids added and removed between two drafts, and `idMatcher(patterns)` matches ids against `.rinthel/scan-ignore`.
 - Extension points: `MANIFEST_READERS`, `IMPORT_EXTRACTORS` and `TABLE_EXTRACTORS` (`src/tables/index.ts`).
 
 ## Que NO hace
-- No writes to disk, no summary text, no Scan coverage against a Workspace: that is `cli` (`diagrams scan`).
+- No writes to disk, no summary text, no Scan coverage against a Workspace (it needs the compiled Model): that is `cli` (`diagrams scan`, `src/scan-coverage.ts`).
 - No knowledge of the DSL, the Model or Themes: the agent turns the draft into `.dg` files and `validate` checks them.
 
 ## Depende de

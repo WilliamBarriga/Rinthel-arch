@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -74,6 +74,8 @@ describe('scan', () => {
         { id: 'npm:stripe', weight: 1 },
       ],
       tables: [],
+      coverage: null,
+      changes: null,
       next: expect.not.stringContaining('er View'),
     });
   });
@@ -160,6 +162,134 @@ describe('scan', () => {
     expect(exitCode).toBe(2);
     expect(stdout).toBe('');
     expect(stderr).toContain(message);
+  });
+
+  it('--json reports Scan coverage against the Workspace found under the root, matched only by Source path refs', async () => {
+    const root = repo('scan-coverage');
+
+    const { exitCode, stdout } = await run(['scan', root, '--json']);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout).coverage).toEqual({
+      workspace: join(root, 'diagrams'),
+      units: { total: 3, covered: 1, uncovered: ['.', 'packages/api'] },
+      tables: { total: 2, covered: 1, uncovered: ['Post'] },
+      orphanRefs: [{ node: 'legacy', ref: 'packages/legacy' }],
+      columns: [{ node: 'users', table: 'User', missing: ['email'], extra: ['nickname'] }],
+      ignored: 0,
+    });
+  });
+
+  it('the summary lists the coverage gaps and points to refreshing the Workspace; gaps keep exit code 0', async () => {
+    const root = repo('scan-coverage');
+
+    const { exitCode, stdout } = await run(['scan', root]);
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain(
+      [
+        '',
+        `Scan coverage against ${join(root, 'diagrams')}: 1 of 3 units and 1 of 2 tables cited by a Node.`,
+        '  uncovered unit   .',
+        '  uncovered unit   packages/api',
+        '  uncovered table  Post',
+        '  orphan ref       packages/legacy  in Node legacy',
+        '  columns          User             in Node users: missing email; extra nickname',
+        '',
+        'Next: refresh the Workspace: cite the uncovered units and tables worth showing, re-point or remove orphan refs and',
+        'align Attributes with their columns; never rewrite what a covered Node says. Then run diagrams validate --workspace',
+        '<workspace>. Guide: skill rinthel-diagramas, "Refresh from code".',
+        '',
+      ].join('\n'),
+    );
+  });
+
+  it('--workspace chooses the Workspace; one that does not compile only adds a coverage note', async () => {
+    const root = repo('scan-coverage');
+    const broken = mkdtempSync(join(tmpdir(), 'scan-ws-'));
+    writeFileSync(join(broken, 'model.dg'), 'model {');
+
+    const { exitCode, stdout } = await run(['scan', root, '--json', '--workspace', broken]);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout).coverage).toEqual({ workspace: broken, error: expect.stringContaining('does not compile') });
+    expect((await run(['scan', root, '--workspace', broken])).stdout).toContain(`Scan coverage against ${broken}: the Workspace does not compile`);
+  });
+
+  it('several Workspaces at the same depth ask for --workspace instead of guessing', async () => {
+    const root = repo('scan-coverage');
+    cpSync(join(root, 'diagrams'), join(root, 'docs'), { recursive: true });
+
+    const summary = JSON.parse((await run(['scan', root, '--json'])).stdout);
+
+    expect(summary.coverage).toEqual({ workspace: null, error: 'several Workspaces under the root (diagrams, docs); pass --workspace <path>' });
+    expect(summary.next).toContain('write the Workspace .dg files');
+  });
+
+  it('.rinthel/scan-ignore removes matching ids from coverage but not from the draft', async () => {
+    const root = repo('scan-coverage');
+    mkdirSync(join(root, '.rinthel'));
+    writeFileSync(join(root, '.rinthel/scan-ignore'), '# deliberate omissions\npackages/*\nPost\n.\n');
+
+    const { stdout } = await run(['scan', root, '--json']);
+
+    expect(JSON.parse(stdout).coverage).toMatchObject({
+      units: { total: 3, covered: 1, uncovered: [] },
+      tables: { total: 2, covered: 1, uncovered: [] },
+      orphanRefs: [],
+      ignored: 4,
+    });
+    const draft = JSON.parse(readFileSync(join(root, '.rinthel/scan.json'), 'utf8'));
+    expect(draft.units.map(({ id }: { id: string }) => id)).toEqual(['.', 'apps/web', 'packages/api']);
+    expect(draft.tables.map(({ id }: { id: string }) => id)).toEqual(['Post', 'User']);
+    expect((await run(['scan', root])).stdout).toContain('4 ids ignored by .rinthel/scan-ignore.');
+  });
+
+  it('a second scan rotates the previous draft to scan.prev.json and reports what changed since it', async () => {
+    const root = repo('scan-coverage');
+    expect(JSON.parse((await run(['scan', root, '--json'])).stdout).changes).toBeNull();
+    const first = readFileSync(join(root, '.rinthel/scan.json'), 'utf8');
+    mkdirSync(join(root, 'packages/billing/src'), { recursive: true });
+    writeFileSync(join(root, 'packages/billing/package.json'), '{ "name": "@acme/billing" }\n');
+    writeFileSync(join(root, 'packages/billing/src/index.ts'), "import { z } from 'zod';\nexport const schema = z;\n");
+    writeFileSync(join(root, 'apps/web/src/main.tsx'), 'export const App = 1;\n');
+    writeFileSync(join(root, 'prisma/schema.prisma'), 'model User {\n  id    Int    @id\n  email String @unique\n  name  String?\n}\n');
+
+    const { exitCode, stdout } = await run(['scan', root, '--json']);
+
+    expect(exitCode).toBe(0);
+    expect(readFileSync(join(root, '.rinthel/scan.prev.json'), 'utf8')).toBe(first);
+    expect(JSON.parse(stdout).changes).toEqual({
+      previous: join(root, '.rinthel/scan.prev.json'),
+      commits: { previous: null, current: null },
+      units: { added: ['packages/billing'], removed: [] },
+      dependencies: { added: [], removed: ['apps/web->packages/api'] },
+      externals: { added: ['npm:zod'], removed: ['npm:react'] },
+      tables: { added: [], removed: ['Post'] },
+      columns: { added: ['User#name'], removed: [] },
+    });
+    expect((await run(['scan', root])).stdout).toContain('No changes since the previous scan (no commit -> no commit).');
+  });
+
+  it('the summary lists the changes since the previous scan', async () => {
+    const root = repo('scan-coverage');
+    await run(['scan', root]);
+    writeFileSync(join(root, 'apps/web/src/main.tsx'), 'export const App = 1;\n');
+    writeFileSync(join(root, 'prisma/schema.prisma'), 'model User {\n  id Int @id\n}\n');
+
+    const { stdout } = await run(['scan', root]);
+
+    expect(stdout).toContain(
+      [
+        '',
+        'Changes since the previous scan (no commit -> no commit):',
+        '  - dependency  apps/web -> packages/api',
+        '  - external    npm:react',
+        '  - table       Post',
+        '  - column      User#email',
+        '',
+      ].join('\n'),
+    );
   });
 
   it('a root that is not a folder is a usage error', async () => {
