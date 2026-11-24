@@ -1,134 +1,144 @@
 ---
 name: rinthel-diagramas
-description: Escribir, validar y servir diagramas .dg (Nodos, Aristas, Vistas, Pasos; Tipos de diagrama architecture, flow, sequence y er) con el CLI `diagrams` de rinthel-arch. Usalo al crear o editar un Workspace, escribir una Interaccion o una tabla ER, arreglar issues de validate, reordenar Lifelines o mostrar un diagrama al usuario.
+description: Write, validate and serve .dg diagrams (Nodes, Edges, Views, Steps; Diagram types architecture, flow, sequence and er) with the rinthel-arch `diagrams` CLI. Use when creating or editing a Workspace, writing an Interaction or an ER table, fixing validate issues, reordering Lifelines or showing a diagram to the user.
+compatibility: Requires Node 22 or newer and the `diagrams` CLI (npm package rinthel-arch). Use `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams`. Serving the viewer needs a free local port; images need a headless browser.
 ---
 
-# Diagramas: escribir y servir
+# Diagrams: write and serve
 
-Un **Workspace** es una carpeta de `.dg`; el DSL de texto es la unica fuente editable (ADR 0001). `.diagrams/` es salida derivada: se regenera, no se edita. Vocabulario exacto en `CONTEXT.md` (Modelo, Vista, Pin, Paso).
+A **Workspace** is a folder of `.dg` files; the text DSL is the only editable source. `.diagrams/` is derived output: it is regenerated, never edited. Vocabulary: Model, View, Pin, Step.
 
-El CLI es `diagrams` (abreviado `dg`; si no esta instalado, `node <rinthel-arch>/packages/cli/dist/bin.js` tras `pnpm build` en ese repo). `dg <comando> --help` es la fuente de las opciones. Las rutas `docs/` y `examples/` de abajo son del repo rinthel-arch.
+Below, `dg` stands for the CLI: run `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams` (the pinned version keeps the JSON contract stable under this skill). `dg <command> --help` is the source of the options. Syntax: `references/dsl-reference.md`.
 
-## Bucle
+## Loop
 
-1. **Ubicar**: `dg inspect search <texto> --workspace <ruta>` da ids cualificados y `archivo:linea`. Usa ids que `inspect` devolvio.
-2. **Editar** el `.dg`. Sintaxis en `docs/guia/referencia-dsl.md`; ejemplo vivo: `examples/rinthel-arch/`.
-3. **Validar**: `dg validate --workspace <ruta> --json`. Aplica primero cada `fix` (por `dg edit --edits '<json>'` o a mano), lee `hint` cuando no hay `fix`, y guiate por `code` (estable; `message` cambia).
-4. **Cerrar** cuando `ok` es `true` y el resumen no trae errores. Con `--strict`, tambien sin avisos.
-5. **Mirar** el resultado (abajo) cuando el cambio es visual: una Vista nueva, Pins, Pasos.
+1. **Locate**: `dg inspect search <text> --workspace <path>` gives qualified ids and `file:line`. Use ids that `inspect` returned.
+2. **Edit** the `.dg`. Syntax in `references/dsl-reference.md`; a starter Workspace is in "Start a Workspace" below.
+3. **Validate**: `dg validate --workspace <path> --json`. Apply each `fix` first (through `dg edit --edits '<json>'` or by hand), read `hint` when there is no `fix`, and key on `code` (stable; `message` changes).
+4. **Close** when `ok` is `true` and the summary has no errors. With `--strict`, no warnings either.
+5. **Look** at the result (see "Serve and show") when the change is visual: a new View, Pins, Steps.
 
-## Elegir el Tipo de diagrama
+## Start a Workspace
 
-El Tipo (`type` de la Vista) decide como se dibuja el mismo Modelo; el Modelo no cambia.
-
-| El usuario quiere... | `type` | Que se escribe |
-| --- | --- | --- |
-| Piezas y sus dependencias | `architecture` | Nodos y Aristas; `include`, `depth`, `pin` |
-| Un recorrido paso a paso por piezas | `flow` | Lo mismo mas `steps { show/hide }` |
-| Quien llama a quien y en que orden | `sequence` | Una `interaction` en `model` y una Vista que la proyecta |
-| Tablas, columnas y claves foraneas | `er` | Atributos con `pk fk uk` y Aristas con cardinalidad |
-
-Un mismo Modelo admite varias Vistas de Tipos distintos. Detalle de cada sintaxis: `docs/guia/referencia-dsl.md` (secciones Interacciones, Vista de secuencia, Vistas `er`).
-
-## Secuencia
-
-Una **Interaccion** es un escenario ordenado entre Nodos del Modelo (las Lifelines); la Vista `sequence` la proyecta. Este ejemplo valida tal cual:
+A new Workspace is a folder with one `main.dg`. This one validates as is and draws an `architecture` View:
 
 ```
-specification { node servicio { description "Un servicio" icon box color blue } }
+specification {
+  node service  { description "A piece of logic" icon server   color blue }
+  node database { description "Storage"          icon database color green }
+}
 model {
-  servicio cliente "Cliente"
-  servicio api "API"
-  servicio db "Base de datos"
-  interaction compra "Compra" {
-    pedido: cliente -> api "POST /pedidos"
-    alt "hay stock" {
-      api -> db "reservar"
+  service api "API"
+  database db "Database"
+  api -> db "reads and writes"
+}
+view overview { type architecture include ** }
+```
+
+Grow it by adding Nodes and Edges to `model`, kinds to `specification` and Views as needed. Keep Themes in `theme.dg` or a `themes/` folder and fonts in `fonts/` (see skill `rinthel-temas`).
+
+## Pick the Diagram type
+
+The Diagram type (`type` of the View) decides how the same Model is drawn; the Model does not change.
+
+| The user wants... | `type` | What to write |
+| --- | --- | --- |
+| Pieces and their dependencies | `architecture` | Nodes and Edges; `include`, `depth`, `pin` |
+| A step-by-step walk through pieces | `flow` | The same plus `steps { show/hide }` |
+| Who calls whom and in what order | `sequence` | An `interaction` in `model` and a View that projects it |
+| Tables, columns and foreign keys | `er` | Attributes with `pk fk uk` and Edges with cardinality |
+
+One Model admits several Views of different types. Each syntax in detail: `references/dsl-reference.md` (sections Interactions, Sequence View, `er` Views).
+
+## Sequence
+
+An **Interaction** is an ordered scenario between Model Nodes (the Lifelines); the `sequence` View projects it. This example validates as is:
+
+```
+specification { node service { description "A service" icon box color blue } }
+model {
+  service client "Client"
+  service api "API"
+  service db "Database"
+  interaction purchase "Purchase" {
+    order: client -> api "POST /orders"
+    alt "in stock" {
+      api -> db "reserve"
       reply db -> api "ok"
-    } else "sin stock" {
-      api -> cliente "rechazar"
+    } else "out of stock" {
+      api -> client "reject"
     }
-    note right of db "idempotente"
-    reply api -> cliente "201"
+    note right of db "idempotent"
+    reply api -> client "201"
   }
 }
-view compra { type sequence interaction compra order cliente, api autonumber }
+view purchase { type sequence interaction purchase order client, api, db autonumber }
 ```
 
-- Mensaje: `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"]`. El orden de declaracion es el orden temporal; las activaciones se derivan (un `sync` abre, el `reply` cierra).
-- Fragmentos `opt loop break critical`, `alt { } else { }`, `par { } and { }`; Notas `note left|right of X`, `note over X, Y`; `ref otra-interaccion` (declara tambien una Vista que proyecte la referida).
-- Vista `sequence`: `interaction` obligatoria; `order` opcional; `depth`, `collapsed`, `exclude`, `autonumber`. `include` y `pin` no valen. Pasos: `step "titulo" { upto <id de Mensaje> }` o `steps each`; ponle `id:` a los Mensajes que un Paso corta.
-- `dg inspect interaction <id> --workspace <ruta>` da sus Lifelines en orden, cuantos Mensajes tiene y las Vistas que la proyectan.
+- Message: `[id:] [async|reply|create|destroy] origin -> target ["label"]`. Declaration order is time order; activations are derived (a `sync` opens, the `reply` closes).
+- Fragments `opt loop break critical`, `alt { } else { }`, `par { } and { }`; Notes `note left|right of X`, `note over X, Y`; `ref other-interaction` (also declare a View that projects the referenced one).
+- `sequence` View: `interaction` required; `order` optional; `depth`, `collapsed`, `exclude`, `autonumber`. `include` and `pin` do not apply. Steps: `step "title" { upto <Message id> }` or `steps each`; give an `id:` to the Messages a Step cuts at.
+- `dg inspect interaction <id> --workspace <path>` gives its Lifelines in order, how many Messages it has and the Views that project it.
 
-### Codigos de secuencia y ER al validar
+### Sequence and ER codes in validate
 
-| `code` | Accion |
+| `code` | Action |
 | --- | --- |
-| `unknown-lifeline`, `unknown-interaction`, `unknown-step` | Aplica el `fix` (typo) o elige un id de la lista del `hint` |
-| `sequence-without-interaction` | Agrega `interaction <id>` a la Vista |
-| `view-property-for-type` | Quita la propiedad o cambia `type`; el `hint` dice cual |
-| `create-not-first`, `after-destroy` | Mueve el `create` a la primera aparicion o saca los Mensajes posteriores al `destroy`; `related` apunta al otro extremo |
-| `invalid-fragment-operand` | `else` solo en `alt`, `and` solo en `par`; `opt/loop/break/critical` tienen un operando |
-| `step-not-advancing`, `step-not-projected`, `steps-each-with-step` | Pasos que solo avanzan, sobre Mensajes proyectados; no mezcles `steps each` con `step` |
-| `er-cardinality` | Solo `0..1`, `1`, `0..*`, `1..*` en Vista `er`; aplica el `fix` |
-| `duplicate-key-mark` | Aplica el `fix` (borra la marca repetida) |
-| `reply-without-sync`, `order-not-in-interaction`, `ref-without-view` | Avisos: revisa el orden de los Mensajes, el `order` o agrega la Vista de la Interaccion referida |
+| `unknown-lifeline`, `unknown-interaction`, `unknown-step` | Apply the `fix` (typo) or pick an id from the `hint` list |
+| `sequence-without-interaction` | Add `interaction <id>` to the View |
+| `view-property-for-type` | Remove the property or change `type`; the `hint` says which |
+| `create-not-first`, `after-destroy` | Move the `create` to the first appearance or remove the Messages after the `destroy`; `related` points at the other end |
+| `invalid-fragment-operand` | `else` only in `alt`, `and` only in `par`; `opt/loop/break/critical` have one operand |
+| `step-not-advancing`, `step-not-projected`, `steps-each-with-step` | Steps only advance, over projected Messages; do not mix `steps each` with `step` |
+| `er-cardinality` | Only `0..1`, `1`, `0..*`, `1..*` in an `er` View; apply the `fix` |
+| `duplicate-key-mark` | Apply the `fix` (deletes the repeated mark) |
+| `reply-without-sync`, `order-not-in-interaction`, `ref-without-view` | Warnings: check Message order, the `order`, or add the View of the referenced Interaction |
 
-La lista completa de codigos sale de `dg skill --workspace <ruta>`.
+The full list of codes comes from `dg skill --workspace <path>`.
 
-### Reordenar Lifelines
+### Reorder Lifelines
 
-Arrastrar una cabecera en el visor reescribe `order`. Por CLI, con el orden visible completo:
+Dragging a header in the viewer rewrites `order`. From the CLI, with the full visible order:
 
 ```
-dg edit --workspace <ruta> --intent '{"type":"reorder-lifelines","view":"compra","order":["api","cliente","db"]}'
+dg edit --workspace <path> --intent '{"type":"reorder-lifelines","view":"purchase","order":["api","client","db"]}'
 ```
 
 ## ER
 
-Una Vista `type er` dibuja cada Nodo hoja como tabla. Este ejemplo valida tal cual:
+A `type er` View draws each leaf Node as a table. This example validates as is:
 
 ```
-specification { node tabla { description "Tabla" icon box color blue } }
+specification { node table { description "Table" icon box color blue } }
 model {
-  tabla clientes "Clientes" {
+  table customers "Customers" {
     id: uuid pk
-    email: text? uk "unico"
+    email: text? uk "unique"
   }
-  tabla pedidos "Pedidos" {
+  table orders "Orders" {
     id: uuid pk
-    cliente_id: uuid fk
+    customer_id: uuid fk
   }
-  pedidos#cliente_id "0..*" -> "1" clientes#id "pertenece" identifying
+  orders#customer_id "0..*" -> "1" customers#id "belongs to" identifying
 }
-view tablas { type er include ** }
+view tables { type er include ** }
 ```
 
-- Atributo `nombre: tipo[?] [pk] [fk] [uk] ["notas"]`; `?` lo hace opcional. Arista `identifying` al final: trazo continuo, el resto discontinuo.
-- Extremos `nodo#atributo`; cardinalidades `0..1`, `1`, `0..*`, `1..*`.
-- Un Grupo colapsado agrega las FK de sus tablas (sin marcadores).
+- Attribute `name: type[?] [pk] [fk] [uk] ["notes"]`; `?` makes it optional. Trailing `identifying` on an Edge: solid line, the rest dashed.
+- Endpoints `node#attribute`; cardinalities `0..1`, `1`, `0..*`, `1..*`.
+- A collapsed Group aggregates the FKs of its tables (no markers).
 
-## Servir y mostrar
+## Serve and show
 
-- `dg dev --workspace <ruta> --port <N>` sirve la UI de dev en `http://127.0.0.1:<N>/#vista=<id>`. Es un proceso largo: lanzalo en segundo plano, vigila su salida hasta la linea con la URL y entrega esa URL al usuario.
-- `dev` recompila al guardar: edita el `.dg` y la UI se actualiza sola. El usuario tambien escribe desde la UI (editor, arrastres, `fix`, galeria de Temas) y puede deshacer desde el Historial de archivos: vuelve a leer el archivo antes de editarlo. Para que `dg edit` no pise un cambio suyo, pasale `--hash <archivo>=<hash>` con el `hash` de `GET /api/archivo/<ruta>` (rechaza con `stale-hash`: relee y reintenta; detalle en `docs/guia/cli.md`).
-- La UI muestra en su panel Agente cada `validate`, `build`, `inspect` y `edit` que corres y resalta lo que cambias. Exporta `DIAGRAMS_AGENTE=<tu nombre>` para que el usuario sepa quien fue; no pongas `DIAGRAMS_ACTIVIDAD=0` salvo que te lo pidan. Guia: `docs/guia/ui-de-dev.md`.
-- Para mandar el diagrama a alguien sin la herramienta: `dg export --workspace <ruta> --out <archivo>.html` escribe un HTML de solo lectura autocontenido (Vistas, Pasos, `link`, galeria de Temas). Para mostrarlo, sirve su carpeta con un servidor local y entrega la URL.
-- Imagen de una Vista: captura el visor de `dev` con un navegador headless y entrega al usuario una URL servida por un servidor local (`http://localhost:<puerto>/...`), no una ruta de archivo. En el repo rinthel-arch, `pnpm capturas --workspace <ruta> --vista <id> <tema>...` lo hace (necesita `pnpm build` y Chromium).
-- Un Workspace con Tema de codigo (`.tsx`) exige `--trust-code` o confirmar en el visor; confia solo en Workspaces propios.
+- `dg dev --workspace <path> --port <N>` serves the dev UI at `http://127.0.0.1:<N>/#vista=<id>`. It is a long process: start it in the background, watch its output until the line with the URL and hand that URL to the user.
+- `dev` recompiles on save: edit the `.dg` and the UI updates itself. The user also writes from the UI (editor, drags, `fix`, Theme gallery) and can undo from the file History: re-read the file before editing it. So `dg edit` does not overwrite their change, pass `--hash <file>=<hash>` with the `hash` from `GET /api/archivo/<path>` (rejects with `stale-hash`: re-read and retry).
+- The UI shows in its Agent panel every `validate`, `build`, `inspect` and `edit` you run and highlights what you change. Export `DIAGRAMS_AGENTE=<your name>` so the user knows who it was; do not set `DIAGRAMS_ACTIVIDAD=0` unless asked.
+- To send the diagram to someone without the tool: `dg export --workspace <path> --out <file>.html` writes a self-contained read-only HTML (Views, Steps, `link`, Theme gallery). To show it, serve its folder with a local server and hand over the URL.
+- Image of a View: capture the `dev` viewer with a headless browser and give the user a URL served by a local server (`http://localhost:<port>/...`), not a file path.
+- A Workspace with a code Theme (`.tsx`) needs `--trust-code` or confirmation in the viewer; trust only your own Workspaces.
 
-## Ejemplos para copiar
+## Look things up before inventing
 
-| Quiero... | Mira |
-| --- | --- |
-| El primer diagrama, paso a paso | `examples/tutorial/paso-1` a `paso-6`, y `docs/guia/tutorial.md` |
-| Un Modelo grande con drill-down y Pasos | `examples/rinthel-arch/` (Vistas `paquetes`, `flujo-edicion`) |
-| Ver un Tipo de nodo en cada estado | `examples/temas/galeria/` |
-| Secuencia y ER sobre el mapa del repo | `examples/rinthel-arch/fuente-canonica.dg` (`editar-pin`, `fuente-er`) |
-| Secuencia o ER con Tema propio | `examples/temas/secuencia.dg`, `examples/temas/er.dg` |
-
-## Consultar antes de inventar
-
-- Sintaxis o bloque desconocido: `docs/guia/referencia-dsl.md`.
-- Estetica, colores, fuentes, animacion: skill `rinthel-temas`.
-- Cambiar el DSL, un Tema de ejemplo o el CLI: actualiza `docs/guia/` (y `docs/guia/cli.md` si cambian opciones); `pnpm docs:catalogo` regenera `docs/referencia-catalogo.md`.
+- Unknown syntax or block: `references/dsl-reference.md`.
+- Look, colors, fonts, animation: skill `rinthel-temas`.
+- CLI options: `dg <command> --help`.
