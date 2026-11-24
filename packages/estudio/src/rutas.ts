@@ -6,3 +6,10 @@ export const ARCHIVOS_DEL_ESTUDIO = ['pagina.js', 'worker.js', 'estilo.css'] as 
 
 /** Carpeta de `dist/estudio/` con los trozos de la pagina que se cargan bajo demanda (nombres con hash). */
 export const CARPETA_DE_TROZOS = 'trozos';
+
+/** Page of an exported Dev UI (`diagrams export`), an IIFE in `dist/estudio/`; `dev` does not serve it. */
+export const PAGINA_EXPORTADA = 'exportado.js';
+
+/** Ids of the elements of an exported HTML that carry the data (JSON) and the layout Worker code (text). */
+export const ID_DE_LOS_DATOS = 'rinthel-datos';
+export const ID_DEL_WORKER = 'rinthel-worker';

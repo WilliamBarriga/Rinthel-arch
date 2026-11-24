@@ -6,7 +6,7 @@ El CLI es `packages/cli/dist/bin.js` (tras `pnpm build`). En esta guia se abrevi
 alias dg="node $PWD/packages/cli/dist/bin.js"
 ```
 
-`dg --help` lista los comandos y `dg <comando> --help` da las opciones de cada uno (la ayuda sale en stdout, codigo 0). Todos salvo `scan` piden `--workspace <ruta>`, la carpeta con los `.dg`. Contrato de diseno: [ADR 0005](../adr/0005-cli-para-agentes.md).
+`dg --help` lista los comandos y `dg <comando> --help` da las opciones de cada uno (la ayuda sale en stdout, codigo 0). Todos salvo `scan` piden `--workspace <ruta>` (en `scan` es opcional), la carpeta con los `.dg`. Contrato de diseno: [ADR 0005](../adr/0005-cli-para-agentes.md).
 
 ## Codigos de salida
 
@@ -97,7 +97,7 @@ Genera un `SKILL.md` con los Tipos de nodo, Temas, sintaxis, contratos y codigos
 ### `scan`: Borrador de escaneo de una codebase
 
 ```
-dg scan [<raiz>] [--out <archivo>] [--json] [--depth <N>] [--max-files <N>]
+dg scan [<raiz>] [--out <archivo>] [--json] [--depth <N>] [--max-files <N>] [--workspace <ruta>]
 ```
 
 Lee la codebase de `<raiz>` (la carpeta actual por defecto) sin ejecutar nada y escribe el Borrador de escaneo `rinthel/scan@1` en `<raiz>/.rinthel/scan.json` (o en `--out`; no se versiona). No usa `--workspace` ni escribe `.dg`: el agente lee el Borrador y escribe el Workspace, que se valida con `validate`. Contrato: [ADR 0010](../adr/0010-importador-de-codebases.md).
@@ -105,9 +105,28 @@ Lee la codebase de `<raiz>` (la carpeta actual por defecto) sin ejecutar nada y 
 - **Unidades** (`units`): una por manifiesto (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`), mas la raiz. Su `id` es la carpeta relativa a la raiz (`.` para la raiz) y es la ref de la Source `path` del Nodo que la dibuje. `parent` sale de la ruta y `kind` (`package`, `app`, `module`, `folder`) es una pista, no un Tipo de nodo. Un manifiesto sin otros manifiestos dentro y con 30 archivos o mas se parte en sub-unidades `folder` hasta `--depth` niveles (2 por defecto; 0 no parte).
 - **Dependencias** (`dependencies`): imports de TS/JS (`import`, `export ... from`, `import()`, `require()`) agregados por par de unidades, con `weight` (cuantos imports) y hasta 3 `examples` (`archivo:linea`). Los imports dentro de una misma unidad y los modulos de Node no cuentan.
 - **Externos** (`externals`): paquetes importados que no son unidades, con `importedBy`; `extracted` si un manifiesto los declara, `inferred` si solo un import los nombra.
+- **Tablas** (`tables`): leidas sin ejecutar nada de esquemas Prisma (`*.prisma`, incluso repartidos en varios archivos), de modelos Drizzle (`pgTable`, `mysqlTable`, `sqliteTable`), Django (`models.py`, tabla `db_table` o `<app>_<modelo>`, `id` implicito, tablas de `ManyToManyField`) y SQLAlchemy (clases con `__tablename__`, `Column`, `mapped_column` y `Table(...)`), leidos del arbol sintactico sin importar el codigo (un patron que no entiende baja `confidence` a `inferred`), y de DDL SQL (`*.sql`: `CREATE TABLE`, `ALTER TABLE`, `DROP TABLE`, `CREATE UNIQUE INDEX`). `name` es el nombre en la base (`@@map` y `@map` en Prisma), `origin` dice de donde salio (`prisma`, `sql`, `drizzle`, `django`, `sqlalchemy`), `columns` llevan `type` y `pk`, `fk`, `uk`, `optional`, y `relations` van de `<tabla>#<columna>` a `<tabla>#<columna>` con su `cardinality` (`["0..*", "1"]`). Su `id` es el nombre de la tabla, o `<archivo de esquema>:<nombre>` si dos esquemas tienen una tabla con el mismo nombre; es la ref de la Source `path` del Nodo que la dibuje en una Vista `er`. Los `.sql` de una carpeta se aplican en orden de ruta, asi que un historial de migraciones da las tablas finales; se saltan las migraciones `down` y las que genera Prisma (carpeta con `migration_lock.toml`) o drizzle-kit (con `meta/_journal.json`), cuyo esquema ya se lee.
 - **Limites** (`limits`): archivos leidos, `truncated` si se llego a `--max-files` (20000 por defecto; no falla), imports sin resolver (alias, URLs), archivos de mas de 1 MB sin parsear y los lenguajes cuyos imports esta version no lee (dan unidades sin dependencias).
 
-Cada item lleva `source {file, line}` (linea 0: la carpeta misma) y `confidence` (`extracted` o `inferred`). Respeta los `.gitignore` y siempre salta `node_modules`, `dist`, `build`, `.venv`, `venv`, `vendor`, `third_party`, `__pycache__`, `.git`, `.rinthel` y `.diagrams`. Con el mismo commit, el Borrador es identico byte a byte. stdout es un resumen compacto que termina con el siguiente paso; con `--json`, ese resumen como un objeto con su propio `contractVersion` (`draft`, `schema`, `commit`, `counts`, `limits` y las 15 primeras `units`, `dependencies` y `externals`). Sale 0 si escribio el Borrador y 2 en un fallo de uso.
+Cada item lleva `source {file, line}` (linea 0: la carpeta misma) y `confidence` (`extracted` o `inferred`). Respeta los `.gitignore` y siempre salta `node_modules`, `dist`, `build`, `.venv`, `venv`, `vendor`, `third_party`, `__pycache__`, `.git`, `.rinthel` y `.diagrams`. Con el mismo commit, el Borrador es identico byte a byte. stdout es un resumen compacto que termina con el siguiente paso; con `--json`, ese resumen como un objeto con su propio `contractVersion` (`draft`, `schema`, `commit`, `counts`, `limits` y las 15 primeras `units`, `dependencies`, `externals` y `tables`). Si hay tablas, el siguiente paso sugiere una Vista `er`. Sale 0 si escribio el Borrador y 2 en un fallo de uso.
+
+Refrescar un Workspace ya escrito ([ADR 0010](../adr/0010-importador-de-codebases.md), enmienda "refresh incremental"):
+
+- **Cobertura de escaneo** (`coverage`): si hay un Workspace (`--workspace <ruta>`, o la carpeta menos profunda bajo `<raiz>`, hasta 4 niveles, que tenga archivos `.dg`), `scan` lo compila sin ejecutar nada y lo compara con el Borrador solo por las Sources `path` de sus Nodos: unidades y tablas que ningun Nodo cita (`units.uncovered`, `tables.uncovered`), refs que no son ningun id del Borrador (`orphanRefs`, por Nodo) y, en los Nodos que citan una tabla, columnas sin Atributo (`missing`) y Atributos sin columna (`extra`). Es informativa: no son Issues y la salida sigue en 0. Si hay dos o mas Workspaces a la misma profundidad o el Workspace no compila, `coverage` trae `error` y el texto lo dice. Sin Workspace, `coverage` es `null`. Con cobertura, el siguiente paso pasa a ser refrescar el Workspace.
+- **`.rinthel/scan-ignore`** (se versiona): patrones estilo `.gitignore` sobre ids de unidad, de tabla y refs (`packages/legacy-*`, `audit_log`; la unidad raiz solo con una linea `.`). Lo que casa sale de la cobertura (y se cuenta en `ignored`), no del Borrador.
+- **Cambios desde el escaneo anterior** (`changes`): antes de escribir, `scan` rota el Borrador previo a `scan.prev.json` junto a `--out` (`.rinthel/scan.prev.json` por defecto, no se versiona) y lista por id las unidades, dependencias, externos, tablas y columnas (`<tabla>#<columna>`, solo de tablas que siguen) agregados o quitados, con los dos commits. Una tabla cuyo id se cualifico porque aparecio otra con el mismo nombre sale como quitada y agregada. Sin Borrador previo, `changes` es `null`.
+
+### `export`: un HTML autocontenido para mandar a cualquiera
+
+```
+dg export --workspace <ruta> --out <archivo>.html [--theme-path <dir>]
+```
+
+Escribe la [UI de dev](ui-de-dev.md) del Workspace como **un solo archivo HTML de solo lectura**: se abre con doble clic (`file://`) o desde cualquier servidor estatico, sin pedir nada a la red. Funcionan el indice de Vistas, los Pasos, los `link` (drill-down), el colapso de Grupos, la Seleccion, el Buscador (Vistas y comandos) y la galeria de Temas para previsualizar otro Tema; no estan el editor, Issues, Detalle, Historial, el feed del agente, las Diferencias ni nada que escriba (arrastrar Nodos, fijar Tema, `fix`). La barra lo marca con "Read-only".
+
+- **Dentro del archivo**: la pagina, el motor de layout (ELK, en un Worker que arranca desde un Blob o, si el navegador no deja crearlo, en el hilo principal) y las fuentes de los Temas (del Workspace y de `--theme-path`). El ejemplo `examples/rinthel-arch` (33 Vistas, 15 Temas) pesa unos 5 MB, 2.1 MB con gzip.
+- **Temas con codigo (`.tsx`)**: van dentro y corren en el navegador de quien abra el archivo, sin confirmacion; el comando lo avisa en stdout.
+- No escribe nada junto al Workspace. Sale 0 si escribio el archivo, 1 si el Workspace tiene errores (los lista y no escribe) y 2 en un fallo de uso.
 
 ## Bucle de trabajo
 

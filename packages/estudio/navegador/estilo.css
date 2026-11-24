@@ -703,6 +703,75 @@
     cursor: pointer;
   }
 
+  /* "Start here" tour (`tour/`): the pill of the first visit and the coachmarks. */
+  .ui-pildora-tour {
+    padding: 0 4px;
+    gap: 2px;
+    border-color: var(--ui-acento);
+    & button {
+      font: inherit;
+      border: 0;
+      cursor: pointer;
+      border-radius: 99px;
+      padding: 7px 12px;
+      background: transparent;
+      color: var(--ui-tenue);
+    }
+    & .ui-pildora-tour-abrir {
+      background: var(--ui-acento);
+      color: var(--ui-acento-sobre);
+      font-weight: 600;
+    }
+  }
+  .ui-tour-velo {
+    position: fixed;
+    inset: 0;
+    background: #0009;
+    z-index: 10;
+  }
+  .ui-tour-hueco {
+    position: fixed;
+    border-radius: 16px;
+    box-shadow:
+      0 0 0 9999px #0009,
+      0 0 0 2px var(--ui-acento);
+    pointer-events: none;
+    z-index: 10;
+    transition: all var(--ui-dur) var(--ui-curva);
+  }
+  .ui-dialogo.ui-tour {
+    width: 340px;
+    top: auto;
+    transform: none;
+    padding: 14px 16px;
+    background: var(--ui-superficie-solida);
+    & p {
+      margin: 0 0 4px;
+      line-height: 1.55;
+    }
+  }
+  .ui-tour-fila {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    & > span {
+      flex: 1;
+    }
+  }
+  .ui-boton-primario {
+    background: var(--ui-acento);
+    color: var(--ui-acento-sobre);
+    border-color: transparent;
+    font-weight: 600;
+  }
+  .ui-tour-dato {
+    font-size: 12px;
+    color: var(--ui-agente-texto);
+    background: var(--ui-agente-suave);
+    padding: 1px 5px;
+    border-radius: 5px;
+  }
+
   /* Leyenda del shell montada fuera del lienzo. */
   .ui-leyenda {
     position: absolute;

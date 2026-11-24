@@ -11,7 +11,7 @@ import type { PropsDeEstadoEnHash } from 'shell';
 
 import type { EstadoDeDev } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
-import { COMANDOS } from '../comandos/registro';
+import { comandosDe } from '../comandos/registro';
 import type { Plataforma } from '../comandos/teclas';
 import { useAtajos } from '../comandos/use-atajos';
 import { crearEscritura } from '../escritura/escritura';
@@ -21,6 +21,10 @@ import { ContextoDePrevisualizacion, useEstadoDePrevisualizacion } from '../tema
 import { ContextoDeEstudio, ContextoDelEditor } from './contexto';
 import type { CanalDelEditor, ContextoDelEstudio, DialogoDelEstudio } from './contexto';
 import type { LadoDeIsla } from './limites';
+import { disponiblesEn } from './modo';
+import type { ModoDelEstudio } from './modo';
+import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS } from './pestanas';
+import type { PestanaDelPanel } from './pestanas';
 import { useCaducidad } from './use-caducidad';
 import { useIsla } from './use-isla';
 import type { Isla } from './use-isla';
@@ -38,6 +42,8 @@ interface BaseDelEstudio {
   plataforma: Plataforma;
   /** Ultimo fallo de lo que llega fuera de los proveedores (evento `estado` malformado, carga de Componentes): se avisa una vez por objeto. */
   fallo?: FalloDelEstudio | undefined;
+  /** `export`: read-only (`modo.ts`). */
+  modo: ModoDelEstudio;
 }
 
 /** Un objeto por ocurrencia: el mismo mensaje dos veces se avisa dos veces. */
@@ -48,6 +54,8 @@ interface FalloDelEstudio {
 /** Estado del chrome que el marco dibuja. */
 interface ChromeDelMarco {
   islas: Record<LadoDeIsla, Isla>;
+  /** The tabs of each island in this mode. */
+  disponibles: Record<LadoDeIsla, readonly PestanaDelPanel[]>;
   pestanas: Record<LadoDeIsla, string>;
   elegirPestana(lado: LadoDeIsla, pestana: string): void;
   dialogo: DialogoDelEstudio | undefined;
@@ -83,13 +91,19 @@ function motivoSinGestos(estado: EstadoDeDev | undefined): string | undefined {
   return error === undefined ? undefined : `Gestures disabled: the text does not compile (${textoDeSitio(error)} ${error.message})`;
 }
 
-export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plataforma, fallo, fuente, hashProps, children }: PropsDeProveedores): ReactElement {
+/** The tabs of each island available in `modo`. */
+function pestanasDe(modo: ModoDelEstudio): Record<LadoDeIsla, readonly PestanaDelPanel[]> {
+  return { izquierda: disponiblesEn(PESTANAS_IZQUIERDAS, modo), derecha: disponiblesEn(PESTANAS_DERECHAS, modo) };
+}
+
+export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plataforma, fallo, modo, fuente, hashProps, children }: PropsDeProveedores): ReactElement {
   const tamano = useTamano();
   const medidas = { ancho: tamano.width, alto: tamano.height };
   const izquierda = useIsla({ lado: 'izquierda', id: 'ui-isla-izquierda', nombre: 'left panel', lienzo: medidas, anchoInicial: 280 });
   const derecha = useIsla({ lado: 'derecha', id: 'ui-isla-derecha', nombre: 'right panel', lienzo: medidas, anchoInicial: 400 });
   const islas = { izquierda, derecha };
-  const [pestanas, setPestanas] = useState<Record<LadoDeIsla, string>>({ izquierda: 'vistas', derecha: 'detalle' });
+  const disponibles = useMemo(() => pestanasDe(modo), [modo]);
+  const [pestanas, setPestanas] = useState<Record<LadoDeIsla, string>>(() => ({ izquierda: disponibles.izquierda[0]?.id ?? '', derecha: disponibles.derecha[0]?.id ?? '' }));
   const [portales, setPortales] = useState<HTMLElement | null>(null);
   const [dialogo, setDialogo] = useState<DialogoDelEstudio>();
   // Un dialogo se carga (trozo aparte) la primera vez que se abre y desde ahi sigue montado.
@@ -104,7 +118,9 @@ export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plata
   const guardados = useRef(new Set<() => Promise<void>>());
 
   const elegirPestana = (lado: LadoDeIsla, pestana: string): void => setPestanas((p) => ({ ...p, [lado]: pestana }));
+  /** A tab that does not exist in this mode (Details in an export) is ignored. */
   const abrirPestana = (lado: LadoDeIsla, pestana: string): void => {
+    if (!disponibles[lado].some(({ id }) => id === pestana)) return;
     islas[lado].mostrar();
     elegirPestana(lado, pestana);
   };
@@ -121,6 +137,7 @@ export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plata
     vista: hashProps?.view,
     seleccion: hashProps?.selected ?? null,
     irAVista: (vista) => hashProps?.onPathChange([vista]),
+    irAPaso: (paso) => hashProps?.onStepChange(paso),
     seleccionar: (id) => hashProps?.onSelect(id),
     abrirPestana,
     alternarIsla: (lado) => islas[lado].alternar(),
@@ -136,6 +153,7 @@ export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plata
     vaciarGuardado,
     plataforma,
     portales,
+    modo,
   };
   const canalDelEditor = useMemo<CanalDelEditor>(
     () => ({
@@ -148,10 +166,11 @@ export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plata
     [sitioDeCodigo],
   );
   const previsualizacion = useEstadoDePrevisualizacion(hashProps?.view);
-  useAtajos(COMANDOS, contexto);
+  useAtajos(useMemo(() => comandosDe(modo), [modo]), contexto);
 
   const chrome: ChromeDelMarco = {
     islas,
+    disponibles,
     pestanas,
     elegirPestana,
     dialogo,

@@ -3,7 +3,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import type { ReactElement } from 'react';
 
 import { useEstudio } from '../marco/contexto';
-import { COMANDOS } from './registro';
+import { comandosDe } from './registro';
 import { etiquetasDeTeclas } from './teclas';
 import type { Ambito } from './teclas';
 
@@ -22,11 +22,11 @@ const TECLAS_DEL_LIENZO: readonly { nombre: string; teclas: string[] }[] = [
 ];
 
 export function Ayuda({ abierto, alCambiar }: { abierto: boolean; alCambiar: (abierto: boolean) => void }): ReactElement {
-  const { plataforma, portales } = useEstudio();
+  const { plataforma, portales, modo, abrirDialogo } = useEstudio();
   const grupos = GRUPOS.map(({ ambito, nombre }) => ({
     nombre,
     filas: [
-      ...COMANDOS.filter((c) => c.ambito === ambito)
+      ...comandosDe(modo).filter((c) => c.ambito === ambito)
         .map((c) => ({ nombre: c.nombre, teclas: etiquetasDeTeclas(c, plataforma) }))
         .filter((f) => f.teclas.length > 0),
       ...(ambito === 'lienzo' ? TECLAS_DEL_LIENZO : []),
@@ -57,7 +57,12 @@ export function Ayuda({ abierto, alCambiar }: { abierto: boolean; alCambiar: (ab
               </dl>
             </section>
           ))}
-          <Dialog.Close className="ui-boton">Close</Dialog.Close>
+          <div className="ui-tour-fila">
+            <Dialog.Close className="ui-boton">Close</Dialog.Close>
+            <button type="button" className="ui-boton" onClick={() => abrirDialogo('tour')}>
+              View tour
+            </button>
+          </div>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

@@ -1,5 +1,5 @@
 /**
- * `cli`: comandos `validate`, `build`, `skill`, `inspect`, `edit`, `dev` y `scan` (opciones: `docs/guia/cli.md`).
+ * `cli`: comandos `validate`, `build`, `skill`, `inspect`, `edit`, `dev`, `scan` y `export` (opciones: `docs/guia/cli.md`).
  * Interfaz: `run(argv, dependencias?) -> { exitCode, stdout, stderr }`; no escribe en el proceso (`bin.ts` imprime).
  * Invariantes: unico paquete con I/O de disco; `validate` nunca reescribe y devuelve todos los issues ordenados;
  * su unico efecto lateral es el Registro de actividad en `.diagrams/actividad.jsonl`.
@@ -16,6 +16,7 @@ import { ayudaPara } from './ayuda';
 import { editar } from './comando-edit';
 import { inspeccionar } from './comando-inspect';
 import { comandoDev } from './dev';
+import { comandoExport } from './export';
 import { MAX_ISSUES_POR_DEFECTO, abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { comandoScan } from './scan';
@@ -79,9 +80,10 @@ async function despachar(argv: readonly string[], dependencias: Dependencias): P
   if (comando === 'inspect') return inspeccionar(resto, dependencias);
   if (comando === 'dev') return comandoDev(resto);
   if (comando === 'scan') return comandoScan(resto, dependencias);
+  if (comando === 'export') return comandoExport(resto);
   if (comando !== 'validate' && comando !== 'build' && comando !== 'skill') {
     return uso(
-      `Unknown command '${comando ?? ''}'. Usage: diagrams <validate|build|skill|inspect|edit|dev|scan> --workspace <path> (diagrams --help for details)`,
+      `Unknown command '${comando ?? ''}'. Usage: diagrams <validate|build|skill|inspect|edit|dev|scan|export> --workspace <path> (diagrams --help for details)`,
     );
   }
   if (comando === 'skill') return skill(resto, dependencias);

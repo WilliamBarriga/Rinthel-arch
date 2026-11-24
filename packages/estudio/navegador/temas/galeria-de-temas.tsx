@@ -17,7 +17,9 @@ import { textoDeSitio } from '../sitio';
 import { usePrevisualizacionDeTema } from './previsualizacion';
 
 export function GaleriaDeTemas(): ReactElement {
-  const { fuente, vista, cliente, escribir } = useEstudio();
+  const { fuente, vista, cliente, escribir, modo } = useEstudio();
+  // Pinning writes `theme` in the View: only in `dev`.
+  const conFijar = modo === 'dev';
   const { temaPrevio, previsualizarTema } = usePrevisualizacionDeTema();
   const [elegido, setElegido] = useState<string>();
   const marcas = useMarcasExternas(cliente);
@@ -43,7 +45,7 @@ export function GaleriaDeTemas(): ReactElement {
       {vista !== undefined && (
         <p className="ui-tenue">
           View {vista}: {fijado === undefined ? 'no pinned Theme' : `pinned Theme ${fijado}`}
-          {fijado !== undefined && (
+          {conFijar && fijado !== undefined && (
             <button type="button" aria-label={`Unpin the Theme of ${vista}`} onClick={() => void fijar(undefined)}>
               Unpin
             </button>
@@ -60,7 +62,7 @@ export function GaleriaDeTemas(): ReactElement {
           </div>
         ))}
       </div>
-      {elegido !== undefined && <FichaDeTema nombre={elegido} paleta={fuente.themes.find(({ name }) => name === elegido)?.palette ?? {}} vista={vista} fijado={fijado} previsualizando={temaPrevio === elegido} alFijar={() => void fijar(elegido)} alSoltar={() => previsualizarTema(undefined)} />}
+      {elegido !== undefined && <FichaDeTema nombre={elegido} paleta={fuente.themes.find(({ name }) => name === elegido)?.palette ?? {}} vista={conFijar ? vista : undefined} fijado={fijado} previsualizando={temaPrevio === elegido} alFijar={() => void fijar(elegido)} alSoltar={() => previsualizarTema(undefined)} />}
     </div>
   );
 }
@@ -68,6 +70,7 @@ export function GaleriaDeTemas(): ReactElement {
 interface PropsDeFicha {
   nombre: string;
   paleta: Readonly<Record<string, string>>;
+  /** View where the Theme can be pinned; `undefined` if it cannot (no View, or a read-only export). */
   vista: string | undefined;
   fijado: string | undefined;
   previsualizando: boolean;

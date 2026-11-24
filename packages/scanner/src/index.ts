@@ -1,6 +1,7 @@
 /**
  * `scanner`: reads a codebase, without running it, into a Scan draft `rinthel/scan@1` (ADR 0010).
- * Interface: `scan(root, options?) -> Promise<ScanDraft>` and `serializeDraft(draft) -> string` (what `scan` writes).
+ * Interface: `scan(root, options?) -> Promise<ScanDraft>` and `serializeDraft(draft) -> string` (what `scan` writes);
+ * for refreshing a Workspace, `diffDrafts(previous, current)` and `idMatcher(patterns)` (`.rinthel/scan-ignore`).
  * Invariants: never executes, installs or imports project code (git state is read from `.git` files, not `git`);
  * same files, same draft byte for byte (sorted arrays, fixed key order, ids from paths and names, no clock).
  * Honors `.gitignore` and `EXCLUDED_FOLDERS`; stops at `maxFiles` and marks `limits.truncated` instead of failing.
@@ -11,14 +12,15 @@ import { readFileSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 
 import { SCAN_DRAFT_SCHEMA } from './draft';
-import type { Confidence, LanguageCount, ScanDependency, ScanDraft, ScanExternal, ScanTable, Source } from './draft';
+import type { Confidence, LanguageCount, ScanDependency, ScanDraft, ScanExternal, Source } from './draft';
 import { byCodeUnit, listFiles } from './files';
 import { readCommit } from './git';
 import { IMPORT_EXTRACTORS } from './imports';
 import type { FoundImport } from './imports';
 import { languageOf } from './languages';
 import { normalizePackage } from './manifests';
-import { TABLE_EXTRACTORS } from './tables';
+import { TABLE_EXTRACTORS, identifyTables } from './tables';
+import type { FoundTable } from './tables';
 import { buildUnits } from './units';
 
 export { SCAN_DRAFT_SCHEMA } from './draft';
@@ -37,6 +39,8 @@ export type {
   UnitKind,
 } from './draft';
 export { EXCLUDED_FOLDERS } from './files';
+export { diffDrafts, idMatcher } from './refresh';
+export type { DraftChanges, IdChanges } from './refresh';
 export { SPLIT_MIN_FILES } from './units';
 
 /** Version written in `scanner`; it follows `packages/scanner/package.json`. */
@@ -130,15 +134,16 @@ export async function scan(root: string, options: ScanOptions = {}): Promise<Sca
     }
   }
 
-  const tables: ScanTable[] = [];
+  const tables: (FoundTable & { unit: string })[] = [];
   for (const extractor of TABLE_EXTRACTORS) {
-    const own = files.filter((path) => extractor.matches(path));
+    const own = files.filter((path) => extractor.matches(path)).sort(byCodeUnit);
     if (own.length === 0) continue;
     const read = await extractor.load();
-    for (const path of own) {
+    const schemas = own.flatMap((path) => {
       const text = parseable(path);
-      if (text !== undefined) tables.push(...read(path, text).map((table) => ({ ...table, unit: unitOfFile(path) })));
-    }
+      return text === undefined ? [] : [{ path, text }];
+    });
+    tables.push(...read(schemas, { files: fileSet }).map((table) => ({ ...table, unit: unitOfFile(table.source.file) })));
   }
 
   const covered = new Set(IMPORT_EXTRACTORS.flatMap((extractor) => extractor.languages));
@@ -178,7 +183,7 @@ export async function scan(root: string, options: ScanOptions = {}): Promise<Sca
         confidence,
       }),
     ),
-    tables: tables.sort((a, b) => byCodeUnit(a.id, b.id)),
+    tables: identifyTables(tables),
   };
 }
 

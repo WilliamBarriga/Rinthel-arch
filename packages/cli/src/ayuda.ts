@@ -1,6 +1,6 @@
 import { CARPETA_DE_SALIDA } from './workspace';
 
-const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill', 'scan'] as const;
+const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill', 'scan', 'export'] as const;
 export type ComandoConAyuda = (typeof COMANDOS)[number];
 
 const WORKSPACE = '--workspace <path>  Folder with the .dg files (required)';
@@ -96,7 +96,14 @@ Regenerate it when the Node kinds, the Themes or the codes change.
 
 Reads a codebase without running it and writes a Scan draft (rinthel/scan@1): units from manifests
 (package.json, pyproject.toml, go.mod, Cargo.toml), dependencies between them from TS/JS imports,
-externals and limits. Prints a compact summary that ends with the next step. Never writes .dg files.
+externals, database tables from Prisma schemas and SQL DDL, and limits. Prints a compact summary that
+ends with the next step. Never writes .dg files.
+
+With a Workspace (--workspace, or the shallowest folder under <root> with .dg files) it adds Scan
+coverage: units and tables no Node cites as a Source path ref, orphan refs, and columns missing or extra
+versus Attributes. Ids matching <root>/.rinthel/scan-ignore (gitignore-style, versioned) are left out
+of coverage, not of the draft. The previous draft rotates to scan.prev.json next to --out and the
+summary lists the units, dependencies, externals, tables and columns added or removed since then.
 
 Options:
   <root>               Folder to scan (current folder by default)
@@ -104,9 +111,25 @@ Options:
   --json               stdout is exactly one summary object with its own contractVersion
   --depth <N>          Folder levels a large manifest is split into (2 by default; 0 never splits)
   --max-files <N>      Files read at most (20000 by default); beyond it limits.truncated is true
+  --workspace <path>   Workspace to report Scan coverage against (found under <root> by default)
 
 Honors .gitignore and always skips node_modules, dist, build, .venv and vendored code.
-Exit: 0 draft written, 2 usage or internal failure (message on stderr).
+Exit: 0 draft written (coverage gaps included), 2 usage or internal failure (message on stderr).
+`,
+  export: `diagrams export --workspace <path> --out <file>.html [options]
+
+Writes the Dev UI of the Workspace as one self-contained, read-only HTML file to send to anyone:
+Views, Steps, links, collapsing, selection and Theme switching work; editing, Undo history, agent
+activity and Diffs are left out. Layout engine (ELK) and Theme fonts go inside; it opens from disk
+(file://) or from any static server, with no network requests. Writes nothing next to the Workspace.
+
+Options:
+  --workspace <path>   Folder with the .dg files (required)
+  --out <file>         The HTML file to write (required; missing folders are created)
+  --theme-path <dir>   Extra Themes folder; merged before the Workspace (the Workspace wins)
+
+Themes with code (.tsx components) go inside and run in the browser of whoever opens the file.
+Exit: 0 written, 1 the Workspace has errors (nothing written), 2 usage or internal failure.
 `,
 };
 
@@ -123,6 +146,7 @@ Commands:
   edit       Sets a Pin or applies structured edits to the .dg
   skill      Generates the agent skill of a Workspace
   scan       Reads a codebase into a Scan draft for an agent to diagram (diagrams scan [<root>])
+  export     Writes the Dev UI as one self-contained, read-only HTML file (--out <file>.html)
 
 Agent loop: inspect, edit the .dg, validate --json until ok:true.
 Exit codes: 0 success, 1 Workspace errors, 2 usage or internal failure.

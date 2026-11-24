@@ -7,11 +7,12 @@
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import type { ReactElement } from 'react';
 
+import { urlDeFuente as urlDeFuenteDeDev } from 'canonico';
 import { deserializarEstado, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeHash, AdaptadorDeLayout, Navegacion, PropsDeEstadoEnHash } from 'shell';
 
 import { crearClienteDeDev } from './cliente';
-import type { DependenciasDelCliente } from './cliente';
+import type { ClienteDeDev, DependenciasDelCliente } from './cliente';
 import { plataformaDe } from './comandos/teclas';
 import type { Plataforma } from './comandos/teclas';
 import { historialDelCliente } from './historial/historial-visible';
@@ -20,14 +21,24 @@ import type { Dibujable, GeometriasDeDev } from './lienzo/geometrias';
 import { hashDeEstudio } from './lienzo/hash-de-estudio';
 import { useLienzoDelEstudio } from './lienzo/lienzo';
 import { Marco } from './marco/marco';
+import type { ModoDelEstudio } from './marco/modo';
 import { ProveedoresDelEstudio } from './marco/proveedores';
 import { useEstadoDeDev } from './marco/use-estado-de-dev';
 import { useComponentes } from './temas/use-componentes';
 
-export interface PropsDelEstudio {
-  fetch: typeof fetch;
-  /** Fabrica de la conexion SSE (`EventSource` en el navegador, `devEnMemoria` en pruebas). */
-  eventos: DependenciasDelCliente['eventos'];
+/** The `dev` transport (`fetch` and SSE), or an already built client (the read-only one of an export). */
+type TransporteDelEstudio =
+  | {
+      fetch: typeof fetch;
+      /** Fabrica de la conexion SSE (`EventSource` en el navegador, `devEnMemoria` en pruebas). */
+      eventos: DependenciasDelCliente['eventos'];
+      cliente?: undefined;
+    }
+  | { cliente: ClienteDeDev; fetch?: undefined; eventos?: undefined };
+
+export type PropsDelEstudio = TransporteDelEstudio & PropsComunes;
+
+interface PropsComunes {
   /** Hash del navegador tal cual (`hashDelNavegador(window)`); el estudio lo traduce a `#vista=<id>`. */
   hash: AdaptadorDeHash;
   /** Layout cuando la Geometria del servidor no llega (el Worker en el navegador). */
@@ -36,12 +47,17 @@ export interface PropsDelEstudio {
   confirmar: (mensaje: string) => boolean;
   /** Como se escriben las teclas (`Cmd` o `Ctrl`); por defecto, la de `navigator`. */
   plataforma?: Plataforma;
+  /** `export`: read-only (`marco/modo.ts`). Por defecto `dev`. */
+  modo?: ModoDelEstudio;
+  /** URL de un archivo de fuente de `estado.fuentes`; por defecto la ruta `/fuentes/` de `dev`. */
+  urlDeFuente?: (ruta: string) => string;
 }
 
 export function Estudio(props: PropsDelEstudio): ReactElement {
-  const { fetch: fetchFn, eventos, layout, confirmar } = props;
+  const { fetch: fetchFn, eventos, layout, confirmar, modo = 'dev', urlDeFuente = urlDeFuenteDeDev } = props;
   const hash = useMemo(() => hashDeEstudio(props.hash), [props.hash]);
-  const cliente = useMemo(() => crearClienteDeDev({ fetch: fetchFn, eventos }), [fetchFn, eventos]);
+  const propio = props.cliente;
+  const cliente = useMemo(() => propio ?? crearClienteDeDev({ fetch: fetchFn as typeof fetch, eventos: eventos as DependenciasDelCliente['eventos'] }), [propio, fetchFn, eventos]);
   // El panel Historial puede montarse despues de conectar: el almacen escucha desde el principio.
   useEffect(() => void historialDelCliente(cliente), [cliente]);
   const geometrias = useMemo(
@@ -62,7 +78,7 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
   const dibujable = useSyncExternalStore(geometrias.suscribir, geometrias.dibujable);
   const componentes = useComponentes(cliente, estado?.version, confirmar, reportar);
   const plataforma = props.plataforma ?? plataformaDe(typeof navigator === 'undefined' ? undefined : navigator);
-  const base = { estado, vigente, recibir, cliente, plataforma, fallo };
+  const base = { estado, vigente, recibir, cliente, plataforma, fallo, modo };
 
   if (dibujable === undefined)
     return (
@@ -74,7 +90,7 @@ export function Estudio(props: PropsDelEstudio): ReactElement {
     <VistaEnHash dibujable={dibujable} hash={hash} geometrias={geometrias}>
       {(hashProps) => (
         <ProveedoresDelEstudio {...base} fuente={dibujable.estado.fuente} hashProps={hashProps}>
-          <MarcoConLienzo dibujable={dibujable} hashProps={hashProps} layout={layout} componentes={componentes} />
+          <MarcoConLienzo dibujable={dibujable} hashProps={hashProps} layout={layout} componentes={componentes} urlDeFuente={urlDeFuente} />
         </ProveedoresDelEstudio>
       )}
     </VistaEnHash>
