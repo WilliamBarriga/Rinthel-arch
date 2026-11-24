@@ -145,9 +145,9 @@ theme notebook {
   node {
     layer shape rect { radius 6 }
     layer fill solid { color paper }
-    layer header solid { color blue  zone header }     // only the header (all, header or body)
+    layer header solid { color amber  zone header }     // only the header (all, header or body)
     layer outline border { color ink }
-    slots column { title { color paper  weight 700 }  attrs }
+    slots column { title { color ink  weight 700 }  attrs }
   }
   row {
     height 26                                           // row height: changes table size
