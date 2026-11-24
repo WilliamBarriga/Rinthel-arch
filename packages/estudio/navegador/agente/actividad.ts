@@ -18,10 +18,10 @@ const plural = (n: number, singular: string, varios: string): string => `${n} ${
 
 /** `fallo` es la salida 2 (fallo de uso); `errores`, la salida 1 o un `resumen` con errores; `avisos`, un `resumen` solo con avisos. */
 export function marcaDelEvento({ exitCode, resumen }: EventoDeActividad): { tipo: TipoDeMarca; texto: string } {
-  if (exitCode === 2) return { tipo: 'fallo', texto: 'fallo de uso' };
-  if (resumen !== undefined && resumen.errores > 0) return { tipo: 'errores', texto: plural(resumen.errores, 'error', 'errores') };
+  if (exitCode === 2) return { tipo: 'fallo', texto: 'usage failure' };
+  if (resumen !== undefined && resumen.errores > 0) return { tipo: 'errores', texto: plural(resumen.errores, 'error', 'errors') };
   if (exitCode === 1) return { tipo: 'errores', texto: 'error' };
-  if (resumen !== undefined && resumen.avisos > 0) return { tipo: 'avisos', texto: plural(resumen.avisos, 'aviso', 'avisos') };
+  if (resumen !== undefined && resumen.avisos > 0) return { tipo: 'avisos', texto: plural(resumen.avisos, 'warning', 'warnings') };
   return { tipo: 'ok', texto: 'ok' };
 }
 

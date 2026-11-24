@@ -23,7 +23,7 @@ export function useComponentes(cliente: ClienteDeDev, version: number | undefine
           pedir: async () => {
             const carga = await cargar();
             if (carga.ok) return carga;
-            const mensaje = `No se pudieron cargar los Componentes de Tema: ${carga.mensaje}`;
+            const mensaje = `Could not load the Theme components: ${carga.mensaje}`;
             reportar(mensaje);
             return { ok: false, mensaje };
           },

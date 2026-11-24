@@ -127,7 +127,7 @@ describe('scan', () => {
     expect(existsSync(join(root, '.rinthel'))).toBe(false);
     expect(JSON.parse(readFileSync(out, 'utf8')).limits).toMatchObject({ truncated: true, maxFiles: 2 });
     expect(stdout).toContain(`Scan draft written to ${out}`);
-    expect(stdout).toContain('Limits: stopped at --max-files 2 (truncated); imports not read for python (1 file).');
+    expect(stdout).toContain('Limits: stopped at --max-files 2 (truncated); imports not read for go (1 file).');
   });
 
   it('two runs write byte-identical drafts', async () => {

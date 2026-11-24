@@ -36,7 +36,6 @@ describe('scan: languages without import support', () => {
     expect(draft.dependencies).toEqual([]);
     expect(draft.limits.languagesWithoutImports).toEqual([
       { language: 'go', files: 1 },
-      { language: 'python', files: 2 },
       { language: 'rust', files: 1 },
     ]);
   });

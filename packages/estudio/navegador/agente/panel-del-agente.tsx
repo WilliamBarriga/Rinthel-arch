@@ -30,11 +30,11 @@ export function PanelDelAgente(): ReactElement {
   }, [almacen, sinVer]);
 
   return (
-    <section aria-label="Agente" className="ui-agente">
+    <section aria-label="Agent" className="ui-agente">
       {quitados.length > 0 && (
         <div className="ui-quitados">
-          <p className="ui-tenue">Quitado por fuera</p>
-          <ul aria-label="Quitado por fuera" className="ui-lista">
+          <p className="ui-tenue">Removed externally</p>
+          <ul aria-label="Removed externally" className="ui-lista">
             {quitados.map((elemento) => {
               const { tipo, id } = etiquetaDeElemento(elemento);
               return (
@@ -47,9 +47,9 @@ export function PanelDelAgente(): ReactElement {
         </div>
       )}
       {eventos.length === 0 ? (
-        <p className="ui-tenue">Sin actividad del agente. Los comandos validate, build, inspect y edit apareceran aqui.</p>
+        <p className="ui-tenue">No agent activity. The validate, build, inspect and edit commands will appear here.</p>
       ) : (
-        <ol className="ui-feed" aria-label="Actividad del agente">
+        <ol className="ui-feed" aria-label="Agent activity">
           {eventos
             .map((evento, i) => <LineaDelFeed key={`${i}:${evento.ts}:${evento.pid}`} evento={evento} />)
             .reverse()}
@@ -94,7 +94,7 @@ function LineaDelFeed({ evento }: { evento: EventoDeActividad }): ReactElement {
         <span className="ui-feed-marca" data-marca={marca.tipo}>
           {marca.texto}
         </span>
-        <button type="button" className="ui-boton-icono" aria-label="Ver args" aria-expanded={abierta} onClick={() => setAbierta((a) => !a)}>
+        <button type="button" className="ui-boton-icono" aria-label="Show args" aria-expanded={abierta} onClick={() => setAbierta((a) => !a)}>
           {abierta ? '▾' : '▸'}
         </button>
       </div>

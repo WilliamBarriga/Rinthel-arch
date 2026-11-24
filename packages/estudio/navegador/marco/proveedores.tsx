@@ -80,14 +80,14 @@ export function useChrome(): ChromeDelMarco {
 /** El motivo visible por el que no hay Gestos (el primer error del estado), o `undefined`. */
 function motivoSinGestos(estado: EstadoDeDev | undefined): string | undefined {
   const error = estado?.issues.find((i) => i.severity === 'error');
-  return error === undefined ? undefined : `Gestos deshabilitados: el texto no compila (${textoDeSitio(error)} ${error.message})`;
+  return error === undefined ? undefined : `Gestures disabled: the text does not compile (${textoDeSitio(error)} ${error.message})`;
 }
 
 export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plataforma, fallo, fuente, hashProps, children }: PropsDeProveedores): ReactElement {
   const tamano = useTamano();
   const medidas = { ancho: tamano.width, alto: tamano.height };
-  const izquierda = useIsla({ lado: 'izquierda', id: 'ui-isla-izquierda', nombre: 'panel izquierdo', lienzo: medidas, anchoInicial: 280 });
-  const derecha = useIsla({ lado: 'derecha', id: 'ui-isla-derecha', nombre: 'panel derecho', lienzo: medidas, anchoInicial: 400 });
+  const izquierda = useIsla({ lado: 'izquierda', id: 'ui-isla-izquierda', nombre: 'left panel', lienzo: medidas, anchoInicial: 280 });
+  const derecha = useIsla({ lado: 'derecha', id: 'ui-isla-derecha', nombre: 'right panel', lienzo: medidas, anchoInicial: 400 });
   const islas = { izquierda, derecha };
   const [pestanas, setPestanas] = useState<Record<LadoDeIsla, string>>({ izquierda: 'vistas', derecha: 'detalle' });
   const [portales, setPortales] = useState<HTMLElement | null>(null);

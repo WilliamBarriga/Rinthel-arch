@@ -31,16 +31,16 @@ export interface PestanaDelPanel {
 const ANCHO_DEL_EDITOR = 560;
 
 export const PESTANAS_IZQUIERDAS: readonly PestanaDelPanel[] = [
-  { id: 'vistas', nombre: 'Vistas', Contenido: PanelDeVistas },
-  { id: 'codigo', nombre: 'Codigo', Contenido: PanelDeCodigo, conservar: true, anchoMinimo: ANCHO_DEL_EDITOR },
+  { id: 'vistas', nombre: 'Views', Contenido: PanelDeVistas },
+  { id: 'codigo', nombre: 'Code', Contenido: PanelDeCodigo, conservar: true, anchoMinimo: ANCHO_DEL_EDITOR },
 ];
 
 export const PESTANAS_DERECHAS: readonly PestanaDelPanel[] = [
-  { id: 'detalle', nombre: 'Detalle', Contenido: Detalle },
+  { id: 'detalle', nombre: 'Details', Contenido: Detalle },
   { id: 'issues', nombre: 'Issues', Contenido: PanelDeIssues },
-  { id: 'temas', nombre: 'Temas', Contenido: GaleriaDeTemas },
-  { id: 'historial', nombre: 'Historial', Contenido: PanelDelHistorial },
-  { id: 'agente', nombre: 'Agente', Contenido: PanelDelAgente },
+  { id: 'temas', nombre: 'Themes', Contenido: GaleriaDeTemas },
+  { id: 'historial', nombre: 'Undo history', Contenido: PanelDelHistorial },
+  { id: 'agente', nombre: 'Agent', Contenido: PanelDelAgente },
 ];
 
 /**

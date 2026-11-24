@@ -14,7 +14,7 @@ const MODULOS: Record<string, unknown> = { react: React, 'react/jsx-runtime': js
 /** Registra solo los exports con nombre en mayuscula que son funciones; lanza si el bundle importa otro modulo. */
 function evaluarBundle(bundle: string): ComponentesDeTema {
   const requerir = (nombre: string): unknown => {
-    if (!Object.hasOwn(MODULOS, nombre)) throw new Error(`Un componente de Tema no puede importar '${nombre}'`);
+    if (!Object.hasOwn(MODULOS, nombre)) throw new Error(`A Theme component cannot import '${nombre}'`);
     return MODULOS[nombre];
   };
   const exportados = new Function('require', bundle)(requerir) as Record<string, unknown>;
@@ -37,12 +37,12 @@ export function crearCargadorDeComponentes(cliente: ClienteDeDev, confirmar: (me
     const { temaConCodigo, componentes, confiado } = codigo.valor;
     if (!temaConCodigo) return { ok: true, valor: undefined };
     if (!confiado) {
-      if (!confirmar(`Los Temas de este Workspace cargan codigo (${componentes.join(', ')}) que corre en tu navegador sin sandbox. Cargalo solo si confias en el Workspace. Cargar el codigo?`)) {
+      if (!confirmar(`The Themes of this Workspace load code (${componentes.join(', ')}) that runs in your browser without a sandbox. Load it only if you trust the Workspace. Load the code?`)) {
         rechazado = true;
         return { ok: true, valor: undefined };
       }
       const confirmado = await cliente.confiar();
-      if (!confirmado.ok) return { ok: false, mensaje: `dev no acepto la confirmacion: ${confirmado.mensaje}` };
+      if (!confirmado.ok) return { ok: false, mensaje: `dev did not accept the confirmation: ${confirmado.mensaje}` };
     }
     const bundle = await cliente.bundleDeComponentes();
     if (!bundle.ok) return bundle;

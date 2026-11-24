@@ -39,9 +39,9 @@ const ARGS = ['--workspace', '.', '--intent', '{"tipo":"mover-pin"}'];
 const evento = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => eventoDeActividad(pid, { args: ARGS, ...extra });
 const lineas = lineasDeActividad;
 
-const feed = () => screen.getByRole('list', { name: 'Actividad del agente' });
-const ultimaLinea = () => screen.getByRole('button', { name: /^Ultima linea del agente/ });
-const interruptor = () => screen.getByRole('switch', { name: 'Seguir al agente' });
+const feed = () => screen.getByRole('list', { name: 'Agent activity' });
+const ultimaLinea = () => screen.getByRole('button', { name: /^Agent last line/ });
+const interruptor = () => screen.getByRole('switch', { name: 'Follow the agent' });
 
 describe('feed del agente', () => {
   it('al abrir muestra los Eventos previos, el mas nuevo arriba, con hora, quien, comando, objetivo y marca; args al expandir', async () => {
@@ -49,7 +49,7 @@ describe('feed del agente', () => {
       { 'main.dg': DSL },
       { actividad: lineas(evento(11, { comando: 'validate', exitCode: 1, resumen: { errores: 2, avisos: 0 } }), evento(12, { agente: 'claude', objetivo: { vista: 'otra' } })) },
     );
-    fireEvent.click(await screen.findByRole('tab', { name: 'Agente' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Agent' }));
 
     const items = await waitFor(() => {
       const encontrados = within(feed()).getAllByRole('listitem');
@@ -63,17 +63,17 @@ describe('feed del agente', () => {
     expect(within(nuevo).getByText('edit')).toBeTruthy();
     expect(within(nuevo).getByText('ok')).toBeTruthy();
     expect(within(viejo).getByText('pid 11')).toBeTruthy();
-    expect(within(viejo).getByText('2 errores')).toBeTruthy();
+    expect(within(viejo).getByText('2 errors')).toBeTruthy();
 
     expect(within(nuevo).queryByText(/--intent/)).toBeNull();
-    fireEvent.click(within(nuevo).getByRole('button', { name: 'Ver args' }));
+    fireEvent.click(within(nuevo).getByRole('button', { name: 'Show args' }));
     expect(within(nuevo).getByText(`diagrams edit --workspace . --intent {"tipo":"mover-pin"}`)).toBeTruthy();
   });
 
   it('el objetivo es clicable y lleva a la Vista que nombra', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { actividad: lineas(evento(1, { objetivo: { vista: 'otra' } })) });
     await lienzoListo(contenedor, 'mapa');
-    fireEvent.click(screen.getByRole('tab', { name: 'Agente' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Agent' }));
 
     fireEvent.click(await within(feed()).findByRole('button', { name: 'otra' }));
 
@@ -85,19 +85,19 @@ describe('feed del agente', () => {
 describe('ultima linea del agente', () => {
   it('la pildora muestra la ultima linea y cuenta lo nuevo sin seguir al agente; clic abre la pestana Agente y lo da por visto', async () => {
     const { dev } = await montarEstudio({ 'main.dg': DSL }, { actividad: lineas(evento(1)) });
-    await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toBe('Ultima linea del agente: pid 1 edit'));
+    await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toBe('Agent last line: pid 1 edit'));
 
     act(() => {
       dev.anexarActividad(lineas(evento(2, { agente: 'claude', objetivo: { vista: 'otra' } }), evento(3, { agente: 'claude', objetivo: { nodo: 'db' } })));
     });
 
-    await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toBe('Ultima linea del agente: claude edit db, 2 sin ver'));
+    await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toBe('Agent last line: claude edit db, 2 unseen'));
     expect(ultimaLinea().textContent).toContain('2');
     expect(window.location.hash).not.toContain('vista=otra');
 
     fireEvent.click(ultimaLinea());
-    expect(screen.getByRole('tab', { name: 'Agente' }).getAttribute('aria-selected')).toBe('true');
-    expect(ultimaLinea().getAttribute('aria-label')).toBe('Ultima linea del agente: claude edit db');
+    expect(screen.getByRole('tab', { name: 'Agent' }).getAttribute('aria-selected')).toBe('true');
+    expect(ultimaLinea().getAttribute('aria-label')).toBe('Agent last line: claude edit db');
   });
 });
 
@@ -109,9 +109,9 @@ describe('seguir al agente', () => {
     expect(interruptor().getAttribute('aria-checked')).toBe('true');
     // Los previos no mueven.
     expect(window.location.hash).not.toContain('vista=detalle');
-    const derecha = screen.getByRole('tablist', { name: 'Panel derecho' });
+    const derecha = screen.getByRole('tablist', { name: 'Right panel' });
     const activaDerecha = () => within(derecha).getAllByRole('tab').find((t) => t.getAttribute('aria-selected') === 'true')?.textContent;
-    expect(activaDerecha()).toBe('Detalle');
+    expect(activaDerecha()).toBe('Details');
 
     act(() => dev.anexarActividad(lineas(evento(2, { objetivo: { vista: 'otra' } }))));
     await waitFor(() => expect(window.location.hash).toBe('#vista=otra'));
@@ -125,11 +125,11 @@ describe('seguir al agente', () => {
     expect(screen.getByRole('option', { name: 'mapa' }).getAttribute('aria-selected')).toBe('true');
 
     act(() => dev.anexarActividad(lineas(evento(5, { objetivo: { archivos: ['main.dg'] } }))));
-    await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toBe('Ultima linea del agente: pid 5 edit main.dg'));
+    await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toBe('Agent last line: pid 5 edit main.dg'));
     expect(window.location.hash).toBe('#s=api');
 
-    expect(activaDerecha()).toBe('Detalle');
-    expect(screen.getByRole('listbox', { name: 'Vistas' })).toBeTruthy();
+    expect(activaDerecha()).toBe('Details');
+    expect(screen.getByRole('listbox', { name: 'Views' })).toBeTruthy();
   });
 
   it('un Nodo que el agente nombra antes de que llegue el estado que lo crea se sigue al llegar ese estado', async () => {
@@ -143,19 +143,19 @@ describe('seguir al agente', () => {
     await waitFor(() => expect(window.location.hash).toBe('#vista=otra&s=cache'));
   });
 
-  it('el Buscador lo activa y lo desactiva con "Seguir al agente: activar" y "Seguir al agente: desactivar"', async () => {
+  it('el Buscador lo activa y lo desactiva con "Follow the agent: on" y "Follow the agent: off"', async () => {
     await montarEstudio({ 'main.dg': DSL });
-    await screen.findByRole('listbox', { name: 'Vistas' });
+    await screen.findByRole('listbox', { name: 'Views' });
     const ejecutar = async (nombre: string) => {
       fireEvent.keyDown(document.body, { key: 'k', ctrlKey: true });
-      const dialogo = await screen.findByRole('dialog', { name: 'Buscador' });
-      fireEvent.change(within(dialogo).getByRole('combobox', { name: 'Buscar' }), { target: { value: 'seguir' } });
+      const dialogo = await screen.findByRole('dialog', { name: 'Finder' });
+      fireEvent.change(within(dialogo).getByRole('combobox', { name: 'Search' }), { target: { value: 'follow' } });
       fireEvent.click(await within(dialogo).findByRole('option', { name: new RegExp(nombre) }));
     };
 
-    await ejecutar('Seguir al agente: activar');
+    await ejecutar('Follow the agent: on');
     await waitFor(() => expect(interruptor().getAttribute('aria-checked')).toBe('true'));
-    await ejecutar('Seguir al agente: desactivar');
+    await ejecutar('Follow the agent: off');
     await waitFor(() => expect(interruptor().getAttribute('aria-checked')).toBe('false'));
   });
 
@@ -165,7 +165,7 @@ describe('seguir al agente', () => {
 
     act(() => dev.anexarActividad(lineas(evento(2, { objetivo: { vista: 'otra' } }))));
 
-    await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toContain('1 sin ver'));
+    await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toContain('1 unseen'));
     expect(window.location.hash).not.toContain('otra');
   });
 });

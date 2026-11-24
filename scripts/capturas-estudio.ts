@@ -55,33 +55,33 @@ async function principal(): Promise<void> {
     const contexto = await navegador.newContext({ viewport: ENCUADRE, deviceScaleFactor: 1.25, reducedMotion: 'reduce' });
     const pagina = await contexto.newPage();
     pagina.setDefaultTimeout(30_000);
-    const izquierdo = pagina.getByRole('complementary', { name: 'Panel izquierdo' });
-    const derecho = pagina.getByRole('complementary', { name: 'Panel derecho' });
+    const izquierdo = pagina.getByRole('complementary', { name: 'Left panel' });
+    const derecho = pagina.getByRole('complementary', { name: 'Right panel' });
 
     // Indice, lienzo y Detalle del Nodo seleccionado.
     await pagina.goto(`${dev.url}#vista=${VISTA}&s=${NODO}`);
     await esperarLienzo(pagina);
-    await derecho.getByRole('region', { name: 'Detalle' }).getByRole('heading').first().waitFor();
+    await derecho.getByRole('region', { name: 'Details' }).getByRole('heading').first().waitFor();
     await capturar(pagina, 'vista-y-detalle');
 
     // Codigo a la izquierda, galeria de Temas a la derecha.
-    await izquierdo.getByRole('tab', { name: 'Codigo' }).click();
-    await izquierdo.getByRole('textbox', { name: /^Codigo de / }).waitFor();
-    await derecho.getByRole('tab', { name: 'Temas' }).click();
+    await izquierdo.getByRole('tab', { name: 'Code' }).click();
+    await izquierdo.getByRole('textbox', { name: /^Code of / }).waitFor();
+    await derecho.getByRole('tab', { name: 'Themes' }).click();
     await pagina.waitForTimeout(500);
     await capturar(pagina, 'codigo-y-temas');
 
     // Un agente edita por fuera: feed, resaltado e Historial del Workspace.
-    await izquierdo.getByRole('tab', { name: 'Vistas' }).click();
-    await derecho.getByRole('tab', { name: 'Agente' }).click();
+    await izquierdo.getByRole('tab', { name: 'Views' }).click();
+    await derecho.getByRole('tab', { name: 'Agent' }).click();
     cli(workspace, 'edit', '--intent', JSON.stringify({ tipo: 'fijar-tema', vista: VISTA, tema: 'neutral-dark' }));
-    await derecho.getByRole('list', { name: 'Actividad del agente' }).getByRole('listitem').filter({ hasText: 'edit' }).waitFor();
+    await derecho.getByRole('list', { name: 'Agent activity' }).getByRole('listitem').filter({ hasText: 'edit' }).waitFor();
     await esperarLienzo(pagina);
     await capturar(pagina, 'agente');
 
     // Buscador (Mod+K).
     await pagina.keyboard.press('Control+k');
-    await pagina.getByRole('dialog', { name: 'Buscador' }).getByRole('combobox', { name: 'Buscar' }).fill('ses');
+    await pagina.getByRole('dialog', { name: 'Finder' }).getByRole('combobox', { name: 'Search' }).fill('ses');
     await pagina.waitForTimeout(500);
     await capturar(pagina, 'buscador');
     await contexto.close();

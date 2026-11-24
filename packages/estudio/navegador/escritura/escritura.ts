@@ -50,7 +50,7 @@ interface Plan {
   aviso(r: Extract<ResultadoDeEnvio, { ok: false }>): string;
 }
 
-const SIN_ESTADO = rechazo('aun no hay estado del Workspace');
+const SIN_ESTADO = rechazo('no Workspace state yet');
 
 function planDe(pedido: PedidoDeEscritura, cliente: Cliente): Plan {
   if ('historial' in pedido) {
@@ -59,7 +59,7 @@ function planDe(pedido: PedidoDeEscritura, cliente: Cliente): Plan {
       vaciarGuardado: true,
       reintentar: false,
       enviar: () => (historial === 'deshacer' ? cliente.deshacer() : historial === 'rehacer' ? cliente.rehacer() : cliente.saltar(historial.saltar)),
-      aviso: (r) => `No se pudo ${typeof historial === 'object' ? 'saltar' : historial}: ${r.mensaje}`,
+      aviso: (r) => `Could not ${typeof historial === 'object' ? 'jump' : historial === 'deshacer' ? 'undo' : 'redo'}: ${r.mensaje}`,
     };
   }
   if ('intencion' in pedido) {
@@ -76,10 +76,10 @@ function planDe(pedido: PedidoDeEscritura, cliente: Cliente): Plan {
     async enviar(estado) {
       if (estado === undefined) return SIN_ESTADO;
       const peticion = pedido.ediciones(estado);
-      return peticion === undefined ? rechazo('no queda nada que aplicar') : cliente.editarTexto({ ...peticion, version: estado.version });
+      return peticion === undefined ? rechazo('nothing left to apply') : cliente.editarTexto({ ...peticion, version: estado.version });
     },
     aviso(r) {
-      const motivo = [r.motivo, r.file === undefined ? undefined : `en ${r.file}`].filter((x) => x !== undefined).join(' ');
+      const motivo = [r.motivo, r.file === undefined ? undefined : `in ${r.file}`].filter((x) => x !== undefined).join(' ');
       return `${pedido.fallo}${motivo === '' ? '' : ` (${motivo})`}: ${r.mensaje}`;
     },
   };
@@ -99,7 +99,7 @@ export function crearEscritura({ cliente, vigente, recibir, avisar, vaciarGuarda
     if (!r.ok && r.desactualizado && plan.reintentar) r = await plan.enviar(await recargar());
     if (r.ok) return r;
     if (r.desactualizado) {
-      avisar(`El archivo cambio en disco; se recargo la Vista (${r.mensaje})`);
+      avisar(`The file changed on disk; the View was reloaded (${r.mensaje})`);
       await recargar();
     } else avisar(plan.aviso(r));
     return r;

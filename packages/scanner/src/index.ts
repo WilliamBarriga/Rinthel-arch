@@ -17,6 +17,7 @@ import { readCommit } from './git';
 import { IMPORT_EXTRACTORS } from './imports';
 import type { FoundImport } from './imports';
 import { languageOf } from './languages';
+import { normalizePackage } from './manifests';
 import { TABLE_EXTRACTORS, identifyTables } from './tables';
 import type { FoundTable } from './tables';
 import { buildUnits } from './units';
@@ -75,8 +76,8 @@ export async function scan(root: string, options: ScanOptions = {}): Promise<Sca
   const declared = new Set<string>();
   for (const [id, inFolder] of manifests) {
     for (const manifest of inFolder) {
-      if (manifest.name !== undefined) internal.set(`${manifest.ecosystem}:${manifest.name}`, id);
-      for (const name of manifest.declares) declared.add(`${manifest.ecosystem}:${name}`);
+      if (manifest.name !== undefined) internal.set(`${manifest.ecosystem}:${normalizePackage(manifest.ecosystem, manifest.name)}`, id);
+      for (const name of manifest.declares) declared.add(`${manifest.ecosystem}:${normalizePackage(manifest.ecosystem, name)}`);
     }
   }
 

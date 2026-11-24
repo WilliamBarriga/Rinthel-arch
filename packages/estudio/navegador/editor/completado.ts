@@ -17,27 +17,27 @@ export function opcionesDeCompletado(fuente: FuenteCanonica | undefined): Comple
     ...de(
       fuente.model.nodes.map((n) => n.id),
       'variable',
-      'Nodo',
+      'Node',
     ),
     ...de(
       fuente.specification.nodeTypes.map((t) => t.name),
       'class',
-      'Tipo',
+      'Node kind',
     ),
     ...de(
       fuente.views.map((v) => v.id),
       'namespace',
-      'Vista',
+      'View',
     ),
     ...de(
       fuente.model.interactions.map((i) => i.id),
       'function',
-      'Interaccion',
+      'Interaction',
     ),
     ...de(
       fuente.themes.map((t) => t.name),
       'type',
-      'Tema',
+      'Theme',
     ),
     ...PALABRAS,
   ];

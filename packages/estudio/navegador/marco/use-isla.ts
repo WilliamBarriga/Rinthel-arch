@@ -29,7 +29,7 @@ export interface Isla {
   ocultar(): void;
   /** Ensancha la isla hasta `minimo` (recortado al maximo del lienzo); si ya es mas ancha, no cambia. */
   ensanchar(minimo: number): void;
-  /** Para medir el alto del contenido al empezar un gesto. */
+  /** Para medir el content height al empezar un gesto. */
   ref: (elemento: HTMLElement | null) => void;
   /** Props del asa de un eje: separador accesible para `horizontal` y `vertical`; la esquina es solo de puntero. */
   asa(eje: EjeDeAsa): HTMLAttributes<HTMLDivElement>;
@@ -78,19 +78,19 @@ export function useIsla({ lado, id, nombre, lienzo, anchoInicial }: OpcionesDeIs
       setTamano(nuevo);
     };
     if (eje === 'horizontal') {
-      return { ...puntero, role: 'separator', tabIndex: 0, 'aria-orientation': 'vertical', 'aria-label': `Ancho del ${nombre}`, 'aria-controls': id, 'aria-valuemin': rango.ancho.min, 'aria-valuemax': rango.ancho.max, 'aria-valuenow': tamano.ancho, onKeyDown: teclado };
+      return { ...puntero, role: 'separator', tabIndex: 0, 'aria-orientation': 'vertical', 'aria-label': `Width of the ${nombre}`, 'aria-controls': id, 'aria-valuemin': rango.ancho.min, 'aria-valuemax': rango.ancho.max, 'aria-valuenow': tamano.ancho, onKeyDown: teclado };
     }
     return {
       ...puntero,
       role: 'separator',
       tabIndex: 0,
       'aria-orientation': 'horizontal',
-      'aria-label': `Alto del ${nombre}`,
+      'aria-label': `Height of the ${nombre}`,
       'aria-controls': id,
       'aria-valuemin': rango.alto.min,
       'aria-valuemax': rango.alto.max,
       'aria-valuenow': tamano.alto ?? Math.round(elemento.current?.getBoundingClientRect().height ?? rango.alto.min),
-      'aria-valuetext': tamano.alto === null ? 'alto del contenido' : `${tamano.alto} px`,
+      'aria-valuetext': tamano.alto === null ? 'content height' : `${tamano.alto} px`,
       onKeyDown: teclado,
       onDoubleClick: volverAlContenido,
     };
