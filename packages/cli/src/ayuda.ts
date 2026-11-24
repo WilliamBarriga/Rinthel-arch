@@ -1,6 +1,6 @@
 import { CARPETA_DE_SALIDA } from './workspace';
 
-const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill'] as const;
+const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill', 'scan'] as const;
 export type ComandoConAyuda = (typeof COMANDOS)[number];
 
 const WORKSPACE = '--workspace <path>  Folder with the .dg files (required)';
@@ -94,6 +94,22 @@ Generates a skill (SKILL.md) so an agent can write and fix the .dg files of THAT
 Themes, syntax, the validate/inspect/edit contract and issue codes. It goes to stdout or to --out.
 Regenerate it when the Node kinds, the Themes or the codes change.
 `,
+  scan: `diagrams scan [<root>] [options]
+
+Reads a codebase without running it and writes a Scan draft (rinthel/scan@1): units from manifests
+(package.json, pyproject.toml, go.mod, Cargo.toml), dependencies between them from TS/JS imports,
+externals and limits. Prints a compact summary that ends with the next step. Never writes .dg files.
+
+Options:
+  <root>               Folder to scan (current folder by default)
+  --out <file>         Where to write the draft (<root>/.rinthel/scan.json by default, not versioned)
+  --json               stdout is exactly one summary object with its own contractVersion
+  --depth <N>          Folder levels a large manifest is split into (2 by default; 0 never splits)
+  --max-files <N>      Files read at most (20000 by default); beyond it limits.truncated is true
+
+Honors .gitignore and always skips node_modules, dist, build, .venv and vendored code.
+Exit: 0 draft written, 2 usage or internal failure (message on stderr).
+`,
 };
 
 const AYUDA_GENERAL = `diagrams: CLI to write, validate and view .dg diagrams
@@ -108,6 +124,7 @@ Commands:
   inspect    Queries the Model: buscar, nodo, vista, interaccion, tema (read-only)
   edit       Sets a Pin or applies structured edits to the .dg
   skill      Generates the agent skill of a Workspace
+  scan       Reads a codebase into a Scan draft for an agent to diagram (diagrams scan [<root>])
 
 Agent loop: inspect, edit the .dg, validate --json until ok:true.
 Exit codes: 0 success, 1 Workspace errors, 2 usage or internal failure.

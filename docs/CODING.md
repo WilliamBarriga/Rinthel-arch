@@ -4,7 +4,7 @@ Vocabulario de diseno: **Modulo**, **Interfaz**, **Seam**, **Adaptador**, **Prof
 
 ## Estructura
 
-Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico, tema, dsl, layout, sesion, render, shell, estudio, cli). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. `exports` declara solo `.`; la unica excepcion es `estudio`, con `./protocolo` (tipos del protocolo de `dev` que `cli` importa sin cargar la app), `./contrato` (suite de contrato de solo pruebas) y `./construir` (arma el bundle de la app; lo usan su build y el bench). Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
+Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico, tema, dsl, layout, sesion, render, shell, estudio, cli, scanner). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. `exports` declara solo `.`; la unica excepcion es `estudio`, con `./protocolo` (tipos del protocolo de `dev` que `cli` importa sin cargar la app), `./contrato` (suite de contrato de solo pruebas) y `./construir` (arma el bundle de la app; lo usan su build y el bench). Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
 
 ## Modulos profundos
 
@@ -20,6 +20,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 - Un seam existe cuando algo varia a traves de el: un adaptador es un seam hipotetico, dos es uno real. Con un solo adaptador, llamada directa.
 - Las dependencias entran como argumento; las funciones devuelven resultados en vez de mutar.
 - Direccion de dependencias: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. Un paquete solo importa de los anteriores. `tema` va tras `canonico` porque reutiliza sus `Issue` y codigos, y antes de `dsl` porque el compilador de Temas valida con su catalogo (ADR 0004, enmienda).
+- `scanner` sits outside the chain (ADR 0010): it imports no workspace package and only `cli` imports it (`AISLADOS` in `scripts/check-dependencies.ts`).
 - El nucleo es agnostico del Proyecto documentado (ver `AGENTS.md`).
 
 ## Pruebas

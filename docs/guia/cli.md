@@ -6,7 +6,7 @@ El CLI es `packages/cli/dist/bin.js` (tras `pnpm build`). En esta guia se abrevi
 alias dg="node $PWD/packages/cli/dist/bin.js"
 ```
 
-`dg --help` lista los comandos y `dg <comando> --help` da las opciones de cada uno (la ayuda sale en stdout, codigo 0). Todos piden `--workspace <ruta>`, la carpeta con los `.dg`. Contrato de diseno: [ADR 0005](../adr/0005-cli-para-agentes.md).
+`dg --help` lista los comandos y `dg <comando> --help` da las opciones de cada uno (la ayuda sale en stdout, codigo 0). Todos salvo `scan` piden `--workspace <ruta>`, la carpeta con los `.dg`. Contrato de diseno: [ADR 0005](../adr/0005-cli-para-agentes.md).
 
 ## Codigos de salida
 
@@ -93,6 +93,21 @@ dg skill --workspace <ruta> [--out <archivo>]
 ```
 
 Genera un `SKILL.md` con los Tipos de nodo, Temas, sintaxis, contratos y codigos de issue de ese Workspace. Es para proyectos que usan el sistema: instalala en la carpeta de skills de tu harness. Regenerala cuando cambien los Tipos de nodo, los Temas o los codigos.
+
+### `scan`: Borrador de escaneo de una codebase
+
+```
+dg scan [<raiz>] [--out <archivo>] [--json] [--depth <N>] [--max-files <N>]
+```
+
+Lee la codebase de `<raiz>` (la carpeta actual por defecto) sin ejecutar nada y escribe el Borrador de escaneo `rinthel/scan@1` en `<raiz>/.rinthel/scan.json` (o en `--out`; no se versiona). No usa `--workspace` ni escribe `.dg`: el agente lee el Borrador y escribe el Workspace, que se valida con `validate`. Contrato: [ADR 0010](../adr/0010-importador-de-codebases.md).
+
+- **Unidades** (`units`): una por manifiesto (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`), mas la raiz. Su `id` es la carpeta relativa a la raiz (`.` para la raiz) y es la ref de la Source `path` del Nodo que la dibuje. `parent` sale de la ruta y `kind` (`package`, `app`, `module`, `folder`) es una pista, no un Tipo de nodo. Un manifiesto sin otros manifiestos dentro y con 30 archivos o mas se parte en sub-unidades `folder` hasta `--depth` niveles (2 por defecto; 0 no parte).
+- **Dependencias** (`dependencies`): imports de TS/JS (`import`, `export ... from`, `import()`, `require()`) agregados por par de unidades, con `weight` (cuantos imports) y hasta 3 `examples` (`archivo:linea`). Los imports dentro de una misma unidad y los modulos de Node no cuentan.
+- **Externos** (`externals`): paquetes importados que no son unidades, con `importedBy`; `extracted` si un manifiesto los declara, `inferred` si solo un import los nombra.
+- **Limites** (`limits`): archivos leidos, `truncated` si se llego a `--max-files` (20000 por defecto; no falla), imports sin resolver (alias, URLs), archivos de mas de 1 MB sin parsear y los lenguajes cuyos imports esta version no lee (dan unidades sin dependencias).
+
+Cada item lleva `source {file, line}` (linea 0: la carpeta misma) y `confidence` (`extracted` o `inferred`). Respeta los `.gitignore` y siempre salta `node_modules`, `dist`, `build`, `.venv`, `venv`, `vendor`, `third_party`, `__pycache__`, `.git`, `.rinthel` y `.diagrams`. Con el mismo commit, el Borrador es identico byte a byte. stdout es un resumen compacto que termina con el siguiente paso; con `--json`, ese resumen como un objeto con su propio `contractVersion` (`draft`, `schema`, `commit`, `counts`, `limits` y las 15 primeras `units`, `dependencies` y `externals`). Sale 0 si escribio el Borrador y 2 en un fallo de uso.
 
 ## Bucle de trabajo
 
