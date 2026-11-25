@@ -21,6 +21,6 @@ export { abrirWorkspaceVivo } from './workspace-vivo';
 export type { CodigoCompilado, PuertoDelWorkspaceVivo, WorkspaceVivo } from './workspace-vivo';
 export type { RegistroDeActividad } from './registro-de-actividad-vivo';
 export type { Reloj } from './reloj';
-export { atenderApiDeDev } from './api-de-dev';
+export { atenderApiDeDev, fetchSobreApiDeDev } from './api-de-dev';
 export { puertoEnMemoria } from './puerto-vivo-en-memoria';
 export type { WorkspaceEnMemoria } from './puerto-en-memoria';

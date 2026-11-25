@@ -16,7 +16,7 @@ import type { OpcionesDeDev, ServidorDev } from 'cli';
 import { puertoEnMemoria } from 'sesion';
 import type { PuertoDelWorkspaceVivo } from 'sesion';
 
-import { puertoDeDisco } from '../src/dev';
+import { puertoDeDisco } from '../src/puerto-de-disco';
 
 const BASE = `specification {
   node servicio

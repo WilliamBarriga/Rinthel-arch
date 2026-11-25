@@ -201,3 +201,15 @@ export async function atenderApiDeDev(vivo: WorkspaceVivo, peticion: PeticionDeD
     return serializar(error(500, e instanceof Error ? e.message : String(e)));
   }
 }
+
+/**
+ * `fetch` over the dev API in process, without HTTP: every request goes to `atenderApiDeDev`. `base` resolves relative
+ * URLs (`/api/estado`). Shared by `export` (it captures the state) and the in-memory dev of the estudio tests.
+ */
+export function fetchSobreApiDeDev(vivo: WorkspaceVivo, base = 'http://127.0.0.1'): typeof fetch {
+  return (async (entrada: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(entrada instanceof Request ? entrada.url : entrada), base);
+    const { status, cuerpo, cabeceras } = await atenderApiDeDev(vivo, { metodo: init?.method ?? 'GET', url, ...(typeof init?.body === 'string' && { cuerpo: init.body }) });
+    return new Response(cuerpo, { status, headers: cabeceras });
+  }) as typeof fetch;
+}

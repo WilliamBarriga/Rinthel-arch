@@ -11,9 +11,9 @@ import { basename, dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { capturarExportado, carpetaDelEstudio, htmlDeExportado } from 'estudio';
-import { abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
+import { abrirWorkspaceVivo, fetchSobreApiDeDev } from 'sesion';
 
-import { puertoDeDisco, relojReal } from './dev';
+import { puertoDeDisco, relojReal } from './puerto-de-disco';
 import { abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { leerArchivoDeFuente, leerWorkspace } from './workspace';
@@ -53,13 +53,8 @@ export async function comandoExport(args: readonly string[], { estaticos = carpe
       confiarEnCodigo: true,
     });
     try {
-      const fetchDeDev = (async (entrada: string | URL | Request, init?: RequestInit) => {
-        const url = new URL(String(entrada), 'http://127.0.0.1');
-        const r = await atenderApiDeDev(vivo, { metodo: init?.method ?? 'GET', url, ...(typeof init?.body === 'string' && { cuerpo: init.body }) });
-        return new Response(r.cuerpo, { status: r.status, headers: r.cabeceras });
-      }) as typeof fetch;
       const raices = temas === undefined ? [workspace] : [workspace, temas];
-      const datos = await capturarExportado({ fetch: fetchDeDev, leerFuente: (ruta) => leerArchivoDeFuente(raices, ruta) });
+      const datos = await capturarExportado({ fetch: fetchSobreApiDeDev(vivo), leerFuente: (ruta) => leerArchivoDeFuente(raices, ruta) });
       vistas = datos.estado.vistas.length;
       componentes = datos.componentes?.nombres ?? [];
       html = htmlDeExportado(datos, { titulo: `${basename(resolve(workspace))} - rinthel-arch`, estaticos });
