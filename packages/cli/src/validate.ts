@@ -27,9 +27,9 @@ export function construirSalida(
   };
 }
 
-/** Su `hint`, o el reemplazo de su `fix` como "quisiste decir". */
+/** Su `hint`, o el reemplazo de su `fix` como "did you mean". */
 const pista = (issue: Issue): string =>
-  issue.hint !== undefined ? `; ${issue.hint}` : issue.fix !== undefined && issue.fix.replacement !== '' ? `; quisiste decir '${issue.fix.replacement}'` : '';
+  issue.hint !== undefined ? `; ${issue.hint}` : issue.fix !== undefined && issue.fix.replacement !== '' ? `; did you mean '${issue.fix.replacement}'` : '';
 
 /** Una linea por issue y un resumen. */
 export function textoLegible(salida: SalidaDeValidate): string {
@@ -38,6 +38,6 @@ export function textoLegible(salida: SalidaDeValidate): string {
       `${issue.file}:${issue.line}:${issue.column} ${issue.severity} ${issue.code} ${issue.message}${pista(issue)}`,
   );
   const { errors, warnings, truncated } = salida.summary;
-  lineas.push(`${errors} errores, ${warnings} avisos${truncated ? ' (lista truncada)' : ''}`);
+  lineas.push(`${errors} errors, ${warnings} warnings${truncated ? ' (list truncated)' : ''}`);
   return `${lineas.join('\n')}\n`;
 }

@@ -14,7 +14,7 @@
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { readFileSync, rmSync, watch } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -23,22 +23,15 @@ import type { EventoDeDev } from 'canonico';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
 import { abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
-import type { PuertoDelWorkspaceVivo, Reloj, WorkspaceVivo } from 'sesion';
+import type { PuertoDelWorkspaceVivo, WorkspaceVivo } from 'sesion';
 
 import { compiladorDeCodigo } from './codigo';
 import type { ResultadoDeCodigo } from './codigo';
-import { registroEnDisco } from './registro-en-disco';
-import { leerConTemas, uso as usoComun } from './sesion-cli';
+import { puertoDeDisco, relojReal } from './puerto-de-disco';
+import type { Observador } from './puerto-de-disco';
+import { uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
-import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos, leerWorkspace } from './workspace';
-
-/** `setTimeout` como reloj del Workspace vivo. */
-export const relojReal: Reloj = {
-  programar(fn, ms) {
-    const t = setTimeout(fn, ms);
-    return () => clearTimeout(t);
-  },
-};
+import { leerArchivoDeFuente } from './workspace';
 
 /** Todo salvo `workspace` tiene un defecto real. */
 export interface OpcionesDeDev {
@@ -67,34 +60,6 @@ export interface ServidorDev {
   /** Si el codigo ya se sirve (confirmado de antemano con `confiarEnCodigo`). */
   confiado: boolean;
   cerrar(): Promise<void>;
-}
-
-/** `fs.watch` recursivo; ignora carpetas ocultas (`.diagrams/`, `.git/`) y `node_modules`. */
-function observarDisco(raiz: string, alCambiar: () => void): () => void {
-  const observador = watch(raiz, { recursive: true }, (_evento, nombre) => {
-    if (nombre !== null && nombre.split(/[\\/]/).some((parte) => parte.startsWith('.') || parte === 'node_modules')) return;
-    alCambiar();
-  });
-  return () => observador.close();
-}
-
-/** Avisa de cualquier cambio bajo `raiz`; devuelve como dejar de observar. */
-export type Observador = (raiz: string, alCambiar: () => void) => () => void;
-
-/**
- * El Workspace vivo sobre el disco: los `.dg` de `workspace` (propios) fusionados tras los de `temas`, escritura atomica
- * bajo la raiz, recursos (`.tsx`, fuentes) de ambas carpetas, el observador (`fs.watch` recursivo por defecto) y el
- * Registro de actividad de `registro-en-disco.ts`.
- */
-export function puertoDeDisco(workspace: string, { temas, observar = observarDisco }: { temas?: string; observar?: Observador } = {}): PuertoDelWorkspaceVivo {
-  return {
-    actividad: registroEnDisco(workspace),
-    leer: () => ({ propios: leerWorkspace(workspace), disco: leerConTemas(leerWorkspace, workspace, temas) }),
-    escribir: (ruta, texto) => escribirTexto(destinoEnWorkspace(workspace, ruta), texto),
-    borrar: (ruta) => rmSync(destinoEnWorkspace(workspace, ruta), { force: true }),
-    recursos: () => ({ ...(temas === undefined ? {} : leerRecursos(temas)), ...leerRecursos(workspace) }),
-    observar: (alCambiar) => observar(workspace, alCambiar),
-  };
 }
 
 const LIMITE_DEL_CUERPO = 64 * 1024;
@@ -132,11 +97,11 @@ const TIPOS_DE_ESTATICO: Readonly<Record<string, string>> = { '.html': 'text/htm
 function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
   let bytes: Buffer;
   try {
-    if (ruta === undefined) throw new Error('no declarado');
+    if (ruta === undefined) throw new Error('not declared');
     bytes = readFileSync(ruta);
   } catch {
     cabecera(res, 'text/plain', 404);
-    res.end('No encontrado (si falta el build de la app: pnpm --filter estudio build)');
+    res.end('Not found (if the app build is missing: pnpm --filter estudio build)');
     return;
   }
   cabecera(res, TIPOS_DE_ESTATICO[extname(ruta)] ?? 'application/octet-stream');
@@ -172,8 +137,8 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   /** Controles del transporte de un POST: `Origin` propio (o ninguno) y JSON; si fallan, el estado y el mensaje. */
   const rechazoDelPost = (req: IncomingMessage): [number, string] | undefined => {
     const origen = req.headers.origin;
-    if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) return [403, 'Origen no permitido'];
-    if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return [415, 'Se esperaba application/json'];
+    if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) return [403, 'Origin not allowed'];
+    if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return [415, 'Expected application/json'];
     return undefined;
   };
 
@@ -183,9 +148,9 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     let cuerpo: string | undefined;
     if (metodo === 'POST') {
       const rechazo = rechazoDelPost(req);
-      if (rechazo !== undefined) return responder(res, rechazo[0], { ok: false, mensaje: rechazo[1] });
+      if (rechazo !== undefined) return responder(res, rechazo[0], { ok: false, message: rechazo[1] });
       cuerpo = await leerCuerpo(req);
-      if (cuerpo === undefined) return responder(res, 413, { ok: false, mensaje: 'Cuerpo demasiado grande' });
+      if (cuerpo === undefined) return responder(res, 413, { ok: false, message: 'Request body too large' });
     }
     const respuesta = await atenderApiDeDev(vivo, { metodo, url, ...(cuerpo !== undefined && { cuerpo }) });
     res.writeHead(respuesta.status, respuesta.cabeceras);
@@ -205,7 +170,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     // Contra DNS rebinding.
     if (!hostsPropios().includes(req.headers.host ?? '')) {
       cabecera(res, 'text/plain', 403);
-      res.end('Host no permitido');
+      res.end('Host not allowed');
       return;
     }
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
@@ -220,7 +185,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       const fuente = servirFuente(ruta.slice(RUTAS_DE_DEV.fuentes.length));
       if (fuente === undefined) {
         cabecera(res, 'text/plain', 404);
-        res.end('No encontrado');
+        res.end('Not found');
       } else {
         res.writeHead(200, { 'content-type': fuente.tipo, 'cache-control': 'no-store', 'content-length': fuente.bytes.length });
         res.end(fuente.bytes);
@@ -248,7 +213,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     throw error;
   });
   const direccion = servidor.address();
-  if (direccion === null || typeof direccion === 'string') throw new Error('El servidor no tiene puerto');
+  if (direccion === null || typeof direccion === 'string') throw new Error('The server has no port');
   const { componentes, confiado } = vivo.codigo();
 
   return {
@@ -277,9 +242,9 @@ export async function comandoDev(
   } catch (error) {
     return uso((error as Error).message);
   }
-  if (valores.workspace === undefined) return uso('Falta --workspace <ruta>');
+  if (valores.workspace === undefined) return uso('Missing --workspace <path>');
   const puertoHttp = Number(valores.port ?? 4173);
-  if (!Number.isInteger(puertoHttp) || puertoHttp < 0 || puertoHttp > 65535) return uso('--port debe ser un entero entre 0 y 65535');
+  if (!Number.isInteger(puertoHttp) || puertoHttp < 0 || puertoHttp > 65535) return uso('--port must be an integer between 0 and 65535');
   const { observar, estudio } = dependencias;
   const workspace = valores.workspace;
   const temas = valores['theme-path'];
@@ -296,10 +261,10 @@ export async function comandoDev(
       servidor.conCodigo.length === 0
         ? ''
         : servidor.confiado
-          ? `AVISO: los Temas del Workspace cargan codigo (${servidor.conCodigo.join(', ')}); confirmado con --trust-code.\n`
-          : `AVISO: los Temas del Workspace cargan codigo (${servidor.conCodigo.join(', ')}) que corre en tu navegador sin sandbox. El visor pedira confirmacion antes de cargarlo; usa --trust-code solo en un Workspace propio.\n`;
-    return { exitCode: 0, stdout: `${aviso}diagrams dev escuchando en ${servidor.url}\n`, stderr: '' };
+          ? `WARNING: the Workspace Themes load code (${servidor.conCodigo.join(', ')}); confirmed with --trust-code.\n`
+          : `WARNING: the Workspace Themes load code (${servidor.conCodigo.join(', ')}) that runs in your browser without a sandbox. The viewer will ask for confirmation before loading it; use --trust-code only on a Workspace you own.\n`;
+    return { exitCode: 0, stdout: `${aviso}diagrams dev listening on ${servidor.url}\n`, stderr: '' };
   } catch (error) {
-    return uso(`No se pudo iniciar dev: ${(error as Error).message}`);
+    return uso(`Could not start dev: ${(error as Error).message}`);
   }
 }

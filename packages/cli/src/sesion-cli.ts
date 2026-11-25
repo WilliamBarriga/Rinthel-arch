@@ -34,7 +34,7 @@ export function abrirSesionDe(
     const fuentes = enDisco ? { archivosDeFuente: [...new Set([...(carpetaDeTemas === undefined ? [] : leerFuentes(carpetaDeTemas)), ...leerFuentes(raiz)])] } : {};
     return { sesion: abrirSesion(leerConTemas(leer, raiz, carpetaDeTemas), { ...opciones, ...fuentes, componentes: codigo.componentes, issuesDelAdaptador: codigo.issues }) };
   } catch (error) {
-    return { fallo: uso(`No se pudo leer el Workspace: ${(error as Error).message}`) };
+    return { fallo: uso(`Could not read the Workspace: ${(error as Error).message}`) };
   }
 }
 

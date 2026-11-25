@@ -19,7 +19,7 @@ export interface WorkspaceVivoEnMemoria extends PuertoDelWorkspaceVivo, Workspac
 export interface ContenidoVivoEnMemoria extends ContenidoEnMemoria {
   /** Sin el, `recursos()` da `undefined`. */
   recursos?: Record<string, string>;
-  /** Texto inicial de `.diagrams/actividad.jsonl`; sin el, el registro no existe todavia. */
+  /** Texto inicial de `.diagrams/activity.jsonl`; sin el, el registro no existe todavia. */
   actividad?: string;
   /** Toda escritura propia lanza un `Error` con este mensaje (fallo de I/O); `editarFuera` sigue escribiendo. */
   escrituraRota?: string;
@@ -50,10 +50,27 @@ export function puertoEnMemoria({ recursos, actividad, escrituraRota, ...conteni
     base.borrar(ruta);
     avisar();
   };
+  // Paths of the Workspace: its `.dg` files plus the resources; a folder exists if some path is under it.
+  const rutas = (): string[] => [...Object.keys(base.leer().propios), ...Object.keys(hashes ?? {})];
+  const dentro = (ruta: string, carpeta: string): boolean => ruta === carpeta || ruta.startsWith(`${carpeta}/`);
+  const renombrar = (antigua: string, nueva: string): void => {
+    if (escrituraRota !== undefined) throw new Error(escrituraRota);
+    const nuevaRuta = (ruta: string): string => nueva + ruta.slice(antigua.length);
+    const { propios } = base.leer();
+    for (const ruta of Object.keys(propios).filter((r) => dentro(r, antigua))) {
+      base.escribir(nuevaRuta(ruta), propios[ruta] as string);
+      base.borrar(ruta);
+    }
+    if (hashes !== undefined) hashes = Object.fromEntries(Object.entries(hashes).map(([ruta, hash]) => [dentro(ruta, antigua) ? nuevaRuta(ruta) : ruta, hash]));
+    avisar();
+  };
   return {
     ...base,
     escribir,
     borrar,
+    rutas,
+    existe: (ruta) => rutas().some((r) => dentro(r, ruta)),
+    renombrar,
     recursos: () => (hashes === undefined ? undefined : { ...hashes }),
     observar(alCambiar) {
       observadores.add(alCambiar);

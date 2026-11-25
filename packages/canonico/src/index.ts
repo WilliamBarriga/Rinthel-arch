@@ -42,6 +42,8 @@ export { combineIconProviders, genericIcons, hidratarIconos, resolveNodeTypeIcon
 export type { IconProvider } from './iconos';
 export { idDeArista, idDeElementoDeSecuencia, leerIdDeElementoDeSecuencia, revealAt } from './pasos';
 export type { Visibilidad } from './pasos';
+export { aristaPlaneada, extremoPlaneado, mensajePlaneado, planeados } from './planeado';
+export type { Planeados } from './planeado';
 export { candidatosCercanos } from './sugerencias';
 export { validate } from './validar';
 export type { OpcionesDeValidate, RutaDeFuente, SitioDeTexto, Ubicador } from './validar';
@@ -80,6 +82,17 @@ export type {
 
 export type { Issue, IssueFix, IssueRelated, Severity, TextPosition, TextRange } from './issue';
 
+export {
+  CONVENCIONES_RENOMBRADAS,
+  VALORES_DE_CATALOGO_ANTIGUOS,
+  convencionesObsoletas,
+  issueDeRenombre,
+  issueDeRenombreDeRuta,
+  mensajeDeValorAntiguo,
+  renombreAntiguo,
+  renombreEnRuta,
+} from './renombres';
+export type { CategoriaDeCatalogo, ConvencionRenombrada, Renombre } from './renombres';
 export { CODIGOS, CODIGOS_DEPRECADOS, DESCRIPCION_DE_CODIGO } from './codigos';
 export type { Codigo } from './codigos';
 
@@ -90,6 +103,8 @@ export { ACTIVIDAD_CONTRACT_VERSION, COMANDOS_CON_ACTIVIDAD, crearLectorDeActivi
 export type { EventoDeActividad, ObjetivoDeActividad } from './actividad';
 
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';
+export { SCAN_CONTRACT_VERSION, scanChangesSchema, scanCoverageNoticeSchema, scanCoverageSchema, scanSummarySchema } from './scan';
+export type { ScanChanges, ScanCoverage, ScanCoverageNotice, ScanSummary } from './scan';
 export type { SalidaDeInspect } from './inspect';
 
 export { MOTIVOS_DE_RECHAZO, intencionDeOrdenSchema, intencionDePinSchema, intencionDeTemaSchema, intencionSchema } from './pin';

@@ -64,7 +64,7 @@ describe('Secuencia: acierto', () => {
     const etiqueta = centro(g.messages['1.0.0']!.label!);
     pulsarEn(container, etiqueta.x, etiqueta.y);
     expect(ultimo(ids)).toEqual(['checkout:1.0.0']);
-    expect(container.querySelector('[data-message="checkout:1.0.0"] [data-state="seleccionado"]')).not.toBeNull();
+    expect(container.querySelector('[data-message="checkout:1.0.0"] [data-state="selected"]')).not.toBeNull();
   });
 
   it('Nota; la activacion cae en su Lifeline; el interior de un Fragmento deja pasar el click', async () => {
@@ -73,7 +73,7 @@ describe('Secuencia: acierto', () => {
     const nota = g.notes[0]!;
     pulsarEn(container, ...Object.values(centro(nota)) as [number, number]);
     expect(ultimo(ids)).toEqual(['checkout:2']);
-    expect(container.querySelector('[data-note="checkout:2"]')!.getAttribute('data-estados')).toBe('seleccionado');
+    expect(container.querySelector('[data-note="checkout:2"]')!.getAttribute('data-estados')).toBe('selected');
 
     const activacion = g.activations.find((a) => a.lifeline === 'api')!;
     pulsarEn(container, activacion.x + activacion.width / 2, activacion.y1 + 2);
@@ -106,7 +106,7 @@ describe('Secuencia: acierto', () => {
     expect(deserializarEstado('#p=v&s=checkout:1.0.1', fuente).selected).toBe('checkout:1.0.1');
     expect(deserializarEstado('#p=v&s=otra:1.0.1', fuente).selected).toBeNull();
     const { container } = await montar(sinPasos, { selected: 'checkout:1.0.1' });
-    expect(container.querySelector('[data-message="checkout:1.0.1"] [data-state="seleccionado"]')).not.toBeNull();
+    expect(container.querySelector('[data-message="checkout:1.0.1"] [data-state="selected"]')).not.toBeNull();
   });
 
   it('lo que el Paso no revelo no se selecciona', async () => {
@@ -126,15 +126,15 @@ describe('Secuencia: acierto', () => {
 
   it('dos Lifelines seleccionadas no emiten en-ruta ni atenuado', async () => {
     const { container } = await montar(sinPasos, { selection: ['cliente', 'db'] });
-    expect(container.querySelectorAll('[data-state="seleccionado"]').length).toBeGreaterThan(0);
-    expect(container.querySelector('[data-state="en-ruta"]')).toBeNull();
+    expect(container.querySelectorAll('[data-state="selected"]').length).toBeGreaterThan(0);
+    expect(container.querySelector('[data-state="on-path"]')).toBeNull();
     expect(container.querySelector('[data-atenuado]')).toBeNull();
   });
 });
 
 describe('Secuencia: teclado', () => {
   // La cabecera espejo del pie repite el Nodo de cada Lifeline: se cuenta cada una una sola vez.
-  const conFoco = (c: HTMLElement) => [...new Set([...c.querySelectorAll('[data-state="foco"]')].map((e) => e.closest('[data-id]')?.getAttribute('data-id') ?? e.closest('[data-message]')?.getAttribute('data-message')))];
+  const conFoco = (c: HTMLElement) => [...new Set([...c.querySelectorAll('[data-state="focus"]')].map((e) => e.closest('[data-id]')?.getAttribute('data-id') ?? e.closest('[data-message]')?.getAttribute('data-message')))];
   const tecla = (zona: HTMLElement, key: string, init: KeyboardEventInit = {}) => act(() => void fireEvent.keyDown(zona, { key, ...init }));
 
   it('Tab recorre las Lifelines en orden de columna y las flechas laterales saltan a la vecina', async () => {

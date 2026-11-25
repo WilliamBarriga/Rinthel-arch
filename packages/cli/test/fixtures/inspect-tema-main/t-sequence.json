@@ -1,75 +1,75 @@
 {
-  "contractVersion": 1,
-  "comando": "tema",
-  "tema": {
+  "contractVersion": 2,
+  "command": "theme",
+  "theme": {
     "name": "t",
     "file": "main.dg",
     "line": 3,
     "extends": [],
-    "partes": [],
-    "diagrama": "sequence",
-    "capas": [
+    "parts": [],
+    "diagram": "sequence",
+    "layers": [
       {
-        "nombre": "forma",
-        "primitiva": "rect",
+        "name": "forma",
+        "primitive": "rect",
         "props": {
           "radius": 0
         },
-        "encima": false,
-        "animada": false,
-        "origen": {
+        "above": false,
+        "animated": false,
+        "origin": {
           "file": "main.dg",
           "line": 5
         }
       },
       {
-        "nombre": "relleno",
-        "primitiva": "solid",
+        "name": "relleno",
+        "primitive": "solid",
         "props": {
           "color": "azul"
         },
-        "encima": false,
-        "animada": false,
-        "origen": {
+        "above": false,
+        "animated": false,
+        "origin": {
           "file": "main.dg",
           "line": 5
         }
       }
     ],
-    "pagina": {
-      "fijo": false,
-      "capas": []
+    "page": {
+      "fixed": false,
+      "layers": []
     },
-    "grupo": {
-      "propio": false,
-      "cabecera": "row gap 6 pad 6 { icon title }",
-      "origenDeCabecera": {
+    "group": {
+      "own": false,
+      "header": "row gap 6 pad 6 { icon title }",
+      "headerOrigin": {
         "file": "main.dg",
         "line": 3
       },
-      "alturaDeCabecera": 36,
+      "headerHeight": 36,
       "padding": {
         "top": 8,
         "left": 16,
         "bottom": 16,
         "right": 16
       },
-      "capas": [],
-      "colapsado": {
+      "layers": [],
+      "collapsed": {
         "slots": "column { title }",
-        "origenDeSlots": {
+        "slotsOrigin": {
           "file": "main.dg",
           "line": 5
         },
-        "capas": []
+        "layers": []
       }
     },
     "slots": "column { title }",
-    "origenDeSlots": {
+    "slotsOrigin": {
       "file": "main.dg",
       "line": 5
     },
-    "metricas": {
+    "metrics": {
       "fontSize": 14,
       "factorDeAncho": 0.55,
       "fuentes": {
@@ -133,15 +133,15 @@
         "rellenoVerticalDeFragmento": 10
       }
     },
-    "temaConCodigo": false,
-    "componentes": [],
-    "elementos": {
-      "secuencia": {
+    "hasCode": false,
+    "components": [],
+    "elements": {
+      "sequence": {
         "message": {
-          "capas": [
+          "layers": [
             {
-              "nombre": "linea",
-              "primitiva": "line",
+              "name": "linea",
+              "primitive": "line",
               "props": {
                 "color": "azul",
                 "width": 1.5,
@@ -150,22 +150,22 @@
                 "cut": 6,
                 "radius": 8
               },
-              "encima": false,
-              "animada": false,
-              "origen": {
+              "above": false,
+              "animated": false,
+              "origin": {
                 "file": "main.dg",
                 "line": 3
               }
             }
           ],
-          "marcadores": {
+          "markers": {
             "end": "arrow"
           },
-          "parches": {
+          "patches": {
             "reply": [
               {
-                "nombre": "linea",
-                "primitiva": "line",
+                "name": "linea",
+                "primitive": "line",
                 "props": {
                   "color": "rojo",
                   "width": 1.5,
@@ -174,94 +174,94 @@
                   "cut": 6,
                   "radius": 8
                 },
-                "encima": false,
-                "animada": false,
-                "origen": {
+                "above": false,
+                "animated": false,
+                "origin": {
                   "file": "main.dg",
                   "line": 3
                 }
               }
             ]
           },
-          "metricas": {
+          "metrics": {
             "gap": 40
           }
         },
         "fragment": {
-          "capas": [
+          "layers": [
             {
-              "nombre": "forma",
-              "primitiva": "rect",
+              "name": "forma",
+              "primitive": "rect",
               "props": {
                 "radius": 0
               },
-              "encima": false,
-              "animada": false,
-              "origen": {
+              "above": false,
+              "animated": false,
+              "origin": {
                 "file": "main.dg",
                 "line": 3
               }
             },
             {
-              "nombre": "relleno",
-              "primitiva": "solid",
+              "name": "relleno",
+              "primitive": "solid",
               "props": {
                 "color": "azul/0.1"
               },
-              "encima": false,
-              "animada": false,
-              "origen": {
+              "above": false,
+              "animated": false,
+              "origin": {
                 "file": "main.dg",
                 "line": 3
               }
             }
           ],
-          "marcadores": {},
-          "parches": {
+          "markers": {},
+          "patches": {
             "alt": [
               {
-                "nombre": "forma",
-                "primitiva": "rect",
+                "name": "forma",
+                "primitive": "rect",
                 "props": {
                   "radius": 0
                 },
-                "encima": false,
-                "animada": false,
-                "origen": {
+                "above": false,
+                "animated": false,
+                "origin": {
                   "file": "main.dg",
                   "line": 3
                 }
               },
               {
-                "nombre": "relleno",
-                "primitiva": "solid",
+                "name": "relleno",
+                "primitive": "solid",
                 "props": {
                   "color": "rojo/0.1"
                 },
-                "encima": false,
-                "animada": false,
-                "origen": {
+                "above": false,
+                "animated": false,
+                "origin": {
                   "file": "main.dg",
                   "line": 3
                 }
               }
             ]
           },
-          "metricas": {}
+          "metrics": {}
         }
       },
-      "fila": {
-        "alto": 30,
-        "capas": [
+      "row": {
+        "height": 30,
+        "layers": [
           {
-            "nombre": "fondo",
-            "primitiva": "solid",
+            "name": "fondo",
+            "primitive": "solid",
             "props": {
               "color": "azul/0.05"
             },
-            "encima": false,
-            "animada": false,
-            "origen": {
+            "above": false,
+            "animated": false,
+            "origin": {
               "file": "main.dg",
               "line": 3
             }

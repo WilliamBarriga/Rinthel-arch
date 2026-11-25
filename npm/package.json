@@ -1,0 +1,45 @@
+{
+  "name": "rinthel-arch",
+  "version": "0.1.0",
+  "description": "Write large, detailed diagrams of any project as text (.dg) and render them as navigable, themeable Views.",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "diagrams",
+    "architecture",
+    "dsl",
+    "cli",
+    "sequence-diagram",
+    "er-diagram",
+    "pi-package"
+  ],
+  "pi": {
+    "skills": [
+      "./skills"
+    ]
+  },
+  "homepage": "https://github.com/WilliamBarriga/Rinthel-arch#readme",
+  "bugs": {
+    "url": "https://github.com/WilliamBarriga/Rinthel-arch/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WilliamBarriga/Rinthel-arch.git"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "bin": {
+    "diagrams": "dist/bin.js",
+    "rinthel-arch": "dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "LICENSE-LIKEC4",
+    "THIRD-PARTY-NOTICES.md"
+  ],
+  "dependencies": {
+    "esbuild": "0.28.1"
+  }
+}

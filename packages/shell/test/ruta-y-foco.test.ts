@@ -50,12 +50,12 @@ describe('ruta', () => {
   it('resaltar una ruta pone en-ruta lo que la compone y atenua el resto', () => {
     const estados = estadosDeRuta(vista, ['a', 'b', 'c']);
 
-    expect(estados['a']).toEqual(['en-ruta']);
-    expect(estados['c']).toEqual(['en-ruta']);
-    expect(estados['a -> b']).toEqual(['en-ruta']);
-    expect(estados['b -> c']).toEqual(['en-ruta']);
-    expect(estados['a -> d']).toEqual(['atenuado']);
-    for (const id of ['g', 'g.x', 'd', 'e']) expect(estados[id]).toEqual(['atenuado']);
+    expect(estados['a']).toEqual(['on-path']);
+    expect(estados['c']).toEqual(['on-path']);
+    expect(estados['a -> b']).toEqual(['on-path']);
+    expect(estados['b -> c']).toEqual(['on-path']);
+    expect(estados['a -> d']).toEqual(['dimmed']);
+    for (const id of ['g', 'g.x', 'd', 'e']) expect(estados[id]).toEqual(['dimmed']);
   });
 
   it('sin ruta no se atenua nada', () => {
@@ -63,6 +63,6 @@ describe('ruta', () => {
   });
 
   it('unirEstados concatena los de cada id', () => {
-    expect(unirEstados({ a: ['seleccionado'] }, { a: ['en-ruta'], b: ['foco'] })).toEqual({ a: ['seleccionado', 'en-ruta'], b: ['foco'] });
+    expect(unirEstados({ a: ['selected'] }, { a: ['on-path'], b: ['focus'] })).toEqual({ a: ['selected', 'on-path'], b: ['focus'] });
   });
 });

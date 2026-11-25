@@ -107,14 +107,14 @@ describe('ER: seleccion', () => {
 
   it('dos tablas seleccionadas muestran la ruta mas corta sobre las FK', async () => {
     const { container } = await montarTablas({ selection: ['a', 'c'] });
-    const enRuta = [...container.querySelectorAll('.rd-caja [data-state="en-ruta"]')].map((e) => e.closest('[data-id]')!.getAttribute('data-id')).sort();
+    const enRuta = [...container.querySelectorAll('.rd-caja [data-state="on-path"]')].map((e) => e.closest('[data-id]')!.getAttribute('data-id')).sort();
     expect(enRuta).toEqual(['a', 'b', 'c']);
-    expect(container.querySelectorAll('path[data-state="en-ruta"]').length).toBeGreaterThanOrEqual(2);
+    expect(container.querySelectorAll('path[data-state="on-path"]').length).toBeGreaterThanOrEqual(2);
   });
 });
 
 describe('ER: arrastrar una tabla', () => {
-  it('escribe un Pin con mover-pin y se deshace', async () => {
+  it('escribe un Pin con move-pin y se deshace', async () => {
     let historial: Historial = crearHistorial({ 'main.dg': TABLAS });
     const control = {
       archivos: () => historial.archivos,
@@ -129,7 +129,7 @@ describe('ER: arrastrar una tabla', () => {
         return h !== undefined;
       },
     };
-    const onMoveNode = vi.fn(({ id, x, y }: { id: string; x: number; y: number }) => control.aplicar({ tipo: 'mover-pin', vista: 'v', nodo: id, x, y }).ok);
+    const onMoveNode = vi.fn(({ id, x, y }: { id: string; x: number; y: number }) => control.aplicar({ type: 'move-pin', view: 'v', node: id, x, y }).ok);
     const { container } = await montarTablas({ onMoveNode, camera: { x: 0, y: 0, width: 900, height: 600 } });
     const cabecera = container.querySelector('[data-id="a"] [data-part="nodo"]')!;
     const gesto = (d: Element | Window, tipo: string, cx: number, cy: number) => {
@@ -175,11 +175,11 @@ describe('ER: Pasos', () => {
       const v = parte != null ? parte.style.opacity : el?.getAttribute('opacity');
       return v === null || v === undefined || v === '' ? '1' : v;
     };
-    const paso = () => fireEvent.click(screen.getByRole('button', { name: 'Paso siguiente' }));
+    const paso = () => fireEvent.click(screen.getByRole('button', { name: 'Next step' }));
     const idFk = idDeArista(fuente.model.edges[0]!);
-    const atras = () => fireEvent.click(screen.getByRole('button', { name: 'Paso anterior' }));
+    const atras = () => fireEvent.click(screen.getByRole('button', { name: 'Previous step' }));
     // Entra en el Paso 1: el Paso 0 la dejaria vacia.
-    expect(container.querySelector('[data-pasos]')?.textContent).toContain('Paso 1 de 2');
+    expect(container.querySelector('[data-pasos]')?.textContent).toContain('Step 1 of 2');
     expect(opacidad('a')).toBe('1');
     expect(opacidad('b')).toBe('1');
     expect(opacidad(idFk)).toBe('1');

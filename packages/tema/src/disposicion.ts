@@ -140,23 +140,23 @@ export function construirDisposicion<R>(entrada: EntradaDeCaja<R>, elemento: 'no
     escritas.some((p) => p.clave === 'align') ? (props['align'] as Alineacion | undefined) : undefined;
   const caja = (c: EntradaDeCaja<R>): CajaDeSlots => {
     if (!(DIRECCIONES as readonly string[]).includes(c.direccion)) {
-      errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Direccion '${c.direccion}' desconocida; usa ${DIRECCIONES.join(' o ')}`, ref: c.ref, ...sugerir(c.direccion, DIRECCIONES) });
+      errores.push({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `Unknown direction '${c.direccion}'; use ${DIRECCIONES.join(' or ')}`, ref: c.ref, ...sugerir(c.direccion, DIRECCIONES) });
     }
-    const props = propiedades('La caja', `'${c.direccion}'`, PROPIEDADES_DE_CAJA, c.props, c.ref);
+    const props = propiedades('The box', `'${c.direccion}'`, PROPIEDADES_DE_CAJA, c.props, c.ref);
     const hijos: ElementoDeSlots[] = [];
     for (const h of c.hijos) {
       if (!('slot' in h)) {
         hijos.push(caja(h));
       } else if (!esSlot(h.slot)) {
-        errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Slot '${h.slot}' desconocido; disponibles: ${SLOTS.join(', ')}`, ref: h.ref, ...sugerir(h.slot, SLOTS) });
+        errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Unknown Slot '${h.slot}'; available: ${SLOTS.join(', ')}`, ref: h.ref, ...sugerir(h.slot, SLOTS) });
       } else if (elemento === 'grupo' && SLOTS_SOLO_DE_NODO.includes(h.slot)) {
-        errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `El Slot '${h.slot}' no vale en un Grupo: solo en un Nodo hoja`, ref: h.ref });
+        errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Slot '${h.slot}' is not valid in a Group: only in a leaf Node`, ref: h.ref });
       } else if (vistos.has(h.slot)) {
-        errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Slot '${h.slot}' repetido`, ref: h.ref });
+        errores.push({ codigo: CODIGOS.E_THEME_UNKNOWN_SLOT, mensaje: `Duplicate Slot '${h.slot}'`, ref: h.ref });
       } else {
         vistos.add(h.slot);
         const escritas = h.align === undefined ? [] : [h.align];
-        const a = alineacion(propiedades('El Slot', `'${h.slot}'`, { align: ALINEACION }, escritas, h.ref), escritas);
+        const a = alineacion(propiedades('The Slot', `'${h.slot}'`, { align: ALINEACION }, escritas, h.ref), escritas);
         hijos.push({ slot: h.slot, ...(a !== undefined && { align: a }) });
       }
     }

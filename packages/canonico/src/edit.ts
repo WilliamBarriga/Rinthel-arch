@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { MOTIVOS_DE_RECHAZO } from './pin';
 
-export const EDIT_CONTRACT_VERSION = 1;
+export const EDIT_CONTRACT_VERSION = 2;
 
 /** Hash estable (53 bits, hex) del contenido de un archivo; no criptografico. Puro, sin `node:crypto`. */
 export function hashDeContenido(texto: string): string {
@@ -29,6 +29,8 @@ export const edicionDeTextoSchema = z.object({
   file: z.string(),
   range: z.object({ start: posicionSchema, end: posicionSchema }),
   replacement: z.string(),
+  /** New path of `file` (file or folder): the `fix` of `old-workspace-convention`. The text part is an empty edit. */
+  rename: z.string().optional(),
 });
 
 /** Entrada de `edit --edits`; `hash` opcional es el del archivo que vio quien las pide. */

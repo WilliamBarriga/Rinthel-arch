@@ -1,0 +1,93 @@
+// Step 6: the same Model in other Diagram types (sequence and ER), with the Theme of step 4.
+specification {
+  node actor    { description "Who uses the system"       icon user     color purple }
+  node service { description "Logic piece"            icon server   color blue }
+  node store  { description "Data that persists"        icon database color green }
+  node queue     { description "Message channel"          icon queue    color amber }
+  node external  { description "Third-party system"        icon cloud    color red }
+  node domain  { description "Groups related pieces" icon box      color gray }
+}
+
+model {
+  actor client "Customer" "Places orders"
+  service api "API" "Entry point"
+
+  domain shop "Shop" {
+    service orders "Orders" "Records orders"
+    service payments "Payments" "Charges the orders"
+    queue events "Events"
+    store db "Database" {
+      attrs {
+        id: uuid
+        total: decimal "in cents"
+      }
+    }
+  }
+
+  external stripe "Payment gateway"
+
+  client -> api "HTTP"
+  api -> shop.orders
+  shop.orders -> shop.events "order created"
+  shop.events -> shop.payments
+  shop.payments -> stripe "charges"
+  shop.orders -> shop.db
+
+  // Tables for the ER View: Nodes like any other, with Attributes and keys.
+  domain data "Data" {
+    store customers "Customers" {
+      id: uuid pk
+      email: text? uk
+    }
+    store orders-table "Orders" {
+      id: uuid pk
+      client_id: uuid fk
+      total: decimal "in cents"
+    }
+  }
+  data.orders-table#client_id "0..*" -> "1" data.customers#id "belongs to"
+
+  // An Interaction: an ordered scenario between Model Nodes (the Lifelines).
+  interaction purchase "Purchase" {
+    client -> api "POST /orders"
+    api -> shop.orders "record"
+    alt "payment approved" {
+      shop.orders -> shop.payments "charge"
+      shop.payments -> stripe "charge"
+      reply stripe -> shop.payments "ok"
+    } else "payment declined" {
+      reply shop.payments -> shop.orders "declined"
+    }
+    note right of stripe "idempotent"
+    reply api -> client "201"
+  }
+}
+
+view main {
+  theme shop
+  type architecture
+  include **
+  exclude data, data.**
+  collapsed shop
+  link shop -> shop-detail
+}
+
+view shop-detail {
+  theme shop
+  type architecture
+  include shop.**, api, stripe
+}
+
+view purchase-sequence {
+  theme shop
+  type sequence
+  interaction purchase
+  order client, api, shop.orders, shop.payments, stripe
+  autonumber
+}
+
+view tables {
+  theme shop
+  type er
+  include data.customers, data.orders-table
+}

@@ -3,12 +3,12 @@ import type { ReactElement } from 'react';
 
 import type { EstadoDeLectura } from './use-lectura-por-version';
 
-/** `que` nombra lo que se lee (`Cargando <que>...`); con el dato no muestra nada. */
+/** `que` nombra lo que se lee (`Loading <que>...`); con el dato no muestra nada. */
 export function AvisoDeLectura({ lectura, que }: { lectura: EstadoDeLectura<unknown>; que: string }): ReactElement | null {
   if (lectura.tipo === 'dato') return null;
   return (
     <p className="ui-tenue" role="status">
-      {lectura.tipo === 'cargando' ? `Cargando ${que}...` : lectura.mensaje}
+      {lectura.tipo === 'cargando' ? `Loading ${que}...` : lectura.mensaje}
     </p>
   );
 }

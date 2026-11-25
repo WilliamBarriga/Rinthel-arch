@@ -11,7 +11,12 @@ export type EstadoVisual = Estado;
 /** Grosor minimo (px) del anillo de foco: ningun Estilo lo quita. */
 export const ANILLO_DE_FOCO_MINIMO = 2;
 
-/** Contorno de un estado: color, grosor, trazo discontinuo opcional y opacidad. En `atenuado` solo cuenta `opacidad`: la del elemento entero. */
+/**
+ * Contorno de un estado: color, grosor, trazo discontinuo opcional y opacidad. En `dimmed` solo cuenta `opacidad`: la
+ * del elemento entero. En `planned` (el aspecto del Tema por defecto para lo Planeado, que hereda todo Tema sin parche
+ * propio del estado) `opacidad` tambien es la del elemento entero, el contorno discontinuo rodea la caja por fuera y
+ * `trazo` discontinua ademas las lineas de Aristas, Mensajes y Lifelines.
+ */
 export interface AspectoDeEstado {
   color: string;
   ancho: number;
@@ -93,12 +98,13 @@ export function resolverEstilo(tema: Tema, diagrama: TipoDeDiagrama, metricas?: 
     },
     etiqueta: { halo: { color: tokens.background, ancho: 3 }, centradoVertical: 0.35 },
     estados: {
-      seleccionado: { color: acento, ancho: 3, opacidad: 1 },
+      planned: { color: tokens.border, ancho: 1.5, trazo: '5 4', opacidad: 0.55 },
+      selected: { color: acento, ancho: 3, opacidad: 1 },
       hover: { color: acento, ancho: 2, opacidad: 0.6 },
-      fantasma: { color: tokens.border, ancho: 2, trazo: '4 3', opacidad: 0.7 },
-      'en-ruta': { color: acento, ancho: 3, opacidad: 1 },
-      atenuado: { color: tokens.border, ancho: 0, opacidad: 0.3 },
-      foco: { color: acento, ancho: 3, opacidad: 1 },
+      ghost: { color: tokens.border, ancho: 2, trazo: '4 3', opacidad: 0.7 },
+      'on-path': { color: acento, ancho: 3, opacidad: 1 },
+      dimmed: { color: tokens.border, ancho: 0, opacidad: 0.3 },
+      focus: { color: acento, ancho: 3, opacidad: 1 },
     },
     glifos: { expandido: '-', colapsado: '+' },
   };
@@ -107,7 +113,7 @@ export function resolverEstilo(tema: Tema, diagrama: TipoDeDiagrama, metricas?: 
 /** Aspecto de un estado tal como se dibuja: el anillo de foco nunca baja del minimo ni es invisible. */
 export function aspectoDeEstado(estilo: Estilo, estado: EstadoVisual): AspectoDeEstado {
   const aspecto = estilo.estados[estado];
-  if (estado !== 'foco') return aspecto;
+  if (estado !== 'focus') return aspecto;
   return { ...aspecto, ancho: Math.max(aspecto.ancho, ANILLO_DE_FOCO_MINIMO), opacidad: 1 };
 }
 

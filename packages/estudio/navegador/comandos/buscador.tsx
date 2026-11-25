@@ -1,6 +1,6 @@
 /**
  * Buscador (Mod+K): dialogo de Base UI con Autocomplete. Encuentra comandos del registro (con su atajo), Vistas (de
- * la Fuente), Nodos (`inspect buscar`, con su `archivo:linea`) y un `archivo:linea` escrito tal cual, que abre Codigo.
+ * la Fuente), Nodos (`inspect search`, con su `archivo:linea`) y un `archivo:linea` escrito tal cual, que abre Codigo.
  * El filtrado es propio (`filter={null}`): los Nodos llegan del servidor y descartan respuestas viejas.
  */
 import { Autocomplete } from '@base-ui/react/autocomplete';
@@ -14,7 +14,7 @@ import { useInspectPorVersion } from '../marco/use-lectura-por-version';
 import { sitioEscrito, textoDeSitio } from '../sitio';
 import { destinoDeNodo } from '../vistas/destino';
 import { indiceDeVistas } from '../vistas/indice';
-import { COMANDOS } from './registro';
+import { comandosDe } from './registro';
 import { etiquetasDeTeclas } from './teclas';
 
 interface Entrada {
@@ -41,17 +41,17 @@ function irANodo(e: ContextoDelEstudio, id: string): void {
   e.abrirPestana('derecha', 'detalle');
 }
 
-/** Los Nodos de `inspect buscar`; mientras no llegan los de la consulta vigente (o si falla), ninguno. */
+/** Los Nodos de `inspect search`; mientras no llegan los de la consulta vigente (o si falla), ninguno. */
 function useNodos(consulta: string): Entrada[] {
   const { cliente, estado } = useEstudio();
   const limpia = consulta.trim();
-  const lectura = useInspectPorVersion(cliente, estado?.version, 'buscar', limpia === '' || sitioEscrito(limpia) !== undefined ? undefined : limpia);
+  const lectura = useInspectPorVersion(cliente, estado?.version, 'search', limpia === '' || sitioEscrito(limpia) !== undefined ? undefined : limpia);
   return useMemo(
     () =>
       lectura.tipo !== 'dato'
         ? []
-        : lectura.dato.resultados
-            .filter((n) => n.kind === 'nodo')
+        : lectura.dato.results
+            .filter((n) => n.kind === 'node')
             .map((n) => ({ value: `nodo:${n.id}`, label: n.title, detalle: `${n.id} · ${textoDeSitio(n)}`, ejecutar: (e: ContextoDelEstudio) => irANodo(e, n.id) })),
     [lectura],
   );
@@ -59,23 +59,23 @@ function useNodos(consulta: string): Entrada[] {
 
 function Contenido({ alElegir }: { alElegir: () => void }): ReactElement {
   const estudio = useEstudio();
-  const { fuente, plataforma } = estudio;
+  const { fuente, plataforma, modo, puedeEscribir } = estudio;
   const [consulta, setConsulta] = useState('');
   const vistas = useMemo(() => (fuente === undefined ? [] : indiceDeVistas(fuente).flatMap((g) => g.vistas)), [fuente]);
   const nodos = useNodos(consulta);
 
   const sitio = sitioEscrito(consulta);
   const todos: Grupo[] = [
-    { value: 'Archivo', items: sitio === undefined ? [] : [{ value: `sitio:${textoDeSitio(sitio)}`, label: `Abrir ${textoDeSitio(sitio)}`, ejecutar: (e) => e.abrirCodigo(sitio) }] },
+    { value: 'File', items: sitio === undefined || !puedeEscribir ? [] : [{ value: `sitio:${textoDeSitio(sitio)}`, label: `Open ${textoDeSitio(sitio)}`, ejecutar: (e) => e.abrirCodigo(sitio) }] },
     {
-      value: 'Comandos',
-      items: COMANDOS.filter((c) => c.enBuscador !== false && contiene(c.nombre, consulta.trim())).map((c) => ({ value: `comando:${c.id}`, label: c.nombre, teclas: etiquetasDeTeclas(c, plataforma), ejecutar: c.ejecutar })),
+      value: 'Commands',
+      items: comandosDe(modo).filter((c) => c.enBuscador !== false && contiene(c.nombre, consulta.trim())).map((c) => ({ value: `comando:${c.id}`, label: c.nombre, teclas: etiquetasDeTeclas(c, plataforma), ejecutar: c.ejecutar })),
     },
     {
-      value: 'Vistas',
+      value: 'Views',
       items: vistas.filter((v) => contiene(v.id, consulta.trim())).map((v) => ({ value: `vista:${v.id}`, label: v.id, detalle: v.tipo, ejecutar: (e) => e.irAVista(v.id) })),
     },
-    { value: 'Nodos', items: nodos },
+    { value: 'Nodes', items: nodos },
   ];
   const grupos = todos.filter((g) => g.items.length > 0);
 
@@ -86,9 +86,9 @@ function Contenido({ alElegir }: { alElegir: () => void }): ReactElement {
 
   return (
     <Autocomplete.Root open inline items={grupos} filter={null} value={consulta} onValueChange={setConsulta} autoHighlight="always" keepHighlight>
-      <Autocomplete.Input className="ui-buscador-campo" aria-label="Buscar" placeholder="Vistas, Nodos, archivo:linea o comandos" />
+      <Autocomplete.Input className="ui-buscador-campo" aria-label="Search" placeholder="Views, Nodes, file:line or commands" />
       <Autocomplete.Empty>
-        <p className="ui-tenue">Sin resultados.</p>
+        <p className="ui-tenue">No results.</p>
       </Autocomplete.Empty>
       <Autocomplete.List className="ui-buscador-lista">
         {(grupo: Grupo) => (
@@ -120,7 +120,7 @@ export function Buscador({ abierto, alCambiar }: { abierto: boolean; alCambiar: 
     <Dialog.Root open={abierto} onOpenChange={alCambiar}>
       <Dialog.Portal container={portales}>
         <Dialog.Backdrop className="ui-fondo-dialogo" />
-        <Dialog.Popup className="ui-dialogo ui-buscador" aria-label="Buscador">
+        <Dialog.Popup className="ui-dialogo ui-buscador" aria-label="Finder">
           <Contenido alElegir={() => alCambiar(false)} />
         </Dialog.Popup>
       </Dialog.Portal>

@@ -1,7 +1,7 @@
 /**
  * Galeria de Temas: los Temas de la Fuente (los del Workspace, los de `--theme-path` y los incorporados) en un `listbox`
  * (`marco/use-listbox.ts`: flechas y Enter, o clic). Elegir uno lo previsualiza en la Vista activa sin escribir y muestra su cadena `extends`, su Paleta y sus Capas (via
- * `inspect tema`). Los Temas cambiados por fuera llevan la marca de cambio externo hasta dejar la galeria. "Fijar" escribe `theme` en esa Vista con la Intencion `fijar-tema`; "Quitar" la deja sin Tema fijado.
+ * `inspect theme`). Los Temas cambiados por fuera llevan la marca de cambio externo hasta dejar la galeria. "Fijar" escribe `theme` en esa Vista con la Intencion `set-theme`; "Quitar" la deja sin Tema fijado.
  */
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
@@ -17,7 +17,9 @@ import { textoDeSitio } from '../sitio';
 import { usePrevisualizacionDeTema } from './previsualizacion';
 
 export function GaleriaDeTemas(): ReactElement {
-  const { fuente, vista, cliente, escribir } = useEstudio();
+  const { fuente, vista, cliente, escribir, puedeEscribir } = useEstudio();
+  // Pinning writes `theme` in the View: only in `dev`.
+  const conFijar = puedeEscribir;
   const { temaPrevio, previsualizarTema } = usePrevisualizacionDeTema();
   const [elegido, setElegido] = useState<string>();
   const marcas = useMarcasExternas(cliente);
@@ -26,15 +28,15 @@ export function GaleriaDeTemas(): ReactElement {
     setElegido(tema);
     previsualizarTema(tema);
   };
-  const lista = useListbox({ nombre: 'Temas', prefijo: 'ui-tema', orden: temas.map(({ name }) => name), elegida: elegido, elegir });
+  const lista = useListbox({ nombre: 'Themes', prefijo: 'ui-tema', orden: temas.map(({ name }) => name), elegida: elegido, elegir });
   // Los Temas cambiados por fuera quedan marcados mientras se ve la galeria; al dejarla se dan por vistos.
   useEffect(() => () => diferenciasDelCliente(cliente).actualizar(verGaleria), [cliente]);
-  if (fuente === undefined) return <p className="ui-tenue">El Workspace aun no compila: no hay Temas que mostrar.</p>;
+  if (fuente === undefined) return <p className="ui-tenue">The Workspace does not compile yet: no Themes to show.</p>;
 
   const fijado = fuente.views.find(({ id }) => id === vista)?.theme;
   const fijar = async (tema: string | undefined): Promise<void> => {
     if (vista === undefined) return;
-    const r = await escribir({ intencion: { tipo: 'fijar-tema', vista, ...(tema !== undefined && { tema }) }, fallo: `No se pudo ${tema === undefined ? 'quitar' : 'fijar'} el Tema` });
+    const r = await escribir({ intencion: { type: 'set-theme', view: vista, ...(tema !== undefined && { theme: tema }) }, fallo: `Could not ${tema === undefined ? 'unpin' : 'pin'} the Theme` });
     if (r.ok) previsualizarTema(undefined);
   };
 
@@ -42,10 +44,10 @@ export function GaleriaDeTemas(): ReactElement {
     <div className="ui-galeria">
       {vista !== undefined && (
         <p className="ui-tenue">
-          Vista {vista}: {fijado === undefined ? 'sin Tema fijado' : `Tema fijado ${fijado}`}
-          {fijado !== undefined && (
-            <button type="button" aria-label={`Quitar el Tema fijado de ${vista}`} onClick={() => void fijar(undefined)}>
-              Quitar
+          View {vista}: {fijado === undefined ? 'no pinned Theme' : `pinned Theme ${fijado}`}
+          {conFijar && fijado !== undefined && (
+            <button type="button" aria-label={`Unpin the Theme of ${vista}`} onClick={() => void fijar(undefined)}>
+              Unpin
             </button>
           )}
         </p>
@@ -55,12 +57,12 @@ export function GaleriaDeTemas(): ReactElement {
           <div key={name} {...lista.opcion(name)} className="ui-indice-vista">
             <span className="ui-mono">{name}</span>
             {marcas.temas.has(name) && <MarcaExterna />}
-            {name === fijado && <span className="ui-enlaces">fijado</span>}
-            {name === temaPrevio && <span className="ui-enlaces">previsualizando</span>}
+            {name === fijado && <span className="ui-enlaces">pinned</span>}
+            {name === temaPrevio && <span className="ui-enlaces">previewing</span>}
           </div>
         ))}
       </div>
-      {elegido !== undefined && <FichaDeTema nombre={elegido} paleta={fuente.themes.find(({ name }) => name === elegido)?.palette ?? {}} vista={vista} fijado={fijado} previsualizando={temaPrevio === elegido} alFijar={() => void fijar(elegido)} alSoltar={() => previsualizarTema(undefined)} />}
+      {elegido !== undefined && <FichaDeTema nombre={elegido} paleta={fuente.themes.find(({ name }) => name === elegido)?.palette ?? {}} vista={conFijar ? vista : undefined} fijado={fijado} previsualizando={temaPrevio === elegido} alFijar={() => void fijar(elegido)} alSoltar={() => previsualizarTema(undefined)} />}
     </div>
   );
 }
@@ -68,6 +70,7 @@ export function GaleriaDeTemas(): ReactElement {
 interface PropsDeFicha {
   nombre: string;
   paleta: Readonly<Record<string, string>>;
+  /** View where the Theme can be pinned; `undefined` if it cannot (no View, or a read-only export). */
   vista: string | undefined;
   fijado: string | undefined;
   previsualizando: boolean;
@@ -77,21 +80,21 @@ interface PropsDeFicha {
 
 function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, alSoltar }: PropsDeFicha): ReactElement {
   const { cliente, estado } = useEstudio();
-  const lectura = useInspectPorVersion(cliente, estado?.version, 'tema', nombre);
-  const tema = lectura.tipo === 'dato' ? lectura.dato.tema : undefined;
+  const lectura = useInspectPorVersion(cliente, estado?.version, 'theme', nombre);
+  const tema = lectura.tipo === 'dato' ? lectura.dato.theme : undefined;
 
   return (
-    <section aria-label={`Tema ${nombre}`} className="ui-detalle">
+    <section aria-label={`Theme ${nombre}`} className="ui-detalle">
       <h2 className="ui-detalle-titulo">{nombre}</h2>
       <div className="ui-acciones">
         {vista !== undefined && fijado !== nombre && (
           <button type="button" onClick={alFijar}>
-            {`Fijar ${nombre} en ${vista}`}
+            {`Pin ${nombre} to ${vista}`}
           </button>
         )}
         {previsualizando && (
           <button type="button" onClick={alSoltar}>
-            Dejar de previsualizar
+            Stop previewing
           </button>
         )}
       </div>
@@ -100,12 +103,12 @@ function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, 
       ) : (
         <>
           <p className="ui-mono ui-sitio">{textoDeSitio(tema)}</p>
-          <h3 className="ui-subtitulo">Cadena extends</h3>
+          <h3 className="ui-subtitulo">Extends chain</h3>
           <p className="ui-mono">{[nombre, ...tema.extends].join(' > ')}</p>
         </>
       )}
-      <h3 className="ui-subtitulo">Paleta</h3>
-      <ul aria-label="Paleta" className="ui-lista ui-paleta">
+      <h3 className="ui-subtitulo">Palette</h3>
+      <ul aria-label="Palette" className="ui-lista ui-paleta">
         {Object.entries(paleta).map(([clave, color]) => (
           <li key={clave} className="ui-mono">
             <span aria-hidden className="ui-muestra" style={{ background: color }} />
@@ -115,13 +118,13 @@ function FichaDeTema({ nombre, paleta, vista, fijado, previsualizando, alFijar, 
       </ul>
       {tema !== undefined && (
         <>
-          <h3 className="ui-subtitulo">Capas</h3>
-          <ul aria-label="Capas" className="ui-lista">
-            {tema.capas.map((capa) => (
-              <li key={capa.nombre} className="ui-mono">
-                {capa.nombre} {capa.primitiva}
-                {capa.encima ? ' [encima]' : ''}
-                {capa.animada ? ' [animada]' : ''}
+          <h3 className="ui-subtitulo">Layers</h3>
+          <ul aria-label="Layers" className="ui-lista">
+            {tema.layers.map((capa) => (
+              <li key={capa.name} className="ui-mono">
+                {capa.name} {capa.primitive}
+                {capa.above ? ' [on top]' : ''}
+                {capa.animated ? ' [animated]' : ''}
               </li>
             ))}
           </ul>

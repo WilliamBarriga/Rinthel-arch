@@ -1,0 +1,57 @@
+// Contrast: actor, store, artifact, queue, domain, module, probe, package, service
+// Deliberate, as in the prototype: the card border (text/0.06) is a hairline; the card reads by its white and its shadows.
+// Soft light (Stripe/Apple style): white cards with layered shadows and rounded Edges.
+theme soft-light {
+  palette {
+    background "#f5f6fa"  text "#0f172a"  white "#ffffff"
+    blue "#4f46e5"  purple "#9333ea"  green "#059669"  amber "#d97706"  red "#e11d48"  gray "#64748b"
+  }
+  fonts { body "Inter"  mono "JetBrains Mono"  fallback "sans-serif" }
+  tokens { background "#f5f6fa"  foreground "#0f172a"  border "#64748b" }
+  page {
+    layer light radial { from blue/0.10  to background/0  x 15  y 10 }
+    fixed
+  }
+  node {
+    layer shadow-far shadow { color text/0.08  x 0  y 10  blur 28 }
+    layer shadow-near shadow { color text/0.06  x 0  y 1  blur 2 }
+    layer shape rect { radius 16 }
+    layer fill solid { color white }
+    layer border border { color text/0.06 }
+    // Icon in a faint box in the kind color, title with the badge below and, in a closed Group, the counter.
+    slots column min-width 180 slack 30 {
+      row gap 12 pad 12 pad-y 0 min-height 60 {
+        icon { variant box  side 34  radius 10  fill COLOR/0.1  glyph 16 }
+        column { title { weight 600  text-align start  leading 1.25 }  badge { alpha 0.5  tracking 0.02 } }
+        counter { fill COLOR/0.1 }
+      }
+      attrs
+    }
+    type external { layer shadow-far none  layer shadow-near none  layer fill { color background }  layer border dashed { color text/0.5 } }
+    state hover { layer shadow-far { color COLOR/0.25  y 18  blur 40 }  layer shadow-near { y 2  blur 4 }  transition 180ms ease-out }
+    state on-path { layer border { color COLOR  width 2 } }
+    state dimmed { layer shadow-far none }
+  }
+  group {
+    layer shape rect { radius 22 }
+    layer fill solid { color COLOR/0.05 }
+    slots row pad 12 pad-y 9 { title { size 0.85  weight 600  fill COLOR/0.2  border COLOR/0.5  radius 50  pad 10 } }
+    padding 13 24 24 24
+    // Closed is the Node card with another sheet offset below.
+    state collapsed {
+      layer sheet-shadow shadow before shape { color text/0.06  x 0  y 4  blur 12  offset 6 6 }
+      layer sheet solid before shape { color white  offset 6 6 }
+      layer sheet-border border before shape { color text/0.06  offset 6 6 }
+      layer shadow-far shadow before shape { color text/0.08  x 0  y 10  blur 28 }
+      layer shadow-near shadow before shape { color text/0.06  x 0  y 1  blur 2 }
+      layer shape { radius 16 }
+      layer fill { color white }
+      layer border border after fill { color text/0.06 }
+    }
+  }
+  edge {
+    layer line line { color text/0.22  width 1.5  corner round  radius 14 }
+    end arrow { size 10 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 50  fill white  border text/0.08  color text/0.8 }
+  }
+}

@@ -96,7 +96,7 @@ export function advertenciasDeContraste(tema: Tema, tipos: Readonly<Record<strin
         const minimo = r.parte === 'texto' ? MINIMO_TEXTO : MINIMO_GRAFICO;
         if (r.razon >= minimo) continue;
         if (estado !== 'base' && base.some((b) => b.parte === r.parte && Math.abs(b.razon - r.razon) < 1e-9)) continue;
-        const que = r.parte === 'texto' ? 'El texto' : 'El borde';
+        const que = r.parte === 'texto' ? 'The text' : 'The border';
         avisos.push({
           tipo,
           estado,
@@ -104,7 +104,7 @@ export function advertenciasDeContraste(tema: Tema, tipos: Readonly<Record<strin
           capa: r.capa,
           razon: r.razon,
           minimo,
-          mensaje: `${que} del Tipo '${tipo}' (estado ${estado}) tiene contraste ${r.razon.toFixed(2)}:1 con ${r.color}; el minimo es ${minimo}:1`,
+          mensaje: `${que} of kind '${tipo}' (state ${estado}) has contrast ${r.razon.toFixed(2)}:1 with ${r.color}; the minimum is ${minimo}:1`,
         });
       }
     }

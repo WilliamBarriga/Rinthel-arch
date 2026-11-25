@@ -67,12 +67,12 @@ describe('Paso inicial por Tipo de diagrama', () => {
     });
     const { container } = render(<VistaInteractiva source={er} view="v" theme={TEMA_NEUTRO} layout={enFila} width={800} height={600} camera={{ x: 0, y: 0, width: 800, height: 600 }} />);
     await dibujado(container);
-    expect(container.querySelector('[data-pasos]')?.textContent).toContain('Paso 1 de 1: Tablas');
+    expect(container.querySelector('[data-pasos]')?.textContent).toContain('Step 1 of 1: Tablas');
     expect(opacidad(container, 'a')).toBe(1);
     cleanup();
     const { container: arq } = montar(pasos);
     await dibujado(arq);
-    expect(arq.querySelector('[data-pasos]')?.textContent).toContain('Paso 0 de 2');
+    expect(arq.querySelector('[data-pasos]')?.textContent).toContain('Step 0 of 2');
   });
 });
 
@@ -80,8 +80,8 @@ describe('Pasos anterior y siguiente', () => {
   it('sin steps no hay controles ni se oculta nada', async () => {
     const { container } = montar([]);
     await dibujado(container);
-    expect(screen.queryByRole('button', { name: 'Paso siguiente' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Paso anterior' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Next step' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Previous step' })).toBeNull();
     expect(opacidad(container, 'c')).toBe(1);
   });
 
@@ -90,14 +90,14 @@ describe('Pasos anterior y siguiente', () => {
     await dibujado(container);
     expect(opacidad(container, 'a')).toBe(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Paso siguiente' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next step' }));
     expect(opacidad(container, 'a')).toBe(1);
     expect(opacidad(container, 'b')).toBe(1);
     expect(opacidad(container, 'c')).toBe(0);
     expect(opacidad(container, 'a -> b')).toBe(1);
     expect(opacidad(container, 'b -> c')).toBe(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Paso siguiente' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next step' }));
     expect(opacidad(container, 'a')).toBe(1);
     expect(opacidad(container, 'c')).toBe(1);
     expect(opacidad(container, 'b -> c')).toBe(1);
@@ -106,21 +106,21 @@ describe('Pasos anterior y siguiente', () => {
   it('anterior oculta lo del ultimo Paso; los botones se deshabilitan en los extremos', async () => {
     const { container } = montar(pasos, { defaultStep: 2 });
     await dibujado(container);
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Paso siguiente' }).disabled).toBe(true);
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Next step' }).disabled).toBe(true);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Paso anterior' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Previous step' }));
     expect(opacidad(container, 'c')).toBe(0);
     expect(opacidad(container, 'a')).toBe(1);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Paso anterior' }));
-    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Paso anterior' }).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Previous step' }));
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Previous step' }).disabled).toBe(true);
   });
 
   it('la geometria no cambia entre Pasos', async () => {
     const { container } = montar(pasos);
     await dibujado(container);
     const antes = sinVisibilidad(container);
-    fireEvent.click(screen.getByRole('button', { name: 'Paso siguiente' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next step' }));
     expect(sinVisibilidad(container)).toBe(antes);
   });
 
@@ -130,17 +130,17 @@ describe('Pasos anterior y siguiente', () => {
     await dibujado(container);
     expect(opacidad(container, 'c')).toBe(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Paso siguiente' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Next step' }));
     expect(onStepChange).toHaveBeenCalledWith(2);
     expect(opacidad(container, 'c')).toBe(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Paso anterior' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Previous step' }));
     expect(onStepChange).toHaveBeenLastCalledWith(0);
   });
 
   it('muestra la posicion y el titulo del Paso actual', async () => {
     const { container } = montar(pasos, { step: 1 });
     await dibujado(container);
-    expect(screen.getByText('Paso 1 de 2: Entrada')).toBeTruthy();
+    expect(screen.getByText('Step 1 of 2: Entrada')).toBeTruthy();
   });
 });

@@ -1,37 +1,39 @@
-# Mapa de rinthel-arch (caso de uso)
+# rinthel-arch map (use case)
 
-Workspace de ejemplo en el que el sistema se documenta a si mismo: paquetes del monorepo, dependencias y flujo de edicion. No es parte del nucleo: sirve de prueba de punta a punta (validate, build, dev).
+This repo as a Workspace: the system documents itself. It is regenerated from code: `diagrams scan .` writes the Scan draft and an agent following the skill `rinthel-diagramas` ("Import from code") writes the `.dg` files, so every Node of the repo cites its scan unit with a Source `path` ref. It is not part of the core: it serves as an end-to-end test (validate, build, dev, export) and as the [live demo](https://williambarriga.github.io/Rinthel-arch/).
 
-## Contenido
+## Contents
 
-| Archivo | Que mapea |
+| File | What it maps |
 | --- | --- |
-| `especificacion.dg` | Tipos de nodo (actor, paquete, modulo, artefacto, salida, externo...) y Temas `diagrams` (oscuro) y `diagrams-claro`: extienden los incorporados `neutral-dark` y `neutral` con las fuentes del Workspace y dos parches por Tipo (las Partes `barra-paquete` y `borde-discontinuo`) |
-| `sistema.dg` | Los nueve paquetes con sus modulos (uno por archivo de `src`, con `source` al archivo; `estudio/navegador` agrupado por feature), actores, artefactos (incluido el Registro de actividad), procesos y librerias externas. Los titulos de modulo llevan el paquete o la feature (`tema/estilo`, `editor/guardado`) para distinguir homonimos |
-| `conexiones.dg` | Dependencias entre paquetes (de `package.json`) y entre modulos: dentro de un paquete, todos los imports; entre paquetes, solo las costuras que explican el mapa. Mas el flujo de datos con actores, servidor dev, SSE y Worker. Las Aristas solo se declaran en `model`, con ids cualificados |
-| `vistas.dg` | Vista de paquetes con drill-down a cada paquete, la Vista `abierto` (render y layout abiertos; la Vista `abierto` del prototipo aprobado), un detalle por paquete (`*-detalle`, incluido `estudio-detalle`) y cinco Vistas de flujo con Pasos: `flujo-edicion` (arrastrar un Nodo en la UI de dev), `flujo-validate`, `flujo-dev`, `flujo-agente` (del comando al panel Agente) y `flujo-tema` |
-| `fuente-canonica.dg` | La Fuente canonica como esquema ER (Vista `fuente-er`, con Pasos) y dos Interacciones con Vista de secuencia: `editar-pin` (del arrastre a la Escritura, `/api/edit` y el Workspace vivo, con el 409; Fragmento `alt`, `ref`, Notas, Pasos y `link` a `sesion-detalle`, `shell-detalle` y `estudio-detalle`) y `recompilar` (Sesion, Diferencia y clasificacion del cambio) |
-| `temas/` | Los Temas aprobados y, en `temas/fuentes/`, sus familias en `woff2` con licencias `OFL-<familia>.txt`. Es la unica copia: la galeria los usa con `--theme-path` |
-| `vistas-temas.dg` | Una Vista `abierto-<tema>` por Tema: el mismo diagrama de la Vista `abierto` con cada estetica. Sus capturas estan en la [galeria](../../docs/galeria.md) |
-| `fuentes/` | DejaVu Sans y Mono (licencia en `LICENCIA-DejaVu.txt`) |
+| `specification.dg` | Node kinds (actor, package, app, artifact, module, table, external) and the Themes `diagrams` (dark) and `diagrams-light`: they extend the built-in `neutral-dark` and `neutral` with the Workspace fonts and two patches per kind (the Parts `bar-package` and `border-dashed`) |
+| `model.dg` | The scan units as Nodes: the root Group `repo`, one Node per package (merging its `src` folders), the Scanner and the Dev UI as Groups with their folders, the externals that shape the system, and the dependencies as Edges (heaviest first, test folders and weight-1 imports left out). Two actors run the CLI |
+| `architecture.dg` | The `context` View (sorts first, so the Dev UI and the demo open on it) with Drill-down into `dev-ui-detail` (then `browser-detail`) and `scanner-detail`, and the `open` View that the Theme gallery draws |
+| `flows.dg` | Two `flow` Views with Steps: `flow-dev` (from the `.dg` files to the canvas) and `flow-scan` (what `diagrams scan` reads) |
+| `tables.dg` | The tables the scan found (the Scanner's test fixture: Prisma and SQL) and their `er` View `tables` |
+| `sequence.dg` | The Interaction `export` and its `sequence` View `export-sequence`, with a `break` Fragment, a Note, Steps and a `link` to `dev-ui-detail` |
+| `theme-views.dg` | One `open-<theme>` View per Theme: the `open` View with each aesthetic. Their screenshots are in the [gallery](../../docs/galeria.md) |
+| `themes/` | The approved Themes and, in `themes/fonts/`, their families as `woff2` with `OFL-<family>.txt` licenses. It is the only copy: the gallery uses them with `--theme-path` |
+| `fonts/` | DejaVu Sans and Mono (license in `LICENSE-DejaVu.txt`) |
 
-## Uso
+Left out on purpose, in `.rinthel/scan-ignore` at the repo root: the test folders and the other scanner fixtures.
+
+## Usage
 
 ```
 node packages/cli/dist/bin.js validate --workspace examples/rinthel-arch
-node packages/cli/dist/bin.js build    --workspace examples/rinthel-arch
 node packages/cli/dist/bin.js dev      --workspace examples/rinthel-arch
+node packages/cli/dist/bin.js scan .   --workspace examples/rinthel-arch   # what changed in the code since the Workspace
 ```
 
-Para regenerar las capturas de `docs/img/`: `pnpm docs:capturas`. Para ver una Vista con otro Tema sin tocar el ejemplo (necesita `pnpm build`):
+When `scan` reports uncovered units or orphan refs, refresh the Workspace with the skill (`skills/rinthel-diagramas`, "Refresh from code"). The derived output goes to `examples/rinthel-arch/.diagrams/` (ignored by git).
+
+To see a View with another Theme without touching the example (needs `pnpm build`):
 
 ```
-pnpm capturas --workspace examples/rinthel-arch --vista abierto --prototipo A neutral neutral-dark
+pnpm capturas --workspace examples/rinthel-arch --view open --prototype A neutral neutral-dark
 ```
 
-La salida queda en `examples/rinthel-arch/.diagrams/` (ignorada por git). `dev` sirve la vista previa en vivo en 127.0.0.1; navega con los enlaces de drill-down.
+## Live demo
 
-## Limitaciones que siguen
-
-- Las Aristas no se pueden declarar dentro del bloque de un Nodo: hay que usar el id cualificado completo en `model`.
-- Una etiqueta de Arista elevada por un Grupo colapsado se conserva solo si es la unica entre ese par; si se fusionan varias, se pierde.
+`pnpm demo:publish` exports this Workspace and publishes it on the orphan `gh-pages` branch (see "Live demo" in [CONTRIBUTING](../../CONTRIBUTING.md#live-demo)); `pnpm demo:publish --dry-run` builds the branch locally without pushing.

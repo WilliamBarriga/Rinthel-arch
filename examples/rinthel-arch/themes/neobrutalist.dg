@@ -1,0 +1,62 @@
+// Contrast: none
+// Neobrutalist (Gumroad style): thick black borders and hard shadow with no blur.
+theme neobrutalist {
+  palette {
+    background "#f3eee1"  text "#111111"  paper "#ffffff"  sticker "#fde047"
+    blue "#93c5fd"  purple "#c4b5fd"  green "#86efac"  amber "#fdba74"  red "#fca5a5"  gray "#d4d4d8"
+  }
+  fonts { body "Inter"  mono "Space Mono"  fallback "sans-serif" }
+  tokens { background "#f3eee1"  foreground "#111111"  border "#111111" }
+  page {
+    layer dots dots { color text/0.2  size 22  radius 1 }
+    fixed
+  }
+  node {
+    layer shadow shadow { color text  x 4  y 4 }
+    layer shape rect { radius 6 }
+    layer fill solid { color paper }
+    layer border border { color text  width 2 }
+    // Icon in a colored box, thick title with the mono badge below and, in a closed Group, the counter.
+    slots column min-width 170 slack 36 {
+      row gap 10 pad 10 min-height 56 {
+        icon { variant box  side 30  radius 5  fill COLOR  border text  border-width 2  color text }
+        column {
+          title { weight 800  text-align start  leading 1.25 }
+          badge { alpha 0.6  transform uppercase  font mono  size 0.66  tracking 0.08 }
+        }
+        counter { fill sticker  border text  border-width 2  font mono }
+      }
+      attrs
+    }
+    type external { layer shape cut { cut 12 }  layer tint gradient after fill { from COLOR/0.35  to COLOR/0.35 } }
+    type artifact { layer fold fold after border { color COLOR  size 14  shadow text } }
+    state hover { layer shadow { x 7  y 7 }  transition 100ms ease-out }
+    state on-path { layer fill { color sticker } }
+    state dimmed { layer shadow none }
+  }
+  group {
+    layer shape rect { radius 8 }
+    layer fill solid { color COLOR/0.3 }
+    layer border dashed { color text  width 2 }
+    slots row pad 12 pad-y 9 {
+      title { transform uppercase  font mono  size 0.8  leading 2.1  tracking 0.06  weight 600  fill paper  border text  border-width 2  radius 4  pad 10 }
+    }
+    padding 6 22 22 22
+    // Closed is the Node card with two more below: alternating hard shadows of paper and ink.
+    state collapsed {
+      layer shape { radius 6 }
+      layer fill { color paper }
+      layer border border { color text  width 2 }
+      layer stack-3 shadow before shape { color text  x 12  y 12 }
+      layer stack-2 shadow before shape { color paper  x 10  y 10 }
+      layer stack-1 shadow before shape { color text  x 6  y 6 }
+      layer shadow shadow before shape { color paper  x 4  y 4 }
+    }
+  }
+  edge {
+    layer line line { color text  width 2  corner round  radius 2 }
+    start square { size 8 }
+    end arrow { size 10 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 3  fill sticker  border text  border-width 1.5  shadow text  rotate -2  font mono  weight 700  color text/0.8 }
+  }
+}

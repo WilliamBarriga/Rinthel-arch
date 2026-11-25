@@ -24,7 +24,7 @@ describe('construirEstudio', () => {
 
     await construirEstudio({ salida });
 
-    expect(readdirSync(salida).sort()).toEqual(['estilo.css', 'index.html', 'pagina.js', 'trozos', 'worker.js']);
+    expect(readdirSync(salida).sort()).toEqual(['estilo.css', 'exportado.js', 'index.html', 'pagina.js', 'trozos', 'worker.js']);
     const html = readFileSync(join(salida, 'index.html'), 'utf8');
     expect(html).toContain(`<script type="module" src="${RUTA_DEL_ESTUDIO}pagina.js"></script>`);
     expect(html).toContain(`<link rel="stylesheet" href="${RUTA_DEL_ESTUDIO}estilo.css">`);
@@ -44,6 +44,29 @@ describe('construirEstudio', () => {
     expect(pagina.includes('cm-scroller')).toBe(false);
     expect(trozos.some((t) => t.includes('cm-scroller'))).toBe(true);
     expect(pagina).toContain('./trozos/');
+  }, 60_000);
+
+  it('the export page is one script without the editor or its own ELK (ELK goes once, in the Worker)', async () => {
+    const salida = temporal();
+
+    await construirEstudio({ salida });
+
+    const exportada = readFileSync(join(salida, 'exportado.js'), 'utf8');
+    expect(exportada).not.toMatch(/^\s*import\b|\bimport\(/m);
+    expect(exportada.includes('cm-scroller')).toBe(false);
+    expect(exportada.includes('org.eclipse.elk')).toBe(false);
+    expect(readFileSync(join(salida, 'worker.js'), 'utf8')).toContain('org.eclipse.elk');
+  }, 60_000);
+
+  it('ELK ships once, in the Worker: no page chunk carries a copy', async () => {
+    const salida = temporal();
+
+    await construirEstudio({ salida });
+
+    const elk = (archivo: string): boolean => readFileSync(join(salida, archivo), 'utf8').includes('org.eclipse.elk');
+    const pagina = ['pagina.js', ...readdirSync(join(salida, 'trozos')).map((t) => join('trozos', t))];
+    expect(pagina.filter(elk)).toEqual([]);
+    expect(elk('worker.js')).toBe(true);
   }, 60_000);
 
   it('el paso de CSS es conectable: recibe la entrada y su salida es la hoja servida', async () => {

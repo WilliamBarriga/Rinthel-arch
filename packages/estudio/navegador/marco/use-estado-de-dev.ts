@@ -21,7 +21,7 @@ export function useEstadoDeDev(cliente: ClienteDeDev, geometrias: GeometriasDeDe
     },
     [geometrias],
   );
-  useEffect(() => cliente.suscribir(recibir, (mensaje) => reportar(`${mensaje}; se conserva el estado vigente`)), [cliente, recibir, reportar]);
+  useEffect(() => cliente.suscribir(recibir, (mensaje) => reportar(`${mensaje}; keeping the current state`)), [cliente, recibir, reportar]);
   const vigente = useCallback(() => ultimo.current, []);
   return { estado, vigente, recibir };
 }

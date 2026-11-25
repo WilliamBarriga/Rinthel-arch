@@ -24,12 +24,12 @@ export interface OpcionesDeSesion {
   tema?: string;
   /**
    * Componentes de Tema por nombre. Con el registro, `diagnosticar` y `construir` comprueban que existen y que
-   * sus parametros coinciden; sin el solo emiten `W_THEME_WITH_CODE` por Tema (o Vista) que usa la Capa `code`.
+   * sus parametros coinciden; sin el solo emiten `theme-with-code` por Tema (o Vista) que usa la Capa `code`.
    */
   componentes?: Readonly<Record<string, InterfazDeComponente>>;
   /**
    * Rutas (relativas al Workspace, con `/`) de los archivos de fuente. Con ellas se exige un archivo por familia
-   * de `fonts` (`E_THEME_FONT_MISSING`) y el Estilo trae las caras; sin ellas no se comprueba.
+   * de `fonts` (`theme-font-missing`) y el Estilo trae las caras; sin ellas no se comprueba.
    */
   archivosDeFuente?: readonly string[];
   /** Issues del adaptador (p. ej. un `.tsx` que no compila); se suman tal cual a los de `diagnosticar` y `construir`. */
@@ -57,7 +57,7 @@ export interface Sesion {
   /** Origen de las Capas de cada Tema declarado en el texto (cadena `extends`, `part`, sitio de cada Capa); vacio sin Fuente. */
   readonly origenesDeTema: Readonly<Record<string, OrigenDeTema>>;
   /**
-   * Issues de compilacion, del adaptador, de Tema y `W_OVERLAPPING_PINS`. Solo calcula layout en Vistas con 2 o mas Pins.
+   * Issues de compilacion, del adaptador, de Tema y `overlapping-pins`. Solo calcula layout en Vistas con 2 o mas Pins.
    * Un fallo interno de layout rechaza la promesa.
    */
   diagnosticar(): Promise<Issue[]>;
@@ -90,7 +90,7 @@ function temaDeVista(fuente: FuenteCanonica, vista: Vista, global: string | unde
 }
 
 /**
- * `W_OVERLAPPING_PINS`: un aviso por par de Pins solapados, situado en el primero y con el segundo en `related`.
+ * `overlapping-pins`: un aviso por par de Pins solapados, situado en el primero y con el segundo en `related`.
  * Un par sin posicion de texto conocida (Pin que no viene del DSL) no se avisa.
  */
 function avisosDePins(vista: string, geometry: Geometria, pins: readonly PosicionDePin[]): Issue[] {
@@ -114,8 +114,8 @@ function avisosDePinsDeGrafo(vista: string, geometry: GeometriaGrafo, pins: read
         file: primero.file,
         line: primero.line,
         column: primero.column,
-        message: `En la Vista '${vista}', los Pins de '${a}' y '${b}' se solapan`,
-        related: [{ file: segundo.file, line: segundo.line, column: segundo.column, message: `Pin de '${b}'` }],
+        message: `In View '${vista}', the Pins of '${a}' and '${b}' overlap`,
+        related: [{ file: segundo.file, line: segundo.line, column: segundo.column, message: `Pin of '${b}'` }],
       },
     ];
   });
@@ -125,7 +125,7 @@ const coloresDeTipos = (fuente: FuenteCanonica): Record<string, string | undefin
   Object.fromEntries(fuente.specification.nodeTypes.map((tipo) => [tipo.name, typeof tipo['color'] === 'string' ? tipo['color'] : undefined]));
 
 /**
- * Solo warnings: `W_THEME_LOW_CONTRAST` por Tema, Tipo y estado (en el nombre del Tema) y `W_THEME_COLOR_ONLY`
+ * Solo warnings: `theme-low-contrast` por Tema, Tipo y estado (en el nombre del Tema) y `theme-color-only`
  * por Vista cuando dos de sus Tipos solo difieren por color (en el id de la Vista).
  */
 function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefined, global: string | undefined): Issue[] {
@@ -140,7 +140,7 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
     const donde = sitio(['themes', i, 'name']);
     if (donde === null) return;
     for (const aviso of advertenciasDeContraste(tema, colores)) {
-      issues.push({ code: CODIGOS.W_THEME_LOW_CONTRAST, severity: 'warning', ...donde, message: `Tema '${tema.name}': ${aviso.mensaje}`, hint: `ajusta la Capa '${aviso.capa}' o los colores de la Paleta` });
+      issues.push({ code: CODIGOS.W_THEME_LOW_CONTRAST, severity: 'warning', ...donde, message: `Theme '${tema.name}': ${aviso.mensaje}`, hint: `adjust Layer '${aviso.capa}' or the Palette colors` });
     }
   });
   fuente.views.forEach((declarada, i) => {
@@ -150,19 +150,19 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
     const usados = new Set(resuelta.nodes.map((n) => n.type));
     const tipos = fuente.specification.nodeTypes.filter((t) => usados.has(t.name)).map((t) => ({ name: t.name, color: colores[t.name], icon: t.icon }));
     const tema = temaDeVista(fuente, declarada, global);
-    const aviso = (message: string): Issue => ({ code: CODIGOS.W_THEME_COLOR_ONLY, severity: 'warning', ...donde, message, hint: 'da al Tema un trazo, un marcador o un estilo distinto; el color no basta' });
+    const aviso = (message: string): Issue => ({ code: CODIGOS.W_THEME_COLOR_ONLY, severity: 'warning', ...donde, message, hint: 'give the Theme a different stroke, marker or style; color alone is not enough' });
     const tiposDeMensaje = resuelta.type === 'sequence' ? [...new Set(resuelta.interaction.messages.map((m) => m.kind))] : [];
-    for (const [a, b] of mensajesSoloColor(tema, tiposDeMensaje)) issues.push(aviso(`En la Vista '${declarada.id}', los Mensajes '${a}' y '${b}' se distinguen solo por color`));
+    for (const [a, b] of mensajesSoloColor(tema, tiposDeMensaje)) issues.push(aviso(`In View '${declarada.id}', Messages '${a}' and '${b}' differ only by color`));
     if (resuelta.type === 'er' && resuelta.edges.some((e) => e.identifying === true) && aristaIdentificanteSoloColor(tema)) {
-      issues.push(aviso(`En la Vista '${declarada.id}', las Aristas identificantes y las no identificantes se distinguen solo por color`));
+      issues.push(aviso(`In View '${declarada.id}', identifying and non-identifying Edges differ only by color`));
     }
     for (const [a, b] of tiposSoloColor(tema, resuelta.type, tipos)) {
       issues.push({
         code: CODIGOS.W_THEME_COLOR_ONLY,
         severity: 'warning',
         ...donde,
-        message: `En la Vista '${declarada.id}', los Tipos '${a}' y '${b}' se distinguen solo por color`,
-        hint: 'da al Tema una forma, un icono o un borde distinto por Tipo; el visor mostrara la leyenda',
+        message: `In View '${declarada.id}', Node kinds '${a}' and '${b}' differ only by color`,
+        hint: 'give the Theme a different shape, icon or border per kind; the viewer will show the legend',
       });
     }
   });
@@ -170,7 +170,7 @@ function avisosDeAccesibilidad(fuente: FuenteCanonica, ubicar: Ubicador | undefi
 }
 
 /**
- * `W_THEME_WITH_CODE` por Tema (y por Vista cuyo override anade componentes) y, con `componentes`,
+ * `theme-with-code` por Tema (y por Vista cuyo override anade componentes) y, con `componentes`,
  * la comprobacion de su interfaz. Nunca ejecuta ni lee codigo.
  */
 function avisosDeCodigo(fuente: FuenteCanonica, ubicar: Ubicador | undefined, componentes: OpcionesDeSesion['componentes']): Issue[] {
@@ -186,29 +186,29 @@ function avisosDeCodigo(fuente: FuenteCanonica, ubicar: Ubicador | undefined, co
       code: CODIGOS.W_THEME_WITH_CODE,
       severity: 'warning',
       ...donde,
-      message: `${que} usa codigo (componentes: ${nombres.join(', ')}); revisalo antes de confiar en el Workspace`,
-      hint: 'la Capa `code` corre codigo del Workspace sin sandbox',
+      message: `${que} uses code (components: ${nombres.join(', ')}); review it before trusting the Workspace`,
+      hint: 'the `code` Layer runs Workspace code without a sandbox',
     });
     if (componentes === undefined) return;
     for (const uso of usos) {
       const interfaz = componentes[uso.nombre];
       if (interfaz === undefined) {
         const cerca = candidatosCercanos(uso.nombre, Object.keys(componentes));
-        issues.push({ code: CODIGOS.E_THEME_COMPONENT_MISSING, severity: 'error', ...donde, message: `${que}: el componente '${uso.nombre}' no existe en el Workspace`, ...(cerca.length > 0 && { hint: `quisiste decir ${cerca.map((c) => `'${c}'`).join(' o ')}` }) });
+        issues.push({ code: CODIGOS.E_THEME_COMPONENT_MISSING, severity: 'error', ...donde, message: `${que}: component '${uso.nombre}' does not exist in the Workspace`, ...(cerca.length > 0 && { hint: `did you mean ${cerca.map((c) => `'${c}'`).join(' or ')}` }) });
         continue;
       }
       if (interfaz.parametros === undefined) continue;
       for (const [clave, valor] of Object.entries(uso.parametros)) {
         const esperado = interfaz.parametros[clave];
         const tipo = typeof valor === 'number' ? 'numero' : 'texto';
-        const problema = esperado === undefined ? `no declara el parametro '${clave}'` : esperado === tipo ? undefined : `espera '${clave}' como ${esperado}, no ${tipo}`;
-        if (problema !== undefined) issues.push({ code: CODIGOS.E_THEME_COMPONENT_PARAMS, severity: 'error', ...donde, message: `${que}: el componente '${uso.nombre}' ${problema}` });
+        const problema = esperado === undefined ? `does not declare the parameter '${clave}'` : esperado === tipo ? undefined : `expects '${clave}' as ${esperado}, not ${tipo}`;
+        if (problema !== undefined) issues.push({ code: CODIGOS.E_THEME_COMPONENT_PARAMS, severity: 'error', ...donde, message: `${que}: component '${uso.nombre}' ${problema}` });
       }
     }
   };
   fuente.themes.forEach((tema, i) => {
     const donde = sitio(['themes', i, 'name']);
-    if (donde !== null) revisar(donde, `Tema '${tema.name}'`, usosDeCodigo(tema));
+    if (donde !== null) revisar(donde, `Theme '${tema.name}'`, usosDeCodigo(tema));
   });
   fuente.views.forEach((declarada, i) => {
     if (declarada.themePatch === undefined) return;
@@ -216,12 +216,12 @@ function avisosDeCodigo(fuente: FuenteCanonica, ubicar: Ubicador | undefined, co
     if (donde === null) return;
     const tema = temaDeVista(fuente, declarada, undefined);
     const base = new Set(usosDeCodigo(tema).map((uso) => JSON.stringify(uso)));
-    revisar(donde, `La Vista '${declarada.id}'`, usosDeCodigo(tema, leerOps(declarada.themePatch)).filter((uso) => !base.has(JSON.stringify(uso))));
+    revisar(donde, `View '${declarada.id}'`, usosDeCodigo(tema, leerOps(declarada.themePatch)).filter((uso) => !base.has(JSON.stringify(uso))));
   });
   return issues;
 }
 
-/** `E_THEME_FONT_MISSING` por familia de `fonts` sin archivo, situado en el nombre del Tema; con la familia cercana si la hay. */
+/** `theme-font-missing` por familia de `fonts` sin archivo, situado en el nombre del Tema; con la familia cercana si la hay. */
 function avisosDeFuentes(fuente: FuenteCanonica, ubicar: Ubicador | undefined, archivos: readonly string[] | undefined): Issue[] {
   if (archivos === undefined) return [];
   const disponibles = [...new Set(archivos.flatMap((ruta) => /([^/]+?)(?:-[a-z]+(?:-ext)?-\d{3}-(?:normal|italic))?\.(?:woff2|woff|ttf|otf)$/i.exec(ruta)?.[1]?.toLowerCase() ?? []))];
@@ -236,8 +236,8 @@ function avisosDeFuentes(fuente: FuenteCanonica, ubicar: Ubicador | undefined, a
         severity: 'error',
         file: donde.file,
         ...donde.range.start,
-        message: `Tema '${tema.name}': la fuente '${familia}' (fonts.${clave}) no tiene archivo en el Workspace`,
-        hint: cerca.length > 0 ? `quisiste decir ${cerca.map((c) => `'${c}'`).join(' o ')}` : `copia ${familia.toLowerCase().replace(/\s+/g, '-')}-latin-400-normal.woff2 al Workspace, o usa una familia generica (sans-serif, monospace...)`,
+        message: `Theme '${tema.name}': font '${familia}' (fonts.${clave}) has no file in the Workspace`,
+        hint: cerca.length > 0 ? `did you mean ${cerca.map((c) => `'${c}'`).join(' or ')}` : `copy ${familia.toLowerCase().replace(/\s+/g, '-')}-latin-400-normal.woff2 into the Workspace, or use a generic family (sans-serif, monospace...)`,
       });
     }
   });
@@ -338,7 +338,7 @@ function crear(
     },
     consultar: (consulta) => {
       if (fuente === undefined || compilado.ubicar === undefined) return undefined;
-      if (consulta.comando !== 'tema') return consultar(fuente, compilado.ubicar, consulta);
+      if (consulta.comando !== 'theme') return consultar(fuente, compilado.ubicar, consulta);
       const { argumento, comando: _comando, ...opciones } = consulta;
       return consultarTema(fuente, compilado.origenesDeTemas ?? {}, argumento, opciones);
     },

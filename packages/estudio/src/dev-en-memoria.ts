@@ -9,7 +9,7 @@
  * Errores: nunca lanza por una peticion; responde el estado HTTP que daria `dev`.
  */
 import { RUTAS_DE_DEV } from 'canonico';
-import { abrirWorkspaceVivo, atenderApiDeDev, puertoEnMemoria } from 'sesion';
+import { abrirWorkspaceVivo, fetchSobreApiDeDev, puertoEnMemoria } from 'sesion';
 import type { Reloj, WorkspaceEnMemoria } from 'sesion';
 
 export interface DevEnMemoria {
@@ -75,14 +75,11 @@ export async function devEnMemoria({ codigo, ahora = Date.now, ...contenido }: C
     return p;
   };
 
-  const atender = async (url: URL, init: RequestInit | undefined): Promise<Response> => {
-    const { status, cuerpo, cabeceras } = await atenderApiDeDev(vivo, { metodo: init?.method ?? 'GET', url, ...(typeof init?.body === 'string' && { cuerpo: init.body }) });
-    return new Response(cuerpo, { status, headers: cabeceras });
-  };
+  const atender = fetchSobreApiDeDev(vivo, 'http://memoria');
 
   return {
     fetch: ((entrada: string | URL | Request, init?: RequestInit) => {
-      const p = atender(new URL(String(entrada instanceof Request ? entrada.url : entrada), 'http://memoria'), init);
+      const p = atender(entrada, init);
       // Solo las escrituras: una lectura (Geometria) puede esperar a temporizadores falsos de la prueba.
       return init?.method === 'POST' ? seguir(p) : p;
     }) as typeof fetch,

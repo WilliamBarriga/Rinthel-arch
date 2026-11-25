@@ -1,5 +1,7 @@
 /** Resolucion pura de Vistas. Una Vista solo selecciona Nodos del Modelo, nunca define entidades. */
 import type { Arista, Extremo, FuenteCanonica, Nodo, OverrideDeNodo, Paso, Vista } from './esquema';
+import { aristaPlaneada, planeados } from './planeado';
+import type { Planeados } from './planeado';
 import { resolverSecuencia } from './secuencia';
 import type { InteraccionResuelta } from './secuencia';
 
@@ -19,9 +21,14 @@ export interface NodoResuelto extends Omit<Nodo, 'children'> {
   childCount: number;
   /** Vista a la que enlaza (drill-down); un Grupo con `link` no se expande. */
   link?: string;
+  /** Planeado efectivo (ADR 0011): marcado o bajo un Grupo marcado. Sus `attributes` llevan solo su marca propia. */
+  planned?: boolean;
 }
 
-/** Arista visible; `count` es cuantas Aristas del Modelo representa (mas de una si se fusionaron). */
+/**
+ * Arista visible; `count` es cuantas Aristas del Modelo representa (mas de una si se fusionaron). `planned` es el
+ * efectivo (marcada o con un extremo planeado); una fusionada lo esta solo si todas las que agrupa lo estan.
+ */
 export interface AristaResuelta extends Arista {
   count: number;
 }
@@ -105,8 +112,9 @@ export function resolveView(
   const colorDeTipo = new Map(fuente.specification.nodeTypes.map((tipo) => [tipo.name, tipo.color]));
   const iconoDeTipo = new Map(fuente.specification.nodeTypes.map((tipo) => [tipo.name, tipo.icon]));
   const enlaces = new Map(vista.links.map(({ node, view }) => [node, view]));
+  const planeado = planeados(fuente.model);
   const resolver = (nodo: Nodo): NodoResuelto => {
-    const { children, ...resto } = nodo;
+    const { children, planned: _marca, ...resto } = nodo;
     const enlace = enlaces.get(nodo.id);
     const override = overrides.get(nodo.id);
     const color = override?.color ?? colorDeTipo.get(nodo.type);
@@ -120,18 +128,19 @@ export function resolveView(
       collapsed: colapsado(nodo),
       childCount: children.length,
       ...(enlace !== undefined && { link: enlace }),
+      ...(planeado.nodos.has(nodo.id) && { planned: true }),
     };
   };
 
   if (vista.type === 'sequence') {
-    const { nodes, interaction } = resolverSecuencia(fuente.model.interactions, fuente.model.nodes, vista, excluidos, resolver, ancestroColapsado);
+    const { nodes, interaction } = resolverSecuencia(fuente.model.interactions, fuente.model.nodes, vista, excluidos, resolver, ancestroColapsado, planeado);
     return { type: vista.type, nodes, interaction, steps: pasosDeSecuencia(vista, interaction) };
   }
 
   return {
     type: vista.type,
     nodes: todos.filter((nodo) => visibles.has(nodo.id)).map(resolver),
-    edges: elevarAristas(fuente.model.edges, visibles, ancestroColapsado),
+    edges: elevarAristas(fuente.model.edges, visibles, ancestroColapsado, planeado),
     overrides: vista.overrides,
     steps: vista.steps,
   };
@@ -170,9 +179,12 @@ function elevarAristas(
   aristas: readonly Arista[],
   visibles: ReadonlySet<string>,
   ancestroColapsado: ReadonlyMap<string, string>,
+  planeado: Planeados,
 ): AristaResuelta[] {
   const fusionadas = new Map<string, AristaResuelta>();
-  for (const arista of aristas) {
+  for (const original of aristas) {
+    const { planned: _marca, ...sinMarca } = original;
+    const arista: Arista = { ...sinMarca, ...(aristaPlaneada(original, planeado) && { planned: true }) };
     const from = elevar(arista.from, ancestroColapsado);
     const to = elevar(arista.to, ancestroColapsado);
     if (!visibles.has(from.node) || !visibles.has(to.node)) continue;
@@ -183,9 +195,14 @@ function elevarAristas(
     if (previa === undefined) {
       fusionadas.set(clave, { ...arista, from, to, count: 1 });
     } else {
-      const { fromCardinality, toCardinality, label, identifying, ...sinCardinalidad } = previa;
-      // Una linea fusionada es identificante solo si todas las Aristas que agrupa lo son.
-      fusionadas.set(clave, { ...sinCardinalidad, ...(identifying === true && arista.identifying === true && { identifying }), count: previa.count + 1 });
+      const { fromCardinality, toCardinality, label, identifying, planned, ...sinCardinalidad } = previa;
+      // Una linea fusionada es identificante (o planeada) solo si todas las Aristas que agrupa lo son.
+      fusionadas.set(clave, {
+        ...sinCardinalidad,
+        ...(identifying === true && arista.identifying === true && { identifying }),
+        ...(planned === true && arista.planned === true && { planned }),
+        count: previa.count + 1,
+      });
     }
   }
   return [...fusionadas.values()];

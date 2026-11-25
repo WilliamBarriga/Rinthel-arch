@@ -168,6 +168,22 @@ describe('revisarWorkspace', () => {
     );
   });
 
+  it('scanner sits outside the chain: only cli imports it and it imports no workspace package', () => {
+    const raiz = crearWorkspace({
+      'packages/canonico/package.json': manifiesto('canonico', { dependencies: { scanner: 'workspace:*' } }),
+      'packages/canonico/src/index.ts': "import { scan } from 'scanner';\nexport const s = scan;\n",
+      'packages/scanner/package.json': manifiesto('scanner', { dependencies: { canonico: 'workspace:*' } }),
+      'packages/scanner/src/index.ts': "import { algo } from 'canonico';\nexport const scan = algo;\n",
+      'packages/cli/package.json': manifiesto('cli', { dependencies: { scanner: 'workspace:*' } }),
+      'packages/cli/src/index.ts': "import { scan } from 'scanner';\nexport const s = scan;\n",
+    });
+
+    expect(revisarWorkspace(raiz).map((v) => [v.paquete, v.regla])).toEqual([
+      ['canonico', 'aislado'],
+      ['scanner', 'aislado'],
+    ]);
+  });
+
   it('acepta un import legal por nombre, declarado y hacia un paquete anterior', () => {
     const raiz = crearWorkspace({
       'packages/canonico/package.json': manifiesto('canonico'),

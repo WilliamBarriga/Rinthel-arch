@@ -1,133 +1,207 @@
 ---
 name: rinthel-diagramas
-description: Escribir, validar y servir diagramas .dg (Nodos, Aristas, Vistas, Pasos; Tipos de diagrama architecture, flow, sequence y er) con el CLI `diagrams` de rinthel-arch. Usalo al crear o editar un Workspace, escribir una Interaccion o una tabla ER, arreglar issues de validate, reordenar Lifelines o mostrar un diagrama al usuario.
+description: Write, validate and serve .dg diagrams (Nodes, Edges, Views, Steps; Diagram types architecture, flow, sequence and er) with the rinthel-arch `diagrams` CLI. Use when creating or editing a Workspace, writing an Interaction or an ER table, fixing validate issues, reordering Lifelines, showing a diagram to the user, turning an existing codebase into a Workspace, refreshing that Workspace after the code changed, drawing a Blueprint from a PRD or spec, or reconciling planned elements with the code.
+compatibility: Requires Node 24 or newer and the `diagrams` CLI (npm package rinthel-arch). Use `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams`. Serving the viewer needs a free local port; images need a headless browser.
 ---
 
-# Diagramas: escribir y servir
+# Diagrams: write and serve
 
-Un **Workspace** es una carpeta de `.dg`; el DSL de texto es la unica fuente editable (ADR 0001). `.diagrams/` es salida derivada: se regenera, no se edita. Vocabulario exacto en `CONTEXT.md` (Modelo, Vista, Pin, Paso).
+A **Workspace** is a folder of `.dg` files; the text DSL is the only editable source. `.diagrams/` is derived output: it is regenerated, never edited. Vocabulary: Model, View, Pin, Step.
 
-El CLI es `diagrams` (abreviado `dg`; si no esta instalado, `node <rinthel-arch>/packages/cli/dist/bin.js` tras `pnpm build` en ese repo). `dg <comando> --help` es la fuente de las opciones. Las rutas `docs/` y `examples/` de abajo son del repo rinthel-arch.
+Below, `dg` stands for the CLI: run `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams` (the pinned version keeps the JSON contract stable under this skill). `dg <command> --help` is the source of the options. Syntax: `references/dsl-reference.md`.
 
-## Bucle
+## Loop
 
-1. **Ubicar**: `dg inspect buscar <texto> --workspace <ruta>` da ids cualificados y `archivo:linea`. Usa ids que `inspect` devolvio.
-2. **Editar** el `.dg`. Sintaxis en `docs/guia/referencia-dsl.md`; ejemplo vivo: `examples/rinthel-arch/`.
-3. **Validar**: `dg validate --workspace <ruta> --json`. Aplica primero cada `fix` (por `dg edit --edits '<json>'` o a mano), lee `hint` cuando no hay `fix`, y guiate por `code` (estable; `message` cambia).
-4. **Cerrar** cuando `ok` es `true` y el resumen no trae errores. Con `--strict`, tambien sin avisos.
-5. **Mirar** el resultado (abajo) cuando el cambio es visual: una Vista nueva, Pins, Pasos.
+1. **Locate**: `dg inspect search <text> --workspace <path>` gives qualified ids and `file:line`. Use ids that `inspect` returned.
+2. **Edit** the `.dg`. Syntax in `references/dsl-reference.md`; a starter Workspace is in "Start a Workspace" below.
+3. **Validate**: `dg validate --workspace <path> --json`. Apply each `fix` first (through `dg edit --edits '<json>'` or by hand), read `hint` when there is no `fix`, and key on `code` (stable; `message` changes).
+4. **Close** when `ok` is `true` and the summary has no errors. With `--strict`, no warnings either.
+5. **Look** at the result (see "Serve and show") when the change is visual: a new View, Pins, Steps.
 
-## Elegir el Tipo de diagrama
+## Start a Workspace
 
-El Tipo (`type` de la Vista) decide como se dibuja el mismo Modelo; el Modelo no cambia.
-
-| El usuario quiere... | `type` | Que se escribe |
-| --- | --- | --- |
-| Piezas y sus dependencias | `architecture` | Nodos y Aristas; `include`, `depth`, `pin` |
-| Un recorrido paso a paso por piezas | `flow` | Lo mismo mas `steps { show/hide }` |
-| Quien llama a quien y en que orden | `sequence` | Una `interaction` en `model` y una Vista que la proyecta |
-| Tablas, columnas y claves foraneas | `er` | Atributos con `pk fk uk` y Aristas con cardinalidad |
-
-Un mismo Modelo admite varias Vistas de Tipos distintos. Detalle de cada sintaxis: `docs/guia/referencia-dsl.md` (secciones Interacciones, Vista de secuencia, Vistas `er`).
-
-## Secuencia
-
-Una **Interaccion** es un escenario ordenado entre Nodos del Modelo (las Lifelines); la Vista `sequence` la proyecta. Este ejemplo valida tal cual:
+A new Workspace is a folder with one `main.dg`. This one validates as is and draws an `architecture` View:
 
 ```
-specification { node servicio { description "Un servicio" icon box color blue } }
+specification {
+  node service  { description "A piece of logic" icon server   color blue }
+  node database { description "Storage"          icon database color green }
+}
 model {
-  servicio cliente "Cliente"
-  servicio api "API"
-  servicio db "Base de datos"
-  interaction compra "Compra" {
-    pedido: cliente -> api "POST /pedidos"
-    alt "hay stock" {
-      api -> db "reservar"
+  service api "API"
+  database db "Database"
+  api -> db "reads and writes"
+}
+view overview { type architecture include ** }
+```
+
+Grow it by adding Nodes and Edges to `model`, kinds to `specification` and Views as needed. Keep Themes in `theme.dg` or a `themes/` folder and fonts in `fonts/` (see skill `rinthel-temas`).
+
+## Pick the Diagram type
+
+The Diagram type (`type` of the View) decides how the same Model is drawn; the Model does not change.
+
+| The user wants... | `type` | What to write |
+| --- | --- | --- |
+| Pieces and their dependencies | `architecture` | Nodes and Edges; `include`, `depth`, `pin` |
+| A step-by-step walk through pieces | `flow` | The same plus `steps { show/hide }` |
+| Who calls whom and in what order | `sequence` | An `interaction` in `model` and a View that projects it |
+| Tables, columns and foreign keys | `er` | Attributes with `pk fk uk` and Edges with cardinality |
+
+One Model admits several Views of different types. Each syntax in detail: `references/dsl-reference.md` (sections Interactions, Sequence View, `er` Views).
+
+## Sequence
+
+An **Interaction** is an ordered scenario between Model Nodes (the Lifelines); the `sequence` View projects it. This example validates as is:
+
+```
+specification { node service { description "A service" icon box color blue } }
+model {
+  service client "Client"
+  service api "API"
+  service db "Database"
+  interaction purchase "Purchase" {
+    order: client -> api "POST /orders"
+    alt "in stock" {
+      api -> db "reserve"
       reply db -> api "ok"
-    } else "sin stock" {
-      api -> cliente "rechazar"
+    } else "out of stock" {
+      api -> client "reject"
     }
-    note right of db "idempotente"
-    reply api -> cliente "201"
+    note right of db "idempotent"
+    reply api -> client "201"
   }
 }
-view compra { type sequence interaction compra order cliente, api autonumber }
+view purchase { type sequence interaction purchase order client, api, db autonumber }
 ```
 
-- Mensaje: `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"]`. El orden de declaracion es el orden temporal; las activaciones se derivan (un `sync` abre, el `reply` cierra).
-- Fragmentos `opt loop break critical`, `alt { } else { }`, `par { } and { }`; Notas `note left|right of X`, `note over X, Y`; `ref otra-interaccion` (declara tambien una Vista que proyecte la referida).
-- Vista `sequence`: `interaction` obligatoria; `order` opcional; `depth`, `collapsed`, `exclude`, `autonumber`. `include` y `pin` no valen. Pasos: `step "titulo" { upto <id de Mensaje> }` o `steps each`; ponle `id:` a los Mensajes que un Paso corta.
-- `dg inspect interaccion <id> --workspace <ruta>` da sus Lifelines en orden, cuantos Mensajes tiene y las Vistas que la proyectan.
+- Message: `[id:] [async|reply|create|destroy] origin -> target ["label"]`. Declaration order is time order; activations are derived (a `sync` opens, the `reply` closes).
+- Fragments `opt loop break critical`, `alt { } else { }`, `par { } and { }`; Notes `note left|right of X`, `note over X, Y`; `ref other-interaction` (also declare a View that projects the referenced one).
+- `sequence` View: `interaction` required; `order` optional; `depth`, `collapsed`, `exclude`, `autonumber`. `include` and `pin` do not apply. Steps: `step "title" { upto <Message id> }` or `steps each`; give an `id:` to the Messages a Step cuts at.
+- `dg inspect interaction <id> --workspace <path>` gives its Lifelines in order, how many Messages it has and the Views that project it.
+- `dg inspect planned --workspace <path>` (no argument) lists the planned elements with their `spec` refs; see the planned mark in `references/dsl-reference.md`.
 
-### Codigos de secuencia y ER al validar
+### Sequence and ER codes in validate
 
-| `code` | Accion |
+| `code` | Action |
 | --- | --- |
-| `E_UNKNOWN_LIFELINE`, `E_UNKNOWN_INTERACTION`, `E_UNKNOWN_STEP` | Aplica el `fix` (typo) o elige un id de la lista del `hint` |
-| `E_SEQUENCE_WITHOUT_INTERACTION` | Agrega `interaction <id>` a la Vista |
-| `E_VIEW_PROPERTY_FOR_TYPE` | Quita la propiedad o cambia `type`; el `hint` dice cual |
-| `E_CREATE_NOT_FIRST`, `E_AFTER_DESTROY` | Mueve el `create` a la primera aparicion o saca los Mensajes posteriores al `destroy`; `related` apunta al otro extremo |
-| `E_INVALID_FRAGMENT_OPERAND` | `else` solo en `alt`, `and` solo en `par`; `opt/loop/break/critical` tienen un operando |
-| `E_STEP_NOT_ADVANCING`, `E_STEP_NOT_PROJECTED`, `E_STEPS_EACH_WITH_STEP` | Pasos que solo avanzan, sobre Mensajes proyectados; no mezcles `steps each` con `step` |
-| `E_ER_CARDINALITY` | Solo `0..1`, `1`, `0..*`, `1..*` en Vista `er`; aplica el `fix` |
-| `E_DUPLICATE_KEY_MARK` | Aplica el `fix` (borra la marca repetida) |
-| `W_REPLY_WITHOUT_SYNC`, `W_ORDER_NOT_IN_INTERACTION`, `W_REF_WITHOUT_VIEW` | Avisos: revisa el orden de los Mensajes, el `order` o agrega la Vista de la Interaccion referida |
+| `unknown-lifeline`, `unknown-interaction`, `unknown-step` | Apply the `fix` (typo) or pick an id from the `hint` list |
+| `sequence-without-interaction` | Add `interaction <id>` to the View |
+| `view-property-for-type` | Remove the property or change `type`; the `hint` says which |
+| `create-not-first`, `after-destroy` | Move the `create` to the first appearance or remove the Messages after the `destroy`; `related` points at the other end |
+| `invalid-fragment-operand` | `else` only in `alt`, `and` only in `par`; `opt/loop/break/critical` have one operand |
+| `step-not-advancing`, `step-not-projected`, `steps-each-with-step` | Steps only advance, over projected Messages; do not mix `steps each` with `step` |
+| `er-cardinality` | Only `0..1`, `1`, `0..*`, `1..*` in an `er` View; apply the `fix` |
+| `old-catalog-value` | Old (Spanish) name of a built-in Motion, effect, state, Theme, Palette color or Layer, or `ORIGEN`; apply the `fix` |
+| `duplicate-key-mark` | Apply the `fix` (deletes the repeated mark) |
+| `old-workspace-convention` | Apply the `fix` with `edit --edits`: it renames the file or folder to `fix.rename` (`theme.dg`, `themes/`, `fonts/`). Revalidate: a nested old name shows up next |
+| `unknown-source-kind` | Warning: write each Source entry as `<kind> "<ref>"` with a known kind (`path`, `spec`, `file`, `url`, `git`), e.g. `spec "prd.md#2"`, never `kind "spec" ref "..."` |
+| `reply-without-sync`, `order-not-in-interaction`, `ref-without-view` | Warnings: check Message order, the `order`, or add the View of the referenced Interaction |
 
-La lista completa de codigos sale de `dg skill --workspace <ruta>`.
+The full list of codes comes from `dg skill --workspace <path>`.
 
-### Reordenar Lifelines
+### Reorder Lifelines
 
-Arrastrar una cabecera en el visor reescribe `order`. Por CLI, con el orden visible completo:
+Dragging a header in the viewer rewrites `order`. From the CLI, with the full visible order:
 
 ```
-dg edit --workspace <ruta> --intent '{"tipo":"ordenar-lifelines","vista":"compra","orden":["api","cliente","db"]}'
+dg edit --workspace <path> --intent '{"type":"reorder-lifelines","view":"purchase","order":["api","client","db"]}'
 ```
 
 ## ER
 
-Una Vista `type er` dibuja cada Nodo hoja como tabla. Este ejemplo valida tal cual:
+A `type er` View draws each leaf Node as a table. This example validates as is:
 
 ```
-specification { node tabla { description "Tabla" icon box color blue } }
+specification { node table { description "Table" icon box color blue } }
 model {
-  tabla clientes "Clientes" {
+  table customers "Customers" {
     id: uuid pk
-    email: text? uk "unico"
+    email: text? uk "unique"
   }
-  tabla pedidos "Pedidos" {
+  table orders "Orders" {
     id: uuid pk
-    cliente_id: uuid fk
+    customer_id: uuid fk
   }
-  pedidos#cliente_id "0..*" -> "1" clientes#id "pertenece" identifying
+  orders#customer_id "0..*" -> "1" customers#id "belongs to" identifying
 }
-view tablas { type er include ** }
+view tables { type er include ** }
 ```
 
-- Atributo `nombre: tipo[?] [pk] [fk] [uk] ["notas"]`; `?` lo hace opcional. Arista `identifying` al final: trazo continuo, el resto discontinuo.
-- Extremos `nodo#atributo`; cardinalidades `0..1`, `1`, `0..*`, `1..*`.
-- Un Grupo colapsado agrega las FK de sus tablas (sin marcadores).
+- Attribute `name: type[?] [pk] [fk] [uk] [planned] ["notes"]`; `?` makes it optional. Trailing `identifying` on an Edge: solid line, the rest dashed.
+- Endpoints `node#attribute`; cardinalities `0..1`, `1`, `0..*`, `1..*`.
+- A collapsed Group aggregates the FKs of its tables (no markers).
 
-## Servir y mostrar
+## Import from code
 
-- `dg dev --workspace <ruta> --port <N>` sirve la UI de dev en `http://127.0.0.1:<N>/#vista=<id>`. Es un proceso largo: lanzalo en segundo plano, vigila su salida hasta la linea con la URL y entrega esa URL al usuario.
-- `dev` recompila al guardar: edita el `.dg` y la UI se actualiza sola. El usuario tambien escribe desde la UI (editor, arrastres, `fix`, galeria de Temas) y puede deshacer desde el Historial de archivos: vuelve a leer el archivo antes de editarlo. Para que `dg edit` no pise un cambio suyo, pasale `--hash <archivo>=<hash>` con el `hash` de `GET /api/archivo/<ruta>` (rechaza con `hash-desactualizado`: relee y reintenta; detalle en `docs/guia/cli.md`).
-- La UI muestra en su panel Agente cada `validate`, `build`, `inspect` y `edit` que corres y resalta lo que cambias. Exporta `DIAGRAMS_AGENTE=<tu nombre>` para que el usuario sepa quien fue; no pongas `DIAGRAMS_ACTIVIDAD=0` salvo que te lo pidan. Guia: `docs/guia/ui-de-dev.md`.
-- Imagen de una Vista: captura el visor de `dev` con un navegador headless y entrega al usuario una URL servida por un servidor local (`http://localhost:<puerto>/...`), no una ruta de archivo. En el repo rinthel-arch, `pnpm capturas --workspace <ruta> --vista <id> <tema>...` lo hace (necesita `pnpm build` y Chromium).
-- Un Workspace con Tema de codigo (`.tsx`) exige `--trust-code` o confirmar en el visor; confia solo en Workspaces propios.
+Turn a codebase into a Workspace in two halves: `scan` extracts the mechanical facts into a **Scan draft**; you decide what is worth drawing and write the `.dg`. `scan` never writes `.dg` and never runs the project's code.
 
-## Ejemplos para copiar
+1. **Scan**: `dg scan <root> --json` writes `<root>/.rinthel/scan.json` (not versioned) and prints counts. Read the draft for the detail; fields and the starting Node kind catalog are in `references/scan-import.md`. Check `limits` first: `truncated` or languages without imports mean a partial picture, say so to the user.
+2. **Declare kinds** in `specification` from the catalog in the reference; add only what the draft needs.
+3. **Nodes and Groups**: one Node per unit worth showing, with `source { path "<unit id>" }` (the unit id exactly as in the draft; this ref is how a refresh finds the Node again). Nest a Node inside the Node of its `parent` unit, so the folder tree becomes Groups. Skip units that carry no meaning to the reader (an empty root, a folder of fixtures); skipped units stay out of the Model. A Node may cite several units to merge them.
+4. **Edges**: draw a `dependencies` item as an Edge when its `weight` makes it meaningful, heaviest first, and leave out the weight-1 imports that add noise. Between Groups, keep one Edge on the Group rather than one per child. Label an Edge with what it means ("calls", "reads") when the code makes it clear, otherwise "uses".
+5. **Externals**: add an `external` Node only for the few that shape the system (database driver, queue, payment API); leave the long tail out. Cite `source { path "<external id>" }` like units.
+6. **Tables**: for each `tables` item write a `table` Node citing `source { path "<table id>" }` (the table id, not the schema file), its `columns` as Attributes (`name: type[?] [pk] [fk] [uk]`) and each `relations` item as an Edge between `node#column` endpoints with its `cardinality`. Add a `type er` View over them. See "ER".
+7. **Views**: a **context View** first (`type architecture`, top-level Groups `collapsed`), then a **per-Group View** for each Group worth opening, reached from the context View with `link <group> -> <view>` (Drill-down). Keep about 30 visible Nodes per View: past that, collapse a Group, split the View or leave minor Nodes out.
+8. **Validate** with `dg validate --workspace <path> --json`, as in the Loop, and show the result with `dev`. The Workspace goes in a folder of its own under the root (for example `diagrams/`), versioned with the code.
 
-| Quiero... | Mira |
-| --- | --- |
-| El primer diagrama, paso a paso | `examples/tutorial/paso-1` a `paso-6`, y `docs/guia/tutorial.md` |
-| Un Modelo grande con drill-down y Pasos | `examples/rinthel-arch/` (Vistas `paquetes`, `flujo-edicion`) |
-| Ver un Tipo de nodo en cada estado | `examples/temas/galeria/` |
-| Secuencia y ER sobre el mapa del repo | `examples/rinthel-arch/fuente-canonica.dg` (`editar-pin`, `fuente-er`) |
-| Secuencia o ER con Tema propio | `examples/temas/secuencia.dg`, `examples/temas/er.dg` |
+Completion: every unit and table in the draft is either cited by a Node or deliberately left out, and `validate` reports `ok` with no errors. The next `scan` tells you which: its coverage lists what no Node cites.
 
-## Consultar antes de inventar
+## Refresh from code
 
-- Sintaxis o bloque desconocido: `docs/guia/referencia-dsl.md`.
-- Estetica, colores, fuentes, animacion: skill `rinthel-temas`.
-- Cambiar el DSL, un Tema de ejemplo o el CLI: actualiza `docs/guia/` (y `docs/guia/cli.md` si cambian opciones); `pnpm docs:catalogo` regenera `docs/referencia-catalogo.md`.
+Run it only when the user asks. No hook or watcher refreshes a Workspace on its own.
+
+1. **Scan again**: `dg scan <root> --json`. It finds the Workspace under `<root>` (pass `--workspace <path>` when several exist), rotates the old draft to `scan.prev.json` and reports `coverage` (what is uncovered, orphan refs, Attribute drift) and `changes` since the previous scan.
+2. **Reconcile refs by `path` alone**: a Node matches the draft only through its Source `path` refs; titles, names and guesses do not count. For each orphan ref, decide: a unit or table in `changes.added` that is clearly the same thing was moved, so re-point the ref and keep the Node id; otherwise it is gone.
+3. **Remove what disappeared**: a Node whose last ref is gone is removed with every Edge that touches it, without asking, and listed in your report. Ask first only when removal would lose hand-written content: a long description, an Interaction that uses it.
+4. **Add what is new**: give each uncovered unit or table worth showing a Node, with the criteria of "Import from code". Draw new `dependencies` the same way; remove an import Edge whose dependency disappeared and keep an Edge that carries meaning the imports never had. Align a table's Attributes with its columns (`missing` and `extra`).
+5. **Keep what is written**: for a Node that stays covered, never rewrite its title, description, Group, Node kind, Views or Pins. The refresh only adds, removes or re-points refs and Nodes; a person may have edited the rest on purpose.
+6. **Leave things out on purpose** by adding their id or a gitignore-style pattern to `<root>/.rinthel/scan-ignore` (one per line, versioned). Ignored ids leave the coverage report, not the draft.
+7. **Validate**, then scan once more.
+
+Completion: the second `scan` reports no orphan refs and no uncovered items that you did not decide to ignore, `validate` is `ok`, and your report lists the Nodes you added, re-pointed and removed. Decision table: `references/scan-import.md`.
+
+## Plan from a spec
+
+Turn a PRD, spec or description of something that does not exist yet into a **Blueprint**: a Workspace whose proposed elements carry the Model mark `planned`. Often the system already exists (a new feature in a repo with a Workspace): then add the proposal to that Workspace and keep real and planned together in the same View. Details, the default Views and an example: `references/plan-from-spec.md`.
+
+1. **Read the spec** whole. List the parts, the key journeys (one user goal each) and any data model it states.
+2. **Declare kinds** in `specification`: reuse the Workspace's kinds, or the starting catalog in `references/scan-import.md`.
+3. **Draw the proposal**: Nodes (Groups for subsystems), Edges, and Attributes when the spec has tables. Mark every proposed Node, Edge, Attribute and Interaction `planned`; a planned Group marks its descendants, and an Edge or Message touching a planned thing is drawn planned, so mark the root and the Edges that stand alone. Never mark what already exists.
+4. **Cite the spec**: when the spec is a file, each Node written from it carries `source { spec "<file>#<section>" }`. Interactions, Edges and Attributes take no `source`: start their `description` with `Spec: <file>#<section>` (an Attribute inherits its table's Node ref). Write no `path` ref on a planned Node, because that says it exists.
+5. **Record doubt in the element**: put each guess in the `description` of the element it affects as `Assumption: <what you assumed>`, and each thing the spec leaves undecided (including anything the spec retires) as `Open question: <the question>`. `inspect search "Open question" --workspace <path>` lists them (search also matches descriptions).
+6. **Views by default**: one `architecture` View, one `sequence` View per key journey (an `interaction` plus a View that projects it), an `er` View when the spec has a data model. A `flow` View only when the user asks. Keep about 30 visible Nodes per View; collapse Groups and link per-Group Views as in "Import from code".
+7. **Validate** as in the Loop (`--strict`), then serve with `dev`.
+8. **Ask after showing**: hand over the `dev` URL first, then ask the user at most about 5 questions, only the ones whose answer changes the shape of the diagram (pick them from your `Open question:` list). Apply the answers and validate again.
+
+Completion: `validate` is `ok` with no warnings, every part, journey and table the spec names is drawn or listed as an `Open question:`, and the user has the URL.
+
+## Reconcile a Blueprint with the code
+
+Run it when the user says the system is built (or partly built), never on your own.
+
+1. **List the plan**: `dg inspect planned --workspace <path> --json` gives each planned Node with its `spec` refs, plus planned Attributes, Edges and Interactions.
+2. **Scan**: `dg scan <root> --json`, then read the draft (`references/scan-import.md`). The draft is the only evidence of what is built.
+3. **Match each planned Node and table** to a unit, external or table of the draft by what it does, never by its title alone. Matching is your decision, not the tool's.
+4. **Found**: add the Source `path` ref with the draft id, and remove `planned` from that Node (and from its Attributes when the table exists). Keep its title, description and Edges; drop an `Assumption:` the code confirmed and keep one it did not. An Edge was drawn planned through this Node: when the draft has no such dependency, mark that Edge `planned` itself before the Node loses its mark.
+5. **Not found**: keep it `planned` and put it in your report.
+6. **Clean up**: `validate` warns `planned-with-path` on a Node that has both marks and gives a `fix` that removes `planned`; apply it only after you checked the path is the real thing. The error `real-node-in-planned-group` means a real Node sits under a planned Group: apply its `fix` (remove the Group's mark) once the Group's children are built, otherwise move the real Node out.
+7. **Cover the rest**: units of the draft that no Node cites are new work outside the plan; add them as in "Refresh from code" or leave them out on purpose. `scan` coverage never counts planned Nodes as missing.
+8. **Validate**, scan once more, and report.
+
+Report to the user in three lists: **built** (planned elements now cited by a path), **not built yet or diverges from the plan** (still planned; for each, say whether the draft has something close and what differs), and **built but not planned** (uncovered units you added or ignored). Completion: `inspect planned` lists exactly the elements in the second list.
+
+## Serve and show
+
+- `dg dev --workspace <path> --port <N>` serves the dev UI at `http://127.0.0.1:<N>/#view=<id>`. It is a long process: start it in the background, watch its output until the line with the URL and hand that URL to the user.
+- `dev` recompiles on save: edit the `.dg` and the UI updates itself. The user also writes from the UI (editor, drags, `fix`, Theme gallery) and can undo from the file History: re-read the file before editing it. So `dg edit` does not overwrite their change, pass `--hash <file>=<hash>` with the `hash` from `GET /api/archivo/<path>` (rejects with `stale-hash`: re-read and retry).
+- The UI shows in its Agent panel every `validate`, `build`, `inspect` and `edit` you run and highlights what you change. Export `DIAGRAMS_AGENT=<your name>` so the user knows who it was; do not set `DIAGRAMS_ACTIVITY=0` unless asked.
+- To send the diagram to someone without the tool: `dg export --workspace <path> --out <file>.html` writes a self-contained read-only HTML (Views, Steps, `link`, Theme gallery). To show it, serve its folder with a local server and hand over the URL.
+- Image of a View: capture the `dev` viewer with a headless browser and give the user a URL served by a local server (`http://localhost:<port>/...`), not a file path.
+- A Workspace with a code Theme (`.tsx`) needs `--trust-code` or confirmation in the viewer; trust only your own Workspaces.
+
+## Look things up before inventing
+
+- Unknown syntax or block: `references/dsl-reference.md`.
+- Look, colors, fonts, animation: skill `rinthel-temas`.
+- CLI options: `dg <command> --help`.

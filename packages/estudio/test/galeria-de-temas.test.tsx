@@ -39,42 +39,42 @@ const fondoDelLienzo = (contenedor: HTMLElement): string => contenedor.querySele
 /** Espera al lienzo (antes, el marco sin Fuente se reemplaza y la pestana elegida se pierde) y abre la galeria. */
 async function abrirGaleria(contenedor: HTMLElement): Promise<HTMLElement> {
   await lienzoListo(contenedor, 'mapa');
-  fireEvent.click(await screen.findByRole('tab', { name: 'Temas' }));
-  return screen.findByRole('listbox', { name: 'Temas' });
+  fireEvent.click(await screen.findByRole('tab', { name: 'Themes' }));
+  return screen.findByRole('listbox', { name: 'Themes' });
 }
 
 describe('galeria de Temas', () => {
   it('lista los Temas de la Fuente (incluidos los de --theme-path) y marca el fijado en la Vista activa', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL.replace('include **', 'include **\n  theme oscuro') }, { hash: '#vista=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL.replace('include **', 'include **\n  theme oscuro') }, { hash: '#view=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
     const galeria = await abrirGaleria(contenedor);
 
     const nombres = within(galeria).getAllByRole('option').map((o) => o.getAttribute('aria-label'));
     expect(nombres).toEqual(expect.arrayContaining(['neutral', 'oscuro', 'prestado']));
-    expect(within(galeria).getByRole('option', { name: 'oscuro' }).textContent).toContain('fijado');
+    expect(within(galeria).getByRole('option', { name: 'oscuro' }).textContent).toContain('pinned');
   });
 
   it('elegir un Tema muestra su cadena extends, su Paleta y sus Capas y previsualiza la Vista activa sin escribir', async () => {
-    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
+    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
     const galeria = await abrirGaleria(contenedor);
     const fondoOriginal = fondoDelLienzo(contenedor);
 
     fireEvent.click(within(galeria).getByRole('option', { name: 'prestado' }));
 
-    const ficha = await screen.findByRole('region', { name: 'Tema prestado' });
+    const ficha = await screen.findByRole('region', { name: 'Theme prestado' });
     expect(await within(ficha).findByText('prestado > oscuro > neutral')).toBeTruthy();
-    expect(within(within(ficha).getByRole('list', { name: 'Paleta' })).getByText('pizarra').closest('li')?.textContent).toContain('#405060');
-    expect(within(within(ficha).getByRole('list', { name: 'Capas' })).getAllByRole('listitem').length).toBeGreaterThan(0);
+    expect(within(within(ficha).getByRole('list', { name: 'Palette' })).getByText('pizarra').closest('li')?.textContent).toContain('#405060');
+    expect(within(within(ficha).getByRole('list', { name: 'Layers' })).getAllByRole('listitem').length).toBeGreaterThan(0);
 
     await waitFor(() => expect(fondoDelLienzo(contenedor)).toBe('#405060'));
     expect(fondoOriginal).not.toBe('#405060');
     expect(dev.workspace.texto('main.dg')).toBe(DSL);
 
-    fireEvent.click(within(ficha).getByRole('button', { name: 'Dejar de previsualizar' }));
+    fireEvent.click(within(ficha).getByRole('button', { name: 'Stop previewing' }));
     await waitFor(() => expect(fondoDelLienzo(contenedor)).toBe(fondoOriginal));
   });
 
   it('se recorre con las flechas y Enter elige el Tema, como el indice de Vistas', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
     const galeria = await abrirGaleria(contenedor);
     const nombres = within(galeria).getAllByRole('option').map((o) => o.getAttribute('aria-label') ?? '');
     const activa = (): string | null | undefined => {
@@ -87,9 +87,9 @@ describe('galeria de Temas', () => {
     fireEvent.keyDown(galeria, { key: 'ArrowDown' });
     expect(activa()).toBe(nombres[1]);
     // Moverse no elige: la ficha aparece al pulsar Enter.
-    expect(screen.queryByRole('region', { name: `Tema ${nombres[1]}` })).toBeNull();
+    expect(screen.queryByRole('region', { name: `Theme ${nombres[1]}` })).toBeNull();
     fireEvent.keyDown(galeria, { key: 'Enter' });
-    expect(await screen.findByRole('region', { name: `Tema ${nombres[1]}` })).toBeTruthy();
+    expect(await screen.findByRole('region', { name: `Theme ${nombres[1]}` })).toBeTruthy();
     expect(within(galeria).getByRole('option', { name: nombres[1] }).getAttribute('aria-selected')).toBe('true');
 
     fireEvent.keyDown(galeria, { key: 'End' });
@@ -101,15 +101,15 @@ describe('galeria de Temas', () => {
   });
 
   it('fijar escribe theme en la Vista activa y quitar lo borra', async () => {
-    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     const galeria = await abrirGaleria(contenedor);
 
     fireEvent.click(within(galeria).getByRole('option', { name: 'oscuro' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Fijar oscuro en mapa' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Pin oscuro to mapa' }));
     await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(DSL.replace('view mapa {\n', 'view mapa {\n  theme oscuro\n')));
-    await waitFor(() => expect(within(galeria).getByRole('option', { name: 'oscuro' }).textContent).toContain('fijado'));
+    await waitFor(() => expect(within(galeria).getByRole('option', { name: 'oscuro' }).textContent).toContain('pinned'));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Quitar el Tema fijado de mapa' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Unpin the Theme of mapa' }));
     await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(DSL));
   });
 });

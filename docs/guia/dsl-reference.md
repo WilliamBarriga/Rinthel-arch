@@ -1,0 +1,281 @@
+[Read in English](../guide/dsl-reference.md)
+
+# Referencia del DSL
+
+Resumen de la sintaxis de los archivos `.dg`. La gramatica completa esta en `packages/dsl/src/gramatica/diagramas.langium`; las decisiones, en el [ADR 0001](../adr/0001-dsl-fuente-editable.md). Los Temas se describen en [Personalizar con Temas](themes.md). Los comentarios empiezan con `//`.
+
+Un Workspace es una carpeta con cualquier cantidad de `.dg` (en subcarpetas tambien); se fusionan en un unico Modelo. Un archivo puede mezclar bloques `specification`, `model`, `view`, `theme` y `part`.
+
+## `specification`: Tipos de nodo
+
+```
+specification {
+  node service { description "Logic piece"  icon server  color blue }
+  node note    { description "Test element"  color gray }
+}
+```
+
+`description`, `icon` y `color` son opcionales. `color` es un nombre de Paleta del Tema. Iconos usados en los ejemplos: `user`, `box`, `server`, `database`, `queue`, `cloud`. Usar un Tipo no declarado es un error.
+
+## `model`: Nodos y Aristas
+
+```
+model {
+  kind id "Title" "Description" {
+    kind child "Title"                     // a Group is a Node with children
+    attrs { id: uuid   total: decimal "in cents" }
+    email: text? uk "unique"               // an Attribute can also stand loose in the body (see "`er` Views")
+    source { file "packages/x/src/a.ts"  url "https://..." }
+  }
+
+  source -> target "label"
+  source "1" -> "N" target                 // optional cardinalities
+  orders#customer_id -> customers#id       // an Attribute as an end (`node#attribute`)
+}
+```
+
+- Titulo y descripcion son opcionales; sin titulo, se usa el id.
+- Los hijos se referencian con el id cualificado por su jerarquia: `platform.orders`.
+- Los espacios alrededor de `->` son obligatorios (`-` es valido dentro de un id).
+- `source` guarda referencias opacas al proyecto documentado, una `<tipo> "<ref>"` por entrada (`path "src/api"`, `spec "prd.md#2"`, `file`, `url`, `git`); el sistema no interpreta la ref. `scan` y la cobertura leen `path`, `inspect planned` lee `spec`; cualquier otro tipo es el aviso `unknown-source-kind`.
+- `extend <nodo> { ... }`, dentro de un bloque `model`, agrega hijos, Atributos o `source` a un Nodo declarado en otro archivo o bloque.
+- Las Aristas se declaran solo en `model`, nunca en una Vista.
+- Un escenario ordenado entre Nodos es una Interaccion (ver abajo).
+
+### Planeado
+
+`planned` marca lo propuesto que aun no existe, junto a lo real. Es parte del Modelo, asi que toda Vista lo dibuja: el Tema por defecto atenua lo planeado y le da un contorno discontinuo (cajas) o lineas discontinuas (Aristas, Mensajes); un Tema puede reestilizarlo con `state planned { ... }`.
+
+```
+model {
+  service checkout "Checkout" "Pays an order" planned {   // after title and description, before the body
+    service cart "Cart"                                   // also planned: a planned Group marks its descendants
+  }
+  table orders "Orders" {
+    coupon: text? fk planned "From the PRD"               // among the key marks; in er Views, a PLAN chip
+  }
+  api -> checkout.cart "adds" planned                     // at the end, after `identifying` if both are present
+  interaction pay "Pay" planned { api -> checkout }       // after title and description
+}
+```
+
+- Una Arista se dibuja planeada si lleva la marca o si alguno de sus extremos (Nodo o Atributo) lo esta; una fusionada, solo si lo estan todas las que agrupa.
+- Un Mensaje se dibuja planeado si lo esta su Interaccion o una de sus Lifelines.
+- Un Nodo real (con Source `path`) bajo un Grupo planeado es el error `real-node-in-planned-group`; su `fix` quita la marca del Grupo. La otra salida es sacar el Nodo del Grupo.
+- Un Nodo llamado `planned` no puede abrir la declaracion que sigue justo a un Nodo, una Arista o un Atributo (se leeria como su marca).
+
+### Interacciones
+
+Un Workspace completo con una Interaccion y la Vista que la dibuja:
+
+```dg
+specification {
+  node actor    { icon user     color purple }
+  node service  { icon server   color blue }
+  node store    { icon database color green }
+  node queue    { icon queue    color amber }
+}
+
+model {
+  actor client "Customer"
+  service api "API"
+  store db "Database"
+  queue events "Events"
+
+  interaction checkout "Purchase" "Payment flow" {
+    place: client -> api "POST /orders"     // `place:` is an optional alias of the Message
+    api -> db "query"
+    reply db -> api "rows"
+    async api -> events "event"
+    api -> api "validate"                    // self Message
+    reply api -> client "201"
+  }
+}
+
+view purchase { type sequence  interaction checkout }
+```
+
+Ciclo de vida de una Lifeline: `create origen -> destino` la hace nacer (su cabecera baja a la altura del Mensaje y la flecha termina en ella) y `destroy origen -> destino` la termina (su linea se corta en una X, el marcador `cross`).
+
+```dg
+specification { node piece { icon box  color blue } }
+model {
+  piece client
+  piece api
+  piece token
+  interaction session {
+    client -> api "login"
+    create api -> token "issue"
+    destroy api -> token "revoke"
+  }
+}
+view lifecycle { type sequence  interaction session }
+```
+
+- Un Mensaje es `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"] ["descripcion"]`; sin tipo es `sync`. Los extremos son Nodos de cualquier nivel (las Lifelines) y no hace falta una Arista entre ellos.
+- El orden de declaracion es el orden temporal. La activacion no se escribe: un `sync` abre una en el receptor y el siguiente `reply` del receptor al emisor la cierra.
+- `create` solo vale en la primera aparicion del destino (`create-not-first`) y ninguna Lifeline puede aparecer despues de su `destroy` (`after-destroy`) en orden de declaracion, tambien dentro de Fragmentos; ambos errores traen `related`.
+- Fragmento: `opt|loop|break|critical ["guarda"] { }` (un operando), `alt ["guarda"] { } else ["guarda"] { }` y `par { } and { }` (uno o mas). La guarda es texto libre y opcional. `else` solo vale en `alt` y `and` en `par`; otra combinacion da `invalid-fragment-operand`. Un `sync` sin `reply` dentro de un Fragmento deja su activacion abierta hasta el fin del Fragmento. `opt`, `loop`, `break`, `critical`, `alt`, `par`, `else` y `and` siguen valiendo como ids de Nodo.
+- Nota: `note left of X "texto"`, `note right of X "texto"` y `note over X[, Y] "texto"`. Se dibuja como papel (esquina doblada, texto envuelto a un ancho maximo) y no es una Lifeline; `over X, Y` ensancha la separacion entre X e Y si hace falta. Un objetivo que no es un Nodo da `unknown-lifeline`.
+- `ref <interaccion>`: marco `ref` con el titulo de la Interaccion referida; cubre sus participantes presentes en la Vista, o todas las Lifelines si no hay ninguno en comun. Los ciclos son validos (no se expande). Una Interaccion inexistente da `unknown-interaction` (con `fix` por typo) y una que ninguna Vista de secuencia proyecta, `ref-without-view`. `note`, `left`, `right`, `of` y `ref` siguen valiendo como ids de Nodo.
+- El id de una Interaccion tiene su propio espacio de nombres (puede coincidir con el de un Nodo); `interaction`, `async`, `reply`, `create`, `destroy` y `order` siguen valiendo como ids de Nodo.
+
+Fragmentos (anidables), Notas y `ref` en una Interaccion; el ejemplo es completo:
+
+```dg
+specification { node piece { icon box  color blue } }
+
+model {
+  piece client
+  piece api
+  piece db
+  piece queue
+
+  interaction checkout {
+    client -> api "request"
+    alt "in stock" {
+      api -> db "reserve"
+    } else "out of stock" {
+      api -> client "reject"
+    }
+    par { api -> queue "event" } and { api -> db "audit" }
+    note over client, api "idempotent"
+    ref auditing
+  }
+  interaction auditing { db -> queue "record" }
+}
+
+view purchase { type sequence  interaction checkout  autonumber }
+view audit { type sequence  interaction auditing }
+```
+
+## `view`: que mostrar
+
+```
+view packages {
+  type architecture             // or flow, sequence, er
+  theme diagrams                // optional; default: neutral
+  include a, b.*, c.**          // selectors
+  exclude a.internal
+  depth 1
+  expanded render, session      // Groups open at the start
+  collapsed canonical, theme    // Groups closed at the start
+  link canonical -> canonical-detail // drill-down to another View (a Group with a link does not expand)
+  node render { label "Render"  pin 120,40  color amber }
+}
+```
+
+| Propiedad | Efecto |
+| --- | --- |
+| `type` | `architecture`, `flow`, `sequence` o `er` |
+| `include`, `exclude` | Selectores: `a` (el Nodo), `a.*` (sus hijos directos), `a.**` (todos sus descendientes). `**` solo, todo el Modelo |
+| `depth N` | Profundidad inicial; los Grupos que la exceden aparecen colapsados |
+| `expanded`, `collapsed` | Estado inicial de los Grupos nombrados |
+| `link nodo -> vista` | Un Grupo enlazado no se expande en esta Vista: navega a la otra. Los ciclos son validos; el visor muestra las migas. En secuencia solo vale desde una Lifeline (clic en su cabecera o Enter con foco); desde un Mensaje, Nota o Fragmento es `link-not-lifeline`. El marco de un `ref` navega a la primera Vista de secuencia que proyecta la Interaccion referida (inerte si no hay o es la actual) |
+| `theme nombre { parche }` | Tema de la Vista, con un parche opcional solo para ella |
+| `interaction id` | Solo en `sequence` (obligatoria): la Interaccion que proyecta |
+| `order a, b` | Solo en `sequence`: orden de las Lifelines de izquierda a derecha; parcial, el resto sigue por primera aparicion |
+| `autonumber` | Solo en `sequence`: numera los Mensajes proyectados (`1. etiqueta`), tras `exclude`/`depth`; cuenta `reply`, `create`, `destroy` y propios elevados |
+| `steps each` | Solo en `sequence`: un Paso por Mensaje proyectado (ver Pasos); no se combina con `step` |
+| `node id { ... }` | Overrides de presentacion de un Nodo en esta Vista: `label`, `pin x,y`, `color` |
+
+Una Vista nunca define entidades nuevas ni toca el Modelo.
+
+### Vista de secuencia
+
+```
+view purchase {
+  type sequence
+  interaction checkout
+  order client, api
+}
+```
+
+Dibuja una columna por Lifeline y los Mensajes de arriba abajo, con las activaciones derivadas (las anidadas van desplazadas). Cualquier Tema la dibuja: `message` y `lifeline` se derivan de la Arista y `activation` del Nodo; `reply` lleva la continuidad opuesta a la del trazo base. `include` y `pin` son error en una Vista de secuencia (`view-property-for-type`), igual que `interaction`, `order` y `autonumber` fuera de ella. `depth`, `collapsed` y `exclude` valen: `depth`/`collapsed` funden las Lifelines hijas en la de su Grupo y sus Mensajes se elevan (dentro del mismo Grupo pasan a mensaje propio; un `create`/`destroy` de una hija pasa a `async`); con el Grupo abierto, un `box` con su nombre envuelve a sus hijas y la Lifeline propia del Grupo, si la tiene, va primera. `exclude` quita la Lifeline y sus Mensajes, y un Fragmento que queda vacio desaparece.
+
+### Pin
+
+`pin x,y` fija la posicion de un Nodo (relativa a su Grupo padre, o al lienzo si es raiz) y anula el auto-layout para ese Nodo. No se escribe a mano: arrastra el Nodo en el visor y el Pin se escribe en el `.dg` (o usa `dg edit --view <id> --node <id> --x N --y N`).
+
+## Vistas `er`: tablas y claves foraneas
+
+Una Vista `type er` dibuja cada Nodo hoja como una tabla (cabecera mas una fila por Atributo) y las Aristas como FK con marcadores de pie de gallo, sin flechas. Acepta lo mismo que `architecture` (`include`, `exclude`, `depth`, `expanded`, `collapsed`, `pin`, `node`, `steps`). Funciona con cualquier Tema; un Nodo `pill` o `circle` se dibuja como `rect`.
+
+```dg
+specification { node table { icon database  color green } }
+
+model {
+  table orders "Orders" {
+    id: uuid pk
+    customer_id: uuid pk fk
+    email: text? uk "unique"
+  }
+  table customers "Customers" { id: uuid pk }
+  orders#customer_id "1..*" -> "1" customers#id "belongs to" identifying
+}
+view tables { type er  include ** }
+```
+
+- Atributo: `nombre: tipo[?] [pk] [fk] [uk] ["notas"]`. El `?` pegado al tipo lo hace opcional; las marcas van en cualquier orden y repetir una es `duplicate-key-mark` (su `fix` borra la repetida). Cada marca se dibuja como un chip en la fila.
+- Arista identificante: palabra final `identifying` (linea continua; las demas van discontinuas). Un Nodo llamado `identifying` no puede abrir la declaracion que sigue justo a una Arista (se leeria como su marca); `pk`, `fk`, `uk` y `er` valen como ids en cualquier sitio.
+- Cardinalidad: en una Vista ER solo valen `0..1`, `1`, `0..*` y `1..*` (`er-cardinality`, con `fix` si hay un candidato cercano unico). Cada una se dibuja como su marcador (`zero-one`, `one`, `zero-many`, `many`); un Grupo colapsado con varias FK agregadas va sin marcadores.
+- Fuera de una Vista ER las marcas y `identifying` se ignoran sin aviso.
+
+## Vistas `flow` y Pasos
+
+Una Vista puede revelar su contenido por **Pasos**. Cada Paso es acumulativo: `show` revela, `hide` oculta. Solo cambia la visibilidad, nunca la posicion, asi que el diagrama no se mueve entre Pasos.
+
+```
+view flow-edit {
+  type flow
+  include author, shell.sh-selection, session.ses-intents, workspace
+  steps {
+    step "The author drags a Pin in the shell" {
+      show author, shell.sh-selection
+    }
+    step "The gesture becomes an Intent" {
+      show session.ses-intents
+    }
+    step "The .dg file is rewritten" {
+      show workspace
+      hide shell.sh-selection
+    }
+  }
+}
+```
+
+Un item es un selector de Nodos o una Arista (`a -> b`, o `edge a -> b`). En un Paso, `a.*` y `a.**` incluyen tambien al Grupo `a`.
+
+En una Vista `sequence` un Paso es un **corte del tiempo**: `step "titulo" { upto <id> }` muestra la Interaccion hasta el Mensaje con ese id (incluido) y solo avanza; `steps each` da un Paso por Mensaje proyectado, titulado con su etiqueta o `from -> to`. `show` y `hide` son error ahi (`view-property-for-type`, con `hint` a `upto`), igual que `upto` y `steps each` fuera de secuencia. Las Notas y `ref` aparecen con el Mensaje previo; todas las Lifelines desde el primer Paso salvo las nacidas con `create`; la activacion se recorta en el corte; el marco de un Fragmento aparece al entrar el corte y la guarda de cada operando al entrar en el. Nada cambia de posicion. Errores: `unknown-step` (con `fix` por typo), `step-not-projected` (`depth`/`exclude` quitan el Mensaje), `step-not-advancing` (con `related` al Paso anterior) y `steps-each-with-step`.
+
+```dg
+specification { node piece { icon box  color blue } }
+model {
+  piece client
+  piece api
+  interaction checkout {
+    request: client -> api "request"
+    done: reply api -> client "done"
+  }
+}
+view purchase {
+  type sequence
+  interaction checkout
+  steps { step "Request" { upto request }  step "Done" { upto done } }
+}
+```
+
+Un ejemplo completo esta en [`examples/rinthel-arch/architecture.dg`](../../examples/rinthel-arch/architecture.dg).
+
+## `theme` y `part`
+
+```
+theme mine extends neutral { palette { ... }  node { ... }  group { ... }  edge { ... } }
+part bar { layer accent shadow { color COLOR  x 4 } }
+```
+
+Detalle en [Personalizar con Temas](themes.md) y en el [catalogo](../theme-catalog.md).
+
+## Errores y avisos
+
+`dg validate` imprime `archivo:linea:columna severidad codigo mensaje`, con `hint` o una correccion (`fix`) cuando hay un unico candidato. Con `--json` el resultado es un objeto con `contractVersion`, para agentes y herramientas ([ADR 0005](../adr/0005-cli-para-agentes.md)). Los codigos son nombres estables en kebab-case (`duplicate-part`, `theme-low-contrast`, `unknown-lifeline`, `reply-without-sync`...); la severidad (`error` bloquea, `warning` avisa) es un campo aparte de cada issue.

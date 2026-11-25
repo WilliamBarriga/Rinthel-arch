@@ -17,13 +17,13 @@ export function UltimaLineaDelAgente(): ReactElement {
   const { cliente, abrirPestana } = useEstudio();
   const { almacen, instantanea } = useActividadDelAgente(cliente);
   const ultimo = instantanea.eventos[instantanea.eventos.length - 1];
-  const linea = ultimo === undefined ? 'sin actividad' : resumenDelEvento(ultimo);
+  const linea = ultimo === undefined ? 'no activity' : resumenDelEvento(ultimo);
   const sinVer = instantanea.siguiendo ? 0 : instantanea.sinVer;
   return (
     <button
       type="button"
       className="ui-ultima-linea"
-      aria-label={`Ultima linea del agente: ${linea}${sinVer > 0 ? `, ${sinVer} sin ver` : ''}`}
+      aria-label={`Agent last line: ${linea}${sinVer > 0 ? `, ${sinVer} unseen` : ''}`}
       title={linea}
       onClick={() => {
         abrirPestana('derecha', 'agente');
@@ -49,8 +49,8 @@ export function SeguirAlAgente(): ReactElement {
     () =>
       almacen.alEnVivo((eventos) => {
         if (!almacen.instantanea().siguiendo) return;
-        const ultimo = [...eventos].reverse().find(({ objetivo }) => objetivo?.vista !== undefined || objetivo?.nodo !== undefined);
-        if (ultimo?.objetivo !== undefined) setPendiente({ objetivo: ultimo.objetivo });
+        const ultimo = [...eventos].reverse().find(({ target: objetivo }) => objetivo?.view !== undefined || objetivo?.node !== undefined);
+        if (ultimo?.target !== undefined) setPendiente({ objetivo: ultimo.target });
       }),
     [almacen],
   );
@@ -75,13 +75,13 @@ export function SeguirAlAgente(): ReactElement {
     <label className="ui-seguir">
       <Switch.Root
         className="ui-interruptor"
-        aria-label="Seguir al agente"
+        aria-label="Follow the agent"
         checked={instantanea.siguiendo}
         onCheckedChange={(siguiendo) => almacen.seguir(siguiendo)}
       >
         <Switch.Thumb className="ui-interruptor-pulgar" />
       </Switch.Root>
-      <span aria-hidden>seguir</span>
+      <span aria-hidden>follow</span>
     </label>
   );
 }

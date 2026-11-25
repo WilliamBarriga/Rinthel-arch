@@ -16,41 +16,55 @@ const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist']);
 
 /**
  * Ruta relativa con `/` -> lo que `leer` saca de cada archivo que `acepta`. Salta carpetas ocultas
- * (`.diagrams/`), `node_modules` y `dist` salvo con `incluirOcultas`.
+ * (`.diagrams/`), `node_modules`, `dist` y las que `salta`; no baja de `profundidad` carpetas bajo `raiz`.
  */
 function recorrer(
   raiz: string,
   acepta: (nombre: string) => boolean,
   leer: (ruta: string) => string,
-  incluirOcultas = false,
+  { profundidad = Infinity, salta = () => false }: { profundidad?: number; salta?: (nombre: string) => boolean } = {},
 ): Record<string, string> {
   const archivos: Record<string, string> = {};
-  const visitar = (carpeta: string): void => {
+  const visitar = (carpeta: string, nivel: number): void => {
     for (const entrada of readdirSync(carpeta, { withFileTypes: true })) {
-      if (!incluirOcultas && (entrada.name.startsWith('.') || CARPETAS_IGNORADAS.has(entrada.name))) continue;
+      if (entrada.name.startsWith('.') || CARPETAS_IGNORADAS.has(entrada.name)) continue;
       const ruta = join(carpeta, entrada.name);
-      if (entrada.isDirectory()) visitar(ruta);
-      else if (acepta(entrada.name)) archivos[relative(raiz, ruta).split(sep).join('/')] = leer(ruta);
+      if (entrada.isDirectory()) {
+        if (nivel < profundidad && !salta(entrada.name)) visitar(ruta, nivel + 1);
+      } else if (acepta(entrada.name)) archivos[relative(raiz, ruta).split(sep).join('/')] = leer(ruta);
     }
   };
-  visitar(raiz);
+  visitar(raiz, 0);
   return archivos;
 }
 
-/** Archivos `.dg` y `.svg` (iconos) bajo `raiz`. Lanza si la raiz no existe o no es una carpeta. */
+/** Archivos `.dg` y `.svg` (iconos) bajo `raiz`. Lanza si la raiz no existe o is not a folder. */
 export function leerWorkspace(raiz: string): ArchivosDelWorkspace {
-  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' no es una carpeta`);
+  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' is not a folder`);
   return recorrer(raiz, (nombre) => nombre.endsWith(EXTENSION) || nombre.endsWith('.svg'), (ruta) => readFileSync(ruta, 'utf8'));
+}
+
+/** Rutas relativas con `/` de todos los archivos bajo `raiz` (para revisar las convenciones de nombres). */
+export function leerRutas(raiz: string): string[] {
+  return Object.keys(recorrer(raiz, () => true, () => ''));
+}
+
+/**
+ * Relative `/` paths of the `.dg` files under `raiz`, at most `profundidad` folders down, skipping the folders that
+ * `recorrer` skips and those `salta` names (how `scan` looks for a Workspace).
+ */
+export function rutasDeDg(raiz: string, profundidad: number, salta: (nombre: string) => boolean): string[] {
+  return Object.keys(recorrer(raiz, (nombre) => nombre.endsWith(EXTENSION), () => '', { profundidad, salta }));
 }
 
 const EXTENSIONES_DE_RECURSO = ['.tsx', '.ttf', '.otf', '.woff', '.woff2'];
 
 /**
  * Componentes `.tsx` y fuentes tipograficas bajo `raiz`: ruta relativa con `/` -> SHA-256 del contenido.
- * Lanza si la raiz no existe o no es una carpeta.
+ * Lanza si la raiz no existe o is not a folder.
  */
 export function leerRecursos(raiz: string): Record<string, string> {
-  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' no es una carpeta`);
+  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' is not a folder`);
   return recorrer(raiz, (nombre) => EXTENSIONES_DE_RECURSO.some((extension) => nombre.endsWith(extension)), (ruta) => createHash('sha256').update(readFileSync(ruta)).digest('hex'));
 }
 
@@ -118,7 +132,7 @@ export function destinoEnWorkspace(raiz: string, ruta: string): string {
   const base = resolve(raiz);
   const destino = resolve(base, ...ruta.split('/'));
   if (ruta.startsWith('/') || isAbsolute(ruta) || !destino.startsWith(base + sep)) {
-    throw new Error(`'${ruta}' queda fuera del Workspace`);
+    throw new Error(`'${ruta}' is outside the Workspace`);
   }
   return destino;
 }

@@ -11,21 +11,21 @@ export type { Visto };
 export type ResultadoDeIntencion = ResultadoDeGesto;
 
 /**
- * Reductor puro: mapa nuevo o rechazo con `motivo`. `visto` rechaza con `hash-desactualizado` si el archivo que
+ * Reductor puro: mapa nuevo o rechazo con `reason`. `visto` rechaza con `stale-hash` si el archivo que
  * cambia difiere; sin `visto` aplica sobre el vigente. No escribe.
  */
 export function aplicarIntencion(archivos: ArchivosDelWorkspace, intencion: Intencion, visto?: Visto): ResultadoDeIntencion {
-  switch (intencion.tipo) {
-    case 'mover-pin': {
-      const { tipo: _tipo, ...pin } = intencion;
+  switch (intencion.type) {
+    case 'move-pin': {
+      const { type: _tipo, ...pin } = intencion;
       return moverPin(archivos, pin, visto);
     }
-    case 'ordenar-lifelines': {
-      const { tipo: _tipo, ...orden } = intencion;
+    case 'reorder-lifelines': {
+      const { type: _tipo, ...orden } = intencion;
       return ordenarLifelines(archivos, orden, visto);
     }
-    case 'fijar-tema': {
-      const { tipo: _tipo, ...tema } = intencion;
+    case 'set-theme': {
+      const { type: _tipo, ...tema } = intencion;
       return fijarTema(archivos, tema, visto);
     }
   }

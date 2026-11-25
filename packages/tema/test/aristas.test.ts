@@ -13,8 +13,8 @@ const conArista = (arista: Partial<TemaResuelto['arista']>): TemaResuelto => ({
 
 const GLOW = conArista({
   capas: [
-    linea('glow', { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 }),
-    linea('principal', { color: 'ORIGEN', width: 2, style: 'solid', corner: 'sharp', cut: 6, radius: 8 }),
+    linea('glow', { color: 'ORIGIN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 }),
+    linea('principal', { color: 'ORIGIN', width: 2, style: 'solid', corner: 'sharp', cut: 6, radius: 8 }),
   ],
 });
 
@@ -39,26 +39,26 @@ describe('Familia trazo', () => {
 
     expect(ok.errores).toEqual([]);
     expect(ok.primitiva?.props).toMatchObject({ corner: 'round', radius: 12 });
-    expect(mal.errores[0]?.codigo).toBe('E_THEME_INVALID_VALUE');
+    expect(mal.errores[0]?.codigo).toBe('theme-invalid-value');
   });
 
   it('rechaza un estilo desconocido con sugerencia y un grosor fuera de rango sin recortar', () => {
     const [estilo] = construirPrimitiva('line', [{ clave: 'color', valor: 'blue' }, { clave: 'style', valor: 'dashd' }], paleta, 'capa-arista').errores;
     const [grosor] = construirPrimitiva('line', [{ clave: 'color', valor: 'blue' }, { clave: 'width', valor: 99 }], paleta, 'capa-arista').errores;
 
-    expect(estilo).toMatchObject({ codigo: 'E_THEME_INVALID_VALUE', hint: "quisiste decir 'dashed'" });
-    expect(grosor?.codigo).toBe('E_THEME_INVALID_VALUE');
+    expect(estilo).toMatchObject({ codigo: 'theme-invalid-value', hint: "did you mean 'dashed'" });
+    expect(grosor?.codigo).toBe('theme-invalid-value');
   });
 
   it('un trazo no vale como Capa de Nodo ni una Capa de Nodo como trazo', () => {
-    expect(construirPrimitiva('line', [], paleta).errores[0]).toMatchObject({ codigo: 'E_THEME_UNKNOWN_PRIMITIVE' });
-    expect(construirPrimitiva('solid', [], paleta, 'capa-arista').errores[0]).toMatchObject({ codigo: 'E_THEME_UNKNOWN_PRIMITIVE' });
+    expect(construirPrimitiva('line', [], paleta).errores[0]).toMatchObject({ codigo: 'theme-unknown-primitive' });
+    expect(construirPrimitiva('solid', [], paleta, 'capa-arista').errores[0]).toMatchObject({ codigo: 'theme-unknown-primitive' });
     expect(temaResueltoSchema.safeParse(conArista({ capas: [{ nombre: 'x', primitiva: { tipo: 'solid', props: { color: 'blue' } } }] })).success).toBe(false);
   });
 
-  it('ORIGEN vale en una Arista y no en un Nodo', () => {
-    expect(construirPrimitiva('line', [{ clave: 'color', valor: 'ORIGEN' }], paleta, 'capa-arista').errores).toEqual([]);
-    expect(construirPrimitiva('solid', [{ clave: 'color', valor: 'ORIGEN' }], paleta).errores).toHaveLength(1);
+  it('ORIGIN vale en una Arista y no en un Nodo', () => {
+    expect(construirPrimitiva('line', [{ clave: 'color', valor: 'ORIGIN' }], paleta, 'capa-arista').errores).toEqual([]);
+    expect(construirPrimitiva('solid', [{ clave: 'color', valor: 'ORIGIN' }], paleta).errores).toHaveLength(1);
   });
 });
 
@@ -80,7 +80,7 @@ describe('pintura de la Arista', () => {
     expect(capas[1]?.props).toMatchObject({ color: '#2563eb', width: 2 });
   });
 
-  it('ORIGEN toma el color del Nodo de origen; sin origen conocido, el borde del Tema', () => {
+  it('ORIGIN toma el color del Nodo de origen; sin origen conocido, el borde del Tema', () => {
     const { arista } = estiloResuelto(GLOW, { diagrama: 'architecture' }).pintura;
 
     expect(arista.origenes['green']?.capas[1]?.props['color']).toBe(TEMA_NEUTRO.palette['green']);

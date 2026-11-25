@@ -30,7 +30,7 @@ export interface DevDePrueba {
   eventos: (url: string, alEvento: (nombre: string, datos: string) => void) => () => void;
   /** Escritura fuera de `dev` (un agente u otro editor); `undefined` borra. */
   editarFuera(ruta: string, texto: string | undefined): void;
-  /** Anexa texto a `.diagrams/actividad.jsonl`, como el CLI de otro proceso. */
+  /** Anexa texto a `.diagrams/activity.jsonl`, como el CLI de otro proceso. */
   anexarActividad(texto: string): void;
   cerrar(): Promise<void>;
 }
@@ -197,17 +197,17 @@ function esperarHistorial(dev: DevDePrueba, basta: (h: HistorialDeDev) => boolea
 
 /** Evento de actividad de prueba (un `edit` exitoso del proceso `pid`); `extra` pisa cualquier campo. */
 export const eventoDeActividad = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
-  contractVersion: 1,
+  contractVersion: 2,
   ts: '2026-11-19T10:00:00.000Z',
   pid,
-  comando: 'edit',
+  command: 'edit',
   args: ['--workspace', '.', '--intent', '{}'],
   exitCode: 0,
-  duracionMs: 4,
+  durationMs: 4,
   ...extra,
 });
 
-/** Las lineas de `.diagrams/actividad.jsonl` con esos Eventos. */
+/** Las lineas de `.diagrams/activity.jsonl` con esos Eventos. */
 export const lineasDeActividad = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
 
 export function probarContratoDeDev(crear: CrearDev): void {
@@ -259,7 +259,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
               lista.push([nombre, JSON.parse(datos)]);
               if (lista.length === 3) dev.editarFuera('main.dg', DSL.replace('"API"', '"API nueva"'));
               if (nombre !== 'diferencia') return;
-              if ((JSON.parse(datos) as DiferenciaDeDev).origen === 'externo') void post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 });
+              if ((JSON.parse(datos) as DiferenciaDeDev).origen === 'externo') void post(dev, '/api/edit', { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 });
               else {
                 setTimeout(cerrar, 0);
                 ok(lista);
@@ -312,7 +312,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
 
     it('un Evento anexado al registro llega como event: actividad en vivo', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
-        const nuevo = eventoDeActividad(7, { agente: 'claude', objetivo: { vista: 'datos' } });
+        const nuevo = eventoDeActividad(7, { agent: 'claude', target: { view: 'datos' } });
         const recibidos = await esperarActividad(
           dev,
           (r) => r.some((a) => !a.previos),
@@ -330,7 +330,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           () => dev.editarFuera('main.dg', DSL.replace('servicio db "Base de datos"', 'servicio db "Datos"\n  servicio cola "Cola"')),
         );
         const diferencia = recibidos.find(([nombre]) => nombre === 'diferencia')?.[1] as DiferenciaDeDev;
-        expect(diferencia).toMatchObject({ origen: 'externo', agregados: [{ tipo: 'nodo', id: 'cola' }], quitados: [], cambiados: [{ elemento: { tipo: 'nodo', id: 'db' }, propiedades: [{ nombre: 'title', clase: 'texto' }] }] });
+        expect(diferencia).toMatchObject({ origen: 'externo', agregados: [{ kind: 'node', id: 'cola' }], quitados: [], cambiados: [{ elemento: { kind: 'node', id: 'db' }, propiedades: [{ nombre: 'title', clase: 'texto' }] }] });
         const estados = recibidos.filter(([nombre]) => nombre === 'estado').map(([, datos]) => (datos as EstadoDeDev).version);
         expect(estados[estados.length - 1]).toBe(diferencia.version);
       });
@@ -341,9 +341,9 @@ export function probarContratoDeDev(crear: CrearDev): void {
         const recibidos = await esperarEventos(
           dev,
           (r) => r.some(([nombre]) => nombre === 'diferencia'),
-          () => void post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos', tema: 'claro' }),
+          () => void post(dev, '/api/edit', { type: 'set-theme', view: 'datos', theme: 'claro' }),
         );
-        expect(recibidos.find(([nombre]) => nombre === 'diferencia')?.[1]).toMatchObject({ origen: 'propio', cambiados: [{ elemento: { tipo: 'vista', id: 'datos' }, propiedades: [{ nombre: 'theme', clase: 'estructura' }] }] });
+        expect(recibidos.find(([nombre]) => nombre === 'diferencia')?.[1]).toMatchObject({ origen: 'propio', cambiados: [{ elemento: { kind: 'view', id: 'datos' }, propiedades: [{ nombre: 'theme', clase: 'estructura' }] }] });
       });
     });
 
@@ -359,16 +359,16 @@ export function probarContratoDeDev(crear: CrearDev): void {
 
     it('GET /api/inspect/<comando>/<argumento> da lo mismo que inspect --json; si no existe, 404 con los cercanos', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
-        const nodo = await json(dev, '/api/inspect/nodo/api');
+        const nodo = await json(dev, '/api/inspect/node/api');
         expect(nodo.status).toBe(200);
-        expect(nodo.cuerpo).toMatchObject({ comando: 'nodo', nodo: { id: 'api', type: 'servicio', title: 'API', file: 'main.dg', line: 6 }, aristas: [{ from: 'api', to: 'db', label: 'lee', direction: 'out' }], vistas: [{ id: 'general' }] });
-        const buscar = await json(dev, '/api/inspect/buscar/dat');
-        expect((buscar.cuerpo['resultados'] as Array<{ kind: string; id: string }>).map((r) => `${r.kind}:${r.id}`)).toEqual(['vista:datos', 'nodo:db']);
-        const vista = await json(dev, '/api/inspect/vista/datos');
-        expect(vista.cuerpo).toMatchObject({ comando: 'vista', vista: { id: 'datos', nodos: [{ id: 'db' }] } });
+        expect(nodo.cuerpo).toMatchObject({ command: 'node', node: { id: 'api', type: 'servicio', title: 'API', file: 'main.dg', line: 6 }, edges: [{ from: 'api', to: 'db', label: 'lee', direction: 'out' }], views: [{ id: 'general' }] });
+        const buscar = await json(dev, '/api/inspect/search/dat');
+        expect((buscar.cuerpo['results'] as Array<{ kind: string; id: string }>).map((r) => `${r.kind}:${r.id}`)).toEqual(['view:datos', 'node:db']);
+        const vista = await json(dev, '/api/inspect/view/datos');
+        expect(vista.cuerpo).toMatchObject({ command: 'view', view: { id: 'datos', nodes: [{ id: 'db' }] } });
 
-        const ausente = await json(dev, '/api/inspect/nodo/apj');
-        expect(ausente).toEqual({ status: 404, cuerpo: { ok: false, mensaje: "No existe el Nodo 'apj'. Quiza: api", cercanos: ['api'] } });
+        const ausente = await json(dev, '/api/inspect/node/apj');
+        expect(ausente).toEqual({ status: 404, cuerpo: { ok: false, message: "No such Node 'apj'. Did you mean: api", suggestions: ['api'] } });
         expect((await dev.fetch('/api/inspect/nada/x')).status).toBe(404);
       });
     });
@@ -382,23 +382,23 @@ export function probarContratoDeDev(crear: CrearDev): void {
       });
     });
 
-    it('GET /api/inspect/tema/<nombre> da la cadena extends y las Capas; un Tema inexistente es 404 con los cercanos', async () => {
+    it('GET /api/inspect/theme/<nombre> da la cadena extends y las Capas; un Tema inexistente es 404 con los cercanos', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
-        const { status, cuerpo } = await json(dev, '/api/inspect/tema/claro');
+        const { status, cuerpo } = await json(dev, '/api/inspect/theme/claro');
         expect(status).toBe(200);
-        expect(cuerpo).toMatchObject({ comando: 'tema', tema: { name: 'claro', file: 'main.dg', extends: ['neutral'] } });
-        expect(await json(dev, '/api/inspect/tema/clara')).toEqual({ status: 404, cuerpo: { ok: false, mensaje: "No existe el Tema 'clara'. Quiza: claro", cercanos: ['claro'] } });
+        expect(cuerpo).toMatchObject({ command: 'theme', theme: { name: 'claro', file: 'main.dg', extends: ['neutral'] } });
+        expect(await json(dev, '/api/inspect/theme/clara')).toEqual({ status: 404, cuerpo: { ok: false, message: "No such Theme 'clara'. Did you mean: claro", suggestions: ['claro'] } });
       });
     });
 
-    it('POST /api/edit con fijar-tema escribe theme en la Vista; sin tema lo quita; un Tema no declarado es 422 tema-desconocido', async () => {
+    it('POST /api/edit con set-theme escribe theme en la Vista; sin tema lo quita; un Tema no declarado es 422 unknown-theme', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
         const temaDe = async (vista: string) => ((await json(dev, '/api/estado')).cuerpo['fuente'] as EstadoDeDev['fuente'])?.views.find((v) => v.id === vista)?.theme;
-        expect(await post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos', tema: 'claro' })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        expect(await post(dev, '/api/edit', { type: 'set-theme', view: 'datos', theme: 'claro' })).toMatchObject({ status: 200, cuerpo: { ok: true } });
         expect(await temaDe('datos')).toBe('claro');
-        expect(await post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos' })).toMatchObject({ status: 200, cuerpo: { ok: true } });
+        expect(await post(dev, '/api/edit', { type: 'set-theme', view: 'datos' })).toMatchObject({ status: 200, cuerpo: { ok: true } });
         expect(await temaDe('datos')).toBeUndefined();
-        expect(await post(dev, '/api/edit', { tipo: 'fijar-tema', vista: 'datos', tema: 'clara' })).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'tema-desconocido' } });
+        expect(await post(dev, '/api/edit', { type: 'set-theme', view: 'datos', theme: 'clara' })).toMatchObject({ status: 422, cuerpo: { ok: false, reason: 'unknown-theme' } });
       });
     });
 
@@ -407,7 +407,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
         const version = (await json(dev, '/api/estado')).cuerpo['version'] as number;
         const overrides = async () => ((await json(dev, '/api/estado')).cuerpo['fuente'] as EstadoDeDev['fuente'])?.views[0]?.overrides ?? [];
 
-        const editado = await post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 40, y: 80, version });
+        const editado = await post(dev, '/api/edit', { type: 'move-pin', view: 'general', node: 'api', x: 40, y: 80, version });
         expect(editado).toMatchObject({ status: 200, cuerpo: { ok: true } });
         expect(await overrides()).toMatchObject([{ node: 'api', pin: { x: 40, y: 80 } }]);
 
@@ -420,10 +420,10 @@ export function probarContratoDeDev(crear: CrearDev): void {
 
     it('rechazos de POST /api/edit: version olvidada 409, Vista desconocida 422, cuerpo que no es Intencion 400', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
-        expect(await post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 1, version: 9999 })).toMatchObject({ status: 409, cuerpo: { ok: false, motivo: 'hash-desactualizado' } });
-        expect(await post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'nada', nodo: 'api', x: 1, y: 1 })).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'vista-desconocida' } });
+        expect(await post(dev, '/api/edit', { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 1, version: 9999 })).toMatchObject({ status: 409, cuerpo: { ok: false, reason: 'stale-hash' } });
+        expect(await post(dev, '/api/edit', { type: 'move-pin', view: 'nada', node: 'api', x: 1, y: 1 })).toMatchObject({ status: 422, cuerpo: { ok: false, reason: 'unknown-view' } });
         expect((await post(dev, '/api/edit', { tipo: 'otra-cosa' })).status).toBe(400);
-        expect(await post(dev, '/api/deshacer', {})).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'nada-que-deshacer' } });
+        expect(await post(dev, '/api/deshacer', {})).toMatchObject({ status: 422, cuerpo: { ok: false, reason: 'nothing-to-undo' } });
       });
     });
 
@@ -434,16 +434,16 @@ export function probarContratoDeDev(crear: CrearDev): void {
         const conUna = await esperarHistorial(
           dev,
           (h) => h.pasado.length === 1,
-          () => void post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }),
+          () => void post(dev, '/api/edit', { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 }),
         );
-        expect(conUna.pasado).toEqual([{ id: 1, descripcion: 'mover api en general', archivos: ['main.dg'], cuando: expect.any(Number), alcanzable: true }]);
+        expect(conUna.pasado).toEqual([{ id: 1, descripcion: 'move api in general', archivos: ['main.dg'], cuando: expect.any(Number), alcanzable: true }]);
       });
     });
 
     it('POST /api/historial/saltar lleva a la entrada sin apilar y conserva el futuro; id inexistente 422; archivo cambiado por fuera 409', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
-        await post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 });
-        await post(dev, '/api/edit', { tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 3, y: 4 });
+        await post(dev, '/api/edit', { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 });
+        await post(dev, '/api/edit', { type: 'move-pin', view: 'general', node: 'api', x: 3, y: 4 });
         const conDos = (await json(dev, '/api/archivo/main.dg')).cuerpo['texto'];
 
         const alInicio = await post(dev, '/api/historial/saltar', { id: 0 });
@@ -452,13 +452,13 @@ export function probarContratoDeDev(crear: CrearDev): void {
         expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(DSL);
         expect(await post(dev, '/api/historial/saltar', { id: 2 })).toMatchObject({ status: 200, cuerpo: { ok: true } });
         expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(conDos);
-        expect(await post(dev, '/api/historial/saltar', { id: 99 })).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'entrada-desconocida' } });
+        expect(await post(dev, '/api/historial/saltar', { id: 99 })).toMatchObject({ status: 422, cuerpo: { ok: false, reason: 'unknown-entry' } });
         expect((await post(dev, '/api/historial/saltar', { id: 'uno' })).status).toBe(400);
 
         await esperarEstado(dev, (e) => e.fuente?.model.nodes.some((n) => n.title === 'Otra') === true, () => dev.editarFuera('main.dg', String(conDos).replace('"API"', '"Otra"')));
         const desactualizado = await post(dev, '/api/historial/saltar', { id: 1 });
         expect(desactualizado.status).toBe(409);
-        expect(rechazoDeDevSchema.parse(desactualizado.cuerpo)).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+        expect(rechazoDeDevSchema.parse(desactualizado.cuerpo)).toMatchObject({ ok: false, reason: 'stale-hash' });
       });
     });
 
@@ -470,9 +470,9 @@ export function probarContratoDeDev(crear: CrearDev): void {
         expect(await error(await enviar(dev, '/api/nada', '{}'))).toMatchObject({ status: 404 });
         for (const ruta of ['/api/edit', '/api/deshacer', '/api/rehacer', '/api/historial/saltar', '/api/confiar']) {
           expect(await error(await dev.fetch(ruta))).toMatchObject({ status: 405, allow: 'POST' });
-          expect(await error(await enviar(dev, ruta, 'no es json'))).toEqual({ status: 400, allow: null, cuerpo: { ok: false, mensaje: 'JSON invalido' } });
+          expect(await error(await enviar(dev, ruta, 'no es json'))).toEqual({ status: 400, allow: null, cuerpo: { ok: false, message: 'Invalid JSON' } });
         }
-        for (const ruta of ['/api/estado', '/api/archivos', '/api/codigo', '/api/vista/datos', '/api/inspect/nodo/api', '/api/archivo/main.dg']) {
+        for (const ruta of ['/api/estado', '/api/archivos', '/api/codigo', '/api/vista/datos', '/api/inspect/node/api', '/api/archivo/main.dg']) {
           expect(await error(await enviar(dev, ruta, '{}'))).toMatchObject({ status: 405, allow: 'GET' });
         }
         expect((await json(dev, '/api/archivo/main.dg')).cuerpo['texto']).toBe(DSL);
@@ -483,8 +483,8 @@ export function probarContratoDeDev(crear: CrearDev): void {
       await con(
         { 'main.dg': DSL },
         async (dev) => {
-          const res = await enviar(dev, '/api/edit', JSON.stringify({ tipo: 'mover-pin', vista: 'general', nodo: 'api', x: 1, y: 2 }));
-          expect({ status: res.status, cuerpo: errorDeDevSchema.parse(await res.json()) }).toEqual({ status: 500, cuerpo: { ok: false, mensaje: 'disco lleno' } });
+          const res = await enviar(dev, '/api/edit', JSON.stringify({ type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 }));
+          expect({ status: res.status, cuerpo: errorDeDevSchema.parse(await res.json()) }).toEqual({ status: 500, cuerpo: { ok: false, message: 'disco lleno' } });
         },
         { escrituraRota: 'disco lleno' },
       );
@@ -565,7 +565,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
     it('un texto que no compila: 422 invalida por defecto; con aunqueNoCompile se guarda y el estado trae los issues', async () => {
       await con({ 'main.dg': DSL }, async (dev) => {
         const rota = { ediciones: [{ file: 'main.dg', range: enLinea(8, 3), replacement: 'fantasma -> ' }] };
-        expect(await post(dev, '/api/edit', rota)).toMatchObject({ status: 422, cuerpo: { ok: false, motivo: 'invalida' } });
+        expect(await post(dev, '/api/edit', rota)).toMatchObject({ status: 422, cuerpo: { ok: false, reason: 'invalid' } });
         expect(await post(dev, '/api/edit', { ...rota, aunqueNoCompile: true })).toMatchObject({ status: 200, cuerpo: { ok: true } });
         expect(await leerTexto(dev, 'main.dg')).toContain('fantasma -> api -> db');
         const estado = (await json(dev, '/api/estado')).cuerpo as unknown as EstadoDeDev;
@@ -581,7 +581,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           const { version } = (await json(dev, '/api/archivo/main.dg')).cuerpo;
           expect(await post(dev, '/api/edit', { ediciones: [{ file: 'tema.dg', range: enLinea(1, 1), replacement: '// x\n' }], aunqueNoCompile: true })).toMatchObject({
             status: 422,
-            cuerpo: { ok: false, motivo: 'archivo-desconocido' },
+            cuerpo: { ok: false, reason: 'unknown-file' },
           });
           await esperarEstado(
             dev,
@@ -590,7 +590,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           );
           expect(await post(dev, '/api/edit', { ediciones: [{ file: 'main.dg', range: enLinea(1, 1), replacement: '// x\n' }], version })).toMatchObject({
             status: 409,
-            cuerpo: { ok: false, motivo: 'hash-desactualizado' },
+            cuerpo: { ok: false, reason: 'stale-hash' },
           });
           expect((await post(dev, '/api/edit', { ediciones: [{ file: 1 }] })).status).toBe(400);
         },

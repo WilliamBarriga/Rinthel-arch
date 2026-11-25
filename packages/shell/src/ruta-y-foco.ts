@@ -1,4 +1,4 @@
-/** Ruta y foco de teclado, puro y sin DOM: los estados `en-ruta`, `atenuado` y `foco` que `render` recibe por `estados`. */
+/** Ruta y foco de teclado, puro y sin DOM: los estados `on-path`, `dimmed` y `focus` que `render` recibe por `estados`. */
 import { idDeArista, idDeElementoDeSecuencia } from 'canonico';
 import type { AristaResuelta, VistaDeSecuencia, VistaResuelta } from 'canonico';
 import type { Estados, EstadoVisual } from 'render';
@@ -64,7 +64,7 @@ export function rutaMasCorta(vista: VistaResuelta, desde: string, hasta: string)
 }
 
 /**
- * Estados de una ruta: `en-ruta` en sus Nodos y en las Aristas que unen Nodos consecutivos, `atenuado`
+ * Estados de una ruta: `on-path` en sus Nodos y en las Aristas que unen Nodos consecutivos, `dimmed`
  * en el resto de Nodos y Aristas de la Vista. Una ruta vacia no marca nada.
  */
 export function estadosDeRuta(vista: VistaResuelta, ruta: readonly string[]): Estados {
@@ -76,8 +76,8 @@ export function estadosDeRuta(vista: VistaResuelta, ruta: readonly string[]): Es
       return sig !== undefined && ((a.from.node === id && a.to.node === sig) || (a.from.node === sig && a.to.node === id));
     });
   const estados: Record<string, readonly EstadoVisual[]> = {};
-  for (const n of vista.nodes) estados[n.id] = [nodos.has(n.id) ? 'en-ruta' : 'atenuado'];
-  for (const a of aristasDe(vista)) estados[idDeArista(a)] = [enRuta(a) ? 'en-ruta' : 'atenuado'];
+  for (const n of vista.nodes) estados[n.id] = [nodos.has(n.id) ? 'on-path' : 'dimmed'];
+  for (const a of aristasDe(vista)) estados[idDeArista(a)] = [enRuta(a) ? 'on-path' : 'dimmed'];
   return estados;
 }
 

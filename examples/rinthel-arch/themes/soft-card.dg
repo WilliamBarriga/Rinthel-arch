@@ -1,0 +1,59 @@
+// Contrast: actor, store, artifact, queue, domain, module, probe, package, service
+// Deliberate, as in the prototype: the thin translucent border (text/0.13) is decorative; the card reads by its fill and its text.
+// Sober dark card (Linear/Vercel style): translucent fill, thin border and discreet Edges.
+theme soft-card {
+  palette {
+    background "#09090b"  text "#fafafa"
+    blue "#60a5fa"  purple "#a78bfa"  green "#34d399"  amber "#fbbf24"  red "#f87171"  gray "#a1a1aa"
+  }
+  fonts { body "Inter"  mono "JetBrains Mono"  fallback "sans-serif" }
+  tokens { background "#09090b"  foreground "#fafafa"  border "#a1a1aa" }
+  page {
+    layer dots dots { color text/0.1  size 22  radius 1 }
+    fixed
+  }
+  node {
+    layer box rect { radius 10 }
+    layer fill solid { color text/0.045 }
+    layer border border { color text/0.13 }
+    // Icon in a box, title with the kind badge below and, in a closed Group, the counter on the right.
+    slots column min-width 160 slack 26 {
+      row gap 10 pad 10 min-height 54 {
+        icon { variant box  side 28  radius 7  fill COLOR/0.14  border COLOR/0.45 }
+        column { title { weight 600  text-align start  leading 1.25 }  badge { alpha 0.5  tracking 0.02 } }
+        counter { fill text/0.08  border text/0.15 }
+      }
+      attrs
+    }
+    type package { use accent }
+    type external { layer fill { color background }  layer border dashed { color text/0.45 } }
+    state hover { layer border { color COLOR/0.7 }  transition 120ms ease-out }
+    state on-path { layer border { color COLOR  width 2 } }
+    state dimmed { layer fill none }
+  }
+  group {
+    layer box rect { radius 16 }
+    layer fill solid { color text/0.025 }
+    layer border dashed { color text/0.14 }
+    slots row pad 18 pad-y 6 { title { dot COLOR  transform uppercase  size 0.8  tracking 0.1  alpha 0.6  weight 600 } }
+    padding 12 20 20 20
+    // Closed is a card like the Node one, with another offset below (the stack) and the package accent.
+    state collapsed {
+      layer stack solid before box { color background  offset 5 5 }
+      layer stack-border border before box { color text/0.1  offset 5 5 }
+      layer box { radius 10 }
+      layer fill { color text/0.045 }
+      layer border border { color text/0.13 }
+      use accent
+    }
+  }
+  edge {
+    layer line line { color text/0.32  width 1.2  corner round  radius 6 }
+    start dot { size 4.4  color text/0.5 }
+    end chevron { size 9 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 50  fill background  border text/0.16  color text/0.8 }
+  }
+}
+
+// Package accent: a 3 px bar in the kind color on the left edge.
+part accent { layer accent shadow after border { color COLOR  x 3  y 0  inset 1 } }

@@ -4,6 +4,8 @@
  * primera aparicion.
  */
 import type { AnclajeDeNota, Interaccion, ItemDeInteraccion, Mensaje, Nodo, OperadorDeFragmento, TipoDeMensaje, Vista } from './esquema';
+import { mensajePlaneado, planeados } from './planeado';
+import type { Planeados } from './planeado';
 import type { NodoResuelto } from './vistas';
 
 /** Mensaje proyectado por una Vista; `ruta` es su identidad (ruta de indices en la Interaccion, `0.1.2` dentro de Fragmentos anidados). */
@@ -19,6 +21,8 @@ export interface MensajeResuelto {
   ambito?: string[];
   /** Numero de `autonumber` (ya incluido en `label`); ausente si la Vista no numera. */
   numero?: number;
+  /** Planeado (ADR 0011): su Interaccion o una de sus Lifelines (antes de elevarla) lo esta. */
+  planned?: boolean;
 }
 
 /** `box` de un Grupo abierto; `lifelines` en orden de columna, la del propio Grupo (si la tiene) primera. */
@@ -161,6 +165,7 @@ export function resolverSecuencia(
   excluidos: ReadonlySet<string>,
   resolverNodo: (nodo: Nodo) => NodoResuelto,
   ancestroColapsado: ReadonlyMap<string, string> = new Map(),
+  planeado: Planeados = planeados({ nodes: nodos, interactions: interacciones }),
 ): { nodes: NodoResuelto[]; interaction: InteraccionResuelta } {
   const interaccion = interacciones.find((candidata) => candidata.id === vista.interaction);
   if (interaccion === undefined) return { nodes: [], interaction: { id: vista.interaction ?? '', title: '', messages: [], items: [] } };
@@ -185,7 +190,7 @@ export function resolverSecuencia(
       const from = elevar(item.from);
       const to = elevar(item.to);
       const kind = (item.kind === 'create' || item.kind === 'destroy') && to !== item.to ? 'async' : item.kind;
-      const mensaje: MensajeResuelto = { ruta, ...(item.id !== undefined && { id: item.id }), kind, from, to, ...(item.label !== undefined && { label: item.label }), ...(ambito.length > 0 && { ambito }) };
+      const mensaje: MensajeResuelto = { ruta, ...(item.id !== undefined && { id: item.id }), kind, from, to, ...(item.label !== undefined && { label: item.label }), ...(ambito.length > 0 && { ambito }), ...(mensajePlaneado(item, interaccion.id, planeado) && { planned: true }) };
       mensajes.push(mensaje);
       return [{ type: 'message', message: mensaje }];
     });

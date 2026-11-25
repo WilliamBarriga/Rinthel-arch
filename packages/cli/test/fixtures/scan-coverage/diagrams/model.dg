@@ -1,0 +1,23 @@
+specification {
+  node app
+  node table
+}
+
+model {
+  app web "Web" {
+    source { path "apps/web" }
+  }
+  app legacy "Legacy API" {
+    source { path "packages/legacy" }
+  }
+  table users "Users" {
+    source { path "User" }
+    id: int pk
+    nickname: text
+  }
+}
+
+view main {
+  type architecture
+  include **
+}

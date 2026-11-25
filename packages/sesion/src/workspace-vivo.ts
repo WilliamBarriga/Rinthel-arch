@@ -4,10 +4,10 @@
  * lo que recibe un cliente al conectar (estado, Historial y actividad con previos) y `escuchar` el flujo (tras cada
  * estado, su Historial y su Diferencia; la actividad nueva). Los adaptadores (servidor real, `devEnMemoria`) solo serializan.
  * Invariantes: una edicion con `version` usa los hashes de esa version como `visto`; una version fuera de las ultimas
- * `VERSIONES_GUARDADAS` rechaza con `hash-desactualizado`; sin version, se aplica sobre el texto vigente.
+ * `VERSIONES_GUARDADAS` rechaza con `stale-hash`; sin version, se aplica sobre el texto vigente.
  * Edicion, deshacer y rehacer van en cola; una escritura que falla a mitad se revierte. Con errores, el estado lleva los
  * issues con la Fuente y la Geometria de la ultima Sesion buena, sin `cambio`. El Historial es por archivo
- * (`HistorialDeArchivos`): una escritura externa no lo reinicia; deshacer y rehacer rechazan con `hash-desactualizado`
+ * (`HistorialDeArchivos`): una escritura externa no lo reinicia; deshacer y rehacer rechazan con `stale-hash`
  * solo si cambio por fuera un archivo que la entrada restaura. Las ediciones de texto (editor, `fix`) usan la misma
  * puerta que las Intenciones; con `aunqueNoCompile` se escriben aunque introduzcan errores. Saltar (#193) escribe una
  * sola vez la instantanea destino, sin apilar, con la misma regla de rechazo; `historial()` dice que entradas son
@@ -22,7 +22,7 @@
  * Registro de actividad: si el puerto lo da, el Workspace vivo compone un Registro de actividad vivo
  * (`registro-de-actividad-vivo.ts`, con el mismo reloj y debounce) y lo emite tras el estado y el Historial.
  */
-import { combineIconProviders, diferenciaVacia, esArchivoDeFuente, genericIcons, salidaDeInspectSchema, serializarIconos, workspaceIcons } from 'canonico';
+import { combineIconProviders, convencionesObsoletas, diferenciaVacia, esArchivoDeFuente, genericIcons, salidaDeInspectSchema, serializarIconos, workspaceIcons } from 'canonico';
 import type { ArchivoDeDev, ArchivosDeDev, DiferenciaDeDev, EstadoDeDev, EventoDeDev, GeometriaCacheada, HistorialDeDev, Intencion, Issue, MotivoDeRechazo, OrigenDeDiferencia, TipoDeCambio } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { componentesDeTema } from 'tema';
@@ -53,7 +53,9 @@ export interface PuertoDelWorkspaceVivo extends PuertoDeWorkspace {
   recursos(): Record<string, string> | undefined;
   /** Devuelve como dejar de observar. */
   observar(alCambiar: () => void): () => void;
-  /** Registro de actividad (`.diagrams/actividad.jsonl`) con su observador propio; sin el, no hay actividad. */
+  /** Every Workspace path (any file), for the `old-workspace-convention` errors; without it they are not reported. */
+  rutas?(): string[];
+  /** Registro de actividad (`.diagrams/activity.jsonl`) con su observador propio; sin el, no hay actividad. */
   actividad?: RegistroDeActividad;
 }
 
@@ -80,14 +82,14 @@ export interface CodigoCompilado {
 }
 
 /** `version` es la del estado tras recompilar. */
-export type ResultadoDelWorkspaceVivo = { ok: true; version: number } | { ok: false; motivo: MotivoDeRechazo; mensaje: string; file?: string };
+export type ResultadoDelWorkspaceVivo = { ok: true; version: number } | { ok: false; reason: MotivoDeRechazo; message: string; file?: string };
 
 /** Ediciones de texto de la UI (`POST /api/edit { ediciones }`): guardado del editor, un `fix` o "Aplicar N fix". */
 export interface EdicionesDeTexto {
   ediciones: readonly EdicionDeTexto[];
   /** Descripcion de la entrada del Historial; por defecto "texto de <archivos>". */
   descripcion?: string;
-  /** Guardado del editor: se escribe aunque introduzca errores (ADR 0007). Sin el, un error nuevo rechaza con `invalida`. */
+  /** Guardado del editor: se escribe aunque introduzca errores (ADR 0007). Sin el, un error nuevo rechaza con `invalid`. */
   aunqueNoCompile?: boolean;
 }
 
@@ -116,7 +118,7 @@ export interface WorkspaceVivo {
   archivo(ruta: string): ArchivoDeDev | undefined;
   deshacer(): Promise<ResultadoDelWorkspaceVivo>;
   rehacer(): Promise<ResultadoDelWorkspaceVivo>;
-  /** Lleva el Workspace a la entrada `id` (0: Inicio) sin apilar; `entrada-desconocida` si no existe. */
+  /** Lleva el Workspace a la entrada `id` (0: Inicio) sin apilar; `unknown-entry` si no existe. */
   saltar(id: number): Promise<ResultadoDelWorkspaceVivo>;
   /** Geometria de una Vista de la ultima Sesion buena (con `tema`, con ese Tema y sin cache); `undefined` si falta la Vista o el Tema. */
   geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<GeometriaCacheada | undefined>;
@@ -170,7 +172,9 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
   let actual: Sesion = abrirSesion(archivos, { ...opcionesDeSesion(recursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
   /** Ultima Sesion sin errores de compilacion. */
   let buena: { sesion: Sesion; archivos: ArchivosDelWorkspace } | undefined = actual.fuente === undefined ? undefined : { sesion: actual, archivos };
-  let issues: Issue[] = await actual.diagnosticar();
+  /** Compile issues plus the old file conventions of the Workspace paths (as `validate` reports them). */
+  const conConvenciones = (lista: Issue[]): Issue[] => [...lista, ...convencionesObsoletas(puerto.rutas?.() ?? [])];
+  let issues: Issue[] = conConvenciones(await actual.diagnosticar());
   /** version -> archivo -> hash. */
   const versiones = new Map<number, Record<string, string>>([[version, hashesDe(archivos)]]);
   let estado = construirEstado();
@@ -217,7 +221,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     origenPendiente = unirOrigen(origenPendiente, origenDe(archivos, nuevos));
     codigo = compilarCodigo();
     const sesion = (buena?.sesion ?? actual).actualizar(nuevos, { ...opcionesDeSesion(nuevosRecursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
-    const nuevosIssues = await sesion.diagnosticar();
+    const nuevosIssues = conConvenciones(await sesion.diagnosticar());
     actual = sesion;
     archivos = nuevos;
     // Con errores se conserva el ultimo dibujo bueno (y sus recursos de referencia): no hay cambio que dibujar.
@@ -344,7 +348,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     enCola(async () => {
       const traducido = vistoDe(versionVista);
       if (traducido === undefined) {
-        return { ok: false, motivo: 'hash-desactualizado', mensaje: `La version ${versionVista} del estado ya no esta guardada; recarga la Vista` };
+        return { ok: false, reason: 'stale-hash', message: `State version ${versionVista} is no longer stored; reload the View` };
       }
       const antes = puerto.leer().propios;
       const escritas: string[] = [];
@@ -357,6 +361,8 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
               escritas.push(ruta);
               escribirPropio(ruta, texto);
             },
+            ...(puerto.renombrar !== undefined && { renombrar: puerto.renombrar.bind(puerto) }),
+            ...(puerto.existe !== undefined && { existe: puerto.existe.bind(puerto) }),
           },
           esEdicionesDeTexto(aplicable) ? aplicable.ediciones : aplicable,
           traducido.visto,
@@ -366,7 +372,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
         revertir(antes, escritas);
         throw error;
       }
-      if (!resultado.ok) return { ok: false, motivo: resultado.motivo, mensaje: resultado.mensaje, ...(resultado.file !== undefined && { file: resultado.file }) };
+      if (!resultado.ok) return { ok: false, reason: resultado.reason, message: resultado.message, ...(resultado.file !== undefined && { file: resultado.file }) };
       const descripcion = !esEdicionesDeTexto(aplicable) ? descripcionDeIntencion(aplicable) : (aplicable.descripcion ?? descripcionDeTexto(resultado.cambiados));
       historial = registrar(historial, descripcion, antes, puerto.leer().propios, ahora());
       return recompilarTrasEscribir();

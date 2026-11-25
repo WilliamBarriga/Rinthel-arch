@@ -58,20 +58,20 @@ describe('advertencias de contraste', () => {
     const t = tema(
       { oscuro: '#111111', claro: '#f5f5f5' },
       [capa('relleno', 'solid', { color: 'oscuro' })],
-      { estados: { atenuado: [{ nombre: 'relleno', props: { color: 'claro' } }] } },
+      { estados: { dimmed: [{ nombre: 'relleno', props: { color: 'claro' } }] } },
       { foreground: '#ffffff' },
     );
     const avisos = advertenciasDeContraste(t, { x: undefined });
 
-    expect(avisos.map((a) => [a.estado, a.parte, a.capa])).toEqual([['atenuado', 'texto', 'relleno']]);
+    expect(avisos.map((a) => [a.estado, a.parte, a.capa])).toEqual([['dimmed', 'texto', 'relleno']]);
   });
 
-  it('los Temas incorporados neutral y alto-contraste no dan avisos', () => {
+  it('los Temas incorporados neutral y high-contrast no dan avisos', () => {
     expect(advertenciasDeContraste(TEMA_NEUTRO, { servicio: 'blue' })).toEqual([]);
     expect(advertenciasDeContraste(TEMA_ALTO_CONTRASTE, { servicio: 'blue', db: 'green' })).toEqual([]);
   });
 
-  it('alto-contraste llega ya resuelto: cada Primitiva trae los defectos del catalogo, como si saliera de dsl', () => {
+  it('high-contrast llega ya resuelto: cada Primitiva trae los defectos del catalogo, como si saliera de dsl', () => {
     const t = TEMA_ALTO_CONTRASTE;
     const primitivas: Array<[Primitiva, UbicacionDePrimitiva]> = [
       ...t.pagina.capas.map((c): [Primitiva, UbicacionDePrimitiva] => [c.primitiva, 'capa-pagina']),

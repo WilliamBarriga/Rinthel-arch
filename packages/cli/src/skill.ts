@@ -16,28 +16,28 @@ import { CARPETA_DE_SALIDA } from './workspace';
 const celda = (texto: string): string => (texto.trim() === '' ? '-' : texto.replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|'));
 
 const EJEMPLO_DE_DSL = `specification {
-  node servicio { description "Pieza desplegable"  color blue }
+  node service { description "Deployable unit"  color blue }
 }
 
-theme claro extends neutral {
-  palette { acento "#0ea5e9" }
+theme light extends neutral {
+  palette { accent "#0ea5e9" }
 }
 
 model {
-  servicio sistema "Sistema" {
-    servicio api "API"
-    servicio db "Base de datos" {
-      attrs { id: uuid "clave"  email: text }
+  service system "System" {
+    service api "API"
+    service db "Database" {
+      attrs { id: uuid "key"  email: text }
     }
   }
-  sistema.api -> sistema.db
+  system.api -> system.db
 }
 
-view general {
+view overview {
   type architecture
   include **
-  theme claro
-  node sistema.db { label "Datos"  color acento }
+  theme light
+  node system.db { label "Data"  color accent }
 }`;
 
 /** `SKILL.md` del proyecto. Determinista: el mismo catalogo produce los mismos bytes. */
@@ -53,128 +53,128 @@ export function generarSkill(fuente: FuenteCanonica): string {
 
   return `---
 name: diagrams
-description: Escribir y corregir los archivos .dg (DSL de diagramas) de este proyecto con el bucle diagrams inspect, editar, validate. Usalo al crear o editar Nodos, Aristas, Vistas o Temas.
+description: Write and fix the .dg files (diagram DSL) of this project with the diagrams loop inspect, edit, validate. Use it when creating or editing Nodes, Edges, Views or Themes.
 ---
 
-# Diagramas de este proyecto
+# Diagrams of this project
 
-Los diagramas se escriben en archivos \`.dg\` del Workspace. Es la unica fuente editable: nunca edites el JSON de \`${CARPETA_DE_SALIDA}/\`, que es salida derivada.
+Diagrams are written in \`.dg\` files of the Workspace. They are the only editable source: never edit the JSON in \`${CARPETA_DE_SALIDA}/\`, which is derived output.
 
-## Bucle de trabajo
+## Working loop
 
-1. Consulta el Modelo con \`diagrams inspect\` para saber que ids existen, donde estan escritos y como se conectan (no adivines ids ni releas todos los \`.dg\`).
-2. Edita los \`.dg\`.
-3. Ejecuta \`diagrams validate --workspace <ruta> --json\`.
-4. Si \`ok\` es \`false\`, corrige cada issue (empieza por los \`fix\`, que son ediciones exactas del texto) y vuelve al paso 3.
-5. Termina cuando \`ok\` es \`true\`. \`diagrams build\` genera la geometria y \`diagrams dev\` muestra los diagramas.
+1. Query the Model with \`diagrams inspect\` to learn which ids exist, where they are written and how they connect (do not guess ids or re-read every \`.dg\`).
+2. Edit the \`.dg\` files.
+3. Run \`diagrams validate --workspace <path> --json\`.
+4. If \`ok\` is \`false\`, fix each issue (start with the \`fix\` entries, which are exact text edits) and go back to step 3.
+5. Stop when \`ok\` is \`true\`. \`diagrams build\` generates the geometry and \`diagrams dev\` shows the diagrams.
 
-Para ver el resultado mientras se edita (persona o agente), \`diagrams dev\` abre el bucle en vivo (ver abajo). Si dos autores tocan el mismo \`.dg\`, gana la ultima escritura; la reconciliacion es de git.
+To see the result while editing (person or agent), \`diagrams dev\` opens the live loop (see below). If two authors touch the same \`.dg\`, the last write wins; reconciliation is git's job.
 
-Este skill se genera: tras cambiar los Tipos de nodo, Temas o codigos, regeneralo con \`diagrams skill --workspace <ruta> --out <archivo>\`.
+This skill is generated: after changing the Node kinds, Themes or codes, regenerate it with \`diagrams skill --workspace <path> --out <file>\`.
 
-## Tipos de nodo
+## Node kinds
 
-Todo Nodo declara su tipo con uno de estos (\`specification { node <tipo> { ... } }\`).
+Every Node declares its kind with one of these (\`specification { node <kind> { ... } }\`).
 
-| Tipo | Descripcion | Icono | Color |
+| Kind | Description | Icon | Color |
 | --- | --- | --- | --- |
 ${tipos.join('\n') || '| - | - | - | - |'}
 
-## Paleta y Temas
+## Palette and Themes
 
-Un color se escribe solo por nombre de Paleta (en un Tipo de nodo o en un override de Vista); el valor hex vive unicamente dentro de un \`theme\`.
+A color is written only by Palette name (in a Node kind or a View override); the hex value lives only inside a \`theme\`.
 
-| Tema | Colores de Paleta |
+| Theme | Palette colors |
 | --- | --- |
 ${temas.join('\n')}
 
-## Sintaxis del DSL
+## DSL syntax
 
 \`\`\`dg
 ${EJEMPLO_DE_DSL}
 \`\`\`
 
-- Un Nodo es \`<tipo> <id> ["Titulo" ["Descripcion"]] [{ hijos, attrs, source }]\`; sus hijos lo hacen Grupo y su id completo es \`padre.hijo\`.
-- Una Arista es \`origen ["card"] -> ["card"] destino ["etiqueta"]\` (espacios alrededor de \`->\`; la etiqueta se pierde al fusionar Aristas elevadas por un Grupo colapsado); un extremo puede ser \`nodo#atributo\`.
-- Una Vista solo selecciona (\`include\`, \`exclude\`, \`depth\`; selectores \`a\`, \`a.*\`, \`a.**\`); \`type\` es \`architecture\`, \`flow\`, \`sequence\` (con \`interaction <id>\`, un Modelo con \`interaction <id> { a -> b "msg" }\`) o \`er\` (Nodos con \`attrs\` y claves \`pk\`/\`fk\`, Aristas con cardinalidad). Sus overrides por Nodo (\`label\`, \`pin x,y\`, \`order\`, \`color\`) nunca tocan el Modelo; \`pin\` es la posicion relativa al Grupo padre y en una Vista \`sequence\`, \`order a, b\` fija el orden (parcial) de las Lifelines. Una Interaccion admite Mensajes \`async|reply|create|destroy\`, Fragmentos (\`opt loop break critical alt/else par/and\`), \`note\` y \`ref\`; la Vista admite \`autonumber\` y Pasos \`upto <id de Mensaje>\`/\`steps each\`; una Vista \`er\` marca Atributos \`pk fk uk\` y Aristas \`identifying\`.
-- Una Vista puede declarar \`theme\`, \`collapsed\`/\`expanded\`, \`link <nodo> -> <vista>\` y \`steps\` de revelado (\`steps { step "Titulo" { show a, a -> b  hide c } }\`: acumulativos; \`show\` revela y \`hide\` oculta lo anterior; en un paso \`a.*\` revela el Grupo \`a\` y sus hijos).
-- \`extend <nodo> { ... }\` anade hijos, \`attrs\` y \`source\` a un Nodo declarado en otro archivo. Un Tipo de nodo admite \`description\`, \`icon\`, \`style\` y \`color\`; el \`icon\` es un icono generico o el nombre de un \`.svg\` del Workspace.
+- A Node is \`<kind> <id> ["Title" ["Description"]] [{ children, attrs, source }]\`; its children make it a Group and its full id is \`parent.child\`.
+- An Edge is \`origin ["card"] -> ["card"] target ["label"]\` (spaces around \`->\`; the label is lost when merging Edges lifted by a collapsed Group); an end can be \`node#attribute\`.
+- A View only selects (\`include\`, \`exclude\`, \`depth\`; selectors \`a\`, \`a.*\`, \`a.**\`); \`type\` is \`architecture\`, \`flow\`, \`sequence\` (with \`interaction <id>\`, and a Model with \`interaction <id> { a -> b "msg" }\`) or \`er\` (Nodes with \`attrs\` and \`pk\`/\`fk\` keys, Edges with cardinality). Its per-Node overrides (\`label\`, \`pin x,y\`, \`order\`, \`color\`) never touch the Model; \`pin\` is the position relative to the parent Group, and in a \`sequence\` View \`order a, b\` sets the (partial) order of the Lifelines. An Interaction accepts \`async|reply|create|destroy\` Messages, Fragments (\`opt loop break critical alt/else par/and\`), \`note\` and \`ref\`; the View accepts \`autonumber\` and Steps \`upto <Message id>\`/\`steps each\`; an \`er\` View marks Attributes \`pk fk uk\` and Edges \`identifying\`.
+- A View can declare \`theme\`, \`collapsed\`/\`expanded\`, \`link <node> -> <view>\` and reveal \`steps\` (\`steps { step "Title" { show a, a -> b  hide c } }\`: cumulative; \`show\` reveals and \`hide\` hides what came before; in a step \`a.*\` reveals the Group \`a\` and its children).
+- \`extend <node> { ... }\` adds children, \`attrs\` and \`source\` to a Node declared in another file. A Node kind accepts \`description\`, \`icon\`, \`style\` and \`color\`; the \`icon\` is a generic icon or the name of an \`.svg\` in the Workspace.
 
-## Contrato de validate
+## validate contract
 
-\`diagrams validate --workspace <ruta> [--json] [--max-issues N] [--strict]\`. Con \`--json\`, stdout es exactamente un objeto (contractVersion ${CONTRACT_VERSION}). \`summary\` cuenta todos los issues; \`truncated\` indica que \`issues\` se corto en \`--max-issues\` (100 por defecto). Los issues salen ordenados por archivo, linea, columna y codigo.
+\`diagrams validate --workspace <path> [--json] [--max-issues N] [--strict]\`. With \`--json\`, stdout is exactly one object (contractVersion ${CONTRACT_VERSION}). \`summary\` counts all issues; \`truncated\` says \`issues\` was cut at \`--max-issues\` (100 by default). Issues are sorted by file, line, column and code.
 
-| Codigo de salida | Significado |
+| Exit code | Meaning |
 | --- | --- |
-| 0 | Sin errores (los avisos no fallan) |
-| 1 | Hay errores; con \`--strict\`, tambien avisos |
-| 2 | Fallo de uso o interno (mensaje en stderr) |
+| 0 | No errors (warnings do not fail) |
+| 1 | There are errors; with \`--strict\`, warnings too |
+| 2 | Usage or internal failure (message on stderr) |
 
-Cada issue trae \`code\` (estable), \`severity\` (\`error\` o \`warning\`), \`file\`, \`line\`, \`column\`, \`message\`, y opcionales \`hint\`, \`related\` y \`fix\`. El \`fix\` es una edicion exacta del texto (\`{ file, range, replacement }\`) y solo aparece cuando hay un unico candidato; si hay varios, lee \`hint\`. Nunca hay \`fix\` sobre el JSON canonico. Guiate por \`code\`: \`message\` y \`hint\` pueden cambiar.
+Every issue carries \`code\` (stable), \`severity\` (\`error\` or \`warning\`), \`file\`, \`line\`, \`column\`, \`message\`, and optionally \`hint\`, \`related\` and \`fix\`. The \`fix\` is an exact text edit (\`{ file, range, replacement }\`) and only appears when there is a single candidate; if there are several, read \`hint\`. There is never a \`fix\` over the canonical JSON. Rely on \`code\`: \`message\` and \`hint\` may change.
 
-Esquema (JSON Schema derivado del esquema Zod del contrato):
+Schema (JSON Schema derived from the contract's Zod schema):
 
 \`\`\`json
 ${JSON.stringify(salidaDeValidateJsonSchema(), null, 2)}
 \`\`\`
 
-## Consultar el Modelo (inspect)
+## Query the Model (inspect)
 
-Solo lectura; nunca escribe. Cada resultado trae el id cualificado, el tipo y \`archivo:linea\` de donde se escribio.
+Read-only; never writes. Every result carries the qualified id, the kind and the \`file:line\` where it was written.
 
 \`\`\`text
-diagrams inspect buscar <texto> --workspace <ruta> [--json]
-diagrams inspect nodo <id> --workspace <ruta> [--json]
-diagrams inspect vista <id> --workspace <ruta> [--json]
-diagrams inspect interaccion <id> --workspace <ruta> [--json]
-diagrams inspect tema <nombre> --workspace <ruta> [--tipo <tipo>] [--estado <estado>] [--diagrama <tipo>] [--catalogo] [--json]
+diagrams inspect search <text> --workspace <path> [--json]
+diagrams inspect node <id> --workspace <path> [--json]
+diagrams inspect view <id> --workspace <path> [--json]
+diagrams inspect interaction <id> --workspace <path> [--json]
+diagrams inspect theme <name> --workspace <path> [--kind <kind>] [--state <state>] [--diagram <type>] [--catalog] [--json]
 \`\`\`
 
-- \`buscar\` encuentra Nodos por id parcial o titulo, Vistas por id e Interacciones por id o titulo (sin distinguir mayusculas).
-- \`nodo\` devuelve el Nodo, su padre e hijos, sus Atributos, las Aristas que entran y salen, y las Vistas que lo muestran.
-- \`vista\` devuelve el tipo (\`architecture\`, \`flow\`, \`sequence\` o \`er\`) y los Nodos y Aristas visibles de la Vista en su estado inicial; en una Vista \`sequence\`, los Nodos son sus Lifelines y trae la \`interaction\` que proyecta.
-- \`interaccion\` devuelve el titulo, la cantidad de items y de Mensajes, las Lifelines (en orden de aparicion) y las Vistas \`sequence\` que la proyectan.
-- \`tema\` devuelve la cadena \`extends\`, las \`part\` usadas, la pila de Capas resuelta para el \`--tipo\`, \`--estado\` y \`--diagrama\` (architecture, flow, sequence, er) pedidos (cada Capa con el \`archivo:linea\` del parche que la fijo, para saber que parche editar), las Metricas y si el Tema usa codigo; con \`--catalogo\`, tambien las claves del catalogo de Primitivas, Movimientos y efectos.
-- Sin \`--json\` sale texto legible. Con \`--json\`, stdout es exactamente un objeto (contractVersion ${INSPECT_CONTRACT_VERSION}, independiente del de validate) con \`comando\` = \`buscar\`, \`nodo\`, \`vista\`, \`interaccion\` o \`tema\`.
-- Codigos de salida: 0 hay respuesta (\`buscar\` sin coincidencias tambien), 1 el Nodo, la Vista, la Interaccion, el Tema, el Tipo o el estado no existe (stderr sugiere ids cercanos) o el Workspace tiene errores (corrigelos con validate), 2 fallo de uso o interno.
+- \`search\` finds Nodes by partial id or title, Views by id and Interactions by id or title (case-insensitive).
+- \`node\` returns the Node, its parent and children, its Attributes, the Edges in and out, and the Views that show it.
+- \`view\` returns the type (\`architecture\`, \`flow\`, \`sequence\` or \`er\`) and the visible Nodes and Edges of the View in its initial state; in a \`sequence\` View the Nodes are its Lifelines and it includes the \`interaction\` it projects.
+- \`interaction\` returns the title, the number of items and Messages, the Lifelines (in order of appearance) and the \`sequence\` Views that project it.
+- \`theme\` returns the \`extends\` chain, the \`part\` used, the Layer stack resolved for the requested \`--kind\`, \`--state\` and \`--diagram\` (architecture, flow, sequence, er) (each Layer with the \`file:line\` of the patch that set it, so you know which patch to edit), the Metrics and whether the Theme uses code; with \`--catalog\`, also the keys of the Primitive, Motion and effect catalog.
+- Without \`--json\` the output is readable text. With \`--json\`, stdout is exactly one object (contractVersion ${INSPECT_CONTRACT_VERSION}, independent from validate) with \`command\` = \`search\`, \`node\`, \`view\`, \`interaction\` or \`theme\`.
+- Exit codes: 0 there is an answer (\`search\` with no matches too), 1 the Node, View, Interaction, Theme, kind or state does not exist (stderr suggests nearby ids) or the Workspace has errors (fix them with validate), 2 usage or internal failure.
 
-Esquema de \`inspect --json\` (JSON Schema derivado del esquema Zod):
+\`inspect --json\` schema (JSON Schema derived from the Zod schema):
 
 \`\`\`json
 ${JSON.stringify(salidaDeInspectJsonSchema(), null, 2)}
 \`\`\`
 
-## Editar de forma estructurada (edit)
+## Structured editing (edit)
 
-Es la unica escritura explicita del CLI y solo escribe lo que pides; \`validate\` nunca reescribe. Edita siempre el \`.dg\`, nunca el JSON canonico.
+It is the CLI's only explicit write and it writes only what you ask for; \`validate\` never rewrites. Always edit the \`.dg\`, never the canonical JSON.
 
 \`\`\`text
-diagrams edit --workspace <ruta> --view <vista> --node <id cualificado> --x N --y N [--json]
-diagrams edit --workspace <ruta> --intent '{"tipo":"ordenar-lifelines","vista":"<vista>","orden":["a","b"]}' [--json]
-diagrams edit --workspace <ruta> --edits '[{"file":"main.dg","range":{"start":{"line":1,"column":1},"end":{"line":1,"column":2}},"replacement":"..."}]' [--json]
+diagrams edit --workspace <path> --view <view> --node <qualified id> --x N --y N [--json]
+diagrams edit --workspace <path> --intent '{"type":"reorder-lifelines","view":"<view>","order":["a","b"]}' [--json]
+diagrams edit --workspace <path> --edits '[{"file":"main.dg","range":{"start":{"line":1,"column":1},"end":{"line":1,"column":2}},"replacement":"..."}]' [--json]
 \`\`\`
 
-- La primera forma mueve el Pin de un Nodo en una Vista: reemplaza el \`pin\` si existe y lo anade si no; no necesitas conocer la sintaxis.
-- La segunda aplica una Intencion por su contrato JSON (no lleva \`hash\`: uno heredado en el JSON se ignora; la concurrencia es \`--hash <archivo>=<hash>\`); \`ordenar-lifelines\` reescribe el \`order\` completo de una Vista \`sequence\` con el orden visible dado, y las entradas de \`order\` hoy ocultas (Grupo colapsado, \`exclude\`) conservan su posicion relativa. \`fijar-tema\` (\`{ vista, tema? }\`) escribe \`theme <tema>\` en la Vista conservando su parche, o lo quita sin \`tema\`; un Tema no declarado rechaza con \`tema-desconocido\`.
-- La tercera aplica ediciones de texto ya calculadas (p. ej. el \`fix\` de un issue de \`validate\`): rangos 1-based, fin excluido.
-- Concurrencia: cada edicion lleva el hash del archivo que viste (\`hash\` en la edicion, o \`--hash <archivo>=<hash>\`); sin hash se usa el del disco. Si el archivo cambio, se rechaza todo sin escritura parcial.
-- Se rechaza tambien lo que introduce errores nuevos, solapa ediciones o apunta fuera del archivo.
-- Con \`--json\`, stdout es exactamente un objeto (contractVersion ${EDIT_CONTRACT_VERSION}, independiente de los otros) con \`ok\`; si es \`false\` trae \`reason\` y \`message\`.
-- Codigos de salida: 0 escrito, 1 edicion rechazada o invalida, 2 fallo de uso o interno.
+- The first form moves the Pin of a Node in a View: it replaces the \`pin\` if it exists and adds it if not; you do not need to know the syntax.
+- The second applies an Intent through its JSON contract (it carries no \`hash\`: one inherited in the JSON is ignored; concurrency is \`--hash <file>=<hash>\`); \`reorder-lifelines\` rewrites the whole \`order\` of a \`sequence\` View with the given visible order, and the \`order\` entries that are hidden today (collapsed Group, \`exclude\`) keep their relative position. \`set-theme\` (\`{ view, theme? }\`) writes \`theme <theme>\` in the View keeping its patch, or removes it without \`theme\`; an undeclared Theme is rejected with \`unknown-theme\`.
+- The third applies already computed text edits (e.g. the \`fix\` of a \`validate\` issue): 1-based ranges, end excluded.
+- Concurrency: every edit carries the hash of the file you saw (\`hash\` in the edit, or \`--hash <file>=<hash>\`); without a hash the one on disk is used. If the file changed, everything is rejected with no partial write.
+- Also rejected: anything that introduces new errors, overlaps edits or points outside the file.
+- With \`--json\`, stdout is exactly one object (contractVersion ${EDIT_CONTRACT_VERSION}, independent from the others) with \`ok\`; if it is \`false\` it carries \`reason\` and \`message\`.
+- Exit codes: 0 written, 1 edit rejected or invalid, 2 usage or internal failure.
 
-Esquema de \`edit --json\` (JSON Schema derivado del esquema Zod):
+\`edit --json\` schema (JSON Schema derived from the Zod schema):
 
 \`\`\`json
 ${JSON.stringify(salidaDeEditJsonSchema(), null, 2)}
 \`\`\`
 
-## Bucle en vivo (dev)
+## Live loop (dev)
 
-\`diagrams dev --workspace <ruta>\` levanta un servidor local (solo en 127.0.0.1, puerto 4173 por defecto; \`--port N\` lo cambia) que sirve la UI de dev. Observa el Workspace y, ante cada cambio en los \`.dg\` (con un debounce de ~150 ms), recompila y empuja a la pagina la Vista, los issues y la actividad por Server-Sent Events. La UI muestra la Vista activa del hash de la URL (\`#vista=<id>\`), un editor del DSL, los issues clicables (\`archivo:linea\`), la galeria de Temas, el Historial de archivos y un feed con cada \`validate\`, \`build\`, \`inspect\` y \`edit\` que corres (exporta \`DIAGRAMS_AGENTE=<nombre>\` para firmarlos). Un agente no necesita abrirla: usa inspect y validate; \`dev\` es para que la persona vea el resultado en vivo y edite. La persona tambien escribe los \`.dg\` desde la UI: relee el archivo antes de editarlo y pasa \`edit --hash <archivo>=<hash>\` para no pisar un cambio suyo.
+\`diagrams dev --workspace <path>\` starts a local server (on 127.0.0.1 only, port 4173 by default; \`--port N\` changes it) that serves the Dev UI. It watches the Workspace and, on every change to the \`.dg\` files (with a ~150 ms debounce), recompiles and pushes the View, the issues and the activity to the page over Server-Sent Events. The UI shows the active View from the URL hash (\`#view=<id>\`), a DSL editor, clickable issues (\`file:line\`), the Theme gallery, the file History and a feed with every \`validate\`, \`build\`, \`inspect\` and \`edit\` you run (export \`DIAGRAMS_AGENT=<name>\` to sign them). An agent does not need to open it: use inspect and validate; \`dev\` is for the person to see the result live and edit. The person also writes the \`.dg\` files from the UI: re-read the file before editing it and pass \`edit --hash <file>=<hash>\` so you do not overwrite their change.
 
-## Codigos de issue
+## Issue codes
 
-| Codigo | Significado |
+| Code | Meaning |
 | --- | --- |
 ${codigos.join('\n')}
 `;

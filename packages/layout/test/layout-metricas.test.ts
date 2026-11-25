@@ -109,7 +109,7 @@ describe('layout de secuencia exige Metricas de secuencia', () => {
   };
 
   it('una tabla de Vista de arquitectura lanza error en vez de caer en defectos', async () => {
-    await expect(layoutConMetricas(secuencia(), tablaDeMetricas(TEMA_NEUTRO, 'architecture'))).rejects.toThrow(/secuencia/);
+    await expect(layoutConMetricas(secuencia(), tablaDeMetricas(TEMA_NEUTRO, 'architecture'))).rejects.toThrow(/sequence part/);
   });
 
   it('la tabla de Tipo sequence lo coloca', async () => {

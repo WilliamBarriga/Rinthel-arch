@@ -11,25 +11,25 @@ theme claro extends neutral { palette { acento "#0ea5e9" } }
 ${vista}
 `;
 
-const fijar = (tema?: string, vista = 'v'): Intencion => ({ tipo: 'fijar-tema', vista, ...(tema !== undefined && { tema }) });
+const fijar = (tema?: string, vista = 'v'): Intencion => ({ type: 'set-theme', view: vista, ...(tema !== undefined && { theme: tema }) });
 
 const aplicar = (texto: string, intencion: Intencion): string => {
   const r = aplicarEnMemoria({ 'main.dg': texto }, intencion);
-  if (!r.ok) throw new Error(`${r.motivo}: ${r.mensaje}`);
+  if (!r.ok) throw new Error(`${r.reason}: ${r.message}`);
   return r.archivos['main.dg'] as string;
 };
 
-describe('Intencion fijar-tema', () => {
+describe('Intencion set-theme', () => {
   it('con theme en la Vista reescribe el nombre y conserva el parche', () => {
     const texto = ws(`view v {
   type architecture
-  theme neutral { layer borde { color amber  width 3 } }
+  theme neutral { layer border { color amber  width 3 } }
   include **
 }`);
     expect(aplicar(texto, fijar('claro'))).toBe(
       ws(`view v {
   type architecture
-  theme claro { layer borde { color amber  width 3 } }
+  theme claro { layer border { color amber  width 3 } }
   include **
 }`),
     );
@@ -66,35 +66,35 @@ describe('Intencion fijar-tema', () => {
   it('sin tema y con parche escribe theme neutral { parche }', () => {
     const texto = ws(`view v {
   type architecture
-  theme claro { layer borde { color amber  width 3 } }
+  theme claro { layer border { color amber  width 3 } }
   include **
 }`);
     expect(aplicar(texto, fijar())).toBe(
       ws(`view v {
   type architecture
-  theme neutral { layer borde { color amber  width 3 } }
+  theme neutral { layer border { color amber  width 3 } }
   include **
 }`),
     );
   });
 
-  it('un Tema no declarado se rechaza con tema-desconocido y nombra los cercanos', () => {
+  it('un Tema no declarado se rechaza con unknown-theme y nombra los cercanos', () => {
     const texto = ws(`view v {
   type architecture
   include **
 }`);
     const r = aplicarEnMemoria({ 'main.dg': texto }, fijar('clar'));
-    expect(r).toMatchObject({ ok: false, motivo: 'tema-desconocido' });
-    expect(!r.ok && r.mensaje).toContain('claro');
+    expect(r).toMatchObject({ ok: false, reason: 'unknown-theme' });
+    expect(!r.ok && r.message).toContain('claro');
   });
 
-  it('una Vista inexistente rechaza con vista-desconocida y un visto viejo con hash-desactualizado', () => {
+  it('una View not found rechaza con unknown-view y un visto viejo con stale-hash', () => {
     const texto = ws(`view v {
   type architecture
   include **
 }`);
-    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro', 'nada'))).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
-    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro'), { 'main.dg': 'viejo' })).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro', 'nada'))).toMatchObject({ ok: false, reason: 'unknown-view' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro'), { 'main.dg': 'viejo' })).toMatchObject({ ok: false, reason: 'stale-hash' });
     expect(aplicarEnMemoria({ 'main.dg': texto }, fijar('claro'), { 'main.dg': hashDeContenido(texto) }).ok).toBe(true);
   });
 });

@@ -1,0 +1,207 @@
+// Catalog of shapes, fills and borders (Shape, Fill and Border Families of ADR 0008).
+// One Theme per group of Primitives, to compare them in the same View. Every Primitive of the
+// catalog appears at least once; a test verifies it. No intentional contrast warnings.
+specification {
+  node piece { description "Sample Node" icon box color blue }
+}
+
+model {
+  piece a "Pastilla"
+  piece b "Esquina cortada"
+  piece c "Circulo"
+  piece d "Rellenos"
+  a -> b "shape"
+  b -> c
+  c -> d
+}
+
+theme base-sample {
+  palette { paper "#fefce8"  ink "#1e293b"  accent "#2563eb"  soft "#bfdbfe" }
+  tokens { background "#ffffff"  foreground "#1e293b"  border "#475569" }
+}
+
+// Shapes: pill, cut corner and circle (the circle needs a square box).
+theme shape-pill extends base-sample {
+  node {
+    layer shape pill
+    layer fill solid { color paper }
+    layer border border { color ink width 2 }
+    slots { title attrs }
+  }
+}
+
+theme shape-corner extends base-sample {
+  node {
+    layer shape cut { cut 12 }
+    layer fill solid { color soft }
+    slots { title attrs }
+  }
+}
+
+theme shape-circle extends base-sample {
+  node {
+    layer shape circle
+    layer fill solid { color paper }
+    layer border border { color accent width 2 }
+    slots { title }
+  }
+}
+
+// Fills: gradient, grid, lines, discs and noise (the patterns over a solid color).
+theme fill-gradient extends base-sample {
+  node {
+    layer shape rect { radius 8 }
+    layer fill gradient { from paper  to soft  angle 135 }
+    layer border border { color ink }
+    slots { title attrs }
+  }
+}
+
+theme fill-radial extends base-sample {
+  page {
+    layer light radial { from soft  to paper  x 15  y 10 }
+    layer grid grid { color ink/0.06  size 24 }
+    fixed
+  }
+  node {
+    layer shape rect { radius 8 }
+    layer fill radial { from paper  to soft  x 30  y 20 }
+    layer border border { color ink }
+    slots { title attrs }
+  }
+}
+
+theme fill-grid extends base-sample {
+  node {
+    layer shape rect
+    layer base solid { color paper }
+    layer weave grid { color soft  size 12  width 1 }
+    layer border border { color ink }
+    slots { title attrs }
+  }
+}
+
+theme fill-lines extends base-sample {
+  node {
+    layer shape rect
+    layer base solid { color paper }
+    layer weave lines { color soft  size 8  width 2  angle 45 }
+    layer border border { color ink }
+    slots { title attrs }
+  }
+}
+
+theme fill-discs extends base-sample {
+  node {
+    layer shape rect
+    layer base solid { color paper }
+    layer weave dots { color soft  size 10  radius 2 }
+    layer border border { color ink }
+    slots { title attrs }
+  }
+}
+
+theme fill-disk extends base-sample {
+  page {
+    layer sun disc { color soft  radius 160  x 85  y 20 }
+    fixed
+  }
+  node {
+    layer shape rect
+    layer base solid { color paper }
+    layer notch disc { color ink/0.3  radius 3  x 9  y 9  unit px }
+    layer border border { color ink }
+    slots { title attrs }
+  }
+}
+
+theme fill-noise extends base-sample {
+  node {
+    layer shape rect
+    layer base solid { color paper }
+    layer grain noise { frequency 0.8  opacity 0.2 }
+    layer border border { color ink }
+    slots { title attrs }
+  }
+}
+
+// Borders and strokes: dashed, dotted and detached outline.
+theme border-dashed extends base-sample {
+  node {
+    layer shape rect { radius 4 }
+    layer fill solid { color paper }
+    layer border dashed { color ink  width 2 }
+    slots { title attrs }
+  }
+}
+
+theme border-dotted extends base-sample {
+  node {
+    layer shape rect { radius 4 }
+    layer fill solid { color paper }
+    layer border dotted { color ink  width 3 }
+    slots { title attrs }
+  }
+}
+
+theme border-outline extends base-sample {
+  node {
+    layer shape rect { radius 4 }
+    layer fill solid { color paper }
+    layer border border { color ink }
+    layer aura outline { color accent  width 2  offset 3 }
+    slots { title attrs }
+  }
+}
+
+// ER cardinality markers (crow feet). In an ER View the core picks them by the cardinality of
+// each Edge; here they are declared as end markers to show them in any Diagram type.
+theme markers-er extends base-sample {
+  node {
+    layer shape rect { radius 4 }
+    layer fill solid { color paper }
+    layer border border { color ink }
+    slots { title attrs }
+  }
+  edge {
+    layer line line { color ink }
+    start one { size 12 }
+    end many { size 12 }
+  }
+}
+
+theme markers-er-optional extends markers-er {
+  edge {
+    start zero-one { size 12 }
+    end zero-many { size 12 }
+  }
+}
+
+// The X of a destroyed Lifeline (sequence): a marker centered on the end.
+theme marker-cross extends markers-er {
+  edge {
+    start cross { size 10 }
+    end cross { size 10 }
+  }
+}
+
+view shapes {
+  type architecture
+  theme shape-pill
+  include **
+}
+
+// Side band and Edge markers that the rest of the gallery does not use.
+theme band-markers extends base-sample {
+  node {
+    layer shape rect { radius 4 }
+    layer fill solid { color paper }
+    layer band stripe { color accent  side left  width 6 }
+    slots { title attrs }
+  }
+  edge {
+    layer line line { color ink }
+    start diamond { size 8 }
+    end bar { size 8 }
+  }
+}

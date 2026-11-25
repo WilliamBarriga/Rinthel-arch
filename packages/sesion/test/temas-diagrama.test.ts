@@ -64,14 +64,14 @@ describe('seam sesion: cascada por Tipo de diagrama', () => {
     const dsl = trabajo('    diagram sequense { layer relleno { color verde } }');
     const issues = await abrirSesion(dsl).diagnosticar();
 
-    const issue = issues.find((i) => i.code === 'E_THEME_UNKNOWN_DIAGRAM_TYPE');
+    const issue = issues.find((i) => i.code === 'theme-unknown-diagram-type');
     expect(issue?.fix?.replacement).toBe('sequence');
   });
 
   it('un valor invalido dentro de diagram es un issue de Tema', async () => {
     const issues = await abrirSesion(trabajo('    diagram flow { layer relleno { color noexiste } }')).diagnosticar();
 
-    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
+    expect(issues.map((i) => i.code)).toEqual(['unknown-palette-color']);
   });
 
   it('en group y edge tambien: el Grupo cambia su padding y la Arista su marcador', () => {

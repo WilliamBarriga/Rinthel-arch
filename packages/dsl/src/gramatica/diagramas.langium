@@ -48,10 +48,10 @@ Model:
   '}'
 ;
 
-// `interaction <id> ["Titulo"] ["Descripcion"] { mensajes }`. Su id vive en un espacio de nombres propio;
-// `interaction` sigue valiendo como id de Nodo.
+// `interaction <id> ["Titulo"] ["Descripcion"] [planned] { mensajes }`. Su id vive en un espacio de nombres propio;
+// `interaction` sigue valiendo como id de Nodo. `planned` (ADR 0011) marca todos sus Mensajes.
 Interaction:
-  'interaction' name=Id (title=String (description=String)?)? '{'
+  'interaction' name=Id (title=String (description=String)?)? (planned?='planned')? '{'
     items+=InteractionItem*
   '}'
 ;
@@ -71,7 +71,7 @@ InteractionRef:
 
 // `opt|loop|break|critical ["guarda"] { }`, `alt ["guarda"] { } else ["guarda"] { }`, `par { } and { }`.
 // El parser acepta cualquier operador con `else`/`and` en cualquier cantidad; `canonico` emite
-// `E_INVALID_FRAGMENT_OPERAND`, no `E_SYNTAX_ERROR`.
+// `invalid-fragment-operand`, no `syntax-error`.
 Fragment:
   operator=('opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par') operands+=FirstOperand operands+=NextOperand*
 ;
@@ -92,9 +92,10 @@ Message:
 
 // `<origen> ["card"] -> ["card"] <destino> ["etiqueta"]`; los extremos son ids cualificados.
 // Los espacios alrededor de `->` son obligatorios: `-` es valido dentro de un Id.
-// ER: la palabra final `identifying` marca la relacion como identificante.
+// ER: la palabra final `identifying` marca la relacion como identificante; `planned` (ADR 0011, tras `identifying`),
+// como propuesta.
 Edge:
-  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint (label=String)? (identifying?='identifying')?
+  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint (label=String)? (identifying?='identifying')? (planned?='planned')?
 ;
 
 // Nodo por id cualificado (`a.b.c`) y, opcional, uno de sus Atributos (`a.b#col`).
@@ -115,7 +116,7 @@ Extend:
 
 // Theme -------------------------------------
 
-// `theme <nombre> [extends <padre>] { palette { azul "#00f" } fonts { ... } tokens { ... } }`
+// `theme <nombre> [extends <padre>] { palette { blue "#00f" } fonts { ... } tokens { ... } }`
 // Un solo padre; el hex solo vive aqui.
 Theme:
   'theme' name=Id ('extends' parent=Id)? '{'
@@ -145,7 +146,7 @@ EntryValue returns string:
 Num returns string:
   DIGITS ('.' DIGITS)?;
 
-// `node { layer fondo solid { color azul }  slots { title attrs }  type servicio { ... }  state hover { ... } }`
+// `node { layer background solid { color blue }  slots { title attrs }  type servicio { ... }  state hover { ... } }`
 // Capas de abajo hacia arriba, Slots en orden y parches por Tipo de nodo (`type`) y por estado (`state`).
 ThemeNode:
   'node' '{' items+=NodeItem* '}';
@@ -177,7 +178,7 @@ ThemeType:
   'type' name=Id '{' items+=PatchItem* '}';
 
 // Los parches de estado no pueden tocar las Metricas; `slots` se acepta aqui solo para
-// que el catalogo lo rechace con un error claro (E_THEME_STATE_TOUCHES_METRICS).
+// que el catalogo lo rechace con un error claro (theme-state-touches-metrics).
 ThemeState:
   'state' name=Id '{' items+=StateItem* '}';
 
@@ -200,7 +201,7 @@ ThemeUse:
 ThemeLayer:
   'layer' name=Id (remove?='none' | (primitive=IdTerminal)? (placement=('before' | 'after') target=Id)? (over?='over')? ('{' (animations+=LayerAnimation | props+=LayerProp)* '}')?);
 
-// En una Capa: `motion pulso 1.2s ease-in-out intensity 0.4`, `motion none` (quita el heredado) o
+// En una Capa: `motion pulse 1.2s ease-in-out intensity 0.4`, `motion none` (quita el heredado) o
 // `keyframes opacity 2s { 0 1  50 0.4  100 1 }`. En `node`: `transition`, `enter`, `exit`, `stagger`;
 // `transition` tambien en un `state`. Los parametros son palabras cerradas (no colisionan con las propiedades).
 LayerAnimation:
@@ -271,13 +272,13 @@ SlotBox:
 SlotEntry:
   name=Id ('{' props+=LayerProp* '}')?;
 
-// `edge { layer glow line { color ORIGEN/0.3 width 6 }  start dot  end arrow { size 10 }  label { pad 6 fill paper } }`
+// `edge { layer glow line { color ORIGIN/0.3 width 6 }  start dot  end arrow { size 10 }  label { pad 6 fill paper } }`
 // Pila de trazos, marcadores de extremo y etiqueta con modelo de caja.
 ThemeEdge:
   'edge' '{' items+=EdgeItem* '}';
 
 EdgeItem:
-  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel | ThemeDiagram | EdgeIdentifying;
+  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel | ThemeDiagram | EdgeIdentifying | ThemeState;
 
 // `identifying { ... }`: parche del trazo de las Aristas identificantes de una Vista ER.
 EdgeIdentifying:
@@ -290,8 +291,8 @@ ThemeMarker:
 ThemeLabel:
   'label' '{' props+=LayerProp* '}';
 
-// `row { layer fondo solid { color papel }  height 28  alternate { layer fondo { color gris } }  name { weight 600 }
-//   key { fill azul }  key pk { layer fondo { color verde } }  optional { layer fondo { color gris } } }`
+// `row { layer background solid { color paper }  height 28  alternate { layer background { color gray } }  name { weight 600 }
+//   key { fill blue }  key pk { layer background { color green } }  optional { layer background { color gray } } }`
 // Fila de una tabla ER: `alternate` parchea las filas impares; `key pk|fk|uk` y `optional` parchean por marca de
 // clave y por Atributo opcional. Solo pinta, salvo `height`.
 ThemeRow:
@@ -320,7 +321,7 @@ RowState:
 RowText:
   slot=Id '{' props+=LayerProp* '}';
 
-// `message { layer linea line { color tinta }  end arrow { size 9 }  gap 36  kind reply { layer linea { style dashed } } }`
+// `message { layer line line { color ink }  end arrow { size 9 }  gap 36  kind reply { layer line { style dashed } } }`
 // Elementos de secuencia. Parches por variante: `kind <tipo>` en message, `op <operador>` en fragment. Que admite
 // cada uno lo valida el catalogo de `tema`; los nombres de estilo, Metrica y variante se validan al compilar.
 ThemeSequence:
@@ -341,7 +342,7 @@ SequenceMetric:
 SequenceText:
   slot=Id '{' props+=LayerProp* '}';
 
-// `page { layer fondo solid { color paper }  layer puntos dots { color ink/0.1 size 22 }  fixed }`
+// `page { layer background solid { color paper }  layer dots dots { color ink/0.1 size 22 }  fixed }`
 // Fondo de pagina, bajo Grupos, Aristas y Nodos. Sin `fixed` el patron se mueve y escala con el pan/zoom; con `fixed` queda fijo al visor.
 ThemePage:
   'page' '{' items+=PageItem* '}';
@@ -471,12 +472,13 @@ Selector returns string:
 Wildcard returns string:
   '*' | '**';
 
-// `<tipo> <nombre> "titulo" "descripcion" { hijos }`
+// `<tipo> <nombre> "titulo" "descripcion" [planned] { hijos }`; `planned` (ADR 0011) marca tambien a los descendientes.
 Element:
   type=Id name=Id
   (title=String
     (description=String)?
   )?
+  (planned?='planned')?
   ('{'
     (elements+=Element | attrs+=Attrs | attributes+=Attribute | sources+=Source)*
   '}')?
@@ -488,7 +490,7 @@ Attrs:
   'attrs' '{' items+=Attribute* '}'
 ;
 
-// `source { kind "ref" ... }`: referencias opacas; el `ref` siempre es cadena.
+// `source { path "src/api"  spec "prd.md#2" }`: referencias opacas `<tipo> "<ref>"`; el `ref` siempre es cadena.
 Source:
   'source' '{' items+=SourceItem* '}'
 ;
@@ -497,9 +499,10 @@ SourceItem:
   kind=Id ref=String
 ;
 
-// ER: `?` pegado al tipo es `optional`; `pk`, `fk` y `uk` (en cualquier orden) son las marcas de clave.
+// ER: `?` pegado al tipo es `optional`; `pk`, `fk` y `uk` (en cualquier orden) son las marcas de clave y `planned`
+// (ADR 0011), la de propuesta, entre ellas.
 Attribute:
-  name=Id ':' type=Id (optional?='?')? (keys+=KeyMark)* (notes=String)?
+  name=Id ':' type=Id (optional?='?')? (keys+=KeyMark)* (planned?='planned')? (keys+=KeyMark)* (notes=String)?
 ;
 
 KeyMark returns string:
@@ -516,7 +519,7 @@ Id returns string:
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
   'model' | 'node' | 'specification' | 'interaction' | 'autonumber' | 'async' | 'reply' | 'create' | 'destroy' |
   'opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par' | 'else' | 'and' | 'note' | 'left' | 'right' | 'of' | 'ref' |
-  'upto' | 'each' | 'pk' | 'fk' | 'uk' | 'identifying' | 'height' | 'key' | 'optional' | 'alternate' |
+  'upto' | 'each' | 'pk' | 'fk' | 'uk' | 'identifying' | 'planned' | 'height' | 'key' | 'optional' | 'alternate' |
   'lifeline' | 'activation' | 'message' | 'fragment' | 'kind' | 'op';
 
 // -------------------------

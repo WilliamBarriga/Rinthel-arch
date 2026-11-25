@@ -49,7 +49,7 @@ describe('adaptador de compilacion de .tsx', () => {
     const { issues } = compiladorDeCodigo(raiz).compilar();
 
     expect(issues.length).toBeGreaterThan(0);
-    expect(issues[0]).toMatchObject({ code: 'E_THEME_CODE_COMPILE', severity: 'error', file: 'temas/roto.tsx', line: 2 });
+    expect(issues[0]).toMatchObject({ code: 'theme-code-compile', severity: 'error', file: 'temas/roto.tsx', line: 2 });
     expect(issues[0]!.column).toBeGreaterThan(0);
   });
 
@@ -61,7 +61,7 @@ describe('adaptador de compilacion de .tsx', () => {
     escribir(raiz, 'temas/aurora.tsx', 'export function Aurora() { return <i> }\n');
     const roto = compilador.compilar();
 
-    expect(new Set(roto.issues.map((i) => i.code))).toEqual(new Set(['E_THEME_CODE_COMPILE']));
+    expect(new Set(roto.issues.map((i) => i.code))).toEqual(new Set(['theme-code-compile']));
     expect(Object.keys(roto.componentes)).toEqual(['Aurora']);
     const registro = cargarComponentes(roto.bundle);
     expect(renderToStaticMarkup(createElement(registro['Aurora']!, { id: 'x', parametros: { hue: 1 } } as never))).toBe('<i data-aurora="x" data-hue="1"></i>');
@@ -72,7 +72,7 @@ describe('adaptador de compilacion de .tsx', () => {
 
     const { issues } = compiladorDeCodigo(raiz).compilar();
 
-    expect(issues).toEqual([expect.objectContaining({ code: 'E_THEME_COMPONENT_DUPLICATE', file: 'b/aurora.tsx', line: 1 })]);
+    expect(issues).toEqual([expect.objectContaining({ code: 'theme-component-duplicate', file: 'b/aurora.tsx', line: 1 })]);
   });
 
   it('un Workspace sin .tsx o inexistente no tiene componentes ni issues', () => {

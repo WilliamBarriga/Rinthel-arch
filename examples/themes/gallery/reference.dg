@@ -1,0 +1,111 @@
+// Reference Model to compare a Theme against the approved prototype (branch `prototype/render-hibrido`, ticket #46).
+// It copies the prototype Model, with its Node kinds (package, module, artifact, plus actor and external from `model.dg`):
+// monorepo packages with expanded Groups, collapsed Groups, Edges with and without a label and lifted Edges.
+// It lives under the `reference` Group so the coverage Views (`**`) exclude it.
+// The `<theme>-reference` View is equivalent to the prototype `open` View (see `views.dg`).
+specification {
+  node package   { description "Monorepo package"           icon box  color blue }
+  node module    { description "Module inside a package"    icon box  color gray }
+  node artifact { description "File or folder of the Project" icon box  color green }
+}
+
+model {
+  domain reference "Reference" {
+    actor author "Author" "Writes .dg files and looks at the diagrams"
+    actor agent "Agent" "Validates, queries and edits through the CLI"
+
+    artifact workspace "Workspace" "Folder of .dg files of the documented Project"
+    artifact output-derived ".diagrams/" "Derived output; not versioned"
+
+    package canonical "canonical" "Zod schema, validation and View resolution" {
+      module can-schema "schema" "Canonical form (Zod)"
+      module can-validate "validate" "Issues with code and suggestions"
+      module can-views "views" "Resolution of include, exclude and depth"
+      module can-steps "steps" "Step-by-step reveal of flow Views"
+      module can-pin "pin" "Pin: position fixed by the author"
+      module can-inspect "inspect" "Queries over the Model"
+    }
+
+    package dsl "dsl" "Text to Canonical form; Workspace merge" {
+      module dsl-grammar "grammar" "Langium grammar"
+      module dsl-compile "compile" "Files to Canonical form"
+      module dsl-themes "themes" "Themes, palette and tokens"
+      module dsl-locator "locator" "Positions in the source text"
+    }
+
+    package layout "layout" "ELK and Pin; cached geometry" {
+      module lay-layout "layout" "View to geometry"
+      module lay-metrics "metrics" "Text measurement"
+      module lay-index "index" "Geometry index"
+    }
+
+    package session "session" "Compile, validate and layout pipeline" {
+      module ses-session "session" "diagnose, build, geometry"
+      module ses-edits "edits" "Structured editing of the DSL"
+      module ses-intents "intents" "Intents, undo and redo"
+    }
+
+    package render "render" "Pure React SVG" {
+      module ren-scene "scene" "Geometry to elements"
+      module ren-style "style" "Style resolved against the Theme"
+      module ren-diagram "diagram" "Componente Diagram"
+    }
+
+    package shell "shell" "Interaction in the browser" {
+      module sh-camera "camera" "Pan and zoom"
+      module sh-collapse "collapse" "Group collapse"
+      module sh-selection "selection" "Selection and dragging of Pins"
+      module sh-worker "layout-in-worker" "Relayout in a Worker"
+    }
+
+    package cli "cli" "validate, build, export, inspect, edit, dev" {
+      module cli-validate "validate" "Diagnostics"
+      module cli-export "export" "SVG, PNG and HTML"
+      module cli-inspect "inspect" "Ids, locations and neighbors"
+      module cli-edit "edit" "Edits from the terminal"
+      module cli-dev "dev" "Local server with reload"
+    }
+
+    external elk "ELK (elkjs)" "Layout engine"
+    external react "React 19" "SVG drawing"
+  }
+
+  reference.author -> reference.workspace "writes .dg"
+  reference.agent -> reference.cli "validate / inspect / edit"
+  reference.author -> reference.cli.cli-dev "opens the shell"
+  reference.cli -> reference.workspace "reads"
+  reference.cli -> reference.output-derived "writes"
+
+  reference.dsl -> reference.canonical
+  reference.layout -> reference.canonical
+  reference.session -> reference.canonical
+  reference.session -> reference.dsl
+  reference.session -> reference.layout
+  reference.render -> reference.canonical
+  reference.render -> reference.layout
+  reference.shell -> reference.session
+  reference.shell -> reference.render
+  reference.shell -> reference.layout
+  reference.cli -> reference.session
+  reference.cli -> reference.render
+
+  reference.layout.lay-layout -> reference.elk
+  reference.layout.lay-layout -> reference.layout.lay-metrics
+  reference.layout.lay-index -> reference.layout.lay-layout
+  reference.session.ses-session -> reference.dsl.dsl-compile
+  reference.session.ses-session -> reference.canonical.can-validate
+  reference.session.ses-session -> reference.layout.lay-layout "memoizes per View"
+  reference.session.ses-edits -> reference.dsl.dsl-locator
+  reference.session.ses-intents -> reference.session.ses-edits
+  reference.render.ren-diagram -> reference.react
+  reference.render.ren-diagram -> reference.render.ren-scene
+  reference.render.ren-scene -> reference.render.ren-style
+  reference.shell.sh-worker -> reference.layout.lay-layout
+  reference.shell.sh-selection -> reference.session.ses-intents
+  reference.shell.sh-collapse -> reference.canonical.can-views
+  reference.cli.cli-validate -> reference.session.ses-session
+  reference.cli.cli-inspect -> reference.canonical.can-inspect
+  reference.cli.cli-edit -> reference.session.ses-edits
+  reference.cli.cli-dev -> reference.shell
+  reference.cli.cli-export -> reference.render.ren-diagram
+}

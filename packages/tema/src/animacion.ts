@@ -1,7 +1,7 @@
 /** Catalogo de animacion declarativa. Solo se anima lo que no toca las Metricas. */
 import { CODIGOS } from 'canonico';
 
-import { sugerir } from './catalogo';
+import { errorDeValorAntiguo, sugerir } from './catalogo';
 import type { ErrorDeCatalogo } from './catalogo';
 
 export const EASINGS = ['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out'] as const;
@@ -9,15 +9,15 @@ export type Easing = (typeof EASINGS)[number];
 
 /** `intensidad` dice si admiten el parametro. */
 export const MOVIMIENTOS = {
-  flujo: { intensidad: false, easing: 'linear', duracionMs: 2000 },
-  pulso: { intensidad: true, easing: 'ease-in-out', duracionMs: 1200 },
-  respiracion: { intensidad: true, easing: 'ease-in-out', duracionMs: 3000 },
-  giro: { intensidad: false, easing: 'linear', duracionMs: 2000 },
+  stream: { intensidad: false, easing: 'linear', duracionMs: 2000 },
+  pulse: { intensidad: true, easing: 'ease-in-out', duracionMs: 1200 },
+  breathe: { intensidad: true, easing: 'ease-in-out', duracionMs: 3000 },
+  spin: { intensidad: false, easing: 'linear', duracionMs: 2000 },
   aura: { intensidad: true, easing: 'ease-in-out', duracionMs: 2000 },
 } as const satisfies Record<string, { intensidad: boolean; easing: Easing; duracionMs: number }>;
 export type NombreDeMovimiento = keyof typeof MOVIMIENTOS;
 
-export const EFECTOS = ['fundido', 'escala', 'deslizar'] as const;
+export const EFECTOS = ['fade', 'zoom', 'slide'] as const;
 export type NombreDeEfecto = (typeof EFECTOS)[number];
 
 export const PROPIEDADES_ANIMABLES = {
@@ -117,7 +117,7 @@ function leerParametros(
     if (!admitidas.includes(clave)) {
       errores.push({
         codigo: CODIGOS.E_THEME_UNKNOWN_PROPERTY,
-        mensaje: `'${espec.nombre}' no admite '${clave}'; disponibles: ${admitidas.join(', ')}`,
+        mensaje: `'${espec.nombre}' does not support '${clave}'; available: ${admitidas.join(', ')}`,
         clave,
         ...sugerir(clave, admitidas),
       });
@@ -125,29 +125,31 @@ function leerParametros(
       const ms = aNumero(valor);
       const min = clave === 'duration' ? 1 : 0;
       const max = clave === 'duration' ? 60000 : 10000;
-      if (Number.isNaN(ms) || ms < min || ms > max) errores.push(invalido(`'${clave}' de '${espec.nombre}' debe estar entre ${min} y ${max} ms, no '${valor}'`, clave));
+      if (Number.isNaN(ms) || ms < min || ms > max) errores.push(invalido(`'${clave}' of '${espec.nombre}' must be between ${min} and ${max} ms, not '${valor}'`, clave));
       else if (clave === 'duration') tiempo.duracionMs = ms;
       else tiempo.retardoMs = ms;
     } else if (clave === 'easing') {
       if ((EASINGS as readonly string[]).includes(String(valor))) tiempo.easing = valor as Easing;
-      else errores.push({ ...invalido(`Easing '${valor}' desconocido; disponibles: ${EASINGS.join(', ')}`, clave), ...sugerir(String(valor), EASINGS) });
+      else errores.push({ ...invalido(`Unknown easing '${valor}'; available: ${EASINGS.join(', ')}`, clave), ...sugerir(String(valor), EASINGS) });
     } else if (clave === 'intensity') {
       const n = aNumero(valor);
-      if (Number.isNaN(n) || n < 0 || n > 1) errores.push(invalido(`'intensity' de '${espec.nombre}' debe ser un numero entre 0 y 1, no '${valor}'`, clave));
+      if (Number.isNaN(n) || n < 0 || n > 1) errores.push(invalido(`'intensity' of '${espec.nombre}' must be a number between 0 and 1, not '${valor}'`, clave));
       else intensidad = n;
     } else if ((espec.reducidos as readonly string[]).includes(String(valor))) reducido = valor as Reducido;
-    else errores.push(invalido(`'reduced' de '${espec.nombre}' solo admite ${espec.reducidos.join(' o ')}, no '${valor}'`, clave));
+    else errores.push(invalido(`'reduced' of '${espec.nombre}' only accepts ${espec.reducidos.join(' or ')}, not '${valor}'`, clave));
   }
   return { tiempo, intensidad, reducido, errores };
 }
 
 export function construirMovimiento(nombre: string, params: readonly ParametroDeAnimacion[]): Resultado<Movimiento> {
   if (!Object.hasOwn(MOVIMIENTOS, nombre)) {
+    const antiguo = errorDeValorAntiguo('motion', nombre);
+    if (antiguo !== undefined) return { errores: [antiguo] };
     return {
       errores: [
         {
           codigo: CODIGOS.E_THEME_UNKNOWN_MOTION,
-          mensaje: `Movimiento '${nombre}' desconocido; disponibles: ${Object.keys(MOVIMIENTOS).join(', ')}`,
+          mensaje: `Unknown Motion '${nombre}'; available: ${Object.keys(MOVIMIENTOS).join(', ')}`,
           ...sugerir(nombre, Object.keys(MOVIMIENTOS)),
         },
       ],
@@ -171,7 +173,7 @@ export function construirKeyframes(propiedad: string, params: readonly Parametro
       errores: [
         {
           codigo: CODIGOS.E_THEME_UNKNOWN_MOTION,
-          mensaje: `Propiedad animable '${propiedad}' desconocida; solo se anima lo que no toca las Metricas: ${Object.keys(PROPIEDADES_ANIMABLES).join(', ')}`,
+          mensaje: `Unknown animatable property '${propiedad}'; only what does not touch the Metrics can be animated: ${Object.keys(PROPIEDADES_ANIMABLES).join(', ')}`,
           ...sugerir(propiedad, Object.keys(PROPIEDADES_ANIMABLES)),
         },
       ],
@@ -179,13 +181,13 @@ export function construirKeyframes(propiedad: string, params: readonly Parametro
   }
   const rango = PROPIEDADES_ANIMABLES[propiedad as PropiedadAnimable];
   const { tiempo, errores } = leerParametros({ nombre: 'keyframes', duracionMs: 1000, easing: 'ease-in-out', intensidad: false, reducidos: ['still'], conRetardo: true }, params);
-  if (pasos.length < 2) errores.push(invalido(`'keyframes ${propiedad}' necesita al menos dos pasos`, 'pasos'));
+  if (pasos.length < 2) errores.push(invalido(`'keyframes ${propiedad}' needs at least two steps`, 'pasos'));
   pasos.forEach((paso, i) => {
     if (paso.en < 0 || paso.en > 100 || (i > 0 && paso.en <= (pasos[i - 1] as PasoDeKeyframes).en)) {
-      errores.push(invalido(`El paso ${paso.en} de 'keyframes ${propiedad}' debe estar entre 0 y 100 y crecer respecto del anterior`, 'pasos'));
+      errores.push(invalido(`Step ${paso.en} of 'keyframes ${propiedad}' must be between 0 and 100 and increase over the previous one`, 'pasos'));
     }
     if (paso.valor < rango.min || paso.valor > rango.max) {
-      errores.push(invalido(`El valor ${paso.valor} de '${propiedad}' debe estar entre ${rango.min} y ${rango.max}`, 'pasos'));
+      errores.push(invalido(`Value ${paso.valor} of '${propiedad}' must be between ${rango.min} and ${rango.max}`, 'pasos'));
     }
   });
   if (errores.length > 0) return { errores };
@@ -200,11 +202,13 @@ export function construirTransicion(params: readonly ParametroDeAnimacion[]): Re
 
 export function construirEfecto(nombre: string, params: readonly ParametroDeAnimacion[]): Resultado<Efecto> {
   if (!(EFECTOS as readonly string[]).includes(nombre)) {
+    const antiguo = errorDeValorAntiguo('effect', nombre);
+    if (antiguo !== undefined) return { errores: [antiguo] };
     return {
       errores: [
         {
           codigo: CODIGOS.E_THEME_UNKNOWN_MOTION,
-          mensaje: `Efecto '${nombre}' desconocido; disponibles: ${EFECTOS.join(', ')}`,
+          mensaje: `Unknown effect '${nombre}'; available: ${EFECTOS.join(', ')}`,
           ...sugerir(nombre, EFECTOS),
         },
       ],
@@ -217,5 +221,5 @@ export function construirEfecto(nombre: string, params: readonly ParametroDeAnim
 
 /** `stagger` en ms. */
 export function construirEscalonado(ms: number): Resultado<number> {
-  return ms >= 0 && ms <= 2000 ? { animacion: ms, errores: [] } : { errores: [invalido(`'stagger' debe estar entre 0 y 2000 ms, no '${ms}'`, 'duration')] };
+  return ms >= 0 && ms <= 2000 ? { animacion: ms, errores: [] } : { errores: [invalido(`'stagger' must be between 0 and 2000 ms, not '${ms}'`, 'duration')] };
 }

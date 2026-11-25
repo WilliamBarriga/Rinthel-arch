@@ -17,14 +17,14 @@ ${extra}}
 `;
 
 const intencion = (_texto: string, x = 5, y = -7) => ({
-  tipo: 'mover-pin' as const,
-  vista: 'v',
-  nodo: 'a',
+  type: 'move-pin' as const,
+  view: 'v',
+  node: 'a',
   x,
   y,
 });
 
-describe('Intencion mover-pin', () => {
+describe('Intencion move-pin', () => {
   it('inserta un override nuevo sin tocar el resto del archivo', async () => {
     const texto = base('');
     const r = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto));
@@ -40,7 +40,7 @@ describe('Intencion mover-pin', () => {
   it('anade el pin a un override existente sin pin', () => {
     const texto = base('  node a { label "A" }\n');
     const r = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto));
-    if (!r.ok) throw new Error(r.mensaje);
+    if (!r.ok) throw new Error(r.message);
 
     expect(r.archivos['main.dg']).toBe(base('  node a { label "A" pin 5,-7 }\n'));
   });
@@ -48,7 +48,7 @@ describe('Intencion mover-pin', () => {
   it('anade el pin a un override vacio', () => {
     const texto = base('  node a {}\n');
     const r = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto));
-    if (!r.ok) throw new Error(r.mensaje);
+    if (!r.ok) throw new Error(r.message);
 
     expect(r.archivos['main.dg']).toBe(base('  node a { pin 5,-7 }\n'));
   });
@@ -56,7 +56,7 @@ describe('Intencion mover-pin', () => {
   it('reemplaza un pin existente y la Sesion resultante lo refleja sin issues nuevos', async () => {
     const texto = base('  node a { label "A" pin 1,2 }\n  node b { pin 100,100 }\n');
     const r = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto));
-    if (!r.ok) throw new Error(r.mensaje);
+    if (!r.ok) throw new Error(r.message);
 
     expect(r.archivos['main.dg']).toBe(base('  node a { label "A" pin 5,-7 }\n  node b { pin 100,100 }\n'));
     const sesion = abrirSesion(r.archivos);
@@ -69,13 +69,13 @@ describe('Intencion mover-pin', () => {
 
     const r = aplicarEnMemoria({ 'main.dg': texto }, intencion(texto), { 'main.dg': hashDeContenido('otra cosa') });
 
-    expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado' });
+    expect(r).toMatchObject({ ok: false, reason: 'stale-hash' });
   });
 
   it('vista o nodo inexistente se rechazan', () => {
     const texto = base('');
-    expect(aplicarEnMemoria({ 'main.dg': texto }, { ...intencion(texto), vista: 'nada' })).toMatchObject({ ok: false, motivo: 'vista-desconocida' });
-    expect(aplicarEnMemoria({ 'main.dg': texto }, { ...intencion(texto), nodo: 'nada' })).toMatchObject({ ok: false, motivo: 'invalida' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, { ...intencion(texto), view: 'nada' })).toMatchObject({ ok: false, reason: 'unknown-view' });
+    expect(aplicarEnMemoria({ 'main.dg': texto }, { ...intencion(texto), node: 'nada' })).toMatchObject({ ok: false, reason: 'invalid' });
   });
 
   it('lleva el limite de coordenadas a la salida: redondea x e y a enteros y los limita a un rango razonable', () => {
@@ -131,7 +131,7 @@ describe('puerta de escritura con ediciones estructuradas', () => {
         { file: 'b.dg', range: rango, replacement: 'z', hash: 'viejo' },
       ],
     );
-    expect(r).toMatchObject({ ok: false, motivo: 'hash-desactualizado', file: 'b.dg' });
+    expect(r).toMatchObject({ ok: false, reason: 'stale-hash', file: 'b.dg' });
   });
 
   it('rechaza una edicion que introduce errores', () => {
@@ -141,7 +141,7 @@ describe('puerta de escritura con ediciones estructuradas', () => {
       { 'main.dg': texto },
       [{ file: 'main.dg', range: { start: punto, end: punto }, replacement: '}}}', hash: hashDeContenido(texto) }],
     );
-    expect(r).toMatchObject({ ok: false, motivo: 'invalida' });
+    expect(r).toMatchObject({ ok: false, reason: 'invalid' });
   });
 
   it('un error preexistente que cambia de mensaje no bloquea una edicion ajena', () => {
@@ -172,6 +172,6 @@ view v {
     const r = escribirEdiciones({ 'main.dg': roto }, [
       { file: 'main.dg', range: { start: { line: 2, column: 42 }, end: { line: 2, column: 42 } }, replacement: ' b -> fantasma', hash },
     ]);
-    expect(r).toMatchObject({ ok: false, motivo: 'invalida' });
+    expect(r).toMatchObject({ ok: false, reason: 'invalid' });
   });
 });

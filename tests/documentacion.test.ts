@@ -9,6 +9,7 @@ import {
   SECCIONES_README,
   revisarEnlacesDeAgents,
   revisarIndiceDeAdrs,
+  revisarParesDeGuias,
   revisarReadmes,
 } from '../scripts/check-docs';
 
@@ -189,5 +190,62 @@ describe('revisarEnlacesDeAgents', () => {
 
   it('el AGENTS.md de este repo enlaza ambos indices y existen', () => {
     expect(revisarEnlacesDeAgents(raizDelRepo)).toEqual([]);
+  });
+});
+
+describe('revisarParesDeGuias', () => {
+  const en = '[Leer en espanol](../guia/a.md)\n\n# A\n\n## One\n\n```dg\nmodel {}\n```\n\n## Two\n';
+  const es = '[Read in English](../guide/a.md)\n\n# A\n\n## Uno\n\n```dg\nmodel {}\n```\n\n## Dos\n';
+
+  it('accepts a pair that links both ways with equal headings and code', () => {
+    const raiz = crearRepo({ 'docs/guide/a.md': en, 'docs/guia/a.md': es });
+
+    expect(revisarParesDeGuias(raiz)).toEqual([]);
+  });
+
+  it('fails when a guide lacks its pair', () => {
+    const raiz = crearRepo({ 'docs/guide/a.md': en });
+
+    expect(revisarParesDeGuias(raiz)).toContainEqual(expect.objectContaining({ archivo: 'docs/guide/a.md', regla: 'par' }));
+  });
+
+  it('fails when the Spanish guide has no English source', () => {
+    const raiz = crearRepo({ 'docs/guia/a.md': es });
+
+    expect(revisarParesDeGuias(raiz)).toContainEqual(expect.objectContaining({ archivo: 'docs/guia/a.md', regla: 'par' }));
+  });
+
+  it('fails when the first line does not link to the pair', () => {
+    const raiz = crearRepo({ 'docs/guide/a.md': en.replace('../guia/a.md', '../guia/b.md'), 'docs/guia/a.md': es });
+
+    expect(revisarParesDeGuias(raiz)).toContainEqual(expect.objectContaining({ archivo: 'docs/guide/a.md', regla: 'enlace' }));
+  });
+
+  it('fails when the number of ## headings differs', () => {
+    const raiz = crearRepo({ 'docs/guide/a.md': en, 'docs/guia/a.md': es.replace('\n## Dos\n', '') });
+
+    expect(revisarParesDeGuias(raiz)).toContainEqual(expect.objectContaining({ regla: 'encabezados' }));
+  });
+
+  it('does not count a ## line inside a code block as a heading', () => {
+    const raiz = crearRepo({ 'docs/guide/a.md': en.replace('model {}', '## not a heading'), 'docs/guia/a.md': es.replace('model {}', '## not a heading') });
+
+    expect(revisarParesDeGuias(raiz)).toEqual([]);
+  });
+
+  it('fails when a code block differs', () => {
+    const raiz = crearRepo({ 'docs/guide/a.md': en, 'docs/guia/a.md': es.replace('model {}', 'model { x }') });
+
+    expect(revisarParesDeGuias(raiz)).toContainEqual(expect.objectContaining({ regla: 'codigo' }));
+  });
+
+  it('fails when the number of code blocks differs', () => {
+    const raiz = crearRepo({ 'docs/guide/a.md': en, 'docs/guia/a.md': es.replace(/```dg[\s\S]*?```\n/, '') });
+
+    expect(revisarParesDeGuias(raiz)).toContainEqual(expect.objectContaining({ regla: 'codigo' }));
+  });
+
+  it('the guides of this repo are paired', () => {
+    expect(revisarParesDeGuias(raizDelRepo)).toEqual([]);
   });
 });

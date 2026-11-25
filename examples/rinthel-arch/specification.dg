@@ -1,0 +1,25 @@
+// Node kinds of this repo's map, regenerated from `diagrams scan` (skill rinthel-diagramas, "Import from code").
+specification {
+  node actor    { description "Person or agent that uses the system"       icon user     color purple }
+  node package  { description "pnpm package of the monorepo"               icon box      color blue }
+  node app      { description "A runnable app: the CLI and its servers"      icon server   color green }
+  node artifact { description "A file or bundle that the build produces"   icon box      color green }
+  node module   { description "A folder of code inside a package"          icon box      color gray }
+  node table    { description "A database table"                           icon database color amber }
+  node external { description "A third-party dependency"                   icon cloud    color red }
+}
+
+// Themes of the map: the card of the built-ins (neutral-dark and neutral) with the Workspace fonts and
+// two patches per Node kind (ADR 0008): the package gets a bar of its color on the left and the external one, a dashed border.
+theme diagrams extends neutral-dark {
+  fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono"  fallback "sans-serif" }
+  node { type package { use bar-package }  type external { use border-dashed } }
+}
+
+theme diagrams-light extends neutral {
+  fonts { body "DejaVu Sans"  mono "DejaVu Sans Mono"  fallback "sans-serif" }
+  node { type package { use bar-package }  type external { use border-dashed } }
+}
+
+part bar-package { layer accent shadow after border { color COLOR  x 3  y 0  inset 1 } }
+part border-dashed { layer fill { color background }  layer border dashed { color frame } }

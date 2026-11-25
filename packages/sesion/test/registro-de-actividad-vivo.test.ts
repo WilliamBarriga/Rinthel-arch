@@ -48,7 +48,7 @@ describe('Registro de actividad vivo', () => {
     const puerto = puertoEnMemoria({ propios: { 'main.dg': MAIN } });
     const { ws, reloj, empujados } = await abrir(puerto);
 
-    puerto.anexarActividad(lineas(evento(1, { comando: 'edit', objetivo: { vista: 'v' } })));
+    puerto.anexarActividad(lineas(evento(1, { command: 'edit', target: { view: 'v' } })));
     puerto.anexarActividad('{esto no es json\n');
     reloj.avanzar(50);
     puerto.anexarActividad(lineas(evento(2)));
@@ -56,7 +56,7 @@ describe('Registro de actividad vivo', () => {
     expect(empujados).toEqual([]);
     reloj.avanzar(1);
 
-    expect(empujados).toEqual([{ previos: false, eventos: [evento(1, { comando: 'edit', objetivo: { vista: 'v' } }), evento(2)] }]);
+    expect(empujados).toEqual([{ previos: false, eventos: [evento(1, { command: 'edit', target: { view: 'v' } }), evento(2)] }]);
     expect(previos(ws)).toEqual([1, 2]);
   });
 

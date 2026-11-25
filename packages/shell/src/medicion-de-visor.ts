@@ -20,7 +20,7 @@ export function hashesDeFamilias(fonts: Readonly<Record<string, string>>, archiv
 }
 
 /**
- * Aviso (`W_THEME_FONT_NOT_SERVED`) de las familias no genericas que el Tema declara y el visor no puede pedir
+ * Aviso (`theme-font-not-served`) de las familias no genericas que el Tema declara y el visor no puede pedir
  * por falta de `fontUrl`; vacio si todas son genericas. Es un issue de visor: su `file` es el Tema, sin enlace al editor.
  */
 export function avisoDeFuentesSinServir(fonts: Readonly<Record<string, string>>): IssueDelVisor[] {
@@ -33,7 +33,7 @@ export function avisoDeFuentesSinServir(fonts: Readonly<Record<string, string>>)
       file: '(visor)',
       line: 1,
       column: 1,
-      message: `El visor no recibe fontUrl: ${familias.join(', ')} se mide y se pinta con la reserva; entrega fontUrl y fontFiles para usar la fuente declarada`,
+      message: `The viewer received no fontUrl: ${familias.join(', ')} is measured and painted with the fallback; provide fontUrl and fontFiles to use the declared font`,
       href: '#',
     },
   ];
@@ -50,7 +50,7 @@ export interface OpcionesDeMedicion {
 
 function anchoConLienzo(): (fuente: string, texto: string) => number {
   const contexto = document.createElement('canvas').getContext('2d');
-  if (contexto === null) throw new Error('El navegador no ofrece un lienzo 2D para medir texto');
+  if (contexto === null) throw new Error('The browser offers no 2D canvas to measure text');
   return (fuente, texto) => {
     contexto.font = fuente;
     return contexto.measureText(texto).width;

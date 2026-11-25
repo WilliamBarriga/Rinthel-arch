@@ -127,12 +127,12 @@ describe('Diagram: parches de Tipo y de estado pintados igual en Nodos y Grupos'
   it('un estado cambia solo lo que cambia y devuelve su valor inicial a lo que quita', async () => {
     const t = tema({
       capas: [capa('forma', 'rect', { radius: 3 }), capa('relleno', 'solid', { color: 'amber' }), capa('sombra', 'shadow', { x: 0, y: 2, blur: 4, spread: 0, inset: 0, color: 'gray' })],
-      estados: { hover: [op('sombra', { y: 8 })], atenuado: [{ nombre: 'sombra', props: {}, quitar: true }] },
+      estados: { hover: [op('sombra', { y: 8 })], dimmed: [{ nombre: 'sombra', props: {}, quitar: true }] },
     });
     const { css } = await dibujar(t);
 
     expect(regla(css, '.rd-nodo[data-estados~="hover"]')).toBe('box-shadow:0px 8px 4px 0px #6b7280');
-    expect(regla(css, '.rd-nodo[data-estados~="atenuado"]')).toBe('box-shadow:initial');
+    expect(regla(css, '.rd-nodo[data-estados~="dimmed"]')).toBe('box-shadow:initial');
   });
 
   it('COLOR es la variable del color del Nodo, con y sin alfa, en una hoja que sirve a todos los colores', async () => {

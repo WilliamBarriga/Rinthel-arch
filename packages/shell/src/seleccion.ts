@@ -18,7 +18,7 @@ export function conEstadosTransitorios(base: Estados, hover: string | undefined,
   if (hover === undefined && fantasma === undefined) return base;
   const unido: Record<string, readonly EstadoVisual[]> = { ...base };
   if (hover !== undefined) unido[hover] = [...(unido[hover] ?? []), 'hover'];
-  if (fantasma !== undefined) unido[fantasma] = [...(unido[fantasma] ?? []), 'fantasma'];
+  if (fantasma !== undefined) unido[fantasma] = [...(unido[fantasma] ?? []), 'ghost'];
   return unido;
 }
 
@@ -35,8 +35,8 @@ export function useSeleccion(
     return elemento === undefined ? SELECCION_VACIA : [elemento];
   }, [selection, selected, propia, vista]);
   const estados = useMemo<Estados>(() => {
-    const porId: Record<string, ['seleccionado']> = {};
-    for (const elemento of seleccion) porId[elemento.id] = ['seleccionado'];
+    const porId: Record<string, ['selected']> = {};
+    for (const elemento of seleccion) porId[elemento.id] = ['selected'];
     return porId;
   }, [seleccion]);
   const pulsar = (elemento: ElementoSeleccionable, acumula: boolean): { seleccionado: boolean; seleccion: Seleccion } => {

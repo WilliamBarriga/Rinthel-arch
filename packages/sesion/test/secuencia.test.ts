@@ -113,63 +113,63 @@ describe('seam sesion: validacion de secuencia', () => {
   const issues = async (texto: string) => abrirSesion({ 'main.dg': texto }).diagnosticar();
   const codigos = async (texto: string) => (await issues(texto)).map((i) => i.code);
 
-  it('E_SEQUENCE_WITHOUT_INTERACTION con hint de las Interacciones existentes', async () => {
+  it('sequence-without-interaction con hint de las Interacciones existentes', async () => {
     const res = await issues(modelo(escenario) + 'view v { type sequence }\n');
-    expect(res.map((i) => i.code)).toEqual(['E_SEQUENCE_WITHOUT_INTERACTION']);
+    expect(res.map((i) => i.code)).toEqual(['sequence-without-interaction']);
     expect(res[0]!.hint).toContain('checkout');
   });
 
-  it('E_UNKNOWN_INTERACTION en la Vista, con fix por typo', async () => {
+  it('unknown-interaction en la Vista, con fix por typo', async () => {
     const texto = modelo(escenario) + 'view v { type sequence\n interaction chekout }\n';
     const res = await issues(texto);
-    expect(res.map((i) => i.code)).toEqual(['E_UNKNOWN_INTERACTION']);
+    expect(res.map((i) => i.code)).toEqual(['unknown-interaction']);
     expect(res[0]!.fix?.replacement).toBe('checkout');
     expect(res[0]).toMatchObject({ file: 'main.dg', line: texto.split('\n').findIndex((l) => l.includes('chekout')) + 1 });
   });
 
-  it('E_DUPLICATE_INTERACTION con related al original', async () => {
+  it('duplicate-interaction con related al original', async () => {
     const res = await issues(modelo(`${escenario}\n  interaction checkout { cliente -> api }`) + vista);
-    expect(res.map((i) => i.code)).toEqual(['E_DUPLICATE_INTERACTION']);
+    expect(res.map((i) => i.code)).toEqual(['duplicate-interaction']);
     expect(res[0]!.related).toHaveLength(1);
     expect(res[0]!.line).toBeGreaterThan(res[0]!.related![0]!.line);
   });
 
-  it('E_UNKNOWN_LIFELINE en un extremo y en `order`, con fix por typo y nunca E_SYNTAX_ERROR', async () => {
+  it('unknown-lifeline en un extremo y en `order`, con fix por typo y nunca syntax-error', async () => {
     const enMensaje = await issues(modelo('  interaction checkout { cliente -> apii }') + vista);
-    expect(enMensaje.map((i) => i.code)).toEqual(['E_UNKNOWN_LIFELINE']);
+    expect(enMensaje.map((i) => i.code)).toEqual(['unknown-lifeline']);
     expect(enMensaje[0]!.fix?.replacement).toBe('api');
     const enOrder = await issues(modelo(escenario) + 'view v { type sequence\n interaction checkout\n order cliente, dbb }\n');
-    expect(enOrder.map((i) => i.code)).toEqual(['E_UNKNOWN_LIFELINE']);
+    expect(enOrder.map((i) => i.code)).toEqual(['unknown-lifeline']);
     expect(enOrder[0]!.fix?.replacement).toBe('db');
   });
 
-  it('E_DUPLICATE_MESSAGE_ID con related', async () => {
+  it('duplicate-message-id con related', async () => {
     const res = await issues(modelo('  interaction checkout {\n a: cliente -> api\n a: api -> db\n }') + vista);
-    expect(res.map((i) => i.code)).toEqual(['E_DUPLICATE_MESSAGE_ID']);
+    expect(res.map((i) => i.code)).toEqual(['duplicate-message-id']);
     expect(res[0]!.related).toHaveLength(1);
   });
 
-  it('E_VIEW_PROPERTY_FOR_TYPE: include y pin en secuencia; interaction y order fuera', async () => {
+  it('view-property-for-type: include y pin en secuencia; interaction y order fuera', async () => {
     const enSecuencia = await issues(modelo(escenario) + 'view v { type sequence\n interaction checkout\n include **\n node api { pin 10, 10 } }\n');
-    expect(enSecuencia.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE', 'E_VIEW_PROPERTY_FOR_TYPE']);
+    expect(enSecuencia.map((i) => i.code)).toEqual(['view-property-for-type', 'view-property-for-type']);
     expect(enSecuencia.every((i) => i.hint !== undefined)).toBe(true);
     const fuera = await issues(modelo(escenario) + 'view v { type architecture\n include **\n interaction checkout\n order api }\n');
-    expect(fuera.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE', 'E_VIEW_PROPERTY_FOR_TYPE']);
+    expect(fuera.map((i) => i.code)).toEqual(['view-property-for-type', 'view-property-for-type']);
   });
 
-  it('expanded en una Vista de secuencia es E_VIEW_PROPERTY_FOR_TYPE con ayuda', async () => {
+  it('expanded en una Vista de secuencia es view-property-for-type con ayuda', async () => {
     const texto = modelo(escenario.replace(/\bapi\b/g, 'equipo.api'), '  servicio cliente\n  servicio equipo {\n  servicio api\n  }\n  servicio db\n  servicio cola');
     const res = await issues(texto + 'view v { type sequence\n interaction checkout\n expanded equipo }\n');
-    expect(res.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
+    expect(res.map((i) => i.code)).toEqual(['view-property-for-type']);
     expect(res[0]!.hint).toBeDefined();
   });
 
-  it('expanded sobre un Nodo que no es Grupo, o con link, en secuencia solo da E_VIEW_PROPERTY_FOR_TYPE', async () => {
+  it('expanded sobre un Nodo que no es Grupo, o con link, en secuencia solo da view-property-for-type', async () => {
     const texto = modelo(escenario.replace(/\bapi\b/g, 'equipo.api'), '  servicio cliente\n  servicio equipo {\n  servicio api\n  }\n  servicio db\n  servicio cola');
     const noGrupo = await issues(texto + 'view v { type sequence\n interaction checkout\n expanded db }\n');
-    expect(noGrupo.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
+    expect(noGrupo.map((i) => i.code)).toEqual(['view-property-for-type']);
     const conLink = await issues(texto + 'view w { type architecture\n include ** }\nview v { type sequence\n interaction checkout\n expanded equipo\n link equipo -> w }\n');
-    expect(conLink.map((i) => i.code)).toEqual(['E_VIEW_PROPERTY_FOR_TYPE']);
+    expect(conLink.map((i) => i.code)).toEqual(['view-property-for-type']);
   });
 
   it('la Geometria de secuencia no trae cajas al pie de las Lifelines', async () => {
@@ -177,28 +177,28 @@ describe('seam sesion: validacion de secuencia', () => {
     expect('footers' in g).toBe(false);
   });
 
-  it('E_LINK_NOT_LIFELINE: link desde un Mensaje o un Nodo que no es Lifeline; desde una Lifeline vale', async () => {
+  it('link-not-lifeline: link desde un Mensaje o un Nodo que no es Lifeline; desde una Lifeline vale', async () => {
     const otra = 'view otra { type architecture\n include ** }\n';
     const base = modelo(escenario) + otra;
     const deLifeline = await issues(base + 'view v { type sequence\n interaction checkout\n link api -> otra }\n');
     expect(deLifeline).toEqual([]);
     const deMensaje = await issues(base + 'view v { type sequence\n interaction checkout\n link pedido -> otra }\n');
-    expect(deMensaje.map((i) => i.code)).toEqual(['E_LINK_NOT_LIFELINE']);
+    expect(deMensaje.map((i) => i.code)).toEqual(['link-not-lifeline']);
     const deNodoAjeno = await issues(modelo('  interaction checkout { cliente -> api }') + otra + 'view v { type sequence\n interaction checkout\n link db -> otra }\n');
-    expect(deNodoAjeno.map((i) => i.code)).toEqual(['E_LINK_NOT_LIFELINE']);
+    expect(deNodoAjeno.map((i) => i.code)).toEqual(['link-not-lifeline']);
     expect(deNodoAjeno[0]!.severity).toBe('error');
     // En arquitectura el mismo link no se toca.
     expect(await issues(base + 'view w { type architecture\n include **\n link api -> otra }\n')).toEqual([]);
   });
 
-  it('W_ORDER_NOT_IN_INTERACTION (aviso, se ignora) y W_REPLY_WITHOUT_SYNC', async () => {
+  it('order-not-in-interaction (aviso, se ignora) y reply-without-sync', async () => {
     const orden = await issues(modelo('  interaction checkout { cliente -> api }') + 'view v { type sequence\n interaction checkout\n order cola, api }\n');
-    expect(orden.map((i) => [i.code, i.severity])).toEqual([['W_ORDER_NOT_IN_INTERACTION', 'warning']]);
+    expect(orden.map((i) => [i.code, i.severity])).toEqual([['order-not-in-interaction', 'warning']]);
     const g = await geometriaDe(modelo('  interaction checkout { cliente -> api }') + 'view v { type sequence\n interaction checkout\n order cola, api }\n');
     expect(Object.keys(g.lifelines)).toEqual(['api', 'cliente']);
 
     const respuesta = await issues(modelo('  interaction checkout { reply api -> cliente }') + vista);
-    expect(respuesta.map((i) => [i.code, i.severity])).toEqual([['W_REPLY_WITHOUT_SYNC', 'warning']]);
+    expect(respuesta.map((i) => [i.code, i.severity])).toEqual([['reply-without-sync', 'warning']]);
   });
 
   it('un Mensaje sin Arista entre sus Nodos es valido', async () => {
@@ -238,18 +238,18 @@ describe('seam sesion: create y destroy', () => {
     expect(g.messages['3']!.points.at(-1)!.x).toBe(g.lifelines['db']!.x);
   });
 
-  it('E_CREATE_NOT_FIRST con related a la primera aparicion', async () => {
+  it('create-not-first con related a la primera aparicion', async () => {
     const texto = modelo('  interaction checkout {\n cliente -> db\n create api -> db\n }') + vista;
     const res = await abrirSesion({ 'main.dg': texto }).diagnosticar();
-    expect(res.map((i) => i.code)).toEqual(['E_CREATE_NOT_FIRST']);
+    expect(res.map((i) => i.code)).toEqual(['create-not-first']);
     expect(res[0]!.related).toHaveLength(1);
     expect(res[0]!.related![0]!.line).toBeLessThan(res[0]!.line);
   });
 
-  it('E_AFTER_DESTROY con related al destroy', async () => {
+  it('after-destroy con related al destroy', async () => {
     const texto = modelo('  interaction checkout {\n destroy cliente -> db\n api -> db\n }') + vista;
     const res = await abrirSesion({ 'main.dg': texto }).diagnosticar();
-    expect(res.map((i) => i.code)).toEqual(['E_AFTER_DESTROY']);
+    expect(res.map((i) => i.code)).toEqual(['after-destroy']);
     expect(res[0]!.related).toHaveLength(1);
     expect(res[0]!.related![0]!.line).toBeLessThan(res[0]!.line);
   });

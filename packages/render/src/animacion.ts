@@ -29,18 +29,18 @@ const FUNDIDO_CORTO = '100ms';
 
 /** Cuerpo del `@keyframes` de cada Movimiento; `--rd-i` es la intensidad. Anadir uno al catalogo sin entrada aqui rompe el typecheck. */
 const MOVIMIENTO_CSS: { readonly [M in NombreDeMovimiento]: string } = {
-  flujo: 'to{background-position:var(--rd-flujo,40px) 0}',
-  pulso: '0%,100%{opacity:1}50%{opacity:calc(1 - var(--rd-i,0.5) * 0.7)}',
-  respiracion: '0%,100%{scale:1}50%{scale:calc(1 + var(--rd-i,0.5) * 0.08)}',
-  giro: 'to{rotate:360deg}',
+  stream: 'to{background-position:var(--rd-stream,40px) 0}',
+  pulse: '0%,100%{opacity:1}50%{opacity:calc(1 - var(--rd-i,0.5) * 0.7)}',
+  breathe: '0%,100%{scale:1}50%{scale:calc(1 + var(--rd-i,0.5) * 0.08)}',
+  spin: 'to{rotate:360deg}',
   aura: '0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 calc(var(--rd-i,0.5) * 24px) calc(var(--rd-i,0.5) * 4px) var(--trazo,currentColor)}',
 };
 
 /** Estado inicial (entrada) o final (salida) de cada efecto; la opacidad de salida la pone la visibilidad. */
 const EFECTO_CSS: { readonly [E in NombreDeEfecto]: Declaraciones } = {
-  fundido: { opacity: '0' },
-  escala: { opacity: '0', scale: '0.85' },
-  deslizar: { opacity: '0', translate: '0 12px' },
+  fade: { opacity: '0' },
+  zoom: { opacity: '0', scale: '0.85' },
+  slide: { opacity: '0', translate: '0 12px' },
 };
 
 /** Declaracion CSS de cada propiedad animable de `keyframes`. */
@@ -212,7 +212,7 @@ function reglasDeElemento(clave: ClaveDeElemento, animacion: AnimacionDeNodo | u
     const retardo = `calc(${ms(entrada.retardoMs)} + var(--rd-n, 0) * ${ms(escalonadoMs ?? 0)})`;
     salida.bloques.push(`@keyframes rd-in-${entrada.efecto}{from{${bloque(EFECTO_CSS[entrada.efecto])}}}`);
     salida.reglas.push([VISIBLES, { animation: `rd-in-${entrada.efecto} ${ms(entrada.duracionMs)} ${entrada.easing} ${retardo} backwards` }]);
-    if (entrada.reducido === 'fade' && entrada.efecto !== 'fundido') salida.bloques.push(`@keyframes rd-in-fundido{from{${bloque(EFECTO_CSS['fundido'])}}}`);
+    if (entrada.reducido === 'fade' && entrada.efecto !== 'fade') salida.bloques.push(`@keyframes rd-in-fade{from{${bloque(EFECTO_CSS['fade'])}}}`);
     salida.reducidas.push([VISIBLES, reducida(entrada.reducido, 'animation')]);
   }
   if (salidaDeNodo !== undefined) {
@@ -228,7 +228,7 @@ function reglasDeElemento(clave: ClaveDeElemento, animacion: AnimacionDeNodo | u
 function reducida(modo: 'fade' | 'instant', tipo: 'transition' | 'animation'): Declaraciones {
   if (modo === 'instant') return tipo === 'transition' ? { transition: 'none!important' } : { animation: 'none!important' };
   if (tipo === 'transition') return { transition: `opacity ${FUNDIDO_CORTO} linear!important` };
-  return { 'animation-name': 'rd-in-fundido!important', 'animation-duration': `${FUNDIDO_CORTO}!important`, 'animation-delay': '0s!important' };
+  return { 'animation-name': 'rd-in-fade!important', 'animation-duration': `${FUNDIDO_CORTO}!important`, 'animation-delay': '0s!important' };
 }
 
 /**

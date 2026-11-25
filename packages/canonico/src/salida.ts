@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import type { Issue } from './issue';
 
-export const CONTRACT_VERSION = 1;
+export const CONTRACT_VERSION = 2;
 
 const posicionSchema = z.object({
   line: z.number().int().min(1),
@@ -29,6 +29,7 @@ export const issueSchema = z.object({
       file: z.string(),
       range: z.object({ start: posicionSchema, end: posicionSchema }),
       replacement: z.string(),
+      rename: z.string().optional(),
     })
     .optional(),
 }) satisfies z.ZodType<Issue>;

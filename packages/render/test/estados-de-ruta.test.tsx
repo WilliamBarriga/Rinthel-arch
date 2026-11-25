@@ -37,26 +37,26 @@ describe('Diagram: estados de ruta y foco como selectores', () => {
     const hoja = hojaDe(dibujo(await props()));
     const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
 
-    expect(hoja).toContain(`.rd-estado[data-state="en-ruta"]{border:${estilo.estados['en-ruta'].ancho}px solid ${estilo.estados['en-ruta'].color}}`);
-    expect(hoja).toContain('.rd-estado[data-state="foco"]{');
+    expect(hoja).toContain(`.rd-estado[data-state="on-path"]{border:${estilo.estados['on-path'].ancho}px solid ${estilo.estados['on-path'].color}}`);
+    expect(hoja).toContain('.rd-estado[data-state="focus"]{');
     expect(hoja).toMatch(/\[data-atenuado\]\{opacity:0\.\d+\}/);
-    expect(hoja).not.toContain('.rd-estado[data-state="atenuado"]');
+    expect(hoja).not.toContain('.rd-estado[data-state="dimmed"]');
   });
 
   it('un Nodo en-ruta y otro con foco llevan su contorno; el atenuado, una marca de atenuado en su caja', async () => {
-    const html = dibujo(await props({ estados: { a: ['en-ruta'], b: ['foco'], c: ['atenuado'] } }));
+    const html = dibujo(await props({ estados: { a: ['on-path'], b: ['focus'], c: ['dimmed'] } }));
 
-    expect(html.slice(html.indexOf('data-id="a"'), html.indexOf('data-id="b"'))).toContain('data-state="en-ruta"');
-    expect(html.slice(html.indexOf('data-id="b"'), html.indexOf('data-id="c"'))).toContain('data-state="foco"');
+    expect(html.slice(html.indexOf('data-id="a"'), html.indexOf('data-id="b"'))).toContain('data-state="on-path"');
+    expect(html.slice(html.indexOf('data-id="b"'), html.indexOf('data-id="c"'))).toContain('data-state="focus"');
     expect(marcas(html, 'data-atenuado')).toHaveLength(1);
     expect(marcas(html, 'data-atenuado')[0]).toContain('data-id="c"');
-    expect(marcas(html, 'data-state="atenuado"')).toHaveLength(0);
+    expect(marcas(html, 'data-state="dimmed"')).toHaveLength(0);
   });
 
   it('una Arista en-ruta lleva su trazo de estado y una atenuada su marca', async () => {
-    const html = dibujo(await props({ estados: { 'a -> b': ['en-ruta'], 'b -> c': ['atenuado'] } }));
+    const html = dibujo(await props({ estados: { 'a -> b': ['on-path'], 'b -> c': ['dimmed'] } }));
 
-    expect(marcas(html, 'data-state="en-ruta"').some((m) => m.startsWith('<path'))).toBe(true);
+    expect(marcas(html, 'data-state="on-path"').some((m) => m.startsWith('<path'))).toBe(true);
     expect(marcas(html, 'data-atenuado')[0]).toContain('data-edge="b -&gt; c"');
   });
 
@@ -66,19 +66,19 @@ describe('Diagram: estados de ruta y foco como selectores', () => {
     const base = await props({ theme: redondo });
     const codo = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 60, y: 60 }];
     const geometry = { ...base.geometry, edges: { ...base.geometry.edges, 'a -> b': { ...base.geometry.edges['a -> b']!, points: codo } } };
-    const html = dibujo({ ...base, geometry, estados: { 'a -> b': ['en-ruta'] } });
+    const html = dibujo({ ...base, geometry, estados: { 'a -> b': ['on-path'] } });
 
-    const contorno = marcas(html, 'data-state="en-ruta"').find((m) => m.startsWith('<path'))!;
+    const contorno = marcas(html, 'data-state="on-path"').find((m) => m.startsWith('<path'))!;
     expect(contorno).toContain('d="M 0 0 L 52 0 Q 60 0 60 8 L 60 60"');
   });
 
   it('el anillo de foco es irremovible: un Estilo que lo deja sin grosor se dibuja con el minimo', async () => {
     const base = resolverEstilo(TEMA_NEUTRO, 'architecture');
-    const sinAnillo = { ...base, estados: { ...base.estados, foco: { ...base.estados.foco, ancho: 0 } } };
-    const html = dibujo(await props({ estilo: sinAnillo, estados: { a: ['foco'], 'a -> b': ['foco'] } }));
+    const sinAnillo = { ...base, estados: { ...base.estados, focus: { ...base.estados.focus, ancho: 0 } } };
+    const html = dibujo(await props({ estilo: sinAnillo, estados: { a: ['focus'], 'a -> b': ['focus'] } }));
 
-    expect(hojaDe(html)).toMatch(/\.rd-estado\[data-state="foco"\]\{border:[2-9]px solid/);
-    expect(marcas(html, 'data-state="foco"').find((m) => m.startsWith('<path'))).toMatch(/stroke-width="[2-9]/);
+    expect(hojaDe(html)).toMatch(/\.rd-estado\[data-state="focus"\]\{border:[2-9]px solid/);
+    expect(marcas(html, 'data-state="focus"').find((m) => m.startsWith('<path'))).toMatch(/stroke-width="[2-9]/);
   });
 
   it('sin estados no hay marcas de atenuado', async () => {

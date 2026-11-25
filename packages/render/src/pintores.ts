@@ -217,16 +217,29 @@ export function pintarControl(estilo: Estilo, { nodo, caja, alClic }: { nodo: No
 /**
  * Arista: la pila de trazos del Tema sobre la ruta ortogonal, sus marcadores de
  * extremo y la cardinalidad de cada extremo junto a su puerto, desplazada hacia
- * fuera del Nodo. `origen` es el color de Paleta del Nodo de origen (`ORIGEN`). Los hijos extra
+ * fuera del Nodo. `origen` es el color de Paleta del Nodo de origen (`ORIGIN`). Los hijos extra
  * (la etiqueta) los pone quien llama; `atributos` lleva opacidad e id.
  */
 export function pintarArista(
   estilo: Estilo,
-  datos: { id: string; puntos: readonly Punto[]; origen?: string; desde?: string; hasta?: string; er?: { identificante: boolean }; atributos?: Record<string, string>; extra?: Elemento[]; alClic?: () => void },
+  datos: {
+    id: string;
+    puntos: readonly Punto[];
+    origen?: string;
+    desde?: string;
+    hasta?: string;
+    er?: { identificante: boolean };
+    /** The Theme's stroke stack of the state that rules the Edge (paint-only); without it, the rest stack. */
+    enEstado?: { capas: PinturaDeArista['capas']; identificante?: PinturaDeArista['capas'] };
+    atributos?: Record<string, string>;
+    extra?: Elemento[];
+    alClic?: () => void;
+  },
 ): Elemento {
-  const { id, puntos, origen, er, atributos = {}, extra = [], alClic } = datos;
+  const { id, puntos, origen, er, enEstado, atributos = {}, extra = [], alClic } = datos;
   const { arista, metricas } = estilo;
-  const delTema = (origen === undefined ? undefined : estilo.pintura.arista.origenes[origen]) ?? estilo.pintura.arista;
+  const enReposo = (origen === undefined ? undefined : estilo.pintura.arista.origenes[origen]) ?? estilo.pintura.arista;
+  const delTema = enEstado === undefined ? enReposo : { ...enReposo, capas: enEstado.capas, identificante: enEstado.identificante ?? enReposo.identificante };
   // Vista ER: los marcadores de cardinalidad sustituyen a los del Tema y al texto de la cardinalidad.
   const pintura = er === undefined ? delTema : pinturaEr(delTema, puntos, datos.desde, datos.hasta, er.identificante);
   const [desde, hasta] = er === undefined ? [datos.desde, datos.hasta] : [undefined, undefined];
@@ -372,7 +385,7 @@ export function pintarEstadoDeCaja(estado: EstadoVisual, id: string, rect?: Rect
     attrs: {
       class: 'rd-estado',
       'data-state': estado,
-      ...(estado === 'seleccionado' && { 'data-selected': id }),
+      ...(estado === 'selected' && { 'data-selected': id }),
       ...(rect !== undefined && { style: enRect(rect) }),
     },
   };
@@ -389,7 +402,7 @@ export function pintarEstadoDeRuta(estilo: Estilo, estado: EstadoVisual, id: str
     attrs: {
       d: ruta,
       'data-state': estado,
-      ...(estado === 'seleccionado' && { 'data-selected': id }),
+      ...(estado === 'selected' && { 'data-selected': id }),
       fill: 'none',
       stroke: color,
       'stroke-width': num(ancho),

@@ -6,7 +6,7 @@
 import { useMemo } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
-import { resolveView, urlDeFuente } from 'canonico';
+import { resolveView } from 'canonico';
 import type { FuenteCanonica } from 'canonico';
 import type { ComponentesDeTema } from 'render';
 import { Leyenda, VistaInteractiva } from 'shell';
@@ -25,12 +25,16 @@ export interface OpcionesDelLienzo {
   hashProps: PropsDeEstadoEnHash;
   layout: AdaptadorDeLayout;
   componentes: ComponentesDeTema | undefined;
+  /** URL de un archivo de fuente de `estado.fuentes` (`/fuentes/` en `dev`, `data:` en un export). */
+  urlDeFuente: (ruta: string) => string;
 }
 
 /** Devuelve el lienzo (con su halo) y la leyenda de la Vista activa; sin Tema, ninguno de los dos. */
-export function useLienzoDelEstudio({ dibujable, hashProps: props, layout, componentes }: OpcionesDelLienzo): { lienzo: ReactNode; leyenda: ReactNode } {
+export function useLienzoDelEstudio({ dibujable, hashProps: props, layout, componentes, urlDeFuente }: OpcionesDelLienzo): { lienzo: ReactNode; leyenda: ReactNode } {
   const estudio = useEstudio();
-  const { cliente, avisar, motivoSinGestos } = estudio;
+  const { cliente, avisar, motivoSinGestos, puedeEscribir } = estudio;
+  // Read-only (export): no Gestures and no Code to open.
+  const conGestos = puedeEscribir && motivoSinGestos === undefined;
   const { temaPrevio } = usePrevisualizacionDeTema();
   const { estado } = dibujable;
   const fuente = estado.fuente;
@@ -52,7 +56,7 @@ export function useLienzoDelEstudio({ dibujable, hashProps: props, layout, compo
           estudio.abrirPestana('derecha', 'detalle');
         }}
         onOpen={(elemento) => {
-          if (elemento.tipo === 'nodo') void abrirCodigoEnBloque(estudio, 'nodo', elemento.id);
+          if (puedeEscribir && elemento.tipo === 'nodo') void abrirCodigoEnBloque(estudio, 'node', elemento.id);
         }}
         source={dibujada.fuente}
         theme={tema}
@@ -63,9 +67,9 @@ export function useLienzoDelEstudio({ dibujable, hashProps: props, layout, compo
         width={datos.width}
         height={datos.height}
         cachedGeometries={datos.cachedGeometries}
-        {...(motivoSinGestos === undefined && {
-          onMoveNode: ({ id, x, y }) => escribirDesdeElLienzo({ intencion: { tipo: 'mover-pin', vista: props.view, nodo: id, x, y }, fallo: 'No se pudo mover el Pin' }),
-          onReorderLifelines: ({ orden }) => escribirDesdeElLienzo({ intencion: { tipo: 'ordenar-lifelines', vista: props.view, orden }, fallo: 'No se pudo reordenar las Lifelines' }),
+        {...(conGestos && {
+          onMoveNode: ({ id, x, y }) => escribirDesdeElLienzo({ intencion: { type: 'move-pin', view: props.view, node: id, x, y }, fallo: 'Could not move the Pin' }),
+          onReorderLifelines: ({ orden }) => escribirDesdeElLienzo({ intencion: { type: 'reorder-lifelines', view: props.view, order: orden }, fallo: 'Could not reorder the Lifelines' }),
         })}
         chrome={false}
       />

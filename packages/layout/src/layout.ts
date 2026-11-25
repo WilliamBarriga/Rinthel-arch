@@ -366,7 +366,7 @@ export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Me
   const tabla = comoTabla(metricas);
   return JSON.stringify({
     tipo: vista.type,
-    nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => (vista.type === 'er' ? [a.name, a.type, a.keys, a.optional] : [a.name, a.type]))]),
+    nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => (vista.type === 'er' ? [a.name, a.type, a.keys, a.optional, a.planned] : [a.name, a.type]))]),
     ...claveDeConexiones(vista),
     metricas: claveDeMetricas(tabla),
   });

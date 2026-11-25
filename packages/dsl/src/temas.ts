@@ -7,7 +7,7 @@
  * de Tipo y de estado se acumulan tras los del padre; `slots` reemplaza la disposicion heredada. Un Tema sin
  * base define su pila en orden. Sin `extends`, parte de fuentes, tokens y Slots del neutro con paleta vacia.
  */
-import { CODIGOS } from 'canonico';
+import { CODIGOS, VALORES_DE_CATALOGO_ANTIGUOS, issueDeRenombre, mensajeDeValorAntiguo, renombreAntiguo } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
 import type { AstNode as Ast } from 'langium';
 import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, fuentesSinReserva, opTocaMetricas, parsearEstado } from 'tema';
@@ -15,7 +15,7 @@ import type { CajaDeSlots, CapaDeTema, ElementoDeTema, OpDeCapa, TemaResuelto } 
 
 import type { GroupItem, GroupPadding, NodeItem, Theme, ThemeDiagram, ThemeLayer, ThemeSlots, ThemeState, ThemeUse } from './generated/ast';
 import { ARCHIVO_INCORPORADOS, NOMBRES_INCORPORADOS } from './incorporados';
-import { aRango, issueConSugerencia } from './posiciones';
+import { aRango, baseDeErrorDeEstado, issueConSugerencia, rangoDe } from './posiciones';
 import { compilarArista } from './temas-arista';
 import { compilarFila } from './temas-fila';
 import { compilarSecuencia } from './temas-secuencia';
@@ -38,7 +38,7 @@ export interface TemaDeclarado {
 
 export type DeclaracionDeParte = ParteDeclarada;
 
-/** Donde se fijo cada Capa de un Tema, por nivel de la cascada; lo usa `inspect tema`. */
+/** Donde se fijo cada Capa de un Tema, por nivel de la cascada; lo usa `inspect theme`. */
 export interface OrigenDeTema {
   sitio: Sitio;
   /** Ancestros por `extends`, del padre hacia la raiz. */
@@ -60,7 +60,7 @@ export interface OrigenDeTema {
 export interface TemasCompilados {
   temas: TemaResuelto[];
   issues: Issue[];
-  /** Incluye los incorporados (archivo `<incorporados>`); `alto-contraste` no figura. */
+  /** Incluye los incorporados (archivo `<incorporados>`); `high-contrast` no figura. */
   origenes: Record<string, OrigenDeTema>;
   /** Parches de Capa de una Vista (`theme t { layer ... }`) validados contra el Tema `tema`. */
   parchesDeVista(tema: string, items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string): { ops: OpDeCapa[]; issues: Issue[] };
@@ -88,6 +88,13 @@ interface Entorno {
 }
 
 /** Nombres de las `part` que usa un bloque, incluidas las que usan esas partes. */
+/** El `extends` de un Tema apunta a uno no declarado; un nombre antiguo de Tema incorporado es `old-catalog-value` si el nuevo existe. */
+function temaPadreNoDeclarado(parent: string, archivo: string, ast: Theme, existentes: readonly string[]): Issue {
+  const nuevo = renombreAntiguo(VALORES_DE_CATALOGO_ANTIGUOS, 'theme', parent);
+  if (nuevo !== undefined && existentes.includes(nuevo)) return issueDeRenombre(CODIGOS.E_OLD_CATALOG_VALUE, mensajeDeValorAntiguo('theme', parent, nuevo), archivo, rangoDe(ast, 'parent'), nuevo);
+  return issueConSugerencia({ code: CODIGOS.E_UNKNOWN_THEME, message: `Theme '${parent}' is not declared` }, archivo, ast, 'parent', existentes);
+}
+
 function partesUsadas(items: ReadonlyArray<{ $type: string }>, partes: ReadonlyMap<string, ParteDeclarada>, vistas = new Set<string>()): string[] {
   for (const item of items) {
     if (item.$type === 'ThemeUse') {
@@ -123,9 +130,9 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
         severity: 'error',
         file: declarado.archivo,
         ...declarado.nombre.start,
-        message: `Tema duplicado '${name}'`,
+        message: `Duplicate Theme '${name}'`,
         ...(original !== undefined && original.archivo !== ARCHIVO_INCORPORADOS && {
-          related: [{ file: original.archivo, ...original.nombre.start, message: `Primera declaracion de '${name}'` }],
+          related: [{ file: original.archivo, ...original.nombre.start, message: `First declaration of '${name}'` }],
         }),
       });
       continue;
@@ -146,7 +153,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       file: parte.archivo,
       ...parte.nombre.start,
       message: `Parte duplicada '${parte.ast.name}'`,
-      related: [{ file: original.archivo, ...original.nombre.start, message: `Primera declaracion de '${parte.ast.name}'` }],
+      related: [{ file: original.archivo, ...original.nombre.start, message: `First declaration of '${parte.ast.name}'` }],
     });
   }
 
@@ -169,8 +176,8 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       if (base === undefined) {
         issues.push(
           padre !== undefined
-            ? { code: CODIGOS.E_EXTENDS_CYCLE, severity: 'error', file: declarado.archivo, ...declarado.padre.start, message: `Ciclo de extends: '${name}' extiende a '${parent}', que depende de el` }
-            : issueConSugerencia({ code: CODIGOS.E_UNKNOWN_THEME, message: `Tema '${parent}' no declarado` }, declarado.archivo, declarado.ast, 'parent', [...porNombre.keys(), TEMA_ALTO_CONTRASTE.name]),
+            ? { code: CODIGOS.E_EXTENDS_CYCLE, severity: 'error', file: declarado.archivo, ...declarado.padre.start, message: `extends cycle: '${name}' extends '${parent}', which depends on it` }
+            : temaPadreNoDeclarado(parent, declarado.archivo, declarado.ast, [...porNombre.keys(), TEMA_ALTO_CONTRASTE.name]),
         );
         enCurso.delete(name);
         fallidos.add(name);
@@ -239,8 +246,8 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
           severity: 'error',
           file: declarado.archivo,
           ...aRango(entrada.$cstNode?.range).start,
-          message: `La familia '${entrada.value}' de fonts.${entrada.key} no declara reserva`,
-          hint: 'Agrega fallback "sans-serif" (o la generica que corresponda) al bloque fonts',
+          message: `Family '${entrada.value}' of fonts.${entrada.key} declares no fallback`,
+          hint: 'Add fallback "sans-serif" (or the matching generic family) to the fonts block',
         });
       }
     }
@@ -286,7 +293,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
   for (const declarado of porNombre.values()) resolver(declarado);
 
   return {
-    // Los incorporados primero y en su orden; `alto-contraste` lo define `tema`.
+    // Los incorporados primero y en su orden; `high-contrast` lo define `tema`.
     temas: [...resueltos.values(), altoContraste]
       .map(({ tema }) => tema)
       .sort((a, b) => (NOMBRES_INCORPORADOS.indexOf(a.name as never) + 1 || 99) - (NOMBRES_INCORPORADOS.indexOf(b.name as never) + 1 || 99)),
@@ -347,7 +354,7 @@ function compilarPadding(item: GroupPadding, archivo: string, issues: Issue[]): 
       severity: 'error',
       file: archivo,
       ...aRango(item.$cstNode?.range).start,
-      message: lados === undefined ? `'padding' lleva 1, 2 o 4 valores (arriba, derecha, abajo, izquierda), no ${v.length}` : `'padding' ${fuera} fuera de rango; usa de 0 a 128`,
+      message: lados === undefined ? `'padding' takes 1, 2 or 4 values (top, right, bottom, left), not ${v.length}` : `'padding' ${fuera} is out of range; use 0 to 128`,
     });
     return undefined;
   }
@@ -391,7 +398,7 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     if (!tipos.includes(item.name)) {
       issues.push(
         issueConSugerencia(
-          { code: CODIGOS.E_UNKNOWN_NODE_TYPE, message: `Tipo de nodo '${item.name}' no declarado en 'specification'` },
+          { code: CODIGOS.E_UNKNOWN_NODE_TYPE, message: `Node kind '${item.name}' is not declared in 'specification'` },
           archivo, item, 'name', tipos,
         ),
       );
@@ -399,7 +406,7 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     }
     const propios = new Map(origenes);
     const ops = compilarBloque(item.items, { ...contexto, origenes: propios, modo: 'parchear', candidatas: sobreDiagramas });
-    if (elemento === 'grupo') avisarSiTocaMetricas(ops, sobreDiagramas, item, `Un parche de Tipo del Grupo no puede tocar las Metricas`, `'${item.name}' no tiene entrada propia en la tabla; usa el bloque base o 'state collapsed'`, archivo, issues);
+    if (elemento === 'grupo') avisarSiTocaMetricas(ops, sobreDiagramas, item, `A Group kind patch cannot touch Metrics`, `'${item.name}' has no entry of its own in the table; use the base block or 'state collapsed'`, archivo, issues);
     bloque.tipos[item.name] = [...(bloque.tipos[item.name] ?? []), ...ops];
     anotarOrigenes(entorno.porTipo, item.name, propios, origenes);
   }
@@ -414,7 +421,7 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     }
     const parseado = parsearEstado(item.name);
     if ('error' in parseado) {
-      issues.push(issueConSugerencia({ code: parseado.error.code, message: parseado.error.message }, archivo, item, 'name', ESTADOS_DE[elemento]));
+      issues.push(issueConSugerencia(baseDeErrorDeEstado(parseado.error), archivo, item, 'name', ESTADOS_DE[elemento]));
       continue;
     }
     const { estado } = parseado;
@@ -424,7 +431,7 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
         severity: 'error',
         file: archivo,
         ...aRango(slots.$cstNode?.range).start,
-        message: `Un parche de estado no puede tocar los Slots: '${estado}' nunca relayouta; cambialos en el bloque base`,
+        message: `A state patch cannot touch Slots: '${estado}' never re-lays out; change them in the base block`,
       });
     }
     const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');
@@ -432,13 +439,13 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
     const inicial = new Map(propios);
     const ops = compilarBloque(capas, { ...contexto, origenes: propios, modo: 'parchear', candidatas: conColapso });
     anotarOrigenes(entorno.porEstado, estado, propios, inicial);
-    avisarSiTocaMetricas(ops, conColapso, item, `Un parche de estado no puede tocar las Metricas`, `'${estado}' nunca relayouta, cambiala en el bloque base`, archivo, issues);
+    avisarSiTocaMetricas(ops, conColapso, item, `A state patch cannot touch Metrics`, `'${estado}' never re-lays out; change it in the base block`, archivo, issues);
     bloque.estados[estado] = [...(bloque.estados[estado] ?? []), ...ops];
   }
 }
 
 /**
- * Un tipo desconocido es `E_THEME_UNKNOWN_DIAGRAM_TYPE` con `fix` por typo. Varios bloques del mismo tipo se
+ * Un tipo desconocido es `theme-unknown-diagram-type` con `fix` por typo. Varios bloques del mismo tipo se
  * acumulan. `padding` solo vale en el Grupo; los estilos de texto de un Slot no cambian por Tipo de diagrama.
  */
 function compilarDiagrama(item: ThemeDiagram, elemento: ElementoDeTema, tema: TemaResuelto, ctx: Omit<ContextoDeBloque, 'modo' | 'candidatas'> & { entorno: Entorno }): void {
@@ -461,9 +468,9 @@ function compilarDiagrama(item: ThemeDiagram, elemento: ElementoDeTema, tema: Te
       if (destino.slots !== undefined) parche.slots = destino.slots;
     } else if (hijo.$type === 'GroupPadding') {
       if (elemento === 'grupo') parche.padding = compilarPadding(hijo, archivo, issues) ?? parche.padding;
-      else issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: archivo, ...aRango(hijo.$cstNode?.range).start, message: "'padding' es del Grupo: ponlo en 'group { diagram ... }'" });
+      else issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: archivo, ...aRango(hijo.$cstNode?.range).start, message: "'padding' belongs to the Group: put it in 'group { diagram ... }'" });
     } else if (hijo.$type === 'ThemeMarker' || hijo.$type === 'ThemeLabel') {
-      issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeLabel' ? 'label' : hijo.side}' es de la Arista: ponlo en 'edge { diagram ... }'` });
+      issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeLabel' ? 'label' : hijo.side}' belongs to the Edge: put it in 'edge { diagram ... }'` });
     }
   }
   bloque.diagramas = {
@@ -472,7 +479,7 @@ function compilarDiagrama(item: ThemeDiagram, elemento: ElementoDeTema, tema: Te
   };
 }
 
-/** Error `E_THEME_STATE_TOUCHES_METRICS` por cada parche que cambia la caja (`opTocaMetricas`). */
+/** Error `theme-state-touches-metrics` por cada parche que cambia la caja (`opTocaMetricas`). */
 function avisarSiTocaMetricas(ops: readonly OpDeCapa[], pilas: ReadonlyArray<readonly CapaDeTema[]>, donde: Ast, titulo: string, consejo: string, archivo: string, issues: Issue[]): void {
   for (const op of ops) {
     const razon = opTocaMetricas(op, pilas);

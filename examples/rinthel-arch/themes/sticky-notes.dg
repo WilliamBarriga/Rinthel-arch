@@ -1,0 +1,74 @@
+// Contrast: none
+// Whiteboard with sticky notes: slightly rotated colored notes, adhesive tape and hand-drawn strokes.
+theme sticky-notes {
+  fonts { body "Caveat"  mono "Caveat"  fallback "cursive" }
+  palette {
+    background "#fcfcf8"  text "#2b2b2b"  tape "#d8d2c0"  paper "#fcfcf8"  ink "#2456c9"
+    blue "#bfe3ff"  purple "#e4d0ff"  green "#c8f2c2"  amber "#fff3a0"  red "#ffc9d6"  gray "#fff3a0"
+  }
+  tokens { background "#fcfcf8"  foreground "#2b2b2b"  border "#2456c9"  seed 7 }
+  page {
+    layer squares grid { color ink/0.07  size 26 }
+    fixed
+  }
+  node {
+    // Note in the kind color, slightly rotated, with its shadow and a piece of tape on top.
+    layer spin tilt { degrees 3 }
+    layer shadow shadow { color text/0.18  x 1  y 10  blur 14 }
+    layer shape rect { radius 2 }
+    layer probe gradient { from COLOR  to mix(COLOR, text, 0.08)  angle 170 }
+    layer tape tape over { color tape/0.7  width 54  height 18  angle -4 }
+    slots column min-width 170 slack 62 {
+      row gap 8 pad 14 min-height 62 {
+        column {
+          title { weight 700  size 1.45  text-align start  leading 1.25 }
+          badge { alpha 0.55  size 0.95 }
+        }
+        counter { fill paper  border text }
+      }
+      attrs
+    }
+    // Actor and external are not notes: paper with a hand-drawn stroke (external, dashed and in ink).
+    type actor {
+      layer shadow none  layer tape none
+      layer shape pill
+      layer probe solid { color paper }
+      layer border border after probe { color text  width 2 }
+      layer stroke sketch after border { roughness 3.5  frequency 0.035 }
+    }
+    type external {
+      layer shadow none  layer tape none
+      layer probe solid { color paper }
+      layer border dashed after probe { color ink  width 2 }
+      layer stroke sketch after border { roughness 3.5  frequency 0.035 }
+    }
+    state hover { layer shadow { color text/0.25  x 2  y 18  blur 24 }  transition 150ms ease-out }
+    state on-path { layer shadow { color ink/0.3 } }
+    state dimmed { layer shadow none }
+  }
+  group {
+    // Hand-drawn ink box, no fill, with the name written on top.
+    layer shape rect { radius 14 }
+    layer border border { color ink/0.7  width 2.5 }
+    layer stroke sketch { roughness 3.5  frequency 0.035 }
+    slots row pad 18 pad-y 9 { title { size 1.4  leading 1.3  weight 600 } }
+    padding 12 26 26 26
+    // Closed is a note like the Node one with a darker one peeking out below.
+    state collapsed {
+      layer spin tilt before shape { degrees 3 }
+      layer below-shadow shadow before shape { color text/0.15  x 1  y 6  blur 10  offset 6 5 }
+      layer below solid before shape { color mix(COLOR, text, 0.15)  offset 6 5 }
+      layer shadow shadow before shape { color text/0.18  x 1  y 10  blur 14 }
+      layer shape { radius 2 }
+      layer probe gradient after shape { from COLOR  to mix(COLOR, text, 0.08)  angle 170 }
+      layer border none
+      layer stroke none
+      layer tape tape after probe over { color tape/0.7  width 54  height 18  angle -4 }
+    }
+  }
+  edge {
+    layer line line { color ink  width 2  corner round  radius 18  cap round  roughness 3.5  frequency 0.035 }
+    end chevron { size 9 }
+    label { scale 1.21  pad 10  pad-y 2.5  radius 0  fill background/0  border background/0  color ink }
+  }
+}

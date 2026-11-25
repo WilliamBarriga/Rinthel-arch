@@ -1,10 +1,10 @@
 /**
  * Colores del Tema: siempre nombres de Paleta. Expresiones: `ink`, `ink/0.15` (alfa), `mix(a, b, 0.3)`, y los
- * especiales `COLOR` (color del Tipo de nodo) y `ORIGEN` (color del Nodo de origen de una Arista).
+ * especiales `COLOR` (color del Tipo de nodo) y `ORIGIN` (color del Nodo de origen de una Arista).
  */
-import { candidatosCercanos } from 'canonico';
+import { VALORES_DE_CATALOGO_ANTIGUOS, candidatosCercanos, mensajeDeValorAntiguo, renombreAntiguo } from 'canonico';
 
-type Base = { tipo: 'paleta'; nombre: string } | { tipo: 'especial'; nombre: 'COLOR' | 'ORIGEN' } | { tipo: 'mix'; a: string; b: string; t: number };
+type Base = { tipo: 'paleta'; nombre: string } | { tipo: 'especial'; nombre: 'COLOR' | 'ORIGIN' } | { tipo: 'mix'; a: string; b: string; t: number };
 interface Expresion {
   base: Base;
   alfa?: number;
@@ -15,6 +15,8 @@ export interface ErrorDeColor {
   /** Este error lleva codigo propio. */
   fueraDePaleta?: boolean;
   hint?: string;
+  /** An old name (a built-in Palette color or `ORIGEN`): the error is `old-catalog-value` and its fix rewrites it. */
+  renombre?: { antiguo: string; nuevo: string };
 }
 
 export interface ContextoDeColor {
@@ -26,7 +28,7 @@ export interface ContextoDeColor {
 
 const NUMERO = /^(?:\d+\.?\d*|\.\d+)$/;
 
-const esEspecial = (nombre: string): nombre is 'COLOR' | 'ORIGEN' => nombre === 'COLOR' || nombre === 'ORIGEN';
+const esEspecial = (nombre: string): nombre is 'COLOR' | 'ORIGIN' => nombre === 'COLOR' || nombre === 'ORIGIN';
 
 function leer(texto: string): Expresion | undefined {
   const partido = /^(.*?)(?:\/(\d*\.?\d+))?$/.exec(texto.trim());
@@ -39,14 +41,29 @@ function leer(texto: string): Expresion | undefined {
     return { base: { tipo: 'mix', a: mezcla[1] as string, b: mezcla[2] as string, t: Number(t) }, ...(alfa !== undefined && { alfa }) };
   }
   if (!/^[A-Za-z_][-\w]*$/.test(cuerpo)) return undefined;
-  const base: Base = cuerpo === 'COLOR' || cuerpo === 'ORIGEN' ? { tipo: 'especial', nombre: cuerpo } : { tipo: 'paleta', nombre: cuerpo };
+  const base: Base = cuerpo === 'COLOR' || cuerpo === 'ORIGIN' ? { tipo: 'especial', nombre: cuerpo } : { tipo: 'paleta', nombre: cuerpo };
   return { base, ...(alfa !== undefined && { alfa }) };
 }
 
 const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string } => {
   const candidatos = candidatosCercanos(escrito, existentes);
-  return candidatos.length === 0 ? {} : { hint: `quisiste decir ${candidatos.map((c) => `'${c}'`).join(' o ')}` };
+  return candidatos.length === 0 ? {} : { hint: `did you mean ${candidatos.map((c) => `'${c}'`).join(' or ')}` };
 };
+
+/**
+ * The new name of an old color name: `ORIGEN` always, a built-in Palette color only if the Palette has the new name
+ * (a user Palette that declares its own `fondo` is untouched).
+ */
+function nombreNuevo(nombre: string, paleta: Readonly<Record<string, string>>): { categoria: 'color' | 'palette'; nombre: string } | undefined {
+  const especial = renombreAntiguo(VALORES_DE_CATALOGO_ANTIGUOS, 'color', nombre);
+  if (especial !== undefined) return { categoria: 'color', nombre: especial };
+  const dePaleta = renombreAntiguo(VALORES_DE_CATALOGO_ANTIGUOS, 'palette', nombre);
+  return dePaleta !== undefined && Object.hasOwn(paleta, dePaleta) ? { categoria: 'palette', nombre: dePaleta } : undefined;
+}
+
+/** `texto` with every whole-word old name replaced by its new one: the fix of a color expression. */
+export const renombrarColor = (texto: string, renombres: ReadonlyArray<{ antiguo: string; nuevo: string }>): string =>
+  renombres.reduce((hecho, { antiguo, nuevo }) => hecho.replace(new RegExp(String.raw`(?<![-\w])${antiguo}(?![-\w])`, 'g'), nuevo), texto);
 
 export function hexARgb(hex: string): [number, number, number] | undefined {
   const corto = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(hex);
@@ -56,22 +73,25 @@ export function hexARgb(hex: string): [number, number, number] | undefined {
   return [1, 2, 3].map((i) => Number.parseInt(largo[i] as string, 16)) as [number, number, number];
 }
 
-/** Devuelve todos los problemas; `ORIGEN` solo vale con `ambito` `arista`. */
+/** Devuelve todos los problemas; `ORIGIN` solo vale con `ambito` `arista`. */
 export function validarColor(texto: string, paleta: Readonly<Record<string, string>>, ambito: 'nodo' | 'arista' | 'pagina' = 'nodo'): ErrorDeColor[] {
   const expresion = leer(texto);
-  if (expresion === undefined) return [{ mensaje: `'${texto}' no es una expresion de color valida (nombre, nombre/alfa o mix(a, b, t))` }];
+  if (expresion === undefined) return [{ mensaje: `'${texto}' is not a valid color expression (name, name/alpha or mix(a, b, t))` }];
   const errores: ErrorDeColor[] = [];
   const necesitaHex = expresion.alfa !== undefined || expresion.base.tipo === 'mix';
   const comprobar = (nombre: string): void => {
-    if (!Object.hasOwn(paleta, nombre)) {
-      errores.push({ mensaje: `Color '${nombre}' no es un nombre de Paleta del Tema`, fueraDePaleta: true, ...sugerir(nombre, Object.keys(paleta)) });
+    const nuevo = Object.hasOwn(paleta, nombre) ? undefined : nombreNuevo(nombre, paleta);
+    if (nuevo !== undefined) {
+      errores.push({ mensaje: mensajeDeValorAntiguo(nuevo.categoria, nombre, nuevo.nombre), renombre: { antiguo: nombre, nuevo: nuevo.nombre } });
+    } else if (!Object.hasOwn(paleta, nombre)) {
+      errores.push({ mensaje: `Color '${nombre}' is not a Palette name of the Theme`, fueraDePaleta: true, ...sugerir(nombre, Object.keys(paleta)) });
     } else if (necesitaHex && hexARgb(paleta[nombre] as string) === undefined) {
-      errores.push({ mensaje: `El color '${nombre}' de la Paleta no es un hex (#rgb o #rrggbb); alfa y mix lo necesitan` });
+      errores.push({ mensaje: `Palette color '${nombre}' is not a hex (#rgb or #rrggbb); alpha and mix need one` });
     }
   };
-  const especial = (nombre: 'COLOR' | 'ORIGEN'): void => {
-    if (nombre === 'ORIGEN' && ambito !== 'arista') errores.push({ mensaje: "'ORIGEN' solo vale en Aristas (es el color del Nodo de origen)" });
-    else if (nombre === 'COLOR' && ambito === 'pagina') errores.push({ mensaje: "'COLOR' no vale en la pagina (es el color del Tipo de nodo); usa un nombre de Paleta" });
+  const especial = (nombre: 'COLOR' | 'ORIGIN'): void => {
+    if (nombre === 'ORIGIN' && ambito !== 'arista') errores.push({ mensaje: "'ORIGIN' is only valid on Edges (it is the color of the source Node)" });
+    else if (nombre === 'COLOR' && ambito === 'pagina') errores.push({ mensaje: "'COLOR' is not valid on the page (it is the Node kind color); use a Palette name" });
   };
   const operando = (nombre: string): void => (esEspecial(nombre) ? especial(nombre) : comprobar(nombre));
   const { base, alfa } = expresion;
@@ -79,9 +99,9 @@ export function validarColor(texto: string, paleta: Readonly<Record<string, stri
   else if (base.tipo === 'mix') {
     operando(base.a);
     operando(base.b);
-    if (base.t < 0 || base.t > 1) errores.push({ mensaje: `El factor de mix debe estar entre 0 y 1, no ${base.t}` });
+    if (base.t < 0 || base.t > 1) errores.push({ mensaje: `The mix factor must be between 0 and 1, not ${base.t}` });
   } else especial(base.nombre);
-  if (alfa !== undefined && (alfa < 0 || alfa > 1)) errores.push({ mensaje: `El alfa debe estar entre 0 y 1, no ${alfa}` });
+  if (alfa !== undefined && (alfa < 0 || alfa > 1)) errores.push({ mensaje: `The alpha must be between 0 and 1, not ${alfa}` });
   return errores;
 }
 
@@ -96,7 +116,7 @@ export function resolverColor(texto: string, paleta: Readonly<Record<string, str
     const variable = `var(${contexto.variable})`;
     return alfa === undefined ? variable : `color-mix(in srgb, ${variable} ${Math.round(alfa * 10000) / 100}%, transparent)`;
   }
-  const dePaleta = (nombre: string): string | undefined => (nombre === 'COLOR' ? contexto.color : nombre === 'ORIGEN' ? contexto.origen : nombre);
+  const dePaleta = (nombre: string): string | undefined => (nombre === 'COLOR' ? contexto.color : nombre === 'ORIGIN' ? contexto.origen : nombre);
   let valor: string;
   if (base.tipo === 'mix' && contexto.variable !== undefined && (base.a === 'COLOR' || base.b === 'COLOR')) {
     // Con `COLOR` mezcla el navegador; `t` es la parte de `b`, como en la mezcla con hex.

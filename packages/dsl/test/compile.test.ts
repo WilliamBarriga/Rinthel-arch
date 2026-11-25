@@ -94,7 +94,7 @@ describe('compile: Nodos y specification', () => {
     ]);
   });
 
-  it('un Tipo de nodo no declarado produce E_UNKNOWN_NODE_TYPE con su posicion exacta', () => {
+  it('un Tipo de nodo no declarado produce unknown-node-type con su posicion exacta', () => {
     const resultado = compile({
       'main.dg': ['specification { node servicio }', 'model {', '  servico api', '}'].join('\n'),
     });
@@ -102,7 +102,7 @@ describe('compile: Nodos y specification', () => {
     expect(resultado.canonico).toBeUndefined();
     expect(resultado.issues).toHaveLength(1);
     expect(resultado.issues[0]).toMatchObject({
-      code: 'E_UNKNOWN_NODE_TYPE',
+      code: 'unknown-node-type',
       severity: 'error',
       file: 'main.dg',
       line: 3,
@@ -128,9 +128,9 @@ describe('compile: Nodos y specification', () => {
       'main.dg': ['specification { node servicio node servicios }', 'model {', '  servici api', '}'].join('\n'),
     });
 
-    expect(issues[0]?.code).toBe('E_UNKNOWN_NODE_TYPE');
+    expect(issues[0]?.code).toBe('unknown-node-type');
     expect(issues[0]?.fix).toBeUndefined();
-    expect(issues[0]?.hint).toBe('Candidatos: servicio, servicios');
+    expect(issues[0]?.hint).toBe('Candidates: servicio, servicios');
   });
 
   it('un Tipo de nodo sin parecido no emite fix ni hint', () => {
@@ -149,7 +149,7 @@ describe('compile: Nodos y specification', () => {
 
     expect(resultado.canonico).toBeUndefined();
     expect(resultado.issues[0]).toMatchObject({
-      code: 'E_SYNTAX_ERROR',
+      code: 'syntax-error',
       severity: 'error',
       file: 'main.dg',
       // `servicio "api"` es un prefijo valido de Arista (`servicio "1" -> ...`):
@@ -177,17 +177,17 @@ describe('compile: Nodos y specification', () => {
     });
 
     expect(issues.map((i) => [i.file, i.line, i.code])).toEqual([
-      ['a.dg', 2, 'E_UNKNOWN_NODE_TYPE'],
-      ['z.dg', 1, 'E_UNKNOWN_NODE_TYPE'],
+      ['a.dg', 2, 'unknown-node-type'],
+      ['z.dg', 1, 'unknown-node-type'],
     ]);
   });
 
-  it('un bloque sin cerrar al final del texto da E_SYNTAX_ERROR con posicion valida', () => {
+  it('un bloque sin cerrar al final del texto da syntax-error con posicion valida', () => {
     const resultado = compile({ 'main.dg': 'specification { node servicio }\nmodel {\n  servicio api {' });
 
     expect(resultado.canonico).toBeUndefined();
     expect(resultado.issues).toHaveLength(1);
-    expect(resultado.issues[0]).toMatchObject({ code: 'E_SYNTAX_ERROR', file: 'main.dg', line: 3 });
+    expect(resultado.issues[0]).toMatchObject({ code: 'syntax-error', file: 'main.dg', line: 3 });
     expect(resultado.issues[0]?.column).toBeGreaterThanOrEqual(1);
   });
 });
@@ -278,7 +278,7 @@ describe('compile: Aristas', () => {
     expect(canonico?.model.edges).toEqual([]);
   });
 
-  it('un extremo inexistente es E_DANGLING_EDGE con la posicion del extremo', () => {
+  it('un extremo inexistente es dangling-edge con la posicion del extremo', () => {
     const { canonico, issues } = compile({
       'main.dg': `${spec}
 model {
@@ -290,7 +290,7 @@ model {
     expect(canonico).toBeUndefined();
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
-      code: 'E_DANGLING_EDGE',
+      code: 'dangling-edge',
       severity: 'error',
       file: 'main.dg',
       line: 4,
@@ -309,7 +309,7 @@ model {
 }`,
     });
 
-    expect(issues[0]?.code).toBe('E_DANGLING_EDGE');
+    expect(issues[0]?.code).toBe('dangling-edge');
     expect(issues[0]?.fix).toEqual({
       file: 'main.dg',
       range: { start: { line: 5, column: 10 }, end: { line: 5, column: 13 } },
@@ -333,7 +333,7 @@ model {
 
   it('informa ambos extremos colgantes', () => {
     const { issues } = compile({ 'main.dg': `${spec} model { x -> y }` });
-    expect(issues.map((i) => i.code)).toEqual(['E_DANGLING_EDGE', 'E_DANGLING_EDGE']);
+    expect(issues.map((i) => i.code)).toEqual(['dangling-edge', 'dangling-edge']);
   });
 });
 
@@ -406,7 +406,7 @@ describe('compile: Atributos', () => {
     ]);
   });
 
-  it('un Atributo inexistente es E_UNKNOWN_ATTRIBUTE con la posicion del Atributo', () => {
+  it('un Atributo inexistente es unknown-attribute con la posicion del Atributo', () => {
     const { canonico, issues } = compile({
       'main.dg': `${spec}
 model {
@@ -419,7 +419,7 @@ model {
     expect(canonico).toBeUndefined();
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
-      code: 'E_UNKNOWN_ATTRIBUTE',
+      code: 'unknown-attribute',
       severity: 'error',
       file: 'main.dg',
       line: 5,
@@ -446,12 +446,12 @@ model {
         }`,
     });
 
-    expect(issues.map((i) => i.code).sort()).toEqual(['E_DANGLING_EDGE', 'E_UNKNOWN_ATTRIBUTE']);
+    expect(issues.map((i) => i.code).sort()).toEqual(['dangling-edge', 'unknown-attribute']);
   });
 
-  it('con el Nodo inexistente solo informa E_DANGLING_EDGE, no el Atributo', () => {
+  it('con el Nodo inexistente solo informa dangling-edge, no el Atributo', () => {
     const { issues } = compile({ 'main.dg': `${spec} model { tabla a  a -> nada#x }` });
-    expect(issues.map((i) => i.code)).toEqual(['E_DANGLING_EDGE']);
+    expect(issues.map((i) => i.code)).toEqual(['dangling-edge']);
   });
 });
 
@@ -464,7 +464,7 @@ describe('compile: source', () => {
         model {
           servicio api {
             source { git "src/api.ts" }
-            source { url "https://ejemplo.com/api" doc "docs/api.md" }
+            source { url "https://ejemplo.com/api" file "docs/api.md" }
           }
         }`,
     });
@@ -473,7 +473,7 @@ describe('compile: source', () => {
     expect(canonico?.model.nodes[0]?.source).toEqual([
       { kind: 'git', ref: 'src/api.ts' },
       { kind: 'url', ref: 'https://ejemplo.com/api' },
-      { kind: 'doc', ref: 'docs/api.md' },
+      { kind: 'file', ref: 'docs/api.md' },
     ]);
   });
 
@@ -489,7 +489,7 @@ describe('compile: source', () => {
     expect(canonico?.model.nodes[0]?.source).toEqual([{ kind: 'cualquier-cosa', ref: '  ../x:y#z  ' }]);
   });
 
-  it('un ref que no es cadena es E_SYNTAX_ERROR con posicion', () => {
+  it('un ref que no es cadena es syntax-error con posicion', () => {
     const { issues, canonico } = compile({
       'main.dg': `${spec}
         model {
@@ -500,7 +500,7 @@ describe('compile: source', () => {
     });
 
     expect(canonico).toBeUndefined();
-    expect(issues.every((issue) => issue.code === 'E_SYNTAX_ERROR')).toBe(true);
+    expect(issues.every((issue) => issue.code === 'syntax-error')).toBe(true);
     expect(issues[0]).toMatchObject({ file: 'main.dg', line: 4, column: 26 });
   });
 });
@@ -558,7 +558,7 @@ describe('compile: Workspace multiarchivo', () => {
     expect(canonico?.model.nodes[0]?.children[0]?.children.map((n) => n.id)).toEqual(['api.cache.x']);
   });
 
-  it('un Nodo duplicado sin extend es E_DUPLICATE_NODE con related al original', () => {
+  it('un Nodo duplicado sin extend es duplicate-node con related al original', () => {
     const { issues, canonico } = compile({
       'a.dg': 'specification { node servicio }\nmodel {\n  servicio api\n}',
       'b.dg': 'model {\n  servicio db\n  servicio api\n}',
@@ -567,7 +567,7 @@ describe('compile: Workspace multiarchivo', () => {
     expect(canonico).toBeUndefined();
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
-      code: 'E_DUPLICATE_NODE',
+      code: 'duplicate-node',
       severity: 'error',
       file: 'b.dg',
       line: 3,
@@ -585,16 +585,16 @@ describe('compile: Workspace multiarchivo', () => {
         }`,
     });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_DUPLICATE_NODE', 'E_DUPLICATE_NODE']);
+    expect(issues.map((i) => i.code)).toEqual(['duplicate-node', 'duplicate-node']);
   });
 
-  it('un extend cuyo Nodo no existe es E_UNKNOWN_EXTEND_TARGET', () => {
+  it('un extend cuyo Nodo no existe es unknown-extend-target', () => {
     const { issues } = compile({
       'a.dg': 'specification { node servicio }\nmodel {\n  extend nada { servicio x }\n}',
     });
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_EXTEND_TARGET', file: 'a.dg', line: 3, column: 10 });
+    expect(issues[0]).toMatchObject({ code: 'unknown-extend-target', file: 'a.dg', line: 3, column: 10 });
   });
 
   it('el resultado no depende del orden en que se pasan los archivos', () => {
@@ -658,23 +658,23 @@ describe('compile: Vistas', () => {
     expect(canonico?.views[0]?.include).toEqual(['*', '**']);
   });
 
-  it('type ausente es E_UNKNOWN_VIEW_TYPE con posicion', () => {
+  it('type ausente es unknown-view-type con posicion', () => {
     const { issues, canonico } = compile({
       'main.dg': `${base}\nview sin_tipo {\n  include a\n}`,
     });
 
     expect(canonico).toBeUndefined();
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_VIEW_TYPE', file: 'main.dg', line: 2, column: 6 });
+    expect(issues[0]).toMatchObject({ code: 'unknown-view-type', file: 'main.dg', line: 2, column: 6 });
   });
 
-  it('type desconocido es E_UNKNOWN_VIEW_TYPE en la posicion del valor', () => {
+  it('type desconocido es unknown-view-type en la posicion del valor', () => {
     const { issues } = compile({
       'main.dg': `${base}\nview v {\n  type secuencia\n}`,
     });
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_VIEW_TYPE', line: 3, column: 8 });
+    expect(issues[0]).toMatchObject({ code: 'unknown-view-type', line: 3, column: 8 });
   });
 
   it('depth 0 es sintacticamente valido y no hace lanzar a compile', () => {
@@ -739,7 +739,7 @@ view v {
     expect(canonico?.views[0]?.overrides).toEqual([]);
   });
 
-  it('override sobre un Nodo fuera de la Vista es E_OVERRIDE_OUTSIDE_VIEW con posicion', () => {
+  it('override sobre un Nodo fuera de la Vista es override-outside-view con posicion', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}\nview v {\n  type flow\n  include a\n  node b { color red }\n}`,
     });
@@ -747,7 +747,7 @@ view v {
     expect(canonico).toBeUndefined();
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
-      code: 'E_OVERRIDE_OUTSIDE_VIEW',
+      code: 'override-outside-view',
       severity: 'error',
       file: 'main.dg',
       line: 5,
@@ -755,20 +755,20 @@ view v {
     });
   });
 
-  it('override sobre un Nodo inexistente tambien es E_OVERRIDE_OUTSIDE_VIEW', () => {
+  it('override sobre un Nodo inexistente tambien es override-outside-view', () => {
     const { issues } = compile({
       'main.dg': `${base} view v { type flow include ** node fantasma { label "x" } }`,
     });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_OVERRIDE_OUTSIDE_VIEW']);
+    expect(issues.map((i) => i.code)).toEqual(['override-outside-view']);
   });
 
-  it('color solo acepta nombres de Paleta: un hex es E_UNKNOWN_PALETTE_COLOR', () => {
+  it('color solo acepta nombres de Paleta: un hex es unknown-palette-color', () => {
     const { issues } = compile({
       'main.dg': `${base} view v { type flow include ** node a { color "#ff0000" } }`,
     });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
+    expect(issues.map((i) => i.code)).toEqual(['unknown-palette-color']);
   });
 
   it('pin admite coordenadas negativas', () => {
@@ -789,7 +789,7 @@ describe('compile: Tema', () => {
     const { canonico, issues } = compile({ 'main.dg': base });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.map((t) => t.name)).toEqual(['neutral', 'neutral-dark', 'alto-contraste']);
+    expect(canonico?.themes.map((t) => t.name)).toEqual(['neutral', 'neutral-dark', 'high-contrast']);
   });
 
   it('compila palette, fonts y tokens a un objeto plano', () => {
@@ -863,14 +863,49 @@ describe('compile: Tema', () => {
     });
   });
 
+  it('edge { state <name> { ... } } compiles a paint-only patch of the stroke stack per state', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme lines {
+          palette { blue "#2563eb"  gray "#6b7280" }
+          edge {
+            layer main line { color gray }
+            state planned { layer main { color blue  style dotted } }
+          }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect((canonico?.themes.find((t) => t.name === 'lines')?.['arista'] as { estados?: unknown }).estados).toEqual({
+      planned: [{ nombre: 'main', props: { color: 'blue', style: 'dotted' } }],
+    });
+  });
+
+  it('a state of edge rejects slots and an unknown state', () => {
+    const { issues } = compile({
+      'main.dg': `${base}
+        theme lines {
+          palette { gray "#6b7280" }
+          edge {
+            layer main line { color gray }
+            state planed { layer main { width 2 } }
+            state hover { slots { title } }
+          }
+        }`,
+    });
+
+    expect(issues.map((i) => i.message)).toEqual(expect.arrayContaining([expect.stringContaining("'slots' is not valid in a state of 'edge'")]));
+    expect(issues.some((i) => i.fix?.replacement === 'planned' || i.hint?.includes('planned') === true)).toBe(true);
+  });
+
   it('compila el bloque edge: pila de trazos con glow, marcadores y etiqueta con modelo de caja', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}
         theme metro {
           palette { blue "#2563eb"  gray "#6b7280" }
           edge {
-            layer glow line { color ORIGEN/0.3  width 8 }
-            layer principal line { color ORIGEN  width 2  style dashed  corner chamfer }
+            layer glow line { color ORIGIN/0.3  width 8 }
+            layer principal line { color ORIGIN  width 2  style dashed  corner chamfer }
             start dot { size 6 }
             end via
             label { pad 6  fill blue }
@@ -881,8 +916,8 @@ describe('compile: Tema', () => {
     expect(issues).toEqual([]);
     expect(canonico?.themes.find((t) => t.name === 'metro')?.['arista']).toEqual({
       capas: [
-        { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } },
-        { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGEN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6, radius: 8 } } },
+        { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGIN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } },
+        { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGIN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6, radius: 8 } } },
       ],
       origen: { tipo: 'dot', props: { size: 6 } },
       fin: { tipo: 'via', props: { size: 8 } },
@@ -903,7 +938,7 @@ describe('compile: Tema', () => {
         }`,
     });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_UNKNOWN_PRIMITIVE', 'E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_PRIMITIVE']);
+    expect(issues.map((i) => i.code)).toEqual(['theme-unknown-primitive', 'theme-invalid-value', 'theme-unknown-primitive']);
     expect(issues[2]?.message).toContain('arrow');
   });
 
@@ -971,10 +1006,10 @@ describe('compile: Tema', () => {
     });
 
     expect(issues.map((i) => [i.code, i.line])).toEqual([
-      ['E_THEME_UNKNOWN_PROPERTY', 4],
-      ['E_THEME_UNKNOWN_SLOT', 5],
-      ['E_THEME_INVALID_VALUE', 6],
-      ['E_THEME_STATE_TOUCHES_METRICS', 8],
+      ['theme-unknown-property', 4],
+      ['theme-unknown-slot', 5],
+      ['theme-invalid-value', 6],
+      ['theme-state-touches-metrics', 8],
     ]);
     expect(issues[0]!.hint).toContain("'gap'");
     expect(issues[1]!.hint).toContain("'icon'");
@@ -993,7 +1028,7 @@ describe('compile: Tema', () => {
         }`,
     });
 
-    expect(issues.map((i) => [i.code, i.line])).toEqual([['E_THEME_STATE_TOUCHES_METRICS', 5]]);
+    expect(issues.map((i) => [i.code, i.line])).toEqual([['theme-state-touches-metrics', 5]]);
     expect(issues[0]!.message).toContain('Slots');
   });
 
@@ -1022,13 +1057,13 @@ describe('compile: Tema', () => {
   it('un giro de mas de 3 grados es un error, no se recorta', () => {
     const { issues } = compile({ 'main.dg': `${base} theme excedido { node { layer ladeo tilt { degrees 4 } } }` });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(issues.map((i) => i.code)).toEqual(['theme-invalid-value']);
   });
 
   it('los bloques nodeStyles y edgeStyles ya no existen en el DSL', () => {
     const { issues } = compile({ 'main.dg': `${base} theme viejo { nodeStyles { servicio { fill red } } }` });
 
-    expect(issues.map((i) => i.code)).toContain('E_SYNTAX_ERROR');
+    expect(issues.map((i) => i.code)).toContain('syntax-error');
   });
 
   it('layer y slots siguen siendo identificadores validos en el Modelo', () => {
@@ -1038,64 +1073,64 @@ describe('compile: Tema', () => {
     expect(canonico?.model.nodes.map((n) => n.id)).toEqual(['slots']);
   });
 
-  it('tema duplicado es E_DUPLICATE_THEME con related a la primera declaracion', () => {
+  it('tema duplicado es duplicate-theme con related a la primera declaracion', () => {
     const { issues } = compile({ 'main.dg': `${base}\n${claro}\ntheme claro { }` });
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_DUPLICATE_THEME', file: 'main.dg', line: 3 });
+    expect(issues[0]).toMatchObject({ code: 'duplicate-theme', file: 'main.dg', line: 3 });
     expect(issues[0]?.related?.[0]).toMatchObject({ file: 'main.dg', line: 2 });
   });
 
   it('declarar `neutral` es duplicado del Tema por defecto', () => {
     const { issues } = compile({ 'main.dg': `${base} theme neutral { }` });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_DUPLICATE_THEME']);
+    expect(issues.map((i) => i.code)).toEqual(['duplicate-theme']);
   });
 
-  it('ciclo de extends es E_EXTENDS_CYCLE', () => {
+  it('ciclo de extends es extends-cycle', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}\ntheme a extends b { }\ntheme b extends a { }`,
     });
 
     expect(canonico).toBeUndefined();
-    expect(issues.map((i) => i.code)).toEqual(['E_EXTENDS_CYCLE', 'E_EXTENDS_CYCLE']);
+    expect(issues.map((i) => i.code)).toEqual(['extends-cycle', 'extends-cycle']);
     expect(issues[0]).toMatchObject({ file: 'main.dg', line: 2 });
   });
 
-  it('extends de un tema inexistente es E_UNKNOWN_THEME', () => {
+  it('extends de un tema inexistente es unknown-theme', () => {
     const { issues } = compile({ 'main.dg': `${base} theme a extends fantasma { }` });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_THEME']);
+    expect(issues.map((i) => i.code)).toEqual(['unknown-theme']);
   });
 
-  it('una Vista puede elegir su theme; uno inexistente es E_UNKNOWN_THEME', () => {
+  it('una Vista puede elegir su theme; uno inexistente es unknown-theme', () => {
     const bien = compile({ 'main.dg': `${base} ${claro} view v { type flow theme claro }` });
     const mal = compile({ 'main.dg': `${base} view v { type flow theme claroo }` });
 
     expect(bien.issues).toEqual([]);
     expect(bien.canonico?.views[0]?.theme).toBe('claro');
-    expect(mal.issues.map((i) => i.code)).toEqual(['E_UNKNOWN_THEME']);
+    expect(mal.issues.map((i) => i.code)).toEqual(['unknown-theme']);
   });
 
   it('una Vista con un Tema que existe pero no se resuelve no dice "no declarado": solo queda el error real del Tema', () => {
     const { issues } = compile({ 'main.dg': `${base} theme a extends fantasma { }  view v { type flow theme a }` });
 
-    expect(issues.map((i) => [i.code, i.line])).toEqual([['E_UNKNOWN_THEME', 1]]);
+    expect(issues.map((i) => [i.code, i.line])).toEqual([['unknown-theme', 1]]);
     expect(issues[0]?.message).toContain("'fantasma'");
   });
 
-  it('color de Tipo de nodo desconocido es E_UNKNOWN_PALETTE_COLOR con fix si hay un candidato', () => {
+  it('color de Tipo de nodo desconocido es unknown-palette-color con fix si hay un candidato', () => {
     const { issues } = compile({ 'main.dg': 'specification { node servicio { color blu } }  model { servicio a }' });
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_PALETTE_COLOR', file: 'main.dg' });
+    expect(issues[0]).toMatchObject({ code: 'unknown-palette-color', file: 'main.dg' });
     expect(issues[0]?.fix?.replacement).toBe('blue');
   });
 
   it('un hex fuera del Tema nunca es un color valido', () => {
     const { issues } = compile({ 'main.dg': 'specification { node servicio { color "#ff0000" } }  model { servicio a }' });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
+    expect(issues.map((i) => i.code)).toEqual(['unknown-palette-color']);
   });
 
   it('color de override se valida contra la Paleta del theme de la Vista', () => {
@@ -1103,7 +1138,7 @@ describe('compile: Tema', () => {
       `${base} ${claro} view v { type flow include ** theme ${tema} node a { color danger } }`;
 
     expect(compile({ 'main.dg': vista('claro') }).issues).toEqual([]);
-    expect(compile({ 'main.dg': vista('neutral') }).issues.map((i) => i.code)).toEqual(['E_UNKNOWN_PALETTE_COLOR']);
+    expect(compile({ 'main.dg': vista('neutral') }).issues.map((i) => i.code)).toEqual(['unknown-palette-color']);
   });
 });
 describe('compile: iconos', () => {
@@ -1128,12 +1163,12 @@ describe('compile: iconos', () => {
     expect(issues).toEqual([]);
   });
 
-  it('clave desconocida es E_UNKNOWN_ICON con posicion y fix si hay un candidato', () => {
+  it('clave desconocida es unknown-icon con posicion y fix si hay un candidato', () => {
     const { issues, canonico } = compile({ 'main.dg': nodo('databse') });
 
     expect(canonico).toBeUndefined();
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_ICON', severity: 'error', file: 'main.dg', line: 1 });
+    expect(issues[0]).toMatchObject({ code: 'unknown-icon', severity: 'error', file: 'main.dg', line: 1 });
     expect(issues[0]?.fix?.replacement).toBe('database');
   });
 });
@@ -1185,13 +1220,13 @@ describe('compile: drill-down', () => {
     expect(canonico?.views[0]?.drill).toBeUndefined();
   });
 
-  it('link a una Vista inexistente es E_UNKNOWN_VIEW_LINK, con fix si hay un candidato', () => {
+  it('link a una Vista inexistente es unknown-view-link, con fix si hay un candidato', () => {
     const { issues } = compile({
       'main.dg': `${base}\nview v {\n  type flow\n  include **\n  link a -> detale\n}\nview detalle { type flow }`,
     });
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_VIEW_LINK', file: 'main.dg', line: 5 });
+    expect(issues[0]).toMatchObject({ code: 'unknown-view-link', file: 'main.dg', line: 5 });
     expect(issues[0]?.fix?.replacement).toBe('detalle');
   });
 
@@ -1204,27 +1239,27 @@ describe('compile: drill-down', () => {
     expect(issues).toEqual([]);
   });
 
-  it('collapsed/expanded sobre un Nodo que no es Grupo es E_INVALID_EXPANSION_TARGET', () => {
+  it('collapsed/expanded sobre un Nodo que no es Grupo es invalid-expansion-target', () => {
     const { issues } = compile({ 'main.dg': `${base}\nview v {\n  type flow\n  include **\n  collapsed c\n}` });
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_INVALID_EXPANSION_TARGET', line: 5 });
+    expect(issues[0]).toMatchObject({ code: 'invalid-expansion-target', line: 5 });
   });
 
-  it('collapsed/expanded sobre un Grupo que la Vista no muestra, o inexistente, es E_INVALID_EXPANSION_TARGET', () => {
+  it('collapsed/expanded sobre un Grupo que la Vista no muestra, o inexistente, es invalid-expansion-target', () => {
     const fuera = compile({ 'main.dg': `${base} view v { type flow include a expanded b }` });
     const fantasma = compile({ 'main.dg': `${base} view v { type flow include ** collapsed zzz }` });
 
-    expect(fuera.issues.map((i) => i.code)).toEqual(['E_INVALID_EXPANSION_TARGET']);
-    expect(fantasma.issues.map((i) => i.code)).toEqual(['E_INVALID_EXPANSION_TARGET']);
+    expect(fuera.issues.map((i) => i.code)).toEqual(['invalid-expansion-target']);
+    expect(fantasma.issues.map((i) => i.code)).toEqual(['invalid-expansion-target']);
   });
 
-  it('link junto con expanded sobre el mismo Nodo es E_LINK_WITH_EXPANDED', () => {
+  it('link junto con expanded sobre el mismo Nodo es link-with-expanded', () => {
     const { issues } = compile({
       'main.dg': `${base} view v { type flow include ** expanded a link a -> v }`,
     });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_LINK_WITH_EXPANDED']);
+    expect(issues.map((i) => i.code)).toEqual(['link-with-expanded']);
   });
 });
 
@@ -1266,13 +1301,13 @@ describe('compile: Pasos (steps)', () => {
     expect(canonico?.views[0]?.steps).toEqual([]);
   });
 
-  it('un selector que no coincide con ningun Nodo es E_UNKNOWN_STEP en su posicion', () => {
+  it('un selector que no coincide con ningun Nodo es unknown-step en su posicion', () => {
     const { issues } = compile({
       'main.dg': `${base}\nview v {\n  type flow\n  steps {\n    step "s" { show zzz }\n  }\n}`,
     });
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_UNKNOWN_STEP', severity: 'error', file: 'main.dg', line: 5, column: 21 });
+    expect(issues[0]).toMatchObject({ code: 'unknown-step', severity: 'error', file: 'main.dg', line: 5, column: 21 });
   });
 
   it('un selector comodin sin coincidencias tambien lo es', () => {
@@ -1280,15 +1315,15 @@ describe('compile: Pasos (steps)', () => {
       'main.dg': `${base} view v { type flow  steps { step "s" { hide b.* } } }`,
     });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_STEP']);
+    expect(issues.map((i) => i.code)).toEqual(['unknown-step']);
   });
 
-  it('una Arista que no existe en el Modelo es E_UNKNOWN_STEP', () => {
+  it('una Arista que no existe en el Modelo es unknown-step', () => {
     const { issues } = compile({
       'main.dg': `${base} view v { type flow  steps { step "s" { show edge b -> a.x } } }`,
     });
 
-    expect(issues.map((i) => i.code)).toEqual(['E_UNKNOWN_STEP']);
+    expect(issues.map((i) => i.code)).toEqual(['unknown-step']);
   });
 
   it('un id parecido lleva fix con un unico candidato', () => {
@@ -1296,7 +1331,7 @@ describe('compile: Pasos (steps)', () => {
       'main.dg': `${base} view v { type flow  steps { step "s" { show a.xx } } }`,
     });
 
-    expect(issues[0]?.code).toBe('E_UNKNOWN_STEP');
+    expect(issues[0]?.code).toBe('unknown-step');
     expect(issues[0]?.fix?.replacement).toBe('a.x');
   });
 
@@ -1314,11 +1349,11 @@ describe('compile: Pasos (steps)', () => {
 
 describe('compile: Temas del ejemplo rinthel-arch', () => {
   it('extienden los incorporados oscuro y claro con parches por Tipo, sin issues', async () => {
-    // `vistas-temas.dg` usa los 14 Temas de `temas/`, con avisos de contraste deliberados: lo cubre tests/ejemplos-docs.test.ts.
+    // `theme-views.dg` uses the 14 Themes of `themes/`, con avisos de contraste deliberados: lo cubre tests/ejemplos-docs.test.ts.
     const { readFileSync, readdirSync } = await import('node:fs');
     const dir = new URL('../../../examples/rinthel-arch/', import.meta.url);
     const fuentes = Object.fromEntries(
-      readdirSync(dir).filter((f) => f.endsWith('.dg') && f !== 'vistas-temas.dg').map((f) => [f, readFileSync(new URL(f, dir), 'utf8')]),
+      readdirSync(dir).filter((f) => f.endsWith('.dg') && f !== 'theme-views.dg').map((f) => [f, readFileSync(new URL(f, dir), 'utf8')]),
     );
     const { canonico, issues } = compile(fuentes);
 
@@ -1327,10 +1362,10 @@ describe('compile: Temas del ejemplo rinthel-arch', () => {
     expect(issues).toEqual([]);
     const tema = (nombre: string) => temas.find((t) => t.name === nombre) as unknown as { tokens: object; nodo: { tipos: Record<string, Array<{ nombre: string }>> } };
     expect(tema('diagrams').tokens).toMatchObject({ background: '#09090b' });
-    expect(tema('diagrams-claro').tokens).toMatchObject({ background: '#f8fafc' });
-    for (const nombre of ['diagrams', 'diagrams-claro']) {
-      expect(tema(nombre).nodo.tipos['paquete']?.map((op) => op.nombre)).toEqual(['acento']);
-      expect(tema(nombre).nodo.tipos['externo']?.map((op) => op.nombre)).toEqual(['relleno', 'borde']);
+    expect(tema('diagrams-light').tokens).toMatchObject({ background: '#f8fafc' });
+    for (const nombre of ['diagrams', 'diagrams-light']) {
+      expect(tema(nombre).nodo.tipos['package']?.map((op) => op.nombre)).toEqual(['accent']);
+      expect(tema(nombre).nodo.tipos['external']?.map((op) => op.nombre)).toEqual(['fill', 'border']);
     }
   });
 });

@@ -31,7 +31,7 @@ describe('seam sesion: accesibilidad del Tema', () => {
     const sesion = abrirSesion({ 'main.dg': modelo + tema('COLOR', 'tokens { foreground "#ffffff" }') + vista });
 
     const issues = await sesion.diagnosticar();
-    const contraste = issues.filter((i) => i.code === 'W_THEME_LOW_CONTRAST');
+    const contraste = issues.filter((i) => i.code === 'theme-low-contrast');
 
     expect(contraste.map((i) => i.severity)).toEqual(['warning', 'warning']);
     expect(contraste[0]!.message).toContain("'servicio'");
@@ -42,7 +42,7 @@ describe('seam sesion: accesibilidad del Tema', () => {
 
   it('dos Tipos que solo difieren por color dan el warning solo-color en la Vista', async () => {
     const issues = await abrirSesion({ 'main.dg': modelo + tema('COLOR') + vista }).diagnosticar();
-    const soloColor = issues.filter((i) => i.code === 'W_THEME_COLOR_ONLY');
+    const soloColor = issues.filter((i) => i.code === 'theme-color-only');
 
     expect(soloColor).toHaveLength(1);
     expect(soloColor[0]).toMatchObject({ severity: 'warning', file: 'main.dg' });
@@ -54,7 +54,7 @@ describe('seam sesion: accesibilidad del Tema', () => {
     const conInsignia = tema('COLOR').replace('slots { title attrs }', 'slots { title badge attrs }');
     const issues = await abrirSesion({ 'main.dg': modelo + conInsignia + vista }).diagnosticar();
 
-    expect(issues.filter((i) => i.code === 'W_THEME_COLOR_ONLY')).toEqual([]);
+    expect(issues.filter((i) => i.code === 'theme-color-only')).toEqual([]);
   });
 
   it('el solo-color de cada Vista usa su Tipo de diagrama: la insignia de diagram flow solo distingue en la de flujo', async () => {
@@ -62,8 +62,8 @@ describe('seam sesion: accesibilidad del Tema', () => {
     const vistas = vista + vista.replace('view v', 'view f').replace('architecture', 'flow');
     const issues = await abrirSesion({ 'main.dg': modelo + conInsigniaEnFlujo + vistas }).diagnosticar();
 
-    const soloColor = issues.filter((i) => i.code === 'W_THEME_COLOR_ONLY');
-    expect(soloColor.map((i) => i.message.match(/Vista '(\w+)'/)?.[1])).toEqual(['v']);
+    const soloColor = issues.filter((i) => i.code === 'theme-color-only');
+    expect(soloColor.map((i) => i.message.match(/View '(\w+)'/)?.[1])).toEqual(['v']);
   });
 
   it('un Tema que no usa el color del Tipo ni tiene mal contraste no avisa', async () => {
@@ -72,7 +72,7 @@ describe('seam sesion: accesibilidad del Tema', () => {
     expect(issues).toEqual([]);
   });
 
-  it.each(['', 'neutral', 'neutral-dark', 'alto-contraste'])('el Tema incorporado %j no da ningun warning, con Grupos abiertos y cerrados', async (nombre) => {
+  it.each(['', 'neutral', 'neutral-dark', 'high-contrast'])('el Tema incorporado %j no da ningun warning, con Grupos abiertos y cerrados', async (nombre) => {
     // Un .dg minimo como lo empieza una persona: Tipos con color e icono, un Grupo abierto, uno cerrado y Aristas.
     const colores = `specification {
   node servicio { color blue  icon server }  node base { color green  icon database }

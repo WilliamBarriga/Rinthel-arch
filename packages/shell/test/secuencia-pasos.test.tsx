@@ -79,6 +79,6 @@ describe('VistaInteractiva: Pasos de secuencia', () => {
     await esperar(c);
     expect(opacidad(c.querySelector('[data-message="i:0"]'))).toBe(1);
     expect(opacidad(c.querySelector('[data-message="i:2.0.0"]'))).toBe(0);
-    expect(c.querySelector('[data-pasos]')?.textContent).toContain('Paso 1 de 3');
+    expect(c.querySelector('[data-pasos]')?.textContent).toContain('Step 1 of 3');
   });
 });

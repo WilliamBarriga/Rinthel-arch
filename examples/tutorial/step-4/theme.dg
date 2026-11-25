@@ -1,0 +1,21 @@
+// Step 4: a Theme of your own. It starts from neutral-dark (`extends`) and changes only what it wants.
+theme shop extends neutral-dark {
+  // The Palette: every color has a name; the parent Theme already defines its own and some are overridden here.
+  palette { blue "#38bdf8"  green "#34d399"  background "#0b1220"  paper "#111a2e" }
+
+  // One patch per Node kind: the service gets a bar of its color on the left; the external one, a dashed border.
+  node {
+    type service { use bar }
+    type external { use dashed }
+  }
+
+  // Edges: a thick line with rounded corners and an arrowhead.
+  edge {
+    layer line line { color blue  width 2.4  corner round  radius 12 }
+    end arrow { size 11  color blue }
+  }
+}
+
+// Parts: reusable pieces of a Theme. COLOR takes the color of the Node kind.
+part bar { layer accent shadow after border { color COLOR  x 4  y 0  inset 1 } }
+part dashed { layer fill { color background }  layer border dashed { color frame } }

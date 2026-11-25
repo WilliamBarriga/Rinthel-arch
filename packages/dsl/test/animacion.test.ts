@@ -16,23 +16,23 @@ describe('compile: animacion declarativa del Tema', () => {
   it('compila Movimientos de Capa, transition, enter, exit y stagger', () => {
     const resultado = tema(`palette { blue "#00f" }
       node {
-        ${CAPAS.replace('width 2 }', `width 2  motion pulso 1.2s ease-in-out intensity 0.4 delay 100ms }`)}
+        ${CAPAS.replace('width 2 }', `width 2  motion pulse 1.2s ease-in-out intensity 0.4 delay 100ms }`)}
         transition 120ms ease-out
-        enter escala 300ms
-        exit fundido 200ms reduced instant
+        enter zoom 300ms
+        exit fade 200ms reduced instant
         stagger 60ms
-        state seleccionado { layer acento { motion aura }  transition 80ms }
+        state selected { layer acento { motion aura }  transition 80ms }
       }`);
     const nodo = nodoDe(resultado);
 
     expect(resultado.issues).toEqual([]);
-    expect(nodo['capas'][1].animacion).toEqual({ clase: 'movimiento', movimiento: 'pulso', duracionMs: 1200, easing: 'ease-in-out', intensidad: 0.4, retardoMs: 100, reducido: 'still' });
-    expect(nodo['estados'].seleccionado[0].animacion).toMatchObject({ movimiento: 'aura', duracionMs: 2000 });
+    expect(nodo['capas'][1].animacion).toEqual({ clase: 'movimiento', movimiento: 'pulse', duracionMs: 1200, easing: 'ease-in-out', intensidad: 0.4, retardoMs: 100, reducido: 'still' });
+    expect(nodo['estados'].selected[0].animacion).toMatchObject({ movimiento: 'aura', duracionMs: 2000 });
     expect(nodo['animacion']).toEqual({
       transicion: { duracionMs: 120, easing: 'ease-out', reducido: 'fade' },
-      transicionesDeEstado: { seleccionado: { duracionMs: 80, easing: 'ease', reducido: 'fade' } },
-      entrada: { efecto: 'escala', duracionMs: 300, easing: 'ease-out', retardoMs: 0, reducido: 'fade' },
-      salida: { efecto: 'fundido', duracionMs: 200, easing: 'ease-out', retardoMs: 0, reducido: 'instant' },
+      transicionesDeEstado: { selected: { duracionMs: 80, easing: 'ease', reducido: 'fade' } },
+      entrada: { efecto: 'zoom', duracionMs: 300, easing: 'ease-out', retardoMs: 0, reducido: 'fade' },
+      salida: { efecto: 'fade', duracionMs: 200, easing: 'ease-out', retardoMs: 0, reducido: 'instant' },
       escalonadoMs: 60,
     });
   });
@@ -51,11 +51,11 @@ describe('compile: animacion declarativa del Tema', () => {
   });
 
   it('motion none en un estado o en un hijo quita el Movimiento heredado', () => {
-    const padre = `theme p { palette { blue "#00f" }  node { ${CAPAS.replace('width 2 }', 'width 2  motion respiracion }')} } }`;
+    const padre = `theme p { palette { blue "#00f" }  node { ${CAPAS.replace('width 2 }', 'width 2  motion breathe }')} } }`;
     const resultado = compile({ 'main.dg': `${base}\n${padre}\ntheme h extends p { node { layer acento { motion none } } }` });
 
     expect(resultado.issues).toEqual([]);
-    expect(nodoDe(resultado, 'p')['capas'][1].animacion).toMatchObject({ movimiento: 'respiracion' });
+    expect(nodoDe(resultado, 'p')['capas'][1].animacion).toMatchObject({ movimiento: 'breathe' });
     expect(nodoDe(resultado, 'h')['capas'][1].animacion).toBeUndefined();
   });
 
@@ -76,23 +76,23 @@ describe('compile: animacion declarativa del Tema', () => {
         stagger 9000ms
       }`);
 
-    expect(issues.map((i) => i.code).sort()).toEqual(['E_THEME_INVALID_VALUE', 'E_THEME_INVALID_VALUE', 'E_THEME_UNKNOWN_MOTION', 'E_THEME_UNKNOWN_MOTION']);
+    expect(issues.map((i) => i.code).sort()).toEqual(['theme-invalid-value', 'theme-invalid-value', 'theme-unknown-motion', 'theme-unknown-motion']);
     const motion = issues.find((i) => i.message.includes('pulsso'));
-    expect(motion).toMatchObject({ file: 'main.dg', line: 6, hint: "quisiste decir 'pulso'" });
+    expect(motion).toMatchObject({ file: 'main.dg', line: 6, hint: "did you mean 'pulse'" });
   });
 
   it('valores fuera de rango no se recortan', () => {
     const { issues } = tema(`palette { blue "#00f" }
-      node { ${CAPAS.replace('width 2 }', 'width 2  motion pulso intensity 7 }')} }`);
+      node { ${CAPAS.replace('width 2 }', 'width 2  motion pulse intensity 7 }')} }`);
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]).toMatchObject({ code: 'E_THEME_INVALID_VALUE', severity: 'error' });
+    expect(issues[0]).toMatchObject({ code: 'theme-invalid-value', severity: 'error' });
   });
 
   it('dos transition en el mismo bloque es un error, no un ultimo-gana silencioso', () => {
     const { issues } = tema('node { transition 100ms  transition 200ms }');
 
-    expect(issues.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(issues.map((i) => i.code)).toEqual(['theme-invalid-value']);
   });
 
   it('motion, delay y compania siguen siendo identificadores validos en el Modelo', () => {
@@ -105,7 +105,7 @@ describe('compile: animacion declarativa del Tema', () => {
   it('un decimal con cero a la izquierda conserva sus ceros (0.05 no es 0.5)', () => {
     const resultado = tema(`palette { blue "#00f" }
       node {
-        ${CAPAS.replace('width 2 }', 'width 2  motion pulso intensity 0.05 }')}
+        ${CAPAS.replace('width 2 }', 'width 2  motion pulse intensity 0.05 }')}
       }`);
 
     expect(resultado.issues).toEqual([]);

@@ -137,15 +137,15 @@ describe('Secuencia: expandir una Lifeline de Grupo', () => {
     const r = render(<VistaInteractiva source={fuenteDe(grupos)} defaultView="cerrada" theme={TEMA_NEUTRO} layout={layout} width={1200} height={900} morphMs={0} />);
     const { container } = r;
     await waitFor(() => expect(container.querySelector('[data-toggle="sistema"]')).not.toBeNull(), { timeout: 15000 });
-    fireEvent.click(container.querySelector('[data-pasos] [aria-label="Paso siguiente"]')!);
-    fireEvent.click(container.querySelector('[data-pasos] [aria-label="Paso siguiente"]')!);
-    fireEvent.click(container.querySelector('[data-pasos] [aria-label="Paso siguiente"]')!);
-    expect(container.querySelector('[data-pasos]')!.textContent).toContain('Paso 3 de 3');
+    fireEvent.click(container.querySelector('[data-pasos] [aria-label="Next step"]')!);
+    fireEvent.click(container.querySelector('[data-pasos] [aria-label="Next step"]')!);
+    fireEvent.click(container.querySelector('[data-pasos] [aria-label="Next step"]')!);
+    expect(container.querySelector('[data-pasos]')!.textContent).toContain('Step 3 of 3');
     const antes = xDe(container.querySelector<HTMLElement>('[data-id="sistema"]')!) - camaraX(container);
 
     fireEvent.click(container.querySelector('[data-toggle="sistema"]')!);
     await waitFor(() => expect(container.querySelector('[data-group-box="sistema"]')).not.toBeNull(), { timeout: 15000 });
-    expect(container.querySelector('[data-pasos]')!.textContent).toContain('Paso 3 de 3');
+    expect(container.querySelector('[data-pasos]')!.textContent).toContain('Step 3 of 3');
     const caja = container.querySelector<HTMLElement>('[data-group-box="sistema"]')!;
     const despues = xDe(caja) - camaraX(container);
     expect(despues).toBeCloseTo(antes, 3);

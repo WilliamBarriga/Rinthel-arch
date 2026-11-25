@@ -52,7 +52,7 @@ describe('hover', () => {
   it('el hover convive con la seleccion del mismo Nodo', async () => {
     const { container } = await montar({ selected: 'a' });
     sobre(container, 50, 25);
-    expect(conEstado(container, 'seleccionado')).toHaveLength(1);
+    expect(conEstado(container, 'selected')).toHaveLength(1);
     expect(conEstado(container, 'hover')).toHaveLength(1);
   });
 });
@@ -60,12 +60,12 @@ describe('hover', () => {
 describe('fantasma de arrastre', () => {
   it('el Nodo arrastrado se dibuja en fantasma hasta soltarlo', async () => {
     const { container } = await montar({ onMoveNode: () => true });
-    expect(conEstado(container, 'fantasma')).toHaveLength(0);
+    expect(conEstado(container, 'ghost')).toHaveLength(0);
     gesto(container.querySelector('[data-id="a"] [data-part="nodo"]')!, 'mousedown', 10, 10);
     gesto(window, 'mousemove', 60, 30);
-    expect(container.querySelector('[data-id="a"] [data-state="fantasma"]')).not.toBeNull();
+    expect(container.querySelector('[data-id="a"] [data-state="ghost"]')).not.toBeNull();
     gesto(window, 'mouseup', 60, 30);
-    await waitFor(() => expect(conEstado(container, 'fantasma')).toHaveLength(0));
+    await waitFor(() => expect(conEstado(container, 'ghost')).toHaveLength(0));
   });
 });
 

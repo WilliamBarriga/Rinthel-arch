@@ -1,0 +1,58 @@
+// Contrast: none
+// Phosphor terminal (CRT): green on black, glow, scan lines and dotted Edges.
+theme crt-terminal {
+  palette {
+    background "#020a04"  text "#7dff9b"
+    blue "#5cf2ff"  purple "#c49bff"  green "#7dff9b"  amber "#ffcc55"  red "#ff6b6b"  gray "#7dff9b"
+  }
+  fonts { body "JetBrains Mono"  mono "JetBrains Mono"  fallback "monospace" }
+  tokens { background "#020a04"  foreground "#7dff9b"  border "#7dff9b" }
+  page {
+    layer base radial { from green/0.10  to background  x 50  y 50 }
+    layer sweep lines { color text/0.05  size 3  angle 0 }
+    fixed
+  }
+  node {
+    layer glow glow { color COLOR/0.35  radius 10 }
+    layer shape rect
+    layer fill solid { color COLOR/0.05 }
+    layer border border { color COLOR/0.8 }
+    // No icon: the title is a command line with its glow and the mono badge below.
+    slots column min-width 170 slack 56 {
+      row gap 8 pad 12 pad-y 0 min-height 46 {
+        column {
+          title { weight 700  transform uppercase  tracking 0.04  glow COLOR/0.8  prefix "> "  text-align start  leading 1.25 }
+          badge { alpha 0.55  font mono  size 0.72 }
+        }
+        counter { fill background  border COLOR  font mono }
+      }
+      attrs
+    }
+    type external { layer glow none  layer fill { color background }  layer border dashed { color COLOR/0.6 } }
+    state hover { layer fill { color COLOR/0.2 }  layer glow { color COLOR/0.7  radius 18 }  transition 80ms linear }
+    state on-path { layer glow { color COLOR  motion pulse 1.2s ease-in-out intensity 0.5 } }
+    state dimmed { layer glow none }
+  }
+  group {
+    layer shape rect
+    layer border dashed { color text/0.45 }
+    slots row pad 12 pad-y 9 {
+      title { transform uppercase  font mono  size 0.8  leading 1.9  tracking 0.1  weight 600  fill background  border text  radius 4  pad 10 }
+    }
+    padding 4 20 20 20
+    // Closed is the Node box with a cursor in the kind color on the right edge.
+    state collapsed {
+      layer glow glow before shape { color COLOR/0.35  radius 10 }
+      layer fill solid after shape { color COLOR/0.05 }
+      layer border border { color COLOR/0.8 }
+      layer cursor shadow after border { color COLOR  x -4  y 0  inset 1 }
+    }
+  }
+  edge {
+    layer halo line { color text/0.12  width 5 }
+    layer line line { color text/0.8  width 1.2  style dotted }
+    start square { size 8  color text }
+    end chevron { size 9  color text/0.8 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 0  fill background  border text/0.6  border-width 1.5  font mono  weight 700  color text/0.8 }
+  }
+}

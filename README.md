@@ -1,109 +1,130 @@
 # rinthel-arch
 
-[![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
-![Node >= 20](https://img.shields.io/badge/node-%3E%3D20-green.svg)
-![Estado: 0.x](https://img.shields.io/badge/estado-0.x%20en%20desarrollo-orange.svg)
+**Architecture diagrams of your repo that your coding agent can read, write and keep up to date.**
 
-Sistema (React + TypeScript) para escribir y renderizar diagramas grandes y detallados de cualquier proyecto. Describes tu sistema una vez en texto (`.dg`) y obtienes varias Vistas navegables, con la estetica que elijas: el mismo diagrama puede verse como tarjetas sobrias, neon, plano tecnico, post-its o placa de circuito, cambiando solo el Tema.
+One text model, many views (architecture, flow, sequence, ER), with themes and step-by-step animation ready for talks and video.
 
-**English:** a text DSL for large architecture, flow, sequence and ER diagrams. You describe a system once and get several navigable views, rendered with fully themeable and animatable styles. Documentation is in Spanish for now; see the [short English overview](README.en.md).
+[![npm](https://img.shields.io/npm/v/rinthel-arch.svg)](https://www.npmjs.com/package/rinthel-arch)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-green.svg)
 
-![El mismo diagrama con el Tema synthwave](docs/img/temas/synthwave.png)
+[Leer en espanol](README.es.md) | **[Live demo](https://williambarriga.github.io/Rinthel-arch/)**
 
-## Que ofrece
+<!-- GIF slot (#250): an agent imports a codebase with `scan` and the diagram appears in the Dev UI with the changes highlighted. Replace this still image with the GIF. -->
+![The Dev UI showing this repo's own diagram](docs/img/estudio/vista-y-detalle.png)
 
-- **Cuatro Tipos de diagrama.** `architecture`, `flow`, `sequence` (Interacciones entre Lifelines, con Fragmentos, Notas y Pasos) y `er` (tablas con claves y cardinalidad) comparten el mismo Modelo y los mismos Temas.
-- **Un Modelo, muchas Vistas.** Los Nodos, Aristas y Atributos se escriben una vez; cada Vista elige que mostrar (`include`, `exclude`, `depth`) y puede enlazar a otra (drill-down) o revelarse paso a paso.
-- **La estetica es un Tema.** Un Tema es texto: Paleta, fuentes y una pila de Capas por elemento, tomadas de un catalogo cerrado (formas, rellenos, bordes, sombras, glow, vidrio, trazos, marcadores, animaciones). Hay Temas de ejemplo (ver la [galeria](docs/galeria.md)) y tres incorporados.
-- **UI en vivo.** `dev` recompila al guardar y sirve la [UI de dev](docs/guia/ui-de-dev.md): lienzo (pan, zoom, colapso de Grupos, arrastre de Nodos que reescribe el `.dg`), editor del DSL, Issues con `fix`, galeria de Temas, Historial de archivos (deshacer y rehacer) y el feed del Registro de actividad: lo que hace un agente por el CLI.
-- **Pensado para humanos y agentes.** `validate` devuelve issues estructurados con sugerencias, `inspect` consulta el Modelo y `skill` genera la skill de agente de un Workspace.
+## Quick start
 
-## Un vistazo al DSL
+**With your coding agent.** Install the skills (one `skills/` tree serves all four agents):
 
 ```
+claude plugin install rinthel-arch --marketplace WilliamBarriga/Rinthel-arch
+codex plugin marketplace add WilliamBarriga/Rinthel-arch
+npx skills add WilliamBarriga/Rinthel-arch -a opencode -g
+pi install npm:rinthel-arch
+```
+
+- **Claude Code** (2.1.292 or later): inside a session, `/plugin install rinthel-arch --marketplace WilliamBarriga/Rinthel-arch` does the same.
+- **Codex**: after adding the marketplace, install `rinthel-arch` from the Plugins directory.
+
+Then ask your agent, in your own repo:
+
+> Diagram this repo.
+
+The agent runs `scan`, writes the `.dg` files, validates them and gives you a local URL to open. Later, "refresh the diagram" updates only what changed in the code, and "draw the system in this PRD" sketches a design that does not exist yet. The skills call the CLI through `npx -y -p rinthel-arch@<version> diagrams`, so there is nothing else to install. Details per agent: [Quick start guide](docs/guide/quick-start.md).
+
+**Without an agent.** Requires Node 24 or later:
+
+```
+npx rinthel-arch dev --workspace .
+```
+
+Open `http://127.0.0.1:4173/` and write `.dg` files in that folder (the [DSL glance](#the-dsl-at-a-glance) below is a valid first file); the Dev UI redraws on every save. Installed globally (`npm i -g rinthel-arch`), the CLI answers to both `diagrams` and `rinthel-arch`.
+
+## Why
+
+- **If you work with a coding agent:** it reads the code, writes the diagram, validates it and refreshes it when the code changes, and you review a picture instead of a wall of text.
+- **If you present:** one source gives you clean views for docs and animated, themed ones for talks and video, without redrawing by hand.
+- **If you read Spanish:** the README and every user guide are also in Spanish.
+
+## What you get
+
+- **Import from code.** `scan` reads any repo without running it (manifests, TS/JS and Python imports, Prisma, SQL, Drizzle, Django and SQLAlchemy tables) and writes a draft of facts that the agent turns into Nodes, Edges and Views. Running it again reports what the diagram no longer covers and what changed.
+- **Blueprints.** Mark Nodes, Edges, Attributes and Interactions as `planned` to draw a proposal next to what exists; they are drawn faded and dashed, and `validate` points out the ones the code has since built.
+- **Four diagram types, one Model.** `architecture`, `flow`, `sequence` and `er` Views are cut from the same Nodes and Edges; Views link to each other (drill-down) and reveal themselves step by step.
+- **Themes.** A Theme is text: a Palette, fonts and stacked Layers (shapes, fills, glass, glow, strokes, animations). Fourteen example Themes plus three built-in.
+- **A live Dev UI.** `dev` serves a canvas, a DSL editor, Issues with one-click fixes, a Theme gallery, an Undo history and a feed of what your agent is doing.
+- **Share anywhere.** `export --workspace . --out diagram.html` writes one self-contained, read-only HTML file that opens in any browser.
+- **A CLI built for agents.** `validate --json` returns structured Issues with fixes, `inspect` queries the Model with `file:line`, and `edit` applies structured changes.
+
+| | |
+| --- | --- |
+| ![A sequence View of a checkout](docs/img/tipos/sequence-shop.png)<br>`type sequence` | ![An er View of customers and orders](docs/img/tipos/er-shop.png)<br>`type er` |
+
+## Themes
+
+<!-- Themes mosaic slot (#250): replace with the mosaic of the same diagram in several Themes. -->
+The same diagram of this repo, changing only the Theme:
+
+| | | |
+| --- | --- | --- |
+| ![soft-card Theme](docs/img/temas/soft-card.png)<br>`soft-card` | ![blueprint Theme](docs/img/temas/blueprint.png)<br>`blueprint` | ![synthwave Theme](docs/img/temas/synthwave.png)<br>`synthwave` |
+| ![sticky-notes Theme](docs/img/temas/sticky-notes.png)<br>`sticky-notes` | ![pcb Theme](docs/img/temas/pcb.png)<br>`pcb` | ![editorial Theme](docs/img/temas/editorial.png)<br>`editorial` |
+
+All of them in the [gallery](docs/gallery.md); to make your own, see [Customizing with Themes](docs/guide/themes.md).
+
+## The DSL at a glance
+
+```dg
 specification {
-  node actor    { icon user     color purple }
-  node servicio { icon server   color blue }
-  node almacen  { icon database color green }
+  node actor   { icon user     color purple }
+  node service { icon server   color blue }
+  node store   { icon database color green }
 }
 
 model {
-  actor cliente "Cliente"
-  servicio api "API" "Punto de entrada"
-  servicio pedidos "Pedidos"
-  almacen db "Base de datos"
+  actor customer "Customer"
+  service api "API" "Entry point"
+  service orders "Orders"
+  store db "Database"
 
-  cliente -> api "HTTP"
-  api -> pedidos
-  pedidos -> db
+  customer -> api "HTTP"
+  api -> orders
+  orders -> db
 }
 
-view principal {
+view main {
   type architecture
   include **
 }
 ```
 
-El [tutorial](docs/guia/tutorial.md) arma un diagrama parecido (una tienda en linea) y lo lleva, en cinco pasos, a Grupos, Vistas enlazadas y un Tema propio.
+The [tutorial](docs/guide/tutorial.md) grows a diagram like this one into Groups, linked Views, sequence and ER, and a Theme of your own.
 
-## Secuencia y ER
+## Docs
 
-Una Interaccion (un escenario ordenado entre Nodos) se dibuja como diagrama de secuencia, y los Nodos con Atributos como tablas ER, desde el mismo Modelo y con cualquier Tema:
-
-| | |
+| Guide | What for |
 | --- | --- |
-| ![Vista sequence de la compra](docs/img/tipos/secuencia-tienda.png)<br>`type sequence` | ![Vista er de clientes y pedidos](docs/img/tipos/er-tienda.png)<br>`type er` |
+| [Quick start](docs/guide/quick-start.md) | Install in your agent, run the CLI, walk through the examples |
+| [Tutorial](docs/guide/tutorial.md) | A first diagram, from zero to customized |
+| [CLI](docs/guide/cli.md) | Commands, options, exit codes and `--json` output |
+| [Dev UI](docs/guide/dev-ui.md) | Panels, editor, Undo history, shortcuts and following an agent |
+| [Customizing with Themes](docs/guide/themes.md) | Palette, Layers, per-type and per-state patches, Parts, motion |
+| [DSL reference](docs/guide/dsl-reference.md) | Model, Views, Steps, Interactions, ER and `planned` |
+| [Theme catalog](docs/theme-catalog.md) | Every Primitive, Slot, Motion and Effect with its ranges |
 
-El [tutorial](docs/guia/tutorial.md#paso-6-opcional-secuencia-y-er) los arma paso a paso y la [referencia del DSL](docs/guia/referencia-dsl.md) cubre Mensajes, Fragmentos, Notas, `ref`, marcas ER y Pasos.
+Every guide has a Spanish version in [docs/guia/](docs/guia/). Under the hood: the glossary is [CONTEXT.md](CONTEXT.md) and the design decisions are in [docs/adr/](docs/adr/).
 
-## Galeria
+## Status
 
-El mismo mapa de este repo (`examples/rinthel-arch/`), cambiando solo el Tema.
+Version 0.x: the DSL, the JSON contracts and the Themes may change between minor versions. Planned work lives in the [issues](https://github.com/WilliamBarriga/Rinthel-arch/issues).
 
-| | | |
-| --- | --- | --- |
-| ![Tema soft-card: tarjetas sobrias](docs/img/temas/soft-card.png)<br>`soft-card` | ![Tema blueprint: plano tecnico](docs/img/temas/blueprint.png)<br>`blueprint` | ![Tema crt-terminal: terminal verde](docs/img/temas/crt-terminal.png)<br>`crt-terminal` |
+## Contributing
 
-Los Temas de ejemplo, con una imagen cada uno, estan en la [galeria completa](docs/galeria.md).
+Issues and pull requests are welcome. Open an issue before a large change and read [CONTRIBUTING.md](CONTRIBUTING.md), which has the package map and the local test gate. To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
-## Empezar
+## License
 
-Requisitos: Node 20 o superior y pnpm. El paquete aun no esta publicado en npm: se usa clonando el repo.
+[MIT](LICENSE). The fonts bundled with the examples carry their own licenses (OFL-1.1 and DejaVu) next to the files.
 
-```
-git clone https://github.com/WilliamBarriga/Rinthel-arch.git
-cd Rinthel-arch
-pnpm install
-pnpm build
-node packages/cli/dist/bin.js dev --workspace examples/rinthel-arch
-```
-
-`dev` imprime una URL (`http://127.0.0.1:4173/`). Si la UI carga ahi, todo funciona; cambia a las Vistas `abierto-<tema>` para ver los Temas de ejemplo. Para tu propio diagrama, apunta `--workspace` a una carpeta con tus `.dg`.
-
-## Documentacion
-
-| Guia | Para que |
-| --- | --- |
-| [Inicio rapido](docs/guia/inicio-rapido.md) | Instalar, correr el CLI y recorrer los ejemplos |
-| [Tutorial](docs/guia/tutorial.md) | Crear un diagrama pequeno y personalizarlo en cinco pasos |
-| [CLI](docs/guia/cli.md) | Comandos, opciones, codigos de salida y salida `--json` |
-| [UI de dev](docs/guia/ui-de-dev.md) | Paneles, editor, Historial, atajos y seguir a un agente |
-| [Personalizar con Temas](docs/guia/personalizar-temas.md) | Paleta, Capas, parches por Tipo y estado, Partes, movimiento |
-| [Referencia del DSL](docs/guia/referencia-dsl.md) | Sintaxis de Modelo, Vistas y Pasos |
-| [Catalogo de Temas](docs/referencia-catalogo.md) | Todas las Primitivas, Slots, Movimientos y Efectos con sus rangos |
-
-Por dentro: el glosario esta en [CONTEXT.md](CONTEXT.md), las decisiones en [docs/adr/](docs/adr/) y las reglas de codigo en [docs/CODING.md](docs/CODING.md).
-
-## Estado
-
-Version 0.x, sin publicar en npm: el DSL y los contratos de los paquetes pueden cambiar entre versiones. Soporta los cuatro Tipos de diagrama: `architecture`, `flow`, `sequence` y `er`. El trabajo pendiente vive en los [issues](https://github.com/WilliamBarriga/Rinthel-arch/issues).
-
-## Contribuir
-
-Los issues y PRs son bienvenidos. Abre un issue antes de una contribucion grande y lee [CONTRIBUTING.md](CONTRIBUTING.md), que incluye el mapa de paquetes. Para reportar una vulnerabilidad, mira [SECURITY.md](SECURITY.md).
-
-## Licencia
-
-[MIT](LICENSE). Las fuentes incluidas en los ejemplos traen sus propias licencias (OFL-1.1 y DejaVu) junto a los archivos.
-
-El paquete `dsl` parte de la gramatica y el compilador de [LikeC4](https://github.com/likec4/likec4) (MIT); su aviso de copyright y licencia estan en [`packages/dsl/LICENSE-LIKEC4`](packages/dsl/LICENSE-LIKEC4).
+The `dsl` package starts from the grammar and compiler of [LikeC4](https://github.com/likec4/likec4) (MIT); its copyright and license notice are in [`packages/dsl/LICENSE-LIKEC4`](packages/dsl/LICENSE-LIKEC4).

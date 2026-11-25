@@ -133,45 +133,45 @@ describe('seam sesion: Fragmentos de secuencia', () => {
     expect((await geometriaDe(texto)).fragments).toEqual([]);
   });
 
-  it('alt con and y opt con else dan E_INVALID_FRAGMENT_OPERAND con hint, no E_SYNTAX_ERROR', async () => {
+  it('alt con and y opt con else dan invalid-fragment-operand con hint, no syntax-error', async () => {
     const diagnosticar = (cuerpo: string) => abrirSesion({ 'main.dg': modelo(`  interaction i {\n${cuerpo}\n  }`) }).diagnosticar();
     const cruzado = await diagnosticar('alt { cliente -> api } and { cliente -> db }');
-    expect(cruzado.map((d) => d.code)).toEqual(['E_INVALID_FRAGMENT_OPERAND']);
+    expect(cruzado.map((d) => d.code)).toEqual(['invalid-fragment-operand']);
     expect(cruzado[0]!.hint).toContain('else');
     expect(cruzado[0]!.line).toBe(8);
     const sobra = await diagnosticar('opt { cliente -> api } else { cliente -> db }');
-    expect(sobra.map((d) => d.code)).toEqual(['E_INVALID_FRAGMENT_OPERAND']);
+    expect(sobra.map((d) => d.code)).toEqual(['invalid-fragment-operand']);
     expect(sobra[0]!.hint).toBeDefined();
     const par = await diagnosticar('par { cliente -> api } else { cliente -> db }');
-    expect(par.map((d) => d.code)).toEqual(['E_INVALID_FRAGMENT_OPERAND']);
+    expect(par.map((d) => d.code)).toEqual(['invalid-fragment-operand']);
     expect(par[0]!.hint).toContain('and');
   });
 
   it('un Mensaje con un extremo desconocido dentro de un Fragmento se ubica en el texto', async () => {
     const issues = await abrirSesion({ 'main.dg': modelo('  interaction i {\n    opt {\n      cliente -> apii "a"\n    }\n  }') }).diagnosticar();
-    expect(issues.map((d) => [d.code, d.line])).toEqual([['E_UNKNOWN_LIFELINE', 9]]);
+    expect(issues.map((d) => [d.code, d.line])).toEqual([['unknown-lifeline', 9]]);
   });
 });
 
 describe('seam sesion: create y destroy con Fragmentos', () => {
   const diagnosticos = (interaccion: string) => abrirSesion({ 'main.dg': modelo(interaccion) }).diagnosticar();
 
-  it('E_CREATE_NOT_FIRST si el destino aparecio antes en otro Fragmento o fuera de el', async () => {
+  it('create-not-first si el destino aparecio antes en otro Fragmento o fuera de el', async () => {
     const res = await diagnosticos(`  interaction i {
     opt { cliente -> db "x" }
     alt { create api -> db "abrir" } else { api -> cliente }
   }`);
-    expect(res.map((i) => i.code)).toEqual(['E_CREATE_NOT_FIRST']);
+    expect(res.map((i) => i.code)).toEqual(['create-not-first']);
     expect(res[0]!.related![0]!.line).toBeLessThan(res[0]!.line);
   });
 
-  it('E_AFTER_DESTROY si el destroy esta en un Fragmento y la aparicion despues, fuera o dentro', async () => {
+  it('after-destroy si el destroy esta en un Fragmento y la aparicion despues, fuera o dentro', async () => {
     const res = await diagnosticos(`  interaction i {
     opt { destroy cliente -> db }
     api -> db "tarde"
     loop { db -> cola }
   }`);
-    expect(res.map((i) => i.code)).toEqual(['E_AFTER_DESTROY', 'E_AFTER_DESTROY']);
+    expect(res.map((i) => i.code)).toEqual(['after-destroy', 'after-destroy']);
     expect(res[0]!.related![0]!.line).toBeLessThan(res[0]!.line);
   });
 

@@ -38,7 +38,7 @@ export interface PropsDeAltoContraste {
   onHighContrastChange?: (activo: boolean) => void;
 }
 
-/** Tema efectivo del visor y el interruptor: `alto-contraste` reemplaza al Tema solo aqui. */
+/** Tema efectivo del visor y el interruptor: `high-contrast` reemplaza al Tema solo aqui. */
 export function useAltoContraste(tema: Tema, props: PropsDeAltoContraste): { tema: Tema; activo: boolean; interruptor: ReactElement; reducedMotion: 'on' | 'off' | undefined } {
   const { reducedMotion, interruptor: movimiento } = useReducedMotion();
   const sistema = usePrefiereAltoContraste();
@@ -51,7 +51,7 @@ export function useAltoContraste(tema: Tema, props: PropsDeAltoContraste): { tem
   const interruptor = (
     <div className="rd-chrome rd-contraste">
       <button type="button" aria-pressed={activo} onClick={alternar}>
-        Alto contraste
+        High contrast
       </button>
       {movimiento}
     </div>
@@ -72,7 +72,7 @@ export function useReducedMotion(): { reducedMotion: 'on' | 'off' | undefined; i
   const activo = manual ?? sistema;
   const interruptor = (
     <button type="button" aria-pressed={activo} onClick={() => fijarManual(!activo)}>
-      Reducir movimiento
+      Reduce motion
     </button>
   );
   return { reducedMotion: manual === undefined ? undefined : manual ? 'on' : 'off', interruptor };
@@ -90,7 +90,7 @@ export function Leyenda({ fuente, vista, tema, modo }: { fuente: FuenteCanonica;
   const leyenda = leyendaDelTema(tema, vista.type, tipos);
   if (tipos.length === 0 || (modo === 'auto' && !leyenda.necesaria)) return null;
   return (
-    <ul className="rd-chrome rd-leyenda" data-leyenda aria-label="Leyenda">
+    <ul className="rd-chrome rd-leyenda" data-leyenda aria-label="Legend">
       {leyenda.entradas.map((e) => (
         <li key={e.tipo}>
           <i aria-hidden style={{ background: e.color ?? 'transparent' }} />

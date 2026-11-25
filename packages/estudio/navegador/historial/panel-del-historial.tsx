@@ -1,7 +1,7 @@
 /**
  * Panel Historial: las entradas del Historial de `dev`, lo mas reciente arriba (el futuro atenuado, luego la posicion
  * actual y el pasado) y al final Inicio. Un clic salta a la entrada; las no alcanzables quedan deshabilitadas con su
- * motivo. Saltar pasa por la Escritura (`escribir`), que antes vacia el guardado pendiente del editor.
+ * reason. Saltar pasa por la Escritura (`escribir`), que antes vacia el guardado pendiente del editor.
  */
 import { useEffect, useId, useState } from 'react';
 import type { ReactElement } from 'react';
@@ -18,7 +18,7 @@ interface Fila {
   id: number;
   entrada?: EntradaDelHistorialDeDev;
   alcanzable: boolean;
-  motivo?: string;
+  reason?: string;
   futuro: boolean;
   actual: boolean;
 }
@@ -27,7 +27,7 @@ const filaDe = (entrada: EntradaDelHistorialDeDev, futuro: boolean, actual: bool
   id: entrada.id,
   entrada,
   alcanzable: entrada.alcanzable,
-  ...(entrada.motivo !== undefined && { motivo: entrada.motivo }),
+  ...(entrada.reason !== undefined && { reason: entrada.reason }),
   futuro,
   actual,
 });
@@ -42,22 +42,22 @@ export function PanelDelHistorial(): ReactElement {
   }, []);
   useEffect(() => setAhora(Date.now()), [historial]);
 
-  if (historial === undefined) return <p className="ui-tenue">Esperando el Historial de dev.</p>;
+  if (historial === undefined) return <p className="ui-tenue">Waiting for the dev Undo history.</p>;
   const { pasado, futuro, inicio } = historial;
   const ultima = pasado[pasado.length - 1];
   const filas: Fila[] = [
     ...[...futuro].reverse().map((e) => filaDe(e, true, false)),
     ...[...pasado].reverse().map((e) => filaDe(e, false, e === ultima)),
-    { id: 0, alcanzable: inicio.alcanzable, ...(inicio.motivo !== undefined && { motivo: inicio.motivo }), futuro: false, actual: ultima === undefined },
+    { id: 0, alcanzable: inicio.alcanzable, ...(inicio.reason !== undefined && { reason: inicio.reason }), futuro: false, actual: ultima === undefined },
   ];
   const saltar = (fila: Fila): void => {
     if (!fila.actual) void estudio.escribir({ historial: { saltar: fila.id } });
   };
 
   return (
-    <section aria-label="Historial" className="ui-historial">
-      {pasado.length === 0 && futuro.length === 0 && <p className="ui-tenue">Sin cambios todavia. Cada Gesto, guardado o fix sera una entrada.</p>}
-      <ol className="ui-historial-lista" aria-label="Historial de cambios">
+    <section aria-label="Undo history" className="ui-historial">
+      {pasado.length === 0 && futuro.length === 0 && <p className="ui-tenue">No changes yet. Every Gesture, save or fix will be an entry.</p>}
+      <ol className="ui-historial-lista" aria-label="Change history">
         {filas.map((fila) => (
           <FilaDelHistorial key={fila.id} fila={fila} ahora={ahora} alSaltar={saltar} />
         ))}
@@ -76,14 +76,14 @@ function FilaDelHistorial({ fila, ahora, alSaltar }: { fila: Fila; ahora: number
         className="ui-historial-boton"
         disabled={!fila.alcanzable}
         aria-current={fila.actual ? 'step' : undefined}
-        aria-describedby={fila.motivo === undefined ? undefined : idMotivo}
+        aria-describedby={fila.reason === undefined ? undefined : idMotivo}
         onClick={() => alSaltar(fila)}
       >
         <span className="ui-historial-marca" aria-hidden="true">
           {fila.actual ? '●' : '○'}
         </span>
         {entrada === undefined ? (
-          <span className="ui-historial-descripcion">Inicio</span>
+          <span className="ui-historial-descripcion">Start</span>
         ) : (
           <>
             <span className="ui-historial-descripcion">{entrada.descripcion}</span>
@@ -95,9 +95,9 @@ function FilaDelHistorial({ fila, ahora, alSaltar }: { fila: Fila; ahora: number
         )}
         {fila.actual && <span className="ui-historial-actual">actual</span>}
       </button>
-      {fila.motivo !== undefined && (
+      {fila.reason !== undefined && (
         <p id={idMotivo} className="ui-historial-motivo">
-          {fila.motivo}
+          {fila.reason}
         </p>
       )}
     </li>

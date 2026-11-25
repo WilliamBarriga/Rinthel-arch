@@ -16,16 +16,16 @@ describe('referenciaDelCatalogo', () => {
   });
 
   it('muestra rango y defecto de una propiedad numerica', () => {
-    expect(fila('glow')).toContain('`radius` 1 a 100 (12)');
+    expect(fila('glow')).toContain('`radius` 1 to 100 (12)');
   });
 
   it('muestra las opciones y marca las Primitivas que afectan a las Metricas', () => {
-    expect(fila('circle')).toMatch(/\| si \|/);
+    expect(fila('circle')).toMatch(/\| yes \|/);
     expect(fila('rect')).toMatch(/\| no \|/);
     expect(fila('line')).toMatch(/`style` solid\|/);
   });
 
   it('declara que esta generada', () => {
-    expect(texto).toContain('Generado');
+    expect(texto).toContain('Generated');
   });
 });

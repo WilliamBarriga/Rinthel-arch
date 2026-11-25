@@ -97,8 +97,8 @@ describe('seam sesion: Tema de secuencia explicito', () => {
     const fuera = await abrir('  lifeline { gap 5 }').diagnosticar();
     const typo = await abrir('  message { kind asynk { layer linea { width 2 } } }').diagnosticar();
 
-    expect(fuera.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
-    expect(typo.map((i) => i.code)).toEqual(['E_THEME_INVALID_VALUE']);
+    expect(fuera.map((i) => i.code)).toEqual(['theme-invalid-value']);
+    expect(typo.map((i) => i.code)).toEqual(['theme-invalid-value']);
     expect(typo[0]!.fix).toBeDefined();
   });
 });
@@ -122,11 +122,11 @@ model {
 const conTema = (tema: string) => abrirSesion({ 'main.dg': `${AMBOS}view s { type sequence  interaction i  theme ${tema} }\nview e { type er  include orders, customers  theme ${tema} }\n` });
 
 describe('seam sesion: Temas incorporados y secuencia/ER', () => {
-  it.each(['neutral', 'neutral-dark', 'alto-contraste'])('%s dibuja secuencia y ER sin warnings ni errores', async (tema) => {
+  it.each(['neutral', 'neutral-dark', 'high-contrast'])('%s dibuja secuencia y ER sin warnings ni errores', async (tema) => {
     expect(await conTema(tema).diagnosticar()).toEqual([]);
   });
 
-  it.each(['neutral', 'alto-contraste'])('%s declara de forma explicita todos los Elementos nuevos', (tema) => {
+  it.each(['neutral', 'high-contrast'])('%s declara de forma explicita todos los Elementos nuevos', (tema) => {
     const sesion = conTema(tema);
     const secuencia = sesion.estilo('s')!.pintura.secuencia!;
     expect(Object.keys(secuencia).sort()).toEqual(['activacion', 'fragmento', 'lifeline', 'mensaje', 'nota']);
@@ -142,9 +142,9 @@ describe('seam sesion: Temas incorporados y secuencia/ER', () => {
     expect(oscuro.mensaje!.base.capas[0]!.props['color']).not.toBe(claro.mensaje!.base.capas[0]!.props['color']);
   });
 
-  it('alto-contraste usa trazos mas gruesos que neutral', () => {
+  it('high-contrast usa trazos mas gruesos que neutral', () => {
     const grosor = (tema: string) => Number(conTema(tema).estilo('s')!.pintura.secuencia!.mensaje!.base.capas.at(-1)!.props['width']);
-    expect(grosor('alto-contraste')).toBeGreaterThan(grosor('neutral'));
+    expect(grosor('high-contrast')).toBeGreaterThan(grosor('neutral'));
   });
 });
 
@@ -152,15 +152,15 @@ describe('seam sesion: solo-color en Mensajes y Aristas identificantes', () => {
   const colorOnly = async (tema: string, vista: string) => {
     const base = tema.includes('  edge {') ? BASE.split('\n').filter((l) => !l.startsWith('  edge {')).join('\n') : BASE;
     const issues = await abrirSesion({ 'main.dg': `${AMBOS}theme t {\n${base}\n${tema}\n}\nview s { type sequence  interaction i  theme t }\nview e { type er  include orders, customers  theme t }\n` }).diagnosticar();
-    return issues.filter((i) => i.code === 'W_THEME_COLOR_ONLY' && i.message.includes(`'${vista}'`));
+    return issues.filter((i) => i.code === 'theme-color-only' && i.message.includes(`'${vista}'`));
   };
 
   it('avisa si reply solo cambia de color respecto de sync', async () => {
     const avisos = await colorOnly('  message {\n    layer linea line { color tinta  style solid }\n    end arrow { size 8 }\n    kind reply { layer linea { color rojo } }\n  }', 's');
 
     expect(avisos.map((i) => i.message)).toEqual([
-      "En la Vista 's', los Mensajes 'sync' y 'reply' se distinguen solo por color",
-      "En la Vista 's', los Mensajes 'async' y 'reply' se distinguen solo por color",
+      "In View 's', Messages 'sync' and 'reply' differ only by color",
+      "In View 's', Messages 'async' and 'reply' differ only by color",
     ]);
   });
 
@@ -172,7 +172,7 @@ describe('seam sesion: solo-color en Mensajes y Aristas identificantes', () => {
   it('avisa si la Arista identificante y la no identificante son iguales salvo el color', async () => {
     const avisos = await colorOnly('  edge { layer linea line { color tinta  style dotted }  identifying { layer linea { color azul } } }', 'e');
 
-    expect(avisos.map((i) => i.message)).toEqual(["En la Vista 'e', las Aristas identificantes y las no identificantes se distinguen solo por color"]);
+    expect(avisos.map((i) => i.message)).toEqual(["In View 'e', identifying and non-identifying Edges differ only by color"]);
   });
 
   it('no avisa con identificante continua y no identificante discontinua', async () => {

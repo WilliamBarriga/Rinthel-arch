@@ -83,28 +83,28 @@ describe('e2e: la UI de dev en Chromium', () => {
   it('indice, Vista, editor, edit externo, Mod+K, deshacer desde el Historial y redimensionado', async () => {
     const pagina = await navegador.newPage({ viewport: { width: 1600, height: 900 } });
     pagina.setDefaultTimeout(ESPERA.timeout);
-    const lienzo = pagina.getByRole('main', { name: 'Lienzo' });
-    const izquierdo = pagina.getByRole('complementary', { name: 'Panel izquierdo' });
-    const derecho = pagina.getByRole('complementary', { name: 'Panel derecho' });
+    const lienzo = pagina.getByRole('main', { name: 'Canvas' });
+    const izquierdo = pagina.getByRole('complementary', { name: 'Left panel' });
+    const derecho = pagina.getByRole('complementary', { name: 'Right panel' });
 
     // 1. Indice.
     await pagina.goto(servidor.url);
-    const indice = izquierdo.getByRole('listbox', { name: 'Vistas' });
+    const indice = izquierdo.getByRole('listbox', { name: 'Views' });
     await expect.poll(() => indice.getByRole('option').allInnerTexts(), ESPERA).toEqual([expect.stringContaining('general'), 'datos', expect.stringContaining('detalle')]);
 
     // 2. Abrir una Vista.
     await indice.getByRole('option', { name: 'datos' }).click();
     await lienzo.getByRole('group', { name: /^Pedidos, tabla/ }).waitFor();
-    await expect.poll(() => pagina.url(), ESPERA).toContain('#vista=datos');
+    await expect.poll(() => pagina.url(), ESPERA).toContain('#view=datos');
 
     // 3. Escribir en el editor: se guarda en disco y el lienzo se actualiza.
-    await izquierdo.getByRole('tab', { name: 'Codigo' }).click();
-    await izquierdo.getByRole('textbox', { name: 'Codigo de main.dg' }).click();
+    await izquierdo.getByRole('tab', { name: 'Code' }).click();
+    await izquierdo.getByRole('textbox', { name: 'Code of main.dg' }).click();
     await pagina.keyboard.press('Control+Home');
     for (let i = 1; i < numeroDeLinea(enDisco(), '"Pedidos"'); i++) await pagina.keyboard.press('ArrowDown');
     await escribirTrasLinea(pagina, 'tabla facturas "Facturas"');
     await expect.poll(enDisco, ESPERA).toContain('tabla facturas "Facturas"');
-    await expect.poll(() => izquierdo.getByRole('status', { name: 'Guardado del editor' }).textContent(), ESPERA).toBe('Guardado');
+    await expect.poll(() => izquierdo.getByRole('status', { name: 'Editor save state' }).textContent(), ESPERA).toBe('Saved');
     await lienzo.getByRole('group', { name: /^Facturas, tabla/ }).waitFor();
 
     // 4. `diagrams edit` desde fuera: el feed del agente lo muestra y el lienzo lo resalta.
@@ -112,20 +112,20 @@ describe('e2e: la UI de dev en Chromium', () => {
     const linea = numeroDeLinea(texto, '"Usuarios"');
     const columna = texto.split('\n')[linea - 1]!.indexOf('Usuarios') + 1;
     const edits = [{ file: 'main.dg', range: { start: { line: linea, column: columna }, end: { line: linea, column: columna + 'Usuarios'.length } }, replacement: 'Clientes' }];
-    const edicion = await run(['edit', '--workspace', workspace, '--edits', JSON.stringify(edits)], { entorno: { DIAGRAMS_AGENTE: 'e2e' } });
+    const edicion = await run(['edit', '--workspace', workspace, '--edits', JSON.stringify(edits)], { entorno: { DIAGRAMS_AGENT: 'e2e' } });
     expect(edicion.exitCode, edicion.stdout + edicion.stderr).toBe(0);
-    await derecho.getByRole('tab', { name: 'Agente' }).click();
-    await derecho.getByRole('list', { name: 'Actividad del agente' }).getByRole('listitem').filter({ hasText: 'e2e' }).filter({ hasText: 'edit' }).waitFor();
+    await derecho.getByRole('tab', { name: 'Agent' }).click();
+    await derecho.getByRole('list', { name: 'Agent activity' }).getByRole('listitem').filter({ hasText: 'e2e' }).filter({ hasText: 'edit' }).waitFor();
     await lienzo.getByRole('group', { name: /^Clientes, tabla/ }).waitFor();
-    await expect.poll(() => pagina.getByRole('status', { name: 'Resaltado del lienzo' }).getByRole('listitem').allInnerTexts(), ESPERA).toContain('plataforma.datos.usuarios');
-    await expect.poll(() => izquierdo.getByRole('textbox', { name: 'Codigo de main.dg' }).innerText(), ESPERA).toContain('"Clientes"');
+    await expect.poll(() => pagina.getByRole('status', { name: 'Canvas highlight' }).getByRole('listitem').allInnerTexts(), ESPERA).toContain('plataforma.datos.usuarios');
+    await expect.poll(() => izquierdo.getByRole('textbox', { name: 'Code of main.dg' }).innerText(), ESPERA).toContain('"Clientes"');
 
     // 5. Mod+K a `archivo:linea` y escribir alli.
     const destino = numeroDeLinea(enDisco(), '"Cliente web"');
     await pagina.keyboard.press('Control+k');
-    const buscador = pagina.getByRole('dialog', { name: 'Buscador' });
-    await buscador.getByRole('combobox', { name: 'Buscar' }).fill(`main.dg:${destino}`);
-    await buscador.getByRole('option', { name: `Abrir main.dg:${destino}` }).waitFor();
+    const buscador = pagina.getByRole('dialog', { name: 'Finder' });
+    await buscador.getByRole('combobox', { name: 'Search' }).fill(`main.dg:${destino}`);
+    await buscador.getByRole('option', { name: `Open main.dg:${destino}` }).waitFor();
     await pagina.keyboard.press('Enter');
     await buscador.waitFor({ state: 'hidden' });
     await escribirTrasLinea(pagina, 'servicio movil "App movil"');
@@ -133,8 +133,8 @@ describe('e2e: la UI de dev en Chromium', () => {
     expect(numeroDeLinea(enDisco(), '"App movil"')).toBe(destino + 1);
 
     // 6. Deshacer desde el Historial: saltar a la entrada anterior quita lo escrito en el paso 5 y conserva lo demas.
-    await derecho.getByRole('tab', { name: 'Historial' }).click();
-    const historial = derecho.getByRole('list', { name: 'Historial de cambios' });
+    await derecho.getByRole('tab', { name: 'Undo history' }).click();
+    const historial = derecho.getByRole('list', { name: 'Change history' });
     await expect.poll(() => historial.getByRole('listitem').count(), ESPERA).toBe(3);
     await historial.getByRole('listitem').nth(1).getByRole('button').click();
     await expect.poll(enDisco, ESPERA).not.toContain('App movil');
@@ -143,7 +143,7 @@ describe('e2e: la UI de dev en Chromium', () => {
     await expect.poll(() => historial.getByRole('listitem').nth(1).getByRole('button').getAttribute('aria-current'), ESPERA).toBe('step');
 
     // Arrastrar el borde del panel izquierdo lo ensancha (desde el minimo: abrir Codigo ya lo ensancho).
-    const separador = izquierdo.getByRole('separator', { name: 'Ancho del panel izquierdo' });
+    const separador = izquierdo.getByRole('separator', { name: 'Width of the left panel' });
     await separador.focus();
     await pagina.keyboard.press('Home');
     await expect.poll(async () => separador.getAttribute('aria-valuenow'), ESPERA).toBe(await separador.getAttribute('aria-valuemin'));

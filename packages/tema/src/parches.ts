@@ -4,13 +4,16 @@
  */
 import { CODIGOS, TIPOS_DE_VISTA, candidatosCercanos } from 'canonico';
 
-import { CATALOGO, construirPrimitiva, sugerir } from './catalogo';
+import { CATALOGO, construirPrimitiva, errorDeValorAntiguo, sugerir } from './catalogo';
 import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva, UbicacionDePrimitiva } from './catalogo';
 import type { TemaResuelto } from './tema';
 import type { Animacion } from './animacion';
 
-/** `foco` y `en-ruta` los calcula la shell. */
-export const ESTADOS = ['hover', 'seleccionado', 'fantasma', 'en-ruta', 'atenuado', 'foco'] as const;
+/**
+ * En orden de precedencia (el ultimo gana). `focus` y `on-path` los calcula la shell; `planned` sale del Modelo (marca
+ * Planeado, ADR 0011) y va primero: cualquier estado de interaccion se pinta sobre el.
+ */
+export const ESTADOS = ['planned', 'hover', 'selected', 'ghost', 'on-path', 'dimmed', 'focus'] as const;
 export type Estado = (typeof ESTADOS)[number];
 /** Los que un Tema distingue con `diagram <tipo> { ... }`. */
 export const TIPOS_DE_DIAGRAMA = TIPOS_DE_VISTA;
@@ -59,6 +62,11 @@ export function aplicarOps(
   const errores: ErrorDeOp[] = [];
   const indiceDe = (nombre: string): number => capas.findIndex((c) => c.nombre === nombre);
   const nombres = (): string[] => capas.map((c) => c.nombre);
+  /** An old built-in Layer name (`borde`) whose new name (`border`) is in the stack: `old-catalog-value` with its fix. */
+  const capaAntigua = (nombre: string): ErrorDeCatalogo | undefined => {
+    const error = errorDeValorAntiguo('layer', nombre);
+    return error?.candidato !== undefined && indiceDe(error.candidato) >= 0 ? error : undefined;
+  };
 
   ops.forEach((op, indice) => {
     const falla = (e: ErrorDeCatalogo, donde: ErrorDeOp['donde'], base?: string): void => {
@@ -68,7 +76,7 @@ export function aplicarOps(
 
     if (op.quitar === true) {
       if (actual < 0) {
-        falla({ codigo: CODIGOS.E_THEME_UNKNOWN_LAYER, mensaje: `No se puede quitar la Capa '${op.nombre}': no existe`, ...sugerir(op.nombre, nombres()) }, 'nombre');
+        falla(capaAntigua(op.nombre) ?? { codigo: CODIGOS.E_THEME_UNKNOWN_LAYER, mensaje: `Cannot remove Layer '${op.nombre}': it does not exist`, ...sugerir(op.nombre, nombres()) }, 'nombre');
       } else capas.splice(actual, 1);
       return;
     }
@@ -77,9 +85,9 @@ export function aplicarOps(
     const destino = op.antes ?? op.despues;
     if (destino !== undefined && (indiceDe(destino) < 0 || destino === op.nombre)) {
       falla(
-        {
+        (destino === op.nombre ? undefined : capaAntigua(destino)) ?? {
           codigo: CODIGOS.E_THEME_UNKNOWN_LAYER,
-          mensaje: destino === op.nombre ? `La Capa '${op.nombre}' no puede ubicarse respecto de si misma` : `${lado === 'antes' ? 'before' : 'after'} '${destino}': esa Capa no existe`,
+          mensaje: destino === op.nombre ? `Layer '${op.nombre}' cannot be placed relative to itself` : `${lado === 'antes' ? 'before' : 'after'} '${destino}': that Layer does not exist`,
           ...sugerir(destino, nombres().filter((n) => n !== op.nombre)),
         },
         'ubicacion',
@@ -91,9 +99,9 @@ export function aplicarOps(
     const existente = actual >= 0 ? capas[actual] : undefined;
     if (existente === undefined && destino === undefined && modo === 'parchear') {
       falla(
-        {
+        capaAntigua(op.nombre) ?? {
           codigo: CODIGOS.E_THEME_PATCH_WITHOUT_PLACEMENT,
-          mensaje: `La Capa '${op.nombre}' no existe; para anadirla indica 'before' o 'after' de otra Capa`,
+          mensaje: `Layer '${op.nombre}' does not exist; to add it, give 'before' or 'after' another Layer`,
           ...sugerir(op.nombre, nombres()),
         },
         'nombre',
@@ -101,7 +109,7 @@ export function aplicarOps(
       return;
     }
     if (existente === undefined && op.primitiva === undefined) {
-      falla({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `La Capa nueva '${op.nombre}' exige una Primitiva` }, 'nombre');
+      falla({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje: `The new Layer '${op.nombre}' requires a Primitive` }, 'nombre');
       return;
     }
 
@@ -162,24 +170,26 @@ export function cascada(
 export function opTocaMetricas(op: OpDeCapa, pilas: ReadonlyArray<readonly CapaDeTema[]>): string | undefined {
   const existente = pilas.flatMap((pila) => pila.filter((capa) => capa.nombre === op.nombre))[0];
   const afecta = (tipo: string | undefined): boolean => tipo !== undefined && ((CATALOGO as Record<string, DefinicionDePrimitiva>)[tipo]?.afectaMetricas ?? false);
-  if (op.quitar === true) return afecta(existente?.primitiva.tipo) ? `la Capa '${op.nombre}' define la caja y no puede quitarse` : undefined;
+  if (op.quitar === true) return afecta(existente?.primitiva.tipo) ? `Layer '${op.nombre}' defines the box and cannot be removed` : undefined;
   const nuevo = op.primitiva ?? existente?.primitiva.tipo;
-  if (afecta(nuevo)) return `la Capa '${op.nombre}' usa '${nuevo}', que afecta a las Metricas`;
-  return afecta(existente?.primitiva.tipo) ? `la Capa '${op.nombre}' sustituye una forma que define la caja` : undefined;
+  if (afecta(nuevo)) return `Layer '${op.nombre}' uses '${nuevo}', which affects the Metrics`;
+  return afecta(existente?.primitiva.tipo) ? `Layer '${op.nombre}' replaces a shape that defines the box` : undefined;
 }
 
 export type ResultadoDeEstado =
   | { estado: Estado }
-  | { error: { code: typeof CODIGOS.E_THEME_UNKNOWN_STATE; message: string; candidatos: string[] } };
+  | { error: { code: typeof CODIGOS.E_THEME_UNKNOWN_STATE | typeof CODIGOS.E_OLD_CATALOG_VALUE; message: string; candidatos: string[] } };
 
-/** Error `E_THEME_UNKNOWN_STATE` con candidatos cercanos si no es de `ESTADOS`. */
+/** Error `theme-unknown-state` con candidatos cercanos si no es de `ESTADOS`; un nombre antiguo es `old-catalog-value` con el nuevo como unico candidato. */
 export function parsearEstado(escrito: string): ResultadoDeEstado {
   const estado = ESTADOS.find((e) => e === escrito);
   if (estado !== undefined) return { estado };
+  const antiguo = errorDeValorAntiguo('state', escrito);
+  if (antiguo?.candidato !== undefined) return { error: { code: CODIGOS.E_OLD_CATALOG_VALUE, message: antiguo.mensaje, candidatos: [antiguo.candidato] } };
   return {
     error: {
       code: CODIGOS.E_THEME_UNKNOWN_STATE,
-      message: `Estado '${escrito}' desconocido; disponibles: ${ESTADOS.join(', ')}`,
+      message: `Unknown state '${escrito}'; available: ${ESTADOS.join(', ')}`,
       candidatos: candidatosCercanos(escrito, ESTADOS),
     },
   };

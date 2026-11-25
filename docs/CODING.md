@@ -4,7 +4,7 @@ Vocabulario de diseno: **Modulo**, **Interfaz**, **Seam**, **Adaptador**, **Prof
 
 ## Estructura
 
-Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico, tema, dsl, layout, sesion, render, shell, estudio, cli). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. `exports` declara solo `.`; la unica excepcion es `estudio`, con `./protocolo` (tipos del protocolo de `dev` que `cli` importa sin cargar la app), `./contrato` (suite de contrato de solo pruebas) y `./construir` (arma el bundle de la app; lo usan su build y el bench). Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
+Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico, tema, dsl, layout, sesion, render, shell, estudio, cli, scanner). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. `exports` declara solo `.`; la unica excepcion es `estudio`, con `./protocolo` (tipos del protocolo de `dev` que `cli` importa sin cargar la app), `./contrato` (suite de contrato de solo pruebas) y `./construir` (arma el bundle de la app; lo usan su build y el bench). Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
 
 ## Modulos profundos
 
@@ -20,6 +20,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 - Un seam existe cuando algo varia a traves de el: un adaptador es un seam hipotetico, dos es uno real. Con un solo adaptador, llamada directa.
 - Las dependencias entran como argumento; las funciones devuelven resultados en vez de mutar.
 - Direccion de dependencias: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. Un paquete solo importa de los anteriores. `tema` va tras `canonico` porque reutiliza sus `Issue` y codigos, y antes de `dsl` porque el compilador de Temas valida con su catalogo (ADR 0004, enmienda).
+- `scanner` sits outside the chain (ADR 0010): it imports no workspace package and only `cli` imports it (`AISLADOS` in `scripts/check-dependencies.ts`).
 - El nucleo es agnostico del Proyecto documentado (ver `AGENTS.md`).
 
 ## Pruebas
@@ -32,7 +33,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 - Contrato compartido entre fake y real: una suite (`probarContratoDeDev(crear)`) corre contra el fake en el paquete que lo define y contra el adaptador real en el que lo implementa. Una ruta nueva entra a la vez al contrato, al fake y al real.
 - Interfaz de usuario: se consulta por rol y nombre accesible (prueba tambien la accesibilidad), nunca componentes ni estado interno; se espera con `findBy*`/`waitFor` y el tiempo (debounce, avisos) con timers falsos. Las islas y los componentes no son seams: se prueban a traves de la app montada en jsdom. Excepcion, solo donde no hay rol que consultar: el lienzo (`data-id`, `data-vista`, `data-layout`, `data-part` de las Partes dibujadas, las variables `--rd-*` del dibujo y lo que dibuja el Componente de Tema de prueba, `data-aurora` de `BUNDLE_DE_PRUEBA`; `lienzoListo` de `packages/estudio/test/ayudas-de-ui.tsx`; las ayudas de puntero del lienzo, como `pulsarNodo`, tienen una sola copia en `tests/ayudas/lienzo.ts`, que las pruebas de los paquetes importan por ruta relativa, como el reloj falso y los Eventos de actividad de `tests/ayudas/reloj.ts` y `tests/ayudas/actividad.ts`) y las decoraciones de CodeMirror (clases `cm-*` y las marcas que el editor pone en sus lineas); un atributo de estado del chrome (`data-arrastrando`) se busca como ancestro de un elemento consultado por rol.
 - Una sola punta a punta en navegador real, dentro de `pnpm test` (`packages/cli/test/e2e-estudio.test.ts`): `dev` real, Chromium headless de Playwright, locators y plazo de 60 s. Cubre solo lo que jsdom no puede (escritura en disco, CodeMirror, scroll, arrastres); lo demas va a jsdom. Busca Chromium con `tests/ayudas/chromium.ts` (ayuda de prueba compartida en la raiz), el mismo helper que `pnpm capturas` y `pnpm docs:capturas`; sin Chromium falla pidiendo `pnpm exec playwright install chromium`. Sin regresion visual automatica: la estetica se revisa a mano con `pnpm docs:capturas` servido por `localhost`.
-- Documentacion derivada: lo que sale de un esquema se genera, no se escribe a mano. `docs/referencia-catalogo.md` sale del catalogo de `tema` (`pnpm docs:catalogo`); `tests/referencia-catalogo.test.ts` falla si se desvia. Una Primitiva nueva: una entrada en el catalogo, su pintor y regenerar la referencia.
+- Documentacion derivada: lo que sale de un esquema se genera, no se escribe a mano. `docs/theme-catalog.md` sale del catalogo de `tema` (`pnpm docs:catalogo`); `tests/referencia-catalogo.test.ts` falla si se desvia. Una Primitiva nueva: una entrada en el catalogo, su pintor y regenerar la referencia.
 - Runner de pruebas: Vitest. Build de paquetes: tsup. Gestor: pnpm workspaces, sin orquestador de tareas.
 
 ## README de paquete

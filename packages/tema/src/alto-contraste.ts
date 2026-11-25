@@ -1,5 +1,5 @@
 /**
- * Tema `alto-contraste`: la tarjeta de `neutral` sobre fondo negro, texto blanco y bordes gruesos del color del Tipo,
+ * Tema `high-contrast`: la tarjeta de `neutral` sobre fondo negro, texto blanco y bordes gruesos del color del Tipo,
  * sin translucidos ni warnings de contraste. Va ya resuelto porque solo lo aplica el visor, en lugar del de la Vista.
  */
 import { TEMA_NEUTRO } from './tema';
@@ -10,7 +10,7 @@ const texto = (props: Record<string, string | number>) : Primitiva => ({ tipo: '
 
 export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
   ...TEMA_NEUTRO,
-  name: 'alto-contraste',
+  name: 'high-contrast',
   palette: {
     white: '#ffffff',
     black: '#000000',
@@ -27,9 +27,9 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
   nodo: {
     ...TEMA_NEUTRO.nodo,
     capas: [
-      { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
-      { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'black' } } },
-      { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'COLOR', width: 3 } } },
+      { nombre: 'shape', primitiva: { tipo: 'rect', props: { radius: 0 } } },
+      { nombre: 'fill', primitiva: { tipo: 'solid', props: { color: 'black' } } },
+      { nombre: 'border', primitiva: { tipo: 'border', props: { color: 'COLOR', width: 3 } } },
     ],
     slots: {
       direccion: 'column',
@@ -54,22 +54,22 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
       counter: { tipo: 'chip', props: { fill: 'black', border: 'white', 'border-width': 2, color: 'white', weight: 700, radius: 50 } },
       attrs: texto({}),
     },
-    estados: { seleccionado: [{ nombre: 'borde', props: { width: 6 } }] },
+    estados: { selected: [{ nombre: 'border', props: { width: 6 } }] },
   },
   grupo: {
     ...TEMA_NEUTRO.grupo,
     capas: [
-      { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
-      { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'black' } } },
-      { nombre: 'borde', primitiva: { tipo: 'dashed', props: { color: 'white', width: 2 } } },
+      { nombre: 'shape', primitiva: { tipo: 'rect', props: { radius: 0 } } },
+      { nombre: 'fill', primitiva: { tipo: 'solid', props: { color: 'black' } } },
+      { nombre: 'border', primitiva: { tipo: 'dashed', props: { color: 'white', width: 2 } } },
     ],
     slots: { direccion: 'row', gap: 0, pad: 12, padY: 6, hijos: [{ slot: 'title' }] },
     textos: { title: texto({ dot: 'COLOR', transform: 'uppercase', size: 0.85, tracking: 0.08, weight: 700 }) },
     padding: { top: 12, left: 20, bottom: 20, right: 20 },
-    colapsado: { ops: [{ nombre: 'borde', primitiva: 'border', props: { color: 'COLOR', width: 3 } }] },
+    colapsado: { ops: [{ nombre: 'border', primitiva: 'border', props: { color: 'COLOR', width: 3 } }] },
   },
   arista: {
-    capas: [{ nombre: 'linea', primitiva: { tipo: 'line', props: { color: 'white', width: 2, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } }],
+    capas: [{ nombre: 'line', primitiva: { tipo: 'line', props: { color: 'white', width: 2, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } }],
     fin: { tipo: 'arrow', props: { size: 9 } },
     etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 6, 'pad-y': 2, fill: 'black', border: 'white', 'border-width': 1.5, color: 'white', radius: 0 } },
     diagramas: { er: { ops: [], fin: { tipo: 'arrow', props: { size: 12, color: 'white' } } } },
@@ -77,8 +77,8 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
   fila: {
     alto: 28,
     capas: [
-      { nombre: 'fondo', primitiva: { tipo: 'solid', props: { color: 'black' } } },
-      { nombre: 'separador', primitiva: { tipo: 'stripe', props: { color: 'white', side: 'bottom', width: 2 } } },
+      { nombre: 'background', primitiva: { tipo: 'solid', props: { color: 'black' } } },
+      { nombre: 'separator', primitiva: { tipo: 'stripe', props: { color: 'white', side: 'bottom', width: 2 } } },
     ],
     alterna: [],
     textos: { name: texto({ weight: 700 }), type: texto({}) },
@@ -87,12 +87,12 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
     estados: {},
   },
   secuencia: {
-    lifeline: { capas: [{ nombre: 'linea', primitiva: { tipo: 'line', props: { color: 'white', width: 2, style: 'dashed' } } }], fin: { tipo: 'cross', props: { size: 14, color: 'white' } }, textos: {}, parches: {}, estados: {}, metricas: {} },
+    lifeline: { capas: [{ nombre: 'line', primitiva: { tipo: 'line', props: { color: 'white', width: 2, style: 'dashed' } } }], fin: { tipo: 'cross', props: { size: 14, color: 'white' } }, textos: {}, parches: {}, estados: {}, metricas: {} },
     activation: {
       capas: [
-        { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
-        { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'black' } } },
-        { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'COLOR', width: 3 } } },
+        { nombre: 'shape', primitiva: { tipo: 'rect', props: { radius: 0 } } },
+        { nombre: 'fill', primitiva: { tipo: 'solid', props: { color: 'black' } } },
+        { nombre: 'border', primitiva: { tipo: 'border', props: { color: 'COLOR', width: 3 } } },
       ],
       textos: {},
       parches: {},
@@ -100,13 +100,13 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
       metricas: { width: 12 },
     },
     message: {
-      capas: [{ nombre: 'linea', primitiva: { tipo: 'line', props: { color: 'white', width: 3, style: 'solid', corner: 'sharp' } } }],
+      capas: [{ nombre: 'line', primitiva: { tipo: 'line', props: { color: 'white', width: 3, style: 'solid', corner: 'sharp' } } }],
       fin: { tipo: 'arrow', props: { size: 11 } },
       textos: {},
       parches: {
         async: { ops: [], fin: { tipo: 'chevron', props: { size: 11 } } },
-        reply: { ops: [{ nombre: 'linea', props: { style: 'dashed' } }], fin: { tipo: 'chevron', props: { size: 11 } } },
-        create: { ops: [{ nombre: 'linea', props: { style: 'dashed' } }], fin: { tipo: 'chevron', props: { size: 11 } } },
+        reply: { ops: [{ nombre: 'line', props: { style: 'dashed' } }], fin: { tipo: 'chevron', props: { size: 11 } } },
+        create: { ops: [{ nombre: 'line', props: { style: 'dashed' } }], fin: { tipo: 'chevron', props: { size: 11 } } },
         destroy: { ops: [], fin: { tipo: 'arrow', props: { size: 11 } } },
       },
       estados: {},
@@ -114,9 +114,9 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
     },
     fragment: {
       capas: [
-        { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
-        { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'black' } } },
-        { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'white', width: 3 } } },
+        { nombre: 'shape', primitiva: { tipo: 'rect', props: { radius: 0 } } },
+        { nombre: 'fill', primitiva: { tipo: 'solid', props: { color: 'black' } } },
+        { nombre: 'border', primitiva: { tipo: 'border', props: { color: 'white', width: 3 } } },
       ],
       textos: {
         operator: { tipo: 'label', props: { color: 'white', weight: 700 } },
@@ -129,8 +129,8 @@ export const TEMA_ALTO_CONTRASTE: TemaResuelto = {
     },
     note: {
       capas: [
-        { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'black' } } },
-        { nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'amber', width: 3 } } },
+        { nombre: 'fill', primitiva: { tipo: 'solid', props: { color: 'black' } } },
+        { nombre: 'border', primitiva: { tipo: 'border', props: { color: 'amber', width: 3 } } },
       ],
       textos: { text: texto({}) },
       parches: {},

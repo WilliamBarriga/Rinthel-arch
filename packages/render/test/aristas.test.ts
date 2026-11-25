@@ -16,7 +16,7 @@ const L = [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 40 }];
 
 describe('Aristas del Tema', () => {
   it('la pila de trazos se dibuja de abajo hacia arriba: el glow ancho y translucido va bajo el principal', () => {
-    const estilo = resolverEstilo(tema({ capas: [linea('glow', { color: 'ORIGEN/0.3', width: 8 }), linea('principal', { color: 'ORIGEN' })] }), 'architecture');
+    const estilo = resolverEstilo(tema({ capas: [linea('glow', { color: 'ORIGIN/0.3', width: 8 }), linea('principal', { color: 'ORIGIN' })] }), 'architecture');
     const rutas = todos(pintarArista(estilo, { id: 'a -> b', puntos: L, origen: 'blue' }), 'path').filter((p) => p.attrs['data-capa'] !== undefined);
 
     expect(rutas.map((r) => r.attrs['data-capa'])).toEqual(['glow', 'principal']);

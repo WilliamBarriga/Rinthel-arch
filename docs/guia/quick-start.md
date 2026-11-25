@@ -1,0 +1,106 @@
+[Read in English](../guide/quick-start.md)
+
+# Inicio rapido
+
+## Requisitos
+
+- Node 20 o superior.
+- pnpm.
+- Para `pnpm test` y para regenerar las capturas de la documentacion: Chromium, desde la cache de Playwright (`pnpm exec playwright install chromium`) o con `CHROMIUM_PATH`.
+
+## Instalar las skills en tu agente
+
+Un solo arbol `skills/` (`rinthel-diagramas` y `rinthel-temas`) sirve a cuatro agentes, cada uno con su manifiesto fino (formatos segun la documentacion oficial de cada agente, consultada el 2026-11-24).
+
+| Agente | Instalacion | Notas |
+| --- | --- | --- |
+| Claude Code | `claude plugin install rinthel-arch --marketplace WilliamBarriga/Rinthel-arch` | Requiere Claude Code 2.1.292 o superior. En sesion: `/plugin install rinthel-arch --marketplace WilliamBarriga/Rinthel-arch`. Las skills quedan como `/rinthel-arch:rinthel-diagramas` y `/rinthel-arch:rinthel-temas` |
+| Codex | `codex plugin marketplace add WilliamBarriga/Rinthel-arch` | Despues instala `rinthel-arch` desde el directorio de Plugins y abre una sesion nueva. Alternativa sin plugin: copia `skills/*` a `~/.agents/skills/` |
+| OpenCode | `npx skills add WilliamBarriga/Rinthel-arch -a opencode -g` | OpenCode no tiene formato de plugin para skills: lee `~/.config/opencode/skills`, `~/.claude/skills` y `~/.agents/skills`. Tambien sirve copiar `skills/*` a mano |
+| Pi | `pi install npm:rinthel-arch` | El paquete npm declara `pi.skills` y la keyword `pi-package`. Con `--local` lo escribe en `.pi/settings.json` del proyecto |
+
+El CLI no viaja con el plugin: las skills usan `diagrams` si esta en el `PATH` y, si no, `npx -y -p rinthel-arch@<version> diagrams`. Para tenerlo instalado: `npm i -g rinthel-arch` (comandos `diagrams` y `rinthel-arch`). No ejecutes el nombre `diagrams` directamente con npx: ese nombre en npm es de otro paquete.
+
+## Instalar y construir desde el codigo fuente
+
+Para trabajar en el repo mismo (o correr los ejemplos), usa un clon:
+
+```
+git clone https://github.com/WilliamBarriga/Rinthel-arch.git
+cd Rinthel-arch
+pnpm install
+pnpm build
+```
+
+El CLI queda en `packages/cli/dist/bin.js`. En esta guia lo abreviamos como `dg`:
+
+```
+alias dg="node $PWD/packages/cli/dist/bin.js"
+```
+
+## Los conceptos en un minuto
+
+Un **Workspace** es una carpeta de archivos `.dg`. Todos se fusionan en un unico **Modelo** (los Nodos y las Aristas de tu proyecto). Una **Vista** elige que parte del Modelo se dibuja y de que **Tipo de diagrama** (`architecture`, `flow`, `sequence` o `er`). Un **Tema** decide como se ve. El vocabulario completo esta en [CONTEXT.md](../../CONTEXT.md).
+
+Un archivo `.dg` tiene hasta cinco clases de bloque:
+
+| Bloque | Para que |
+| --- | --- |
+| `specification` | Declara los Tipos de nodo (icono y color) |
+| `model` | Declara los Nodos y las Aristas |
+| `view` | Elige que mostrar y con que Tema |
+| `theme` | Define una estetica (Paleta, fuentes, Capas) |
+| `part` | Trozo de Tema reutilizable |
+
+## Los comandos
+
+Detalle de cada uno en la [guia del CLI](cli.md), o `dg <comando> --help`. Todos piden `--workspace <ruta>`.
+
+| Comando | Que hace |
+| --- | --- |
+| `dg validate --workspace <ruta>` | Compila y valida; lista errores y avisos con archivo y linea. `--json` da el mismo resultado estructurado |
+| `dg build --workspace <ruta>` | Escribe la Fuente canonica y la geometria en `<ruta>/.diagrams/` (no se versiona) |
+| `dg dev --workspace <ruta>` | UI en vivo en `http://127.0.0.1:4173/` ([UI de dev](dev-ui.md)); recompila al guardar |
+| `dg inspect search <texto>`<br>`dg inspect node <id>`<br>`dg inspect view <id>`<br>`dg inspect interaction <id>`<br>`dg inspect theme <nombre>` | Consultas de solo lectura sobre el Modelo, con `archivo:linea` |
+| `dg edit` | Escribe sobre el `.dg`: fija un Pin (`--view <id> --node <id> --x N --y N`) o aplica una Intencion (`--intent '<json>'`, p. ej. `reorder-lifelines` en secuencia) o ediciones estructuradas (`--edits '<json>'`, por ejemplo los `fix` de `validate`). Es lo que usa el visor al arrastrar un Nodo |
+| `dg skill` | Imprime una skill (Markdown) para que un agente escriba y corrija `.dg` con el bucle inspect, editar, validate |
+
+En la UI, la Vista se elige en el panel Vistas o con el hash de la URL (`#view=<id>`), y los enlaces de drill-down y las migas navegan entre Vistas. Arrastrar un Nodo fija su Pin y reescribe el archivo `.dg`.
+
+## Recorrer los ejemplos
+
+```
+dg dev --workspace examples/tutorial/step-2      # the small diagram of the tutorial
+dg dev --workspace examples/rinthel-arch         # this repo documented, with its example Themes
+dg dev --workspace examples/themes/gallery --theme-path examples/rinthel-arch/themes        # a common Model with the example Themes and the states of each Node
+```
+
+En `examples/rinthel-arch` (regenerado con `dg scan`) prueba la Vista `context` y haz clic en `estudio` o `scanner` (drill-down), o abre una Vista `open-<theme>`. La Vista `flow-dev` es de Tipo `flow`: avanza sus Pasos para ver como se revela el diagrama; `tables` es `er` y `export-sequence` es `sequence`.
+
+## Secuencia y ER en un minuto
+
+El mismo Modelo se dibuja como secuencia o como tablas cambiando el `type` de la Vista. Una **Interaccion** (`interaction`) es un escenario ordenado entre Nodos del Modelo, y los Atributos con `pk`, `fk` y `uk` hacen tablas:
+
+```dg
+specification {
+  node service  { icon server   color blue }
+  node store    { icon database color green }
+}
+
+model {
+  service api "API"
+  store orders "Orders" { id: uuid pk  total: decimal }
+  interaction place-order { api -> orders "insert"  reply orders -> api "ok" }
+}
+
+view order-flow { type sequence  interaction place-order }
+view order-tables { type er  include orders }
+```
+
+`dg dev` abre la Vista de secuencia con `#view=order-flow`. Mas en el [paso 6 del tutorial](tutorial.md#paso-6-opcional-secuencia-y-er).
+
+## Siguiente
+
+- [Tutorial](tutorial.md): tu primer diagrama, de cero a personalizado.
+- [Personalizar con Temas](themes.md).
+- [Referencia del DSL](dsl-reference.md).

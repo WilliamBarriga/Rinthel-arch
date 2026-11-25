@@ -19,7 +19,7 @@ export async function iniciarDevDeGaleria(repo: string, workspace: string, carpe
     let salida = '';
     const alRecibir = (trozo: Buffer): void => {
       salida += trozo.toString();
-      const coincide = /escuchando en (http:\/\/\S+)/.exec(salida);
+      const coincide = /listening on (http:\/\/\S+)/.exec(salida);
       if (coincide !== null) resolver(coincide[1]!);
     };
     hijo.stdout.on('data', alRecibir);

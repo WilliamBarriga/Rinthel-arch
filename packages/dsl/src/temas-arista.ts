@@ -1,10 +1,10 @@
 /** Bloque `edge` de un Tema: pila de trazos (Familia trazo); cada marcador y la etiqueta son una Primitiva suelta. */
 import { CODIGOS } from 'canonico';
-import { aplicarOps } from 'tema';
+import { ESTADOS, aplicarOps, parsearEstado } from 'tema';
 import type { CapaDeTema, OpDeCapa, Primitiva, TemaResuelto } from 'tema';
 
 import type { EdgeItem, ThemeDiagram, ThemeLabel, ThemeLayer, ThemeMarker, ThemeUse } from './generated/ast';
-import { aRango, rangoDe } from './posiciones';
+import { aRango, baseDeErrorDeEstado, issueConSugerencia, rangoDe } from './posiciones';
 import { compilarBloque } from './temas-capas';
 import { nombreDeDiagrama, primitivaSuelta } from './temas-comun';
 import type { Contexto } from './temas-comun';
@@ -33,6 +33,23 @@ export function compilarArista(items: readonly EdgeItem[], tema: TemaResuelto, c
       const vigente = aplicarOps(tema.arista.capas as CapaDeTema[], previo, tema.palette, 'parchear', 'capa-arista').pila;
       const ops = compilarBloque(item.items, { ...ctx, modo: 'parchear', ubicacion: 'capa-arista', candidatas: [vigente], origenes: new Map() });
       tema.arista.identificante = [...previo, ...ops];
+    } else if (item.$type === 'ThemeState') {
+      // Paint-only: a state patches the stroke stack (Layers and Parts); markers, label and Metrics stay.
+      const resultado = parsearEstado(item.name);
+      if ('error' in resultado) {
+        ctx.issues.push(issueConSugerencia(baseDeErrorDeEstado(resultado.error), ctx.archivo, item, 'name', ESTADOS));
+        continue;
+      }
+      for (const hijo of item.items) {
+        if (hijo.$type === 'ThemeSlots' || hijo.$type === 'ThemeTransition') {
+          ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeSlots' ? 'slots' : 'transition'}' is not valid in a state of 'edge'` });
+        }
+      }
+      const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');
+      const previo = tema.arista.estados?.[resultado.estado] ?? [];
+      const vigente = aplicarOps(tema.arista.capas as CapaDeTema[], previo, tema.palette, 'parchear', 'capa-arista').pila;
+      const ops = compilarBloque(capas, { ...ctx, modo: 'parchear', ubicacion: 'capa-arista', candidatas: [vigente], origenes: new Map() });
+      tema.arista.estados = { ...tema.arista.estados, [resultado.estado]: [...previo, ...ops] };
     }
   }
 }
@@ -51,13 +68,13 @@ function compilarDiagramaDeArista(item: ThemeDiagram, tema: TemaResuelto, ctx: C
   for (const hijo of item.items) {
     if (hijo.$type === 'ThemeMarker') {
       if (hijo.remove === true) {
-        ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.side} none' no vale en 'diagram': quitar un marcador se hace en el bloque base` });
+        ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.side} none' is not valid in 'diagram': removing a marker is done in the base block` });
       } else compilarMarcador(hijo, parche, ctx);
     } else if (hijo.$type === 'ThemeLabel') {
       const etiqueta = primitivaSuelta('label', hijo.props, 'etiqueta', ctx, aRango(hijo.$cstNode?.range).start);
       if (etiqueta !== undefined) parche.etiqueta = etiqueta;
     } else if (hijo.$type === 'ThemeSlots' || hijo.$type === 'GroupPadding') {
-      ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeSlots' ? 'slots' : 'padding'}' no es de la Arista: ponlo en 'node' o 'group'` });
+      ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeSlots' ? 'slots' : 'padding'}' does not belong to the Edge: put it in 'node' or 'group'` });
     }
   }
   tema.arista.diagramas = { ...tema.arista.diagramas, [diagrama]: parche };

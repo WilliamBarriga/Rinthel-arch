@@ -56,7 +56,7 @@ describe('validate', () => {
     expect(validate(f, { iconos: genericIcons() })).toEqual([]);
   });
 
-  it('E_UNKNOWN_NODE_TYPE, con fix si hay un unico candidato', () => {
+  it('unknown-node-type, con fix si hay un unico candidato', () => {
     const f = fuente();
     f.model.nodes[0]!.children[0]!.type = 'servicioo';
     const [issue] = validate(f);
@@ -64,7 +64,7 @@ describe('validate', () => {
     expect(issue?.fix).toBeUndefined();
   });
 
-  it('E_DANGLING_EDGE y E_UNKNOWN_ATTRIBUTE', () => {
+  it('dangling-edge y unknown-attribute', () => {
     const f = fuente();
     f.model.edges.push(
       { from: { node: 'zzz' }, to: { node: 'b' } },
@@ -73,13 +73,13 @@ describe('validate', () => {
     expect(codigos(f)).toEqual([CODIGOS.E_DANGLING_EDGE, CODIGOS.E_UNKNOWN_ATTRIBUTE]);
   });
 
-  it('E_UNKNOWN_ICON solo se comprueba con un IconProvider', () => {
+  it('unknown-icon solo se comprueba con un IconProvider', () => {
     const f = fuente({ specification: { nodeTypes: [{ name: 'servicio', description: '', icon: 'no-existe' }] } });
     expect(codigos(f)).toEqual([]);
     expect(codigos(f, { iconos: genericIcons() })).toEqual([CODIGOS.E_UNKNOWN_ICON]);
   });
 
-  it('E_UNKNOWN_PALETTE_COLOR en el Tipo de nodo y en un override', () => {
+  it('unknown-palette-color en el Tipo de nodo y en un override', () => {
     const f = fuente({
       specification: { nodeTypes: [{ name: 'servicio', description: '', color: '#ff0000' }] },
       views: [vista({ overrides: [{ node: 'a', color: 'bluee' }] })],
@@ -88,33 +88,33 @@ describe('validate', () => {
     expect(issues.map(({ code }) => code)).toEqual([CODIGOS.E_UNKNOWN_PALETTE_COLOR, CODIGOS.E_UNKNOWN_PALETTE_COLOR]);
   });
 
-  it('E_UNKNOWN_THEME en la Vista', () => {
+  it('unknown-theme en la Vista', () => {
     expect(codigos(fuente({ views: [vista({ theme: 'oscuro' })] }))).toEqual([CODIGOS.E_UNKNOWN_THEME]);
   });
 
-  it('E_OVERRIDE_OUTSIDE_VIEW', () => {
+  it('override-outside-view', () => {
     const f = fuente({ views: [vista({ include: ['a'], overrides: [{ node: 'b', label: 'x' }] })] });
     expect(codigos(f)).toEqual([CODIGOS.E_OVERRIDE_OUTSIDE_VIEW]);
   });
 
-  it('E_UNKNOWN_VIEW_LINK', () => {
+  it('unknown-view-link', () => {
     const f = fuente({ views: [vista({ links: [{ node: 'a', view: 'otra' }] })] });
     expect(codigos(f)).toEqual([CODIGOS.E_UNKNOWN_VIEW_LINK]);
   });
 
-  it('E_INVALID_EXPANSION_TARGET: collapsed sobre una hoja y expanded sobre un Nodo ausente', () => {
+  it('invalid-expansion-target: collapsed sobre una hoja y expanded sobre un Nodo ausente', () => {
     const f = fuente({ views: [vista({ collapsed: ['b'], expanded: ['zzz'] })] });
     expect(codigos(f)).toEqual([CODIGOS.E_INVALID_EXPANSION_TARGET, CODIGOS.E_INVALID_EXPANSION_TARGET]);
   });
 
-  it('E_LINK_WITH_EXPANDED', () => {
+  it('link-with-expanded', () => {
     const f = fuente({
       views: [vista({ expanded: ['a'], links: [{ node: 'a', view: 'v' }] })],
     });
     expect(codigos(f)).toEqual([CODIGOS.E_LINK_WITH_EXPANDED]);
   });
 
-  it('E_UNKNOWN_STEP: selector y Arista inexistentes, en show y en hide', () => {
+  it('unknown-step: selector y Arista inexistentes, en show y en hide', () => {
     const f = fuente({
       views: [
         vista({

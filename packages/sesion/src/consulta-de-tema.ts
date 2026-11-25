@@ -1,4 +1,4 @@
-/** `inspect tema`: la consulta de un Tema (cadena `extends`, Capas, Grupo, Elementos, Slots y Metricas). Pura. */
+/** `inspect theme`: la consulta de un Tema (cadena `extends`, Capas, Grupo, Elementos, Slots y Metricas). Pura. */
 import { INSPECT_CONTRACT_VERSION, candidatosCercanos } from 'canonico';
 import type { FuenteCanonica } from 'canonico';
 import type { OrigenDeTema } from 'dsl';
@@ -9,7 +9,7 @@ import type { Respuesta } from './consultas';
 
 type Sitio = { file: string; line: number };
 
-/** Opciones de `inspect tema`: Tipo de nodo, estado y Tipo de diagrama de la cascada, y si se adjunta el catalogo. */
+/** Opciones de `inspect theme`: Tipo de nodo, estado y Tipo de diagrama de la cascada, y si se adjunta el catalogo. */
 export interface OpcionesDeConsultaDeTema {
   tipo?: string;
   estado?: string;
@@ -24,22 +24,22 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   const declarado = fuente.themes.find((t) => t.name === nombre);
   if (declarado === undefined) {
     const cerca = candidatosCercanos(nombre, fuente.themes.map((t) => t.name));
-    return { noEncontrado: `No existe el Tema '${nombre}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`, cercanos: cerca };
+    return { noEncontrado: `No such Theme '${nombre}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}`, suggestions: cerca };
   }
   const tipos = fuente.specification.nodeTypes.map((t) => t.name);
   if (tipo !== undefined && !tipos.includes(tipo)) {
     const cerca = candidatosCercanos(tipo, tipos);
-    return { noEncontrado: `No existe el Tipo de nodo '${tipo}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}`, cercanos: cerca };
+    return { noEncontrado: `No such Node kind '${tipo}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}`, suggestions: cerca };
   }
   const parseado = estado === undefined ? undefined : parsearEstado(estado);
   if (parseado !== undefined && 'error' in parseado) {
     const { candidatos } = parseado.error;
-    return { noEncontrado: `No existe el estado '${estado}'${candidatos.length === 0 ? '' : `. Quiza: ${candidatos.join(', ')}`}. Estados: ${ESTADOS.join(', ')}`, cercanos: [...candidatos] };
+    return { noEncontrado: `No such state '${estado}'${candidatos.length === 0 ? '' : `. Did you mean: ${candidatos.join(', ')}`}. States: ${ESTADOS.join(', ')}`, suggestions: [...candidatos] };
   }
   const tipoDeDiagrama = diagrama === undefined ? undefined : TIPOS_DE_DIAGRAMA.find((t) => t === diagrama);
   if (diagrama !== undefined && tipoDeDiagrama === undefined) {
     const cerca = candidatosCercanos(diagrama, TIPOS_DE_DIAGRAMA);
-    return { noEncontrado: `No existe el Tipo de diagrama '${diagrama}'${cerca.length === 0 ? '' : `. Quiza: ${cerca.join(', ')}`}. Tipos: ${TIPOS_DE_DIAGRAMA.join(', ')}`, cercanos: cerca };
+    return { noEncontrado: `No such Diagram type '${diagrama}'${cerca.length === 0 ? '' : `. Did you mean: ${cerca.join(', ')}`}. Types: ${TIPOS_DE_DIAGRAMA.join(', ')}`, suggestions: cerca };
   }
   const estadoValido = parseado === undefined || 'error' in parseado ? undefined : parseado.estado;
 
@@ -52,27 +52,27 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
     return sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line };
   };
   const aCapa = (capa: CapaDeTema, sitio: Sitio) => ({
-    nombre: capa.nombre,
-    primitiva: capa.primitiva.tipo,
+    name: capa.nombre,
+    primitive: capa.primitiva.tipo,
     props: capa.primitiva.props,
-    encima: capa.encima === true,
-    animada: capa.animacion !== undefined,
-    origen: sitio,
+    above: capa.encima === true,
+    animated: capa.animacion !== undefined,
+    origin: sitio,
   });
   const capas = cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido }) }).map((capa: CapaDeTema) => aCapa(capa, sitioDe(capa.nombre)));
   const sitioDelTema = origen?.sitio ?? INCORPORADO;
-  const situar = (capas: readonly CapaDescrita[]) => capas.map((capa) => ({ ...capa, origen: sitioDelTema }));
+  const situar = (capas: readonly CapaDescrita[]) => capas.map((capa) => ({ name: capa.nombre, primitive: capa.primitiva, props: capa.props, above: capa.encima, animated: capa.animada, origin: sitioDelTema }));
   const descritos = elementosDeTema(declarado, tipoDeDiagrama, tipo);
   const secuencia = Object.fromEntries(
-    Object.entries(descritos.secuencia ?? {}).map(([nombre, e]) => [nombre, { ...e, capas: situar(e.capas), parches: Object.fromEntries(Object.entries(e.parches).map(([v, capas]) => [v, situar(capas)])) }]),
+    Object.entries(descritos.secuencia ?? {}).map(([nombre, e]) => [nombre, { layers: situar(e.capas), markers: e.marcadores, patches: Object.fromEntries(Object.entries(e.parches).map(([v, capas]) => [v, situar(capas)])), metrics: e.metricas, ...(e.derivado === true && { derived: true as const }) }]),
   );
   const elementos = {
-    ...(descritos.secuencia !== undefined && { secuencia }),
-    ...(descritos.fila !== undefined && { fila: { ...descritos.fila, capas: situar(descritos.fila.capas) } }),
+    ...(descritos.secuencia !== undefined && { sequence: secuencia }),
+    ...(descritos.fila !== undefined && { row: { ...(descritos.fila.alto !== undefined && { height: descritos.fila.alto }), layers: situar(descritos.fila.capas), ...(descritos.fila.derivado === true && { derived: true as const }) } }),
   };
   const pagina = {
-    fijo: tema.pagina.fijo,
-    capas: (tema.pagina.capas as CapaDeTema[]).map((capa) => {
+    fixed: tema.pagina.fijo,
+    layers: (tema.pagina.capas as CapaDeTema[]).map((capa) => {
       const sitio = origen?.pagina[capa.nombre];
       return aCapa(capa, sitio === undefined ? (origen?.sitio ?? INCORPORADO) : { file: sitio.file, line: sitio.line });
     }),
@@ -94,37 +94,37 @@ export function consultarTema(fuente: FuenteCanonica, origenes: Readonly<Record<
   const pilaDeGrupo = (colapsado: boolean) =>
     cascada(tema, { ...(tipo !== undefined && { tipo }), ...(estadoValido !== undefined && { estado: estadoValido }), ...(colapsado && { colapsado }) }, 'grupo').map((capa: CapaDeTema) => aCapa(capa, sitioDeGrupo(capa.nombre, colapsado)));
   const grupo = {
-    propio: tema.grupo.capas.length > 0,
-    cabecera: describirDisposicion(tabla.grupoAbierto.disposicion),
-    origenDeCabecera: sitioDeSlots(origen?.slots.grupo),
-    alturaDeCabecera: alturaDeCabecera(tabla.grupoAbierto),
+    own: tema.grupo.capas.length > 0,
+    header: describirDisposicion(tabla.grupoAbierto.disposicion),
+    headerOrigin: sitioDeSlots(origen?.slots.grupo),
+    headerHeight: alturaDeCabecera(tabla.grupoAbierto),
     padding: tema.grupo.padding,
-    capas: pilaDeGrupo(false),
-    colapsado: { slots: describirDisposicion(tabla.grupoColapsado.disposicion), origenDeSlots: sitioDeSlots(origen?.slots.colapsado ?? origen?.slots.nodo), capas: pilaDeGrupo(true) },
+    layers: pilaDeGrupo(false),
+    collapsed: { slots: describirDisposicion(tabla.grupoColapsado.disposicion), slotsOrigin: sitioDeSlots(origen?.slots.colapsado ?? origen?.slots.nodo), layers: pilaDeGrupo(true) },
   };
   return {
     salida: {
       contractVersion: INSPECT_CONTRACT_VERSION,
-      comando: 'tema',
-      tema: {
+      command: 'theme',
+      theme: {
         name: nombre,
         ...(origen === undefined ? INCORPORADO : { file: origen.sitio.file, line: origen.sitio.line }),
         extends: origen?.extends ?? [],
-        partes: origen?.partes ?? [],
-        ...(tipo !== undefined && { tipo }),
-        ...(estadoValido !== undefined && { estado: estadoValido }),
-        ...(tipoDeDiagrama !== undefined && { diagrama: tipoDeDiagrama }),
-        capas,
-        pagina,
-        grupo,
-        ...(Object.keys(elementos).length > 0 && { elementos }),
+        parts: origen?.partes ?? [],
+        ...(tipo !== undefined && { kind: tipo }),
+        ...(estadoValido !== undefined && { state: estadoValido }),
+        ...(tipoDeDiagrama !== undefined && { diagram: tipoDeDiagrama }),
+        layers: capas,
+        page: pagina,
+        group: grupo,
+        ...(Object.keys(elementos).length > 0 && { elements: elementos }),
         slots: describirDisposicion(delNodo.disposicion),
-        origenDeSlots: sitioDeSlots(origen?.slots.nodo),
+        slotsOrigin: sitioDeSlots(origen?.slots.nodo),
         // `paddingGrupo` es del Grupo: la tabla del Nodo trae el valor por defecto, que no dice nada de este Tema.
-        metricas: JSON.parse(JSON.stringify({ ...delNodo, paddingGrupo: tabla.grupoAbierto.paddingGrupo })) as never,
-        temaConCodigo: componentes.length > 0,
-        componentes,
-        ...(catalogo && { catalogo: { primitivas: Object.keys(CATALOGO), movimientos: Object.keys(MOVIMIENTOS), efectos: [...EFECTOS] } }),
+        metrics: JSON.parse(JSON.stringify({ ...delNodo, paddingGrupo: tabla.grupoAbierto.paddingGrupo })) as never,
+        hasCode: componentes.length > 0,
+        components: componentes,
+        ...(catalogo && { catalog: { primitives: Object.keys(CATALOGO), motions: Object.keys(MOVIMIENTOS), effects: [...EFECTOS] } }),
       },
     },
   };

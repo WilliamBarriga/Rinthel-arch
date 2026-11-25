@@ -4,7 +4,7 @@ Esquemas Zod de la Fuente canonica, las funciones puras que la consultan y los c
 ## Que hace
 - Define y valida el esquema de la Fuente canonica (Nodos, Aristas, Vistas, Pasos, Paleta) y de la Geometria; `validate` devuelve `Issue` con `hint` y `fix` (codigos en `CODIGOS`).
 - `resolveView` selecciona los Nodos de una Vista y, en una Vista `sequence`, resuelve su Interaccion (Lifelines, activaciones; `secuencia.ts`); una Vista `er` se resuelve como `architecture`. `revealAt` interpreta sus Pasos.
-- Unico dueno de los contratos versionados: las Intenciones de edicion (`pin.ts`: `mover-pin`, `ordenar-lifelines`, `fijar-tema`), las salidas `--json` de `validate`, `inspect` y `edit`, el Evento de actividad (`actividad.ts`, una linea del Registro de actividad; `crearLectorDeActividad` lee solo lo anexado) y el protocolo de `dev` (`dev.ts`: rutas, eventos SSE, estado, Diferencia, Historial de archivos; `estudio/protocolo` lo reexporta). Un campo nuevo de un contrato se agrega aqui, no en quien lo usa.
+- Unico dueno de los contratos versionados: las Intenciones de edicion (`pin.ts`: `move-pin`, `reorder-lifelines`, `set-theme`), las salidas `--json` de `validate`, `inspect` y `edit`, el Evento de actividad (`actividad.ts`, una linea del Registro de actividad; `crearLectorDeActividad` lee solo lo anexado) y el protocolo de `dev` (`dev.ts`: rutas, eventos SSE, estado, Diferencia, Historial de archivos; `estudio/protocolo` lo reexporta). Un campo nuevo de un contrato se agrega aqui, no en quien lo usa.
 
 ## Que NO hace
 - No lee texto DSL ni fusiona archivos: eso es de `dsl`.

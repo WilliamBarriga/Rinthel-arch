@@ -10,14 +10,14 @@ import { CATALOGO, ESTADOS, estiloResuelto, resolverTema } from 'tema';
 import type { TemaResuelto } from 'tema';
 
 /** Galeria de los 14 Temas de ejemplo: un `.dg` por Tema sobre un Modelo comun. */
-const RAIZ = resolve(import.meta.dirname, '../examples/temas/galeria');
-/** Los 14 Temas y sus fuentes tienen una sola copia, en `examples/rinthel-arch/temas/`; la galeria los toma con `--theme-path`. */
-const CARPETA_DE_TEMAS = resolve(import.meta.dirname, '../examples/rinthel-arch/temas');
+const RAIZ = resolve(import.meta.dirname, '../examples/themes/gallery');
+/** Los 14 Temas y sus fuentes tienen una sola copia, en `examples/rinthel-arch/themes/`; la galeria los toma con `--theme-path`. */
+const CARPETA_DE_TEMAS = resolve(import.meta.dirname, '../examples/rinthel-arch/themes');
 const leerDg = (raiz: string): [string, string][] => readdirSync(raiz).filter((f) => f.endsWith('.dg')).map((f) => [f, readFileSync(resolve(raiz, f), 'utf8')]);
 const leer = (): Record<string, string> => Object.fromEntries([...leerDg(CARPETA_DE_TEMAS), ...leerDg(RAIZ)]);
 
 const TEMAS = [
-  'soft-card', 'glass-chip', 'neobrutalist', 'blueprint', 'claro-suave', 'crt-terminal', 'synthwave',
+  'soft-card', 'glass-chip', 'neobrutalist', 'blueprint', 'soft-light', 'crt-terminal', 'synthwave',
   'editorial', 'bauhaus', 'sticky-notes', 'keycaps', 'metro-map', 'pcb', 'pixel-art',
 ];
 
@@ -41,7 +41,7 @@ const primitivasDe = (t: TemaResuelto): Set<string> => {
 describe('galeria de Temas de ejemplo', () => {
   it('toda Primitiva del catalogo (sin fijar su cantidad) aparece en al menos un Tema de ejemplo', () => {
     const usadas = new Set<string>();
-    const sueltos = ['catalogo-formas.dg', 'codigo.dg'].map((f) => compile({ [f]: readFileSync(resolve(import.meta.dirname, '../examples/temas', f), 'utf8') }).canonico!);
+    const sueltos = ['shape-catalog.dg', 'code.dg'].map((f) => compile({ [f]: readFileSync(resolve(import.meta.dirname, '../examples/themes', f), 'utf8') }).canonico!);
     for (const tema of [...canonico!.themes, ...sueltos.flatMap((c) => c.themes)]) for (const p of primitivasDe(resolverTema(tema))) usadas.add(p);
     expect(Object.keys(CATALOGO).filter((p) => !usadas.has(p))).toEqual([]);
   });
@@ -59,40 +59,40 @@ describe('galeria de Temas de ejemplo', () => {
   });
 
   it('hay una Vista de cobertura, una de referencia, una de secuencia y una ER por Tema', () => {
-    const esperadas = [...TEMAS, ...TEMAS.map((t) => `${t}-referencia`), ...TEMAS.map((t) => `${t}-secuencia`), ...TEMAS.map((t) => `${t}-er`)];
+    const esperadas = [...TEMAS, ...TEMAS.map((t) => `${t}-reference`), ...TEMAS.map((t) => `${t}-sequence`), ...TEMAS.map((t) => `${t}-er`)];
     expect(canonico?.views.map((v) => v.id).sort()).toEqual(esperadas.sort());
   });
 
   it('las Vistas de cobertura no muestran el Modelo de referencia', () => {
     for (const tema of TEMAS) {
       const ids = resolveView(canonico!, tema)!.nodes.map((n) => n.id);
-      expect(ids.filter((id) => id.startsWith('referencia')), tema).toEqual([]);
+      expect(ids.filter((id) => id.startsWith('reference')), tema).toEqual([]);
     }
   });
 
   it.each(TEMAS)('la Vista de referencia de %s equivale a la Vista abierto del prototipo', (tema) => {
-    const vista = resolveView(canonico!, `${tema}-referencia`) as VistaDeGrafo;
-    const abierto = (id: string) => vista.nodes.find((n) => n.id === `referencia.${id}`)!;
+    const vista = resolveView(canonico!, `${tema}-reference`) as VistaDeGrafo;
+    const abierto = (id: string) => vista.nodes.find((n) => n.id === `reference.${id}`)!;
     // Grupos abiertos con sus modulos y Grupos colapsados con contador (4 raices, 3 abiertos).
-    for (const id of ['render', 'sesion', 'layout']) expect(abierto(id).collapsed, id).toBe(false);
-    for (const [id, hijos] of [['canonico', 6], ['dsl', 4], ['shell', 4], ['cli', 5]] as const) {
+    for (const id of ['render', 'session', 'layout']) expect(abierto(id).collapsed, id).toBe(false);
+    for (const [id, hijos] of [['canonical', 6], ['dsl', 4], ['shell', 4], ['cli', 5]] as const) {
       expect(abierto(id).collapsed, id).toBe(true);
       expect(abierto(id).childCount, id).toBe(hijos);
     }
-    expect(vista.nodes.map((n) => n.id)).not.toContain('referencia');
+    expect(vista.nodes.map((n) => n.id)).not.toContain('reference');
     expect(vista.nodes).toHaveLength(22);
     expect(vista.edges).toHaveLength(36);
-    expect(vista.edges.some((a) => a.label === 'memoiza por Vista')).toBe(true);
+    expect(vista.edges.some((a) => a.label === 'memoizes per View')).toBe(true);
   });
 
   it.each(TEMAS)('%s tiene Vistas de secuencia (con Fragmento y Nota) y ER (con tres tablas) con su Tema', (tema) => {
-    const secuencia = resolveView(canonico!, `${tema}-secuencia`) as VistaDeSecuencia;
+    const secuencia = resolveView(canonico!, `${tema}-sequence`) as VistaDeSecuencia;
     expect(secuencia.type).toBe('sequence');
-    expect(secuencia.nodes.map((n) => n.id).sort()).toEqual(['cliente', 'pasarela', 'plataforma.eventos', 'plataforma.pagos', 'plataforma.pedidos', 'proveedor']);
+    expect(secuencia.nodes.map((n) => n.id).sort()).toEqual(['client', 'gateway', 'platform.events', 'platform.orders', 'platform.payments', 'provider']);
     expect(secuencia.interaction.items.map((i) => i.type)).toEqual(expect.arrayContaining(['fragment', 'note']));
     const er = resolveView(canonico!, `${tema}-er`) as VistaDeGrafo;
     expect(er.type).toBe('er');
-    expect(er.nodes.map((n) => n.id).sort()).toEqual(['datos.clientes', 'datos.lineas', 'datos.pedidos-tabla']);
+    expect(er.nodes.map((n) => n.id).sort()).toEqual(['data.customers', 'data.lines', 'data.orders-table']);
     expect(er.edges).toHaveLength(2);
     expect(canonico!.views.find((v) => v.id === `${tema}-er`)?.theme).toBe(tema);
   });
@@ -105,7 +105,8 @@ describe('galeria de Temas de ejemplo', () => {
     expect(aristas.some((a) => a.label !== undefined && a.label !== '')).toBe(true);
     expect(aristas.some((a) => a.label === undefined || a.label === '')).toBe(true);
     const titulos = todosLosNodos().map((n) => n.title.toLowerCase());
-    for (const estado of ESTADOS) expect(titulos, estado).toContain(estado);
+    // `planned` no lo pone la shell sino la marca del Modelo (ADR 0011): la galeria no tiene un Nodo que lo nombre.
+    for (const estado of ESTADOS.filter((e) => e !== 'planned')) expect(titulos, estado).toContain(estado);
   });
 
   it('el Modelo usa todos los Tipos de nodo declarados', () => {
@@ -128,28 +129,28 @@ describe('galeria de Temas de ejemplo', () => {
 
   it('los warnings de cada ejemplo son exactamente los declarados en su cabecera, y no hay otros', async () => {
     const warnings = (await abrirSesion(archivos).diagnosticar()).filter((i) => i.severity === 'warning');
-    const vistasDe = (nombre: string) => ['', '-referencia', '-secuencia', '-er'].map((sufijo) => `En la Vista '${nombre}${sufijo}'`);
-    const deTema = (nombre: string) => warnings.filter((i) => i.message.startsWith(`Tema '${nombre}'`) || vistasDe(nombre).some((v) => i.message.startsWith(v)));
+    const vistasDe = (nombre: string) => ['', '-reference', '-sequence', '-er'].map((sufijo) => `In View '${nombre}${sufijo}'`);
+    const deTema = (nombre: string) => warnings.filter((i) => i.message.startsWith(`Theme '${nombre}'`) || vistasDe(nombre).some((v) => i.message.startsWith(v)));
     const lista = (nombre: string, linea: string): string[] => {
       const valor = new RegExp(`^// ${linea}:\\s*(.+)$`, 'm').exec(archivos[`${nombre}.dg`]!)?.[1]?.replace(/\.$/, '').trim();
-      return valor === undefined || valor === 'ninguno' ? [] : valor.split(',').map((t) => t.trim()).sort();
+      return valor === undefined || valor === 'none' ? [] : valor.split(',').map((t) => t.trim()).sort();
     };
     for (const nombre of TEMAS) {
-      expect(archivos[`${nombre}.dg`], `${nombre}: falta la linea "// Contraste: ..." al inicio`).toMatch(/^\/\/ Contraste:/);
-      const contraste = deTema(nombre).filter((i) => i.code === 'W_THEME_LOW_CONTRAST');
-      const reales = [...new Set(contraste.map((i) => /Tipo '([^']+)'/.exec(i.message)![1]!))].sort();
-      expect(reales, nombre).toEqual(lista(nombre, 'Contraste'));
+      expect(archivos[`${nombre}.dg`], `${nombre}: missing the "// Contrast: ..." line at the top`).toMatch(/^\/\/ Contrast:/);
+      const contraste = deTema(nombre).filter((i) => i.code === 'theme-low-contrast');
+      const reales = [...new Set(contraste.map((i) => /of kind '([^']+)'/.exec(i.message)![1]!))].sort();
+      expect(reales, nombre).toEqual(lista(nombre, 'Contrast'));
       // `// Solo color: a/b, ...` declara los pares de Tipos que el Tema distingue solo por color (como el prototipo).
-      const soloColor = deTema(nombre).filter((i) => i.code === 'W_THEME_COLOR_ONLY').map((i) => /'([^']+)' y '([^']+)'/.exec(i.message)!.slice(1).join('/'));
-      expect([...new Set(soloColor)].sort(), nombre).toEqual(lista(nombre, 'Solo color'));
+      const soloColor = deTema(nombre).filter((i) => i.code === 'theme-color-only').map((i) => /kinds '([^']+)' and '([^']+)'/.exec(i.message)!.slice(1).join('/'));
+      expect([...new Set(soloColor)].sort(), nombre).toEqual(lista(nombre, 'Color only'));
       // Cualquier otro warning del Tema no esta declarado en la cabecera: es un defecto del ejemplo.
-      expect(deTema(nombre).filter((i) => i.code !== 'W_THEME_LOW_CONTRAST' && i.code !== 'W_THEME_COLOR_ONLY').map((i) => `${i.code}: ${i.message}`), nombre).toEqual([]);
+      expect(deTema(nombre).filter((i) => i.code !== 'theme-low-contrast' && i.code !== 'theme-color-only').map((i) => `${i.code}: ${i.message}`), nombre).toEqual([]);
     }
-    expect(warnings.filter((i) => !TEMAS.some((n) => i.message.startsWith(`Tema '${n}'`) || vistasDe(n).some((v) => i.message.startsWith(v)))).map((i) => `${i.code}: ${i.message}`), 'warnings sin Tema').toEqual([]);
+    expect(warnings.filter((i) => !TEMAS.some((n) => i.message.startsWith(`Theme '${n}'`) || vistasDe(n).some((v) => i.message.startsWith(v)))).map((i) => `${i.code}: ${i.message}`), 'warnings sin Tema').toEqual([]);
   });
 
   it('las fuentes incluidas son archivos OFL del Workspace, cada familia con su licencia, sin CDN', () => {
-    const fuentes = readdirSync(resolve(CARPETA_DE_TEMAS, 'fuentes'));
+    const fuentes = readdirSync(resolve(CARPETA_DE_TEMAS, 'fonts'));
     const familias = new Set(fuentes.filter((f) => f.endsWith('.woff2')).map((f) => f.replace(/-latin-\d{3}-(?:normal|italic)\.woff2$/, '')));
     expect([...familias].sort()).toEqual(['caveat', 'gelasio', 'inter', 'jetbrains-mono', 'nunito', 'outfit', 'press-start-2p', 'space-mono']);
     for (const familia of familias) expect(fuentes, familia).toContain(`OFL-${familia}.txt`);
@@ -157,8 +158,8 @@ describe('galeria de Temas de ejemplo', () => {
   });
 
   it('toda fuente que declara un Tema de la galeria tiene archivo en el Workspace', async () => {
-    const archivosDeFuente = readdirSync(resolve(CARPETA_DE_TEMAS, 'fuentes')).map((f) => `fuentes/${f}`);
-    const faltantes = (await abrirSesion(archivos, { archivosDeFuente }).diagnosticar()).filter((i) => i.code === 'E_THEME_FONT_MISSING');
+    const archivosDeFuente = readdirSync(resolve(CARPETA_DE_TEMAS, 'fonts')).map((f) => `fonts/${f}`);
+    const faltantes = (await abrirSesion(archivos, { archivosDeFuente }).diagnosticar()).filter((i) => i.code === 'theme-font-missing');
     expect(faltantes.map((i) => i.message)).toEqual([]);
   });
 });

@@ -81,7 +81,7 @@ describe('validacion de la disposicion', () => {
     );
   });
 
-  it('todos los errores a la vez, con codigo, referencia y "quisiste decir"', () => {
+  it('todos los errores a la vez, con codigo, referencia y "did you mean"', () => {
     const { errores } = construirDisposicion(
       entrada(
         [
@@ -102,9 +102,9 @@ describe('validacion de la disposicion', () => {
       [CODIGOS.E_THEME_UNKNOWN_SLOT, 'h3'],
       [CODIGOS.E_THEME_INVALID_VALUE, 'f'],
     ]);
-    expect(errores[0]!.hint).toBe("quisiste decir 'gap'");
-    expect(errores[2]!.hint).toBe("quisiste decir 'title'");
-    expect(errores[3]!.hint).toBe("quisiste decir 'center'");
-    expect(errores[5]!.hint).toBe("quisiste decir 'row'");
+    expect(errores[0]!.hint).toBe("did you mean 'gap'");
+    expect(errores[2]!.hint).toBe("did you mean 'title'");
+    expect(errores[3]!.hint).toBe("did you mean 'center'");
+    expect(errores[5]!.hint).toBe("did you mean 'row'");
   });
 });

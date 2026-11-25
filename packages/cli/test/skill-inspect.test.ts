@@ -18,7 +18,7 @@ describe('skill: inspect y dev', () => {
   it('documenta inspect, dev y el bucle inspect, editar, validate', async () => {
     const texto = await skill();
 
-    for (const comando of ['inspect buscar', 'inspect nodo', 'inspect vista', 'dev --workspace']) expect(texto).toContain(comando);
+    for (const comando of ['inspect search', 'inspect node', 'inspect view', 'dev --workspace']) expect(texto).toContain(comando);
     expect(texto).toMatch(/inspect[\s\S]*edit[\s\S]*validate/i);
     expect(texto).toContain(`contractVersion ${INSPECT_CONTRACT_VERSION}`);
   });

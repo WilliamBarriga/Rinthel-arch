@@ -56,3 +56,7 @@ Medidas (pnpm bench, misma maquina):
 | `relayout-grande` (3000 con Grupos y Slots anidados) | 4.1 s | 4.0 s | 8 s |
 
 `relayout-grande` usa unos 1.6 GiB de RSS. Bundle: Worker 463.2 KiB (limite 1024), pagina 162.3 KiB (limite 500).
+
+## Amendment (spec #226, ticket #245): the exported HTML
+
+`diagrams export` implements the export foreseen in "Bundle": one HTML with the export page (`estudio/dist/estudio/exportado.js`, an IIFE with no ELK of its own and no editor) and the layout Worker as text. The page starts it from a Blob; if `new Worker` throws or the Worker fails, the same Worker code runs on the main thread behind an in-process message port, so ELK is in the file once. The export embeds no cached Geometry: the viewer measures with the embedded Theme fonts and lays out every View itself, so "`export` rejects it and asks for `build`" above no longer applies. Size of `examples/rinthel-arch` (33 Views, 15 Themes, all fonts): 5.0 MB, 2.1 MB gzip (page 332 KiB, Worker 471 KiB, data and fonts the rest).

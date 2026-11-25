@@ -44,8 +44,8 @@ describe('seam sesion: estilo de texto de un Slot (prefijo y glow)', () => {
   it('un `prefix` demasiado largo es un error situado, no se recorta', async () => {
     const issues = await abrir(tema('prefix "-------------->"')).diagnosticar();
 
-    expect(issues.map((i) => i.code)).toContain('E_THEME_INVALID_VALUE');
-    expect(issues.find((i) => i.code === 'E_THEME_INVALID_VALUE')!.message).toMatch(/prefix/);
+    expect(issues.map((i) => i.code)).toContain('theme-invalid-value');
+    expect(issues.find((i) => i.code === 'theme-invalid-value')!.message).toMatch(/prefix/);
   });
 
   it('`glow` del texto es un color de Paleta y solo pinta: no cambia las Metricas', async () => {

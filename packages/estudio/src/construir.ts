@@ -1,15 +1,19 @@
 /**
  * `construirEstudio({ salida, css? })`: escribe en `salida` los estaticos de la app (`index.html`, `pagina.js` con sus
- * trozos en `trozos/`, `worker.js`, `estilo.css`). JS con esbuild, minificado y determinista: la pagina es un modulo ES
- * partido (`splitting`), y lo que se importa con `import()` (el editor con CodeMirror, el Buscador) va en trozos que se
- * piden bajo demanda; el Worker es un IIFE (se carga por Blob). El paso de CSS es
- * conectable (`css`): recibe la ruta de `navegador/estilo.css` y devuelve la hoja; por defecto la empaqueta esbuild.
+ * trozos en `trozos/`, `worker.js`, `estilo.css`) y la pagina de un export (`exportado.js`, IIFE sin trozos). JS con
+ * esbuild, minificado y determinista: la pagina es un modulo ES partido (`splitting`), y lo que se importa con
+ * `import()` (el editor con CodeMirror, el Buscador) va en trozos que se piden bajo demanda; el Worker es un IIFE (se
+ * carga por Blob). El paso de CSS es conectable (`css`): recibe la ruta de `navegador/estilo.css` y devuelve la hoja; por defecto la empaqueta esbuild.
  * Errores: un fallo de esbuild o de escritura rechaza.
  */
 import { build } from 'esbuild';
+import type { Plugin } from 'esbuild';
 import { copyFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// With its extension: `scripts/construir.ts` runs this file with Node directly.
+import { PAGINA_EXPORTADA } from './rutas.ts';
 
 const navegador = (archivo: string): string => fileURLToPath(new URL(`../navegador/${archivo}`, import.meta.url));
 
@@ -40,33 +44,63 @@ const COMUNES = {
   define: { 'process.env.NODE_ENV': '"production"' },
 } as const;
 
-/** La pagina como modulo ES con trozos: ruta relativa a `salida` -> contenido. */
+/**
+ * La pagina como modulo ES con trozos: ruta relativa a `salida` -> contenido. Only chunks reachable from `pagina.js`
+ * are kept: esbuild still emits a chunk for a dynamic `import()` whose caller was tree-shaken (ELK's
+ * `elk.bundled.js` from `layout`, which the page never runs because layout happens in the Worker).
+ */
 async function empaquetarPagina(entrada: string, salida: string): Promise<Record<string, Uint8Array>> {
-  const { outputFiles } = await build({
+  const { outputFiles, metafile } = await build({
     ...COMUNES,
     entryPoints: { pagina: entrada },
     format: 'esm',
     splitting: true,
+    metafile: true,
     outdir: salida,
     chunkNames: 'trozos/[name]-[hash]',
   });
-  return Object.fromEntries(outputFiles.map((f) => [relative(resolve(salida), f.path).split(sep).join('/'), f.contents]));
+  const alcanzables = new Set<string>();
+  const pendientes = Object.keys(metafile.outputs).filter((ruta) => resolve(ruta) === resolve(salida, 'pagina.js'));
+  for (let ruta = pendientes.pop(); ruta !== undefined; ruta = pendientes.pop()) {
+    if (alcanzables.has(resolve(ruta))) continue;
+    alcanzables.add(resolve(ruta));
+    pendientes.push(...(metafile.outputs[ruta]?.imports ?? []).filter((i) => !i.external).map((i) => i.path));
+  }
+  return Object.fromEntries(outputFiles.filter((f) => alcanzables.has(resolve(f.path))).map((f) => [relative(resolve(salida), f.path).split(sep).join('/'), f.contents]));
 }
 
-async function empaquetar(entrada: string, alias: Record<string, string> = {}): Promise<string> {
-  const { outputFiles } = await build({ ...COMUNES, entryPoints: [entrada], format: 'iife', alias });
+async function empaquetar(entrada: string, alias: Record<string, string> = {}, plugins: Plugin[] = []): Promise<string> {
+  const { outputFiles } = await build({ ...COMUNES, entryPoints: [entrada], format: 'iife', alias, plugins });
   return outputFiles[0]?.text ?? '';
 }
+
+/** Resolves the imports whose path matches each filter to a replacement module. */
+const sustituir = (reglas: ReadonlyArray<readonly [RegExp, string]>): Plugin => ({
+  name: 'sustituir',
+  setup(b) {
+    for (const [filtro, ruta] of reglas) b.onResolve({ filter: filtro }, () => ({ path: ruta }));
+  },
+});
+
+/**
+ * The export page (`diagrams export`) is one IIFE, without chunks, to inline it in a single HTML. It has no editor
+ * (the Code tab does not exist there) and no ELK of its own: ELK goes once, in the Worker code embedded next to it.
+ */
+const PAGINA_EXPORTADA_SIN = sustituir([
+  [/\/editor\/panel-de-codigo$/, navegador('exportado/sin-editor.ts')],
+  [/^elkjs\/lib\/elk\.bundled\.js$/, navegador('exportado/sin-elk.ts')],
+]);
 
 /**
  * El Worker no lleva zod: recibe Metricas ya validadas en la pagina. `zod-inerte` sustituye al paquete para que
  * los esquemas, que se construyen al cargar, no entren al bundle.
  */
 export async function construirEstudio({ salida, css = cssConEsbuild }: OpcionesDeConstruccion): Promise<void> {
-  const [pagina, worker, hoja] = await Promise.all([
+  const [pagina, worker, hoja, exportada] = await Promise.all([
     empaquetarPagina(navegador('dev.tsx'), salida),
     empaquetar(navegador('worker/worker.ts'), { zod: navegador('worker/zod-inerte.ts') }),
     css(navegador('estilo.css')),
+    empaquetar(navegador('exportado/pagina.tsx'), {}, [PAGINA_EXPORTADA_SIN]),
   ]);
   mkdirSync(salida, { recursive: true });
   // Trozos de un build anterior (otro hash) no deben quedar servibles.
@@ -76,6 +110,7 @@ export async function construirEstudio({ salida, css = cssConEsbuild }: Opciones
     writeFileSync(join(salida, ruta), contenido);
   }
   writeFileSync(join(salida, 'worker.js'), worker);
+  writeFileSync(join(salida, PAGINA_EXPORTADA), exportada);
   writeFileSync(join(salida, 'estilo.css'), hoja);
   copyFileSync(navegador('index.html'), join(salida, 'index.html'));
 }

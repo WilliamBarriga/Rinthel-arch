@@ -7,6 +7,9 @@ import type { AdaptadorDeLayout } from 'shell';
 
 import { ayudasDeLienzo } from '../../../tests/ayudas/lienzo';
 import { devEnMemoria } from '../src/contrato';
+import { capturarExportado } from '../src/exportado';
+import type { DatosDeExportado } from '../src/exportado';
+import { propsDeExportado } from '../navegador/exportado/props';
 import type { CodigoDePrueba, DevEnMemoria } from '../src/contrato';
 import { Estudio } from '../navegador/estudio';
 import type { Plataforma } from '../navegador/comandos/teclas';
@@ -29,7 +32,7 @@ export interface OpcionesDeMontaje {
   plataforma?: Plataforma;
   /** Archivos de `--theme-path` (solo lectura). */
   temas?: Record<string, string>;
-  /** Texto inicial de `.diagrams/actividad.jsonl`. */
+  /** Texto inicial de `.diagrams/activity.jsonl`. */
   actividad?: string;
   /** Temas con codigo ya compilados (Componentes y bundle de `/componentes.js`). */
   codigo?: CodigoDePrueba;
@@ -46,6 +49,19 @@ export async function montarEstudio(propios: Record<string, string>, { hash = ''
   const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }), ...(codigo !== undefined && { codigo }) });
   const { container } = render(<Estudio fetch={envolverFetch(dev.fetch)} eventos={envolverEventos(dev.eventos)} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={confirmar} plataforma={plataforma} />);
   return { dev, contenedor: container };
+}
+
+/**
+ * The Dev UI in export mode: the data is captured from the in-memory `dev` (as `diagrams export` does from the real
+ * one) and served by the read-only client.
+ */
+export async function montarExportado(propios: Record<string, string>, { hash = '', temas }: Pick<OpcionesDeMontaje, 'hash' | 'temas'> = {}): Promise<{ datos: DatosDeExportado; contenedor: HTMLElement }> {
+  window.history.replaceState(null, '', `/${hash}`);
+  const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }) });
+  const datos = await capturarExportado({ fetch: dev.fetch, leerFuente: () => undefined });
+  await dev.cerrar();
+  const { container } = render(<Estudio {...propsDeExportado(datos)} hash={hashDelNavegador(window)} layout={layoutReal} plataforma="otras" />);
+  return { datos, contenedor: container };
 }
 
 /** Workspace minimo de las pruebas de la app: dos Nodos, una Arista y la Vista `mapa`. */

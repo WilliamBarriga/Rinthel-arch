@@ -30,11 +30,11 @@ export function PanelDelAgente(): ReactElement {
   }, [almacen, sinVer]);
 
   return (
-    <section aria-label="Agente" className="ui-agente">
+    <section aria-label="Agent" className="ui-agente">
       {quitados.length > 0 && (
         <div className="ui-quitados">
-          <p className="ui-tenue">Quitado por fuera</p>
-          <ul aria-label="Quitado por fuera" className="ui-lista">
+          <p className="ui-tenue">Removed externally</p>
+          <ul aria-label="Removed externally" className="ui-lista">
             {quitados.map((elemento) => {
               const { tipo, id } = etiquetaDeElemento(elemento);
               return (
@@ -47,9 +47,9 @@ export function PanelDelAgente(): ReactElement {
         </div>
       )}
       {eventos.length === 0 ? (
-        <p className="ui-tenue">Sin actividad del agente. Los comandos validate, build, inspect y edit apareceran aqui.</p>
+        <p className="ui-tenue">No agent activity. The validate, build, inspect and edit commands will appear here.</p>
       ) : (
-        <ol className="ui-feed" aria-label="Actividad del agente">
+        <ol className="ui-feed" aria-label="Agent activity">
           {eventos
             .map((evento, i) => <LineaDelFeed key={`${i}:${evento.ts}:${evento.pid}`} evento={evento} />)
             .reverse()}
@@ -63,7 +63,7 @@ function LineaDelFeed({ evento }: { evento: EventoDeActividad }): ReactElement {
   const { fuente, vista, irAVista, seleccionar } = useEstudio();
   const [abierta, setAbierta] = useState(false);
   const marca = marcaDelEvento(evento);
-  const { objetivo } = evento;
+  const { target: objetivo } = evento;
   const ir = (destino: Parameters<typeof destinoDelObjetivo>[0]): void => {
     if (fuente === undefined) return;
     const d = destinoDelObjetivo(destino, fuente, vista);
@@ -78,27 +78,27 @@ function LineaDelFeed({ evento }: { evento: EventoDeActividad }): ReactElement {
           {hora(evento.ts)}
         </time>
         <span className="ui-feed-quien">{quienDelEvento(evento)}</span>
-        <span className="ui-mono">{evento.comando}</span>
-        {objetivo?.vista !== undefined && (
-          <button type="button" className="ui-enlace ui-mono" onClick={() => ir({ vista: objetivo.vista })}>
-            {objetivo.vista}
+        <span className="ui-mono">{evento.command}</span>
+        {objetivo?.view !== undefined && (
+          <button type="button" className="ui-enlace ui-mono" onClick={() => ir({ view: objetivo.view })}>
+            {objetivo.view}
           </button>
         )}
-        {objetivo?.nodo !== undefined && (
-          <button type="button" className="ui-enlace ui-mono" onClick={() => ir({ nodo: objetivo.nodo })}>
-            {objetivo.nodo}
+        {objetivo?.node !== undefined && (
+          <button type="button" className="ui-enlace ui-mono" onClick={() => ir({ node: objetivo.node })}>
+            {objetivo.node}
           </button>
         )}
-        {objetivo?.tema !== undefined && <span className="ui-mono">{objetivo.tema}</span>}
-        {objetivo?.archivos !== undefined && <span className="ui-mono ui-tenue">{objetivo.archivos.join(', ')}</span>}
+        {objetivo?.theme !== undefined && <span className="ui-mono">{objetivo.theme}</span>}
+        {objetivo?.files !== undefined && <span className="ui-mono ui-tenue">{objetivo.files.join(', ')}</span>}
         <span className="ui-feed-marca" data-marca={marca.tipo}>
           {marca.texto}
         </span>
-        <button type="button" className="ui-boton-icono" aria-label="Ver args" aria-expanded={abierta} onClick={() => setAbierta((a) => !a)}>
+        <button type="button" className="ui-boton-icono" aria-label="Show args" aria-expanded={abierta} onClick={() => setAbierta((a) => !a)}>
           {abierta ? '▾' : '▸'}
         </button>
       </div>
-      {abierta && <code className="ui-feed-args ui-mono">{['diagrams', evento.comando, ...evento.args].join(' ')}</code>}
+      {abierta && <code className="ui-feed-args ui-mono">{['diagrams', evento.command, ...evento.args].join(' ')}</code>}
     </li>
   );
 }
