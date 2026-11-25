@@ -26,6 +26,7 @@ There is no CI: tests run locally. The pre-commit hook runs `pnpm check`.
 
 - The core is agnostic of the documented project: whatever is project-specific goes as an example in `examples/`.
 - The whole repo is in English (code, docs, messages, commits), without unicode emojis (`pnpm check:emojis` verifies it). Spanish only lives in `README.es.md` and the Spanish user guides.
+- Identifiers in a new file follow the language of its host package until the internal migration (#253-#257); comments in new code are always English.
 - Before adopting a new dependency, research it (license, maintenance, fit) and leave the research written; adoption is decided in an issue or ADR.
 
 ### User guides come in pairs

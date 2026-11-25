@@ -53,7 +53,7 @@ describe('validate', () => {
 model { servicio a }
 view v { type architecture  include **  theme mio }
 theme mio extends neutral-drak { }
-theme otro extends neutral { node { layer relleno { color margo } } }
+theme otro extends neutral { node { layer fill { color fram } } }
 `,
     );
 
@@ -62,7 +62,7 @@ theme otro extends neutral { node { layer relleno { color margo } } }
     expect(resultado.exitCode).toBe(1);
     const lineas = resultado.stdout.split('\n');
     expect(lineas.find((l) => l.includes("'neutral-drak'"))).toContain("did you mean 'neutral-dark'");
-    expect(lineas.find((l) => l.includes('unknown-palette-color'))).toContain("did you mean 'marco'");
+    expect(lineas.find((l) => l.includes('unknown-palette-color'))).toContain("did you mean 'frame'");
   });
 
   it('una Arista colgante sale con dangling-edge, posicion y fix de un unico candidato', async () => {

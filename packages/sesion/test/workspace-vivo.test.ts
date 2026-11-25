@@ -818,3 +818,28 @@ describe('Workspace vivo: protocolo de eventos', () => {
     expect(recibidos).toEqual([]);
   });
 });
+
+describe('Workspace vivo: old file conventions (the Dev UI fix action)', () => {
+  it('reports old-workspace-convention and its rename fix renames the file, together with a text fix', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE, 'temas/t.dg': 'theme t extends neutral { node { state hover { layer borde { width 2 } } } }\n' } });
+    const { ws } = await abrir(puerto);
+    const fixes = ws.estado().issues.flatMap((i) => (i.fix === undefined ? [] : [i.fix]));
+    expect(ws.estado().issues.map((i) => i.code).sort()).toEqual(['old-catalog-value', 'old-workspace-convention']);
+
+    const r = await ws.editar({ ediciones: fixes }, ws.estado().version);
+
+    expect(r).toMatchObject({ ok: true });
+    expect(puerto.texto('themes/t.dg')).toContain('layer border');
+    expect(puerto.texto('temas/t.dg')).toBeUndefined();
+    expect(ws.estado().issues).toEqual([]);
+  });
+
+  it('a rename onto an existing path is rejected with invalid-rename and nothing is written', async () => {
+    const puerto = puertoEnMemoria({ propios: { 'main.dg': BASE, 'temas/t.dg': 'theme t extends neutral-dark {\n}\n', 'themes/u.dg': 'theme u extends neutral-dark {\n}\n' } });
+    const { ws } = await abrir(puerto);
+    const fix = ws.estado().issues.find((i) => i.code === 'old-workspace-convention')?.fix;
+
+    expect(await ws.editar({ ediciones: [fix!] }, ws.estado().version)).toMatchObject({ ok: false, reason: 'invalid-rename' });
+    expect(puerto.texto('temas/t.dg')).toBeDefined();
+  });
+});

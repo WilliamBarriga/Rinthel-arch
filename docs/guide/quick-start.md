@@ -65,7 +65,7 @@ Each one is detailed in the [CLI guide](cli.md), or `dg <command> --help`. All o
 | `dg edit` | Writes to the `.dg`: sets a Pin (`--view <id> --node <id> --x N --y N`) or applies an Intent (`--intent '<json>'`, e.g. `reorder-lifelines` in a sequence) or structured edits (`--edits '<json>'`, for example the `fix` of `validate`). It is what the viewer uses when you drag a Node |
 | `dg skill` | Prints a skill (Markdown) so an agent can write and fix `.dg` with the inspect, edit, validate loop |
 
-In the UI, the View is chosen in the Views panel or with the URL hash (`#vista=<id>`), and drill-down links and breadcrumbs navigate between Views. Dragging a Node sets its Pin and rewrites the `.dg` file.
+In the UI, the View is chosen in the Views panel or with the URL hash (`#view=<id>`), and drill-down links and breadcrumbs navigate between Views. Dragging a Node sets its Pin and rewrites the `.dg` file.
 
 ## Walk through the examples
 
@@ -97,7 +97,7 @@ view order-flow { type sequence  interaction place-order }
 view order-tables { type er  include orders }
 ```
 
-`dg dev` opens the sequence View with `#vista=order-flow`. More in [step 6 of the tutorial](tutorial.md#step-6-optional-sequence-and-er).
+`dg dev` opens the sequence View with `#view=order-flow`. More in [step 6 of the tutorial](tutorial.md#step-6-optional-sequence-and-er).
 
 ## Next
 

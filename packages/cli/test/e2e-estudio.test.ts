@@ -95,7 +95,7 @@ describe('e2e: la UI de dev en Chromium', () => {
     // 2. Abrir una Vista.
     await indice.getByRole('option', { name: 'datos' }).click();
     await lienzo.getByRole('group', { name: /^Pedidos, tabla/ }).waitFor();
-    await expect.poll(() => pagina.url(), ESPERA).toContain('#vista=datos');
+    await expect.poll(() => pagina.url(), ESPERA).toContain('#view=datos');
 
     // 3. Escribir en el editor: se guarda en disco y el lienzo se actualiza.
     await izquierdo.getByRole('tab', { name: 'Code' }).click();
@@ -112,7 +112,7 @@ describe('e2e: la UI de dev en Chromium', () => {
     const linea = numeroDeLinea(texto, '"Usuarios"');
     const columna = texto.split('\n')[linea - 1]!.indexOf('Usuarios') + 1;
     const edits = [{ file: 'main.dg', range: { start: { line: linea, column: columna }, end: { line: linea, column: columna + 'Usuarios'.length } }, replacement: 'Clientes' }];
-    const edicion = await run(['edit', '--workspace', workspace, '--edits', JSON.stringify(edits)], { entorno: { DIAGRAMS_AGENTE: 'e2e' } });
+    const edicion = await run(['edit', '--workspace', workspace, '--edits', JSON.stringify(edits)], { entorno: { DIAGRAMS_AGENT: 'e2e' } });
     expect(edicion.exitCode, edicion.stdout + edicion.stderr).toBe(0);
     await derecho.getByRole('tab', { name: 'Agent' }).click();
     await derecho.getByRole('list', { name: 'Agent activity' }).getByRole('listitem').filter({ hasText: 'e2e' }).filter({ hasText: 'edit' }).waitFor();

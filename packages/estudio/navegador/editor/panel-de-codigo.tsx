@@ -228,7 +228,8 @@ function recuperarPerdidos(vista: EditorView, perdidos: readonly FragmentoPerdid
  * misma logica que el boton del panel Issues (`aplicarFixes`: version vigente, 409 con reintento, aviso con motivo).
  */
 function aplicarFix(vista: EditorView, file: string, fix: FixDeIssue, issue: IssueDeDev, estudio: ContextoDelEstudio): void {
-  if (fix.file === file && !vista.state.readOnly) {
+  // A rename (`fix.rename`) is not a text change: it always goes to `dev`.
+  if (fix.file === file && fix.rename === undefined && !vista.state.readOnly) {
     const doc = vista.state.doc;
     const offset = ({ line, column }: { line: number; column: number }): number => doc.line(line).from + column - 1;
     vista.dispatch({ changes: { from: offset(fix.range.start), to: offset(fix.range.end), insert: fix.replacement }, userEvent: 'input' });

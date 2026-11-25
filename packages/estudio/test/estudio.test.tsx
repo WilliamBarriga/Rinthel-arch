@@ -129,14 +129,14 @@ describe('indice de Vistas', () => {
     expect(screen.getByRole('option', { name: 'mapa', description: 'links to detalle; linked from otra' })).toBeTruthy();
   });
 
-  it('elegir una Vista cambia el lienzo y la URL a #vista=<id>; atras en el navegador vuelve', async () => {
+  it('elegir una Vista cambia el lienzo y la URL a #view=<id>; atras en el navegador vuelve', async () => {
     const { contenedor } = await montarEstudio({ 'main.dg': DSL });
     await lienzoListo(contenedor, 'mapa');
 
     fireEvent.click(await screen.findByRole('option', { name: 'detalle' }));
 
     await lienzoListo(contenedor, 'detalle');
-    expect(window.location.hash).toBe('#vista=detalle');
+    expect(window.location.hash).toBe('#view=detalle');
     expect(opcion('detalle').getAttribute('aria-selected')).toBe('true');
 
     act(() => window.history.back());
@@ -160,7 +160,7 @@ describe('indice de Vistas', () => {
   });
 
   it('abre la Vista que nombra la URL', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=otra' });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=otra' });
 
     await lienzoListo(contenedor, 'otra');
     expect(opcion('otra').getAttribute('aria-selected')).toBe('true');

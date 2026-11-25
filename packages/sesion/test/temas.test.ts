@@ -248,7 +248,7 @@ describe('seam sesion: Slots badge, counter, desc y footer', () => {
   const fuente = `specification { node paquete { color rojo } }
 model {
   paquete g "G" "Agrupa dos modulos" {
-    source { ruta "packages/g" }
+    source { path "packages/g" }
     paquete h
     paquete i
   }

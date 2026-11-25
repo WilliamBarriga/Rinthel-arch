@@ -44,7 +44,7 @@ theme metro-map {
   edge {
     // Line in the source Node color, with a white outline that separates it from the ones it crosses.
     layer outline line { color white  width 11  corner round  radius 22  cap round }
-    layer line line { color ORIGEN  width 6  corner round  radius 22  cap round }
+    layer line line { color ORIGIN  width 6  corner round  radius 22  cap round }
     end none
     label { scale 0.82  pad 10  pad-y 2.5  radius 3  fill text  border text  color white  weight 700 }
   }

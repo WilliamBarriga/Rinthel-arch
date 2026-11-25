@@ -48,6 +48,7 @@ describe('MotivoDeRechazo', () => {
       'nothing-to-redo',
       'unknown-theme',
       'unknown-entry',
+      'invalid-rename',
     ] as const;
 
     for (const reason of motivos) {

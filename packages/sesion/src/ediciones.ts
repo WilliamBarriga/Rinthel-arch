@@ -13,6 +13,8 @@ export interface EdicionConHash {
   replacement: string;
   /** `hashDeContenido` del archivo tal como lo vio el llamador. */
   hash: string;
+  /** New path of `file` (a file or folder): a rename, applied by `aplicarAlWorkspace`, not by the text functions. */
+  rename?: string;
 }
 
 /** Con `ok: false` no se escribe nada. */

@@ -66,9 +66,9 @@ export function Migas({ navegacion }: { navegacion: Navegacion }): ReactElement 
     <nav
       className="rd-chrome rd-migas"
       data-breadcrumbs
-      aria-label="Ruta"
+      aria-label="Breadcrumbs"
     >
-      <button type="button" aria-label="Atras" disabled={ruta.length <= 1} onClick={atras}>
+      <button type="button" aria-label="Back" disabled={ruta.length <= 1} onClick={atras}>
         &lt;
       </button>
       {ruta.map((id, i) =>

@@ -29,7 +29,7 @@ interface PropsDelMarco {
 }
 
 export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElement {
-  const { motivoSinGestos, modo } = useEstudio();
+  const { motivoSinGestos, modo, puedeEscribir } = useEstudio();
   const { islas, disponibles, pestanas, elegirPestana, dialogo, cargados, cerrarDialogo, aviso, alMontarPortales } = useChrome();
   const gesto = useGestoEnLienzo();
   const solido = islas.izquierda.arrastrando || islas.derecha.arrastrando || gesto.enGesto;
@@ -41,7 +41,7 @@ export function Marco({ navegacion, lienzo, leyenda }: PropsDelMarco): ReactElem
       </main>
       <header className="ui-barra">
         <span className="ui-pildora ui-marca">rinthel-arch</span>
-        {modo === 'export' && <span className="ui-pildora ui-tenue">Read-only</span>}
+        {!puedeEscribir && <span className="ui-pildora ui-tenue">Read-only</span>}
         {navegacion !== undefined && (
           <div className="ui-pildora ui-migas">
             <Migas navegacion={navegacion} />

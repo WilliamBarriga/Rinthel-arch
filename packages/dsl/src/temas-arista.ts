@@ -1,10 +1,10 @@
 /** Bloque `edge` de un Tema: pila de trazos (Familia trazo); cada marcador y la etiqueta son una Primitiva suelta. */
 import { CODIGOS } from 'canonico';
-import { aplicarOps } from 'tema';
+import { ESTADOS, aplicarOps, parsearEstado } from 'tema';
 import type { CapaDeTema, OpDeCapa, Primitiva, TemaResuelto } from 'tema';
 
 import type { EdgeItem, ThemeDiagram, ThemeLabel, ThemeLayer, ThemeMarker, ThemeUse } from './generated/ast';
-import { aRango, rangoDe } from './posiciones';
+import { aRango, baseDeErrorDeEstado, issueConSugerencia, rangoDe } from './posiciones';
 import { compilarBloque } from './temas-capas';
 import { nombreDeDiagrama, primitivaSuelta } from './temas-comun';
 import type { Contexto } from './temas-comun';
@@ -33,6 +33,23 @@ export function compilarArista(items: readonly EdgeItem[], tema: TemaResuelto, c
       const vigente = aplicarOps(tema.arista.capas as CapaDeTema[], previo, tema.palette, 'parchear', 'capa-arista').pila;
       const ops = compilarBloque(item.items, { ...ctx, modo: 'parchear', ubicacion: 'capa-arista', candidatas: [vigente], origenes: new Map() });
       tema.arista.identificante = [...previo, ...ops];
+    } else if (item.$type === 'ThemeState') {
+      // Paint-only: a state patches the stroke stack (Layers and Parts); markers, label and Metrics stay.
+      const resultado = parsearEstado(item.name);
+      if ('error' in resultado) {
+        ctx.issues.push(issueConSugerencia(baseDeErrorDeEstado(resultado.error), ctx.archivo, item, 'name', ESTADOS));
+        continue;
+      }
+      for (const hijo of item.items) {
+        if (hijo.$type === 'ThemeSlots' || hijo.$type === 'ThemeTransition') {
+          ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeSlots' ? 'slots' : 'transition'}' is not valid in a state of 'edge'` });
+        }
+      }
+      const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');
+      const previo = tema.arista.estados?.[resultado.estado] ?? [];
+      const vigente = aplicarOps(tema.arista.capas as CapaDeTema[], previo, tema.palette, 'parchear', 'capa-arista').pila;
+      const ops = compilarBloque(capas, { ...ctx, modo: 'parchear', ubicacion: 'capa-arista', candidatas: [vigente], origenes: new Map() });
+      tema.arista.estados = { ...tema.arista.estados, [resultado.estado]: [...previo, ...ops] };
     }
   }
 }

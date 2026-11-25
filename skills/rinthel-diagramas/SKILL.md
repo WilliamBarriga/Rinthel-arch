@@ -92,9 +92,10 @@ view purchase { type sequence interaction purchase order client, api, db autonum
 | `invalid-fragment-operand` | `else` only in `alt`, `and` only in `par`; `opt/loop/break/critical` have one operand |
 | `step-not-advancing`, `step-not-projected`, `steps-each-with-step` | Steps only advance, over projected Messages; do not mix `steps each` with `step` |
 | `er-cardinality` | Only `0..1`, `1`, `0..*`, `1..*` in an `er` View; apply the `fix` |
-| `old-catalog-value` | Old (Spanish) name of a built-in Motion, effect, state or Theme; apply the `fix` |
+| `old-catalog-value` | Old (Spanish) name of a built-in Motion, effect, state, Theme, Palette color or Layer, or `ORIGEN`; apply the `fix` |
 | `duplicate-key-mark` | Apply the `fix` (deletes the repeated mark) |
-| `old-workspace-convention` | Rename the file or folder to the path in `fix.rename` (`theme.dg`, `themes/`, `fonts/`) and revalidate |
+| `old-workspace-convention` | Apply the `fix` with `edit --edits`: it renames the file or folder to `fix.rename` (`theme.dg`, `themes/`, `fonts/`). Revalidate: a nested old name shows up next |
+| `unknown-source-kind` | Warning: write each Source entry as `<kind> "<ref>"` with a known kind (`path`, `spec`, `file`, `url`, `git`), e.g. `spec "prd.md#2"`, never `kind "spec" ref "..."` |
 | `reply-without-sync`, `order-not-in-interaction`, `ref-without-view` | Warnings: check Message order, the `order`, or add the View of the referenced Interaction |
 
 The full list of codes comes from `dg skill --workspace <path>`.
@@ -168,7 +169,7 @@ Turn a PRD, spec or description of something that does not exist yet into a **Bl
 2. **Declare kinds** in `specification`: reuse the Workspace's kinds, or the starting catalog in `references/scan-import.md`.
 3. **Draw the proposal**: Nodes (Groups for subsystems), Edges, and Attributes when the spec has tables. Mark every proposed Node, Edge, Attribute and Interaction `planned`; a planned Group marks its descendants, and an Edge or Message touching a planned thing is drawn planned, so mark the root and the Edges that stand alone. Never mark what already exists.
 4. **Cite the spec**: when the spec is a file, each Node written from it carries `source { spec "<file>#<section>" }`. Interactions, Edges and Attributes take no `source`: start their `description` with `Spec: <file>#<section>` (an Attribute inherits its table's Node ref). Write no `path` ref on a planned Node, because that says it exists.
-5. **Record doubt in the element**: put each guess in the `description` of the element it affects as `Assumption: <what you assumed>`, and each thing the spec leaves undecided (including anything the spec retires) as `Open question: <the question>`. `grep -rn "Open question:" <workspace>` lists them (`inspect search` matches ids and titles only).
+5. **Record doubt in the element**: put each guess in the `description` of the element it affects as `Assumption: <what you assumed>`, and each thing the spec leaves undecided (including anything the spec retires) as `Open question: <the question>`. `inspect search "Open question" --workspace <path>` lists them (search also matches descriptions).
 6. **Views by default**: one `architecture` View, one `sequence` View per key journey (an `interaction` plus a View that projects it), an `er` View when the spec has a data model. A `flow` View only when the user asks. Keep about 30 visible Nodes per View; collapse Groups and link per-Group Views as in "Import from code".
 7. **Validate** as in the Loop (`--strict`), then serve with `dev`.
 8. **Ask after showing**: hand over the `dev` URL first, then ask the user at most about 5 questions, only the ones whose answer changes the shape of the diagram (pick them from your `Open question:` list). Apply the answers and validate again.
@@ -192,9 +193,9 @@ Report to the user in three lists: **built** (planned elements now cited by a pa
 
 ## Serve and show
 
-- `dg dev --workspace <path> --port <N>` serves the dev UI at `http://127.0.0.1:<N>/#vista=<id>`. It is a long process: start it in the background, watch its output until the line with the URL and hand that URL to the user.
+- `dg dev --workspace <path> --port <N>` serves the dev UI at `http://127.0.0.1:<N>/#view=<id>`. It is a long process: start it in the background, watch its output until the line with the URL and hand that URL to the user.
 - `dev` recompiles on save: edit the `.dg` and the UI updates itself. The user also writes from the UI (editor, drags, `fix`, Theme gallery) and can undo from the file History: re-read the file before editing it. So `dg edit` does not overwrite their change, pass `--hash <file>=<hash>` with the `hash` from `GET /api/archivo/<path>` (rejects with `stale-hash`: re-read and retry).
-- The UI shows in its Agent panel every `validate`, `build`, `inspect` and `edit` you run and highlights what you change. Export `DIAGRAMS_AGENTE=<your name>` so the user knows who it was; do not set `DIAGRAMS_ACTIVIDAD=0` unless asked.
+- The UI shows in its Agent panel every `validate`, `build`, `inspect` and `edit` you run and highlights what you change. Export `DIAGRAMS_AGENT=<your name>` so the user knows who it was; do not set `DIAGRAMS_ACTIVITY=0` unless asked.
 - To send the diagram to someone without the tool: `dg export --workspace <path> --out <file>.html` writes a self-contained read-only HTML (Views, Steps, `link`, Theme gallery). To show it, serve its folder with a local server and hand over the URL.
 - Image of a View: capture the `dev` viewer with a headless browser and give the user a URL served by a local server (`http://localhost:<port>/...`), not a file path.
 - A Workspace with a code Theme (`.tsx`) needs `--trust-code` or confirmation in the viewer; trust only your own Workspaces.

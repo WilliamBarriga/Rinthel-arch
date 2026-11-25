@@ -6,7 +6,7 @@
  */
 import { CODIGOS } from './codigos';
 import { CARDINALIDADES_ER } from './esquema';
-import { VALORES_DE_CATALOGO_ANTIGUOS, mensajeDeValorAntiguo, renombreAntiguo } from './nombres-antiguos';
+import { VALORES_DE_CATALOGO_ANTIGUOS, mensajeDeValorAntiguo, renombreAntiguo } from './renombres';
 import type { ElementoDePaso, FuenteCanonica, Interaccion, ItemDeInteraccion, Nodo, Tema, Vista } from './esquema';
 import type { IconProvider } from './iconos';
 import type { Issue, TextRange } from './issue';

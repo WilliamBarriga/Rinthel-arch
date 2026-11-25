@@ -13,8 +13,8 @@ const conArista = (arista: Partial<TemaResuelto['arista']>): TemaResuelto => ({
 
 const GLOW = conArista({
   capas: [
-    linea('glow', { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 }),
-    linea('principal', { color: 'ORIGEN', width: 2, style: 'solid', corner: 'sharp', cut: 6, radius: 8 }),
+    linea('glow', { color: 'ORIGIN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 }),
+    linea('principal', { color: 'ORIGIN', width: 2, style: 'solid', corner: 'sharp', cut: 6, radius: 8 }),
   ],
 });
 
@@ -56,9 +56,9 @@ describe('Familia trazo', () => {
     expect(temaResueltoSchema.safeParse(conArista({ capas: [{ nombre: 'x', primitiva: { tipo: 'solid', props: { color: 'blue' } } }] })).success).toBe(false);
   });
 
-  it('ORIGEN vale en una Arista y no en un Nodo', () => {
-    expect(construirPrimitiva('line', [{ clave: 'color', valor: 'ORIGEN' }], paleta, 'capa-arista').errores).toEqual([]);
-    expect(construirPrimitiva('solid', [{ clave: 'color', valor: 'ORIGEN' }], paleta).errores).toHaveLength(1);
+  it('ORIGIN vale en una Arista y no en un Nodo', () => {
+    expect(construirPrimitiva('line', [{ clave: 'color', valor: 'ORIGIN' }], paleta, 'capa-arista').errores).toEqual([]);
+    expect(construirPrimitiva('solid', [{ clave: 'color', valor: 'ORIGIN' }], paleta).errores).toHaveLength(1);
   });
 });
 
@@ -80,7 +80,7 @@ describe('pintura de la Arista', () => {
     expect(capas[1]?.props).toMatchObject({ color: '#2563eb', width: 2 });
   });
 
-  it('ORIGEN toma el color del Nodo de origen; sin origen conocido, el borde del Tema', () => {
+  it('ORIGIN toma el color del Nodo de origen; sin origen conocido, el borde del Tema', () => {
     const { arista } = estiloResuelto(GLOW, { diagrama: 'architecture' }).pintura;
 
     expect(arista.origenes['green']?.capas[1]?.props['color']).toBe(TEMA_NEUTRO.palette['green']);

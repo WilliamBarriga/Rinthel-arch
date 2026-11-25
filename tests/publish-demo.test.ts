@@ -16,7 +16,7 @@ const WORKSPACE = join(TMP, 'workspace');
 
 const git = (...args: string[]): string => execFileSync('git', ['-C', REPO, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim();
 const publish = (...args: string[]): string =>
-  execFileSync(process.execPath, [SCRIPT, '--repo', REPO, '--workspace', WORKSPACE, '--skip-build', ...args], { encoding: 'utf8', env: { ...process.env, DIAGRAMS_ACTIVIDAD: '0' } });
+  execFileSync(process.execPath, [SCRIPT, '--repo', REPO, '--workspace', WORKSPACE, '--skip-build', ...args], { encoding: 'utf8', env: { ...process.env, DIAGRAMS_ACTIVITY: '0' } });
 
 execFileSync('git', ['init', '-q', '-b', 'main', REPO]);
 git('config', 'user.email', 'test@example.com');

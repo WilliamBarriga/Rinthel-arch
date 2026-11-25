@@ -33,7 +33,7 @@ Options: those of validate (--json, --strict, --max-issues, --theme, --theme-pat
 
 Dev UI at http://127.0.0.1:<port>/ (listens on localhost only): canvas, DSL editor, Issues, Themes,
 file History and the activity log feed. Recompiles on save. The active View lives in the URL hash
-(#vista=<id>). Dragging a Node sets its Pin and rewrites the .dg.
+(#view=<id>). Dragging a Node sets its Pin and rewrites the .dg.
 Guide: docs/guide/dev-ui.md.
 
 Options:
@@ -48,7 +48,7 @@ This is a long-running process: start it in the background and wait for the line
 
 Read-only queries over the Model; each result carries the qualified id, kind and file:line.
 
-  inspect search <text>       Nodes by partial id or title, Views by id
+  inspect search <text>       Nodes and Interactions by partial id, title or description, Views by id
   inspect node <id>           Node, parent and children, Attributes, Edges and the Views that show it
   inspect view <id>           Visible Nodes and Edges of the View in its initial state
   inspect interaction <id>    Lifelines in order, Messages and the Views that project the Interaction
@@ -96,9 +96,10 @@ Regenerate it when the Node kinds, the Themes or the codes change.
   scan: `diagrams scan [<root>] [options]
 
 Reads a codebase without running it and writes a Scan draft (rinthel/scan@1): units from manifests
-(package.json, pyproject.toml, go.mod, Cargo.toml), dependencies between them from TS/JS imports,
-externals, database tables from Prisma schemas and SQL DDL, and limits. Prints a compact summary that
-ends with the next step. Never writes .dg files.
+(package.json, pyproject.toml, go.mod, Cargo.toml), dependencies between them from TS/JS and Python
+imports, externals, database tables (Prisma schemas, SQL DDL, and Drizzle, Django and SQLAlchemy
+models read from the syntax tree), and limits. Prints a compact summary that ends with the next step.
+Never writes .dg files.
 
 With a Workspace (--workspace, or the shallowest folder under <root> with .dg files) it adds Scan
 coverage: units and tables no Node cites as a Source path ref, orphan refs, and columns missing or extra
@@ -151,8 +152,8 @@ Commands:
 
 Agent loop: inspect, edit the .dg, validate --json until ok:true.
 Exit codes: 0 success, 1 Workspace errors, 2 usage or internal failure.
-validate, build, inspect and edit append an Event to <path>/${CARPETA_DE_SALIDA}/actividad.jsonl
-(DIAGRAMS_ACTIVIDAD=0 turns it off; DIAGRAMS_AGENTE names the agent).
+validate, build, inspect and edit append an Event to <path>/${CARPETA_DE_SALIDA}/activity.jsonl
+(DIAGRAMS_ACTIVITY=0 turns it off; DIAGRAMS_AGENT names the agent).
 Full guide: docs/guide/cli.md
 `;
 

@@ -37,7 +37,7 @@ const TEMA = (cuerpo: string, dentro = ''): string => `theme t {\n  palette { ti
 const USA_T = '  theme t\n';
 
 /** Old catalog value -> the English one, per category; each snippet is a minimal Workspace using the old value. */
-const CASOS: ReadonlyArray<{ categoria: string; viejo: string; nuevo: string; fuente: string }> = [
+const CASOS: ReadonlyArray<{ categoria: string; viejo: string; nuevo: string; fuente: string; reemplazo?: string }> = [
   { categoria: 'motion', viejo: 'flujo', nuevo: 'stream', fuente: BASE(TEMA('    layer borde border { color tinta  motion flujo 2s }\n'), USA_T) },
   { categoria: 'motion', viejo: 'respiracion', nuevo: 'breathe', fuente: BASE(TEMA('    layer borde border { color tinta  motion respiracion 3s }\n'), USA_T) },
   { categoria: 'effect', viejo: 'deslizar', nuevo: 'slide', fuente: BASE(TEMA('', '  enter deslizar 300ms\n'), USA_T) },
@@ -46,10 +46,15 @@ const CASOS: ReadonlyArray<{ categoria: string; viejo: string; nuevo: string; fu
   { categoria: 'state', viejo: 'en-ruta', nuevo: 'on-path', fuente: BASE(TEMA('    state en-ruta { layer forma { radius 8 } }\n'), USA_T) },
   { categoria: 'theme', viejo: 'alto-contraste', nuevo: 'high-contrast', fuente: BASE('', '  theme alto-contraste\n') },
   { categoria: 'theme', viejo: 'alto-contraste', nuevo: 'high-contrast', fuente: BASE('theme t extends alto-contraste { }', USA_T) },
+  { categoria: 'layer', viejo: 'borde', nuevo: 'border', fuente: BASE('theme t extends neutral { node { state hover { layer borde { width 2 } } } }', USA_T) },
+  { categoria: 'layer', viejo: 'forma', nuevo: 'shape', fuente: BASE('theme t extends neutral { node { layer marca solid after forma { color blue } } }', USA_T) },
+  { categoria: 'palette', viejo: 'tinta', nuevo: 'ink', reemplazo: 'ink/0.5', fuente: BASE('theme t extends neutral { node { layer fill { color tinta/0.5 } } }', USA_T) },
+  { categoria: 'palette', viejo: 'tinta', nuevo: 'ink', reemplazo: 'mix(ink,paper,0.5)', fuente: BASE('theme t extends neutral { node { layer fill { color mix(tinta, papel, 0.5) } } }', USA_T) },
+  { categoria: 'color', viejo: 'ORIGEN', nuevo: 'ORIGIN', fuente: BASE('theme t extends neutral { edge { layer line { color ORIGEN } } }', USA_T) },
 ];
 
 describe('validate: old catalog values', () => {
-  it.each(CASOS)('$categoria: `$viejo` is an old-catalog-value error whose fix rewrites it to `$nuevo`, and the Workspace ends clean', async ({ viejo, nuevo, fuente }) => {
+  it.each(CASOS)('$categoria: `$viejo` is an old-catalog-value error whose fix rewrites it to `$nuevo`, and the Workspace ends clean', async ({ viejo, nuevo, fuente, reemplazo }) => {
     const raiz = workspace(fuente);
     const { exitCode, salida } = await validar(raiz);
 
@@ -59,11 +64,17 @@ describe('validate: old catalog values', () => {
     expect(issue?.severity).toBe('error');
     expect(issue?.message).toContain(`'${viejo}'`);
     expect(issue?.message).toContain(`'${nuevo}'`);
-    expect(issue?.fix?.replacement).toBe(nuevo);
+    expect(issue?.fix?.replacement).toBe(reemplazo ?? nuevo);
+    expect(salida.issues.filter((i) => i.code === 'old-catalog-value')).toHaveLength(1);
 
     const r = await run(['edit', '--workspace', raiz, '--edits', JSON.stringify([issue?.fix])]);
     expect(r.exitCode, r.stderr).toBe(0);
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toContain(nuevo);
+    expect((await validar(raiz)).salida.issues.filter((i) => i.severity === 'error')).toEqual([]);
+  });
+
+  it('a user Theme that declares its own `fondo` color and `borde` Layer is untouched', async () => {
+    const raiz = workspace(BASE('theme t { palette { fondo "#ffffff" }  node { layer borde border { color fondo } }  edge { layer linea line { color fondo } } }', USA_T));
     expect((await validar(raiz)).salida.issues.filter((i) => i.severity === 'error')).toEqual([]);
   });
 

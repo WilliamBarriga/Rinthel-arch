@@ -6,7 +6,7 @@
  */
 import { builtinModules } from 'node:module';
 
-import { loadGrammar } from '../tree-sitter';
+import { loadTypescriptGrammar } from '../tree-sitter';
 import type { FoundImport, ImportExtractor, ImportTarget } from './extractor';
 
 const QUERY = `
@@ -19,10 +19,6 @@ const QUERY = `
   arguments: (arguments . (string (string_fragment) @source))
   (#eq? @callee "require"))
 `;
-
-const TS_GRAMMAR = 'tree-sitter-typescript/tree-sitter-typescript.wasm';
-const TSX_GRAMMAR = 'tree-sitter-typescript/tree-sitter-tsx.wasm';
-const TS_ONLY = /\.(?:ts|mts|cts)$/;
 
 const RESOLVABLE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.d.ts', '.js', '.jsx', '.mjs', '.cjs', '.json'];
 const JS_TO_TS: Readonly<Record<string, readonly string[]>> = {
@@ -37,9 +33,9 @@ const NPM_NAME = /^(?:@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*$/i;
 export const typescriptImports: ImportExtractor = {
   languages: ['typescript', 'javascript'],
   async load() {
-    const [ts, tsx] = await Promise.all([loadGrammar(TS_GRAMMAR, QUERY), loadGrammar(TSX_GRAMMAR, QUERY)]);
+    const grammarFor = await loadTypescriptGrammar(QUERY);
     return (path, text, { files }) =>
-      (TS_ONLY.test(path) && !path.endsWith('.d.ts') ? ts : tsx)
+      grammarFor(path)
         .captures(text)
         .filter(({ name }) => name === 'source')
         .flatMap(({ text: specifier, line }): FoundImport[] => {

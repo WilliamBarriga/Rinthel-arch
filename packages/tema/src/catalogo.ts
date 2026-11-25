@@ -4,7 +4,7 @@ import type { CategoriaDeCatalogo } from 'canonico';
 
 import { CATALOGO_DE_EFECTOS } from './catalogo-efectos';
 import type { FamiliaDeEfectos } from './catalogo-efectos';
-import { validarColor } from './color';
+import { renombrarColor, validarColor } from './color';
 import { BORDES } from './familias/borde';
 import { CODIGO } from './familias/codigo';
 import { FORMAS } from './familias/forma';
@@ -202,7 +202,14 @@ export function validarPropiedades(
       const expresion = String(valor);
       const problemas = validarColor(expresion, paleta, contextoDeColor);
       if (problemas.length === 0) resultado[clave] = expresion;
+      const renombres = problemas.flatMap((p) => (p.renombre === undefined ? [] : [p.renombre]));
+      const candidato = renombres.length === 0 ? undefined : renombrarColor(expresion, renombres);
       for (const problema of problemas) {
+        if (problema.renombre !== undefined) {
+          // One Issue per expression: its fix already rewrites every old name in it.
+          if (problema.renombre === renombres[0]) errores.push({ codigo: CODIGOS.E_OLD_CATALOG_VALUE, mensaje: problema.mensaje, clave, ...(candidato !== undefined && { candidato }) });
+          continue;
+        }
         errores.push({
           codigo: problema.fueraDePaleta === true ? CODIGOS.E_UNKNOWN_PALETTE_COLOR : CODIGOS.E_THEME_INVALID_VALUE,
           mensaje: problema.mensaje,

@@ -117,7 +117,7 @@ La UI de `dev` muestra en tiempo real lo que hace un agente con el CLI desde otr
 
 ### Canal
 
-El CLI escribe un log append-only por Workspace, `resolve(--workspace)/.diagrams/actividad.jsonl`, con un Evento de actividad JSON por linea. `dev` lo observa con un observador propio (el watcher del Workspace sigue ignorando carpetas ocultas). Es el unico canal: funciona sin `dev`, con varios agentes y varios `dev`, sirve a otros consumidores (`tail -f`, pruebas, capturas) y no abre superficie de red. El POST al `dev` vivo con el mismo esquema queda como posible transporte de menor latencia, sin ruta reservada. Se descarta ejecutar los comandos a traves de `dev` (dos caminos de ejecucion, endpoint que ejecuta escrituras, estado compartido).
+El CLI escribe un log append-only por Workspace, `resolve(--workspace)/.diagrams/activity.jsonl`, con un Evento de actividad JSON por linea. `dev` lo observa con un observador propio (el watcher del Workspace sigue ignorando carpetas ocultas). Es el unico canal: funciona sin `dev`, con varios agentes y varios `dev`, sirve a otros consumidores (`tail -f`, pruebas, capturas) y no abre superficie de red. El POST al `dev` vivo con el mismo esquema queda como posible transporte de menor latencia, sin ruta reservada. Se descarta ejecutar los comandos a traves de `dev` (dos caminos de ejecucion, endpoint que ejecuta escrituras, estado compartido).
 
 `build` deja de borrar `.diagrams/` entero: reemplaza solo `canonico.json` y `geometria/`.
 
@@ -125,7 +125,7 @@ El CLI escribe un log append-only por Workspace, `resolve(--workspace)/.diagrams
 
 Registran `validate`, `build`, `inspect` y `edit`, tambien cuando salen 1 o 2. No registran `skill`, `dev` ni la ayuda. Si `--workspace` falta o no resuelve, no hay donde escribir y no se registra. Lo que el humano hace desde la UI de `dev` (Gestos, guardar desde el editor) no entra en el registro.
 
-`validate` e `inspect` siguen sin tocar el DSL ni las salidas de `build`; su unico efecto lateral nuevo es este rastro. Activo por defecto; `DIAGRAMS_ACTIVIDAD=0` lo desactiva. Un fallo al escribir el log se ignora: nunca cambia stdout, stderr ni el codigo de salida.
+`validate` e `inspect` siguen sin tocar el DSL ni las salidas de `build`; su unico efecto lateral nuevo es este rastro. Activo por defecto; `DIAGRAMS_ACTIVITY=0` lo desactiva. Un fallo al escribir el log se ignora: nunca cambia stdout, stderr ni el codigo de salida.
 
 El emisor es un solo punto del CLI (envoltorio de `run` o dependencia inyectable), no cada comando; `sesion` sigue pura.
 
@@ -137,7 +137,7 @@ El emisor es un solo punto del CLI (envoltorio de `run` o dependencia inyectable
   summary?: { errors, warnings } }
 ```
 
-- `agent`: texto libre de `DIAGRAMS_AGENTE`, si alguien lo fija; el sistema no conoce ningun harness.
+- `agent`: texto libre de `DIAGRAMS_AGENT`, si alguien lo fija; el sistema no conoce ningun harness.
 - `args`: el argv tras el comando, completo.
 - `target`: solo lo que el comando nombra (`inspect view|node|theme`, la Vista o Nodo de una Intencion de `edit`, los `files` que escribio `edit`). El CLI no deduce nada.
 - `summary`: de `validate` y `build`. No se guardan stdout ni stderr.
@@ -146,7 +146,7 @@ Lineas cortas escritas con un solo `write` en modo append; el lector descarta la
 
 ### Retencion
 
-Al pasar 1 MB, quien escribe rota a `actividad.1.jsonl` (una sola generacion anterior). El lector tolera que el archivo se acorte.
+Al pasar 1 MB, quien escribe rota a `activity.1.jsonl` (una sola generacion anterior). El lector tolera que el archivo se acorte.
 
 ### En `dev` y la UI
 
@@ -159,3 +159,8 @@ Seguir al agente (interruptor): `target.view` lleva a esa Vista; `target.node` s
 ## Enmienda: Intencion `set-theme` y motivo `unknown-theme` (#176, mapa #168)
 
 `diagrams edit --intent` acepta la Intencion `set-theme` `{ vista, tema? }` (ADR 0007). El enum `reason` de `edit --json` suma `unknown-theme` (salida 1; 422 en `dev`), paralelo a `unknown-view`. El resto de la salida de `edit` no cambia.
+
+## Amendment: English public contract (spec #226)
+
+- **JSON keys and values in English (#228), one breaking change without aliases**: `validate` 2, `inspect` 2, `edit` 2 and the activity log 2. `inspect`: `comando`/`consulta`/`resultados` are `command`/`query`/`results`, and the node, view, interaction and theme payloads use English keys (`node`, `edges`, `views`, `theme`, `layers`...). `edit` Intents use `type`, `view`, `node`, `order`, `theme`; rejections carry `reason`, `message` and `suggestions`. Activity events carry `agent`, `command`, `durationMs`, `target { view, node, theme, files }` and `summary { errors, warnings }`. New codes and reasons are kebab-case English with no `E_`/`W_` prefix. The env vars are `DIAGRAMS_AGENT` and `DIAGRAMS_ACTIVITY` and the log is `.diagrams/activity.jsonl` (rotated to `activity.1.jsonl`).
+- **Additive, no version bump (review of #226)**: `inspect search` also matches Node and Interaction descriptions (description-only matches sort last). An `edit --edits` entry may carry `rename` (the `fix` of `old-workspace-convention`): the file or folder is renamed in the same all-or-nothing batch as the text edits, its new path is listed in `files`, and an impossible rename rejects the batch with the new reason `invalid-rename`. The warning `unknown-source-kind` is a new code. `scan --json` (contract `SCAN_CONTRACT_VERSION`) has its Zod schema `scanSummarySchema` in `canonico`; draft relations gained `source`.

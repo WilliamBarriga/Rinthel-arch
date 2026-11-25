@@ -100,3 +100,18 @@ describe('validate: planned mark', () => {
     expect((await validar(raiz)).salida.issues).toEqual([]);
   });
 });
+
+describe('validate: Source kinds', () => {
+  it('the mistaken form `kind "spec" ref "..."` warns unknown-source-kind on both entries; `spec "..."` is clean', async () => {
+    const base = (fuente: string) => `specification {\n  node service\n}\n\nmodel {\n  service pay "Pay" planned {\n    ${fuente}\n  }\n}\n`;
+    const mal = await validar(workspace(base('source { kind "spec"  ref "prd.md#1" }')));
+    expect(mal.exitCode).toBe(0);
+    expect(mal.salida.issues.map((i) => [i.code, i.severity, i.message.split("'")[1]])).toEqual([
+      ['unknown-source-kind', 'warning', 'kind'],
+      ['unknown-source-kind', 'warning', 'ref'],
+    ]);
+
+    const bien = await validar(workspace(base('source { spec "prd.md#1" }')));
+    expect(bien.salida.issues).toEqual([]);
+  });
+});

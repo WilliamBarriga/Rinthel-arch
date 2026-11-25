@@ -8,6 +8,7 @@
 import { EDIT_CONTRACT_VERSION, edicionesPedidasSchema, intencionSchema, salidaDeEditSchema } from 'canonico';
 import type { SalidaDeEdit } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
+import { existsSync, renameSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { aplicarAlWorkspace, hashDeContenido } from 'sesion';
 import type { Aplicable } from 'sesion';
@@ -27,7 +28,15 @@ export async function editar(
   {
     leer = leerWorkspace,
     escribirArchivo = escribirTexto,
-  }: { leer?: (raiz: string) => ArchivosDelWorkspace; escribirArchivo?: (ruta: string, texto: string) => void },
+    renombrarRuta = renameSync,
+    existeRuta = existsSync,
+  }: {
+    leer?: (raiz: string) => ArchivosDelWorkspace;
+    escribirArchivo?: (ruta: string, texto: string) => void;
+    /** Absolute paths; by default `fs.renameSync`. */
+    renombrarRuta?: (antigua: string, nueva: string) => void;
+    existeRuta?: (ruta: string) => boolean;
+  },
 ): Promise<ResultadoConActividad> {
   let v;
   try {
@@ -115,7 +124,12 @@ export async function editar(
   let resultado;
   try {
     resultado = aplicarAlWorkspace(
-      { leer: () => ({ disco: archivos, propios }), escribir: (f, texto) => escribirArchivo(destinoEnWorkspace(raiz, f), texto) },
+      {
+        leer: () => ({ disco: archivos, propios }),
+        escribir: (f, texto) => escribirArchivo(destinoEnWorkspace(raiz, f), texto),
+        renombrar: (antigua, nueva) => renombrarRuta(destinoEnWorkspace(raiz, antigua), destinoEnWorkspace(raiz, nueva)),
+        existe: (ruta) => existeRuta(destinoEnWorkspace(raiz, ruta)),
+      },
       aplicable,
       Object.fromEntries(hashes),
     );
@@ -123,21 +137,20 @@ export async function editar(
     return conObjetivo(uso(`Could not write: ${(error as Error).message}`));
   }
   if (!resultado.ok) return conObjetivo(rechazado(resultado, json));
-  const { ediciones, cambiados } = resultado;
+  const { ediciones, cambiados, renombrados } = resultado;
+  // `files`: written files plus the new path of each rename.
+  const tocados = [...new Set([...cambiados, ...renombrados.map((r) => r.rename)])].sort();
   const salida: SalidaDeEdit = salidaDeEditSchema.parse({
     contractVersion: EDIT_CONTRACT_VERSION,
     ok: true,
-    edits: ediciones.map(({ file, range, replacement }) => ({ file, range, replacement })),
-    files: cambiados,
+    edits: ediciones.map(({ file, range, replacement, rename }) => ({ file, range, replacement, ...(rename !== undefined && { rename }) })),
+    files: tocados,
   });
-  return conObjetivo(
-    {
-      exitCode: 0,
-      stdout: json ? `${JSON.stringify(salida, null, 2)}\n` : `${cambiados.length} file(s) edited: ${cambiados.join(', ')}\n`,
-      stderr: '',
-    },
-    cambiados,
-  );
+  const texto = [
+    `${cambiados.length} file(s) edited${cambiados.length === 0 ? '' : `: ${cambiados.join(', ')}`}`,
+    ...renombrados.map((r) => `renamed ${r.file} -> ${r.rename}`),
+  ].join('\n');
+  return conObjetivo({ exitCode: 0, stdout: json ? `${JSON.stringify(salida, null, 2)}\n` : `${texto}\n`, stderr: '' }, tocados);
 }
 
 function rechazado(r: RechazoDeEdicion, json: boolean): ResultadoDeEjecucion {

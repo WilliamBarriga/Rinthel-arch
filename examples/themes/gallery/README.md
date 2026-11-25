@@ -17,10 +17,10 @@ Each Theme has a reference View, `<theme>-reference`, equivalent to the `open` V
 ```
 pnpm build                          # once; the script uses the built CLI
 pnpm capturas soft-card             # one Theme: reference View against the prototype `open` View
-pnpm capturas --todos               # all Themes
+pnpm capturas --all                 # all Themes
 pnpm capturas soft-card glass-chip  # several Themes on a single page
-pnpm capturas soft-card cobertura   # only the gallery, coverage Model
-pnpm capturas --workspace examples/rinthel-arch --vista open --prototipo A neutral neutral-dark
+pnpm capturas soft-card coverage    # only the gallery, coverage Model
+pnpm capturas --workspace examples/rinthel-arch --view open --prototype A neutral neutral-dark
                                     # another Workspace: its View with each Theme (from the Workspace or built-in), next to a prototype variant
 ```
 

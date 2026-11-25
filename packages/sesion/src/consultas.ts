@@ -39,22 +39,28 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
 
   if (comando === 'search') {
     const aguja = argumento.toLowerCase();
-    // Orden: id exacto, id (o ultimo tramo) que empieza por la consulta, el resto; dentro, por id.
-    const rango = (id: string) => (id.toLowerCase() === aguja ? 0 : id.toLowerCase().startsWith(aguja) || id.slice(id.lastIndexOf('.') + 1).toLowerCase().startsWith(aguja) ? 1 : 2);
+    const contiene = (texto: string | undefined): boolean => texto !== undefined && texto.toLowerCase().includes(aguja);
+    // Order: exact id, id (or its last segment) starting with the query, other id or title matches, and last the
+    // matches only in the description (assumptions and open questions live there); within each, declaration order.
+    const rango = (r: { id: string; soloDescripcion: boolean }) =>
+      r.soloDescripcion ? 3 : r.id.toLowerCase() === aguja ? 0 : r.id.toLowerCase().startsWith(aguja) || r.id.slice(r.id.lastIndexOf('.') + 1).toLowerCase().startsWith(aguja) ? 1 : 2;
     const encontrados = [
       ...nodos
-        .filter(({ nodo }) => nodo.id.toLowerCase().includes(aguja) || nodo.title.toLowerCase().includes(aguja))
-        .map((n) => ({ kind: 'node' as const, ...resumen(n) })),
+        .filter(({ nodo }) => contiene(nodo.id) || contiene(nodo.title) || contiene(nodo.description))
+        .map((n) => ({ r: { kind: 'node' as const, ...resumen(n) }, soloDescripcion: !contiene(n.nodo.id) && !contiene(n.nodo.title) })),
       ...vistas
-        .filter(({ vista }) => vista.id.toLowerCase().includes(aguja))
-        .map(({ vista, sitio }) => ({ kind: 'view' as const, id: vista.id, type: vista.type, title: vista.id, ...sitio })),
+        .filter(({ vista }) => contiene(vista.id))
+        .map(({ vista, sitio }) => ({ r: { kind: 'view' as const, id: vista.id, type: vista.type, title: vista.id, ...sitio }, soloDescripcion: false })),
       ...interacciones
-        .filter(({ interaccion }) => interaccion.id.toLowerCase().includes(aguja) || interaccion.title.toLowerCase().includes(aguja))
-        .map(({ interaccion, sitio }) => ({ kind: 'interaction' as const, id: interaccion.id, type: 'interaction', title: interaccion.title, ...sitio })),
+        .filter(({ interaccion }) => contiene(interaccion.id) || contiene(interaccion.title) || contiene(interaccion.description))
+        .map(({ interaccion, sitio }) => ({
+          r: { kind: 'interaction' as const, id: interaccion.id, type: 'interaction', title: interaccion.title, ...sitio },
+          soloDescripcion: !contiene(interaccion.id) && !contiene(interaccion.title),
+        })),
     ];
     const resultados = encontrados
-      .map((r, orden) => ({ r, orden }))
-      .sort((a, b) => rango(a.r.id) - rango(b.r.id) || a.orden - b.orden)
+      .map((e, orden) => ({ ...e, orden }))
+      .sort((a, b) => rango({ id: a.r.id, soloDescripcion: a.soloDescripcion }) - rango({ id: b.r.id, soloDescripcion: b.soloDescripcion }) || a.orden - b.orden)
       .map(({ r }) => r);
     return { salida: { contractVersion: INSPECT_CONTRACT_VERSION, command: comando, query: argumento, results: resultados } };
   }

@@ -32,7 +32,7 @@ export interface OpcionesDeMontaje {
   plataforma?: Plataforma;
   /** Archivos de `--theme-path` (solo lectura). */
   temas?: Record<string, string>;
-  /** Texto inicial de `.diagrams/actividad.jsonl`. */
+  /** Texto inicial de `.diagrams/activity.jsonl`. */
   actividad?: string;
   /** Temas con codigo ya compilados (Componentes y bundle de `/componentes.js`). */
   codigo?: CodigoDePrueba;

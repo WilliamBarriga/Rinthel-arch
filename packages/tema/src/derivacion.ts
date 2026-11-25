@@ -80,7 +80,21 @@ export function mensaje(declarado: PinturaDeTrazoDeSecuencia | undefined, arista
     const derivado = mensajeDerivado(declarado.capas, undefined, kind);
     return declarado.fin === undefined ? derivado : { ...derivado, fin: declarado.fin };
   };
-  const tipos = Object.fromEntries(TIPOS_DE_MENSAJE.map((kind) => [kind, tipoDe(kind)]));
+  // Declared states: the `message` block's, or (without the block) the Edge's, derived per kind like the base stack.
+  const estadoDe = (kind: TipoDeMensaje): TrazoDeVariante['estados'] => {
+    if (declarado !== undefined) {
+      const propios = Object.entries(declarado.estadosDeTrazo ?? {});
+      return propios.length === 0 ? undefined : Object.fromEntries(propios.map(([estado, e]) => [estado, declarado.variantes[kind] !== undefined ? (e.variantes[kind] ?? e.capas) : mensajeDerivado(e.capas, undefined, kind).capas]));
+    }
+    const deArista = Object.entries(arista.estadosDeArista ?? {});
+    return deArista.length === 0 ? undefined : Object.fromEntries(deArista.map(([estado, e]) => [estado, mensajeDerivado(e.capas, arista.fin, kind).capas]));
+  };
+  const tipos = Object.fromEntries(
+    TIPOS_DE_MENSAJE.map((kind) => {
+      const estados = estadoDe(kind);
+      return [kind, { ...tipoDe(kind), ...(estados !== undefined && { estados }) }];
+    }),
+  );
   if (declarado !== undefined) return { ...declarado, tipos };
   return { capas: arista.capas, ...(arista.origen !== undefined && { origen: arista.origen }), ...(arista.fin !== undefined && { fin: arista.fin }), variantes: {}, tipos };
 }
@@ -128,7 +142,7 @@ export function fragmento(declarado: PinturaDeCajaDeSecuencia | undefined, nodo:
 export function nota(declarada: PinturaDeCajaDeSecuencia | undefined, paleta: Readonly<Record<string, string>>, borde: string): PinturaDeNota {
   const color = paleta[COLOR_DE_NOTA] ?? borde;
   if (declarada !== undefined) return { ...declarada, papel: { color, opacidadDeRelleno: 1 } };
-  return { ...cajaVacia([{ nombre: 'relleno', ...primitiva('solid', { color }) }, { nombre: 'borde', ...primitiva('border', { color, width: 1 }) }]), papel: { color, opacidadDeRelleno: OPACIDAD_DE_PAPEL } };
+  return { ...cajaVacia([{ nombre: 'fill', ...primitiva('solid', { color }) }, { nombre: 'border', ...primitiva('border', { color, width: 1 }) }]), papel: { color, opacidadDeRelleno: OPACIDAD_DE_PAPEL } };
 }
 
 /** Filas sin Capas cuyo texto es el del Slot `attrs`. */

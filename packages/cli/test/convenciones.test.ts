@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -33,9 +33,11 @@ async function validar(raiz: string) {
   return { exitCode: resultado.exitCode, salida: salidaDeValidateSchema.parse(JSON.parse(resultado.stdout)) };
 }
 
-/** Aplica los `fix` de renombrado tal como los reporta `validate`. */
-function aplicarRenombrados(raiz: string, issues: ReadonlyArray<{ fix?: { file: string; rename?: string } }>): void {
-  for (const { fix } of issues) if (fix?.rename !== undefined) renameSync(join(raiz, fix.file), join(raiz, fix.rename));
+/** Applies the rename `fix`es as `validate` reports them, through `edit --edits` (one batch). */
+async function aplicarRenombrados(raiz: string, issues: ReadonlyArray<{ fix?: unknown }>): Promise<void> {
+  const fixes = issues.flatMap((i) => (i.fix === undefined ? [] : [i.fix]));
+  const r = await run(['edit', '--workspace', raiz, '--edits', JSON.stringify(fixes)]);
+  expect(r.exitCode, r.stderr).toBe(0);
 }
 
 describe('convenciones de archivos del Workspace', () => {
@@ -59,7 +61,7 @@ describe('convenciones de archivos del Workspace', () => {
       fix: { file: 'sub/tema.dg', rename: 'sub/theme.dg' },
     });
 
-    aplicarRenombrados(raiz, salida.issues);
+    await aplicarRenombrados(raiz, salida.issues);
     expect(existsSync(join(raiz, 'sub/theme.dg'))).toBe(true);
     expect((await validar(raiz)).salida.issues).toEqual([]);
   });
@@ -70,7 +72,7 @@ describe('convenciones de archivos del Workspace', () => {
 
     expect(salida.issues.map((i) => [i.code, i.file, i.fix?.rename])).toEqual([['old-workspace-convention', 'temas', 'themes']]);
 
-    aplicarRenombrados(raiz, salida.issues);
+    await aplicarRenombrados(raiz, salida.issues);
     const despues = await validar(raiz);
     expect(despues.salida.issues).toEqual([]);
     expect(despues.exitCode).toBe(0);
@@ -82,7 +84,7 @@ describe('convenciones de archivos del Workspace', () => {
 
     expect(salida.issues.map((i) => [i.code, i.file, i.fix?.rename])).toEqual([['old-workspace-convention', 'fuentes', 'fonts']]);
 
-    aplicarRenombrados(raiz, salida.issues);
+    await aplicarRenombrados(raiz, salida.issues);
     expect((await validar(raiz)).salida.issues).toEqual([]);
   });
 
@@ -91,14 +93,14 @@ describe('convenciones de archivos del Workspace', () => {
     const primera = await validar(raiz);
     expect(primera.salida.issues.map((i) => i.file)).toEqual(['temas']);
 
-    aplicarRenombrados(raiz, primera.salida.issues);
+    await aplicarRenombrados(raiz, primera.salida.issues);
     const segunda = await validar(raiz);
     expect(segunda.salida.issues.map((i) => [i.file, i.fix?.rename])).toEqual([
       ['themes/fuentes', 'themes/fonts'],
       ['themes/tema.dg', 'themes/theme.dg'],
     ]);
 
-    aplicarRenombrados(raiz, segunda.salida.issues);
+    await aplicarRenombrados(raiz, segunda.salida.issues);
     expect((await validar(raiz)).salida.issues).toEqual([]);
   });
 
@@ -114,5 +116,44 @@ describe('convenciones de archivos del Workspace', () => {
     const resultado = await run(['validate', '--workspace', raiz]);
     expect(resultado.stdout).toContain("tema.dg:1:1 error old-workspace-convention");
     expect(resultado.stdout).toContain("rename 'tema.dg' to 'theme.dg'");
+  });
+
+  it('edit applies a rename fix together with a text fix as one batch, and says what it renamed', async () => {
+    const raiz = workspace({ 'tema.dg': 'theme mine extends neutral { node { state hover { layer borde { width 2 } } } }\n', 'fuentes/LICENSE.txt': 'ofl' });
+    writeFileSync(join(raiz, 'main.dg'), `${MODELO}\nview v {\n  type architecture\n  include **\n  theme mine\n}\n`);
+    const { salida } = await validar(raiz);
+    expect(salida.issues.map((i) => i.code).sort()).toEqual(['old-catalog-value', 'old-workspace-convention', 'old-workspace-convention']);
+
+    const r = await run(['edit', '--workspace', raiz, '--edits', JSON.stringify(salida.issues.map((i) => i.fix))]);
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(r.stdout).toContain('renamed tema.dg -> theme.dg');
+    expect(r.stdout).toContain('renamed fuentes -> fonts');
+    expect(readFileSync(join(raiz, 'theme.dg'), 'utf8')).toContain('layer border');
+    expect(existsSync(join(raiz, 'fonts/LICENSE.txt'))).toBe(true);
+    expect((await validar(raiz)).salida.issues).toEqual([]);
+  });
+
+  it('edit --json lists the rename in edits and its new path in files', async () => {
+    const raiz = workspace({ 'tema.dg': TEMA });
+    const { salida } = await validar(raiz);
+    const r = await run(['edit', '--workspace', raiz, '--json', '--edits', JSON.stringify([salida.issues[0]?.fix])]);
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(JSON.parse(r.stdout)).toMatchObject({ ok: true, edits: [{ file: 'tema.dg', rename: 'theme.dg' }], files: ['theme.dg'] });
+  });
+
+  it('an impossible rename rejects the whole batch: nothing is written or renamed', async () => {
+    const raiz = workspace({ 'temas/a.dg': 'theme a extends neutral { node { state hover { layer borde { width 2 } } } }\n', 'themes/b.dg': 'theme b extends neutral-dark {\n}\n' });
+    const { salida } = await validar(raiz);
+    const r = await run(['edit', '--workspace', raiz, '--json', '--edits', JSON.stringify(salida.issues.map((i) => i.fix))]);
+    expect(r.exitCode).toBe(1);
+    expect(JSON.parse(r.stdout)).toMatchObject({ ok: false, reason: 'invalid-rename', file: 'temas' });
+    expect(readFileSync(join(raiz, 'temas/a.dg'), 'utf8')).toContain('layer borde');
+  });
+
+  it('a rename of a path that does not exist is unknown-file', async () => {
+    const raiz = workspace({});
+    const fix = { file: 'temas', range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: '', rename: 'themes' };
+    const r = await run(['edit', '--workspace', raiz, '--json', '--edits', JSON.stringify([fix])]);
+    expect(JSON.parse(r.stdout)).toMatchObject({ ok: false, reason: 'unknown-file', file: 'temas' });
   });
 });

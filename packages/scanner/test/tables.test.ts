@@ -62,7 +62,9 @@ describe('scan: Prisma tables', () => {
           { name: 'tags', type: 'String[]' },
           { name: 'author_id', type: 'String', fk: true, optional: true },
         ],
-        relations: [{ from: 'Post#author_id', to: 'users#id', cardinality: ['0..*', '0..1'], confidence: 'extracted' }],
+        relations: [
+          { from: 'Post#author_id', to: 'users#id', cardinality: ['0..*', '0..1'], source: { file: 'prisma/schema.prisma', line: 30 }, confidence: 'extracted' },
+        ],
         source: { file: 'prisma/schema.prisma', line: 26 },
         confidence: 'extracted',
       },
@@ -76,7 +78,9 @@ describe('scan: Prisma tables', () => {
           { name: 'bio', type: 'String' },
           { name: 'user_id', type: 'String', fk: true, uk: true },
         ],
-        relations: [{ from: 'Profile#user_id', to: 'users#id', cardinality: ['0..1', '1'], confidence: 'extracted' }],
+        relations: [
+          { from: 'Profile#user_id', to: 'users#id', cardinality: ['0..1', '1'], source: { file: 'prisma/schema.prisma', line: 22 }, confidence: 'extracted' },
+        ],
         source: { file: 'prisma/schema.prisma', line: 19 },
         confidence: 'extracted',
       },
@@ -177,7 +181,9 @@ describe('scan: SQL DDL tables', () => {
           { name: 'order_id', type: 'INTEGER', fk: true, uk: true, optional: true },
           { name: 'total', type: 'numeric(10, 2)', optional: true },
         ],
-        relations: [{ from: 'invoices#order_id', to: 'orders#id', cardinality: ['0..1', '0..1'], confidence: 'extracted' }],
+        relations: [
+          { from: 'invoices#order_id', to: 'orders#id', cardinality: ['0..1', '0..1'], source: { file: 'db/schema.sql', line: 39 }, confidence: 'extracted' },
+        ],
         source: { file: 'db/schema.sql', line: 37 },
         confidence: 'extracted',
       },
@@ -191,7 +197,9 @@ describe('scan: SQL DDL tables', () => {
           { name: 'sku', type: 'varchar(32)', pk: true },
           { name: 'qty', type: 'int unsigned' },
         ],
-        relations: [{ from: 'order_items#order_id', to: 'orders#id', cardinality: ['0..*', '1'], confidence: 'extracted' }],
+        relations: [
+          { from: 'order_items#order_id', to: 'orders#id', cardinality: ['0..*', '1'], source: { file: 'db/schema.sql', line: 34 }, confidence: 'extracted' },
+        ],
         source: { file: 'db/schema.sql', line: 28 },
         confidence: 'extracted',
       },
@@ -206,7 +214,9 @@ describe('scan: SQL DDL tables', () => {
           { name: 'coupon', type: 'text', optional: true },
           { name: 'note', type: 'text', optional: true },
         ],
-        relations: [{ from: 'orders#customer_id', to: 'customers#id', cardinality: ['0..*', '1'], confidence: 'extracted' }],
+        relations: [
+          { from: 'orders#customer_id', to: 'customers#id', cardinality: ['0..*', '1'], source: { file: 'db/schema.sql', line: 21 }, confidence: 'extracted' },
+        ],
         source: { file: 'db/schema.sql', line: 19 },
         confidence: 'extracted',
       },
@@ -238,7 +248,15 @@ describe('scan: SQL DDL tables', () => {
           { name: 'id', type: 'int', pk: true },
           { name: 'user_id', type: 'int', fk: true, optional: true },
         ],
-        relations: [{ from: 'articles#user_id', to: 'users#id', cardinality: ['0..*', '0..1'], confidence: 'extracted' }],
+        relations: [
+          {
+            from: 'articles#user_id',
+            to: 'users#id',
+            cardinality: ['0..*', '0..1'],
+            source: { file: 'db/migrations/0002_more.up.sql', line: 4 },
+            confidence: 'extracted',
+          },
+        ],
         source: { file: 'db/migrations/0001_init.up.sql', line: 2 },
       },
       {
@@ -328,7 +346,9 @@ describe('scan: table ids and multi-file schemas', () => {
           { name: 'teamId', type: 'Int', pk: true },
           { name: 'slug', type: 'String', uk: true },
         ],
-        relations: [{ from: 'Membership#userId', to: 'User#id', cardinality: ['0..*', '1'], confidence: 'extracted' }],
+        relations: [
+          { from: 'Membership#userId', to: 'User#id', cardinality: ['0..*', '1'], source: { file: 'prisma/schema/membership.prisma', line: 5 }, confidence: 'extracted' },
+        ],
       },
       { id: 'User', columns: [{ name: 'id', type: 'Int', pk: true }], relations: [] },
     ]);

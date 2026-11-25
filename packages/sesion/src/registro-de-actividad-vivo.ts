@@ -1,5 +1,5 @@
 /**
- * Registro de actividad vivo: lo que `dev` muestra del Registro de actividad (`.diagrams/actividad.jsonl`), sin disco ni
+ * Registro de actividad vivo: lo que `dev` muestra del Registro de actividad (`.diagrams/activity.jsonl`), sin disco ni
  * reloj propios. `conexion()` da el evento `actividad` con `previos: true` y los ultimos `EVENTOS_PREVIOS` Eventos; cada
  * aviso del observador del registro, con debounce, empuja por `escuchar` los Eventos nuevos (`previos: false`).
  * Invariantes: lectura incremental tolerante (lineas rotas; un archivo acortado, rotado o borrado se relee desde el

@@ -2,7 +2,7 @@
  * Capturas de la UI de `dev` para las guias (`docs/img/estudio/`); lo lanza `pnpm docs:capturas` y necesita `pnpm build`
  * y Chromium. Abre `dev` sobre una copia de `examples/rinthel-arch` con un Registro de actividad sembrado por el CLI y
  * captura la pagina entera: Vista con Detalle, Codigo con la galeria de Temas, feed del agente tras un `edit` externo y
- * el Buscador. Uso: `node scripts/capturas-estudio.ts [--salida <dir>]`.
+ * el Buscador. Uso: `node scripts/capturas-estudio.ts [--out <dir>]`.
  */
 import { spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
@@ -22,12 +22,12 @@ const VISTA = 'context';
 const NODO = 'repo.cli';
 const ENCUADRE = { width: 1600, height: 900 };
 
-const { values } = parseArgs({ args: process.argv.slice(2), options: { salida: { type: 'string', default: 'docs/img/estudio' } } });
-const salida = resolve(REPO, values.salida);
+const { values } = parseArgs({ args: process.argv.slice(2), options: { out: { type: 'string', default: 'docs/img/estudio' } } });
+const salida = resolve(REPO, values.out);
 
 /** Corre el CLI como lo haria un agente: con nombre, para que el feed lo muestre. */
 function cli(workspace: string, ...args: string[]): void {
-  const r = spawnSync(process.execPath, [BIN, ...args, '--workspace', workspace], { env: { ...process.env, DIAGRAMS_AGENTE: 'claude' }, encoding: 'utf8' });
+  const r = spawnSync(process.execPath, [BIN, ...args, '--workspace', workspace], { env: { ...process.env, DIAGRAMS_AGENT: 'claude' }, encoding: 'utf8' });
   if (r.status !== 0) throw new Error(`diagrams ${args.join(' ')} salio ${r.status}:\n${r.stderr}`);
 }
 
@@ -59,7 +59,7 @@ async function principal(): Promise<void> {
     const derecho = pagina.getByRole('complementary', { name: 'Right panel' });
 
     // Indice, lienzo y Detalle del Nodo seleccionado.
-    await pagina.goto(`${dev.url}#vista=${VISTA}&s=${NODO}`);
+    await pagina.goto(`${dev.url}#view=${VISTA}&s=${NODO}`);
     await esperarLienzo(pagina);
     await derecho.getByRole('region', { name: 'Details' }).getByRole('heading').first().waitFor();
     await capturar(pagina, 'vista-y-detalle');

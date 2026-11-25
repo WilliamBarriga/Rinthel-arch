@@ -1,46 +1,46 @@
 # AGENTS.md - rinthel-arch
 
-Sistema React + TS para escribir y renderizar diagramas grandes y detallados de cualquier proyecto. El ejemplo de `examples/rinthel-arch/` documenta este mismo repo; el sistema no depende de ningun proyecto externo.
+A React + TS system to write and render large, detailed diagrams of any project. The example in `examples/rinthel-arch/` documents this same repo; the system does not depend on any external project.
 
-## Camino de lectura
+## Reading path
 
-Antes de tocar un paquete, en este orden:
+Before touching a package, in this order:
 
-1. `CONTEXT.md`: el glosario del repo. Usar esos terminos exactos (Modelo, Vista, Tipo de diagrama, Pin...).
-2. `docs/CODING.md`: reglas de codigo.
-3. El ADR del modulo, elegido en el indice `docs/adr/README.md`.
-4. `packages/<paquete>/README.md`: que hace, que no hace, archivo de entrada.
+1. `CONTEXT.md`: the repo glossary. Use those exact terms (Model, View, Diagram type, Pin...).
+2. `docs/CODING.md`: code rules.
+3. The module's ADR, picked from the index `docs/adr/README.md`.
+4. `packages/<package>/README.md`: what it does, what it does not do, entry file.
 
-Pruebas de un solo paquete: `pnpm --filter <paquete> test`.
+Tests of a single package: `pnpm --filter <package> test`.
 
-## Fuentes de verdad
+## Sources of truth
 
-- Decisiones y trabajo pendiente: GitHub Issues de este repo (`gh`, `WilliamBarriga/Rinthel-arch`); cada ticket es un issue con label `wayfinder:<tipo>`.
-- Reglas de codigo (estructura de paquetes, modulos profundos, hexagonal, pruebas): `docs/CODING.md`.
-- Research: indice con una conclusion por rama en `docs/ramas.md`; `research/<nombre>.md` en ramas `research/<nombre>`, no en `main`; listarlas con `git branch -a -l '*research/*'` y leer el archivo con `git show research/<nombre>:research/<nombre>.md` antes de re-investigar.
-- Guias de usuario (README, `docs/guide/` con su par en espanol `docs/guia/`, `CONTRIBUTING.md`; la regla de pares esta en CONTRIBUTING): al cambiar el DSL, un Tema de ejemplo, el CLI o la UI de dev (`packages/estudio`), actualizarlas; `pnpm docs:capturas` regenera las imagenes de `docs/img/`.
-- ADRs de contrato: indice en `docs/adr/README.md`. Leer el ADR del modulo antes de cambiar su interfaz.
-- Catalogo de Temas (Primitivas, Slots, Movimientos, Efectos con rangos y defectos): `docs/theme-catalog.md`, generado desde `packages/tema` con `pnpm docs:catalogo`; no editar a mano (una prueba falla si se desvia).
+- Decisions and pending work: GitHub Issues of this repo (`gh`, `WilliamBarriga/Rinthel-arch`); each ticket is an issue labelled `wayfinder:<type>`.
+- Code rules (package structure, deep modules, hexagonal, tests): `docs/CODING.md`.
+- Research: index with one conclusion per branch in `docs/ramas.md`; `research/<name>.md` lives on `research/<name>` branches, not on `main`; list them with `git branch -a -l '*research/*'` and read the file with `git show research/<name>:research/<name>.md` before researching again.
+- User guides (README, `docs/guide/` with its Spanish pair `docs/guia/`, `CONTRIBUTING.md`; the pair rule is in CONTRIBUTING): when changing the DSL, an example Theme, the CLI or the Dev UI (`packages/estudio`), update them; `pnpm docs:capturas` regenerates the images in `docs/img/`.
+- Contract ADRs: index in `docs/adr/README.md`. Read the module's ADR before changing its interface.
+- Theme catalog (Primitives, Slots, Motions, Effects with ranges and defaults): `docs/theme-catalog.md`, generated from `packages/tema` with `pnpm docs:catalogo`; do not edit it by hand (a test fails if it drifts).
 
-## Skills del repo
+## Repo skills
 
-`skills/` (formato `SKILL.md`, agnostico del harness): `rinthel-diagramas` (escribir, validar y servir `.dg`) y `rinthel-temas` (personalizar la estetica). Cargalas antes de editar un Workspace o un Tema. Opciones del CLI: `docs/guia/cli.md` o `diagrams <comando> --help`.
+`skills/` (`SKILL.md` format, harness-agnostic): `rinthel-diagramas` (write, validate and serve `.dg`) and `rinthel-temas` (customize the look). Load them before editing a Workspace or a Theme. CLI options: `docs/guide/cli.md` or `diagrams <command> --help`.
 
-## Dependencias y tecnologia
+## Dependencies and technology
 
-Antes de adoptar una dependencia, investigarla (licencia, mantenimiento, encaje con los requisitos) y dejar el research escrito; la adopcion se decide en un ticket o ADR.
+Before adopting a dependency, research it (license, maintenance, fit with the requirements) and write the research down; adoption is decided in a ticket or ADR.
 
-## Convenciones
+## Conventions
 
-- El nucleo es agnostico del proyecto documentado; todo lo especifico de un proyecto vive como ejemplo o caso de uso.
-- Este repo es independiente: no depende de ningun repo consumidor. Integrar el sistema en un repo consumidor (slides, video u otro) es trabajo de ese repo, fuera de este. Slides, video y los demas son casos de uso del contrato de `render`.
-- Eraser DSL y Archify estan descartados; no reintroducirlos.
-- Language: the whole repo is written in English (code, docs, commit messages, CLI messages). Spanish is secondary and lives only in `README.es.md` and the Spanish guides (`docs/guia/`); touching a guide means touching its pair in the other language. Answer the user in Spanish. No unicode emojis (`pnpm check:emojis` verifies it).
+- The core is agnostic of the documented project; everything specific to a project lives as an example or use case.
+- This repo is independent: it does not depend on any consumer repo. Integrating the system into a consumer repo (slides, video or other) is that repo's work, outside this one. Slides, video and the rest are use cases of the `render` contract.
+- Eraser DSL and Archify are discarded; do not reintroduce them.
+- Language: the whole repo is written in English (code, docs, commit messages, CLI messages). Spanish is secondary and lives only in `README.es.md` and the Spanish guides (`docs/guia/`); touching a guide means touching its pair in the other language. Identifiers in a new file follow the language of its host package until the internal migration (see CONTRIBUTING). Answer the user in Spanish. No unicode emojis (`pnpm check:emojis` verifies it).
 
-## Verificacion
+## Verification
 
-- Iterar con `pnpm check` (typecheck, lint, orden de paquetes, plantilla de docs, emojis); el hook pre-commit lo corre. `pnpm test` es la compuerta completa (build + tests).
-- No hay CI: todo se prueba en local. No agregar workflows de GitHub Actions.
-- Esperar procesos largos con Monitor, no con `sleep`.
-- Todo HTML que se quiera mostrar al usuario (reportes, previews, exports) se sirve desde un mini server local (ej. `python3 -m http.server` en el directorio del archivo, o `dev`) y se entrega la URL `http://localhost:<puerto>/...`. Firefox no ve este disco, asi que `xdg-open` de un archivo o una ruta `file://` no sirve.
-- Ticket por subagente: cargar la skill `tdd` primero (no queda fijada en el repo; ponerlo en el prompt).
+- Iterate with `pnpm check` (typecheck, lint, package order, docs template, emojis); the pre-commit hook runs it. `pnpm test` is the full gate (build + tests).
+- There is no CI: everything is tested locally. Do not add GitHub Actions workflows.
+- Wait for long processes with Monitor, not with `sleep`.
+- Any HTML meant for the user (reports, previews, exports) is served from a small local server (e.g. `python3 -m http.server` in the file's folder, or `dev`) and handed over as the URL `http://localhost:<port>/...`. Firefox cannot see this disk, so `xdg-open` on a file or a `file://` path does not work.
+- One ticket per subagent: load the `tdd` skill first (it is not pinned in the repo; put it in the prompt).

@@ -133,7 +133,7 @@ Un Tema es texto, igual que el Modelo. La forma mas corta de hacer uno propio es
 
 ```
 theme shop extends neutral-dark {
-  palette { blue "#38bdf8"  green "#34d399"  fondo "#0b1220"  papel "#111a2e" }
+  palette { blue "#38bdf8"  green "#34d399"  background "#0b1220"  paper "#111a2e" }
 
   node {
     type service { use bar }
@@ -141,20 +141,20 @@ theme shop extends neutral-dark {
   }
 
   edge {
-    layer linea line { color blue  width 2.4  corner round  radius 12 }
+    layer line line { color blue  width 2.4  corner round  radius 12 }
     end arrow { size 11  color blue }
   }
 }
 
-part bar { layer acento shadow after borde { color COLOR  x 4  y 0  inset 1 } }
-part dashed { layer relleno { color fondo }  layer borde dashed { color marco } }
+part bar { layer accent shadow after border { color COLOR  x 4  y 0  inset 1 } }
+part dashed { layer fill { color background }  layer border dashed { color frame } }
 ```
 
 Y en las dos Vistas cambia `theme neutral-dark` por `theme shop`. Que paso:
 
 - `palette` pisa algunos colores del padre. En un Tema todo color es un **nombre de Paleta**; los valores hex solo viven aqui.
 - `node { type service { ... } }` es un **parche por Tipo**: aplica solo a los Nodos de ese Tipo. `use bar` incluye una **Parte** (`part`), un parche reutilizable. `COLOR` dentro de una Parte toma el color del Tipo del Nodo que la usa: la barra de `service` es azul y la de otro Tipo tendria el suyo.
-- `layer <nombre> <primitiva> { ... }` define, cambia o agrega una **Capa**. `layer borde dashed` cambia la Capa `borde` del padre a una Primitiva discontinua; `layer acento shadow after borde` agrega una Capa nueva justo despues de `borde`. (Las Capas y nombres de Paleta incorporados, como `borde`, `relleno`, `fondo` y `marco`, conservan su nombre en espanol.)
+- `layer <nombre> <primitiva> { ... }` define, cambia o agrega una **Capa**. `layer border dashed` cambia la Capa `border` del padre a una Primitiva discontinua; `layer accent shadow after border` agrega una Capa nueva justo despues de `border`. Las Capas incorporadas (`shape`, `fill`, `border`, `shadow`...) y los colores de Paleta (`background`, `paper`, `ink`, `frame`, `stroke`, `shadow`) los lista `inspect theme neutral`.
 - `edge { ... }` cambia las Aristas: trazo grueso, esquinas redondeadas y punta de flecha.
 
 ![Paso 4](../img/tutorial/step-4-shop.png)

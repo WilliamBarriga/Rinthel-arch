@@ -181,12 +181,12 @@ describe('seam sesion: validacion estricta de la cascada', () => {
     expect(noNumerico).toEqual(['theme-invalid-value']);
   });
 
-  it('colores: fuera de Paleta, alfa o mix fuera de rango y ORIGEN en un Nodo (tambien dentro de mix) son errores', async () => {
+  it('colores: fuera de Paleta, alfa o mix fuera de rango y ORIGIN en un Nodo (tambien dentro de mix) son errores', async () => {
     const dsl = temaT(`    layer a solid after forma { color verde }
     layer b solid after forma { color rojo/1.5 }
     layer c solid after forma { color mix(rojo, papel, 2) }
-    layer d solid after forma { color ORIGEN }
-    layer e solid after forma { color mix(ORIGEN, rojo, 0.5) }`);
+    layer d solid after forma { color ORIGIN }
+    layer e solid after forma { color mix(ORIGIN, rojo, 0.5) }`);
 
     expect(await codigos(trabajoT(dsl))).toEqual(['theme-invalid-value', 'theme-invalid-value', 'theme-invalid-value', 'theme-invalid-value', 'unknown-palette-color']);
   });

@@ -30,7 +30,7 @@ export interface DevDePrueba {
   eventos: (url: string, alEvento: (nombre: string, datos: string) => void) => () => void;
   /** Escritura fuera de `dev` (un agente u otro editor); `undefined` borra. */
   editarFuera(ruta: string, texto: string | undefined): void;
-  /** Anexa texto a `.diagrams/actividad.jsonl`, como el CLI de otro proceso. */
+  /** Anexa texto a `.diagrams/activity.jsonl`, como el CLI de otro proceso. */
   anexarActividad(texto: string): void;
   cerrar(): Promise<void>;
 }
@@ -207,7 +207,7 @@ export const eventoDeActividad = (pid: number, extra: Partial<EventoDeActividad>
   ...extra,
 });
 
-/** Las lineas de `.diagrams/actividad.jsonl` con esos Eventos. */
+/** Las lineas de `.diagrams/activity.jsonl` con esos Eventos. */
 export const lineasDeActividad = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
 
 export function probarContratoDeDev(crear: CrearDev): void {
@@ -470,7 +470,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
         expect(await error(await enviar(dev, '/api/nada', '{}'))).toMatchObject({ status: 404 });
         for (const ruta of ['/api/edit', '/api/deshacer', '/api/rehacer', '/api/historial/saltar', '/api/confiar']) {
           expect(await error(await dev.fetch(ruta))).toMatchObject({ status: 405, allow: 'POST' });
-          expect(await error(await enviar(dev, ruta, 'no es json'))).toEqual({ status: 400, allow: null, cuerpo: { ok: false, message: 'JSON invalido' } });
+          expect(await error(await enviar(dev, ruta, 'no es json'))).toEqual({ status: 400, allow: null, cuerpo: { ok: false, message: 'Invalid JSON' } });
         }
         for (const ruta of ['/api/estado', '/api/archivos', '/api/codigo', '/api/vista/datos', '/api/inspect/node/api', '/api/archivo/main.dg']) {
           expect(await error(await enviar(dev, ruta, '{}'))).toMatchObject({ status: 405, allow: 'GET' });

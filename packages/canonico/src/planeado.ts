@@ -1,21 +1,21 @@
 /**
- * Marca Planeado efectiva (ADR 0011): la escrita mas la heredada. Un Grupo planeado marca a sus descendientes (y a
- * sus Atributos); una Arista lo esta si lleva la marca o si un extremo (Nodo o Atributo) lo esta; un Mensaje, si su
- * Interaccion o una de sus Lifelines lo esta. Puro.
+ * Effective Planned mark (ADR 0011): the written mark plus the inherited one. A planned Group marks its descendants
+ * (and their Attributes); an Edge is planned if it carries the mark or one of its ends (Node or Attribute) is planned;
+ * a Message, if its Interaction or one of its Lifelines is. Pure.
  */
 import type { Arista, Extremo, Interaccion, Mensaje, Nodo } from './esquema';
 
-/** Lo planeado de un Modelo, con la herencia ya aplicada. */
+/** What is planned in a Model, with inheritance already applied. */
 export interface Planeados {
-  /** Ids de Nodo planeados (marcados o bajo un Grupo marcado). */
+  /** Ids of planned Nodes (marked or under a marked Group). */
   nodos: ReadonlySet<string>;
-  /** `nodo#atributo` planeados: los marcados y todos los de un Nodo planeado. */
+  /** Planned `node#attribute` keys: the marked ones and all those of a planned Node. */
   atributos: ReadonlySet<string>;
-  /** Ids de Interaccion marcadas. */
+  /** Ids of marked Interactions. */
   interacciones: ReadonlySet<string>;
 }
 
-/** Recorre el Modelo una vez; las consultas (`extremoPlaneado`, `aristaPlaneada`, `mensajePlaneado`) son O(1). */
+/** Walks the Model once; the queries (`extremoPlaneado`, `aristaPlaneada`, `mensajePlaneado`) are O(1). */
 export function planeados(modelo: { nodes: readonly Nodo[]; interactions?: readonly Pick<Interaccion, 'id' | 'planned'>[] }): Planeados {
   const nodos = new Set<string>();
   const atributos = new Set<string>();
@@ -32,17 +32,17 @@ export function planeados(modelo: { nodes: readonly Nodo[]; interactions?: reado
   return { nodos, atributos, interacciones };
 }
 
-/** Un extremo de Arista (Nodo o `nodo#atributo`) planeado. */
+/** Whether an Edge end (Node or `node#attribute`) is planned. */
 export function extremoPlaneado(extremo: Extremo, p: Planeados): boolean {
   return p.nodos.has(extremo.node) || (extremo.attribute !== undefined && p.atributos.has(`${extremo.node}#${extremo.attribute}`));
 }
 
-/** La Arista del Modelo se dibuja planeada: marcada o con un extremo planeado. */
+/** Whether the Model Edge is drawn planned: marked or with a planned end. */
 export function aristaPlaneada(arista: Pick<Arista, 'from' | 'to' | 'planned'>, p: Planeados): boolean {
   return arista.planned === true || extremoPlaneado(arista.from, p) || extremoPlaneado(arista.to, p);
 }
 
-/** El Mensaje (con sus extremos del Modelo, antes de elevarlos) de la Interaccion `interaccion` se dibuja planeado. */
+/** Whether the Message (with its Model ends, before lifting) of Interaction `interaccion` is drawn planned. */
 export function mensajePlaneado(mensaje: Pick<Mensaje, 'from' | 'to'>, interaccion: string, p: Planeados): boolean {
   return p.interacciones.has(interaccion) || p.nodos.has(mensaje.from) || p.nodos.has(mensaje.to);
 }

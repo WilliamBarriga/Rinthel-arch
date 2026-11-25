@@ -39,7 +39,7 @@ async function dejarLlegarLaVieja(): Promise<void> {
 
 describe('respuestas viejas', () => {
   it('en Detalle, la de un Nodo que se dejo de seleccionar no pisa la del Nodo nuevo', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverFetch: retrasar('/api/inspect/node/api') });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa', envolverFetch: retrasar('/api/inspect/node/api') });
     await lienzoListo(contenedor, 'mapa');
 
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
@@ -53,7 +53,7 @@ describe('respuestas viejas', () => {
   });
 
   it('en la ficha de Tema, la del Tema elegido antes no pisa la del elegido despues', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverFetch: retrasar('/api/inspect/theme/oscuro') });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa', envolverFetch: retrasar('/api/inspect/theme/oscuro') });
     await lienzoListo(contenedor, 'mapa');
     fireEvent.click(await screen.findByRole('tab', { name: 'Themes' }));
     const galeria = await screen.findByRole('listbox', { name: 'Themes' });
@@ -72,7 +72,7 @@ describe('respuestas viejas', () => {
 
 describe('estados de carga y fallo', () => {
   it('Detalle anuncia la carga y el fallo por rol: un Nodo borrado por fuera muestra el mensaje de inspect', async () => {
-    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
     pulsarNodo(contenedor, 'db');
     const detalle = screen.getByRole('region', { name: 'Details' });
@@ -91,7 +91,7 @@ describe('estados de carga y fallo', () => {
         if (String(entrada).includes('/api/inspect/theme/')) throw new Error('Sin red');
         return f(entrada, init);
       }) as typeof fetch;
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverFetch: caido });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa', envolverFetch: caido });
     await lienzoListo(contenedor, 'mapa');
     fireEvent.click(await screen.findByRole('tab', { name: 'Themes' }));
     fireEvent.click(within(await screen.findByRole('listbox', { name: 'Themes' })).getByRole('option', { name: 'oscuro' }));

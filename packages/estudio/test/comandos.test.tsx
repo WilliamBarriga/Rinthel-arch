@@ -151,7 +151,7 @@ describe('Buscador', () => {
     fireEvent.click(await within(dialogo).findByRole('option', { name: /^otra/ }));
 
     await lienzoListo(contenedor, 'otra');
-    expect(window.location.hash).toBe('#vista=otra');
+    expect(window.location.hash).toBe('#view=otra');
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Finder' })).toBeNull());
   });
 

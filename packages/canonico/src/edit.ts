@@ -29,6 +29,8 @@ export const edicionDeTextoSchema = z.object({
   file: z.string(),
   range: z.object({ start: posicionSchema, end: posicionSchema }),
   replacement: z.string(),
+  /** New path of `file` (file or folder): the `fix` of `old-workspace-convention`. The text part is an empty edit. */
+  rename: z.string().optional(),
 });
 
 /** Entrada de `edit --edits`; `hash` opcional es el del archivo que vio quien las pide. */

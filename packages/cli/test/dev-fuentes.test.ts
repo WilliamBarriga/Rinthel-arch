@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { iniciarDev } from 'cli';
 import type { ServidorDev } from 'cli';
 
-import { puertoDeDisco } from '../src/dev';
+import { puertoDeDisco } from '../src/puerto-de-disco';
 
 const modelo = (fonts: string) => `specification { node servicio }
 model { servicio api "API" }

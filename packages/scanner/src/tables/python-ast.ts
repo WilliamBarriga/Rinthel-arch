@@ -1,7 +1,10 @@
 /** What the Django and SQLAlchemy readers share: the Python grammar and small helpers over its syntax tree. */
-import { type SyntaxNode, loadSyntax } from '../tree-sitter';
+import { PYTHON_GRAMMAR, type SyntaxNode, loadSyntax } from '../tree-sitter';
 
-export const loadPython = () => loadSyntax('tree-sitter-python/tree-sitter-python.wasm');
+export const loadPython = () => loadSyntax(PYTHON_GRAMMAR);
+
+/** Last segment of a dotted name: `ForeignKey` of `models.ForeignKey`. */
+export const lastSegment = (dotted: string): string => dotted.slice(dotted.lastIndexOf('.') + 1);
 
 /** A call as written: the dotted function name, positional arguments and keyword arguments. */
 export interface Call {
@@ -25,7 +28,7 @@ export function callOf(node: SyntaxNode | null | undefined): Call | undefined {
     if (arg.type === 'keyword_argument' && key !== null && value !== null) kwargs.set(key.text, value);
     else args.push(arg);
   }
-  return { name, last: name.slice(name.lastIndexOf('.') + 1), args, kwargs };
+  return { name, last: lastSegment(name), args, kwargs };
 }
 
 /** The value of a plain string literal (not an f-string, not concatenated). */

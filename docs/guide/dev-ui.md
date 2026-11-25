@@ -6,7 +6,7 @@
 
 ![Packages View with the Details of the cli Node](../img/estudio/vista-y-detalle.png)
 
-The canvas takes the whole page. At the top is the bar (current View with its path, Search, the agent's last line and "follow"); on the sides, two floating panels. Each panel is hidden with its button or with Ctrl/Cmd+B (left) and Ctrl/Cmd+J (right); when hidden, it leaves a tab on the edge that shows it again. It is resized by dragging its edge or corner (the width and height handles also respond to the arrow keys; double click on the height one returns to the content height). The active View stays in the URL as `#vista=<id>`, so it can be shared or returned to with Back. Over the canvas are the Step controls (if the View has them), the "High contrast" button (draws with the `high-contrast` Theme without writing anything) and "Reduce motion", and the legend when there are kinds that are only told apart by color.
+The canvas takes the whole page. At the top is the bar (current View with its path, Search, the agent's last line and "follow"); on the sides, two floating panels. Each panel is hidden with its button or with Ctrl/Cmd+B (left) and Ctrl/Cmd+J (right); when hidden, it leaves a tab on the edge that shows it again. It is resized by dragging its edge or corner (the width and height handles also respond to the arrow keys; double click on the height one returns to the content height). The active View stays in the URL as `#view=<id>`, so it can be shared or returned to with Back. Over the canvas are the Step controls (if the View has them), the "High contrast" button (draws with the `high-contrast` Theme without writing anything) and "Reduce motion", and the legend when there are kinds that are only told apart by color.
 
 ## Left panel
 
@@ -25,14 +25,14 @@ The canvas takes the whole page. At the top is the bar (current View with its pa
 
 ## Follow an agent
 
-The `validate`, `build`, `inspect` and `edit` commands note each run in `<path>/.diagrams/actividad.jsonl`; `dev` reads it separately from the Workspace. For the feed to say who it was, the agent exports a name:
+The `validate`, `build`, `inspect` and `edit` commands note each run in `<path>/.diagrams/activity.jsonl`; `dev` reads it separately from the Workspace. For the feed to say who it was, the agent exports a name:
 
 ```
-export DIAGRAMS_AGENTE=claude          # appears on each line of the feed
+export DIAGRAMS_AGENT=claude          # appears on each line of the feed
 dg validate --workspace <path> --json
 ```
 
-`DIAGRAMS_ACTIVIDAD=0` turns the log off. Format and rotation details: [Activity log](cli.md#activity-log).
+`DIAGRAMS_ACTIVITY=0` turns the log off. Format and rotation details: [Activity log](cli.md#activity-log).
 
 ![Agent feed after an external edit](../img/estudio/agente.png)
 
@@ -60,4 +60,4 @@ The first visit shows in the bar the "1-minute tour" pill: a walk of coachmarks 
 
 ## Read-only export
 
-`dg export --workspace <path> --out <file>.html` writes this same UI as a single HTML file to send to someone who does not have the tool ([CLI](cli.md#export-a-self-contained-html-to-send-to-anyone)). What remains is the Views panel, the Theme gallery (preview, without "Pin"), the canvas with Steps, `link` and collapse, and the Finder with Views and commands; Code, Details, Issues, Undo history and Agent are not there, nor are the shortcuts that write. The bar shows "Read-only". The tour is there too, with an "In your repo" stop (`npx rinthel-arch scan` and then `dev`) instead of Code and Agent.
+`dg export --workspace <path> --out <file>.html` writes this same UI as a single HTML file to send to someone who does not have the tool ([CLI](cli.md#export-a-self-contained-html-to-send-to-anyone)). What remains is the Views panel, the Theme gallery (preview, without "Pin"), the canvas with Steps, `link` and collapse, and the Finder with Views and commands; Code, Details, Issues, Undo history and Agent are not there, nor are the shortcuts that write. The bar shows "Read-only". The tour is there too, with an "In your repo" stop (`npx rinthel-arch scan` and then `npx rinthel-arch dev --workspace .`) instead of Code and Agent.

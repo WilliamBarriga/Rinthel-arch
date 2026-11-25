@@ -22,7 +22,7 @@
  * Registro de actividad: si el puerto lo da, el Workspace vivo compone un Registro de actividad vivo
  * (`registro-de-actividad-vivo.ts`, con el mismo reloj y debounce) y lo emite tras el estado y el Historial.
  */
-import { combineIconProviders, diferenciaVacia, esArchivoDeFuente, genericIcons, salidaDeInspectSchema, serializarIconos, workspaceIcons } from 'canonico';
+import { combineIconProviders, convencionesObsoletas, diferenciaVacia, esArchivoDeFuente, genericIcons, salidaDeInspectSchema, serializarIconos, workspaceIcons } from 'canonico';
 import type { ArchivoDeDev, ArchivosDeDev, DiferenciaDeDev, EstadoDeDev, EventoDeDev, GeometriaCacheada, HistorialDeDev, Intencion, Issue, MotivoDeRechazo, OrigenDeDiferencia, TipoDeCambio } from 'canonico';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { componentesDeTema } from 'tema';
@@ -53,7 +53,9 @@ export interface PuertoDelWorkspaceVivo extends PuertoDeWorkspace {
   recursos(): Record<string, string> | undefined;
   /** Devuelve como dejar de observar. */
   observar(alCambiar: () => void): () => void;
-  /** Registro de actividad (`.diagrams/actividad.jsonl`) con su observador propio; sin el, no hay actividad. */
+  /** Every Workspace path (any file), for the `old-workspace-convention` errors; without it they are not reported. */
+  rutas?(): string[];
+  /** Registro de actividad (`.diagrams/activity.jsonl`) con su observador propio; sin el, no hay actividad. */
   actividad?: RegistroDeActividad;
 }
 
@@ -170,7 +172,9 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
   let actual: Sesion = abrirSesion(archivos, { ...opcionesDeSesion(recursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
   /** Ultima Sesion sin errores de compilacion. */
   let buena: { sesion: Sesion; archivos: ArchivosDelWorkspace } | undefined = actual.fuente === undefined ? undefined : { sesion: actual, archivos };
-  let issues: Issue[] = await actual.diagnosticar();
+  /** Compile issues plus the old file conventions of the Workspace paths (as `validate` reports them). */
+  const conConvenciones = (lista: Issue[]): Issue[] => [...lista, ...convencionesObsoletas(puerto.rutas?.() ?? [])];
+  let issues: Issue[] = conConvenciones(await actual.diagnosticar());
   /** version -> archivo -> hash. */
   const versiones = new Map<number, Record<string, string>>([[version, hashesDe(archivos)]]);
   let estado = construirEstado();
@@ -217,7 +221,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     origenPendiente = unirOrigen(origenPendiente, origenDe(archivos, nuevos));
     codigo = compilarCodigo();
     const sesion = (buena?.sesion ?? actual).actualizar(nuevos, { ...opcionesDeSesion(nuevosRecursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
-    const nuevosIssues = await sesion.diagnosticar();
+    const nuevosIssues = conConvenciones(await sesion.diagnosticar());
     actual = sesion;
     archivos = nuevos;
     // Con errores se conserva el ultimo dibujo bueno (y sus recursos de referencia): no hay cambio que dibujar.
@@ -357,6 +361,8 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
               escritas.push(ruta);
               escribirPropio(ruta, texto);
             },
+            ...(puerto.renombrar !== undefined && { renombrar: puerto.renombrar.bind(puerto) }),
+            ...(puerto.existe !== undefined && { existe: puerto.existe.bind(puerto) }),
           },
           esEdicionesDeTexto(aplicable) ? aplicable.ediciones : aplicable,
           traducido.visto,

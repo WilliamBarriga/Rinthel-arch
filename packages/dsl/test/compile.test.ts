@@ -464,7 +464,7 @@ describe('compile: source', () => {
         model {
           servicio api {
             source { git "src/api.ts" }
-            source { url "https://ejemplo.com/api" doc "docs/api.md" }
+            source { url "https://ejemplo.com/api" file "docs/api.md" }
           }
         }`,
     });
@@ -473,7 +473,7 @@ describe('compile: source', () => {
     expect(canonico?.model.nodes[0]?.source).toEqual([
       { kind: 'git', ref: 'src/api.ts' },
       { kind: 'url', ref: 'https://ejemplo.com/api' },
-      { kind: 'doc', ref: 'docs/api.md' },
+      { kind: 'file', ref: 'docs/api.md' },
     ]);
   });
 
@@ -863,14 +863,49 @@ describe('compile: Tema', () => {
     });
   });
 
+  it('edge { state <name> { ... } } compiles a paint-only patch of the stroke stack per state', () => {
+    const { canonico, issues } = compile({
+      'main.dg': `${base}
+        theme lines {
+          palette { blue "#2563eb"  gray "#6b7280" }
+          edge {
+            layer main line { color gray }
+            state planned { layer main { color blue  style dotted } }
+          }
+        }`,
+    });
+
+    expect(issues).toEqual([]);
+    expect((canonico?.themes.find((t) => t.name === 'lines')?.['arista'] as { estados?: unknown }).estados).toEqual({
+      planned: [{ nombre: 'main', props: { color: 'blue', style: 'dotted' } }],
+    });
+  });
+
+  it('a state of edge rejects slots and an unknown state', () => {
+    const { issues } = compile({
+      'main.dg': `${base}
+        theme lines {
+          palette { gray "#6b7280" }
+          edge {
+            layer main line { color gray }
+            state planed { layer main { width 2 } }
+            state hover { slots { title } }
+          }
+        }`,
+    });
+
+    expect(issues.map((i) => i.message)).toEqual(expect.arrayContaining([expect.stringContaining("'slots' is not valid in a state of 'edge'")]));
+    expect(issues.some((i) => i.fix?.replacement === 'planned' || i.hint?.includes('planned') === true)).toBe(true);
+  });
+
   it('compila el bloque edge: pila de trazos con glow, marcadores y etiqueta con modelo de caja', () => {
     const { canonico, issues } = compile({
       'main.dg': `${base}
         theme metro {
           palette { blue "#2563eb"  gray "#6b7280" }
           edge {
-            layer glow line { color ORIGEN/0.3  width 8 }
-            layer principal line { color ORIGEN  width 2  style dashed  corner chamfer }
+            layer glow line { color ORIGIN/0.3  width 8 }
+            layer principal line { color ORIGIN  width 2  style dashed  corner chamfer }
             start dot { size 6 }
             end via
             label { pad 6  fill blue }
@@ -881,8 +916,8 @@ describe('compile: Tema', () => {
     expect(issues).toEqual([]);
     expect(canonico?.themes.find((t) => t.name === 'metro')?.['arista']).toEqual({
       capas: [
-        { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } },
-        { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGEN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6, radius: 8 } } },
+        { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGIN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } },
+        { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGIN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6, radius: 8 } } },
       ],
       origen: { tipo: 'dot', props: { size: 6 } },
       fin: { tipo: 'via', props: { size: 8 } },
@@ -1329,8 +1364,8 @@ describe('compile: Temas del ejemplo rinthel-arch', () => {
     expect(tema('diagrams').tokens).toMatchObject({ background: '#09090b' });
     expect(tema('diagrams-light').tokens).toMatchObject({ background: '#f8fafc' });
     for (const nombre of ['diagrams', 'diagrams-light']) {
-      expect(tema(nombre).nodo.tipos['package']?.map((op) => op.nombre)).toEqual(['acento']);
-      expect(tema(nombre).nodo.tipos['external']?.map((op) => op.nombre)).toEqual(['relleno', 'borde']);
+      expect(tema(nombre).nodo.tipos['package']?.map((op) => op.nombre)).toEqual(['accent']);
+      expect(tema(nombre).nodo.tipos['external']?.map((op) => op.nombre)).toEqual(['fill', 'border']);
     }
   });
 });

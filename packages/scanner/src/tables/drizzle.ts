@@ -8,24 +8,21 @@
  * `inferred`, and an unreadable column has type `unknown`. Not read: `foreignKey()`, `unique().on()`, `relations()`.
  */
 import type { ScanColumn } from '../draft';
-import { type SyntaxNode, loadSyntax } from '../tree-sitter';
+import { type SyntaxNode, loadTypescriptSyntax } from '../tree-sitter';
 import type { FoundRelation, FoundTable, SchemaFile, TableExtractor } from '.';
-import { relationOf } from './relation';
+import { relationOf, scanColumn } from './relation';
 
-const TS_GRAMMAR = 'tree-sitter-typescript/tree-sitter-typescript.wasm';
-const TSX_GRAMMAR = 'tree-sitter-typescript/tree-sitter-tsx.wasm';
-const TS_ONLY = /\.(?:ts|mts|cts)$/;
 const FACTORY = /^(?:pg|mysql|sqlite|singlestore)Table$/;
 
 export const drizzle: TableExtractor = {
   origin: 'drizzle',
   matches: (path) => /\.(?:[cm]?[jt]s|[jt]sx)$/.test(path) && !path.endsWith('.d.ts'),
   async load() {
-    const [ts, tsx] = await Promise.all([loadSyntax(TS_GRAMMAR), loadSyntax(TSX_GRAMMAR)]);
+    const syntaxFor = await loadTypescriptSyntax();
     return (files) => {
       const tables = files.flatMap((file) => {
         if (!file.text.includes('drizzle-orm')) return [];
-        return (TS_ONLY.test(file.path) ? ts : tsx).parse(file.text, (root) => readTables(root, file)) ?? [];
+        return syntaxFor(file.path).parse(file.text, (root) => readTables(root, file)) ?? [];
       });
       return tables.map((table) => toFound(table, tables));
     };
@@ -39,6 +36,7 @@ interface Reference {
 
 interface Column {
   key: string;
+  line: number;
   name: string;
   type: string;
   pk: boolean;
@@ -127,9 +125,10 @@ function readColumns(body: SyntaxNode, table: Table, imported: ReadonlySet<strin
       table.certain = false;
       continue;
     }
-    const column = readColumn(key, member.childForFieldName('value'), imported);
+    const line = member.startPosition.row + 1;
+    const column = readColumn(key, line, member.childForFieldName('value'), imported);
     if (column === undefined) table.certain = false;
-    table.columns.push(column ?? { key, name: key, type: 'unknown', pk: false, unique: false, notNull: false, reference: undefined });
+    table.columns.push(column ?? { key, line, name: key, type: 'unknown', pk: false, unique: false, notNull: false, reference: undefined });
   }
 }
 
@@ -144,8 +143,8 @@ function stringOf(node: SyntaxNode | undefined | null): string | undefined {
 }
 
 /** `serial('id').primaryKey()`: a chain of calls, from the outermost modifier in to the builder. */
-function readColumn(key: string, value: SyntaxNode | null, imported: ReadonlySet<string>): Column | undefined {
-  const column: Column = { key, name: key, type: '', pk: false, unique: false, notNull: false, reference: undefined };
+function readColumn(key: string, line: number, value: SyntaxNode | null, imported: ReadonlySet<string>): Column | undefined {
+  const column: Column = { key, line, name: key, type: '', pk: false, unique: false, notNull: false, reference: undefined };
   let node = value;
   let array = false;
   while (node?.type === 'call_expression') {
@@ -189,23 +188,26 @@ function toFound(table: Table, all: readonly Table[]): FoundTable {
   const relations: FoundRelation[] = [];
   const columns = table.columns.map((column): ScanColumn => {
     const pk = pks.has(column.key);
-    const result: ScanColumn = { name: column.name, type: column.type };
-    if (pk) result.pk = true;
     if (column.reference !== undefined) {
-      result.fk = true;
       const target = targetOf(column.reference, table, all);
       relations.push(
         relationOf(
           column.name,
           target ?? { table: column.reference.variable, column: column.reference.key },
           { unique: column.unique || (pk && pks.size === 1), optional: !column.notNull && !pk },
+          { file: table.file, line: column.line },
           target === undefined ? 'inferred' : 'extracted',
         ),
       );
     }
-    if (column.unique && !pk) result.uk = true;
-    if (!column.notNull && !pk) result.optional = true;
-    return result;
+    return scanColumn({
+      name: column.name,
+      type: column.type,
+      pk,
+      unique: column.unique,
+      optional: !column.notNull,
+      fk: column.reference !== undefined,
+    });
   });
   return {
     name: table.name,

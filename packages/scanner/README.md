@@ -2,9 +2,9 @@
 The Scanner: reads a codebase, without running it, into a Scan draft `rinthel/scan@1` (folder in, draft out).
 
 ## Que hace
-- `scan(root, { depth, maxFiles })` lists files (`.gitignore`, `EXCLUDED_FOLDERS`, `maxFiles` cap), finds units from manifests (`src/manifests.ts`), splits large leaf units into `folder` sub-units (`src/units.ts`), reads imports per language (`src/imports/`: TS/JS and Python, via `web-tree-sitter`) and aggregates them into `dependencies` and `externals`. `serializeDraft` gives the exact bytes `diagrams scan` writes.
+- `scan(root, { depth, maxFiles })` lists files (`.gitignore`, `EXCLUDED_FOLDERS`, `maxFiles` cap), finds units from manifests (`src/manifests.ts`), splits large leaf units into `folder` sub-units (`src/units.ts`), reads imports per language (`src/imports/`: TS/JS and Python, via `web-tree-sitter`, whose only door is `src/tree-sitter.ts`) and aggregates them into `dependencies` and `externals` (`src/imports/aggregate.ts`). `serializeDraft` gives the exact bytes `diagrams scan` writes.
 - Deterministic: sorted output, ids from paths and names, no clock; the commit is read from `.git` files, never by running `git`.
-- Reads database tables statically (`src/tables/`): Prisma schemas and SQL DDL with hand-written readers (no parser dependency), and Drizzle, Django and SQLAlchemy models read from the TypeScript and Python syntax trees (never imported or run; what cannot be read lowers `confidence`), table ids and relation targets resolved across extractors.
+- Reads database tables statically (`src/tables/`): Prisma schemas and SQL DDL with hand-written readers (no parser dependency; shared token helpers in `src/tables/tokens.ts`), and Drizzle, Django and SQLAlchemy models read from the TypeScript and Python syntax trees (never imported or run; what cannot be read lowers `confidence`), table ids and relation targets resolved across extractors. Column flags and relation cardinality follow one rule (`src/tables/relation.ts`).
 - For refreshing a Workspace (`src/refresh.ts`): `diffDrafts(previous, current)` gives the ids added and removed between two drafts, and `idMatcher(patterns)` matches ids against `.rinthel/scan-ignore`.
 - Extension points: `MANIFEST_READERS`, `IMPORT_EXTRACTORS` and `TABLE_EXTRACTORS` (`src/tables/index.ts`).
 

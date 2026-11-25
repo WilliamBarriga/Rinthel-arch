@@ -62,6 +62,11 @@ export function aplicarOps(
   const errores: ErrorDeOp[] = [];
   const indiceDe = (nombre: string): number => capas.findIndex((c) => c.nombre === nombre);
   const nombres = (): string[] => capas.map((c) => c.nombre);
+  /** An old built-in Layer name (`borde`) whose new name (`border`) is in the stack: `old-catalog-value` with its fix. */
+  const capaAntigua = (nombre: string): ErrorDeCatalogo | undefined => {
+    const error = errorDeValorAntiguo('layer', nombre);
+    return error?.candidato !== undefined && indiceDe(error.candidato) >= 0 ? error : undefined;
+  };
 
   ops.forEach((op, indice) => {
     const falla = (e: ErrorDeCatalogo, donde: ErrorDeOp['donde'], base?: string): void => {
@@ -71,7 +76,7 @@ export function aplicarOps(
 
     if (op.quitar === true) {
       if (actual < 0) {
-        falla({ codigo: CODIGOS.E_THEME_UNKNOWN_LAYER, mensaje: `Cannot remove Layer '${op.nombre}': it does not exist`, ...sugerir(op.nombre, nombres()) }, 'nombre');
+        falla(capaAntigua(op.nombre) ?? { codigo: CODIGOS.E_THEME_UNKNOWN_LAYER, mensaje: `Cannot remove Layer '${op.nombre}': it does not exist`, ...sugerir(op.nombre, nombres()) }, 'nombre');
       } else capas.splice(actual, 1);
       return;
     }
@@ -80,7 +85,7 @@ export function aplicarOps(
     const destino = op.antes ?? op.despues;
     if (destino !== undefined && (indiceDe(destino) < 0 || destino === op.nombre)) {
       falla(
-        {
+        (destino === op.nombre ? undefined : capaAntigua(destino)) ?? {
           codigo: CODIGOS.E_THEME_UNKNOWN_LAYER,
           mensaje: destino === op.nombre ? `Layer '${op.nombre}' cannot be placed relative to itself` : `${lado === 'antes' ? 'before' : 'after'} '${destino}': that Layer does not exist`,
           ...sugerir(destino, nombres().filter((n) => n !== op.nombre)),
@@ -94,7 +99,7 @@ export function aplicarOps(
     const existente = actual >= 0 ? capas[actual] : undefined;
     if (existente === undefined && destino === undefined && modo === 'parchear') {
       falla(
-        {
+        capaAntigua(op.nombre) ?? {
           codigo: CODIGOS.E_THEME_PATCH_WITHOUT_PLACEMENT,
           mensaje: `Layer '${op.nombre}' does not exist; to add it, give 'before' or 'after' another Layer`,
           ...sugerir(op.nombre, nombres()),

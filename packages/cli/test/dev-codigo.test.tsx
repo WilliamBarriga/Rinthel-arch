@@ -8,7 +8,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { iniciarDev } from 'cli';
 import type { ServidorDev } from 'cli';
 
-import { comandoDev, puertoDeDisco } from '../src/dev';
+import { comandoDev } from '../src/dev';
+import { puertoDeDisco } from '../src/puerto-de-disco';
 import { evaluarBundle as cargarComponentes } from './evaluar-bundle';
 
 const FIXTURE = resolve(__dirname, 'fixtures/tema-codigo');

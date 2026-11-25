@@ -91,7 +91,7 @@ const RUTAS: readonly Ruta[] = [
     ruta: RUTAS_DE_DEV.edit,
     async atender(vivo, _url, cuerpo) {
       const pedido = pedidoDeEdicion(cuerpo);
-      if (pedido === undefined) return error(400, 'Expected an Intent { tipo, ... } or { ediciones, version, descripcion? }');
+      if (pedido === undefined) return error(400, 'Expected an Intent { type, ... } or { ediciones, version, descripcion? }');
       return resultado(await vivo.editar(pedido.aplicable, pedido.version));
     },
   },
@@ -122,7 +122,7 @@ const RUTAS: readonly Ruta[] = [
     atender(vivo, url) {
       const file = archivoDeRuta(url.pathname.slice(RUTAS_DE_DEV.archivo.length));
       const leido = file === undefined ? undefined : vivo.archivo(file);
-      return leido === undefined ? error(404, 'Archivo inexistente') : json(200, leido);
+      return leido === undefined ? error(404, 'File not found') : json(200, leido);
     },
   },
   {
@@ -181,14 +181,14 @@ const metodoAjeno = (permitido: 'GET' | 'POST'): Respuesta => ({ ...error(405, '
 
 async function atender(vivo: WorkspaceVivo, { metodo, url, cuerpo }: PeticionDeDev): Promise<Respuesta> {
   const ruta = rutaDe(url.pathname);
-  if (ruta === undefined) return error(404, 'No encontrado');
+  if (ruta === undefined) return error(404, 'Not found');
   if (ruta.metodo === 'GET') return metodo === 'GET' || metodo === 'HEAD' ? ruta.atender(vivo, url, undefined) : metodoAjeno('GET');
   if (metodo !== 'POST') return metodoAjeno('POST');
   let leido: unknown;
   try {
     leido = JSON.parse(cuerpo ?? '');
   } catch {
-    return error(400, 'JSON invalido');
+    return error(400, 'Invalid JSON');
   }
   return ruta.atender(vivo, url, leido);
 }
@@ -200,4 +200,16 @@ export async function atenderApiDeDev(vivo: WorkspaceVivo, peticion: PeticionDeD
   } catch (e) {
     return serializar(error(500, e instanceof Error ? e.message : String(e)));
   }
+}
+
+/**
+ * `fetch` over the dev API in process, without HTTP: every request goes to `atenderApiDeDev`. `base` resolves relative
+ * URLs (`/api/estado`). Shared by `export` (it captures the state) and the in-memory dev of the estudio tests.
+ */
+export function fetchSobreApiDeDev(vivo: WorkspaceVivo, base = 'http://127.0.0.1'): typeof fetch {
+  return (async (entrada: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(entrada instanceof Request ? entrada.url : entrada), base);
+    const { status, cuerpo, cabeceras } = await atenderApiDeDev(vivo, { metodo: init?.method ?? 'GET', url, ...(typeof init?.body === 'string' && { cuerpo: init.body }) });
+    return new Response(cuerpo, { status, headers: cabeceras });
+  }) as typeof fetch;
 }

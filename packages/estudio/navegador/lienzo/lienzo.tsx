@@ -32,9 +32,9 @@ export interface OpcionesDelLienzo {
 /** Devuelve el lienzo (con su halo) y la leyenda de la Vista activa; sin Tema, ninguno de los dos. */
 export function useLienzoDelEstudio({ dibujable, hashProps: props, layout, componentes, urlDeFuente }: OpcionesDelLienzo): { lienzo: ReactNode; leyenda: ReactNode } {
   const estudio = useEstudio();
-  const { cliente, avisar, motivoSinGestos, modo } = estudio;
+  const { cliente, avisar, motivoSinGestos, puedeEscribir } = estudio;
   // Read-only (export): no Gestures and no Code to open.
-  const conGestos = modo === 'dev' && motivoSinGestos === undefined;
+  const conGestos = puedeEscribir && motivoSinGestos === undefined;
   const { temaPrevio } = usePrevisualizacionDeTema();
   const { estado } = dibujable;
   const fuente = estado.fuente;
@@ -56,7 +56,7 @@ export function useLienzoDelEstudio({ dibujable, hashProps: props, layout, compo
           estudio.abrirPestana('derecha', 'detalle');
         }}
         onOpen={(elemento) => {
-          if (modo === 'dev' && elemento.tipo === 'nodo') void abrirCodigoEnBloque(estudio, 'node', elemento.id);
+          if (puedeEscribir && elemento.tipo === 'nodo') void abrirCodigoEnBloque(estudio, 'node', elemento.id);
         }}
         source={dibujada.fuente}
         theme={tema}

@@ -16,7 +16,7 @@ import type { OpcionesDeDev, ServidorDev } from 'cli';
 import { puertoEnMemoria } from 'sesion';
 import type { PuertoDelWorkspaceVivo } from 'sesion';
 
-import { puertoDeDisco } from '../src/dev';
+import { puertoDeDisco } from '../src/puerto-de-disco';
 
 const BASE = `specification {
   node servicio
@@ -200,7 +200,7 @@ describe('dev: seguridad', () => {
 
     for (const ruta of ['api/edit', 'api/deshacer', 'api/rehacer', 'api/historial/saltar', 'api/confiar', 'api/nada']) {
       expect(await respuesta(await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' }))).toEqual({ status: 403, cuerpo: { ok: false, message: 'Origin not allowed' } });
-      expect(await respuesta(await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' }))).toEqual({ status: 415, cuerpo: { ok: false, message: 'Se esperaba application/json' } });
+      expect(await respuesta(await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' }))).toEqual({ status: 415, cuerpo: { ok: false, message: 'Expected application/json' } });
     }
     expect(await respuesta(await post(servidor, 'api/edit', { ...cuerpo, relleno: 'x'.repeat(70 * 1024) }))).toEqual({ status: 413, cuerpo: { ok: false, message: 'Request body too large' } });
     expect((await post(servidor, 'api/edit', cuerpo, { ...JSON_, origin: servidor.url.replace(/\/$/, '') })).status).toBe(200);
@@ -220,12 +220,12 @@ describe('dev: disco y Registro de actividad', () => {
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toBe(BASE);
   });
 
-  it('observa .diagrams/actividad.jsonl aparte del Workspace: reproduce lo previo al conectar y empuja lo anexado', async () => {
+  it('observa .diagrams/activity.jsonl aparte del Workspace: reproduce lo previo al conectar y empuja lo anexado', async () => {
     const raiz = mkdtempSync(join(tmpdir(), 'rinthel-dev-actividad-'));
     carpetas.push(raiz);
     writeFileSync(join(raiz, 'main.dg'), BASE);
     mkdirSync(join(raiz, '.diagrams'));
-    writeFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), lineasDeActividad(eventoDeActividad(1)));
+    writeFileSync(join(raiz, '.diagrams', 'activity.jsonl'), lineasDeActividad(eventoDeActividad(1)));
     const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
     const fetchDelServidor: typeof fetch = (ruta, init) => fetch(new URL(String(ruta).replace(/^\//, ''), servidor.url), init);
@@ -235,7 +235,7 @@ describe('dev: disco y Registro de actividad', () => {
       const cerrar = eventosSobreFetch(fetchDelServidor)('/eventos', (nombre, datos) => {
         if (nombre !== 'actividad') return;
         lista.push(JSON.parse(datos) as ActividadDeDev);
-        if (lista.length === 1) appendFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), lineasDeActividad(eventoDeActividad(2)));
+        if (lista.length === 1) appendFileSync(join(raiz, '.diagrams', 'activity.jsonl'), lineasDeActividad(eventoDeActividad(2)));
         else {
           cerrar();
           ok(lista);
