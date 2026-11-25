@@ -34,7 +34,7 @@ Options: those of validate (--json, --strict, --max-issues, --theme, --theme-pat
 Dev UI at http://127.0.0.1:<port>/ (listens on localhost only): canvas, DSL editor, Issues, Themes,
 file History and the activity log feed. Recompiles on save. The active View lives in the URL hash
 (#vista=<id>). Dragging a Node sets its Pin and rewrites the .dg.
-Guide: docs/guia/ui-de-dev.md.
+Guide: docs/guide/dev-ui.md.
 
 Options:
   ${WORKSPACE}
@@ -152,7 +152,7 @@ Agent loop: inspect, edit the .dg, validate --json until ok:true.
 Exit codes: 0 success, 1 Workspace errors, 2 usage or internal failure.
 validate, build, inspect and edit append an Event to <path>/${CARPETA_DE_SALIDA}/actividad.jsonl
 (DIAGRAMS_ACTIVIDAD=0 turns it off; DIAGRAMS_AGENTE names the agent).
-Full guide: docs/guia/cli.md
+Full guide: docs/guide/cli.md
 `;
 
 /** `undefined` si `argv` no pide ayuda (`--help`, `-h`, `help [comando]` o sin argumentos). */

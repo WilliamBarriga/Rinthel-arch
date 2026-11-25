@@ -45,8 +45,8 @@ async function principal(): Promise<void> {
   const workspace = mkdtempSync(join(tmpdir(), 'capturas-estudio-'));
   cpSync(join(REPO, 'examples/rinthel-arch'), workspace, { recursive: true, filter: (origen) => !origen.includes('/.diagrams') });
   cli(workspace, 'validate');
-  cli(workspace, 'inspect', 'vista', VISTA);
-  cli(workspace, 'inspect', 'nodo', 'cli');
+  cli(workspace, 'inspect', 'view', VISTA);
+  cli(workspace, 'inspect', 'node', 'cli');
   mkdirSync(salida, { recursive: true });
 
   const dev = await iniciarDevDeGaleria(REPO, workspace);

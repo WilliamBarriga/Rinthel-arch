@@ -1,6 +1,8 @@
+[Read in English](../guide/dsl-reference.md)
+
 # Referencia del DSL
 
-Resumen de la sintaxis de los archivos `.dg`. La gramatica completa esta en `packages/dsl/src/gramatica/diagramas.langium`; las decisiones, en el [ADR 0001](../adr/0001-dsl-fuente-editable.md). Los Temas se describen en [Personalizar con Temas](personalizar-temas.md). Los comentarios empiezan con `//`.
+Resumen de la sintaxis de los archivos `.dg`. La gramatica completa esta en `packages/dsl/src/gramatica/diagramas.langium`; las decisiones, en el [ADR 0001](../adr/0001-dsl-fuente-editable.md). Los Temas se describen en [Personalizar con Temas](themes.md). Los comentarios empiezan con `//`.
 
 Un Workspace es una carpeta con cualquier cantidad de `.dg` (en subcarpetas tambien); se fusionan en un unico Modelo. Un archivo puede mezclar bloques `specification`, `model`, `view`, `theme` y `part`.
 
@@ -8,8 +10,8 @@ Un Workspace es una carpeta con cualquier cantidad de `.dg` (en subcarpetas tamb
 
 ```
 specification {
-  node servicio { description "Pieza de logica"  icon server  color blue }
-  node nota     { description "Elemento de prueba"  color gray }
+  node service { description "Logic piece"  icon server  color blue }
+  node note    { description "Test element"  color gray }
 }
 ```
 
@@ -19,21 +21,21 @@ specification {
 
 ```
 model {
-  tipo id "Titulo" "Descripcion" {
-    tipo hijo "Titulo"                     // un Grupo es un Nodo con hijos
-    attrs { id: uuid   total: decimal "en centavos" }
-    email: text? uk "unico"                // un Atributo tambien puede ir suelto en el cuerpo (ver "Vistas `er`")
+  kind id "Title" "Description" {
+    kind child "Title"                     // a Group is a Node with children
+    attrs { id: uuid   total: decimal "in cents" }
+    email: text? uk "unique"               // an Attribute can also stand loose in the body (see "`er` Views")
     source { file "packages/x/src/a.ts"  url "https://..." }
   }
 
-  origen -> destino "etiqueta"
-  origen "1" -> "N" destino                // cardinalidades opcionales
-  pedidos#cliente_id -> clientes#id        // un Atributo como extremo (`nodo#atributo`)
+  source -> target "label"
+  source "1" -> "N" target                 // optional cardinalities
+  orders#customer_id -> customers#id       // an Attribute as an end (`node#attribute`)
 }
 ```
 
 - Titulo y descripcion son opcionales; sin titulo, se usa el id.
-- Los hijos se referencian con el id cualificado por su jerarquia: `plataforma.pedidos`.
+- Los hijos se referencian con el id cualificado por su jerarquia: `platform.orders`.
 - Los espacios alrededor de `->` son obligatorios (`-` es valido dentro de un id).
 - `source` guarda referencias opacas (`kind "ref"`) al proyecto documentado; el sistema no las interpreta.
 - `extend <nodo> { ... }`, dentro de un bloque `model`, agrega hijos, Atributos o `source` a un Nodo declarado en otro archivo o bloque.
@@ -46,14 +48,14 @@ model {
 
 ```
 model {
-  servicio cobro "Cobro" "Paga un pedido" planned {     // tras titulo y descripcion, antes del cuerpo
-    servicio carrito "Carrito"                          // tambien planeado: un Grupo planeado marca a sus descendientes
+  service checkout "Checkout" "Pays an order" planned {   // after title and description, before the body
+    service cart "Cart"                                   // also planned: a planned Group marks its descendants
   }
-  tabla pedidos "Pedidos" {
-    cupon: text? fk planned "Del PRD"                   // entre las marcas de clave; en Vistas er, un chip PLAN
+  table orders "Orders" {
+    coupon: text? fk planned "From the PRD"               // among the key marks; in er Views, a PLAN chip
   }
-  api -> cobro.carrito "agrega" planned                 // al final, tras `identifying` si van las dos
-  interaction pagar "Pagar" planned { api -> cobro }    // tras titulo y descripcion
+  api -> checkout.cart "adds" planned                     // at the end, after `identifying` if both are present
+  interaction pay "Pay" planned { api -> checkout }       // after title and description
 }
 ```
 
@@ -69,45 +71,45 @@ Un Workspace completo con una Interaccion y la Vista que la dibuja:
 ```dg
 specification {
   node actor    { icon user     color purple }
-  node servicio { icon server   color blue }
-  node almacen  { icon database color green }
-  node cola     { icon queue    color amber }
+  node service  { icon server   color blue }
+  node store    { icon database color green }
+  node queue    { icon queue    color amber }
 }
 
 model {
-  actor cliente "Cliente"
-  servicio api "API"
-  almacen db "Base de datos"
-  cola eventos "Eventos"
+  actor client "Customer"
+  service api "API"
+  store db "Database"
+  queue events "Events"
 
-  interaction checkout "Compra" "Flujo de pago" {
-    pedido: cliente -> api "POST /orders"   // `pedido:` es un alias opcional del Mensaje
-    api -> db "consulta"
-    reply db -> api "filas"
-    async api -> eventos "evento"
-    api -> api "validar"                     // Mensaje propio
-    reply api -> cliente "201"
+  interaction checkout "Purchase" "Payment flow" {
+    place: client -> api "POST /orders"     // `place:` is an optional alias of the Message
+    api -> db "query"
+    reply db -> api "rows"
+    async api -> events "event"
+    api -> api "validate"                    // self Message
+    reply api -> client "201"
   }
 }
 
-view compra { type sequence  interaction checkout }
+view purchase { type sequence  interaction checkout }
 ```
 
 Ciclo de vida de una Lifeline: `create origen -> destino` la hace nacer (su cabecera baja a la altura del Mensaje y la flecha termina en ella) y `destroy origen -> destino` la termina (su linea se corta en una X, el marcador `cross`).
 
 ```dg
-specification { node pieza { icon box  color blue } }
+specification { node piece { icon box  color blue } }
 model {
-  pieza cliente
-  pieza api
-  pieza token
-  interaction sesion {
-    cliente -> api "login"
-    create api -> token "emitir"
-    destroy api -> token "revocar"
+  piece client
+  piece api
+  piece token
+  interaction session {
+    client -> api "login"
+    create api -> token "issue"
+    destroy api -> token "revoke"
   }
 }
-view vida { type sequence  interaction sesion }
+view lifecycle { type sequence  interaction session }
 ```
 
 - Un Mensaje es `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"] ["descripcion"]`; sin tipo es `sync`. Los extremos son Nodos de cualquier nivel (las Lifelines) y no hace falta una Arista entre ellos.
@@ -121,44 +123,44 @@ view vida { type sequence  interaction sesion }
 Fragmentos (anidables), Notas y `ref` en una Interaccion; el ejemplo es completo:
 
 ```dg
-specification { node pieza { icon box  color blue } }
+specification { node piece { icon box  color blue } }
 
 model {
-  pieza cliente
-  pieza api
-  pieza db
-  pieza cola
+  piece client
+  piece api
+  piece db
+  piece queue
 
   interaction checkout {
-    cliente -> api "pedir"
-    alt "hay stock" {
-      api -> db "reservar"
-    } else "sin stock" {
-      api -> cliente "rechazar"
+    client -> api "request"
+    alt "in stock" {
+      api -> db "reserve"
+    } else "out of stock" {
+      api -> client "reject"
     }
-    par { api -> cola "evento" } and { api -> db "auditar" }
-    note over cliente, api "idempotente"
-    ref auditoria
+    par { api -> queue "event" } and { api -> db "audit" }
+    note over client, api "idempotent"
+    ref auditing
   }
-  interaction auditoria { db -> cola "registrar" }
+  interaction auditing { db -> queue "record" }
 }
 
-view compra { type sequence  interaction checkout  autonumber }
-view auditar { type sequence  interaction auditoria }
+view purchase { type sequence  interaction checkout  autonumber }
+view audit { type sequence  interaction auditing }
 ```
 
 ## `view`: que mostrar
 
 ```
-view paquetes {
-  type architecture             // o flow, sequence, er
-  theme diagrams                // opcional; defecto: neutral
-  include a, b.*, c.**          // selectores
-  exclude a.privado
+view packages {
+  type architecture             // or flow, sequence, er
+  theme diagrams                // optional; default: neutral
+  include a, b.*, c.**          // selectors
+  exclude a.internal
   depth 1
-  expanded render, sesion       // Grupos abiertos al inicio
-  collapsed canonico, tema      // Grupos cerrados al inicio
-  link canonico -> canonico-detalle // drill-down a otra Vista (un Grupo con link no se expande)
+  expanded render, session      // Groups open at the start
+  collapsed canonical, theme    // Groups closed at the start
+  link canonical -> canonical-detail // drill-down to another View (a Group with a link does not expand)
   node render { label "Render"  pin 120,40  color amber }
 }
 ```
@@ -182,10 +184,10 @@ Una Vista nunca define entidades nuevas ni toca el Modelo.
 ### Vista de secuencia
 
 ```
-view compra {
+view purchase {
   type sequence
   interaction checkout
-  order cliente, api
+  order client, api
 }
 ```
 
@@ -200,18 +202,18 @@ Dibuja una columna por Lifeline y los Mensajes de arriba abajo, con las activaci
 Una Vista `type er` dibuja cada Nodo hoja como una tabla (cabecera mas una fila por Atributo) y las Aristas como FK con marcadores de pie de gallo, sin flechas. Acepta lo mismo que `architecture` (`include`, `exclude`, `depth`, `expanded`, `collapsed`, `pin`, `node`, `steps`). Funciona con cualquier Tema; un Nodo `pill` o `circle` se dibuja como `rect`.
 
 ```dg
-specification { node tabla { icon database  color green } }
+specification { node table { icon database  color green } }
 
 model {
-  tabla orders "Pedidos" {
+  table orders "Orders" {
     id: uuid pk
     customer_id: uuid pk fk
-    email: text? uk "unico"
+    email: text? uk "unique"
   }
-  tabla customers "Clientes" { id: uuid pk }
-  orders#customer_id "1..*" -> "1" customers#id "pertenece" identifying
+  table customers "Customers" { id: uuid pk }
+  orders#customer_id "1..*" -> "1" customers#id "belongs to" identifying
 }
-view tablas { type er  include ** }
+view tables { type er  include ** }
 ```
 
 - Atributo: `nombre: tipo[?] [pk] [fk] [uk] ["notas"]`. El `?` pegado al tipo lo hace opcional; las marcas van en cualquier orden y repetir una es `duplicate-key-mark` (su `fix` borra la repetida). Cada marca se dibuja como un chip en la fila.
@@ -224,19 +226,19 @@ view tablas { type er  include ** }
 Una Vista puede revelar su contenido por **Pasos**. Cada Paso es acumulativo: `show` revela, `hide` oculta. Solo cambia la visibilidad, nunca la posicion, asi que el diagrama no se mueve entre Pasos.
 
 ```
-view flujo-edicion {
+view flow-edit {
   type flow
-  include autor, shell.sh-seleccion, sesion.ses-intenciones, workspace
+  include author, shell.sh-selection, session.ses-intents, workspace
   steps {
-    step "El autor arrastra un Pin en el shell" {
-      show autor, shell.sh-seleccion
+    step "The author drags a Pin in the shell" {
+      show author, shell.sh-selection
     }
-    step "El gesto se traduce en una Intencion" {
-      show sesion.ses-intenciones
+    step "The gesture becomes an Intent" {
+      show session.ses-intents
     }
-    step "Se reescribe el archivo .dg" {
+    step "The .dg file is rewritten" {
       show workspace
-      hide shell.sh-seleccion
+      hide shell.sh-selection
     }
   }
 }
@@ -247,19 +249,19 @@ Un item es un selector de Nodos o una Arista (`a -> b`, o `edge a -> b`). En un 
 En una Vista `sequence` un Paso es un **corte del tiempo**: `step "titulo" { upto <id> }` muestra la Interaccion hasta el Mensaje con ese id (incluido) y solo avanza; `steps each` da un Paso por Mensaje proyectado, titulado con su etiqueta o `from -> to`. `show` y `hide` son error ahi (`view-property-for-type`, con `hint` a `upto`), igual que `upto` y `steps each` fuera de secuencia. Las Notas y `ref` aparecen con el Mensaje previo; todas las Lifelines desde el primer Paso salvo las nacidas con `create`; la activacion se recorta en el corte; el marco de un Fragmento aparece al entrar el corte y la guarda de cada operando al entrar en el. Nada cambia de posicion. Errores: `unknown-step` (con `fix` por typo), `step-not-projected` (`depth`/`exclude` quitan el Mensaje), `step-not-advancing` (con `related` al Paso anterior) y `steps-each-with-step`.
 
 ```dg
-specification { node pieza { icon box  color blue } }
+specification { node piece { icon box  color blue } }
 model {
-  pieza cliente
-  pieza api
+  piece client
+  piece api
   interaction checkout {
-    pedido: cliente -> api "pedir"
-    fin: reply api -> cliente "listo"
+    request: client -> api "request"
+    done: reply api -> client "done"
   }
 }
-view compra {
+view purchase {
   type sequence
   interaction checkout
-  steps { step "Pedido" { upto pedido }  step "Fin" { upto fin } }
+  steps { step "Request" { upto request }  step "Done" { upto done } }
 }
 ```
 
@@ -268,12 +270,12 @@ Un ejemplo completo esta en [`examples/rinthel-arch/views.dg`](../../examples/ri
 ## `theme` y `part`
 
 ```
-theme mio extends neutral { palette { ... }  node { ... }  group { ... }  edge { ... } }
-part barra { layer acento shadow { color COLOR  x 4 } }
+theme mine extends neutral { palette { ... }  node { ... }  group { ... }  edge { ... } }
+part bar { layer acento shadow { color COLOR  x 4 } }
 ```
 
-Detalle en [Personalizar con Temas](personalizar-temas.md) y en el [catalogo](../referencia-catalogo.md).
+Detalle en [Personalizar con Temas](themes.md) y en el [catalogo](../theme-catalog.md).
 
 ## Errores y avisos
 
-`dg validate` imprime `archivo:linea:columna severidad codigo mensaje`, con `hint` o una correccion (`fix`) cuando hay un unico candidato. Con `--json` el resultado es un objeto con `contractVersion`, para agentes y herramientas ([ADR 0005](../adr/0005-cli-para-agentes.md)). Los codigos son estables (`duplicate-part`, `theme-low-contrast`, `unknown-lifeline`, `reply-without-sync`...); los que empiezan con `E_` bloquean y los `W_` avisan.
+`dg validate` imprime `archivo:linea:columna severidad codigo mensaje`, con `hint` o una correccion (`fix`) cuando hay un unico candidato. Con `--json` el resultado es un objeto con `contractVersion`, para agentes y herramientas ([ADR 0005](../adr/0005-cli-para-agentes.md)). Los codigos son nombres estables en kebab-case (`duplicate-part`, `theme-low-contrast`, `unknown-lifeline`, `reply-without-sync`...); la severidad (`error` bloquea, `warning` avisa) es un campo aparte de cada issue.

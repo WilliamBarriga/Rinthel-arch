@@ -1,6 +1,8 @@
+[Read in English](../guide/cli.md)
+
 # CLI
 
-El CLI es `packages/cli/dist/bin.js` (tras `pnpm build`). En esta guia se abrevia `dg`:
+El CLI es `packages/cli/dist/bin.js` (tras `pnpm build`), o el comando `diagrams` del paquete npm `rinthel-arch`. En esta guia se abrevia `dg`:
 
 ```
 alias dg="node $PWD/packages/cli/dist/bin.js"
@@ -25,7 +27,7 @@ Con `--json`, stdout es exactamente un objeto, sin texto extra. `validate`/`buil
 ### `validate`: compilar y validar (solo lectura)
 
 ```
-dg validate --workspace <ruta> [--json] [--strict] [--max-issues N] [--theme <nombre>] [--theme-path <dir>]
+dg validate --workspace <path> [--json] [--strict] [--max-issues N] [--theme <name>] [--theme-path <dir>]
 ```
 
 Lista todos los issues en una pasada, ordenados por archivo, linea, columna y codigo. Sin errores de compilacion calcula el layout de las Vistas con al menos dos Pins y avisa `overlapping-pins` por cada par solapado (con `--strict` hace fallar); las Vistas sin Pins no pagan layout. Si un Tema trae codigo (`.tsx`) que no compila, el error es `theme-code-compile`, con archivo y linea. `--max-issues` (100 por defecto) corta la lista y marca `summary.truncated`. Un issue puede traer `fix` (`{ file, range, replacement }`) cuando hay un unico candidato, o `hint` si hay varios. `validate` nunca reescribe archivos.
@@ -48,7 +50,7 @@ Codigos de los Tipos de diagrama `sequence` y `er` (la lista completa, con su de
 ### `build`: escribir la geometria
 
 ```
-dg build --workspace <ruta> [las opciones de validate]
+dg build --workspace <path> [the options of validate]
 ```
 
 Escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, geometry }`; `geometry.kind` es `grafo` para architecture, flow y er, y `secuencia` para una Vista `sequence`, con `lifelines`, `activations`, `messages`, `fragments`, `notes` y `groups`) en `<ruta>/.diagrams/`, reemplazando solo esos dos (derivado: no se versiona ni se edita; el Registro de actividad se conserva). Con errores, o con avisos en `--strict`, sale 1 y borra la salida anterior. `--theme` fija el Tema global (una Vista con `theme` propio lo anula; sin ninguno, el neutro); un Tema no declarado sale 2.
@@ -56,10 +58,10 @@ Escribe `canonico.json` y `geometria/<vista>.json` (`{ view, theme, layoutKey, g
 ### `dev`: visor en vivo
 
 ```
-dg dev --workspace <ruta> [--port N] [--trust-code] [--theme-path <dir>]
+dg dev --workspace <path> [--port N] [--trust-code] [--theme-path <dir>]
 ```
 
-Sirve en `http://127.0.0.1:<puerto>/` (4173 por defecto, `--port 0` elige uno libre; solo escucha en localhost) la [UI de dev](ui-de-dev.md): lienzo con los cuatro Tipos de diagrama, indice de Vistas, editor del DSL, Issues, galeria de Temas, Historial y feed del agente. Recompila al guardar y, si una edicion rompe el DSL, conserva el ultimo dibujo bueno. La Vista se elige con el hash (`#vista=<id>`).
+Sirve en `http://127.0.0.1:<puerto>/` (4173 por defecto, `--port 0` elige uno libre; solo escucha en localhost) la [UI de dev](dev-ui.md): lienzo con los cuatro Tipos de diagrama, indice de Vistas, editor del DSL, Issues, galeria de Temas, Historial y feed del agente. Recompila al guardar y, si una edicion rompe el DSL, conserva el ultimo dibujo bueno. La Vista se elige con el hash (`#vista=<id>`).
 
 - **Temas con codigo (`.tsx`)**: `dev` no los sirve hasta que lo confirmes en la UI; `--trust-code` lo da de antemano. Usalo solo con Workspaces que conoces.
 - **Escrituras**: arrastrar un Nodo fija su Pin; en una Vista `sequence`, arrastrar en horizontal la cabecera de una Lifeline (o el titulo de un `box`, que mueve el bloque) reescribe el `order` completo y una hija no sale del `box` de su Grupo. El editor, los `fix` y la galeria tambien escriben el `.dg` con el mismo nucleo que `edit`; cada escritura es una entrada del Historial de archivos de `dev`, que sobrevive a las ediciones de otros programas.
@@ -68,11 +70,11 @@ Sirve en `http://127.0.0.1:<puerto>/` (4173 por defecto, `--port 0` elige uno li
 ### `inspect`: consultar el Modelo (solo lectura)
 
 ```
-dg inspect search <texto>   --workspace <ruta> [--json]
-dg inspect node <id>        --workspace <ruta> [--json]
-dg inspect view <id>       --workspace <ruta> [--json]
-dg inspect interaction <id> --workspace <ruta> [--json]
-dg inspect theme <nombre>    --workspace <ruta> [--kind <tipo>] [--state <estado>] [--diagram <tipo>] [--catalog] [--json]
+dg inspect search <text>    --workspace <path> [--json]
+dg inspect node <id>        --workspace <path> [--json]
+dg inspect view <id>        --workspace <path> [--json]
+dg inspect interaction <id> --workspace <path> [--json]
+dg inspect theme <name>     --workspace <path> [--kind <kind>] [--state <state>] [--diagram <type>] [--catalog] [--json]
 ```
 
 Cada resultado trae el id cualificado, el tipo y `archivo:linea`. `search` tambien halla Interacciones (por id o titulo); `view` da el tipo de la Vista (`architecture`, `flow`, `sequence`, `er`) y, en secuencia, sus Lifelines como Nodos y la `interaction` que proyecta; `interaction` da titulo, cantidad de items (primer nivel) y de Mensajes, Lifelines en orden de aparicion y las Vistas que la proyectan. `theme` muestra la cadena `extends`, las Partes, la pila de Capas con el `archivo:linea` del parche que fijo cada una (asi se sabe que editar) y las Metricas; tambien los Elementos de secuencia y la fila ER con la misma resolucion que el dibujo: los declarados y, con `--diagram sequence` o `--diagram er`, los derivados de `edge` y `node` (`derived: true` en `--json`); `--catalog` agrega las claves de Primitivas y Movimientos. `inspect theme` marca `hasCode` y lista los componentes cuando el Tema usa codigo. Sale 1 si el Nodo, la Vista, la Interaccion o el Tema no existe (stderr sugiere ids cercanos).
@@ -80,19 +82,19 @@ Cada resultado trae el id cualificado, el tipo y `archivo:linea`. `search` tambi
 ### `edit`: la unica escritura explicita
 
 ```
-dg edit --workspace <ruta> --view <id> --node <id> --x N --y N [--hash <archivo>=<hash>] [--json]
-dg edit --workspace <ruta> --intent '<json>' [--hash <archivo>=<hash>] [--json]
-dg edit --workspace <ruta> --edits '<json>' [--hash <archivo>=<hash>] [--json]
+dg edit --workspace <path> --view <id> --node <id> --x N --y N [--hash <file>=<hash>] [--json]
+dg edit --workspace <path> --intent '<json>' [--hash <file>=<hash>] [--json]
+dg edit --workspace <path> --edits '<json>' [--hash <file>=<hash>] [--json]
 ```
 
-Todo o nada: si una edicion falla no se escribe nada. Con `--hash`, rechaza la edicion si el archivo cambio desde que se leyo. Solo toca `.dg` del Workspace. `--intent` aplica una Intencion por su contrato JSON (no lleva `hash`: uno heredado en el JSON se ignora; la concurrencia es `--hash <archivo>=<hash>`, que rechaza si ese archivo cambio, y sin `--hash` aplica sobre el texto vigente); hoy ademas de `move-pin` existe `{"type":"reorder-lifelines","view":"flujo","order":["cliente","api","db"]}`: reescribe el `order` completo de una Vista `sequence` con el orden visible dado, aunque coincida con la primera aparicion; las entradas de `order` hoy ocultas (hijas de un Grupo colapsado, excluidas) conservan su posicion relativa. `{"type":"set-theme","view":"general","theme":"claro"}` fija el Tema de una Vista: reescribe el nombre de su `theme` conservando el parche, o inserta `theme claro` como primera linea del cuerpo si no tenia; sin `"theme"` quita la linea (si habia parche escribe `theme neutral { parche }`). Un Tema no declarado (ni en el Workspace ni en `--theme-path`) rechaza con `unknown-theme` (salida 1). Sirve para fijar Pins y para aplicar los `fix` de `validate`; el resto de cambios se editan a mano en el `.dg` y se revalidan.
+Todo o nada: si una edicion falla no se escribe nada. Con `--hash`, rechaza la edicion si el archivo cambio desde que se leyo. Solo toca `.dg` del Workspace. `--intent` aplica una Intencion por su contrato JSON (no lleva `hash`: uno heredado en el JSON se ignora; la concurrencia es `--hash <archivo>=<hash>`, que rechaza si ese archivo cambio, y sin `--hash` aplica sobre el texto vigente); hoy ademas de `move-pin` existe `{"type":"reorder-lifelines","view":"flow","order":["client","api","db"]}`: reescribe el `order` completo de una Vista `sequence` con el orden visible dado, aunque coincida con la primera aparicion; las entradas de `order` hoy ocultas (hijas de un Grupo colapsado, excluidas) conservan su posicion relativa. `{"type":"set-theme","view":"overview","theme":"light"}` fija el Tema de una Vista: reescribe el nombre de su `theme` conservando el parche, o inserta `theme light` como primera linea del cuerpo si no tenia; sin `"theme"` quita la linea (si habia parche escribe `theme neutral { parche }`). Un Tema no declarado (ni en el Workspace ni en `--theme-path`) rechaza con `unknown-theme` (salida 1). Sirve para fijar Pins y para aplicar los `fix` de `validate`; el resto de cambios se editan a mano en el `.dg` y se revalidan.
 
 De donde sale el `--hash`: es el `hashDeContenido` de `canonico` del texto que leiste (53 bits en hexadecimal, no un SHA), y es opcional: sin el, `edit` aplica sobre el texto vigente. Con `dev` corriendo, `GET http://127.0.0.1:<puerto>/api/archivo/<ruta>` da `{ file, texto, hash, version }` y `GET /api/archivos` el `hash` de cada `.dg` (por ejemplo `curl -s http://127.0.0.1:4173/api/archivo/main.dg`); lee el texto y su `hash` de la misma respuesta y pasalo tal cual: `--hash main.dg=<hash>`. Si el archivo cambio entre medias, `edit` rechaza con `stale-hash` (salida 1): vuelve a leer y reintenta.
 
 ### `skill`: skill de agente de un Workspace
 
 ```
-dg skill --workspace <ruta> [--out <archivo>]
+dg skill --workspace <path> [--out <file>]
 ```
 
 Genera un `SKILL.md` con los Tipos de nodo, Temas, sintaxis, contratos y codigos de issue de ese Workspace. Es para proyectos que usan el sistema: instalala en la carpeta de skills de tu harness. Regenerala cuando cambien los Tipos de nodo, los Temas o los codigos.
@@ -100,7 +102,7 @@ Genera un `SKILL.md` con los Tipos de nodo, Temas, sintaxis, contratos y codigos
 ### `scan`: Borrador de escaneo de una codebase
 
 ```
-dg scan [<raiz>] [--out <archivo>] [--json] [--depth <N>] [--max-files <N>] [--workspace <ruta>]
+dg scan [<root>] [--out <file>] [--json] [--depth <N>] [--max-files <N>] [--workspace <path>]
 ```
 
 Lee la codebase de `<raiz>` (la carpeta actual por defecto) sin ejecutar nada y escribe el Borrador de escaneo `rinthel/scan@1` en `<raiz>/.rinthel/scan.json` (o en `--out`; no se versiona). No usa `--workspace` ni escribe `.dg`: el agente lee el Borrador y escribe el Workspace, que se valida con `validate`. Contrato: [ADR 0010](../adr/0010-importador-de-codebases.md).
@@ -122,10 +124,10 @@ Refrescar un Workspace ya escrito ([ADR 0010](../adr/0010-importador-de-codebase
 ### `export`: un HTML autocontenido para mandar a cualquiera
 
 ```
-dg export --workspace <ruta> --out <archivo>.html [--theme-path <dir>]
+dg export --workspace <path> --out <file>.html [--theme-path <dir>]
 ```
 
-Escribe la [UI de dev](ui-de-dev.md) del Workspace como **un solo archivo HTML de solo lectura**: se abre con doble clic (`file://`) o desde cualquier servidor estatico, sin pedir nada a la red. Funcionan el indice de Vistas, los Pasos, los `link` (drill-down), el colapso de Grupos, la Seleccion, el Buscador (Vistas y comandos) y la galeria de Temas para previsualizar otro Tema; no estan el editor, Issues, Detalle, Historial, el feed del agente, las Diferencias ni nada que escriba (arrastrar Nodos, fijar Tema, `fix`). La barra lo marca con "Read-only".
+Escribe la [UI de dev](dev-ui.md) del Workspace como **un solo archivo HTML de solo lectura**: se abre con doble clic (`file://`) o desde cualquier servidor estatico, sin pedir nada a la red. Funcionan el indice de Vistas, los Pasos, los `link` (drill-down), el colapso de Grupos, la Seleccion, el Buscador (Vistas y comandos) y la galeria de Temas para previsualizar otro Tema; no estan el editor, Issues, Detalle, Historial, el feed del agente, las Diferencias ni nada que escriba (arrastrar Nodos, fijar Tema, `fix`). La barra lo marca con "Read-only".
 
 - **Dentro del archivo**: la pagina, el motor de layout (ELK, en un Worker que arranca desde un Blob o, si el navegador no deja crearlo, en el hilo principal) y las fuentes de los Temas (del Workspace y de `--theme-path`). El ejemplo `examples/rinthel-arch` (33 Vistas, 15 Temas) pesa unos 5 MB, 2.1 MB con gzip.
 - **Temas con codigo (`.tsx`)**: van dentro y corren en el navegador de quien abra el archivo, sin confirmacion; el comando lo avisa en stdout.
@@ -134,10 +136,10 @@ Escribe la [UI de dev](ui-de-dev.md) del Workspace como **un solo archivo HTML d
 ## Bucle de trabajo
 
 ```
-dg inspect search <texto> --workspace <ruta>   # que existe y donde esta escrito
-# editar el .dg
-dg validate --workspace <ruta> --json          # repetir hasta ok: true
-dg dev --workspace <ruta>                      # verlo
+dg inspect search <text> --workspace <path>    # what exists and where it is written
+# edit the .dg
+dg validate --workspace <path> --json          # repeat until ok: true
+dg dev --workspace <path>                      # see it
 ```
 
 ## Opciones comunes
@@ -150,7 +152,7 @@ dg dev --workspace <ruta>                      # verlo
 
 ## Registro de actividad
 
-`validate`, `build`, `inspect` y `edit` anexan un Evento de actividad (una linea JSON, `eventoDeActividadSchema` de `canonico`) a `<ruta>/.diagrams/actividad.jsonl`, tambien cuando salen 1 o 2. `skill`, `dev` y la ayuda no registran, ni ningun comando cuyo `--workspace` falte o no sea una carpeta. Cada Evento lleva `ts`, `pid`, `command`, `args` (el argv tras el comando), `exitCode`, `durationMs`, el `target` que el comando nombra (`inspect view|node|theme`, la Vista y el Nodo de una Intencion de `edit`, los archivos que escribio `edit`) y, en `validate` y `build`, `summary { errors, warnings }`; nunca stdout ni stderr. Al pasar 1 MB rota a `actividad.1.jsonl`. Un fallo al escribirlo no cambia la salida ni el codigo. Se sigue sin `dev` con `tail -f <ruta>/.diagrams/actividad.jsonl`. `dev` lo observa aparte del Workspace (ignora lineas rotas y vuelve a leer un registro acortado o rotado) y lo muestra en el panel Agente con los ultimos 50 Eventos; que hace la UI con ellos y con los cambios externos: [Seguir a un agente](ui-de-dev.md#seguir-a-un-agente).
+`validate`, `build`, `inspect` y `edit` anexan un Evento de actividad (una linea JSON, `eventoDeActividadSchema` de `canonico`) a `<ruta>/.diagrams/actividad.jsonl`, tambien cuando salen 1 o 2. `skill`, `dev` y la ayuda no registran, ni ningun comando cuyo `--workspace` falte o no sea una carpeta. Cada Evento lleva `ts`, `pid`, `command`, `args` (el argv tras el comando), `exitCode`, `durationMs`, el `target` que el comando nombra (`inspect view|node|theme`, la Vista y el Nodo de una Intencion de `edit`, los archivos que escribio `edit`) y, en `validate` y `build`, `summary { errors, warnings }`; nunca stdout ni stderr. Al pasar 1 MB rota a `actividad.1.jsonl`. Un fallo al escribirlo no cambia la salida ni el codigo. Se sigue sin `dev` con `tail -f <ruta>/.diagrams/actividad.jsonl`. `dev` lo observa aparte del Workspace (ignora lineas rotas y vuelve a leer un registro acortado o rotado) y lo muestra en el panel Agente con los ultimos 50 Eventos; que hace la UI con ellos y con los cambios externos: [Seguir a un agente](dev-ui.md#seguir-a-un-agente).
 
 | Variable | Efecto |
 | --- | --- |

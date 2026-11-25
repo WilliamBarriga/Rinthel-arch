@@ -148,7 +148,7 @@ model {
     module thm-code "theme/code" "Contract of the code Theme (.tsx) and its trusted loading" {
       source { file "packages/tema/src/codigo.ts" }
     }
-    module thm-reference "theme/reference" "Generates docs/referencia-catalogo.md from the catalog" {
+    module thm-reference "theme/reference" "Generates docs/theme-catalog.md from the catalog" {
       source { file "packages/tema/src/referencia.ts" }
     }
     module thm-seed "theme/seed" "Deterministic seed for the hand-drawn stroke" {

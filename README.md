@@ -14,8 +14,8 @@ Sistema (React + TypeScript) para escribir y renderizar diagramas grandes y deta
 
 - **Cuatro Tipos de diagrama.** `architecture`, `flow`, `sequence` (Interacciones entre Lifelines, con Fragmentos, Notas y Pasos) y `er` (tablas con claves y cardinalidad) comparten el mismo Modelo y los mismos Temas.
 - **Un Modelo, muchas Vistas.** Los Nodos, Aristas y Atributos se escriben una vez; cada Vista elige que mostrar (`include`, `exclude`, `depth`) y puede enlazar a otra (drill-down) o revelarse paso a paso.
-- **La estetica es un Tema.** Un Tema es texto: Paleta, fuentes y una pila de Capas por elemento, tomadas de un catalogo cerrado (formas, rellenos, bordes, sombras, glow, vidrio, trazos, marcadores, animaciones). Hay Temas de ejemplo (ver la [galeria](docs/galeria.md)) y tres incorporados.
-- **UI en vivo.** `dev` recompila al guardar y sirve la [UI de dev](docs/guia/ui-de-dev.md): lienzo (pan, zoom, colapso de Grupos, arrastre de Nodos que reescribe el `.dg`), editor del DSL, Issues con `fix`, galeria de Temas, Historial de archivos (deshacer y rehacer) y el feed del Registro de actividad: lo que hace un agente por el CLI.
+- **La estetica es un Tema.** Un Tema es texto: Paleta, fuentes y una pila de Capas por elemento, tomadas de un catalogo cerrado (formas, rellenos, bordes, sombras, glow, vidrio, trazos, marcadores, animaciones). Hay Temas de ejemplo (ver la [galeria](docs/gallery.md)) y tres incorporados.
+- **UI en vivo.** `dev` recompila al guardar y sirve la [UI de dev](docs/guia/dev-ui.md): lienzo (pan, zoom, colapso de Grupos, arrastre de Nodos que reescribe el `.dg`), editor del DSL, Issues con `fix`, galeria de Temas, Historial de archivos (deshacer y rehacer) y el feed del Registro de actividad: lo que hace un agente por el CLI.
 - **Pensado para humanos y agentes.** `validate` devuelve issues estructurados con sugerencias, `inspect` consulta el Modelo y `skill` genera la skill de agente de un Workspace.
 
 ## Un vistazo al DSL
@@ -54,7 +54,7 @@ Una Interaccion (un escenario ordenado entre Nodos) se dibuja como diagrama de s
 | --- | --- |
 | ![Vista sequence de la compra](docs/img/tipos/sequence-shop.png)<br>`type sequence` | ![Vista er de clientes y pedidos](docs/img/tipos/er-shop.png)<br>`type er` |
 
-El [tutorial](docs/guia/tutorial.md#paso-6-opcional-secuencia-y-er) los arma paso a paso y la [referencia del DSL](docs/guia/referencia-dsl.md) cubre Mensajes, Fragmentos, Notas, `ref`, marcas ER y Pasos.
+El [tutorial](docs/guia/tutorial.md#paso-6-opcional-secuencia-y-er) los arma paso a paso y la [referencia del DSL](docs/guia/dsl-reference.md) cubre Mensajes, Fragmentos, Notas, `ref`, marcas ER y Pasos.
 
 ## Galeria
 
@@ -64,7 +64,7 @@ El mismo mapa de este repo (`examples/rinthel-arch/`), cambiando solo el Tema.
 | --- | --- | --- |
 | ![Tema soft-card: tarjetas sobrias](docs/img/temas/soft-card.png)<br>`soft-card` | ![Tema blueprint: plano tecnico](docs/img/temas/blueprint.png)<br>`blueprint` | ![Tema crt-terminal: terminal verde](docs/img/temas/crt-terminal.png)<br>`crt-terminal` |
 
-Los Temas de ejemplo, con una imagen cada uno, estan en la [galeria completa](docs/galeria.md).
+Los Temas de ejemplo, con una imagen cada uno, estan en la [galeria completa](docs/gallery.md).
 
 ## Empezar
 
@@ -77,7 +77,7 @@ npx skills add WilliamBarriga/Rinthel-arch -a opencode -g
 pi install npm:rinthel-arch
 ```
 
-Codex instala el plugin despues desde su directorio de Plugins. Las skills corren el CLI con `npx -y -p rinthel-arch@<version> diagrams` cuando no esta instalado. El detalle por agente esta en la [guia de inicio rapido](docs/guia/inicio-rapido.md).
+Codex instala el plugin despues desde su directorio de Plugins. Las skills corren el CLI con `npx -y -p rinthel-arch@<version> diagrams` cuando no esta instalado. El detalle por agente esta en la [guia de inicio rapido](docs/guia/quick-start.md).
 
 Desde un clon:
 
@@ -97,13 +97,13 @@ node packages/cli/dist/bin.js dev --workspace examples/rinthel-arch
 
 | Guia | Para que |
 | --- | --- |
-| [Inicio rapido](docs/guia/inicio-rapido.md) | Instalar, correr el CLI y recorrer los ejemplos |
+| [Inicio rapido](docs/guia/quick-start.md) | Instalar, correr el CLI y recorrer los ejemplos |
 | [Tutorial](docs/guia/tutorial.md) | Crear un diagrama pequeno y personalizarlo en cinco pasos |
 | [CLI](docs/guia/cli.md) | Comandos, opciones, codigos de salida y salida `--json` |
-| [UI de dev](docs/guia/ui-de-dev.md) | Paneles, editor, Historial, atajos y seguir a un agente |
-| [Personalizar con Temas](docs/guia/personalizar-temas.md) | Paleta, Capas, parches por Tipo y estado, Partes, movimiento |
-| [Referencia del DSL](docs/guia/referencia-dsl.md) | Sintaxis de Modelo, Vistas y Pasos |
-| [Catalogo de Temas](docs/referencia-catalogo.md) | Todas las Primitivas, Slots, Movimientos y Efectos con sus rangos |
+| [UI de dev](docs/guia/dev-ui.md) | Paneles, editor, Historial, atajos y seguir a un agente |
+| [Personalizar con Temas](docs/guia/themes.md) | Paleta, Capas, parches por Tipo y estado, Partes, movimiento |
+| [Referencia del DSL](docs/guia/dsl-reference.md) | Sintaxis de Modelo, Vistas y Pasos |
+| [Catalogo de Temas](docs/theme-catalog.md) | Todas las Primitivas, Slots, Movimientos y Efectos con sus rangos |
 
 Por dentro: el glosario esta en [CONTEXT.md](CONTEXT.md), las decisiones en [docs/adr/](docs/adr/) y las reglas de codigo en [docs/CODING.md](docs/CODING.md).
 

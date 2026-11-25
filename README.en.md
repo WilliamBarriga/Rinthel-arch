@@ -8,8 +8,8 @@ A React + TypeScript system for writing and rendering large, detailed diagrams o
 
 - **Four diagram types.** `architecture`, `flow`, `sequence` (Interactions between Lifelines, with Fragments, Notes and Steps) and `er` (tables with keys and cardinality) share the same Model and the same Themes.
 - **One Model, many Views.** Nodes, Edges and Attributes are written once; each View picks what to show (`include`, `exclude`, `depth`) and can link to another (drill-down) or reveal itself step by step.
-- **Aesthetics are a Theme.** A Theme is text: a Palette, fonts and a stack of Layers per element, drawn from a closed catalog (shapes, fills, borders, shadows, glow, glass, strokes, markers, animations). There are example Themes (see the [gallery](docs/galeria.md)) and three built-in ones.
-- **Live UI.** `dev` rebuilds on save and serves the [dev UI](docs/guia/ui-de-dev.md): a canvas (pan, zoom, Group collapse, node dragging that rewrites the `.dg`), a DSL editor, Issues with `fix`, a Theme gallery, the file History (undo and redo) and the Activity Log feed: what an agent does through the CLI.
+- **Aesthetics are a Theme.** A Theme is text: a Palette, fonts and a stack of Layers per element, drawn from a closed catalog (shapes, fills, borders, shadows, glow, glass, strokes, markers, animations). There are example Themes (see the [gallery](docs/gallery.md)) and three built-in ones.
+- **Live UI.** `dev` rebuilds on save and serves the [dev UI](docs/guide/dev-ui.md): a canvas (pan, zoom, Group collapse, node dragging that rewrites the `.dg`), a DSL editor, Issues with `fix`, a Theme gallery, the file History (undo and redo) and the Activity Log feed: what an agent does through the CLI.
 - **Built for humans and agents.** `validate` returns structured issues with suggestions, `inspect` queries the Model and `skill` generates the agent skill for a Workspace.
 
 ## Getting started
@@ -23,7 +23,7 @@ npx skills add WilliamBarriga/Rinthel-arch -a opencode -g
 pi install npm:rinthel-arch
 ```
 
-Codex then installs the plugin from its Plugins directory. The skills run the CLI with `npx -y -p rinthel-arch@<version> diagrams` when it is not installed. Details per agent in the [quick start guide](docs/guia/inicio-rapido.md).
+Codex then installs the plugin from its Plugins directory. The skills run the CLI with `npx -y -p rinthel-arch@<version> diagrams` when it is not installed. Details per agent in the [quick start guide](docs/guide/quick-start.md).
 
 From a clone:
 
@@ -43,6 +43,6 @@ node packages/cli/dist/bin.js dev --workspace examples/rinthel-arch
 
 Version 0.x, not published on npm: the DSL and package contracts may change between versions. Supports four diagram types: `architecture`, `flow`, `sequence` and `er`.
 
-The documentation is in Spanish for now. Start with the [Spanish README](README.md), the [tutorial](docs/guia/tutorial.md) and the [DSL reference](docs/guia/referencia-dsl.md); the code, CLI output and examples are usable regardless. Issues in English are welcome.
+The documentation is in Spanish for now. Start with the [Spanish README](README.md), the [tutorial](docs/guide/tutorial.md) and the [DSL reference](docs/guide/dsl-reference.md); the code, CLI output and examples are usable regardless. Issues in English are welcome.
 
 Licensed under [MIT](LICENSE).
