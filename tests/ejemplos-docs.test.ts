@@ -92,7 +92,7 @@ describe('rinthel-arch map: regenerated from scan (the live demo)', () => {
 
 /** Bloques ```dg de las guias: cada uno es un Workspace completo de un archivo y debe compilar sin errores. */
 describe('bloques .dg de las guias', () => {
-  const GUIAS = ['docs/guide/dsl-reference.md', 'docs/guide/themes.md', 'docs/guide/tutorial.md', 'docs/guide/quick-start.md', 'docs/guia/dsl-reference.md', 'docs/guia/themes.md', 'docs/guia/tutorial.md', 'docs/guia/quick-start.md', 'README.md'];
+  const GUIAS = ['docs/guide/dsl-reference.md', 'docs/guide/themes.md', 'docs/guide/tutorial.md', 'docs/guide/quick-start.md', 'docs/guia/dsl-reference.md', 'docs/guia/themes.md', 'docs/guia/tutorial.md', 'docs/guia/quick-start.md', 'README.md', 'README.es.md'];
   const bloques = GUIAS.flatMap((guia) =>
     [...readFileSync(resolve(RAIZ, guia), 'utf8').matchAll(/```dg\n([\s\S]*?)```/g)].map(([, texto], i) => ({ nombre: `${guia}#${i + 1}`, texto: texto! })),
   );
@@ -109,9 +109,39 @@ describe('bloques .dg de las guias', () => {
   }
 
   it('el README presenta los cuatro Tipos de diagrama con captura', () => {
-    const readme = readFileSync(resolve(RAIZ, 'README.md'), 'utf8');
-    for (const tipo of ['architecture', 'flow', 'sequence', 'er']) expect(readme, tipo).toContain(`\`${tipo}\``);
-    for (const img of ['tipos/sequence-shop.png', 'tipos/er-shop.png']) expect(readme).toContain(`docs/img/${img}`);
+    for (const path of ['README.md', 'README.es.md']) {
+      const readme = readFileSync(resolve(RAIZ, path), 'utf8');
+      for (const tipo of ['architecture', 'flow', 'sequence', 'er']) expect(readme, `${path} ${tipo}`).toContain(`\`${tipo}\``);
+      for (const img of ['tipos/sequence-shop.png', 'tipos/er-shop.png']) expect(readme, path).toContain(`docs/img/${img}`);
+    }
+  });
+});
+
+describe('README pair', () => {
+  const en = readFileSync(resolve(RAIZ, 'README.md'), 'utf8');
+  const es = readFileSync(resolve(RAIZ, 'README.es.md'), 'utf8');
+  const firstLink = (text: string) => /\]\(([^)]+)\)/.exec(text.replace(/\[!\[[^\]]*\]\([^)]*\)\]\([^)]*\)|!\[[^\]]*\]\([^)]*\)/g, ''))?.[1];
+  const headings = (text: string) => text.split('\n').filter((l) => l.startsWith('## ')).length;
+  const sections = (text: string) => text.split(/^## /m);
+
+  it('README.md is English, opens with the tagline and links the Spanish version and the Live demo first', () => {
+    expect(existsSync(resolve(RAIZ, 'README.en.md'))).toBe(false);
+    expect(en).toContain('**Architecture diagrams of your repo that your coding agent can read, write and keep up to date.**');
+    expect(en).toContain('One text model, many views (architecture, flow, sequence, ER), with themes and step-by-step animation ready for talks and video.');
+    expect(firstLink(en)).toBe('README.es.md');
+    expect(firstLink(es)).toBe('README.md');
+    for (const text of [en, es]) expect(text).toContain('https://williambarriga.github.io/Rinthel-arch/');
+  });
+
+  it('both READMEs share the section order and mention LikeC4 only in the License section', () => {
+    expect(headings(es)).toBe(headings(en));
+    expect(en.split('\n').filter((l) => l.startsWith('## '))).toEqual(['## Quick start', '## Why', '## What you get', '## Themes', '## The DSL at a glance', '## Docs', '## Status', '## Contributing', '## License']);
+    for (const text of [en, es]) {
+      const withLikeC4 = sections(text).filter((s) => /likec4/i.test(s));
+      expect(withLikeC4.map((s) => s.split('\n')[0])).toEqual([text === en ? 'License' : 'Licencia']);
+      expect(text).toContain('npx rinthel-arch dev');
+      expect(text).toContain('docs/gallery.md');
+    }
   });
 });
 
@@ -130,7 +160,7 @@ describe('documentacion publica', () => {
 
   it('los enlaces relativos de README, guias y CONTRIBUTING apuntan a archivos que existen', () => {
     const guias = ['docs/guide', 'docs/guia'].flatMap((dir) => readdirSync(resolve(RAIZ, dir)).map((f) => `${dir}/${f}`));
-    const docs = ['README.md', 'README.en.md', 'CONTRIBUTING.md', 'docs/gallery.md', ...guias];
+    const docs = ['README.md', 'README.es.md', 'CONTRIBUTING.md', 'docs/gallery.md', ...guias];
     for (const doc of docs) {
       const texto = readFileSync(resolve(RAIZ, doc), 'utf8');
       for (const [, destino] of texto.matchAll(/\]\(([^)\s#]+)(?:#[^)]*)?\)/g)) {
