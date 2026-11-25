@@ -101,6 +101,19 @@ export const salidaDeInspectSchema = z.discriminatedUnion('command', [
   }),
   z.object({
     ...comun,
+    command: z.literal('planned'),
+    /** Lo planeado (ADR 0011), con la herencia aplicada; `inherited` es verdadero si no lleva la marca escrita. */
+    planned: z.object({
+      /** `spec` son los refs de las Source `spec` del Nodo (el documento de requisitos o diseno). */
+      nodes: z.array(resumenDeNodoSchema.extend({ spec: z.array(z.string()), inherited: z.boolean() })),
+      /** Solo los Atributos que llevan la marca (los de un Nodo planeado ya salen con el Nodo). */
+      attributes: z.array(z.object({ node: z.string(), name: z.string(), type: z.string(), ...sitioSchema })),
+      edges: z.array(aristaSchema.extend({ inherited: z.boolean() })),
+      interactions: z.array(z.object({ id: z.string(), title: z.string(), ...sitioSchema })),
+    }),
+  }),
+  z.object({
+    ...comun,
     command: z.literal('theme'),
     theme: z.object({
       name: z.string(),

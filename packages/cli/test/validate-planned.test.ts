@@ -82,4 +82,21 @@ describe('validate: planned mark', () => {
     expect(salida.issues.map((i) => i.code)).toEqual(['real-node-in-planned-group']);
     expect(salida.issues[0]?.message).toContain('2 real Nodes');
   });
+
+  it('warns planned-with-path on a planned Node that also has a Source path, and its fix removes the mark', async () => {
+    const texto = WORKSPACE('').replace('service cart "Cart"', 'service cart "Cart" planned {\n      source { path "src/cart" spec "prd#cart" }\n    }');
+    const raiz = workspace(texto);
+    const { exitCode, salida } = await validar(raiz);
+
+    expect(exitCode).toBe(0);
+    expect(salida.issues.map((i) => [i.code, i.severity])).toEqual([['planned-with-path', 'warning']]);
+    const [issue] = salida.issues;
+    expect(issue?.message).toContain("'shop.cart'");
+    expect(issue?.fix?.replacement).toBe('');
+
+    const r = await run(['edit', '--workspace', raiz, '--edits', JSON.stringify([issue?.fix])]);
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toContain('service cart "Cart" {');
+    expect((await validar(raiz)).salida.issues).toEqual([]);
+  });
 });

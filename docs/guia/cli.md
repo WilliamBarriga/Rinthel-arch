@@ -43,6 +43,7 @@ Codigos de los Tipos de diagrama `sequence` y `er` (la lista completa, con su de
 | `er-cardinality`, `duplicate-key-mark` | Cardinalidad ER invalida (con `fix`) y marca de clave repetida (`pk`, `fk`, `uk`) |
 | `old-catalog-value` | Un Movimiento, efecto, estado o Tema incorporado escrito con su nombre antiguo en espanol; el `fix` lo reescribe al nombre en ingles |
 | `real-node-in-planned-group` | Un Nodo real (con Source `path`) bajo un Grupo marcado `planned`; el `fix` quita la marca del Grupo |
+| `planned-with-path` | Aviso: un Nodo marcado `planned` que tambien tiene Source `path` (ya existe en el codigo); el `fix` quita `planned` |
 | `old-workspace-convention` | Un archivo o carpeta del Workspace usa un nombre viejo (`tema.dg`, `temas/`, `fuentes/`); el `fix` lleva `rename` a `theme.dg`, `themes/`, `fonts/`. Renombra de fuera hacia dentro y revalida |
 
 ### `build`: escribir la geometria
@@ -72,10 +73,11 @@ dg inspect search <texto>   --workspace <ruta> [--json]
 dg inspect node <id>        --workspace <ruta> [--json]
 dg inspect view <id>       --workspace <ruta> [--json]
 dg inspect interaction <id> --workspace <ruta> [--json]
+dg inspect planned          --workspace <ruta> [--json]
 dg inspect theme <nombre>    --workspace <ruta> [--kind <tipo>] [--state <estado>] [--diagram <tipo>] [--catalog] [--json]
 ```
 
-Cada resultado trae el id cualificado, el tipo y `archivo:linea`. `search` tambien halla Interacciones (por id o titulo); `view` da el tipo de la Vista (`architecture`, `flow`, `sequence`, `er`) y, en secuencia, sus Lifelines como Nodos y la `interaction` que proyecta; `interaction` da titulo, cantidad de items (primer nivel) y de Mensajes, Lifelines en orden de aparicion y las Vistas que la proyectan. `theme` muestra la cadena `extends`, las Partes, la pila de Capas con el `archivo:linea` del parche que fijo cada una (asi se sabe que editar) y las Metricas; tambien los Elementos de secuencia y la fila ER con la misma resolucion que el dibujo: los declarados y, con `--diagram sequence` o `--diagram er`, los derivados de `edge` y `node` (`derived: true` en `--json`); `--catalog` agrega las claves de Primitivas y Movimientos. `inspect theme` marca `hasCode` y lista los componentes cuando el Tema usa codigo. Sale 1 si el Nodo, la Vista, la Interaccion o el Tema no existe (stderr sugiere ids cercanos).
+Cada resultado trae el id cualificado, el tipo y `archivo:linea`. `search` tambien halla Interacciones (por id o titulo); `view` da el tipo de la Vista (`architecture`, `flow`, `sequence`, `er`) y, en secuencia, sus Lifelines como Nodos y la `interaction` que proyecta; `interaction` da titulo, cantidad de items (primer nivel) y de Mensajes, Lifelines en orden de aparicion y las Vistas que la proyectan. `planned` (sin argumento) lista lo planeado con herencia aplicada: Nodos (con sus refs Source `spec`), Atributos marcados, Aristas e Interacciones. `theme` muestra la cadena `extends`, las Partes, la pila de Capas con el `archivo:linea` del parche que fijo cada una (asi se sabe que editar) y las Metricas; tambien los Elementos de secuencia y la fila ER con la misma resolucion que el dibujo: los declarados y, con `--diagram sequence` o `--diagram er`, los derivados de `edge` y `node` (`derived: true` en `--json`); `--catalog` agrega las claves de Primitivas y Movimientos. `inspect theme` marca `hasCode` y lista los componentes cuando el Tema usa codigo. Sale 1 si el Nodo, la Vista, la Interaccion o el Tema no existe (stderr sugiere ids cercanos).
 
 ### `edit`: la unica escritura explicita
 

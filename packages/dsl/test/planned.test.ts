@@ -111,4 +111,18 @@ describe('planned mark', () => {
       ['billing', true],
     ]);
   });
+
+  it('situates the planned word of Edges, Attributes and Interactions with its leading space', () => {
+    const { ubicar } = compile({ 'main.dg': WORKSPACE });
+    if (ubicar === undefined) throw new Error('no ubicar');
+    const texto = WORKSPACE.split('\n');
+    const palabra = (ruta: (string | number)[]): string => {
+      const sitio = ubicar(ruta);
+      if (sitio === undefined || sitio === null) throw new Error(`no site for ${ruta.join('.')}`);
+      return texto[sitio.range.start.line - 1]!.slice(sitio.range.start.column - 1, sitio.range.end.column - 1);
+    };
+    expect(palabra(['model', 'edges', 1, 'planned'])).toBe(' planned');
+    expect(palabra(['model', 'interactions', 0, 'planned'])).toBe(' planned');
+    expect(palabra(['model', 'nodes', 3, 'attributes', 1, 'planned'])).toBe(' planned');
+  });
 });

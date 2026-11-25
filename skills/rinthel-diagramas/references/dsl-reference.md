@@ -73,6 +73,8 @@ model {
 - An Edge is drawn planned if it carries the mark or if either end (Node or Attribute) is planned; a merged Edge only if all it merges are.
 - A Message is drawn planned if its Interaction or one of its Lifelines is planned.
 - A real Node (with a Source `path`) under a planned Group is the error `real-node-in-planned-group`; its `fix` removes the Group's mark. The other way out is to move the Node out of the Group.
+- A Node marked `planned` that also has a Source `path` already exists in the code: the warning `planned-with-path` (its `fix` removes the mark). Either the mark is stale, or the path points at something that is not built yet.
+- `dg inspect planned --workspace <path> [--json]` lists what is planned (no argument): Nodes (with their Source `spec` refs; `inherited` when the mark comes from a Group), Attributes with their own mark, Edges (also planned through an end) and Interactions, each with `file:line`. Use it before reconciling with a Scan (`dg scan` coverage already ignores planned Nodes and Attributes).
 - A Node named `planned` cannot open the declaration right after a Node, Edge or Attribute (it would read as its mark).
 
 ## Interactions

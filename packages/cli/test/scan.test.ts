@@ -204,6 +204,25 @@ describe('scan', () => {
     );
   });
 
+  it('coverage ignores planned Nodes and planned Attributes', async () => {
+    const root = repo('scan-coverage');
+    const model = join(root, 'diagrams/model.dg');
+    writeFileSync(
+      model,
+      readFileSync(model, 'utf8')
+        .replace('app legacy "Legacy API" {', 'app legacy "Legacy API" planned {')
+        .replace('nickname: text', 'nickname: text planned'),
+    );
+
+    const { exitCode, stdout } = await run(['scan', root, '--json']);
+
+    expect(exitCode).toBe(0);
+    expect(JSON.parse(stdout).coverage).toMatchObject({
+      orphanRefs: [],
+      columns: [{ node: 'users', table: 'User', missing: ['email'], extra: [] }],
+    });
+  });
+
   it('--workspace chooses the Workspace; one that does not compile only adds a coverage note', async () => {
     const root = repo('scan-coverage');
     const broken = mkdtempSync(join(tmpdir(), 'scan-ws-'));
