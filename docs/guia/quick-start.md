@@ -4,7 +4,7 @@
 
 ## Requisitos
 
-- Node 20 o superior.
+- Node 24.11 o superior.
 - pnpm.
 - Para `pnpm test` y para regenerar las capturas de la documentacion: Chromium, desde la cache de Playwright (`pnpm exec playwright install chromium`) o con `CHROMIUM_PATH`.
 
