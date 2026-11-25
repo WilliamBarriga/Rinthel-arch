@@ -146,7 +146,7 @@ Lineas cortas escritas con un solo `write` en modo append; el lector descarta la
 
 ### Retencion
 
-Al pasar 1 MB, quien escribe rota a `actividad.1.jsonl` (una sola generacion anterior). El lector tolera que el archivo se acorte.
+Al pasar 1 MB, quien escribe rota a `activity.1.jsonl` (una sola generacion anterior). El lector tolera que el archivo se acorte.
 
 ### En `dev` y la UI
 
@@ -159,3 +159,8 @@ Seguir al agente (interruptor): `target.view` lleva a esa Vista; `target.node` s
 ## Enmienda: Intencion `set-theme` y motivo `unknown-theme` (#176, mapa #168)
 
 `diagrams edit --intent` acepta la Intencion `set-theme` `{ vista, tema? }` (ADR 0007). El enum `reason` de `edit --json` suma `unknown-theme` (salida 1; 422 en `dev`), paralelo a `unknown-view`. El resto de la salida de `edit` no cambia.
+
+## Amendment: English public contract (spec #226)
+
+- **JSON keys and values in English (#228), one breaking change without aliases**: `validate` 2, `inspect` 2, `edit` 2 and the activity log 2. `inspect`: `comando`/`consulta`/`resultados` are `command`/`query`/`results`, and the node, view, interaction and theme payloads use English keys (`node`, `edges`, `views`, `theme`, `layers`...). `edit` Intents use `type`, `view`, `node`, `order`, `theme`; rejections carry `reason`, `message` and `suggestions`. Activity events carry `agent`, `command`, `durationMs`, `target { view, node, theme, files }` and `summary { errors, warnings }`. New codes and reasons are kebab-case English with no `E_`/`W_` prefix. The env vars are `DIAGRAMS_AGENT` and `DIAGRAMS_ACTIVITY` and the log is `.diagrams/activity.jsonl` (rotated to `activity.1.jsonl`).
+- **Additive, no version bump (review of #226)**: `inspect search` also matches Node and Interaction descriptions (description-only matches sort last). An `edit --edits` entry may carry `rename` (the `fix` of `old-workspace-convention`): the file or folder is renamed in the same all-or-nothing batch as the text edits, its new path is listed in `files`, and an impossible rename rejects the batch with the new reason `invalid-rename`. The warning `unknown-source-kind` is a new code. `scan --json` (contract `SCAN_CONTRACT_VERSION`) has its Zod schema `scanSummarySchema` in `canonico`; draft relations gained `source`.

@@ -145,13 +145,13 @@ describe('Registro de actividad', () => {
     expect(await run(['validate', '--workspace', raiz, '--json'], activo)).toEqual(esperado);
   });
 
-  it('al pasar 1 MB rota a actividad.1.jsonl', async () => {
+  it('al pasar 1 MB rota a activity.1.jsonl', async () => {
     const raiz = workspace();
     mkdirSync(join(raiz, '.diagrams'));
     const viejo = `${'x'.repeat(1024 * 1024)}\n`;
     writeFileSync(registro(raiz), viejo);
     await run(['validate', '--workspace', raiz], activo);
-    expect(readFileSync(join(raiz, '.diagrams', 'actividad.1.jsonl'), 'utf8')).toBe(viejo);
+    expect(readFileSync(join(raiz, '.diagrams', 'activity.1.jsonl'), 'utf8')).toBe(viejo);
     expect(eventos(raiz).map((e) => e.command)).toEqual(['validate']);
   });
 
