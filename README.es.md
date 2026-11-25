@@ -10,8 +10,7 @@ Un modelo en texto, muchas vistas (arquitectura, flujo, secuencia, ER), con Tema
 
 [Read in English](README.md) | **[Demo en vivo](https://williambarriga.github.io/Rinthel-arch/)**
 
-<!-- Espacio del GIF (#250): un agente importa un codebase con `scan` y el diagrama aparece en la UI de dev con los cambios resaltados. Reemplazar esta imagen fija por el GIF. -->
-![La UI de dev mostrando el diagrama de este mismo repo](docs/img/estudio/vista-y-detalle.png)
+![Un agente escanea este repo, escribe su diagrama y lo refresca cuando cambia el codigo; la UI de dev resalta lo nuevo](docs/img/estudio/agente-importa.gif)
 
 ## Inicio rapido
 
@@ -63,13 +62,9 @@ Abre `http://127.0.0.1:4173/` y escribe archivos `.dg` en esa carpeta (el [vista
 
 ## Temas
 
-<!-- Espacio del mosaico de Temas (#250): reemplazar por el mosaico del mismo diagrama en varios Temas. -->
 El mismo diagrama de este repo, cambiando solo el Tema:
 
-| | | |
-| --- | --- | --- |
-| ![Tema soft-card](docs/img/temas/soft-card.png)<br>`soft-card` | ![Tema blueprint](docs/img/temas/blueprint.png)<br>`blueprint` | ![Tema synthwave](docs/img/temas/synthwave.png)<br>`synthwave` |
-| ![Tema sticky-notes](docs/img/temas/sticky-notes.png)<br>`sticky-notes` | ![Tema pcb](docs/img/temas/pcb.png)<br>`pcb` | ![Tema editorial](docs/img/temas/editorial.png)<br>`editorial` |
+[![El mismo diagrama en nueve Temas, cada uno con su nombre bajo la imagen](docs/img/mosaico-de-temas.png)](docs/gallery.md)
 
 Todos estan en la [galeria](docs/gallery.md); para hacer el tuyo, mira [Personalizar con Temas](docs/guia/themes.md).
 

@@ -10,8 +10,7 @@ One text model, many views (architecture, flow, sequence, ER), with themes and s
 
 [Leer en espanol](README.es.md) | **[Live demo](https://williambarriga.github.io/Rinthel-arch/)**
 
-<!-- GIF slot (#250): an agent imports a codebase with `scan` and the diagram appears in the Dev UI with the changes highlighted. Replace this still image with the GIF. -->
-![The Dev UI showing this repo's own diagram](docs/img/estudio/vista-y-detalle.png)
+![An agent scans this repo, writes its diagram and refreshes it after the code changes; the Dev UI highlights what is new](docs/img/estudio/agente-importa.gif)
 
 ## Quick start
 
@@ -63,13 +62,9 @@ Open `http://127.0.0.1:4173/` and write `.dg` files in that folder (the [DSL gla
 
 ## Themes
 
-<!-- Themes mosaic slot (#250): replace with the mosaic of the same diagram in several Themes. -->
 The same diagram of this repo, changing only the Theme:
 
-| | | |
-| --- | --- | --- |
-| ![soft-card Theme](docs/img/temas/soft-card.png)<br>`soft-card` | ![blueprint Theme](docs/img/temas/blueprint.png)<br>`blueprint` | ![synthwave Theme](docs/img/temas/synthwave.png)<br>`synthwave` |
-| ![sticky-notes Theme](docs/img/temas/sticky-notes.png)<br>`sticky-notes` | ![pcb Theme](docs/img/temas/pcb.png)<br>`pcb` | ![editorial Theme](docs/img/temas/editorial.png)<br>`editorial` |
+[![The same diagram in nine Themes, each one named under its image](docs/img/mosaico-de-temas.png)](docs/gallery.md)
 
 All of them in the [gallery](docs/gallery.md); to make your own, see [Customizing with Themes](docs/guide/themes.md).
 
