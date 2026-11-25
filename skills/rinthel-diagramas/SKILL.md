@@ -1,6 +1,6 @@
 ---
 name: rinthel-diagramas
-description: Write, validate and serve .dg diagrams (Nodes, Edges, Views, Steps; Diagram types architecture, flow, sequence and er) with the rinthel-arch `diagrams` CLI. Use when creating or editing a Workspace, writing an Interaction or an ER table, fixing validate issues, reordering Lifelines, showing a diagram to the user, turning an existing codebase into a Workspace or refreshing that Workspace after the code changed.
+description: Write, validate and serve .dg diagrams (Nodes, Edges, Views, Steps; Diagram types architecture, flow, sequence and er) with the rinthel-arch `diagrams` CLI. Use when creating or editing a Workspace, writing an Interaction or an ER table, fixing validate issues, reordering Lifelines, showing a diagram to the user, turning an existing codebase into a Workspace, refreshing that Workspace after the code changed, drawing a Blueprint from a PRD or spec, or reconciling planned elements with the code.
 compatibility: Requires Node 22 or newer and the `diagrams` CLI (npm package rinthel-arch). Use `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams`. Serving the viewer needs a free local port; images need a headless browser.
 ---
 
@@ -159,6 +159,36 @@ Run it only when the user asks. No hook or watcher refreshes a Workspace on its 
 7. **Validate**, then scan once more.
 
 Completion: the second `scan` reports no orphan refs and no uncovered items that you did not decide to ignore, `validate` is `ok`, and your report lists the Nodes you added, re-pointed and removed. Decision table: `references/scan-import.md`.
+
+## Plan from a spec
+
+Turn a PRD, spec or description of something that does not exist yet into a **Blueprint**: a Workspace whose proposed elements carry the Model mark `planned`. Often the system already exists (a new feature in a repo with a Workspace): then add the proposal to that Workspace and keep real and planned together in the same View. Details, the default Views and an example: `references/plan-from-spec.md`.
+
+1. **Read the spec** whole. List the parts, the key journeys (one user goal each) and any data model it states.
+2. **Declare kinds** in `specification`: reuse the Workspace's kinds, or the starting catalog in `references/scan-import.md`.
+3. **Draw the proposal**: Nodes (Groups for subsystems), Edges, and Attributes when the spec has tables. Mark every proposed Node, Edge, Attribute and Interaction `planned`; a planned Group marks its descendants, and an Edge or Message touching a planned thing is drawn planned, so mark the root and the Edges that stand alone. Never mark what already exists.
+4. **Cite the spec**: when the spec is a file, each Node written from it carries `source { spec "<file>#<section>" }`. Interactions, Edges and Attributes take no `source`: start their `description` with `Spec: <file>#<section>` (an Attribute inherits its table's Node ref). Write no `path` ref on a planned Node, because that says it exists.
+5. **Record doubt in the element**: put each guess in the `description` of the element it affects as `Assumption: <what you assumed>`, and each thing the spec leaves undecided (including anything the spec retires) as `Open question: <the question>`. `grep -rn "Open question:" <workspace>` lists them (`inspect search` matches ids and titles only).
+6. **Views by default**: one `architecture` View, one `sequence` View per key journey (an `interaction` plus a View that projects it), an `er` View when the spec has a data model. A `flow` View only when the user asks. Keep about 30 visible Nodes per View; collapse Groups and link per-Group Views as in "Import from code".
+7. **Validate** as in the Loop (`--strict`), then serve with `dev`.
+8. **Ask after showing**: hand over the `dev` URL first, then ask the user at most about 5 questions, only the ones whose answer changes the shape of the diagram (pick them from your `Open question:` list). Apply the answers and validate again.
+
+Completion: `validate` is `ok` with no warnings, every part, journey and table the spec names is drawn or listed as an `Open question:`, and the user has the URL.
+
+## Reconcile a Blueprint with the code
+
+Run it when the user says the system is built (or partly built), never on your own.
+
+1. **List the plan**: `dg inspect planned --workspace <path> --json` gives each planned Node with its `spec` refs, plus planned Attributes, Edges and Interactions.
+2. **Scan**: `dg scan <root> --json`, then read the draft (`references/scan-import.md`). The draft is the only evidence of what is built.
+3. **Match each planned Node and table** to a unit, external or table of the draft by what it does, never by its title alone. Matching is your decision, not the tool's.
+4. **Found**: add the Source `path` ref with the draft id, and remove `planned` from that Node (and from its Attributes when the table exists). Keep its title, description and Edges; drop an `Assumption:` the code confirmed and keep one it did not. An Edge was drawn planned through this Node: when the draft has no such dependency, mark that Edge `planned` itself before the Node loses its mark.
+5. **Not found**: keep it `planned` and put it in your report.
+6. **Clean up**: `validate` warns `planned-with-path` on a Node that has both marks and gives a `fix` that removes `planned`; apply it only after you checked the path is the real thing. The error `real-node-in-planned-group` means a real Node sits under a planned Group: apply its `fix` (remove the Group's mark) once the Group's children are built, otherwise move the real Node out.
+7. **Cover the rest**: units of the draft that no Node cites are new work outside the plan; add them as in "Refresh from code" or leave them out on purpose. `scan` coverage never counts planned Nodes as missing.
+8. **Validate**, scan once more, and report.
+
+Report to the user in three lists: **built** (planned elements now cited by a path), **not built yet or diverges from the plan** (still planned; for each, say whether the draft has something close and what differs), and **built but not planned** (uncovered units you added or ignored). Completion: `inspect planned` lists exactly the elements in the second list.
 
 ## Serve and show
 
