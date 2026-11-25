@@ -1,7 +1,7 @@
 /**
  * `<Estudio>`: la app de `dev`. Solo ensambla: el cliente (con `fetch` y `eventos` inyectados; en pruebas, los de
  * `devEnMemoria`), el estado por SSE, las Geometrias y los Componentes de Tema, y encima los proveedores del estudio
- * (`marco/proveedores.tsx`), que envuelven al marco y al lienzo. La Vista vive en el hash (`#vista=<id>`). Sin Fuente
+ * (`marco/proveedores.tsx`), que envuelven al marco y al lienzo. La Vista vive en el hash (`#view=<id>`). Sin Fuente
  * (el Workspace nunca compilo) el lienzo queda vacio y los paneles lo dicen.
  */
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
@@ -39,7 +39,7 @@ type TransporteDelEstudio =
 export type PropsDelEstudio = TransporteDelEstudio & PropsComunes;
 
 interface PropsComunes {
-  /** Hash del navegador tal cual (`hashDelNavegador(window)`); el estudio lo traduce a `#vista=<id>`. */
+  /** Hash del navegador tal cual (`hashDelNavegador(window)`); el estudio lo traduce a `#view=<id>`. */
   hash: AdaptadorDeHash;
   /** Layout cuando la Geometria del servidor no llega (el Worker en el navegador). */
   layout: AdaptadorDeLayout;

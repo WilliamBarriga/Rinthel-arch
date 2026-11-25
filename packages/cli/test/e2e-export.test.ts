@@ -68,7 +68,7 @@ async function abrir(url: string, { sinWorker = false } = {}): Promise<{ pagina:
   });
   pagina.on('pageerror', (e) => errores.push(e.message));
   if (sinWorker) await pagina.addInitScript(() => Object.defineProperty(window, 'Worker', { value: undefined }));
-  await pagina.goto(`${url}#vista=context`);
+  await pagina.goto(`${url}#view=context`);
   return { pagina, ajenas, errores };
 }
 

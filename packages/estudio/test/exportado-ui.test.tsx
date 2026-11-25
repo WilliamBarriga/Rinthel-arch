@@ -47,7 +47,7 @@ const fondoDelLienzo = (contenedor: HTMLElement, vista: string): string => conte
 
 describe('export mode', () => {
   it('hides the writing panels and keeps only Views and Themes, marked as read-only', async () => {
-    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
 
     expect(within(screen.getByRole('tablist', { name: 'Left panel' })).getAllByRole('tab').map((t) => t.textContent)).toEqual(['Views']);
@@ -57,7 +57,7 @@ describe('export mode', () => {
   });
 
   it('the Finder and the shortcuts list no writing commands', async () => {
-    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
 
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true });
@@ -68,12 +68,12 @@ describe('export mode', () => {
   });
 
   it('navigates between Views from the index and by Drill-down', async () => {
-    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
 
     fireEvent.click(screen.getByRole('option', { name: 'detalle' }));
     await lienzoListo(contenedor, 'detalle');
-    expect(window.location.hash).toBe('#vista=detalle');
+    expect(window.location.hash).toBe('#view=detalle');
 
     fireEvent.click(screen.getByRole('option', { name: 'mapa' }));
     await lienzoListo(contenedor, 'mapa');
@@ -82,7 +82,7 @@ describe('export mode', () => {
   });
 
   it('Steps advance on the canvas', async () => {
-    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
     const pasos = contenedor.querySelector<HTMLElement>('[data-pasos]')!;
     const texto = (): string => pasos.querySelector('span')?.textContent ?? '';
@@ -95,7 +95,7 @@ describe('export mode', () => {
   });
 
   it('switching Theme previews it with its extends chain, without offering to pin it', async () => {
-    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
     const original = fondoDelLienzo(contenedor, 'mapa');
 
@@ -109,7 +109,7 @@ describe('export mode', () => {
   });
 
   it('selecting a Node keeps the Themes panel (there is no Details panel to open)', async () => {
-    const { contenedor } = await montarExportado({ 'main.dg': DSL.replace('link api -> detalle', '') }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarExportado({ 'main.dg': DSL.replace('link api -> detalle', '') }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
 
     pulsarNodo(contenedor, 'db');

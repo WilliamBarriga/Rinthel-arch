@@ -65,7 +65,7 @@ Detalle de cada uno en la [guia del CLI](cli.md), o `dg <comando> --help`. Todos
 | `dg edit` | Escribe sobre el `.dg`: fija un Pin (`--view <id> --node <id> --x N --y N`) o aplica una Intencion (`--intent '<json>'`, p. ej. `reorder-lifelines` en secuencia) o ediciones estructuradas (`--edits '<json>'`, por ejemplo los `fix` de `validate`). Es lo que usa el visor al arrastrar un Nodo |
 | `dg skill` | Imprime una skill (Markdown) para que un agente escriba y corrija `.dg` con el bucle inspect, editar, validate |
 
-En la UI, la Vista se elige en el panel Vistas o con el hash de la URL (`#vista=<id>`), y los enlaces de drill-down y las migas navegan entre Vistas. Arrastrar un Nodo fija su Pin y reescribe el archivo `.dg`.
+En la UI, la Vista se elige en el panel Vistas o con el hash de la URL (`#view=<id>`), y los enlaces de drill-down y las migas navegan entre Vistas. Arrastrar un Nodo fija su Pin y reescribe el archivo `.dg`.
 
 ## Recorrer los ejemplos
 
@@ -97,7 +97,7 @@ view order-flow { type sequence  interaction place-order }
 view order-tables { type er  include orders }
 ```
 
-`dg dev` abre la Vista de secuencia con `#vista=order-flow`. Mas en el [paso 6 del tutorial](tutorial.md#paso-6-opcional-secuencia-y-er).
+`dg dev` abre la Vista de secuencia con `#view=order-flow`. Mas en el [paso 6 del tutorial](tutorial.md#paso-6-opcional-secuencia-y-er).
 
 ## Siguiente
 

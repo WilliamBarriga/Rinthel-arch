@@ -78,7 +78,7 @@ describe('feed del agente', () => {
     fireEvent.click(await within(feed()).findByRole('button', { name: 'otra' }));
 
     await lienzoListo(contenedor, 'otra');
-    expect(window.location.hash).toBe('#vista=otra');
+    expect(window.location.hash).toBe('#view=otra');
   });
 });
 
@@ -93,7 +93,7 @@ describe('ultima linea del agente', () => {
 
     await waitFor(() => expect(ultimaLinea().getAttribute('aria-label')).toBe('Agent last line: claude edit db, 2 unseen'));
     expect(ultimaLinea().textContent).toContain('2');
-    expect(window.location.hash).not.toContain('vista=otra');
+    expect(window.location.hash).not.toContain('view=otra');
 
     fireEvent.click(ultimaLinea());
     expect(screen.getByRole('tab', { name: 'Agent' }).getAttribute('aria-selected')).toBe('true');
@@ -108,16 +108,16 @@ describe('seguir al agente', () => {
     fireEvent.click(interruptor());
     expect(interruptor().getAttribute('aria-checked')).toBe('true');
     // Los previos no mueven.
-    expect(window.location.hash).not.toContain('vista=detalle');
+    expect(window.location.hash).not.toContain('view=detalle');
     const derecha = screen.getByRole('tablist', { name: 'Right panel' });
     const activaDerecha = () => within(derecha).getAllByRole('tab').find((t) => t.getAttribute('aria-selected') === 'true')?.textContent;
     expect(activaDerecha()).toBe('Details');
 
     act(() => dev.anexarActividad(lineas(evento(2, { target: { view: 'otra' } }))));
-    await waitFor(() => expect(window.location.hash).toBe('#vista=otra'));
+    await waitFor(() => expect(window.location.hash).toBe('#view=otra'));
 
     act(() => dev.anexarActividad(lineas(evento(3, { target: { node: 'db' } }))));
-    await waitFor(() => expect(window.location.hash).toBe('#vista=otra&s=db'));
+    await waitFor(() => expect(window.location.hash).toBe('#view=otra&s=db'));
 
     act(() => dev.anexarActividad(lineas(evento(4, { target: { node: 'api' } }))));
     // `mapa` es la Vista por defecto: el hash la omite.
@@ -140,7 +140,7 @@ describe('seguir al agente', () => {
     act(() => dev.anexarActividad(lineas(evento(2, { target: { node: 'cache' } }))));
     act(() => dev.editarFuera('main.dg', DSL.replace('include db', 'include db, cache').replace('servicio db "Base de datos"', 'servicio db "Base de datos"\n  servicio cache "Cache"').replace('include **', 'include api, db')));
 
-    await waitFor(() => expect(window.location.hash).toBe('#vista=otra&s=cache'));
+    await waitFor(() => expect(window.location.hash).toBe('#view=otra&s=cache'));
   });
 
   it('el Buscador lo activa y lo desactiva con "Follow the agent: on" y "Follow the agent: off"', async () => {

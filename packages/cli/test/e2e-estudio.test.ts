@@ -95,7 +95,7 @@ describe('e2e: la UI de dev en Chromium', () => {
     // 2. Abrir una Vista.
     await indice.getByRole('option', { name: 'datos' }).click();
     await lienzo.getByRole('group', { name: /^Pedidos, tabla/ }).waitFor();
-    await expect.poll(() => pagina.url(), ESPERA).toContain('#vista=datos');
+    await expect.poll(() => pagina.url(), ESPERA).toContain('#view=datos');
 
     // 3. Escribir en el editor: se guarda en disco y el lienzo se actualiza.
     await izquierdo.getByRole('tab', { name: 'Code' }).click();

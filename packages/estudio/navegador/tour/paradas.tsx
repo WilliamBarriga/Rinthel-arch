@@ -1,8 +1,8 @@
 /**
  * The fixed script of the "Start here" tour. Each stop uses the open Workspace's data (read once, when the tour
  * opens, so moving between Views during the tour does not rewrite the next stops) and falls back to generic text.
- * Stops: canvas, Views, Drill-down (skipped without a `link`), Steps, Themes, then Code and Agent in `dev` or
- * "In your repo" in the export.
+ * Stops: canvas, Views, Drill-down (skipped without a `link`), Steps, Themes, then Code and Agent in `dev` (`soloEnDev`) or
+ * "In your repo" in the export (`soloEnExport`), filtered with `disponiblesEn`.
  */
 import type { ReactElement, ReactNode } from 'react';
 
@@ -10,9 +10,10 @@ import type { FuenteCanonica, Nodo, Vista } from 'canonico';
 
 import { abrirCodigoEnBloque } from '../comandos/registro';
 import type { ContextoDelEstudio } from '../marco/contexto';
-import type { ModoDelEstudio } from '../marco/modo';
+import { disponiblesEn, puedeEscribirEn } from '../marco/modo';
+import type { ConModo, ModoDelEstudio } from '../marco/modo';
 
-export interface ParadaDelTour {
+export interface ParadaDelTour extends ConModo {
   titulo: string;
   texto: ReactNode;
   /** Selector of the real area the stop highlights; without it the card goes to the center. */
@@ -47,12 +48,13 @@ function vistasPorTipo(vistas: readonly Vista[]): string {
 const preferida = (vistas: readonly Vista[], tipo: string): Vista | undefined => vistas.find((v) => v.type === tipo) ?? vistas[0];
 
 /** The script for the Workspace `fuente` (`undefined` if it never compiled), its active View and the mode. */
-export function paradasDelTour(fuente: FuenteCanonica | undefined, vistaActiva: string | undefined, modo: ModoDelEstudio): ParadaDelTour[] {
+export function paradasDelTour(fuente: FuenteCanonica | undefined, vistaActiva: string | undefined, modo: ModoDelEstudio): readonly ParadaDelTour[] {
   const vistas = fuente?.views ?? [];
   const activa = vistas.find((v) => v.id === vistaActiva);
   const conLink = preferida(vistas.filter((v) => v.links.length > 0), 'architecture');
   const link = conLink?.links[0];
   const conPasos = preferida(vistas.filter((v) => v.steps.length > 0), 'flow');
+  const puedeEscribir = puedeEscribirEn(modo);
   const paradas: ParadaDelTour[] = [];
 
   paradas.push({
@@ -90,10 +92,10 @@ export function paradasDelTour(fuente: FuenteCanonica | undefined, vistaActiva: 
       texto: (
         <>
           <Dato>{nodo}</Dato> has its own View: double-click it to open <Dato>{link.view}</Dato>.
-          {modo === 'dev' && ' The Details on the right tell where it lives in the code.'}
+          {puedeEscribir && ' The Details on the right tell where it lives in the code.'}
         </>
       ),
-      zona: modo === 'dev' ? ISLA_DERECHA : ZONA_DEL_LIENZO,
+      zona: puedeEscribir ? ISLA_DERECHA : ZONA_DEL_LIENZO,
       preparar: (e) => {
         e.irAVista(conLink.id);
         e.seleccionar(link.node);
@@ -131,25 +133,23 @@ export function paradasDelTour(fuente: FuenteCanonica | undefined, vistaActiva: 
             <Dato>{activa.id}</Dato> is drawn with <Dato>{activa.theme}</Dato>.{' '}
           </>
         )}
-        {modo === 'dev' ? 'Preview another look without writing anything; Pin saves it in the View.' : 'Try another look: the preview changes nothing.'}
+        {puedeEscribir ? 'Preview another look without writing anything; Pin saves it in the View.' : 'Try another look: the preview changes nothing.'}
       </>
     ),
     zona: ISLA_DERECHA,
     preparar: (e) => e.abrirPestana('derecha', 'temas'),
   });
 
-  if (modo === 'export') {
-    paradas.push({
-      titulo: 'In your repo',
-      texto: (
-        <>
-          Here you can only look. In your repo, your coding agent scans the code, writes the <Dato>.dg</Dato> and you watch it change live: run{' '}
-          <Dato>npx rinthel-arch scan</Dato> and then <Dato>npx rinthel-arch dev</Dato>.
-        </>
-      ),
-    });
-    return paradas;
-  }
+  paradas.push({
+    titulo: 'In your repo',
+    texto: (
+      <>
+        Here you can only look. In your repo, your coding agent scans the code, writes the <Dato>.dg</Dato> and you watch it change live: run{' '}
+        <Dato>npx rinthel-arch scan</Dato> and then <Dato>npx rinthel-arch dev --workspace .</Dato>.
+      </>
+    ),
+    soloEnExport: true,
+  });
 
   paradas.push({
     titulo: 'Code',
@@ -174,6 +174,7 @@ export function paradasDelTour(fuente: FuenteCanonica | undefined, vistaActiva: 
         void abrirCodigoEnBloque(e, 'view', activa.id);
       }
     },
+    soloEnDev: true,
   });
 
   paradas.push({
@@ -181,6 +182,7 @@ export function paradasDelTour(fuente: FuenteCanonica | undefined, vistaActiva: 
     texto: 'When your coding agent runs validate or edit, it shows up here and what changes is highlighted on the canvas. Follow jumps to what it touches.',
     zona: ISLA_DERECHA,
     preparar: (e) => e.abrirPestana('derecha', 'agente'),
+    soloEnDev: true,
   });
-  return paradas;
+  return disponiblesEn(paradas, modo);
 }

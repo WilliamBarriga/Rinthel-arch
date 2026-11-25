@@ -21,7 +21,7 @@ import { ContextoDePrevisualizacion, useEstadoDePrevisualizacion } from '../tema
 import { ContextoDeEstudio, ContextoDelEditor } from './contexto';
 import type { CanalDelEditor, ContextoDelEstudio, DialogoDelEstudio } from './contexto';
 import type { LadoDeIsla } from './limites';
-import { disponiblesEn } from './modo';
+import { disponiblesEn, puedeEscribirEn } from './modo';
 import type { ModoDelEstudio } from './modo';
 import { PESTANAS_DERECHAS, PESTANAS_IZQUIERDAS } from './pestanas';
 import type { PestanaDelPanel } from './pestanas';
@@ -154,6 +154,7 @@ export function ProveedoresDelEstudio({ estado, vigente, recibir, cliente, plata
     plataforma,
     portales,
     modo,
+    puedeEscribir: puedeEscribirEn(modo),
   };
   const canalDelEditor = useMemo<CanalDelEditor>(
     () => ({

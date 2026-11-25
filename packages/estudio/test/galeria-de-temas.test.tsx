@@ -45,7 +45,7 @@ async function abrirGaleria(contenedor: HTMLElement): Promise<HTMLElement> {
 
 describe('galeria de Temas', () => {
   it('lista los Temas de la Fuente (incluidos los de --theme-path) y marca el fijado en la Vista activa', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL.replace('include **', 'include **\n  theme oscuro') }, { hash: '#vista=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL.replace('include **', 'include **\n  theme oscuro') }, { hash: '#view=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
     const galeria = await abrirGaleria(contenedor);
 
     const nombres = within(galeria).getAllByRole('option').map((o) => o.getAttribute('aria-label'));
@@ -54,7 +54,7 @@ describe('galeria de Temas', () => {
   });
 
   it('elegir un Tema muestra su cadena extends, su Paleta y sus Capas y previsualiza la Vista activa sin escribir', async () => {
-    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
+    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
     const galeria = await abrirGaleria(contenedor);
     const fondoOriginal = fondoDelLienzo(contenedor);
 
@@ -74,7 +74,7 @@ describe('galeria de Temas', () => {
   });
 
   it('se recorre con las flechas y Enter elige el Tema, como el indice de Vistas', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa', temas: { 'prestados/prestado.dg': PRESTADO } });
     const galeria = await abrirGaleria(contenedor);
     const nombres = within(galeria).getAllByRole('option').map((o) => o.getAttribute('aria-label') ?? '');
     const activa = (): string | null | undefined => {
@@ -101,7 +101,7 @@ describe('galeria de Temas', () => {
   });
 
   it('fijar escribe theme en la Vista activa y quitar lo borra', async () => {
-    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     const galeria = await abrirGaleria(contenedor);
 
     fireEvent.click(within(galeria).getByRole('option', { name: 'oscuro' }));

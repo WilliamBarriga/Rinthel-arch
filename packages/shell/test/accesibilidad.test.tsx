@@ -48,7 +48,7 @@ describe('alto contraste en el visor', () => {
     const { layout } = layoutContador();
     const { container, getByRole } = montar(layout, TEMA_NEUTRO);
     await waitFor(() => expect(container.querySelector('[data-id="x"]')).not.toBeNull());
-    const boton = getByRole('button', { name: /alto contraste/i });
+    const boton = getByRole('button', { name: /high contrast/i });
     expect(boton.getAttribute('aria-pressed')).toBe('false');
 
     fireEvent.click(boton);
@@ -67,17 +67,17 @@ describe('alto contraste en el visor', () => {
 
     expect(fondo(container)).toBe('#000000');
     expect(temas).toHaveLength(1);
-    expect(getByRole('button', { name: /alto contraste/i }).getAttribute('aria-pressed')).toBe('true');
+    expect(getByRole('button', { name: /high contrast/i }).getAttribute('aria-pressed')).toBe('true');
   });
 
   it('el estado controlado manda y avisa del cambio', async () => {
     const { layout } = layoutContador();
     const alCambiar = vi.fn();
     const { getByRole } = montar(layout, TEMA_NEUTRO, { highContrast: false, onHighContrastChange: alCambiar });
-    fireEvent.click(getByRole('button', { name: /alto contraste/i }));
+    fireEvent.click(getByRole('button', { name: /high contrast/i }));
 
     expect(alCambiar).toHaveBeenCalledWith(true);
-    expect(getByRole('button', { name: /alto contraste/i }).getAttribute('aria-pressed')).toBe('false');
+    expect(getByRole('button', { name: /high contrast/i }).getAttribute('aria-pressed')).toBe('false');
   });
 });
 
@@ -93,6 +93,7 @@ describe('leyenda derivada del Tema', () => {
     expect(leyenda!.textContent).toContain('base');
     expect(leyenda!.textContent).toContain('rect');
     expect(leyenda!.innerHTML).toContain('#cc0000');
+    expect(leyenda!.getAttribute('aria-label')).toBe('Legend');
   });
 
   it('no aparece si los Tipos se distinguen por mas que el color, salvo que se pida siempre', async () => {
@@ -135,16 +136,16 @@ describe('interruptor manual de reduced-motion', () => {
     const { container, getByRole } = montar();
     await waitFor(() => expect(container.querySelector('svg')).not.toBeNull());
     expect(marca(container)).toBeUndefined();
-    expect(getByRole('button', { name: 'Reducir movimiento' }).getAttribute('aria-pressed')).toBe('false');
+    expect(getByRole('button', { name: 'Reduce motion' }).getAttribute('aria-pressed')).toBe('false');
   });
 
   it('activarlo fija data-reduced-motion=on y desactivarlo fija off, aunque el sistema no lo pida', async () => {
     const { container, getByRole } = montar();
     await waitFor(() => expect(container.querySelector('svg')).not.toBeNull());
-    fireEvent.click(getByRole('button', { name: 'Reducir movimiento' }));
+    fireEvent.click(getByRole('button', { name: 'Reduce motion' }));
     expect(marca(container)).toBe('on');
-    expect(getByRole('button', { name: 'Reducir movimiento' }).getAttribute('aria-pressed')).toBe('true');
-    fireEvent.click(getByRole('button', { name: 'Reducir movimiento' }));
+    expect(getByRole('button', { name: 'Reduce motion' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(getByRole('button', { name: 'Reduce motion' }));
     expect(marca(container)).toBe('off');
   });
 
@@ -152,8 +153,8 @@ describe('interruptor manual de reduced-motion', () => {
     vi.stubGlobal('matchMedia', (q: string) => ({ matches: q.includes('prefers-reduced-motion'), addEventListener: () => undefined, removeEventListener: () => undefined }));
     const { container, getByRole } = montar();
     await waitFor(() => expect(container.querySelector('svg')).not.toBeNull());
-    expect(getByRole('button', { name: 'Reducir movimiento' }).getAttribute('aria-pressed')).toBe('true');
-    fireEvent.click(getByRole('button', { name: 'Reducir movimiento' }));
+    expect(getByRole('button', { name: 'Reduce motion' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(getByRole('button', { name: 'Reduce motion' }));
     expect(marca(container)).toBe('off');
   });
 });

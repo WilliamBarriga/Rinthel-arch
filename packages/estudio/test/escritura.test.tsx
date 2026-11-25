@@ -36,7 +36,7 @@ function retenerEventos(): { retenidos: { activo: boolean }; envolverEventos: No
 /** Monta con la Vista `mapa` lista; `antes` prepara el Workspace con `dev` antes de retener los eventos. */
 async function montarYEscribirFuera(antes: (dev: DevEnMemoria) => Promise<void> = () => Promise.resolve()) {
   const { retenidos, envolverEventos } = retenerEventos();
-  const montado = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverEventos });
+  const montado = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa', envolverEventos });
   await lienzoListo(montado.contenedor, 'mapa');
   await antes(montado.dev);
   await waitFor(() => expect(montado.dev.workspace.texto('main.dg')).toBeDefined());
@@ -141,7 +141,7 @@ describe('Escritura ante un 409', () => {
 
   it('ordenar las Lifelines recarga la Vista y avisa', async () => {
     const { retenidos, envolverEventos } = retenerEventos();
-    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL_SECUENCIA }, { hash: '#vista=sec', envolverEventos });
+    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL_SECUENCIA }, { hash: '#view=sec', envolverEventos });
     await waitFor(() => expect(contenedor.querySelector('.rd-vista[data-layout="listo"] [data-lifeline="db"]')).not.toBeNull(), { timeout: 15000 });
     retenidos.activo = true;
     dev.editarFuera('main.dg', conCacheEnSecuencia(dev.workspace.texto('main.dg')!));
@@ -169,7 +169,7 @@ describe('Escritura ante un 409', () => {
   // estado nuevo y, si el reintento escribe, no hay aviso porque la accion se cumplio.
   it('aplicar un fix reintenta sobre el estado recargado y escribe sin avisar', async () => {
     const { retenidos, envolverEventos } = retenerEventos();
-    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa', envolverEventos });
+    const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa', envolverEventos });
     await lienzoListo(contenedor, 'mapa');
     dev.editarFuera('main.dg', DSL.replace('  api -> db "lee"\n', '  api -> dbb "lee"\n'));
     await dev.asentado();
