@@ -3,7 +3,7 @@
  * belongs to exactly one unit, the deepest whose folder contains it.
  */
 import type { ScanUnit } from './draft';
-import { byCodeUnit } from './files';
+import { byCodeUnit, groupBy } from './collections';
 import { languageOf } from './languages';
 import { MANIFEST_READERS } from './manifests';
 import type { Manifest } from './manifests';
@@ -61,7 +61,7 @@ export function buildUnits(
     const manifest = manifests.get(id)?.[0];
     return {
       id,
-      name: manifest?.name ?? lastSegment(id, rootName),
+      name: manifest?.name ?? unitName(id, rootName),
       kind: manifest?.kind ?? 'folder',
       parent,
       languages,
@@ -95,17 +95,7 @@ function contains(outer: string, inner: string): boolean {
   return outer === '.' ? inner !== '.' : inner.startsWith(`${outer}/`);
 }
 
-function lastSegment(id: string, rootName: string): string {
+/** A folder unit's name: its folder's name (the root's own for `.`). */
+function unitName(id: string, rootName: string): string {
   return id === '.' ? rootName : id.slice(id.lastIndexOf('/') + 1);
-}
-
-function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<string, T[]> {
-  const groups = new Map<string, T[]>();
-  for (const item of items) {
-    const k = key(item);
-    const group = groups.get(k);
-    if (group === undefined) groups.set(k, [item]);
-    else group.push(item);
-  }
-  return groups;
 }

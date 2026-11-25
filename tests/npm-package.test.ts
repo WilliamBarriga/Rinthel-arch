@@ -1,6 +1,7 @@
 /**
  * Packed-package smoke test: builds the `rinthel-arch` npm package (`npm/`), packs it with `npm pack`, installs the
- * tarball in an empty folder and runs `validate`, `scan` and `dev` from the installed bin on this Node (22+).
+ * tarball in an empty folder and runs `validate`, `scan` (TS and Python), `export` and `dev` from the installed bin on
+ * this Node (22+).
  * Needs `pnpm build` first (`pnpm test` does it) and esbuild in the npm cache or the registry.
  */
 import { execFileSync, spawn } from 'node:child_process';
@@ -121,6 +122,61 @@ describe('the rinthel-arch npm package', () => {
     const summary = JSON.parse(stdout) as { counts: { dependencies: number }; limits: { languagesWithoutImports: unknown[] } };
     expect(summary.counts.dependencies).toBeGreaterThan(0);
     expect(summary.limits.languagesWithoutImports).toEqual([]);
+  });
+
+  it('scan reads Python imports and SQLAlchemy tables with the packaged Python grammar', () => {
+    const repo = writeFiles(join(TMP, 'py'), {
+      'pyproject.toml': '[project]\nname = "svc"\ndependencies = ["sqlalchemy"]\n',
+      'svc/__init__.py': '',
+      'svc/models.py': [
+        'from sqlalchemy import Column, ForeignKey, Integer',
+        'from sqlalchemy.orm import DeclarativeBase',
+        '',
+        'class Base(DeclarativeBase):',
+        '    pass',
+        '',
+        'class User(Base):',
+        '    __tablename__ = "users"',
+        '    id = Column(Integer, primary_key=True)',
+        '',
+        'class Order(Base):',
+        '    __tablename__ = "orders"',
+        '    id = Column(Integer, primary_key=True)',
+        '    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)',
+        '',
+      ].join('\n'),
+      'worker/pyproject.toml': '[project]\nname = "worker"\ndependencies = ["svc"]\n',
+      'worker/main.py': 'import os\nfrom svc.models import User\n',
+    });
+
+    const { stdout, exitCode } = runBin(['scan', repo, '--json']);
+
+    expect(exitCode, stdout).toBe(0);
+    const summary = JSON.parse(stdout) as {
+      counts: { dependencies: number };
+      limits: { languagesWithoutImports: unknown[] };
+      externals: { id: string }[];
+      tables: { id: string; relations: number }[];
+    };
+    expect(summary.limits.languagesWithoutImports).toEqual([]);
+    expect(summary.externals.map(({ id }) => id)).toEqual(['pypi:sqlalchemy']);
+    expect(summary.counts.dependencies).toBe(1);
+    expect(summary.tables).toMatchObject([
+      { id: 'orders', relations: 1 },
+      { id: 'users', relations: 0 },
+    ]);
+  });
+
+  it('export writes one self-contained HTML file', () => {
+    const out = join(TMP, 'export', 'diagrams.html');
+
+    const { stdout, exitCode } = runBin(['export', '--workspace', join(TMP, 'ws'), '--out', out]);
+
+    expect(exitCode, stdout).toBe(0);
+    const html = readFileSync(out, 'utf8');
+    expect(html.startsWith('<!doctype html>') || html.startsWith('<!DOCTYPE html>')).toBe(true);
+    expect(html).not.toMatch(/<script[^>]+src="https?:/);
+    expect(html.length).toBeGreaterThan(100_000);
   });
 
   it('dev serves the Dev UI page and its assets', async () => {

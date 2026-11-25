@@ -9,6 +9,8 @@ import { join } from 'node:path';
 import ignore from 'ignore';
 import type { Ignore } from 'ignore';
 
+import { byCodeUnit } from './collections';
+
 /** Dependencies, build output, virtualenvs, vendored code and tool state; never part of the project's own code. */
 export const EXCLUDED_FOLDERS: ReadonlySet<string> = new Set([
   '.git',
@@ -34,8 +36,6 @@ interface Rules {
   base: string;
   rules: Ignore;
 }
-
-export const byCodeUnit = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
 export function listFiles(root: string, maxFiles: number): FileListing {
   const files: string[] = [];

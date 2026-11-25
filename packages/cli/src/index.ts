@@ -19,7 +19,7 @@ import { comandoDev } from './dev';
 import { comandoExport } from './export';
 import { MAX_ISSUES_POR_DEFECTO, abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
-import { comandoScan } from './scan';
+import { scanCommand } from './scan';
 import { generarSkill } from './skill';
 import { construirSalida, textoLegible } from './validate';
 import { CARPETA_DE_SALIDA, escribirSalida, escribirTexto, leerRutas, leerWorkspace } from './workspace';
@@ -81,7 +81,7 @@ async function despachar(argv: readonly string[], dependencias: Dependencias): P
   if (comando === 'edit') return editar(resto, dependencias);
   if (comando === 'inspect') return inspeccionar(resto, dependencias);
   if (comando === 'dev') return comandoDev(resto);
-  if (comando === 'scan') return comandoScan(resto, dependencias);
+  if (comando === 'scan') return scanCommand(resto, { writeText: dependencias.escribirArchivo });
   if (comando === 'export') return comandoExport(resto);
   if (comando !== 'validate' && comando !== 'build' && comando !== 'skill') {
     return uso(

@@ -6,6 +6,8 @@
  */
 import type { ScanColumn } from '../draft';
 import type { FoundRelation, FoundTable, SchemaFile, TableExtractor } from '.';
+import { relationOf, scanColumn } from './relation';
+import { BRACES, PARENS_AND_BRACKETS, type Token as Shared, closing, split } from './tokens';
 
 export const prisma: TableExtractor = {
   origin: 'prisma',
@@ -13,12 +15,8 @@ export const prisma: TableExtractor = {
   load: () => Promise.resolve(readPrisma),
 };
 
-interface Token {
-  text: string;
-  line: number;
-  /** `string` for `"..."` literals (text without quotes). */
-  kind: 'word' | 'string' | 'punct';
-}
+/** `string` for `"..."` literals (text without quotes). */
+type Token = Shared<'word' | 'string' | 'punct'>;
 
 interface Attribute {
   /** `id`, `unique`, `relation`, `map`, `db.VarChar`... */
@@ -35,6 +33,7 @@ interface Argument {
 
 interface Field {
   name: string;
+  line: number;
   type: string;
   optional: boolean;
   list: boolean;
@@ -95,26 +94,26 @@ function toTable(model: Model, modelNamed: (name: string) => Model | undefined):
       fks.add(key);
       const referenced = references[index];
       if (referenced === undefined) return;
-      relations.push({
-        column: columnName(model, key),
-        target: { table: tableName(target), column: columnName(target, referenced) },
-        cardinality: [unique ? '0..1' : '0..*', field.optional ? '0..1' : '1'],
-        confidence: 'extracted',
-      });
+      relations.push(
+        relationOf(columnName(model, key), { table: tableName(target), column: columnName(target, referenced) }, { unique, optional: field.optional }, { file: model.file, line: field.line }),
+      );
     });
   }
 
   return {
     name: tableName(model),
     origin: 'prisma',
-    columns: scalars.map((field): ScanColumn => {
-      const column: ScanColumn = { name: columnName(model, field.name), type: field.list ? `${field.type}[]` : field.type };
-      if (pks.has(field.name)) column.pk = true;
-      if (fks.has(field.name)) column.fk = true;
-      if (uniques.has(field.name) && !pks.has(field.name)) column.uk = true;
-      if (field.optional) column.optional = true;
-      return column;
-    }),
+    columns: scalars.map(
+      (field): ScanColumn =>
+        scanColumn({
+          name: columnName(model, field.name),
+          type: field.list ? `${field.type}[]` : field.type,
+          pk: pks.has(field.name),
+          unique: uniques.has(field.name),
+          optional: field.optional,
+          fk: fks.has(field.name),
+        }),
+    ),
     relations,
     source: { file: model.file, line: model.line },
     confidence: 'extracted',
@@ -136,23 +135,17 @@ function readModels(file: SchemaFile): Model[] {
   for (let i = 0; i < tokens.length; i++) {
     const open = tokens[i + 2];
     if (tokens[i]?.text !== 'model' || tokens[i + 1]?.kind !== 'word' || open?.text !== '{') continue;
-    let depth = 0;
-    let end = i + 2;
-    for (; end < tokens.length; end++) {
-      const text = (tokens[end] as Token).text;
-      if (text === '{') depth++;
-      else if (text === '}' && --depth === 0) break;
-    }
+    const end = closing(tokens, i + 2, BRACES) ?? tokens.length;
     const model: Model = { name: (tokens[i + 1] as Token).text, file: file.path, line: (tokens[i] as Token).line, fields: [], blockAttributes: [] };
-    for (const statement of statements(tokens.slice(i + 3, end))) readStatement(statement, model);
+    for (const statement of lines(tokens.slice(i + 3, end))) readStatement(statement, model);
     models.push(model);
     i = end;
   }
   return models;
 }
 
-/** Splits a block body into its lines; a line continues while a paren or bracket is open. */
-function statements(tokens: Token[]): Token[][] {
+/** Splits a block body into its lines (Prisma's statements); a line continues while a paren or bracket is open. */
+function lines(tokens: Token[]): Token[][] {
   const result: Token[][] = [];
   let depth = 0;
   let line = -1;
@@ -175,12 +168,12 @@ function readStatement(tokens: Token[], model: Model): void {
   }
   if (first?.kind !== 'word' || second?.kind !== 'word') return;
   let i = 2;
-  if (tokens[i]?.text === '(') i = closing(tokens, i) + 1;
+  if (tokens[i]?.text === '(') i = closingOrLast(tokens, i) + 1;
   const list = tokens[i]?.text === '[' && tokens[i + 1]?.text === ']';
   if (list) i += 2;
   const optional = tokens[i]?.text === '?';
   if (optional) i++;
-  model.fields.push({ name: first.text, type: second.text, optional, list, attributes: attributes(tokens.slice(i)) });
+  model.fields.push({ name: first.text, line: first.line, type: second.text, optional, list, attributes: attributes(tokens.slice(i)) });
 }
 
 /** `@name(args)` and `@group.name(args)` in order; `tokens` starts at an `@`. */
@@ -200,7 +193,7 @@ function attributes(tokens: Token[]): Attribute[] {
     }
     let args: Argument[] = [];
     if (tokens[i]?.text === '(') {
-      const end = closing(tokens, i);
+      const end = closingOrLast(tokens, i);
       args = argumentsOf(tokens.slice(i + 1, end));
       i = end + 1;
     }
@@ -211,41 +204,17 @@ function attributes(tokens: Token[]): Attribute[] {
 
 /** Top-level comma-separated arguments; nested calls (`sort: Desc`, `ids(...)`) only keep their words. */
 function argumentsOf(tokens: Token[]): Argument[] {
-  const result: Argument[] = [];
-  let current: Token[] = [];
-  let depth = 0;
-  const flush = (): void => {
-    if (current.length === 0) return;
+  return split(tokens, PARENS_AND_BRACKETS).map((current): Argument => {
     const keyed = current[1]?.text === ':' && current[0]?.kind === 'word';
     const value = keyed ? current.slice(2) : current;
     const string = value[0]?.kind === 'string' && value.length === 1 ? value[0].text : undefined;
     const words = value.filter((token, index) => token.kind === 'word' && value[index + 1]?.text !== '(' && value[index + 1]?.text !== ':').map(({ text }) => text);
-    result.push({ ...(keyed ? { key: (current[0] as Token).text } : {}), words, ...(string === undefined ? {} : { string }) });
-    current = [];
-  };
-  for (const token of tokens) {
-    if (token.text === ',' && depth === 0) {
-      flush();
-      continue;
-    }
-    if (token.text === '(' || token.text === '[') depth++;
-    else if (token.text === ')' || token.text === ']') depth--;
-    current.push(token);
-  }
-  flush();
-  return result;
+    return { ...(keyed ? { key: (current[0] as Token).text } : {}), words, ...(string === undefined ? {} : { string }) };
+  });
 }
 
-/** Index of the token closing the paren or bracket at `open`, or the last index. */
-function closing(tokens: Token[], open: number): number {
-  let depth = 0;
-  for (let i = open; i < tokens.length; i++) {
-    const text = (tokens[i] as Token).text;
-    if (text === '(' || text === '[') depth++;
-    else if ((text === ')' || text === ']') && --depth === 0) return i;
-  }
-  return tokens.length - 1;
-}
+/** Index of the token closing the paren or bracket at `open`, or the last index (an unclosed list ends the line). */
+const closingOrLast = (tokens: Token[], open: number): number => closing(tokens, open, PARENS_AND_BRACKETS) ?? tokens.length - 1;
 
 function tokenize(text: string): Token[] {
   const tokens: Token[] = [];

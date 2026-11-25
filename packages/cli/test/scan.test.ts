@@ -103,7 +103,7 @@ describe('scan', () => {
     );
     const draft = JSON.parse(readFileSync(join(root, '.rinthel/scan.json'), 'utf8'));
     expect(draft.tables.find(({ id }: { id: string }) => id === 'audit_log').relations).toEqual([
-      { from: 'audit_log#user_id', to: 'User#id', cardinality: ['0..*', '0..1'], confidence: 'extracted' },
+      { from: 'audit_log#user_id', to: 'User#id', cardinality: ['0..*', '0..1'], source: { file: 'db/audit.sql', line: 4 }, confidence: 'extracted' },
     ]);
   });
 
@@ -202,6 +202,20 @@ describe('scan', () => {
         '',
       ].join('\n'),
     );
+  });
+
+  it('with complete coverage the next step does not ask to refresh the Workspace', async () => {
+    const root = repo('scan-coverage');
+    mkdirSync(join(root, '.rinthel'));
+    writeFileSync(join(root, '.rinthel/scan-ignore'), '*\n.\n');
+
+    const { exitCode, stdout } = await run(['scan', root]);
+
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain('cited by a Node. Nothing to refresh.');
+    expect(stdout).not.toContain('refresh the Workspace');
+    expect(stdout.trimEnd().split('\n').at(-1)).toBe('Next: nothing to refresh; scan again after the code changes.');
+    expect(JSON.parse((await run(['scan', root, '--json'])).stdout).next).toBe('Next: nothing to refresh; scan again after the code changes.');
   });
 
   it('coverage ignores planned Nodes and planned Attributes', async () => {

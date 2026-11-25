@@ -4,7 +4,7 @@
  * to ids (`identifyTables`). A new source is one more entry in `TABLE_EXTRACTORS`.
  */
 import type { Confidence, ScanTable, Source } from '../draft';
-import { byCodeUnit } from '../files';
+import { byCodeUnit, groupBy } from '../collections';
 import { django } from './django';
 import { drizzle } from './drizzle';
 import { prisma } from './prisma';
@@ -30,6 +30,8 @@ export interface FoundRelation {
   target: { table: string; column: string };
   /** `[from side, to side]`, for example `["0..*", "1"]`. */
   cardinality: [string, string];
+  /** Where the foreign key is written. */
+  source: Source;
   confidence: Confidence;
 }
 
@@ -50,6 +52,30 @@ export interface TableExtractor {
 }
 
 export const TABLE_EXTRACTORS: readonly TableExtractor[] = [prisma, sql, drizzle, django, sqlalchemy];
+
+/**
+ * Runs each extractor that matches some listed file (in code-unit order) and identifies the tables they find.
+ * `parseable(path)`: the file's text, or `undefined` if it is unreadable or too large; `unitOfFile`: the unit that owns it.
+ */
+export async function readTables(
+  files: readonly string[],
+  parseable: (path: string) => string | undefined,
+  unitOfFile: (path: string) => string,
+): Promise<ScanTable[]> {
+  const context: SchemaContext = { files: new Set(files) };
+  const tables: (FoundTable & { unit: string })[] = [];
+  for (const extractor of TABLE_EXTRACTORS) {
+    const own = files.filter((path) => extractor.matches(path)).sort(byCodeUnit);
+    if (own.length === 0) continue;
+    const read = await extractor.load();
+    const schemas = own.flatMap((path) => {
+      const text = parseable(path);
+      return text === undefined ? [] : [{ path, text }];
+    });
+    tables.push(...read(schemas, context).map((table) => ({ ...table, unit: unitOfFile(table.source.file) })));
+  }
+  return identifyTables(tables);
+}
 
 /**
  * Gives each table its id and points relations at ids. The id is the table name; when several tables share a name
@@ -78,12 +104,13 @@ export function identifyTables(found: readonly (FoundTable & { unit: string })[]
         origin: table.origin,
         unit: table.unit,
         columns: table.columns,
-        relations: table.relations.map(({ column, target, cardinality, confidence }) => {
+        relations: table.relations.map(({ column, target, cardinality, source, confidence }) => {
           const to = targetOf(table, target.table);
           return {
             from: `${id}#${column}`,
             to: `${to === undefined ? target.table : idOf(to)}#${target.column}`,
             cardinality,
+            source,
             confidence: to === undefined ? 'inferred' : confidence,
           };
         }),
@@ -92,12 +119,6 @@ export function identifyTables(found: readonly (FoundTable & { unit: string })[]
       };
     })
     .sort((a, b) => byCodeUnit(a.id, b.id));
-}
-
-function groupBy<T>(items: readonly T[], key: (item: T) => string): Map<string, T[]> {
-  const groups = new Map<string, T[]>();
-  for (const item of items) groups.set(key(item), [...(groups.get(key(item)) ?? []), item]);
-  return groups;
 }
 
 /** Leading folders two files share. */

@@ -28,7 +28,19 @@ export interface Capture {
   line: number;
 }
 
+/** Grammar `.wasm` module paths, resolved from this package. */
+export const TYPESCRIPT_GRAMMAR = 'tree-sitter-typescript/tree-sitter-typescript.wasm';
+/** TSX, which also reads plain JS and JSX. */
+export const TSX_GRAMMAR = 'tree-sitter-typescript/tree-sitter-tsx.wasm';
+export const PYTHON_GRAMMAR = 'tree-sitter-python/tree-sitter-python.wasm';
+
+/** `.ts`, `.mts` and `.cts` (not `.d.ts`) use the TypeScript grammar; `.tsx` and every JS extension use TSX. */
+export const typescriptGrammarFor = (path: string): string =>
+  /\.(?:ts|mts|cts)$/.test(path) && !path.endsWith('.d.ts') ? TYPESCRIPT_GRAMMAR : TSX_GRAMMAR;
+
 let runtime: Promise<void> | undefined;
+const languages = new Map<string, Promise<Language>>();
+const syntaxes = new Map<string, Promise<Syntax>>();
 const grammars = new Map<string, Promise<Grammar>>();
 const requireFrom = createRequire(import.meta.url);
 
@@ -38,67 +50,72 @@ function resolveFile(wasm: string): string {
   return existsSync(bundled) ? bundled : requireFrom.resolve(wasm);
 }
 
+/** Starts the runtime once and loads each grammar once per process. */
+function loadLanguage(wasm: string): Promise<Language> {
+  let language = languages.get(wasm);
+  if (language === undefined) {
+    runtime ??= Parser.init();
+    language = runtime.then(() => Language.load(resolveFile(wasm)));
+    languages.set(wasm, language);
+  }
+  return language;
+}
+
+/** Memoizes `create(key)` in `cache`. */
+function memo<T>(cache: Map<string, Promise<T>>, key: string, create: () => Promise<T>): Promise<T> {
+  let value = cache.get(key);
+  if (value === undefined) {
+    value = create();
+    cache.set(key, value);
+  }
+  return value;
+}
+
 /**
- * `wasm`: module path of the grammar's `.wasm`, resolved from this package (for example
- * `tree-sitter-typescript/tree-sitter-typescript.wasm`). `query`: a tree-sitter query; every capture is returned.
+ * For readers that walk the tree themselves (schema extractors). `wasm`: module path of the grammar's `.wasm`, resolved
+ * from this package (for example `TYPESCRIPT_GRAMMAR`).
  */
-export function loadGrammar(wasm: string, query: string): Promise<Grammar> {
-  const key = `${wasm}\n${query}`;
-  let grammar = grammars.get(key);
-  if (grammar === undefined) {
-    grammar = load(wasm, query);
-    grammars.set(key, grammar);
-  }
-  return grammar;
-}
-
-async function load(wasm: string, source: string): Promise<Grammar> {
-  runtime ??= Parser.init();
-  await runtime;
-  const language = await Language.load(resolveFile(wasm));
-  const parser = new Parser();
-  parser.setLanguage(language);
-  const query = new Query(language, source);
-  return {
-    captures(text) {
-      const tree = parser.parse(text);
-      if (tree === null) return [];
-      try {
-        return query.captures(tree.rootNode).map(({ name, node }) => ({ name, text: node.text, line: node.startPosition.row + 1 }));
-      } finally {
-        tree.delete();
-      }
-    },
-  };
-}
-
-const syntaxes = new Map<string, Promise<Syntax>>();
-
-/** Like `loadGrammar`, but for readers that walk the tree themselves (schema extractors) instead of using a query. */
 export function loadSyntax(wasm: string): Promise<Syntax> {
-  let syntax = syntaxes.get(wasm);
-  if (syntax === undefined) {
-    syntax = loadTree(wasm);
-    syntaxes.set(wasm, syntax);
-  }
-  return syntax;
+  return memo(syntaxes, wasm, async () => {
+    const language = await loadLanguage(wasm); // also starts the runtime, which `new Parser()` needs
+    const parser = new Parser();
+    parser.setLanguage(language);
+    return {
+      parse(text, read) {
+        const tree = parser.parse(text);
+        if (tree === null) return undefined;
+        try {
+          return read(tree.rootNode);
+        } finally {
+          tree.delete();
+        }
+      },
+    };
+  });
 }
 
-async function loadTree(wasm: string): Promise<Syntax> {
-  runtime ??= Parser.init();
-  await runtime;
-  const language = await Language.load(resolveFile(wasm));
-  const parser = new Parser();
-  parser.setLanguage(language);
-  return {
-    parse(text, read) {
-      const tree = parser.parse(text);
-      if (tree === null) return undefined;
-      try {
-        return read(tree.rootNode);
-      } finally {
-        tree.delete();
-      }
-    },
-  };
+/** Like `loadSyntax`, with a tree-sitter `query` whose every capture is returned. */
+export function loadGrammar(wasm: string, query: string): Promise<Grammar> {
+  return memo(grammars, `${wasm}\n${query}`, async () => {
+    const [syntax, language] = await Promise.all([loadSyntax(wasm), loadLanguage(wasm)]);
+    const compiled = new Query(language, query);
+    return {
+      captures: (text) =>
+        syntax.parse(text, (root) =>
+          compiled.captures(root).map(({ name, node }) => ({ name, text: node.text, line: node.startPosition.row + 1 })),
+        ) ?? [],
+    };
+  });
+}
+
+/** Both TypeScript-family grammars, loaded; the result picks a file's (`typescriptGrammarFor`). */
+export async function loadTypescriptSyntax(): Promise<(path: string) => Syntax> {
+  const [ts, tsx] = await Promise.all([loadSyntax(TYPESCRIPT_GRAMMAR), loadSyntax(TSX_GRAMMAR)]);
+  return (path) => (typescriptGrammarFor(path) === TYPESCRIPT_GRAMMAR ? ts : tsx);
+}
+
+/** Like `loadTypescriptSyntax`, with a query. */
+export async function loadTypescriptGrammar(query: string): Promise<(path: string) => Grammar> {
+  const [ts, tsx] = await Promise.all([loadGrammar(TYPESCRIPT_GRAMMAR, query), loadGrammar(TSX_GRAMMAR, query)]);
+  return (path) => (typescriptGrammarFor(path) === TYPESCRIPT_GRAMMAR ? ts : tsx);
 }

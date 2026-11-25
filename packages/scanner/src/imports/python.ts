@@ -6,7 +6,7 @@
  * as the manifests' names are). The standard library and `__future__` are dropped.
  */
 import { normalizePackage } from '../manifests';
-import { loadGrammar } from '../tree-sitter';
+import { PYTHON_GRAMMAR, loadGrammar } from '../tree-sitter';
 import type { FoundImport, ImportContext, ImportExtractor, ImportTarget } from './extractor';
 import { PYTHON_STDLIB } from './python-stdlib';
 
@@ -18,7 +18,7 @@ const QUERY = `
 export const pythonImports: ImportExtractor = {
   languages: ['python'],
   async load() {
-    const grammar = await loadGrammar('tree-sitter-python/tree-sitter-python.wasm', QUERY);
+    const grammar = await loadGrammar(PYTHON_GRAMMAR, QUERY);
     return (path, text, context) =>
       grammar.captures(text).flatMap(({ text: statement, line }): FoundImport[] =>
         parseStatement(statement).flatMap((found) => {

@@ -103,6 +103,8 @@ export { ACTIVIDAD_CONTRACT_VERSION, COMANDOS_CON_ACTIVIDAD, crearLectorDeActivi
 export type { EventoDeActividad, ObjetivoDeActividad } from './actividad';
 
 export { INSPECT_CONTRACT_VERSION, salidaDeInspectJsonSchema, salidaDeInspectSchema } from './inspect';
+export { SCAN_CONTRACT_VERSION, scanChangesSchema, scanCoverageNoticeSchema, scanCoverageSchema, scanSummarySchema } from './scan';
+export type { ScanChanges, ScanCoverage, ScanCoverageNotice, ScanSummary } from './scan';
 export type { SalidaDeInspect } from './inspect';
 
 export { MOTIVOS_DE_RECHAZO, intencionDeOrdenSchema, intencionDePinSchema, intencionDeTemaSchema, intencionSchema } from './pin';
