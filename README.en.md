@@ -14,6 +14,19 @@ A React + TypeScript system for writing and rendering large, detailed diagrams o
 
 ## Getting started
 
+Quick start, install the skills in your coding agent (one `skills/` tree serves all four):
+
+```
+claude plugin install rinthel-arch --marketplace WilliamBarriga/Rinthel-arch
+codex plugin marketplace add WilliamBarriga/Rinthel-arch
+npx skills add WilliamBarriga/Rinthel-arch -a opencode -g
+pi install npm:rinthel-arch
+```
+
+Codex then installs the plugin from its Plugins directory. The skills run the CLI with `npx -y -p rinthel-arch@<version> diagrams` when it is not installed. Details per agent in the [quick start guide](docs/guia/inicio-rapido.md).
+
+From a clone:
+
 Requires Node 20+ and pnpm. Not published on npm yet: use it from a clone.
 
 ```

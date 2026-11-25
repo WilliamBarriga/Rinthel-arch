@@ -1,6 +1,6 @@
 ---
 name: rinthel-diagramas
-description: Write, validate and serve .dg diagrams (Nodes, Edges, Views, Steps; Diagram types architecture, flow, sequence and er) with the rinthel-arch `diagrams` CLI. Use when creating or editing a Workspace, writing an Interaction or an ER table, fixing validate issues, reordering Lifelines or showing a diagram to the user.
+description: Write, validate and serve .dg diagrams (Nodes, Edges, Views, Steps; Diagram types architecture, flow, sequence and er) with the rinthel-arch `diagrams` CLI. Use when creating or editing a Workspace, writing an Interaction or an ER table, fixing validate issues, reordering Lifelines, showing a diagram to the user, turning an existing codebase into a Workspace or refreshing that Workspace after the code changed.
 compatibility: Requires Node 22 or newer and the `diagrams` CLI (npm package rinthel-arch). Use `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams`. Serving the viewer needs a free local port; images need a headless browser.
 ---
 
@@ -129,6 +129,35 @@ view tables { type er include ** }
 - Attribute `name: type[?] [pk] [fk] [uk] ["notes"]`; `?` makes it optional. Trailing `identifying` on an Edge: solid line, the rest dashed.
 - Endpoints `node#attribute`; cardinalities `0..1`, `1`, `0..*`, `1..*`.
 - A collapsed Group aggregates the FKs of its tables (no markers).
+
+## Import from code
+
+Turn a codebase into a Workspace in two halves: `scan` extracts the mechanical facts into a **Scan draft**; you decide what is worth drawing and write the `.dg`. `scan` never writes `.dg` and never runs the project's code.
+
+1. **Scan**: `dg scan <root> --json` writes `<root>/.rinthel/scan.json` (not versioned) and prints counts. Read the draft for the detail; fields and the starting Node kind catalog are in `references/scan-import.md`. Check `limits` first: `truncated` or languages without imports mean a partial picture, say so to the user.
+2. **Declare kinds** in `specification` from the catalog in the reference; add only what the draft needs.
+3. **Nodes and Groups**: one Node per unit worth showing, with `source { path "<unit id>" }` (the unit id exactly as in the draft; this ref is how a refresh finds the Node again). Nest a Node inside the Node of its `parent` unit, so the folder tree becomes Groups. Skip units that carry no meaning to the reader (an empty root, a folder of fixtures); skipped units stay out of the Model. A Node may cite several units to merge them.
+4. **Edges**: draw a `dependencies` item as an Edge when its `weight` makes it meaningful, heaviest first, and leave out the weight-1 imports that add noise. Between Groups, keep one Edge on the Group rather than one per child. Label an Edge with what it means ("calls", "reads") when the code makes it clear, otherwise "uses".
+5. **Externals**: add an `external` Node only for the few that shape the system (database driver, queue, payment API); leave the long tail out. Cite `source { path "<external id>" }` like units.
+6. **Tables**: for each `tables` item write a `table` Node citing `source { path "<table id>" }` (the table id, not the schema file), its `columns` as Attributes (`name: type[?] [pk] [fk] [uk]`) and each `relations` item as an Edge between `node#column` endpoints with its `cardinality`. Add a `type er` View over them. See "ER".
+7. **Views**: a **context View** first (`type architecture`, top-level Groups `collapsed`), then a **per-Group View** for each Group worth opening, reached from the context View with `link <group> -> <view>` (Drill-down). Keep about 30 visible Nodes per View: past that, collapse a Group, split the View or leave minor Nodes out.
+8. **Validate** with `dg validate --workspace <path> --json`, as in the Loop, and show the result with `dev`. The Workspace goes in a folder of its own under the root (for example `diagrams/`), versioned with the code.
+
+Completion: every unit and table in the draft is either cited by a Node or deliberately left out, and `validate` reports `ok` with no errors. The next `scan` tells you which: its coverage lists what no Node cites.
+
+## Refresh from code
+
+Run it only when the user asks. No hook or watcher refreshes a Workspace on its own.
+
+1. **Scan again**: `dg scan <root> --json`. It finds the Workspace under `<root>` (pass `--workspace <path>` when several exist), rotates the old draft to `scan.prev.json` and reports `coverage` (what is uncovered, orphan refs, Attribute drift) and `changes` since the previous scan.
+2. **Reconcile refs by `path` alone**: a Node matches the draft only through its Source `path` refs; titles, names and guesses do not count. For each orphan ref, decide: a unit or table in `changes.added` that is clearly the same thing was moved, so re-point the ref and keep the Node id; otherwise it is gone.
+3. **Remove what disappeared**: a Node whose last ref is gone is removed with every Edge that touches it, without asking, and listed in your report. Ask first only when removal would lose hand-written content: a long description, an Interaction that uses it.
+4. **Add what is new**: give each uncovered unit or table worth showing a Node, with the criteria of "Import from code". Draw new `dependencies` the same way; remove an import Edge whose dependency disappeared and keep an Edge that carries meaning the imports never had. Align a table's Attributes with its columns (`missing` and `extra`).
+5. **Keep what is written**: for a Node that stays covered, never rewrite its title, description, Group, Node kind, Views or Pins. The refresh only adds, removes or re-points refs and Nodes; a person may have edited the rest on purpose.
+6. **Leave things out on purpose** by adding their id or a gitignore-style pattern to `<root>/.rinthel/scan-ignore` (one per line, versioned). Ignored ids leave the coverage report, not the draft.
+7. **Validate**, then scan once more.
+
+Completion: the second `scan` reports no orphan refs and no uncovered items that you did not decide to ignore, `validate` is `ok`, and your report lists the Nodes you added, re-pointed and removed. Decision table: `references/scan-import.md`.
 
 ## Serve and show
 

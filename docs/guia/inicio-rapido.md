@@ -8,6 +8,19 @@
 
 El paquete aun no esta publicado en npm, asi que el sistema se usa desde un clon del repo.
 
+## Instalar las skills en tu agente
+
+Un solo arbol `skills/` (`rinthel-diagramas` y `rinthel-temas`) sirve a cuatro agentes, cada uno con su manifiesto fino (formatos segun la documentacion oficial de cada agente, consultada el 2026-11-24).
+
+| Agente | Instalacion | Notas |
+| --- | --- | --- |
+| Claude Code | `claude plugin install rinthel-arch --marketplace WilliamBarriga/Rinthel-arch` | Requiere Claude Code 2.1.292 o superior. En sesion: `/plugin install rinthel-arch --marketplace WilliamBarriga/Rinthel-arch`. Las skills quedan como `/rinthel-arch:rinthel-diagramas` y `/rinthel-arch:rinthel-temas` |
+| Codex | `codex plugin marketplace add WilliamBarriga/Rinthel-arch` | Despues instala `rinthel-arch` desde el directorio de Plugins y abre una sesion nueva. Alternativa sin plugin: copia `skills/*` a `~/.agents/skills/` |
+| OpenCode | `npx skills add WilliamBarriga/Rinthel-arch -a opencode -g` | OpenCode no tiene formato de plugin para skills: lee `~/.config/opencode/skills`, `~/.claude/skills` y `~/.agents/skills`. Tambien sirve copiar `skills/*` a mano |
+| Pi | `pi install npm:rinthel-arch` | El paquete npm declara `pi.skills` y la keyword `pi-package`. Con `--local` lo escribe en `.pi/settings.json` del proyecto |
+
+El CLI no viaja con el plugin: las skills usan `diagrams` si esta en el `PATH` y, si no, `npx -y -p rinthel-arch@<version> diagrams`. Para tenerlo instalado: `npm i -g rinthel-arch` (comandos `diagrams` y `rinthel-arch`). No ejecutes el nombre `diagrams` directamente con npx: ese nombre en npm es de otro paquete.
+
 ## Instalar y construir
 
 ```

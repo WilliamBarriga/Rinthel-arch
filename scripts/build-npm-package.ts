@@ -4,7 +4,8 @@
  *   it ships a native binary per platform and compiles Theme components at runtime).
  * - `dist/estudio/`: the Dev UI static assets, where `estudio` looks for them relative to the bundle.
  * - `dist/*.wasm`: the Scanner's tree-sitter runtime and grammars, loaded only by `scan`.
- * - `LICENSE`, `LICENSE-LIKEC4` and `THIRD-PARTY-NOTICES.md` (generated from `pnpm licenses list`).
+ * - `skills/`: a copy of the repo's `skills/` tree, the Pi package resource (`pi.skills`).
+ * - `LICENSE`,`LICENSE-LIKEC4` and `THIRD-PARTY-NOTICES.md` (generated from `pnpm licenses list`).
  * Nothing is published here.
  */
 import { execFileSync } from 'node:child_process';
@@ -99,6 +100,9 @@ mkdirSync(DIST, { recursive: true });
 await bundleCli();
 copyDevUi();
 copyWasm();
+// The single `skills/` tree, found by Pi through the `pi.skills` field of `npm/package.json`.
+rmSync(join(PACKAGE, 'skills'), { recursive: true, force: true });
+cpSync(join(REPO, 'skills'), join(PACKAGE, 'skills'), { recursive: true });
 copyFileSync(join(REPO, 'LICENSE'), join(PACKAGE, 'LICENSE'));
 copyFileSync(join(REPO, 'packages', 'dsl', 'LICENSE-LIKEC4'), join(PACKAGE, 'LICENSE-LIKEC4'));
 writeFileSync(join(PACKAGE, 'THIRD-PARTY-NOTICES.md'), thirdPartyNotices());
