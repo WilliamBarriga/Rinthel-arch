@@ -69,15 +69,16 @@ describe('link, breadcrumbs y atras', () => {
     await waitFor(() => expect(container.querySelector('[data-id="y"]')).toBeNull());
     await dibujado(container, 'z');
     expect(migas()).toEqual(['a', 'b', 'c']);
+    expect(screen.getByRole('navigation', { name: 'Breadcrumbs' })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Atras' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     await dibujado(container, 'y');
     expect(migas()).toEqual(['a', 'b']);
 
     fireEvent.click(screen.getByRole('button', { name: 'a' }));
     await dibujado(container, 'x');
     expect(migas()).toEqual(['a']);
-    expect((screen.getByRole('button', { name: 'Atras' }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: 'Back' }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('un ciclo entre Vistas no rompe la navegacion', async () => {
@@ -88,7 +89,7 @@ describe('link, breadcrumbs y atras', () => {
     pulsar(container, 'y');
     await dibujado(container, 'x');
     expect(migas()).toEqual(['a', 'b', 'a']);
-    fireEvent.click(screen.getByRole('button', { name: 'Atras' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
     await dibujado(container, 'y');
     expect(migas()).toEqual(['a', 'b']);
   });
