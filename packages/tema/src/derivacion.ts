@@ -128,7 +128,7 @@ export function fragmento(declarado: PinturaDeCajaDeSecuencia | undefined, nodo:
 export function nota(declarada: PinturaDeCajaDeSecuencia | undefined, paleta: Readonly<Record<string, string>>, borde: string): PinturaDeNota {
   const color = paleta[COLOR_DE_NOTA] ?? borde;
   if (declarada !== undefined) return { ...declarada, papel: { color, opacidadDeRelleno: 1 } };
-  return { ...cajaVacia([{ nombre: 'relleno', ...primitiva('solid', { color }) }, { nombre: 'borde', ...primitiva('border', { color, width: 1 }) }]), papel: { color, opacidadDeRelleno: OPACIDAD_DE_PAPEL } };
+  return { ...cajaVacia([{ nombre: 'fill', ...primitiva('solid', { color }) }, { nombre: 'border', ...primitiva('border', { color, width: 1 }) }]), papel: { color, opacidadDeRelleno: OPACIDAD_DE_PAPEL } };
 }
 
 /** Filas sin Capas cuyo texto es el del Slot `attrs`. */

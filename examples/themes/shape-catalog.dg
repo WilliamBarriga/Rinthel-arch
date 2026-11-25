@@ -10,7 +10,7 @@ model {
   piece b "Esquina cortada"
   piece c "Circulo"
   piece d "Rellenos"
-  a -> b "forma"
+  a -> b "shape"
   b -> c
   c -> d
 }

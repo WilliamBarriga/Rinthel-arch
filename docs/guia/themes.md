@@ -15,7 +15,7 @@ Una Vista usa un Tema. Se puede ajustar solo para esa Vista con un parche entre 
 ```
 view highlighted {
   type architecture
-  theme shop { layer borde { color amber  width 3 } }
+  theme shop { layer border { color amber  width 3 } }
   include **
 }
 ```
@@ -39,12 +39,12 @@ Todo es opcional; con `extends` solo escribes lo que cambia.
 ### Paleta, fuentes y tokens
 
 ```
-palette { fondo "#13001f"  texto "#fdf4ff"  rosa "#ff2bd6"  blue "#22e4ff" }
+palette { background "#13001f"  text "#fdf4ff"  pink "#ff2bd6"  blue "#22e4ff" }
 fonts   { body "Outfit"  mono "JetBrains Mono"  fallback "sans-serif" }
 tokens  { background "#13001f"  foreground "#fdf4ff"  border "#ff2bd6" }
 ```
 
-- El hex solo existe en `palette`. En todo el resto, un color es un **nombre de Paleta**, con modificadores: `rosa/0.4` (opacidad) o los especiales `COLOR` (el color del Tipo del Nodo, el que declaraste en `specification`) y `ORIGEN` (en Aristas, el color del Nodo de origen).
+- El hex solo existe en `palette`. En todo el resto, un color es un **nombre de Paleta**, con modificadores: `pink/0.4` (opacidad) o los especiales `COLOR` (el color del Tipo del Nodo, el que declaraste en `specification`) y `ORIGIN` (en Aristas, el color del Nodo de origen).
 - Los nombres `blue`, `green`, `amber`, `red`, `purple` y `gray` son los colores que usan los Tipos de nodo; define los que uses.
 - Las fuentes se **autohospedan**: pon los archivos en el Workspace, por ejemplo en una carpeta `fonts/` (`woff2`, `woff`, `ttf` u `otf`, uno por familia y peso; la convencion de nombres esta en la [galeria de ejemplo](../../examples/themes/gallery/README.md#fonts)) y nombra la familia en `fonts`. No hay CDN. `fallback` es la familia generica de reserva. Los ejemplos traen sus fuentes y licencias en `examples/rinthel-arch/themes/fonts/`.
 
@@ -54,10 +54,10 @@ Cada elemento se dibuja con una **pila de Capas**, de abajo hacia arriba. Una Ca
 
 ```
 node {
-  layer glow   glow     { color rosa/0.55  radius 18 }
-  layer forma  rect     { radius 12 }
-  layer relleno gradient { from rosa  to cian  angle 100 }
-  layer borde  border   { color cian  width 2 }
+  layer glow   glow     { color pink/0.55  radius 18 }
+  layer shape  rect     { radius 12 }
+  layer fill gradient { from pink  to cyan  angle 100 }
+  layer border  border   { color cyan  width 2 }
 }
 ```
 
@@ -90,7 +90,7 @@ slots column min-width 160 slack 28 {
       title { weight 700  text-align start }
       badge { alpha 0.6  transform uppercase  size 0.66  tracking 0.18 }
     }
-    counter { fill rosa  border cian }
+    counter { fill pink  border cyan }
   }
   attrs
 }
@@ -104,8 +104,8 @@ La variacion dentro de un Tema se escribe como parches sobre las Capas, por nomb
 
 ```
 node {
-  type external { layer borde dashed { color cian } }           // only Nodes of that kind
-  state hover { layer glow { color cian/0.8  radius 28 }  transition 140ms ease-out }
+  type external { layer border dashed { color cyan } }           // only Nodes of that kind
+  state hover { layer glow { color cyan/0.8  radius 28 }  transition 140ms ease-out }
 }
 ```
 
@@ -116,7 +116,7 @@ La cascada, donde gana el ultimo, es: Tema base, Tipo de diagrama, Tipo de nodo,
 ### Partes: parches reutilizables
 
 ```
-part bar { layer acento shadow after borde { color COLOR  x 4  y 0  inset 1 } }
+part bar { layer accent shadow after border { color COLOR  x 4  y 0  inset 1 } }
 
 theme my-theme { node { type service { use bar }  type package { use bar } } }
 ```
@@ -127,14 +127,14 @@ Una `part` no pertenece a ningun Tema y su nombre es unico en el Workspace. Las 
 
 ```
 edge {
-  layer halo  line { color rosa/0.18  width 8  corner round  radius 14 }   // wide translucent stroke: gives the glow
-  layer linea line { color cian  width 1.8  corner round  radius 14 }
+  layer halo  line { color pink/0.18  width 8  corner round  radius 14 }   // wide translucent stroke: gives the glow
+  layer line line { color cyan  width 1.8  corner round  radius 14 }
   start hollow { size 7 }
-  end arrow { size 10  color cian }
-  label { scale 0.82  pad 10  radius 50  fill fondo  border rosa/0.7 }
+  end arrow { size 10  color cyan }
+  label { scale 0.82  pad 10  radius 50  fill background  border pink/0.7 }
 }
 page {
-  layer rejilla grid { color rosa/0.10  size 44 }
+  layer grid grid { color pink/0.10  size 44 }
   fixed          // the background does not move with pan/zoom
 }
 ```
@@ -155,28 +155,28 @@ model {
 }
 
 theme notebook {
-  palette { papel "#fffdf5"  tinta "#1f2937"  azul "#2457d6"  gris "#ece8dc"  verde "#d9f2dc"  ambar "#fdecc8" }
+  palette { paper "#fffdf5"  ink "#1f2937"  blue "#2457d6"  gray "#ece8dc"  green "#d9f2dc"  amber "#fdecc8" }
   node {
-    layer forma rect { radius 6 }
-    layer relleno solid { color papel }
-    layer cabecera solid { color azul  zone header }   // only the header (all, header or body)
-    layer borde border { color tinta }
-    slots column { title { color papel  weight 700 }  attrs }
+    layer shape rect { radius 6 }
+    layer fill solid { color paper }
+    layer header solid { color blue  zone header }   // only the header (all, header or body)
+    layer border border { color ink }
+    slots column { title { color paper  weight 700 }  attrs }
   }
   row {
     height 26                                           // height of each row: changes the size of the tables
-    layer fondo solid { color papel }
-    layer separador stripe { color gris  side bottom  width 1 }
-    alternate { layer fondo { color gris } }            // odd rows
-    key pk { layer fondo { color verde } }              // rows with that mark (pk, fk, uk); they stack in that order
-    optional { layer fondo { color ambar } }            // optional Attributes (after the keys)
-    state selected { layer fondo { color verde } }      // selected row (also hover); only paints
-    name { weight 600  size 1.1 }  type { color azul }  // text style; size (a multiple of the Theme text) changes the measured size
-    key { fill azul  color papel  radius 4 }            // the chip of each key mark
+    layer background solid { color paper }
+    layer separator stripe { color gray  side bottom  width 1 }
+    alternate { layer background { color gray } }            // odd rows
+    key pk { layer background { color green } }              // rows with that mark (pk, fk, uk); they stack in that order
+    optional { layer background { color amber } }            // optional Attributes (after the keys)
+    state selected { layer background { color green } }      // selected row (also hover); only paints
+    name { weight 600  size 1.1 }  type { color blue }  // text style; size (a multiple of the Theme text) changes the measured size
+    key { fill blue  color paper  radius 4 }            // the chip of each key mark
   }
   edge {
-    layer linea line { color tinta }
-    diagram er { end arrow { size 12  color azul } }    // only color and size of the crow's foot
+    layer line line { color ink }
+    diagram er { end arrow { size 12  color blue } }    // only color and size of the crow's foot
   }
 }
 
@@ -186,7 +186,7 @@ view tables { type er  theme notebook  include ** }
 - `zone header` pinta de arriba hasta donde empiezan las filas (`attrs`); sin `attrs` equivale a `all`. `zone body` cubre las filas. Una Capa con `zone` pinta aparte de la caja, asi que un parche de estado no la cambia.
 - `row` solo vale en Vistas `er`; en las demas los Atributos siguen con el estilo del Slot `attrs`. El alto (`height`, 12 a 120) es una Metrica; las Capas y parches solo pintan (uno que cambie la caja es `theme-state-touches-metrics`).
 - El marcador de cada extremo lo fija el nucleo segun la cardinalidad (`1` a `one`, `0..1` a `zero-one`, `1..*` a `many`, `0..*` a `zero-many`); el Tema solo cambia su `color` y `size`.
-- Las Aristas identificantes (`identifying`) van continuas y las demas discontinuas; `edge { identifying { layer linea { color azul } } }` cambia ademas el trazo de las identificantes. Si ambas quedan iguales salvo el color, `validate` avisa con `theme-color-only`.
+- Las Aristas identificantes (`identifying`) van continuas y las demas discontinuas; `edge { identifying { layer line { color blue } } }` cambia ademas el trazo de las identificantes. Si ambas quedan iguales salvo el color, `validate` avisa con `theme-color-only`.
 
 ### Secuencia: `lifeline`, `activation`, `message`, `fragment` y `note`
 
@@ -210,42 +210,42 @@ model {
 }
 
 theme ink {
-  palette { papel "#fefce8"  tinta "#1f2937"  azul "#2563eb"  verde "#16a34a"  rojo "#dc2626"  ambar "#d97706" }
+  palette { paper "#fefce8"  ink "#1f2937"  blue "#2563eb"  green "#16a34a"  red "#dc2626"  amber "#d97706" }
   node {
-    layer forma rect { radius 6 }
-    layer relleno solid { color papel }
-    layer borde border { color tinta }
+    layer shape rect { radius 6 }
+    layer fill solid { color paper }
+    layer border border { color ink }
     slots { title }
   }
-  edge { layer linea line { color tinta  width 1.2 } }
+  edge { layer line line { color ink  width 1.2 } }
   lifeline {
-    layer linea line { color tinta/0.5  width 1  style dashed }
-    end cross { size 12  color rojo }
+    layer line line { color ink/0.5  width 1  style dashed }
+    end cross { size 12  color red }
     gap 200                                          // minimum distance between Lifelines
   }
   activation {
-    layer relleno solid { color azul/0.2 }
-    layer borde border { color azul }
+    layer fill solid { color blue/0.2 }
+    layer border border { color blue }
     width 12
   }
   message {
-    layer linea line { color tinta  width 1.5 }
+    layer line line { color ink  width 1.5 }
     end arrow { size 10 }
     gap 40  loop-width 48  create-offset 0           // between Messages, width of the self loop, offset of the created header
-    kind async { layer linea { color verde }  end chevron { size 10  color verde } }   // patch per kind: sync, async, reply, create, destroy
+    kind async { layer line { color green }  end chevron { size 10  color green } }   // patch per kind: sync, async, reply, create, destroy
   }
   fragment {
-    layer forma rect { radius 8 }
-    layer relleno solid { color papel/0.6 }
-    layer borde border { color tinta/0.6 }
-    operator { color tinta  weight 700 }  guard { color tinta }  divider { color tinta/0.5  style dashed }
-    op alt { layer borde { color azul } }            // patch per operator: opt loop break critical alt par ref
+    layer shape rect { radius 8 }
+    layer fill solid { color paper/0.6 }
+    layer border border { color ink/0.6 }
+    operator { color ink  weight 700 }  guard { color ink }  divider { color ink/0.5  style dashed }
+    op alt { layer border { color blue } }            // patch per operator: opt loop break critical alt par ref
     padding 20  padding-y 10                         // around the content
   }
   note {
-    layer relleno solid { color ambar/0.25 }
-    layer borde border { color ambar }
-    text { color tinta  weight 600 }
+    layer fill solid { color amber/0.25 }
+    layer border border { color amber }
+    text { color ink  weight 600 }
   }
 }
 
@@ -273,4 +273,4 @@ Los rangos y easings estan en el [catalogo](../theme-catalog.md#motions).
 
 - `dg inspect theme <nombre> --workspace <ruta>` imprime el Tema resuelto (su padre, sus Partes, las Capas y su `archivo:linea`). Con `extends`, es la forma de ver que heredas.
 - `dg validate` lista errores con sugerencias: una Primitiva mal escrita propone la mas parecida.
-- Para estudiar un efecto concreto, busca el Tema de ejemplo que lo usa: `synthwave` (neon y rejilla), `glass-chip` (vidrio), `sticky-notes` (mano alzada y cinta), `keycaps` (teclas 3D), `pcb` (pines y trazos con `corner chamfer`), `metro-map` (trazos del color del origen, `ORIGEN`), `pixel-art` (`style pixel`).
+- Para estudiar un efecto concreto, busca el Tema de ejemplo que lo usa: `synthwave` (neon y rejilla), `glass-chip` (vidrio), `sticky-notes` (mano alzada y cinta), `keycaps` (teclas 3D), `pcb` (pines y trazos con `corner chamfer`), `metro-map` (trazos del color del origen, `ORIGIN`), `pixel-art` (`style pixel`).

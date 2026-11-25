@@ -74,7 +74,7 @@ describe('Diagram', () => {
   it('dibuja las Aristas con flecha, como rutas ortogonales', async () => {
     const svg = await dibujar(TEMA_NEUTRO);
 
-    expect(svg).toMatch(/<g data-edge="a\.api -&gt; db"><path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" stroke-width="[\d.]+" data-capa="linea"/);
+    expect(svg).toMatch(/<g data-edge="a\.api -&gt; db"><path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" stroke-width="[\d.]+" data-capa="line"/);
     expect(svg).toMatch(/<g data-edge="a\.api -&gt; a\.auth"/);
     expect(svg).toMatch(/<g data-marker="fin" transform="translate\([\d. ]+\) rotate\(-?[\d.]+\)"><path d="M 0 0 L -8 -4 L -8 4 z"/);
   });

@@ -23,13 +23,13 @@ describe('Intencion set-theme', () => {
   it('con theme en la Vista reescribe el nombre y conserva el parche', () => {
     const texto = ws(`view v {
   type architecture
-  theme neutral { layer borde { color amber  width 3 } }
+  theme neutral { layer border { color amber  width 3 } }
   include **
 }`);
     expect(aplicar(texto, fijar('claro'))).toBe(
       ws(`view v {
   type architecture
-  theme claro { layer borde { color amber  width 3 } }
+  theme claro { layer border { color amber  width 3 } }
   include **
 }`),
     );
@@ -66,13 +66,13 @@ describe('Intencion set-theme', () => {
   it('sin tema y con parche escribe theme neutral { parche }', () => {
     const texto = ws(`view v {
   type architecture
-  theme claro { layer borde { color amber  width 3 } }
+  theme claro { layer border { color amber  width 3 } }
   include **
 }`);
     expect(aplicar(texto, fijar())).toBe(
       ws(`view v {
   type architecture
-  theme neutral { layer borde { color amber  width 3 } }
+  theme neutral { layer border { color amber  width 3 } }
   include **
 }`),
     );

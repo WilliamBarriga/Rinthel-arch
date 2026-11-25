@@ -92,7 +92,7 @@ view purchase { type sequence interaction purchase order client, api, db autonum
 | `invalid-fragment-operand` | `else` only in `alt`, `and` only in `par`; `opt/loop/break/critical` have one operand |
 | `step-not-advancing`, `step-not-projected`, `steps-each-with-step` | Steps only advance, over projected Messages; do not mix `steps each` with `step` |
 | `er-cardinality` | Only `0..1`, `1`, `0..*`, `1..*` in an `er` View; apply the `fix` |
-| `old-catalog-value` | Old (Spanish) name of a built-in Motion, effect, state or Theme; apply the `fix` |
+| `old-catalog-value` | Old (Spanish) name of a built-in Motion, effect, state, Theme, Palette color or Layer, or `ORIGEN`; apply the `fix` |
 | `duplicate-key-mark` | Apply the `fix` (deletes the repeated mark) |
 | `old-workspace-convention` | Rename the file or folder to the path in `fix.rename` (`theme.dg`, `themes/`, `fonts/`) and revalidate |
 | `reply-without-sync`, `order-not-in-interaction`, `ref-without-view` | Warnings: check Message order, the `order`, or add the View of the referenced Interaction |

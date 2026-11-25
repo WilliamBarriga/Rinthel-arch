@@ -16,7 +16,7 @@ describe('Grupo del Tema: pila propia', () => {
       const { abierto, colapsado } = estiloResuelto(sinGrupo, { diagrama: 'architecture' }).pintura.grupo;
       const nombresDelNodo = estiloResuelto(sinGrupo, { diagrama: 'architecture' }).pintura.nodo.capas.map((c) => c.nombre);
 
-      expect(abierto.capas.map((c) => c.nombre)).toEqual(['caja', 'relleno', 'borde']);
+      expect(abierto.capas.map((c) => c.nombre)).toEqual(['box', 'fill', 'border']);
       expect(abierto.capas.find((c) => c.nombre === 'relleno')?.props['color']).toContain((sinGrupo.tokens as Record<string, string>)['foreground']);
       expect(abierto.capas.find((c) => c.nombre === 'borde')?.tipo).toBe('border');
       expect(colapsado.capas.find((c) => c.nombre === 'borde')?.tipo).toBe('dashed');

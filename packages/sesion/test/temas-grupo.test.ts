@@ -40,9 +40,9 @@ describe('seam sesion: bloque group del Tema', () => {
 
     expect(await sesion.diagnosticar()).toEqual([]);
     expect(nombres(nodo.capas)).toEqual(['forma', 'relleno']);
-    expect(nombres(grupo.abierto.capas)).toEqual(['caja', 'relleno', 'borde']);
+    expect(nombres(grupo.abierto.capas)).toEqual(['box', 'fill', 'border']);
     expect(JSON.stringify(grupo.abierto.capas)).not.toContain('#fefce8');
-    expect(grupo.colapsado.capas.find((c) => c.nombre === 'borde')?.tipo).toBe('dashed');
+    expect(grupo.colapsado.capas.find((c) => c.nombre === 'border')?.tipo).toBe('dashed');
   });
 
   it('declara Capas, parches por Tipo, por estado y el parche collapsed con la misma sintaxis que node', async () => {

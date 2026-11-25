@@ -59,7 +59,7 @@ describe('inspect theme', () => {
 
     expect(r.exitCode).toBe(0);
     const tema = temaDe(r.salida);
-    expect(tema.file).toBe('<incorporados>');
+    expect(tema.file).toBe('<built-in>');
     expect(tema.catalog?.primitives).toEqual(expect.arrayContaining(['rect', 'solid', 'border', 'circle']));
     expect(tema.catalog?.motions).toEqual(expect.arrayContaining(['pulse']));
     expect(tema.catalog?.effects.length).toBeGreaterThan(0);
@@ -72,7 +72,7 @@ describe('inspect theme', () => {
     expect(tema.extends).toEqual(['neutral']);
     // neutral-dark solo cambia la Paleta: todas sus Capas las fijo neutral, en lineas distintas del texto incorporado.
     const sitios = tema.layers.map((c) => c.origin);
-    expect(sitios.every((s) => s.file === '<incorporados>' && s.line > 1)).toBe(true);
+    expect(sitios.every((s) => s.file === '<built-in>' && s.line > 1)).toBe(true);
     expect(new Set(sitios.map((s) => s.line)).size).toBe(sitios.length);
   });
 

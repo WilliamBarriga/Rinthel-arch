@@ -35,7 +35,7 @@ describe('Temas incorporados', () => {
 
   it('el neutro dibuja con Capas, Slots, estados y animacion minima', () => {
     const neutro = resolverTema(compilar().themes[0]!);
-    expect(neutro.nodo.capas.map((c) => c.nombre)).toEqual(['forma', 'relleno', 'borde', 'sombra']);
+    expect(neutro.nodo.capas.map((c) => c.nombre)).toEqual(['shape', 'fill', 'border', 'shadow']);
     expect(Object.keys(neutro.nodo.estados).sort()).toEqual(['dimmed', 'hover', 'on-path']);
     expect(neutro.nodo.animacion?.transicionesDeEstado?.hover).toBeDefined();
   });

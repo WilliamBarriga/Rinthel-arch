@@ -6,39 +6,39 @@
 import type { Documento, Theme } from './generated/ast';
 
 /** Nombre con el que los issues y los `related` se refieren a este texto. */
-export const ARCHIVO_INCORPORADOS = '<incorporados>';
+export const ARCHIVO_INCORPORADOS = '<built-in>';
 
-export const FUENTE_INCORPORADOS = `// Tarjeta sobria clara: fondo de puntos, tarjeta blanca con borde fino, icono en caja del color del Tipo,
-// titulo con la insignia del Tipo debajo y, en un Grupo cerrado, una tarjeta apilada con el contador.
-// Todo color sale de la Paleta: neutral-dark solo cambia la Paleta.
+export const FUENTE_INCORPORADOS = `// Plain light card: dotted background, white card with a thin border, icon in a box of the Node kind color,
+// title with the kind badge below and, on a collapsed Group, a stacked card with the counter.
+// Every color comes from the Palette: neutral-dark only changes the Palette.
 theme neutral {
   palette {
     gray "#64748b"  blue "#2563eb"  green "#16a34a"  amber "#d97706"  red "#dc2626"  purple "#7c3aed"
-    fondo "#f8fafc"  papel "#ffffff"  tinta "#0f172a"  marco "#878f9e"  linea "#808a9a"  sombra "#0f172a"
+    background "#f8fafc"  paper "#ffffff"  ink "#0f172a"  frame "#878f9e"  stroke "#808a9a"  shadow "#0f172a"
   }
   fonts { body "system-ui, sans-serif"  mono "ui-monospace, monospace" }
   tokens { background "#f8fafc"  foreground "#0f172a"  border "#878f9e" }
   page {
-    layer puntos dots { color tinta/0.09  size 22  radius 1 }
+    layer dots dots { color ink/0.09  size 22  radius 1 }
     fixed
   }
   node {
-    layer forma rect { radius 10 }
-    layer relleno solid { color papel }
-    layer borde border { color marco }
-    layer sombra shadow { color sombra/0.06  y 2  blur 6 }
+    layer shape rect { radius 10 }
+    layer fill solid { color paper }
+    layer border border { color frame }
+    layer shadow shadow { color shadow/0.06  y 2  blur 6 }
     slots column min-width 160 slack 26 {
       row gap 10 pad 10 min-height 54 {
         icon { variant box  side 28  radius 7  fill COLOR/0.14  border COLOR/0.45  color COLOR }
-        column { title { weight 600  text-align start  leading 1.25  color tinta }  badge { alpha 0.6  tracking 0.02  color tinta } }
-        counter { fill tinta/0.06  border tinta/0.18  color tinta }
+        column { title { weight 600  text-align start  leading 1.25  color ink }  badge { alpha 0.6  tracking 0.02  color ink } }
+        counter { fill ink/0.06  border ink/0.18  color ink }
       }
-      attrs { color tinta }
+      attrs { color ink }
     }
-    state hover { layer borde { color COLOR }  transition 120ms ease-out }
-    state on-path { layer borde { color COLOR  width 2  motion pulse 1.2s ease-in-out intensity 0.4 } }
-    state dimmed { layer sombra none }
-    // En una Vista de secuencia la cabecera de la Lifeline es mas compacta: icono y nombre, sin insignia ni contador.
+    state hover { layer border { color COLOR }  transition 120ms ease-out }
+    state on-path { layer border { color COLOR  width 2  motion pulse 1.2s ease-in-out intensity 0.4 } }
+    state dimmed { layer shadow none }
+    // In a sequence View the Lifeline header is more compact: icon and name, no badge or counter.
     diagram sequence {
       slots column min-width 130 slack 22 { row gap 8 pad 8 min-height 44 { icon  title } }
     }
@@ -47,80 +47,80 @@ theme neutral {
     }
   }
   group {
-    layer forma rect { radius 16 }
-    layer relleno solid { color tinta/0.025 }
-    layer borde dashed { color marco }
-    slots row pad 18 pad-y 6 { title { dot COLOR  transform uppercase  size 0.8  tracking 0.1  alpha 0.7  weight 600  color tinta } }
+    layer shape rect { radius 16 }
+    layer fill solid { color ink/0.025 }
+    layer border dashed { color frame }
+    slots row pad 18 pad-y 6 { title { dot COLOR  transform uppercase  size 0.8  tracking 0.1  alpha 0.7  weight 600  color ink } }
     padding 12 20 20 20
-    // Cerrado: la tarjeta del Nodo con otra desplazada debajo y una barra del color del Tipo a la izquierda.
+    // Collapsed: the Node card with another one offset below and a bar of the kind color on the left.
     state collapsed {
-      layer pila solid before forma { color papel  offset 5 5 }
-      layer pila-borde border before forma { color marco  offset 5 5 }
-      layer forma { radius 10 }
-      layer relleno { color papel }
-      layer borde border { color marco }
-      layer acento shadow after borde { color COLOR  x 3  y 0  inset 1 }
+      layer stack solid before shape { color paper  offset 5 5 }
+      layer stack-border border before shape { color frame  offset 5 5 }
+      layer shape { radius 10 }
+      layer fill { color paper }
+      layer border border { color frame }
+      layer accent shadow after border { color COLOR  x 3  y 0  inset 1 }
     }
   }
   edge {
-    layer linea line { color linea  width 1.2  corner round  radius 6 }
-    start dot { size 4.4  color linea }
+    layer line line { color stroke  width 1.2  corner round  radius 6 }
+    start dot { size 4.4  color stroke }
     end chevron { size 9 }
-    label { scale 0.82  pad 10  pad-y 2.5  radius 50  fill papel  border tinta/0.16  color tinta }
-    diagram er { end arrow { size 12  color linea } }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 50  fill paper  border ink/0.16  color ink }
+    diagram er { end arrow { size 12  color stroke } }
   }
-  // Tablas ER: la cabecera es solo el nombre (sin icono, insignia ni contador) y las filas se separan con una linea fina.
+  // ER tables: the header is only the name (no icon, badge or counter) and rows are split by a thin line.
   row {
     height 26
-    layer fondo solid { color papel }
-    layer separador stripe { color tinta/0.08  side bottom  width 1 }
-    alternate { layer fondo { color tinta/0.03 } }
-    name { color tinta }
-    type { color tinta  alpha 0.65 }
+    layer background solid { color paper }
+    layer separator stripe { color ink/0.08  side bottom  width 1 }
+    alternate { layer background { color ink/0.03 } }
+    name { color ink }
+    type { color ink  alpha 0.65 }
   }
-  // Secuencia: la Lifeline discontinua con una cruz al destruirse; los Mensajes continuos con flecha, async con chevron y
-  // reply y create discontinuos; la activacion, el Fragmento y la Nota como cajas sobrias.
+  // Sequence: a dashed Lifeline with a cross when destroyed; solid Messages with an arrow, async with a chevron, and
+  // dashed reply and create; the activation, the Fragment and the Note as plain boxes.
   lifeline {
-    layer linea line { color linea  width 1  style dashed }
+    layer line line { color stroke  width 1  style dashed }
     end cross { size 10 }
   }
   activation {
-    layer forma rect { radius 2 }
-    layer relleno solid { color papel }
-    layer borde border { color COLOR }
+    layer shape rect { radius 2 }
+    layer fill solid { color paper }
+    layer border border { color COLOR }
     width 10
   }
   message {
-    layer linea line { color linea  width 1.2  corner round  radius 6 }
+    layer line line { color stroke  width 1.2  corner round  radius 6 }
     end arrow { size 9 }
     gap 32
     kind async { end chevron { size 9 } }
-    kind reply { layer linea { style dashed }  end chevron { size 9 } }
-    kind create { layer linea { style dashed }  end chevron { size 9 } }
+    kind reply { layer line { style dashed }  end chevron { size 9 } }
+    kind create { layer line { style dashed }  end chevron { size 9 } }
     kind destroy { end arrow { size 9 } }
   }
   fragment {
-    layer forma rect { radius 6 }
-    layer relleno solid { color papel }
-    layer borde border { color marco }
-    operator { color tinta  weight 600 }
-    guard { color linea }
-    divider { color marco  width 1  style dashed }
-    op ref { layer relleno { color papel } }
+    layer shape rect { radius 6 }
+    layer fill solid { color paper }
+    layer border border { color frame }
+    operator { color ink  weight 600 }
+    guard { color stroke }
+    divider { color frame  width 1  style dashed }
+    op ref { layer fill { color paper } }
     padding 16
   }
   note {
-    layer relleno solid { color amber/0.2 }
-    layer borde border { color amber  width 1 }
-    text { color tinta }
+    layer fill solid { color amber/0.2 }
+    layer border border { color amber  width 1 }
+    text { color ink }
   }
 }
 
-// La misma tarjeta sobre fondo oscuro (estilo Linear/Vercel).
+// The same card on a dark background (Linear/Vercel style).
 theme neutral-dark extends neutral {
   palette {
     gray "#a1a1aa"  blue "#60a5fa"  green "#34d399"  amber "#fbbf24"  red "#f87171"  purple "#a78bfa"
-    fondo "#09090b"  papel "#141417"  tinta "#fafafa"  marco "#5f5f69"  linea "#71717a"  sombra "#000000"
+    background "#09090b"  paper "#141417"  ink "#fafafa"  frame "#5f5f69"  stroke "#71717a"  shadow "#000000"
   }
   tokens { background "#09090b"  foreground "#fafafa"  border "#5f5f69" }
 }

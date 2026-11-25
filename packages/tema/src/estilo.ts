@@ -115,7 +115,7 @@ export interface PinturaDeCajaDeSecuencia {
   derivado?: true;
 }
 
-/** Por color de Paleta del Nodo de origen (`ORIGEN`), como la Arista. */
+/** Por color de Paleta del Nodo de origen (`ORIGIN`), como la Arista. */
 export interface TrazosDeSecuencia {
   base: PinturaDeTrazoDeSecuencia;
   origenes: Record<string, PinturaDeTrazoDeSecuencia>;
@@ -151,7 +151,7 @@ export interface Pintura {
   nodo: PinturaDeElemento;
   /** Sin `group` en el Tema, la pila sobria derivada de sus tokens. */
   grupo: { abierto: PinturaDeElemento; colapsado: PinturaDeElemento };
-  /** `origenes`: por color de Paleta del Nodo de origen (`ORIGEN`). */
+  /** `origenes`: por color de Paleta del Nodo de origen (`ORIGIN`). */
   arista: PinturaDeArista & { origenes: Record<string, PinturaDeArista> };
   pagina: PinturaDePagina;
   /** Solo en una Vista ER. */
@@ -220,7 +220,7 @@ function pintar(pila: readonly CapaDeTema[], tema: TemaResuelto, colorDelTipo: s
   }));
 }
 
-const TRAZO_POR_DEFECTO: CapaDeTema = { nombre: 'linea', primitiva: { tipo: 'line', props: { color: COLOR_DE_RESPALDO, width: 1, style: 'solid', corner: 'sharp', cut: 6 } } };
+const TRAZO_POR_DEFECTO: CapaDeTema = { nombre: 'line', primitiva: { tipo: 'line', props: { color: COLOR_DE_RESPALDO, width: 1, style: 'solid', corner: 'sharp', cut: 6 } } };
 
 /** `colorDeOrigen` es nombre de Paleta. */
 function pintarArista(tema: TemaResuelto, colorDeOrigen: string | undefined): PinturaDeArista {
@@ -253,9 +253,9 @@ function grupoSobrio(tema: TemaResuelto, colapsado: boolean, variable: string | 
   const { foreground, border } = tema.tokens;
   const velo = `color-mix(in srgb, ${foreground} ${colapsado ? 8 : 4}%, transparent)`;
   return [
-    { nombre: 'caja', tipo: 'rect', props: { radius: 8 } },
-    { nombre: 'relleno', tipo: 'solid', props: { color: velo } },
-    { nombre: 'borde', tipo: colapsado ? 'dashed' : 'border', props: { color: variable === undefined ? border : `var(${variable})`, width: 1 } },
+    { nombre: 'box', tipo: 'rect', props: { radius: 8 } },
+    { nombre: 'fill', tipo: 'solid', props: { color: velo } },
+    { nombre: 'border', tipo: colapsado ? 'dashed' : 'border', props: { color: variable === undefined ? border : `var(${variable})`, width: 1 } },
   ];
 }
 

@@ -133,7 +133,7 @@ A Theme is text, just like the Model. The shortest way to make your own is to **
 
 ```
 theme shop extends neutral-dark {
-  palette { blue "#38bdf8"  green "#34d399"  fondo "#0b1220"  papel "#111a2e" }
+  palette { blue "#38bdf8"  green "#34d399"  background "#0b1220"  paper "#111a2e" }
 
   node {
     type service { use bar }
@@ -141,20 +141,20 @@ theme shop extends neutral-dark {
   }
 
   edge {
-    layer linea line { color blue  width 2.4  corner round  radius 12 }
+    layer line line { color blue  width 2.4  corner round  radius 12 }
     end arrow { size 11  color blue }
   }
 }
 
-part bar { layer acento shadow after borde { color COLOR  x 4  y 0  inset 1 } }
-part dashed { layer relleno { color fondo }  layer borde dashed { color marco } }
+part bar { layer accent shadow after border { color COLOR  x 4  y 0  inset 1 } }
+part dashed { layer fill { color background }  layer border dashed { color frame } }
 ```
 
 And in both Views change `theme neutral-dark` to `theme shop`. What happened:
 
 - `palette` overrides some colors of the parent. In a Theme every color is a **Palette name**; hex values only live here.
 - `node { type service { ... } }` is a **per-kind patch**: it applies only to Nodes of that kind. `use bar` includes a **Part** (`part`), a reusable patch. `COLOR` inside a Part takes the color of the kind of the Node that uses it: the bar of `service` is blue and another kind would get its own.
-- `layer <name> <primitive> { ... }` defines, changes or adds a **Layer**. `layer borde dashed` changes the parent's `borde` Layer to a dashed Primitive; `layer acento shadow after borde` adds a new Layer right after `borde`. (The built-in Layers and Palette names, such as `borde`, `relleno`, `fondo` and `marco`, keep their Spanish names.)
+- `layer <name> <primitive> { ... }` defines, changes or adds a **Layer**. `layer border dashed` changes the parent's `border` Layer to a dashed Primitive; `layer accent shadow after border` adds a new Layer right after `border`. The built-in Layers (`shape`, `fill`, `border`, `shadow`...) and Palette colors (`background`, `paper`, `ink`, `frame`, `stroke`, `shadow`) are listed by `inspect theme neutral`.
 - `edge { ... }` changes the Edges: thick stroke, rounded corners and an arrowhead.
 
 ![Step 4](../img/tutorial/step-4-shop.png)

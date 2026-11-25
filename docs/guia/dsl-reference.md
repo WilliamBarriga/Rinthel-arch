@@ -271,7 +271,7 @@ Un ejemplo completo esta en [`examples/rinthel-arch/architecture.dg`](../../exam
 
 ```
 theme mine extends neutral { palette { ... }  node { ... }  group { ... }  edge { ... } }
-part bar { layer acento shadow { color COLOR  x 4 } }
+part bar { layer accent shadow { color COLOR  x 4 } }
 ```
 
 Detalle en [Personalizar con Temas](themes.md) y en el [catalogo](../theme-catalog.md).

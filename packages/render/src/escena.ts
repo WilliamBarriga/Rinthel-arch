@@ -81,7 +81,7 @@ export interface Contexto extends EntradaDeEscena {
   cajas: ReadonlyMap<string, CajaDeNodo>;
   /** Nombre accesible de cada Nodo, sacado solo del Modelo (nunca del Tema). */
   nombres?: ReadonlyMap<string, string>;
-  /** Color de Paleta de cada Nodo: el de su Tipo o override; `ORIGEN` de una Arista toma el de su origen. */
+  /** Color de Paleta de cada Nodo: el de su Tipo o override; `ORIGIN` de una Arista toma el de su origen. */
   coloresDeNodo: ReadonlyMap<string, string | undefined>;
   /** Posicion de cada Nodo en el escalonado de `enter`; vacio si el Tema no declara `stagger`. */
   escalonado: ReadonlyMap<string, number>;

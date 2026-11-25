@@ -869,8 +869,8 @@ describe('compile: Tema', () => {
         theme metro {
           palette { blue "#2563eb"  gray "#6b7280" }
           edge {
-            layer glow line { color ORIGEN/0.3  width 8 }
-            layer principal line { color ORIGEN  width 2  style dashed  corner chamfer }
+            layer glow line { color ORIGIN/0.3  width 8 }
+            layer principal line { color ORIGIN  width 2  style dashed  corner chamfer }
             start dot { size 6 }
             end via
             label { pad 6  fill blue }
@@ -881,8 +881,8 @@ describe('compile: Tema', () => {
     expect(issues).toEqual([]);
     expect(canonico?.themes.find((t) => t.name === 'metro')?.['arista']).toEqual({
       capas: [
-        { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGEN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } },
-        { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGEN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6, radius: 8 } } },
+        { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGIN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } },
+        { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGIN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6, radius: 8 } } },
       ],
       origen: { tipo: 'dot', props: { size: 6 } },
       fin: { tipo: 'via', props: { size: 8 } },

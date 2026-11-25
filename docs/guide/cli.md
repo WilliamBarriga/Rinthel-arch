@@ -43,7 +43,7 @@ Codes of the `sequence` and `er` Diagram types (the full list, with descriptions
 | `step-not-projected`, `step-not-advancing` | An `upto` points to a Message the View does not project or that does not advance |
 | `order-not-in-interaction`, `ref-without-view`, `reply-without-sync` | Warnings (only fail with `--strict`) |
 | `er-cardinality`, `duplicate-key-mark` | Invalid ER cardinality (with `fix`) and repeated key mark (`pk`, `fk`, `uk`) |
-| `old-catalog-value` | A Motion, effect, state or built-in Theme written with its old Spanish name; the `fix` rewrites it to the English name |
+| `old-catalog-value` | A Motion, effect, state, built-in Theme, built-in Palette color or Layer, or `ORIGEN` written with its old Spanish name; the `fix` rewrites it to the English name |
 | `real-node-in-planned-group` | A real Node (with a `path` Source) under a Group marked `planned`; the `fix` removes the mark from the Group |
 | `planned-with-path` | Warning: a Node marked `planned` that also has a `path` Source (it already exists in the code); the `fix` removes `planned` |
 | `old-workspace-convention` | A Workspace file or folder uses an old name (`tema.dg`, `temas/`, `fuentes/`); the `fix` carries `rename` to `theme.dg`, `themes/`, `fonts/`. Rename from the outside in and revalidate |

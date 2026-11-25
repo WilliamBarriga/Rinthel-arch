@@ -217,7 +217,7 @@ export function pintarControl(estilo: Estilo, { nodo, caja, alClic }: { nodo: No
 /**
  * Arista: la pila de trazos del Tema sobre la ruta ortogonal, sus marcadores de
  * extremo y la cardinalidad de cada extremo junto a su puerto, desplazada hacia
- * fuera del Nodo. `origen` es el color de Paleta del Nodo de origen (`ORIGEN`). Los hijos extra
+ * fuera del Nodo. `origen` es el color de Paleta del Nodo de origen (`ORIGIN`). Los hijos extra
  * (la etiqueta) los pone quien llama; `atributos` lleva opacidad e id.
  */
 export function pintarArista(
