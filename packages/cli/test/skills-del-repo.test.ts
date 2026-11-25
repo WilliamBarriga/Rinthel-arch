@@ -123,3 +123,28 @@ describe('repo skills: import and refresh from code', () => {
     expect(texto).toContain('## Refresh from code');
   });
 });
+
+describe('repo skills: plan from a spec', () => {
+  const texto = leer('rinthel-diagramas', 'SKILL.md');
+  const seccion = (titulo: string): string => new RegExp(`## ${titulo}\\n([\\s\\S]*?)(?=\\n## |$)`).exec(texto)?.[1] ?? '';
+
+  it('has a "Plan from a spec" section with the Blueprint rules', () => {
+    const cuerpo = seccion('Plan from a spec');
+    for (const termino of ['planned', 'spec "<file>#<section>"', 'Assumption:', 'Open question:', 'architecture', 'sequence', 'er', 'at most about 5 questions', 'dev']) {
+      expect(cuerpo, termino).toContain(termino);
+    }
+  });
+
+  it('has a reconcile section that uses inspect planned and planned-with-path and reports what is not built', () => {
+    const cuerpo = seccion('Reconcile a Blueprint with the code');
+    for (const termino of ['inspect planned', 'planned-with-path', 'dg scan', 'not built yet or diverges from the plan', 'path']) {
+      expect(cuerpo, termino).toContain(termino);
+    }
+  });
+
+  it('ships the reference and the CLI facts it relies on exist', async () => {
+    expect(leer('rinthel-diagramas', 'references/plan-from-spec.md')).toContain('## Reconcile decisions');
+    const ayuda = await run(['inspect', '--help']);
+    expect(ayuda.stdout).toContain('inspect planned');
+  });
+});
