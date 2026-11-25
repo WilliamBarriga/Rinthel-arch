@@ -105,7 +105,8 @@ describe('galeria de Temas de ejemplo', () => {
     expect(aristas.some((a) => a.label !== undefined && a.label !== '')).toBe(true);
     expect(aristas.some((a) => a.label === undefined || a.label === '')).toBe(true);
     const titulos = todosLosNodos().map((n) => n.title.toLowerCase());
-    for (const estado of ESTADOS) expect(titulos, estado).toContain(estado);
+    // `planned` no lo pone la shell sino la marca del Modelo (ADR 0011): la galeria no tiene un Nodo que lo nombre.
+    for (const estado of ESTADOS.filter((e) => e !== 'planned')) expect(titulos, estado).toContain(estado);
   });
 
   it('el Modelo usa todos los Tipos de nodo declarados', () => {
