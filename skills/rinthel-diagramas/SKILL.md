@@ -192,7 +192,7 @@ Report to the user in three lists: **built** (planned elements now cited by a pa
 
 ## Serve and show
 
-- `dg dev --workspace <path> --port <N>` serves the dev UI at `http://127.0.0.1:<N>/#vista=<id>`. It is a long process: start it in the background, watch its output until the line with the URL and hand that URL to the user.
+- `dg dev --workspace <path> --port <N>` serves the dev UI at `http://127.0.0.1:<N>/#view=<id>`. It is a long process: start it in the background, watch its output until the line with the URL and hand that URL to the user.
 - `dev` recompiles on save: edit the `.dg` and the UI updates itself. The user also writes from the UI (editor, drags, `fix`, Theme gallery) and can undo from the file History: re-read the file before editing it. So `dg edit` does not overwrite their change, pass `--hash <file>=<hash>` with the `hash` from `GET /api/archivo/<path>` (rejects with `stale-hash`: re-read and retry).
 - The UI shows in its Agent panel every `validate`, `build`, `inspect` and `edit` you run and highlights what you change. Export `DIAGRAMS_AGENTE=<your name>` so the user knows who it was; do not set `DIAGRAMS_ACTIVIDAD=0` unless asked.
 - To send the diagram to someone without the tool: `dg export --workspace <path> --out <file>.html` writes a self-contained read-only HTML (Views, Steps, `link`, Theme gallery). To show it, serve its folder with a local server and hand over the URL.

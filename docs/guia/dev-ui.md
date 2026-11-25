@@ -6,7 +6,7 @@
 
 ![Vista paquetes con el Detalle del Nodo cli](../img/estudio/vista-y-detalle.png)
 
-El lienzo ocupa toda la pagina. Arriba va la barra (Vista actual con su ruta, Buscar, ultima linea del agente y "seguir"); a los lados, dos paneles flotantes. Cada panel se oculta con su boton o con Ctrl/Cmd+B (izquierdo) y Ctrl/Cmd+J (derecho); oculto, deja una pestana en el borde que lo vuelve a mostrar. Se redimensiona arrastrando su borde o su esquina (las asas de ancho y alto tambien responden a las flechas; doble clic en la de alto vuelve al alto del contenido). La Vista activa queda en la URL como `#vista=<id>`, asi que se puede compartir o volver con Atras. Sobre el lienzo quedan los controles de Pasos (si la Vista los tiene), los botones "High contrast" (dibuja con el Tema `high-contrast` sin escribir nada) y "Reduce motion", y la leyenda cuando hay Tipos que solo se distinguen por color.
+El lienzo ocupa toda la pagina. Arriba va la barra (Vista actual con su ruta, Buscar, ultima linea del agente y "seguir"); a los lados, dos paneles flotantes. Cada panel se oculta con su boton o con Ctrl/Cmd+B (izquierdo) y Ctrl/Cmd+J (derecho); oculto, deja una pestana en el borde que lo vuelve a mostrar. Se redimensiona arrastrando su borde o su esquina (las asas de ancho y alto tambien responden a las flechas; doble clic en la de alto vuelve al alto del contenido). La Vista activa queda en la URL como `#view=<id>`, asi que se puede compartir o volver con Atras. Sobre el lienzo quedan los controles de Pasos (si la Vista los tiene), los botones "High contrast" (dibuja con el Tema `high-contrast` sin escribir nada) y "Reduce motion", y la leyenda cuando hay Tipos que solo se distinguen por color.
 
 ## Panel izquierdo
 

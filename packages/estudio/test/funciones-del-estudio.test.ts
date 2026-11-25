@@ -69,15 +69,15 @@ describe('indice de Vistas', () => {
   });
 });
 
-describe('hash de la UI (#vista=<id>)', () => {
-  it('traduce la ruta del shell (p) a vista y de vuelta, sin tocar el resto', () => {
-    expect(aHashDeEstudio('p=a&p=b&s=api')).toBe('vista=a&vista=b&s=api');
-    expect(deHashDeEstudio('#vista=a&s=api')).toBe('p=a&s=api');
+describe('hash de la UI (#view=<id>)', () => {
+  it('traduce la ruta del shell (p) a view y de vuelta, sin tocar el resto', () => {
+    expect(aHashDeEstudio('p=a&p=b&s=api')).toBe('view=a&view=b&s=api');
+    expect(deHashDeEstudio('#view=a&s=api')).toBe('p=a&s=api');
     expect(deHashDeEstudio('')).toBe('');
   });
 
-  it('envuelve un adaptador: lee y escribe con vista=', () => {
-    let texto = '#vista=detalle';
+  it('envuelve un adaptador: lee y escribe con view=', () => {
+    let texto = '#view=detalle';
     const escritos: string[] = [];
     const adaptador = hashDeEstudio({
       leer: () => texto,
@@ -90,7 +90,7 @@ describe('hash de la UI (#vista=<id>)', () => {
 
     expect(adaptador.leer()).toBe('p=detalle');
     adaptador.escribir('p=flujo&t=1', { reemplazar: false });
-    expect(escritos).toEqual(['vista=flujo&t=1']);
+    expect(escritos).toEqual(['view=flujo&t=1']);
   });
 });
 

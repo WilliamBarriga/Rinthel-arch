@@ -27,7 +27,7 @@ view map {
 
 describe('planned elements in the Dev UI', () => {
   it('draws a planned Group, its descendants and the Edge touching them as planned, and real ones as usual', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=map' });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=map' });
     const lienzo = await lienzoListo(contenedor, 'map');
     const caja = (id: string): HTMLElement | null => lienzo.querySelector<HTMLElement>(`.rd-caja[data-id="${id}"]`);
 
@@ -39,7 +39,7 @@ describe('planned elements in the Dev UI', () => {
   });
 
   it('a selected planned Node keeps its planned state', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=map' });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=map' });
     const lienzo = await lienzoListo(contenedor, 'map');
 
     pulsarNodo(contenedor, 'shop.cart');

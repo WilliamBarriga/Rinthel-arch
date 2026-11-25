@@ -33,7 +33,7 @@ Options: those of validate (--json, --strict, --max-issues, --theme, --theme-pat
 
 Dev UI at http://127.0.0.1:<port>/ (listens on localhost only): canvas, DSL editor, Issues, Themes,
 file History and the activity log feed. Recompiles on save. The active View lives in the URL hash
-(#vista=<id>). Dragging a Node sets its Pin and rewrites the .dg.
+(#view=<id>). Dragging a Node sets its Pin and rewrites the .dg.
 Guide: docs/guide/dev-ui.md.
 
 Options:

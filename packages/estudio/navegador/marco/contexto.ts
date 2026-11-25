@@ -26,7 +26,7 @@ export interface ContextoDelEstudio {
   vista: string | undefined;
   /** Elemento seleccionado en el lienzo (id de Nodo o de elemento de secuencia). */
   seleccion: string | null;
-  /** Cambia la Vista activa: entrada nueva en el historial del navegador (`#vista=<id>`). */
+  /** Cambia la Vista activa: entrada nueva en el historial del navegador (`#view=<id>`). */
   irAVista(vista: string): void;
   /** Shows Step `paso` of the active View (after `irAVista`, of the new one). */
   irAPaso(paso: number): void;

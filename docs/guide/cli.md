@@ -62,7 +62,7 @@ Writes `canonico.json` and `geometria/<view>.json` (`{ view, theme, layoutKey, g
 dg dev --workspace <path> [--port N] [--trust-code] [--theme-path <dir>]
 ```
 
-Serves the [Dev UI](dev-ui.md) at `http://127.0.0.1:<port>/` (4173 by default, `--port 0` picks a free one; it only listens on localhost): a canvas with the four Diagram types, a View index, the DSL editor, Issues, a Theme gallery, History and the agent feed. It rebuilds on save and, if an edit breaks the DSL, keeps the last good drawing. The View is chosen with the hash (`#vista=<id>`).
+Serves the [Dev UI](dev-ui.md) at `http://127.0.0.1:<port>/` (4173 by default, `--port 0` picks a free one; it only listens on localhost): a canvas with the four Diagram types, a View index, the DSL editor, Issues, a Theme gallery, History and the agent feed. It rebuilds on save and, if an edit breaks the DSL, keeps the last good drawing. The View is chosen with the hash (`#view=<id>`).
 
 - **Themes with code (`.tsx`)**: `dev` does not serve them until you confirm in the UI; `--trust-code` gives it in advance. Use it only with Workspaces you know.
 - **Writes**: dragging a Node sets its Pin; in a `sequence` View, dragging a Lifeline header horizontally (or the title of a `box`, which moves the block) rewrites the full `order` and a child does not leave the `box` of its Group. The editor, the `fix` buttons and the gallery also write the `.dg` with the same core as `edit`; each write is an entry in the `dev` file History, which survives edits by other programs.

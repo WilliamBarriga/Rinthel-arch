@@ -6,7 +6,7 @@
 
 ![Packages View with the Details of the cli Node](../img/estudio/vista-y-detalle.png)
 
-The canvas takes the whole page. At the top is the bar (current View with its path, Search, the agent's last line and "follow"); on the sides, two floating panels. Each panel is hidden with its button or with Ctrl/Cmd+B (left) and Ctrl/Cmd+J (right); when hidden, it leaves a tab on the edge that shows it again. It is resized by dragging its edge or corner (the width and height handles also respond to the arrow keys; double click on the height one returns to the content height). The active View stays in the URL as `#vista=<id>`, so it can be shared or returned to with Back. Over the canvas are the Step controls (if the View has them), the "High contrast" button (draws with the `high-contrast` Theme without writing anything) and "Reduce motion", and the legend when there are kinds that are only told apart by color.
+The canvas takes the whole page. At the top is the bar (current View with its path, Search, the agent's last line and "follow"); on the sides, two floating panels. Each panel is hidden with its button or with Ctrl/Cmd+B (left) and Ctrl/Cmd+J (right); when hidden, it leaves a tab on the edge that shows it again. It is resized by dragging its edge or corner (the width and height handles also respond to the arrow keys; double click on the height one returns to the content height). The active View stays in the URL as `#view=<id>`, so it can be shared or returned to with Back. Over the canvas are the Step controls (if the View has them), the "High contrast" button (draws with the `high-contrast` Theme without writing anything) and "Reduce motion", and the legend when there are kinds that are only told apart by color.
 
 ## Left panel
 

@@ -59,7 +59,7 @@ async function principal(): Promise<void> {
     const derecho = pagina.getByRole('complementary', { name: 'Right panel' });
 
     // Indice, lienzo y Detalle del Nodo seleccionado.
-    await pagina.goto(`${dev.url}#vista=${VISTA}&s=${NODO}`);
+    await pagina.goto(`${dev.url}#view=${VISTA}&s=${NODO}`);
     await esperarLienzo(pagina);
     await derecho.getByRole('region', { name: 'Details' }).getByRole('heading').first().waitFor();
     await capturar(pagina, 'vista-y-detalle');

@@ -74,7 +74,7 @@ async function abrirDesdeLaPildora(): Promise<void> {
 
 describe('tour pill', () => {
   it('the first visit shows only the pill; using it starts the tour and it never comes back', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
     expect(screen.queryByRole('dialog', { name: 'Tour' })).toBeNull();
 
@@ -83,13 +83,13 @@ describe('tour pill', () => {
     expect(screen.queryByRole('button', { name: '1-minute tour' })).toBeNull();
     cleanup();
 
-    const segunda = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const segunda = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(segunda.contenedor, 'mapa');
     expect(screen.queryByRole('button', { name: '1-minute tour' })).toBeNull();
   });
 
   it('dismissing the pill hides it for good', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
 
     fireEvent.click(await screen.findByRole('button', { name: 'Dismiss the tour' }));
@@ -97,13 +97,13 @@ describe('tour pill', () => {
     expect(screen.queryByRole('dialog', { name: 'Tour' })).toBeNull();
     cleanup();
 
-    const segunda = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const segunda = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(segunda.contenedor, 'mapa');
     expect(screen.queryByRole('button', { name: '1-minute tour' })).toBeNull();
   });
 
   it('"View tour" in the Finder starts it any time, also after dismissing the pill', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
     fireEvent.click(await screen.findByRole('button', { name: 'Dismiss the tour' }));
 
@@ -114,7 +114,7 @@ describe('tour pill', () => {
   });
 
   it('the ? help offers the tour too', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
 
     fireEvent.keyDown(document.body, { key: '?' });
@@ -126,7 +126,7 @@ describe('tour pill', () => {
 
 describe('tour stops', () => {
   it('use the Workspace data: active View, Views per type, a real Drill-down, Steps, the Theme, Code and Agent', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
     await abrirDesdeLaPildora();
 
@@ -143,7 +143,7 @@ describe('tour stops', () => {
   });
 
   it('the stops move the UI: Drill-down selects the linked Node, Steps leaves Step 1 on, Code opens the editor', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
     await abrirDesdeLaPildora();
     const dialogo = await tour();
@@ -155,7 +155,7 @@ describe('tour stops', () => {
     await waitFor(() => expect(window.location.hash).toBe('#s=api'));
     expect(screen.getByRole('tab', { name: 'Details', hidden: true }).getAttribute('aria-selected')).toBe('true');
     siguiente();
-    await waitFor(() => expect(window.location.hash).toBe('#vista=detalle&t=1'));
+    await waitFor(() => expect(window.location.hash).toBe('#view=detalle&t=1'));
     siguiente();
     expect(screen.getByRole('tab', { name: 'Themes', hidden: true }).getAttribute('aria-selected')).toBe('true');
     siguiente();
@@ -168,7 +168,7 @@ describe('tour stops', () => {
   });
 
   it('skip the Drill-down stop without links and fall back to generic text', async () => {
-    const { contenedor } = await montarEstudio({ 'main.dg': DSL_BASICO }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL_BASICO }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
     await abrirDesdeLaPildora();
 
@@ -180,7 +180,7 @@ describe('tour stops', () => {
 
 describe('tour in the export', () => {
   it('shows the pill and replaces Code and Agent with "In your repo"', async () => {
-    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#vista=mapa' });
+    const { contenedor } = await montarExportado({ 'main.dg': DSL }, { hash: '#view=mapa' });
     await lienzoListo(contenedor, 'mapa');
     await abrirDesdeLaPildora();
 
