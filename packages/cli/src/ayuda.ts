@@ -44,7 +44,7 @@ Options:
 
 This is a long-running process: start it in the background and wait for the line with the URL.
 `,
-  inspect: `diagrams inspect <search|node|view|interaction|theme> <argument> --workspace <path> [options]
+  inspect: `diagrams inspect <search|node|view|interaction|planned|theme> [argument] --workspace <path> [options]
 
 Read-only queries over the Model; each result carries the qualified id, kind and file:line.
 
@@ -52,6 +52,7 @@ Read-only queries over the Model; each result carries the qualified id, kind and
   inspect node <id>           Node, parent and children, Attributes, Edges and the Views that show it
   inspect view <id>           Visible Nodes and Edges of the View in its initial state
   inspect interaction <id>    Lifelines in order, Messages and the Views that project the Interaction
+  inspect planned             Planned Nodes, Attributes, Edges and Interactions (no argument), with their spec refs
   inspect theme <name>        extends chain, Parts, Layer stack with file:line, Metrics
 
 Options:
@@ -142,7 +143,7 @@ Commands:
   validate   Compiles and validates; lists issues with file, line and fix (read-only)
   build      Writes the canonical Source and the geometry to <path>/${CARPETA_DE_SALIDA}/
   dev        Dev UI at http://127.0.0.1:4173/: view, edit and follow the Workspace
-  inspect    Queries the Model: search, node, view, interaction, theme (read-only)
+  inspect    Queries the Model: search, node, view, interaction, planned, theme (read-only)
   edit       Sets a Pin or applies structured edits to the .dg
   skill      Generates the agent skill of a Workspace
   scan       Reads a codebase into a Scan draft for an agent to diagram (diagrams scan [<root>])

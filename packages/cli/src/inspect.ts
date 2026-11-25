@@ -58,6 +58,13 @@ export function textoLegible(salida: SalidaDeInspect): string {
     lineas.push(`Lifelines: ${i.lifelines.join(', ')}`);
     lineas.push('Views:');
     for (const v of i.views) lineas.push(`  ${v.id} ${sitio(v)}`);
+  } else if (salida.command === 'planned') {
+    const { nodes, attributes, edges, interactions } = salida.planned;
+    for (const n of nodes) lineas.push(`node ${n.id} ${n.type}${titulo(n.title)} ${sitio(n)}${n.inherited ? ' (inherited)' : ''}${n.spec.length === 0 ? '' : ` spec ${n.spec.join(', ')}`}`);
+    for (const a of attributes) lineas.push(`attribute ${a.node}#${a.name} ${sitio(a)}`);
+    for (const e of edges) lineas.push(`edge ${e.from} -> ${e.to}${e.label === undefined ? '' : ` "${e.label}"`} ${sitio(e)}${e.inherited ? ' (inherited)' : ''}`);
+    for (const i of interactions) lineas.push(`interaction ${i.id}${titulo(i.title)} ${sitio(i)}`);
+    lineas.push(`${nodes.length + attributes.length + edges.length + interactions.length} planned`);
   } else if (salida.command === 'theme') {
     const { theme: tema } = salida;
     lineas.push(`${tema.name} ${tema.file}:${tema.line}${tema.kind === undefined ? '' : ` kind=${tema.kind}`}${tema.state === undefined ? '' : ` state=${tema.state}`}${tema.diagram === undefined ? '' : ` diagram=${tema.diagram}`}`);

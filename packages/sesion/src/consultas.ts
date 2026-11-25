@@ -1,4 +1,4 @@
-import { INSPECT_CONTRACT_VERSION, aplanarMensajes, candidatosCercanos, lifelinesDe, padreDe, resolveView } from 'canonico';
+import { INSPECT_CONTRACT_VERSION, aplanarMensajes, aristaPlaneada, candidatosCercanos, lifelinesDe, padreDe, planeados, resolveView } from 'canonico';
 import type { Arista, FuenteCanonica, Nodo, RutaDeFuente, SalidaDeInspect, Ubicador } from 'canonico';
 
 type Sitio = { file: string; line: number };
@@ -6,7 +6,7 @@ type Sitio = { file: string; line: number };
 import type { OpcionesDeConsultaDeTema } from './consulta-de-tema';
 
 /** `argumento` es texto para `buscar`, nombre para `tema` e id para el resto; las opciones de `tema` ajustan su cascada. */
-export type Consulta = { comando: 'search' | 'node' | 'view' | 'interaction'; argumento: string } | ({ comando: 'theme'; argumento: string } & OpcionesDeConsultaDeTema);
+export type Consulta = { comando: 'search' | 'node' | 'view' | 'interaction'; argumento: string } | { comando: 'planned'; argumento?: string } | ({ comando: 'theme'; argumento: string } & OpcionesDeConsultaDeTema);
 
 /** `noEncontrado` es el message (con `Quiza: ...`); `suggestions`, los ids parecidos que nombra. */
 export type Respuesta = { salida: SalidaDeInspect } | { noEncontrado: string; suggestions: string[] };
@@ -19,12 +19,12 @@ function recorrerNodos(nodos: readonly Nodo[], ruta: RutaDeFuente = ['model', 'n
   });
 }
 
-export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento }: Exclude<Consulta, { comando: 'theme' }>): Respuesta {
+export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, argumento = '' }: Exclude<Consulta, { comando: 'theme' }>): Respuesta {
   const sitioDe = (ruta: RutaDeFuente): Sitio => {
     const sitio = ubicar(ruta);
     return { file: sitio?.file ?? '(unknown)', line: sitio?.range.start.line ?? 1 };
   };
-  const nodos = recorrerNodos(fuente.model.nodes).map(({ nodo, ruta }) => ({ nodo, sitio: sitioDe([...ruta, 'name']) }));
+  const nodos = recorrerNodos(fuente.model.nodes).map(({ nodo, ruta }) => ({ nodo, ruta, sitio: sitioDe([...ruta, 'name']) }));
   const vistas = fuente.views.map((vista, i) => ({ vista, sitio: sitioDe(['views', i, 'id']) }));
   const interacciones = fuente.model.interactions.map((interaccion, i) => ({ interaccion, sitio: sitioDe(['model', 'interactions', i, 'id']) }));
   const resumen = ({ nodo, sitio }: (typeof nodos)[number]) => ({ id: nodo.id, type: nodo.type, title: nodo.title, ...sitio });
@@ -57,6 +57,28 @@ export function consultar(fuente: FuenteCanonica, ubicar: Ubicador, { comando, a
       .sort((a, b) => rango(a.r.id) - rango(b.r.id) || a.orden - b.orden)
       .map(({ r }) => r);
     return { salida: { contractVersion: INSPECT_CONTRACT_VERSION, command: comando, query: argumento, results: resultados } };
+  }
+
+  if (comando === 'planned') {
+    const p = planeados(fuente.model);
+    return {
+      salida: {
+        contractVersion: INSPECT_CONTRACT_VERSION,
+        command: comando,
+        planned: {
+          nodes: nodos
+            .filter(({ nodo }) => p.nodos.has(nodo.id))
+            .map((n) => ({ ...resumen(n), spec: n.nodo.source.filter((s) => s.kind === 'spec').map((s) => s.ref), inherited: n.nodo.planned !== true })),
+          attributes: nodos.flatMap(({ nodo, ruta }) =>
+            nodo.attributes.flatMap((atributo, i) =>
+              atributo.planned === true ? [{ node: nodo.id, name: atributo.name, type: atributo.type, ...sitioDe([...ruta, 'attributes', i, 'planned']) }] : [],
+            ),
+          ),
+          edges: fuente.model.edges.flatMap((arista, i) => (aristaPlaneada(arista, p) ? [{ ...aristaDe(arista, i), inherited: arista.planned !== true }] : [])),
+          interactions: interacciones.filter(({ interaccion }) => interaccion.planned === true).map(({ interaccion, sitio }) => ({ id: interaccion.id, title: interaccion.title, ...sitio })),
+        },
+      },
+    };
   }
 
   if (comando === 'interaction') {

@@ -5,6 +5,7 @@
 import { readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
+import { planeados } from 'canonico';
 import type { Atributo, Modelo, Nodo } from 'canonico';
 import { EXCLUDED_FOLDERS } from 'scanner';
 import type { ScanDraft, ScanTable } from 'scanner';
@@ -100,14 +101,18 @@ interface CoverageNode {
 }
 
 /**
- * The Nodes and Attributes that take part in coverage. Planned-aware filtering (#242) goes here: a planned Node never
- * makes an orphan ref and a planned Attribute is never extra.
+ * The Nodes and Attributes that take part in coverage. Planned-aware (ADR 0011): a planned Node (marked or under a
+ * planned Group) is proposed code, so it never makes an orphan ref, and a planned Attribute (marked or of a planned
+ * Node) is never extra.
  */
 function coverageNodes(model: Modelo): CoverageNode[] {
   const nodes: CoverageNode[] = [];
+  const planned = planeados(model);
   const visit = (node: Nodo): void => {
     const refs = node.source.filter((source) => source.kind === 'path').map((source) => source.ref);
-    if (refs.length > 0) nodes.push({ id: node.id, refs, attributes: node.attributes });
+    if (refs.length > 0 && !planned.nodos.has(node.id)) {
+      nodes.push({ id: node.id, refs, attributes: node.attributes.filter((attribute) => !planned.atributos.has(`${node.id}#${attribute.name}`)) });
+    }
     node.children.forEach(visit);
   };
   model.nodes.forEach(visit);

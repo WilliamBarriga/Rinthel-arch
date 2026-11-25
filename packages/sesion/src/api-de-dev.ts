@@ -65,8 +65,11 @@ export function consultaDeRuta(url: URL): Consulta | undefined {
   } catch {
     argumento = undefined;
   }
-  if (comando === undefined || !(COMANDOS_DE_INSPECT as readonly string[]).includes(comando) || argumento === undefined || argumento === '' || sobra.length > 0) return undefined;
-  if (comando !== 'theme') return { comando: comando as Exclude<ComandoDeInspect, 'theme'>, argumento };
+  if (comando === undefined || !(COMANDOS_DE_INSPECT as readonly string[]).includes(comando) || sobra.length > 0) return undefined;
+  // `planned` no recibe argumento (`/api/inspect/planned/`); el resto lo exige.
+  if (comando === 'planned') return argumento === undefined || argumento === '' ? { comando } : undefined;
+  if (argumento === undefined || argumento === '') return undefined;
+  if (comando !== 'theme') return { comando: comando as Exclude<ComandoDeInspect, 'theme' | 'planned'>, argumento };
   const opcion = (parametro: 'kind' | 'state' | 'diagram', clave: 'tipo' | 'estado' | 'diagrama'): { [k: string]: string } => {
     const valor = url.searchParams.get(parametro);
     return valor === null ? {} : { [clave]: valor };
