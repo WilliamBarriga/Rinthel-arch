@@ -10,8 +10,8 @@
 import type { ScanColumn } from '../draft';
 import type { FoundRelation, FoundTable, SchemaFile, TableExtractor } from '.';
 import type { SyntaxNode } from '../tree-sitter';
-import { type Call, boolOf, callOf, classesOf, loadPython, stringOf } from './python-ast';
-import { relationOf } from './relation';
+import { type Call, boolOf, callOf, classesOf, lastSegment, loadPython, stringOf } from './python-ast';
+import { relationOf, scanColumn } from './relation';
 
 export const sqlalchemy: TableExtractor = {
   origin: 'sqlalchemy',
@@ -92,8 +92,6 @@ function readColumn(call: Call, attr: string, annotation: string | undefined): C
   };
 }
 
-const lastSegment = (dotted: string): string => dotted.slice(dotted.lastIndexOf('.') + 1);
-
 /** `Mapped[Optional[str]]` gives `str`, optional; `Mapped[int | None]` the same. */
 function annotationOf(annotation: string | undefined): { type: string; optional: boolean } | undefined {
   if (annotation === undefined) return undefined;
@@ -130,17 +128,13 @@ function toFound(table: Table, all: readonly Table[]): FoundTable {
   const relations: FoundRelation[] = [];
   let certain = table.columns.every((column) => column.type !== 'unknown');
   const columns = table.columns.map((column): ScanColumn => {
-    const result: ScanColumn = { name: column.name, type: column.type };
-    if (column.pk) result.pk = true;
     if (column.foreignKey !== undefined) {
-      result.fk = true;
       const target = resolve(column.foreignKey, all);
       if (target === undefined) certain = false;
       else relations.push(relationOf(column.name, target, { unique: column.unique || (column.pk && pks === 1), optional: column.optional }));
     }
-    if (column.unique && !column.pk) result.uk = true;
-    if (column.optional) result.optional = true;
-    return result;
+    const { name, type, pk, unique, optional } = column;
+    return scanColumn({ name, type, pk, unique, optional, fk: column.foreignKey !== undefined });
   });
   return { name: table.name, origin: 'sqlalchemy', columns, relations, source: { file: table.file, line: table.line }, confidence: certain ? 'extracted' : 'inferred' };
 }

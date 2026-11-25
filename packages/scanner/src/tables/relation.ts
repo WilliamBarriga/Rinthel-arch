@@ -1,5 +1,8 @@
-/** How the ORM readers (Drizzle, Django, SQLAlchemy) turn a foreign key into a relation with its cardinality. */
-import type { Confidence } from '../draft';
+/**
+ * The column and relation conventions every schema reader shares (ADR 0010): which flags a column carries and how a
+ * foreign key becomes a relation with its cardinality.
+ */
+import type { Confidence, ScanColumn } from '../draft';
 import type { FoundRelation } from '.';
 
 export interface ForeignKeyShape {
@@ -17,4 +20,25 @@ export function relationOf(
   confidence: Confidence = 'extracted',
 ): FoundRelation {
   return { column, target, cardinality: [unique ? '0..1' : '0..*', optional ? '0..1' : '1'], confidence };
+}
+
+export interface ColumnShape {
+  name: string;
+  type: string;
+  pk: boolean;
+  /** Unique on its own (single-column unique constraint). */
+  unique: boolean;
+  /** Accepts NULL. */
+  optional: boolean;
+  fk: boolean;
+}
+
+/** Flags only when true; `uk` and `optional` never on a primary key column. */
+export function scanColumn({ name, type, pk, unique, optional, fk }: ColumnShape): ScanColumn {
+  const column: ScanColumn = { name, type };
+  if (pk) column.pk = true;
+  if (fk) column.fk = true;
+  if (unique && !pk) column.uk = true;
+  if (optional && !pk) column.optional = true;
+  return column;
 }

@@ -5,6 +5,8 @@
  */
 import type { ScanColumn } from '../draft';
 import type { FoundRelation, FoundTable, SchemaContext, SchemaFile, TableExtractor } from '.';
+import { relationOf, scanColumn } from './relation';
+import { PARENS, type Token as Shared, closing as closingOf, split as splitBy } from './tokens';
 
 export const sql: TableExtractor = {
   origin: 'sql',
@@ -12,12 +14,8 @@ export const sql: TableExtractor = {
   load: () => Promise.resolve(readSql),
 };
 
-interface Token {
-  text: string;
-  line: number;
-  /** `ident` for quoted identifiers (text unquoted), `string` for literals and `$$` bodies. */
-  kind: 'word' | 'ident' | 'string' | 'punct';
-}
+/** `ident` for quoted identifiers (text unquoted), `string` for literals and `$$` bodies. */
+type Token = Shared<'word' | 'ident' | 'string' | 'punct'>;
 
 interface Column {
   name: string;
@@ -164,29 +162,30 @@ function toFound(table: Table, tableNamed: (name: string) => Table | undefined):
       return column !== undefined && !column.notNull && !has(table.primaryKey, name);
     });
     columns.forEach((column, index) => {
-      relations.push({
-        column: table.columns.find((candidate) => key(candidate.name) === key(column))?.name ?? column,
-        target: {
-          table: referenced?.name ?? target,
-          column: targetColumns?.[index] ?? 'id',
-        },
-        cardinality: [unique ? '0..1' : '0..*', optional ? '0..1' : '1'],
-        confidence: targetColumns === undefined ? 'inferred' : 'extracted',
-      });
+      relations.push(
+        relationOf(
+          table.columns.find((candidate) => key(candidate.name) === key(column))?.name ?? column,
+          { table: referenced?.name ?? target, column: targetColumns?.[index] ?? 'id' },
+          { unique, optional },
+          targetColumns === undefined ? 'inferred' : 'extracted',
+        ),
+      );
     });
   }
   return {
     name: table.name,
     origin: 'sql',
-    columns: table.columns.map(({ name, type, notNull }): ScanColumn => {
-      const column: ScanColumn = { name, type };
-      const pk = has(table.primaryKey, name);
-      if (pk) column.pk = true;
-      if (table.foreignKeys.some((fk) => has(fk.columns, name))) column.fk = true;
-      if (!pk && table.uniques.some((set) => set.length === 1 && has(set, name))) column.uk = true;
-      if (!pk && !notNull) column.optional = true;
-      return column;
-    }),
+    columns: table.columns.map(
+      ({ name, type, notNull }): ScanColumn =>
+        scanColumn({
+          name,
+          type,
+          pk: has(table.primaryKey, name),
+          unique: table.uniques.some((set) => set.length === 1 && has(set, name)),
+          optional: !notNull,
+          fk: table.foreignKeys.some((fk) => has(fk.columns, name)),
+        }),
+    ),
     relations,
     source: { file: table.file, line: table.line },
     confidence: 'extracted',
@@ -304,32 +303,11 @@ function typeText(tokens: Token[]): string {
   return text.replace(/ {2,}/g, ' ').replace(/, \)/g, ',)').trim();
 }
 
-/** Top-level comma-separated parts. */
-function split(tokens: Token[]): Token[][] {
-  const parts: Token[][] = [[]];
-  let depth = 0;
-  for (const token of tokens) {
-    if (token.text === ',' && depth === 0) {
-      parts.push([]);
-      continue;
-    }
-    if (token.text === '(') depth++;
-    else if (token.text === ')') depth--;
-    parts[parts.length - 1]?.push(token);
-  }
-  return parts.filter((part) => part.length > 0);
-}
+/** Comma-separated parts outside parens. */
+const split = (tokens: Token[]): Token[][] => splitBy(tokens, PARENS);
 
-/** Index of the `)` closing the `(` at `open`, or the end. */
-function closing(tokens: Token[], open: number): number {
-  let depth = 0;
-  for (let i = open; i < tokens.length; i++) {
-    const text = (tokens[i] as Token).text;
-    if (text === '(') depth++;
-    else if (text === ')' && --depth === 0) return i;
-  }
-  return tokens.length;
-}
+/** Index of the `)` closing the `(` at `open`, or the end (an unclosed list runs to the end of the statement). */
+const closing = (tokens: Token[], open: number): number => closingOf(tokens, open, PARENS) ?? tokens.length;
 
 const isWord = (token: Token | undefined, word: string): boolean => token?.kind === 'word' && token.text.toUpperCase() === word;
 

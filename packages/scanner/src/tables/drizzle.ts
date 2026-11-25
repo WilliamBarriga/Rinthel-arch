@@ -8,24 +8,21 @@
  * `inferred`, and an unreadable column has type `unknown`. Not read: `foreignKey()`, `unique().on()`, `relations()`.
  */
 import type { ScanColumn } from '../draft';
-import { type SyntaxNode, loadSyntax } from '../tree-sitter';
+import { type SyntaxNode, loadTypescriptSyntax } from '../tree-sitter';
 import type { FoundRelation, FoundTable, SchemaFile, TableExtractor } from '.';
-import { relationOf } from './relation';
+import { relationOf, scanColumn } from './relation';
 
-const TS_GRAMMAR = 'tree-sitter-typescript/tree-sitter-typescript.wasm';
-const TSX_GRAMMAR = 'tree-sitter-typescript/tree-sitter-tsx.wasm';
-const TS_ONLY = /\.(?:ts|mts|cts)$/;
 const FACTORY = /^(?:pg|mysql|sqlite|singlestore)Table$/;
 
 export const drizzle: TableExtractor = {
   origin: 'drizzle',
   matches: (path) => /\.(?:[cm]?[jt]s|[jt]sx)$/.test(path) && !path.endsWith('.d.ts'),
   async load() {
-    const [ts, tsx] = await Promise.all([loadSyntax(TS_GRAMMAR), loadSyntax(TSX_GRAMMAR)]);
+    const syntaxFor = await loadTypescriptSyntax();
     return (files) => {
       const tables = files.flatMap((file) => {
         if (!file.text.includes('drizzle-orm')) return [];
-        return (TS_ONLY.test(file.path) ? ts : tsx).parse(file.text, (root) => readTables(root, file)) ?? [];
+        return syntaxFor(file.path).parse(file.text, (root) => readTables(root, file)) ?? [];
       });
       return tables.map((table) => toFound(table, tables));
     };
@@ -189,10 +186,7 @@ function toFound(table: Table, all: readonly Table[]): FoundTable {
   const relations: FoundRelation[] = [];
   const columns = table.columns.map((column): ScanColumn => {
     const pk = pks.has(column.key);
-    const result: ScanColumn = { name: column.name, type: column.type };
-    if (pk) result.pk = true;
     if (column.reference !== undefined) {
-      result.fk = true;
       const target = targetOf(column.reference, table, all);
       relations.push(
         relationOf(
@@ -203,9 +197,14 @@ function toFound(table: Table, all: readonly Table[]): FoundTable {
         ),
       );
     }
-    if (column.unique && !pk) result.uk = true;
-    if (!column.notNull && !pk) result.optional = true;
-    return result;
+    return scanColumn({
+      name: column.name,
+      type: column.type,
+      pk,
+      unique: column.unique,
+      optional: !column.notNull,
+      fk: column.reference !== undefined,
+    });
   });
   return {
     name: table.name,

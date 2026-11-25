@@ -10,7 +10,7 @@
  */
 import type { ScanColumn } from '../draft';
 import type { FoundRelation, FoundTable, SchemaFile, TableExtractor } from '.';
-import { type PlainCall, type PyClass, boolOf, callOf, classesOf, loadPython, plain, stringOf } from './python-ast';
+import { type PlainCall, type PyClass, boolOf, callOf, classesOf, lastSegment, loadPython, plain, stringOf } from './python-ast';
 import { relationOf } from './relation';
 
 export const django: TableExtractor = {
@@ -71,15 +71,13 @@ function toModel(pyClass: PyClass, file: SchemaFile): Model {
   };
 }
 
-const lastName = (dotted: string): string => dotted.slice(dotted.lastIndexOf('.') + 1);
-
 /** Marks which classes are models: those that extend `Model` or, transitively, another model of the scan. */
 function resolveModels(models: Model[]): Model[] {
   for (let changed = true; changed; ) {
     changed = false;
     for (const model of models) {
       if (model.isModel) continue;
-      if (model.bases.some((base) => lastName(base) === 'Model' || models.some((other) => other.isModel && other.name === lastName(base)))) {
+      if (model.bases.some((base) => lastSegment(base) === 'Model' || models.some((other) => other.isModel && other.name === lastSegment(base)))) {
         model.isModel = true;
         changed = true;
       }
@@ -94,7 +92,7 @@ function build(models: Model[]): FoundTable[] {
   /** Parent models by class name, same file first. */
   const parentsOf = (model: Model): Model[] =>
     model.bases.flatMap((base) => {
-      const candidates = models.filter((other) => other !== model && other.name === lastName(base));
+      const candidates = models.filter((other) => other !== model && other.name === lastSegment(base));
       const parent = candidates.find((other) => other.file === model.file) ?? candidates[0];
       return parent === undefined ? [] : [parent];
     });
@@ -125,8 +123,8 @@ function build(models: Model[]): FoundTable[] {
     const written = node?.string ?? node?.text;
     if (written === undefined) return undefined;
     if (written === 'self') return { model: from, written: from.name };
-    const [app, name] = written.includes('.') ? [written.slice(0, written.lastIndexOf('.')), lastName(written)] : [undefined, written];
-    const candidates = models.filter((model) => model.name === name && !model.abstract && (app === undefined || model.app === lastName(app) || node?.string === undefined));
+    const [app, name] = written.includes('.') ? [written.slice(0, written.lastIndexOf('.')), lastSegment(written)] : [undefined, written];
+    const candidates = models.filter((model) => model.name === name && !model.abstract && (app === undefined || model.app === lastSegment(app) || node?.string === undefined));
     const model = candidates.find((candidate) => candidate.app === from.app) ?? candidates.find((candidate) => candidate.file === from.file) ?? candidates[0];
     return model === undefined ? undefined : { model, written };
   }
@@ -161,10 +159,10 @@ function build(models: Model[]): FoundTable[] {
         const unique = kind === 'OneToOneField' || call.kwargs.get('unique')?.bool === true || pk;
         if (target === undefined) {
           const written = call.args[0]?.string ?? call.args[0]?.text ?? '';
-          const [app, name] = written.includes('.') ? [written.slice(0, written.lastIndexOf('.')), lastName(written)] : [owner.app, written];
+          const [app, name] = written.includes('.') ? [written.slice(0, written.lastIndexOf('.')), lastSegment(written)] : [owner.app, written];
           column.type = 'ForeignKey';
           if (/^[\w.]+$/.test(written)) {
-            relations.push(relationOf(column.name, { table: `${lastName(app)}_${name.toLowerCase()}`, column: 'id' }, { unique, optional }, 'inferred'));
+            relations.push(relationOf(column.name, { table: `${lastSegment(app)}_${name.toLowerCase()}`, column: 'id' }, { unique, optional }, 'inferred'));
           } else {
             certain = false;
           }

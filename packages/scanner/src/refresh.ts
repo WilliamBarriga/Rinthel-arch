@@ -5,7 +5,7 @@
 import ignore from 'ignore';
 
 import type { ScanDraft } from './draft';
-import { byCodeUnit } from './files';
+import { byCodeUnit } from './collections';
 
 /**
  * Matcher for gitignore-style `patterns` (the text of `.rinthel/scan-ignore`) over unit and table ids. The root unit
