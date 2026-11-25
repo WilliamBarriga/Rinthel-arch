@@ -3,13 +3,16 @@
  * "Start here" tour: a fixed script of coachmarks whose stops use the open Workspace's data. The first visit shows
  * only a "1-minute tour" pill, remembered in browser-local state; "View tour" (Finder and `?` help) starts it any time.
  */
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DSL_BASICO, lienzoListo, montarEstudio, montarExportado } from './ayudas-de-ui';
 
 beforeEach(() => localStorage.clear());
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const DSL = `specification {
   node servicio
@@ -188,6 +191,47 @@ describe('tour in the export', () => {
     expect(paradas.map((p) => p.split(':')[0])).toEqual(['Your repo as a diagram', 'Views', 'Drill-down', 'Steps', 'Themes', 'In your repo']);
     expect(paradas[4]).not.toContain('Pin');
     expect(paradas[5]).toContain('npx rinthel-arch scan');
-    expect(paradas[5]).toContain('npx rinthel-arch dev');
+    expect(paradas[5]).toContain('npx rinthel-arch dev --workspace .');
+  });
+});
+
+describe('tour highlight', () => {
+  it('follows the size of its area and the window as they change, without waiting', async () => {
+    const avisos: (() => void)[] = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(aviso: () => void) {
+          avisos.push(aviso);
+        }
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    );
+    const { contenedor } = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa' });
+    await lienzoListo(contenedor, 'mapa');
+    const lienzo = contenedor.querySelector<HTMLElement>('.ui-lienzo')!;
+    let caja = { left: 100, top: 50, width: 400, height: 300 };
+    lienzo.getBoundingClientRect = () => DOMRect.fromRect({ x: caja.left, y: caja.top, width: caja.width, height: caja.height });
+
+    await abrirDesdeLaPildora();
+    await tour();
+    const hueco = (): string => {
+      const s = document.querySelector<HTMLElement>('.ui-tour-hueco')?.style;
+      return s === undefined ? '' : `${s.left} ${s.top} ${s.width} ${s.height}`;
+    };
+    await waitFor(() => expect(hueco()).toBe('92px 42px 416px 316px'));
+
+    caja = { left: 10, top: 20, width: 200, height: 100 };
+    act(() => avisos.forEach((aviso) => aviso()));
+    expect(hueco()).toBe('2px 12px 216px 116px');
+
+    caja = { left: 0, top: 0, width: 640, height: 480 };
+    act(() => {
+      vi.stubGlobal('innerWidth', window.innerWidth + 200);
+      window.dispatchEvent(new Event('resize'));
+    });
+    expect(hueco()).toBe('-8px -8px 656px 496px');
   });
 });

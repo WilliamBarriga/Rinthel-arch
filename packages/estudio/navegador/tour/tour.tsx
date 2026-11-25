@@ -8,13 +8,13 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 import type { CSSProperties, ReactElement } from 'react';
 
 import { useEstudio } from '../marco/contexto';
+import { useTamano } from '../marco/use-tamano';
 import { paradasDelTour } from './paradas';
 import type { ParadaDelTour } from './paradas';
 import { marcarTourVisto } from './visto';
 
 const MARGEN = 8;
 const ANCHO_DE_LA_TARJETA = 340;
-const MEDIR_CADA_MS = 250;
 
 interface Caja {
   left: number;
@@ -23,13 +23,30 @@ interface Caja {
   height: number;
 }
 
-/** The highlighted area of `zona` (with a margin), measured again while the panels move; `null` without one. */
+/**
+ * The highlighted area of `zona` (with a margin); `null` without one. Measured again when the area resizes
+ * (`ResizeObserver`: a panel dragged, another tab) and when the window does (`useTamano`). While the area is not in the
+ * page (the stop's `preparar` is still moving the UI there, or a View change replaced it), a `MutationObserver` waits
+ * for it.
+ */
 function useHueco(zona: string | undefined): Caja | null {
   const [caja, setCaja] = useState<Caja | null>(null);
+  const { width, height } = useTamano();
   useLayoutEffect(() => {
     if (zona === undefined) return setCaja(null);
+    let observado: Element | null = null;
+    const alCambiarDeTamano = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(() => medir());
+    const alCambiarLaPagina = new MutationObserver(() => {
+      if (document.querySelector(zona) !== observado) medir();
+    });
     const medir = (): void => {
-      const r = document.querySelector(zona)?.getBoundingClientRect();
+      const elemento = document.querySelector(zona);
+      if (elemento !== observado) {
+        if (observado !== null) alCambiarDeTamano?.unobserve(observado);
+        if (elemento !== null) alCambiarDeTamano?.observe(elemento);
+        observado = elemento;
+      }
+      const r = elemento?.getBoundingClientRect();
       setCaja((previa) => {
         if (r === undefined) return null;
         const nueva = { left: r.left - MARGEN, top: r.top - MARGEN, width: r.width + 2 * MARGEN, height: r.height + 2 * MARGEN };
@@ -37,9 +54,12 @@ function useHueco(zona: string | undefined): Caja | null {
       });
     };
     medir();
-    const intervalo = window.setInterval(medir, MEDIR_CADA_MS);
-    return () => window.clearInterval(intervalo);
-  }, [zona]);
+    alCambiarLaPagina.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      alCambiarDeTamano?.disconnect();
+      alCambiarLaPagina.disconnect();
+    };
+  }, [zona, width, height]);
   return caja;
 }
 
