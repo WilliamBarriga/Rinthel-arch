@@ -1,7 +1,7 @@
 ---
 name: rinthel-diagramas
 description: Write, validate and serve .dg diagrams (Nodes, Edges, Views, Steps; Diagram types architecture, flow, sequence and er) with the rinthel-arch `diagrams` CLI. Use when creating or editing a Workspace, writing an Interaction or an ER table, fixing validate issues, reordering Lifelines, showing a diagram to the user, turning an existing codebase into a Workspace, refreshing that Workspace after the code changed, drawing a Blueprint from a PRD or spec, or reconciling planned elements with the code.
-compatibility: Requires Node 22 or newer and the `diagrams` CLI (npm package rinthel-arch). Use `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams`. Serving the viewer needs a free local port; images need a headless browser.
+compatibility: Requires Node 24 or newer and the `diagrams` CLI (npm package rinthel-arch). Use `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams`. Serving the viewer needs a free local port; images need a headless browser.
 ---
 
 # Diagrams: write and serve

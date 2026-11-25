@@ -27,7 +27,7 @@
     "url": "git+https://github.com/WilliamBarriga/Rinthel-arch.git"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "bin": {
     "diagrams": "dist/bin.js",

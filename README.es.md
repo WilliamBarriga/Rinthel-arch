@@ -6,7 +6,7 @@ Un modelo en texto, muchas vistas (arquitectura, flujo, secuencia, ER), con Tema
 
 [![npm](https://img.shields.io/npm/v/rinthel-arch.svg)](https://www.npmjs.com/package/rinthel-arch)
 [![Licencia: MIT](https://img.shields.io/badge/licencia-MIT-blue.svg)](LICENSE)
-![Node >= 22](https://img.shields.io/badge/node-%3E%3D22-green.svg)
+![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-green.svg)
 
 [Read in English](README.md) | **[Demo en vivo](https://williambarriga.github.io/Rinthel-arch/)**
 
@@ -33,7 +33,7 @@ Luego pidele a tu agente, en tu propio repo:
 
 El agente corre `scan`, escribe los archivos `.dg`, los valida y te da una URL local para abrir. Despues, "refresh the diagram" actualiza solo lo que cambio en el codigo, y "draw the system in this PRD" bosqueja un diseno que aun no existe. Las skills llaman al CLI con `npx -y -p rinthel-arch@<version> diagrams`, asi que no hay nada mas que instalar. El detalle por agente esta en la [guia de inicio rapido](docs/guia/quick-start.md).
 
-**Sin agente.** Requiere Node 22 o superior:
+**Sin agente.** Requiere Node 24 o superior:
 
 ```
 npx rinthel-arch dev --workspace .

@@ -63,8 +63,8 @@ afterAll(() => {
 });
 
 describe('the rinthel-arch npm package', () => {
-  it('runs on Node 22 or later', () => {
-    expect(Number(process.versions.node.split('.')[0])).toBeGreaterThanOrEqual(22);
+  it('runs on Node 24 or later, as engines declares', () => {
+    expect(Number(process.versions.node.split('.')[0])).toBeGreaterThanOrEqual(24);
   });
 
   it('installs both bins, diagrams and rinthel-arch', () => {

@@ -4,7 +4,7 @@ Write large, detailed diagrams of any project as text (`.dg`) and render them as
 
 ## Usage
 
-Requires Node 22 or later.
+Requires Node 24 or later.
 
 ```
 npx rinthel-arch dev --workspace .

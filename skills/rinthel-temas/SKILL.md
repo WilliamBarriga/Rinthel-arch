@@ -1,7 +1,7 @@
 ---
 name: rinthel-temas
 description: Customize the look of a rinthel-arch diagram with Themes (Palette, fonts, Layers, Slots, Motions, Parts, plus sequence and ER elements). Use when creating or tweaking a Theme, styling a sequence or er View, changing colors or fonts, animating, or fixing Theme issues from validate.
-compatibility: Requires Node 22 or newer and the `diagrams` CLI (npm package rinthel-arch). Use `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams`.
+compatibility: Requires Node 24 or newer and the `diagrams` CLI (npm package rinthel-arch). Use `diagrams` when it is on the PATH, otherwise `npx -y -p rinthel-arch@0.1.0 diagrams`.
 ---
 
 # Themes: customize the look
