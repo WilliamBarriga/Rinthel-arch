@@ -150,7 +150,7 @@ describe('versions and names', () => {
 });
 
 describe('install docs', () => {
-  const docs = ['README.md', 'README.en.md', 'docs/guide/quick-start.md', 'docs/guia/quick-start.md'];
+  const docs = ['README.md', 'README.es.md', 'docs/guide/quick-start.md', 'docs/guia/quick-start.md'];
 
   it('give the install command of each agent', () => {
     for (const path of docs) {
