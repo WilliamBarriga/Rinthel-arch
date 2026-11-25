@@ -68,6 +68,21 @@ describe('inspect search', () => {
     expect(r.stdout).toBe('node cola servicio "Cola" main.dg:9\n1 result\n');
   });
 
+  it('also matches descriptions (assumptions, open questions), after the id and title matches', async () => {
+    const texto = `specification { node service }
+model {
+  service open "Open service"
+  service billing "Billing" "Open question: who owns refunds?"
+  interaction pay "Pay" "Assumption: open banking API" { billing -> open "x" }
+}
+`;
+    const { salida } = await json(['search', 'open question'], workspace(texto));
+    expect(salida).toMatchObject({ results: [{ kind: 'node', id: 'billing' }] });
+
+    const todos = await json(['search', 'open'], workspace(texto));
+    expect((todos.salida as { results: { kind: string; id: string }[] }).results.map((r) => `${r.kind}:${r.id}`)).toEqual(['node:open', 'node:billing', 'interaction:pay']);
+  });
+
   it('sin coincidencias sale 0 con lista vacia', async () => {
     const { exitCode, salida } = await json(['search', 'zzz']);
     expect(exitCode).toBe(0);

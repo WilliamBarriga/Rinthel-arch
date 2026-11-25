@@ -48,7 +48,7 @@ This is a long-running process: start it in the background and wait for the line
 
 Read-only queries over the Model; each result carries the qualified id, kind and file:line.
 
-  inspect search <text>       Nodes by partial id or title, Views by id
+  inspect search <text>       Nodes and Interactions by partial id, title or description, Views by id
   inspect node <id>           Node, parent and children, Attributes, Edges and the Views that show it
   inspect view <id>           Visible Nodes and Edges of the View in its initial state
   inspect interaction <id>    Lifelines in order, Messages and the Views that project the Interaction
