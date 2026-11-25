@@ -1,12 +1,12 @@
-// Catalog of Node kinds and Themes of the rinthel-arch map (the system documents itself).
+// Node kinds of this repo's map, regenerated from `diagrams scan` (skill rinthel-diagramas, "Import from code").
 specification {
-  node actor    { description "Person or agent that uses the system"        icon user      color purple }
-  node package  { description "pnpm package of the monorepo"                  icon box       color blue }
-  node module   { description "Deep module inside a package"       icon box       color gray }
-  node artifact { description "File or folder that is read or produced"  icon box       color green }
-  node output   { description "System output"                          icon box       color amber }
-  node external  { description "Third-party library or tool"         icon cloud     color red }
-  node process  { description "Running process"                       icon server    color blue }
+  node actor    { description "Person or agent that uses the system"       icon user     color purple }
+  node package  { description "pnpm package of the monorepo"               icon box      color blue }
+  node app      { description "A runnable app: the CLI and its servers"      icon server   color green }
+  node artifact { description "A file or bundle that the build produces"   icon box      color green }
+  node module   { description "A folder of code inside a package"          icon box      color gray }
+  node table    { description "A database table"                           icon database color amber }
+  node external { description "A third-party dependency"                   icon cloud    color red }
 }
 
 // Themes of the map: the card of the built-ins (neutral-dark and neutral) with the Workspace fonts and

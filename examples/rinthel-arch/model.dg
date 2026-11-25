@@ -1,0 +1,195 @@
+// This repo as a Model, regenerated from `diagrams scan .` (draft `.rinthel/scan.json`) by an agent following the skill
+// rinthel-diagramas, "Import from code". Each Node cites its scan unit with a Source `path` ref, so `diagrams scan .
+// --workspace examples/rinthel-arch` can report what is new or gone. Left out on purpose: `.rinthel/scan-ignore`.
+model {
+  actor author "Author" "Writes .dg files and works in the Dev UI"
+  actor agent "Agent" "Imports a codebase, validates and edits through the CLI with JSON output"
+
+  package repo "rinthel-arch" "The monorepo root: repo scripts, repo-wide tests and benchmarks" {
+    source { path "." }
+
+    package canonical "canonico" "Canonical form: Zod schema, validation, View resolution, Steps, Pins and queries" {
+      source { path "packages/canonico"  path "packages/canonico/src" }
+    }
+    package dsl "dsl" "Text to Canonical form with Langium; Workspace merge and Theme compiler" {
+      source { path "packages/dsl"  path "packages/dsl/src"  path "packages/dsl/src/gramatica" }
+    }
+    package theme "tema" "Catalog of Primitives, Slots, Motions and Effects; resolved Style of each element" {
+      source { path "packages/tema"  path "packages/tema/src"  path "packages/tema/src/familias" }
+    }
+    package layout "layout" "ELK layout and Pins, sequence layout, cached Geometry and its keys" {
+      source { path "packages/layout" }
+    }
+    package session "sesion" "Session: compile, validate and lay out; single write gate and live Workspace for dev" {
+      source { path "packages/sesion"  path "packages/sesion/src" }
+    }
+    package render "render" "Pure React SVG: Geometry and Style to painted elements" {
+      source { path "packages/render"  path "packages/render/src"  path "packages/render/src/pintura" }
+    }
+    package shell "shell" "Interactive View over render: camera, Selection, collapse, Steps and drags" {
+      source { path "packages/shell"  path "packages/shell/src" }
+    }
+    app cli "cli" "The diagrams CLI: validate, build, inspect, edit, scan, export and the dev server" {
+      source { path "packages/cli" }
+    }
+    artifact npm "npm package" "The published rinthel-arch package: the bundled CLI with the Dev UI and the skills" {
+      source { path "npm" }
+    }
+
+    package scanner "scanner" "Reads a codebase, without running it, into a Scan draft" {
+      source { path "packages/scanner" }
+      module core "scanner/src" "Files, units from manifests, the draft and refresh matching" {
+        source { path "packages/scanner/src" }
+      }
+      module imports "scanner/imports" "Import readers per language (TS/JS, Python) over web-tree-sitter" {
+        source { path "packages/scanner/src/imports" }
+      }
+      module tables "scanner/tables" "Table readers: Prisma, SQL, Drizzle, Django and SQLAlchemy" {
+        source { path "packages/scanner/src/tables" }
+      }
+    }
+
+    package dev-ui "estudio" "The Dev UI: DSL editor, canvas, Themes, Issues, Undo history, agent activity and the export page" {
+      source { path "packages/estudio" }
+      module server "estudio/src" "Node side: builds the browser bundles and writes the exported HTML" {
+        source { path "packages/estudio/src" }
+      }
+      module scripts "estudio/scripts" "Build scripts of the browser bundles" {
+        source { path "packages/estudio/scripts" }
+      }
+      module browser "estudio/navegador" "The browser app: entry, dev client and the panels below" {
+        source { path "packages/estudio/navegador" }
+        module frame "frame" "The shell of the app: islands, tabs, top bar, dialogs and the shared context" {
+          source { path "packages/estudio/navegador/marco" }
+        }
+        module commands "commands" "Command registry, shortcuts and the Finder" {
+          source { path "packages/estudio/navegador/comandos" }
+        }
+        module canvas "canvas" "The canvas around the interactive View" {
+          source { path "packages/estudio/navegador/lienzo" }
+        }
+        module views "views" "Index of Views" {
+          source { path "packages/estudio/navegador/vistas" }
+        }
+        module themes "themes" "Theme gallery: preview and pin" {
+          source { path "packages/estudio/navegador/temas" }
+        }
+        module editor "editor" "DSL editor (CodeMirror) and saving" {
+          source { path "packages/estudio/navegador/editor" }
+        }
+        module issues "issues" "Issues panel and fixes" {
+          source { path "packages/estudio/navegador/issues" }
+        }
+        module details "details" "Details of the selected Node" {
+          source { path "packages/estudio/navegador/detalle" }
+        }
+        module writing "writing" "Sends Intents from gestures to the dev server" {
+          source { path "packages/estudio/navegador/escritura" }
+        }
+        module history "history" "Undo history of the Workspace" {
+          source { path "packages/estudio/navegador/historial" }
+        }
+        module agent "agent" "Agent activity feed" {
+          source { path "packages/estudio/navegador/agente" }
+        }
+        module diff "diff" "Diffs between versions" {
+          source { path "packages/estudio/navegador/diferencia" }
+        }
+        module tour "tour" "The one-minute tour" {
+          source { path "packages/estudio/navegador/tour" }
+        }
+        module export "export" "Read-only entry of the exported HTML" {
+          source { path "packages/estudio/navegador/exportado" }
+        }
+        module worker "worker" "Layout Web Worker" {
+          source { path "packages/estudio/navegador/worker" }
+        }
+      }
+    }
+  }
+
+  // Externals that shape the system; the long tail (test and build tools) is left out.
+  external langium "Langium" "Parser generator of the DSL" { source { path "npm:langium" } }
+  external zod "Zod" "Schema validation" { source { path "npm:zod" } }
+  external elk "ELK (elkjs)" "Layout engine" { source { path "npm:elkjs" } }
+  external react "React" "SVG and Dev UI rendering" { source { path "npm:react"  path "npm:react-dom" } }
+  external d3 "d3-zoom" "Camera of the interactive View" { source { path "npm:d3-zoom"  path "npm:d3-selection" } }
+  external esbuild "esbuild" "Browser bundles and .tsx Theme compilation" { source { path "npm:esbuild" } }
+  external tree-sitter "web-tree-sitter" "Syntax trees for the Scanner" { source { path "npm:web-tree-sitter" } }
+  external codemirror "CodeMirror 6" "DSL editor" {
+    source { path "npm:@codemirror/view"  path "npm:@codemirror/state"  path "npm:@codemirror/language"  path "npm:@lezer/highlight" }
+  }
+  external base-ui "Base UI" "Accessible dialogs, tabs and menus" { source { path "npm:@base-ui/react" } }
+
+  // Who runs it (not in the scan).
+  author -> repo.cli "runs diagrams dev"
+  agent -> repo.cli "runs scan, validate, edit"
+
+  // Dependencies between packages, heaviest first (scan `dependencies`, test folders left out, weight-1 imports left out).
+  repo.cli -> repo.canonical "uses"
+  repo.dev-ui -> repo.canonical "uses"
+  repo.shell -> repo.canonical "uses"
+  repo.session -> repo.canonical "uses"
+  repo.render -> repo.theme "styles with"
+  repo.theme -> repo.canonical "uses"
+  repo.dsl -> repo.theme "compiles Themes with"
+  repo.dsl -> repo.canonical "compiles to"
+  repo.dev-ui -> repo.shell "embeds"
+  repo.cli -> repo.session "opens"
+  repo.shell -> repo.render "draws with"
+  repo.layout -> repo.canonical "reads"
+  repo.session -> repo.dsl "compiles with"
+  repo.shell -> repo.theme "uses"
+  repo.render -> repo.canonical "uses"
+  repo.cli -> repo.dev-ui "serves and exports"
+  repo.layout -> repo.theme "measures with"
+  repo.cli -> repo.dsl "uses"
+  repo.session -> repo.theme "uses"
+  repo.shell -> repo.layout "lays out with"
+  repo.cli -> repo.scanner "scans with"
+  repo.dev-ui -> repo.render "uses"
+  repo.dev-ui -> repo.session "uses"
+  repo.render -> repo.layout "uses"
+
+  // Inside the Scanner.
+  repo.scanner.tables -> repo.scanner.core "uses"
+  repo.scanner.imports -> repo.scanner.core "uses"
+  repo.scanner.core -> repo.scanner.imports "reads imports with"
+  repo.scanner.core -> repo.scanner.tables "reads tables with"
+
+  // Inside the Dev UI: the panels use the frame's context, the frame mounts them.
+  repo.dev-ui.browser -> repo.dev-ui.server "uses"
+  repo.dev-ui.scripts -> repo.dev-ui.server "builds with"
+  repo.dev-ui.browser.commands -> repo.dev-ui.browser.frame "uses"
+  repo.dev-ui.browser.frame -> repo.dev-ui.browser.commands "mounts"
+  repo.dev-ui.browser.themes -> repo.dev-ui.browser.frame "uses"
+  repo.dev-ui.browser.editor -> repo.dev-ui.browser.frame "uses"
+  repo.dev-ui.browser.tour -> repo.dev-ui.browser.frame "uses"
+  repo.dev-ui.browser.details -> repo.dev-ui.browser.frame "uses"
+  repo.dev-ui.browser.themes -> repo.dev-ui.browser.diff "uses"
+  repo.dev-ui.browser.agent -> repo.dev-ui.browser.frame "uses"
+  repo.dev-ui.browser.commands -> repo.dev-ui.browser.views "uses"
+  repo.dev-ui.browser.issues -> repo.dev-ui.browser.frame "uses"
+  repo.dev-ui.browser.canvas -> repo.dev-ui.browser.frame "uses"
+  repo.dev-ui.browser.views -> repo.dev-ui.browser.frame "uses"
+  repo.dev-ui.browser.frame -> repo.dev-ui.browser.agent "mounts"
+  repo.dev-ui.browser.frame -> repo.dev-ui.browser.writing "mounts"
+  repo.dev-ui.browser.frame -> repo.dev-ui.browser.canvas "mounts"
+  repo.dev-ui.browser.frame -> repo.dev-ui.browser.themes "mounts"
+  repo.dev-ui.browser.frame -> repo.dev-ui.browser.tour "mounts"
+
+  // Externals.
+  repo.dsl -> langium "parses with"
+  repo.canonical -> zod "validates with"
+  repo.theme -> zod "validates with"
+  repo.layout -> elk "lays out with"
+  repo.render -> react "renders with"
+  repo.shell -> react "renders with"
+  repo.shell -> d3 "zooms with"
+  repo.dev-ui -> react "renders with"
+  repo.dev-ui.server -> esbuild "bundles with"
+  repo.cli -> esbuild "compiles code Themes with"
+  repo.scanner.core -> tree-sitter "parses code with"
+  repo.dev-ui.browser.editor -> codemirror "edits with"
+  repo.dev-ui.browser -> base-ui "uses"
+}

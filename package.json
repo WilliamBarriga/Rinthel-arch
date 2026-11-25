@@ -21,6 +21,7 @@
     "docs:capturas": "node scripts/docs-capturas.ts",
     "docs:catalogo": "node scripts/generar-referencia-catalogo.ts",
     "npm:package": "node scripts/build-npm-package.ts",
+    "demo:publish": "node scripts/publish-demo.ts",
     "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {

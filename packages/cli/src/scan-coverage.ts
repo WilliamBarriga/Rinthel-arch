@@ -33,7 +33,7 @@ export interface Coverage {
   workspace: string;
   units: CoverageCount;
   tables: CoverageCount;
-  /** Source `path` refs that are neither a unit nor a table id of the draft, by Node id. */
+  /** Source `path` refs that are not a unit, table or external id of the draft, by Node id. */
   orphanRefs: { node: string; ref: string }[];
   columns: ColumnDifference[];
   /** Distinct ids left out by `.rinthel/scan-ignore`. */
@@ -122,6 +122,7 @@ function coverageNodes(model: Modelo): CoverageNode[] {
 function compare(draft: ScanDraft, model: Modelo, workspace: string, ignores: (id: string) => boolean): Coverage {
   const units = new Set(draft.units.map((unit) => unit.id));
   const tables = new Map(draft.tables.map((table) => [table.id, table]));
+  const externals = new Set(draft.externals.map((external) => external.id));
   const cited = new Set<string>();
   const orphanRefs: Coverage['orphanRefs'] = [];
   const columns: ColumnDifference[] = [];
@@ -139,7 +140,7 @@ function compare(draft: ScanDraft, model: Modelo, workspace: string, ignores: (i
       const table = tables.get(ref);
       if (table !== undefined) {
         if (kept(table.id)) citedTables.push(table);
-      } else if (!units.has(ref) && kept(ref)) {
+      } else if (!units.has(ref) && !externals.has(ref) && kept(ref)) {
         orphanRefs.push({ node: node.id, ref });
       }
     }

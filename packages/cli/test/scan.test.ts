@@ -245,6 +245,16 @@ describe('scan', () => {
     expect(summary.next).toContain('write the Workspace .dg files');
   });
 
+  it('a Node citing an external id of the draft (as the skill says) is not an orphan ref', async () => {
+    const root = repo('scan-coverage');
+    const model = join(root, 'diagrams/model.dg');
+    writeFileSync(model, readFileSync(model, 'utf8').replace('model {', 'model {\n  app payments "Stripe" { source { path "npm:stripe" } }'));
+
+    const { stdout } = await run(['scan', root, '--json']);
+
+    expect(JSON.parse(stdout).coverage.orphanRefs).toEqual([{ node: 'legacy', ref: 'packages/legacy' }]);
+  });
+
   it('.rinthel/scan-ignore removes matching ids from coverage but not from the draft', async () => {
     const root = repo('scan-coverage');
     mkdirSync(join(root, '.rinthel'));
