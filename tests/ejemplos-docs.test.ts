@@ -23,18 +23,18 @@ const TEMAS = [
 describe('tutorial (examples/tutorial)', () => {
   for (const paso of [1, 2, 3, 4, 5, 6]) {
     it(`el paso ${paso} valida sin errores ni avisos y trae la Vista principal`, () => {
-      const { canonico, issues } = compile(leerDg(`examples/tutorial/paso-${paso}`));
+      const { canonico, issues } = compile(leerDg(`examples/tutorial/step-${paso}`));
       expect(issues).toEqual([]);
-      expect(canonico?.views.map((v) => v.id)).toContain('principal');
+      expect(canonico?.views.map((v) => v.id)).toContain('main');
     });
   }
 });
 
 describe('tutorial paso 6: secuencia y ER', () => {
   it('trae una Vista sequence y una er sobre el mismo Modelo', () => {
-    const { canonico } = compile(leerDg('examples/tutorial/paso-6'));
-    expect(resolveView(canonico!, 'comprar-secuencia')?.type).toBe('sequence');
-    expect(resolveView(canonico!, 'tablas')?.type).toBe('er');
+    const { canonico } = compile(leerDg('examples/tutorial/step-6'));
+    expect(resolveView(canonico!, 'purchase-sequence')?.type).toBe('sequence');
+    expect(resolveView(canonico!, 'tables')?.type).toBe('er');
   });
 });
 
@@ -46,9 +46,9 @@ describe('mapa de rinthel-arch con los 14 Temas', () => {
     expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
   });
 
-  it('tiene una Vista `abierto-<tema>` por Tema aprobado', () => {
+  it('tiene una Vista `open-<tema>` por Tema aprobado', () => {
     const ids = canonico!.views.map((v) => v.id);
-    for (const t of TEMAS) expect(ids, t).toContain(`abierto-${t}`);
+    for (const t of TEMAS) expect(ids, t).toContain(`open-${t}`);
   });
 });
 
@@ -56,7 +56,7 @@ describe('mapa de rinthel-arch: secuencia y ER', () => {
   const { canonico, issues } = compile(leerDg('examples/rinthel-arch'));
 
   it('la Vista ER de la Fuente canonica proyecta sus tablas y Aristas', () => {
-    const er = resolveView(canonico!, 'fuente-er') as VistaDeGrafo;
+    const er = resolveView(canonico!, 'canonical-er') as VistaDeGrafo;
     expect(er.type).toBe('er');
     expect(er.nodes).toHaveLength(7);
     expect(er.edges.length).toBeGreaterThanOrEqual(8);
@@ -64,13 +64,13 @@ describe('mapa de rinthel-arch: secuencia y ER', () => {
   });
 
   it('la Interaccion editar-pin tiene Fragmento, ref, Pasos y link a arquitectura', () => {
-    const vista = resolveView(canonico!, 'editar-pin') as VistaDeSecuencia;
+    const vista = resolveView(canonico!, 'edit-pin') as VistaDeSecuencia;
     expect(vista.type).toBe('sequence');
     const fragmento = vista.interaction.items.find((i) => i.type === 'fragment') as unknown as { operands: Array<{ items: Array<{ type: string }> }> };
     expect(fragmento.operands[0]!.items.map((i) => i.type)).toContain('ref');
     expect(vista.steps).toHaveLength(2);
-    expect(canonico!.views.find((v) => v.id === 'editar-pin')!.links?.map((l) => l.view)).toEqual(['sesion-detalle', 'shell-detalle', 'estudio-detalle']);
-    expect(canonico!.views.map((v) => v.id)).toContain('recompilar');
+    expect(canonico!.views.find((v) => v.id === 'edit-pin')!.links?.map((l) => l.view)).toEqual(['session-detail', 'shell-detail', 'dev-ui-detail']);
+    expect(canonico!.views.map((v) => v.id)).toContain('recompile');
   });
 
   it('no agrega issues propios (solo los avisos deliberados de los Temas)', () => {
@@ -100,13 +100,13 @@ describe('bloques .dg de las guias', () => {
   it('el README presenta los cuatro Tipos de diagrama con captura', () => {
     const readme = readFileSync(resolve(RAIZ, 'README.md'), 'utf8');
     for (const tipo of ['architecture', 'flow', 'sequence', 'er']) expect(readme, tipo).toContain(`\`${tipo}\``);
-    for (const img of ['tipos/secuencia-tienda.png', 'tipos/er-tienda.png']) expect(readme).toContain(`docs/img/${img}`);
+    for (const img of ['tipos/sequence-shop.png', 'tipos/er-shop.png']) expect(readme).toContain(`docs/img/${img}`);
   });
 });
 
 describe('documentacion publica', () => {
   it('hay capturas de secuencia y ER (tutorial paso 6 y README)', () => {
-    for (const f of ['tutorial/paso-6-secuencia-tienda.png', 'tutorial/paso-6-er-tienda.png', 'tipos/secuencia-tienda.png', 'tipos/er-tienda.png']) {
+    for (const f of ['tutorial/step-6-sequence-shop.png', 'tutorial/step-6-er-shop.png', 'tipos/sequence-shop.png', 'tipos/er-shop.png']) {
       expect(existsSync(resolve(RAIZ, 'docs/img', f)), f).toBe(true);
     }
   });
@@ -114,7 +114,7 @@ describe('documentacion publica', () => {
   it('hay una captura por Tema y por paso del tutorial', () => {
     for (const t of TEMAS) expect(existsSync(resolve(RAIZ, `docs/img/temas/${t}.png`)), t).toBe(true);
     const pasos = readdirSync(resolve(RAIZ, 'docs/img/tutorial'));
-    for (const n of [1, 2, 3, 4, 5]) expect(pasos.some((f) => f.startsWith(`paso-${n}-`)), `paso ${n}`).toBe(true);
+    for (const n of [1, 2, 3, 4, 5]) expect(pasos.some((f) => f.startsWith(`step-${n}-`)), `paso ${n}`).toBe(true);
   });
 
   it('los enlaces relativos de README, guias y CONTRIBUTING apuntan a archivos que existen', () => {

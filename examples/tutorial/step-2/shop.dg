@@ -1,0 +1,47 @@
+// Step 2: Groups, Attributes, labeled Edges and a second linked View.
+specification {
+  node actor    { description "Who uses the system"       icon user     color purple }
+  node service { description "Logic piece"            icon server   color blue }
+  node store  { description "Data that persists"        icon database color green }
+  node queue     { description "Message channel"          icon queue    color amber }
+  node external  { description "Third-party system"        icon cloud    color red }
+  node domain  { description "Groups related pieces" icon box      color gray }
+}
+
+model {
+  actor client "Customer" "Places orders"
+  service api "API" "Entry point"
+
+  domain shop "Shop" {
+    service orders "Orders" "Records orders"
+    service payments "Payments" "Charges the orders"
+    queue events "Events"
+    store db "Database" {
+      attrs {
+        id: uuid
+        total: decimal "in cents"
+      }
+    }
+  }
+
+  external stripe "Payment gateway"
+
+  client -> api "HTTP"
+  api -> shop.orders
+  shop.orders -> shop.events "order created"
+  shop.events -> shop.payments
+  shop.payments -> stripe "charges"
+  shop.orders -> shop.db
+}
+
+view main {
+  type architecture
+  include **
+  collapsed shop
+  link shop -> shop-detail
+}
+
+view shop-detail {
+  type architecture
+  include shop.**, api, stripe
+}

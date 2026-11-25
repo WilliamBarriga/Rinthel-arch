@@ -4,14 +4,14 @@ import { describe, expect, it } from 'vitest';
 
 import { abrirSesion } from 'sesion';
 
-const ejemplo = readFileSync(resolve(import.meta.dirname, '../examples/temas/secuencia.dg'), 'utf8');
+const ejemplo = readFileSync(resolve(import.meta.dirname, '../examples/themes/sequence.dg'), 'utf8');
 
-describe('examples/temas/secuencia.dg', () => {
+describe('examples/themes/sequence.dg', () => {
   it('compila sin issues y declara todos los Elementos de secuencia', async () => {
-    const sesion = abrirSesion({ 'secuencia.dg': ejemplo });
+    const sesion = abrirSesion({ 'sequence.dg': ejemplo });
 
     expect(await sesion.diagnosticar()).toEqual([]);
-    const pintura = sesion.estilo('compra')!.pintura.secuencia!;
+    const pintura = sesion.estilo('purchase')!.pintura.secuencia!;
     expect(Object.keys(pintura).sort()).toEqual(['activacion', 'fragmento', 'lifeline', 'mensaje', 'nota']);
     expect(Object.keys(pintura.mensaje!.base.variantes).sort()).toEqual(['async', 'destroy', 'reply']);
     expect(Object.keys(pintura.fragmento!.variantes).sort()).toEqual(['alt', 'ref']);

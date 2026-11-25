@@ -1,0 +1,21 @@
+// `code` Layer (ADR 0008): a React component of the Workspace itself paints the Layer. This example
+// only declares the usage; the `Aurora` component lives in a `.tsx` next to the Workspace that uses it.
+// The compiler warns theme-with-code (intentional: the Theme runs user code).
+specification {
+  node piece { description "Sample Node" icon box color blue }
+}
+
+model {
+  piece a "With code"
+}
+
+theme with-code {
+  palette { paper "#fefce8"  ink "#1e293b" }
+  tokens { background "#ffffff"  foreground "#1e293b"  border "#475569" }
+  node {
+    layer shape rect { radius 4 }
+    layer fill solid { color paper }
+    layer aura code over { component Aurora  hue 3 }
+    slots { title }
+  }
+}

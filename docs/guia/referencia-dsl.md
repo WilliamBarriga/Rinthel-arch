@@ -241,7 +241,7 @@ view compra {
 }
 ```
 
-Un ejemplo completo esta en [`examples/rinthel-arch/vistas.dg`](../../examples/rinthel-arch/vistas.dg).
+Un ejemplo completo esta en [`examples/rinthel-arch/views.dg`](../../examples/rinthel-arch/views.dg).
 
 ## `theme` y `part`
 

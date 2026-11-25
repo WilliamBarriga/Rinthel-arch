@@ -47,9 +47,9 @@ Tres ideas:
 
 Sin `theme`, la Vista usa el Tema incorporado `neutral`:
 
-![Paso 1](../img/tutorial/paso-1-neutral.png)
+![Paso 1](../img/tutorial/step-1-neutral.png)
 
-Verifica con `dg validate --workspace mi-tienda`: debe decir `0 errores, 0 avisos`. Este paso esta en [`examples/tutorial/paso-1`](../../examples/tutorial/paso-1).
+Verifica con `dg validate --workspace mi-tienda`: debe decir `0 errores, 0 avisos`. Este paso esta en [`examples/tutorial/step-1`](../../examples/tutorial/step-1).
 
 ## Paso 2: Grupos, Atributos y una segunda Vista
 
@@ -101,9 +101,9 @@ view tienda-detalle {
 
 `collapsed tienda` muestra el Grupo como un solo Nodo con su contador de hijos y eleva las Aristas de sus hijos a su borde. En el visor, el enlace te lleva a `tienda-detalle`. Para abrirlo en la misma Vista usa `expanded tienda`.
 
-![Paso 2](../img/tutorial/paso-2-neutral.png)
+![Paso 2](../img/tutorial/step-2-neutral.png)
 
-Completo en [`examples/tutorial/paso-2`](../../examples/tutorial/paso-2).
+Completo en [`examples/tutorial/step-2`](../../examples/tutorial/step-2).
 
 ## Paso 3: cambiar de Tema
 
@@ -121,9 +121,9 @@ view principal {
 
 Esa es toda la diferencia: el Modelo y la Vista no cambian, solo `theme`.
 
-![Paso 3](../img/tutorial/paso-3-neutral-dark.png)
+![Paso 3](../img/tutorial/step-3-neutral-dark.png)
 
-Completo en [`examples/tutorial/paso-3`](../../examples/tutorial/paso-3).
+Completo en [`examples/tutorial/step-3`](../../examples/tutorial/step-3).
 
 ## Paso 4: tu propio Tema
 
@@ -155,9 +155,9 @@ Y en las dos Vistas cambia `theme neutral-dark` por `theme tienda`. Que paso:
 - `layer <nombre> <primitiva> { ... }` define, cambia o agrega una **Capa**. `layer borde dashed` cambia la Capa `borde` del padre a una Primitiva discontinua; `layer acento shadow after borde` agrega una Capa nueva justo despues de `borde`.
 - `edge { ... }` cambia las Aristas: trazo grueso, esquinas redondeadas y punta de flecha.
 
-![Paso 4](../img/tutorial/paso-4-tienda.png)
+![Paso 4](../img/tutorial/step-4-shop.png)
 
-Completo en [`examples/tutorial/paso-4`](../../examples/tutorial/paso-4). Si te equivocas en una Primitiva o una propiedad, `validate` dice cual y sugiere la correcta.
+Completo en [`examples/tutorial/step-4`](../../examples/tutorial/step-4). Si te equivocas en una Primitiva o una propiedad, `validate` dice cual y sugiere la correcta.
 
 ## Paso 5 (opcional): un Tema desde cero
 
@@ -166,15 +166,15 @@ Sin `extends`, un Tema declara todo lo que quiere ver: la Paleta, las fuentes, e
 - **Estados** (`state hover { ... }`) que cambian la pintura al pasar el raton, seleccionar o estar en una ruta.
 - **Movimiento** (`motion aura 2s`) colgado de una Capa, y efectos de entrada (`enter fade 300ms`).
 
-El Tema `neon` de [`examples/tutorial/paso-5/neon.dg`](../../examples/tutorial/paso-5/neon.dg) usa todo eso en unas 40 lineas:
+El Tema `neon` de [`examples/tutorial/step-5/neon.dg`](../../examples/tutorial/step-5/neon.dg) usa todo eso en unas 40 lineas:
 
-![Paso 5](../img/tutorial/paso-5-neon.png)
+![Paso 5](../img/tutorial/step-5-neon.png)
 
 Pasa el raton sobre un Nodo para ver el glow cambiar y compara con el glow pulsante del Tema `synthwave` en el [mapa del repo](../../README.md#galeria).
 
 ## Paso 6 (opcional): secuencia y ER
 
-El mismo Modelo se dibuja de otras formas cambiando el `type` de la Vista. [`examples/tutorial/paso-6`](../../examples/tutorial/paso-6) suma a la tienda una **Interaccion** (un escenario ordenado entre Nodos, con un Fragmento `alt` y una Nota) y dos tablas con claves:
+El mismo Modelo se dibuja de otras formas cambiando el `type` de la Vista. [`examples/tutorial/step-6`](../../examples/tutorial/step-6) suma a la tienda una **Interaccion** (un escenario ordenado entre Nodos, con un Fragmento `alt` y una Nota) y dos tablas con claves:
 
 ```dg
 specification {
@@ -217,12 +217,12 @@ view comprar-secuencia { type sequence  interaction comprar  autonumber }
 view tablas { type er  include clientes, pedidos-tabla }
 ```
 
-![Secuencia de la compra, con el Tema tienda](../img/tutorial/paso-6-secuencia-tienda.png)
+![Secuencia de la compra, con el Tema tienda](../img/tutorial/step-6-sequence-shop.png)
 
-![Tablas ER, con el Tema tienda](../img/tutorial/paso-6-er-tienda.png)
+![Tablas ER, con el Tema tienda](../img/tutorial/step-6-er-shop.png)
 
 
-Las Lifelines son los Nodos del Modelo; la Vista `er` dibuja cada Nodo hoja como tabla y las Aristas con cardinalidad (`"0..*" -> "1"`) como claves foraneas. El Tema `tienda` se aplica sin cambios: lo que no declara se deriva de `node` y `edge`. Mira todos los Temas de ejemplo en secuencia y ER en la galeria (`examples/temas/galeria`).
+Las Lifelines son los Nodos del Modelo; la Vista `er` dibuja cada Nodo hoja como tabla y las Aristas con cardinalidad (`"0..*" -> "1"`) como claves foraneas. El Tema `tienda` se aplica sin cambios: lo que no declara se deriva de `node` y `edge`. Mira todos los Temas de ejemplo en secuencia y ER en la galeria (`examples/themes/gallery`).
 
 ## Siguiente
 

@@ -1,0 +1,233 @@
+// Views of the map: one per question ("how are the packages split", "how does an edit flow").
+view packages {
+  type architecture
+  theme diagrams
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli
+  depth 1
+  link canonical -> canonical-detail
+  link theme -> theme-detail
+  link dsl -> dsl-detail
+  link layout -> layout-detail
+  link session -> session-detail
+  link render -> render-detail
+  link shell -> shell-detail
+  link dev-ui -> dev-ui-detail
+  link cli -> cli-detail
+}
+
+// The packages with render and layout expanded and the rest collapsed (the `open` View of the approved prototype; session was collapsed when it grew to 16 modules).
+view open {
+  type architecture
+  theme diagrams
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+
+view canonical-detail {
+  type architecture
+  theme diagrams
+  include canonical.**, zod, dsl.dsl-compile, session.ses-workspace-live, session.ses-api-dev, session.ses-registry-live, dev-ui.dui-protocol, cli.cli-inspect, cli.cli-activity, shell.sh-steps, layout.lay-sequence
+  depth 2
+}
+
+view dsl-detail {
+  type architecture
+  theme diagrams
+  include dsl.**, langium, canonical.can-schema, theme.thm-catalog, theme.thm-patches, session.ses-session
+  depth 2
+}
+
+view layout-detail {
+  type architecture
+  theme diagrams
+  include layout.**, elk, canonical.can-geometry, canonical.can-sequence, theme.thm-sequence, theme.thm-slots, theme.thm-metrics, session.ses-session, shell.sh-serve-layout, shell.sh-geometry
+  depth 2
+}
+
+view session-detail {
+  type architecture
+  theme diagrams-light
+  include session.**, dsl.dsl-compile, dsl.dsl-themes, layout.lay-layout, canonical.can-dev, cli.cli-dev, dev-ui.dui-in-memory-dev
+  depth 2
+}
+
+view render-detail {
+  type architecture
+  theme diagrams
+  include render.**, react, theme.thm-style, theme.thm-messages, layout.lay-index, layout.lay-sequence, shell.sh-view
+  depth 3
+}
+
+view shell-detail {
+  type architecture
+  theme diagrams
+  include shell.**, d3, layout.lay-layout, layout.lay-index, render.ren-scene, render.ren-diagram, render.ren-style, canonical.can-steps, canonical.can-sequence, dev-ui.dui-web.web-canvas.cnv-canvas
+  depth 2
+}
+
+// The Dev UI: each browser feature as a collapsed Group; expanding one shows its files.
+view dev-ui-detail {
+  type architecture
+  theme diagrams
+  include dev-ui.**, react, codemirror, base-ui, esbuild, canonical.can-dev, session.ses-api-dev, session.ses-workspace-live, shell.sh-view, render.ren-code, server-dev
+  depth 3
+}
+
+view theme-detail {
+  type architecture
+  theme diagrams
+  include theme.**, zod, canonical.can-schema, dsl.dsl-themes, layout.lay-layout, render.ren-style, session.ses-query-theme
+  depth 3
+}
+
+view cli-detail {
+  type architecture
+  theme diagrams
+  include cli.**, esbuild, node-http, server-dev, workspace, registry-activity, session.ses-session, session.ses-workspace-live, session.ses-api-dev, session.ses-apply, session.ses-registry-live, canonical.can-inspect, canonical.can-dev, dev-ui.dui-index
+  depth 2
+}
+
+// What happens when the author drags a Node in the Dev UI: from the gesture to the .dg and back to the canvas.
+view flow-edit {
+  type flow
+  theme diagrams
+  include author, shell.sh-drag, dev-ui.dui-web.web-canvas.cnv-canvas, dev-ui.dui-web.web-writing, dev-ui.dui-web.web-client, cli.cli-dev, session.ses-api-dev, session.ses-workspace-live, session.ses-apply, session.ses-intents, workspace, session.ses-session, shell.sh-view, render.ren-diagram
+  steps {
+    step "The author drags a Node on the canvas" {
+      show author, shell.sh-drag, dev-ui.dui-web.web-canvas.cnv-canvas
+    }
+    step "The writing layer sends the Intent with the current version" {
+      show dev-ui.dui-web.web-writing, dev-ui.dui-web.web-client
+    }
+    step "dev delegates /api/edit to atenderApiDeDev" {
+      show cli.cli-dev, session.ses-api-dev
+    }
+    step "The live Workspace applies it through the single write gate" {
+      show session.ses-workspace-live, session.ses-apply, session.ses-intents
+    }
+    step "The .dg file is rewritten" {
+      show workspace
+    }
+    step "The Session recompiles and the new state arrives over SSE" {
+      show session.ses-session
+    }
+    step "The canvas redraws the View" {
+      show shell.sh-view, render.ren-diagram
+    }
+  }
+}
+
+// What happens when the agent runs `dg validate` (or `build`).
+view flow-validate {
+  type flow
+  theme diagrams
+  include agent, cli.cli-index, cli.cli-workspace, workspace, cli.cli-session, session.ses-session, dsl.dsl-compile, canonical.can-validate, cli.cli-validate, cli.cli-activity, cli.cli-registry-disk, registry-activity
+  steps {
+    step "The agent runs dg validate --json" {
+      show agent, cli.cli-index
+    }
+    step "The CLI reads the .dg folder" {
+      show cli.cli-workspace, workspace
+    }
+    step "A Session is opened with the Themes from --theme-path" {
+      show cli.cli-session, session.ses-session
+    }
+    step "The DSL is compiled to Canonical form" {
+      show dsl.dsl-compile
+    }
+    step "The Canonical form is validated: issues with code, hint and fix" {
+      show canonical.can-validate
+    }
+    step "The summary and the exit code are printed" {
+      show cli.cli-validate
+    }
+    step "An Event is appended to the Activity log" {
+      show cli.cli-activity, cli.cli-registry-disk, registry-activity
+    }
+  }
+}
+
+// What happens from saving a .dg until the Dev UI updates.
+view flow-dev {
+  type flow
+  theme diagrams
+  include author, workspace, cli.cli-dev, session.ses-workspace-live, session.ses-session, session.ses-diff, session.ses-change, server-dev, dev-ui.dui-web.web-frame.frm-state-dev, dev-ui.dui-web.web-canvas.cnv-geometries, shell.sh-worker, worker-layout, dev-ui.dui-web.web-canvas.cnv-canvas, shell.sh-view, render.ren-diagram
+  steps {
+    step "The author (or the agent) saves a .dg" {
+      show author, workspace
+    }
+    step "The dev disk watcher notifies the live Workspace" {
+      show cli.cli-dev, session.ses-workspace-live
+    }
+    step "The Session recompiles and validates" {
+      show session.ses-session
+    }
+    step "The Diff is computed and the change is classified: paint, structure or code" {
+      show session.ses-diff, session.ses-change
+    }
+    step "The server pushes state, Diff and Undo history over SSE" {
+      show server-dev, dev-ui.dui-web.web-frame.frm-state-dev
+    }
+    step "If the structure changed, the Worker recomputes the Geometry of the active View" {
+      show dev-ui.dui-web.web-canvas.cnv-geometries, shell.sh-worker, worker-layout
+    }
+    step "The canvas redraws the View and highlights what changed" {
+      show dev-ui.dui-web.web-canvas.cnv-canvas, shell.sh-view, render.ren-diagram
+    }
+  }
+}
+
+// How the author sees what the agent does: from the command to the Agent panel of the Dev UI.
+view flow-agent {
+  type flow
+  theme diagrams
+  include agent, cli.cli-index, cli.cli-activity, cli.cli-registry-disk, registry-activity, session.ses-registry-live, session.ses-workspace-live, server-dev, dev-ui.dui-web.web-agent.agt-activity, dev-ui.dui-web.web-agent.agt-panel, dev-ui.dui-web.web-agent.agt-pills, author
+  steps {
+    step "The agent runs validate, inspect or edit" {
+      show agent, cli.cli-index
+    }
+    step "The CLI builds an Event and appends it with rotation" {
+      show cli.cli-activity, cli.cli-registry-disk, registry-activity
+    }
+    step "dev watches the log and reads the new lines with debounce" {
+      show session.ses-registry-live, session.ses-workspace-live
+    }
+    step "The server pushes event: actividad" {
+      show server-dev, dev-ui.dui-web.web-agent.agt-activity
+    }
+    step "The Agent panel and the pills show it to the author" {
+      show dev-ui.dui-web.web-agent.agt-panel, dev-ui.dui-web.web-agent.agt-pills, author
+    }
+  }
+}
+
+// From a Theme written in DSL to pixels: how a Primitive reaches the SVG.
+view flow-theme {
+  type flow
+  theme diagrams
+  include workspace, dsl.dsl-themes, dsl.dsl-themes-layers, theme.thm-catalog, theme.thm-theme, theme.thm-contrast, theme.thm-style, theme.thm-metrics, layout.lay-layout, render.ren-style, render.ren-sheet, render.ren-diagram
+  steps {
+    step "The Theme is written in a .dg" {
+      show workspace
+    }
+    step "The Theme compiler validates it against the catalog" {
+      show dsl.dsl-themes, dsl.dsl-themes-layers, theme.thm-catalog
+    }
+    step "The Theme is resolved: Palette, Layers and Slots" {
+      show theme.thm-theme
+    }
+    step "A warning is raised for insufficient contrast" {
+      show theme.thm-contrast
+    }
+    step "The Metrics give the size of each Node to the layout" {
+      show theme.thm-metrics, layout.lay-layout
+    }
+    step "The resolved Style goes to render" {
+      show theme.thm-style, render.ren-style
+    }
+    step "The sheet and the painters produce the SVG" {
+      show render.ren-sheet, render.ren-diagram
+    }
+  }
+}

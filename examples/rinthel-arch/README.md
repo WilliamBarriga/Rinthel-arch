@@ -1,21 +1,21 @@
-# Mapa de rinthel-arch (caso de uso)
+# rinthel-arch map (use case)
 
-Workspace de ejemplo en el que el sistema se documenta a si mismo: paquetes del monorepo, dependencias y flujo de edicion. No es parte del nucleo: sirve de prueba de punta a punta (validate, build, dev).
+Example Workspace in which the system documents itself: monorepo packages, dependencies and the editing flow. It is not part of the core: it serves as an end-to-end test (validate, build, dev).
 
-## Contenido
+## Contents
 
-| Archivo | Que mapea |
+| File | What it maps |
 | --- | --- |
-| `especificacion.dg` | Tipos de nodo (actor, paquete, modulo, artefacto, salida, externo...) y Temas `diagrams` (oscuro) y `diagrams-claro`: extienden los incorporados `neutral-dark` y `neutral` con las fuentes del Workspace y dos parches por Tipo (las Partes `barra-paquete` y `borde-discontinuo`) |
-| `sistema.dg` | Los nueve paquetes con sus modulos (uno por archivo de `src`, con `source` al archivo; `estudio/navegador` agrupado por feature), actores, artefactos (incluido el Registro de actividad), procesos y librerias externas. Los titulos de modulo llevan el paquete o la feature (`tema/estilo`, `editor/guardado`) para distinguir homonimos |
-| `conexiones.dg` | Dependencias entre paquetes (de `package.json`) y entre modulos: dentro de un paquete, todos los imports; entre paquetes, solo las costuras que explican el mapa. Mas el flujo de datos con actores, servidor dev, SSE y Worker. Las Aristas solo se declaran en `model`, con ids cualificados |
-| `vistas.dg` | Vista de paquetes con drill-down a cada paquete, la Vista `abierto` (render y layout abiertos; la Vista `abierto` del prototipo aprobado), un detalle por paquete (`*-detalle`, incluido `estudio-detalle`) y cinco Vistas de flujo con Pasos: `flujo-edicion` (arrastrar un Nodo en la UI de dev), `flujo-validate`, `flujo-dev`, `flujo-agente` (del comando al panel Agente) y `flujo-tema` |
-| `fuente-canonica.dg` | La Fuente canonica como esquema ER (Vista `fuente-er`, con Pasos) y dos Interacciones con Vista de secuencia: `editar-pin` (del arrastre a la Escritura, `/api/edit` y el Workspace vivo, con el 409; Fragmento `alt`, `ref`, Notas, Pasos y `link` a `sesion-detalle`, `shell-detalle` y `estudio-detalle`) y `recompilar` (Sesion, Diferencia y clasificacion del cambio) |
-| `themes/` | Los Temas aprobados y, en `themes/fonts/`, sus familias en `woff2` con licencias `OFL-<familia>.txt`. Es la unica copia: la galeria los usa con `--theme-path` |
-| `vistas-temas.dg` | Una Vista `abierto-<tema>` por Tema: el mismo diagrama de la Vista `abierto` con cada estetica. Sus capturas estan en la [galeria](../../docs/galeria.md) |
-| `fonts/` | DejaVu Sans y Mono (licencia en `LICENCIA-DejaVu.txt`) |
+| `specification.dg` | Node kinds (actor, package, module, artifact, output, external...) and the Themes `diagrams` (dark) and `diagrams-light`: they extend the built-in `neutral-dark` and `neutral` with the Workspace fonts and two patches per kind (the Parts `bar-package` and `border-dashed`) |
+| `system.dg` | The nine packages with their modules (one per `src` file, with `source` pointing at the file; `dev-ui/browser` grouped by feature), actors, artifacts (including the Activity log), processes and external libraries. Module titles carry the package or the feature (`theme/style`, `editor/saving`) to tell homonyms apart |
+| `connections.dg` | Dependencies between packages (from `package.json`) and between modules: inside a package, all imports; across packages, only the seams that explain the map. Plus the data flow with actors, dev server, SSE and Worker. Edges are only declared in `model`, with qualified ids |
+| `views.dg` | A packages View with drill-down into each package, the `open` View (render and layout expanded; the `open` View of the approved prototype), one detail per package (`*-detail`, including `dev-ui-detail`) and five flow Views with Steps: `flow-edit` (dragging a Node in the Dev UI), `flow-validate`, `flow-dev`, `flow-agent` (from the command to the Agent panel) and `flow-theme` |
+| `canonical-form.dg` | The Canonical form as an ER schema (View `canonical-er`, with Steps) and two Interactions with a sequence View: `edit-pin` (from the drag to the write, `/api/edit` and the live Workspace, with the 409; `alt` Fragment, `ref`, Notes, Steps and `link` to `session-detail`, `shell-detail` and `dev-ui-detail`) and `recompile` (Session, Diff and change classification) |
+| `themes/` | The approved Themes and, in `themes/fonts/`, their families as `woff2` with `OFL-<family>.txt` licenses. It is the only copy: the gallery uses them with `--theme-path` |
+| `theme-views.dg` | One `open-<theme>` View per Theme: the same diagram as the `open` View with each aesthetic. Their screenshots are in the [gallery](../../docs/galeria.md) |
+| `fonts/` | DejaVu Sans and Mono (license in `LICENSE-DejaVu.txt`) |
 
-## Uso
+## Usage
 
 ```
 node packages/cli/dist/bin.js validate --workspace examples/rinthel-arch
@@ -23,15 +23,15 @@ node packages/cli/dist/bin.js build    --workspace examples/rinthel-arch
 node packages/cli/dist/bin.js dev      --workspace examples/rinthel-arch
 ```
 
-Para regenerar las capturas de `docs/img/`: `pnpm docs:capturas`. Para ver una Vista con otro Tema sin tocar el ejemplo (necesita `pnpm build`):
+To regenerate the screenshots in `docs/img/`: `pnpm docs:capturas`. To see a View with another Theme without touching the example (needs `pnpm build`):
 
 ```
-pnpm capturas --workspace examples/rinthel-arch --vista abierto --prototipo A neutral neutral-dark
+pnpm capturas --workspace examples/rinthel-arch --vista open --prototipo A neutral neutral-dark
 ```
 
-La salida queda en `examples/rinthel-arch/.diagrams/` (ignorada por git). `dev` sirve la vista previa en vivo en 127.0.0.1; navega con los enlaces de drill-down.
+The output goes to `examples/rinthel-arch/.diagrams/` (ignored by git). `dev` serves the live preview on 127.0.0.1; navigate with the drill-down links.
 
-## Limitaciones que siguen
+## Remaining limitations
 
-- Las Aristas no se pueden declarar dentro del bloque de un Nodo: hay que usar el id cualificado completo en `model`.
-- Una etiqueta de Arista elevada por un Grupo colapsado se conserva solo si es la unica entre ese par; si se fusionan varias, se pierde.
+- Edges cannot be declared inside a Node block: use the full qualified id in `model`.
+- An Edge label lifted by a collapsed Group is kept only if it is the only one between that pair; if several are merged, it is lost.

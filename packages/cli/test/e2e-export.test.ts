@@ -68,7 +68,7 @@ async function abrir(url: string, { sinWorker = false } = {}): Promise<{ pagina:
   });
   pagina.on('pageerror', (e) => errores.push(e.message));
   if (sinWorker) await pagina.addInitScript(() => Object.defineProperty(window, 'Worker', { value: undefined }));
-  await pagina.goto(`${url}#vista=paquetes`);
+  await pagina.goto(`${url}#vista=packages`);
   return { pagina, ajenas, errores };
 }
 
@@ -77,19 +77,19 @@ const listo = (pagina: Page, vista: string) => pagina.locator(`.rd-vista[data-vi
 async function recorrer(url: string, opciones: { sinWorker?: boolean } = {}): Promise<void> {
   const { pagina, ajenas, errores } = await abrir(url, opciones);
   try {
-    await listo(pagina, 'paquetes');
+    await listo(pagina, 'packages');
     await pagina.getByText('Read-only').waitFor();
     expect(await pagina.getByRole('tab', { name: 'Code' }).count()).toBe(0);
 
     // Another View from the index.
-    await pagina.getByRole('listbox', { name: 'Views' }).getByRole('option', { name: 'abierto', exact: true }).click();
-    await listo(pagina, 'abierto');
+    await pagina.getByRole('listbox', { name: 'Views' }).getByRole('option', { name: 'open', exact: true }).click();
+    await listo(pagina, 'open');
 
     // Theme switching (a Theme with its own fonts): the canvas lays out again with it.
     await pagina.getByRole('tab', { name: 'Themes' }).click();
     await pagina.getByRole('listbox', { name: 'Themes' }).getByRole('option', { name: 'blueprint' }).click();
     await pagina.getByRole('region', { name: 'Theme blueprint' }).waitFor();
-    await listo(pagina, 'abierto');
+    await listo(pagina, 'open');
     // Its embedded font file loaded (not the fallback).
     await expect.poll(() => pagina.evaluate(() => [...document.fonts].some((f) => f.family.includes('JetBrains Mono') && f.status === 'loaded')), ESPERA).toBe(true);
 

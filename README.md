@@ -52,7 +52,7 @@ Una Interaccion (un escenario ordenado entre Nodos) se dibuja como diagrama de s
 
 | | |
 | --- | --- |
-| ![Vista sequence de la compra](docs/img/tipos/secuencia-tienda.png)<br>`type sequence` | ![Vista er de clientes y pedidos](docs/img/tipos/er-tienda.png)<br>`type er` |
+| ![Vista sequence de la compra](docs/img/tipos/sequence-shop.png)<br>`type sequence` | ![Vista er de clientes y pedidos](docs/img/tipos/er-shop.png)<br>`type er` |
 
 El [tutorial](docs/guia/tutorial.md#paso-6-opcional-secuencia-y-er) los arma paso a paso y la [referencia del DSL](docs/guia/referencia-dsl.md) cubre Mensajes, Fragmentos, Notas, `ref`, marcas ER y Pasos.
 
@@ -78,7 +78,7 @@ pnpm build
 node packages/cli/dist/bin.js dev --workspace examples/rinthel-arch
 ```
 
-`dev` imprime una URL (`http://127.0.0.1:4173/`). Si la UI carga ahi, todo funciona; cambia a las Vistas `abierto-<tema>` para ver los Temas de ejemplo. Para tu propio diagrama, apunta `--workspace` a una carpeta con tus `.dg`.
+`dev` imprime una URL (`http://127.0.0.1:4173/`). Si la UI carga ahi, todo funciona; cambia a las Vistas `open-<theme>` para ver los Temas de ejemplo. Para tu propio diagrama, apunta `--workspace` a una carpeta con tus `.dg`.
 
 ## Documentacion
 

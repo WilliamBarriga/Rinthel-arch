@@ -44,7 +44,7 @@ tokens  { background "#13001f"  foreground "#fdf4ff"  border "#ff2bd6" }
 
 - El hex solo existe en `palette`. En todo el resto, un color es un **nombre de Paleta**, con modificadores: `rosa/0.4` (opacidad) o los especiales `COLOR` (el color del Tipo del Nodo, el que declaraste en `specification`) y `ORIGEN` (en Aristas, el color del Nodo de origen).
 - Los nombres `blue`, `green`, `amber`, `red`, `purple` y `gray` son los colores que usan los Tipos de nodo; define los que uses.
-- Las fuentes se **autohospedan**: pon los archivos en el Workspace, por ejemplo en una carpeta `fonts/` (`woff2`, `woff`, `ttf` u `otf`, uno por familia y peso; la convencion de nombres esta en la [galeria de ejemplo](../../examples/temas/galeria/README.md#fuentes)) y nombra la familia en `fonts`. No hay CDN. `fallback` es la familia generica de reserva. Los ejemplos traen sus fuentes y licencias en `examples/rinthel-arch/themes/fonts/`.
+- Las fuentes se **autohospedan**: pon los archivos en el Workspace, por ejemplo en una carpeta `fonts/` (`woff2`, `woff`, `ttf` u `otf`, uno por familia y peso; la convencion de nombres esta en la [galeria de ejemplo](../../examples/themes/gallery/README.md#fuentes)) y nombra la familia en `fonts`. No hay CDN. `fallback` es la familia generica de reserva. Los ejemplos traen sus fuentes y licencias en `examples/rinthel-arch/themes/fonts/`.
 
 ### Capas y Primitivas
 
@@ -119,7 +119,7 @@ part barra { layer acento shadow after borde { color COLOR  x 4  y 0  inset 1 } 
 theme mi-tema { node { type servicio { use barra }  type paquete { use barra } } }
 ```
 
-Una `part` no pertenece a ningun Tema y su nombre es unico en el Workspace. Las del tutorial estan en [`examples/tutorial/paso-4/theme.dg`](../../examples/tutorial/paso-4/theme.dg).
+Una `part` no pertenece a ningun Tema y su nombre es unico en el Workspace. Las del tutorial estan en [`examples/tutorial/step-4/theme.dg`](../../examples/tutorial/step-4/theme.dg).
 
 ### Aristas y fondo
 
@@ -141,7 +141,7 @@ El enrutado de las Aristas lo hace el layout y no depende del Tema.
 
 ### Tablas ER: `row`, `zone` y marcadores
 
-Una Vista `er` dibuja cada Nodo como tabla (cabecera y una fila por Atributo). El Tema la estiliza con el bloque `row`, la propiedad `zone` de las Capas de Nodo y los marcadores de Arista (ejemplo completo en [`examples/temas/er.dg`](../../examples/temas/er.dg)):
+Una Vista `er` dibuja cada Nodo como tabla (cabecera y una fila por Atributo). El Tema la estiliza con el bloque `row`, la propiedad `zone` de las Capas de Nodo y los marcadores de Arista (ejemplo completo en [`examples/themes/er.dg`](../../examples/themes/er.dg)):
 
 ```dg
 specification { node tabla { icon database  color green } }
@@ -188,7 +188,7 @@ view tablas { type er  theme libreta  include ** }
 
 ### Secuencia: `lifeline`, `activation`, `message`, `fragment` y `note`
 
-Una Vista `sequence` se dibuja sola con cualquier Tema (los elementos se derivan de `edge` y `node`); para estilizarla se declaran bloques al nivel de `node` y `edge` (ejemplo completo en [`examples/temas/secuencia.dg`](../../examples/temas/secuencia.dg)). Todos admiten `layer`, `use`, `state` y, donde aplica, parches por variante, y las separaciones de secuencia son sus Metricas:
+Una Vista `sequence` se dibuja sola con cualquier Tema (los elementos se derivan de `edge` y `node`); para estilizarla se declaran bloques al nivel de `node` y `edge` (ejemplo completo en [`examples/themes/sequence.dg`](../../examples/themes/sequence.dg)). Todos admiten `layer`, `use`, `state` y, donde aplica, parches por variante, y las separaciones de secuencia son sus Metricas:
 
 ```dg
 specification { node pieza { icon box  color blue } }

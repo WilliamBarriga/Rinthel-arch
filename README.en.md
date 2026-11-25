@@ -24,7 +24,7 @@ pnpm build
 node packages/cli/dist/bin.js dev --workspace examples/rinthel-arch
 ```
 
-`dev` prints a URL (`http://127.0.0.1:4173/`). If the UI loads there, everything works; switch to the `abierto-<tema>` Views to see the example Themes. For your own diagram, point `--workspace` at a folder with your `.dg` files.
+`dev` prints a URL (`http://127.0.0.1:4173/`). If the UI loads there, everything works; switch to the `open-<theme>` Views to see the example Themes. For your own diagram, point `--workspace` at a folder with your `.dg` files.
 
 ## Status and documentation
 

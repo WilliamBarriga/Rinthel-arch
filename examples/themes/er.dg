@@ -1,0 +1,52 @@
+// Example Theme for ER tables (`row` block, `zone` and markers). Colored header with `zone header`, alternating
+// rows, one patch per key mark and crow's feet in another color only in ER Views.
+specification {
+  node table { description "Database table" icon box color blue }
+}
+
+model {
+  table customers "Customers" {
+    id: uuid pk
+    name: text
+    email: text? uk
+  }
+  table orders "Orders" {
+    id: uuid pk
+    customer_id: uuid fk
+    note: text?
+  }
+  orders#customer_id "0..*" -> "1" customers#id "belongs to" identifying
+}
+
+theme er-tables {
+  palette { paper "#fefce8"  ink "#1f2937"  blue "#2563eb"  grey "#e5e7eb"  green "#dcfce7"  amber-ink "#92400e" }
+  node {
+    layer shape rect { radius 6 }
+    layer fill solid { color paper }
+    layer header solid { color blue  zone header }
+    layer border border { color ink }
+    slots column { title { color paper  weight 700 }  attrs }
+  }
+  row {
+    height 26
+    layer background solid { color paper }
+    layer separator stripe { color grey  side bottom  width 1 }
+    alternate { layer background { color grey } }
+    key pk { layer background { color green } }
+    optional { layer separator { color amber-ink } }
+    name { weight 600 }
+    type { color blue }
+    key { fill blue  color paper  radius 4 }
+  }
+  edge {
+    layer line line { color ink }
+    end arrow { size 12 }
+    diagram er { end arrow { size 12  color blue } }
+  }
+}
+
+view tables {
+  type er
+  include **
+  theme er-tables
+}

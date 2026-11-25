@@ -19,7 +19,7 @@ import { iniciarDevDeGaleria, servirEstatico } from './capturas/servidores.ts';
 import { prepararWorkspace } from './capturas/workspace.ts';
 
 const REPO = resolve(import.meta.dirname, '..');
-const GALERIA = 'examples/temas/galeria';
+const GALERIA = 'examples/themes/gallery';
 const TEMAS_DE_EJEMPLO = 'examples/rinthel-arch/themes';
 const VIEWPORT = { width: 1600, height: 900 };
 const VISTAS = ['abierto', 'cobertura'] as const;
@@ -75,7 +75,7 @@ function leerArgumentos(): Pedido {
     workspace: GALERIA,
     carpetaDeTemas: TEMAS_DE_EJEMPLO,
     temas,
-    vistaDe: (t) => (vista === 'abierto' ? `${t}-referencia` : t),
+    vistaDe: (t) => (vista === 'abierto' ? `${t}-reference` : t),
     varianteDe: (t) => (vista === 'abierto' ? VARIANTE_DE_TEMA[t] : undefined),
     titulo: `Prototipo contra galeria (Vista ${vista})`,
     lado: 'galeria',

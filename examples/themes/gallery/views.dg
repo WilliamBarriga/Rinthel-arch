@@ -1,0 +1,61 @@
+// One View per Theme: the same Model, with the `platform` Group expanded and `persistence` collapsed.
+// Serve the gallery with `node packages/cli/dist/bin.js dev --workspace examples/themes/gallery --theme-path examples/rinthel-arch/themes`
+// and switch Views to compare the 14 Themes.
+view soft-card    { type architecture  theme soft-card     include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view glass-chip   { type architecture  theme glass-chip    include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view neobrutalist { type architecture  theme neobrutalist  include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view blueprint    { type architecture  theme blueprint     include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view soft-light  { type architecture  theme soft-light   include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view crt-terminal { type architecture  theme crt-terminal  include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view synthwave    { type architecture  theme synthwave     include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view editorial    { type architecture  theme editorial     include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view bauhaus      { type architecture  theme bauhaus       include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view sticky-notes { type architecture  theme sticky-notes  include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view keycaps      { type architecture  theme keycaps       include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view metro-map    { type architecture  theme metro-map     include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view pcb          { type architecture  theme pcb           include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view pixel-art    { type architecture  theme pixel-art     include **  exclude reference, reference.**, data, data.**  expanded platform, states  collapsed persistence }
+view soft-card-reference { type architecture  theme soft-card  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view glass-chip-reference { type architecture  theme glass-chip  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view neobrutalist-reference { type architecture  theme neobrutalist  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view blueprint-reference { type architecture  theme blueprint  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view soft-light-reference { type architecture  theme soft-light  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view crt-terminal-reference { type architecture  theme crt-terminal  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view synthwave-reference { type architecture  theme synthwave  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view editorial-reference { type architecture  theme editorial  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view bauhaus-reference { type architecture  theme bauhaus  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view sticky-notes-reference { type architecture  theme sticky-notes  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view keycaps-reference { type architecture  theme keycaps  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view metro-map-reference { type architecture  theme metro-map  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view pcb-reference { type architecture  theme pcb  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+view pixel-art-reference { type architecture  theme pixel-art  include reference.*, reference.render.**, reference.session.**, reference.layout.**  expanded reference.render, reference.session, reference.layout  collapsed reference.canonical, reference.dsl, reference.shell, reference.cli }
+
+// One sequence View and one ER View per Theme: the same Model, another Diagram type.
+view soft-card-sequence { type sequence  theme soft-card  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view glass-chip-sequence { type sequence  theme glass-chip  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view neobrutalist-sequence { type sequence  theme neobrutalist  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view blueprint-sequence { type sequence  theme blueprint  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view soft-light-sequence { type sequence  theme soft-light  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view crt-terminal-sequence { type sequence  theme crt-terminal  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view synthwave-sequence { type sequence  theme synthwave  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view editorial-sequence { type sequence  theme editorial  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view bauhaus-sequence { type sequence  theme bauhaus  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view sticky-notes-sequence { type sequence  theme sticky-notes  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view keycaps-sequence { type sequence  theme keycaps  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view metro-map-sequence { type sequence  theme metro-map  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view pcb-sequence { type sequence  theme pcb  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view pixel-art-sequence { type sequence  theme pixel-art  interaction charge  order client, gateway, platform.orders, platform.payments, provider, platform.events  autonumber }
+view soft-card-er { type er  theme soft-card  include data.customers, data.orders-table, data.lines }
+view glass-chip-er { type er  theme glass-chip  include data.customers, data.orders-table, data.lines }
+view neobrutalist-er { type er  theme neobrutalist  include data.customers, data.orders-table, data.lines }
+view blueprint-er { type er  theme blueprint  include data.customers, data.orders-table, data.lines }
+view soft-light-er { type er  theme soft-light  include data.customers, data.orders-table, data.lines }
+view crt-terminal-er { type er  theme crt-terminal  include data.customers, data.orders-table, data.lines }
+view synthwave-er { type er  theme synthwave  include data.customers, data.orders-table, data.lines }
+view editorial-er { type er  theme editorial  include data.customers, data.orders-table, data.lines }
+view bauhaus-er { type er  theme bauhaus  include data.customers, data.orders-table, data.lines }
+view sticky-notes-er { type er  theme sticky-notes  include data.customers, data.orders-table, data.lines }
+view keycaps-er { type er  theme keycaps  include data.customers, data.orders-table, data.lines }
+view metro-map-er { type er  theme metro-map  include data.customers, data.orders-table, data.lines }
+view pcb-er { type er  theme pcb  include data.customers, data.orders-table, data.lines }
+view pixel-art-er { type er  theme pixel-art  include data.customers, data.orders-table, data.lines }

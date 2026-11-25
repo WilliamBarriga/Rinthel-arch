@@ -1,0 +1,44 @@
+// Step 5 (optional): a Theme with no parent. Whatever you do not declare is not drawn: here we write the Layers of Node, Group, Edge and background.
+theme neon {
+  palette {
+    background "#13001f"  text "#fdf4ff"  pink "#ff2bd6"  cyan "#22e4ff"
+    blue "#22e4ff"  purple "#b36bff"  green "#3dffb5"  amber "#ffb13d"  red "#ff2b6a"  gray "#c9a6ff"
+  }
+  fonts { body "system-ui"  mono "ui-monospace"  fallback "sans-serif" }
+  tokens { background "#13001f"  foreground "#fdf4ff"  border "#ff2bd6" }
+  page {
+    layer grid grid { color pink/0.10  size 44 }
+    fixed
+  }
+  node {
+    layer glow glow { color pink/0.55  radius 18 }
+    layer shape rect { radius 12 }
+    layer fill gradient { from background  to COLOR/0.25  angle 160 }
+    layer border border { color pink  width 2 }
+    slots column min-width 160 slack 28 {
+      row gap 10 pad 14 min-height 50 {
+        icon { variant dot  side 18 }
+        column { title { weight 700 }  badge { alpha 0.6  transform uppercase  size 0.66  tracking 0.18 } }
+        counter { fill pink  border cyan }
+      }
+      attrs
+    }
+    type external { layer glow { color cyan/0.4  radius 12 }  layer border dashed { color cyan } }
+    state hover { layer glow { color cyan/0.8  radius 28 }  transition 140ms ease-out }
+    state on-path { layer glow { motion aura 2s ease-in-out intensity 0.6 } }
+    enter fade 300ms
+  }
+  group {
+    layer shape rect { radius 18 }
+    layer fill solid { color cyan/0.04 }
+    layer border border { color cyan/0.5 }
+    slots row pad 12 pad-y 9 { title { transform uppercase  size 0.75  tracking 0.18 } }
+    padding 12 22 22 22
+  }
+  edge {
+    layer halo line { color pink/0.18  width 8  corner round  radius 14 }
+    layer line line { color cyan  width 1.8  corner round  radius 14 }
+    layer flow line over { color text  width 1.8  motion stream 2s }
+    end arrow { size 10  color cyan }
+  }
+}
