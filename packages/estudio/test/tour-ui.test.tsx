@@ -6,7 +6,7 @@
 import { act, cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DSL_BASICO, lienzoListo, montarEstudio, montarExportado } from './ayudas-de-ui';
+import { DSL_BASICO, lienzoListo, montarEstudio, montarExportado, posicionDe, pulsarNodo } from './ayudas-de-ui';
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
@@ -150,7 +150,7 @@ describe('tour stops', () => {
     await lienzoListo(contenedor, 'mapa');
     await abrirDesdeLaPildora();
     const dialogo = await tour();
-    // The tour is modal: the rest of the UI is hidden from the accessibility tree while it is open.
+    // The tour card is a portal outside the island trees; `hidden: true` keeps these queries independent of aria-hidden.
     const siguiente = (): void => void fireEvent.click(within(dialogo).getByRole('button', { name: 'Next' }));
 
     siguiente();
@@ -234,4 +234,76 @@ describe('tour highlight', () => {
     });
     expect(hueco()).toBe('-8px -8px 656px 496px');
   });
+});
+
+/** A real press: pointer down and up, then the click (what Base UI listens to for outside presses). */
+function pulsar(elemento: Element): void {
+  fireEvent.pointerDown(elemento);
+  fireEvent.pointerUp(elemento);
+  fireEvent.click(elemento);
+}
+
+describe('tour interaction', () => {
+  for (const [modo, montar] of [
+    ['dev', montarEstudio],
+    ['export', montarExportado],
+  ] as const) {
+    it(`in ${modo}, the highlighted UI takes clicks and the tour stays on its stop; the backdrop does nothing`, async () => {
+      const { contenedor } = await montar({ 'main.dg': DSL }, { hash: '#view=mapa' });
+      await lienzoListo(contenedor, 'mapa');
+      await abrirDesdeLaPildora();
+      const dialogo = await tour();
+      const siguiente = (): void => void fireEvent.click(within(dialogo).getByRole('button', { name: 'Next' }));
+      const sigueEn = (parada: string): void => {
+        expect(screen.getByRole('dialog', { name: 'Tour' })).toBe(dialogo);
+        expect(titulo(dialogo)).toBe(parada);
+      };
+
+      // Stop 1: the canvas takes a press on a Node, which selects it.
+      fireEvent.pointerDown(contenedor.querySelector('[data-id="db"]')!);
+      pulsarNodo(contenedor, 'db');
+      await waitFor(() => expect(window.location.hash).toContain('s=db'));
+      sigueEn('Your repo as a diagram');
+
+      // Stop 2: picking a View in the left island.
+      siguiente();
+      pulsar(within(screen.getByRole('listbox', { name: 'Views', hidden: true })).getByRole('option', { name: /otro/, hidden: true }));
+      await waitFor(() => expect(window.location.hash).toContain('view=otro'));
+      sigueEn('Views');
+
+      // Stop 3: pressing the linked Node drills into its View.
+      siguiente();
+      await lienzoListo(contenedor, 'mapa');
+      await waitFor(() => expect(posicionDe(contenedor, 'api')).toBeDefined());
+      fireEvent.pointerDown(contenedor.querySelector('[data-id="api"]')!);
+      pulsarNodo(contenedor, 'api');
+      await lienzoListo(contenedor, 'detalle');
+      sigueEn('Drill-down');
+
+      // Stop 4: the Step controls go forward.
+      siguiente();
+      await waitFor(() => expect(window.location.hash).toBe('#view=detalle&t=1'));
+      pulsar(screen.getByRole('button', { name: 'Next step', hidden: true }));
+      await waitFor(() => expect(window.location.hash).toBe('#view=detalle&t=2'));
+      sigueEn('Steps');
+
+      // Stop 5: a Theme from the gallery is previewed.
+      siguiente();
+      pulsar(within(screen.getByRole('listbox', { name: 'Themes', hidden: true })).getByRole('option', { name: /oscuro/, hidden: true }));
+      expect(await screen.findByRole('region', { name: 'Theme oscuro', hidden: true })).toBeTruthy();
+      sigueEn('Themes');
+
+      // Whatever the tour lays over the page around its card (the dimmed rest) takes presses that do nothing.
+      const capas = [...document.querySelectorAll('.ui-portales *')].filter((e) => !e.contains(dialogo) && !dialogo.contains(e));
+      expect(capas.length).toBeGreaterThan(0);
+      for (const capa of capas) pulsar(capa);
+      sigueEn('Themes');
+
+      // The next stop still works after the UI moved; Escape closes the tour.
+      siguiente();
+      expect(titulo(dialogo)).toBe(modo === 'dev' ? 'Code' : 'In your repo');
+      fireEvent.keyDown(dialogo, { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Tour' })).toBeNull());
+    });
+  }
 });

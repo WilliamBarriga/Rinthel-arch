@@ -729,6 +729,10 @@
     background: #0009;
     z-index: 10;
   }
+  /* Takes the presses on the dimmed rest; the hole's box-shadow does the dimming. */
+  .ui-tour-bloqueo {
+    background: transparent;
+  }
   .ui-tour-hueco {
     position: fixed;
     border-radius: 16px;
