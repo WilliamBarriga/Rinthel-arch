@@ -9,8 +9,10 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { DEFAULT_DEPTH, DEFAULT_MAX_FILES, SCAN_DRAFT_SCHEMA, diffDrafts, idMatcher, scan, serializeDraft } from 'scanner';
-import type { DraftChanges, ScanDraft } from 'scanner';
+import { SCAN_CONTRACT_VERSION, scanSummarySchema } from 'canonico';
+import type { ScanChanges, ScanSummary } from 'canonico';
+import { DEFAULT_DEPTH, DEFAULT_MAX_FILES, SCAN_DRAFT_SCHEMA, byCodeUnit, diffDrafts, idMatcher, scan, serializeDraft } from 'scanner';
+import type { ScanDraft } from 'scanner';
 
 import { coverageOf, findWorkspace } from './scan-coverage';
 import type { Coverage, CoverageNotice } from './scan-coverage';
@@ -18,8 +20,7 @@ import { uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
 import { escribirTexto } from './workspace';
 
-/** Version of the `scan --json` summary; independent from the draft's `schema` and from `validate`'s. */
-export const SCAN_CONTRACT_VERSION = 1;
+export { SCAN_CONTRACT_VERSION };
 
 /** Draft path inside the scanned root; `.rinthel/` is not versioned. */
 export const DRAFT_PATH = '.rinthel/scan.json';
@@ -45,14 +46,20 @@ const REFRESH_STEP =
   'align Attributes with their columns; never rewrite what a covered Node says. Then run diagrams validate --workspace\n' +
   '<workspace>. Guide: skill rinthel-diagramas, "Refresh from code".';
 
-export interface DependenciasDeScan {
+/** The next step when coverage found no gaps. */
+const UP_TO_DATE_STEP = 'Next: nothing to refresh; scan again after the code changes.';
+
+/** The disk as `scan` sees it besides the Scanner and the Workspace: the draft it rotates and writes, and `scan-ignore`. */
+export interface ScanDependencies {
+  /** A text file, or `undefined` if it cannot be read. */
+  readText?: (path: string) => string | undefined;
   /** Creates missing folders. */
-  escribirArchivo?: (ruta: string, texto: string) => void;
+  writeText?: (path: string, text: string) => void;
 }
 
-export async function comandoScan(
+export async function scanCommand(
   args: readonly string[],
-  { escribirArchivo = escribirTexto }: DependenciasDeScan,
+  { readText = readTextFile, writeText = escribirTexto }: ScanDependencies,
 ): Promise<ResultadoDeEjecucion> {
   let parsed;
   try {
@@ -89,32 +96,27 @@ export async function comandoScan(
   const previousPath = out.endsWith('.json') ? `${out.slice(0, -'.json'.length)}.prev.json` : `${out}.prev`;
   const previousText = readText(out);
   try {
-    if (previousText !== undefined) escribirArchivo(previousPath, previousText);
-    escribirArchivo(out, serializeDraft(draft));
+    if (previousText !== undefined) writeText(previousPath, previousText);
+    writeText(out, serializeDraft(draft));
   } catch (error) {
     return uso(`Could not write '${out}': ${(error as Error).message}`);
   }
   const previous = parseDraft(previousText);
   const changes = previous === undefined ? null : { previous: previousPath, ...diffDrafts(previous, draft) };
   const workspace = findWorkspace(root, values.workspace);
-  const coverage = workspace === undefined ? null : 'error' in workspace ? workspace : coverageOf(draft, workspace.path, idMatcher(readIgnore(root)));
+  const coverage =
+    workspace === undefined || 'error' in workspace ? (workspace ?? null) : coverageOf(draft, workspace.path, idMatcher(readText(join(root, IGNORE_PATH)) ?? ''));
   const summary = summarize(draft, out, coverage, changes);
   return { exitCode: 0, stdout: values.json ? `${JSON.stringify(summary)}\n` : text(summary), stderr: '' };
 }
 
-/** Changes since the draft `scan` found at `--out`, which it rotated to `previous`. */
-type Changes = DraftChanges & { previous: string };
-
-function readText(path: string): string | undefined {
+function readTextFile(path: string): string | undefined {
   try {
     return readFileSync(path, 'utf8');
   } catch {
     return undefined;
   }
 }
-
-/** The patterns of `<root>/.rinthel/scan-ignore`, or none. */
-const readIgnore = (root: string): string => readText(join(root, IGNORE_PATH)) ?? '';
 
 /** A previous draft of the same schema; anything else gives no changes. */
 function parseDraft(text: string | undefined): ScanDraft | undefined {
@@ -133,13 +135,12 @@ function integer(value: string | undefined, fallback: number, min: number): numb
   return Number.isInteger(number) && number >= min && value.trim() !== '' ? number : undefined;
 }
 
-type Summary = ReturnType<typeof summarize>;
-
-function summarize(draft: ScanDraft, out: string, coverage: Coverage | CoverageNotice | null, changes: Changes | null) {
-  const units = [...draft.units].sort((a, b) => b.files - a.files || compare(a.id, b.id));
-  const dependencies = [...draft.dependencies].sort((a, b) => b.weight - a.weight || compare(a.id, b.id));
-  const externals = [...draft.externals].sort((a, b) => b.weight - a.weight || compare(a.id, b.id));
-  return {
+/** The `scan --json` object, checked against its contract. */
+function summarize(draft: ScanDraft, out: string, coverage: Coverage | CoverageNotice | null, changes: ScanChanges | null): ScanSummary {
+  const units = [...draft.units].sort((a, b) => b.files - a.files || byCodeUnit(a.id, b.id));
+  const dependencies = [...draft.dependencies].sort((a, b) => b.weight - a.weight || byCodeUnit(a.id, b.id));
+  const externals = [...draft.externals].sort((a, b) => b.weight - a.weight || byCodeUnit(a.id, b.id));
+  return scanSummarySchema.parse({
     contractVersion: SCAN_CONTRACT_VERSION,
     draft: out,
     schema: draft.schema,
@@ -160,10 +161,10 @@ function summarize(draft: ScanDraft, out: string, coverage: Coverage | CoverageN
     coverage,
     changes,
     next: nextStep(draft.tables.length, coverage).replaceAll('\n', ' '),
-  };
+  });
 }
 
-function text(summary: Summary): string {
+function text(summary: ScanSummary): string {
   const { counts, limits } = summary;
   const lines = [
     `Scan draft written to ${summary.draft} (${summary.schema}, ${summary.commit === null ? 'no commit' : `commit ${summary.commit.slice(0, 12)}`}).`,
@@ -199,11 +200,13 @@ function text(summary: Summary): string {
   return lines.join('\n');
 }
 
-const nextStep = (tables: number, coverage: Coverage | CoverageNotice | null): string =>
-  coverage !== null && !('error' in coverage) ? REFRESH_STEP : tables > 0 ? `${NEXT_STEP}\n${ER_STEP}` : NEXT_STEP;
+function nextStep(tables: number, coverage: Coverage | CoverageNotice | null): string {
+  if (coverage === null || 'error' in coverage) return tables > 0 ? `${NEXT_STEP}\n${ER_STEP}` : NEXT_STEP;
+  return coverageGaps(coverage).length > 0 ? REFRESH_STEP : UP_TO_DATE_STEP;
+}
 
 /** One line per added (`+`) or removed (`-`) id, `SUMMARY_ROWS` at most; `--json` lists them all. */
-function changesText(changes: Changes): string[] {
+function changesText(changes: ScanChanges): string[] {
   const commit = (sha: string | null): string => (sha === null ? 'no commit' : `commit ${sha.slice(0, 12)}`);
   const rows = (['units', 'dependencies', 'externals', 'tables', 'columns'] as const).flatMap((kind) => {
     const label = { units: 'unit', dependencies: 'dependency', externals: 'external', tables: 'table', columns: 'column' }[kind];
@@ -221,16 +224,7 @@ function changesText(changes: Changes): string[] {
 function coverageText(coverage: Coverage | CoverageNotice): string[] {
   if ('error' in coverage) return [`Scan coverage${coverage.workspace === null ? '' : ` against ${coverage.workspace}`}: ${coverage.error}.`];
   const { units, tables } = coverage;
-  const rows = [
-    ...units.uncovered.map((id) => ['uncovered unit', id]),
-    ...tables.uncovered.map((id) => ['uncovered table', id]),
-    ...coverage.orphanRefs.map(({ node, ref }) => ['orphan ref', ref, `in Node ${node}`]),
-    ...coverage.columns.map(({ node, table, missing, extra }) => [
-      'columns',
-      table,
-      `in Node ${node}: ${[...(missing.length > 0 ? [`missing ${missing.join(', ')}`] : []), ...(extra.length > 0 ? [`extra ${extra.join(', ')}`] : [])].join('; ')}`,
-    ]),
-  ];
+  const rows = coverageGaps(coverage);
   const ignored = coverage.ignored > 0 ? ` ${plural(coverage.ignored, 'id')} ignored by ${IGNORE_PATH}.` : '';
   const lines = [
     `Scan coverage against ${coverage.workspace}: ${units.covered} of ${plural(units.total, 'unit')} and ${tables.covered} of ` +
@@ -241,6 +235,20 @@ function coverageText(coverage: Coverage | CoverageNotice): string[] {
   return lines;
 }
 
+/** One row per gap: uncovered units and tables, orphan refs, column differences. */
+function coverageGaps(coverage: Coverage): string[][] {
+  return [
+    ...coverage.units.uncovered.map((id) => ['uncovered unit', id]),
+    ...coverage.tables.uncovered.map((id) => ['uncovered table', id]),
+    ...coverage.orphanRefs.map(({ node, ref }) => ['orphan ref', ref, `in Node ${node}`]),
+    ...coverage.columns.map(({ node, table, missing, extra }) => [
+      'columns',
+      table,
+      `in Node ${node}: ${[...(missing.length > 0 ? [`missing ${missing.join(', ')}`] : []), ...(extra.length > 0 ? [`extra ${extra.join(', ')}`] : [])].join('; ')}`,
+    ]),
+  ];
+}
+
 /** Left-aligned columns, two spaces apart, indented by two. */
 function table(rows: string[][]): string[] {
   const widths = rows[0]?.map((_, column) => Math.max(...rows.map((row) => (row[column] ?? '').length))) ?? [];
@@ -248,4 +256,3 @@ function table(rows: string[][]): string[] {
 }
 
 const plural = (count: number, one: string, many = `${one}s`): string => `${count} ${count === 1 ? one : many}`;
-const compare = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
