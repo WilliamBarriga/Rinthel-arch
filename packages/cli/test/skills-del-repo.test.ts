@@ -88,3 +88,38 @@ describe('repo skills: every .dg example compiles with the CLI', () => {
     });
   }
 });
+
+describe('repo skills: import and refresh from code', () => {
+  const texto = leer('rinthel-diagramas', 'SKILL.md');
+  const seccion = (titulo: string): string => new RegExp(`## ${titulo}\\n([\\s\\S]*?)(?=\\n## |$)`).exec(texto)?.[1] ?? '';
+
+  it('has an "Import from code" section with the scan flow', () => {
+    const cuerpo = seccion('Import from code');
+    for (const termino of ['dg scan', 'source { path', 'parent', 'weight', 'external', 'collapsed', 'link', '30', 'validate']) {
+      expect(cuerpo, termino).toContain(termino);
+    }
+  });
+
+  it('has a "Refresh from code" section with the matching and protection rules', () => {
+    const cuerpo = seccion('Refresh from code').toLowerCase();
+    for (const termino of ['orphan', 'last ref', 'hand-written', 'never rewrite', 'title, description, group, node kind, views or pins', 'scan-ignore', 'only when the user asks']) {
+      expect(cuerpo, termino).toContain(termino);
+    }
+  });
+
+  it('ships the reference with the starting Node kind catalog and the coverage shape', () => {
+    const referencia = leer('rinthel-diagramas', 'references/scan-import.md');
+    expect(referencia).toContain('rinthel/scan@1');
+    expect(referencia).toContain('node external');
+    expect(referencia).toContain('orphanRefs');
+  });
+
+  it('is the section the scan summary points to', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'skill-scan-'));
+    writeFileSync(join(dir, 'package.json'), '{"name":"x"}');
+    const resultado = await run(['scan', dir, '--json']);
+    expect(JSON.parse(resultado.stdout).next).toContain('"Import from code"');
+    expect(texto).toContain('## Import from code');
+    expect(texto).toContain('## Refresh from code');
+  });
+});

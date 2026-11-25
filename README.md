@@ -68,6 +68,19 @@ Los Temas de ejemplo, con una imagen cada uno, estan en la [galeria completa](do
 
 ## Empezar
 
+Inicio rapido: instala las skills en tu agente de codigo (un solo arbol `skills/` sirve a los cuatro):
+
+```
+claude plugin install rinthel-arch --marketplace WilliamBarriga/Rinthel-arch
+codex plugin marketplace add WilliamBarriga/Rinthel-arch
+npx skills add WilliamBarriga/Rinthel-arch -a opencode -g
+pi install npm:rinthel-arch
+```
+
+Codex instala el plugin despues desde su directorio de Plugins. Las skills corren el CLI con `npx -y -p rinthel-arch@<version> diagrams` cuando no esta instalado. El detalle por agente esta en la [guia de inicio rapido](docs/guia/inicio-rapido.md).
+
+Desde un clon:
+
 Requisitos: Node 20 o superior y pnpm. El paquete aun no esta publicado en npm: se usa clonando el repo.
 
 ```
