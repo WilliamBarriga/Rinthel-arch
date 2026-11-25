@@ -1,6 +1,6 @@
 # Galeria de Temas
 
-El mismo mapa de este repo (`examples/rinthel-arch/`), cambiando solo el Tema. Cada imagen sale de una Vista `abierto-<tema>`. Para verlos en vivo: `dg dev --workspace examples/rinthel-arch` (ver [Inicio rapido](guia/inicio-rapido.md)).
+El mismo mapa de este repo (`examples/rinthel-arch/`), cambiando solo el Tema. Cada imagen sale de una Vista `open-<theme>`. Para verlos en vivo: `dg dev --workspace examples/rinthel-arch` (ver [Inicio rapido](guia/inicio-rapido.md)).
 
 | | | |
 | --- | --- | --- |

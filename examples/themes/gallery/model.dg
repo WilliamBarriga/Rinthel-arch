@@ -1,0 +1,97 @@
+// Common Model of the Theme gallery: agnostic of the documented project. The 14 Views (one per Theme)
+// share it, so any visual difference comes from the Theme alone.
+//
+// Covers: every Node kind, an expanded Group (platform) and a collapsed one (persistence),
+// Edges with and without a label, Attributes and one Node per state of ADR 0008 (group `states`):
+// hover over `hover`, click `selected` or any node to see `on-path` and
+// `dimmed`, and navigate with the keyboard to see `focus`.
+specification {
+  node actor    { description "Person or agent that uses the system"  icon user    color purple }
+  node service { description "Running piece of logic"          icon server     color blue }
+  node store  { description "Data that persists"                   icon database     color green }
+  node queue     { description "Message channel between pieces"        icon queue     color amber }
+  node external  { description "Third-party system"                   icon cloud   color red }
+  node domain  { description "Groups related pieces"            icon box     color gray }
+  node probe     { description "Test element for a state"       color gray }
+}
+
+model {
+  actor client "Customer" "Who places orders"
+  service gateway "Gateway" "Entry point"
+
+  domain platform "Platform" {
+    service orders "Orders" "Records and queries orders" {
+      attrs {
+        id: uuid
+        total: decimal "in cents"
+      }
+    }
+    service payments "Payments"
+    queue events "Events"
+  }
+
+  domain persistence "Persistence" {
+    store base "Database"
+    store cache "Cache"
+  }
+
+  external provider "Payment provider"
+
+  domain states "States" {
+    probe hover "hover"
+    probe selected "selected"
+    probe ghost "ghost"
+    probe on-path "on-path"
+    probe dimmed "dimmed"
+    probe focus "focus"
+  }
+
+  domain data "Data" {
+    store customers "Customers" {
+      id: uuid pk
+      name: text
+      email: text? uk
+    }
+    store orders-table "Orders" {
+      id: uuid pk
+      client_id: uuid fk
+      total: decimal "in cents"
+    }
+    store lines "Lines" {
+      order_id: uuid pk fk
+      product: text pk
+      quantity: int
+    }
+  }
+
+  data.orders-table#client_id "0..*" -> "1" data.customers#id "belongs to"
+  data.lines#order_id "1..*" -> "1" data.orders-table#id "details" identifying
+
+  interaction charge "Charging an order" {
+    order: client -> gateway "POST /orders"
+    gateway -> platform.orders "record"
+    alt "payment approved" {
+      platform.orders -> platform.payments "charge"
+      platform.payments -> provider "API"
+      reply provider -> platform.payments "ok"
+      async platform.orders -> platform.events "order.paid"
+    } else "payment declined" {
+      reply platform.payments -> platform.orders "declined"
+    }
+    note right of provider "idempotent"
+    reply gateway -> client "201"
+  }
+
+  client -> gateway "HTTPS"
+  gateway -> platform.orders
+  platform.orders -> platform.payments "charges"
+  platform.orders -> platform.events
+  platform.payments -> provider "API"
+  platform.orders -> persistence.base "stores"
+  platform.events -> persistence.cache
+  states.hover -> states.selected
+  states.selected -> states.ghost
+  states.ghost -> states.on-path
+  states.on-path -> states.dimmed
+  states.dimmed -> states.focus
+}

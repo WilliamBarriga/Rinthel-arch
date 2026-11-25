@@ -1314,11 +1314,11 @@ describe('compile: Pasos (steps)', () => {
 
 describe('compile: Temas del ejemplo rinthel-arch', () => {
   it('extienden los incorporados oscuro y claro con parches por Tipo, sin issues', async () => {
-    // `vistas-temas.dg` usa los 14 Temas de `temas/`, con avisos de contraste deliberados: lo cubre tests/ejemplos-docs.test.ts.
+    // `theme-views.dg` uses the 14 Themes of `themes/`, con avisos de contraste deliberados: lo cubre tests/ejemplos-docs.test.ts.
     const { readFileSync, readdirSync } = await import('node:fs');
     const dir = new URL('../../../examples/rinthel-arch/', import.meta.url);
     const fuentes = Object.fromEntries(
-      readdirSync(dir).filter((f) => f.endsWith('.dg') && f !== 'vistas-temas.dg').map((f) => [f, readFileSync(new URL(f, dir), 'utf8')]),
+      readdirSync(dir).filter((f) => f.endsWith('.dg') && f !== 'theme-views.dg').map((f) => [f, readFileSync(new URL(f, dir), 'utf8')]),
     );
     const { canonico, issues } = compile(fuentes);
 
@@ -1327,10 +1327,10 @@ describe('compile: Temas del ejemplo rinthel-arch', () => {
     expect(issues).toEqual([]);
     const tema = (nombre: string) => temas.find((t) => t.name === nombre) as unknown as { tokens: object; nodo: { tipos: Record<string, Array<{ nombre: string }>> } };
     expect(tema('diagrams').tokens).toMatchObject({ background: '#09090b' });
-    expect(tema('diagrams-claro').tokens).toMatchObject({ background: '#f8fafc' });
-    for (const nombre of ['diagrams', 'diagrams-claro']) {
-      expect(tema(nombre).nodo.tipos['paquete']?.map((op) => op.nombre)).toEqual(['acento']);
-      expect(tema(nombre).nodo.tipos['externo']?.map((op) => op.nombre)).toEqual(['relleno', 'borde']);
+    expect(tema('diagrams-light').tokens).toMatchObject({ background: '#f8fafc' });
+    for (const nombre of ['diagrams', 'diagrams-light']) {
+      expect(tema(nombre).nodo.tipos['package']?.map((op) => op.nombre)).toEqual(['acento']);
+      expect(tema(nombre).nodo.tipos['external']?.map((op) => op.nombre)).toEqual(['relleno', 'borde']);
     }
   });
 });

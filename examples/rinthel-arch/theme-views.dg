@@ -1,0 +1,100 @@
+// One View per approved Theme (ADR 0008): the map `open` View with each one, to see how much the same diagram changes.
+// The files in `themes/` are the only copy of the 14 Themes: the gallery (`examples/themes/gallery/`) takes them with `--theme-path`.
+view open-soft-card {
+  type architecture
+  theme soft-card
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-glass-chip {
+  type architecture
+  theme glass-chip
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-neobrutalist {
+  type architecture
+  theme neobrutalist
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-blueprint {
+  type architecture
+  theme blueprint
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-soft-light {
+  type architecture
+  theme soft-light
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-crt-terminal {
+  type architecture
+  theme crt-terminal
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-synthwave {
+  type architecture
+  theme synthwave
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-editorial {
+  type architecture
+  theme editorial
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-bauhaus {
+  type architecture
+  theme bauhaus
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-sticky-notes {
+  type architecture
+  theme sticky-notes
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-keycaps {
+  type architecture
+  theme keycaps
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-metro-map {
+  type architecture
+  theme metro-map
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-pcb {
+  type architecture
+  theme pcb
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}
+view open-pixel-art {
+  type architecture
+  theme pixel-art
+  include author, agent, workspace, derived-output, canonical, theme, dsl, layout, session, render, shell, dev-ui, cli, render.**, session.**, layout.**, elk, react
+  expanded render, layout
+  collapsed canonical, theme, dsl, session, shell, dev-ui, cli, render.ren-paint
+}

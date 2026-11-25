@@ -47,8 +47,8 @@ No hay CI: las pruebas se corren en local. El hook de pre-commit corre `pnpm che
 | `npm` | The publishable `rinthel-arch` npm package: manifest and README; `pnpm npm:package` fills `dist/`, the licenses and the third-party notice |
 | `examples/tutorial` | El tutorial, un Workspace por paso |
 | `examples/rinthel-arch` | Este repo documentado con su propio DSL, con sus Temas de ejemplo |
-| `examples/temas` | Temas sueltos de muestra (catalogo de formas, Capa `code`, secuencia, ER) |
-| `examples/temas/galeria` | Un Modelo comun para los Temas de ejemplo (de `examples/rinthel-arch/themes`, via `--theme-path`), y estados de cada Nodo |
+| `examples/themes` | Temas sueltos de muestra (catalogo de formas, Capa `code`, secuencia, ER) |
+| `examples/themes/gallery` | Un Modelo comun para los Temas de ejemplo (de `examples/rinthel-arch/themes`, via `--theme-path`), y estados de cada Nodo |
 
 ## npm package
 

@@ -1,0 +1,23 @@
+// Step 1: the minimum. Node kinds, a Model and a View.
+specification {
+  node actor    { description "Who uses the system"       icon user    color purple }
+  node service { description "Logic piece"            icon server  color blue }
+  node store  { description "Data that persists"        icon database color green }
+}
+
+model {
+  actor client "Customer" "Places orders"
+
+  service api "API" "Entry point"
+  service orders "Orders" "Records orders"
+  store db "Database" "Stores the orders"
+
+  client -> api "HTTP"
+  api -> orders
+  orders -> db "SQL"
+}
+
+view main {
+  type architecture
+  include **
+}

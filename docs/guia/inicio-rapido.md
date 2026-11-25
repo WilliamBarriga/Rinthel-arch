@@ -68,12 +68,12 @@ En la UI, la Vista se elige en el panel Vistas o con el hash de la URL (`#vista=
 ## Recorrer los ejemplos
 
 ```
-dg dev --workspace examples/tutorial/paso-2      # el diagrama pequeno del tutorial
+dg dev --workspace examples/tutorial/step-2      # el diagrama pequeno del tutorial
 dg dev --workspace examples/rinthel-arch         # este repo documentado, con sus Temas de ejemplo
-dg dev --workspace examples/temas/galeria --theme-path examples/rinthel-arch/themes        # un Modelo comun con los Temas de ejemplo y los estados de cada Nodo
+dg dev --workspace examples/themes/gallery --theme-path examples/rinthel-arch/themes        # un Modelo comun con los Temas de ejemplo y los estados de cada Nodo
 ```
 
-En `examples/rinthel-arch` prueba la Vista `paquetes` y haz clic en un paquete (drill-down), o abre una Vista `abierto-<tema>`. La Vista `flujo-edicion` es de Tipo `flow`: avanza sus Pasos para ver como se revela el diagrama.
+En `examples/rinthel-arch` prueba la Vista `packages` y haz clic en un paquete (drill-down), o abre una Vista `open-<theme>`. La Vista `flow-edit` es de Tipo `flow`: avanza sus Pasos para ver como se revela el diagrama.
 
 ## Secuencia y ER en un minuto
 

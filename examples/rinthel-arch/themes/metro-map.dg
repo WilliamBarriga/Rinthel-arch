@@ -1,51 +1,51 @@
-// Contraste: cola
-// Solo color: modulo/artefacto, paquete/artefacto, paquete/modulo
-// Deliberado, como en el prototipo: al pasar o en ruta, el borde ambar de la estacion casi no contrasta con su propio tinte ambar.
-// Deliberado, como en el prototipo: sin insignia, paquete, modulo y artefacto son estaciones iguales y solo cambia el color de su icono y de sus lineas.
-// Mapa de metro: estaciones en pastilla con borde grueso y lineas gruesas del color del origen.
+// Contrast: queue
+// Color only: module/artifact, package/artifact, package/module
+// Deliberate, as in the prototype: on hover or on a path, the amber border of the station barely contrasts with its own amber tint.
+// Deliberate, as in the prototype: with no badge, package, module and artifact are identical stations and only the color of their icon and of their lines changes.
+// Metro map: pill stations with a thick border and thick lines in the source color.
 theme metro-map {
   palette {
-    fondo "#ffffff"  texto "#111111"  blanco "#ffffff"
+    background "#ffffff"  text "#111111"  white "#ffffff"
     blue "#0067b1"  purple "#8a3ffc"  green "#00953b"  amber "#f5a300"  red "#e3001b"  gray "#7a7a7a"
   }
   fonts { body "Inter"  mono "JetBrains Mono"  fallback "sans-serif" }
   tokens { background "#ffffff"  foreground "#111111"  border "#111111" }
   node {
-    // Estacion: pastilla blanca con borde grueso; el color del Tipo va en el punto del icono.
-    layer forma pill
-    layer relleno solid { color blanco }
-    layer borde border { color texto  width 4 }
+    // Station: white pill with a thick border; the kind color goes on the icon dot.
+    layer shape pill
+    layer fill solid { color white }
+    layer border border { color text  width 4 }
     slots column min-width 150 slack 20 {
       row gap 10 pad 12 min-height 52 {
-        icon { variant box  side 22  radius 50  fill COLOR  border texto  border-width 3  color blanco }
+        icon { variant box  side 22  radius 50  fill COLOR  border text  border-width 3  color white }
         title { weight 700  text-align start  leading 1.25 }
-        counter { fill blanco  border texto  border-width 2 }
+        counter { fill white  border text  border-width 2 }
       }
       attrs
     }
-    type externo { layer borde dashed { color texto  width 4 } }
-    state hover { layer relleno { color COLOR/0.12 }  layer borde { color COLOR }  transition 120ms ease-out }
-    state on-path { layer borde { color COLOR  width 6 } }
-    state dimmed { layer borde { color gray } }
+    type external { layer border dashed { color text  width 4 } }
+    state hover { layer fill { color COLOR/0.12 }  layer border { color COLOR }  transition 120ms ease-out }
+    state on-path { layer border { color COLOR  width 6 } }
+    state dimmed { layer border { color gray } }
   }
   group {
-    // Zona de tarifa: un area tenue del color del Tipo, sin borde.
-    layer forma rect { radius 36 }
-    layer relleno solid { color COLOR/0.07 }
+    // Fare zone: a faint area in the kind color, with no border.
+    layer shape rect { radius 36 }
+    layer fill solid { color COLOR/0.07 }
     slots row pad 18 pad-y 9 { title { transform uppercase  size 0.75  leading 1.2  tracking 0.18  weight 600 } }
     padding 19 26 26 26
-    // Cerrado es una estacion de intercambio: la del Nodo con el borde mas grueso.
+    // Closed is an interchange station: the Node one with a thicker border.
     state collapsed {
-      layer forma pill
-      layer relleno { color blanco }
-      layer borde border after relleno { color texto  width 7 }
+      layer shape pill
+      layer fill { color white }
+      layer border border after fill { color text  width 7 }
     }
   }
   edge {
-    // Linea del color del Nodo de origen, con un contorno blanco que la separa de las que cruza.
-    layer contorno line { color blanco  width 11  corner round  radius 22  cap round }
-    layer linea line { color ORIGEN  width 6  corner round  radius 22  cap round }
+    // Line in the source Node color, with a white outline that separates it from the ones it crosses.
+    layer outline line { color white  width 11  corner round  radius 22  cap round }
+    layer line line { color ORIGEN  width 6  corner round  radius 22  cap round }
     end none
-    label { scale 0.82  pad 10  pad-y 2.5  radius 3  fill texto  border texto  color blanco  weight 700 }
+    label { scale 0.82  pad 10  pad-y 2.5  radius 3  fill text  border text  color white  weight 700 }
   }
 }

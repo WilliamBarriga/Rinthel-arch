@@ -1,0 +1,116 @@
+// The Canonical form as a data schema (ER View) and two Interactions of the system (sequence Views).
+model {
+  artifact source-form "Canonical form" {
+    version: int pk
+    hash: text "per file"
+  }
+  artifact f-node "Node" {
+    id: text pk "qualified with ."
+    kind: text
+    title: text?
+    parent: text? fk
+  }
+  artifact f-edge "Edge" {
+    id: text pk
+    source: text fk
+    target: text fk
+    label: text?
+  }
+  artifact f-view "View" {
+    id: text pk
+    kind: text "architecture, flow, sequence, er"
+    theme: text?
+    interaction: text? fk
+  }
+  artifact f-step "Step" {
+    view: text pk fk
+    ordering: int pk
+    cut: text? "Message (sequence)"
+  }
+  artifact f-interaction "Interaction" {
+    id: text pk
+    title: text
+  }
+  artifact f-message "Message" {
+    interaction: text pk fk
+    route: text pk
+    source: text fk
+    target: text fk
+  }
+
+  f-node#parent "0..1" -> "0..*" f-node#id "contains"
+  f-edge#source "0..*" -> "1" f-node#id "leaves"
+  f-edge#target "0..*" -> "1" f-node#id "arrives at"
+  f-view#interaction "0..*" -> "0..1" f-interaction#id "projects"
+  f-step#view "0..*" -> "1" f-view#id "reveals" identifying
+  f-message#interaction "1..*" -> "1" f-interaction#id "composes" identifying
+  f-message#source "0..*" -> "1" f-node#id "source Lifeline"
+  f-message#target "0..*" -> "1" f-node#id "target Lifeline"
+
+  interaction edit-pin "Edit a Pin" "Dragging a Node in the Dev UI rewrites the .dg file" {
+    drag: author -> shell.sh-drag "drags a Node"
+    shell.sh-drag -> dev-ui.dui-web.web-canvas.cnv-canvas "onMoveNode(centro)"
+    dev-ui.dui-web.web-canvas.cnv-canvas -> dev-ui.dui-web.web-writing "move-pin Intent"
+    dev-ui.dui-web.web-writing -> cli.cli-dev "POST /api/edit with version"
+    note over cli.cli-dev "delegates to atenderApiDeDev"
+    cli.cli-dev -> session.ses-workspace-live "apply the Intent"
+    alt "current version" {
+      async session.ses-workspace-live -> workspace "rewrites the .dg"
+      ref recompile
+    } else "file changed on disk" {
+      note over session.ses-workspace-live "rejects with stale-hash"
+    }
+    reply session.ses-workspace-live -> cli.cli-dev "new version or rejection"
+    reply cli.cli-dev -> dev-ui.dui-web.web-writing "200 or 409"
+    reply dev-ui.dui-web.web-writing -> dev-ui.dui-web.web-canvas.cnv-canvas "on 409 reloads and notifies"
+    reply dev-ui.dui-web.web-canvas.cnv-canvas -> shell.sh-drag "true or false"
+    note right of workspace "neither .diagrams/ nor the Canonical form is touched by hand"
+    finish: reply shell.sh-drag -> author "the Node stays or goes back to its place"
+  }
+
+  interaction recompile "Recompile" "The live Workspace recompiles and decides what the viewer must redo" {
+    session.ses-workspace-live -> session.ses-session "update"
+    session.ses-session -> dsl.dsl-compile "compiles the files"
+    reply dsl.dsl-compile -> session.ses-session "Canonical form"
+    reply session.ses-session -> session.ses-workspace-live "new Session"
+    session.ses-workspace-live -> session.ses-diff "diff"
+    reply session.ses-diff -> session.ses-workspace-live "Diff"
+    session.ses-workspace-live -> session.ses-change "clasificarCambio"
+    reply session.ses-change -> session.ses-workspace-live "paint, structure or code"
+    note right of session.ses-change "Geometry is requested later, per View and on demand"
+  }
+}
+
+view canonical-er {
+  type er
+  theme diagrams
+  include f-node, f-edge, f-view, f-step, f-interaction, f-message, source-form
+  steps {
+    step "Nodes and Edges" { show f-node, f-edge }
+    step "Views and Steps" { show f-view, f-step }
+    step "Interactions and Messages" { show f-interaction, f-message }
+  }
+}
+
+view edit-pin {
+  type sequence
+  theme diagrams
+  interaction edit-pin
+  order author, shell.sh-drag, dev-ui.dui-web.web-canvas.cnv-canvas, dev-ui.dui-web.web-writing, cli.cli-dev, session.ses-workspace-live, workspace
+  autonumber
+  link session.ses-workspace-live -> session-detail
+  link shell.sh-drag -> shell-detail
+  link dev-ui.dui-web.web-canvas.cnv-canvas -> dev-ui-detail
+  steps {
+    step "The author drags" { upto drag }
+    step "The Node stays in place or goes back" { upto finish }
+  }
+}
+
+view recompile {
+  type sequence
+  theme diagrams
+  interaction recompile
+  order session.ses-workspace-live, session.ses-session, dsl.dsl-compile, session.ses-diff, session.ses-change
+  link session.ses-session -> session-detail
+}

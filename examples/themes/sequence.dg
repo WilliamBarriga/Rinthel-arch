@@ -1,0 +1,75 @@
+// Example Theme for sequence diagrams: Lifelines, activations, Messages by kind, Fragments by operator and
+// Notes, with tuned sequence spacing. Whatever is not declared is derived from `edge` and `node`.
+specification {
+  node service { description "A service" icon box color blue }
+}
+
+model {
+  service client "Customer"
+  service api "API"
+  service queue "Queue"
+  interaction purchase "Purchase" {
+    client -> api "POST /orders"
+    alt "in stock" {
+      async api -> queue "order.created"
+      note right of queue "processed later"
+    } else "out of stock" {
+      api -> api "validate"
+    }
+    reply api -> client "201"
+    destroy api -> queue
+  }
+}
+
+theme sequence {
+  palette { paper "#fefce8"  ink "#1f2937"  blue "#2563eb"  green "#16a34a"  red "#dc2626"  amber-ink "#d97706" }
+  node {
+    layer shape rect { radius 6 }
+    layer fill solid { color paper }
+    layer border border { color ink }
+    slots { title }
+  }
+  edge { layer line line { color ink  width 1.2 } }
+  lifeline {
+    layer line line { color ink/0.5  width 1  style dashed }
+    end cross { size 12  color red }
+    gap 200
+  }
+  activation {
+    layer shape rect { radius 2 }
+    layer fill solid { color blue/0.2 }
+    layer border border { color blue }
+    width 12
+  }
+  message {
+    layer line line { color ink  width 1.5 }
+    end arrow { size 10 }
+    gap 40
+    loop-width 48
+    kind async { layer line { color green }  end chevron { size 10  color green } }
+    kind reply { layer line { style dashed }  end chevron { size 10 } }
+    kind destroy { layer line { color red }  end arrow { color red } }
+  }
+  fragment {
+    layer shape rect { radius 8 }
+    layer fill solid { color paper/0.6 }
+    layer border border { color ink/0.6 }
+    operator { color ink  weight 700 }
+    guard { color ink }
+    divider { color ink/0.5  width 1.5  style dashed }
+    op alt { layer border { color blue } }
+    op ref { layer fill { color amber-ink/0.1 } }
+    padding 20
+  }
+  note {
+    layer fill solid { color amber-ink/0.25 }
+    layer border border { color amber-ink }
+    text { color ink  weight 600 }
+  }
+}
+
+view purchase {
+  type sequence
+  interaction purchase
+  theme sequence
+}

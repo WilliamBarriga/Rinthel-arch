@@ -1,0 +1,608 @@
+// The nine monorepo packages with their real modules (ADR 0004), the actors, the artifacts and the external libraries.
+// One `module` per file of `packages/<package>/src` (and of `packages/estudio/navegador`, grouped by feature);
+// the dependencies are in `connections.dg`.
+model {
+  actor author "Author" "Writes .dg files and works in the Dev UI: editor, canvas, Themes and Undo history"
+  actor agent "Agent" "Validates, queries and edits through the CLI with stable JSON output"
+
+  artifact workspace "Workspace" "Folder of .dg files, .tsx Themes and fonts of the documented Project"
+  artifact dg-code-theme "Code Theme (.tsx)" "Workspace's own painters; require --trust-code"
+  artifact workspace-fonts "Workspace fonts" "woff2, woff, ttf and otf served under /fuentes"
+  artifact registry-activity "Activity log" ".diagrams/actividad.jsonl: one Event per validate, build, inspect or edit"
+  output derived-output ".diagrams/" "Derived output (SVG, HTML); not versioned"
+  output html-viewer "Dev UI in the browser" "index.html, pagina.js, worker.js and estilo.css from dist/estudio/"
+
+  process server-dev "Dev server" "HTTP on 127.0.0.1 only: Dev UI static files, /api/*, SSE and disk watcher"
+  process worker-layout "Layout Web Worker" "Relayout off the UI thread"
+
+  package canonical "canonical" "Zod schema, validation, View resolution, Steps, Pins and queries; base with no internal dependencies" {
+    source { path "packages/canonico/src" }
+    module can-schema "canonical/schema" "Canonical form: Model, Views, Theme and Steps as Zod schemas" {
+      source { file "packages/canonico/src/esquema.ts" }
+    }
+    module can-codes "canonical/codes" "Stable catalog of the E_ and W_ Issue codes" {
+      source { file "packages/canonico/src/codigos.ts" }
+    }
+    module can-issue "canonical/issue" "Shape of an Issue: code, severity, site, hint and fix" {
+      source { file "packages/canonico/src/issue.ts" }
+    }
+    module can-suggestions "canonical/suggestions" "Edit-distance candidates for hints and fixes" {
+      source { file "packages/canonico/src/sugerencias.ts" }
+    }
+    module can-icons "canonical/icons" "Valid icons for Node kinds" {
+      source { file "packages/canonico/src/iconos.ts" }
+    }
+    module can-validate "canonical/validate" "Semantic validation of the Model and Views, with codes and suggestions" {
+      source { file "packages/canonico/src/validar.ts" }
+    }
+    module can-views "canonical/views" "Resolution of include, exclude, depth, expanded and link into a resolved View" {
+      source { file "packages/canonico/src/vistas.ts" }
+    }
+    module can-steps "canonical/steps" "Cumulative reveal of flow Views: show and hide per Step" {
+      source { file "packages/canonico/src/pasos.ts" }
+    }
+    module can-sequence "canonical/sequence" "Resolution of an Interaction for a sequence View: Lifelines (by order and first appearance) and activations" {
+      source { file "packages/canonico/src/secuencia.ts" }
+    }
+    module can-pin "canonical/pin" "Pin: position fixed by the author, relative to the parent Group" {
+      source { file "packages/canonico/src/pin.ts" }
+    }
+    module can-edit "canonical/edit" "Shape of a structured edit and its result" {
+      source { file "packages/canonico/src/edit.ts" }
+    }
+    module can-inspect "canonical/inspect" "Model queries: ids, neighbors and search" {
+      source { file "packages/canonico/src/inspect.ts" }
+    }
+    module can-geometry "canonical/geometry" "Geometry types shared by layout, render and shell" {
+      source { file "packages/canonico/src/geometria.ts" }
+    }
+    module can-dev "canonical/dev" "Dev protocol with a single owner: routes, named SSE events and state schemas, Diff, Undo history and writes" {
+      source { file "packages/canonico/src/dev.ts" }
+    }
+    module can-activity "canonical/activity" "Schema of the activity Event (one line of actividad.jsonl) and its pure reader" {
+      source { file "packages/canonico/src/actividad.ts" }
+    }
+    module can-route-fonts "canonical/font-route" "Route a viewer uses to request the Workspace fonts" {
+      source { file "packages/canonico/src/ruta-de-fuentes.ts" }
+    }
+    module can-output "canonical/output" "Schemas of the CLI JSON output (contractVersion)" {
+      source { file "packages/canonico/src/salida.ts" }
+    }
+  }
+
+  package theme "theme" "Catalog of Primitives, Slots, Motions, Effects and sequence and ER Elements; resolved Style and Slot placement" {
+    source { path "packages/tema/src" }
+    module thm-catalog "theme/catalog" "Primitives and Slots with ranges and defaults; validation with suggestions" {
+      source { file "packages/tema/src/catalogo.ts" }
+    }
+    module thm-catalog-effects "theme/catalog-effects" "Catalog Effects and their scope (per element or global)" {
+      source { file "packages/tema/src/catalogo-efectos.ts" }
+    }
+    module thm-families "theme/families" "One Family per Primitive type: the definition of each" {
+      source { path "packages/tema/src/familias" }
+      module thm-fam-shape "theme/shape" "Node shapes" { source { file "packages/tema/src/familias/forma.ts" } }
+      module thm-fam-fill "theme/fill" "Fills: solid, gradient, weave, stripe" { source { file "packages/tema/src/familias/relleno.ts" } }
+      module thm-fam-border "theme/border" "Borders: solid, dashed, dotted" { source { file "packages/tema/src/familias/borde.ts" } }
+      module thm-fam-stroke "theme/stroke" "Edge strokes, including hand-drawn" { source { file "packages/tema/src/familias/trazo.ts" } }
+      module thm-fam-marker "theme/marker" "Edge ends and markers" { source { file "packages/tema/src/familias/marcador.ts" } }
+      module thm-fam-text "theme/text" "Text Slots: title, description, labels" { source { file "packages/tema/src/familias/texto.ts" } }
+      module thm-fam-code "theme/code" "Primitives that delegate to a code painter" { source { file "packages/tema/src/familias/codigo.ts" } }
+    }
+    module thm-theme "theme/theme" "Strict schema of the resolved Theme: Palette, tokens, Layers and Slots" {
+      source { file "packages/tema/src/tema.ts" }
+    }
+    module thm-patches "theme/patches" "Patches per kind and Part: applying them over a base Theme" {
+      source { file "packages/tema/src/parches.ts" }
+    }
+    module thm-animation "theme/animation" "Theme Motions and Effects: durations, curves and triggers" {
+      source { file "packages/tema/src/animacion.ts" }
+    }
+    module thm-color "theme/color" "Color conversion and mixing" {
+      source { file "packages/tema/src/color.ts" }
+    }
+    module thm-fonts "theme/fonts" "Theme font families and their fallback" {
+      source { file "packages/tema/src/fuentes.ts" }
+    }
+    module thm-measure "theme/measure" "Injectable text measurement (canvas, estimator or table)" {
+      source { file "packages/tema/src/medicion.ts" }
+    }
+    module thm-content "theme/content" "Which text each Slot of a Node carries" {
+      source { file "packages/tema/src/contenido.ts" }
+    }
+    module thm-layout "theme/layout" "Content layout: columns, alignment and padding" {
+      source { file "packages/tema/src/disposicion.ts" }
+    }
+    module thm-metrics "theme/metrics" "Metrics derived from box, Slots and measured text" {
+      source { file "packages/tema/src/metricas.ts" }
+    }
+    module thm-sequence "theme/sequence" "Sequence Theme elements (lifeline, activation, message, fragment, note): single table of what each block accepts" {
+      source { file "packages/tema/src/secuencia.ts" }
+    }
+    module thm-row "theme/row" "ER table row (row block): height, alternating rows and patches by key or optional" {
+      source { file "packages/tema/src/fila.ts" }
+    }
+    module thm-messages "theme/messages" "Painting of sequence Messages and ER Edges derived from the Edge; shared by render and color-only" {
+      source { file "packages/tema/src/mensajes.ts" }
+    }
+    module thm-derivation "theme/derivation" "Sequence and ER elements the Theme does not declare, derived from the node and edge painting" {
+      source { file "packages/tema/src/derivacion.ts" }
+    }
+    module thm-elements "theme/elements" "Sequence and ER elements described for inspect theme (declared or derived)" {
+      source { file "packages/tema/src/elementos.ts" }
+    }
+    module thm-slots "theme/slots" "Rectangle of each Slot inside the Node box" {
+      source { file "packages/tema/src/slots.ts" }
+    }
+    module thm-texts-a-measure "theme/texts-to-measure" "List of texts the layout must measure before placing" {
+      source { file "packages/tema/src/textos-a-medir.ts" }
+    }
+    module thm-style "theme/style" "Resolved Style: Metrics, painting and animation against the Theme" {
+      source { file "packages/tema/src/estilo.ts" }
+    }
+    module thm-contrast "theme/contrast" "theme-low-contrast warnings by contrast ratio" {
+      source { file "packages/tema/src/contraste.ts" }
+    }
+    module thm-high-contrast "theme/high-contrast" "High-contrast variant of a Theme" {
+      source { file "packages/tema/src/alto-contraste.ts" }
+    }
+    module thm-code "theme/code" "Contract of the code Theme (.tsx) and its trusted loading" {
+      source { file "packages/tema/src/codigo.ts" }
+    }
+    module thm-reference "theme/reference" "Generates docs/referencia-catalogo.md from the catalog" {
+      source { file "packages/tema/src/referencia.ts" }
+    }
+    module thm-seed "theme/seed" "Deterministic seed for the hand-drawn stroke" {
+      source { file "packages/tema/src/semilla.ts" }
+    }
+  }
+
+  package dsl "dsl" "Text to Canonical form; Workspace merge and Theme compiler" {
+    source { path "packages/dsl/src" }
+    module dsl-grammar "dsl/grammar" "Langium grammar and generated parser" {
+      source { path "packages/dsl/src/gramatica" }
+    }
+    module dsl-compile "dsl/compile" "Workspace files to Canonical form, with syntax Issues" {
+      source { file "packages/dsl/src/compilar.ts" }
+    }
+    module dsl-builtins "dsl/builtins" "Built-in Themes: neutral and neutral-dark" {
+      source { file "packages/dsl/src/incorporados.ts" }
+    }
+    module dsl-themes "dsl/themes" "Theme compiler: extends, palette, tokens and patches" {
+      source { file "packages/dsl/src/temas.ts" }
+    }
+    module dsl-themes-layers "dsl/themes-layers" "Painted Layers of the Theme" {
+      source { file "packages/dsl/src/temas-capas.ts" }
+    }
+    module dsl-themes-slots "dsl/themes-slots" "Slots and their placement in the Theme DSL" {
+      source { file "packages/dsl/src/temas-slots.ts" }
+    }
+    module dsl-themes-animation "dsl/themes-animation" "Motions and Effects in the Theme DSL" {
+      source { file "packages/dsl/src/temas-animacion.ts" }
+    }
+    module dsl-themes-edge "dsl/themes-edge" "Edge stroke and markers in the Theme DSL" {
+      source { file "packages/dsl/src/temas-arista.ts" }
+    }
+    module dsl-themes-sequence "dsl/themes-sequence" "Sequence elements in the Theme DSL" {
+      source { file "packages/dsl/src/temas-secuencia.ts" }
+    }
+    module dsl-themes-row "dsl/themes-row" "Row block (ER rows) in the Theme DSL" {
+      source { file "packages/dsl/src/temas-fila.ts" }
+    }
+    module dsl-themes-page "dsl/themes-page" "Page background of the Theme" {
+      source { file "packages/dsl/src/temas-pagina.ts" }
+    }
+    module dsl-themes-common "dsl/themes-common" "Utilities shared by the Theme compilers" {
+      source { file "packages/dsl/src/temas-comun.ts" }
+    }
+    module dsl-positions "dsl/positions" "Text ranges of each AST node" {
+      source { file "packages/dsl/src/posiciones.ts" }
+    }
+    module dsl-locator "dsl/locator" "File and line of each Node, Edge, View and Pin in the source text" {
+      source { file "packages/dsl/src/ubicador.ts" }
+    }
+  }
+
+  package layout "layout" "ELK and Pin; own sequence layout; cached geometry and invalidation keys" {
+    source { path "packages/layout/src" }
+    module lay-layout "layout/layout" "View resolved to Geometry with ELK (INCLUDE_CHILDREN), Pins, Edge labels and claveDeEstructura / claveDeLayout" {
+      source { file "packages/layout/src/layout.ts" }
+    }
+    module lay-sequence "layout/sequence" "Own sequence layout, no ELK, deterministic and synchronous: Lifeline columns and Message rows" {
+      source { file "packages/layout/src/secuencia.ts" }
+    }
+    module lay-index "layout/index" "Geometry index to locate Nodes and Edges" {
+      source { file "packages/layout/src/indice.ts" }
+    }
+  }
+
+  package session "session" "Session (compile, validate, layout), single write over the text and live Workspace: dev state without transport" {
+    source { path "packages/sesion/src" }
+    module ses-session "session/session" "abrirSesion: diagnose, build, geometry, style and query, memoizing layout per View" {
+      source { file "packages/sesion/src/sesion.ts" }
+    }
+    module ses-queries "session/queries" "inspect search, node, view and interaction over the Canonical form, with suggestions when nothing is found" {
+      source { file "packages/sesion/src/consultas.ts" }
+    }
+    module ses-query-theme "session/theme-query" "inspect theme: extends chain, Layers, Elements, Slots and Metrics" {
+      source { file "packages/sesion/src/consulta-de-tema.ts" }
+    }
+    module ses-apply "session/apply" "aplicarAlWorkspace: the single write gate (Intent or edits with hash, all or nothing)" {
+      source { file "packages/sesion/src/aplicar.ts" }
+    }
+    module ses-intents "session/intents" "Pure Intent reducer and Intent history (undo and redo)" {
+      source { file "packages/sesion/src/intenciones.ts" }
+    }
+    module ses-gestures "session/gestures" "Gestures: what to locate and what text to write for each Intent (internal)" {
+      source { file "packages/sesion/src/gestos.ts" }
+    }
+    module ses-edits "session/edits" "Loose text edits over located ranges, with a hash per file" {
+      source { file "packages/sesion/src/ediciones.ts" }
+    }
+    module ses-diff "session/diff" "diferenciar: the pure Diff between two Canonical forms, element by element" {
+      source { file "packages/sesion/src/diferencia.ts" }
+    }
+    module ses-change "session/change" "clasificarCambio: paint, structure or code; what the viewer must redo" {
+      source { file "packages/sesion/src/cambio.ts" }
+    }
+    module ses-workspace-live "session/live-workspace" "Live Workspace: current and last-good Session, write queue, versions and sole owner of the event sequence" {
+      source { file "packages/sesion/src/workspace-vivo.ts" }
+    }
+    module ses-history-files "session/file-history" "Dev history per file: undo, redo and jump; rejects if a file changed outside" {
+      source { file "packages/sesion/src/historial-de-archivos.ts" }
+    }
+    module ses-registry-live "session/live-activity-log" "What dev shows of the Activity log: earlier events on connect and new ones with debounce" {
+      source { file "packages/sesion/src/registro-de-actividad-vivo.ts" }
+    }
+    module ses-clock "session/clock" "Injected clock and shared debounce (the core has no clock of its own)" {
+      source { file "packages/sesion/src/reloj.ts" }
+    }
+    module ses-api-dev "session/dev-api" "atenderApiDeDev: request to full response; a route table gives routing, 404 and 405" {
+      source { file "packages/sesion/src/api-de-dev.ts" }
+    }
+    module ses-port-memory "session/in-memory-port" "In-memory Workspace port (disk fake)" {
+      source { file "packages/sesion/src/puerto-en-memoria.ts" }
+    }
+    module ses-port-live-memory "session/in-memory-live-port" "puertoEnMemoria: PuertoDelWorkspaceVivo with watchers, resources and activity" {
+      source { file "packages/sesion/src/puerto-vivo-en-memoria.ts" }
+    }
+  }
+
+  package render "render" "Pure React SVG: Geometry (graph or sequence) and Style to painted elements" {
+    source { path "packages/render/src" }
+    module ren-diagram "render/diagram" "Diagram component: Geometry and Theme to SVG" {
+      source { file "packages/render/src/diagram.tsx" }
+    }
+    module ren-limit "render/boundary" "Error boundary that isolates a broken code painter" {
+      source { file "packages/render/src/limite.tsx" }
+    }
+    module ren-scene "render/scene" "Geometry to a list of elements ordered by stack" {
+      source { file "packages/render/src/escena.ts" }
+    }
+    module ren-sequence "render/sequence" "Scene of a sequence View: Lifelines, activations and Messages over the sequence Geometry" {
+      source { file "packages/render/src/secuencia.ts" }
+    }
+    module ren-style "render/style" "Style resolved against the Theme, ready to paint" {
+      source { file "packages/render/src/estilo.ts" }
+    }
+    module ren-sheet "render/sheet" "CSS stylesheet derived from the Style (classes per element)" {
+      source { file "packages/render/src/hoja.ts" }
+    }
+    module ren-painters "render/painters" "One painter per Slot and Primitive" {
+      source { file "packages/render/src/pintores.ts" }
+    }
+    module ren-paint "render/paint" "Painters for shape, fill, border and page" {
+      source { path "packages/render/src/pintura" }
+      module ren-pin-common "render/common" "Shared rules, such as 'is border'" { source { file "packages/render/src/pintura/comun.ts" } }
+      module ren-pin-shape "render/shape" "Shape path" { source { file "packages/render/src/pintura/forma.ts" } }
+      module ren-pin-fill "render/fill" "Fills and gradients" { source { file "packages/render/src/pintura/relleno.ts" } }
+      module ren-pin-border "render/border" "Borders" { source { file "packages/render/src/pintura/borde.ts" } }
+      module ren-pin-page "render/page" "Page background" { source { file "packages/render/src/pintura/pagina.ts" } }
+    }
+    module ren-edges "render/edges" "Edge paths and labels" {
+      source { file "packages/render/src/aristas.ts" }
+    }
+    module ren-effects "render/effects" "Per-element and global Effects" {
+      source { file "packages/render/src/efectos.ts" }
+    }
+    module ren-animation "render/animation" "Motions: Theme transitions and triggers" {
+      source { file "packages/render/src/animacion.ts" }
+    }
+    module ren-stacks "render/stacks" "Stacking order of Layers" {
+      source { file "packages/render/src/pilas.ts" }
+    }
+    module ren-element "render/element" "Scene element: the type scene produces and the SVG consumes" {
+      source { file "packages/render/src/elemento.ts" }
+    }
+    module ren-code "render/code" "Bridge to the code Theme (.tsx)" {
+      source { file "packages/render/src/codigo.ts" }
+    }
+  }
+
+  package shell "shell" "VistaInteractiva over render: camera, Selection, path and focus, collapse, Steps, hash and drags that notify the parent" {
+    source { path "packages/shell/src" }
+    module sh-view "shell/interactive-view" "VistaInteractiva: joins camera, Selection, drag, Steps, navigation and chrome; each state controlled or internal" {
+      source { file "packages/shell/src/vista-interactiva.tsx" }
+    }
+    module sh-geometry "shell/geometry" "Geometry of the active View cached by structure; Pins are applied afterwards without relayout" {
+      source { file "packages/shell/src/geometria.ts" }
+    }
+    module sh-camera "shell/camera" "Pan and zoom with d3-zoom" {
+      source { file "packages/shell/src/camara.ts" }
+    }
+    module sh-viewport "shell/viewport" "Visible window and framing of the View" {
+      source { file "packages/shell/src/viewport.ts" }
+    }
+    module sh-zoom-semantic "shell/semantic-zoom" "Detail according to zoom level" {
+      source { file "packages/shell/src/zoom-semantico.ts" }
+    }
+    module sh-collapse "shell/collapse" "Group collapse and expansion" {
+      source { file "packages/shell/src/colapso.ts" }
+    }
+    module sh-selection "shell/selection" "Selection of Nodes, Edges, Messages, Notes, Lifelines and Fragments" {
+      source { file "packages/shell/src/seleccion.ts" }
+    }
+    module sh-route-focus "shell/path-and-focus" "Shortest path and keyboard focus, pure: on-path, dimmed and focus states for render" {
+      source { file "packages/shell/src/ruta-y-foco.ts" }
+    }
+    module sh-interaction "shell/interaction" "Gesture machine: click, drag and keyboard (hit-test over the Geometry)" {
+      source { file "packages/shell/src/interaccion.ts" }
+    }
+    module sh-config "shell/config" "Interaction thresholds and margins (tuning)" {
+      source { file "packages/shell/src/configuracion.ts" }
+    }
+    module sh-box "shell/box" "Point inside box: the single version of the bounds for hit-test and drag" {
+      source { file "packages/shell/src/caja.ts" }
+    }
+    module sh-drag "shell/drag" "Dragging a Node: notifies the parent with onMoveNode, without writing; snaps back if rejected" {
+      source { file "packages/shell/src/arrastre.ts" }
+    }
+    module sh-sort-lifelines "shell/sort-lifelines" "Reorder Lifelines by dragging the header (pure); notifies with onReorderLifelines" {
+      source { file "packages/shell/src/ordenar-lifelines.ts" }
+    }
+    module sh-controlled "shell/controlled" "State controlled by props or own: [current, set]" {
+      source { file "packages/shell/src/controlado.ts" }
+    }
+    module sh-navigation "shell/navigation" "Drill-down by link and breadcrumbs" {
+      source { file "packages/shell/src/navegacion.tsx" }
+    }
+    module sh-steps "shell/steps" "Step control of a flow or sequence View" {
+      source { file "packages/shell/src/pasos.tsx" }
+    }
+    module sh-hash "shell/hash" "Reader state in the URL hash; AdaptadorDeHash renames keys" {
+      source { file "packages/shell/src/hash.ts" }
+    }
+    module sh-state-hash "shell/state-in-hash" "useEstadoEnHash: controlled props of VistaInteractiva kept in the hash" {
+      source { file "packages/shell/src/estado-en-hash.ts" }
+    }
+    module sh-morph "shell/morph" "Animated transition between two Geometries" {
+      source { file "packages/shell/src/morph.ts" }
+    }
+    module sh-worker "shell/worker-layout" "adaptadorDeWorker: relayout in a Worker with browser text measurements" {
+      source { file "packages/shell/src/layout-en-worker.ts" }
+    }
+    module sh-serve-layout "shell/serve-layout" "Worker side: receives a View and returns Geometry" {
+      source { file "packages/shell/src/servir-layout.ts" }
+    }
+    module sh-measure "shell/viewer-measure" "Text measurements with canvas and loaded fonts" {
+      source { file "packages/shell/src/medicion-de-visor.ts" }
+    }
+    module sh-chrome "shell/chrome" "Canvas chrome (issues, toasts, legend, breadcrumbs) with CSS variables from the Style" {
+      source { file "packages/shell/src/chrome.tsx" }
+    }
+    module sh-accessibility "shell/accessibility" "ARIA roles, focus, high contrast and keyboard navigation" {
+      source { file "packages/shell/src/accesibilidad.tsx" }
+    }
+    module sh-notices "shell/notices" "Workspace and Theme Issues shown in the viewer" {
+      source { file "packages/shell/src/avisos.tsx" }
+    }
+  }
+
+  package dev-ui "dev-ui" "Dev UI in the browser: DSL editor, canvas, Themes, Issues, Undo history and agent activity" {
+    source { path "packages/estudio" }
+    module dui-index "dev-ui/index" "activosDelEstudio: on-disk paths of the static files in dist/estudio/" {
+      source { file "packages/estudio/src/index.ts" }
+    }
+    module dui-routes "dev-ui/routes" "RUTA_DEL_ESTUDIO: the /_estudio prefix and the build's static files" {
+      source { file "packages/estudio/src/rutas.ts" }
+    }
+    module dui-protocol "dev-ui/protocol" "The dev protocol as the page sees it; re-exports canonical/dev" {
+      source { file "packages/estudio/src/protocolo.ts" }
+    }
+    module dui-build "dev-ui/build" "construirEstudio: index.html, chunked pagina.js, worker.js and estilo.css with esbuild" {
+      source { file "packages/estudio/src/construir.ts" }
+    }
+    module dui-contract "dev-ui/contract" "probarContratoDeDev: the suite that runs the same against devEnMemoria and the real dev" {
+      source { file "packages/estudio/src/contrato.ts" }
+    }
+    module dui-in-memory-dev "dev-ui/in-memory-dev" "devEnMemoria: the real live Workspace over puertoEnMemoria; only the transport is fake" {
+      source { file "packages/estudio/src/dev-en-memoria.ts" }
+    }
+    module dui-sse "dev-ui/sse" "Incremental text/event-stream reader for fetch-based tests" {
+      source { file "packages/estudio/src/sse.ts" }
+    }
+
+    module dui-web "dev-ui/browser" "The dev page, one folder per feature" {
+      source { path "packages/estudio/navegador" }
+      module web-dev "browser/dev" "Page entry: real dependencies (fetch, EventSource, Worker) and mounts the Dev UI" {
+        source { file "packages/estudio/navegador/dev.tsx" }
+      }
+      module web-dev-ui "browser/dev-ui" "Dev UI: only assembles client, SSE state, Geometries, Components and providers" {
+        source { file "packages/estudio/navegador/estudio.tsx" }
+      }
+      module web-client "browser/client" "ClienteDeDev: the only piece with routes; validates everything with the protocol and never throws" {
+        source { file "packages/estudio/navegador/cliente.ts" }
+      }
+      module web-store "browser/store" "Per-client stores (WeakMap) that listen to a validated SSE event" {
+        source { file "packages/estudio/navegador/almacen.ts" }
+      }
+      module web-site "browser/site" "Code site file:line, pure" {
+        source { file "packages/estudio/navegador/sitio.ts" }
+      }
+
+      module web-frame "browser/frame" "Frame: providers, islands, tabs and shared hooks" {
+        source { path "packages/estudio/navegador/marco" }
+        module frm-providers "frame/providers" "Assemble useEstudio(), the editor channel and the preview; wrap frame and canvas" { source { file "packages/estudio/navegador/marco/proveedores.tsx" } }
+        module frm-context "frame/context" "useEstudio(): dev state, client and actions (irAVista, escribir, avisar...)" { source { file "packages/estudio/navegador/marco/contexto.ts" } }
+        module frm-frame "frame/frame" "Full-screen canvas with pill bar, islands, legend, toasts and dialogs" { source { file "packages/estudio/navegador/marco/marco.tsx" } }
+        module frm-tabs "frame/tabs" "Tab registry: each panel is a component without props" { source { file "packages/estudio/navegador/marco/pestanas.tsx" } }
+        module frm-island "frame/island" "Side island: tabs, hide and resize handles" { source { file "packages/estudio/navegador/marco/isla.tsx" } }
+        module frm-use-island "frame/use-island" "Size and visibility of an island by pointer or keyboard" { source { file "packages/estudio/navegador/marco/use-isla.ts" } }
+        module frm-limits "frame/limits" "Island resize limits, no DOM" { source { file "packages/estudio/navegador/marco/limites.ts" } }
+        module frm-state-dev "frame/use-dev-state" "Dev state over SSE: keeps the highest version" { source { file "packages/estudio/navegador/marco/use-estado-de-dev.ts" } }
+        module frm-reading "frame/use-reading-by-version" "The only guard against stale responses: loading, data or failure" { source { file "packages/estudio/navegador/marco/use-lectura-por-version.ts" } }
+        module frm-notice-reading "frame/reading-notice" "Loading or failure of a read, the same in every panel" { source { file "packages/estudio/navegador/marco/aviso-de-lectura.tsx" } }
+        module frm-listbox "frame/use-listbox" "The only navigable listbox (Views and Theme gallery)" { source { file "packages/estudio/navegador/marco/use-listbox.ts" } }
+        module frm-expiry "frame/use-expiry" "Expiry timer for notices, marks and highlights" { source { file "packages/estudio/navegador/marco/use-caducidad.ts" } }
+        module frm-size "frame/use-size" "Window size" { source { file "packages/estudio/navegador/marco/use-tamano.ts" } }
+      }
+
+      module web-canvas "browser/canvas" "The canvas: interactive View over the drawn Canonical form" {
+        source { path "packages/estudio/navegador/lienzo" }
+        module cnv-canvas "canvas/canvas" "Interactive View without chrome, previewed Theme, halo for external changes and drags" { source { file "packages/estudio/navegador/lienzo/lienzo.tsx" } }
+        module cnv-geometries "canvas/geometries" "On-demand Geometry of the active View depending on the kind of change" { source { file "packages/estudio/navegador/lienzo/geometrias.ts" } }
+        module cnv-data "canvas/view-data" "Interactive View data props for the active View" { source { file "packages/estudio/navegador/lienzo/datos-de-vista.ts" } }
+        module cnv-gesture "canvas/gesture" "Gesture in progress (drag, pan, zoom): lowers the glass to avoid dropping frames" { source { file "packages/estudio/navegador/lienzo/gesto.ts" } }
+        module cnv-hash "canvas/dev-ui-hash" "#view=<id> in the URL: translates the shell's p key" { source { file "packages/estudio/navegador/lienzo/hash-de-estudio.ts" } }
+      }
+
+      module web-writing "browser/writing" "Write: the only path for actions that write; owner of the current version and of the 409" {
+        source { file "packages/estudio/navegador/escritura/escritura.ts" }
+      }
+
+      module web-editor "browser/editor" "Code tab: CodeMirror 6 editor for the DSL" {
+        source { path "packages/estudio/navegador/editor" }
+        module ed-panel "editor/code-panel" "Single-file editor: autosaves, inline issues, completion and disk marks" { source { file "packages/estudio/navegador/editor/panel-de-codigo.tsx" } }
+        module ed-saving "editor/saving" "Debounced autosave: minimal edits even if it does not compile" { source { file "packages/estudio/navegador/editor/guardado.ts" } }
+        module ed-changes "editor/changes" "Accumulated ChangeSets turned into edits { file, range, replacement }" { source { file "packages/estudio/navegador/editor/cambios.ts" } }
+        module ed-reconciliation "editor/reconciliation" "fusionarTresVias: the buffer facing external writes" { source { file "packages/estudio/navegador/editor/reconciliacion.ts" } }
+        module ed-marks "editor/disk-marks" "Highlights the lines that came from disk" { source { file "packages/estudio/navegador/editor/marcas-del-disco.ts" } }
+        module ed-diagnostics "editor/diagnostics" "State Issues as Diagnostic, with the fix as an action" { source { file "packages/estudio/navegador/editor/diagnosticos.ts" } }
+        module ed-completion "editor/completion" "Keywords and ids from the last good Canonical form, no LSP" { source { file "packages/estudio/navegador/editor/completado.ts" } }
+        module ed-language "editor/language" "DSL highlighting with StreamLanguage" { source { file "packages/estudio/navegador/editor/lenguaje.ts" } }
+        module ed-words "editor/keywords" "Generated from the dsl grammar at build time" { source { file "packages/estudio/navegador/editor/palabras-clave.ts" } }
+      }
+
+      module web-issues "browser/issues" "Issues tab and apply fix" {
+        source { path "packages/estudio/navegador/issues" }
+        module iss-panel "issues/issues-panel" "Issues of the last state with a filter; jumps to file:line" { source { file "packages/estudio/navegador/issues/panel-de-issues.tsx" } }
+        module iss-fix "issues/apply-fix" "Apply a fix through the Write, with one retry if safe" { source { file "packages/estudio/navegador/issues/aplicar-fix.ts" } }
+      }
+
+      module web-history "browser/history" "File history tab" {
+        source { path "packages/estudio/navegador/historial" }
+        module hst-panel "history/history-panel" "History entries; one click jumps to the entry" { source { file "packages/estudio/navegador/historial/panel-del-historial.tsx" } }
+        module hst-visible "history/visible-history" "Last history event, kept per client" { source { file "packages/estudio/navegador/historial/historial-visible.ts" } }
+      }
+
+      module web-diff "browser/diff" "External Diffs highlighted on the page" {
+        source { path "packages/estudio/navegador/diferencia" }
+        module dff-store "diff/diffs" "Store of external Diffs per client" { source { file "packages/estudio/navegador/diferencia/diferencias.ts" } }
+        module dff-projection "diff/projection" "What is highlighted in the canvas, the index and the gallery; pure" { source { file "packages/estudio/navegador/diferencia/proyeccion.ts" } }
+        module dff-highlight "diff/highlight" "useDiferenciasExternas: joins, schedules and clears the highlight" { source { file "packages/estudio/navegador/diferencia/resaltado.tsx" } }
+      }
+
+      module web-agent "browser/agent" "Agent activity: panel, pills and follow the agent" {
+        source { path "packages/estudio/navegador/agente" }
+        module agt-activity "agent/activity" "Mark, summary and target of an Event; feed store" { source { file "packages/estudio/navegador/agente/actividad.ts" } }
+        module agt-panel "agent/agent-panel" "Activity log feed, newest on top" { source { file "packages/estudio/navegador/agente/panel-del-agente.tsx" } }
+        module agt-pills "agent/pills" "Last line, counter and follow-the-agent switch" { source { file "packages/estudio/navegador/agente/pildoras.tsx" } }
+      }
+
+      module web-themes "browser/themes" "Theme gallery and Theme Components" {
+        source { path "packages/estudio/navegador/temas" }
+        module ths-gallery "themes/theme-gallery" "Themes of the Canonical form in a listbox; previews and pins" { source { file "packages/estudio/navegador/temas/galeria-de-temas.tsx" } }
+        module ths-preview "themes/preview" "Preview Theme on the canvas without writing" { source { file "packages/estudio/navegador/temas/previsualizacion.ts" } }
+        module ths-components "themes/components" "Queries the code, asks for trust and evaluates the bundle with the page's React" { source { file "packages/estudio/navegador/temas/componentes.ts" } }
+        module ths-use-components "themes/use-components" "Theme Components of the drawn View, re-read per state" { source { file "packages/estudio/navegador/temas/use-componentes.ts" } }
+      }
+
+      module web-views "browser/views" "View index" {
+        source { path "packages/estudio/navegador/vistas" }
+        module vws-panel "views/views-panel" "Listbox grouped by Diagram type; the option is the active View" { source { file "packages/estudio/navegador/vistas/panel-de-vistas.tsx" } }
+        module vws-index "views/index" "Views by kind with their incoming and outgoing links; pure" { source { file "packages/estudio/navegador/vistas/indice.ts" } }
+        module vws-target "views/target" "Which View shows a Node; pure" { source { file "packages/estudio/navegador/vistas/destino.ts" } }
+      }
+
+      module web-detail "browser/detail" "Detail panel: the selected Node according to inspect node" {
+        source { file "packages/estudio/navegador/detalle/detalle.tsx" }
+      }
+
+      module web-commands "browser/commands" "Single command registry: shortcuts, Finder and help" {
+        source { path "packages/estudio/navegador/comandos" }
+        module cmd-registry "commands/registry" "COMANDOS: id, name, keys, scope and run" { source { file "packages/estudio/navegador/comandos/registro.ts" } }
+        module cmd-keys "commands/keys" "resolverTecla: key, scope and platform to command; pure" { source { file "packages/estudio/navegador/comandos/teclas.ts" } }
+        module cmd-use-shortcuts "commands/use-shortcuts" "The Dev UI's only keyboard listener" { source { file "packages/estudio/navegador/comandos/use-atajos.ts" } }
+        module cmd-finder "commands/finder" "Finder (Mod+K): commands, Views, Nodes and file:line" { source { file "packages/estudio/navegador/comandos/buscador.tsx" } }
+        module cmd-pill "commands/finder-pill" "Pill that opens the Finder" { source { file "packages/estudio/navegador/comandos/pildora-del-buscador.tsx" } }
+        module cmd-help "commands/help" "Dialog of shortcuts grouped by scope" { source { file "packages/estudio/navegador/comandos/ayuda.tsx" } }
+        module cmd-shortcut "commands/shortcut" "BotonConAtajo: aria-keyshortcuts and tooltip" { source { file "packages/estudio/navegador/comandos/atajo.tsx" } }
+      }
+
+      module web-worker "browser/worker" "Layout Web Worker bundle" {
+        source { path "packages/estudio/navegador/worker" }
+        module wrk-worker "worker/worker" "Worker entry: serves the layout (ELK) through self" { source { file "packages/estudio/navegador/worker/worker.ts" } }
+        module wrk-prelude "worker/prelude" "Empty document so ELK runs as a library" { source { file "packages/estudio/navegador/worker/preludio.ts" } }
+        module wrk-zod-inert "worker/inert-zod" "Inert stand-in for zod in the Worker bundle" { source { file "packages/estudio/navegador/worker/zod-inerte.ts" } }
+      }
+    }
+  }
+
+  package cli "cli" "validate, build, inspect, edit, dev and skill; disk, Activity log and dev HTTP adapter" {
+    source { path "packages/cli/src" }
+    module cli-bin "cli/bin" "diagrams binary: prints what run() returns" {
+      source { file "packages/cli/src/bin.ts" }
+    }
+    module cli-index "cli/index" "run(): routes the command, parses options and returns the exit code" {
+      source { file "packages/cli/src/index.ts" }
+    }
+    module cli-help "cli/help" "--help text per command" {
+      source { file "packages/cli/src/ayuda.ts" }
+    }
+    module cli-workspace "cli/workspace" "Reads the .dg folder and resources; owner of the .diagrams/ output folder" {
+      source { file "packages/cli/src/workspace.ts" }
+    }
+    module cli-session "cli/cli-session" "Opens the Session with the Themes from --theme-path" {
+      source { file "packages/cli/src/sesion-cli.ts" }
+    }
+    module cli-validate "cli/validate" "Human diagnostics and --json" {
+      source { file "packages/cli/src/validate.ts" }
+    }
+    module cli-inspect "cli/inspect" "Ids, sites, neighbors and search" {
+      source { file "packages/cli/src/inspect.ts" }
+    }
+    module cli-command-inspect "cli/inspect-command" "inspect subcommands and their output" {
+      source { file "packages/cli/src/comando-inspect.ts" }
+    }
+    module cli-edit "cli/edit-command" "Structured edits from the terminal (dg edit), with --hash" {
+      source { file "packages/cli/src/comando-edit.ts" }
+    }
+    module cli-rejections "cli/rejections" "Single table from MotivoDeRechazo to HTTP status and code" {
+      source { file "packages/cli/src/rechazos.ts" }
+    }
+    module cli-activity "cli/activity" "Builds the activity Event for validate, build, inspect and edit" {
+      source { file "packages/cli/src/actividad.ts" }
+    }
+    module cli-registry-disk "cli/log-on-disk" "Single owner of the on-disk log: rotating append and watching for dev" {
+      source { file "packages/cli/src/registro-en-disco.ts" }
+    }
+    module cli-code "cli/code" "Trust (--trust-code) and esbuild compilation of .tsx Themes, without running them" {
+      source { file "packages/cli/src/codigo.ts" }
+    }
+    module cli-dev "cli/dev" "Dev HTTP adapter: disk port, watcher, SSE, Dev UI statics and security (Host, Origin)" {
+      source { file "packages/cli/src/dev.ts" }
+    }
+    module cli-skill "cli/skill" "Installs the repo's skills for agents" {
+      source { file "packages/cli/src/skill.ts" }
+    }
+  }
+
+  external langium "Langium" "Parser generator"
+  external zod "Zod" "Schema validation"
+  external elk "ELK (elkjs)" "Layout engine"
+  external react "React 19" "SVG and Dev UI rendering"
+  external d3 "d3-zoom and d3-selection" "Camera"
+  external esbuild "esbuild" "Dev UI bundling and .tsx Theme compilation"
+  external node-http "node:http and node:fs" "Server and disk watcher"
+  external codemirror "CodeMirror 6" "DSL editor in the Dev UI"
+  external base-ui "Base UI" "Accessible dialogs, tabs, tooltips and autocomplete"
+}

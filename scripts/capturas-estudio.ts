@@ -18,7 +18,7 @@ import { iniciarDevDeGaleria } from './capturas/servidores.ts';
 
 const REPO = resolve(import.meta.dirname, '..');
 const BIN = join(REPO, 'packages/cli/dist/bin.js');
-const VISTA = 'paquetes';
+const VISTA = 'packages';
 const NODO = 'cli';
 const ENCUADRE = { width: 1600, height: 900 };
 
