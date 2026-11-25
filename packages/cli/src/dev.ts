@@ -173,7 +173,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   const rechazoDelPost = (req: IncomingMessage): [number, string] | undefined => {
     const origen = req.headers.origin;
     if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) return [403, 'Origin not allowed'];
-    if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return [415, 'Se esperaba application/json'];
+    if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return [415, 'Expected application/json'];
     return undefined;
   };
 
@@ -220,7 +220,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       const fuente = servirFuente(ruta.slice(RUTAS_DE_DEV.fuentes.length));
       if (fuente === undefined) {
         cabecera(res, 'text/plain', 404);
-        res.end('No encontrado');
+        res.end('Not found');
       } else {
         res.writeHead(200, { 'content-type': fuente.tipo, 'cache-control': 'no-store', 'content-length': fuente.bytes.length });
         res.end(fuente.bytes);
