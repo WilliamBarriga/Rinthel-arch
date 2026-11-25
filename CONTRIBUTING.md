@@ -30,7 +30,7 @@ There is no CI: tests run locally. The pre-commit hook runs `pnpm check`.
 
 ### User guides come in pairs
 
-The English guides in `docs/guide/` are the source; the Spanish guides in `docs/guia/` are their translation. Both folders use the same file name (`docs/guide/cli.md` pairs with `docs/guia/cli.md`) and the first line of each file links to its pair (`[Leer en espanol](../guia/cli.md)` and `[Read in English](../guide/cli.md)`).
+The English guides in `docs/guide/` are the source; the Spanish guides in `docs/guia/` are their translation. Both folders use the same file name (`docs/guide/cli.md` pairs with `docs/guia/cli.md`) and the first line of each file links to its pair (a "Leer en espanol" link to `../guia/cli.md` and a "Read in English" link to `../guide/cli.md`).
 
 The rule: touching a guide means touching its pair. `pnpm check` fails if a guide lacks its pair, if the first line does not link to it, if the two differ in the number of `##` headings, or if their fenced code blocks are not identical (so code, commands and DSL examples stay in English in both). Screenshots in `docs/img/` are English and are shared by both languages. To add a guide, create both files in the same change.
 
