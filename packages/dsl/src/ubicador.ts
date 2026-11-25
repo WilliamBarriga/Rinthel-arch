@@ -55,10 +55,16 @@ export function crearUbicador(datos: DatosDelUbicador): Ubicador {
 
 function deNodo({ fuente, nodos }: DatosDelUbicador, ruta: Ruta): SitioDeTexto | null {
   let actual: unknown = fuente;
-  for (const clave of ruta.slice(0, -1)) actual = (actual as Record<string | number, unknown>)[clave];
+  for (const clave of ruta.slice(0, ruta.at(-3) === 'attributes' ? -3 : -1)) actual = (actual as Record<string | number, unknown>)[clave];
+  const propiedad = ruta.at(-1) as string;
+  // `[..., 'attributes', j, 'planned']`: el Atributo `j` del Nodo (los de `attrs { }` primero, luego los sueltos).
+  if (ruta.at(-3) === 'attributes') {
+    const dueno = nodos.get((actual as { id: string }).id);
+    const atributo = dueno === undefined ? undefined : [...dueno.ast.attrs.flatMap((bloque) => bloque.items), ...dueno.ast.attributes][ruta.at(-2) as number];
+    return dueno === undefined || atributo === undefined ? null : sitio(dueno.archivo, rangoDeMarca(atributo, propiedad));
+  }
   const declarado = nodos.get((actual as { id: string }).id);
   if (declarado === undefined) return null;
-  const propiedad = ruta.at(-1) as string;
   // La marca `planned` se situa con su espacio previo: un `fix` que la borra deja el texto limpio.
   return sitio(declarado.archivo, propiedad === 'planned' ? rangoDeMarca(declarado.ast, propiedad) : rangoDe(declarado.ast, propiedad));
 }
@@ -67,6 +73,7 @@ function deArista({ aristas }: DatosDelUbicador, [i, lado, campo]: Ruta): SitioD
   const arista = aristas[i as number];
   if (arista === undefined) return null;
   // Cardinalidades: `ruta` = [i, 'fromCardinality' | 'toCardinality'], sin `campo`.
+  if (lado === 'planned') return sitio(arista.archivo, rangoDeMarca(arista.ast, 'planned'));
   if (lado === 'fromCardinality' || lado === 'toCardinality') return sitio(arista.archivo, rangoDe(arista.ast, lado));
   return sitio(arista.archivo, rangoDe(arista.ast[lado as 'from' | 'to'], campo as string));
 }
@@ -102,6 +109,7 @@ function deInteraccion({ interacciones }: DatosDelUbicador, [i, campo, ...resto]
     if (propiedad === 'targets' && typeof resto[k + 1] === 'number') return sitio(interaccion.archivo, rangoDeIndice(nodo, 'targets', resto[k + 1] as number));
     return sitio(interaccion.archivo, propiedad === undefined ? aRango(nodo.$cstNode?.range) : rangoDe(nodo, propiedad === 'id' ? 'alias' : propiedad));
   }
+  if (campo === 'planned') return sitio(interaccion.archivo, rangoDeMarca(interaccion.ast, 'planned'));
   return sitio(interaccion.archivo, rangoDe(interaccion.ast, campo === 'id' ? 'name' : (campo as string)));
 }
 

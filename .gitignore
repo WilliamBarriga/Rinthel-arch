@@ -14,3 +14,6 @@ revision-arquitectura.html
 /npm/THIRD-PARTY-NOTICES.md
 /npm/*.tgz
 /npm/skills/
+# Scan drafts (diagrams scan); .rinthel/scan-ignore is versioned
+.rinthel/scan.json
+.rinthel/scan.prev.json

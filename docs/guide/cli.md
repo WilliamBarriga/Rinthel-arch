@@ -45,6 +45,7 @@ Codes of the `sequence` and `er` Diagram types (the full list, with descriptions
 | `er-cardinality`, `duplicate-key-mark` | Invalid ER cardinality (with `fix`) and repeated key mark (`pk`, `fk`, `uk`) |
 | `old-catalog-value` | A Motion, effect, state or built-in Theme written with its old Spanish name; the `fix` rewrites it to the English name |
 | `real-node-in-planned-group` | A real Node (with a `path` Source) under a Group marked `planned`; the `fix` removes the mark from the Group |
+| `planned-with-path` | Warning: a Node marked `planned` that also has a `path` Source (it already exists in the code); the `fix` removes `planned` |
 | `old-workspace-convention` | A Workspace file or folder uses an old name (`tema.dg`, `temas/`, `fuentes/`); the `fix` carries `rename` to `theme.dg`, `themes/`, `fonts/`. Rename from the outside in and revalidate |
 
 ### `build`: write the geometry
@@ -74,10 +75,11 @@ dg inspect search <text>    --workspace <path> [--json]
 dg inspect node <id>        --workspace <path> [--json]
 dg inspect view <id>        --workspace <path> [--json]
 dg inspect interaction <id> --workspace <path> [--json]
+dg inspect planned          --workspace <path> [--json]
 dg inspect theme <name>     --workspace <path> [--kind <kind>] [--state <state>] [--diagram <type>] [--catalog] [--json]
 ```
 
-Each result carries the qualified id, the kind and `file:line`. `search` also finds Interactions (by id or title); `view` gives the type of the View (`architecture`, `flow`, `sequence`, `er`) and, in a sequence, its Lifelines as Nodes and the `interaction` it projects; `interaction` gives the title, the number of items (first level) and of Messages, the Lifelines in order of appearance and the Views that project it. `theme` shows the `extends` chain, the Parts, the Layer stack with the `file:line` of the patch that set each one (so you know what to edit) and the Metrics; also the sequence Elements and the ER row with the same resolution as the drawing: the declared ones and, with `--diagram sequence` or `--diagram er`, those derived from `edge` and `node` (`derived: true` in `--json`); `--catalog` adds the keys of Primitives and Motions. `inspect theme` sets `hasCode` and lists the components when the Theme uses code. It exits 1 if the Node, View, Interaction or Theme does not exist (stderr suggests nearby ids).
+Each result carries the qualified id, the kind and `file:line`. `search` also finds Interactions (by id or title); `view` gives the type of the View (`architecture`, `flow`, `sequence`, `er`) and, in a sequence, its Lifelines as Nodes and the `interaction` it projects; `interaction` gives the title, the number of items (first level) and of Messages, the Lifelines in order of appearance and the Views that project it. `planned` (no argument) lists what is planned with inheritance applied: Nodes (with their `spec` Source refs), marked Attributes, Edges and Interactions. `theme` shows the `extends` chain, the Parts, the Layer stack with the `file:line` of the patch that set each one (so you know what to edit) and the Metrics; also the sequence Elements and the ER row with the same resolution as the drawing: the declared ones and, with `--diagram sequence` or `--diagram er`, those derived from `edge` and `node` (`derived: true` in `--json`); `--catalog` adds the keys of Primitives and Motions. `inspect theme` sets `hasCode` and lists the components when the Theme uses code. It exits 1 if the Node, View, Interaction or Theme does not exist (stderr suggests nearby ids).
 
 ### `edit`: the only explicit write
 

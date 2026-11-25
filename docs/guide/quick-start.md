@@ -75,7 +75,7 @@ dg dev --workspace examples/rinthel-arch         # this repo documented, with it
 dg dev --workspace examples/themes/gallery --theme-path examples/rinthel-arch/themes        # a common Model with the example Themes and the states of each Node
 ```
 
-In `examples/rinthel-arch` try the `packages` View and click a package (drill-down), or open an `open-<theme>` View. The `flow-edit` View is of type `flow`: advance its Steps to see how the diagram is revealed.
+In `examples/rinthel-arch` (regenerated with `dg scan`) try the `context` View and click `estudio` or `scanner` (drill-down), or open an `open-<theme>` View. The `flow-dev` View is of type `flow`: advance its Steps to see how the diagram is revealed; `tables` is `er` and `export-sequence` is `sequence`.
 
 ## Sequence and ER in one minute
 

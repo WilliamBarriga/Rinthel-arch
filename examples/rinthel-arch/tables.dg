@@ -1,0 +1,32 @@
+// The tables `scan` found in this repo: the schema of the Scanner's test fixture (a Prisma schema plus a SQL file),
+// drawn as the skill says for `tables` items. The other fixture copies are left out in `.rinthel/scan-ignore`.
+model {
+  module fixture "scan-tables fixture" "A tiny app in the cli tests whose schema the Scanner reads" {
+    source { path "packages/cli/test/fixtures/scan-tables" }
+    table user "User" "From prisma/schema.prisma" {
+      source { path "packages/cli/test/fixtures/scan-tables/prisma/schema.prisma:User" }
+      id: Int pk
+      email: String uk
+    }
+    table post "Post" "From prisma/schema.prisma" {
+      source { path "packages/cli/test/fixtures/scan-tables/prisma/schema.prisma:Post" }
+      id: Int pk
+      authorId: Int fk
+    }
+    table audit-log "audit_log" "From db/audit.sql" {
+      source { path "audit_log" }
+      id: bigint pk
+      user_id: int? fk
+      action: text
+    }
+  }
+
+  fixture.post#authorId "0..*" -> "1" fixture.user#id "author"
+  fixture.audit-log#user_id "0..*" -> "0..1" fixture.user#id "actor"
+}
+
+view tables {
+  type er
+  theme diagrams
+  include fixture.**
+}

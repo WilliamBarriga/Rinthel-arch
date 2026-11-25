@@ -132,6 +132,10 @@ function validarGruposPlaneados(nodos: readonly Nodo[], ruta: RutaDeFuente, emit
     const aqui = [...ruta, indice];
     if (nodo.planned === true) {
       const reales = descendientesReales(nodo.children, [...aqui, 'children']);
+      // Marcado `planned` y con Source `path`: ya existe en el codigo; quitar la marca es el arreglo.
+      if (esReal(nodo)) {
+        emitirCon([...aqui, 'planned'], CODIGOS.W_PLANNED_WITH_PATH, `Node '${nodo.id}' is marked planned but has a Source path, so it already exists in the code; remove planned or the path`, { severity: 'warning', reemplazo: '' });
+      }
       const [primero] = reales;
       if (primero !== undefined) {
         const cuales = reales.length === 1 ? `the real Node '${primero.nodo.id}'` : `${reales.length} real Nodes (first '${primero.nodo.id}')`;

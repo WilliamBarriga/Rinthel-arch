@@ -79,6 +79,7 @@ view purchase { type sequence interaction purchase order client, api, db autonum
 - Fragments `opt loop break critical`, `alt { } else { }`, `par { } and { }`; Notes `note left|right of X`, `note over X, Y`; `ref other-interaction` (also declare a View that projects the referenced one).
 - `sequence` View: `interaction` required; `order` optional; `depth`, `collapsed`, `exclude`, `autonumber`. `include` and `pin` do not apply. Steps: `step "title" { upto <Message id> }` or `steps each`; give an `id:` to the Messages a Step cuts at.
 - `dg inspect interaction <id> --workspace <path>` gives its Lifelines in order, how many Messages it has and the Views that project it.
+- `dg inspect planned --workspace <path>` (no argument) lists the planned elements with their `spec` refs; see the planned mark in `references/dsl-reference.md`.
 
 ### Sequence and ER codes in validate
 

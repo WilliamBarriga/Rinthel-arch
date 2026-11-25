@@ -5,6 +5,7 @@
 import { readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
+import { planeados } from 'canonico';
 import type { Atributo, Modelo, Nodo } from 'canonico';
 import { EXCLUDED_FOLDERS } from 'scanner';
 import type { ScanDraft, ScanTable } from 'scanner';
@@ -32,7 +33,7 @@ export interface Coverage {
   workspace: string;
   units: CoverageCount;
   tables: CoverageCount;
-  /** Source `path` refs that are neither a unit nor a table id of the draft, by Node id. */
+  /** Source `path` refs that are not a unit, table or external id of the draft, by Node id. */
   orphanRefs: { node: string; ref: string }[];
   columns: ColumnDifference[];
   /** Distinct ids left out by `.rinthel/scan-ignore`. */
@@ -100,14 +101,18 @@ interface CoverageNode {
 }
 
 /**
- * The Nodes and Attributes that take part in coverage. Planned-aware filtering (#242) goes here: a planned Node never
- * makes an orphan ref and a planned Attribute is never extra.
+ * The Nodes and Attributes that take part in coverage. Planned-aware (ADR 0011): a planned Node (marked or under a
+ * planned Group) is proposed code, so it never makes an orphan ref, and a planned Attribute (marked or of a planned
+ * Node) is never extra.
  */
 function coverageNodes(model: Modelo): CoverageNode[] {
   const nodes: CoverageNode[] = [];
+  const planned = planeados(model);
   const visit = (node: Nodo): void => {
     const refs = node.source.filter((source) => source.kind === 'path').map((source) => source.ref);
-    if (refs.length > 0) nodes.push({ id: node.id, refs, attributes: node.attributes });
+    if (refs.length > 0 && !planned.nodos.has(node.id)) {
+      nodes.push({ id: node.id, refs, attributes: node.attributes.filter((attribute) => !planned.atributos.has(`${node.id}#${attribute.name}`)) });
+    }
     node.children.forEach(visit);
   };
   model.nodes.forEach(visit);
@@ -117,6 +122,7 @@ function coverageNodes(model: Modelo): CoverageNode[] {
 function compare(draft: ScanDraft, model: Modelo, workspace: string, ignores: (id: string) => boolean): Coverage {
   const units = new Set(draft.units.map((unit) => unit.id));
   const tables = new Map(draft.tables.map((table) => [table.id, table]));
+  const externals = new Set(draft.externals.map((external) => external.id));
   const cited = new Set<string>();
   const orphanRefs: Coverage['orphanRefs'] = [];
   const columns: ColumnDifference[] = [];
@@ -134,7 +140,7 @@ function compare(draft: ScanDraft, model: Modelo, workspace: string, ignores: (i
       const table = tables.get(ref);
       if (table !== undefined) {
         if (kept(table.id)) citedTables.push(table);
-      } else if (!units.has(ref) && kept(ref)) {
+      } else if (!units.has(ref) && !externals.has(ref) && kept(ref)) {
         orphanRefs.push({ node: node.id, ref });
       }
     }

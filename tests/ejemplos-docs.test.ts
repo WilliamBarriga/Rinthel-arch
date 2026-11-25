@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { resolveView } from 'canonico';
-import type { VistaDeGrafo, VistaDeSecuencia } from 'canonico';
+import type { Nodo, VistaDeGrafo, VistaDeSecuencia } from 'canonico';
 import { compile } from 'dsl';
 
 /** Lo que la documentacion publica promete: el tutorial valida, el mapa trae los 14 Temas, las capturas y los enlaces existen. */
@@ -52,25 +52,36 @@ describe('mapa de rinthel-arch con los 14 Temas', () => {
   });
 });
 
-describe('mapa de rinthel-arch: secuencia y ER', () => {
+describe('rinthel-arch map: regenerated from scan (the live demo)', () => {
   const { canonico, issues } = compile(leerDg('examples/rinthel-arch'));
+  const vistas = canonico!.views;
+  const todos = (nodos: Nodo[]): Nodo[] => nodos.flatMap((n) => [n, ...todos(n.children)]);
 
-  it('la Vista ER de la Fuente canonica proyecta sus tablas y Aristas', () => {
-    const er = resolveView(canonico!, 'canonical-er') as VistaDeGrafo;
-    expect(er.type).toBe('er');
-    expect(er.nodes).toHaveLength(7);
-    expect(er.edges.length).toBeGreaterThanOrEqual(8);
-    expect(er.steps).toHaveLength(3);
+  it('every Node of the repo Group cites a scan unit as a Source path ref', () => {
+    const repo = canonico!.model.nodes.find((n) => n.id === 'repo')!;
+    expect(repo.source.map((s) => s.ref)).toEqual(['.']);
+    const delRepo = todos(repo.children);
+    expect(delRepo.length).toBeGreaterThanOrEqual(10);
+    for (const n of delRepo) expect(n.source.some((s) => s.kind === 'path'), n.id).toBe(true);
   });
 
-  it('la Interaccion editar-pin tiene Fragmento, ref, Pasos y link a arquitectura', () => {
-    const vista = resolveView(canonico!, 'edit-pin') as VistaDeSecuencia;
-    expect(vista.type).toBe('sequence');
-    const fragmento = vista.interaction.items.find((i) => i.type === 'fragment') as unknown as { operands: Array<{ items: Array<{ type: string }> }> };
-    expect(fragmento.operands[0]!.items.map((i) => i.type)).toContain('ref');
-    expect(vista.steps).toHaveLength(2);
-    expect(canonico!.views.find((v) => v.id === 'edit-pin')!.links?.map((l) => l.view)).toEqual(['session-detail', 'shell-detail', 'dev-ui-detail']);
-    expect(canonico!.views.map((v) => v.id)).toContain('recompile');
+  it('opens on an architecture context View with Drill-down into existing Views', () => {
+    const contexto = vistas.find((v) => v.id === 'context')!;
+    expect(contexto.type).toBe('architecture');
+    expect(contexto.links?.length).toBeGreaterThanOrEqual(2);
+    for (const l of contexto.links ?? []) expect(vistas.map((v) => v.id)).toContain(l.view);
+  });
+
+  it('has a flow View with Steps, an er View over the scanned tables and a sequence View', () => {
+    const flujo = vistas.find((v) => v.type === 'flow' && (resolveView(canonico!, v.id) as VistaDeGrafo).steps.length >= 3);
+    expect(flujo).toBeDefined();
+    const er = resolveView(canonico!, 'tables') as VistaDeGrafo;
+    expect(er.type).toBe('er');
+    expect(er.nodes).toHaveLength(3);
+    expect(er.edges).toHaveLength(2);
+    const secuencia = resolveView(canonico!, 'export-sequence') as VistaDeSecuencia;
+    expect(secuencia.type).toBe('sequence');
+    expect(secuencia.steps.length).toBeGreaterThanOrEqual(2);
   });
 
   it('no agrega issues propios (solo los avisos deliberados de los Temas)', () => {

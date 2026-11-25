@@ -1,0 +1,36 @@
+// What `diagrams export` does, as a sequence: the same path that builds this live demo.
+model {
+  interaction export "diagrams export" "One self-contained, read-only HTML of the Dev UI" {
+    run: author -> repo.cli "diagrams export --out index.html"
+    repo.cli -> repo.session "open the Session"
+    repo.session -> repo.dsl "compile the .dg files"
+    reply repo.dsl -> repo.session "Canonical form"
+    reply repo.session -> repo.cli "live Workspace, or its Issues"
+    break "the Workspace has errors" {
+      async repo.cli -> author "Issues, exit 1, nothing written"
+    }
+    capture: repo.cli -> repo.dev-ui "capture state, Geometries and fonts"
+    repo.dev-ui -> repo.session "GET /api/estado and /api/vista"
+    repo.session -> repo.layout "lay out each View"
+    reply repo.layout -> repo.session "Geometry"
+    reply repo.session -> repo.dev-ui "state and Geometries"
+    html: reply repo.dev-ui -> repo.cli "one HTML: page, layout Worker, data, fonts"
+    note right of repo.dev-ui "ELK and the fonts go inside: it opens from file:// too"
+    done: reply repo.cli -> author "Exported N Views"
+  }
+}
+
+view export-sequence {
+  type sequence
+  theme diagrams
+  interaction export
+  order author, repo.cli, repo.session, repo.dsl, repo.layout, repo.dev-ui
+  autonumber
+  link repo.dev-ui -> dev-ui-detail
+  steps {
+    step "The author runs export" { upto run }
+    step "The Dev UI captures what the page needs" { upto capture }
+    step "The HTML comes back in one file" { upto html }
+    step "Done" { upto done }
+  }
+}

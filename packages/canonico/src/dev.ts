@@ -175,7 +175,7 @@ export const peticionDeSaltoSchema = z.object({ id: z.number().int().nonnegative
 export const INICIO_DEL_HISTORIAL_DE_DEV = 0;
 
 /** Subcomandos de `inspect` y de `GET /api/inspect/<comando>/<argumento>`; las opciones de `tema` van en la query. */
-export const COMANDOS_DE_INSPECT = ['search', 'node', 'view', 'interaction', 'theme'] as const;
+export const COMANDOS_DE_INSPECT = ['search', 'node', 'view', 'interaction', 'planned', 'theme'] as const;
 export type ComandoDeInspect = (typeof COMANDOS_DE_INSPECT)[number];
 
 export function rutaDeInspect(comando: ComandoDeInspect, argumento: string, opciones: Readonly<Record<string, string>> = {}): string {

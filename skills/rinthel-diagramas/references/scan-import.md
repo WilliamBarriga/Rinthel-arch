@@ -41,7 +41,7 @@ Pick `app` for a unit that starts something (a server, a CLI, a UI entry), `modu
 ```
 
 - `uncovered` units and tables are in the draft but no Node cites them as a Source `path` ref.
-- `orphanRefs` are refs a Node cites that are no longer in the draft: a unit or table was renamed, moved or deleted.
+- `orphanRefs` are refs a Node cites that are no longer in the draft: a unit, table or external was renamed, moved or deleted.
 - `columns` compares a table Node's Attributes with the table's columns by name: `missing` are columns without an Attribute, `extra` are Attributes without a column (Columns appear as `<table id>#<column>`).
 - `ignored` counts items left out by `.rinthel/scan-ignore` (see "Refresh from code").
 

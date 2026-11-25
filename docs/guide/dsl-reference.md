@@ -265,7 +265,7 @@ view purchase {
 }
 ```
 
-A complete example is in [`examples/rinthel-arch/views.dg`](../../examples/rinthel-arch/views.dg).
+A complete example is in [`examples/rinthel-arch/architecture.dg`](../../examples/rinthel-arch/architecture.dg).
 
 ## `theme` and `part`
 

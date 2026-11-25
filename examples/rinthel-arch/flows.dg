@@ -1,0 +1,48 @@
+// flow Views with Steps over the same Model.
+
+// What `diagrams dev` runs, from the .dg files to the canvas.
+view flow-dev {
+  type flow
+  theme diagrams
+  include author, repo.cli, repo.session, repo.dsl, repo.canonical, repo.theme, repo.layout, elk, repo.dev-ui, repo.shell, repo.render, react
+  collapsed repo.dev-ui
+  steps {
+    step "The author runs diagrams dev" {
+      show author, repo.cli
+    }
+    step "The Session compiles the .dg files to the Canonical form" {
+      show repo.session, repo.dsl, repo.canonical, repo.theme
+    }
+    step "ELK lays out each View" {
+      show repo.layout, elk
+    }
+    step "The CLI serves the Dev UI" {
+      show repo.dev-ui
+    }
+    step "The canvas draws the View with its Theme" {
+      show repo.shell, repo.render, react
+    }
+  }
+}
+
+// What `diagrams scan` does: the Scanner reads the code, the agent writes the Workspace (this one).
+view flow-scan {
+  type flow
+  theme diagrams-light
+  include agent, repo.cli, repo.scanner, repo.scanner.*, tree-sitter
+  expanded repo.scanner
+  steps {
+    step "The agent runs diagrams scan" {
+      show agent, repo.cli
+    }
+    step "The Scanner finds the units from the manifests" {
+      show repo.scanner, repo.scanner.core
+    }
+    step "It reads the imports of each language" {
+      show repo.scanner.imports, tree-sitter
+    }
+    step "And the tables of the schemas" {
+      show repo.scanner.tables
+    }
+  }
+}

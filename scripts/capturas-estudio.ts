@@ -18,8 +18,8 @@ import { iniciarDevDeGaleria } from './capturas/servidores.ts';
 
 const REPO = resolve(import.meta.dirname, '..');
 const BIN = join(REPO, 'packages/cli/dist/bin.js');
-const VISTA = 'packages';
-const NODO = 'cli';
+const VISTA = 'context';
+const NODO = 'repo.cli';
 const ENCUADRE = { width: 1600, height: 900 };
 
 const { values } = parseArgs({ args: process.argv.slice(2), options: { salida: { type: 'string', default: 'docs/img/estudio' } } });
@@ -46,7 +46,7 @@ async function principal(): Promise<void> {
   cpSync(join(REPO, 'examples/rinthel-arch'), workspace, { recursive: true, filter: (origen) => !origen.includes('/.diagrams') });
   cli(workspace, 'validate');
   cli(workspace, 'inspect', 'view', VISTA);
-  cli(workspace, 'inspect', 'node', 'cli');
+  cli(workspace, 'inspect', 'node', NODO);
   mkdirSync(salida, { recursive: true });
 
   const dev = await iniciarDevDeGaleria(REPO, workspace);
