@@ -87,12 +87,19 @@ function diferencia(de: Declaraciones, a: Declaraciones): Declaraciones {
 
 const bloque = estiloEnLinea;
 
+/** Separacion (px) entre la caja y el contorno de `planned`, que la rodea por fuera. */
+const HOLGURA_DE_PLANEADO = 4;
+
 function declaracionesDeEstado(estilo: Estilo, estado: EstadoVisual): Declaraciones {
   const { color, ancho, trazo, opacidad } = aspectoDeEstado(estilo, estado);
-  return {
-    border: `${px(ancho)} ${trazo === undefined ? 'solid' : 'dashed'} ${css(color)}`,
-    ...(opacidad !== 1 && { opacity: num(opacidad) }),
-  };
+  const borde = `${px(ancho)} ${trazo === undefined ? 'solid' : 'dashed'} ${css(color)}`;
+  // `planned`: la opacidad es la del elemento entero (`data-planeado`); el contorno va por fuera para no tapar el borde del Tema.
+  if (estado === 'planned') {
+    const fuera = px(-HOLGURA_DE_PLANEADO);
+    const crece = `calc(100% + ${px(2 * HOLGURA_DE_PLANEADO)})`;
+    return { border: borde, left: fuera, top: fuera, width: crece, height: crece };
+  }
+  return { border: borde, ...(opacidad !== 1 && { opacity: num(opacidad) }) };
 }
 
 /**
@@ -167,6 +174,10 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
     ['& .rd-caja:hover .rd-control, & .rd-caja:focus-within .rd-control', { opacity: '1' }],
     ['& .rd-estado', { position: 'absolute', left: '0', top: '0', width: '100%', height: '100%', 'box-sizing': 'border-box', 'pointer-events': 'none' }],
     ['& [data-atenuado]', { opacity: num(estilo.estados.dimmed.opacidad) }],
+    // Planeado con el aspecto por defecto: atenuado (multiplicado si ademas esta `dimmed`) y con las lineas discontinuas.
+    ['& [data-planeado]', { opacity: num(estilo.estados.planned.opacidad) }],
+    ['& [data-planeado][data-atenuado]', { opacity: num(estilo.estados.planned.opacidad * estilo.estados.dimmed.opacidad) }],
+    ['& [data-planeado] > path[data-capa]', { 'stroke-dasharray': estilo.estados.planned.trazo ?? 'none' }],
     ...(Object.keys(estilo.estados) as EstadoVisual[]).filter((estado) => estado !== 'dimmed').map((estado): [string, Declaraciones] => [`& .rd-estado[data-state="${estado}"]`, declaracionesDeEstado(estilo, estado)]),
   ];
 }

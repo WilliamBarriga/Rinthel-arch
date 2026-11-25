@@ -40,6 +40,28 @@ model {
 - Las Aristas se declaran solo en `model`, nunca en una Vista.
 - Un escenario ordenado entre Nodos es una Interaccion (ver abajo).
 
+### Planeado
+
+`planned` marca lo propuesto que aun no existe, junto a lo real. Es parte del Modelo, asi que toda Vista lo dibuja: el Tema por defecto atenua lo planeado y le da un contorno discontinuo (cajas) o lineas discontinuas (Aristas, Mensajes); un Tema puede reestilizarlo con `state planned { ... }`.
+
+```
+model {
+  servicio cobro "Cobro" "Paga un pedido" planned {     // tras titulo y descripcion, antes del cuerpo
+    servicio carrito "Carrito"                          // tambien planeado: un Grupo planeado marca a sus descendientes
+  }
+  tabla pedidos "Pedidos" {
+    cupon: text? fk planned "Del PRD"                   // entre las marcas de clave; en Vistas er, un chip PLAN
+  }
+  api -> cobro.carrito "agrega" planned                 // al final, tras `identifying` si van las dos
+  interaction pagar "Pagar" planned { api -> cobro }    // tras titulo y descripcion
+}
+```
+
+- Una Arista se dibuja planeada si lleva la marca o si alguno de sus extremos (Nodo o Atributo) lo esta; una fusionada, solo si lo estan todas las que agrupa.
+- Un Mensaje se dibuja planeado si lo esta su Interaccion o una de sus Lifelines.
+- Un Nodo real (con Source `path`) bajo un Grupo planeado es el error `real-node-in-planned-group`; su `fix` quita la marca del Grupo. La otra salida es sacar el Nodo del Grupo.
+- Un Nodo llamado `planned` no puede abrir la declaracion que sigue justo a un Nodo, una Arista o un Atributo (se leeria como su marca).
+
 ### Interacciones
 
 Un Workspace completo con una Interaccion y la Vista que la dibuja:

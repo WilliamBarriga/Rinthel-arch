@@ -128,6 +128,20 @@ And `zone` (`all`, `header`, `body`; default `all`): which part of the box the L
 | `title`, `badge`, `desc`, `footer`, `attrs` | `text` |
 | `counter` | `chip` |
 
+## States
+
+A `state <name> { ... }` patch only paints: it never changes the Metrics. Later rows win over earlier ones when an element is in several states.
+
+| State | Set by |
+| --- | --- |
+| `planned` | The Model: Planned elements. Without its own patch a Theme inherits the default look: faded, with a dashed contour around boxes and dashed lines |
+| `hover` | The Dev UI: the element under the pointer |
+| `selected` | The Dev UI: the selected element |
+| `ghost` | The Dev UI: the Node being dragged |
+| `on-path` | The Dev UI: the Nodes and Edges of the highlighted path |
+| `dimmed` | The Dev UI: what is off the highlighted path |
+| `focus` | The Dev UI: the element with keyboard focus |
+
 ## ER table row (`row`)
 
 Theme block that styles the rows of an `er` View. `height` (12 to 120) and the `size` of `name`, `type` and `key` (a multiple of the Theme text size, as in Slots) change the measured size; the rest only paints.

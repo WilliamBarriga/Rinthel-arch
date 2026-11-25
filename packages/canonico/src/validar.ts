@@ -93,6 +93,7 @@ export function validate(fuente: FuenteCanonica, opciones: OpcionesDeValidate = 
   const tipos = new Set(fuente.specification.nodeTypes.map((tipo) => tipo.name));
   validarInteracciones(fuente, emitir, emitirCon);
   validarNodos(fuente.model.nodes, ['model', 'nodes'], tipos, emitir);
+  validarGruposPlaneados(fuente.model.nodes, ['model', 'nodes'], emitirCon);
   validarAristas(fuente, emitir);
   validarCatalogo(fuente, opciones.iconos, emitir);
   fuente.views.forEach((vista, indice) => {
@@ -117,6 +118,35 @@ function validarNodos(nodos: readonly Nodo[], ruta: RutaDeFuente, tipos: Readonl
     }
     validarNodos(nodo.children, [...aqui, 'children'], tipos, emitir);
   });
+}
+
+/** Tiene Source `path`: ya existe en el codigo (ADR 0010, 0011). */
+const esReal = (nodo: Nodo): boolean => nodo.source.some((referencia) => referencia.kind === 'path');
+
+/**
+ * Un Grupo marcado `planned` con descendientes reales (Source `path`) los dibujaria planeados: un error por Grupo,
+ * en su marca, con `fix` que la quita y el primer descendiente real como sitio relacionado.
+ */
+function validarGruposPlaneados(nodos: readonly Nodo[], ruta: RutaDeFuente, emitirCon: EmitirCon): void {
+  nodos.forEach((nodo, indice) => {
+    const aqui = [...ruta, indice];
+    if (nodo.planned === true) {
+      const reales = descendientesReales(nodo.children, [...aqui, 'children']);
+      const [primero] = reales;
+      if (primero !== undefined) {
+        const cuales = reales.length === 1 ? `the real Node '${primero.nodo.id}'` : `${reales.length} real Nodes (first '${primero.nodo.id}')`;
+        emitirCon([...aqui, 'planned'], CODIGOS.E_REAL_NODE_IN_PLANNED_GROUP, `Group '${nodo.id}' is marked planned but contains ${cuales} with a Source path; remove the Group's mark or move the real Nodes out of it`, {
+          reemplazo: '',
+          relacionado: { ruta: [...primero.ruta, 'name'], message: `'${primero.nodo.id}' has a Source path` },
+        });
+      }
+    }
+    validarGruposPlaneados(nodo.children, [...aqui, 'children'], emitirCon);
+  });
+}
+
+function descendientesReales(nodos: readonly Nodo[], ruta: RutaDeFuente): { nodo: Nodo; ruta: RutaDeFuente }[] {
+  return nodos.flatMap((nodo, indice) => [...(esReal(nodo) ? [{ nodo, ruta: [...ruta, indice] }] : []), ...descendientesReales(nodo.children, [...ruta, indice, 'children'])]);
 }
 
 function atributosPorNodo(nodos: readonly Nodo[], destino = new Map<string, string[]>()): Map<string, string[]> {

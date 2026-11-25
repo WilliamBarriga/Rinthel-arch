@@ -334,6 +334,7 @@ function compilarElemento(
     attributes: atributosDe(elemento.attrs, elemento.attributes, archivo, issues),
     source: referenciasDe(elemento.sources),
     children: [],
+    ...(elemento.planned && { planned: true }),
   };
   registro.set(id, { nodo, ast: elemento, origen: { file: archivo, ...sitio } });
   nodo.children = compilarHijos(elemento.elements, id, archivo, contexto);
@@ -408,6 +409,7 @@ function atributosDe(bloques: readonly Attrs[], sueltos: readonly Attribute[], a
       notes: item.notes ?? '',
       ...(claves.length > 0 && { keys: claves }),
       ...(item.optional && { optional: true }),
+      ...(item.planned && { planned: true }),
     };
   });
 }
@@ -432,6 +434,7 @@ function compilarArista(arista: Edge): Arista {
     ...(arista.toCardinality !== undefined && { toCardinality: arista.toCardinality }),
     ...(arista.label !== undefined && { label: arista.label }),
     ...(arista.identifying && { identifying: true }),
+    ...(arista.planned && { planned: true }),
   };
 }
 
@@ -442,6 +445,7 @@ function compilarInteraccion(interaccion: Interaction): Interaccion {
     title: interaccion.title ?? interaccion.name,
     description: interaccion.description ?? '',
     items: interaccion.items.map(compilarItem),
+    ...(interaccion.planned && { planned: true }),
   };
 }
 

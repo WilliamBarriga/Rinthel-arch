@@ -42,6 +42,8 @@ export { combineIconProviders, genericIcons, hidratarIconos, resolveNodeTypeIcon
 export type { IconProvider } from './iconos';
 export { idDeArista, idDeElementoDeSecuencia, leerIdDeElementoDeSecuencia, revealAt } from './pasos';
 export type { Visibilidad } from './pasos';
+export { aristaPlaneada, extremoPlaneado, mensajePlaneado, planeados } from './planeado';
+export type { Planeados } from './planeado';
 export { candidatosCercanos } from './sugerencias';
 export { validate } from './validar';
 export type { OpcionesDeValidate, RutaDeFuente, SitioDeTexto, Ubicador } from './validar';

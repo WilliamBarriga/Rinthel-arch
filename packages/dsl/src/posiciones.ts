@@ -1,7 +1,7 @@
 /** Posiciones del texto en el AST de Langium y issues con sugerencia. Puro. */
 import { CODIGOS, candidatosCercanos } from 'canonico';
 import type { Issue, TextRange } from 'canonico';
-import { GrammarUtils } from 'langium';
+import { CstUtils, GrammarUtils } from 'langium';
 import type { AstNode } from 'langium';
 
 interface RangoDeLangium {
@@ -12,6 +12,18 @@ interface RangoDeLangium {
 /** Rango 1-based (fin excluido) de una propiedad del AST; `1:1` si el CST no lo conoce. */
 export function rangoDe(nodo: AstNode, propiedad: string): TextRange {
   return aRango(GrammarUtils.findNodeForProperty(nodo.$cstNode, propiedad)?.range);
+}
+
+/**
+ * Rango de una palabra marca (`planned`) junto con el espacio que la separa de lo anterior en su linea: borrarlo deja
+ * el texto como si nunca se hubiera escrito.
+ */
+export function rangoDeMarca(nodo: AstNode, propiedad: string): TextRange {
+  const marca = GrammarUtils.findNodeForProperty(nodo.$cstNode, propiedad);
+  if (marca === undefined) return aRango(undefined);
+  const previo = CstUtils.getPreviousNode(marca, false);
+  const desde = previo !== undefined && previo.range.end.line === marca.range.start.line ? previo.range.end : marca.range.start;
+  return aRango({ start: desde, end: marca.range.end });
 }
 
 /** Como `rangoDe`, para el `indice`-esimo valor de una propiedad multiple. */

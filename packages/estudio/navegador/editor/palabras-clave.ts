@@ -78,6 +78,7 @@ export const PALABRAS_CLAVE: readonly string[] = [
   'part',
   'pin',
   'pk',
+  'planned',
   'reduced',
   'ref',
   'reply',

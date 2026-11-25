@@ -48,10 +48,10 @@ Model:
   '}'
 ;
 
-// `interaction <id> ["Titulo"] ["Descripcion"] { mensajes }`. Su id vive en un espacio de nombres propio;
-// `interaction` sigue valiendo como id de Nodo.
+// `interaction <id> ["Titulo"] ["Descripcion"] [planned] { mensajes }`. Su id vive en un espacio de nombres propio;
+// `interaction` sigue valiendo como id de Nodo. `planned` (ADR 0011) marca todos sus Mensajes.
 Interaction:
-  'interaction' name=Id (title=String (description=String)?)? '{'
+  'interaction' name=Id (title=String (description=String)?)? (planned?='planned')? '{'
     items+=InteractionItem*
   '}'
 ;
@@ -92,9 +92,10 @@ Message:
 
 // `<origen> ["card"] -> ["card"] <destino> ["etiqueta"]`; los extremos son ids cualificados.
 // Los espacios alrededor de `->` son obligatorios: `-` es valido dentro de un Id.
-// ER: la palabra final `identifying` marca la relacion como identificante.
+// ER: la palabra final `identifying` marca la relacion como identificante; `planned` (ADR 0011, tras `identifying`),
+// como propuesta.
 Edge:
-  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint (label=String)? (identifying?='identifying')?
+  from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint (label=String)? (identifying?='identifying')? (planned?='planned')?
 ;
 
 // Nodo por id cualificado (`a.b.c`) y, opcional, uno de sus Atributos (`a.b#col`).
@@ -471,12 +472,13 @@ Selector returns string:
 Wildcard returns string:
   '*' | '**';
 
-// `<tipo> <nombre> "titulo" "descripcion" { hijos }`
+// `<tipo> <nombre> "titulo" "descripcion" [planned] { hijos }`; `planned` (ADR 0011) marca tambien a los descendientes.
 Element:
   type=Id name=Id
   (title=String
     (description=String)?
   )?
+  (planned?='planned')?
   ('{'
     (elements+=Element | attrs+=Attrs | attributes+=Attribute | sources+=Source)*
   '}')?
@@ -497,9 +499,10 @@ SourceItem:
   kind=Id ref=String
 ;
 
-// ER: `?` pegado al tipo es `optional`; `pk`, `fk` y `uk` (en cualquier orden) son las marcas de clave.
+// ER: `?` pegado al tipo es `optional`; `pk`, `fk` y `uk` (en cualquier orden) son las marcas de clave y `planned`
+// (ADR 0011), la de propuesta, entre ellas.
 Attribute:
-  name=Id ':' type=Id (optional?='?')? (keys+=KeyMark)* (notes=String)?
+  name=Id ':' type=Id (optional?='?')? (keys+=KeyMark)* (planned?='planned')? (keys+=KeyMark)* (notes=String)?
 ;
 
 KeyMark returns string:
@@ -516,7 +519,7 @@ Id returns string:
   'steps' | 'step' | 'show' | 'hide' | 'edge' | 'start' | 'end' | 'page' | 'fixed' | 'group' | 'padding' | 'diagram' |
   'model' | 'node' | 'specification' | 'interaction' | 'autonumber' | 'async' | 'reply' | 'create' | 'destroy' |
   'opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par' | 'else' | 'and' | 'note' | 'left' | 'right' | 'of' | 'ref' |
-  'upto' | 'each' | 'pk' | 'fk' | 'uk' | 'identifying' | 'height' | 'key' | 'optional' | 'alternate' |
+  'upto' | 'each' | 'pk' | 'fk' | 'uk' | 'identifying' | 'planned' | 'height' | 'key' | 'optional' | 'alternate' |
   'lifeline' | 'activation' | 'message' | 'fragment' | 'kind' | 'op';
 
 // -------------------------

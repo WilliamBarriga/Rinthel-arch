@@ -5,7 +5,7 @@
 import type { FuenteCanonica, SitioDeTexto, TextRange, Ubicador } from 'canonico';
 
 import type { Edge, Element, Fragment, Interaction, NodeTypeDecl, View } from './generated/ast';
-import { aRango, puntoVacio, rangoDe, rangoDeIndice } from './posiciones';
+import { aRango, puntoVacio, rangoDe, rangoDeIndice, rangoDeMarca } from './posiciones';
 import { GrammarUtils } from 'langium';
 import type { AstNode } from 'langium';
 
@@ -58,7 +58,9 @@ function deNodo({ fuente, nodos }: DatosDelUbicador, ruta: Ruta): SitioDeTexto |
   for (const clave of ruta.slice(0, -1)) actual = (actual as Record<string | number, unknown>)[clave];
   const declarado = nodos.get((actual as { id: string }).id);
   if (declarado === undefined) return null;
-  return sitio(declarado.archivo, rangoDe(declarado.ast, ruta.at(-1) as string));
+  const propiedad = ruta.at(-1) as string;
+  // La marca `planned` se situa con su espacio previo: un `fix` que la borra deja el texto limpio.
+  return sitio(declarado.archivo, propiedad === 'planned' ? rangoDeMarca(declarado.ast, propiedad) : rangoDe(declarado.ast, propiedad));
 }
 
 function deArista({ aristas }: DatosDelUbicador, [i, lado, campo]: Ruta): SitioDeTexto | null {

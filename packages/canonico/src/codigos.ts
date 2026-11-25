@@ -65,6 +65,7 @@ export const CODIGOS = Object.freeze({
   E_ER_CARDINALITY: 'er-cardinality',
   E_OLD_CATALOG_VALUE: 'old-catalog-value',
   E_OLD_WORKSPACE_CONVENTION: 'old-workspace-convention',
+  E_REAL_NODE_IN_PLANNED_GROUP: 'real-node-in-planned-group',
 } as const);
 
 /** Codigos activos; `Issue.code` es `string`. */
@@ -133,6 +134,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   'er-cardinality': 'An Edge included in an ER View has a cardinality that is not `0..1`, `1`, `0..*` or `1..*`; the `fix` proposes the single close candidate.',
   'old-catalog-value': 'A Motion, effect, state or built-in Theme is written with its old Spanish name; the `fix` rewrites it to the English one (no aliases).',
   'old-workspace-convention': 'A Workspace file or folder uses an old Spanish convention name (`tema.dg`, `temas/`, `fuentes/`); the `fix` renames it (`theme.dg`, `themes/`, `fonts/`).',
+  'real-node-in-planned-group': 'A real Node (with a Source `path`) is under a Group marked `planned`, which would draw it as planned; the `fix` removes the Group\'s mark (or move the Node out of the Group).',
   'theme-font-not-served': 'The viewer does not know where to request the Theme font files (`fontUrl` is missing): it measures and paints with the fallback, not the declared font.',
 });
 

@@ -9,8 +9,11 @@ import type { DefinicionDePrimitiva, ErrorDeCatalogo, Primitiva, UbicacionDePrim
 import type { TemaResuelto } from './tema';
 import type { Animacion } from './animacion';
 
-/** `focus` y `on-path` los calcula la shell. */
-export const ESTADOS = ['hover', 'selected', 'ghost', 'on-path', 'dimmed', 'focus'] as const;
+/**
+ * En orden de precedencia (el ultimo gana). `focus` y `on-path` los calcula la shell; `planned` sale del Modelo (marca
+ * Planeado, ADR 0011) y va primero: cualquier estado de interaccion se pinta sobre el.
+ */
+export const ESTADOS = ['planned', 'hover', 'selected', 'ghost', 'on-path', 'dimmed', 'focus'] as const;
 export type Estado = (typeof ESTADOS)[number];
 /** Los que un Tema distingue con `diagram <tipo> { ... }`. */
 export const TIPOS_DE_DIAGRAMA = TIPOS_DE_VISTA;

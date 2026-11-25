@@ -2,6 +2,8 @@
 import { EASINGS, EFECTOS, MOVIMIENTOS, PROPIEDADES_ANIMABLES } from './animacion';
 import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA } from './secuencia';
 import { ALTO_DE_FILA, CLAVES_DE_FILA, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA } from './fila';
+import { ESTADOS } from './parches';
+import type { Estado } from './parches';
 import { CATALOGO, DEFINICION_DE_SLOT, PROPIEDADES_DE_DESPLAZAMIENTO, PROPIEDAD_DE_ZONA, SLOTS, ubicacionesDe } from './catalogo';
 import type { DefinicionDePrimitiva, DefinicionDePropiedad, NombreDePrimitiva } from './catalogo';
 
@@ -18,6 +20,17 @@ const propiedad = (nombre: string, definicion: DefinicionDePropiedad): string =>
     case 'texto':
       return `\`${nombre}\` texto de hasta ${definicion.largo} caracteres${definicion.opcional === true ? ' (opcional)' : ''}`;
   }
+};
+
+/** Quien pone cada estado; la tabla obliga a describir un estado nuevo. */
+const ORIGEN_DE_ESTADO: Readonly<Record<Estado, string>> = {
+  planned: 'The Model: Planned elements. Without its own patch a Theme inherits the default look: faded, with a dashed contour around boxes and dashed lines',
+  hover: 'The Dev UI: the element under the pointer',
+  selected: 'The Dev UI: the selected element',
+  ghost: 'The Dev UI: the Node being dragged',
+  'on-path': 'The Dev UI: the Nodes and Edges of the highlighted path',
+  dimmed: 'The Dev UI: what is off the highlighted path',
+  focus: 'The Dev UI: the element with keyboard focus',
 };
 
 const tabla = (cabecera: readonly string[], filas: readonly (readonly string[])[]): string[] => [
@@ -60,6 +73,12 @@ export function referenciaDelCatalogo(): string {
   lineas.push('', '## Slots', '', ...tabla(['Slot', 'Estilo'], SLOTS.map((slot) => [`\`${slot}\``, `\`${DEFINICION_DE_SLOT[slot].estilo}\``])));
   lineas.push(
     '',
+    '## States',
+    '',
+    'A `state <name> { ... }` patch only paints: it never changes the Metrics. Later rows win over earlier ones when an element is in several states.',
+    '',
+    ...tabla(['State', 'Set by'], ESTADOS.map((estado) => [`\`${estado}\``, ORIGEN_DE_ESTADO[estado]])),
+    '',
     '## Fila de tabla ER (`row`)',
     '',
     `Bloque del Tema que estiliza las filas de una Vista \`er\`. \`height\` (${ALTO_DE_FILA.min} a ${ALTO_DE_FILA.max}) y el \`size\` de \`name\`, \`type\` y \`key\` (multiplo del tamano de texto del Tema, como en los Slots) cambian el tamano medido; el resto solo pinta.`,
@@ -71,7 +90,7 @@ export function referenciaDelCatalogo(): string {
         ['`alternate { ... }`', 'Parche de las filas impares'],
         [`\`key ${CLAVES_DE_FILA.join('|')} { ... }\``, 'Parche de las filas con esa marca de clave, en ese orden'],
         ['`optional { ... }`', 'Parche de los Atributos opcionales, tras las claves'],
-        ['`state hover|seleccionado|... { ... }`', 'Parche de estado de la fila (solo pinta), sobre la pila de su variante; el shell emite `hover` y `selected`'],
+        ['`state hover|selected|... { ... }`', 'Parche de estado de la fila (solo pinta), sobre la pila de su variante; el shell emite `hover` y `selected`'],
         ...NOMBRES_DE_TEXTO_DE_FILA.map((nombre) => [`\`${nombre} { ... }\``, `Estilo de texto con la Primitiva \`${TEXTOS_DE_FILA[nombre]}\`${nombre === 'key' ? ' (el chip de cada marca de clave)' : ''}`]),
       ],
     ),

@@ -34,6 +34,8 @@ export interface Nodo {
   attributes: Atributo[];
   source: ReferenciaOpaca[];
   children: Nodo[];
+  /** Marca Planeado (ADR 0011): propuesto, aun no construido; marca a sus descendientes. Ausente es `false`. */
+  planned?: boolean;
 }
 
 /** Referencia a algo externo al Modelo; el nucleo no interpreta `kind` ni `ref`. */
@@ -57,6 +59,8 @@ export interface Atributo {
   keys?: ClaveDeAtributo[];
   /** El tipo admite nulo (`tipo?` en el DSL); ausente es `false`. */
   optional?: boolean;
+  /** Marca Planeado (ADR 0011), dibujada como chip junto a las de clave; ausente es `false`. */
+  planned?: boolean;
 }
 
 /** `node` es el id cualificado completo; `attribute` se escribe `nodo#atributo` (el punto es solo jerarquia). */
@@ -73,6 +77,8 @@ export interface Arista {
   label?: string;
   /** ER: linea continua en vez de discontinua; ausente es `false`. */
   identifying?: boolean;
+  /** Marca Planeado (ADR 0011); una Arista tambien se dibuja planeada si un extremo lo esta. Ausente es `false`. */
+  planned?: boolean;
 }
 
 export interface Modelo {
@@ -143,6 +149,8 @@ export interface Interaccion {
   title: string;
   description: string;
   items: ItemDeInteraccion[];
+  /** Marca Planeado (ADR 0011): todos sus Mensajes se dibujan planeados. Ausente es `false`. */
+  planned?: boolean;
 }
 
 const referenciaOpacaSchema = z.object({ kind: z.string().min(1), ref: z.string() });
@@ -153,6 +161,7 @@ export const atributoSchema = z.object({
   notes: z.string().default(''),
   keys: z.array(z.enum(CLAVES_DE_ATRIBUTO)).min(1).optional(),
   optional: z.boolean().optional(),
+  planned: z.boolean().optional(),
 });
 
 /** Que `type` este en el catalogo se comprueba en `fuenteCanonicaSchema`, donde vive el catalogo. */
@@ -165,6 +174,7 @@ export const nodoSchema: z.ZodType<Nodo> = z.lazy(() =>
     attributes: z.array(atributoSchema).default([]),
     source: z.array(referenciaOpacaSchema).default([]),
     children: z.array(nodoSchema).default([]),
+    planned: z.boolean().optional(),
   }),
 );
 
@@ -181,6 +191,7 @@ export const aristaSchema = z.object({
   toCardinality: z.string().min(1).optional(),
   label: z.string().min(1).optional(),
   identifying: z.boolean().optional(),
+  planned: z.boolean().optional(),
 });
 
 export const mensajeSchema = z.object({
@@ -223,6 +234,7 @@ export const interaccionSchema = z.object({
   title: z.string().min(1),
   description: z.string().default(''),
   items: z.array(itemSchema).default([]),
+  planned: z.boolean().optional(),
 });
 
 const modeloSchema = z.object({
