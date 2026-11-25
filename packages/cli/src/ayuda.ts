@@ -96,9 +96,10 @@ Regenerate it when the Node kinds, the Themes or the codes change.
   scan: `diagrams scan [<root>] [options]
 
 Reads a codebase without running it and writes a Scan draft (rinthel/scan@1): units from manifests
-(package.json, pyproject.toml, go.mod, Cargo.toml), dependencies between them from TS/JS imports,
-externals, database tables from Prisma schemas and SQL DDL, and limits. Prints a compact summary that
-ends with the next step. Never writes .dg files.
+(package.json, pyproject.toml, go.mod, Cargo.toml), dependencies between them from TS/JS and Python
+imports, externals, database tables (Prisma schemas, SQL DDL, and Drizzle, Django and SQLAlchemy
+models read from the syntax tree), and limits. Prints a compact summary that ends with the next step.
+Never writes .dg files.
 
 With a Workspace (--workspace, or the shallowest folder under <root> with .dg files) it adds Scan
 coverage: units and tables no Node cites as a Source path ref, orphan refs, and columns missing or extra

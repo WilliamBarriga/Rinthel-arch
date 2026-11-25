@@ -4,6 +4,8 @@ Reference for the "Import from code" and "Refresh from code" sections of `SKILL.
 
 ## Scan draft (`.rinthel/scan.json`, schema `rinthel/scan@1`)
 
+What `scan` reads, statically: units from manifests (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`); imports of TS/JS and Python; tables from Prisma schemas, SQL DDL (`*.sql`, migration histories folded) and Drizzle, Django and SQLAlchemy models (read from the syntax tree, never imported).
+
 Read the draft file for detail; the `scan` summary only counts. Every item carries `source {file, line}` and `confidence` (`extracted` = read as written, `inferred` = guessed, for example a relation to a table the scan did not find).
 
 | Section | Item fields you use |
@@ -11,7 +13,7 @@ Read the draft file for detail; the `scan` summary only counts. Every item carri
 | `units[]` | `id` (path of the folder, `.` is the root), `name`, `kind` (`package`, `app`, `module`, `folder`: a hint, not a Node kind), `parent` (id of the enclosing unit), `languages`, `files` |
 | `dependencies[]` | `from`, `to` (unit ids), `weight` (imports aggregated), `examples[]` (`file`, `line`) |
 | `externals[]` | `id` (`npm:react`), `name`, `ecosystem`, `importedBy[]` (unit ids), `weight` |
-| `tables[]` | `id`, `name`, `origin` (`prisma`, `sql`, ...), `unit`, `columns[]` (`name`, `type`, `pk`, `fk`, `uk`, `optional`; flags only present when true), `relations[]` (`from` and `to` as `<table id>#<column>`, `cardinality` as `[from side, to side]`) |
+| `tables[]` | `id`, `name`, `origin` (`prisma`, `sql`, ...), `unit`, `columns[]` (`name`, `type`, `pk`, `fk`, `uk`, `optional`; flags only present when true), `relations[]` (`from` and `to` as `<table id>#<column>`, `cardinality` as `[from side, to side]`, `source` where the foreign key is written) |
 | `limits` | `truncated`, `largeFilesSkipped`, `unresolvedImports`, `languagesWithoutImports[]` |
 
 Languages in `limits.languagesWithoutImports` give units but no dependencies: draw their Edges only if you can read the imports yourself, and say so to the user.
