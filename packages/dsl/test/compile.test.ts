@@ -464,7 +464,7 @@ describe('compile: source', () => {
         model {
           servicio api {
             source { git "src/api.ts" }
-            source { url "https://ejemplo.com/api" doc "docs/api.md" }
+            source { url "https://ejemplo.com/api" file "docs/api.md" }
           }
         }`,
     });
@@ -473,7 +473,7 @@ describe('compile: source', () => {
     expect(canonico?.model.nodes[0]?.source).toEqual([
       { kind: 'git', ref: 'src/api.ts' },
       { kind: 'url', ref: 'https://ejemplo.com/api' },
-      { kind: 'doc', ref: 'docs/api.md' },
+      { kind: 'file', ref: 'docs/api.md' },
     ]);
   });
 

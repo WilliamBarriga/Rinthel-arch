@@ -37,7 +37,7 @@ model {
 - Title and description are optional; without a title, the id is used.
 - Children are referenced with the id qualified by their hierarchy: `platform.orders`.
 - The spaces around `->` are required (`-` is valid inside an id).
-- `source` keeps opaque references (`kind "ref"`) to the documented project; the system does not interpret them.
+- `source` keeps opaque references to the documented project, one `<kind> "<ref>"` per entry (`path "src/api"`, `spec "prd.md#2"`, `file`, `url`, `git`); the system does not interpret the ref. `scan` and coverage read `path`, `inspect planned` reads `spec`; any other kind is the warning `unknown-source-kind`.
 - `extend <node> { ... }`, inside a `model` block, adds children, Attributes or `source` to a Node declared in another file or block.
 - Edges are declared only in `model`, never in a View.
 - An ordered scenario between Nodes is an Interaction (see below).

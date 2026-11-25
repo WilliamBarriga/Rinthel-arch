@@ -67,6 +67,7 @@ export const CODIGOS = Object.freeze({
   E_OLD_WORKSPACE_CONVENTION: 'old-workspace-convention',
   E_REAL_NODE_IN_PLANNED_GROUP: 'real-node-in-planned-group',
   W_PLANNED_WITH_PATH: 'planned-with-path',
+  W_UNKNOWN_SOURCE_KIND: 'unknown-source-kind',
 } as const);
 
 /** Codigos activos; `Issue.code` es `string`. */
@@ -137,6 +138,7 @@ export const DESCRIPCION_DE_CODIGO: Readonly<Record<Codigo, string>> = Object.fr
   'old-workspace-convention': 'A Workspace file or folder uses an old Spanish convention name (`tema.dg`, `temas/`, `fuentes/`); the `fix` renames it (`theme.dg`, `themes/`, `fonts/`).',
   'planned-with-path': 'A Node marked `planned` also has a Source `path`, so it already exists in the code; the `fix` removes the mark.',
   'real-node-in-planned-group':'A real Node (with a Source `path`) is under a Group marked `planned`, which would draw it as planned; the `fix` removes the Group\'s mark (or move the Node out of the Group).',
+  'unknown-source-kind': 'A `source` entry uses a kind the tools do not know (known: `path`, `spec`, `file`, `url`, `git`); the ref is kept but `scan`, coverage and `inspect planned` ignore it. The form is `<kind> "<ref>"`, e.g. `spec "prd.md#2"`, never `kind "spec"` (warning).',
   'theme-font-not-served': 'The viewer does not know where to request the Theme font files (`fontUrl` is missing): it measures and paints with the fallback, not the declared font.',
 });
 

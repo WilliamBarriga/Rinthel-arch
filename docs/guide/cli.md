@@ -46,6 +46,7 @@ Codes of the `sequence` and `er` Diagram types (the full list, with descriptions
 | `old-catalog-value` | A Motion, effect, state, built-in Theme, built-in Palette color or Layer, or `ORIGEN` written with its old Spanish name; the `fix` rewrites it to the English name |
 | `real-node-in-planned-group` | A real Node (with a `path` Source) under a Group marked `planned`; the `fix` removes the mark from the Group |
 | `planned-with-path` | Warning: a Node marked `planned` that also has a `path` Source (it already exists in the code); the `fix` removes `planned` |
+| `unknown-source-kind` | Warning: a `source` entry with a kind other than `path`, `spec`, `file`, `url` or `git`; the form is `<kind> "<ref>"` (`spec "prd.md#2"`), never `kind "spec"` |
 | `old-workspace-convention` | A Workspace file or folder uses an old name (`tema.dg`, `temas/`, `fuentes/`); the `fix` carries `rename` to `theme.dg`, `themes/`, `fonts/`; `edit --edits` (and the fix button of the Dev UI) applies it as a rename, in the same all-or-nothing batch as text fixes. Nested old names show up one level at a time: revalidate after applying |
 
 ### `build`: write the geometry

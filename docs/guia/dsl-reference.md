@@ -37,7 +37,7 @@ model {
 - Titulo y descripcion son opcionales; sin titulo, se usa el id.
 - Los hijos se referencian con el id cualificado por su jerarquia: `platform.orders`.
 - Los espacios alrededor de `->` son obligatorios (`-` es valido dentro de un id).
-- `source` guarda referencias opacas (`kind "ref"`) al proyecto documentado; el sistema no las interpreta.
+- `source` guarda referencias opacas al proyecto documentado, una `<tipo> "<ref>"` por entrada (`path "src/api"`, `spec "prd.md#2"`, `file`, `url`, `git`); el sistema no interpreta la ref. `scan` y la cobertura leen `path`, `inspect planned` lee `spec`; cualquier otro tipo es el aviso `unknown-source-kind`.
 - `extend <nodo> { ... }`, dentro de un bloque `model`, agrega hijos, Atributos o `source` a un Nodo declarado en otro archivo o bloque.
 - Las Aristas se declaran solo en `model`, nunca en una Vista.
 - Un escenario ordenado entre Nodos es una Interaccion (ver abajo).

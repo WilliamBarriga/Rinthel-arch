@@ -490,7 +490,7 @@ Attrs:
   'attrs' '{' items+=Attribute* '}'
 ;
 
-// `source { kind "ref" ... }`: referencias opacas; el `ref` siempre es cadena.
+// `source { path "src/api"  spec "prd.md#2" }`: referencias opacas `<tipo> "<ref>"`; el `ref` siempre es cadena.
 Source:
   'source' '{' items+=SourceItem* '}'
 ;

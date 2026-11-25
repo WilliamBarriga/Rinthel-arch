@@ -95,6 +95,7 @@ view purchase { type sequence interaction purchase order client, api, db autonum
 | `old-catalog-value` | Old (Spanish) name of a built-in Motion, effect, state, Theme, Palette color or Layer, or `ORIGEN`; apply the `fix` |
 | `duplicate-key-mark` | Apply the `fix` (deletes the repeated mark) |
 | `old-workspace-convention` | Apply the `fix` with `edit --edits`: it renames the file or folder to `fix.rename` (`theme.dg`, `themes/`, `fonts/`). Revalidate: a nested old name shows up next |
+| `unknown-source-kind` | Warning: write each Source entry as `<kind> "<ref>"` with a known kind (`path`, `spec`, `file`, `url`, `git`), e.g. `spec "prd.md#2"`, never `kind "spec" ref "..."` |
 | `reply-without-sync`, `order-not-in-interaction`, `ref-without-view` | Warnings: check Message order, the `order`, or add the View of the referenced Interaction |
 
 The full list of codes comes from `dg skill --workspace <path>`.

@@ -332,7 +332,7 @@ function compilarElemento(
     title: elemento.title ?? elemento.name,
     description: elemento.description ?? '',
     attributes: atributosDe(elemento.attrs, elemento.attributes, archivo, issues),
-    source: referenciasDe(elemento.sources),
+    source: referenciasDe(elemento.sources, archivo, issues),
     children: [],
     ...(elemento.planned && { planned: true }),
   };
@@ -377,7 +377,7 @@ function compilarExtension(extension: Extend, archivo: string, contexto: Context
   if (objetivo === undefined) return false;
   const { nodo } = objetivo;
   nodo.attributes.push(...atributosDe(extension.attrs, extension.attributes, archivo, contexto.issues));
-  nodo.source.push(...referenciasDe(extension.sources));
+  nodo.source.push(...referenciasDe(extension.sources, archivo, contexto.issues));
   nodo.children.push(...compilarHijos(extension.elements, nodo.id, archivo, contexto));
   return true;
 }
@@ -414,8 +414,31 @@ function atributosDe(bloques: readonly Attrs[], sueltos: readonly Attribute[], a
   });
 }
 
-function referenciasDe(bloques: readonly Source[]): ReferenciaOpaca[] {
-  return bloques.flatMap((bloque) => bloque.items.map(({ kind, ref }) => ({ kind, ref })));
+/** Source kinds the tools read (`path`: scan and coverage; `spec`: `inspect planned`) or document. */
+const TIPOS_DE_FUENTE = ['path', 'spec', 'file', 'url', 'git'] as const;
+
+/** The refs stay opaque; an unknown kind (`kind "spec"`, a typo) is the warning `unknown-source-kind`. */
+function referenciasDe(bloques: readonly Source[], archivo: string, issues: Issue[]): ReferenciaOpaca[] {
+  return bloques.flatMap((bloque) =>
+    bloque.items.map((item) => {
+      if (!(TIPOS_DE_FUENTE as readonly string[]).includes(item.kind)) {
+        const issue = issueConSugerencia(
+          {
+            code: CODIGOS.W_UNKNOWN_SOURCE_KIND,
+            message: `Source kind '${item.kind}' is not known (${TIPOS_DE_FUENTE.join(', ')}); write '<kind> "<ref>"', e.g. 'spec "prd.md#2"'`,
+          },
+          archivo,
+          item,
+          'kind',
+          TIPOS_DE_FUENTE,
+        );
+        // Never a fix: in the mistaken form `kind "spec" ref "..."` a close kind would still be wrong.
+        const { fix, ...sinFix } = issue;
+        issues.push({ ...sinFix, severity: 'warning', ...(fix !== undefined && { hint: `did you mean '${fix.replacement}'` }) });
+      }
+      return { kind: item.kind, ref: item.ref };
+    }),
+  );
 }
 
 /**

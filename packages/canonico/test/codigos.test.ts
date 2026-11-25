@@ -68,6 +68,7 @@ const codigosDeV1 = [
   'old-workspace-convention',
   'real-node-in-planned-group',
   'planned-with-path',
+  'unknown-source-kind',
 ];
 
 describe('catalogo de codigos de issue', () => {

@@ -46,6 +46,7 @@ Codigos de los Tipos de diagrama `sequence` y `er` (la lista completa, con su de
 | `old-catalog-value` | Un Movimiento, efecto, estado, Tema incorporado, color de Paleta o Capa incorporados, o `ORIGEN` escrito con su nombre antiguo en espanol; el `fix` lo reescribe al nombre en ingles |
 | `real-node-in-planned-group` | Un Nodo real (con Source `path`) bajo un Grupo marcado `planned`; el `fix` quita la marca del Grupo |
 | `planned-with-path` | Aviso: un Nodo marcado `planned` que tambien tiene Source `path` (ya existe en el codigo); el `fix` quita `planned` |
+| `unknown-source-kind` | Aviso: una entrada de `source` con un tipo distinto de `path`, `spec`, `file`, `url` o `git`; la forma es `<tipo> "<ref>"` (`spec "prd.md#2"`), nunca `kind "spec"` |
 | `old-workspace-convention` | Un archivo o carpeta del Workspace usa un nombre viejo (`tema.dg`, `temas/`, `fuentes/`); el `fix` lleva `rename` a `theme.dg`, `themes/`, `fonts/`; `edit --edits` (y el boton de fix de la UI de dev) lo aplica como renombrado, en la misma tanda todo o nada que los fix de texto. Los nombres viejos anidados aparecen de a un nivel: revalida tras aplicar |
 
 ### `build`: escribir la geometria
