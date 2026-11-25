@@ -92,7 +92,7 @@ describe('rinthel-arch map: regenerated from scan (the live demo)', () => {
 
 /** Bloques ```dg de las guias: cada uno es un Workspace completo de un archivo y debe compilar sin errores. */
 describe('bloques .dg de las guias', () => {
-  const GUIAS = ['docs/guia/referencia-dsl.md', 'docs/guia/personalizar-temas.md', 'docs/guia/tutorial.md', 'docs/guia/inicio-rapido.md', 'README.md'];
+  const GUIAS = ['docs/guide/dsl-reference.md', 'docs/guide/themes.md', 'docs/guide/tutorial.md', 'docs/guide/quick-start.md', 'docs/guia/dsl-reference.md', 'docs/guia/themes.md', 'docs/guia/tutorial.md', 'docs/guia/quick-start.md', 'README.md'];
   const bloques = GUIAS.flatMap((guia) =>
     [...readFileSync(resolve(RAIZ, guia), 'utf8').matchAll(/```dg\n([\s\S]*?)```/g)].map(([, texto], i) => ({ nombre: `${guia}#${i + 1}`, texto: texto! })),
   );
@@ -129,7 +129,8 @@ describe('documentacion publica', () => {
   });
 
   it('los enlaces relativos de README, guias y CONTRIBUTING apuntan a archivos que existen', () => {
-    const docs = ['README.md', 'CONTRIBUTING.md', ...readdirSync(resolve(RAIZ, 'docs/guia')).map((f) => `docs/guia/${f}`)];
+    const guias = ['docs/guide', 'docs/guia'].flatMap((dir) => readdirSync(resolve(RAIZ, dir)).map((f) => `${dir}/${f}`));
+    const docs = ['README.md', 'README.en.md', 'CONTRIBUTING.md', 'docs/gallery.md', ...guias];
     for (const doc of docs) {
       const texto = readFileSync(resolve(RAIZ, doc), 'utf8');
       for (const [, destino] of texto.matchAll(/\]\(([^)\s#]+)(?:#[^)]*)?\)/g)) {

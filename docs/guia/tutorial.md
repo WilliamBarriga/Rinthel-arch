@@ -1,39 +1,41 @@
+[Read in English](../guide/tutorial.md)
+
 # Tutorial: un diagrama pequeno y su personalizacion
 
 Vas a describir una tienda en linea con cuatro piezas, verla en el visor y cambiar su estetica en tres pasos. Cada paso es un Workspace completo en [`examples/tutorial/`](../../examples/tutorial/), asi que puedes abrirlo y comparar con lo que escribes. Una prueba del repo valida los seis, para que el tutorial no se desactualice.
 
-Necesitas haber hecho el [inicio rapido](inicio-rapido.md) (`pnpm install && pnpm build`); `dg` es el alias del CLI que se define alli.
+Necesitas haber hecho el [inicio rapido](quick-start.md) (`pnpm install && pnpm build`); `dg` es el alias del CLI que se define alli.
 
 Crea una carpeta vacia, por ejemplo `mi-tienda/`, y trabaja ahi. Para ver cada cambio:
 
 ```
-dg dev --workspace mi-tienda
+dg dev --workspace my-shop
 ```
 
 ## Paso 1: lo minimo
 
-Crea `mi-tienda/tienda.dg`:
+Crea `mi-tienda/shop.dg`:
 
 ```dg
 specification {
-  node actor    { description "Quien usa el sistema"  icon user     color purple }
-  node servicio { description "Pieza de logica"       icon server   color blue }
-  node almacen  { description "Datos que persisten"   icon database color green }
+  node actor    { description "Who uses the system"  icon user     color purple }
+  node service  { description "Logic piece"          icon server   color blue }
+  node store    { description "Data that persists"   icon database color green }
 }
 
 model {
-  actor cliente "Cliente" "Hace pedidos"
+  actor client "Customer" "Places orders"
 
-  servicio api "API" "Punto de entrada"
-  servicio pedidos "Pedidos" "Registra pedidos"
-  almacen db "Base de datos" "Guarda los pedidos"
+  service api "API" "Entry point"
+  service orders "Orders" "Records orders"
+  store db "Database" "Stores the orders"
 
-  cliente -> api "HTTP"
-  api -> pedidos
-  pedidos -> db "SQL"
+  client -> api "HTTP"
+  api -> orders
+  orders -> db "SQL"
 }
 
-view principal {
+view main {
   type architecture
   include **
 }
@@ -49,57 +51,57 @@ Sin `theme`, la Vista usa el Tema incorporado `neutral`:
 
 ![Paso 1](../img/tutorial/step-1-neutral.png)
 
-Verifica con `dg validate --workspace mi-tienda`: debe decir `0 errores, 0 avisos`. Este paso esta en [`examples/tutorial/step-1`](../../examples/tutorial/step-1).
+Verifica con `dg validate --workspace mi-tienda`: debe decir `0 errors, 0 warnings`. Este paso esta en [`examples/tutorial/step-1`](../../examples/tutorial/step-1).
 
 ## Paso 2: Grupos, Atributos y una segunda Vista
 
-Un **Grupo** es un Nodo que contiene otros Nodos; se anidan sin limite. Los **Atributos** (`attrs`) son campos de un Nodo y tambien pueden ser extremos de una Arista (`tienda.db#total`). Cambia el Modelo asi (el resto del archivo no cambia, salvo los tipos nuevos `cola`, `externo` y `dominio` en `specification`):
+Un **Grupo** es un Nodo que contiene otros Nodos; se anidan sin limite. Los **Atributos** (`attrs`) son campos de un Nodo y tambien pueden ser extremos de una Arista (`shop.db#total`). Cambia el Modelo asi (el resto del archivo no cambia, salvo los tipos nuevos `queue`, `external` y `domain` en `specification`):
 
 ```
 model {
-  actor cliente "Cliente" "Hace pedidos"
-  servicio api "API" "Punto de entrada"
+  actor client "Customer" "Places orders"
+  service api "API" "Entry point"
 
-  dominio tienda "Tienda" {
-    servicio pedidos "Pedidos" "Registra pedidos"
-    servicio pagos "Pagos" "Cobra los pedidos"
-    cola eventos "Eventos"
-    almacen db "Base de datos" {
+  domain shop "Shop" {
+    service orders "Orders" "Records orders"
+    service payments "Payments" "Charges the orders"
+    queue events "Events"
+    store db "Database" {
       attrs {
         id: uuid
-        total: decimal "en centavos"
+        total: decimal "in cents"
       }
     }
   }
 
-  externo stripe "Pasarela de pago"
+  external stripe "Payment gateway"
 
-  cliente -> api "HTTP"
-  api -> tienda.pedidos
-  tienda.pedidos -> tienda.eventos "pedido creado"
-  tienda.eventos -> tienda.pagos
-  tienda.pagos -> stripe "cobra"
-  tienda.pedidos -> tienda.db
+  client -> api "HTTP"
+  api -> shop.orders
+  shop.orders -> shop.events "order created"
+  shop.events -> shop.payments
+  shop.payments -> stripe "charges"
+  shop.orders -> shop.db
 }
 ```
 
-Los hijos se referencian por id cualificado (`tienda.pedidos`). Ahora la Vista principal colapsa el Grupo y enlaza a una segunda Vista con su detalle (drill-down):
+Los hijos se referencian por id cualificado (`shop.orders`). Ahora la Vista principal colapsa el Grupo y enlaza a una segunda Vista con su detalle (drill-down):
 
 ```
-view principal {
+view main {
   type architecture
   include **
-  collapsed tienda
-  link tienda -> tienda-detalle
+  collapsed shop
+  link shop -> shop-detail
 }
 
-view tienda-detalle {
+view shop-detail {
   type architecture
-  include tienda.**, api, stripe
+  include shop.**, api, stripe
 }
 ```
 
-`collapsed tienda` muestra el Grupo como un solo Nodo con su contador de hijos y eleva las Aristas de sus hijos a su borde. En el visor, el enlace te lleva a `tienda-detalle`. Para abrirlo en la misma Vista usa `expanded tienda`.
+`collapsed shop` muestra el Grupo como un solo Nodo con su contador de hijos y eleva las Aristas de sus hijos a su borde. En el visor, el enlace te lleva a `shop-detail`. Para abrirlo en la misma Vista usa `expanded shop`.
 
 ![Paso 2](../img/tutorial/step-2-neutral.png)
 
@@ -110,12 +112,12 @@ Completo en [`examples/tutorial/step-2`](../../examples/tutorial/step-2).
 Hay tres Temas incorporados: `neutral` (claro, el defecto), `neutral-dark` y `high-contrast`. Se elige en la Vista:
 
 ```
-view principal {
+view main {
   theme neutral-dark
   type architecture
   include **
-  collapsed tienda
-  link tienda -> tienda-detalle
+  collapsed shop
+  link shop -> shop-detail
 }
 ```
 
@@ -130,12 +132,12 @@ Completo en [`examples/tutorial/step-3`](../../examples/tutorial/step-3).
 Un Tema es texto, igual que el Modelo. La forma mas corta de hacer uno propio es **extender** uno existente y cambiar solo lo que quieras. Crea `mi-tienda/theme.dg`:
 
 ```
-theme tienda extends neutral-dark {
+theme shop extends neutral-dark {
   palette { blue "#38bdf8"  green "#34d399"  fondo "#0b1220"  papel "#111a2e" }
 
   node {
-    type servicio { use barra }
-    type externo { use discontinuo }
+    type service { use bar }
+    type external { use dashed }
   }
 
   edge {
@@ -144,15 +146,15 @@ theme tienda extends neutral-dark {
   }
 }
 
-part barra { layer acento shadow after borde { color COLOR  x 4  y 0  inset 1 } }
-part discontinuo { layer relleno { color fondo }  layer borde dashed { color marco } }
+part bar { layer acento shadow after borde { color COLOR  x 4  y 0  inset 1 } }
+part dashed { layer relleno { color fondo }  layer borde dashed { color marco } }
 ```
 
-Y en las dos Vistas cambia `theme neutral-dark` por `theme tienda`. Que paso:
+Y en las dos Vistas cambia `theme neutral-dark` por `theme shop`. Que paso:
 
 - `palette` pisa algunos colores del padre. En un Tema todo color es un **nombre de Paleta**; los valores hex solo viven aqui.
-- `node { type servicio { ... } }` es un **parche por Tipo**: aplica solo a los Nodos de ese Tipo. `use barra` incluye una **Parte** (`part`), un parche reutilizable. `COLOR` dentro de una Parte toma el color del Tipo del Nodo que la usa: la barra de `servicio` es azul y la de otro Tipo tendria el suyo.
-- `layer <nombre> <primitiva> { ... }` define, cambia o agrega una **Capa**. `layer borde dashed` cambia la Capa `borde` del padre a una Primitiva discontinua; `layer acento shadow after borde` agrega una Capa nueva justo despues de `borde`.
+- `node { type service { ... } }` es un **parche por Tipo**: aplica solo a los Nodos de ese Tipo. `use bar` incluye una **Parte** (`part`), un parche reutilizable. `COLOR` dentro de una Parte toma el color del Tipo del Nodo que la usa: la barra de `service` es azul y la de otro Tipo tendria el suyo.
+- `layer <nombre> <primitiva> { ... }` define, cambia o agrega una **Capa**. `layer borde dashed` cambia la Capa `borde` del padre a una Primitiva discontinua; `layer acento shadow after borde` agrega una Capa nueva justo despues de `borde`. (Las Capas y nombres de Paleta incorporados, como `borde`, `relleno`, `fondo` y `marco`, conservan su nombre en espanol.)
 - `edge { ... }` cambia las Aristas: trazo grueso, esquinas redondeadas y punta de flecha.
 
 ![Paso 4](../img/tutorial/step-4-shop.png)
@@ -170,7 +172,7 @@ El Tema `neon` de [`examples/tutorial/step-5/neon.dg`](../../examples/tutorial/s
 
 ![Paso 5](../img/tutorial/step-5-neon.png)
 
-Pasa el raton sobre un Nodo para ver el glow cambiar y compara con el glow pulsante del Tema `synthwave` en el [mapa del repo](../../README.md#galeria).
+Pasa el raton sobre un Nodo para ver el glow cambiar y compara con el glow pulsante del Tema `synthwave` en la [galeria](../gallery.md).
 
 ## Paso 6 (opcional): secuencia y ER
 
@@ -179,53 +181,53 @@ El mismo Modelo se dibuja de otras formas cambiando el `type` de la Vista. [`exa
 ```dg
 specification {
   node actor    { icon user     color purple }
-  node servicio { icon server   color blue }
-  node almacen  { icon database color green }
+  node service  { icon server   color blue }
+  node store    { icon database color green }
 }
 
 model {
-  actor cliente "Cliente"
-  servicio api "API"
-  servicio pedidos "Pedidos"
-  servicio pagos "Pagos"
+  actor client "Customer"
+  service api "API"
+  service orders "Orders"
+  service payments "Payments"
 
-  almacen clientes "Clientes" {
+  store customers "Customers" {
     id: uuid pk
     email: text? uk
   }
-  almacen pedidos-tabla "Pedidos" {
+  store orders-table "Orders" {
     id: uuid pk
-    cliente_id: uuid fk
-    total: decimal "en centavos"
+    client_id: uuid fk
+    total: decimal "in cents"
   }
-  pedidos-tabla#cliente_id "0..*" -> "1" clientes#id "pertenece a"
+  orders-table#client_id "0..*" -> "1" customers#id "belongs to"
 
-  interaction comprar "Comprar" {
-    cliente -> api "POST /pedidos"
-    api -> pedidos "registrar"
-    alt "pago aprobado" {
-      pedidos -> pagos "cobrar"
-    } else "pago rechazado" {
-      reply pagos -> pedidos "rechazado"
+  interaction purchase "Purchase" {
+    client -> api "POST /orders"
+    api -> orders "record"
+    alt "payment approved" {
+      orders -> payments "charge"
+    } else "payment declined" {
+      reply payments -> orders "declined"
     }
-    note right of pagos "idempotente"
-    reply api -> cliente "201"
+    note right of payments "idempotent"
+    reply api -> client "201"
   }
 }
 
-view comprar-secuencia { type sequence  interaction comprar  autonumber }
-view tablas { type er  include clientes, pedidos-tabla }
+view purchase-sequence { type sequence  interaction purchase  autonumber }
+view tables { type er  include customers, orders-table }
 ```
 
-![Secuencia de la compra, con el Tema tienda](../img/tutorial/step-6-sequence-shop.png)
+![Secuencia de la compra, con el Tema shop](../img/tutorial/step-6-sequence-shop.png)
 
-![Tablas ER, con el Tema tienda](../img/tutorial/step-6-er-shop.png)
+![Tablas ER, con el Tema shop](../img/tutorial/step-6-er-shop.png)
 
 
-Las Lifelines son los Nodos del Modelo; la Vista `er` dibuja cada Nodo hoja como tabla y las Aristas con cardinalidad (`"0..*" -> "1"`) como claves foraneas. El Tema `tienda` se aplica sin cambios: lo que no declara se deriva de `node` y `edge`. Mira todos los Temas de ejemplo en secuencia y ER en la galeria (`examples/themes/gallery`).
+Las Lifelines son los Nodos del Modelo; la Vista `er` dibuja cada Nodo hoja como tabla y las Aristas con cardinalidad (`"0..*" -> "1"`) como claves foraneas. El Tema `shop` se aplica sin cambios: lo que no declara se deriva de `node` y `edge`. Mira todos los Temas de ejemplo en secuencia y ER en la galeria (`examples/themes/gallery`).
 
 ## Siguiente
 
-- [Personalizar con Temas](personalizar-temas.md): el modelo de Capas, estados y movimiento en detalle.
-- [Referencia del DSL](referencia-dsl.md): Pins, Pasos para revelar un diagrama, `source`.
+- [Personalizar con Temas](themes.md): el modelo de Capas, estados y movimiento en detalle.
+- [Referencia del DSL](dsl-reference.md): Pins, Pasos para revelar un diagrama, `source`.
 - Mira como esta escrito el mapa del repo en [`examples/rinthel-arch/`](../../examples/rinthel-arch/).

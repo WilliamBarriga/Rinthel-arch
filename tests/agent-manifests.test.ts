@@ -150,7 +150,7 @@ describe('versions and names', () => {
 });
 
 describe('install docs', () => {
-  const docs = ['README.md', 'README.en.md', 'docs/guia/inicio-rapido.md'];
+  const docs = ['README.md', 'README.en.md', 'docs/guide/quick-start.md', 'docs/guia/quick-start.md'];
 
   it('give the install command of each agent', () => {
     for (const path of docs) {
@@ -163,7 +163,7 @@ describe('install docs', () => {
   });
 
   it('never suggest `npx diagrams` (that npm name is an unrelated package)', () => {
-    for (const path of [...docs, 'docs/guia/cli.md',...skillNames.map((n) => `skills/${n}/SKILL.md`)]) {
+    for (const path of [...docs, 'docs/guide/cli.md', 'docs/guia/cli.md', ...skillNames.map((n) => `skills/${n}/SKILL.md`)]) {
       expect(readFileSync(join(REPO, path), 'utf8'), path).not.toMatch(/npx\s+(-y\s+)?diagrams\b/);
     }
   });

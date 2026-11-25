@@ -1,5 +1,5 @@
 # estudio
-App de navegador de `dev`: la pagina que `diagrams dev` sirve en `/` y `/_estudio/*` (guia de usuario: `docs/guia/ui-de-dev.md`).
+App de navegador de `dev`: la pagina que `diagrams dev` sirve en `/` y `/_estudio/*` (guia de usuario: `docs/guide/dev-ui.md`).
 
 ## Que hace
 - `navegador/` por feature (una carpeta cada una); `dev.tsx` arranca y `estudio.tsx` solo ensambla. `marco/proveedores.tsx` envuelve marco y lienzo; el marco (`marco/marco.tsx`, estado del chrome con `useChrome()`, tokens `--ui-*` bajo `.ui-chrome` en `tokens.css`) no define tipos de dominio, y fuera de `marco/` solo se importan tipos de su contexto.

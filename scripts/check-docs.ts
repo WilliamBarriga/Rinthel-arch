@@ -4,6 +4,8 @@
  * "Archivo de entrada" existen (`entrada`) y "Probar" contiene `pnpm --filter <paquete> test` (`probar`).
  * `revisarIndiceDeAdrs`: cada `docs/adr/NNNN-*.md` aparece en `docs/adr/README.md` (`indice`).
  * `revisarEnlacesDeAgents`: `AGENTS.md` nombra `docs/adr/README.md` y `docs/ramas.md`, y ambos existen (`indice`).
+ * `revisarParesDeGuias`: cada `docs/guide/<x>.md` (ingles, fuente) tiene `docs/guia/<x>.md` (espanol) y al reves (`par`); la primera
+ * linea de cada uno enlaza a su par (`enlace`); mismo numero de `## ` (`encabezados`) y bloques de codigo identicos (`codigo`).
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -19,7 +21,7 @@ export const SECCIONES_README = [
 
 export interface Violacion {
   archivo: string;
-  regla: 'seccion' | 'entrada' | 'probar' | 'indice';
+  regla: 'seccion' | 'entrada' | 'probar' | 'indice' | 'par' | 'enlace' | 'encabezados' | 'codigo';
   mensaje: string;
 }
 
@@ -114,4 +116,67 @@ export function revisarEnlacesDeAgents(raiz: string): Violacion[] {
     mensaje: 'falta el archivo que AGENTS.md enlaza',
   }));
   return [...sinEnlace, ...inexistentes];
+}
+
+const CARPETA_INGLES = 'docs/guide';
+const CARPETA_ESPANOL = 'docs/guia';
+
+/** Encabezados `## ` y bloques de codigo (con su fence) de un Markdown; ignora los `## ` dentro de un bloque. */
+function estructuraDeGuia(texto: string): { encabezados: number; bloques: string[] } {
+  let encabezados = 0;
+  const bloques: string[] = [];
+  let actual: string[] | undefined;
+  for (const linea of texto.split('\n')) {
+    if (linea.startsWith('```')) {
+      if (actual === undefined) actual = [linea];
+      else {
+        bloques.push([...actual, linea].join('\n'));
+        actual = undefined;
+      }
+    } else if (actual !== undefined) actual.push(linea);
+    else if (linea.startsWith('## ')) encabezados += 1;
+  }
+  return { encabezados, bloques };
+}
+
+const mdDe = (raiz: string, carpeta: string): string[] =>
+  existsSync(join(raiz, carpeta)) ? readdirSync(join(raiz, carpeta)).filter((f) => f.endsWith('.md')).sort() : [];
+
+export function revisarParesDeGuias(raiz: string): Violacion[] {
+  const violaciones: Violacion[] = [];
+  const ingles = mdDe(raiz, CARPETA_INGLES);
+  const espanol = mdDe(raiz, CARPETA_ESPANOL);
+  const lados = [
+    { carpeta: CARPETA_INGLES, archivos: ingles, otra: CARPETA_ESPANOL, existentes: espanol },
+    { carpeta: CARPETA_ESPANOL, archivos: espanol, otra: CARPETA_INGLES, existentes: ingles },
+  ];
+  for (const { carpeta, archivos, otra, existentes } of lados) {
+    const destino = otra.slice('docs/'.length);
+    for (const nombre of archivos) {
+      const archivo = `${carpeta}/${nombre}`;
+      if (!existentes.includes(nombre)) {
+        violaciones.push({ archivo, regla: 'par', mensaje: `falta el par ${otra}/${nombre}` });
+        continue;
+      }
+      const primera = readFileSync(join(raiz, archivo), 'utf8').split('\n').find((l) => l.trim() !== '') ?? '';
+      if (!primera.includes(`](../${destino}/${nombre})`)) {
+        violaciones.push({ archivo, regla: 'enlace', mensaje: `la primera linea no enlaza a ../${destino}/${nombre}` });
+      }
+    }
+  }
+  for (const nombre of ingles.filter((n) => espanol.includes(n))) {
+    const a = estructuraDeGuia(readFileSync(join(raiz, CARPETA_INGLES, nombre), 'utf8'));
+    const b = estructuraDeGuia(readFileSync(join(raiz, CARPETA_ESPANOL, nombre), 'utf8'));
+    const archivo = `${CARPETA_INGLES}/${nombre}`;
+    if (a.encabezados !== b.encabezados) {
+      violaciones.push({ archivo, regla: 'encabezados', mensaje: `${a.encabezados} encabezados "## " en ingles y ${b.encabezados} en espanol` });
+    }
+    if (a.bloques.length !== b.bloques.length) {
+      violaciones.push({ archivo, regla: 'codigo', mensaje: `${a.bloques.length} bloques de codigo en ingles y ${b.bloques.length} en espanol` });
+    } else {
+      const i = a.bloques.findIndex((bloque, k) => bloque !== b.bloques[k]);
+      if (i !== -1) violaciones.push({ archivo, regla: 'codigo', mensaje: `el bloque de codigo ${i + 1} difiere entre idiomas` });
+    }
+  }
+  return violaciones;
 }

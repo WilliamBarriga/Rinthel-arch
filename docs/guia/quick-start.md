@@ -1,3 +1,5 @@
+[Read in English](../guide/quick-start.md)
+
 # Inicio rapido
 
 ## Requisitos
@@ -5,8 +7,6 @@
 - Node 20 o superior.
 - pnpm.
 - Para `pnpm test` y para regenerar las capturas de la documentacion: Chromium, desde la cache de Playwright (`pnpm exec playwright install chromium`) o con `CHROMIUM_PATH`.
-
-El paquete aun no esta publicado en npm, asi que el sistema se usa desde un clon del repo.
 
 ## Instalar las skills en tu agente
 
@@ -21,7 +21,9 @@ Un solo arbol `skills/` (`rinthel-diagramas` y `rinthel-temas`) sirve a cuatro a
 
 El CLI no viaja con el plugin: las skills usan `diagrams` si esta en el `PATH` y, si no, `npx -y -p rinthel-arch@<version> diagrams`. Para tenerlo instalado: `npm i -g rinthel-arch` (comandos `diagrams` y `rinthel-arch`). No ejecutes el nombre `diagrams` directamente con npx: ese nombre en npm es de otro paquete.
 
-## Instalar y construir
+## Instalar y construir desde el codigo fuente
+
+Para trabajar en el repo mismo (o correr los ejemplos), usa un clon:
 
 ```
 git clone https://github.com/WilliamBarriga/Rinthel-arch.git
@@ -58,7 +60,7 @@ Detalle de cada uno en la [guia del CLI](cli.md), o `dg <comando> --help`. Todos
 | --- | --- |
 | `dg validate --workspace <ruta>` | Compila y valida; lista errores y avisos con archivo y linea. `--json` da el mismo resultado estructurado |
 | `dg build --workspace <ruta>` | Escribe la Fuente canonica y la geometria en `<ruta>/.diagrams/` (no se versiona) |
-| `dg dev --workspace <ruta>` | UI en vivo en `http://127.0.0.1:4173/` ([UI de dev](ui-de-dev.md)); recompila al guardar |
+| `dg dev --workspace <ruta>` | UI en vivo en `http://127.0.0.1:4173/` ([UI de dev](dev-ui.md)); recompila al guardar |
 | `dg inspect search <texto>`<br>`dg inspect node <id>`<br>`dg inspect view <id>`<br>`dg inspect interaction <id>`<br>`dg inspect theme <nombre>` | Consultas de solo lectura sobre el Modelo, con `archivo:linea` |
 | `dg edit` | Escribe sobre el `.dg`: fija un Pin (`--view <id> --node <id> --x N --y N`) o aplica una Intencion (`--intent '<json>'`, p. ej. `reorder-lifelines` en secuencia) o ediciones estructuradas (`--edits '<json>'`, por ejemplo los `fix` de `validate`). Es lo que usa el visor al arrastrar un Nodo |
 | `dg skill` | Imprime una skill (Markdown) para que un agente escriba y corrija `.dg` con el bucle inspect, editar, validate |
@@ -68,9 +70,9 @@ En la UI, la Vista se elige en el panel Vistas o con el hash de la URL (`#vista=
 ## Recorrer los ejemplos
 
 ```
-dg dev --workspace examples/tutorial/step-2      # el diagrama pequeno del tutorial
-dg dev --workspace examples/rinthel-arch         # este repo documentado, con sus Temas de ejemplo
-dg dev --workspace examples/themes/gallery --theme-path examples/rinthel-arch/themes        # un Modelo comun con los Temas de ejemplo y los estados de cada Nodo
+dg dev --workspace examples/tutorial/step-2      # the small diagram of the tutorial
+dg dev --workspace examples/rinthel-arch         # this repo documented, with its example Themes
+dg dev --workspace examples/themes/gallery --theme-path examples/rinthel-arch/themes        # a common Model with the example Themes and the states of each Node
 ```
 
 En `examples/rinthel-arch` (regenerado con `dg scan`) prueba la Vista `context` y haz clic en `estudio` o `scanner` (drill-down), o abre una Vista `open-<theme>`. La Vista `flow-dev` es de Tipo `flow`: avanza sus Pasos para ver como se revela el diagrama; `tables` es `er` y `export-sequence` es `sequence`.
@@ -81,24 +83,24 @@ El mismo Modelo se dibuja como secuencia o como tablas cambiando el `type` de la
 
 ```dg
 specification {
-  node servicio { icon server   color blue }
-  node almacen  { icon database color green }
+  node service  { icon server   color blue }
+  node store    { icon database color green }
 }
 
 model {
-  servicio api "API"
-  almacen pedidos "Pedidos" { id: uuid pk  total: decimal }
-  interaction crear { api -> pedidos "insertar"  reply pedidos -> api "ok" }
+  service api "API"
+  store orders "Orders" { id: uuid pk  total: decimal }
+  interaction place-order { api -> orders "insert"  reply orders -> api "ok" }
 }
 
-view flujo { type sequence  interaction crear }
-view tabla { type er  include pedidos }
+view order-flow { type sequence  interaction place-order }
+view order-tables { type er  include orders }
 ```
 
-`dg dev` abre la Vista de secuencia con `#vista=flujo`. Mas en el [paso 6 del tutorial](tutorial.md#paso-6-opcional-secuencia-y-er).
+`dg dev` abre la Vista de secuencia con `#vista=order-flow`. Mas en el [paso 6 del tutorial](tutorial.md#paso-6-opcional-secuencia-y-er).
 
 ## Siguiente
 
 - [Tutorial](tutorial.md): tu primer diagrama, de cero a personalizado.
-- [Personalizar con Temas](personalizar-temas.md).
-- [Referencia del DSL](referencia-dsl.md).
+- [Personalizar con Temas](themes.md).
+- [Referencia del DSL](dsl-reference.md).

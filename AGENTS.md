@@ -18,9 +18,9 @@ Pruebas de un solo paquete: `pnpm --filter <paquete> test`.
 - Decisiones y trabajo pendiente: GitHub Issues de este repo (`gh`, `WilliamBarriga/Rinthel-arch`); cada ticket es un issue con label `wayfinder:<tipo>`.
 - Reglas de codigo (estructura de paquetes, modulos profundos, hexagonal, pruebas): `docs/CODING.md`.
 - Research: indice con una conclusion por rama en `docs/ramas.md`; `research/<nombre>.md` en ramas `research/<nombre>`, no en `main`; listarlas con `git branch -a -l '*research/*'` y leer el archivo con `git show research/<nombre>:research/<nombre>.md` antes de re-investigar.
-- Guias de usuario (README, `docs/guia/`, `CONTRIBUTING.md`): al cambiar el DSL, un Tema de ejemplo, el CLI o la UI de dev (`packages/estudio`), actualizarlas; `pnpm docs:capturas` regenera las imagenes de `docs/img/`.
+- Guias de usuario (README, `docs/guide/` con su par en espanol `docs/guia/`, `CONTRIBUTING.md`; la regla de pares esta en CONTRIBUTING): al cambiar el DSL, un Tema de ejemplo, el CLI o la UI de dev (`packages/estudio`), actualizarlas; `pnpm docs:capturas` regenera las imagenes de `docs/img/`.
 - ADRs de contrato: indice en `docs/adr/README.md`. Leer el ADR del modulo antes de cambiar su interfaz.
-- Catalogo de Temas (Primitivas, Slots, Movimientos, Efectos con rangos y defectos): `docs/referencia-catalogo.md`, generado desde `packages/tema` con `pnpm docs:catalogo`; no editar a mano (una prueba falla si se desvia).
+- Catalogo de Temas (Primitivas, Slots, Movimientos, Efectos con rangos y defectos): `docs/theme-catalog.md`, generado desde `packages/tema` con `pnpm docs:catalogo`; no editar a mano (una prueba falla si se desvia).
 
 ## Skills del repo
 

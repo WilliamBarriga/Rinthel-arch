@@ -1,5 +1,5 @@
 /**
- * `cli`: comandos `validate`, `build`, `skill`, `inspect`, `edit`, `dev`, `scan` y `export` (opciones: `docs/guia/cli.md`).
+ * `cli`: comandos `validate`, `build`, `skill`, `inspect`, `edit`, `dev`, `scan` y `export` (opciones: `docs/guide/cli.md`).
  * Interfaz: `run(argv, dependencias?) -> { exitCode, stdout, stderr }`; no escribe en el proceso (`bin.ts` imprime).
  * Invariantes: unico paquete con I/O de disco; `validate` nunca reescribe y devuelve todos los issues ordenados;
  * su unico efecto lateral es el Registro de actividad en `.diagrams/actividad.jsonl`.
