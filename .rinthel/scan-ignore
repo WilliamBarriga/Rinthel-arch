@@ -1,0 +1,7 @@
+# Left out of examples/rinthel-arch on purpose (skill rinthel-diagramas, "Refresh from code").
+# Test suites: they import what they test and add no architecture.
+packages/*/test
+# Scanner fixtures under the cli tests; scan-tables stays: its tables feed the er View.
+packages/cli/test/fixtures/scan-app
+packages/cli/test/fixtures/scan-coverage
+packages/cli/test/fixtures/scan-monorepo

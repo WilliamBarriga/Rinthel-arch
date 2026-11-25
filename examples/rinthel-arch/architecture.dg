@@ -1,0 +1,44 @@
+// Architecture Views of the map: the context first (this file sorts first, so the Dev UI and the demo open on it), then
+// one View per Group worth opening (Drill-down). Flows with Steps: `flows.dg`; er: `tables.dg`; sequence: `sequence.dg`.
+
+// Context: the packages of the monorepo and the externals that shape them; the larger Groups open in their own View.
+view context {
+  type architecture
+  theme diagrams
+  include author, agent, repo, repo.*, langium, zod, elk, react, d3, esbuild, tree-sitter
+  collapsed repo.scanner, repo.dev-ui
+  link repo.dev-ui -> dev-ui-detail
+  link repo.scanner -> scanner-detail
+}
+
+// The same packages with the Scanner and the Dev UI open (the browser app stays closed): the View the Theme gallery draws.
+view open {
+  type architecture
+  theme diagrams
+  include author, agent, repo, repo.*, repo.scanner.*, repo.dev-ui.*, langium, zod, elk, react, d3, esbuild, tree-sitter
+  expanded repo.scanner, repo.dev-ui
+  collapsed repo.dev-ui.browser
+}
+
+view dev-ui-detail {
+  type architecture
+  theme diagrams
+  include repo.dev-ui, repo.dev-ui.*, repo.cli, repo.canonical, repo.shell, repo.render, repo.session, react, esbuild, base-ui
+  expanded repo.dev-ui
+  collapsed repo.dev-ui.browser
+  link repo.dev-ui.browser -> browser-detail
+}
+
+view browser-detail {
+  type architecture
+  theme diagrams
+  include repo.dev-ui.browser, repo.dev-ui.browser.*, repo.dev-ui.server, codemirror, base-ui
+  expanded repo.dev-ui.browser
+}
+
+view scanner-detail {
+  type architecture
+  theme diagrams-light
+  include agent, repo.cli, repo.scanner, repo.scanner.*, tree-sitter
+  expanded repo.scanner
+}

@@ -68,7 +68,7 @@ async function abrir(url: string, { sinWorker = false } = {}): Promise<{ pagina:
   });
   pagina.on('pageerror', (e) => errores.push(e.message));
   if (sinWorker) await pagina.addInitScript(() => Object.defineProperty(window, 'Worker', { value: undefined }));
-  await pagina.goto(`${url}#vista=packages`);
+  await pagina.goto(`${url}#vista=context`);
   return { pagina, ajenas, errores };
 }
 
@@ -77,7 +77,7 @@ const listo = (pagina: Page, vista: string) => pagina.locator(`.rd-vista[data-vi
 async function recorrer(url: string, opciones: { sinWorker?: boolean } = {}): Promise<void> {
   const { pagina, ajenas, errores } = await abrir(url, opciones);
   try {
-    await listo(pagina, 'packages');
+    await listo(pagina, 'context');
     await pagina.getByText('Read-only').waitFor();
     expect(await pagina.getByRole('tab', { name: 'Code' }).count()).toBe(0);
 
