@@ -91,11 +91,12 @@ export function paradasDelTour(fuente: FuenteCanonica | undefined, vistaActiva: 
       titulo: 'Drill-down',
       texto: (
         <>
-          <Dato>{nodo}</Dato> has its own View: double-click it to open <Dato>{link.view}</Dato>.
+          <Dato>{nodo}</Dato> has its own View: click it to open <Dato>{link.view}</Dato>.
           {puedeEscribir && ' The Details on the right tell where it lives in the code.'}
         </>
       ),
-      zona: puedeEscribir ? ISLA_DERECHA : ZONA_DEL_LIENZO,
+      // The canvas, where the Node to click is; the Details island floats over it, so it stays live too.
+      zona: ZONA_DEL_LIENZO,
       preparar: (e) => {
         e.irAVista(conLink.id);
         e.seleccionar(link.node);

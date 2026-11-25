@@ -56,7 +56,7 @@ Ctrl/Cmd+K opens the Finder: Views, Nodes (with their `file:line`), commands and
 | Ctrl/Cmd+S | Save the text now |
 | Esc | Leave the editor |
 
-The first visit shows in the bar the "1-minute tour" pill: a walk of coachmarks through the canvas, Views, Drill-down (if the Workspace has a `link`), Steps, Themes, Code and Agent, with the data of the open Workspace. Using it or closing it with its "x" does not bring it back (it is remembered in the browser); the tour stays available by hand with "View tour" in the Finder or in the `?` help.
+The first visit shows in the bar the "1-minute tour" pill: a walk of coachmarks through the canvas, Views, Drill-down (if the Workspace has a `link`), Steps, Themes, Code and Agent, with the data of the open Workspace. The highlighted area of each stop stays usable (click the Node to drill into its View, go forward a Step, preview a Theme) and the tour stays on its stop; the dimmed rest does not take clicks, and the tour only closes with Skip, Done or Escape. Using it or closing it with its "x" does not bring it back (it is remembered in the browser); the tour stays available by hand with "View tour" in the Finder or in the `?` help.
 
 ## Read-only export
 

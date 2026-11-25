@@ -1,7 +1,12 @@
 /**
- * "Start here" tour (dialog `tour` of the marco, opened with `abrirDialogo('tour')`): modal coachmarks that dim the UI,
+ * "Start here" tour (dialog `tour` of the marco, opened with `abrirDialogo('tour')`): coachmarks that dim the UI,
  * highlight the real area of each stop and move the UI there, with Skip, Back and Next. The script is `paradas.tsx`;
  * it is read from the Workspace each time the tour opens.
+ *
+ * The highlighted area stays live: the stops invite to use it (drill into a View, change Step, preview a Theme), so the
+ * dialog is not modal and presses never dismiss it (a modal Base UI dialog lays a page-wide backdrop that turns every
+ * click into an outside press). Over the dimmed rest lies a layer that takes the presses with the area cut out of it
+ * (`clip-path`), so a press there reaches nothing. The tour closes only with Skip, Done or Escape.
  */
 import { Dialog } from '@base-ui/react/dialog';
 import { useEffect, useLayoutEffect, useState } from 'react';
@@ -63,6 +68,12 @@ function useHueco(zona: string | undefined): Caja | null {
   return caja;
 }
 
+/** The layer over the dimmed rest: the whole window minus `h`, cut out with the even-odd rule. */
+function bloqueoSinHueco(h: Caja): CSSProperties {
+  const [x0, y0, x1, y1] = [h.left, h.top, h.left + h.width, h.top + h.height];
+  return { clipPath: `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x0}px ${y0}px, ${x1}px ${y0}px, ${x1}px ${y1}px, ${x0}px ${y1}px, ${x0}px ${y0}px)` };
+}
+
 /** The card goes beside the highlighted area, below a wide one, or in the center without one. */
 function posicionDeLaTarjeta(h: Caja | null): CSSProperties {
   if (h === null || h.width === 0) return { left: '50%', top: '40%', transform: 'translate(-50%, -50%)' };
@@ -94,9 +105,16 @@ export function Tour({ abierto, alCambiar }: { abierto: boolean; alCambiar: (abi
   const ultima = indice + 1 >= paradas.length;
 
   return (
-    <Dialog.Root open={abierto && parada !== undefined} onOpenChange={alCambiar}>
+    <Dialog.Root open={abierto && parada !== undefined} onOpenChange={alCambiar} modal={false} disablePointerDismissal>
       <Dialog.Portal container={estudio.portales}>
-        {hueco === null || hueco.width === 0 ? <div className="ui-tour-velo" /> : <div className="ui-tour-hueco" style={hueco} />}
+        {hueco === null || hueco.width === 0 ? (
+          <div className="ui-tour-velo" />
+        ) : (
+          <>
+            <div className="ui-tour-velo ui-tour-bloqueo" style={bloqueoSinHueco(hueco)} />
+            <div className="ui-tour-hueco" style={hueco} />
+          </>
+        )}
         <Dialog.Popup className="ui-dialogo ui-tour" aria-label="Tour" style={posicionDeLaTarjeta(hueco)}>
           {parada !== undefined && (
             <>

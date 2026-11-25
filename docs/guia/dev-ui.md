@@ -56,7 +56,7 @@ Ctrl/Cmd+K abre el Buscador: Vistas, Nodos (con su `archivo:linea`), comandos y 
 | Ctrl/Cmd+S | Guardar el texto ya |
 | Esc | Salir del editor |
 
-La primera visita muestra en la barra la pildora "1-minute tour": un recorrido de coachmarks por el lienzo, Vistas, Drill-down (si el Workspace tiene un `link`), Pasos, Temas, Codigo y Agente, con los datos del Workspace abierto. Al usarla o cerrarla con su "x" no vuelve (se recuerda en el navegador); el tour sigue a mano con "View tour" en el Buscador o en la ayuda de `?`.
+La primera visita muestra en la barra la pildora "1-minute tour": un recorrido de coachmarks por el lienzo, Vistas, Drill-down (si el Workspace tiene un `link`), Pasos, Temas, Codigo y Agente, con los datos del Workspace abierto. El area resaltada de cada parada sigue usable (clic en el Nodo para entrar a su Vista, avanzar un Paso, previsualizar un Tema) y el tour sigue en su parada; el resto atenuado no toma clics, y el tour solo se cierra con Skip, Done o Escape. Al usarla o cerrarla con su "x" no vuelve (se recuerda en el navegador); el tour sigue a mano con "View tour" en el Buscador o en la ayuda de `?`.
 
 ## Export de solo lectura
 
