@@ -11,7 +11,7 @@ import type { CapaPintada, PinturaDeCajaDeSecuencia, PinturaDeTrazoDeSecuencia, 
 import { estiloEnLinea, num } from './elemento';
 import type { Elemento } from './elemento';
 import { resolverEstilo } from './estilo';
-import { aplanar, cajaDeNodo, capaSvg, colorDeTrazo, contornos, marcasDeTrazo, marcoDeEscena, planeado, nombresAccesibles, opacidad, posicionesDeEscalonado, visibilidadSvg } from './escena';
+import { aplanar, cajaDeNodo, capaSvg, colorDeTrazo, contornos, estadoDeTrazo, marcasDeTrazo, marcoDeEscena, planeado, nombresAccesibles, opacidad, posicionesDeEscalonado, visibilidadSvg } from './escena';
 import type { Contexto, EntradaDeEscena, Estados } from './escena';
 import { declaracionesDeCaja } from './hoja';
 import { pilaDeNodo } from './pilas';
@@ -78,17 +78,21 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: Vi
   const trazos = rutas.map(({ mensaje, ruta }): Elemento => {
     const id = idDe(mensaje);
     const v = visibilidadSvg(visibility(id));
-    const pintura = deColor(secuencia.mensaje, coloresDeNodo.get(mensaje.from)).tipos[mensaje.kind]!;
+    const delTipo = deColor(secuencia.mensaje, coloresDeNodo.get(mensaje.from)).tipos[mensaje.kind]!;
+    // A state the Theme declares for Messages swaps the stroke stack (paint-only); markers stay.
+    const enEstado = estadoDeTrazo(delTipo.estados, entrada.estados, id);
+    const pintura = enEstado === undefined ? delTipo : { ...delTipo, capas: enEstado };
     return {
       tag: 'g',
-      attrs: { 'data-edge': id, 'data-message': id, 'data-kind': mensaje.kind, ...v, ...marcasDeTrazo(entrada.estados, id) },
+      attrs: { 'data-edge': id, 'data-message': id, 'data-kind': mensaje.kind, ...v, ...marcasDeTrazo(entrada.estados, id, delTipo.estados?.planned !== undefined) },
       hijos: [...pintarTrazos(pintura, ruta.points, estilo.pintura.semilla), ...pintarMarcadores(estilo, pintura, ruta.points), ...contornos(entrada.estados?.[id]).map((e) => pintarEstadoDeRuta(estilo, e, id, ruta.points))],
     };
   });
   const etiquetas = rutas.flatMap(({ mensaje, ruta }): Elemento[] => {
     if (mensaje.label === undefined) return [];
     const id = idDe(mensaje);
-    return [{ tag: 'g', attrs: { 'data-edge-labels': id, ...visibilidadSvg(visibility(id)), ...(planeado(entrada.estados, id) && { 'data-planeado': '' }) }, hijos: [pintarEtiquetaDeArista(estilo, { id, texto: mensaje.label, puntos: ruta.points, caja: ruta.label })] }];
+    const plannedPropio = deColor(secuencia.mensaje, coloresDeNodo.get(mensaje.from)).tipos[mensaje.kind]?.estados?.planned !== undefined;
+    return [{ tag: 'g', attrs: { 'data-edge-labels': id, ...visibilidadSvg(visibility(id)), ...(planeado(entrada.estados, id) && !plannedPropio && { 'data-planeado': '' }) }, hijos: [pintarEtiquetaDeArista(estilo, { id, texto: mensaje.label, puntos: ruta.points, caja: ruta.label })] }];
   });
 
   const grupos = geometry.groups.map((grupo) => grupoHtml(grupo, contexto));

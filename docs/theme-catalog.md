@@ -139,7 +139,7 @@ A `state <name> { ... }` patch only paints: it never changes the Metrics. Later 
 
 | State | Set by |
 | --- | --- |
-| `planned` | The Model: Planned elements. Without its own patch a Theme inherits the default look: faded, with a dashed contour around boxes and dashed lines |
+| `planned` | The Model: Planned elements. Without its own patch a Theme inherits the default look: faded, with a dashed contour around boxes and dashed lines. A patch in `edge` or `message` restyles lines |
 | `hover` | The Dev UI: the element under the pointer |
 | `selected` | The Dev UI: the selected element |
 | `ghost` | The Dev UI: the Node being dragged |

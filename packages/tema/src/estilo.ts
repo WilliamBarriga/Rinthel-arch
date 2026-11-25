@@ -45,6 +45,8 @@ export interface PinturaDeArista {
   origen?: PrimitivaPintada;
   fin?: PrimitivaPintada;
   etiqueta: PrimitivaPintada;
+  /** Only the states the Theme declares: the stroke stack (and the identifying one) with the state patch. Paint-only. */
+  estadosDeArista?: Partial<Record<Estado, { capas: CapaPintada[]; identificante?: CapaPintada[] }>>;
 }
 
 /** `capas` es el reposo; cada estado declarado trae su pila completa. */
@@ -97,12 +99,16 @@ export interface PinturaDeTrazoDeSecuencia {
   variantes: Record<string, TrazoDeVariante>;
   /** En `message`, la pila de cada tipo de Mensaje (parche `kind` o derivada); vacio en `lifeline`. */
   tipos: Record<string, TrazoDeVariante>;
+  /** Declared states: the base stack and each `kind` patch with the state patch over it. */
+  estadosDeTrazo?: Partial<Record<Estado, { capas: CapaPintada[]; variantes: Record<string, CapaPintada[]> }>>;
 }
 
 export interface TrazoDeVariante {
   capas: CapaPintada[];
   origen?: PrimitivaPintada;
   fin?: PrimitivaPintada;
+  /** Only the states the Theme declares: this stroke stack with the state patch. Paint-only. */
+  estados?: Partial<Record<Estado, CapaPintada[]>>;
 }
 
 export interface PinturaDeCajaDeSecuencia {
@@ -239,8 +245,17 @@ function pintarArista(tema: TemaResuelto, colorDeOrigen: string | undefined): Pi
   const identificante = arista.identificante === undefined ? undefined : pintar(aplicarOps(arista.capas.length === 0 ? [TRAZO_POR_DEFECTO] : (arista.capas as CapaDeTema[]), arista.identificante, tema.palette, 'parchear', 'capa-arista').pila, tema, colorDeOrigen);
   const origen = marcador(arista.origen);
   const fin = marcador(arista.fin);
+  const base = arista.capas.length === 0 ? [TRAZO_POR_DEFECTO] : (arista.capas as CapaDeTema[]);
+  const conEstado = (ops: readonly OpDeCapa[]) => {
+    const pila = aplicarOps(base, ops, tema.palette, 'parchear', 'capa-arista').pila;
+    const propia = arista.identificante === undefined ? undefined : pintar(aplicarOps(aplicarOps(base, arista.identificante, tema.palette, 'parchear', 'capa-arista').pila, ops, tema.palette, 'parchear', 'capa-arista').pila, tema, colorDeOrigen);
+    return { capas: pintar(pila, tema, colorDeOrigen), ...(propia !== undefined && { identificante: propia }) };
+  };
+  const declarados = Object.keys(arista.estados ?? {}).sort() as Estado[];
+  const estados = declarados.length === 0 ? undefined : Object.fromEntries(declarados.map((estado) => [estado, conEstado(arista.estados?.[estado] ?? [])]));
   return {
     capas,
+    ...(estados !== undefined && { estadosDeArista: estados }),
     ...(identificante !== undefined && { identificante }),
     ...(origen !== undefined && { origen }),
     ...(fin !== undefined && { fin }),
@@ -307,12 +322,23 @@ function pinturaDeSecuencia(tema: TemaResuelto, variable: string | undefined, pi
         return [variante, { capas: propias, ...(o !== undefined && { origen: o }), ...(f !== undefined && { fin: f }) }];
       }),
     );
+    const declarados = (Object.keys(bloque.estados) as Estado[]).filter((e) => (bloque.estados[e]?.length ?? 0) > 0).sort();
+    const conEstado = (capasBase: readonly CapaDeTema[], ops: readonly OpDeCapa[]): CapaPintada[] => pintar(aplicarOps(capasBase, ops, tema.palette, 'parchear', ubicacion).pila, tema, colorDeOrigen);
+    const baseDeEstado = bloque.capas.length === 0 ? [TRAZO_POR_DEFECTO] : (bloque.capas as CapaDeTema[]);
+    const estadosDeTrazo = Object.fromEntries(
+      declarados.map((estado) => {
+        const ops = bloque.estados[estado] ?? [];
+        const deVariante = (parche: { ops: readonly OpDeCapa[] }): CapaPintada[] => conEstado(aplicarOps(baseDeEstado, parche.ops, tema.palette, 'parchear', ubicacion).pila, ops);
+        return [estado, { capas: conEstado(baseDeEstado, ops), variantes: Object.fromEntries(Object.entries(bloque.parches).map(([variante, parche]) => [variante, deVariante(parche)])) }];
+      }),
+    );
     return {
       capas,
       ...(origen !== undefined && { origen }),
       ...(fin !== undefined && { fin }),
       variantes,
       tipos: {},
+      ...(declarados.length > 0 && { estadosDeTrazo }),
     };
   };
   const porColor = (nombre: 'lifeline' | 'message', derivar: (declarado: PinturaDeTrazoDeSecuencia | undefined, arista: PinturaDeArista) => PinturaDeTrazoDeSecuencia): TrazosDeSecuencia => {

@@ -80,6 +80,8 @@ const aristaSchema = z.strictObject({
   etiqueta: primitivaSchema.optional(),
   /** Aristas identificantes de una Vista ER; ausente, el mismo trazo que las demas. */
   identificante: z.array(opSchema).optional(),
+  /** Paint-only patches of the stroke stack per state (`edge { state planned { ... } }`). */
+  estados: z.partialRecord(z.enum(ESTADOS), z.array(opSchema)).optional(),
   /** Marcadores y etiqueta de un Tipo de diagrama sustituyen a los del Tema. */
   diagramas: z
     .partialRecord(

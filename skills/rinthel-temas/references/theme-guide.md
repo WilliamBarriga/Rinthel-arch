@@ -97,7 +97,7 @@ Cascade, last wins: base Theme, Diagram type, Node kind, state, View patch.
 
 `diagram <type> { ... }` (inside `node`, `group` and `edge`) targets one Diagram type (`architecture`, `flow`, `sequence`, `er`): `node { diagram flow { slots row pad 20 { title attrs } } }` changes only flow Views. It accepts `layer`, `use` and `slots`; `padding` in `group`; markers (`start`/`end`) and `label` in `edge`. Unlike a state, it may change Metrics. An unknown type is `theme-unknown-diagram-type`.
 
-States: `hover`, `selected`, `ghost`, `on-path`, `dimmed`, `focus` (and `planned`, for Planned elements). Without its own `state planned` patch a Theme inherits the default look for planned elements (faded, dashed contour around boxes, dashed lines); with one in `node` or `group`, that patch replaces it on boxes. A state may only change paint, never size or Slots (`validate` rejects it), so hovering never moves the diagram. A Group also has `state collapsed`, the look of the closed Group.
+States: `hover`, `selected`, `ghost`, `on-path`, `dimmed`, `focus` (and `planned`, for Planned elements). Without its own `state planned` patch a Theme inherits the default look for planned elements (faded, dashed contour around boxes, dashed lines); with one in `node` or `group` that patch replaces it on boxes, and with one in `edge` (or `message`) it replaces it on lines (`edge { state planned { layer line { style dotted } } }`; only `layer` and `use`). A state may only change paint, never size or Slots (`validate` rejects it), so hovering never moves the diagram. A Group also has `state collapsed`, the look of the closed Group.
 
 ### Parts: reusable patches
 

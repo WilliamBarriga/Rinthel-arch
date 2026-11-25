@@ -24,7 +24,7 @@ const propiedad = (nombre: string, definicion: DefinicionDePropiedad): string =>
 
 /** Quien pone cada estado; la tabla obliga a describir un estado nuevo. */
 const ORIGEN_DE_ESTADO: Readonly<Record<Estado, string>> = {
-  planned: 'The Model: Planned elements. Without its own patch a Theme inherits the default look: faded, with a dashed contour around boxes and dashed lines',
+  planned: 'The Model: Planned elements. Without its own patch a Theme inherits the default look: faded, with a dashed contour around boxes and dashed lines. A patch in `edge` or `message` restyles lines',
   hover: 'The Dev UI: the element under the pointer',
   selected: 'The Dev UI: the selected element',
   ghost: 'The Dev UI: the Node being dragged',

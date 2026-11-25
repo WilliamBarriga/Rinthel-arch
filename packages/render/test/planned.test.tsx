@@ -123,3 +123,40 @@ describe('planned elements on the canvas', () => {
     expect(hojaDe(html)).toMatch(/\[data-estados~="planned"\]\{[^}]*#dc2626/);
   });
 });
+
+describe('a Theme restyles planned Edges and Messages (paint-only)', () => {
+  const linea = (nombre: string, props: Record<string, string | number>) => ({ nombre, primitiva: { tipo: 'line', props: { width: 1, style: 'solid', corner: 'sharp', cut: 6, ...props } } });
+  const conPlanned: TemaResuelto = {
+    ...TEMA_NEUTRO,
+    name: 'own-lines',
+    arista: { ...TEMA_NEUTRO.arista, capas: [linea('line', { color: 'gray' })], estados: { planned: [{ nombre: 'line', props: { color: 'red', style: 'dotted' } }] } },
+  };
+
+  it('a planned Edge takes the Theme stack of its planned patch, without the default dashed look', async () => {
+    const html = await dibujar('arch', { theme: conPlanned });
+    const view = resolveView(FUENTE, 'arch') as VistaDeGrafo;
+    const [haciaPlan, haciaOtro] = view.edges.map((arista) => idDeArista(arista).replaceAll('>', '&gt;'));
+    const trazo = (id: string): string => html.slice(html.indexOf(`data-edge="${id}"`), html.indexOf('</g>', html.indexOf(`data-edge="${id}"`)));
+
+    expect(etiquetaCon(html, `data-edge="${haciaPlan}"`)).not.toContain('data-planeado');
+    expect(trazo(haciaPlan)).toContain('stroke="#dc2626"');
+    expect(trazo(haciaPlan)).toContain('stroke-linecap="round"');
+    expect(trazo(haciaOtro)).not.toContain('stroke="#dc2626"');
+  });
+
+  it('without a message block, a planned Message takes the Edge planned patch (sequence)', async () => {
+    const html = await dibujar('seq', { theme: conPlanned });
+    const view = resolveView(FUENTE, 'seq') as VistaDeSecuencia;
+    const [aOtro, aPlan] = view.interaction.messages.map((m) => idDeElementoDeSecuencia('flow', m.ruta));
+    const trazo = (id: string): string => html.slice(html.indexOf(`data-message="${id}"`), html.indexOf('</g>', html.indexOf(`data-message="${id}"`)));
+
+    expect(etiquetaCon(html, `data-message="${aPlan}"`)).not.toContain('data-planeado');
+    expect(trazo(aPlan)).toContain('stroke="#dc2626"');
+    expect(trazo(aOtro)).not.toContain('stroke="#dc2626"');
+  });
+
+  it('never changes the layout: Metrics are the same with or without the patch', async () => {
+    const view = resolveView(FUENTE, 'arch') as VistaDeGrafo;
+    expect(await layoutView(view, conPlanned)).toEqual(await layoutView(view, { ...conPlanned, arista: { ...conPlanned.arista, estados: {} } }));
+  });
+});

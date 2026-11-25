@@ -80,7 +80,21 @@ export function mensaje(declarado: PinturaDeTrazoDeSecuencia | undefined, arista
     const derivado = mensajeDerivado(declarado.capas, undefined, kind);
     return declarado.fin === undefined ? derivado : { ...derivado, fin: declarado.fin };
   };
-  const tipos = Object.fromEntries(TIPOS_DE_MENSAJE.map((kind) => [kind, tipoDe(kind)]));
+  // Declared states: the `message` block's, or (without the block) the Edge's, derived per kind like the base stack.
+  const estadoDe = (kind: TipoDeMensaje): TrazoDeVariante['estados'] => {
+    if (declarado !== undefined) {
+      const propios = Object.entries(declarado.estadosDeTrazo ?? {});
+      return propios.length === 0 ? undefined : Object.fromEntries(propios.map(([estado, e]) => [estado, declarado.variantes[kind] !== undefined ? (e.variantes[kind] ?? e.capas) : mensajeDerivado(e.capas, undefined, kind).capas]));
+    }
+    const deArista = Object.entries(arista.estadosDeArista ?? {});
+    return deArista.length === 0 ? undefined : Object.fromEntries(deArista.map(([estado, e]) => [estado, mensajeDerivado(e.capas, arista.fin, kind).capas]));
+  };
+  const tipos = Object.fromEntries(
+    TIPOS_DE_MENSAJE.map((kind) => {
+      const estados = estadoDe(kind);
+      return [kind, { ...tipoDe(kind), ...(estados !== undefined && { estados }) }];
+    }),
+  );
   if (declarado !== undefined) return { ...declarado, tipos };
   return { capas: arista.capas, ...(arista.origen !== undefined && { origen: arista.origen }), ...(arista.fin !== undefined && { fin: arista.fin }), variantes: {}, tipos };
 }

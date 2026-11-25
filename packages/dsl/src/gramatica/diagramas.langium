@@ -278,7 +278,7 @@ ThemeEdge:
   'edge' '{' items+=EdgeItem* '}';
 
 EdgeItem:
-  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel | ThemeDiagram | EdgeIdentifying;
+  ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel | ThemeDiagram | EdgeIdentifying | ThemeState;
 
 // `identifying { ... }`: parche del trazo de las Aristas identificantes de una Vista ER.
 EdgeIdentifying:
