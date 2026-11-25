@@ -70,6 +70,8 @@ export interface ScanRelation {
   to: string;
   /** `[from side, to side]`, for example `["0..*", "1"]`. */
   cardinality: [string, string];
+  /** Where the foreign key is written (a migration may add it in another file than the table's). */
+  source: Source;
   confidence: Confidence;
 }
 

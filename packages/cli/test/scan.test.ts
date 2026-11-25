@@ -103,7 +103,7 @@ describe('scan', () => {
     );
     const draft = JSON.parse(readFileSync(join(root, '.rinthel/scan.json'), 'utf8'));
     expect(draft.tables.find(({ id }: { id: string }) => id === 'audit_log').relations).toEqual([
-      { from: 'audit_log#user_id', to: 'User#id', cardinality: ['0..*', '0..1'], confidence: 'extracted' },
+      { from: 'audit_log#user_id', to: 'User#id', cardinality: ['0..*', '0..1'], source: { file: 'db/audit.sql', line: 4 }, confidence: 'extracted' },
     ]);
   });
 

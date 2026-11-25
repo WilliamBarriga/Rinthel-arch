@@ -29,6 +29,7 @@ type Target = { table: string; column: string } | { model: string; attr: string 
 
 interface Column {
   attr: string;
+  line: number;
   name: string;
   type: string;
   pk: boolean;
@@ -53,9 +54,9 @@ function readTables(root: SyntaxNode, file: SchemaFile): Table[] {
   for (const pyClass of classesOf(root)) {
     const name = stringOf(pyClass.assignments.find((assignment) => assignment.name === '__tablename__')?.value);
     if (name === undefined) continue;
-    const columns = pyClass.assignments.flatMap(({ name: attr, annotation, value }) => {
+    const columns = pyClass.assignments.flatMap(({ name: attr, annotation, value, line }) => {
       const call = callOf(value);
-      return call !== undefined && COLUMN_CALLS.has(call.last) ? [readColumn(call, attr, annotation)] : [];
+      return call !== undefined && COLUMN_CALLS.has(call.last) ? [readColumn(call, attr, annotation, line)] : [];
     });
     tables.push({ name, className: pyClass.name, file: file.path, line: pyClass.line, columns });
   }
@@ -66,14 +67,14 @@ function readTables(root: SyntaxNode, file: SchemaFile): Table[] {
     if (statement === null || statement === undefined || call?.last !== 'Table' || name === undefined) continue;
     const columns = call.args.flatMap((arg) => {
       const column = callOf(arg);
-      return column !== undefined && COLUMN_CALLS.has(column.last) ? [readColumn(column, '', undefined)] : [];
+      return column !== undefined && COLUMN_CALLS.has(column.last) ? [readColumn(column, '', undefined, arg.startPosition.row + 1)] : [];
     });
     tables.push({ name, className: undefined, file: file.path, line: statement.startPosition.row + 1, columns });
   }
   return tables;
 }
 
-function readColumn(call: Call, attr: string, annotation: string | undefined): Column {
+function readColumn(call: Call, attr: string, annotation: string | undefined, line: number): Column {
   const explicit = stringOf(call.args[0]);
   const named = call.args.filter((arg) => stringOf(arg) === undefined);
   const typeNode = call.kwargs.get('type_') ?? named.find((arg) => !NOT_TYPES.has(callOf(arg)?.last ?? lastSegment(arg.text)));
@@ -83,6 +84,7 @@ function readColumn(call: Call, attr: string, annotation: string | undefined): C
   const foreignKey = named.map((arg) => callOf(arg)).find((inner) => inner?.last === 'ForeignKey');
   return {
     attr,
+    line,
     name: stringOf(call.kwargs.get('name')) ?? explicit ?? attr,
     type: typeNode === undefined ? (fromAnnotation?.type ?? 'unknown') : (callOf(typeNode)?.last ?? lastSegment(typeNode.text)),
     pk,
@@ -131,7 +133,7 @@ function toFound(table: Table, all: readonly Table[]): FoundTable {
     if (column.foreignKey !== undefined) {
       const target = resolve(column.foreignKey, all);
       if (target === undefined) certain = false;
-      else relations.push(relationOf(column.name, target, { unique: column.unique || (column.pk && pks === 1), optional: column.optional }));
+      else relations.push(relationOf(column.name, target, { unique: column.unique || (column.pk && pks === 1), optional: column.optional }, { file: table.file, line: column.line }));
     }
     const { name, type, pk, unique, optional } = column;
     return scanColumn({ name, type, pk, unique, optional, fk: column.foreignKey !== undefined });

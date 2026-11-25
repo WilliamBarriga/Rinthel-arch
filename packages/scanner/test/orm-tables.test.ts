@@ -139,8 +139,8 @@ describe('scan: ORM tables', () => {
         { name: 'created_at', type: 'timestamp', optional: true },
       ],
       relations: [
-        { from: 'posts#author_id', to: 'users#id', cardinality: ['0..*', '0..1'], confidence: 'extracted' },
-        { from: 'posts#editorId', to: 'users#id', cardinality: ['0..*', '1'], confidence: 'extracted' },
+        { from: 'posts#author_id', to: 'users#id', cardinality: ['0..*', '0..1'], source: { file: 'src/db/schema.ts', line: 17 }, confidence: 'extracted' },
+        { from: 'posts#editorId', to: 'users#id', cardinality: ['0..*', '1'], source: { file: 'src/db/schema.ts', line: 18 }, confidence: 'extracted' },
       ],
     });
     expect(draft.tables.find(({ id }) => id === 'members')).toMatchObject({
@@ -148,7 +148,7 @@ describe('scan: ORM tables', () => {
         { name: 'user_id', type: 'integer', pk: true, fk: true },
         { name: 'team_id', type: 'integer', pk: true },
       ],
-      relations: [{ from: 'members#user_id', to: 'users#id', cardinality: ['0..*', '1'] }],
+      relations: [{ from: 'members#user_id', to: 'users#id', cardinality: ['0..*', '1'], source: { file: 'src/db/schema.ts', line: 25 } }],
     });
   });
 
@@ -186,9 +186,9 @@ describe('scan: ORM tables', () => {
         { name: 'cover_id', type: 'AutoField', fk: true, uk: true },
       ],
       relations: [
-        { from: 'blog_entry#author_id', to: 'blog_writers#id', cardinality: ['0..*', '1'], confidence: 'extracted' },
-        { from: 'blog_entry#editor_id', to: 'blog_writers#id', cardinality: ['0..*', '0..1'], confidence: 'extracted' },
-        { from: 'blog_entry#cover_id', to: 'media_image#id', cardinality: ['0..1', '1'], confidence: 'extracted' },
+        { from: 'blog_entry#author_id', to: 'blog_writers#id', cardinality: ['0..*', '1'], source: { file: 'blog/models.py', line: 15 }, confidence: 'extracted' },
+        { from: 'blog_entry#editor_id', to: 'blog_writers#id', cardinality: ['0..*', '0..1'], source: { file: 'blog/models.py', line: 16 }, confidence: 'extracted' },
+        { from: 'blog_entry#cover_id', to: 'media_image#id', cardinality: ['0..1', '1'], source: { file: 'blog/models.py', line: 19 }, confidence: 'extracted' },
       ],
     });
     expect(draft.tables.find(({ id }) => id === 'blog_entry_tags')).toMatchObject({
@@ -198,8 +198,8 @@ describe('scan: ORM tables', () => {
         { name: 'tag_id', type: 'AutoField', fk: true },
       ],
       relations: [
-        { from: 'blog_entry_tags#entry_id', to: 'blog_entry#slug', cardinality: ['0..*', '1'] },
-        { from: 'blog_entry_tags#tag_id', to: 'blog_tag#id', cardinality: ['0..*', '1'] },
+        { from: 'blog_entry_tags#entry_id', to: 'blog_entry#slug', cardinality: ['0..*', '1'], source: { file: 'blog/models.py', line: 18 } },
+        { from: 'blog_entry_tags#tag_id', to: 'blog_tag#id', cardinality: ['0..*', '1'], source: { file: 'blog/models.py', line: 18 } },
       ],
     });
     expect(draft.tables.find(({ id }) => id === 'blog_comment')).toMatchObject({
@@ -208,7 +208,7 @@ describe('scan: ORM tables', () => {
         { name: 'created', type: 'DateTimeField' },
         { name: 'entry_slug', type: 'SlugField', fk: true },
       ],
-      relations: [{ from: 'blog_comment#entry_slug', to: 'blog_entry#slug', cardinality: ['0..*', '1'] }],
+      relations: [{ from: 'blog_comment#entry_slug', to: 'blog_entry#slug', cardinality: ['0..*', '1'], source: { file: 'blog/models.py', line: 31 } }],
     });
   });
 
@@ -238,8 +238,8 @@ describe('scan: ORM tables', () => {
         { name: 'city', type: 'String', optional: true },
       ],
       relations: [
-        { from: 'addresses#owner_id', to: 'users#id', cardinality: ['0..*', '1'], confidence: 'extracted' },
-        { from: 'addresses#backup_id', to: 'users#id', cardinality: ['0..1', '0..1'], confidence: 'extracted' },
+        { from: 'addresses#owner_id', to: 'users#id', cardinality: ['0..*', '1'], source: { file: 'svc/models.py', line: 20 }, confidence: 'extracted' },
+        { from: 'addresses#backup_id', to: 'users#id', cardinality: ['0..1', '0..1'], source: { file: 'svc/models.py', line: 21 }, confidence: 'extracted' },
       ],
     });
     expect(draft.tables.find(({ id }) => id === 'audit')).toMatchObject({
@@ -247,7 +247,7 @@ describe('scan: ORM tables', () => {
         { name: 'id', type: 'Integer', pk: true },
         { name: 'user_id', type: 'Integer', fk: true, optional: true },
       ],
-      relations: [{ from: 'audit#user_id', to: 'users#id', cardinality: ['0..*', '0..1'] }],
+      relations: [{ from: 'audit#user_id', to: 'users#id', cardinality: ['0..*', '0..1'], source: { file: 'svc/models.py', line: 31 } }],
     });
   });
 

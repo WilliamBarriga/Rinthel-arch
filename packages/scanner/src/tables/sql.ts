@@ -3,7 +3,7 @@
  * Dialect-agnostic: `"x"`, `` `x` `` and `[x]` identifiers, `--`, `#` and block comments, `$tag$` bodies. A statement it
  * does not know is skipped; one it cannot follow never hides the rest of the file.
  */
-import type { ScanColumn } from '../draft';
+import type { ScanColumn, Source } from '../draft';
 import type { FoundRelation, FoundTable, SchemaContext, SchemaFile, TableExtractor } from '.';
 import { relationOf, scanColumn } from './relation';
 import { PARENS, type Token as Shared, closing as closingOf, split as splitBy } from './tokens';
@@ -28,6 +28,8 @@ interface ForeignKey {
   table: string;
   /** `undefined`: the target's primary key. */
   references: string[] | undefined;
+  /** The definition that declares it, in the file of its statement. */
+  source: Source;
 }
 
 interface Table {
@@ -88,7 +90,7 @@ function apply(tables: Map<string, Table>, statement: Token[], file: string): vo
     const table = createTable(statement, file);
     if (table !== undefined) tables.set(key(table.name), table);
   } else if (isWord(first, 'ALTER') && isWord(second, 'TABLE')) {
-    alterTable(tables, statement);
+    alterTable(tables, statement, file);
   } else if (isWord(first, 'DROP') && isWord(second, 'TABLE')) {
     let i = 2;
     if (isWord(statement[i], 'IF') && isWord(statement[i + 1], 'EXISTS')) i += 2;
@@ -100,7 +102,7 @@ function apply(tables: Map<string, Table>, statement: Token[], file: string): vo
 }
 
 /** `ALTER TABLE [ONLY] [IF EXISTS] name action, action...`; unknown actions are skipped. */
-function alterTable(tables: Map<string, Table>, statement: Token[]): void {
+function alterTable(tables: Map<string, Table>, statement: Token[], file: string): void {
   let i = 2;
   if (isWord(statement[i], 'IF') && isWord(statement[i + 1], 'EXISTS')) i += 2;
   if (isWord(statement[i], 'ONLY')) i++;
@@ -112,7 +114,7 @@ function alterTable(tables: Map<string, Table>, statement: Token[]): void {
     const columnAt = isWord(object, 'COLUMN') ? 2 : 1;
     const exists = isWord(action[columnAt], 'IF') ? 2 + Number(isWord(action[columnAt + 1], 'NOT')) : 0;
     if (isWord(verb, 'ADD')) {
-      addDefinition(table, action.slice(columnAt + exists));
+      addDefinition(table, action.slice(columnAt + exists), file);
     } else if (isWord(verb, 'DROP') && !isWord(object, 'CONSTRAINT')) {
       const column = action[columnAt + exists]?.text;
       if (column !== undefined) dropColumn(table, column);
@@ -153,7 +155,7 @@ function toFound(table: Table, tableNamed: (name: string) => Table | undefined):
   const has = (list: readonly string[], name: string): boolean => list.some((item) => key(item) === key(name));
   const uniqueSets = [table.primaryKey, ...table.uniques].filter((set) => set.length > 0).map((set) => set.map(key).sort().join(','));
   const relations: FoundRelation[] = [];
-  for (const { columns, table: target, references } of table.foreignKeys) {
+  for (const { columns, table: target, references, source } of table.foreignKeys) {
     const referenced = tableNamed(target);
     const targetColumns = references ?? (referenced !== undefined && referenced.primaryKey.length > 0 ? referenced.primaryKey : undefined);
     const unique = uniqueSets.includes(columns.map(key).sort().join(','));
@@ -167,6 +169,7 @@ function toFound(table: Table, tableNamed: (name: string) => Table | undefined):
           table.columns.find((candidate) => key(candidate.name) === key(column))?.name ?? column,
           { table: referenced?.name ?? target, column: targetColumns?.[index] ?? 'id' },
           { unique, optional },
+          source,
           targetColumns === undefined ? 'inferred' : 'extracted',
         ),
       );
@@ -203,12 +206,14 @@ function createTable(tokens: Token[], file: string): Table | undefined {
   const name = qualifiedName(tokens, i);
   if (name === undefined || tokens[name.end]?.text !== '(') return undefined;
   const table: Table = { name: name.name, file, line: (tokens[0] as Token).line, columns: [], primaryKey: [], uniques: [], foreignKeys: [] };
-  for (const definition of split(tokens.slice(name.end + 1, closing(tokens, name.end)))) addDefinition(table, definition);
+  for (const definition of split(tokens.slice(name.end + 1, closing(tokens, name.end)))) addDefinition(table, definition, file);
   return table;
 }
 
 /** Column definition or table constraint, as inside `CREATE TABLE (...)` or after `ALTER TABLE ... ADD`. */
-function addDefinition(table: Table, tokens: Token[]): void {
+/** `file`: of the statement, where a foreign key it declares is written. */
+function addDefinition(table: Table, tokens: Token[], file: string): void {
+  const source = { file, line: tokens[0]?.line ?? table.line };
   let i = 0;
   if (isWord(tokens[i], 'CONSTRAINT')) i += 2;
   const first = tokens[i];
@@ -220,10 +225,10 @@ function addDefinition(table: Table, tokens: Token[]): void {
     const open = tokens.findIndex((token, index) => index > i && token.text === '(');
     const references = tokens.findIndex((token, index) => index > open && isWord(token, 'REFERENCES'));
     if (open < 0 || references < 0) return;
-    const fk = foreignKey(tokens, references, names(tokens, open));
+    const fk = foreignKey(tokens, references, names(tokens, open), source);
     if (fk !== undefined) table.foreignKeys.push(fk);
   } else if (i === 0 && first !== undefined && (first.kind === 'ident' || (first.kind === 'word' && !TABLE_CLAUSES.has(first.text.toUpperCase())))) {
-    addColumn(table, tokens);
+    addColumn(table, tokens, source);
   }
 }
 
@@ -236,7 +241,7 @@ const COLUMN_CLAUSES = new Set([
   'AUTOINCREMENT', 'IDENTITY', 'COMMENT', 'ON', 'AS', 'CHARSET', 'INVISIBLE', 'VISIBLE', 'STORED', 'VIRTUAL', 'ENCODE', 'KEY',
 ]);
 
-function addColumn(table: Table, tokens: Token[]): void {
+function addColumn(table: Table, tokens: Token[], source: Source): void {
   let i = 1;
   const type: Token[] = [];
   for (let depth = 0; i < tokens.length; i++) {
@@ -258,7 +263,7 @@ function addColumn(table: Table, tokens: Token[]): void {
     else if (isWord(token, 'PRIMARY') && isWord(tokens[i + 1], 'KEY')) table.primaryKey = [name];
     else if (isWord(token, 'UNIQUE')) table.uniques.push([name]);
     else if (isWord(token, 'REFERENCES')) {
-      const fk = foreignKey(tokens, i, [name]);
+      const fk = foreignKey(tokens, i, [name], source);
       if (fk !== undefined) table.foreignKeys.push(fk);
     }
   }
@@ -266,10 +271,10 @@ function addColumn(table: Table, tokens: Token[]): void {
 }
 
 /** `REFERENCES table [(columns)]` starting at the `REFERENCES` token. */
-function foreignKey(tokens: Token[], at: number, columns: string[]): ForeignKey | undefined {
+function foreignKey(tokens: Token[], at: number, columns: string[], source: Source): ForeignKey | undefined {
   const target = qualifiedName(tokens, at + 1);
   if (target === undefined || columns.length === 0) return undefined;
-  return { columns, table: target.name, references: tokens[target.end]?.text === '(' ? names(tokens, target.end) : undefined };
+  return { columns, table: target.name, references: tokens[target.end]?.text === '(' ? names(tokens, target.end) : undefined, source };
 }
 
 /** `a.b.c` from `at`: the last part is the name (schema prefixes are dropped). */

@@ -30,6 +30,8 @@ export interface FoundRelation {
   target: { table: string; column: string };
   /** `[from side, to side]`, for example `["0..*", "1"]`. */
   cardinality: [string, string];
+  /** Where the foreign key is written. */
+  source: Source;
   confidence: Confidence;
 }
 
@@ -102,12 +104,13 @@ export function identifyTables(found: readonly (FoundTable & { unit: string })[]
         origin: table.origin,
         unit: table.unit,
         columns: table.columns,
-        relations: table.relations.map(({ column, target, cardinality, confidence }) => {
+        relations: table.relations.map(({ column, target, cardinality, source, confidence }) => {
           const to = targetOf(table, target.table);
           return {
             from: `${id}#${column}`,
             to: `${to === undefined ? target.table : idOf(to)}#${target.column}`,
             cardinality,
+            source,
             confidence: to === undefined ? 'inferred' : confidence,
           };
         }),

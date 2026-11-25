@@ -33,6 +33,7 @@ interface Argument {
 
 interface Field {
   name: string;
+  line: number;
   type: string;
   optional: boolean;
   list: boolean;
@@ -94,7 +95,7 @@ function toTable(model: Model, modelNamed: (name: string) => Model | undefined):
       const referenced = references[index];
       if (referenced === undefined) return;
       relations.push(
-        relationOf(columnName(model, key), { table: tableName(target), column: columnName(target, referenced) }, { unique, optional: field.optional }),
+        relationOf(columnName(model, key), { table: tableName(target), column: columnName(target, referenced) }, { unique, optional: field.optional }, { file: model.file, line: field.line }),
       );
     });
   }
@@ -172,7 +173,7 @@ function readStatement(tokens: Token[], model: Model): void {
   if (list) i += 2;
   const optional = tokens[i]?.text === '?';
   if (optional) i++;
-  model.fields.push({ name: first.text, type: second.text, optional, list, attributes: attributes(tokens.slice(i)) });
+  model.fields.push({ name: first.text, line: first.line, type: second.text, optional, list, attributes: attributes(tokens.slice(i)) });
 }
 
 /** `@name(args)` and `@group.name(args)` in order; `tokens` starts at an `@`. */

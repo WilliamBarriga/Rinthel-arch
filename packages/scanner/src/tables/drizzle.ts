@@ -36,6 +36,7 @@ interface Reference {
 
 interface Column {
   key: string;
+  line: number;
   name: string;
   type: string;
   pk: boolean;
@@ -124,9 +125,10 @@ function readColumns(body: SyntaxNode, table: Table, imported: ReadonlySet<strin
       table.certain = false;
       continue;
     }
-    const column = readColumn(key, member.childForFieldName('value'), imported);
+    const line = member.startPosition.row + 1;
+    const column = readColumn(key, line, member.childForFieldName('value'), imported);
     if (column === undefined) table.certain = false;
-    table.columns.push(column ?? { key, name: key, type: 'unknown', pk: false, unique: false, notNull: false, reference: undefined });
+    table.columns.push(column ?? { key, line, name: key, type: 'unknown', pk: false, unique: false, notNull: false, reference: undefined });
   }
 }
 
@@ -141,8 +143,8 @@ function stringOf(node: SyntaxNode | undefined | null): string | undefined {
 }
 
 /** `serial('id').primaryKey()`: a chain of calls, from the outermost modifier in to the builder. */
-function readColumn(key: string, value: SyntaxNode | null, imported: ReadonlySet<string>): Column | undefined {
-  const column: Column = { key, name: key, type: '', pk: false, unique: false, notNull: false, reference: undefined };
+function readColumn(key: string, line: number, value: SyntaxNode | null, imported: ReadonlySet<string>): Column | undefined {
+  const column: Column = { key, line, name: key, type: '', pk: false, unique: false, notNull: false, reference: undefined };
   let node = value;
   let array = false;
   while (node?.type === 'call_expression') {
@@ -193,6 +195,7 @@ function toFound(table: Table, all: readonly Table[]): FoundTable {
           column.name,
           target ?? { table: column.reference.variable, column: column.reference.key },
           { unique: column.unique || (pk && pks.size === 1), optional: !column.notNull && !pk },
+          { file: table.file, line: column.line },
           target === undefined ? 'inferred' : 'extracted',
         ),
       );

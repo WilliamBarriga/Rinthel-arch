@@ -8,7 +8,7 @@
  * `'app.Model'` and `'self'`; one that does not resolve is named `<app>_<model>` and the relation is `inferred`.
  * Not read: migrations, `through` tables, `GenericForeignKey`, multi-table inheritance links.
  */
-import type { ScanColumn } from '../draft';
+import type { ScanColumn, Source } from '../draft';
 import type { FoundRelation, FoundTable, SchemaFile, TableExtractor } from '.';
 import { type PlainCall, type PyClass, boolOf, callOf, classesOf, lastSegment, loadPython, plain, stringOf } from './python-ast';
 import { relationOf } from './relation';
@@ -27,6 +27,7 @@ export const django: TableExtractor = {
 
 interface Field {
   attr: string;
+  line: number;
   /** `CharField`, `ForeignKey`... */
   kind: string;
   call: PlainCall;
@@ -59,10 +60,10 @@ function toModel(pyClass: PyClass, file: SchemaFile): Model {
     file: file.path,
     line: pyClass.line,
     bases: pyClass.bases,
-    fields: pyClass.assignments.flatMap(({ name, value }): Field[] => {
+    fields: pyClass.assignments.flatMap(({ name, value, line }): Field[] => {
       const call = callOf(value);
       const kind = call?.last ?? '';
-      return call !== undefined && (kind.endsWith('Field') || kind === 'ForeignKey') && kind !== 'GenericForeignKey' ? [{ attr: name, kind, call: plain(call) }] : [];
+      return call !== undefined && (kind.endsWith('Field') || kind === 'ForeignKey') && kind !== 'GenericForeignKey' ? [{ attr: name, line, kind, call: plain(call) }] : [];
     }),
     dbTable: stringOf(metaValue('db_table')),
     abstract: boolOf(metaValue('abstract')) === true,
@@ -139,6 +140,8 @@ function build(models: Model[]): FoundTable[] {
     if (!fields.some(({ field }) => isPk(field))) columns.push({ name: 'id', type: 'AutoField', pk: true });
     for (const { owner, field } of fields) {
       const { call, kind } = field;
+      // An inherited field is written in its abstract owner's file.
+      const source = { file: owner.file, line: field.line };
       const pk = isPk(field);
       const optional = call.kwargs.get('null')?.bool === true && !pk;
       if (kind === 'ManyToManyField') {
@@ -148,7 +151,7 @@ function build(models: Model[]): FoundTable[] {
           certain = false;
           continue;
         }
-        found.push(joinTable(model, field, target.model, pkOf(model), pkOf(target.model), tableName(model)));
+        found.push(joinTable(model, field, target.model, pkOf(model), pkOf(target.model), tableName(model), source));
         continue;
       }
       const column: ScanColumn = { name: columnNameOf(field), type: kind };
@@ -162,7 +165,7 @@ function build(models: Model[]): FoundTable[] {
           const [app, name] = written.includes('.') ? [written.slice(0, written.lastIndexOf('.')), lastSegment(written)] : [owner.app, written];
           column.type = 'ForeignKey';
           if (/^[\w.]+$/.test(written)) {
-            relations.push(relationOf(column.name, { table: `${lastSegment(app)}_${name.toLowerCase()}`, column: 'id' }, { unique, optional }, 'inferred'));
+            relations.push(relationOf(column.name, { table: `${lastSegment(app)}_${name.toLowerCase()}`, column: 'id' }, { unique, optional }, source, 'inferred'));
           } else {
             certain = false;
           }
@@ -172,7 +175,7 @@ function build(models: Model[]): FoundTable[] {
           const toFieldNode = fieldsOf(target.model).find(({ field: other }) => other.attr === toField)?.field;
           const targetColumn = toField === undefined ? targetPk.name : toFieldNode === undefined ? toField : columnNameOf(toFieldNode);
           column.type = targetPk.type;
-          relations.push(relationOf(column.name, { table: tableName(target.model), column: targetColumn }, { unique, optional }));
+          relations.push(relationOf(column.name, { table: tableName(target.model), column: targetColumn }, { unique, optional }, source));
         }
       }
       if (call.kwargs.get('unique')?.bool === true || kind === 'OneToOneField') {
@@ -194,7 +197,7 @@ function build(models: Model[]): FoundTable[] {
 }
 
 /** The hidden table of a `ManyToManyField`: `<table>_<field>` with a key to each side. */
-function joinTable(model: Model, field: Field, target: Model, ownPk: { name: string; type: string }, targetPk: { name: string; type: string }, owner: string): FoundTable {
+function joinTable(model: Model, field: Field, target: Model, ownPk: { name: string; type: string }, targetPk: { name: string; type: string }, owner: string, source: Source): FoundTable {
   const self = target === model;
   const fromName = self ? `from_${model.name.toLowerCase()}_id` : `${model.name.toLowerCase()}_id`;
   const toName = self ? `to_${target.name.toLowerCase()}_id` : `${target.name.toLowerCase()}_id`;
@@ -208,8 +211,8 @@ function joinTable(model: Model, field: Field, target: Model, ownPk: { name: str
       { name: toName, type: targetPk.type, fk: true },
     ],
     relations: [
-      relationOf(fromName, { table: tableName(model), column: ownPk.name }, shape),
-      relationOf(toName, { table: tableName(target), column: targetPk.name }, shape),
+      relationOf(fromName, { table: tableName(model), column: ownPk.name }, shape, source),
+      relationOf(toName, { table: tableName(target), column: targetPk.name }, shape, source),
     ],
     source: { file: model.file, line: model.line },
     confidence: 'extracted',
