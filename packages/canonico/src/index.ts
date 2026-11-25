@@ -82,11 +82,17 @@ export type {
 
 export type { Issue, IssueFix, IssueRelated, Severity, TextPosition, TextRange } from './issue';
 
-export { VALORES_DE_CATALOGO_ANTIGUOS, issueDeRenombre, mensajeDeValorAntiguo, renombreAntiguo } from './nombres-antiguos';
-export type { CategoriaDeCatalogo, Renombre } from './nombres-antiguos';
-
-export { CONVENCIONES_RENOMBRADAS, convencionesObsoletas } from './convenciones';
-export type { ConvencionRenombrada } from './convenciones';
+export {
+  CONVENCIONES_RENOMBRADAS,
+  VALORES_DE_CATALOGO_ANTIGUOS,
+  convencionesObsoletas,
+  issueDeRenombre,
+  issueDeRenombreDeRuta,
+  mensajeDeValorAntiguo,
+  renombreAntiguo,
+  renombreEnRuta,
+} from './renombres';
+export type { CategoriaDeCatalogo, ConvencionRenombrada, Renombre } from './renombres';
 export { CODIGOS, CODIGOS_DEPRECADOS, DESCRIPCION_DE_CODIGO } from './codigos';
 export type { Codigo } from './codigos';
 
