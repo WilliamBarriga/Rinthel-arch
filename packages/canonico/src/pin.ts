@@ -28,6 +28,7 @@ export const MOTIVOS_DE_RECHAZO = [
   'nothing-to-redo',
   'unknown-theme',
   'unknown-entry',
+  'invalid-rename',
 ] as const;
 
 export type MotivoDeRechazo = (typeof MOTIVOS_DE_RECHAZO)[number];

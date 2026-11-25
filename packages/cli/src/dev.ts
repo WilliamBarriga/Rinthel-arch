@@ -14,7 +14,7 @@
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { readFileSync, rmSync, watch } from 'node:fs';
+import { existsSync, readFileSync, renameSync, rmSync, watch } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
@@ -30,7 +30,7 @@ import type { ResultadoDeCodigo } from './codigo';
 import { registroEnDisco } from './registro-en-disco';
 import { leerConTemas, uso as usoComun } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
-import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos, leerWorkspace } from './workspace';
+import { destinoEnWorkspace, escribirTexto, leerArchivoDeFuente, leerRecursos, leerRutas, leerWorkspace } from './workspace';
 
 /** `setTimeout` como reloj del Workspace vivo. */
 export const relojReal: Reloj = {
@@ -92,6 +92,9 @@ export function puertoDeDisco(workspace: string, { temas, observar = observarDis
     leer: () => ({ propios: leerWorkspace(workspace), disco: leerConTemas(leerWorkspace, workspace, temas) }),
     escribir: (ruta, texto) => escribirTexto(destinoEnWorkspace(workspace, ruta), texto),
     borrar: (ruta) => rmSync(destinoEnWorkspace(workspace, ruta), { force: true }),
+    renombrar: (antigua, nueva) => renameSync(destinoEnWorkspace(workspace, antigua), destinoEnWorkspace(workspace, nueva)),
+    existe: (ruta) => existsSync(destinoEnWorkspace(workspace, ruta)),
+    rutas: () => leerRutas(workspace),
     recursos: () => ({ ...(temas === undefined ? {} : leerRecursos(temas)), ...leerRecursos(workspace) }),
     observar: (alCambiar) => observar(workspace, alCambiar),
   };
