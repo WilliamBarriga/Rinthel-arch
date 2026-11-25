@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@12.5.1",
   "engines": {
-    "node": ">=20"
+    "node": ">=24.11"
   },
   "scripts": {
     "build": "pnpm -r build",
@@ -30,8 +30,8 @@
     "canonico": "workspace:*",
     "cli": "workspace:*",
     "dsl": "workspace:*",
-    "esbuild": "^0.28.1",
-    "eslint": "^10.14.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.15.0",
     "estudio": "workspace:*",
     "layout": "workspace:*",
     "playwright": "^1.64.0",
@@ -40,7 +40,7 @@
     "shell": "workspace:*",
     "tema": "workspace:*",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.72.1",
+    "typescript-eslint": "^8.74.0",
     "vitest": "^4.1.11"
   }
 }
