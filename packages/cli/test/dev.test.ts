@@ -220,12 +220,12 @@ describe('dev: disco y Registro de actividad', () => {
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toBe(BASE);
   });
 
-  it('observa .diagrams/actividad.jsonl aparte del Workspace: reproduce lo previo al conectar y empuja lo anexado', async () => {
+  it('observa .diagrams/activity.jsonl aparte del Workspace: reproduce lo previo al conectar y empuja lo anexado', async () => {
     const raiz = mkdtempSync(join(tmpdir(), 'rinthel-dev-actividad-'));
     carpetas.push(raiz);
     writeFileSync(join(raiz, 'main.dg'), BASE);
     mkdirSync(join(raiz, '.diagrams'));
-    writeFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), lineasDeActividad(eventoDeActividad(1)));
+    writeFileSync(join(raiz, '.diagrams', 'activity.jsonl'), lineasDeActividad(eventoDeActividad(1)));
     const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
     const fetchDelServidor: typeof fetch = (ruta, init) => fetch(new URL(String(ruta).replace(/^\//, ''), servidor.url), init);
@@ -235,7 +235,7 @@ describe('dev: disco y Registro de actividad', () => {
       const cerrar = eventosSobreFetch(fetchDelServidor)('/eventos', (nombre, datos) => {
         if (nombre !== 'actividad') return;
         lista.push(JSON.parse(datos) as ActividadDeDev);
-        if (lista.length === 1) appendFileSync(join(raiz, '.diagrams', 'actividad.jsonl'), lineasDeActividad(eventoDeActividad(2)));
+        if (lista.length === 1) appendFileSync(join(raiz, '.diagrams', 'activity.jsonl'), lineasDeActividad(eventoDeActividad(2)));
         else {
           cerrar();
           ok(lista);

@@ -1,5 +1,5 @@
 /**
- * Esquema Zod del Evento de actividad: una linea de `<workspace>/.diagrams/actividad.jsonl` (ADR 0005, enmienda
+ * Esquema Zod del Evento de actividad: una linea de `<workspace>/.diagrams/activity.jsonl` (ADR 0005, enmienda
  * "Registro de actividad"). Version independiente de `validate`, `inspect` y `edit`: anadir campos no rompe el
  * contrato; quitarlos o cambiar su significado exige subir `ACTIVIDAD_CONTRACT_VERSION`.
  */
@@ -15,7 +15,7 @@ export const eventoDeActividadSchema = z.object({
   /** ISO 8601. */
   ts: z.string(),
   pid: z.number().int(),
-  /** Texto libre de `DIAGRAMS_AGENTE`. */
+  /** Texto libre de `DIAGRAMS_AGENT`. */
   agent: z.string().optional(),
   command: z.enum(COMANDOS_CON_ACTIVIDAD),
   /** El argv tras el comando, completo. */
@@ -39,7 +39,7 @@ export type EventoDeActividad = z.infer<typeof eventoDeActividadSchema>;
 export type ObjetivoDeActividad = NonNullable<EventoDeActividad['target']>;
 
 /**
- * Lector incremental de `actividad.jsonl` (puro: recibe el texto entero del archivo, `undefined` si no existe).
+ * Lector incremental de `activity.jsonl` (puro: recibe el texto entero del archivo, `undefined` si no existe).
  * Cada llamada devuelve los Eventos de las lineas completas que aun no habia dado. Omite las lineas que no parsean o no
  * cumplen `eventoDeActividadSchema`; una linea sin `\n` final espera a la siguiente lectura. Si el texto ya no empieza
  * por lo leido (archivo acortado o rotado) o falta, vuelve a leer desde el principio.

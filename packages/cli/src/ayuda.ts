@@ -151,8 +151,8 @@ Commands:
 
 Agent loop: inspect, edit the .dg, validate --json until ok:true.
 Exit codes: 0 success, 1 Workspace errors, 2 usage or internal failure.
-validate, build, inspect and edit append an Event to <path>/${CARPETA_DE_SALIDA}/actividad.jsonl
-(DIAGRAMS_ACTIVIDAD=0 turns it off; DIAGRAMS_AGENTE names the agent).
+validate, build, inspect and edit append an Event to <path>/${CARPETA_DE_SALIDA}/activity.jsonl
+(DIAGRAMS_ACTIVITY=0 turns it off; DIAGRAMS_AGENT names the agent).
 Full guide: docs/guide/cli.md
 `;
 

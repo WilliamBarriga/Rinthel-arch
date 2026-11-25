@@ -19,7 +19,7 @@ export interface WorkspaceVivoEnMemoria extends PuertoDelWorkspaceVivo, Workspac
 export interface ContenidoVivoEnMemoria extends ContenidoEnMemoria {
   /** Sin el, `recursos()` da `undefined`. */
   recursos?: Record<string, string>;
-  /** Texto inicial de `.diagrams/actividad.jsonl`; sin el, el registro no existe todavia. */
+  /** Texto inicial de `.diagrams/activity.jsonl`; sin el, el registro no existe todavia. */
   actividad?: string;
   /** Toda escritura propia lanza un `Error` con este mensaje (fallo de I/O); `editarFuera` sigue escribiendo. */
   escrituraRota?: string;

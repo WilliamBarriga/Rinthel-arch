@@ -154,9 +154,9 @@ dg dev --workspace <path>                      # see it
 
 ## Activity log
 
-`validate`, `build`, `inspect` and `edit` append an Activity event (one JSON line, `eventoDeActividadSchema` of `canonico`) to `<path>/.diagrams/actividad.jsonl`, also when they exit 1 or 2. `skill`, `dev` and help do not log, nor does any command whose `--workspace` is missing or not a folder. Each event carries `ts`, `pid`, `command`, `args` (the argv after the command), `exitCode`, `durationMs`, the `target` that the command names (`inspect view|node|theme`, the View and Node of an `edit` Intent, the files `edit` wrote) and, in `validate` and `build`, `summary { errors, warnings }`; never stdout or stderr. Past 1 MB it rotates to `actividad.1.jsonl`. A failure to write it changes neither the output nor the code. It is followed without `dev` with `tail -f <path>/.diagrams/actividad.jsonl`. `dev` watches it separately from the Workspace (ignores broken lines and rereads a shortened or rotated log) and shows it in the Agent panel with the last 50 events; what the UI does with them and with external changes: [Follow an agent](dev-ui.md#follow-an-agent).
+`validate`, `build`, `inspect` and `edit` append an Activity event (one JSON line, `eventoDeActividadSchema` of `canonico`) to `<path>/.diagrams/activity.jsonl`, also when they exit 1 or 2. `skill`, `dev` and help do not log, nor does any command whose `--workspace` is missing or not a folder. Each event carries `ts`, `pid`, `command`, `args` (the argv after the command), `exitCode`, `durationMs`, the `target` that the command names (`inspect view|node|theme`, the View and Node of an `edit` Intent, the files `edit` wrote) and, in `validate` and `build`, `summary { errors, warnings }`; never stdout or stderr. Past 1 MB it rotates to `actividad.1.jsonl`. A failure to write it changes neither the output nor the code. It is followed without `dev` with `tail -f <path>/.diagrams/activity.jsonl`. `dev` watches it separately from the Workspace (ignores broken lines and rereads a shortened or rotated log) and shows it in the Agent panel with the last 50 events; what the UI does with them and with external changes: [Follow an agent](dev-ui.md#follow-an-agent).
 
 | Variable | Effect |
 | --- | --- |
-| `DIAGRAMS_ACTIVIDAD=0` | Turns the log off (on by default) |
-| `DIAGRAMS_AGENTE=<text>` | Free-form agent name; it reaches the `agent` field of the event |
+| `DIAGRAMS_ACTIVITY=0` | Turns the log off (on by default) |
+| `DIAGRAMS_AGENT=<text>` | Free-form agent name; it reaches the `agent` field of the event |

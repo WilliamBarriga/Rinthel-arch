@@ -56,10 +56,10 @@ export async function conActividad(
   const inicio = Date.now();
   const { actividad, ...resultado } = await ejecutar();
   const [comando, ...args] = argv;
-  if (!registra(comando) || entorno['DIAGRAMS_ACTIVIDAD'] === '0') return resultado;
+  if (!registra(comando) || entorno['DIAGRAMS_ACTIVITY'] === '0') return resultado;
   const carpeta = carpetaDe(args);
   if (carpeta === undefined) return resultado;
-  const agente = entorno['DIAGRAMS_AGENTE'];
+  const agente = entorno['DIAGRAMS_AGENT'];
   const evento: EventoDeActividad = {
     contractVersion: ACTIVIDAD_CONTRACT_VERSION,
     ts: new Date(inicio).toISOString(),

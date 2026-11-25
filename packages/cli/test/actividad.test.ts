@@ -36,7 +36,7 @@ function workspace(texto = DG): string {
   return raiz;
 }
 
-const registro = (raiz: string) => join(raiz, '.diagrams', 'actividad.jsonl');
+const registro = (raiz: string) => join(raiz, '.diagrams', 'activity.jsonl');
 
 function eventos(raiz: string): EventoDeActividad[] {
   if (!existsSync(registro(raiz))) return [];
@@ -97,11 +97,11 @@ describe('Registro de actividad', () => {
     expect(existsSync(join(raiz, '.diagrams'))).toBe(false);
   });
 
-  it('DIAGRAMS_ACTIVIDAD=0 lo apaga y DIAGRAMS_AGENTE llega a agente', async () => {
+  it('DIAGRAMS_ACTIVITY=0 lo apaga y DIAGRAMS_AGENT llega a agente', async () => {
     const raiz = workspace();
-    await run(['validate', '--workspace', raiz], { entorno: { DIAGRAMS_ACTIVIDAD: '0' } });
+    await run(['validate', '--workspace', raiz], { entorno: { DIAGRAMS_ACTIVITY: '0' } });
     expect(eventos(raiz)).toEqual([]);
-    await run(['validate', '--workspace', raiz], { entorno: { DIAGRAMS_AGENTE: 'revisor' } });
+    await run(['validate', '--workspace', raiz], { entorno: { DIAGRAMS_AGENT: 'revisor' } });
     expect(eventos(raiz).map((e) => e.agent)).toEqual(['revisor']);
   });
 
@@ -140,7 +140,7 @@ describe('Registro de actividad', () => {
 
   it('un fallo al escribir el registro no cambia stdout, stderr ni el codigo', async () => {
     const raiz = workspace();
-    const esperado = await run(['validate', '--workspace', raiz, '--json'], { entorno: { DIAGRAMS_ACTIVIDAD: '0' } });
+    const esperado = await run(['validate', '--workspace', raiz, '--json'], { entorno: { DIAGRAMS_ACTIVITY: '0' } });
     writeFileSync(join(raiz, '.diagrams'), 'no soy una carpeta');
     expect(await run(['validate', '--workspace', raiz, '--json'], activo)).toEqual(esperado);
   });

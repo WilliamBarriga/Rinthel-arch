@@ -16,5 +16,5 @@ export const eventoDeActividad = (pid: number, extra: Partial<EventoDeActividad>
   ...extra,
 });
 
-/** Las lineas de `.diagrams/actividad.jsonl` con esos Eventos. */
+/** Las lineas de `.diagrams/activity.jsonl` con esos Eventos. */
 export const lineasDeActividad = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');

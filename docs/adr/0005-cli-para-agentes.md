@@ -117,7 +117,7 @@ La UI de `dev` muestra en tiempo real lo que hace un agente con el CLI desde otr
 
 ### Canal
 
-El CLI escribe un log append-only por Workspace, `resolve(--workspace)/.diagrams/actividad.jsonl`, con un Evento de actividad JSON por linea. `dev` lo observa con un observador propio (el watcher del Workspace sigue ignorando carpetas ocultas). Es el unico canal: funciona sin `dev`, con varios agentes y varios `dev`, sirve a otros consumidores (`tail -f`, pruebas, capturas) y no abre superficie de red. El POST al `dev` vivo con el mismo esquema queda como posible transporte de menor latencia, sin ruta reservada. Se descarta ejecutar los comandos a traves de `dev` (dos caminos de ejecucion, endpoint que ejecuta escrituras, estado compartido).
+El CLI escribe un log append-only por Workspace, `resolve(--workspace)/.diagrams/activity.jsonl`, con un Evento de actividad JSON por linea. `dev` lo observa con un observador propio (el watcher del Workspace sigue ignorando carpetas ocultas). Es el unico canal: funciona sin `dev`, con varios agentes y varios `dev`, sirve a otros consumidores (`tail -f`, pruebas, capturas) y no abre superficie de red. El POST al `dev` vivo con el mismo esquema queda como posible transporte de menor latencia, sin ruta reservada. Se descarta ejecutar los comandos a traves de `dev` (dos caminos de ejecucion, endpoint que ejecuta escrituras, estado compartido).
 
 `build` deja de borrar `.diagrams/` entero: reemplaza solo `canonico.json` y `geometria/`.
 
@@ -125,7 +125,7 @@ El CLI escribe un log append-only por Workspace, `resolve(--workspace)/.diagrams
 
 Registran `validate`, `build`, `inspect` y `edit`, tambien cuando salen 1 o 2. No registran `skill`, `dev` ni la ayuda. Si `--workspace` falta o no resuelve, no hay donde escribir y no se registra. Lo que el humano hace desde la UI de `dev` (Gestos, guardar desde el editor) no entra en el registro.
 
-`validate` e `inspect` siguen sin tocar el DSL ni las salidas de `build`; su unico efecto lateral nuevo es este rastro. Activo por defecto; `DIAGRAMS_ACTIVIDAD=0` lo desactiva. Un fallo al escribir el log se ignora: nunca cambia stdout, stderr ni el codigo de salida.
+`validate` e `inspect` siguen sin tocar el DSL ni las salidas de `build`; su unico efecto lateral nuevo es este rastro. Activo por defecto; `DIAGRAMS_ACTIVITY=0` lo desactiva. Un fallo al escribir el log se ignora: nunca cambia stdout, stderr ni el codigo de salida.
 
 El emisor es un solo punto del CLI (envoltorio de `run` o dependencia inyectable), no cada comando; `sesion` sigue pura.
 
@@ -137,7 +137,7 @@ El emisor es un solo punto del CLI (envoltorio de `run` o dependencia inyectable
   summary?: { errors, warnings } }
 ```
 
-- `agent`: texto libre de `DIAGRAMS_AGENTE`, si alguien lo fija; el sistema no conoce ningun harness.
+- `agent`: texto libre de `DIAGRAMS_AGENT`, si alguien lo fija; el sistema no conoce ningun harness.
 - `args`: el argv tras el comando, completo.
 - `target`: solo lo que el comando nombra (`inspect view|node|theme`, la Vista o Nodo de una Intencion de `edit`, los `files` que escribio `edit`). El CLI no deduce nada.
 - `summary`: de `validate` y `build`. No se guardan stdout ni stderr.

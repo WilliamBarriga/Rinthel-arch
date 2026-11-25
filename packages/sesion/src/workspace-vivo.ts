@@ -53,7 +53,7 @@ export interface PuertoDelWorkspaceVivo extends PuertoDeWorkspace {
   recursos(): Record<string, string> | undefined;
   /** Devuelve como dejar de observar. */
   observar(alCambiar: () => void): () => void;
-  /** Registro de actividad (`.diagrams/actividad.jsonl`) con su observador propio; sin el, no hay actividad. */
+  /** Registro de actividad (`.diagrams/activity.jsonl`) con su observador propio; sin el, no hay actividad. */
   actividad?: RegistroDeActividad;
 }
 

@@ -25,14 +25,14 @@ El lienzo ocupa toda la pagina. Arriba va la barra (Vista actual con su ruta, Bu
 
 ## Seguir a un agente
 
-Los comandos `validate`, `build`, `inspect` y `edit` anotan cada ejecucion en `<ruta>/.diagrams/actividad.jsonl`; `dev` la lee aparte del Workspace. Para que el feed diga quien fue, el agente exporta un nombre:
+Los comandos `validate`, `build`, `inspect` y `edit` anotan cada ejecucion en `<ruta>/.diagrams/activity.jsonl`; `dev` la lee aparte del Workspace. Para que el feed diga quien fue, el agente exporta un nombre:
 
 ```
-export DIAGRAMS_AGENTE=claude          # appears on each line of the feed
+export DIAGRAMS_AGENT=claude          # appears on each line of the feed
 dg validate --workspace <path> --json
 ```
 
-`DIAGRAMS_ACTIVIDAD=0` apaga el registro. Detalle del formato y la rotacion: [Registro de actividad](cli.md#registro-de-actividad).
+`DIAGRAMS_ACTIVITY=0` apaga el registro. Detalle del formato y la rotacion: [Registro de actividad](cli.md#registro-de-actividad).
 
 ![Feed del agente tras un edit externo](../img/estudio/agente.png)
 

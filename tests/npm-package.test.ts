@@ -30,7 +30,7 @@ function writeFiles(root: string, files: Record<string, string>): string {
 /** Runs the installed `diagrams` bin with this Node; returns its stdout (stderr too on failure) and exit code. */
 function runBin(args: string[]): { stdout: string; exitCode: number } {
   try {
-    return { stdout: execFileSync(process.execPath, [BIN, ...args], { encoding: 'utf8', env: { ...process.env, DIAGRAMS_ACTIVIDAD: '0' } }), exitCode: 0 };
+    return { stdout: execFileSync(process.execPath, [BIN, ...args], { encoding: 'utf8', env: { ...process.env, DIAGRAMS_ACTIVITY: '0' } }), exitCode: 0 };
   } catch (error) {
     const failure = error as { stdout: string; stderr: string; status: number };
     return { stdout: `${failure.stdout}${failure.stderr}`, exitCode: failure.status };
@@ -125,7 +125,7 @@ describe('the rinthel-arch npm package', () => {
 
   it('dev serves the Dev UI page and its assets', async () => {
     const ws = join(TMP, 'ws');
-    const dev = spawn(process.execPath, [BIN, 'dev', '--workspace', ws, '--port', '0'], { env: { ...process.env, DIAGRAMS_ACTIVIDAD: '0' } });
+    const dev = spawn(process.execPath, [BIN, 'dev', '--workspace', ws, '--port', '0'], { env: { ...process.env, DIAGRAMS_ACTIVITY: '0' } });
     processes.push(dev);
     const url = await new Promise<string>((done, fail) => {
       let output = '';

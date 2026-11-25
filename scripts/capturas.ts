@@ -1,8 +1,8 @@
 /**
  * Capturas lado a lado del prototipo (`prototype/render-hibrido`) contra la galeria de Temas en `dev`; necesita `pnpm build`.
- * Uso: `pnpm capturas <tema>... [abierto|cobertura]`, `pnpm capturas --todos [vista]` o
- * `pnpm capturas --workspace <ruta> --vista <id> [--prototipo <variante>] <tema>...` (sobre una copia temporal).
- * `--salida <dir>` (docs): solo PNG `<prefijo><tema>.png`; encuadre 1600x900 y escala 2 por defecto.
+ * Uso: `pnpm capturas <tema>... [open|coverage]`, `pnpm capturas --all [vista]` o
+ * `pnpm capturas --workspace <ruta> --view <id> [--prototype <variante>] <tema>...` (sobre una copia temporal).
+ * `--out <dir>` (docs, con `--prefix`, `--width`, `--height`, `--scale`): solo PNG `<prefijo><tema>.png`; encuadre 1600x900 y escala 2 por defecto.
  * Salida: PNG y pagina de comparacion en `$CAPTURAS_DIR` (por defecto `/tmp/rinthel-capturas`), servida en un mini server
  * que sigue vivo al terminar. Chromium: `$CHROMIUM_PATH` o la cache de Playwright; un solo motor para que sean comparables.
  */
@@ -22,7 +22,7 @@ const REPO = resolve(import.meta.dirname, '..');
 const GALERIA = 'examples/themes/gallery';
 const TEMAS_DE_EJEMPLO = 'examples/rinthel-arch/themes';
 const VIEWPORT = { width: 1600, height: 900 };
-const VISTAS = ['abierto', 'cobertura'] as const;
+const VISTAS = ['open', 'coverage'] as const;
 type Vista = (typeof VISTAS)[number];
 
 const fallar = (mensaje: string): never => {
@@ -45,26 +45,26 @@ interface Pedido {
   docs?: { dir: string; prefijo: string; escala: number; encuadre: { width: number; height: number } };
 }
 
-const USO = `Uso: pnpm capturas <tema>... [${VISTAS.join('|')}]  o  pnpm capturas --todos [vista]
-     pnpm capturas --workspace <ruta> --vista <id> [--prototipo <variante>] <tema>...`;
+const USO = `Usage: pnpm capturas <theme>... [${VISTAS.join('|')}]  or  pnpm capturas --all [view]
+       pnpm capturas --workspace <path> --view <id> [--prototype <variant>] <theme>...`;
 
 function leerArgumentos(): Pedido {
   const { values: v, positionals: posicionales } = parseArgs({
     args: process.argv.slice(2),
-    options: { todos: { type: 'boolean', default: false }, workspace: { type: 'string' }, salida: { type: 'string' }, prefijo: { type: 'string' }, escala: { type: 'string' }, ancho: { type: 'string' }, alto: { type: 'string' }, vista: { type: 'string' }, prototipo: { type: 'string' } },
+    options: { all: { type: 'boolean', default: false }, workspace: { type: 'string' }, out: { type: 'string' }, prefix: { type: 'string' }, scale: { type: 'string' }, width: { type: 'string' }, height: { type: 'string' }, view: { type: 'string' }, prototype: { type: 'string' } },
     allowPositionals: true,
   });
   if (v.workspace !== undefined) {
-    const pedido = pedidoDeWorkspace(v.workspace, v.vista, v.prototipo, posicionales);
-    if (v.salida !== undefined) pedido.docs = { dir: resolve(REPO, v.salida), prefijo: v.prefijo ?? '', escala: Number(v.escala ?? 2), encuadre: { width: Number(v.ancho ?? VIEWPORT.width), height: Number(v.alto ?? VIEWPORT.height) } };
+    const pedido = pedidoDeWorkspace(v.workspace, v.view, v.prototype, posicionales);
+    if (v.out !== undefined) pedido.docs = { dir: resolve(REPO, v.out), prefijo: v.prefix ?? '', escala: Number(v.scale ?? 2), encuadre: { width: Number(v.width ?? VIEWPORT.width), height: Number(v.height ?? VIEWPORT.height) } };
     return pedido;
   }
-  if (v.vista !== undefined || v.prototipo !== undefined) return fallar(`--vista y --prototipo van con --workspace.\n${USO}`);
+  if (v.view !== undefined || v.prototype !== undefined) return fallar(`--view and --prototype go with --workspace.\n${USO}`);
   // La Vista, si se da, va al final.
-  const vista = VISTAS.includes(posicionales[posicionales.length - 1] as Vista) ? (posicionales.pop() as Vista) : 'abierto';
+  const vista = VISTAS.includes(posicionales[posicionales.length - 1] as Vista) ? (posicionales.pop() as Vista) : 'open';
   const nombres = Object.keys(VARIANTE_DE_TEMA);
   let temas = posicionales;
-  if (v.todos) {
+  if (v.all) {
     if (posicionales.length > 0) fallar(`Vista '${posicionales[0]}' desconocida. Usa: ${VISTAS.join(', ')}.`);
     temas = nombres;
   }
@@ -75,15 +75,15 @@ function leerArgumentos(): Pedido {
     workspace: GALERIA,
     carpetaDeTemas: TEMAS_DE_EJEMPLO,
     temas,
-    vistaDe: (t) => (vista === 'abierto' ? `${t}-reference` : t),
-    varianteDe: (t) => (vista === 'abierto' ? VARIANTE_DE_TEMA[t] : undefined),
+    vistaDe: (t) => (vista === 'open' ? `${t}-reference` : t),
+    varianteDe: (t) => (vista === 'open' ? VARIANTE_DE_TEMA[t] : undefined),
     titulo: `Prototipo contra galeria (Vista ${vista})`,
     lado: 'galeria',
   };
 }
 
 function pedidoDeWorkspace(ruta: string, vista: string | undefined, variante: string | undefined, temas: string[]): Pedido {
-  if (vista === undefined || temas.length === 0) return fallar(`Con --workspace hacen falta --vista y al menos un Tema.\n${USO}`);
+  if (vista === undefined || temas.length === 0) return fallar(`With --workspace, --view and at least one Theme are required.\n${USO}`);
   const variantes = Object.values(VARIANTE_DE_TEMA);
   if (variante !== undefined && !variantes.includes(variante)) return fallar(`Variante '${variante}' desconocida. Variantes: ${variantes.join(', ')}`);
   const copia = prepararWorkspace(resolve(REPO, ruta), vista, temas, process.env['CAPTURAS_DIR'] ?? '/tmp/rinthel-capturas');

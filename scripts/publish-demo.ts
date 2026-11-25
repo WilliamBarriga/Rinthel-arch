@@ -52,7 +52,7 @@ if (!values['skip-build']) execFileSync('pnpm', ['build'], { cwd: ROOT, stdio: '
 const out = mkdtempSync(join(tmpdir(), 'rinthel-demo-'));
 try {
   const html = join(out, 'index.html');
-  execFileSync(process.execPath, [BIN, 'export', '--workspace', workspace, '--out', html], { stdio: 'inherit', env: { ...process.env, DIAGRAMS_ACTIVIDAD: '0' } });
+  execFileSync(process.execPath, [BIN, 'export', '--workspace', workspace, '--out', html], { stdio: 'inherit', env: { ...process.env, DIAGRAMS_ACTIVITY: '0' } });
   const bytes = readFileSync(html);
   console.log(`index.html: ${(bytes.length / MB).toFixed(2)} MB raw, ${(gzipSync(bytes, { level: 9 }).length / MB).toFixed(2)} MB gzip`);
 

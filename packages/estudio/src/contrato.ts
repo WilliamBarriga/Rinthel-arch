@@ -30,7 +30,7 @@ export interface DevDePrueba {
   eventos: (url: string, alEvento: (nombre: string, datos: string) => void) => () => void;
   /** Escritura fuera de `dev` (un agente u otro editor); `undefined` borra. */
   editarFuera(ruta: string, texto: string | undefined): void;
-  /** Anexa texto a `.diagrams/actividad.jsonl`, como el CLI de otro proceso. */
+  /** Anexa texto a `.diagrams/activity.jsonl`, como el CLI de otro proceso. */
   anexarActividad(texto: string): void;
   cerrar(): Promise<void>;
 }
@@ -207,7 +207,7 @@ export const eventoDeActividad = (pid: number, extra: Partial<EventoDeActividad>
   ...extra,
 });
 
-/** Las lineas de `.diagrams/actividad.jsonl` con esos Eventos. */
+/** Las lineas de `.diagrams/activity.jsonl` con esos Eventos. */
 export const lineasDeActividad = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
 
 export function probarContratoDeDev(crear: CrearDev): void {

@@ -25,14 +25,14 @@ The canvas takes the whole page. At the top is the bar (current View with its pa
 
 ## Follow an agent
 
-The `validate`, `build`, `inspect` and `edit` commands note each run in `<path>/.diagrams/actividad.jsonl`; `dev` reads it separately from the Workspace. For the feed to say who it was, the agent exports a name:
+The `validate`, `build`, `inspect` and `edit` commands note each run in `<path>/.diagrams/activity.jsonl`; `dev` reads it separately from the Workspace. For the feed to say who it was, the agent exports a name:
 
 ```
-export DIAGRAMS_AGENTE=claude          # appears on each line of the feed
+export DIAGRAMS_AGENT=claude          # appears on each line of the feed
 dg validate --workspace <path> --json
 ```
 
-`DIAGRAMS_ACTIVIDAD=0` turns the log off. Format and rotation details: [Activity log](cli.md#activity-log).
+`DIAGRAMS_ACTIVITY=0` turns the log off. Format and rotation details: [Activity log](cli.md#activity-log).
 
 ![Agent feed after an external edit](../img/estudio/agente.png)
 
