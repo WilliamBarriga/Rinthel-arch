@@ -60,6 +60,8 @@ export interface ContextoDelEstudio {
   portales: HTMLElement | null;
   /** `export`: read-only Dev UI written by `diagrams export` (`modo.ts`); `dev` otherwise. */
   modo: ModoDelEstudio;
+  /** Derived once from `modo` (`puedeEscribirEn`): Gestures, Pin, opening Code. `false` in the export. */
+  puedeEscribir: boolean;
 }
 
 /** The Finder, the shortcuts help and the "Start here" tour (`tour/`). */

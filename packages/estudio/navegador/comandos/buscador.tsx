@@ -59,14 +59,14 @@ function useNodos(consulta: string): Entrada[] {
 
 function Contenido({ alElegir }: { alElegir: () => void }): ReactElement {
   const estudio = useEstudio();
-  const { fuente, plataforma, modo } = estudio;
+  const { fuente, plataforma, modo, puedeEscribir } = estudio;
   const [consulta, setConsulta] = useState('');
   const vistas = useMemo(() => (fuente === undefined ? [] : indiceDeVistas(fuente).flatMap((g) => g.vistas)), [fuente]);
   const nodos = useNodos(consulta);
 
   const sitio = sitioEscrito(consulta);
   const todos: Grupo[] = [
-    { value: 'File', items: sitio === undefined || modo !== 'dev' ? [] : [{ value: `sitio:${textoDeSitio(sitio)}`, label: `Open ${textoDeSitio(sitio)}`, ejecutar: (e) => e.abrirCodigo(sitio) }] },
+    { value: 'File', items: sitio === undefined || !puedeEscribir ? [] : [{ value: `sitio:${textoDeSitio(sitio)}`, label: `Open ${textoDeSitio(sitio)}`, ejecutar: (e) => e.abrirCodigo(sitio) }] },
     {
       value: 'Commands',
       items: comandosDe(modo).filter((c) => c.enBuscador !== false && contiene(c.nombre, consulta.trim())).map((c) => ({ value: `comando:${c.id}`, label: c.nombre, teclas: etiquetasDeTeclas(c, plataforma), ejecutar: c.ejecutar })),

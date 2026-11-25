@@ -17,9 +17,9 @@ import { textoDeSitio } from '../sitio';
 import { usePrevisualizacionDeTema } from './previsualizacion';
 
 export function GaleriaDeTemas(): ReactElement {
-  const { fuente, vista, cliente, escribir, modo } = useEstudio();
+  const { fuente, vista, cliente, escribir, puedeEscribir } = useEstudio();
   // Pinning writes `theme` in the View: only in `dev`.
-  const conFijar = modo === 'dev';
+  const conFijar = puedeEscribir;
   const { temaPrevio, previsualizarTema } = usePrevisualizacionDeTema();
   const [elegido, setElegido] = useState<string>();
   const marcas = useMarcasExternas(cliente);
