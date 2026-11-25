@@ -79,9 +79,9 @@ export function piezasDeAtributo(atributo: Atributo, metricas: Pick<Metricas, 'f
   ];
 }
 
-/** `derecha` es su distancia al borde derecho de la fila. */
+/** `derecha` es su distancia al borde derecho de la fila. `planned` es la marca Planeado (ADR 0011), tras las de clave. */
 export interface ChipDeClave {
-  clave: ClaveDeAtributo;
+  clave: ClaveDeAtributo | 'planned';
   texto: string;
   derecha: number;
   width: number;
@@ -92,17 +92,30 @@ const SEPARACION_DE_CHIPS = 4;
 const MARGEN_DERECHO_DE_CHIPS = 6;
 const HOLGURA_ANTES_DE_CHIPS = 12;
 
-/** De izquierda a derecha en el orden de `keys`; vacio fuera de una Vista ER (`metricas.marcasDeClave`). */
-export function chipsDeClaves(atributo: Pick<Atributo, 'keys'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): ChipDeClave[] {
-  if (metricas.marcasDeClave !== true || atributo.keys === undefined) return [];
+/** Texto del chip de la marca Planeado. */
+const TEXTO_DE_PLANEADO = 'PLAN';
+
+/**
+ * De izquierda a derecha en el orden de `keys` y, si el Atributo lleva la marca `planned`, su chip al final; vacio
+ * fuera de una Vista ER (`metricas.marcasDeClave`). El ancho de un chip sale de su texto.
+ */
+export function chipsDeClaves(atributo: Pick<Atributo, 'keys' | 'planned'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): ChipDeClave[] {
+  if (metricas.marcasDeClave !== true) return [];
+  const marcas: Array<ClaveDeAtributo | 'planned'> = [...(atributo.keys ?? []), ...(atributo.planned === true ? (['planned'] as const) : [])];
   const tamano = metricas.tamanoDeFila?.key ?? Math.round(metricas.fontSize * metricas.escalaAtributo * 0.8 * 10) / 10;
-  const ancho = Math.ceil(2 * tamano * 0.62 + 8);
-  const n = atributo.keys.length;
-  return atributo.keys.map((clave, i) => ({ clave, texto: clave.toUpperCase(), derecha: MARGEN_DERECHO_DE_CHIPS + (n - 1 - i) * (ancho + SEPARACION_DE_CHIPS), width: ancho, tamano }));
+  const chips: ChipDeClave[] = [];
+  let derecha = MARGEN_DERECHO_DE_CHIPS;
+  for (const clave of [...marcas].reverse()) {
+    const texto = clave === 'planned' ? TEXTO_DE_PLANEADO : clave.toUpperCase();
+    const width = Math.ceil(texto.length * tamano * 0.62 + 8);
+    chips.unshift({ clave, texto, derecha, width, tamano });
+    derecha += width + SEPARACION_DE_CHIPS;
+  }
+  return chips;
 }
 
 /** Incluye la holgura que los separa del texto; 0 sin chips. */
-export function anchoDeChips(atributo: Pick<Atributo, 'keys'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): number {
+export function anchoDeChips(atributo: Pick<Atributo, 'keys' | 'planned'>, metricas: Pick<Metricas, 'fontSize' | 'escalaAtributo' | 'marcasDeClave' | 'tamanoDeFila'>): number {
   const chips = chipsDeClaves(atributo, metricas);
   return chips.length === 0 ? 0 : HOLGURA_ANTES_DE_CHIPS + Math.max(...chips.map((c) => c.derecha + c.width));
 }

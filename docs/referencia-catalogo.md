@@ -133,6 +133,20 @@ Y `zone` (`all`, `header`, `body`; sin ella, `all`): que parte de la caja pinta 
 | `attrs` | `text` |
 | `counter` | `chip` |
 
+## States
+
+A `state <name> { ... }` patch only paints: it never changes the Metrics. Later rows win over earlier ones when an element is in several states.
+
+| State | Set by |
+| --- | --- |
+| `planned` | The Model: Planned elements. Without its own patch a Theme inherits the default look: faded, with a dashed contour around boxes and dashed lines |
+| `hover` | The Dev UI: the element under the pointer |
+| `selected` | The Dev UI: the selected element |
+| `ghost` | The Dev UI: the Node being dragged |
+| `on-path` | The Dev UI: the Nodes and Edges of the highlighted path |
+| `dimmed` | The Dev UI: what is off the highlighted path |
+| `focus` | The Dev UI: the element with keyboard focus |
+
 ## Fila de tabla ER (`row`)
 
 Bloque del Tema que estiliza las filas de una Vista `er`. `height` (12 a 120) y el `size` de `name`, `type` y `key` (multiplo del tamano de texto del Tema, como en los Slots) cambian el tamano medido; el resto solo pinta.
@@ -143,7 +157,7 @@ Bloque del Tema que estiliza las filas de una Vista `er`. `height` (12 a 120) y 
 | `alternate { ... }` | Parche de las filas impares |
 | `key pk|fk|uk { ... }` | Parche de las filas con esa marca de clave, en ese orden |
 | `optional { ... }` | Parche de los Atributos opcionales, tras las claves |
-| `state hover|seleccionado|... { ... }` | Parche de estado de la fila (solo pinta), sobre la pila de su variante; el shell emite `hover` y `selected` |
+| `state hover|selected|... { ... }` | Parche de estado de la fila (solo pinta), sobre la pila de su variante; el shell emite `hover` y `selected` |
 | `name { ... }` | Estilo de texto con la Primitiva `text` |
 | `type { ... }` | Estilo de texto con la Primitiva `text` |
 | `key { ... }` | Estilo de texto con la Primitiva `chip` (el chip de cada marca de clave) |

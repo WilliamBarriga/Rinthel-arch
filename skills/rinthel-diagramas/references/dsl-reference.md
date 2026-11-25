@@ -8,6 +8,7 @@ A Workspace is a folder with any number of `.dg` files (subfolders too); they me
 
 - `specification`: Node kinds
 - `model`: Nodes and Edges
+- Planned elements
 - Interactions (sequence)
 - `view`: what to show
 - Sequence View
@@ -51,6 +52,28 @@ model {
 - `extend <node> { ... }`, inside a `model` block, adds children, Attributes or `source` to a Node declared in another file or block.
 - Edges are declared only in `model`, never in a View.
 - An ordered scenario between Nodes is an Interaction (below).
+
+## Planned elements
+
+`planned` marks what is proposed and not built yet, next to what exists. It belongs to the Model, so every View draws it: the default Theme fades planned elements and gives them a dashed contour (boxes) or dashed lines (Edges, Messages); a Theme can restyle it with `state planned { ... }`.
+
+```
+model {
+  service checkout "Checkout" "Pays an order" planned {   // after title and description, before the body
+    service cart "Cart"                                   // planned too: a planned Group marks its descendants
+  }
+  table orders "Orders" {
+    coupon: text? fk planned "From the PRD"               // among the key marks; drawn as a PLAN chip in er Views
+  }
+  api -> checkout.cart "adds" planned                     // trailing, after `identifying` if both
+  interaction pay "Pay" planned { api -> checkout }      // after title and description
+}
+```
+
+- An Edge is drawn planned if it carries the mark or if either end (Node or Attribute) is planned; a merged Edge only if all it merges are.
+- A Message is drawn planned if its Interaction or one of its Lifelines is planned.
+- A real Node (with a Source `path`) under a planned Group is the error `real-node-in-planned-group`; its `fix` removes the Group's mark. The other way out is to move the Node out of the Group.
+- A Node named `planned` cannot open the declaration right after a Node, Edge or Attribute (it would read as its mark).
 
 ## Interactions
 

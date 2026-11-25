@@ -3,7 +3,7 @@
  * absolutas (Grupos HTML, Aristas SVG, Nodos HTML) bajo un solo `transform` de pan/zoom, asi HTML y SVG quedan alineados
  * a cualquier zoom. Pura: la misma entrada da el mismo arbol. Los valores de atributo van sin escapar: React los escapa.
  */
-import { idDeArista } from 'canonico';
+import { idDeArista, idDeElementoDeSecuencia } from 'canonico';
 import type { AristaResuelta, CajaDeNodo, Geometria, GeometriaGrafo, IconProvider, NodoResuelto, Tema, Visibilidad, VistaDeGrafo, VistaResuelta } from 'canonico';
 import { indiceDeGeometria } from 'layout';
 import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
@@ -93,7 +93,8 @@ type ContextoDeGrafo = Contexto & { view: VistaDeGrafo; geometry: GeometriaGrafo
  * Lanza si un Nodo de la Vista is not in the geometry, si la Geometria es de otro Tipo de diagrama que la Vista o si
  * el Tema no cumple el contrato.
  */
-export function construirEscena(entrada: EntradaDeEscena): Elemento {
+export function construirEscena(dada: EntradaDeEscena): Elemento {
+  const entrada = conPlaneados(dada);
   const { view, geometry } = entrada;
   switch (view.type) {
     case 'sequence':
@@ -105,6 +106,25 @@ export function construirEscena(entrada: EntradaDeEscena): Elemento {
       if (geometry.kind !== 'grafo') throw new Error(`construirEscena: the View is '${view.type}' and the Geometry is '${geometry.kind}'`);
       return construirEscenaDeGrafo({ ...entrada, view, geometry });
   }
+}
+
+/**
+ * Lo Planeado del Modelo (ADR 0011, ya heredado en la Vista resuelta) es un estado visual mas: `planned` va delante de
+ * los estados del llamador en cada Nodo, Arista, Mensaje y Atributo marcado (este, solo con su marca propia).
+ */
+function conPlaneados(entrada: EntradaDeEscena): EntradaDeEscena {
+  const { view } = entrada;
+  const ids = [
+    ...view.nodes.filter((nodo) => nodo.planned === true).map((nodo) => nodo.id),
+    ...view.nodes.flatMap((nodo) => nodo.attributes.filter((atributo) => atributo.planned === true).map((atributo) => `${nodo.id}#${atributo.name}`)),
+    ...(view.type === 'sequence'
+      ? view.interaction.messages.filter((mensaje) => mensaje.planned === true).map((mensaje) => idDeElementoDeSecuencia(view.interaction.id, mensaje.ruta))
+      : view.edges.filter((arista) => arista.planned === true).map(idDeArista)),
+  ];
+  if (ids.length === 0) return entrada;
+  const estados: Record<string, readonly EstadoVisual[]> = { ...entrada.estados };
+  for (const id of ids) estados[id] = ['planned', ...(estados[id] ?? []).filter((estado) => estado !== 'planned')];
+  return { ...entrada, estados };
 }
 
 function construirEscenaDeGrafo(entrada: EntradaDeEscena & { view: VistaDeGrafo; geometry: GeometriaGrafo }): Elemento {
@@ -259,6 +279,8 @@ export function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
   const datos = { nodo, caja, trazo, texto: nodo.label, icons, ...(contexto.estados !== undefined && { estados: contexto.estados }) };
   const conmutable = grupo || (nodo.collapsed && nodo.link === undefined);
   const efectos = efectosDeElemento(estilo, pila, nodo.id);
+  // Sin parche `planned` propio, la caja toma el aspecto por defecto: atenuada y con contorno discontinuo.
+  const planeadoPorDefecto = planeado(contexto.estados, nodo.id) && pila.estados.planned === undefined;
   const codigo = {
     nodo,
     ancho: caja.width,
@@ -271,7 +293,7 @@ export function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
 
   return {
     tag: 'div',
-    attrs: { class: 'rd-caja', 'data-id': nodo.id, 'data-elemento': clave, ...(tipo !== undefined && { 'data-tipo': tipo }), ...(atenuado(contexto.estados, nodo.id) && { 'data-atenuado': '' }), style: posicion(caja, efectos.giro) },
+    attrs: { class: 'rd-caja', 'data-id': nodo.id, 'data-elemento': clave, ...(tipo !== undefined && { 'data-tipo': tipo }), ...(atenuado(contexto.estados, nodo.id) && { 'data-atenuado': '' }), ...(planeadoPorDefecto && { 'data-planeado': '' }), style: posicion(caja, efectos.giro) },
     hijos: [
       {
         tag: 'div',
@@ -299,6 +321,7 @@ export function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
           ...efectos.encima,
         ],
       },
+      ...(planeadoPorDefecto ? [pintarEstadoDeCaja('planned', nodo.id)] : []),
       ...estadosDeNodo(nodo, caja, contexto),
     ],
   };
@@ -320,7 +343,15 @@ function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, 
 
 /** `dimmed` no tiene contorno: atenua el elemento entero (marca `data-atenuado`, estilada por la hoja). */
 export const atenuado = (estados: Estados | undefined, id: string): boolean => estados?.[id]?.includes('dimmed') === true;
-export const contornos = (lista: readonly EstadoVisual[] | undefined): EstadoVisual[] => (lista ?? []).filter((e) => e !== 'dimmed');
+/** `planned` atenua el elemento (marca `data-planeado`) y discontinua sus lineas; su contorno de caja lo pone quien la dibuja. */
+export const planeado = (estados: Estados | undefined, id: string): boolean => estados?.[id]?.includes('planned') === true;
+/** Marcas de `dimmed` y `planned` de un trazo (Arista, Mensaje, Lifeline) o de su etiqueta. */
+export const marcasDeTrazo = (estados: Estados | undefined, id: string): Record<string, string> => ({
+  ...(atenuado(estados, id) && { 'data-atenuado': '' }),
+  ...(planeado(estados, id) && { 'data-planeado': '' }),
+});
+/** Estados con contorno propio sobre el elemento: todos menos `dimmed` y `planned`. */
+export const contornos = (lista: readonly EstadoVisual[] | undefined): EstadoVisual[] => (lista ?? []).filter((e) => e !== 'dimmed' && e !== 'planned');
 
 function tieneFilas(nodo: NodoResuelto, estilo: Estilo, detail?: NivelDeDetalle): boolean {
   return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, metricasDeHoja(estilo.tabla, nodo)).length > 0;
@@ -346,7 +377,7 @@ function aristaSvg(arista: AristaResuelta, { view, geometry, estilo, onSelect, v
       desde: arista.fromCardinality,
       hasta: arista.toCardinality,
       ...(view.type === 'er' && { er: { identificante: arista.identifying === true } }),
-      atributos: atenuado(estados, id) ? { ...v, 'data-atenuado': '' } : v,
+      atributos: { ...v, ...marcasDeTrazo(estados, id) },
       extra: contornos(estados?.[id]).map((e) => pintarEstadoDeRuta(estilo, e, id, puntos)),
       ...(onSelect !== undefined && { alClic: () => onSelect(id) }),
     }),
@@ -366,7 +397,7 @@ function etiquetaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visib
   return [
     {
       tag: 'g',
-      attrs: { 'data-edge-labels': id, ...(atenuado(estados, id) ? { ...v, 'data-atenuado': '' } : v) },
+      attrs: { 'data-edge-labels': id, ...v, ...marcasDeTrazo(estados, id) },
       ...(onSelect !== undefined && { alClic: () => onSelect(id) }),
       hijos: [pintarEtiquetaDeArista(estilo, { id, texto: arista.label, puntos, caja: geometry.labels[id] })],
     },

@@ -66,6 +66,7 @@ const codigosDeV1 = [
   'er-cardinality',
   'old-catalog-value',
   'old-workspace-convention',
+  'real-node-in-planned-group',
 ];
 
 describe('catalogo de codigos de issue', () => {

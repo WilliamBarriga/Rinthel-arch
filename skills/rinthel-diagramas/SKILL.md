@@ -126,7 +126,7 @@ model {
 view tables { type er include ** }
 ```
 
-- Attribute `name: type[?] [pk] [fk] [uk] ["notes"]`; `?` makes it optional. Trailing `identifying` on an Edge: solid line, the rest dashed.
+- Attribute `name: type[?] [pk] [fk] [uk] [planned] ["notes"]`; `?` makes it optional. Trailing `identifying` on an Edge: solid line, the rest dashed.
 - Endpoints `node#attribute`; cardinalities `0..1`, `1`, `0..*`, `1..*`.
 - A collapsed Group aggregates the FKs of its tables (no markers).
 

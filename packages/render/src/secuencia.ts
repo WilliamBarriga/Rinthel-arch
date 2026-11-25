@@ -11,7 +11,7 @@ import type { CapaPintada, PinturaDeCajaDeSecuencia, PinturaDeTrazoDeSecuencia, 
 import { estiloEnLinea, num } from './elemento';
 import type { Elemento } from './elemento';
 import { resolverEstilo } from './estilo';
-import { aplanar, atenuado, cajaDeNodo, capaSvg, colorDeTrazo, contornos, marcoDeEscena, nombresAccesibles, opacidad, posicionesDeEscalonado, visibilidadSvg } from './escena';
+import { aplanar, cajaDeNodo, capaSvg, colorDeTrazo, contornos, marcasDeTrazo, marcoDeEscena, planeado, nombresAccesibles, opacidad, posicionesDeEscalonado, visibilidadSvg } from './escena';
 import type { Contexto, EntradaDeEscena, Estados } from './escena';
 import { declaracionesDeCaja } from './hoja';
 import { pilaDeNodo } from './pilas';
@@ -49,7 +49,7 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: Vi
     return [
       {
         tag: 'g',
-        attrs: { 'data-lifeline': nodo.id, ...(atenuado(entrada.estados, nodo.id) ? { ...v, 'data-atenuado': '' } : v) },
+        attrs: { 'data-lifeline': nodo.id, ...v, ...marcasDeTrazo(entrada.estados, nodo.id) },
         ...(entrada.onSelect !== undefined && { alClic: () => entrada.onSelect!(nodo.id) }),
         hijos: [...pintarTrazos(pintura, puntos, estilo.pintura.semilla), ...pintarMarcadores(estilo, pintura, puntos)],
       },
@@ -81,14 +81,14 @@ export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: Vi
     const pintura = deColor(secuencia.mensaje, coloresDeNodo.get(mensaje.from)).tipos[mensaje.kind]!;
     return {
       tag: 'g',
-      attrs: { 'data-edge': id, 'data-message': id, 'data-kind': mensaje.kind, ...(atenuado(entrada.estados, id) ? { ...v, 'data-atenuado': '' } : v) },
+      attrs: { 'data-edge': id, 'data-message': id, 'data-kind': mensaje.kind, ...v, ...marcasDeTrazo(entrada.estados, id) },
       hijos: [...pintarTrazos(pintura, ruta.points, estilo.pintura.semilla), ...pintarMarcadores(estilo, pintura, ruta.points), ...contornos(entrada.estados?.[id]).map((e) => pintarEstadoDeRuta(estilo, e, id, ruta.points))],
     };
   });
   const etiquetas = rutas.flatMap(({ mensaje, ruta }): Elemento[] => {
     if (mensaje.label === undefined) return [];
     const id = idDe(mensaje);
-    return [{ tag: 'g', attrs: { 'data-edge-labels': id, ...visibilidadSvg(visibility(id)) }, hijos: [pintarEtiquetaDeArista(estilo, { id, texto: mensaje.label, puntos: ruta.points, caja: ruta.label })] }];
+    return [{ tag: 'g', attrs: { 'data-edge-labels': id, ...visibilidadSvg(visibility(id)), ...(planeado(entrada.estados, id) && { 'data-planeado': '' }) }, hijos: [pintarEtiquetaDeArista(estilo, { id, texto: mensaje.label, puntos: ruta.points, caja: ruta.label })] }];
   });
 
   const grupos = geometry.groups.map((grupo) => grupoHtml(grupo, contexto));
