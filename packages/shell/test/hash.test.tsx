@@ -1,22 +1,22 @@
 import { act, cleanup, render, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { Geometria, VistaResuelta } from 'canonico';
-import { VistaInteractiva, deserializarEstado, hashDelNavegador, serializarEstado, useEstadoEnHash } from 'shell';
-import type { AdaptadorDeHash, AdaptadorDeLayout, EstadoDeShell } from 'shell';
-import { pulsarNodo } from './ayudas';
-import { TEMA_NEUTRO } from 'tema';
+import { canonicalFormSchema } from 'canonical';
+import type { Geometry, ResolvedView } from 'canonical';
+import { InteractiveView, deserializeState, browserHash, serializeState, useHashState } from 'shell';
+import type { HashAdapter, LayoutAdapter, ShellState } from 'shell';
+import { pressNode } from './helpers';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(() => {
   cleanup();
   window.history.replaceState(null, '', '#');
 });
 
-const nodo = (id: string, children: unknown[] = []) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children });
-const fuente = fuenteCanonicaSchema.parse({
+const node = (id: string, children: unknown[] = []) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children });
+const source = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
-  model: { nodes: [nodo('g', [nodo('g.h'), nodo('g.i')]), nodo('x'), nodo('y')], edges: [] },
+  model: { nodes: [node('g', [node('g.h'), node('g.i')]), node('x'), node('y')], edges: [] },
   views: [
     {
       id: 'a',
@@ -33,9 +33,9 @@ const fuente = fuenteCanonicaSchema.parse({
   ],
 });
 
-const POR_DEFECTO: EstadoDeShell = { path: ['a'], state: {}, selected: null, step: 0 };
+const DEFAULTS: ShellState = { path: ['a'], state: {}, selected: null, step: 0 };
 
-const completo: EstadoDeShell = {
+const full: ShellState = {
   path: ['a', 'b', 'a'],
   state: { expanded: ['g'], collapsed: [] },
   selected: 'x',
@@ -43,217 +43,217 @@ const completo: EstadoDeShell = {
   camera: { x: 10.5, y: -3, width: 400, height: 300 },
 };
 
-describe('serializarEstado y deserializarEstado', () => {
-  it('ida y vuelta sin perdida', () => {
-    expect(deserializarEstado(serializarEstado(completo), fuente)).toEqual(completo);
+describe('serializeState and deserializeState', () => {
+  it('round trip without loss', () => {
+    expect(deserializeState(serializeState(full), source)).toEqual(full);
   });
 
-  it('ids con caracteres especiales sobreviven', () => {
-    const f = fuenteCanonicaSchema.parse({
+  it('ids with special characters survive', () => {
+    const f = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
-      model: { nodes: [nodo('a_b-1')], edges: [] },
+      model: { nodes: [node('a_b-1')], edges: [] },
       views: [{ id: 'v 1,2&=%', type: 'flow', include: ['**'], exclude: [] }],
     });
-    const e: EstadoDeShell = { path: ['v 1,2&=%'], state: {}, selected: 'a_b-1', step: 0 };
-    expect(deserializarEstado(serializarEstado(e), f)).toEqual(e);
+    const e: ShellState = { path: ['v 1,2&=%'], state: {}, selected: 'a_b-1', step: 0 };
+    expect(deserializeState(serializeState(e), f)).toEqual(e);
   });
 
-  it('el estado por defecto serializa a hash vacio', () => {
-    expect(serializarEstado(POR_DEFECTO, 'a')).toBe('');
-    expect(deserializarEstado('', fuente)).toEqual(POR_DEFECTO);
+  it('the default state serializes to an empty hash', () => {
+    expect(serializeState(DEFAULTS, 'a')).toBe('');
+    expect(deserializeState('', source)).toEqual(DEFAULTS);
   });
 
-  it('acepta el prefijo #', () => {
-    expect(deserializarEstado('#' + serializarEstado(completo), fuente)).toEqual(completo);
+  it('accepts the # prefix', () => {
+    expect(deserializeState('#' + serializeState(full), source)).toEqual(full);
   });
 
-  it('hash basura cae al estado por defecto', () => {
+  it('a garbage hash falls back to the default state', () => {
     for (const h of ['%%%', '===&&&', 'p=&s=&t=abc&cam=x,y', 'zzz']) {
-      expect(deserializarEstado(h, fuente)).toEqual(POR_DEFECTO);
+      expect(deserializeState(h, source)).toEqual(DEFAULTS);
     }
   });
 
-  it('ids inexistentes caen al default por campo', () => {
-    const e = deserializarEstado('p=a&p=nada&p=b&s=fantasma&e=g&e=nope&c=zzz&t=9', fuente);
+  it('missing ids fall back to the default per field', () => {
+    const e = deserializeState('p=a&p=nada&p=b&s=fantasma&e=g&e=nope&c=zzz&t=9', source);
     expect(e.path).toEqual(['a', 'b']);
     expect(e.selected).toBeNull();
     expect(e.state).toEqual({ expanded: ['g'], collapsed: [] });
     expect(e.step).toBe(0);
   });
 
-  it('Vista inexistente cae a la Vista por defecto', () => {
-    expect(deserializarEstado('p=nada', fuente).path).toEqual(['a']);
+  it('a missing View falls back to the default View', () => {
+    expect(deserializeState('p=nada', source).path).toEqual(['a']);
   });
 
-  it('una Vista de secuencia con Pasos entra en el primero; arquitectura conserva el 0', () => {
-    const secuencia = fuenteCanonicaSchema.parse({
+  it('a sequence View with Steps enters at the first one; architecture keeps 0', () => {
+    const sequence = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
-      model: { nodes: [nodo('x'), nodo('y')], edges: [], interactions: [{ id: 'i', title: 'i', items: [{ type: 'message', kind: 'sync', from: 'x', to: 'y' }] }] },
+      model: { nodes: [node('x'), node('y')], edges: [], interactions: [{ id: 'i', title: 'i', items: [{ type: 'message', kind: 'sync', from: 'x', to: 'y' }] }] },
       views: [{ id: 's', type: 'sequence', include: ['**'], exclude: [], interaction: 'i', steps: [{ title: 'uno', show: [] }] }],
     });
-    expect(deserializarEstado('', secuencia).step).toBe(1);
-    expect(deserializarEstado('p=s&t=0', secuencia).step).toBe(0);
-    expect(serializarEstado({ path: ['s'], state: {}, selected: null, step: 1 }, 's', secuencia)).toBe('');
-    expect(serializarEstado({ path: ['s'], state: {}, selected: null, step: 0 }, 's', secuencia)).toBe('t=0');
-    expect(deserializarEstado('', fuente).step).toBe(0);
+    expect(deserializeState('', sequence).step).toBe(1);
+    expect(deserializeState('p=s&t=0', sequence).step).toBe(0);
+    expect(serializeState({ path: ['s'], state: {}, selected: null, step: 1 }, 's', sequence)).toBe('');
+    expect(serializeState({ path: ['s'], state: {}, selected: null, step: 0 }, 's', sequence)).toBe('t=0');
+    expect(deserializeState('', source).step).toBe(0);
   });
 
-  it('una Vista ER con Pasos entra en el primero: el Paso 0 la dejaria vacia', () => {
-    const er = fuenteCanonicaSchema.parse({
+  it('an ER View with Steps enters at the first one: Step 0 would leave it empty', () => {
+    const er = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
-      model: { nodes: [nodo('x'), nodo('y')], edges: [] },
+      model: { nodes: [node('x'), node('y')], edges: [] },
       views: [{ id: 'e', type: 'er', include: ['**'], exclude: [], steps: [{ title: 'uno', show: [{ selector: 'x' }] }] }],
     });
-    expect(deserializarEstado('', er).step).toBe(1);
-    expect(deserializarEstado('p=e&t=0', er).step).toBe(0);
-    expect(serializarEstado({ path: ['e'], state: {}, selected: null, step: 1 }, 'e', er)).toBe('');
+    expect(deserializeState('', er).step).toBe(1);
+    expect(deserializeState('p=e&t=0', er).step).toBe(0);
+    expect(serializeState({ path: ['e'], state: {}, selected: null, step: 1 }, 'e', er)).toBe('');
   });
 
-  it('el Paso se acota a los Pasos de la Vista activa', () => {
-    expect(deserializarEstado('p=b&t=1', fuente).step).toBe(0);
-    expect(deserializarEstado('p=a&t=-1', fuente).step).toBe(0);
-    expect(deserializarEstado('p=a&t=1', fuente).step).toBe(1);
+  it('the Step is clamped to the Steps of the active View', () => {
+    expect(deserializeState('p=b&t=1', source).step).toBe(0);
+    expect(deserializeState('p=a&t=-1', source).step).toBe(0);
+    expect(deserializeState('p=a&t=1', source).step).toBe(1);
   });
 
-  it('camara invalida se descarta', () => {
-    expect(deserializarEstado('cam=1,2,0,5', fuente).camera).toBeUndefined();
-    expect(deserializarEstado('cam=1,2,3', fuente).camera).toBeUndefined();
-    expect(deserializarEstado('cam=1,2,NaN,5', fuente).camera).toBeUndefined();
+  it('an invalid camera is discarded', () => {
+    expect(deserializeState('cam=1,2,0,5', source).camera).toBeUndefined();
+    expect(deserializeState('cam=1,2,3', source).camera).toBeUndefined();
+    expect(deserializeState('cam=1,2,NaN,5', source).camera).toBeUndefined();
   });
 });
 
-describe('useEstadoEnHash', () => {
-  const adaptadorFake = (inicial = '') => {
-    let hash = inicial;
-    const oyentes = new Set<() => void>();
-    const escrituras: { hash: string; reemplazar: boolean }[] = [];
-    const a: AdaptadorDeHash = {
-      leer: () => hash,
-      escribir: (h, o) => {
+describe('useHashState', () => {
+  const fakeAdapter = (initial = '') => {
+    let hash = initial;
+    const listeners = new Set<() => void>();
+    const writes: { hash: string; replace: boolean }[] = [];
+    const a: HashAdapter = {
+      read: () => hash,
+      write: (h, o) => {
         hash = h;
-        escrituras.push({ hash: h, reemplazar: o.reemplazar });
+        writes.push({ hash: h, replace: o.replace });
       },
-      suscribir: (cb) => {
-        oyentes.add(cb);
-        return () => oyentes.delete(cb);
+      subscribe: (cb) => {
+        listeners.add(cb);
+        return () => listeners.delete(cb);
       },
     };
     return {
       a,
-      escrituras,
-      navegar: (h: string) => {
+      writes,
+      navigate: (h: string) => {
         hash = h;
-        oyentes.forEach((o) => o());
+        listeners.forEach((o) => o());
       },
     };
   };
 
-  it('arranca desde el hash y lo expone como props', () => {
-    const { a } = adaptadorFake(serializarEstado(completo));
-    const { result } = renderHook(() => useEstadoEnHash({ source: fuente, hash: a, camera: true }));
+  it('starts from the hash and exposes it as props', () => {
+    const { a } = fakeAdapter(serializeState(full));
+    const { result } = renderHook(() => useHashState({ source, hash: a, camera: true }));
     expect(result.current.view).toBe('a');
-    expect(result.current.path).toEqual(completo.path);
-    expect(result.current.state).toEqual(completo.state);
+    expect(result.current.path).toEqual(full.path);
+    expect(result.current.state).toEqual(full.state);
     expect(result.current.selected).toBe('x');
     expect(result.current.step).toBe(2);
-    expect(result.current.camera).toEqual(completo.camera);
+    expect(result.current.camera).toEqual(full.camera);
   });
 
-  it('los avisos escriben el hash; el cambio de Vista empuja historial y reinicia el resto', () => {
-    const { a, escrituras } = adaptadorFake();
-    const { result } = renderHook(() => useEstadoEnHash({ source: fuente, hash: a, camera: true }));
+  it('the callbacks write the hash; a View change pushes history and resets the rest', () => {
+    const { a, writes } = fakeAdapter();
+    const { result } = renderHook(() => useHashState({ source, hash: a, camera: true }));
     act(() => result.current.onSelect('x'));
     act(() => result.current.onStepChange(1));
     act(() => result.current.onStateChange({ expanded: ['g'] }));
     act(() => result.current.onCameraChange({ x: 1, y: 2, width: 3, height: 4 }));
-    expect(escrituras.every((e) => e.reemplazar)).toBe(true);
-    const antes = deserializarEstado(escrituras[escrituras.length - 1]!.hash, fuente);
-    expect(antes).toMatchObject({ selected: 'x', step: 1, state: { expanded: ['g'] }, camera: { x: 1, y: 2, width: 3, height: 4 } });
+    expect(writes.every((e) => e.replace)).toBe(true);
+    const before = deserializeState(writes[writes.length - 1]!.hash, source);
+    expect(before).toMatchObject({ selected: 'x', step: 1, state: { expanded: ['g'] }, camera: { x: 1, y: 2, width: 3, height: 4 } });
 
     act(() => result.current.onPathChange(['a', 'b']));
-    const ultima = escrituras[escrituras.length - 1]!;
-    expect(ultima.reemplazar).toBe(false);
-    expect(deserializarEstado(ultima.hash, fuente)).toEqual({ path: ['a', 'b'], state: {}, selected: null, step: 0 });
+    const last = writes[writes.length - 1]!;
+    expect(last.replace).toBe(false);
+    expect(deserializeState(last.hash, source)).toEqual({ path: ['a', 'b'], state: {}, selected: null, step: 0 });
     expect(result.current.selected).toBeNull();
     expect(result.current.camera).toBeUndefined();
   });
 
-  it('sin camera:true el viewport no se lee ni se escribe', () => {
-    const { a, escrituras } = adaptadorFake('cam=1,2,3,4');
-    const { result } = renderHook(() => useEstadoEnHash({ source: fuente, hash: a }));
+  it('without camera:true the viewport is neither read nor written', () => {
+    const { a, writes } = fakeAdapter('cam=1,2,3,4');
+    const { result } = renderHook(() => useHashState({ source, hash: a }));
     expect(result.current.camera).toBeUndefined();
     act(() => result.current.onCameraChange({ x: 9, y: 9, width: 9, height: 9 }));
-    expect(escrituras).toEqual([]);
+    expect(writes).toEqual([]);
   });
 
-  it('un cambio externo del hash (atras del navegador) actualiza el estado', () => {
-    const { a, navegar } = adaptadorFake();
-    const { result } = renderHook(() => useEstadoEnHash({ source: fuente, hash: a }));
-    act(() => navegar('p=a&p=b'));
+  it('an external hash change (browser back) updates the state', () => {
+    const { a, navigate } = fakeAdapter();
+    const { result } = renderHook(() => useHashState({ source, hash: a }));
+    act(() => navigate('p=a&p=b'));
     expect(result.current.view).toBe('b');
   });
 
-  it('un cambio de ruta que mantiene la Vista conserva el resto', () => {
-    const { a } = adaptadorFake('s=x');
-    const { result } = renderHook(() => useEstadoEnHash({ source: fuente, hash: a }));
+  it('a path change that keeps the View keeps the rest', () => {
+    const { a } = fakeAdapter('s=x');
+    const { result } = renderHook(() => useHashState({ source, hash: a }));
     act(() => result.current.onPathChange(['a', 'a']));
     expect(result.current.selected).toBe('x');
   });
 
-  it('Vista por defecto configurable', () => {
-    const { a } = adaptadorFake();
-    const { result } = renderHook(() => useEstadoEnHash({ source: fuente, hash: a, defaultView: 'b' }));
+  it('configurable default View', () => {
+    const { a } = fakeAdapter();
+    const { result } = renderHook(() => useHashState({ source, hash: a, defaultView: 'b' }));
     expect(result.current.view).toBe('b');
   });
 });
 
-describe('integracion con VistaInteractiva y location.hash', () => {
-  const layout: AdaptadorDeLayout = async (vista: VistaResuelta) => {
-    const nodes: Geometria['nodes'] = {};
-    vista.nodes.forEach((n, i) => {
+describe('integration with InteractiveView and location.hash', () => {
+  const layout: LayoutAdapter = async (view: ResolvedView) => {
+    const nodes: Geometry['nodes'] = {};
+    view.nodes.forEach((n, i) => {
       nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
     });
     return { nodes, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 500, height: 50 };
   };
   function App() {
-    const props = useEstadoEnHash({ source: fuente, hash: hashDelNavegador(window), camera: true });
-    return <VistaInteractiva source={fuente} theme={TEMA_NEUTRO} layout={layout} width={800} height={600} {...props} />;
+    const props = useHashState({ source, hash: browserHash(window), camera: true });
+    return <InteractiveView source={source} theme={NEUTRAL_THEME} layout={layout} width={800} height={600} {...props} />;
   }
-  const dibujado = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`[data-id="${id}"]`)).not.toBeNull());
+  const waitForDrawn = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`[data-id="${id}"]`)).not.toBeNull());
 
-  it('recargar con el hash restaura Vista y ruta', async () => {
-    const primera = render(<App />);
-    await dibujado(primera.container, 'x');
-    pulsarNodo(primera.container, 'x');
-    await dibujado(primera.container, 'y');
+  it('reloading with the hash restores View and path', async () => {
+    const first = render(<App />);
+    await waitForDrawn(first.container, 'x');
+    pressNode(first.container, 'x');
+    await waitForDrawn(first.container, 'y');
     expect(window.location.hash).toContain('p=a&p=b');
-    primera.unmount();
+    first.unmount();
 
-    const segunda = render(<App />);
-    await dibujado(segunda.container, 'y');
+    const second = render(<App />);
+    await waitForDrawn(second.container, 'y');
     expect(Array.from(document.querySelectorAll('[data-breadcrumbs] [data-crumb]')).map((e) => e.getAttribute('data-crumb'))).toEqual(['a', 'b']);
   });
 
-  it('restaura Paso y seleccion en la Vista inicial', async () => {
+  it('restores Step and selection in the initial View', async () => {
     window.history.replaceState(null, '', '#s=g&t=1');
     const { container } = render(<App />);
-    await dibujado(container, 'x');
+    await waitForDrawn(container, 'x');
     expect(container.querySelector('[data-selected="g"]')).not.toBeNull();
     expect(container.textContent).toContain('Step 1 of 2');
   });
 
-  it('hash invalido no rompe', async () => {
+  it('an invalid hash does not break', async () => {
     window.history.replaceState(null, '', '#p=nada&s=zzz&t=99');
     const { container } = render(<App />);
-    await dibujado(container, 'x');
+    await waitForDrawn(container, 'x');
   });
 });
 
-describe('hashDelNavegador en archivos locales', () => {
-  it('si replaceState lanza (file:// en algunos navegadores), reemplaza la entrada con location.replace', () => {
-    const reemplazos: string[] = [];
+describe('browserHash on local files', () => {
+  it('if replaceState throws (file:// in some browsers), it replaces the entry with location.replace', () => {
+    const replacements: string[] = [];
     const win = {
-      location: { hash: '', pathname: '/a.html', search: '', replace: (destino: string) => reemplazos.push(destino) },
+      location: { hash: '', pathname: '/a.html', search: '', replace: (target: string) => replacements.push(target) },
       history: {
         replaceState: () => {
           throw new DOMException('no permitido', 'SecurityError');
@@ -262,19 +262,19 @@ describe('hashDelNavegador en archivos locales', () => {
       },
     } as unknown as Window;
 
-    hashDelNavegador(win).escribir('s=x', { reemplazar: true });
+    browserHash(win).write('s=x', { replace: true });
 
-    expect(reemplazos).toEqual(['#s=x']);
+    expect(replacements).toEqual(['#s=x']);
   });
 
-  it('si pushState lanza al vaciar el hash, lo vacia con location.hash', () => {
+  it('if pushState throws when emptying the hash, it empties it with location.hash', () => {
     const hashes: string[] = [];
     const win = {
       location: {
         pathname: '/a.html',
         search: '',
-        set hash(valor: string) {
-          hashes.push(valor);
+        set hash(value: string) {
+          hashes.push(value);
         },
       },
       history: {
@@ -284,7 +284,7 @@ describe('hashDelNavegador en archivos locales', () => {
       },
     } as unknown as Window;
 
-    hashDelNavegador(win).escribir('', { reemplazar: false });
+    browserHash(win).write('', { replace: false });
 
     expect(hashes).toEqual(['']);
   });

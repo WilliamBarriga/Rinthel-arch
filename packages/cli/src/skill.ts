@@ -1,21 +1,21 @@
 import {
-  CODIGOS,
+  CODES,
   CONTRACT_VERSION,
-  DESCRIPCION_DE_CODIGO,
+  CODE_DESCRIPTION,
   EDIT_CONTRACT_VERSION,
   INSPECT_CONTRACT_VERSION,
-  salidaDeEditJsonSchema,
-  salidaDeInspectJsonSchema,
-  salidaDeValidateJsonSchema,
-} from 'canonico';
-import type { FuenteCanonica } from 'canonico';
+  editOutputJsonSchema,
+  inspectOutputJsonSchema,
+  validateOutputJsonSchema,
+} from 'canonical';
+import type { CanonicalForm } from 'canonical';
 
-import { CARPETA_DE_SALIDA } from './workspace';
+import { OUTPUT_FOLDER } from './workspace';
 
-/** Sin saltos de linea ni barras que rompan la fila Markdown. */
-const celda = (texto: string): string => (texto.trim() === '' ? '-' : texto.replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|'));
+/** No line breaks nor pipes that break the Markdown row. */
+const cellValue = (text: string): string => (text.trim() === '' ? '-' : text.replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|'));
 
-const EJEMPLO_DE_DSL = `specification {
+const DSL_EXAMPLE = `specification {
   node service { description "Deployable unit"  color blue }
 }
 
@@ -40,16 +40,16 @@ view overview {
   node system.db { label "Data"  color accent }
 }`;
 
-/** `SKILL.md` del proyecto. Determinista: el mismo catalogo produce los mismos bytes. */
-export function generarSkill(fuente: FuenteCanonica): string {
-  const tipos = fuente.specification.nodeTypes.map(
-    (tipo) => `| \`${tipo.name}\` | ${celda(tipo.description)} | ${celda(tipo.icon ?? '')} | ${celda(tipo.color ?? '')} |`,
+/** The project's `SKILL.md`. Deterministic: the same catalog produces the same bytes. */
+export function generateSkill(source: CanonicalForm): string {
+  const kinds = source.specification.nodeTypes.map(
+    (type) => `| \`${type.name}\` | ${cellValue(type.description)} | ${cellValue(type.icon ?? '')} | ${cellValue(type.color ?? '')} |`,
   );
-  const temas = fuente.themes.map(
-    (tema) =>
-      `| \`${tema.name}\` | ${Object.keys(tema.palette).map((color) => `\`${color}\``).join(', ') || '-'} |`,
+  const themes = source.themes.map(
+    (theme) =>
+      `| \`${theme.name}\` | ${Object.keys(theme.palette).map((color) => `\`${color}\``).join(', ') || '-'} |`,
   );
-  const codigos = Object.values(CODIGOS).map((codigo) => `| \`${codigo}\` | ${DESCRIPCION_DE_CODIGO[codigo]} |`);
+  const codes = Object.values(CODES).map((code) => `| \`${code}\` | ${CODE_DESCRIPTION[code]} |`);
 
   return `---
 name: diagrams
@@ -58,7 +58,7 @@ description: Write and fix the .dg files (diagram DSL) of this project with the 
 
 # Diagrams of this project
 
-Diagrams are written in \`.dg\` files of the Workspace. They are the only editable source: never edit the JSON in \`${CARPETA_DE_SALIDA}/\`, which is derived output.
+Diagrams are written in \`.dg\` files of the Workspace. They are the only editable source: never edit the JSON in \`${OUTPUT_FOLDER}/\`, which is derived output.
 
 ## Working loop
 
@@ -78,7 +78,7 @@ Every Node declares its kind with one of these (\`specification { node <kind> { 
 
 | Kind | Description | Icon | Color |
 | --- | --- | --- | --- |
-${tipos.join('\n') || '| - | - | - | - |'}
+${kinds.join('\n') || '| - | - | - | - |'}
 
 ## Palette and Themes
 
@@ -86,12 +86,12 @@ A color is written only by Palette name (in a Node kind or a View override); the
 
 | Theme | Palette colors |
 | --- | --- |
-${temas.join('\n')}
+${themes.join('\n')}
 
 ## DSL syntax
 
 \`\`\`dg
-${EJEMPLO_DE_DSL}
+${DSL_EXAMPLE}
 \`\`\`
 
 - A Node is \`<kind> <id> ["Title" ["Description"]] [{ children, attrs, source }]\`; its children make it a Group and its full id is \`parent.child\`.
@@ -115,7 +115,7 @@ Every issue carries \`code\` (stable), \`severity\` (\`error\` or \`warning\`), 
 Schema (JSON Schema derived from the contract's Zod schema):
 
 \`\`\`json
-${JSON.stringify(salidaDeValidateJsonSchema(), null, 2)}
+${JSON.stringify(validateOutputJsonSchema(), null, 2)}
 \`\`\`
 
 ## Query the Model (inspect)
@@ -141,7 +141,7 @@ diagrams inspect theme <name> --workspace <path> [--kind <kind>] [--state <state
 \`inspect --json\` schema (JSON Schema derived from the Zod schema):
 
 \`\`\`json
-${JSON.stringify(salidaDeInspectJsonSchema(), null, 2)}
+${JSON.stringify(inspectOutputJsonSchema(), null, 2)}
 \`\`\`
 
 ## Structured editing (edit)
@@ -165,7 +165,7 @@ diagrams edit --workspace <path> --edits '[{"file":"main.dg","range":{"start":{"
 \`edit --json\` schema (JSON Schema derived from the Zod schema):
 
 \`\`\`json
-${JSON.stringify(salidaDeEditJsonSchema(), null, 2)}
+${JSON.stringify(editOutputJsonSchema(), null, 2)}
 \`\`\`
 
 ## Live loop (dev)
@@ -176,6 +176,6 @@ ${JSON.stringify(salidaDeEditJsonSchema(), null, 2)}
 
 | Code | Meaning |
 | --- | --- |
-${codigos.join('\n')}
+${codes.join('\n')}
 `;
 }

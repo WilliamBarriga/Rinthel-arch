@@ -3,34 +3,34 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
 import { run } from 'cli';
 
 const fixtures = join(import.meta.dirname, 'fixtures');
 
-function copiarFixture(nombre: string): string {
-  const destino = mkdtempSync(join(tmpdir(), 'build-'));
-  cpSync(join(fixtures, nombre), destino, { recursive: true });
-  return destino;
+function copyFixture(name: string): string {
+  const target = mkdtempSync(join(tmpdir(), 'build-'));
+  cpSync(join(fixtures, name), target, { recursive: true });
+  return target;
 }
 
-const leerJson = (ruta: string): unknown => JSON.parse(readFileSync(ruta, 'utf8'));
+const readJson = (path: string): unknown => JSON.parse(readFileSync(path, 'utf8'));
 
 describe('build', () => {
-  it('escribe la Fuente canonica y una geometria por Vista en .diagrams/', async () => {
-    const workspace = copiarFixture('build-basico');
+  it('writes the Canonical form and one geometry per View in .diagrams/', async () => {
+    const workspace = copyFixture('build-basic');
 
-    const resultado = await run(['build', '--workspace', workspace]);
+    const result = await run(['build', '--workspace', workspace]);
 
-    expect(resultado.exitCode).toBe(0);
-    expect(resultado.stderr).toBe('');
-    const fuente = fuenteCanonicaSchema.parse(leerJson(join(workspace, '.diagrams', 'canonico.json')));
-    expect(fuente.views.map((vista) => vista.id)).toEqual(['general', 'detalle']);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe('');
+    const source = canonicalFormSchema.parse(readJson(join(workspace, '.diagrams', 'canonico.json')));
+    expect(source.views.map((view) => view.id)).toEqual(['general', 'detalle']);
     expect(readdirSync(join(workspace, '.diagrams', 'geometria')).sort()).toEqual([
       'detalle.json',
       'general.json',
     ]);
-    const general = leerJson(join(workspace, '.diagrams', 'geometria', 'general.json')) as {
+    const general = readJson(join(workspace, '.diagrams', 'geometria', 'general.json')) as {
       view: string;
       geometry: { nodes: Record<string, unknown>; edges: Record<string, unknown>; width: number };
     };
@@ -40,85 +40,85 @@ describe('build', () => {
     expect(general.geometry.width).toBeGreaterThan(0);
   });
 
-  it('con errores de validacion sale con 1 y no escribe nada', async () => {
-    const workspace = copiarFixture('con-errores');
+  it('with validation errors it exits 1 and writes nothing', async () => {
+    const workspace = copyFixture('with-errors');
 
-    const resultado = await run(['build', '--workspace', workspace]);
+    const result = await run(['build', '--workspace', workspace]);
 
-    expect(resultado.exitCode).toBe(1);
-    expect(resultado.stdout).toContain('error');
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toContain('error');
     expect(existsSync(join(workspace, '.diagrams'))).toBe(false);
   });
 
-  it('una Vista con theme propio usa ese Tema y el resto el global', async () => {
-    const workspace = copiarFixture('build-basico');
-    const temaDe = (vista: string): unknown =>
-      (leerJson(join(workspace, '.diagrams', 'geometria', `${vista}.json`)) as { theme: string }).theme;
+  it('a View with its own theme uses that Theme and the rest the global one', async () => {
+    const workspace = copyFixture('build-basic');
+    const themeOf = (view: string): unknown =>
+      (readJson(join(workspace, '.diagrams', 'geometria', `${view}.json`)) as { theme: string }).theme;
 
     await run(['build', '--workspace', workspace]);
-    expect([temaDe('general'), temaDe('detalle')]).toEqual(['neutral', 'grande']);
+    expect([themeOf('general'), themeOf('detalle')]).toEqual(['neutral', 'grande']);
 
     await run(['build', '--workspace', workspace, '--theme', 'grande']);
-    expect([temaDe('general'), temaDe('detalle')]).toEqual(['grande', 'grande']);
+    expect([themeOf('general'), themeOf('detalle')]).toEqual(['grande', 'grande']);
   });
 
-  it('el Tema de la Vista cambia la geometria (fuente mayor, cajas mayores)', async () => {
-    const workspace = copiarFixture('build-basico');
+  it('the View Theme changes the geometry (larger font, larger boxes)', async () => {
+    const workspace = copyFixture('build-basic');
     await run(['build', '--workspace', workspace]);
-    const altura = (vista: string): number =>
-      (leerJson(join(workspace, '.diagrams', 'geometria', `${vista}.json`)) as { geometry: { height: number } }).geometry.height;
+    const height = (view: string): number =>
+      (readJson(join(workspace, '.diagrams', 'geometria', `${view}.json`)) as { geometry: { height: number } }).geometry.height;
 
-    expect(altura('detalle')).toBeGreaterThan(altura('general'));
+    expect(height('detalle')).toBeGreaterThan(height('general'));
   });
 
-  it('--theme con un Tema inexistente es un fallo de uso y no escribe', async () => {
-    const workspace = copiarFixture('build-basico');
+  it('--theme with a missing Theme is a usage failure and does not write', async () => {
+    const workspace = copyFixture('build-basic');
 
-    const resultado = await run(['build', '--workspace', workspace, '--theme', 'nada']);
+    const result = await run(['build', '--workspace', workspace, '--theme', 'nada']);
 
-    expect(resultado.exitCode).toBe(2);
-    expect(resultado.stderr).toContain("'nada'");
-    expect(resultado.stderr).toContain('neutral, neutral-dark, high-contrast, grande');
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("'nada'");
+    expect(result.stderr).toContain('neutral, neutral-dark, high-contrast, grande');
     expect(existsSync(join(workspace, '.diagrams'))).toBe(false);
   });
 
-  it('--theme-path aporta Temas antes del Workspace; los Temas del Workspace siguen disponibles', async () => {
-    const workspace = copiarFixture('build-basico');
-    const temas = join(fixtures, 'temas-extra');
+  it('--theme-path brings Themes before the Workspace; the Workspace Themes are still available', async () => {
+    const workspace = copyFixture('build-basic');
+    const themes = join(fixtures, 'extra-themes');
 
-    const resultado = await run(['build', '--workspace', workspace, '--theme-path', temas, '--theme', 'corporativo']);
+    const result = await run(['build', '--workspace', workspace, '--theme-path', themes, '--theme', 'corporativo']);
 
-    expect(resultado.exitCode).toBe(0);
-    const fuente = fuenteCanonicaSchema.parse(leerJson(join(workspace, '.diagrams', 'canonico.json')));
-    expect(fuente.themes.map((tema) => tema.name)).toContain('corporativo');
-    const general = leerJson(join(workspace, '.diagrams', 'geometria', 'general.json')) as { theme: string };
+    expect(result.exitCode).toBe(0);
+    const source = canonicalFormSchema.parse(readJson(join(workspace, '.diagrams', 'canonico.json')));
+    expect(source.themes.map((theme) => theme.name)).toContain('corporativo');
+    const general = readJson(join(workspace, '.diagrams', 'geometria', 'general.json')) as { theme: string };
     expect(general.theme).toBe('corporativo');
   });
 
-  it('si el Workspace y --theme-path comparten ruta, gana el Workspace', async () => {
-    const workspace = copiarFixture('build-basico');
-    writeFileSync(join(workspace, 'temas.dg'), '');
+  it('if the Workspace and --theme-path share a path, the Workspace wins', async () => {
+    const workspace = copyFixture('build-basic');
+    writeFileSync(join(workspace, 'themes.dg'), '');
 
-    const resultado = await run([
-      'build', '--workspace', workspace, '--theme-path', join(fixtures, 'temas-extra'), '--theme', 'corporativo',
+    const result = await run([
+      'build', '--workspace', workspace, '--theme-path', join(fixtures, 'extra-themes'), '--theme', 'corporativo',
     ]);
 
-    expect(resultado.exitCode).toBe(2);
-    expect(resultado.stderr).toContain("'corporativo'");
+    expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain("'corporativo'");
   });
 
-  it('reconstruir reemplaza la salida: no quedan Vistas borradas', async () => {
-    const workspace = copiarFixture('build-basico');
+  it('rebuilding replaces the output: no deleted Views are left', async () => {
+    const workspace = copyFixture('build-basic');
     await run(['build', '--workspace', workspace]);
-    const fuente = readFileSync(join(workspace, 'main.dg'), 'utf8');
-    writeFileSync(join(workspace, 'main.dg'), fuente.replace(/view detalle[\s\S]*$/, ''));
+    const source = readFileSync(join(workspace, 'main.dg'), 'utf8');
+    writeFileSync(join(workspace, 'main.dg'), source.replace(/view detalle[\s\S]*$/, ''));
 
     await run(['build', '--workspace', workspace]);
 
     expect(readdirSync(join(workspace, '.diagrams', 'geometria'))).toEqual(['general.json']);
   });
 
-  it('un par de Pins solapados sale como overlapping-pins con posicion y related', async () => {
+  it('a pair of overlapping Pins comes out as overlapping-pins with position and related', async () => {
     const workspace = mkdtempSync(join(tmpdir(), 'build-'));
     writeFileSync(
       join(workspace, 'main.dg'),
@@ -133,10 +133,10 @@ view v {
 `,
     );
 
-    const resultado = await run(['build', '--workspace', workspace, '--json']);
+    const result = await run(['build', '--workspace', workspace, '--json']);
 
-    expect(resultado.exitCode).toBe(0);
-    const { issues } = JSON.parse(resultado.stdout) as { issues: Record<string, unknown>[] };
+    expect(result.exitCode).toBe(0);
+    const { issues } = JSON.parse(result.stdout) as { issues: Record<string, unknown>[] };
     expect(issues).toEqual([
       expect.objectContaining({
         code: 'overlapping-pins',
@@ -150,16 +150,16 @@ view v {
     expect(existsSync(join(workspace, '.diagrams', 'canonico.json'))).toBe(true);
   });
 
-  it('con --strict los Pins solapados hacen fallar el build', async () => {
+  it('with --strict overlapping Pins make the build fail', async () => {
     const workspace = mkdtempSync(join(tmpdir(), 'build-'));
     writeFileSync(
       join(workspace, 'main.dg'),
       'specification { node s } model { s a  s b } view v { type flow include ** node a { pin 0,0 } node b { pin 0,0 } }',
     );
 
-    const resultado = await run(['build', '--workspace', workspace, '--strict']);
+    const result = await run(['build', '--workspace', workspace, '--strict']);
 
-    expect(resultado.exitCode).toBe(1);
+    expect(result.exitCode).toBe(1);
     expect(existsSync(join(workspace, '.diagrams'))).toBe(false);
   });
 });

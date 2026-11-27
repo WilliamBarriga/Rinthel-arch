@@ -20,9 +20,9 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
-    "canonico": "workspace:*",
+    "canonical": "workspace:*",
     "elkjs": "0.12.0",
-    "tema": "workspace:*"
+    "theme": "workspace:*"
   },
   "sideEffects": false
 }

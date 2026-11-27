@@ -1,6 +1,6 @@
 /**
- * Lo propio del adaptador HTTP de `dev`: estaticos, seguridad del transporte (Host, Origin, content-type, tamano), disco y
- * cierre. Las rutas `/api/*`, sus bordes y los eventos SSE los cubre `probarContratoDeDev` (`contrato-dev.test.ts`).
+ * What is specific to the `dev` HTTP adapter: static files, transport security (Host, Origin, content-type, size), disk and
+ * closing. The `/api/*` routes, their edges and the SSE events are covered by `testDevContract` (`dev-contract.test.ts`).
  */
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
@@ -8,15 +8,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { eventoDeActividad, eventosSobreFetch, lineasDeActividad } from 'estudio/contrato';
-import type { ActividadDeDev } from 'estudio/protocolo';
+import { activityEvent, eventsOverFetch, activityLines } from 'dev-ui/contract';
+import type { DevActivity } from 'dev-ui/protocol';
 
-import { iniciarDev } from 'cli';
-import type { OpcionesDeDev, ServidorDev } from 'cli';
-import { puertoEnMemoria } from 'sesion';
-import type { PuertoDelWorkspaceVivo } from 'sesion';
+import { startDev } from 'cli';
+import type { DevOptions, DevServer } from 'cli';
+import { inMemoryPort } from 'session';
+import type { LiveWorkspacePort } from 'session';
 
-import { puertoDeDisco } from '../src/puerto-de-disco';
+import { diskPortOf } from '../src/disk-port';
 
 const BASE = `specification {
   node servicio
@@ -34,216 +34,216 @@ view general {
 }
 `;
 
-/** Workspace en memoria con un observador que se puede consultar. */
-function entorno(inicial: Record<string, string>) {
-  const base = puertoEnMemoria({ propios: inicial });
-  let observadores = 0;
-  const puerto: PuertoDelWorkspaceVivo = {
+/** In-memory Workspace with a watcher that can be queried. */
+function memoryEnv(initial: Record<string, string>) {
+  const base = inMemoryPort({ own: initial });
+  let watchers = 0;
+  const port: LiveWorkspacePort = {
     ...base,
-    observar(alCambiar) {
-      observadores += 1;
-      const dejar = base.observar(alCambiar);
+    watch(handleChange) {
+      watchers += 1;
+      const leave = base.watch(handleChange);
       return () => {
-        observadores -= 1;
-        dejar();
+        watchers -= 1;
+        leave();
       };
     },
   };
-  return { puerto, observando: () => observadores > 0 };
+  return { port, watching: () => watchers > 0 };
 }
 
-/** El disco real sin `fs.watch`: las pruebas no dependen del watcher del sistema. */
-const disco = (raiz: string) => puertoDeDisco(raiz, { observar: () => () => undefined });
+/** The real disk without `fs.watch`: the tests do not depend on the system watcher. */
+const diskPort = (root: string) => diskPortOf(root, { watch: () => () => undefined });
 
-const carpetas: string[] = [];
+const folderList: string[] = [];
 
-/** `estudio` falso: sus estaticos son archivos de una carpeta temporal que la prueba puede reescribir. */
-function estudioFalso() {
-  const carpeta = mkdtempSync(join(tmpdir(), 'rinthel-estudio-falso-'));
-  carpetas.push(carpeta);
-  const ruta = (nombre: string) => join(carpeta, nombre);
-  const escribir = (nombre: string, texto: string) => writeFileSync(ruta(nombre), texto);
-  escribir('index.html', '<!doctype html><title>falso</title>');
-  escribir('pagina.js', '/*pagina*/');
-  escribir('estilo.css', '/*estilo*/');
-  return { estudio: () => ({ indice: ruta('index.html'), archivos: { 'pagina.js': ruta('pagina.js'), 'estilo.css': ruta('estilo.css'), 'ausente.js': ruta('ausente.js') } }), escribir };
+/** Fake `dev-ui`: its static files are files in a temp folder that the test can rewrite. */
+function fakeDevUi() {
+  const folder = mkdtempSync(join(tmpdir(), 'rinthel-fake-dev-ui-'));
+  folderList.push(folder);
+  const path = (name: string) => join(folder, name);
+  const write = (name: string, text: string) => writeFileSync(path(name), text);
+  write('index.html', '<!doctype html><title>fake</title>');
+  write('page.js', '/*page*/');
+  write('style.css', '/*style*/');
+  return { devUi: () => ({ index: path('index.html'), files: { 'page.js': path('page.js'), 'style.css': path('style.css'), 'missing.js': path('missing.js') } }), write };
 }
 
-/** Workspace real en una carpeta temporal, con `main.dg` = `BASE`. */
-function workspaceEnDisco(): string {
-  const raiz = mkdtempSync(join(tmpdir(), 'rinthel-dev-'));
-  carpetas.push(raiz);
-  writeFileSync(join(raiz, 'main.dg'), BASE);
-  return raiz;
+/** Real Workspace in a temp folder, with `main.dg` = `BASE`. */
+function diskWorkspace(): string {
+  const root = mkdtempSync(join(tmpdir(), 'rinthel-dev-'));
+  folderList.push(root);
+  writeFileSync(join(root, 'main.dg'), BASE);
+  return root;
 }
 
-const sinCodigo: OpcionesDeDev['compilarCodigo'] = () => ({ componentes: {}, issues: [], bundle: 'return {};' });
+const withoutCode: DevOptions['compileCode'] = () => ({ components: {}, issues: [], bundle: 'return {};' });
 
-const respuesta = async (res: Response) => ({ status: res.status, cuerpo: (await res.json()) as unknown });
+const response = async (res: Response) => ({ status: res.status, body: (await res.json()) as unknown });
 
-const abiertos: ServidorDev[] = [];
-async function arrancar(env: ReturnType<typeof entorno>, extra: Partial<OpcionesDeDev> = {}): Promise<ServidorDev> {
-  const servidor = await iniciarDev({ workspace: '/ws', puerto: env.puerto, ...extra, debounceMs: 5, puertoHttp: 0 });
-  abiertos.push(servidor);
-  return servidor;
+const openServers: DevServer[] = [];
+async function startServer(env: ReturnType<typeof memoryEnv>, extra: Partial<DevOptions> = {}): Promise<DevServer> {
+  const server = await startDev({ workspace: '/ws', port: env.port, ...extra, debounceMs: 5, httpPort: 0 });
+  openServers.push(server);
+  return server;
 }
 afterEach(async () => {
-  await Promise.all(abiertos.splice(0).map((servidor) => servidor.cerrar()));
-  for (const carpeta of carpetas.splice(0)) rmSync(carpeta, { recursive: true, force: true });
+  await Promise.all(openServers.splice(0).map((server) => server.close()));
+  for (const folder of folderList.splice(0)) rmSync(folder, { recursive: true, force: true });
 });
 
 const JSON_ = { 'content-type': 'application/json' };
-const post = (servidor: ServidorDev, ruta: string, cuerpo: unknown = {}, cabeceras: Record<string, string> = JSON_) =>
-  fetch(`${servidor.url}${ruta}`, { method: 'POST', headers: cabeceras, body: typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo) });
+const post = (server: DevServer, path: string, body: unknown = {}, headerValues: Record<string, string> = JSON_) =>
+  fetch(`${server.url}${path}`, { method: 'POST', headers: headerValues, body: typeof body === 'string' ? body : JSON.stringify(body) });
 
-describe('dev: rutas', () => {
-  it('escucha solo en 127.0.0.1 y sirve / y /_estudio/* del estudio inyectado, sin cache', async () => {
-    const { estudio } = estudioFalso();
-    const servidor = await arrancar(entorno({ 'main.dg': BASE }), { estudio });
+describe('dev: routes', () => {
+  it('listens only on 127.0.0.1 and serves / and /_dev-ui/* of the injected dev-ui, without cache', async () => {
+    const { devUi } = fakeDevUi();
+    const server = await startServer(memoryEnv({ 'main.dg': BASE }), { devUi });
 
-    expect(servidor.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
-    const pagina = await fetch(servidor.url);
-    expect(pagina.headers.get('content-type')).toContain('text/html');
-    expect(pagina.headers.get('cache-control')).toBe('no-store');
-    expect(await pagina.text()).toBe('<!doctype html><title>falso</title>');
-    const js = await fetch(`${servidor.url}_estudio/pagina.js`);
-    expect([js.headers.get('content-type'), js.headers.get('cache-control'), await js.text()]).toEqual(['text/javascript; charset=utf-8', 'no-store', '/*pagina*/']);
-    const css = await fetch(`${servidor.url}_estudio/estilo.css`);
-    expect([css.headers.get('content-type'), await css.text()]).toEqual(['text/css; charset=utf-8', '/*estilo*/']);
-    expect((await fetch(`${servidor.url}nada`)).status).toBe(404);
+    expect(server.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/$/);
+    const page = await fetch(server.url);
+    expect(page.headers.get('content-type')).toContain('text/html');
+    expect(page.headers.get('cache-control')).toBe('no-store');
+    expect(await page.text()).toBe('<!doctype html><title>fake</title>');
+    const js = await fetch(`${server.url}_dev-ui/page.js`);
+    expect([js.headers.get('content-type'), js.headers.get('cache-control'), await js.text()]).toEqual(['text/javascript; charset=utf-8', 'no-store', '/*page*/']);
+    const css = await fetch(`${server.url}_dev-ui/style.css`);
+    expect([css.headers.get('content-type'), await css.text()]).toEqual(['text/css; charset=utf-8', '/*style*/']);
+    expect((await fetch(`${server.url}nada`)).status).toBe(404);
   });
 
-  it('lee los estaticos del disco en cada peticion: un rebuild del estudio se ve al recargar', async () => {
-    const { estudio, escribir } = estudioFalso();
-    const servidor = await arrancar(entorno({ 'main.dg': BASE }), { estudio });
-    expect(await (await fetch(`${servidor.url}_estudio/pagina.js`)).text()).toBe('/*pagina*/');
+  it('reads the static files from disk on every request: a dev-ui rebuild shows on reload', async () => {
+    const { devUi, write } = fakeDevUi();
+    const server = await startServer(memoryEnv({ 'main.dg': BASE }), { devUi });
+    expect(await (await fetch(`${server.url}_dev-ui/page.js`)).text()).toBe('/*page*/');
 
-    escribir('pagina.js', '/*pagina nueva*/');
-    escribir('index.html', '<p>nueva</p>');
+    write('page.js', '/*new page*/');
+    write('index.html', '<p>new</p>');
 
-    expect(await (await fetch(`${servidor.url}_estudio/pagina.js`)).text()).toBe('/*pagina nueva*/');
-    expect(await (await fetch(servidor.url)).text()).toBe('<p>nueva</p>');
+    expect(await (await fetch(`${server.url}_dev-ui/page.js`)).text()).toBe('/*new page*/');
+    expect(await (await fetch(server.url)).text()).toBe('<p>new</p>');
   });
 
-  it('bajo /_estudio/ solo sirve los archivos declarados; uno que falta en disco es 404', async () => {
-    const { estudio } = estudioFalso();
-    const servidor = await arrancar(entorno({ 'main.dg': BASE }), { estudio });
+  it('under /_dev-ui/ it only serves the declared files; one missing on disk is 404', async () => {
+    const { devUi } = fakeDevUi();
+    const server = await startServer(memoryEnv({ 'main.dg': BASE }), { devUi });
 
-    expect((await fetch(`${servidor.url}_estudio/index.html`)).status).toBe(404);
-    expect((await fetch(`${servidor.url}_estudio/..%2F..%2Fetc%2Fpasswd`)).status).toBe(404);
-    expect((await fetch(`${servidor.url}_estudio/ausente.js`)).status).toBe(404);
-    expect((await fetch(`${servidor.url}app.js`)).status).toBe(404);
+    expect((await fetch(`${server.url}_dev-ui/index.html`)).status).toBe(404);
+    expect((await fetch(`${server.url}_dev-ui/..%2F..%2Fetc%2Fpasswd`)).status).toBe(404);
+    expect((await fetch(`${server.url}_dev-ui/missing.js`)).status).toBe(404);
+    expect((await fetch(`${server.url}app.js`)).status).toBe(404);
   });
 
-  it('sin inyectar, sirve el build real de estudio', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await iniciarDev({ workspace: '/ws', puerto: env.puerto, puertoHttp: 0 });
-    abiertos.push(servidor);
+  it('without injection, it serves the real dev-ui build', async () => {
+    const env = memoryEnv({ 'main.dg': BASE });
+    const server = await startDev({ workspace: '/ws', port: env.port, httpPort: 0 });
+    openServers.push(server);
 
-    expect(await (await fetch(servidor.url)).text()).toContain('<script type="module" src="/_estudio/pagina.js">');
-    const pagina = await (await fetch(`${servidor.url}_estudio/pagina.js`)).text();
-    const trozo = /"\.\/(trozos\/[^"]+\.js)"/.exec(pagina)?.[1];
-    expect(trozo).toBeDefined();
-    const servido = await fetch(`${servidor.url}_estudio/${trozo}`);
-    expect([servido.status, servido.headers.get('content-type')]).toEqual([200, 'text/javascript; charset=utf-8']);
-    expect((await (await fetch(`${servidor.url}_estudio/worker.js`)).text()).length).toBeGreaterThan(1000);
+    expect(await (await fetch(server.url)).text()).toContain('<script type="module" src="/_dev-ui/page.js">');
+    const page = await (await fetch(`${server.url}_dev-ui/page.js`)).text();
+    const chunk = /"\.\/(chunks\/[^"]+\.js)"/.exec(page)?.[1];
+    expect(chunk).toBeDefined();
+    const served = await fetch(`${server.url}_dev-ui/${chunk}`);
+    expect([served.status, served.headers.get('content-type')]).toEqual([200, 'text/javascript; charset=utf-8']);
+    expect((await (await fetch(`${server.url}_dev-ui/worker.js`)).text()).length).toBeGreaterThan(1000);
   });
 
-  it('--theme-path (opcion temas) aporta Temas antes del Workspace', async () => {
-    const temas = join(import.meta.dirname, 'fixtures', 'temas-extra');
-    const servidor = await iniciarDev({ workspace: workspaceEnDisco(), temas, compilarCodigo: sinCodigo, puertoHttp: 0 });
-    abiertos.push(servidor);
+  it('--theme-path (themes option) brings Themes before the Workspace', async () => {
+    const themes = join(import.meta.dirname, 'fixtures', 'extra-themes');
+    const server = await startDev({ workspace: diskWorkspace(), themes, compileCode: withoutCode, httpPort: 0 });
+    openServers.push(server);
 
-    const fuente = ((await (await fetch(`${servidor.url}api/estado`)).json()) as { fuente: { themes: { name: string }[] } }).fuente;
-    expect(fuente.themes.map(({ name }) => name)).toContain('corporativo');
+    const source = ((await (await fetch(`${server.url}api/state`)).json()) as { fuente: { themes: { name: string }[] } }).fuente;
+    expect(source.themes.map(({ name }) => name)).toContain('corporativo');
   });
 
-  it('cerrar libera el puerto y deja de observar', async () => {
-    const env = entorno({ 'main.dg': BASE });
-    const servidor = await arrancar(env);
-    expect(env.observando()).toBe(true);
+  it('closing frees the port and stops watching', async () => {
+    const env = memoryEnv({ 'main.dg': BASE });
+    const server = await startServer(env);
+    expect(env.watching()).toBe(true);
 
-    await servidor.cerrar();
+    await server.close();
 
-    expect(env.observando()).toBe(false);
-    await expect(fetch(servidor.url)).rejects.toThrow();
+    expect(env.watching()).toBe(false);
+    await expect(fetch(server.url)).rejects.toThrow();
   });
 });
 
-describe('dev: seguridad', () => {
-  it('rechaza peticiones cuyo Host no es 127.0.0.1 o localhost con el puerto del servidor (DNS rebinding)', async () => {
-    const servidor = await arrancar(entorno({ 'main.dg': BASE }));
-    const puerto = Number(new URL(servidor.url).port);
-    const conHost = (host: string | undefined) =>
-      new Promise<number>((ok, fallo) => {
-        const req = request({ host: '127.0.0.1', port: puerto, path: '/api/estado', headers: host === undefined ? {} : { host } }, (res) => {
+describe('dev: security', () => {
+  it('rejects requests whose Host is not 127.0.0.1 or localhost with the server port (DNS rebinding)', async () => {
+    const server = await startServer(memoryEnv({ 'main.dg': BASE }));
+    const port = Number(new URL(server.url).port);
+    const withHost = (host: string | undefined) =>
+      new Promise<number>((ok, failure) => {
+        const req = request({ host: '127.0.0.1', port, path: '/api/state', headers: host === undefined ? {} : { host } }, (res) => {
           res.resume();
           ok(res.statusCode ?? 0);
         });
-        req.on('error', fallo);
+        req.on('error', failure);
         req.end();
       });
 
-    expect(await conHost(`127.0.0.1:${puerto}`)).toBe(200);
-    expect(await conHost(`localhost:${puerto}`)).toBe(200);
-    expect(await conHost(`evil.example:${puerto}`)).toBe(403);
-    expect(await conHost(`127.0.0.1.evil.example:${puerto}`)).toBe(403);
-    expect(await conHost('127.0.0.1:1')).toBe(403);
-    expect(await conHost('127.0.0.1')).toBe(403);
+    expect(await withHost(`127.0.0.1:${port}`)).toBe(200);
+    expect(await withHost(`localhost:${port}`)).toBe(200);
+    expect(await withHost(`evil.example:${port}`)).toBe(403);
+    expect(await withHost(`127.0.0.1.evil.example:${port}`)).toBe(403);
+    expect(await withHost('127.0.0.1:1')).toBe(403);
+    expect(await withHost('127.0.0.1')).toBe(403);
   });
 
-  it('todo POST exige Origin propio (403) y JSON (415), y limita el cuerpo (413), antes de llegar a la API', async () => {
-    const raiz = workspaceEnDisco();
-    const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
-    abiertos.push(servidor);
-    const cuerpo = { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 };
+  it('every POST requires its own Origin (403) and JSON (415), and limits the body (413), before reaching the API', async () => {
+    const root = diskWorkspace();
+    const server = await startDev({ workspace: root, port: diskPort(root), compileCode: withoutCode, httpPort: 0 });
+    openServers.push(server);
+    const body = { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 };
 
-    for (const ruta of ['api/edit', 'api/deshacer', 'api/rehacer', 'api/historial/saltar', 'api/confiar', 'api/nada']) {
-      expect(await respuesta(await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' }))).toEqual({ status: 403, cuerpo: { ok: false, message: 'Origin not allowed' } });
-      expect(await respuesta(await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' }))).toEqual({ status: 415, cuerpo: { ok: false, message: 'Expected application/json' } });
+    for (const path of ['api/edit', 'api/undo', 'api/redo', 'api/history/jump', 'api/trust', 'api/nada']) {
+      expect(await response(await post(server, path, body, { ...JSON_, origin: 'http://evil.example' }))).toEqual({ status: 403, body: { ok: false, message: 'Origin not allowed' } });
+      expect(await response(await post(server, path, body, { 'content-type': 'text/plain' }))).toEqual({ status: 415, body: { ok: false, message: 'Expected application/json' } });
     }
-    expect(await respuesta(await post(servidor, 'api/edit', { ...cuerpo, relleno: 'x'.repeat(70 * 1024) }))).toEqual({ status: 413, cuerpo: { ok: false, message: 'Request body too large' } });
-    expect((await post(servidor, 'api/edit', cuerpo, { ...JSON_, origin: servidor.url.replace(/\/$/, '') })).status).toBe(200);
-    expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toContain('node api { pin 1,2 }');
+    expect(await response(await post(server, 'api/edit', { ...body, padding: 'x'.repeat(70 * 1024) }))).toEqual({ status: 413, body: { ok: false, message: 'Request body too large' } });
+    expect((await post(server, 'api/edit', body, { ...JSON_, origin: server.url.replace(/\/$/, '') })).status).toBe(200);
+    expect(readFileSync(join(root, 'main.dg'), 'utf8')).toContain('node api { pin 1,2 }');
   });
 });
 
-describe('dev: disco y Registro de actividad', () => {
-  it('POST /api/edit escribe en el disco del Workspace y deshacer lo restaura', async () => {
-    const raiz = workspaceEnDisco();
-    const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
-    abiertos.push(servidor);
+describe('dev: disk and Activity log', () => {
+  it('POST /api/edit writes to the Workspace disk and undo restores it', async () => {
+    const root = diskWorkspace();
+    const server = await startDev({ workspace: root, port: diskPort(root), compileCode: withoutCode, httpPort: 0 });
+    openServers.push(server);
 
-    expect((await post(servidor, 'api/edit', { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 })).status).toBe(200);
-    expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toContain('node api { pin 1,2 }');
-    expect((await post(servidor, 'api/deshacer')).status).toBe(200);
-    expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toBe(BASE);
+    expect((await post(server, 'api/edit', { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 })).status).toBe(200);
+    expect(readFileSync(join(root, 'main.dg'), 'utf8')).toContain('node api { pin 1,2 }');
+    expect((await post(server, 'api/undo')).status).toBe(200);
+    expect(readFileSync(join(root, 'main.dg'), 'utf8')).toBe(BASE);
   });
 
-  it('observa .diagrams/activity.jsonl aparte del Workspace: reproduce lo previo al conectar y empuja lo anexado', async () => {
-    const raiz = mkdtempSync(join(tmpdir(), 'rinthel-dev-actividad-'));
-    carpetas.push(raiz);
-    writeFileSync(join(raiz, 'main.dg'), BASE);
-    mkdirSync(join(raiz, '.diagrams'));
-    writeFileSync(join(raiz, '.diagrams', 'activity.jsonl'), lineasDeActividad(eventoDeActividad(1)));
-    const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
-    abiertos.push(servidor);
-    const fetchDelServidor: typeof fetch = (ruta, init) => fetch(new URL(String(ruta).replace(/^\//, ''), servidor.url), init);
+  it('watches .diagrams/activity.jsonl apart from the Workspace: replays what came before connecting and pushes what is appended', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'rinthel-dev-activity-'));
+    folderList.push(root);
+    writeFileSync(join(root, 'main.dg'), BASE);
+    mkdirSync(join(root, '.diagrams'));
+    writeFileSync(join(root, '.diagrams', 'activity.jsonl'), activityLines(activityEvent(1)));
+    const server = await startDev({ workspace: root, port: diskPort(root), compileCode: withoutCode, httpPort: 0 });
+    openServers.push(server);
+    const serverFetch: typeof fetch = (path, init) => fetch(new URL(String(path).replace(/^\//, ''), server.url), init);
 
-    const recibidos = await new Promise<ActividadDeDev[]>((ok) => {
-      const lista: ActividadDeDev[] = [];
-      const cerrar = eventosSobreFetch(fetchDelServidor)('/eventos', (nombre, datos) => {
-        if (nombre !== 'actividad') return;
-        lista.push(JSON.parse(datos) as ActividadDeDev);
-        if (lista.length === 1) appendFileSync(join(raiz, '.diagrams', 'activity.jsonl'), lineasDeActividad(eventoDeActividad(2)));
+    const received = await new Promise<DevActivity[]>((ok) => {
+      const list: DevActivity[] = [];
+      const close = eventsOverFetch(serverFetch)('/events', (name, data) => {
+        if (name !== 'actividad') return;
+        list.push(JSON.parse(data) as DevActivity);
+        if (list.length === 1) appendFileSync(join(root, '.diagrams', 'activity.jsonl'), activityLines(activityEvent(2)));
         else {
-          cerrar();
-          ok(lista);
+          close();
+          ok(list);
         }
       });
     });
 
-    expect(recibidos.map((a) => [a.previos, a.eventos.map((e) => e.pid)])).toEqual([
+    expect(received.map((a) => [a.previos, a.eventos.map((e) => e.pid)])).toEqual([
       [true, [1]],
       [false, [2]],
     ]);

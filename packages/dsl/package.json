@@ -22,8 +22,8 @@
     "langium-cli": "^4.4.0"
   },
   "dependencies": {
-    "canonico": "workspace:*",
+    "canonical": "workspace:*",
     "langium": "^4.4.0",
-    "tema": "workspace:*"
+    "theme": "workspace:*"
   }
 }

@@ -1,182 +1,200 @@
 /**
- * Chequeo de la documentacion que se puede pudrir; cada `revisarX(raiz) -> Violacion[]` devuelve violaciones ordenadas.
- * `revisarReadmes`: cada `packages/<paquete>/README.md` existe y tiene las `SECCIONES_README` (`seccion`), sus rutas de
- * "Archivo de entrada" existen (`entrada`) y "Probar" contiene `pnpm --filter <paquete> test` (`probar`).
- * `revisarIndiceDeAdrs`: cada `docs/adr/NNNN-*.md` aparece en `docs/adr/README.md` (`indice`).
- * `revisarEnlacesDeAgents`: `AGENTS.md` nombra `docs/adr/README.md` y `docs/ramas.md`, y ambos existen (`indice`).
- * `revisarParesDeGuias`: cada `docs/guide/<x>.md` (ingles, fuente) tiene `docs/guia/<x>.md` (espanol) y al reves (`par`); la primera
- * linea de cada uno enlaza a su par (`enlace`); mismo numero de `## ` (`encabezados`) y bloques de codigo identicos (`codigo`).
+ * Check of the documentation that can rot; each `checkX(root) -> Violation[]` returns sorted violations.
+ * `checkReadmes`: each `packages/<package>/README.md` exists and has the `README_SECTIONS` (`section`), its
+ * "Entry file" paths exist (`entry`) and "Test" contains `pnpm --filter <package> test` (`test`).
+ * `checkAdrIndex`: each `docs/adr/NNNN-*.md` appears in `docs/adr/README.md` (`index`).
+ * `checkAgentsLinks`: `AGENTS.md` names `docs/adr/README.md` and `docs/research-branches.md`, and both exist (`index`).
+ * `checkGuidePairs`: each `docs/guide/<x>.md` (English, source) has `docs/guia/<x>.md` (Spanish) and the other way round
+ * (`pair`); the first line of each links to its pair (`link`); same number of `## ` (`headings`) and identical code blocks (`code`).
+ * `checkGlossary`: each entry of `CONTEXT.md` (line `**X**...:`) is headed `**English** (es: **Spanish**):` (`glossary`).
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-export const SECCIONES_README = [
-  'Que hace',
-  'Que NO hace',
-  'Depende de',
-  'Archivo de entrada',
-  'ADR relacionado',
-  'Probar',
+export const README_SECTIONS = [
+  'What it does',
+  'What it does not do',
+  'Depends on',
+  'Entry file',
+  'Related ADR',
+  'Test',
 ] as const;
 
-export interface Violacion {
-  archivo: string;
-  regla: 'seccion' | 'entrada' | 'probar' | 'indice' | 'par' | 'enlace' | 'encabezados' | 'codigo';
-  mensaje: string;
+export interface Violation {
+  file: string;
+  rule: 'section' | 'entry' | 'test' | 'index' | 'pair' | 'link' | 'headings' | 'code' | 'glossary';
+  message: string;
 }
 
-/** Texto bajo `## <seccion>` hasta el siguiente `## `; `undefined` si falta el encabezado. */
-function cuerpoDeSeccion(readme: string, seccion: string): string | undefined {
-  const lineas = readme.split('\n');
-  const inicio = lineas.findIndex((l) => l.trim() === `## ${seccion}`);
-  if (inicio === -1) return undefined;
-  const resto = lineas.slice(inicio + 1);
-  const fin = resto.findIndex((l) => l.startsWith('## '));
-  return (fin === -1 ? resto : resto.slice(0, fin)).join('\n');
+/** Text under `## <section>` up to the next `## `; `undefined` if the heading is missing. */
+function sectionBody(readme: string, section: string): string | undefined {
+  const lines = readme.split('\n');
+  const start = lines.findIndex((l) => l.trim() === `## ${section}`);
+  if (start === -1) return undefined;
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((l) => l.startsWith('## '));
+  return (end === -1 ? rest : rest.slice(0, end)).join('\n');
 }
 
-export function revisarReadmes(raiz: string): Violacion[] {
-  const violaciones: Violacion[] = [];
-  const carpetaPaquetes = join(raiz, 'packages');
-  if (!existsSync(carpetaPaquetes)) return violaciones;
+export function checkReadmes(root: string): Violation[] {
+  const violations: Violation[] = [];
+  const packagesFolder = join(root, 'packages');
+  if (!existsSync(packagesFolder)) return violations;
 
-  for (const paquete of readdirSync(carpetaPaquetes).sort()) {
-    const archivo = `packages/${paquete}/README.md`;
-    if (!existsSync(join(raiz, archivo))) {
-      violaciones.push({ archivo, regla: 'seccion', mensaje: 'falta el README del paquete' });
+  for (const pkg of readdirSync(packagesFolder).sort()) {
+    const file = `packages/${pkg}/README.md`;
+    if (!existsSync(join(root, file))) {
+      violations.push({ file, rule: 'section', message: 'the package README is missing' });
       continue;
     }
-    const readme = readFileSync(join(raiz, archivo), 'utf8');
-    const violar = (regla: Violacion['regla'], mensaje: string) =>
-      violaciones.push({ archivo, regla, mensaje });
+    const readme = readFileSync(join(root, file), 'utf8');
+    const violate = (rule: Violation['rule'], message: string) =>
+      violations.push({ file, rule, message });
 
-    for (const seccion of SECCIONES_README) {
-      if (cuerpoDeSeccion(readme, seccion) === undefined) {
-        violar('seccion', `falta la seccion "## ${seccion}"`);
+    for (const section of README_SECTIONS) {
+      if (sectionBody(readme, section) === undefined) {
+        violate('section', `the section "## ${section}" is missing`);
       }
     }
 
-    const entrada = cuerpoDeSeccion(readme, 'Archivo de entrada');
-    if (entrada !== undefined) {
-      const rutas = [...entrada.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
-      if (rutas.length === 0) {
-        violar('entrada', 'la seccion de entrada no nombra ningun archivo entre comillas invertidas');
+    const entry = sectionBody(readme, 'Entry file');
+    if (entry !== undefined) {
+      const paths = [...entry.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+      if (paths.length === 0) {
+        violate('entry', 'the entry section names no file between backticks');
       }
-      for (const ruta of rutas) {
-        if (!existsSync(join(raiz, ruta))) violar('entrada', `el archivo de entrada "${ruta}" no existe`);
+      for (const path of paths) {
+        if (!existsSync(join(root, path))) violate('entry', `the entry file "${path}" does not exist`);
       }
     }
 
-    const probar = cuerpoDeSeccion(readme, 'Probar');
-    if (probar !== undefined && !probar.includes(`pnpm --filter ${paquete} test`)) {
-      violar('probar', `la seccion "Probar" no contiene "pnpm --filter ${paquete} test"`);
+    const test = sectionBody(readme, 'Test');
+    if (test !== undefined && !test.includes(`pnpm --filter ${pkg} test`)) {
+      violate('test', `the "Test" section does not contain "pnpm --filter ${pkg} test"`);
     }
   }
-  return violaciones;
+  return violations;
 }
 
-export function revisarIndiceDeAdrs(raiz: string): Violacion[] {
-  const carpeta = join(raiz, 'docs/adr');
-  if (!existsSync(carpeta)) return [];
-  const adrs = readdirSync(carpeta)
+export function checkAdrIndex(root: string): Violation[] {
+  const folder = join(root, 'docs/adr');
+  if (!existsSync(folder)) return [];
+  const adrs = readdirSync(folder)
     .filter((f) => /^\d{4}-.+\.md$/.test(f))
     .sort();
   if (adrs.length === 0) return [];
 
-  const rutaIndice = 'docs/adr/README.md';
-  if (!existsSync(join(raiz, rutaIndice))) {
-    return [{ archivo: rutaIndice, regla: 'indice', mensaje: 'falta el indice de ADRs' }];
+  const indexPath = 'docs/adr/README.md';
+  if (!existsSync(join(root, indexPath))) {
+    return [{ file: indexPath, rule: 'index', message: 'the ADR index is missing' }];
   }
-  const indice = readFileSync(join(raiz, rutaIndice), 'utf8');
+  const index = readFileSync(join(root, indexPath), 'utf8');
   return adrs
-    .filter((adr) => !indice.includes(adr))
+    .filter((adr) => !index.includes(adr))
     .map((adr) => ({
-      archivo: `docs/adr/${adr}`,
-      regla: 'indice' as const,
-      mensaje: `el ADR no aparece en ${rutaIndice}`,
+      file: `docs/adr/${adr}`,
+      rule: 'index' as const,
+      message: `the ADR does not appear in ${indexPath}`,
     }));
 }
 
-const INDICES_DE_AGENTS = ['docs/adr/README.md', 'docs/ramas.md'] as const;
+const AGENTS_INDEXES = ['docs/adr/README.md', 'docs/research-branches.md'] as const;
 
-export function revisarEnlacesDeAgents(raiz: string): Violacion[] {
-  const archivo = 'AGENTS.md';
-  if (!existsSync(join(raiz, archivo))) {
-    return [{ archivo, regla: 'indice', mensaje: 'falta AGENTS.md' }];
+export function checkAgentsLinks(root: string): Violation[] {
+  const file = 'AGENTS.md';
+  if (!existsSync(join(root, file))) {
+    return [{ file, rule: 'index', message: 'AGENTS.md is missing' }];
   }
-  const agents = readFileSync(join(raiz, archivo), 'utf8');
-  const sinEnlace = INDICES_DE_AGENTS.filter((indice) => !agents.includes(indice)).map((indice) => ({
-    archivo,
-    regla: 'indice' as const,
-    mensaje: `AGENTS.md no enlaza ${indice}`,
+  const agents = readFileSync(join(root, file), 'utf8');
+  const unlinked = AGENTS_INDEXES.filter((index) => !agents.includes(index)).map((index) => ({
+    file,
+    rule: 'index' as const,
+    message: `AGENTS.md does not link ${index}`,
   }));
-  const inexistentes = INDICES_DE_AGENTS.filter((indice) => !existsSync(join(raiz, indice))).map((indice) => ({
-    archivo: indice,
-    regla: 'indice' as const,
-    mensaje: 'falta el archivo que AGENTS.md enlaza',
+  const missing = AGENTS_INDEXES.filter((index) => !existsSync(join(root, index))).map((index) => ({
+    file: index,
+    rule: 'index' as const,
+    message: 'the file AGENTS.md links is missing',
   }));
-  return [...sinEnlace, ...inexistentes];
+  return [...unlinked, ...missing];
 }
 
-const CARPETA_INGLES = 'docs/guide';
-const CARPETA_ESPANOL = 'docs/guia';
+const ENGLISH_FOLDER = 'docs/guide';
+const SPANISH_FOLDER = 'docs/guia';
 
-/** Encabezados `## ` y bloques de codigo (con su fence) de un Markdown; ignora los `## ` dentro de un bloque. */
-function estructuraDeGuia(texto: string): { encabezados: number; bloques: string[] } {
-  let encabezados = 0;
-  const bloques: string[] = [];
-  let actual: string[] | undefined;
-  for (const linea of texto.split('\n')) {
-    if (linea.startsWith('```')) {
-      if (actual === undefined) actual = [linea];
+/** `## ` headings and code blocks (with their fence) of a Markdown file; ignores `## ` inside a block. */
+function guideStructure(text: string): { headings: number; blocks: string[] } {
+  let headings = 0;
+  const blocks: string[] = [];
+  let current: string[] | undefined;
+  for (const line of text.split('\n')) {
+    if (line.startsWith('```')) {
+      if (current === undefined) current = [line];
       else {
-        bloques.push([...actual, linea].join('\n'));
-        actual = undefined;
+        blocks.push([...current, line].join('\n'));
+        current = undefined;
       }
-    } else if (actual !== undefined) actual.push(linea);
-    else if (linea.startsWith('## ')) encabezados += 1;
+    } else if (current !== undefined) current.push(line);
+    else if (line.startsWith('## ')) headings += 1;
   }
-  return { encabezados, bloques };
+  return { headings, blocks };
 }
 
-const mdDe = (raiz: string, carpeta: string): string[] =>
-  existsSync(join(raiz, carpeta)) ? readdirSync(join(raiz, carpeta)).filter((f) => f.endsWith('.md')).sort() : [];
+const mdFiles = (root: string, folder: string): string[] =>
+  existsSync(join(root, folder)) ? readdirSync(join(root, folder)).filter((f) => f.endsWith('.md')).sort() : [];
 
-export function revisarParesDeGuias(raiz: string): Violacion[] {
-  const violaciones: Violacion[] = [];
-  const ingles = mdDe(raiz, CARPETA_INGLES);
-  const espanol = mdDe(raiz, CARPETA_ESPANOL);
-  const lados = [
-    { carpeta: CARPETA_INGLES, archivos: ingles, otra: CARPETA_ESPANOL, existentes: espanol },
-    { carpeta: CARPETA_ESPANOL, archivos: espanol, otra: CARPETA_INGLES, existentes: ingles },
+export function checkGuidePairs(root: string): Violation[] {
+  const violations: Violation[] = [];
+  const english = mdFiles(root, ENGLISH_FOLDER);
+  const spanish = mdFiles(root, SPANISH_FOLDER);
+  const sides = [
+    { folder: ENGLISH_FOLDER, files: english, other: SPANISH_FOLDER, existing: spanish },
+    { folder: SPANISH_FOLDER, files: spanish, other: ENGLISH_FOLDER, existing: english },
   ];
-  for (const { carpeta, archivos, otra, existentes } of lados) {
-    const destino = otra.slice('docs/'.length);
-    for (const nombre of archivos) {
-      const archivo = `${carpeta}/${nombre}`;
-      if (!existentes.includes(nombre)) {
-        violaciones.push({ archivo, regla: 'par', mensaje: `falta el par ${otra}/${nombre}` });
+  for (const { folder, files, other, existing } of sides) {
+    const target = other.slice('docs/'.length);
+    for (const name of files) {
+      const file = `${folder}/${name}`;
+      if (!existing.includes(name)) {
+        violations.push({ file, rule: 'pair', message: `the pair ${other}/${name} is missing` });
         continue;
       }
-      const primera = readFileSync(join(raiz, archivo), 'utf8').split('\n').find((l) => l.trim() !== '') ?? '';
-      if (!primera.includes(`](../${destino}/${nombre})`)) {
-        violaciones.push({ archivo, regla: 'enlace', mensaje: `la primera linea no enlaza a ../${destino}/${nombre}` });
+      const first = readFileSync(join(root, file), 'utf8').split('\n').find((l) => l.trim() !== '') ?? '';
+      if (!first.includes(`](../${target}/${name})`)) {
+        violations.push({ file, rule: 'link', message: `the first line does not link to ../${target}/${name}` });
       }
     }
   }
-  for (const nombre of ingles.filter((n) => espanol.includes(n))) {
-    const a = estructuraDeGuia(readFileSync(join(raiz, CARPETA_INGLES, nombre), 'utf8'));
-    const b = estructuraDeGuia(readFileSync(join(raiz, CARPETA_ESPANOL, nombre), 'utf8'));
-    const archivo = `${CARPETA_INGLES}/${nombre}`;
-    if (a.encabezados !== b.encabezados) {
-      violaciones.push({ archivo, regla: 'encabezados', mensaje: `${a.encabezados} encabezados "## " en ingles y ${b.encabezados} en espanol` });
+  for (const name of english.filter((n) => spanish.includes(n))) {
+    const a = guideStructure(readFileSync(join(root, ENGLISH_FOLDER, name), 'utf8'));
+    const b = guideStructure(readFileSync(join(root, SPANISH_FOLDER, name), 'utf8'));
+    const file = `${ENGLISH_FOLDER}/${name}`;
+    if (a.headings !== b.headings) {
+      violations.push({ file, rule: 'headings', message: `${a.headings} "## " headings in English and ${b.headings} in Spanish` });
     }
-    if (a.bloques.length !== b.bloques.length) {
-      violaciones.push({ archivo, regla: 'codigo', mensaje: `${a.bloques.length} bloques de codigo en ingles y ${b.bloques.length} en espanol` });
+    if (a.blocks.length !== b.blocks.length) {
+      violations.push({ file, rule: 'code', message: `${a.blocks.length} code blocks in English and ${b.blocks.length} in Spanish` });
     } else {
-      const i = a.bloques.findIndex((bloque, k) => bloque !== b.bloques[k]);
-      if (i !== -1) violaciones.push({ archivo, regla: 'codigo', mensaje: `el bloque de codigo ${i + 1} difiere entre idiomas` });
+      const i = a.blocks.findIndex((block, k) => block !== b.blocks[k]);
+      if (i !== -1) violations.push({ file, rule: 'code', message: `code block ${i + 1} differs between languages` });
     }
   }
-  return violaciones;
+  return violations;
+}
+
+const GLOSSARY_ENTRY = /^\*\*[^*]+\*\* \(es: \*\*[^*]+\*\*\):$/;
+
+export function checkGlossary(root: string): Violation[] {
+  const file = 'CONTEXT.md';
+  if (!existsSync(join(root, file))) return [];
+  return readFileSync(join(root, file), 'utf8')
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line) => line.startsWith('**') && line.endsWith(':'))
+    .filter((line) => !GLOSSARY_ENTRY.test(line))
+    .map((line) => ({
+      file,
+      rule: 'glossary' as const,
+      message: `the entry "${line}" does not follow "**English** (es: **Spanish**):"`,
+    }));
 }

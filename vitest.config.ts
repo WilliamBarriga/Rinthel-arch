@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
-// Los tests de cada paquete viven en `packages/<paquete>/test` y se ejecutan con
-// `pnpm -r test`; aqui solo corre el chequeo de dependencias del workspace.
+// Each package's tests live in `packages/<package>/test` and run with
+// `pnpm -r test`; only the root tests (`tests/`) run here.
 export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],

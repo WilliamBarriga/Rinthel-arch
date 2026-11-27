@@ -2,7 +2,7 @@
 
 # Customizing with Themes
 
-The aesthetic of a diagram lives in the **Theme**, never in the Model: the same Model and the same View can be seen as sober cards, neon or a circuit board by changing one line (`theme <name>`). This guide explains how a Theme is built and how to write one. If you have not yet, start with the [tutorial](tutorial.md). The exact list of Primitives, properties and ranges is in the [catalog](../theme-catalog.md); the contract, in [ADR 0008](../adr/0008-sistema-de-temas-expresivo.md).
+The aesthetic of a diagram lives in the **Theme**, never in the Model: the same Model and the same View can be seen as sober cards, neon or a circuit board by changing one line (`theme <name>`). This guide explains how a Theme is built and how to write one. If you have not yet, start with the [tutorial](tutorial.md). The exact list of Primitives, properties and ranges is in the [catalog](../theme-catalog.md); the contract, in [ADR 0008](../adr/0008-expressive-theme-system.md).
 
 ## Choosing a Theme
 

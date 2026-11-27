@@ -17,10 +17,10 @@ Tests of a single package: `pnpm --filter <package> test`.
 
 - Decisions and pending work: GitHub Issues of this repo (`gh`, `WilliamBarriga/Rinthel-arch`); each ticket is an issue labelled `wayfinder:<type>`.
 - Code rules (package structure, deep modules, hexagonal, tests): `docs/CODING.md`.
-- Research: index with one conclusion per branch in `docs/ramas.md`; `research/<name>.md` lives on `research/<name>` branches, not on `main`; list them with `git branch -a -l '*research/*'` and read the file with `git show research/<name>:research/<name>.md` before researching again.
-- User guides (README, `docs/guide/` with its Spanish pair `docs/guia/`, `CONTRIBUTING.md`; the pair rule is in CONTRIBUTING): when changing the DSL, an example Theme, the CLI or the Dev UI (`packages/estudio`), update them; `pnpm docs:capturas` regenerates the images in `docs/img/`.
+- Research: index with one conclusion per branch in `docs/research-branches.md`; `research/<name>.md` lives on `research/<name>` branches, not on `main`; list them with `git branch -a -l '*research/*'` and read the file with `git show research/<name>:research/<name>.md` before researching again.
+- User guides (README, `docs/guide/` with its Spanish pair `docs/guia/`, `CONTRIBUTING.md`; the pair rule is in CONTRIBUTING): when changing the DSL, an example Theme, the CLI or the Dev UI (`packages/dev-ui`), update them; `pnpm docs:screenshots` regenerates the images in `docs/img/`.
 - Contract ADRs: index in `docs/adr/README.md`. Read the module's ADR before changing its interface.
-- Theme catalog (Primitives, Slots, Motions, Effects with ranges and defaults): `docs/theme-catalog.md`, generated from `packages/tema` with `pnpm docs:catalogo`; do not edit it by hand (a test fails if it drifts).
+- Theme catalog (Primitives, Slots, Motions, Effects with ranges and defaults): `docs/theme-catalog.md`, generated from `packages/theme` with `pnpm docs:catalog`; do not edit it by hand (a test fails if it drifts).
 
 ## Repo skills
 
@@ -35,7 +35,7 @@ Before adopting a dependency, research it (license, maintenance, fit with the re
 - The core is agnostic of the documented project; everything specific to a project lives as an example or use case.
 - This repo is independent: it does not depend on any consumer repo. Integrating the system into a consumer repo (slides, video or other) is that repo's work, outside this one. Slides, video and the rest are use cases of the `render` contract.
 - Eraser DSL and Archify are discarded; do not reintroduce them.
-- Language: the whole repo is written in English (code, docs, commit messages, CLI messages). Spanish is secondary and lives only in `README.es.md` and the Spanish guides (`docs/guia/`); touching a guide means touching its pair in the other language. Identifiers in a new file follow the language of its host package until the internal migration (see CONTRIBUTING). Answer the user in Spanish. No unicode emojis (`pnpm check:emojis` verifies it).
+- Language: the whole repo is written in English (code, docs, commit messages, CLI messages). Spanish is secondary and lives only in `README.es.md` and the Spanish guides (`docs/guia/`); touching a guide means touching its pair in the other language. Identifiers are English, except the deliberately Spanish wire/public contract listed in CONTRIBUTING (do not translate it). Answer the user in Spanish. No unicode emojis (`pnpm check:emojis` verifies it).
 
 ## Verification
 

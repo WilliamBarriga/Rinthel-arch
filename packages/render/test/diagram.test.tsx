@@ -2,25 +2,25 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView, revealAt } from 'canonico';
-import type { Geometria, VistaDeGrafo, VistaResuelta } from 'canonico';
+import { canonicalFormSchema, resolveView, revealAt } from 'canonical';
+import type { Geometry, GraphView, ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
-import { Diagram, resolverEstilo } from 'render';
+import { Diagram, resolveStyle } from 'render';
 import type { DiagramProps } from 'render';
-import { TEMA_NEUTRO, colocarEnCaja, metricasDe, primitivasDe } from 'tema';
-import type { CajaDeSlots, TemaResuelto } from 'tema';
+import { NEUTRAL_THEME, placeInBox, metricsOf, primitivesOf } from 'theme';
+import type { SlotLayoutBox, ResolvedTheme } from 'theme';
 
-import { PINTORES } from '../src/hoja';
-import { capaDe, etiquetaCon, hojaDe, propiedad, rectDe, traslacionDe } from './ayudas';
+import { PAINTERS } from '../src/sheet';
+import { layerOf, tagWith, sheetOf, property, rectOf, translationOf } from './helpers';
 
-const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
+const node = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
 
-/** a { a1 a2 } -> b -> c, con dos pasos: primero `a`, luego `b` y `c`. */
-function vista(estado = {}, steps: unknown[] = []): VistaDeGrafo {
-  const fuente = fuenteCanonicaSchema.parse({
+/** a { a1 a2 } -> b -> c, with two steps: first `a`, then `b` and `c`. */
+function makeView(state = {}, steps: unknown[] = []): GraphView {
+  const source = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: {
-      nodes: [nodo('a', 'A', [nodo('a.a1', 'A1'), nodo('a.a2', 'A2')]), nodo('b', 'B'), nodo('c', 'C')],
+      nodes: [node('a', 'A', [node('a.a1', 'A1'), node('a.a2', 'A2')]), node('b', 'B'), node('c', 'C')],
       edges: [
         { from: { node: 'a.a1' }, to: { node: 'b' } },
         { from: { node: 'b' }, to: { node: 'c' } },
@@ -28,19 +28,19 @@ function vista(estado = {}, steps: unknown[] = []): VistaDeGrafo {
     },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], steps }],
   });
-  return resolveView(fuente, 'v', estado) as VistaDeGrafo;
+  return resolveView(source, 'v', state) as GraphView;
 }
 
-const PASOS = [
+const STEPS = [
   { title: 'uno', show: [{ selector: 'a.**' }, { selector: 'a' }], hide: [] },
   { title: 'dos', show: [{ selector: 'b' }, { selector: 'c' }], hide: [] },
 ];
 
-/** Tema con una pila de Capas: forma redonda, relleno y borde de Paleta. */
-const CON_CAPAS: TemaResuelto = {
-  ...TEMA_NEUTRO,
+/** Theme with a Layer stack: rounded shape, fill and Palette border. */
+const WITH_LAYERS: ResolvedTheme = {
+  ...NEUTRAL_THEME,
   nodo: {
-    slots: TEMA_NEUTRO.nodo.slots,
+    slots: NEUTRAL_THEME.nodo.slots,
     textos: {},
     tipos: {},
     estados: {},
@@ -52,41 +52,41 @@ const CON_CAPAS: TemaResuelto = {
   },
 };
 
-async function props(view: VistaResuelta, extra: Partial<DiagramProps> = {}): Promise<DiagramProps> {
-  const geometry: Geometria = await layoutView(view, TEMA_NEUTRO);
-  return { view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, ...extra };
+async function props(view: ResolvedView, extra: Partial<DiagramProps> = {}): Promise<DiagramProps> {
+  const geometry: Geometry = await layoutView(view, NEUTRAL_THEME);
+  return { view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, ...extra };
 }
 
-/** Recorre el arbol de elementos que devuelve el componente (sin DOM). */
-function buscar(nodo: ReactNode, quien: (e: ReactElement<Record<string, unknown>>) => boolean): ReactElement<Record<string, unknown>> | undefined {
-  if (nodo === null || typeof nodo !== 'object') return undefined;
-  if (Array.isArray(nodo)) return nodo.map((n) => buscar(n, quien)).find((e) => e !== undefined);
-  const elemento = nodo as ReactElement<Record<string, unknown>>;
-  if (quien(elemento)) return elemento;
-  return buscar(elemento.props?.['children'] as ReactNode, quien);
+/** Walks the element tree the component returns (without DOM). */
+function find(tree: ReactNode, who: (e: ReactElement<Record<string, unknown>>) => boolean): ReactElement<Record<string, unknown>> | undefined {
+  if (tree === null || typeof tree !== 'object') return undefined;
+  if (Array.isArray(tree)) return tree.map((n) => find(n, who)).find((e) => e !== undefined);
+  const element = tree as ReactElement<Record<string, unknown>>;
+  if (who(element)) return element;
+  return find(element.props?.['children'] as ReactNode, who);
 }
 
-const dibujo = (p: DiagramProps): string => renderToStaticMarkup(<Diagram {...p} />);
-const parteDe = (html: string, id: string): string | undefined => etiquetaCon(html.slice(html.indexOf(`data-id="${id}"`)), 'data-part="nodo"');
-const opacidadDe = (html: string, id: string): string | undefined => propiedad(parteDe(html, id), 'opacity');
-const mundoDe = (html: string): string | undefined => etiquetaCon(html, 'class="rd-mundo"');
+const drawing = (p: DiagramProps): string => renderToStaticMarkup(<Diagram {...p} />);
+const partOf = (html: string, id: string): string | undefined => tagWith(html.slice(html.indexOf(`data-id="${id}"`)), 'data-part="nodo"');
+const opacityOf = (html: string, id: string): string | undefined => property(partOf(html, id), 'opacity');
+const worldOf = (html: string): string | undefined => tagWith(html, 'class="rd-mundo"');
 
-describe('Diagram: estructura hibrida', () => {
-  it('son tres capas planas en orden Grupo, Arista, Nodo bajo un contenedor', async () => {
-    const html = dibujo(await props(vista()));
+describe('Diagram: hybrid structure', () => {
+  it('there are three flat layers in Group, Edge, Node order under a container', async () => {
+    const html = drawing(await props(makeView()));
     const [g, a, n] = ['grupos', 'aristas', 'nodos'].map((c) => html.indexOf(`data-capa="${c}"`)) as [number, number, number];
 
     expect(html).toMatch(/^<div class="rd-\w+" data-diagram="" data-camara="0 0 \d+ \d+" style="width:800px;height:600px">/);
     expect(g).toBeGreaterThan(-1);
     expect(g).toBeLessThan(a);
     expect(a).toBeLessThan(n);
-    expect(etiquetaCon(html, 'data-capa="aristas"')).toContain('aria-hidden="true"');
+    expect(tagWith(html, 'data-capa="aristas"')).toContain('aria-hidden="true"');
   });
 
-  it('los Grupos abiertos van en su capa, los Nodos hoja en la de Nodos y las Aristas en el SVG', async () => {
-    const html = dibujo(await props(vista()));
-    const ids = (capa: 'grupos' | 'aristas' | 'nodos', atributo: string): string[] =>
-      [...capaDe(html, capa).matchAll(new RegExp(`${atributo}="([^"]+)"`, 'g'))].map((m) => m[1]!);
+  it('open Groups go in their layer, leaf Nodes in the Nodes layer and Edges in the SVG', async () => {
+    const html = drawing(await props(makeView()));
+    const ids = (layer: 'grupos' | 'aristas' | 'nodos', attribute: string): string[] =>
+      [...layerOf(html, layer).matchAll(new RegExp(`${attribute}="([^"]+)"`, 'g'))].map((m) => m[1]!);
 
     expect(ids('grupos', 'data-id')).toEqual(['a']);
     expect(ids('nodos', 'data-id')).toEqual(['a.a1', 'a.a2', 'b', 'c']);
@@ -94,106 +94,106 @@ describe('Diagram: estructura hibrida', () => {
     expect(ids('nodos', 'data-edge')).toEqual([]);
   });
 
-  it('un unico transform de pan/zoom en el contenedor, con el encuadre de la camara', async () => {
-    const html = dibujo(await props(vista(), { camera: { x: 10, y: 20, width: 400, height: 300 } }));
+  it('a single pan/zoom transform on the container, with the camera framing', async () => {
+    const html = drawing(await props(makeView(), { camera: { x: 10, y: 20, width: 400, height: 300 } }));
 
     expect(html).toContain('data-camara="10 20 400 300"');
-    expect(propiedad(mundoDe(html), 'transform')).toBe('translate(-20px,-40px) scale(2)');
+    expect(property(worldOf(html), 'transform')).toBe('translate(-20px,-40px) scale(2)');
     expect(html.match(/scale\(/g)).toHaveLength(1);
   });
 
-  it('una camara con otra proporcion se centra como un viewBox', async () => {
-    const html = dibujo(await props(vista(), { camera: { x: 0, y: 0, width: 400, height: 600 } }));
+  it('a camera with another aspect ratio is centered like a viewBox', async () => {
+    const html = drawing(await props(makeView(), { camera: { x: 0, y: 0, width: 400, height: 600 } }));
 
-    // escala 1 (min(2, 1)); sobran 400 px a lo ancho, 200 a cada lado.
-    expect(propiedad(mundoDe(html), 'transform')).toBe('translate(200px,0px) scale(1)');
+    // scale 1 (min(2, 1)); 400 px left over in width, 200 on each side.
+    expect(property(worldOf(html), 'transform')).toBe('translate(200px,0px) scale(1)');
   });
 
-  it('cada caja esta en coordenadas absolutas del lienzo, tambien las de un Nodo dentro de un Grupo', async () => {
-    const p = await props(vista());
-    const html = dibujo(p);
+  it('each box is in absolute canvas coordinates, also those of a Node inside a Group', async () => {
+    const p = await props(makeView());
+    const html = drawing(p);
     const { a, 'a.a1': a1, b } = p.geometry.nodes;
 
-    expect(traslacionDe(etiquetaCon(html, 'data-id="a"'))).toEqual({ x: a!.x, y: a!.y });
-    expect(traslacionDe(etiquetaCon(html, 'data-id="a.a1"'))).toEqual({ x: a!.x + a1!.x, y: a!.y + a1!.y });
-    expect(traslacionDe(etiquetaCon(html, 'data-id="b"'))).toEqual({ x: b!.x, y: b!.y });
-    expect(rectDe(etiquetaCon(html, 'data-id="a.a1"'))).toMatchObject({ width: a1!.width, height: a1!.height });
+    expect(translationOf(tagWith(html, 'data-id="a"'))).toEqual({ x: a!.x, y: a!.y });
+    expect(translationOf(tagWith(html, 'data-id="a.a1"'))).toEqual({ x: a!.x + a1!.x, y: a!.y + a1!.y });
+    expect(translationOf(tagWith(html, 'data-id="b"'))).toEqual({ x: b!.x, y: b!.y });
+    expect(rectOf(tagWith(html, 'data-id="a.a1"'))).toMatchObject({ width: a1!.width, height: a1!.height });
   });
 
-  it('el mundo mide como la geometria y las Aristas van en un SVG del mismo tamano', async () => {
-    const p = await props(vista());
-    const html = dibujo(p);
+  it('the world measures like the geometry and the Edges go in an SVG of the same size', async () => {
+    const p = await props(makeView());
+    const html = drawing(p);
     const { width, height } = p.geometry;
 
-    expect(propiedad(mundoDe(html), 'width')).toBe(`${width}px`);
-    expect(propiedad(mundoDe(html), 'height')).toBe(`${height}px`);
+    expect(property(worldOf(html), 'width')).toBe(`${width}px`);
+    expect(property(worldOf(html), 'height')).toBe(`${height}px`);
     expect(html).toContain(`width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"`);
   });
 
-  it('cada Slot va en el rectangulo que reservo la colocacion compartida', async () => {
-    const p = await props(vista());
-    const html = dibujo(p);
-    const { slots } = colocarEnCaja(metricasDe(TEMA_NEUTRO, 'architecture'), { titulo: 'b', atributos: [], icono: false }, p.geometry.nodes['b']!.width);
-    const titulo = etiquetaCon(html.slice(html.indexOf('data-id="b"')), 'data-slot="title"');
+  it('each Slot goes on the rectangle the shared placement reserved', async () => {
+    const p = await props(makeView());
+    const html = drawing(p);
+    const { slots } = placeInBox(metricsOf(NEUTRAL_THEME, 'architecture'), { titulo: 'b', atributos: [], icono: false }, p.geometry.nodes['b']!.width);
+    const title = tagWith(html.slice(html.indexOf('data-id="b"')), 'data-slot="title"');
 
-    expect(rectDe(titulo)).toEqual(slots.title);
-    expect(titulo).toContain('class="rd-slot rd-title"');
+    expect(rectOf(title)).toEqual(slots.title);
+    expect(title).toContain('class="rd-slot rd-title"');
   });
 
-  describe('Slots badge, desc, footer y counter', () => {
-    const COLUMNA: CajaDeSlots = { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }, { slot: 'desc' }, { slot: 'footer' }] };
-    const FILA: CajaDeSlots = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'title' }, { slot: 'counter' }] };
-    const conSlots = (slots: TemaResuelto['nodo']['slots'], textos: TemaResuelto['nodo']['textos'] = {}): TemaResuelto => ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, slots, textos } });
-    const dibujar = async (tema: TemaResuelto, estado = {}) => {
-      const v = vista(estado);
-      const nodos = v.nodes.map((n) => (n.id === 'b' ? { ...n, description: 'Reparte la carga', source: [{ kind: 'ruta', ref: 'src/b.ts' }] } : n));
-      const geometry = await layoutView({ ...v, nodes: nodos }, tema);
-      return { html: dibujo({ view: { ...v, nodes: nodos }, geometry, theme: tema, width: 800, height: 600 }), geometry };
+  describe('Slots badge, desc, footer and counter', () => {
+    const COLUMN: SlotLayoutBox = { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }, { slot: 'desc' }, { slot: 'footer' }] };
+    const ROW: SlotLayoutBox = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'title' }, { slot: 'counter' }] };
+    const withSlots = (slots: ResolvedTheme['nodo']['slots'], texts: ResolvedTheme['nodo']['textos'] = {}): ResolvedTheme => ({ ...NEUTRAL_THEME, nodo: { ...NEUTRAL_THEME.nodo, slots, textos: texts } });
+    const draw = async (theme: ResolvedTheme, state = {}) => {
+      const v = makeView(state);
+      const nodes = v.nodes.map((n) => (n.id === 'b' ? { ...n, description: 'Reparte la carga', source: [{ kind: 'ruta', ref: 'src/b.ts' }] } : n));
+      const geometry = await layoutView({ ...v, nodes }, theme);
+      return { html: drawing({ view: { ...v, nodes }, geometry, theme, width: 800, height: 600 }), geometry };
     };
-    const slotDe = (html: string, id: string, slot: string) => etiquetaCon(html.slice(html.indexOf(`data-id="${id}"`)), `data-slot="${slot}"`);
+    const slotOf = (html: string, id: string, slot: string) => tagWith(html.slice(html.indexOf(`data-id="${id}"`)), `data-slot="${slot}"`);
 
-    it('cada Slot nuevo se pinta en su rectangulo con su texto', async () => {
-      const { html, geometry } = await dibujar(conSlots(COLUMNA));
+    it('each new Slot is painted on its rectangle with its text', async () => {
+      const { html, geometry } = await draw(withSlots(COLUMN));
       const slots = geometry.nodes['b']!.slots!;
 
-      for (const [slot, texto] of [['badge', 'servicio'], ['desc', 'Reparte la carga'], ['footer', 'src/b.ts']] as const) {
-        expect(rectDe(slotDe(html, 'b', slot))).toEqual(slots[slot]);
-        expect(html).toContain(`>${texto}</div>`);
+      for (const [slot, text] of [['badge', 'servicio'], ['desc', 'Reparte la carga'], ['footer', 'src/b.ts']] as const) {
+        expect(rectOf(slotOf(html, 'b', slot))).toEqual(slots[slot]);
+        expect(html).toContain(`>${text}</div>`);
       }
-      // El tamano de texto reservado (14 * 0.74) se escribe en el elemento.
-      expect(propiedad(slotDe(html, 'b', 'badge'), 'font-size')).toBe('10.36px');
+      // The reserved text size (14 * 0.74) is written on the element.
+      expect(property(slotOf(html, 'b', 'badge'), 'font-size')).toBe('10.36px');
     });
 
-    it('un Nodo sin descripcion ni fuente no pinta desc ni footer', async () => {
-      const { html } = await dibujar(conSlots(COLUMNA));
+    it('a Node without description nor source does not paint desc nor footer', async () => {
+      const { html } = await draw(withSlots(COLUMN));
 
-      expect(slotDe(html, 'c', 'desc')).toBeUndefined();
-      expect(slotDe(html, 'c', 'footer')).toBeUndefined();
-      expect(slotDe(html, 'c', 'badge')).toBeDefined();
+      expect(slotOf(html, 'c', 'desc')).toBeUndefined();
+      expect(slotOf(html, 'c', 'footer')).toBeUndefined();
+      expect(slotOf(html, 'c', 'badge')).toBeDefined();
     });
 
-    it('counter solo se pinta en el Grupo colapsado, con el numero de hijos', async () => {
-      const { html } = await dibujar(conSlots(FILA), { collapsed: ['a'] });
+    it('counter is only painted on the collapsed Group, with the number of children', async () => {
+      const { html } = await draw(withSlots(ROW), { collapsed: ['a'] });
 
-      expect(slotDe(html, 'a', 'counter')).toBeDefined();
-      expect(slotDe(html, 'b', 'counter')).toBeUndefined();
+      expect(slotOf(html, 'a', 'counter')).toBeDefined();
+      expect(slotOf(html, 'b', 'counter')).toBeUndefined();
       expect(html).toContain('>2</div>');
       expect(html).not.toContain('A (2)');
     });
 
-    it('un borde grueso publica su ancho en --rd-borde y los Slots se corren esa distancia (la ultima fila no se recorta)', async () => {
-      const grueso: TemaResuelto = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'blue', width: 4 } } }] as never } };
-      const { html } = await dibujar(grueso);
-      const hoja = hojaDe(html);
+    it('a thick border publishes its width in --rd-borde and the Slots shift by that distance (the last row is not clipped)', async () => {
+      const thick: ResolvedTheme = { ...NEUTRAL_THEME, nodo: { ...NEUTRAL_THEME.nodo, capas: [{ nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'blue', width: 4 } } }] as never } };
+      const { html } = await draw(thick);
+      const sheet = sheetOf(html);
 
-      expect(hoja).toMatch(/\.rd-nodo\{[^}]*--rd-borde:4px/);
-      expect(hoja).toContain('.rd-icono{margin:calc(-1 * var(--rd-borde, 0px))');
-      expect(hoja).toContain('.rd-attrs{clip-path:inset(0 var(--rd-borde, 0px) var(--rd-borde, 0px))');
+      expect(sheet).toMatch(/\.rd-nodo\{[^}]*--rd-borde:4px/);
+      expect(sheet).toContain('.rd-icono{margin:calc(-1 * var(--rd-borde, 0px))');
+      expect(sheet).toContain('.rd-attrs{clip-path:inset(0 var(--rd-borde, 0px) var(--rd-borde, 0px))');
     });
 
-    it('el estilo de texto (alpha, text-align) y el de caja del contador salen en la hoja', async () => {
-      const { html } = await dibujar(
-        conSlots(
+    it('the text style (alpha, text-align) and the counter box style come out in the sheet', async () => {
+      const { html } = await draw(
+        withSlots(
           { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }, { slot: 'counter' }] },
           {
             title: { tipo: 'text', props: { weight: 600, style: 'normal', transform: 'none', 'text-align': 'start' } },
@@ -202,30 +202,30 @@ describe('Diagram: estructura hibrida', () => {
           },
         ),
       );
-      const hoja = hojaDe(html);
+      const sheet = sheetOf(html);
 
-      expect(hoja).toMatch(/data-slot="title"\]\{[^}]*text-align:left/);
-      expect(hoja).toMatch(/data-slot="badge"\]\{[^}]*opacity:0.5[^}]*text-align:right/);
-      expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*border-radius:8px[^}]*background:${TEMA_NEUTRO.palette['amber']}[^}]*border:1px solid ${TEMA_NEUTRO.palette['blue']}`));
+      expect(sheet).toMatch(/data-slot="title"\]\{[^}]*text-align:left/);
+      expect(sheet).toMatch(/data-slot="badge"\]\{[^}]*opacity:0.5[^}]*text-align:right/);
+      expect(sheet).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*border-radius:8px[^}]*background:${NEUTRAL_THEME.palette['amber']}[^}]*border:1px solid ${NEUTRAL_THEME.palette['blue']}`));
     });
 
-    it('un Tema con icon variant dot muestra el punto del color del Tipo aunque el Tipo no declare icon, y reserva su sitio', async () => {
-      const FILA_ICONO: CajaDeSlots = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'title' }] };
-      const conPunto = conSlots(FILA_ICONO, { icon: { tipo: 'icon', props: { variant: 'dot', side: 7, radius: 6, fill: 'COLOR' } } });
-      const conGlifo = conSlots(FILA_ICONO, { icon: { tipo: 'icon', props: { variant: 'plain', side: 7 } } });
-      const { html, geometry } = await dibujar(conPunto);
-      const { geometry: sinPunto } = await dibujar(conGlifo);
+    it('a Theme with icon variant dot shows the dot in the Node kind color even if the kind declares no icon, and reserves its spot', async () => {
+      const ICON_ROW: SlotLayoutBox = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'title' }] };
+      const withDot = withSlots(ICON_ROW, { icon: { tipo: 'icon', props: { variant: 'dot', side: 7, radius: 6, fill: 'COLOR' } } });
+      const withGlyph = withSlots(ICON_ROW, { icon: { tipo: 'icon', props: { variant: 'plain', side: 7 } } });
+      const { html, geometry } = await draw(withDot);
+      const { geometry: withoutDot } = await draw(withGlyph);
 
-      expect(rectDe(slotDe(html, 'b', 'icon'))).toMatchObject({ width: 7, height: 7 });
-      expect(slotDe(html, 'b', 'icon')).toContain('data-variante="dot"');
-      expect(slotDe(html, 'b', 'icon')).not.toContain('data-icon=');
-      expect(geometry.nodes['b']!.width).toBeGreaterThan(sinPunto.nodes['b']!.width - 1);
-      expect(sinPunto.nodes['b']!.slots?.['icon']).toBeUndefined();
+      expect(rectOf(slotOf(html, 'b', 'icon'))).toMatchObject({ width: 7, height: 7 });
+      expect(slotOf(html, 'b', 'icon')).toContain('data-variante="dot"');
+      expect(slotOf(html, 'b', 'icon')).not.toContain('data-icon=');
+      expect(geometry.nodes['b']!.width).toBeGreaterThan(withoutDot.nodes['b']!.width - 1);
+      expect(withoutDot.nodes['b']!.slots?.['icon']).toBeUndefined();
     });
 
-    it('font mono y border-width llegan al texto, al contador y al icono; el punto con ring va sobre un aro', async () => {
-      const { html } = await dibujar(
-        conSlots(
+    it('font mono and border-width reach the text, the counter and the icon; the dot with ring sits on a ring', async () => {
+      const { html } = await draw(
+        withSlots(
           { direccion: 'row', gap: 0, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'badge' }, { slot: 'counter' }] },
           {
             icon: { tipo: 'icon', props: { variant: 'dot', side: 18, radius: 6, ring: 'amber', border: 'blue', 'border-width': 2 } },
@@ -235,245 +235,245 @@ describe('Diagram: estructura hibrida', () => {
         ),
         { collapsed: ['a'] },
       );
-      const hoja = hojaDe(html);
-      const mono = TEMA_NEUTRO.fonts.mono;
+      const sheet = sheetOf(html);
+      const mono = NEUTRAL_THEME.fonts.mono;
 
-      expect(hoja).toMatch(new RegExp(String.raw`data-slot="badge"\]\{[^}]*font-family:${mono}[^}]*border:2px solid`));
-      expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*font-family:${mono}[^}]*border:2px solid`));
-      expect(hoja).toMatch(new RegExp(String.raw`data-variante="dot"\]\{[^}]*background:radial-gradient\(circle closest-side,currentColor 0 44%,${TEMA_NEUTRO.palette['amber']} 46%\)[^}]*border:2px solid`));
-      // El texto del contador se centra dentro de su borde de 2px.
-      const contador = slotDe(html, 'a', 'counter');
-      expect(propiedad(contador, 'line-height')).toBe(`${rectDe(contador).height - 4}px`);
+      expect(sheet).toMatch(new RegExp(String.raw`data-slot="badge"\]\{[^}]*font-family:${mono}[^}]*border:2px solid`));
+      expect(sheet).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*font-family:${mono}[^}]*border:2px solid`));
+      expect(sheet).toMatch(new RegExp(String.raw`data-variante="dot"\]\{[^}]*background:radial-gradient\(circle closest-side,currentColor 0 44%,${NEUTRAL_THEME.palette['amber']} 46%\)[^}]*border:2px solid`));
+      // The counter text is centered inside its 2px border.
+      const countSlot = slotOf(html, 'a', 'counter');
+      expect(property(countSlot, 'line-height')).toBe(`${rectOf(countSlot).height - 4}px`);
     });
   });
 
-  it('cada Nodo es una caja con contain: layout style', async () => {
-    const html = dibujo(await props(vista()));
+  it('each Node is a box with contain: layout style', async () => {
+    const html = drawing(await props(makeView()));
 
-    expect(hojaDe(html)).toMatch(/\.rd-caja\{[^}]*contain:layout style/);
+    expect(sheetOf(html)).toMatch(/\.rd-caja\{[^}]*contain:layout style/);
     expect(html).toMatch(/class="rd-caja" data-id="b"/);
   });
 });
 
-describe('Diagram: hoja de estilo', () => {
-  it('compila las Capas del Tema a CSS en orden, y el color de Tipo del Nodo va como variable', async () => {
-    const html = dibujo(await props(vista(), { theme: CON_CAPAS }));
+describe('Diagram: style sheet', () => {
+  it('compiles the Theme Layers to CSS in order, and the Node kind color goes as a variable', async () => {
+    const html = drawing(await props(makeView(), { theme: WITH_LAYERS }));
 
-    expect(hojaDe(html)).toContain('border-radius:12px;background:#d97706;border:2px solid #2563eb');
-    expect(propiedad(parteDe(html, 'b'), '--trazo')).toBe('#9ca3af');
+    expect(sheetOf(html)).toContain('border-radius:12px;background:#d97706;border:2px solid #2563eb');
+    expect(property(partOf(html, 'b'), '--trazo')).toBe('#9ca3af');
   });
 
-  it('es determinista y los estados son selectores', async () => {
-    const p = await props(vista());
-    const hoja = hojaDe(dibujo(p));
+  it('is deterministic and the states are selectors', async () => {
+    const p = await props(makeView());
+    const sheet = sheetOf(drawing(p));
 
-    expect(hojaDe(dibujo(p))).toBe(hoja);
-    for (const estado of ['selected', 'hover', 'ghost']) expect(hoja).toContain(`.rd-estado[data-state="${estado}"]{`);
-    expect(hoja).toContain('.rd-estado[data-state="ghost"]{border:2px dashed #9ca3af;opacity:0.7}');
+    expect(sheetOf(drawing(p))).toBe(sheet);
+    for (const state of ['selected', 'hover', 'ghost']) expect(sheet).toContain(`.rd-estado[data-state="${state}"]{`);
+    expect(sheet).toContain('.rd-estado[data-state="ghost"]{border:2px dashed #9ca3af;opacity:0.7}');
   });
 
-  it('sin Capas en el Tema se usa el aspecto por defecto del Estilo', async () => {
-    expect(hojaDe(dibujo(await props(vista())))).toContain('border-radius:6px;background:#ffffff;border:1px solid var(--trazo, #9ca3af)');
+  it('without Layers in the Theme the default look of the Style is used', async () => {
+    expect(sheetOf(drawing(await props(makeView())))).toContain('border-radius:6px;background:#ffffff;border:1px solid var(--trazo, #9ca3af)');
   });
 
-  it('dos Temas dan clases de alcance distintas, asi no se pisan en la misma pagina', async () => {
-    const clase = (html: string): string => /^<div class="(rd-\w+)"/.exec(html)![1]!;
-    const a = dibujo(await props(vista()));
-    const b = dibujo(await props(vista(), { theme: CON_CAPAS }));
+  it('two Themes give different scope classes, so they do not clash on the same page', async () => {
+    const className = (html: string): string => /^<div class="(rd-\w+)"/.exec(html)![1]!;
+    const a = drawing(await props(makeView()));
+    const b = drawing(await props(makeView(), { theme: WITH_LAYERS }));
 
-    expect(clase(a)).not.toBe(clase(b));
-    expect(hojaDe(b)).not.toContain(`.${clase(a)}`);
+    expect(className(a)).not.toBe(className(b));
+    expect(sheetOf(b)).not.toContain(`.${className(a)}`);
   });
 
-  it('cada Primitiva del catalogo tiene su pintor', () => {
-    expect(Object.keys(PINTORES).sort()).toEqual(primitivasDe('capa-nodo').sort());
+  it('every catalog Primitive has its painter', () => {
+    expect(Object.keys(PAINTERS).sort()).toEqual(primitivesOf('capa-nodo').sort());
   });
 
-  it('un valor hostil del Tema no puede cerrar la hoja ni inyectar reglas', async () => {
-    const hostil: TemaResuelto = { ...CON_CAPAS, palette: { ...CON_CAPAS.palette, amber: 'red}</style><script>x()</script>' } };
-    const html = dibujo(await props(vista(), { theme: hostil }));
+  it('a hostile Theme value cannot close the sheet nor inject rules', async () => {
+    const hostile: ResolvedTheme = { ...WITH_LAYERS, palette: { ...WITH_LAYERS.palette, amber: 'red}</style><script>x()</script>' } };
+    const html = drawing(await props(makeView(), { theme: hostile }));
 
     expect(html).not.toContain('<script>');
-    expect(hojaDe(html)).not.toContain('</style>');
-    expect(hojaDe(html)).toContain('background:red/stylescriptx()/script');
+    expect(sheetOf(html)).not.toContain('</style>');
+    expect(sheetOf(html)).toContain('background:red/stylescriptx()/script');
   });
 });
 
 describe('Diagram', () => {
-  it('dibuja Nodos, Grupos y Aristas', async () => {
-    const html = dibujo(await props(vista()));
+  it('draws Nodes, Groups and Edges', async () => {
+    const html = drawing(await props(makeView()));
 
     for (const id of ['a', 'a.a1', 'a.a2', 'b', 'c']) expect(html).toContain(`data-id="${id}"`);
     expect(html).toContain('data-edge="a.a1 -&gt; b"');
   });
 
-  it('las etiquetas de Arista van en una pasada posterior a todos los trazos, con la visibilidad de su Arista', async () => {
-    const base = vista();
-    const view: VistaResuelta = { ...base, edges: base.edges.map((e, i) => (i === 0 ? { ...e, label: 'uno' } : e)) };
-    const html = dibujo(await props(view, { visibility: (id) => (id === 'a.a1 -> b' ? 0.5 : 1) }));
-    const ultimaArista = html.lastIndexOf('<g data-edge="');
+  it('Edge labels go in a pass after all strokes, with the visibility of their Edge', async () => {
+    const base = makeView();
+    const view: ResolvedView = { ...base, edges: base.edges.map((e, i) => (i === 0 ? { ...e, label: 'uno' } : e)) };
+    const html = drawing(await props(view, { visibility: (id) => (id === 'a.a1 -> b' ? 0.5 : 1) }));
+    const lastEdge = html.lastIndexOf('<g data-edge="');
 
-    expect(html.indexOf('data-edge-labels="a.a1 -&gt; b"')).toBeGreaterThan(ultimaArista);
+    expect(html.indexOf('data-edge-labels="a.a1 -&gt; b"')).toBeGreaterThan(lastEdge);
     expect(html).toMatch(/<g data-edge-labels="a.a1 -&gt; b" opacity="0.5"/);
   });
 
-  it('visibility 0, 1 y fraccion se reflejan en la opacidad de Nodos y Aristas', async () => {
+  it('visibility 0, 1 and a fraction show in the opacity of Nodes and Edges', async () => {
     const visibility = (id: string): number => ({ b: 0, c: 0.5, 'b -> c': 0.25 })[id] ?? 1;
-    const html = dibujo(await props(vista(), { visibility }));
+    const html = drawing(await props(makeView(), { visibility }));
 
-    expect(opacidadDe(html, 'b')).toBe('0');
-    expect(opacidadDe(html, 'c')).toBe('0.5');
-    expect(opacidadDe(html, 'a.a1')).toBeUndefined();
+    expect(opacityOf(html, 'b')).toBe('0');
+    expect(opacityOf(html, 'c')).toBe('0.5');
+    expect(opacityOf(html, 'a.a1')).toBeUndefined();
     expect(html).toMatch(/<g data-edge="b -&gt; c" opacity="0.25"/);
     expect(html).not.toMatch(/<g data-edge="a.a1 -&gt; b" opacity/);
   });
 
-  it('un Grupo colapsado es un Nodo unico con contador y sin hijos', async () => {
-    const html = dibujo(await props(vista({ collapsed: ['a'] })));
+  it('a collapsed Group is a single Node with a counter and without children', async () => {
+    const html = drawing(await props(makeView({ collapsed: ['a'] })));
 
     expect(html).toContain('A (2)');
     expect(html).not.toContain('data-id="a.a1"');
     expect(html).toContain('data-edge="a -&gt; b"');
-    expect(capaDe(html, 'nodos')).toContain('data-id="a"');
-    expect(capaDe(html, 'grupos')).not.toContain('data-id=');
-    expect(parteDe(html, 'a')).toContain('data-collapsed=""');
+    expect(layerOf(html, 'nodos')).toContain('data-id="a"');
+    expect(layerOf(html, 'grupos')).not.toContain('data-id=');
+    expect(partOf(html, 'a')).toContain('data-collapsed=""');
   });
 
-  it('con revealAt el resultado coincide con el paso esperado', async () => {
-    const view = vista({}, PASOS);
+  it('with revealAt the result matches the expected step', async () => {
+    const view = makeView({}, STEPS);
     const base = await props(view);
-    const enPaso = (k: number): string => dibujo({ ...base, visibility: revealAt(view, k) });
+    const inStep = (k: number): string => drawing({ ...base, visibility: revealAt(view, k) });
 
-    expect(opacidadDe(enPaso(1), 'a.a1')).toBeUndefined();
-    expect(opacidadDe(enPaso(1), 'b')).toBe('0');
-    expect(opacidadDe(enPaso(2), 'b')).toBeUndefined();
-    expect(opacidadDe(enPaso(1.5), 'b')).toBe('0');
+    expect(opacityOf(inStep(1), 'a.a1')).toBeUndefined();
+    expect(opacityOf(inStep(1), 'b')).toBe('0');
+    expect(opacityOf(inStep(2), 'b')).toBeUndefined();
+    expect(opacityOf(inStep(1.5), 'b')).toBe('0');
   });
 
-  it('sin estado propio: las mismas props producen el mismo arbol', async () => {
-    const p = await props(vista(), { visibility: (id) => (id === 'c' ? 0.3 : 1) });
+  it('no state of its own: the same props produce the same tree', async () => {
+    const p = await props(makeView(), { visibility: (id) => (id === 'c' ? 0.3 : 1) });
 
-    expect(dibujo(p)).toBe(dibujo(p));
+    expect(drawing(p)).toBe(drawing(p));
     expect(JSON.stringify(Diagram(p))).toBe(JSON.stringify(Diagram(p)));
   });
 
-  it('un Nodo o Arista con visibilidad 0 no recibe clics', async () => {
+  it('a Node or Edge with visibility 0 gets no clicks', async () => {
     const visibility = (id: string): number => (id === 'b' || id === 'b -> c' ? 0 : 1);
-    const html = dibujo(await props(vista(), { visibility }));
+    const html = drawing(await props(makeView(), { visibility }));
 
-    expect(propiedad(parteDe(html, 'b'), 'pointer-events')).toBe('none');
-    expect(propiedad(parteDe(html, 'c'), 'pointer-events')).toBeUndefined();
+    expect(property(partOf(html, 'b'), 'pointer-events')).toBe('none');
+    expect(property(partOf(html, 'c'), 'pointer-events')).toBeUndefined();
     expect(html).toMatch(/<g data-edge="b -&gt; c" opacity="0" pointer-events="none"/);
   });
 
-  it('el marcador de flecha toma el color de borde del Tema y no hay ids que compartir', async () => {
-    const oscuro = { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, border: '#4b5563' } };
-    const a = dibujo(await props(vista()));
-    const b = dibujo(await props(vista(), { theme: oscuro }));
+  it('the arrow marker takes the Theme border color and there are no ids to share', async () => {
+    const dark = { ...NEUTRAL_THEME, tokens: { ...NEUTRAL_THEME.tokens, border: '#4b5563' } };
+    const a = drawing(await props(makeView()));
+    const b = drawing(await props(makeView(), { theme: dark }));
 
     expect(a).toContain('data-marker="fin"');
     expect(a).not.toContain('<marker');
     expect(b).toMatch(/data-marker="fin"[^>]*><path d="[^"]+" fill="#4b5563"/);
   });
 
-  it('cambiar un valor del Estilo cambia lo que dibuja Diagram', async () => {
-    const base = await props(vista());
-    const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
-    const otro = { ...estilo, nodo: { ...estilo.nodo, radio: 13, relleno: '#fafafa' }, glifos: { expandido: 'v', colapsado: '>' } };
-    const dibujar = (e: typeof estilo): string => dibujo({ ...base, onToggle: () => {}, estilo: e });
+  it('changing a Style value changes what Diagram draws', async () => {
+    const base = await props(makeView());
+    const style = resolveStyle(NEUTRAL_THEME, 'architecture');
+    const another = { ...style, node: { ...style.node, radius: 13, fill: '#fafafa' }, glyphs: { expandedGlyph: 'v', collapsedGlyph: '>' } };
+    const draw = (e: typeof style): string => drawing({ ...base, onToggle: () => {}, style: e });
 
-    expect(dibujar(otro)).not.toBe(dibujar(estilo));
-    expect(hojaDe(dibujar(otro))).toContain('border-radius:13px;background:#fafafa');
-    expect(dibujar(otro)).toContain('>v<');
+    expect(draw(another)).not.toBe(draw(style));
+    expect(sheetOf(draw(another))).toContain('border-radius:13px;background:#fafafa');
+    expect(draw(another)).toContain('>v<');
   });
 
-  it('pulsar un Nodo llama a onSelect con su id; pulsar una Arista, con el de la Arista', async () => {
+  it('clicking a Node calls onSelect with its id; clicking an Edge, with the Edge one', async () => {
     const onSelect = vi.fn();
-    const arbol = Diagram(await props(vista(), { onSelect }));
-    // El clic va en la parte propia del Nodo, hija de la caja `data-id`.
-    const porId = (id: string) => buscar(buscar(arbol, (e) => e.props['data-id'] === id)!.props['children'] as ReactNode, (e) => e.props['data-part'] === 'nodo')!;
-    const porArista = (id: string) => buscar(arbol, (e) => e.props['data-edge'] === id)!;
+    const tree = Diagram(await props(makeView(), { onSelect }));
+    // The click goes on the Node's own part, a child of the `data-id` box.
+    const byId = (id: string) => find(find(tree, (e) => e.props['data-id'] === id)!.props['children'] as ReactNode, (e) => e.props['data-part'] === 'nodo')!;
+    const perEdge = (id: string) => find(tree, (e) => e.props['data-edge'] === id)!;
 
-    (porId('b').props['onClick'] as () => void)();
-    (porArista('b -> c').props['onClick'] as () => void)();
+    (byId('b').props['onClick'] as () => void)();
+    (perEdge('b -> c').props['onClick'] as () => void)();
 
     expect(onSelect.mock.calls).toEqual([['b'], ['b -> c']]);
   });
 
-  it('el control de un Grupo llama a onToggle con su id sin seleccionarlo', async () => {
+  it('the control of a Group calls onToggle with its id without selecting it', async () => {
     const onToggle = vi.fn();
     const onSelect = vi.fn();
-    const arbol = Diagram(await props(vista(), { onToggle, onSelect }));
-    const control = buscar(arbol, (e) => e.props['data-toggle'] === 'a')!;
-    const detener = vi.fn();
+    const tree = Diagram(await props(makeView(), { onToggle, onSelect }));
+    const control = find(tree, (e) => e.props['data-toggle'] === 'a')!;
+    const stop = vi.fn();
 
-    (control.props['onClick'] as (ev: { stopPropagation(): void }) => void)({ stopPropagation: detener });
+    (control.props['onClick'] as (ev: { stopPropagation(): void }) => void)({ stopPropagation: stop });
 
     expect(onToggle).toHaveBeenCalledWith('a');
-    expect(detener).toHaveBeenCalled();
-    expect(buscar(arbol, (e) => e.props['data-toggle'] === 'b')).toBeUndefined();
+    expect(stop).toHaveBeenCalled();
+    expect(find(tree, (e) => e.props['data-toggle'] === 'b')).toBeUndefined();
   });
 
-  it('el control de colapso solo se ve al pasar el raton por su caja o con el foco del teclado dentro', async () => {
-    const hoja = hojaDe(dibujo(await props(vista(), { onToggle: () => undefined })));
+  it('the collapse control only shows when hovering its box or with keyboard focus inside', async () => {
+    const sheet = sheetOf(drawing(await props(makeView(), { onToggle: () => undefined })));
 
-    expect(hoja).toMatch(/\.rd-control\{[^}]*opacity:0/);
-    expect(hoja).toMatch(/\.rd-caja:hover \.rd-control,\.rd-[a-z0-9]+ \.rd-caja:focus-within \.rd-control\{opacity:1\}/);
+    expect(sheet).toMatch(/\.rd-control\{[^}]*opacity:0/);
+    expect(sheet).toMatch(/\.rd-caja:hover \.rd-control,\.rd-[a-z0-9]+ \.rd-caja:focus-within \.rd-control\{opacity:1\}/);
   });
 
-  it('sin onToggle no se dibujan controles de colapso', async () => {
-    expect(dibujo(await props(vista()))).not.toContain('data-toggle');
+  it('without onToggle no collapse controls are drawn', async () => {
+    expect(drawing(await props(makeView()))).not.toContain('data-toggle');
   });
 
-  describe('estados visuales', () => {
-    const marcas = (html: string, estado: string): string[] => [...html.matchAll(new RegExp(`<[^>]*data-state="${estado}"[^>]*>`, 'g'))].map((m) => m[0]);
+  describe('visual states', () => {
+    const marks = (html: string, state: string): string[] => [...html.matchAll(new RegExp(`<[^>]*data-state="${state}"[^>]*>`, 'g'))].map((m) => m[0]);
 
-    it('un Nodo seleccionado lleva un contorno dentro de su caja, estilado por la hoja con el color del Estilo', async () => {
-      const html = dibujo(await props(vista(), { estados: { b: ['selected'] } }));
-      const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
-      const [marca] = marcas(html, 'selected');
+    it('a selected Node carries an outline inside its box, styled by the sheet with the Style color', async () => {
+      const html = drawing(await props(makeView(), { states: { b: ['selected'] } }));
+      const style = resolveStyle(NEUTRAL_THEME, 'architecture');
+      const [mark] = marks(html, 'selected');
 
-      expect(marca).toContain('data-selected="b"');
-      expect(marca).toContain('class="rd-estado"');
+      expect(mark).toContain('data-selected="b"');
+      expect(mark).toContain('class="rd-estado"');
       expect(html.slice(html.indexOf('data-id="b"'), html.indexOf('data-id="c"'))).toContain('data-state="selected"');
-      expect(hojaDe(html)).toContain(`.rd-estado[data-state="selected"]{border:3px solid ${estilo.estados.selected.color}}`);
+      expect(sheetOf(html)).toContain(`.rd-estado[data-state="selected"]{border:3px solid ${style.states.selected.color}}`);
     });
 
-    it('sin estados no se dibuja ninguna marca', async () => {
-      expect(dibujo(await props(vista())).replace(/<style>[\s\S]*<\/style>/, '')).not.toContain('data-state');
+    it('without states no mark is drawn', async () => {
+      expect(drawing(await props(makeView())).replace(/<style>[\s\S]*<\/style>/, '')).not.toContain('data-state');
     });
 
-    it('una Arista marcada se dibuja en su capa SVG; un Atributo que no se muestra, no', async () => {
-      const estados = { 'b -> c': ['hover'], 'a#x': ['selected'] } as const;
-      const html = dibujo(await props(vista(), { estados }));
+    it('a marked Edge is drawn in its SVG layer; an Attribute that is not shown, is not', async () => {
+      const states = { 'b -> c': ['hover'], 'a#x': ['selected'] } as const;
+      const html = drawing(await props(makeView(), { states }));
 
-      expect(marcas(capaDe(html, 'aristas'), 'hover')).toHaveLength(1);
-      expect(marcas(capaDe(html, 'aristas'), 'hover')[0]).toContain('<path');
-      expect(marcas(html, 'selected')).toHaveLength(0);
+      expect(marks(layerOf(html, 'aristas'), 'hover')).toHaveLength(1);
+      expect(marks(layerOf(html, 'aristas'), 'hover')[0]).toContain('<path');
+      expect(marks(html, 'selected')).toHaveLength(0);
     });
 
-    it('el fantasma y el hover usan sus propias entradas del Estilo', async () => {
-      const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
-      const otro = { ...estilo, estados: { ...estilo.estados, ghost: { ...estilo.estados.ghost, color: 'hotpink' } } };
-      const hoja = hojaDe(dibujo(await props(vista(), { estados: { c: ['ghost'] }, estilo: otro })));
+    it('ghost and hover use their own Style entries', async () => {
+      const style = resolveStyle(NEUTRAL_THEME, 'architecture');
+      const another = { ...style, states: { ...style.states, ghost: { ...style.states.ghost, color: 'hotpink' } } };
+      const sheet = sheetOf(drawing(await props(makeView(), { states: { c: ['ghost'] }, style: another })));
 
-      expect(hoja).toContain('.rd-estado[data-state="ghost"]{border:2px dashed hotpink;opacity:0.7}');
-      expect(hoja).toContain(`.rd-estado[data-state="hover"]{border:2px solid ${estilo.estados.hover.color};opacity:0.6}`);
+      expect(sheet).toContain('.rd-estado[data-state="ghost"]{border:2px dashed hotpink;opacity:0.7}');
+      expect(sheet).toContain(`.rd-estado[data-state="hover"]{border:2px solid ${style.states.hover.color};opacity:0.6}`);
     });
 
-    it('un Atributo seleccionado marca su fila, en el rectangulo de la colocacion', async () => {
-      const fuente = fuenteCanonicaSchema.parse({
+    it('a selected Attribute marks its row, on the placement rectangle', async () => {
+      const source = canonicalFormSchema.parse({
         specification: { nodeTypes: [{ name: 'servicio' }] },
-        model: { nodes: [{ ...nodo('t', 'T'), attributes: [{ name: 'id', type: 'int' }, { name: 'nombre', type: 'text' }] }], edges: [] },
+        model: { nodes: [{ ...node('t', 'T'), attributes: [{ name: 'id', type: 'int' }, { name: 'nombre', type: 'text' }] }], edges: [] },
         views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
       });
-      const v = resolveView(fuente, 'v')!;
-      const p = await props(v, { estados: { 't#nombre': ['selected'] } });
-      const marca = marcas(dibujo(p), 'selected')[0];
-      const m = metricasDe(TEMA_NEUTRO, 'architecture');
+      const v = resolveView(source, 'v')!;
+      const p = await props(v, { states: { 't#nombre': ['selected'] } });
+      const mark = marks(drawing(p), 'selected')[0];
+      const m = metricsOf(NEUTRAL_THEME, 'architecture');
 
-      expect(marca).toContain('data-selected="t#nombre"');
-      expect(rectDe(marca)).toEqual({ x: 0, y: m.cabecera + m.fila, width: p.geometry.nodes['t']!.width, height: m.fila });
+      expect(mark).toContain('data-selected="t#nombre"');
+      expect(rectOf(mark)).toEqual({ x: 0, y: m.cabecera + m.fila, width: p.geometry.nodes['t']!.width, height: m.fila });
     });
   });
 });

@@ -3,11 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { compile } from 'dsl';
 
 describe('dsl', () => {
-  it('se importa por nombre de paquete y compila un Workspace minimo', () => {
-    const { canonico, issues } = compile({
+  it('is imported by package name and compiles a minimal Workspace', () => {
+    const { canonical, issues } = compile({
       'a.dg': 'specification { node servicio }\nmodel { servicio a "A" }\n',
     });
     expect(issues).toEqual([]);
-    expect(canonico?.model.nodes.map((nodo) => nodo.id)).toEqual(['a']);
+    expect(canonical?.model.nodes.map((node) => node.id)).toEqual(['a']);
   });
 });

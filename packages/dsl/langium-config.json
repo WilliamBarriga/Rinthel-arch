@@ -1,11 +1,11 @@
 {
-  "projectName": "Diagramas",
+  "projectName": "Diagrams",
   "importExtension": "",
   "langiumInternal": false,
   "languages": [
     {
       "id": "diagramas",
-      "grammar": "src/gramatica/diagramas.langium",
+      "grammar": "src/grammar/diagrams.langium",
       "fileExtensions": [".dg"]
     }
   ],

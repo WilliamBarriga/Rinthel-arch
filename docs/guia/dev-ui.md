@@ -4,7 +4,7 @@
 
 `dg dev --workspace <ruta>` abre en `http://127.0.0.1:4173/` una UI para mirar, editar y seguir un Workspace mientras un agente (o tu editor) lo cambia. Arranque y opciones del comando: [CLI, `dev`](cli.md#dev-visor-en-vivo).
 
-![Vista paquetes con el Detalle del Nodo cli](../img/estudio/vista-y-detalle.png)
+![Vista paquetes con el Detalle del Nodo cli](../img/dev-ui/view-and-detail.png)
 
 El lienzo ocupa toda la pagina. Arriba va la barra (Vista actual con su ruta, Buscar, ultima linea del agente y "seguir"); a los lados, dos paneles flotantes. Cada panel se oculta con su boton o con Ctrl/Cmd+B (izquierdo) y Ctrl/Cmd+J (derecho); oculto, deja una pestana en el borde que lo vuelve a mostrar. Se redimensiona arrastrando su borde o su esquina (las asas de ancho y alto tambien responden a las flechas; doble clic en la de alto vuelve al alto del contenido). La Vista activa queda en la URL como `#view=<id>`, asi que se puede compartir o volver con Atras. Sobre el lienzo quedan los controles de Pasos (si la Vista los tiene), los botones "High contrast" (dibuja con el Tema `high-contrast` sin escribir nada) y "Reduce motion", y la leyenda cuando hay Tipos que solo se distinguen por color.
 
@@ -13,7 +13,7 @@ El lienzo ocupa toda la pagina. Arriba va la barra (Vista actual con su ruta, Bu
 - **Views**: el indice agrupado por Tipo de diagrama, con las Vistas que enlazan o son enlazadas. Clic o flechas (Inicio y Fin van a la primera y la ultima) cambian de Vista. Un punto marca las Vistas que cambiaron por fuera y aun no visitaste.
 - **Code**: editor del DSL; se abre tambien con doble clic en un Nodo (en su bloque) y abre a la vez Issues en la isla derecha. Guarda solo (unos 400 ms despues de dejar de teclear, al perder el foco o con Ctrl/Cmd+S), aunque el texto no compile: el lienzo conserva el ultimo dibujo bueno y los arrastres se deshabilitan con el motivo a la vista. Issues en linea con su `fix`, completado de palabras clave e ids, F12 a la definicion; Esc vuelve a Vistas. Si otro programa escribe el mismo archivo, el editor mezcla su texto con el tuyo (gana el disco donde chocan), marca lo que llego de fuera y ofrece recuperar lo que se perdio. Los archivos de `--theme-path` se abren en solo lectura.
 
-![Editor del DSL y galeria de Temas](../img/estudio/codigo-y-temas.png)
+![Editor del DSL y galeria de Temas](../img/dev-ui/code-and-themes.png)
 
 ## Panel derecho
 
@@ -34,7 +34,7 @@ dg validate --workspace <path> --json
 
 `DIAGRAMS_ACTIVITY=0` apaga el registro. Detalle del formato y la rotacion: [Registro de actividad](cli.md#registro-de-actividad).
 
-![Feed del agente tras un edit externo](../img/estudio/agente.png)
+![Feed del agente tras un edit externo](../img/dev-ui/agent.png)
 
 - El panel **Agent** muestra los ultimos 50 Eventos al abrir y los nuevos en vivo: hora, agente, comando, objetivo clicable (Vista, Nodo, archivo) y resultado; "Show args" despliega el argv. La pildora de la barra resume la ultima linea y cuenta las que no viste.
 - Todo lo que cambia por fuera de la pagina (el CLI, un agente que edita el `.dg` a mano u otro editor) se resalta unos 5 s en el lienzo, marca en el indice las otras Vistas que lo muestran y en la galeria los Temas cambiados; lo quitado se lista en el panel Agente hasta el siguiente cambio externo. Lo que escribe la propia UI no se resalta.
@@ -44,7 +44,7 @@ dg validate --workspace <path> --json
 
 Ctrl/Cmd+K abre el Buscador: Vistas, Nodos (con su `archivo:linea`), comandos y un `archivo:linea` escrito tal cual, que abre Codigo en esa linea.
 
-![Buscador](../img/estudio/buscador.png)
+![Buscador](../img/dev-ui/search.png)
 
 | Atajo | Accion |
 | --- | --- |

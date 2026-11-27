@@ -1,15 +1,15 @@
 /**
- * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
- * cada peticion y con `no-store`), el estado y la Geometria por Vista, y serializa por SSE (`/eventos`) la instantanea de
- * conexion y el flujo de eventos del Workspace vivo (la secuencia es de `sesion`; el protocolo, de `canonico`).
- * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); todo POST exige
- * un `Origin` propio (o ninguno, si no 403) y `application/json` (si no 415); un cuerpo de mas de 64 KiB es 413;
- * `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
- * `/api/*` y toda ruta no servida aqui: la respuesta completa de `atenderApiDeDev` (ruteo, 400, 404, 405, 409, 422, 500).
- * Puertos: `puertoHttp` es el TCP; `puerto` es el `PuertoDelWorkspaceVivo` (por defecto `puertoDeDisco`: el disco del
- * Workspace y de `--theme-path`, `fs.watch` y el Registro de actividad de `registro-en-disco.ts`).
- * Errores: `iniciarDev` rechaza si el puerto TCP esta ocupado (sin dejar el observador activo) y lanza si la lectura
- * inicial falla; `run(['dev', ...])` los convierte en codigo 2. Un estatico de `estudio` sin construir es 404 al pedirlo.
+ * Command `dev`: HTTP server on 127.0.0.1 only that serves the `dev-ui` app (`/` and `/_dev-ui/*`, read from disk on
+ * every request and with `no-store`), the state and the Geometry per View, and serializes over SSE (`/events`) the
+ * connection snapshot and the event stream of the live Workspace (the sequence is `session`'s; the protocol, `canonical`'s).
+ * Security: 403 for any `Host` other than `127.0.0.1:<port>` or `localhost:<port>` (DNS rebinding); every POST requires
+ * its own `Origin` (or none, otherwise 403) and `application/json` (otherwise 415); a body over 64 KiB is 413;
+ * `/fonts/<path>` only serves font files under the root (otherwise 404).
+ * `/api/*` and every route not served here: the full response of `handleDevApi` (routing, 400, 404, 405, 409, 422, 500).
+ * Ports: `httpPort` is the TCP one; `port` is the `LiveWorkspacePort` (by default `diskPortOf`: the disk of the
+ * Workspace and of `--theme-path`, `fs.watch` and the Activity log of `disk-log.ts`).
+ * Errors: `startDev` rejects if the TCP port is taken (without leaving the watcher active) and throws if the initial
+ * read fails; `run(['dev', ...])` turns them into code 2. An unbuilt `dev-ui` static file is 404 when requested.
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -18,253 +18,253 @@ import { readFileSync } from 'node:fs';
 import { extname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { RUTAS_DE_DEV } from 'canonico';
-import type { EventoDeDev } from 'canonico';
-import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
-import type { ActivosDelEstudio } from 'estudio';
-import { abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
-import type { PuertoDelWorkspaceVivo, WorkspaceVivo } from 'sesion';
+import { DEV_ROUTES } from 'canonical';
+import type { DevEvent } from 'canonical';
+import { DEV_UI_ROUTE, devUiAssets } from 'dev-ui';
+import type { DevUiAssets } from 'dev-ui';
+import { openLiveWorkspace, handleDevApi } from 'session';
+import type { LiveWorkspacePort, LiveWorkspace } from 'session';
 
-import { compiladorDeCodigo } from './codigo';
-import type { ResultadoDeCodigo } from './codigo';
-import { puertoDeDisco, relojReal } from './puerto-de-disco';
-import type { Observador } from './puerto-de-disco';
-import { uso as usoComun } from './sesion-cli';
-import type { ResultadoDeEjecucion } from './sesion-cli';
-import { leerArchivoDeFuente } from './workspace';
+import { codeCompiler } from './code';
+import type { CodeResult } from './code';
+import { diskPortOf, realClock } from './disk-port';
+import type { Watcher } from './disk-port';
+import { usage as usoComun } from './cli-session';
+import type { RunResult } from './cli-session';
+import { readFontFile } from './workspace';
 
-/** Todo salvo `workspace` tiene un defecto real. */
-export interface OpcionesDeDev {
+/** Everything but `workspace` has a real default. */
+export interface DevOptions {
   workspace: string;
-  /** Carpeta de Temas (`--theme-path`): se fusiona antes del Workspace, que gana en rutas repetidas. No se observa. */
-  temas?: string;
-  /** Puerto TCP en 127.0.0.1 (`--port`); 0 elige uno libre. */
-  puertoHttp?: number;
-  /** Por donde el Workspace vivo lee, escribe, observa y sigue el Registro de actividad; por defecto `puertoDeDisco(workspace, { temas })`. */
-  puerto?: PuertoDelWorkspaceVivo;
-  /** Espera en ms tras el ultimo cambio antes de recompilar; por defecto la del Workspace vivo. */
+  /** Themes folder (`--theme-path`): merged before the Workspace, which wins on repeated paths. Not watched. */
+  themes?: string;
+  /** TCP port on 127.0.0.1 (`--port`); 0 picks a free one. */
+  httpPort?: number;
+  /** Where the live Workspace reads, writes, watches and follows the Activity log; by default `diskPortOf(workspace, { themes })`. */
+  port?: LiveWorkspacePort;
+  /** Wait in ms after the last change before recompiling; by default the live Workspace's. */
   debounceMs?: number;
-  /** Rutas de los estaticos de la app; por defecto las del build de `estudio`. Se consultan en cada peticion. */
-  estudio?: () => ActivosDelEstudio;
-  /** `--trust-code`: sirve `/componentes.js` sin pedir confirmacion en el navegador. Por defecto `false`. */
-  confiarEnCodigo?: boolean;
-  /** Compila los `.tsx` de `workspace`; por defecto el adaptador de esbuild (un Workspace inexistente no tiene codigo). */
-  compilarCodigo?: () => ResultadoDeCodigo;
+  /** Paths of the app's static files; by default those of the `dev-ui` build. Looked up on every request. */
+  devUi?: () => DevUiAssets;
+  /** `--trust-code`: serves `/components.js` without asking for confirmation in the browser. Default `false`. */
+  trustCode?: boolean;
+  /** Compiles the `.tsx` files of `workspace`; by default the esbuild adapter (a missing Workspace has no code). */
+  compileCode?: () => CodeResult;
 }
 
-export interface ServidorDev {
-  /** `http://127.0.0.1:<puerto>/` */
+export interface DevServer {
+  /** `http://127.0.0.1:<port>/` */
   url: string;
-  /** Componentes de Tema que los Temas del Workspace usaban al arrancar (vacio si no hay codigo). */
-  conCodigo: string[];
-  /** Si el codigo ya se sirve (confirmado de antemano con `confiarEnCodigo`). */
-  confiado: boolean;
-  cerrar(): Promise<void>;
+  /** Theme components the Workspace Themes used at startup (empty if there is no code). */
+  codeComponents: string[];
+  /** Whether the code is already served (confirmed beforehand with `trustCode`). */
+  trusted: boolean;
+  close(): Promise<void>;
 }
 
-const LIMITE_DEL_CUERPO = 64 * 1024;
+const BODY_LIMIT = 64 * 1024;
 
-/** `undefined` si pasa de `LIMITE_DEL_CUERPO`; rechaza si la conexion falla. */
-function leerCuerpo(req: IncomingMessage): Promise<string | undefined> {
-  return new Promise((ok, fallo) => {
-    let texto = '';
+/** `undefined` if it exceeds `BODY_LIMIT`; rejects if the connection fails. */
+function readBody(req: IncomingMessage): Promise<string | undefined> {
+  return new Promise((ok, failure) => {
+    let text = '';
     req.setEncoding('utf8');
-    req.on('data', (trozo: string) => {
-      texto += trozo;
-      if (texto.length > LIMITE_DEL_CUERPO) {
+    req.on('data', (chunk: string) => {
+      text += chunk;
+      if (text.length > BODY_LIMIT) {
         req.removeAllListeners('data');
         req.resume();
         ok(undefined);
       }
     });
-    req.on('end', () => ok(texto));
-    req.on('error', fallo);
+    req.on('end', () => ok(text));
+    req.on('error', failure);
   });
 }
 
-function cabecera(res: ServerResponse, tipo: string, estado = 200): void {
-  res.writeHead(estado, { 'content-type': `${tipo}; charset=utf-8`, 'cache-control': 'no-store' });
+function header(res: ServerResponse, type: string, status = 200): void {
+  res.writeHead(status, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-store' });
 }
 
-const responder = (res: ServerResponse, estadoHttp: number, cuerpo: unknown): void => {
-  cabecera(res, 'application/json', estadoHttp);
-  res.end(JSON.stringify(cuerpo));
+const respond = (res: ServerResponse, httpStatus: number, body: unknown): void => {
+  header(res, 'application/json', httpStatus);
+  res.end(JSON.stringify(body));
 };
 
-const TIPOS_DE_ESTATICO: Readonly<Record<string, string>> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+const STATIC_TYPES: Readonly<Record<string, string>> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 
-/** Lee del disco en cada peticion (un rebuild de `estudio` se ve al recargar); ausente -> 404. */
-function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
+/** Reads from disk on every request (a `dev-ui` rebuild shows on reload); missing -> 404. */
+function serveStatic(res: ServerResponse, path: string | undefined): void {
   let bytes: Buffer;
   try {
-    if (ruta === undefined) throw new Error('not declared');
-    bytes = readFileSync(ruta);
+    if (path === undefined) throw new Error('not declared');
+    bytes = readFileSync(path);
   } catch {
-    cabecera(res, 'text/plain', 404);
-    res.end('Not found (if the app build is missing: pnpm --filter estudio build)');
+    header(res, 'text/plain', 404);
+    res.end('Not found (if the app build is missing: pnpm --filter dev-ui build)');
     return;
   }
-  cabecera(res, TIPOS_DE_ESTATICO[extname(ruta)] ?? 'application/octet-stream');
+  header(res, STATIC_TYPES[extname(path)] ?? 'application/octet-stream');
   res.end(bytes);
 }
 
-/** El codigo de Temas se sirve en `/componentes.js` solo tras `POST /api/confiar` o `confiarEnCodigo`. */
-export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puertoHttp = 0, debounceMs, estudio = activosDelEstudio, confiarEnCodigo = false } = opciones;
-  const { puerto = puertoDeDisco(workspace, temas === undefined ? {} : { temas }), compilarCodigo = compiladorDeCodigo(workspace).compilar } = opciones;
-  const vivo: WorkspaceVivo = await abrirWorkspaceVivo({
-    puerto,
-    raiz: resolve(workspace),
-    reloj: relojReal,
-    ahora: Date.now,
-    confiarEnCodigo,
+/** Theme code is served at `/components.js` only after `POST /api/trust` or `trustCode`. */
+export async function startDev(options: DevOptions): Promise<DevServer> {
+  const { workspace, themes, httpPort: httpPort = 0, debounceMs, devUi: devUi = devUiAssets, trustCode: trustCode = false } = options;
+  const { port: port = diskPortOf(workspace, themes === undefined ? {} : { themes }), compileCode: compileCode = codeCompiler(workspace).compile } = options;
+  const live: LiveWorkspace = await openLiveWorkspace({
+    port: port,
+    root: resolve(workspace),
+    clock: realClock,
+    now: Date.now,
+    trustCode: trustCode,
     ...(debounceMs !== undefined && { debounceMs }),
-    compilarCodigo,
+    compileCode: compileCode,
   });
 
-  const clientes = new Set<ServerResponse>();
-  /** La secuencia de eventos es del Workspace vivo; aqui solo se serializa como SSE. */
-  const enviar = (cliente: ServerResponse, { nombre, datos }: EventoDeDev): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
-  const dejarDeEscuchar = vivo.escuchar((evento) => {
-    for (const cliente of clientes) enviar(cliente, evento);
+  const clients = new Set<ServerResponse>();
+  /** The event sequence belongs to the live Workspace; here it is only serialized as SSE. */
+  const send = (client: ServerResponse, { name, data }: DevEvent): void => void client.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+  const stopListening = live.listen((event) => {
+    for (const client of clients) send(client, event);
   });
 
-  const hostsPropios = (): string[] => {
-    const { port } = servidor.address() as AddressInfo;
+  const ownHosts = (): string[] => {
+    const { port } = server.address() as AddressInfo;
     return [`127.0.0.1:${port}`, `localhost:${port}`];
   };
 
-  /** Controles del transporte de un POST: `Origin` propio (o ninguno) y JSON; si fallan, el estado y el mensaje. */
-  const rechazoDelPost = (req: IncomingMessage): [number, string] | undefined => {
-    const origen = req.headers.origin;
-    if (origen !== undefined && !hostsPropios().some((host) => origen === `http://${host}`)) return [403, 'Origin not allowed'];
+  /** Transport checks of a POST: own `Origin` (or none) and JSON; if they fail, the status and the message. */
+  const postRejection = (req: IncomingMessage): [number, string] | undefined => {
+    const origin = req.headers.origin;
+    if (origin !== undefined && !ownHosts().some((host) => origin === `http://${host}`)) return [403, 'Origin not allowed'];
     if (!(req.headers['content-type'] ?? '').toLowerCase().startsWith('application/json')) return [415, 'Expected application/json'];
     return undefined;
   };
 
-  /** La API responde completo; aqui solo se controla y se lee el transporte. */
+  /** The API answers in full; here the transport is only checked and read. */
   const api = async (req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> => {
-    const metodo = req.method ?? 'GET';
-    let cuerpo: string | undefined;
-    if (metodo === 'POST') {
-      const rechazo = rechazoDelPost(req);
-      if (rechazo !== undefined) return responder(res, rechazo[0], { ok: false, message: rechazo[1] });
-      cuerpo = await leerCuerpo(req);
-      if (cuerpo === undefined) return responder(res, 413, { ok: false, message: 'Request body too large' });
+    const methodName = req.method ?? 'GET';
+    let body: string | undefined;
+    if (methodName === 'POST') {
+      const rejection = postRejection(req);
+      if (rejection !== undefined) return respond(res, rejection[0], { ok: false, message: rejection[1] });
+      body = await readBody(req);
+      if (body === undefined) return respond(res, 413, { ok: false, message: 'Request body too large' });
     }
-    const respuesta = await atenderApiDeDev(vivo, { metodo, url, ...(cuerpo !== undefined && { cuerpo }) });
-    res.writeHead(respuesta.status, respuesta.cabeceras);
-    res.end(respuesta.cuerpo);
+    const response = await handleDevApi(live, { method: methodName, url, ...(body !== undefined && { body }) });
+    res.writeHead(response.status, response.headers);
+    res.end(response.body);
   };
 
-  /** Una ruta mal codificada o que sale de la raiz da `undefined`. */
-  const servirFuente = (rutaCodificada: string): ReturnType<typeof leerArchivoDeFuente> => {
+  /** A badly encoded path or one that leaves the root gives `undefined`. */
+  const serveFont = (encodedPath: string): ReturnType<typeof readFontFile> => {
     try {
-      return leerArchivoDeFuente(temas === undefined ? [workspace] : [workspace, temas], decodeURIComponent(rutaCodificada));
+      return readFontFile(themes === undefined ? [workspace] : [workspace, themes], decodeURIComponent(encodedPath));
     } catch {
       return undefined;
     }
   };
 
-  const servidor = createServer((req, res) => {
-    // Contra DNS rebinding.
-    if (!hostsPropios().includes(req.headers.host ?? '')) {
-      cabecera(res, 'text/plain', 403);
+  const server = createServer((req, res) => {
+    // Against DNS rebinding.
+    if (!ownHosts().includes(req.headers.host ?? '')) {
+      header(res, 'text/plain', 403);
       res.end('Host not allowed');
       return;
     }
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
-    const ruta = url.pathname;
-    if (ruta === '/') {
-      servirEstatico(res, estudio().indice);
-    } else if (ruta.startsWith(RUTA_DEL_ESTUDIO)) {
-      const { archivos } = estudio();
-      const nombre = ruta.slice(RUTA_DEL_ESTUDIO.length);
-      servirEstatico(res, Object.hasOwn(archivos, nombre) ? archivos[nombre] : undefined);
-    } else if (ruta.startsWith(RUTAS_DE_DEV.fuentes)) {
-      const fuente = servirFuente(ruta.slice(RUTAS_DE_DEV.fuentes.length));
-      if (fuente === undefined) {
-        cabecera(res, 'text/plain', 404);
+    const path = url.pathname;
+    if (path === '/') {
+      serveStatic(res, devUi().index);
+    } else if (path.startsWith(DEV_UI_ROUTE)) {
+      const { files } = devUi();
+      const name = path.slice(DEV_UI_ROUTE.length);
+      serveStatic(res, Object.hasOwn(files, name) ? files[name] : undefined);
+    } else if (path.startsWith(DEV_ROUTES.fonts)) {
+      const source = serveFont(path.slice(DEV_ROUTES.fonts.length));
+      if (source === undefined) {
+        header(res, 'text/plain', 404);
         res.end('Not found');
       } else {
-        res.writeHead(200, { 'content-type': fuente.tipo, 'cache-control': 'no-store', 'content-length': fuente.bytes.length });
-        res.end(fuente.bytes);
+        res.writeHead(200, { 'content-type': source.type, 'cache-control': 'no-store', 'content-length': source.bytes.length });
+        res.end(source.bytes);
       }
-    } else if (ruta === RUTAS_DE_DEV.eventos) {
+    } else if (path === DEV_ROUTES.events) {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
-      clientes.add(res);
-      res.on('close', () => clientes.delete(res));
-      for (const evento of vivo.conexion()) enviar(res, evento);
+      clients.add(res);
+      res.on('close', () => clients.delete(res));
+      for (const event of live.connection()) send(res, event);
     } else {
-      // Una conexion que se corta al leer el cuerpo no tiene a quien responder.
+      // A connection that drops while reading the body has no one to answer.
       api(req, res, url).catch(() => res.destroy());
     }
   });
 
-  const detener = (): void => {
-    dejarDeEscuchar();
-    vivo.cerrar();
+  const stop = (): void => {
+    stopListening();
+    live.close();
   };
-  await new Promise<void>((ok, fallo) => {
-    servidor.once('error', fallo);
-    servidor.listen(puertoHttp, '127.0.0.1', () => ok());
+  await new Promise<void>((ok, failure) => {
+    server.once('error', failure);
+    server.listen(httpPort, '127.0.0.1', () => ok());
   }).catch((error: unknown) => {
-    detener();
+    stop();
     throw error;
   });
-  const direccion = servidor.address();
-  if (direccion === null || typeof direccion === 'string') throw new Error('The server has no port');
-  const { componentes, confiado } = vivo.codigo();
+  const direction = server.address();
+  if (direction === null || typeof direction === 'string') throw new Error('The server has no port');
+  const { components, trusted } = live.code();
 
   return {
-    url: `http://127.0.0.1:${direccion.port}/`,
-    conCodigo: componentes,
-    confiado,
-    cerrar: () =>
+    url: `http://127.0.0.1:${direction.port}/`,
+    codeComponents: components,
+    trusted: trusted,
+    close: () =>
       new Promise<void>((ok) => {
-        detener();
-        servidor.close(() => ok());
-        servidor.closeAllConnections();
+        stop();
+        server.close(() => ok());
+        server.closeAllConnections();
       }),
   };
 }
 
 
-/** Vuelve con la URL; el servidor mantiene vivo el proceso. Puerto TCP 4173 por defecto. `observar` reemplaza a `fs.watch`. */
-export async function comandoDev(
+/** Resolves with the URL; the server keeps the process alive. TCP port 4173 by default. `watch` replaces `fs.watch`. */
+export async function devCommand(
   args: readonly string[],
-  dependencias: Pick<OpcionesDeDev, 'estudio'> & { observar?: Observador } = {},
-): Promise<ResultadoDeEjecucion> {
-  const uso = usoComun;
-  let valores;
+  dependencies: Pick<DevOptions, 'devUi'> & { watch?: Watcher } = {},
+): Promise<RunResult> {
+  const usage = usoComun;
+  let valueList;
   try {
-    valores = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, port: { type: 'string' }, 'theme-path': { type: 'string' }, 'trust-code': { type: 'boolean' } }, strict: true }).values;
+    valueList = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, port: { type: 'string' }, 'theme-path': { type: 'string' }, 'trust-code': { type: 'boolean' } }, strict: true }).values;
   } catch (error) {
-    return uso((error as Error).message);
+    return usage((error as Error).message);
   }
-  if (valores.workspace === undefined) return uso('Missing --workspace <path>');
-  const puertoHttp = Number(valores.port ?? 4173);
-  if (!Number.isInteger(puertoHttp) || puertoHttp < 0 || puertoHttp > 65535) return uso('--port must be an integer between 0 and 65535');
-  const { observar, estudio } = dependencias;
-  const workspace = valores.workspace;
-  const temas = valores['theme-path'];
+  if (valueList.workspace === undefined) return usage('Missing --workspace <path>');
+  const httpPort = Number(valueList.port ?? 4173);
+  if (!Number.isInteger(httpPort) || httpPort < 0 || httpPort > 65535) return usage('--port must be an integer between 0 and 65535');
+  const { watch, devUi } = dependencies;
+  const workspace = valueList.workspace;
+  const themes = valueList['theme-path'];
   try {
-    const servidor = await iniciarDev({
+    const server = await startDev({
       workspace,
-      puertoHttp,
-      ...(estudio !== undefined && { estudio }),
-      ...(temas !== undefined && { temas }),
-      ...(observar !== undefined && { puerto: puertoDeDisco(workspace, { ...(temas !== undefined && { temas }), observar }) }),
-      ...(valores['trust-code'] === true && { confiarEnCodigo: true }),
+      httpPort: httpPort,
+      ...(devUi !== undefined && { devUi }),
+      ...(themes !== undefined && { themes }),
+      ...(watch !== undefined && { port: diskPortOf(workspace, { ...(themes !== undefined && { themes }), watch }) }),
+      ...(valueList['trust-code'] === true && { trustCode: true }),
     });
-    const aviso =
-      servidor.conCodigo.length === 0
+    const notice =
+      server.codeComponents.length === 0
         ? ''
-        : servidor.confiado
-          ? `WARNING: the Workspace Themes load code (${servidor.conCodigo.join(', ')}); confirmed with --trust-code.\n`
-          : `WARNING: the Workspace Themes load code (${servidor.conCodigo.join(', ')}) that runs in your browser without a sandbox. The viewer will ask for confirmation before loading it; use --trust-code only on a Workspace you own.\n`;
-    return { exitCode: 0, stdout: `${aviso}diagrams dev listening on ${servidor.url}\n`, stderr: '' };
+        : server.trusted
+          ? `WARNING: the Workspace Themes load code (${server.codeComponents.join(', ')}); confirmed with --trust-code.\n`
+          : `WARNING: the Workspace Themes load code (${server.codeComponents.join(', ')}) that runs in your browser without a sandbox. The viewer will ask for confirmation before loading it; use --trust-code only on a Workspace you own.\n`;
+    return { exitCode: 0, stdout: `${notice}diagrams dev listening on ${server.url}\n`, stderr: '' };
   } catch (error) {
-    return uso(`Could not start dev: ${(error as Error).message}`);
+    return usage(`Could not start dev: ${(error as Error).message}`);
   }
 }

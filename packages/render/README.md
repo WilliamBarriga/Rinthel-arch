@@ -1,25 +1,25 @@
 # render
-Componente React `<Diagram>` que dibuja una Vista resuelta con su Geometria y el Estilo de un Tema.
+React component `<Diagram>` that draws a resolved View with its Geometry and the Style of a Theme.
 
-## Que hace
-- Dibuja Grupos (HTML), Aristas (SVG) y Nodos (HTML) en tres capas bajo una camara de pan/zoom; una Vista ER dibuja cada tabla como Nodo con filas.
-- Una Geometria `secuencia` se dibuja con `construirEscenaDeSecuencia`: Lifelines con cabecera espejo, activaciones, Mensajes, Fragmentos y Notas; lee las pilas de esos Elementos de Tema ya resueltas (declaradas o derivadas) del Estilo de `tema`, sin reglas de derivacion propias.
-- `resolverEstilo` convierte un Tema en el `Estilo` de los pintores; `hojaDeFuentes` emite la hoja determinista. `PINTORES` (`src/hoja.ts`) es la tabla exhaustiva Primitiva -> pintor: una Primitiva nueva en `tema` sin pintor aqui rompe el typecheck.
-- Pinta Estados visuales, nivel de detalle y Pasos, anima con CSS (respeta reduced-motion) y acepta codigo solo por la prop `componentes`.
+## What it does
+- Draws Groups (HTML), Edges (SVG) and Nodes (HTML) in three layers under a pan/zoom camera; an ER View draws each table as a Node with rows.
+- A `secuencia` Geometry is drawn with `buildSequenceScene`: Lifelines with a mirrored header, activations, Messages, Fragments and Notes; it reads the already resolved stacks of those Theme elements (declared or derived) from the `theme` Style, with no derivation rules of its own.
+- `resolveStyle` turns a Theme into the painters' `Style`; `fontSheet` emits the deterministic sheet. `PAINTERS` (`src/sheet.ts`) is the exhaustive Primitive -> painter table: a new Primitive in `theme` without a painter here breaks the typecheck.
+- Paints visual states, level of detail and Steps, animates with CSS (respects reduced-motion) and accepts code only through the `components` prop.
 
-## Que NO hace
-- No calcula posiciones ni valida Temas: eso es de `layout` y `tema`.
-- No resuelve Vistas ni interpreta Pasos: eso es de `canonico`; el estado de seleccion y camara es de `shell`.
-- No toca disco, reloj ni red: es nucleo puro.
+## What it does not do
+- Does not compute positions nor validate Themes: that is `layout` and `theme`.
+- Does not resolve Views nor interpret Steps: that is `canonical`; selection and camera state is `shell`'s.
+- Does not touch disk, clock or network: it is pure core.
 
-## Depende de
-`canonico`, `layout` y `tema` (`docs/CODING.md`, "Direccion de dependencias"). Dependencia externa: peer `react` 18 o 19.
+## Depends on
+`canonical`, `layout` and `theme` (`docs/CODING.md`, "Dependency direction"). External dependency: peer `react` 18 or 19.
 
-## Archivo de entrada
-`packages/render/src/index.ts` (la cabecera documenta props, invariantes y modos de error).
+## Entry file
+`packages/render/src/index.ts` (the header documents props, invariants and error modes).
 
-## ADR relacionado
-`docs/adr/0008-sistema-de-temas-expresivo.md` (render hibrido, Estilo y animacion) y `docs/adr/0002-render-tema-y-revelado.md` (contrato puro y color por Paleta).
+## Related ADR
+`docs/adr/0008-expressive-theme-system.md` (hybrid render, Style and animation) and `docs/adr/0002-render-theme-and-reveal.md` (pure contract and color by Palette).
 
-## Probar
+## Test
 `pnpm --filter render test`

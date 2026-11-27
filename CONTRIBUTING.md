@@ -15,7 +15,7 @@ Follow the reading path in [AGENTS.md](AGENTS.md#camino-de-lectura): glossary, c
 
 ```
 pnpm install
-pnpm exec playwright install chromium   # once: used by the end-to-end part of pnpm test and by pnpm docs:capturas
+pnpm exec playwright install chromium   # once: used by the end-to-end part of pnpm test and by pnpm docs:screenshots
 pnpm check   # typecheck, lint, package order, docs and emojis: fast, for iterating
 pnpm test    # full gate: build, typecheck and all the tests
 ```
@@ -26,7 +26,8 @@ There is no CI: tests run locally. The pre-commit hook runs `pnpm check`.
 
 - The core is agnostic of the documented project: whatever is project-specific goes as an example in `examples/`.
 - The whole repo is in English (code, docs, messages, commits), without unicode emojis (`pnpm check:emojis` verifies it). Spanish only lives in `README.es.md` and the Spanish user guides.
-- Identifiers in a new file follow the language of its host package until the internal migration (#253-#257); comments in new code are always English.
+- Identifiers and comments are English.
+- Deliberate Spanish exception: the public or wire contract keeps its Spanish names, because renaming them would break users, caches or clients. That is the `dev` protocol and Diff JSON keys, SSE event names and URL hash keys; cached Geometry and Metrics keys (`canonico.json`, `geometria/`); the Theme source keys users write and the `CodeProps` keys; `rd-*`/`ui-*` CSS classes and `data-*` attributes; issue codes, DSL keywords and string values used as data; and the skill folders `skills/rinthel-diagramas` and `skills/rinthel-temas`. Do not translate those, and do not add new Spanish names outside them.
 - Before adopting a new dependency, research it (license, maintenance, fit) and leave the research written; adoption is decided in an issue or ADR.
 
 ### User guides come in pairs
@@ -37,21 +38,21 @@ The rule: touching a guide means touching its pair. `pnpm check` fails if a guid
 
 ### Generated files and screenshots
 
-- `docs/theme-catalog.md` is generated with `pnpm docs:catalogo`; do not edit it by hand.
-- The screenshots in `docs/img/` are regenerated with `pnpm docs:capturas` (needs `pnpm build` and Chromium) when a Theme, an example or the `dev` UI changes.
+- `docs/theme-catalog.md` is generated with `pnpm docs:catalog`; do not edit it by hand.
+- The screenshots in `docs/img/` are regenerated with `pnpm docs:screenshots` (needs `pnpm build` and Chromium) when a Theme, an example or the `dev` UI changes.
 
 ## Repo map
 
 | Path | Contents |
 | --- | --- |
-| `packages/canonico` | Schema of the canonical source (Zod), validation, View resolution and versioned contracts (Intents, `--json`, Activity event, `dev` protocol) |
-| `packages/tema` | Catalog of Primitives and Slots, resolved Style and Metrics |
+| `packages/canonical` | Schema of the Canonical form (Zod), validation, View resolution and versioned contracts (Intents, `--json`, Activity event, `dev` protocol) |
+| `packages/theme` | Catalog of Primitives and Slots, resolved Style and Metrics |
 | `packages/dsl` | Grammar (Langium) and compiler of the `.dg` text |
 | `packages/layout` | Layout with ELK and Pins; cached geometry |
-| `packages/sesion` | Shared pipeline: compile, validate, compute geometry and edit the text; the live Workspace of `dev` without transport |
+| `packages/session` | Shared pipeline: compile, validate, compute geometry and edit the text; the live Workspace of `dev` without transport |
 | `packages/render` | Pure drawing in React (Nodes and Groups in HTML/CSS, Edges in SVG) |
 | `packages/shell` | Interactive viewer: pan/zoom, collapse, drag |
-| `packages/estudio` | Browser app of `dev` (the [Dev UI](docs/guide/dev-ui.md)): canvas, editor, Issues, Themes, file History and agent feed |
+| `packages/dev-ui` | Browser app of `dev` (the [Dev UI](docs/guide/dev-ui.md)): canvas, editor, Issues, Themes, file History and agent feed |
 | `packages/cli` | `validate`, `build`, `dev`, `inspect`, `edit`, `skill`, `scan`, `export`; the only package that touches disk and the `dev` server |
 | `packages/scanner` | Scanner: reads a codebase, without running it, into a Scan draft; outside the core, only `cli` imports it |
 | `npm` | The publishable `rinthel-arch` npm package: manifest and README; `pnpm npm:package` fills `dist/`, the licenses and the third-party notice |
@@ -62,7 +63,7 @@ The rule: touching a guide means touching its pair. `pnpm check` fails if a guid
 
 ## npm package
 
-`rinthel-arch` on npm is one package that bundles the whole CLI (`npm/`, outside the pnpm workspace). After `pnpm build`, `pnpm npm:package` writes `npm/dist/` (the esbuild bundle `bin.js`, the Dev UI assets in `estudio/` and the Scanner's `.wasm`), `LICENSE`, `LICENSE-LIKEC4` and `THIRD-PARTY-NOTICES.md` (generated from `pnpm licenses list`); then `npm pack` in `npm/` builds the tarball. `tests/npm-package.test.ts`, part of `pnpm test`, packs it, installs it in an empty folder and runs `validate`, `scan` and `dev`. elkjs is redistributed under EPL-2.0: the notice carries its license text and where to get its source. Publishing is manual, with interactive 2FA, and not part of any test.
+`rinthel-arch` on npm is one package that bundles the whole CLI (`npm/`, outside the pnpm workspace). After `pnpm build`, `pnpm npm:package` writes `npm/dist/` (the esbuild bundle `bin.js`, the Dev UI assets in `dev-ui/` and the Scanner's `.wasm`), `LICENSE`, `LICENSE-LIKEC4` and `THIRD-PARTY-NOTICES.md` (generated from `pnpm licenses list`); then `npm pack` in `npm/` builds the tarball. `tests/npm-package.test.ts`, part of `pnpm test`, packs it, installs it in an empty folder and runs `validate`, `scan` and `dev`. elkjs is redistributed under EPL-2.0: the notice carries its license text and where to get its source. Publishing is manual, with interactive 2FA, and not part of any test.
 
 ## Live demo
 
@@ -70,7 +71,7 @@ The demo at https://williambarriga.github.io/Rinthel-arch/ is `examples/rinthel-
 
 ## Research and prototype branches
 
-The `research/*` branches hold investigations (one `research/<name>.md` file per branch) and `prototype/*` holds the prototypes that grounded decisions. They are context material: they are not merged into `main`. The index with one conclusion per branch is [docs/ramas.md](docs/ramas.md). List the research ones with `git branch -a -l '*research/*'` and read one with `git show research/<name>:research/<name>.md`.
+The `research/*` branches hold investigations (one `research/<name>.md` file per branch) and `prototype/*` holds the prototypes that grounded decisions. They are context material: they are not merged into `main`. The index with one conclusion per branch is [docs/research-branches.md](docs/research-branches.md). List the research ones with `git branch -a -l '*research/*'` and read one with `git show research/<name>:research/<name>.md`.
 
 ## Agents
 

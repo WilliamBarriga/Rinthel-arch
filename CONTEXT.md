@@ -1,185 +1,181 @@
 # rinthel-arch
 
-Sistema para explicar proyectos con diagramas grandes y detallados, agnostico del proyecto que se documenta.
+System to explain projects with large, detailed diagrams, agnostic of the project being documented.
 
 ## Language
 
-Cada termino lleva su nombre canonico en ingles (`en:`), el oficial en la cara publica; en ambos idiomas los terminos del glosario van con mayuscula inicial.
+Each entry is headed by its canonical English term, the official one on the public face, followed by its Spanish term (`es:`) used in `README.es.md` and `docs/guia/`; in both languages glossary terms are capitalized.
 
-**Proyecto documentado** (en: **Documented project**):
-El software o sistema que se explica (ej. este mismo repo, en `examples/rinthel-arch/`). El sistema de diagramas no depende de el.
+**Documented project** (es: **Proyecto documentado**):
+The software or system being explained (e.g. this same repo, in `examples/rinthel-arch/`). The diagram system does not depend on it.
 
-**Modelo** (en: **Model**):
-Conjunto unico de Nodos y Aristas de un Proyecto documentado, del que salen todas las Vistas. El texto semantico (titulo, descripcion) vive una sola vez, aqui.
+**Model** (es: **Modelo**):
+The single set of Nodes and Edges of a Documented project, from which every View is drawn. Semantic text (title, description) lives once, here.
 
-**Nodo** (en: **Node**):
-Entidad del Modelo con identidad estable (id cualificado por su jerarquia, ej. `rinthel.api.auth`), Tipo de nodo declarado por el proyecto, titulo, descripcion, Atributos opcionales y `source` opcional.
+**Node** (es: **Nodo**):
+Model entity with a stable identity (id qualified by its hierarchy, e.g. `rinthel.api.auth`), a Node kind declared by the project, title, description, optional Attributes and optional `source`.
 
-**Grupo** (en: **Group**):
-Nodo que contiene otros Nodos. Se anida sin limite. No es un concepto aparte de Nodo.
+**Group** (es: **Grupo**):
+Node that contains other Nodes. Nests without limit. Not a concept separate from Node.
 
-**Arista** (en: **Edge**):
-Relacion entre dos extremos del Modelo. Un extremo es un Nodo o un Atributo de un Nodo, y puede llevar cardinalidad y una etiqueta corta.
-_Avoid (en)_: relationship, link
+**Edge** (es: **Arista**):
+Relation between two ends of the Model. An end is a Node or an Attribute of a Node, and may carry a cardinality and a short label.
+_Avoid_: relationship, link
 
-**Atributo** (en: **Attribute**):
-Elemento estructurado y ordenado de un Nodo (columna, campo, metodo), con nombre, tipo y notas. Es direccionable como extremo de una Arista. Distinto de un Nodo hijo.
+**Attribute** (es: **Atributo**):
+Structured, ordered element of a Node (column, field, method), with name, type and notes. It is addressable as an Edge end. Distinct from a child Node.
 
-**Interaccion** (en: **Interaction**):
-Escenario del Modelo con id propio (espacio de nombres separado del de los Nodos), titulo y descripcion opcionales: lista ordenada de Mensajes, Notas, Fragmentos y referencias a otras Interacciones. El orden de la lista es el orden temporal. Una Vista de secuencia proyecta exactamente una. Distinta de Arista: no exige ni crea Aristas.
+**Interaction** (es: **Interaccion**):
+Model scenario with its own id (a namespace separate from that of Nodes), optional title and description: an ordered list of Messages, Notes, Fragments and references to other Interactions. The list order is the temporal order. A sequence View projects exactly one. Distinct from Edge: it neither requires nor creates Edges.
 
-**Lifeline** (en: **Lifeline**):
-Participante de una Interaccion. Es un Nodo de cualquier nivel, no una entidad aparte; su orden en la Vista es el de primera aparicion, salvo override de la Vista.
+**Lifeline** (es: **Lifeline**):
+Participant of an Interaction. It is a Node of any level, not a separate entity; its order in the View is the order of first appearance, unless the View overrides it.
 
-**Mensaje** (en: **Message**):
-Item de una Interaccion de un Nodo a otro (o al mismo, mensaje propio), con tipo (`sync`, `async`, `reply`, `create`, `destroy`), etiqueta y descripcion opcionales. Su identidad es su posicion en la Interaccion; puede llevar un id opcional, unico en su Interaccion, que es solo un alias para citarlo. La activacion no se declara: se deriva de los pares `sync`/`reply`.
+**Message** (es: **Mensaje**):
+Interaction item from one Node to another (or to itself, a self message), with a type (`sync`, `async`, `reply`, `create`, `destroy`), and optional label and description. Its identity is its position in the Interaction; it may carry an optional id, unique in its Interaction, which is only an alias to cite it. Activation is not declared: it is derived from `sync`/`reply` pairs.
 
-**Fragmento** (en: **Fragment**):
-Item de una Interaccion que agrupa Mensajes bajo un operador (`alt`, `opt`, `loop`, `par`, `break`, `critical`) en uno o mas operandos con guarda opcional. Se anida. No es un Nodo ni un Grupo: contiene Mensajes, no entidades.
+**Fragment** (es: **Fragmento**):
+Interaction item that groups Messages under an operator (`alt`, `opt`, `loop`, `par`, `break`, `critical`) in one or more operands with an optional guard. Nests. It is neither a Node nor a Group: it contains Messages, not entities.
 
-**Tipo de nodo** (en: **Node kind**):
-Categoria de Nodo (servicio, tabla, actor...) declarada en el catalogo del Proyecto documentado, con su icono y estilo. Un Tipo de nodo no declarado es error de validacion. Distinto de Tipo de diagrama.
-_Avoid (en)_: node type
+**Node kind** (es: **Tipo de nodo**):
+Category of Node (service, table, actor...) declared in the Documented project's catalog, with its icon and style. An undeclared Node kind is a validation error. Distinct from Diagram type.
+_Avoid_: node type
 
-**Source** (en: **Source**):
-Lista de referencias opacas de un Nodo al Proyecto documentado (ruta de archivo, ruta y simbolo, URL, id de entidad externa), cada una con `kind` y `ref`. El nucleo las guarda sin interpretarlas.
+**Source** (es: **Source**):
+List of opaque references from a Node to the Documented project (file path, path and symbol, URL, external entity id), each with `kind` and `ref`. The core stores them without interpreting them.
 
-**Vista** (en: **View**):
-Proyeccion declarativa de un Modelo, de un Tipo de diagrama: que Nodos incluye o excluye y hasta que profundidad (en secuencia, que Interaccion proyecta). Nunca define entidades nuevas. Puede sobrescribir solo presentacion (etiqueta corta, Pin, estilo, orden).
+**View** (es: **Vista**):
+Declarative projection of a Model, of one Diagram type: which Nodes it includes or excludes and down to what depth (in sequence, which Interaction it projects). It never defines new entities. It may override presentation only (short label, Pin, style, order).
 
-**Tipo de diagrama** (en: **Diagram type**):
-Familia de notacion que fija como se dibuja una Vista. Hoy hay cuatro: arquitectura, flujo, secuencia y ER; todos comparten el mismo Modelo y los mismos Temas.
+**Diagram type** (es: **Tipo de diagrama**):
+Notation family that fixes how a View is drawn. Today there are four: architecture, flow, sequence and ER; all share the same Model and the same Themes.
 
-**Drill-down** (en: **Drill-down**):
-Pasar de un Nodo a su detalle. Cada Vista tiene un mecanismo por defecto (colapsar o expandir el Grupo en la misma Vista) y puede anularlo por Nodo enlazando a otra Vista. Un Grupo enlazado no se expande en esa Vista.
+**Drill-down** (es: **Drill-down**):
+Going from a Node to its detail. Each View has a default mechanism (collapse or expand the Group in the same View) and may override it per Node by linking to another View. A linked Group does not expand in that View.
 
-**Cabecera del Grupo** (en: **Group header**):
-Arbol de Slots (mini-layout) que el Tema declara en `group` para el titulo y el icono de un Grupo abierto; su alto, con el padding de la zona de hijos, es el margen superior que layout reserva.
+**Group header** (es: **Cabecera del Grupo**):
+Tree of Slots (mini-layout) that the Theme declares in `group` for the title and icon of an open Group; its height, plus the padding of the children area, is the top margin that layout reserves.
 
-**Grupo colapsado** (en: **Collapsed group**):
-Grupo mostrado como un Nodo unico, con su contador de hijos y las Aristas de sus hijos elevadas a su borde. Al abrir una Vista, los Grupos que exceden su profundidad aparecen colapsados.
+**Collapsed group** (es: **Grupo colapsado**):
+Group shown as a single Node, with its child counter and its children's Edges lifted to its border. When a View opens, the Groups that exceed its depth appear collapsed.
 
-**Enlace entre Vistas** (en: **View link**):
-Drill-down de un Nodo, o de un `ref` en secuencia, hacia otra Vista de cualquier Tipo de diagrama. Es navegacion, no jerarquia: una Vista puede tener varios padres y los ciclos son validos. La ruta recorrida se muestra como breadcrumbs.
+**View link** (es: **Enlace entre Vistas**):
+Drill-down from a Node, or from a `ref` in sequence, to another View of any Diagram type. It is navigation, not hierarchy: a View may have several parents and cycles are valid. The path walked is shown as breadcrumbs.
 
-**Tema** (en: **Theme**):
-Declaracion de presentacion con la que se dibuja una Vista: Paleta, fuentes, tokens y, por cada elemento (Nodo, Arista, Grupo, fondo de pagina), una pila de Capas, mas su animacion. Se declara en el Workspace, es modular (`extends` de un padre y Partes reutilizables) y nunca toca el Modelo. Una Vista elige un solo Tema, asi que diagramas distintos pueden tener lineas visuales distintas; dentro de la Vista, la forma varia por Tipo de nodo, estado, Arista y Grupo mediante parches.
+**Theme** (es: **Tema**):
+Presentation declaration a View is drawn with: Palette, fonts, tokens and, for each element (Node, Edge, Group, page background), a stack of Layers, plus its animation. It is declared in the Workspace, it is modular (`extends` from a parent and reusable Parts) and it never touches the Model. A View picks a single Theme, so different diagrams can have different visual lines; inside the View, the shape varies by Node kind, state, Edge and Group through patches.
 
-**Tema por defecto** (en: **Default theme**):
-Tema incorporado que usa una Vista sin Tema: `neutral` (claro). Lo acompanan `neutral-dark` y `high-contrast`. Escrito en el mismo DSL que cualquier Tema.
+**Default theme** (es: **Tema por defecto**):
+Built-in Theme used by a View without a Theme: `neutral` (light). It comes with `neutral-dark` and `high-contrast`. Written in the same DSL as any Theme.
 
-**Capa** (en: **Layer**):
-Unidad con nombre de la pila que dibuja un elemento; es una instancia de una Primitiva, va bajo el contenido (defecto) o sobre el, y puede animarse. La variacion por Tipo, estado o Vista se expresa como parche por nombre de Capa (cambiar, anadir con `before`/`after`, quitar con `none`). Un componente de codigo del Tema tambien es una Capa (Componente de Tema).
+**Layer** (es: **Capa**):
+Named unit of the stack that draws an element; it is an instance of a Primitive, goes under the content (default) or over it, and can be animated. Variation by kind, state or View is expressed as a patch by Layer name (change, add with `before`/`after`, remove with `none`). A Theme code component is also a Layer (Theme component).
 
-**Primitiva** (en: **Primitive**):
-Tipo de Capa del catalogo cerrado (forma, relleno, trazo, sombra, vidrio, decoracion...). Una Primitiva nueva se anade al catalogo por issue; una Familia nueva, por ADR.
+**Primitive** (es: **Primitiva**):
+Layer type from the closed catalog (shape, fill, stroke, shadow, glass, decoration...). A new Primitive is added to the catalog through an issue; a new Family, through an ADR.
 
-**Familia** (en: **Family**):
-Grupo de Primitivas del mismo oficio (forma, relleno, borde (continuo, discontinuo, punteado, outline), trazo de Arista, sombra, glow, vidrio, filtro, decoracion, marcador de Arista, estilo de texto de Slot, codigo). Cada Primitiva pertenece a una sola.
+**Family** (es: **Familia**):
+Group of Primitives with the same job (shape, fill, border (solid, dashed, dotted, outline), Edge stroke, shadow, glow, glass, filter, decoration, Edge marker, Slot text style, code). Each Primitive belongs to exactly one.
 
-**Slot** (en: **Slot**):
-Lugar de contenido de nombre fijo en un Nodo o Grupo (`icon`, `title`, `desc`, `badge`, `footer`, `attrs`, `counter`). El Tema decide cuales se muestran, en que orden y con que estilo. Junto con la caja, son lo unico que afecta a las Metricas.
+**Slot** (es: **Slot**):
+Fixed-name content place in a Node or Group (`icon`, `title`, `desc`, `badge`, `footer`, `attrs`, `counter`). The Theme decides which are shown, in what order and with what style. Together with the box, they are the only thing that affects the Metrics.
 
-**Elemento de Tema** (en: **Theme element**):
-Cada cosa que un Tema sabe dibujar con su propia pila de Capas: pagina, Nodo, Grupo y Arista, y los de secuencia y ER (Lifeline, activacion, Mensaje, Fragmento, Nota, fila de Atributo). Un Tema que no declara un Elemento lo recibe derivado de sus otros Elementos, de modo que cualquier Tema dibuja cualquier Tipo de diagrama. Lo que varia por Tipo de diagrama en Nodo, Grupo o Arista es un nivel de la cascada, no un Elemento aparte.
+**Theme element** (es: **Elemento de Tema**):
+Each thing a Theme knows how to draw with its own stack of Layers: page, Node, Group and Edge, plus the sequence and ER ones (Lifeline, activation, Message, Fragment, Note, Attribute row). A Theme that does not declare an Element receives it derived from its other Elements, so any Theme draws any Diagram type. What varies by Diagram type in Node, Group or Edge is a level of the cascade, not a separate Element.
 
-**Movimiento** (en: **Motion**):
-Animacion continua de catalogo cerrado (`stream`, `pulse`, `breathe`...) que se cuelga de una Capa y puede atarse a un estado. Las reacciones a la interaccion son transiciones entre parches de estado; `enter`/`exit` animan la aparicion y salida, y un Paso solo dispara la `enter`.
+**Motion** (es: **Movimiento**):
+Continuous animation from a closed catalog (`stream`, `pulse`, `breathe`...) that hangs from a Layer and can be tied to a state. Reactions to interaction are transitions between state patches; `enter`/`exit` animate appearance and exit, and a Step only triggers `enter`.
 
-**Parte de Tema** (en: **Theme part**):
-Parche reutilizable sin Tema (`part`), incluido con `use` dentro de un elemento.
+**Theme part** (es: **Parte de Tema**):
+Reusable patch without a Theme (`part`), included with `use` inside an element.
 
-**Componente de Tema** (en: **Theme component**):
-Componente React/TS del Workspace que un Tema referencia por nombre como Capa `code`, para lo que el catalogo no cubre. Es solo visual y no afecta a las Metricas; un Tema que lo usa queda marcado "con codigo".
+**Theme component** (es: **Componente de Tema**):
+React/TS component of the Workspace that a Theme references by name as a `code` Layer, for what the catalog does not cover. It is only visual and does not affect the Metrics; a Theme that uses one is marked "with code".
 
-**Paleta** (en: **Palette**):
-Colores con nombre de un Tema (`blue`, `danger`). El Modelo y las Vistas solo se refieren a un color por su nombre de Paleta, nunca por valor literal.
+**Palette** (es: **Paleta**):
+Named colors of a Theme (`blue`, `danger`). The Model and the Views only refer to a color by its Palette name, never by literal value.
 
-**Paso** (en: **Step**):
-Punto ordenado de una Vista que revela Nodos y Aristas de forma acumulativa. Solo cambia visibilidad, nunca posicion. Una Vista sin Pasos se muestra completa. En secuencia, un Paso es un corte del tiempo: muestra la Interaccion hasta un Mensaje y solo avanza.
+**Step** (es: **Paso**):
+Ordered point of a View that reveals Nodes and Edges cumulatively. It only changes visibility, never position. A View without Steps is shown complete. In sequence, a Step is a cut in time: it shows the Interaction up to a Message and only moves forward.
 
-**Autonumeracion** (en: **Autonumbering**):
-Numero que una Vista de secuencia pone a cada Mensaje que proyecta, por orden de declaracion. Es presentacion de la Vista: no depende de los Pasos ni se guarda en el Modelo.
+**Autonumbering** (es: **Autonumeracion**):
+Number that a sequence View puts on each Message it projects, in declaration order. It is View presentation: it does not depend on Steps and is not stored in the Model.
 
-**Pin** (en: **Pin**):
-Posicion manual de un elemento en una Vista que anula el auto-layout. Ancla el centro del elemento.
+**Pin** (es: **Pin**):
+Manual position of an element in a View that overrides auto-layout. It anchors the element's center.
 
-**Fuente canonica** (en: **Canonical form**):
-Formato estructurado (Modelo y Vistas) validable por esquema, del que se renderiza todo. Es un artefacto derivado: nadie lo edita, se compila siempre desde el DSL de texto.
-_Avoid (en)_: canonical source
+**Canonical form** (es: **Fuente canonica**):
+Structured format (Model and Views), validatable by schema, from which everything is rendered. It is a derived artifact: nobody edits it, it is always compiled from the Text DSL.
+_Avoid_: canonical source
 
-**DSL de texto** (en: **Text DSL**):
-Sintaxis legible para humanos y agentes, y unica fuente que se edita y versiona. Compila en un solo sentido a la Fuente canonica.
+**Text DSL** (es: **DSL de texto**):
+Syntax readable by humans and agents, and the only source that is edited and versioned. It compiles one way to the Canonical form.
 
-**Workspace** (en: **Workspace**):
-Carpeta de archivos de DSL de texto que se fusionan en el Modelo unico de un Proyecto documentado. Cada archivo puede aportar Nodos, Aristas y Vistas.
+**Workspace** (es: **Workspace**):
+Folder of Text DSL files that merge into the single Model of a Documented project. Each file may contribute Nodes, Edges and Views.
 
-**Issue** (en: **Issue**):
-Hallazgo de la validacion de un Workspace: codigo estable, severidad (`error` o `warning`), `archivo:linea`, mensaje y, opcionales, una pista y un `fix` (el reemplazo de texto que lo corrige cuando hay un unico candidato). Es dato, nunca excepcion.
+**Issue** (es: **Issue**):
+Finding of the validation of a Workspace: stable code, severity (`error` or `warning`), `file:line`, message and, optionally, a hint and a `fix` (the text replacement that corrects it when there is a single candidate). It is data, never an exception.
 
-**Sesion** (en: **Session**):
-Estado compilado de un Workspace en un momento dado: Fuente canonica, issues y geometria por Vista (calculada bajo demanda). Es un valor inmutable; un cambio de archivos produce otra Sesion. Lo consumen el CLI, `dev` y `inspect`.
+**Session** (es: **Sesion**):
+Compiled state of a Workspace at a given moment: Canonical form, issues and geometry per View (computed on demand). It is an immutable value; a file change produces another Session. The CLI, `dev` and `inspect` consume it.
 
-**Estilo resuelto** (en: **Resolved style**):
-Resultado de aplicar la cascada (Tema base, Tipo de nodo, estado, override de la Vista) a las pilas de Capas. Tiene dos mitades: las Metricas (las lee el layout) y la pintura (las Capas, las lee el render). Cambiar la estetica es cambiar el Tema, no la logica de dibujo.
+**Resolved style** (es: **Estilo resuelto**):
+Result of applying the cascade (base Theme, Node kind, state, View override) to the Layer stacks. It has two halves: the Metrics (read by layout) and the paint (the Layers, read by render). Changing the look means changing the Theme, not the drawing logic.
 
-**Metricas** (en: **Metrics**):
-Medidas de espacio derivadas de un Tema, por elemento (Nodo por Tipo de nodo, Grupo abierto, Grupo colapsado, etiqueta de Arista y, en secuencia, cabecera de Lifeline, activacion, Fragmento, Nota y etiqueta de Mensaje): padding, gap, tamano de Slot y caja minima de la forma, mas las separaciones de secuencia (entre Lifelines, entre Mensajes, lazo del mensaje propio). Solo la caja y los Slots las afectan. Las comparten el calculo de posiciones y el dibujo, de modo que lo reservado y lo dibujado no pueden divergir.
+**Metrics** (es: **Metricas**):
+Space measures derived from a Theme, per element (Node per Node kind, open Group, Collapsed group, Edge label and, in sequence, Lifeline header, activation, Fragment, Note and Message label): padding, gap, Slot size and minimum shape box, plus the sequence spacings (between Lifelines, between Messages, self-message loop). Only the box and the Slots affect them. Position computation and drawing share them, so what is reserved and what is drawn cannot diverge.
 
-**Geometria vigente** (en: **Fresh geometry**):
-Geometria cacheada de una Vista que sigue valiendo: nada de lo que influye en las posiciones (estructura, textos, fuentes, Metricas, Pins) cambio desde que se calculo. Una sola respuesta para Sesion, CLI y shell.
+**Fresh geometry** (es: **Geometria vigente**):
+Cached geometry of a View that is still valid: nothing that influences positions (structure, texts, fonts, Metrics, Pins) changed since it was computed. A single answer for Session, CLI and shell.
 
-**Intencion** (en: **Intent**):
-Cambio que el usuario pide sobre el DSL de texto, expresado en terminos del dominio (mover el Pin de un Nodo en una Vista; ordenar las Lifelines de una Vista de secuencia; fijar o quitar el Tema de una Vista). Aun no es una edicion de texto; un Gesto la convierte en una.
+**Intent** (es: **Intencion**):
+Change the user asks for on the Text DSL, expressed in domain terms (move a Node's Pin in a View; order the Lifelines of a sequence View; set or remove a View's Theme). It is not a text edit yet; a Gesture turns it into one.
 
-**Gesto** (en: **Gesture**):
-Operacion de la Sesion que recibe una Intencion, calcula la edicion minima del DSL de texto, la auto-prueba y la aplica en memoria. Quien lo invoca solo se ocupa de escribir el resultado.
+**Gesture** (es: **Gesto**):
+Session operation that receives an Intent, computes the minimal edit of the Text DSL, self-tests it and applies it in memory. Its caller only takes care of writing the result.
 
-**Historial** (en: **Undo history**):
-Pila inmutable de deshacer y rehacer de las Intenciones (ADR 0007): cada Intencion aplicada apila el texto del Workspace que deja, sin I/O. Es el del reductor puro, sin disco de por medio.
-_Evitar_: Historial a secas para el de `dev` (ese es el Historial de archivos).
+**Undo history** (es: **Historial**):
+Immutable undo and redo stack of Intents (ADR 0007): each applied Intent pushes the Workspace text it leaves, without I/O. It is the pure reducer's, with no disk involved.
+_Avoid_: plain "history" for the one in `dev` (that is the File history).
 
-**Historial de archivos** (en: **File history**):
-Historial de deshacer de `dev`: cada entrada guarda, por archivo, el texto antes y despues de una escritura de la UI (Intencion, guardado del editor, `fix`), con una descripcion y su hora. Deshacer, rehacer y saltar a una entrada se rechazan solo si cambio por fuera un archivo que la entrada restaura; una escritura externa no lo reinicia. La UI ve de el el Historial visible: cada entrada con si es alcanzable sobre el disco vigente.
+**File history** (es: **Historial de archivos**):
+Undo history of `dev`: each entry stores, per file, the text before and after a UI write (Intent, editor save, `fix`), with a description and its time. Undo, redo and jumping to an entry are rejected only if a file the entry restores changed outside; an external write does not reset it. The UI sees the visible history from it: each entry with whether it is reachable on the current disk.
 
-**UI de dev** (en: **Dev UI**):
-App de navegador que sirve `dev` (paquete `estudio`) para mirar, editar y seguir un Workspace: lienzo con la Vista activa, editor del DSL de texto, Issues, galeria de Temas, Detalle, Historial de archivos y feed del Registro de actividad. Toda escritura pasa por el Workspace vivo; no toca disco.
+**Dev UI** (es: **UI de dev**):
+Browser app served by `dev` (package `dev-ui`) to look at, edit and follow a Workspace: canvas with the active View, Text DSL editor, Issues, Theme gallery, Detail, File history and Activity log feed. Every write goes through the Live workspace; it does not touch disk.
 
-**Workspace vivo** (en: **Live workspace**):
-El estado de `dev` sin transporte: la Sesion vigente y la ultima buena, el Historial de archivos, la cola de escrituras, las versiones que vio la UI, la Diferencia con su origen y, compuesto, el Registro de actividad vivo (modulo propio que lee y empuja la actividad). Es el unico dueno de la secuencia de eventos del protocolo de `dev`: al conectar, estado, Historial de archivos y actividad previa; tras cada estado, su Historial de archivos y su Diferencia. El servidor de `dev` y su fake de pruebas solo la transportan.
+**Live workspace** (es: **Workspace vivo**):
+The state of `dev` without transport: the current and the last good Session, the File history, the write queue, the versions the UI saw, the Diff with its origin and, composed, the live Activity log (its own module that reads and pushes the activity). It is the only owner of the event sequence of the `dev` protocol: on connect, state, File history and previous activity; after each state, its File history and its Diff. The `dev` server and its test fake only transport it.
 
-**Seleccion** (en: **Selection**):
-Elemento o elementos de una Vista (Nodo, Arista, Atributo; en secuencia tambien Mensaje, Fragmento y Nota) sobre los que actua el editor. Es el sujeto de las Intenciones.
+**Selection** (es: **Seleccion**):
+Element or elements of a View (Node, Edge, Attribute; in sequence also Message, Fragment and Note) the editor acts on. It is the subject of Intents.
 
-**Registro de actividad** (en: **Activity log**):
-Historial de los comandos del CLI que leen o escriben el Workspace (`validate`, `build`, `inspect`, `edit`), por cualquier autor y con o sin `dev` abierto. Solo registra el CLI: lo que el humano hace en la UI de `dev` no entra. Es solo informativo: no forma parte del Modelo, del Historial ni del Historial de archivos.
+**Activity log** (es: **Registro de actividad**):
+History of the CLI commands that read or write the Workspace (`validate`, `build`, `inspect`, `edit`), by any author and with or without `dev` open. It only records the CLI: what the human does in the Dev UI does not enter. It is informational only: it is not part of the Model, the Undo history or the File history.
 
-**Evento de actividad** (en: **Activity event**):
-Una entrada del Registro de actividad: que comando corrio, quien (proceso y, si se declara, agente), sobre que objetivo nombrado (Vista, Nodo, Tema o archivos) y con que resultado.
+**Activity event** (es: **Evento de actividad**):
+An entry of the Activity log: which command ran, who (process and, if declared, agent), on which named target (View, Node, Theme or files) and with what result.
 
-**Diferencia** (en: **Diff**):
-Lo que cambio entre dos Sesiones buenas, en terminos del dominio: Nodos, Atributos, Aristas, Interacciones, Mensajes, Vistas y Temas agregados, quitados o cambiados, y de cada cambiado que propiedades cambiaron, marcadas como de texto o de estructura. Un renombre es un quitado mas un agregado. Su origen es propio (lo escribio la UI de `dev`) o externo (un agente, otro editor, el CLI); solo la externa se resalta. No dice cuanto hay que rehacer para dibujar: eso es la clasificacion del cambio.
-_Evitar_: Cambio del Modelo (tambien abarca Vistas y Temas).
-_Avoid (en)_: change set, model change
+**Diff** (es: **Diferencia**):
+What changed between two good Sessions, in domain terms: Nodes, Attributes, Edges, Interactions, Messages, Views and Themes added, removed or changed, and for each changed one which properties changed, marked as text or structure. A rename is a removal plus an addition. Its origin is own (written by the Dev UI) or external (an agent, another editor, the CLI); only the external one is highlighted. It does not say how much must be redone to draw: that is the change classification.
+_Avoid_: change set, model change (it also covers Views and Themes)
 
-**Buscador** (en: **Finder**):
-Dialogo de la UI de `dev` que encuentra y salta a Vistas, Nodos y `archivo:linea`, y ejecuta comandos de la UI por su nombre.
-_Evitar_: paleta, paleta de comandos (Paleta son los colores de un Tema).
-_Avoid (en)_: command palette
+**Finder** (es: **Buscador**):
+Dev UI dialog that finds and jumps to Views, Nodes and `file:line`, and runs UI commands by name.
+_Avoid_: palette, command palette (Palette is a Theme's colors)
 
-**Escaner** (en: **Scanner**):
-Herramienta fuera del nucleo que lee la codebase de un Proyecto documentado sin ejecutarla y extrae hechos mecanicos (unidades, dependencias entre ellas, externos, tablas) a un Borrador de escaneo. No conoce el DSL de texto ni el Modelo, y no decide nada que dependa de interpretar el proyecto.
+**Scanner** (es: **Escaner**):
+Tool outside the core that reads the codebase of a Documented project without running it and extracts mechanical facts (units, dependencies between them, externals, tables) into a Scan draft. It knows neither the Text DSL nor the Model, and decides nothing that depends on interpreting the project.
 
-**Borrador de escaneo** (en: **Scan draft**):
-Salida del Escaner: hechos con su origen (`archivo:linea`) y su confianza (extraido o inferido). Lo lee el agente para escribir el Workspace; no es un Workspace ni Fuente canonica y el sistema nunca lo compila.
-_Avoid (en)_: import, generated diagram
+**Scan draft** (es: **Borrador de escaneo**):
+Output of the Scanner: facts with their origin (`file:line`) and their confidence (extracted or inferred). The agent reads it to write the Workspace; it is neither a Workspace nor Canonical form and the system never compiles it.
+_Avoid_: import, generated diagram
 
-**Cobertura de escaneo** (en: **Scan coverage**):
-Emparejamiento entre un Borrador de escaneo y las Sources `path` del Modelo: unidades y tablas que ningun Nodo cita (no cubiertas), refs que ya no estan en el Borrador (huerfanas), columnas que faltan o sobran frente a los Atributos de la tabla, y lo que el proyecto decidio ignorar. Lo Planeado no cuenta: no tiene ref `path`. Es informativa, no un Issue de validacion.
-_Evitar_: sincronizacion, import incremental
-_Avoid (en)_: sync, drift
+**Scan coverage** (es: **Cobertura de escaneo**):
+Matching between a Scan draft and the Model's `path` Sources: units and tables no Node cites (uncovered), refs no longer in the Draft (orphaned), columns missing or extra against the table's Attributes, and what the project decided to ignore. Planned elements do not count: they have no `path` ref. It is informational, not a validation Issue.
+_Avoid_: sync, drift, incremental import
 
-**Planeado** (en: **Planned**):
-Marca del Modelo para un Nodo, Arista, Atributo o Interaccion que todavia no existe en el Proyecto documentado: se propuso desde un PRD o una descripcion. La heredan los descendientes de un Grupo planeado y las Aristas y Mensajes que tocan algo planeado. Se dibuja distinto de lo real en la misma Vista y deja de serlo cuando el elemento aparece en el codigo.
-_Evitar_: borrador, propuesto, fantasma (Fantasma es un estado de Tema)
-_Avoid (en)_: draft, proposed, blueprint (Blueprint es el nombre de la feature, no del concepto)
+**Planned** (es: **Planeado**):
+Model mark for a Node, Edge, Attribute or Interaction that does not exist yet in the Documented project: it was proposed from a PRD or a description. The descendants of a planned Group inherit it, and so do the Edges and Messages that touch something planned. It is drawn differently from what is real in the same View and stops being planned when the element appears in the code.
+_Avoid_: draft, proposed, ghost (Ghost is a Theme state), blueprint (Blueprint is the name of the feature, not of the concept)

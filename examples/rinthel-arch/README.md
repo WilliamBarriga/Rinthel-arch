@@ -12,7 +12,7 @@ This repo as a Workspace: the system documents itself. It is regenerated from co
 | `flows.dg` | Two `flow` Views with Steps: `flow-dev` (from the `.dg` files to the canvas) and `flow-scan` (what `diagrams scan` reads) |
 | `tables.dg` | The tables the scan found (the Scanner's test fixture: Prisma and SQL) and their `er` View `tables` |
 | `sequence.dg` | The Interaction `export` and its `sequence` View `export-sequence`, with a `break` Fragment, a Note, Steps and a `link` to `dev-ui-detail` |
-| `theme-views.dg` | One `open-<theme>` View per Theme: the `open` View with each aesthetic. Their screenshots are in the [gallery](../../docs/galeria.md) |
+| `theme-views.dg` | One `open-<theme>` View per Theme: the `open` View with each aesthetic. Their screenshots are in the [gallery](../../docs/gallery.md) |
 | `themes/` | The approved Themes and, in `themes/fonts/`, their families as `woff2` with `OFL-<family>.txt` licenses. It is the only copy: the gallery uses them with `--theme-path` |
 | `fonts/` | DejaVu Sans and Mono (license in `LICENSE-DejaVu.txt`) |
 
@@ -31,7 +31,7 @@ When `scan` reports uncovered units or orphan refs, refresh the Workspace with t
 To see a View with another Theme without touching the example (needs `pnpm build`):
 
 ```
-pnpm capturas --workspace examples/rinthel-arch --view open --prototype A neutral neutral-dark
+pnpm screenshots --workspace examples/rinthel-arch --view open --prototype A neutral neutral-dark
 ```
 
 ## Live demo

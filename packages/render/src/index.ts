@@ -1,17 +1,17 @@
 /**
- * `render`: `<Diagram>` dibuja una Vista resuelta y su Geometria como arbol React; `resolverEstilo` deriva el Estilo
- * del Tema (ADR 0002, 0008).
- * Invariantes: sin estado ni efectos; marcado determinista byte a byte; colores solo de la Paleta del Tema; lo animado
- * nunca provoca relayout; el codigo del Workspace entra solo por la prop `componentes`.
- * Errores: lanza si un Nodo de la Vista no esta en la Geometria, si la Geometria es de otro Tipo de diagrama o si el
- * Tema no cumple `resolverTema`. Depende de `canonico`, `tema` y `layout`; peer React 18 y 19.
+ * `render`: `<Diagram>` draws a resolved View and its Geometry as a React tree; `resolveStyle` derives the Style
+ * from the Theme (ADR 0002, 0008).
+ * Invariants: no state nor effects; byte-for-byte deterministic markup; colors only from the Theme Palette; what is
+ * animated never triggers a relayout; Workspace code comes in only through the `components` prop.
+ * Errors: throws if a Node of the View is not in the Geometry, if the Geometry is of another Diagram type or if the
+ * Theme does not satisfy `resolveTheme`. Depends on `canonical`, `theme` and `layout`; peer React 18 and 19.
  */
 export { Diagram } from './diagram';
-export type { ComponenteDeTema, ComponentesDeTema, PropsDeCodigo } from './codigo';
+export type { ThemeComponent, ThemeComponents, CodeProps } from './code';
 export type { DiagramProps } from './diagram';
-export type { Camara, Estados, NivelDeDetalle } from './escena';
-export { resolverEstilo } from './estilo';
-export { hojaDeFuentes } from './hoja';
-export { PINTORES } from './hoja';
-export { centroDeEtiquetaSinCaja } from './pintores';
-export type { AspectoDeEstado, EstadoVisual, Estilo } from './estilo';
+export type { Camera, States, DetailLevel } from './scene';
+export { resolveStyle } from './style';
+export { fontSheet } from './sheet';
+export { PAINTERS } from './sheet';
+export { boxlessLabelCenter } from './painters';
+export type { StateLook, VisualState, Style } from './style';

@@ -2,7 +2,7 @@
 
 # DSL reference
 
-Summary of the syntax of `.dg` files. The full grammar is in `packages/dsl/src/gramatica/diagramas.langium`; the decisions, in [ADR 0001](../adr/0001-dsl-fuente-editable.md). Themes are described in [Customizing with Themes](themes.md). Comments start with `//`.
+Summary of the syntax of `.dg` files. The full grammar is in `packages/dsl/src/grammar/diagrams.langium`; the decisions, in [ADR 0001](../adr/0001-dsl-editable-source.md). Themes are described in [Customizing with Themes](themes.md). Comments start with `//`.
 
 A Workspace is a folder with any number of `.dg` files (in subfolders too); they merge into a single Model. A file can mix `specification`, `model`, `view`, `theme` and `part` blocks.
 
@@ -278,4 +278,4 @@ Details in [Customizing with Themes](themes.md) and in the [catalog](../theme-ca
 
 ## Errors and warnings
 
-`dg validate` prints `file:line:column severity code message`, with `hint` or a fix (`fix`) when there is a single candidate. With `--json` the result is an object with `contractVersion`, for agents and tools ([ADR 0005](../adr/0005-cli-para-agentes.md)). Codes are stable kebab-case names (`duplicate-part`, `theme-low-contrast`, `unknown-lifeline`, `reply-without-sync`...); the severity (`error` blocks, `warning` warns) is a separate field of each issue.
+`dg validate` prints `file:line:column severity code message`, with `hint` or a fix (`fix`) when there is a single candidate. With `--json` the result is an object with `contractVersion`, for agents and tools ([ADR 0005](../adr/0005-cli-for-agents.md)). Codes are stable kebab-case names (`duplicate-part`, `theme-low-contrast`, `unknown-lifeline`, `reply-without-sync`...); the severity (`error` blocks, `warning` warns) is a separate field of each issue.

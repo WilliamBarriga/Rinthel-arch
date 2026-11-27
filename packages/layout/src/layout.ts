@@ -1,24 +1,24 @@
-/** Layout de una Vista de grafo con ELK: `INCLUDE_CHILDREN`, sin `considerModelOrder`. */
+/** Layout of a graph View with ELK: `INCLUDE_CHILDREN`, without `considerModelOrder`. */
 import type { ELK, ElkNode } from 'elkjs/lib/elk-api';
-import { idDeArista } from 'canonico';
-import type { CajaDeNodo, Geometria, GeometriaGrafo, ItemResuelto, NodoResuelto, OverrideDeNodo, Punto, RutaDeArista, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
+import { edgeId } from 'canonical';
+import type { NodeBox, Geometry, GraphGeometry, ResolvedItem, ResolvedNode, NodeOverride, Point, EdgeRoute, Theme, GraphView, ResolvedView } from 'canonical';
 
-import { indiceDeGeometria } from './indice';
-import { layoutSecuencia } from './secuencia';
-import { LARGO_DE_MARCADOR_ER, atributosVisibles, claveDeMetricas, colocarEnCaja, colocarNodo, contenidoDeNodo, comoTabla, metricasDeHoja, tablaDeMetricas, tamanoDeEtiqueta } from 'tema';
-import type { MedidasDeTexto, Metricas, TablaDeMetricas } from 'tema';
+import { geometryIndex } from './geometry-index';
+import { layoutSequence } from './sequence';
+import { ER_MARKER_LENGTH, visibleAttributes, metricsKey, placeInBox, placeNode, nodeContent, asTable, leafMetrics, metricsTable, labelSize } from 'theme';
+import type { TextMeasures, Metrics, MetricsTable } from 'theme';
 
 
-export interface OpcionesDeLayout {
-  /** Por defecto el empaquetado, que corre igual en Node y en Web Worker. */
+export interface LayoutOptions {
+  /** Defaults to the bundled one, which runs the same in Node and in a Web Worker. */
   elk?: ELK;
-  /** Por defecto la tabla derivada del Tema; una sola `Metricas` vale para todo elemento. `render` debe dibujar con las mismas. */
-  metricas?: Metricas | TablaDeMetricas;
-  /** Sin ellas el texto se estima por caracter. Se ignoran si se pasa `metricas`. */
-  medidas?: MedidasDeTexto;
+  /** Defaults to the table derived from the Theme; a single `Metrics` applies to every element. `render` must draw with the same ones. */
+  metricas?: Metrics | MetricsTable;
+  /** Without them text is estimated per character. Ignored when `metrics` is passed. */
+  measures?: TextMeasures;
 }
 
-const OPCIONES_RAIZ = {
+const ROOT_OPTIONS = {
   'elk.algorithm': 'layered',
   'elk.direction': 'RIGHT',
   'elk.edgeRouting': 'ORTHOGONAL',
@@ -27,376 +27,376 @@ const OPCIONES_RAIZ = {
   'elk.json.shapeCoords': 'PARENT',
   'elk.spacing.nodeNode': '24',
   'elk.layered.spacing.nodeNodeBetweenLayers': '48',
-  // 1 (el minimo) reduce a la mitad el relayout de 1k Nodos.
+  // 1 (the minimum) halves the relayout of 1k Nodes.
   'elk.layered.thoroughness': '1',
 };
 
 /**
- * Determinista. Los Grupos cerrados son Nodos hoja. Sin `opciones.elk` crea un motor por llamada.
- * Rechaza si ELK falla.
+ * Deterministic. Closed Groups are leaf Nodes. Without `options.elk` it creates one engine per call.
+ * Rejects if ELK fails.
  */
 export async function layoutView(
-  vista: VistaResuelta,
-  tema: Tema,
-  opciones: OpcionesDeLayout = {},
-): Promise<Geometria> {
-  return layoutConMetricas(vista, opciones.metricas ?? tablaDeMetricas(tema, vista.type, opciones.medidas), opciones);
+  view: ResolvedView,
+  theme: Theme,
+  options: LayoutOptions = {},
+): Promise<Geometry> {
+  return layoutWithMetrics(view, options.metricas ?? metricsTable(theme, view.type, options.measures), options);
 }
 
-/** `layoutView` sobre Metricas ya resueltas, sin el Tema: es lo que corre el Worker, que no empaqueta el esquema del Tema. */
-export async function layoutConMetricas(
-  vista: VistaResuelta,
-  metricas: Metricas | TablaDeMetricas,
-  opciones: { elk?: ELK } = {},
-): Promise<Geometria> {
-  switch (vista.type) {
+/** `layoutView` over already resolved Metrics, without the Theme: it is what the Worker runs, which does not bundle the Theme schema. */
+export async function layoutWithMetrics(
+  view: ResolvedView,
+  metricas: Metrics | MetricsTable,
+  options: { elk?: ELK } = {},
+): Promise<Geometry> {
+  switch (view.type) {
     case 'architecture':
     case 'flow':
     case 'er':
-      return layoutGrafo(vista, metricas, opciones);
+      return layoutGraph(view, metricas, options);
     case 'sequence':
-      return layoutSecuencia(vista, metricas);
+      return layoutSequence(view, metricas);
   }
 }
 
-async function layoutGrafo(
-  vista: VistaDeGrafo,
-  metricas: Metricas | TablaDeMetricas,
-  opciones: { elk?: ELK },
-): Promise<GeometriaGrafo> {
-  // Import dinamico: quien solo usa las medidas (render) no arrastra ELK al empaquetar.
-  const elk = opciones.elk ?? new (await import('elkjs/lib/elk.bundled.js')).default();
-  const medidas = comoTabla(metricas);
+async function layoutGraph(
+  view: GraphView,
+  metricas: Metrics | MetricsTable,
+  options: { elk?: ELK },
+): Promise<GraphGeometry> {
+  // Dynamic import: whoever only uses the measures (render) does not pull ELK into its bundle.
+  const elk = options.elk ?? new (await import('elkjs/lib/elk.bundled.js')).default();
+  const measures = asTable(metricas);
 
-  const grafo: ElkNode = {
-    id: 'raiz',
-    layoutOptions: OPCIONES_RAIZ,
-    children: indiceDeGeometria(vista, { nodes: {} }).raices.map((nodo) => aElk(nodo, medidas)),
-    edges: vista.edges.map((arista) => ({
-      id: idDeArista(arista),
-      sources: [arista.from.node],
-      targets: [arista.to.node],
-      ...(arista.label !== undefined && { labels: [{ id: `${idDeArista(arista)}:etiqueta`, text: arista.label, ...tamanoDeEtiqueta(arista.label, medidas.etiqueta) }] }),
+  const graph: ElkNode = {
+    id: 'root',
+    layoutOptions: ROOT_OPTIONS,
+    children: geometryIndex(view, { nodes: {} }).roots.map((node) => toElk(node, measures)),
+    edges: view.edges.map((edge) => ({
+      id: edgeId(edge),
+      sources: [edge.from.node],
+      targets: [edge.to.node],
+      ...(edge.label !== undefined && { labels: [{ id: `${edgeId(edge)}:label`, text: edge.label, ...labelSize(edge.label, measures.etiqueta) }] }),
     })),
   };
-  const resultado = await elk.layout(grafo);
+  const result = await elk.layout(graph);
 
-  const nodes: Record<string, CajaDeNodo> = {};
-  const recoger = (hijos: readonly ElkNode[] | undefined): void => {
-    for (const hijo of hijos ?? []) {
-      nodes[hijo.id] = { x: hijo.x ?? 0, y: hijo.y ?? 0, width: hijo.width ?? 0, height: hijo.height ?? 0 };
-      recoger(hijo.children);
+  const nodes: Record<string, NodeBox> = {};
+  const collect = (childNodes: readonly ElkNode[] | undefined): void => {
+    for (const child of childNodes ?? []) {
+      nodes[child.id] = { x: child.x ?? 0, y: child.y ?? 0, width: child.width ?? 0, height: child.height ?? 0 };
+      collect(child.children);
     }
   };
-  recoger(resultado.children);
-  const edges: Record<string, RutaDeArista> = {};
-  const labels: Record<string, CajaDeNodo> = {};
-  for (const arista of resultado.edges ?? []) {
-    const [seccion] = arista.sections ?? [];
-    if (seccion === undefined) continue;
-    const [etiqueta] = arista.labels ?? [];
-    if (etiqueta !== undefined) labels[arista.id] = { x: etiqueta.x ?? 0, y: etiqueta.y ?? 0, width: etiqueta.width ?? 0, height: etiqueta.height ?? 0 };
-    edges[arista.id] = { points: [seccion.startPoint, ...(seccion.bendPoints ?? []), seccion.endPoint].map(({ x, y }) => ({ x, y })) };
+  collect(result.children);
+  const edges: Record<string, EdgeRoute> = {};
+  const labels: Record<string, NodeBox> = {};
+  for (const edge of result.edges ?? []) {
+    const [section] = edge.sections ?? [];
+    if (section === undefined) continue;
+    const [label] = edge.labels ?? [];
+    if (label !== undefined) labels[edge.id] = { x: label.x ?? 0, y: label.y ?? 0, width: label.width ?? 0, height: label.height ?? 0 };
+    edges[edge.id] = { points: [section.startPoint, ...(section.bendPoints ?? []), section.endPoint].map(({ x, y }) => ({ x, y })) };
   }
-  return conPinsYPuertos(vista, medidas, { kind: 'grafo', nodes, edges, labels, pinsSolapados: [], width: resultado.width ?? 0, height: resultado.height ?? 0 });
+  return withPinsAndPorts(view, measures, { kind: 'grafo', nodes, edges, labels, pinsSolapados: [], width: result.width ?? 0, height: result.height ?? 0 });
 }
 
-function conPinsYPuertos(vista: VistaDeGrafo, medidas: TablaDeMetricas, base: GeometriaGrafo): GeometriaGrafo {
-  const pinneada = aplicarPins(vista, base.nodes, base.edges, base.labels);
-  const conPuertos = { ...pinneada, edges: ajustarAPuertosDeAtributo(vista, medidas, pinneada.nodes, pinneada.edges) };
-  // ER: el pie de gallo necesita un tramo final horizontal de al menos su largo; se garantiza tras puertos y Pins.
-  if (vista.type === 'er') conPuertos.edges = garantizarTramosFinalesEr(vista, indiceDeGeometria(vista, { nodes: conPuertos.nodes }).cajas, conPuertos.edges);
-  return { ...conPuertos, kind: 'grafo', nodes: conSlots(vista, medidas, conPuertos.nodes), width: base.width, height: base.height };
+function withPinsAndPorts(view: GraphView, measures: MetricsTable, base: GraphGeometry): GraphGeometry {
+  const pinned = applyPins(view, base.nodes, base.edges, base.labels);
+  const withPorts = { ...pinned, edges: snapToAttributePorts(view, measures, pinned.nodes, pinned.edges) };
+  // ER: the crow's foot needs a horizontal final segment at least as long as itself; it is ensured after ports and Pins.
+  if (view.type === 'er') withPorts.edges = ensureErFinalSegments(view, geometryIndex(view, { nodes: withPorts.nodes }).boxes, withPorts.edges);
+  return { ...withPorts, kind: 'grafo', nodes: withSlots(view, measures, withPorts.nodes), width: base.width, height: base.height };
 }
 
-/** Anade a cada Nodo hoja el rectangulo de sus Slots, el mismo que usa `render` para pintar. */
-function conSlots(vista: VistaResuelta, medidas: TablaDeMetricas, nodes: Record<string, CajaDeNodo>): Record<string, CajaDeNodo> {
-  const resultado = { ...nodes };
-  for (const nodo of vista.nodes) {
-    const caja = resultado[nodo.id];
-    if (nodo.children.length === 0 && caja !== undefined) {
-      const m = metricasDeHoja(medidas, nodo);
-      resultado[nodo.id] = { ...caja, slots: colocarEnCaja(m, contenidoDeNodo(nodo, m), caja.width).slots };
+/** Adds to each leaf Node the rectangle of its Slots, the same one `render` uses to paint. */
+function withSlots(view: ResolvedView, measures: MetricsTable, nodes: Record<string, NodeBox>): Record<string, NodeBox> {
+  const result = { ...nodes };
+  for (const node of view.nodes) {
+    const box = result[node.id];
+    if (node.children.length === 0 && box !== undefined) {
+      const m = leafMetrics(measures, node);
+      result[node.id] = { ...box, slots: placeInBox(m, nodeContent(node, m), box.width).slots };
     }
   }
-  return resultado;
+  return result;
 }
 
 /**
- * Aplica los Pins de `vista` a `base`, la geometria de la misma estructura calculada sin Pins. Da el mismo
- * resultado que `layoutView` sin volver a ejecutar ELK.
+ * Applies the Pins of `view` to `base`, the geometry of the same structure computed without Pins. Gives the same
+ * result as `layoutView` without running ELK again.
  */
-export function aplicarPinsAGeometria(vista: VistaResuelta, base: Geometria, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): Geometria {
-  switch (vista.type) {
+export function applyPinsToGeometry(view: ResolvedView, base: Geometry, theme: Theme, metricas: Metrics | MetricsTable = metricsTable(theme, view.type)): Geometry {
+  switch (view.type) {
     case 'sequence':
-      // La Geometria de secuencia sale completa de su layout: no hay paso post-layout.
+      // The sequence Geometry comes complete from its layout: there is no post-layout step.
       return base;
     case 'architecture':
     case 'flow':
     case 'er':
-      return base.kind === 'grafo' ? conPinsYPuertos(vista, comoTabla(metricas), base) : base;
+      return base.kind === 'grafo' ? withPinsAndPorts(view, asTable(metricas), base) : base;
   }
 }
 
 /**
- * El centro de la caja del Nodo pineado pasa a `pin`, relativo a su Grupo padre. Una Arista con ambos extremos
- * en el subarbol movido se traslada con su etiqueta; una que lo cruza se re-enruta en Z y pierde la etiqueta
- * (`render` la pone sobre la nueva ruta). Un Pin sobre un Nodo ausente se ignora. No muta sus argumentos.
- * `pinsSolapados`: pares de Nodos pineados cuyas cajas se solapan, salvo ancestro y descendiente.
+ * The center of the pinned Node's box moves to `pin`, relative to its parent Group. An Edge with both ends
+ * in the moved subtree moves with its label; one that crosses it is rerouted in Z and loses its label
+ * (`render` puts it on the new route). A Pin on a missing Node is ignored. Does not mutate its arguments.
+ * `pinsSolapados`: pairs of pinned Nodes whose boxes overlap, except ancestor and descendant.
  */
-function aplicarPins(
-  vista: VistaDeGrafo,
-  nodes: Record<string, CajaDeNodo>,
-  edges: Record<string, RutaDeArista>,
-  labels: Record<string, CajaDeNodo>,
-): Pick<GeometriaGrafo, 'nodes' | 'edges' | 'labels' | 'pinsSolapados'> {
-  const pins = pinsDe(vista).filter((o) => nodes[o.node] !== undefined);
+function applyPins(
+  view: GraphView,
+  nodes: Record<string, NodeBox>,
+  edges: Record<string, EdgeRoute>,
+  labels: Record<string, NodeBox>,
+): Pick<GraphGeometry, 'nodes' | 'edges' | 'labels' | 'pinsSolapados'> {
+  const pins = pinsOf(view).filter((o) => nodes[o.node] !== undefined);
   if (pins.length === 0) return { nodes, edges, labels, pinsSolapados: [] };
-  const nuevos: Record<string, CajaDeNodo> = { ...nodes };
+  const pinnedBoxes: Record<string, NodeBox> = { ...nodes };
   for (const { node, pin } of pins) {
-    const caja = nuevos[node]!;
-    nuevos[node] = { ...caja, x: pin.x - caja.width / 2, y: pin.y - caja.height / 2 };
+    const box = pinnedBoxes[node]!;
+    pinnedBoxes[node] = { ...box, x: pin.x - box.width / 2, y: pin.y - box.height / 2 };
   }
-  const previo = indiceDeGeometria(vista, { nodes });
-  const indice = indiceDeGeometria(vista, { nodes: nuevos });
-  const { padre } = indice;
-  const dentroDe = (id: string, raiz: string): boolean => id === raiz || (padre.has(id) && dentroDe(padre.get(id)!, raiz));
-  const movidos = pins.map((o) => o.node);
-  const rutas: Record<string, RutaDeArista> = { ...edges };
-  const etiquetas: Record<string, CajaDeNodo> = { ...labels };
-  for (const arista of vista.edges) {
-    const [origen, destino] = [arista.from.node, arista.to.node];
-    const raizOrigen = movidos.find((m) => dentroDe(origen, m));
-    const raizDestino = movidos.find((m) => dentroDe(destino, m));
-    if (raizOrigen === undefined && raizDestino === undefined) continue;
-    const id = idDeArista(arista);
-    const previa = edges[id];
-    if (raizOrigen === raizDestino && previa !== undefined) {
-      const antes = previo.cajas.get(raizOrigen!)!;
-      const despues = indice.cajas.get(raizOrigen!)!;
-      const [dx, dy] = [despues.x - antes.x, despues.y - antes.y];
-      rutas[id] = { points: previa.points.map(({ x, y }) => ({ x: x + dx, y: y + dy })) };
-      const etiqueta = etiquetas[id];
-      if (etiqueta !== undefined) etiquetas[id] = { ...etiqueta, x: etiqueta.x + dx, y: etiqueta.y + dy };
+  const previous = geometryIndex(view, { nodes });
+  const index = geometryIndex(view, { nodes: pinnedBoxes });
+  const { parent } = index;
+  const isInside = (id: string, root: string): boolean => id === root || (parent.has(id) && isInside(parent.get(id)!, root));
+  const moved = pins.map((o) => o.node);
+  const routes: Record<string, EdgeRoute> = { ...edges };
+  const labelBoxes: Record<string, NodeBox> = { ...labels };
+  for (const edge of view.edges) {
+    const [source, target] = [edge.from.node, edge.to.node];
+    const sourceRoot = moved.find((m) => isInside(source, m));
+    const targetRoot = moved.find((m) => isInside(target, m));
+    if (sourceRoot === undefined && targetRoot === undefined) continue;
+    const id = edgeId(edge);
+    const previousRoute = edges[id];
+    if (sourceRoot === targetRoot && previousRoute !== undefined) {
+      const before = previous.boxes.get(sourceRoot!)!;
+      const after = index.boxes.get(sourceRoot!)!;
+      const [dx, dy] = [after.x - before.x, after.y - before.y];
+      routes[id] = { points: previousRoute.points.map(({ x, y }) => ({ x: x + dx, y: y + dy })) };
+      const label = labelBoxes[id];
+      if (label !== undefined) labelBoxes[id] = { ...label, x: label.x + dx, y: label.y + dy };
     } else {
-      delete etiquetas[id];
-      rutas[id] = { points: rutaOrtogonal(indice.cajas.get(origen)!, indice.cajas.get(destino)!) };
+      delete labelBoxes[id];
+      routes[id] = { points: orthogonalRoute(index.boxes.get(source)!, index.boxes.get(target)!) };
     }
   }
 
   const pinsSolapados: [string, string][] = [];
-  const ids = [...new Set(movidos)].sort();
+  const ids = [...new Set(moved)].sort();
   ids.forEach((a, i) => {
     for (const b of ids.slice(i + 1)) {
-      if (dentroDe(a, b) || dentroDe(b, a)) continue;
-      if (seSolapan(indice.cajas.get(a)!, indice.cajas.get(b)!)) pinsSolapados.push([a, b]);
+      if (isInside(a, b) || isInside(b, a)) continue;
+      if (overlap(index.boxes.get(a)!, index.boxes.get(b)!)) pinsSolapados.push([a, b]);
     }
   });
-  return { nodes: nuevos, edges: rutas, labels: etiquetas, pinsSolapados };
+  return { nodes: pinnedBoxes, edges: routes, labels: labelBoxes, pinsSolapados };
 }
 
 /**
- * Una Arista a `nodo#atributo` termina en la fila de ese Atributo (ELK apunta al centro del Nodo). Solo se
- * ajusta un tramo final horizontal; si la ruta no tiene codo previo se inserta uno a mitad de camino.
+ * An Edge to `node#attribute` ends at the row of that Attribute (ELK points at the Node's center). Only a
+ * horizontal final segment is adjusted; if the route has no previous elbow, one is inserted halfway.
  */
-function ajustarAPuertosDeAtributo(
-  vista: VistaDeGrafo,
-  tabla: TablaDeMetricas,
-  nodes: Record<string, CajaDeNodo>,
-  edges: Record<string, RutaDeArista>,
-): Record<string, RutaDeArista> {
-  const atributos = new Map(vista.nodes.map((nodo) => [nodo.id, atributosVisibles(nodo, metricasDeHoja(tabla, nodo))]));
-  const { cajas } = indiceDeGeometria(vista, { nodes });
-  const rutas = { ...edges };
-  for (const arista of vista.edges) {
-    const id = idDeArista(arista);
-    const ruta = rutas[id];
-    if (ruta === undefined) continue;
-    let puntos = ruta.points;
-    for (const [lado, extremo] of [['inicio', arista.from], ['fin', arista.to]] as const) {
-      const indice = extremo.attribute === undefined ? -1 : (atributos.get(extremo.node) ?? []).findIndex((a) => a.name === extremo.attribute);
-      if (indice < 0) continue;
-      const dueno = vista.nodes.find((n) => n.id === extremo.node)!;
-      const m = metricasDeHoja(tabla, dueno);
-      const fila = colocarEnCaja(m, contenidoDeNodo(dueno, m), cajas.get(extremo.node)!.width).filas[indice]!;
-      const y = cajas.get(extremo.node)!.y + fila.y + fila.height / 2;
-      puntos = moverPuerto(puntos, lado, y);
+function snapToAttributePorts(
+  view: GraphView,
+  table: MetricsTable,
+  nodes: Record<string, NodeBox>,
+  edges: Record<string, EdgeRoute>,
+): Record<string, EdgeRoute> {
+  const attributeList = new Map(view.nodes.map((node) => [node.id, visibleAttributes(node, leafMetrics(table, node))]));
+  const { boxes } = geometryIndex(view, { nodes });
+  const routes = { ...edges };
+  for (const edge of view.edges) {
+    const id = edgeId(edge);
+    const route = routes[id];
+    if (route === undefined) continue;
+    let points = route.points;
+    for (const [side, end] of [['start', edge.from], ['end', edge.to]] as const) {
+      const index = end.attribute === undefined ? -1 : (attributeList.get(end.node) ?? []).findIndex((a) => a.name === end.attribute);
+      if (index < 0) continue;
+      const owner = view.nodes.find((n) => n.id === end.node)!;
+      const m = leafMetrics(table, owner);
+      const row = placeInBox(m, nodeContent(owner, m), boxes.get(end.node)!.width).filas[index]!;
+      const y = boxes.get(end.node)!.y + row.y + row.height / 2;
+      points = movePort(points, side, y);
     }
-    rutas[id] = { points: puntos };
+    routes[id] = { points };
   }
-  return rutas;
+  return routes;
 }
 
 /**
- * Cada extremo de una Arista ER acaba en un tramo horizontal de al menos `LARGO_DE_MARCADOR_ER`, para que el
- * marcador de cardinalidad no se monte sobre el codo. Un extremo vertical pasa al lado del Nodo mas cercano a la ruta.
+ * Each end of an ER Edge finishes in a horizontal segment at least `ER_MARKER_LENGTH` long, so the
+ * cardinality marker does not sit on the elbow. A vertical end moves to the side of the Node closest to the route.
  */
-function garantizarTramosFinalesEr(vista: VistaDeGrafo, cajas: ReadonlyMap<string, CajaDeNodo>, edges: Record<string, RutaDeArista>): Record<string, RutaDeArista> {
-  const rutas = { ...edges };
-  for (const arista of vista.edges) {
-    const id = idDeArista(arista);
-    const ruta = rutas[id];
-    const [origen, destino] = [cajas.get(arista.from.node), cajas.get(arista.to.node)];
-    if (ruta === undefined || ruta.points.length < 2 || origen === undefined || destino === undefined) continue;
-    let puntos = ruta.points;
-    // Una ruta de dos puntos se parte antes: los dos extremos piden su tramo y se reparten el recorrido.
-    if (puntos.length === 2) {
-      const [a, b] = [puntos[0]!, puntos[1]!];
-      const medio = (a.x + b.x) / 2;
-      puntos = [a, { x: medio, y: a.y }, { x: medio, y: b.y }, b];
+function ensureErFinalSegments(view: GraphView, boxes: ReadonlyMap<string, NodeBox>, edges: Record<string, EdgeRoute>): Record<string, EdgeRoute> {
+  const routes = { ...edges };
+  for (const edge of view.edges) {
+    const id = edgeId(edge);
+    const route = routes[id];
+    const [source, target] = [boxes.get(edge.from.node), boxes.get(edge.to.node)];
+    if (route === undefined || route.points.length < 2 || source === undefined || target === undefined) continue;
+    let points = route.points;
+    // A two-point route is split first: both ends ask for their segment and share the way.
+    if (points.length === 2) {
+      const [a, b] = [points[0]!, points[1]!];
+      const middle = (a.x + b.x) / 2;
+      points = [a, { x: middle, y: a.y }, { x: middle, y: b.y }, b];
     }
-    puntos = tramoFinal(puntos, origen, 'inicio');
-    puntos = tramoFinal(puntos, destino, 'fin');
-    rutas[id] = { points: puntos };
+    points = finalSegment(points, source, 'start');
+    points = finalSegment(points, target, 'end');
+    routes[id] = { points };
   }
-  return rutas;
+  return routes;
 }
 
-function tramoFinal(puntos: Punto[], caja: CajaDeNodo, lado: 'inicio' | 'fin'): Punto[] {
-  const p = lado === 'inicio' ? [...puntos] : [...puntos].reverse();
-  // `p[0]` es el puerto, `p[1]` el codo previo.
-  let [puerto, codo] = [p[0]!, p[1]!];
-  if (puerto.y !== codo.y) {
-    // Llega en vertical: el puerto pasa al borde lateral del Nodo del lado de la ruta, a la altura del codo (acotada al Nodo).
-    const derecha = codo.x >= caja.x + caja.width / 2;
-    const y = Math.min(Math.max(puerto.y, caja.y + 1), caja.y + caja.height - 1);
-    puerto = { x: derecha ? caja.x + caja.width : caja.x, y };
-    p.splice(0, 2, puerto, { x: codo.x, y }, codo);
-    codo = p[1]!;
+function finalSegment(points: Point[], box: NodeBox, side: 'start' | 'end'): Point[] {
+  const p = side === 'start' ? [...points] : [...points].reverse();
+  // `p[0]` is the port, `p[1]` the previous elbow.
+  let [port, elbow] = [p[0]!, p[1]!];
+  if (port.y !== elbow.y) {
+    // It arrives vertically: the port moves to the side border of the Node on the route's side, at the elbow's height (clamped to the Node).
+    const rightmost = elbow.x >= box.x + box.width / 2;
+    const y = Math.min(Math.max(port.y, box.y + 1), box.y + box.height - 1);
+    port = { x: rightmost ? box.x + box.width : box.x, y };
+    p.splice(0, 2, port, { x: elbow.x, y }, elbow);
+    elbow = p[1]!;
   }
-  const hacia = Math.sign(codo.x - puerto.x) || (puerto.x <= caja.x + caja.width / 2 ? -1 : 1);
-  if (Math.abs(codo.x - puerto.x) < LARGO_DE_MARCADOR_ER || Math.sign(codo.x - puerto.x) !== hacia) {
-    const x = puerto.x + hacia * LARGO_DE_MARCADOR_ER;
-    const siguiente = p[2];
-    // Si el tramo que sale del codo es vertical se desplaza con el; si no, se anade uno vertical.
-    if (siguiente !== undefined && siguiente.x === codo.x) {
-      p[1] = { x, y: codo.y };
-      p[2] = { x, y: siguiente.y };
-    } else if (siguiente === undefined) {
-      p[1] = { x, y: codo.y };
+  const direction = Math.sign(elbow.x - port.x) || (port.x <= box.x + box.width / 2 ? -1 : 1);
+  if (Math.abs(elbow.x - port.x) < ER_MARKER_LENGTH || Math.sign(elbow.x - port.x) !== direction) {
+    const x = port.x + direction * ER_MARKER_LENGTH;
+    const next = p[2];
+    // If the segment leaving the elbow is vertical it moves with it; otherwise a vertical one is added.
+    if (next !== undefined && next.x === elbow.x) {
+      p[1] = { x, y: elbow.y };
+      p[2] = { x, y: next.y };
+    } else if (next === undefined) {
+      p[1] = { x, y: elbow.y };
     } else {
-      p.splice(1, 1, { x, y: codo.y }, { x, y: siguiente.y });
+      p.splice(1, 1, { x, y: elbow.y }, { x, y: next.y });
     }
   }
-  return lado === 'inicio' ? p : p.reverse();
+  return side === 'start' ? p : p.reverse();
 }
 
-function moverPuerto(puntos: Punto[], lado: 'inicio' | 'fin', y: number): Punto[] {
-  const copia = lado === 'inicio' ? [...puntos].reverse() : [...puntos];
-  const fin = copia[copia.length - 1]!;
-  const previo = copia[copia.length - 2]!;
-  if (previo.y !== fin.y || fin.y === y) return puntos;
-  const antes = copia[copia.length - 3];
-  if (antes === undefined) {
-    const medio = (previo.x + fin.x) / 2;
-    copia.splice(1, 0, { x: medio, y: previo.y }, { x: medio, y });
-  } else if (antes.y === previo.y) {
-    // Tramo previo tambien horizontal: un codo nuevo evita dejarlo en diagonal.
-    copia.splice(copia.length - 1, 0, { x: previo.x, y });
+function movePort(points: Point[], side: 'start' | 'end', y: number): Point[] {
+  const copy = side === 'start' ? [...points].reverse() : [...points];
+  const end = copy[copy.length - 1]!;
+  const previous = copy[copy.length - 2]!;
+  if (previous.y !== end.y || end.y === y) return points;
+  const before = copy[copy.length - 3];
+  if (before === undefined) {
+    const middle = (previous.x + end.x) / 2;
+    copy.splice(1, 0, { x: middle, y: previous.y }, { x: middle, y });
+  } else if (before.y === previous.y) {
+    // Previous segment also horizontal: a new elbow avoids leaving it diagonal.
+    copy.splice(copy.length - 1, 0, { x: previous.x, y });
   } else {
-    copia[copia.length - 2] = { x: previo.x, y };
+    copy[copy.length - 2] = { x: previous.x, y };
   }
-  copia[copia.length - 1] = { x: fin.x, y };
-  return lado === 'inicio' ? copia.reverse() : copia;
+  copy[copy.length - 1] = { x: end.x, y };
+  return side === 'start' ? copy.reverse() : copy;
 }
 
-function seSolapan(a: CajaDeNodo, b: CajaDeNodo): boolean {
+function overlap(a: NodeBox, b: NodeBox): boolean {
   return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
-/** Ruta en Z entre los bordes de dos cajas: horizontal si estan separadas en x o encimadas, si no vertical. */
-function rutaOrtogonal(origen: CajaDeNodo, destino: CajaDeNodo): Punto[] {
-  const centro = (c: CajaDeNodo): Punto => ({ x: c.x + c.width / 2, y: c.y + c.height / 2 });
-  const [o, d] = [centro(origen), centro(destino)];
-  if (seSolapan(origen, destino) || origen.x + origen.width <= destino.x || destino.x + destino.width <= origen.x) {
-    const derecha = d.x >= o.x;
-    const salida = derecha ? origen.x + origen.width : origen.x;
-    const entrada = derecha ? destino.x : destino.x + destino.width;
-    const medio = (salida + entrada) / 2;
-    return [{ x: salida, y: o.y }, { x: medio, y: o.y }, { x: medio, y: d.y }, { x: entrada, y: d.y }];
+/** Z route between the borders of two boxes: horizontal if they are apart in x or overlapping, otherwise vertical. */
+function orthogonalRoute(source: NodeBox, target: NodeBox): Point[] {
+  const center = (c: NodeBox): Point => ({ x: c.x + c.width / 2, y: c.y + c.height / 2 });
+  const [o, d] = [center(source), center(target)];
+  if (overlap(source, target) || source.x + source.width <= target.x || target.x + target.width <= source.x) {
+    const rightmost = d.x >= o.x;
+    const exit = rightmost ? source.x + source.width : source.x;
+    const entry = rightmost ? target.x : target.x + target.width;
+    const middle = (exit + entry) / 2;
+    return [{ x: exit, y: o.y }, { x: middle, y: o.y }, { x: middle, y: d.y }, { x: entry, y: d.y }];
   }
-  const abajo = d.y >= o.y;
-  const salida = abajo ? origen.y + origen.height : origen.y;
-  const entrada = abajo ? destino.y : destino.y + destino.height;
-  const medio = (salida + entrada) / 2;
-  return [{ x: o.x, y: salida }, { x: o.x, y: medio }, { x: d.x, y: medio }, { x: d.x, y: entrada }];
+  const bottom = d.y >= o.y;
+  const exit = bottom ? source.y + source.height : source.y;
+  const entry = bottom ? target.y : target.y + target.height;
+  const middle = (exit + entry) / 2;
+  return [{ x: o.x, y: exit }, { x: o.x, y: middle }, { x: d.x, y: middle }, { x: d.x, y: entry }];
 }
 
-function paddingElk({ top, left, bottom, right }: Metricas['paddingGrupo']): string {
+function elkPadding({ top, left, bottom, right }: Metrics['paddingGrupo']): string {
   return `[top=${top},left=${left},bottom=${bottom},right=${right}]`;
 }
 
-function aElk(nodo: NodoResuelto, tabla: TablaDeMetricas): ElkNode {
-  if (nodo.children.length === 0) {
-    const medidas = metricasDeHoja(tabla, nodo);
-    const { width, height } = colocarNodo(contenidoDeNodo(nodo, medidas), medidas);
-    return { id: nodo.id, width, height };
+function toElk(node: ResolvedNode, table: MetricsTable): ElkNode {
+  if (node.children.length === 0) {
+    const measures = leafMetrics(table, node);
+    const { width, height } = placeNode(nodeContent(node, measures), measures);
+    return { id: node.id, width, height };
   }
-  // El Grupo abierto nunca es mas angosto que su cabecera (titulo, icono y control de colapso).
-  const { width } = colocarNodo(contenidoDeNodo(nodo, tabla.grupoAbierto), tabla.grupoAbierto);
+  // An open Group is never narrower than its header (title, icon and collapse control).
+  const { width } = placeNode(nodeContent(node, table.grupoAbierto), table.grupoAbierto);
   return {
-    id: nodo.id,
-    layoutOptions: { 'elk.padding': paddingElk(tabla.grupoAbierto.paddingGrupo), 'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': `(${width}, 0)` },
-    children: nodo.children.map((hijo) => aElk(hijo, tabla)),
+    id: node.id,
+    layoutOptions: { 'elk.padding': elkPadding(table.grupoAbierto.paddingGrupo), 'elk.nodeSize.constraints': 'MINIMUM_SIZE', 'elk.nodeSize.minimum': `(${width}, 0)` },
+    children: node.children.map((child) => toElk(child, table)),
   };
 }
 
 /**
- * Clave de cache de la geometria: igual si y solo si el layout no cambia. Entran estructura visible, textos, Pins,
- * Metricas y si el Nodo tiene icono; no paleta ni colores.
+ * Geometry cache key: equal if and only if the layout does not change. It includes the visible structure, texts, Pins,
+ * Metrics and whether the Node has an icon; not the palette nor colors.
  */
-export function claveDeLayout(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): string {
-  return JSON.stringify({ tipo: vista.type, estructura: claveDeEstructura(vista, tema, metricas), pins: pinsDe(vista).map((o) => [o.node, o.pin.x, o.pin.y]) });
+export function layoutKey(view: ResolvedView, theme: Theme, metricas: Metrics | MetricsTable = metricsTable(theme, view.type)): string {
+  return JSON.stringify({ tipo: view.type, estructura: structureKey(view, theme, metricas), pins: pinsOf(view).map((o) => [o.node, o.pin.x, o.pin.y]) });
 }
 
-/** Overrides con Pin de la Vista; una Vista de secuencia no tiene Pins (su orden lo da `order`). */
-function pinsDe(vista: VistaResuelta): (OverrideDeNodo & { pin: NonNullable<OverrideDeNodo['pin']> })[] {
-  switch (vista.type) {
+/** Overrides of the View with a Pin; a sequence View has no Pins (its order comes from `order`). */
+function pinsOf(view: ResolvedView): (NodeOverride & { pin: NonNullable<NodeOverride['pin']> })[] {
+  switch (view.type) {
     case 'sequence':
       return [];
     case 'architecture':
     case 'flow':
     case 'er':
-      return vista.overrides.flatMap((o) => (o.pin === undefined ? [] : [{ ...o, pin: o.pin }]));
+      return view.overrides.flatMap((o) => (o.pin === undefined ? [] : [{ ...o, pin: o.pin }]));
   }
 }
 
-/** `claveDeLayout` sin los Pins: identifica la geometria que calcula ELK. */
-export function claveDeEstructura(vista: VistaResuelta, tema: Tema, metricas: Metricas | TablaDeMetricas = tablaDeMetricas(tema, vista.type)): string {
-  const tabla = comoTabla(metricas);
+/** `layoutKey` without the Pins: identifies the geometry ELK computes. */
+export function structureKey(view: ResolvedView, theme: Theme, metricas: Metrics | MetricsTable = metricsTable(theme, view.type)): string {
+  const table = asTable(metricas);
   return JSON.stringify({
-    tipo: vista.type,
-    nodos: vista.nodes.map((nodo) => [nodo.id, Object.hasOwn(tabla.tipos, nodo.type) ? nodo.type : '', nodo.label, nodo.collapsed, nodo.icon !== undefined, nodo.children.map((hijo) => hijo.id), atributosVisibles(nodo, metricasDeHoja(tabla, nodo)).map((a) => (vista.type === 'er' ? [a.name, a.type, a.keys, a.optional, a.planned] : [a.name, a.type]))]),
-    ...claveDeConexiones(vista),
-    metricas: claveDeMetricas(tabla),
+    tipo: view.type,
+    nodos: view.nodes.map((node) => [node.id, Object.hasOwn(table.tipos, node.type) ? node.type : '', node.label, node.collapsed, node.icon !== undefined, node.children.map((child) => child.id), visibleAttributes(node, leafMetrics(table, node)).map((a) => (view.type === 'er' ? [a.name, a.type, a.keys, a.optional, a.planned] : [a.name, a.type]))]),
+    ...connectionsKey(view),
+    metricas: metricsKey(table),
   });
 }
 
-/** Lo que une a los Nodos en la clave de estructura: Aristas en un grafo; Mensajes, Fragmentos y `box` en secuencia. */
-function claveDeConexiones(vista: VistaResuelta): Record<string, unknown> {
-  switch (vista.type) {
+/** What links the Nodes in the structure key: Edges in a graph; Messages, Fragments and `box` in sequence. */
+function connectionsKey(view: ResolvedView): Record<string, unknown> {
+  switch (view.type) {
     case 'sequence': {
-      const { messages, items, groups } = vista.interaction;
+      const { messages, items, groups } = view.interaction;
       return {
         aristas: [],
-        mensajes: messages.map((m) => [m.ruta, m.kind, m.from, m.to, m.label]),
-        fragmentos: claveDeFragmentos(items),
-        grupos: groups?.map((g) => [g.id, g.label, g.nivel, g.lifelines]),
+        mensajes: messages.map((m) => [m.path, m.kind, m.from, m.to, m.label]),
+        fragmentos: fragmentsKey(items),
+        grupos: groups?.map((g) => [g.id, g.label, g.level, g.lifelines]),
       };
     }
     case 'architecture':
     case 'flow':
     case 'er':
-      return { aristas: vista.edges.map((arista) => [idDeArista(arista), arista.label]) };
+      return { aristas: view.edges.map((edge) => [edgeId(edge), edge.label]) };
   }
 }
 
-/** Estructura de los Fragmentos (operador, guardas y a que Mensajes cubren) para la clave de layout. */
-function claveDeFragmentos(items: readonly ItemResuelto[]): unknown[] {
+/** Structure of the Fragments (operator, guards and which Messages they cover) for the layout key. */
+function fragmentsKey(items: readonly ResolvedItem[]): unknown[] {
   return items.flatMap((item): unknown[] => {
     if (item.type === 'message') return [];
-    if (item.type === 'note') return [[item.ruta, 'note', item.anchor, item.targets, item.text]];
-    if (item.type === 'ref') return [[item.ruta, 'ref', item.title, item.participantes]];
-    return [[item.ruta, item.operator, item.operands.map((o) => [o.guard, o.items.map((i) => (i.type === 'message' ? i.message.ruta : claveDeFragmentos([i])))])]];
+    if (item.type === 'note') return [[item.path, 'note', item.anchor, item.targets, item.text]];
+    if (item.type === 'ref') return [[item.path, 'ref', item.title, item.participants]];
+    return [[item.path, item.operator, item.operands.map((o) => [o.guard, o.items.map((i) => (i.type === 'message' ? i.message.path : fragmentsKey([i])))])]];
   });
 }

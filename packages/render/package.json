@@ -26,9 +26,9 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
-    "canonico": "workspace:*",
+    "canonical": "workspace:*",
     "layout": "workspace:*",
-    "tema": "workspace:*"
+    "theme": "workspace:*"
   },
   "sideEffects": false
 }

@@ -172,12 +172,15 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.1
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:packages/canonico
+        version: link:packages/canonical
       cli:
         specifier: workspace:*
         version: link:packages/cli
+      dev-ui:
+        specifier: workspace:*
+        version: link:packages/dev-ui
       dsl:
         specifier: workspace:*
         version: link:packages/dsl
@@ -187,9 +190,6 @@ importers:
       eslint:
         specifier: ^10.15.0
         version: 10.15.0
-      estudio:
-        specifier: workspace:*
-        version: link:packages/estudio
       layout:
         specifier: workspace:*
         version: link:packages/layout
@@ -199,15 +199,15 @@ importers:
       render:
         specifier: workspace:*
         version: link:packages/render
-      sesion:
+      session:
         specifier: workspace:*
-        version: link:packages/sesion
+        version: link:packages/session
       shell:
         specifier: workspace:*
         version: link:packages/shell
-      tema:
+      theme:
         specifier: workspace:*
-        version: link:packages/tema
+        version: link:packages/theme
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -218,7 +218,7 @@ importers:
         specifier: ^4.1.11
         version: 4.1.12(@types/node@24.19.1)(jsdom@30.1.2)(vite@7.3.7(@types/node@24.19.1))
 
-  packages/canonico:
+  packages/canonical:
     dependencies:
       zod:
         specifier: ^4.6.6
@@ -236,30 +236,30 @@ importers:
 
   packages/cli:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
+      dev-ui:
+        specifier: workspace:*
+        version: link:../dev-ui
       dsl:
         specifier: workspace:*
         version: link:../dsl
       esbuild:
         specifier: 0.28.2
         version: 0.28.2
-      estudio:
-        specifier: workspace:*
-        version: link:../estudio
       layout:
         specifier: workspace:*
         version: link:../layout
       scanner:
         specifier: workspace:*
         version: link:../scanner
-      sesion:
+      session:
         specifier: workspace:*
-        version: link:../sesion
-      tema:
+        version: link:../session
+      theme:
         specifier: workspace:*
-        version: link:../tema
+        version: link:../theme
     devDependencies:
       '@types/react':
         specifier: ^19.3.0
@@ -283,32 +283,7 @@ importers:
         specifier: ^4.1.11
         version: 4.1.12(@types/node@24.19.1)(jsdom@30.1.2)(vite@7.3.7(@types/node@24.19.1))
 
-  packages/dsl:
-    dependencies:
-      canonico:
-        specifier: workspace:*
-        version: link:../canonico
-      langium:
-        specifier: ^4.4.0
-        version: 4.4.0
-      tema:
-        specifier: workspace:*
-        version: link:../tema
-    devDependencies:
-      langium-cli:
-        specifier: ^4.4.0
-        version: 4.4.0
-      tsup:
-        specifier: ^9.0.0
-        version: 9.0.0(postcss@8.5.28)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-      vitest:
-        specifier: ^4.1.11
-        version: 4.1.12(@types/node@24.19.1)(jsdom@30.1.2)(vite@7.3.7(@types/node@24.19.1))
-
-  packages/estudio:
+  packages/dev-ui:
     dependencies:
       '@base-ui/react':
         specifier: 1.9.0
@@ -337,9 +312,9 @@ importers:
       '@lezer/highlight':
         specifier: 1.2.5
         version: 1.2.5
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       layout:
         specifier: workspace:*
         version: link:../layout
@@ -352,9 +327,9 @@ importers:
       render:
         specifier: workspace:*
         version: link:../render
-      sesion:
+      session:
         specifier: workspace:*
-        version: link:../sesion
+        version: link:../session
       shell:
         specifier: workspace:*
         version: link:../shell
@@ -390,17 +365,42 @@ importers:
         specifier: ^4.1.11
         version: 4.1.12(@types/node@24.19.1)(jsdom@30.1.2)(vite@7.3.7(@types/node@24.19.1))
 
+  packages/dsl:
+    dependencies:
+      canonical:
+        specifier: workspace:*
+        version: link:../canonical
+      langium:
+        specifier: ^4.4.0
+        version: 4.4.0
+      theme:
+        specifier: workspace:*
+        version: link:../theme
+    devDependencies:
+      langium-cli:
+        specifier: ^4.4.0
+        version: 4.4.0
+      tsup:
+        specifier: ^9.0.0
+        version: 9.0.0(postcss@8.5.28)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.11
+        version: 4.1.12(@types/node@24.19.1)(jsdom@30.1.2)(vite@7.3.7(@types/node@24.19.1))
+
   packages/layout:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       elkjs:
         specifier: 0.12.0
         version: 0.12.0
-      tema:
+      theme:
         specifier: workspace:*
-        version: link:../tema
+        version: link:../theme
     devDependencies:
       tsup:
         specifier: ^9.0.0
@@ -414,18 +414,18 @@ importers:
 
   packages/render:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       layout:
         specifier: workspace:*
         version: link:../layout
       react:
         specifier: ^18.0.0 || ^19.0.0
         version: 19.3.0
-      tema:
+      theme:
         specifier: workspace:*
-        version: link:../tema
+        version: link:../theme
     devDependencies:
       '@types/react':
         specifier: ^19.3.0
@@ -474,20 +474,20 @@ importers:
         specifier: ^4.1.11
         version: 4.1.12(@types/node@24.19.1)(jsdom@30.1.2)(vite@7.3.7(@types/node@24.19.1))
 
-  packages/sesion:
+  packages/session:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       dsl:
         specifier: workspace:*
         version: link:../dsl
       layout:
         specifier: workspace:*
         version: link:../layout
-      tema:
+      theme:
         specifier: workspace:*
-        version: link:../tema
+        version: link:../theme
     devDependencies:
       tsup:
         specifier: ^9.0.0
@@ -501,9 +501,9 @@ importers:
 
   packages/shell:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       d3-selection:
         specifier: 3.0.0
         version: 3.0.0
@@ -516,12 +516,12 @@ importers:
       render:
         specifier: workspace:*
         version: link:../render
-      sesion:
+      session:
         specifier: workspace:*
-        version: link:../sesion
-      tema:
+        version: link:../session
+      theme:
         specifier: workspace:*
-        version: link:../tema
+        version: link:../theme
     devDependencies:
       '@testing-library/dom':
         specifier: ^10.4.2
@@ -560,11 +560,11 @@ importers:
         specifier: ^4.1.11
         version: 4.1.12(@types/node@24.19.1)(jsdom@30.1.2)(vite@7.3.7(@types/node@24.19.1))
 
-  packages/tema:
+  packages/theme:
     dependencies:
-      canonico:
+      canonical:
         specifier: workspace:*
-        version: link:../canonico
+        version: link:../canonical
       zod:
         specifier: ^4.6.6
         version: 4.6.6

@@ -1,0 +1,26 @@
+# Codebase importer: Scanner outside the core and a versioned Scan draft
+
+To turn a codebase into diagrams, the work is split in two: our own Scanner in TS extracts the mechanical facts into a Scan draft, and the agent decides and interprets (parts, names, Groups, Node kinds, which Edges to draw, Views) and writes the `.dg`, which is validated with `validate` like any other. Having the Scanner write `.dg` was discarded (the system would have to interpret the project and the core would come to know it), as was adopting graphify or codegraph (they give symbol graphs, with no columns for `er`). Source: the ticket "Codebase importer design" (#219) of map #211 and the research `research/escaner-codebases`.
+
+## Decisions
+
+- **`scanner` package**: does not depend on the core (`dsl`, `canonical`, `layout`, `render`, `theme`) and the core does not depend on it. Only `cli` imports it. It never runs code of the scanned project.
+- **Command `diagrams scan [<root>] [--out] [--json] [--depth] [--max-files]`**: writes the Scan draft to disk (by default `<root>/.rinthel/scan.json`, not versioned) and prints a compact summary ending with the next step, or that summary in JSON with `--json`. It uses the same exit codes as `validate` and its own `contractVersion`. It is not called `import` because it does not write `.dg`.
+- **Draft `rinthel/scan@1`**: `root`, `commit`, `scanner`, `limits`, `units` (with `parent` derived from the path and a mechanical `kind` `package|app|module|folder`, which is a hint and not a Node kind), `dependencies` (aggregated per unit, with `weight` and `examples`), `externals` and `tables` (with `columns` pk/fk/uk/optional and `relations` with cardinality). Each item carries `source {file,line}` and `confidence: extracted|inferred`. Ids are deterministic, and with the same commit the result is byte-for-byte identical. Adding fields does not bump the version; an incompatible change does. `endpoints` is left out of v1.
+- **Units**: come from the manifests (`package.json`/workspaces, `pyproject.toml`, `go.mod`, `Cargo.toml`). A large manifest is split into `folder` sub-units down to `--depth` (default 2) and dependencies are aggregated at that level.
+- **Reading**: respects `.gitignore` and always excludes `node_modules`, `dist`, `build`, `.venv` and vendored code. The `--max-files` cap (default 20000) is flagged in `limits.truncated`, without failing.
+- **v1**: TS/JS and Python imports with `web-tree-sitter` (WASM). Other languages give units without import Edges and are declared in `limits`. Five static schema extractors: Prisma, SQL DDL, Drizzle, Django and SQLAlchemy.
+- **Trace in the Model**: each Node written from the Draft carries a Source `{kind: "path", ref: <unit id>}`; a table carries the Source of its schema. No concept is added to the DSL or the core.
+- **Validation**: only `validate`, plus review with `dev`. A coverage check (Draft units with no Node citing them) comes with the incremental refresh.
+- **Distribution**: the Scanner and its `.wasm` files travel inside the `rinthel-arch` npm package and are loaded only when `scan` runs. The agent flow is a section of the `rinthel-diagramas` skill.
+
+## Amendment: incremental refresh
+
+Source: the ticket "Incremental refresh of the imported Workspace" (#225) of map #211.
+
+- **Matching only by ref**: the Draft is matched with the Model only through each Node's Source `{kind "path", ref <Draft id>}`, with no globs or heuristics. A table cites the Draft's table id, not the schema file (this corrects "Trace in the Model"). A Node may cite several units to merge them. A moved unit changes id and shows up as orphan plus not covered; the agent decides whether it was a move. Edges are not matched.
+- **Scan coverage in `scan`**: if there is a Workspace, `cli` compiles it (`scanner` still does not know the core) and the summary and `--json` report uncovered units and tables, orphan refs and columns missing or extra against the Attributes. It is informative: exit 0, they are not `validate` Issues. Planned elements do not count, and a planned Attribute is not extra.
+- **Previous Draft**: `scan` rotates the previous Draft to `.rinthel/scan.prev.json` (not versioned) and reports the changes since that scan (units, dependencies, externals, tables and columns added or removed, with their commit). Without a previous Draft there is only coverage.
+- **Deliberate omissions**: `.rinthel/scan-ignore` (versioned, gitignore-style patterns over unit or table ids) removes items from coverage, not from the Draft. Nothing enters the DSL.
+- **No tracking of hand edits**: protected by a rule in the "Refresh from code" section of the `rinthel-diagramas` skill. The agent only adds, removes or repoints refs and reconciles Planned elements; it never rewrites the title, description, Group, Node kind, Views or Pins of a Node that is still covered. An orphan ref is repointed if there was a move (keeping the Node's id); if it was the last ref, the Node and its Edges are removed without asking and reported, unless hand-written content would be lost (long description, Interactions), in which case it asks. New dependencies are drawn with the criteria of the initial import; an import Edge whose dependency disappeared is removed and a semantic one is kept.
+- **Trigger**: on demand only; in v1 no hooks, watch or notice in `dev`.

@@ -1,26 +1,26 @@
 # cli
-Binario `diagrams`: valida, construye, consulta, edita y sirve Workspaces desde la terminal.
+The `diagrams` binary: validates, builds, queries, edits and serves Workspaces from the terminal.
 
-## Que hace
-- Comandos `validate`, `build`, `skill`, `inspect` (`search`, `node`, `view`, `interaction`, `theme`), `edit`, `dev`, `scan` y `export`; `run(argv, dependencias?)` devuelve `{ exitCode, stdout, stderr }` y no escribe en el proceso (`bin.ts` imprime). El `--help` de cada comando vive en `src/ayuda.ts`; las opciones, en `docs/guide/cli.md`.
-- Es el unico paquete que lee y escribe el Workspace en disco; `edit` es la unica escritura sobre el DSL. `--json` da un contrato por comando (esquemas en `canonico`).
-- Registro de actividad: `validate`, `build`, `inspect` y `edit` anexan un Evento (`src/actividad.ts`; `DIAGRAMS_ACTIVITY=0` lo apaga, `DIAGRAMS_AGENT` nombra al agente). `src/registro-en-disco.ts` es su unico dueno en disco: `.diagrams/activity.jsonl` (`CARPETA_DE_SALIDA` de `workspace.ts`), anexado con rotacion a 1 MB y observacion para `dev`.
-- `dev` (`src/dev.ts`) sirve la app de `estudio` (`/` y `/_estudio/*`, leida del disco en cada peticion: un rebuild se ve al recargar) y delega `/api/*` en `atenderApiDeDev` sobre el Workspace vivo de `sesion`; aqui solo viven el puerto de disco (`puertoDeDisco`, reemplazable con la opcion `puerto`; el TCP es `puertoHttp`), el watcher, el SSE y la seguridad HTTP (Host, Origin, tamano). `src/codigo.ts` compila con esbuild, sin ejecutar, los Temas con codigo (`.tsx`).
-- `export` (`src/export.ts`) opens the live Workspace once (no server, no watcher), captures its data through `atenderApiDeDev` with `capturarExportado` (fonts read with `leerArchivoDeFuente`) and writes `htmlDeExportado` from `estudio`: one read-only HTML.
+## What it does
+- Commands `validate`, `build`, `skill`, `inspect` (`search`, `node`, `view`, `interaction`, `theme`), `edit`, `dev`, `scan` and `export`; `run(argv, dependencies?)` returns `{ exitCode, stdout, stderr }` and does not write to the process (`bin.ts` prints). Each command's `--help` lives in `src/help.ts`; the options, in `docs/guide/cli.md`.
+- It is the only package that reads and writes the Workspace on disk; `edit` is the only write on the DSL. `--json` gives one contract per command (schemas in `canonical`).
+- Activity log: `validate`, `build`, `inspect` and `edit` append an Event (`src/activity.ts`; `DIAGRAMS_ACTIVITY=0` turns it off, `DIAGRAMS_AGENT` names the agent). `src/disk-log.ts` is its only owner on disk: `.diagrams/activity.jsonl` (`OUTPUT_FOLDER` of `workspace.ts`), appended with rotation at 1 MB and watched for `dev`.
+- `dev` (`src/dev.ts`) serves the `dev-ui` app (`/` and `/_dev-ui/*`, read from disk on every request: a rebuild shows on reload) and delegates `/api/*` to `handleDevApi` over the Live workspace of `session`; only the disk port lives here (`diskPortOf`, replaceable with the `port` option; TCP is `httpPort`), plus the watcher, the SSE and HTTP security (Host, Origin, size). `src/code.ts` compiles Themes with code (`.tsx`) with esbuild, without running them.
+- `export` (`src/export.ts`) opens the live Workspace once (no server, no watcher), captures its data through `handleDevApi` with `captureExport` (fonts read with `readFontFile`) and writes `exportHtml` from `dev-ui`: one read-only HTML.
 
-## Que NO hace
-- No compila DSL ni valida: eso es de `sesion`.
-- No calcula geometria ni dibuja: eso es de `layout`, `render` y `shell`.
-- No tiene codigo de navegador: la pagina de `dev` y la del export son de `estudio` (de el toma `activosDelEstudio`, `RUTA_DEL_ESTUDIO`, `carpetaDelEstudio`, `capturarExportado` y `htmlDeExportado`).
+## What it does not do
+- Does not compile DSL nor validate: that is `session`.
+- Does not compute geometry nor draw: that is `layout`, `render` and `shell`.
+- Has no browser code: the `dev` page and the export page are `dev-ui`'s (from it, it takes `devUiAssets`, `DEV_UI_ROUTE`, `devUiFolder`, `captureExport` and `exportHtml`).
 
-## Depende de
-`canonico`, `dsl`, `sesion` y `estudio`. Dependencia externa: `esbuild`.
+## Depends on
+`canonical`, `dsl`, `session` and `dev-ui`. External dependency: `esbuild`.
 
-## Archivo de entrada
-`packages/cli/src/index.ts` (la cabecera documenta interfaz, invariantes y modos de error).
+## Entry file
+`packages/cli/src/index.ts` (the header documents interface, invariants and error modes).
 
-## ADR relacionado
-`docs/adr/0005-cli-para-agentes.md` (con su enmienda Registro de actividad, y `0008-sistema-de-temas-expresivo.md` para Temas con codigo).
+## Related ADR
+`docs/adr/0005-cli-for-agents.md` (with its Activity log amendment, and `0008-expressive-theme-system.md` for Themes with code).
 
-## Probar
-`pnpm --filter cli test` (incluye el contrato de `dev` contra el servidor real y las puntas a punta en Chromium de `test/e2e-estudio.test.ts` y `test/e2e-export.test.ts`, que abre un export por http y por `file://`; requiere `pnpm build`).
+## Test
+`pnpm --filter cli test` (includes the `dev` contract against the real server and the Chromium end-to-end tests `test/e2e-dev-ui.test.ts` and `test/e2e-export.test.ts`, which opens an export over http and over `file://`; requires `pnpm build`).

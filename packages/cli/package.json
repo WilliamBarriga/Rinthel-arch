@@ -24,14 +24,14 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
-    "canonico": "workspace:*",
+    "canonical": "workspace:*",
+    "dev-ui": "workspace:*",
     "dsl": "workspace:*",
     "esbuild": "0.28.2",
-    "estudio": "workspace:*",
     "layout": "workspace:*",
     "scanner": "workspace:*",
-    "sesion": "workspace:*",
-    "tema": "workspace:*"
+    "session": "workspace:*",
+    "theme": "workspace:*"
   },
   "bin": {
     "diagrams": "./dist/bin.js"

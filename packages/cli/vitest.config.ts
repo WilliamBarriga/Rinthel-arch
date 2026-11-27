@@ -2,6 +2,6 @@ import { defineConfig, mergeConfig } from 'vitest/config';
 
 import base from '../../vitest.config.shared';
 
-// El Registro de actividad va apagado en las pruebas para no dejar `activity.jsonl` en las fixtures;
-// las pruebas del Registro pasan su propio `entorno` a `run`.
+// The Activity log is off in tests so they leave no `activity.jsonl` in the fixtures;
+// the Activity log tests pass their own `env` dependency to `run`.
 export default mergeConfig(base, defineConfig({ test: { env: { DIAGRAMS_ACTIVITY: '0' } } }));

@@ -9,16 +9,16 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { SCAN_CONTRACT_VERSION, scanSummarySchema } from 'canonico';
-import type { ScanChanges, ScanSummary } from 'canonico';
+import { SCAN_CONTRACT_VERSION, scanSummarySchema } from 'canonical';
+import type { ScanChanges, ScanSummary } from 'canonical';
 import { DEFAULT_DEPTH, DEFAULT_MAX_FILES, SCAN_DRAFT_SCHEMA, byCodeUnit, diffDrafts, idMatcher, scan, serializeDraft } from 'scanner';
 import type { ScanDraft } from 'scanner';
 
 import { coverageOf, findWorkspace } from './scan-coverage';
 import type { Coverage, CoverageNotice } from './scan-coverage';
-import { uso } from './sesion-cli';
-import type { ResultadoDeEjecucion } from './sesion-cli';
-import { escribirTexto } from './workspace';
+import { usage } from './cli-session';
+import type { RunResult } from './cli-session';
+import { writeTextFile } from './workspace';
 
 export { SCAN_CONTRACT_VERSION };
 
@@ -59,8 +59,8 @@ export interface ScanDependencies {
 
 export async function scanCommand(
   args: readonly string[],
-  { readText = readTextFile, writeText = escribirTexto }: ScanDependencies,
-): Promise<ResultadoDeEjecucion> {
+  { readText = readTextFile, writeText = writeTextFile }: ScanDependencies,
+): Promise<RunResult> {
   let parsed;
   try {
     parsed = parseArgs({
@@ -76,14 +76,14 @@ export async function scanCommand(
       strict: true,
     });
   } catch (error) {
-    return uso((error as Error).message);
+    return usage((error as Error).message);
   }
   const { values, positionals } = parsed;
-  if (positionals.length > 1) return uso(`scan takes one root folder; got ${positionals.join(', ')}`);
+  if (positionals.length > 1) return usage(`scan takes one root folder; got ${positionals.join(', ')}`);
   const depth = integer(values.depth, DEFAULT_DEPTH, 0);
-  if (depth === undefined) return uso('--depth must be an integer >= 0');
+  if (depth === undefined) return usage('--depth must be an integer >= 0');
   const maxFiles = integer(values['max-files'], DEFAULT_MAX_FILES, 1);
-  if (maxFiles === undefined) return uso('--max-files must be an integer >= 1');
+  if (maxFiles === undefined) return usage('--max-files must be an integer >= 1');
 
   const root = positionals[0] ?? '.';
   const out = values.out ?? join(root, DRAFT_PATH);
@@ -91,7 +91,7 @@ export async function scanCommand(
   try {
     draft = await scan(root, { depth, maxFiles });
   } catch (error) {
-    return uso(`Could not scan '${root}': ${(error as Error).message}`);
+    return usage(`Could not scan '${root}': ${(error as Error).message}`);
   }
   const previousPath = out.endsWith('.json') ? `${out.slice(0, -'.json'.length)}.prev.json` : `${out}.prev`;
   const previousText = readText(out);
@@ -99,7 +99,7 @@ export async function scanCommand(
     if (previousText !== undefined) writeText(previousPath, previousText);
     writeText(out, serializeDraft(draft));
   } catch (error) {
-    return uso(`Could not write '${out}': ${(error as Error).message}`);
+    return usage(`Could not write '${out}': ${(error as Error).message}`);
   }
   const previous = parseDraft(previousText);
   const changes = previous === undefined ? null : { previous: previousPath, ...diffDrafts(previous, draft) };

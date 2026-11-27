@@ -10,21 +10,21 @@ Switch Views to compare. Each Theme also has a sequence View (`<theme>-sequence`
 
 ## Comparing with the prototype (internal use by maintainers)
 
-This section is for whoever maintains the Themes: it needs the repo's `prototype/*` branches and is not required to use the gallery. To see the gallery or capture a Theme, `dev` (above) and `pnpm docs:capturas` are enough.
+This section is for whoever maintains the Themes: it needs the repo's `prototype/*` branches and is not required to use the gallery. To see the gallery or capture a Theme, `dev` (above) and `pnpm docs:screenshots` are enough.
 
 Each Theme has a reference View, `<theme>-reference`, equivalent to the `open` View of the approved prototype (branch `prototype/render-hibrido`): same Nodes, expanded Groups (`render`, `session`, `layout`), collapsed Groups and Edges. Its Model lives in `reference.dg`, with the prototype's Node kinds (`package`, `module`, `artifact`, plus `actor` and `external`), under the `reference` Group, and the coverage Views exclude it.
 
 ```
-pnpm build                          # once; the script uses the built CLI
-pnpm capturas soft-card             # one Theme: reference View against the prototype `open` View
-pnpm capturas --all                 # all Themes
-pnpm capturas soft-card glass-chip  # several Themes on a single page
-pnpm capturas soft-card coverage    # only the gallery, coverage Model
-pnpm capturas --workspace examples/rinthel-arch --view open --prototype A neutral neutral-dark
-                                    # another Workspace: its View with each Theme (from the Workspace or built-in), next to a prototype variant
+pnpm build                             # once; the script uses the built CLI
+pnpm screenshots soft-card             # one Theme: reference View against the prototype `open` View
+pnpm screenshots --all                 # all Themes
+pnpm screenshots soft-card glass-chip  # several Themes on a single page
+pnpm screenshots soft-card coverage    # only the gallery, coverage Model
+pnpm screenshots --workspace examples/rinthel-arch --view open --prototype A neutral neutral-dark
+                                       # another Workspace: its View with each Theme (from the Workspace or built-in), next to a prototype variant
 ```
 
-The script extracts the prototype to a temporary directory (cached by commit), starts `dev` on this gallery, captures both with Chromium (it waits for the fonts and the shell's `data-layout="listo"` signal) and serves a side-by-side comparison page. It prints `http://localhost:<port>/salida/`; the server stays alive and the next `pnpm capturas` replaces the previous one. The output goes to `$CAPTURAS_DIR` (default `/tmp/rinthel-capturas`, outside the repo). Chromium comes from `$CHROMIUM_PATH` or the Playwright cache. It does not run in `pnpm test`.
+The script extracts the prototype to a temporary directory (cached by commit), starts `dev` on this gallery, captures both with Chromium (it waits for the fonts and the shell's `data-layout="listo"` signal) and serves a side-by-side comparison page. It prints `http://localhost:<port>/output/`; the server stays alive and the next `pnpm screenshots` replaces the previous one. The output goes to `$SCREENSHOTS_DIR` (default `/tmp/rinthel-screenshots`, outside the repo). Chromium comes from `$CHROMIUM_PATH` or the Playwright cache. It does not run in `pnpm test`.
 
 ## Contents
 
@@ -42,4 +42,4 @@ A Theme names them in `fonts` and declares the reserve with `fallback`:
 fonts { body "Caveat"  mono "Caveat"  fallback "cursive" }
 ```
 
-A family's file is found by name, with the Fontsource convention: `<family-in-kebab>-<subset>-<weight>-<style>.<ext>` (`caveat-latin-700-normal.woff2`; `<Family>.<ext>` also works as weight 400). A non-generic family without a file in the Workspace is the `theme-font-missing` error, located on the Theme, with "did you mean". `dev` serves the files at `/fuentes/<path>` (only fonts of the Workspace and of `--theme-path`) and the viewer declares the `@font-face` and measures with the font already loaded. The gallery Themes that use these fonts are `sticky-notes` (Caveat), `pixel-art` (Press Start 2P), `blueprint`, `crt-terminal` and `pcb` (JetBrains Mono), `soft-card`, `glass-chip`, `neobrutalist`, `soft-light` and `metro-map` (Inter), `neobrutalist` (Space Mono), `synthwave` (Outfit), `keycaps` (Nunito) and `editorial` (Gelasio). Where the prototype falls back to a system font (Futura in `bauhaus`, Helvetica in `metro-map`) the Theme names what the browser ends up using: the generic family or the next one in the stack that is in `fonts/`.
+A family's file is found by name, with the Fontsource convention: `<family-in-kebab>-<subset>-<weight>-<style>.<ext>` (`caveat-latin-700-normal.woff2`; `<Family>.<ext>` also works as weight 400). A non-generic family without a file in the Workspace is the `theme-font-missing` error, located on the Theme, with "did you mean". `dev` serves the files at `/fonts/<path>` (only fonts of the Workspace and of `--theme-path`) and the viewer declares the `@font-face` and measures with the font already loaded. The gallery Themes that use these fonts are `sticky-notes` (Caveat), `pixel-art` (Press Start 2P), `blueprint`, `crt-terminal` and `pcb` (JetBrains Mono), `soft-card`, `glass-chip`, `neobrutalist`, `soft-light` and `metro-map` (Inter), `neobrutalist` (Space Mono), `synthwave` (Outfit), `keycaps` (Nunito) and `editorial` (Gelasio). Where the prototype falls back to a system font (Futura in `bauhaus`, Helvetica in `metro-map`) the Theme names what the browser ends up using: the generic family or the next one in the stack that is in `fonts/`.

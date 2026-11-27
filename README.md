@@ -10,7 +10,7 @@ One text model, many views (architecture, flow, sequence, ER), with themes and s
 
 [Leer en espanol](README.es.md) | **[Live demo](https://williambarriga.github.io/Rinthel-arch/)**
 
-![An agent scans this repo, writes its diagram and refreshes it after the code changes; the Dev UI highlights what is new](docs/img/estudio/agente-importa.gif)
+![An agent scans this repo, writes its diagram and refreshes it after the code changes; the Dev UI highlights what is new](docs/img/dev-ui/agent-imports.gif)
 
 ## Quick start
 
@@ -58,13 +58,13 @@ Open `http://127.0.0.1:4173/` and write `.dg` files in that folder (the [DSL gla
 
 | | |
 | --- | --- |
-| ![A sequence View of a checkout](docs/img/tipos/sequence-shop.png)<br>`type sequence` | ![An er View of customers and orders](docs/img/tipos/er-shop.png)<br>`type er` |
+| ![A sequence View of a checkout](docs/img/diagram-types/sequence-shop.png)<br>`type sequence` | ![An er View of customers and orders](docs/img/diagram-types/er-shop.png)<br>`type er` |
 
 ## Themes
 
 The same diagram of this repo, changing only the Theme:
 
-[![The same diagram in nine Themes, each one named under its image](docs/img/mosaico-de-temas.png)](docs/gallery.md)
+[![The same diagram in nine Themes, each one named under its image](docs/img/theme-mosaic.png)](docs/gallery.md)
 
 All of them in the [gallery](docs/gallery.md); to make your own, see [Customizing with Themes](docs/guide/themes.md).
 
