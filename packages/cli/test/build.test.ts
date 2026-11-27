@@ -17,7 +17,7 @@ function copyFixture(name: string): string {
 const readJson = (path: string): unknown => JSON.parse(readFileSync(path, 'utf8'));
 
 describe('build', () => {
-  it('writes the canonical source and one geometry per View in .diagrams/', async () => {
+  it('writes the Canonical form and one geometry per View in .diagrams/', async () => {
     const workspace = copyFixture('build-basic');
 
     const result = await run(['build', '--workspace', workspace]);

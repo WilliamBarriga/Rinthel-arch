@@ -160,7 +160,7 @@ function ActiveView(props: ActiveViewProps): ReactElement {
   currentSettings.current = settings;
   const resolvedView = useMemo(() => {
     const resolved = resolveView(source, view, state);
-    if (resolved === undefined) throw new Error(`View '${view}' does not exist in the canonical Source`);
+    if (resolved === undefined) throw new Error(`View '${view}' does not exist in the Canonical form`);
     return resolved;
   }, [source, view, state]);
 

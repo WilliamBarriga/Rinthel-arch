@@ -55,7 +55,7 @@ export function preparePrototype(cacheRoot: string, repo: string): PreparedProto
   exec('tar', ['-x', '-C', folder], repo, tar);
   exec('pnpm', ['install', '--frozen-lockfile', '--ignore-scripts', '--prefer-offline'], folder);
   exec('pnpm', ['-r', 'build'], folder);
-  // The prototype reads the canonical Source from `.diagrams/canonico.json`.
+  // The prototype reads the Canonical form from `.diagrams/canonico.json`.
   exec('node', ['packages/cli/dist/bin.js', 'build', '--workspace', 'examples/rinthel-arch'], folder);
   exec('node', ['prototype-estetica/hibrido.ts'], folder);
   return { folder, page: PAGE };

@@ -44,7 +44,7 @@ The rule: touching a guide means touching its pair. `pnpm check` fails if a guid
 
 | Path | Contents |
 | --- | --- |
-| `packages/canonical` | Schema of the canonical source (Zod), validation, View resolution and versioned contracts (Intents, `--json`, Activity event, `dev` protocol) |
+| `packages/canonical` | Schema of the Canonical form (Zod), validation, View resolution and versioned contracts (Intents, `--json`, Activity event, `dev` protocol) |
 | `packages/theme` | Catalog of Primitives and Slots, resolved Style and Metrics |
 | `packages/dsl` | Grammar (Langium) and compiler of the `.dg` text |
 | `packages/layout` | Layout with ELK and Pins; cached geometry |

@@ -59,7 +59,7 @@ Each one is detailed in the [CLI guide](cli.md), or `dg <command> --help`. All o
 | Command | What it does |
 | --- | --- |
 | `dg validate --workspace <path>` | Compiles and validates; lists errors and warnings with file and line. `--json` gives the same result, structured |
-| `dg build --workspace <path>` | Writes the canonical source and the geometry to `<path>/.diagrams/` (not versioned) |
+| `dg build --workspace <path>` | Writes the Canonical form and the geometry to `<path>/.diagrams/` (not versioned) |
 | `dg dev --workspace <path>` | Live UI at `http://127.0.0.1:4173/` ([Dev UI](dev-ui.md)); rebuilds on save |
 | `dg inspect search <text>`<br>`dg inspect node <id>`<br>`dg inspect view <id>`<br>`dg inspect interaction <id>`<br>`dg inspect theme <name>` | Read-only queries over the Model, with `file:line` |
 | `dg edit` | Writes to the `.dg`: sets a Pin (`--view <id> --node <id> --x N --y N`) or applies an Intent (`--intent '<json>'`, e.g. `reorder-lifelines` in a sequence) or structured edits (`--edits '<json>'`, for example the `fix` of `validate`). It is what the viewer uses when you drag a Node |

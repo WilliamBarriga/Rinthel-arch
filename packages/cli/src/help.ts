@@ -24,7 +24,7 @@ Every issue carries a stable code, file, line, column and, when there is a singl
 `,
   build: `diagrams build --workspace <path> [options]
 
-Validates and writes the canonical Source and the geometry to <path>/${OUTPUT_FOLDER}/ (derived, not versioned).
+Validates and writes the Canonical form and the geometry to <path>/${OUTPUT_FOLDER}/ (derived, not versioned).
 With errors it exits 1 and deletes the previous output.
 
 Options: those of validate (--json, --strict, --max-issues, --theme, --theme-path).
@@ -142,7 +142,7 @@ Usage: diagrams <command> --workspace <path> [options]
 
 Commands:
   validate   Compiles and validates; lists issues with file, line and fix (read-only)
-  build      Writes the canonical Source and the geometry to <path>/${OUTPUT_FOLDER}/
+  build      Writes the Canonical form and the geometry to <path>/${OUTPUT_FOLDER}/
   dev        Dev UI at http://127.0.0.1:4173/: view, edit and follow the Workspace
   inspect    Queries the Model: search, node, view, interaction, planned, theme (read-only)
   edit       Sets a Pin or applies structured edits to the .dg
