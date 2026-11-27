@@ -2,21 +2,21 @@
 import { useMemo, useState } from 'react';
 
 import type { ResolvedView } from 'canonical';
-import type { EstadoVisual, Estados } from 'render';
+import type { VisualState, States } from 'render';
 
 import { SELECCION_VACIA, elementoPorId, seleccionar } from './interaccion';
 import type { ElementoSeleccionable, Seleccion } from './interaccion';
 
 export interface ResultadoDeSeleccion {
-  estados: Estados;
+  estados: States;
   /** Aplica el clic sobre un elemento; devuelve si queda seleccionado (para avisar y navegar). */
   pulsar: (elemento: ElementoSeleccionable, acumula: boolean) => { seleccionado: boolean; seleccion: Seleccion };
 }
 
 /** Une a los estados de seleccion los de hover (id bajo el raton) y fantasma (id arrastrandose). */
-export function conEstadosTransitorios(base: Estados, hover: string | undefined, fantasma: string | undefined): Estados {
+export function conEstadosTransitorios(base: States, hover: string | undefined, fantasma: string | undefined): States {
   if (hover === undefined && fantasma === undefined) return base;
-  const unido: Record<string, readonly EstadoVisual[]> = { ...base };
+  const unido: Record<string, readonly VisualState[]> = { ...base };
   if (hover !== undefined) unido[hover] = [...(unido[hover] ?? []), 'hover'];
   if (fantasma !== undefined) unido[fantasma] = [...(unido[fantasma] ?? []), 'ghost'];
   return unido;
@@ -34,7 +34,7 @@ export function useSeleccion(
     const elemento = selected === null ? undefined : elementoPorId(vista, selected);
     return elemento === undefined ? SELECCION_VACIA : [elemento];
   }, [selection, selected, propia, vista]);
-  const estados = useMemo<Estados>(() => {
+  const estados = useMemo<States>(() => {
     const porId: Record<string, ['selected']> = {};
     for (const elemento of seleccion) porId[elemento.id] = ['selected'];
     return porId;

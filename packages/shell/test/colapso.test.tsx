@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { canonicalFormSchema, resolveView } from 'canonical';
 import type { CollapseState, Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
-import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
+import type { AdaptadorDeLayout, Camera, VistaInteractivaProps } from 'shell';
 import { NEUTRAL_THEME } from 'theme';
 import { opacidadDeNodo, posicionDe } from './ayudas';
 
@@ -53,7 +53,7 @@ function geometriaCentrada(vista: ResolvedView): Geometry {
   return { nodes, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 800, height: 100 };
 }
 
-const camaraInicial: Camara = { x: 0, y: 0, width: 800, height: 600 };
+const camaraInicial: Camera = { x: 0, y: 0, width: 800, height: 600 };
 /** Ids dibujados, ordenados: las capas planas pintan los Grupos antes que los Nodos. */
 const ids = (c: HTMLElement) => [...c.querySelectorAll('[data-id]')].map((e) => e.getAttribute('data-id')).sort();
 const alternar = (c: HTMLElement, id: string) => fireEvent.click(c.querySelector(`[data-toggle="${id}"]`)!);

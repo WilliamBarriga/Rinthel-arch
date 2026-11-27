@@ -1,46 +1,46 @@
-/** Componente React de una Vista: sin estado ni efectos; colapso, visibilidad y camara llegan por props. */
+/** React component of a View: no state nor effects; collapse, visibility and camera come in through props. */
 import { createElement } from 'react';
 import type { MouseEvent, ReactElement, ReactNode } from 'react';
 
-import { ConLimite } from './limite';
-import { construirEscena } from './escena';
-import type { Elemento, EntradaDeEscena } from './escena';
+import { WithBoundary } from './boundary';
+import { buildScene } from './scene';
+import type { MarkupElement, SceneInput } from './scene';
 
-export type DiagramProps = EntradaDeEscena;
+export type DiagramProps = SceneInput;
 
 export function Diagram(props: DiagramProps): ReactElement {
-  return aReact(construirEscena(props), 'raiz');
+  return toReact(buildScene(props), 'raiz');
 }
 
-/** `stroke-dasharray` -> `strokeDasharray`, `class` -> `className`; `data-*` y `aria-*` se quedan como estan. */
-function nombreReact(atributo: string): string {
-  if (atributo === 'class') return 'className';
-  return atributo.startsWith('data-') || atributo.startsWith('aria-') ? atributo : atributo.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
+/** `stroke-dasharray` -> `strokeDasharray`, `class` -> `className`; `data-*` and `aria-*` stay as they are. */
+function reactName(attribute: string): string {
+  if (attribute === 'class') return 'className';
+  return attribute.startsWith('data-') || attribute.startsWith('aria-') ? attribute : attribute.replace(/-(\w)/g, (_, c: string) => c.toUpperCase());
 }
 
-/** `a:1px;--b:2` -> objeto de estilo de React (las variables `--x` se conservan tal cual). */
-function estiloReact(texto: string): Record<string, string> {
-  const estilo: Record<string, string> = {};
-  for (const declaracion of texto.split(';')) {
-    const corte = declaracion.indexOf(':');
-    if (corte < 0) continue;
-    const propiedad = declaracion.slice(0, corte).trim();
-    estilo[propiedad.startsWith('--') ? propiedad : propiedad.replace(/-(\w)/g, (_, c: string) => c.toUpperCase())] = declaracion.slice(corte + 1).trim();
+/** `a:1px;--b:2` -> React style object (the `--x` variables are kept as is). */
+function reactStyle(text: string): Record<string, string> {
+  const style: Record<string, string> = {};
+  for (const declaration of text.split(';')) {
+    const cutoff = declaration.indexOf(':');
+    if (cutoff < 0) continue;
+    const property = declaration.slice(0, cutoff).trim();
+    style[property.startsWith('--') ? property : property.replace(/-(\w)/g, (_, c: string) => c.toUpperCase())] = declaration.slice(cutoff + 1).trim();
   }
-  return estilo;
+  return style;
 }
 
-function aReact({ tag, attrs, hijos, html, alClic, componente }: Elemento, clave: string): ReactElement {
-  const props: Record<string, unknown> = { key: clave };
-  for (const [nombre, valor] of Object.entries(attrs)) props[nombreReact(nombre)] = nombre === 'style' ? estiloReact(valor) : valor;
-  if (alClic !== undefined) {
-    props['onClick'] = (evento?: Pick<MouseEvent, 'stopPropagation'>) => {
-      evento?.stopPropagation();
-      alClic();
+function toReact({ tag, attrs, children, html, onClick, component }: MarkupElement, key: string): ReactElement {
+  const props: Record<string, unknown> = { key };
+  for (const [name, value] of Object.entries(attrs)) props[reactName(name)] = name === 'style' ? reactStyle(value) : value;
+  if (onClick !== undefined) {
+    props['onClick'] = (event?: Pick<MouseEvent, 'stopPropagation'>) => {
+      event?.stopPropagation();
+      onClick();
     };
   }
   if (html !== undefined) props['dangerouslySetInnerHTML'] = { __html: html };
-  const contenido: ReactNode[] | undefined = hijos?.map((hijo, i) => (typeof hijo === 'string' ? hijo : aReact(hijo, String(i))));
-  if (componente !== undefined) return createElement(tag, props, createElement(ConLimite, null, createElement(componente.tipo, componente.props)));
-  return createElement(tag, props, ...(contenido ?? []));
+  const contents: ReactNode[] | undefined = children?.map((child, i) => (typeof child === 'string' ? child : toReact(child, String(i))));
+  if (component !== undefined) return createElement(tag, props, createElement(WithBoundary, null, createElement(component.kind, component.props)));
+  return createElement(tag, props, ...(contents ?? []));
 }

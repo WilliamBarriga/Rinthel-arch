@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { canonicalFormSchema } from 'canonical';
 import type { Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
-import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
+import type { AdaptadorDeLayout, Camera, VistaInteractivaProps } from 'shell';
 import { dobleClicEnNodo, posicionDe, pulsarNodo } from './ayudas';
 import { NEUTRAL_THEME } from 'theme';
 
@@ -23,7 +23,7 @@ const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
   });
   return { nodes, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 300, height: 50 };
 };
-const camara: Camara = { x: 0, y: 0, width: 800, height: 600 };
+const camara: Camera = { x: 0, y: 0, width: 800, height: 600 };
 
 function gesto(destino: Element | Window, tipo: string, clientX: number, clientY: number): void {
   const evento = new MouseEvent(tipo, { bubbles: true, cancelable: true, clientX, clientY, button: 0, buttons: tipo === 'mouseup' ? 0 : 1 });

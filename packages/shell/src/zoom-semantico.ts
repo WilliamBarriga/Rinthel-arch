@@ -1,5 +1,5 @@
 /** Zoom semantico: la escala de la camara elige cuanto texto se dibuja; no toca la geometria. */
-import type { NivelDeDetalle } from 'render';
+import type { DetailLevel } from 'render';
 
 /** Escalas (lienzo / camara) desde las que se pasa a cada nivel; `etiqueta` es todo lo menor que `titulo`. */
 export interface UmbralesDeDetalle {
@@ -11,7 +11,7 @@ export interface UmbralesDeDetalle {
 
 export const UMBRALES_POR_DEFECTO: UmbralesDeDetalle = { titulo: 0.4, completo: 0.8 };
 
-export function nivelDeDetalle(escala: number, umbrales: UmbralesDeDetalle = UMBRALES_POR_DEFECTO): NivelDeDetalle {
+export function nivelDeDetalle(escala: number, umbrales: UmbralesDeDetalle = UMBRALES_POR_DEFECTO): DetailLevel {
   if (escala >= umbrales.completo) return 'completo';
   if (escala >= umbrales.titulo) return 'titulo';
   return 'etiqueta';

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { canonicalFormSchema } from 'canonical';
 import type { GraphGeometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
-import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
+import type { AdaptadorDeLayout, Camera, VistaInteractivaProps } from 'shell';
 import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
@@ -29,7 +29,7 @@ const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
   edges['b -> c'] = { points: [{ x: 220, y: 25 }, { x: 240, y: 25 }] };
   return { nodes, edges, labels: {}, kind: 'grafo', pinsSolapados: [], width: 600, height: 50 };
 };
-const camara: Camara = { x: 0, y: 0, width: 800, height: 600 };
+const camara: Camera = { x: 0, y: 0, width: 800, height: 600 };
 
 async function montar(extra: Partial<VistaInteractivaProps> = {}) {
   const r = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={enFila} width={800} height={600} camera={camara} {...extra} />);

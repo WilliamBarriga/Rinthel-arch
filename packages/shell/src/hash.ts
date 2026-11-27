@@ -1,7 +1,7 @@
 /** Estado del shell en el hash de URL. Sin DOM salvo en `hashDelNavegador`. */
 import { parseSequenceElementId } from 'canonical';
 import type { CollapseState, CanonicalForm, Node } from 'canonical';
-import type { Camara } from 'render';
+import type { Camera } from 'render';
 
 /** Estado del lector que vive en el hash. `path` termina en la Vista activa. */
 export interface EstadoDeShell {
@@ -9,7 +9,7 @@ export interface EstadoDeShell {
   state: CollapseState;
   selected: string | null;
   step: number;
-  camera?: Camara;
+  camera?: Camera;
 }
 
 export interface AdaptadorDeHash {
@@ -98,7 +98,7 @@ export function serializarEstado(estado: EstadoDeShell, vistaInicial?: string, s
   return p.toString();
 }
 
-function leerCamara(texto: string | null): Camara | undefined {
+function leerCamara(texto: string | null): Camera | undefined {
   if (texto === null) return undefined;
   const partes = texto.split(',');
   if (partes.length !== 4 || partes.some((s) => s.trim() === '')) return undefined;

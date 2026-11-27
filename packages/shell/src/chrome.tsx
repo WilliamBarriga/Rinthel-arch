@@ -1,19 +1,19 @@
 /** Chrome del shell: colores y fuente salen del Estilo resuelto como variables CSS del contenedor; el aspecto vive en clases. */
 import type { CSSProperties, ReactElement } from 'react';
 
-import type { Estilo } from 'render';
+import type { Style } from 'render';
 
 import { CSS_DE_ACCESIBILIDAD } from './accesibilidad';
 import { CSS_DE_AVISOS } from './avisos';
 
-export function variablesDeChrome(estilo: Estilo): CSSProperties {
+export function variablesDeChrome(estilo: Style): CSSProperties {
   return {
-    '--rd-fondo': estilo.fondo,
-    '--rd-texto': estilo.texto,
-    '--rd-borde': estilo.borde,
-    '--rd-acento': estilo.estados.selected.color,
-    '--rd-fuente': estilo.fuenteCuerpo,
-    '--rd-error': estilo.colorDeError,
+    '--rd-fondo': estilo.background,
+    '--rd-texto': estilo.text,
+    '--rd-borde': estilo.border,
+    '--rd-acento': estilo.states.selected.color,
+    '--rd-fuente': estilo.bodyFont,
+    '--rd-error': estilo.errorColor,
   } as CSSProperties;
 }
 

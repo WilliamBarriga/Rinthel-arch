@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { CollapseState, CanonicalForm } from 'canonical';
-import type { Camara } from 'render';
+import type { Camera } from 'render';
 
 import { deserializarEstado, pasoInicialDeVista, serializarEstado, vistaPorDefecto } from './hash';
 import type { AdaptadorDeHash, EstadoDeShell } from './hash';
@@ -26,12 +26,12 @@ export interface PropsDeEstadoEnHash {
   state: CollapseState;
   selected: string | null;
   step: number;
-  camera?: Camara;
+  camera?: Camera;
   onPathChange: (ruta: string[]) => void;
   onStateChange: (estado: CollapseState) => void;
   onSelect: (id: string) => void;
   onStepChange: (paso: number) => void;
-  onCameraChange: (camara: Camara) => void;
+  onCameraChange: (camara: Camera) => void;
 }
 
 export function useEstadoEnHash(opciones: OpcionesDeEstadoEnHash): PropsDeEstadoEnHash {

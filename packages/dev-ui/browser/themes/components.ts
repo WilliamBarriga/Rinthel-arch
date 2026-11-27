@@ -5,24 +5,24 @@
  */
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
-import type { ComponentesDeTema } from 'render';
+import type { ThemeComponents } from 'render';
 
 import type { DevClient, Read } from '../client';
 
 const MODULES: Record<string, unknown> = { react: React, 'react/jsx-runtime': jsxRuntime, 'react/jsx-dev-runtime': jsxRuntime };
 
 /** Registers only the capitalized named exports that are functions; throws if the bundle imports another module. */
-function evaluateBundle(bundle: string): ComponentesDeTema {
+function evaluateBundle(bundle: string): ThemeComponents {
   const require = (name: string): unknown => {
     if (!Object.hasOwn(MODULES, name)) throw new Error(`A Theme component cannot import '${name}'`);
     return MODULES[name];
   };
   const exported = new Function('require', bundle)(require) as Record<string, unknown>;
-  return Object.fromEntries(Object.entries(exported).filter(([name, value]) => /^[A-Z]/.test(name) && typeof value === 'function')) as ComponentesDeTema;
+  return Object.fromEntries(Object.entries(exported).filter(([name, value]) => /^[A-Z]/.test(name) && typeof value === 'function')) as ThemeComponents;
 }
 
 /** Missing `value`: there is no code or the confirmation was refused. `ok: false` carries the visible reason. */
-export type ComponentsLoad = Read<ComponentesDeTema | undefined>;
+export type ComponentsLoad = Read<ThemeComponents | undefined>;
 
 /**
  * Asks for confirmation the first time there is untrusted code (it does not ask again if refused) and loads the

@@ -20,7 +20,7 @@ export type { AjustesDeInteraccion } from './configuracion';
 export type { RelojDeCuadros } from './morph';
 export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
 export type { UmbralesDeDetalle } from './zoom-semantico';
-export type { Camara, NivelDeDetalle } from 'render';
+export type { Camera, DetailLevel } from 'render';
 export type { IconProvider } from 'canonical';
 export { deserializarEstado, hashDelNavegador, serializarEstado, vistaPorDefecto } from './hash';
 export type { AdaptadorDeHash, EstadoDeShell } from './hash';

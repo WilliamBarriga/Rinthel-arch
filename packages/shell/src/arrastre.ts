@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
 import type { SequenceGeometry } from 'canonical';
-import type { Camara } from 'render';
+import type { Camera } from 'render';
 
 import type { Calculo } from './geometria';
 import { ordenTrasArrastrar, unidadBajo } from './ordenar-lifelines';
@@ -28,7 +28,7 @@ export interface EntradaDeArrastre {
   alReordenar?: AlReordenarLifelines | undefined;
   /** Calculo vigente (sin morph ni desplazamiento): al cambiar, el desplazamiento provisional se descarta. */
   calculo: Calculo | undefined;
-  camaraVigente: RefObject<Camara>;
+  camaraVigente: RefObject<Camera>;
   ancho: number;
   /** Distancia en pixeles de pantalla a partir de la cual el gesto cuenta como arrastre. */
   umbral: number;

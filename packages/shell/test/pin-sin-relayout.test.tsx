@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { canonicalFormSchema } from 'canonical';
 import type { CanonicalForm, Geometry } from 'canonical';
 import { VistaInteractiva } from 'shell';
-import type { AdaptadorDeLayout, Camara } from 'shell';
+import type { AdaptadorDeLayout, Camera } from 'shell';
 import { NEUTRAL_THEME } from 'theme';
 import { posicionDe } from './ayudas';
 
@@ -19,7 +19,7 @@ const fuente = (overrides: unknown[]): CanonicalForm =>
   });
 const conPin = (x: number, y: number) => fuente([{ node: 'b', pin: { x, y } }]);
 
-const camara: Camara = { x: 0, y: 0, width: 800, height: 600 };
+const camara: Camera = { x: 0, y: 0, width: 800, height: 600 };
 
 describe('mover un Pin en el shell', () => {
   it('no vuelve a llamar al adaptador de layout y muestra el Pin nuevo', async () => {

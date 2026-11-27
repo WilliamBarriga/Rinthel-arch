@@ -6,8 +6,8 @@ import type { D3ZoomEvent } from 'd3-zoom';
 
 import { sequenceElementId, resolveView } from 'canonical';
 import type { CollapseState, CanonicalForm, Geometry, IconProvider, Theme, Visibility, ResolvedView } from 'canonical';
-import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
-import type { Camara, ComponentesDeTema } from 'render';
+import { Diagram, fontSheet, resolveStyle } from 'render';
+import type { Camera, ThemeComponents } from 'render';
 import { resolveTheme } from 'theme';
 import type { TextMeasures, TextToMeasure } from 'theme';
 
@@ -50,7 +50,7 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   /** Leyenda de Tipos derivada del Tema: `auto` (por defecto) solo si dos Tipos difieren unicamente por color. */
   legend?: ModoDeLeyenda;
   /** Componentes de Tema (Capa `code`) por nombre; los registra el adaptador (`dev`), el shell solo los pasa a `Diagram`. */
-  componentes?: ComponentesDeTema;
+  componentes?: ThemeComponents;
   source: CanonicalForm;
   theme: Theme;
   layout: AdaptadorDeLayout;
@@ -81,9 +81,9 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   /** Una expansion se rechazo por superar `maxNodes`. */
   onLimit?: (id: string) => void;
   /** Camara controlada, en unidades de la geometria; sin ella el componente guarda la suya. */
-  camera?: Camara;
+  camera?: Camera;
   /** Pan o zoom del usuario: la camara que resulta. */
-  onCameraChange?: (camara: Camara) => void;
+  onCameraChange?: (camara: Camera) => void;
   /** Elemento seleccionado controlado (id de Nodo, de Arista o `nodo#atributo`); sin ella el componente guarda su Seleccion. */
   selected?: string | null;
   /** Se selecciono un elemento: su id (Nodo, Arista o etiqueta por `edgeId`, Atributo como `nodo#atributo`). */
@@ -192,8 +192,8 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const calculo = useGeometria({ vista, theme, layout, medir: medirConFuentes, claveDeFuentes: JSON.stringify(hashesDeFuentes), semilla, onError, alLlegar });
 
   // Hasta que el usuario o un colapso la mueva, la camara encuadra toda la Vista segun la primera geometria.
-  const [movida, fijarCamara] = useControlado<Camara | undefined>(props.camera, undefined, (nueva) => nueva && ultimo.current.onCameraChange?.(nueva));
-  const encuadre = useRef<Camara | undefined>(undefined);
+  const [movida, fijarCamara] = useControlado<Camera | undefined>(props.camera, undefined, (nueva) => nueva && ultimo.current.onCameraChange?.(nueva));
+  const encuadre = useRef<Camera | undefined>(undefined);
   if (encuadre.current === undefined && calculo !== undefined) encuadre.current = encuadrar(calculo.geometria, width, height, ajustes.fitMargin);
   const camara = movida ?? encuadre.current ?? { x: 0, y: 0, width, height };
   const camaraBase = useRef(camara);
@@ -281,7 +281,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
     if (base === undefined || desplazado === undefined || caja === undefined) return base;
     return { vista: base.vista, geometria: { ...base.geometria, nodes: { ...base.geometria.nodes, [desplazado.id]: { ...caja, x: desplazado.x, y: desplazado.y } } } };
   }, [calculo, morph, desplazado]);
-  const camaraVista = useMemo<Camara>(() => {
+  const camaraVista = useMemo<Camera>(() => {
     if (calculo === undefined || mostrado === undefined || morph === undefined) return camara;
     const final = cajaDeAncla(calculo.vista, morph.hasta, morph.ancla);
     const ahora = cajaDeAncla(mostrado.vista, mostrado.geometria, morph.ancla);
@@ -303,7 +303,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const [hover, fijarHover] = useState<string | undefined>(undefined);
   const estados = useMemo(() => conEstadosTransitorios(estadosDeSeleccion, enCurso === undefined ? hover : undefined, enCurso), [estadosDeSeleccion, hover, enCurso]);
   const medidas = calculo?.medidas;
-  const estilo = useMemo(() => resolverEstilo(theme, vista.type, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas), [theme, fontFiles, medidas, vista.type]);
+  const estilo = useMemo(() => resolveStyle(theme, vista.type, undefined, fontFiles === undefined ? undefined : Object.keys(fontFiles), medidas), [theme, fontFiles, medidas, vista.type]);
 
   const enSecuencia = vista.type === 'sequence';
   const visible = (id: string): boolean => (visibility?.(id) ?? 1) > 0;
@@ -432,21 +432,21 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   return (
     <div ref={zona} onClick={alPulsar} onDoubleClickCapture={alAbrir} onMouseMove={alMoverElRaton} onMouseLeave={() => fijarHover(undefined)} className="rd-vista" data-vista={view} data-layout={calculo !== undefined && calculo.vista === vista && morph === undefined ? 'listo' : 'calculando'} tabIndex={0} onKeyDown={alTeclear} onFocus={alEnfocar} onBlur={alSoltarElFoco} style={{ ...variablesDeChrome(estilo), width, height }}>
       <EstiloDelChrome />
-      {fontUrl !== undefined && estilo.caras.length > 0 && <style data-fuentes="">{hojaDeFuentes(estilo.caras, fontUrl)}</style>}
+      {fontUrl !== undefined && estilo.faces.length > 0 && <style data-fuentes="">{fontSheet(estilo.faces, fontUrl)}</style>}
       {mostrado !== undefined && recortada !== undefined && (
         <Diagram
           view={recortada}
           geometry={mostrado.geometria}
           theme={theme}
           {...(props.icons !== undefined && { icons: props.icons })}
-          {...(props.componentes !== undefined && { componentes: props.componentes })}
+          {...(props.componentes !== undefined && { components: props.componentes })}
           width={width}
           height={height}
           camera={camaraVista}
           detail={detalle}
-          estados={estadosFinales}
-          estilo={estilo}
-          {...(fontUrl !== undefined && { urlDeFuente: fontUrl })}
+          states={estadosFinales}
+          style={estilo}
+          {...(fontUrl !== undefined && { fontUrl })}
           onToggle={alternar}
           {...(reducedMotion !== undefined && { reducedMotion })}
           {...(visibilidadMostrada !== undefined && { visibility: visibilidadMostrada })}

@@ -7,8 +7,8 @@ import { refTarget, edgeId, sequenceElementId, parseSequenceElementId } from 'ca
 import type { NodeBox, Geometry, ResolvedItem, ResolvedNode, Point, Theme, Visibility, View, SequenceView, ResolvedView } from 'canonical';
 import { geometryIndex } from 'layout';
 import { visibleAttributes, placeInBox, nodeContent, leafMetrics } from 'theme';
-import { centroDeEtiquetaSinCaja, resolverEstilo } from 'render';
-import type { Estilo } from 'render';
+import { boxlessLabelCenter, resolveStyle } from 'render';
+import type { Style } from 'render';
 
 import { contiene } from './caja';
 import { AJUSTES_POR_DEFECTO } from './configuracion';
@@ -49,13 +49,13 @@ function distanciaASegmento(p: Point, a: Point, b: Point): number {
 }
 
 /** Caja de la etiqueta: la que reservo el layout o, si la Arista se re-enruto, una estimada sobre el segmento mas largo. */
-function cajaDeEtiqueta(texto: string, puntos: readonly Point[], reservada: NodeBox | undefined, estilo: Estilo): NodeBox {
+function cajaDeEtiqueta(texto: string, puntos: readonly Point[], reservada: NodeBox | undefined, estilo: Style): NodeBox {
   if (reservada !== undefined) return reservada;
-  const { metricas } = estilo;
+  const { metrics: metricas } = estilo;
   const tamano = metricas.fontSize * metricas.escalaEtiqueta;
   const [width, height] = [texto.length * tamano * metricas.factorDeAncho + metricas.holguraDeEtiqueta, tamano];
-  const centro = centroDeEtiquetaSinCaja(estilo, puntos);
-  return { x: centro.x - width / 2, y: centro.y - height * (1 - estilo.etiqueta.centradoVertical), width, height };
+  const centro = boxlessLabelCenter(estilo, puntos);
+  return { x: centro.x - width / 2, y: centro.y - height * (1 - estilo.label.verticalCentering), width, height };
 }
 
 /** Nodos en el orden en que `render` los dibuja: cada Grupo antes que sus hijos. */
@@ -73,7 +73,7 @@ export function elementoBajo(
 ): ElementoSeleccionable | undefined {
   if (vista.type === 'sequence') return elementoBajoEnSecuencia(vista, geometria, punto, tolerancia, visibilidad ?? (() => 1));
   const { boxes: cajas, roots: raices } = geometryIndex(vista, geometria);
-  const estilo = resolverEstilo(tema, vista.type);
+  const estilo = resolveStyle(tema, vista.type);
 
   // Aristas se dibujan encima de los Nodos; la ultima dibujada es la superior.
   const aristas = vista.edges.map((arista) => ({ arista, id: edgeId(arista), puntos: geometria.edges?.[edgeId(arista)]?.points ?? [] }));
@@ -90,7 +90,7 @@ export function elementoBajo(
   for (const nodo of enOrdenDeDibujo(raices).reverse()) {
     const caja = cajas.get(nodo.id);
     if (caja === undefined || !contiene(caja, punto)) continue;
-    const delNodo = leafMetrics(estilo.tabla, nodo);
+    const delNodo = leafMetrics(estilo.table, nodo);
     const filas = atributos ? visibleAttributes(nodo, delNodo) : [];
     const rectas = placeInBox(delNodo, nodeContent(nodo, delNodo), caja.width).filas;
     const indice = rectas.findIndex((r) => punto.y >= caja.y + r.y && punto.y < caja.y + r.y + r.height);
@@ -143,7 +143,7 @@ export function cajaDeElemento(vista: ResolvedView, geometria: Geo, tema: Theme,
   const { boxes: cajas } = geometryIndex(vista, geometria);
   if (elemento.tipo === 'nodo') return cajas.get(elemento.id);
   if (elemento.tipo === 'atributo') {
-    const { tabla } = resolverEstilo(tema, vista.type);
+    const { table: tabla } = resolveStyle(tema, vista.type);
     const [idNodo = '', nombre] = elemento.id.split('#');
     const nodo = enOrdenDeDibujo(geometryIndex(vista, geometria).roots).find((n) => n.id === idNodo);
     const caja = cajas.get(idNodo);
@@ -167,7 +167,7 @@ export function cajaDeElemento(vista: ResolvedView, geometria: Geo, tema: Theme,
   const puntos = geometria.edges?.[elemento.id]?.points ?? [];
   if (arista === undefined || puntos.length < 2) return undefined;
   if (elemento.tipo === 'etiqueta') {
-    return arista.label === undefined ? undefined : cajaDeEtiqueta(arista.label, puntos, geometria.labels?.[elemento.id], resolverEstilo(tema, vista.type));
+    return arista.label === undefined ? undefined : cajaDeEtiqueta(arista.label, puntos, geometria.labels?.[elemento.id], resolveStyle(tema, vista.type));
   }
   const [xs, ys] = [puntos.map((p) => p.x), puntos.map((p) => p.y)];
   const [x, y] = [Math.min(...xs), Math.min(...ys)];

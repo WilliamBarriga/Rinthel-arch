@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { canonicalFormSchema, edgeId } from 'canonical';
 import type { Geometry, GraphGeometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
-import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
+import type { AdaptadorDeLayout, Camera, VistaInteractivaProps } from 'shell';
 import { opacidadDeNodo, pulsarEn, pulsarNodo } from './ayudas';
 import { NEUTRAL_THEME, metricsOf } from 'theme';
 
@@ -45,7 +45,7 @@ const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
   return { nodes, edges, labels: {}, kind: 'grafo', pinsSolapados: [], width: 700, height: 50 };
 };
 
-const camaraGrande: Camara = { x: 0, y: 0, width: 800, height: 600 };
+const camaraGrande: Camera = { x: 0, y: 0, width: 800, height: 600 };
 const ids = (c: HTMLElement) => [...c.querySelectorAll('[data-id]')].map((e) => e.getAttribute('data-id'));
 const viewBoxDe = (c: HTMLElement) => c.querySelector('[data-diagram]')!.getAttribute('data-camara');
 const zonaDe = (c: HTMLElement) => c.firstElementChild!;
@@ -103,7 +103,7 @@ describe('VistaInteractiva', () => {
 
     fireEvent.wheel(zonaDe(container), { deltaY: -100, clientX: 0, clientY: 0 });
 
-    const nueva = onCameraChange.mock.calls.at(-1)![0] as Camara;
+    const nueva = onCameraChange.mock.calls.at(-1)![0] as Camera;
     expect(nueva.width).toBeLessThan(800);
     expect(nueva.height).toBeLessThan(600);
     expect(viewBoxDe(container)).toBe('0 0 800 600');
@@ -125,7 +125,7 @@ describe('VistaInteractiva', () => {
     gesto(window, 'mousemove', 60, 90);
     gesto(window, 'mouseup', 60, 90);
 
-    const nueva = onCameraChange.mock.calls.at(-1)![0] as Camara;
+    const nueva = onCameraChange.mock.calls.at(-1)![0] as Camera;
     expect(nueva).toMatchObject({ x: 40, y: 10, width: 800, height: 600 });
   });
 

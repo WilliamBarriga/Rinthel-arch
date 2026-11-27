@@ -4,13 +4,13 @@
  */
 import { useMemo } from 'react';
 
-import type { ComponentesDeTema } from 'render';
+import type { ThemeComponents } from 'render';
 
 import type { DevClient } from '../client';
 import { createComponentsLoader } from './components';
 import { useReadByVersion } from '../frame/use-read-by-version';
 
-export function useComponents(client: DevClient, version: number | undefined, confirm: (message: string) => boolean, report: (message: string) => void): ComponentesDeTema | undefined {
+export function useComponents(client: DevClient, version: number | undefined, confirm: (message: string) => boolean, report: (message: string) => void): ThemeComponents | undefined {
   const load = useMemo(() => createComponentsLoader(client, confirm), [client, confirm]);
   const reading = useReadByVersion(
     client,

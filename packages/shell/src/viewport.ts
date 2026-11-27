@@ -2,10 +2,10 @@
 import { edgeId } from 'canonical';
 import type { ResolvedEdge, NodeBox, Geometry, ResolvedNode, ResolvedView } from 'canonical';
 import { geometryIndex } from 'layout';
-import type { Camara } from 'render';
+import type { Camera } from 'render';
 
 /** Cruce con borde incluido, para que una ruta recta (alto o ancho 0) cuente. */
-function cruzan(caja: NodeBox, camara: Camara): boolean {
+function cruzan(caja: NodeBox, camara: Camera): boolean {
   return (
     caja.x <= camara.x + camara.width &&
     caja.x + caja.width >= camara.x &&
@@ -25,7 +25,7 @@ function extension(geometria: Geometry, id: string, caja: NodeBox): NodeBox {
  * la camara. Un Grupo visible conserva solo los hijos visibles. Un Nodo sin caja
  * en la geometria se conserva para que `render` avise del error de uso.
  */
-export function recortarAlViewport(vista: ResolvedView, geometria: Geometry, camara: Camara): ResolvedView {
+export function recortarAlViewport(vista: ResolvedView, geometria: Geometry, camara: Camera): ResolvedView {
   const { boxes: cajas } = geometryIndex(vista, geometria);
   const dentro = new Set<string>();
   for (const nodo of vista.nodes) {
@@ -48,7 +48,7 @@ export function recortarAlViewport(vista: ResolvedView, geometria: Geometry, cam
 }
 
 /** Aristas cuya ruta cruza la camara (una sin ruta en la geometria se descarta). */
-function aristasEnLaCamara(aristas: readonly ResolvedEdge[], geometria: Geometry, camara: Camara): ResolvedEdge[] {
+function aristasEnLaCamara(aristas: readonly ResolvedEdge[], geometria: Geometry, camara: Camera): ResolvedEdge[] {
   return aristas.filter((arista) => {
     const puntos = (geometria.kind === 'grafo' ? geometria.edges[edgeId(arista)]?.points : undefined) ?? [];
     if (puntos.length === 0) return false;

@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { canonicalFormSchema } from 'canonical';
 import type { Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva, nivelDeDetalle } from 'shell';
-import type { AdaptadorDeLayout, Camara } from 'shell';
+import type { AdaptadorDeLayout, Camera } from 'shell';
 import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
@@ -34,8 +34,8 @@ const fijo: AdaptadorDeLayout = async (vista: ResolvedView) => {
   return { nodes, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 400, height: 200 };
 };
 
-const conAncho = (width: number): Camara => ({ x: 0, y: 0, width, height: (width * 600) / 800 });
-const montar = (camera: Camara) =>
+const conAncho = (width: number): Camera => ({ x: 0, y: 0, width, height: (width * 600) / 800 });
+const montar = (camera: Camera) =>
   render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={fijo} width={800} height={600} camera={camera} />);
 
 describe('nivelDeDetalle', () => {

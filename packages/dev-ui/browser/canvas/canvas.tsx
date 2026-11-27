@@ -8,7 +8,7 @@ import type { ReactElement, ReactNode } from 'react';
 
 import { resolveView } from 'canonical';
 import type { CanonicalForm } from 'canonical';
-import type { ComponentesDeTema } from 'render';
+import type { ThemeComponents } from 'render';
 import { Leyenda, VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, PropsDeEstadoEnHash } from 'shell';
 
@@ -24,7 +24,7 @@ export interface CanvasOptions {
   drawable: Drawable;
   hashProps: PropsDeEstadoEnHash;
   layout: AdaptadorDeLayout;
-  components: ComponentesDeTema | undefined;
+  components: ThemeComponents | undefined;
   /** URL of a font file of `state.fuentes` (`/fonts/` in `dev`, `data:` in an export). */
   fontUrlOf: (route: string) => string;
 }
