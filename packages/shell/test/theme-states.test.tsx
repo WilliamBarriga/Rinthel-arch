@@ -84,7 +84,7 @@ ${row}
 
 describe('Theme states painted in ER', () => {
   it('a selected row paints the stack of row state selected; the others stay at rest', async () => {
-    const { container, sesion: session } = await mountEr(ER('    layer fondo solid { color papel }\n    state selected { layer fondo { color verde } }\n    state hover { layer fondo { color azul } }'), 'orders#id');
+    const { container, session } = await mountEr(ER('    layer fondo solid { color papel }\n    state selected { layer fondo { color verde } }\n    state hover { layer fondo { color azul } }'), 'orders#id');
 
     const row = (a: string) => container.querySelector(`[data-attribute="orders#${a}"]`)!.getAttribute('style');
     expect(row('id')).toMatch(/#16a34a|rgb\(22, 163, 74\)/);
@@ -105,5 +105,5 @@ async function mountEr(text: string, selected: string) {
   const source = session.source!;
   const r = render(<InteractiveView source={source} view="tablas" theme={source.themes.find((t) => t.name === 't')!} layout={layout} width={900} height={600} selected={selected} />);
   await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-id="orders"]')).not.toBeNull(), { timeout: 15000 });
-  return { ...r, sesion: session };
+  return { ...r, session };
 }

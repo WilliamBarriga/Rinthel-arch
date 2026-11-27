@@ -1349,7 +1349,7 @@ describe('compile: Steps', () => {
 
 describe('compile: Themes of the rinthel-arch example', () => {
   it('they extend the built-in ones dark and light with Node kind patches, without issues', async () => {
-    // `theme-views.dg` uses the 14 Themes of `themes/`, with deliberate contrast warnings: tests/ejemplos-docs.test.ts covers it.
+    // `theme-views.dg` uses the 14 Themes of `themes/`, with deliberate contrast warnings: tests/docs-examples.test.ts covers it.
     const { readFileSync, readdirSync } = await import('node:fs');
     const dir = new URL('../../../examples/rinthel-arch/', import.meta.url);
     const fonts = Object.fromEntries(

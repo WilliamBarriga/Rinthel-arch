@@ -37,7 +37,7 @@ function reconcile(path: readonly string[], view: string): readonly string[] {
 
 export function useNavigation(props: NavigationProps): Navigation {
   const initial = props.view ?? props.path?.[props.path.length - 1] ?? props.defaultView;
-  if (initial === undefined) throw new Error('VistaInteractiva requiere `view`, `path` o `defaultView`');
+  if (initial === undefined) throw new Error('InteractiveView needs `view`, `path` or `defaultView`');
   const controlledPath = props.path !== undefined && props.path.length > 0 ? props.path : undefined;
   const [base, set] = useControlled<readonly string[]>(controlledPath, [initial], (newOne) => {
     props.onPathChange?.([...newOne]);

@@ -39,7 +39,7 @@ describe('Issue (ADR 0005)', () => {
       column: 9,
       message: "Tipo de nodo 'servce' no declarado",
       hint: 'Declaralo en specification o corrige el typo',
-      related: [{ file: 'dsl/catalog.model', line: 3, column: 3, message: 'catalogo aqui' }],
+      related: [{ file: 'dsl/catalog.model', line: 3, column: 3, message: 'catalog here' }],
       fix: {
         file: 'dsl/api.model',
         range: {

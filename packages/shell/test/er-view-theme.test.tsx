@@ -33,7 +33,7 @@ const mount = async (dsl: string) => {
     <InteractiveView source={source} view="tablas" theme={source.themes.find((t) => t.name === 't')!} layout={(view, currentTheme, measures) => layoutView(view, currentTheme, { measures })} width={900} height={600} />,
   );
   await waitFor(() => expect(result.container.querySelector('.rd-vista[data-layout="listo"] [data-id="orders"]')).not.toBeNull(), { timeout: 15000 });
-  return { ...result, sesion: session };
+  return { ...result, session };
 };
 
 describe('ER Theme in jsdom: zone', () => {

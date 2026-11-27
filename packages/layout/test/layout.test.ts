@@ -40,7 +40,7 @@ function view(viewExtra: Record<string, unknown> = {}, state = {}): GraphView {
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], ...viewExtra }],
   });
   const resolved = resolveView(source, 'v', state);
-  if (resolved === undefined || resolved.type === 'sequence') throw new Error('Vista inexistente o de secuencia');
+  if (resolved === undefined || resolved.type === 'sequence') throw new Error('View missing or of sequence type');
   return resolved;
 }
 

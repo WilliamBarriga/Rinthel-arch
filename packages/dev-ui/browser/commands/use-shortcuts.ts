@@ -2,7 +2,7 @@
  * The single keyboard listener of the Dev UI: translates each window `keydown` into a registry command with
  * `resolveKey` and the scope of the focused element. It listens in the capture phase so global shortcuts with a
  * modifier also win inside the editor (Mod+/ before CodeMirror); what it does not resolve goes on as usual
- * (CodeMirror, the browser, `VistaInteractiva`).
+ * (CodeMirror, the browser, `InteractiveView`).
  */
 import { useEffect, useLayoutEffect, useRef } from 'react';
 

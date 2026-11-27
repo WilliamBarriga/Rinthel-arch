@@ -81,7 +81,7 @@ const ChromeContext = createContext<FrameChrome | undefined>(undefined);
 /** The chrome state the frame draws. */
 export function useChrome(): FrameChrome {
   const chrome = useContext(ChromeContext);
-  if (chrome === undefined) throw new Error('useChrome fuera de <ProveedoresDelEstudio>');
+  if (chrome === undefined) throw new Error('useChrome outside <DevUiProviders>');
   return chrome;
 }
 

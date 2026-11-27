@@ -1,5 +1,5 @@
 /**
- * Dev UI canvas: `VistaInteractiva` (`chrome={false}`) over the drawn Source (with the previewed Theme, if any), the
+ * Dev UI canvas: `InteractiveView` (`chrome={false}`) over the drawn Source (with the previewed Theme, if any), the
  * halo of external changes and the legend. It runs inside the providers: a click on a Node opens Details, a double
  * click opens Code at its block and the Gestures write through the Dev UI writing path.
  */

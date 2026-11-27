@@ -27,7 +27,7 @@ export type { HashAdapter, ShellState } from './hash';
 export { useHashState } from './hash-state';
 export type { HashStateOptions, HashStateProps } from './hash-state';
 export type { OnReorderLifelines } from './drag';
-export type { PinIntent as IntencionDePin } from 'canonical';
+export type { PinIntent } from 'canonical';
 export type { UndoHistory, Intent } from 'session';
 export { workerAdapter } from './worker-layout';
 export { serveLayout } from './serve-layout';

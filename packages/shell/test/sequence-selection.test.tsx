@@ -43,7 +43,7 @@ const freeInTab = (g: SequenceGeometry, tab: { x: number; y: number; width: numb
   for (let x = tab.x + 1; x < tab.x + tab.width; x++) {
     if (Object.values(g.lifelines).every((l) => Math.abs(l.x - x) > 12)) return { x, y: tab.y + tab.height / 2 };
   }
-  throw new Error('la pestana cubre una Lifeline entera');
+  throw new Error('the tab covers a whole Lifeline');
 };
 
 async function mount(text: string, extra: Record<string, unknown> = {}) {
