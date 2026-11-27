@@ -1,15 +1,15 @@
 /**
- * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
- * cada peticion y con `no-store`), el estado y la Geometria por Vista, y serializa por SSE (`/eventos`) la instantanea de
+ * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `dev-ui` (`/` y `/_dev-ui/*`, leidos del disco en
+ * cada peticion y con `no-store`), el estado y la Geometria por Vista, y serializa por SSE (`/events`) la instantanea de
  * conexion y el flujo de eventos del Workspace vivo (la secuencia es de `session`; el protocolo, de `canonical`).
  * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); todo POST exige
  * un `Origin` propio (o ninguno, si no 403) y `application/json` (si no 415); un cuerpo de mas de 64 KiB es 413;
- * `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
+ * `/fonts/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
  * `/api/*` y toda ruta no servida aqui: la respuesta completa de `handleDevApi` (ruteo, 400, 404, 405, 409, 422, 500).
  * Puertos: `puertoHttp` es el TCP; `puerto` es el `LiveWorkspacePort` (por defecto `puertoDeDisco`: el disco del
  * Workspace y de `--theme-path`, `fs.watch` y el Registro de actividad de `registro-en-disco.ts`).
  * Errores: `iniciarDev` rechaza si el puerto TCP esta ocupado (sin dejar el observador activo) y lanza si la lectura
- * inicial falla; `run(['dev', ...])` los convierte en codigo 2. Un estatico de `estudio` sin construir es 404 al pedirlo.
+ * inicial falla; `run(['dev', ...])` los convierte en codigo 2. Un estatico de `dev-ui` sin construir es 404 al pedirlo.
  */
 import { createServer } from 'node:http';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -20,8 +20,8 @@ import { parseArgs } from 'node:util';
 
 import { DEV_ROUTES } from 'canonical';
 import type { DevEvent } from 'canonical';
-import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
-import type { ActivosDelEstudio } from 'estudio';
+import { DEV_UI_ROUTE, devUiAssets } from 'dev-ui';
+import type { DevUiAssets } from 'dev-ui';
 import { openLiveWorkspace, handleDevApi } from 'session';
 import type { LiveWorkspacePort, LiveWorkspace } from 'session';
 
@@ -44,9 +44,9 @@ export interface OpcionesDeDev {
   puerto?: LiveWorkspacePort;
   /** Espera en ms tras el ultimo cambio antes de recompilar; por defecto la del Workspace vivo. */
   debounceMs?: number;
-  /** Rutas de los estaticos de la app; por defecto las del build de `estudio`. Se consultan en cada peticion. */
-  estudio?: () => ActivosDelEstudio;
-  /** `--trust-code`: sirve `/componentes.js` sin pedir confirmacion en el navegador. Por defecto `false`. */
+  /** Rutas de los estaticos de la app; por defecto las del build de `dev-ui`. Se consultan en cada peticion. */
+  estudio?: () => DevUiAssets;
+  /** `--trust-code`: sirve `/components.js` sin pedir confirmacion en el navegador. Por defecto `false`. */
   confiarEnCodigo?: boolean;
   /** Compila los `.tsx` de `workspace`; por defecto el adaptador de esbuild (un Workspace inexistente no tiene codigo). */
   compilarCodigo?: () => ResultadoDeCodigo;
@@ -93,7 +93,7 @@ const responder = (res: ServerResponse, estadoHttp: number, cuerpo: unknown): vo
 
 const TIPOS_DE_ESTATICO: Readonly<Record<string, string>> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 
-/** Lee del disco en cada peticion (un rebuild de `estudio` se ve al recargar); ausente -> 404. */
+/** Lee del disco en cada peticion (un rebuild de `dev-ui` se ve al recargar); ausente -> 404. */
 function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
   let bytes: Buffer;
   try {
@@ -101,16 +101,16 @@ function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
     bytes = readFileSync(ruta);
   } catch {
     cabecera(res, 'text/plain', 404);
-    res.end('Not found (if the app build is missing: pnpm --filter estudio build)');
+    res.end('Not found (if the app build is missing: pnpm --filter dev-ui build)');
     return;
   }
   cabecera(res, TIPOS_DE_ESTATICO[extname(ruta)] ?? 'application/octet-stream');
   res.end(bytes);
 }
 
-/** El codigo de Temas se sirve en `/componentes.js` solo tras `POST /api/confiar` o `confiarEnCodigo`. */
+/** El codigo de Temas se sirve en `/components.js` solo tras `POST /api/trust` o `confiarEnCodigo`. */
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
-  const { workspace, temas, puertoHttp = 0, debounceMs, estudio = activosDelEstudio, confiarEnCodigo = false } = opciones;
+  const { workspace, temas, puertoHttp = 0, debounceMs, estudio = devUiAssets, confiarEnCodigo = false } = opciones;
   const { puerto = puertoDeDisco(workspace, temas === undefined ? {} : { temas }), compilarCodigo = compiladorDeCodigo(workspace).compilar } = opciones;
   const vivo: LiveWorkspace = await openLiveWorkspace({
     port: puerto,
@@ -176,10 +176,10 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
     const url = new URL(req.url ?? '/', 'http://127.0.0.1');
     const ruta = url.pathname;
     if (ruta === '/') {
-      servirEstatico(res, estudio().indice);
-    } else if (ruta.startsWith(RUTA_DEL_ESTUDIO)) {
-      const { archivos } = estudio();
-      const nombre = ruta.slice(RUTA_DEL_ESTUDIO.length);
+      servirEstatico(res, estudio().index);
+    } else if (ruta.startsWith(DEV_UI_ROUTE)) {
+      const { files: archivos } = estudio();
+      const nombre = ruta.slice(DEV_UI_ROUTE.length);
       servirEstatico(res, Object.hasOwn(archivos, nombre) ? archivos[nombre] : undefined);
     } else if (ruta.startsWith(DEV_ROUTES.fonts)) {
       const fuente = servirFuente(ruta.slice(DEV_ROUTES.fonts.length));

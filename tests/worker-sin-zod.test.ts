@@ -7,14 +7,14 @@ import { layoutView } from 'layout';
 import { adaptadorDeWorker } from 'shell';
 import { NEUTRAL_THEME } from 'theme';
 
-import { activosDelEstudio } from 'estudio';
+import { devUiAssets } from 'dev-ui';
 
-/** El bundle del Worker que produce el build de `estudio` y sirve `dev`. */
-const workerDelEstudio = (): string => readFileSync(activosDelEstudio().archivos['worker.js']!, 'utf8');
+/** El bundle del Worker que produce el build de `dev-ui` y sirve `dev`. */
+const workerDelEstudio = (): string => readFileSync(devUiAssets().files['worker.js']!, 'utf8');
 
 /**
  * Ejecuta el bundle del Worker que sirve `dev` (con zod inerte) con un `self` falso: si algo que importa llamara a zod,
- * fallaria aqui. Requiere los paquetes construidos (incluido `estudio`).
+ * fallaria aqui. Requiere los paquetes construidos (incluido `dev-ui`).
  */
 describe('Worker de layout empaquetado', () => {
   it('calcula la misma geometria que layoutView sin validar el Tema', async () => {

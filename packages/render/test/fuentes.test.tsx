@@ -15,7 +15,7 @@ const ARCHIVOS = [
   'fuentes/press-start-2p-latin-400-normal.woff2',
   'fuentes/inter-latin-400-normal.woff2',
 ];
-const url = (ruta: string): string => `/fuentes/${ruta.split('/').map(encodeURIComponent).join('/')}`;
+const url = (ruta: string): string => `/fonts/${ruta.split('/').map(encodeURIComponent).join('/')}`;
 
 async function dibujo(tema: ResolvedTheme, extra: Record<string, unknown>): Promise<string> {
   const fuente = canonicalFormSchema.parse({
@@ -32,7 +32,7 @@ describe('Diagram: fuentes del Workspace', () => {
   it('declara un @font-face por cada cara de las fuentes que usa el Tema, con la URL del shell', async () => {
     const hoja = hojaDe(await dibujo(CAVEAT, { estilo: resolverEstilo(CAVEAT, 'architecture', undefined, ARCHIVOS), urlDeFuente: url }));
 
-    expect(hoja).toContain('@font-face{font-family:"Caveat";font-style:normal;font-weight:400;font-display:block;src:url("/fuentes/fuentes/caveat-latin-400-normal.woff2") format("woff2")}');
+    expect(hoja).toContain('@font-face{font-family:"Caveat";font-style:normal;font-weight:400;font-display:block;src:url("/fonts/fuentes/caveat-latin-400-normal.woff2") format("woff2")}');
     expect(hoja).toContain('font-family:"Caveat";font-style:normal;font-weight:700');
     expect(hoja).toContain('font-family:"Press Start 2P";font-style:normal;font-weight:400');
     expect(hoja).not.toContain('"Inter"');

@@ -20,23 +20,23 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
 /** Orden de dependencias (ADR 0004): un paquete solo importa de los anteriores. */
-export const CADENA = ['canonical', 'theme', 'dsl', 'layout', 'session', 'render', 'shell', 'estudio', 'cli'] as const;
+export const CADENA = ['canonical', 'theme', 'dsl', 'layout', 'session', 'render', 'shell', 'dev-ui', 'cli'] as const;
 
 /**
- * Subpaths publicos ademas de `.` (ADR 0004, enmienda `estudio`): `protocolo` es el contrato de `dev` del que `cli`
- * importa tipos sin cargar la app de navegador; `contrato` es la suite de pruebas compartida; `construir` arma el bundle
+ * Subpaths publicos ademas de `.` (ADR 0004, enmienda `dev-ui`): `protocol` es el contrato de `dev` del que `cli`
+ * importa tipos sin cargar la app de navegador; `contract` es la suite de pruebas compartida; `build` arma el bundle
  * de la app (lo usa el bench). Ningun otro paquete los tiene.
  */
 export const SUBPATHS_PERMITIDOS: Readonly<Record<string, readonly string[]>> = {
-  estudio: ['./protocolo', './contrato', './construir'],
+  'dev-ui': ['./protocol', './contract', './build'],
 };
 
 /**
- * Archivos que pueden reexportar de otro paquete (ruta relativa a la raiz del repo): `estudio/protocolo` junta el
+ * Archivos que pueden reexportar de otro paquete (ruta relativa a la raiz del repo): `dev-ui/protocol` junta el
  * contrato de `dev` para la app y `cli`; la fachada publica de `shell` ofrece a sus consumidores los tipos de su interfaz.
  * Fuera de ellos, cada nombre se importa del paquete dueno, sin segundos caminos.
  */
-export const REEXPORTES_PERMITIDOS: readonly string[] = ['packages/estudio/src/protocolo.ts', 'packages/shell/src/index.ts'];
+export const REEXPORTES_PERMITIDOS: readonly string[] = ['packages/dev-ui/src/protocol.ts', 'packages/shell/src/index.ts'];
 
 /**
  * Packages outside `CADENA` (ADR 0010): they import no workspace package and only the listed packages import them.

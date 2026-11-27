@@ -1,8 +1,8 @@
 /**
- * Route a viewer uses to request the Workspace font files (served by `cli`, requested by `estudio`).
+ * Route a viewer uses to request the Workspace font files (served by `cli`, requested by `dev-ui`).
  * The rest of the `dev` routes and schemas are in `dev.ts` (`DEV_ROUTES`).
  */
-export const FONTS_ROUTE = '/fuentes/';
+export const FONTS_ROUTE = '/fonts/';
 
 /** URL relative to the `dev` server, with each segment encoded. */
 export const fontUrl = (path: string): string => FONTS_ROUTE + path.split('/').map(encodeURIComponent).join('/');

@@ -1,6 +1,6 @@
 /**
  * Lo propio del adaptador HTTP de `dev`: estaticos, seguridad del transporte (Host, Origin, content-type, tamano), disco y
- * cierre. Las rutas `/api/*`, sus bordes y los eventos SSE los cubre `probarContratoDeDev` (`contrato-dev.test.ts`).
+ * cierre. Las rutas `/api/*`, sus bordes y los eventos SSE los cubre `testDevContract` (`contrato-dev.test.ts`).
  */
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { request } from 'node:http';
@@ -8,8 +8,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { eventoDeActividad, eventosSobreFetch, lineasDeActividad } from 'estudio/contrato';
-import type { ActividadDeDev } from 'estudio/protocolo';
+import { activityEvent, eventsOverFetch, activityLines } from 'dev-ui/contract';
+import type { DevActivity } from 'dev-ui/protocol';
 
 import { iniciarDev } from 'cli';
 import type { OpcionesDeDev, ServidorDev } from 'cli';
@@ -57,16 +57,16 @@ const disco = (raiz: string) => puertoDeDisco(raiz, { observar: () => () => unde
 
 const carpetas: string[] = [];
 
-/** `estudio` falso: sus estaticos son archivos de una carpeta temporal que la prueba puede reescribir. */
+/** `dev-ui` falso: sus estaticos son archivos de una carpeta temporal que la prueba puede reescribir. */
 function estudioFalso() {
   const carpeta = mkdtempSync(join(tmpdir(), 'rinthel-estudio-falso-'));
   carpetas.push(carpeta);
   const ruta = (nombre: string) => join(carpeta, nombre);
   const escribir = (nombre: string, texto: string) => writeFileSync(ruta(nombre), texto);
   escribir('index.html', '<!doctype html><title>falso</title>');
-  escribir('pagina.js', '/*pagina*/');
-  escribir('estilo.css', '/*estilo*/');
-  return { estudio: () => ({ indice: ruta('index.html'), archivos: { 'pagina.js': ruta('pagina.js'), 'estilo.css': ruta('estilo.css'), 'ausente.js': ruta('ausente.js') } }), escribir };
+  escribir('page.js', '/*pagina*/');
+  escribir('style.css', '/*estilo*/');
+  return { estudio: () => ({ index: ruta('index.html'), files: { 'page.js': ruta('page.js'), 'style.css': ruta('style.css'), 'ausente.js': ruta('ausente.js') } }), escribir };
 }
 
 /** Workspace real en una carpeta temporal, con `main.dg` = `BASE`. */
@@ -97,7 +97,7 @@ const post = (servidor: ServidorDev, ruta: string, cuerpo: unknown = {}, cabecer
   fetch(`${servidor.url}${ruta}`, { method: 'POST', headers: cabeceras, body: typeof cuerpo === 'string' ? cuerpo : JSON.stringify(cuerpo) });
 
 describe('dev: rutas', () => {
-  it('escucha solo en 127.0.0.1 y sirve / y /_estudio/* del estudio inyectado, sin cache', async () => {
+  it('escucha solo en 127.0.0.1 y sirve / y /_dev-ui/* de dev-ui inyectado, sin cache', async () => {
     const { estudio } = estudioFalso();
     const servidor = await arrancar(entorno({ 'main.dg': BASE }), { estudio });
 
@@ -106,47 +106,47 @@ describe('dev: rutas', () => {
     expect(pagina.headers.get('content-type')).toContain('text/html');
     expect(pagina.headers.get('cache-control')).toBe('no-store');
     expect(await pagina.text()).toBe('<!doctype html><title>falso</title>');
-    const js = await fetch(`${servidor.url}_estudio/pagina.js`);
+    const js = await fetch(`${servidor.url}_dev-ui/page.js`);
     expect([js.headers.get('content-type'), js.headers.get('cache-control'), await js.text()]).toEqual(['text/javascript; charset=utf-8', 'no-store', '/*pagina*/']);
-    const css = await fetch(`${servidor.url}_estudio/estilo.css`);
+    const css = await fetch(`${servidor.url}_dev-ui/style.css`);
     expect([css.headers.get('content-type'), await css.text()]).toEqual(['text/css; charset=utf-8', '/*estilo*/']);
     expect((await fetch(`${servidor.url}nada`)).status).toBe(404);
   });
 
-  it('lee los estaticos del disco en cada peticion: un rebuild del estudio se ve al recargar', async () => {
+  it('lee los estaticos del disco en cada peticion: un rebuild de dev-ui se ve al recargar', async () => {
     const { estudio, escribir } = estudioFalso();
     const servidor = await arrancar(entorno({ 'main.dg': BASE }), { estudio });
-    expect(await (await fetch(`${servidor.url}_estudio/pagina.js`)).text()).toBe('/*pagina*/');
+    expect(await (await fetch(`${servidor.url}_dev-ui/page.js`)).text()).toBe('/*pagina*/');
 
-    escribir('pagina.js', '/*pagina nueva*/');
+    escribir('page.js', '/*pagina nueva*/');
     escribir('index.html', '<p>nueva</p>');
 
-    expect(await (await fetch(`${servidor.url}_estudio/pagina.js`)).text()).toBe('/*pagina nueva*/');
+    expect(await (await fetch(`${servidor.url}_dev-ui/page.js`)).text()).toBe('/*pagina nueva*/');
     expect(await (await fetch(servidor.url)).text()).toBe('<p>nueva</p>');
   });
 
-  it('bajo /_estudio/ solo sirve los archivos declarados; uno que falta en disco es 404', async () => {
+  it('bajo /_dev-ui/ solo sirve los archivos declarados; uno que falta en disco es 404', async () => {
     const { estudio } = estudioFalso();
     const servidor = await arrancar(entorno({ 'main.dg': BASE }), { estudio });
 
-    expect((await fetch(`${servidor.url}_estudio/index.html`)).status).toBe(404);
-    expect((await fetch(`${servidor.url}_estudio/..%2F..%2Fetc%2Fpasswd`)).status).toBe(404);
-    expect((await fetch(`${servidor.url}_estudio/ausente.js`)).status).toBe(404);
+    expect((await fetch(`${servidor.url}_dev-ui/index.html`)).status).toBe(404);
+    expect((await fetch(`${servidor.url}_dev-ui/..%2F..%2Fetc%2Fpasswd`)).status).toBe(404);
+    expect((await fetch(`${servidor.url}_dev-ui/ausente.js`)).status).toBe(404);
     expect((await fetch(`${servidor.url}app.js`)).status).toBe(404);
   });
 
-  it('sin inyectar, sirve el build real de estudio', async () => {
+  it('sin inyectar, sirve el build real de dev-ui', async () => {
     const env = entorno({ 'main.dg': BASE });
     const servidor = await iniciarDev({ workspace: '/ws', puerto: env.puerto, puertoHttp: 0 });
     abiertos.push(servidor);
 
-    expect(await (await fetch(servidor.url)).text()).toContain('<script type="module" src="/_estudio/pagina.js">');
-    const pagina = await (await fetch(`${servidor.url}_estudio/pagina.js`)).text();
-    const trozo = /"\.\/(trozos\/[^"]+\.js)"/.exec(pagina)?.[1];
+    expect(await (await fetch(servidor.url)).text()).toContain('<script type="module" src="/_dev-ui/page.js">');
+    const pagina = await (await fetch(`${servidor.url}_dev-ui/page.js`)).text();
+    const trozo = /"\.\/(chunks\/[^"]+\.js)"/.exec(pagina)?.[1];
     expect(trozo).toBeDefined();
-    const servido = await fetch(`${servidor.url}_estudio/${trozo}`);
+    const servido = await fetch(`${servidor.url}_dev-ui/${trozo}`);
     expect([servido.status, servido.headers.get('content-type')]).toEqual([200, 'text/javascript; charset=utf-8']);
-    expect((await (await fetch(`${servidor.url}_estudio/worker.js`)).text()).length).toBeGreaterThan(1000);
+    expect((await (await fetch(`${servidor.url}_dev-ui/worker.js`)).text()).length).toBeGreaterThan(1000);
   });
 
   it('--theme-path (opcion temas) aporta Temas antes del Workspace', async () => {
@@ -154,7 +154,7 @@ describe('dev: rutas', () => {
     const servidor = await iniciarDev({ workspace: workspaceEnDisco(), temas, compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
 
-    const fuente = ((await (await fetch(`${servidor.url}api/estado`)).json()) as { fuente: { themes: { name: string }[] } }).fuente;
+    const fuente = ((await (await fetch(`${servidor.url}api/state`)).json()) as { fuente: { themes: { name: string }[] } }).fuente;
     expect(fuente.themes.map(({ name }) => name)).toContain('corporativo');
   });
 
@@ -176,7 +176,7 @@ describe('dev: seguridad', () => {
     const puerto = Number(new URL(servidor.url).port);
     const conHost = (host: string | undefined) =>
       new Promise<number>((ok, fallo) => {
-        const req = request({ host: '127.0.0.1', port: puerto, path: '/api/estado', headers: host === undefined ? {} : { host } }, (res) => {
+        const req = request({ host: '127.0.0.1', port: puerto, path: '/api/state', headers: host === undefined ? {} : { host } }, (res) => {
           res.resume();
           ok(res.statusCode ?? 0);
         });
@@ -198,7 +198,7 @@ describe('dev: seguridad', () => {
     abiertos.push(servidor);
     const cuerpo = { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 };
 
-    for (const ruta of ['api/edit', 'api/deshacer', 'api/rehacer', 'api/historial/saltar', 'api/confiar', 'api/nada']) {
+    for (const ruta of ['api/edit', 'api/undo', 'api/redo', 'api/history/jump', 'api/trust', 'api/nada']) {
       expect(await respuesta(await post(servidor, ruta, cuerpo, { ...JSON_, origin: 'http://evil.example' }))).toEqual({ status: 403, cuerpo: { ok: false, message: 'Origin not allowed' } });
       expect(await respuesta(await post(servidor, ruta, cuerpo, { 'content-type': 'text/plain' }))).toEqual({ status: 415, cuerpo: { ok: false, message: 'Expected application/json' } });
     }
@@ -216,7 +216,7 @@ describe('dev: disco y Registro de actividad', () => {
 
     expect((await post(servidor, 'api/edit', { type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 })).status).toBe(200);
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toContain('node api { pin 1,2 }');
-    expect((await post(servidor, 'api/deshacer')).status).toBe(200);
+    expect((await post(servidor, 'api/undo')).status).toBe(200);
     expect(readFileSync(join(raiz, 'main.dg'), 'utf8')).toBe(BASE);
   });
 
@@ -225,17 +225,17 @@ describe('dev: disco y Registro de actividad', () => {
     carpetas.push(raiz);
     writeFileSync(join(raiz, 'main.dg'), BASE);
     mkdirSync(join(raiz, '.diagrams'));
-    writeFileSync(join(raiz, '.diagrams', 'activity.jsonl'), lineasDeActividad(eventoDeActividad(1)));
+    writeFileSync(join(raiz, '.diagrams', 'activity.jsonl'), activityLines(activityEvent(1)));
     const servidor = await iniciarDev({ workspace: raiz, puerto: disco(raiz), compilarCodigo: sinCodigo, puertoHttp: 0 });
     abiertos.push(servidor);
     const fetchDelServidor: typeof fetch = (ruta, init) => fetch(new URL(String(ruta).replace(/^\//, ''), servidor.url), init);
 
-    const recibidos = await new Promise<ActividadDeDev[]>((ok) => {
-      const lista: ActividadDeDev[] = [];
-      const cerrar = eventosSobreFetch(fetchDelServidor)('/eventos', (nombre, datos) => {
+    const recibidos = await new Promise<DevActivity[]>((ok) => {
+      const lista: DevActivity[] = [];
+      const cerrar = eventsOverFetch(fetchDelServidor)('/events', (nombre, datos) => {
         if (nombre !== 'actividad') return;
-        lista.push(JSON.parse(datos) as ActividadDeDev);
-        if (lista.length === 1) appendFileSync(join(raiz, '.diagrams', 'activity.jsonl'), lineasDeActividad(eventoDeActividad(2)));
+        lista.push(JSON.parse(datos) as DevActivity);
+        if (lista.length === 1) appendFileSync(join(raiz, '.diagrams', 'activity.jsonl'), activityLines(activityEvent(2)));
         else {
           cerrar();
           ok(lista);

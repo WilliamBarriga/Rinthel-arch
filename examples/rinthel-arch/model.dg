@@ -49,60 +49,60 @@ model {
       }
     }
 
-    package dev-ui "estudio" "The Dev UI: DSL editor, canvas, Themes, Issues, Undo history, agent activity and the export page" {
-      source { path "packages/estudio" }
-      module server "estudio/src" "Node side: builds the browser bundles and writes the exported HTML" {
-        source { path "packages/estudio/src" }
+    package dev-ui "dev-ui" "The Dev UI: DSL editor, canvas, Themes, Issues, Undo history, agent activity and the export page" {
+      source { path "packages/dev-ui" }
+      module server "dev-ui/src" "Node side: builds the browser bundles and writes the exported HTML" {
+        source { path "packages/dev-ui/src" }
       }
-      module scripts "estudio/scripts" "Build scripts of the browser bundles" {
-        source { path "packages/estudio/scripts" }
+      module scripts "dev-ui/scripts" "Build scripts of the browser bundles" {
+        source { path "packages/dev-ui/scripts" }
       }
-      module browser "estudio/navegador" "The browser app: entry, dev client and the panels below" {
-        source { path "packages/estudio/navegador" }
+      module browser "dev-ui/browser" "The browser app: entry, dev client and the panels below" {
+        source { path "packages/dev-ui/browser" }
         module frame "frame" "The shell of the app: islands, tabs, top bar, dialogs and the shared context" {
-          source { path "packages/estudio/navegador/marco" }
+          source { path "packages/dev-ui/browser/frame" }
         }
         module commands "commands" "Command registry, shortcuts and the Finder" {
-          source { path "packages/estudio/navegador/comandos" }
+          source { path "packages/dev-ui/browser/commands" }
         }
         module canvas "canvas" "The canvas around the interactive View" {
-          source { path "packages/estudio/navegador/lienzo" }
+          source { path "packages/dev-ui/browser/canvas" }
         }
         module views "views" "Index of Views" {
-          source { path "packages/estudio/navegador/vistas" }
+          source { path "packages/dev-ui/browser/views" }
         }
         module themes "themes" "Theme gallery: preview and pin" {
-          source { path "packages/estudio/navegador/temas" }
+          source { path "packages/dev-ui/browser/themes" }
         }
         module editor "editor" "DSL editor (CodeMirror) and saving" {
-          source { path "packages/estudio/navegador/editor" }
+          source { path "packages/dev-ui/browser/editor" }
         }
         module issues "issues" "Issues panel and fixes" {
-          source { path "packages/estudio/navegador/issues" }
+          source { path "packages/dev-ui/browser/issues" }
         }
         module details "details" "Details of the selected Node" {
-          source { path "packages/estudio/navegador/detalle" }
+          source { path "packages/dev-ui/browser/detail" }
         }
         module writing "writing" "Sends Intents from gestures to the dev server" {
-          source { path "packages/estudio/navegador/escritura" }
+          source { path "packages/dev-ui/browser/writing" }
         }
         module history "history" "Undo history of the Workspace" {
-          source { path "packages/estudio/navegador/historial" }
+          source { path "packages/dev-ui/browser/history" }
         }
         module agent "agent" "Agent activity feed" {
-          source { path "packages/estudio/navegador/agente" }
+          source { path "packages/dev-ui/browser/agent" }
         }
         module diff "diff" "Diffs between versions" {
-          source { path "packages/estudio/navegador/diferencia" }
+          source { path "packages/dev-ui/browser/diff" }
         }
         module tour "tour" "The one-minute tour" {
-          source { path "packages/estudio/navegador/tour" }
+          source { path "packages/dev-ui/browser/tour" }
         }
         module export "export" "Read-only entry of the exported HTML" {
-          source { path "packages/estudio/navegador/exportado" }
+          source { path "packages/dev-ui/browser/export" }
         }
         module worker "worker" "Layout Web Worker" {
-          source { path "packages/estudio/navegador/worker" }
+          source { path "packages/dev-ui/browser/worker" }
         }
       }
     }

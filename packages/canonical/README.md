@@ -1,10 +1,10 @@
 # canonical
-Zod schemas of the Canonical form, the pure functions that query it and the contracts shared by `cli`, `session` and `estudio`.
+Zod schemas of the Canonical form, the pure functions that query it and the contracts shared by `cli`, `session` and `dev-ui`.
 
 ## What it does
 - Defines and validates the schema of the Canonical form (Nodes, Edges, Views, Steps, Palette) and of the Geometry; `validate` returns `Issue`s with `hint` and `fix` (codes in `CODES`).
 - `resolveView` selects the Nodes of a View and, in a `sequence` View, resolves its Interaction (Lifelines, activations; `sequence.ts`); an `er` View is resolved as `architecture`. `revealAt` interprets its Steps.
-- Single owner of the versioned contracts: the edit Intents (`pin.ts`: `move-pin`, `reorder-lifelines`, `set-theme`), the `--json` outputs of `validate`, `inspect` and `edit`, the Activity event (`activity.ts`, one line of the Activity log; `createActivityReader` reads only what was appended) and the `dev` protocol (`dev.ts`: routes, SSE events, state, Diff, File history; `estudio/protocolo` re-exports it). A new field of a contract is added here, not in its user.
+- Single owner of the versioned contracts: the edit Intents (`pin.ts`: `move-pin`, `reorder-lifelines`, `set-theme`), the `--json` outputs of `validate`, `inspect` and `edit`, the Activity event (`activity.ts`, one line of the Activity log; `createActivityReader` reads only what was appended) and the `dev` protocol (`dev.ts`: routes, SSE events, state, Diff, File history; `dev-ui/protocol` re-exports it). A new field of a contract is added here, not in its user.
 
 ## What it does not do
 - Does not read DSL text nor merge files: that is `dsl`.

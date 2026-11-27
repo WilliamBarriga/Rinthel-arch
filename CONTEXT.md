@@ -143,7 +143,7 @@ _Avoid_: plain "history" for the one in `dev` (that is the File history).
 Undo history of `dev`: each entry stores, per file, the text before and after a UI write (Intent, editor save, `fix`), with a description and its time. Undo, redo and jumping to an entry are rejected only if a file the entry restores changed outside; an external write does not reset it. The UI sees the visible history from it: each entry with whether it is reachable on the current disk.
 
 **Dev UI** (es: **UI de dev**):
-Browser app served by `dev` (package `estudio`) to look at, edit and follow a Workspace: canvas with the active View, Text DSL editor, Issues, Theme gallery, Detail, File history and Activity log feed. Every write goes through the Live workspace; it does not touch disk.
+Browser app served by `dev` (package `dev-ui`) to look at, edit and follow a Workspace: canvas with the active View, Text DSL editor, Issues, Theme gallery, Detail, File history and Activity log feed. Every write goes through the Live workspace; it does not touch disk.
 
 **Live workspace** (es: **Workspace vivo**):
 The state of `dev` without transport: the current and the last good Session, the File history, the write queue, the versions the UI saw, the Diff with its origin and, composed, the live Activity log (its own module that reads and pushes the activity). It is the only owner of the event sequence of the `dev` protocol: on connect, state, File history and previous activity; after each state, its File history and its Diff. The `dev` server and its test fake only transport it.

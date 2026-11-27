@@ -2,7 +2,7 @@
  * Live workspace: the state of `dev` without HTTP (current and last good Session, File history, write queue, versions).
  * Events: it is the only owner of the SSE event sequence of the protocol (`DevEvent` from `canonical`): `connection()`
  * gives what a client receives on connect (state, File history and activity with `previos`) and `listen` the stream
- * (after each state, its File history and its Diff; the new activity). The adapters (real server, `devEnMemoria`) only serialize.
+ * (after each state, its File history and its Diff; the new activity). The adapters (real server, `inMemoryDev`) only serialize.
  * Invariants: an edit with `version` uses that version's hashes as `seen`; a version outside the last
  * `STORED_VERSIONS` rejects with `stale-hash`; without a version, it applies over the current text.
  * Edit, undo and redo are queued; a write that fails halfway is reverted. With errors, the state carries the issues
@@ -124,7 +124,7 @@ export interface LiveWorkspace {
   /** `inspect` over the last good Session, with the output normalized as `inspect --json`; `undefined` if the Workspace never compiled. */
   query(query: Query): QueryAnswer | undefined;
   /**
-   * Connection snapshot: what a `/eventos` client receives on connect, in order: `estado`, `historial` and the
+   * Connection snapshot: what a `/events` client receives on connect, in order: `estado`, `historial` and the
    * `actividad` with `previos: true` of the live Activity log.
    */
   connection(): DevEvent[];

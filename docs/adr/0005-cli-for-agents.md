@@ -105,7 +105,7 @@ Theme codes (unknown property, nonexistent `before`/`after`, contrast, `solo-col
 
 If something fails (DSL or compilation) the Issues panel shows it and `dev` keeps the last good drawing. The page requests the geometry only for the active View, and none after a `pintura` change (protocol in ADR 0007).
 
-Trust in code: `dev` does not serve `/componentes.js` until the user confirms (the viewer asks the first time the Workspace has a Theme with code; `--trust-code` grants it beforehand) and warns about the code at startup. `/api/codigo` reports `hasCode`, the components and whether it is confirmed.
+Trust in code: `dev` does not serve `/components.js` until the user confirms (the viewer asks the first time the Workspace has a Theme with code; `--trust-code` grants it beforehand) and warns about the code at startup. `/api/code` reports `hasCode`, the components and whether it is confirmed.
 
 ### Left as implementation
 
@@ -154,7 +154,7 @@ Past 1 MB, the writer rotates to `activity.1.jsonl` (a single previous generatio
 
 Feed of the Agent panel: one line per event (time, agent or pid, command, clickable target, result mark: ok, errors, warnings or usage failure); the `args` on expand. No filters in the first delivery.
 
-Follow the agent (toggle): `target.view` goes to that View; `target.node` stays on the active View if it contains it and otherwise jumps to the first View, in declaration order, that contains it, and selects it; `target.files` does not move on its own. The `dev` page resolves it with the source of the current state (`destinoDelObjetivo` in `estudio`). Highlighting what changed belongs to the Session Diff, not to this log.
+Follow the agent (toggle): `target.view` goes to that View; `target.node` stays on the active View if it contains it and otherwise jumps to the first View, in declaration order, that contains it, and selects it; `target.files` does not move on its own. The `dev` page resolves it with the source of the current state (`targetOfGoal` in `dev-ui`). Highlighting what changed belongs to the Session Diff, not to this log.
 
 ## Amendment: Intent `set-theme` and reason `unknown-theme` (#176, map #168)
 

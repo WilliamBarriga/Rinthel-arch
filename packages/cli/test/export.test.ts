@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { run } from 'cli';
-import { datosDeExportadoSchema } from 'estudio';
+import { exportDataSchema } from 'dev-ui';
 
 const fixtures = join(import.meta.dirname, 'fixtures');
 
@@ -16,9 +16,9 @@ function copia(fixture: string): string {
 }
 
 /** The embedded data of an exported HTML, validated as the page does. */
-function datosDe(html: string): ReturnType<typeof datosDeExportadoSchema.parse> {
+function datosDe(html: string): ReturnType<typeof exportDataSchema.parse> {
   const json = /<script type="application\/json" id="rinthel-datos">([\s\S]*?)<\/script>/.exec(html)?.[1];
-  return datosDeExportadoSchema.parse(JSON.parse(json ?? 'null'));
+  return exportDataSchema.parse(JSON.parse(json ?? 'null'));
 }
 
 describe('export', () => {

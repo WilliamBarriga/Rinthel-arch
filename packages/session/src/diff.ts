@@ -1,7 +1,7 @@
 /**
  * Diff (CONTEXT.md): what changed between two Canonical forms, element by element. Pure; separate from
  * `classifyChange`, which decides how to redraw. The types, the identity (`elementKey`) and the schema live in
- * `canonical` (`dev.ts`), shared by `estudio` and `cli`.
+ * `canonical` (`dev.ts`), shared by `dev-ui` and `cli`.
  * Invariants: it does not detect renames (a rename is a removal plus an addition); each changed element carries its
  * changed properties tagged `texto` (label, description, Message text) or `estructura` (the rest). Stable order:
  * by element kind and, within it, by declaration order.

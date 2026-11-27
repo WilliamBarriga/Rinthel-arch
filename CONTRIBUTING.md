@@ -51,7 +51,7 @@ The rule: touching a guide means touching its pair. `pnpm check` fails if a guid
 | `packages/session` | Shared pipeline: compile, validate, compute geometry and edit the text; the live Workspace of `dev` without transport |
 | `packages/render` | Pure drawing in React (Nodes and Groups in HTML/CSS, Edges in SVG) |
 | `packages/shell` | Interactive viewer: pan/zoom, collapse, drag |
-| `packages/estudio` | Browser app of `dev` (the [Dev UI](docs/guide/dev-ui.md)): canvas, editor, Issues, Themes, file History and agent feed |
+| `packages/dev-ui` | Browser app of `dev` (the [Dev UI](docs/guide/dev-ui.md)): canvas, editor, Issues, Themes, file History and agent feed |
 | `packages/cli` | `validate`, `build`, `dev`, `inspect`, `edit`, `skill`, `scan`, `export`; the only package that touches disk and the `dev` server |
 | `packages/scanner` | Scanner: reads a codebase, without running it, into a Scan draft; outside the core, only `cli` imports it |
 | `npm` | The publishable `rinthel-arch` npm package: manifest and README; `pnpm npm:package` fills `dist/`, the licenses and the third-party notice |
@@ -62,7 +62,7 @@ The rule: touching a guide means touching its pair. `pnpm check` fails if a guid
 
 ## npm package
 
-`rinthel-arch` on npm is one package that bundles the whole CLI (`npm/`, outside the pnpm workspace). After `pnpm build`, `pnpm npm:package` writes `npm/dist/` (the esbuild bundle `bin.js`, the Dev UI assets in `estudio/` and the Scanner's `.wasm`), `LICENSE`, `LICENSE-LIKEC4` and `THIRD-PARTY-NOTICES.md` (generated from `pnpm licenses list`); then `npm pack` in `npm/` builds the tarball. `tests/npm-package.test.ts`, part of `pnpm test`, packs it, installs it in an empty folder and runs `validate`, `scan` and `dev`. elkjs is redistributed under EPL-2.0: the notice carries its license text and where to get its source. Publishing is manual, with interactive 2FA, and not part of any test.
+`rinthel-arch` on npm is one package that bundles the whole CLI (`npm/`, outside the pnpm workspace). After `pnpm build`, `pnpm npm:package` writes `npm/dist/` (the esbuild bundle `bin.js`, the Dev UI assets in `dev-ui/` and the Scanner's `.wasm`), `LICENSE`, `LICENSE-LIKEC4` and `THIRD-PARTY-NOTICES.md` (generated from `pnpm licenses list`); then `npm pack` in `npm/` builds the tarball. `tests/npm-package.test.ts`, part of `pnpm test`, packs it, installs it in an empty folder and runs `validate`, `scan` and `dev`. elkjs is redistributed under EPL-2.0: the notice carries its license text and where to get its source. Publishing is manual, with interactive 2FA, and not part of any test.
 
 ## Live demo
 

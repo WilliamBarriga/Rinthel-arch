@@ -22,7 +22,7 @@ export interface ActivityLog {
 /** Activity events that `dev` replays on connect. */
 const PREVIOUS_EVENTS = 50;
 
-/** The `actividad` branch of the `/eventos` events. */
+/** The `actividad` branch of the `/events` events. */
 export type DevActivityEvent = Extract<DevEvent, { name: 'actividad' }>;
 
 export interface LiveActivityLogOptions {

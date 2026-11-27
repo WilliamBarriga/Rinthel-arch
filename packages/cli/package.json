@@ -25,9 +25,9 @@
   },
   "dependencies": {
     "canonical": "workspace:*",
+    "dev-ui": "workspace:*",
     "dsl": "workspace:*",
     "esbuild": "0.28.2",
-    "estudio": "workspace:*",
     "layout": "workspace:*",
     "scanner": "workspace:*",
     "session": "workspace:*",

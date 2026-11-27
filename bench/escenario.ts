@@ -17,7 +17,7 @@ import { NEUTRAL_THEME } from 'theme';
 import { adaptadorDeWorker, servirLayout } from 'shell';
 import type { PuertoDeMensajes } from 'shell';
 
-import { construirEstudio } from 'estudio/construir';
+import { buildDevUi } from 'dev-ui/build';
 import { generarSecuencia, generarWorkspace } from './generador.ts';
 
 const ESCENARIOS = ['build-10k', 'relayout-1k', 'relayout-slots', 'relayout-grande', 'colapso-5k', 'secuencia-grande', 'bundle'] as const;
@@ -203,14 +203,14 @@ function cierre(raiz: string, archivo: string, visto = new Set<string>()): Set<s
 }
 
 async function bundleDelShell(): Promise<Record<string, number>> {
-  // La pagina real de `dev` tal como la construye `estudio` (`dev.tsx`, modulo ES con trozos) y el Worker (ELK, sin zod).
+  // La pagina real de `dev` tal como la construye `dev-ui` (`dev.tsx`, modulo ES con chunks) y el Worker (ELK, sin zod).
   const salida = mkdtempSync(join(tmpdir(), 'rinthel-bundle-'));
   try {
-    await construirEstudio({ salida });
+    await buildDevUi({ output: salida });
     const gzip = (archivos: Iterable<string>): number => [...archivos].reduce((total, a) => total + gzipSync(readFileSync(join(salida, a)), { level: 9 }).length, 0);
-    const inicial = cierre(salida, 'pagina.js');
-    const codigo = readdirSync(join(salida, 'trozos')).find((t) => t.startsWith('panel-de-codigo-'));
-    const delEditor = codigo === undefined ? [] : [...cierre(salida, `trozos/${codigo}`)].filter((a) => !inicial.has(a));
+    const inicial = cierre(salida, 'page.js');
+    const codigo = readdirSync(join(salida, 'chunks')).find((t) => t.startsWith('code-panel-'));
+    const delEditor = codigo === undefined ? [] : [...cierre(salida, `chunks/${codigo}`)].filter((a) => !inicial.has(a));
     const worker = gzip(['worker.js']);
     // Suelo: lo que pesa elkjs separado en api (pagina) + worker, sin nada nuestro.
     const lib = join(import.meta.dirname, '..', 'packages', 'layout', 'node_modules', 'elkjs', 'lib');
