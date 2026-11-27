@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
 import { canonicalFormSchema, resolveView } from 'canonical';
-import { layoutView as layoutDeVista } from 'layout';
+import { layoutView as layoutViewRaw } from 'layout';
 import type { GraphGeometry } from 'canonical';
 import { Diagram, resolveStyle } from 'render';
 import type { DiagramProps } from 'render';
@@ -11,8 +11,8 @@ import { NEUTRAL_THEME } from 'theme';
 import { sheetOf } from './helpers';
 
 /** `layoutView` of a graph View (architecture or flow): these tests look at Edge paths and boxes. */
-const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
-  const geometry = await layoutDeVista(...args);
+const layoutView = async (...args: Parameters<typeof layoutViewRaw>) => {
+  const geometry = await layoutViewRaw(...args);
   if (geometry.kind !== 'grafo') throw new Error('expected a graph Geometry');
   return geometry;
 };

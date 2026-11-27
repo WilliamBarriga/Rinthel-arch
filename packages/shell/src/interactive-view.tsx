@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FocusEvent as EventoDeFoco, KeyboardEvent as EventoDeTecla, MouseEvent as EventoDeRaton, ReactElement } from 'react';
+import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactElement } from 'react';
 import { select } from 'd3-selection';
 import { zoom, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent } from 'd3-zoom';
@@ -343,14 +343,14 @@ function ActiveView(props: ActiveViewProps): ReactElement {
     else toggle(id);
   };
 
-  const handleFocus = (event: EventoDeFoco): void => {
+  const handleFocus = (event: ReactFocusEvent): void => {
     if (event.target === event.currentTarget) setFocus((current) => current ?? (inSequence ? moveFocusInSequence(resolvedView, undefined, 'siguiente', visible) : moveFocus(resolvedView, undefined, 'siguiente')));
   };
-  const handleBlur = (event: EventoDeFoco): void => {
+  const handleBlur = (event: ReactFocusEvent): void => {
     if (event.target === event.currentTarget) setFocus(undefined);
   };
   /** Tab walks in Model order (and releases focus when leaving at an end), arrows jump along Edges, Enter/Space collapses or opens. */
-  const handleKeyDown = (event: EventoDeTecla): void => {
+  const handleKeyDown = (event: ReactKeyboardEvent): void => {
     if (event.target !== event.currentTarget) return;
     const move = (motion: Parameters<typeof moveFocus>[2] | Parameters<typeof moveFocusInSequence>[2]): boolean => {
       const next = inSequence ? moveFocusInSequence(resolvedView, currentFocus, motion as Parameters<typeof moveFocusInSequence>[2], visible) : moveFocus(resolvedView, currentFocus, motion as Parameters<typeof moveFocus>[2]);
@@ -387,7 +387,7 @@ function ActiveView(props: ActiveViewProps): ReactElement {
   const detail = detailLevel(width / cameraWidth, props.detailThresholds);
 
   /** Element under the mouse, over the whole View (not the one clipped to the viewport). */
-  const elementUnderMouse = (event: EventoDeRaton) => {
+  const elementUnderMouse = (event: ReactMouseEvent) => {
     if (shown === undefined || (event.target as Element).closest('[data-diagram]') === null) return undefined;
     const box = zone.current!.getBoundingClientRect();
     const k = width / currentCamera.current.width;
@@ -396,7 +396,7 @@ function ActiveView(props: ActiveViewProps): ReactElement {
   };
 
   /** In capture: on an element, the double click opens it and does not reach d3's zoom (which stops it in the drawing). */
-  const handleOpen = (event: EventoDeRaton): void => {
+  const handleOpen = (event: ReactMouseEvent): void => {
     if (dragging.current || props.onOpen === undefined) return;
     const element = elementUnderMouse(event);
     if (element === undefined) return;
@@ -404,12 +404,12 @@ function ActiveView(props: ActiveViewProps): ReactElement {
     props.onOpen({ kind: element.kind, id: element.id });
   };
 
-  const handleMouseMove = (event: EventoDeRaton): void => {
+  const handleMouseMove = (event: ReactMouseEvent): void => {
     if (inProgress !== undefined) return;
     setHover(elementUnderMouse(event)?.id);
   };
 
-  const handlePress = (event: EventoDeRaton): void => {
+  const handlePress = (event: ReactMouseEvent): void => {
     if (dragging.current) return;
     const element = elementUnderMouse(event);
     if (element === undefined) return;
