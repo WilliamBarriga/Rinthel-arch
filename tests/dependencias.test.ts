@@ -44,7 +44,7 @@ function crearWorkspace(archivos: Record<string, string>): string {
 
 describe('revisarWorkspace', () => {
   it('usa la cadena de dependencias de ADR 0004', () => {
-    expect(CADENA).toEqual(['canonical', 'tema', 'dsl', 'layout', 'sesion', 'render', 'shell', 'estudio', 'cli']);
+    expect(CADENA).toEqual(['canonical', 'tema', 'dsl', 'layout', 'session', 'render', 'shell', 'estudio', 'cli']);
   });
 
   it('estudio queda fuera del nucleo puro (usa DOM, fetch y EventSource)', () => {

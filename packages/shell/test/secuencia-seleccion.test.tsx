@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import type { SequenceGeometry } from 'canonical';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { VistaInteractiva, deserializarEstado } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -34,7 +34,7 @@ const sinPasos = `${modelo}view v { type sequence\n interaction checkout }\n`;
 const conPasos = `${modelo}view v { type sequence\n interaction checkout\n steps { step "uno" { upto pedir }\n step "dos" { upto guardar } } }\n`;
 const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
 
-const fuenteDe = (texto: string) => abrirSesion({ 'main.dg': texto }).fuente!;
+const fuenteDe = (texto: string) => openSession({ 'main.dg': texto }).source!;
 const geometriaDe = async (texto: string): Promise<SequenceGeometry> => (await layoutView(resolveView(fuenteDe(texto), 'v')!, TEMA_NEUTRO)) as SequenceGeometry;
 const centro = (c: { x: number; y: number; width: number; height: number }) => ({ x: c.x + c.width / 2, y: c.y + c.height / 2 });
 

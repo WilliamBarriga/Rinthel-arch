@@ -11,7 +11,7 @@ import { basename, dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
 import { capturarExportado, carpetaDelEstudio, htmlDeExportado } from 'estudio';
-import { abrirWorkspaceVivo, fetchSobreApiDeDev } from 'sesion';
+import { openLiveWorkspace, fetchOverDevApi } from 'session';
 
 import { puertoDeDisco, relojReal } from './puerto-de-disco';
 import { abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
@@ -39,27 +39,27 @@ export async function comandoExport(args: readonly string[], { estaticos = carpe
 
   const abierta = abrirSesionDe(leerWorkspace, workspace, temas);
   if ('fallo' in abierta) return abierta.fallo;
-  if (abierta.sesion.fuente === undefined) return { exitCode: 1, stdout: await textoDeIssues(abierta.sesion), stderr: '' };
+  if (abierta.sesion.source === undefined) return { exitCode: 1, stdout: await textoDeIssues(abierta.sesion), stderr: '' };
 
   let html: string;
   let vistas: number;
   let componentes: string[];
   try {
-    const vivo = await abrirWorkspaceVivo({
-      puerto: { ...puertoDeDisco(workspace, temas === undefined ? {} : { temas }), observar: () => () => undefined },
-      raiz: resolve(workspace),
-      reloj: relojReal,
-      ahora: Date.now,
-      confiarEnCodigo: true,
+    const vivo = await openLiveWorkspace({
+      port: { ...puertoDeDisco(workspace, temas === undefined ? {} : { temas }), watch: () => () => undefined },
+      root: resolve(workspace),
+      clock: relojReal,
+      now: Date.now,
+      trustCode: true,
     });
     try {
       const raices = temas === undefined ? [workspace] : [workspace, temas];
-      const datos = await capturarExportado({ fetch: fetchSobreApiDeDev(vivo), leerFuente: (ruta) => leerArchivoDeFuente(raices, ruta) });
+      const datos = await capturarExportado({ fetch: fetchOverDevApi(vivo), leerFuente: (ruta) => leerArchivoDeFuente(raices, ruta) });
       vistas = datos.estado.vistas.length;
       componentes = datos.componentes?.nombres ?? [];
       html = htmlDeExportado(datos, { titulo: `${basename(resolve(workspace))} - rinthel-arch`, estaticos });
     } finally {
-      vivo.cerrar();
+      vivo.close();
     }
   } catch (error) {
     return uso(`Could not export: ${(error as Error).message}`);

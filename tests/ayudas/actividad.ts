@@ -1,11 +1,11 @@
 /**
- * Eventos del Registro de actividad para las pruebas de `sesion`. `estudio/contrato` (codigo fuente, publicado para
- * `estudio` y `cli`) tiene los suyos: el codigo fuente no importa de `tests/ayudas` y `sesion` no importa de `estudio`.
+ * Activity log events for the `session` tests. `estudio/contrato` (source code, published for `estudio` and `cli`)
+ * has its own: source code does not import from `tests/ayudas` and `session` does not import from `estudio`.
  */
 import type { ActivityEvent } from 'canonical';
 
-/** Un `validate` exitoso del proceso `pid`, con la hora derivada de `pid`; `extra` pisa cualquier campo. */
-export const eventoDeActividad = (pid: number, extra: Partial<ActivityEvent> = {}): ActivityEvent => ({
+/** A successful `validate` of process `pid`, with the time derived from `pid`; `extra` overrides any field. */
+export const activityEvent = (pid: number, extra: Partial<ActivityEvent> = {}): ActivityEvent => ({
   contractVersion: 2,
   ts: `2026-11-19T10:00:${String(pid % 60).padStart(2, '0')}.000Z`,
   pid,
@@ -16,5 +16,5 @@ export const eventoDeActividad = (pid: number, extra: Partial<ActivityEvent> = {
   ...extra,
 });
 
-/** Las lineas de `.diagrams/activity.jsonl` con esos Eventos. */
-export const lineasDeActividad = (...eventos: ActivityEvent[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
+/** The `.diagrams/activity.jsonl` lines with those Events. */
+export const activityLines = (...events: ActivityEvent[]): string => events.map((e) => `${JSON.stringify(e)}\n`).join('');

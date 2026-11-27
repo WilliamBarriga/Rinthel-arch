@@ -1,12 +1,12 @@
 /**
  * Comando `dev`: servidor HTTP solo en 127.0.0.1 que sirve la app de `estudio` (`/` y `/_estudio/*`, leidos del disco en
  * cada peticion y con `no-store`), el estado y la Geometria por Vista, y serializa por SSE (`/eventos`) la instantanea de
- * conexion y el flujo de eventos del Workspace vivo (la secuencia es de `sesion`; el protocolo, de `canonical`).
+ * conexion y el flujo de eventos del Workspace vivo (la secuencia es de `session`; el protocolo, de `canonical`).
  * Seguridad: 403 a todo `Host` distinto de `127.0.0.1:<puerto>` o `localhost:<puerto>` (DNS rebinding); todo POST exige
  * un `Origin` propio (o ninguno, si no 403) y `application/json` (si no 415); un cuerpo de mas de 64 KiB es 413;
  * `/fuentes/<ruta>` solo sirve archivos de fuente bajo la raiz (si no, 404).
- * `/api/*` y toda ruta no servida aqui: la respuesta completa de `atenderApiDeDev` (ruteo, 400, 404, 405, 409, 422, 500).
- * Puertos: `puertoHttp` es el TCP; `puerto` es el `PuertoDelWorkspaceVivo` (por defecto `puertoDeDisco`: el disco del
+ * `/api/*` y toda ruta no servida aqui: la respuesta completa de `handleDevApi` (ruteo, 400, 404, 405, 409, 422, 500).
+ * Puertos: `puertoHttp` es el TCP; `puerto` es el `LiveWorkspacePort` (por defecto `puertoDeDisco`: el disco del
  * Workspace y de `--theme-path`, `fs.watch` y el Registro de actividad de `registro-en-disco.ts`).
  * Errores: `iniciarDev` rechaza si el puerto TCP esta ocupado (sin dejar el observador activo) y lanza si la lectura
  * inicial falla; `run(['dev', ...])` los convierte en codigo 2. Un estatico de `estudio` sin construir es 404 al pedirlo.
@@ -22,8 +22,8 @@ import { DEV_ROUTES } from 'canonical';
 import type { DevEvent } from 'canonical';
 import { RUTA_DEL_ESTUDIO, activosDelEstudio } from 'estudio';
 import type { ActivosDelEstudio } from 'estudio';
-import { abrirWorkspaceVivo, atenderApiDeDev } from 'sesion';
-import type { PuertoDelWorkspaceVivo, WorkspaceVivo } from 'sesion';
+import { openLiveWorkspace, handleDevApi } from 'session';
+import type { LiveWorkspacePort, LiveWorkspace } from 'session';
 
 import { compiladorDeCodigo } from './codigo';
 import type { ResultadoDeCodigo } from './codigo';
@@ -41,7 +41,7 @@ export interface OpcionesDeDev {
   /** Puerto TCP en 127.0.0.1 (`--port`); 0 elige uno libre. */
   puertoHttp?: number;
   /** Por donde el Workspace vivo lee, escribe, observa y sigue el Registro de actividad; por defecto `puertoDeDisco(workspace, { temas })`. */
-  puerto?: PuertoDelWorkspaceVivo;
+  puerto?: LiveWorkspacePort;
   /** Espera en ms tras el ultimo cambio antes de recompilar; por defecto la del Workspace vivo. */
   debounceMs?: number;
   /** Rutas de los estaticos de la app; por defecto las del build de `estudio`. Se consultan en cada peticion. */
@@ -112,20 +112,20 @@ function servirEstatico(res: ServerResponse, ruta: string | undefined): void {
 export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> {
   const { workspace, temas, puertoHttp = 0, debounceMs, estudio = activosDelEstudio, confiarEnCodigo = false } = opciones;
   const { puerto = puertoDeDisco(workspace, temas === undefined ? {} : { temas }), compilarCodigo = compiladorDeCodigo(workspace).compilar } = opciones;
-  const vivo: WorkspaceVivo = await abrirWorkspaceVivo({
-    puerto,
-    raiz: resolve(workspace),
-    reloj: relojReal,
-    ahora: Date.now,
-    confiarEnCodigo,
+  const vivo: LiveWorkspace = await openLiveWorkspace({
+    port: puerto,
+    root: resolve(workspace),
+    clock: relojReal,
+    now: Date.now,
+    trustCode: confiarEnCodigo,
     ...(debounceMs !== undefined && { debounceMs }),
-    compilarCodigo,
+    compileCode: compilarCodigo,
   });
 
   const clientes = new Set<ServerResponse>();
   /** La secuencia de eventos es del Workspace vivo; aqui solo se serializa como SSE. */
   const enviar = (cliente: ServerResponse, { name: nombre, data: datos }: DevEvent): void => void cliente.write(`event: ${nombre}\ndata: ${JSON.stringify(datos)}\n\n`);
-  const dejarDeEscuchar = vivo.escuchar((evento) => {
+  const dejarDeEscuchar = vivo.listen((evento) => {
     for (const cliente of clientes) enviar(cliente, evento);
   });
 
@@ -152,9 +152,9 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       cuerpo = await leerCuerpo(req);
       if (cuerpo === undefined) return responder(res, 413, { ok: false, message: 'Request body too large' });
     }
-    const respuesta = await atenderApiDeDev(vivo, { metodo, url, ...(cuerpo !== undefined && { cuerpo }) });
-    res.writeHead(respuesta.status, respuesta.cabeceras);
-    res.end(respuesta.cuerpo);
+    const respuesta = await handleDevApi(vivo, { method: metodo, url, ...(cuerpo !== undefined && { body: cuerpo }) });
+    res.writeHead(respuesta.status, respuesta.headers);
+    res.end(respuesta.body);
   };
 
   /** Una ruta mal codificada o que sale de la raiz da `undefined`. */
@@ -194,7 +194,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       clientes.add(res);
       res.on('close', () => clientes.delete(res));
-      for (const evento of vivo.conexion()) enviar(res, evento);
+      for (const evento of vivo.connection()) enviar(res, evento);
     } else {
       // Una conexion que se corta al leer el cuerpo no tiene a quien responder.
       api(req, res, url).catch(() => res.destroy());
@@ -203,7 +203,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
 
   const detener = (): void => {
     dejarDeEscuchar();
-    vivo.cerrar();
+    vivo.close();
   };
   await new Promise<void>((ok, fallo) => {
     servidor.once('error', fallo);
@@ -214,7 +214,7 @@ export async function iniciarDev(opciones: OpcionesDeDev): Promise<ServidorDev> 
   });
   const direccion = servidor.address();
   if (direccion === null || typeof direccion === 'string') throw new Error('The server has no port');
-  const { componentes, confiado } = vivo.codigo();
+  const { components: componentes, trusted: confiado } = vivo.code();
 
   return {
     url: `http://127.0.0.1:${direccion.port}/`,

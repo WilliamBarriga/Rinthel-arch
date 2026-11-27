@@ -36,7 +36,7 @@ describe('panel Issues', () => {
 
     fireEvent.click(within(lista).getByRole('button', { name: 'Apply fix for main.dg:8' }));
 
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toContain('  api -> db "lee"\n'));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toContain('  api -> db "lee"\n'));
     expect(cuerpos).toEqual([{ ediciones: [{ file: 'main.dg', range: { start: { line: 8, column: 10 }, end: { line: 8, column: 13 } }, replacement: 'db' }], version: version.version }]);
     await waitFor(() => expect(within(screen.getByRole('list', { name: 'Issues' })).getAllByRole('listitem')).toHaveLength(1));
   });
@@ -61,8 +61,8 @@ describe('panel Issues', () => {
 
     expect(within(lista).getAllByRole('listitem').map((li) => within(li).getAllByRole('button')[0]!.textContent)).toEqual(['main.dg:9']);
     fireEvent.click(screen.getByRole('button', { name: 'Apply 1 fix' }));
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toContain('  db -> api "escribe"\n'));
-    expect(dev.workspace.texto('main.dg')).toContain('  api -> dbb "lee"\n');
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toContain('  db -> api "escribe"\n'));
+    expect(dev.workspace.text('main.dg')).toContain('  api -> dbb "lee"\n');
     expect(cuerpos).toEqual([expect.objectContaining({ descripcion: 'Apply 1 fix' })]);
   });
 
@@ -81,12 +81,12 @@ describe('panel Issues', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Apply 2 fix' }));
 
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(DSL.replace('  api -> db "lee"\n', '  api -> db "lee"\n  db -> api "escribe"\n')));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(DSL.replace('  api -> db "lee"\n', '  api -> db "lee"\n  db -> api "escribe"\n')));
     expect(cuerpos).toEqual([{ ediciones: [expect.objectContaining({ replacement: 'db' }), expect.objectContaining({ replacement: 'api' })], version: expect.any(Number), descripcion: 'Apply 2 fix' }]);
     expect(await screen.findByText('No issues.')).toBeTruthy();
     // Un solo deshacer vuelve atras los dos fix.
     await dev.fetch('/api/deshacer', { method: 'POST', body: '{}' });
-    expect(dev.workspace.texto('main.dg')).toBe(COLGANTES);
+    expect(dev.workspace.text('main.dg')).toBe(COLGANTES);
   });
 
   it.each([
@@ -101,7 +101,7 @@ describe('panel Issues', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Apply 2 fix' }));
 
     expect((await screen.findByRole('alert')).textContent).toBe(`No fix was applied (${motivo} in main.dg): ${mensaje}`);
-    expect(dev.workspace.texto('main.dg')).toBe(COLGANTES);
+    expect(dev.workspace.text('main.dg')).toBe(COLGANTES);
   });
 
   it('ante un 409 el panel se recalcula sobre el estado nuevo y reintenta', async () => {
@@ -115,8 +115,8 @@ describe('panel Issues', () => {
 
     fireEvent.click(await within(montado.lista).findByRole('button', { name: 'Apply fix for main.dg:8' }));
 
-    await waitFor(() => expect(montado.dev.workspace.texto('main.dg')).toContain('  api -> db "lee"\n'));
-    expect(montado.dev.workspace.texto('main.dg')).toMatch(/^\/\/ agente\n/);
+    await waitFor(() => expect(montado.dev.workspace.text('main.dg')).toContain('  api -> db "lee"\n'));
+    expect(montado.dev.workspace.text('main.dg')).toMatch(/^\/\/ agente\n/);
     expect(cuerpos).toEqual([
       expect.objectContaining({ ediciones: [expect.objectContaining({ range: expect.objectContaining({ start: { line: 8, column: 10 } }) })] }),
       expect.objectContaining({ ediciones: [expect.objectContaining({ range: expect.objectContaining({ start: { line: 9, column: 10 } }) })] }),

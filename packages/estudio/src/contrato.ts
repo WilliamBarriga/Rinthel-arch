@@ -1,10 +1,10 @@
 /**
  * `estudio/contrato` (solo pruebas): `probarContratoDeDev(crear)` es la suite que corre igual contra `devEnMemoria`
- * (aqui) y contra el `dev` real con `puertoEnMemoria` (en `cli`), para que el fake no mienta. Tambien exporta
+ * (aqui) y contra el `dev` real con `inMemoryPort` (en `cli`), para que el fake no mienta. Tambien exporta
  * `devEnMemoria`, `eventosSobreFetch` (transporte SSE sobre `fetch`, para Node) y la fabrica de Eventos de actividad de
  * prueba (`eventoDeActividad`, `lineasDeActividad`).
  * Invariantes: las entradas son DSL de texto; las rutas se piden relativas (`/api/estado`); no entra al bundle del navegador.
- * Depende de `vitest` (peerDependency opcional), `sesion` y `canonical`.
+ * Depende de `vitest` (peerDependency opcional), `session` y `canonical`.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -211,8 +211,8 @@ export const eventoDeActividad = (pid: number, extra: Partial<ActivityEvent> = {
 export const lineasDeActividad = (...eventos: ActivityEvent[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
 
 export function probarContratoDeDev(crear: CrearDev): void {
-  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, extra: Omit<ContenidoDeDevDePrueba, 'propios'> = {}): Promise<T> => {
-    const dev = await crear({ propios, ...extra });
+  const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, extra: Omit<ContenidoDeDevDePrueba, 'own'> = {}): Promise<T> => {
+    const dev = await crear({ own: propios, ...extra });
     try {
       return await prueba(dev);
     } finally {
@@ -281,7 +281,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           });
           expect(resto.filter((n) => n === 'diferencia')).toHaveLength(2);
         },
-        { actividad: lineasDeActividad(eventoDeActividad(1)) },
+        { activity: lineasDeActividad(eventoDeActividad(1)) },
       );
     });
 
@@ -306,7 +306,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           expect(previos?.previos).toBe(true);
           expect(previos?.eventos.map((e) => e.pid)).toEqual(Array.from({ length: 50 }, (_, i) => i + 5));
         },
-        { actividad: registro },
+        { activity: registro },
       );
     });
 
@@ -486,7 +486,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           const res = await enviar(dev, '/api/edit', JSON.stringify({ type: 'move-pin', view: 'general', node: 'api', x: 1, y: 2 }));
           expect({ status: res.status, cuerpo: errorDeDevSchema.parse(await res.json()) }).toEqual({ status: 500, cuerpo: { ok: false, message: 'disco lleno' } });
         },
-        { escrituraRota: 'disco lleno' },
+        { brokenWrite: 'disco lleno' },
       );
     });
 
@@ -538,7 +538,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           ]);
           expect(archivos.every((a) => a.hash.length > 0)).toBe(true);
         },
-        { temas: { 'tema.dg': TEMA } },
+        { themes: { 'tema.dg': TEMA } },
       );
     });
 
@@ -594,7 +594,7 @@ export function probarContratoDeDev(crear: CrearDev): void {
           });
           expect((await post(dev, '/api/edit', { ediciones: [{ file: 1 }] })).status).toBe(400);
         },
-        { temas: { 'tema.dg': TEMA } },
+        { themes: { 'tema.dg': TEMA } },
       );
     });
   });

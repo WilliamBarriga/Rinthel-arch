@@ -4,7 +4,7 @@ Complementa el ADR 0007. Describe como queda el shell tras la limpieza; no cambi
 
 ## Estado de partida
 
-`VistaActiva` (en `packages/shell/src/vista-interactiva.tsx`) sigue siendo el adaptador entre d3-zoom/DOM y el nucleo (`interaccion.ts`, `colapso.ts`, `geometria.ts`). El nucleo de intenciones e historial (#100) vive en `sesion` (`intenciones.ts`), fuera de `VistaActiva`; `control-de-edicion.ts` se retiro de `shell` en #165 (ADR 0007, seccion Shell). Lo que queda dentro del componente: camara d3, arrastre de Nodos, seleccion, colapso con morph, pasos y navegacion por hooks.
+`VistaActiva` (en `packages/shell/src/vista-interactiva.tsx`) sigue siendo el adaptador entre d3-zoom/DOM y el nucleo (`interaccion.ts`, `colapso.ts`, `geometria.ts`). El nucleo de intenciones e historial (#100) vive en `session` (`intents.ts`), fuera de `VistaActiva`; `control-de-edicion.ts` se retiro de `shell` en #165 (ADR 0007, seccion Shell). Lo que queda dentro del componente: camara d3, arrastre de Nodos, seleccion, colapso con morph, pasos y navegacion por hooks.
 
 ## Un mecanismo para props controlados: `useControlado`
 

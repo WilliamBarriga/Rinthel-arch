@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import type { SequenceGeometry } from 'canonical';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -13,7 +13,7 @@ import { camaraDe, pulsarEn } from './ayudas';
 afterEach(cleanup);
 
 const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
-const fuenteDe = (texto: string) => abrirSesion({ 'main.dg': texto }).fuente!;
+const fuenteDe = (texto: string) => openSession({ 'main.dg': texto }).source!;
 const geometriaDe = async (texto: string, vista: string): Promise<SequenceGeometry> => (await layoutView(resolveView(fuenteDe(texto), vista)!, TEMA_NEUTRO)) as SequenceGeometry;
 const actual = (c: HTMLElement) => c.querySelector('[data-vista]')!.getAttribute('data-vista');
 const migas = (c: HTMLElement) => [...c.querySelectorAll('[data-breadcrumbs] [data-crumb]')].map((e) => e.getAttribute('data-crumb'));

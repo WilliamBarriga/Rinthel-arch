@@ -2,7 +2,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { layoutView } from 'layout';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -30,7 +30,7 @@ view cerrada { type sequence
  interaction i
  depth 1 }
 `;
-const fuente = abrirSesion({ 'main.dg': texto }).fuente!;
+const fuente = openSession({ 'main.dg': texto }).source!;
 const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
 const rect = (el: HTMLElement) => {
   // Las cabeceras se posicionan con `transform: translate(x, y)`; el box, con left/top.

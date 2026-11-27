@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { CanonicalForm } from 'canonical';
-import { abrirSesion, diferenciar } from 'sesion';
+import { openSession, computeDiff } from 'session';
 
 import type { DiferenciaDeDev, ElementoDeDiferenciaDeDev } from '../src/protocolo';
 import { proyectarDiferencia, unirDiferencia, visitarVista, vencerResaltado } from '../navegador/diferencia/proyeccion';
@@ -44,7 +44,7 @@ theme claro extends neutral {
 }
 `;
 
-const fuente: CanonicalForm = abrirSesion({ 'main.dg': DSL }).fuente!;
+const fuente: CanonicalForm = openSession({ 'main.dg': DSL }).source!;
 
 const nodo = (id: string): ElementoDeDiferenciaDeDev => ({ kind: 'node', id });
 
@@ -84,15 +84,15 @@ describe('proyectarDiferencia', () => {
 
   it('el aviso de Tema cubre la cadena extends: cambiar el padre avisa en la Vista del hijo', () => {
     const conPadre = (acento: string) =>
-      abrirSesion({ 'main.dg': DSL.replace('theme claro extends neutral {', `theme base extends neutral {\n  palette { acento "${acento}" }\n}\n\ntheme claro extends base {`).replace('  palette { acento "#0ea5e9" }\n', '') }).fuente!;
+      openSession({ 'main.dg': DSL.replace('theme claro extends neutral {', `theme base extends neutral {\n  palette { acento "${acento}" }\n}\n\ntheme claro extends base {`).replace('  palette { acento "#0ea5e9" }\n', '') }).source!;
     const antes = conPadre('#111111');
     const despues = conPadre('#222222');
-    const { cambiados } = diferenciar(antes, despues);
+    const { cambiados } = computeDiff(antes, despues);
     expect(proyectarDiferencia(cambiados.map((c) => c.elemento), despues, { vista: 'general' })).toMatchObject({ temaDeLaVista: 'claro' });
   });
 
   it('una Arista se proyecta por su ordinal dentro del par de Nodos', () => {
-    const er = abrirSesion({
+    const er = openSession({
       'er.dg': `specification { node tabla }
 model {
   tabla pedidos "Pedidos" {
@@ -108,7 +108,7 @@ view datos {
   include **
 }
 `,
-    }).fuente!;
+    }).source!;
     const arista = (ordinal: number): ElementoDeDiferenciaDeDev => ({ kind: 'edge', from: 'pedidos', to: 'personas', ordinal });
     expect(proyectarDiferencia([arista(0)], er, { vista: 'datos' }).lienzo).toEqual(['pedidos#cliente_id -> personas#id']);
     expect(proyectarDiferencia([arista(1)], er, { vista: 'datos' }).lienzo).toEqual(['pedidos#vendedor_id -> personas#id']);

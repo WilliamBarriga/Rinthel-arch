@@ -1,5 +1,5 @@
 /**
- * The `dev` protocol, with a single owner, shared by the Live workspace (`sesion`), the server (`cli`) and the page
+ * The `dev` protocol, with a single owner, shared by the Live workspace (`session`), the server (`cli`) and the page
  * (`estudio`): routes, named SSE events, schemas of what the Live workspace produces (state, Diff, File history,
  * activity, files, `inspect` not found) and of the write requests, the identity of the elements of a
  * Diff and the mapping of a rejection to an HTTP status (ADR 0004, 0007). `estudio/protocolo` re-exports it for the page.
@@ -132,7 +132,7 @@ export type ChangedProperty = z.infer<typeof changedPropertySchema>;
 const changedElementSchema = z.object({ elemento: diffElementSchema, propiedades: z.array(changedPropertySchema) });
 export type ChangedElement = z.infer<typeof changedElementSchema>;
 
-/** Diff (CONTEXT.md) between two Canonical forms; computed by `diferenciar` in `sesion`. */
+/** Diff (CONTEXT.md) between two Canonical forms; computed by `computeDiff` in `session`. */
 export const diffSchema = z.object({
   agregados: z.array(diffElementSchema),
   quitados: z.array(diffElementSchema),
@@ -246,7 +246,7 @@ export type InspectNotFound = z.infer<typeof inspectNotFoundSchema>;
  * SSE events of `/eventos`, each with `event: <name>` and the data in JSON. On connect `estado`,
  * `historial` and `actividad` arrive with `previos: true`; after each `estado`, the `historial` and, if any, the `diferencia`
  * of that `version`; and an `actividad` with `previos: false` per batch appended to the log. The sequence is decided by
- * the Live workspace (`conexion` and `escuchar` in `sesion`); the real server and `devEnMemoria` only serialize it.
+ * the Live workspace (`connection` and `listen` in `session`); the real server and `devEnMemoria` only serialize it.
  */
 export const DEV_EVENTS = ['estado', 'actividad', 'diferencia', 'historial'] as const;
 export type DevEventName = (typeof DEV_EVENTS)[number];

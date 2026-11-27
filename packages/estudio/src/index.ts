@@ -5,7 +5,7 @@
  * Export (`diagrams export`): `capturarExportado` (the data, through the `dev` API) and `htmlDeExportado` (the file).
  * Invariantes: no empaqueta nada; solo lista los trozos de la pagina (`trozos/`, con hash) en cada llamada; las rutas
  * existen solo tras `pnpm --filter estudio build`.
- * Depende de `canonical`, `layout`, `render`, `sesion` (solo `devEnMemoria` de `estudio/contrato`) y `shell` (solo la
+ * Depende de `canonical`, `layout`, `render`, `session` (solo `devEnMemoria` de `estudio/contrato`) y `shell` (solo la
  * app de navegador, que no se exporta por aqui).
  */
 import { existsSync, readdirSync } from 'node:fs';

@@ -4,7 +4,7 @@
  * Invariants: qualified ids `a.b.c` define the hierarchy; colors are Palette names, never hex; of the Theme it
  * only knows `name` and `palette`; a View only selects Nodes.
  * Errors: `validate` returns sorted issues and never throws; it only throws on usage or internal failures.
- * Dependencies: only `zod`; it is the first of `canonical -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`.
+ * Dependencies: only `zod`; it is the first of `canonical -> tema -> dsl -> layout -> session -> render -> shell -> estudio -> cli`.
  */
 export {
   ER_CARDINALITIES,

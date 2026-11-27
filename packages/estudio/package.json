@@ -52,7 +52,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "render": "workspace:*",
-    "sesion": "workspace:*",
+    "session": "workspace:*",
     "shell": "workspace:*",
     "zod": "^4.6.6"
   },

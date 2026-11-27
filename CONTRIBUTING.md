@@ -48,7 +48,7 @@ The rule: touching a guide means touching its pair. `pnpm check` fails if a guid
 | `packages/tema` | Catalog of Primitives and Slots, resolved Style and Metrics |
 | `packages/dsl` | Grammar (Langium) and compiler of the `.dg` text |
 | `packages/layout` | Layout with ELK and Pins; cached geometry |
-| `packages/sesion` | Shared pipeline: compile, validate, compute geometry and edit the text; the live Workspace of `dev` without transport |
+| `packages/session` | Shared pipeline: compile, validate, compute geometry and edit the text; the live Workspace of `dev` without transport |
 | `packages/render` | Pure drawing in React (Nodes and Groups in HTML/CSS, Edges in SVG) |
 | `packages/shell` | Interactive viewer: pan/zoom, collapse, drag |
 | `packages/estudio` | Browser app of `dev` (the [Dev UI](docs/guide/dev-ui.md)): canvas, editor, Issues, Themes, file History and agent feed |

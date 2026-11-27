@@ -1,7 +1,7 @@
 /** La consulta de `inspect` sobre una Sesion y el formato de toda su salida (JSON y legible). */
 import { inspectOutputSchema } from 'canonical';
 import type { InspectCommand, InspectOutput } from 'canonical';
-import type { Respuesta, Sesion } from 'sesion';
+import type { QueryAnswer, Session } from 'session';
 
 type Sitio = { file: string; line: number };
 
@@ -17,9 +17,9 @@ export interface ConsultaDeInspect {
 }
 
 /** `inspect` de la terminal (la consulta vive en `Sesion.consultar`; `GET /api/inspect` la hace el Workspace vivo); `undefined` si la Sesion no tiene Fuente (errores). */
-export function consultarInspect(sesion: Sesion, { comando, argumento, tipo, estado, diagrama, catalogo }: ConsultaDeInspect): Respuesta | undefined {
-  if (comando !== 'theme') return sesion.consultar({ comando, argumento });
-  return sesion.consultar({ comando, argumento, catalogo: catalogo === true, ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(diagrama !== undefined && { diagrama }) });
+export function consultarInspect(sesion: Session, { comando, argumento, tipo, estado, diagrama, catalogo }: ConsultaDeInspect): QueryAnswer | undefined {
+  if (comando !== 'theme') return sesion.query({ command: comando, argument: argumento });
+  return sesion.query({ command: comando, argument: argumento, catalog: catalogo === true, ...(tipo !== undefined && { kind: tipo }), ...(estado !== undefined && { state: estado }), ...(diagrama !== undefined && { diagram: diagrama }) });
 }
 
 /** La salida tal como la da `inspect --json` (validada y normalizada por el esquema). */

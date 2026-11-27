@@ -13,10 +13,10 @@ import type { BuildOptions, Message } from 'esbuild';
 
 import { CODES } from 'canonical';
 import type { Issue } from 'canonical';
-import type { CodigoCompilado, InterfazDeComponente } from 'sesion';
+import type { CompiledCode, ComponentInterface } from 'session';
 
-/** Lo que el Workspace vivo de `sesion` espera del compilador (`CodigoCompilado`). */
-export type ResultadoDeCodigo = CodigoCompilado;
+/** Lo que el Workspace vivo de `session` espera del compilador (`CompiledCode`). */
+export type ResultadoDeCodigo = CompiledCode;
 
 interface ModuloCompilado {
   cjs: string;
@@ -105,7 +105,7 @@ export function compiladorDeCodigo(raiz: string): { compilar(): ResultadoDeCodig
       try {
         huella = huellaDe(raiz, rutas);
       } catch {
-        return ultimo?.resultado ?? { componentes: {}, issues: [], bundle: unirModulos([]) };
+        return ultimo?.resultado ?? { components: {}, issues: [], bundle: unirModulos([]) };
       }
       if (ultimo?.huella === huella) return ultimo.resultado;
 
@@ -117,7 +117,7 @@ export function compiladorDeCodigo(raiz: string): { compilar(): ResultadoDeCodig
       }
       for (const ruta of [...buenos.keys()]) if (!rutas.includes(ruta)) buenos.delete(ruta);
 
-      const componentes: Record<string, InterfazDeComponente> = {};
+      const componentes: Record<string, ComponentInterface> = {};
       const dueno = new Map<string, string>();
       for (const [ruta, { exportados }] of [...buenos].sort(([a], [b]) => a.localeCompare(b))) {
         for (const nombre of exportados) {
@@ -130,7 +130,7 @@ export function compiladorDeCodigo(raiz: string): { compilar(): ResultadoDeCodig
           componentes[nombre] = {};
         }
       }
-      const resultado = { componentes, issues, bundle: unirModulos([...buenos].sort(([a], [b]) => a.localeCompare(b))) };
+      const resultado = { components: componentes, issues, bundle: unirModulos([...buenos].sort(([a], [b]) => a.localeCompare(b))) };
       ultimo = { huella, resultado };
       return resultado;
     },

@@ -13,8 +13,8 @@ import type { ActividadDeDev } from 'estudio/protocolo';
 
 import { iniciarDev } from 'cli';
 import type { OpcionesDeDev, ServidorDev } from 'cli';
-import { puertoEnMemoria } from 'sesion';
-import type { PuertoDelWorkspaceVivo } from 'sesion';
+import { inMemoryPort } from 'session';
+import type { LiveWorkspacePort } from 'session';
 
 import { puertoDeDisco } from '../src/puerto-de-disco';
 
@@ -36,13 +36,13 @@ view general {
 
 /** Workspace en memoria con un observador que se puede consultar. */
 function entorno(inicial: Record<string, string>) {
-  const base = puertoEnMemoria({ propios: inicial });
+  const base = inMemoryPort({ own: inicial });
   let observadores = 0;
-  const puerto: PuertoDelWorkspaceVivo = {
+  const puerto: LiveWorkspacePort = {
     ...base,
-    observar(alCambiar) {
+    watch(alCambiar) {
       observadores += 1;
-      const dejar = base.observar(alCambiar);
+      const dejar = base.watch(alCambiar);
       return () => {
         observadores -= 1;
         dejar();
@@ -77,7 +77,7 @@ function workspaceEnDisco(): string {
   return raiz;
 }
 
-const sinCodigo: OpcionesDeDev['compilarCodigo'] = () => ({ componentes: {}, issues: [], bundle: 'return {};' });
+const sinCodigo: OpcionesDeDev['compilarCodigo'] = () => ({ components: {}, issues: [], bundle: 'return {};' });
 
 const respuesta = async (res: Response) => ({ status: res.status, cuerpo: (await res.json()) as unknown });
 

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { ChangeSet, EditorState, Text } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 
 import { edicionesDesdeCambios } from '../navegador/editor/cambios';
 import { opcionesDeCompletado } from '../navegador/editor/completado';
@@ -72,7 +72,7 @@ view mapa {
 
 describe('completado', () => {
   it('ofrece las palabras clave y los ids de la ultima Fuente buena (Nodos, Vistas, Tipos, Interacciones)', () => {
-    const fuente = abrirSesion({ 'main.dg': DSL }).fuente;
+    const fuente = openSession({ 'main.dg': DSL }).source;
     const opciones = opcionesDeCompletado(fuente);
     const de = (tipo: string) => opciones.filter((o) => o.type === tipo).map((o) => o.label);
     expect(de('keyword')).toEqual(expect.arrayContaining(['view', 'include']));

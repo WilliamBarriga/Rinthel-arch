@@ -1,5 +1,5 @@
 # canonical
-Zod schemas of the Canonical form, the pure functions that query it and the contracts shared by `cli`, `sesion` and `estudio`.
+Zod schemas of the Canonical form, the pure functions that query it and the contracts shared by `cli`, `session` and `estudio`.
 
 ## What it does
 - Defines and validates the schema of the Canonical form (Nodes, Edges, Views, Steps, Palette) and of the Geometry; `validate` returns `Issue`s with `hint` and `fix` (codes in `CODES`).
@@ -9,7 +9,7 @@ Zod schemas of the Canonical form, the pure functions that query it and the cont
 ## What it does not do
 - Does not read DSL text nor merge files: that is `dsl`.
 - Does not define the content of a Theme nor compute geometry: that is `tema` and `layout`.
-- Does not touch disk, clock or network: it is pure core (the on-disk Activity log is `cli`'s; the protocol is served by `cli` and produced by `sesion`).
+- Does not touch disk, clock or network: it is pure core (the on-disk Activity log is `cli`'s; the protocol is served by `cli` and produced by `session`).
 
 ## Depends on
 No workspace package. It is the first of the chain (`docs/CODING.md`, "Dependency direction"). External dependency: `zod`.

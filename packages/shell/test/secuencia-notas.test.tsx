@@ -2,7 +2,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { layoutView } from 'layout';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { TEMA_NEUTRO, claveDeTexto } from 'tema';
@@ -24,7 +24,7 @@ model {
 view v { type sequence
  interaction i }
 `;
-const fuente = abrirSesion({ 'main.dg': texto }).fuente!;
+const fuente = openSession({ 'main.dg': texto }).source!;
 
 describe('VistaInteractiva: Notas y ref de secuencia', () => {
   it('la Nota se ve como papel (esquina doblada, sin cabecera) y no como participante; el ref pinta su titulo', async () => {

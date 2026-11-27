@@ -199,9 +199,9 @@ importers:
       render:
         specifier: workspace:*
         version: link:packages/render
-      sesion:
+      session:
         specifier: workspace:*
-        version: link:packages/sesion
+        version: link:packages/session
       shell:
         specifier: workspace:*
         version: link:packages/shell
@@ -254,9 +254,9 @@ importers:
       scanner:
         specifier: workspace:*
         version: link:../scanner
-      sesion:
+      session:
         specifier: workspace:*
-        version: link:../sesion
+        version: link:../session
       tema:
         specifier: workspace:*
         version: link:../tema
@@ -352,9 +352,9 @@ importers:
       render:
         specifier: workspace:*
         version: link:../render
-      sesion:
+      session:
         specifier: workspace:*
-        version: link:../sesion
+        version: link:../session
       shell:
         specifier: workspace:*
         version: link:../shell
@@ -474,7 +474,7 @@ importers:
         specifier: ^4.1.11
         version: 4.1.12(@types/node@24.19.1)(jsdom@30.1.2)(vite@7.3.7(@types/node@24.19.1))
 
-  packages/sesion:
+  packages/session:
     dependencies:
       canonical:
         specifier: workspace:*
@@ -516,9 +516,9 @@ importers:
       render:
         specifier: workspace:*
         version: link:../render
-      sesion:
+      session:
         specifier: workspace:*
-        version: link:../sesion
+        version: link:../session
       tema:
         specifier: workspace:*
         version: link:../tema

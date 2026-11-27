@@ -57,7 +57,7 @@ describe('editor del DSL: guardado', () => {
     vi.advanceTimersByTime(1);
     vi.useRealTimers();
 
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toContain('servicio api "API nueva"'));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toContain('servicio api "API nueva"'));
     expect(posts).toEqual([
       {
         ruta: '/api/edit',
@@ -76,13 +76,13 @@ describe('editor del DSL: guardado', () => {
     escribir(vista, 'include **', '\n  // uno');
     expect(fireEvent.keyDown(caja, { key: 's', ctrlKey: true })).toBe(false);
     vi.useRealTimers();
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toContain('// uno'));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toContain('// uno'));
 
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     escribir(vista, '// uno', '\n  // dos');
     fireEvent.blur(caja);
     vi.useRealTimers();
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toContain('// dos'));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toContain('// dos'));
   });
 
   it('un texto que no compila se guarda igual: el lienzo conserva la ultima Fuente buena y los Gestos quedan deshabilitados con el motivo', async () => {
@@ -93,7 +93,7 @@ describe('editor del DSL: guardado', () => {
     escribir(vista, '  api -> db "lee"', '\n  fantasma -> api');
     fireEvent.keyDown(caja, { key: 's', ctrlKey: true });
 
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toContain('fantasma -> api'));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toContain('fantasma -> api'));
     const motivo = await screen.findByRole('status', { name: 'Gestures' });
     expect(motivo.textContent).toMatch(/Gestures disabled/);
     expect(motivo.textContent).toMatch(/main\.dg:9/);
@@ -111,7 +111,7 @@ describe('editor del DSL: guardado', () => {
     vi.useRealTimers();
 
     await waitFor(() => expect(posts.map((p) => p.ruta)).toEqual(['/api/edit', '/api/deshacer']));
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(DSL));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(DSL));
   });
 });
 
@@ -242,7 +242,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     dev.editarFuera('main.dg', DSL.replace('specification {', '// del agente\nspecification {').replace('"API"', '"API publica"'));
 
     await waitFor(() => expect(vista.state.doc.toString()).toContain('"API publica"'));
-    expect(vista.state.doc.toString()).toBe(dev.workspace.texto('main.dg'));
+    expect(vista.state.doc.toString()).toBe(dev.workspace.text('main.dg'));
     const { from, to } = vista.state.selection.main;
     expect(vista.state.sliceDoc(from, to)).toBe('include');
     expect(vista.scrollDOM.scrollTop).toBe(scroll);
@@ -265,7 +265,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     vi.useRealTimers();
 
     const unido = DSL.replace('"API"', '"API publica"').replace('include **', 'include **\n  // mio');
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(unido));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(unido));
     expect(posts.filter((p) => p.ruta === '/api/edit')).toHaveLength(2);
     await waitFor(() => expect(estadoDelGuardado().textContent).toMatch(/^Saved/));
     expect(vista.state.doc.toString()).toBe(unido);
@@ -288,7 +288,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     const aviso = screen.getByRole('alert', { name: 'External write' });
     expect(aviso.textContent).toMatch(/the disk won in one place \(line 7\)/);
     expect(vista.state.doc.toString()).toBe(DSL.replace('"Base de datos"', '"Postgres"'));
-    expect(dev.workspace.texto('main.dg')).toBe(DSL.replace('"Base de datos"', '"Postgres"'));
+    expect(dev.workspace.text('main.dg')).toBe(DSL.replace('"Base de datos"', '"Postgres"'));
 
     act(() => vi.advanceTimersByTime(15_000 - 1));
     expect(screen.queryByRole('alert', { name: 'External write' })).not.toBeNull();
@@ -312,7 +312,7 @@ describe('editor del DSL frente a escrituras externas', () => {
 
     const recuperado = DSL.replace('"Base de datos"', '"Base de datos (mia)"');
     expect(vista.state.doc.toString()).toBe(recuperado);
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(recuperado));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(recuperado));
     expect(screen.queryByRole('alert', { name: 'External write' })).toBeNull();
   });
 
@@ -333,7 +333,7 @@ describe('editor del DSL frente a escrituras externas', () => {
 
     escribir(vista, 'include **', '\n  // mio');
     fireEvent.keyDown(caja, { key: 's', ctrlKey: true });
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toContain('// mio'));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toContain('// mio'));
     await act(async () => dev.asentado());
     await waitFor(() => expect(estadoDelGuardado().textContent).toMatch(/^Saved/));
     await act(async () => new Promise((r) => setTimeout(r, 50)));
@@ -341,7 +341,7 @@ describe('editor del DSL frente a escrituras externas', () => {
     expect(lecturas).toEqual(['/api/archivo/main.dg']);
     for (const l of document.querySelectorAll('.cm-line.ui-linea-del-disco')) lineasDelDisco.push(Number(l.textContent));
     expect(lineasDelDisco).toEqual([]);
-    expect(vista.state.doc.toString()).toBe(dev.workspace.texto('main.dg'));
+    expect(vista.state.doc.toString()).toBe(dev.workspace.text('main.dg'));
   });
 });
 

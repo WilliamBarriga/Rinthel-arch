@@ -1,5 +1,5 @@
 /**
- * Edit Intents (`POST /api/edit`, ADR 0005 and 0007) and rejection reasons of `sesion`.
+ * Edit Intents (`POST /api/edit`, ADR 0005 and 0007) and rejection reasons of `session`.
  * Single declaration: the `reason` enum of `editOutputSchema` derives from `REJECTION_REASONS`.
  */
 import { z } from 'zod';

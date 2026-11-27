@@ -20,8 +20,8 @@ model {
     package layout "layout" "ELK layout and Pins, sequence layout, cached Geometry and its keys" {
       source { path "packages/layout" }
     }
-    package session "sesion" "Session: compile, validate and lay out; single write gate and live Workspace for dev" {
-      source { path "packages/sesion"  path "packages/sesion/src" }
+    package session "session" "Session: compile, validate and lay out; single write gate and live Workspace for dev" {
+      source { path "packages/session"  path "packages/session/src" }
     }
     package render "render" "Pure React SVG: Geometry and Style to painted elements" {
       source { path "packages/render"  path "packages/render/src"  path "packages/render/src/pintura" }
