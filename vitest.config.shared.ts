@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     include: ['test/**/*.test.{ts,tsx}'],
     environment: 'node',
-    // Varias pruebas arrancan el CLI, el layout o la gramatica en frio: con la maquina cargada pasan de los 5 s por defecto.
+    // Several tests start the CLI, the layout or the grammar cold: on a busy machine they exceed the default 5 s.
     testTimeout: 30_000,
   },
 });
