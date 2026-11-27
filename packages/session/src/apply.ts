@@ -1,5 +1,5 @@
 import type { RejectionReason } from 'canonical';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 
 import { applyEdits, contentHash, replaceText } from './edits';
 import type { HashedEdit } from './edits';
@@ -11,7 +11,7 @@ import type { Intent, Seen } from './intents';
  * writable files). I/O failures propagate as exceptions.
  */
 export interface WorkspacePort {
-  read(): { disk: ArchivosDelWorkspace; own: ArchivosDelWorkspace };
+  read(): { disk: WorkspaceFiles; own: WorkspaceFiles };
   write(path: string, text: string): void;
   /**
    * Renames a Workspace path (file or folder, `/`-separated) for an edit with `rename` (the `fix` of
@@ -82,7 +82,7 @@ function renameAll(port: WorkspacePort, renames: readonly RenamedPath[]): void {
   }
 }
 
-const changedBetween = (before: ArchivosDelWorkspace, after: ArchivosDelWorkspace): string[] =>
+const changedBetween = (before: WorkspaceFiles, after: WorkspaceFiles): string[] =>
   Object.keys(after)
     .filter((f) => after[f] !== before[f])
     .sort();

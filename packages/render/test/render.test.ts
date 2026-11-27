@@ -4,19 +4,19 @@ import { combineIconProviders, canonicalFormSchema, genericIcons, resolveView, w
 import type { IconProvider, Theme, GraphView, ResolvedView } from 'canonical';
 import { layoutView as layoutDeVista } from 'layout';
 
-import { aHtml, etiquetaCon, rectDe } from './ayudas';
+import { toHtml, tagWith, rectOf } from './helpers';
 import { NEUTRAL_THEME, metricsOf } from 'theme';
 import type { ResolvedTheme } from 'theme';
 
-/** `layoutView` de una Vista de grafo (architecture o flow): estas pruebas miran rutas y cajas de Aristas. */
+/** `layoutView` of a graph View (architecture or flow): these tests look at Edge paths and boxes. */
 const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
-  const geometria = await layoutDeVista(...args);
-  if (geometria.kind !== 'grafo') throw new Error('se esperaba una Geometria de grafo');
-  return geometria;
+  const geometry = await layoutDeVista(...args);
+  if (geometry.kind !== 'grafo') throw new Error('expected a graph Geometry');
+  return geometry;
 };
 
 
-const nodo = (id: string, title: string, type: string, children: unknown[] = []) => ({
+const node = (id: string, title: string, type: string, children: unknown[] = []) => ({
   id,
   type,
   title,
@@ -24,23 +24,23 @@ const nodo = (id: string, title: string, type: string, children: unknown[] = [])
   children,
 });
 
-/** Grupo `a` con dos servicios, una base fuera y un override de color y label. */
-function vista(estado = {}): GraphView {
-  const fuente = canonicalFormSchema.parse({
+/** Group `a` with two services, a database outside and a color and label override. */
+function view(state = {}): GraphView {
+  const source = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio', color: 'blue' }, { name: 'base', color: 'green' }] },
     model: {
       nodes: [
-        nodo('a', 'Plataforma', 'servicio', [nodo('a.api', 'API', 'servicio'), nodo('a.auth', 'Auth & <Tokens>', 'servicio')]),
-        nodo('db', 'Base de datos', 'base'),
+        node('a', 'Plataforma', 'servicio', [node('a.api', 'API', 'servicio'), node('a.auth', 'Auth & <Tokens>', 'servicio')]),
+        node('db', 'Base de datos', 'base'),
       ],
       edges: [{ from: { node: 'a.api' }, to: { node: 'db' }, fromCardinality: '1', toCardinality: '0..*' }, { from: { node: 'a.api' }, to: { node: 'a.auth' } }],
     },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], overrides: [{ node: 'db', color: 'red', label: 'Postgres' }] }],
   });
-  return resolveView(fuente, 'v', estado) as GraphView;
+  return resolveView(source, 'v', state) as GraphView;
 }
 
-const OSCURO: ResolvedTheme = {
+const DARK: ResolvedTheme = {
   name: 'oscuro',
   palette: { ...NEUTRAL_THEME.palette, blue: '#60a5fa', green: '#4ade80', red: '#f87171' },
   fonts: { body: 'Inter, sans-serif', mono: 'monospace' },
@@ -51,73 +51,73 @@ const OSCURO: ResolvedTheme = {
   pagina: NEUTRAL_THEME.pagina,
 };
 
-async function dibujar(tema: Theme, estado = {}): Promise<string> {
-  const v = vista(estado);
-  const geometry = await layoutView(v, tema);
-  return aHtml({ view: v, geometry, theme: tema, width: 800, height: 600 });
+async function draw(theme: Theme, state = {}): Promise<string> {
+  const v = view(state);
+  const geometry = await layoutView(v, theme);
+  return toHtml({ view: v, geometry, theme, width: 800, height: 600 });
 }
 
 describe('Diagram', () => {
-  it('dibuja la Vista con el Tema oscuro: fondo y texto del Tema en la hoja', async () => {
-    const html = await dibujar(OSCURO);
+  it('draws the View with the dark Theme: Theme background and text in the sheet', async () => {
+    const html = await draw(DARK);
 
     expect(html).toContain('background:#111827;color:#f9fafb;font-family:"Inter", sans-serif;font-size:16px');
   });
 
-  it('dibuja un Grupo colapsado como un Nodo con su contador', async () => {
-    const html = await dibujar(NEUTRAL_THEME, { collapsed: ['a'] });
+  it('draws a collapsed Group as a Node with its counter', async () => {
+    const html = await draw(NEUTRAL_THEME, { collapsed: ['a'] });
 
     expect(html).toContain('>Plataforma (2)<');
     expect(html).not.toContain('data-slot="title" style="left:10px');
   });
 
-  it('dibuja las Aristas con flecha, como rutas ortogonales', async () => {
-    const svg = await dibujar(NEUTRAL_THEME);
+  it('draws the Edges with an arrow, as orthogonal paths', async () => {
+    const svg = await draw(NEUTRAL_THEME);
 
     expect(svg).toMatch(/<g data-edge="a\.api -&gt; db"><path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" stroke-width="[\d.]+" data-capa="line"/);
     expect(svg).toMatch(/<g data-edge="a\.api -&gt; a\.auth"/);
     expect(svg).toMatch(/<g data-marker="fin" transform="translate\([\d. ]+\) rotate\(-?[\d.]+\)"><path d="M 0 0 L -8 -4 L -8 4 z"/);
   });
 
-  it('dibuja una Arista entre Grupos sobre el borde del Grupo colapsado', async () => {
-    const svg = await dibujar(NEUTRAL_THEME, { collapsed: ['a'] });
+  it('draws an Edge between Groups over the border of the collapsed Group', async () => {
+    const svg = await draw(NEUTRAL_THEME, { collapsed: ['a'] });
 
     expect(svg).toMatch(/<g data-edge="a -&gt; db"/);
     expect(svg).not.toMatch(/data-edge="a\.api/);
   });
 
-  it('la cardinalidad va junto al extremo que le corresponde', async () => {
-    const v = vista();
+  it('the cardinality goes next to the endpoint it belongs to', async () => {
+    const v = view();
     const geometry = await layoutView(v, NEUTRAL_THEME);
-    const svg = aHtml({ view: v, geometry, theme: NEUTRAL_THEME, width: 800, height: 600 });
-    const ruta = geometry.edges['a.api -> db']!.points;
-    const inicio = ruta[0]!;
-    const fin = ruta[ruta.length - 1]!;
-    const posicion = (lado: string, texto: string): { x: number; y: number } => {
-      const m = new RegExp(`<text data-cardinality="a\\.api -&gt; db:${lado}" x="([\\d.-]+)" y="([\\d.-]+)"[^>]*>${texto}</text>`).exec(svg);
-      expect(m, `cardinalidad ${lado}`).not.toBeNull();
+    const svg = toHtml({ view: v, geometry, theme: NEUTRAL_THEME, width: 800, height: 600 });
+    const path = geometry.edges['a.api -> db']!.points;
+    const start = path[0]!;
+    const end = path[path.length - 1]!;
+    const position = (side: string, text: string): { x: number; y: number } => {
+      const m = new RegExp(`<text data-cardinality="a\\.api -&gt; db:${side}" x="([\\d.-]+)" y="([\\d.-]+)"[^>]*>${text}</text>`).exec(svg);
+      expect(m, `cardinalidad ${side}`).not.toBeNull();
       return { x: Number(m![1]), y: Number(m![2]) };
     };
-    const cerca = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
-    const origen = posicion('from', '1');
-    const destino = posicion('to', '0\\.\\.\\*');
+    const near = (a: { x: number; y: number }, b: { x: number; y: number }): number => Math.hypot(a.x - b.x, a.y - b.y);
+    const origin = position('from', '1');
+    const target = position('to', '0\\.\\.\\*');
 
-    expect(cerca(origen, inicio)).toBeLessThan(cerca(origen, fin));
-    expect(cerca(destino, fin)).toBeLessThan(cerca(destino, inicio));
+    expect(near(origin, start)).toBeLessThan(near(origin, end));
+    expect(near(target, end)).toBeLessThan(near(target, start));
     expect(svg).not.toContain('data-cardinality="a.api -&gt; a.auth');
   });
 
-  it('la etiqueta de una Arista va sobre su ruta, en un solo texto', async () => {
-    const base = vista();
+  it('the label of an Edge goes over its path, in a single text', async () => {
+    const base = view();
     const v: ResolvedView = {
       ...base,
-      edges: base.edges.map((arista) => (arista.to.node === 'a.auth' ? { ...arista, label: 'valida <token>' } : arista)),
+      edges: base.edges.map((edge) => (edge.to.node === 'a.auth' ? { ...edge, label: 'valida <token>' } : edge)),
     };
     const geometry = await layoutView(v, NEUTRAL_THEME);
-    const svg = aHtml({ view: v, geometry, theme: NEUTRAL_THEME, width: 800, height: 600 });
-    const ruta = geometry.edges['a.api -> a.auth']!.points;
-    const xs = ruta.map((p) => p.x);
-    const ys = ruta.map((p) => p.y);
+    const svg = toHtml({ view: v, geometry, theme: NEUTRAL_THEME, width: 800, height: 600 });
+    const path = geometry.edges['a.api -> a.auth']!.points;
+    const xs = path.map((p) => p.x);
+    const ys = path.map((p) => p.y);
     const m = /<text data-edge-label="a\.api -&gt; a\.auth"[^>]* x="([\d.-]+)" y="([\d.-]+)"[^>]*>valida &lt;token&gt;<\/text>/.exec(svg);
 
     expect(m).not.toBeNull();
@@ -128,192 +128,192 @@ describe('Diagram', () => {
     expect(svg).not.toContain('data-edge-label="a.api -&gt; db"');
   });
 
-  it('es determinista byte a byte', async () => {
-    expect(await dibujar(NEUTRAL_THEME)).toBe(await dibujar(NEUTRAL_THEME));
+  it('is deterministic byte for byte', async () => {
+    expect(await draw(NEUTRAL_THEME)).toBe(await draw(NEUTRAL_THEME));
   });
 
-  it('los colores salen del Tema por nombre de Paleta', async () => {
-    const neutro = await dibujar(NEUTRAL_THEME);
-    const oscuro = await dibujar(OSCURO);
+  it('colors come from the Theme by Palette name', async () => {
+    const neutral = await draw(NEUTRAL_THEME);
+    const dark = await draw(DARK);
 
-    expect(neutro).toContain(NEUTRAL_THEME.palette['blue']);
-    expect(neutro).toContain(NEUTRAL_THEME.palette['red']);
-    expect(oscuro).toContain('#60a5fa');
-    expect(oscuro).not.toContain(NEUTRAL_THEME.palette['blue']);
+    expect(neutral).toContain(NEUTRAL_THEME.palette['blue']);
+    expect(neutral).toContain(NEUTRAL_THEME.palette['red']);
+    expect(dark).toContain('#60a5fa');
+    expect(dark).not.toContain(NEUTRAL_THEME.palette['blue']);
   });
 
-  it('el unico hex del SVG viene del Tema', async () => {
-    const svg = await dibujar(OSCURO);
-    const permitidos = new Set([...Object.values(OSCURO.palette), ...Object.values(OSCURO.tokens)].map((c) => c.toLowerCase()));
+  it('the only hex in the SVG comes from the Theme', async () => {
+    const svg = await draw(DARK);
+    const allowed = new Set([...Object.values(DARK.palette), ...Object.values(DARK.tokens)].map((c) => c.toLowerCase()));
 
     for (const hex of svg.match(/#[0-9a-fA-F]{3,8}\b/g) ?? []) {
-      expect(permitidos.has(hex.toLowerCase())).toBe(true);
+      expect(allowed.has(hex.toLowerCase())).toBe(true);
     }
   });
 
-  it('escapa el texto de los Nodos y usa el label del override', async () => {
-    const svg = await dibujar(NEUTRAL_THEME);
+  it('escapes the Node text and uses the override label', async () => {
+    const svg = await draw(NEUTRAL_THEME);
 
     expect(svg).toContain('Auth &amp; &lt;Tokens&gt;');
     expect(svg).toContain('Postgres');
     expect(svg).not.toContain('Base de datos');
   });
 
-  it('un Grupo colapsado no dibuja a sus hijos', async () => {
-    const svg = await dibujar(NEUTRAL_THEME, { collapsed: ['a'] });
+  it('a collapsed Group does not draw its children', async () => {
+    const svg = await draw(NEUTRAL_THEME, { collapsed: ['a'] });
 
     expect(svg).not.toContain('>API<');
     expect(svg).toContain('Plataforma');
   });
 
-  it('escapa tambien los valores del Tema que van en atributos', async () => {
-    const hostil: Theme = { ...NEUTRAL_THEME, palette: { ...NEUTRAL_THEME.palette, blue: '"/><script>' }, fonts: { body: 'a"b', mono: 'monospace' } };
-    const svg = await dibujar(hostil);
+  it('also escapes the Theme values that go into attributes', async () => {
+    const hostile: Theme = { ...NEUTRAL_THEME, palette: { ...NEUTRAL_THEME.palette, blue: '"/><script>' }, fonts: { body: 'a"b', mono: 'monospace' } };
+    const svg = await draw(hostile);
 
     expect(svg).not.toContain('<script>');
     expect(svg).not.toMatch(/<script/i);
   });
 });
 
-describe('Diagram: Atributos e iconos', () => {
-  function tabla(iconos: Record<string, string> = {}): { view: ResolvedView; icons: IconProvider } {
-    const fuente = canonicalFormSchema.parse({
+describe('Diagram: Attributes and icons', () => {
+  function table(iconList: Record<string, string> = {}): { view: ResolvedView; icons: IconProvider } {
+    const source = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'tabla', icon: 'database', color: 'blue' }, { name: 'servicio', icon: 'logo' }] },
       model: {
         nodes: [
           {
-            ...nodo('usuarios', 'Usuarios', 'tabla'),
+            ...node('usuarios', 'Usuarios', 'tabla'),
             attributes: [{ name: 'id', type: 'uuid' }, { name: 'email', type: 'text' }, { name: 'creado', type: 'timestamp' }],
           },
-          nodo('api', 'API', 'servicio'),
+          node('api', 'API', 'servicio'),
         ],
         edges: [{ from: { node: 'api' }, to: { node: 'usuarios', attribute: 'email' } }],
       },
       views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
     });
-    return { view: resolveView(fuente, 'v')!, icons: combineIconProviders(workspaceIcons(iconos), genericIcons()) };
+    return { view: resolveView(source, 'v')!, icons: combineIconProviders(workspaceIcons(iconList), genericIcons()) };
   }
-  async function dibujarTabla(iconos: Record<string, string> = {}): Promise<string> {
-    const { view, icons } = tabla(iconos);
+  async function drawTable(iconList: Record<string, string> = {}): Promise<string> {
+    const { view, icons } = table(iconList);
     const geometry = await layoutView(view, NEUTRAL_THEME);
-    return aHtml({ view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, icons });
+    return toHtml({ view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, icons });
   }
 
-  it('dibuja un Nodo tipo tabla con sus Atributos en orden', async () => {
-    const svg = await dibujarTabla();
+  it('draws a table Node with its Attributes in order', async () => {
+    const svg = await drawTable();
 
     expect(svg.indexOf('id: uuid')).toBeGreaterThan(-1);
     expect(svg.indexOf('id: uuid')).toBeLessThan(svg.indexOf('email: text'));
     expect(svg.indexOf('email: text')).toBeLessThan(svg.indexOf('creado: timestamp'));
   });
 
-  it('la Arista a nodo#atributo termina a la altura de la fila del Atributo', async () => {
-    const { view, icons } = tabla();
+  it('the Edge to node#attribute ends at the height of the Attribute row', async () => {
+    const { view, icons } = table();
     const geometry = await layoutView(view, NEUTRAL_THEME);
-    const svg = aHtml({ view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, icons });
-    const { cabecera, fila } = metricsOf(NEUTRAL_THEME, 'architecture');
-    const caja = geometry.nodes['usuarios']!;
-    const fin = geometry.edges['api -> usuarios#email']!.points.at(-1)!;
-    const slot = rectDe(etiquetaCon(svg, 'data-slot="attrs"'));
-    const dibujada = rectDe(etiquetaCon(svg, 'data-attribute="usuarios#email"'));
+    const svg = toHtml({ view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, icons });
+    const { cabecera: header, fila: row } = metricsOf(NEUTRAL_THEME, 'architecture');
+    const box = geometry.nodes['usuarios']!;
+    const end = geometry.edges['api -> usuarios#email']!.points.at(-1)!;
+    const slot = rectOf(tagWith(svg, 'data-slot="attrs"'));
+    const drawn = rectOf(tagWith(svg, 'data-attribute="usuarios#email"'));
 
-    expect(fin.y).toBe(caja.y + cabecera + 1.5 * fila);
-    expect(slot.y + dibujada.y + dibujada.height / 2).toBe(cabecera + 1.5 * fila);
+    expect(end.y).toBe(box.y + header + 1.5 * row);
+    expect(slot.y + drawn.y + drawn.height / 2).toBe(header + 1.5 * row);
   });
 
-  it('el icono del Tipo de nodo se incrusta inline, sin referencias externas', async () => {
-    const svg = await dibujarTabla();
-    const icono = /<div [^>]*data-icon="database"[^>]*>([\s\S]*?)<\/div>/.exec(svg);
+  it('the Node kind icon is embedded inline, without external references', async () => {
+    const svg = await drawTable();
+    const icon = /<div [^>]*data-icon="database"[^>]*>([\s\S]*?)<\/div>/.exec(svg);
 
-    expect(icono).not.toBeNull();
-    expect(icono![1]).toContain('<ellipse');
+    expect(icon).not.toBeNull();
+    expect(icon![1]).toContain('<ellipse');
     expect(svg).not.toMatch(/href\s*=|<image|url\(https?:/i);
   });
 
-  it('un icono del Workspace con referencias externas o scripts no se incrusta', async () => {
-    const peligroso = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><image href="https://x.test/a.png"/><script>alert(1)</script></svg>';
-    const svg = await dibujarTabla({ 'iconos/logo.svg': peligroso });
+  it('a Workspace icon with external references or scripts is not embedded', async () => {
+    const dangerous = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><image href="https://x.test/a.png"/><script>alert(1)</script></svg>';
+    const svg = await drawTable({ 'iconos/logo.svg': dangerous });
 
     expect(svg).not.toContain('x.test');
     expect(svg).not.toContain('<script');
   });
 
   it.each([
-    ['evento sin espacio', '<svg xmlns="http://www.w3.org/2000/svg"/onload="alert(1)"><circle r="1"/></svg>'],
-    ['evento tras comilla', '<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"onclick="x()"/></svg>'],
+    ['an event without a space', '<svg xmlns="http://www.w3.org/2000/svg"/onload="alert(1)"><circle r="1"/></svg>'],
+    ['an event after a quote', '<svg xmlns="http://www.w3.org/2000/svg"><circle r="1"onclick="x()"/></svg>'],
     ['iframe', '<svg xmlns="http://www.w3.org/2000/svg"><iframe src="https://x.test"/></svg>'],
-    ['animate hacia href', '<svg xmlns="http://www.w3.org/2000/svg"><a><animate attributeName="href" values="javascript:alert(1)"/></a></svg>'],
-    ['href sin comillas', '<svg xmlns="http://www.w3.org/2000/svg"><use href=https://x.test/a.svg#i /></svg>'],
-    ['style con import', '<svg xmlns="http://www.w3.org/2000/svg"><style>@import "https://x.test/a.css";</style></svg>'],
-    ['url externa en atributo', '<svg xmlns="http://www.w3.org/2000/svg"><circle r="1" fill="url(https://x.test/g)"/></svg>'],
-  ])('un icono del Workspace con %s no se incrusta', async (_, peligroso) => {
-    const svg = (await dibujarTabla({ 'iconos/logo.svg': peligroso })).replace(/<style>[\s\S]*?<\/style>/, '');
+    ['animate toward href', '<svg xmlns="http://www.w3.org/2000/svg"><a><animate attributeName="href" values="javascript:alert(1)"/></a></svg>'],
+    ['an unquoted href', '<svg xmlns="http://www.w3.org/2000/svg"><use href=https://x.test/a.svg#i /></svg>'],
+    ['a style with import', '<svg xmlns="http://www.w3.org/2000/svg"><style>@import "https://x.test/a.css";</style></svg>'],
+    ['an external url in an attribute', '<svg xmlns="http://www.w3.org/2000/svg"><circle r="1" fill="url(https://x.test/g)"/></svg>'],
+  ])('a Workspace icon with %s is not embedded', async (_, dangerous) => {
+    const svg = (await drawTable({ 'iconos/logo.svg': dangerous })).replace(/<style>[\s\S]*?<\/style>/, '');
 
     expect(svg).not.toMatch(/x\.test|alert|onload|onclick|<iframe|<animate|<style/);
   });
 
-  it('un icono con prologo XML y comentarios se incrusta sin ellos', async () => {
-    const limpio = '<?xml version="1.0"?>\n<!-- logo -->\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>';
-    const svg = await dibujarTabla({ 'iconos/logo.svg': limpio });
+  it('an icon with an XML prolog and comments is embedded without them', async () => {
+    const clean = '<?xml version="1.0"?>\n<!-- logo -->\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>';
+    const svg = await drawTable({ 'iconos/logo.svg': clean });
 
     expect(svg).not.toContain('<?xml');
     expect(svg).not.toContain('<!--');
   });
 
-  it('un icono del Workspace con su propio width/height queda a tamano del Nodo y el SVG sigue siendo determinista', async () => {
+  it('a Workspace icon with its own width/height ends up at Node size and the SVG stays deterministic', async () => {
     const logo = '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>';
-    const svg = await dibujarTabla({ 'iconos/logo.svg': logo });
+    const svg = await drawTable({ 'iconos/logo.svg': logo });
 
     expect(svg).not.toContain('width="200"');
     expect(svg).toContain('<circle');
-    expect(svg).toBe(await dibujarTabla({ 'iconos/logo.svg': logo }));
+    expect(svg).toBe(await drawTable({ 'iconos/logo.svg': logo }));
   });
 });
 
-describe('Metricas compartidas: layout y dibujo', () => {
-  const fuente = canonicalFormSchema.parse({
+describe('shared Metrics: layout and drawing', () => {
+  const source = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'tabla' }] },
     model: {
       nodes: [
-        { ...nodo('t', 'Tabla', 'tabla'), attributes: [{ name: 'id', type: 'uuid' }, { name: 'columna_muy_larga_de_verdad', type: 'varchar(255)' }] },
+        { ...node('t', 'Tabla', 'tabla'), attributes: [{ name: 'id', type: 'uuid' }, { name: 'columna_muy_larga_de_verdad', type: 'varchar(255)' }] },
       ],
     },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
   });
-  const view = resolveView(fuente, 'v')!;
+  const view = resolveView(source, 'v')!;
 
-  async function dibujarCon(metricas = metricsOf(NEUTRAL_THEME, 'architecture')) {
-    const geometry = await layoutView(view, NEUTRAL_THEME, { metricas });
-    const html = aHtml({ view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, metricas });
-    const zona = rectDe(etiquetaCon(html, 'data-slot="attrs"'));
-    const tamano = Number(/\.rd-fila\{[^}]*font-size:([\d.]+)px/.exec(html)![1]);
-    const filas = [...html.matchAll(/<div [^>]*data-attribute="t#[^"]+"[^>]*>([^<]*)</g)].map((m) => {
-      const r = rectDe(m[0]);
-      // Esquina absoluta dentro de la caja del Nodo (la fila es relativa al Slot) y texto con su margen.
-      return { x: zona.x + r.x + metricas.margenDeTexto, y: zona.y + r.y + r.height / 2, tamano, texto: m[1]! };
+  async function drawWith(metrics = metricsOf(NEUTRAL_THEME, 'architecture')) {
+    const geometry = await layoutView(view, NEUTRAL_THEME, { metricas: metrics });
+    const html = toHtml({ view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, metrics });
+    const zone = rectOf(tagWith(html, 'data-slot="attrs"'));
+    const fontSizeValue = Number(/\.rd-fila\{[^}]*font-size:([\d.]+)px/.exec(html)![1]);
+    const rows = [...html.matchAll(/<div [^>]*data-attribute="t#[^"]+"[^>]*>([^<]*)</g)].map((m) => {
+      const r = rectOf(m[0]);
+      // Absolute corner inside the Node box (the row is relative to the Slot) and text with its margin.
+      return { x: zone.x + r.x + metrics.margenDeTexto, y: zone.y + r.y + r.height / 2, tamano: fontSizeValue, texto: m[1]! };
     });
-    return { caja: geometry.nodes['t']!, filas };
+    return { caja: geometry.nodes['t']!, filas: rows };
   }
 
-  it('lo dibujado cabe en lo reservado: filas dentro de la caja y texto dentro del ancho', async () => {
+  it('what is drawn fits in what is reserved: rows inside the box and text inside the width', async () => {
     const m = metricsOf(NEUTRAL_THEME, 'architecture');
-    const { caja, filas } = await dibujarCon();
+    const { caja: box, filas: rows } = await drawWith();
 
-    expect(filas).toHaveLength(2);
-    for (const f of filas) {
-      expect(f.y).toBeLessThan(caja.height);
-      expect(f.x + f.texto.length * f.tamano * m.factorDeAncho).toBeLessThanOrEqual(caja.width);
+    expect(rows).toHaveLength(2);
+    for (const f of rows) {
+      expect(f.y).toBeLessThan(box.height);
+      expect(f.x + f.texto.length * f.tamano * m.factorDeAncho).toBeLessThanOrEqual(box.width);
     }
   });
 
-  it('cambiar una Metrica mueve layout y dibujo a la vez, y lo dibujado sigue cabiendo', async () => {
+  it('changing a Metric moves layout and drawing together, and what is drawn still fits', async () => {
     const m = metricsOf(NEUTRAL_THEME, 'architecture');
-    const base = await dibujarCon();
-    const otra = await dibujarCon({ ...m, cabecera: m.cabecera + 12, fila: m.fila + 6, paddingHorizontal: m.paddingHorizontal + 16 });
+    const base = await drawWith();
+    const other = await drawWith({ ...m, cabecera: m.cabecera + 12, fila: m.fila + 6, paddingHorizontal: m.paddingHorizontal + 16 });
 
-    expect(otra.caja.height).toBe(base.caja.height + 12 + 2 * 6);
-    expect(otra.caja.width).toBe(base.caja.width + 16);
-    expect(otra.filas[0]!.y).toBe(base.filas[0]!.y + 12 + 3);
-    expect(otra.filas[1]!.y).toBeLessThan(otra.caja.height);
+    expect(other.caja.height).toBe(base.caja.height + 12 + 2 * 6);
+    expect(other.caja.width).toBe(base.caja.width + 16);
+    expect(other.filas[0]!.y).toBe(base.filas[0]!.y + 12 + 3);
+    expect(other.filas[1]!.y).toBeLessThan(other.caja.height);
   });
 });

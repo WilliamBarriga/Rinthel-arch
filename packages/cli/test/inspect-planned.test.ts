@@ -39,9 +39,9 @@ view all {
 `;
 
 function workspace(): string {
-  const raiz = mkdtempSync(join(tmpdir(), 'inspect-planned-'));
-  writeFileSync(join(raiz, 'main.dg'), WORKSPACE);
-  return raiz;
+  const root = mkdtempSync(join(tmpdir(), 'inspect-planned-'));
+  writeFileSync(join(root, 'main.dg'), WORKSPACE);
+  return root;
 }
 
 describe('inspect planned', () => {
@@ -49,8 +49,8 @@ describe('inspect planned', () => {
     const r = await run(['inspect', 'planned', '--workspace', workspace(), '--json']);
 
     expect(r.exitCode, r.stderr).toBe(0);
-    const salida = inspectOutputSchema.parse(JSON.parse(r.stdout));
-    expect(salida).toEqual({
+    const output = inspectOutputSchema.parse(JSON.parse(r.stdout));
+    expect(output).toEqual({
       contractVersion: 2,
       command: 'planned',
       planned: {

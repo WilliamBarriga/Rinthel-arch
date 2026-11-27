@@ -1,8 +1,8 @@
 import { CODES, nearestCandidates, resolveView } from 'canonical';
 import type { CanonicalForm, Geometry, CachedGeometry, GraphGeometry, Issue, Theme, Locator, View } from 'canonical';
 import { compile } from 'dsl';
-import type { ArchivosDelWorkspace, OrigenDeTema, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
-import { claveDeLayout, layoutView } from 'layout';
+import type { WorkspaceFiles, ThemeOrigin, PinPosition, CompileResult } from 'dsl';
+import { layoutKey, layoutView } from 'layout';
 import { NEUTRAL_THEME, contrastWarnings, identifyingEdgeColorOnly, resolvedStyle, colorOnlyMessages, readOps, resolveFonts, resolveTheme, colorOnlyKinds, codeUses } from 'theme';
 import type { ResolvedStyle, ComponentUse } from 'theme';
 
@@ -55,7 +55,7 @@ export interface Session {
   /** Locator of the Canonical form (file and range of each value); absent together with `source`. */
   readonly locate: Locator | undefined;
   /** Origin of the Layers of each Theme declared in the text (`extends` chain, `part`, site of each Layer); empty without a Canonical form. */
-  readonly themeOrigins: Readonly<Record<string, OrigenDeTema>>;
+  readonly themeOrigins: Readonly<Record<string, ThemeOrigin>>;
   /**
    * Compilation, adapter, Theme and `overlapping-pins` issues. It only computes layout in Views with 2 or more Pins.
    * An internal layout failure rejects the promise.
@@ -79,7 +79,7 @@ export interface Session {
    * Another Session for these files; the current one does not change. It reuses a View's geometry when its
    * `layoutKey`, its Theme and its Pins do not change. `changes` renews `components`, `adapterIssues` and `fontFiles`.
    */
-  update(files: ArchivosDelWorkspace, changes?: Pick<SessionOptions, 'components' | 'adapterIssues' | 'fontFiles'>): Session;
+  update(files: WorkspaceFiles, changes?: Pick<SessionOptions, 'components' | 'adapterIssues' | 'fontFiles'>): Session;
 }
 
 const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`;
@@ -93,7 +93,7 @@ function viewTheme(source: CanonicalForm, view: View, global: string | undefined
  * `overlapping-pins`: one warning per pair of overlapping Pins, located at the first one with the second in `related`.
  * A pair without a known text position (a Pin that does not come from the DSL) is not reported.
  */
-function pinWarnings(view: string, geometry: Geometry, pins: readonly PosicionDePin[]): Issue[] {
+function pinWarnings(view: string, geometry: Geometry, pins: readonly PinPosition[]): Issue[] {
   switch (geometry.kind) {
     case 'grafo':
       return graphPinWarnings(view, geometry, pins);
@@ -102,7 +102,7 @@ function pinWarnings(view: string, geometry: Geometry, pins: readonly PosicionDe
   }
 }
 
-function graphPinWarnings(view: string, geometry: GraphGeometry, pins: readonly PosicionDePin[]): Issue[] {
+function graphPinWarnings(view: string, geometry: GraphGeometry, pins: readonly PinPosition[]): Issue[] {
   const pinOf = (node: string) => pins.find((pin) => pin.view === view && pin.node === node);
   return geometry.pinsSolapados.flatMap(([a, b]) => {
     const [first, second] = [pinOf(a), pinOf(b)];
@@ -253,12 +253,12 @@ interface GeometryEntry {
 type Memo = ReadonlyMap<string, GeometryEntry>;
 
 function createSession(
-  files: ArchivosDelWorkspace,
+  files: WorkspaceFiles,
   options: SessionOptions,
-  compiled: ResultadoDeCompilacion,
+  compiled: CompileResult,
   previousMemo: Memo,
 ): Session {
-  const { canonico: source, pins } = compiled;
+  const { canonical: source, pins } = compiled;
   const memo = new Map<string, GeometryEntry>();
   const adapterIssues = options.adapterIssues ?? [];
 
@@ -268,14 +268,14 @@ function createSession(
     const resolved = resolveView(source, view);
     if (declared === undefined || resolved === undefined) return undefined;
     const theme = viewTheme(source, declared, options.theme);
-    return { key: JSON.stringify([theme.name, claveDeLayout(resolved, theme)]), theme, resolved };
+    return { key: JSON.stringify([theme.name, layoutKey(resolved, theme)]), theme, resolved };
   };
 
   const geometryWithTheme = (view: string, themeName: string): Promise<CachedGeometry | undefined> => {
     const resolved = source === undefined ? undefined : resolveView(source, view);
     const theme = source?.themes.find(({ name }) => name === themeName);
     if (resolved === undefined || theme === undefined) return Promise.resolve(undefined);
-    return layoutView(resolved, theme).then((geometry) => ({ view, theme: theme.name, layoutKey: claveDeLayout(resolved, theme), geometry }));
+    return layoutView(resolved, theme).then((geometry) => ({ view, theme: theme.name, layoutKey: layoutKey(resolved, theme), geometry }));
   };
 
   const geometry = (view: string, { theme }: GeometryOptions = {}): Promise<CachedGeometry | undefined> => {
@@ -291,7 +291,7 @@ function createSession(
         : layoutView(keyed.resolved, keyed.theme).then((geometry) => ({
             view,
             theme: keyed.theme.name,
-            layoutKey: claveDeLayout(keyed.resolved, keyed.theme),
+            layoutKey: layoutKey(keyed.resolved, keyed.theme),
             geometry,
           }));
     memo.set(view, { key: keyed.key, result });
@@ -309,11 +309,11 @@ function createSession(
 
   const session: Session = {
     source,
-    locate: compiled.ubicar,
-    themeOrigins: compiled.origenesDeTemas ?? {},
+    locate: compiled.locate,
+    themeOrigins: compiled.themeOrigins ?? {},
     async diagnose() {
       if (source === undefined) return [...compiled.issues, ...adapterIssues];
-      const accessibility = [...accessibilityWarnings(source, compiled.ubicar, options.theme), ...codeWarnings(source, compiled.ubicar, options.components), ...fontWarnings(source, compiled.ubicar, options.fontFiles)];
+      const accessibility = [...accessibilityWarnings(source, compiled.locate, options.theme), ...codeWarnings(source, compiled.locate, options.components), ...fontWarnings(source, compiled.locate, options.fontFiles)];
       const withPins = source.views.filter(({ id }) => pins.filter((pin) => pin.view === id).length >= 2);
       return [...compiled.issues, ...adapterIssues, ...accessibility, ...(await warnings(withPins.map(({ id }) => id)))];
     },
@@ -324,7 +324,7 @@ function createSession(
         const cached = await geometry(id);
         if (cached !== undefined) output[`geometria/${id}.json`] = json(cached);
       }
-      const issues = [...compiled.issues, ...adapterIssues, ...accessibilityWarnings(source, compiled.ubicar, options.theme), ...codeWarnings(source, compiled.ubicar, options.components), ...fontWarnings(source, compiled.ubicar, options.fontFiles), ...(await warnings(source.views.map(({ id }) => id)))];
+      const issues = [...compiled.issues, ...adapterIssues, ...accessibilityWarnings(source, compiled.locate, options.theme), ...codeWarnings(source, compiled.locate, options.components), ...fontWarnings(source, compiled.locate, options.fontFiles), ...(await warnings(source.views.map(({ id }) => id)))];
       return { files: output, issues };
     },
     geometry,
@@ -337,10 +337,10 @@ function createSession(
       return resolvedStyle(keyed.theme, { tipos: kinds, diagrama: declared.type, ...(options.fontFiles !== undefined && { archivosDeFuente: options.fontFiles }), ...(declared.themePatch !== undefined && { vista: readOps(declared.themePatch) }) });
     },
     query: (query) => {
-      if (source === undefined || compiled.ubicar === undefined) return undefined;
-      if (query.command !== 'theme') return runQuery(source, compiled.ubicar, query);
+      if (source === undefined || compiled.locate === undefined) return undefined;
+      if (query.command !== 'theme') return runQuery(source, compiled.locate, query);
       const { argument, command: _command, ...options } = query;
-      return queryTheme(source, compiled.origenesDeTemas ?? {}, argument, options);
+      return queryTheme(source, compiled.themeOrigins ?? {}, argument, options);
     },
     viewsWithGeometry: () => [...memo.keys()],
     update: (nextFiles, changes = {}) => createSession(nextFiles, { ...options, ...changes }, compile(nextFiles), memo),
@@ -349,6 +349,6 @@ function createSession(
 }
 
 /** Compiles once and leaves layout on demand. Pure over `files`: it neither reads disk nor watches changes. */
-export function openSession(files: ArchivosDelWorkspace, options: SessionOptions = {}): Session {
+export function openSession(files: WorkspaceFiles, options: SessionOptions = {}): Session {
   return createSession(files, options, compile(files), new Map());
 }

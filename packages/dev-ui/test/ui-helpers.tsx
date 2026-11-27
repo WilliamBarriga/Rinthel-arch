@@ -2,10 +2,10 @@
 import { configure, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { layoutView } from 'layout';
-import { hashDelNavegador } from 'shell';
-import type { AdaptadorDeLayout } from 'shell';
+import { browserHash } from 'shell';
+import type { LayoutAdapter } from 'shell';
 
-import { ayudasDeLienzo } from '../../../tests/ayudas/lienzo';
+import { canvasHelpers } from '../../../tests/helpers/canvas';
 import { inMemoryDev } from '../src/contract';
 import { captureExport } from '../src/export';
 import type { ExportData } from '../src/export';
@@ -25,7 +25,7 @@ if (typeof Range !== 'undefined' && !('getClientRects' in Range.prototype)) {
 configure({ asyncUtilTimeout: 15_000 });
 
 /** The real layout (the Worker's in the browser), for the Views whose Geometry has not arrived from the server yet. */
-export const realLayout: AdaptadorDeLayout = (view, theme, measures) => layoutView(view, theme, { ...(measures !== undefined && { medidas: measures }) });
+export const realLayout: LayoutAdapter = (view, theme, measures) => layoutView(view, theme, { ...(measures !== undefined && { measures }) });
 
 export interface MountOptions {
   hash?: string;
@@ -47,7 +47,7 @@ export interface MountOptions {
 export async function mountDevUi(own: Record<string, string>, { hash = '', platform: platform = 'otras', themes, activity, code, confirm: confirm = () => false, wrapFetch: wrapFetch = (f) => f, wrapEvents: wrapEvents = (e) => e }: MountOptions = {}): Promise<{ dev: InMemoryDev; container: HTMLElement }> {
   window.history.replaceState(null, '', `/${hash}`);
   const dev = await inMemoryDev({ own, ...(themes !== undefined && { themes }), ...(activity !== undefined && { activity }), ...(code !== undefined && { code }) });
-  const { container } = render(<DevUi fetch={wrapFetch(dev.fetch)} events={wrapEvents(dev.events)} hash={hashDelNavegador(window)} layout={realLayout} confirm={confirm} platform={platform} />);
+  const { container } = render(<DevUi fetch={wrapFetch(dev.fetch)} events={wrapEvents(dev.events)} hash={browserHash(window)} layout={realLayout} confirm={confirm} platform={platform} />);
   return { dev, container };
 }
 
@@ -60,7 +60,7 @@ export async function mountExport(own: Record<string, string>, { hash = '', them
   const dev = await inMemoryDev({ own, ...(themes !== undefined && { themes }) });
   const data = await captureExport({ fetch: dev.fetch, readSource: () => undefined });
   await dev.close();
-  const { container } = render(<DevUi {...exportProps(data)} hash={hashDelNavegador(window)} layout={realLayout} platform="otras" />);
+  const { container } = render(<DevUi {...exportProps(data)} hash={browserHash(window)} layout={realLayout} platform="otras" />);
   return { data, container };
 }
 
@@ -129,5 +129,5 @@ export const canvasReady = (container: HTMLElement, view: string): Promise<HTMLE
     return canvas;
   });
 
-/** Click and double click at the center of a drawn Node; the only copy lives in `tests/ayudas/lienzo.ts`. */
-export const { dobleClicEnNodo: doubleClickOnNode, posicionDe: positionOf, pulsarNodo: pressNode } = ayudasDeLienzo(fireEvent);
+/** Click and double click at the center of a drawn Node; the only copy lives in `tests/helpers/canvas.ts`. */
+export const { doubleClickNode: doubleClickOnNode, positionOf, pressNode } = canvasHelpers(fireEvent);

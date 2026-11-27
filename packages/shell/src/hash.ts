@@ -1,138 +1,138 @@
-/** Estado del shell en el hash de URL. Sin DOM salvo en `hashDelNavegador`. */
+/** Shell state in the URL hash. No DOM except in `browserHash`. */
 import { parseSequenceElementId } from 'canonical';
 import type { CollapseState, CanonicalForm, Node } from 'canonical';
-import type { Camara } from 'render';
+import type { Camera } from 'render';
 
-/** Estado del lector que vive en el hash. `path` termina en la Vista activa. */
-export interface EstadoDeShell {
+/** Reader state that lives in the hash. `path` ends at the active View. */
+export interface ShellState {
   path: string[];
   state: CollapseState;
   selected: string | null;
   step: number;
-  camera?: Camara;
+  camera?: Camera;
 }
 
-export interface AdaptadorDeHash {
-  /** Hash vigente, con o sin `#`. */
-  leer: () => string;
-  /** Fija el hash (sin `#`); `reemplazar` no agrega entrada de historial. */
-  escribir: (hash: string, opciones: { reemplazar: boolean }) => void;
-  /** Avisa de cambios externos (atras/adelante, edicion manual); devuelve la baja. */
-  suscribir: (aviso: () => void) => () => void;
+export interface HashAdapter {
+  /** Current hash, with or without `#`. */
+  read: () => string;
+  /** Sets the hash (without `#`); `replace` adds no history entry. */
+  write: (hash: string, options: { replace: boolean }) => void;
+  /** Reports external changes (back/forward, manual edit); returns the unsubscribe. */
+  subscribe: (notice: () => void) => () => void;
 }
 
-export function hashDelNavegador(win: Window): AdaptadorDeHash {
+export function browserHash(win: Window): HashAdapter {
   return {
-    leer: () => win.location.hash,
-    escribir: (hash, { reemplazar }) => {
-      const destino = hash === '' ? win.location.pathname + win.location.search : `#${hash}`;
-      if (reemplazar) {
+    read: () => win.location.hash,
+    write: (hash, { replace }) => {
+      const target = hash === '' ? win.location.pathname + win.location.search : `#${hash}`;
+      if (replace) {
         try {
-          win.history.replaceState(null, '', destino);
+          win.history.replaceState(null, '', target);
         } catch {
-          // Archivos locales (file://): algunos navegadores rechazan replaceState; un cambio de hash reemplaza la entrada igual.
+          // Local files (file://): some browsers reject replaceState; a hash change replaces the entry anyway.
           win.location.replace(`#${hash}`);
         }
       }
       else if (hash === '') {
         try {
-          win.history.pushState(null, '', destino);
+          win.history.pushState(null, '', target);
         } catch {
           win.location.hash = '';
         }
       }
       else win.location.hash = hash;
     },
-    suscribir: (aviso) => {
-      win.addEventListener('hashchange', aviso);
-      win.addEventListener('popstate', aviso);
+    subscribe: (notice) => {
+      win.addEventListener('hashchange', notice);
+      win.addEventListener('popstate', notice);
       return () => {
-        win.removeEventListener('hashchange', aviso);
-        win.removeEventListener('popstate', aviso);
+        win.removeEventListener('hashchange', notice);
+        win.removeEventListener('popstate', notice);
       };
     },
   };
 }
 
-const idsDelModelo = (nodos: readonly Node[], acumulado = new Set<string>()): Set<string> => {
-  for (const n of nodos) {
-    acumulado.add(n.id);
-    idsDelModelo(n.children, acumulado);
+const modelIds = (nodes: readonly Node[], accumulated = new Set<string>()): Set<string> => {
+  for (const n of nodes) {
+    accumulated.add(n.id);
+    modelIds(n.children, accumulated);
   }
-  return acumulado;
+  return accumulated;
 };
 
-/** `interaccion:ruta` (Mensaje, Fragmento o Nota de secuencia) de una Interaccion que existe en la Fuente. */
-function esElementoDeInteraccion(id: string, source: CanonicalForm): boolean {
-  const leido = parseSequenceElementId(id);
-  return leido !== undefined && leido.operand === undefined && (source.model.interactions ?? []).some((i) => i.id === leido.interaction);
+/** `interaction:path` (sequence Message, Fragment or Note) of an Interaction that exists in the source. */
+function isInteractionElement(id: string, source: CanonicalForm): boolean {
+  const parsed = parseSequenceElementId(id);
+  return parsed !== undefined && parsed.operand === undefined && (source.model.interactions ?? []).some((i) => i.id === parsed.interaction);
 }
 
-/** La primera Vista de la Fuente; `undefined` si no hay Vistas. */
-export const vistaPorDefecto = (source: CanonicalForm): string | undefined => source.views[0]?.id;
+/** The first View of the source; `undefined` if there are no Views. */
+export const firstView = (source: CanonicalForm): string | undefined => source.views[0]?.id;
 
-/** Paso de entrada: 1 en sequence y er con Pasos (el 0 las dejaria vacias); 0 (antes del primero) en el resto. */
-export const pasoInicialDeTipo = (tipo: string, total: number): number => ((tipo === 'sequence' || tipo === 'er') && total > 0 ? 1 : 0);
+/** Entry Step: 1 in sequence and er with Steps (0 would leave them empty); 0 (before the first) in the rest. */
+export const initialStepOfType = (kind: string, total: number): number => ((kind === 'sequence' || kind === 'er') && total > 0 ? 1 : 0);
 
-export const pasoInicialDeVista = (source: CanonicalForm, vista: string | undefined): number => {
-  const v = source.views.find((candidata) => candidata.id === vista);
-  return v === undefined ? 0 : pasoInicialDeTipo(v.type, v.steps?.length ?? 0);
+export const initialStepOfView = (source: CanonicalForm, view: string | undefined): number => {
+  const v = source.views.find((candidate) => candidate.id === view);
+  return v === undefined ? 0 : initialStepOfType(v.type, v.steps?.length ?? 0);
 };
 
 /**
- * Estado -> hash (sin `#`): `p` ruta (repetido), `e`/`c` Grupos abiertos/cerrados, `s` Seleccion, `t` Paso,
- * `cam=x,y,w,h`. Omite lo que vale su default (la ruta `[vistaInicial]`, el Paso de entrada), asi el estado inicial da hash vacio.
+ * State -> hash (without `#`): `p` path (repeated), `e`/`c` open/closed Groups, `s` Selection, `t` Step,
+ * `cam=x,y,w,h`. Omits what equals its default (the path `[initialView]`, the entry Step), so the initial state gives an empty hash.
  */
-export function serializarEstado(estado: EstadoDeShell, vistaInicial?: string, source?: CanonicalForm): string {
+export function serializeState(state: ShellState, initialView?: string, source?: CanonicalForm): string {
   const p = new URLSearchParams();
-  if (!(estado.path.length === 1 && estado.path[0] === vistaInicial)) for (const v of estado.path) p.append('p', v);
-  for (const id of estado.state.expanded ?? []) p.append('e', id);
-  for (const id of estado.state.collapsed ?? []) p.append('c', id);
-  if (estado.selected !== null) p.set('s', estado.selected);
-  const pasoPorDefecto = source === undefined ? 0 : pasoInicialDeVista(source, estado.path[estado.path.length - 1]);
-  if (estado.step !== pasoPorDefecto) p.set('t', String(estado.step));
-  if (estado.camera !== undefined) {
-    const { x, y, width, height } = estado.camera;
+  if (!(state.path.length === 1 && state.path[0] === initialView)) for (const v of state.path) p.append('p', v);
+  for (const id of state.state.expanded ?? []) p.append('e', id);
+  for (const id of state.state.collapsed ?? []) p.append('c', id);
+  if (state.selected !== null) p.set('s', state.selected);
+  const defaultStepValue = source === undefined ? 0 : initialStepOfView(source, state.path[state.path.length - 1]);
+  if (state.step !== defaultStepValue) p.set('t', String(state.step));
+  if (state.camera !== undefined) {
+    const { x, y, width, height } = state.camera;
     p.set('cam', [x, y, width, height].join(','));
   }
   return p.toString();
 }
 
-function leerCamara(texto: string | null): Camara | undefined {
-  if (texto === null) return undefined;
-  const partes = texto.split(',');
-  if (partes.length !== 4 || partes.some((s) => s.trim() === '')) return undefined;
-  const [x, y, width, height] = partes.map(Number) as [number, number, number, number];
+function readCamera(text: string | null): Camera | undefined {
+  if (text === null) return undefined;
+  const parts = text.split(',');
+  if (parts.length !== 4 || parts.some((s) => s.trim() === '')) return undefined;
+  const [x, y, width, height] = parts.map(Number) as [number, number, number, number];
   if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return undefined;
   return { x, y, width, height };
 }
 
 /**
- * Hash -> estado valido contra la Fuente. Nunca lanza: lo que no se entiende o no existe cae al default de ese
- * campo. El colapso trae `expanded` y `collapsed` juntos, o es `{}`.
+ * Hash -> state validated against the source. Never throws: what is not understood or does not exist falls back to that
+ * field's default. Collapse brings `expanded` and `collapsed` together, or is `{}`.
  */
-export function deserializarEstado(hash: string, source: CanonicalForm, vistaInicial: string | undefined = vistaPorDefecto(source)): EstadoDeShell {
+export function deserializeState(hash: string, source: CanonicalForm, initialView: string | undefined = firstView(source)): ShellState {
   const p = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
-  const vistas = new Set(source.views.map((v) => v.id));
-  const nodos = idsDelModelo(source.model.nodes);
+  const viewList = new Set(source.views.map((v) => v.id));
+  const nodes = modelIds(source.model.nodes);
 
-  let path = p.getAll('p').filter((v) => vistas.has(v));
-  if (path.length === 0) path = vistaInicial === undefined ? [] : [vistaInicial];
-  const activa = source.views.find((v) => v.id === path[path.length - 1]);
+  let path = p.getAll('p').filter((v) => viewList.has(v));
+  if (path.length === 0) path = initialView === undefined ? [] : [initialView];
+  const activeOne = source.views.find((v) => v.id === path[path.length - 1]);
 
-  const conocidos = (clave: string): string[] => p.getAll(clave).filter((id) => nodos.has(id));
-  const expanded = conocidos('e');
-  const collapsed = conocidos('c');
+  const known = (key: string): string[] => p.getAll(key).filter((id) => nodes.has(id));
+  const expanded = known('e');
+  const collapsed = known('c');
   const state: CollapseState = expanded.length === 0 && collapsed.length === 0 ? {} : { expanded, collapsed };
 
   const s = p.get('s');
-  const selected = s !== null && (nodos.has(s) || esElementoDeInteraccion(s, source)) ? s : null;
+  const selected = s !== null && (nodes.has(s) || isInteractionElement(s, source)) ? s : null;
 
   const t = p.get('t');
-  const inicial = pasoInicialDeVista(source, activa?.id);
-  const n = t !== null && /^\d+$/.test(t) ? Number(t) : inicial;
-  const step = n <= (activa?.steps?.length ?? 0) ? n : inicial;
+  const initial = initialStepOfView(source, activeOne?.id);
+  const n = t !== null && /^\d+$/.test(t) ? Number(t) : initial;
+  const step = n <= (activeOne?.steps?.length ?? 0) ? n : initial;
 
-  const camera = leerCamara(p.get('cam'));
+  const camera = readCamera(p.get('cam'));
   return { path, state, selected, step, ...(camera !== undefined && { camera }) };
 }

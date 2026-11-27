@@ -23,7 +23,7 @@
  */
 import { combineIconProviders, obsoleteConventions, emptyDiff, isFontFile, genericIcons, inspectOutputSchema, serializeIcons, workspaceIcons } from 'canonical';
 import type { DevFile, DevFiles, DevDiff, DevState, DevEvent, CachedGeometry, DevHistory, Intent, Issue, RejectionReason, DiffOrigin, ChangeKind } from 'canonical';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 import { themeComponents } from 'theme';
 
 import { applyToWorkspace } from './apply';
@@ -149,7 +149,7 @@ const NO_CODE: CompiledCode = { components: {}, issues: [], bundle: 'return {};'
 
 const isTextEdits = (applicable: Intent | TextEdits): applicable is TextEdits => 'edits' in applicable;
 
-const hashesOf = (files: ArchivosDelWorkspace): Record<string, string> => Object.fromEntries(Object.entries(files).map(([path, text]) => [path, contentHash(text)]));
+const hashesOf = (files: WorkspaceFiles): Record<string, string> => Object.fromEntries(Object.entries(files).map(([path, text]) => [path, contentHash(text)]));
 
 export async function openLiveWorkspace(options: LiveWorkspaceOptions): Promise<LiveWorkspace> {
   const { port, root, clock, debounceMs = DEBOUNCE_MS, compileCode = () => NO_CODE, now } = options;
@@ -170,7 +170,7 @@ export async function openLiveWorkspace(options: LiveWorkspaceOptions): Promise<
   let trusted = options.trustCode ?? false;
   let current: Session = openSession(files, { ...sessionOptions(resources), components: code.components, adapterIssues: code.issues });
   /** Last Session without compilation errors. */
-  let lastGood: { session: Session; files: ArchivosDelWorkspace } | undefined = current.source === undefined ? undefined : { session: current, files };
+  let lastGood: { session: Session; files: WorkspaceFiles } | undefined = current.source === undefined ? undefined : { session: current, files };
   /** Compile issues plus the old file conventions of the Workspace paths (as `validate` reports them). */
   const withConventions = (list: Issue[]): Issue[] => [...list, ...obsoleteConventions(port.paths?.() ?? [])];
   let issues: Issue[] = withConventions(await current.diagnose());
@@ -209,7 +209,7 @@ export async function openLiveWorkspace(options: LiveWorkspaceOptions): Promise<
   let running: Promise<void> | undefined;
   let pending = false;
   const recompileOnce = async (): Promise<void> => {
-    let nextFiles: ArchivosDelWorkspace;
+    let nextFiles: WorkspaceFiles;
     let nextResources: Record<string, string> | undefined;
     try {
       nextFiles = port.read().disk;
@@ -245,7 +245,7 @@ export async function openLiveWorkspace(options: LiveWorkspaceOptions): Promise<
     if (diff !== undefined) emit({ name: 'diferencia', data: diff });
   };
   /** `propio` if each changed file is a hash echo of a UI write (and consumes it). */
-  function originOf(earlier: ArchivosDelWorkspace, nextFiles: ArchivosDelWorkspace): DiffOrigin | undefined {
+  function originOf(earlier: WorkspaceFiles, nextFiles: WorkspaceFiles): DiffOrigin | undefined {
     const changed = [...new Set([...Object.keys(earlier), ...Object.keys(nextFiles)])].filter((path) => earlier[path] !== nextFiles[path]);
     if (changed.length === 0) return undefined;
     let origin: DiffOrigin = 'propio';
@@ -309,7 +309,7 @@ export async function openLiveWorkspace(options: LiveWorkspaceOptions): Promise<
   };
 
   /** Best effort: a failure does not interrupt the rest of `paths`. */
-  const revert = (origin: ArchivosDelWorkspace, paths: readonly string[]): void => {
+  const revert = (origin: WorkspaceFiles, paths: readonly string[]): void => {
     for (const path of paths) {
       try {
         if (path in origin) writeOwn(path, origin[path] as string);
@@ -320,7 +320,7 @@ export async function openLiveWorkspace(options: LiveWorkspaceOptions): Promise<
     }
   };
   /** If it fails halfway, it reverts and rethrows. */
-  const writeToDisk = (origin: ArchivosDelWorkspace, target: ArchivosDelWorkspace): void => {
+  const writeToDisk = (origin: WorkspaceFiles, target: WorkspaceFiles): void => {
     const touched: string[] = [];
     try {
       for (const path of Object.keys(target).filter((r) => target[r] !== origin[r]).sort()) {
@@ -377,7 +377,7 @@ export async function openLiveWorkspace(options: LiveWorkspaceOptions): Promise<
       return recompileAfterWrite();
     });
 
-  const restore = (move: (h: FileHistory, disk: ArchivosDelWorkspace) => RestoreResult): Promise<LiveWorkspaceResult> =>
+  const restore = (move: (h: FileHistory, disk: WorkspaceFiles) => RestoreResult): Promise<LiveWorkspaceResult> =>
     enqueue(async () => {
       const disk = port.read().own;
       const r = move(history, disk);

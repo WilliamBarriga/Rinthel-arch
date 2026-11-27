@@ -3,136 +3,134 @@ import { mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync,
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import { isFontFile, fontMimeType } from 'canonical';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 
-/** Nombre de la carpeta de salida derivada del Workspace (build y Registro de actividad). */
-export const CARPETA_DE_SALIDA = '.diagrams';
+/** Name of the output folder derived from the Workspace (build and Activity log). */
+export const OUTPUT_FOLDER = '.diagrams';
 
-/** `<raiz>/.diagrams` */
-export const carpetaDeSalida = (raiz: string): string => join(raiz, CARPETA_DE_SALIDA);
+/** `<root>/.diagrams` */
+export const outputFolder = (root: string): string => join(root, OUTPUT_FOLDER);
 
 const EXTENSION = '.dg';
-const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist']);
+const IGNORED_FOLDERS = new Set(['node_modules', 'dist']);
 
 /**
- * Ruta relativa con `/` -> lo que `leer` saca de cada archivo que `acepta`. Salta carpetas ocultas
- * (`.diagrams/`), `node_modules`, `dist` y las que `salta`; no baja de `profundidad` carpetas bajo `raiz`.
+ * Relative path with `/` -> what `read` gets from each file it `accepts`. Skips hidden folders
+ * (`.diagrams/`), `node_modules`, `dist` and those it `skips`; goes no deeper than `depth` folders under `root`.
  */
-function recorrer(
-  raiz: string,
-  acepta: (nombre: string) => boolean,
-  leer: (ruta: string) => string,
-  { profundidad = Infinity, salta = () => false }: { profundidad?: number; salta?: (nombre: string) => boolean } = {},
+function walk(
+  root: string,
+  accepts: (name: string) => boolean,
+  read: (path: string) => string,
+  { depth: depth = Infinity, skips: skips = () => false }: { depth?: number; skips?: (name: string) => boolean } = {},
 ): Record<string, string> {
-  const archivos: Record<string, string> = {};
-  const visitar = (carpeta: string, nivel: number): void => {
-    for (const entrada of readdirSync(carpeta, { withFileTypes: true })) {
-      if (entrada.name.startsWith('.') || CARPETAS_IGNORADAS.has(entrada.name)) continue;
-      const ruta = join(carpeta, entrada.name);
-      if (entrada.isDirectory()) {
-        if (nivel < profundidad && !salta(entrada.name)) visitar(ruta, nivel + 1);
-      } else if (acepta(entrada.name)) archivos[relative(raiz, ruta).split(sep).join('/')] = leer(ruta);
+  const files: Record<string, string> = {};
+  const visit = (folder: string, level: number): void => {
+    for (const input of readdirSync(folder, { withFileTypes: true })) {
+      if (input.name.startsWith('.') || IGNORED_FOLDERS.has(input.name)) continue;
+      const path = join(folder, input.name);
+      if (input.isDirectory()) {
+        if (level < depth && !skips(input.name)) visit(path, level + 1);
+      } else if (accepts(input.name)) files[relative(root, path).split(sep).join('/')] = read(path);
     }
   };
-  visitar(raiz, 0);
-  return archivos;
+  visit(root, 0);
+  return files;
 }
 
-/** Archivos `.dg` y `.svg` (iconos) bajo `raiz`. Lanza si la raiz no existe o is not a folder. */
-export function leerWorkspace(raiz: string): ArchivosDelWorkspace {
-  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' is not a folder`);
-  return recorrer(raiz, (nombre) => nombre.endsWith(EXTENSION) || nombre.endsWith('.svg'), (ruta) => readFileSync(ruta, 'utf8'));
+/** `.dg` and `.svg` (icon) files under `root`. Throws if the root does not exist or is not a folder. */
+export function readWorkspace(root: string): WorkspaceFiles {
+  if (!statSync(root).isDirectory()) throw new Error(`'${root}' is not a folder`);
+  return walk(root, (name) => name.endsWith(EXTENSION) || name.endsWith('.svg'), (path) => readFileSync(path, 'utf8'));
 }
 
-/** Rutas relativas con `/` de todos los archivos bajo `raiz` (para revisar las convenciones de nombres). */
-export function leerRutas(raiz: string): string[] {
-  return Object.keys(recorrer(raiz, () => true, () => ''));
-}
-
-/**
- * Relative `/` paths of the `.dg` files under `raiz`, at most `profundidad` folders down, skipping the folders that
- * `recorrer` skips and those `salta` names (how `scan` looks for a Workspace).
- */
-export function rutasDeDg(raiz: string, profundidad: number, salta: (nombre: string) => boolean): string[] {
-  return Object.keys(recorrer(raiz, (nombre) => nombre.endsWith(EXTENSION), () => '', { profundidad, salta }));
-}
-
-const EXTENSIONES_DE_RECURSO = ['.tsx', '.ttf', '.otf', '.woff', '.woff2'];
-
-/**
- * Componentes `.tsx` y fuentes tipograficas bajo `raiz`: ruta relativa con `/` -> SHA-256 del contenido.
- * Lanza si la raiz no existe o is not a folder.
- */
-export function leerRecursos(raiz: string): Record<string, string> {
-  if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' is not a folder`);
-  return recorrer(raiz, (nombre) => EXTENSIONES_DE_RECURSO.some((extension) => nombre.endsWith(extension)), (ruta) => createHash('sha256').update(readFileSync(ruta)).digest('hex'));
-}
-
-export { isFontFile as esArchivoDeFuente };
-
-/** Rutas relativas a `raiz`, con `/`. */
-export function leerFuentes(raiz: string): string[] {
-  return Object.keys(leerRecursos(raiz)).filter(isFontFile);
+/** Relative paths with `/` of every file under `root` (to check the naming conventions). */
+export function readPaths(root: string): string[] {
+  return Object.keys(walk(root, () => true, () => ''));
 }
 
 /**
- * Bytes y tipo MIME de `ruta` en la primera de las `raices` que la tenga. Solo extensiones de fuente, solo archivos
- * regulares y solo si, resueltos los enlaces simbolicos, siguen dentro de su raiz; cualquier otra cosa da `undefined`.
+ * Relative `/` paths of the `.dg` files under `root`, at most `depth` folders down, skipping the folders that
+ * `walk` skips and those `skips` names (how `scan` looks for a Workspace).
  */
-export function leerArchivoDeFuente(raices: readonly string[], ruta: string): { bytes: Buffer; tipo: string } | undefined {
-  const tipo = fontMimeType(ruta);
-  if (tipo === undefined) return undefined;
-  for (const raiz of raices) {
+export function dgPaths(root: string, depth: number, skips: (name: string) => boolean): string[] {
+  return Object.keys(walk(root, (name) => name.endsWith(EXTENSION), () => '', { depth, skips }));
+}
+
+const RESOURCE_EXTENSIONS = ['.tsx', '.ttf', '.otf', '.woff', '.woff2'];
+
+/**
+ * Theme component `.tsx` files and font files under `root`: relative path with `/` -> SHA-256 of the contents.
+ * Throws if the root does not exist or is not a folder.
+ */
+export function readResources(root: string): Record<string, string> {
+  if (!statSync(root).isDirectory()) throw new Error(`'${root}' is not a folder`);
+  return walk(root, (name) => RESOURCE_EXTENSIONS.some((extension) => name.endsWith(extension)), (path) => createHash('sha256').update(readFileSync(path)).digest('hex'));
+}
+
+/** Paths relative to `root`, with `/`. */
+export function readFonts(root: string): string[] {
+  return Object.keys(readResources(root)).filter(isFontFile);
+}
+
+/**
+ * Bytes and MIME type of `path` in the first of the `roots` that has it. Only font extensions, only regular files
+ * and only if, once symlinks are resolved, they stay inside their root; anything else gives `undefined`.
+ */
+export function readFontFile(roots: readonly string[], path: string): { bytes: Buffer; type: string } | undefined {
+  const type = fontMimeType(path);
+  if (type === undefined) return undefined;
+  for (const root of roots) {
     try {
-      const real = realpathSync(destinoEnWorkspace(raiz, ruta));
-      if (!real.startsWith(realpathSync(raiz) + sep) || !statSync(real).isFile()) continue;
-      return { bytes: readFileSync(real), tipo };
+      const actual = realpathSync(workspaceTarget(root, path));
+      if (!actual.startsWith(realpathSync(root) + sep) || !statSync(actual).isFile()) continue;
+      return { bytes: readFileSync(actual), type };
     } catch {
-      // fuera de la raiz, inexistente o ilegible: se prueba la siguiente raiz
+      // outside the root, missing or unreadable: try the next root
     }
   }
   return undefined;
 }
 
-/** Lo que `build` reemplaza en `.diagrams/`; el resto (el Registro de actividad) se conserva. */
-const SALIDA_DE_BUILD = ['canonico.json', 'geometria'];
+/** What `build` replaces in `.diagrams/`; the rest (the Activity log) is kept. */
+const BUILD_OUTPUT = ['canonico.json', 'geometria'];
 /**
- * Reemplaza `<raiz>/.diagrams/<subcarpeta>` (por defecto, `canonico.json` y `geometria/`) por `archivos` (ruta
- * relativa a `.diagrams/` con `/`): no quedan restos de una Vista que ya no existe.
+ * Replaces `<root>/.diagrams/<subfolder>` (by default `canonico.json` and `geometria/`) with `files` (path
+ * relative to `.diagrams/` with `/`): no leftovers of a View that no longer exists.
  */
-export function escribirSalida(
-  raiz: string,
-  archivos: Readonly<Record<string, string | Uint8Array>>,
-  subcarpeta = '',
+export function writeOutput(
+  root: string,
+  files: Readonly<Record<string, string | Uint8Array>>,
+  subfolder = '',
 ): void {
-  const destino = carpetaDeSalida(raiz);
-  for (const ruta of subcarpeta === '' ? SALIDA_DE_BUILD : [subcarpeta]) rmSync(join(destino, ruta), { recursive: true, force: true });
-  for (const [ruta, texto] of Object.entries(archivos)) {
-    const archivo = join(destino, ...ruta.split('/'));
-    mkdirSync(dirname(archivo), { recursive: true });
-    writeFileSync(archivo, texto);
+  const target = outputFolder(root);
+  for (const path of subfolder === '' ? BUILD_OUTPUT : [subfolder]) rmSync(join(target, path), { recursive: true, force: true });
+  for (const [path, text] of Object.entries(files)) {
+    const file = join(target, ...path.split('/'));
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, text);
   }
 }
 
-/** Crea las carpetas que falten. Atomico (temporal y rename): nadie ve el archivo a medias. */
-export function escribirTexto(ruta: string, texto: string): void {
-  mkdirSync(dirname(ruta), { recursive: true });
-  const temporal = `${ruta}.${process.pid}.${Date.now()}.tmp`;
+/** Creates missing folders. Atomic (temp file and rename): nobody sees the file half written. */
+export function writeTextFile(path: string, text: string): void {
+  mkdirSync(dirname(path), { recursive: true });
+  const tempDir = `${path}.${process.pid}.${Date.now()}.tmp`;
   try {
-    writeFileSync(temporal, texto);
-    renameSync(temporal, ruta);
+    writeFileSync(tempDir, text);
+    renameSync(tempDir, path);
   } catch (error) {
-    rmSync(temporal, { force: true });
+    rmSync(tempDir, { force: true });
     throw error;
   }
 }
 
-/** `ruta` es relativa a `raiz`, con `/`; lanza si el destino queda fuera de la raiz. */
-export function destinoEnWorkspace(raiz: string, ruta: string): string {
-  const base = resolve(raiz);
-  const destino = resolve(base, ...ruta.split('/'));
-  if (ruta.startsWith('/') || isAbsolute(ruta) || !destino.startsWith(base + sep)) {
-    throw new Error(`'${ruta}' is outside the Workspace`);
+/** `path` is relative to `root`, with `/`; throws if the target ends up outside the root. */
+export function workspaceTarget(root: string, path: string): string {
+  const base = resolve(root);
+  const target = resolve(base, ...path.split('/'));
+  if (path.startsWith('/') || isAbsolute(path) || !target.startsWith(base + sep)) {
+    throw new Error(`'${path}' is outside the Workspace`);
   }
-  return destino;
+  return target;
 }

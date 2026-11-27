@@ -5,8 +5,8 @@
 import { lazy, Suspense } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
-import { Migas } from 'shell';
-import type { Navegacion } from 'shell';
+import { Breadcrumbs } from 'shell';
+import type { Navigation } from 'shell';
 
 import { FinderPill } from '../commands/finder-pill';
 import { useCanvasGesture } from '../canvas/gesture';
@@ -23,7 +23,7 @@ const Tour = lazy(() => import('../tour/tour').then((m) => ({ default: m.Tour })
 
 interface FrameProps {
   /** Breadcrumbs over the hash path; `undefined` without a Source. */
-  navigation: Navegacion | undefined;
+  navigation: Navigation | undefined;
   canvas: ReactNode;
   legend?: ReactNode;
 }
@@ -44,7 +44,7 @@ export function Frame({ navigation, canvas, legend }: FrameProps): ReactElement 
         {!canWrite && <span className="ui-pildora ui-tenue">Read-only</span>}
         {navigation !== undefined && (
           <div className="ui-pildora ui-migas">
-            <Migas navegacion={navigation} />
+            <Breadcrumbs navigation={navigation} />
           </div>
         )}
         <FinderPill />

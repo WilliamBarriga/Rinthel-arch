@@ -22,7 +22,7 @@ export const PreviewContext = createContext<ThemePreview | undefined>(undefined)
 
 export function useThemePreview(): ThemePreview {
   const context = useContext(PreviewContext);
-  if (context === undefined) throw new Error('usePrevisualizacionDeTema fuera de <Estudio>');
+  if (context === undefined) throw new Error('useThemePreview outside <DevUiProviders>');
   return context;
 }
 

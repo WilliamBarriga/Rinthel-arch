@@ -1,7 +1,7 @@
 /** `inspect theme`: the query of a Theme (`extends` chain, Layers, Group, Theme elements, Slots and Metrics). Pure. */
 import { INSPECT_CONTRACT_VERSION, nearestCandidates } from 'canonical';
 import type { CanonicalForm } from 'canonical';
-import type { OrigenDeTema } from 'dsl';
+import type { ThemeOrigin } from 'dsl';
 import { CATALOG, EFFECTS, STATES, MOTIONS, DIAGRAM_TYPES, headerHeight, cascade, themeComponents, describeLayout, themeElements, nodeMetricsFor, parseState, resolveTheme, metricsTable, themeForDiagram } from 'theme';
 import type { ResolvedLayer, DescribedLayer } from 'theme';
 
@@ -20,7 +20,7 @@ export interface ThemeQueryOptions {
 const BUILT_IN: Site = { file: '(incorporado)', line: 1 };
 
 /** `extends` chain, `part`s used, Layer stack for a Node kind and state (with the site that set each Layer), Metrics and code use. */
-export function queryTheme(source: CanonicalForm, origins: Readonly<Record<string, OrigenDeTema>>, name: string, { kind, state, diagram, catalog: catalog = false }: ThemeQueryOptions = {}): QueryAnswer {
+export function queryTheme(source: CanonicalForm, origins: Readonly<Record<string, ThemeOrigin>>, name: string, { kind, state, diagram, catalog: catalog = false }: ThemeQueryOptions = {}): QueryAnswer {
   const declared = source.themes.find((t) => t.name === name);
   if (declared === undefined) {
     const nearest = nearestCandidates(name, source.themes.map((t) => t.name));
@@ -48,8 +48,8 @@ export function queryTheme(source: CanonicalForm, origins: Readonly<Record<strin
   const origin = origins[name];
   const siteOf = (layer: string): Site => {
     // The most specific cascade level that set the Layer wins: state, Node kind, base.
-    const site = (validState === undefined ? undefined : origin?.estados[validState]?.[layer]) ?? (kind === undefined ? undefined : origin?.tipos[kind]?.[layer]) ?? origin?.base[layer];
-    return site === undefined ? (origin?.sitio ?? BUILT_IN) : { file: site.file, line: site.line };
+    const site = (validState === undefined ? undefined : origin?.states[validState]?.[layer]) ?? (kind === undefined ? undefined : origin?.kinds[kind]?.[layer]) ?? origin?.base[layer];
+    return site === undefined ? (origin?.site ?? BUILT_IN) : { file: site.file, line: site.line };
   };
   const toLayer = (layer: ResolvedLayer, site: Site) => ({
     name: layer.nombre,
@@ -60,7 +60,7 @@ export function queryTheme(source: CanonicalForm, origins: Readonly<Record<strin
     origin: site,
   });
   const layers = cascade(theme, { ...(kind !== undefined && { tipo: kind }), ...(validState !== undefined && { estado: validState }) }).map((layer: ResolvedLayer) => toLayer(layer, siteOf(layer.nombre)));
-  const themeSite = origin?.sitio ?? BUILT_IN;
+  const themeSite = origin?.site ?? BUILT_IN;
   const withOrigin = (layers: readonly DescribedLayer[]) => layers.map((layer) => ({ name: layer.nombre, primitive: layer.primitiva, props: layer.props, above: layer.encima, animated: layer.animada, origin: themeSite }));
   const described = themeElements(declared, diagramType, kind);
   const sequence = Object.fromEntries(
@@ -73,23 +73,23 @@ export function queryTheme(source: CanonicalForm, origins: Readonly<Record<strin
   const page = {
     fixed: theme.pagina.fijo,
     layers: (theme.pagina.capas as ResolvedLayer[]).map((layer) => {
-      const site = origin?.pagina[layer.nombre];
-      return toLayer(layer, site === undefined ? (origin?.sitio ?? BUILT_IN) : { file: site.file, line: site.line });
+      const site = origin?.page[layer.nombre];
+      return toLayer(layer, site === undefined ? (origin?.site ?? BUILT_IN) : { file: site.file, line: site.line });
     }),
   };
   // If no block writes the Slot layout, the Theme's (or the core's) applies.
-  const slotsSite = (site: Site | undefined): Site => site ?? origin?.sitio ?? BUILT_IN;
+  const slotsSite = (site: Site | undefined): Site => site ?? origin?.site ?? BUILT_IN;
   const table = metricsTable(declared, diagramType);
   const nodeMetrics = nodeMetricsFor(table, kind);
-  const groupOrigin = origin?.grupo;
+  const groupOrigin = origin?.group;
   const groupSiteOf = (layer: string, collapsed: boolean): Site => {
     // Cascade: state, collapsed, Node kind, base.
     const site =
-      (validState === undefined ? undefined : groupOrigin?.estados[validState]?.[layer]) ??
-      (collapsed ? groupOrigin?.colapsado[layer] : undefined) ??
-      (kind === undefined ? undefined : groupOrigin?.tipos[kind]?.[layer]) ??
+      (validState === undefined ? undefined : groupOrigin?.states[validState]?.[layer]) ??
+      (collapsed ? groupOrigin?.collapsed[layer] : undefined) ??
+      (kind === undefined ? undefined : groupOrigin?.kinds[kind]?.[layer]) ??
       groupOrigin?.base[layer];
-    return site === undefined ? (origin?.sitio ?? BUILT_IN) : { file: site.file, line: site.line };
+    return site === undefined ? (origin?.site ?? BUILT_IN) : { file: site.file, line: site.line };
   };
   const groupStack = (collapsed: boolean) =>
     cascade(theme, { ...(kind !== undefined && { tipo: kind }), ...(validState !== undefined && { estado: validState }), ...(collapsed && { colapsado: collapsed }) }, 'grupo').map((layer: ResolvedLayer) => toLayer(layer, groupSiteOf(layer.nombre, collapsed)));
@@ -108,9 +108,9 @@ export function queryTheme(source: CanonicalForm, origins: Readonly<Record<strin
       command: 'theme',
       theme: {
         name,
-        ...(origin === undefined ? BUILT_IN : { file: origin.sitio.file, line: origin.sitio.line }),
+        ...(origin === undefined ? BUILT_IN : { file: origin.site.file, line: origin.site.line }),
         extends: origin?.extends ?? [],
-        parts: origin?.partes ?? [],
+        parts: origin?.parts ?? [],
         ...(kind !== undefined && { kind }),
         ...(validState !== undefined && { state: validState }),
         ...(diagramType !== undefined && { diagram: diagramType }),

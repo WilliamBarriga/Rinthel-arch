@@ -14,7 +14,7 @@ const GROUPS: readonly { scope: Scope; name: string }[] = [
   { scope: 'texto', name: 'Text field' },
 ];
 
-/** Keys of `VistaInteractiva` itself with the focus on the canvas: they are not registry commands, but they are documented. */
+/** Keys of `InteractiveView` itself with the focus on the canvas: they are not registry commands, but they are documented. */
 const CANVAS_KEYS: readonly { name: string; keys: string[] }[] = [
   { name: 'Cycle through elements', keys: ['Tab', 'Shift+Tab'] },
   { name: 'Move between elements', keys: ['Arrows'] },

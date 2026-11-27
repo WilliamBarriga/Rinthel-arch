@@ -12,7 +12,7 @@ Browser app of `dev`: the page `diagrams dev` serves at `/` and `/_dev-ui/*` (us
 - Build (`tsup` + `scripts/build.ts`, which calls `dev-ui/build`, the same entry the bench uses): `dist/dev-ui/` with `index.html`, `page.js` (the editor and the dialogs in `chunks/` on demand), `worker.js` (zod replaced by `worker/inert-zod.ts`), `style.css` and `export.js` (the export page: one IIFE without the editor nor ELK); `devUiAssets()` gives their paths and `devUiFolder()` the folder. It also regenerates `browser/editor/keywords.ts` from the `dsl` grammar (committed; do not edit by hand).
 
 ## What it does not do
-Serves nothing and does not touch the Workspace (server, disk and Theme `.tsx` are `cli`'s; the `/api/*` routes, `session`'s); does not draw (`render`, `shell`). Not in `NUCLEO`: it uses DOM, `fetch` and `EventSource`. No Tailwind nor shadcn: Base UI (pinned version) and own CSS.
+Serves nothing and does not touch the Workspace (server, disk and Theme `.tsx` are `cli`'s; the `/api/*` routes, `session`'s); does not draw (`render`, `shell`). Not in `CORE`: it uses DOM, `fetch` and `EventSource`. No Tailwind nor shadcn: Base UI (pinned version) and own CSS.
 
 ## Depends on
 `canonical`, `render`, `shell`, `session` (only `inMemoryDev`) and `layout` (today only in tests). External: `react`, `react-dom`, `zod`, `@base-ui/react`, CodeMirror 6 (`@codemirror/*`, `@lezer/highlight`; pinned versions); `esbuild` in the build; `vitest` as optional peer of `dev-ui/contract`.
@@ -24,4 +24,4 @@ Serves nothing and does not touch the Workspace (server, disk and Theme `.tsx` a
 `docs/adr/0004-pnpm-monorepo-and-packages.md` (`dev-ui` amendment) and `docs/adr/0007-interaction-and-edit-protocol.md`.
 
 ## Test
-`pnpm --filter dev-ui test`: pure functions, the contract against `inMemoryDev` and the app in jsdom (`test/ui-helpers.tsx:mountDevUi`, queries by role; `maxWorkers: 2`, fake timers for debounce and highlighting; tests do not import internal UI constants). Every new `dev` route goes into the contract. `cli` runs the same contract against the real `dev` and the single Chromium end-to-end (`packages/cli/test/e2e-estudio.test.ts`); marker position, scroll and drags are tested only there.
+`pnpm --filter dev-ui test`: pure functions, the contract against `inMemoryDev` and the app in jsdom (`test/ui-helpers.tsx:mountDevUi`, queries by role; `maxWorkers: 2`, fake timers for debounce and highlighting; tests do not import internal UI constants). Every new `dev` route goes into the contract. `cli` runs the same contract against the real `dev` and the single Chromium end-to-end (`packages/cli/test/e2e-dev-ui.test.ts`); marker position, scroll and drags are tested only there.

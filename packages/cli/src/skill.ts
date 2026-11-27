@@ -10,12 +10,12 @@ import {
 } from 'canonical';
 import type { CanonicalForm } from 'canonical';
 
-import { CARPETA_DE_SALIDA } from './workspace';
+import { OUTPUT_FOLDER } from './workspace';
 
-/** Sin saltos de linea ni barras que rompan la fila Markdown. */
-const celda = (texto: string): string => (texto.trim() === '' ? '-' : texto.replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|'));
+/** No line breaks nor pipes that break the Markdown row. */
+const cellValue = (text: string): string => (text.trim() === '' ? '-' : text.replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|'));
 
-const EJEMPLO_DE_DSL = `specification {
+const DSL_EXAMPLE = `specification {
   node service { description "Deployable unit"  color blue }
 }
 
@@ -40,16 +40,16 @@ view overview {
   node system.db { label "Data"  color accent }
 }`;
 
-/** `SKILL.md` del proyecto. Determinista: el mismo catalogo produce los mismos bytes. */
-export function generarSkill(fuente: CanonicalForm): string {
-  const tipos = fuente.specification.nodeTypes.map(
-    (tipo) => `| \`${tipo.name}\` | ${celda(tipo.description)} | ${celda(tipo.icon ?? '')} | ${celda(tipo.color ?? '')} |`,
+/** The project's `SKILL.md`. Deterministic: the same catalog produces the same bytes. */
+export function generateSkill(source: CanonicalForm): string {
+  const kinds = source.specification.nodeTypes.map(
+    (type) => `| \`${type.name}\` | ${cellValue(type.description)} | ${cellValue(type.icon ?? '')} | ${cellValue(type.color ?? '')} |`,
   );
-  const temas = fuente.themes.map(
-    (tema) =>
-      `| \`${tema.name}\` | ${Object.keys(tema.palette).map((color) => `\`${color}\``).join(', ') || '-'} |`,
+  const themes = source.themes.map(
+    (theme) =>
+      `| \`${theme.name}\` | ${Object.keys(theme.palette).map((color) => `\`${color}\``).join(', ') || '-'} |`,
   );
-  const codigos = Object.values(CODES).map((codigo) => `| \`${codigo}\` | ${CODE_DESCRIPTION[codigo]} |`);
+  const codes = Object.values(CODES).map((code) => `| \`${code}\` | ${CODE_DESCRIPTION[code]} |`);
 
   return `---
 name: diagrams
@@ -58,7 +58,7 @@ description: Write and fix the .dg files (diagram DSL) of this project with the 
 
 # Diagrams of this project
 
-Diagrams are written in \`.dg\` files of the Workspace. They are the only editable source: never edit the JSON in \`${CARPETA_DE_SALIDA}/\`, which is derived output.
+Diagrams are written in \`.dg\` files of the Workspace. They are the only editable source: never edit the JSON in \`${OUTPUT_FOLDER}/\`, which is derived output.
 
 ## Working loop
 
@@ -78,7 +78,7 @@ Every Node declares its kind with one of these (\`specification { node <kind> { 
 
 | Kind | Description | Icon | Color |
 | --- | --- | --- | --- |
-${tipos.join('\n') || '| - | - | - | - |'}
+${kinds.join('\n') || '| - | - | - | - |'}
 
 ## Palette and Themes
 
@@ -86,12 +86,12 @@ A color is written only by Palette name (in a Node kind or a View override); the
 
 | Theme | Palette colors |
 | --- | --- |
-${temas.join('\n')}
+${themes.join('\n')}
 
 ## DSL syntax
 
 \`\`\`dg
-${EJEMPLO_DE_DSL}
+${DSL_EXAMPLE}
 \`\`\`
 
 - A Node is \`<kind> <id> ["Title" ["Description"]] [{ children, attrs, source }]\`; its children make it a Group and its full id is \`parent.child\`.
@@ -176,6 +176,6 @@ ${JSON.stringify(editOutputJsonSchema(), null, 2)}
 
 | Code | Meaning |
 | --- | --- |
-${codigos.join('\n')}
+${codes.join('\n')}
 `;
 }

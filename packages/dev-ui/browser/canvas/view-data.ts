@@ -1,4 +1,4 @@
-/** Data props of `VistaInteractiva` for the active View: icons, cached Geometries, Theme and size. */
+/** Data props of `InteractiveView` for the active View: icons, cached Geometries, Theme and size. */
 import { useMemo } from 'react';
 
 import { hydrateIcons } from 'canonical';

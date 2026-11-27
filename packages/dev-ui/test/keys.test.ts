@@ -84,7 +84,7 @@ describe('resolveKey: scopes', () => {
     expect(resolve(ctrl('s'), 'global')).toBe('guardar-global');
   });
 
-  it('Tab, arrows, Enter and Space belong to VistaInteractiva with the focus on the canvas', () => {
+  it('Tab, arrows, Enter and Space belong to InteractiveView with the focus on the canvas', () => {
     const withAll: KeysDeclaration[] = [{ id: 'x', keys: ['Tab', 'ArrowLeft', 'Enter', 'Space'], scope: 'global' }];
     for (const key of ['Tab', 'ArrowLeft', 'Enter', ' ']) {
       expect(resolveKey(withAll, press(key), 'lienzo', 'otras')).toBeUndefined();

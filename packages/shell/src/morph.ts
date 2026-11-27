@@ -1,158 +1,158 @@
-/** Morph entre dos geometrias: interpolacion pura y el hook que la anima; sin reloj, o con duracion 0, no hay animacion. */
+/** Morph between two geometries: pure interpolation and the hook that animates it; without a clock, or with duration 0, there is no animation. */
 import { useCallback, useEffect, useState } from 'react';
 
 import type { NodeBox, Geometry, GraphGeometry, SequenceGeometry, EdgeRoute, Visibility } from 'canonical';
 
-/** Pide un cuadro (`cuadro` recibe el tiempo en ms) y devuelve la funcion que lo cancela. */
-export type RelojDeCuadros = (cuadro: (ahoraMs: number) => void) => () => void;
+/** Requests a frame (`frame` receives the time in ms) and returns the function that cancels it. */
+export type FrameClock = (frame: (nowMs: number) => void) => () => void;
 
-/** Reloj de `requestAnimationFrame`, o `undefined` si el entorno no lo tiene. */
-export function relojDelNavegador(): RelojDeCuadros | undefined {
-  return typeof requestAnimationFrame === 'function' ? relojDeRaf : undefined;
+/** `requestAnimationFrame` clock, or `undefined` if the environment lacks it. */
+export function browserClock(): FrameClock | undefined {
+  return typeof requestAnimationFrame === 'function' ? rafClock : undefined;
 }
 
-/** Una sola funcion para todos los renders: `useMorph` la usa como dependencia de un efecto y, si cambiara de identidad, reiniciaria el morph en cada cuadro. */
-const relojDeRaf: RelojDeCuadros = (cuadro) => {
-  const id = requestAnimationFrame(cuadro);
+/** A single function for all renders: `useMorph` uses it as an effect dependency and, if its identity changed, it would restart the morph on every frame. */
+const rafClock: FrameClock = (frame) => {
+  const id = requestAnimationFrame(frame);
   return () => cancelAnimationFrame(id);
 };
 
 export interface Morph {
-  desde: Geometry;
-  hasta: Geometry;
-  /** Grupo tocado, que se mantiene fijo en pantalla. */
-  ancla: string;
+  from: Geometry;
+  to: Geometry;
+  /** Touched Group, which stays fixed on screen. */
+  anchor: string;
 }
 
-const suavizado = (t: number): number => t * t * (3 - 2 * t);
+const smoothed = (t: number): number => t * t * (3 - 2 * t);
 
-/** Devuelve el morph en curso con su progreso `t` en 0..1 (ya suavizado), `iniciar` y `cancelar`. */
+/** Returns the morph in progress with its progress `t` in 0..1 (already smoothed), `start` and `cancel`. */
 export function useMorph(
-  duracionMs: number,
-  reloj: RelojDeCuadros | undefined = relojDelNavegador(),
+  durationMs: number,
+  clock: FrameClock | undefined = browserClock(),
 ): {
   morph: (Morph & { t: number }) | undefined;
-  iniciar: (morph: Morph) => void;
-  cancelar: () => void;
+  start: (morph: Morph) => void;
+  cancel: () => void;
 } {
-  const [activo, setActivo] = useState<Morph>();
+  const [active, setActive] = useState<Morph>();
   const [t, setT] = useState(0);
-  const iniciar = useCallback(
+  const start = useCallback(
     (morph: Morph) => {
-      if (duracionMs <= 0 || reloj === undefined) return;
+      if (durationMs <= 0 || clock === undefined) return;
       setT(0);
-      setActivo(morph);
+      setActive(morph);
     },
-    [duracionMs, reloj],
+    [durationMs, clock],
   );
-  const cancelar = useCallback(() => setActivo(undefined), []);
+  const cancel = useCallback(() => setActive(undefined), []);
 
   useEffect(() => {
-    if (activo === undefined || reloj === undefined) return;
-    let inicio: number | undefined;
-    let cancelarCuadro = (): void => {};
-    const paso = (ahora: number): void => {
-      inicio ??= ahora;
-      const lineal = Math.min(1, (ahora - inicio) / duracionMs);
+    if (active === undefined || clock === undefined) return;
+    let startedAt: number | undefined;
+    let cancelFrame = (): void => {};
+    const step = (now: number): void => {
+      startedAt ??= now;
+      const lineal = Math.min(1, (now - startedAt) / durationMs);
       if (lineal >= 1) {
-        setActivo(undefined);
+        setActive(undefined);
         return;
       }
-      setT(suavizado(lineal));
-      cancelarCuadro = reloj(paso);
+      setT(smoothed(lineal));
+      cancelFrame = clock(step);
     };
-    cancelarCuadro = reloj(paso);
-    return () => cancelarCuadro();
-  }, [activo, duracionMs, reloj]);
+    cancelFrame = clock(step);
+    return () => cancelFrame();
+  }, [active, durationMs, clock]);
 
-  return { morph: activo === undefined ? undefined : { ...activo, t }, iniciar, cancelar };
+  return { morph: active === undefined ? undefined : { ...active, t }, start, cancel };
 }
 
-const mezcla = (a: number, b: number, t: number): number => a + (b - a) * t;
+const mix = (a: number, b: number, t: number): number => a + (b - a) * t;
 
-export function mezclarCaja(a: NodeBox, b: NodeBox, t: number): NodeBox {
-  return { x: mezcla(a.x, b.x, t), y: mezcla(a.y, b.y, t), width: mezcla(a.width, b.width, t), height: mezcla(a.height, b.height, t) };
+export function mixBox(a: NodeBox, b: NodeBox, t: number): NodeBox {
+  return { x: mix(a.x, b.x, t), y: mix(a.y, b.y, t), width: mix(a.width, b.width, t), height: mix(a.height, b.height, t) };
 }
 
-function mezclarRuta(a: EdgeRoute, b: EdgeRoute, t: number): EdgeRoute {
+function mixPath(a: EdgeRoute, b: EdgeRoute, t: number): EdgeRoute {
   if (a.points.length !== b.points.length) return b;
-  return { points: b.points.map((p, i) => ({ x: mezcla(a.points[i]!.x, p.x, t), y: mezcla(a.points[i]!.y, p.y, t) })) };
+  return { points: b.points.map((p, i) => ({ x: mix(a.points[i]!.x, p.x, t), y: mix(a.points[i]!.y, p.y, t) })) };
 }
 
 /**
- * Geometria intermedia entre `desde` (t = 0) y `hasta` (t = 1). Lo que existe
- * en las dos se interpola; lo que solo existe en `hasta` queda en su sitio final
- * (`visibilidadDeMorph` lo funde); las rutas con distinto numero de puntos saltan
- * a la nueva.
+ * Intermediate geometry between `from` (t = 0) and `to` (t = 1). What exists
+ * in both is interpolated; what only exists in `to` stays at its final place
+ * (`morphVisibility` fades it in); routes with a different number of points jump
+ * to the new one.
  */
-export function interpolarGeometria(desde: Geometry, hasta: Geometry, t: number): Geometry {
-  switch (hasta.kind) {
+export function interpolateGeometry(from: Geometry, to: Geometry, t: number): Geometry {
+  switch (to.kind) {
     case 'grafo':
-      return desde.kind === 'grafo' ? interpolarGrafo(desde, hasta, t) : hasta;
+      return from.kind === 'grafo' ? interpolateGraph(from, to, t) : to;
     case 'secuencia':
-      return desde.kind === 'secuencia' ? interpolarSecuencia(desde, hasta, t) : hasta;
+      return from.kind === 'secuencia' ? interpolateSequence(from, to, t) : to;
   }
 }
 
 /**
- * Secuencia: las cabeceras, las lineas de las Lifelines, las activaciones (si no cambia su numero), las flechas de los
- * Mensajes y los `box` de los Grupos se interpolan; lo demas (marcos, Notas, etiquetas) salta a la posicion final.
+ * Sequence: headers, Lifeline lines, activations (if their number does not change), Message
+ * arrows and Group `box`es are interpolated; the rest (frames, Notes, labels) jumps to the final position.
  */
-function interpolarSecuencia(desde: SequenceGeometry, hasta: SequenceGeometry, t: number): SequenceGeometry {
+function interpolateSequence(from: SequenceGeometry, to: SequenceGeometry, t: number): SequenceGeometry {
   const nodes: SequenceGeometry['nodes'] = {};
-  for (const [id, caja] of Object.entries(hasta.nodes)) {
-    const previa = desde.nodes[id];
-    nodes[id] = previa === undefined ? caja : mezclarCaja(previa, caja, t);
+  for (const [id, box] of Object.entries(to.nodes)) {
+    const previousRoute = from.nodes[id];
+    nodes[id] = previousRoute === undefined ? box : mixBox(previousRoute, box, t);
   }
   const lifelines: SequenceGeometry['lifelines'] = {};
-  for (const [id, linea] of Object.entries(hasta.lifelines)) {
-    const previa = desde.lifelines[id];
-    lifelines[id] = previa === undefined ? linea : { ...linea, x: mezcla(previa.x, linea.x, t), y1: mezcla(previa.y1, linea.y1, t), y2: mezcla(previa.y2, linea.y2, t) };
+  for (const [id, line] of Object.entries(to.lifelines)) {
+    const previousRoute = from.lifelines[id];
+    lifelines[id] = previousRoute === undefined ? line : { ...line, x: mix(previousRoute.x, line.x, t), y1: mix(previousRoute.y1, line.y1, t), y2: mix(previousRoute.y2, line.y2, t) };
   }
-  const activations = hasta.activations.map((activacion, i) => {
-    const previa = desde.activations[i];
-    if (desde.activations.length !== hasta.activations.length || previa === undefined || previa.lifeline !== activacion.lifeline) return activacion;
-    return { ...activacion, x: mezcla(previa.x, activacion.x, t), y1: mezcla(previa.y1, activacion.y1, t), y2: mezcla(previa.y2, activacion.y2, t) };
+  const activations = to.activations.map((activation, i) => {
+    const previousRoute = from.activations[i];
+    if (from.activations.length !== to.activations.length || previousRoute === undefined || previousRoute.lifeline !== activation.lifeline) return activation;
+    return { ...activation, x: mix(previousRoute.x, activation.x, t), y1: mix(previousRoute.y1, activation.y1, t), y2: mix(previousRoute.y2, activation.y2, t) };
   });
   const messages: SequenceGeometry['messages'] = {};
-  for (const [ruta, mensaje] of Object.entries(hasta.messages)) {
-    const previo = desde.messages[ruta];
-    const mismos = previo !== undefined && previo.points.length === mensaje.points.length;
-    messages[ruta] = mismos
+  for (const [path, message] of Object.entries(to.messages)) {
+    const previous = from.messages[path];
+    const sameOnes = previous !== undefined && previous.points.length === message.points.length;
+    messages[path] = sameOnes
       ? {
-          ...mensaje,
-          points: mensaje.points.map((p, i) => ({ x: mezcla(previo.points[i]!.x, p.x, t), y: mezcla(previo.points[i]!.y, p.y, t) })),
-          ...(mensaje.label !== undefined && previo.label !== undefined && { label: mezclarCaja(previo.label, mensaje.label, t) }),
+          ...message,
+          points: message.points.map((p, i) => ({ x: mix(previous.points[i]!.x, p.x, t), y: mix(previous.points[i]!.y, p.y, t) })),
+          ...(message.label !== undefined && previous.label !== undefined && { label: mixBox(previous.label, message.label, t) }),
         }
-      : mensaje;
+      : message;
   }
-  const groups = hasta.groups.map((grupo) => {
-    const previo = desde.groups.find((g) => g.id === grupo.id);
-    return previo === undefined ? grupo : { ...grupo, x: mezcla(previo.x, grupo.x, t), y: mezcla(previo.y, grupo.y, t), width: mezcla(previo.width, grupo.width, t), height: mezcla(previo.height, grupo.height, t) };
+  const groups = to.groups.map((group) => {
+    const previous = from.groups.find((g) => g.id === group.id);
+    return previous === undefined ? group : { ...group, x: mix(previous.x, group.x, t), y: mix(previous.y, group.y, t), width: mix(previous.width, group.width, t), height: mix(previous.height, group.height, t) };
   });
-  return { ...hasta, nodes, lifelines, activations, messages, groups, width: mezcla(desde.width, hasta.width, t), height: mezcla(desde.height, hasta.height, t) };
+  return { ...to, nodes, lifelines, activations, messages, groups, width: mix(from.width, to.width, t), height: mix(from.height, to.height, t) };
 }
 
-function interpolarGrafo(desde: GraphGeometry, hasta: GraphGeometry, t: number): GraphGeometry {
+function interpolateGraph(from: GraphGeometry, to: GraphGeometry, t: number): GraphGeometry {
   const nodes: Record<string, NodeBox> = {};
-  for (const [id, caja] of Object.entries(hasta.nodes)) {
-    const previa = desde.nodes[id];
-    nodes[id] = previa === undefined ? caja : mezclarCaja(previa, caja, t);
+  for (const [id, box] of Object.entries(to.nodes)) {
+    const previousRoute = from.nodes[id];
+    nodes[id] = previousRoute === undefined ? box : mixBox(previousRoute, box, t);
   }
   const edges: Record<string, EdgeRoute> = {};
-  for (const [id, ruta] of Object.entries(hasta.edges)) {
-    const previa = desde.edges[id];
-    edges[id] = previa === undefined ? ruta : mezclarRuta(previa, ruta, t);
+  for (const [id, path] of Object.entries(to.edges)) {
+    const previousRoute = from.edges[id];
+    edges[id] = previousRoute === undefined ? path : mixPath(previousRoute, path, t);
   }
-  return { ...hasta, nodes, edges, width: mezcla(desde.width, hasta.width, t), height: mezcla(desde.height, hasta.height, t) };
+  return { ...to, nodes, edges, width: mix(from.width, to.width, t), height: mix(from.height, to.height, t) };
 }
 
-/** Visibilidad durante el morph: lo que no estaba en `desde` entra con fundido `t`; el resto manda `base` (o 1). */
-export function visibilidadDeMorph(desde: Geometry, hasta: Geometry, t: number, base?: Visibility): Visibility {
+/** Visibility during the morph: what was not in `from` enters with fade `t`; the rest follows `base` (or 1). */
+export function morphVisibility(from: Geometry, to: Geometry, t: number, base?: Visibility): Visibility {
   return (id) => {
-    const previa = base?.(id) ?? 1;
-    const aristaNueva = hasta.kind === 'grafo' && desde.kind === 'grafo' && hasta.edges[id] !== undefined && desde.edges[id] === undefined;
-    const nuevo = (hasta.nodes[id] !== undefined && desde.nodes[id] === undefined) || aristaNueva;
-    return nuevo ? previa * t : previa;
+    const previousRoute = base?.(id) ?? 1;
+    const newEdge = to.kind === 'grafo' && from.kind === 'grafo' && to.edges[id] !== undefined && from.edges[id] === undefined;
+    const isNew = (to.nodes[id] !== undefined && from.nodes[id] === undefined) || newEdge;
+    return isNew ? previousRoute * t : previousRoute;
   };
 }

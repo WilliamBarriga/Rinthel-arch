@@ -175,8 +175,8 @@ Lifeline header (Node entry with its `diagram sequence` patch), `activation.widt
 
 ## Layout and Geometry
 
-- **A single entry**: `layoutView` / `layoutConMetricas` choose the algorithm by `vista.type`; `session`, `cli`, `shell` and the Worker do not change. Sequence runs through the same adapter (Worker in the shell, Node in the CLI).
-- **Geometry**: union discriminated by `kind`, `grafo` (architecture, flow, ER) or `secuencia`. Both share `nodes` (in sequence, the Lifeline headers), `width` and `height`, so `indiceDeGeometria`, camera and morph keep working. `secuencia` adds Lifelines (x, start y, end y, destroyed), activations, Messages (by index path, with points and label box), Fragments (frame, tab, guards, dividers) and Notes. `render` switches on `kind` and does not measure.
+- **A single entry**: `layoutView` / `layoutWithMetrics` choose the algorithm by `view.type`; `session`, `cli`, `shell` and the Worker do not change. Sequence runs through the same adapter (Worker in the shell, Node in the CLI).
+- **Geometry**: union discriminated by `kind`, `grafo` (architecture, flow, ER) or `secuencia`. Both share `nodes` (in sequence, the Lifeline headers), `width` and `height`, so `geometryIndex`, camera and morph keep working. `secuencia` adds Lifelines (x, start y, end y, destroyed), activations, Messages (by index path, with points and label box), Fragments (frame, tab, guards, dividers) and Notes. `render` switches on `kind` and does not measure.
 - **ER**: the architecture ELK path (`layered`, `RIGHT`, orthogonal) with the post-ELK adjustment of the port to the Attribute's row, plus a new guarantee: the last segment of every Edge into a table is horizontal and is at least as long as the crow's foot marker (without it the foot rides on the bend). ELK ports per row (`FIXED_POS` E/W) discarded; reopened only for unacceptable crossings or overlaps.
 - **Sequence**: own algorithm without ELK, deterministic and synchronous (`async` signature for uniformity).
   - Columns: one per Lifeline in `order` order and then first appearance; distance between neighbours = max(Theme gap, widest label of a Message between them, self loop, Note).
@@ -185,8 +185,8 @@ Lifeline header (Node entry with its `diagram sequence` patch), `activation.widt
   - Activations derived from the `sync`/`reply` stack; each nested level shifts by `activation.width/2`; arrows end at the edge of the activation.
   - Fragment frame: the Lifelines its content covers plus padding; for `ref`, the participants of the referenced Interaction present in the View, or all of them if there are none in common.
   - Message label centered above the arrow; for the self message, to the right of the loop.
-- **Key and cache**: `claveDeLayout` and `claveDeEstructura` include `vista.type`; in sequence, also the items of the projected Interaction (endpoints, kind and labels after `depth`/`exclude`), `order` and `autonumber` (it changes the labels); no Pins. The new Metrics enter through the existing path. `cachedGeometrySchema` validates the union; an older JSON without `kind` is read as `grafo`.
-- **Performance**: new scenario `secuencia-grande` in `pnpm bench`: 1000 Messages, 50 Lifelines, Fragments nested 3 levels, budget 500 ms.
+- **Key and cache**: `layoutKey` and `structureKey` include `view.type`; in sequence, also the items of the projected Interaction (endpoints, kind and labels after `depth`/`exclude`), `order` and `autonumber` (it changes the labels); no Pins. The new Metrics enter through the existing path. `cachedGeometrySchema` validates the union; an older JSON without `kind` is read as `grafo`.
+- **Performance**: new scenario `sequence-large` in `pnpm bench`: 1000 Messages, 50 Lifelines, Fragments nested 3 levels, budget 500 ms.
 
 ## Consequences
 

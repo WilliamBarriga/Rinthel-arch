@@ -4,9 +4,9 @@ import { resolveView, revealAt } from 'canonical';
 import { compile } from 'dsl';
 import { NEUTRAL_THEME } from 'theme';
 
-describe('compile: Nodos y specification', () => {
-  it('compila un Tipo de nodo y un Nodo a la Fuente canonica', () => {
-    const resultado = compile({
+describe('compile: Nodes and specification', () => {
+  it('compiles a Node kind and a Node to the Canonical form', () => {
+    const result = compile({
       'main.dg': `
         specification {
           node servicio
@@ -17,8 +17,8 @@ describe('compile: Nodos y specification', () => {
       `,
     });
 
-    expect(resultado.issues).toEqual([]);
-    expect(resultado.canonico).toEqual({
+    expect(result.issues).toEqual([]);
+    expect(result.canonical).toEqual({
       specification: { nodeTypes: [{ name: 'servicio', description: '' }] },
       model: {
         edges: [],
@@ -40,8 +40,8 @@ describe('compile: Nodos y specification', () => {
     });
   });
 
-  it('anida Nodos sin limite y cualifica el id por la jerarquia', () => {
-    const { canonico, issues } = compile({
+  it('nests Nodes without limit and qualifies the id by the hierarchy', () => {
+    const { canonical, issues } = compile({
       'main.dg': `
         specification { node servicio node modulo }
         model {
@@ -55,22 +55,22 @@ describe('compile: Nodos y specification', () => {
     });
 
     expect(issues).toEqual([]);
-    const [rinthel] = canonico!.model.nodes;
+    const [rinthel] = canonical!.model.nodes;
     expect(rinthel?.id).toBe('rinthel');
     expect(rinthel?.children.map((n) => n.id)).toEqual(['rinthel.api']);
     expect(rinthel?.children[0]?.children.map((n) => n.id)).toEqual(['rinthel.api.auth']);
   });
 
-  it('usa el nombre como titulo cuando el Nodo no declara uno', () => {
-    const { canonico } = compile({
+  it('uses the name as title when the Node declares none', () => {
+    const { canonical } = compile({
       'main.dg': 'specification { node servicio } model { servicio api }',
     });
 
-    expect(canonico?.model.nodes[0]).toMatchObject({ id: 'api', title: 'api', description: '' });
+    expect(canonical?.model.nodes[0]).toMatchObject({ id: 'api', title: 'api', description: '' });
   });
 
-  it('lee icono, estilo y color de Paleta de un Tipo de nodo', () => {
-    const { canonico } = compile({
+  it('reads icon, style and Palette color of a Node kind', () => {
+    const { canonical } = compile({
       'main.dg': `
         specification {
           node servicio {
@@ -83,7 +83,7 @@ describe('compile: Nodos y specification', () => {
       `,
     });
 
-    expect(canonico?.specification.nodeTypes).toEqual([
+    expect(canonical?.specification.nodeTypes).toEqual([
       {
         name: 'servicio',
         description: 'Proceso desplegable',
@@ -94,14 +94,14 @@ describe('compile: Nodos y specification', () => {
     ]);
   });
 
-  it('un Tipo de nodo no declarado produce unknown-node-type con su posicion exacta', () => {
-    const resultado = compile({
+  it('an undeclared Node kind produces unknown-node-type with its exact position', () => {
+    const result = compile({
       'main.dg': ['specification { node servicio }', 'model {', '  servico api', '}'].join('\n'),
     });
 
-    expect(resultado.canonico).toBeUndefined();
-    expect(resultado.issues).toHaveLength(1);
-    expect(resultado.issues[0]).toMatchObject({
+    expect(result.canonical).toBeUndefined();
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]).toMatchObject({
       code: 'unknown-node-type',
       severity: 'error',
       file: 'main.dg',
@@ -110,7 +110,7 @@ describe('compile: Nodos y specification', () => {
     });
   });
 
-  it('un typo de Tipo de nodo con un unico candidato emite fix sobre el texto', () => {
+  it('a Node kind typo with a single candidate emits a fix on the text', () => {
     const { issues } = compile({
       'main.dg': ['specification { node servicio }', 'model {', '  servico api', '}'].join('\n'),
     });
@@ -123,7 +123,7 @@ describe('compile: Nodos y specification', () => {
     expect(issues[0]?.hint).toBeUndefined();
   });
 
-  it('con dos candidatos de Tipo de nodo no emite fix, solo hint', () => {
+  it('with two Node kind candidates it emits no fix, only a hint', () => {
     const { issues } = compile({
       'main.dg': ['specification { node servicio node servicios }', 'model {', '  servici api', '}'].join('\n'),
     });
@@ -133,7 +133,7 @@ describe('compile: Nodos y specification', () => {
     expect(issues[0]?.hint).toBe('Candidates: servicio, servicios');
   });
 
-  it('un Tipo de nodo sin parecido no emite fix ni hint', () => {
+  it('a Node kind with no resemblance emits neither fix nor hint', () => {
     const { issues } = compile({
       'main.dg': ['specification { node servicio }', 'model {', '  zzz api', '}'].join('\n'),
     });
@@ -142,35 +142,35 @@ describe('compile: Nodos y specification', () => {
     expect(issues[0]?.hint).toBeUndefined();
   });
 
-  it('un error de sintaxis es un issue con posicion, no una excepcion', () => {
-    const resultado = compile({
+  it('a syntax error is an issue with a position, not an exception', () => {
+    const result = compile({
       'main.dg': ['specification { node servicio }', 'model {', '  servicio "api"', '}'].join('\n'),
     });
 
-    expect(resultado.canonico).toBeUndefined();
-    expect(resultado.issues[0]).toMatchObject({
+    expect(result.canonical).toBeUndefined();
+    expect(result.issues[0]).toMatchObject({
       code: 'syntax-error',
       severity: 'error',
       file: 'main.dg',
-      // `servicio "api"` es un prefijo valido de Arista (`servicio "1" -> ...`):
-      // el parser solo se queja al llegar al `}` que cierra el bloque.
+      // `servicio "api"` is a valid Edge prefix (`servicio "1" -> ...`):
+      // the parser only complains when it reaches the `}` closing the block.
       line: 4,
       column: 1,
     });
   });
 
-  it('une los archivos del Workspace: el catalogo y los Nodos de todos cuentan', () => {
-    const { canonico, issues } = compile({
+  it('joins the Workspace files: the catalog and the Nodes of all of them count', () => {
+    const { canonical, issues } = compile({
       'b/modelo.dg': 'model { servicio api }',
       'a/tipos.dg': 'specification { node servicio }',
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.specification.nodeTypes.map((t) => t.name)).toEqual(['servicio']);
-    expect(canonico?.model.nodes.map((n) => n.id)).toEqual(['api']);
+    expect(canonical?.specification.nodeTypes.map((t) => t.name)).toEqual(['servicio']);
+    expect(canonical?.model.nodes.map((n) => n.id)).toEqual(['api']);
   });
 
-  it('informa los issues de todos los archivos en orden determinista', () => {
+  it('reports the issues of all files in deterministic order', () => {
     const { issues } = compile({
       'z.dg': 'model { fantasma x }',
       'a.dg': 'model {\n  fantasma y\n}',
@@ -182,21 +182,21 @@ describe('compile: Nodos y specification', () => {
     ]);
   });
 
-  it('un bloque sin cerrar al final del texto da syntax-error con posicion valida', () => {
-    const resultado = compile({ 'main.dg': 'specification { node servicio }\nmodel {\n  servicio api {' });
+  it('an unclosed block at the end of the text gives syntax-error with a valid position', () => {
+    const result = compile({ 'main.dg': 'specification { node servicio }\nmodel {\n  servicio api {' });
 
-    expect(resultado.canonico).toBeUndefined();
-    expect(resultado.issues).toHaveLength(1);
-    expect(resultado.issues[0]).toMatchObject({ code: 'syntax-error', file: 'main.dg', line: 3 });
-    expect(resultado.issues[0]?.column).toBeGreaterThanOrEqual(1);
+    expect(result.canonical).toBeUndefined();
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]).toMatchObject({ code: 'syntax-error', file: 'main.dg', line: 3 });
+    expect(result.issues[0]?.column).toBeGreaterThanOrEqual(1);
   });
 });
 
-describe('compile: Aristas', () => {
+describe('compile: Edges', () => {
   const spec = 'specification { node servicio node base }';
 
-  it('compila una Arista entre Nodos a la Fuente canonica', () => {
-    const { canonico, issues } = compile({
+  it('compiles an Edge between Nodes to the Canonical form', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${spec}
         model {
           servicio api
@@ -206,11 +206,11 @@ describe('compile: Aristas', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.edges).toEqual([{ from: { node: 'api' }, to: { node: 'db' } }]);
+    expect(canonical?.model.edges).toEqual([{ from: { node: 'api' }, to: { node: 'db' } }]);
   });
 
-  it('lee la cardinalidad opcional de cada extremo', () => {
-    const { canonico, issues } = compile({
+  it('reads the optional cardinality of each end', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${spec}
         model {
           servicio api
@@ -221,14 +221,14 @@ describe('compile: Aristas', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.edges).toEqual([
+    expect(canonical?.model.edges).toEqual([
       { from: { node: 'api' }, to: { node: 'db' }, fromCardinality: '1', toCardinality: 'N' },
       { from: { node: 'db' }, to: { node: 'api' }, toCardinality: '0..1' },
     ]);
   });
 
-  it('acepta como nombre de Atributo o de Nodo las palabras de nivel superior (model, node, specification)', () => {
-    const { canonico, issues } = compile({
+  it('accepts the top-level words (model, node, specification) as Attribute or Node names', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${spec}
         model {
           base model { attrs { model: text  node: text  specification: int } }
@@ -237,12 +237,12 @@ describe('compile: Aristas', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.nodes.map((n) => n.id)).toEqual(['model', 'node']);
-    expect(canonico?.model.nodes[0]?.attributes.map((a) => a.name)).toEqual(['model', 'node', 'specification']);
+    expect(canonical?.model.nodes.map((n) => n.id)).toEqual(['model', 'node']);
+    expect(canonical?.model.nodes[0]?.attributes.map((a) => a.name)).toEqual(['model', 'node', 'specification']);
   });
 
-  it('compila la etiqueta de una Arista, con o sin cardinalidad', () => {
-    const { canonico, issues } = compile({
+  it('compiles the label of an Edge, with or without cardinality', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${spec}
         model {
           servicio api
@@ -253,14 +253,14 @@ describe('compile: Aristas', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.edges).toEqual([
+    expect(canonical?.model.edges).toEqual([
       { from: { node: 'api' }, to: { node: 'db' }, label: 'lee y escribe' },
       { from: { node: 'db' }, to: { node: 'api' }, fromCardinality: '1', toCardinality: 'N', label: 'devuelve' },
     ]);
   });
 
-  it('resuelve extremos con id cualificado por la jerarquia', () => {
-    const { canonico, issues } = compile({
+  it('resolves ends with an id qualified by the hierarchy', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${spec}
         model {
           servicio rinthel { servicio api }
@@ -270,16 +270,16 @@ describe('compile: Aristas', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.edges?.[0]?.from).toEqual({ node: 'rinthel.api' });
+    expect(canonical?.model.edges?.[0]?.from).toEqual({ node: 'rinthel.api' });
   });
 
-  it('un Modelo sin Aristas da una lista vacia', () => {
-    const { canonico } = compile({ 'main.dg': `${spec} model { servicio api }` });
-    expect(canonico?.model.edges).toEqual([]);
+  it('a Model without Edges gives an empty list', () => {
+    const { canonical } = compile({ 'main.dg': `${spec} model { servicio api }` });
+    expect(canonical?.model.edges).toEqual([]);
   });
 
-  it('un extremo inexistente es dangling-edge con la posicion del extremo', () => {
-    const { canonico, issues } = compile({
+  it('a missing end is dangling-edge with the position of the end', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${spec}
 model {
   servicio api
@@ -287,7 +287,7 @@ model {
 }`,
     });
 
-    expect(canonico).toBeUndefined();
+    expect(canonical).toBeUndefined();
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
       code: 'dangling-edge',
@@ -299,7 +299,7 @@ model {
     expect(issues[0]?.fix).toBeUndefined();
   });
 
-  it('con un unico candidato cercano ofrece un fix sobre el extremo', () => {
+  it('with a single close candidate it offers a fix on the end', () => {
     const { issues } = compile({
       'main.dg': `${spec}
 model {
@@ -317,7 +317,7 @@ model {
     });
   });
 
-  it('con varios candidatos igual de cercanos no hay fix, solo hint', () => {
+  it('with several equally close candidates there is no fix, only a hint', () => {
     const { issues } = compile({
       'main.dg': `${spec}
 model {
@@ -331,17 +331,17 @@ model {
     expect(issues[0]?.hint).toContain('ab');
   });
 
-  it('informa ambos extremos colgantes', () => {
+  it('reports both dangling ends', () => {
     const { issues } = compile({ 'main.dg': `${spec} model { x -> y }` });
     expect(issues.map((i) => i.code)).toEqual(['dangling-edge', 'dangling-edge']);
   });
 });
 
-describe('compile: Atributos', () => {
+describe('compile: Attributes', () => {
   const spec = 'specification { node tabla node servicio }';
 
-  it('conserva orden, tipo y notas de los Atributos de un Nodo', () => {
-    const { canonico, issues } = compile({
+  it('keeps order, type and notes of the Attributes of a Node', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${spec}
         model {
           tabla usuarios "Usuarios" {
@@ -355,15 +355,15 @@ describe('compile: Atributos', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.nodes[0]?.attributes).toEqual([
+    expect(canonical?.model.nodes[0]?.attributes).toEqual([
       { name: 'id', type: 'uuid', notes: 'clave primaria' },
       { name: 'email', type: 'text', notes: '' },
       { name: 'creado', type: 'timestamp', notes: 'UTC' },
     ]);
   });
 
-  it('un Atributo no es un Nodo hijo: no aparece en children ni en el Modelo', () => {
-    const { canonico } = compile({
+  it('an Attribute is not a child Node: it is neither in children nor in the Model', () => {
+    const { canonical } = compile({
       'main.dg': `${spec}
         model {
           tabla usuarios {
@@ -373,18 +373,18 @@ describe('compile: Atributos', () => {
         }`,
     });
 
-    const [usuarios] = canonico!.model.nodes;
-    expect(usuarios?.children.map((n) => n.id)).toEqual(['usuarios.perfil']);
-    expect(usuarios?.attributes.map((a) => a.name)).toEqual(['id']);
+    const [users] = canonical!.model.nodes;
+    expect(users?.children.map((n) => n.id)).toEqual(['usuarios.perfil']);
+    expect(users?.attributes.map((a) => a.name)).toEqual(['id']);
   });
 
-  it('un Nodo sin attrs tiene lista vacia de Atributos', () => {
-    const { canonico } = compile({ 'main.dg': `${spec} model { tabla t }` });
-    expect(canonico?.model.nodes[0]?.attributes).toEqual([]);
+  it('a Node without attrs has an empty list of Attributes', () => {
+    const { canonical } = compile({ 'main.dg': `${spec} model { tabla t }` });
+    expect(canonical?.model.nodes[0]?.attributes).toEqual([]);
   });
 
-  it('una Arista a nodo#atributo compila con el Atributo en el extremo', () => {
-    const { canonico, issues } = compile({
+  it('an Edge to node#attribute compiles with the Attribute on the end', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${spec}
         model {
           tabla usuarios { attrs { id: uuid } }
@@ -395,7 +395,7 @@ describe('compile: Atributos', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.edges).toEqual([
+    expect(canonical?.model.edges).toEqual([
       {
         from: { node: 'pedidos', attribute: 'usuario_id' },
         to: { node: 'usuarios', attribute: 'id' },
@@ -406,8 +406,8 @@ describe('compile: Atributos', () => {
     ]);
   });
 
-  it('un Atributo inexistente es unknown-attribute con la posicion del Atributo', () => {
-    const { canonico, issues } = compile({
+  it('a missing Attribute is unknown-attribute with the position of the Attribute', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${spec}
 model {
   tabla usuarios { attrs { id: uuid } }
@@ -416,7 +416,7 @@ model {
 }`,
     });
 
-    expect(canonico).toBeUndefined();
+    expect(canonical).toBeUndefined();
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
       code: 'unknown-attribute',
@@ -432,7 +432,7 @@ model {
     });
   });
 
-  it('un Nodo hijo no vale como Atributo, ni un Atributo como Nodo hijo', () => {
+  it('a child Node is not valid as an Attribute, nor an Attribute as a child Node', () => {
     const { issues } = compile({
       'main.dg': `${spec}
         model {
@@ -449,7 +449,7 @@ model {
     expect(issues.map((i) => i.code).sort()).toEqual(['dangling-edge', 'unknown-attribute']);
   });
 
-  it('con el Nodo inexistente solo informa dangling-edge, no el Atributo', () => {
+  it('with a missing Node it only reports dangling-edge, not the Attribute', () => {
     const { issues } = compile({ 'main.dg': `${spec} model { tabla a  a -> nada#x }` });
     expect(issues.map((i) => i.code)).toEqual(['dangling-edge']);
   });
@@ -458,8 +458,8 @@ model {
 describe('compile: source', () => {
   const spec = 'specification { node servicio }';
 
-  it('compila varios source de un Nodo a una lista {kind, ref} en orden', () => {
-    const { canonico, issues } = compile({
+  it('compiles several sources of a Node to a {kind, ref} list in order', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${spec}
         model {
           servicio api {
@@ -470,27 +470,27 @@ describe('compile: source', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.nodes[0]?.source).toEqual([
+    expect(canonical?.model.nodes[0]?.source).toEqual([
       { kind: 'git', ref: 'src/api.ts' },
       { kind: 'url', ref: 'https://ejemplo.com/api' },
       { kind: 'file', ref: 'docs/api.md' },
     ]);
   });
 
-  it('un Nodo sin source tiene la lista vacia', () => {
-    const { canonico } = compile({ 'main.dg': `${spec} model { servicio api }` });
-    expect(canonico?.model.nodes[0]?.source).toEqual([]);
+  it('a Node without source has an empty list', () => {
+    const { canonical } = compile({ 'main.dg': `${spec} model { servicio api }` });
+    expect(canonical?.model.nodes[0]?.source).toEqual([]);
   });
 
-  it('guarda kind y ref sin interpretarlos', () => {
-    const { canonico } = compile({
+  it('stores kind and ref without interpreting them', () => {
+    const { canonical } = compile({
       'main.dg': `${spec} model { servicio api { source { cualquier-cosa "  ../x:y#z  " } } }`,
     });
-    expect(canonico?.model.nodes[0]?.source).toEqual([{ kind: 'cualquier-cosa', ref: '  ../x:y#z  ' }]);
+    expect(canonical?.model.nodes[0]?.source).toEqual([{ kind: 'cualquier-cosa', ref: '  ../x:y#z  ' }]);
   });
 
-  it('un ref que no es cadena es syntax-error con posicion', () => {
-    const { issues, canonico } = compile({
+  it('a ref that is not a string is syntax-error with a position', () => {
+    const { issues, canonical } = compile({
       'main.dg': `${spec}
         model {
           servicio api {
@@ -499,28 +499,28 @@ describe('compile: source', () => {
         }`,
     });
 
-    expect(canonico).toBeUndefined();
+    expect(canonical).toBeUndefined();
     expect(issues.every((issue) => issue.code === 'syntax-error')).toBe(true);
     expect(issues[0]).toMatchObject({ file: 'main.dg', line: 4, column: 26 });
   });
 });
 
-describe('compile: Workspace multiarchivo', () => {
-  it('fusiona specification, Nodos y Aristas de varios archivos en un solo Modelo', () => {
-    const { canonico, issues } = compile({
+describe('compile: multi-file Workspace', () => {
+  it('merges specification, Nodes and Edges of several files into one Model', () => {
+    const { canonical, issues } = compile({
       'tipos.dg': 'specification { node servicio }',
       'nodos.dg': 'model { servicio api  servicio db }',
       'aristas.dg': 'model { api -> db }',
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.specification.nodeTypes.map((t) => t.name)).toEqual(['servicio']);
-    expect(canonico?.model.nodes.map((n) => n.id)).toEqual(['api', 'db']);
-    expect(canonico?.model.edges).toEqual([{ from: { node: 'api' }, to: { node: 'db' } }]);
+    expect(canonical?.specification.nodeTypes.map((t) => t.name)).toEqual(['servicio']);
+    expect(canonical?.model.nodes.map((n) => n.id)).toEqual(['api', 'db']);
+    expect(canonical?.model.edges).toEqual([{ from: { node: 'api' }, to: { node: 'db' } }]);
   });
 
-  it('extend anade hijos, Atributos y source a un Nodo de otro archivo', () => {
-    const { canonico, issues } = compile({
+  it('extend adds children, Attributes and source to a Node of another file', () => {
+    const { canonical, issues } = compile({
       'a.dg': 'specification { node servicio }  model { servicio api { servicio auth } }',
       'b.dg': `model {
         extend api {
@@ -533,38 +533,38 @@ describe('compile: Workspace multiarchivo', () => {
     });
 
     expect(issues).toEqual([]);
-    const api = canonico?.model.nodes[0];
+    const api = canonical?.model.nodes[0];
     expect(api?.children.map((n) => n.id)).toEqual(['api.auth', 'api.cache']);
     expect(api?.attributes).toEqual([{ name: 'puerto', type: 'int', notes: '' }]);
     expect(api?.source).toEqual([{ kind: 'git', ref: 'src/api.ts' }]);
     expect(api?.children[0]?.children.map((n) => n.id)).toEqual(['api.auth.tokens']);
   });
 
-  it('un extend puede estar en un archivo que se lee antes que el Nodo', () => {
-    const { canonico, issues } = compile({
+  it('an extend can be in a file read before the Node', () => {
+    const { canonical, issues } = compile({
       'a-extiende.dg': 'model { extend api { servicio cache } }',
       'z-define.dg': 'specification { node servicio }  model { servicio api }',
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.nodes[0]?.children.map((n) => n.id)).toEqual(['api.cache']);
+    expect(canonical?.model.nodes[0]?.children.map((n) => n.id)).toEqual(['api.cache']);
   });
 
-  it('un extend puede apuntar a un Nodo creado por otro extend, en cualquier orden de archivos', () => {
+  it('an extend can point to a Node created by another extend, in any file order', () => {
     const base = { 'a.dg': 'model { extend api.cache { servicio x } }', 'z.dg': 'specification { node servicio }  model { servicio api  extend api { servicio cache } }' };
-    const { canonico, issues } = compile(base);
+    const { canonical, issues } = compile(base);
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.nodes[0]?.children[0]?.children.map((n) => n.id)).toEqual(['api.cache.x']);
+    expect(canonical?.model.nodes[0]?.children[0]?.children.map((n) => n.id)).toEqual(['api.cache.x']);
   });
 
-  it('un Nodo duplicado sin extend es duplicate-node con related al original', () => {
-    const { issues, canonico } = compile({
+  it('a duplicated Node without extend is duplicate-node with related to the original', () => {
+    const { issues, canonical } = compile({
       'a.dg': 'specification { node servicio }\nmodel {\n  servicio api\n}',
       'b.dg': 'model {\n  servicio db\n  servicio api\n}',
     });
 
-    expect(canonico).toBeUndefined();
+    expect(canonical).toBeUndefined();
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
       code: 'duplicate-node',
@@ -576,7 +576,7 @@ describe('compile: Workspace multiarchivo', () => {
     });
   });
 
-  it('detecta duplicados dentro de un mismo archivo y entre hijos', () => {
+  it('detects duplicates within the same file and among children', () => {
     const { issues } = compile({
       'a.dg': `specification { node servicio }
         model {
@@ -588,7 +588,7 @@ describe('compile: Workspace multiarchivo', () => {
     expect(issues.map((i) => i.code)).toEqual(['duplicate-node', 'duplicate-node']);
   });
 
-  it('un extend cuyo Nodo no existe es unknown-extend-target', () => {
+  it('an extend whose Node does not exist is unknown-extend-target', () => {
     const { issues } = compile({
       'a.dg': 'specification { node servicio }\nmodel {\n  extend nada { servicio x }\n}',
     });
@@ -597,37 +597,37 @@ describe('compile: Workspace multiarchivo', () => {
     expect(issues[0]).toMatchObject({ code: 'unknown-extend-target', file: 'a.dg', line: 3, column: 10 });
   });
 
-  it('el resultado no depende del orden en que se pasan los archivos', () => {
-    const archivos: [string, string][] = [
+  it('the result does not depend on the order the files are passed in', () => {
+    const files: [string, string][] = [
       ['a.dg', 'specification { node servicio }  model { servicio api }'],
       ['b.dg', 'model { extend api { servicio cache } servicio db }'],
       ['c.dg', 'model { extend api { servicio cola } api -> db }'],
     ];
-    const resultados = [archivos, [...archivos].reverse(), [archivos[1], archivos[2], archivos[0]]].map(
-      (orden) => {
-        const { ubicar: _ubicar, ...resultado } = compile(Object.fromEntries(orden as [string, string][]));
-        return resultado;
+    const results = [files, [...files].reverse(), [files[1], files[2], files[0]]].map(
+      (order) => {
+        const { locate: _locate, ...result } = compile(Object.fromEntries(order as [string, string][]));
+        return result;
       },
     );
 
-    expect(resultados[0]?.issues).toEqual([]);
-    expect(resultados[1]).toEqual(resultados[0]);
-    expect(resultados[2]).toEqual(resultados[0]);
+    expect(results[0]?.issues).toEqual([]);
+    expect(results[1]).toEqual(results[0]);
+    expect(results[2]).toEqual(results[0]);
   });
 
-  it('el duplicado se resuelve igual sin importar el orden de los archivos', () => {
+  it('the duplicate resolves the same regardless of the file order', () => {
     const base = { 'x.dg': 'model { servicio api }', 'y.dg': 'specification { node servicio }  model { servicio api }' };
-    const invertido = { 'y.dg': base['y.dg'], 'x.dg': base['x.dg'] };
+    const inverted = { 'y.dg': base['y.dg'], 'x.dg': base['x.dg'] };
 
-    expect(compile(invertido)).toEqual(compile(base));
+    expect(compile(inverted)).toEqual(compile(base));
   });
 });
 
-describe('compile: Vistas', () => {
+describe('compile: Views', () => {
   const base = 'specification { node servicio }  model { servicio a { servicio x }  servicio b }';
 
-  it('compila view con type, include, exclude y depth', () => {
-    const { canonico, issues } = compile({
+  it('compiles view with type, include, exclude and depth', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base}
         view general {
           type architecture
@@ -638,37 +638,37 @@ describe('compile: Vistas', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.views).toEqual([
+    expect(canonical?.views).toEqual([
       { id: 'general', type: 'architecture', include: ['a.*', 'b.**', 'c'], exclude: ['b'], depth: 2, order: [], overrides: [], collapsed: [], expanded: [], links: [], steps: [] },
     ]);
   });
 
-  it('una Vista flow solo con type; el resto queda vacio', () => {
-    const { canonico } = compile({ 'main.dg': `${base} view f { type flow }` });
+  it('a flow View with only type; the rest stays empty', () => {
+    const { canonical } = compile({ 'main.dg': `${base} view f { type flow }` });
 
-    expect(canonico?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], order: [], overrides: [], collapsed: [], expanded: [], links: [], steps: [] }]);
+    expect(canonical?.views).toEqual([{ id: 'f', type: 'flow', include: [], exclude: [], order: [], overrides: [], collapsed: [], expanded: [], links: [], steps: [] }]);
   });
 
-  it('acepta `*` y `**` como selectores y varios include', () => {
-    const { canonico, issues } = compile({
+  it('accepts `*` and `**` as selectors and several includes', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base} view t { type flow  include *  include ** }`,
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.views[0]?.include).toEqual(['*', '**']);
+    expect(canonical?.views[0]?.include).toEqual(['*', '**']);
   });
 
-  it('type ausente es unknown-view-type con posicion', () => {
-    const { issues, canonico } = compile({
+  it('a missing type is unknown-view-type with a position', () => {
+    const { issues, canonical } = compile({
       'main.dg': `${base}\nview sin_tipo {\n  include a\n}`,
     });
 
-    expect(canonico).toBeUndefined();
+    expect(canonical).toBeUndefined();
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({ code: 'unknown-view-type', file: 'main.dg', line: 2, column: 6 });
   });
 
-  it('type desconocido es unknown-view-type en la posicion del valor', () => {
+  it('an unknown type is unknown-view-type at the position of the value', () => {
     const { issues } = compile({
       'main.dg': `${base}\nview v {\n  type secuencia\n}`,
     });
@@ -677,31 +677,31 @@ describe('compile: Vistas', () => {
     expect(issues[0]).toMatchObject({ code: 'unknown-view-type', line: 3, column: 8 });
   });
 
-  it('depth 0 es sintacticamente valido y no hace lanzar a compile', () => {
-    const { canonico, issues } = compile({ 'main.dg': `${base} view v { type flow  include **  depth 0 }` });
+  it('depth 0 is syntactically valid and does not make compile throw', () => {
+    const { canonical, issues } = compile({ 'main.dg': `${base} view v { type flow  include **  depth 0 }` });
 
     expect(issues).toEqual([]);
-    expect(canonico?.views[0]?.depth).toBe(0);
+    expect(canonical?.views[0]?.depth).toBe(0);
   });
 
-  it('fusiona Vistas de varios archivos', () => {
-    const { canonico, issues } = compile({
+  it('merges Views of several files', () => {
+    const { canonical, issues } = compile({
       'a.dg': base,
       'b.dg': 'view uno { type flow }',
       'c.dg': 'view dos { type architecture }',
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.views.map((v) => v.id)).toEqual(['uno', 'dos']);
+    expect(canonical?.views.map((v) => v.id)).toEqual(['uno', 'dos']);
   });
 });
 
-describe('compile: overrides de presentacion por Nodo en la Vista', () => {
+describe('compile: per-Node presentation overrides in the View', () => {
   const base = 'specification { node servicio }  model { servicio a { servicio x }  servicio b }';
 
-  it('compila label, pin, order y color a la Vista sin tocar el Modelo', () => {
-    const sin = compile({ 'main.dg': `${base} view v { type architecture include ** }` });
-    const { canonico, issues } = compile({
+  it('compiles label, pin, order and color to the View without touching the Model', () => {
+    const without = compile({ 'main.dg': `${base} view v { type architecture include ** }` });
+    const { canonical, issues } = compile({
       'main.dg': `${base}
         view v {
           type architecture
@@ -712,14 +712,14 @@ describe('compile: overrides de presentacion por Nodo en la Vista', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.views[0]?.overrides).toEqual([
+    expect(canonical?.views[0]?.overrides).toEqual([
       { node: 'a.x', label: 'Equis', pin: { x: 120, y: 40 }, order: 2, color: 'blue' },
       { node: 'b', color: 'red' },
     ]);
-    expect(canonico?.model).toEqual(sin.canonico?.model);
+    expect(canonical?.model).toEqual(without.canonical?.model);
   });
 
-  it('informa la posicion de cada override con pin, para que otros comandos situen sus avisos', () => {
+  it('reports the position of each override with pin, so other commands can locate their warnings', () => {
     const { pins } = compile({
       'main.dg': `${base}
 view v {
@@ -733,18 +733,18 @@ view v {
     expect(pins).toEqual([{ view: 'v', node: 'b', file: 'main.dg', line: 6, column: 8 }]);
   });
 
-  it('una Vista sin overrides los deja vacios', () => {
-    const { canonico } = compile({ 'main.dg': `${base} view v { type flow }` });
+  it('a View without overrides leaves them empty', () => {
+    const { canonical } = compile({ 'main.dg': `${base} view v { type flow }` });
 
-    expect(canonico?.views[0]?.overrides).toEqual([]);
+    expect(canonical?.views[0]?.overrides).toEqual([]);
   });
 
-  it('override sobre un Nodo fuera de la Vista es override-outside-view con posicion', () => {
-    const { canonico, issues } = compile({
+  it('an override on a Node outside the View is override-outside-view with a position', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base}\nview v {\n  type flow\n  include a\n  node b { color red }\n}`,
     });
 
-    expect(canonico).toBeUndefined();
+    expect(canonical).toBeUndefined();
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({
       code: 'override-outside-view',
@@ -755,7 +755,7 @@ view v {
     });
   });
 
-  it('override sobre un Nodo inexistente tambien es override-outside-view', () => {
+  it('an override on a missing Node is also override-outside-view', () => {
     const { issues } = compile({
       'main.dg': `${base} view v { type flow include ** node fantasma { label "x" } }`,
     });
@@ -763,7 +763,7 @@ view v {
     expect(issues.map((i) => i.code)).toEqual(['override-outside-view']);
   });
 
-  it('color solo acepta nombres de Paleta: un hex es unknown-palette-color', () => {
+  it('color only accepts Palette names: a hex is unknown-palette-color', () => {
     const { issues } = compile({
       'main.dg': `${base} view v { type flow include ** node a { color "#ff0000" } }`,
     });
@@ -771,32 +771,32 @@ view v {
     expect(issues.map((i) => i.code)).toEqual(['unknown-palette-color']);
   });
 
-  it('pin admite coordenadas negativas', () => {
-    const { canonico, issues } = compile({
+  it('pin accepts negative coordinates', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base} view v { type flow include ** node a { pin -10,-5 } }`,
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.views[0]?.overrides[0]?.pin).toEqual({ x: -10, y: -5 });
+    expect(canonical?.views[0]?.overrides[0]?.pin).toEqual({ x: -10, y: -5 });
   });
 });
 
-describe('compile: Tema', () => {
+describe('compile: Theme', () => {
   const base = 'specification { node servicio { color blue } }  model { servicio a }';
-  const claro = 'theme claro { palette { blue "#0000ff"  danger "#ff0000" } fonts { body "Inter, sans-serif" } tokens { surface "#ffffff" } }';
+  const light = 'theme claro { palette { blue "#0000ff"  danger "#ff0000" } fonts { body "Inter, sans-serif" } tokens { surface "#ffffff" } }';
 
-  it('un Workspace sin theme usa el Tema neutro', () => {
-    const { canonico, issues } = compile({ 'main.dg': base });
+  it('a Workspace without theme uses the neutral Theme', () => {
+    const { canonical, issues } = compile({ 'main.dg': base });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.map((t) => t.name)).toEqual(['neutral', 'neutral-dark', 'high-contrast']);
+    expect(canonical?.themes.map((t) => t.name)).toEqual(['neutral', 'neutral-dark', 'high-contrast']);
   });
 
-  it('compila palette, fonts y tokens a un objeto plano', () => {
-    const { canonico, issues } = compile({ 'main.dg': `${base} ${claro}` });
+  it('compiles palette, fonts and tokens to a flat object', () => {
+    const { canonical, issues } = compile({ 'main.dg': `${base} ${light}` });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 'claro')).toEqual({
+    expect(canonical?.themes.find((t) => t.name === 'claro')).toEqual({
       name: 'claro',
       palette: { blue: '#0000ff', danger: '#ff0000' },
       fonts: { ...NEUTRAL_THEME.fonts, body: 'Inter, sans-serif' },
@@ -808,14 +808,14 @@ describe('compile: Tema', () => {
     });
   });
 
-  it('extends hereda de un solo padre y el hijo gana; el resultado ya esta resuelto', () => {
-    const { canonico, issues } = compile({
-      'a.dg': `${base} ${claro}`,
+  it('extends inherits from a single parent and the child wins; the result is already resolved', () => {
+    const { canonical, issues } = compile({
+      'a.dg': `${base} ${light}`,
       'b.dg': 'theme oscuro extends claro { palette { blue "#00aaff" } tokens { surface "#111111" } }',
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 'oscuro')).toEqual({
+    expect(canonical?.themes.find((t) => t.name === 'oscuro')).toEqual({
       name: 'oscuro',
       palette: { blue: '#00aaff', danger: '#ff0000' },
       fonts: { ...NEUTRAL_THEME.fonts, body: 'Inter, sans-serif' },
@@ -827,16 +827,16 @@ describe('compile: Tema', () => {
     });
   });
 
-  it('un Tema puede extender el neutro', () => {
-    const { canonico, issues } = compile({ 'main.dg': `${base} theme t extends neutral { palette { teal "#008080" } }` });
+  it('a Theme can extend the neutral one', () => {
+    const { canonical, issues } = compile({ 'main.dg': `${base} theme t extends neutral { palette { teal "#008080" } }` });
 
     expect(issues).toEqual([]);
-    const neutral = canonico?.themes.find((t) => t.name === 'neutral');
-    expect(canonico?.themes.find((t) => t.name === 't')).toEqual({ ...neutral, name: 't', palette: { ...neutral?.palette, teal: '#008080' } });
+    const neutral = canonical?.themes.find((t) => t.name === 'neutral');
+    expect(canonical?.themes.find((t) => t.name === 't')).toEqual({ ...neutral, name: 't', palette: { ...neutral?.palette, teal: '#008080' } });
   });
 
-  it('compila el bloque node a una pila de Capas y a los Slots, con los defectos del catalogo', () => {
-    const { canonico, issues } = compile({
+  it('compiles the node block to a Layer stack and to the Slots, with the catalog defaults', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base}
         theme ejemplo {
           palette { blue "#2563eb"  gray "#6b7280" }
@@ -850,7 +850,7 @@ describe('compile: Tema', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 'ejemplo')?.['nodo']).toEqual({
+    expect(canonical?.themes.find((t) => t.name === 'ejemplo')?.['nodo']).toEqual({
       capas: [
         { nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } },
         { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'blue' } } },
@@ -864,7 +864,7 @@ describe('compile: Tema', () => {
   });
 
   it('edge { state <name> { ... } } compiles a paint-only patch of the stroke stack per state', () => {
-    const { canonico, issues } = compile({
+    const { canonical, issues } = compile({
       'main.dg': `${base}
         theme lines {
           palette { blue "#2563eb"  gray "#6b7280" }
@@ -876,7 +876,7 @@ describe('compile: Tema', () => {
     });
 
     expect(issues).toEqual([]);
-    expect((canonico?.themes.find((t) => t.name === 'lines')?.['arista'] as { estados?: unknown }).estados).toEqual({
+    expect((canonical?.themes.find((t) => t.name === 'lines')?.['arista'] as { estados?: unknown }).estados).toEqual({
       planned: [{ nombre: 'main', props: { color: 'blue', style: 'dotted' } }],
     });
   });
@@ -898,8 +898,8 @@ describe('compile: Tema', () => {
     expect(issues.some((i) => i.fix?.replacement === 'planned' || i.hint?.includes('planned') === true)).toBe(true);
   });
 
-  it('compila el bloque edge: pila de trazos con glow, marcadores y etiqueta con modelo de caja', () => {
-    const { canonico, issues } = compile({
+  it('compiles the edge block: stroke stack with glow, markers and a label with a box model', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base}
         theme metro {
           palette { blue "#2563eb"  gray "#6b7280" }
@@ -914,7 +914,7 @@ describe('compile: Tema', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 'metro')?.['arista']).toEqual({
+    expect(canonical?.themes.find((t) => t.name === 'metro')?.['arista']).toEqual({
       capas: [
         { nombre: 'glow', primitiva: { tipo: 'line', props: { color: 'ORIGIN/0.3', width: 8, style: 'solid', corner: 'sharp', cut: 6, radius: 8 } } },
         { nombre: 'principal', primitiva: { tipo: 'line', props: { color: 'ORIGIN', width: 2, style: 'dashed', corner: 'chamfer', cut: 6, radius: 8 } } },
@@ -925,7 +925,7 @@ describe('compile: Tema', () => {
     });
   });
 
-  it('el bloque edge rechaza Primitivas de Nodo, valores invalidos y marcadores desconocidos con sugerencia', () => {
+  it('the edge block rejects Node Primitives, invalid values and unknown markers with a suggestion', () => {
     const { issues } = compile({
       'main.dg': `${base}
         theme malo {
@@ -942,21 +942,21 @@ describe('compile: Tema', () => {
     expect(issues[2]?.message).toContain('arrow');
   });
 
-  it('un Slot lleva su estilo de texto en el bloque slots', () => {
-    const { canonico, issues } = compile({
+  it('a Slot carries its text style in the slots block', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base}
         theme t { node { slots { title { weight 700  transform uppercase }  attrs } } }`,
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 't')?.['nodo']).toMatchObject({
+    expect(canonical?.themes.find((t) => t.name === 't')?.['nodo']).toMatchObject({
       slots: { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'attrs' }] },
       textos: { title: { tipo: 'text', props: { weight: 700, style: 'normal', transform: 'uppercase' } } },
     });
   });
 
-  it('slots admite filas y columnas anidadas con gap, pad, align y tokens, y el estilo del icono', () => {
-    const { canonico, issues } = compile({
+  it('slots accepts nested rows and columns with gap, pad, align and tokens, and the icon style', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base}
         theme t {
           tokens { gap 6 }
@@ -974,7 +974,7 @@ describe('compile: Tema', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.themes.find((t) => t.name === 't')?.['nodo']).toMatchObject({
+    expect(canonical?.themes.find((t) => t.name === 't')?.['nodo']).toMatchObject({
       slots: {
         direccion: 'column',
         gap: 0,
@@ -991,7 +991,7 @@ describe('compile: Tema', () => {
     });
   });
 
-  it('las claves de slots se validan con sugerencia y posicion; un parche de estado no cambia la disposicion', () => {
+  it('slots keys are validated with suggestion and position; a state patch does not change the layout', () => {
     const { issues } = compile({
       'main.dg': `${base}
         theme t {
@@ -1016,7 +1016,7 @@ describe('compile: Tema', () => {
     expect(issues[2]!.hint).toContain("'center'");
   });
 
-  it('un parche de estado que cambia el estilo de texto de la cabecera de Grupo (tracking, chip, size) es error, igual que la disposicion', () => {
+  it('a state patch changing the text style of the Group header (tracking, chip, size) is an error, like the layout', () => {
     const { issues } = compile({
       'main.dg': `${base}
         theme t {
@@ -1032,8 +1032,8 @@ describe('compile: Tema', () => {
     expect(issues[0]!.message).toContain('Slots');
   });
 
-  it('compila las Familias de efectos con sus defectos, y `seed N` en tokens', () => {
-    const { canonico, issues } = compile({
+  it('compiles the effect Families with their defaults, and `seed N` in tokens', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base}
         theme efectos {
           palette { blue "#2563eb"  gray "#6b7280" }
@@ -1048,78 +1048,78 @@ describe('compile: Tema', () => {
         }`,
     });
 
-    const tema = canonico?.themes.find((t) => t.name === 'efectos');
+    const theme = canonical?.themes.find((t) => t.name === 'efectos');
     expect(issues).toEqual([]);
-    expect((tema?.['tokens'] as Record<string, string>)['seed']).toBe('7');
-    expect((tema?.['nodo'] as { capas: Array<{ primitiva: { tipo: string } }> }).capas.map((c) => c.primitiva.tipo)).toEqual(['shadow', 'glow', 'glass', 'sketch', 'tilt']);
+    expect((theme?.['tokens'] as Record<string, string>)['seed']).toBe('7');
+    expect((theme?.['nodo'] as { capas: Array<{ primitiva: { tipo: string } }> }).capas.map((c) => c.primitiva.tipo)).toEqual(['shadow', 'glow', 'glass', 'sketch', 'tilt']);
   });
 
-  it('un giro de mas de 3 grados es un error, no se recorta', () => {
+  it('a rotation of more than 3 degrees is an error, it is not clamped', () => {
     const { issues } = compile({ 'main.dg': `${base} theme excedido { node { layer ladeo tilt { degrees 4 } } }` });
 
     expect(issues.map((i) => i.code)).toEqual(['theme-invalid-value']);
   });
 
-  it('los bloques nodeStyles y edgeStyles ya no existen en el DSL', () => {
+  it('the nodeStyles and edgeStyles blocks no longer exist in the DSL', () => {
     const { issues } = compile({ 'main.dg': `${base} theme viejo { nodeStyles { servicio { fill red } } }` });
 
     expect(issues.map((i) => i.code)).toContain('syntax-error');
   });
 
-  it('layer y slots siguen siendo identificadores validos en el Modelo', () => {
-    const { canonico, issues } = compile({ 'main.dg': 'specification { node layer }  model { layer slots }' });
+  it('layer and slots are still valid identifiers in the Model', () => {
+    const { canonical, issues } = compile({ 'main.dg': 'specification { node layer }  model { layer slots }' });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.nodes.map((n) => n.id)).toEqual(['slots']);
+    expect(canonical?.model.nodes.map((n) => n.id)).toEqual(['slots']);
   });
 
-  it('tema duplicado es duplicate-theme con related a la primera declaracion', () => {
-    const { issues } = compile({ 'main.dg': `${base}\n${claro}\ntheme claro { }` });
+  it('a duplicated theme is duplicate-theme with related to the first declaration', () => {
+    const { issues } = compile({ 'main.dg': `${base}\n${light}\ntheme claro { }` });
 
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({ code: 'duplicate-theme', file: 'main.dg', line: 3 });
     expect(issues[0]?.related?.[0]).toMatchObject({ file: 'main.dg', line: 2 });
   });
 
-  it('declarar `neutral` es duplicado del Tema por defecto', () => {
+  it('declaring `neutral` duplicates the default Theme', () => {
     const { issues } = compile({ 'main.dg': `${base} theme neutral { }` });
 
     expect(issues.map((i) => i.code)).toEqual(['duplicate-theme']);
   });
 
-  it('ciclo de extends es extends-cycle', () => {
-    const { canonico, issues } = compile({
+  it('an extends cycle is extends-cycle', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base}\ntheme a extends b { }\ntheme b extends a { }`,
     });
 
-    expect(canonico).toBeUndefined();
+    expect(canonical).toBeUndefined();
     expect(issues.map((i) => i.code)).toEqual(['extends-cycle', 'extends-cycle']);
     expect(issues[0]).toMatchObject({ file: 'main.dg', line: 2 });
   });
 
-  it('extends de un tema inexistente es unknown-theme', () => {
+  it('extends of a missing theme is unknown-theme', () => {
     const { issues } = compile({ 'main.dg': `${base} theme a extends fantasma { }` });
 
     expect(issues.map((i) => i.code)).toEqual(['unknown-theme']);
   });
 
-  it('una Vista puede elegir su theme; uno inexistente es unknown-theme', () => {
-    const bien = compile({ 'main.dg': `${base} ${claro} view v { type flow theme claro }` });
-    const mal = compile({ 'main.dg': `${base} view v { type flow theme claroo }` });
+  it('a View can choose its theme; a missing one is unknown-theme', () => {
+    const valid = compile({ 'main.dg': `${base} ${light} view v { type flow theme claro }` });
+    const invalid = compile({ 'main.dg': `${base} view v { type flow theme claroo }` });
 
-    expect(bien.issues).toEqual([]);
-    expect(bien.canonico?.views[0]?.theme).toBe('claro');
-    expect(mal.issues.map((i) => i.code)).toEqual(['unknown-theme']);
+    expect(valid.issues).toEqual([]);
+    expect(valid.canonical?.views[0]?.theme).toBe('claro');
+    expect(invalid.issues.map((i) => i.code)).toEqual(['unknown-theme']);
   });
 
-  it('una Vista con un Tema que existe pero no se resuelve no dice "no declarado": solo queda el error real del Tema', () => {
+  it('a View with a Theme that exists but does not resolve does not say "not declared": only the real Theme error remains', () => {
     const { issues } = compile({ 'main.dg': `${base} theme a extends fantasma { }  view v { type flow theme a }` });
 
     expect(issues.map((i) => [i.code, i.line])).toEqual([['unknown-theme', 1]]);
     expect(issues[0]?.message).toContain("'fantasma'");
   });
 
-  it('color de Tipo de nodo desconocido es unknown-palette-color con fix si hay un candidato', () => {
+  it('an unknown Node kind color is unknown-palette-color with a fix if there is a candidate', () => {
     const { issues } = compile({ 'main.dg': 'specification { node servicio { color blu } }  model { servicio a }' });
 
     expect(issues).toHaveLength(1);
@@ -1127,46 +1127,46 @@ describe('compile: Tema', () => {
     expect(issues[0]?.fix?.replacement).toBe('blue');
   });
 
-  it('un hex fuera del Tema nunca es un color valido', () => {
+  it('a hex outside the Theme is never a valid color', () => {
     const { issues } = compile({ 'main.dg': 'specification { node servicio { color "#ff0000" } }  model { servicio a }' });
 
     expect(issues.map((i) => i.code)).toEqual(['unknown-palette-color']);
   });
 
-  it('color de override se valida contra la Paleta del theme de la Vista', () => {
-    const vista = (tema: string) =>
-      `${base} ${claro} view v { type flow include ** theme ${tema} node a { color danger } }`;
+  it('an override color is validated against the Palette of the View theme', () => {
+    const view = (theme: string) =>
+      `${base} ${light} view v { type flow include ** theme ${theme} node a { color danger } }`;
 
-    expect(compile({ 'main.dg': vista('claro') }).issues).toEqual([]);
-    expect(compile({ 'main.dg': vista('neutral') }).issues.map((i) => i.code)).toEqual(['unknown-palette-color']);
+    expect(compile({ 'main.dg': view('claro') }).issues).toEqual([]);
+    expect(compile({ 'main.dg': view('neutral') }).issues.map((i) => i.code)).toEqual(['unknown-palette-color']);
   });
 });
-describe('compile: iconos', () => {
-  const nodo = (icono: string) => `specification { node servicio { icon ${icono} } }  model { servicio a }`;
+describe('compile: icons', () => {
+  const node = (iconName: string) => `specification { node servicio { icon ${iconName} } }  model { servicio a }`;
 
-  it('acepta una clave de los iconos genericos', () => {
-    const { issues, canonico } = compile({ 'main.dg': nodo('database') });
-
-    expect(issues).toEqual([]);
-    expect(canonico?.specification.nodeTypes[0]?.icon).toBe('database');
-  });
-
-  it('acepta un SVG del Workspace por el nombre de su archivo', () => {
-    const { issues } = compile({ 'main.dg': nodo('mi-logo'), 'iconos/mi-logo.svg': '<svg></svg>' });
+  it('accepts a key of the generic icons', () => {
+    const { issues, canonical } = compile({ 'main.dg': node('database') });
 
     expect(issues).toEqual([]);
+    expect(canonical?.specification.nodeTypes[0]?.icon).toBe('database');
   });
 
-  it('un archivo .svg del Workspace no se parsea como DSL', () => {
-    const { issues } = compile({ 'main.dg': nodo('database'), 'x.svg': '<svg><path d="M0 0"/></svg>' });
+  it('accepts a Workspace SVG by its file name', () => {
+    const { issues } = compile({ 'main.dg': node('mi-logo'), 'iconos/mi-logo.svg': '<svg></svg>' });
 
     expect(issues).toEqual([]);
   });
 
-  it('clave desconocida es unknown-icon con posicion y fix si hay un candidato', () => {
-    const { issues, canonico } = compile({ 'main.dg': nodo('databse') });
+  it('a Workspace .svg file is not parsed as DSL', () => {
+    const { issues } = compile({ 'main.dg': node('database'), 'x.svg': '<svg><path d="M0 0"/></svg>' });
 
-    expect(canonico).toBeUndefined();
+    expect(issues).toEqual([]);
+  });
+
+  it('an unknown key is unknown-icon with position and a fix if there is a candidate', () => {
+    const { issues, canonical } = compile({ 'main.dg': node('databse') });
+
+    expect(canonical).toBeUndefined();
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({ code: 'unknown-icon', severity: 'error', file: 'main.dg', line: 1 });
     expect(issues[0]?.fix?.replacement).toBe('database');
@@ -1175,8 +1175,8 @@ describe('compile: iconos', () => {
 describe('compile: drill-down', () => {
   const base = 'specification { node servicio }  model { servicio a { servicio x }  servicio b { servicio y }  servicio c }';
 
-  it('compila drill collapse, collapsed, expanded y link a la Vista', () => {
-    const { canonico, issues } = compile({
+  it('compiles drill collapse, collapsed, expanded and link to the View', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base}
         view general {
           type architecture
@@ -1190,7 +1190,7 @@ describe('compile: drill-down', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.views[0]).toMatchObject({
+    expect(canonical?.views[0]).toMatchObject({
       drill: 'collapse',
       collapsed: ['a'],
       expanded: ['b'],
@@ -1198,29 +1198,29 @@ describe('compile: drill-down', () => {
     });
   });
 
-  it('de punta a punta: un Grupo que excede depth abre colapsado y expanded lo abre', () => {
-    const fuente = (extra: string) =>
-      compile({ 'main.dg': `${base} view v { type architecture include ** depth 1 ${extra} }` }).canonico;
+  it('end to end: a Group beyond depth opens collapsed and expanded opens it', () => {
+    const source = (extra: string) =>
+      compile({ 'main.dg': `${base} view v { type architecture include ** depth 1 ${extra} }` }).canonical;
 
-    const cerrado = fuente('');
-    const abierto = fuente('expanded a');
+    const closed = source('');
+    const open = source('expanded a');
 
-    expect(cerrado && resolveView(cerrado, 'v')?.nodes.find((n) => n.id === 'a')).toMatchObject({
+    expect(closed && resolveView(closed, 'v')?.nodes.find((n) => n.id === 'a')).toMatchObject({
       collapsed: true,
       childCount: 1,
       children: [],
     });
-    expect(abierto && resolveView(abierto, 'v')?.nodes.map((n) => n.id)).toEqual(['a', 'a.x', 'b', 'c']);
+    expect(open && resolveView(open, 'v')?.nodes.map((n) => n.id)).toEqual(['a', 'a.x', 'b', 'c']);
   });
 
-  it('una Vista sin drill-down deja collapsed, expanded y links vacios', () => {
-    const { canonico } = compile({ 'main.dg': `${base} view v { type flow }` });
+  it('a View without drill-down leaves collapsed, expanded and links empty', () => {
+    const { canonical } = compile({ 'main.dg': `${base} view v { type flow }` });
 
-    expect(canonico?.views[0]).toMatchObject({ collapsed: [], expanded: [], links: [] });
-    expect(canonico?.views[0]?.drill).toBeUndefined();
+    expect(canonical?.views[0]).toMatchObject({ collapsed: [], expanded: [], links: [] });
+    expect(canonical?.views[0]?.drill).toBeUndefined();
   });
 
-  it('link a una Vista inexistente es unknown-view-link, con fix si hay un candidato', () => {
+  it('a link to a missing View is unknown-view-link, with a fix if there is a candidate', () => {
     const { issues } = compile({
       'main.dg': `${base}\nview v {\n  type flow\n  include **\n  link a -> detale\n}\nview detalle { type flow }`,
     });
@@ -1230,7 +1230,7 @@ describe('compile: drill-down', () => {
     expect(issues[0]?.fix?.replacement).toBe('detalle');
   });
 
-  it('link puede apuntar a una Vista de otro archivo', () => {
+  it('link can point to a View of another file', () => {
     const { issues } = compile({
       'a.dg': `${base} view v { type flow include ** link a -> otra }`,
       'b.dg': 'view otra { type flow }',
@@ -1239,22 +1239,22 @@ describe('compile: drill-down', () => {
     expect(issues).toEqual([]);
   });
 
-  it('collapsed/expanded sobre un Nodo que no es Grupo es invalid-expansion-target', () => {
+  it('collapsed/expanded on a Node that is not a Group is invalid-expansion-target', () => {
     const { issues } = compile({ 'main.dg': `${base}\nview v {\n  type flow\n  include **\n  collapsed c\n}` });
 
     expect(issues).toHaveLength(1);
     expect(issues[0]).toMatchObject({ code: 'invalid-expansion-target', line: 5 });
   });
 
-  it('collapsed/expanded sobre un Grupo que la Vista no muestra, o inexistente, es invalid-expansion-target', () => {
-    const fuera = compile({ 'main.dg': `${base} view v { type flow include a expanded b }` });
-    const fantasma = compile({ 'main.dg': `${base} view v { type flow include ** collapsed zzz }` });
+  it('collapsed/expanded on a Group the View does not show, or missing, is invalid-expansion-target', () => {
+    const outside = compile({ 'main.dg': `${base} view v { type flow include a expanded b }` });
+    const ghost = compile({ 'main.dg': `${base} view v { type flow include ** collapsed zzz }` });
 
-    expect(fuera.issues.map((i) => i.code)).toEqual(['invalid-expansion-target']);
-    expect(fantasma.issues.map((i) => i.code)).toEqual(['invalid-expansion-target']);
+    expect(outside.issues.map((i) => i.code)).toEqual(['invalid-expansion-target']);
+    expect(ghost.issues.map((i) => i.code)).toEqual(['invalid-expansion-target']);
   });
 
-  it('link junto con expanded sobre el mismo Nodo es link-with-expanded', () => {
+  it('link together with expanded on the same Node is link-with-expanded', () => {
     const { issues } = compile({
       'main.dg': `${base} view v { type flow include ** expanded a link a -> v }`,
     });
@@ -1263,11 +1263,11 @@ describe('compile: drill-down', () => {
   });
 });
 
-describe('compile: Pasos (steps)', () => {
+describe('compile: Steps', () => {
   const base = 'specification { node servicio }  model { servicio a { servicio x  servicio y }  servicio b  a.x -> b }';
 
-  it('compila steps con show y hide, selectores y Aristas', () => {
-    const { canonico, issues } = compile({
+  it('compiles steps with show and hide, selectors and Edges', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base}
         view v {
           type architecture
@@ -1280,28 +1280,28 @@ describe('compile: Pasos (steps)', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.views[0]?.steps).toEqual([
+    expect(canonical?.views[0]?.steps).toEqual([
       { title: 'Entrada', show: [{ selector: 'b' }], hide: [] },
       { title: 'Detalle', show: [{ selector: 'a.*' }, { from: 'a.x', to: 'b' }], hide: [{ selector: 'b' }] },
     ]);
   });
 
-  it('la Arista se nombra tambien sin la palabra `edge`', () => {
-    const { canonico, issues } = compile({
+  it('the Edge can also be named without the word `edge`', () => {
+    const { canonical, issues } = compile({
       'main.dg': `${base} view v { type flow  steps { step "s" { show a.x -> b } } }`,
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.views[0]?.steps[0]?.show).toEqual([{ from: 'a.x', to: 'b' }]);
+    expect(canonical?.views[0]?.steps[0]?.show).toEqual([{ from: 'a.x', to: 'b' }]);
   });
 
-  it('sin steps la Vista queda con steps vacio', () => {
-    const { canonico } = compile({ 'main.dg': `${base} view v { type flow }` });
+  it('without steps the View has empty steps', () => {
+    const { canonical } = compile({ 'main.dg': `${base} view v { type flow }` });
 
-    expect(canonico?.views[0]?.steps).toEqual([]);
+    expect(canonical?.views[0]?.steps).toEqual([]);
   });
 
-  it('un selector que no coincide con ningun Nodo es unknown-step en su posicion', () => {
+  it('a selector matching no Node is unknown-step at its position', () => {
     const { issues } = compile({
       'main.dg': `${base}\nview v {\n  type flow\n  steps {\n    step "s" { show zzz }\n  }\n}`,
     });
@@ -1310,7 +1310,7 @@ describe('compile: Pasos (steps)', () => {
     expect(issues[0]).toMatchObject({ code: 'unknown-step', severity: 'error', file: 'main.dg', line: 5, column: 21 });
   });
 
-  it('un selector comodin sin coincidencias tambien lo es', () => {
+  it('a wildcard selector without matches is too', () => {
     const { issues } = compile({
       'main.dg': `${base} view v { type flow  steps { step "s" { hide b.* } } }`,
     });
@@ -1318,7 +1318,7 @@ describe('compile: Pasos (steps)', () => {
     expect(issues.map((i) => i.code)).toEqual(['unknown-step']);
   });
 
-  it('una Arista que no existe en el Modelo es unknown-step', () => {
+  it('an Edge that does not exist in the Model is unknown-step', () => {
     const { issues } = compile({
       'main.dg': `${base} view v { type flow  steps { step "s" { show edge b -> a.x } } }`,
     });
@@ -1326,7 +1326,7 @@ describe('compile: Pasos (steps)', () => {
     expect(issues.map((i) => i.code)).toEqual(['unknown-step']);
   });
 
-  it('un id parecido lleva fix con un unico candidato', () => {
+  it('a similar id carries a fix with a single candidate', () => {
     const { issues } = compile({
       'main.dg': `${base} view v { type flow  steps { step "s" { show a.xx } } }`,
     });
@@ -1335,44 +1335,44 @@ describe('compile: Pasos (steps)', () => {
     expect(issues[0]?.fix?.replacement).toBe('a.x');
   });
 
-  it('de punta a punta: DSL -> resolveView -> revealAt', () => {
-    const { canonico } = compile({
+  it('end to end: DSL -> resolveView -> revealAt', () => {
+    const { canonical } = compile({
       'main.dg': `${base} view v { type flow  include **  steps { step "1" { show b }  step "2" { show a.x } } }`,
     });
-    const vista = resolveView(canonico!, 'v')!;
+    const view = resolveView(canonical!, 'v')!;
 
-    expect(['a.x', 'b'].map(revealAt(vista, 1))).toEqual([0, 1]);
-    expect(['a.x', 'b'].map(revealAt(vista, 2))).toEqual([1, 1]);
-    expect(revealAt(vista, 2)('a.x -> b')).toBe(1);
+    expect(['a.x', 'b'].map(revealAt(view, 1))).toEqual([0, 1]);
+    expect(['a.x', 'b'].map(revealAt(view, 2))).toEqual([1, 1]);
+    expect(revealAt(view, 2)('a.x -> b')).toBe(1);
   });
 });
 
-describe('compile: Temas del ejemplo rinthel-arch', () => {
-  it('extienden los incorporados oscuro y claro con parches por Tipo, sin issues', async () => {
-    // `theme-views.dg` uses the 14 Themes of `themes/`, con avisos de contraste deliberados: lo cubre tests/ejemplos-docs.test.ts.
+describe('compile: Themes of the rinthel-arch example', () => {
+  it('they extend the built-in ones dark and light with Node kind patches, without issues', async () => {
+    // `theme-views.dg` uses the 14 Themes of `themes/`, with deliberate contrast warnings: tests/docs-examples.test.ts covers it.
     const { readFileSync, readdirSync } = await import('node:fs');
     const dir = new URL('../../../examples/rinthel-arch/', import.meta.url);
-    const fuentes = Object.fromEntries(
+    const fonts = Object.fromEntries(
       readdirSync(dir).filter((f) => f.endsWith('.dg') && f !== 'theme-views.dg').map((f) => [f, readFileSync(new URL(f, dir), 'utf8')]),
     );
-    const { canonico, issues } = compile(fuentes);
+    const { canonical, issues } = compile(fonts);
 
     expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
-    const temas = canonico?.themes ?? [];
+    const themeList = canonical?.themes ?? [];
     expect(issues).toEqual([]);
-    const tema = (nombre: string) => temas.find((t) => t.name === nombre) as unknown as { tokens: object; nodo: { tipos: Record<string, Array<{ nombre: string }>> } };
-    expect(tema('diagrams').tokens).toMatchObject({ background: '#09090b' });
-    expect(tema('diagrams-light').tokens).toMatchObject({ background: '#f8fafc' });
-    for (const nombre of ['diagrams', 'diagrams-light']) {
-      expect(tema(nombre).nodo.tipos['package']?.map((op) => op.nombre)).toEqual(['accent']);
-      expect(tema(nombre).nodo.tipos['external']?.map((op) => op.nombre)).toEqual(['fill', 'border']);
+    const theme = (name: string) => themeList.find((t) => t.name === name) as unknown as { tokens: object; nodo: { tipos: Record<string, Array<{ nombre: string }>> } };
+    expect(theme('diagrams').tokens).toMatchObject({ background: '#09090b' });
+    expect(theme('diagrams-light').tokens).toMatchObject({ background: '#f8fafc' });
+    for (const name of ['diagrams', 'diagrams-light']) {
+      expect(theme(name).nodo.tipos['package']?.map((op) => op.nombre)).toEqual(['accent']);
+      expect(theme(name).nodo.tipos['external']?.map((op) => op.nombre)).toEqual(['fill', 'border']);
     }
   });
 });
 
-describe('compile: Interacciones y Vistas de secuencia', () => {
-  it('compila una Interaccion con tipos, alias, etiquetas y mensaje propio, y una Vista con interaction y order', () => {
-    const { issues, canonico } = compile({
+describe('compile: Interactions and sequence Views', () => {
+  it('compiles an Interaction with kinds, aliases, labels and a self message, and a View with interaction and order', () => {
+    const { issues, canonical } = compile({
       'main.dg': `specification { node servicio }
         model {
           servicio a
@@ -1387,7 +1387,7 @@ describe('compile: Interacciones y Vistas de secuencia', () => {
     });
 
     expect(issues).toEqual([]);
-    expect(canonico?.model.interactions).toEqual([
+    expect(canonical?.model.interactions).toEqual([
       {
         id: 'flujo',
         title: 'Flujo',
@@ -1399,6 +1399,6 @@ describe('compile: Interacciones y Vistas de secuencia', () => {
         ],
       },
     ]);
-    expect(canonico?.views[0]).toMatchObject({ type: 'sequence', interaction: 'flujo', order: ['b', 'a'] });
+    expect(canonical?.views[0]).toMatchObject({ type: 'sequence', interaction: 'flujo', order: ['b', 'a'] });
   });
 });

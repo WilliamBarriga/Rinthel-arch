@@ -6,7 +6,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const GRAMMAR = fileURLToPath(new URL('../../dsl/src/gramatica/diagramas.langium', import.meta.url));
+const GRAMMAR = fileURLToPath(new URL('../../dsl/src/grammar/diagrams.langium', import.meta.url));
 const TARGET = fileURLToPath(new URL('../browser/editor/keywords.ts', import.meta.url));
 
 /** The word-shaped literals (`'view'`, `'ease-in-out'`), without repeats and in alphabetical order. */

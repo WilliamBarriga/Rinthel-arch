@@ -2,7 +2,7 @@
 
 # DSL reference
 
-Summary of the syntax of `.dg` files. The full grammar is in `packages/dsl/src/gramatica/diagramas.langium`; the decisions, in [ADR 0001](../adr/0001-dsl-editable-source.md). Themes are described in [Customizing with Themes](themes.md). Comments start with `//`.
+Summary of the syntax of `.dg` files. The full grammar is in `packages/dsl/src/grammar/diagrams.langium`; the decisions, in [ADR 0001](../adr/0001-dsl-editable-source.md). Themes are described in [Customizing with Themes](themes.md). Comments start with `//`.
 
 A Workspace is a folder with any number of `.dg` files (in subfolders too); they merge into a single Model. A file can mix `specification`, `model`, `view`, `theme` and `part` blocks.
 

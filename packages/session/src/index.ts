@@ -4,7 +4,7 @@
  * Live workspace (the state of `dev` without transport, owner of the event sequence: `connection` and `listen`; it composes the File history and the live Activity log): `openLiveWorkspace` over a `LiveWorkspacePort` with injected clock and time,
  * `handleDevApi` (the `/api/*` routes as request -> complete response) and `inMemoryPort` (fake of the port).
  * Only what another package uses is exported; the rest is internal.
- * Invariants: pure over `ArchivosDelWorkspace` (no disk); a Session is immutable; it never imports code (ADR 0008).
+ * Invariants: pure over `WorkspaceFiles` (no disk); a Session is immutable; it never imports code (ADR 0008).
  * Errors: the Workspace's are issues; rejected edits carry `reason`; layout failures and port I/O failures propagate.
  * Dependencies: `canonical`, `theme`, `dsl` and `layout`.
  */

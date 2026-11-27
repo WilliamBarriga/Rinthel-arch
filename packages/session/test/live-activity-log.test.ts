@@ -5,8 +5,8 @@ import type { DevActivity } from 'canonical';
 import { openLiveWorkspace, inMemoryPort } from 'session';
 import type { LiveWorkspacePort, LiveWorkspace } from 'session';
 
-import { activityEvent as event, activityLines as lines } from '../../../tests/ayudas/actividad';
-import { fakeClock } from '../../../tests/ayudas/reloj';
+import { activityEvent as event, activityLines as lines } from '../../../tests/helpers/activity';
+import { fakeClock } from '../../../tests/helpers/clock';
 
 const MAIN = 'specification { node servicio }\nmodel { servicio a "A" }\n';
 

@@ -4,7 +4,7 @@
  */
 import { createRoot } from 'react-dom/client';
 
-import { hashDelNavegador } from 'shell';
+import { browserHash } from 'shell';
 
 import { exportDataSchema } from '../../src/export';
 import { DATA_ID, WORKER_ID } from '../../src/routes';
@@ -15,4 +15,4 @@ import { exportProps } from './props';
 const text = (id: string): string => document.getElementById(id)?.textContent ?? '';
 
 const data = exportDataSchema.parse(JSON.parse(text(DATA_ID)));
-createRoot(document.getElementById('raiz') as HTMLElement).render(<DevUi {...exportProps(data)} hash={hashDelNavegador(window)} layout={exportedLayout(text(WORKER_ID))} />);
+createRoot(document.getElementById('raiz') as HTMLElement).render(<DevUi {...exportProps(data)} hash={browserHash(window)} layout={exportedLayout(text(WORKER_ID))} />);

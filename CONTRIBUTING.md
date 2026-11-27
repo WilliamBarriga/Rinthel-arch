@@ -15,7 +15,7 @@ Follow the reading path in [AGENTS.md](AGENTS.md#camino-de-lectura): glossary, c
 
 ```
 pnpm install
-pnpm exec playwright install chromium   # once: used by the end-to-end part of pnpm test and by pnpm docs:capturas
+pnpm exec playwright install chromium   # once: used by the end-to-end part of pnpm test and by pnpm docs:screenshots
 pnpm check   # typecheck, lint, package order, docs and emojis: fast, for iterating
 pnpm test    # full gate: build, typecheck and all the tests
 ```
@@ -37,8 +37,8 @@ The rule: touching a guide means touching its pair. `pnpm check` fails if a guid
 
 ### Generated files and screenshots
 
-- `docs/theme-catalog.md` is generated with `pnpm docs:catalogo`; do not edit it by hand.
-- The screenshots in `docs/img/` are regenerated with `pnpm docs:capturas` (needs `pnpm build` and Chromium) when a Theme, an example or the `dev` UI changes.
+- `docs/theme-catalog.md` is generated with `pnpm docs:catalog`; do not edit it by hand.
+- The screenshots in `docs/img/` are regenerated with `pnpm docs:screenshots` (needs `pnpm build` and Chromium) when a Theme, an example or the `dev` UI changes.
 
 ## Repo map
 

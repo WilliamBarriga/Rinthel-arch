@@ -31,7 +31,7 @@ When `scan` reports uncovered units or orphan refs, refresh the Workspace with t
 To see a View with another Theme without touching the example (needs `pnpm build`):
 
 ```
-pnpm capturas --workspace examples/rinthel-arch --view open --prototype A neutral neutral-dark
+pnpm screenshots --workspace examples/rinthel-arch --view open --prototype A neutral neutral-dark
 ```
 
 ## Live demo

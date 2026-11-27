@@ -7,7 +7,7 @@
  * - A global with a modifier acts from any scope, except those marked `inText: false` (undo and redo: in the editor
  *   and in a text field their own history rules).
  * - Keys without a modifier act only with the focus outside text (canvas or global).
- * - With the focus on the canvas, Tab, arrows, Enter and Space belong to `VistaInteractiva`: they never resolve.
+ * - With the focus on the canvas, Tab, arrows, Enter and Space belong to `InteractiveView`: they never resolve.
  * - Autorepeat triggers nothing.
  */
 

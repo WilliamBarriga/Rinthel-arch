@@ -1,131 +1,131 @@
-/** La consulta de `inspect` sobre una Sesion y el formato de toda su salida (JSON y legible). */
+/** The `inspect` query over a Session and the format of all its output (JSON and readable). */
 import { inspectOutputSchema } from 'canonical';
 import type { InspectCommand, InspectOutput } from 'canonical';
 import type { QueryAnswer, Session } from 'session';
 
-type Sitio = { file: string; line: number };
+type Site = { file: string; line: number };
 
 
-/** Una consulta de `inspect`; `tipo`, `estado`, `diagrama` y `catalogo` solo cuentan en `tema`. */
-export interface ConsultaDeInspect {
-  comando: InspectCommand;
-  argumento: string;
-  tipo?: string;
-  estado?: string;
-  diagrama?: string;
-  catalogo?: boolean;
+/** An `inspect` query; `type`, `status`, `diagram` and `catalog` only count for `theme`. */
+export interface InspectQuery {
+  command: InspectCommand;
+  argument: string;
+  type?: string;
+  status?: string;
+  diagram?: string;
+  catalog?: boolean;
 }
 
-/** `inspect` de la terminal (la consulta vive en `Sesion.consultar`; `GET /api/inspect` la hace el Workspace vivo); `undefined` si la Sesion no tiene Fuente (errores). */
-export function consultarInspect(sesion: Session, { comando, argumento, tipo, estado, diagrama, catalogo }: ConsultaDeInspect): QueryAnswer | undefined {
-  if (comando !== 'theme') return sesion.query({ command: comando, argument: argumento });
-  return sesion.query({ command: comando, argument: argumento, catalog: catalogo === true, ...(tipo !== undefined && { kind: tipo }), ...(estado !== undefined && { state: estado }), ...(diagrama !== undefined && { diagram: diagrama }) });
+/** Terminal `inspect` (the query lives in `Session.query`; `GET /api/inspect` is run by the live Workspace); `undefined` if the Session has no source (errors). */
+export function queryInspect(session: Session, { command, argument, type, status, diagram, catalog }: InspectQuery): QueryAnswer | undefined {
+  if (command !== 'theme') return session.query({ command, argument });
+  return session.query({ command, argument, catalog: catalog === true, ...(type !== undefined && { kind: type }), ...(status !== undefined && { state: status }), ...(diagram !== undefined && { diagram }) });
 }
 
-/** La salida tal como la da `inspect --json` (validada y normalizada por el esquema). */
-export const comoSalidaDeInspect = (salida: InspectOutput): InspectOutput => inspectOutputSchema.parse(salida);
+/** The output as `inspect --json` gives it (validated and normalized by the schema). */
+export const asInspectOutput = (output: InspectOutput): InspectOutput => inspectOutputSchema.parse(output);
 
-export const comoJson = (salida: InspectOutput): string => `${JSON.stringify(comoSalidaDeInspect(salida), null, 2)}\n`;
+export const asJson = (output: InspectOutput): string => `${JSON.stringify(asInspectOutput(output), null, 2)}\n`;
 
-const sitio = ({ file, line }: Sitio): string => `${file}:${line}`;
-const titulo = (t: string): string => (t === '' ? '' : ` "${t}"`);
+const site = ({ file, line }: Site): string => `${file}:${line}`;
+const title = (t: string): string => (t === '' ? '' : ` "${t}"`);
 
-/** Una linea por resultado. */
-export function textoLegible(salida: InspectOutput): string {
-  const lineas: string[] = [];
-  if (salida.command === 'search') {
-    for (const r of salida.results) lineas.push(r.kind === 'view' ? `view ${r.id} ${r.type} ${sitio(r)}` : r.kind === 'interaction' ? `interaction ${r.id}${titulo(r.title)} ${sitio(r)}` : `node ${r.id} ${r.type}${titulo(r.title)} ${sitio(r)}`);
-    lineas.push(`${salida.results.length} ${salida.results.length === 1 ? 'result' : 'results'}`);
-  } else if (salida.command === 'node') {
-    const { node: nodo } = salida;
-    lineas.push(`${nodo.id} ${nodo.type}${titulo(nodo.title)} ${sitio(nodo)}`);
-    if (nodo.description !== '') lineas.push(`  ${nodo.description}`);
-    if (nodo.parent !== undefined) lineas.push(`Parent: ${nodo.parent}`);
-    if (nodo.children.length > 0) lineas.push(`Children: ${nodo.children.join(', ')}`);
-    if (nodo.attributes.length > 0) lineas.push(`Attributes: ${nodo.attributes.map((a) => `${a.name}: ${a.type}`).join(', ')}`);
-    lineas.push('Edges:');
-    for (const a of salida.edges) {
-      const otro = a.direction === 'out' ? a.to : a.from;
-      lineas.push(`  ${a.direction === 'out' ? '->' : '<-'} ${otro}${a.label === undefined ? '' : ` "${a.label}"`} ${sitio(a)}`);
+/** One line per result. */
+export function readableText(output: InspectOutput): string {
+  const lines: string[] = [];
+  if (output.command === 'search') {
+    for (const r of output.results) lines.push(r.kind === 'view' ? `view ${r.id} ${r.type} ${site(r)}` : r.kind === 'interaction' ? `interaction ${r.id}${title(r.title)} ${site(r)}` : `node ${r.id} ${r.type}${title(r.title)} ${site(r)}`);
+    lines.push(`${output.results.length} ${output.results.length === 1 ? 'result' : 'results'}`);
+  } else if (output.command === 'node') {
+    const { node } = output;
+    lines.push(`${node.id} ${node.type}${title(node.title)} ${site(node)}`);
+    if (node.description !== '') lines.push(`  ${node.description}`);
+    if (node.parent !== undefined) lines.push(`Parent: ${node.parent}`);
+    if (node.children.length > 0) lines.push(`Children: ${node.children.join(', ')}`);
+    if (node.attributes.length > 0) lines.push(`Attributes: ${node.attributes.map((a) => `${a.name}: ${a.type}`).join(', ')}`);
+    lines.push('Edges:');
+    for (const a of output.edges) {
+      const another = a.direction === 'out' ? a.to : a.from;
+      lines.push(`  ${a.direction === 'out' ? '->' : '<-'} ${another}${a.label === undefined ? '' : ` "${a.label}"`} ${site(a)}`);
     }
-    lineas.push('Views:');
-    for (const v of salida.views) lineas.push(`  ${v.id} ${sitio(v)}`);
-  } else if (salida.command === 'interaction') {
-    const { interaction: i } = salida;
-    lineas.push(`${i.id}${titulo(i.title)} ${i.items} items ${sitio(i)}`);
-    if (i.description !== '') lineas.push(`  ${i.description}`);
-    lineas.push(`Messages: ${i.messages}`);
-    lineas.push(`Lifelines: ${i.lifelines.join(', ')}`);
-    lineas.push('Views:');
-    for (const v of i.views) lineas.push(`  ${v.id} ${sitio(v)}`);
-  } else if (salida.command === 'planned') {
-    const { nodes, attributes, edges, interactions } = salida.planned;
-    for (const n of nodes) lineas.push(`node ${n.id} ${n.type}${titulo(n.title)} ${sitio(n)}${n.inherited ? ' (inherited)' : ''}${n.spec.length === 0 ? '' : ` spec ${n.spec.join(', ')}`}`);
-    for (const a of attributes) lineas.push(`attribute ${a.node}#${a.name} ${sitio(a)}`);
-    for (const e of edges) lineas.push(`edge ${e.from} -> ${e.to}${e.label === undefined ? '' : ` "${e.label}"`} ${sitio(e)}${e.inherited ? ' (inherited)' : ''}`);
-    for (const i of interactions) lineas.push(`interaction ${i.id}${titulo(i.title)} ${sitio(i)}`);
-    lineas.push(`${nodes.length + attributes.length + edges.length + interactions.length} planned`);
-  } else if (salida.command === 'theme') {
-    const { theme: tema } = salida;
-    lineas.push(`${tema.name} ${tema.file}:${tema.line}${tema.kind === undefined ? '' : ` kind=${tema.kind}`}${tema.state === undefined ? '' : ` state=${tema.state}`}${tema.diagram === undefined ? '' : ` diagram=${tema.diagram}`}`);
-    lineas.push(`extends: ${tema.extends.length === 0 ? '(none)' : tema.extends.join(' > ')}`);
-    lineas.push(`parts: ${tema.parts.length === 0 ? '(none)' : tema.parts.join(', ')}`);
-    lineas.push('Layers:');
-    for (const c of tema.layers) {
+    lines.push('Views:');
+    for (const v of output.views) lines.push(`  ${v.id} ${site(v)}`);
+  } else if (output.command === 'interaction') {
+    const { interaction: i } = output;
+    lines.push(`${i.id}${title(i.title)} ${i.items} items ${site(i)}`);
+    if (i.description !== '') lines.push(`  ${i.description}`);
+    lines.push(`Messages: ${i.messages}`);
+    lines.push(`Lifelines: ${i.lifelines.join(', ')}`);
+    lines.push('Views:');
+    for (const v of i.views) lines.push(`  ${v.id} ${site(v)}`);
+  } else if (output.command === 'planned') {
+    const { nodes, attributes, edges, interactions } = output.planned;
+    for (const n of nodes) lines.push(`node ${n.id} ${n.type}${title(n.title)} ${site(n)}${n.inherited ? ' (inherited)' : ''}${n.spec.length === 0 ? '' : ` spec ${n.spec.join(', ')}`}`);
+    for (const a of attributes) lines.push(`attribute ${a.node}#${a.name} ${site(a)}`);
+    for (const e of edges) lines.push(`edge ${e.from} -> ${e.to}${e.label === undefined ? '' : ` "${e.label}"`} ${site(e)}${e.inherited ? ' (inherited)' : ''}`);
+    for (const i of interactions) lines.push(`interaction ${i.id}${title(i.title)} ${site(i)}`);
+    lines.push(`${nodes.length + attributes.length + edges.length + interactions.length} planned`);
+  } else if (output.command === 'theme') {
+    const { theme } = output;
+    lines.push(`${theme.name} ${theme.file}:${theme.line}${theme.kind === undefined ? '' : ` kind=${theme.kind}`}${theme.state === undefined ? '' : ` state=${theme.state}`}${theme.diagram === undefined ? '' : ` diagram=${theme.diagram}`}`);
+    lines.push(`extends: ${theme.extends.length === 0 ? '(none)' : theme.extends.join(' > ')}`);
+    lines.push(`parts: ${theme.parts.length === 0 ? '(none)' : theme.parts.join(', ')}`);
+    lines.push('Layers:');
+    for (const c of theme.layers) {
       const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
-      lineas.push(`  ${c.name} ${c.primitive}${props === '' ? '' : ` ${props}`}${c.above ? ' [above]' : ''}${c.animated ? ' [animated]' : ''} ${sitio(c.origin)}`);
+      lines.push(`  ${c.name} ${c.primitive}${props === '' ? '' : ` ${props}`}${c.above ? ' [above]' : ''}${c.animated ? ' [animated]' : ''} ${site(c.origin)}`);
     }
-    lineas.push(`Page:${tema.page.layers.length === 0 ? ' (only the background color)' : tema.page.fixed ? ' (fixed to the viewer)' : ' (moves with the camera)'}`);
-    for (const c of tema.page.layers) {
+    lines.push(`Page:${theme.page.layers.length === 0 ? ' (only the background color)' : theme.page.fixed ? ' (fixed to the viewer)' : ' (moves with the camera)'}`);
+    for (const c of theme.page.layers) {
       const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
-      lineas.push(`  ${c.name} ${c.primitive}${props === '' ? '' : ` ${props}`} ${sitio(c.origin)}`);
+      lines.push(`  ${c.name} ${c.primitive}${props === '' ? '' : ` ${props}`} ${site(c.origin)}`);
     }
-    const { group: grupo } = tema;
-    lineas.push(`Group:${grupo.own ? '' : ' (no group: sober stack derived from the Theme tokens, not the Node Layers)'}`);
-    lineas.push(`  header: ${grupo.header} (height ${grupo.headerHeight}) ${sitio(grupo.headerOrigin)}`);
-    lineas.push(`  padding: ${grupo.padding.top} ${grupo.padding.right} ${grupo.padding.bottom} ${grupo.padding.left}`);
-    for (const [titulo, capas] of [['open', grupo.layers], ['collapsed', grupo.collapsed.layers]] as const) {
-      if (capas.length > 0) lineas.push(`  ${titulo}:`);
-      for (const c of capas) {
+    const { group } = theme;
+    lines.push(`Group:${group.own ? '' : ' (no group: sober stack derived from the Theme tokens, not the Node Layers)'}`);
+    lines.push(`  header: ${group.header} (height ${group.headerHeight}) ${site(group.headerOrigin)}`);
+    lines.push(`  padding: ${group.padding.top} ${group.padding.right} ${group.padding.bottom} ${group.padding.left}`);
+    for (const [titulo, layers] of [['open', group.layers], ['collapsed', group.collapsed.layers]] as const) {
+      if (layers.length > 0) lines.push(`  ${titulo}:`);
+      for (const c of layers) {
         const props = Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ');
-        lineas.push(`    ${c.name} ${c.primitive}${props === '' ? '' : ` ${props}`}${c.above ? ' [above]' : ''}${c.animated ? ' [animated]' : ''} ${sitio(c.origin)}`);
+        lines.push(`    ${c.name} ${c.primitive}${props === '' ? '' : ` ${props}`}${c.above ? ' [above]' : ''}${c.animated ? ' [animated]' : ''} ${site(c.origin)}`);
       }
     }
-    lineas.push(`  collapsed header: ${grupo.collapsed.slots} ${sitio(grupo.collapsed.slotsOrigin)}`);
-    const { elements: elementos } = tema;
-    if (elementos?.sequence !== undefined) {
-      lineas.push('Sequence:');
-      for (const [nombre, bloque] of Object.entries(elementos.sequence)) {
-        const marcadores = Object.entries(bloque.markers).map(([lado, tipo]) => ` ${lado}=${tipo}`).join('');
-        const metricas = Object.entries(bloque.metrics).map(([clave, valor]) => ` ${clave}=${valor}`).join('');
-        lineas.push(`  ${nombre}${bloque.derived === true ? ' (derived)' : ''}:${marcadores}${metricas}`);
-        for (const c of bloque.layers) lineas.push(`    ${c.name} ${c.primitive} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
-        for (const [variante, capas] of Object.entries(bloque.patches)) {
-          lineas.push(`    patch ${variante}:`);
-          for (const c of capas) lineas.push(`      ${c.name} ${c.primitive} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
+    lines.push(`  collapsed header: ${group.collapsed.slots} ${site(group.collapsed.slotsOrigin)}`);
+    const { elements } = theme;
+    if (elements?.sequence !== undefined) {
+      lines.push('Sequence:');
+      for (const [name, block] of Object.entries(elements.sequence)) {
+        const markerList = Object.entries(block.markers).map(([side, type]) => ` ${side}=${type}`).join('');
+        const metrics = Object.entries(block.metrics).map(([key, value]) => ` ${key}=${value}`).join('');
+        lines.push(`  ${name}${block.derived === true ? ' (derived)' : ''}:${markerList}${metrics}`);
+        for (const c of block.layers) lines.push(`    ${c.name} ${c.primitive} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
+        for (const [variantName, layers] of Object.entries(block.patches)) {
+          lines.push(`    patch ${variantName}:`);
+          for (const c of layers) lines.push(`      ${c.name} ${c.primitive} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
         }
       }
     }
-    if (elementos?.row !== undefined) {
-      lineas.push(`Row${elementos.row.derived === true ? ' (derived)' : ''}: height ${elementos.row.height ?? '(default)'}`);
-      for (const c of elementos.row.layers) lineas.push(`  ${c.name} ${c.primitive} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
+    if (elements?.row !== undefined) {
+      lines.push(`Row${elements.row.derived === true ? ' (derived)' : ''}: height ${elements.row.height ?? '(default)'}`);
+      for (const c of elements.row.layers) lines.push(`  ${c.name} ${c.primitive} ${Object.entries(c.props).map(([k, v]) => `${k}=${v}`).join(' ')}`.trimEnd());
     }
-    lineas.push(`Slots: ${tema.slots} ${sitio(tema.slotsOrigin)}`);
-    lineas.push('Metrics:');
-    for (const [clave, valor] of Object.entries(tema.metrics)) if (clave !== 'disposicion') lineas.push(`  ${clave}: ${typeof valor === 'object' ? JSON.stringify(valor) : String(valor)}`);
-    lineas.push(tema.hasCode ? `with code: ${tema.components.join(', ')}` : 'no code');
-    if (tema.catalog !== undefined) {
-      lineas.push(`Primitives: ${tema.catalog.primitives.join(', ')}`);
-      lineas.push(`Motions: ${tema.catalog.motions.join(', ')}`);
-      lineas.push(`Effects: ${tema.catalog.effects.join(', ')}`);
+    lines.push(`Slots: ${theme.slots} ${site(theme.slotsOrigin)}`);
+    lines.push('Metrics:');
+    for (const [key, value] of Object.entries(theme.metrics)) if (key !== 'disposicion') lines.push(`  ${key}: ${typeof value === 'object' ? JSON.stringify(value) : String(value)}`);
+    lines.push(theme.hasCode ? `with code: ${theme.components.join(', ')}` : 'no code');
+    if (theme.catalog !== undefined) {
+      lines.push(`Primitives: ${theme.catalog.primitives.join(', ')}`);
+      lines.push(`Motions: ${theme.catalog.motions.join(', ')}`);
+      lines.push(`Effects: ${theme.catalog.effects.join(', ')}`);
     }
   } else {
-    const { view: vista } = salida;
-    lineas.push(`${vista.id} ${vista.type}${vista.interaction === undefined ? '' : ` (interaction ${vista.interaction})`} ${sitio(vista)}`);
-    lineas.push('Nodes:');
-    for (const n of vista.nodes) lineas.push(`  ${n.id} ${n.type}${titulo(n.title)} ${sitio(n)}`);
-    lineas.push('Edges:');
-    for (const a of vista.edges) lineas.push(`  ${a.from} -> ${a.to}${a.label === undefined ? '' : ` "${a.label}"`}${a.count > 1 ? ` (x${a.count})` : ''} ${sitio(a)}`);
+    const { view } = output;
+    lines.push(`${view.id} ${view.type}${view.interaction === undefined ? '' : ` (interaction ${view.interaction})`} ${site(view)}`);
+    lines.push('Nodes:');
+    for (const n of view.nodes) lines.push(`  ${n.id} ${n.type}${title(n.title)} ${site(n)}`);
+    lines.push('Edges:');
+    for (const a of view.edges) lines.push(`  ${a.from} -> ${a.to}${a.label === undefined ? '' : ` "${a.label}"`}${a.count > 1 ? ` (x${a.count})` : ''} ${site(a)}`);
   }
-  return `${lineas.join('\n')}\n`;
+  return `${lines.join('\n')}\n`;
 }

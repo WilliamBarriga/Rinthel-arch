@@ -1,22 +1,22 @@
-/** Falla (codigo 1, con archivo:linea) si un `.md` versionado contiene un pictograma unicode. */
+/** Fails (code 1, with file:line) if a versioned `.md` contains a unicode pictograph. */
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-const PICTOGRAMA = /\p{Extended_Pictographic}/u;
-const archivos = execFileSync('git', ['ls-files', '*.md'], { encoding: 'utf8' })
+const PICTOGRAPH = /\p{Extended_Pictographic}/u;
+const files = execFileSync('git', ['ls-files', '*.md'], { encoding: 'utf8' })
   .split('\n')
   .filter(Boolean);
 
-const hallazgos: string[] = [];
-for (const archivo of archivos) {
-  readFileSync(archivo, 'utf8')
+const findings: string[] = [];
+for (const file of files) {
+  readFileSync(file, 'utf8')
     .split('\n')
-    .forEach((linea, i) => {
-      if (PICTOGRAMA.test(linea)) hallazgos.push(`${archivo}:${i + 1}`);
+    .forEach((line, i) => {
+      if (PICTOGRAPH.test(line)) findings.push(`${file}:${i + 1}`);
     });
 }
 
-if (hallazgos.length > 0) {
-  console.error(`Emojis unicode en docs (AGENTS.md los prohibe):\n${hallazgos.join('\n')}`);
+if (findings.length > 0) {
+  console.error(`Unicode emojis in docs (AGENTS.md forbids them):\n${findings.join('\n')}`);
   process.exit(1);
 }

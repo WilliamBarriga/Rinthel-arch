@@ -7,7 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ReactElement, ReactNode } from 'react';
 
 import type { CanonicalForm } from 'canonical';
-import type { PropsDeEstadoEnHash } from 'shell';
+import type { HashStateProps } from 'shell';
 
 import type { DevState } from '../../src/protocol';
 import type { DevClient } from '../client';
@@ -71,7 +71,7 @@ interface ProvidersProps extends DevUiBase {
   /** Without a Source (the Workspace never compiled) there is no View nor Selection. */
   source?: CanonicalForm;
   /** The active View, the Selection and the path, which live in the hash. */
-  hashProps?: PropsDeEstadoEnHash;
+  hashProps?: HashStateProps;
   /** The frame (with the canvas, if there is a Source). */
   children: ReactNode;
 }
@@ -81,7 +81,7 @@ const ChromeContext = createContext<FrameChrome | undefined>(undefined);
 /** The chrome state the frame draws. */
 export function useChrome(): FrameChrome {
   const chrome = useContext(ChromeContext);
-  if (chrome === undefined) throw new Error('useChrome fuera de <ProveedoresDelEstudio>');
+  if (chrome === undefined) throw new Error('useChrome outside <DevUiProviders>');
   return chrome;
 }
 

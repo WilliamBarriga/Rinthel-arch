@@ -9,8 +9,8 @@ import type { Attribute, Model, Node, ScanCoverage, ScanCoverageNotice } from 'c
 import { EXCLUDED_FOLDERS, byCodeUnit } from 'scanner';
 import type { ScanDraft, ScanTable } from 'scanner';
 
-import { abrirSesionDe } from './sesion-cli';
-import { leerWorkspace, rutasDeDg } from './workspace';
+import { openSessionOf } from './cli-session';
+import { readWorkspace, dgPaths } from './workspace';
 
 /** Its shape is the `coverage` of the `scan --json` contract (`scanSummarySchema` in `canonical`). */
 export type Coverage = ScanCoverage;
@@ -32,7 +32,7 @@ export function findWorkspace(root: string, explicit: string | undefined): { pat
   if (explicit !== undefined) return { path: explicit };
   let files: string[];
   try {
-    files = rutasDeDg(root, WORKSPACE_SEARCH_DEPTH, (name) => EXCLUDED_FOLDERS.has(name));
+    files = dgPaths(root, WORKSPACE_SEARCH_DEPTH, (name) => EXCLUDED_FOLDERS.has(name));
   } catch {
     return undefined;
   }
@@ -47,9 +47,9 @@ export function findWorkspace(root: string, explicit: string | undefined): { pat
 
 /** Compiles the Workspace (never runs its code) and compares it with the draft. */
 export function coverageOf(draft: ScanDraft, workspace: string, ignores: (id: string) => boolean): Coverage | CoverageNotice {
-  const opened = abrirSesionDe(leerWorkspace, workspace);
-  if ('fallo' in opened) return { workspace, error: opened.fallo.stderr.trim() };
-  const model = opened.sesion.source?.model;
+  const opened = openSessionOf(readWorkspace, workspace);
+  if ('failure' in opened) return { workspace, error: opened.failure.stderr.trim() };
+  const model = opened.session.source?.model;
   if (model === undefined) return { workspace, error: `the Workspace does not compile; run diagrams validate --workspace ${workspace}` };
   return compare(draft, model, workspace, ignores);
 }

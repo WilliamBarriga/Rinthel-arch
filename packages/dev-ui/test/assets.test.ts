@@ -13,7 +13,7 @@ afterEach(() => {
 });
 
 function temporary(): string {
-  const folder = mkdtempSync(join(tmpdir(), 'rinthel-estudio-'));
+  const folder = mkdtempSync(join(tmpdir(), 'rinthel-dev-ui-'));
   folders.push(folder);
   return folder;
 }
