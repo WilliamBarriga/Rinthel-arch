@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`validate > con errores sale con codigo 1 y un snapshot estable del contrato 1`] = `
+exports[`validate > with errors it exits with code 1 and a stable snapshot of the contract 1`] = `
 {
   "contractVersion": 2,
   "issues": [

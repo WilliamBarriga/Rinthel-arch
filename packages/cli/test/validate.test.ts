@@ -17,12 +17,12 @@ import { run } from 'cli';
 const fixtures = join(import.meta.dirname, 'fixtures');
 
 describe('validate', () => {
-  it('un Workspace valido sale con codigo 0 y el objeto versionado', async () => {
-    const resultado = await run(['validate', '--workspace', join(fixtures, 'minimo'), '--json']);
+  it('a valid Workspace exits with code 0 and the versioned object', async () => {
+    const result = await run(['validate', '--workspace', join(fixtures, 'minimal'), '--json']);
 
-    expect(resultado.exitCode).toBe(0);
-    expect(resultado.stderr).toBe('');
-    expect(JSON.parse(resultado.stdout)).toEqual({
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(JSON.parse(result.stdout)).toEqual({
       contractVersion: 2,
       ok: true,
       summary: { errors: 0, warnings: 0, truncated: false },
@@ -30,25 +30,25 @@ describe('validate', () => {
     });
   });
 
-  it('con errores sale con codigo 1 y un snapshot estable del contrato', async () => {
-    const resultado = await run(['validate', '--workspace', join(fixtures, 'con-errores'), '--json']);
+  it('with errors it exits with code 1 and a stable snapshot of the contract', async () => {
+    const result = await run(['validate', '--workspace', join(fixtures, 'with-errors'), '--json']);
 
-    expect(resultado.exitCode).toBe(1);
-    const salida = validateOutputSchema.parse(JSON.parse(resultado.stdout));
-    expect(salida.ok).toBe(false);
-    expect(salida.summary).toEqual({ errors: 2, warnings: 0, truncated: false });
-    expect(salida.issues.map((i) => [i.file, i.line, i.column, i.code])).toEqual([
+    expect(result.exitCode).toBe(1);
+    const output = validateOutputSchema.parse(JSON.parse(result.stdout));
+    expect(output.ok).toBe(false);
+    expect(output.summary).toEqual({ errors: 2, warnings: 0, truncated: false });
+    expect(output.issues.map((i) => [i.file, i.line, i.column, i.code])).toEqual([
       ['main.dg', 6, 3, 'unknown-node-type'],
       ['main.dg', 8, 1, 'syntax-error'],
     ]);
-    // `message` no es contrato: el snapshot fija solo lo que si lo es.
-    expect({ ...salida, issues: salida.issues.map(({ message, ...resto }) => resto) }).toMatchSnapshot();
+    // `message` is not contract: the snapshot pins only what is.
+    expect({ ...output, issues: output.issues.map(({ message, ...rest }) => rest) }).toMatchSnapshot();
   });
 
-  it('en texto, cada issue con candidato dice "did you mean" (de su fix o de su hint), como en --json', async () => {
-    const raiz = mkdtempSync(join(tmpdir(), 'validate-hint-'));
+  it('in text, every issue with a candidate says "did you mean" (from its fix or its hint), as in --json', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'validate-hint-'));
     writeFileSync(
-      join(raiz, 'main.dg'),
+      join(root, 'main.dg'),
       `specification { node servicio { color blue } }
 model { servicio a }
 view v { type architecture  include **  theme mio }
@@ -57,21 +57,21 @@ theme otro extends neutral { node { layer fill { color fram } } }
 `,
     );
 
-    const resultado = await run(['validate', '--workspace', raiz]);
+    const result = await run(['validate', '--workspace', root]);
 
-    expect(resultado.exitCode).toBe(1);
-    const lineas = resultado.stdout.split('\n');
-    expect(lineas.find((l) => l.includes("'neutral-drak'"))).toContain("did you mean 'neutral-dark'");
-    expect(lineas.find((l) => l.includes('unknown-palette-color'))).toContain("did you mean 'frame'");
+    expect(result.exitCode).toBe(1);
+    const lines = result.stdout.split('\n');
+    expect(lines.find((l) => l.includes("'neutral-drak'"))).toContain("did you mean 'neutral-dark'");
+    expect(lines.find((l) => l.includes('unknown-palette-color'))).toContain("did you mean 'frame'");
   });
 
-  it('una Arista colgante sale con dangling-edge, posicion y fix de un unico candidato', async () => {
-    const resultado = await run(['validate', '--workspace', join(fixtures, 'arista-colgante'), '--json']);
+  it('a dangling Edge exits with dangling-edge, position and a single-candidate fix', async () => {
+    const result = await run(['validate', '--workspace', join(fixtures, 'dangling-edge'), '--json']);
 
-    expect(resultado.exitCode).toBe(1);
-    const salida = validateOutputSchema.parse(JSON.parse(resultado.stdout));
-    expect(salida.issues).toHaveLength(1);
-    expect(salida.issues[0]).toMatchObject({
+    expect(result.exitCode).toBe(1);
+    const output = validateOutputSchema.parse(JSON.parse(result.stdout));
+    expect(output.issues).toHaveLength(1);
+    expect(output.issues[0]).toMatchObject({
       code: 'dangling-edge',
       severity: 'error',
       file: 'main.dg',
@@ -85,32 +85,32 @@ theme otro extends neutral { node { layer fill { color fram } } }
     });
   });
 
-  it('un Atributo inexistente en una Arista sale con unknown-attribute por validate', async () => {
-    const resultado = await run(
-      ['validate', '--workspace', join(fixtures, 'atributo-inexistente'), '--json'],
+  it('a missing Attribute on an Edge exits with unknown-attribute through validate', async () => {
+    const result = await run(
+      ['validate', '--workspace', join(fixtures, 'missing-attribute'), '--json'],
     );
 
-    expect(resultado.exitCode).toBe(1);
-    const salida = validateOutputSchema.parse(JSON.parse(resultado.stdout));
-    expect(salida.issues.map((i) => [i.line, i.column, i.code])).toEqual([
+    expect(result.exitCode).toBe(1);
+    const output = validateOutputSchema.parse(JSON.parse(result.stdout));
+    expect(output.issues.map((i) => [i.line, i.column, i.code])).toEqual([
       [9, 23, 'unknown-attribute'],
     ]);
   });
 
-  it('--max-issues corta la lista pero summary cuenta todo y marca truncated', async () => {
-    const resultado = await run([
-      'validate', '--workspace', join(fixtures, 'con-errores'), '--json', '--max-issues', '1',
+  it('--max-issues cuts the list but summary counts everything and marks truncated', async () => {
+    const result = await run([
+      'validate', '--workspace', join(fixtures, 'with-errors'), '--json', '--max-issues', '1',
     ]);
 
-    const salida = JSON.parse(resultado.stdout);
-    expect(salida.issues).toHaveLength(1);
-    expect(salida.summary).toEqual({ errors: 2, warnings: 0, truncated: true });
-    expect(resultado.exitCode).toBe(1);
+    const output = JSON.parse(result.stdout);
+    expect(output.issues).toHaveLength(1);
+    expect(output.summary).toEqual({ errors: 2, warnings: 0, truncated: true });
+    expect(result.exitCode).toBe(1);
   });
 
-  it('--strict trata los warnings como fallo; sin el, un warning deja codigo 0', async () => {
-    const dependencias = {
-      leer: () => ({
+  it('--strict treats warnings as a failure; without it, a warning leaves code 0', async () => {
+    const dependencies = {
+      read: () => ({
         'main.dg': `specification { node servicio }
 model { servicio a  servicio b }
 view v {
@@ -124,20 +124,20 @@ view v {
     };
     const args = ['validate', '--workspace', '.', '--json'];
 
-    const tolerante = await run(args, dependencias);
-    expect(tolerante.exitCode).toBe(0);
-    expect(JSON.parse(tolerante.stdout).summary).toEqual({ errors: 0, warnings: 1, truncated: false });
+    const tolerant = await run(args, dependencies);
+    expect(tolerant.exitCode).toBe(0);
+    expect(JSON.parse(tolerant.stdout).summary).toEqual({ errors: 0, warnings: 1, truncated: false });
 
-    const estricto = await run([...args, '--strict'], dependencias);
-    expect(estricto.exitCode).toBe(1);
-    expect(JSON.parse(estricto.stdout).ok).toBe(false);
+    const strictFlag = await run([...args, '--strict'], dependencies);
+    expect(strictFlag.exitCode).toBe(1);
+    expect(JSON.parse(strictFlag.stdout).ok).toBe(false);
   });
 
-  it('sin --json imprime texto legible con posicion', async () => {
-    const resultado = await run(['validate', '--workspace', join(fixtures, 'con-errores')]);
+  it('without --json it prints readable text with position', async () => {
+    const result = await run(['validate', '--workspace', join(fixtures, 'with-errors')]);
 
-    expect(resultado.stdout).toContain('main.dg:6:3 error unknown-node-type');
-    expect(resultado.stdout).toContain('2 errors, 0 warnings');
+    expect(result.stdout).toContain('main.dg:6:3 error unknown-node-type');
+    expect(result.stdout).toContain('2 errors, 0 warnings');
   });
 
   it.each([
@@ -146,114 +146,114 @@ view v {
     [['validate', '--workspace', '.', '--max-issues', '0']],
     [['validate', '--workspace', '.', '--rara']],
     [['construir']],
-  ])('fallo de uso %j sale con codigo 2, stderr y stdout vacio', async (argv) => {
-    const resultado = await run(argv);
+  ])('usage failure %j exits with code 2, stderr and empty stdout', async (argv) => {
+    const result = await run(argv);
 
-    expect(resultado.exitCode).toBe(2);
-    expect(resultado.stdout).toBe('');
-    expect(resultado.stderr).not.toBe('');
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).not.toBe('');
   });
 
-  it('nunca escribe: el Workspace queda identico tras validar', async () => {
-    const copia = mkdtempSync(join(tmpdir(), 'diagrams-'));
-    cpSync(join(fixtures, 'con-errores'), copia, { recursive: true });
-    const foto = () =>
-      readdirSync(copia, { recursive: true })
+  it('never writes: the Workspace stays identical after validating', async () => {
+    const copy = mkdtempSync(join(tmpdir(), 'diagrams-'));
+    cpSync(join(fixtures, 'with-errors'), copy, { recursive: true });
+    const snapshot = () =>
+      readdirSync(copy, { recursive: true })
         .map(String)
         .sort()
-        .map((ruta) => {
-          const abs = join(copia, ruta);
-          return [ruta, statSync(abs).isFile() ? readFileSync(abs, 'utf8') : null];
+        .map((path) => {
+          const abs = join(copy, path);
+          return [path, statSync(abs).isFile() ? readFileSync(abs, 'utf8') : null];
         });
-    const antes = foto();
+    const before = snapshot();
 
-    await run(['validate', '--workspace', copia, '--json']);
+    await run(['validate', '--workspace', copy, '--json']);
 
-    expect(foto()).toEqual(antes);
+    expect(snapshot()).toEqual(before);
   });
 
-  it('ignora la salida derivada .diagrams/ al leer el Workspace', async () => {
-    const copia = mkdtempSync(join(tmpdir(), 'diagrams-'));
-    cpSync(join(fixtures, 'minimo'), copia, { recursive: true });
-    mkdirSync(join(copia, '.diagrams'));
-    writeFileSync(join(copia, '.diagrams', 'roto.dg'), 'basura {{{');
+  it('ignores the derived output .diagrams/ when reading the Workspace', async () => {
+    const copy = mkdtempSync(join(tmpdir(), 'diagrams-'));
+    cpSync(join(fixtures, 'minimal'), copy, { recursive: true });
+    mkdirSync(join(copy, '.diagrams'));
+    writeFileSync(join(copy, '.diagrams', 'roto.dg'), 'basura {{{');
 
-    const resultado = await run(['validate', '--workspace', copia, '--json']);
+    const result = await run(['validate', '--workspace', copy, '--json']);
 
-    expect(resultado.exitCode).toBe(0);
+    expect(result.exitCode).toBe(0);
   });
 
-  it('un bloque sin cerrar sale con codigo 1 y posicion valida', async () => {
-    const copia = mkdtempSync(join(tmpdir(), 'diagrams-'));
-    writeFileSync(join(copia, 'main.dg'), 'specification { node servicio }\nmodel {\n  servicio api {');
+  it('an unclosed block exits with code 1 and a valid position', async () => {
+    const copy = mkdtempSync(join(tmpdir(), 'diagrams-'));
+    writeFileSync(join(copy, 'main.dg'), 'specification { node servicio }\nmodel {\n  servicio api {');
 
-    const resultado = await run(['validate', '--workspace', copia, '--json']);
+    const result = await run(['validate', '--workspace', copy, '--json']);
 
-    expect(resultado.exitCode).toBe(1);
-    expect(JSON.parse(resultado.stdout).issues[0]).toMatchObject({ code: 'syntax-error', line: 3 });
+    expect(result.exitCode).toBe(1);
+    expect(JSON.parse(result.stdout).issues[0]).toMatchObject({ code: 'syntax-error', line: 3 });
   });
 });
 
-describe('validate: bucle validate/fix', () => {
-  /** Aplica un `fix` (rangos 1-based, fin excluido) sobre el texto del archivo. */
-  function aplicarFix(texto: string, { range, replacement }: { range: { start: { line: number; column: number }; end: { line: number; column: number } }; replacement: string }): string {
-    const lineas = texto.split('\n');
-    const desplazamiento = (p: { line: number; column: number }) =>
-      lineas.slice(0, p.line - 1).reduce((suma, linea) => suma + linea.length + 1, 0) + p.column - 1;
-    return texto.slice(0, desplazamiento(range.start)) + replacement + texto.slice(desplazamiento(range.end));
+describe('validate: validate/fix loop', () => {
+  /** Applies a `fix` (1-based ranges, end excluded) to the file text. */
+  function applyFix(text: string, { range, replacement }: { range: { start: { line: number; column: number }; end: { line: number; column: number } }; replacement: string }): string {
+    const lines = text.split('\n');
+    const offset = (p: { line: number; column: number }) =>
+      lines.slice(0, p.line - 1).reduce((sum, line) => sum + line.length + 1, 0) + p.column - 1;
+    return text.slice(0, offset(range.start)) + replacement + text.slice(offset(range.end));
   }
 
-  async function validar(raiz: string) {
-    const resultado = await run(['validate', '--workspace', raiz, '--json']);
-    return validateOutputSchema.parse(JSON.parse(resultado.stdout));
+  async function validateCommand(root: string) {
+    const result = await run(['validate', '--workspace', root, '--json']);
+    return validateOutputSchema.parse(JSON.parse(result.stdout));
   }
 
-  it('aplicar el fix al texto hace desaparecer el issue al revalidar, sin que validate escriba', async () => {
-    const raiz = mkdtempSync(join(tmpdir(), 'diagramas-fix-'));
-    const archivo = join(raiz, 'main.dg');
+  it('applying the fix to the text makes the issue disappear on revalidation, without validate writing', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'diagrams-fix-'));
+    const file = join(root, 'main.dg');
     const original = 'specification { node servicio }\nmodel {\n  servico api\n}\n';
-    writeFileSync(archivo, original);
+    writeFileSync(file, original);
 
-    const antes = await validar(raiz);
-    expect(readFileSync(archivo, 'utf8')).toBe(original);
-    expect(antes.issues.map((i) => i.code)).toEqual(['unknown-node-type']);
+    const before = await validateCommand(root);
+    expect(readFileSync(file, 'utf8')).toBe(original);
+    expect(before.issues.map((i) => i.code)).toEqual(['unknown-node-type']);
 
-    const fix = antes.issues[0]?.fix;
+    const fix = before.issues[0]?.fix;
     expect(fix?.file).toBe('main.dg');
-    writeFileSync(archivo, aplicarFix(original, fix as NonNullable<typeof fix>));
+    writeFileSync(file, applyFix(original, fix as NonNullable<typeof fix>));
 
-    const despues = await validar(raiz);
-    expect(despues).toMatchObject({ ok: true, issues: [] });
+    const after = await validateCommand(root);
+    expect(after).toMatchObject({ ok: true, issues: [] });
   });
 
-  it('el fix de una Arista colgante tambien cierra el bucle', async () => {
-    const raiz = mkdtempSync(join(tmpdir(), 'diagramas-fix-'));
-    const archivo = join(raiz, 'main.dg');
+  it('the fix of a dangling Edge also closes the loop', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'diagrams-fix-'));
+    const file = join(root, 'main.dg');
     const original = 'specification { node servicio }\nmodel {\n  servicio api\n  servicio db\n  api -> dbb\n}\n';
-    writeFileSync(archivo, original);
+    writeFileSync(file, original);
 
-    const fix = (await validar(raiz)).issues[0]?.fix;
-    writeFileSync(archivo, aplicarFix(original, fix as NonNullable<typeof fix>));
+    const fix = (await validateCommand(root)).issues[0]?.fix;
+    writeFileSync(file, applyFix(original, fix as NonNullable<typeof fix>));
 
-    expect((await validar(raiz)).issues).toEqual([]);
+    expect((await validateCommand(root)).issues).toEqual([]);
   });
 
-  it('ordena los issues por archivo, linea, columna y codigo aunque la fuente no lo haga', async () => {
-    const resultado = await run(['validate', '--workspace', '.', '--json'], {
-      leer: () => ({
+  it('sorts the issues by file, line, column and code even if the source does not', async () => {
+    const result = await run(['validate', '--workspace', '.', '--json'], {
+      read: () => ({
         'b.dg': 'specification { node servicio }\nmodel {\n  servicio api {',
         'a.dg': 'specification { node servicio }\nmodel {\n  servicio api {',
       }),
     });
 
-    const archivos = JSON.parse(resultado.stdout).issues.map((i: { file: string }) => i.file);
-    expect(archivos.length).toBeGreaterThanOrEqual(2);
-    expect(archivos).toEqual([...archivos].sort());
-    expect(new Set(archivos)).toEqual(new Set(['a.dg', 'b.dg']));
+    const files = JSON.parse(result.stdout).issues.map((i: { file: string }) => i.file);
+    expect(files.length).toBeGreaterThanOrEqual(2);
+    expect(files).toEqual([...files].sort());
+    expect(new Set(files)).toEqual(new Set(['a.dg', 'b.dg']));
   });
 
   describe('overlapping-pins', () => {
-    const conPinsSolapados = (): string => {
+    const withOverlappingPins = (): string => {
       const workspace = mkdtempSync(join(tmpdir(), 'validate-'));
       writeFileSync(
         join(workspace, 'main.dg'),
@@ -270,16 +270,16 @@ view v {
       return workspace;
     };
 
-    it('validate --json emite el aviso con posicion y related, sin escribir .diagrams', async () => {
-      const workspace = conPinsSolapados();
+    it('validate --json emits the warning with position and related, without writing .diagrams', async () => {
+      const workspace = withOverlappingPins();
 
-      const resultado = await run(['validate', '--workspace', workspace, '--json']);
+      const result = await run(['validate', '--workspace', workspace, '--json']);
 
-      expect(resultado.exitCode).toBe(0);
-      const salida = validateOutputSchema.parse(JSON.parse(resultado.stdout));
-      expect(salida.ok).toBe(true);
-      expect(salida.summary).toEqual({ errors: 0, warnings: 1, truncated: false });
-      expect(salida.issues).toEqual([
+      expect(result.exitCode).toBe(0);
+      const output = validateOutputSchema.parse(JSON.parse(result.stdout));
+      expect(output.ok).toBe(true);
+      expect(output.summary).toEqual({ errors: 0, warnings: 1, truncated: false });
+      expect(output.issues).toEqual([
         expect.objectContaining({
           code: 'overlapping-pins',
           severity: 'warning',
@@ -292,58 +292,58 @@ view v {
       expect(readdirSync(workspace)).toEqual(['main.dg']);
     });
 
-    it('con --strict el aviso hace fallar', async () => {
-      const resultado = await run(['validate', '--workspace', conPinsSolapados(), '--strict']);
+    it('with --strict the warning fails', async () => {
+      const result = await run(['validate', '--workspace', withOverlappingPins(), '--strict']);
 
-      expect(resultado.exitCode).toBe(1);
-      expect(resultado.stdout).toContain('overlapping-pins');
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout).toContain('overlapping-pins');
     });
 
-    it('Pins que no se solapan no avisan', async () => {
-      const workspace = conPinsSolapados();
+    it('Pins that do not overlap do not warn', async () => {
+      const workspace = withOverlappingPins();
       writeFileSync(join(workspace, 'main.dg'), readFileSync(join(workspace, 'main.dg'), 'utf8').replace('pin 10,10', 'pin 500,500'));
 
-      const resultado = await run(['validate', '--workspace', workspace, '--json']);
+      const result = await run(['validate', '--workspace', workspace, '--json']);
 
-      expect(JSON.parse(resultado.stdout).issues).toEqual([]);
+      expect(JSON.parse(result.stdout).issues).toEqual([]);
     });
 
-    it('no calcula layout si hay errores de compilacion', async () => {
-      const workspace = conPinsSolapados();
+    it('does not compute layout if there are compile errors', async () => {
+      const workspace = withOverlappingPins();
       writeFileSync(join(workspace, 'roto.dg'), 'model { servicio }');
 
-      const resultado = await run(['validate', '--workspace', workspace, '--json']);
+      const result = await run(['validate', '--workspace', workspace, '--json']);
 
-      expect(JSON.parse(resultado.stdout).issues.map((i: { code: string }) => i.code)).toEqual(['syntax-error']);
+      expect(JSON.parse(result.stdout).issues.map((i: { code: string }) => i.code)).toEqual(['syntax-error']);
     });
   });
 
-  describe('--theme-path y --theme', () => {
-    it('--theme-path aporta Temas antes del Workspace', async () => {
-      const resultado = await run([
-        'validate', '--workspace', join(fixtures, 'build-basico'), '--theme-path', join(fixtures, 'temas-extra'), '--json',
+  describe('--theme-path and --theme', () => {
+    it('--theme-path contributes Themes before the Workspace', async () => {
+      const result = await run([
+        'validate', '--workspace', join(fixtures, 'build-basic'), '--theme-path', join(fixtures, 'extra-themes'), '--json',
       ]);
 
-      expect(resultado.exitCode).toBe(0);
-      expect(resultado.stderr).toBe('');
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe('');
     });
 
-    it('un Tema de --theme-path hace valida una Vista que lo usa', async () => {
+    it('a Theme from --theme-path makes a View that uses it valid', async () => {
       const workspace = mkdtempSync(join(tmpdir(), 'validate-'));
       writeFileSync(join(workspace, 'main.dg'), 'specification { node s } model { s a } view v { type flow include ** theme corporativo }');
 
-      const sin = await run(['validate', '--workspace', workspace, '--json']);
-      const con = await run(['validate', '--workspace', workspace, '--theme-path', join(fixtures, 'temas-extra'), '--json']);
+      const without = await run(['validate', '--workspace', workspace, '--json']);
+      const withValue = await run(['validate', '--workspace', workspace, '--theme-path', join(fixtures, 'extra-themes'), '--json']);
 
-      expect(JSON.parse(sin.stdout).issues.map((i: { code: string }) => i.code)).toEqual(['unknown-theme']);
-      expect(con.exitCode).toBe(0);
+      expect(JSON.parse(without.stdout).issues.map((i: { code: string }) => i.code)).toEqual(['unknown-theme']);
+      expect(withValue.exitCode).toBe(0);
     });
 
-    it('--theme inexistente es un fallo de uso (codigo 2), como en build', async () => {
-      const resultado = await run(['validate', '--workspace', join(fixtures, 'build-basico'), '--theme', 'nada']);
+    it('a missing --theme is a usage failure (code 2), as in build', async () => {
+      const result = await run(['validate', '--workspace', join(fixtures, 'build-basic'), '--theme', 'nada']);
 
-      expect(resultado.exitCode).toBe(2);
-      expect(resultado.stderr).toContain("'nada'");
+      expect(result.exitCode).toBe(2);
+      expect(result.stderr).toContain("'nada'");
     });
   });
 });

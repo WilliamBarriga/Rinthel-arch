@@ -1,12 +1,12 @@
-import { CARPETA_DE_SALIDA } from './workspace';
+import { OUTPUT_FOLDER } from './workspace';
 
-const COMANDOS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill', 'scan', 'export'] as const;
-export type ComandoConAyuda = (typeof COMANDOS)[number];
+const COMMANDS = ['validate', 'build', 'dev', 'inspect', 'edit', 'skill', 'scan', 'export'] as const;
+export type CommandWithHelp = (typeof COMMANDS)[number];
 
 const WORKSPACE = '--workspace <path>  Folder with the .dg files (required)';
 const THEME_PATH = '--theme-path <dir>  Extra Theme folder; merged before the Workspace (the Workspace wins)';
 
-const AYUDA_DE_COMANDO: Record<ComandoConAyuda, string> = {
+const COMMAND_HELP: Record<CommandWithHelp, string> = {
   validate: `diagrams validate --workspace <path> [options]
 
 Compiles and validates. Read-only: never rewrites files.
@@ -24,7 +24,7 @@ Every issue carries a stable code, file, line, column and, when there is a singl
 `,
   build: `diagrams build --workspace <path> [options]
 
-Validates and writes the canonical Source and the geometry to <path>/${CARPETA_DE_SALIDA}/ (derived, not versioned).
+Validates and writes the canonical Source and the geometry to <path>/${OUTPUT_FOLDER}/ (derived, not versioned).
 With errors it exits 1 and deletes the previous output.
 
 Options: those of validate (--json, --strict, --max-issues, --theme, --theme-path).
@@ -135,14 +135,14 @@ Exit: 0 written, 1 the Workspace has errors (nothing written), 2 usage or intern
 `,
 };
 
-const AYUDA_GENERAL = `diagrams: CLI to write, validate and view .dg diagrams
+const GENERAL_HELP = `diagrams: CLI to write, validate and view .dg diagrams
 
 Usage: diagrams <command> --workspace <path> [options]
        diagrams <command> --help
 
 Commands:
   validate   Compiles and validates; lists issues with file, line and fix (read-only)
-  build      Writes the canonical Source and the geometry to <path>/${CARPETA_DE_SALIDA}/
+  build      Writes the canonical Source and the geometry to <path>/${OUTPUT_FOLDER}/
   dev        Dev UI at http://127.0.0.1:4173/: view, edit and follow the Workspace
   inspect    Queries the Model: search, node, view, interaction, planned, theme (read-only)
   edit       Sets a Pin or applies structured edits to the .dg
@@ -152,19 +152,19 @@ Commands:
 
 Agent loop: inspect, edit the .dg, validate --json until ok:true.
 Exit codes: 0 success, 1 Workspace errors, 2 usage or internal failure.
-validate, build, inspect and edit append an Event to <path>/${CARPETA_DE_SALIDA}/activity.jsonl
+validate, build, inspect and edit append an Event to <path>/${OUTPUT_FOLDER}/activity.jsonl
 (DIAGRAMS_ACTIVITY=0 turns it off; DIAGRAMS_AGENT names the agent).
 Full guide: docs/guide/cli.md
 `;
 
-/** `undefined` si `argv` no pide ayuda (`--help`, `-h`, `help [comando]` o sin argumentos). */
-export function ayudaPara(argv: readonly string[]): string | undefined {
-  const [comando, ...resto] = argv;
-  const pide = (valor: string | undefined): boolean => valor === '--help' || valor === '-h';
-  const esComando = (valor: string | undefined): valor is ComandoConAyuda => COMANDOS.includes(valor as ComandoConAyuda);
+/** `undefined` if `argv` does not ask for help (`--help`, `-h`, `help [command]` or no arguments). */
+export function helpFor(argv: readonly string[]): string | undefined {
+  const [command, ...rest] = argv;
+  const asks = (value: string | undefined): boolean => value === '--help' || value === '-h';
+  const isCommand = (value: string | undefined): value is CommandWithHelp => COMMANDS.includes(value as CommandWithHelp);
 
-  if (comando === undefined || pide(comando)) return AYUDA_GENERAL;
-  if (comando === 'help') return esComando(resto[0]) ? AYUDA_DE_COMANDO[resto[0]] : AYUDA_GENERAL;
-  if (esComando(comando) && resto.some(pide)) return AYUDA_DE_COMANDO[comando];
+  if (command === undefined || asks(command)) return GENERAL_HELP;
+  if (command === 'help') return isCommand(rest[0]) ? COMMAND_HELP[rest[0]] : GENERAL_HELP;
+  if (isCommand(command) && rest.some(asks)) return COMMAND_HELP[command];
   return undefined;
 }

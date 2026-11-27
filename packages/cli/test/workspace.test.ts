@@ -3,39 +3,39 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { destinoEnWorkspace, escribirTexto } from '../src/workspace';
+import { workspaceTarget, writeTextFile } from '../src/workspace';
 
-const carpetas: string[] = [];
-const temporal = (): string => {
+const folderList: string[] = [];
+const tempDir = (): string => {
   const c = mkdtempSync(join(tmpdir(), 'ws-'));
-  carpetas.push(c);
+  folderList.push(c);
   return c;
 };
 afterEach(() => {
-  for (const c of carpetas.splice(0)) rmSync(c, { recursive: true, force: true });
+  for (const c of folderList.splice(0)) rmSync(c, { recursive: true, force: true });
 });
 
-describe('destinoEnWorkspace', () => {
-  it('resuelve una ruta relativa con / bajo la raiz', () => {
-    expect(destinoEnWorkspace('/ws', 'a/b.dg')).toBe(resolve('/ws', 'a', 'b.dg'));
+describe('workspaceTarget', () => {
+  it('resolves a relative / path under the root', () => {
+    expect(workspaceTarget('/ws', 'a/b.dg')).toBe(resolve('/ws', 'a', 'b.dg'));
   });
 
-  it('rechaza rutas que escapan de la raiz', () => {
-    expect(() => destinoEnWorkspace('/ws', '../fuera.dg')).toThrow(/outside the Workspace/);
-    expect(() => destinoEnWorkspace('/ws', 'a/../../fuera.dg')).toThrow(/outside the Workspace/);
-    expect(() => destinoEnWorkspace('/ws', '/otra/ruta.dg')).toThrow(/outside the Workspace/);
+  it('rejects paths that escape the root', () => {
+    expect(() => workspaceTarget('/ws', '../fuera.dg')).toThrow(/outside the Workspace/);
+    expect(() => workspaceTarget('/ws', 'a/../../fuera.dg')).toThrow(/outside the Workspace/);
+    expect(() => workspaceTarget('/ws', '/otra/ruta.dg')).toThrow(/outside the Workspace/);
   });
 });
 
-describe('escribirTexto', () => {
-  it('crea carpetas, reemplaza el contenido y no deja temporales', () => {
-    const raiz = temporal();
-    const destino = join(raiz, 'sub', 'a.dg');
-    escribirTexto(destino, 'uno');
-    writeFileSync(join(raiz, 'sub', 'otro.dg'), 'x');
-    escribirTexto(destino, 'dos');
+describe('writeTextFile', () => {
+  it('creates folders, replaces the contents and leaves no temporary files', () => {
+    const root = tempDir();
+    const target = join(root, 'sub', 'a.dg');
+    writeTextFile(target, 'uno');
+    writeFileSync(join(root, 'sub', 'otro.dg'), 'x');
+    writeTextFile(target, 'dos');
 
-    expect(readFileSync(destino, 'utf8')).toBe('dos');
-    expect(readdirSync(join(raiz, 'sub')).sort()).toEqual(['a.dg', 'otro.dg']);
+    expect(readFileSync(target, 'utf8')).toBe('dos');
+    expect(readdirSync(join(root, 'sub')).sort()).toEqual(['a.dg', 'otro.dg']);
   });
 });

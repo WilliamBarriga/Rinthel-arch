@@ -1,22 +1,22 @@
 import { CONTRACT_VERSION } from 'canonical';
 import type { Issue, ValidateOutput } from 'canonical';
 
-export interface OpcionesDeValidate {
+export interface ValidateOptions {
   maxIssues: number;
   strict: boolean;
 }
 
-/** Orden del contrato: archivo, linea, columna y codigo. */
-function compararIssues(a: Issue, b: Issue): number {
+/** Contract order: file, line, column and code. */
+function compareIssues(a: Issue, b: Issue): number {
   return a.file.localeCompare(b.file) || a.line - b.line || a.column - b.column || a.code.localeCompare(b.code);
 }
 
-/** Ordena los issues: llegan de varias fuentes sin orden comun. */
-export function construirSalida(
-  desordenados: readonly Issue[],
-  { maxIssues, strict }: OpcionesDeValidate,
+/** Sorts the issues: they come from several sources with no common order. */
+export function buildOutput(
+  unordered: readonly Issue[],
+  { maxIssues, strict }: ValidateOptions,
 ): ValidateOutput {
-  const issues = [...desordenados].sort(compararIssues);
+  const issues = [...unordered].sort(compareIssues);
   const errors = issues.filter((issue) => issue.severity === 'error').length;
   const warnings = issues.length - errors;
   return {
@@ -27,17 +27,17 @@ export function construirSalida(
   };
 }
 
-/** Su `hint`, o el reemplazo de su `fix` como "did you mean". */
-const pista = (issue: Issue): string =>
+/** Its `hint`, or the replacement of its `fix` as "did you mean". */
+const hintText = (issue: Issue): string =>
   issue.hint !== undefined ? `; ${issue.hint}` : issue.fix !== undefined && issue.fix.replacement !== '' ? `; did you mean '${issue.fix.replacement}'` : '';
 
-/** Una linea por issue y un resumen. */
-export function textoLegible(salida: ValidateOutput): string {
-  const lineas = salida.issues.map(
+/** One line per issue and a summary. */
+export function readableText(output: ValidateOutput): string {
+  const lines = output.issues.map(
     (issue) =>
-      `${issue.file}:${issue.line}:${issue.column} ${issue.severity} ${issue.code} ${issue.message}${pista(issue)}`,
+      `${issue.file}:${issue.line}:${issue.column} ${issue.severity} ${issue.code} ${issue.message}${hintText(issue)}`,
   );
-  const { errors, warnings, truncated } = salida.summary;
-  lineas.push(`${errors} errors, ${warnings} warnings${truncated ? ' (list truncated)' : ''}`);
-  return `${lineas.join('\n')}\n`;
+  const { errors, warnings, truncated } = output.summary;
+  lines.push(`${errors} errors, ${warnings} warnings${truncated ? ' (list truncated)' : ''}`);
+  return `${lines.join('\n')}\n`;
 }

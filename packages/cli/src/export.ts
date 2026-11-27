@@ -13,65 +13,65 @@ import { parseArgs } from 'node:util';
 import { captureExport, devUiFolder, exportHtml } from 'dev-ui';
 import { openLiveWorkspace, fetchOverDevApi } from 'session';
 
-import { puertoDeDisco, relojReal } from './puerto-de-disco';
-import { abrirSesionDe, textoDeIssues, uso } from './sesion-cli';
-import type { ResultadoDeEjecucion } from './sesion-cli';
-import { leerArchivoDeFuente, leerWorkspace } from './workspace';
+import { diskPortOf, realClock } from './disk-port';
+import { openSessionOf, issuesText, usage } from './cli-session';
+import type { RunResult } from './cli-session';
+import { readFontFile, readWorkspace } from './workspace';
 
-export interface DependenciasDeExport {
+export interface ExportDependencies {
   /** Folder of the `dev-ui` build; by default the real one. */
-  estaticos?: string;
+  statics?: string;
 }
 
 const MB = 1024 * 1024;
 
-export async function comandoExport(args: readonly string[], { estaticos = devUiFolder() }: DependenciasDeExport = {}): Promise<ResultadoDeEjecucion> {
-  let valores;
+export async function exportCommand(args: readonly string[], { statics: statics = devUiFolder() }: ExportDependencies = {}): Promise<RunResult> {
+  let valueList;
   try {
-    valores = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, out: { type: 'string' }, 'theme-path': { type: 'string' } }, strict: true }).values;
+    valueList = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, out: { type: 'string' }, 'theme-path': { type: 'string' } }, strict: true }).values;
   } catch (error) {
-    return uso((error as Error).message);
+    return usage((error as Error).message);
   }
-  if (valores.workspace === undefined) return uso('Missing --workspace <path>');
-  if (valores.out === undefined) return uso('Missing --out <file>.html');
-  const workspace = valores.workspace;
-  const temas = valores['theme-path'];
+  if (valueList.workspace === undefined) return usage('Missing --workspace <path>');
+  if (valueList.out === undefined) return usage('Missing --out <file>.html');
+  const workspace = valueList.workspace;
+  const themes = valueList['theme-path'];
 
-  const abierta = abrirSesionDe(leerWorkspace, workspace, temas);
-  if ('fallo' in abierta) return abierta.fallo;
-  if (abierta.sesion.source === undefined) return { exitCode: 1, stdout: await textoDeIssues(abierta.sesion), stderr: '' };
+  const opened = openSessionOf(readWorkspace, workspace, themes);
+  if ('failure' in opened) return opened.failure;
+  if (opened.session.source === undefined) return { exitCode: 1, stdout: await issuesText(opened.session), stderr: '' };
 
   let html: string;
-  let vistas: number;
-  let componentes: string[];
+  let viewList: number;
+  let components: string[];
   try {
-    const vivo = await openLiveWorkspace({
-      port: { ...puertoDeDisco(workspace, temas === undefined ? {} : { temas }), watch: () => () => undefined },
+    const live = await openLiveWorkspace({
+      port: { ...diskPortOf(workspace, themes === undefined ? {} : { themes }), watch: () => () => undefined },
       root: resolve(workspace),
-      clock: relojReal,
+      clock: realClock,
       now: Date.now,
       trustCode: true,
     });
     try {
-      const raices = temas === undefined ? [workspace] : [workspace, temas];
-      const datos = await captureExport({ fetch: fetchOverDevApi(vivo), readSource: (ruta) => { const f = leerArchivoDeFuente(raices, ruta); return f && { bytes: f.bytes, kind: f.tipo }; } });
-      vistas = datos.estado.vistas.length;
-      componentes = datos.componentes?.nombres ?? [];
-      html = exportHtml(datos, { title: `${basename(resolve(workspace))} - rinthel-arch`, statics: estaticos });
+      const roots = themes === undefined ? [workspace] : [workspace, themes];
+      const data = await captureExport({ fetch: fetchOverDevApi(live), readSource: (path) => { const f = readFontFile(roots, path); return f && { bytes: f.bytes, kind: f.type }; } });
+      viewList = data.estado.vistas.length;
+      components = data.componentes?.nombres ?? [];
+      html = exportHtml(data, { title: `${basename(resolve(workspace))} - rinthel-arch`, statics });
     } finally {
-      vivo.close();
+      live.close();
     }
   } catch (error) {
-    return uso(`Could not export: ${(error as Error).message}`);
+    return usage(`Could not export: ${(error as Error).message}`);
   }
 
-  const out = valores.out;
+  const out = valueList.out;
   try {
     mkdirSync(dirname(out), { recursive: true });
     writeFileSync(out, html);
   } catch (error) {
-    return uso(`Could not write '${out}': ${(error as Error).message}`);
+    return usage(`Could not write '${out}': ${(error as Error).message}`);
   }
-  const aviso = componentes.length === 0 ? '' : `NOTE: the file includes the code of the Theme components (${componentes.join(', ')}); it runs in the browser of whoever opens it.\n`;
-  return { exitCode: 0, stdout: `${aviso}Exported ${vistas} Views to ${out} (${(Buffer.byteLength(html) / MB).toFixed(2)} MB)\n`, stderr: '' };
+  const notice = components.length === 0 ? '' : `NOTE: the file includes the code of the Theme components (${components.join(', ')}); it runs in the browser of whoever opens it.\n`;
+  return { exitCode: 0, stdout: `${notice}Exported ${viewList} Views to ${out} (${(Buffer.byteLength(html) / MB).toFixed(2)} MB)\n`, stderr: '' };
 }
