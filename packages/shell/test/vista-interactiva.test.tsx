@@ -6,7 +6,7 @@ import type { Geometry, GraphGeometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
 import { opacidadDeNodo, pulsarEn, pulsarNodo } from './ayudas';
-import { TEMA_NEUTRO, metricasDe } from 'tema';
+import { NEUTRAL_THEME, metricsOf } from 'theme';
 
 afterEach(cleanup);
 
@@ -58,7 +58,7 @@ function gesto(destino: Element | Window, tipo: string, clientX: number, clientY
 }
 
 function props(extra: Partial<VistaInteractivaProps> = {}): VistaInteractivaProps {
-  return { source: fuente, view: 'v', theme: TEMA_NEUTRO, layout: enFila, width: 800, height: 600, ...extra };
+  return { source: fuente, view: 'v', theme: NEUTRAL_THEME, layout: enFila, width: 800, height: 600, ...extra };
 }
 const montar = (extra: Partial<VistaInteractivaProps> = {}) => render(<VistaInteractiva {...props(extra)} />);
 
@@ -158,7 +158,7 @@ describe('VistaInteractiva', () => {
       model: { nodes: [{ ...nodo('t', 'T'), attributes: [{ name: 'id', type: 'uuid' }, { name: 'mail', type: 'text' }] }], edges: [] },
       views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
     });
-    const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
+    const { cabecera, fila } = metricsOf(NEUTRAL_THEME, 'architecture');
     const alto: AdaptadorDeLayout = async () => ({
       nodes: { t: { x: 0, y: 0, width: 200, height: cabecera + 2 * fila } },
       edges: {},
@@ -257,7 +257,7 @@ describe('VistaInteractiva', () => {
     const adaptador: AdaptadorDeLayout = (vista, tema) =>
       ++llamadas === 1 ? new Promise<Geometry>((r) => (resolverViejo = r)) : enFila(vista, tema);
     const { container, rerender } = montar({ layout: adaptador, camera: camaraGrande });
-    rerender(<VistaInteractiva {...props({ layout: adaptador, camera: camaraGrande, theme: { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, fontSize: '20px' } } })} />);
+    rerender(<VistaInteractiva {...props({ layout: adaptador, camera: camaraGrande, theme: { ...NEUTRAL_THEME, tokens: { ...NEUTRAL_THEME.tokens, fontSize: '20px' } } })} />);
     await waitFor(() => expect(ids(container)).toEqual(['a', 'b', 'c', 'd']));
     resolverViejo({ nodes: {}, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 1, height: 1 });
     await new Promise((r) => setTimeout(r, 0));

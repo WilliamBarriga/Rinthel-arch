@@ -1,7 +1,7 @@
 /**
  * Temas incorporados `neutral` (el de una Vista sin Tema) y `neutral-dark`, en DSL y compilados con el Workspace
  * como un archivo mas. Invariante: cero warnings de contraste (texto 4.5:1, partes graficas 3:1).
- * `high-contrast` lo define `tema` (el visor lo necesita sin compilar); `resolverTemas` lo anade a la Fuente.
+ * `high-contrast` lo define `theme` (el visor lo necesita sin compilar); `resolverTemas` lo anade a la Fuente.
  */
 import type { Documento, Theme } from './generated/ast';
 

@@ -5,7 +5,7 @@ import { layoutView } from 'layout';
 import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -31,14 +31,14 @@ describe('Secuencia: recorte al viewport', () => {
   it('una Lifeline cuya cabecera quedo fuera de la camara sigue dibujando su linea y su activacion', { timeout: 20000 }, async () => {
     const fuente = openSession({ 'main.dg': texto }).source!;
     // Camara por debajo de las cabeceras: la linea y las activaciones se ven, las cabeceras no.
-    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={600} height={100} camera={{ x: 0, y: 200, width: 600, height: 100 }} />);
+    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} width={600} height={100} camera={{ x: 0, y: 200, width: 600, height: 100 }} />);
     await waitFor(() => expect(container.querySelector('[data-activation]')).not.toBeNull(), { timeout: 15000 });
     expect(container.querySelector('[data-lifeline="a"]')).not.toBeNull();
   });
 
   it('una Lifeline fuera de la camara no se dibuja y su activacion tampoco rompe el dibujo', { timeout: 20000 }, async () => {
     const fuente = openSession({ 'main.dg': texto }).source!;
-    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={100} height={100} camera={{ x: 0, y: 200, width: 100, height: 100 }} />);
+    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} width={100} height={100} camera={{ x: 0, y: 200, width: 100, height: 100 }} />);
     await waitFor(() => expect(container.querySelector('[data-lifeline="a"]')).not.toBeNull(), { timeout: 15000 });
     expect(container.querySelector('[data-lifeline="b"]')).toBeNull();
   });

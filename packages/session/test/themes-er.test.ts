@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { openSession } from 'session';
-import { colocarNodo, contenidoDeNodo, pilaDeFila, piezasDeAtributo } from 'tema';
+import { placeNode, nodeContent, rowStack, attributePieces } from 'theme';
 
 const ER = `specification { node tabla }
 model {
@@ -47,9 +47,9 @@ describe('session seam: ER Theme, zone', () => {
 });
 
 const ROW = (body: string): ReturnType<typeof theme> => theme('', `  row {\n${body}\n  }`);
-const colors = (session: ReturnType<typeof openSession>, view: string, row: Parameters<typeof pilaDeFila>[1]): string[] => {
+const colors = (session: ReturnType<typeof openSession>, view: string, row: Parameters<typeof rowStack>[1]): string[] => {
   const paint = session.style(view)!.pintura.fila;
-  return paint === undefined ? [] : pilaDeFila(paint, row).map((c) => String(c.props['color']));
+  return paint === undefined ? [] : rowStack(paint, row).map((c) => String(c.props['color']));
 };
 const plain = { impar: false, keys: [], opcional: false } as const;
 
@@ -82,7 +82,7 @@ describe('session seam: ER Theme, row block', () => {
       const m = openSession(ROW(body)).style('tablas')!.metricas;
       const orders = { name: 'email', type: 'text', optional: true, keys: ['uk'] } as never;
       const node = { id: 'orders', type: 'tabla', title: 'Pedidos', description: '', children: [], attributes: [orders], source: [] } as never;
-      return { m, pieces: piezasDeAtributo(orders, m), width: colocarNodo({ ...contenidoDeNodo(node, m), atributos: [orders] }, m).width };
+      return { m, pieces: attributePieces(orders, m), width: placeNode({ ...nodeContent(node, m), atributos: [orders] }, m).width };
     };
     const base = measured('    layer fondo solid { color papel }');
     const large = measured('    layer fondo solid { color papel }\n    name { size 2 }\n    type { size 1.5 }\n    key { size 1.2 }');

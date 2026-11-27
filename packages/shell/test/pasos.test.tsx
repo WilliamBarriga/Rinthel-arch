@@ -5,7 +5,7 @@ import { canonicalFormSchema, edgeId } from 'canonical';
 import type { GraphGeometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -45,7 +45,7 @@ const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
 
 const montar = (steps: unknown[], extra: Partial<VistaInteractivaProps> = {}) =>
   render(
-    <VistaInteractiva source={fuente(steps)} view="v" theme={TEMA_NEUTRO} layout={enFila} width={800} height={600} camera={{ x: 0, y: 0, width: 800, height: 600 }} {...extra} />,
+    <VistaInteractiva source={fuente(steps)} view="v" theme={NEUTRAL_THEME} layout={enFila} width={800} height={600} camera={{ x: 0, y: 0, width: 800, height: 600 }} {...extra} />,
   );
 
 const opacidad = (c: HTMLElement, id: string): number => {
@@ -65,7 +65,7 @@ describe('Paso inicial por Tipo de diagrama', () => {
       model: { nodes: [nodo('a'), nodo('b')], edges: [] },
       views: [{ id: 'v', type: 'er', include: ['**'], exclude: [], steps: [{ title: 'Tablas', show: [{ selector: 'a' }] }] }],
     });
-    const { container } = render(<VistaInteractiva source={er} view="v" theme={TEMA_NEUTRO} layout={enFila} width={800} height={600} camera={{ x: 0, y: 0, width: 800, height: 600 }} />);
+    const { container } = render(<VistaInteractiva source={er} view="v" theme={NEUTRAL_THEME} layout={enFila} width={800} height={600} camera={{ x: 0, y: 0, width: 800, height: 600 }} />);
     await dibujado(container);
     expect(container.querySelector('[data-pasos]')?.textContent).toContain('Step 1 of 1: Tablas');
     expect(opacidad(container, 'a')).toBe(1);

@@ -8,12 +8,12 @@ Computes the Geometry of a View (ELK for architecture, flow and er; an own algor
 - `claveDeLayout` and `claveDeEstructura` say when to relayout; `aplicarPinsAGeometria` applies Pins without ELK; `indiceDeGeometria` gives absolute boxes, each Node's parent and the roots.
 
 ## What it does not do
-- Does not define the Metrics nor the placement of Slots: it reads them from `tema`.
+- Does not define the Metrics nor the placement of Slots: it reads them from `theme`.
 - Does not draw nor handle the viewer's Worker: that is `render` and `shell`.
 - Does not store the geometry on disk: that is `cli`.
 
 ## Depends on
-`canonical` and `tema`. External dependency: `elkjs`.
+`canonical` and `theme`. External dependency: `elkjs`.
 
 ## Entry file
 `packages/layout/src/index.ts` (the header documents invariants and error modes).

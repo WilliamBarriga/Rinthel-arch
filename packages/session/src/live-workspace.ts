@@ -24,7 +24,7 @@
 import { combineIconProviders, obsoleteConventions, emptyDiff, isFontFile, genericIcons, inspectOutputSchema, serializeIcons, workspaceIcons } from 'canonical';
 import type { DevFile, DevFiles, DevDiff, DevState, DevEvent, CachedGeometry, DevHistory, Intent, Issue, RejectionReason, DiffOrigin, ChangeKind } from 'canonical';
 import type { ArchivosDelWorkspace } from 'dsl';
-import { componentesDeTema } from 'tema';
+import { themeComponents } from 'theme';
 
 import { applyToWorkspace } from './apply';
 import type { TextEdit, WorkspacePort } from './apply';
@@ -424,7 +424,7 @@ export async function openLiveWorkspace(options: LiveWorkspaceOptions): Promise<
       activity.connection(),
     ],
     reload: () => recompile(),
-    code: () => ({ components: [...new Set((lastGood?.session.source?.themes ?? []).flatMap((theme) => componentesDeTema(theme)))].sort(), trusted, bundle: code.bundle }),
+    code: () => ({ components: [...new Set((lastGood?.session.source?.themes ?? []).flatMap((theme) => themeComponents(theme)))].sort(), trusted, bundle: code.bundle }),
     trust() {
       trusted = true;
     },

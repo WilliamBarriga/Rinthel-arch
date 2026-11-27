@@ -1,11 +1,11 @@
 /**
  * Bloque de parches de Capa (Tema, `type`, `state`, `part` u override de Vista): expande `use`, resuelve `$token`
- * y valida contra el catalogo y la pila vigente. La semantica de aplicar parches vive en `tema`.
+ * y valida contra el catalogo y la pila vigente. La semantica de aplicar parches vive en `theme`.
  */
 import { CODES } from 'canonical';
 import type { Issue, TextRange } from 'canonical';
-import { validarOps } from 'tema';
-import type { CapaDeTema, ErrorDeCatalogo, OpDeCapa, UbicacionDePrimitiva } from 'tema';
+import { validateOps } from 'theme';
+import type { ResolvedLayer, CatalogError, LayerOp, PrimitivePlacement } from 'theme';
 
 import type { ThemeLayer, ThemeUse } from './generated/ast';
 import { aRango, issueConSugerencia, rangoDe } from './posiciones';
@@ -25,9 +25,9 @@ export interface ContextoDeBloque extends Contexto {
   /** `definir` solo en el primer bloque de un Tema sin Capas heredadas. */
   modo: 'definir' | 'parchear';
   /** Donde se usan las Capas del bloque; `capa-nodo` si falta. */
-  ubicacion?: UbicacionDePrimitiva;
+  ubicacion?: PrimitivePlacement;
   /** Pilas sobre las que el bloque puede aplicar; basta que valga para una. */
-  candidatas: ReadonlyArray<readonly CapaDeTema[]>;
+  candidatas: ReadonlyArray<readonly ResolvedLayer[]>;
   /** Sitio de cada Capa de la pila base; el bloque lo actualiza con lo que define. */
   origenes: Map<string, Sitio>;
 }
@@ -59,10 +59,10 @@ function expandir(items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string, 
 
 const sitioDe = (archivo: string, rango: TextRange): Sitio => ({ file: archivo, ...rango.start });
 
-function aOp(elemento: Elemento, ctx: ContextoDeBloque): { op: OpDeCapa; errores: ErrorDeCatalogo[] } {
+function aOp(elemento: Elemento, ctx: ContextoDeBloque): { op: LayerOp; errores: CatalogError[] } {
   const { item } = elemento;
   const { props, errores } = propiedadesResueltas(item.props, ctx.tokens);
-  const op: OpDeCapa = {
+  const op: LayerOp = {
     nombre: item.name,
     props: Object.fromEntries(props.map(({ clave, valor }) => [clave, valor])),
     ...(item.remove === true && { quitar: true as const }),
@@ -90,7 +90,7 @@ function rechazarAnimacionDePagina(item: ThemeLayer, archivo: string, issues: Is
 }
 
 /** Devuelve los parches sin error en orden de aplicacion; los issues quedan en `ctx.issues`. */
-export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx: ContextoDeBloque): OpDeCapa[] {
+export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx: ContextoDeBloque): LayerOp[] {
   const elementos = expandir(items, ctx.archivo, ctx, new Set(), true);
   const base = new Map(ctx.origenes);
 
@@ -116,7 +116,7 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
     if (animada.animacion !== undefined) delOp.op.animacion = animada.animacion;
     return { elemento, ...delOp, animacionFalla: animada.fallo };
   });
-  const issueDe = (elemento: Elemento, error: ErrorDeCatalogo, donde: 'nombre' | 'ubicacion' | 'propiedad', baseDeError?: string): Issue => {
+  const issueDe = (elemento: Elemento, error: CatalogError, donde: 'nombre' | 'ubicacion' | 'propiedad', baseDeError?: string): Issue => {
     const { item, archivo } = elemento;
     const prop = error.clave === undefined ? undefined : propiedadDeClave(item.props, error.clave);
     const rango =
@@ -147,12 +147,12 @@ export function compilarBloque(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx:
   compiladas.forEach(({ animacionFalla }, i) => {
     if (animacionFalla) fallidas.add(i);
   });
-  for (const error of validarOps(ctx.candidatas, ops, ctx.paleta, ctx.modo, ctx.ubicacion)) {
+  for (const error of validateOps(ctx.candidatas, ops, ctx.paleta, ctx.modo, ctx.ubicacion)) {
     fallidas.add(error.indice);
     ctx.issues.push(issueDe((compiladas[error.indice] as { elemento: Elemento }).elemento, error, error.donde, error.base));
   }
 
-  const validas: OpDeCapa[] = [];
+  const validas: LayerOp[] = [];
   compiladas.forEach(({ elemento, op }, i) => {
     if (fallidas.has(i)) return;
     validas.push(op);

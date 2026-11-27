@@ -4,7 +4,7 @@ import { combineIconProviders, canonicalFormSchema, genericIcons, resolveView, w
 import { layoutView } from 'layout';
 import { aHtml, etiquetaCon } from './ayudas';
 import type { DiagramProps } from 'render';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 type Detalle = NonNullable<DiagramProps['detail']>;
 
@@ -18,9 +18,9 @@ async function dibujar(detail?: Detalle): Promise<string> {
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], overrides: [{ node: 'usuarios', label: 'Usr' }] }],
   });
   const view = resolveView(fuente, 'v')!;
-  const geometry = await layoutView(view, TEMA_NEUTRO);
+  const geometry = await layoutView(view, NEUTRAL_THEME);
   const icons = combineIconProviders(workspaceIcons({}), genericIcons());
-  return aHtml({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons, ...(detail !== undefined && { detail }) });
+  return aHtml({ view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, icons, ...(detail !== undefined && { detail }) });
 }
 
 describe('Diagram: nivel de detalle', () => {

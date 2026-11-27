@@ -5,8 +5,8 @@ import { canonicalFormSchema } from 'canonical';
 import type { Geometry } from 'canonical';
 import { VistaInteractiva, hashesDeFamilias } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
-import type { MedidasDeTexto, TemaResuelto } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
+import type { TextMeasures, ResolvedTheme } from 'theme';
 
 afterEach(() => {
   cleanup();
@@ -19,7 +19,7 @@ const fuente = canonicalFormSchema.parse({
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
 });
 const geometria: Geometry = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 100, height: 50 };
-const CAVEAT: TemaResuelto = { ...TEMA_NEUTRO, fonts: { body: 'Caveat', mono: 'Caveat', fallback: 'cursive' } };
+const CAVEAT: ResolvedTheme = { ...NEUTRAL_THEME, fonts: { body: 'Caveat', mono: 'Caveat', fallback: 'cursive' } };
 const ARCHIVOS = { 'fuentes/caveat-latin-400-normal.woff2': 'h400', 'fuentes/caveat-latin-700-normal.woff2': 'h700', 'fuentes/inter-latin-400-normal.woff2': 'hi' };
 const url = (ruta: string): string => `/fuentes/${ruta}`;
 
@@ -44,7 +44,7 @@ describe('VistaInteractiva con fuentes del Workspace', () => {
     const orden: string[] = [];
     vi.stubGlobal('document', Object.assign(document, { fonts: { load: async (fuente: string) => void orden.push(`carga ${fuente}`) } }));
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ font: '', measureText: () => ({ width: 77 }) } as unknown as CanvasRenderingContext2D);
-    const recibidas: (MedidasDeTexto | undefined)[] = [];
+    const recibidas: (TextMeasures | undefined)[] = [];
     const layout: AdaptadorDeLayout = async (_vista, _tema, medidas) => (recibidas.push(medidas), geometria);
 
     render(<VistaInteractiva source={fuente} view="v" theme={CAVEAT} layout={layout} width={400} height={300} fontFiles={ARCHIVOS} fontUrl={url} />);
@@ -56,7 +56,7 @@ describe('VistaInteractiva con fuentes del Workspace', () => {
   });
 
   it('sin fontFiles no declara fuentes y el layout estima', async () => {
-    const recibidas: (MedidasDeTexto | undefined)[] = [];
+    const recibidas: (TextMeasures | undefined)[] = [];
     const layout: AdaptadorDeLayout = async (_vista, _tema, medidas) => (recibidas.push(medidas), geometria);
 
     const { container } = render(<VistaInteractiva source={fuente} view="v" theme={CAVEAT} layout={layout} width={400} height={300} />);
@@ -82,7 +82,7 @@ describe('VistaInteractiva con fuentes del Workspace', () => {
     const conUrl = render(<VistaInteractiva source={fuente} view="v" theme={CAVEAT} layout={layout} width={400} height={300} fontFiles={ARCHIVOS} fontUrl={url} />);
     expect(conUrl.container.querySelector('[data-panel="issues"]')).toBeNull();
     cleanup();
-    const generico = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={400} height={300} />);
+    const generico = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} width={400} height={300} />);
     expect(generico.container.querySelector('[data-panel="issues"]')).toBeNull();
   });
 });

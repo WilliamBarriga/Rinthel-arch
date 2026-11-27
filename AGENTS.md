@@ -20,7 +20,7 @@ Tests of a single package: `pnpm --filter <package> test`.
 - Research: index with one conclusion per branch in `docs/research-branches.md`; `research/<name>.md` lives on `research/<name>` branches, not on `main`; list them with `git branch -a -l '*research/*'` and read the file with `git show research/<name>:research/<name>.md` before researching again.
 - User guides (README, `docs/guide/` with its Spanish pair `docs/guia/`, `CONTRIBUTING.md`; the pair rule is in CONTRIBUTING): when changing the DSL, an example Theme, the CLI or the Dev UI (`packages/estudio`), update them; `pnpm docs:capturas` regenerates the images in `docs/img/`.
 - Contract ADRs: index in `docs/adr/README.md`. Read the module's ADR before changing its interface.
-- Theme catalog (Primitives, Slots, Motions, Effects with ranges and defaults): `docs/theme-catalog.md`, generated from `packages/tema` with `pnpm docs:catalogo`; do not edit it by hand (a test fails if it drifts).
+- Theme catalog (Primitives, Slots, Motions, Effects with ranges and defaults): `docs/theme-catalog.md`, generated from `packages/theme` with `pnpm docs:catalogo`; do not edit it by hand (a test fails if it drifts).
 
 ## Repo skills
 

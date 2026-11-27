@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolverTema } from 'tema';
+import { resolveTheme } from 'theme';
 
 import { compile } from '../src';
 
@@ -34,14 +34,14 @@ describe('Temas incorporados', () => {
   });
 
   it('el neutro dibuja con Capas, Slots, estados y animacion minima', () => {
-    const neutro = resolverTema(compilar().themes[0]!);
+    const neutro = resolveTheme(compilar().themes[0]!);
     expect(neutro.nodo.capas.map((c) => c.nombre)).toEqual(['shape', 'fill', 'border', 'shadow']);
     expect(Object.keys(neutro.nodo.estados).sort()).toEqual(['dimmed', 'hover', 'on-path']);
     expect(neutro.nodo.animacion?.transicionesDeEstado?.hover).toBeDefined();
   });
 
   it.each(['neutral', 'neutral-dark', 'high-contrast'])('%s usa los Slots de tarjeta, el Grupo propio y el fondo de pagina', (nombre) => {
-    const tema = resolverTema(compilar().themes.find((t) => t.name === nombre)!);
+    const tema = resolveTheme(compilar().themes.find((t) => t.name === nombre)!);
     const slots = JSON.stringify(tema.nodo.slots);
     for (const slot of ['icon', 'title', 'badge', 'counter', 'attrs']) expect(slots).toContain(`"slot":"${slot}"`);
     expect(tema.grupo.capas.length).toBeGreaterThan(0);
@@ -57,7 +57,7 @@ describe('Temas incorporados', () => {
   });
 
   it.each(['neutral', 'neutral-dark', 'high-contrast'])('%s cumple el contraste: texto 4.5:1 y partes graficas 3:1', (nombre) => {
-    const tema = resolverTema(compilar().themes.find((t) => t.name === nombre)!);
+    const tema = resolveTheme(compilar().themes.find((t) => t.name === nombre)!);
     const { palette: p, tokens } = tema;
     expect(contraste(tokens.foreground, tokens.background)).toBeGreaterThanOrEqual(4.5);
     const papel = p['papel'] ?? p['black'] ?? tokens.background;

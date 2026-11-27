@@ -13,7 +13,7 @@ Compiled state of a Workspace: compiles, validates, computes layout and edits th
 - Does not run nor import Theme code: it receives the `.tsx` already compiled (`CompiledCode`) from the adapter.
 
 ## Depends on
-`canonical`, `tema`, `dsl` and `layout` (`docs/CODING.md`, "Dependency direction").
+`canonical`, `theme`, `dsl` and `layout` (`docs/CODING.md`, "Dependency direction").
 
 ## Entry file
 `packages/session/src/index.ts` (the header summarizes the interface; the detail is in each export's TSDoc).

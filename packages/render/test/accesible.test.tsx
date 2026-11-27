@@ -5,12 +5,12 @@ import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
 import type { DiagramProps } from 'render';
-import { TEMA_ALTO_CONTRASTE, TEMA_NEUTRO } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { HIGH_CONTRAST_THEME, NEUTRAL_THEME } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 const nodo = (id: string, type: string, title: string, children: unknown[] = []) => ({ id, type, title, description: '', children });
 
-async function props(theme: TemaResuelto): Promise<DiagramProps> {
+async function props(theme: ResolvedTheme): Promise<DiagramProps> {
   const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }, { name: 'base' }] },
     model: {
@@ -31,7 +31,7 @@ const etiquetaDe = (html: string, id: string): string => {
 
 describe('Diagram: contenido accesible', () => {
   it('cada Nodo se anuncia con su etiqueta, su Tipo y su relacion con otros Nodos', async () => {
-    const html = renderToStaticMarkup(<Diagram {...await props(TEMA_NEUTRO)} />);
+    const html = renderToStaticMarkup(<Diagram {...await props(NEUTRAL_THEME)} />);
 
     expect(etiquetaDe(html, 'api')).toBe('API de pagos, servicio, va a Base de pagos (consulta)');
     expect(etiquetaDe(html, 'db')).toBe('Base de pagos, base, comes from API de pagos (consulta)');
@@ -39,8 +39,8 @@ describe('Diagram: contenido accesible', () => {
   });
 
   it('el nombre accesible no depende del Tema y el SVG de Aristas es decorativo', async () => {
-    const neutro = renderToStaticMarkup(<Diagram {...await props(TEMA_NEUTRO)} />);
-    const alto = renderToStaticMarkup(<Diagram {...await props(TEMA_ALTO_CONTRASTE)} />);
+    const neutro = renderToStaticMarkup(<Diagram {...await props(NEUTRAL_THEME)} />);
+    const alto = renderToStaticMarkup(<Diagram {...await props(HIGH_CONTRAST_THEME)} />);
 
     for (const id of ['api', 'db', 'g']) expect(etiquetaDe(alto, id)).toBe(etiquetaDe(neutro, id));
     expect(neutro).toMatch(/<svg[^>]*data-capa="aristas"[^>]*aria-hidden="true"/);

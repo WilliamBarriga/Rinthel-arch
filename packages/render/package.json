@@ -28,7 +28,7 @@
   "dependencies": {
     "canonical": "workspace:*",
     "layout": "workspace:*",
-    "tema": "workspace:*"
+    "theme": "workspace:*"
   },
   "sideEffects": false
 }

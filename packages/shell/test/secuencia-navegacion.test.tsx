@@ -7,19 +7,19 @@ import type { SequenceGeometry } from 'canonical';
 import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 import { camaraDe, pulsarEn } from './ayudas';
 
 afterEach(cleanup);
 
 const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
 const fuenteDe = (texto: string) => openSession({ 'main.dg': texto }).source!;
-const geometriaDe = async (texto: string, vista: string): Promise<SequenceGeometry> => (await layoutView(resolveView(fuenteDe(texto), vista)!, TEMA_NEUTRO)) as SequenceGeometry;
+const geometriaDe = async (texto: string, vista: string): Promise<SequenceGeometry> => (await layoutView(resolveView(fuenteDe(texto), vista)!, NEUTRAL_THEME)) as SequenceGeometry;
 const actual = (c: HTMLElement) => c.querySelector('[data-vista]')!.getAttribute('data-vista');
 const migas = (c: HTMLElement) => [...c.querySelectorAll('[data-breadcrumbs] [data-crumb]')].map((e) => e.getAttribute('data-crumb'));
 
 async function montar(texto: string, vista: string, esperar: string) {
-  const r = render(<VistaInteractiva source={fuenteDe(texto)} defaultView={vista} theme={TEMA_NEUTRO} layout={layout} width={1200} height={900} />);
+  const r = render(<VistaInteractiva source={fuenteDe(texto)} defaultView={vista} theme={NEUTRAL_THEME} layout={layout} width={1200} height={900} />);
   await waitFor(() => expect(r.container.querySelector(esperar)).not.toBeNull(), { timeout: 15000 });
   return r;
 }
@@ -134,7 +134,7 @@ describe('Secuencia: link desde una Lifeline', () => {
 
 describe('Secuencia: expandir una Lifeline de Grupo', () => {
   it('conserva el Paso y deja el borde izquierdo del Grupo en la misma posicion de pantalla', { timeout: 30000 }, async () => {
-    const r = render(<VistaInteractiva source={fuenteDe(grupos)} defaultView="cerrada" theme={TEMA_NEUTRO} layout={layout} width={1200} height={900} morphMs={0} />);
+    const r = render(<VistaInteractiva source={fuenteDe(grupos)} defaultView="cerrada" theme={NEUTRAL_THEME} layout={layout} width={1200} height={900} morphMs={0} />);
     const { container } = r;
     await waitFor(() => expect(container.querySelector('[data-toggle="sistema"]')).not.toBeNull(), { timeout: 15000 });
     fireEvent.click(container.querySelector('[data-pasos] [aria-label="Next step"]')!);
@@ -166,7 +166,7 @@ describe('Secuencia: expandir una Lifeline de Grupo', () => {
       cuadros.push(cuadro);
       return () => {};
     };
-    const { container } = render(<VistaInteractiva source={fuenteDe(grupos)} defaultView="cerrada" theme={TEMA_NEUTRO} layout={layout} width={3000} height={900} morphMs={100} clock={clock} />);
+    const { container } = render(<VistaInteractiva source={fuenteDe(grupos)} defaultView="cerrada" theme={NEUTRAL_THEME} layout={layout} width={3000} height={900} morphMs={100} clock={clock} />);
     await waitFor(() => expect(container.querySelector('[data-toggle="sistema"]')).not.toBeNull(), { timeout: 15000 });
     const x = (id: string) => xDe(container.querySelector<HTMLElement>(`[data-id="${id}"]`)!);
     const antes = x('cola');

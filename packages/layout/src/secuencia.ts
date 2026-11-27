@@ -5,8 +5,8 @@
  */
 import { activationsOf } from 'canonical';
 import type { Activation, ActivationBox, PlacedGroupBox, NodeBox, SequenceGeometry, ResolvedItem, FragmentFrame, ResolvedMessage, PlacedNote, ResolvedNote, PlacedOperand, MessageRoute, SequenceView } from 'canonical';
-import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeGuarda } from 'tema';
-import type { Metricas, TablaDeMetricas } from 'tema';
+import { NOTE_CORNER, noteBox, placeInBox, placeNode, asTable, nodeContent, leafMetrics, labelSize, guardText } from 'theme';
+import type { Metrics, MetricsTable } from 'theme';
 
 
 
@@ -17,7 +17,7 @@ interface NecesidadDeAncho {
   ancho: number;
 }
 
-// px que el Tema no ajusta; las separaciones ajustables son `Metricas.secuencia`.
+// px que el Tema no ajusta; las separaciones ajustables son `Metrics.secuencia`.
 const MARGEN = 24;
 const SEPARACION_DE_CABECERAS = 24;
 const HOLGURA_DE_ETIQUETA = 24;
@@ -56,8 +56,8 @@ function notasDe(items: readonly ResolvedItem[]): ResolvedNote[] {
   return items.flatMap((item): ResolvedNote[] => (item.type === 'note' ? [item] : item.type === 'fragment' ? item.operands.flatMap((o) => notasDe(o.items)) : []));
 }
 
-export function layoutSecuencia(vista: SequenceView, metricas: Metricas | TablaDeMetricas): SequenceGeometry {
-  const tabla = comoTabla(metricas);
+export function layoutSecuencia(vista: SequenceView, metricas: Metrics | MetricsTable): SequenceGeometry {
+  const tabla = asTable(metricas);
   const sec = tabla.base.secuencia;
   if (sec === undefined) throw new Error('layoutSecuencia: the Metrics table has no sequence part; compute it with tablaDeMetricas(tema, \'sequence\')');
   const huecoEntreLifelines = sec.huecoEntreLifelines;
@@ -74,12 +74,12 @@ export function layoutSecuencia(vista: SequenceView, metricas: Metricas | TablaD
 
   // Cabeceras: cada una con su tamano de Nodo, todas con el alto de la mayor.
   const medidas = lifelines.map((nodo) => {
-    const m = metricasDeHoja(tabla, nodo);
-    return colocarNodo(contenidoDeNodo(nodo, m), m);
+    const m = leafMetrics(tabla, nodo);
+    return placeNode(nodeContent(nodo, m), m);
   });
   const altoDeCabecera = Math.max(0, ...medidas.map(({ height }) => height));
-  const anchoDeEtiqueta = (mensaje: ResolvedMessage): number => (mensaje.label === undefined ? 0 : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta).width);
-  const altoDeEtiqueta = (mensaje: ResolvedMessage): number => (mensaje.label === undefined ? 0 : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta).height);
+  const anchoDeEtiqueta = (mensaje: ResolvedMessage): number => (mensaje.label === undefined ? 0 : labelSize(mensaje.label, tabla.etiqueta).width);
+  const altoDeEtiqueta = (mensaje: ResolvedMessage): number => (mensaje.label === undefined ? 0 : labelSize(mensaje.label, tabla.etiqueta).height);
 
   const huecos = lifelines.slice(1).map((_, i) => Math.max(huecoEntreLifelines, (medidas[i]!.width + medidas[i + 1]!.width) / 2 + SEPARACION_DE_CABECERAS));
   const necesidades = (mensaje: ResolvedMessage): NecesidadDeAncho | undefined => {
@@ -91,7 +91,7 @@ export function layoutSecuencia(vista: SequenceView, metricas: Metricas | TablaD
   };
   // Mensajes de menor a mayor alcance: el hueco que falta se suma al ultimo tramo del alcance.
   // Notas: `over X, Y` pide que la caja quepa entre X e Y (con su sobresalir); `left of`/`right of` piden hueco con la vecina.
-  const cajasDeNota = new Map(notasDe(itemsDeLaInteraccion).map((nota) => [nota.path, cajaDeNota(nota.text, tabla.etiqueta)]));
+  const cajasDeNota = new Map(notasDe(itemsDeLaInteraccion).map((nota) => [nota.path, noteBox(nota.text, tabla.etiqueta)]));
   const pedidosDeNota = notasDe(itemsDeLaInteraccion).flatMap((nota): NecesidadDeAncho[] => {
     const caja = cajasDeNota.get(nota.path)!;
     const cols = nota.targets.map((id) => columna.get(id)!);
@@ -110,7 +110,7 @@ export function layoutSecuencia(vista: SequenceView, metricas: Metricas | TablaD
   // `box` de Grupos abiertos: cada nivel reserva una franja de titulo sobre las cabeceras y relleno a los lados.
   const grupos = vista.interaction.groups ?? [];
   const niveles = Math.max(0, ...grupos.map((g) => g.level + 1));
-  const titulos = new Map(grupos.map((g) => [g.id, tamanoDeEtiqueta(g.label, tabla.etiqueta)]));
+  const titulos = new Map(grupos.map((g) => [g.id, labelSize(g.label, tabla.etiqueta)]));
   const altoDeTitulo = Math.max(0, ...[...titulos.values()].map((t) => t.height)) + HOLGURA_DE_TITULO;
   const relleno = (nivel: number): number => RELLENO_H_DE_GRUPO * (niveles - nivel);
   const extremos = new Map(grupos.map((g) => [g.id, { desde: Math.min(...g.lifelines.map((id) => columna.get(id)!)), hasta: Math.max(...g.lifelines.map((id) => columna.get(id)!)) }]));
@@ -185,15 +185,15 @@ export function layoutSecuencia(vista: SequenceView, metricas: Metricas | TablaD
         const ancho = item.anchor === 'over' && cols.length > 1 && izq !== der ? Math.max(caja.width, der - izq + 2 * SOBRESALE_DE_NOTA) : caja.width;
         const nx = item.anchor === 'left' ? izq - HUECO_DE_NOTA - ancho : item.anchor === 'right' ? der + HUECO_DE_NOTA : Math.round((izq + der) / 2 - ancho / 2);
         const arriba = cursor + ESPACIO_ENTRE_NOTAS;
-        notas.push({ ruta: item.path, anchor: item.anchor, x: nx, y: arriba, width: ancho, height: caja.height, lines: caja.lines, lineHeight: caja.lineHeight, fold: ESQUINA_DE_NOTA });
+        notas.push({ ruta: item.path, anchor: item.anchor, x: nx, y: arriba, width: ancho, height: caja.height, lines: caja.lines, lineHeight: caja.lineHeight, fold: NOTE_CORNER });
         extremos.push(nx, nx + ancho);
         cursor = arriba + caja.height + ESPACIO_ENTRE_NOTAS;
         continue;
       }
       if (item.type === 'ref') {
         const arriba = cursor + HUECO_ENTRE_FRAGMENTOS;
-        const pestana = tamanoDeEtiqueta('ref', tabla.etiqueta);
-        const titulo = tamanoDeEtiqueta(item.title, tabla.etiqueta);
+        const pestana = labelSize('ref', tabla.etiqueta);
+        const titulo = labelSize(item.title, tabla.etiqueta);
         const tab = { x: 0, y: arriba, width: pestana.width + HOLGURA_DE_PESTANA, height: pestana.height };
         const alto = pestana.height + titulo.height + rellenoArribaDeFragmento + rellenoAbajoDeFragmento;
         marcos.push({ ruta: item.path, operator: 'ref', nivel, x: 0, y: arriba, width: 0, height: alto, tab, title: { text: item.title, box: { x: 0, y: arriba + pestana.height + rellenoArribaDeFragmento / 2, ...titulo } }, operands: [{ y1: arriba, y2: arriba + alto }] });
@@ -208,15 +208,15 @@ export function layoutSecuencia(vista: SequenceView, metricas: Metricas | TablaD
       const dentro: string[] = [];
       const extremosDentro: number[] = [];
       const arriba = cursor + HUECO_ENTRE_FRAGMENTOS;
-      const pestana = tamanoDeEtiqueta(item.operator, tabla.etiqueta);
+      const pestana = labelSize(item.operator, tabla.etiqueta);
       const tab = { x: 0, y: arriba, width: pestana.width + HOLGURA_DE_PESTANA, height: pestana.height };
       const marco: FragmentFrame = { ruta: item.path, operator: item.operator, nivel, x: 0, y: arriba, width: 0, height: 0, tab, operands: [] };
       marcos.push(marco);
       let alturaInterna = 0;
       item.operands.forEach((operando, k) => {
         const arribaDelOperando = k === 0 ? arriba : cursor;
-        const guarda = operando.guard === undefined ? undefined : textoDeGuarda(operando.guard);
-        const medida = guarda === undefined ? undefined : tamanoDeEtiqueta(guarda, tabla.etiqueta);
+        const guarda = operando.guard === undefined ? undefined : guardText(operando.guard);
+        const medida = guarda === undefined ? undefined : labelSize(guarda, tabla.etiqueta);
         const colocado: PlacedOperand = { y1: arribaDelOperando, y2: arribaDelOperando, ...(k > 0 && { divider: arribaDelOperando }) };
         if (guarda !== undefined && medida !== undefined) {
           // En el primer operando la guarda va junto a la pestana; en los siguientes, bajo su divisor.
@@ -287,7 +287,7 @@ export function layoutSecuencia(vista: SequenceView, metricas: Metricas | TablaD
   const rutas: Record<string, MessageRoute> = {};
   mensajes.forEach((mensaje, i) => {
     const y = ys[i]!;
-    const etiqueta = mensaje.label === undefined ? undefined : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta);
+    const etiqueta = mensaje.label === undefined ? undefined : labelSize(mensaje.label, tabla.etiqueta);
     if (mensaje.from === mensaje.to) {
       const inicio = borde(mensaje.from, nivelVigente(mensaje.from, i, false), 'derecho');
       const fin = borde(mensaje.from, nivelVigente(mensaje.to, i, true), 'derecho');
@@ -353,8 +353,8 @@ export function layoutSecuencia(vista: SequenceView, metricas: Metricas | TablaD
   lifelines.forEach((nodo, i) => {
     const { width } = medidas[i]!;
     const caja = { x: Math.round(xDeLifeline(nodo.id) - width / 2), y: yDeCabecera(nodo.id), width, height: altoDeCabecera };
-    const m = metricasDeHoja(tabla, nodo);
-    nodes[nodo.id] = { ...caja, slots: colocarEnCaja(m, contenidoDeNodo(nodo, m), width).slots };
+    const m = leafMetrics(tabla, nodo);
+    nodes[nodo.id] = { ...caja, slots: placeInBox(m, nodeContent(nodo, m), width).slots };
     lineas[nodo.id] = { x: xDeLifeline(nodo.id), y1: caja.y + altoDeCabecera, y2: destruccion(nodo.id) < 0 ? yFinal + RELLENO_FINAL : yFinalDe(nodo.id), ...(destruccion(nodo.id) >= 0 && { destroyed: true as const }) };
     derecha = Math.max(derecha, caja.x + width);
   });

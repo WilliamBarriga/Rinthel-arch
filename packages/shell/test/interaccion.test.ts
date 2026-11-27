@@ -5,7 +5,7 @@ import { canonicalFormSchema, edgeId, resolveView } from 'canonical';
 import type { Geometry, GraphView } from 'canonical';
 
 import { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from '../src/interaccion';
-import { TEMA_NEUTRO, metricasDe } from 'tema';
+import { NEUTRAL_THEME, metricsOf } from 'theme';
 
 const nodo = (id: string, extra: object = {}) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [], ...extra });
 
@@ -24,7 +24,7 @@ const fuente = canonicalFormSchema.parse({
 const vista = resolveView(fuente, 'v', { expanded: ['g'] }) as GraphView;
 const arista = vista.edges[0]!;
 const idArista = edgeId(arista);
-const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
+const { cabecera, fila } = metricsOf(NEUTRAL_THEME, 'architecture');
 
 /** g en (100,100) 300x200; h dentro de g en (20,40) 200x{cabecera+2 filas}; p en (1000,100). */
 const geometria: Geometry = {
@@ -41,7 +41,7 @@ const geometria: Geometry = {
   height: 400,
 };
 const bajo = (x: number, y: number, tolerancia?: number) =>
-  elementoBajo(vista, geometria, TEMA_NEUTRO, { x, y }, tolerancia === undefined ? {} : { tolerancia });
+  elementoBajo(vista, geometria, NEUTRAL_THEME, { x, y }, tolerancia === undefined ? {} : { tolerancia });
 
 describe('elementoBajo', () => {
   it('devuelve el Nodo hoja, no el Grupo que lo contiene', () => {
@@ -86,14 +86,14 @@ describe('elementoBajo', () => {
   });
 
   it('puede ignorar los Atributos cuando no se dibujan', () => {
-    const r = elementoBajo(vista, geometria, TEMA_NEUTRO, { x: 130, y: 100 + 40 + cabecera + 1 }, { atributos: false });
+    const r = elementoBajo(vista, geometria, NEUTRAL_THEME, { x: 130, y: 100 + 40 + cabecera + 1 }, { atributos: false });
     expect(r).toEqual({ tipo: 'nodo', id: 'g.h' });
   });
 });
 
 describe('cajaDeElemento', () => {
   it('da la caja en el lienzo de cada tipo de elemento', () => {
-    const caja = (el: Parameters<typeof cajaDeElemento>[3]) => cajaDeElemento(vista, geometria, TEMA_NEUTRO, el);
+    const caja = (el: Parameters<typeof cajaDeElemento>[3]) => cajaDeElemento(vista, geometria, NEUTRAL_THEME, el);
     expect(caja({ tipo: 'nodo', id: 'g.h' })).toEqual({ x: 120, y: 140, width: 200, height: cabecera + 2 * fila });
     expect(caja({ tipo: 'atributo', id: 'g.h#nombre' })).toEqual({ x: 120, y: 140 + cabecera + fila, width: 200, height: fila });
     expect(caja({ tipo: 'arista', id: idArista })).toEqual({ x: 320, y: 125, width: 680, height: 75 });

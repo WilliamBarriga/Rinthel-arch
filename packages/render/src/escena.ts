@@ -6,8 +6,8 @@
 import { edgeId, sequenceElementId } from 'canonical';
 import type { ResolvedEdge, NodeBox, Geometry, GraphGeometry, IconProvider, ResolvedNode, Theme, Visibility, GraphView, ResolvedView } from 'canonical';
 import { indiceDeGeometria } from 'layout';
-import { ESTADOS, atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
-import type { Metricas } from 'tema';
+import { STATES, visibleAttributes, placeInBox, nodeContent, leafMetrics } from 'theme';
+import type { Metrics } from 'theme';
 
 import { pintarCapasAnimadas } from './animacion';
 import { filtrosDeTrazo } from './aristas';
@@ -56,7 +56,7 @@ export interface EntradaDeEscena {
   /** Con ella, cada Grupo (o Grupo colapsado sin enlace) lleva un control de colapso; solo avisa, el colapso llega en `view`. */
   onToggle?: (id: string) => void;
   /** Metricas con las que dibujar; deben ser las del layout. Por defecto las derivadas del Tema. */
-  metricas?: Metricas;
+  metricas?: Metrics;
   /**
    * Estados visuales por id; un id no dibujado se ignora. `dimmed` baja la opacidad sin contorno y el anillo de `focus`
    * no baja de `ANILLO_DE_FOCO_MINIMO` px.
@@ -331,9 +331,9 @@ function estadosDeNodo(nodo: ResolvedNode, caja: NodeBox, { estados, estilo, det
   if (estados === undefined) return [];
   const propios = contornos(estados[nodo.id]).map((e) => pintarEstadoDeCaja(e, nodo.id));
   if (esGrupo(nodo) || !tieneFilas(nodo, estilo, detail)) return propios;
-  const metricas = metricasDeHoja(estilo.tabla, nodo);
-  const atributos = atributosVisibles(nodo, metricas);
-  const rectas = colocarEnCaja(metricas, contenidoDeNodo(nodo, metricas), caja.width).filas;
+  const metricas = leafMetrics(estilo.tabla, nodo);
+  const atributos = visibleAttributes(nodo, metricas);
+  const rectas = placeInBox(metricas, nodeContent(nodo, metricas), caja.width).filas;
   const filas = atributos.flatMap((atributo, i) => {
     const id = `${nodo.id}#${atributo.name}`;
     return contornos(estados[id]).map((e) => pintarEstadoDeCaja(e, id, rectas[i]!));
@@ -354,17 +354,17 @@ export const marcasDeTrazo = (estados: Estados | undefined, id: string, plannedP
   ...(planeado(estados, id) && !plannedPropio && { 'data-planeado': '' }),
 });
 
-/** The stack of the state that rules a stroke: the last of `ESTADOS` that `id` carries and the Theme declares (paint-only). */
+/** The stack of the state that rules a stroke: the last of `STATES` that `id` carries and the Theme declares (paint-only). */
 export function estadoDeTrazo<T>(declarados: Partial<Record<EstadoVisual, T>> | undefined, estados: Estados | undefined, id: string): T | undefined {
   const activos = estados?.[id] ?? [];
-  const vigente = ESTADOS.filter((estado) => activos.includes(estado) && declarados?.[estado] !== undefined).at(-1);
+  const vigente = STATES.filter((estado) => activos.includes(estado) && declarados?.[estado] !== undefined).at(-1);
   return vigente === undefined ? undefined : declarados?.[vigente];
 }
 /** Estados con contorno propio sobre el elemento: todos menos `dimmed` y `planned`. */
 export const contornos = (lista: readonly EstadoVisual[] | undefined): EstadoVisual[] => (lista ?? []).filter((e) => e !== 'dimmed' && e !== 'planned');
 
 function tieneFilas(nodo: ResolvedNode, estilo: Estilo, detail?: NivelDeDetalle): boolean {
-  return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, metricasDeHoja(estilo.tabla, nodo)).length > 0;
+  return (detail === undefined || detail === 'completo') && visibleAttributes(nodo, leafMetrics(estilo.tabla, nodo)).length > 0;
 }
 
 /** Valor de la Paleta para el color del Nodo; sin color, o desconocido, el borde del Estilo. */

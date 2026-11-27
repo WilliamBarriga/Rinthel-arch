@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import type { Geometry, Theme, ResolvedView } from 'canonical';
 import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout } from 'layout';
-import { tablaDeMetricas, textosAMedir } from 'tema';
-import type { MedidasDeTexto } from 'tema';
+import { metricsTable, textsToMeasure } from 'theme';
+import type { TextMeasures } from 'theme';
 
 import type { AdaptadorDeLayout, MedidorDeTexto } from './vista-interactiva';
 
@@ -16,7 +16,7 @@ export interface Calculo {
   vista: ResolvedView;
   geometria: Geometry;
   /** Medidas reales de texto con las que se calculo la Geometria; el dibujo coloca los Slots con ellas. */
-  medidas?: MedidasDeTexto;
+  medidas?: TextMeasures;
 }
 
 export interface EntradaDeGeometria {
@@ -44,9 +44,9 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   const ultimo = useRef(entrada);
   ultimo.current = entrada;
   // Medidas reales: se piden cuando cambian los textos o las fuentes y el layout espera a tenerlas.
-  const textos = entrada.medir === undefined ? undefined : textosAMedir(vista, tablaDeMetricas(theme, vista.type));
+  const textos = entrada.medir === undefined ? undefined : textsToMeasure(vista, metricsTable(theme, vista.type));
   const claveTextos = textos === undefined ? undefined : JSON.stringify([entrada.claveDeFuentes, textos]);
-  const [medido, setMedido] = useState<{ clave: string; medidas: MedidasDeTexto }>();
+  const [medido, setMedido] = useState<{ clave: string; medidas: TextMeasures }>();
   useEffect(() => {
     if (claveTextos === undefined) return;
     let vigente = true;
@@ -66,7 +66,7 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   const medidas = claveTextos !== undefined && medido?.clave === claveTextos ? medido.medidas : undefined;
   const esperando = claveTextos !== undefined && medidas === undefined;
   // Solo lo que mueve el layout (estructura, textos, fuentes, origen de las medidas) lo repite; la paleta no.
-  const tabla = tablaDeMetricas(theme, vista.type, medidas);
+  const tabla = metricsTable(theme, vista.type, medidas);
   const claveTema = claveDeLayout(vista, theme, tabla);
   const claveBase = claveDeEstructura(vista, theme, tabla);
   const mostrado = useRef<Calculo | undefined>(undefined);

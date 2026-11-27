@@ -1,7 +1,7 @@
-/** Bloques de secuencia de un Tema; lo que admite cada Elemento lo dice `ESPECIFICACION_DE_SECUENCIA` de `tema`. */
+/** Bloques de secuencia de un Tema; lo que admite cada Elemento lo dice `SEQUENCE_SPEC` de `theme`. */
 import { CODES } from 'canonical';
-import { BLOQUES_DE_SECUENCIA, ESPECIFICACION_DE_SECUENCIA, ESTADOS, aplicarOps, parsearEstado } from 'tema';
-import type { BloqueDeSecuencia, CapaDeTema, OpDeCapa, Primitiva, TemaResuelto } from 'tema';
+import { SEQUENCE_BLOCKS, SEQUENCE_SPEC, STATES, applyOps, parseState } from 'theme';
+import type { SequenceBlock, ResolvedLayer, LayerOp, Primitive, ResolvedTheme } from 'theme';
 
 import type { SequenceItem, ThemeMarker, ThemeSequence } from './generated/ast';
 import { aRango, baseDeErrorDeEstado, issueConSugerencia, rangoDe } from './posiciones';
@@ -9,14 +9,14 @@ import { compilarBloque } from './temas-capas';
 import { primitivaSuelta } from './temas-comun';
 import type { Contexto } from './temas-comun';
 
-type Bloque = NonNullable<NonNullable<TemaResuelto['secuencia']>[BloqueDeSecuencia]>;
-type Marcadores = { origen?: Primitiva; fin?: Primitiva };
+type Bloque = NonNullable<NonNullable<ResolvedTheme['secuencia']>[SequenceBlock]>;
+type Marcadores = { origen?: Primitive; fin?: Primitive };
 
 const vacio = (): Bloque => ({ capas: [], textos: {}, parches: {}, estados: {}, metricas: {} });
 
 /** Aplica los bloques sobre `tema.secuencia` (heredada del padre). */
-export function compilarSecuencia(bloques: readonly ThemeSequence[], tema: TemaResuelto, ctx: Contexto): void {
-  for (const nombre of BLOQUES_DE_SECUENCIA) {
+export function compilarSecuencia(bloques: readonly ThemeSequence[], tema: ResolvedTheme, ctx: Contexto): void {
+  for (const nombre of SEQUENCE_BLOCKS) {
     const delNombre = bloques.filter((b) => b.element === nombre);
     if (delNombre.length === 0) continue;
     const bloque = tema.secuencia?.[nombre] ?? vacio();
@@ -25,8 +25,8 @@ export function compilarSecuencia(bloques: readonly ThemeSequence[], tema: TemaR
   }
 }
 
-function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly SequenceItem[], bloque: Bloque, tema: TemaResuelto, ctx: Contexto): void {
-  const espec = ESPECIFICACION_DE_SECUENCIA[nombre];
+function compilarBloqueDeSecuencia(nombre: SequenceBlock, items: readonly SequenceItem[], bloque: Bloque, tema: ResolvedTheme, ctx: Contexto): void {
+  const espec = SEQUENCE_SPEC[nombre];
   const error = (donde: { $cstNode?: { range: Parameters<typeof aRango>[0] } }, message: string): void => {
     ctx.issues.push({ code: CODES.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(donde.$cstNode?.range).start, message });
   };
@@ -47,10 +47,10 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
   };
 
   const modo = bloque.capas.length === 0 ? 'definir' : 'parchear';
-  const ops = compilarBloque(capasDe(items), { ...ctx, modo, ubicacion: espec.capas, candidatas: [bloque.capas as CapaDeTema[]], origenes: new Map() });
-  bloque.capas = aplicarOps(bloque.capas as CapaDeTema[], ops, tema.palette, modo, espec.capas).pila;
+  const ops = compilarBloque(capasDe(items), { ...ctx, modo, ubicacion: espec.capas, candidatas: [bloque.capas as ResolvedLayer[]], origenes: new Map() });
+  bloque.capas = applyOps(bloque.capas as ResolvedLayer[], ops, tema.palette, modo, espec.capas).pila;
 
-  const parche = (hijos: readonly SequenceItem[]): OpDeCapa[] => compilarBloque(capasDe(hijos), { ...ctx, modo: 'parchear', ubicacion: espec.capas, candidatas: [bloque.capas as CapaDeTema[]], origenes: new Map() });
+  const parche = (hijos: readonly SequenceItem[]): LayerOp[] => compilarBloque(capasDe(hijos), { ...ctx, modo: 'parchear', ubicacion: espec.capas, candidatas: [bloque.capas as ResolvedLayer[]], origenes: new Map() });
 
   for (const item of items) {
     switch (item.$type) {
@@ -58,9 +58,9 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
         marcador(item, bloque, false);
         break;
       case 'ThemeState': {
-        const resultado = parsearEstado(item.name);
+        const resultado = parseState(item.name);
         if ('error' in resultado) {
-          ctx.issues.push(issueConSugerencia(baseDeErrorDeEstado(resultado.error), ctx.archivo, item, 'name', ESTADOS));
+          ctx.issues.push(issueConSugerencia(baseDeErrorDeEstado(resultado.error), ctx.archivo, item, 'name', STATES));
           break;
         }
         for (const hijo of item.items) {
@@ -84,7 +84,7 @@ function compilarBloqueDeSecuencia(nombre: BloqueDeSecuencia, items: readonly Se
           break;
         }
         const previo = bloque.parches[item.name] ?? { ops: [] };
-        const propio: { ops: OpDeCapa[] } & Marcadores = { ...previo, ops: [...previo.ops, ...parche(item.items)] };
+        const propio: { ops: LayerOp[] } & Marcadores = { ...previo, ops: [...previo.ops, ...parche(item.items)] };
         for (const hijo of item.items) if (hijo.$type === 'ThemeMarker') marcador(hijo, propio, true);
         bloque.parches = { ...bloque.parches, [item.name]: propio };
         break;

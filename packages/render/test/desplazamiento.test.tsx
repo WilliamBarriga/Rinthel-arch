@@ -6,8 +6,8 @@ import type { ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
 import type { DiagramProps } from 'render';
-import { TEMA_NEUTRO, construirTransicion } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME, buildTransition } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 import { hojaDe } from './ayudas';
 
@@ -28,12 +28,12 @@ const capas = (sombra: Record<string, number>) => [
   { nombre: 'tarjeta', primitiva: { tipo: 'solid', props: { color: 'amber' } } },
 ];
 
-const temaCon = (nodoExtra: Record<string, unknown> = {}): TemaResuelto =>
-  ({ ...TEMA_NEUTRO, nodo: { slots: TEMA_NEUTRO.nodo.slots, tipos: {}, estados: {}, capas: capas({ 'offset-x': 4, 'offset-y': -3, grow: 2 }), ...nodoExtra } }) as unknown as TemaResuelto;
+const temaCon = (nodoExtra: Record<string, unknown> = {}): ResolvedTheme =>
+  ({ ...NEUTRAL_THEME, nodo: { slots: NEUTRAL_THEME.nodo.slots, tipos: {}, estados: {}, capas: capas({ 'offset-x': 4, 'offset-y': -3, grow: 2 }), ...nodoExtra } }) as unknown as ResolvedTheme;
 
-async function dibujar(theme: TemaResuelto, extra: Partial<DiagramProps> = {}) {
+async function dibujar(theme: ResolvedTheme, extra: Partial<DiagramProps> = {}) {
   const view = vista();
-  const geometry = await layoutView(view, TEMA_NEUTRO);
+  const geometry = await layoutView(view, NEUTRAL_THEME);
   const html = renderToStaticMarkup(<Diagram view={view} geometry={geometry} theme={theme} width={800} height={600} {...extra} />);
   return { html, geometry };
 }
@@ -56,7 +56,7 @@ describe('Diagram: offset y grow de una Capa', () => {
   });
 
   it('un parche de estado mueve la Capa solo con ese estado y respeta la transition', async () => {
-    const transicion = construirTransicion([{ clave: 'duration', valor: 150 }]).animacion!;
+    const transicion = buildTransition([{ clave: 'duration', valor: 150 }]).animacion!;
     const tema = temaCon({
       capas: capas({ 'offset-x': 4, 'offset-y': 4 }),
       estados: { hover: [{ nombre: 'sombra', props: { 'offset-x': 7, 'offset-y': 7 } }] },
@@ -89,7 +89,7 @@ describe('Diagram: offset y grow de una Capa', () => {
   });
 
   it('un parche de estado que cambia grow lo anima con scale (compositor), no con width ni height', async () => {
-    const transicion = construirTransicion([{ clave: 'duration', valor: 150 }]).animacion!;
+    const transicion = buildTransition([{ clave: 'duration', valor: 150 }]).animacion!;
     const tema = temaCon({
       capas: capas({ 'offset-x': 4, 'offset-y': 4, grow: 2 }),
       estados: { hover: [{ nombre: 'sombra', props: { grow: 10 } }] },

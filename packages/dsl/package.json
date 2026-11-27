@@ -24,6 +24,6 @@
   "dependencies": {
     "canonical": "workspace:*",
     "langium": "^4.4.0",
-    "tema": "workspace:*"
+    "theme": "workspace:*"
   }
 }

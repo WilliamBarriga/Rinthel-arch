@@ -5,7 +5,7 @@ import { layoutView } from 'layout';
 import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -34,7 +34,7 @@ const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, te
 
 const montar = (vista: string, paso: number) => {
   const fuente = openSession({ 'main.dg': cuerpo(vista) }).source!;
-  return render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} step={paso} width={1200} height={900} />);
+  return render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} step={paso} width={1200} height={900} />);
 };
 const opacidad = (el: Element | null): number => {
   if (el === null) throw new Error('elemento ausente');
@@ -75,7 +75,7 @@ describe('VistaInteractiva: Pasos de secuencia', () => {
 
   it('sin Paso controlado, la Vista entra en su primer Paso (ADR 0009), no vacia', async () => {
     const fuente = openSession({ 'main.dg': cuerpo(vista) }).source!;
-    const { container: c } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={1200} height={900} />);
+    const { container: c } = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} width={1200} height={900} />);
     await esperar(c);
     expect(opacidad(c.querySelector('[data-message="i:0"]'))).toBe(1);
     expect(opacidad(c.querySelector('[data-message="i:2.0.0"]'))).toBe(0);

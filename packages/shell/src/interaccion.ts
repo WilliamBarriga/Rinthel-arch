@@ -6,7 +6,7 @@
 import { refTarget, edgeId, sequenceElementId, parseSequenceElementId } from 'canonical';
 import type { NodeBox, Geometry, ResolvedItem, ResolvedNode, Point, Theme, Visibility, View, SequenceView, ResolvedView } from 'canonical';
 import { indiceDeGeometria } from 'layout';
-import { atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
+import { visibleAttributes, placeInBox, nodeContent, leafMetrics } from 'theme';
 import { centroDeEtiquetaSinCaja, resolverEstilo } from 'render';
 import type { Estilo } from 'render';
 
@@ -90,9 +90,9 @@ export function elementoBajo(
   for (const nodo of enOrdenDeDibujo(raices).reverse()) {
     const caja = cajas.get(nodo.id);
     if (caja === undefined || !contiene(caja, punto)) continue;
-    const delNodo = metricasDeHoja(estilo.tabla, nodo);
-    const filas = atributos ? atributosVisibles(nodo, delNodo) : [];
-    const rectas = colocarEnCaja(delNodo, contenidoDeNodo(nodo, delNodo), caja.width).filas;
+    const delNodo = leafMetrics(estilo.tabla, nodo);
+    const filas = atributos ? visibleAttributes(nodo, delNodo) : [];
+    const rectas = placeInBox(delNodo, nodeContent(nodo, delNodo), caja.width).filas;
     const indice = rectas.findIndex((r) => punto.y >= caja.y + r.y && punto.y < caja.y + r.y + r.height);
     const atributo = filas[indice];
     return atributo === undefined ? { tipo: 'nodo', id: nodo.id } : { tipo: 'atributo', id: `${nodo.id}#${atributo.name}` };
@@ -147,11 +147,11 @@ export function cajaDeElemento(vista: ResolvedView, geometria: Geo, tema: Theme,
     const [idNodo = '', nombre] = elemento.id.split('#');
     const nodo = enOrdenDeDibujo(indiceDeGeometria(vista, geometria).raices).find((n) => n.id === idNodo);
     const caja = cajas.get(idNodo);
-    const metricas = nodo === undefined ? tabla.base : metricasDeHoja(tabla, nodo);
-    const atributos = nodo === undefined ? [] : atributosVisibles(nodo, metricas);
+    const metricas = nodo === undefined ? tabla.base : leafMetrics(tabla, nodo);
+    const atributos = nodo === undefined ? [] : visibleAttributes(nodo, metricas);
     const indice = atributos.findIndex((a) => a.name === nombre);
     if (nodo === undefined || caja === undefined || indice < 0) return undefined;
-    const fila = colocarEnCaja(metricas, contenidoDeNodo(nodo, metricas), caja.width).filas[indice]!;
+    const fila = placeInBox(metricas, nodeContent(nodo, metricas), caja.width).filas[indice]!;
     return { x: caja.x + fila.x, y: caja.y + fila.y, width: fila.width, height: fila.height };
   }
   if (elemento.tipo === 'mensaje' || elemento.tipo === 'nota' || elemento.tipo === 'fragmento') {

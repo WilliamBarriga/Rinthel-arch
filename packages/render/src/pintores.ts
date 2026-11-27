@@ -4,8 +4,8 @@
  */
 import { sanitizeIcon } from 'canonical';
 import type { Attribute, NodeBox, IconProvider, ResolvedNode } from 'canonical';
-import { ESTADOS, LARGO_DE_MARCADOR_ER, alturaDeCabecera, capasDeAristaEr, pilaDeFila, chipsDeClaves, colocarEnCaja, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeAtributo, textoDeSlot } from 'tema';
-import type { ContenidoDeNodo, Estado, Metricas, NombreDePrimitiva, NombreDeSlot, NombreDeSlotDeTexto, PinturaDeArista, PinturaDeNodo, PrimitivaPintada, Rect } from 'tema';
+import { STATES, ER_MARKER_LENGTH, headerHeight, erEdgeLayers, rowStack, keyChips, placeInBox, nodeContent, leafMetrics, labelSize, attributeText, slotText } from 'theme';
+import type { NodeContent, State, Metrics, PrimitiveName, SlotName, TextSlotName, EdgePaint, NodePaint, PaintedPrimitive, Rect } from 'theme';
 
 import { pintarMarcadores, pintarTrazos, rutaDeCapa } from './aristas';
 import { declaracionesLimpias, limpiarValorCss, num } from './elemento';
@@ -24,7 +24,7 @@ export interface DatosDeNodo {
   caja: NodeBox;
   /** Color de trazo ya resuelto de la Paleta. */
   trazo: string;
-  /** Texto de la etiqueta del Nodo (el titulo de un Grupo abierto; un Nodo hoja usa el que da `contenidoDeNodo`). */
+  /** Texto de la etiqueta del Nodo (el titulo de un Grupo abierto; un Nodo hoja usa el que da `nodeContent`). */
   texto: string;
   icons?: IconProvider;
   /** Estados visuales por id de elemento; los de una fila ER van bajo `nodo#atributo` y se pintan con la pila de estado de `row`. */
@@ -47,14 +47,14 @@ interface ContextoDeSlot {
   /** Atributos que se dibujan (vacio si el nivel de detalle los oculta). */
   atributos: readonly Attribute[];
   /** Estilo de texto de los Slots del elemento que se dibuja (Nodo, Grupo abierto o colapsado). */
-  textos: PinturaDeNodo['textos'];
-  metricas: Metricas;
-  contenido: ContenidoDeNodo;
+  textos: NodePaint['textos'];
+  metricas: Metrics;
+  contenido: NodeContent;
 }
 
 /** Slot de una sola linea de texto, con el tamano que reservo la colocacion (y el texto que mido `layout`). */
-function pintarTexto(slot: NombreDeSlotDeTexto, { metricas, contenido, textos }: ContextoDeSlot, rect: Rect): Elemento[] {
-  const medido = textoDeSlot(slot, metricas, contenido);
+function pintarTexto(slot: TextSlotName, { metricas, contenido, textos }: ContextoDeSlot, rect: Rect): Elemento[] {
+  const medido = slotText(slot, metricas, contenido);
   if (medido === undefined) return [];
   const tamano = medido.tamano === metricas.fontSize ? '' : `font-size:${num(medido.tamano)}px;`;
   // El contador es una caja con borde: su texto se centra en el interior.
@@ -62,8 +62,8 @@ function pintarTexto(slot: NombreDeSlotDeTexto, { metricas, contenido, textos }:
   return [slotDeTexto(slot, `rd-${slot}`, rect, medido.texto, slot === 'counter' ? `${tamano}line-height:${num(rect.height - 2 * borde)}px;` : tamano)];
 }
 
-/** Un pintor por Slot del catalogo (un Slot sin pintor rompe el typecheck), en el rectangulo que dio la colocacion de `tema`. */
-const PINTORES_DE_SLOT: { readonly [S in NombreDeSlot]: (contexto: ContextoDeSlot, rect: Rect) => Elemento[] } = {
+/** Un pintor por Slot del catalogo (un Slot sin pintor rompe el typecheck), en el rectangulo que dio la colocacion de `theme`. */
+const PINTORES_DE_SLOT: { readonly [S in SlotName]: (contexto: ContextoDeSlot, rect: Rect) => Elemento[] } = {
   title: (contexto, rect) => pintarTexto('title', contexto, rect),
   badge: (contexto, rect) => pintarTexto('badge', contexto, rect),
   desc: (contexto, rect) => pintarTexto('desc', contexto, rect),
@@ -74,16 +74,16 @@ const PINTORES_DE_SLOT: { readonly [S in NombreDeSlot]: (contexto: ContextoDeSlo
 };
 
 /** Cada Slot que el Tema lista para `metricas`, en su rectangulo dentro de una caja de `ancho`. `conAtributos`: si se dibujan las filas de `attrs`. */
-function pintarSlots(estilo: Estilo, datos: DatosDeNodo, metricas: Metricas, ancho: number, conAtributos: boolean): Elemento[] {
-  const contenido = contenidoDeNodo(datos.nodo, metricas);
-  const { slots } = colocarEnCaja(metricas, contenido, ancho);
+function pintarSlots(estilo: Estilo, datos: DatosDeNodo, metricas: Metrics, ancho: number, conAtributos: boolean): Elemento[] {
+  const contenido = nodeContent(datos.nodo, metricas);
+  const { slots } = placeInBox(metricas, contenido, ancho);
   const contexto = { estilo, datos, metricas, contenido, atributos: conAtributos ? contenido.atributos : [], textos: pilaDeNodo(estilo.pintura, datos.nodo).pila.textos };
-  return (Object.keys(slots) as NombreDeSlot[]).flatMap((slot) => PINTORES_DE_SLOT[slot](contexto, slots[slot]!));
+  return (Object.keys(slots) as SlotName[]).flatMap((slot) => PINTORES_DE_SLOT[slot](contexto, slots[slot]!));
 }
 
 /** Contenido de un Nodo (hoja, o Grupo colapsado): cada Slot que el Tema lista, en su rectangulo. */
 export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: boolean }): Elemento[] {
-  return pintarSlots(estilo, datos, metricasDeHoja(estilo.tabla, datos.nodo), datos.caja.width, datos.conAtributos);
+  return pintarSlots(estilo, datos, leafMetrics(estilo.tabla, datos.nodo), datos.caja.width, datos.conAtributos);
 }
 
 /**
@@ -91,11 +91,11 @@ export function pintarNodo(estilo: Estilo, datos: DatosDeNodo & { conAtributos: 
  * empieza `attrs` (sin `attrs`, toda la caja); `body` cubre la zona de `attrs` hasta el pie (sin `attrs`, nada). Hereda las
  * esquinas de la caja que toca. Solo pinta: un parche de estado no las cambia.
  */
-export function pintarZonas(estilo: Estilo, datos: DatosDeNodo, capas: readonly PinturaDeNodo['capas'][number][]): Elemento[] {
+export function pintarZonas(estilo: Estilo, datos: DatosDeNodo, capas: readonly NodePaint['capas'][number][]): Elemento[] {
   const delasZonas = capas.filter(esDeZona);
   if (delasZonas.length === 0) return [];
-  const metricas = metricasDeHoja(estilo.tabla, datos.nodo);
-  const { slots } = colocarEnCaja(metricas, contenidoDeNodo(datos.nodo, metricas), datos.caja.width);
+  const metricas = leafMetrics(estilo.tabla, datos.nodo);
+  const { slots } = placeInBox(metricas, nodeContent(datos.nodo, metricas), datos.caja.width);
   const filas = slots.attrs;
   return delasZonas.flatMap((capa): Elemento[] => {
     const cabecera = capa.props['zone'] === 'header';
@@ -125,7 +125,7 @@ export function pintarGrupo(estilo: Estilo, datos: DatosDeNodo): Elemento[] {
  * sin glifo). Solo se incrusta el glifo si pasa `sanitizeIcon`; el aspecto de la
  * caja y del punto lo da la hoja.
  */
-function pintarIcono(textos: PinturaDeNodo['textos'], nodo: ResolvedNode, trazo: string, icons: IconProvider | undefined, rect: Rect): Elemento[] {
+function pintarIcono(textos: NodePaint['textos'], nodo: ResolvedNode, trazo: string, icons: IconProvider | undefined, rect: Rect): Elemento[] {
   const variante = String(textos.icon?.props['variant'] ?? 'plain');
   // Un punto es el color del Tipo y no necesita glifo: se muestra aunque el Tipo no declare icono.
   if (nodo.icon === undefined && variante !== 'dot') return [];
@@ -145,11 +145,11 @@ function pintarIcono(textos: PinturaDeNodo['textos'], nodo: ResolvedNode, trazo:
   return [{ tag: 'div', attrs: atributos, html: dimensionado }];
 }
 
-/** Estado que manda sobre una fila: el ultimo de `ESTADOS` que lleva (el orden de la hoja de los Nodos). */
-const estadoDeFila = (lista: readonly EstadoVisual[] | undefined): Estado | undefined => ESTADOS.filter((estado) => lista?.includes(estado) === true).at(-1);
+/** Estado que manda sobre una fila: el ultimo de `STATES` que lleva (el orden de la hoja de los Nodos). */
+const estadoDeFila = (lista: readonly EstadoVisual[] | undefined): State | undefined => STATES.filter((estado) => lista?.includes(estado) === true).at(-1);
 
 /** Estilo en linea de un texto de la fila (`name`, `type`, `key`) que el Tema declara; vacio si no. */
-const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo, tamano?: number): string =>
+const enLinea = (texto: PaintedPrimitive | undefined, estilo: Estilo, tamano?: number): string =>
   texto === undefined ? '' : declaracionesLimpias({ ...declaracionesDeTexto(texto, estilo.fuenteMono), ...(tamano !== undefined && { 'font-size': `${num(tamano)}px` }) });
 
 /**
@@ -157,7 +157,7 @@ const enLinea = (texto: PrimitivaPintada | undefined, estilo: Estilo, tamano?: n
  * pinta la pila de `row` del Estilo (segun si es impar, sus marcas de clave y si es opcional) y sus textos `name`, `type`
  * y `key` con su estilo.
  */
-function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Attribute[], zona: Rect, metricasDeNodo: Metricas, estados?: DatosDeNodo['estados']): Elemento {
+function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Attribute[], zona: Rect, metricasDeNodo: Metrics, estados?: DatosDeNodo['estados']): Elemento {
   const { metricas } = estilo;
   const marcas = metricasDeNodo.marcasDeClave === true;
   const delTema = marcas ? estilo.pintura.fila : undefined;
@@ -165,7 +165,7 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Attribu
     tag: 'div',
     attrs: { class: `rd-slot rd-attrs${zona.y > 0 ? ' rd-separado' : ''}`, 'data-slot': 'attrs', style: enRect(zona) },
     hijos: atributos.map((atributo, i) => {
-      const capas = delTema === undefined ? [] : pilaDeFila(delTema, { impar: i % 2 === 1, keys: atributo.keys ?? [], opcional: atributo.optional === true }, estadoDeFila(estados?.[`${id}#${atributo.name}`]));
+      const capas = delTema === undefined ? [] : rowStack(delTema, { impar: i % 2 === 1, keys: atributo.keys ?? [], opcional: atributo.optional === true }, estadoDeFila(estados?.[`${id}#${atributo.name}`]));
       const efectos = capas.length === 0 ? undefined : efectosDeElemento(estilo, { capas }, `${id}#${atributo.name}`);
       const caja = capas.length === 0 ? '' : declaracionesLimpias(declaracionesDeCaja(estilo, { capas, estados: {} }, capas.filter((c) => !esDeZona(c))));
       return {
@@ -178,14 +178,14 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Attribu
         hijos: [
           ...(efectos?.debajo ?? []),
           ...(delTema === undefined
-            ? [textoDeAtributo(atributo, marcas)]
+            ? [attributeText(atributo, marcas)]
             : [
                 { tag: 'span', attrs: { 'data-fila-texto': 'name', style: enLinea(delTema.textos.name, estilo, metricasDeNodo.tamanoDeFila?.name) }, hijos: [atributo.name] } as Elemento,
                 ': ',
                 { tag: 'span', attrs: { 'data-fila-texto': 'type', style: enLinea(delTema.textos.type, estilo, metricasDeNodo.tamanoDeFila?.type) }, hijos: [`${atributo.type}${atributo.optional === true ? '?' : ''}`] } as Elemento,
               ]),
           // Vista ER: un chip por marca de clave, pegado al borde derecho de la fila.
-          ...chipsDeClaves(atributo, metricasDeNodo).map((chip): Elemento => ({
+          ...keyChips(atributo, metricasDeNodo).map((chip): Elemento => ({
             tag: 'span',
             attrs: {
               class: 'rd-clave',
@@ -204,7 +204,7 @@ function pintarAtributos(estilo: Estilo, id: string, atributos: readonly Attribu
 /** Control de colapso de un Grupo: el glifo del Estilo segun el estado. */
 export function pintarControl(estilo: Estilo, { nodo, caja, alClic }: { nodo: ResolvedNode; caja: NodeBox; alClic: () => void }): Elemento {
   const metricas = nodo.collapsed ? estilo.tabla.grupoColapsado : estilo.tabla.grupoAbierto;
-  const alto = Math.min(alturaDeCabecera(metricas), caja.height);
+  const alto = Math.min(headerHeight(metricas), caja.height);
   const rect = { x: caja.width - 2 * metricas.margenDeControl, y: 0, width: 2 * metricas.margenDeControl, height: alto };
   return {
     tag: 'div',
@@ -230,7 +230,7 @@ export function pintarArista(
     hasta?: string;
     er?: { identificante: boolean };
     /** The Theme's stroke stack of the state that rules the Edge (paint-only); without it, the rest stack. */
-    enEstado?: { capas: PinturaDeArista['capas']; identificante?: PinturaDeArista['capas'] };
+    enEstado?: { capas: EdgePaint['capas']; identificante?: EdgePaint['capas'] };
     atributos?: Record<string, string>;
     extra?: Elemento[];
     alClic?: () => void;
@@ -280,20 +280,20 @@ export function pintarArista(
 }
 
 /** Marcador de pie de gallo de cada cardinalidad canonica de una Vista ER. */
-const FORMA_ER: Readonly<Record<string, NombreDePrimitiva>> = { '1': 'one', '0..1': 'zero-one', '1..*': 'many', '0..*': 'zero-many' };
+const FORMA_ER: Readonly<Record<string, PrimitiveName>> = { '1': 'one', '0..1': 'zero-one', '1..*': 'many', '0..*': 'zero-many' };
 
 /**
  * Pintura de una Arista de Vista ER: linea continua si es identificante y discontinua si no; sin flechas;
  * en cada extremo el marcador de su cardinalidad (ninguno si falta o no es canonica). Color y tamano salen del marcador
  * del Tema (`fin`, si no `origen`) o del trazo principal; el tamano se acota al tramo final disponible.
  */
-function pinturaEr(base: PinturaDeArista, puntos: readonly Punto[], desde: string | undefined, hasta: string | undefined, identificante: boolean): PinturaDeArista {
-  const capas = capasDeAristaEr(base, identificante);
+function pinturaEr(base: EdgePaint, puntos: readonly Punto[], desde: string | undefined, hasta: string | undefined, identificante: boolean): EdgePaint {
+  const capas = erEdgeLayers(base, identificante);
   const delTema = base.fin ?? base.origen;
   const color = delTema?.props['color'] ?? capas.at(-1)?.props['color'] ?? '';
-  const tamano = Number(delTema?.props['size'] ?? LARGO_DE_MARCADOR_ER);
+  const tamano = Number(delTema?.props['size'] ?? ER_MARKER_LENGTH);
   const largo = (a: Punto | undefined, b: Punto | undefined): number => (a === undefined || b === undefined ? tamano : Math.hypot(a.x - b.x, a.y - b.y));
-  const marcador = (cardinalidad: string | undefined, a: Punto | undefined, b: Punto | undefined): PrimitivaPintada | undefined => {
+  const marcador = (cardinalidad: string | undefined, a: Punto | undefined, b: Punto | undefined): PaintedPrimitive | undefined => {
     const tipo = cardinalidad === undefined ? undefined : FORMA_ER[cardinalidad];
     return tipo === undefined ? undefined : { tipo, props: { color, size: Math.min(tamano, largo(a, b)) } };
   };
@@ -337,7 +337,7 @@ export function pintarEtiquetaDeArista(
   const { fill, border, radius, color, weight, font, shadow, rotate, style } = estilo.pintura.arista.etiqueta.props;
   const anchoDeBorde = estilo.pintura.arista.etiqueta.props['border-width'];
   const conCaja = fill !== undefined || border !== undefined;
-  const medida = tamanoDeEtiqueta(texto, metricas);
+  const medida = labelSize(texto, metricas);
   const rect = caja ?? { x: centro.x - medida.width / 2, y: centro.y - tamano * etiqueta.centradoVertical - medida.height / 2, ...medida };
   const textoSvg: Elemento = {
     tag: 'text',

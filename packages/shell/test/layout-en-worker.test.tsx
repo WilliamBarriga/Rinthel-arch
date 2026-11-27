@@ -5,7 +5,7 @@ import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { VistaInteractiva, adaptadorDeWorker, servirLayout } from 'shell';
 import type { PuertoDeMensajes } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 import { posicionDe } from './ayudas';
 
 afterEach(cleanup);
@@ -44,22 +44,22 @@ describe('layout en Worker', () => {
     const [pagina, worker] = parDePuertos();
     servirLayout(worker);
     const vista = resolveView(fuente, 'v', { expanded: ['g'] })!;
-    const porWorker = await adaptadorDeWorker(pagina)(vista, TEMA_NEUTRO);
-    expect(porWorker).toEqual(await layoutView(vista, TEMA_NEUTRO));
+    const porWorker = await adaptadorDeWorker(pagina)(vista, NEUTRAL_THEME);
+    expect(porWorker).toEqual(await layoutView(vista, NEUTRAL_THEME));
   });
 
   it('un fallo del layout en el Worker rechaza la promesa del adaptador', async () => {
     const [pagina, worker] = parDePuertos();
     servirLayout(worker, { elk: { layout: () => Promise.reject(new Error('elk roto')) } as never });
     const vista = resolveView(fuente, 'v')!;
-    await expect(adaptadorDeWorker(pagina)(vista, TEMA_NEUTRO)).rejects.toThrow('elk roto');
+    await expect(adaptadorDeWorker(pagina)(vista, NEUTRAL_THEME)).rejects.toThrow('elk roto');
   });
 
   it('integracion con ELK real: expandir un Grupo mantiene su posicion en pantalla', async () => {
     const [pagina, worker] = parDePuertos();
     servirLayout(worker);
     const { container } = render(
-      <VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={adaptadorDeWorker(pagina)} width={800} height={600} morphMs={0} />,
+      <VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={adaptadorDeWorker(pagina)} width={800} height={600} morphMs={0} />,
     );
     const ids = () => [...container.querySelectorAll('[data-id]')].map((e) => e.getAttribute('data-id'));
     const pantalla = () => {

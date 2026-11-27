@@ -5,8 +5,8 @@
 import { sequenceElementId } from 'canonical';
 import type { ActivationBox, PlacedGroupBox, SequenceGeometry, FragmentFrame, ResolvedMessage, ResolvedNode, PlacedNote, Visibility, SequenceView } from 'canonical';
 import { indiceDeGeometria } from 'layout';
-import { ESTADOS, RELLENO_DE_NOTA, primitivasDeFamilia } from 'tema';
-import type { CapaPintada, PinturaDeCajaDeSecuencia, PinturaDeTrazoDeSecuencia, TrazosDeSecuencia } from 'tema';
+import { STATES, NOTE_PADDING, primitivesOfFamily } from 'theme';
+import type { PaintedLayer, SequenceBoxPaint, SequenceStrokePaint, SequenceStrokes } from 'theme';
 
 import { estiloEnLinea, num } from './elemento';
 import type { Elemento } from './elemento';
@@ -22,7 +22,7 @@ import { pintarMarcadores, pintarTrazos } from './aristas';
 const cajaAbsoluta = (x: number, y: number, ancho: number, alto: number): string => `position:absolute;box-sizing:border-box;left:${num(x)}px;top:${num(y)}px;width:${num(ancho)}px;height:${num(alto)}px`;
 
 /** El trazo de un Elemento de secuencia para un Nodo de origen del color de Paleta `color`. */
-const deColor = (trazos: TrazosDeSecuencia, color: string | undefined): PinturaDeTrazoDeSecuencia => (color === undefined ? undefined : trazos.origenes[color]) ?? trazos.base;
+const deColor = (trazos: SequenceStrokes, color: string | undefined): SequenceStrokePaint => (color === undefined ? undefined : trazos.origenes[color]) ?? trazos.base;
 
 export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: SequenceView; geometry: SequenceGeometry }): Elemento {
   const { view, geometry, theme } = entrada;
@@ -135,7 +135,7 @@ function activacionHtml(activacion: ActivationBox, nodo: ResolvedNode, contexto:
 }
 
 /** Estilo en linea de una caja con las `capas` de su Elemento de Tema. */
-const estiloDeCaja = (contexto: Contexto, capas: readonly CapaPintada[]): string => estiloEnLinea(declaracionesDeCaja(contexto.estilo, { capas: [...capas], estados: {} }));
+const estiloDeCaja = (contexto: Contexto, capas: readonly PaintedLayer[]): string => estiloEnLinea(declaracionesDeCaja(contexto.estilo, { capas: [...capas], estados: {} }));
 
 /** Estados del elemento (`selected`, `hover`) como atributo; Fragmentos y Notas se estilan con sus Elementos de Tema. */
 const atributoDeEstados = (estados: Estados | undefined, id: string): Record<string, string> => {
@@ -161,19 +161,19 @@ function grupoHtml(grupo: PlacedGroupBox, contexto: Contexto): Elemento {
 }
 
 /** Pila de Capas del marco de un Fragmento: la de su `op` o la del bloque `fragment`, en el estado vigente. */
-function capasDeFragmento(pintura: PinturaDeCajaDeSecuencia, operador: string, estado?: PinturaDeCajaDeSecuencia['estados'][keyof PinturaDeCajaDeSecuencia['estados']]): readonly CapaPintada[] {
+function capasDeFragmento(pintura: SequenceBoxPaint, operador: string, estado?: SequenceBoxPaint['estados'][keyof SequenceBoxPaint['estados']]): readonly PaintedLayer[] {
   return estado === undefined ? (pintura.variantes[operador] ?? pintura.capas) : (estado.variantes[operador] ?? estado.capas);
 }
 
-/** Pila del estado que manda sobre un elemento: el ultimo de `ESTADOS` que el elemento lleva y el Tema declara (el orden de la hoja de los Nodos). */
-function pilaDeEstado(declarado: PinturaDeCajaDeSecuencia | undefined, estados: Estados | undefined, id: string): PinturaDeCajaDeSecuencia['estados'][keyof PinturaDeCajaDeSecuencia['estados']] {
+/** Pila del estado que manda sobre un elemento: el ultimo de `STATES` que el elemento lleva y el Tema declara (el orden de la hoja de los Nodos). */
+function pilaDeEstado(declarado: SequenceBoxPaint | undefined, estados: Estados | undefined, id: string): SequenceBoxPaint['estados'][keyof SequenceBoxPaint['estados']] {
   const activos = contornos(estados?.[id]);
-  const vigente = ESTADOS.filter((estado) => activos.includes(estado) && declarado?.estados[estado] !== undefined).at(-1);
+  const vigente = STATES.filter((estado) => activos.includes(estado) && declarado?.estados[estado] !== undefined).at(-1);
   return vigente === undefined ? undefined : declarado?.estados[vigente];
 }
 
 /** Declaracion CSS `border-top` del trazo `divider` (`line`) del Fragmento: su ancho, estilo y color. */
-function bordeDeDivisor(pintura: PinturaDeCajaDeSecuencia): string {
+function bordeDeDivisor(pintura: SequenceBoxPaint): string {
   const { props } = pintura.textos['divider']!;
   const estilo = String(props['style']);
   return `${num(Number(props['width']))}px ${estilo === 'dashed' || estilo === 'dotted' ? estilo : 'solid'} ${String(props['color'])}`;
@@ -230,7 +230,7 @@ function textosDeFragmentoSvg(marco: FragmentFrame, estilo: Contexto['estilo'], 
 function notaSvg(nota: PlacedNote, estilo: Contexto['estilo'], interaccion: string, visibility: Visibility, estados: Estados | undefined): Elemento {
   const pintura = estilo.pintura.secuencia!.nota;
   const capasVigentes = pilaDeEstado(pintura, estados, sequenceElementId(interaccion, nota.ruta))?.capas ?? pintura.capas;
-  const ultima = (familia: 'relleno' | 'borde'): CapaPintada | undefined => capasVigentes.filter((capa) => primitivasDeFamilia(familia).includes(capa.tipo)).at(-1);
+  const ultima = (familia: 'relleno' | 'borde'): PaintedLayer | undefined => capasVigentes.filter((capa) => primitivesOfFamily(familia).includes(capa.tipo)).at(-1);
   const { papel } = pintura;
   const capaDeRelleno = ultima('relleno');
   const capaDeBorde = ultima('borde');
@@ -245,7 +245,7 @@ function notaSvg(nota: PlacedNote, estilo: Contexto['estilo'], interaccion: stri
   const tamano = estilo.metricas.fontSize;
   const lineas = nota.lines.map((linea, i): Elemento => ({
     tag: 'text',
-    attrs: { x: num(x + RELLENO_DE_NOTA), y: num(y + RELLENO_DE_NOTA + i * nota.lineHeight + nota.lineHeight / 2 + tamano * estilo.etiqueta.centradoVertical), 'font-family': estilo.fuenteCuerpo, 'font-size': num(tamano), fill: estiloDeTexto?.['color'] === undefined ? estilo.texto : String(estiloDeTexto['color']), ...(estiloDeTexto?.['weight'] !== undefined && { 'font-weight': String(estiloDeTexto['weight']) }) },
+    attrs: { x: num(x + NOTE_PADDING), y: num(y + NOTE_PADDING + i * nota.lineHeight + nota.lineHeight / 2 + tamano * estilo.etiqueta.centradoVertical), 'font-family': estilo.fuenteCuerpo, 'font-size': num(tamano), fill: estiloDeTexto?.['color'] === undefined ? estilo.texto : String(estiloDeTexto['color']), ...(estiloDeTexto?.['weight'] !== undefined && { 'font-weight': String(estiloDeTexto['weight']) }) },
     hijos: [linea],
   }));
   return {

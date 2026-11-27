@@ -243,7 +243,7 @@ const modelSchema = z.object({
   interactions: z.array(interactionSchema).default([]),
 });
 
-/** Envelope of the already resolved Theme; the rest of the content passes through as is and the `tema` package validates it. */
+/** Envelope of the already resolved Theme; the rest of the content passes through as is and the `theme` package validates it. */
 export const themeSchema = z.looseObject({
   name: z.string().min(1),
   palette: z.record(z.string(), z.string()).default({}),
@@ -302,7 +302,7 @@ export const viewSchema = z.object({
   autonumber: z.literal(true).optional(),
   overrides: z.array(overrideSchema).default([]),
   theme: z.string().min(1).optional(),
-  /** Layer patches by name (`theme t { layer ... }`), last level of the cascade; `tema` validates them. */
+  /** Layer patches by name (`theme t { layer ... }`), last level of the cascade; `theme` validates them. */
   themePatch: z.array(z.looseObject({ nombre: z.string().min(1) })).optional(),
   drill: z.literal('collapse').optional(),
   /** They win over the `depth` rule. */

@@ -31,7 +31,7 @@
     "layout": "workspace:*",
     "scanner": "workspace:*",
     "session": "workspace:*",
-    "tema": "workspace:*"
+    "theme": "workspace:*"
   },
   "bin": {
     "diagrams": "./dist/bin.js"

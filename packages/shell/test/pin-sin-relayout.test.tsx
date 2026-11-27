@@ -5,7 +5,7 @@ import { canonicalFormSchema } from 'canonical';
 import type { CanonicalForm, Geometry } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 import { posicionDe } from './ayudas';
 
 afterEach(cleanup);
@@ -32,7 +32,7 @@ describe('mover un Pin en el shell', () => {
       width: 300,
       height: 50,
     } satisfies Geometry));
-    const props = (source: CanonicalForm) => ({ source, view: 'v', theme: TEMA_NEUTRO, layout, width: 800, height: 600, camera: camara });
+    const props = (source: CanonicalForm) => ({ source, view: 'v', theme: NEUTRAL_THEME, layout, width: 800, height: 600, camera: camara });
     const { container, rerender } = render(<VistaInteractiva {...props(fuente([]))} />);
     await waitFor(() => expect(posicionDe(container, 'b')).toEqual([200, 0]));
 

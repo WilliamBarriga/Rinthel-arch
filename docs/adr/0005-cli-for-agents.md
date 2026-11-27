@@ -78,7 +78,7 @@ Read-only subcommand, with `--json` and its own `contractVersion` like the rest 
 - the `extends` chain and the `part`s used;
 - the resolved Layer stack for the requested Kind and state, each Layer with the `file:line` of the patch that set it;
 - the Metrics table;
-- the sequence Elements and the ER row (ADR 0009) with the same resolution as drawing (the Resolved style of `tema`, with no CLI-specific patches): the declared ones and, with `--diagram sequence` or `er`, the ones derived from `edge` and `node` with `derivado: true` (additive change; `contractVersion` stays at 1);
+- the sequence Elements and the ER row (ADR 0009) with the same resolution as drawing (the Resolved style of `theme`, with no CLI-specific patches): the declared ones and, with `--diagram sequence` or `er`, the ones derived from `edge` and `node` with `derivado: true` (additive change; `contractVersion` stays at 1);
 - `hasCode` and the list of components;
 - with `--catalog`, the catalog keys of Primitives and Motions, derived from the single schema (no parallel lists).
 

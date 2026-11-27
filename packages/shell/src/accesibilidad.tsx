@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
 import type { CanonicalForm, Theme, ResolvedView } from 'canonical';
-import { TEMA_ALTO_CONTRASTE, leyendaDelTema } from 'tema';
+import { HIGH_CONTRAST_THEME, themeLegend } from 'theme';
 
 export const CSS_DE_ACCESIBILIDAD = `
 .rd-contraste { right: 8px; top: 8px; }
@@ -56,7 +56,7 @@ export function useAltoContraste(tema: Theme, props: PropsDeAltoContraste): { te
       {movimiento}
     </div>
   );
-  return { tema: activo ? TEMA_ALTO_CONTRASTE : tema, activo, interruptor, reducedMotion };
+  return { tema: activo ? HIGH_CONTRAST_THEME : tema, activo, interruptor, reducedMotion };
 }
 
 const CONSULTA_MOVIMIENTO = '(prefers-reduced-motion: reduce)';
@@ -87,7 +87,7 @@ export function Leyenda({ fuente, vista, tema, modo }: { fuente: CanonicalForm; 
   const tipos = fuente.specification.nodeTypes
     .filter((t) => usados.has(t.name))
     .map((t) => ({ name: t.name, color: typeof t['color'] === 'string' ? t['color'] : undefined, icon: t.icon }));
-  const leyenda = leyendaDelTema(tema, vista.type, tipos);
+  const leyenda = themeLegend(tema, vista.type, tipos);
   if (tipos.length === 0 || (modo === 'auto' && !leyenda.necesaria)) return null;
   return (
     <ul className="rd-chrome rd-leyenda" data-leyenda aria-label="Legend">

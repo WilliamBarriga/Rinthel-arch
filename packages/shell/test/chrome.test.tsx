@@ -5,8 +5,8 @@ import { canonicalFormSchema } from 'canonical';
 import type { Geometry, Theme } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 afterEach(cleanup);
 
@@ -23,10 +23,10 @@ const layout: AdaptadorDeLayout = async (vista) => {
   });
   return { nodes, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 300, height: 50 };
 };
-const OSCURO: TemaResuelto = {
-  ...TEMA_NEUTRO,
+const OSCURO: ResolvedTheme = {
+  ...NEUTRAL_THEME,
   name: 'oscuro',
-  palette: { ...TEMA_NEUTRO.palette, blue: '#60a5fa' },
+  palette: { ...NEUTRAL_THEME.palette, blue: '#60a5fa' },
   tokens: { background: '#111827', foreground: '#f9fafb', border: '#4b5563' },
 };
 
@@ -45,7 +45,7 @@ describe('chrome del shell', () => {
   });
 
   it('con el Tema claro las variables son las del Tema claro', () => {
-    const raiz = montar(TEMA_NEUTRO).container.firstElementChild as HTMLElement;
+    const raiz = montar(NEUTRAL_THEME).container.firstElementChild as HTMLElement;
 
     expect(raiz.style.getPropertyValue('--rd-fondo')).toBe('#ffffff');
   });
@@ -72,7 +72,7 @@ describe('chrome del shell', () => {
     const issue = { severity: 'error' as const, code: 'E_X', message: 'roto', file: 'main.dg', line: 1, column: 1, href: '#' };
     const montarConChrome = (chrome?: boolean) =>
       render(
-        <VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} legend="always" issues={[issue]} toasts={['hola']} {...(chrome !== undefined && { chrome })} />,
+        <VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} width={800} height={600} legend="always" issues={[issue]} toasts={['hola']} {...(chrome !== undefined && { chrome })} />,
       );
 
     it('por defecto dibuja issues, toasts, leyenda y migas', async () => {

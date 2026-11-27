@@ -1,6 +1,6 @@
 /** Elemento de la escena (HTML o SVG) y ayudantes de formato CSS. */
 
-import { fnv1a } from 'tema';
+import { fnv1a } from 'theme';
 
 import type { ComponenteDeTema, PropsDeCodigo } from './codigo';
 

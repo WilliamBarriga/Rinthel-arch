@@ -5,8 +5,8 @@ import type { IconProvider, Theme, GraphView, ResolvedView } from 'canonical';
 import { layoutView as layoutDeVista } from 'layout';
 
 import { aHtml, etiquetaCon, rectDe } from './ayudas';
-import { TEMA_NEUTRO, metricasDe } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME, metricsOf } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 /** `layoutView` de una Vista de grafo (architecture o flow): estas pruebas miran rutas y cajas de Aristas. */
 const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
@@ -40,15 +40,15 @@ function vista(estado = {}): GraphView {
   return resolveView(fuente, 'v', estado) as GraphView;
 }
 
-const OSCURO: TemaResuelto = {
+const OSCURO: ResolvedTheme = {
   name: 'oscuro',
-  palette: { ...TEMA_NEUTRO.palette, blue: '#60a5fa', green: '#4ade80', red: '#f87171' },
+  palette: { ...NEUTRAL_THEME.palette, blue: '#60a5fa', green: '#4ade80', red: '#f87171' },
   fonts: { body: 'Inter, sans-serif', mono: 'monospace' },
   tokens: { background: '#111827', foreground: '#f9fafb', border: '#4b5563', fontSize: '16px' },
-  nodo: TEMA_NEUTRO.nodo,
-  grupo: TEMA_NEUTRO.grupo,
-  arista: TEMA_NEUTRO.arista,
-  pagina: TEMA_NEUTRO.pagina,
+  nodo: NEUTRAL_THEME.nodo,
+  grupo: NEUTRAL_THEME.grupo,
+  arista: NEUTRAL_THEME.arista,
+  pagina: NEUTRAL_THEME.pagina,
 };
 
 async function dibujar(tema: Theme, estado = {}): Promise<string> {
@@ -65,14 +65,14 @@ describe('Diagram', () => {
   });
 
   it('dibuja un Grupo colapsado como un Nodo con su contador', async () => {
-    const html = await dibujar(TEMA_NEUTRO, { collapsed: ['a'] });
+    const html = await dibujar(NEUTRAL_THEME, { collapsed: ['a'] });
 
     expect(html).toContain('>Plataforma (2)<');
     expect(html).not.toContain('data-slot="title" style="left:10px');
   });
 
   it('dibuja las Aristas con flecha, como rutas ortogonales', async () => {
-    const svg = await dibujar(TEMA_NEUTRO);
+    const svg = await dibujar(NEUTRAL_THEME);
 
     expect(svg).toMatch(/<g data-edge="a\.api -&gt; db"><path d="M [\d. ]+( L [\d. ]+)+" fill="none" stroke="[^"]+" stroke-width="[\d.]+" data-capa="line"/);
     expect(svg).toMatch(/<g data-edge="a\.api -&gt; a\.auth"/);
@@ -80,7 +80,7 @@ describe('Diagram', () => {
   });
 
   it('dibuja una Arista entre Grupos sobre el borde del Grupo colapsado', async () => {
-    const svg = await dibujar(TEMA_NEUTRO, { collapsed: ['a'] });
+    const svg = await dibujar(NEUTRAL_THEME, { collapsed: ['a'] });
 
     expect(svg).toMatch(/<g data-edge="a -&gt; db"/);
     expect(svg).not.toMatch(/data-edge="a\.api/);
@@ -88,8 +88,8 @@ describe('Diagram', () => {
 
   it('la cardinalidad va junto al extremo que le corresponde', async () => {
     const v = vista();
-    const geometry = await layoutView(v, TEMA_NEUTRO);
-    const svg = aHtml({ view: v, geometry, theme: TEMA_NEUTRO, width: 800, height: 600 });
+    const geometry = await layoutView(v, NEUTRAL_THEME);
+    const svg = aHtml({ view: v, geometry, theme: NEUTRAL_THEME, width: 800, height: 600 });
     const ruta = geometry.edges['a.api -> db']!.points;
     const inicio = ruta[0]!;
     const fin = ruta[ruta.length - 1]!;
@@ -113,8 +113,8 @@ describe('Diagram', () => {
       ...base,
       edges: base.edges.map((arista) => (arista.to.node === 'a.auth' ? { ...arista, label: 'valida <token>' } : arista)),
     };
-    const geometry = await layoutView(v, TEMA_NEUTRO);
-    const svg = aHtml({ view: v, geometry, theme: TEMA_NEUTRO, width: 800, height: 600 });
+    const geometry = await layoutView(v, NEUTRAL_THEME);
+    const svg = aHtml({ view: v, geometry, theme: NEUTRAL_THEME, width: 800, height: 600 });
     const ruta = geometry.edges['a.api -> a.auth']!.points;
     const xs = ruta.map((p) => p.x);
     const ys = ruta.map((p) => p.y);
@@ -129,17 +129,17 @@ describe('Diagram', () => {
   });
 
   it('es determinista byte a byte', async () => {
-    expect(await dibujar(TEMA_NEUTRO)).toBe(await dibujar(TEMA_NEUTRO));
+    expect(await dibujar(NEUTRAL_THEME)).toBe(await dibujar(NEUTRAL_THEME));
   });
 
   it('los colores salen del Tema por nombre de Paleta', async () => {
-    const neutro = await dibujar(TEMA_NEUTRO);
+    const neutro = await dibujar(NEUTRAL_THEME);
     const oscuro = await dibujar(OSCURO);
 
-    expect(neutro).toContain(TEMA_NEUTRO.palette['blue']);
-    expect(neutro).toContain(TEMA_NEUTRO.palette['red']);
+    expect(neutro).toContain(NEUTRAL_THEME.palette['blue']);
+    expect(neutro).toContain(NEUTRAL_THEME.palette['red']);
     expect(oscuro).toContain('#60a5fa');
-    expect(oscuro).not.toContain(TEMA_NEUTRO.palette['blue']);
+    expect(oscuro).not.toContain(NEUTRAL_THEME.palette['blue']);
   });
 
   it('el unico hex del SVG viene del Tema', async () => {
@@ -152,7 +152,7 @@ describe('Diagram', () => {
   });
 
   it('escapa el texto de los Nodos y usa el label del override', async () => {
-    const svg = await dibujar(TEMA_NEUTRO);
+    const svg = await dibujar(NEUTRAL_THEME);
 
     expect(svg).toContain('Auth &amp; &lt;Tokens&gt;');
     expect(svg).toContain('Postgres');
@@ -160,14 +160,14 @@ describe('Diagram', () => {
   });
 
   it('un Grupo colapsado no dibuja a sus hijos', async () => {
-    const svg = await dibujar(TEMA_NEUTRO, { collapsed: ['a'] });
+    const svg = await dibujar(NEUTRAL_THEME, { collapsed: ['a'] });
 
     expect(svg).not.toContain('>API<');
     expect(svg).toContain('Plataforma');
   });
 
   it('escapa tambien los valores del Tema que van en atributos', async () => {
-    const hostil: Theme = { ...TEMA_NEUTRO, palette: { ...TEMA_NEUTRO.palette, blue: '"/><script>' }, fonts: { body: 'a"b', mono: 'monospace' } };
+    const hostil: Theme = { ...NEUTRAL_THEME, palette: { ...NEUTRAL_THEME.palette, blue: '"/><script>' }, fonts: { body: 'a"b', mono: 'monospace' } };
     const svg = await dibujar(hostil);
 
     expect(svg).not.toContain('<script>');
@@ -195,8 +195,8 @@ describe('Diagram: Atributos e iconos', () => {
   }
   async function dibujarTabla(iconos: Record<string, string> = {}): Promise<string> {
     const { view, icons } = tabla(iconos);
-    const geometry = await layoutView(view, TEMA_NEUTRO);
-    return aHtml({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons });
+    const geometry = await layoutView(view, NEUTRAL_THEME);
+    return aHtml({ view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, icons });
   }
 
   it('dibuja un Nodo tipo tabla con sus Atributos en orden', async () => {
@@ -209,9 +209,9 @@ describe('Diagram: Atributos e iconos', () => {
 
   it('la Arista a nodo#atributo termina a la altura de la fila del Atributo', async () => {
     const { view, icons } = tabla();
-    const geometry = await layoutView(view, TEMA_NEUTRO);
-    const svg = aHtml({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, icons });
-    const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
+    const geometry = await layoutView(view, NEUTRAL_THEME);
+    const svg = aHtml({ view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, icons });
+    const { cabecera, fila } = metricsOf(NEUTRAL_THEME, 'architecture');
     const caja = geometry.nodes['usuarios']!;
     const fin = geometry.edges['api -> usuarios#email']!.points.at(-1)!;
     const slot = rectDe(etiquetaCon(svg, 'data-slot="attrs"'));
@@ -282,9 +282,9 @@ describe('Metricas compartidas: layout y dibujo', () => {
   });
   const view = resolveView(fuente, 'v')!;
 
-  async function dibujarCon(metricas = metricasDe(TEMA_NEUTRO, 'architecture')) {
-    const geometry = await layoutView(view, TEMA_NEUTRO, { metricas });
-    const html = aHtml({ view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, metricas });
+  async function dibujarCon(metricas = metricsOf(NEUTRAL_THEME, 'architecture')) {
+    const geometry = await layoutView(view, NEUTRAL_THEME, { metricas });
+    const html = aHtml({ view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, metricas });
     const zona = rectDe(etiquetaCon(html, 'data-slot="attrs"'));
     const tamano = Number(/\.rd-fila\{[^}]*font-size:([\d.]+)px/.exec(html)![1]);
     const filas = [...html.matchAll(/<div [^>]*data-attribute="t#[^"]+"[^>]*>([^<]*)</g)].map((m) => {
@@ -296,7 +296,7 @@ describe('Metricas compartidas: layout y dibujo', () => {
   }
 
   it('lo dibujado cabe en lo reservado: filas dentro de la caja y texto dentro del ancho', async () => {
-    const m = metricasDe(TEMA_NEUTRO, 'architecture');
+    const m = metricsOf(NEUTRAL_THEME, 'architecture');
     const { caja, filas } = await dibujarCon();
 
     expect(filas).toHaveLength(2);
@@ -307,7 +307,7 @@ describe('Metricas compartidas: layout y dibujo', () => {
   });
 
   it('cambiar una Metrica mueve layout y dibujo a la vez, y lo dibujado sigue cabiendo', async () => {
-    const m = metricasDe(TEMA_NEUTRO, 'architecture');
+    const m = metricsOf(NEUTRAL_THEME, 'architecture');
     const base = await dibujarCon();
     const otra = await dibujarCon({ ...m, cabecera: m.cabecera + 12, fila: m.fila + 6, paddingHorizontal: m.paddingHorizontal + 16 });
 

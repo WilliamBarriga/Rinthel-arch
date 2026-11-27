@@ -4,8 +4,8 @@ import { canonicalFormSchema, edgeId, sequenceElementId, resolveView } from 'can
 import type { GraphView, SequenceView, ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import type { DiagramProps } from 'render';
-import { TEMA_NEUTRO } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 import { aHtml, etiquetaCon, hojaDe } from './ayudas';
 
@@ -45,7 +45,7 @@ const FUENTE = canonicalFormSchema.parse({
 
 async function dibujar(id: string, extra: Partial<DiagramProps> = {}): Promise<string> {
   const view = resolveView(FUENTE, id) as ResolvedView;
-  const theme = (extra.theme as TemaResuelto | undefined) ?? TEMA_NEUTRO;
+  const theme = (extra.theme as ResolvedTheme | undefined) ?? NEUTRAL_THEME;
   return aHtml({ view, geometry: await layoutView(view, theme), theme, width: 800, height: 600, ...extra });
 }
 
@@ -67,8 +67,8 @@ describe('planned elements on the canvas', () => {
 
   it('never changes Metrics: the planned Node keeps the size it would have if real', async () => {
     const view = resolveView(FUENTE, 'arch') as GraphView;
-    const real = await layoutView({ ...view, nodes: view.nodes.map(({ planned: _p, ...n }) => n) }, TEMA_NEUTRO);
-    const planeada = await layoutView(view, TEMA_NEUTRO);
+    const real = await layoutView({ ...view, nodes: view.nodes.map(({ planned: _p, ...n }) => n) }, NEUTRAL_THEME);
+    const planeada = await layoutView(view, NEUTRAL_THEME);
     expect(planeada).toEqual(real);
   });
 
@@ -106,11 +106,11 @@ describe('planned elements on the canvas', () => {
   });
 
   it('a Theme with its own planned patch restyles the state instead of the default look', async () => {
-    const propio: TemaResuelto = {
-      ...TEMA_NEUTRO,
+    const propio: ResolvedTheme = {
+      ...NEUTRAL_THEME,
       name: 'own',
       nodo: {
-        ...TEMA_NEUTRO.nodo,
+        ...NEUTRAL_THEME.nodo,
         capas: [{ nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'gray', width: 1 } } }],
         estados: { planned: [{ nombre: 'borde', props: { color: 'red' } }] },
       },
@@ -126,10 +126,10 @@ describe('planned elements on the canvas', () => {
 
 describe('a Theme restyles planned Edges and Messages (paint-only)', () => {
   const linea = (nombre: string, props: Record<string, string | number>) => ({ nombre, primitiva: { tipo: 'line', props: { width: 1, style: 'solid', corner: 'sharp', cut: 6, ...props } } });
-  const conPlanned: TemaResuelto = {
-    ...TEMA_NEUTRO,
+  const conPlanned: ResolvedTheme = {
+    ...NEUTRAL_THEME,
     name: 'own-lines',
-    arista: { ...TEMA_NEUTRO.arista, capas: [linea('line', { color: 'gray' })], estados: { planned: [{ nombre: 'line', props: { color: 'red', style: 'dotted' } }] } },
+    arista: { ...NEUTRAL_THEME.arista, capas: [linea('line', { color: 'gray' })], estados: { planned: [{ nombre: 'line', props: { color: 'red', style: 'dotted' } }] } },
   };
 
   it('a planned Edge takes the Theme stack of its planned patch, without the default dashed look', async () => {

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { canonicalFormSchema, edgeId, resolveView } from 'canonical';
 import type { Attribute, NodeBox, Geometry, Theme, GraphView, ResolvedView } from 'canonical';
 import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView as layoutDeVista } from 'layout';
-import { TEMA_NEUTRO, metricasDe, tablaDeMetricas } from 'tema';
+import { NEUTRAL_THEME, metricsOf, metricsTable } from 'theme';
 
 /** `layoutView` de una Vista de grafo (architecture o flow): estas pruebas miran cajas y rutas de Aristas. */
 const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
@@ -44,7 +44,7 @@ function vista(vistaExtra: Record<string, unknown> = {}, estado = {}): GraphView
   return resuelta;
 }
 
-const con = (cambios: Partial<Theme>): Theme => ({ ...TEMA_NEUTRO, ...cambios });
+const con = (cambios: Partial<Theme>): Theme => ({ ...NEUTRAL_THEME, ...cambios });
 
 describe('layoutView', () => {
   describe('etiquetas de Arista', () => {
@@ -61,7 +61,7 @@ describe('layoutView', () => {
     };
 
     it('reserva una caja para cada etiqueta, sin pisar ningun Nodo', async () => {
-      const geometria = await layoutView(conEtiqueta('publica eventos al bus'), TEMA_NEUTRO);
+      const geometria = await layoutView(conEtiqueta('publica eventos al bus'), NEUTRAL_THEME);
       const caja = geometria.labels['b.b2 -> c'];
 
       expect(caja).toBeDefined();
@@ -76,26 +76,26 @@ describe('layoutView', () => {
     });
 
     it('sin etiquetas no hay cajas de etiqueta y el layout no cambia', async () => {
-      const sin = await layoutView(conEtiqueta(undefined), TEMA_NEUTRO);
+      const sin = await layoutView(conEtiqueta(undefined), NEUTRAL_THEME);
 
       expect(sin.labels).toEqual({});
-      expect(sin).toEqual(await layoutView(vista(), TEMA_NEUTRO));
+      expect(sin).toEqual(await layoutView(vista(), NEUTRAL_THEME));
     });
 
     it('la etiqueta entra en la clave de layout', () => {
-      expect(claveDeLayout(conEtiqueta('x'), TEMA_NEUTRO)).not.toBe(claveDeLayout(conEtiqueta(undefined), TEMA_NEUTRO));
+      expect(claveDeLayout(conEtiqueta('x'), NEUTRAL_THEME)).not.toBe(claveDeLayout(conEtiqueta(undefined), NEUTRAL_THEME));
     });
 
     it('una etiqueta mas larga ocupa una caja mas ancha', async () => {
-      const corta = (await layoutView(conEtiqueta('ab'), TEMA_NEUTRO)).labels['b.b2 -> c']!;
-      const larga = (await layoutView(conEtiqueta('una etiqueta bastante larga'), TEMA_NEUTRO)).labels['b.b2 -> c']!;
+      const corta = (await layoutView(conEtiqueta('ab'), NEUTRAL_THEME)).labels['b.b2 -> c']!;
+      const larga = (await layoutView(conEtiqueta('una etiqueta bastante larga'), NEUTRAL_THEME)).labels['b.b2 -> c']!;
 
       expect(larga.width).toBeGreaterThan(corta.width);
     });
   });
 
   it('cada Nodo visible tiene tamano positivo y posicion relativa a su Grupo', async () => {
-    const geometria = await layoutView(vista(), TEMA_NEUTRO);
+    const geometria = await layoutView(vista(), NEUTRAL_THEME);
 
     expect(Object.keys(geometria.nodes).sort()).toEqual(['a', 'a.a1', 'a.a2', 'a.a3', 'b', 'b.b1', 'b.b2', 'c']);
     for (const caja of Object.values(geometria.nodes)) {
@@ -105,7 +105,7 @@ describe('layoutView', () => {
   });
 
   it('los hijos quedan contenidos en su Grupo', async () => {
-    const { nodes } = await layoutView(vista(), TEMA_NEUTRO);
+    const { nodes } = await layoutView(vista(), NEUTRAL_THEME);
 
     for (const [grupo, hijos] of [['a', ['a.a1', 'a.a2', 'a.a3']], ['b', ['b.b1', 'b.b2']]] as const) {
       const marco = nodes[grupo]!;
@@ -120,7 +120,7 @@ describe('layoutView', () => {
   });
 
   it('los hermanos no se solapan', async () => {
-    const { nodes } = await layoutView(vista(), TEMA_NEUTRO);
+    const { nodes } = await layoutView(vista(), NEUTRAL_THEME);
     const hermanos = ['a.a1', 'a.a2', 'a.a3'].map((id) => nodes[id]!);
 
     for (const [i, p] of hermanos.entries()) {
@@ -133,22 +133,22 @@ describe('layoutView', () => {
   });
 
   it('la misma entrada produce la misma geometria', async () => {
-    const primera = await layoutView(vista(), TEMA_NEUTRO);
-    const segunda = await layoutView(vista(), TEMA_NEUTRO);
+    const primera = await layoutView(vista(), NEUTRAL_THEME);
+    const segunda = await layoutView(vista(), NEUTRAL_THEME);
 
     expect(segunda).toEqual(primera);
   });
 
   it('un Grupo colapsado es un Nodo hoja con su propio tamano', async () => {
-    const { nodes } = await layoutView(vista({}, { collapsed: ['a'] }), TEMA_NEUTRO);
+    const { nodes } = await layoutView(vista({}, { collapsed: ['a'] }), NEUTRAL_THEME);
 
     expect(Object.keys(nodes).sort()).toEqual(['a', 'b', 'b.b1', 'b.b2', 'c']);
   });
 
   it('un texto de fuente mayor da Nodos mas anchos', async () => {
     const largo = vista({ overrides: [{ node: 'c', label: 'Servicio de facturacion' }] });
-    const normal = await layoutView(largo, con({ tokens: { ...TEMA_NEUTRO.tokens, fontSize: '14px' } }));
-    const grande = await layoutView(largo, con({ tokens: { ...TEMA_NEUTRO.tokens, fontSize: '28px' } }));
+    const normal = await layoutView(largo, con({ tokens: { ...NEUTRAL_THEME.tokens, fontSize: '14px' } }));
+    const grande = await layoutView(largo, con({ tokens: { ...NEUTRAL_THEME.tokens, fontSize: '28px' } }));
 
     expect(grande.nodes['c']!.width).toBeGreaterThan(normal.nodes['c']!.width);
     expect(grande.nodes['c']!.height).toBeGreaterThan(normal.nodes['c']!.height);
@@ -157,8 +157,8 @@ describe('layoutView', () => {
   it('el label de un override cuenta para el tamano', async () => {
     const largo = vista({ overrides: [{ node: 'c', label: 'Un nombre bastante largo para este Nodo' }] });
 
-    const base = await layoutView(vista(), TEMA_NEUTRO);
-    const conLabel = await layoutView(largo, TEMA_NEUTRO);
+    const base = await layoutView(vista(), NEUTRAL_THEME);
+    const conLabel = await layoutView(largo, NEUTRAL_THEME);
 
     expect(conLabel.nodes['c']!.width).toBeGreaterThan(base.nodes['c']!.width);
   });
@@ -182,7 +182,7 @@ const sobreElBorde = (punto: { x: number; y: number }, caja: NodeBox): boolean =
 describe('layoutView: rutas de Aristas', () => {
   it('cada Arista tiene una ruta ortogonal que une los bordes de sus extremos', async () => {
     const v = vista();
-    const geometria = await layoutView(v, TEMA_NEUTRO);
+    const geometria = await layoutView(v, NEUTRAL_THEME);
 
     expect(Object.keys(geometria.edges).sort()).toEqual(v.edges.map(edgeId).sort());
     for (const arista of v.edges) {
@@ -199,14 +199,14 @@ describe('layoutView: rutas de Aristas', () => {
 
   it('las Aristas entre Grupos distintos se enrutan (a.a2 -> b.b1)', async () => {
     const v = vista();
-    const { edges } = await layoutView(v, TEMA_NEUTRO);
+    const { edges } = await layoutView(v, NEUTRAL_THEME);
 
     expect(edges[edgeId({ from: { node: 'a.a2' }, to: { node: 'b.b1' } })]!.points.length).toBeGreaterThanOrEqual(2);
   });
 
   it('las Aristas elevadas de un Grupo colapsado se enrutan sobre su borde', async () => {
     const v = vista({}, { collapsed: ['a'] });
-    const geometria = await layoutView(v, TEMA_NEUTRO);
+    const geometria = await layoutView(v, NEUTRAL_THEME);
     const elevada = v.edges.find((arista) => arista.from.node === 'a' && arista.to.node === 'b.b1')!;
     const { points } = geometria.edges[edgeId(elevada)]!;
 
@@ -214,8 +214,8 @@ describe('layoutView: rutas de Aristas', () => {
   });
 
   it('las rutas son deterministas', async () => {
-    const primera = await layoutView(vista(), TEMA_NEUTRO);
-    const segunda = await layoutView(vista(), TEMA_NEUTRO);
+    const primera = await layoutView(vista(), NEUTRAL_THEME);
+    const segunda = await layoutView(vista(), NEUTRAL_THEME);
 
     expect(segunda.edges).toEqual(primera.edges);
   });
@@ -223,40 +223,40 @@ describe('layoutView: rutas de Aristas', () => {
 
 describe('claveDeLayout', () => {
   it('cambia con la fuente o el tamano de texto', () => {
-    const base = claveDeLayout(vista(), TEMA_NEUTRO);
+    const base = claveDeLayout(vista(), NEUTRAL_THEME);
 
-    expect(claveDeLayout(vista(), con({ fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter' } }))).not.toBe(base);
-    expect(claveDeLayout(vista(), con({ tokens: { ...TEMA_NEUTRO.tokens, fontSize: '20px' } }))).not.toBe(base);
+    expect(claveDeLayout(vista(), con({ fonts: { ...NEUTRAL_THEME.fonts, body: 'Inter' } }))).not.toBe(base);
+    expect(claveDeLayout(vista(), con({ tokens: { ...NEUTRAL_THEME.tokens, fontSize: '20px' } }))).not.toBe(base);
   });
 
   it('cambia al cambiar el tipo de la Vista (de layout y de estructura)', () => {
     const arquitectura = vista();
     const flujo = { ...arquitectura, type: 'flow' as const };
 
-    expect(claveDeLayout(flujo, TEMA_NEUTRO)).not.toBe(claveDeLayout(arquitectura, TEMA_NEUTRO));
-    expect(claveDeEstructura(flujo, TEMA_NEUTRO)).not.toBe(claveDeEstructura(arquitectura, TEMA_NEUTRO));
+    expect(claveDeLayout(flujo, NEUTRAL_THEME)).not.toBe(claveDeLayout(arquitectura, NEUTRAL_THEME));
+    expect(claveDeEstructura(flujo, NEUTRAL_THEME)).not.toBe(claveDeEstructura(arquitectura, NEUTRAL_THEME));
   });
 
   it('no cambia con la paleta, los colores ni los iconos', () => {
-    const base = claveDeLayout(vista(), TEMA_NEUTRO);
-    const otraPaleta = con({ palette: { ...TEMA_NEUTRO.palette, blue: '#000000' }, tokens: { ...TEMA_NEUTRO.tokens, background: '#000' } });
+    const base = claveDeLayout(vista(), NEUTRAL_THEME);
+    const otraPaleta = con({ palette: { ...NEUTRAL_THEME.palette, blue: '#000000' }, tokens: { ...NEUTRAL_THEME.tokens, background: '#000' } });
     const coloreada = vista({ overrides: [{ node: 'c', color: 'blue' }] });
 
     expect(claveDeLayout(vista(), otraPaleta)).toBe(base);
-    expect(claveDeLayout(coloreada, TEMA_NEUTRO)).toBe(base);
+    expect(claveDeLayout(coloreada, NEUTRAL_THEME)).toBe(base);
   });
 
   it('cambia al cambiar solo un Pin y es estable sin cambios de Pin', () => {
     const conPin = (x: number, y: number) => vista({ overrides: [{ node: 'c', pin: { x, y } }] });
-    const base = claveDeLayout(conPin(10, 20), TEMA_NEUTRO);
+    const base = claveDeLayout(conPin(10, 20), NEUTRAL_THEME);
 
-    expect(claveDeLayout(conPin(10, 20), TEMA_NEUTRO)).toBe(base);
-    expect(claveDeLayout(conPin(11, 20), TEMA_NEUTRO)).not.toBe(base);
-    expect(claveDeLayout(vista(), TEMA_NEUTRO)).not.toBe(base);
+    expect(claveDeLayout(conPin(10, 20), NEUTRAL_THEME)).toBe(base);
+    expect(claveDeLayout(conPin(11, 20), NEUTRAL_THEME)).not.toBe(base);
+    expect(claveDeLayout(vista(), NEUTRAL_THEME)).not.toBe(base);
   });
 
   it('cambia con la estructura: otro estado de colapso', () => {
-    expect(claveDeLayout(vista({}, { collapsed: ['a'] }), TEMA_NEUTRO)).not.toBe(claveDeLayout(vista(), TEMA_NEUTRO));
+    expect(claveDeLayout(vista({}, { collapsed: ['a'] }), NEUTRAL_THEME)).not.toBe(claveDeLayout(vista(), NEUTRAL_THEME));
   });
 });
 
@@ -269,17 +269,17 @@ describe('claveDeEstructura', () => {
   };
 
   it('cambia con los Atributos de un Nodo hoja (nombre o tipo)', () => {
-    const base = claveDeEstructura(conAtributos([{ name: 'id', type: 'uuid', notes: '' }]), TEMA_NEUTRO);
+    const base = claveDeEstructura(conAtributos([{ name: 'id', type: 'uuid', notes: '' }]), NEUTRAL_THEME);
 
-    expect(claveDeEstructura(conAtributos([{ name: 'id', type: 'uuid', notes: '' }, { name: 'x', type: 'int', notes: '' }]), TEMA_NEUTRO)).not.toBe(base);
-    expect(claveDeEstructura(conAtributos([{ name: 'id', type: 'texto largo', notes: '' }]), TEMA_NEUTRO)).not.toBe(base);
+    expect(claveDeEstructura(conAtributos([{ name: 'id', type: 'uuid', notes: '' }, { name: 'x', type: 'int', notes: '' }]), NEUTRAL_THEME)).not.toBe(base);
+    expect(claveDeEstructura(conAtributos([{ name: 'id', type: 'texto largo', notes: '' }]), NEUTRAL_THEME)).not.toBe(base);
   });
 
   it('cambia con los extremos de una Arista a un Atributo', () => {
     const v = conAtributos([{ name: 'id', type: 'uuid', notes: '' }]);
     const aAtributo = { ...v, edges: v.edges.map((e) => (e.to.node === 'c' ? { ...e, to: { node: 'c', attribute: 'id' } } : e)) };
 
-    expect(claveDeEstructura(aAtributo, TEMA_NEUTRO)).not.toBe(claveDeEstructura(v, TEMA_NEUTRO));
+    expect(claveDeEstructura(aAtributo, NEUTRAL_THEME)).not.toBe(claveDeEstructura(v, NEUTRAL_THEME));
   });
 
   it('cambia con la estructura de Grupos anidados mas de un nivel', () => {
@@ -288,13 +288,13 @@ describe('claveDeEstructura', () => {
       n.id === 'a.a1' ? { ...n, children: [{ ...n, id: 'a.a1.x', children: [] }] } : { ...n, children: n.children.map(anidar) };
     const profunda = { ...base, nodes: base.nodes.map(anidar) };
 
-    expect(claveDeEstructura(profunda, TEMA_NEUTRO)).not.toBe(claveDeEstructura(base, TEMA_NEUTRO));
+    expect(claveDeEstructura(profunda, NEUTRAL_THEME)).not.toBe(claveDeEstructura(base, NEUTRAL_THEME));
   });
 
   it('no cambia al mover un Pin', () => {
     const conPin = vista({ overrides: [{ node: 'c', pin: { x: 5, y: 5 } }] });
 
-    expect(claveDeEstructura(conPin, TEMA_NEUTRO)).toBe(claveDeEstructura(vista(), TEMA_NEUTRO));
+    expect(claveDeEstructura(conPin, NEUTRAL_THEME)).toBe(claveDeEstructura(vista(), NEUTRAL_THEME));
   });
 });
 
@@ -302,7 +302,7 @@ describe('layoutView: Pin post-ELK', () => {
   const pin = (node: string, x: number, y: number) => ({ overrides: [{ node, pin: { x, y } }] });
 
   it('el centro del Nodo pineado queda exactamente en su Pin, relativo a su Grupo', async () => {
-    const { nodes } = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
+    const { nodes } = await layoutView(vista(pin('a.a1', 200, 100)), NEUTRAL_THEME);
     const caja = nodes['a.a1']!;
 
     expect(caja.x + caja.width / 2).toBe(200);
@@ -311,8 +311,8 @@ describe('layoutView: Pin post-ELK', () => {
 
   it('un Nodo que cambia de tamano crece alrededor de su Pin', async () => {
     const conLabel = (label: string) => vista({ overrides: [{ node: 'a.a1', label, pin: { x: 200, y: 100 } }] });
-    const corto = (await layoutView(conLabel('A'), TEMA_NEUTRO)).nodes['a.a1']!;
-    const largo = (await layoutView(conLabel('Servicio de facturacion con nombre muy largo'), TEMA_NEUTRO)).nodes['a.a1']!;
+    const corto = (await layoutView(conLabel('A'), NEUTRAL_THEME)).nodes['a.a1']!;
+    const largo = (await layoutView(conLabel('Servicio de facturacion con nombre muy largo'), NEUTRAL_THEME)).nodes['a.a1']!;
 
     expect(largo.width).toBeGreaterThan(corto.width);
     for (const caja of [corto, largo]) {
@@ -322,8 +322,8 @@ describe('layoutView: Pin post-ELK', () => {
   });
 
   it('las Aristas no incidentes no cambian y las incidentes siguen a su Nodo', async () => {
-    const libre = await layoutView(vista(), TEMA_NEUTRO);
-    const pineada = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
+    const libre = await layoutView(vista(), NEUTRAL_THEME);
+    const pineada = await layoutView(vista(pin('a.a1', 200, 100)), NEUTRAL_THEME);
     const a1 = pineada.nodes['a.a1']!;
     const grupo = pineada.nodes['a']!;
 
@@ -345,22 +345,22 @@ describe('layoutView: Pin post-ELK', () => {
   });
 
   it('un Pin sobre un Nodo ausente de la Vista se ignora', async () => {
-    const libre = await layoutView(vista(), TEMA_NEUTRO);
+    const libre = await layoutView(vista(), NEUTRAL_THEME);
 
-    expect(await layoutView(vista(pin('a.zzz', 5, 5)), TEMA_NEUTRO)).toEqual(libre);
+    expect(await layoutView(vista(pin('a.zzz', 5, 5)), NEUTRAL_THEME)).toEqual(libre);
   });
 
   it('dos Pins que se solapan se informan como par de ids; sin solape, vacio', async () => {
-    const solapados = await layoutView({ ...vista({ overrides: [{ node: 'c', pin: { x: 500, y: 500 } }, { node: 'b', pin: { x: 500, y: 500 } }] }) }, TEMA_NEUTRO);
-    const separados = await layoutView(vista({ overrides: [{ node: 'c', pin: { x: 900, y: 900 } }, { node: 'b', pin: { x: 0, y: 0 } }] }), TEMA_NEUTRO);
+    const solapados = await layoutView({ ...vista({ overrides: [{ node: 'c', pin: { x: 500, y: 500 } }, { node: 'b', pin: { x: 500, y: 500 } }] }) }, NEUTRAL_THEME);
+    const separados = await layoutView(vista({ overrides: [{ node: 'c', pin: { x: 900, y: 900 } }, { node: 'b', pin: { x: 0, y: 0 } }] }), NEUTRAL_THEME);
 
     expect(solapados.pinsSolapados).toEqual([['b', 'c']]);
     expect(separados.pinsSolapados).toEqual([]);
   });
 
   it('al pinear un Grupo, sus Aristas internas se trasladan con el y conservan su forma', async () => {
-    const libre = await layoutView(vista(), TEMA_NEUTRO);
-    const pineada = await layoutView(vista(pin('a', 300, 200)), TEMA_NEUTRO);
+    const libre = await layoutView(vista(), NEUTRAL_THEME);
+    const pineada = await layoutView(vista(pin('a', 300, 200)), NEUTRAL_THEME);
     const id = edgeId({ from: { node: 'a.a1' }, to: { node: 'a.a2' } });
     const antes = libre.edges[id]!.points;
     const despues = pineada.edges[id]!.points;
@@ -374,7 +374,7 @@ describe('layoutView: Pin post-ELK', () => {
   it('un Grupo y su hijo pineados no cuentan como solape', async () => {
     const { pinsSolapados } = await layoutView(
       vista({ overrides: [{ node: 'a', pin: { x: 0, y: 0 } }, { node: 'a.a1', pin: { x: 20, y: 40 } }] }),
-      TEMA_NEUTRO,
+      NEUTRAL_THEME,
     );
 
     expect(pinsSolapados).toEqual([]);
@@ -383,7 +383,7 @@ describe('layoutView: Pin post-ELK', () => {
   it('con Nodos pineados encimados la ruta no retrocede por dentro de las cajas', async () => {
     const { edges } = await layoutView(
       vista({ overrides: [{ node: 'a.a2', pin: { x: 40, y: 40 } }, { node: 'a.a1', pin: { x: 50, y: 50 } }] }),
-      TEMA_NEUTRO,
+      NEUTRAL_THEME,
     );
     const { points } = edges[edgeId({ from: { node: 'a.a1' }, to: { node: 'a.a2' } })]!;
 
@@ -392,8 +392,8 @@ describe('layoutView: Pin post-ELK', () => {
   });
 
   it('el Pin es determinista', async () => {
-    const a = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
-    const b = await layoutView(vista(pin('a.a1', 200, 100)), TEMA_NEUTRO);
+    const a = await layoutView(vista(pin('a.a1', 200, 100)), NEUTRAL_THEME);
+    const b = await layoutView(vista(pin('a.a1', 200, 100)), NEUTRAL_THEME);
     expect(a).toEqual(b);
   });
 });
@@ -414,27 +414,27 @@ describe('layoutView: Nodos con Atributos', () => {
   const columnas = [{ name: 'id', type: 'uuid', notes: '' }, { name: 'email', type: 'text' }, { name: 'creado', type: 'timestamp' }];
 
   it('el Nodo con Atributos es mas alto, una fila por Atributo, y su tamano los cubre', async () => {
-    const sin = await layoutView(conAtributos(columnas.slice(1, 2)), TEMA_NEUTRO);
-    const con = await layoutView(conAtributos(columnas), TEMA_NEUTRO);
-    const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
+    const sin = await layoutView(conAtributos(columnas.slice(1, 2)), NEUTRAL_THEME);
+    const con = await layoutView(conAtributos(columnas), NEUTRAL_THEME);
+    const { cabecera, fila } = metricsOf(NEUTRAL_THEME, 'architecture');
 
     expect(con.nodes['t']!.height).toBeGreaterThanOrEqual(cabecera + columnas.length * fila);
     expect(con.nodes['t']!.height - sin.nodes['t']!.height).toBe((columnas.length - 1) * fila);
   });
 
   it('un Atributo largo ensancha el Nodo', async () => {
-    const corto = await layoutView(conAtributos(columnas), TEMA_NEUTRO);
+    const corto = await layoutView(conAtributos(columnas), NEUTRAL_THEME);
     const largo = await layoutView(
       conAtributos([...columnas, { name: 'un_nombre_de_columna_muy_largo_para_el_nodo', type: 'character varying(255)' }]),
-      TEMA_NEUTRO,
+      NEUTRAL_THEME,
     );
 
     expect(largo.nodes['t']!.width).toBeGreaterThan(corto.nodes['t']!.width);
   });
 
   it('una Arista a nodo#atributo termina en la fila de ese Atributo, sobre el borde', async () => {
-    const { nodes, edges } = await layoutView(conAtributos(columnas), TEMA_NEUTRO);
-    const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
+    const { nodes, edges } = await layoutView(conAtributos(columnas), NEUTRAL_THEME);
+    const { cabecera, fila } = metricsOf(NEUTRAL_THEME, 'architecture');
     const caja = nodes['t']!;
     const { points } = edges[edgeId({ from: { node: 's' }, to: { node: 't', attribute: 'email' } })]!;
     const fin = points[points.length - 1]!;
@@ -458,37 +458,37 @@ describe('Metricas', () => {
   const largo = [{ name: 'columna_con_un_nombre_larguisimo_para_medir', type: 'varchar' }];
 
   it('se derivan del Tema: otro tamano de texto, otras Metricas', () => {
-    const base = metricasDe(TEMA_NEUTRO, 'architecture');
-    const grande = metricasDe(con({ tokens: { ...TEMA_NEUTRO.tokens, fontSize: '28px' } }), 'architecture');
+    const base = metricsOf(NEUTRAL_THEME, 'architecture');
+    const grande = metricsOf(con({ tokens: { ...NEUTRAL_THEME.tokens, fontSize: '28px' } }), 'architecture');
 
     expect(grande.cabecera).toBeGreaterThan(base.cabecera);
     expect(grande.fila).toBeGreaterThan(base.fila);
   });
 
   it('la clave de layout depende de las Metricas', () => {
-    const base = metricasDe(TEMA_NEUTRO, 'architecture');
+    const base = metricsOf(NEUTRAL_THEME, 'architecture');
 
-    expect(claveDeLayout(vista(), TEMA_NEUTRO, { ...base, paddingHorizontal: base.paddingHorizontal + 8 })).not.toBe(
-      claveDeLayout(vista(), TEMA_NEUTRO),
+    expect(claveDeLayout(vista(), NEUTRAL_THEME, { ...base, paddingHorizontal: base.paddingHorizontal + 8 })).not.toBe(
+      claveDeLayout(vista(), NEUTRAL_THEME),
     );
-    expect(claveDeLayout(vista(), TEMA_NEUTRO, tablaDeMetricas(TEMA_NEUTRO, 'architecture'))).toBe(claveDeLayout(vista(), TEMA_NEUTRO));
+    expect(claveDeLayout(vista(), NEUTRAL_THEME, metricsTable(NEUTRAL_THEME, 'architecture'))).toBe(claveDeLayout(vista(), NEUTRAL_THEME));
   });
 
   it('cambiar una Metrica mueve el layout: mas padding, Nodo mas ancho; mas fila, mas alto', async () => {
-    const base = metricasDe(TEMA_NEUTRO, 'architecture');
+    const base = metricsOf(NEUTRAL_THEME, 'architecture');
     const v = tabla(largo);
-    const normal = (await layoutView(v, TEMA_NEUTRO)).nodes['t']!;
-    const ancho = (await layoutView(v, TEMA_NEUTRO, { metricas: { ...base, paddingHorizontal: base.paddingHorizontal + 20 } })).nodes['t']!;
-    const alto = (await layoutView(v, TEMA_NEUTRO, { metricas: { ...base, fila: base.fila + 10 } })).nodes['t']!;
+    const normal = (await layoutView(v, NEUTRAL_THEME)).nodes['t']!;
+    const ancho = (await layoutView(v, NEUTRAL_THEME, { metricas: { ...base, paddingHorizontal: base.paddingHorizontal + 20 } })).nodes['t']!;
+    const alto = (await layoutView(v, NEUTRAL_THEME, { metricas: { ...base, fila: base.fila + 10 } })).nodes['t']!;
 
     expect(ancho.width).toBe(normal.width + 20);
     expect(alto.height).toBe(normal.height + 10);
   });
 
   it('un Atributo se mide con la escala con que se dibuja', async () => {
-    const m = metricasDe(TEMA_NEUTRO, 'architecture');
+    const m = metricsOf(NEUTRAL_THEME, 'architecture');
     const texto = 'columna_con_un_nombre_larguisimo_para_medir: varchar';
-    const { width } = (await layoutView(tabla(largo), TEMA_NEUTRO)).nodes['t']!;
+    const { width } = (await layoutView(tabla(largo), NEUTRAL_THEME)).nodes['t']!;
 
     expect(width).toBe(Math.ceil(texto.length * m.fontSize * m.escalaAtributo * m.factorDeAncho + m.paddingHorizontal));
   });
@@ -498,18 +498,18 @@ describe('Pin sin relayout de ELK', () => {
   const conPin = (x: number, y: number) => vista({ overrides: [{ node: 'a.a1', pin: { x, y } }] });
 
   it('la clave de estructura ignora los Pins pero no la estructura', () => {
-    const base = claveDeEstructura(vista(), TEMA_NEUTRO);
+    const base = claveDeEstructura(vista(), NEUTRAL_THEME);
 
-    expect(claveDeEstructura(conPin(10, 20), TEMA_NEUTRO)).toBe(base);
-    expect(claveDeEstructura(conPin(30, 40), TEMA_NEUTRO)).toBe(base);
-    expect(claveDeEstructura(vista({}, { collapsed: ['a'] }), TEMA_NEUTRO)).not.toBe(base);
+    expect(claveDeEstructura(conPin(10, 20), NEUTRAL_THEME)).toBe(base);
+    expect(claveDeEstructura(conPin(30, 40), NEUTRAL_THEME)).toBe(base);
+    expect(claveDeEstructura(vista({}, { collapsed: ['a'] }), NEUTRAL_THEME)).not.toBe(base);
   });
 
   it('aplicar Pins a la geometria sin Pins da la misma que un layout completo', async () => {
-    const sinPins = await layoutView(vista(), TEMA_NEUTRO);
+    const sinPins = await layoutView(vista(), NEUTRAL_THEME);
 
     for (const [x, y] of [[200, 100], [210, 90]] as const) {
-      expect(aplicarPinsAGeometria(conPin(x, y), sinPins, TEMA_NEUTRO)).toEqual(await layoutView(conPin(x, y), TEMA_NEUTRO));
+      expect(aplicarPinsAGeometria(conPin(x, y), sinPins, NEUTRAL_THEME)).toEqual(await layoutView(conPin(x, y), NEUTRAL_THEME));
     }
   });
 });

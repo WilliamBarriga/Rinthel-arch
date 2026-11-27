@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
-import { TEMA_NEUTRO } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 import { capaDe, etiquetaCon, hojaDe } from './ayudas';
 
@@ -24,20 +24,20 @@ const vista = resolveView(
   'v',
 )!;
 
-const tema = (titulo: Record<string, number | string>, etiqueta: Record<string, number | string> = {}, icono?: Record<string, number | string>): TemaResuelto =>
+const tema = (titulo: Record<string, number | string>, etiqueta: Record<string, number | string> = {}, icono?: Record<string, number | string>): ResolvedTheme =>
   ({
-    ...TEMA_NEUTRO,
+    ...NEUTRAL_THEME,
     nodo: {
-      ...TEMA_NEUTRO.nodo,
+      ...NEUTRAL_THEME.nodo,
       capas: [{ nombre: 'forma', primitiva: { tipo: 'rect', props: { radius: 0 } } }],
       textos: { title: { tipo: 'text', props: { weight: 700, ...titulo } }, ...(icono !== undefined && { icon: { tipo: 'icon', props: icono } }) },
     },
-    arista: { ...TEMA_NEUTRO.arista, etiqueta: { tipo: 'label', props: { fill: 'blue', ...etiqueta } } },
-  }) as unknown as TemaResuelto;
+    arista: { ...NEUTRAL_THEME.arista, etiqueta: { tipo: 'label', props: { fill: 'blue', ...etiqueta } } },
+  }) as unknown as ResolvedTheme;
 
 const iconos = { keys: () => ['box'], resolve: () => '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>' };
 
-async function dibujar(theme: TemaResuelto) {
+async function dibujar(theme: ResolvedTheme) {
   const geometry = await layoutView(vista, theme);
   const html = renderToStaticMarkup(<Diagram view={vista} geometry={geometry} theme={theme} width={800} height={600} icons={iconos} />);
   return { html, css: hojaDe(html) };

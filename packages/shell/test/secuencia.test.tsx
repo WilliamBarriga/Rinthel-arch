@@ -6,7 +6,7 @@ import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { pulsarNodo } from './ayudas';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -32,7 +32,7 @@ const layout: AdaptadorDeLayout = (vista, tema) => layoutView(vista, tema);
 
 describe('VistaInteractiva con una Vista de secuencia', () => {
   it('dibuja las Lifelines, los Mensajes y las activaciones, y distingue reply de sync por el trazo', async () => {
-    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} />);
+    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} width={800} height={600} />);
     await waitFor(() => expect(container.querySelector('[data-message]')).not.toBeNull());
 
     expect([...container.querySelectorAll('.rd-nodos [data-id]')].map((e) => e.getAttribute('data-id'))).toEqual(['cliente', 'api', 'db']);
@@ -55,7 +55,7 @@ describe('VistaInteractiva con una Vista de secuencia', () => {
 
   it('hace clic en una Lifeline y la selecciona', async () => {
     const seleccion: string[][] = [];
-    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} onSelectionChange={(ids) => seleccion.push(ids)} />);
+    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} width={800} height={600} onSelectionChange={(ids) => seleccion.push(ids)} />);
     await waitFor(() => expect(container.querySelector('[data-message]')).not.toBeNull());
     pulsarNodo(container, 'api');
     expect(seleccion.at(-1)).toEqual(['api']);
@@ -78,7 +78,7 @@ view v { type sequence
 
   it('dibuja el marcador cross al final de la Lifeline destruida y ninguno en las demas', async () => {
     const source = openSession({ 'main.dg': ciclo }).source!;
-    const { container } = render(<VistaInteractiva source={source} view="v" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} />);
+    const { container } = render(<VistaInteractiva source={source} view="v" theme={NEUTRAL_THEME} layout={layout} width={800} height={600} />);
     await waitFor(() => expect(container.querySelector('[data-message]')).not.toBeNull());
 
     expect([...container.querySelectorAll('[data-message]')].map((m) => m.getAttribute('data-kind'))).toEqual(['create', 'destroy']);

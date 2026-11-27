@@ -5,8 +5,8 @@ import { canonicalFormSchema } from 'canonical';
 import type { Geometry, Theme, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 afterEach(() => {
   cleanup();
@@ -34,19 +34,19 @@ function layoutContador() {
 }
 
 const capaRelleno = { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'COLOR' } } };
-const conColor = (tema: Partial<TemaResuelto> = {}): TemaResuelto =>
-  ({ ...TEMA_NEUTRO, name: 'color', palette: { ...TEMA_NEUTRO.palette, a: '#cc0000', b: '#0000cc' }, nodo: { ...TEMA_NEUTRO.nodo, capas: [capaRelleno] }, ...tema }) as TemaResuelto;
+const conColor = (tema: Partial<ResolvedTheme> = {}): ResolvedTheme =>
+  ({ ...NEUTRAL_THEME, name: 'color', palette: { ...NEUTRAL_THEME.palette, a: '#cc0000', b: '#0000cc' }, nodo: { ...NEUTRAL_THEME.nodo, capas: [capaRelleno] }, ...tema }) as ResolvedTheme;
 
 /** Fondo del visor (variable del chrome): sale del Tema que se esta dibujando. */
 const fondo = (contenedor: HTMLElement): string => (contenedor.querySelector('.rd-vista') as HTMLElement).style.getPropertyValue('--rd-fondo');
 
-const montar = (layout: AdaptadorDeLayout, theme: TemaResuelto, extra: Record<string, unknown> = {}) =>
+const montar = (layout: AdaptadorDeLayout, theme: ResolvedTheme, extra: Record<string, unknown> = {}) =>
   render(<VistaInteractiva source={fuente} view="v" theme={theme} layout={layout} width={800} height={600} {...extra} />);
 
 describe('alto contraste en el visor', () => {
   it('el interruptor reemplaza el Tema solo en el visor y se puede volver', async () => {
     const { layout } = layoutContador();
-    const { container, getByRole } = montar(layout, TEMA_NEUTRO);
+    const { container, getByRole } = montar(layout, NEUTRAL_THEME);
     await waitFor(() => expect(container.querySelector('[data-id="x"]')).not.toBeNull());
     const boton = getByRole('button', { name: /high contrast/i });
     expect(boton.getAttribute('aria-pressed')).toBe('false');
@@ -62,7 +62,7 @@ describe('alto contraste en el visor', () => {
   it('prefers-contrast: more lo activa de entrada', async () => {
     vi.stubGlobal('matchMedia', (consulta: string) => ({ matches: consulta.includes('prefers-contrast: more'), addEventListener: () => {}, removeEventListener: () => {} }));
     const { temas, layout } = layoutContador();
-    const { container, getByRole } = montar(layout, TEMA_NEUTRO);
+    const { container, getByRole } = montar(layout, NEUTRAL_THEME);
     await waitFor(() => expect(container.querySelector('[data-id="x"]')).not.toBeNull());
 
     expect(fondo(container)).toBe('#000000');
@@ -73,7 +73,7 @@ describe('alto contraste en el visor', () => {
   it('el estado controlado manda y avisa del cambio', async () => {
     const { layout } = layoutContador();
     const alCambiar = vi.fn();
-    const { getByRole } = montar(layout, TEMA_NEUTRO, { highContrast: false, onHighContrastChange: alCambiar });
+    const { getByRole } = montar(layout, NEUTRAL_THEME, { highContrast: false, onHighContrastChange: alCambiar });
     fireEvent.click(getByRole('button', { name: /high contrast/i }));
 
     expect(alCambiar).toHaveBeenCalledWith(true);
@@ -97,7 +97,7 @@ describe('leyenda derivada del Tema', () => {
   });
 
   it('no aparece si los Tipos se distinguen por mas que el color, salvo que se pida siempre', async () => {
-    const distinto = conColor({ nodo: { ...TEMA_NEUTRO.nodo, capas: [capaRelleno], tipos: { base: [{ nombre: 'forma', primitiva: 'pill', props: {}, antes: 'relleno' }] } } as TemaResuelto['nodo'] });
+    const distinto = conColor({ nodo: { ...NEUTRAL_THEME.nodo, capas: [capaRelleno], tipos: { base: [{ nombre: 'forma', primitiva: 'pill', props: {}, antes: 'relleno' }] } } as ResolvedTheme['nodo'] });
     const { layout } = layoutContador();
     const { container } = montar(layout, distinto);
     await waitFor(() => expect(container.querySelector('[data-id="x"]')).not.toBeNull());
@@ -113,7 +113,7 @@ describe('leyenda derivada del Tema', () => {
 describe('leyenda por Tipo de diagrama de la Vista', () => {
   it('una insignia que el Tema solo pone en diagram flow distingue los Tipos en la Vista de flujo, no en la de arquitectura', async () => {
     const conInsignia = { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }] };
-    const tema = conColor({ nodo: { ...TEMA_NEUTRO.nodo, capas: [capaRelleno], diagramas: { flow: { ops: [], slots: conInsignia } } } as TemaResuelto['nodo'] });
+    const tema = conColor({ nodo: { ...NEUTRAL_THEME.nodo, capas: [capaRelleno], diagramas: { flow: { ops: [], slots: conInsignia } } } as ResolvedTheme['nodo'] });
     const conFlujo = canonicalFormSchema.parse({ ...fuente, views: [...fuente.views, { id: 'f', type: 'flow', include: ['**'], exclude: [] }] });
     const { layout } = layoutContador();
     const montarVista = (view: string) => render(<VistaInteractiva source={conFlujo} view={view} theme={tema} layout={layout} width={800} height={600} />);
@@ -129,7 +129,7 @@ describe('leyenda por Tipo de diagrama de la Vista', () => {
 });
 
 describe('interruptor manual de reduced-motion', () => {
-  const montar = () => render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layoutContador().layout} width={800} height={600} />);
+  const montar = () => render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layoutContador().layout} width={800} height={600} />);
   const marca = (c: HTMLElement) => c.querySelector('[data-reduced-motion]')?.getAttribute('data-reduced-motion');
 
   it('sin tocarlo manda la preferencia del sistema: el Diagram no lleva el atributo', async () => {

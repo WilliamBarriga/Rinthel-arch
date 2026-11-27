@@ -5,7 +5,7 @@ import { canonicalFormSchema } from 'canonical';
 import type { GraphGeometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -32,7 +32,7 @@ const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
 const camara: Camara = { x: 0, y: 0, width: 800, height: 600 };
 
 async function montar(extra: Partial<VistaInteractivaProps> = {}) {
-  const r = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={enFila} width={800} height={600} camera={camara} {...extra} />);
+  const r = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={enFila} width={800} height={600} camera={camara} {...extra} />);
   await waitFor(() => expect(r.container.querySelector('[data-id="a"]')).not.toBeNull());
   return { ...r, zona: r.container.querySelector<HTMLElement>('.rd-vista')! };
 }

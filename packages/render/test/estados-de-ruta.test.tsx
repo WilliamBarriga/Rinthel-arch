@@ -6,7 +6,7 @@ import { layoutView as layoutDeVista } from 'layout';
 import type { GraphGeometry } from 'canonical';
 import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 import { hojaDe } from './ayudas';
 
@@ -27,7 +27,7 @@ async function props(extra: Partial<Omit<DiagramProps, 'geometry'>> = {}): Promi
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
   });
   const view = resolveView(fuente, 'v')!;
-  return { view, geometry: await layoutView(view, TEMA_NEUTRO), theme: TEMA_NEUTRO, width: 800, height: 600, ...extra };
+  return { view, geometry: await layoutView(view, NEUTRAL_THEME), theme: NEUTRAL_THEME, width: 800, height: 600, ...extra };
 }
 const dibujo = (p: DiagramProps): string => renderToStaticMarkup(<Diagram {...p} />);
 const marcas = (completo: string, atributo: string): string[] => [...completo.replace(/<style>[\s\S]*<\/style>/, '').matchAll(new RegExp(`<[^>]*${atributo}[^>]*>`, 'g'))].map((m) => m[0]);
@@ -35,7 +35,7 @@ const marcas = (completo: string, atributo: string): string[] => [...completo.re
 describe('Diagram: estados de ruta y foco como selectores', () => {
   it('la hoja trae un selector por estado: en-ruta y foco con contorno, atenuado con opacidad', async () => {
     const hoja = hojaDe(dibujo(await props()));
-    const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
+    const estilo = resolverEstilo(NEUTRAL_THEME, 'architecture');
 
     expect(hoja).toContain(`.rd-estado[data-state="on-path"]{border:${estilo.estados['on-path'].ancho}px solid ${estilo.estados['on-path'].color}}`);
     expect(hoja).toContain('.rd-estado[data-state="focus"]{');
@@ -62,7 +62,7 @@ describe('Diagram: estados de ruta y foco como selectores', () => {
 
   it('el contorno de estado de una ruta con codo sigue la misma esquina que el trazo de la Arista', async () => {
     const linea = { nombre: 'linea', primitiva: { tipo: 'line', props: { color: 'gray', width: 2, style: 'solid', corner: 'round', radius: 8, cut: 6 } } };
-    const redondo = { ...TEMA_NEUTRO, arista: { ...TEMA_NEUTRO.arista, capas: [linea] } };
+    const redondo = { ...NEUTRAL_THEME, arista: { ...NEUTRAL_THEME.arista, capas: [linea] } };
     const base = await props({ theme: redondo });
     const codo = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 60, y: 60 }];
     const geometry = { ...base.geometry, edges: { ...base.geometry.edges, 'a -> b': { ...base.geometry.edges['a -> b']!, points: codo } } };
@@ -73,7 +73,7 @@ describe('Diagram: estados de ruta y foco como selectores', () => {
   });
 
   it('el anillo de foco es irremovible: un Estilo que lo deja sin grosor se dibuja con el minimo', async () => {
-    const base = resolverEstilo(TEMA_NEUTRO, 'architecture');
+    const base = resolverEstilo(NEUTRAL_THEME, 'architecture');
     const sinAnillo = { ...base, estados: { ...base.estados, focus: { ...base.estados.focus, ancho: 0 } } };
     const html = dibujo(await props({ estilo: sinAnillo, estados: { a: ['focus'], 'a -> b': ['focus'] } }));
 

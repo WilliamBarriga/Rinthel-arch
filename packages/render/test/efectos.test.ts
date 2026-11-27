@@ -4,7 +4,7 @@ import { canonicalFormSchema, resolveView } from 'canonical';
 import type { Theme, ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import { aHtml, etiquetaCon, hojaDe, propiedad } from './ayudas';
-import { TEMA_NEUTRO, construirPrimitiva } from 'tema';
+import { NEUTRAL_THEME, buildPrimitive } from 'theme';
 
 const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
 
@@ -19,14 +19,14 @@ function vista(titulo = 'Base', colapsado = false): ResolvedView {
 
 /** Capa como la entrega el compilador del DSL: propiedades validadas y con los defectos del catalogo. */
 const capa = (nombre: string, tipo: string, props: Record<string, string | number> = {}) => {
-  const { primitiva, errores } = construirPrimitiva(tipo, Object.entries(props).map(([clave, valor]) => ({ clave, valor })), TEMA_NEUTRO.palette);
+  const { primitiva, errores } = buildPrimitive(tipo, Object.entries(props).map(([clave, valor]) => ({ clave, valor })), NEUTRAL_THEME.palette);
   if (primitiva === undefined) throw new Error(errores.map((e) => e.mensaje).join('; '));
   return { nombre, primitiva: { tipo, props: primitiva.props } };
 };
 const conCapas = (capas: ReturnType<typeof capa>[], seed?: string): Theme => ({
-  ...TEMA_NEUTRO,
-  tokens: { ...TEMA_NEUTRO.tokens, ...(seed !== undefined && { seed }) },
-  nodo: { ...TEMA_NEUTRO.nodo, capas },
+  ...NEUTRAL_THEME,
+  tokens: { ...NEUTRAL_THEME.tokens, ...(seed !== undefined && { seed }) },
+  nodo: { ...NEUTRAL_THEME.nodo, capas },
 });
 
 async function dibujar(tema: Theme, v = vista()): Promise<string> {
@@ -113,11 +113,11 @@ describe('mano alzada y giro deterministas', () => {
 
 describe('trazo de Arista a mano alzada', () => {
   const linea = (props: Record<string, string | number>) => {
-    const { primitiva, errores } = construirPrimitiva('line', Object.entries(props).map(([clave, valor]) => ({ clave, valor })), TEMA_NEUTRO.palette, 'capa-arista');
+    const { primitiva, errores } = buildPrimitive('line', Object.entries(props).map(([clave, valor]) => ({ clave, valor })), NEUTRAL_THEME.palette, 'capa-arista');
     if (primitiva === undefined) throw new Error(errores.map((e) => e.mensaje).join('; '));
     return { nombre: 'linea', primitiva };
   };
-  const conTrazo = (props: Record<string, string | number>): Theme => ({ ...TEMA_NEUTRO, arista: { ...TEMA_NEUTRO.arista, capas: [linea({ color: 'blue', ...props })] } });
+  const conTrazo = (props: Record<string, string | number>): Theme => ({ ...NEUTRAL_THEME, arista: { ...NEUTRAL_THEME.arista, capas: [linea({ color: 'blue', ...props })] } });
   const aristas = (html: string): string => /data-capa="aristas"[\s\S]*?<\/svg>/.exec(html)?.[0] ?? '';
 
   it('roughness desplaza el trazo con un filtro de ruido en el lienzo, que no desaparece en tramos rectos', async () => {
@@ -166,7 +166,7 @@ describe('decoracion y desbordes', () => {
     expect(propiedad(doblez, 'top')).toBe('-2px');
     expect(propiedad(doblez, 'right')).toBe('-2px');
     expect(propiedad(doblez, 'border-width')).toBe('0 14px 14px 0');
-    expect(propiedad(doblez, 'border-color')).toBe(`transparent ${TEMA_NEUTRO.tokens.background} #2563eb transparent`);
+    expect(propiedad(doblez, 'border-color')).toBe(`transparent ${NEUTRAL_THEME.tokens.background} #2563eb transparent`);
     expect(propiedad(doblez, 'box-shadow')).toBe('-2px 2px 0 #6b7280');
   });
 

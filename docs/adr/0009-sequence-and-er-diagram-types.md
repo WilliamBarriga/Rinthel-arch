@@ -171,7 +171,7 @@ Built-in Themes: `neutral` explicitly declares all the Elements and `diagram` pa
 
 ### New Metrics
 
-Lifeline header (Node entry with its `diagram sequence` patch), `activation.width`, Fragment tab and guard, Note box, Message label (with the Edge label rule), `row` height, and the sequence spacings: gap between Lifelines, gap between Messages, Fragment padding, self loop width and `create` offset. All have core defaults and are tuned with `diagram sequence` or in the new blocks. Fragment tabs and guards, Message labels and Note text enter `textosAMedir` (with the estimate the tab came out clipped).
+Lifeline header (Node entry with its `diagram sequence` patch), `activation.width`, Fragment tab and guard, Note box, Message label (with the Edge label rule), `row` height, and the sequence spacings: gap between Lifelines, gap between Messages, Fragment padding, self loop width and `create` offset. All have core defaults and are tuned with `diagram sequence` or in the new blocks. Fragment tabs and guards, Message labels and Note text enter `textsToMeasure` (with the estimate the tab came out clipped).
 
 ## Layout and Geometry
 

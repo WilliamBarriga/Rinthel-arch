@@ -38,7 +38,7 @@
     "layout": "workspace:*",
     "render": "workspace:*",
     "session": "workspace:*",
-    "tema": "workspace:*"
+    "theme": "workspace:*"
   },
   "sideEffects": false
 }

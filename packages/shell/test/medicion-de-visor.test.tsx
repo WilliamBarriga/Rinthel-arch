@@ -5,8 +5,8 @@ import { canonicalFormSchema } from 'canonical';
 import type { Geometry } from 'canonical';
 import { VistaInteractiva, adaptadorDeWorker, medirEnVisor, servirLayout } from 'shell';
 import type { AdaptadorDeLayout, PuertoDeMensajes } from 'shell';
-import { TEMA_NEUTRO, claveDeTexto } from 'tema';
-import type { MedidasDeTexto, TextoAMedir } from 'tema';
+import { NEUTRAL_THEME, textKey } from 'theme';
+import type { TextMeasures, TextToMeasure } from 'theme';
 
 afterEach(cleanup);
 
@@ -20,7 +20,7 @@ const fuente = canonicalFormSchema.parse({
 describe('medirEnVisor', () => {
   it('carga cada fuente antes de medir y devuelve anchos por clave con el hash de cada fuente', async () => {
     const orden: string[] = [];
-    const textos: TextoAMedir[] = [
+    const textos: TextToMeasure[] = [
       { familia: 'Inter', tamano: 14, texto: 'hola' },
       { familia: 'Inter', tamano: 12, texto: 'x' },
     ];
@@ -36,7 +36,7 @@ describe('medirEnVisor', () => {
     expect(medidas).toEqual({
       nivel: 'medido',
       fuentes: { Inter: 'abcd1234' },
-      anchos: { [claveDeTexto('Inter', 14, 'hola')]: 40, [claveDeTexto('Inter', 12, 'x')]: 10 },
+      anchos: { [textKey('Inter', 14, 'hola')]: 40, [textKey('Inter', 12, 'x')]: 10 },
     });
   });
 });
@@ -52,20 +52,20 @@ describe('VistaInteractiva con medicion real', () => {
     });
 
     expect(fuentes).toEqual(['800 14px "Inter"', '800 14px "Inter"']);
-    expect(medidas.anchos).toEqual({ [claveDeTexto('Inter', 14, 'hola', 800)]: 50 });
+    expect(medidas.anchos).toEqual({ [textKey('Inter', 14, 'hola', 800)]: 50 });
   });
 
   it('espera las medidas y se las entrega al layout; sin medidor el layout no las recibe', async () => {
-    const recibidas: (MedidasDeTexto | undefined)[] = [];
+    const recibidas: (TextMeasures | undefined)[] = [];
     const layout: AdaptadorDeLayout = async (_vista, _tema, medidas) => (recibidas.push(medidas), geometria);
-    const medidas: MedidasDeTexto = { nivel: 'medido', fuentes: { sans: 'h1' }, anchos: {} };
-    let pedidos: TextoAMedir[] = [];
+    const medidas: TextMeasures = { nivel: 'medido', fuentes: { sans: 'h1' }, anchos: {} };
+    let pedidos: TextToMeasure[] = [];
 
     const { container } = render(
       <VistaInteractiva
         source={fuente}
         view="v"
-        theme={TEMA_NEUTRO}
+        theme={NEUTRAL_THEME}
         layout={layout}
         width={400}
         height={300}
@@ -80,10 +80,10 @@ describe('VistaInteractiva con medicion real', () => {
 
   it('el dibujo coloca los Slots con las mismas medidas que el layout: un titulo en chip toma su ancho medido', async () => {
     const enChip = {
-      ...TEMA_NEUTRO,
-      nodo: { ...TEMA_NEUTRO.nodo, slots: { direccion: 'row' as const, gap: 0, pad: 0, hijos: [{ slot: 'title' as const }] }, textos: { title: { tipo: 'text', props: { fill: 'blue' } } } },
+      ...NEUTRAL_THEME,
+      nodo: { ...NEUTRAL_THEME.nodo, slots: { direccion: 'row' as const, gap: 0, pad: 0, hijos: [{ slot: 'title' as const }] }, textos: { title: { tipo: 'text', props: { fill: 'blue' } } } },
     };
-    const medidas: MedidasDeTexto = { nivel: 'medido', fuentes: {}, anchos: { [claveDeTexto(TEMA_NEUTRO.fonts.body, 14, 'a')]: 300 } };
+    const medidas: TextMeasures = { nivel: 'medido', fuentes: {}, anchos: { [textKey(NEUTRAL_THEME.fonts.body, 14, 'a')]: 300 } };
     const layout: AdaptadorDeLayout = async (vista, tema, m) => (await import('layout')).layoutView(vista, tema, { ...(m !== undefined && { medidas: m }) });
 
     const { container } = render(<VistaInteractiva source={fuente} view="v" theme={enChip} layout={layout} width={400} height={300} measure={async () => medidas} />);
@@ -115,11 +115,11 @@ describe('layout en Worker con medidas', () => {
     servirLayout(worker);
     const adaptador = adaptadorDeWorker(pagina);
     const vista = { ...(await import('canonical')).resolveView(fuente, 'v')! };
-    const m = TEMA_NEUTRO.fonts['body']!;
+    const m = NEUTRAL_THEME.fonts['body']!;
     const fontSize = 14;
 
-    const sin = await adaptador(vista, TEMA_NEUTRO);
-    const con = await adaptador(vista, TEMA_NEUTRO, { nivel: 'medido', fuentes: {}, anchos: { [claveDeTexto(m, fontSize, 'a')]: 600 } });
+    const sin = await adaptador(vista, NEUTRAL_THEME);
+    const con = await adaptador(vista, NEUTRAL_THEME, { nivel: 'medido', fuentes: {}, anchos: { [textKey(m, fontSize, 'a')]: 600 } });
 
     expect(sin.nodes['a']!.width).toBe(120);
     expect(con.nodes['a']!.width).toBe(632);
