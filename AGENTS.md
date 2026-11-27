@@ -35,7 +35,7 @@ Before adopting a dependency, research it (license, maintenance, fit with the re
 - The core is agnostic of the documented project; everything specific to a project lives as an example or use case.
 - This repo is independent: it does not depend on any consumer repo. Integrating the system into a consumer repo (slides, video or other) is that repo's work, outside this one. Slides, video and the rest are use cases of the `render` contract.
 - Eraser DSL and Archify are discarded; do not reintroduce them.
-- Language: the whole repo is written in English (code, docs, commit messages, CLI messages). Spanish is secondary and lives only in `README.es.md` and the Spanish guides (`docs/guia/`); touching a guide means touching its pair in the other language. Identifiers in a new file follow the language of its host package until the internal migration (see CONTRIBUTING). Answer the user in Spanish. No unicode emojis (`pnpm check:emojis` verifies it).
+- Language: the whole repo is written in English (code, docs, commit messages, CLI messages). Spanish is secondary and lives only in `README.es.md` and the Spanish guides (`docs/guia/`); touching a guide means touching its pair in the other language. Identifiers are English, except the deliberately Spanish wire/public contract listed in CONTRIBUTING (do not translate it). Answer the user in Spanish. No unicode emojis (`pnpm check:emojis` verifies it).
 
 ## Verification
 

@@ -26,7 +26,8 @@ There is no CI: tests run locally. The pre-commit hook runs `pnpm check`.
 
 - The core is agnostic of the documented project: whatever is project-specific goes as an example in `examples/`.
 - The whole repo is in English (code, docs, messages, commits), without unicode emojis (`pnpm check:emojis` verifies it). Spanish only lives in `README.es.md` and the Spanish user guides.
-- Identifiers in a new file follow the language of its host package until the internal migration (#253-#257); comments in new code are always English.
+- Identifiers and comments are English.
+- Deliberate Spanish exception: the public or wire contract keeps its Spanish names, because renaming them would break users, caches or clients. That is the `dev` protocol and Diff JSON keys, SSE event names and URL hash keys; cached Geometry and Metrics keys (`canonico.json`, `geometria/`); the Theme source keys users write and the `CodeProps` keys; `rd-*`/`ui-*` CSS classes and `data-*` attributes; issue codes, DSL keywords and string values used as data; and the skill folders `skills/rinthel-diagramas` and `skills/rinthel-temas`. Do not translate those, and do not add new Spanish names outside them.
 - Before adopting a new dependency, research it (license, maintenance, fit) and leave the research written; adoption is decided in an issue or ADR.
 
 ### User guides come in pairs
