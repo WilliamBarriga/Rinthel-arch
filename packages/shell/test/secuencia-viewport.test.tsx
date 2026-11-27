@@ -9,7 +9,7 @@ import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
-const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
+const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { measures: medidas }) });
 const texto = `specification { node servicio }
 model {
   servicio a "A"

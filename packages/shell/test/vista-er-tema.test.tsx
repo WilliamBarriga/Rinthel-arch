@@ -30,7 +30,7 @@ const montar = async (dsl: string) => {
   const sesion = openSession({ 'main.dg': ER + dsl });
   const fuente = sesion.source!;
   const resultado = render(
-    <VistaInteractiva source={fuente} view="tablas" theme={fuente.themes.find((t) => t.name === 't')!} layout={(vista, tema, medidas) => layoutView(vista, tema, { medidas })} width={900} height={600} />,
+    <VistaInteractiva source={fuente} view="tablas" theme={fuente.themes.find((t) => t.name === 't')!} layout={(vista, tema, medidas) => layoutView(vista, tema, { measures: medidas })} width={900} height={600} />,
   );
   await waitFor(() => expect(resultado.container.querySelector('.rd-vista[data-layout="listo"] [data-id="orders"]')).not.toBeNull(), { timeout: 15000 });
   return { ...resultado, sesion };

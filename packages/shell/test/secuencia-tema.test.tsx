@@ -34,7 +34,7 @@ const montar = async (bloques: string) => {
   expect((await sesion.diagnose()).filter((i) => i.severity === 'error')).toEqual([]);
   const fuente = sesion.source!;
   const resultado = render(
-    <VistaInteractiva source={fuente} view="v" theme={fuente.themes.find((t) => t.name === 't')!} layout={(vista, tema, medidas) => layoutView(vista, tema, { medidas })} width={1000} height={700} />,
+    <VistaInteractiva source={fuente} view="v" theme={fuente.themes.find((t) => t.name === 't')!} layout={(vista, tema, medidas) => layoutView(vista, tema, { measures: medidas })} width={1000} height={700} />,
   );
   await waitFor(() => expect(resultado.container.querySelector('[data-message]')).not.toBeNull(), { timeout: 15000 });
   return resultado.container;

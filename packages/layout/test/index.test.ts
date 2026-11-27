@@ -5,13 +5,13 @@ import { layoutView } from 'layout';
 import { NEUTRAL_THEME } from 'theme';
 
 describe('layout', () => {
-  it('se importa por nombre de paquete y calcula la geometria de una Vista', async () => {
-    const fuente = canonicalFormSchema.parse({
+  it('is imported by package name and computes the geometry of a View', async () => {
+    const source = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: { nodes: [{ id: 'a', type: 'servicio', title: 'A' }] },
       views: [{ id: 'v', type: 'architecture', include: ['a'] }],
     });
-    const geometria = await layoutView(resolveView(fuente, 'v')!, NEUTRAL_THEME);
-    expect(Object.keys(geometria.nodes)).toEqual(['a']);
+    const geometry = await layoutView(resolveView(source, 'v')!, NEUTRAL_THEME);
+    expect(Object.keys(geometry.nodes)).toEqual(['a']);
   });
 });

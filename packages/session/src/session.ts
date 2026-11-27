@@ -2,7 +2,7 @@ import { CODES, nearestCandidates, resolveView } from 'canonical';
 import type { CanonicalForm, Geometry, CachedGeometry, GraphGeometry, Issue, Theme, Locator, View } from 'canonical';
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, OrigenDeTema, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
-import { claveDeLayout, layoutView } from 'layout';
+import { layoutKey, layoutView } from 'layout';
 import { NEUTRAL_THEME, contrastWarnings, identifyingEdgeColorOnly, resolvedStyle, colorOnlyMessages, readOps, resolveFonts, resolveTheme, colorOnlyKinds, codeUses } from 'theme';
 import type { ResolvedStyle, ComponentUse } from 'theme';
 
@@ -268,14 +268,14 @@ function createSession(
     const resolved = resolveView(source, view);
     if (declared === undefined || resolved === undefined) return undefined;
     const theme = viewTheme(source, declared, options.theme);
-    return { key: JSON.stringify([theme.name, claveDeLayout(resolved, theme)]), theme, resolved };
+    return { key: JSON.stringify([theme.name, layoutKey(resolved, theme)]), theme, resolved };
   };
 
   const geometryWithTheme = (view: string, themeName: string): Promise<CachedGeometry | undefined> => {
     const resolved = source === undefined ? undefined : resolveView(source, view);
     const theme = source?.themes.find(({ name }) => name === themeName);
     if (resolved === undefined || theme === undefined) return Promise.resolve(undefined);
-    return layoutView(resolved, theme).then((geometry) => ({ view, theme: theme.name, layoutKey: claveDeLayout(resolved, theme), geometry }));
+    return layoutView(resolved, theme).then((geometry) => ({ view, theme: theme.name, layoutKey: layoutKey(resolved, theme), geometry }));
   };
 
   const geometry = (view: string, { theme }: GeometryOptions = {}): Promise<CachedGeometry | undefined> => {
@@ -291,7 +291,7 @@ function createSession(
         : layoutView(keyed.resolved, keyed.theme).then((geometry) => ({
             view,
             theme: keyed.theme.name,
-            layoutKey: claveDeLayout(keyed.resolved, keyed.theme),
+            layoutKey: layoutKey(keyed.resolved, keyed.theme),
             geometry,
           }));
     memo.set(view, { key: keyed.key, result });

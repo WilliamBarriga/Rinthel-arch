@@ -10,7 +10,7 @@ afterEach(cleanup);
 
 const PALETA = `palette { papel "#fefce8"  tinta "#1f2937"  azul "#2563eb"  verde "#16a34a"  rojo "#dc2626"  gris "#e5e7eb" }`;
 const NODO = `  node {\n    layer forma rect { radius 6 }\n    layer relleno solid { color papel }\n    layer borde border { color tinta width 1 }\n    slots { title attrs }\n  }`;
-const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
+const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { measures: medidas }) });
 
 const montar = async (texto: string, vista: string, esperar: string, selected: string) => {
   const fuente = openSession({ 'main.dg': texto }).source!;

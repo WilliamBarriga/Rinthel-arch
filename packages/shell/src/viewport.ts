@@ -1,7 +1,7 @@
 /** Recorte de una Vista resuelta a lo que cae en la camara; puro. Las cajas se comparan en coordenadas del lienzo. */
 import { edgeId } from 'canonical';
 import type { ResolvedEdge, NodeBox, Geometry, ResolvedNode, ResolvedView } from 'canonical';
-import { indiceDeGeometria } from 'layout';
+import { geometryIndex } from 'layout';
 import type { Camara } from 'render';
 
 /** Cruce con borde incluido, para que una ruta recta (alto o ancho 0) cuente. */
@@ -26,7 +26,7 @@ function extension(geometria: Geometry, id: string, caja: NodeBox): NodeBox {
  * en la geometria se conserva para que `render` avise del error de uso.
  */
 export function recortarAlViewport(vista: ResolvedView, geometria: Geometry, camara: Camara): ResolvedView {
-  const { cajas } = indiceDeGeometria(vista, geometria);
+  const { boxes: cajas } = geometryIndex(vista, geometria);
   const dentro = new Set<string>();
   for (const nodo of vista.nodes) {
     const caja = cajas.get(nodo.id);

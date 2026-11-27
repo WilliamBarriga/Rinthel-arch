@@ -3,9 +3,9 @@ Computes the Geometry of a View (ELK for architecture, flow and er; an own algor
 
 ## What it does
 - `layoutView` gives the box of each visible Node and the orthogonal route of each Edge of a `ResolvedView`.
-- `layoutView` picks by `vista.type`: layered ELK for graphs; in `sequence`, `layoutSecuencia` (internal, `src/secuencia.ts`) places Lifelines (columns) and Messages (rows) without ELK. The Geometry is a union by `kind` (`grafo` or `secuencia`). The Geometry types are not declared here: they come from the `canonical` schema (`geometrySchema`) and are imported from `canonical`.
-- `layoutConMetricas` is `layoutView` over already resolved Metrics, without the Theme: the Worker (`shell`) runs it, which does not bundle the Theme schema. `render` must draw with the same Metrics.
-- `claveDeLayout` and `claveDeEstructura` say when to relayout; `aplicarPinsAGeometria` applies Pins without ELK; `indiceDeGeometria` gives absolute boxes, each Node's parent and the roots.
+- `layoutView` picks by `view.type`: layered ELK for graphs; in `sequence`, `layoutSequence` (internal, `src/sequence.ts`) places Lifelines (columns) and Messages (rows) without ELK. The Geometry is a union by `kind` (`grafo` or `secuencia`). The Geometry types are not declared here: they come from the `canonical` schema (`geometrySchema`) and are imported from `canonical`.
+- `layoutWithMetrics` is `layoutView` over already resolved Metrics, without the Theme: the Worker (`shell`) runs it, which does not bundle the Theme schema. `render` must draw with the same Metrics.
+- `layoutKey` and `structureKey` say when to relayout; `applyPinsToGeometry` applies Pins without ELK; `geometryIndex` gives absolute boxes, each Node's parent and the roots.
 
 ## What it does not do
 - Does not define the Metrics nor the placement of Slots: it reads them from `theme`.

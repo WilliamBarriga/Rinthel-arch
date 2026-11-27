@@ -3,7 +3,7 @@ import { zoomIdentity } from 'd3-zoom';
 import type { ZoomTransform } from 'd3-zoom';
 
 import type { NodeBox, Geometry, ResolvedView } from 'canonical';
-import { indiceDeGeometria } from 'layout';
+import { geometryIndex } from 'layout';
 import type { Camara } from 'render';
 
 /** Camara que muestra toda la geometria, centrada y con margen; no amplia por encima de 1:1. */
@@ -40,7 +40,7 @@ export function compensarCamara(camara: Camara, antes: NodeBox, despues: NodeBox
  * la `y` queda en 0 (la camara no se desplaza en vertical).
  */
 export function cajaDeAncla(vista: ResolvedView, geometria: Geometry, id: string): NodeBox | undefined {
-  if (geometria.kind !== 'secuencia') return indiceDeGeometria(vista, geometria).cajas.get(id);
+  if (geometria.kind !== 'secuencia') return geometryIndex(vista, geometria).boxes.get(id);
   const caja = geometria.groups.find((grupo) => grupo.id === id) ?? geometria.nodes[id];
   return caja === undefined ? undefined : { ...caja, y: 0 };
 }

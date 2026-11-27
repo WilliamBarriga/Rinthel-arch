@@ -33,7 +33,7 @@ describe('VistaInteractiva: Notas y ref de secuencia', () => {
       pedidos.push(...textos);
       return { nivel: 'medido', fuentes: {}, anchos: Object.fromEntries(textos.map((t) => [textKey(t.familia, t.tamano, t.texto, t.peso), t.texto.length * 8])) };
     };
-    const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
+    const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { measures: medidas }) });
     const { container } = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} measure={measure} width={1200} height={800} />);
     await waitFor(() => expect(container.querySelector('[data-note]')).not.toBeNull(), { timeout: 8000 });
 

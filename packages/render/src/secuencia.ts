@@ -4,7 +4,7 @@
  */
 import { sequenceElementId } from 'canonical';
 import type { ActivationBox, PlacedGroupBox, SequenceGeometry, FragmentFrame, ResolvedMessage, ResolvedNode, PlacedNote, Visibility, SequenceView } from 'canonical';
-import { indiceDeGeometria } from 'layout';
+import { geometryIndex } from 'layout';
 import { STATES, NOTE_PADDING, primitivesOfFamily } from 'theme';
 import type { PaintedLayer, SequenceBoxPaint, SequenceStrokePaint, SequenceStrokes } from 'theme';
 
@@ -27,7 +27,7 @@ const deColor = (trazos: SequenceStrokes, color: string | undefined): SequenceSt
 export function construirEscenaDeSecuencia(entrada: EntradaDeEscena & { view: SequenceView; geometry: SequenceGeometry }): Elemento {
   const { view, geometry, theme } = entrada;
   const estilo = entrada.estilo ?? resolverEstilo(theme, view.type, entrada.metricas);
-  const { raices, cajas } = indiceDeGeometria(view, geometry);
+  const { roots: raices, boxes: cajas } = geometryIndex(view, geometry);
   const visibility = entrada.visibility ?? (() => 1);
   const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));
   const contexto: Contexto = { ...entrada, visibility, estilo, cajas, coloresDeNodo, escalonado: posicionesDeEscalonado(raices, visibility, estilo, entrada.nuevos) };

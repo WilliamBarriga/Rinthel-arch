@@ -30,7 +30,7 @@ model {
 }
 ${vista}
 `;
-const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
+const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { measures: medidas }) });
 
 const montar = (vista: string, paso: number) => {
   const fuente = openSession({ 'main.dg': cuerpo(vista) }).source!;

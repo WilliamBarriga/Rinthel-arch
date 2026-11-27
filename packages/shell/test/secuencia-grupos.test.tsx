@@ -31,7 +31,7 @@ view cerrada { type sequence
  depth 1 }
 `;
 const fuente = openSession({ 'main.dg': texto }).source!;
-const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
+const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { measures: medidas }) });
 const rect = (el: HTMLElement) => {
   // Las cabeceras se posicionan con `transform: translate(x, y)`; el box, con left/top.
   const t = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(el.style.transform);

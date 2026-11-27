@@ -5,7 +5,7 @@
  */
 import { refTarget, edgeId, sequenceElementId, parseSequenceElementId } from 'canonical';
 import type { NodeBox, Geometry, ResolvedItem, ResolvedNode, Point, Theme, Visibility, View, SequenceView, ResolvedView } from 'canonical';
-import { indiceDeGeometria } from 'layout';
+import { geometryIndex } from 'layout';
 import { visibleAttributes, placeInBox, nodeContent, leafMetrics } from 'theme';
 import { centroDeEtiquetaSinCaja, resolverEstilo } from 'render';
 import type { Estilo } from 'render';
@@ -72,7 +72,7 @@ export function elementoBajo(
   { tolerancia = AJUSTES_POR_DEFECTO.hitTolerance, atributos = true, visibilidad }: OpcionesDeHitTest = {},
 ): ElementoSeleccionable | undefined {
   if (vista.type === 'sequence') return elementoBajoEnSecuencia(vista, geometria, punto, tolerancia, visibilidad ?? (() => 1));
-  const { cajas, raices } = indiceDeGeometria(vista, geometria);
+  const { boxes: cajas, roots: raices } = geometryIndex(vista, geometria);
   const estilo = resolverEstilo(tema, vista.type);
 
   // Aristas se dibujan encima de los Nodos; la ultima dibujada es la superior.
@@ -119,7 +119,7 @@ function elementoBajoEnSecuencia(vista: SequenceView, geometria: Geo, punto: Poi
   const nota = [...(geometria.notes ?? [])].reverse().find((n) => visible(idDe(n.ruta)) && contiene(n, punto));
   if (nota !== undefined) return { tipo: 'nota', id: idDe(nota.ruta) };
 
-  const { cajas } = indiceDeGeometria(vista, geometria);
+  const { boxes: cajas } = geometryIndex(vista, geometria);
   for (const nodo of vista.nodes) {
     const caja = cajas.get(nodo.id);
     if (visible(nodo.id) && caja !== undefined && contiene(caja, punto)) return { tipo: 'nodo', id: nodo.id };
@@ -140,12 +140,12 @@ function elementoBajoEnSecuencia(vista: SequenceView, geometria: Geo, punto: Poi
 
 /** Caja en el lienzo de un elemento (para marcarlo); `undefined` si ya no existe en la Vista o la geometria. */
 export function cajaDeElemento(vista: ResolvedView, geometria: Geo, tema: Theme, elemento: ElementoSeleccionable): NodeBox | undefined {
-  const { cajas } = indiceDeGeometria(vista, geometria);
+  const { boxes: cajas } = geometryIndex(vista, geometria);
   if (elemento.tipo === 'nodo') return cajas.get(elemento.id);
   if (elemento.tipo === 'atributo') {
     const { tabla } = resolverEstilo(tema, vista.type);
     const [idNodo = '', nombre] = elemento.id.split('#');
-    const nodo = enOrdenDeDibujo(indiceDeGeometria(vista, geometria).raices).find((n) => n.id === idNodo);
+    const nodo = enOrdenDeDibujo(geometryIndex(vista, geometria).roots).find((n) => n.id === idNodo);
     const caja = cajas.get(idNodo);
     const metricas = nodo === undefined ? tabla.base : leafMetrics(tabla, nodo);
     const atributos = nodo === undefined ? [] : visibleAttributes(nodo, metricas);

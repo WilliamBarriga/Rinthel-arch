@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { Geometry, Theme, ResolvedView } from 'canonical';
-import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout } from 'layout';
+import { applyPinsToGeometry, structureKey, layoutKey } from 'layout';
 import { metricsTable, textsToMeasure } from 'theme';
 import type { TextMeasures } from 'theme';
 
@@ -67,8 +67,8 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
   const esperando = claveTextos !== undefined && medidas === undefined;
   // Solo lo que mueve el layout (estructura, textos, fuentes, origen de las medidas) lo repite; la paleta no.
   const tabla = metricsTable(theme, vista.type, medidas);
-  const claveTema = claveDeLayout(vista, theme, tabla);
-  const claveBase = claveDeEstructura(vista, theme, tabla);
+  const claveTema = layoutKey(vista, theme, tabla);
+  const claveBase = structureKey(vista, theme, tabla);
   const mostrado = useRef<Calculo | undefined>(undefined);
   const cache = useRef<{ llave: AdaptadorDeLayout; mapa: Map<string, Geometry> } | undefined>(undefined);
 
@@ -89,14 +89,14 @@ export function useGeometria(entrada: EntradaDeGeometria): Calculo | undefined {
       mapa.delete(clave);
       mapa.set(clave, base);
       if (mapa.size > MAX_CACHE) mapa.delete(mapa.keys().next().value!);
-      mostrar(aplicarPinsAGeometria(vista, base, tema, tabla));
+      mostrar(applyPinsToGeometry(vista, base, tema, tabla));
     };
 
     let vigente = true;
     const base = mapa.get(clave);
     if (base !== undefined) {
       recibir(base);
-    } else if (semilla !== undefined && medidas === undefined && claveDeLayout(semilla.vista, theme) === claveTema) {
+    } else if (semilla !== undefined && medidas === undefined && layoutKey(semilla.vista, theme) === claveTema) {
       mostrar(semilla.geometria);
     } else {
       layout(sinPins(vista), tema, medidas).then(

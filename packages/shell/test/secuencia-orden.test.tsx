@@ -33,7 +33,7 @@ view cerrada { type sequence
  depth 1 }
 `;
 const fuente = openSession({ 'main.dg': texto }).source!;
-const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
+const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { measures: medidas }) });
 const camara = { x: 0, y: 0, width: 1200, height: 800 };
 
 async function montar(vista: string, extra: Partial<VistaInteractivaProps> = {}) {

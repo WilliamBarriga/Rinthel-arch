@@ -32,7 +32,7 @@ model {
 `;
 const sinPasos = `${modelo}view v { type sequence\n interaction checkout }\n`;
 const conPasos = `${modelo}view v { type sequence\n interaction checkout\n steps { step "uno" { upto pedir }\n step "dos" { upto guardar } } }\n`;
-const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
+const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { measures: medidas }) });
 
 const fuenteDe = (texto: string) => openSession({ 'main.dg': texto }).source!;
 const geometriaDe = async (texto: string): Promise<SequenceGeometry> => (await layoutView(resolveView(fuenteDe(texto), 'v')!, NEUTRAL_THEME)) as SequenceGeometry;

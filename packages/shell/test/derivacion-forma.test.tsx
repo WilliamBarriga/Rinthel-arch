@@ -39,7 +39,7 @@ const montar = async (dsl: string, vista: string, esperar: string) => {
   if (sesion.source === undefined) throw new Error(JSON.stringify(await sesion.diagnose()).slice(0, 1500));
   const fuente = sesion.source;
   const resultado = render(
-    <VistaInteractiva source={fuente} view={vista} theme={fuente.themes.find((t) => t.name === 't')!} layout={(v, t, medidas) => layoutView(v, t, { medidas })} width={900} height={600} />,
+    <VistaInteractiva source={fuente} view={vista} theme={fuente.themes.find((t) => t.name === 't')!} layout={(v, t, medidas) => layoutView(v, t, { measures: medidas })} width={900} height={600} />,
   );
   await waitFor(() => expect(resultado.container.querySelector(esperar)).not.toBeNull(), { timeout: 8000 });
   return resultado;

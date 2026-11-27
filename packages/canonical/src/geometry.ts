@@ -87,7 +87,7 @@ export const geometrySchema = z.preprocess(
   z.discriminatedUnion('kind', [graphGeometrySchema, sequenceGeometrySchema]),
 );
 
-/** `layoutKey` is the `claveDeLayout` of the resolved View and the Theme; if it differs from the current one, the cache is invalid. */
+/** `layoutKey` is the `layoutKey()` (package `layout`) of the resolved View and the Theme; if it differs from the current one, the cache is invalid. */
 export const cachedGeometrySchema = z.object({
   view: z.string().min(1),
   theme: z.string().min(1),

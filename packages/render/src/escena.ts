@@ -5,7 +5,7 @@
  */
 import { edgeId, sequenceElementId } from 'canonical';
 import type { ResolvedEdge, NodeBox, Geometry, GraphGeometry, IconProvider, ResolvedNode, Theme, Visibility, GraphView, ResolvedView } from 'canonical';
-import { indiceDeGeometria } from 'layout';
+import { geometryIndex } from 'layout';
 import { STATES, visibleAttributes, placeInBox, nodeContent, leafMetrics } from 'theme';
 import type { Metrics } from 'theme';
 
@@ -130,7 +130,7 @@ function conPlaneados(entrada: EntradaDeEscena): EntradaDeEscena {
 function construirEscenaDeGrafo(entrada: EntradaDeEscena & { view: GraphView; geometry: GraphGeometry }): Elemento {
   const { view, geometry, theme } = entrada;
   const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.view.type, entrada.metricas);
-  const { raices, cajas } = indiceDeGeometria(view, geometry);
+  const { roots: raices, boxes: cajas } = geometryIndex(view, geometry);
   const visibility = entrada.visibility ?? (() => 1);
   const coloresDeNodo = new Map(raices.flatMap((raiz) => aplanar(raiz)).map((nodo) => [nodo.id, nodo.color]));
   const contexto: ContextoDeGrafo = { ...entrada, visibility, estilo, cajas, coloresDeNodo, escalonado: posicionesDeEscalonado(raices, visibility, estilo, entrada.nuevos) };

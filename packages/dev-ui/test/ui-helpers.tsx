@@ -25,7 +25,7 @@ if (typeof Range !== 'undefined' && !('getClientRects' in Range.prototype)) {
 configure({ asyncUtilTimeout: 15_000 });
 
 /** The real layout (the Worker's in the browser), for the Views whose Geometry has not arrived from the server yet. */
-export const realLayout: AdaptadorDeLayout = (view, theme, measures) => layoutView(view, theme, { ...(measures !== undefined && { medidas: measures }) });
+export const realLayout: AdaptadorDeLayout = (view, theme, measures) => layoutView(view, theme, { ...(measures !== undefined && { measures }) });
 
 export interface MountOptions {
   hash?: string;

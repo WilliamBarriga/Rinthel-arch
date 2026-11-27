@@ -12,7 +12,7 @@ import { camaraDe, pulsarEn } from './ayudas';
 
 afterEach(cleanup);
 
-const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
+const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { measures: medidas }) });
 const fuenteDe = (texto: string) => openSession({ 'main.dg': texto }).source!;
 const geometriaDe = async (texto: string, vista: string): Promise<SequenceGeometry> => (await layoutView(resolveView(fuenteDe(texto), vista)!, NEUTRAL_THEME)) as SequenceGeometry;
 const actual = (c: HTMLElement) => c.querySelector('[data-vista]')!.getAttribute('data-vista');

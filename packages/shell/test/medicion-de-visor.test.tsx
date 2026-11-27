@@ -84,7 +84,7 @@ describe('VistaInteractiva con medicion real', () => {
       nodo: { ...NEUTRAL_THEME.nodo, slots: { direccion: 'row' as const, gap: 0, pad: 0, hijos: [{ slot: 'title' as const }] }, textos: { title: { tipo: 'text', props: { fill: 'blue' } } } },
     };
     const medidas: TextMeasures = { nivel: 'medido', fuentes: {}, anchos: { [textKey(NEUTRAL_THEME.fonts.body, 14, 'a')]: 300 } };
-    const layout: AdaptadorDeLayout = async (vista, tema, m) => (await import('layout')).layoutView(vista, tema, { ...(m !== undefined && { medidas: m }) });
+    const layout: AdaptadorDeLayout = async (vista, tema, m) => (await import('layout')).layoutView(vista, tema, { ...(m !== undefined && { measures: m }) });
 
     const { container } = render(<VistaInteractiva source={fuente} view="v" theme={enChip} layout={layout} width={400} height={300} measure={async () => medidas} />);
     await waitFor(() => expect(container.querySelector('[data-id="a"] [data-slot="title"]')).not.toBeNull());
