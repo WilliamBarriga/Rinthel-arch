@@ -8,7 +8,7 @@ El CLI es `packages/cli/dist/bin.js` (tras `pnpm build`), o el comando `diagrams
 alias dg="node $PWD/packages/cli/dist/bin.js"
 ```
 
-`dg --help` lista los comandos y `dg <comando> --help` da las opciones de cada uno (la ayuda sale en stdout, codigo 0). Todos salvo `scan` piden `--workspace <ruta>` (en `scan` es opcional), la carpeta con los `.dg`. Contrato de diseno: [ADR 0005](../adr/0005-cli-para-agentes.md).
+`dg --help` lista los comandos y `dg <comando> --help` da las opciones de cada uno (la ayuda sale en stdout, codigo 0). Todos salvo `scan` piden `--workspace <ruta>` (en `scan` es opcional), la carpeta con los `.dg`. Contrato de diseno: [ADR 0005](../adr/0005-cli-for-agents.md).
 
 ## Codigos de salida
 
@@ -108,7 +108,7 @@ Genera un `SKILL.md` con los Tipos de nodo, Temas, sintaxis, contratos y codigos
 dg scan [<root>] [--out <file>] [--json] [--depth <N>] [--max-files <N>] [--workspace <path>]
 ```
 
-Lee la codebase de `<raiz>` (la carpeta actual por defecto) sin ejecutar nada y escribe el Borrador de escaneo `rinthel/scan@1` en `<raiz>/.rinthel/scan.json` (o en `--out`; no se versiona). No usa `--workspace` ni escribe `.dg`: el agente lee el Borrador y escribe el Workspace, que se valida con `validate`. Contrato: [ADR 0010](../adr/0010-importador-de-codebases.md).
+Lee la codebase de `<raiz>` (la carpeta actual por defecto) sin ejecutar nada y escribe el Borrador de escaneo `rinthel/scan@1` en `<raiz>/.rinthel/scan.json` (o en `--out`; no se versiona). No usa `--workspace` ni escribe `.dg`: el agente lee el Borrador y escribe el Workspace, que se valida con `validate`. Contrato: [ADR 0010](../adr/0010-codebase-importer.md).
 
 - **Unidades** (`units`): una por manifiesto (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`), mas la raiz. Su `id` es la carpeta relativa a la raiz (`.` para la raiz) y es la ref de la Source `path` del Nodo que la dibuje. `parent` sale de la ruta y `kind` (`package`, `app`, `module`, `folder`) es una pista, no un Tipo de nodo. Un manifiesto sin otros manifiestos dentro y con 30 archivos o mas se parte en sub-unidades `folder` hasta `--depth` niveles (2 por defecto; 0 no parte).
 - **Dependencias** (`dependencies`): imports de TS/JS (`import`, `export ... from`, `import()`, `require()`) y de Python (`import a.b`, `from a.b import c`, relativos `from .x import y`; los modulos locales se resuelven contra los archivos del repo, sueltos o bajo `src/`) agregados por par de unidades, con `weight` (cuantos imports) y hasta 3 `examples` (`archivo:linea`). Los imports dentro de una misma unidad, los modulos de Node y la biblioteca estandar de Python no cuentan; cualquier otro modulo de Python es un externo de PyPI.
@@ -118,7 +118,7 @@ Lee la codebase de `<raiz>` (la carpeta actual por defecto) sin ejecutar nada y 
 
 Cada item lleva `source {file, line}` (linea 0: la carpeta misma) y `confidence` (`extracted` o `inferred`). Respeta los `.gitignore` y siempre salta `node_modules`, `dist`, `build`, `.venv`, `venv`, `vendor`, `third_party`, `__pycache__`, `.git`, `.rinthel` y `.diagrams`. Con el mismo commit, el Borrador es identico byte a byte. stdout es un resumen compacto que termina con el siguiente paso; con `--json`, ese resumen como un objeto con su propio `contractVersion` (`draft`, `schema`, `commit`, `counts`, `limits` y las 15 primeras `units`, `dependencies`, `externals` y `tables`). Si hay tablas, el siguiente paso sugiere una Vista `er`. Sale 0 si escribio el Borrador y 2 en un fallo de uso.
 
-Refrescar un Workspace ya escrito ([ADR 0010](../adr/0010-importador-de-codebases.md), enmienda "refresh incremental"):
+Refrescar un Workspace ya escrito ([ADR 0010](../adr/0010-codebase-importer.md), enmienda "refresh incremental"):
 
 - **Cobertura de escaneo** (`coverage`): si hay un Workspace (`--workspace <ruta>`, o la carpeta menos profunda bajo `<raiz>`, hasta 4 niveles, que tenga archivos `.dg`), `scan` lo compila sin ejecutar nada y lo compara con el Borrador solo por las Sources `path` de sus Nodos: unidades y tablas que ningun Nodo cita (`units.uncovered`, `tables.uncovered`), refs que no son ningun id del Borrador (`orphanRefs`, por Nodo) y, en los Nodos que citan una tabla, columnas sin Atributo (`missing`) y Atributos sin columna (`extra`). Es informativa: no son Issues y la salida sigue en 0. Si hay dos o mas Workspaces a la misma profundidad o el Workspace no compila, `coverage` trae `error` y el texto lo dice. Sin Workspace, `coverage` es `null`. Con cobertura, el siguiente paso pasa a ser refrescar el Workspace, o dice que no hay nada que refrescar cuando la cobertura no tiene huecos.
 - **`.rinthel/scan-ignore`** (se versiona): patrones estilo `.gitignore` sobre ids de unidad, de tabla y refs (`packages/legacy-*`, `audit_log`; la unidad raiz solo con una linea `.`). Lo que casa sale de la cobertura (y se cuenta en `ignored`), no del Borrador.

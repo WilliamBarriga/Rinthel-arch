@@ -1,27 +1,28 @@
 /**
  * Chequeo de la documentacion que se puede pudrir; cada `revisarX(raiz) -> Violacion[]` devuelve violaciones ordenadas.
  * `revisarReadmes`: cada `packages/<paquete>/README.md` existe y tiene las `SECCIONES_README` (`seccion`), sus rutas de
- * "Archivo de entrada" existen (`entrada`) y "Probar" contiene `pnpm --filter <paquete> test` (`probar`).
+ * "Entry file" existen (`entrada`) y "Test" contiene `pnpm --filter <paquete> test` (`probar`).
  * `revisarIndiceDeAdrs`: cada `docs/adr/NNNN-*.md` aparece en `docs/adr/README.md` (`indice`).
- * `revisarEnlacesDeAgents`: `AGENTS.md` nombra `docs/adr/README.md` y `docs/ramas.md`, y ambos existen (`indice`).
+ * `revisarEnlacesDeAgents`: `AGENTS.md` nombra `docs/adr/README.md` y `docs/research-branches.md`, y ambos existen (`indice`).
  * `revisarParesDeGuias`: cada `docs/guide/<x>.md` (ingles, fuente) tiene `docs/guia/<x>.md` (espanol) y al reves (`par`); la primera
  * linea de cada uno enlaza a su par (`enlace`); mismo numero de `## ` (`encabezados`) y bloques de codigo identicos (`codigo`).
+ * `revisarGlosario`: cada entrada de `CONTEXT.md` (linea `**X**...:`) se encabeza `**English** (es: **Spanish**):` (`glosario`).
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 export const SECCIONES_README = [
-  'Que hace',
-  'Que NO hace',
-  'Depende de',
-  'Archivo de entrada',
-  'ADR relacionado',
-  'Probar',
+  'What it does',
+  'What it does not do',
+  'Depends on',
+  'Entry file',
+  'Related ADR',
+  'Test',
 ] as const;
 
 export interface Violacion {
   archivo: string;
-  regla: 'seccion' | 'entrada' | 'probar' | 'indice' | 'par' | 'enlace' | 'encabezados' | 'codigo';
+  regla: 'seccion' | 'entrada' | 'probar' | 'indice' | 'par' | 'enlace' | 'encabezados' | 'codigo' | 'glosario';
   mensaje: string;
 }
 
@@ -56,7 +57,7 @@ export function revisarReadmes(raiz: string): Violacion[] {
       }
     }
 
-    const entrada = cuerpoDeSeccion(readme, 'Archivo de entrada');
+    const entrada = cuerpoDeSeccion(readme, 'Entry file');
     if (entrada !== undefined) {
       const rutas = [...entrada.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
       if (rutas.length === 0) {
@@ -67,9 +68,9 @@ export function revisarReadmes(raiz: string): Violacion[] {
       }
     }
 
-    const probar = cuerpoDeSeccion(readme, 'Probar');
+    const probar = cuerpoDeSeccion(readme, 'Test');
     if (probar !== undefined && !probar.includes(`pnpm --filter ${paquete} test`)) {
-      violar('probar', `la seccion "Probar" no contiene "pnpm --filter ${paquete} test"`);
+      violar('probar', `la seccion "Test" no contiene "pnpm --filter ${paquete} test"`);
     }
   }
   return violaciones;
@@ -97,7 +98,7 @@ export function revisarIndiceDeAdrs(raiz: string): Violacion[] {
     }));
 }
 
-const INDICES_DE_AGENTS = ['docs/adr/README.md', 'docs/ramas.md'] as const;
+const INDICES_DE_AGENTS = ['docs/adr/README.md', 'docs/research-branches.md'] as const;
 
 export function revisarEnlacesDeAgents(raiz: string): Violacion[] {
   const archivo = 'AGENTS.md';
@@ -179,4 +180,21 @@ export function revisarParesDeGuias(raiz: string): Violacion[] {
     }
   }
   return violaciones;
+}
+
+const ENTRADA_DE_GLOSARIO = /^\*\*[^*]+\*\* \(es: \*\*[^*]+\*\*\):$/;
+
+export function revisarGlosario(raiz: string): Violacion[] {
+  const archivo = 'CONTEXT.md';
+  if (!existsSync(join(raiz, archivo))) return [];
+  return readFileSync(join(raiz, archivo), 'utf8')
+    .split('\n')
+    .map((linea) => linea.trimEnd())
+    .filter((linea) => linea.startsWith('**') && linea.endsWith(':'))
+    .filter((linea) => !ENTRADA_DE_GLOSARIO.test(linea))
+    .map((linea) => ({
+      archivo,
+      regla: 'glosario' as const,
+      mensaje: `la entrada "${linea}" no sigue "**English** (es: **Spanish**):"`,
+    }));
 }

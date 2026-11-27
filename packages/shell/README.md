@@ -1,25 +1,25 @@
 # shell
-Capa interactiva en React sobre `render`: pan/zoom, Seleccion, navegacion entre Vistas y edicion de Pins.
+Interactive React layer over `render`: pan/zoom, Selection, navigation between Views and Pin editing.
 
-## Que hace
-- `VistaInteractiva` resuelve una Vista, pide la Geometria al adaptador de layout (`adaptadorDeWorker` en la pagina, `servirLayout` dentro del Worker) y la dibuja con `render`; mide texto con la fuente real (`medirEnVisor`).
-- Camara con pan y zoom, Seleccion, ruta mas corta, foco, hover, colapso de Grupos con relayout y morph, Pasos con drill-down y zoom semantico (en `sequence`, Seleccion por Mensaje, Nota, Lifeline y Fragmento, teclado y `ref`/`link` entre Vistas); cada estado es controlado por props o interno, y `useEstadoEnHash` lo lleva al hash de la URL (`AdaptadorDeHash` permite renombrar claves, como hace `estudio`).
-- Solo bajo `dev`, arrastres que avisan al padre sin escribir: `onMoveNode` (centro nuevo del Nodo, como un Pin) y `onReorderLifelines` (orden visible completo); si la promesa resuelve `false` el elemento vuelve a su sitio. Construir la Intencion, deshacer y rehacer es del padre (`estudio`).
-- Chrome del lienzo (issues, toasts, leyenda, migas) desactivable con `chrome={false}`; `Leyenda` y `Migas` se exportan para montarlo fuera.
+## What it does
+- `VistaInteractiva` resolves a View, asks the layout adapter for the Geometry (`adaptadorDeWorker` in the page, `servirLayout` inside the Worker) and draws it with `render`; it measures text with the real font (`medirEnVisor`).
+- Camera with pan and zoom, Selection, shortest path, focus, hover, Group collapse with relayout and morph, Steps with drill-down and semantic zoom (in `sequence`, Selection by Message, Note, Lifeline and Fragment, keyboard and `ref`/`link` between Views); each state is controlled by props or internal, and `useEstadoEnHash` carries it into the URL hash (`AdaptadorDeHash` allows renaming keys, as `estudio` does).
+- Only under `dev`, drags that notify the parent without writing: `onMoveNode` (new Node center, like a Pin) and `onReorderLifelines` (full visible order); if the promise resolves `false` the element goes back to its place. Building the Intent, undo and redo are the parent's (`estudio`).
+- Canvas chrome (issues, toasts, legend, breadcrumbs) can be turned off with `chrome={false}`; `Leyenda` and `Migas` are exported to mount it outside.
 
-## Que NO hace
-- No dibuja SVG ni calcula posiciones: eso es de `render` y `layout`.
-- No lee ni escribe el DSL: la edicion pura es de `sesion`.
-- No define el CLI ni sirve archivos: eso es de `cli`.
+## What it does not do
+- Does not draw SVG nor compute positions: that is `render` and `layout`.
+- Does not read nor write the DSL: pure editing is `sesion`'s.
+- Does not define the CLI nor serve files: that is `cli`.
 
-## Depende de
-`canonical`, `tema`, `layout`, `sesion` y `render`. Dependencias externas: `d3-selection`, `d3-zoom`; `react` es peer.
+## Depends on
+`canonical`, `tema`, `layout`, `sesion` and `render`. External dependencies: `d3-selection`, `d3-zoom`; `react` is a peer.
 
-## Archivo de entrada
-`packages/shell/src/index.ts` (la cabecera documenta la interfaz publica y los props).
+## Entry file
+`packages/shell/src/index.ts` (the header documents the public interface and the props).
 
-## ADR relacionado
-`docs/adr/0008-sistema-de-temas-expresivo.md` (ruta, foco y medicion de texto) y `docs/adr/0007-interaccion-y-protocolo-de-edicion.md` (Gesto de mover un Pin).
+## Related ADR
+`docs/adr/0008-expressive-theme-system.md` (path, focus and text measuring) and `docs/adr/0007-interaction-and-edit-protocol.md` (Gesture to move a Pin).
 
-## Probar
+## Test
 `pnpm --filter shell test`

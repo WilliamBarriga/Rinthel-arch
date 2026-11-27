@@ -70,7 +70,7 @@ The demo at https://williambarriga.github.io/Rinthel-arch/ is `examples/rinthel-
 
 ## Research and prototype branches
 
-The `research/*` branches hold investigations (one `research/<name>.md` file per branch) and `prototype/*` holds the prototypes that grounded decisions. They are context material: they are not merged into `main`. The index with one conclusion per branch is [docs/ramas.md](docs/ramas.md). List the research ones with `git branch -a -l '*research/*'` and read one with `git show research/<name>:research/<name>.md`.
+The `research/*` branches hold investigations (one `research/<name>.md` file per branch) and `prototype/*` holds the prototypes that grounded decisions. They are context material: they are not merged into `main`. The index with one conclusion per branch is [docs/research-branches.md](docs/research-branches.md). List the research ones with `git branch -a -l '*research/*'` and read one with `git show research/<name>:research/<name>.md`.
 
 ## Agents
 
