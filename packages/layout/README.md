@@ -1,25 +1,25 @@
 # layout
-Calcula la Geometria de una Vista (ELK para architecture, flow y er; algoritmo propio para sequence) y aplica los Pins.
+Computes the Geometry of a View (ELK for architecture, flow and er; an own algorithm for sequence) and applies the Pins.
 
-## Que hace
-- `layoutView` da la caja de cada Nodo visible y la ruta ortogonal de cada Arista de una `VistaResuelta`.
-- `layoutView` elige por `vista.type`: ELK en capas para grafos; en `sequence`, `layoutSecuencia` (interno, `src/secuencia.ts`) coloca Lifelines (columnas) y Mensajes (filas) sin ELK. La Geometria es una union por `kind` (`grafo` o `secuencia`). Los tipos de Geometria no se declaran aqui: salen del esquema de `canonico` (`geometriaSchema`) y se importan de `canonico`.
-- `layoutConMetricas` es `layoutView` sobre Metricas ya resueltas, sin el Tema: lo corre el Worker (`shell`), que no empaqueta el esquema del Tema. `render` debe dibujar con las mismas Metricas.
-- `claveDeLayout` y `claveDeEstructura` dicen cuando relayoutar; `aplicarPinsAGeometria` aplica Pins sin ELK; `indiceDeGeometria` entrega cajas absolutas, el padre de cada Nodo y las raices.
+## What it does
+- `layoutView` gives the box of each visible Node and the orthogonal route of each Edge of a `VistaResuelta`.
+- `layoutView` picks by `vista.type`: layered ELK for graphs; in `sequence`, `layoutSecuencia` (internal, `src/secuencia.ts`) places Lifelines (columns) and Messages (rows) without ELK. The Geometry is a union by `kind` (`grafo` or `secuencia`). The Geometry types are not declared here: they come from the `canonico` schema (`geometriaSchema`) and are imported from `canonico`.
+- `layoutConMetricas` is `layoutView` over already resolved Metrics, without the Theme: the Worker (`shell`) runs it, which does not bundle the Theme schema. `render` must draw with the same Metrics.
+- `claveDeLayout` and `claveDeEstructura` say when to relayout; `aplicarPinsAGeometria` applies Pins without ELK; `indiceDeGeometria` gives absolute boxes, each Node's parent and the roots.
 
-## Que NO hace
-- No define las Metricas ni la colocacion de Slots: las lee de `tema`.
-- No dibuja ni maneja el Worker del visor: eso es de `render` y `shell`.
-- No guarda la geometria en disco: eso es de `cli`.
+## What it does not do
+- Does not define the Metrics nor the placement of Slots: it reads them from `tema`.
+- Does not draw nor handle the viewer's Worker: that is `render` and `shell`.
+- Does not store the geometry on disk: that is `cli`.
 
-## Depende de
-`canonico` y `tema`. Dependencia externa: `elkjs`.
+## Depends on
+`canonico` and `tema`. External dependency: `elkjs`.
 
-## Archivo de entrada
-`packages/layout/src/index.ts` (la cabecera documenta invariantes y modos de error).
+## Entry file
+`packages/layout/src/index.ts` (the header documents invariants and error modes).
 
-## ADR relacionado
-`docs/adr/0003-layout-elk-geometria-cacheada.md`.
+## Related ADR
+`docs/adr/0003-elk-layout-cached-geometry.md`.
 
-## Probar
+## Test
 `pnpm --filter layout test`

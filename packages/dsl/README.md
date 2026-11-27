@@ -1,25 +1,25 @@
 # dsl
-Compilador del DSL de texto (gramatica Langium) a la Fuente canonica.
+Compiler from the Text DSL (Langium grammar) to the Canonical form.
 
-## Que hace
-- `compile` fusiona los archivos del Workspace de forma determinista y devuelve la Fuente canonica con sus `Issue` posicionados, sin lanzar excepciones.
-- Compila `interaction`, `type sequence`, `type er` y el bloque `theme`, cuyas Capas y Slots valida contra el catalogo de `tema`, incluidos los Elementos de secuencia (`lifeline`, `activation`, `message`, `fragment`, `note`) y de ER (`row`).
-- Devuelve la posicion en el texto de cada `pin` y de cada valor (`ubicar`), base de la edicion de Pins.
-- Declara en DSL los Temas incorporados `neutral` y `neutral-dark` (`src/incorporados.ts`, cero avisos de contraste); `high-contrast` es de `tema`. La gramatica es `src/gramatica/diagramas.langium`; `src/generated/` sale de `pnpm generate` (lo corre `build`), no se versiona ni se edita.
+## What it does
+- `compile` merges the Workspace files deterministically and returns the Canonical form with its positioned `Issue`s, without throwing.
+- Compiles `interaction`, `type sequence`, `type er` and the `theme` block, whose Layers and Slots it validates against the `tema` catalog, including the sequence Elements (`lifeline`, `activation`, `message`, `fragment`, `note`) and the ER one (`row`).
+- Returns the text position of each `pin` and each value (`ubicar`), the basis of Pin editing.
+- Declares in DSL the built-in Themes `neutral` and `neutral-dark` (`src/incorporados.ts`, zero contrast warnings); `high-contrast` belongs to `tema`. The grammar is `src/gramatica/diagramas.langium`; `src/generated/` comes from `pnpm generate` (run by `build`), it is neither versioned nor edited.
 
-## Que NO hace
-- No define ni valida el esquema de la Fuente canonica: eso es de `canonico`.
-- No define el catalogo de Primitivas, Slots y Efectos ni calcula geometria: eso es de `tema` y `layout`.
-- No lee disco: recibe `ArchivosDelWorkspace` ya leido.
+## What it does not do
+- Does not define nor validate the schema of the Canonical form: that is `canonico`.
+- Does not define the catalog of Primitives, Slots and Effects nor compute geometry: that is `tema` and `layout`.
+- Does not read disk: it receives `ArchivosDelWorkspace` already read.
 
-## Depende de
-`canonico` y `tema` (`docs/CODING.md`, "Direccion de dependencias"). Dependencia externa: `langium`.
+## Depends on
+`canonico` and `tema` (`docs/CODING.md`, "Dependency direction"). External dependency: `langium`.
 
-## Archivo de entrada
-`packages/dsl/src/index.ts` (la cabecera documenta invariantes y modos de error).
+## Entry file
+`packages/dsl/src/index.ts` (the header documents invariants and error modes).
 
-## ADR relacionado
-`docs/adr/0001-dsl-fuente-editable.md` (el DSL es la unica fuente editable) y `docs/adr/0008-sistema-de-temas-expresivo.md` (sintaxis del bloque `theme`).
+## Related ADR
+`docs/adr/0001-dsl-editable-source.md` (the DSL is the only editable source) and `docs/adr/0008-expressive-theme-system.md` (syntax of the `theme` block).
 
-## Probar
+## Test
 `pnpm --filter dsl test`

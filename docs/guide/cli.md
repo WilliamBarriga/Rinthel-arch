@@ -8,7 +8,7 @@ The CLI is `packages/cli/dist/bin.js` (after `pnpm build`), or the `diagrams` co
 alias dg="node $PWD/packages/cli/dist/bin.js"
 ```
 
-`dg --help` lists the commands and `dg <command> --help` gives the options of each one (help goes to stdout, exit code 0). All of them except `scan` require `--workspace <path>` (in `scan` it is optional), the folder with the `.dg` files. Design contract: [ADR 0005](../adr/0005-cli-para-agentes.md).
+`dg --help` lists the commands and `dg <command> --help` gives the options of each one (help goes to stdout, exit code 0). All of them except `scan` require `--workspace <path>` (in `scan` it is optional), the folder with the `.dg` files. Design contract: [ADR 0005](../adr/0005-cli-for-agents.md).
 
 ## Exit codes
 
@@ -108,7 +108,7 @@ Generates a `SKILL.md` with the Node kinds, Themes, syntax, contracts and issue 
 dg scan [<root>] [--out <file>] [--json] [--depth <N>] [--max-files <N>] [--workspace <path>]
 ```
 
-Reads the codebase at `<root>` (the current folder by default) without running anything and writes the `rinthel/scan@1` Scan draft to `<root>/.rinthel/scan.json` (or to `--out`; not versioned). It does not use `--workspace` for input nor write `.dg`: the agent reads the draft and writes the Workspace, which is validated with `validate`. Contract: [ADR 0010](../adr/0010-importador-de-codebases.md).
+Reads the codebase at `<root>` (the current folder by default) without running anything and writes the `rinthel/scan@1` Scan draft to `<root>/.rinthel/scan.json` (or to `--out`; not versioned). It does not use `--workspace` for input nor write `.dg`: the agent reads the draft and writes the Workspace, which is validated with `validate`. Contract: [ADR 0010](../adr/0010-codebase-importer.md).
 
 - **Units** (`units`): one per manifest (`package.json`, `pyproject.toml`, `go.mod`, `Cargo.toml`), plus the root. Its `id` is the folder relative to the root (`.` for the root) and is the ref of the `path` Source of the Node that draws it. `parent` comes from the path and `kind` (`package`, `app`, `module`, `folder`) is a hint, not a Node kind. A manifest with no other manifests inside and with 30 files or more is split into `folder` sub-units down to `--depth` levels (2 by default; 0 does not split).
 - **Dependencies** (`dependencies`): TS/JS imports (`import`, `export ... from`, `import()`, `require()`) and Python imports (`import a.b`, `from a.b import c`, relative `from .x import y`; local modules resolve against the repo files, plain or under `src/`) aggregated per pair of units, with `weight` (how many imports) and up to 3 `examples` (`file:line`). Imports within the same unit, Node modules and the Python standard library do not count; any other Python module is a PyPI external.
@@ -118,7 +118,7 @@ Reads the codebase at `<root>` (the current folder by default) without running a
 
 Each item carries `source {file, line}` (line 0: the folder itself) and `confidence` (`extracted` or `inferred`). It respects `.gitignore` and always skips `node_modules`, `dist`, `build`, `.venv`, `venv`, `vendor`, `third_party`, `__pycache__`, `.git`, `.rinthel` and `.diagrams`. With the same commit, the draft is byte-for-byte identical. stdout is a compact summary that ends with the next step; with `--json`, that summary as an object with its own `contractVersion` (`draft`, `schema`, `commit`, `counts`, `limits` and the first 15 `units`, `dependencies`, `externals` and `tables`). If there are tables, the next step suggests an `er` View. It exits 0 if it wrote the draft and 2 on a usage failure.
 
-Refreshing an already written Workspace ([ADR 0010](../adr/0010-importador-de-codebases.md), "incremental refresh" amendment):
+Refreshing an already written Workspace ([ADR 0010](../adr/0010-codebase-importer.md), "incremental refresh" amendment):
 
 - **Scan coverage** (`coverage`): if there is a Workspace (`--workspace <path>`, or the shallowest folder under `<root>`, up to 4 levels, that has `.dg` files), `scan` compiles it without running anything and compares it with the draft only by the `path` Sources of its Nodes: units and tables that no Node cites (`units.uncovered`, `tables.uncovered`), refs that are no id of the draft (`orphanRefs`, per Node) and, in Nodes that cite a table, columns without an Attribute (`missing`) and Attributes without a column (`extra`). It is informative: they are not Issues and the exit code stays 0. If there are two or more Workspaces at the same depth or the Workspace does not compile, `coverage` carries `error` and the text says so. Without a Workspace, `coverage` is `null`. With coverage, the next step becomes refreshing the Workspace, or says there is nothing to refresh when coverage has no gaps.
 - **`.rinthel/scan-ignore`** (versioned): `.gitignore`-style patterns over unit ids, table ids and refs (`packages/legacy-*`, `audit_log`; the root unit only with a `.` line). What matches leaves the coverage (and is counted in `ignored`), not the draft.

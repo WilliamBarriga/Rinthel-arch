@@ -1,24 +1,24 @@
 # canonico
-Esquemas Zod de la Fuente canonica, las funciones puras que la consultan y los contratos que comparten `cli`, `sesion` y `estudio`.
+Zod schemas of the Canonical form, the pure functions that query it and the contracts shared by `cli`, `sesion` and `estudio`.
 
-## Que hace
-- Define y valida el esquema de la Fuente canonica (Nodos, Aristas, Vistas, Pasos, Paleta) y de la Geometria; `validate` devuelve `Issue` con `hint` y `fix` (codigos en `CODIGOS`).
-- `resolveView` selecciona los Nodos de una Vista y, en una Vista `sequence`, resuelve su Interaccion (Lifelines, activaciones; `secuencia.ts`); una Vista `er` se resuelve como `architecture`. `revealAt` interpreta sus Pasos.
-- Unico dueno de los contratos versionados: las Intenciones de edicion (`pin.ts`: `move-pin`, `reorder-lifelines`, `set-theme`), las salidas `--json` de `validate`, `inspect` y `edit`, el Evento de actividad (`actividad.ts`, una linea del Registro de actividad; `crearLectorDeActividad` lee solo lo anexado) y el protocolo de `dev` (`dev.ts`: rutas, eventos SSE, estado, Diferencia, Historial de archivos; `estudio/protocolo` lo reexporta). Un campo nuevo de un contrato se agrega aqui, no en quien lo usa.
+## What it does
+- Defines and validates the schema of the Canonical form (Nodes, Edges, Views, Steps, Palette) and of the Geometry; `validate` returns `Issue`s with `hint` and `fix` (codes in `CODIGOS`).
+- `resolveView` selects the Nodes of a View and, in a `sequence` View, resolves its Interaction (Lifelines, activations; `secuencia.ts`); an `er` View is resolved as `architecture`. `revealAt` interprets its Steps.
+- Single owner of the versioned contracts: the edit Intents (`pin.ts`: `move-pin`, `reorder-lifelines`, `set-theme`), the `--json` outputs of `validate`, `inspect` and `edit`, the Activity event (`actividad.ts`, one line of the Activity log; `crearLectorDeActividad` reads only what was appended) and the `dev` protocol (`dev.ts`: routes, SSE events, state, Diff, File history; `estudio/protocolo` re-exports it). A new field of a contract is added here, not in its user.
 
-## Que NO hace
-- No lee texto DSL ni fusiona archivos: eso es de `dsl`.
-- No define el contenido de un Tema ni calcula geometria: eso es de `tema` y `layout`.
-- No toca disco, reloj ni red: es nucleo puro (el Registro de actividad en disco es de `cli`; el protocolo lo sirve `cli` y lo produce `sesion`).
+## What it does not do
+- Does not read DSL text nor merge files: that is `dsl`.
+- Does not define the content of a Theme nor compute geometry: that is `tema` and `layout`.
+- Does not touch disk, clock or network: it is pure core (the on-disk Activity log is `cli`'s; the protocol is served by `cli` and produced by `sesion`).
 
-## Depende de
-Ningun paquete del workspace. Es el primero de la cadena (`docs/CODING.md`, "Direccion de dependencias"). Dependencia externa: `zod`.
+## Depends on
+No workspace package. It is the first of the chain (`docs/CODING.md`, "Dependency direction"). External dependency: `zod`.
 
-## Archivo de entrada
-`packages/canonico/src/index.ts` (la cabecera documenta invariantes y modos de error).
+## Entry file
+`packages/canonico/src/index.ts` (the header documents invariants and error modes).
 
-## ADR relacionado
-`docs/adr/0001-dsl-fuente-editable.md` (Fuente canonica), `docs/adr/0002-render-tema-y-revelado.md` (Pasos y colores de Paleta) y `docs/adr/0007-interaccion-y-protocolo-de-edicion.md` (Intenciones y protocolo de `dev`).
+## Related ADR
+`docs/adr/0001-dsl-editable-source.md` (Canonical form), `docs/adr/0002-render-theme-and-reveal.md` (Steps and Palette colors) and `docs/adr/0007-interaction-and-edit-protocol.md` (Intents and the `dev` protocol).
 
-## Probar
+## Test
 `pnpm --filter canonico test`
