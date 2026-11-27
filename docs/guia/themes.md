@@ -2,7 +2,7 @@
 
 # Personalizar con Temas
 
-La estetica de un diagrama vive en el **Tema**, nunca en el Modelo: el mismo Modelo y la misma Vista se pueden ver como tarjetas sobrias, neon o placa de circuito cambiando una linea (`theme <nombre>`). Esta guia explica como esta hecho un Tema y como escribir uno. Si no lo has hecho, empieza por el [tutorial](tutorial.md). La lista exacta de Primitivas, propiedades y rangos esta en el [catalogo](../theme-catalog.md); el contrato, en el [ADR 0008](../adr/0008-sistema-de-temas-expresivo.md).
+La estetica de un diagrama vive en el **Tema**, nunca en el Modelo: el mismo Modelo y la misma Vista se pueden ver como tarjetas sobrias, neon o placa de circuito cambiando una linea (`theme <nombre>`). Esta guia explica como esta hecho un Tema y como escribir uno. Si no lo has hecho, empieza por el [tutorial](tutorial.md). La lista exacta de Primitivas, propiedades y rangos esta en el [catalogo](../theme-catalog.md); el contrato, en el [ADR 0008](../adr/0008-expressive-theme-system.md).
 
 ## Elegir un Tema
 

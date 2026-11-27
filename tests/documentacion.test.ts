@@ -8,6 +8,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import {
   SECCIONES_README,
   revisarEnlacesDeAgents,
+  revisarGlosario,
   revisarIndiceDeAdrs,
   revisarParesDeGuias,
   revisarReadmes,
@@ -38,12 +39,12 @@ function crearRepo(archivos: Record<string, string>): string {
 function readmeValido(nombre: string, opciones: { sin?: string[]; entrada?: string } = {}): string {
   const entrada = opciones.entrada ?? `packages/${nombre}/src/index.ts`;
   const cuerpos: Record<string, string> = {
-    'Que hace': 'Hace algo.',
-    'Que NO hace': 'No hace otra cosa.',
-    'Depende de': 'Nada.',
-    'Archivo de entrada': `\`${entrada}\``,
-    'ADR relacionado': '`docs/adr/0001-x.md`',
-    Probar: `\`pnpm --filter ${nombre} test\``,
+    'What it does': 'Hace algo.',
+    'What it does not do': 'No hace otra cosa.',
+    'Depends on': 'Nada.',
+    'Entry file': `\`${entrada}\``,
+    'Related ADR': '`docs/adr/0001-x.md`',
+    Test: `\`pnpm --filter ${nombre} test\``,
   };
   const secciones = SECCIONES_README.filter((s) => !opciones.sin?.includes(s))
     .map((s) => `## ${s}\n\n${cuerpos[s]}\n`)
@@ -61,12 +62,12 @@ function repoConPaquete(readme?: string): Record<string, string> {
 describe('revisarReadmes', () => {
   it('fija la plantilla de secciones', () => {
     expect(SECCIONES_README).toEqual([
-      'Que hace',
-      'Que NO hace',
-      'Depende de',
-      'Archivo de entrada',
-      'ADR relacionado',
-      'Probar',
+      'What it does',
+      'What it does not do',
+      'Depends on',
+      'Entry file',
+      'Related ADR',
+      'Test',
     ]);
   });
 
@@ -85,7 +86,7 @@ describe('revisarReadmes', () => {
   });
 
   it('falla si un README pierde una seccion', () => {
-    const raiz = crearRepo(repoConPaquete(readmeValido('canonico', { sin: ['Que NO hace'] })));
+    const raiz = crearRepo(repoConPaquete(readmeValido('canonico', { sin: ['What it does not do'] })));
 
     expect(revisarReadmes(raiz)).toContainEqual(
       expect.objectContaining({ archivo: 'packages/canonico/README.md', regla: 'seccion' }),
@@ -109,7 +110,7 @@ describe('revisarReadmes', () => {
     expect(revisarReadmes(raiz)).toContainEqual(expect.objectContaining({ regla: 'entrada' }));
   });
 
-  it('falla si la seccion Probar no da el comando del paquete', () => {
+  it('falla si la seccion Test no da el comando del paquete', () => {
     const readme = readmeValido('canonico').replace('pnpm --filter canonico test', 'pnpm test');
     const raiz = crearRepo(repoConPaquete(readme));
 
@@ -159,15 +160,15 @@ describe('revisarIndiceDeAdrs', () => {
 });
 
 describe('revisarEnlacesDeAgents', () => {
-  const completo = 'Indices: `docs/adr/README.md` y `docs/ramas.md`.\n';
-  const indices = { 'docs/adr/README.md': '# ADRs\n', 'docs/ramas.md': '# Ramas\n' };
+  const completo = 'Indices: `docs/adr/README.md` y `docs/research-branches.md`.\n';
+  const indices = { 'docs/adr/README.md': '# ADRs\n', 'docs/research-branches.md': '# Research branches\n' };
 
   it('acepta un AGENTS.md que enlaza ambos indices existentes', () => {
     expect(revisarEnlacesDeAgents(crearRepo({ 'AGENTS.md': completo, ...indices }))).toEqual([]);
   });
 
   it('falla si falta el enlace al indice de ADRs', () => {
-    const raiz = crearRepo({ 'AGENTS.md': 'Solo `docs/ramas.md`.\n', ...indices });
+    const raiz = crearRepo({ 'AGENTS.md': 'Solo `docs/research-branches.md`.\n', ...indices });
 
     expect(revisarEnlacesDeAgents(raiz)).toContainEqual(
       expect.objectContaining({ archivo: 'AGENTS.md', regla: 'indice' }),
@@ -180,11 +181,11 @@ describe('revisarEnlacesDeAgents', () => {
     expect(revisarEnlacesDeAgents(raiz)).toHaveLength(1);
   });
 
-  it('falla si docs/ramas.md no existe', () => {
+  it('falla si docs/research-branches.md no existe', () => {
     const raiz = crearRepo({ 'AGENTS.md': completo, 'docs/adr/README.md': '# ADRs\n' });
 
     expect(revisarEnlacesDeAgents(raiz)).toContainEqual(
-      expect.objectContaining({ archivo: 'docs/ramas.md', regla: 'indice' }),
+      expect.objectContaining({ archivo: 'docs/research-branches.md', regla: 'indice' }),
     );
   });
 
@@ -247,5 +248,31 @@ describe('revisarParesDeGuias', () => {
 
   it('the guides of this repo are paired', () => {
     expect(revisarParesDeGuias(raizDelRepo)).toEqual([]);
+  });
+});
+
+describe('revisarGlosario', () => {
+  const glosario = (entrada: string) => `# x\n\n## Language\n\n${entrada}\nA definition.\n`;
+
+  it('accepts entries headed by the English term with the Spanish one in parentheses', () => {
+    const raiz = crearRepo({ 'CONTEXT.md': glosario('**Model** (es: **Modelo**):') });
+
+    expect(revisarGlosario(raiz)).toEqual([]);
+  });
+
+  it('fails when an entry is still headed by the Spanish term', () => {
+    const raiz = crearRepo({ 'CONTEXT.md': glosario('**Modelo** (en: **Model**):') });
+
+    expect(revisarGlosario(raiz)).toContainEqual(expect.objectContaining({ archivo: 'CONTEXT.md', regla: 'glosario' }));
+  });
+
+  it('fails when an entry lacks the Spanish term', () => {
+    const raiz = crearRepo({ 'CONTEXT.md': glosario('**Model**:') });
+
+    expect(revisarGlosario(raiz)).toContainEqual(expect.objectContaining({ regla: 'glosario' }));
+  });
+
+  it('the glossary of this repo is English first', () => {
+    expect(revisarGlosario(raizDelRepo)).toEqual([]);
   });
 });

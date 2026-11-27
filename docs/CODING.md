@@ -1,54 +1,54 @@
-# Reglas de codigo
+# Coding rules
 
-Vocabulario de diseno: **Modulo**, **Interfaz**, **Seam**, **Adaptador**, **Profundidad** (skill `codebase-design`). Vocabulario de dominio: `CONTEXT.md`. Decisiones de contrato por modulo: `docs/adr/`.
+Design vocabulary: **Module**, **Interface**, **Seam**, **Adapter**, **Depth** (skill `codebase-design`). Domain vocabulary: `CONTEXT.md`. Contract decisions per module: `docs/adr/`.
 
-## Estructura
+## Structure
 
-Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico, tema, dsl, layout, sesion, render, shell, estudio, cli, scanner). La interfaz del modulo es el paquete: lo que no sale por `exports` de su `package.json` es privado. `exports` declara solo `.`; la unica excepcion es `estudio`, con `./protocolo` (tipos del protocolo de `dev` que `cli` importa sin cargar la app), `./contrato` (suite de contrato de solo pruebas) y `./construir` (arma el bundle de la app; lo usan su build y el bench). Un paquete se importa por su nombre; los archivos internos de otro paquete no se importan.
+Monorepo with workspaces. One package in `packages/` per deep module (canonico, tema, dsl, layout, sesion, render, shell, estudio, cli, scanner). The module's interface is the package: whatever does not leave through the `exports` of its `package.json` is private. `exports` declares only `.`; the only exception is `estudio`, with `./protocolo` (types of the `dev` protocol that `cli` imports without loading the app), `./contrato` (test-only contract suite) and `./construir` (builds the app bundle; used by its build and the bench). A package is imported by its name; internal files of another package are not imported.
 
-## Modulos profundos
+## Deep modules
 
-- Interfaz pequena (pocas funciones y tipos), mucho comportamiento detras.
-- La interfaz incluye invariantes, orden de llamadas, modos de error y configuracion requerida. La cabecera del `index.ts` la resume en pocas lineas (interfaz, invariantes, modos de error, dependencias); el detalle de cada export vive en su TSDoc y las opciones de usuario en `docs/guia/`.
-- Test de borrado: si borrar el modulo hace desaparecer la complejidad, era un pass-through; se fusiona con quien lo usa.
-- Las piezas internas pueden ser pequenas y sustituibles; solo cuenta como interfaz lo que cruza el seam.
+- Small interface (few functions and types), a lot of behavior behind it.
+- The interface includes invariants, call order, error modes and required configuration. The header of `index.ts` summarizes it in a few lines (interface, invariants, error modes, dependencies); the detail of each export lives in its TSDoc and user options in `docs/guide/`.
+- Deletion test: if deleting the module makes the complexity disappear, it was a pass-through; merge it into its caller.
+- Internal pieces may be small and replaceable; only what crosses the seam counts as interface.
 
-## Hexagonal donde hay variacion real
+## Hexagonal where there is real variation
 
-- **Nucleo puro**: compilador DSL, Modelo, Vistas, validacion, Pin, render. Sin I/O, sin reloj, sin estado global.
-- **Puertos**: interfaces que define el nucleo segun lo que necesita. **Adaptadores**: sistema de archivos, ELK, d3-zoom, Web Worker, CLI; viven en el borde y dependen del nucleo, nunca al reves.
-- Un seam existe cuando algo varia a traves de el: un adaptador es un seam hipotetico, dos es uno real. Con un solo adaptador, llamada directa.
-- Las dependencias entran como argumento; las funciones devuelven resultados en vez de mutar.
-- Direccion de dependencias: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. Un paquete solo importa de los anteriores. `tema` va tras `canonico` porque reutiliza sus `Issue` y codigos, y antes de `dsl` porque el compilador de Temas valida con su catalogo (ADR 0004, enmienda).
+- **Pure core**: DSL compiler, Model, Views, validation, Pin, render. No I/O, no clock, no global state.
+- **Ports**: interfaces the core defines according to what it needs. **Adapters**: file system, ELK, d3-zoom, Web Worker, CLI; they live at the edge and depend on the core, never the other way around.
+- A seam exists when something varies across it: one adapter is a hypothetical seam, two is a real one. With a single adapter, a direct call.
+- Dependencies come in as arguments; functions return results instead of mutating.
+- Dependency direction: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. A package only imports from the earlier ones. `tema` comes after `canonico` because it reuses its `Issue` and codes, and before `dsl` because the Theme compiler validates against its catalog (ADR 0004, amendment).
 - `scanner` sits outside the chain (ADR 0010): it imports no workspace package and only `cli` imports it (`AISLADOS` in `scripts/check-dependencies.ts`).
-- El nucleo es agnostico del Proyecto documentado (ver `AGENTS.md`).
+- The core is agnostic of the Documented project (see `AGENTS.md`).
 
-## Pruebas
+## Tests
 
-- La interfaz es la superficie de prueba: tests y llamadores cruzan el mismo seam.
-- Entradas y salidas observables. Un refactor interno deja todos los tests en verde.
-- Fakes en memoria (adaptadores reales de bajo costo) antes que mocks; mock solo para I/O que no se puede simular.
-- Compilador: texto DSL entra, Fuente canonica sale; se compara contra la salida publica.
-- Protocolo cliente-servidor: el fake va sobre el transporte, no sobre el dominio. `devEnMemoria` (`estudio/contrato`) es el Workspace vivo real de `sesion` (con `atenderApiDeDev`, las mismas rutas que `dev`) sobre `puertoEnMemoria`; solo el HTTP y el SSE son falsos. La app recibe `fetch` y la fabrica de eventos inyectados (sin polyfills de `EventSource` ni MSW) y los errores de red se inyectan envolviendo `fetch`.
-- Contrato compartido entre fake y real: una suite (`probarContratoDeDev(crear)`) corre contra el fake en el paquete que lo define y contra el adaptador real en el que lo implementa. Una ruta nueva entra a la vez al contrato, al fake y al real.
-- Interfaz de usuario: se consulta por rol y nombre accesible (prueba tambien la accesibilidad), nunca componentes ni estado interno; se espera con `findBy*`/`waitFor` y el tiempo (debounce, avisos) con timers falsos. Las islas y los componentes no son seams: se prueban a traves de la app montada en jsdom. Excepcion, solo donde no hay rol que consultar: el lienzo (`data-id`, `data-vista`, `data-layout`, `data-part` de las Partes dibujadas, las variables `--rd-*` del dibujo y lo que dibuja el Componente de Tema de prueba, `data-aurora` de `BUNDLE_DE_PRUEBA`; `lienzoListo` de `packages/estudio/test/ayudas-de-ui.tsx`; las ayudas de puntero del lienzo, como `pulsarNodo`, tienen una sola copia en `tests/ayudas/lienzo.ts`, que las pruebas de los paquetes importan por ruta relativa, como el reloj falso y los Eventos de actividad de `tests/ayudas/reloj.ts` y `tests/ayudas/actividad.ts`) y las decoraciones de CodeMirror (clases `cm-*` y las marcas que el editor pone en sus lineas); un atributo de estado del chrome (`data-arrastrando`) se busca como ancestro de un elemento consultado por rol.
-- Una sola punta a punta en navegador real, dentro de `pnpm test` (`packages/cli/test/e2e-estudio.test.ts`): `dev` real, Chromium headless de Playwright, locators y plazo de 60 s. Cubre solo lo que jsdom no puede (escritura en disco, CodeMirror, scroll, arrastres); lo demas va a jsdom. Busca Chromium con `tests/ayudas/chromium.ts` (ayuda de prueba compartida en la raiz), el mismo helper que `pnpm capturas` y `pnpm docs:capturas`; sin Chromium falla pidiendo `pnpm exec playwright install chromium`. Sin regresion visual automatica: la estetica se revisa a mano con `pnpm docs:capturas` servido por `localhost`.
-- Documentacion derivada: lo que sale de un esquema se genera, no se escribe a mano. `docs/theme-catalog.md` sale del catalogo de `tema` (`pnpm docs:catalogo`); `tests/referencia-catalogo.test.ts` falla si se desvia. Una Primitiva nueva: una entrada en el catalogo, su pintor y regenerar la referencia.
-- Runner de pruebas: Vitest. Build de paquetes: tsup. Gestor: pnpm workspaces, sin orquestador de tareas.
+- The interface is the test surface: tests and callers cross the same seam.
+- Observable inputs and outputs. An internal refactor leaves every test green.
+- In-memory fakes (cheap real adapters) before mocks; mock only for I/O that cannot be simulated.
+- Compiler: DSL text goes in, Canonical form comes out; compare against the public output.
+- Client-server protocol: the fake sits on the transport, not on the domain. `devEnMemoria` (`estudio/contrato`) is the real Live workspace of `sesion` (with `atenderApiDeDev`, the same routes as `dev`) over `puertoEnMemoria`; only HTTP and SSE are fake. The app receives `fetch` and the injected event factory (no `EventSource` polyfills nor MSW) and network errors are injected by wrapping `fetch`.
+- Contract shared between fake and real: one suite (`probarContratoDeDev(crear)`) runs against the fake in the package that defines it and against the real adapter in the one that implements it. A new route enters the contract, the fake and the real one at the same time.
+- User interface: query by role and accessible name (it also tests accessibility), never components or internal state; wait with `findBy*`/`waitFor` and time (debounce, notices) with fake timers. Islands and components are not seams: they are tested through the app mounted in jsdom. Exception, only where there is no role to query: the canvas (`data-id`, `data-vista`, `data-layout`, `data-part` of the drawn Parts, the drawing's `--rd-*` variables and what the test Theme component draws, `data-aurora` from `BUNDLE_DE_PRUEBA`; `lienzoListo` from `packages/estudio/test/ayudas-de-ui.tsx`; the canvas pointer helpers, such as `pulsarNodo`, have a single copy in `tests/ayudas/lienzo.ts`, which package tests import by relative path, like the fake clock and the Activity events of `tests/ayudas/reloj.ts` and `tests/ayudas/actividad.ts`) and the CodeMirror decorations (`cm-*` classes and the marks the editor puts on its lines); a chrome state attribute (`data-arrastrando`) is searched as an ancestor of an element queried by role.
+- A single end-to-end in a real browser, inside `pnpm test` (`packages/cli/test/e2e-estudio.test.ts`): real `dev`, Playwright's headless Chromium, locators and a 60 s deadline. It covers only what jsdom cannot (disk writes, CodeMirror, scroll, drags); the rest goes to jsdom. It finds Chromium with `tests/ayudas/chromium.ts` (shared test helper at the root), the same helper as `pnpm capturas` and `pnpm docs:capturas`; without Chromium it fails asking for `pnpm exec playwright install chromium`. No automatic visual regression: the look is reviewed by hand with `pnpm docs:capturas` served from `localhost`.
+- Derived documentation: what comes out of a schema is generated, not hand-written. `docs/theme-catalog.md` comes from the `tema` catalog (`pnpm docs:catalogo`); `tests/referencia-catalogo.test.ts` fails if it drifts. A new Primitive: an entry in the catalog, its painter and regenerating the reference.
+- Test runner: Vitest. Package build: tsup. Manager: pnpm workspaces, no task orchestrator.
 
-## README de paquete
+## Package README
 
-`packages/<paquete>/README.md` es la puerta de entrada del paquete: hasta 25 lineas (sin linea en blanco tras cada encabezado), con un resumen de una linea bajo el titulo `# <paquete>` y estas secciones `##`, en este orden (la lista vive en `SECCIONES_README` de `scripts/check-docs.ts`):
+`packages/<package>/README.md` is the package's front door: up to 25 lines (no blank line after each heading), with a one-line summary under the title `# <package>` and these `##` sections, in this order (the list lives in `SECCIONES_README` of `scripts/check-docs.ts`):
 
-1. `Que hace`: las capacidades del paquete, en pocas lineas.
-2. `Que NO hace`: lo que se busca aqui y vive en otro paquete, con el paquete dueno.
-3. `Depende de`: paquetes del workspace que importa (o "Ningun paquete del workspace").
-4. `Archivo de entrada`: ruta del `index.ts` entre comillas invertidas, relativa a la raiz del repo.
-5. `ADR relacionado`: el ADR del contrato del paquete.
-6. `Probar`: `pnpm --filter <paquete> test`.
+1. `What it does`: the package's capabilities, in a few lines.
+2. `What it does not do`: what people look for here and lives in another package, with the owning package.
+3. `Depends on`: workspace packages it imports (or "No workspace package").
+4. `Entry file`: path of `index.ts` in backticks, relative to the repo root.
+5. `Related ADR`: the ADR of the package's contract.
+6. `Test`: `pnpm --filter <package> test`.
 
-Modelo: `packages/canonico/README.md`. `pnpm check:docs` falla si un paquete no tiene README o si este pierde una seccion, nombra un archivo de entrada inexistente o no da el comando de `Probar`.
+Model: `packages/canonico/README.md`. `pnpm check:docs` fails if a package has no README or if it loses a section, names a nonexistent entry file or does not give the `Test` command.
 
-## Chequeos automaticos
+## Automatic checks
 
-La direccion de dependencias, los imports internos entre paquetes, la superficie `exports` y la pureza del nucleo (`canonico`, `tema`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell`, `estudio` y `cli` son adaptadores), y que ningun archivo reexporte (`export ... from`) de otro paquete salvo `estudio/protocolo` y la fachada de `shell`, y que `scripts/` y `bench/` usen de los paquetes solo su nombre o lo que declara `exports` (nunca sus `test/` o `scripts/` por ruta), los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.
+The dependency direction, internal imports between packages, the `exports` surface and core purity (`canonico`, `tema`, `dsl`, `sesion`, `render`: no `node:*`, clock, randomness, `process`, network or DOM; `layout`, `shell`, `estudio` and `cli` are adapters), that no file re-exports (`export ... from`) from another package except `estudio/protocolo` and the `shell` facade, and that `scripts/` and `bench/` use from packages only their name or what `exports` declares (never their `test/` or `scripts/` by path), are verified by `scripts/check-dependencies.ts` (`pnpm check:deps`); they are not repeated in review.
