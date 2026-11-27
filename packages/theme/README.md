@@ -2,7 +2,7 @@
 Catalog of Primitives and Slots, schema of the resolved Theme and Resolved style (Metrics and paint).
 
 ## What it does
-- Defines the catalog (`CATALOG`, `SLOTS`, `MOTIONS`, `EFFECTS`), source of `docs/theme-catalog.md` (`catalogReference`; after changing it, `pnpm docs:catalogo`). `resolveTheme` validates a Theme; `NEUTRAL_THEME` is the resolved base (the DSL `neutral` is declared by `dsl`) and `HIGH_CONTRAST_THEME` the viewer's built-in.
+- Defines the catalog (`CATALOG`, `SLOTS`, `MOTIONS`, `EFFECTS`), source of `docs/theme-catalog.md` (`catalogReference`; after changing it, `pnpm docs:catalog`). `resolveTheme` validates a Theme; `NEUTRAL_THEME` is the resolved base (the DSL `neutral` is declared by `dsl`) and `HIGH_CONTRAST_THEME` the viewer's built-in.
 - `resolvedStyle(theme)` gives `{ metricas, pintura }` with cascade and patches; `placeNode` places Slots and `resolveColor` resolves colors; `themeForDiagram(theme, type)` applies the `diagram <type>` patches (a level between the base Theme and the Node kind); `metricsTable` and `resolvedStyle` receive it as `diagrama`.
 - Defines the sequence Elements (`lifeline`, `activation`, `message`, `fragment`, `note`) and the ER one (`row`); a Theme that does not declare them receives them derived from `node` and `edge` in the Resolved style (`derivation.ts`, the only place with those rules; `derivado: true`).
 - Computes contrast, legend and text measuring tables; `fnv1a` (`seed.ts`) is the only hash, reused by the `render` fingerprint and `fontHash`.

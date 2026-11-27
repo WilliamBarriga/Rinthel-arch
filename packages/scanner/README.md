@@ -13,7 +13,7 @@ The Scanner: reads a codebase, without running it, into a Scan draft `rinthel/sc
 - No knowledge of the DSL, the Model or Themes: the agent turns the draft into `.dg` files and `validate` checks them.
 
 ## Depends on
-No workspace package; only `cli` imports it (`pnpm check:deps`, rule `aislado`). External: `web-tree-sitter` with the `.wasm` grammars of `tree-sitter-typescript` and `tree-sitter-python` (their native build scripts are disabled in `pnpm-workspace.yaml`), and `ignore`.
+No workspace package; only `cli` imports it (`pnpm check:deps`, rule `isolated`). External: `web-tree-sitter` with the `.wasm` grammars of `tree-sitter-typescript` and `tree-sitter-python` (their native build scripts are disabled in `pnpm-workspace.yaml`), and `ignore`.
 
 ## Entry file
 `packages/scanner/src/index.ts` (the header documents interface, invariants and modes of error; the draft's shape is `packages/scanner/src/draft.ts`).

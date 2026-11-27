@@ -186,7 +186,7 @@ Lifeline header (Node entry with its `diagram sequence` patch), `activation.widt
   - Fragment frame: the Lifelines its content covers plus padding; for `ref`, the participants of the referenced Interaction present in the View, or all of them if there are none in common.
   - Message label centered above the arrow; for the self message, to the right of the loop.
 - **Key and cache**: `layoutKey` and `structureKey` include `view.type`; in sequence, also the items of the projected Interaction (endpoints, kind and labels after `depth`/`exclude`), `order` and `autonumber` (it changes the labels); no Pins. The new Metrics enter through the existing path. `cachedGeometrySchema` validates the union; an older JSON without `kind` is read as `grafo`.
-- **Performance**: new scenario `secuencia-grande` in `pnpm bench`: 1000 Messages, 50 Lifelines, Fragments nested 3 levels, budget 500 ms.
+- **Performance**: new scenario `sequence-large` in `pnpm bench`: 1000 Messages, 50 Lifelines, Fragments nested 3 levels, budget 500 ms.
 
 ## Consequences
 

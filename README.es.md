@@ -10,7 +10,7 @@ Un modelo en texto, muchas vistas (arquitectura, flujo, secuencia, ER), con Tema
 
 [Read in English](README.md) | **[Demo en vivo](https://williambarriga.github.io/Rinthel-arch/)**
 
-![Un agente escanea este repo, escribe su diagrama y lo refresca cuando cambia el codigo; la UI de dev resalta lo nuevo](docs/img/estudio/agente-importa.gif)
+![Un agente escanea este repo, escribe su diagrama y lo refresca cuando cambia el codigo; la UI de dev resalta lo nuevo](docs/img/dev-ui/agent-imports.gif)
 
 ## Inicio rapido
 
@@ -58,13 +58,13 @@ Abre `http://127.0.0.1:4173/` y escribe archivos `.dg` en esa carpeta (el [vista
 
 | | |
 | --- | --- |
-| ![Vista sequence de una compra](docs/img/tipos/sequence-shop.png)<br>`type sequence` | ![Vista er de clientes y pedidos](docs/img/tipos/er-shop.png)<br>`type er` |
+| ![Vista sequence de una compra](docs/img/diagram-types/sequence-shop.png)<br>`type sequence` | ![Vista er de clientes y pedidos](docs/img/diagram-types/er-shop.png)<br>`type er` |
 
 ## Temas
 
 El mismo diagrama de este repo, cambiando solo el Tema:
 
-[![El mismo diagrama en nueve Temas, cada uno con su nombre bajo la imagen](docs/img/mosaico-de-temas.png)](docs/gallery.md)
+[![El mismo diagrama en nueve Temas, cada uno con su nombre bajo la imagen](docs/img/theme-mosaic.png)](docs/gallery.md)
 
 Todos estan en la [galeria](docs/gallery.md); para hacer el tuyo, mira [Personalizar con Temas](docs/guia/themes.md).
 

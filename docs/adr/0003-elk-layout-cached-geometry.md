@@ -40,12 +40,12 @@ The Pin moves from the top-left corner to the center of the box (ADR 0008). `apl
 
 The layout Worker weighed 556.6 KiB gzip (limit: 500) because the Theme was validated with zod inside it. Two decisions:
 
-- **The Theme is validated once, in the page.** `workerAdapter` resolves the Theme (`metricsTable(theme, measures)`, which validates with `resolveTheme` and memoizes) and sends the Worker `{ id, vista, metricas }`; the Worker runs `layoutWithMetrics(view, metrics)`, the core of `layoutView` over already resolved Metrics. `layoutView(view, theme, options)` is still the Node entry: it validates the Theme and delegates to the same core, so the result is identical (test at the Worker seam: `worker-layout.test.tsx` compares against `layoutView`, and `tests/worker-sin-zod.test.ts` runs the real Worker bundle and checks that it does not need zod). The Worker bundle replaces the `zod` package with an inert object (`packages/dev-ui/browser/worker/inert-zod.ts`) because `canonical` and `theme` build their schemas on load; if anything the Worker imports called zod, that test fails. Result: 463.2 KiB gzip, of which 456.8 are ELK.
+- **The Theme is validated once, in the page.** `workerAdapter` resolves the Theme (`metricsTable(theme, measures)`, which validates with `resolveTheme` and memoizes) and sends the Worker `{ id, vista, metricas }`; the Worker runs `layoutWithMetrics(view, metrics)`, the core of `layoutView` over already resolved Metrics. `layoutView(view, theme, options)` is still the Node entry: it validates the Theme and delegates to the same core, so the result is identical (test at the Worker seam: `worker-layout.test.tsx` compares against `layoutView`, and `tests/worker-without-zod.test.ts` runs the real Worker bundle and checks that it does not need zod). The Worker bundle replaces the `zod` package with an inert object (`packages/dev-ui/browser/worker/inert-zod.ts`) because `canonical` and `theme` build their schemas on load; if anything the Worker imports called zod, that test fails. Result: 463.2 KiB gzip, of which 456.8 are ELK.
 - **The Worker limit rises to 1 MiB gzip.** The maintainer needs diagrams larger than the examples and 500 KiB falls short when ELK alone weighs ~457. Diagram size is governed by the relayout budgets (times and memory of the bench scenarios), not by the bundle: this limit only prevents the Worker from growing unnoticed. The page (shell + React, no ELK) keeps 500 KiB (it measures 162.3).
 
 ### Large diagram scenario
 
-New scenario `relayout-grande` (`pnpm bench`): 3000 Model Nodes, all visible, in Groups of 8 children (4-5 levels) with the `row/column` Slot arrangement of `relayout-slots` nested three levels. It is measured through the real Worker (in-memory ports) cold (first relayout with that Theme) and warm (repeated). Budget: 8 s in both cases, about 2x of margin over the measurement because time depends on the machine and its load; it is not an interactivity promise (the interactive limit is still 2 s with 1k visible Nodes) but the ceiling above which a diagram of that size is considered broken.
+New scenario `relayout-large` (`pnpm bench`): 3000 Model Nodes, all visible, in Groups of 8 children (4-5 levels) with the `row/column` Slot arrangement of `relayout-slots` nested three levels. It is measured through the real Worker (in-memory ports) cold (first relayout with that Theme) and warm (repeated). Budget: 8 s in both cases, about 2x of margin over the measurement because time depends on the machine and its load; it is not an interactivity promise (the interactive limit is still 2 s with 1k visible Nodes) but the ceiling above which a diagram of that size is considered broken.
 
 Measurements (pnpm bench, same machine):
 
@@ -53,9 +53,9 @@ Measurements (pnpm bench, same machine):
 |---|---|---|---|
 | `relayout-1k` (1000 visible) | 1.6 s | 1.3 s | 2 s |
 | `relayout-slots` (500 with nested Slots) | 0.6 s | 0.5 s | 2 s |
-| `relayout-grande` (3000 with nested Groups and Slots) | 4.1 s | 4.0 s | 8 s |
+| `relayout-large` (3000 with nested Groups and Slots) | 4.1 s | 4.0 s | 8 s |
 
-`relayout-grande` uses about 1.6 GiB of RSS. Bundle: Worker 463.2 KiB (limit 1024), page 162.3 KiB (limit 500).
+`relayout-large` uses about 1.6 GiB of RSS. Bundle: Worker 463.2 KiB (limit 1024), page 162.3 KiB (limit 500).
 
 ## Amendment (spec #226, ticket #245): the exported HTML
 

@@ -22,4 +22,4 @@ Compiled state of a Workspace: compiles, validates, computes layout and edits th
 `docs/adr/0007-interaction-and-edit-protocol.md` (Intents, Undo history and the `dev` protocol) and `docs/adr/0005-cli-for-agents.md` (structured editing and Activity log).
 
 ## Test
-`pnpm --filter session test` (tests cross the public interface; fake clock and test Activity events in the root `tests/ayudas/`).
+`pnpm --filter session test` (tests cross the public interface; fake clock and test Activity events in the root `tests/helpers/`).

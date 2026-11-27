@@ -17,7 +17,7 @@ revision-arquitectura.html
 # Scan drafts (diagrams scan); .rinthel/scan-ignore is versioned
 .rinthel/scan.json
 .rinthel/scan.prev.json
-# Local tools that made the README GIF and Themes mosaic (docs/img/estudio/agente-importa.gif,
-# docs/img/mosaico-de-temas.png); not versioned
-/scripts/capturas-gif.ts
-/scripts/mosaico-de-temas.ts
+# Local tools that made the README GIF and Themes mosaic (docs/img/dev-ui/agent-imports.gif,
+# docs/img/theme-mosaic.png); not versioned
+/scripts/screenshots-gif.ts
+/scripts/theme-mosaic.ts

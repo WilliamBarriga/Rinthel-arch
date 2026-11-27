@@ -4,7 +4,7 @@
 
 `dg dev --workspace <path>` opens at `http://127.0.0.1:4173/` a UI to look at, edit and follow a Workspace while an agent (or your editor) changes it. Command startup and options: [CLI, `dev`](cli.md#dev-live-viewer).
 
-![Packages View with the Details of the cli Node](../img/estudio/vista-y-detalle.png)
+![Packages View with the Details of the cli Node](../img/dev-ui/view-and-detail.png)
 
 The canvas takes the whole page. At the top is the bar (current View with its path, Search, the agent's last line and "follow"); on the sides, two floating panels. Each panel is hidden with its button or with Ctrl/Cmd+B (left) and Ctrl/Cmd+J (right); when hidden, it leaves a tab on the edge that shows it again. It is resized by dragging its edge or corner (the width and height handles also respond to the arrow keys; double click on the height one returns to the content height). The active View stays in the URL as `#view=<id>`, so it can be shared or returned to with Back. Over the canvas are the Step controls (if the View has them), the "High contrast" button (draws with the `high-contrast` Theme without writing anything) and "Reduce motion", and the legend when there are kinds that are only told apart by color.
 
@@ -13,7 +13,7 @@ The canvas takes the whole page. At the top is the bar (current View with its pa
 - **Views**: the index grouped by Diagram type, with the Views that link or are linked. Click or arrows (Home and End go to the first and last) change View. A dot marks the Views that changed from outside and that you have not yet visited.
 - **Code**: the DSL editor; it also opens with a double click on a Node (at its block) and opens Issues on the right island at the same time. It saves by itself (about 400 ms after you stop typing, on losing focus or with Ctrl/Cmd+S), even if the text does not compile: the canvas keeps the last good drawing and drags are disabled with the reason in view. Inline Issues with their `fix`, completion of keywords and ids, F12 to go to a definition; Esc returns to Views. If another program writes the same file, the editor merges its text with yours (the disk wins where they collide), marks what came from outside and offers to recover what was lost. Files from `--theme-path` open read-only.
 
-![DSL editor and Theme gallery](../img/estudio/codigo-y-temas.png)
+![DSL editor and Theme gallery](../img/dev-ui/code-and-themes.png)
 
 ## Right panel
 
@@ -34,7 +34,7 @@ dg validate --workspace <path> --json
 
 `DIAGRAMS_ACTIVITY=0` turns the log off. Format and rotation details: [Activity log](cli.md#activity-log).
 
-![Agent feed after an external edit](../img/estudio/agente.png)
+![Agent feed after an external edit](../img/dev-ui/agent.png)
 
 - The **Agent** panel shows the last 50 events on opening and the new ones live: time, agent, command, clickable target (View, Node, file) and result; "Show args" expands the argv. The bar pill summarizes the last line and counts the ones you have not seen.
 - Everything that changes outside the page (the CLI, an agent that edits the `.dg` by hand or another editor) is highlighted for about 5 s on the canvas, marks in the index the other Views that show it and in the gallery the changed Themes; what was removed is listed in the Agent panel until the next external change. What the UI itself writes is not highlighted.
@@ -44,7 +44,7 @@ dg validate --workspace <path> --json
 
 Ctrl/Cmd+K opens the Finder: Views, Nodes (with their `file:line`), commands and a `file:line` typed as is, which opens Code at that line.
 
-![Finder](../img/estudio/buscador.png)
+![Finder](../img/dev-ui/search.png)
 
 | Shortcut | Action |
 | --- | --- |

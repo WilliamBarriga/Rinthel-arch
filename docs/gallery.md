@@ -4,10 +4,10 @@ The same map of this repo (`examples/rinthel-arch/`), changing only the Theme. E
 
 | | | |
 | --- | --- | --- |
-| ![Theme soft-card](img/temas/soft-card.png)<br>`soft-card` | ![Theme glass-chip](img/temas/glass-chip.png)<br>`glass-chip` | ![Theme neobrutalist](img/temas/neobrutalist.png)<br>`neobrutalist` |
-| ![Theme blueprint](img/temas/blueprint.png)<br>`blueprint` | ![Theme soft-light](img/temas/soft-light.png)<br>`soft-light` | ![Theme crt-terminal](img/temas/crt-terminal.png)<br>`crt-terminal` |
-| ![Theme synthwave](img/temas/synthwave.png)<br>`synthwave` | ![Theme editorial](img/temas/editorial.png)<br>`editorial` | ![Theme bauhaus](img/temas/bauhaus.png)<br>`bauhaus` |
-| ![Theme sticky-notes](img/temas/sticky-notes.png)<br>`sticky-notes` | ![Theme keycaps](img/temas/keycaps.png)<br>`keycaps` | ![Theme metro-map](img/temas/metro-map.png)<br>`metro-map` |
-| ![Theme pcb](img/temas/pcb.png)<br>`pcb` | ![Theme pixel-art](img/temas/pixel-art.png)<br>`pixel-art` | |
+| ![Theme soft-card](img/themes/soft-card.png)<br>`soft-card` | ![Theme glass-chip](img/themes/glass-chip.png)<br>`glass-chip` | ![Theme neobrutalist](img/themes/neobrutalist.png)<br>`neobrutalist` |
+| ![Theme blueprint](img/themes/blueprint.png)<br>`blueprint` | ![Theme soft-light](img/themes/soft-light.png)<br>`soft-light` | ![Theme crt-terminal](img/themes/crt-terminal.png)<br>`crt-terminal` |
+| ![Theme synthwave](img/themes/synthwave.png)<br>`synthwave` | ![Theme editorial](img/themes/editorial.png)<br>`editorial` | ![Theme bauhaus](img/themes/bauhaus.png)<br>`bauhaus` |
+| ![Theme sticky-notes](img/themes/sticky-notes.png)<br>`sticky-notes` | ![Theme keycaps](img/themes/keycaps.png)<br>`keycaps` | ![Theme metro-map](img/themes/metro-map.png)<br>`metro-map` |
+| ![Theme pcb](img/themes/pcb.png)<br>`pcb` | ![Theme pixel-art](img/themes/pixel-art.png)<br>`pixel-art` | |
 
 To make your own, see [Customizing with Themes](guide/themes.md). Spanish: [Spanish guides](guia/themes.md).
