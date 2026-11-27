@@ -21,9 +21,9 @@ const GLOW = withEdge({
 describe('stroke Family', () => {
   it('fills the defaults and accepts the four styles and the chamfer corner', () => {
     for (const style of ['solid', 'dashed', 'dotted', 'pixel']) {
-      expect(buildPrimitive('line', [{ clave: 'color', valor: 'blue' }, { clave: 'style', valor: style }], palette, 'capa-arista').errores).toEqual([]);
+      expect(buildPrimitive('line', [{ key: 'color', value: 'blue' }, { key: 'style', value: style }], palette, 'capa-arista').errors).toEqual([]);
     }
-    expect(buildPrimitive('line', [{ clave: 'color', valor: 'blue' }, { clave: 'corner', valor: 'chamfer' }], palette, 'capa-arista').primitiva?.props).toEqual({
+    expect(buildPrimitive('line', [{ key: 'color', value: 'blue' }, { key: 'corner', value: 'chamfer' }], palette, 'capa-arista').primitive?.props).toEqual({
       color: 'blue',
       width: 1.5,
       style: 'solid',
@@ -34,40 +34,40 @@ describe('stroke Family', () => {
   });
 
   it('accepts the round corner with its radius and rejects an out-of-range radius', () => {
-    const ok = buildPrimitive('line', [{ clave: 'color', valor: 'blue' }, { clave: 'corner', valor: 'round' }, { clave: 'radius', valor: 12 }], palette, 'capa-arista');
-    const bad = buildPrimitive('line', [{ clave: 'color', valor: 'blue' }, { clave: 'radius', valor: 999 }], palette, 'capa-arista');
+    const ok = buildPrimitive('line', [{ key: 'color', value: 'blue' }, { key: 'corner', value: 'round' }, { key: 'radius', value: 12 }], palette, 'capa-arista');
+    const bad = buildPrimitive('line', [{ key: 'color', value: 'blue' }, { key: 'radius', value: 999 }], palette, 'capa-arista');
 
-    expect(ok.errores).toEqual([]);
-    expect(ok.primitiva?.props).toMatchObject({ corner: 'round', radius: 12 });
-    expect(bad.errores[0]?.codigo).toBe('theme-invalid-value');
+    expect(ok.errors).toEqual([]);
+    expect(ok.primitive?.props).toMatchObject({ corner: 'round', radius: 12 });
+    expect(bad.errors[0]?.code).toBe('theme-invalid-value');
   });
 
   it('rejects an unknown style with a suggestion and an out-of-range width without clamping', () => {
-    const [style] = buildPrimitive('line', [{ clave: 'color', valor: 'blue' }, { clave: 'style', valor: 'dashd' }], palette, 'capa-arista').errores;
-    const [thickness] = buildPrimitive('line', [{ clave: 'color', valor: 'blue' }, { clave: 'width', valor: 99 }], palette, 'capa-arista').errores;
+    const [style] = buildPrimitive('line', [{ key: 'color', value: 'blue' }, { key: 'style', value: 'dashd' }], palette, 'capa-arista').errors;
+    const [thickness] = buildPrimitive('line', [{ key: 'color', value: 'blue' }, { key: 'width', value: 99 }], palette, 'capa-arista').errors;
 
-    expect(style).toMatchObject({ codigo: 'theme-invalid-value', hint: "did you mean 'dashed'" });
-    expect(thickness?.codigo).toBe('theme-invalid-value');
+    expect(style).toMatchObject({ code: 'theme-invalid-value', hint: "did you mean 'dashed'" });
+    expect(thickness?.code).toBe('theme-invalid-value');
   });
 
   it('a stroke is not valid as a Node Layer nor a Node Layer as a stroke', () => {
-    expect(buildPrimitive('line', [], palette).errores[0]).toMatchObject({ codigo: 'theme-unknown-primitive' });
-    expect(buildPrimitive('solid', [], palette, 'capa-arista').errores[0]).toMatchObject({ codigo: 'theme-unknown-primitive' });
+    expect(buildPrimitive('line', [], palette).errors[0]).toMatchObject({ code: 'theme-unknown-primitive' });
+    expect(buildPrimitive('solid', [], palette, 'capa-arista').errors[0]).toMatchObject({ code: 'theme-unknown-primitive' });
     expect(resolvedThemeSchema.safeParse(withEdge({ capas: [{ nombre: 'x', primitiva: { tipo: 'solid', props: { color: 'blue' } } }] })).success).toBe(false);
   });
 
   it('ORIGIN is valid on an Edge and not on a Node', () => {
-    expect(buildPrimitive('line', [{ clave: 'color', valor: 'ORIGIN' }], palette, 'capa-arista').errores).toEqual([]);
-    expect(buildPrimitive('solid', [{ clave: 'color', valor: 'ORIGIN' }], palette).errores).toHaveLength(1);
+    expect(buildPrimitive('line', [{ key: 'color', value: 'ORIGIN' }], palette, 'capa-arista').errors).toEqual([]);
+    expect(buildPrimitive('solid', [{ key: 'color', value: 'ORIGIN' }], palette).errors).toHaveLength(1);
   });
 });
 
 describe('marker Family', () => {
   it('accepts the catalog markers, including via, with an optional color', () => {
     for (const kind of ['arrow', 'dot', 'diamond', 'bar', 'via']) {
-      expect(buildPrimitive(kind, [], palette, 'marcador').primitiva).toEqual({ tipo: kind, props: { size: 8 } });
+      expect(buildPrimitive(kind, [], palette, 'marcador').primitive).toEqual({ tipo: kind, props: { size: 8 } });
     }
-    expect(buildPrimitive('arrow', [{ clave: 'size', valor: 1 }], palette, 'marcador').errores).toHaveLength(1);
+    expect(buildPrimitive('arrow', [{ key: 'size', value: 1 }], palette, 'marcador').errors).toHaveLength(1);
   });
 });
 

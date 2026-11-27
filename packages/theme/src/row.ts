@@ -13,17 +13,17 @@ export const ROW_TEXT_NAMES = Object.keys(ROW_TEXTS) as RowTextName[];
 /** Key marks with their own patch, in the order they apply (the last one wins). */
 export const ROW_KEYS: readonly AttributeKey[] = ATTRIBUTE_KEYS;
 
-/** `impar` is 0-based. */
+/** `odd` is 0-based. */
 export interface RowVariant {
-  impar: boolean;
+  odd: boolean;
   keys: readonly AttributeKey[];
-  opcional: boolean;
+  optional: boolean;
 }
 
 /** Stable key of a variant: the marks are sorted, so the declaration order of the Attribute does not matter. */
-export const rowKey = ({ impar: odd, keys, opcional: optional }: RowVariant): string => `${odd ? 'i' : 'p'}|${ROW_KEYS.filter((k) => keys.includes(k)).join('+')}|${optional ? 'o' : '-'}`;
+export const rowKey = ({ odd, keys, optional }: RowVariant): string => `${odd ? 'i' : 'p'}|${ROW_KEYS.filter((k) => keys.includes(k)).join('+')}|${optional ? 'o' : '-'}`;
 
 export function rowVariants(): RowVariant[] {
   const subsets = ROW_KEYS.reduce<AttributeKey[][]>((acc, k) => [...acc, ...acc.map((s) => [...s, k])], [[]]);
-  return [false, true].flatMap((odd) => subsets.flatMap((keys) => [false, true].map((optional) => ({ impar: odd, keys, opcional: optional }))));
+  return [false, true].flatMap((odd) => subsets.flatMap((keys) => [false, true].map((optional) => ({ odd, keys, optional }))));
 }

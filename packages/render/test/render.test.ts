@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import { combineIconProviders, canonicalFormSchema, genericIcons, resolveView, workspaceIcons } from 'canonical';
 import type { IconProvider, Theme, GraphView, ResolvedView } from 'canonical';
-import { layoutView as layoutDeVista } from 'layout';
+import { layoutView as layoutViewRaw } from 'layout';
 
 import { toHtml, tagWith, rectOf } from './helpers';
 import { NEUTRAL_THEME, metricsOf } from 'theme';
 import type { ResolvedTheme } from 'theme';
 
 /** `layoutView` of a graph View (architecture or flow): these tests look at Edge paths and boxes. */
-const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
-  const geometry = await layoutDeVista(...args);
+const layoutView = async (...args: Parameters<typeof layoutViewRaw>) => {
+  const geometry = await layoutViewRaw(...args);
   if (geometry.kind !== 'grafo') throw new Error('expected a graph Geometry');
   return geometry;
 };

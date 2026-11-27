@@ -11,7 +11,7 @@ import type { ResolvedTheme } from 'theme';
 
 import { sheetOf } from './helpers';
 
-const p = (key: string, value: string | number) => ({ clave: key, valor: value });
+const p = (key: string, value: string | number) => ({ key, value });
 const ok = <T,>(r: { animacion?: T }): T => r.animacion!;
 
 const node = (id: string) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [] });
@@ -75,11 +75,11 @@ describe('Diagram: Layer Motions', () => {
     const aura = ok(buildMotion('aura', []));
     const theme = themeWith({ capas: layers(), estados: { selected: [{ nombre: 'acento', props: {}, animacion: aura }] } }, false);
     const withoutState = await draw(theme);
-    const selectedOne = await draw(theme, { states: { a: ['selected'] } });
-    const css = sheetOf(selectedOne);
+    const selected = await draw(theme, { states: { a: ['selected'] } });
+    const css = sheetOf(selected);
 
     expect(withoutState).not.toContain('data-estados="');
-    expect(selectedOne).toMatch(/data-id="a"[^>]*><div[^>]*data-part="nodo"[^>]*data-estados="selected"/);
+    expect(selected).toMatch(/data-id="a"[^>]*><div[^>]*data-part="nodo"[^>]*data-estados="selected"/);
     expect(css).toMatch(/\[data-estados~="selected"\] \.rd-anim\[data-anim="acento"\]\{[^}]*animation:rd-mov-aura/);
     expect(css).not.toMatch(/^\.[\w-]+ \.rd-anim\[data-anim="acento"\]\{[^}]*animation:/m);
   });

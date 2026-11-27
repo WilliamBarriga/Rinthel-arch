@@ -70,8 +70,8 @@ describe('planned mark', () => {
 
   it('a planned Group marks its descendants and an Edge touching something planned is planned (architecture)', () => {
     const view = resolveView(compiled(), 'all') as GraphView;
-    const plannedOnes = Object.fromEntries(view.nodes.map((node) => [node.id, node.planned === true]));
-    expect(plannedOnes).toEqual({ shop: false, 'shop.api': false, 'shop.checkout': true, 'shop.checkout.cart': true, billing: true, mail: false, orders: false });
+    const plannedById = Object.fromEntries(view.nodes.map((node) => [node.id, node.planned === true]));
+    expect(plannedById).toEqual({ shop: false, 'shop.api': false, 'shop.checkout': true, 'shop.checkout.cart': true, billing: true, mail: false, orders: false });
     expect(view.edges.map((edge) => [edge.from.node, edge.to.node, edge.planned === true])).toEqual([
       ['shop.api', 'shop.checkout.cart', true],
       ['shop.api', 'mail', false],

@@ -10,7 +10,7 @@ import type { SelectableElement, Selection } from './interaction';
 export interface SelectionResult {
   states: States;
   /** Applies the click on an element; returns whether it stays selected (to report and navigate). */
-  press: (element: SelectableElement, accumulates: boolean) => { selectedOne: boolean; selection: Selection };
+  press: (element: SelectableElement, accumulates: boolean) => { selected: boolean; selection: Selection };
 }
 
 /** Merges into the selection states those of hover (id under the mouse) and ghost (id being dragged). */
@@ -39,10 +39,10 @@ export function useSelection(
     for (const element of selectionList) byId[element.id] = ['selected'];
     return byId;
   }, [selectionList]);
-  const press = (element: SelectableElement, accumulates: boolean): { selectedOne: boolean; selection: Selection } => {
+  const press = (element: SelectableElement, accumulates: boolean): { selected: boolean; selection: Selection } => {
     const next = select(selectionList, element, accumulates ? 'alternar' : 'reemplazar');
     if (selected === undefined && selection === undefined) setOwn(next);
-    return { selectedOne: next.some((e) => e.kind === element.kind && e.id === element.id), selection: next };
+    return { selected: next.some((e) => e.kind === element.kind && e.id === element.id), selection: next };
   };
   return { selection: selectionList, states, press };
 }

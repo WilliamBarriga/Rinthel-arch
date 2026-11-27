@@ -280,10 +280,10 @@ describe('inspect theme: declared Elements come out as before derivation', () =>
     const r = await run(['inspect', 'theme', 't', '--diagram', 'sequence', '--workspace', SEQUENCE_ROOT, '--json']);
     const output = JSON.parse(r.stdout) as { theme: { elements: { sequence: Record<string, { derived?: true }> } } };
     const { sequence } = output.theme.elements;
-    const derivedOnes = Object.keys(sequence).filter((name) => sequence[name]?.derived === true);
-    for (const name of derivedOnes) delete sequence[name];
+    const derivedBlocks = Object.keys(sequence).filter((name) => sequence[name]?.derived === true);
+    for (const name of derivedBlocks) delete sequence[name];
 
-    expect(derivedOnes.sort()).toEqual(['activation', 'lifeline', 'note']);
+    expect(derivedBlocks.sort()).toEqual(['activation', 'lifeline', 'note']);
     expect(output).toEqual(JSON.parse(fromMain('sequence')));
   });
 });

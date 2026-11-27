@@ -71,8 +71,8 @@ describe('Slot layout validation', () => {
   const entry = (children: BoxInput<string>['hijos'], props: BoxInput<string>['props'] = [], direction = 'column'): BoxInput<string> => ({ ref: 'raiz', direccion: direction, props, hijos: children });
 
   it('a valid tree returns the layout with defaults', () => {
-    const { disposicion: layout, errores: errors } = buildLayout(
-      entry([{ ref: 'f', direccion: 'row', props: [{ clave: 'gap', valor: '6', ref: 'gap' }], hijos: [{ ref: 'i', slot: 'icon' }, { ref: 't', slot: 'title', align: { clave: 'align', valor: 'end', ref: 'a' } }] }, { ref: 'x', slot: 'attrs' }]),
+    const { disposicion: layout, errors } = buildLayout(
+      entry([{ ref: 'f', direccion: 'row', props: [{ key: 'gap', value: '6', ref: 'gap' }], hijos: [{ ref: 'i', slot: 'icon' }, { ref: 't', slot: 'title', align: { key: 'align', value: 'end', ref: 'a' } }] }, { ref: 'x', slot: 'attrs' }]),
     );
 
     expect(errors).toEqual([]);
@@ -82,19 +82,19 @@ describe('Slot layout validation', () => {
   });
 
   it('all errors at once, with code, reference and "did you mean"', () => {
-    const { errores: errors } = buildLayout(
+    const { errors } = buildLayout(
       entry(
         [
           { ref: 'h1', slot: 'titl' },
-          { ref: 'h2', slot: 'title', align: { clave: 'align', valor: 'centro', ref: 'a2' } },
+          { ref: 'h2', slot: 'title', align: { key: 'align', value: 'centro', ref: 'a2' } },
           { ref: 'h3', slot: 'title' },
           { ref: 'f', direccion: 'rown', props: [], hijos: [] },
         ],
-        [{ clave: 'gapp', valor: 8, ref: 'p1' }, { clave: 'pad', valor: 999, ref: 'p2' }],
+        [{ key: 'gapp', value: 8, ref: 'p1' }, { key: 'pad', value: 999, ref: 'p2' }],
       ),
     );
 
-    expect(errors.map((e) => [e.codigo, e.ref])).toEqual([
+    expect(errors.map((e) => [e.code, e.ref])).toEqual([
       [CODES.E_THEME_UNKNOWN_PROPERTY, 'p1'],
       [CODES.E_THEME_INVALID_VALUE, 'p2'],
       [CODES.E_THEME_UNKNOWN_SLOT, 'h1'],

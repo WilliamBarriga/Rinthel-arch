@@ -84,12 +84,12 @@ describe('e2e: the dev UI in Chromium', () => {
     const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
     page.setDefaultTimeout(WAIT.timeout);
     const canvas = page.getByRole('main', { name: 'Canvas' });
-    const leftOne = page.getByRole('complementary', { name: 'Left panel' });
-    const rightOne = page.getByRole('complementary', { name: 'Right panel' });
+    const leftPanel = page.getByRole('complementary', { name: 'Left panel' });
+    const rightPanel = page.getByRole('complementary', { name: 'Right panel' });
 
     // 1. Index.
     await page.goto(server.url);
-    const index = leftOne.getByRole('listbox', { name: 'Views' });
+    const index = leftPanel.getByRole('listbox', { name: 'Views' });
     await expect.poll(() => index.getByRole('option').allInnerTexts(), WAIT).toEqual([expect.stringContaining('general'), 'datos', expect.stringContaining('detalle')]);
 
     // 2. Open a View.
@@ -98,13 +98,13 @@ describe('e2e: the dev UI in Chromium', () => {
     await expect.poll(() => page.url(), WAIT).toContain('#view=datos');
 
     // 3. Type in the editor: it is saved to disk and the canvas updates.
-    await leftOne.getByRole('tab', { name: 'Code' }).click();
-    await leftOne.getByRole('textbox', { name: 'Code of main.dg' }).click();
+    await leftPanel.getByRole('tab', { name: 'Code' }).click();
+    await leftPanel.getByRole('textbox', { name: 'Code of main.dg' }).click();
     await page.keyboard.press('Control+Home');
     for (let i = 1; i < lineNumber(onDisk(), '"Pedidos"'); i++) await page.keyboard.press('ArrowDown');
     await writeAfterLine(page, 'tabla facturas "Facturas"');
     await expect.poll(onDisk, WAIT).toContain('tabla facturas "Facturas"');
-    await expect.poll(() => leftOne.getByRole('status', { name: 'Editor save state' }).textContent(), WAIT).toBe('Saved');
+    await expect.poll(() => leftPanel.getByRole('status', { name: 'Editor save state' }).textContent(), WAIT).toBe('Saved');
     await canvas.getByRole('group', { name: /^Facturas, tabla/ }).waitFor();
 
     // 4. `diagrams edit` from outside: the agent feed shows it and the canvas highlights it.
@@ -114,11 +114,11 @@ describe('e2e: the dev UI in Chromium', () => {
     const edits = [{ file: 'main.dg', range: { start: { line, column }, end: { line, column: column + 'Usuarios'.length } }, replacement: 'Clientes' }];
     const edition = await run(['edit', '--workspace', workspace, '--edits', JSON.stringify(edits)], { env: { DIAGRAMS_AGENT: 'e2e' } });
     expect(edition.exitCode, edition.stdout + edition.stderr).toBe(0);
-    await rightOne.getByRole('tab', { name: 'Agent' }).click();
-    await rightOne.getByRole('list', { name: 'Agent activity' }).getByRole('listitem').filter({ hasText: 'e2e' }).filter({ hasText: 'edit' }).waitFor();
+    await rightPanel.getByRole('tab', { name: 'Agent' }).click();
+    await rightPanel.getByRole('list', { name: 'Agent activity' }).getByRole('listitem').filter({ hasText: 'e2e' }).filter({ hasText: 'edit' }).waitFor();
     await canvas.getByRole('group', { name: /^Clientes, tabla/ }).waitFor();
     await expect.poll(() => page.getByRole('status', { name: 'Canvas highlight' }).getByRole('listitem').allInnerTexts(), WAIT).toContain('plataforma.datos.usuarios');
-    await expect.poll(() => leftOne.getByRole('textbox', { name: 'Code of main.dg' }).innerText(), WAIT).toContain('"Clientes"');
+    await expect.poll(() => leftPanel.getByRole('textbox', { name: 'Code of main.dg' }).innerText(), WAIT).toContain('"Clientes"');
 
     // 5. Mod+K to `file:line` and type there.
     const target = lineNumber(onDisk(), '"Cliente web"');
@@ -133,8 +133,8 @@ describe('e2e: the dev UI in Chromium', () => {
     expect(lineNumber(onDisk(), '"App movil"')).toBe(target + 1);
 
     // 6. Undo from the History: jumping to the previous entry removes what was typed in step 5 and keeps the rest.
-    await rightOne.getByRole('tab', { name: 'Undo history' }).click();
-    const history = rightOne.getByRole('list', { name: 'Change history' });
+    await rightPanel.getByRole('tab', { name: 'Undo history' }).click();
+    const history = rightPanel.getByRole('list', { name: 'Change history' });
     await expect.poll(() => history.getByRole('listitem').count(), WAIT).toBe(3);
     await history.getByRole('listitem').nth(1).getByRole('button').click();
     await expect.poll(onDisk, WAIT).not.toContain('App movil');
@@ -143,20 +143,20 @@ describe('e2e: the dev UI in Chromium', () => {
     await expect.poll(() => history.getByRole('listitem').nth(1).getByRole('button').getAttribute('aria-current'), WAIT).toBe('step');
 
     // Dragging the edge of the left panel widens it (from the minimum: opening Code already widened it).
-    const separator = leftOne.getByRole('separator', { name: 'Width of the left panel' });
+    const separator = leftPanel.getByRole('separator', { name: 'Width of the left panel' });
     await separator.focus();
     await page.keyboard.press('Home');
     await expect.poll(async () => separator.getAttribute('aria-valuenow'), WAIT).toBe(await separator.getAttribute('aria-valuemin'));
     // The island animates its width: wait for it to reach the minimum before measuring.
-    await expect.poll(async () => (await leftOne.boundingBox())!.width, WAIT).toBeLessThan(Number(await separator.getAttribute('aria-valuemin')) + 4);
-    const width = (await leftOne.boundingBox())!.width;
+    await expect.poll(async () => (await leftPanel.boundingBox())!.width, WAIT).toBeLessThan(Number(await separator.getAttribute('aria-valuemin')) + 4);
+    const width = (await leftPanel.boundingBox())!.width;
     const border = (await separator.boundingBox())!;
     const y = border.y + border.height / 2;
     await page.mouse.move(border.x + border.width / 2, y);
     await page.mouse.down();
     await page.mouse.move(border.x + border.width / 2 + 120, y, { steps: 5 });
     await page.mouse.up();
-    await expect.poll(async () => (await leftOne.boundingBox())!.width, WAIT).toBeGreaterThan(width + 100);
+    await expect.poll(async () => (await leftPanel.boundingBox())!.width, WAIT).toBeGreaterThan(width + 100);
 
     await page.close();
   }, DEADLINE_MS);

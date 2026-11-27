@@ -211,7 +211,7 @@ function resolveProps(
   return Object.fromEntries(
     Object.entries(primitive.props).map(([key, value]) => [
       key,
-      definition.propiedades[key]?.tipo === 'color' ? resolveColor(String(value), palette, context) : value,
+      definition.properties[key]?.type === 'color' ? resolveColor(String(value), palette, context) : value,
     ]),
   );
 }
@@ -251,8 +251,8 @@ function paintEdge(theme: ResolvedTheme, originColor: string | undefined): EdgeP
     const own = edge.identificante === undefined ? undefined : paintLayers(applyOps(applyOps(base, edge.identificante, theme.palette, 'parchear', 'capa-arista').pila, ops, theme.palette, 'parchear', 'capa-arista').pila, theme, originColor);
     return { capas: paintLayers(stack, theme, originColor), ...(own !== undefined && { identificante: own }) };
   };
-  const declaredOnes = Object.keys(edge.estados ?? {}).sort() as State[];
-  const states = declaredOnes.length === 0 ? undefined : Object.fromEntries(declaredOnes.map((state) => [state, withState(edge.estados?.[state] ?? [])]));
+  const declared = Object.keys(edge.estados ?? {}).sort() as State[];
+  const states = declared.length === 0 ? undefined : Object.fromEntries(declared.map((state) => [state, withState(edge.estados?.[state] ?? [])]));
   return {
     capas: layers,
     ...(states !== undefined && { estadosDeArista: states }),
@@ -278,18 +278,18 @@ function rowPaint(theme: ResolvedTheme, variable: string | undefined): RowPaint 
   const { fila: row } = theme;
   if (row === undefined) return undefined;
   const stack = (v: RowVariant, state?: State): PaintedLayer[] => {
-    const ops: ReadonlyArray<readonly LayerOp[]> = [v.impar ? row.alterna : [], ...ROW_KEYS.filter((k) => v.keys.includes(k)).map((k) => row.claves[k] ?? []), v.opcional ? row.opcional : [], state === undefined ? [] : (row.estados[state] ?? [])];
+    const ops: ReadonlyArray<readonly LayerOp[]> = [v.odd ? row.alterna : [], ...ROW_KEYS.filter((k) => v.keys.includes(k)).map((k) => row.claves[k] ?? []), v.optional ? row.opcional : [], state === undefined ? [] : (row.estados[state] ?? [])];
     const layers = ops.reduce<ResolvedLayer[]>((acc, patch) => (patch.length === 0 ? acc : applyOps(acc, patch, theme.palette, 'parchear').pila), row.capas as ResolvedLayer[]);
     return paintLayers(layers, theme, undefined, variable);
   };
-  const base = stack({ impar: false, keys: [], opcional: false });
+  const base = stack({ odd: false, keys: [], optional: false });
   const variants: Record<string, PaintedLayer[]> = {};
   const states: Record<string, PaintedLayer[]> = {};
-  const declaredOnes = (Object.keys(row.estados) as State[]).filter((e) => (row.estados[e]?.length ?? 0) > 0);
+  const declared = (Object.keys(row.estados) as State[]).filter((e) => (row.estados[e]?.length ?? 0) > 0);
   for (const v of rowVariants()) {
     const own = stack(v);
     if (JSON.stringify(own) !== JSON.stringify(base)) variants[rowKey(v)] = own;
-    for (const state of declaredOnes) states[`${rowKey(v)}@${state}`] = stack(v, state);
+    for (const state of declared) states[`${rowKey(v)}@${state}`] = stack(v, state);
   }
   const { paleta: palette, contexto: context } = colorContext(theme, undefined, variable);
   const texts = Object.fromEntries(Object.entries(row.textos).map(([name, text]) => [name, paintedPrimitive(text.tipo, resolveProps(text, palette, context))]));
@@ -315,18 +315,18 @@ function sequencePaint(theme: ResolvedTheme, variable: string | undefined, paint
     const end = marker(block.fin, palette, context, strokeColor);
     const variants = Object.fromEntries(
       Object.entries(block.parches).map(([variant, patch]) => {
-        const ownOnes = paintLayers(applyOps(block.capas as ResolvedLayer[], patch.ops, theme.palette, 'parchear', placement).pila, theme, originColor);
-        const ownColor = ownOnes.at(-1)?.props['color'];
+        const own = paintLayers(applyOps(block.capas as ResolvedLayer[], patch.ops, theme.palette, 'parchear', placement).pila, theme, originColor);
+        const ownColor = own.at(-1)?.props['color'];
         const o = marker(patch.origen, palette, context, ownColor);
         const f = marker(patch.fin, palette, context, ownColor);
-        return [variant, { capas: ownOnes, ...(o !== undefined && { origen: o }), ...(f !== undefined && { fin: f }) }];
+        return [variant, { capas: own, ...(o !== undefined && { origen: o }), ...(f !== undefined && { fin: f }) }];
       }),
     );
-    const declaredOnes = (Object.keys(block.estados) as State[]).filter((e) => (block.estados[e]?.length ?? 0) > 0).sort();
+    const declared = (Object.keys(block.estados) as State[]).filter((e) => (block.estados[e]?.length ?? 0) > 0).sort();
     const withState = (baseLayers: readonly ResolvedLayer[], ops: readonly LayerOp[]): PaintedLayer[] => paintLayers(applyOps(baseLayers, ops, theme.palette, 'parchear', placement).pila, theme, originColor);
     const stateBase = block.capas.length === 0 ? [DEFAULT_STROKE] : (block.capas as ResolvedLayer[]);
     const strokeStates = Object.fromEntries(
-      declaredOnes.map((state) => {
+      declared.map((state) => {
         const ops = block.estados[state] ?? [];
         const fromVariant = (patch: { ops: readonly LayerOp[] }): PaintedLayer[] => withState(applyOps(stateBase, patch.ops, theme.palette, 'parchear', placement).pila, ops);
         return [state, { capas: withState(stateBase, ops), variantes: Object.fromEntries(Object.entries(block.parches).map(([variant, patch]) => [variant, fromVariant(patch)])) }];
@@ -338,7 +338,7 @@ function sequencePaint(theme: ResolvedTheme, variable: string | undefined, paint
       ...(end !== undefined && { fin: end }),
       variantes: variants,
       tipos: {},
-      ...(declaredOnes.length > 0 && { estadosDeTrazo: strokeStates }),
+      ...(declared.length > 0 && { estadosDeTrazo: strokeStates }),
     };
   };
   const byColor = (name: 'lifeline' | 'message', derive: (declared: SequenceStrokePaint | undefined, edge: EdgePaint) => SequenceStrokePaint): SequenceStrokes => {

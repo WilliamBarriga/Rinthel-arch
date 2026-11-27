@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { NEUTRAL_THEME, buildMotion, resolvedStyle, resolvedThemeSchema } from 'theme';
 
-const p = (key: string, value: string | number) => ({ clave: key, valor: value });
+const p = (key: string, value: string | number) => ({ key, value });
 
 describe('animation in the Resolved style', () => {
   const pulse = buildMotion('pulse', [p('duration', 1200)]).animacion!;

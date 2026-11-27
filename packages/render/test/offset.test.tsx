@@ -56,7 +56,7 @@ describe('Diagram: offset and grow of a Layer', () => {
   });
 
   it('a state patch moves the Layer only with that state and honors the transition', async () => {
-    const transitionValue = buildTransition([{ clave: 'duration', valor: 150 }]).animacion!;
+    const transitionValue = buildTransition([{ key: 'duration', value: 150 }]).animacion!;
     const theme = themeWith({
       capas: layers({ 'offset-x': 4, 'offset-y': 4 }),
       estados: { hover: [{ nombre: 'sombra', props: { 'offset-x': 7, 'offset-y': 7 } }] },
@@ -89,7 +89,7 @@ describe('Diagram: offset and grow of a Layer', () => {
   });
 
   it('a state patch that changes grow animates it with scale (compositor), not with width nor height', async () => {
-    const transitionValue = buildTransition([{ clave: 'duration', valor: 150 }]).animacion!;
+    const transitionValue = buildTransition([{ key: 'duration', value: 150 }]).animacion!;
     const theme = themeWith({
       capas: layers({ 'offset-x': 4, 'offset-y': 4, grow: 2 }),
       estados: { hover: [{ nombre: 'sombra', props: { grow: 10 } }] },

@@ -97,19 +97,19 @@ export function renameInPath(path: string): { index: number; rename: RenamedConv
 }
 
 /**
- * An `old-workspace-convention` error whose `fix` is a rename: `rename` is the new path of `oldOne`, and `range` and
+ * An `old-workspace-convention` error whose `fix` is a rename: `rename` is the new path of `oldPath`, and `range` and
  * `replacement` are an empty edit at 1:1 so a text-only consumer changes nothing.
  */
-export function pathRenameIssue(oldOne: string, newOne: string, rename: RenamedConvention): Issue {
+export function pathRenameIssue(oldPath: string, newPath: string, rename: RenamedConvention): Issue {
   return {
     code: 'old-workspace-convention',
     severity: 'error',
-    file: oldOne,
+    file: oldPath,
     line: 1,
     column: 1,
     message: `The ${rename.kind} name '${rename.old}' is no longer used; the convention is '${rename.new}'`,
-    hint: `rename '${oldOne}' to '${newOne}'`,
-    fix: { file: oldOne, range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: '', rename: newOne },
+    hint: `rename '${oldPath}' to '${newPath}'`,
+    fix: { file: oldPath, range: { start: { line: 1, column: 1 }, end: { line: 1, column: 1 } }, replacement: '', rename: newPath },
   };
 }
 
@@ -125,10 +125,10 @@ export function obsoleteConventions(routes: readonly string[]): Issue[] {
     const found = renameInPath(path);
     if (found === undefined) continue;
     const segments = path.split('/');
-    const oldOne = segments.slice(0, found.index + 1).join('/');
-    if (views.has(oldOne)) continue;
-    views.add(oldOne);
-    issues.push(pathRenameIssue(oldOne, [...segments.slice(0, found.index), found.rename.new].join('/'), found.rename));
+    const oldPath = segments.slice(0, found.index + 1).join('/');
+    if (views.has(oldPath)) continue;
+    views.add(oldPath);
+    issues.push(pathRenameIssue(oldPath, [...segments.slice(0, found.index), found.rename.new].join('/'), found.rename));
   }
   return issues;
 }

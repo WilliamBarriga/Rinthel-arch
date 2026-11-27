@@ -51,7 +51,7 @@ const colors = (session: ReturnType<typeof openSession>, view: string, row: Para
   const paint = session.style(view)!.pintura.fila;
   return paint === undefined ? [] : rowStack(paint, row).map((c) => String(c.props['color']));
 };
-const plain = { impar: false, keys: [], opcional: false } as const;
+const plain = { odd: false, keys: [], optional: false } as const;
 
 describe('session seam: ER Theme, row block', () => {
   it('a key pk patch changes the Resolved style only of the rows with that key', async () => {
@@ -72,9 +72,9 @@ describe('session seam: ER Theme, row block', () => {
     optional { layer fondo { color rojo } }`),
     );
 
-    expect(colors(session, 'tablas', { impar: true, keys: [], opcional: false })).toEqual(['#1f2937']);
-    expect(colors(session, 'tablas', { impar: true, keys: ['fk', 'pk'], opcional: false })).toEqual(['#2563eb']);
-    expect(colors(session, 'tablas', { impar: false, keys: ['pk'], opcional: true })).toEqual(['#dc2626']);
+    expect(colors(session, 'tablas', { odd: true, keys: [], optional: false })).toEqual(['#1f2937']);
+    expect(colors(session, 'tablas', { odd: true, keys: ['fk', 'pk'], optional: false })).toEqual(['#2563eb']);
+    expect(colors(session, 'tablas', { odd: false, keys: ['pk'], optional: true })).toEqual(['#dc2626']);
   });
 
   it('the size of row name and type changes the measured size and the table width; key changes the chip', () => {

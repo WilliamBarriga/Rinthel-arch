@@ -2,53 +2,53 @@ import type { PrimitiveDefinition } from '../catalog';
 
 export const FILLS = {
   gradient: {
-    familia: 'relleno',
-    afectaMetricas: false,
-    fondoDeTexto: ['from', 'to'],
-    propiedades: { from: { tipo: 'color' }, to: { tipo: 'color' }, angle: { tipo: 'numero', min: 0, max: 360, defecto: 180 } },
+    family: 'relleno',
+    affectsMetrics: false,
+    textBackground: ['from', 'to'],
+    properties: { from: { type: 'color' }, to: { type: 'color' }, angle: { type: 'number', min: 0, max: 360, default: 180 } },
   },
   /** Circular gradient from the point `x`/`y` (percentage of the box; may lie outside it) up to 110% of the radius. */
   radial: {
-    familia: 'relleno',
-    afectaMetricas: false,
-    propiedades: { from: { tipo: 'color' }, to: { tipo: 'color' }, x: { tipo: 'numero', min: -100, max: 200, defecto: 50 }, y: { tipo: 'numero', min: -100, max: 200, defecto: 50 } },
+    family: 'relleno',
+    affectsMetrics: false,
+    properties: { from: { type: 'color' }, to: { type: 'color' }, x: { type: 'number', min: -100, max: 200, default: 50 }, y: { type: 'number', min: -100, max: 200, default: 50 } },
   },
   /** Disc of radius `radius` (px) centered at `x`/`y`: percentage of the box or page, or px from its top-left corner with `unit px`. */
   disc: {
-    familia: 'relleno',
-    afectaMetricas: false,
-    propiedades: {
-      color: { tipo: 'color' },
-      radius: { tipo: 'numero', min: 1, max: 2000, defecto: 8 },
-      x: { tipo: 'numero', min: -2000, max: 2000, defecto: 50 },
-      y: { tipo: 'numero', min: -2000, max: 2000, defecto: 50 },
-      unit: { tipo: 'opcion', valores: ['percent', 'px'], defecto: 'percent' },
+    family: 'relleno',
+    affectsMetrics: false,
+    properties: {
+      color: { type: 'color' },
+      radius: { type: 'number', min: 1, max: 2000, default: 8 },
+      x: { type: 'number', min: -2000, max: 2000, default: 50 },
+      y: { type: 'number', min: -2000, max: 2000, default: 50 },
+      unit: { type: 'option', values: ['percent', 'px'], default: 'percent' },
     },
   },
   grid: {
-    familia: 'relleno',
-    afectaMetricas: false,
-    propiedades: { color: { tipo: 'color' }, size: { tipo: 'numero', min: 2, max: 200, defecto: 16 }, width: { tipo: 'numero', min: 1, max: 8, defecto: 1 } },
+    family: 'relleno',
+    affectsMetrics: false,
+    properties: { color: { type: 'color' }, size: { type: 'number', min: 2, max: 200, default: 16 }, width: { type: 'number', min: 1, max: 8, default: 1 } },
   },
   lines: {
-    familia: 'relleno',
-    afectaMetricas: false,
-    propiedades: {
-      color: { tipo: 'color' },
-      size: { tipo: 'numero', min: 2, max: 200, defecto: 8 },
-      width: { tipo: 'numero', min: 1, max: 8, defecto: 1 },
-      angle: { tipo: 'numero', min: 0, max: 180, defecto: 45 },
+    family: 'relleno',
+    affectsMetrics: false,
+    properties: {
+      color: { type: 'color' },
+      size: { type: 'number', min: 2, max: 200, default: 8 },
+      width: { type: 'number', min: 1, max: 8, default: 1 },
+      angle: { type: 'number', min: 0, max: 180, default: 45 },
     },
   },
   dots: {
-    familia: 'relleno',
-    afectaMetricas: false,
-    propiedades: { color: { tipo: 'color' }, size: { tipo: 'numero', min: 4, max: 200, defecto: 12 }, radius: { tipo: 'numero', min: 1, max: 50, defecto: 2 } },
+    family: 'relleno',
+    affectsMetrics: false,
+    properties: { color: { type: 'color' }, size: { type: 'number', min: 4, max: 200, default: 12 }, radius: { type: 'number', min: 1, max: 50, default: 2 } },
   },
   /** Fractal grain: gray without `color`. `color` is a Palette name: the grain is a separate image and `COLOR` does not reach it. */
   noise: {
-    familia: 'relleno',
-    afectaMetricas: false,
-    propiedades: { frequency: { tipo: 'numero', min: 0.1, max: 2, defecto: 0.8 }, opacity: { tipo: 'numero', min: 0, max: 1, defecto: 0.15 }, color: { tipo: 'color', opcional: true } },
+    family: 'relleno',
+    affectsMetrics: false,
+    properties: { frequency: { type: 'number', min: 0.1, max: 2, default: 0.8 }, opacity: { type: 'number', min: 0, max: 1, default: 0.15 }, color: { type: 'color', optional: true } },
   },
 } as const satisfies Record<string, PrimitiveDefinition>;

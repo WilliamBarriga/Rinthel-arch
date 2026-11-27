@@ -172,7 +172,7 @@ function marker(style: Style, primitive: PaintedPrimitive | undefined, endpoint:
 /** Source and end markers, rotated along the first and last segment of the path. */
 export function paintMarkers(style: Style, paint: VariantStroke, points: readonly Point[]): MarkupElement[] {
   const [first, second] = [points[0], points[1]];
-  const [lastOne, secondToLast] = [points[points.length - 1], points[points.length - 2]];
-  if (first === undefined || second === undefined || lastOne === undefined || secondToLast === undefined) return [];
-  return [...marker(style, paint.origen, first, second, 'origen'), ...marker(style, paint.fin, lastOne, secondToLast, 'fin')];
+  const [last, secondToLast] = [points[points.length - 1], points[points.length - 2]];
+  if (first === undefined || second === undefined || last === undefined || secondToLast === undefined) return [];
+  return [...marker(style, paint.origen, first, second, 'origen'), ...marker(style, paint.fin, last, secondToLast, 'fin')];
 }

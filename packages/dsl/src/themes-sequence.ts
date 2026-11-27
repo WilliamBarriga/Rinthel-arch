@@ -84,9 +84,9 @@ function compileSequenceBlock(name: SequenceBlock, items: readonly SequenceItem[
           break;
         }
         const previous = block.parches[item.name] ?? { ops: [] };
-        const ownOne: { ops: LayerOp[] } & Markers = { ...previous, ops: [...previous.ops, ...patch(item.items)] };
-        for (const child of item.items) if (child.$type === 'ThemeMarker') marker(child, ownOne, true);
-        block.parches = { ...block.parches, [item.name]: ownOne };
+        const own: { ops: LayerOp[] } & Markers = { ...previous, ops: [...previous.ops, ...patch(item.items)] };
+        for (const child of item.items) if (child.$type === 'ThemeMarker') marker(child, own, true);
+        block.parches = { ...block.parches, [item.name]: own };
         break;
       }
       case 'SequenceMetric': {
@@ -119,7 +119,7 @@ function compileSequenceBlock(name: SequenceBlock, items: readonly SequenceItem[
           );
           break;
         }
-        const text = looseFamily(allowed.primitiva, item.props, allowed.ubicacion, ctx, rangeOf(item, 'slot').start);
+        const text = looseFamily(allowed.primitiva, item.props, allowed.placement, ctx, rangeOf(item, 'slot').start);
         if (text !== undefined) block.textos = { ...block.textos, [item.slot]: text };
         break;
       }

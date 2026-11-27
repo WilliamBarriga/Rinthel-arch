@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { FocusEvent as EventoDeFoco, KeyboardEvent as EventoDeTecla, MouseEvent as EventoDeRaton, ReactElement } from 'react';
+import type { FocusEvent as ReactFocusEvent, KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent, ReactElement } from 'react';
 import { select } from 'd3-selection';
 import { zoom, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent } from 'd3-zoom';
@@ -160,7 +160,7 @@ function ActiveView(props: ActiveViewProps): ReactElement {
   currentSettings.current = settings;
   const resolvedView = useMemo(() => {
     const resolved = resolveView(source, view, state);
-    if (resolved === undefined) throw new Error(`View '${view}' does not exist in the canonical Source`);
+    if (resolved === undefined) throw new Error(`View '${view}' does not exist in the Canonical form`);
     return resolved;
   }, [source, view, state]);
 
@@ -192,7 +192,7 @@ function ActiveView(props: ActiveViewProps): ReactElement {
   const computation = useGeometry({ view: resolvedView, theme, layout, measure: measureWithFonts, fontsKey: JSON.stringify(fontHashes), seed, onError, onArrive });
 
   // Until the user or a collapse moves it, the camera frames the whole View from the first geometry.
-  const [moved, setCamera] = useControlled<Camera | undefined>(props.camera, undefined, (newOne) => newOne && lastOne.current.onCameraChange?.(newOne));
+  const [moved, setCamera] = useControlled<Camera | undefined>(props.camera, undefined, (nextCamera) => nextCamera && latest.current.onCameraChange?.(nextCamera));
   const framing = useRef<Camera | undefined>(undefined);
   if (framing.current === undefined && computation !== undefined) framing.current = fitTo(computation.geometry, width, height, settings.fitMargin);
   const camera = moved ?? framing.current ?? { x: 0, y: 0, width, height };
@@ -205,8 +205,8 @@ function ActiveView(props: ActiveViewProps): ReactElement {
   const zone = useRef<HTMLDivElement>(null);
   const behavior = useRef(zoom<HTMLDivElement, unknown>());
   const silence = useRef(false);
-  const lastOne = useRef(props);
-  lastOne.current = props;
+  const latest = useRef(props);
+  latest.current = props;
   const currentCamera = useRef(camera);
   const currentGeometry = useRef<Geometry | undefined>(undefined);
   currentGeometry.current = computation?.geometry;
@@ -237,8 +237,8 @@ function ActiveView(props: ActiveViewProps): ReactElement {
     const comp = behavior.current;
     comp
       .filter((event: Event) => {
-        if (lastOne.current.onMoveNode !== undefined && event.type === 'mousedown' && nodeIdAt(event.target) !== undefined) return false;
-        if (lastOne.current.onReorderLifelines !== undefined && event.type === 'mousedown' && grabsInSequence(event as MouseEvent)) return false;
+        if (latest.current.onMoveNode !== undefined && event.type === 'mousedown' && nodeIdAt(event.target) !== undefined) return false;
+        if (latest.current.onReorderLifelines !== undefined && event.type === 'mousedown' && grabsInSequence(event as MouseEvent)) return false;
         return (!(event as MouseEvent).ctrlKey || event.type === 'wheel') && !(event as MouseEvent).button;
       })
       .extent([
@@ -326,9 +326,9 @@ function ActiveView(props: ActiveViewProps): ReactElement {
     if (dragging.current) return;
     const next = toggleGroup(state, resolvedView, id);
     if (next === undefined) return;
-    const newOne = resolveView(source, view, next);
-    if (newOne === undefined) return;
-    if (countVisibleNodes(newOne) > maxNodes && countVisibleNodes(newOne) > countVisibleNodes(resolvedView)) {
+    const nextCamera = resolveView(source, view, next);
+    if (nextCamera === undefined) return;
+    if (countVisibleNodes(nextCamera) > maxNodes && countVisibleNodes(nextCamera) > countVisibleNodes(resolvedView)) {
       props.onLimit?.(id);
       return;
     }
@@ -343,14 +343,14 @@ function ActiveView(props: ActiveViewProps): ReactElement {
     else toggle(id);
   };
 
-  const handleFocus = (event: EventoDeFoco): void => {
+  const handleFocus = (event: ReactFocusEvent): void => {
     if (event.target === event.currentTarget) setFocus((current) => current ?? (inSequence ? moveFocusInSequence(resolvedView, undefined, 'siguiente', visible) : moveFocus(resolvedView, undefined, 'siguiente')));
   };
-  const handleBlur = (event: EventoDeFoco): void => {
+  const handleBlur = (event: ReactFocusEvent): void => {
     if (event.target === event.currentTarget) setFocus(undefined);
   };
   /** Tab walks in Model order (and releases focus when leaving at an end), arrows jump along Edges, Enter/Space collapses or opens. */
-  const handleKeyDown = (event: EventoDeTecla): void => {
+  const handleKeyDown = (event: ReactKeyboardEvent): void => {
     if (event.target !== event.currentTarget) return;
     const move = (motion: Parameters<typeof moveFocus>[2] | Parameters<typeof moveFocusInSequence>[2]): boolean => {
       const next = inSequence ? moveFocusInSequence(resolvedView, currentFocus, motion as Parameters<typeof moveFocusInSequence>[2], visible) : moveFocus(resolvedView, currentFocus, motion as Parameters<typeof moveFocus>[2]);
@@ -387,7 +387,7 @@ function ActiveView(props: ActiveViewProps): ReactElement {
   const detail = detailLevel(width / cameraWidth, props.detailThresholds);
 
   /** Element under the mouse, over the whole View (not the one clipped to the viewport). */
-  const elementUnderMouse = (event: EventoDeRaton) => {
+  const elementUnderMouse = (event: ReactMouseEvent) => {
     if (shown === undefined || (event.target as Element).closest('[data-diagram]') === null) return undefined;
     const box = zone.current!.getBoundingClientRect();
     const k = width / currentCamera.current.width;
@@ -396,7 +396,7 @@ function ActiveView(props: ActiveViewProps): ReactElement {
   };
 
   /** In capture: on an element, the double click opens it and does not reach d3's zoom (which stops it in the drawing). */
-  const handleOpen = (event: EventoDeRaton): void => {
+  const handleOpen = (event: ReactMouseEvent): void => {
     if (dragging.current || props.onOpen === undefined) return;
     const element = elementUnderMouse(event);
     if (element === undefined) return;
@@ -404,19 +404,19 @@ function ActiveView(props: ActiveViewProps): ReactElement {
     props.onOpen({ kind: element.kind, id: element.id });
   };
 
-  const handleMouseMove = (event: EventoDeRaton): void => {
+  const handleMouseMove = (event: ReactMouseEvent): void => {
     if (inProgress !== undefined) return;
     setHover(elementUnderMouse(event)?.id);
   };
 
-  const handlePress = (event: EventoDeRaton): void => {
+  const handlePress = (event: ReactMouseEvent): void => {
     if (dragging.current) return;
     const element = elementUnderMouse(event);
     if (element === undefined) return;
     const accumulates = event.shiftKey || event.ctrlKey || event.metaKey;
     const result = press(element, accumulates);
     props.onSelectionChange?.(result.selection.map((e) => e.id));
-    if (!result.selectedOne) return;
+    if (!result.selected) return;
     onSelect?.(element.id);
     if (accumulates) return;
     if (element.kind === 'fragmento') {

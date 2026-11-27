@@ -59,19 +59,19 @@ function expand(items: ReadonlyArray<ThemeLayer | ThemeUse>, file: string, ctx: 
 
 const siteOf = (file: string, range: TextRange): Site => ({ file, ...range.start });
 
-function toOp(element: LayerEntry, ctx: BlockContext): { op: LayerOp; errores: CatalogError[] } {
+function toOp(element: LayerEntry, ctx: BlockContext): { op: LayerOp; errors: CatalogError[] } {
   const { item } = element;
-  const { props, errores: errors } = resolvedProperties(item.props, ctx.tokens);
+  const { props, errors } = resolvedProperties(item.props, ctx.tokens);
   const op: LayerOp = {
     nombre: item.name,
-    props: Object.fromEntries(props.map(({ clave: key, valor: value }) => [key, value])),
+    props: Object.fromEntries(props.map(({ key, value }) => [key, value])),
     ...(item.remove === true && { quitar: true as const }),
     ...(item.primitive !== undefined && { primitiva: item.primitive }),
     ...(item.placement === 'before' && { antes: item.target }),
     ...(item.placement === 'after' && { despues: item.target }),
     ...(item.over === true && { encima: true as const }),
   };
-  return { op, errores: errors };
+  return { op, errors };
 }
 
 /** The page background is not animated: `motion` and `keyframes` in `page` are an error. */
@@ -116,31 +116,31 @@ export function compileBlock(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx: B
     if (animated.animacion !== undefined) fromOp.op.animacion = animated.animacion;
     return { elemento: element, ...fromOp, animacionFalla: animated.failed };
   });
-  const issueOf = (element: LayerEntry, error: CatalogError, where: 'nombre' | 'ubicacion' | 'propiedad', errorBase?: string): Issue => {
+  const issueOf = (element: LayerEntry, error: CatalogError, where: 'name' | 'placement' | 'property', errorBase?: string): Issue => {
     const { item, file } = element;
-    const prop = error.clave === undefined ? undefined : keyProperty(item.props, error.clave);
+    const prop = error.key === undefined ? undefined : keyProperty(item.props, error.key);
     const range =
-      where === 'ubicacion'
+      where === 'placement'
         ? rangeOf(item, 'target')
-        : where === 'propiedad' && prop !== undefined
-          ? rangeOf(prop, error.codigo === CODES.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value')
-          : rangeOf(item, error.codigo === CODES.E_THEME_UNKNOWN_PRIMITIVE ? 'primitive' : 'name');
+        : where === 'property' && prop !== undefined
+          ? rangeOf(prop, error.code === CODES.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value')
+          : rangeOf(item, error.code === CODES.E_THEME_UNKNOWN_PRIMITIVE ? 'primitive' : 'name');
     const origin = errorBase === undefined ? undefined : base.get(errorBase);
     // A single close candidate gives a `fix` instead of a `hint`; tokens (with `$`) are not fixed.
-    const fixable = error.candidato !== undefined && error.codigo !== CODES.E_THEME_UNKNOWN_TOKEN;
+    const fixable = error.candidate !== undefined && error.code !== CODES.E_THEME_UNKNOWN_TOKEN;
     return {
-      code: error.codigo,
+      code: error.code,
       severity: 'error',
       file: file,
       ...range.start,
-      message: error.mensaje,
-      ...(fixable ? { fix: { file, range, replacement: error.candidato as string } } : error.hint !== undefined && { hint: error.hint }),
+      message: error.message,
+      ...(fixable ? { fix: { file, range, replacement: error.candidate as string } } : error.hint !== undefined && { hint: error.hint }),
       ...(origin !== undefined && { related: [{ ...origin, message: `base Layer '${errorBase}' that this patch modifies` }] }),
     };
   };
 
-  for (const { elemento: element, errores: errors } of compiledList) {
-    for (const error of errors) ctx.issues.push(issueOf(element, error, 'propiedad'));
+  for (const { elemento: element, errors } of compiledList) {
+    for (const error of errors) ctx.issues.push(issueOf(element, error, 'property'));
   }
   const ops = compiledList.map(({ op }) => op);
   const failedList = new Set<number>();
@@ -148,16 +148,16 @@ export function compileBlock(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx: B
     if (animationFailed) failedList.add(i);
   });
   for (const error of validateOps(ctx.candidates, ops, ctx.palette, ctx.mode, ctx.placement)) {
-    failedList.add(error.indice);
-    ctx.issues.push(issueOf((compiledList[error.indice] as { elemento: LayerEntry }).elemento, error, error.donde, error.base));
+    failedList.add(error.index);
+    ctx.issues.push(issueOf((compiledList[error.index] as { elemento: LayerEntry }).elemento, error, error.where, error.base));
   }
 
-  const validOnes: LayerOp[] = [];
+  const validOps: LayerOp[] = [];
   compiledList.forEach(({ elemento: element, op }, i) => {
     if (failedList.has(i)) return;
-    validOnes.push(op);
+    validOps.push(op);
     if (op.quitar === true) ctx.origins.delete(op.nombre);
     else ctx.origins.set(op.nombre, siteOf(element.file, rangeOf(element.item, 'name')));
   });
-  return validOnes;
+  return validOps;
 }

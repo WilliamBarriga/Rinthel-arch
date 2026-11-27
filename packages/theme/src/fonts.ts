@@ -50,9 +50,9 @@ export function resolveFonts(fonts: Readonly<Record<string, string>>, files: rea
     for (const family of familiesOf(value)) {
       if (isGeneric(family) || views.has(family)) continue;
       views.add(family);
-      const ownOnes = files.flatMap((issuePath) => faceOf(family, issuePath) ?? []);
-      if (ownOnes.length === 0) missing.push({ clave: key, familia: family });
-      for (const face of ownOnes) faces.set(`${face.familia}|${face.peso}|${face.estilo}`, face);
+      const familyFaces = files.flatMap((issuePath) => faceOf(family, issuePath) ?? []);
+      if (familyFaces.length === 0) missing.push({ clave: key, familia: family });
+      for (const face of familyFaces) faces.set(`${face.familia}|${face.peso}|${face.estilo}`, face);
     }
   }
   const sorted = [...faces.values()].sort((a, b) => a.familia.localeCompare(b.familia) || a.peso - b.peso || a.estilo.localeCompare(b.estilo) || a.ruta.localeCompare(b.ruta));

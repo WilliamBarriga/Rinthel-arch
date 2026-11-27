@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { canonicalFormSchema, edgeId, resolveView } from 'canonical';
 import type { Theme, GraphView, ResolvedView } from 'canonical';
-import { layoutKey, layoutWithMetrics, layoutView as layoutDeVista } from 'layout';
+import { layoutKey, layoutWithMetrics, layoutView as layoutViewRaw } from 'layout';
 import { NEUTRAL_THEME, textKey, metricsOf, metricsTable } from 'theme';
 
 /** `layoutView` of a graph View (architecture or flow): these tests look at boxes and Edge routes. */
-const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
-  const geometry = await layoutDeVista(...args);
+const layoutView = async (...args: Parameters<typeof layoutViewRaw>) => {
+  const geometry = await layoutViewRaw(...args);
   if (geometry.kind !== 'grafo') throw new Error('expected a graph Geometry');
   return geometry;
 };

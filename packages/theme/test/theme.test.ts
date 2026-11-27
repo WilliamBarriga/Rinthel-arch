@@ -41,21 +41,21 @@ describe('Theme contract', () => {
 
 describe('catalog', () => {
   it('fills the defaults and rejects without clamping', () => {
-    expect(buildPrimitive('rect', [], {}).primitiva).toEqual({ tipo: 'rect', props: { radius: 0 } });
-    expect(buildPrimitive('border', [{ clave: 'color', valor: 'a' }], { a: '#000' }).primitiva).toEqual({ tipo: 'border', props: { color: 'a', width: 1 } });
-    expect(buildPrimitive('rect', [{ clave: 'radius', valor: '101' }], {}).errores.map((e) => e.codigo)).toEqual(['theme-invalid-value']);
-    expect(buildPrimitive('rect', [{ clave: 'radius', valor: 'x' }], {}).primitiva).toBeUndefined();
+    expect(buildPrimitive('rect', [], {}).primitive).toEqual({ tipo: 'rect', props: { radius: 0 } });
+    expect(buildPrimitive('border', [{ key: 'color', value: 'a' }], { a: '#000' }).primitive).toEqual({ tipo: 'border', props: { color: 'a', width: 1 } });
+    expect(buildPrimitive('rect', [{ key: 'radius', value: '101' }], {}).errors.map((e) => e.code)).toEqual(['theme-invalid-value']);
+    expect(buildPrimitive('rect', [{ key: 'radius', value: 'x' }], {}).primitive).toBeUndefined();
   });
 
   it('suggests the nearest candidate for a misspelled Primitive', () => {
-    const [error] = buildPrimitive('sollid', [], {}).errores;
+    const [error] = buildPrimitive('sollid', [], {}).errors;
 
-    expect(error).toMatchObject({ codigo: 'theme-unknown-primitive', hint: "did you mean 'solid'" });
+    expect(error).toMatchObject({ code: 'theme-unknown-primitive', hint: "did you mean 'solid'" });
   });
 
   it('only circle and the Slot and label text styles affect the Metrics, and circle asks for a square box', () => {
-    const affecting = Object.entries(CATALOG).filter(([, p]) => p.afectaMetricas).map(([name]) => name);
-    const square = Object.entries(CATALOG).filter(([, p]) => 'cajaMinima' in p).map(([name]) => name);
+    const affecting = Object.entries(CATALOG).filter(([, p]) => p.affectsMetrics).map(([name]) => name);
+    const square = Object.entries(CATALOG).filter(([, p]) => 'minimumBox' in p).map(([name]) => name);
 
     expect(affecting).toEqual(['circle', 'text', 'chip', 'icon', 'label']);
     expect(square).toEqual(['circle']);
@@ -74,11 +74,11 @@ describe('catalog', () => {
     ['outline', 'offset', -17],
   ])('%s: %s=%s fuera de rango es error y no se recorta', (kind, key, value) => {
     const palette = { a: '#000', b: '#fff' };
-    const colors = ['color', 'from', 'to'].filter((c) => Object.hasOwn(CATALOG[kind as keyof typeof CATALOG].propiedades, c)).map((c) => ({ clave: c, valor: 'a' }));
-    const { primitiva: primitive, errores: errors } = buildPrimitive(kind, [...colors, { clave: key, valor: value }], palette);
+    const colors = ['color', 'from', 'to'].filter((c) => Object.hasOwn(CATALOG[kind as keyof typeof CATALOG].properties, c)).map((c) => ({ key: c, value: 'a' }));
+    const { primitive, errors } = buildPrimitive(kind, [...colors, { key, value }], palette);
 
     expect(primitive).toBeUndefined();
-    expect(errors.map((e) => e.codigo)).toEqual(['theme-invalid-value']);
+    expect(errors.map((e) => e.code)).toEqual(['theme-invalid-value']);
   });
 });
 

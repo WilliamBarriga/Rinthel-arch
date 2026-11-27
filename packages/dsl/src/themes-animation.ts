@@ -11,10 +11,10 @@ import { themeIssue as situar } from './themes-common';
 type Ast = Parameters<typeof rangeOf>[0];
 
 const toIssue = (file: string, error: CatalogError, range: TextRange): Issue =>
-  error.codigo === CODES.E_OLD_CATALOG_VALUE && error.candidato !== undefined ? renameIssue(error.codigo, error.mensaje, file, range, error.candidato) : situar(file, error, range.start);
+  error.code === CODES.E_OLD_CATALOG_VALUE && error.candidate !== undefined ? renameIssue(error.code, error.message, file, range, error.candidate) : situar(file, error, range.start);
 
 /** An unknown or old name is located on the name; the rest, on the whole element. */
-const isNameError = (error: CatalogError): boolean => error.codigo === CODES.E_THEME_UNKNOWN_MOTION || error.codigo === CODES.E_OLD_CATALOG_VALUE;
+const isNameError = (error: CatalogError): boolean => error.code === CODES.E_THEME_UNKNOWN_MOTION || error.code === CODES.E_OLD_CATALOG_VALUE;
 
 /** An unknown unit is a value error. */
 function readParams(params: readonly AnimParam[], file: string, issues: Issue[]): AnimationParameter[] {
@@ -22,15 +22,15 @@ function readParams(params: readonly AnimParam[], file: string, issues: Issue[])
   const duration = (key: string, d: Duration): void => {
     const ms = durationMs(d.amount, d.unit);
     if (ms === undefined) {
-      issues.push(toIssue(file, { codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `Unknown unit '${d.unit}' in '${d.amount}${d.unit}'; use 'ms' or 's'` }, rangeOf(d, 'unit')));
-    } else output.push({ clave: key, valor: ms });
+      issues.push(toIssue(file, { code: CODES.E_THEME_INVALID_VALUE, message: `Unknown unit '${d.unit}' in '${d.amount}${d.unit}'; use 'ms' or 's'` }, rangeOf(d, 'unit')));
+    } else output.push({ key, value: ms });
   };
   for (const param of params) {
     if (param.duration !== undefined) duration('duration', param.duration);
     if (param.delay !== undefined) duration('delay', param.delay);
-    if (param.intensity !== undefined) output.push({ clave: 'intensity', valor: param.intensity });
-    if (param.reduced !== undefined) output.push({ clave: 'reduced', valor: param.reduced });
-    if (param.easing !== undefined) output.push({ clave: 'easing', valor: param.easing });
+    if (param.intensity !== undefined) output.push({ key: 'intensity', value: param.intensity });
+    if (param.reduced !== undefined) output.push({ key: 'reduced', value: param.reduced });
+    if (param.easing !== undefined) output.push({ key: 'easing', value: param.easing });
   }
   return output;
 }
@@ -46,21 +46,21 @@ export function compileLayerAnimation(item: ThemeLayer, file: string, issues: Is
   const before = issues.length;
   let animation: Animation | null | undefined;
   if (item.animations.length > 1) {
-    issues.push(toIssue(file, { codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `Layer '${item.name}' accepts a single 'motion' or 'keyframes'` }, toRange(item.animations[1]?.$cstNode?.range)));
+    issues.push(toIssue(file, { code: CODES.E_THEME_INVALID_VALUE, message: `Layer '${item.name}' accepts a single 'motion' or 'keyframes'` }, toRange(item.animations[1]?.$cstNode?.range)));
   }
   const [anim] = item.animations;
   if (anim?.$type === 'ThemeMotion') {
     if (anim.remove) animation = null;
     else {
       const params = readParams(anim.params, file, issues);
-      const { animacion: done, errores: errors } = buildMotion(anim.name ?? '', params);
+      const { animacion: done, errors } = buildMotion(anim.name ?? '', params);
       for (const e of errors) issues.push(toIssue(file, e, isNameError(e) ? rangeOf(anim, 'name') : toRange(anim.$cstNode?.range)));
       animation = done;
     }
   } else if (anim?.$type === 'ThemeKeyframes') {
     const params = readParams(anim.params, file, issues);
     const stepList = anim.steps.map((step) => ({ en: Number(step.at), valor: Number(step.value) }));
-    const { animacion: done, errores: errors } = buildKeyframes(anim.property, params, stepList);
+    const { animacion: done, errors } = buildKeyframes(anim.property, params, stepList);
     for (const e of errors) issues.push(toIssue(file, e, isNameError(e) ? rangeOf(anim, 'property') : toRange(anim.$cstNode?.range)));
     animation = done;
   }
@@ -69,14 +69,14 @@ export function compileLayerAnimation(item: ThemeLayer, file: string, issues: Is
 
 function transitionOf(item: ThemeTransition, file: string, issues: Issue[]) {
   const params = readParams(item.params, file, issues);
-  const { animacion: animation, errores: errors } = buildTransition(params);
+  const { animacion: animation, errors } = buildTransition(params);
   for (const e of errors) issues.push(toIssue(file, e, toRange(item.$cstNode?.range)));
   return animation;
 }
 
 function effectOf(item: ThemeEnter | ThemeExit, file: string, issues: Issue[]) {
   const params = readParams(item.params, file, issues);
-  const { animacion: animation, errores: errors } = buildEffect(item.effect, params);
+  const { animacion: animation, errors } = buildEffect(item.effect, params);
   for (const e of errors) issues.push(toIssue(file, e, isNameError(e) ? rangeOf(item, 'effect') : toRange(item.$cstNode?.range)));
   return animation;
 }
@@ -84,16 +84,16 @@ function effectOf(item: ThemeEnter | ThemeExit, file: string, issues: Issue[]) {
 function staggerOf(item: ThemeStagger, file: string, issues: Issue[]): number | undefined {
   const ms = durationMs(item.amount.amount, item.amount.unit);
   if (ms === undefined) {
-    issues.push(toIssue(file, { codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `Unknown unit '${item.amount.unit}'; use 'ms' or 's'` }, rangeOf(item.amount, 'unit')));
+    issues.push(toIssue(file, { code: CODES.E_THEME_INVALID_VALUE, message: `Unknown unit '${item.amount.unit}'; use 'ms' or 's'` }, rangeOf(item.amount, 'unit')));
     return undefined;
   }
-  const { animacion: animation, errores: errors } = buildStagger(ms);
+  const { animacion: animation, errors } = buildStagger(ms);
   for (const e of errors) issues.push(toIssue(file, e, toRange(item.$cstNode?.range)));
   return animation;
 }
 
 const repeated = (file: string, what: string, item: Ast): Issue =>
-  toIssue(file, { codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `'${what}' repeated in the same block` }, toRange(item.$cstNode?.range));
+  toIssue(file, { code: CODES.E_THEME_INVALID_VALUE, message: `'${what}' repeated in the same block` }, toRange(item.$cstNode?.range));
 
 /** Over the inherited one; an element repeated in the same block is an error. */
 export function compileNodeAnimation(items: ReadonlyArray<NodeItem>, inherited: NodeAnimation | undefined, file: string, issues: Issue[]): NodeAnimation | undefined {

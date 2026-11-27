@@ -165,7 +165,7 @@ function paintAttributes(style: Style, id: string, attributes: readonly Attribut
     tag: 'div',
     attrs: { class: `rd-slot rd-attrs${zone.y > 0 ? ' rd-separado' : ''}`, 'data-slot': 'attrs', style: inRect(zone) },
     children: attributes.map((attribute, i) => {
-      const layers = ofTheme === undefined ? [] : rowStack(ofTheme, { impar: i % 2 === 1, keys: attribute.keys ?? [], opcional: attribute.optional === true }, rowState(states?.[`${id}#${attribute.name}`]));
+      const layers = ofTheme === undefined ? [] : rowStack(ofTheme, { odd: i % 2 === 1, keys: attribute.keys ?? [], optional: attribute.optional === true }, rowState(states?.[`${id}#${attribute.name}`]));
       const effects = layers.length === 0 ? undefined : elementEffects(style, { capas: layers }, `${id}#${attribute.name}`);
       const box = layers.length === 0 ? '' : cleanDeclarations(boxDeclarations(style, { capas: layers, estados: {} }, layers.filter((c) => !isZoneLayer(c))));
       return {
@@ -297,9 +297,9 @@ function erPaint(base: EdgePaint, points: readonly Point[], from: string | undef
     const kind = cardinality === undefined ? undefined : ER_SHAPE[cardinality];
     return kind === undefined ? undefined : { tipo: kind, props: { color, size: Math.min(fontSizeValue, length(a, b)) } };
   };
-  const [first, second, secondToLast, lastOne] = [points[0], points[1], points[points.length - 2], points[points.length - 1]];
+  const [first, second, secondToLast, last] = [points[0], points[1], points[points.length - 2], points[points.length - 1]];
   const origin = marker(from, first, second);
-  const end = marker(to, lastOne, secondToLast);
+  const end = marker(to, last, secondToLast);
   return { capas: layers, etiqueta: base.etiqueta, ...(origin !== undefined && { origen: origin }), ...(end !== undefined && { fin: end }) };
 }
 

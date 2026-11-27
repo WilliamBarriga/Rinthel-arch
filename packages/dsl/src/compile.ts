@@ -1,22 +1,22 @@
 /** Parses each file with Langium and translates the AST to the Canonical form. Pure: does not read disk. */
 import { CODES, VIEW_TYPES, combineIconProviders, canonicalFormSchema, genericIcons, validate, viewSchema, workspaceIcons } from 'canonical';
 import type {
-  Edge as Arista,
-  Attribute as Atributo,
+  Edge as CanonicalEdge,
+  Attribute as CanonicalAttribute,
   AttributeKey,
   StepElement,
   Endpoint,
   CanonicalForm,
-  Interaction as Interaccion,
-  InteractionItem as ItemDeInteraccion,
+  Interaction as CanonicalInteraction,
+  InteractionItem as CanonicalInteractionItem,
   Issue,
   Node,
-  NodeOverride as OverrideDeNodo,
-  Step as Paso,
+  NodeOverride as CanonicalNodeOverride,
+  Step as CanonicalStep,
   OpaqueReference,
   NodeKind,
   Locator,
-  View as Vista,
+  View as CanonicalView,
 } from 'canonical';
 import {
   EmptyFileSystem,
@@ -86,7 +86,7 @@ export function compile(workspace: WorkspaceFiles): CompileResult {
   }));
   const declaredParts: PartDeclaration[] = [];
   const kindAsts: { file: string; ast: NodeTypeDecl }[] = [];
-  const viewList: { vista: Vista; file: string; ast: View }[] = [];
+  const viewList: { view: CanonicalView; file: string; ast: View }[] = [];
   const roots: { file: string; elementos: Element[]; edges: Edge[]; extensiones: Extend[]; interactions: Interaction[] }[] = [];
 
   for (const file of Object.keys(workspace).sort()) {
@@ -121,8 +121,8 @@ export function compile(workspace: WorkspaceFiles): CompileResult {
       declaredParts.push({ file, ast: part, name: rangeOf(part, 'name') });
     }
     for (const view of result.value.views) {
-      const compiledOne = compileView(view, file, issues);
-      if (compiledOne !== undefined) viewList.push({ vista: compiledOne, file, ast: view });
+      const compiled = compileView(view, file, issues);
+      if (compiled !== undefined) viewList.push({ view: compiled, file, ast: view });
     }
     for (const model of result.value.models) {
       roots.push({
@@ -146,7 +146,7 @@ export function compile(workspace: WorkspaceFiles): CompileResult {
   }
   applyExtensions(roots.flatMap(({ file, extensiones: extensions }) => extensions.map((extension) => ({ file, extension }))), context);
 
-  const edgeList: Arista[] = [];
+  const edgeList: CanonicalEdge[] = [];
   const edgeAsts: { file: string; ast: Edge }[] = [];
   for (const { file, edges: ofFile } of roots) {
     // With broken syntax the AST is partial: its Edges would give false dangling ends.
@@ -157,7 +157,7 @@ export function compile(workspace: WorkspaceFiles): CompileResult {
     }
   }
 
-  const interactionList: Interaccion[] = [];
+  const interactionList: CanonicalInteraction[] = [];
   const interactionAsts: { file: string; ast: Interaction }[] = [];
   for (const { file, interactions: ofFile } of roots) {
     // With broken syntax the AST is partial: its Messages would give false unknown endpoints.
@@ -170,7 +170,7 @@ export function compile(workspace: WorkspaceFiles): CompileResult {
 
   const { themes: themeList, issues: ofTheme, parchesDeVista: viewPatches, origins: themeOrigins } = resolveThemes(declaredThemes, declaredParts, nodeKinds.map(({ name }) => name));
   issues.push(...ofTheme);
-  for (const { vista: view, file, ast } of viewList) {
+  for (const { view, file, ast } of viewList) {
     const block = ast.props.find((prop) => prop.$type === 'ViewTheme');
     if (block === undefined || block.items.length === 0 || view.theme === undefined) continue;
     const { ops, issues: ofOverride } = viewPatches(view.theme, block.items, file);
@@ -181,7 +181,7 @@ export function compile(workspace: WorkspaceFiles): CompileResult {
     themes: themeList,
     specification: { nodeTypes: nodeKinds },
     model: { nodes: nodeList, edges: edgeList, interactions: interactionList },
-    views: viewList.map(({ vista: view }) => view),
+    views: viewList.map(({ view }) => view),
   };
   const locate = createLocator({
     source: source,
@@ -195,11 +195,11 @@ export function compile(workspace: WorkspaceFiles): CompileResult {
   });
   // A declared Theme that did not resolve already has its error (`ofTheme`); it is not reported again as undeclared.
   const unresolved = new Set(declaredThemes.map(({ ast }) => ast.name).filter((name) => !themeList.some((t) => t.name === name)));
-  const withoutTheme = (issue: Issue): boolean => issue.code === CODES.E_UNKNOWN_THEME && viewList.some(({ vista: view }) => view.theme !== undefined && unresolved.has(view.theme) && issue.message === `Theme '${view.theme}' is not declared`);
+  const withoutTheme = (issue: Issue): boolean => issue.code === CODES.E_UNKNOWN_THEME && viewList.some(({ view }) => view.theme !== undefined && unresolved.has(view.theme) && issue.message === `Theme '${view.theme}' is not declared`);
   issues.push(...validate(source, { icons: combineIconProviders(workspaceIcons(workspace), genericIcons()), locate }).filter((issue) => !withoutTheme(issue)));
 
   const pins: PinPosition[] = [];
-  for (const { vista: view, file, ast } of viewList) {
+  for (const { view, file, ast } of viewList) {
     // With broken syntax the AST is partial: its overrides would give false positives.
     if (!brokenSyntax.has(file)) pins.push(...pinPositions(view, ast, file));
   }
@@ -227,7 +227,7 @@ interface Context {
 }
 
 /** Compiles a View; without a valid `type` it is `unknown-view-type` and there is no View. */
-function compileView(view: View, file: string, issues: Issue[]): Vista | undefined {
+function compileView(view: View, file: string, issues: Issue[]): CanonicalView | undefined {
   const kind = view.props.find((prop) => prop.$type === 'ViewType');
   if (kind === undefined) {
     issues.push({
@@ -274,7 +274,7 @@ function compileView(view: View, file: string, issues: Issue[]): Vista | undefin
   };
 }
 
-function stepOf(step: Step): Paso {
+function stepOf(step: Step): CanonicalStep {
   const items = (className: 'StepShow' | 'StepHide'): StepElement[] =>
     step.actions.flatMap((action) =>
       action.$type === className
@@ -285,8 +285,8 @@ function stepOf(step: Step): Paso {
   return { title: step.title, show: items('StepShow'), hide: items('StepHide'), ...(upto !== undefined && { upto }) };
 }
 
-function overrideOf(declared: NodeOverride): OverrideDeNodo {
-  const override: OverrideDeNodo = { node: declared.node };
+function overrideOf(declared: NodeOverride): CanonicalNodeOverride {
+  const override: CanonicalNodeOverride = { node: declared.node };
   for (const prop of declared.props) {
     if (prop.$type === 'OverrideLabel') override.label = prop.value;
     else if (prop.$type === 'OverridePin') override.pin = { x: prop.x, y: prop.y };
@@ -296,7 +296,7 @@ function overrideOf(declared: NodeOverride): OverrideDeNodo {
   return override;
 }
 
-function pinPositions(view: Vista, ast: View, file: string): PinPosition[] {
+function pinPositions(view: CanonicalView, ast: View, file: string): PinPosition[] {
   return ast.props.flatMap((prop) =>
     prop.$type === 'NodeOverride' && prop.props.some((p) => p.$type === 'OverridePin')
       ? [{ view: view.id, node: prop.node, file, ...rangeOf(prop, 'node').start }]
@@ -386,7 +386,7 @@ function compileExtension(extension: Extend, file: string, context: Context): bo
  * Attributes of a Node: those of its `attrs` blocks and the loose ones in the body, in that order.
  * A repeated key mark is `duplicate-key-mark` (with a `fix` that deletes the repeated one) and is stored once.
  */
-function attributesOf(blocks: readonly Attrs[], loose: readonly Attribute[], file: string, issues: Issue[]): Atributo[] {
+function attributesOf(blocks: readonly Attrs[], loose: readonly Attribute[], file: string, issues: Issue[]): CanonicalAttribute[] {
   return [...blocks.flatMap((block) => block.items), ...loose].map((item) => {
     const keyList = [...new Set(item.keys)] as AttributeKey[];
     item.keys.forEach((key, i) => {
@@ -445,7 +445,7 @@ function referencesOf(blocks: readonly Source[], file: string, issues: Issue[]):
  * Edges are compiled as they are; whether their ends exist is checked by
  * `validate` in `canonical` (with the position the Locator provides).
  */
-function compileEdge(edge: Edge): Arista {
+function compileEdge(edge: Edge): CanonicalEdge {
   const endpoint = ({ node, attribute }: Edge['from']): Endpoint => ({
     node,
     ...(attribute !== undefined && { attribute }),
@@ -462,7 +462,7 @@ function compileEdge(edge: Edge): Arista {
 }
 
 /** Interaction as it is; `validate` checks that each Message's ends exist and that ids do not repeat. */
-function compileInteraction(interaction: Interaction): Interaccion {
+function compileInteraction(interaction: Interaction): CanonicalInteraction {
   return {
     id: interaction.name,
     title: interaction.title ?? interaction.name,
@@ -472,7 +472,7 @@ function compileInteraction(interaction: Interaction): Interaccion {
   };
 }
 
-function compileItem(item: InteractionItem): ItemDeInteraccion {
+function compileItem(item: InteractionItem): CanonicalInteractionItem {
   if (item.$type === 'Fragment') {
     return {
       type: 'fragment',

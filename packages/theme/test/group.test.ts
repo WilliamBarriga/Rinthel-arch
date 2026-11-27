@@ -106,13 +106,13 @@ describe('Theme Group: Metrics', () => {
       textos: { title: { tipo: 'text', props: { transform: 'uppercase', tracking: 0.2, size: 0.8 } } },
     });
     const table = metricsTable(t, 'architecture');
-    const measuredOnes = textsToMeasure({ nodes: [{ id: 'g', type: 'capa', children: [{ id: 'h', children: [] }], label: 'plataforma', attributes: [], source: [], description: '', collapsed: false, childCount: 1 }], edges: [] } as never, table).map((m) => m.texto);
+    const texts = textsToMeasure({ nodes: [{ id: 'g', type: 'capa', children: [{ id: 'h', children: [] }], label: 'plataforma', attributes: [], source: [], description: '', collapsed: false, childCount: 1 }], edges: [] } as never, table).map((m) => m.texto);
 
     expect(table.grupoColapsado.disposicion.hijos).toEqual([{ slot: 'title' }]);
     // Without a Slots patch, the closed Group uses the Node ones (a leaf), not the header.
     expect(metricsTable(theme(), 'architecture').grupoColapsado.disposicion).toEqual(NEUTRAL_THEME.nodo.slots);
     expect(table.grupoAbierto.disposicion.hijos.map((h) => ('slot' in h ? h.slot : '?'))).toEqual(['icon', 'title']);
-    expect(measuredOnes).toContain('PLATAFORMA');
+    expect(texts).toContain('PLATAFORMA');
     expect(metricsTable(theme(), 'architecture').grupoAbierto.titulo).toMatchObject({ tracking: 0, mayusculas: false });
   });
 });

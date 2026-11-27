@@ -10,10 +10,10 @@ const example = readFileSync(resolve(import.meta.dirname, '../examples/themes/sh
 const { canonical, issues } = compile({ 'shape-catalog.dg': example });
 
 const FAMILIES = ['forma', 'relleno', 'borde'];
-const fromCatalog = Object.entries(CATALOG).filter(([, p]) => FAMILIES.includes(p.familia));
+const fromCatalog = Object.entries(CATALOG).filter(([, p]) => FAMILIES.includes(p.family));
 
 /** Valid value of a property to build the Primitive: the default, or a Palette color. */
-const valueOf = (p: PropertyDefinition): string | number => (p.tipo === 'color' ? 'ink' : p.tipo === 'nombre' ? 'Example' : p.tipo === 'opcion' ? (p.defecto ?? p.valores[0]!) : p.tipo === 'texto' ? 'x' : (p.defecto ?? p.min));
+const valueOf = (p: PropertyDefinition): string | number => (p.type === 'color' ? 'ink' : p.type === 'name' ? 'Example' : p.type === 'option' ? (p.default ?? p.values[0]!) : p.type === 'text' ? 'x' : (p.default ?? p.min));
 
 type ThemeWithLayers = { nodo?: { capas: Array<{ primitiva: { tipo: string } }> } };
 
@@ -24,8 +24,8 @@ describe('catalog of shapes, fills and borders', () => {
 
   it.each(fromCatalog.map(([name]) => name))('%s appears in an example Theme', (name) => {
     const definition = CATALOG[name as keyof typeof CATALOG];
-    const props = Object.entries(definition.propiedades).map(([clave, p]) => ({ clave, valor: valueOf(p as PropertyDefinition) }));
-    const { errores: errors } = buildPrimitive(name, props, { ink: '#111111' });
+    const props = Object.entries(definition.properties).map(([key, p]) => ({ key, value: valueOf(p as PropertyDefinition) }));
+    const { errors } = buildPrimitive(name, props, { ink: '#111111' });
     const usedIn = (canonical?.themes ?? []).filter((t) => ((t as unknown as ThemeWithLayers).nodo?.capas ?? []).some((c) => c.primitiva.tipo === name));
 
     expect(errors).toEqual([]);

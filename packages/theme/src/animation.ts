@@ -74,13 +74,13 @@ export interface Effect extends Timing {
 
 /** `duration` and `delay` already in ms. */
 export interface AnimationParameter {
-  clave: string;
-  valor: string | number;
+  key: string;
+  value: string | number;
 }
 
 interface Result<T> {
   animacion?: T;
-  errores: CatalogError[];
+  errors: CatalogError[];
 }
 
 const UNITS: Record<string, number> = { ms: 1, s: 1000 };
@@ -91,7 +91,7 @@ export function durationMs(count: string, unit: string): number | undefined {
   return factor === undefined || Number.isNaN(Number(count)) ? undefined : Math.round(Number(count) * factor);
 }
 
-const invalid = (message: string, key: string): CatalogError => ({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: message, clave: key });
+const invalid = (message: string, key: string): CatalogError => ({ code: CODES.E_THEME_INVALID_VALUE, message, key });
 
 const toNumber = (value: string | number): number => (typeof value === 'number' ? value : /^-?\d+(?:\.\d+)?$/.test(value) ? Number(value) : Number.NaN);
 
@@ -107,18 +107,18 @@ interface Spec {
 function readParameters(
   spec: Spec,
   params: readonly AnimationParameter[],
-): { tiempo: Timing; intensidad: number | undefined; reducido: Reduced; errores: CatalogError[] } {
+): { tiempo: Timing; intensidad: number | undefined; reducido: Reduced; errors: CatalogError[] } {
   const errors: CatalogError[] = [];
   const timing: Timing = { duracionMs: spec.duracionMs, easing: spec.easing, retardoMs: 0 };
   let intensity: number | undefined = spec.intensidad ? 0.5 : undefined;
   let reduced: Reduced = spec.reducidos[0] as Reduced;
   const allowed = ['duration', 'easing', 'reduced', ...(spec.conRetardo ? ['delay'] : []), ...(spec.intensidad ? ['intensity'] : [])];
-  for (const { clave: key, valor: value } of params) {
+  for (const { key, value } of params) {
     if (!allowed.includes(key)) {
       errors.push({
-        codigo: CODES.E_THEME_UNKNOWN_PROPERTY,
-        mensaje: `'${spec.nombre}' does not support '${key}'; available: ${allowed.join(', ')}`,
-        clave: key,
+        code: CODES.E_THEME_UNKNOWN_PROPERTY,
+        message: `'${spec.nombre}' does not support '${key}'; available: ${allowed.join(', ')}`,
+        key: key,
         ...suggest(key, allowed),
       });
     } else if (key === 'duration' || key === 'delay') {
@@ -138,49 +138,49 @@ function readParameters(
     } else if ((spec.reducidos as readonly string[]).includes(String(value))) reduced = value as Reduced;
     else errors.push(invalid(`'reduced' of '${spec.nombre}' only accepts ${spec.reducidos.join(' or ')}, not '${value}'`, key));
   }
-  return { tiempo: timing, intensidad: intensity, reducido: reduced, errores: errors };
+  return { tiempo: timing, intensidad: intensity, reducido: reduced, errors };
 }
 
 export function buildMotion(name: string, params: readonly AnimationParameter[]): Result<Motion> {
   if (!Object.hasOwn(MOTIONS, name)) {
     const old = oldValueError('motion', name);
-    if (old !== undefined) return { errores: [old] };
+    if (old !== undefined) return { errors: [old] };
     return {
-      errores: [
+      errors: [
         {
-          codigo: CODES.E_THEME_UNKNOWN_MOTION,
-          mensaje: `Unknown Motion '${name}'; available: ${Object.keys(MOTIONS).join(', ')}`,
+          code: CODES.E_THEME_UNKNOWN_MOTION,
+          message: `Unknown Motion '${name}'; available: ${Object.keys(MOTIONS).join(', ')}`,
           ...suggest(name, Object.keys(MOTIONS)),
         },
       ],
     };
   }
   const definition: { intensidad: boolean; easing: Easing; duracionMs: number } = MOTIONS[name as MotionName];
-  const { tiempo: timing, intensidad: intensity, errores: errors } = readParameters(
+  const { tiempo: timing, intensidad: intensity, errors } = readParameters(
     { nombre: name, duracionMs: definition.duracionMs, easing: definition.easing, intensidad: definition.intensidad, reducidos: ['still'], conRetardo: true },
     params,
   );
-  if (errors.length > 0) return { errores: errors };
+  if (errors.length > 0) return { errors };
   return {
     animacion: { clase: 'movimiento', movimiento: name as MotionName, ...timing, ...(intensity !== undefined && { intensidad: intensity }), reducido: 'still' },
-    errores: errors,
+    errors: errors,
   };
 }
 
 export function buildKeyframes(property: string, params: readonly AnimationParameter[], steps: readonly KeyframesStep[]): Result<LayerKeyframes> {
   if (!Object.hasOwn(ANIMATABLE_PROPERTIES, property)) {
     return {
-      errores: [
+      errors: [
         {
-          codigo: CODES.E_THEME_UNKNOWN_MOTION,
-          mensaje: `Unknown animatable property '${property}'; only what does not touch the Metrics can be animated: ${Object.keys(ANIMATABLE_PROPERTIES).join(', ')}`,
+          code: CODES.E_THEME_UNKNOWN_MOTION,
+          message: `Unknown animatable property '${property}'; only what does not touch the Metrics can be animated: ${Object.keys(ANIMATABLE_PROPERTIES).join(', ')}`,
           ...suggest(property, Object.keys(ANIMATABLE_PROPERTIES)),
         },
       ],
     };
   }
   const range = ANIMATABLE_PROPERTIES[property as AnimatableProperty];
-  const { tiempo: timing, errores: errors } = readParameters({ nombre: 'keyframes', duracionMs: 1000, easing: 'ease-in-out', intensidad: false, reducidos: ['still'], conRetardo: true }, params);
+  const { tiempo: timing, errors } = readParameters({ nombre: 'keyframes', duracionMs: 1000, easing: 'ease-in-out', intensidad: false, reducidos: ['still'], conRetardo: true }, params);
   if (steps.length < 2) errors.push(invalid(`'keyframes ${property}' needs at least two steps`, 'pasos'));
   steps.forEach((step, i) => {
     if (step.en < 0 || step.en > 100 || (i > 0 && step.en <= (steps[i - 1] as KeyframesStep).en)) {
@@ -190,36 +190,36 @@ export function buildKeyframes(property: string, params: readonly AnimationParam
       errors.push(invalid(`Value ${step.valor} of '${property}' must be between ${range.min} and ${range.max}`, 'pasos'));
     }
   });
-  if (errors.length > 0) return { errores: errors };
-  return { animacion: { clase: 'keyframes', propiedad: property as AnimatableProperty, pasos: steps.map((p) => ({ ...p })), ...timing, reducido: 'still' }, errores: errors };
+  if (errors.length > 0) return { errors };
+  return { animacion: { clase: 'keyframes', propiedad: property as AnimatableProperty, pasos: steps.map((p) => ({ ...p })), ...timing, reducido: 'still' }, errors };
 }
 
 export function buildTransition(params: readonly AnimationParameter[]): Result<Transition> {
-  const { tiempo: timing, reducido: reduced, errores: errors } = readParameters({ nombre: 'transition', duracionMs: 150, easing: 'ease', intensidad: false, reducidos: ['fade', 'instant'], conRetardo: false }, params);
-  if (errors.length > 0) return { errores: errors };
-  return { animacion: { duracionMs: timing.duracionMs, easing: timing.easing, reducido: reduced as 'fade' | 'instant' }, errores: errors };
+  const { tiempo: timing, reducido: reduced, errors } = readParameters({ nombre: 'transition', duracionMs: 150, easing: 'ease', intensidad: false, reducidos: ['fade', 'instant'], conRetardo: false }, params);
+  if (errors.length > 0) return { errors };
+  return { animacion: { duracionMs: timing.duracionMs, easing: timing.easing, reducido: reduced as 'fade' | 'instant' }, errors };
 }
 
 export function buildEffect(name: string, params: readonly AnimationParameter[]): Result<Effect> {
   if (!(EFFECTS as readonly string[]).includes(name)) {
     const old = oldValueError('effect', name);
-    if (old !== undefined) return { errores: [old] };
+    if (old !== undefined) return { errors: [old] };
     return {
-      errores: [
+      errors: [
         {
-          codigo: CODES.E_THEME_UNKNOWN_MOTION,
-          mensaje: `Unknown effect '${name}'; available: ${EFFECTS.join(', ')}`,
+          code: CODES.E_THEME_UNKNOWN_MOTION,
+          message: `Unknown effect '${name}'; available: ${EFFECTS.join(', ')}`,
           ...suggest(name, EFFECTS),
         },
       ],
     };
   }
-  const { tiempo: timing, reducido: reduced, errores: errors } = readParameters({ nombre: name, duracionMs: 300, easing: 'ease-out', intensidad: false, reducidos: ['fade', 'instant'], conRetardo: true }, params);
-  if (errors.length > 0) return { errores: errors };
-  return { animacion: { efecto: name as EffectName, ...timing, reducido: reduced as 'fade' | 'instant' }, errores: errors };
+  const { tiempo: timing, reducido: reduced, errors } = readParameters({ nombre: name, duracionMs: 300, easing: 'ease-out', intensidad: false, reducidos: ['fade', 'instant'], conRetardo: true }, params);
+  if (errors.length > 0) return { errors };
+  return { animacion: { efecto: name as EffectName, ...timing, reducido: reduced as 'fade' | 'instant' }, errors };
 }
 
 /** `stagger` in ms. */
 export function buildStagger(ms: number): Result<number> {
-  return ms >= 0 && ms <= 2000 ? { animacion: ms, errores: [] } : { errores: [invalid(`'stagger' must be between 0 and 2000 ms, not '${ms}'`, 'duration')] };
+  return ms >= 0 && ms <= 2000 ? { animacion: ms, errors: [] } : { errors: [invalid(`'stagger' must be between 0 and 2000 ms, not '${ms}'`, 'duration')] };
 }

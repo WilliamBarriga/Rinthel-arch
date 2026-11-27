@@ -14,47 +14,47 @@ import { TEXTS } from './families/text';
 import { STROKES } from './families/stroke';
 
 export type PropertyDefinition =
-  | { readonly tipo: 'numero'; readonly min: number; readonly max: number; readonly defecto?: number; readonly opcional?: true }
-  | { readonly tipo: 'color'; readonly opcional?: true }
-  | { readonly tipo: 'opcion'; readonly valores: readonly string[]; readonly defecto?: string; readonly opcional?: true }
+  | { readonly type: 'number'; readonly min: number; readonly max: number; readonly default?: number; readonly optional?: true }
+  | { readonly type: 'color'; readonly optional?: true }
+  | { readonly type: 'option'; readonly values: readonly string[]; readonly default?: string; readonly optional?: true }
   /** Theme component: identifier that starts with an uppercase letter. */
-  | { readonly tipo: 'nombre' }
-  /** Quoted text of at most `largo` characters. */
-  | { readonly tipo: 'texto'; readonly largo: number; readonly opcional?: true };
+  | { readonly type: 'name' }
+  /** Quoted text of at most `maxLength` characters. */
+  | { readonly type: 'text'; readonly maxLength: number; readonly optional?: true };
 
 /** `capa-nodo` is the default; `capa-pagina` only admits the fill Family. */
 export type PrimitivePlacement = 'capa-nodo' | 'capa-arista' | 'marcador' | 'etiqueta' | 'texto-slot' | 'capa-pagina';
 
 export interface PrimitiveDefinition {
-  readonly familia: 'forma' | 'relleno' | 'borde' | 'trazo' | 'marcador' | 'texto' | 'codigo' | EffectFamily;
-  readonly ubicacion?: PrimitivePlacement;
-  readonly propiedades: Readonly<Record<string, PropertyDefinition>>;
-  readonly afectaMetricas: boolean;
+  readonly family: 'forma' | 'relleno' | 'borde' | 'trazo' | 'marcador' | 'texto' | 'codigo' | EffectFamily;
+  readonly placement?: PrimitivePlacement;
+  readonly properties: Readonly<Record<string, PropertyDefinition>>;
+  readonly affectsMetrics: boolean;
   /** Color properties that cover the box: background against which text contrast is measured. Fill Family only. */
-  readonly fondoDeTexto?: readonly string[];
-  readonly cajaMinima?: 'cuadrado';
+  readonly textBackground?: readonly string[];
+  readonly minimumBox?: 'square';
   /** Accepts undeclared properties (parameters of a Theme component), number or text as is. */
-  readonly abierta?: true;
+  readonly open?: true;
 }
 
 /** Properties common to every Node or Group Layer: `offset x y` and `grow`. Paint only; no default. */
 export const OFFSET_PROPERTIES = {
-  'offset-x': { tipo: 'numero', min: -200, max: 200 },
-  'offset-y': { tipo: 'numero', min: -200, max: 200 },
-  grow: { tipo: 'numero', min: -100, max: 100 },
+  'offset-x': { type: 'number', min: -200, max: 200 },
+  'offset-y': { type: 'number', min: -200, max: 200 },
+  grow: { type: 'number', min: -100, max: 100 },
 } as const satisfies Record<string, PropertyDefinition>;
 
 /** `zone` of a Node Layer: `all` (absent), `header` (Slots before `attrs`; without `attrs`, `all`) or `body` (`attrs`). */
 export const ZONES = ['all', 'header', 'body'] as const;
-export const ZONE_PROPERTY = { zone: { tipo: 'opcion', valores: ZONES, opcional: true } } as const satisfies Record<string, PropertyDefinition>;
+export const ZONE_PROPERTY = { zone: { type: 'option', values: ZONES, optional: true } } as const satisfies Record<string, PropertyDefinition>;
 
 export const CATALOG = {
-  rect: { familia: 'forma', afectaMetricas: false, propiedades: { radius: { tipo: 'numero', min: 0, max: 100, defecto: 0 } } },
-  solid: { familia: 'relleno', afectaMetricas: false, propiedades: { color: { tipo: 'color' } }, fondoDeTexto: ['color'] },
+  rect: { family: 'forma', affectsMetrics: false, properties: { radius: { type: 'number', min: 0, max: 100, default: 0 } } },
+  solid: { family: 'relleno', affectsMetrics: false, properties: { color: { type: 'color' } }, textBackground: ['color'] },
   border: {
-    familia: 'borde',
-    afectaMetricas: false,
-    propiedades: { color: { tipo: 'color' }, width: { tipo: 'numero', min: 1, max: 16, defecto: 1 } },
+    family: 'borde',
+    affectsMetrics: false,
+    properties: { color: { type: 'color' }, width: { type: 'number', min: 1, max: 16, default: 1 } },
   },
   ...SHAPES,
   ...FILLS,
@@ -72,41 +72,41 @@ export type PrimitiveName = keyof typeof CATALOG;
 export const definitionOf = (name: PrimitiveName): PrimitiveDefinition => CATALOG[name];
 
 /** In catalog order. */
-export const primitivesOfFamily = (family: PrimitiveDefinition['familia']): PrimitiveName[] =>
-  (Object.keys(CATALOG) as PrimitiveName[]).filter((name) => definitionOf(name).familia === family);
+export const primitivesOfFamily = (family: PrimitiveDefinition['family']): PrimitiveName[] =>
+  (Object.keys(CATALOG) as PrimitiveName[]).filter((name) => definitionOf(name).family === family);
 
-/** Without a declared `ubicacion`, a Primitive is a Node Layer. */
+/** Without a declared `placement`, a Primitive is a Node Layer. */
 export type PrimitiveNameAt<U extends PrimitivePlacement> = {
-  [K in PrimitiveName]: (typeof CATALOG)[K] extends { readonly ubicacion: infer V } ? (V extends U ? K : never) : U extends 'capa-nodo' ? K : never;
+  [K in PrimitiveName]: (typeof CATALOG)[K] extends { readonly placement: infer V } ? (V extends U ? K : never) : U extends 'capa-nodo' ? K : never;
 }[PrimitiveName];
 
 export interface SlotDefinition {
-  readonly estilo: 'text' | 'icon' | 'chip';
-  readonly elastico: boolean;
+  readonly style: 'text' | 'icon' | 'chip';
+  readonly elastic: boolean;
   /** Single-line text Slot, measured with `slotText`; not derived from the style (`attrs` is `text` and is not one). */
-  readonly texto?: true;
+  readonly text?: true;
   /** Relative to the Theme text size. */
-  readonly escala?: number;
+  readonly scale?: number;
   /** Relative to the text size; without it, the header height of the Metrics. */
-  readonly interlineado?: number;
+  readonly lineHeight?: number;
 }
 
 export const SLOT_DEFINITION = {
-  icon: { estilo: 'icon', elastico: false },
-  title: { estilo: 'text', elastico: true, texto: true },
+  icon: { style: 'icon', elastic: false },
+  title: { style: 'text', elastic: true, text: true },
   /** The Node kind. */
-  badge: { estilo: 'text', elastico: true, texto: true, escala: 0.74, interlineado: 1.25 },
-  desc: { estilo: 'text', elastico: true, texto: true, escala: 0.85, interlineado: 1.25 },
+  badge: { style: 'text', elastic: true, text: true, scale: 0.74, lineHeight: 1.25 },
+  desc: { style: 'text', elastic: true, text: true, scale: 0.85, lineHeight: 1.25 },
   /** The first `source` of the Node. */
-  footer: { estilo: 'text', elastico: true, texto: true, escala: 0.75, interlineado: 1.25 },
-  attrs: { estilo: 'text', elastico: true },
+  footer: { style: 'text', elastic: true, text: true, scale: 0.75, lineHeight: 1.25 },
+  attrs: { style: 'text', elastic: true },
   /** Children hidden by a Collapsed group. */
-  counter: { estilo: 'chip', elastico: false, texto: true, escala: 0.8, interlineado: 1.25 },
+  counter: { style: 'chip', elastic: false, text: true, scale: 0.8, lineHeight: 1.25 },
 } as const satisfies Record<string, SlotDefinition>;
 export type SlotName = keyof typeof SLOT_DEFINITION;
 export const SLOTS = Object.keys(SLOT_DEFINITION) as SlotName[];
-export type TextSlotName = { [S in SlotName]: (typeof SLOT_DEFINITION)[S] extends { readonly texto: true } ? S : never }[SlotName];
-export const TEXT_SLOTS = SLOTS.filter((slot): slot is TextSlotName => 'texto' in SLOT_DEFINITION[slot]);
+export type TextSlotName = { [S in SlotName]: (typeof SLOT_DEFINITION)[S] extends { readonly text: true } ? S : never }[SlotName];
+export const TEXT_SLOTS = SLOTS.filter((slot): slot is TextSlotName => 'text' in SLOT_DEFINITION[slot]);
 
 /** Already validated: properties with defaults, colors still as Palette names. */
 export interface Primitive {
@@ -114,46 +114,46 @@ export interface Primitive {
   props: Record<string, number | string>;
 }
 
-/** `clave` locates the offending property. */
+/** `key` locates the offending property. */
 export interface CatalogError {
-  codigo: string;
-  mensaje: string;
-  clave?: string;
+  code: string;
+  message: string;
+  key?: string;
   hint?: string;
   /** Only if there is a single close candidate. */
-  candidato?: string;
+  candidate?: string;
 }
 
 const isPrimitive = (name: string): name is PrimitiveName => Object.hasOwn(CATALOG, name);
-const placementOf = (name: PrimitiveName): PrimitivePlacement => definitionOf(name).ubicacion ?? 'capa-nodo';
+const placementOf = (name: PrimitiveName): PrimitivePlacement => definitionOf(name).placement ?? 'capa-nodo';
 const validAt = (name: PrimitiveName, placement: PrimitivePlacement): boolean =>
-  placement === 'capa-pagina' ? definitionOf(name).familia === 'relleno' : placementOf(name) === placement;
+  placement === 'capa-pagina' ? definitionOf(name).family === 'relleno' : placementOf(name) === placement;
 export const primitivesOf = (placement: PrimitivePlacement): string[] =>
   (Object.keys(CATALOG) as PrimitiveName[]).filter((name) => validAt(name, placement));
 export const placementsOf = (name: PrimitiveName): PrimitivePlacement[] =>
   validAt(name, 'capa-pagina') ? [placementOf(name), 'capa-pagina'] : [placementOf(name)];
 export const isSlot = (name: string): name is SlotName => Object.hasOwn(SLOT_DEFINITION, name);
 
-export const suggest = (written: string, existingOnes: Iterable<string>): { hint?: string; candidato?: string } => {
-  const candidates = nearestCandidates(written, existingOnes);
+export const suggest = (written: string, known: Iterable<string>): { hint?: string; candidate?: string } => {
+  const candidates = nearestCandidates(written, known);
   const [single] = candidates;
-  return candidates.length === 0 ? {} : { hint: `did you mean ${candidates.map((c) => `'${c}'`).join(' or ')}`, ...(candidates.length === 1 && single !== undefined && { candidato: single }) };
+  return candidates.length === 0 ? {} : { hint: `did you mean ${candidates.map((c) => `'${c}'`).join(' or ')}`, ...(candidates.length === 1 && single !== undefined && { candidate: single }) };
 };
 
 /** Returns every error at once; out of range is an error, never clamped. Values arrive as DSL text. */
 export function buildPrimitive(
   kind: string,
-  props: ReadonlyArray<{ clave: string; valor: string | number }>,
+  props: ReadonlyArray<{ key: string; value: string | number }>,
   palette: Readonly<Record<string, string>>,
   placement: PrimitivePlacement = 'capa-nodo',
-): { primitiva?: Primitive; errores: CatalogError[] } {
+): { primitive?: Primitive; errors: CatalogError[] } {
   if (!isPrimitive(kind) || !validAt(kind, placement)) {
     const valid = primitivesOf(placement);
     return {
-      errores: [
+      errors: [
         {
-          codigo: CODES.E_THEME_UNKNOWN_PRIMITIVE,
-          mensaje: isPrimitive(kind)
+          code: CODES.E_THEME_UNKNOWN_PRIMITIVE,
+          message: isPrimitive(kind)
             ? `Primitive '${kind}' is not valid here (it belongs to ${placementsOf(kind).join(' and ')}); available: ${valid.join(', ')}`
             : `Unknown Primitive '${kind}'; available: ${valid.join(', ')}`,
           ...suggest(kind, valid),
@@ -162,43 +162,43 @@ export function buildPrimitive(
     };
   }
   const base: PrimitiveDefinition = CATALOG[kind];
-  const defined = placement === 'capa-nodo' && base.abierta !== true ? { ...base.propiedades, ...OFFSET_PROPERTIES, ...ZONE_PROPERTY } : base.propiedades;
-  const { propiedades: properties, errores: errors } = validateProperties({ sujeto: `Primitive '${kind}'`, nombre: `'${kind}'`, propiedades: defined, abierta: base.abierta === true }, props, palette, placement === 'capa-nodo' || placement === 'texto-slot' ? 'nodo' : placement === 'capa-pagina' ? 'pagina' : 'arista');
-  return errors.length > 0 ? { errores: errors } : { primitiva: { tipo: kind, props: properties }, errores: errors };
+  const defined = placement === 'capa-nodo' && base.open !== true ? { ...base.properties, ...OFFSET_PROPERTIES, ...ZONE_PROPERTY } : base.properties;
+  const { properties, errors } = validateProperties({ subject: `Primitive '${kind}'`, name: `'${kind}'`, properties: defined, open: base.open === true }, props, palette, placement === 'capa-nodo' || placement === 'texto-slot' ? 'nodo' : placement === 'capa-pagina' ? 'pagina' : 'arista');
+  return errors.length > 0 ? { errors } : { primitive: { tipo: kind, props: properties }, errors };
 }
 
 export interface PropertySet {
   /** E.g. `Primitive 'rect'`. */
-  sujeto: string;
+  subject: string;
   /** For "'key' of 'rect' must be ...". */
-  nombre: string;
-  propiedades: Readonly<Record<string, PropertyDefinition>>;
-  abierta?: boolean;
+  name: string;
+  properties: Readonly<Record<string, PropertyDefinition>>;
+  open?: boolean;
 }
 
 /** Single rule for ranges, options, colors and defaults, shared by Primitives and Slot boxes. */
 export function validateProperties(
   set: PropertySet,
-  props: ReadonlyArray<{ clave: string; valor: string | number }>,
+  props: ReadonlyArray<{ key: string; value: string | number }>,
   palette: Readonly<Record<string, string>>,
   colorContext: 'nodo' | 'arista' | 'pagina' = 'nodo',
-): { propiedades: Record<string, number | string>; errores: CatalogError[] } {
-  const { sujeto: subject, nombre: name, propiedades: defined } = set;
+): { properties: Record<string, number | string>; errors: CatalogError[] } {
+  const { subject, name, properties: defined } = set;
   const errors: CatalogError[] = [];
   const result: Record<string, number | string> = {};
 
-  for (const { clave: key, valor: value } of props) {
+  for (const { key, value } of props) {
     const property = defined[key];
-    if (property === undefined && set.abierta === true) {
+    if (property === undefined && set.open === true) {
       result[key] = typeof value === 'string' && /^-?\d+(?:\.\d+)?$/.test(value) ? Number(value) : value;
     } else if (property === undefined) {
       errors.push({
-        codigo: CODES.E_THEME_UNKNOWN_PROPERTY,
-        mensaje: `${subject} has no property '${key}'; available: ${Object.keys(defined).join(', ')}`,
-        clave: key,
+        code: CODES.E_THEME_UNKNOWN_PROPERTY,
+        message: `${subject} has no property '${key}'; available: ${Object.keys(defined).join(', ')}`,
+        key: key,
         ...suggest(key, Object.keys(defined)),
       });
-    } else if (property.tipo === 'color') {
+    } else if (property.type === 'color') {
       const expression = String(value);
       const problems = validateColor(expression, palette, colorContext);
       if (problems.length === 0) result[key] = expression;
@@ -207,91 +207,91 @@ export function validateProperties(
       for (const problem of problems) {
         if (problem.renombre !== undefined) {
           // One Issue per expression: its fix already rewrites every old name in it.
-          if (problem.renombre === renames[0]) errors.push({ codigo: CODES.E_OLD_CATALOG_VALUE, mensaje: problem.mensaje, clave: key, ...(candidate !== undefined && { candidato: candidate }) });
+          if (problem.renombre === renames[0]) errors.push({ code: CODES.E_OLD_CATALOG_VALUE, message: problem.mensaje, key, ...(candidate !== undefined && { candidate }) });
           continue;
         }
         errors.push({
-          codigo: problem.fueraDePaleta === true ? CODES.E_UNKNOWN_PALETTE_COLOR : CODES.E_THEME_INVALID_VALUE,
-          mensaje: problem.mensaje,
-          clave: key,
+          code: problem.fueraDePaleta === true ? CODES.E_UNKNOWN_PALETTE_COLOR : CODES.E_THEME_INVALID_VALUE,
+          message: problem.mensaje,
+          key: key,
           ...(problem.hint !== undefined && { hint: problem.hint }),
         });
       }
-    } else if (property.tipo === 'nombre') {
+    } else if (property.type === 'name') {
       if (/^[A-Z][A-Za-z0-9_]*$/.test(String(value))) result[key] = String(value);
-      else errors.push({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `'${key}' of ${name} must be a Component name (starts with an uppercase letter, e.g. Aurora), not '${value}'`, clave: key });
-    } else if (property.tipo === 'texto') {
+      else errors.push({ code: CODES.E_THEME_INVALID_VALUE, message: `'${key}' of ${name} must be a Component name (starts with an uppercase letter, e.g. Aurora), not '${value}'`, key });
+    } else if (property.type === 'text') {
       const text = String(value);
-      if (text.length <= property.largo) result[key] = text;
-      else errors.push({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `'${key}' of ${name} must be text of at most ${property.largo} characters, not '${text}'`, clave: key });
-    } else if (property.tipo === 'opcion') {
-      if (property.valores.includes(String(value))) result[key] = String(value);
+      if (text.length <= property.maxLength) result[key] = text;
+      else errors.push({ code: CODES.E_THEME_INVALID_VALUE, message: `'${key}' of ${name} must be text of at most ${property.maxLength} characters, not '${text}'`, key });
+    } else if (property.type === 'option') {
+      if (property.values.includes(String(value))) result[key] = String(value);
       else {
         errors.push({
-          codigo: CODES.E_THEME_INVALID_VALUE,
-          mensaje: `'${key}' of ${name} must be one of ${property.valores.join(', ')}, not '${value}'`,
-          clave: key,
-          ...suggest(String(value), property.valores),
+          code: CODES.E_THEME_INVALID_VALUE,
+          message: `'${key}' of ${name} must be one of ${property.values.join(', ')}, not '${value}'`,
+          key: key,
+          ...suggest(String(value), property.values),
         });
       }
     } else {
       const number = typeof value === 'number' ? value : /^-?\d+(?:\.\d+)?$/.test(value) ? Number(value) : Number.NaN;
       if (Number.isNaN(number) || number < property.min || number > property.max) {
         errors.push({
-          codigo: CODES.E_THEME_INVALID_VALUE,
-          mensaje: `'${key}' of ${name} must be a number between ${property.min} and ${property.max}, not '${value}'`,
-          clave: key,
+          code: CODES.E_THEME_INVALID_VALUE,
+          message: `'${key}' of ${name} must be a number between ${property.min} and ${property.max}, not '${value}'`,
+          key: key,
         });
       } else result[key] = number;
     }
   }
 
-  const given = new Set(props.map((p) => p.clave));
+  const given = new Set(props.map((p) => p.key));
   for (const [key, property] of Object.entries(defined)) {
     if (given.has(key)) continue;
-    if (property.tipo === 'numero' && property.defecto === undefined && (property.opcional === true || key in OFFSET_PROPERTIES)) continue;
-    if (property.tipo === 'numero' && property.defecto !== undefined) result[key] = property.defecto;
-    else if (property.tipo === 'opcion' && property.defecto !== undefined) result[key] = property.defecto;
-    else if (property.tipo === 'opcion' && property.opcional === true) continue;
-    else if ((property.tipo === 'color' || property.tipo === 'texto') && property.opcional === true) continue;
-    else errors.push({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `${subject} requires the property '${key}'`, clave: key });
+    if (property.type === 'number' && property.default === undefined && (property.optional === true || key in OFFSET_PROPERTIES)) continue;
+    if (property.type === 'number' && property.default !== undefined) result[key] = property.default;
+    else if (property.type === 'option' && property.default !== undefined) result[key] = property.default;
+    else if (property.type === 'option' && property.optional === true) continue;
+    else if ((property.type === 'color' || property.type === 'text') && property.optional === true) continue;
+    else errors.push({ code: CODES.E_THEME_INVALID_VALUE, message: `${subject} requires the property '${key}'`, key });
   }
-  return { propiedades: result, errores: errors };
+  return { properties: result, errors };
 }
 
 
 /** An undeclared or non-numeric token is an error, never a default value. */
 export function resolveTokens(
-  props: ReadonlyArray<{ clave: string; valor: string | number }>,
+  props: ReadonlyArray<{ key: string; value: string | number }>,
   tokens: Readonly<Record<string, string>>,
-): { props: Array<{ clave: string; valor: string | number }>; errores: CatalogError[] } {
+): { props: Array<{ key: string; value: string | number }>; errors: CatalogError[] } {
   const errors: CatalogError[] = [];
-  const resolved: Array<{ clave: string; valor: string | number }> = [];
-  for (const { clave: key, valor: value } of props) {
+  const resolved: Array<{ key: string; value: string | number }> = [];
+  for (const { key, value } of props) {
     if (typeof value !== 'string' || !value.startsWith('$')) {
-      resolved.push({ clave: key, valor: value });
+      resolved.push({ key, value });
       continue;
     }
     const name = value.slice(1);
     if (!Object.hasOwn(tokens, name)) {
       errors.push({
-        codigo: CODES.E_THEME_UNKNOWN_TOKEN,
-        mensaje: `Token '${value}' is not declared in the Theme's 'tokens'`,
-        clave: key,
+        code: CODES.E_THEME_UNKNOWN_TOKEN,
+        message: `Token '${value}' is not declared in the Theme's 'tokens'`,
+        key: key,
         ...suggest(name, Object.keys(tokens)),
       });
       continue;
     }
     const number = Number(tokens[name]);
-    if (Number.isFinite(number)) resolved.push({ clave: key, valor: number });
-    else errors.push({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `Token '${value}' is not a number ('${tokens[name]}')`, clave: key });
+    if (Number.isFinite(number)) resolved.push({ key, value: number });
+    else errors.push({ code: CODES.E_THEME_INVALID_VALUE, message: `Token '${value}' is not a number ('${tokens[name]}')`, key });
   }
-  return { props: resolved, errores: errors };
+  return { props: resolved, errors };
 }
 
-/** An old (Spanish) name of `category` is the `old-catalog-value` error with the new one as `candidato` (the `fix`); `undefined` otherwise. */
+/** An old (Spanish) name of `category` is the `old-catalog-value` error with the new one as `candidate` (the `fix`); `undefined` otherwise. */
 export function oldValueError(category: CatalogCategory, written: string): CatalogError | undefined {
-  const renamed = oldRename(OLD_CATALOG_VALUES, category, written);
-  if (renamed === undefined) return undefined;
-  return { codigo: CODES.E_OLD_CATALOG_VALUE, mensaje: oldValueMessage(category, written, renamed), candidato: renamed };
+  const newName = oldRename(OLD_CATALOG_VALUES, category, written);
+  if (newName === undefined) return undefined;
+  return { code: CODES.E_OLD_CATALOG_VALUE, message: oldValueMessage(category, written, newName), candidate: newName };
 }

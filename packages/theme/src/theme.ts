@@ -231,9 +231,9 @@ export const resolvedThemeSchema = z
   })
   .superRefine((theme, ctx) => {
     const validate = (primitive: { tipo: string; props: Record<string, string | number> }, placement: PrimitivePlacement, path: Array<string | number>): void => {
-      const props = Object.entries(primitive.props).map(([key, value]) => ({ clave: key, valor: value }));
-      for (const error of buildPrimitive(primitive.tipo, props, theme.palette, placement).errores) {
-        ctx.addIssue({ code: 'custom', path: [...path, ...(error.clave === undefined ? [] : ['props', error.clave])], message: error.mensaje });
+      const props = Object.entries(primitive.props).map(([key, value]) => ({ key, value }));
+      for (const error of buildPrimitive(primitive.tipo, props, theme.palette, placement).errors) {
+        ctx.addIssue({ code: 'custom', path: [...path, ...(error.key === undefined ? [] : ['props', error.key])], message: error.message });
       }
     };
     const fills = new Set<string>();
@@ -253,7 +253,7 @@ export const resolvedThemeSchema = z
     if (theme.arista.etiqueta !== undefined) validate(theme.arista.etiqueta, 'etiqueta', ['arista', 'etiqueta']);
     for (const [diagram, patch] of Object.entries(theme.arista.diagramas ?? {})) {
       for (const e of validateOps([theme.arista.capas as ResolvedLayer[]], patch.ops, theme.palette, 'parchear', 'capa-arista')) {
-        ctx.addIssue({ code: 'custom', path: ['arista', 'diagramas', diagram, 'ops', e.indice], message: e.mensaje });
+        ctx.addIssue({ code: 'custom', path: ['arista', 'diagramas', diagram, 'ops', e.index], message: e.message });
       }
       if (patch.origen !== undefined) validate(patch.origen, 'marcador', ['arista', 'diagramas', diagram, 'origen']);
       if (patch.fin !== undefined) validate(patch.fin, 'marcador', ['arista', 'diagramas', diagram, 'fin']);
@@ -261,7 +261,7 @@ export const resolvedThemeSchema = z
     }
     if (theme.arista.identificante !== undefined) {
       for (const e of validateOps([theme.arista.capas as ResolvedLayer[]], theme.arista.identificante, theme.palette, 'parchear', 'capa-arista')) {
-        ctx.addIssue({ code: 'custom', path: ['arista', 'identificante', e.indice], message: e.mensaje });
+        ctx.addIssue({ code: 'custom', path: ['arista', 'identificante', e.index], message: e.message });
       }
     }
     validateElement(ctx, theme, 'nodo');
@@ -277,8 +277,8 @@ function validateSequence(ctx: z.RefinementCtx, theme: ResolvedTheme, sequence: 
     const spec = SEQUENCE_SPEC[name];
     const failure = (path: Array<string | number>, message: string): void => ctx.addIssue({ code: 'custom', path: ['secuencia', name, ...path], message });
     const primitive = (p: { tipo: string; props: Record<string, string | number> }, placement: PrimitivePlacement, path: Array<string | number>): void => {
-      const props = Object.entries(p.props).map(([key, value]) => ({ clave: key, valor: value }));
-      for (const error of buildPrimitive(p.tipo, props, theme.palette, placement).errores) failure([...path, ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
+      const props = Object.entries(p.props).map(([key, value]) => ({ key, value }));
+      for (const error of buildPrimitive(p.tipo, props, theme.palette, placement).errors) failure([...path, ...(error.key === undefined ? [] : ['props', error.key])], error.message);
     };
     const views = new Set<string>();
     block.capas.forEach((layer, i) => {
@@ -295,7 +295,7 @@ function validateSequence(ctx: z.RefinementCtx, theme: ResolvedTheme, sequence: 
       const allowed = spec.textos[key];
       if (allowed === undefined) failure(['textos', key], `'${name}' has no style '${key}'`);
       else if (text.tipo !== allowed.primitiva) failure(['textos', key], `style '${key}' of '${name}' uses Primitive '${allowed.primitiva}', not '${text.tipo}'`);
-      else primitive(text, allowed.ubicacion, ['textos', key]);
+      else primitive(text, allowed.placement, ['textos', key]);
     }
     for (const [key, value] of Object.entries(block.metricas)) {
       const range = spec.metricas[key];
@@ -305,12 +305,12 @@ function validateSequence(ctx: z.RefinementCtx, theme: ResolvedTheme, sequence: 
     const base = block.capas as ResolvedLayer[];
     for (const [variant, patch] of Object.entries(block.parches)) {
       if (spec.parches === undefined || !spec.parches.nombres.includes(variant)) failure(['parches', variant], `'${variant}' is not a variant of '${name}'`);
-      for (const e of validateOps([base], patch.ops, theme.palette, 'parchear', spec.capas)) failure(['parches', variant, 'ops', e.indice], e.mensaje);
+      for (const e of validateOps([base], patch.ops, theme.palette, 'parchear', spec.capas)) failure(['parches', variant, 'ops', e.index], e.message);
       if (patch.origen !== undefined) primitive(patch.origen, 'marcador', ['parches', variant, 'origen']);
       if (patch.fin !== undefined) primitive(patch.fin, 'marcador', ['parches', variant, 'fin']);
     }
     for (const [state, ops] of Object.entries(block.estados)) {
-      for (const e of validateOps([base], ops, theme.palette, 'parchear', spec.capas)) failure(['estados', state, e.indice], e.mensaje);
+      for (const e of validateOps([base], ops, theme.palette, 'parchear', spec.capas)) failure(['estados', state, e.index], e.message);
     }
   }
 }
@@ -322,8 +322,8 @@ function validateRow(ctx: z.RefinementCtx, theme: ResolvedTheme, row: NonNullabl
   row.capas.forEach((layer, i) => {
     if (views.has(layer.nombre)) failure(['capas', i, 'nombre'], `Duplicate Layer '${layer.nombre}'`);
     views.add(layer.nombre);
-    const props = Object.entries(layer.primitiva.props).map(([key, value]) => ({ clave: key, valor: value }));
-    for (const error of buildPrimitive(layer.primitiva.tipo, props, theme.palette).errores) failure(['capas', i, 'primitiva', ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
+    const props = Object.entries(layer.primitiva.props).map(([key, value]) => ({ key, value }));
+    for (const error of buildPrimitive(layer.primitiva.tipo, props, theme.palette).errors) failure(['capas', i, 'primitiva', ...(error.key === undefined ? [] : ['props', error.key])], error.message);
   });
   const base = row.capas as ResolvedLayer[];
   const patches: Array<[Array<string | number>, readonly LayerOp[]]> = [
@@ -333,15 +333,15 @@ function validateRow(ctx: z.RefinementCtx, theme: ResolvedTheme, row: NonNullabl
     ...Object.entries(row.claves).map(([key, ops]): [Array<string | number>, readonly LayerOp[]] => [['claves', key], ops]),
   ];
   for (const [issuePath, ops] of patches) {
-    for (const e of validateOps([base], ops, theme.palette, 'parchear')) failure([...issuePath, e.indice], e.mensaje);
+    for (const e of validateOps([base], ops, theme.palette, 'parchear')) failure([...issuePath, e.index], e.message);
     ops.forEach((op, index) => {
       const ratio = opTouchesMetrics(op, [base]);
       if (ratio !== undefined) failure([...issuePath, index], `a row patch cannot touch the Metrics: ${ratio}`);
     });
   }
   for (const [name, text] of Object.entries(row.textos)) {
-    const props = Object.entries(text.props).map(([key, value]) => ({ clave: key, valor: value }));
-    for (const error of buildPrimitive(text.tipo, props, theme.palette, 'texto-slot').errores) failure(['textos', name, ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
+    const props = Object.entries(text.props).map(([key, value]) => ({ key, value }));
+    for (const error of buildPrimitive(text.tipo, props, theme.palette, 'texto-slot').errors) failure(['textos', name, ...(error.key === undefined ? [] : ['props', error.key])], error.message);
     const expected = ROW_TEXTS[name as keyof typeof ROW_TEXTS];
     if (text.tipo !== expected) failure(['textos', name], `row text '${name}' is styled with Primitive '${expected}', not '${text.tipo}'`);
   }
@@ -357,12 +357,12 @@ function validateElement(ctx: z.RefinementCtx, theme: ResolvedTheme, element: No
   block.capas.forEach((layer, i) => {
     if (views.has(layer.nombre)) failure(['capas', i, 'nombre'], `Duplicate Layer '${layer.nombre}'`);
     views.add(layer.nombre);
-    const { errores: errors } = buildPrimitive(
+    const { errors } = buildPrimitive(
       layer.primitiva.tipo,
-      Object.entries(layer.primitiva.props).map(([key, value]) => ({ clave: key, valor: value })),
+      Object.entries(layer.primitiva.props).map(([key, value]) => ({ key, value })),
       theme.palette,
     );
-    for (const error of errors) failure(['capas', i, 'primitiva', ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
+    for (const error of errors) failure(['capas', i, 'primitiva', ...(error.key === undefined ? [] : ['props', error.key])], error.message);
   });
   /** Duplicates are counted per tree (header, collapsed). */
   const walk = (box: SlotLayoutBox, issuePath: string, inTree = new Set<string>()): void => {
@@ -376,9 +376,9 @@ function validateElement(ctx: z.RefinementCtx, theme: ResolvedTheme, element: No
   walk(block.slots, 'slots');
   const slotStyle = (texts: Partial<Record<SlotName, Primitive>>, issuePath: Array<string | number>): void => {
     for (const [slot, text] of Object.entries(texts)) {
-      const props = Object.entries(text.props).map(([key, value]) => ({ clave: key, valor: value }));
-      for (const error of buildPrimitive(text.tipo, props, theme.palette, 'texto-slot').errores) failure([...issuePath, slot, ...(error.clave === undefined ? [] : ['props', error.clave])], error.mensaje);
-      const expected = SLOT_DEFINITION[slot as SlotName].estilo;
+      const props = Object.entries(text.props).map(([key, value]) => ({ key, value }));
+      for (const error of buildPrimitive(text.tipo, props, theme.palette, 'texto-slot').errors) failure([...issuePath, slot, ...(error.key === undefined ? [] : ['props', error.key])], error.message);
+      const expected = SLOT_DEFINITION[slot as SlotName].style;
       if (text.tipo !== expected) failure([...issuePath, slot], `Slot '${slot}' is styled with Primitive '${expected}', not '${text.tipo}'`);
     }
   };
@@ -393,25 +393,25 @@ function validateElement(ctx: z.RefinementCtx, theme: ResolvedTheme, element: No
     });
   };
   for (const [diagram, patch] of Object.entries(block.diagramas ?? {})) {
-    for (const e of validateOps([base], patch.ops, theme.palette, 'parchear')) failure(['diagramas', diagram, 'ops', e.indice], e.mensaje);
+    for (const e of validateOps([base], patch.ops, theme.palette, 'parchear')) failure(['diagramas', diagram, 'ops', e.index], e.message);
     if (patch.slots !== undefined) walk(patch.slots, 'diagramas');
     stacks.push(applyWithoutErrors(base, patch.ops, theme.palette));
   }
   const bases = [...stacks];
   for (const [kind, ops] of Object.entries(block.tipos)) {
-    for (const e of validateOps(bases, ops, theme.palette, 'parchear')) failure(['tipos', kind, e.indice], e.mensaje);
+    for (const e of validateOps(bases, ops, theme.palette, 'parchear')) failure(['tipos', kind, e.index], e.message);
     if (element === 'grupo') withoutMetrics(ops, bases, ['tipos', kind], 'Group kind');
     stacks.push(...bases.map((stack) => applyWithoutErrors(stack, ops, theme.palette)));
   }
   if (element === 'grupo') {
     const collapsed = (block as z.output<typeof groupSchema>).colapsado;
-    for (const e of validateOps(stacks, collapsed.ops, theme.palette, 'parchear')) failure(['colapsado', 'ops', e.indice], e.mensaje);
+    for (const e of validateOps(stacks, collapsed.ops, theme.palette, 'parchear')) failure(['colapsado', 'ops', e.index], e.message);
     if (collapsed.textos !== undefined) slotStyle(collapsed.textos, ['colapsado', 'textos']);
     if (collapsed.slots !== undefined) walk(collapsed.slots, 'colapsado');
     stacks.push(...stacks.map((stack) => applyWithoutErrors(stack, collapsed.ops, theme.palette)));
   }
   for (const [state, ops] of Object.entries(block.estados)) {
-    for (const e of validateOps(stacks, ops, theme.palette, 'parchear')) failure(['estados', state, e.indice], e.mensaje);
+    for (const e of validateOps(stacks, ops, theme.palette, 'parchear')) failure(['estados', state, e.index], e.message);
     withoutMetrics(ops, stacks, ['estados', state], 'state');
   }
 }
@@ -432,7 +432,7 @@ function withSequenceDefaults(sequence: NonNullable<ResolvedTheme['secuencia']>,
       ...block,
       capas: block.capas.map((c) => ({ ...c, primitiva: complete(c.primitiva, spec.capas) })),
       ...markers(block),
-      textos: Object.fromEntries(Object.entries(block.textos).map(([key, text]) => [key, complete(text, spec.textos[key]?.ubicacion ?? 'texto-slot')])),
+      textos: Object.fromEntries(Object.entries(block.textos).map(([key, text]) => [key, complete(text, spec.textos[key]?.placement ?? 'texto-slot')])),
       parches: Object.fromEntries(Object.entries(block.parches).map(([variant, patch]) => [variant, { ...patch, ...markers(patch) }])),
     };
   }
@@ -524,8 +524,8 @@ export function resolveTheme(theme: Theme): ResolvedTheme {
 function withDefaults(theme: ResolvedTheme): ResolvedTheme {
   const complete = <P extends { tipo: string; props: Record<string, string | number> }>(primitive: P, placement: PrimitivePlacement): P | Primitive => {
     if (primitive.tipo === 'code') return primitive;
-    const props = Object.entries(primitive.props).map(([key, value]) => ({ clave: key, valor: value }));
-    return buildPrimitive(primitive.tipo, props, theme.palette, placement).primitiva ?? primitive;
+    const props = Object.entries(primitive.props).map(([key, value]) => ({ key, value }));
+    return buildPrimitive(primitive.tipo, props, theme.palette, placement).primitive ?? primitive;
   };
   const layers = <C extends { primitiva: { tipo: string; props: Record<string, string | number> } }>(list: C[], placement: PrimitivePlacement): C[] => list.map((c) => ({ ...c, primitiva: complete(c.primitiva, placement) }));
   const texts = (list: Partial<Record<SlotName, Primitive>>): Partial<Record<SlotName, Primitive>> =>

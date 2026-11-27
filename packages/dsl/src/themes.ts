@@ -90,8 +90,8 @@ interface Environment {
 /** Names of the `part`s a block uses, including the ones those parts use. */
 /** The `extends` of a Theme points to an undeclared one; an old built-in Theme name is `old-catalog-value` if the new one exists. */
 function undeclaredParentTheme(parent: string, file: string, ast: Theme, existing: readonly string[]): Issue {
-  const renamed = oldRename(OLD_CATALOG_VALUES, 'theme', parent);
-  if (renamed !== undefined && existing.includes(renamed)) return renameIssue(CODES.E_OLD_CATALOG_VALUE, oldValueMessage('theme', parent, renamed), file, rangeOf(ast, 'parent'), renamed);
+  const newName = oldRename(OLD_CATALOG_VALUES, 'theme', parent);
+  if (newName !== undefined && existing.includes(newName)) return renameIssue(CODES.E_OLD_CATALOG_VALUE, oldValueMessage('theme', parent, newName), file, rangeOf(ast, 'parent'), newName);
   return issueWithSuggestion({ code: CODES.E_UNKNOWN_THEME, message: `Theme '${parent}' is not declared` }, file, ast, 'parent', existing);
 }
 
@@ -158,15 +158,15 @@ export function resolveThemes(declaredList: readonly DeclaredTheme[], declaredPa
   }
 
   const builtIn: ThemeOrigin = { site: { file: '(incorporado)', line: 1, column: 1 }, extends: [], parts: [], base: {}, kinds: {}, states: {}, group: { base: {}, kinds: {}, states: {}, collapsed: {} }, page: {}, slots: {} };
-  const resolvedOnes = new Map<string, CompiledTheme>();
+  const resolved = new Map<string, CompiledTheme>();
   const highContrast: CompiledTheme = { theme: HIGH_CONTRAST_THEME, origins: new Map(), origin: builtIn };
   const inProgress = new Set<string>();
-  const failedOnes = new Set<string>();
+  const failed = new Set<string>();
   const resolve = (declared: DeclaredTheme): CompiledTheme | undefined => {
     const { name, parent } = declared.ast;
-    const isDone = resolvedOnes.get(name);
+    const isDone = resolved.get(name);
     if (isDone !== undefined) return isDone;
-    if (inProgress.has(name) || failedOnes.has(name)) return undefined;
+    if (inProgress.has(name) || failed.has(name)) return undefined;
     inProgress.add(name);
 
     let base: CompiledTheme | undefined;
@@ -180,7 +180,7 @@ export function resolveThemes(declaredList: readonly DeclaredTheme[], declaredPa
             : undeclaredParentTheme(parent, declared.file, declared.ast, [...byName.keys(), HIGH_CONTRAST_THEME.name]),
         );
         inProgress.delete(name);
-        failedOnes.add(name);
+        failed.add(name);
         return undefined;
       }
     }
@@ -287,20 +287,20 @@ export function resolveThemes(declaredList: readonly DeclaredTheme[], declaredPa
         slots: Object.fromEntries(slotSites),
       },
     };
-    resolvedOnes.set(name, compiled);
+    resolved.set(name, compiled);
     return compiled;
   };
   for (const declared of byName.values()) resolve(declared);
 
   return {
     // The built-in ones first and in their order; `high-contrast` is defined by `theme`.
-    themes: [...resolvedOnes.values(), highContrast]
+    themes: [...resolved.values(), highContrast]
       .map(({ theme }) => theme)
       .sort((a, b) => (BUILT_IN_NAMES.indexOf(a.name as never) + 1 || 99) - (BUILT_IN_NAMES.indexOf(b.name as never) + 1 || 99)),
     issues,
-    origins: Object.fromEntries([...resolvedOnes].map(([name, { origin }]) => [name, origin])),
+    origins: Object.fromEntries([...resolved].map(([name, { origin }]) => [name, origin])),
     parchesDeVista: (themeName, items, file) => {
-      const ofTheme = resolvedOnes.get(themeName);
+      const ofTheme = resolved.get(themeName);
       const ofViewBlock: Issue[] = [];
       if (ofTheme === undefined) return { ops: [], issues: ofViewBlock };
       const ops = compileBlock(items, {

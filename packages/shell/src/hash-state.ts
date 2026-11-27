@@ -44,15 +44,15 @@ export function useHashState(options: HashStateOptions): HashStateProps {
   };
   const [state, setStateValue] = useState<ShellState>(read);
   const current = useRef(state);
-  const lastOne = useRef({ hash, initial, withCamera, read, source });
-  lastOne.current = { hash, initial, withCamera, read, source };
+  const latestInputs = useRef({ hash, initial, withCamera, read, source });
+  latestInputs.current = { hash, initial, withCamera, read, source };
 
   useEffect(
     () =>
       hash.subscribe(() => {
-        const latest = lastOne.current.read();
-        const { initial: startValue } = lastOne.current;
-        if (serializeState(latest, startValue, lastOne.current.source) === serializeState(current.current, startValue, lastOne.current.source)) return;
+        const latest = latestInputs.current.read();
+        const { initial: startValue } = latestInputs.current;
+        if (serializeState(latest, startValue, latestInputs.current.source) === serializeState(current.current, startValue, latestInputs.current.source)) return;
         current.current = latest;
         setStateValue(latest);
       }),
@@ -60,7 +60,7 @@ export function useHashState(options: HashStateOptions): HashStateProps {
   );
 
   const apply = (next: ShellState, replace: boolean): void => {
-    const { hash: h, initial: startValue, source } = lastOne.current;
+    const { hash: h, initial: startValue, source } = latestInputs.current;
     const text = serializeState(next, startValue, source);
     const previous = serializeState(current.current, startValue, source);
     current.current = next;
@@ -78,13 +78,13 @@ export function useHashState(options: HashStateOptions): HashStateProps {
     onPathChange: (path) => {
       const e = current.current;
       const viewChange = path[path.length - 1] !== e.path[e.path.length - 1];
-      apply(viewChange ? { path, state: {}, selected: null, step: initialStepOfView(lastOne.current.source, path[path.length - 1]) } : { ...e, path }, !viewChange && path.length <= e.path.length);
+      apply(viewChange ? { path, state: {}, selected: null, step: initialStepOfView(latestInputs.current.source, path[path.length - 1]) } : { ...e, path }, !viewChange && path.length <= e.path.length);
     },
     onStateChange: (state) => apply({ ...current.current, state }, true),
     onSelect: (selected) => apply({ ...current.current, selected }, true),
     onStepChange: (step) => apply({ ...current.current, step }, true),
     onCameraChange: (camera) => {
-      if (lastOne.current.withCamera) apply({ ...current.current, camera }, true);
+      if (latestInputs.current.withCamera) apply({ ...current.current, camera }, true);
     },
   };
   if (state.camera !== undefined) props.camera = state.camera;

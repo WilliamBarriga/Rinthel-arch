@@ -68,8 +68,8 @@ describe('planned elements on the canvas', () => {
   it('never changes Metrics: the planned Node keeps the size it would have if real', async () => {
     const view = resolveView(FONT, 'arch') as GraphView;
     const actual = await layoutView({ ...view, nodes: view.nodes.map(({ planned: _p, ...n }) => n) }, NEUTRAL_THEME);
-    const plannedOne = await layoutView(view, NEUTRAL_THEME);
-    expect(plannedOne).toEqual(actual);
+    const withPlanned = await layoutView(view, NEUTRAL_THEME);
+    expect(withPlanned).toEqual(actual);
   });
 
   it('an Edge touching a planned Node is drawn planned with a dashed line', async () => {

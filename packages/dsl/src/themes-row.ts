@@ -37,9 +37,9 @@ export function compileRow(items: readonly RowItem[], theme: ResolvedTheme, ctx:
   for (const item of items) {
     switch (item.$type) {
       case 'RowHeight': {
-        const { propiedades: properties, errores: errors } = validateProperties(
-          { sujeto: "The 'row' block", nombre: "'row'", propiedades: { height: { tipo: 'numero', min: ROW_HEIGHT.min, max: ROW_HEIGHT.max } } },
-          [{ clave: 'height', valor: item.value }],
+        const { properties, errors } = validateProperties(
+          { subject: "The 'row' block", name: "'row'", properties: { height: { type: 'number', min: ROW_HEIGHT.min, max: ROW_HEIGHT.max } } },
+          [{ key: 'height', value: item.value }],
           theme.palette,
         );
         for (const error of errors) ctx.issues.push(themeIssue(ctx.file, error, rangeOf(item, 'value').start));

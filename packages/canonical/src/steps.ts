@@ -93,13 +93,13 @@ function stateAfter(view: GraphView, k: number): Set<string> {
     }
   }
 
-  const visibleOnes = new Set(revealed);
+  const visible = new Set(revealed);
   for (const edge of view.edges) {
     const id = edgeId(edge);
     const allowed = named.has(id) ? shown.has(id) : !hidden.has(id);
-    if (allowed && revealed.has(edge.from.node) && revealed.has(edge.to.node)) visibleOnes.add(id);
+    if (allowed && revealed.has(edge.from.node) && revealed.has(edge.to.node)) visible.add(id);
   }
-  return visibleOnes;
+  return visible;
 }
 
 /** Unlike the View's `include`, `a.*` and `a.**` also cover the Group `a`. */

@@ -103,9 +103,9 @@ describe('InteractiveView', () => {
 
     fireEvent.wheel(zoneOf(container), { deltaY: -100, clientX: 0, clientY: 0 });
 
-    const newOne = onCameraChange.mock.calls.at(-1)![0] as Camera;
-    expect(newOne.width).toBeLessThan(800);
-    expect(newOne.height).toBeLessThan(600);
+    const camera = onCameraChange.mock.calls.at(-1)![0] as Camera;
+    expect(camera.width).toBeLessThan(800);
+    expect(camera.height).toBeLessThan(600);
     expect(viewBoxOf(container)).toBe('0 0 800 600');
   });
 
@@ -125,8 +125,8 @@ describe('InteractiveView', () => {
     gesture(window, 'mousemove', 60, 90);
     gesture(window, 'mouseup', 60, 90);
 
-    const newOne = onCameraChange.mock.calls.at(-1)![0] as Camera;
-    expect(newOne).toMatchObject({ x: 40, y: 10, width: 800, height: 600 });
+    const camera = onCameraChange.mock.calls.at(-1)![0] as Camera;
+    expect(camera).toMatchObject({ x: 40, y: 10, width: 800, height: 600 });
   });
 
   it('selecting a Node fires onSelect and marks it', async () => {

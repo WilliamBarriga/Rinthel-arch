@@ -5,12 +5,12 @@
 import type { PrimitiveDefinition } from '../catalog';
 
 const marker = {
-  familia: 'marcador',
-  ubicacion: 'marcador',
-  afectaMetricas: false,
-  propiedades: {
-    color: { tipo: 'color', opcional: true },
-    size: { tipo: 'numero', min: 2, max: 32, defecto: 8 },
+  family: 'marcador',
+  placement: 'marcador',
+  affectsMetrics: false,
+  properties: {
+    color: { type: 'color', optional: true },
+    size: { type: 'number', min: 2, max: 32, default: 8 },
   },
 } as const satisfies PrimitiveDefinition;
 

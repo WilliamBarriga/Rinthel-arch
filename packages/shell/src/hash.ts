@@ -118,7 +118,7 @@ export function deserializeState(hash: string, source: CanonicalForm, initialVie
 
   let path = p.getAll('p').filter((v) => viewList.has(v));
   if (path.length === 0) path = initialView === undefined ? [] : [initialView];
-  const activeOne = source.views.find((v) => v.id === path[path.length - 1]);
+  const active = source.views.find((v) => v.id === path[path.length - 1]);
 
   const known = (key: string): string[] => p.getAll(key).filter((id) => nodes.has(id));
   const expanded = known('e');
@@ -129,9 +129,9 @@ export function deserializeState(hash: string, source: CanonicalForm, initialVie
   const selected = s !== null && (nodes.has(s) || isInteractionElement(s, source)) ? s : null;
 
   const t = p.get('t');
-  const initial = initialStepOfView(source, activeOne?.id);
+  const initial = initialStepOfView(source, active?.id);
   const n = t !== null && /^\d+$/.test(t) ? Number(t) : initial;
-  const step = n <= (activeOne?.steps?.length ?? 0) ? n : initial;
+  const step = n <= (active?.steps?.length ?? 0) ? n : initial;
 
   const camera = readCamera(p.get('cam'));
   return { path, state, selected, step, ...(camera !== undefined && { camera }) };

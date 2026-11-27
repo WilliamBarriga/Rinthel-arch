@@ -45,8 +45,8 @@ function read(text: string): Expression | undefined {
   return { base, ...(alpha !== undefined && { alfa: alpha }) };
 }
 
-const suggest = (written: string, existingOnes: Iterable<string>): { hint?: string } => {
-  const candidates = nearestCandidates(written, existingOnes);
+const suggest = (written: string, known: Iterable<string>): { hint?: string } => {
+  const candidates = nearestCandidates(written, known);
   return candidates.length === 0 ? {} : { hint: `did you mean ${candidates.map((c) => `'${c}'`).join(' or ')}` };
 };
 
