@@ -246,9 +246,9 @@ function validateView(source: CanonicalForm, view: View, index: number, emit: Em
 
   // In sequence the View does not select Nodes: any non-excluded one is valid (merged Lifeline or `box` of a Group).
   const ofSequence = view.type === 'sequence' ? nonExcludedNodes(source.model.nodes, view) : undefined;
-  const visibleOnes = ofSequence ?? new Set(resolveView(source, view.id)?.nodes.map((node) => node.id));
+  const visible = ofSequence ?? new Set(resolveView(source, view.id)?.nodes.map((node) => node.id));
   view.overrides.forEach((override, i) => {
-    if (!visibleOnes.has(override.node)) {
+    if (!visible.has(override.node)) {
       emit([...path, 'overrides', i, 'node'], CODES.E_OVERRIDE_OUTSIDE_VIEW, `Override on '${override.node}', which View '${view.id}' does not show`);
     }
   });
@@ -334,14 +334,14 @@ function validateInteractions(source: CanonicalForm, emit: Emit, emitWith: EmitW
 
 /** `create` only at the target's first appearance and no appearance after its `destroy` (the first one to happen), in declaration order even inside Fragments. */
 function validateLifecycle(message: LocatedMessage, j: number, path: (string | number)[], messages: readonly LocatedMessage[], emitWith: EmitWith): void {
-  const previousOnes = messages.slice(0, j);
-  const first = previousOnes.findIndex((m) => m.from === message.to || m.to === message.to);
+  const earlier = messages.slice(0, j);
+  const first = earlier.findIndex((m) => m.from === message.to || m.to === message.to);
   if (message.kind === 'create' && first >= 0) {
-    emitWith([...path, ...message.location, 'to'], CODES.E_CREATE_NOT_FIRST, `'create' on '${message.to}', which already appears earlier in the Interaction`, { related: { path: [...path, ...previousOnes[first]!.location, previousOnes[first]!.from === message.to ? 'from' : 'to'], message: `First appearance of '${message.to}'` } });
+    emitWith([...path, ...message.location, 'to'], CODES.E_CREATE_NOT_FIRST, `'create' on '${message.to}', which already appears earlier in the Interaction`, { related: { path: [...path, ...earlier[first]!.location, earlier[first]!.from === message.to ? 'from' : 'to'], message: `First appearance of '${message.to}'` } });
     return;
   }
   for (const side of ['from', 'to'] as const) {
-    const destruction = previousOnes.find((m) => m.kind === 'destroy' && m.to === message[side]);
+    const destruction = earlier.find((m) => m.kind === 'destroy' && m.to === message[side]);
     if (destruction !== undefined) {
       emitWith([...path, ...message.location, side], CODES.E_AFTER_DESTROY, `'${message[side]}' appears after its 'destroy'`, { related: { path: [...path, ...destruction.location, 'to'], message: `'${message[side]}' is destroyed here` } });
       return;

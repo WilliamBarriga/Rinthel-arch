@@ -121,8 +121,8 @@ export function compile(workspace: WorkspaceFiles): CompileResult {
       declaredParts.push({ file, ast: part, name: rangeOf(part, 'name') });
     }
     for (const view of result.value.views) {
-      const compiledOne = compileView(view, file, issues);
-      if (compiledOne !== undefined) viewList.push({ view: compiledOne, file, ast: view });
+      const compiled = compileView(view, file, issues);
+      if (compiled !== undefined) viewList.push({ view: compiled, file, ast: view });
     }
     for (const model of result.value.models) {
       roots.push({

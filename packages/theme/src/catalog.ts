@@ -134,8 +134,8 @@ export const placementsOf = (name: PrimitiveName): PrimitivePlacement[] =>
   validAt(name, 'capa-pagina') ? [placementOf(name), 'capa-pagina'] : [placementOf(name)];
 export const isSlot = (name: string): name is SlotName => Object.hasOwn(SLOT_DEFINITION, name);
 
-export const suggest = (written: string, existingOnes: Iterable<string>): { hint?: string; candidate?: string } => {
-  const candidates = nearestCandidates(written, existingOnes);
+export const suggest = (written: string, known: Iterable<string>): { hint?: string; candidate?: string } => {
+  const candidates = nearestCandidates(written, known);
   const [single] = candidates;
   return candidates.length === 0 ? {} : { hint: `did you mean ${candidates.map((c) => `'${c}'`).join(' or ')}`, ...(candidates.length === 1 && single !== undefined && { candidate: single }) };
 };
@@ -291,7 +291,7 @@ export function resolveTokens(
 
 /** An old (Spanish) name of `category` is the `old-catalog-value` error with the new one as `candidate` (the `fix`); `undefined` otherwise. */
 export function oldValueError(category: CatalogCategory, written: string): CatalogError | undefined {
-  const renamed = oldRename(OLD_CATALOG_VALUES, category, written);
-  if (renamed === undefined) return undefined;
-  return { code: CODES.E_OLD_CATALOG_VALUE, message: oldValueMessage(category, written, renamed), candidate: renamed };
+  const newName = oldRename(OLD_CATALOG_VALUES, category, written);
+  if (newName === undefined) return undefined;
+  return { code: CODES.E_OLD_CATALOG_VALUE, message: oldValueMessage(category, written, newName), candidate: newName };
 }

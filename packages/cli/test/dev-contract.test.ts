@@ -4,8 +4,8 @@ import { eventsOverFetch, testDevContract } from 'dev-ui/contract';
 import { startDev } from 'cli';
 import { inMemoryPort } from 'session';
 
-testDevContract(async ({ own: ownOnes, themes, activity, brokenWrite: brokenWriteFn, code }) => {
-  const port = inMemoryPort({ own: ownOnes, ...(themes !== undefined && { themes }), ...(activity !== undefined && { activity }), ...(brokenWriteFn !== undefined && { brokenWrite: brokenWriteFn }) });
+testDevContract(async ({ own, themes, activity, brokenWrite: brokenWriteFn, code }) => {
+  const port = inMemoryPort({ own, ...(themes !== undefined && { themes }), ...(activity !== undefined && { activity }), ...(brokenWriteFn !== undefined && { brokenWrite: brokenWriteFn }) });
   const server = await startDev({
     workspace: '/ws',
     port: port,

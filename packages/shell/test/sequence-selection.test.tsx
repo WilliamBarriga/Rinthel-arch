@@ -52,7 +52,7 @@ async function mount(text: string, extra: Record<string, unknown> = {}) {
   await waitFor(() => expect(r.container.querySelector('[data-fragment]')).not.toBeNull(), { timeout: 15000 });
   return { ...r, ids, zone: r.container.querySelector<HTMLElement>('.rd-vista')! };
 }
-const lastOne = (ids: string[][]) => ids.at(-1);
+const lastSelection = (ids: string[][]) => ids.at(-1);
 
 describe('Sequence: hit', () => {
   it('Message by its arrow and by its label; id = Interaction:path', async () => {
@@ -60,10 +60,10 @@ describe('Sequence: hit', () => {
     const { container, ids } = await mount(withoutSteps);
     const arrow = g.messages['0']!.points;
     pressAt(container, (arrow[0]!.x + arrow[1]!.x) / 2, arrow[0]!.y);
-    expect(lastOne(ids)).toEqual(['checkout:0']);
+    expect(lastSelection(ids)).toEqual(['checkout:0']);
     const label = middle(g.messages['1.0.0']!.label!);
     pressAt(container, label.x, label.y);
-    expect(lastOne(ids)).toEqual(['checkout:1.0.0']);
+    expect(lastSelection(ids)).toEqual(['checkout:1.0.0']);
     expect(container.querySelector('[data-message="checkout:1.0.0"] [data-state="selected"]')).not.toBeNull();
   });
 
@@ -72,12 +72,12 @@ describe('Sequence: hit', () => {
     const { container, ids } = await mount(withoutSteps);
     const note = g.notes[0]!;
     pressAt(container, ...Object.values(middle(note)) as [number, number]);
-    expect(lastOne(ids)).toEqual(['checkout:2']);
+    expect(lastSelection(ids)).toEqual(['checkout:2']);
     expect(container.querySelector('[data-note="checkout:2"]')!.getAttribute('data-estados')).toBe('selected');
 
     const activation = g.activations.find((a) => a.lifeline === 'api')!;
     pressAt(container, activation.x + activation.width / 2, activation.y1 + 2);
-    expect(lastOne(ids)).toEqual(['api']);
+    expect(lastSelection(ids)).toEqual(['api']);
 
     const frame = g.fragments[0]!;
     const before = ids.length;
@@ -86,7 +86,7 @@ describe('Sequence: hit', () => {
     expect(ids.length).toBe(before);
     const line = g.lifelines['db']!;
     pressAt(container, line.x, frame.y + frame.height / 2);
-    expect(lastOne(ids)).toEqual(['db']);
+    expect(lastSelection(ids)).toEqual(['db']);
   });
 
   it('Fragment by its tab and by its border', async () => {
@@ -95,10 +95,10 @@ describe('Sequence: hit', () => {
     const frame = g.fragments[0]!;
     const t = freeInTab(g, frame.tab);
     pressAt(container, t.x, t.y);
-    expect(lastOne(ids)).toEqual(['checkout:1']);
+    expect(lastSelection(ids)).toEqual(['checkout:1']);
     ids.length = 0;
     pressAt(container, frame.x + frame.width / 2, frame.y + frame.height);
-    expect(lastOne(ids)).toEqual(['checkout:1']);
+    expect(lastSelection(ids)).toEqual(['checkout:1']);
   });
 
   it('a hash with checkout:1.0.1 restores the selection of the Message', async () => {
@@ -112,8 +112,8 @@ describe('Sequence: hit', () => {
   it('what the Step has not revealed is not selected', async () => {
     const g = await geometryOf(withSteps);
     const { container, ids } = await mount(withSteps, { step: 1 });
-    const hiddenOne = g.messages['3']!.points;
-    pressAt(container, (hiddenOne[0]!.x + hiddenOne[1]!.x) / 2, hiddenOne[0]!.y);
+    const hiddenPoints = g.messages['3']!.points;
+    pressAt(container, (hiddenPoints[0]!.x + hiddenPoints[1]!.x) / 2, hiddenPoints[0]!.y);
     const note = middle(g.notes[0]!);
     pressAt(container, note.x, note.y);
     const frame = freeInTab(g, g.fragments[0]!.tab);
@@ -121,7 +121,7 @@ describe('Sequence: hit', () => {
     expect(ids).toEqual([]);
     const visible = g.messages['0']!.points;
     pressAt(container, (visible[0]!.x + visible[1]!.x) / 2, visible[0]!.y);
-    expect(lastOne(ids)).toEqual(['checkout:0']);
+    expect(lastSelection(ids)).toEqual(['checkout:0']);
   });
 
   it('two selected Lifelines emit neither on-path nor dimmed', async () => {

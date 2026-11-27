@@ -77,11 +77,11 @@ export function elementAt(
 
   // Edges are drawn above the Nodes; the last one drawn is the topmost.
   const edges = view.edges.map((edge) => ({ edge, id: edgeId(edge), points: geometry.edges?.[edgeId(edge)]?.points ?? [] }));
-  const drawnOnes = edges.filter(({ points }) => points.length >= 2);
-  for (const { edge, id, points } of [...drawnOnes].reverse()) {
+  const drawn = edges.filter(({ points }) => points.length >= 2);
+  for (const { edge, id, points } of [...drawn].reverse()) {
     if (edge.label !== undefined && contains(labelBox(edge.label, points, geometry.labels?.[id], style), point)) return { kind: 'etiqueta', id };
   }
-  for (const { id, points } of [...drawnOnes].reverse()) {
+  for (const { id, points } of [...drawn].reverse()) {
     for (let i = 1; i < points.length; i++) {
       if (distanceToSegment(point, points[i - 1]!, points[i]!) <= tolerance) return { kind: 'arista', id };
     }

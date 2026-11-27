@@ -34,46 +34,46 @@ function source(view: Record<string, unknown>, extraEdges: unknown[] = []) {
   });
 }
 
-function visibleOnes(view: Record<string, unknown>, state?: CollapseState): string[] {
+function visibleIds(view: Record<string, unknown>, state?: CollapseState): string[] {
   return (resolveView(source(view), 'v', state)?.nodes ?? []).map((n) => n.id);
 }
 
 describe('resolveView', () => {
   it('an id without a suffix selects only that Node', () => {
-    expect(visibleOnes({ include: ['a', 'c'] })).toEqual(['a', 'c']);
+    expect(visibleIds({ include: ['a', 'c'] })).toEqual(['a', 'c']);
   });
 
   it('`x.*` selects the direct children and `x.**` all descendants', () => {
-    expect(visibleOnes({ include: ['a.*'] })).toEqual(['a.a1', 'a.a2']);
-    expect(visibleOnes({ include: ['a.**'] })).toEqual(['a.a1', 'a.a1.a1x', 'a.a2']);
+    expect(visibleIds({ include: ['a.*'] })).toEqual(['a.a1', 'a.a2']);
+    expect(visibleIds({ include: ['a.**'] })).toEqual(['a.a1', 'a.a1.a1x', 'a.a2']);
   });
 
   it('bare `*` and `**` select the roots and the whole Model', () => {
-    expect(visibleOnes({ include: ['*'] })).toEqual(['a', 'b', 'c']);
-    expect(visibleOnes({ include: ['**'] })).toEqual(['a', 'a.a1', 'a.a1.a1x', 'a.a2', 'b', 'b.b1', 'c']);
+    expect(visibleIds({ include: ['*'] })).toEqual(['a', 'b', 'c']);
+    expect(visibleIds({ include: ['**'] })).toEqual(['a', 'a.a1', 'a.a1.a1x', 'a.a2', 'b', 'b.b1', 'c']);
   });
 
   it('exclude removes what was selected, with the same selectors', () => {
-    expect(visibleOnes({ include: ['**'], exclude: ['c', 'a.**'] })).toEqual(['a', 'b', 'b.b1']);
+    expect(visibleIds({ include: ['**'], exclude: ['c', 'a.**'] })).toEqual(['a', 'b', 'b.b1']);
   });
 
   it('depth limits the nesting level (roots are level 1)', () => {
-    expect(visibleOnes({ include: ['**'], depth: 1 })).toEqual(['a', 'b', 'c']);
-    expect(visibleOnes({ include: ['**'], depth: 2 })).toEqual(['a', 'a.a1', 'a.a2', 'b', 'b.b1', 'c']);
+    expect(visibleIds({ include: ['**'], depth: 1 })).toEqual(['a', 'b', 'c']);
+    expect(visibleIds({ include: ['**'], depth: 2 })).toEqual(['a', 'a.a1', 'a.a2', 'b', 'b.b1', 'c']);
   });
 
   it('exclude does not carry over to descendants: a visible child under an excluded Node stays visible', () => {
-    expect(visibleOnes({ include: ['**'], exclude: ['a'] })).toEqual([
+    expect(visibleIds({ include: ['**'], exclude: ['a'] })).toEqual([
       'a.a1', 'a.a1.a1x', 'a.a2', 'b', 'b.b1', 'c',
     ]);
   });
 
   it('depth 0 shows nothing', () => {
-    expect(visibleOnes({ include: ['**'], depth: 0 })).toEqual([]);
+    expect(visibleIds({ include: ['**'], depth: 0 })).toEqual([]);
   });
 
   it('a View without include shows nothing', () => {
-    expect(visibleOnes({})).toEqual([]);
+    expect(visibleIds({})).toEqual([]);
   });
 
   it('the visible Edges are those with both ends visible', () => {
@@ -120,20 +120,20 @@ describe('resolveView: Group collapse', () => {
   });
 
   it('`expanded` overrides the depth collapse and `collapsed` overrides the open state', () => {
-    expect(visibleOnes({ include: ['**'], depth: 1, expanded: ['a'] })).toEqual(['a', 'a.a1', 'a.a2', 'b', 'c']);
-    expect(visibleOnes({ include: ['**'], collapsed: ['a'] })).toEqual(['a', 'b', 'b.b1', 'c']);
+    expect(visibleIds({ include: ['**'], depth: 1, expanded: ['a'] })).toEqual(['a', 'a.a1', 'a.a2', 'b', 'c']);
+    expect(visibleIds({ include: ['**'], collapsed: ['a'] })).toEqual(['a', 'b', 'b.b1', 'c']);
   });
 
   it('the caller collapse state wins over the View', () => {
     const view = { include: ['**'], depth: 1, collapsed: ['b'], expanded: ['a'] };
 
-    expect(visibleOnes(view, { collapsed: ['a'], expanded: ['b'] })).toEqual(['a', 'b', 'b.b1', 'c']);
+    expect(visibleIds(view, { collapsed: ['a'], expanded: ['b'] })).toEqual(['a', 'b', 'b.b1', 'c']);
   });
 
   it('a Group with a link does not expand even with expanded state', () => {
     const view = { include: ['**'], links: [{ node: 'b', view: 'detalle' }] };
 
-    expect(visibleOnes(view, { expanded: ['b'] })).toEqual(['a', 'a.a1', 'a.a1.a1x', 'a.a2', 'b', 'c']);
+    expect(visibleIds(view, { expanded: ['b'] })).toEqual(['a', 'a.a1', 'a.a1.a1x', 'a.a2', 'b', 'c']);
     expect(nodeOf('b', undefined, view)).toMatchObject({ collapsed: true, link: 'detalle' });
   });
 
@@ -149,10 +149,10 @@ describe('resolveView: Group collapse', () => {
   it('an internal Edge of a collapsed Group disappears and reappears when the Group is expanded', () => {
     const internal = [{ from: { node: 'a.a1' }, to: { node: 'a.a2' } }];
     const closed = resolveGraph(source({ include: ['**'], depth: 1 }, internal), 'v');
-    const openOne = resolveGraph(source({ include: ['**'], depth: 1, expanded: ['a'] }, internal), 'v');
+    const expanded = resolveGraph(source({ include: ['**'], depth: 1, expanded: ['a'] }, internal), 'v');
 
     expect(closed?.edges.some((e) => e.from.node === 'a' && e.to.node === 'a')).toBe(false);
-    expect(openOne?.edges).toContainEqual({ from: { node: 'a.a1' }, to: { node: 'a.a2' }, count: 1 });
+    expect(expanded?.edges).toContainEqual({ from: { node: 'a.a1' }, to: { node: 'a.a2' }, count: 1 });
   });
 
   it('lifting drops the Attribute of the end; ends that are not lifted keep it', () => {

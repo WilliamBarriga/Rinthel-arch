@@ -152,12 +152,12 @@ export function compileBlock(items: ReadonlyArray<ThemeLayer | ThemeUse>, ctx: B
     ctx.issues.push(issueOf((compiledList[error.index] as { elemento: LayerEntry }).elemento, error, error.where, error.base));
   }
 
-  const validOnes: LayerOp[] = [];
+  const validOps: LayerOp[] = [];
   compiledList.forEach(({ elemento: element, op }, i) => {
     if (failedList.has(i)) return;
-    validOnes.push(op);
+    validOps.push(op);
     if (op.quitar === true) ctx.origins.delete(op.nombre);
     else ctx.origins.set(op.nombre, siteOf(element.file, rangeOf(element.item, 'name')));
   });
-  return validOnes;
+  return validOps;
 }

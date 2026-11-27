@@ -41,8 +41,8 @@ export function useGeometry(input: GeometryInput): Computation | undefined {
   const { view, theme, layout, seed } = input;
   const [computation, setComputation] = useState<Computation>();
   const [failure, setFailure] = useState<Error>();
-  const lastOne = useRef(input);
-  lastOne.current = input;
+  const latest = useRef(input);
+  latest.current = input;
   // Real measures: requested when the texts or the fonts change, and the layout waits for them.
   const texts = input.measure === undefined ? undefined : textsToMeasure(view, metricsTable(theme, view.type));
   const textsKey = texts === undefined ? undefined : JSON.stringify([input.fontsKey, texts]);
@@ -50,13 +50,13 @@ export function useGeometry(input: GeometryInput): Computation | undefined {
   useEffect(() => {
     if (textsKey === undefined) return;
     let current = true;
-    lastOne.current.measure!(texts!).then(
+    latest.current.measure!(texts!).then(
       (measures) => current && setMeasured({ key: textsKey, measures }),
       (error: unknown) => {
         if (!current) return;
         const e = error instanceof Error ? error : new Error(String(error));
-        if (lastOne.current.onError === undefined) setFailure(e);
-        else lastOne.current.onError(e);
+        if (latest.current.onError === undefined) setFailure(e);
+        else latest.current.onError(e);
       },
     );
     return () => {
@@ -79,12 +79,12 @@ export function useGeometry(input: GeometryInput): Computation | undefined {
     const key = baseKey;
     const show = (geometry: Geometry): void => {
       const computed = { view, geometry, ...(measures !== undefined && { measures }) };
-      lastOne.current.onArrive?.(shown.current, computed);
+      latest.current.onArrive?.(shown.current, computed);
       shown.current = computed;
       setComputation(computed);
     };
 
-    const currentTheme = lastOne.current.theme;
+    const currentTheme = latest.current.theme;
     const receive = (base: Geometry): void => {
       map.delete(key);
       map.set(key, base);
@@ -106,8 +106,8 @@ export function useGeometry(input: GeometryInput): Computation | undefined {
         (error: unknown) => {
           if (!current) return;
           const e = error instanceof Error ? error : new Error(String(error));
-          if (lastOne.current.onError === undefined) setFailure(e);
-          else lastOne.current.onError(e);
+          if (latest.current.onError === undefined) setFailure(e);
+          else latest.current.onError(e);
         },
       );
     }

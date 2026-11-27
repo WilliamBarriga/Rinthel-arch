@@ -182,10 +182,10 @@ describe('collapse and expansion', () => {
   it('morph with the default clock: ends when the duration elapses even if each frame re-renders (no jitter)', async () => {
     // rAF with real cancellation: only the last requested frame stays pending, as in the browser.
     const pending = new Map<number, FrameRequestCallback>();
-    let nextOne = 0;
+    let nextFrameId = 0;
     vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
-      pending.set(++nextOne, cb);
-      return nextOne;
+      pending.set(++nextFrameId, cb);
+      return nextFrameId;
     });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => pending.delete(id));
     const frames = {

@@ -41,7 +41,7 @@ export function diskPortOf(workspace: string, { themes, watch: watchFn = watchDi
     read: () => ({ own: readWorkspace(workspace), disk: readWithThemes(readWorkspace, workspace, themes) }),
     write: (path, text) => writeTextFile(workspaceTarget(workspace, path), text),
     remove: (path) => rmSync(workspaceTarget(workspace, path), { force: true }),
-    renamePath: (old, newOne) => renameSync(workspaceTarget(workspace, old), workspaceTarget(workspace, newOne)),
+    renamePath: (old, newPath) => renameSync(workspaceTarget(workspace, old), workspaceTarget(workspace, newPath)),
     exists: (path) => existsSync(workspaceTarget(workspace, path)),
     paths: () => readPaths(workspace),
     resources: () => ({ ...(themes === undefined ? {} : readResources(themes)), ...readResources(workspace) }),

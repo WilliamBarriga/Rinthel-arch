@@ -297,9 +297,9 @@ function erPaint(base: EdgePaint, points: readonly Point[], from: string | undef
     const kind = cardinality === undefined ? undefined : ER_SHAPE[cardinality];
     return kind === undefined ? undefined : { tipo: kind, props: { color, size: Math.min(fontSizeValue, length(a, b)) } };
   };
-  const [first, second, secondToLast, lastOne] = [points[0], points[1], points[points.length - 2], points[points.length - 1]];
+  const [first, second, secondToLast, last] = [points[0], points[1], points[points.length - 2], points[points.length - 1]];
   const origin = marker(from, first, second);
-  const end = marker(to, lastOne, secondToLast);
+  const end = marker(to, last, secondToLast);
   return { capas: layers, etiqueta: base.etiqueta, ...(origin !== undefined && { origen: origin }), ...(end !== undefined && { fin: end }) };
 }
 

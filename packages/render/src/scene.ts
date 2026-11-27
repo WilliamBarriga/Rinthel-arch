@@ -94,7 +94,7 @@ type GraphContext = Context & { view: GraphView; geometry: GraphGeometry };
  * the Theme does not satisfy the contract.
  */
 export function buildScene(given: SceneInput): MarkupElement {
-  const input = withPlannedOnes(given);
+  const input = withPlannedEdges(given);
   const { view, geometry } = input;
   switch (view.type) {
     case 'sequence':
@@ -112,7 +112,7 @@ export function buildScene(given: SceneInput): MarkupElement {
  * What is Planned in the Model (ADR 0011, already inherited in the resolved View) is one more visual state: `planned` goes before
  * the caller's states on each marked Node, Edge, Message and Attribute (the latter only with its own mark).
  */
-function withPlannedOnes(input: SceneInput): SceneInput {
+function withPlannedEdges(input: SceneInput): SceneInput {
   const { view } = input;
   const ids = [
     ...view.nodes.filter((node) => node.planned === true).map((node) => node.id),
@@ -293,7 +293,7 @@ export function nodeBox(node: ResolvedNode, context: Context): MarkupElement {
 
   return {
     tag: 'div',
-    attrs: { class: 'rd-caja', 'data-id': node.id, 'data-elemento': key, ...(kind !== undefined && { 'data-tipo': kind }), ...(dimmedOne(context.states, node.id) && { 'data-atenuado': '' }), ...(defaultPlanned && { 'data-planeado': '' }), style: position(box, effects.tiltDeg) },
+    attrs: { class: 'rd-caja', 'data-id': node.id, 'data-elemento': key, ...(kind !== undefined && { 'data-tipo': kind }), ...(isDimmed(context.states, node.id) && { 'data-atenuado': '' }), ...(defaultPlanned && { 'data-planeado': '' }), style: position(box, effects.tiltDeg) },
     children: [
       {
         tag: 'div',
@@ -329,8 +329,8 @@ export function nodeBox(node: ResolvedNode, context: Context): MarkupElement {
 
 function nodeStates(node: ResolvedNode, box: NodeBox, { states, style, detail }: Context): MarkupElement[] {
   if (states === undefined) return [];
-  const ownOnes = outlines(states[node.id]).map((e) => paintBoxState(e, node.id));
-  if (isGroup(node) || !hasRows(node, style, detail)) return ownOnes;
+  const own = outlines(states[node.id]).map((e) => paintBoxState(e, node.id));
+  if (isGroup(node) || !hasRows(node, style, detail)) return own;
   const metrics = leafMetrics(style.table, node);
   const attributes = visibleAttributes(node, metrics);
   const straight = placeInBox(metrics, nodeContent(node, metrics), box.width).filas;
@@ -338,11 +338,11 @@ function nodeStates(node: ResolvedNode, box: NodeBox, { states, style, detail }:
     const id = `${node.id}#${attribute.name}`;
     return outlines(states[id]).map((e) => paintBoxState(e, id, straight[i]!));
   });
-  return [...ownOnes, ...rows];
+  return [...own, ...rows];
 }
 
 /** `dimmed` has no outline: it dims the whole element (`data-atenuado` mark, styled by the sheet). */
-export const dimmedOne = (states: States | undefined, id: string): boolean => states?.[id]?.includes('dimmed') === true;
+export const isDimmed = (states: States | undefined, id: string): boolean => states?.[id]?.includes('dimmed') === true;
 /** `planned` dims the element (`data-planeado` mark) and dashes its lines; its box outline is set by whoever draws it. */
 export const plannedLook = (states: States | undefined, id: string): boolean => states?.[id]?.includes('planned') === true;
 /**
@@ -350,15 +350,15 @@ export const plannedLook = (states: States | undefined, id: string): boolean => 
  * Theme patches `planned` for that stroke) there is no `data-planeado`: the Theme's stack replaces the default look.
  */
 export const strokeMarks = (states: States | undefined, id: string, ownPlanned = false): Record<string, string> => ({
-  ...(dimmedOne(states, id) && { 'data-atenuado': '' }),
+  ...(isDimmed(states, id) && { 'data-atenuado': '' }),
   ...(plannedLook(states, id) && !ownPlanned && { 'data-planeado': '' }),
 });
 
 /** The stack of the state that rules a stroke: the last of `STATES` that `id` carries and the Theme declares (paint-only). */
-export function strokeState<T>(declaredOnes: Partial<Record<VisualState, T>> | undefined, states: States | undefined, id: string): T | undefined {
+export function strokeState<T>(declared: Partial<Record<VisualState, T>> | undefined, states: States | undefined, id: string): T | undefined {
   const active = states?.[id] ?? [];
-  const current = STATES.filter((state) => active.includes(state) && declaredOnes?.[state] !== undefined).at(-1);
-  return current === undefined ? undefined : declaredOnes?.[current];
+  const current = STATES.filter((state) => active.includes(state) && declared?.[state] !== undefined).at(-1);
+  return current === undefined ? undefined : declared?.[current];
 }
 /** States with their own outline over the element: all but `dimmed` and `planned`. */
 export const outlines = (list: readonly VisualState[] | undefined): VisualState[] => (list ?? []).filter((e) => e !== 'dimmed' && e !== 'planned');

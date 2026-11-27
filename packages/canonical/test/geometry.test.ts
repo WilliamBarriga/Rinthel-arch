@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { cachedGeometrySchema } from 'canonical';
 
-const previousOne = {
+const previous = {
   view: 'general',
   theme: 'neutral',
   layoutKey: 'k',
@@ -18,14 +18,14 @@ const previousOne = {
 
 describe('cachedGeometrySchema', () => {
   it('reads a geometry written earlier without kind as grafo', () => {
-    const read = cachedGeometrySchema.parse(previousOne);
+    const read = cachedGeometrySchema.parse(previous);
 
     expect(read.geometry.kind).toBe('grafo');
     expect(read.geometry.nodes['a']).toEqual({ x: 0, y: 0, width: 10, height: 5 });
   });
 
   it('keeps kind grafo when it is already written', () => {
-    expect(cachedGeometrySchema.parse({ ...previousOne, geometry: { ...previousOne.geometry, kind: 'grafo' } }).geometry.kind).toBe('grafo');
+    expect(cachedGeometrySchema.parse({ ...previous, geometry: { ...previous.geometry, kind: 'grafo' } }).geometry.kind).toBe('grafo');
   });
 
   it('does not allow a mirrored footer header in a sequence geometry', () => {
@@ -42,12 +42,12 @@ describe('cachedGeometrySchema', () => {
       width: 10,
       height: 60,
     };
-    const read = cachedGeometrySchema.parse({ ...previousOne, geometry: { ...geometry, footers: { a: { ...box, y: 50 } } } }).geometry;
+    const read = cachedGeometrySchema.parse({ ...previous, geometry: { ...geometry, footers: { a: { ...box, y: 50 } } } }).geometry;
     expect(read).toEqual(geometry);
     expect(read).not.toHaveProperty('footers');
   });
 
   it('rejects an unknown kind', () => {
-    expect(cachedGeometrySchema.safeParse({ ...previousOne, geometry: { ...previousOne.geometry, kind: 'otro' } }).success).toBe(false);
+    expect(cachedGeometrySchema.safeParse({ ...previous, geometry: { ...previous.geometry, kind: 'otro' } }).success).toBe(false);
   });
 });

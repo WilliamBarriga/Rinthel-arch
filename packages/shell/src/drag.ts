@@ -40,8 +40,8 @@ export function useDrag(e: DragInput): { shifted: Motion | undefined; dragging: 
   const [inProgress, setInProgress] = useState<string | undefined>(undefined);
   const dragging = useRef(false);
   // The gesture effect is long-lived: it always reads the latest through refs.
-  const lastOne = useRef(e);
-  lastOne.current = e;
+  const latest = useRef(e);
+  latest.current = e;
 
   useEffect(() => {
     setShifted(undefined);
@@ -55,19 +55,19 @@ export function useDrag(e: DragInput): { shifted: Motion | undefined; dragging: 
     const node = e.zone.current!;
     const handlePress = (event: MouseEvent): void => {
       if (event.button !== 0 || event.ctrlKey) return;
-      const geometry = lastOne.current.computation?.geometry;
+      const geometry = latest.current.computation?.geometry;
       if (geometry?.kind === 'secuencia') return pressInSequence(event, geometry);
       const id = nodeIdAt(event.target);
       const box = id === undefined ? undefined : geometry?.nodes[id];
       if (id === undefined || box === undefined) return;
       const [x0, y0] = [event.clientX, event.clientY];
-      let movedOne = false;
+      let moved = false;
       /** Screen pixels per diagram unit with the camera of this instant. */
       const currentScale = (): number => e.width / e.currentCamera.current!.width;
       const handleMove = (m: MouseEvent): void => {
         const [px, py] = [m.clientX - x0, m.clientY - y0];
-        if (!movedOne && Math.hypot(px, py) < lastOne.current.threshold) return;
-        movedOne = true;
+        if (!moved && Math.hypot(px, py) < latest.current.threshold) return;
+        moved = true;
         setInProgress(id);
         m.preventDefault();
         const k = currentScale();
@@ -77,7 +77,7 @@ export function useDrag(e: DragInput): { shifted: Motion | undefined; dragging: 
         window.removeEventListener('mousemove', handleMove);
         window.removeEventListener('mouseup', handleRelease);
         setInProgress(undefined);
-        if (!movedOne) return;
+        if (!moved) return;
         const k = currentScale();
         const [x, y] = [Math.round(box.x + (m.clientX - x0) / k), Math.round(box.y + (m.clientY - y0) / k)];
         const target = { id, x, y };
@@ -90,7 +90,7 @@ export function useDrag(e: DragInput): { shifted: Motion | undefined; dragging: 
         const giveBack = (): void => setShifted((d) => (d?.id === id ? undefined : d));
         try {
           // The Pin anchors the center: the callback carries the center of the dropped box.
-          const result = lastOne.current.onNodeMove?.({ id, x: Math.round(x + box.width / 2), y: Math.round(y + box.height / 2) });
+          const result = latest.current.onNodeMove?.({ id, x: Math.round(x + box.width / 2), y: Math.round(y + box.height / 2) });
           if (typeof result === 'object') result.then((ok) => ok === false && giveBack(), giveBack);
           else if (result === false) giveBack();
         } catch {
@@ -105,17 +105,17 @@ export function useDrag(e: DragInput): { shifted: Motion | undefined; dragging: 
       const k0 = e.width / e.currentCamera.current!.width;
       const box = node.getBoundingClientRect();
       const camera = e.currentCamera.current!;
-      const activeView = lastOne.current.computation!.view;
+      const activeView = latest.current.computation!.view;
       const groups = activeView.type === 'sequence' ? (activeView.interaction.groups ?? []) : [];
       const unitValue = unitAt(geometry, groups, { x: camera.x + (event.clientX - box.left) / k0, y: camera.y + (event.clientY - box.top) / k0 });
       if (unitValue === undefined) return;
-      const order = lastOne.current.computation!.view.nodes.map((n) => n.id);
+      const order = latest.current.computation!.view.nodes.map((n) => n.id);
       const [x0, y0] = [event.clientX, event.clientY];
-      let movedOne = false;
+      let moved = false;
       const offset = (m: MouseEvent): number => (m.clientX - x0) / (e.width / e.currentCamera.current!.width);
       const handleMove = (m: MouseEvent): void => {
-        if (!movedOne && Math.hypot(m.clientX - x0, m.clientY - y0) < lastOne.current.threshold) return;
-        movedOne = true;
+        if (!moved && Math.hypot(m.clientX - x0, m.clientY - y0) < latest.current.threshold) return;
+        moved = true;
         setInProgress(unitValue.id);
         m.preventDefault();
         const header = geometry.nodes[unitValue.id];
@@ -125,7 +125,7 @@ export function useDrag(e: DragInput): { shifted: Motion | undefined; dragging: 
         window.removeEventListener('mousemove', handleMove);
         window.removeEventListener('mouseup', handleRelease);
         setInProgress(undefined);
-        if (!movedOne) return;
+        if (!moved) return;
         dragging.current = true;
         setTimeout(() => {
           dragging.current = false;
@@ -134,7 +134,7 @@ export function useDrag(e: DragInput): { shifted: Motion | undefined; dragging: 
         const giveBack = (): void => setShifted((d) => (d?.id === unitValue.id ? undefined : d));
         if (newOrder.every((id, i) => id === order[i])) return giveBack();
         try {
-          const result = lastOne.current.onReorder?.({ order: newOrder });
+          const result = latest.current.onReorder?.({ order: newOrder });
           if (typeof result === 'object') result.then((ok) => ok === false && giveBack(), giveBack);
           else if (result === false) giveBack();
         } catch {

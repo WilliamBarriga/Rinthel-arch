@@ -192,7 +192,7 @@ function ActiveView(props: ActiveViewProps): ReactElement {
   const computation = useGeometry({ view: resolvedView, theme, layout, measure: measureWithFonts, fontsKey: JSON.stringify(fontHashes), seed, onError, onArrive });
 
   // Until the user or a collapse moves it, the camera frames the whole View from the first geometry.
-  const [moved, setCamera] = useControlled<Camera | undefined>(props.camera, undefined, (newOne) => newOne && lastOne.current.onCameraChange?.(newOne));
+  const [moved, setCamera] = useControlled<Camera | undefined>(props.camera, undefined, (nextCamera) => nextCamera && latest.current.onCameraChange?.(nextCamera));
   const framing = useRef<Camera | undefined>(undefined);
   if (framing.current === undefined && computation !== undefined) framing.current = fitTo(computation.geometry, width, height, settings.fitMargin);
   const camera = moved ?? framing.current ?? { x: 0, y: 0, width, height };
@@ -205,8 +205,8 @@ function ActiveView(props: ActiveViewProps): ReactElement {
   const zone = useRef<HTMLDivElement>(null);
   const behavior = useRef(zoom<HTMLDivElement, unknown>());
   const silence = useRef(false);
-  const lastOne = useRef(props);
-  lastOne.current = props;
+  const latest = useRef(props);
+  latest.current = props;
   const currentCamera = useRef(camera);
   const currentGeometry = useRef<Geometry | undefined>(undefined);
   currentGeometry.current = computation?.geometry;
@@ -237,8 +237,8 @@ function ActiveView(props: ActiveViewProps): ReactElement {
     const comp = behavior.current;
     comp
       .filter((event: Event) => {
-        if (lastOne.current.onMoveNode !== undefined && event.type === 'mousedown' && nodeIdAt(event.target) !== undefined) return false;
-        if (lastOne.current.onReorderLifelines !== undefined && event.type === 'mousedown' && grabsInSequence(event as MouseEvent)) return false;
+        if (latest.current.onMoveNode !== undefined && event.type === 'mousedown' && nodeIdAt(event.target) !== undefined) return false;
+        if (latest.current.onReorderLifelines !== undefined && event.type === 'mousedown' && grabsInSequence(event as MouseEvent)) return false;
         return (!(event as MouseEvent).ctrlKey || event.type === 'wheel') && !(event as MouseEvent).button;
       })
       .extent([
@@ -326,9 +326,9 @@ function ActiveView(props: ActiveViewProps): ReactElement {
     if (dragging.current) return;
     const next = toggleGroup(state, resolvedView, id);
     if (next === undefined) return;
-    const newOne = resolveView(source, view, next);
-    if (newOne === undefined) return;
-    if (countVisibleNodes(newOne) > maxNodes && countVisibleNodes(newOne) > countVisibleNodes(resolvedView)) {
+    const nextCamera = resolveView(source, view, next);
+    if (nextCamera === undefined) return;
+    if (countVisibleNodes(nextCamera) > maxNodes && countVisibleNodes(nextCamera) > countVisibleNodes(resolvedView)) {
       props.onLimit?.(id);
       return;
     }
@@ -416,7 +416,7 @@ function ActiveView(props: ActiveViewProps): ReactElement {
     const accumulates = event.shiftKey || event.ctrlKey || event.metaKey;
     const result = press(element, accumulates);
     props.onSelectionChange?.(result.selection.map((e) => e.id));
-    if (!result.selectedOne) return;
+    if (!result.selected) return;
     onSelect?.(element.id);
     if (accumulates) return;
     if (element.kind === 'fragmento') {

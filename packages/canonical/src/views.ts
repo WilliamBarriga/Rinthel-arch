@@ -93,17 +93,17 @@ export function resolveView(
   const included = selected(view.include);
   const excluded = selected(view.exclude);
 
-  const collapsedOne = (node: Node): boolean => isCollapsed(node, view, state);
+  const collapsedHere = (node: Node): boolean => isCollapsed(node, view, state);
   const collapsedAncestor = new Map<string, string>();
   const record = (nodes: readonly Node[], inherited: string | undefined): void => {
     for (const node of nodes) {
       if (inherited !== undefined) collapsedAncestor.set(node.id, inherited);
-      record(node.children, inherited ?? (collapsedOne(node) ? node.id : undefined));
+      record(node.children, inherited ?? (collapsedHere(node) ? node.id : undefined));
     }
   };
   record(source.model.nodes, undefined);
 
-  const visibleOnes = new Set(
+  const visible = new Set(
     all
       .map((node) => node.id)
       .filter((id) => included.has(id) && !excluded.has(id) && !collapsedAncestor.has(id) && view.depth !== 0),
@@ -124,8 +124,8 @@ export function resolveView(
       label: override?.label ?? node.title,
       ...(color !== undefined && { color }),
       ...(icon !== undefined && { icon }),
-      children: children.filter((child) => visibleOnes.has(child.id)).map(resolve),
-      collapsed: collapsedOne(node),
+      children: children.filter((child) => visible.has(child.id)).map(resolve),
+      collapsed: collapsedHere(node),
       childCount: children.length,
       ...(link !== undefined && { link }),
       ...(planned.nodes.has(node.id) && { planned: true }),
@@ -139,8 +139,8 @@ export function resolveView(
 
   return {
     type: view.type,
-    nodes: all.filter((node) => visibleOnes.has(node.id)).map(resolve),
-    edges: liftEdges(source.model.edges, visibleOnes, collapsedAncestor, planned),
+    nodes: all.filter((node) => visible.has(node.id)).map(resolve),
+    edges: liftEdges(source.model.edges, visible, collapsedAncestor, planned),
     overrides: view.overrides,
     steps: view.steps,
   };
@@ -177,7 +177,7 @@ function isCollapsed(node: Node, view: View, state: CollapseState): boolean {
 /** Those left with both ends in the same Group are dropped; those repeating a pair are merged adding up `count`. */
 function liftEdges(
   edges: readonly Edge[],
-  visibleOnes: ReadonlySet<string>,
+  visible: ReadonlySet<string>,
   collapsedAncestor: ReadonlyMap<string, string>,
   planned: PlannedSets,
 ): ResolvedEdge[] {
@@ -187,7 +187,7 @@ function liftEdges(
     const edge: Edge = { ...unmarked, ...(plannedEdge(original, planned) && { planned: true }) };
     const from = lift(edge.from, collapsedAncestor);
     const to = lift(edge.to, collapsedAncestor);
-    if (!visibleOnes.has(from.node) || !visibleOnes.has(to.node)) continue;
+    if (!visible.has(from.node) || !visible.has(to.node)) continue;
     if (from.node === to.node && (from !== edge.from || to !== edge.to)) continue;
 
     const key = JSON.stringify([from, to]);

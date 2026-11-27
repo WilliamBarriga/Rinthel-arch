@@ -119,10 +119,10 @@ function alterTable(tables: Map<string, Table>, statement: Token[], file: string
       const column = action[columnAt + exists]?.text;
       if (column !== undefined) dropColumn(table, column);
     } else if (isWord(verb, 'RENAME') && isWord(object, 'TO')) {
-      const renamed = qualifiedName(action, 2);
-      if (renamed === undefined) continue;
+      const newName = qualifiedName(action, 2);
+      if (newName === undefined) continue;
       tables.delete(key(table.name));
-      table.name = renamed.name;
+      table.name = newName.name;
       tables.set(key(table.name), table);
     } else if (isWord(verb, 'RENAME') && isWord(action[columnAt + 1], 'TO')) {
       renameColumn(table, (action[columnAt] as Token).text, action[columnAt + 2]?.text ?? '');

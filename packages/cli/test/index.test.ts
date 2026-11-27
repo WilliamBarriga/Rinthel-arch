@@ -28,7 +28,7 @@ describe('cli: help', () => {
   });
 
   it('every option the CLI accepts appears in its help', async () => {
-    const expectedOnes: Record<string, string[]> = {
+    const expectedOptions: Record<string, string[]> = {
       validate: ['--json', '--strict', '--max-issues', '--theme', '--theme-path'],
       dev: ['--port', '--trust-code', '--theme-path'],
       inspect: ['--kind', '--state', '--diagram', '--catalog', '--json'],
@@ -36,7 +36,7 @@ describe('cli: help', () => {
       skill: ['--out'],
       scan: ['--out', '--json', '--depth', '--max-files'],
     };
-    for (const [command, options] of Object.entries(expectedOnes)) {
+    for (const [command, options] of Object.entries(expectedOptions)) {
       const { stdout } = await run([command, '--help']);
       for (const option of options) expect(stdout, `${command} ${option}`).toContain(option);
     }

@@ -189,7 +189,7 @@ function layerRules({ selector: element, stack }: CurrentStack, layerDeclaration
 }
 
 /** `transition`, `enter`, `exit` and `stagger` of an element (`animation` is its block's), under its own class. */
-function elementRules(key: ElementKey, animation: NodeAnimation | undefined, output: { rules: Rule[]; blocks: string[]; reducedOnes: Rule[] }): void {
+function elementRules(key: ElementKey, animation: NodeAnimation | undefined, output: { rules: Rule[]; blocks: string[]; reducedRules: Rule[] }): void {
   if (animation === undefined) return;
   const { transicion: transitionValue, transicionesDeEstado: stateTransitions, entrada: input, salida: nodeExit, escalonadoMs: staggerMs } = animation;
   const box = `& .rd-${key}`;
@@ -199,28 +199,28 @@ function elementRules(key: ElementKey, animation: NodeAnimation | undefined, out
 
   if (transitionValue !== undefined) {
     output.rules.push([target, { transition: cssTransition(transitionValue) }]);
-    output.reducedOnes.push([target, reduced(transitionValue.reducido, 'transition')]);
+    output.reducedRules.push([target, reduced(transitionValue.reducido, 'transition')]);
   }
   for (const state of STATES) {
     const t = stateTransitions?.[state];
     if (t === undefined) continue;
     const selector = `${box}[data-estados~="${state}"], ${box}[data-estados~="${state}"] .rd-anim`;
     output.rules.push([selector, { transition: cssTransition(t) }]);
-    output.reducedOnes.push([selector, reduced(t.reducido, 'transition')]);
+    output.reducedRules.push([selector, reduced(t.reducido, 'transition')]);
   }
   if (input !== undefined) {
     const delay = `calc(${ms(input.retardoMs)} + var(--rd-n, 0) * ${ms(staggerMs ?? 0)})`;
     output.blocks.push(`@keyframes rd-in-${input.efecto}{from{${block(CSS_EFFECT[input.efecto])}}}`);
     output.rules.push([VISIBLE, { animation: `rd-in-${input.efecto} ${ms(input.duracionMs)} ${input.easing} ${delay} backwards` }]);
     if (input.reducido === 'fade' && input.efecto !== 'fade') output.blocks.push(`@keyframes rd-in-fade{from{${block(CSS_EFFECT['fade'])}}}`);
-    output.reducedOnes.push([VISIBLE, reduced(input.reducido, 'animation')]);
+    output.reducedRules.push([VISIBLE, reduced(input.reducido, 'animation')]);
   }
   if (nodeExit !== undefined) {
     const { efecto: effect, duracionMs: durationMs, easing, retardoMs: delayMs } = nodeExit;
     const properties = ['opacity', 'scale', 'translate'].map((p) => `${p} ${ms(durationMs)} ${easing} ${ms(delayMs)}`).join(',');
     const { opacity: _opacity, ...finalValue } = CSS_EFFECT[effect];
     output.rules.push([HIDDEN, { transition: properties, ...finalValue }]);
-    output.reducedOnes.push([HIDDEN, reduced(nodeExit.reducido, 'transition')]);
+    output.reducedRules.push([HIDDEN, reduced(nodeExit.reducido, 'transition')]);
   }
 }
 
@@ -248,7 +248,7 @@ function reducedPolicy(rules: readonly Rule[]): string[] {
  * the scope class goes; `layerDeclarations` is the Primitive painter.
  */
 export function sheetAnimation(style: Style, layerDeclarations: (layer: PaintedLayer) => Declarations): { rules: Rule[]; blocks: string[] } {
-  const output = { rules: [] as Rule[], blocks: [] as string[], reducedOnes: [] as Rule[] };
+  const output = { rules: [] as Rule[], blocks: [] as string[], reducedRules: [] as Rule[] };
   let hasLayers = false;
   for (const key of ELEMENTS) {
     for (const current of elementStacks(style.paint, key)) {
@@ -257,7 +257,7 @@ export function sheetAnimation(style: Style, layerDeclarations: (layer: PaintedL
     }
     elementRules(key, elementPaint(style.paint, key).animacion, output);
   }
-  const reducedOnes: Rule[] = [...(hasLayers ? ([['& .rd-anim', { animation: 'none!important' }]] as Rule[]) : []), ...output.reducedOnes];
+  const reducedRules: Rule[] = [...(hasLayers ? ([['& .rd-anim', { animation: 'none!important' }]] as Rule[]) : []), ...output.reducedRules];
   // Two elements with the same entry emit the same `@keyframes`: only one.
-  return { rules: output.rules, blocks: [...new Set(output.blocks), ...reducedPolicy(reducedOnes)] };
+  return { rules: output.rules, blocks: [...new Set(output.blocks), ...reducedPolicy(reducedRules)] };
 }

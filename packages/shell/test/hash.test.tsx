@@ -219,25 +219,25 @@ describe('integration with InteractiveView and location.hash', () => {
     const props = useHashState({ source, hash: browserHash(window), camera: true });
     return <InteractiveView source={source} theme={NEUTRAL_THEME} layout={layout} width={800} height={600} {...props} />;
   }
-  const drawnOne = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`[data-id="${id}"]`)).not.toBeNull());
+  const waitForDrawn = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`[data-id="${id}"]`)).not.toBeNull());
 
   it('reloading with the hash restores View and path', async () => {
     const first = render(<App />);
-    await drawnOne(first.container, 'x');
+    await waitForDrawn(first.container, 'x');
     pressNode(first.container, 'x');
-    await drawnOne(first.container, 'y');
+    await waitForDrawn(first.container, 'y');
     expect(window.location.hash).toContain('p=a&p=b');
     first.unmount();
 
     const second = render(<App />);
-    await drawnOne(second.container, 'y');
+    await waitForDrawn(second.container, 'y');
     expect(Array.from(document.querySelectorAll('[data-breadcrumbs] [data-crumb]')).map((e) => e.getAttribute('data-crumb'))).toEqual(['a', 'b']);
   });
 
   it('restores Step and selection in the initial View', async () => {
     window.history.replaceState(null, '', '#s=g&t=1');
     const { container } = render(<App />);
-    await drawnOne(container, 'x');
+    await waitForDrawn(container, 'x');
     expect(container.querySelector('[data-selected="g"]')).not.toBeNull();
     expect(container.textContent).toContain('Step 1 of 2');
   });
@@ -245,7 +245,7 @@ describe('integration with InteractiveView and location.hash', () => {
   it('an invalid hash does not break', async () => {
     window.history.replaceState(null, '', '#p=nada&s=zzz&t=99');
     const { container } = render(<App />);
-    await drawnOne(container, 'x');
+    await waitForDrawn(container, 'x');
   });
 });
 

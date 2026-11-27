@@ -311,11 +311,11 @@ describe('layoutView: Pin post-ELK', () => {
 
   it('a Node that changes size grows around its Pin', async () => {
     const withOverrideLabel = (label: string) => view({ overrides: [{ node: 'a.a1', label, pin: { x: 200, y: 100 } }] });
-    const shortOne = (await layoutView(withOverrideLabel('A'), NEUTRAL_THEME)).nodes['a.a1']!;
+    const shortLabel = (await layoutView(withOverrideLabel('A'), NEUTRAL_THEME)).nodes['a.a1']!;
     const longLabel = (await layoutView(withOverrideLabel('Servicio de facturacion con nombre muy largo'), NEUTRAL_THEME)).nodes['a.a1']!;
 
-    expect(longLabel.width).toBeGreaterThan(shortOne.width);
-    for (const box of [shortOne, longLabel]) {
+    expect(longLabel.width).toBeGreaterThan(shortLabel.width);
+    for (const box of [shortLabel, longLabel]) {
       expect(box.x + box.width / 2).toBe(200);
       expect(box.y + box.height / 2).toBe(100);
     }
@@ -423,13 +423,13 @@ describe('layoutView: Nodes with Attributes', () => {
   });
 
   it('a long Attribute widens the Node', async () => {
-    const shortOne = await layoutView(withAttributes(columns), NEUTRAL_THEME);
+    const shortLabel = await layoutView(withAttributes(columns), NEUTRAL_THEME);
     const longLabel = await layoutView(
       withAttributes([...columns, { name: 'un_nombre_de_columna_muy_largo_para_el_nodo', type: 'character varying(255)' }]),
       NEUTRAL_THEME,
     );
 
-    expect(longLabel.nodes['t']!.width).toBeGreaterThan(shortOne.nodes['t']!.width);
+    expect(longLabel.nodes['t']!.width).toBeGreaterThan(shortLabel.nodes['t']!.width);
   });
 
   it('an Edge to node#attribute ends at the row of that Attribute, on the border', async () => {

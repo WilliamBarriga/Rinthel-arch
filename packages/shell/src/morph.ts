@@ -117,8 +117,8 @@ function interpolateSequence(from: SequenceGeometry, to: SequenceGeometry, t: nu
   const messages: SequenceGeometry['messages'] = {};
   for (const [path, message] of Object.entries(to.messages)) {
     const previous = from.messages[path];
-    const sameOnes = previous !== undefined && previous.points.length === message.points.length;
-    messages[path] = sameOnes
+    const sameShape = previous !== undefined && previous.points.length === message.points.length;
+    messages[path] = sameShape
       ? {
           ...message,
           points: message.points.map((p, i) => ({ x: mix(previous.points[i]!.x, p.x, t), y: mix(previous.points[i]!.y, p.y, t) })),

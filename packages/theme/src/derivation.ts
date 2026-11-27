@@ -83,8 +83,8 @@ export function message(declared: SequenceStrokePaint | undefined, edge: EdgePai
   // Declared states: the `message` block's, or (without the block) the Edge's, derived per kind like the base stack.
   const stateOf = (kind: MessageKind): VariantStroke['estados'] => {
     if (declared !== undefined) {
-      const ownOnes = Object.entries(declared.estadosDeTrazo ?? {});
-      return ownOnes.length === 0 ? undefined : Object.fromEntries(ownOnes.map(([state, e]) => [state, declared.variantes[kind] !== undefined ? (e.variantes[kind] ?? e.capas) : derivedMessage(e.capas, undefined, kind).capas]));
+      const own = Object.entries(declared.estadosDeTrazo ?? {});
+      return own.length === 0 ? undefined : Object.fromEntries(own.map(([state, e]) => [state, declared.variantes[kind] !== undefined ? (e.variantes[kind] ?? e.capas) : derivedMessage(e.capas, undefined, kind).capas]));
     }
     const fromEdge = Object.entries(edge.estadosDeArista ?? {});
     return fromEdge.length === 0 ? undefined : Object.fromEntries(fromEdge.map(([state, e]) => [state, derivedMessage(e.capas, edge.fin, kind).capas]));
