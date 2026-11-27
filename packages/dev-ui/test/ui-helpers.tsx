@@ -5,7 +5,7 @@ import { layoutView } from 'layout';
 import { browserHash } from 'shell';
 import type { LayoutAdapter } from 'shell';
 
-import { ayudasDeLienzo } from '../../../tests/ayudas/lienzo';
+import { canvasHelpers } from '../../../tests/helpers/canvas';
 import { inMemoryDev } from '../src/contract';
 import { captureExport } from '../src/export';
 import type { ExportData } from '../src/export';
@@ -129,5 +129,5 @@ export const canvasReady = (container: HTMLElement, view: string): Promise<HTMLE
     return canvas;
   });
 
-/** Click and double click at the center of a drawn Node; the only copy lives in `tests/ayudas/lienzo.ts`. */
-export const { dobleClicEnNodo: doubleClickOnNode, posicionDe: positionOf, pulsarNodo: pressNode } = ayudasDeLienzo(fireEvent);
+/** Click and double click at the center of a drawn Node; the only copy lives in `tests/helpers/canvas.ts`. */
+export const { doubleClickNode: doubleClickOnNode, positionOf, pressNode } = canvasHelpers(fireEvent);

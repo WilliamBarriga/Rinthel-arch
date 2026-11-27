@@ -5,9 +5,9 @@ import type { DevDiff, DevState, DevEvent } from 'canonical';
 import { openLiveWorkspace, inMemoryPort } from 'session';
 import type { LiveWorkspace } from 'session';
 
-import { activityEvent, activityLines } from '../../../tests/ayudas/actividad';
-import { fakeClock } from '../../../tests/ayudas/reloj';
-import type { FakeClock } from '../../../tests/ayudas/reloj';
+import { activityEvent, activityLines } from '../../../tests/helpers/activity';
+import { fakeClock } from '../../../tests/helpers/clock';
+import type { FakeClock } from '../../../tests/helpers/clock';
 
 type LiveWorkspaceOptions = Parameters<typeof openLiveWorkspace>[0];
 

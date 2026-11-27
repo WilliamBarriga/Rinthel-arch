@@ -1,397 +1,397 @@
 /**
- * `revisarWorkspace(raiz) -> Violacion[]`: escanea `packages/*` (fuente, tests, configs y `package.json`) y devuelve
- * las violaciones ordenadas por paquete, archivo, regla y mensaje; vacio es verde. Solo lee; ignora comentarios.
- * Reglas:
- * - `cadena`: el paquete esta en `CADENA`. `orden`: solo importa de paquetes anteriores en `CADENA`.
- * - `interno`: de otro paquete solo se importa su nombre o lo que declara `exports`; un import relativo no sale del paquete,
- *   salvo desde las pruebas hacia las ayudas compartidas de `AYUDAS_DE_PRUEBA`.
- * - `declaracion`: todo paquete del workspace importado esta en `dependencies` o `peerDependencies`.
- * - `exports`: la superficie publica es la entrada `.` mas, solo en los paquetes de `SUBPATHS_PERMITIDOS`, esos subpaths.
- * - `pureza`: el codigo fuente de `NUCLEO` no importa modulos de Node ni usa reloj, azar, `process`, red ni DOM.
- * - `reexporte`: ningun archivo hace `export ... from` de otro paquete del workspace, salvo los de `REEXPORTES_PERMITIDOS`.
- * - `aislado`: un paquete de `AISLADOS` queda fuera de `CADENA`, no importa ningun paquete del workspace y solo lo
- *   importan los paquetes que `AISLADOS` le asigna.
- * Ademas revisa las carpetas de `CARPETAS_DE_RAIZ` (paquete `(raiz)`) con la regla `interno`: de un paquete solo usan
- * su nombre o lo que declara `exports`, nunca un archivo suyo por ruta relativa.
- * Errores: un `package.json` ilegible o invalido lanza; uno ausente se ignora.
+ * `checkWorkspace(root) -> Violation[]`: scans `packages/*` (source, tests, configs and `package.json`) and returns
+ * the violations sorted by package, file, rule and message; empty is green. Read-only; it ignores comments.
+ * Rules:
+ * - `chain`: the package is in `CHAIN`. `order`: it only imports from earlier packages in `CHAIN`.
+ * - `internal`: from another package only its name or what `exports` declares is imported; a relative import does not
+ *   leave the package, except from tests to the shared helpers in `TEST_HELPERS`.
+ * - `declaration`: every imported workspace package is in `dependencies` or `peerDependencies`.
+ * - `exports`: the public surface is the `.` entry plus, only in the packages of `ALLOWED_SUBPATHS`, those subpaths.
+ * - `purity`: the source code of `CORE` imports no Node modules and uses no clock, randomness, `process`, network or DOM.
+ * - `reexport`: no file does `export ... from` another workspace package, except those in `ALLOWED_REEXPORTS`.
+ * - `isolated`: a package in `ISOLATED` stays outside `CHAIN`, imports no workspace package and is only imported by
+ *   the packages `ISOLATED` assigns to it.
+ * It also checks the folders of `ROOT_FOLDERS` (package `(root)`) with the `internal` rule: from a package they only
+ * use its name or what `exports` declares, never one of its files by relative path.
+ * Errors: an unreadable or invalid `package.json` throws; a missing one is ignored.
  */
 import { builtinModules } from 'node:module';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
-/** Orden de dependencias (ADR 0004): un paquete solo importa de los anteriores. */
-export const CADENA = ['canonical', 'theme', 'dsl', 'layout', 'session', 'render', 'shell', 'dev-ui', 'cli'] as const;
+/** Dependency order (ADR 0004): a package only imports from the earlier ones. */
+export const CHAIN = ['canonical', 'theme', 'dsl', 'layout', 'session', 'render', 'shell', 'dev-ui', 'cli'] as const;
 
 /**
- * Subpaths publicos ademas de `.` (ADR 0004, enmienda `dev-ui`): `protocol` es el contrato de `dev` del que `cli`
- * importa tipos sin cargar la app de navegador; `contract` es la suite de pruebas compartida; `build` arma el bundle
- * de la app (lo usa el bench). Ningun otro paquete los tiene.
+ * Public subpaths besides `.` (ADR 0004, `dev-ui` amendment): `protocol` is the `dev` contract `cli` imports types
+ * from without loading the browser app; `contract` is the shared test suite; `build` assembles the app bundle (the
+ * bench uses it). No other package has them.
  */
-export const SUBPATHS_PERMITIDOS: Readonly<Record<string, readonly string[]>> = {
+export const ALLOWED_SUBPATHS: Readonly<Record<string, readonly string[]>> = {
   'dev-ui': ['./protocol', './contract', './build'],
 };
 
 /**
- * Archivos que pueden reexportar de otro paquete (ruta relativa a la raiz del repo): `dev-ui/protocol` junta el
- * contrato de `dev` para la app y `cli`; la fachada publica de `shell` ofrece a sus consumidores los tipos de su interfaz.
- * Fuera de ellos, cada nombre se importa del paquete dueno, sin segundos caminos.
+ * Files that may re-export from another package (path relative to the repo root): `dev-ui/protocol` gathers the
+ * `dev` contract for the app and `cli`; the public facade of `shell` offers its consumers the types of its interface.
+ * Outside them, each name is imported from the owning package, with no second paths.
  */
-export const REEXPORTES_PERMITIDOS: readonly string[] = ['packages/dev-ui/src/protocol.ts', 'packages/shell/src/index.ts'];
+export const ALLOWED_REEXPORTS: readonly string[] = ['packages/dev-ui/src/protocol.ts', 'packages/shell/src/index.ts'];
 
 /**
- * Packages outside `CADENA` (ADR 0010): they import no workspace package and only the listed packages import them.
+ * Packages outside `CHAIN` (ADR 0010): they import no workspace package and only the listed packages import them.
  * `scanner` reads a codebase without knowing the core; only `cli` uses it.
  */
-export const AISLADOS: Readonly<Record<string, readonly string[]>> = {
+export const ISOLATED: Readonly<Record<string, readonly string[]>> = {
   scanner: ['cli'],
 };
 
-/** Carpeta raiz (relativa al repo) de las ayudas de prueba compartidas entre paquetes; solo la importan pruebas. */
-export const AYUDAS_DE_PRUEBA = 'tests/ayudas';
+/** Root folder (relative to the repo) of the test helpers shared between packages; only tests import it. */
+export const TEST_HELPERS = 'tests/helpers';
 
-/** Carpetas raiz (relativas al repo) que consumen paquetes como un cliente mas: solo por su interfaz declarada. */
-export const CARPETAS_DE_RAIZ = ['scripts', 'bench'] as const;
+/** Root folders (relative to the repo) that consume packages like any other client: only through their declared interface. */
+export const ROOT_FOLDERS = ['scripts', 'bench'] as const;
 
-/** Nombre con el que se reportan las violaciones de `CARPETAS_DE_RAIZ`. */
-const RAIZ = '(raiz)';
+/** Name under which the violations of `ROOT_FOLDERS` are reported. */
+const ROOT = '(root)';
 
-/** Nucleo puro: sin I/O, sin reloj, sin estado global. */
-export const NUCLEO = ['canonical', 'theme', 'dsl', 'session', 'render'] as const;
+/** Pure core: no I/O, no clock, no global state. */
+export const CORE = ['canonical', 'theme', 'dsl', 'session', 'render'] as const;
 
-const IMPUREZAS: ReadonlyArray<readonly [RegExp, string]> = [
-  [/\bnew Date\b|\bDate\.now\b|\bperformance\.now\b/, 'reloj'],
-  [/\bMath\.random\b|\bcrypto\.(?:randomUUID|getRandomValues)\b/, 'azar'],
-  [/\bprocess\.|\bglobalThis\b/, 'estado global del proceso'],
-  [/\bfetch\(|\bXMLHttpRequest\b|\bnew Worker\b/, 'red o workers'],
-  [/\b(?:window|document|localStorage|sessionStorage)\./, 'DOM'],
+const IMPURITIES: ReadonlyArray<readonly [RegExp, string]> = [
+  [/\bnew Date\b|\bDate\.now\b|\bperformance\.now\b/, 'the clock'],
+  [/\bMath\.random\b|\bcrypto\.(?:randomUUID|getRandomValues)\b/, 'randomness'],
+  [/\bprocess\.|\bglobalThis\b/, 'process global state'],
+  [/\bfetch\(|\bXMLHttpRequest\b|\bnew Worker\b/, 'network or workers'],
+  [/\b(?:window|document|localStorage|sessionStorage)\./, 'the DOM'],
 ];
 
-const MODULOS_DE_NODE = new Set(builtinModules);
+const NODE_MODULES = new Set(builtinModules);
 
-export type Regla = 'cadena' | 'orden' | 'interno' | 'declaracion' | 'exports' | 'pureza' | 'reexporte' | 'aislado';
+export type Rule = 'chain' | 'order' | 'internal' | 'declaration' | 'exports' | 'purity' | 'reexport' | 'isolated';
 
-export interface Violacion {
-  readonly paquete: string;
-  readonly archivo: string;
-  readonly regla: Regla;
-  readonly mensaje: string;
+export interface Violation {
+  readonly package: string;
+  readonly file: string;
+  readonly rule: Rule;
+  readonly message: string;
 }
 
-interface Manifiesto {
+interface Manifest {
   readonly name?: string;
   readonly exports?: unknown;
   readonly dependencies?: Record<string, string>;
   readonly peerDependencies?: Record<string, string>;
 }
 
-interface Paquete {
-  readonly nombre: string;
-  readonly carpeta: string;
-  readonly manifiesto: Manifiesto;
+interface Package {
+  readonly name: string;
+  readonly folder: string;
+  readonly manifest: Manifest;
 }
 
-const CARPETAS_IGNORADAS = new Set(['node_modules', 'dist', 'coverage', '.git']);
-const ARCHIVOS_IGNORADOS = /^tsup\.config\.|^vitest\.config\./;
-const EXTENSIONES_DE_CODIGO = ['.ts', '.tsx', '.mts', '.cts'];
-const RE_REEXPORTE = /\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*(['"])([^'"\n]+)\1/g;
-const RE_ESPECIFICADOR = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/g;
+const IGNORED_FOLDERS = new Set(['node_modules', 'dist', 'coverage', '.git']);
+const IGNORED_FILES = /^tsup\.config\.|^vitest\.config\./;
+const CODE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts'];
+const RE_REEXPORT = /\bexport\s+(?:type\s+)?(?:\*(?:\s+as\s+[\w$]+)?|\{[^}]*\})\s*from\s*(['"])([^'"\n]+)\1/g;
+const RE_SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)(['"])([^'"\n]+)\1/g;
 
-export function revisarWorkspace(raiz: string): Violacion[] {
-  const paquetes = cargarPaquetes(raiz);
-  const violaciones: Violacion[] = [];
-  for (const paquete of paquetes) {
-    violaciones.push(...revisarManifiesto(paquete));
-    for (const archivo of archivosDe(paquete.carpeta)) {
-      violaciones.push(...revisarArchivo(raiz, paquete, archivo, paquetes));
+export function checkWorkspace(root: string): Violation[] {
+  const packages = loadPackages(root);
+  const violations: Violation[] = [];
+  for (const pkg of packages) {
+    violations.push(...checkManifest(pkg));
+    for (const file of filesOf(pkg.folder)) {
+      violations.push(...checkFile(root, pkg, file, packages));
     }
   }
-  for (const carpeta of CARPETAS_DE_RAIZ) {
-    if (!existsSync(join(raiz, carpeta))) continue;
-    for (const archivo of archivosDe(join(raiz, carpeta))) {
-      violaciones.push(...revisarArchivoDeRaiz(raiz, archivo, paquetes));
+  for (const folder of ROOT_FOLDERS) {
+    if (!existsSync(join(root, folder))) continue;
+    for (const file of filesOf(join(root, folder))) {
+      violations.push(...checkRootFile(root, file, packages));
     }
   }
-  return violaciones;
+  return violations;
 }
 
-/** Un archivo de `CARPETAS_DE_RAIZ`: ningun import relativo entra a un paquete y ningun subpath sale de su `exports`. */
-function revisarArchivoDeRaiz(raiz: string, archivo: string, paquetes: Paquete[]): Violacion[] {
-  const relativo = relative(raiz, archivo).split('\\').join('/');
-  const violaciones: Violacion[] = [];
-  for (const especificador of extraerEspecificadores(sinComentarios(readFileSync(archivo, 'utf8')))) {
-    if (especificador.startsWith('.')) {
-      const dueno = paquetes.find((otro) => dentroDe(resolve(dirname(archivo), especificador), otro.carpeta));
-      if (dueno !== undefined) {
-        violaciones.push({
-          paquete: RAIZ,
-          archivo: relativo,
-          regla: 'interno',
-          mensaje: `import relativo "${especificador}" entra a ${dueno.nombre}; importalo por su nombre o por lo que declara su exports`,
+/** A file of `ROOT_FOLDERS`: no relative import enters a package and no subpath goes beyond its `exports`. */
+function checkRootFile(root: string, file: string, packages: Package[]): Violation[] {
+  const rel = relative(root, file).split('\\').join('/');
+  const violations: Violation[] = [];
+  for (const specifier of extractSpecifiers(withoutComments(readFileSync(file, 'utf8')))) {
+    if (specifier.startsWith('.')) {
+      const owner = packages.find((other) => isInside(resolve(dirname(file), specifier), other.folder));
+      if (owner !== undefined) {
+        violations.push({
+          package: ROOT,
+          file: rel,
+          rule: 'internal',
+          message: `relative import "${specifier}" enters ${owner.name}; import it by its name or by what its exports declares`,
         });
       }
       continue;
     }
-    const importado = nombreDePaquete(especificador);
-    const destino = paquetes.find((otro) => otro.nombre === importado);
-    const subpath = especificador.slice(importado.length);
-    if (destino !== undefined && subpath !== '' && !clavesDeExports(destino.manifiesto).includes(`.${subpath}`)) {
-      violaciones.push({
-        paquete: RAIZ,
-        archivo: relativo,
-        regla: 'interno',
-        mensaje: `importa "${especificador}"; de ${importado} solo se importa por nombre y por lo que declara su exports`,
+    const imported = packageName(specifier);
+    const target = packages.find((other) => other.name === imported);
+    const subpath = specifier.slice(imported.length);
+    if (target !== undefined && subpath !== '' && !exportKeys(target.manifest).includes(`.${subpath}`)) {
+      violations.push({
+        package: ROOT,
+        file: rel,
+        rule: 'internal',
+        message: `imports "${specifier}"; from ${imported} only its name and what its exports declares are imported`,
       });
     }
   }
-  return violaciones;
+  return violations;
 }
 
-function cargarPaquetes(raiz: string): Paquete[] {
-  let entradas: string[];
+function loadPackages(root: string): Package[] {
+  let entries: string[];
   try {
-    entradas = readdirSync(join(raiz, 'packages'));
+    entries = readdirSync(join(root, 'packages'));
   } catch {
     return [];
   }
-  const paquetes: Paquete[] = [];
-  for (const entrada of entradas.sort()) {
-    const carpeta = join(raiz, 'packages', entrada);
-    let texto: string;
+  const packages: Package[] = [];
+  for (const entry of entries.sort()) {
+    const folder = join(root, 'packages', entry);
+    let text: string;
     try {
-      texto = readFileSync(join(carpeta, 'package.json'), 'utf8');
+      text = readFileSync(join(folder, 'package.json'), 'utf8');
     } catch {
       continue;
     }
-    paquetes.push({
-      nombre: entrada,
-      carpeta,
-      manifiesto: JSON.parse(texto) as Manifiesto,
+    packages.push({
+      name: entry,
+      folder,
+      manifest: JSON.parse(text) as Manifest,
     });
   }
-  return paquetes;
+  return packages;
 }
 
-function revisarManifiesto(paquete: Paquete): Violacion[] {
-  const violaciones: Violacion[] = [];
-  const nombre = paquete.manifiesto.name ?? paquete.nombre;
-  const archivo = 'package.json';
-  if (!(CADENA as readonly string[]).includes(nombre) && !(nombre in AISLADOS)) {
-    violaciones.push({
-      paquete: nombre,
-      archivo,
-      regla: 'cadena',
-      mensaje: `paquete fuera de la cadena declarada (${CADENA.join(' -> ')}); anadelo a CADENA o renombralo`,
+function checkManifest(pkg: Package): Violation[] {
+  const violations: Violation[] = [];
+  const name = pkg.manifest.name ?? pkg.name;
+  const file = 'package.json';
+  if (!(CHAIN as readonly string[]).includes(name) && !(name in ISOLATED)) {
+    violations.push({
+      package: name,
+      file,
+      rule: 'chain',
+      message: `package outside the declared chain (${CHAIN.join(' -> ')}); add it to CHAIN or rename it`,
     });
   }
-  const claves = clavesDeExports(paquete.manifiesto);
-  const permitidas = ['.', ...(SUBPATHS_PERMITIDOS[nombre] ?? [])];
-  const sobrantes = claves.filter((clave) => !permitidas.includes(clave));
-  if (!claves.includes('.') || sobrantes.length > 0) {
-    violaciones.push({
-      paquete: nombre,
-      archivo,
-      regla: 'exports',
-      mensaje: `exports debe declarar la entrada raiz "." y solo ${permitidas.join(', ')}; declarado: ${
-        claves.length > 0 ? claves.join(', ') : '(ausente)'
+  const keys = exportKeys(pkg.manifest);
+  const allowed = ['.', ...(ALLOWED_SUBPATHS[name] ?? [])];
+  const extra = keys.filter((key) => !allowed.includes(key));
+  if (!keys.includes('.') || extra.length > 0) {
+    violations.push({
+      package: name,
+      file,
+      rule: 'exports',
+      message: `exports must declare the root entry "." and only ${allowed.join(', ')}; declared: ${
+        keys.length > 0 ? keys.join(', ') : '(missing)'
       }`,
     });
   }
-  return violaciones;
+  return violations;
 }
 
-function revisarArchivo(
-  raiz: string,
-  paquete: Paquete,
-  archivo: string,
-  paquetes: Paquete[],
-): Violacion[] {
-  const nombre = paquete.manifiesto.name ?? paquete.nombre;
-  const texto = sinComentarios(readFileSync(archivo, 'utf8'));
-  const relativo = relative(raiz, archivo);
-  const violaciones: Violacion[] = [];
+function checkFile(
+  root: string,
+  pkg: Package,
+  file: string,
+  packages: Package[],
+): Violation[] {
+  const name = pkg.manifest.name ?? pkg.name;
+  const text = withoutComments(readFileSync(file, 'utf8'));
+  const rel = relative(root, file);
+  const violations: Violation[] = [];
 
-  const esNucleo = (NUCLEO as readonly string[]).includes(nombre) && !esDeTest(relativo);
-  if (esNucleo) {
-    for (const [patron, causa] of IMPUREZAS) {
-      if (patron.test(texto)) {
-        violaciones.push({
-          paquete: nombre,
-          archivo: relativo,
-          regla: 'pureza',
-          mensaje: `el nucleo no usa ${causa}; recibelo como argumento o muevelo a un adaptador`,
+  const isCore = (CORE as readonly string[]).includes(name) && !isTest(rel);
+  if (isCore) {
+    for (const [pattern, cause] of IMPURITIES) {
+      if (pattern.test(text)) {
+        violations.push({
+          package: name,
+          file: rel,
+          rule: 'purity',
+          message: `the core does not use ${cause}; receive it as an argument or move it to an adapter`,
         });
       }
     }
   }
 
-  for (const especificador of extraerEspecificadores(texto)) {
-    if (esNucleo && (especificador.startsWith('node:') || MODULOS_DE_NODE.has(especificador))) {
-      violaciones.push({
-        paquete: nombre,
-        archivo: relativo,
-        regla: 'pureza',
-        mensaje: `el nucleo no importa "${especificador}" (I/O); recibelo como puerto desde un adaptador`,
+  for (const specifier of extractSpecifiers(text)) {
+    if (isCore && (specifier.startsWith('node:') || NODE_MODULES.has(specifier))) {
+      violations.push({
+        package: name,
+        file: rel,
+        rule: 'purity',
+        message: `the core does not import "${specifier}" (I/O); receive it as a port from an adapter`,
       });
     }
-    if (especificador.startsWith('.')) {
-      const destino = resolve(dirname(archivo), especificador);
-      const dueno = paquetes.find((otro) => dentroDe(destino, otro.carpeta));
-      const ayudaDePrueba = esDeTest(relativo) && dentroDe(destino, join(raiz, AYUDAS_DE_PRUEBA));
-      if (!ayudaDePrueba && (dueno === undefined || dueno.nombre !== paquete.nombre)) {
-        violaciones.push({
-          paquete: nombre,
-          archivo: relativo,
-          regla: 'interno',
-          mensaje: `import relativo "${especificador}" sale de ${nombre}; otro paquete se importa por su nombre`,
+    if (specifier.startsWith('.')) {
+      const target = resolve(dirname(file), specifier);
+      const owner = packages.find((other) => isInside(target, other.folder));
+      const testHelper = isTest(rel) && isInside(target, join(root, TEST_HELPERS));
+      if (!testHelper && (owner === undefined || owner.name !== pkg.name)) {
+        violations.push({
+          package: name,
+          file: rel,
+          rule: 'internal',
+          message: `relative import "${specifier}" leaves ${name}; another package is imported by its name`,
         });
       }
       continue;
     }
 
-    const importado = nombreDePaquete(especificador);
-    const destino = paquetes.find((otro) => otro.nombre === importado);
-    if (destino === undefined) {
+    const imported = packageName(specifier);
+    const target = packages.find((other) => other.name === imported);
+    if (target === undefined) {
       continue;
     }
 
-    if (importado !== nombre && nombre in AISLADOS) {
-      violaciones.push({
-        paquete: nombre,
-        archivo: relativo,
-        regla: 'aislado',
-        mensaje: `${nombre} is outside the chain and imports no workspace package; it imports ${importado}`,
+    if (imported !== name && name in ISOLATED) {
+      violations.push({
+        package: name,
+        file: rel,
+        rule: 'isolated',
+        message: `${name} is outside the chain and imports no workspace package; it imports ${imported}`,
       });
     }
-    const importadores = AISLADOS[importado];
-    if (importado !== nombre && importadores !== undefined && !importadores.includes(nombre)) {
-      violaciones.push({
-        paquete: nombre,
-        archivo: relativo,
-        regla: 'aislado',
-        mensaje: `${nombre} imports ${importado}; only ${importadores.join(', ')} may import it`,
-      });
-    }
-
-    const mia = (CADENA as readonly string[]).indexOf(nombre);
-    const suya = (CADENA as readonly string[]).indexOf(importado);
-    if (mia >= 0 && suya > mia) {
-      violaciones.push({
-        paquete: nombre,
-        archivo: relativo,
-        regla: 'orden',
-        mensaje: `${nombre} importa de ${importado}, que esta despues en la cadena (${CADENA.join(' -> ')})`,
+    const importers = ISOLATED[imported];
+    if (imported !== name && importers !== undefined && !importers.includes(name)) {
+      violations.push({
+        package: name,
+        file: rel,
+        rule: 'isolated',
+        message: `${name} imports ${imported}; only ${importers.join(', ')} may import it`,
       });
     }
 
-    const subpath = especificador.slice(importado.length);
-    if (subpath !== '' && !clavesDeExports(destino.manifiesto).includes(`.${subpath}`)) {
-      violaciones.push({
-        paquete: nombre,
-        archivo: relativo,
-        regla: 'interno',
-        mensaje: `importa "${especificador}"; de ${importado} solo se importa por nombre y por lo que declara su exports`,
+    const mine = (CHAIN as readonly string[]).indexOf(name);
+    const theirs = (CHAIN as readonly string[]).indexOf(imported);
+    if (mine >= 0 && theirs > mine) {
+      violations.push({
+        package: name,
+        file: rel,
+        rule: 'order',
+        message: `${name} imports from ${imported}, which comes later in the chain (${CHAIN.join(' -> ')})`,
       });
     }
 
-    const declaradas = {
-      ...paquete.manifiesto.dependencies,
-      ...paquete.manifiesto.peerDependencies,
+    const subpath = specifier.slice(imported.length);
+    if (subpath !== '' && !exportKeys(target.manifest).includes(`.${subpath}`)) {
+      violations.push({
+        package: name,
+        file: rel,
+        rule: 'internal',
+        message: `imports "${specifier}"; from ${imported} only its name and what its exports declares are imported`,
+      });
+    }
+
+    const declared = {
+      ...pkg.manifest.dependencies,
+      ...pkg.manifest.peerDependencies,
     };
-    if (importado !== nombre && !(importado in declaradas)) {
-      violaciones.push({
-        paquete: nombre,
-        archivo: relativo,
-        regla: 'declaracion',
-        mensaje: `importa ${importado} sin declararlo en dependencies o peerDependencies`,
+    if (imported !== name && !(imported in declared)) {
+      violations.push({
+        package: name,
+        file: rel,
+        rule: 'declaration',
+        message: `imports ${imported} without declaring it in dependencies or peerDependencies`,
       });
     }
   }
 
-  if (!REEXPORTES_PERMITIDOS.includes(relativo.split('\\').join('/'))) {
-    for (const coincidencia of texto.matchAll(RE_REEXPORTE)) {
-      const importado = nombreDePaquete(coincidencia[2]);
-      if (importado !== nombre && paquetes.some((otro) => otro.nombre === importado)) {
-        violaciones.push({
-          paquete: nombre,
-          archivo: relativo,
-          regla: 'reexporte',
-          mensaje: `reexporta de ${importado}; quien lo usa lo importa de ${importado} directamente`,
+  if (!ALLOWED_REEXPORTS.includes(rel.split('\\').join('/'))) {
+    for (const match of text.matchAll(RE_REEXPORT)) {
+      const imported = packageName(match[2]);
+      if (imported !== name && packages.some((other) => other.name === imported)) {
+        violations.push({
+          package: name,
+          file: rel,
+          rule: 'reexport',
+          message: `re-exports from ${imported}; whoever uses it imports it from ${imported} directly`,
         });
       }
     }
   }
 
-  return violaciones;
+  return violations;
 }
 
-function esDeTest(ruta: string): boolean {
-  return /(^|\/)(test|tests|__tests__)\//.test(ruta) || /\.(test|spec)\.[cm]?tsx?$/.test(ruta);
+function isTest(path: string): boolean {
+  return /(^|\/)(test|tests|__tests__)\//.test(path) || /\.(test|spec)\.[cm]?tsx?$/.test(path);
 }
 
-function clavesDeExports(manifiesto: Manifiesto): string[] {
-  const exports = manifiesto.exports;
+function exportKeys(manifest: Manifest): string[] {
+  const exports = manifest.exports;
   if (typeof exports !== 'object' || exports === null || Array.isArray(exports)) {
     return [];
   }
   return Object.keys(exports);
 }
 
-function nombreDePaquete(especificador: string): string {
-  const partes = especificador.split('/');
-  if (especificador.startsWith('@')) {
-    return partes.length >= 2 ? `${partes[0]}/${partes[1]}` : especificador;
+function packageName(specifier: string): string {
+  const parts = specifier.split('/');
+  if (specifier.startsWith('@')) {
+    return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : specifier;
   }
-  return partes[0];
+  return parts[0];
 }
 
-function dentroDe(ruta: string, carpeta: string): boolean {
-  const rel = relative(carpeta, ruta);
+function isInside(path: string, folder: string): boolean {
+  const rel = relative(folder, path);
   return rel === '' || (!rel.startsWith('..') && rel !== '..' && !rel.startsWith(`..${'/'}`));
 }
 
-function archivosDe(carpeta: string): string[] {
-  const encontrados: string[] = [];
-  const pendientes = [carpeta];
-  while (pendientes.length > 0) {
-    const actual = pendientes.pop() as string;
-    for (const entrada of readdirSync(actual, { withFileTypes: true }).sort((a, b) =>
+function filesOf(folder: string): string[] {
+  const found: string[] = [];
+  const pending = [folder];
+  while (pending.length > 0) {
+    const current = pending.pop() as string;
+    for (const entry of readdirSync(current, { withFileTypes: true }).sort((a, b) =>
       a.name.localeCompare(b.name),
     )) {
-      const ruta = join(actual, entrada.name);
-      if (entrada.isDirectory()) {
-        if (!CARPETAS_IGNORADAS.has(entrada.name)) {
-          pendientes.push(ruta);
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) {
+        if (!IGNORED_FOLDERS.has(entry.name)) {
+          pending.push(path);
         }
       } else if (
-        entrada.isFile() &&
-        EXTENSIONES_DE_CODIGO.some((extension) => entrada.name.endsWith(extension)) &&
-        !entrada.name.endsWith('.d.ts') &&
-        !ARCHIVOS_IGNORADOS.test(entrada.name)
+        entry.isFile() &&
+        CODE_EXTENSIONS.some((extension) => entry.name.endsWith(extension)) &&
+        !entry.name.endsWith('.d.ts') &&
+        !IGNORED_FILES.test(entry.name)
       ) {
-        encontrados.push(ruta);
+        found.push(path);
       }
     }
   }
-  return encontrados.sort();
+  return found.sort();
 }
 
-function extraerEspecificadores(texto: string): string[] {
-  const especificadores: string[] = [];
-  for (const coincidencia of texto.matchAll(RE_ESPECIFICADOR)) {
-    especificadores.push(coincidencia[2]);
+function extractSpecifiers(text: string): string[] {
+  const specifiers: string[] = [];
+  for (const match of text.matchAll(RE_SPECIFIER)) {
+    specifiers.push(match[2]);
   }
-  return especificadores;
+  return specifiers;
 }
 
-/** Aparta las cadenas antes de quitar comentarios: un `//` dentro de una cadena no es comentario. */
-function sinComentarios(texto: string): string {
+/** Sets strings aside before removing comments: a `//` inside a string is not a comment. */
+function withoutComments(text: string): string {
   const placeholders: string[] = [];
-  const conPlaceholders = texto
+  const withPlaceholders = text
     .replace(/(?:'[^'\\]*(?:\\.[^'\\]*)*'|"[^"\\]*(?:\\.[^"\\]*)*"|`[^`]*`)/g, (
       match,
     ) => `__STR${placeholders.push(match) - 1}__`);
-  const sinComentarios = conPlaceholders
+  const stripped = withPlaceholders
     .replace(/\/\/.*$/gm, '  ')
     .replace(/\/\*[\s\S]*?\*\//g, '  ');
-  return sinComentarios.replace(/__STR(\d+)__/g, (_, i) => placeholders[Number(i)]);
+  return stripped.replace(/__STR(\d+)__/g, (_, i) => placeholders[Number(i)]);
 }

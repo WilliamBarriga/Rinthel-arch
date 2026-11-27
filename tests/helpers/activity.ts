@@ -1,6 +1,6 @@
 /**
  * Activity log events for the `session` tests. `dev-ui/contract` (source code, published for `dev-ui` and `cli`)
- * has its own: source code does not import from `tests/ayudas` and `session` does not import from `dev-ui`.
+ * has its own: source code does not import from `tests/helpers` and `session` does not import from `dev-ui`.
  */
 import type { ActivityEvent } from 'canonical';
 

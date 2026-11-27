@@ -10,14 +10,14 @@ const REPO = resolve(import.meta.dirname, '..');
  * coming back, not every Spanish word. README.es.md and the Spanish guides (docs/guia/) are Spanish on purpose.
  */
 const SPANISH = new Set(
-  ('accesibilidad accesible actividad activa animacion antiguos arista aristas arquitectura arrastre avisos ayuda ayudas ' +
+  ('accesibilidad accesible actividad activa agente animacion antiguos arista aristas arquitectura arrastre avisos ayuda ayudas ' +
     'borde caja camara capas capturas catalogo codigo colapso comando compilar comun configuracion controlado contrato ' +
     'convenciones de del dependencias derivacion desplazamiento detalle diagramas disco diseno documentacion efectos ' +
     'ejecutar ejemplos elemento en escena escenario estado estados estilo estudio evaluar fila foco forma formas ' +
-    'fragmentos fuentes galeria generador generar geometria grupo grupos hoja imagenes incorporados indice interaccion ' +
+    'fragmentos fuentes galeria generador generar geometria grupo grupos hoja imagenes importa incorporados indice interaccion ' +
     'interactiva licencia lienzo limite medicion metricas mosaico navegacion notas orden ordenar pagina pasos pilas ' +
     'pintores posiciones prototipo puerto recarga rechazos referencia registro relleno reloj secuencia seleccion ' +
-    'semantico senal servidores servir sesion sin teclado tema temas texto ubicador valores vista visor y')
+    'semantico senal servidores servir sesion sin teclado tema temas texto tipos ubicador valores vista visor y')
     .split(' '),
 );
 

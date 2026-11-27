@@ -2,7 +2,7 @@
  * End to end of `diagrams export` in Chromium (Playwright): this repo's example Workspace exported to one HTML file,
  * opened over http (a static server that only knows that file) and over `file://`. The page draws, navigates and
  * switches Theme with no request besides the document; without Web Workers the layout runs on the main thread.
- * Without Chromium it fails with the command that installs it (`rutaDeChromium`).
+ * Without Chromium it fails with the command that installs it (`chromiumPath`).
  */
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
@@ -18,7 +18,7 @@ import type { Browser, Page } from 'playwright';
 
 import { run } from 'cli';
 
-import { rutaDeChromium } from '../../../tests/ayudas/chromium';
+import { chromiumPath } from '../../../tests/helpers/chromium';
 
 const DEADLINE_MS = 90_000;
 const WAIT = { timeout: 30_000 };
@@ -47,7 +47,7 @@ beforeAll(async () => {
   });
   await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok));
   urlHttp = `http://127.0.0.1:${(server.address() as AddressInfo).port}/rinthel-arch.html`;
-  browser = await chromium.launch({ executablePath: rutaDeChromium(), headless: true });
+  browser = await chromium.launch({ executablePath: chromiumPath(), headless: true });
 }, DEADLINE_MS);
 
 afterAll(async () => {

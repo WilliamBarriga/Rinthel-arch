@@ -1,7 +1,7 @@
 /**
  * The only end to end of the UI: real `dev` over a copy of the `medium` fixture and headless Chromium (Playwright).
  * It walks the spec flow (#184) with locators by role and accessible name; the rest of the UI is tested in jsdom
- * inside `dev-ui`. Without Chromium it fails with the command that installs it (`rutaDeChromium`).
+ * inside `dev-ui`. Without Chromium it fails with the command that installs it (`chromiumPath`).
  */
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -14,7 +14,7 @@ import type { Browser, Page } from 'playwright';
 import { startDev, run } from 'cli';
 import type { DevServer } from 'cli';
 
-import { rutaDeChromium } from '../../../tests/ayudas/chromium';
+import { chromiumPath } from '../../../tests/helpers/chromium';
 
 const DEADLINE_MS = 60_000;
 const WAIT = { timeout: 15_000 };
@@ -27,7 +27,7 @@ beforeAll(async () => {
   workspace = mkdtempSync(join(tmpdir(), 'e2e-dev-ui-'));
   cpSync(join(import.meta.dirname, 'fixtures', 'medium'), workspace, { recursive: true });
   server = await startDev({ workspace, httpPort: 0 });
-  browser = await chromium.launch({ executablePath: rutaDeChromium(), headless: true });
+  browser = await chromium.launch({ executablePath: chromiumPath(), headless: true });
 }, DEADLINE_MS);
 
 afterAll(async () => {
@@ -47,13 +47,13 @@ async function writeAfterLine(page: Page, text: string): Promise<void> {
   await page.keyboard.press('Escape');
 }
 
-describe('rutaDeChromium', () => {
+describe('chromiumPath', () => {
   it('without CHROMIUM_PATH nor a Playwright cache it fails with the command that installs Chromium', () => {
-    expect(() => rutaDeChromium({}, join(tmpdir(), 'no-playwright-cache'))).toThrow('pnpm exec playwright install chromium');
+    expect(() => chromiumPath({}, join(tmpdir(), 'no-playwright-cache'))).toThrow('pnpm exec playwright install chromium');
   });
 
   it('takes CHROMIUM_PATH as is', () => {
-    expect(rutaDeChromium({ CHROMIUM_PATH: '/opt/chrome' }, '/no/existe')).toBe('/opt/chrome');
+    expect(chromiumPath({ CHROMIUM_PATH: '/opt/chrome' }, '/no/existe')).toBe('/opt/chrome');
   });
 
   it('looks for the executable of the latest revision for the platform', () => {
@@ -69,10 +69,10 @@ describe('rutaDeChromium', () => {
       const linux = executable('chromium-1200', 'chrome-linux/chrome');
       const mac = executable('chromium-1200', 'chrome-mac-arm64/Chromium.app/Contents/MacOS/Chromium');
       const windows = executable('chromium-1200', 'chrome-win64/chrome.exe');
-      expect(rutaDeChromium({}, cache, 'linux')).toBe(linux);
-      expect(rutaDeChromium({}, cache, 'darwin')).toBe(mac);
-      expect(rutaDeChromium({}, cache, 'win32')).toBe(windows);
-      expect(() => rutaDeChromium({}, cache, 'aix')).toThrow('pnpm exec playwright install chromium');
+      expect(chromiumPath({}, cache, 'linux')).toBe(linux);
+      expect(chromiumPath({}, cache, 'darwin')).toBe(mac);
+      expect(chromiumPath({}, cache, 'win32')).toBe(windows);
+      expect(() => chromiumPath({}, cache, 'aix')).toThrow('pnpm exec playwright install chromium');
     } finally {
       rmSync(cache, { recursive: true, force: true });
     }
