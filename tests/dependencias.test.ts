@@ -44,7 +44,7 @@ function crearWorkspace(archivos: Record<string, string>): string {
 
 describe('revisarWorkspace', () => {
   it('usa la cadena de dependencias de ADR 0004', () => {
-    expect(CADENA).toEqual(['canonical', 'tema', 'dsl', 'layout', 'session', 'render', 'shell', 'estudio', 'cli']);
+    expect(CADENA).toEqual(['canonical', 'theme', 'dsl', 'layout', 'session', 'render', 'shell', 'estudio', 'cli']);
   });
 
   it('estudio queda fuera del nucleo puro (usa DOM, fetch y EventSource)', () => {
@@ -330,19 +330,19 @@ describe('manifiestos de este workspace', () => {
     ]);
   });
 
-  it('el paquete tema esta en el nucleo puro y solo puede importar de canonical', () => {
+  it('el paquete theme esta en el nucleo puro y solo puede importar de canonical', () => {
     const raiz = crearWorkspace({
       'packages/canonical/package.json': manifiesto('canonical'),
       'packages/canonical/src/index.ts': 'export const a = 1;\n',
-      'packages/tema/package.json': manifiesto('tema', { dependencies: { canonical: 'workspace:*' } }),
-      'packages/tema/src/index.ts': "import { a } from 'canonical';\nexport const t = a + Math.random();\n",
+      'packages/theme/package.json': manifiesto('theme', { dependencies: { canonical: 'workspace:*' } }),
+      'packages/theme/src/index.ts': "import { a } from 'canonical';\nexport const t = a + Math.random();\n",
       'packages/dsl/package.json': manifiesto('dsl'),
-      'packages/dsl/src/index.ts': "import { t } from 'tema';\nexport const d = t;\n",
+      'packages/dsl/src/index.ts': "import { t } from 'theme';\nexport const d = t;\n",
     });
 
     const violaciones = revisarWorkspace(raiz);
 
-    expect(violaciones).toContainEqual(expect.objectContaining({ paquete: 'tema', regla: 'pureza' }));
+    expect(violaciones).toContainEqual(expect.objectContaining({ paquete: 'theme', regla: 'pureza' }));
     expect(violaciones).toContainEqual(expect.objectContaining({ paquete: 'dsl', regla: 'declaracion' }));
     expect(violaciones.filter((v) => v.regla === 'orden')).toEqual([]);
   });

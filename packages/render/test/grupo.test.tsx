@@ -6,8 +6,8 @@ import type { ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
 import type { DiagramProps } from 'render';
-import { TEMA_NEUTRO } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 import { capaDe, etiquetaCon, hojaDe } from './ayudas';
 
@@ -26,14 +26,14 @@ const vista = (estado: { collapsed?: string[] } = {}): ResolvedView =>
 const capa = (nombre: string, tipo: string, props: Record<string, number | string>) => ({ nombre, primitiva: { tipo, props } });
 const op = (nombre: string, props: Record<string, number | string>, primitiva?: string) => ({ nombre, props, ...(primitiva !== undefined && { primitiva }) });
 
-const tema = (nodoExtra: Record<string, unknown> = {}, grupoExtra: Record<string, unknown> = {}): TemaResuelto =>
+const tema = (nodoExtra: Record<string, unknown> = {}, grupoExtra: Record<string, unknown> = {}): ResolvedTheme =>
   ({
-    ...TEMA_NEUTRO,
-    nodo: { ...TEMA_NEUTRO.nodo, capas: [capa('forma', 'rect', { radius: 3 }), capa('relleno', 'solid', { color: 'amber' })], ...nodoExtra },
-    grupo: { ...TEMA_NEUTRO.grupo, ...grupoExtra },
-  }) as unknown as TemaResuelto;
+    ...NEUTRAL_THEME,
+    nodo: { ...NEUTRAL_THEME.nodo, capas: [capa('forma', 'rect', { radius: 3 }), capa('relleno', 'solid', { color: 'amber' })], ...nodoExtra },
+    grupo: { ...NEUTRAL_THEME.grupo, ...grupoExtra },
+  }) as unknown as ResolvedTheme;
 
-async function dibujar(theme: TemaResuelto, extra: Partial<DiagramProps> = {}, estado: { collapsed?: string[] } = {}) {
+async function dibujar(theme: ResolvedTheme, extra: Partial<DiagramProps> = {}, estado: { collapsed?: string[] } = {}) {
   const view = vista(estado);
   const geometry = await layoutView(view, theme);
   const html = renderToStaticMarkup(<Diagram view={view} geometry={geometry} theme={theme} width={800} height={600} {...extra} />);

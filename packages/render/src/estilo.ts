@@ -3,10 +3,10 @@
  * Metricas compartidas con `layout`). `resolverEstilo` es el unico sitio con defaults y numeros de dibujo. Puro.
  */
 import type { Theme } from 'canonical';
-import { estiloResuelto, resolverTema, tablaUniforme } from 'tema';
-import type { CaraDeFuente, Estado, MedidasDeTexto, Metricas, Pintura, TablaDeMetricas, TipoDeDiagrama } from 'tema';
+import { resolvedStyle, resolveTheme, uniformTable } from 'theme';
+import type { FontFace, State, TextMeasures, Metrics, Paint, MetricsTable, DiagramType } from 'theme';
 
-export type EstadoVisual = Estado;
+export type EstadoVisual = State;
 
 /** Grosor minimo (px) del anillo de foco: ningun Estilo lo quita. */
 export const ANILLO_DE_FOCO_MINIMO = 2;
@@ -26,18 +26,18 @@ export interface AspectoDeEstado {
 
 export interface Estilo {
   /** Entrada base de las Metricas (Nodo sin Tipo); para un Nodo concreto, `metricasDeNodo(tabla, tipo)`. */
-  metricas: Metricas;
+  metricas: Metrics;
   /** Metricas por elemento con las que se dibuja; deben ser las del layout. */
-  tabla: TablaDeMetricas;
+  tabla: MetricsTable;
   /** Pintura del Tema: la pila de Capas de cada elemento, con los colores ya resueltos. */
-  pintura: Pintura;
+  pintura: Paint;
   fondo: string;
   texto: string;
   borde: string;
   fuenteCuerpo: string;
   fuenteMono: string;
   /** Caras de fuente del Workspace que usa el Tema (`@font-face`); vacio si el consumidor no dio archivos. */
-  caras: CaraDeFuente[];
+  caras: FontFace[];
   /** Color de los avisos de error del chrome: el token `error` del Tema o, si falta, un rojo por defecto. */
   colorDeError: string;
   /** Nombre de Paleta -> valor. */
@@ -68,16 +68,16 @@ export interface Estilo {
 }
 
 /**
- * Estilo resuelto del Tema. Lanza si el Tema no cumple el contrato (`resolverTema`),
+ * Estilo resuelto del Tema. Lanza si el Tema no cumple el contrato (`resolveTheme`),
  * con un mensaje que nombra cada ruta que falta. `metricas` sustituye a las derivadas del Tema; `medidas`
  * son las medidas reales de texto con las que se calculo la Geometria (las Metricas del dibujo salen de ellas).
  */
-export function resolverEstilo(tema: Theme, diagrama: TipoDeDiagrama, metricas?: Metricas, archivosDeFuente?: readonly string[], medidas?: MedidasDeTexto): Estilo {
-  const { tokens, palette } = resolverTema(tema);
+export function resolverEstilo(tema: Theme, diagrama: DiagramType, metricas?: Metrics, archivosDeFuente?: readonly string[], medidas?: TextMeasures): Estilo {
+  const { tokens, palette } = resolveTheme(tema);
   const acento = palette['blue'] ?? tokens.foreground;
   // `COLOR` de una Capa es la variable `--trazo` que cada Nodo y Grupo fija con su color: una hoja sirve a todos los colores.
-  const resuelto = estiloResuelto(tema, { diagrama, colorEnVariable: '--trazo', ...(archivosDeFuente !== undefined && { archivosDeFuente }), ...(medidas !== undefined && { medidas }) });
-  const tabla = metricas === undefined ? resuelto.tabla : tablaUniforme(metricas);
+  const resuelto = resolvedStyle(tema, { diagrama, colorEnVariable: '--trazo', ...(archivosDeFuente !== undefined && { archivosDeFuente }), ...(medidas !== undefined && { medidas }) });
+  const tabla = metricas === undefined ? resuelto.tabla : uniformTable(metricas);
   return {
     metricas: tabla.base,
     tabla,

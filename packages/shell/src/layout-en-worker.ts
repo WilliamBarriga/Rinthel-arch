@@ -1,7 +1,7 @@
 /** Layout en un Web Worker: `adaptadorDeWorker` (pagina) habla por un `PuertoDeMensajes` con `servirLayout` (Worker). */
 import type { Geometry, ResolvedView } from 'canonical';
-import { tablaDeMetricas } from 'tema';
-import type { TablaDeMetricas } from 'tema';
+import { metricsTable } from 'theme';
+import type { MetricsTable } from 'theme';
 
 import type { AdaptadorDeLayout } from './vista-interactiva';
 
@@ -15,7 +15,7 @@ export interface Peticion {
   id: number;
   vista: ResolvedView;
   /** Metricas ya resueltas (el Tema se valida una vez, en la pagina): el Worker no empaqueta el esquema del Tema. */
-  metricas: TablaDeMetricas;
+  metricas: MetricsTable;
 }
 export type Respuesta = { id: number; geometria: Geometry } | { id: number; error: string };
 
@@ -35,6 +35,6 @@ export function adaptadorDeWorker(puerto: PuertoDeMensajes): AdaptadorDeLayout {
     new Promise<Geometry>((ok, fallo) => {
       const id = siguiente++;
       pendientes.set(id, { ok, fallo });
-      puerto.postMessage({ id, vista, metricas: tablaDeMetricas(tema, vista.type, medidas) } satisfies Peticion);
+      puerto.postMessage({ id, vista, metricas: metricsTable(tema, vista.type, medidas) } satisfies Peticion);
     });
 }

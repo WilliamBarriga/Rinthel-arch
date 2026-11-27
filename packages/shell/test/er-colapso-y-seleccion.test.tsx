@@ -6,7 +6,7 @@ import { layoutView } from 'layout';
 import { openSession, createUndoHistory, undo, editInHistory } from 'session';
 import type { UndoHistory, Intent } from 'session';
 import { VistaInteractiva } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 import { posicionDe, pulsarEn } from './ayudas';
 
 afterEach(cleanup);
@@ -38,7 +38,7 @@ view abierta { type er  include **  }
 
 const montar = async (vista: string) => {
   const fuente = openSession({ 'main.dg': ER }).source!;
-  const r = render(<VistaInteractiva source={fuente} view={vista} theme={TEMA_NEUTRO} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} />);
+  const r = render(<VistaInteractiva source={fuente} view={vista} theme={NEUTRAL_THEME} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} />);
   await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-id="clientes"]')).not.toBeNull(), { timeout: 8000 });
   return { ...r, fuente };
 };
@@ -87,7 +87,7 @@ view p { type er  include **  steps { step "Uno" { show a, b, edge b -> a }  ste
 
 const montarTablas = async (extra: Partial<Parameters<typeof VistaInteractiva>[0]> = {}) => {
   const fuente = openSession({ 'main.dg': TABLAS }).source!;
-  const r = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} {...extra} />);
+  const r = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} {...extra} />);
   await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-id="a"]')).not.toBeNull(), { timeout: 8000 });
   return r;
 };
@@ -167,7 +167,7 @@ describe('ER: arrastrar una tabla', () => {
 describe('ER: Pasos', () => {
   it('un Paso revela tablas y FK como en arquitectura', async () => {
     const fuente = openSession({ 'main.dg': TABLAS }).source!;
-    const { container } = render(<VistaInteractiva source={fuente} view="p" theme={TEMA_NEUTRO} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} />);
+    const { container } = render(<VistaInteractiva source={fuente} view="p" theme={NEUTRAL_THEME} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} />);
     await waitFor(() => expect(container.querySelector('.rd-vista[data-layout="listo"] [data-id="a"]')).not.toBeNull(), { timeout: 8000 });
     const opacidad = (id: string) => {
       const el = container.querySelector(`[data-id="${id}"], [data-edge="${id}"]`);

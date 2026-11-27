@@ -5,7 +5,7 @@ import { canonicalFormSchema } from 'canonical';
 import type { Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -38,7 +38,7 @@ const zona = (c: HTMLElement) => c.querySelector('.rd-vista')!;
 describe('senal de layout del contenedor de la Vista', () => {
   it('marca calculando mientras el layout trabaja y listo cuando llega, con la Vista activa', async () => {
     const { layout, liberar } = adaptadorManual();
-    const { container } = render(<VistaInteractiva source={fuente} view="uno" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} />);
+    const { container } = render(<VistaInteractiva source={fuente} view="uno" theme={NEUTRAL_THEME} layout={layout} width={800} height={600} />);
     expect(zona(container).getAttribute('data-layout')).toBe('calculando');
     expect(zona(container).getAttribute('data-vista')).toBe('uno');
     liberar();
@@ -48,10 +48,10 @@ describe('senal de layout del contenedor de la Vista', () => {
 
   it('vuelve a calculando al cambiar de Vista hasta que llega su layout', async () => {
     const { layout, liberar } = adaptadorManual();
-    const { container, rerender } = render(<VistaInteractiva source={fuente} view="uno" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} />);
+    const { container, rerender } = render(<VistaInteractiva source={fuente} view="uno" theme={NEUTRAL_THEME} layout={layout} width={800} height={600} />);
     liberar();
     await waitFor(() => expect(zona(container).getAttribute('data-layout')).toBe('listo'));
-    rerender(<VistaInteractiva source={fuente} view="dos" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} />);
+    rerender(<VistaInteractiva source={fuente} view="dos" theme={NEUTRAL_THEME} layout={layout} width={800} height={600} />);
     expect(zona(container).getAttribute('data-layout')).toBe('calculando');
     expect(zona(container).getAttribute('data-vista')).toBe('dos');
     liberar();

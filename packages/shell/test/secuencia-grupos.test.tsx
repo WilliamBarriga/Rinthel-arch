@@ -5,7 +5,7 @@ import { layoutView } from 'layout';
 import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -42,7 +42,7 @@ const rect = (el: HTMLElement) => {
 
 describe('VistaInteractiva: box de Grupo en secuencia', () => {
   it('el box del Grupo abierto envuelve a sus hijas, y la Lifeline propia del Grupo va primera dentro', { timeout: 15000 }, async () => {
-    const { container } = render(<VistaInteractiva source={fuente} view="abierta" theme={TEMA_NEUTRO} layout={layout} width={1200} height={800} />);
+    const { container } = render(<VistaInteractiva source={fuente} view="abierta" theme={NEUTRAL_THEME} layout={layout} width={1200} height={800} />);
     await waitFor(() => expect(container.querySelector('[data-group-box="sistema"]')).not.toBeNull(), { timeout: 8000 });
     const caja = rect(container.querySelector<HTMLElement>('[data-group-box="sistema"]')!);
     const cabecera = (id: string) => rect(container.querySelector<HTMLElement>(`[data-id="${id}"]`)!);
@@ -60,7 +60,7 @@ describe('VistaInteractiva: box de Grupo en secuencia', () => {
   });
 
   it('con el Grupo cerrado no hay box', { timeout: 15000 }, async () => {
-    const { container } = render(<VistaInteractiva source={fuente} view="cerrada" theme={TEMA_NEUTRO} layout={layout} width={1200} height={800} />);
+    const { container } = render(<VistaInteractiva source={fuente} view="cerrada" theme={NEUTRAL_THEME} layout={layout} width={1200} height={800} />);
     await waitFor(() => expect(container.querySelector('[data-lifeline="sistema"]')).not.toBeNull(), { timeout: 8000 });
     expect(container.querySelector('[data-group-box]')).toBeNull();
   });

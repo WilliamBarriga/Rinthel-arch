@@ -5,7 +5,7 @@ import { canonicalFormSchema } from 'canonical';
 import type { Geometry, Theme, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -31,7 +31,7 @@ function layoutContador() {
 }
 
 const montar = (layout: AdaptadorDeLayout) =>
-  render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} />);
+  render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} width={800} height={600} />);
 const conTema = (layout: AdaptadorDeLayout, theme: Theme) => (
   <VistaInteractiva source={fuente} view="v" theme={theme} layout={layout} width={800} height={600} />
 );
@@ -42,7 +42,7 @@ describe('cambio de tema desde el padre', () => {
     const { container, rerender } = montar(layout);
     await waitFor(() => expect(container.querySelector('[data-id="a"]')).not.toBeNull());
     const antes = container.innerHTML;
-    rerender(conTema(layout, { ...TEMA_NEUTRO, palette: { ...TEMA_NEUTRO.palette, blue: '#ff0000' } }));
+    rerender(conTema(layout, { ...NEUTRAL_THEME, palette: { ...NEUTRAL_THEME.palette, blue: '#ff0000' } }));
     await waitFor(() => expect(container.innerHTML).not.toBe(antes));
     expect(container.innerHTML).toContain('#ff0000');
     expect(llamadas).toHaveLength(1);
@@ -52,7 +52,7 @@ describe('cambio de tema desde el padre', () => {
     const { llamadas, layout } = layoutContador();
     const { container, rerender } = montar(layout);
     await waitFor(() => expect(container.querySelector('[data-id="a"]')).not.toBeNull());
-    const nuevo = { ...TEMA_NEUTRO, fonts: { ...TEMA_NEUTRO.fonts, body: 'Courier Mono' } };
+    const nuevo = { ...NEUTRAL_THEME, fonts: { ...NEUTRAL_THEME.fonts, body: 'Courier Mono' } };
     rerender(conTema(layout, nuevo));
     await waitFor(() => expect(llamadas).toHaveLength(2));
     expect(llamadas[1]!.tema).toBe(nuevo);
@@ -63,7 +63,7 @@ describe('cambio de tema desde el padre', () => {
     const { llamadas, layout } = layoutContador();
     const { container, rerender } = montar(layout);
     await waitFor(() => expect(container.querySelector('[data-id="a"]')).not.toBeNull());
-    rerender(conTema(layout, { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, fontSize: '22px' } }));
+    rerender(conTema(layout, { ...NEUTRAL_THEME, tokens: { ...NEUTRAL_THEME.tokens, fontSize: '22px' } }));
     await waitFor(() => expect(llamadas).toHaveLength(2));
   });
 });

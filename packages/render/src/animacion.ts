@@ -11,8 +11,8 @@
  * del contenedor, que decide aunque el sistema diga otra cosa. Un Tema declara
  * `reduced` por animacion pero no puede desactivar la politica.
  */
-import { ESTADOS } from 'tema';
-import type { Animacion, AnimacionDeNodo, CapaPintada, KeyframesDeCapa, Movimiento, NombreDeEfecto, NombreDeMovimiento, PinturaDeNodo, PropiedadAnimable, Transicion } from 'tema';
+import { STATES } from 'theme';
+import type { Animation, NodeAnimation, PaintedLayer, LayerKeyframes, Motion, EffectName, MotionName, NodePaint, AnimatableProperty, Transition } from 'theme';
 
 import { huella, limpiarValorCss, num } from './elemento';
 import type { Elemento } from './elemento';
@@ -28,7 +28,7 @@ type Regla = [selector: string, declaraciones: Declaraciones];
 const FUNDIDO_CORTO = '100ms';
 
 /** Cuerpo del `@keyframes` de cada Movimiento; `--rd-i` es la intensidad. Anadir uno al catalogo sin entrada aqui rompe el typecheck. */
-const MOVIMIENTO_CSS: { readonly [M in NombreDeMovimiento]: string } = {
+const MOVIMIENTO_CSS: { readonly [M in MotionName]: string } = {
   stream: 'to{background-position:var(--rd-stream,40px) 0}',
   pulse: '0%,100%{opacity:1}50%{opacity:calc(1 - var(--rd-i,0.5) * 0.7)}',
   breathe: '0%,100%{scale:1}50%{scale:calc(1 + var(--rd-i,0.5) * 0.08)}',
@@ -37,14 +37,14 @@ const MOVIMIENTO_CSS: { readonly [M in NombreDeMovimiento]: string } = {
 };
 
 /** Estado inicial (entrada) o final (salida) de cada efecto; la opacidad de salida la pone la visibilidad. */
-const EFECTO_CSS: { readonly [E in NombreDeEfecto]: Declaraciones } = {
+const EFECTO_CSS: { readonly [E in EffectName]: Declaraciones } = {
   fade: { opacity: '0' },
   zoom: { opacity: '0', scale: '0.85' },
   slide: { opacity: '0', translate: '0 12px' },
 };
 
 /** Declaracion CSS de cada propiedad animable de `keyframes`. */
-const PROPIEDAD_CSS: { readonly [P in PropiedadAnimable]: (valor: number) => string } = {
+const PROPIEDAD_CSS: { readonly [P in AnimatableProperty]: (valor: number) => string } = {
   opacity: (v) => `opacity:${num(v)}`,
   scale: (v) => `scale:${num(v)}`,
   rotate: (v) => `rotate:${num(v)}deg`,
@@ -63,7 +63,7 @@ const bloque = (d: Declaraciones): string => Object.entries(d).map(([k, v]) => `
  * tienen animacion o `offset`/`grow`, en el reposo o en algun estado. No pueden
  * fusionarse en la caja porque se animan o se mueven por separado.
  */
-export function nombresAparte({ capas, estados }: Pick<PinturaDeNodo, 'capas' | 'estados'>): Set<string> {
+export function nombresAparte({ capas, estados }: Pick<NodePaint, 'capas' | 'estados'>): Set<string> {
   const conEstado = new Set(
     Object.values(estados).flatMap((pila) => (pila ?? []).filter((c) => c.animacion !== undefined || estaDesplazada(c)).map((c) => c.nombre)),
   );
@@ -71,7 +71,7 @@ export function nombresAparte({ capas, estados }: Pick<PinturaDeNodo, 'capas' | 
 }
 
 /** Elementos de las Capas con elemento propio de una pila, bajo el contenido (`encima` falso) o sobre el. */
-export function pintarCapasAnimadas(pila: Pick<PinturaDeNodo, 'capas' | 'estados'>, encima: boolean): Elemento[] {
+export function pintarCapasAnimadas(pila: Pick<NodePaint, 'capas' | 'estados'>, encima: boolean): Elemento[] {
   const animadas = nombresAparte(pila);
   return pila.capas
     .filter((capa) => animadas.has(capa.nombre) && (capa.encima === true) === encima)
@@ -85,13 +85,13 @@ interface Compilada {
   bloques: string[];
 }
 
-function compilarAnimacion(animacion: Animacion): Compilada {
+function compilarAnimacion(animacion: Animation): Compilada {
   const tiempo = `${ms(animacion.duracionMs)} ${animacion.easing} ${ms(animacion.retardoMs)} infinite`;
   if (animacion.clase === 'movimiento') return compilarMovimiento(animacion, tiempo);
   return compilarKeyframes(animacion, tiempo);
 }
 
-function compilarMovimiento(m: Movimiento, tiempo: string): Compilada {
+function compilarMovimiento(m: Motion, tiempo: string): Compilada {
   const nombre = `rd-mov-${m.movimiento}`;
   return {
     declaraciones: { animation: `${nombre} ${tiempo}`, ...(m.intensidad !== undefined && { '--rd-i': num(m.intensidad) }) },
@@ -99,20 +99,20 @@ function compilarMovimiento(m: Movimiento, tiempo: string): Compilada {
   };
 }
 
-function compilarKeyframes(k: KeyframesDeCapa, tiempo: string): Compilada {
+function compilarKeyframes(k: LayerKeyframes, tiempo: string): Compilada {
   const nombre = `rd-kf-${huella(JSON.stringify([k.propiedad, k.pasos]))}`;
   const pasos = k.pasos.map((paso) => `${num(paso.en)}%{${PROPIEDAD_CSS[k.propiedad](paso.valor)}}`).join('');
   return { declaraciones: { animation: `${nombre} ${tiempo}` }, bloques: [`@keyframes ${nombre}{${pasos}}`] };
 }
 
-const transicionCss = (t: Transicion): string => PROPIEDADES_DE_TRANSICION.map((p) => `${p} ${ms(t.duracionMs)} ${t.easing}`).join(',');
+const transicionCss = (t: Transition): string => PROPIEDADES_DE_TRANSICION.map((p) => `${p} ${ms(t.duracionMs)} ${t.easing}`).join(',');
 
 /**
  * `scale` que lleva el elemento de una Capa de su `grow` en reposo al de un estado, o `undefined` si el estado no lo
  * cambia. `width` y `height` no se transicionan (solo pintura y composicion); el factor sale del tamano de la caja,
  * que el Nodo expone como `--rd-ancho` y `--rd-alto` (numeros sin unidad) y de la esquina superior izquierda fija.
  */
-function crecimientoDe(deEstado: CapaPintada, base: CapaPintada, borde: number): string | undefined {
+function crecimientoDe(deEstado: PaintedLayer, base: PaintedLayer, borde: number): string | undefined {
   const antes = Number(base.props['grow'] ?? 0);
   const despues = Number(deEstado.props['grow'] ?? antes);
   if (antes === despues) return undefined;
@@ -120,14 +120,14 @@ function crecimientoDe(deEstado: CapaPintada, base: CapaPintada, borde: number):
   return `${eje('--rd-ancho')} ${eje('--rd-alto')}`;
 }
 
-function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesDeCapa: (capa: CapaPintada) => Declaraciones, salida: { reglas: Regla[]; bloques: string[] }): void {
+function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesDeCapa: (capa: PaintedLayer) => Declaraciones, salida: { reglas: Regla[]; bloques: string[] }): void {
   const { capas, estados } = pila;
   const animadas = nombresAparte(pila);
   const emitidos = new Set<string>();
   // El borde de la caja fusionada: el elemento propio de una Capa cubre la caja desde su contorno exterior.
   const borde = anchoDeBorde(capas.filter((c) => !animadas.has(c.nombre)));
   /** Declaraciones de una Capa como elemento propio: su pintura y su desplazamiento. */
-  const pintadaComoElemento = (capa: CapaPintada): Declaraciones => ({
+  const pintadaComoElemento = (capa: PaintedLayer): Declaraciones => ({
     ...Object.fromEntries(Object.entries(declaracionesDeCapa(capa)).map(([k, v]) => [k, limpiarValorCss(v)])),
     ...declaracionesDeDesplazamiento(capa.props, borde),
   });
@@ -146,7 +146,7 @@ function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesD
     const debajo = capa.encima !== true && primeraFusionada > indice;
     const selector = `${elemento} .rd-anim[data-anim="${capa.nombre.replace(/[^\w-]/g, '')}"]`;
     const pintadaBase = pintadaComoElemento(capa);
-    const creceEnEstado = ESTADOS.some((estado) => {
+    const creceEnEstado = STATES.some((estado) => {
       const deEstado = estados[estado]?.find((c) => c.nombre === capa.nombre);
       return deEstado !== undefined && crecimientoDe(deEstado, capa, borde) !== undefined;
     });
@@ -169,7 +169,7 @@ function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesD
         ...propia?.declaraciones,
       },
     ]);
-    for (const estado of ESTADOS) {
+    for (const estado of STATES) {
       const deEstado = estados[estado]?.find((c) => c.nombre === capa.nombre);
       if (deEstado === undefined) continue;
       const crece = crecimientoDe(deEstado, capa, borde);
@@ -189,7 +189,7 @@ function reglasDeCapas({ selector: elemento, pila }: PilaVigente, declaracionesD
 }
 
 /** `transition`, `enter`, `exit` y `stagger` de un elemento (`animacion` es la de su bloque), bajo su propia clase. */
-function reglasDeElemento(clave: ClaveDeElemento, animacion: AnimacionDeNodo | undefined, salida: { reglas: Regla[]; bloques: string[]; reducidas: Regla[] }): void {
+function reglasDeElemento(clave: ClaveDeElemento, animacion: NodeAnimation | undefined, salida: { reglas: Regla[]; bloques: string[]; reducidas: Regla[] }): void {
   if (animacion === undefined) return;
   const { transicion, transicionesDeEstado, entrada, salida: salidaDeNodo, escalonadoMs } = animacion;
   const caja = `& .rd-${clave}`;
@@ -201,7 +201,7 @@ function reglasDeElemento(clave: ClaveDeElemento, animacion: AnimacionDeNodo | u
     salida.reglas.push([destino, { transition: transicionCss(transicion) }]);
     salida.reducidas.push([destino, reducida(transicion.reducido, 'transition')]);
   }
-  for (const estado of ESTADOS) {
+  for (const estado of STATES) {
     const t = transicionesDeEstado?.[estado];
     if (t === undefined) continue;
     const selector = `${caja}[data-estados~="${estado}"], ${caja}[data-estados~="${estado}"] .rd-anim`;
@@ -247,7 +247,7 @@ function politicaReducida(reglas: readonly Regla[]): string[] {
  * Reglas y bloques de la animacion del Estilo. Los bloques ya llevan `&` donde
  * va la clase de alcance; `declaracionesDeCapa` es el pintor de Primitivas.
  */
-export function animacionDeHoja(estilo: Estilo, declaracionesDeCapa: (capa: CapaPintada) => Declaraciones): { reglas: Regla[]; bloques: string[] } {
+export function animacionDeHoja(estilo: Estilo, declaracionesDeCapa: (capa: PaintedLayer) => Declaraciones): { reglas: Regla[]; bloques: string[] } {
   const salida = { reglas: [] as Regla[], bloques: [] as string[], reducidas: [] as Regla[] };
   let hayCapas = false;
   for (const clave of ELEMENTOS) {

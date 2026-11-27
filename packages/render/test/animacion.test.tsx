@@ -6,8 +6,8 @@ import type { ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
 import type { DiagramProps } from 'render';
-import { TEMA_NEUTRO, construirEfecto, construirKeyframes, construirMovimiento, construirTransicion, metricasDe } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME, buildEffect, buildKeyframes, buildMotion, buildTransition, metricsOf } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 import { hojaDe } from './ayudas';
 
@@ -32,15 +32,15 @@ const capas = (animacion?: object) => [
   { nombre: 'acento', primitiva: { tipo: 'border', props: { color: 'blue', width: 2 } }, ...(animacion && { animacion }) },
 ];
 
-const temaCon = (nodoExtra: Record<string, unknown> = {}, conAnimacion = true): TemaResuelto =>
+const temaCon = (nodoExtra: Record<string, unknown> = {}, conAnimacion = true): ResolvedTheme =>
   ({
-    ...TEMA_NEUTRO,
-    nodo: { slots: TEMA_NEUTRO.nodo.slots, tipos: {}, estados: {}, capas: capas(conAnimacion ? ok(construirMovimiento('pulse', [p('duration', 1200), p('intensity', '0.4')])) : undefined), ...nodoExtra },
-  }) as unknown as TemaResuelto;
+    ...NEUTRAL_THEME,
+    nodo: { slots: NEUTRAL_THEME.nodo.slots, tipos: {}, estados: {}, capas: capas(conAnimacion ? ok(buildMotion('pulse', [p('duration', 1200), p('intensity', '0.4')])) : undefined), ...nodoExtra },
+  }) as unknown as ResolvedTheme;
 
-async function dibujar(theme: TemaResuelto, extra: Partial<DiagramProps> = {}): Promise<string> {
+async function dibujar(theme: ResolvedTheme, extra: Partial<DiagramProps> = {}): Promise<string> {
   const view = vista();
-  const geometry = await layoutView(view, TEMA_NEUTRO);
+  const geometry = await layoutView(view, NEUTRAL_THEME);
   return renderToStaticMarkup(<Diagram view={view} geometry={geometry} theme={theme} width={800} height={600} {...extra} />);
 }
 
@@ -65,14 +65,14 @@ describe('Diagram: Movimientos de Capa', () => {
 
   it('todos los Movimientos del catalogo compilan a CSS nativo', async () => {
     for (const nombre of ['stream', 'pulse', 'breathe', 'spin', 'aura']) {
-      const css = hojaDe(await dibujar(temaCon({ capas: capas(ok(construirMovimiento(nombre, []))) })));
+      const css = hojaDe(await dibujar(temaCon({ capas: capas(ok(buildMotion(nombre, []))) })));
 
       expect(css, nombre).toContain(`@keyframes rd-mov-${nombre}{`);
     }
   });
 
   it('un Movimiento atado a un estado solo corre con ese estado', async () => {
-    const aura = ok(construirMovimiento('aura', []));
+    const aura = ok(buildMotion('aura', []));
     const tema = temaCon({ capas: capas(), estados: { selected: [{ nombre: 'acento', props: {}, animacion: aura }] } }, false);
     const sinEstado = await dibujar(tema);
     const seleccionado = await dibujar(tema, { estados: { a: ['selected'] } });
@@ -85,7 +85,7 @@ describe('Diagram: Movimientos de Capa', () => {
   });
 
   it('keyframes minimos se compilan a un @keyframes propio y determinista', async () => {
-    const kf = ok(construirKeyframes('shift-x', [p('duration', 2000)], [{ en: 0, valor: 0 }, { en: 50, valor: -10 }, { en: 100, valor: 0 }]));
+    const kf = ok(buildKeyframes('shift-x', [p('duration', 2000)], [{ en: 0, valor: 0 }, { en: 50, valor: -10 }, { en: 100, valor: 0 }]));
     const css = hojaDe(await dibujar(temaCon({ capas: capas(kf) })));
 
     expect(css).toMatch(/@keyframes (rd-kf-\w+)\{0%\{translate:0px 0\}50%\{translate:-10px 0\}100%\{translate:0px 0\}\}/);
@@ -95,10 +95,10 @@ describe('Diagram: Movimientos de Capa', () => {
 
 describe('Diagram: transition, enter, exit y stagger', () => {
   const animacion = {
-    transicion: ok(construirTransicion([p('duration', 120), p('easing', 'ease-out')])),
-    transicionesDeEstado: { hover: ok(construirTransicion([p('duration', 60)])) },
-    entrada: ok(construirEfecto('zoom', [p('duration', 300)])),
-    salida: ok(construirEfecto('fade', [p('duration', 200), p('reduced', 'instant')])),
+    transicion: ok(buildTransition([p('duration', 120), p('easing', 'ease-out')])),
+    transicionesDeEstado: { hover: ok(buildTransition([p('duration', 60)])) },
+    entrada: ok(buildEffect('zoom', [p('duration', 300)])),
+    salida: ok(buildEffect('fade', [p('duration', 200), p('reduced', 'instant')])),
     escalonadoMs: 80,
   };
   const tema = temaCon({ animacion }, false);
@@ -132,7 +132,7 @@ describe('Diagram: transition, enter, exit y stagger', () => {
 
 describe('Diagram: reduced-motion', () => {
   const tema = temaCon({
-    animacion: { entrada: ok(construirEfecto('fade', [])), salida: ok(construirEfecto('zoom', [p('reduced', 'instant')])), transicion: ok(construirTransicion([p('reduced', 'instant')])) },
+    animacion: { entrada: ok(buildEffect('fade', [])), salida: ok(buildEffect('zoom', [p('reduced', 'instant')])), transicion: ok(buildTransition([p('reduced', 'instant')])) },
   });
 
   it('una sola politica: media query del sistema y atributo manual, con los Movimientos en su fotograma estatico', async () => {
@@ -162,15 +162,15 @@ describe('Diagram: reduced-motion', () => {
 
 describe('Diagram: lo animado no afecta a las Metricas ni relayouta', () => {
   const animada = temaCon({
-    animacion: { transicion: ok(construirTransicion([])), entrada: ok(construirEfecto('slide', [])), salida: ok(construirEfecto('zoom', [])), escalonadoMs: 50 },
+    animacion: { transicion: ok(buildTransition([])), entrada: ok(buildEffect('slide', [])), salida: ok(buildEffect('zoom', [])), escalonadoMs: 50 },
   });
 
   it('las Metricas del Tema son las mismas con y sin animacion', () => {
-    expect(metricasDe(animada, 'architecture')).toEqual(metricasDe(temaCon({}, false), 'architecture'));
+    expect(metricsOf(animada, 'architecture')).toEqual(metricsOf(temaCon({}, false), 'architecture'));
   });
 
   it('ningun @keyframes ni transition toca propiedades de caja o de flujo', async () => {
-    const kf = ok(construirKeyframes('blur', [], [{ en: 0, valor: 0 }, { en: 100, valor: 4 }]));
+    const kf = ok(buildKeyframes('blur', [], [{ en: 0, valor: 0 }, { en: 100, valor: 4 }]));
     const css = hojaDe(await dibujar(temaCon({ capas: capas(kf), animacion: animada.nodo.animacion })));
     const bloques = keyframesDe(css);
 

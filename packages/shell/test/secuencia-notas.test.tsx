@@ -5,8 +5,8 @@ import { layoutView } from 'layout';
 import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO, claveDeTexto } from 'tema';
-import type { MedidasDeTexto, TextoAMedir } from 'tema';
+import { NEUTRAL_THEME, textKey } from 'theme';
+import type { TextMeasures, TextToMeasure } from 'theme';
 
 afterEach(cleanup);
 
@@ -28,13 +28,13 @@ const fuente = openSession({ 'main.dg': texto }).source!;
 
 describe('VistaInteractiva: Notas y ref de secuencia', () => {
   it('la Nota se ve como papel (esquina doblada, sin cabecera) y no como participante; el ref pinta su titulo', async () => {
-    const pedidos: TextoAMedir[] = [];
-    const measure = async (textos: TextoAMedir[]): Promise<MedidasDeTexto> => {
+    const pedidos: TextToMeasure[] = [];
+    const measure = async (textos: TextToMeasure[]): Promise<TextMeasures> => {
       pedidos.push(...textos);
-      return { nivel: 'medido', fuentes: {}, anchos: Object.fromEntries(textos.map((t) => [claveDeTexto(t.familia, t.tamano, t.texto, t.peso), t.texto.length * 8])) };
+      return { nivel: 'medido', fuentes: {}, anchos: Object.fromEntries(textos.map((t) => [textKey(t.familia, t.tamano, t.texto, t.peso), t.texto.length * 8])) };
     };
     const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
-    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} measure={measure} width={1200} height={800} />);
+    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} measure={measure} width={1200} height={800} />);
     await waitFor(() => expect(container.querySelector('[data-note]')).not.toBeNull(), { timeout: 8000 });
 
     expect(pedidos.map((t) => t.texto)).toEqual(expect.arrayContaining(['identidad', 'login']));

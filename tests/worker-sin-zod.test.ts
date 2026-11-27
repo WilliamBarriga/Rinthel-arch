@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { adaptadorDeWorker } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 import { activosDelEstudio } from 'estudio';
 
@@ -42,7 +42,7 @@ describe('Worker de layout empaquetado', () => {
 
     // La pagina arma la peticion con su adaptador; el Worker solo ve Metricas.
     const peticion = new Promise<unknown>((ok) => {
-      void adaptadorDeWorker({ postMessage: ok, onmessage: null })(vista, TEMA_NEUTRO);
+      void adaptadorDeWorker({ postMessage: ok, onmessage: null })(vista, NEUTRAL_THEME);
     });
     global.onmessage!({ data: await peticion });
 
@@ -52,7 +52,7 @@ describe('Worker de layout empaquetado', () => {
     // salen de las Metricas que recibio el Worker, y deben ser los mismos que con el Tema directo.
     const tamanos = (g: Awaited<ReturnType<typeof layoutView>>): unknown =>
       Object.fromEntries(Object.entries(g.nodes).filter(([id]) => id !== 'g').map(([id, c]) => [id, { w: c.width, h: c.height, slots: c.slots }]));
-    expect(tamanos(geometria as never)).toEqual(tamanos(await layoutView(vista, TEMA_NEUTRO)));
+    expect(tamanos(geometria as never)).toEqual(tamanos(await layoutView(vista, NEUTRAL_THEME)));
   }, 30_000);
 
   it('una Vista de secuencia da en el Worker la misma geometria que en Node', async () => {
@@ -77,13 +77,13 @@ describe('Worker de layout empaquetado', () => {
     });
     runInNewContext(worker, global);
     const peticion = new Promise<unknown>((ok) => {
-      void adaptadorDeWorker({ postMessage: ok, onmessage: null })(vista, TEMA_NEUTRO);
+      void adaptadorDeWorker({ postMessage: ok, onmessage: null })(vista, NEUTRAL_THEME);
     });
     global.onmessage!({ data: await peticion });
 
     const { geometria, error } = await respuesta;
     expect(error).toBeUndefined();
-    expect(geometria).toEqual(await layoutView(vista, TEMA_NEUTRO));
+    expect(geometria).toEqual(await layoutView(vista, NEUTRAL_THEME));
     expect((geometria as { kind: string }).kind).toBe('secuencia');
   }, 30_000);
 });

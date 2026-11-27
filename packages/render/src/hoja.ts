@@ -5,10 +5,10 @@
  * contenido, asi dos `Diagram` con Temas distintos en la misma pagina no se pisan.
  *
  * `PINTORES` es la tabla exhaustiva Primitiva -> pintor: anadir una Primitiva al
- * catalogo de `tema` sin pintor aqui rompe el typecheck.
+ * catalogo de `theme` sin pintor aqui rompe el typecheck.
  */
-import { ESTADOS, PUNTO_DE_TITULO_EM } from 'tema';
-import type { CapaPintada, NombreDePrimitivaEn, PinturaDeNodo, PrimitivaPintada } from 'tema';
+import { STATES, TITLE_DOT_EM } from 'theme';
+import type { PaintedLayer, PrimitiveNameAt, NodePaint, PaintedPrimitive } from 'theme';
 
 import { animacionDeHoja, nombresAparte } from './animacion';
 import { PINTORES_DE_EFECTOS, REGLAS_DE_EFECTOS } from './efectos';
@@ -26,7 +26,7 @@ import { PINTORES_DE_RELLENO } from './pintura/relleno';
 export type { Declaraciones, Pintor };
 
 /** Un pintor por Primitiva del catalogo. El color de la Capa es el que dice el Tema; `COLOR` ya llega como la variable `--trazo` del Nodo (su color de Tipo). */
-export const PINTORES: { readonly [P in NombreDePrimitivaEn<'capa-nodo'>]: Pintor } = {
+export const PINTORES: { readonly [P in PrimitiveNameAt<'capa-nodo'>]: Pintor } = {
   rect: ({ radius }) => ({ 'border-radius': px(radius) }),
   border: ({ color, width }) => ({ border: `${px(width)} solid ${css(color)}` }),
   ...PINTORES_DE_FORMA,
@@ -45,7 +45,7 @@ const SOMBRAS = 'box-shadow';
  * hacia arriba. Las Capas con elemento propio de `pila` quedan fuera; una pila sin Capas en el reposo es el aspecto
  * por defecto del Estilo.
  */
-export function declaracionesDeCaja(estilo: Estilo, pila: Pick<PinturaDeNodo, 'capas' | 'estados'>, capas: readonly CapaPintada[] = pila.capas, deZona = false): Declaraciones {
+export function declaracionesDeCaja(estilo: Estilo, pila: Pick<NodePaint, 'capas' | 'estados'>, capas: readonly PaintedLayer[] = pila.capas, deZona = false): Declaraciones {
   const aparte = nombresAparte(pila);
   // Una Capa con `zone` header o body no cubre la caja: la pinta su propio elemento (`pintarZonas`).
   const fusionadas = capas.filter((capa) => !aparte.has(capa.nombre) && (deZona || !esDeZona(capa)));
@@ -60,7 +60,7 @@ export function declaracionesDeCaja(estilo: Estilo, pila: Pick<PinturaDeNodo, 'c
   const acumulados: Record<string, string[]> = {};
   const sombras: string[] = [];
   for (const capa of fusionadas) {
-    for (const [propiedad, valor] of Object.entries(PINTORES[capa.tipo as NombreDePrimitivaEn<'capa-nodo'>](capa.props))) {
+    for (const [propiedad, valor] of Object.entries(PINTORES[capa.tipo as PrimitiveNameAt<'capa-nodo'>](capa.props))) {
       if (propiedad === SOMBRAS) sombras.unshift(valor);
       // En CSS la primera imagen queda encima: la Capa de mas arriba va primero (como en la pagina).
       else if ((FONDOS_ACUMULABLES as readonly string[]).includes(propiedad)) (acumulados[propiedad] ??= []).unshift(valor);
@@ -125,7 +125,7 @@ function reglasDeElemento(estilo: Estilo, clave: (typeof ELEMENTOS)[number]): Ar
     const reposo = declaracionesDeCaja(estilo, pila);
     // En toda regla de caja (tambien con 0): la variable se hereda y un Slot de un Nodo sin borde no debe tomar la de su Grupo.
     salida.push([selector, { ...reposo, [VARIABLE_DE_BORDE]: px(anchoDeBorde(reposo)) }]);
-    for (const estado of ESTADOS) {
+    for (const estado of STATES) {
       const deEstado = pila.estados[estado];
       if (deEstado === undefined) continue;
       const cambios = diferencia(reposo, declaracionesDeCaja(estilo, pila, deEstado));
@@ -183,7 +183,7 @@ function reglas(estilo: Estilo): Array<[string, Declaraciones]> {
 }
 
 /** Aspecto del Slot `icon` segun su estilo `icon`: caja (radio, relleno, borde) o punto; el lado ya lo fijo la colocacion. */
-function reglasDeIcono(caja: string, textos: PinturaDeNodo['textos']): Array<[string, Declaraciones]> {
+function reglasDeIcono(caja: string, textos: NodePaint['textos']): Array<[string, Declaraciones]> {
   const props = textos.icon?.props ?? {};
   const { radius, fill, border, ring } = props;
   const punto = fill !== undefined ? css(fill) : 'currentColor';
@@ -205,7 +205,7 @@ function reglasDeIcono(caja: string, textos: PinturaDeNodo['textos']): Array<[st
 /** Diametro del punto sobre el aro del icono `dot`, en % del radio (8 px en un aro de 18). */
 const PUNTO_SOBRE_ARO = 44;
 
-/** Diametro del punto del titulo en em; el resto de `PUNTO_DE_TITULO_EM` es la separacion con el texto. */
+/** Diametro del punto del titulo en em; el resto de `TITLE_DOT_EM` es la separacion con el texto. */
 const DIAMETRO_DE_PUNTO_EM = 0.55;
 
 /** Desenfoque (px) del resplandor `glow` de un texto. */
@@ -214,7 +214,7 @@ const RESPLANDOR_DE_TEXTO = 8;
 const ALINEACION_CSS: Record<string, string> = { start: 'left', center: 'center', end: 'right' };
 
 /** Declaraciones CSS de un estilo de texto (`text` o `chip`): color, peso, caja del chip, relleno... Solo pintura. */
-export function declaracionesDeTexto(texto: PrimitivaPintada, fuenteMono: string): Declaraciones {
+export function declaracionesDeTexto(texto: PaintedPrimitive, fuenteMono: string): Declaraciones {
   const { weight, color, style, transform, alpha, fill, border, radius, tracking, pad, font, glow } = texto.props;
   const contorno = border === undefined ? 'none' : `${px(texto.props['border-width'] ?? 1)} solid ${css(border)}`;
   const alineacion = texto.props['text-align'];
@@ -237,9 +237,9 @@ export function declaracionesDeTexto(texto: PrimitivaPintada, fuenteMono: string
 
 /**
  * Estilo de texto (`text`, o `chip` en el contador) de cada Slot de un elemento que el Tema lo declara. Es pintura: el
- * tamano, el alto, la separacion entre letras, el punto y el relleno del chip ya los midio la colocacion (`textoDeSlot`).
+ * tamano, el alto, la separacion entre letras, el punto y el relleno del chip ya los midio la colocacion (`slotText`).
  */
-function reglasDeTexto(caja: string, textos: PinturaDeNodo['textos'], fuenteMono: string): Array<[string, Declaraciones]> {
+function reglasDeTexto(caja: string, textos: NodePaint['textos'], fuenteMono: string): Array<[string, Declaraciones]> {
   return Object.entries(textos).flatMap(([slot, texto]): Array<[string, Declaraciones]> => {
     if (texto.tipo !== 'text' && texto.tipo !== 'chip') return [];
     const { dot } = texto.props;
@@ -248,7 +248,7 @@ function reglasDeTexto(caja: string, textos: PinturaDeNodo['textos'], fuenteMono
     if (dot !== undefined) {
       reglas.push([
         `${selector}::before`,
-        { content: '""', display: 'inline-block', width: `${DIAMETRO_DE_PUNTO_EM}em`, height: `${DIAMETRO_DE_PUNTO_EM}em`, 'margin-right': `${num(PUNTO_DE_TITULO_EM - DIAMETRO_DE_PUNTO_EM)}em`, 'border-radius': '50%', 'vertical-align': 'middle', background: css(dot) },
+        { content: '""', display: 'inline-block', width: `${DIAMETRO_DE_PUNTO_EM}em`, height: `${DIAMETRO_DE_PUNTO_EM}em`, 'margin-right': `${num(TITLE_DOT_EM - DIAMETRO_DE_PUNTO_EM)}em`, 'border-radius': '50%', 'vertical-align': 'middle', background: css(dot) },
       ]);
     }
     return reglas;
@@ -273,7 +273,7 @@ export function hojaDeFuentes(caras: Estilo['caras'], urlDeFuente: (ruta: string
 
 /** Hoja de estilo del Estilo: `clase` es la de alcance que debe llevar el contenedor del dibujo; con `sourceUrl` incluye los `@font-face`. */
 export function compilarHoja(estilo: Estilo, urlDeFuente?: (ruta: string) => string): { clase: string; css: string } {
-  const animacion = animacionDeHoja(estilo, (capa) => PINTORES[capa.tipo as NombreDePrimitivaEn<'capa-nodo'>](capa.props));
+  const animacion = animacionDeHoja(estilo, (capa) => PINTORES[capa.tipo as PrimitiveNameAt<'capa-nodo'>](capa.props));
   const todas = [...reglas(estilo), ...animacion.reglas];
   const clase = `rd-${huella(todas.map(([selector, d]) => `${selector}{${bloque(d)}}`).join('') + animacion.bloques.join(''))}`;
   const alcance = (selector: string): string => selector.replace(/&/g, `.${clase}`);

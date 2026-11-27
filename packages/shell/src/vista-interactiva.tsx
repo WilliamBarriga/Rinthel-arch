@@ -8,8 +8,8 @@ import { sequenceElementId, resolveView } from 'canonical';
 import type { CollapseState, CanonicalForm, Geometry, IconProvider, Theme, Visibility, ResolvedView } from 'canonical';
 import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
 import type { Camara, ComponentesDeTema } from 'render';
-import { resolverTema } from 'tema';
-import type { MedidasDeTexto, TextoAMedir } from 'tema';
+import { resolveTheme } from 'theme';
+import type { TextMeasures, TextToMeasure } from 'theme';
 
 import { aCamara, aTransform, cajaDeAncla, compensarCamara, encuadrar, mismaTransform } from './camara';
 import { Leyenda, useAltoContraste } from './accesibilidad';
@@ -41,10 +41,10 @@ import { recortarAlViewport } from './viewport';
 import { nivelDeDetalle } from './zoom-semantico';
 import type { UmbralesDeDetalle } from './zoom-semantico';
 
-export type AdaptadorDeLayout = (vista: ResolvedView, tema: Theme, medidas?: MedidasDeTexto) => Promise<Geometry>;
+export type AdaptadorDeLayout = (vista: ResolvedView, tema: Theme, medidas?: TextMeasures) => Promise<Geometry>;
 
 /** Mide textos con la fuente real (`medirEnVisor`); sin medidor el layout estima por caracter. */
-export type MedidorDeTexto = (textos: TextoAMedir[]) => Promise<MedidasDeTexto>;
+export type MedidorDeTexto = (textos: TextToMeasure[]) => Promise<TextMeasures>;
 
 export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, PropsDeAltoContraste {
   /** Leyenda de Tipos derivada del Tema: `auto` (por defecto) solo si dos Tipos difieren unicamente por color. */
@@ -182,13 +182,13 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   };
   const morphador = useMorph(morphMs, props.clock);
   const { fontFiles, fontUrl } = props;
-  const hashesDeFuentes = useMemo(() => (fontFiles === undefined ? undefined : hashesDeFamilias(resolverTema(theme).fonts, fontFiles)), [fontFiles, theme]);
+  const hashesDeFuentes = useMemo(() => (fontFiles === undefined ? undefined : hashesDeFamilias(resolveTheme(theme).fonts, fontFiles)), [fontFiles, theme]);
   const medirConFuentes = useMemo<MedidorDeTexto | undefined>(
     () => (props.measure !== undefined || hashesDeFuentes === undefined || fontUrl === undefined ? props.measure : (textos) => medirEnVisor(textos, { hashes: hashesDeFuentes })),
     [props.measure, hashesDeFuentes, fontUrl],
   );
   // Sin `fontUrl` el visor no puede pedir las fuentes del Tema: lo dice, en vez de medir y pintar en silencio con la reserva.
-  const avisosDeFuentes = useMemo(() => (fontUrl === undefined ? avisoDeFuentesSinServir(resolverTema(theme).fonts) : []), [fontUrl, theme]);
+  const avisosDeFuentes = useMemo(() => (fontUrl === undefined ? avisoDeFuentesSinServir(resolveTheme(theme).fonts) : []), [fontUrl, theme]);
   const calculo = useGeometria({ vista, theme, layout, medir: medirConFuentes, claveDeFuentes: JSON.stringify(hashesDeFuentes), semilla, onError, alLlegar });
 
   // Hasta que el usuario o un colapso la mueva, la camara encuadra toda la Vista segun la primera geometria.

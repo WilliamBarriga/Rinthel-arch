@@ -3,12 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { resolverEstilo } from 'render';
-import { TEMA_NEUTRO } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 import { aHtml, hojaDe } from './ayudas';
 
-const CAVEAT: TemaResuelto = { ...TEMA_NEUTRO, fonts: { body: 'Caveat', mono: 'Press Start 2P', fallback: 'cursive' } };
+const CAVEAT: ResolvedTheme = { ...NEUTRAL_THEME, fonts: { body: 'Caveat', mono: 'Press Start 2P', fallback: 'cursive' } };
 const ARCHIVOS = [
   'fuentes/caveat-latin-400-normal.woff2',
   'fuentes/caveat-latin-700-normal.woff2',
@@ -17,7 +17,7 @@ const ARCHIVOS = [
 ];
 const url = (ruta: string): string => `/fuentes/${ruta.split('/').map(encodeURIComponent).join('/')}`;
 
-async function dibujo(tema: TemaResuelto, extra: Record<string, unknown>): Promise<string> {
+async function dibujo(tema: ResolvedTheme, extra: Record<string, unknown>): Promise<string> {
   const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: { nodes: [{ id: 'a', type: 'servicio', title: 'A', description: '', children: [] }], edges: [] },

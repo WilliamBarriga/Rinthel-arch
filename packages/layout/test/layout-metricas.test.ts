@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { canonicalFormSchema, edgeId, resolveView } from 'canonical';
 import type { Theme, GraphView, ResolvedView } from 'canonical';
 import { claveDeLayout, layoutConMetricas, layoutView as layoutDeVista } from 'layout';
-import { TEMA_NEUTRO, claveDeTexto, metricasDe, tablaDeMetricas } from 'tema';
+import { NEUTRAL_THEME, textKey, metricsOf, metricsTable } from 'theme';
 
 /** `layoutView` de una Vista de grafo (architecture o flow): estas pruebas miran cajas y rutas de Aristas. */
 const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
@@ -18,7 +18,7 @@ const capas = [
   { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'blue' } } },
 ];
 const conTipos = (tipos: Record<string, unknown[]>, capasBase: unknown[] = capas) =>
-  ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capasBase, tipos } }) as Theme;
+  ({ ...NEUTRAL_THEME, nodo: { ...NEUTRAL_THEME.nodo, capas: capasBase, tipos } }) as Theme;
 const grande = conTipos({ db: [{ nombre: 'forma', primitiva: 'circle', props: {} }] });
 
 const nodo = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, title: id, description: '', children: [], ...extra });
@@ -58,7 +58,7 @@ describe('Metricas por Tipo y relayout por clave de estructura', () => {
       [{ from: { node: 'api' }, to: { node: 't', attribute: 'id' } }],
     );
     const g = await layoutView(v, grande);
-    const m = metricasDe(TEMA_NEUTRO, 'architecture');
+    const m = metricsOf(NEUTRAL_THEME, 'architecture');
     const ruta = g.edges[edgeId(v.edges[0]!)]!.points;
 
     const caja = g.nodes['t']!;
@@ -70,28 +70,28 @@ describe('Metricas por Tipo y relayout por clave de estructura', () => {
 });
 
 describe('medicion de texto en el layout', () => {
-  const tema = TEMA_NEUTRO as unknown as Theme;
+  const tema = NEUTRAL_THEME as unknown as Theme;
   const una = (): ResolvedView => vistaDe([nodo('api', 'servicio')], []);
   const medidasDe = (ancho: number, hash = 'aaaa') => {
-    const m = tablaDeMetricas(tema, 'architecture').base;
-    return { nivel: 'medido' as const, fuentes: { sans: hash }, anchos: { [claveDeTexto(TEMA_NEUTRO.fonts.body, m.fontSize, 'api')]: ancho } };
+    const m = metricsTable(tema, 'architecture').base;
+    return { nivel: 'medido' as const, fuentes: { sans: hash }, anchos: { [textKey(NEUTRAL_THEME.fonts.body, m.fontSize, 'api')]: ancho } };
   };
 
   it('con medidas la caja sale del ancho medido; sin ellas, de la estimacion', async () => {
     const estimada = await layoutView(una(), tema);
     const medida = await layoutView(una(), tema, { medidas: medidasDe(400) });
 
-    expect(medida.nodes['api']!.width).toBe(400 + tablaDeMetricas(tema, 'architecture').base.paddingHorizontal);
+    expect(medida.nodes['api']!.width).toBe(400 + metricsTable(tema, 'architecture').base.paddingHorizontal);
     expect(estimada.nodes['api']!.width).toBe(120);
   });
 
   it('la clave cambia con el origen de las medidas y con el hash de fuente, y con nada mas de la pintura', () => {
-    const clave = (m?: ReturnType<typeof medidasDe>) => claveDeLayout(una(), tema, tablaDeMetricas(tema, 'architecture', m));
+    const clave = (m?: ReturnType<typeof medidasDe>) => claveDeLayout(una(), tema, metricsTable(tema, 'architecture', m));
     const repintado = { ...tema, palette: { ...tema.palette, blue: '#ff0000' } } as Theme;
 
     expect(clave(medidasDe(400))).not.toBe(clave());
     expect(clave(medidasDe(400, 'bbbb'))).not.toBe(clave(medidasDe(400)));
-    expect(claveDeLayout(una(), repintado, tablaDeMetricas(repintado, 'architecture'))).toBe(clave());
+    expect(claveDeLayout(una(), repintado, metricsTable(repintado, 'architecture'))).toBe(clave());
   });
 });
 
@@ -109,10 +109,10 @@ describe('layout de secuencia exige Metricas de secuencia', () => {
   };
 
   it('una tabla de Vista de arquitectura lanza error en vez de caer en defectos', async () => {
-    await expect(layoutConMetricas(secuencia(), tablaDeMetricas(TEMA_NEUTRO, 'architecture'))).rejects.toThrow(/sequence part/);
+    await expect(layoutConMetricas(secuencia(), metricsTable(NEUTRAL_THEME, 'architecture'))).rejects.toThrow(/sequence part/);
   });
 
   it('la tabla de Tipo sequence lo coloca', async () => {
-    expect((await layoutConMetricas(secuencia(), tablaDeMetricas(TEMA_NEUTRO, 'sequence'))).kind).toBe('secuencia');
+    expect((await layoutConMetricas(secuencia(), metricsTable(NEUTRAL_THEME, 'sequence'))).kind).toBe('secuencia');
   });
 });

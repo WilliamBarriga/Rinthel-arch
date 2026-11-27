@@ -7,7 +7,7 @@ import type { SequenceGeometry } from 'canonical';
 import { openSession } from 'session';
 import { VistaInteractiva, deserializarEstado } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 import { pulsarEn } from './ayudas';
 
 afterEach(cleanup);
@@ -35,7 +35,7 @@ const conPasos = `${modelo}view v { type sequence\n interaction checkout\n steps
 const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
 
 const fuenteDe = (texto: string) => openSession({ 'main.dg': texto }).source!;
-const geometriaDe = async (texto: string): Promise<SequenceGeometry> => (await layoutView(resolveView(fuenteDe(texto), 'v')!, TEMA_NEUTRO)) as SequenceGeometry;
+const geometriaDe = async (texto: string): Promise<SequenceGeometry> => (await layoutView(resolveView(fuenteDe(texto), 'v')!, NEUTRAL_THEME)) as SequenceGeometry;
 const centro = (c: { x: number; y: number; width: number; height: number }) => ({ x: c.x + c.width / 2, y: c.y + c.height / 2 });
 
 /** Punto de la pestana que no cae sobre la linea de ninguna Lifeline (el orden de acierto prefiere la Lifeline). */
@@ -48,7 +48,7 @@ const libreEnPestana = (g: SequenceGeometry, tab: { x: number; y: number; width:
 
 async function montar(texto: string, extra: Record<string, unknown> = {}) {
   const ids: string[][] = [];
-  const r = render(<VistaInteractiva source={fuenteDe(texto)} view="v" theme={TEMA_NEUTRO} layout={layout} width={1200} height={900} onSelectionChange={(s) => ids.push(s)} {...extra} />);
+  const r = render(<VistaInteractiva source={fuenteDe(texto)} view="v" theme={NEUTRAL_THEME} layout={layout} width={1200} height={900} onSelectionChange={(s) => ids.push(s)} {...extra} />);
   await waitFor(() => expect(r.container.querySelector('[data-fragment]')).not.toBeNull(), { timeout: 15000 });
   return { ...r, ids, zona: r.container.querySelector<HTMLElement>('.rd-vista')! };
 }

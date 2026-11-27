@@ -23,7 +23,7 @@
     "canonical": "workspace:*",
     "dsl": "workspace:*",
     "layout": "workspace:*",
-    "tema": "workspace:*"
+    "theme": "workspace:*"
   },
   "sideEffects": false
 }

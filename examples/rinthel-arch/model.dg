@@ -14,8 +14,8 @@ model {
     package dsl "dsl" "Text to Canonical form with Langium; Workspace merge and Theme compiler" {
       source { path "packages/dsl"  path "packages/dsl/src"  path "packages/dsl/src/gramatica" }
     }
-    package theme "tema" "Catalog of Primitives, Slots, Motions and Effects; resolved Style of each element" {
-      source { path "packages/tema"  path "packages/tema/src"  path "packages/tema/src/familias" }
+    package theme "theme" "Catalog of Primitives, Slots, Motions and Effects; resolved Style of each element" {
+      source { path "packages/theme"  path "packages/theme/src"  path "packages/theme/src/families" }
     }
     package layout "layout" "ELK layout and Pins, sequence layout, cached Geometry and its keys" {
       source { path "packages/layout" }

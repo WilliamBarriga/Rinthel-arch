@@ -67,7 +67,7 @@ export function issueConSugerencia<T extends AstNode>(
   return issue;
 }
 
-/** Base de issue de un error de `parsearEstado`: un nombre antiguo (`old-catalog-value`) lleva su candidato ya decidido. */
+/** Base de issue de un error de `parseState`: un nombre antiguo (`old-catalog-value`) lleva su candidato ya decidido. */
 export function baseDeErrorDeEstado(error: { code: string; message: string; candidatos: readonly string[] }): { code: string; message: string; candidatos?: readonly string[] } {
   return error.code === CODES.E_OLD_CATALOG_VALUE ? error : { code: error.code, message: error.message };
 }

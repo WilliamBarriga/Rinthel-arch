@@ -1,8 +1,8 @@
 /** Piezas comunes de la compilacion de Temas: contexto, propiedades escritas y errores de catalogo como Issue. */
 import { CODES } from 'canonical';
 import type { Issue, TextRange } from 'canonical';
-import { TIPOS_DE_DIAGRAMA, construirPrimitiva, resolverTokens } from 'tema';
-import type { ErrorDeCatalogo, Primitiva, PropiedadEscrita, TipoDeDiagrama, UbicacionDePrimitiva } from 'tema';
+import { DIAGRAM_TYPES, buildPrimitive, resolveTokens } from 'theme';
+import type { CatalogError, Primitive, WrittenProperty, DiagramType, PrimitivePlacement } from 'theme';
 
 import type { LayerProp, PartDecl, ThemeDiagram } from './generated/ast';
 import { issueConSugerencia, rangoDe } from './posiciones';
@@ -38,8 +38,8 @@ export const propiedadDeClave = (props: readonly LayerProp[], clave: string): La
   props.find(({ key, second }) => key === clave || (key === 'offset' && second !== undefined && (clave === 'offset-x' || clave === 'offset-y')));
 
 /** Sustituye los `$token`; cada propiedad conserva en `ref` la escrita que la origino. */
-export function propiedadesResueltas(lista: readonly LayerProp[], tokens: Readonly<Record<string, string>>): { props: Array<PropiedadEscrita<LayerProp>>; errores: ErrorDeCatalogo[] } {
-  const { props, errores } = resolverTokens(propiedadesEscritas(lista), tokens);
+export function propiedadesResueltas(lista: readonly LayerProp[], tokens: Readonly<Record<string, string>>): { props: Array<WrittenProperty<LayerProp>>; errores: CatalogError[] } {
+  const { props, errores } = resolveTokens(propiedadesEscritas(lista), tokens);
   return {
     props: props.flatMap(({ clave, valor }) => {
       const ref = propiedadDeClave(lista, clave);
@@ -50,10 +50,10 @@ export function propiedadesResueltas(lista: readonly LayerProp[], tokens: Readon
 }
 
 /** La clave si la propiedad no existe, el valor si existe pero no vale. */
-export const inicioDePropiedad = (prop: LayerProp, error: ErrorDeCatalogo): { line: number; column: number } =>
+export const inicioDePropiedad = (prop: LayerProp, error: CatalogError): { line: number; column: number } =>
   rangoDe(prop, error.codigo === CODES.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value').start;
 
-export function aIssue(archivo: string, error: ErrorDeCatalogo, inicio: { line: number; column: number }): Issue {
+export function aIssue(archivo: string, error: CatalogError, inicio: { line: number; column: number }): Issue {
   return { code: error.codigo, severity: 'error', file: archivo, ...inicio, message: error.mensaje, ...(error.hint !== undefined && { hint: error.hint }) };
 }
 
@@ -61,12 +61,12 @@ export function aIssue(archivo: string, error: ErrorDeCatalogo, inicio: { line: 
 export function primitivaSuelta(
   tipo: string,
   props: readonly LayerProp[],
-  ubicacion: UbicacionDePrimitiva,
+  ubicacion: PrimitivePlacement,
   ctx: Contexto,
   culpable: { line: number; column: number },
-): Primitiva | undefined {
+): Primitive | undefined {
   const resueltas = propiedadesResueltas(props, ctx.tokens);
-  const { primitiva, errores } = construirPrimitiva(tipo, resueltas.props, ctx.paleta, ubicacion);
+  const { primitiva, errores } = buildPrimitive(tipo, resueltas.props, ctx.paleta, ubicacion);
   for (const error of [...resueltas.errores, ...errores]) {
     const prop = error.clave === undefined ? undefined : propiedadDeClave(props, error.clave);
     ctx.issues.push(aIssue(ctx.archivo, error, prop !== undefined ? inicioDePropiedad(prop, error) : culpable));
@@ -75,13 +75,13 @@ export function primitivaSuelta(
 }
 
 /** `undefined` (con issue y `fix` por typo) si no es uno de `TIPOS_DE_DIAGRAMA`. */
-export function nombreDeDiagrama(item: ThemeDiagram, archivo: string, issues: Issue[]): TipoDeDiagrama | undefined {
-  const tipo = TIPOS_DE_DIAGRAMA.find((t) => t === item.name);
+export function nombreDeDiagrama(item: ThemeDiagram, archivo: string, issues: Issue[]): DiagramType | undefined {
+  const tipo = DIAGRAM_TYPES.find((t) => t === item.name);
   if (tipo !== undefined) return tipo;
   issues.push(
     issueConSugerencia(
-      { code: CODES.E_THEME_UNKNOWN_DIAGRAM_TYPE, message: `Unknown Diagram type '${item.name}'; available: ${TIPOS_DE_DIAGRAMA.join(', ')}` },
-      archivo, item, 'name', TIPOS_DE_DIAGRAMA,
+      { code: CODES.E_THEME_UNKNOWN_DIAGRAM_TYPE, message: `Unknown Diagram type '${item.name}'; available: ${DIAGRAM_TYPES.join(', ')}` },
+      archivo, item, 'name', DIAGRAM_TYPES,
     ),
   );
   return undefined;

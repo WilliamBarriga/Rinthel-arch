@@ -3,8 +3,8 @@ import type { CanonicalForm, Geometry, CachedGeometry, GraphGeometry, Issue, The
 import { compile } from 'dsl';
 import type { ArchivosDelWorkspace, OrigenDeTema, PosicionDePin, ResultadoDeCompilacion } from 'dsl';
 import { claveDeLayout, layoutView } from 'layout';
-import { TEMA_NEUTRO, advertenciasDeContraste, aristaIdentificanteSoloColor, estiloResuelto, mensajesSoloColor, leerOps, resolverFuentes, resolverTema, tiposSoloColor, usosDeCodigo } from 'tema';
-import type { EstiloResuelto, UsoDeComponente } from 'tema';
+import { NEUTRAL_THEME, contrastWarnings, identifyingEdgeColorOnly, resolvedStyle, colorOnlyMessages, readOps, resolveFonts, resolveTheme, colorOnlyKinds, codeUses } from 'theme';
+import type { ResolvedStyle, ComponentUse } from 'theme';
 
 import { queryTheme } from './theme-query';
 import { runQuery } from './queries';
@@ -70,7 +70,7 @@ export interface Session {
    */
   geometry(view: string, options?: GeometryOptions): Promise<CachedGeometry | undefined>;
   /** Resolved style (Metrics and paint) of a View's Theme; `undefined` if the View does not exist. Synchronous: it needs no layout. */
-  style(view: string): EstiloResuelto | undefined;
+  style(view: string): ResolvedStyle | undefined;
   /** Read-only query, synchronous and without layout; `undefined` if the Session has no Canonical form. */
   query(query: Query): QueryAnswer | undefined;
   /** Ids of the Views whose geometry was already requested (computed or in progress). */
@@ -85,8 +85,8 @@ export interface Session {
 const json = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`;
 
 function viewTheme(source: CanonicalForm, view: View, global: string | undefined): Theme {
-  const name = view.theme ?? global ?? TEMA_NEUTRO.name;
-  return source.themes.find((theme) => theme.name === name) ?? TEMA_NEUTRO;
+  const name = view.theme ?? global ?? NEUTRAL_THEME.name;
+  return source.themes.find((theme) => theme.name === name) ?? NEUTRAL_THEME;
 }
 
 /**
@@ -139,7 +139,7 @@ function accessibilityWarnings(source: CanonicalForm, locate: Locator | undefine
   source.themes.forEach((theme, i) => {
     const location = site(['themes', i, 'name']);
     if (location === null) return;
-    for (const warning of advertenciasDeContraste(theme, colors)) {
+    for (const warning of contrastWarnings(theme, colors)) {
       issues.push({ code: CODES.W_THEME_LOW_CONTRAST, severity: 'warning', ...location, message: `Theme '${theme.name}': ${warning.mensaje}`, hint: `adjust Layer '${warning.capa}' or the Palette colors` });
     }
   });
@@ -152,11 +152,11 @@ function accessibilityWarnings(source: CanonicalForm, locate: Locator | undefine
     const theme = viewTheme(source, declared, global);
     const warning = (message: string): Issue => ({ code: CODES.W_THEME_COLOR_ONLY, severity: 'warning', ...location, message, hint: 'give the Theme a different stroke, marker or style; color alone is not enough' });
     const messageKinds = resolved.type === 'sequence' ? [...new Set(resolved.interaction.messages.map((m) => m.kind))] : [];
-    for (const [a, b] of mensajesSoloColor(theme, messageKinds)) issues.push(warning(`In View '${declared.id}', Messages '${a}' and '${b}' differ only by color`));
-    if (resolved.type === 'er' && resolved.edges.some((e) => e.identifying === true) && aristaIdentificanteSoloColor(theme)) {
+    for (const [a, b] of colorOnlyMessages(theme, messageKinds)) issues.push(warning(`In View '${declared.id}', Messages '${a}' and '${b}' differ only by color`));
+    if (resolved.type === 'er' && resolved.edges.some((e) => e.identifying === true) && identifyingEdgeColorOnly(theme)) {
       issues.push(warning(`In View '${declared.id}', identifying and non-identifying Edges differ only by color`));
     }
-    for (const [a, b] of tiposSoloColor(theme, resolved.type, kinds)) {
+    for (const [a, b] of colorOnlyKinds(theme, resolved.type, kinds)) {
       issues.push({
         code: CODES.W_THEME_COLOR_ONLY,
         severity: 'warning',
@@ -179,7 +179,7 @@ function codeWarnings(source: CanonicalForm, locate: Locator | undefined, compon
     return location === null ? null : { file: location.file, ...location.range.start };
   };
   const issues: Issue[] = [];
-  const checkUses = (location: { file: string; line: number; column: number }, subject: string, uses: readonly UsoDeComponente[]): void => {
+  const checkUses = (location: { file: string; line: number; column: number }, subject: string, uses: readonly ComponentUse[]): void => {
     if (uses.length === 0) return;
     const names = [...new Set(uses.map((use) => use.nombre))];
     issues.push({
@@ -208,15 +208,15 @@ function codeWarnings(source: CanonicalForm, locate: Locator | undefined, compon
   };
   source.themes.forEach((theme, i) => {
     const location = site(['themes', i, 'name']);
-    if (location !== null) checkUses(location, `Theme '${theme.name}'`, usosDeCodigo(theme));
+    if (location !== null) checkUses(location, `Theme '${theme.name}'`, codeUses(theme));
   });
   source.views.forEach((declared, i) => {
     if (declared.themePatch === undefined) return;
     const location = site(['views', i, 'id']);
     if (location === null) return;
     const theme = viewTheme(source, declared, undefined);
-    const base = new Set(usosDeCodigo(theme).map((use) => JSON.stringify(use)));
-    checkUses(location, `View '${declared.id}'`, usosDeCodigo(theme, leerOps(declared.themePatch)).filter((use) => !base.has(JSON.stringify(use))));
+    const base = new Set(codeUses(theme).map((use) => JSON.stringify(use)));
+    checkUses(location, `View '${declared.id}'`, codeUses(theme, readOps(declared.themePatch)).filter((use) => !base.has(JSON.stringify(use))));
   });
   return issues;
 }
@@ -229,7 +229,7 @@ function fontWarnings(source: CanonicalForm, locate: Locator | undefined, files:
   source.themes.forEach((theme, i) => {
     const location = locate === undefined ? { file: '(canonico)', range: { start: { line: 1, column: 1 } } } : locate(['themes', i, 'name']);
     if (location === null) return;
-    for (const { clave: key, familia: family } of resolverFuentes(resolverTema(theme).fonts, files).faltantes) {
+    for (const { clave: key, familia: family } of resolveFonts(resolveTheme(theme).fonts, files).faltantes) {
       const nearest = nearestCandidates(family.toLowerCase().replace(/\s+/g, '-'), available);
       issues.push({
         code: CODES.E_THEME_FONT_MISSING,
@@ -334,7 +334,7 @@ function createSession(
       const declared = source.views.find(({ id }) => id === view);
       if (declared === undefined) return undefined;
       const kinds = Object.fromEntries(source.specification.nodeTypes.map((kind) => [kind.name, typeof kind['color'] === 'string' ? kind['color'] : undefined]));
-      return estiloResuelto(keyed.theme, { tipos: kinds, diagrama: declared.type, ...(options.fontFiles !== undefined && { archivosDeFuente: options.fontFiles }), ...(declared.themePatch !== undefined && { vista: leerOps(declared.themePatch) }) });
+      return resolvedStyle(keyed.theme, { tipos: kinds, diagrama: declared.type, ...(options.fontFiles !== undefined && { archivosDeFuente: options.fontFiles }), ...(declared.themePatch !== undefined && { vista: readOps(declared.themePatch) }) });
     },
     query: (query) => {
       if (source === undefined || compiled.ubicar === undefined) return undefined;

@@ -6,7 +6,7 @@
  * - `pintura`: everything else; the Resolved style is reapplied without relayout.
  */
 import type { CanonicalForm, ChangeKind } from 'canonical';
-import { TEMA_NEUTRO, claveDeMetricas, tablaDeMetricas } from 'tema';
+import { NEUTRAL_THEME, metricsKey, metricsTable } from 'theme';
 
 /** `resources`: hash of each `.tsx` and font file. */
 export interface DevSnapshot {
@@ -21,11 +21,11 @@ const changedIn = (a: Readonly<Record<string, string>>, b: Readonly<Record<strin
 
 /** Everything except the Themes and, per View, the Metrics of its Theme. */
 function structureKey(source: CanonicalForm): string {
-  const themeOf = (name: string | undefined) => source.themes.find((t) => t.name === (name ?? TEMA_NEUTRO.name)) ?? TEMA_NEUTRO;
+  const themeOf = (name: string | undefined) => source.themes.find((t) => t.name === (name ?? NEUTRAL_THEME.name)) ?? NEUTRAL_THEME;
   return JSON.stringify({
     specification: source.specification,
     model: source.model,
-    views: source.views.map(({ theme, themePatch: _patch, ...rest }) => [rest, claveDeMetricas(tablaDeMetricas(themeOf(theme), rest.type))]),
+    views: source.views.map(({ theme, themePatch: _patch, ...rest }) => [rest, metricsKey(metricsTable(themeOf(theme), rest.type))]),
   });
 }
 

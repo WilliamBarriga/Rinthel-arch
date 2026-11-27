@@ -5,7 +5,7 @@ import { canonicalFormSchema, resolveView } from 'canonical';
 import type { CollapseState, Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 import { opacidadDeNodo, posicionDe } from './ayudas';
 
 afterEach(() => {
@@ -67,7 +67,7 @@ function montar(extra: Partial<VistaInteractivaProps> = {}, llamadas = { n: 0 })
   const props: VistaInteractivaProps = {
     source: fuente,
     view: 'v',
-    theme: TEMA_NEUTRO,
+    theme: NEUTRAL_THEME,
     layout: enFilaCentrada(llamadas),
     width: 800,
     height: 600,

@@ -6,7 +6,7 @@
  * Only what another package uses is exported; the rest is internal.
  * Invariants: pure over `ArchivosDelWorkspace` (no disk); a Session is immutable; it never imports code (ADR 0008).
  * Errors: the Workspace's are issues; rejected edits carry `reason`; layout failures and port I/O failures propagate.
- * Dependencies: `canonical`, `tema`, `dsl` and `layout`.
+ * Dependencies: `canonical`, `theme`, `dsl` and `layout`.
  */
 export { openSession } from './session';
 export type { ComponentInterface, Session } from './session';

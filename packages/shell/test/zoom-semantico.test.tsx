@@ -5,7 +5,7 @@ import { canonicalFormSchema } from 'canonical';
 import type { Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva, nivelDeDetalle } from 'shell';
 import type { AdaptadorDeLayout, Camara } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -36,7 +36,7 @@ const fijo: AdaptadorDeLayout = async (vista: ResolvedView) => {
 
 const conAncho = (width: number): Camara => ({ x: 0, y: 0, width, height: (width * 600) / 800 });
 const montar = (camera: Camara) =>
-  render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={fijo} width={800} height={600} camera={camera} />);
+  render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={fijo} width={800} height={600} camera={camera} />);
 
 describe('nivelDeDetalle', () => {
   it('elige el nivel por escala', () => {

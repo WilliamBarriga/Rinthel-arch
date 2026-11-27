@@ -3,15 +3,15 @@
  * parches trae su pila completa y la elige `data-tipo`; un Tipo sin parches usa la del elemento.
  */
 import type { ResolvedNode } from 'canonical';
-import type { Pintura, PinturaDeElemento, PinturaDeNodo } from 'tema';
+import type { Paint, ElementPaint, NodePaint } from 'theme';
 
 /** Pintura de Nodos y Grupos: la del Tema o la de la activacion derivada. */
-type PinturasDeCaja = Pick<Pintura, 'nodo' | 'grupo'>;
+type PinturasDeCaja = Pick<Paint, 'nodo' | 'grupo'>;
 
 const PINTURA_DE = {
-  nodo: (pintura: PinturasDeCaja): PinturaDeElemento => pintura.nodo,
-  grupo: (pintura: PinturasDeCaja): PinturaDeElemento => pintura.grupo.abierto,
-  colapsado: (pintura: PinturasDeCaja): PinturaDeElemento => pintura.grupo.colapsado,
+  nodo: (pintura: PinturasDeCaja): ElementPaint => pintura.nodo,
+  grupo: (pintura: PinturasDeCaja): ElementPaint => pintura.grupo.abierto,
+  colapsado: (pintura: PinturasDeCaja): ElementPaint => pintura.grupo.colapsado,
 } as const;
 
 export type ClaveDeElemento = keyof typeof PINTURA_DE;
@@ -19,7 +19,7 @@ export type ClaveDeElemento = keyof typeof PINTURA_DE;
 /** Claves en el orden en que la hoja las emite. */
 export const ELEMENTOS = Object.keys(PINTURA_DE) as readonly ClaveDeElemento[];
 
-export const pinturaDeElemento = (pintura: PinturasDeCaja, clave: ClaveDeElemento): PinturaDeElemento => PINTURA_DE[clave](pintura);
+export const pinturaDeElemento = (pintura: PinturasDeCaja, clave: ClaveDeElemento): ElementPaint => PINTURA_DE[clave](pintura);
 
 /** Elemento con que se dibuja un Nodo visible: un Grupo cerrado es una hoja con su propia pintura. */
 export function claveDe(nodo: Pick<ResolvedNode, 'collapsed' | 'children'>): ClaveDeElemento {
@@ -37,14 +37,14 @@ export interface PilaVigente {
   selector: string;
   /** Selector de la caja `.rd-caja` que contiene a ese elemento y al contorno de sus estados. */
   caja: string;
-  pila: PinturaDeNodo;
+  pila: NodePaint;
 }
 
 /** Las pilas de un elemento: la base (la que no lleva `data-tipo` si hay Tipos con pila propia) y una por Tipo con parches. */
-export function pilasDeElemento(pintura: Pintura, clave: ClaveDeElemento): PilaVigente[] {
+export function pilasDeElemento(pintura: Paint, clave: ClaveDeElemento): PilaVigente[] {
   const elemento = pinturaDeElemento(pintura, clave);
   const tipos = Object.keys(elemento.tipos);
-  const vigente = (filtro: string, pila: PinturaDeNodo, tipo?: string): PilaVigente => ({
+  const vigente = (filtro: string, pila: NodePaint, tipo?: string): PilaVigente => ({
     clave,
     ...(tipo !== undefined && { tipo }),
     selector: `& .rd-${clave}${filtro}`,
@@ -55,7 +55,7 @@ export function pilasDeElemento(pintura: Pintura, clave: ClaveDeElemento): PilaV
 }
 
 /** Pila con la que se dibuja un Nodo: la de su Tipo si el Tema la parchea, si no la del elemento; `tipo` es lo que lleva su `data-tipo`. */
-export function pilaDeNodo(pintura: PinturasDeCaja, nodo: Pick<ResolvedNode, 'collapsed' | 'children' | 'type'>): { clave: ClaveDeElemento; tipo?: string; pila: PinturaDeNodo } {
+export function pilaDeNodo(pintura: PinturasDeCaja, nodo: Pick<ResolvedNode, 'collapsed' | 'children' | 'type'>): { clave: ClaveDeElemento; tipo?: string; pila: NodePaint } {
   const clave = claveDe(nodo);
   const elemento = pinturaDeElemento(pintura, clave);
   const propia = Object.hasOwn(elemento.tipos, nodo.type);

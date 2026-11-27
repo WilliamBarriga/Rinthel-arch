@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
-import { TEMA_NEUTRO, estiloResuelto } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME, resolvedStyle } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 import { etiquetaCon, hojaDe, propiedad } from './ayudas';
 
@@ -15,9 +15,9 @@ const fuente = canonicalFormSchema.parse({
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
 });
 
-const conPagina = (fijo: boolean): TemaResuelto => ({
-  ...TEMA_NEUTRO,
-  palette: { ...TEMA_NEUTRO.palette, ink: '#102030' },
+const conPagina = (fijo: boolean): ResolvedTheme => ({
+  ...NEUTRAL_THEME,
+  palette: { ...NEUTRAL_THEME.palette, ink: '#102030' },
   pagina: {
     fijo,
     capas: [
@@ -28,7 +28,7 @@ const conPagina = (fijo: boolean): TemaResuelto => ({
   },
 });
 
-async function dibujo(theme: TemaResuelto): Promise<string> {
+async function dibujo(theme: ResolvedTheme): Promise<string> {
   const view = resolveView(fuente, 'v', {})!;
   const geometry = await layoutView(view, theme);
   return renderToStaticMarkup(<Diagram view={view} geometry={geometry} theme={theme} width={800} height={600} />);
@@ -36,11 +36,11 @@ async function dibujo(theme: TemaResuelto): Promise<string> {
 
 describe('Diagram: fondo de pagina', () => {
   it('un Tema sin page no pinta capa de pagina: queda el color background del Tema', async () => {
-    const html = await dibujo(TEMA_NEUTRO);
+    const html = await dibujo(NEUTRAL_THEME);
 
     expect(html).not.toContain('data-capa="pagina"');
     expect(hojaDe(html)).toContain('background:#ffffff');
-    expect(estiloResuelto(TEMA_NEUTRO, { diagrama: 'architecture' }).pintura.pagina).toEqual({ capas: [], fijo: false });
+    expect(resolvedStyle(NEUTRAL_THEME, { diagrama: 'architecture' }).pintura.pagina).toEqual({ capas: [], fijo: false });
   });
 
   it('page fixed va fuera del mundo, antes de el, y debajo de Grupos, Aristas y Nodos', async () => {
@@ -72,11 +72,11 @@ describe('Diagram: fondo de pagina', () => {
   });
 
   it('un disco es un circulo de borde nitido en una posicion de la pagina (porcentaje) o de la caja (px)', async () => {
-    const conDiscos: TemaResuelto = {
-      ...TEMA_NEUTRO,
-      palette: { ...TEMA_NEUTRO.palette, sol: '#f2b705' },
+    const conDiscos: ResolvedTheme = {
+      ...NEUTRAL_THEME,
+      palette: { ...NEUTRAL_THEME.palette, sol: '#f2b705' },
       pagina: { fijo: true, capas: [{ nombre: 'sol', primitiva: { tipo: 'disc', props: { color: 'sol/0.9', radius: 170, x: 88, y: 18, unit: 'percent' } } }] },
-      nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'muesca', primitiva: { tipo: 'disc', props: { color: 'sol', radius: 3, x: 9, y: 9, unit: 'px' } } }] },
+      nodo: { ...NEUTRAL_THEME.nodo, capas: [{ nombre: 'muesca', primitiva: { tipo: 'disc', props: { color: 'sol', radius: 3, x: 9, y: 9, unit: 'px' } } }] },
     };
     const hoja = hojaDe(await dibujo(conDiscos));
 
@@ -85,12 +85,12 @@ describe('Diagram: fondo de pagina', () => {
   });
 
   it('el ruido con color es grano de ese color (no gris), con la opacidad de la Capa', async () => {
-    const conGrano = (color?: string): TemaResuelto => ({
-      ...TEMA_NEUTRO,
-      palette: { ...TEMA_NEUTRO.palette, white: '#ffffff' },
+    const conGrano = (color?: string): ResolvedTheme => ({
+      ...NEUTRAL_THEME,
+      palette: { ...NEUTRAL_THEME.palette, white: '#ffffff' },
       pagina: { fijo: true, capas: [{ nombre: 'fibra', primitiva: { tipo: 'noise', props: { frequency: 0.8, opacity: 0.07, ...(color !== undefined && { color }) } } }] },
     });
-    const svgDe = async (tema: TemaResuelto): Promise<string> => {
+    const svgDe = async (tema: ResolvedTheme): Promise<string> => {
       const regla = /\.rd-\w+ \.rd-pagina\{([^}]*)\}/.exec(hojaDe(await dibujo(tema)))?.[1] ?? '';
       return decodeURIComponent(/data:image\/svg\+xml,([^"]*)/.exec(regla)?.[1] ?? '');
     };

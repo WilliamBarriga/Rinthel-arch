@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { resolveView, revealAt } from 'canonical';
 import { compile } from 'dsl';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 describe('compile: Nodos y specification', () => {
   it('compila un Tipo de nodo y un Nodo a la Fuente canonica', () => {
@@ -799,12 +799,12 @@ describe('compile: Tema', () => {
     expect(canonico?.themes.find((t) => t.name === 'claro')).toEqual({
       name: 'claro',
       palette: { blue: '#0000ff', danger: '#ff0000' },
-      fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter, sans-serif' },
-      tokens: { ...TEMA_NEUTRO.tokens, surface: '#ffffff' },
-      nodo: TEMA_NEUTRO.nodo,
-      grupo: TEMA_NEUTRO.grupo,
-      arista: TEMA_NEUTRO.arista,
-      pagina: TEMA_NEUTRO.pagina,
+      fonts: { ...NEUTRAL_THEME.fonts, body: 'Inter, sans-serif' },
+      tokens: { ...NEUTRAL_THEME.tokens, surface: '#ffffff' },
+      nodo: NEUTRAL_THEME.nodo,
+      grupo: NEUTRAL_THEME.grupo,
+      arista: NEUTRAL_THEME.arista,
+      pagina: NEUTRAL_THEME.pagina,
     });
   });
 
@@ -818,12 +818,12 @@ describe('compile: Tema', () => {
     expect(canonico?.themes.find((t) => t.name === 'oscuro')).toEqual({
       name: 'oscuro',
       palette: { blue: '#00aaff', danger: '#ff0000' },
-      fonts: { ...TEMA_NEUTRO.fonts, body: 'Inter, sans-serif' },
-      tokens: { ...TEMA_NEUTRO.tokens, surface: '#111111' },
-      nodo: TEMA_NEUTRO.nodo,
-      grupo: TEMA_NEUTRO.grupo,
-      arista: TEMA_NEUTRO.arista,
-      pagina: TEMA_NEUTRO.pagina,
+      fonts: { ...NEUTRAL_THEME.fonts, body: 'Inter, sans-serif' },
+      tokens: { ...NEUTRAL_THEME.tokens, surface: '#111111' },
+      nodo: NEUTRAL_THEME.nodo,
+      grupo: NEUTRAL_THEME.grupo,
+      arista: NEUTRAL_THEME.arista,
+      pagina: NEUTRAL_THEME.pagina,
     });
   });
 

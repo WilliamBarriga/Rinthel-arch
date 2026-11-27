@@ -4,8 +4,8 @@
  * cinta...) con la semilla de su id y nombre de Capa, nunca del tamano ni del orden de render. Todo solo pinta: puede
  * sobresalir de la caja sin tocar las Metricas.
  */
-import { fnv1a, giroDeCapa, semillaDeCapa } from 'tema';
-import type { CapaPintada, NombreDePrimitiva, PinturaDeNodo } from 'tema';
+import { fnv1a, layerSpin, layerSeed } from 'theme';
+import type { PaintedLayer, PrimitiveName, NodePaint } from 'theme';
 
 import { limpiarValorCss, num } from './elemento';
 import { anchoDeBorde } from './pintura/comun';
@@ -13,7 +13,7 @@ import type { Elemento } from './elemento';
 import type { Estilo } from './estilo';
 
 type Declaraciones = Record<string, string>;
-type Props = CapaPintada['props'];
+type Props = PaintedLayer['props'];
 
 const px = (valor: number | string | undefined): string => `${num(Number(valor))}px`;
 const css = (valor: number | string | undefined): string => limpiarValorCss(String(valor));
@@ -32,7 +32,7 @@ export interface EfectosDeElemento {
 
 interface ContextoDeEfecto {
   estilo: Estilo;
-  capas: PinturaDeNodo['capas'];
+  capas: NodePaint['capas'];
   /** Semilla de la Capa: id del elemento + nombre de Capa (+ `seed N` del Tema). */
   semilla: number;
 }
@@ -41,12 +41,12 @@ interface ContextoDeEfecto {
 type Efecto =
   | { readonly hoja: (props: Props) => Declaraciones }
   | {
-      readonly elemento: (capa: CapaPintada, contexto: ContextoDeEfecto, resultado: EfectosDeElemento) => void;
+      readonly elemento: (capa: PaintedLayer, contexto: ContextoDeEfecto, resultado: EfectosDeElemento) => void;
       /** Regla de hoja de los hijos que pinta (si los hay): selector (con `&` por la clase de alcance) y declaraciones. */
       readonly regla?: [string, Declaraciones];
     };
 
-const alLado = (capa: CapaPintada, resultado: EfectosDeElemento, hijo: Elemento): void => {
+const alLado = (capa: PaintedLayer, resultado: EfectosDeElemento, hijo: Elemento): void => {
   (capa.encima === true ? resultado.encima : resultado.debajo).push(hijo);
 };
 
@@ -85,10 +85,10 @@ const EFECTOS = {
   },
   tilt: {
     elemento: ({ props }, { semilla }, resultado) => {
-      resultado.giro += giroDeCapa(semilla, Number(props['degrees']));
+      resultado.giro += layerSpin(semilla, Number(props['degrees']));
     },
   },
-} as const satisfies Partial<Record<NombreDePrimitiva, Efecto>>;
+} as const satisfies Partial<Record<PrimitiveName, Efecto>>;
 
 type NombreDeEfecto = keyof typeof EFECTOS;
 
@@ -107,12 +107,12 @@ const SIN_EFECTOS: EfectosDeElemento = { giro: 0, nodo: '', debajo: [], encima: 
 const esPorElemento = (tipo: string): boolean => tipo in EFECTOS && 'elemento' in (EFECTOS as Record<string, Efecto>)[tipo]!;
 
 /** Efectos que dependen del elemento: semilla = id del elemento + nombre de Capa (+ `seed N` del Tema). */
-export function efectosDeElemento(estilo: Estilo, { capas }: Pick<PinturaDeNodo, 'capas'>, id: string): EfectosDeElemento {
+export function efectosDeElemento(estilo: Estilo, { capas }: Pick<NodePaint, 'capas'>, id: string): EfectosDeElemento {
   if (!capas.some((c) => esPorElemento(c.tipo))) return SIN_EFECTOS;
   const resultado: EfectosDeElemento = { giro: 0, nodo: '', debajo: [], encima: [] };
   for (const capa of capas) {
     const efecto = (EFECTOS as Record<string, Efecto>)[capa.tipo];
-    if (efecto !== undefined && 'elemento' in efecto) efecto.elemento(capa, { estilo, capas, semilla: semillaDeCapa(id, capa.nombre, estilo.pintura.semilla) }, resultado);
+    if (efecto !== undefined && 'elemento' in efecto) efecto.elemento(capa, { estilo, capas, semilla: layerSeed(id, capa.nombre, estilo.pintura.semilla) }, resultado);
   }
   return resultado;
 }
@@ -181,7 +181,7 @@ function pines(props: Props): Elemento {
 /** Cinta adhesiva centrada sobre el borde superior: `angle` fijo o, sin el, ladeada hasta 3 grados con el PRNG de su Capa. */
 function cinta(props: Props, semilla: number): Elemento {
   const alto = Number(props['height']);
-  const giro = num(props['angle'] === undefined ? giroDeCapa(semilla, 3) : Number(props['angle']));
+  const giro = num(props['angle'] === undefined ? layerSpin(semilla, 3) : Number(props['angle']));
   return {
     tag: 'div',
     attrs: {

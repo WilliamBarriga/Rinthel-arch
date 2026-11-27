@@ -14,7 +14,7 @@ const nodeBoxSchema = z.object({
   y: finiteNumber,
   width: finiteNumber,
   height: finiteNumber,
-  /** Rectangle of each Slot the Theme shows, relative to the box (placed by `tema`). */
+  /** Rectangle of each Slot the Theme shows, relative to the box (placed by `theme`). */
   slots: z.record(z.string(), z.object({ x: finiteNumber, y: finiteNumber, width: finiteNumber, height: finiteNumber })).optional(),
 });
 

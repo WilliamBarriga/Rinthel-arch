@@ -7,8 +7,8 @@ import type { ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
 import type { ComponenteDeTema, DiagramProps, PropsDeCodigo } from 'render';
-import { TEMA_NEUTRO } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 import { etiquetaCon, propiedad } from './ayudas';
 
@@ -30,12 +30,12 @@ const base = [
 ];
 const aura = (encima = false) => ({ nombre: 'aura', primitiva: { tipo: 'code', props: { component: 'Aurora', hue: 3 } }, ...(encima && { encima: true }) });
 
-const temaCon = (capas: unknown[], estados: Record<string, unknown[]> = {}): TemaResuelto =>
-  ({ ...TEMA_NEUTRO, nodo: { slots: TEMA_NEUTRO.nodo.slots, tipos: {}, estados, textos: {}, capas } }) as unknown as TemaResuelto;
+const temaCon = (capas: unknown[], estados: Record<string, unknown[]> = {}): ResolvedTheme =>
+  ({ ...NEUTRAL_THEME, nodo: { slots: NEUTRAL_THEME.nodo.slots, tipos: {}, estados, textos: {}, capas } }) as unknown as ResolvedTheme;
 
-async function dibujar(theme: TemaResuelto, extra: Partial<DiagramProps> = {}): Promise<string> {
+async function dibujar(theme: ResolvedTheme, extra: Partial<DiagramProps> = {}): Promise<string> {
   const view = vista();
-  const geometry = await layoutView(view, TEMA_NEUTRO);
+  const geometry = await layoutView(view, NEUTRAL_THEME);
   return renderToStaticMarkup(<Diagram view={view} geometry={geometry} theme={theme} width={800} height={600} {...extra} />);
 }
 
@@ -60,7 +60,7 @@ describe('seam Diagram: Capa code', () => {
     expect(a.estado).toEqual(['hover']);
     expect(a.parametros).toEqual({ hue: 3 });
     expect(a.datos).toEqual({ tipo: 'servicio', titulo: 'A', tieneContenido: false });
-    expect(a.colores.trazo).toBe(TEMA_NEUTRO.palette['blue']);
+    expect(a.colores.trazo).toBe(NEUTRAL_THEME.palette['blue']);
     expect(a.caja.ancho).toBeGreaterThan(0);
     expect(a.caja.alto).toBeGreaterThan(0);
     expect(Object.isFrozen(a)).toBe(true);

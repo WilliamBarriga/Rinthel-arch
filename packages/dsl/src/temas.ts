@@ -10,8 +10,8 @@
 import { CODES, OLD_CATALOG_VALUES, renameIssue, oldValueMessage, oldRename } from 'canonical';
 import type { Issue, TextRange } from 'canonical';
 import type { AstNode as Ast } from 'langium';
-import { ESTADOS, TEMA_ALTO_CONTRASTE, TEMA_NEUTRO, aplicarOps, fuentesSinReserva, opTocaMetricas, parsearEstado } from 'tema';
-import type { CajaDeSlots, CapaDeTema, ElementoDeTema, OpDeCapa, TemaResuelto } from 'tema';
+import { STATES, HIGH_CONTRAST_THEME, NEUTRAL_THEME, applyOps, fontsWithoutFallback, opTouchesMetrics, parseState } from 'theme';
+import type { SlotLayoutBox, ResolvedLayer, ThemeElement, LayerOp, ResolvedTheme } from 'theme';
 
 import type { GroupItem, GroupPadding, NodeItem, Theme, ThemeDiagram, ThemeLayer, ThemeSlots, ThemeState, ThemeUse } from './generated/ast';
 import { ARCHIVO_INCORPORADOS, NOMBRES_INCORPORADOS } from './incorporados';
@@ -58,16 +58,16 @@ export interface OrigenDeTema {
 }
 
 export interface TemasCompilados {
-  temas: TemaResuelto[];
+  temas: ResolvedTheme[];
   issues: Issue[];
   /** Incluye los incorporados (archivo `<incorporados>`); `high-contrast` no figura. */
   origenes: Record<string, OrigenDeTema>;
   /** Parches de Capa de una Vista (`theme t { layer ... }`) validados contra el Tema `tema`. */
-  parchesDeVista(tema: string, items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string): { ops: OpDeCapa[]; issues: Issue[] };
+  parchesDeVista(tema: string, items: ReadonlyArray<ThemeLayer | ThemeUse>, archivo: string): { ops: LayerOp[]; issues: Issue[] };
 }
 
 interface Compilado {
-  tema: TemaResuelto;
+  tema: ResolvedTheme;
   /** Sitio de cada Capa de la pila base del Nodo, para `related`. */
   origenes: Map<string, Sitio>;
   origen: OrigenDeTema;
@@ -124,7 +124,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
   for (const declarado of declarados) {
     const { name } = declarado.ast;
     const original = porNombre.get(name);
-    if (original !== undefined || name === TEMA_ALTO_CONTRASTE.name) {
+    if (original !== undefined || name === HIGH_CONTRAST_THEME.name) {
       issues.push({
         code: CODES.E_DUPLICATE_THEME,
         severity: 'error',
@@ -159,7 +159,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
 
   const incorporado: OrigenDeTema = { sitio: { file: '(incorporado)', line: 1, column: 1 }, extends: [], partes: [], base: {}, tipos: {}, estados: {}, grupo: { base: {}, tipos: {}, estados: {}, colapsado: {} }, pagina: {}, slots: {} };
   const resueltos = new Map<string, Compilado>();
-  const altoContraste: Compilado = { tema: TEMA_ALTO_CONTRASTE, origenes: new Map(), origen: incorporado };
+  const altoContraste: Compilado = { tema: HIGH_CONTRAST_THEME, origenes: new Map(), origen: incorporado };
   const enCurso = new Set<string>();
   const fallidos = new Set<string>();
   const resolver = (declarado: TemaDeclarado): Compilado | undefined => {
@@ -172,12 +172,12 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
     let base: Compilado | undefined;
     if (parent !== undefined) {
       const padre = porNombre.get(parent);
-      base = parent === TEMA_ALTO_CONTRASTE.name ? altoContraste : padre && resolver(padre);
+      base = parent === HIGH_CONTRAST_THEME.name ? altoContraste : padre && resolver(padre);
       if (base === undefined) {
         issues.push(
           padre !== undefined
             ? { code: CODES.E_EXTENDS_CYCLE, severity: 'error', file: declarado.archivo, ...declarado.padre.start, message: `extends cycle: '${name}' extends '${parent}', which depends on it` }
-            : temaPadreNoDeclarado(parent, declarado.archivo, declarado.ast, [...porNombre.keys(), TEMA_ALTO_CONTRASTE.name]),
+            : temaPadreNoDeclarado(parent, declarado.archivo, declarado.ast, [...porNombre.keys(), HIGH_CONTRAST_THEME.name]),
         );
         enCurso.delete(name);
         fallidos.add(name);
@@ -185,8 +185,8 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       }
     }
 
-    const origen = base?.tema ?? TEMA_NEUTRO;
-    const tema: TemaResuelto = {
+    const origen = base?.tema ?? NEUTRAL_THEME;
+    const tema: ResolvedTheme = {
       name,
       palette: { ...(base?.tema.palette ?? {}) },
       fonts: { ...origen.fonts },
@@ -237,7 +237,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
       for (const { key, value } of parte.entries) destino[key] = value;
     }
     // Una familia no generica pide reserva explicita; se comprueba con las `fonts` ya heredadas.
-    const sinReserva = fuentesSinReserva(tema.fonts);
+    const sinReserva = fontsWithoutFallback(tema.fonts);
     for (const parte of declarado.ast.parts) {
       if (parte.$type !== 'ThemeFonts') continue;
       for (const entrada of parte.entries.filter((e) => sinReserva.includes(e.key))) {
@@ -293,7 +293,7 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
   for (const declarado of porNombre.values()) resolver(declarado);
 
   return {
-    // Los incorporados primero y en su orden; `high-contrast` lo define `tema`.
+    // Los incorporados primero y en su orden; `high-contrast` lo define `theme`.
     temas: [...resueltos.values(), altoContraste]
       .map(({ tema }) => tema)
       .sort((a, b) => (NOMBRES_INCORPORADOS.indexOf(a.name as never) + 1 || 99) - (NOMBRES_INCORPORADOS.indexOf(b.name as never) + 1 || 99)),
@@ -319,31 +319,31 @@ export function resolverTemas(declarados: readonly TemaDeclarado[], partesDeclar
 }
 
 /** Todas las pilas del Nodo (base, por Tipo, por estado) contra las que se valida un parche de Vista. */
-function todasLasPilas(tema: TemaResuelto): CapaDeTema[][] {
-  const base = tema.nodo.capas as CapaDeTema[];
+function todasLasPilas(tema: ResolvedTheme): ResolvedLayer[][] {
+  const base = tema.nodo.capas as ResolvedLayer[];
   const sobreTipos = pilasSobreTipos(tema, base, 'nodo');
-  const porEstado = Object.values(tema.nodo.estados).flatMap((ops) => sobreTipos.map((pila) => aplicarOps(pila, ops, tema.palette, 'parchear').pila));
+  const porEstado = Object.values(tema.nodo.estados).flatMap((ops) => sobreTipos.map((pila) => applyOps(pila, ops, tema.palette, 'parchear').pila));
   return [...sobreTipos, ...porEstado];
 }
 
-/** El Grupo cerrado. No es un Estado de `tema` (no es de interaccion): solo el Grupo lo admite. */
+/** El Grupo cerrado. No es un Estado de `theme` (no es de interaccion): solo el Grupo lo admite. */
 const ESTADO_COLAPSADO = 'collapsed';
 
-const ESTADOS_DE: Record<ElementoDeTema, readonly string[]> = { nodo: ESTADOS, grupo: [...ESTADOS, ESTADO_COLAPSADO] };
+const ESTADOS_DE: Record<ThemeElement, readonly string[]> = { nodo: STATES, grupo: [...STATES, ESTADO_COLAPSADO] };
 
 /** Pilas contra las que se valida un parche de Tipo de nodo: la base y la de cada Tipo de diagrama. */
-function pilasSobreDiagramas(tema: TemaResuelto, base: CapaDeTema[], elemento: ElementoDeTema): CapaDeTema[][] {
-  return [base, ...Object.values(tema[elemento].diagramas ?? {}).map(({ ops }) => aplicarOps(base, ops, tema.palette, 'parchear').pila)];
+function pilasSobreDiagramas(tema: ResolvedTheme, base: ResolvedLayer[], elemento: ThemeElement): ResolvedLayer[][] {
+  return [base, ...Object.values(tema[elemento].diagramas ?? {}).map(({ ops }) => applyOps(base, ops, tema.palette, 'parchear').pila)];
 }
 
 /** Las pilas de `pilasSobreDiagramas` y, sobre cada una, la de cada Tipo de nodo con parches. */
-function pilasSobreTipos(tema: TemaResuelto, base: CapaDeTema[], elemento: ElementoDeTema): CapaDeTema[][] {
+function pilasSobreTipos(tema: ResolvedTheme, base: ResolvedLayer[], elemento: ThemeElement): ResolvedLayer[][] {
   const bases = pilasSobreDiagramas(tema, base, elemento);
-  return [...bases, ...Object.values(tema[elemento].tipos).flatMap((ops) => bases.map((pila) => aplicarOps(pila, ops, tema.palette, 'parchear').pila))];
+  return [...bases, ...Object.values(tema[elemento].tipos).flatMap((ops) => bases.map((pila) => applyOps(pila, ops, tema.palette, 'parchear').pila))];
 }
 
 /** 1, 2 o 4 valores, como en CSS. */
-function compilarPadding(item: GroupPadding, archivo: string, issues: Issue[]): TemaResuelto['grupo']['padding'] | undefined {
+function compilarPadding(item: GroupPadding, archivo: string, issues: Issue[]): ResolvedTheme['grupo']['padding'] | undefined {
   const v = item.values.map(Number);
   const [a, b, c, d] = v as [number, number, number, number];
   const lados = v.length === 1 ? { top: a, right: a, bottom: a, left: a } : v.length === 2 ? { top: a, right: b, bottom: a, left: b } : v.length === 4 ? { top: a, right: b, bottom: c, left: d } : undefined;
@@ -365,7 +365,7 @@ function compilarPadding(item: GroupPadding, archivo: string, issues: Issue[]): 
  * Compila `node` o `group` sobre la pila heredada en orden: base, Tipos de diagrama, Tipos de nodo, estados.
  * El Grupo no admite parches de Tipo de nodo que toquen las Metricas.
  */
-function compilarElemento(elemento: ElementoDeTema, archivo: string, items: ReadonlyArray<GroupItem>, tema: TemaResuelto, origenes: Map<string, Sitio>, entorno: Entorno): void {
+function compilarElemento(elemento: ThemeElement, archivo: string, items: ReadonlyArray<GroupItem>, tema: ResolvedTheme, origenes: Map<string, Sitio>, entorno: Entorno): void {
   const { partes, tipos, issues } = entorno;
   const contexto = { archivo, partes, paleta: tema.palette, tokens: tema.tokens, origenes, issues };
   const bloque = tema[elemento];
@@ -374,8 +374,8 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
 
   const delBase = items.filter((item): item is ThemeLayer | ThemeUse => item.$type === 'ThemeLayer' || item.$type === 'ThemeUse');
   const modo = bloque.capas.length === 0 ? 'definir' : 'parchear';
-  const opsBase = compilarBloque(delBase, { ...contexto, modo, candidatas: [bloque.capas as CapaDeTema[]] });
-  bloque.capas = aplicarOps(bloque.capas as CapaDeTema[], opsBase, tema.palette, modo).pila;
+  const opsBase = compilarBloque(delBase, { ...contexto, modo, candidatas: [bloque.capas as ResolvedLayer[]] });
+  bloque.capas = applyOps(bloque.capas as ResolvedLayer[], opsBase, tema.palette, modo).pila;
   for (const item of items) {
     if (item.$type === 'ThemeSlots') {
       entorno.sitiosDeSlots.set(elemento, { file: archivo, ...aRango(item.$cstNode?.range).start });
@@ -387,7 +387,7 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
   if (animacion !== undefined) bloque.animacion = animacion;
 
   // Los parches por Tipo de diagrama pueden cambiar las Metricas.
-  const base = bloque.capas as CapaDeTema[];
+  const base = bloque.capas as ResolvedLayer[];
   for (const item of delNodo) {
     if (item.$type === 'ThemeDiagram') compilarDiagrama(item, elemento, tema, { ...contexto, entorno });
   }
@@ -412,14 +412,14 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
   }
 
   const sobreTipos = pilasSobreTipos(tema, base, elemento);
-  const conColapso = colapsable ? [...sobreTipos, ...sobreTipos.map((pila) => aplicarOps(pila, tema.grupo.colapsado.ops, tema.palette, 'parchear').pila)] : sobreTipos;
+  const conColapso = colapsable ? [...sobreTipos, ...sobreTipos.map((pila) => applyOps(pila, tema.grupo.colapsado.ops, tema.palette, 'parchear').pila)] : sobreTipos;
   for (const item of delNodo) {
     if (item.$type !== 'ThemeState') continue;
     if (colapsable && item.name === ESTADO_COLAPSADO) {
       compilarColapsado(item, tema, { ...contexto, entorno, sobreTipos });
       continue;
     }
-    const parseado = parsearEstado(item.name);
+    const parseado = parseState(item.name);
     if ('error' in parseado) {
       issues.push(issueConSugerencia(baseDeErrorDeEstado(parseado.error), archivo, item, 'name', ESTADOS_DE[elemento]));
       continue;
@@ -448,18 +448,18 @@ function compilarElemento(elemento: ElementoDeTema, archivo: string, items: Read
  * Un tipo desconocido es `theme-unknown-diagram-type` con `fix` por typo. Varios bloques del mismo tipo se
  * acumulan. `padding` solo vale en el Grupo; los estilos de texto de un Slot no cambian por Tipo de diagrama.
  */
-function compilarDiagrama(item: ThemeDiagram, elemento: ElementoDeTema, tema: TemaResuelto, ctx: Omit<ContextoDeBloque, 'modo' | 'candidatas'> & { entorno: Entorno }): void {
+function compilarDiagrama(item: ThemeDiagram, elemento: ThemeElement, tema: ResolvedTheme, ctx: Omit<ContextoDeBloque, 'modo' | 'candidatas'> & { entorno: Entorno }): void {
   const { archivo, partes, issues } = ctx;
   const diagrama = nombreDeDiagrama(item, archivo, issues);
   if (diagrama === undefined) return;
   const bloque = tema[elemento];
-  const base = bloque.capas as CapaDeTema[];
+  const base = bloque.capas as ResolvedLayer[];
   const previo = bloque.diagramas?.[diagrama];
-  const vigente = previo === undefined ? base : aplicarOps(base, previo.ops, tema.palette, 'parchear').pila;
+  const vigente = previo === undefined ? base : applyOps(base, previo.ops, tema.palette, 'parchear').pila;
   const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');
   const propios = new Map(ctx.origenes);
   const ops = compilarBloque(capas, { ...ctx, origenes: propios, modo: 'parchear', candidatas: [vigente] });
-  const parche: { ops: OpDeCapa[]; slots?: CajaDeSlots; padding?: TemaResuelto['grupo']['padding'] } = { ops: [...(previo?.ops ?? []), ...ops], ...(previo?.slots !== undefined && { slots: previo.slots }) };
+  const parche: { ops: LayerOp[]; slots?: SlotLayoutBox; padding?: ResolvedTheme['grupo']['padding'] } = { ops: [...(previo?.ops ?? []), ...ops], ...(previo?.slots !== undefined && { slots: previo.slots }) };
   if (previo !== undefined && 'padding' in previo && previo.padding !== undefined) parche.padding = previo.padding;
   for (const hijo of item.items) {
     if (hijo.$type === 'ThemeSlots') {
@@ -479,17 +479,17 @@ function compilarDiagrama(item: ThemeDiagram, elemento: ElementoDeTema, tema: Te
   };
 }
 
-/** Error `theme-state-touches-metrics` por cada parche que cambia la caja (`opTocaMetricas`). */
-function avisarSiTocaMetricas(ops: readonly OpDeCapa[], pilas: ReadonlyArray<readonly CapaDeTema[]>, donde: Ast, titulo: string, consejo: string, archivo: string, issues: Issue[]): void {
+/** Error `theme-state-touches-metrics` por cada parche que cambia la caja (`opTouchesMetrics`). */
+function avisarSiTocaMetricas(ops: readonly LayerOp[], pilas: ReadonlyArray<readonly ResolvedLayer[]>, donde: Ast, titulo: string, consejo: string, archivo: string, issues: Issue[]): void {
   for (const op of ops) {
-    const razon = opTocaMetricas(op, pilas);
+    const razon = opTouchesMetrics(op, pilas);
     if (razon === undefined) continue;
     issues.push({ code: CODES.E_THEME_STATE_TOUCHES_METRICS, severity: 'error', file: archivo, ...aRango(donde.$cstNode?.range).start, message: `${titulo}: ${razon}; ${consejo}` });
   }
 }
 
 /** El Grupo cerrado se comporta como un Nodo hoja: puede cambiar la caja, y su `slots` sustituye a la cabecera. */
-function compilarColapsado(item: ThemeState, tema: TemaResuelto, ctx: Omit<ContextoDeBloque, 'modo' | 'candidatas'> & { entorno: Entorno; sobreTipos: CapaDeTema[][] }): void {
+function compilarColapsado(item: ThemeState, tema: ResolvedTheme, ctx: Omit<ContextoDeBloque, 'modo' | 'candidatas'> & { entorno: Entorno; sobreTipos: ResolvedLayer[][] }): void {
   const { archivo, partes, issues, entorno } = ctx;
   const colapsado = tema.grupo.colapsado;
   for (const slots of item.items.filter((i): i is ThemeSlots => i.$type === 'ThemeSlots')) {

@@ -6,7 +6,7 @@ import type { Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva, deserializarEstado, hashDelNavegador, serializarEstado, useEstadoEnHash } from 'shell';
 import type { AdaptadorDeHash, AdaptadorDeLayout, EstadoDeShell } from 'shell';
 import { pulsarNodo } from './ayudas';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(() => {
   cleanup();
@@ -217,7 +217,7 @@ describe('integracion con VistaInteractiva y location.hash', () => {
   };
   function App() {
     const props = useEstadoEnHash({ source: fuente, hash: hashDelNavegador(window), camera: true });
-    return <VistaInteractiva source={fuente} theme={TEMA_NEUTRO} layout={layout} width={800} height={600} {...props} />;
+    return <VistaInteractiva source={fuente} theme={NEUTRAL_THEME} layout={layout} width={800} height={600} {...props} />;
   }
   const dibujado = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`[data-id="${id}"]`)).not.toBeNull());
 

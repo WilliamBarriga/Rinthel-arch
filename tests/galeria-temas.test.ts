@@ -6,8 +6,8 @@ import { resolveView } from 'canonical';
 import type { GraphView, SequenceView } from 'canonical';
 import { compile } from 'dsl';
 import { openSession } from 'session';
-import { CATALOGO, ESTADOS, estiloResuelto, resolverTema } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { CATALOG, STATES, resolvedStyle, resolveTheme } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 /** Galeria de los 14 Temas de ejemplo: un `.dg` por Tema sobre un Modelo comun. */
 const RAIZ = resolve(import.meta.dirname, '../examples/themes/gallery');
@@ -30,7 +30,7 @@ const todosLosNodos = (): NodoPlano[] => aplanar(canonico!.model.nodes as NodoPl
 const errores = issues.filter((i) => i.severity === 'error');
 
 /** Todas las Primitivas que usa un Tema (pila base, parches de Tipo y de estado, Aristas y texto). */
-const primitivasDe = (t: TemaResuelto): Set<string> => {
+const primitivasDe = (t: ResolvedTheme): Set<string> => {
   const usadas = new Set<string>();
   for (const c of [...t.nodo.capas, ...t.arista.capas]) usadas.add(c.primitiva.tipo);
   for (const ops of [...Object.values(t.nodo.tipos), ...Object.values(t.nodo.estados)]) for (const op of ops) if (op.primitiva !== undefined) usadas.add(op.primitiva);
@@ -42,8 +42,8 @@ describe('galeria de Temas de ejemplo', () => {
   it('toda Primitiva del catalogo (sin fijar su cantidad) aparece en al menos un Tema de ejemplo', () => {
     const usadas = new Set<string>();
     const sueltos = ['shape-catalog.dg', 'code.dg'].map((f) => compile({ [f]: readFileSync(resolve(import.meta.dirname, '../examples/themes', f), 'utf8') }).canonico!);
-    for (const tema of [...canonico!.themes, ...sueltos.flatMap((c) => c.themes)]) for (const p of primitivasDe(resolverTema(tema))) usadas.add(p);
-    expect(Object.keys(CATALOGO).filter((p) => !usadas.has(p))).toEqual([]);
+    for (const tema of [...canonico!.themes, ...sueltos.flatMap((c) => c.themes)]) for (const p of primitivasDe(resolveTheme(tema))) usadas.add(p);
+    expect(Object.keys(CATALOG).filter((p) => !usadas.has(p))).toEqual([]);
   });
 
   it('cada Tema vive en su propio archivo y estan los 14', () => {
@@ -106,7 +106,7 @@ describe('galeria de Temas de ejemplo', () => {
     expect(aristas.some((a) => a.label === undefined || a.label === '')).toBe(true);
     const titulos = todosLosNodos().map((n) => n.title.toLowerCase());
     // `planned` no lo pone la shell sino la marca del Modelo (ADR 0011): la galeria no tiene un Nodo que lo nombre.
-    for (const estado of ESTADOS.filter((e) => e !== 'planned')) expect(titulos, estado).toContain(estado);
+    for (const estado of STATES.filter((e) => e !== 'planned')) expect(titulos, estado).toContain(estado);
   });
 
   it('el Modelo usa todos los Tipos de nodo declarados', () => {
@@ -116,15 +116,15 @@ describe('galeria de Temas de ejemplo', () => {
 
   it('entre todos cubren las Familias del catalogo', () => {
     const usadas = new Set<string>();
-    for (const tema of canonico!.themes.filter((t) => TEMAS.includes(t.name))) for (const p of primitivasDe(resolverTema(tema))) usadas.add(CATALOGO[p as keyof typeof CATALOGO].familia);
-    const todas = new Set(Object.values(CATALOGO).map((d) => d.familia as string).filter((f) => f !== 'codigo'));
+    for (const tema of canonico!.themes.filter((t) => TEMAS.includes(t.name))) for (const p of primitivasDe(resolveTheme(tema))) usadas.add(CATALOG[p as keyof typeof CATALOG].familia);
+    const todas = new Set(Object.values(CATALOG).map((d) => d.familia as string).filter((f) => f !== 'codigo'));
     expect([...todas].filter((f) => !usadas.has(f))).toEqual([]);
   });
 
   it.each(TEMAS)('%s resuelve su Estilo de forma determinista', (nombre) => {
     const tema = canonico!.themes.find((t) => t.name === nombre)!;
     const otro = compile(leer()).canonico!.themes.find((t) => t.name === nombre)!;
-    expect(JSON.stringify(estiloResuelto(tema, { diagrama: 'architecture' }))).toBe(JSON.stringify(estiloResuelto(otro, { diagrama: 'architecture' })));
+    expect(JSON.stringify(resolvedStyle(tema, { diagrama: 'architecture' }))).toBe(JSON.stringify(resolvedStyle(otro, { diagrama: 'architecture' })));
   });
 
   it('los warnings de cada ejemplo son exactamente los declarados en su cabecera, y no hay otros', async () => {

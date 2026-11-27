@@ -3,8 +3,8 @@
  * (`ready` y `check` no bastan). El `@font-face` ya debe estar en la pagina (lo declara `VistaInteractiva` desde `fontFiles`).
  */
 import { CODES } from 'canonical';
-import { claveDeTexto, pilaDeFuente, resolverFuentes } from 'tema';
-import type { MedidasDeTexto, TextoAMedir } from 'tema';
+import { textKey, fontStack, resolveFonts } from 'theme';
+import type { TextMeasures, TextToMeasure } from 'theme';
 
 import type { IssueDelVisor } from './avisos';
 
@@ -15,7 +15,7 @@ import type { IssueDelVisor } from './avisos';
  */
 export function hashesDeFamilias(fonts: Readonly<Record<string, string>>, archivos: Readonly<Record<string, string>>): Record<string, string> {
   const porFamilia = new Map<string, string[]>();
-  for (const cara of resolverFuentes(fonts, Object.keys(archivos)).caras) porFamilia.set(cara.familia, [...(porFamilia.get(cara.familia) ?? []), archivos[cara.ruta]!]);
+  for (const cara of resolveFonts(fonts, Object.keys(archivos)).caras) porFamilia.set(cara.familia, [...(porFamilia.get(cara.familia) ?? []), archivos[cara.ruta]!]);
   return Object.fromEntries([...porFamilia].map(([familia, hashes]) => [familia, hashes.join('+')]));
 }
 
@@ -24,7 +24,7 @@ export function hashesDeFamilias(fonts: Readonly<Record<string, string>>, archiv
  * por falta de `fontUrl`; vacio si todas son genericas. Es un issue de visor: su `file` es el Tema, sin enlace al editor.
  */
 export function avisoDeFuentesSinServir(fonts: Readonly<Record<string, string>>): IssueDelVisor[] {
-  const familias = resolverFuentes(fonts, []).faltantes.map((f) => f.familia);
+  const familias = resolveFonts(fonts, []).faltantes.map((f) => f.familia);
   if (familias.length === 0) return [];
   return [
     {
@@ -58,14 +58,14 @@ function anchoConLienzo(): (fuente: string, texto: string) => number {
 }
 
 /** Mide `textos` con el lienzo del navegador, tras cargar la fuente de cada uno. */
-export async function medirEnVisor(textos: readonly TextoAMedir[], opciones: OpcionesDeMedicion = {}): Promise<MedidasDeTexto> {
+export async function medirEnVisor(textos: readonly TextToMeasure[], opciones: OpcionesDeMedicion = {}): Promise<TextMeasures> {
   const cargar = opciones.cargar ?? ((fuente, texto) => document.fonts.load(fuente, texto));
   const ancho = opciones.ancho ?? anchoConLienzo();
   const anchos: Record<string, number> = {};
   for (const { familia, tamano, texto, peso } of textos) {
-    const fuente = `${peso === undefined ? '' : `${peso} `}${tamano}px ${pilaDeFuente(familia)}`;
+    const fuente = `${peso === undefined ? '' : `${peso} `}${tamano}px ${fontStack(familia)}`;
     await cargar(fuente, texto);
-    anchos[claveDeTexto(familia, tamano, texto, peso)] = ancho(fuente, texto);
+    anchos[textKey(familia, tamano, texto, peso)] = ancho(fuente, texto);
   }
   return { nivel: 'medido', fuentes: { ...opciones.hashes }, anchos };
 }

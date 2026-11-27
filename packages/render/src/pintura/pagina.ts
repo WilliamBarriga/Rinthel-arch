@@ -5,13 +5,13 @@
  * apilan al reves. El relleno `solid` (`background`, que reinicia las
  * imagenes) se emite antes que ellas para no pisarlas.
  */
-import type { CapaPintada } from 'tema';
+import type { PaintedLayer } from 'theme';
 
 import { FONDOS_ACUMULABLES } from './comun';
 import type { Declaraciones } from './comun';
 import { PINTORES_DE_RELLENO } from './relleno';
 
-export function declaracionesDePagina(capas: readonly CapaPintada[]): Declaraciones {
+export function declaracionesDePagina(capas: readonly PaintedLayer[]): Declaraciones {
   const declaraciones: Declaraciones = {};
   const acumulados: Record<string, string[]> = {};
   for (const capa of capas) {

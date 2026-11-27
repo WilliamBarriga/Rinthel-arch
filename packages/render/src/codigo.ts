@@ -4,7 +4,7 @@
  * `contain: layout style`. El componente solo ve `PropsDeCodigo` y no puede cambiar el tamano ni las Metricas.
  */
 import type { ComponentType } from 'react';
-import type { CapaPintada, PinturaDeNodo } from 'tema';
+import type { PaintedLayer, NodePaint } from 'theme';
 import type { ResolvedNode } from 'canonical';
 
 import { limpiarValorCss, num } from './elemento';
@@ -40,7 +40,7 @@ const congelar = <T extends object>(valor: T): Readonly<T> => Object.freeze(valo
  */
 export function pintarCodigo(
   estilo: Estilo,
-  pila: Pick<PinturaDeNodo, 'capas' | 'estados'>,
+  pila: Pick<NodePaint, 'capas' | 'estados'>,
   datos: { nodo: ResolvedNode; ancho: number; alto: number; trazo: string; estados: readonly string[]; tieneContenido: boolean; componentes: ComponentesDeTema | undefined },
   encima: boolean,
 ): Elemento[] {
@@ -70,7 +70,7 @@ export function pintarCodigo(
 }
 
 /** La Capa tal como queda con el primer estado vigente que la parchea (misma regla que la cascada: el parche manda). */
-function vigenteEnEstado(base: CapaPintada, estados: readonly string[], porEstado: Partial<Record<string, CapaPintada[]>>): CapaPintada {
+function vigenteEnEstado(base: PaintedLayer, estados: readonly string[], porEstado: Partial<Record<string, PaintedLayer[]>>): PaintedLayer {
   for (const estado of estados) {
     const parcheada = porEstado[estado]?.find((capa) => capa.nombre === base.nombre && capa.tipo === 'code');
     if (parcheada !== undefined) return parcheada;

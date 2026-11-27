@@ -8,7 +8,7 @@ Zod schemas of the Canonical form, the pure functions that query it and the cont
 
 ## What it does not do
 - Does not read DSL text nor merge files: that is `dsl`.
-- Does not define the content of a Theme nor compute geometry: that is `tema` and `layout`.
+- Does not define the content of a Theme nor compute geometry: that is `theme` and `layout`.
 - Does not touch disk, clock or network: it is pure core (the on-disk Activity log is `cli`'s; the protocol is served by `cli` and produced by `session`).
 
 ## Depends on

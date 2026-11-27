@@ -13,7 +13,7 @@ import type { CollapseState, CanonicalForm, Node, Theme, SequenceView } from 'ca
 import { run } from 'cli';
 import { compile } from 'dsl';
 import { layoutView } from 'layout';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 import { adaptadorDeWorker, servirLayout } from 'shell';
 import type { PuertoDeMensajes } from 'shell';
 
@@ -71,7 +71,7 @@ async function buildDe10k(): Promise<Record<string, number>> {
   }
 }
 
-const TEMA: Theme = TEMA_NEUTRO;
+const TEMA: Theme = NEUTRAL_THEME;
 
 async function relayout(fuente: CanonicalForm, estado: CollapseState, adaptador: ReturnType<typeof adaptadorDeWorker>, tema: Theme = TEMA) {
   const inicio = performance.now();
@@ -100,7 +100,7 @@ async function relayoutDe1k(): Promise<Record<string, number>> {
   };
 }
 
-/** Slots anidados tres niveles: el peor caso razonable de `colocarEnCaja`, que corre por Nodo en cada relayout. */
+/** Slots anidados tres niveles: el peor caso razonable de `placeInBox`, que corre por Nodo en cada relayout. */
 const SLOTS_ANIDADOS = {
   direccion: 'column',
   gap: 4,
@@ -128,7 +128,7 @@ const SLOTS_ANIDADOS = {
 /** Frente al mismo Modelo con la disposicion plana del Tema neutro. */
 async function relayoutConSlotsAnidados(nodos: number): Promise<Record<string, number>> {
   const fuente = compilar(nodos);
-  const anidado = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, slots: SLOTS_ANIDADOS } } as unknown as Theme;
+  const anidado = { ...NEUTRAL_THEME, nodo: { ...NEUTRAL_THEME.nodo, slots: SLOTS_ANIDADOS } } as unknown as Theme;
   const [pagina, worker] = parDePuertos();
   servirLayout(worker);
   const adaptador = adaptadorDeWorker(pagina);

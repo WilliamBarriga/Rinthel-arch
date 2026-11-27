@@ -3,17 +3,17 @@
  * este directorio). Un pintor traduce las propiedades ya validadas de una Capa
  * a declaraciones CSS; no valida ni recorta nada.
  */
-import { primitivasDeFamilia } from 'tema';
-import type { CapaPintada } from 'tema';
+import { primitivesOfFamily } from 'theme';
+import type { PaintedLayer } from 'theme';
 
 import { limpiarValorCss, num } from '../elemento';
 
 /** Primitivas de la Familia borde, del catalogo: cuentan para el grosor de la pila. */
-const BORDES: readonly string[] = primitivasDeFamilia('borde');
+const BORDES: readonly string[] = primitivesOfFamily('borde');
 
 /** Declaraciones CSS de una Capa: propiedad -> valor. */
 export type Declaraciones = Record<string, string>;
-export type Pintor = (props: CapaPintada['props']) => Declaraciones;
+export type Pintor = (props: PaintedLayer['props']) => Declaraciones;
 
 export const px = (valor: number | string | undefined): string => `${num(Number(valor))}px`;
 export const css = (valor: number | string | undefined): string => limpiarValorCss(String(valor));
@@ -31,7 +31,7 @@ export const FONDOS_ACUMULABLES = ['background-image', 'background-size'] as con
  * grosor del borde de la caja: el elemento sale de su contorno exterior, no del
  * interior del borde, asi `offset 0 0` coincide con la caja dibujada.
  */
-export function declaracionesDeDesplazamiento(props: CapaPintada['props'], borde = 0): Declaraciones {
+export function declaracionesDeDesplazamiento(props: PaintedLayer['props'], borde = 0): Declaraciones {
   const crece = Number(props['grow'] ?? 0) + 2 * borde;
   return {
     ...(borde > 0 && { left: px(-borde), top: px(-borde) }),
@@ -41,13 +41,13 @@ export function declaracionesDeDesplazamiento(props: CapaPintada['props'], borde
 }
 
 /** Grosor del borde de una pila: el de su ultima Capa de la Familia borde (0 sin borde). */
-export function anchoDeBorde(capas: readonly CapaPintada[]): number {
+export function anchoDeBorde(capas: readonly PaintedLayer[]): number {
   const borde = capas.filter((c) => BORDES.includes(c.tipo)).pop();
   return borde === undefined ? 0 : Number(borde.props['width']);
 }
 
 /** Si la Capa pinta solo una zona de la caja (`zone header` o `zone body`); `all` y la ausencia de `zone` cubren la caja entera. */
-export const esDeZona = (capa: CapaPintada): boolean => capa.props['zone'] === 'header' || capa.props['zone'] === 'body';
+export const esDeZona = (capa: PaintedLayer): boolean => capa.props['zone'] === 'header' || capa.props['zone'] === 'body';
 
 /** Si la Capa se mueve o crece: va en un elemento propio y no en la caja fusionada. */
-export const estaDesplazada = (capa: CapaPintada): boolean => ['offset-x', 'offset-y', 'grow'].some((clave) => capa.props[clave] !== undefined);
+export const estaDesplazada = (capa: PaintedLayer): boolean => ['offset-x', 'offset-y', 'grow'].some((clave) => capa.props[clave] !== undefined);

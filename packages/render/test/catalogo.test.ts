@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 import { declaracionesDeCaja } from '../src/hoja';
 import { resolverEstilo } from '../src/estilo';
@@ -18,7 +18,7 @@ describe('grosor del borde de una pila', () => {
 });
 
 const caja = (...capas: Array<[string, Record<string, string | number>]>) => {
-  const estilo = resolverEstilo({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capas.map(([tipo, props], i) => ({ nombre: `c${i}`, primitiva: { tipo, props } })) } }, 'architecture');
+  const estilo = resolverEstilo({ ...NEUTRAL_THEME, nodo: { ...NEUTRAL_THEME.nodo, capas: capas.map(([tipo, props], i) => ({ nombre: `c${i}`, primitiva: { tipo, props } })) } }, 'architecture');
   return declaracionesDeCaja(estilo, estilo.pintura.nodo);
 };
 

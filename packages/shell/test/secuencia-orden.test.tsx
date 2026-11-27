@@ -5,7 +5,7 @@ import { layoutView } from 'layout';
 import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 import { posicionDe } from './ayudas';
 
@@ -37,7 +37,7 @@ const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, te
 const camara = { x: 0, y: 0, width: 1200, height: 800 };
 
 async function montar(vista: string, extra: Partial<VistaInteractivaProps> = {}) {
-  const r = render(<VistaInteractiva source={fuente} view={vista} theme={TEMA_NEUTRO} layout={layout} width={1200} height={800} camera={camara} {...extra} />);
+  const r = render(<VistaInteractiva source={fuente} view={vista} theme={NEUTRAL_THEME} layout={layout} width={1200} height={800} camera={camara} {...extra} />);
   // Con la maquina cargada las cabeceras aparecen antes de que el layout termine: el gesto se hace sobre la Geometria final.
   await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-lifeline="cola"]')).not.toBeNull(), { timeout: 15000 });
   return r;

@@ -5,7 +5,7 @@ import { edgeId } from 'canonical';
 import { layoutView } from 'layout';
 import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -32,7 +32,7 @@ view arq { type architecture  include ** }
 
 const montar = async (vista: string) => {
   const fuente = openSession({ 'main.dg': ER }).source!;
-  const resultado = render(<VistaInteractiva source={fuente} view={vista} theme={TEMA_NEUTRO} layout={(vista, tema, medidas) => layoutView(vista, tema, { medidas })} width={900} height={600} />);
+  const resultado = render(<VistaInteractiva source={fuente} view={vista} theme={NEUTRAL_THEME} layout={(vista, tema, medidas) => layoutView(vista, tema, { medidas })} width={900} height={600} />);
   await waitFor(() => expect(resultado.container.querySelector('.rd-vista[data-layout="listo"] [data-id="orders"]')).not.toBeNull());
   return { ...resultado, fuente };
 };

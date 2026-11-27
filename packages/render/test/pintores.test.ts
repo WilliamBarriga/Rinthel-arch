@@ -5,9 +5,9 @@ import { resolverEstilo } from 'render';
 
 import type { Elemento } from '../src/elemento';
 import { pintarArista, pintarControl, pintarEstadoDeCaja, pintarEtiquetaDeArista, pintarGrupo, pintarNodo } from '../src/pintores';
-import { TEMA_NEUTRO, alturaDeCabecera, colocarEnCaja } from 'tema';
+import { NEUTRAL_THEME, headerHeight, placeInBox } from 'theme';
 
-const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
+const estilo = resolverEstilo(NEUTRAL_THEME, 'architecture');
 const caja = { x: 0, y: 0, width: 140, height: 60 };
 const nodoBase = { id: 'n', label: 'N', collapsed: false, children: [], source: [], type: 't', attributes: [], childCount: 0 } as unknown as ResolvedNode;
 const conNodo = (parcial: Partial<ResolvedNode>): ResolvedNode => ({ ...nodoBase, ...parcial });
@@ -28,7 +28,7 @@ describe('pintores por parte', () => {
     const atributos = [{ name: 'id', type: 'uuid', notes: '' }];
     const datos = { nodo: conNodo({ attributes: atributos }), caja, trazo: 'red', texto: 'N', conAtributos: true };
     const [titulo, ...resto] = pintarNodo(estilo, datos);
-    const { slots } = colocarEnCaja(estilo.metricas, { titulo: 'N', atributos, icono: false }, caja.width);
+    const { slots } = placeInBox(estilo.metricas, { titulo: 'N', atributos, icono: false }, caja.width);
 
     expect(titulo!.attrs['data-slot']).toBe('title');
     expect(titulo!.attrs['style']).toContain(`top:${slots.title!.y}px;width:${slots.title!.width}px;height:${slots.title!.height}px`);
@@ -59,20 +59,20 @@ describe('pintores por parte', () => {
     const datos = { nodo: conNodo({ icon: 'box', children: [conNodo({ id: 'h' })] }), caja, trazo: 'red', texto: 'G', icons };
     const elementos = pintarGrupo(estilo, datos);
     const m = estilo.tabla.grupoAbierto;
-    const { slots } = colocarEnCaja(m, { titulo: 'G', atributos: [], icono: true }, caja.width - 2 * m.margenDeControl);
+    const { slots } = placeInBox(m, { titulo: 'G', atributos: [], icono: true }, caja.width - 2 * m.margenDeControl);
     const rectDe = (e: Elemento) => Object.fromEntries([...e.attrs['style']!.matchAll(/(left|top|width|height):([\d.]+)px/g)].map((x) => [x[1], Number(x[2])])) as Record<string, number>;
     const icono = rectDe(elementos.find((e) => e.attrs['data-slot'] === 'icon')!);
     const titulo = rectDe(elementos.find((e) => e.attrs['data-slot'] === 'title')!);
 
     expect(titulo).toMatchObject({ left: slots.title!.x, top: slots.title!.y, width: slots.title!.width });
     expect(icono['left']! + icono['width']!).toBeLessThanOrEqual(titulo['left']!);
-    expect(titulo['top']! + titulo['height']!).toBeLessThanOrEqual(alturaDeCabecera(m));
+    expect(titulo['top']! + titulo['height']!).toBeLessThanOrEqual(headerHeight(m));
     expect(titulo['left']! + titulo['width']!).toBeLessThanOrEqual(caja.width - 2 * m.margenDeControl);
     expect(JSON.stringify(elementos)).not.toContain('rd-encabezado');
   });
 
   it('la cabecera del Grupo sigue la disposicion que declara el Tema, no una posicion fija', () => {
-    const tema = { ...TEMA_NEUTRO, grupo: { ...TEMA_NEUTRO.grupo, slots: { direccion: 'row' as const, gap: 4, pad: 2, hijos: [{ slot: 'title' as const }, { slot: 'icon' as const }] } } };
+    const tema = { ...NEUTRAL_THEME, grupo: { ...NEUTRAL_THEME.grupo, slots: { direccion: 'row' as const, gap: 4, pad: 2, hijos: [{ slot: 'title' as const }, { slot: 'icon' as const }] } } };
     const propio = resolverEstilo(tema, 'architecture');
     const icons = { keys: () => ['box'], resolve: () => '<svg viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>' };
     const elementos = pintarGrupo(propio, { nodo: conNodo({ icon: 'box', children: [conNodo({ id: 'h' })] }), caja, trazo: 'red', texto: 'G', icons });

@@ -5,8 +5,8 @@ import { layoutView } from 'layout';
 import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
-import { TEMA_NEUTRO, claveDeTexto } from 'tema';
-import type { MedidasDeTexto, TextoAMedir } from 'tema';
+import { NEUTRAL_THEME, textKey } from 'theme';
+import type { TextMeasures, TextToMeasure } from 'theme';
 
 afterEach(cleanup);
 
@@ -30,14 +30,14 @@ const fuente = openSession({ 'main.dg': texto }).source!;
 
 describe('VistaInteractiva: Fragmentos de secuencia', () => {
   it('mide la pestana y la guarda (no salen recortadas) y pinta la guarda encima de la activacion', async () => {
-    const pedidos: TextoAMedir[] = [];
+    const pedidos: TextToMeasure[] = [];
     // Cada caracter mide 20 px: bastante mas que la estimacion, asi un recorte se notaria.
-    const measure = async (textos: TextoAMedir[]): Promise<MedidasDeTexto> => {
+    const measure = async (textos: TextToMeasure[]): Promise<TextMeasures> => {
       pedidos.push(...textos);
-      return { nivel: 'medido', fuentes: {}, anchos: Object.fromEntries(textos.map((t) => [claveDeTexto(t.familia, t.tamano, t.texto, t.peso), t.texto.length * 20])) };
+      return { nivel: 'medido', fuentes: {}, anchos: Object.fromEntries(textos.map((t) => [textKey(t.familia, t.tamano, t.texto, t.peso), t.texto.length * 20])) };
     };
     const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
-    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={layout} measure={measure} width={1200} height={800} />);
+    const { container } = render(<VistaInteractiva source={fuente} view="v" theme={NEUTRAL_THEME} layout={layout} measure={measure} width={1200} height={800} />);
     await waitFor(() => expect(container.querySelector('[data-fragment]')).not.toBeNull(), { timeout: 8000 });
 
     expect(pedidos.map((t) => t.texto)).toEqual(expect.arrayContaining(['critical', '[reintentar hasta tres veces]']));

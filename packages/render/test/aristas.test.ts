@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { resolverEstilo } from 'render';
-import { TEMA_NEUTRO } from 'tema';
-import type { TemaResuelto } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
+import type { ResolvedTheme } from 'theme';
 
 import type { Elemento } from '../src/elemento';
 import { pintarArista, pintarEtiquetaDeArista } from '../src/pintores';
 
 const linea = (nombre: string, props: Record<string, string | number>) => ({ nombre, primitiva: { tipo: 'line', props: { width: 2, style: 'solid', corner: 'sharp', cut: 6, radius: 8, ...props } } });
-const tema = (arista: Partial<TemaResuelto['arista']>): TemaResuelto => ({ ...TEMA_NEUTRO, arista: { ...TEMA_NEUTRO.arista, ...arista } });
+const tema = (arista: Partial<ResolvedTheme['arista']>): ResolvedTheme => ({ ...NEUTRAL_THEME, arista: { ...NEUTRAL_THEME.arista, ...arista } });
 const todos = (e: Elemento | string, tag: string): Elemento[] =>
   typeof e === 'string' ? [] : [...(e.tag === tag ? [e] : []), ...(e.hijos ?? []).flatMap((h) => todos(h, tag))];
 
@@ -76,14 +76,14 @@ describe('Aristas del Tema', () => {
 
     expect(via?.hijos).toEqual([
       { tag: 'circle', attrs: { cx: '0', cy: '0', r: '5', fill: '#2563eb' } },
-      { tag: 'circle', attrs: { cx: '0', cy: '0', r: '2', fill: TEMA_NEUTRO.tokens.background } },
+      { tag: 'circle', attrs: { cx: '0', cy: '0', r: '2', fill: NEUTRAL_THEME.tokens.background } },
     ]);
   });
 
   it('la etiqueta con fill dibuja su caja con el radio del Tema; sin fill solo lleva halo', () => {
     const caja = { x: 10, y: 10, width: 50, height: 16 };
     const conCaja = resolverEstilo(tema({ etiqueta: { tipo: 'label', props: { scale: 0.85, pad: 4, radius: 5, fill: 'blue' } } }), 'architecture');
-    const sinCaja = resolverEstilo(TEMA_NEUTRO, 'architecture');
+    const sinCaja = resolverEstilo(NEUTRAL_THEME, 'architecture');
     const a = pintarEtiquetaDeArista(conCaja, { id: 'e', texto: 'x', puntos: L, caja });
     const b = pintarEtiquetaDeArista(sinCaja, { id: 'e', texto: 'x', puntos: L, caja });
 
@@ -108,16 +108,16 @@ describe('Aristas del Tema', () => {
     const texto = todos(g, 'text')[0]!;
 
     expect(typeof g !== 'string' && g.attrs['transform']).toBe('rotate(-2 30 10)');
-    expect(sombra!.attrs).toMatchObject({ x: '2', y: '2', fill: TEMA_NEUTRO.palette['gray'] });
-    expect(caja!.attrs).toMatchObject({ x: '0', 'stroke-width': '1.5', stroke: TEMA_NEUTRO.palette['gray'] });
-    expect(texto.attrs).toMatchObject({ fill: TEMA_NEUTRO.palette['red'], 'font-weight': '700', 'font-family': estilo.fuenteMono });
+    expect(sombra!.attrs).toMatchObject({ x: '2', y: '2', fill: NEUTRAL_THEME.palette['gray'] });
+    expect(caja!.attrs).toMatchObject({ x: '0', 'stroke-width': '1.5', stroke: NEUTRAL_THEME.palette['gray'] });
+    expect(texto.attrs).toMatchObject({ fill: NEUTRAL_THEME.palette['red'], 'font-weight': '700', 'font-family': estilo.fuenteMono });
   });
 
   it('chevron es una V abierta y hollow un anillo hueco del color de fondo', () => {
     const estilo = resolverEstilo(tema({ capas: [linea('l', { color: 'blue' })], origen: { tipo: 'hollow', props: { size: 7 } }, fin: { tipo: 'chevron', props: { size: 9 } } }), 'architecture');
     const marcas = todos(pintarArista(estilo, { id: 'e', puntos: L }), 'g').filter((g) => g.attrs['data-marker'] !== undefined);
 
-    expect(marcas[0]?.hijos?.[0]).toMatchObject({ tag: 'circle', attrs: { r: '3.5', fill: TEMA_NEUTRO.tokens.background, stroke: '#2563eb', 'stroke-width': '1' } });
+    expect(marcas[0]?.hijos?.[0]).toMatchObject({ tag: 'circle', attrs: { r: '3.5', fill: NEUTRAL_THEME.tokens.background, stroke: '#2563eb', 'stroke-width': '1' } });
     expect(marcas[1]?.hijos?.[0]).toMatchObject({ tag: 'path', attrs: { fill: 'none', stroke: '#2563eb', 'stroke-linecap': 'round' } });
   });
 

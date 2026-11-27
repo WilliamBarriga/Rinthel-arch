@@ -6,7 +6,7 @@ import type { Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
 import { pulsarNodo } from './ayudas';
-import { TEMA_NEUTRO } from 'tema';
+import { NEUTRAL_THEME } from 'theme';
 
 afterEach(cleanup);
 
@@ -42,7 +42,7 @@ const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
 
 const montar = (extra: Partial<VistaInteractivaProps> = {}) =>
   render(
-    <VistaInteractiva source={fuente} theme={TEMA_NEUTRO} layout={enFila} width={800} height={600} camera={{ x: 0, y: 0, width: 800, height: 600 }} {...extra} />,
+    <VistaInteractiva source={fuente} theme={NEUTRAL_THEME} layout={enFila} width={800} height={600} camera={{ x: 0, y: 0, width: 800, height: 600 }} {...extra} />,
   );
 
 const dibujado = (c: HTMLElement, id: string) => waitFor(() => expect(c.querySelector(`[data-id="${id}"]`)).not.toBeNull());

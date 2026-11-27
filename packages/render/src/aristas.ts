@@ -5,14 +5,14 @@
  * Arista solo cuenta la caja de la etiqueta). Cada marcador es una forma
  * explicita girada hacia la ruta, sin `<marker>` ni ids que compartir.
  */
-import type { NombreDePrimitivaEn, PrimitivaPintada, TrazoDeVariante } from 'tema';
+import type { PrimitiveNameAt, PaintedPrimitive, VariantStroke } from 'theme';
 
 import { huella, num } from './elemento';
 import type { Elemento } from './elemento';
 import type { Estilo } from './estilo';
 
 type Punto = { x: number; y: number };
-type Props = PrimitivaPintada['props'];
+type Props = PaintedPrimitive['props'];
 
 /** `stroke-dasharray` y remates de cada estilo de trazo, segun su grosor `w`. */
 const ESTILOS: Record<string, (w: number) => Record<string, string>> = {
@@ -69,7 +69,7 @@ export function rutaDeCapa(capa: { props: Props }, puntos: readonly Punto[]): st
 }
 
 /** La pila de trazos, de abajo hacia arriba: un trazo ancho y translucido bajo el principal es el glow. */
-export function pintarTrazos(pintura: TrazoDeVariante, puntos: readonly Punto[], semilla = 0): Elemento[] {
+export function pintarTrazos(pintura: VariantStroke, puntos: readonly Punto[], semilla = 0): Elemento[] {
   return pintura.capas.map((capa) => {
     const { color, width, style } = capa.props as Props & { style: string };
     const grosor = Number(width);
@@ -126,7 +126,7 @@ const pie = (largo: number, semialto: number, color: string): Elemento => ({ tag
 const anillo = (x: number, radio: number, color: string, fondo: string): Elemento => ({ tag: 'circle', attrs: { cx: num(-x), cy: '0', r: num(radio), fill: fondo, stroke: color, 'stroke-width': '1.5' } });
 
 /** Forma de cada marcador en su marco local: la punta en el origen, mirando hacia +x (hacia fuera de la ruta). Tabla exhaustiva sobre el catalogo. */
-const MARCADORES: { readonly [M in NombreDePrimitivaEn<'marcador'>]: Dibujo } = {
+const MARCADORES: { readonly [M in PrimitiveNameAt<'marcador'>]: Dibujo } = {
   arrow: (s, color) => [{ tag: 'path', attrs: { d: `M 0 0 L ${num(-s)} ${num(-s / 2)} L ${num(-s)} ${num(s / 2)} z`, fill: color } }],
   dot: (s, color) => [{ tag: 'circle', attrs: { cx: num(-s / 2), cy: '0', r: num(s / 2), fill: color } }],
   square: (s, color) => [{ tag: 'rect', attrs: { x: num(-s), y: num(-s / 2), width: num(s), height: num(s), fill: color } }],
@@ -156,9 +156,9 @@ const MARCADORES: { readonly [M in NombreDePrimitivaEn<'marcador'>]: Dibujo } = 
 /** Marcadores de cardinalidad ER: llevan `data-shape` para que el DOM diga que cardinalidad dibujan. */
 const FORMAS_ER: ReadonlySet<string> = new Set(['one', 'zero-one', 'many', 'zero-many']);
 
-function marcador(estilo: Estilo, primitiva: PrimitivaPintada | undefined, extremo: Punto, vecino: Punto, lado: 'origen' | 'fin'): Elemento[] {
+function marcador(estilo: Estilo, primitiva: PaintedPrimitive | undefined, extremo: Punto, vecino: Punto, lado: 'origen' | 'fin'): Elemento[] {
   if (primitiva === undefined) return [];
-  const dibujo = MARCADORES[primitiva.tipo as NombreDePrimitivaEn<'marcador'>];
+  const dibujo = MARCADORES[primitiva.tipo as PrimitiveNameAt<'marcador'>];
   const angulo = (Math.atan2(extremo.y - vecino.y, extremo.x - vecino.x) * 180) / Math.PI;
   return [
     {
@@ -170,7 +170,7 @@ function marcador(estilo: Estilo, primitiva: PrimitivaPintada | undefined, extre
 }
 
 /** Marcadores de origen y fin, girados segun el primer y el ultimo segmento de la ruta. */
-export function pintarMarcadores(estilo: Estilo, pintura: TrazoDeVariante, puntos: readonly Punto[]): Elemento[] {
+export function pintarMarcadores(estilo: Estilo, pintura: VariantStroke, puntos: readonly Punto[]): Elemento[] {
   const [primero, segundo] = [puntos[0], puntos[1]];
   const [ultimo, penultimo] = [puntos[puntos.length - 1], puntos[puntos.length - 2]];
   if (primero === undefined || segundo === undefined || ultimo === undefined || penultimo === undefined) return [];

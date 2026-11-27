@@ -7,8 +7,8 @@ import type { Geometry, GraphView, ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
-import { TEMA_NEUTRO, colocarEnCaja, metricasDe, primitivasDe } from 'tema';
-import type { CajaDeSlots, TemaResuelto } from 'tema';
+import { NEUTRAL_THEME, placeInBox, metricsOf, primitivesOf } from 'theme';
+import type { SlotLayoutBox, ResolvedTheme } from 'theme';
 
 import { PINTORES } from '../src/hoja';
 import { capaDe, etiquetaCon, hojaDe, propiedad, rectDe, traslacionDe } from './ayudas';
@@ -37,10 +37,10 @@ const PASOS = [
 ];
 
 /** Tema con una pila de Capas: forma redonda, relleno y borde de Paleta. */
-const CON_CAPAS: TemaResuelto = {
-  ...TEMA_NEUTRO,
+const CON_CAPAS: ResolvedTheme = {
+  ...NEUTRAL_THEME,
   nodo: {
-    slots: TEMA_NEUTRO.nodo.slots,
+    slots: NEUTRAL_THEME.nodo.slots,
     textos: {},
     tipos: {},
     estados: {},
@@ -53,8 +53,8 @@ const CON_CAPAS: TemaResuelto = {
 };
 
 async function props(view: ResolvedView, extra: Partial<DiagramProps> = {}): Promise<DiagramProps> {
-  const geometry: Geometry = await layoutView(view, TEMA_NEUTRO);
-  return { view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, ...extra };
+  const geometry: Geometry = await layoutView(view, NEUTRAL_THEME);
+  return { view, geometry, theme: NEUTRAL_THEME, width: 800, height: 600, ...extra };
 }
 
 /** Recorre el arbol de elementos que devuelve el componente (sin DOM). */
@@ -133,7 +133,7 @@ describe('Diagram: estructura hibrida', () => {
   it('cada Slot va en el rectangulo que reservo la colocacion compartida', async () => {
     const p = await props(vista());
     const html = dibujo(p);
-    const { slots } = colocarEnCaja(metricasDe(TEMA_NEUTRO, 'architecture'), { titulo: 'b', atributos: [], icono: false }, p.geometry.nodes['b']!.width);
+    const { slots } = placeInBox(metricsOf(NEUTRAL_THEME, 'architecture'), { titulo: 'b', atributos: [], icono: false }, p.geometry.nodes['b']!.width);
     const titulo = etiquetaCon(html.slice(html.indexOf('data-id="b"')), 'data-slot="title"');
 
     expect(rectDe(titulo)).toEqual(slots.title);
@@ -141,10 +141,10 @@ describe('Diagram: estructura hibrida', () => {
   });
 
   describe('Slots badge, desc, footer y counter', () => {
-    const COLUMNA: CajaDeSlots = { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }, { slot: 'desc' }, { slot: 'footer' }] };
-    const FILA: CajaDeSlots = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'title' }, { slot: 'counter' }] };
-    const conSlots = (slots: TemaResuelto['nodo']['slots'], textos: TemaResuelto['nodo']['textos'] = {}): TemaResuelto => ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, slots, textos } });
-    const dibujar = async (tema: TemaResuelto, estado = {}) => {
+    const COLUMNA: SlotLayoutBox = { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }, { slot: 'badge' }, { slot: 'desc' }, { slot: 'footer' }] };
+    const FILA: SlotLayoutBox = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'title' }, { slot: 'counter' }] };
+    const conSlots = (slots: ResolvedTheme['nodo']['slots'], textos: ResolvedTheme['nodo']['textos'] = {}): ResolvedTheme => ({ ...NEUTRAL_THEME, nodo: { ...NEUTRAL_THEME.nodo, slots, textos } });
+    const dibujar = async (tema: ResolvedTheme, estado = {}) => {
       const v = vista(estado);
       const nodos = v.nodes.map((n) => (n.id === 'b' ? { ...n, description: 'Reparte la carga', source: [{ kind: 'ruta', ref: 'src/b.ts' }] } : n));
       const geometry = await layoutView({ ...v, nodes: nodos }, tema);
@@ -182,7 +182,7 @@ describe('Diagram: estructura hibrida', () => {
     });
 
     it('un borde grueso publica su ancho en --rd-borde y los Slots se corren esa distancia (la ultima fila no se recorta)', async () => {
-      const grueso: TemaResuelto = { ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: [{ nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'blue', width: 4 } } }] as never } };
+      const grueso: ResolvedTheme = { ...NEUTRAL_THEME, nodo: { ...NEUTRAL_THEME.nodo, capas: [{ nombre: 'borde', primitiva: { tipo: 'border', props: { color: 'blue', width: 4 } } }] as never } };
       const { html } = await dibujar(grueso);
       const hoja = hojaDe(html);
 
@@ -206,11 +206,11 @@ describe('Diagram: estructura hibrida', () => {
 
       expect(hoja).toMatch(/data-slot="title"\]\{[^}]*text-align:left/);
       expect(hoja).toMatch(/data-slot="badge"\]\{[^}]*opacity:0.5[^}]*text-align:right/);
-      expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*border-radius:8px[^}]*background:${TEMA_NEUTRO.palette['amber']}[^}]*border:1px solid ${TEMA_NEUTRO.palette['blue']}`));
+      expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*border-radius:8px[^}]*background:${NEUTRAL_THEME.palette['amber']}[^}]*border:1px solid ${NEUTRAL_THEME.palette['blue']}`));
     });
 
     it('un Tema con icon variant dot muestra el punto del color del Tipo aunque el Tipo no declare icon, y reserva su sitio', async () => {
-      const FILA_ICONO: CajaDeSlots = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'title' }] };
+      const FILA_ICONO: SlotLayoutBox = { direccion: 'row', gap: 8, pad: 0, hijos: [{ slot: 'icon' }, { slot: 'title' }] };
       const conPunto = conSlots(FILA_ICONO, { icon: { tipo: 'icon', props: { variant: 'dot', side: 7, radius: 6, fill: 'COLOR' } } });
       const conGlifo = conSlots(FILA_ICONO, { icon: { tipo: 'icon', props: { variant: 'plain', side: 7 } } });
       const { html, geometry } = await dibujar(conPunto);
@@ -236,11 +236,11 @@ describe('Diagram: estructura hibrida', () => {
         { collapsed: ['a'] },
       );
       const hoja = hojaDe(html);
-      const mono = TEMA_NEUTRO.fonts.mono;
+      const mono = NEUTRAL_THEME.fonts.mono;
 
       expect(hoja).toMatch(new RegExp(String.raw`data-slot="badge"\]\{[^}]*font-family:${mono}[^}]*border:2px solid`));
       expect(hoja).toMatch(new RegExp(String.raw`data-slot="counter"\]\{[^}]*font-family:${mono}[^}]*border:2px solid`));
-      expect(hoja).toMatch(new RegExp(String.raw`data-variante="dot"\]\{[^}]*background:radial-gradient\(circle closest-side,currentColor 0 44%,${TEMA_NEUTRO.palette['amber']} 46%\)[^}]*border:2px solid`));
+      expect(hoja).toMatch(new RegExp(String.raw`data-variante="dot"\]\{[^}]*background:radial-gradient\(circle closest-side,currentColor 0 44%,${NEUTRAL_THEME.palette['amber']} 46%\)[^}]*border:2px solid`));
       // El texto del contador se centra dentro de su borde de 2px.
       const contador = slotDe(html, 'a', 'counter');
       expect(propiedad(contador, 'line-height')).toBe(`${rectDe(contador).height - 4}px`);
@@ -286,11 +286,11 @@ describe('Diagram: hoja de estilo', () => {
   });
 
   it('cada Primitiva del catalogo tiene su pintor', () => {
-    expect(Object.keys(PINTORES).sort()).toEqual(primitivasDe('capa-nodo').sort());
+    expect(Object.keys(PINTORES).sort()).toEqual(primitivesOf('capa-nodo').sort());
   });
 
   it('un valor hostil del Tema no puede cerrar la hoja ni inyectar reglas', async () => {
-    const hostil: TemaResuelto = { ...CON_CAPAS, palette: { ...CON_CAPAS.palette, amber: 'red}</style><script>x()</script>' } };
+    const hostil: ResolvedTheme = { ...CON_CAPAS, palette: { ...CON_CAPAS.palette, amber: 'red}</style><script>x()</script>' } };
     const html = dibujo(await props(vista(), { theme: hostil }));
 
     expect(html).not.toContain('<script>');
@@ -367,7 +367,7 @@ describe('Diagram', () => {
   });
 
   it('el marcador de flecha toma el color de borde del Tema y no hay ids que compartir', async () => {
-    const oscuro = { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, border: '#4b5563' } };
+    const oscuro = { ...NEUTRAL_THEME, tokens: { ...NEUTRAL_THEME.tokens, border: '#4b5563' } };
     const a = dibujo(await props(vista()));
     const b = dibujo(await props(vista(), { theme: oscuro }));
 
@@ -378,7 +378,7 @@ describe('Diagram', () => {
 
   it('cambiar un valor del Estilo cambia lo que dibuja Diagram', async () => {
     const base = await props(vista());
-    const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
+    const estilo = resolverEstilo(NEUTRAL_THEME, 'architecture');
     const otro = { ...estilo, nodo: { ...estilo.nodo, radio: 13, relleno: '#fafafa' }, glifos: { expandido: 'v', colapsado: '>' } };
     const dibujar = (e: typeof estilo): string => dibujo({ ...base, onToggle: () => {}, estilo: e });
 
@@ -430,7 +430,7 @@ describe('Diagram', () => {
 
     it('un Nodo seleccionado lleva un contorno dentro de su caja, estilado por la hoja con el color del Estilo', async () => {
       const html = dibujo(await props(vista(), { estados: { b: ['selected'] } }));
-      const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
+      const estilo = resolverEstilo(NEUTRAL_THEME, 'architecture');
       const [marca] = marcas(html, 'selected');
 
       expect(marca).toContain('data-selected="b"');
@@ -453,7 +453,7 @@ describe('Diagram', () => {
     });
 
     it('el fantasma y el hover usan sus propias entradas del Estilo', async () => {
-      const estilo = resolverEstilo(TEMA_NEUTRO, 'architecture');
+      const estilo = resolverEstilo(NEUTRAL_THEME, 'architecture');
       const otro = { ...estilo, estados: { ...estilo.estados, ghost: { ...estilo.estados.ghost, color: 'hotpink' } } };
       const hoja = hojaDe(dibujo(await props(vista(), { estados: { c: ['ghost'] }, estilo: otro })));
 
@@ -470,7 +470,7 @@ describe('Diagram', () => {
       const v = resolveView(fuente, 'v')!;
       const p = await props(v, { estados: { 't#nombre': ['selected'] } });
       const marca = marcas(dibujo(p), 'selected')[0];
-      const m = metricasDe(TEMA_NEUTRO, 'architecture');
+      const m = metricsOf(NEUTRAL_THEME, 'architecture');
 
       expect(marca).toContain('data-selected="t#nombre"');
       expect(rectDe(marca)).toEqual({ x: 0, y: m.cabecera + m.fila, width: p.geometry.nodes['t']!.width, height: m.fila });
