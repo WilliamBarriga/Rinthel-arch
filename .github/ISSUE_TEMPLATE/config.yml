@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions and ideas
+    url: https://github.com/WilliamBarriga/Rinthel-arch/discussions
+    about: Ask how to do something or propose an idea in Discussions.
+  - name: Security vulnerability
+    url: https://github.com/WilliamBarriga/Rinthel-arch/security/advisories/new
+    about: Report it privately, not as a public issue.

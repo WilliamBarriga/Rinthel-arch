@@ -1,0 +1,63 @@
+name: Bug report
+description: Something in the CLI, the Dev UI, the DSL or the agent skills does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. To report a vulnerability, do not open an issue: see SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what you got. Paste errors and `validate --json` output as text.
+    validations:
+      required: true
+  - type: dropdown
+    id: agent
+    attributes:
+      label: Agent
+      description: Which coding agent ran the skills, if any.
+      options:
+        - Claude Code
+        - Codex
+        - OpenCode
+        - Pi
+        - Other agent
+        - No agent (CLI or Dev UI by hand)
+    validations:
+      required: true
+  - type: input
+    id: agent-version
+    attributes:
+      label: Agent version
+      placeholder: "e.g. Claude Code 2.1.332, pi 1.6.1"
+  - type: dropdown
+    id: install-path
+    attributes:
+      label: Installation path
+      description: How you installed rinthel-arch.
+      options:
+        - claude plugin install (marketplace)
+        - codex plugin marketplace add
+        - npx skills add (OpenCode or other)
+        - pi install npm:rinthel-arch
+        - Skills copied by hand
+        - npx -p rinthel-arch (no install)
+        - npm i -g rinthel-arch
+        - From source (git clone)
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: rinthel-arch and Node versions
+      placeholder: "e.g. rinthel-arch 0.1.0, Node 24.11, Linux"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: The smallest `.dg` (or the command, or the prompt you gave the agent) that shows the problem.
+      render: text
