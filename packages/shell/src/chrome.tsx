@@ -1,19 +1,19 @@
-/** Chrome del shell: colores y fuente salen del Estilo resuelto como variables CSS del contenedor; el aspecto vive en clases. */
+/** Shell chrome: colors and font come from the resolved Style as CSS variables on the container; the look lives in classes. */
 import type { CSSProperties, ReactElement } from 'react';
 
 import type { Style } from 'render';
 
-import { CSS_DE_ACCESIBILIDAD } from './accesibilidad';
-import { CSS_DE_AVISOS } from './avisos';
+import { ACCESSIBILITY_CSS } from './accessibility';
+import { NOTICES_CSS } from './notices';
 
-export function variablesDeChrome(estilo: Style): CSSProperties {
+export function chromeVariables(style: Style): CSSProperties {
   return {
-    '--rd-fondo': estilo.background,
-    '--rd-texto': estilo.text,
-    '--rd-borde': estilo.border,
-    '--rd-acento': estilo.states.selected.color,
-    '--rd-fuente': estilo.bodyFont,
-    '--rd-error': estilo.errorColor,
+    '--rd-fondo': style.background,
+    '--rd-texto': style.text,
+    '--rd-borde': style.border,
+    '--rd-acento': style.states.selected.color,
+    '--rd-fuente': style.bodyFont,
+    '--rd-error': style.errorColor,
   } as CSSProperties;
 }
 
@@ -26,9 +26,9 @@ const CSS = `
 .rd-chrome button:disabled { opacity: 0.5; cursor: default; }
 .rd-chrome button:focus-visible { outline: 2px solid var(--rd-acento); }
 .rd-contenido { display: contents; }
-${CSS_DE_AVISOS}${CSS_DE_ACCESIBILIDAD}`;
+${NOTICES_CSS}${ACCESSIBILITY_CSS}`;
 
-/** Hoja de estilo del chrome; va una vez dentro del contenedor. */
-export function EstiloDelChrome(): ReactElement {
+/** Chrome style sheet; it goes once inside the container. */
+export function ChromeStyle(): ReactElement {
   return <style data-rd-chrome>{CSS}</style>;
 }

@@ -24,7 +24,7 @@ The `dev` page has a single client module (`packages/dev-ui/browser/client.ts`; 
 
 - **State**: `/events` (SSE, the state on connect and after each recompilation) and `/api/state`. It carries the `version` and the classification of the `cambio` (`pintura` | `estructura` | `codigo`, ADR 0005); it no longer carries per-file hashes or the file of each View.
 - **Write**: `POST /api/edit` with `{ ...intencion, version }`; `POST /api/undo` and `POST /api/redo`. A 409 `stale-hash` reloads the state and warns.
-- **Geometry**: `/api/view/<id>`, validated with `cachedGeometrySchema` from `canonical`; a malformed one is reported and not drawn. The page requests only the Geometry of the active View, and another View's when navigating to it. After an `estructura` change (or if a version was skipped) it requests the active View's again and keeps showing the previous drawing until it arrives; after `pintura` or `codigo` it requests none. If a Geometry does not arrive, `VistaInteractiva` computes it in the Worker.
+- **Geometry**: `/api/view/<id>`, validated with `cachedGeometrySchema` from `canonical`; a malformed one is reported and not drawn. The page requests only the Geometry of the active View, and another View's when navigating to it. After an `estructura` change (or if a version was skipped) it requests the active View's again and keeps showing the previous drawing until it arrives; after `pintura` or `codigo` it requests none. If a Geometry does not arrive, `InteractiveView` computes it in the Worker.
 
 ## Consequences
 

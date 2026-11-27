@@ -14,8 +14,8 @@ import { run } from 'cli';
 import { compile } from 'dsl';
 import { layoutView } from 'layout';
 import { NEUTRAL_THEME } from 'theme';
-import { adaptadorDeWorker, servirLayout } from 'shell';
-import type { PuertoDeMensajes } from 'shell';
+import { workerAdapter, serveLayout } from 'shell';
+import type { LayoutPort } from 'shell';
 
 import { buildDevUi } from 'dev-ui/build';
 import { generarSecuencia, generarWorkspace } from './generador.ts';
@@ -38,9 +38,9 @@ function compilar(nodos: number): CanonicalForm {
 }
 
 /** Par de puertos en memoria que copian los mensajes como un Worker (structured clone, asincrono). */
-function parDePuertos(): [PuertoDeMensajes, PuertoDeMensajes] {
-  const crear = (): PuertoDeMensajes & { destino?: PuertoDeMensajes } => {
-    const puerto: PuertoDeMensajes & { destino?: PuertoDeMensajes } = {
+function parDePuertos(): [LayoutPort, LayoutPort] {
+  const crear = (): LayoutPort & { destino?: LayoutPort } => {
+    const puerto: LayoutPort & { destino?: LayoutPort } = {
       onmessage: null,
       postMessage(mensaje) {
         const copia = structuredClone(mensaje);
@@ -73,7 +73,7 @@ async function buildDe10k(): Promise<Record<string, number>> {
 
 const TEMA: Theme = NEUTRAL_THEME;
 
-async function relayout(fuente: CanonicalForm, estado: CollapseState, adaptador: ReturnType<typeof adaptadorDeWorker>, tema: Theme = TEMA) {
+async function relayout(fuente: CanonicalForm, estado: CollapseState, adaptador: ReturnType<typeof workerAdapter>, tema: Theme = TEMA) {
   const inicio = performance.now();
   const vista = resolveView(fuente, 'todo', estado)!;
   const resolucionMs = ms(inicio);
@@ -84,8 +84,8 @@ async function relayout(fuente: CanonicalForm, estado: CollapseState, adaptador:
 async function relayoutDe1k(): Promise<Record<string, number>> {
   const fuente = compilar(1000);
   const [pagina, worker] = parDePuertos();
-  servirLayout(worker);
-  const adaptador = adaptadorDeWorker(pagina);
+  serveLayout(worker);
+  const adaptador = workerAdapter(pagina);
   const frio = await relayout(fuente, {}, adaptador);
   const caliente = await relayout(fuente, {}, adaptador);
   // Sin Worker: el mismo layout directo, para separar el coste de los mensajes.
@@ -130,8 +130,8 @@ async function relayoutConSlotsAnidados(nodos: number): Promise<Record<string, n
   const fuente = compilar(nodos);
   const anidado = { ...NEUTRAL_THEME, nodo: { ...NEUTRAL_THEME.nodo, slots: SLOTS_ANIDADOS } } as unknown as Theme;
   const [pagina, worker] = parDePuertos();
-  servirLayout(worker);
-  const adaptador = adaptadorDeWorker(pagina);
+  serveLayout(worker);
+  const adaptador = workerAdapter(pagina);
   const neutro = await relayout(fuente, {}, adaptador);
   const frio = await relayout(fuente, {}, adaptador, anidado);
   const caliente = await relayout(fuente, {}, adaptador, anidado);
@@ -149,8 +149,8 @@ async function colapsoDe5k(): Promise<Record<string, number>> {
   const fuente = compilar(5000);
   const raices = fuente.model.nodes.filter((n: Node) => n.children.length > 0).map((n: Node) => n.id);
   const [pagina, worker] = parDePuertos();
-  servirLayout(worker);
-  const adaptador = adaptadorDeWorker(pagina);
+  serveLayout(worker);
+  const adaptador = workerAdapter(pagina);
 
   // Estado inicial: todas las raices cerradas (un Modelo de 5k no se expande entero: el shell tope es ~1k).
   const cerrado: CollapseState = { collapsed: raices };

@@ -80,16 +80,16 @@ describe('UI hash (#view=<id>)', () => {
     let text = '#view=detalle';
     const written: string[] = [];
     const adapter = devUiHash({
-      leer: () => text,
-      escribir: (h) => {
+      read: () => text,
+      write: (h) => {
         written.push(h);
         text = `#${h}`;
       },
-      suscribir: () => () => undefined,
+      subscribe: () => () => undefined,
     });
 
-    expect(adapter.leer()).toBe('p=detalle');
-    adapter.escribir('p=flujo&t=1', { reemplazar: false });
+    expect(adapter.read()).toBe('p=detalle');
+    adapter.write('p=flujo&t=1', { replace: false });
     expect(written).toEqual(['view=flujo&t=1']);
   });
 });

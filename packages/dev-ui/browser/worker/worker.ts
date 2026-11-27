@@ -1,7 +1,7 @@
 /** Entry of the `dev` layout Web Worker: serves the layout (ELK) over the `self` port. */
 import './prelude';
 
-import { servirLayout } from 'shell';
-import type { PuertoDeMensajes } from 'shell';
+import { serveLayout } from 'shell';
+import type { LayoutPort } from 'shell';
 
-servirLayout(self as unknown as PuertoDeMensajes);
+serveLayout(self as unknown as LayoutPort);

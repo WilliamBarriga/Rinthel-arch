@@ -1,36 +1,36 @@
 /**
- * `shell`: capa interactiva sobre `render` (ADR 0003, 0008). `<VistaInteractiva>` anade pan/zoom, Seleccion, culling por viewport, colapso con relayout y morph, drill-down, Pasos y zoom semantico; `useEstadoEnHash` lleva ese estado al hash de URL; `adaptadorDeWorker`/`servirLayout` corren el layout en un Worker.
- * Invariantes: cada estado (camara, Seleccion, colapso, Vista, Paso) es controlado por props o interno; solo dibuja lo que devuelve `render`; un layout que llega tarde se descarta y se sigue mostrando el anterior.
- * Errores: una Vista inexistente, o faltar `view`, `path` y `defaultView`, lanza al renderizar; un rechazo del adaptador va a `onError` o, sin el, se lanza al renderizar.
- * Depende de `canonical`, `theme`, `layout`, `session` y `render` (d3-zoom); peer React 18 y 19.
+ * `shell`: interactive layer over `render` (ADR 0003, 0008). `<InteractiveView>` adds pan/zoom, Selection, viewport culling, collapse with relayout and morph, drill-down, Steps and semantic zoom; `useHashState` carries that state into the URL hash; `workerAdapter`/`serveLayout` run the layout in a Worker.
+ * Invariants: each state (camera, Selection, collapse, View, Step) is controlled by props or internal; it only draws what `render` returns; a layout that arrives late is discarded and the previous one keeps showing.
+ * Errors: a missing View, or lacking `view`, `path` and `defaultView`, throws on render; an adapter rejection goes to `onError` or, without it, is thrown on render.
+ * Depends on `canonical`, `theme`, `layout`, `session` and `render` (d3-zoom); peer React 18 and 19.
  */
-export { VistaInteractiva } from './vista-interactiva';
-export type { AdaptadorDeLayout, MedidorDeTexto, VistaInteractivaProps } from './vista-interactiva';
-export type { IssueDelVisor } from './avisos';
-/** Piezas del chrome del lienzo para montarlas fuera con `chrome={false}` (la app de `dev` en `dev-ui`). */
-export { Leyenda } from './accesibilidad';
-export type { ModoDeLeyenda } from './accesibilidad';
-export { Migas } from './navegacion';
-export type { Navegacion } from './navegacion';
-export { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from './interaccion';
-export type { ElementoSeleccionable, ModoDeSeleccion, OpcionesDeHitTest, Seleccion, TipoDeElemento } from './interaccion';
-export type { PropsDeNavegacion } from './navegacion';
-export type { PropsDePasos } from './pasos';
-export type { AjustesDeInteraccion } from './configuracion';
-export type { RelojDeCuadros } from './morph';
-export { UMBRALES_POR_DEFECTO, nivelDeDetalle } from './zoom-semantico';
-export type { UmbralesDeDetalle } from './zoom-semantico';
+export { InteractiveView } from './interactive-view';
+export type { LayoutAdapter, TextMeasurer, InteractiveViewProps } from './interactive-view';
+export type { ViewerIssue } from './notices';
+/** Pieces of the canvas chrome to mount outside with `chrome={false}` (the `dev` app in `dev-ui`). */
+export { Legend } from './accessibility';
+export type { LegendMode } from './accessibility';
+export { Breadcrumbs } from './navigation';
+export type { Navigation } from './navigation';
+export { EMPTY_SELECTION, elementBox, elementAt, select } from './interaction';
+export type { SelectableElement, SelectionMode, HitTestOptions, Selection, ElementKind } from './interaction';
+export type { NavigationProps } from './navigation';
+export type { StepsProps } from './steps';
+export type { InteractionSettings } from './configuration';
+export type { FrameClock } from './morph';
+export { DEFAULT_THRESHOLDS, detailLevel } from './semantic-zoom';
+export type { DetailThresholds } from './semantic-zoom';
 export type { Camera, DetailLevel } from 'render';
 export type { IconProvider } from 'canonical';
-export { deserializarEstado, hashDelNavegador, serializarEstado, vistaPorDefecto } from './hash';
-export type { AdaptadorDeHash, EstadoDeShell } from './hash';
-export { useEstadoEnHash } from './estado-en-hash';
-export type { OpcionesDeEstadoEnHash, PropsDeEstadoEnHash } from './estado-en-hash';
-export type { AlReordenarLifelines } from './arrastre';
+export { deserializeState, browserHash, serializeState, firstView } from './hash';
+export type { HashAdapter, ShellState } from './hash';
+export { useHashState } from './hash-state';
+export type { HashStateOptions, HashStateProps } from './hash-state';
+export type { OnReorderLifelines } from './drag';
 export type { PinIntent as IntencionDePin } from 'canonical';
 export type { UndoHistory, Intent } from 'session';
-export { adaptadorDeWorker } from './layout-en-worker';
-export { servirLayout } from './servir-layout';
-export { hashesDeFamilias, medirEnVisor } from './medicion-de-visor';
-export type { OpcionesDeMedicion } from './medicion-de-visor';
-export type { PuertoDeMensajes } from './layout-en-worker';
+export { workerAdapter } from './worker-layout';
+export { serveLayout } from './serve-layout';
+export { familyHashes, measureInViewer } from './viewer-measurement';
+export type { MeasurementOptions } from './viewer-measurement';
+export type { LayoutPort } from './worker-layout';

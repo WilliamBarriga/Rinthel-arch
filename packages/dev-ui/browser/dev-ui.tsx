@@ -8,8 +8,8 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import type { ReactElement } from 'react';
 
 import { fontUrl as devFontUrl } from 'canonical';
-import { deserializarEstado, useEstadoEnHash } from 'shell';
-import type { AdaptadorDeHash, AdaptadorDeLayout, Navegacion, PropsDeEstadoEnHash } from 'shell';
+import { deserializeState, useHashState } from 'shell';
+import type { HashAdapter, LayoutAdapter, Navigation, HashStateProps } from 'shell';
 
 import { createDevClient } from './client';
 import type { DevClient, ClientDependencies } from './client';
@@ -40,9 +40,9 @@ export type DevUiProps = DevUiTransport & CommonProps;
 
 interface CommonProps {
   /** The browser hash as is (`hashDelNavegador(window)`); the Dev UI translates it to `#view=<id>`. */
-  hash: AdaptadorDeHash;
+  hash: HashAdapter;
   /** Layout when the server Geometry does not arrive (the Worker in the browser). */
-  layout: AdaptadorDeLayout;
+  layout: LayoutAdapter;
   /** Confirmation before loading Theme Components with code. */
   confirm: (message: string) => boolean;
   /** How keys are written (`Cmd` or `Ctrl`); by default, that of `navigator`. */
@@ -65,7 +65,7 @@ export function DevUi(props: DevUiProps): ReactElement {
       createDevGeometries({
         request: (view) => client.geometry(view),
         initialView: (source) => {
-          const { path } = deserializarEstado(hash.leer(), source);
+          const { path } = deserializeState(hash.read(), source);
           return path[path.length - 1];
         },
       }),
@@ -99,14 +99,14 @@ export function DevUi(props: DevUiProps): ReactElement {
 
 interface HashViewProps {
   drawable: Drawable;
-  hash: AdaptadorDeHash;
+  hash: HashAdapter;
   geometries: DevGeometries;
-  children(hashProps: PropsDeEstadoEnHash): ReactElement;
+  children(hashProps: HashStateProps): ReactElement;
 }
 
 /** The active View, the Selection and the path live in the hash; the providers give them to the canvas and the panels. */
 function HashView({ drawable, hash, geometries, children }: HashViewProps): ReactElement {
-  const hashProps = useEstadoEnHash({ source: drawable.state.fuente, hash, defaultView: drawable.state.vistas[0] ?? '', camera: true });
+  const hashProps = useHashState({ source: drawable.state.fuente, hash, defaultView: drawable.state.vistas[0] ?? '', camera: true });
   useEffect(() => geometries.activate(hashProps.view), [geometries, hashProps.view]);
   return children(hashProps);
 }
@@ -117,16 +117,16 @@ function FrameWithCanvas(options: Parameters<typeof useDevUiCanvas>[0]): ReactEl
 }
 
 /** Breadcrumbs mounted outside the canvas over the path controlled by the hash. */
-function navigationFrom(props: PropsDeEstadoEnHash): Navegacion {
+function navigationFrom(props: HashStateProps): Navigation {
   const route = props.path.length > 0 ? props.path : [props.view];
   return {
-    vista: props.view,
-    ruta: route,
-    ir: (target) => props.onPathChange([...route, target]),
-    atras: () => {
+    view: props.view,
+    path: route,
+    go: (target) => props.onPathChange([...route, target]),
+    back: () => {
       if (route.length > 1) props.onPathChange(route.slice(0, -1));
     },
-    irA: (index) => {
+    goTo: (index) => {
       if (index >= 0 && index < route.length - 1) props.onPathChange(route.slice(0, index + 1));
     },
   };

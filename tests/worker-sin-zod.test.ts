@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
-import { adaptadorDeWorker } from 'shell';
+import { workerAdapter } from 'shell';
 import { NEUTRAL_THEME } from 'theme';
 
 import { devUiAssets } from 'dev-ui';
@@ -35,18 +35,18 @@ describe('Worker de layout empaquetado', () => {
     // Contexto con `self` como global, igual que un Web Worker.
     const global: Record<string, unknown> & { onmessage?: (e: { data: unknown }) => void; postMessage?: (m: unknown) => void } = { setTimeout, clearTimeout, queueMicrotask, console };
     global.self = global;
-    const respuesta = new Promise<{ geometria?: unknown; error?: string }>((ok) => {
+    const respuesta = new Promise<{ geometry?: unknown; error?: string }>((ok) => {
       global.postMessage = (m) => ok(m as never);
     });
     runInNewContext(worker, global);
 
     // La pagina arma la peticion con su adaptador; el Worker solo ve Metricas.
     const peticion = new Promise<unknown>((ok) => {
-      void adaptadorDeWorker({ postMessage: ok, onmessage: null })(vista, NEUTRAL_THEME);
+      void workerAdapter({ postMessage: ok, onmessage: null })(vista, NEUTRAL_THEME);
     });
     global.onmessage!({ data: await peticion });
 
-    const { geometria, error } = await respuesta;
+    const { geometry: geometria, error } = await respuesta;
     expect(error).toBeUndefined();
     // ELK no posiciona dentro de un `vm` (sin su Worker propio), pero el tamano de cada caja y sus Slots
     // salen de las Metricas que recibio el Worker, y deben ser los mismos que con el Tema directo.
@@ -72,16 +72,16 @@ describe('Worker de layout empaquetado', () => {
     const worker = workerDelEstudio();
     const global: Record<string, unknown> & { onmessage?: (e: { data: unknown }) => void; postMessage?: (m: unknown) => void } = { setTimeout, clearTimeout, queueMicrotask, console };
     global.self = global;
-    const respuesta = new Promise<{ geometria?: unknown; error?: string }>((ok) => {
+    const respuesta = new Promise<{ geometry?: unknown; error?: string }>((ok) => {
       global.postMessage = (m) => ok(m as never);
     });
     runInNewContext(worker, global);
     const peticion = new Promise<unknown>((ok) => {
-      void adaptadorDeWorker({ postMessage: ok, onmessage: null })(vista, NEUTRAL_THEME);
+      void workerAdapter({ postMessage: ok, onmessage: null })(vista, NEUTRAL_THEME);
     });
     global.onmessage!({ data: await peticion });
 
-    const { geometria, error } = await respuesta;
+    const { geometry: geometria, error } = await respuesta;
     expect(error).toBeUndefined();
     expect(geometria).toEqual(await layoutView(vista, NEUTRAL_THEME));
     expect((geometria as { kind: string }).kind).toBe('secuencia');
