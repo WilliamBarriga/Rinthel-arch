@@ -21,7 +21,7 @@ const fuente = canonicalFormSchema.parse({
 const geometria: Geometry = { nodes: { a: { x: 0, y: 0, width: 100, height: 50 } }, edges: {}, labels: {}, kind: 'grafo', pinsSolapados: [], width: 100, height: 50 };
 const CAVEAT: ResolvedTheme = { ...NEUTRAL_THEME, fonts: { body: 'Caveat', mono: 'Caveat', fallback: 'cursive' } };
 const ARCHIVOS = { 'fuentes/caveat-latin-400-normal.woff2': 'h400', 'fuentes/caveat-latin-700-normal.woff2': 'h700', 'fuentes/inter-latin-400-normal.woff2': 'hi' };
-const url = (ruta: string): string => `/fuentes/${ruta}`;
+const url = (ruta: string): string => `/fonts/${ruta}`;
 
 describe('hashesDeFamilias', () => {
   it('une los hashes de los archivos de cada familia declarada y omite las demas', () => {
@@ -36,7 +36,7 @@ describe('VistaInteractiva con fuentes del Workspace', () => {
 
     const hoja = container.querySelector('style[data-fuentes]')?.textContent ?? '';
     expect(hoja).toContain('font-family:"Caveat"');
-    expect(hoja).toContain('url("/fuentes/fuentes/caveat-latin-700-normal.woff2")');
+    expect(hoja).toContain('url("/fonts/fuentes/caveat-latin-700-normal.woff2")');
     expect(hoja).not.toContain('Inter');
   });
 

@@ -10,7 +10,7 @@ model {
       async repo.cli -> author "Issues, exit 1, nothing written"
     }
     capture: repo.cli -> repo.dev-ui "capture state, Geometries and fonts"
-    repo.dev-ui -> repo.session "GET /api/estado and /api/vista"
+    repo.dev-ui -> repo.session "GET /api/state and /api/view"
     repo.session -> repo.layout "lay out each View"
     reply repo.layout -> repo.session "Geometry"
     reply repo.session -> repo.dev-ui "state and Geometries"

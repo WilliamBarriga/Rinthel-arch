@@ -94,7 +94,7 @@ describe('the rinthel-arch npm package', () => {
   });
 
   it('ships ELK once for the browser and once for Node, not three times', () => {
-    const chunks = join(APP, 'node_modules', 'rinthel-arch', 'dist', 'estudio', 'trozos');
+    const chunks = join(APP, 'node_modules', 'rinthel-arch', 'dist', 'dev-ui', 'chunks');
     expect(readdirSync(chunks).filter((t) => t.startsWith('elk'))).toEqual([]);
   });
 

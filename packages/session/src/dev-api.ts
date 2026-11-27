@@ -1,12 +1,12 @@
 /**
- * `/api/*` and `/componentes.js` routes of `dev` over a Live workspace, without transport: a request goes in (method, URL
+ * `/api/*` and `/components.js` routes of `dev` over a Live workspace, without transport: a request goes in (method, URL
  * and raw body) and a complete response always comes out (HTTP status, body already serialized and headers). Used by the
- * real server (`cli`) and `devEnMemoria` (`estudio/contrato`), so routing, validation and edges are a single one (ADR 0007).
+ * real server (`cli`) and `inMemoryDev` (`dev-ui/contract`), so routing, validation and edges are a single one (ADR 0007).
  * Edges: unknown route 404; wrong method 405 with `allow`; invalid JSON or shape 400; rejections `rejectionHttpStatus`
  * (409/422); the Theme components bundle without trust 403; an exception (port I/O failure) 500 with its message.
  * All with `{ ok: false, message }`. The bundle is the only non-JSON body (`text/javascript`).
  * Invariants: it never rejects. The adapter keeps only the transport and its security (Host, Origin, content-type) and
- * the rest (static files, `/eventos`, fonts).
+ * the rest (static files, `/events`, fonts).
  */
 import { fileFromRoute, INSPECT_COMMANDS, rejectionHttpStatus, intentSchema, editsRequestSchema, jumpRequestSchema, DEV_ROUTES } from 'canonical';
 import type { InspectCommand, Intent } from 'canonical';
@@ -23,7 +23,7 @@ export interface DevRequest {
 
 export interface DevResponse {
   status: number;
-  /** Serialized JSON, except the `/componentes.js` bundle (JavaScript). */
+  /** Serialized JSON, except the `/components.js` bundle (JavaScript). */
   body: string;
   headers: Readonly<Record<string, string>>;
 }
@@ -162,8 +162,8 @@ const ROUTES: readonly Route[] = [
       } catch {
         return error(404, 'View not found');
       }
-      // `?tema=<name>`: the View with another Theme (preview), without cache or File history.
-      const theme = url.searchParams.get('tema') ?? undefined;
+      // `?theme=<name>`: the View with another Theme (preview), without cache or File history.
+      const theme = url.searchParams.get('theme') ?? undefined;
       const geometry = await live.geometry(id, theme === undefined ? undefined : { theme });
       return geometry === undefined ? error(404, theme === undefined ? `View '${id}' not found` : `View '${id}' or Theme '${theme}' not found`) : json(200, geometry);
     },
@@ -204,7 +204,7 @@ export async function handleDevApi(live: LiveWorkspace, request: DevRequest): Pr
 
 /**
  * `fetch` over the dev API in process, without HTTP: every request goes to `handleDevApi`. `base` resolves relative
- * URLs (`/api/estado`). Shared by `export` (it captures the state) and the in-memory dev of the estudio tests.
+ * URLs (`/api/state`). Shared by `export` (it captures the state) and the in-memory dev of the dev-ui tests.
  */
 export function fetchOverDevApi(live: LiveWorkspace, base = 'http://127.0.0.1'): typeof fetch {
   return (async (entry: string | URL | Request, init?: RequestInit) => {

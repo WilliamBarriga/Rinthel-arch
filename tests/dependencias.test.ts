@@ -44,11 +44,11 @@ function crearWorkspace(archivos: Record<string, string>): string {
 
 describe('revisarWorkspace', () => {
   it('usa la cadena de dependencias de ADR 0004', () => {
-    expect(CADENA).toEqual(['canonical', 'theme', 'dsl', 'layout', 'session', 'render', 'shell', 'estudio', 'cli']);
+    expect(CADENA).toEqual(['canonical', 'theme', 'dsl', 'layout', 'session', 'render', 'shell', 'dev-ui', 'cli']);
   });
 
-  it('estudio queda fuera del nucleo puro (usa DOM, fetch y EventSource)', () => {
-    expect(NUCLEO).not.toContain('estudio');
+  it('dev-ui queda fuera del nucleo puro (usa DOM, fetch y EventSource)', () => {
+    expect(NUCLEO).not.toContain('dev-ui');
   });
 
   it('falla si un paquete importa de uno posterior en la cadena', () => {
@@ -108,24 +108,24 @@ describe('revisarWorkspace', () => {
     );
   });
 
-  it('acepta en estudio los subpaths del protocolo y del contrato, y rechaza cualquier otro', () => {
+  it('acepta en dev-ui los subpaths del protocolo y del contrato, y rechaza cualquier otro', () => {
     const raiz = crearWorkspace({
-      'packages/estudio/package.json': manifiesto('estudio', {
+      'packages/dev-ui/package.json': manifiesto('dev-ui', {
         exports: {
           '.': { types: './dist/index.d.ts', import: './dist/index.js' },
-          './protocolo': './dist/protocolo.js',
-          './contrato': './dist/contrato.js',
+          './protocol': './dist/protocol.js',
+          './contract': './dist/contract.js',
           './interno': './dist/interno.js',
         },
       }),
-      'packages/estudio/src/index.ts': 'export const algo = 1;\n',
-      'packages/cli/package.json': manifiesto('cli', { dependencies: { estudio: 'workspace:*' } }),
-      'packages/cli/src/index.ts': "import type { Algo } from 'estudio/protocolo';\nexport type Propio = Algo;\n",
+      'packages/dev-ui/src/index.ts': 'export const algo = 1;\n',
+      'packages/cli/package.json': manifiesto('cli', { dependencies: { 'dev-ui': 'workspace:*' } }),
+      'packages/cli/src/index.ts': "import type { Algo } from 'dev-ui/protocol';\nexport type Propio = Algo;\n",
     });
 
     const violaciones = revisarWorkspace(raiz);
 
-    expect(violaciones).toEqual([expect.objectContaining({ paquete: 'estudio', regla: 'exports', mensaje: expect.stringContaining('./interno') })]);
+    expect(violaciones).toEqual([expect.objectContaining({ paquete: 'dev-ui', regla: 'exports', mensaje: expect.stringContaining('./interno') })]);
   });
 
   it('falla si un paquete no declara exports', () => {
@@ -240,19 +240,19 @@ describe('revisarWorkspace', () => {
     ]);
   });
 
-  it('acepta reexportes propios y los de las excepciones: estudio/protocolo y la fachada de shell', () => {
+  it('acepta reexportes propios y los de las excepciones: dev-ui/protocol y la fachada de shell', () => {
     const raiz = crearWorkspace({
       'packages/canonical/package.json': manifiesto('canonical'),
       'packages/canonical/src/index.ts': "export { algo } from './algo';\n",
       'packages/canonical/src/algo.ts': 'export const algo = 1;\n',
       'packages/shell/package.json': manifiesto('shell', { dependencies: { canonical: 'workspace:*' } }),
       'packages/shell/src/index.ts': "export { algo } from 'canonical';\n",
-      'packages/estudio/package.json': manifiesto('estudio', {
+      'packages/dev-ui/package.json': manifiesto('dev-ui', {
         dependencies: { canonical: 'workspace:*' },
-        exports: { '.': './dist/index.js', './protocolo': './dist/protocolo.js' },
+        exports: { '.': './dist/index.js', './protocol': './dist/protocol.js' },
       }),
-      'packages/estudio/src/index.ts': 'export const app = 1;\n',
-      'packages/estudio/src/protocolo.ts': "export type { algo } from 'canonical';\n",
+      'packages/dev-ui/src/index.ts': 'export const app = 1;\n',
+      'packages/dev-ui/src/protocol.ts': "export type { algo } from 'canonical';\n",
     });
 
     expect(revisarWorkspace(raiz)).toEqual([]);
@@ -263,16 +263,16 @@ describe('revisarWorkspace', () => {
       'packages/cli/package.json': manifiesto('cli'),
       'packages/cli/src/index.ts': 'export const run = 1;\n',
       'packages/cli/test/chromium.ts': 'export const ruta = 1;\n',
-      'packages/estudio/package.json': manifiesto('estudio', {
-        exports: { '.': './dist/index.js', './protocolo': './dist/protocolo.js' },
+      'packages/dev-ui/package.json': manifiesto('dev-ui', {
+        exports: { '.': './dist/index.js', './protocol': './dist/protocol.js' },
       }),
-      'packages/estudio/src/index.ts': 'export const app = 1;\n',
-      'packages/estudio/scripts/empaquetar.ts': 'export const construir = 1;\n',
+      'packages/dev-ui/src/index.ts': 'export const app = 1;\n',
+      'packages/dev-ui/scripts/empaquetar.ts': 'export const construir = 1;\n',
       'tests/ayudas/chromium.ts': 'export const ruta = 1;\n',
       'scripts/capturas.ts':
-        "import { run } from 'cli';\nimport type { X } from 'estudio/protocolo';\nimport { ruta } from '../tests/ayudas/chromium.ts';\nimport { ruta as otra } from '../packages/cli/test/chromium.ts';\nexport const y = [run, ruta, otra] as unknown as X;\n",
-      'scripts/capturas/servidores.ts': "import { app } from 'estudio/src/index';\nexport const s = app;\n",
-      'bench/escenario.ts': "import { construir } from '../packages/estudio/scripts/empaquetar.ts';\nexport const b = construir;\n",
+        "import { run } from 'cli';\nimport type { X } from 'dev-ui/protocol';\nimport { ruta } from '../tests/ayudas/chromium.ts';\nimport { ruta as otra } from '../packages/cli/test/chromium.ts';\nexport const y = [run, ruta, otra] as unknown as X;\n",
+      'scripts/capturas/servidores.ts': "import { app } from 'dev-ui/src/index';\nexport const s = app;\n",
+      'bench/escenario.ts': "import { construir } from '../packages/dev-ui/scripts/empaquetar.ts';\nexport const b = construir;\n",
     });
 
     expect(revisarWorkspace(raiz).map((v) => [v.paquete, v.archivo, v.regla])).toEqual([

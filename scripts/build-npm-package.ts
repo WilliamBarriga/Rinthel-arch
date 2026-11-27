@@ -2,7 +2,7 @@
  * Builds the publishable `rinthel-arch` npm package in `npm/` (run after `pnpm build`; `npm pack` in `npm/` packs it):
  * - `dist/bin.js`: the whole CLI and its workspace packages bundled with esbuild (esbuild itself stays a dependency:
  *   it ships a native binary per platform and compiles Theme components at runtime).
- * - `dist/estudio/`: the Dev UI static assets, where `estudio` looks for them relative to the bundle.
+ * - `dist/dev-ui/`: the Dev UI static assets, where `dev-ui` looks for them relative to the bundle.
  * - `dist/*.wasm`: the Scanner's tree-sitter runtime and grammars, loaded only by `scan`.
  * - `skills/`: a copy of the repo's `skills/` tree, the Pi package resource (`pi.skills`).
  * - `LICENSE`,`LICENSE-LIKEC4` and `THIRD-PARTY-NOTICES.md` (generated from `pnpm licenses list`).
@@ -13,7 +13,7 @@ import { copyFileSync, cpSync, mkdirSync, readFileSync, readdirSync, realpathSyn
 import { dirname, join, resolve } from 'node:path';
 
 import { build } from 'esbuild';
-import { activosDelEstudio } from 'estudio';
+import { devUiAssets } from 'dev-ui';
 
 const REPO = resolve(import.meta.dirname, '..');
 const PACKAGE = join(REPO, 'npm');
@@ -30,7 +30,7 @@ interface LicenseEntry {
 /** elkjs is dual-licensed; we redistribute it under EPL-2.0, whose section 3.1(a) asks for this source statement. */
 const EXTRA_NOTICES: Record<string, string> = {
   elkjs:
-    'elkjs is redistributed unmodified, minified inside `dist/bin.js` and `dist/estudio/worker.js`, under the Eclipse Public License 2.0 ' +
+    'elkjs is redistributed unmodified, minified inside `dist/bin.js` and `dist/dev-ui/worker.js`, under the Eclipse Public License 2.0 ' +
     '(chosen from `EPL-2.0 OR GPL-3.0-or-later`). Its Source Code is available under that license at https://github.com/kieler/elkjs ' +
     '(the Java sources of the Eclipse Layout Kernel at https://github.com/eclipse-elk/elk) and in the `elkjs` package on npm.',
 };
@@ -53,7 +53,7 @@ async function bundleCli(): Promise<void> {
 }
 
 function copyDevUi(): void {
-  cpSync(dirname(activosDelEstudio().indice), join(DIST, 'estudio'), { recursive: true });
+  cpSync(dirname(devUiAssets().index), join(DIST, 'dev-ui'), { recursive: true });
 }
 
 /** Every `.wasm` at the root of a Scanner dependency (web-tree-sitter's runtime and each grammar), next to `bin.js`. */

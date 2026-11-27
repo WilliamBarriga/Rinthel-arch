@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 /**
- * Ayudas de puntero sobre el lienzo dibujado, compartidas por las pruebas de `shell` y `estudio` (unica copia). El
+ * Ayudas de puntero sobre el lienzo dibujado, compartidas por las pruebas de `shell` y `dev-ui` (unica copia). El
  * lienzo no tiene rol que consultar: se lee por `data-diagram`, `data-camara` y `data-id` (docs/CODING.md, Pruebas).
  * `fireEvent` entra como argumento para que los eventos pasen por el `act` de Testing Library de cada paquete.
  */

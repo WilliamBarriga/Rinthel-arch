@@ -1,9 +1,9 @@
 /**
  * The `dev` protocol, with a single owner, shared by the Live workspace (`session`), the server (`cli`) and the page
- * (`estudio`): routes, named SSE events, schemas of what the Live workspace produces (state, Diff, File history,
+ * (`dev-ui`): routes, named SSE events, schemas of what the Live workspace produces (state, Diff, File history,
  * activity, files, `inspect` not found) and of the write requests, the identity of the elements of a
- * Diff and the mapping of a rejection to an HTTP status (ADR 0004, 0007). `estudio/protocolo` re-exports it for the page.
- * Invariants: no I/O; a value from here (route, event, command, HTTP status) is the only one the real server and `devEnMemoria` use.
+ * Diff and the mapping of a rejection to an HTTP status (ADR 0004, 0007). `dev-ui/protocol` re-exports it for the page.
+ * Invariants: no I/O; a value from here (route, event, command, HTTP status) is the only one the real server and `inMemoryDev` use.
  */
 import { z } from 'zod';
 
@@ -17,19 +17,19 @@ import { issueSchema } from './output';
 
 /** `dev` routes; those ending in `/` are prefixes (`<prefix><argument>`). */
 export const DEV_ROUTES = {
-  state: '/api/estado',
-  events: '/eventos',
-  files: '/api/archivos',
-  file: '/api/archivo/',
+  state: '/api/state',
+  events: '/events',
+  files: '/api/files',
+  file: '/api/file/',
   edit: '/api/edit',
-  undo: '/api/deshacer',
-  redo: '/api/rehacer',
-  jump: '/api/historial/saltar',
-  trust: '/api/confiar',
-  code: '/api/codigo',
-  components: '/componentes.js',
+  undo: '/api/undo',
+  redo: '/api/redo',
+  jump: '/api/history/jump',
+  trust: '/api/trust',
+  code: '/api/code',
+  components: '/components.js',
   inspect: '/api/inspect/',
-  view: '/api/vista/',
+  view: '/api/view/',
   fonts: FONTS_ROUTE,
 } as const;
 
@@ -61,7 +61,7 @@ export const devStateSchema = z.object({
   fuente: canonicalFormSchema.optional(),
   iconos: z.record(z.string(), z.string()),
   vistas: z.array(z.string()),
-  /** Relative path -> content hash of the font files; served at `/fuentes/<path>`. Absent if the adapter does not know them. */
+  /** Relative path -> content hash of the font files; served at `/fonts/<path>`. Absent if the adapter does not know them. */
   fuentes: z.record(z.string(), z.string()).optional(),
   issues: z.array(devIssueSchema),
 });
@@ -170,7 +170,7 @@ export const devHistorySchema = z.object({ pasado: z.array(devHistoryEntrySchema
 export type DevHistoryEntry = z.infer<typeof devHistoryEntrySchema>;
 export type DevHistory = z.infer<typeof devHistorySchema>;
 
-/** `POST /api/historial/saltar { id }`: 200 after writing the target, 409 if it changed outside, 422 `unknown-entry`. */
+/** `POST /api/history/jump { id }`: 200 after writing the target, 409 if it changed outside, 422 `unknown-entry`. */
 export const jumpRequestSchema = z.object({ id: z.number().int().nonnegative() });
 export const DEV_HISTORY_START = 0;
 
@@ -183,14 +183,14 @@ export function inspectRoute(command: InspectCommand, argument: string, options:
   return `${DEV_ROUTES.inspect}${command}/${encodeURIComponent(argument)}${query === '' ? '' : `?${query}`}`;
 }
 
-/** `GET /api/archivos`: the Workspace `.dg` files and those of `--theme-path` (`soloLectura: true`), sorted by path. */
+/** `GET /api/files`: the Workspace `.dg` files and those of `--theme-path` (`soloLectura: true`), sorted by path. */
 export const devFilesSchema = z.object({
   version: z.number().int(),
   archivos: z.array(z.object({ file: z.string(), hash: z.string(), soloLectura: z.boolean() })),
 });
 export type DevFiles = z.infer<typeof devFilesSchema>;
 
-/** `GET /api/archivo/<path>` (404 if it does not exist): the `version` is the base of the editor's next edit. */
+/** `GET /api/file/<path>` (404 if it does not exist): the `version` is the base of the editor's next edit. */
 export const devFileSchema = z.object({ file: z.string(), texto: z.string(), hash: z.string(), version: z.number().int() });
 export type DevFile = z.infer<typeof devFileSchema>;
 
@@ -219,18 +219,18 @@ export const editsRequestSchema = z.object({
 });
 export type EditsRequest = z.infer<typeof editsRequestSchema>;
 
-/** `GET /api/codigo`: whether the Workspace Themes use Theme components with code, which ones, and whether they are already served (`/componentes.js`). */
+/** `GET /api/code`: whether the Workspace Themes use Theme components with code, which ones, and whether they are already served (`/components.js`). */
 export const devCodeSchema = z.object({ temaConCodigo: z.boolean(), componentes: z.array(z.string()), confiado: z.boolean() });
 export type DevCode = z.infer<typeof devCodeSchema>;
 
-/** `POST /api/confiar`: from now on the Themes' code is served. */
+/** `POST /api/trust`: from now on the Themes' code is served. */
 export const devTrustSchema = z.object({ ok: z.literal(true) });
 
 /** Body of the `/api/*` boundary errors: 400 (invalid JSON or shape), 404 (route or resource), 405 (method, with `allow`) and 500 (I/O failure). */
 export const devErrorSchema = z.object({ ok: z.literal(false), message: z.string() });
 export type DevError = z.infer<typeof devErrorSchema>;
 
-/** Accepted `POST /api/edit`, `/api/deshacer`, `/api/rehacer` and `/api/historial/saltar`: the `version` of the state after writing. */
+/** Accepted `POST /api/edit`, `/api/undo`, `/api/redo` and `/api/history/jump`: the `version` of the state after writing. */
 export const devWriteSchema = z.object({ ok: z.literal(true), version: z.number().int() });
 export type DevWrite = z.infer<typeof devWriteSchema>;
 
@@ -243,10 +243,10 @@ export const inspectNotFoundSchema = z.object({ ok: z.literal(false), message: z
 export type InspectNotFound = z.infer<typeof inspectNotFoundSchema>;
 
 /**
- * SSE events of `/eventos`, each with `event: <name>` and the data in JSON. On connect `estado`,
+ * SSE events of `/events`, each with `event: <name>` and the data in JSON. On connect `estado`,
  * `historial` and `actividad` arrive with `previos: true`; after each `estado`, the `historial` and, if any, the `diferencia`
  * of that `version`; and an `actividad` with `previos: false` per batch appended to the log. The sequence is decided by
- * the Live workspace (`connection` and `listen` in `session`); the real server and `devEnMemoria` only serialize it.
+ * the Live workspace (`connection` and `listen` in `session`); the real server and `inMemoryDev` only serialize it.
  */
 export const DEV_EVENTS = ['estado', 'actividad', 'diferencia', 'historial'] as const;
 export type DevEventName = (typeof DEV_EVENTS)[number];
@@ -258,7 +258,7 @@ export type DevEventName = (typeof DEV_EVENTS)[number];
 export const devActivitySchema = z.object({ previos: z.boolean(), eventos: z.array(activityEventSchema) });
 export type DevActivity = z.infer<typeof devActivitySchema>;
 
-/** A `/eventos` event with its name and its data. */
+/** A `/events` event with its name and its data. */
 export type DevEvent =
   | { name: 'estado'; data: DevState }
   | { name: 'historial'; data: DevHistory }

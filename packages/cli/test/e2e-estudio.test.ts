@@ -1,7 +1,7 @@
 /**
  * La unica punta a punta de la UI: `dev` real sobre una copia del fixture `mediano` y Chromium headless (Playwright).
  * Recorre el flujo de la spec (#184) con locators por rol y nombre accesible; lo demas de la UI se prueba en jsdom
- * dentro de `estudio`. Sin Chromium falla con el comando que lo instala (`rutaDeChromium`).
+ * dentro de `dev-ui`. Sin Chromium falla con el comando que lo instala (`rutaDeChromium`).
  */
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

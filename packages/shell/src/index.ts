@@ -7,7 +7,7 @@
 export { VistaInteractiva } from './vista-interactiva';
 export type { AdaptadorDeLayout, MedidorDeTexto, VistaInteractivaProps } from './vista-interactiva';
 export type { IssueDelVisor } from './avisos';
-/** Piezas del chrome del lienzo para montarlas fuera con `chrome={false}` (la app de `dev` en `estudio`). */
+/** Piezas del chrome del lienzo para montarlas fuera con `chrome={false}` (la app de `dev` en `dev-ui`). */
 export { Leyenda } from './accesibilidad';
 export type { ModoDeLeyenda } from './accesibilidad';
 export { Migas } from './navegacion';

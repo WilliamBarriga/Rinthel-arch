@@ -1,7 +1,7 @@
 /**
  * Command `export`: writes the Dev UI of a Workspace as one self-contained, read-only HTML file (`--out`). The data
  * is captured through the `dev` API of a live Workspace that is opened, read once and closed (no server, no watcher,
- * nothing written next to the Workspace); the page, the layout Worker and the CSS come from the `estudio` build.
+ * nothing written next to the Workspace); the page, the layout Worker and the CSS come from the `dev-ui` build.
  * Fonts of the Themes (Workspace and `--theme-path`) go inside as `data:` URLs; Theme components with code go inside
  * too (whoever exports is the author, as with `dev --trust-code`), and the command says so.
  * Exit codes: 0 written, 1 the Workspace does not compile (its Issues on stdout, nothing written), 2 usage or I/O.
@@ -10,7 +10,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 
-import { capturarExportado, carpetaDelEstudio, htmlDeExportado } from 'estudio';
+import { captureExport, devUiFolder, exportHtml } from 'dev-ui';
 import { openLiveWorkspace, fetchOverDevApi } from 'session';
 
 import { puertoDeDisco, relojReal } from './puerto-de-disco';
@@ -19,13 +19,13 @@ import type { ResultadoDeEjecucion } from './sesion-cli';
 import { leerArchivoDeFuente, leerWorkspace } from './workspace';
 
 export interface DependenciasDeExport {
-  /** Folder of the `estudio` build; by default the real one. */
+  /** Folder of the `dev-ui` build; by default the real one. */
   estaticos?: string;
 }
 
 const MB = 1024 * 1024;
 
-export async function comandoExport(args: readonly string[], { estaticos = carpetaDelEstudio() }: DependenciasDeExport = {}): Promise<ResultadoDeEjecucion> {
+export async function comandoExport(args: readonly string[], { estaticos = devUiFolder() }: DependenciasDeExport = {}): Promise<ResultadoDeEjecucion> {
   let valores;
   try {
     valores = parseArgs({ args: [...args], options: { workspace: { type: 'string' }, out: { type: 'string' }, 'theme-path': { type: 'string' } }, strict: true }).values;
@@ -54,10 +54,10 @@ export async function comandoExport(args: readonly string[], { estaticos = carpe
     });
     try {
       const raices = temas === undefined ? [workspace] : [workspace, temas];
-      const datos = await capturarExportado({ fetch: fetchOverDevApi(vivo), leerFuente: (ruta) => leerArchivoDeFuente(raices, ruta) });
+      const datos = await captureExport({ fetch: fetchOverDevApi(vivo), readSource: (ruta) => { const f = leerArchivoDeFuente(raices, ruta); return f && { bytes: f.bytes, kind: f.tipo }; } });
       vistas = datos.estado.vistas.length;
       componentes = datos.componentes?.nombres ?? [];
-      html = htmlDeExportado(datos, { titulo: `${basename(resolve(workspace))} - rinthel-arch`, estaticos });
+      html = exportHtml(datos, { title: `${basename(resolve(workspace))} - rinthel-arch`, statics: estaticos });
     } finally {
       vivo.close();
     }

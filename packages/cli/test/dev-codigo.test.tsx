@@ -47,10 +47,10 @@ interface Estado {
   fuente?: unknown;
   issues: Array<{ code: string; file: string; line: number }>;
 }
-const estado = async (s: ServidorDev): Promise<Estado> => (await fetch(`${s.url}api/estado`)).json() as Promise<Estado>;
-const codigo = async (s: ServidorDev) => (await fetch(`${s.url}api/codigo`)).json() as Promise<{ temaConCodigo: boolean; componentes: string[]; confiado: boolean }>;
-const confiar = (s: ServidorDev) => fetch(`${s.url}api/confiar`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
-const bundle = async (s: ServidorDev) => fetch(`${s.url}componentes.js`);
+const estado = async (s: ServidorDev): Promise<Estado> => (await fetch(`${s.url}api/state`)).json() as Promise<Estado>;
+const codigo = async (s: ServidorDev) => (await fetch(`${s.url}api/code`)).json() as Promise<{ temaConCodigo: boolean; componentes: string[]; confiado: boolean }>;
+const confiar = (s: ServidorDev) => fetch(`${s.url}api/trust`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+const bundle = async (s: ServidorDev) => fetch(`${s.url}components.js`);
 const dibujarAurora = (texto: string) => renderToStaticMarkup(createElement(cargarComponentes(texto)['Aurora']!, { id: 'api', parametros: { hue: 3 } } as never));
 
 async function esperarEstado(servidor: ServidorDev, version: number): Promise<Estado> {
@@ -80,8 +80,8 @@ describe('dev: Temas con codigo', () => {
   it('confirmar exige JSON y origen del propio servidor', async () => {
     const { servidor } = await arrancar(copia());
 
-    const ajeno = await fetch(`${servidor.url}api/confiar`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'http://evil.example' }, body: '{}' });
-    const sinJson = await fetch(`${servidor.url}api/confiar`, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: '{}' });
+    const ajeno = await fetch(`${servidor.url}api/trust`, { method: 'POST', headers: { 'content-type': 'application/json', origin: 'http://evil.example' }, body: '{}' });
+    const sinJson = await fetch(`${servidor.url}api/trust`, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: '{}' });
 
     expect([ajeno.status, sinJson.status]).toEqual([403, 415]);
     expect((await codigo(servidor)).confiado).toBe(false);

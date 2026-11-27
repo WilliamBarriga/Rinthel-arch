@@ -64,7 +64,7 @@ describe('dev: ruta de fuentes del Workspace', () => {
   it('sirve el archivo de fuente del Workspace con su tipo, byte a byte', async () => {
     const { url } = await arrancar();
 
-    const r = await pedir(url, '/fuentes/fuentes/caveat-latin-400-normal.woff2');
+    const r = await pedir(url, '/fonts/fuentes/caveat-latin-400-normal.woff2');
 
     expect(r.estado).toBe(200);
     expect(r.tipo).toBe('font/woff2');
@@ -74,16 +74,16 @@ describe('dev: ruta de fuentes del Workspace', () => {
   it('entiende rutas con espacios codificados', async () => {
     const { url } = await arrancar();
 
-    expect((await pedir(url, '/fuentes/fuentes/Con%20Espacios.woff2')).estado).toBe(200);
+    expect((await pedir(url, '/fonts/fuentes/Con%20Espacios.woff2')).estado).toBe(200);
   });
 
   it.each([
-    ['..', '/fuentes/../secreto.woff2'],
-    ['../ codificado', '/fuentes/..%2Fsecreto.woff2'],
-    ['%2e%2e', '/fuentes/%2e%2e/secreto.woff2'],
-    ['varios niveles', '/fuentes/fuentes/..%2F..%2Fsecreto.woff2'],
-    ['absoluta', () => `/fuentes/${encodeURIComponent(join(fuera, 'secreto.woff2'))}`],
-    ['absoluta con barra', () => `/fuentes//${join(fuera, 'secreto.woff2')}`],
+    ['..', '/fonts/../secreto.woff2'],
+    ['../ codificado', '/fonts/..%2Fsecreto.woff2'],
+    ['%2e%2e', '/fonts/%2e%2e/secreto.woff2'],
+    ['varios niveles', '/fonts/fuentes/..%2F..%2Fsecreto.woff2'],
+    ['absoluta', () => `/fonts/${encodeURIComponent(join(fuera, 'secreto.woff2'))}`],
+    ['absoluta con barra', () => `/fonts//${join(fuera, 'secreto.woff2')}`],
   ])('no sirve nada fuera del Workspace (%s)', async (_nombre, ruta) => {
     const { url } = await arrancar();
 
@@ -96,7 +96,7 @@ describe('dev: ruta de fuentes del Workspace', () => {
   it('no sirve un enlace simbolico que apunta fuera del Workspace', async () => {
     const { url } = await arrancar();
 
-    const r = await pedir(url, '/fuentes/fuentes/enlace.woff2');
+    const r = await pedir(url, '/fonts/fuentes/enlace.woff2');
 
     expect(r.estado).toBe(404);
     expect(r.cuerpo.toString()).not.toContain('no debe salir');
@@ -105,15 +105,15 @@ describe('dev: ruta de fuentes del Workspace', () => {
   it('solo sirve fuentes: el DSL del propio Workspace y lo inexistente dan 404', async () => {
     const { url } = await arrancar();
 
-    expect((await pedir(url, '/fuentes/main.dg')).estado).toBe(404);
-    expect((await pedir(url, '/fuentes/fuentes/no-existe.woff2')).estado).toBe(404);
-    expect((await pedir(url, '/fuentes/%E0%A4%A.woff2')).estado).toBe(404);
+    expect((await pedir(url, '/fonts/main.dg')).estado).toBe(404);
+    expect((await pedir(url, '/fonts/fuentes/no-existe.woff2')).estado).toBe(404);
+    expect((await pedir(url, '/fonts/%E0%A4%A.woff2')).estado).toBe(404);
   });
 
   it('el estado lista las fuentes del Workspace con su hash', async () => {
     const { url } = await arrancar();
 
-    const estado = (await (await fetch(`${url}api/estado`)).json()) as { fuentes: Record<string, string>; issues: { code: string }[] };
+    const estado = (await (await fetch(`${url}api/state`)).json()) as { fuentes: Record<string, string>; issues: { code: string }[] };
 
     expect(Object.keys(estado.fuentes).sort()).toEqual(['fuentes/Con Espacios.woff2', 'fuentes/caveat-latin-400-normal.woff2', 'fuentes/enlace.woff2'].sort());
     expect(estado.issues.map((i) => i.code)).not.toContain('theme-font-missing');
@@ -123,7 +123,7 @@ describe('dev: ruta de fuentes del Workspace', () => {
     writeFileSync(join(raiz, 'main.dg'), modelo('fonts { body "Press Start 2P"  mono "monospace"  fallback "monospace" }'));
     const { url } = await arrancar();
 
-    const estado = (await (await fetch(`${url}api/estado`)).json()) as { issues: { code: string; file: string; line: number }[] };
+    const estado = (await (await fetch(`${url}api/state`)).json()) as { issues: { code: string; file: string; line: number }[] };
 
     expect(estado.issues).toContainEqual(expect.objectContaining({ code: 'theme-font-missing', file: 'main.dg', line: 3 }));
   });

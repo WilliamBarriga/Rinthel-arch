@@ -1,6 +1,6 @@
 /**
- * Evalua el bundle CommonJS de `/componentes.js` con React como unico modulo externo, como hace el cargador de
- * `estudio` en el navegador (`cli` no importa codigo de navegador). Sirve para comprobar que lo que `cli` compila carga y dibuja.
+ * Evalua el bundle CommonJS de `/components.js` con React como unico modulo externo, como hace el cargador de
+ * `dev-ui` en el navegador (`cli` no importa codigo de navegador). Sirve para comprobar que lo que `cli` compila carga y dibuja.
  */
 import * as React from 'react';
 import type { ComponentType } from 'react';
