@@ -17,7 +17,7 @@ export interface BlockSpec {
   capas: Extract<PrimitivePlacement, 'capa-arista' | 'capa-nodo'>;
   marcadores: readonly ('start' | 'end')[];
   /** Standalone text or stroke styles (`operator`, `guard`...) by DSL name. */
-  textos: Readonly<Record<string, { primitiva: PrimitiveName; ubicacion: PrimitivePlacement }>>;
+  textos: Readonly<Record<string, { primitiva: PrimitiveName; placement: PrimitivePlacement }>>;
   parches?: { palabra: 'kind' | 'op'; nombres: readonly string[] };
   /** By DSL name. */
   metricas: Readonly<Record<string, BlockMetric>>;
@@ -29,7 +29,7 @@ export const SEQUENCE_SPEC: Readonly<Record<SequenceBlock, BlockSpec>> = {
   message: {
     capas: 'capa-arista',
     marcadores: ['start', 'end'],
-    textos: { label: { primitiva: 'label', ubicacion: 'etiqueta' } },
+    textos: { label: { primitiva: 'label', placement: 'etiqueta' } },
     parches: { palabra: 'kind', nombres: MESSAGE_KINDS },
     metricas: {
       gap: { min: 12, max: 120, defecto: 32 },
@@ -41,14 +41,14 @@ export const SEQUENCE_SPEC: Readonly<Record<SequenceBlock, BlockSpec>> = {
     capas: 'capa-nodo',
     marcadores: [],
     textos: {
-      operator: { primitiva: 'label', ubicacion: 'etiqueta' },
-      guard: { primitiva: 'text', ubicacion: 'texto-slot' },
-      divider: { primitiva: 'line', ubicacion: 'capa-arista' },
+      operator: { primitiva: 'label', placement: 'etiqueta' },
+      guard: { primitiva: 'text', placement: 'texto-slot' },
+      divider: { primitiva: 'line', placement: 'capa-arista' },
     },
     parches: { palabra: 'op', nombres: [...FRAGMENT_OPERATORS, 'ref'] },
     metricas: { padding: { min: 0, max: 64, defecto: 16 }, 'padding-y': { min: 2, max: 40, defecto: 10 } },
   },
-  note: { capas: 'capa-nodo', marcadores: [], textos: { text: { primitiva: 'text', ubicacion: 'texto-slot' } }, metricas: {} },
+  note: { capas: 'capa-nodo', marcadores: [], textos: { text: { primitiva: 'text', placement: 'texto-slot' } }, metricas: {} },
 };
 
 /** Sequence spacings in px; without a Theme setting, the core defaults. */

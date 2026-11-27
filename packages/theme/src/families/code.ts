@@ -3,9 +3,9 @@ import type { PrimitiveDefinition } from '../catalog';
 
 export const CODE = {
   code: {
-    familia: 'codigo',
-    afectaMetricas: false,
-    abierta: true,
-    propiedades: { component: { tipo: 'nombre' } },
+    family: 'codigo',
+    affectsMetrics: false,
+    open: true,
+    properties: { component: { type: 'name' } },
   },
 } as const satisfies Record<string, PrimitiveDefinition>;

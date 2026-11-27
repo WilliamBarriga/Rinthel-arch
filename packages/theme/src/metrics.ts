@@ -135,7 +135,7 @@ function entryOf(resolved: ResolvedTheme, stack: readonly ResolvedLayer[], measu
         return Object.keys(measure).length === 0 ? [] : [[slot, measure]];
       }),
     ),
-    cajaCuadrada: stack.some((layer) => definitionOf(layer.primitiva.tipo).cajaMinima === 'cuadrado'),
+    cajaCuadrada: stack.some((layer) => definitionOf(layer.primitiva.tipo).minimumBox === 'square'),
     anchoMinimo: slots.anchoMinimo ?? 120,
     paddingHorizontal: slots.holgura ?? 32,
     margenDeTexto: 10,

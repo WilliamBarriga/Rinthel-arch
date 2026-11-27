@@ -91,21 +91,21 @@ export function describeLayout(box: SlotLayoutBox): string {
 const optional = <K extends string>(key: K, value: number | string | undefined): Partial<Record<K, number>> =>
   (value === undefined ? {} : { [key]: Number(value) }) as Partial<Record<K, number>>;
 
-const ALIGNMENT: PropertyDefinition = { tipo: 'opcion', valores: ALIGNMENTS, defecto: 'start' };
+const ALIGNMENT: PropertyDefinition = { type: 'option', values: ALIGNMENTS, default: 'start' };
 const BOX_PROPERTIES = {
-  gap: { tipo: 'numero', min: 0, max: 64, defecto: 0 },
-  pad: { tipo: 'numero', min: 0, max: 64, defecto: 0 },
-  'pad-y': { tipo: 'numero', min: 0, max: 64, opcional: true },
-  'min-width': { tipo: 'numero', min: 0, max: 1200, opcional: true },
-  'min-height': { tipo: 'numero', min: 0, max: 600, opcional: true },
-  slack: { tipo: 'numero', min: 0, max: 400, opcional: true },
+  gap: { type: 'number', min: 0, max: 64, default: 0 },
+  pad: { type: 'number', min: 0, max: 64, default: 0 },
+  'pad-y': { type: 'number', min: 0, max: 64, optional: true },
+  'min-width': { type: 'number', min: 0, max: 1200, optional: true },
+  'min-height': { type: 'number', min: 0, max: 600, optional: true },
+  slack: { type: 'number', min: 0, max: 400, optional: true },
   align: ALIGNMENT,
 } as const satisfies Record<string, PropertyDefinition>;
 
 /** `ref` locates it in the text. */
 export interface WrittenProperty<R = unknown> {
-  clave: string;
-  valor: string | number;
+  key: string;
+  value: string | number;
   ref: R;
 }
 
@@ -127,20 +127,20 @@ export interface SlotInput<R = unknown> {
 export type LayoutError<R> = CatalogError & { ref: R };
 
 /** Returns all errors at once, each with a suggestion; `disposicion` only if there are no errors. */
-export function buildLayout<R>(entry: BoxInput<R>, element: 'nodo' | 'grupo' = 'nodo'): { disposicion?: SlotLayoutBox; errores: Array<LayoutError<R>> } {
+export function buildLayout<R>(entry: BoxInput<R>, element: 'nodo' | 'grupo' = 'nodo'): { disposicion?: SlotLayoutBox; errors: Array<LayoutError<R>> } {
   const errors: Array<LayoutError<R>> = [];
   const seen = new Set<string>();
   /** Errors carry the `ref` of the offending property or `backup`. */
   const properties = (article: string, name: string, defined: Record<string, PropertyDefinition>, props: ReadonlyArray<WrittenProperty<R>>, backup: R): Record<string, number | string> => {
-    const result = validateProperties({ sujeto: `${article} ${name}`, nombre: name, propiedades: defined }, props, {});
-    for (const e of result.errores) errors.push({ ...e, ref: props.find((p) => p.clave === e.clave)?.ref ?? backup });
-    return result.propiedades;
+    const result = validateProperties({ subject: `${article} ${name}`, name, properties: defined }, props, {});
+    for (const e of result.errors) errors.push({ ...e, ref: props.find((p) => p.key === e.key)?.ref ?? backup });
+    return result.properties;
   };
   const alignment = (props: Record<string, number | string>, written: ReadonlyArray<WrittenProperty<R>>): Alignment | undefined =>
-    written.some((p) => p.clave === 'align') ? (props['align'] as Alignment | undefined) : undefined;
+    written.some((p) => p.key === 'align') ? (props['align'] as Alignment | undefined) : undefined;
   const box = (c: BoxInput<R>): SlotLayoutBox => {
     if (!(DIRECTIONS as readonly string[]).includes(c.direccion)) {
-      errors.push({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje: `Unknown direction '${c.direccion}'; use ${DIRECTIONS.join(' or ')}`, ref: c.ref, ...suggest(c.direccion, DIRECTIONS) });
+      errors.push({ code: CODES.E_THEME_INVALID_VALUE, message: `Unknown direction '${c.direccion}'; use ${DIRECTIONS.join(' or ')}`, ref: c.ref, ...suggest(c.direccion, DIRECTIONS) });
     }
     const props = properties('The box', `'${c.direccion}'`, BOX_PROPERTIES, c.props, c.ref);
     const children: SlotLayoutElement[] = [];
@@ -148,11 +148,11 @@ export function buildLayout<R>(entry: BoxInput<R>, element: 'nodo' | 'grupo' = '
       if (!('slot' in h)) {
         children.push(box(h));
       } else if (!isSlot(h.slot)) {
-        errors.push({ codigo: CODES.E_THEME_UNKNOWN_SLOT, mensaje: `Unknown Slot '${h.slot}'; available: ${SLOTS.join(', ')}`, ref: h.ref, ...suggest(h.slot, SLOTS) });
+        errors.push({ code: CODES.E_THEME_UNKNOWN_SLOT, message: `Unknown Slot '${h.slot}'; available: ${SLOTS.join(', ')}`, ref: h.ref, ...suggest(h.slot, SLOTS) });
       } else if (element === 'grupo' && NODE_ONLY_SLOTS.includes(h.slot)) {
-        errors.push({ codigo: CODES.E_THEME_UNKNOWN_SLOT, mensaje: `Slot '${h.slot}' is not valid in a Group: only in a leaf Node`, ref: h.ref });
+        errors.push({ code: CODES.E_THEME_UNKNOWN_SLOT, message: `Slot '${h.slot}' is not valid in a Group: only in a leaf Node`, ref: h.ref });
       } else if (seen.has(h.slot)) {
-        errors.push({ codigo: CODES.E_THEME_UNKNOWN_SLOT, mensaje: `Duplicate Slot '${h.slot}'`, ref: h.ref });
+        errors.push({ code: CODES.E_THEME_UNKNOWN_SLOT, message: `Duplicate Slot '${h.slot}'`, ref: h.ref });
       } else {
         seen.add(h.slot);
         const written = h.align === undefined ? [] : [h.align];
@@ -174,5 +174,5 @@ export function buildLayout<R>(entry: BoxInput<R>, element: 'nodo' | 'grupo' = '
     };
   };
   const layout = box(entry);
-  return errors.length > 0 ? { errores: errors } : { disposicion: layout, errores: errors };
+  return errors.length > 0 ? { errors } : { disposicion: layout, errors };
 }

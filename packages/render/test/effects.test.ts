@@ -19,8 +19,8 @@ function view(title = 'Base', collapsed = false): ResolvedView {
 
 /** Layer as the DSL compiler delivers it: validated properties with the catalog defaults. */
 const layer = (name: string, kind: string, props: Record<string, string | number> = {}) => {
-  const { primitiva: primitive, errores: errors } = buildPrimitive(kind, Object.entries(props).map(([key, value]) => ({ clave: key, valor: value })), NEUTRAL_THEME.palette);
-  if (primitive === undefined) throw new Error(errors.map((e) => e.mensaje).join('; '));
+  const { primitive, errors } = buildPrimitive(kind, Object.entries(props).map(([key, value]) => ({ key, value })), NEUTRAL_THEME.palette);
+  if (primitive === undefined) throw new Error(errors.map((e) => e.message).join('; '));
   return { nombre: name, primitiva: { tipo: kind, props: primitive.props } };
 };
 const withLayers = (layers: ReturnType<typeof layer>[], seed?: string): Theme => ({
@@ -113,8 +113,8 @@ describe('deterministic freehand and tilt', () => {
 
 describe('freehand Edge stroke', () => {
   const line = (props: Record<string, string | number>) => {
-    const { primitiva: primitive, errores: errors } = buildPrimitive('line', Object.entries(props).map(([key, value]) => ({ clave: key, valor: value })), NEUTRAL_THEME.palette, 'capa-arista');
-    if (primitive === undefined) throw new Error(errors.map((e) => e.mensaje).join('; '));
+    const { primitive, errors } = buildPrimitive('line', Object.entries(props).map(([key, value]) => ({ key, value })), NEUTRAL_THEME.palette, 'capa-arista');
+    if (primitive === undefined) throw new Error(errors.map((e) => e.message).join('; '));
     return { nombre: 'linea', primitiva: primitive };
   };
   const withStroke = (props: Record<string, string | number>): Theme => ({ ...NEUTRAL_THEME, arista: { ...NEUTRAL_THEME.arista, capas: [line({ color: 'blue', ...props })] } });

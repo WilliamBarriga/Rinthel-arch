@@ -66,8 +66,8 @@ const last = (stack: readonly PaintedLayer[], kinds: readonly PrimitiveName[]): 
 
 function evaluate(stack: readonly PaintedLayer[], background: Rgb, text: Rgb): Array<{ parte: 'texto' | 'grafico'; capa: string; razon: number; color: string }> {
   const results: Array<{ parte: 'texto' | 'grafico'; capa: string; razon: number; color: string }> = [];
-  const fill = [...stack].reverse().find((layer) => definitionOf(layer.tipo).fondoDeTexto !== undefined);
-  const colors = fill === undefined ? [] : (definitionOf(fill.tipo).fondoDeTexto ?? []).map((k) => String(fill.props[k]));
+  const fill = [...stack].reverse().find((layer) => definitionOf(layer.tipo).textBackground !== undefined);
+  const colors = fill === undefined ? [] : (definitionOf(fill.tipo).textBackground ?? []).map((k) => String(fill.props[k]));
   const backgrounds = colors.map((c) => ({ c, rgb: opaque(c, background) })).filter((x): x is { c: string; rgb: Rgb } => x.rgb !== undefined);
   if (fill !== undefined && backgrounds.length > 0) {
     const worst = backgrounds.map((f) => ({ ...f, r: ratio(text, f.rgb) })).sort((a, b) => a.r - b.r)[0]!;
@@ -121,7 +121,7 @@ export interface LegendKind {
 const removeColor = (layer: PaintedLayer) => ({
   nombre: layer.nombre,
   tipo: layer.tipo,
-  props: Object.fromEntries(Object.entries(layer.props).filter(([k]) => (CATALOG[layer.tipo].propiedades as Record<string, PropertyDefinition | undefined>)[k]?.tipo !== 'color')),
+  props: Object.fromEntries(Object.entries(layer.props).filter(([k]) => (CATALOG[layer.tipo].properties as Record<string, PropertyDefinition | undefined>)[k]?.type !== 'color')),
   encima: layer.encima ?? false,
 });
 

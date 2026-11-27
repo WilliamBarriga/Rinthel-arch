@@ -119,7 +119,7 @@ function compileSequenceBlock(name: SequenceBlock, items: readonly SequenceItem[
           );
           break;
         }
-        const text = looseFamily(allowed.primitiva, item.props, allowed.ubicacion, ctx, rangeOf(item, 'slot').start);
+        const text = looseFamily(allowed.primitiva, item.props, allowed.placement, ctx, rangeOf(item, 'slot').start);
         if (text !== undefined) block.textos = { ...block.textos, [item.slot]: text };
         break;
       }

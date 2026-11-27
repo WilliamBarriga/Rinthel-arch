@@ -32,7 +32,7 @@ export function compileSlots(item: ThemeSlots, target: SlotsTarget, ctx: Context
   const errors: Array<{ error: CatalogError; origin: SlotsOrigin }> = [];
   const props = (list: readonly LayerProp[]): Array<WrittenProperty<SlotsOrigin>> => {
     const resolvedList = resolvedProperties(list, ctx.tokens);
-    for (const error of resolvedList.errores) errors.push({ error, origin: (error.clave === undefined ? undefined : keyProperty(list, error.clave)) ?? item });
+    for (const error of resolvedList.errors) errors.push({ error, origin: (error.key === undefined ? undefined : keyProperty(list, error.key)) ?? item });
     return resolvedList.props;
   };
   const box = (node: ThemeSlots | SlotBox): BoxInput<SlotsOrigin> => ({
@@ -42,10 +42,10 @@ export function compileSlots(item: ThemeSlots, target: SlotsTarget, ctx: Context
     hijos: node.children.map((child): BoxInput<SlotsOrigin> | SlotInput<SlotsOrigin> => {
       if (isBox(child)) return box(child);
       const align = child.props.find((p) => p.key === 'align');
-      return { ref: child, slot: child.name, ...(align !== undefined && { align: { clave: 'align', valor: align.value, ref: align } }) };
+      return { ref: child, slot: child.name, ...(align !== undefined && { align: { key: 'align', value: align.value, ref: align } }) };
     }),
   });
-  const { disposicion: layout, errores: fromTree } = buildLayout(box(item), element);
+  const { disposicion: layout, errors: fromTree } = buildLayout(box(item), element);
   for (const { ref, ...error } of fromTree) errors.push({ error, origin: ref });
   for (const { error, origin } of errors) ctx.issues.push(themeIssue(ctx.file, error, site(origin, error)));
   if (layout === undefined || errors.length > 0) return;
@@ -57,7 +57,7 @@ export function compileSlots(item: ThemeSlots, target: SlotsTarget, ctx: Context
   for (const entry of entries) {
     const own = entry.props.filter((p) => p.key !== 'align');
     if (own.length === 0 || !Object.hasOwn(SLOT_DEFINITION, entry.name)) continue;
-    const style = looseFamily(SLOT_DEFINITION[entry.name as SlotName].estilo, own, 'texto-slot', ctx, rangeOf(entry, 'name').start);
+    const style = looseFamily(SLOT_DEFINITION[entry.name as SlotName].style, own, 'texto-slot', ctx, rangeOf(entry, 'name').start);
     if (style !== undefined) texts[entry.name as SlotName] = style;
   }
 }

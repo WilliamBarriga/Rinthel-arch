@@ -41,13 +41,13 @@ export function createDevGeometries({ request, initialView }: GeometriesDependen
   let waiting: { state: WithSource; view: string } | undefined;
   let active: string | undefined;
   /** Replaced on each structure change; whatever arrives late to the old round is discarded. */
-  let round = { requested: new Set<string>(), geometries: {} as Record<string, CachedGeometry>, errores: [] as string[] };
+  let round = { requested: new Set<string>(), geometries: {} as Record<string, CachedGeometry>, errors: [] as string[] };
 
   const notify = (): void => {
     for (const notice of notices) notice();
   };
   const show = (state: WithSource): void => {
-    shown = { state, geometries: { ...round.geometries }, errors: [...round.errores] };
+    shown = { state, geometries: { ...round.geometries }, errors: [...round.errors] };
     notify();
   };
 
@@ -58,7 +58,7 @@ export function createDevGeometries({ request, initialView }: GeometriesDependen
     void request(view).then((read) => {
       if (current !== round) return;
       if (read.ok) current.geometries[view] = read.geometry;
-      else if (read.error !== undefined) current.errores.push(read.error);
+      else if (read.error !== undefined) current.errors.push(read.error);
       if (waiting?.view === view) {
         const ready = waiting.state;
         waiting = undefined;
@@ -82,7 +82,7 @@ export function createDevGeometries({ request, initialView }: GeometriesDependen
         else show(withSource);
         return;
       }
-      round = { requested: new Set(), geometries: {}, errores: [] };
+      round = { requested: new Set(), geometries: {}, errors: [] };
       const view = active ?? initialView(withSource.fuente);
       if (view === undefined) {
         waiting = undefined;

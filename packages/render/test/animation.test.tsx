@@ -11,7 +11,7 @@ import type { ResolvedTheme } from 'theme';
 
 import { sheetOf } from './helpers';
 
-const p = (key: string, value: string | number) => ({ clave: key, valor: value });
+const p = (key: string, value: string | number) => ({ key, value });
 const ok = <T,>(r: { animacion?: T }): T => r.animacion!;
 
 const node = (id: string) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [] });

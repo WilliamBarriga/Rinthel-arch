@@ -45,32 +45,32 @@ describe('deterministic seed', () => {
 
 describe('catalog Effect Families', () => {
   const palette = { azul: '#2563eb' };
-  const ok = (kind: string, props: Array<{ clave: string; valor: string | number }>) => buildPrimitive(kind, props, palette);
+  const ok = (kind: string, props: Array<{ key: string; value: string | number }>) => buildPrimitive(kind, props, palette);
 
   it('covers shadow, glow, glass, filter and decoration, and none affects the Metrics', () => {
-    const families = new Set(Object.values(CATALOG).map((p) => p.familia));
+    const families = new Set(Object.values(CATALOG).map((p) => p.family));
 
     for (const f of ['sombra', 'glow', 'vidrio', 'filtro', 'decoracion']) expect(families).toContain(f);
-    for (const p of Object.values(CATALOG).filter((d) => ['sombra', 'glow', 'vidrio', 'filtro', 'decoracion'].includes(d.familia))) expect(p.afectaMetricas).toBe(false);
+    for (const p of Object.values(CATALOG).filter((d) => ['sombra', 'glow', 'vidrio', 'filtro', 'decoracion'].includes(d.family))) expect(p.affectsMetrics).toBe(false);
   });
 
   it('the shadow accepts inset, spread and blur 0 (hard shadow)', () => {
-    const hard = ok('shadow', [{ clave: 'color', valor: 'azul' }, { clave: 'x', valor: 4 }, { clave: 'y', valor: 4 }, { clave: 'inset', valor: 1 }, { clave: 'spread', valor: -2 }]);
+    const hard = ok('shadow', [{ key: 'color', value: 'azul' }, { key: 'x', value: 4 }, { key: 'y', value: 4 }, { key: 'inset', value: 1 }, { key: 'spread', value: -2 }]);
 
-    expect(hard.errores).toEqual([]);
-    expect(hard.primitiva?.props).toMatchObject({ blur: 0, x: 4, y: 4, inset: 1, spread: -2 });
+    expect(hard.errors).toEqual([]);
+    expect(hard.primitive?.props).toMatchObject({ blur: 0, x: 4, y: 4, inset: 1, spread: -2 });
   });
 
   it('the rotation rejects (without clamping) more than 3 degrees', () => {
-    expect(ok('tilt', [{ clave: 'degrees', valor: 3 }]).errores).toEqual([]);
-    expect(ok('tilt', [{ clave: 'degrees', valor: 4 }]).errores.map((e) => e.codigo)).toEqual(['theme-invalid-value']);
+    expect(ok('tilt', [{ key: 'degrees', value: 3 }]).errors).toEqual([]);
+    expect(ok('tilt', [{ key: 'degrees', value: 4 }]).errors.map((e) => e.code)).toEqual(['theme-invalid-value']);
   });
 
   it('requires color in glow, shadow and tape, and validates the other Primitives', () => {
-    for (const kind of ['glow', 'shadow', 'tape']) expect(ok(kind, []).errores).toHaveLength(1);
-    expect(ok('glass', []).primitiva).toBeDefined();
-    expect(ok('sketch', []).primitiva).toBeDefined();
-    expect(ok('glass', [{ clave: 'blur', valor: 999 }]).errores).toHaveLength(1);
+    for (const kind of ['glow', 'shadow', 'tape']) expect(ok(kind, []).errors).toHaveLength(1);
+    expect(ok('glass', []).primitive).toBeDefined();
+    expect(ok('sketch', []).primitive).toBeDefined();
+    expect(ok('glass', [{ key: 'blur', value: 999 }]).errors).toHaveLength(1);
   });
 
   it('the Theme `seed` is a non-negative integer in tokens', () => {

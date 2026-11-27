@@ -82,8 +82,8 @@ describe('contrast warnings', () => {
       ...(t.arista.etiqueta === undefined ? [] : [[t.arista.etiqueta, 'etiqueta'] as [Primitive, PrimitivePlacement]]),
     ];
     for (const [primitive, placement] of primitives) {
-      const props = Object.entries(primitive.props).map(([key, value]) => ({ clave: key, valor: value }));
-      expect(buildPrimitive(primitive.tipo, props, t.palette, placement).primitiva, primitive.tipo).toEqual(primitive);
+      const props = Object.entries(primitive.props).map(([key, value]) => ({ key, value }));
+      expect(buildPrimitive(primitive.tipo, props, t.palette, placement).primitive, primitive.tipo).toEqual(primitive);
     }
   });
 });

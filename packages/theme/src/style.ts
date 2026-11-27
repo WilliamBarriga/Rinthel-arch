@@ -211,7 +211,7 @@ function resolveProps(
   return Object.fromEntries(
     Object.entries(primitive.props).map(([key, value]) => [
       key,
-      definition.propiedades[key]?.tipo === 'color' ? resolveColor(String(value), palette, context) : value,
+      definition.properties[key]?.type === 'color' ? resolveColor(String(value), palette, context) : value,
     ]),
   );
 }
@@ -278,11 +278,11 @@ function rowPaint(theme: ResolvedTheme, variable: string | undefined): RowPaint 
   const { fila: row } = theme;
   if (row === undefined) return undefined;
   const stack = (v: RowVariant, state?: State): PaintedLayer[] => {
-    const ops: ReadonlyArray<readonly LayerOp[]> = [v.impar ? row.alterna : [], ...ROW_KEYS.filter((k) => v.keys.includes(k)).map((k) => row.claves[k] ?? []), v.opcional ? row.opcional : [], state === undefined ? [] : (row.estados[state] ?? [])];
+    const ops: ReadonlyArray<readonly LayerOp[]> = [v.odd ? row.alterna : [], ...ROW_KEYS.filter((k) => v.keys.includes(k)).map((k) => row.claves[k] ?? []), v.optional ? row.opcional : [], state === undefined ? [] : (row.estados[state] ?? [])];
     const layers = ops.reduce<ResolvedLayer[]>((acc, patch) => (patch.length === 0 ? acc : applyOps(acc, patch, theme.palette, 'parchear').pila), row.capas as ResolvedLayer[]);
     return paintLayers(layers, theme, undefined, variable);
   };
-  const base = stack({ impar: false, keys: [], opcional: false });
+  const base = stack({ odd: false, keys: [], optional: false });
   const variants: Record<string, PaintedLayer[]> = {};
   const states: Record<string, PaintedLayer[]> = {};
   const declaredOnes = (Object.keys(row.estados) as State[]).filter((e) => (row.estados[e]?.length ?? 0) > 0);

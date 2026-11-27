@@ -116,8 +116,8 @@ describe('example Theme gallery', () => {
 
   it('together they cover the catalog Families', () => {
     const used = new Set<string>();
-    for (const theme of canonical!.themes.filter((t) => THEMES.includes(t.name))) for (const p of primitivesOf(resolveTheme(theme))) used.add(CATALOG[p as keyof typeof CATALOG].familia);
-    const all = new Set(Object.values(CATALOG).map((d) => d.familia as string).filter((f) => f !== 'codigo'));
+    for (const theme of canonical!.themes.filter((t) => THEMES.includes(t.name))) for (const p of primitivesOf(resolveTheme(theme))) used.add(CATALOG[p as keyof typeof CATALOG].family);
+    const all = new Set(Object.values(CATALOG).map((d) => d.family as string).filter((f) => f !== 'codigo'));
     expect([...all].filter((f) => !used.has(f))).toEqual([]);
   });
 

@@ -8,17 +8,17 @@ import { CATALOG, SLOT_DEFINITION, OFFSET_PROPERTIES, ZONE_PROPERTY, SLOTS, plac
 import type { PrimitiveDefinition, PropertyDefinition, PrimitiveName } from './catalog';
 
 const property = (name: string, definition: PropertyDefinition): string => {
-  switch (definition.tipo) {
-    case 'numero':
-      return `\`${name}\` ${definition.min} to ${definition.max}${definition.defecto !== undefined ? ` (${definition.defecto})` : definition.opcional === true ? ' (optional)' : ''}`;
+  switch (definition.type) {
+    case 'number':
+      return `\`${name}\` ${definition.min} to ${definition.max}${definition.default !== undefined ? ` (${definition.default})` : definition.optional === true ? ' (optional)' : ''}`;
     case 'color':
-      return `\`${name}\` Palette color${definition.opcional === true ? ' (optional)' : ''}`;
-    case 'opcion':
-      return `\`${name}\` ${definition.valores.join('|')}${definition.defecto !== undefined ? ` (${definition.defecto})` : definition.opcional === true ? ' (optional)' : ''}`;
-    case 'nombre':
+      return `\`${name}\` Palette color${definition.optional === true ? ' (optional)' : ''}`;
+    case 'option':
+      return `\`${name}\` ${definition.values.join('|')}${definition.default !== undefined ? ` (${definition.default})` : definition.optional === true ? ' (optional)' : ''}`;
+    case 'name':
       return `\`${name}\` Component name`;
-    case 'texto':
-      return `\`${name}\` text up to ${definition.largo} characters${definition.opcional === true ? ' (optional)' : ''}`;
+    case 'text':
+      return `\`${name}\` text up to ${definition.maxLength} characters${definition.optional === true ? ' (optional)' : ''}`;
   }
 };
 
@@ -63,7 +63,7 @@ const table = (header: readonly string[], rows: readonly (readonly string[])[]):
 
 export function catalogReference(): string {
   const entries = Object.entries(CATALOG) as [string, PrimitiveDefinition][];
-  const families = [...new Set(entries.map(([, definition]) => definition.familia))];
+  const families = [...new Set(entries.map(([, definition]) => definition.family))];
   const lines: string[] = [
     '# Theme catalog reference',
     '',
@@ -79,20 +79,20 @@ export function catalogReference(): string {
     '',
     ...table(['Common property', 'Range'], Object.entries(OFFSET_PROPERTIES).map(([key, value]) => [`\`${key}\``, `${value.min} to ${value.max}`])),
     '',
-    `And \`zone\` (${ZONE_PROPERTY.zone.valores.map((v) => `\`${v}\``).join(', ')}; without it, \`all\`): which part of the box the Layer paints. \`header\` is the zone of the Slots before \`attrs\` (without \`attrs\` it equals \`all\`) and \`body\` that of \`attrs\`. It only paints, and is applied apart from the box: a state patch does not change it.`,
+    `And \`zone\` (${ZONE_PROPERTY.zone.values.map((v) => `\`${v}\``).join(', ')}; without it, \`all\`): which part of the box the Layer paints. \`header\` is the zone of the Slots before \`attrs\` (without \`attrs\` it equals \`all\`) and \`body\` that of \`attrs\`. It only paints, and is applied apart from the box: a state patch does not change it.`,
   );
   for (const family of families) {
     lines.push('', `### ${(FAMILIES[family] ?? family).replace(/^./, (c) => c.toUpperCase())} family`, '');
     const rows = entries
-      .filter(([, definition]) => definition.familia === family)
+      .filter(([, definition]) => definition.family === family)
       .map(([name, definition]) => {
-        const props = Object.entries(definition.propiedades).map(([key, value]) => property(key, value));
-        if (definition.abierta === true) props.push('free parameters (number or text)');
-        return [`\`${name}\``, placementsOf(name as PrimitiveName).map((u) => PLACEMENTS[u] ?? u).join(', '), props.join('; ') || '-', definition.afectaMetricas ? 'yes' : 'no'];
+        const props = Object.entries(definition.properties).map(([key, value]) => property(key, value));
+        if (definition.open === true) props.push('free parameters (number or text)');
+        return [`\`${name}\``, placementsOf(name as PrimitiveName).map((u) => PLACEMENTS[u] ?? u).join(', '), props.join('; ') || '-', definition.affectsMetrics ? 'yes' : 'no'];
       });
     lines.push(...table(['Primitive', 'Placement', 'Properties', 'Metrics'], rows));
   }
-  lines.push('', '## Slots', '', ...table(['Slot', 'Style'], SLOTS.map((slot) => [`\`${slot}\``, `\`${SLOT_DEFINITION[slot].estilo}\``])));
+  lines.push('', '## Slots', '', ...table(['Slot', 'Style'], SLOTS.map((slot) => [`\`${slot}\``, `\`${SLOT_DEFINITION[slot].style}\``])));
   lines.push(
     '',
     '## States',

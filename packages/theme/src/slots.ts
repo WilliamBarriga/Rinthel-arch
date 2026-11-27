@@ -46,7 +46,7 @@ function measureElement(element: SlotLayoutElement, measure: SlotMeasure): Measu
   if (!isBox(element)) {
     const measured = measure(element.slot);
     if (measured === undefined) return undefined;
-    const { elastico: flexible = SLOT_DEFINITION[element.slot].elastico, ...sz } = measured;
+    const { elastico: flexible = SLOT_DEFINITION[element.slot].elastic, ...sz } = measured;
     return { tam: sz, elastico: flexible, align: element.align, slot: element.slot, hijos: [] };
   }
   const children = element.hijos.flatMap((child) => measureElement(child, measure) ?? []);
@@ -128,8 +128,8 @@ export function slotText(slot: TextSlotName, metrics: Metrics, content: NodeCont
   const { size, leading, mono, peso: weight, prefijo: prefixText = '', borde: border = 0 } = metrics.medidaDeTexto[slot] ?? {};
   const text = prefixText + (style?.mayusculas === true ? raw.toUpperCase() : raw);
   const definition: SlotDefinition = SLOT_DEFINITION[slot];
-  const pixelSize = metrics.fontSize * (size ?? definition.escala ?? 1);
-  const lineSpacing = leading ?? definition.interlineado;
+  const pixelSize = metrics.fontSize * (size ?? definition.scale ?? 1);
+  const lineSpacing = leading ?? definition.lineHeight;
   const chip = slot === 'counter';
   return {
     familia: metrics.fuentes[mono === true ? 'mono' : 'body']!,

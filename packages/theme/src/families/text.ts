@@ -5,101 +5,101 @@
 import type { PrimitiveDefinition, PropertyDefinition } from '../catalog';
 
 /** Changes which font it is measured with. */
-const FONT = { tipo: 'opcion', valores: ['body', 'mono'], opcional: true } as const satisfies PropertyDefinition;
+const FONT = { type: 'option', values: ['body', 'mono'], optional: true } as const satisfies PropertyDefinition;
 /** Without it, 1 px. */
-const BORDER_WIDTH = { tipo: 'numero', min: 0, max: 8, opcional: true } as const satisfies PropertyDefinition;
+const BORDER_WIDTH = { type: 'number', min: 0, max: 8, optional: true } as const satisfies PropertyDefinition;
 
 /** `size` relative to the Theme size and `leading` relative to `size`; without them the Slot rules (`SLOT_DEFINITION`). */
 const TEXT_MEASURE = {
-  size: { tipo: 'numero', min: 0.4, max: 3, opcional: true },
-  leading: { tipo: 'numero', min: 1, max: 5, opcional: true },
+  size: { type: 'number', min: 0.4, max: 3, optional: true },
+  leading: { type: 'number', min: 1, max: 5, optional: true },
 } as const satisfies Record<string, PropertyDefinition>;
 
 export const TEXTS = {
   text: {
-    familia: 'texto',
-    ubicacion: 'texto-slot',
-    afectaMetricas: true,
-    propiedades: {
-      weight: { tipo: 'numero', min: 100, max: 900, defecto: 400 },
-      color: { tipo: 'color', opcional: true },
-      style: { tipo: 'opcion', valores: ['normal', 'italic'], defecto: 'normal' },
-      transform: { tipo: 'opcion', valores: ['none', 'uppercase'], defecto: 'none' },
+    family: 'texto',
+    placement: 'texto-slot',
+    affectsMetrics: true,
+    properties: {
+      weight: { type: 'number', min: 100, max: 900, default: 400 },
+      color: { type: 'color', optional: true },
+      style: { type: 'option', values: ['normal', 'italic'], default: 'normal' },
+      transform: { type: 'option', values: ['none', 'uppercase'], default: 'none' },
       font: FONT,
-      alpha: { tipo: 'numero', min: 0, max: 1, opcional: true },
+      alpha: { type: 'number', min: 0, max: 1, optional: true },
       /** Text alignment inside its rectangle; without it the Slot rules (the title is centered, the rest starts at the left). */
-      'text-align': { tipo: 'opcion', valores: ['start', 'center', 'end'], opcional: true },
+      'text-align': { type: 'option', values: ['start', 'center', 'end'], optional: true },
       ...TEXT_MEASURE,
       /** In em; also widens the measured text. */
-      tracking: { tipo: 'numero', min: 0, max: 1, defecto: 0 },
+      tracking: { type: 'number', min: 0, max: 1, default: 0 },
       /** With `fill` the Slot is a chip: its natural width plus `pad` on each side. */
-      fill: { tipo: 'color', opcional: true },
-      border: { tipo: 'color', opcional: true },
+      fill: { type: 'color', optional: true },
+      border: { type: 'color', optional: true },
       'border-width': BORDER_WIDTH,
-      radius: { tipo: 'numero', min: 0, max: 50, defecto: 0 },
-      pad: { tipo: 'numero', min: 0, max: 32, defecto: 0 },
+      radius: { type: 'number', min: 0, max: 50, default: 0 },
+      pad: { type: 'number', min: 0, max: 32, default: 0 },
       /** Color dot before the text; it is one `size` (in em) wide. */
-      dot: { tipo: 'color', opcional: true },
+      dot: { type: 'color', optional: true },
       /** Text prepended to the Slot's (e.g. `"> "`): measured and painted as part of it. */
-      prefix: { tipo: 'texto', largo: 8, opcional: true },
-      glow: { tipo: 'color', opcional: true },
+      prefix: { type: 'text', maxLength: 8, optional: true },
+      glow: { type: 'color', optional: true },
     },
   },
   chip: {
-    familia: 'texto',
-    ubicacion: 'texto-slot',
-    afectaMetricas: true,
-    propiedades: {
-      weight: { tipo: 'numero', min: 100, max: 900, defecto: 700 },
-      color: { tipo: 'color', opcional: true },
-      fill: { tipo: 'color', opcional: true },
-      border: { tipo: 'color', opcional: true },
+    family: 'texto',
+    placement: 'texto-slot',
+    affectsMetrics: true,
+    properties: {
+      weight: { type: 'number', min: 100, max: 900, default: 700 },
+      color: { type: 'color', optional: true },
+      fill: { type: 'color', optional: true },
+      border: { type: 'color', optional: true },
       'border-width': BORDER_WIDTH,
-      radius: { tipo: 'numero', min: 0, max: 50, defecto: 50 },
+      radius: { type: 'number', min: 0, max: 50, default: 50 },
       size: TEXT_MEASURE.size,
       font: FONT,
     },
   },
   icon: {
-    familia: 'texto',
-    ubicacion: 'texto-slot',
-    afectaMetricas: true,
-    propiedades: {
-      variant: { tipo: 'opcion', valores: ['plain', 'box', 'dot'], defecto: 'plain' },
+    family: 'texto',
+    placement: 'texto-slot',
+    affectsMetrics: true,
+    properties: {
+      variant: { type: 'option', values: ['plain', 'box', 'dot'], default: 'plain' },
       /** In px. */
-      side: { tipo: 'numero', min: 6, max: 96, defecto: 16 },
-      radius: { tipo: 'numero', min: 0, max: 50, defecto: 6 },
-      fill: { tipo: 'color', opcional: true },
+      side: { type: 'number', min: 6, max: 96, default: 16 },
+      radius: { type: 'number', min: 0, max: 50, default: 6 },
+      fill: { type: 'color', optional: true },
       /** In `dot`: the dot (4/9 of the side) sits on a ring of this color. */
-      ring: { tipo: 'color', opcional: true },
-      border: { tipo: 'color', opcional: true },
+      ring: { type: 'color', optional: true },
+      border: { type: 'color', optional: true },
       'border-width': BORDER_WIDTH,
       /** Glyph color; without it, the stroke color of the Node kind. */
-      color: { tipo: 'color', opcional: true },
+      color: { type: 'color', optional: true },
       /** In px; without it, in `box` it takes 60% of the side. Paint-only. */
-      glyph: { tipo: 'numero', min: 6, max: 96, opcional: true },
+      glyph: { type: 'number', min: 6, max: 96, optional: true },
     },
   },
   label: {
-    familia: 'texto',
-    ubicacion: 'etiqueta',
-    afectaMetricas: true,
-    propiedades: {
-      scale: { tipo: 'numero', min: 0.5, max: 2, defecto: 0.85 },
-      pad: { tipo: 'numero', min: 0, max: 32, defecto: 4 },
-      'pad-y': { tipo: 'numero', min: 0, max: 16, opcional: true },
-      radius: { tipo: 'numero', min: 0, max: 50, defecto: 0 },
-      fill: { tipo: 'color', opcional: true },
-      border: { tipo: 'color', opcional: true },
-      'border-width': { tipo: 'numero', min: 0.5, max: 8, opcional: true },
+    family: 'texto',
+    placement: 'etiqueta',
+    affectsMetrics: true,
+    properties: {
+      scale: { type: 'number', min: 0.5, max: 2, default: 0.85 },
+      pad: { type: 'number', min: 0, max: 32, default: 4 },
+      'pad-y': { type: 'number', min: 0, max: 16, optional: true },
+      radius: { type: 'number', min: 0, max: 50, default: 0 },
+      fill: { type: 'color', optional: true },
+      border: { type: 'color', optional: true },
+      'border-width': { type: 'number', min: 0.5, max: 8, optional: true },
       /** Without `color`, the Theme's text color. */
-      color: { tipo: 'color', opcional: true },
-      weight: { tipo: 'numero', min: 100, max: 900, opcional: true },
+      color: { type: 'color', optional: true },
+      weight: { type: 'number', min: 100, max: 900, optional: true },
       font: FONT,
       /** Hard shadow offset 2 px down and right; `rotate` in degrees around the center. */
-      shadow: { tipo: 'color', opcional: true },
-      rotate: { tipo: 'numero', min: -15, max: 15, opcional: true },
-      style: { tipo: 'opcion', valores: ['normal', 'italic'], opcional: true },
+      shadow: { type: 'color', optional: true },
+      rotate: { type: 'number', min: -15, max: 15, optional: true },
+      style: { type: 'option', values: ['normal', 'italic'], optional: true },
     },
   },
 } as const satisfies Record<string, PrimitiveDefinition>;
