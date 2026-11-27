@@ -7,7 +7,7 @@
  * Codigos de salida: 0 correcto, 1 errores del Workspace o edicion rechazada, 2 fallo de uso o interno.
  */
 import { obsoleteConventions, validateOutputSchema } from 'canonical';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 import { parseArgs } from 'node:util';
 
 import { conActividad } from './actividad';
@@ -33,7 +33,7 @@ export type { ResultadoDeEjecucion };
 
 /** Por defecto, las reales. */
 export interface Dependencias {
-  leer?: (raiz: string) => ArchivosDelWorkspace;
+  leer?: (raiz: string) => WorkspaceFiles;
   /** Rutas de todos los archivos del Workspace (convenciones de nombres); con `leer` inyectado, sus claves. */
   listar?: (raiz: string) => string[];
   escribir?: (raiz: string, archivos: Readonly<Record<string, string | Uint8Array>>, subcarpeta?: string) => void;

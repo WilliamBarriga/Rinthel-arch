@@ -2,13 +2,13 @@
 import { nearestCandidates } from 'canonical';
 import type { CanonicalForm, OrderIntent, PinIntent, ThemeIntent, Issue, TextRange, Locator } from 'canonical';
 import { compile } from 'dsl';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 
 import { applyAgainst, errorsByKey, contentHash, offsetOf, reject } from './edits';
 import type { HashedEdit, EditResult } from './edits';
 
 export type GestureResult = EditResult<{
-  files: ArchivosDelWorkspace;
+  files: WorkspaceFiles;
   edits: HashedEdit[];
   issues: Issue[];
 }>;
@@ -57,13 +57,13 @@ function toEdit(write: TextWrite, text: string): HashedEdit {
 
 /** Checks `seen` against the touched file and self-tests the edit (all or nothing); 2 compilations in total. */
 function runGesture(
-  files: ArchivosDelWorkspace,
+  files: WorkspaceFiles,
   view: string,
   seen: Seen | undefined,
   describeWrite: (context: GestureContext) => TextWrite | Rejection,
 ): GestureResult {
   const compiled = compile(files);
-  const { canonico: source, ubicar: locate } = compiled;
+  const { canonical: source, locate } = compiled;
   if (source === undefined || locate === undefined) {
     const first = compiled.issues.find((i) => i.severity === 'error');
     return reject('invalid', `The Workspace has errors: ${first?.message ?? ''}`, first?.file);
@@ -94,7 +94,7 @@ const pinCoordinate = (n: number): number => Math.min(PIN_LIMIT, Math.max(-PIN_L
  * Replaces the `pin` of the Node's override, adds it to an override without `pin`, or inserts `node <id> { pin x,y }`
  * before the View's `}`. A missing Node rejects with `invalid`.
  */
-export function movePin(files: ArchivosDelWorkspace, intent: PinIntent, seen?: Seen): GestureResult {
+export function movePin(files: WorkspaceFiles, intent: PinIntent, seen?: Seen): GestureResult {
   const { node } = intent;
   const pin = `pin ${pinCoordinate(intent.x)},${pinCoordinate(intent.y)}`;
   return runGesture(files, intent.view, seen, ({ declared, index, locate, text }) => {
@@ -128,7 +128,7 @@ function orderWithHidden(order: readonly string[], previousOrder: readonly strin
  * Rewrites the whole `order` of a sequence View (hidden entries keep their relative position) or inserts it before
  * the View's `}`, even if it matches the first-appearance order. An id that is not a Node rejects with `invalid`.
  */
-export function reorderLifelines(files: ArchivosDelWorkspace, intent: OrderIntent, seen?: Seen): GestureResult {
+export function reorderLifelines(files: WorkspaceFiles, intent: OrderIntent, seen?: Seen): GestureResult {
   const { view } = intent;
   return runGesture(files, view, seen, ({ declared, index, locate }) => {
     if (declared.type !== 'sequence') return reject('invalid', `View '${view}' is not a sequence View`);
@@ -161,7 +161,7 @@ function wholeLineOf(text: string, statement: TextRange): TextRange {
  * first line of the body. Without `theme` in the Intent it removes the statement, or leaves `theme neutral { patch }`
  * if it had a patch. A Theme the Canonical form does not declare rejects with `unknown-theme`.
  */
-export function setTheme(files: ArchivosDelWorkspace, intent: ThemeIntent, seen?: Seen): GestureResult {
+export function setTheme(files: WorkspaceFiles, intent: ThemeIntent, seen?: Seen): GestureResult {
   const { view, theme } = intent;
   return runGesture(files, view, seen, ({ declared, index, locate, text, source }) => {
     if (theme !== undefined && !source.themes.some(({ name }) => name === theme)) {

@@ -2,7 +2,7 @@
 
 # Referencia del DSL
 
-Resumen de la sintaxis de los archivos `.dg`. La gramatica completa esta en `packages/dsl/src/gramatica/diagramas.langium`; las decisiones, en el [ADR 0001](../adr/0001-dsl-editable-source.md). Los Temas se describen en [Personalizar con Temas](themes.md). Los comentarios empiezan con `//`.
+Resumen de la sintaxis de los archivos `.dg`. La gramatica completa esta en `packages/dsl/src/grammar/diagrams.langium`; las decisiones, en el [ADR 0001](../adr/0001-dsl-editable-source.md). Los Temas se describen en [Personalizar con Temas](themes.md). Los comentarios empiezan con `//`.
 
 Un Workspace es una carpeta con cualquier cantidad de `.dg` (en subcarpetas tambien); se fusionan en un unico Modelo. Un archivo puede mezclar bloques `specification`, `model`, `view`, `theme` y `part`.
 

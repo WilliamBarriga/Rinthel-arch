@@ -5,13 +5,13 @@
 //
 // Portions of this file have been modified by NVIDIA CORPORATION & AFFILIATES.
 //
-// Derivado de packages/language-server/src/like-c4.langium de LikeC4
-// (https://github.com/likec4/likec4, MIT; ver LICENSE-LIKEC4 en este paquete).
-// Copia recortada y adaptada (ADR 0001).
+// Derived from packages/language-server/src/like-c4.langium of LikeC4
+// (https://github.com/likec4/likec4, MIT; see LICENSE-LIKEC4 in this package).
+// Trimmed and adapted copy (ADR 0001).
 
-grammar Diagramas
+grammar Diagrams
 
-entry Documento:
+entry DiagramFile:
   (
     specifications+=Specification |
     models+=Model |
@@ -36,7 +36,7 @@ NodeTypeDecl:
 NodeTypeProperty:
   key=('description' | 'icon' | 'style' | 'color') ':'? value=PropertyValue ';'?;
 
-// Cadena, o un identificador (p. ej. un nombre de Paleta: `color blue`).
+// String, or an identifier (e.g. a Palette name: `color blue`).
 PropertyValue returns string:
   String | Id;
 
@@ -48,8 +48,8 @@ Model:
   '}'
 ;
 
-// `interaction <id> ["Titulo"] ["Descripcion"] [planned] { mensajes }`. Su id vive en un espacio de nombres propio;
-// `interaction` sigue valiendo como id de Nodo. `planned` (ADR 0011) marca todos sus Mensajes.
+// `interaction <id> ["Title"] ["Description"] [planned] { messages }`. Its id lives in its own namespace;
+// `interaction` is still valid as a Node id. `planned` (ADR 0011) marks all its Messages.
 Interaction:
   'interaction' name=Id (title=String (description=String)?)? (planned?='planned')? '{'
     items+=InteractionItem*
@@ -64,13 +64,13 @@ Note:
   'note' (anchor=('left' | 'right') 'of' targets+=Ref | anchor='over' targets+=Ref (',' targets+=Ref)*) text=String
 ;
 
-// `ref <interaccion>`: los ciclos son validos; no se expande.
+// `ref <interaction>`: cycles are valid; it is not expanded.
 InteractionRef:
   'ref' interaction=Id
 ;
 
-// `opt|loop|break|critical ["guarda"] { }`, `alt ["guarda"] { } else ["guarda"] { }`, `par { } and { }`.
-// El parser acepta cualquier operador con `else`/`and` en cualquier cantidad; `canonical` emite
+// `opt|loop|break|critical ["guard"] { }`, `alt ["guard"] { } else ["guard"] { }`, `par { } and { }`.
+// The parser accepts any operator with `else`/`and` in any amount; `canonical` emits
 // `invalid-fragment-operand`, no `syntax-error`.
 Fragment:
   operator=('opt' | 'loop' | 'break' | 'critical' | 'alt' | 'par') operands+=FirstOperand operands+=NextOperand*
@@ -84,21 +84,21 @@ NextOperand:
   separator=('else' | 'and') (guard=String)? '{' items+=InteractionItem* '}'
 ;
 
-// `[id:] [async|reply|create|destroy] origen -> destino ["etiqueta"] ["descripcion"]`; `origen == destino` es un Mensaje propio.
-// `async`, `reply`, `create` y `destroy` tambien valen como id de Nodo (`reply -> otro`).
+// `[id:] [async|reply|create|destroy] source -> target ["label"] ["description"]`; `source == target` is a self Message.
+// `async`, `reply`, `create` and `destroy` are also valid as Node ids (`reply -> other`).
 Message:
   (alias=Id ':')? (kind=('async' | 'reply' | 'create' | 'destroy'))? from=Ref '->' to=Ref (label=String (description=String)?)?
 ;
 
-// `<origen> ["card"] -> ["card"] <destino> ["etiqueta"]`; los extremos son ids cualificados.
-// Los espacios alrededor de `->` son obligatorios: `-` es valido dentro de un Id.
-// ER: la palabra final `identifying` marca la relacion como identificante; `planned` (ADR 0011, tras `identifying`),
-// como propuesta.
+// `<source> ["card"] -> ["card"] <target> ["label"]`; the ends are qualified ids.
+// Spaces around `->` are required: `-` is valid inside an Id.
+// ER: the final word `identifying` marks the relation as identifying; `planned` (ADR 0011, after `identifying`),
+// as a proposal.
 Edge:
   from=Endpoint (fromCardinality=String)? '->' (toCardinality=String)? to=Endpoint (label=String)? (identifying?='identifying')? (planned?='planned')?
 ;
 
-// Nodo por id cualificado (`a.b.c`) y, opcional, uno de sus Atributos (`a.b#col`).
+// Node by qualified id (`a.b.c`) and, optionally, one of its Attributes (`a.b#col`).
 Endpoint:
   node=Ref ('#' attribute=Id)?
 ;
@@ -106,8 +106,8 @@ Endpoint:
 Ref returns string:
   Id ('.' Id)*;
 
-// `extend <nodo> { ... }`: anade hijos, Atributos y source a un Nodo declarado en
-// otro archivo (o en otro bloque `model`).
+// `extend <node> { ... }`: adds children, Attributes and source to a Node declared in
+// another file (or in another `model` block).
 Extend:
   'extend' target=Ref '{'
     (elements+=Element | attrs+=Attrs | attributes+=Attribute | sources+=Source)*
@@ -116,8 +116,8 @@ Extend:
 
 // Theme -------------------------------------
 
-// `theme <nombre> [extends <padre>] { palette { blue "#00f" } fonts { ... } tokens { ... } }`
-// Un solo padre; el hex solo vive aqui.
+// `theme <name> [extends <parent>] { palette { blue "#00f" } fonts { ... } tokens { ... } }`
+// A single parent; hex only lives here.
 Theme:
   'theme' name=Id ('extends' parent=Id)? '{'
     parts+=ThemePart*
@@ -139,7 +139,7 @@ ThemeTokens:
 ThemeEntry:
   key=Id ':'? value=EntryValue;
 
-// Cadena (`"#00f"`, `"16px"`) o numero (los `tokens` numericos: `gap 8`).
+// String (`"#00f"`, `"16px"`) or number (numeric `tokens`: `gap 8`).
 EntryValue returns string:
   String | Num;
 
@@ -147,16 +147,16 @@ Num returns string:
   DIGITS ('.' DIGITS)?;
 
 // `node { layer background solid { color blue }  slots { title attrs }  type servicio { ... }  state hover { ... } }`
-// Capas de abajo hacia arriba, Slots en orden y parches por Tipo de nodo (`type`) y por estado (`state`).
+// Layers from bottom to top, Slots in order and patches per Node kind (`type`) and per state (`state`).
 ThemeNode:
   'node' '{' items+=NodeItem* '}';
 
 NodeItem:
   ThemeLayer | ThemeSlots | ThemeUse | ThemeType | ThemeState | ThemeDiagram | ThemeTransition | ThemeEnter | ThemeExit | ThemeStagger;
 
-// `group { layer caja rect { radius 16 }  slots row gap 6 { icon title }  padding 8 16 16  type ...  state collapsed { ... } }`
-// Lo mismo que `node` mas el `padding` de la zona de hijos (1, 2 o 4 valores como en CSS). `state collapsed`
-// es el Grupo cerrado, que se comporta como un Nodo hoja (puede cambiar `slots` y la caja).
+// `group { layer box rect { radius 16 }  slots row gap 6 { icon title }  padding 8 16 16  type ...  state collapsed { ... } }`
+// The same as `node` plus the `padding` of the children area (1, 2 or 4 values as in CSS). `state collapsed`
+// is the closed Group, which behaves like a leaf Node (it can change `slots` and the box).
 ThemeGroup:
   'group' '{' items+=GroupItem* '}';
 
@@ -166,8 +166,8 @@ GroupItem:
 GroupPadding:
   'padding' values+=Num+;
 
-// `diagram flow { ... }`: parche por Tipo de diagrama dentro de `node`, `group` o `edge`, entre el Tema base y el
-// Tipo de nodo. Puede cambiar las Metricas. El nombre se valida al compilar.
+// `diagram flow { ... }`: patch per Diagram type inside `node`, `group` or `edge`, between the base Theme and the
+// Node kind. It can change the Metrics. The name is validated when compiling.
 ThemeDiagram:
   'diagram' name=Id '{' items+=DiagramItem* '}';
 
@@ -177,8 +177,8 @@ DiagramItem:
 ThemeType:
   'type' name=Id '{' items+=PatchItem* '}';
 
-// Los parches de estado no pueden tocar las Metricas; `slots` se acepta aqui solo para
-// que el catalogo lo rechace con un error claro (theme-state-touches-metrics).
+// State patches cannot touch the Metrics; `slots` is accepted here only so that
+// the catalog rejects it with a clear error (theme-state-touches-metrics).
 ThemeState:
   'state' name=Id '{' items+=StateItem* '}';
 
@@ -188,22 +188,22 @@ PatchItem:
 StateItem:
   ThemeLayer | ThemeUse | ThemeSlots | ThemeTransition;
 
-// `part <nombre> { layer ... }`: parche reutilizable sin Tema, que se incluye con `use` (nombre unico en el Workspace).
+// `part <name> { layer ... }`: reusable patch without a Theme, included with `use` (name unique in the Workspace).
 PartDecl:
   'part' name=Id '{' items+=PatchItem* '}';
 
 ThemeUse:
   'use' name=Id;
 
-// `layer <nombre> [<primitiva>] [before|after <otra>] [over] [{ props }]`
-// define, cambia o anade segun exista o no en el nivel de abajo; `layer <nombre> none` la quita.
-// La primitiva es un identificador plano (nunca una palabra clave) para no confundirla con `over`/`none`.
+// `layer <name> [<primitive>] [before|after <other>] [over] [{ props }]`
+// defines, changes or adds depending on whether it exists in the level below; `layer <name> none` removes it.
+// The primitive is a plain identifier (never a keyword) so it is not confused with `over`/`none`.
 ThemeLayer:
   'layer' name=Id (remove?='none' | (primitive=IdTerminal)? (placement=('before' | 'after') target=Id)? (over?='over')? ('{' (animations+=LayerAnimation | props+=LayerProp)* '}')?);
 
-// En una Capa: `motion pulse 1.2s ease-in-out intensity 0.4`, `motion none` (quita el heredado) o
-// `keyframes opacity 2s { 0 1  50 0.4  100 1 }`. En `node`: `transition`, `enter`, `exit`, `stagger`;
-// `transition` tambien en un `state`. Los parametros son palabras cerradas (no colisionan con las propiedades).
+// In a Layer: `motion pulse 1.2s ease-in-out intensity 0.4`, `motion none` (removes the inherited one) or
+// `keyframes opacity 2s { 0 1  50 0.4  100 1 }`. In `node`: `transition`, `enter`, `exit`, `stagger`;
+// `transition` also in a `state`. The parameters are closed words (they do not collide with the properties).
 LayerAnimation:
   ThemeMotion | ThemeKeyframes;
 
@@ -226,13 +226,13 @@ ThemeExit:
   'exit' effect=IdTerminal params+=AnimParam*;
 
 ThemeStagger:
-  'stagger' amount=Duracion;
+  'stagger' amount=Duration;
 
 AnimParam:
-  duration=Duracion | 'delay' delay=Duracion | 'intensity' intensity=Num | 'reduced' reduced=IdTerminal | easing=Easing;
+  duration=Duration | 'delay' delay=Duration | 'intensity' intensity=Num | 'reduced' reduced=IdTerminal | easing=Easing;
 
-// Numero seguido de su unidad (`ms` o `s`); la unidad se valida al compilar.
-Duracion:
+// Number followed by its unit (`ms` or `s`); the unit is validated when compiling.
+Duration:
   amount=Num unit=IdTerminal;
 
 Easing returns string:
@@ -241,11 +241,11 @@ Easing returns string:
 SignedNum returns string:
   '-'? DIGITS ('.' DIGITS)?;
 
-// `offset x y` lleva dos valores (`second`); cualquier otra clave con segundo valor es un error al compilar.
+// `offset x y` takes two values (`second`); any other key with a second value is an error when compiling.
 LayerProp:
   key=Id value=LayerValue (second=SignedNum)?;
 
-// Numero, `$token`, nombre de Paleta, `nombre/alfa` o `mix(a, b, t)`; el catalogo de `tema` lo interpreta.
+// Number, `$token`, Palette name, `name/alpha` or `mix(a, b, t)`; the `theme` catalog interprets it.
 LayerValue returns string:
   MixValue | LayerAtom ('/' Num)?;
 
@@ -255,8 +255,8 @@ LayerAtom returns string:
 MixValue returns string:
   'mix' '(' Id ',' Id ',' Num ')';
 
-// `slots [row|column] [gap N] [pad N] [align A] { hijos }`; sin direccion es una columna. Un hijo es un Slot
-// (con su estilo entre llaves) o una caja anidada `row`/`column`.
+// `slots [row|column] [gap N] [pad N] [align A] { children }`; without a direction it is a column. A child is a Slot
+// (with its style in braces) or a nested `row`/`column` box.
 ThemeSlots:
   'slots' direction=SlotDirection? props+=LayerProp* '{' children+=SlotChild* '}';
 
@@ -273,18 +273,18 @@ SlotEntry:
   name=Id ('{' props+=LayerProp* '}')?;
 
 // `edge { layer glow line { color ORIGIN/0.3 width 6 }  start dot  end arrow { size 10 }  label { pad 6 fill paper } }`
-// Pila de trazos, marcadores de extremo y etiqueta con modelo de caja.
+// Stroke stack, end markers and a label with a box model.
 ThemeEdge:
   'edge' '{' items+=EdgeItem* '}';
 
 EdgeItem:
   ThemeLayer | ThemeUse | ThemeMarker | ThemeLabel | ThemeDiagram | EdgeIdentifying | ThemeState;
 
-// `identifying { ... }`: parche del trazo de las Aristas identificantes de una Vista ER.
+// `identifying { ... }`: patch of the stroke of the identifying Edges of an ER View.
 EdgeIdentifying:
   'identifying' '{' items+=PatchItem* '}';
 
-// `start|end <marcador> [{ props }]` o `start|end none`.
+// `start|end <marker> [{ props }]` or `start|end none`.
 ThemeMarker:
   side=('start' | 'end') (remove?='none' | kind=IdTerminal ('{' props+=LayerProp* '}')?);
 
@@ -293,8 +293,8 @@ ThemeLabel:
 
 // `row { layer background solid { color paper }  height 28  alternate { layer background { color gray } }  name { weight 600 }
 //   key { fill blue }  key pk { layer background { color green } }  optional { layer background { color gray } } }`
-// Fila de una tabla ER: `alternate` parchea las filas impares; `key pk|fk|uk` y `optional` parchean por marca de
-// clave y por Atributo opcional. Solo pinta, salvo `height`.
+// ER table row: `alternate` patches the odd rows; `key pk|fk|uk` and `optional` patch per key
+// mark and per optional Attribute. It only paints, except `height`.
 ThemeRow:
   'row' '{' items+=RowItem* '}';
 
@@ -313,17 +313,17 @@ RowOptional:
 RowAlternate:
   'alternate' '{' items+=PatchItem* '}';
 
-// Solo pinta, como los estados de `node`.
+// It only paints, like the `node` states.
 RowState:
   'state' name=Id '{' items+=PatchItem* '}';
 
-// El nombre del texto (`name`, `type`, `key`) se valida al compilar.
+// The text name (`name`, `type`, `key`) is validated when compiling.
 RowText:
   slot=Id '{' props+=LayerProp* '}';
 
 // `message { layer line line { color ink }  end arrow { size 9 }  gap 36  kind reply { layer line { style dashed } } }`
-// Elementos de secuencia. Parches por variante: `kind <tipo>` en message, `op <operador>` en fragment. Que admite
-// cada uno lo valida el catalogo de `tema`; los nombres de estilo, Metrica y variante se validan al compilar.
+// Sequence Elements. Patches per variant: `kind <type>` in message, `op <operator>` in fragment. What each one
+// accepts is validated by the `theme` catalog; the style, Metric and variant names are validated when compiling.
 ThemeSequence:
   element=('lifeline' | 'activation' | 'message' | 'fragment' | 'note') '{' items+=SequenceItem* '}';
 
@@ -343,7 +343,7 @@ SequenceText:
   slot=Id '{' props+=LayerProp* '}';
 
 // `page { layer background solid { color paper }  layer dots dots { color ink/0.1 size 22 }  fixed }`
-// Fondo de pagina, bajo Grupos, Aristas y Nodos. Sin `fixed` el patron se mueve y escala con el pan/zoom; con `fixed` queda fijo al visor.
+// Page background, under Groups, Edges and Nodes. Without `fixed` the pattern moves and scales with pan/zoom; with `fixed` it stays fixed to the viewport.
 ThemePage:
   'page' '{' items+=PageItem* '}';
 
@@ -356,7 +356,7 @@ PageFixed:
 // View -------------------------------------
 
 // `view <id> { type architecture|flow  include a.*, b.**  exclude c  depth N }`.
-// Una Vista solo selecciona Nodos del Modelo; nunca declara entidades.
+// A View only selects Nodes of the Model; it never declares entities.
 View:
   'view' name=Id '{'
     props+=ViewProperty*
@@ -381,7 +381,7 @@ ViewDepth:
 ViewTheme:
   'theme' value=Id ('{' items+=PatchItem* '}')?;
 
-// Drill-down: mecanismo por defecto, estado inicial de Grupos y enlaces a otra Vista.
+// Drill-down: default mechanism, initial state of Groups and links to another View.
 ViewDrill:
   'drill' mode='collapse';
 
@@ -394,21 +394,21 @@ ViewExpanded:
 ViewLink:
   'link' node=Ref '->' view=Id;
 
-// Vista de secuencia: la Interaccion que proyecta y el orden (parcial) de sus Lifelines.
+// Sequence View: the Interaction it projects and the (partial) order of its Lifelines.
 ViewInteraction:
   'interaction' value=Id;
 
 ViewOrder:
   'order' targets+=Ref (',' targets+=Ref)*;
 
-// Numera los Mensajes proyectados por la Vista de secuencia.
+// Numbers the Messages projected by the sequence View.
 ViewAutonumber:
   {infer ViewAutonumber} 'autonumber';
 
-// Pasos de revelado acumulativos; `show` revela y `hide` oculta.
-// Un item es un selector de Nodos (`a`, `a.*`, `a.**`) o una Arista (`edge a -> b`, o `a -> b`).
-// En un Paso, `a.*` y `a.**` abarcan tambien al propio Grupo `a` (revelar un Grupo completo).
-// `steps each` (solo secuencia): un Paso por Mensaje proyectado.
+// Cumulative reveal Steps; `show` reveals and `hide` hides.
+// An item is a Node selector (`a`, `a.*`, `a.**`) or an Edge (`edge a -> b`, or `a -> b`).
+// In a Step, `a.*` and `a.**` also cover the Group `a` itself (revealing a whole Group).
+// `steps each` (sequence only): one Step per projected Message.
 ViewSteps:
   'steps' (each?='each' | '{' steps+=Step* '}');
 
@@ -418,7 +418,7 @@ Step:
 StepAction:
   StepShow | StepHide | StepUpto;
 
-// Solo secuencia: el Paso muestra la Interaccion hasta ese Mensaje (por su id), incluido.
+// Sequence only: the Step shows the Interaction up to that Message (by its id), included.
 StepUpto:
   'upto' target=Ref;
 
@@ -437,10 +437,10 @@ StepEdge:
 StepSelector:
   selector=Selector;
 
-// Overrides de presentacion de un Nodo en esta Vista; nunca tocan el Modelo.
-// `pin x,y` es la posicion relativa al Grupo padre (al lienzo si es raiz), aplicada tras el layout;
-// `order N` se compila y se guarda, pero el layout no lo usa;
-// `color` es un nombre de Paleta.
+// Presentation overrides of a Node in this View; they never touch the Model.
+// `pin x,y` is the position relative to the parent Group (to the canvas if it is a root), applied after layout;
+// `order N` is compiled and stored, but the layout does not use it;
+// `color` is a Palette name.
 NodeOverride:
   'node' node=Ref '{' props+=OverrideProperty* '}';
 
@@ -465,14 +465,14 @@ OverrideOrder:
 OverrideColor:
   'color' value=PropertyValue;
 
-// `a.b` un Nodo, `a.*` sus hijos directos, `a.**` sus descendientes, `*` y `**` a secas.
+// `a.b` a Node, `a.*` its direct children, `a.**` its descendants, `*` and `**` alone.
 Selector returns string:
   Ref ('.' Wildcard)? | Wildcard;
 
 Wildcard returns string:
   '*' | '**';
 
-// `<tipo> <nombre> "titulo" "descripcion" [planned] { hijos }`; `planned` (ADR 0011) marca tambien a los descendientes.
+// `<kind> <name> "title" "description" [planned] { children }`; `planned` (ADR 0011) also marks the descendants.
 Element:
   type=Id name=Id
   (title=String
@@ -484,13 +484,13 @@ Element:
   '}')?
 ;
 
-// `attrs { nombre: tipo "notas" }`; el orden se conserva. Un Atributo tambien puede ir suelto en el cuerpo
-// del Nodo (`nombre: tipo`), que es la forma habitual en ER.
+// `attrs { name: type "notes" }`; the order is kept. An Attribute can also go loose in the body
+// of the Node (`name: type`), which is the usual form in ER.
 Attrs:
   'attrs' '{' items+=Attribute* '}'
 ;
 
-// `source { path "src/api"  spec "prd.md#2" }`: referencias opacas `<tipo> "<ref>"`; el `ref` siempre es cadena.
+// `source { path "src/api"  spec "prd.md#2" }`: opaque references `<kind> "<ref>"`; the `ref` is always a string.
 Source:
   'source' '{' items+=SourceItem* '}'
 ;
@@ -499,8 +499,8 @@ SourceItem:
   kind=Id ref=String
 ;
 
-// ER: `?` pegado al tipo es `optional`; `pk`, `fk` y `uk` (en cualquier orden) son las marcas de clave y `planned`
-// (ADR 0011), la de propuesta, entre ellas.
+// ER: `?` attached to the type is `optional`; `pk`, `fk` and `uk` (in any order) are the key marks and `planned`
+// (ADR 0011), the proposal mark, among them.
 Attribute:
   name=Id ':' type=Id (optional?='?')? (keys+=KeyMark)* (planned?='planned')? (keys+=KeyMark)* (notes=String)?
 ;
@@ -532,7 +532,7 @@ hidden terminal NL: /[\r\n]+/;
 // -----------------------------------
 // Terminals
 terminal String: /"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/;
-// Texto, no numero, y no se llama INT (Langium convertiria a numero por nombre): `Num` concatena sus digitos y un numero perderia los ceros a la izquierda (0.05 -> 0.5).
+// Text, not a number, and not named INT (Langium would convert to a number by name): `Num` concatenates its digits and a number would lose its leading zeros (0.05 -> 0.5).
 terminal DIGITS: /[0-9]+/;
 terminal TokenRef: /\$[a-zA-Z_][-\w]*/;
 terminal IdTerminal:  /([a-zA-Z]|_+[a-zA-Z0-9])[-\w]*/;

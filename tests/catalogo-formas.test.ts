@@ -7,7 +7,7 @@ import { CATALOG, buildPrimitive, resolvedStyle } from 'theme';
 import type { PropertyDefinition } from 'theme';
 
 const ejemplo = readFileSync(resolve(import.meta.dirname, '../examples/themes/shape-catalog.dg'), 'utf8');
-const { canonico, issues } = compile({ 'shape-catalog.dg': ejemplo });
+const { canonical: canonico, issues } = compile({ 'shape-catalog.dg': ejemplo });
 
 const FAMILIAS = ['forma', 'relleno', 'borde'];
 const delCatalogo = Object.entries(CATALOG).filter(([, p]) => FAMILIAS.includes(p.familia));

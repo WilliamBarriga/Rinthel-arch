@@ -1,4 +1,4 @@
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 import { openSession } from 'session';
 import type { Session } from 'session';
 
@@ -16,13 +16,13 @@ export interface ResultadoDeEjecucion {
 export const uso = (mensaje: string): ResultadoDeEjecucion => ({ exitCode: 2, stdout: '', stderr: `${mensaje}\n` });
 
 /** El contenido de `--theme-path` va antes: gana el Workspace en rutas repetidas. */
-export function leerConTemas(leer: (raiz: string) => ArchivosDelWorkspace, raiz: string, carpetaDeTemas?: string): ArchivosDelWorkspace {
+export function leerConTemas(leer: (raiz: string) => WorkspaceFiles, raiz: string, carpetaDeTemas?: string): WorkspaceFiles {
   return { ...(carpetaDeTemas === undefined ? {} : leer(carpetaDeTemas)), ...leer(raiz) };
 }
 
 /** Un fallo de lectura es un fallo de uso (codigo 2). */
 export function abrirSesionDe(
-  leer: (raiz: string) => ArchivosDelWorkspace,
+  leer: (raiz: string) => WorkspaceFiles,
   raiz: string,
   carpetaDeTemas?: string,
   opciones: { tema?: string } = {},

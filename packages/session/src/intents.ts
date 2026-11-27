@@ -1,5 +1,5 @@
 import type { Intent, Issue } from 'canonical';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 
 import type { HashedEdit, EditResult } from './edits';
 import { setTheme, movePin, reorderLifelines } from './gestures';
@@ -14,7 +14,7 @@ export type IntentResult = GestureResult;
  * Pure reducer: a new map or a rejection with `reason`. `seen` rejects with `stale-hash` if the file that
  * changes differs; without `seen` it applies over the current text. It does not write.
  */
-export function applyIntent(files: ArchivosDelWorkspace, intent: Intent, seen?: Seen): IntentResult {
+export function applyIntent(files: WorkspaceFiles, intent: Intent, seen?: Seen): IntentResult {
   switch (intent.type) {
     case 'move-pin': {
       const { type: _type, ...pin } = intent;
@@ -33,15 +33,15 @@ export function applyIntent(files: ArchivosDelWorkspace, intent: Intent, seen?: 
 
 /** Immutable undo/redo stack over the Workspace text (Undo history); `files` is the current one. */
 export interface UndoHistory {
-  readonly files: ArchivosDelWorkspace;
-  readonly past: readonly ArchivosDelWorkspace[];
-  readonly future: readonly ArchivosDelWorkspace[];
+  readonly files: WorkspaceFiles;
+  readonly past: readonly WorkspaceFiles[];
+  readonly future: readonly WorkspaceFiles[];
 }
 
-export const createUndoHistory = (files: ArchivosDelWorkspace): UndoHistory => ({ files, past: [], future: [] });
+export const createUndoHistory = (files: WorkspaceFiles): UndoHistory => ({ files, past: [], future: [] });
 
 /** Records `files` as current and drops the future. It does not check that it differs from the current one. */
-export const pushState = (history: UndoHistory, files: ArchivosDelWorkspace): UndoHistory => ({
+export const pushState = (history: UndoHistory, files: WorkspaceFiles): UndoHistory => ({
   files,
   past: [...history.past, history.files],
   future: [],

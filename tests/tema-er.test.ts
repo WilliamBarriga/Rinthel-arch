@@ -6,7 +6,7 @@ import { compile } from 'dsl';
 import { resolvedStyle } from 'theme';
 
 const ejemplo = readFileSync(resolve(import.meta.dirname, '../examples/themes/er.dg'), 'utf8');
-const { canonico, issues } = compile({ 'er.dg': ejemplo });
+const { canonical: canonico, issues } = compile({ 'er.dg': ejemplo });
 
 describe('Tema de ejemplo para tablas ER', () => {
   it('compila sin issues', () => {

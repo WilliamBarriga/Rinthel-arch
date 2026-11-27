@@ -3,7 +3,7 @@ import { mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync,
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 import { isFontFile, fontMimeType } from 'canonical';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 
 /** Nombre de la carpeta de salida derivada del Workspace (build y Registro de actividad). */
 export const CARPETA_DE_SALIDA = '.diagrams';
@@ -39,7 +39,7 @@ function recorrer(
 }
 
 /** Archivos `.dg` y `.svg` (iconos) bajo `raiz`. Lanza si la raiz no existe o is not a folder. */
-export function leerWorkspace(raiz: string): ArchivosDelWorkspace {
+export function leerWorkspace(raiz: string): WorkspaceFiles {
   if (!statSync(raiz).isDirectory()) throw new Error(`'${raiz}' is not a folder`);
   return recorrer(raiz, (nombre) => nombre.endsWith(EXTENSION) || nombre.endsWith('.svg'), (ruta) => readFileSync(ruta, 'utf8'));
 }

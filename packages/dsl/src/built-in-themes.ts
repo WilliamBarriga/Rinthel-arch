@@ -1,14 +1,14 @@
 /**
- * Temas incorporados `neutral` (el de una Vista sin Tema) y `neutral-dark`, en DSL y compilados con el Workspace
- * como un archivo mas. Invariante: cero warnings de contraste (texto 4.5:1, partes graficas 3:1).
- * `high-contrast` lo define `theme` (el visor lo necesita sin compilar); `resolverTemas` lo anade a la Fuente.
+ * Built-in Themes `neutral` (the one of a View without a Theme) and `neutral-dark`, in DSL and compiled with the Workspace
+ * as one more file. Invariant: zero contrast warnings (text 4.5:1, graphical parts 3:1).
+ * `high-contrast` is defined by `theme` (the viewer needs it without compiling); `resolveThemes` adds it to the Canonical form.
  */
-import type { Documento, Theme } from './generated/ast';
+import type { DiagramFile, Theme } from './generated/ast';
 
-/** Nombre con el que los issues y los `related` se refieren a este texto. */
-export const ARCHIVO_INCORPORADOS = '<built-in>';
+/** Name issues and `related` use to refer to this text. */
+export const BUILT_IN_FILE = '<built-in>';
 
-export const FUENTE_INCORPORADOS = `// Plain light card: dotted background, white card with a thin border, icon in a box of the Node kind color,
+export const BUILT_IN_SOURCE = `// Plain light card: dotted background, white card with a thin border, icon in a box of the Node kind color,
 // title with the kind badge below and, on a collapsed Group, a stacked card with the counter.
 // Every color comes from the Palette: neutral-dark only changes the Palette.
 theme neutral {
@@ -126,7 +126,7 @@ theme neutral-dark extends neutral {
 }
 `;
 
-export const NOMBRES_INCORPORADOS = ['neutral', 'neutral-dark', 'high-contrast'] as const;
+export const BUILT_IN_NAMES = ['neutral', 'neutral-dark', 'high-contrast'] as const;
 
 
-export const temasIncorporados = (parse: (texto: string) => Documento): Theme[] => parse(FUENTE_INCORPORADOS).themes;
+export const builtInThemes = (parse: (text: string) => DiagramFile): Theme[] => parse(BUILT_IN_SOURCE).themes;

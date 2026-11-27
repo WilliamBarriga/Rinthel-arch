@@ -32,7 +32,7 @@ function contarNodos(nodos: readonly { children: readonly unknown[] }[]): number
 }
 
 function compilar(nodos: number): CanonicalForm {
-  const { canonico, issues } = compile(generarWorkspace({ nodos }));
+  const { canonical: canonico, issues } = compile(generarWorkspace({ nodos }));
   if (canonico === undefined) throw new Error(`El Workspace sintetico no compila: ${JSON.stringify(issues.slice(0, 3))}`);
   return canonico;
 }
@@ -173,7 +173,7 @@ async function colapsoDe5k(): Promise<Record<string, number>> {
 
 /** Mejor de 3 corridas tras una de calentamiento. */
 async function secuenciaGrande(): Promise<Record<string, number>> {
-  const { canonico, issues } = compile(generarSecuencia({ mensajes: 1000, lifelines: 50, profundidad: 3 }));
+  const { canonical: canonico, issues } = compile(generarSecuencia({ mensajes: 1000, lifelines: 50, profundidad: 3 }));
   if (canonico === undefined) throw new Error(`La Interaccion sintetica no compila: ${JSON.stringify(issues.slice(0, 3))}`);
   const vista = resolveView(canonico, 'secuencia') as SequenceView;
   const inicio = performance.now();

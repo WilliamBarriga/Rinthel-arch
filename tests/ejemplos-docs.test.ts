@@ -23,7 +23,7 @@ const TEMAS = [
 describe('tutorial (examples/tutorial)', () => {
   for (const paso of [1, 2, 3, 4, 5, 6]) {
     it(`el paso ${paso} valida sin errores ni avisos y trae la Vista principal`, () => {
-      const { canonico, issues } = compile(leerDg(`examples/tutorial/step-${paso}`));
+      const { canonical: canonico, issues } = compile(leerDg(`examples/tutorial/step-${paso}`));
       expect(issues).toEqual([]);
       expect(canonico?.views.map((v) => v.id)).toContain('main');
     });
@@ -32,7 +32,7 @@ describe('tutorial (examples/tutorial)', () => {
 
 describe('tutorial paso 6: secuencia y ER', () => {
   it('trae una Vista sequence y una er sobre el mismo Modelo', () => {
-    const { canonico } = compile(leerDg('examples/tutorial/step-6'));
+    const { canonical: canonico } = compile(leerDg('examples/tutorial/step-6'));
     expect(resolveView(canonico!, 'purchase-sequence')?.type).toBe('sequence');
     expect(resolveView(canonico!, 'tables')?.type).toBe('er');
   });
@@ -40,7 +40,7 @@ describe('tutorial paso 6: secuencia y ER', () => {
 
 describe('mapa de rinthel-arch con los 14 Temas', () => {
   const archivos = leerDg('examples/rinthel-arch');
-  const { canonico, issues } = compile(archivos);
+  const { canonical: canonico, issues } = compile(archivos);
 
   it('valida sin errores', () => {
     expect(issues.filter((i) => i.severity === 'error')).toEqual([]);
@@ -53,7 +53,7 @@ describe('mapa de rinthel-arch con los 14 Temas', () => {
 });
 
 describe('rinthel-arch map: regenerated from scan (the live demo)', () => {
-  const { canonico, issues } = compile(leerDg('examples/rinthel-arch'));
+  const { canonical: canonico, issues } = compile(leerDg('examples/rinthel-arch'));
   const vistas = canonico!.views;
   const todos = (nodos: Node[]): Node[] => nodos.flatMap((n) => [n, ...todos(n.children)]);
 

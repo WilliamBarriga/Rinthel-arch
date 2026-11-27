@@ -10,7 +10,7 @@ import { completionOptions } from '../browser/editor/completion';
 import { diagnosticsOf } from '../browser/editor/diagnostics';
 import { keywordsModule, grammarKeywords } from '../scripts/keywords';
 
-const GRAMMAR = readFileSync(new URL('../../dsl/src/gramatica/diagramas.langium', import.meta.url), 'utf8');
+const GRAMMAR = readFileSync(new URL('../../dsl/src/grammar/diagrams.langium', import.meta.url), 'utf8');
 
 describe('highlighting keywords', () => {
   it('come from the grammar and the list generated at build time is up to date', () => {

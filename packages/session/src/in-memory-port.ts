@@ -1,4 +1,4 @@
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 
 import type { WorkspacePort } from './apply';
 
@@ -12,9 +12,9 @@ export interface InMemoryWorkspace extends WorkspacePort {
 }
 
 export interface InMemoryContent {
-  own: ArchivosDelWorkspace;
+  own: WorkspaceFiles;
   /** Themes from `--theme-path`: merged before the own files (which win on repeated paths). */
-  themes?: ArchivosDelWorkspace;
+  themes?: WorkspaceFiles;
 }
 
 /** `write` and `remove` only touch the own files. */

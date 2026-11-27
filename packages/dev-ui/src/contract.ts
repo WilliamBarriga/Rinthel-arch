@@ -19,7 +19,7 @@ export { inMemoryDev } from './in-memory-dev';
 export type { TestCode, TestDevContent, InMemoryDev } from './in-memory-dev';
 export { createSseReader } from './sse';
 
-/** Relative path -> text, like `ArchivosDelWorkspace` of `dsl`. */
+/** Relative path -> text, like `WorkspaceFiles` of `dsl`. */
 type WorkspaceFiles = Readonly<Record<string, string>>;
 
 /** A `dev` started for a test: what the page sees of it (transport) plus an outside write. */

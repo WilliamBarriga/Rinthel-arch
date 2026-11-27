@@ -2,7 +2,7 @@
  * Comando `inspect`, solo lectura. Con `--json`, un objeto `inspectOutputSchema`.
  * Codigos: 0 respuesta, 1 no existe o el Workspace tiene errores (mensaje en stderr, stdout vacio), 2 fallo de uso o interno.
  */
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 import { parseArgs } from 'node:util';
 
 import { INSPECT_COMMANDS } from 'canonical';
@@ -18,7 +18,7 @@ const fallo = (exitCode: 1 | 2, mensaje: string): ResultadoDeEjecucion => ({ ...
 
 export async function inspeccionar(
   args: readonly string[],
-  { leer = leerWorkspace }: { leer?: (raiz: string) => ArchivosDelWorkspace },
+  { leer = leerWorkspace }: { leer?: (raiz: string) => WorkspaceFiles },
 ): Promise<ResultadoConActividad> {
   let parseado;
   try {
@@ -55,7 +55,7 @@ export async function inspeccionar(
 const OBJETIVO_DE_SUBCOMANDO: Readonly<Record<string, 'view' | 'node' | 'theme'>> = { view: 'view', node: 'node', theme: 'theme' };
 
 async function consultar(
-  leer: (raiz: string) => ArchivosDelWorkspace,
+  leer: (raiz: string) => WorkspaceFiles,
   workspace: string,
   carpetaDeTemas: string | undefined,
   comando: string,

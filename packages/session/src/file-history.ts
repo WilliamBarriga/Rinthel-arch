@@ -8,7 +8,7 @@
  */
 import { DEV_HISTORY_START } from 'canonical';
 import type { DevHistoryEntry, DevHistory, Intent } from 'canonical';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 
 /** `undefined`: the file did not exist (before) or was removed (after). */
 export interface FileChange {
@@ -38,7 +38,7 @@ export const emptyFileHistory: FileHistory = { past: [], future: [], next: 1 };
 
 
 export type RestoreResult =
-  | { ok: true; history: FileHistory; files: ArchivosDelWorkspace; written: string[] }
+  | { ok: true; history: FileHistory; files: WorkspaceFiles; written: string[] }
   | { ok: false; reason: 'nothing-to-undo' | 'nothing-to-redo' | 'stale-hash' | 'unknown-entry'; message: string; file?: string };
 
 /** Description of an Intent's entry. */
@@ -56,11 +56,11 @@ export function intentDescription(intent: Intent): string {
 /** Description of a text save without its own `descripcion`. */
 export const textDescription = (files: readonly string[]): string => `text of ${files.join(', ')}`;
 
-const changedPaths = (before: ArchivosDelWorkspace, after: ArchivosDelWorkspace): string[] =>
+const changedPaths = (before: WorkspaceFiles, after: WorkspaceFiles): string[] =>
   [...new Set([...Object.keys(before), ...Object.keys(after)])].filter((r) => before[r] !== after[r]).sort();
 
 /** Pushes what changed from `before` to `after` and drops the future; without changes it returns the same history. */
-export function record(history: FileHistory, description: string, before: ArchivosDelWorkspace, after: ArchivosDelWorkspace, at = 0): FileHistory {
+export function record(history: FileHistory, description: string, before: WorkspaceFiles, after: WorkspaceFiles, at = 0): FileHistory {
   const paths = changedPaths(before, after);
   if (paths.length === 0) return history;
   const changes = Object.fromEntries(paths.map((r) => [r, { before: before[r], after: after[r] }]));
@@ -68,7 +68,7 @@ export function record(history: FileHistory, description: string, before: Archiv
 }
 
 /** Takes each file of the entry from `from` to `to`, if the disk is still at `from`. */
-function move(entry: HistoryEntry, disk: ArchivosDelWorkspace, direction: 'undo' | 'redo'): { ok: true; files: ArchivosDelWorkspace; written: string[] } | { ok: false; file: string } {
+function move(entry: HistoryEntry, disk: WorkspaceFiles, direction: 'undo' | 'redo'): { ok: true; files: WorkspaceFiles; written: string[] } | { ok: false; file: string } {
   const files: Record<string, string> = { ...disk };
   const written = Object.keys(entry.changes).sort();
   for (const path of written) {
@@ -83,7 +83,7 @@ function move(entry: HistoryEntry, disk: ArchivosDelWorkspace, direction: 'undo'
 
 const changedOutside = (file: string) => ({ ok: false, reason: 'stale-hash', message: `'${file}' changed outside dev; this entry cannot be restored`, file }) as const;
 
-export function undoOn(history: FileHistory, disk: ArchivosDelWorkspace): RestoreResult {
+export function undoOn(history: FileHistory, disk: WorkspaceFiles): RestoreResult {
   const entry = history.past[history.past.length - 1];
   if (entry === undefined) return { ok: false, reason: 'nothing-to-undo', message: 'Nothing to undo' };
   const r = move(entry, disk, 'undo');
@@ -91,7 +91,7 @@ export function undoOn(history: FileHistory, disk: ArchivosDelWorkspace): Restor
   return { ...r, history: { ...history, past: history.past.slice(0, -1), future: [entry, ...history.future] } };
 }
 
-export function redoOn(history: FileHistory, disk: ArchivosDelWorkspace): RestoreResult {
+export function redoOn(history: FileHistory, disk: WorkspaceFiles): RestoreResult {
   const [entry, ...rest] = history.future;
   if (entry === undefined) return { ok: false, reason: 'nothing-to-redo', message: 'Nothing to redo' };
   const r = move(entry, disk, 'redo');
@@ -103,7 +103,7 @@ export function redoOn(history: FileHistory, disk: ArchivosDelWorkspace): Restor
  * Takes the disk to entry `id`: from the past, to the state right after it; from the future, redoing up to it;
  * `DEV_HISTORY_START`, to the text before the first one. `written` are only the files that differ from the disk.
  */
-export function jump(history: FileHistory, disk: ArchivosDelWorkspace, id: number): RestoreResult {
+export function jump(history: FileHistory, disk: WorkspaceFiles, id: number): RestoreResult {
   const backwards = id === DEV_HISTORY_START || history.past.some((e) => e.id === id);
   if (!backwards && !history.future.some((e) => e.id === id)) return { ok: false, reason: 'unknown-entry', message: `There is no entry ${id} in the History` };
   const reached = (h: FileHistory): boolean => (id === DEV_HISTORY_START ? h.past.length === 0 : h.past[h.past.length - 1]?.id === id);
@@ -122,7 +122,7 @@ export function jump(history: FileHistory, disk: ArchivosDelWorkspace, id: numbe
  * The File history as the UI sees it (`DevHistory` from `canonical`): each target is reachable if `jump` to it is
  * not rejected over `disk` (the undo rule); `reason` only if it is not.
  */
-export function visibleHistory(history: FileHistory, disk: ArchivosDelWorkspace): DevHistory {
+export function visibleHistory(history: FileHistory, disk: WorkspaceFiles): DevHistory {
   const reach = (id: number): DevHistory['inicio'] => {
     const r = jump(history, disk, id);
     return r.ok ? { alcanzable: true } : { alcanzable: false, reason: r.message };

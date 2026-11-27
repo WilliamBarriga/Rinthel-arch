@@ -7,7 +7,7 @@
  */
 import { EDIT_CONTRACT_VERSION, requestedEditsSchema, intentSchema, editOutputSchema } from 'canonical';
 import type { EditOutput } from 'canonical';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 import { existsSync, renameSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { applyToWorkspace, contentHash } from 'session';
@@ -31,7 +31,7 @@ export async function editar(
     renombrarRuta = renameSync,
     existeRuta = existsSync,
   }: {
-    leer?: (raiz: string) => ArchivosDelWorkspace;
+    leer?: (raiz: string) => WorkspaceFiles;
     escribirArchivo?: (ruta: string, texto: string) => void;
     /** Absolute paths; by default `fs.renameSync`. */
     renombrarRuta?: (antigua: string, nueva: string) => void;
@@ -72,8 +72,8 @@ export async function editar(
     hashes.set(par.slice(0, i), par.slice(i + 1));
   }
 
-  let propios: ArchivosDelWorkspace;
-  let archivos: ArchivosDelWorkspace;
+  let propios: WorkspaceFiles;
+  let archivos: WorkspaceFiles;
   try {
     propios = leer(v.workspace);
     archivos = leerConTemas(leer, v.workspace, v['theme-path']);

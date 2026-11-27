@@ -11,7 +11,7 @@ const profundidad = (nodos: readonly Node[]): number => nodos.reduce((max, nodo)
 
 describe('generarWorkspace', () => {
   it.each([1, 10, 137, 1000])('compila sin issues y tiene exactamente %i Nodos', (nodos) => {
-    const { issues, canonico } = compile(generarWorkspace({ nodos }));
+    const { issues, canonical: canonico } = compile(generarWorkspace({ nodos }));
 
     expect(issues).toEqual([]);
     expect(contar(canonico!.model.nodes)).toBe(nodos);
@@ -23,14 +23,14 @@ describe('generarWorkspace', () => {
   });
 
   it('genera Grupos anidados y Aristas en proporcion a los Nodos', () => {
-    const { canonico } = compile(generarWorkspace({ nodos: 500, aristasPorNodo: 2 }));
+    const { canonical: canonico } = compile(generarWorkspace({ nodos: 500, aristasPorNodo: 2 }));
 
     expect(profundidad(canonico!.model.nodes)).toBeGreaterThanOrEqual(3);
     expect(canonico!.model.edges).toHaveLength(1000);
   });
 
   it('declara una Vista que incluye todo el Modelo', () => {
-    const { canonico } = compile(generarWorkspace({ nodos: 20 }));
+    const { canonical: canonico } = compile(generarWorkspace({ nodos: 20 }));
 
     expect(canonico!.views.map((vista) => vista.id)).toEqual(['todo']);
     expect(canonico!.views[0]!.include).toEqual(['**']);
@@ -45,7 +45,7 @@ describe('generarSecuencia', () => {
   const generar = (mensajes: number) => compile(generarSecuencia({ mensajes }));
 
   it.each([1, 30, 1000])('compila sin issues y tiene exactamente %i Mensajes', (mensajes) => {
-    const { issues, canonico } = generar(mensajes);
+    const { issues, canonical: canonico } = generar(mensajes);
 
     expect(issues).toEqual([]);
     const vista = resolveView(canonico!, 'secuencia') as SequenceView;
@@ -53,7 +53,7 @@ describe('generarSecuencia', () => {
   });
 
   it('tiene 50 Lifelines y Fragmentos anidados tres niveles', () => {
-    const vista = resolveView(generar(1000).canonico!, 'secuencia') as SequenceView;
+    const vista = resolveView(generar(1000).canonical!, 'secuencia') as SequenceView;
 
     expect(vista.nodes).toHaveLength(50);
     const maxima = Math.max(...vista.interaction.messages.map((m) => m.scope?.length ?? 0));

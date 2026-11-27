@@ -1,7 +1,7 @@
 import { contentHash } from 'canonical';
 import type { Issue, RejectionReason, TextPosition, TextRange } from 'canonical';
 import { compile } from 'dsl';
-import type { ArchivosDelWorkspace } from 'dsl';
+import type { WorkspaceFiles } from 'dsl';
 
 /** Lives in `canonical` (pure, the browser editor uses it too); re-exported for compatibility. */
 export { contentHash };
@@ -55,10 +55,10 @@ export const errorsByKey = (issues: readonly Issue[]): Map<string, number> => {
  * The `issues` are those of the resulting Workspace.
  */
 export function applyAgainst(
-  files: ArchivosDelWorkspace,
+  files: WorkspaceFiles,
   edits: readonly HashedEdit[],
   errorsBefore: Map<string, number>,
-): EditResult<{ files: ArchivosDelWorkspace; issues: Issue[] }> {
+): EditResult<{ files: WorkspaceFiles; issues: Issue[] }> {
   const r = replaceText(files, edits);
   if (!r.ok) return r;
   const result = r.files;
@@ -78,7 +78,7 @@ export function applyAgainst(
  * Like `applyAgainst` but without the error self-test: rejects only on file, hash, range or overlap. It is the one of
  * editor saves, which are written even if they do not compile (ADR 0007).
  */
-export function replaceText(files: ArchivosDelWorkspace, edits: readonly HashedEdit[]): EditResult<{ files: ArchivosDelWorkspace }> {
+export function replaceText(files: WorkspaceFiles, edits: readonly HashedEdit[]): EditResult<{ files: WorkspaceFiles }> {
   const byFile = new Map<string, { start: number; end: number; text: string }[]>();
   for (const { file, range, replacement, hash } of edits) {
     const current = files[file];
@@ -111,8 +111,8 @@ export function replaceText(files: ArchivosDelWorkspace, edits: readonly HashedE
 
 /** `applyAgainst` counting the previous errors of the map itself. */
 export function applyEdits(
-  files: ArchivosDelWorkspace,
+  files: WorkspaceFiles,
   edits: readonly HashedEdit[],
-): EditResult<{ files: ArchivosDelWorkspace; issues: Issue[] }> {
+): EditResult<{ files: WorkspaceFiles; issues: Issue[] }> {
   return applyAgainst(files, edits, errorsByKey(compile(files).issues));
 }

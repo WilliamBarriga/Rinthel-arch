@@ -22,7 +22,7 @@ const TEMAS = [
 ];
 
 const archivos = leer();
-const { canonico, issues } = compile(archivos);
+const { canonical: canonico, issues } = compile(archivos);
 /** Nodos del Modelo en orden, con los hijos de cada Grupo aplanados. */
 type NodoPlano = { title: string; type: string; children: NodoPlano[] };
 const aplanar = (nodos: NodoPlano[]): NodoPlano[] => nodos.flatMap((n) => [n, ...aplanar(n.children)]);
@@ -41,7 +41,7 @@ const primitivasDe = (t: ResolvedTheme): Set<string> => {
 describe('galeria de Temas de ejemplo', () => {
   it('toda Primitiva del catalogo (sin fijar su cantidad) aparece en al menos un Tema de ejemplo', () => {
     const usadas = new Set<string>();
-    const sueltos = ['shape-catalog.dg', 'code.dg'].map((f) => compile({ [f]: readFileSync(resolve(import.meta.dirname, '../examples/themes', f), 'utf8') }).canonico!);
+    const sueltos = ['shape-catalog.dg', 'code.dg'].map((f) => compile({ [f]: readFileSync(resolve(import.meta.dirname, '../examples/themes', f), 'utf8') }).canonical!);
     for (const tema of [...canonico!.themes, ...sueltos.flatMap((c) => c.themes)]) for (const p of primitivasDe(resolveTheme(tema))) usadas.add(p);
     expect(Object.keys(CATALOG).filter((p) => !usadas.has(p))).toEqual([]);
   });
@@ -123,7 +123,7 @@ describe('galeria de Temas de ejemplo', () => {
 
   it.each(TEMAS)('%s resuelve su Estilo de forma determinista', (nombre) => {
     const tema = canonico!.themes.find((t) => t.name === nombre)!;
-    const otro = compile(leer()).canonico!.themes.find((t) => t.name === nombre)!;
+    const otro = compile(leer()).canonical!.themes.find((t) => t.name === nombre)!;
     expect(JSON.stringify(resolvedStyle(tema, { diagrama: 'architecture' }))).toBe(JSON.stringify(resolvedStyle(otro, { diagrama: 'architecture' })));
   });
 
