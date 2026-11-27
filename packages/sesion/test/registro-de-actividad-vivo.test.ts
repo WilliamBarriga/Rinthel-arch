@@ -1,7 +1,7 @@
 /** El Registro de actividad vivo a traves del Workspace vivo (`conexion` y `escuchar`), con `puertoEnMemoria` y reloj falso. */
 import { afterEach, describe, expect, it } from 'vitest';
 
-import type { ActividadDeDev } from 'canonico';
+import type { DevActivity } from 'canonical';
 import { abrirWorkspaceVivo, puertoEnMemoria } from 'sesion';
 import type { PuertoDelWorkspaceVivo, WorkspaceVivo } from 'sesion';
 
@@ -19,15 +19,15 @@ async function abrir(puerto: PuertoDelWorkspaceVivo) {
   const reloj = relojFalso();
   const ws = await abrirWorkspaceVivo({ puerto, reloj, debounceMs: 100, raiz: '/ws', ahora: () => 0 });
   abiertos.push(ws);
-  const empujados: ActividadDeDev[] = [];
+  const empujados: DevActivity[] = [];
   ws.escuchar((e) => {
-    if (e.nombre === 'actividad') empujados.push(e.datos);
+    if (e.name === 'actividad') empujados.push(e.data);
   });
   return { ws, reloj, empujados };
 }
 
 /** La actividad que recibiria un cliente al conectar. */
-const actividadAlConectar = (ws: WorkspaceVivo): ActividadDeDev | undefined => ws.conexion().find((e) => e.nombre === 'actividad')?.datos as ActividadDeDev | undefined;
+const actividadAlConectar = (ws: WorkspaceVivo): DevActivity | undefined => ws.conexion().find((e) => e.name === 'actividad')?.data as DevActivity | undefined;
 const previos = (ws: WorkspaceVivo): number[] => actividadAlConectar(ws)?.eventos.map((e) => e.pid) ?? [];
 
 describe('Registro de actividad vivo', () => {

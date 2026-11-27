@@ -1,5 +1,5 @@
 /** Textos que el layout mide (los mismos que `colocarNodo` y `tamanoDeEtiqueta`, con la misma familia y tamano), sin repetir. */
-import type { ItemResuelto, VistaResuelta } from 'canonico';
+import type { ResolvedItem, ResolvedView } from 'canonical';
 
 import { claveDeTexto } from './medicion';
 import type { TextoAMedir } from './medicion';
@@ -8,7 +8,7 @@ import { estiloDeTextoDeNota, metricasDeHoja, palabrasDeNota, textoDeGuarda } fr
 import type { TablaDeMetricas } from './metricas';
 import { textosDeNodo } from './slots';
 
-export function textosAMedir(vista: VistaResuelta, tabla: TablaDeMetricas): TextoAMedir[] {
+export function textosAMedir(vista: ResolvedView, tabla: TablaDeMetricas): TextoAMedir[] {
   const vistos = new Map<string, TextoAMedir>();
   const anadir = (familia: string, tamano: number, texto: string, peso?: number): void => {
     const clave = claveDeTexto(familia, tamano, texto, peso);
@@ -19,7 +19,7 @@ export function textosAMedir(vista: VistaResuelta, tabla: TablaDeMetricas): Text
     for (const { familia, tamano, texto, peso } of textosDeNodo(m, contenidoDeNodo(nodo, m))) anadir(familia, tamano, texto, peso);
   }
   const e = tabla.etiqueta;
-  const deItems = (items: readonly ItemResuelto[]): void => {
+  const deItems = (items: readonly ResolvedItem[]): void => {
     for (const item of items) {
       if (item.type === 'message') continue;
       if (item.type === 'note') {

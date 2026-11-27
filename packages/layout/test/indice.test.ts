@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
-import type { VistaResuelta } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
+import type { ResolvedView } from 'canonical';
 import { indiceDeGeometria } from 'layout';
 
 const nodo = (id: string, children: unknown[] = []) => ({ id, type: 'servicio', title: id.split('.').pop(), description: '', children });
 
 /** a { a1 { a1x } a2 }, c. */
-function vista(estado = {}): VistaResuelta {
-  const fuente = fuenteCanonicaSchema.parse({
+function vista(estado = {}): ResolvedView {
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: { nodes: [nodo('a', [nodo('a.a1', [nodo('a.a1.x')]), nodo('a.a2')]), nodo('c')] },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],

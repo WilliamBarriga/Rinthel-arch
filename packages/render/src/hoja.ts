@@ -271,7 +271,7 @@ export function hojaDeFuentes(caras: Estilo['caras'], urlDeFuente: (ruta: string
     .join('\n');
 }
 
-/** Hoja de estilo del Estilo: `clase` es la de alcance que debe llevar el contenedor del dibujo; con `urlDeFuente` incluye los `@font-face`. */
+/** Hoja de estilo del Estilo: `clase` es la de alcance que debe llevar el contenedor del dibujo; con `sourceUrl` incluye los `@font-face`. */
 export function compilarHoja(estilo: Estilo, urlDeFuente?: (ruta: string) => string): { clase: string; css: string } {
   const animacion = animacionDeHoja(estilo, (capa) => PINTORES[capa.tipo as NombreDePrimitivaEn<'capa-nodo'>](capa.props));
   const todas = [...reglas(estilo), ...animacion.reglas];

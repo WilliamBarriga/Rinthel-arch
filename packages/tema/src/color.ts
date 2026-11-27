@@ -2,7 +2,7 @@
  * Colores del Tema: siempre nombres de Paleta. Expresiones: `ink`, `ink/0.15` (alfa), `mix(a, b, 0.3)`, y los
  * especiales `COLOR` (color del Tipo de nodo) y `ORIGIN` (color del Nodo de origen de una Arista).
  */
-import { VALORES_DE_CATALOGO_ANTIGUOS, candidatosCercanos, mensajeDeValorAntiguo, renombreAntiguo } from 'canonico';
+import { OLD_CATALOG_VALUES, nearestCandidates, oldValueMessage, oldRename } from 'canonical';
 
 type Base = { tipo: 'paleta'; nombre: string } | { tipo: 'especial'; nombre: 'COLOR' | 'ORIGIN' } | { tipo: 'mix'; a: string; b: string; t: number };
 interface Expresion {
@@ -46,7 +46,7 @@ function leer(texto: string): Expresion | undefined {
 }
 
 const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string } => {
-  const candidatos = candidatosCercanos(escrito, existentes);
+  const candidatos = nearestCandidates(escrito, existentes);
   return candidatos.length === 0 ? {} : { hint: `did you mean ${candidatos.map((c) => `'${c}'`).join(' or ')}` };
 };
 
@@ -55,9 +55,9 @@ const sugerir = (escrito: string, existentes: Iterable<string>): { hint?: string
  * (a user Palette that declares its own `fondo` is untouched).
  */
 function nombreNuevo(nombre: string, paleta: Readonly<Record<string, string>>): { categoria: 'color' | 'palette'; nombre: string } | undefined {
-  const especial = renombreAntiguo(VALORES_DE_CATALOGO_ANTIGUOS, 'color', nombre);
+  const especial = oldRename(OLD_CATALOG_VALUES, 'color', nombre);
   if (especial !== undefined) return { categoria: 'color', nombre: especial };
-  const dePaleta = renombreAntiguo(VALORES_DE_CATALOGO_ANTIGUOS, 'palette', nombre);
+  const dePaleta = oldRename(OLD_CATALOG_VALUES, 'palette', nombre);
   return dePaleta !== undefined && Object.hasOwn(paleta, dePaleta) ? { categoria: 'palette', nombre: dePaleta } : undefined;
 }
 
@@ -82,7 +82,7 @@ export function validarColor(texto: string, paleta: Readonly<Record<string, stri
   const comprobar = (nombre: string): void => {
     const nuevo = Object.hasOwn(paleta, nombre) ? undefined : nombreNuevo(nombre, paleta);
     if (nuevo !== undefined) {
-      errores.push({ mensaje: mensajeDeValorAntiguo(nuevo.categoria, nombre, nuevo.nombre), renombre: { antiguo: nombre, nuevo: nuevo.nombre } });
+      errores.push({ mensaje: oldValueMessage(nuevo.categoria, nombre, nuevo.nombre), renombre: { antiguo: nombre, nuevo: nuevo.nombre } });
     } else if (!Object.hasOwn(paleta, nombre)) {
       errores.push({ mensaje: `Color '${nombre}' is not a Palette name of the Theme`, fueraDePaleta: true, ...sugerir(nombre, Object.keys(paleta)) });
     } else if (necesitaHex && hexARgb(paleta[nombre] as string) === undefined) {

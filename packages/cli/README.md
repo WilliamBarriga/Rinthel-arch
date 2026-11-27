@@ -3,7 +3,7 @@ Binario `diagrams`: valida, construye, consulta, edita y sirve Workspaces desde 
 
 ## Que hace
 - Comandos `validate`, `build`, `skill`, `inspect` (`search`, `node`, `view`, `interaction`, `theme`), `edit`, `dev`, `scan` y `export`; `run(argv, dependencias?)` devuelve `{ exitCode, stdout, stderr }` y no escribe en el proceso (`bin.ts` imprime). El `--help` de cada comando vive en `src/ayuda.ts`; las opciones, en `docs/guide/cli.md`.
-- Es el unico paquete que lee y escribe el Workspace en disco; `edit` es la unica escritura sobre el DSL. `--json` da un contrato por comando (esquemas en `canonico`).
+- Es el unico paquete que lee y escribe el Workspace en disco; `edit` es la unica escritura sobre el DSL. `--json` da un contrato por comando (esquemas en `canonical`).
 - Registro de actividad: `validate`, `build`, `inspect` y `edit` anexan un Evento (`src/actividad.ts`; `DIAGRAMS_ACTIVITY=0` lo apaga, `DIAGRAMS_AGENT` nombra al agente). `src/registro-en-disco.ts` es su unico dueno en disco: `.diagrams/activity.jsonl` (`CARPETA_DE_SALIDA` de `workspace.ts`), anexado con rotacion a 1 MB y observacion para `dev`.
 - `dev` (`src/dev.ts`) sirve la app de `estudio` (`/` y `/_estudio/*`, leida del disco en cada peticion: un rebuild se ve al recargar) y delega `/api/*` en `atenderApiDeDev` sobre el Workspace vivo de `sesion`; aqui solo viven el puerto de disco (`puertoDeDisco`, reemplazable con la opcion `puerto`; el TCP es `puertoHttp`), el watcher, el SSE y la seguridad HTTP (Host, Origin, tamano). `src/codigo.ts` compila con esbuild, sin ejecutar, los Temas con codigo (`.tsx`).
 - `export` (`src/export.ts`) opens the live Workspace once (no server, no watcher), captures its data through `atenderApiDeDev` with `capturarExportado` (fonts read with `leerArchivoDeFuente`) and writes `htmlDeExportado` from `estudio`: one read-only HTML.
@@ -14,7 +14,7 @@ Binario `diagrams`: valida, construye, consulta, edita y sirve Workspaces desde 
 - No tiene codigo de navegador: la pagina de `dev` y la del export son de `estudio` (de el toma `activosDelEstudio`, `RUTA_DEL_ESTUDIO`, `carpetaDelEstudio`, `capturarExportado` y `htmlDeExportado`).
 
 ## Depende de
-`canonico`, `dsl`, `sesion` y `estudio`. Dependencia externa: `esbuild`.
+`canonical`, `dsl`, `sesion` y `estudio`. Dependencia externa: `esbuild`.
 
 ## Archivo de entrada
 `packages/cli/src/index.ts` (la cabecera documenta interfaz, invariantes y modos de error).

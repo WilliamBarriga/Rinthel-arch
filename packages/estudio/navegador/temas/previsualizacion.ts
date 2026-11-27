@@ -5,7 +5,7 @@
  */
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import type { FuenteCanonica, GeometriaCacheada } from 'canonico';
+import type { CanonicalForm, CachedGeometry } from 'canonical';
 
 import type { ClienteDeDev } from '../cliente';
 import type { Dibujable } from '../lienzo/geometrias';
@@ -34,7 +34,7 @@ export function useEstadoDePrevisualizacion(vista: string | undefined): Previsua
 }
 
 interface Dibujada {
-  fuente: FuenteCanonica;
+  fuente: CanonicalForm;
   geometrias: Dibujable['geometrias'];
 }
 
@@ -43,7 +43,7 @@ interface Dibujada {
  * `?tema=` (mientras no llega, la calcula el Worker). Sin `tema`, todo pasa tal cual.
  */
 export function useFuentePrevisualizada(cliente: ClienteDeDev, version: number, { fuente, geometrias }: Dibujada, vista: string, tema: string | undefined): Dibujada {
-  const lectura = useLecturaPorVersion<GeometriaCacheada>(
+  const lectura = useLecturaPorVersion<CachedGeometry>(
     cliente,
     version,
     tema === undefined

@@ -1,8 +1,8 @@
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { Geometria, VistaResuelta } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
 import { dobleClicEnNodo, posicionDe, pulsarNodo } from './ayudas';
@@ -11,13 +11,13 @@ import { TEMA_NEUTRO } from 'tema';
 afterEach(cleanup);
 
 const nodo = (id: string) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [] });
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
   model: { nodes: [nodo('a'), nodo('b')], edges: [] },
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
 });
-const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
-  const nodes: Geometria['nodes'] = {};
+const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
+  const nodes: Geometry['nodes'] = {};
   vista.nodes.forEach((n, i) => {
     nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
   });

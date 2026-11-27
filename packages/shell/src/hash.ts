@@ -1,12 +1,12 @@
 /** Estado del shell en el hash de URL. Sin DOM salvo en `hashDelNavegador`. */
-import { leerIdDeElementoDeSecuencia } from 'canonico';
-import type { EstadoDeColapso, FuenteCanonica, Nodo } from 'canonico';
+import { parseSequenceElementId } from 'canonical';
+import type { CollapseState, CanonicalForm, Node } from 'canonical';
 import type { Camara } from 'render';
 
 /** Estado del lector que vive en el hash. `path` termina en la Vista activa. */
 export interface EstadoDeShell {
   path: string[];
-  state: EstadoDeColapso;
+  state: CollapseState;
   selected: string | null;
   step: number;
   camera?: Camara;
@@ -54,7 +54,7 @@ export function hashDelNavegador(win: Window): AdaptadorDeHash {
   };
 }
 
-const idsDelModelo = (nodos: readonly Nodo[], acumulado = new Set<string>()): Set<string> => {
+const idsDelModelo = (nodos: readonly Node[], acumulado = new Set<string>()): Set<string> => {
   for (const n of nodos) {
     acumulado.add(n.id);
     idsDelModelo(n.children, acumulado);
@@ -63,18 +63,18 @@ const idsDelModelo = (nodos: readonly Nodo[], acumulado = new Set<string>()): Se
 };
 
 /** `interaccion:ruta` (Mensaje, Fragmento o Nota de secuencia) de una Interaccion que existe en la Fuente. */
-function esElementoDeInteraccion(id: string, source: FuenteCanonica): boolean {
-  const leido = leerIdDeElementoDeSecuencia(id);
-  return leido !== undefined && leido.operando === undefined && (source.model.interactions ?? []).some((i) => i.id === leido.interaccion);
+function esElementoDeInteraccion(id: string, source: CanonicalForm): boolean {
+  const leido = parseSequenceElementId(id);
+  return leido !== undefined && leido.operand === undefined && (source.model.interactions ?? []).some((i) => i.id === leido.interaction);
 }
 
 /** La primera Vista de la Fuente; `undefined` si no hay Vistas. */
-export const vistaPorDefecto = (source: FuenteCanonica): string | undefined => source.views[0]?.id;
+export const vistaPorDefecto = (source: CanonicalForm): string | undefined => source.views[0]?.id;
 
 /** Paso de entrada: 1 en sequence y er con Pasos (el 0 las dejaria vacias); 0 (antes del primero) en el resto. */
 export const pasoInicialDeTipo = (tipo: string, total: number): number => ((tipo === 'sequence' || tipo === 'er') && total > 0 ? 1 : 0);
 
-export const pasoInicialDeVista = (source: FuenteCanonica, vista: string | undefined): number => {
+export const pasoInicialDeVista = (source: CanonicalForm, vista: string | undefined): number => {
   const v = source.views.find((candidata) => candidata.id === vista);
   return v === undefined ? 0 : pasoInicialDeTipo(v.type, v.steps?.length ?? 0);
 };
@@ -83,7 +83,7 @@ export const pasoInicialDeVista = (source: FuenteCanonica, vista: string | undef
  * Estado -> hash (sin `#`): `p` ruta (repetido), `e`/`c` Grupos abiertos/cerrados, `s` Seleccion, `t` Paso,
  * `cam=x,y,w,h`. Omite lo que vale su default (la ruta `[vistaInicial]`, el Paso de entrada), asi el estado inicial da hash vacio.
  */
-export function serializarEstado(estado: EstadoDeShell, vistaInicial?: string, source?: FuenteCanonica): string {
+export function serializarEstado(estado: EstadoDeShell, vistaInicial?: string, source?: CanonicalForm): string {
   const p = new URLSearchParams();
   if (!(estado.path.length === 1 && estado.path[0] === vistaInicial)) for (const v of estado.path) p.append('p', v);
   for (const id of estado.state.expanded ?? []) p.append('e', id);
@@ -111,7 +111,7 @@ function leerCamara(texto: string | null): Camara | undefined {
  * Hash -> estado valido contra la Fuente. Nunca lanza: lo que no se entiende o no existe cae al default de ese
  * campo. El colapso trae `expanded` y `collapsed` juntos, o es `{}`.
  */
-export function deserializarEstado(hash: string, source: FuenteCanonica, vistaInicial: string | undefined = vistaPorDefecto(source)): EstadoDeShell {
+export function deserializarEstado(hash: string, source: CanonicalForm, vistaInicial: string | undefined = vistaPorDefecto(source)): EstadoDeShell {
   const p = new URLSearchParams(hash.startsWith('#') ? hash.slice(1) : hash);
   const vistas = new Set(source.views.map((v) => v.id));
   const nodos = idsDelModelo(source.model.nodes);
@@ -123,7 +123,7 @@ export function deserializarEstado(hash: string, source: FuenteCanonica, vistaIn
   const conocidos = (clave: string): string[] => p.getAll(clave).filter((id) => nodos.has(id));
   const expanded = conocidos('e');
   const collapsed = conocidos('c');
-  const state: EstadoDeColapso = expanded.length === 0 && collapsed.length === 0 ? {} : { expanded, collapsed };
+  const state: CollapseState = expanded.length === 0 && collapsed.length === 0 ? {} : { expanded, collapsed };
 
   const s = p.get('s');
   const selected = s !== null && (nodos.has(s) || esElementoDeInteraccion(s, source)) ? s : null;

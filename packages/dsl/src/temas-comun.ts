@@ -1,6 +1,6 @@
 /** Piezas comunes de la compilacion de Temas: contexto, propiedades escritas y errores de catalogo como Issue. */
-import { CODIGOS } from 'canonico';
-import type { Issue, TextRange } from 'canonico';
+import { CODES } from 'canonical';
+import type { Issue, TextRange } from 'canonical';
 import { TIPOS_DE_DIAGRAMA, construirPrimitiva, resolverTokens } from 'tema';
 import type { ErrorDeCatalogo, Primitiva, PropiedadEscrita, TipoDeDiagrama, UbicacionDePrimitiva } from 'tema';
 
@@ -51,7 +51,7 @@ export function propiedadesResueltas(lista: readonly LayerProp[], tokens: Readon
 
 /** La clave si la propiedad no existe, el valor si existe pero no vale. */
 export const inicioDePropiedad = (prop: LayerProp, error: ErrorDeCatalogo): { line: number; column: number } =>
-  rangoDe(prop, error.codigo === CODIGOS.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value').start;
+  rangoDe(prop, error.codigo === CODES.E_THEME_UNKNOWN_PROPERTY ? 'key' : 'value').start;
 
 export function aIssue(archivo: string, error: ErrorDeCatalogo, inicio: { line: number; column: number }): Issue {
   return { code: error.codigo, severity: 'error', file: archivo, ...inicio, message: error.mensaje, ...(error.hint !== undefined && { hint: error.hint }) };
@@ -80,7 +80,7 @@ export function nombreDeDiagrama(item: ThemeDiagram, archivo: string, issues: Is
   if (tipo !== undefined) return tipo;
   issues.push(
     issueConSugerencia(
-      { code: CODIGOS.E_THEME_UNKNOWN_DIAGRAM_TYPE, message: `Unknown Diagram type '${item.name}'; available: ${TIPOS_DE_DIAGRAMA.join(', ')}` },
+      { code: CODES.E_THEME_UNKNOWN_DIAGRAM_TYPE, message: `Unknown Diagram type '${item.name}'; available: ${TIPOS_DE_DIAGRAMA.join(', ')}` },
       archivo, item, 'name', TIPOS_DE_DIAGRAMA,
     ),
   );

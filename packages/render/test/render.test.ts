@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { combineIconProviders, fuenteCanonicaSchema, genericIcons, resolveView, workspaceIcons } from 'canonico';
-import type { IconProvider, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
+import { combineIconProviders, canonicalFormSchema, genericIcons, resolveView, workspaceIcons } from 'canonical';
+import type { IconProvider, Theme, GraphView, ResolvedView } from 'canonical';
 import { layoutView as layoutDeVista } from 'layout';
 
 import { aHtml, etiquetaCon, rectDe } from './ayudas';
@@ -25,8 +25,8 @@ const nodo = (id: string, title: string, type: string, children: unknown[] = [])
 });
 
 /** Grupo `a` con dos servicios, una base fuera y un override de color y label. */
-function vista(estado = {}): VistaDeGrafo {
-  const fuente = fuenteCanonicaSchema.parse({
+function vista(estado = {}): GraphView {
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio', color: 'blue' }, { name: 'base', color: 'green' }] },
     model: {
       nodes: [
@@ -37,7 +37,7 @@ function vista(estado = {}): VistaDeGrafo {
     },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], overrides: [{ node: 'db', color: 'red', label: 'Postgres' }] }],
   });
-  return resolveView(fuente, 'v', estado) as VistaDeGrafo;
+  return resolveView(fuente, 'v', estado) as GraphView;
 }
 
 const OSCURO: TemaResuelto = {
@@ -51,7 +51,7 @@ const OSCURO: TemaResuelto = {
   pagina: TEMA_NEUTRO.pagina,
 };
 
-async function dibujar(tema: Tema, estado = {}): Promise<string> {
+async function dibujar(tema: Theme, estado = {}): Promise<string> {
   const v = vista(estado);
   const geometry = await layoutView(v, tema);
   return aHtml({ view: v, geometry, theme: tema, width: 800, height: 600 });
@@ -109,7 +109,7 @@ describe('Diagram', () => {
 
   it('la etiqueta de una Arista va sobre su ruta, en un solo texto', async () => {
     const base = vista();
-    const v: VistaResuelta = {
+    const v: ResolvedView = {
       ...base,
       edges: base.edges.map((arista) => (arista.to.node === 'a.auth' ? { ...arista, label: 'valida <token>' } : arista)),
     };
@@ -167,7 +167,7 @@ describe('Diagram', () => {
   });
 
   it('escapa tambien los valores del Tema que van en atributos', async () => {
-    const hostil: Tema = { ...TEMA_NEUTRO, palette: { ...TEMA_NEUTRO.palette, blue: '"/><script>' }, fonts: { body: 'a"b', mono: 'monospace' } };
+    const hostil: Theme = { ...TEMA_NEUTRO, palette: { ...TEMA_NEUTRO.palette, blue: '"/><script>' }, fonts: { body: 'a"b', mono: 'monospace' } };
     const svg = await dibujar(hostil);
 
     expect(svg).not.toContain('<script>');
@@ -176,8 +176,8 @@ describe('Diagram', () => {
 });
 
 describe('Diagram: Atributos e iconos', () => {
-  function tabla(iconos: Record<string, string> = {}): { view: VistaResuelta; icons: IconProvider } {
-    const fuente = fuenteCanonicaSchema.parse({
+  function tabla(iconos: Record<string, string> = {}): { view: ResolvedView; icons: IconProvider } {
+    const fuente = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'tabla', icon: 'database', color: 'blue' }, { name: 'servicio', icon: 'logo' }] },
       model: {
         nodes: [
@@ -271,7 +271,7 @@ describe('Diagram: Atributos e iconos', () => {
 });
 
 describe('Metricas compartidas: layout y dibujo', () => {
-  const fuente = fuenteCanonicaSchema.parse({
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'tabla' }] },
     model: {
       nodes: [

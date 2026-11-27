@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { TEMA_NEUTRO } from 'tema';
 
 describe('layout', () => {
   it('se importa por nombre de paquete y calcula la geometria de una Vista', async () => {
-    const fuente = fuenteCanonicaSchema.parse({
+    const fuente = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: { nodes: [{ id: 'a', type: 'servicio', title: 'A' }] },
       views: [{ id: 'v', type: 'architecture', include: ['a'] }],

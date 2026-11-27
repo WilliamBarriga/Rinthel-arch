@@ -1,7 +1,7 @@
 /**
  * Registro en disco: unico dueno en `cli` del Registro de actividad, que vive en la carpeta de salida de `workspace.ts`
  * (`<workspace>/.diagrams/activity.jsonl`): el anexado con rotacion (lo usan `validate`, `build`, `inspect` y `edit`) y la
- * observacion (la usa `dev`). El esquema y el lector puro del registro son de `canonico`.
+ * observacion (la usa `dev`). El esquema y el lector puro del registro son de `canonical`.
  * Invariantes: una linea por anexado, escrita con un solo `write` en modo append; al pasar 1 MB rota a
  * `activity.1.jsonl` (una generacion). La observacion sondea con `fs.watchFile`, que funciona aunque el archivo aun no
  * exista y ve la rotacion (otro inodo, otro tamano).

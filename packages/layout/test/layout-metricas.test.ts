@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
-import type { Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
+import { canonicalFormSchema, edgeId, resolveView } from 'canonical';
+import type { Theme, GraphView, ResolvedView } from 'canonical';
 import { claveDeLayout, layoutConMetricas, layoutView as layoutDeVista } from 'layout';
 import { TEMA_NEUTRO, claveDeTexto, metricasDe, tablaDeMetricas } from 'tema';
 
@@ -18,20 +18,20 @@ const capas = [
   { nombre: 'relleno', primitiva: { tipo: 'solid', props: { color: 'blue' } } },
 ];
 const conTipos = (tipos: Record<string, unknown[]>, capasBase: unknown[] = capas) =>
-  ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capasBase, tipos } }) as Tema;
+  ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas: capasBase, tipos } }) as Theme;
 const grande = conTipos({ db: [{ nombre: 'forma', primitiva: 'circle', props: {} }] });
 
 const nodo = (id: string, type: string, extra: Record<string, unknown> = {}) => ({ id, type, title: id, description: '', children: [], ...extra });
 
-function vistaDe(nodes: unknown[], edges: unknown[]): VistaDeGrafo {
-  const fuente = fuenteCanonicaSchema.parse({
+function vistaDe(nodes: unknown[], edges: unknown[]): GraphView {
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }, { name: 'db' }] },
     model: { nodes, edges },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
   });
-  return resolveView(fuente, 'v') as VistaDeGrafo;
+  return resolveView(fuente, 'v') as GraphView;
 }
-const dosTipos = (): VistaResuelta => vistaDe([nodo('api', 'servicio'), nodo('datos', 'db')], [{ from: { node: 'api' }, to: { node: 'datos' }, label: 'lee' }]);
+const dosTipos = (): ResolvedView => vistaDe([nodo('api', 'servicio'), nodo('datos', 'db')], [{ from: { node: 'api' }, to: { node: 'datos' }, label: 'lee' }]);
 
 describe('Metricas por Tipo y relayout por clave de estructura', () => {
   it('cajas distintas por Tipo en una misma Vista', async () => {
@@ -59,7 +59,7 @@ describe('Metricas por Tipo y relayout por clave de estructura', () => {
     );
     const g = await layoutView(v, grande);
     const m = metricasDe(TEMA_NEUTRO, 'architecture');
-    const ruta = g.edges[idDeArista(v.edges[0]!)]!.points;
+    const ruta = g.edges[edgeId(v.edges[0]!)]!.points;
 
     const caja = g.nodes['t']!;
     // El tipo `db` es un circulo: el contenido (cabecera + una fila) va centrado en su caja cuadrada.
@@ -70,8 +70,8 @@ describe('Metricas por Tipo y relayout por clave de estructura', () => {
 });
 
 describe('medicion de texto en el layout', () => {
-  const tema = TEMA_NEUTRO as unknown as Tema;
-  const una = (): VistaResuelta => vistaDe([nodo('api', 'servicio')], []);
+  const tema = TEMA_NEUTRO as unknown as Theme;
+  const una = (): ResolvedView => vistaDe([nodo('api', 'servicio')], []);
   const medidasDe = (ancho: number, hash = 'aaaa') => {
     const m = tablaDeMetricas(tema, 'architecture').base;
     return { nivel: 'medido' as const, fuentes: { sans: hash }, anchos: { [claveDeTexto(TEMA_NEUTRO.fonts.body, m.fontSize, 'api')]: ancho } };
@@ -87,7 +87,7 @@ describe('medicion de texto en el layout', () => {
 
   it('la clave cambia con el origen de las medidas y con el hash de fuente, y con nada mas de la pintura', () => {
     const clave = (m?: ReturnType<typeof medidasDe>) => claveDeLayout(una(), tema, tablaDeMetricas(tema, 'architecture', m));
-    const repintado = { ...tema, palette: { ...tema.palette, blue: '#ff0000' } } as Tema;
+    const repintado = { ...tema, palette: { ...tema.palette, blue: '#ff0000' } } as Theme;
 
     expect(clave(medidasDe(400))).not.toBe(clave());
     expect(clave(medidasDe(400, 'bbbb'))).not.toBe(clave(medidasDe(400)));
@@ -96,8 +96,8 @@ describe('medicion de texto en el layout', () => {
 });
 
 describe('layout de secuencia exige Metricas de secuencia', () => {
-  const secuencia = (): VistaResuelta => {
-    const fuente = fuenteCanonicaSchema.parse({
+  const secuencia = (): ResolvedView => {
+    const fuente = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: {
         nodes: [nodo('a', 'servicio'), nodo('b', 'servicio')],

@@ -1,6 +1,6 @@
 /** Fila de una tabla ER (bloque `row` del Tema). Solo el alto entra en las Metricas; el resto solo pinta. */
-import { CLAVES_DE_ATRIBUTO } from 'canonico';
-import type { ClaveDeAtributo } from 'canonico';
+import { ATTRIBUTE_KEYS } from 'canonical';
+import type { AttributeKey } from 'canonical';
 
 /** Rango del alto de una fila, en px (`height` del bloque `row`). */
 export const ALTO_DE_FILA = { min: 12, max: 120 } as const;
@@ -11,12 +11,12 @@ export type TextoDeFila = keyof typeof TEXTOS_DE_FILA;
 export const NOMBRES_DE_TEXTO_DE_FILA = Object.keys(TEXTOS_DE_FILA) as TextoDeFila[];
 
 /** Marcas de clave con parche propio, en el orden en que se aplican (la ultima gana). */
-export const CLAVES_DE_FILA: readonly ClaveDeAtributo[] = CLAVES_DE_ATRIBUTO;
+export const CLAVES_DE_FILA: readonly AttributeKey[] = ATTRIBUTE_KEYS;
 
 /** `impar` es 0-based. */
 export interface VarianteDeFila {
   impar: boolean;
-  keys: readonly ClaveDeAtributo[];
+  keys: readonly AttributeKey[];
   opcional: boolean;
 }
 
@@ -24,6 +24,6 @@ export interface VarianteDeFila {
 export const claveDeFila = ({ impar, keys, opcional }: VarianteDeFila): string => `${impar ? 'i' : 'p'}|${CLAVES_DE_FILA.filter((k) => keys.includes(k)).join('+')}|${opcional ? 'o' : '-'}`;
 
 export function variantesDeFila(): VarianteDeFila[] {
-  const subconjuntos = CLAVES_DE_FILA.reduce<ClaveDeAtributo[][]>((acc, k) => [...acc, ...acc.map((s) => [...s, k])], [[]]);
+  const subconjuntos = CLAVES_DE_FILA.reduce<AttributeKey[][]>((acc, k) => [...acc, ...acc.map((s) => [...s, k])], [[]]);
   return [false, true].flatMap((impar) => subconjuntos.flatMap((keys) => [false, true].map((opcional) => ({ impar, keys, opcional }))));
 }

@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Tema } from 'canonico';
+import type { Theme } from 'canonical';
 import { TEMA_NEUTRO, claveDeMetricas, claveDeTexto, colocarNodo, hashDeFuente, metricasDe, tablaDeMetricas, tamanoDeEtiqueta, textosAMedir } from 'tema';
 import type { MedidasDeTexto } from 'tema';
 
-const tema = TEMA_NEUTRO as unknown as Tema;
+const tema = TEMA_NEUTRO as unknown as Theme;
 const medidas = (anchos: Record<string, number>, fuentes: Record<string, string> = { sans: 'aaaa' }): MedidasDeTexto => ({ nivel: 'medido', fuentes, anchos });
 
 describe('medicion de texto', () => {
@@ -68,7 +68,7 @@ describe('medicion de texto', () => {
       ...TEMA_NEUTRO,
       nodo: { ...TEMA_NEUTRO.nodo, slots: { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }] }, textos: { title: { tipo: 'text', props: { weight: 800 } } } },
       arista: { ...TEMA_NEUTRO.arista, etiqueta: { tipo: 'label', props: { weight: 700 } } },
-    } as unknown as Tema;
+    } as unknown as Theme;
     const nodo = { id: 'a', type: 't', label: 'abcd', collapsed: false, children: [], source: [], attributes: [] };
     const tabla = tablaDeMetricas(grueso, 'architecture');
     const textos = textosAMedir({ nodes: [nodo], edges: [{ label: 'lee' }] } as never, tabla);
@@ -85,7 +85,7 @@ describe('medicion de texto', () => {
       ...TEMA_NEUTRO,
       nodo: { ...TEMA_NEUTRO.nodo, slots: { direccion: 'column', gap: 0, pad: 0, hijos: [{ slot: 'title' }] }, textos: { title: { tipo: 'text', props: { font: 'mono' } } } },
       arista: { ...TEMA_NEUTRO.arista, etiqueta: { tipo: 'label', props: { font: 'mono' } } },
-    } as unknown as Tema;
+    } as unknown as Theme;
     const nodo = { id: 'a', type: 't', label: 'abcd', collapsed: false, children: [], source: [], attributes: [] };
     const textos = textosAMedir({ nodes: [nodo], edges: [{ label: 'lee' }] } as never, tablaDeMetricas(mono, 'architecture'));
 

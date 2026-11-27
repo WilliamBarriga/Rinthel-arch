@@ -2,8 +2,8 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { resolveView } from 'canonico';
-import type { Nodo, VistaDeGrafo, VistaDeSecuencia } from 'canonico';
+import { resolveView } from 'canonical';
+import type { Node, GraphView, SequenceView } from 'canonical';
 import { compile } from 'dsl';
 
 /** Lo que la documentacion publica promete: el tutorial valida, el mapa trae los 14 Temas, las capturas y los enlaces existen. */
@@ -55,7 +55,7 @@ describe('mapa de rinthel-arch con los 14 Temas', () => {
 describe('rinthel-arch map: regenerated from scan (the live demo)', () => {
   const { canonico, issues } = compile(leerDg('examples/rinthel-arch'));
   const vistas = canonico!.views;
-  const todos = (nodos: Nodo[]): Nodo[] => nodos.flatMap((n) => [n, ...todos(n.children)]);
+  const todos = (nodos: Node[]): Node[] => nodos.flatMap((n) => [n, ...todos(n.children)]);
 
   it('every Node of the repo Group cites a scan unit as a Source path ref', () => {
     const repo = canonico!.model.nodes.find((n) => n.id === 'repo')!;
@@ -73,13 +73,13 @@ describe('rinthel-arch map: regenerated from scan (the live demo)', () => {
   });
 
   it('has a flow View with Steps, an er View over the scanned tables and a sequence View', () => {
-    const flujo = vistas.find((v) => v.type === 'flow' && (resolveView(canonico!, v.id) as VistaDeGrafo).steps.length >= 3);
+    const flujo = vistas.find((v) => v.type === 'flow' && (resolveView(canonico!, v.id) as GraphView).steps.length >= 3);
     expect(flujo).toBeDefined();
-    const er = resolveView(canonico!, 'tables') as VistaDeGrafo;
+    const er = resolveView(canonico!, 'tables') as GraphView;
     expect(er.type).toBe('er');
     expect(er.nodes).toHaveLength(3);
     expect(er.edges).toHaveLength(2);
-    const secuencia = resolveView(canonico!, 'export-sequence') as VistaDeSecuencia;
+    const secuencia = resolveView(canonico!, 'export-sequence') as SequenceView;
     expect(secuencia.type).toBe('sequence');
     expect(secuencia.steps.length).toBeGreaterThanOrEqual(2);
   });

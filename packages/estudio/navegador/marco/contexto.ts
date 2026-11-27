@@ -6,7 +6,7 @@
  */
 import { createContext, useContext } from 'react';
 
-import type { FuenteCanonica } from 'canonico';
+import type { CanonicalForm } from 'canonical';
 
 import type { EstadoDeDev } from '../../src/protocolo';
 import type { ClienteDeDev } from '../cliente';
@@ -20,7 +20,7 @@ export interface ContextoDelEstudio {
   /** `undefined` hasta que llega el primer estado. */
   estado: EstadoDeDev | undefined;
   /** Fuente de la ultima Sesion buena que se esta dibujando; `undefined` si el Workspace nunca compilo. */
-  fuente: FuenteCanonica | undefined;
+  fuente: CanonicalForm | undefined;
   cliente: ClienteDeDev;
   /** Vista activa (la del hash); `undefined` sin Fuente. */
   vista: string | undefined;

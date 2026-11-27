@@ -4,8 +4,8 @@ import { select } from 'd3-selection';
 import { zoom, zoomTransform } from 'd3-zoom';
 import type { D3ZoomEvent } from 'd3-zoom';
 
-import { idDeElementoDeSecuencia, resolveView } from 'canonico';
-import type { EstadoDeColapso, FuenteCanonica, Geometria, IconProvider, Tema, Visibilidad, VistaResuelta } from 'canonico';
+import { sequenceElementId, resolveView } from 'canonical';
+import type { CollapseState, CanonicalForm, Geometry, IconProvider, Theme, Visibility, ResolvedView } from 'canonical';
 import { Diagram, hojaDeFuentes, resolverEstilo } from 'render';
 import type { Camara, ComponentesDeTema } from 'render';
 import { resolverTema } from 'tema';
@@ -41,7 +41,7 @@ import { recortarAlViewport } from './viewport';
 import { nivelDeDetalle } from './zoom-semantico';
 import type { UmbralesDeDetalle } from './zoom-semantico';
 
-export type AdaptadorDeLayout = (vista: VistaResuelta, tema: Tema, medidas?: MedidasDeTexto) => Promise<Geometria>;
+export type AdaptadorDeLayout = (vista: ResolvedView, tema: Theme, medidas?: MedidasDeTexto) => Promise<Geometry>;
 
 /** Mide textos con la fuente real (`medirEnVisor`); sin medidor el layout estima por caracter. */
 export type MedidorDeTexto = (textos: TextoAMedir[]) => Promise<MedidasDeTexto>;
@@ -51,8 +51,8 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   legend?: ModoDeLeyenda;
   /** Componentes de Tema (Capa `code`) por nombre; los registra el adaptador (`dev`), el shell solo los pasa a `Diagram`. */
   componentes?: ComponentesDeTema;
-  source: FuenteCanonica;
-  theme: Tema;
+  source: CanonicalForm;
+  theme: Theme;
   layout: AdaptadorDeLayout;
   /** Medicion real de texto; con ella el layout espera las medidas y la clave de layout incluye el hash de fuente y el nivel `medido`. */
   measure?: MedidorDeTexto;
@@ -67,13 +67,13 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   width: number;
   height: number;
   /** Estado de colapso controlado (`resolveView`); sin el, el componente guarda el suyo. */
-  state?: EstadoDeColapso;
+  state?: CollapseState;
   /** Aviso del estado de colapso que resulta de alternar un Grupo. */
-  onStateChange?: (state: EstadoDeColapso) => void;
+  onStateChange?: (state: CollapseState) => void;
   /** Geometria cacheada del estado por defecto de la Vista (sin `state`): se usa sin relayout. */
-  cachedGeometry?: Geometria;
+  cachedGeometry?: Geometry;
   /** Geometria cacheada por id de Vista; manda sobre `cachedGeometry` para esa Vista (util al navegar). */
-  cachedGeometries?: Readonly<Record<string, Geometria>>;
+  cachedGeometries?: Readonly<Record<string, Geometry>>;
   /** Duracion del morph al alternar un Grupo, en ms; 0 lo desactiva. Por defecto 300. */
   morphMs?: number;
   /** Tope de Nodos visibles; una expansion que lo supera se rechaza. Por defecto 1000. */
@@ -86,7 +86,7 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
   onCameraChange?: (camara: Camara) => void;
   /** Elemento seleccionado controlado (id de Nodo, de Arista o `nodo#atributo`); sin ella el componente guarda su Seleccion. */
   selected?: string | null;
-  /** Se selecciono un elemento: su id (Nodo, Arista o etiqueta por `idDeArista`, Atributo como `nodo#atributo`). */
+  /** Se selecciono un elemento: su id (Nodo, Arista o etiqueta por `edgeId`, Atributo como `nodo#atributo`). */
   onSelect?: (id: string) => void;
   /** Doble clic sobre un elemento (Nodo, Arista, Atributo, Mensaje...): su tipo y su id, como en `onSelect`; ese doble clic no hace zoom. */
   onOpen?: (elemento: ElementoSeleccionable) => void;
@@ -113,7 +113,7 @@ export interface VistaInteractivaProps extends PropsDePasos, PropsDeNavegacion, 
    */
   route?: readonly string[];
   /** Visibilidad 0..1 de Nodos y Aristas; si se da, manda sobre la derivada de los Pasos. */
-  visibility?: Visibilidad;
+  visibility?: Visibility;
   /** Escalas desde las que el zoom semantico muestra titulo y titulo + Atributos (ver `nivelDeDetalle`). */
   detailThresholds?: UmbralesDeDetalle;
   /** Proveedor de iconos de los Nodos (claves de `icon` -> SVG inline); sin el, no se dibujan iconos. */
@@ -143,7 +143,7 @@ export function VistaInteractiva(props: VistaInteractivaProps): ReactElement {
 
 interface PropsDeVistaActiva extends Omit<VistaInteractivaProps, 'view' | 'cachedGeometry'> {
   view: string;
-  cachedGeometry: Geometria | undefined;
+  cachedGeometry: Geometry | undefined;
   /** Se pulso un Nodo con `link`: la Vista destino. */
   alEnlazar: (destino: string) => void;
   /** Breadcrumbs y boton atras, dibujados dentro del lienzo. */
@@ -154,7 +154,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const { source, view, layout, width, height, onError, onSelect, cachedGeometry, morphMs = 300, maxNodes = MAX_NODOS_VISIBLES } = props;
   const conChrome = props.chrome !== false;
   const { tema: theme, interruptor, reducedMotion } = useAltoContraste(props.theme, props);
-  const [state, fijarEstado] = useControlado<EstadoDeColapso>(props.state, {}, props.onStateChange);
+  const [state, fijarEstado] = useControlado<CollapseState>(props.state, {}, props.onStateChange);
   const ajustes = { ...AJUSTES_POR_DEFECTO, ...props.tuning };
   const ajustesVigentes = useRef(ajustes);
   ajustesVigentes.current = ajustes;
@@ -208,7 +208,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   const ultimo = useRef(props);
   ultimo.current = props;
   const camaraVigente = useRef(camara);
-  const geometriaVigente = useRef<Geometria | undefined>(undefined);
+  const geometriaVigente = useRef<Geometry | undefined>(undefined);
   geometriaVigente.current = calculo?.geometria;
   const vistaVigente = useRef(vista);
   vistaVigente.current = calculo?.vista ?? vista;
@@ -316,7 +316,7 @@ function VistaActiva(props: PropsDeVistaActiva): ReactElement {
   }, [props.route, vista, nodosSeleccionados.join('\n')]);
   const [foco, fijarFoco] = useState<string | undefined>(undefined);
   const focoVigente =
-    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction.messages.some((m) => idDeElementoDeSecuencia(vista.interaction.id, m.ruta) === foco))) ? foco : undefined;
+    foco !== undefined && (vista.nodes.some((n) => n.id === foco) || (enSecuencia && vista.interaction.messages.some((m) => sequenceElementId(vista.interaction.id, m.path) === foco))) ? foco : undefined;
   const estadosFinales = useMemo(
     () => unirEstados(unirEstados(estados, estadosDeRuta(vista, ruta)), focoVigente === undefined ? {} : { [focoVigente]: ['focus'] }),
     [estados, vista, ruta, focoVigente],

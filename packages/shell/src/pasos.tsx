@@ -2,8 +2,8 @@
 import { useMemo } from 'react';
 import type { ReactElement } from 'react';
 
-import { revealAt } from 'canonico';
-import type { Visibilidad, VistaResuelta } from 'canonico';
+import { revealAt } from 'canonical';
+import type { Visibility, ResolvedView } from 'canonical';
 
 import { useControlado } from './controlado';
 import { pasoInicialDeTipo } from './hash';
@@ -16,18 +16,18 @@ export interface PropsDePasos {
   /** El usuario pide otro Paso (ya acotado a 0..N). */
   onStepChange?: ((paso: number) => void) | undefined;
   /** Visibilidad explicita: manda sobre la derivada de los Pasos. */
-  visibility?: Visibilidad | undefined;
+  visibility?: Visibility | undefined;
 }
 
 export interface PasosEnVista {
-  visibility: Visibilidad | undefined;
+  visibility: Visibility | undefined;
   /** Controles anterior/siguiente; `null` si la Vista no tiene `steps`. */
   controles: ReactElement | null;
 }
 
 const acotar = (paso: number, total: number): number => Math.min(Math.max(Number.isNaN(paso) ? 0 : paso, 0), total);
 
-export function usePasos(vista: VistaResuelta, props: PropsDePasos): PasosEnVista {
+export function usePasos(vista: ResolvedView, props: PropsDePasos): PasosEnVista {
   const total = vista.steps.length;
   const [pasoVigente, fijarPaso] = useControlado(props.step, props.defaultStep ?? pasoInicialDeTipo(vista.type, total), props.onStepChange);
   const paso = acotar(pasoVigente, total);

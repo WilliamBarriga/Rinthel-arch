@@ -24,7 +24,7 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
-    "canonico": "workspace:*",
+    "canonical": "workspace:*",
     "dsl": "workspace:*",
     "esbuild": "0.28.2",
     "estudio": "workspace:*",

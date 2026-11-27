@@ -9,11 +9,11 @@ Componente React `<Diagram>` que dibuja una Vista resuelta con su Geometria y el
 
 ## Que NO hace
 - No calcula posiciones ni valida Temas: eso es de `layout` y `tema`.
-- No resuelve Vistas ni interpreta Pasos: eso es de `canonico`; el estado de seleccion y camara es de `shell`.
+- No resuelve Vistas ni interpreta Pasos: eso es de `canonical`; el estado de seleccion y camara es de `shell`.
 - No toca disco, reloj ni red: es nucleo puro.
 
 ## Depende de
-`canonico`, `layout` y `tema` (`docs/CODING.md`, "Direccion de dependencias"). Dependencia externa: peer `react` 18 o 19.
+`canonical`, `layout` y `tema` (`docs/CODING.md`, "Direccion de dependencias"). Dependencia externa: peer `react` 18 o 19.
 
 ## Archivo de entrada
 `packages/render/src/index.ts` (la cabecera documenta props, invariantes y modos de error).

@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from 'react';
 
-import type { SalidaDeInspect } from 'canonico';
+import type { InspectOutput } from 'canonical';
 
 import type { ComandoDeInspect } from '../../src/protocolo';
 import type { ClienteDeDev, Lectura } from '../cliente';
@@ -48,7 +48,7 @@ export function useLecturaPorVersion<T>(cliente: ClienteDeDev, version: number |
   return leida !== undefined && leida.clave === clave ? leida.lectura : CARGANDO;
 }
 
-type SalidaDe<C extends ComandoDeInspect> = Extract<SalidaDeInspect, { command: C }>;
+type SalidaDe<C extends ComandoDeInspect> = Extract<InspectOutput, { command: C }>;
 
 /** `inspect <comando> <argumento>` por version, con la salida ya estrechada a ese comando; sin `argumento` no pide nada. */
 export function useInspectPorVersion<C extends ComandoDeInspect>(cliente: ClienteDeDev, version: number | undefined, comando: C, argumento: string | undefined): EstadoDeLectura<SalidaDe<C>> {

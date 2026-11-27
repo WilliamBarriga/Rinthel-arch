@@ -1,9 +1,9 @@
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { resolveView } from 'canonico';
+import { resolveView } from 'canonical';
 import { layoutView } from 'layout';
-import type { GeometriaSecuencia } from 'canonico';
+import type { SequenceGeometry } from 'canonical';
 import { abrirSesion } from 'sesion';
 import { VistaInteractiva, deserializarEstado } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
@@ -35,11 +35,11 @@ const conPasos = `${modelo}view v { type sequence\n interaction checkout\n steps
 const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
 
 const fuenteDe = (texto: string) => abrirSesion({ 'main.dg': texto }).fuente!;
-const geometriaDe = async (texto: string): Promise<GeometriaSecuencia> => (await layoutView(resolveView(fuenteDe(texto), 'v')!, TEMA_NEUTRO)) as GeometriaSecuencia;
+const geometriaDe = async (texto: string): Promise<SequenceGeometry> => (await layoutView(resolveView(fuenteDe(texto), 'v')!, TEMA_NEUTRO)) as SequenceGeometry;
 const centro = (c: { x: number; y: number; width: number; height: number }) => ({ x: c.x + c.width / 2, y: c.y + c.height / 2 });
 
 /** Punto de la pestana que no cae sobre la linea de ninguna Lifeline (el orden de acierto prefiere la Lifeline). */
-const libreEnPestana = (g: GeometriaSecuencia, tab: { x: number; y: number; width: number; height: number }) => {
+const libreEnPestana = (g: SequenceGeometry, tab: { x: number; y: number; width: number; height: number }) => {
   for (let x = tab.x + 1; x < tab.x + tab.width; x++) {
     if (Object.values(g.lifelines).every((l) => Math.abs(l.x - x) > 12)) return { x, y: tab.y + tab.height / 2 };
   }

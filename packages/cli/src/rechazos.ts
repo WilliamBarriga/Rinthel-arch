@@ -1,12 +1,12 @@
 /**
  * Rechazo de `edit` (codigo de salida 1 para todo motivo). El estado HTTP de las rutas de escritura de `dev` es
- * `estadoHttpDeRechazo` de `canonico`, el mismo que usa `devEnMemoria`.
+ * `rejectionHttpStatus` de `canonical`, el mismo que usa `devEnMemoria`.
  */
-import type { MotivoDeRechazo } from 'canonico';
+import type { RejectionReason } from 'canonical';
 
 export interface RechazoDeEdicion {
   ok: false;
-  reason: MotivoDeRechazo;
+  reason: RejectionReason;
   message: string;
   file?: string;
 }

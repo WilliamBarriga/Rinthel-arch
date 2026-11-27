@@ -8,7 +8,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { ReactElement } from 'react';
 
-import type { EstadoDeColapso, FuenteCanonica } from 'canonico';
+import type { CollapseState, CanonicalForm } from 'canonical';
 
 import type { ClienteDeDev } from '../cliente';
 import { useCaducidad } from '../marco/use-caducidad';
@@ -17,11 +17,11 @@ import { DURACION_DEL_RESALTADO_MS, proyectarDiferencia, unirDiferencia, vencerR
 
 export interface OpcionesDeDiferenciasExternas {
   cliente: ClienteDeDev;
-  fuente: FuenteCanonica;
+  fuente: CanonicalForm;
   /** Version del estado que se esta dibujando. */
   version: number;
   vista: string;
-  estado: EstadoDeColapso;
+  estado: CollapseState;
   paso: number;
   avisar(texto: string): void;
   duracionMs?: number;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Tema } from 'canonico';
+import type { Theme } from 'canonical';
 import { TEMA_NEUTRO, cascada, colocarEnCaja, estiloResuelto, tablaDeMetricas, temaResueltoSchema, textosAMedir } from 'tema';
 import type { OpDeCapa } from 'tema';
 
@@ -8,11 +8,11 @@ const capa = (nombre: string, tipo: string, props: Record<string, number | strin
 const op = (nombre: string, props: Record<string, number | string>, primitiva?: string): OpDeCapa => ({ nombre, props, ...(primitiva !== undefined && { primitiva }) });
 
 const conNodo = { ...TEMA_NEUTRO.nodo, capas: [capa('caja', 'rect', { radius: 3 }), capa('relleno', 'solid', { color: 'red' })] };
-const tema = (grupo: Record<string, unknown> = {}): Tema => ({ ...TEMA_NEUTRO, nodo: conNodo, grupo: { ...TEMA_NEUTRO.grupo, ...grupo } }) as Tema;
+const tema = (grupo: Record<string, unknown> = {}): Theme => ({ ...TEMA_NEUTRO, nodo: conNodo, grupo: { ...TEMA_NEUTRO.grupo, ...grupo } }) as Theme;
 
 describe('Grupo del Tema: pila propia', () => {
   it('un Tema sin group resuelve un Grupo sobrio de sus tokens, nunca las Capas del Nodo', () => {
-    for (const sinGrupo of [tema(), TEMA_NEUTRO as Tema]) {
+    for (const sinGrupo of [tema(), TEMA_NEUTRO as Theme]) {
       const { abierto, colapsado } = estiloResuelto(sinGrupo, { diagrama: 'architecture' }).pintura.grupo;
       const nombresDelNodo = estiloResuelto(sinGrupo, { diagrama: 'architecture' }).pintura.nodo.capas.map((c) => c.nombre);
 

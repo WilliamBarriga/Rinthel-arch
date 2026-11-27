@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fuenteCanonicaSchema, idDeArista } from 'canonico';
-import type { Geometria, GeometriaGrafo, VistaResuelta } from 'canonico';
+import { canonicalFormSchema, edgeId } from 'canonical';
+import type { Geometry, GraphGeometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
 import { opacidadDeNodo, pulsarEn, pulsarNodo } from './ayudas';
@@ -13,7 +13,7 @@ afterEach(cleanup);
 const nodo = (id: string, title: string) => ({ id, type: 'servicio', title, description: '', children: [] });
 
 /** a -> b, c -> d: cuatro Nodos en fila. */
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
   model: {
     nodes: [nodo('a', 'A'), nodo('b', 'B'), nodo('c', 'C'), nodo('d', 'D')],
@@ -26,16 +26,16 @@ const fuente = fuenteCanonicaSchema.parse({
 });
 
 /** Adaptador en memoria (sin ELK): Nodos de 100x50 separados 200 en x. */
-const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
-  const nodes: GeometriaGrafo['nodes'] = {};
+const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
+  const nodes: GraphGeometry['nodes'] = {};
   vista.nodes.forEach((n, i) => {
     nodes[n.id] = { x: i * 200, y: 0, width: 100, height: 50 };
   });
-  const edges: GeometriaGrafo['edges'] = {};
+  const edges: GraphGeometry['edges'] = {};
   for (const e of vista.type === 'sequence' ? [] : vista.edges) {
     const desde = nodes[e.from.node]!;
     const hasta = nodes[e.to.node]!;
-    edges[idDeArista(e)] = {
+    edges[edgeId(e)] = {
       points: [
         { x: desde.x + 100, y: 25 },
         { x: hasta.x, y: 25 },
@@ -64,7 +64,7 @@ const montar = (extra: Partial<VistaInteractivaProps> = {}) => render(<VistaInte
 
 describe('VistaInteractiva', () => {
   it('dibuja los iconos del proveedor `icons`', async () => {
-    const conIcono = fuenteCanonicaSchema.parse({
+    const conIcono = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio', icon: 'logo' }] },
       model: { nodes: [nodo('a', 'A')], edges: [] },
       views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
@@ -147,13 +147,13 @@ describe('VistaInteractiva', () => {
 
     pulsarEn(container, 150, 25);
 
-    const id = idDeArista({ from: { node: 'a' }, to: { node: 'b' } });
+    const id = edgeId({ from: { node: 'a' }, to: { node: 'b' } });
     expect(onSelect).toHaveBeenCalledWith(id);
     await waitFor(() => expect(container.querySelector('[data-selected]')?.getAttribute('data-selected')).toBe(id));
   });
 
   it('seleccionar una fila de Atributo la selecciona a ella y no al Nodo', async () => {
-    const conAtributos = fuenteCanonicaSchema.parse({
+    const conAtributos = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: { nodes: [{ ...nodo('t', 'T'), attributes: [{ name: 'id', type: 'uuid' }, { name: 'mail', type: 'text' }] }], edges: [] },
       views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
@@ -252,10 +252,10 @@ describe('VistaInteractiva', () => {
   });
 
   it('descarta el layout viejo cuando llega despues del nuevo', async () => {
-    let resolverViejo!: (g: Geometria) => void;
+    let resolverViejo!: (g: Geometry) => void;
     let llamadas = 0;
     const adaptador: AdaptadorDeLayout = (vista, tema) =>
-      ++llamadas === 1 ? new Promise<Geometria>((r) => (resolverViejo = r)) : enFila(vista, tema);
+      ++llamadas === 1 ? new Promise<Geometry>((r) => (resolverViejo = r)) : enFila(vista, tema);
     const { container, rerender } = montar({ layout: adaptador, camera: camaraGrande });
     rerender(<VistaInteractiva {...props({ layout: adaptador, camera: camaraGrande, theme: { ...TEMA_NEUTRO, tokens: { ...TEMA_NEUTRO.tokens, fontSize: '20px' } } })} />);
     await waitFor(() => expect(ids(container)).toEqual(['a', 'b', 'c', 'd']));

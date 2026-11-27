@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { adaptadorDeWorker } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -18,7 +18,7 @@ const workerDelEstudio = (): string => readFileSync(activosDelEstudio().archivos
  */
 describe('Worker de layout empaquetado', () => {
   it('calcula la misma geometria que layoutView sin validar el Tema', async () => {
-    const fuente = fuenteCanonicaSchema.parse({
+    const fuente = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: {
         nodes: [
@@ -56,7 +56,7 @@ describe('Worker de layout empaquetado', () => {
   }, 30_000);
 
   it('una Vista de secuencia da en el Worker la misma geometria que en Node', async () => {
-    const fuente = fuenteCanonicaSchema.parse({
+    const fuente = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: {
         nodes: [

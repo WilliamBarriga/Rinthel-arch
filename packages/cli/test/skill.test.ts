@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { CODIGOS, salidaDeValidateJsonSchema } from 'canonico';
+import { CODES, validateOutputJsonSchema } from 'canonical';
 import { compile } from 'dsl';
 import { run } from 'cli';
 
@@ -36,7 +36,7 @@ describe('skill', () => {
   it('lista todos los codigos de issue con su descripcion', async () => {
     const skill = await generar(workspace());
 
-    for (const codigo of Object.values(CODIGOS)) expect(skill).toContain(`\`${codigo}\``);
+    for (const codigo of Object.values(CODES)) expect(skill).toContain(`\`${codigo}\``);
   });
 
   it('describe el contrato de validate: campos, codigos de salida, fix y el JSON Schema', async () => {
@@ -50,7 +50,7 @@ describe('skill', () => {
     expect(skill).toContain('--json');
     expect(skill).toContain('`fix`');
     const bloque = /```json\n([\s\S]*?)\n```/.exec(skill)?.[1];
-    expect(JSON.parse(bloque ?? 'null')).toEqual(salidaDeValidateJsonSchema());
+    expect(JSON.parse(bloque ?? 'null')).toEqual(validateOutputJsonSchema());
   });
 
   it('la sintaxis del skill cubre extend, style, steps y link', async () => {

@@ -35,7 +35,7 @@ Umbral de arrastre (3 px), tolerancia de acierto de Aristas (4 px), escala minim
 
 ## Alias retirado
 
-`IntencionDePinEnviada` (alias de `IntencionDePin`) se elimina de `enviar-pin.ts` y de `index.ts`. Nadie en el repo lo usa; `IntencionDePin` sigue reexportada desde `shell`. Despues, #167 borro `enviar-pin.ts`: `shell` ya no exporta clientes HTTP.
+`IntencionDePinEnviada` (alias de `PinIntent`) se elimina de `enviar-pin.ts` y de `index.ts`. Nadie en el repo lo usa; `PinIntent` sigue reexportada desde `shell`. Despues, #167 borro `enviar-pin.ts`: `shell` ya no exporta clientes HTTP.
 
 ## Hooks de arrastre y seleccion (ticket #109)
 

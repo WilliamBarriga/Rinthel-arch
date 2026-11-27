@@ -4,11 +4,11 @@
  * `devEnMemoria`, `eventosSobreFetch` (transporte SSE sobre `fetch`, para Node) y la fabrica de Eventos de actividad de
  * prueba (`eventoDeActividad`, `lineasDeActividad`).
  * Invariantes: las entradas son DSL de texto; las rutas se piden relativas (`/api/estado`); no entra al bundle del navegador.
- * Depende de `vitest` (peerDependency opcional), `sesion` y `canonico`.
+ * Depende de `vitest` (peerDependency opcional), `sesion` y `canonical`.
  */
 import { describe, expect, it } from 'vitest';
 
-import type { EventoDeActividad } from 'canonico';
+import type { ActivityEvent } from 'canonical';
 
 import { codigoDeDevSchema, confianzaDeDevSchema, errorDeDevSchema, escrituraDeDevSchema, rechazoDeDevSchema } from './protocolo';
 import type { ActividadDeDev, DiferenciaDeDev, EstadoDeDev, HistorialDeDev } from './protocolo';
@@ -196,7 +196,7 @@ function esperarHistorial(dev: DevDePrueba, basta: (h: HistorialDeDev) => boolea
 }
 
 /** Evento de actividad de prueba (un `edit` exitoso del proceso `pid`); `extra` pisa cualquier campo. */
-export const eventoDeActividad = (pid: number, extra: Partial<EventoDeActividad> = {}): EventoDeActividad => ({
+export const eventoDeActividad = (pid: number, extra: Partial<ActivityEvent> = {}): ActivityEvent => ({
   contractVersion: 2,
   ts: '2026-11-19T10:00:00.000Z',
   pid,
@@ -208,7 +208,7 @@ export const eventoDeActividad = (pid: number, extra: Partial<EventoDeActividad>
 });
 
 /** Las lineas de `.diagrams/activity.jsonl` con esos Eventos. */
-export const lineasDeActividad = (...eventos: EventoDeActividad[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
+export const lineasDeActividad = (...eventos: ActivityEvent[]): string => eventos.map((e) => `${JSON.stringify(e)}\n`).join('');
 
 export function probarContratoDeDev(crear: CrearDev): void {
   const con = async <T>(propios: ArchivosDelWorkspace, prueba: (dev: DevDePrueba) => Promise<T>, extra: Omit<ContenidoDeDevDePrueba, 'propios'> = {}): Promise<T> => {

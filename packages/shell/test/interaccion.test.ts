@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
-import type { Geometria, VistaDeGrafo } from 'canonico';
+import { canonicalFormSchema, edgeId, resolveView } from 'canonical';
+import type { Geometry, GraphView } from 'canonical';
 
 import { SELECCION_VACIA, cajaDeElemento, elementoBajo, seleccionar } from '../src/interaccion';
 import { TEMA_NEUTRO, metricasDe } from 'tema';
@@ -10,7 +10,7 @@ import { TEMA_NEUTRO, metricasDe } from 'tema';
 const nodo = (id: string, extra: object = {}) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [], ...extra });
 
 /** g (grupo) con hijo h (con Atributos), fuera p; arista g.h -> p con etiqueta. */
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
   model: {
     nodes: [
@@ -21,13 +21,13 @@ const fuente = fuenteCanonicaSchema.parse({
   },
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],
 });
-const vista = resolveView(fuente, 'v', { expanded: ['g'] }) as VistaDeGrafo;
+const vista = resolveView(fuente, 'v', { expanded: ['g'] }) as GraphView;
 const arista = vista.edges[0]!;
-const idArista = idDeArista(arista);
+const idArista = edgeId(arista);
 const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
 
 /** g en (100,100) 300x200; h dentro de g en (20,40) 200x{cabecera+2 filas}; p en (1000,100). */
-const geometria: Geometria = {
+const geometria: Geometry = {
   nodes: {
     g: { x: 100, y: 100, width: 300, height: 200 },
     'g.h': { x: 20, y: 40, width: 200, height: cabecera + 2 * fila },

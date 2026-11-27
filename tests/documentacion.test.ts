@@ -53,8 +53,8 @@ function readmeValido(nombre: string, opciones: { sin?: string[]; entrada?: stri
 
 function repoConPaquete(readme?: string): Record<string, string> {
   return {
-    'packages/canonico/src/index.ts': 'export const a = 1;\n',
-    ...(readme === undefined ? {} : { 'packages/canonico/README.md': readme }),
+    'packages/canonical/src/index.ts': 'export const a = 1;\n',
+    ...(readme === undefined ? {} : { 'packages/canonical/README.md': readme }),
   };
 }
 
@@ -71,7 +71,7 @@ describe('revisarReadmes', () => {
   });
 
   it('acepta un README que cumple la plantilla', () => {
-    const raiz = crearRepo(repoConPaquete(readmeValido('canonico')));
+    const raiz = crearRepo(repoConPaquete(readmeValido('canonical')));
 
     expect(revisarReadmes(raiz)).toEqual([]);
   });
@@ -80,37 +80,37 @@ describe('revisarReadmes', () => {
     const raiz = crearRepo(repoConPaquete());
 
     expect(revisarReadmes(raiz)).toContainEqual(
-      expect.objectContaining({ archivo: 'packages/canonico/README.md', regla: 'seccion' }),
+      expect.objectContaining({ archivo: 'packages/canonical/README.md', regla: 'seccion' }),
     );
   });
 
   it('falla si un README pierde una seccion', () => {
-    const raiz = crearRepo(repoConPaquete(readmeValido('canonico', { sin: ['Que NO hace'] })));
+    const raiz = crearRepo(repoConPaquete(readmeValido('canonical', { sin: ['Que NO hace'] })));
 
     expect(revisarReadmes(raiz)).toContainEqual(
-      expect.objectContaining({ archivo: 'packages/canonico/README.md', regla: 'seccion' }),
+      expect.objectContaining({ archivo: 'packages/canonical/README.md', regla: 'seccion' }),
     );
   });
 
   it('falla si el archivo de entrada nombrado no existe', () => {
     const raiz = crearRepo(
-      repoConPaquete(readmeValido('canonico', { entrada: 'packages/canonico/src/falta.ts' })),
+      repoConPaquete(readmeValido('canonical', { entrada: 'packages/canonical/src/falta.ts' })),
     );
 
     expect(revisarReadmes(raiz)).toContainEqual(
-      expect.objectContaining({ archivo: 'packages/canonico/README.md', regla: 'entrada' }),
+      expect.objectContaining({ archivo: 'packages/canonical/README.md', regla: 'entrada' }),
     );
   });
 
   it('falla si la seccion de entrada no nombra ningun archivo', () => {
-    const readme = readmeValido('canonico').replace(/`packages\/canonico\/src\/index\.ts`/, 'el index');
+    const readme = readmeValido('canonical').replace(/`packages\/canonical\/src\/index\.ts`/, 'el index');
     const raiz = crearRepo(repoConPaquete(readme));
 
     expect(revisarReadmes(raiz)).toContainEqual(expect.objectContaining({ regla: 'entrada' }));
   });
 
   it('falla si la seccion Probar no da el comando del paquete', () => {
-    const readme = readmeValido('canonico').replace('pnpm --filter canonico test', 'pnpm test');
+    const readme = readmeValido('canonical').replace('pnpm --filter canonical test', 'pnpm test');
     const raiz = crearRepo(repoConPaquete(readme));
 
     expect(revisarReadmes(raiz)).toContainEqual(expect.objectContaining({ regla: 'probar' }));

@@ -114,7 +114,7 @@ Severidades y codigos fijados aqui (codigos en "Codigos de issue").
 
 ### Codigos de issue
 
-El parser acepta la forma general (operandos de Fragmento, propiedades de Vista, `show`/`hide`, `link`) y `canonico` emite el codigo especifico; nada de esto sale como `syntax-error`. `fix` solo con un candidato unico (ADR 0005); si no, `hint`.
+El parser acepta la forma general (operandos de Fragmento, propiedades de Vista, `show`/`hide`, `link`) y `canonical` emite el codigo especifico; nada de esto sale como `syntax-error`. `fix` solo con un candidato unico (ADR 0005); si no, `hint`.
 
 | Regla | Codigo | Severidad | Ayuda |
 | --- | --- | --- | --- |
@@ -185,7 +185,7 @@ Cabecera de Lifeline (entrada de Nodo con su parche `diagram sequence`), `activa
   - Activaciones derivadas de la pila `sync`/`reply`; cada nivel anidado se desplaza `activation.width/2`; las flechas terminan en el borde de la activacion.
   - Marco de Fragmento: las Lifelines que cubre su contenido mas padding; el de `ref`, los participantes de la Interaccion referida presentes en la Vista, o todas si no hay ninguno en comun.
   - Etiqueta de Mensaje centrada encima de la flecha; en el mensaje propio, a la derecha del lazo.
-- **Clave y cache**: `claveDeLayout` y `claveDeEstructura` incluyen `vista.type`; en secuencia, ademas, los items de la Interaccion proyectada (extremos, tipo y etiquetas tras `depth`/`exclude`), `order` y `autonumber` (cambia las etiquetas); sin Pins. Las Metricas nuevas entran por la via existente. `geometriaCacheadaSchema` valida la union; un JSON anterior sin `kind` se lee como `grafo`.
+- **Clave y cache**: `claveDeLayout` y `claveDeEstructura` incluyen `vista.type`; en secuencia, ademas, los items de la Interaccion proyectada (extremos, tipo y etiquetas tras `depth`/`exclude`), `order` y `autonumber` (cambia las etiquetas); sin Pins. Las Metricas nuevas entran por la via existente. `cachedGeometrySchema` valida la union; un JSON anterior sin `kind` se lee como `grafo`.
 - **Rendimiento**: escenario nuevo `secuencia-grande` en `pnpm bench`: 1000 Mensajes, 50 Lifelines, Fragmentos anidados 3 niveles, presupuesto 500 ms.
 
 ## Consecuencias

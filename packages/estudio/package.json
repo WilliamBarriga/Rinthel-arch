@@ -47,7 +47,7 @@
     "@codemirror/state": "6.7.6",
     "@codemirror/view": "6.43.15",
     "@lezer/highlight": "1.2.5",
-    "canonico": "workspace:*",
+    "canonical": "workspace:*",
     "layout": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0",

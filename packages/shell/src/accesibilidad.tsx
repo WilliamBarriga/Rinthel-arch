@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
 
-import type { FuenteCanonica, Tema, VistaResuelta } from 'canonico';
+import type { CanonicalForm, Theme, ResolvedView } from 'canonical';
 import { TEMA_ALTO_CONTRASTE, leyendaDelTema } from 'tema';
 
 export const CSS_DE_ACCESIBILIDAD = `
@@ -39,7 +39,7 @@ export interface PropsDeAltoContraste {
 }
 
 /** Tema efectivo del visor y el interruptor: `high-contrast` reemplaza al Tema solo aqui. */
-export function useAltoContraste(tema: Tema, props: PropsDeAltoContraste): { tema: Tema; activo: boolean; interruptor: ReactElement; reducedMotion: 'on' | 'off' | undefined } {
+export function useAltoContraste(tema: Theme, props: PropsDeAltoContraste): { tema: Theme; activo: boolean; interruptor: ReactElement; reducedMotion: 'on' | 'off' | undefined } {
   const { reducedMotion, interruptor: movimiento } = useReducedMotion();
   const sistema = usePrefiereAltoContraste();
   const [manual, fijarManual] = useState<boolean | undefined>(undefined);
@@ -81,7 +81,7 @@ export function useReducedMotion(): { reducedMotion: 'on' | 'off' | undefined; i
 export type ModoDeLeyenda = 'auto' | 'always' | 'never';
 
 /** Leyenda de los Tipos de la Vista; `null` si no hace falta (modo `auto` sin Tipos que solo difieran por color). */
-export function Leyenda({ fuente, vista, tema, modo }: { fuente: FuenteCanonica; vista: VistaResuelta; tema: Tema; modo: ModoDeLeyenda }): ReactElement | null {
+export function Leyenda({ fuente, vista, tema, modo }: { fuente: CanonicalForm; vista: ResolvedView; tema: Theme; modo: ModoDeLeyenda }): ReactElement | null {
   if (modo === 'never') return null;
   const usados = new Set(vista.nodes.map((n) => n.type));
   const tipos = fuente.specification.nodeTypes

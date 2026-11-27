@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
-import type { VistaResuelta } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
+import type { ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram } from 'render';
 import type { DiagramProps } from 'render';
@@ -12,9 +12,9 @@ import type { TemaResuelto } from 'tema';
 import { capaDe, etiquetaCon, hojaDe } from './ayudas';
 
 const nodo = (id: string, type = 'servicio', children: unknown[] = []) => ({ id, type, title: id.toUpperCase(), description: '', children });
-const vista = (estado: { collapsed?: string[] } = {}): VistaResuelta =>
+const vista = (estado: { collapsed?: string[] } = {}): ResolvedView =>
   resolveView(
-    fuenteCanonicaSchema.parse({
+    canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio', color: 'blue' }, { name: 'capa', color: 'green' }, { name: 'externo', color: 'red' }] },
       model: { nodes: [nodo('g', 'capa', [nodo('g.a'), nodo('g.b', 'externo')]), nodo('h', 'capa', [nodo('h.a')]), nodo('x', 'externo')], edges: [{ from: { node: 'g.a' }, to: { node: 'x' } }] },
       views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],

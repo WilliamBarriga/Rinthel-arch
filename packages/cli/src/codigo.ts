@@ -11,8 +11,8 @@ import { join, relative, sep } from 'node:path';
 import { buildSync } from 'esbuild';
 import type { BuildOptions, Message } from 'esbuild';
 
-import { CODIGOS } from 'canonico';
-import type { Issue } from 'canonico';
+import { CODES } from 'canonical';
+import type { Issue } from 'canonical';
 import type { CodigoCompilado, InterfazDeComponente } from 'sesion';
 
 /** Lo que el Workspace vivo de `sesion` espera del compilador (`CodigoCompilado`). */
@@ -61,7 +61,7 @@ const comunes = (raiz: string, ruta: string): BuildOptions => ({
 });
 
 const issueDeEsbuild = (mensaje: Message, rutaPorDefecto: string): Issue => ({
-  code: CODIGOS.E_THEME_CODE_COMPILE,
+  code: CODES.E_THEME_CODE_COMPILE,
   severity: 'error',
   file: mensaje.location?.file.split(sep).join('/') ?? rutaPorDefecto,
   line: mensaje.location?.line ?? 1,
@@ -78,7 +78,7 @@ function compilarArchivo(raiz: string, ruta: string): { modulo: ModuloCompilado 
     return { modulo: { cjs, exportados: (salida?.exports ?? []).filter(esComponente) } };
   } catch (error) {
     const mensajes = (error as { errors?: Message[] }).errors;
-    return { errores: mensajes === undefined || mensajes.length === 0 ? [{ code: CODIGOS.E_THEME_CODE_COMPILE, severity: 'error', file: ruta, line: 1, column: 1, message: `The component does not compile: ${(error as Error).message}` }] : mensajes.map((m) => issueDeEsbuild(m, ruta)) };
+    return { errores: mensajes === undefined || mensajes.length === 0 ? [{ code: CODES.E_THEME_CODE_COMPILE, severity: 'error', file: ruta, line: 1, column: 1, message: `The component does not compile: ${(error as Error).message}` }] : mensajes.map((m) => issueDeEsbuild(m, ruta)) };
   }
 }
 
@@ -123,7 +123,7 @@ export function compiladorDeCodigo(raiz: string): { compilar(): ResultadoDeCodig
         for (const nombre of exportados) {
           const previo = dueno.get(nombre);
           if (previo !== undefined) {
-            issues.push({ code: CODIGOS.E_THEME_COMPONENT_DUPLICATE, severity: 'error', file: ruta, line: 1, column: 1, message: `Component '${nombre}' is already exported by '${previo}'`, related: [{ file: previo, line: 1, column: 1, message: `First '${nombre}'` }] });
+            issues.push({ code: CODES.E_THEME_COMPONENT_DUPLICATE, severity: 'error', file: ruta, line: 1, column: 1, message: `Component '${nombre}' is already exported by '${previo}'`, related: [{ file: previo, line: 1, column: 1, message: `First '${nombre}'` }] });
             continue;
           }
           dueno.set(nombre, ruta);

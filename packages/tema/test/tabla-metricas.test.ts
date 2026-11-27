@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { Tema } from 'canonico';
+import type { Theme } from 'canonical';
 import { TEMA_NEUTRO, claveDeMetricas, colocarNodo, metricasDeNodo, opTocaMetricas, tablaDeMetricas } from 'tema';
 import type { OpDeCapa } from 'tema';
 
@@ -9,8 +9,8 @@ const relleno = (color: string) => ({ nombre: 'relleno', primitiva: { tipo: 'sol
 const op = (nombre: string, props: Record<string, number | string>, primitiva?: string): OpDeCapa => ({ nombre, props, ...(primitiva !== undefined && { primitiva }) });
 const circulo = (): OpDeCapa => op('forma', {}, 'circle');
 
-const tema = (capas: unknown[], tipos: Record<string, OpDeCapa[]> = {}): Tema =>
-  ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas, tipos } }) as Tema;
+const tema = (capas: unknown[], tipos: Record<string, OpDeCapa[]> = {}): Theme =>
+  ({ ...TEMA_NEUTRO, nodo: { ...TEMA_NEUTRO.nodo, capas, tipos } }) as Theme;
 
 describe('tabla de Metricas por elemento', () => {
   it('un Tipo con caja minima propia tiene su entrada; un Tipo no mencionado usa la entrada base', () => {
@@ -62,7 +62,7 @@ describe('parches de estado y Metricas', () => {
   });
 
   it('el esquema rechaza un parche de estado que cambia la caja', () => {
-    const malo = { ...tema([forma()]), nodo: { ...TEMA_NEUTRO.nodo, capas: [forma()], estados: { hover: [circulo()] } } } as Tema;
+    const malo = { ...tema([forma()]), nodo: { ...TEMA_NEUTRO.nodo, capas: [forma()], estados: { hover: [circulo()] } } } as Theme;
 
     expect(() => tablaDeMetricas(malo, 'architecture')).toThrow(/Metrics/);
   });

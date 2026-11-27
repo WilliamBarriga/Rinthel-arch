@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, idDeArista, resolveView } from 'canonico';
-import type { Atributo, CajaDeNodo, Geometria, Tema, VistaDeGrafo, VistaResuelta } from 'canonico';
+import { canonicalFormSchema, edgeId, resolveView } from 'canonical';
+import type { Attribute, NodeBox, Geometry, Theme, GraphView, ResolvedView } from 'canonical';
 import { aplicarPinsAGeometria, claveDeEstructura, claveDeLayout, layoutView as layoutDeVista } from 'layout';
 import { TEMA_NEUTRO, metricasDe, tablaDeMetricas } from 'tema';
 
@@ -22,8 +22,8 @@ const nodo = (id: string, children: unknown[] = []) => ({
 });
 
 /** a { a1 a2 a3 }, b { b1 b2 }, c; aristas entre Grupos y a un hijo de otro Grupo. */
-function vista(vistaExtra: Record<string, unknown> = {}, estado = {}): VistaDeGrafo {
-  const fuente = fuenteCanonicaSchema.parse({
+function vista(vistaExtra: Record<string, unknown> = {}, estado = {}): GraphView {
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: {
       nodes: [
@@ -44,15 +44,15 @@ function vista(vistaExtra: Record<string, unknown> = {}, estado = {}): VistaDeGr
   return resuelta;
 }
 
-const con = (cambios: Partial<Tema>): Tema => ({ ...TEMA_NEUTRO, ...cambios });
+const con = (cambios: Partial<Theme>): Theme => ({ ...TEMA_NEUTRO, ...cambios });
 
 describe('layoutView', () => {
   describe('etiquetas de Arista', () => {
-    const conEtiqueta = (etiqueta: string | undefined, vistaExtra: Record<string, unknown> = {}): VistaResuelta => {
+    const conEtiqueta = (etiqueta: string | undefined, vistaExtra: Record<string, unknown> = {}): ResolvedView => {
       const base = vista(vistaExtra);
       return { ...base, edges: base.edges.map((arista) => (arista.to.node === 'c' ? { ...arista, ...(etiqueta !== undefined && { label: etiqueta }) } : arista)) };
     };
-    const absoluta = (g: Geometria, id: string): CajaDeNodo => {
+    const absoluta = (g: Geometry, id: string): NodeBox => {
       const partes = id.split('.');
       return partes.slice(0, -1).reduce((caja, _, i) => {
         const padre = g.nodes[partes.slice(0, i + 1).join('.')]!;
@@ -165,7 +165,7 @@ describe('layoutView', () => {
 });
 
 /** Caja de un Nodo en coordenadas del lienzo: suma las posiciones de sus Grupos. */
-function absoluta(geometria: Geometria, vistaDe: VistaResuelta, id: string): CajaDeNodo {
+function absoluta(geometria: Geometry, vistaDe: ResolvedView, id: string): NodeBox {
   const padre = vistaDe.nodes.find((nodo) => nodo.children.some((hijo) => hijo.id === id));
   const caja = geometria.nodes[id]!;
   if (padre === undefined) return caja;
@@ -173,7 +173,7 @@ function absoluta(geometria: Geometria, vistaDe: VistaResuelta, id: string): Caj
   return { ...caja, x: caja.x + marco.x, y: caja.y + marco.y };
 }
 
-const sobreElBorde = (punto: { x: number; y: number }, caja: CajaDeNodo): boolean => {
+const sobreElBorde = (punto: { x: number; y: number }, caja: NodeBox): boolean => {
   const dentro = punto.x >= caja.x - 1 && punto.x <= caja.x + caja.width + 1 && punto.y >= caja.y - 1 && punto.y <= caja.y + caja.height + 1;
   const enElBorde = [caja.x, caja.x + caja.width].some((x) => Math.abs(punto.x - x) <= 1) || [caja.y, caja.y + caja.height].some((y) => Math.abs(punto.y - y) <= 1);
   return dentro && enElBorde;
@@ -184,9 +184,9 @@ describe('layoutView: rutas de Aristas', () => {
     const v = vista();
     const geometria = await layoutView(v, TEMA_NEUTRO);
 
-    expect(Object.keys(geometria.edges).sort()).toEqual(v.edges.map(idDeArista).sort());
+    expect(Object.keys(geometria.edges).sort()).toEqual(v.edges.map(edgeId).sort());
     for (const arista of v.edges) {
-      const { points } = geometria.edges[idDeArista(arista)]!;
+      const { points } = geometria.edges[edgeId(arista)]!;
       expect(points.length).toBeGreaterThanOrEqual(2);
       expect(sobreElBorde(points[0]!, absoluta(geometria, v, arista.from.node))).toBe(true);
       expect(sobreElBorde(points.at(-1)!, absoluta(geometria, v, arista.to.node))).toBe(true);
@@ -201,14 +201,14 @@ describe('layoutView: rutas de Aristas', () => {
     const v = vista();
     const { edges } = await layoutView(v, TEMA_NEUTRO);
 
-    expect(edges[idDeArista({ from: { node: 'a.a2' }, to: { node: 'b.b1' } })]!.points.length).toBeGreaterThanOrEqual(2);
+    expect(edges[edgeId({ from: { node: 'a.a2' }, to: { node: 'b.b1' } })]!.points.length).toBeGreaterThanOrEqual(2);
   });
 
   it('las Aristas elevadas de un Grupo colapsado se enrutan sobre su borde', async () => {
     const v = vista({}, { collapsed: ['a'] });
     const geometria = await layoutView(v, TEMA_NEUTRO);
     const elevada = v.edges.find((arista) => arista.from.node === 'a' && arista.to.node === 'b.b1')!;
-    const { points } = geometria.edges[idDeArista(elevada)]!;
+    const { points } = geometria.edges[edgeId(elevada)]!;
 
     expect(sobreElBorde(points[0]!, absoluta(geometria, v, 'a'))).toBe(true);
   });
@@ -261,9 +261,9 @@ describe('claveDeLayout', () => {
 });
 
 describe('claveDeEstructura', () => {
-  const conAtributos = (atributos: Atributo[]): VistaDeGrafo => {
+  const conAtributos = (atributos: Attribute[]): GraphView => {
     const base = vista();
-    const marcar = (n: VistaResuelta['nodes'][number]): VistaResuelta['nodes'][number] =>
+    const marcar = (n: ResolvedView['nodes'][number]): ResolvedView['nodes'][number] =>
       n.id === 'c' ? { ...n, attributes: atributos } : { ...n, children: n.children.map(marcar) };
     return { ...base, nodes: base.nodes.map(marcar) };
   };
@@ -284,7 +284,7 @@ describe('claveDeEstructura', () => {
 
   it('cambia con la estructura de Grupos anidados mas de un nivel', () => {
     const base = vista();
-    const anidar = (n: VistaResuelta['nodes'][number]): VistaResuelta['nodes'][number] =>
+    const anidar = (n: ResolvedView['nodes'][number]): ResolvedView['nodes'][number] =>
       n.id === 'a.a1' ? { ...n, children: [{ ...n, id: 'a.a1.x', children: [] }] } : { ...n, children: n.children.map(anidar) };
     const profunda = { ...base, nodes: base.nodes.map(anidar) };
 
@@ -327,13 +327,13 @@ describe('layoutView: Pin post-ELK', () => {
     const a1 = pineada.nodes['a.a1']!;
     const grupo = pineada.nodes['a']!;
 
-    expect(pineada.edges[idDeArista({ from: { node: 'b.b2' }, to: { node: 'c' } })]).toEqual(
-      libre.edges[idDeArista({ from: { node: 'b.b2' }, to: { node: 'c' } })],
+    expect(pineada.edges[edgeId({ from: { node: 'b.b2' }, to: { node: 'c' } })]).toEqual(
+      libre.edges[edgeId({ from: { node: 'b.b2' }, to: { node: 'c' } })],
     );
-    expect(pineada.edges[idDeArista({ from: { node: 'a.a2' }, to: { node: 'b.b1' } })]).toEqual(
-      libre.edges[idDeArista({ from: { node: 'a.a2' }, to: { node: 'b.b1' } })],
+    expect(pineada.edges[edgeId({ from: { node: 'a.a2' }, to: { node: 'b.b1' } })]).toEqual(
+      libre.edges[edgeId({ from: { node: 'a.a2' }, to: { node: 'b.b1' } })],
     );
-    const [inicio] = pineada.edges[idDeArista({ from: { node: 'a.a1' }, to: { node: 'a.a2' } })]!.points;
+    const [inicio] = pineada.edges[edgeId({ from: { node: 'a.a1' }, to: { node: 'a.a2' } })]!.points;
     const absoluto = { x: grupo.x + a1.x, y: grupo.y + a1.y };
     const enBorde =
       (inicio!.x === absoluto.x || inicio!.x === absoluto.x + a1.width) &&
@@ -361,7 +361,7 @@ describe('layoutView: Pin post-ELK', () => {
   it('al pinear un Grupo, sus Aristas internas se trasladan con el y conservan su forma', async () => {
     const libre = await layoutView(vista(), TEMA_NEUTRO);
     const pineada = await layoutView(vista(pin('a', 300, 200)), TEMA_NEUTRO);
-    const id = idDeArista({ from: { node: 'a.a1' }, to: { node: 'a.a2' } });
+    const id = edgeId({ from: { node: 'a.a1' }, to: { node: 'a.a2' } });
     const antes = libre.edges[id]!.points;
     const despues = pineada.edges[id]!.points;
     const dx = despues[0]!.x - antes[0]!.x;
@@ -385,7 +385,7 @@ describe('layoutView: Pin post-ELK', () => {
       vista({ overrides: [{ node: 'a.a2', pin: { x: 40, y: 40 } }, { node: 'a.a1', pin: { x: 50, y: 50 } }] }),
       TEMA_NEUTRO,
     );
-    const { points } = edges[idDeArista({ from: { node: 'a.a1' }, to: { node: 'a.a2' } })]!;
+    const { points } = edges[edgeId({ from: { node: 'a.a1' }, to: { node: 'a.a2' } })]!;
 
     expect(points.length).toBeGreaterThanOrEqual(2);
     for (const p of points) expect(Number.isFinite(p.x) && Number.isFinite(p.y)).toBe(true);
@@ -400,8 +400,8 @@ describe('layoutView: Pin post-ELK', () => {
 
 describe('layoutView: Nodos con Atributos', () => {
   const tabla = (atributos: { name: string; type: string }[]) => ({ ...nodo('t'), attributes: atributos });
-  function conAtributos(atributos: { name: string; type: string }[]): VistaResuelta {
-    const fuente = fuenteCanonicaSchema.parse({
+  function conAtributos(atributos: { name: string; type: string }[]): ResolvedView {
+    const fuente = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: {
         nodes: [tabla(atributos), nodo('s')],
@@ -436,7 +436,7 @@ describe('layoutView: Nodos con Atributos', () => {
     const { nodes, edges } = await layoutView(conAtributos(columnas), TEMA_NEUTRO);
     const { cabecera, fila } = metricasDe(TEMA_NEUTRO, 'architecture');
     const caja = nodes['t']!;
-    const { points } = edges[idDeArista({ from: { node: 's' }, to: { node: 't', attribute: 'email' } })]!;
+    const { points } = edges[edgeId({ from: { node: 's' }, to: { node: 't', attribute: 'email' } })]!;
     const fin = points[points.length - 1]!;
     const anterior = points[points.length - 2]!;
 
@@ -448,7 +448,7 @@ describe('layoutView: Nodos con Atributos', () => {
 
 describe('Metricas', () => {
   const tabla = (atributos: { name: string; type: string }[]) => {
-    const fuente = fuenteCanonicaSchema.parse({
+    const fuente = canonicalFormSchema.parse({
       specification: { nodeTypes: [{ name: 'servicio' }] },
       model: { nodes: [{ ...nodo('t'), attributes: atributos }] },
       views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],

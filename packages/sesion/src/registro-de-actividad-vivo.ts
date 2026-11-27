@@ -5,8 +5,8 @@
  * Invariantes: lectura incremental tolerante (lineas rotas; un archivo acortado, rotado o borrado se relee desde el
  * principio); no comparte estado con la Sesion. Errores: un fallo de lectura se ignora y el siguiente aviso reintenta.
  */
-import { crearLectorDeActividad } from 'canonico';
-import type { EventoDeActividad, EventoDeDev } from 'canonico';
+import { createActivityReader } from 'canonical';
+import type { ActivityEvent, DevEvent } from 'canonical';
 
 import { debounce } from './reloj';
 import type { Reloj } from './reloj';
@@ -23,7 +23,7 @@ export interface RegistroDeActividad {
 const EVENTOS_PREVIOS = 50;
 
 /** La rama `actividad` de los eventos de `/eventos`. */
-export type EventoDeActividadDeDev = Extract<EventoDeDev, { nombre: 'actividad' }>;
+export type EventoDeActividadDeDev = Extract<DevEvent, { name: 'actividad' }>;
 
 export interface OpcionesDelRegistroDeActividadVivo {
   /** Sin el, no hay actividad: conecta sin Eventos y nunca empuja. */
@@ -43,8 +43,8 @@ export interface RegistroDeActividadVivo {
 }
 
 export function abrirRegistroDeActividadVivo({ registro, reloj, debounceMs }: OpcionesDelRegistroDeActividadVivo): RegistroDeActividadVivo {
-  const leerActividad = crearLectorDeActividad();
-  const leer = (): EventoDeActividad[] => {
+  const leerActividad = createActivityReader();
+  const leer = (): ActivityEvent[] => {
     try {
       return leerActividad(registro?.leer());
     } catch {
@@ -60,13 +60,13 @@ export function abrirRegistroDeActividadVivo({ registro, reloj, debounceMs }: Op
         const nuevos = leer();
         if (nuevos.length === 0) return;
         previos = [...previos, ...nuevos].slice(-EVENTOS_PREVIOS);
-        const evento: EventoDeActividadDeDev = { nombre: 'actividad', datos: { previos: false, eventos: nuevos } };
+        const evento: EventoDeActividadDeDev = { name: 'actividad', data: { previos: false, eventos: nuevos } };
         for (const oyente of [...oyentes]) oyente(evento);
       }),
     ) ?? (() => undefined);
 
   return {
-    conexion: () => ({ nombre: 'actividad', datos: { previos: true, eventos: [...previos] } }),
+    conexion: () => ({ name: 'actividad', data: { previos: true, eventos: [...previos] } }),
     escuchar(alEvento) {
       oyentes.add(alEvento);
       return () => void oyentes.delete(alEvento);

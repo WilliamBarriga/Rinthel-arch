@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { FuenteCanonica } from 'canonico';
+import type { CanonicalForm } from 'canonical';
 import { abrirSesion } from 'sesion';
 
 import { aHashDeEstudio, deHashDeEstudio, hashDeEstudio } from '../navegador/lienzo/hash-de-estudio';
@@ -43,7 +43,7 @@ view otra {
 }
 `;
 
-const fuente = (): FuenteCanonica => {
+const fuente = (): CanonicalForm => {
   const sesion = abrirSesion({ 'main.dg': DSL });
   if (sesion.fuente === undefined) throw new Error('la Fuente de prueba no compila');
   return sesion.fuente;

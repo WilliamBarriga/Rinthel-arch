@@ -1,5 +1,5 @@
 /** Bloque `row` de un Tema (fila de tabla ER). Un parche de fila solo pinta; las reglas son del catalogo de `tema`. */
-import { CODIGOS } from 'canonico';
+import { CODES } from 'canonical';
 import { ALTO_DE_FILA, CLAVES_DE_FILA, ESTADOS, NOMBRES_DE_TEXTO_DE_FILA, TEXTOS_DE_FILA, aplicarOps, opTocaMetricas, parsearEstado, validarPropiedades } from 'tema';
 import type { CapaDeTema, OpDeCapa, TemaResuelto, TextoDeFila } from 'tema';
 
@@ -28,7 +28,7 @@ export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx:
     for (const op of propios) {
       const razon = opTocaMetricas(op, [fila.capas as CapaDeTema[]]);
       if (razon !== undefined) {
-        ctx.issues.push({ code: CODIGOS.E_THEME_STATE_TOUCHES_METRICS, severity: 'error', file: ctx.archivo, ...aRango(donde.$cstNode?.range).start, message: `A row patch cannot touch Metrics: ${razon}` });
+        ctx.issues.push({ code: CODES.E_THEME_STATE_TOUCHES_METRICS, severity: 'error', file: ctx.archivo, ...aRango(donde.$cstNode?.range).start, message: `A row patch cannot touch Metrics: ${razon}` });
       }
     }
     return propios;
@@ -57,7 +57,7 @@ export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx:
         if (clave === undefined) {
           ctx.issues.push(
             issueConSugerencia(
-              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `Unknown key mark '${item.name}' in 'row'; available: ${CLAVES_DE_FILA.join(', ')}` },
+              { code: CODES.E_THEME_INVALID_VALUE, message: `Unknown key mark '${item.name}' in 'row'; available: ${CLAVES_DE_FILA.join(', ')}` },
               ctx.archivo, item, 'name', CLAVES_DE_FILA,
             ),
           );
@@ -80,7 +80,7 @@ export function compilarFila(items: readonly RowItem[], tema: TemaResuelto, ctx:
         if (nombre === undefined) {
           ctx.issues.push(
             issueConSugerencia(
-              { code: CODIGOS.E_THEME_INVALID_VALUE, message: `'${item.slot}' is neither a row text nor a 'row' patch; available: ${NOMBRES_DE_TEXTO_DE_FILA.join(', ')}, layer, use, height, alternate, key, optional` },
+              { code: CODES.E_THEME_INVALID_VALUE, message: `'${item.slot}' is neither a row text nor a 'row' patch; available: ${NOMBRES_DE_TEXTO_DE_FILA.join(', ')}, layer, use, height, alternate, key, optional` },
               ctx.archivo, item, 'slot', NOMBRES_DE_TEXTO_DE_FILA,
             ),
           );

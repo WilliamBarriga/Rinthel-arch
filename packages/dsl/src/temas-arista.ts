@@ -1,5 +1,5 @@
 /** Bloque `edge` de un Tema: pila de trazos (Familia trazo); cada marcador y la etiqueta son una Primitiva suelta. */
-import { CODIGOS } from 'canonico';
+import { CODES } from 'canonical';
 import { ESTADOS, aplicarOps, parsearEstado } from 'tema';
 import type { CapaDeTema, OpDeCapa, Primitiva, TemaResuelto } from 'tema';
 
@@ -42,7 +42,7 @@ export function compilarArista(items: readonly EdgeItem[], tema: TemaResuelto, c
       }
       for (const hijo of item.items) {
         if (hijo.$type === 'ThemeSlots' || hijo.$type === 'ThemeTransition') {
-          ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeSlots' ? 'slots' : 'transition'}' is not valid in a state of 'edge'` });
+          ctx.issues.push({ code: CODES.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeSlots' ? 'slots' : 'transition'}' is not valid in a state of 'edge'` });
         }
       }
       const capas = item.items.filter((i): i is ThemeLayer | ThemeUse => i.$type === 'ThemeLayer' || i.$type === 'ThemeUse');
@@ -68,13 +68,13 @@ function compilarDiagramaDeArista(item: ThemeDiagram, tema: TemaResuelto, ctx: C
   for (const hijo of item.items) {
     if (hijo.$type === 'ThemeMarker') {
       if (hijo.remove === true) {
-        ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.side} none' is not valid in 'diagram': removing a marker is done in the base block` });
+        ctx.issues.push({ code: CODES.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.side} none' is not valid in 'diagram': removing a marker is done in the base block` });
       } else compilarMarcador(hijo, parche, ctx);
     } else if (hijo.$type === 'ThemeLabel') {
       const etiqueta = primitivaSuelta('label', hijo.props, 'etiqueta', ctx, aRango(hijo.$cstNode?.range).start);
       if (etiqueta !== undefined) parche.etiqueta = etiqueta;
     } else if (hijo.$type === 'ThemeSlots' || hijo.$type === 'GroupPadding') {
-      ctx.issues.push({ code: CODIGOS.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeSlots' ? 'slots' : 'padding'}' does not belong to the Edge: put it in 'node' or 'group'` });
+      ctx.issues.push({ code: CODES.E_THEME_INVALID_VALUE, severity: 'error', file: ctx.archivo, ...aRango(hijo.$cstNode?.range).start, message: `'${hijo.$type === 'ThemeSlots' ? 'slots' : 'padding'}' does not belong to the Edge: put it in 'node' or 'group'` });
     }
   }
   tema.arista.diagramas = { ...tema.arista.diagramas, [diagrama]: parche };

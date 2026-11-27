@@ -9,7 +9,7 @@
  */
 import { z } from 'zod';
 
-import { salidaDeInspectSchema } from 'canonico';
+import { inspectOutputSchema } from 'canonical';
 
 import { codigoDeDevSchema, estadoDeDevSchema, RUTAS_DE_DEV, rutaDeInspect } from './protocolo';
 
@@ -20,7 +20,7 @@ export const datosDeExportadoSchema = z.object({
   formato: z.literal(FORMATO_DEL_EXPORTADO),
   estado: estadoDeDevSchema,
   /** Theme name -> `inspect tema` output (extends chain and Layers of the Themes gallery). */
-  temas: z.record(z.string(), salidaDeInspectSchema),
+  temas: z.record(z.string(), inspectOutputSchema),
   /** Font path of `estado.fuentes` -> `data:` URL. */
   fuentes: z.record(z.string(), z.string()),
   /** Theme components with code: their names and the CommonJS bundle that `dev` serves in `/componentes.js`. */
@@ -51,20 +51,20 @@ function base64(bytes: Uint8Array): string {
 }
 
 export async function capturarExportado({ fetch: fetchFn, leerFuente }: FuentesDeCaptura): Promise<DatosDeExportado> {
-  const estado = await leerJson(fetchFn, RUTAS_DE_DEV.estado, estadoDeDevSchema);
+  const estado = await leerJson(fetchFn, RUTAS_DE_DEV.state, estadoDeDevSchema);
   if (estado.fuente === undefined) throw new Error('The Workspace does not compile: nothing to export');
   const temas: DatosDeExportado['temas'] = {};
-  for (const { name } of estado.fuente.themes) temas[name] = await leerJson(fetchFn, rutaDeInspect('theme', name), salidaDeInspectSchema);
+  for (const { name } of estado.fuente.themes) temas[name] = await leerJson(fetchFn, rutaDeInspect('theme', name), inspectOutputSchema);
   const fuentes: DatosDeExportado['fuentes'] = {};
   for (const ruta of Object.keys(estado.fuentes ?? {}).sort()) {
     const leida = leerFuente(ruta);
     if (leida !== undefined) fuentes[ruta] = `data:${leida.tipo};base64,${base64(leida.bytes)}`;
   }
-  const codigo = await leerJson(fetchFn, RUTAS_DE_DEV.codigo, codigoDeDevSchema);
+  const codigo = await leerJson(fetchFn, RUTAS_DE_DEV.code, codigoDeDevSchema);
   if (!codigo.temaConCodigo) return { formato: FORMATO_DEL_EXPORTADO, estado, temas, fuentes };
   // Whoever exports is the author of the Workspace: the code is trusted as `dev --trust-code` would.
-  if (!codigo.confiado) await fetchFn(RUTAS_DE_DEV.confiar, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
-  const res = await fetchFn(RUTAS_DE_DEV.componentes);
-  if (!res.ok) throw new Error(`dev answered ${res.status} at ${RUTAS_DE_DEV.componentes}`);
+  if (!codigo.confiado) await fetchFn(RUTAS_DE_DEV.trust, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+  const res = await fetchFn(RUTAS_DE_DEV.components);
+  if (!res.ok) throw new Error(`dev answered ${res.status} at ${RUTAS_DE_DEV.components}`);
   return { formato: FORMATO_DEL_EXPORTADO, estado, temas, fuentes, componentes: { nombres: codigo.componentes, bundle: await res.text() } };
 }

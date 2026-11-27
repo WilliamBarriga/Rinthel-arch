@@ -1,5 +1,5 @@
 /** Catalogo de animacion declarativa. Solo se anima lo que no toca las Metricas. */
-import { CODIGOS } from 'canonico';
+import { CODES } from 'canonical';
 
 import { errorDeValorAntiguo, sugerir } from './catalogo';
 import type { ErrorDeCatalogo } from './catalogo';
@@ -91,7 +91,7 @@ export function duracionEnMs(cantidad: string, unidad: string): number | undefin
   return factor === undefined || Number.isNaN(Number(cantidad)) ? undefined : Math.round(Number(cantidad) * factor);
 }
 
-const invalido = (mensaje: string, clave: string): ErrorDeCatalogo => ({ codigo: CODIGOS.E_THEME_INVALID_VALUE, mensaje, clave });
+const invalido = (mensaje: string, clave: string): ErrorDeCatalogo => ({ codigo: CODES.E_THEME_INVALID_VALUE, mensaje, clave });
 
 const aNumero = (valor: string | number): number => (typeof valor === 'number' ? valor : /^-?\d+(?:\.\d+)?$/.test(valor) ? Number(valor) : Number.NaN);
 
@@ -116,7 +116,7 @@ function leerParametros(
   for (const { clave, valor } of params) {
     if (!admitidas.includes(clave)) {
       errores.push({
-        codigo: CODIGOS.E_THEME_UNKNOWN_PROPERTY,
+        codigo: CODES.E_THEME_UNKNOWN_PROPERTY,
         mensaje: `'${espec.nombre}' does not support '${clave}'; available: ${admitidas.join(', ')}`,
         clave,
         ...sugerir(clave, admitidas),
@@ -148,7 +148,7 @@ export function construirMovimiento(nombre: string, params: readonly ParametroDe
     return {
       errores: [
         {
-          codigo: CODIGOS.E_THEME_UNKNOWN_MOTION,
+          codigo: CODES.E_THEME_UNKNOWN_MOTION,
           mensaje: `Unknown Motion '${nombre}'; available: ${Object.keys(MOVIMIENTOS).join(', ')}`,
           ...sugerir(nombre, Object.keys(MOVIMIENTOS)),
         },
@@ -172,7 +172,7 @@ export function construirKeyframes(propiedad: string, params: readonly Parametro
     return {
       errores: [
         {
-          codigo: CODIGOS.E_THEME_UNKNOWN_MOTION,
+          codigo: CODES.E_THEME_UNKNOWN_MOTION,
           mensaje: `Unknown animatable property '${propiedad}'; only what does not touch the Metrics can be animated: ${Object.keys(PROPIEDADES_ANIMABLES).join(', ')}`,
           ...sugerir(propiedad, Object.keys(PROPIEDADES_ANIMABLES)),
         },
@@ -207,7 +207,7 @@ export function construirEfecto(nombre: string, params: readonly ParametroDeAnim
     return {
       errores: [
         {
-          codigo: CODIGOS.E_THEME_UNKNOWN_MOTION,
+          codigo: CODES.E_THEME_UNKNOWN_MOTION,
           mensaje: `Unknown effect '${nombre}'; available: ${EFECTOS.join(', ')}`,
           ...sugerir(nombre, EFECTOS),
         },

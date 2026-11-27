@@ -1,6 +1,6 @@
 /** Posiciones del texto en el AST de Langium y issues con sugerencia. Puro. */
-import { CODIGOS, candidatosCercanos } from 'canonico';
-import type { Issue, TextRange } from 'canonico';
+import { CODES, nearestCandidates } from 'canonical';
+import type { Issue, TextRange } from 'canonical';
 import { CstUtils, GrammarUtils } from 'langium';
 import type { AstNode } from 'langium';
 
@@ -57,7 +57,7 @@ export function issueConSugerencia<T extends AstNode>(
   const { start: inicio, end: fin } = rangoDe(nodo, propiedad);
   const { candidatos: decididos, ...resto } = base;
   const issue: Issue = { ...resto, severity: 'error', file: archivo, ...inicio };
-  const candidatos = decididos ?? candidatosCercanos(nodo[propiedad] as string, existentes);
+  const candidatos = decididos ?? nearestCandidates(nodo[propiedad] as string, existentes);
   const [unico] = candidatos;
   if (candidatos.length === 1 && unico !== undefined) {
     issue.fix = { file: archivo, range: { start: inicio, end: fin }, replacement: unico };
@@ -69,5 +69,5 @@ export function issueConSugerencia<T extends AstNode>(
 
 /** Base de issue de un error de `parsearEstado`: un nombre antiguo (`old-catalog-value`) lleva su candidato ya decidido. */
 export function baseDeErrorDeEstado(error: { code: string; message: string; candidatos: readonly string[] }): { code: string; message: string; candidatos?: readonly string[] } {
-  return error.code === CODIGOS.E_OLD_CATALOG_VALUE ? error : { code: error.code, message: error.message };
+  return error.code === CODES.E_OLD_CATALOG_VALUE ? error : { code: error.code, message: error.message };
 }

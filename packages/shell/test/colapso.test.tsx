@@ -1,8 +1,8 @@
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
-import type { EstadoDeColapso, Geometria, VistaResuelta } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
+import type { CollapseState, Geometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -16,7 +16,7 @@ afterEach(() => {
 const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
 
 /** c (hoja) y g (Grupo de tres hijos, cerrado por defecto). */
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
   model: {
     nodes: [nodo('c', 'C'), nodo('g', 'G', [nodo('g.a', 'A'), nodo('g.b', 'B'), nodo('g.c', 'C2')])],
@@ -36,12 +36,12 @@ function enFilaCentrada(llamadas: { n: number }): AdaptadorDeLayout {
   };
 }
 
-function geometriaCentrada(vista: VistaResuelta): Geometria {
-  const ancho = (n: VistaResuelta['nodes'][number]): number => (n.children.length > 0 ? n.children.length * 110 + 20 : 100);
+function geometriaCentrada(vista: ResolvedView): Geometry {
+  const ancho = (n: ResolvedView['nodes'][number]): number => (n.children.length > 0 ? n.children.length * 110 + 20 : 100);
   const anidados = new Set(vista.nodes.flatMap((n) => n.children.map((h) => h.id)));
   const raices = vista.nodes.filter((n) => !anidados.has(n.id));
   const total = raices.reduce((s, n) => s + ancho(n), 0) + 20 * (raices.length - 1);
-  const nodes: Geometria['nodes'] = {};
+  const nodes: Geometry['nodes'] = {};
   let x = 400 - total / 2;
   for (const n of raices) {
     nodes[n.id] = { x, y: 0, width: ancho(n), height: n.children.length > 0 ? 100 : 50 };
@@ -132,7 +132,7 @@ describe('colapso y expansion', () => {
   });
 
   it('el estado controlado manda: avisa con onStateChange y no se expande solo', async () => {
-    const onStateChange = vi.fn<(estado: EstadoDeColapso) => void>();
+    const onStateChange = vi.fn<(estado: CollapseState) => void>();
     const { container } = montar({ state: {}, onStateChange });
     await waitFor(() => expect(ids(container)).toEqual(['c', 'g']));
 

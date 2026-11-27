@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { salidaDeInspectSchema } from 'canonico';
+import { inspectOutputSchema } from 'canonical';
 import { run } from 'cli';
 
 const DG = `specification { node servicio  node entidad }
@@ -64,7 +64,7 @@ describe('CLI con secuencia y ER', () => {
   it('inspect interaction da id, titulo, items, Lifelines y Vistas', async () => {
     const r = await run(['inspect', 'interaction', 'checkout', '--workspace', workspace(), '--json']);
     expect(r.exitCode).toBe(0);
-    const salida = salidaDeInspectSchema.parse(JSON.parse(r.stdout));
+    const salida = inspectOutputSchema.parse(JSON.parse(r.stdout));
     if (salida.command !== 'interaction') throw new Error('comando');
     expect(salida.interaction).toMatchObject({ id: 'checkout', title: 'Checkout', items: 4, messages: 4, lifelines: ['cliente', 'api', 'db'] });
     expect(salida.interaction.views.map((v) => v.id)).toEqual(['flujo']);
@@ -81,11 +81,11 @@ describe('CLI con secuencia y ER', () => {
 
   it('inspect search encuentra Interacciones y vista muestra su Interaccion', async () => {
     const b = await run(['inspect', 'search', 'check', '--workspace', workspace(), '--json']);
-    const sb = salidaDeInspectSchema.parse(JSON.parse(b.stdout));
+    const sb = inspectOutputSchema.parse(JSON.parse(b.stdout));
     if (sb.command !== 'search') throw new Error('comando');
     expect(sb.results.map((x) => `${x.kind}:${x.id}`)).toContain('interaction:checkout');
     const v = await run(['inspect', 'view', 'flujo', '--workspace', workspace(), '--json']);
-    const sv = salidaDeInspectSchema.parse(JSON.parse(v.stdout));
+    const sv = inspectOutputSchema.parse(JSON.parse(v.stdout));
     if (sv.command !== 'view') throw new Error('comando');
     expect(sv.view.type).toBe('sequence');
     expect(sv.view.interaction).toBe('checkout');

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { EDIT_CONTRACT_VERSION, INSPECT_CONTRACT_VERSION, salidaDeEditJsonSchema, salidaDeInspectJsonSchema } from 'canonico';
+import { EDIT_CONTRACT_VERSION, INSPECT_CONTRACT_VERSION, editOutputJsonSchema, inspectOutputJsonSchema } from 'canonical';
 import { run } from 'cli';
 
 async function skill(): Promise<string> {
@@ -27,7 +27,7 @@ describe('skill: inspect y dev', () => {
     const texto = await skill();
 
     const bloques = [...texto.matchAll(/```json\n([\s\S]*?)\n```/g)].map((m) => JSON.parse(m[1] ?? 'null') as unknown);
-    expect(bloques).toContainEqual(salidaDeInspectJsonSchema());
+    expect(bloques).toContainEqual(inspectOutputJsonSchema());
   });
 
   it('documenta edit con su contrato y su esquema JSON', async () => {
@@ -36,6 +36,6 @@ describe('skill: inspect y dev', () => {
     expect(texto).toContain('diagrams edit --workspace');
     expect(texto).toContain(`contractVersion ${EDIT_CONTRACT_VERSION}`);
     const bloques = [...texto.matchAll(/```json\n([\s\S]*?)\n```/g)].map((m) => JSON.parse(m[1] ?? 'null') as unknown);
-    expect(bloques).toContainEqual(salidaDeEditJsonSchema());
+    expect(bloques).toContainEqual(editOutputJsonSchema());
   });
 });

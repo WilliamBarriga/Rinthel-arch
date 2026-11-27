@@ -1,6 +1,6 @@
 /**
  * Workspace vivo: el estado de `dev` sin HTTP (Sesion vigente y ultima buena, Historial, cola de escrituras, versiones).
- * Eventos: es el unico dueno de la secuencia de eventos SSE del protocolo (`EventoDeDev` de `canonico`): `conexion()` da
+ * Eventos: es el unico dueno de la secuencia de eventos SSE del protocolo (`DevEvent` de `canonical`): `conexion()` da
  * lo que recibe un cliente al conectar (estado, Historial y actividad con previos) y `escuchar` el flujo (tras cada
  * estado, su Historial y su Diferencia; la actividad nueva). Los adaptadores (servidor real, `devEnMemoria`) solo serializan.
  * Invariantes: una edicion con `version` usa los hashes de esa version como `visto`; una version fuera de las ultimas
@@ -22,8 +22,8 @@
  * Registro de actividad: si el puerto lo da, el Workspace vivo compone un Registro de actividad vivo
  * (`registro-de-actividad-vivo.ts`, con el mismo reloj y debounce) y lo emite tras el estado y el Historial.
  */
-import { combineIconProviders, convencionesObsoletas, diferenciaVacia, esArchivoDeFuente, genericIcons, salidaDeInspectSchema, serializarIconos, workspaceIcons } from 'canonico';
-import type { ArchivoDeDev, ArchivosDeDev, DiferenciaDeDev, EstadoDeDev, EventoDeDev, GeometriaCacheada, HistorialDeDev, Intencion, Issue, MotivoDeRechazo, OrigenDeDiferencia, TipoDeCambio } from 'canonico';
+import { combineIconProviders, obsoleteConventions, emptyDiff, isFontFile, genericIcons, inspectOutputSchema, serializeIcons, workspaceIcons } from 'canonical';
+import type { DevFile, DevFiles, DevDiff, DevState, DevEvent, CachedGeometry, DevHistory, Intent, Issue, RejectionReason, DiffOrigin, ChangeKind } from 'canonical';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { componentesDeTema } from 'tema';
 
@@ -82,7 +82,7 @@ export interface CodigoCompilado {
 }
 
 /** `version` es la del estado tras recompilar. */
-export type ResultadoDelWorkspaceVivo = { ok: true; version: number } | { ok: false; reason: MotivoDeRechazo; message: string; file?: string };
+export type ResultadoDelWorkspaceVivo = { ok: true; version: number } | { ok: false; reason: RejectionReason; message: string; file?: string };
 
 /** Ediciones de texto de la UI (`POST /api/edit { ediciones }`): guardado del editor, un `fix` o "Aplicar N fix". */
 export interface EdicionesDeTexto {
@@ -101,34 +101,34 @@ export interface CodigoDelWorkspace {
 }
 
 export interface WorkspaceVivo {
-  estado(): EstadoDeDev;
+  estado(): DevState;
   /**
    * Flujo de eventos con nombre del protocolo, en orden: tras cada recompilacion, `estado` y su `historial` y, si la
    * Fuente cambio, la `diferencia` de esa `version`; por cada tanda anexada al Registro de actividad (con debounce),
    * `actividad` con `previos: false`. Devuelve como dejar de escuchar.
    */
-  escuchar(alEvento: (evento: EventoDeDev) => void): () => void;
+  escuchar(alEvento: (evento: DevEvent) => void): () => void;
   /** `version` es la del estado que vio quien emite la Intencion o las ediciones. */
-  editar(aplicable: Intencion | EdicionesDeTexto, version?: number): Promise<ResultadoDelWorkspaceVivo>;
+  editar(aplicable: Intent | EdicionesDeTexto, version?: number): Promise<ResultadoDelWorkspaceVivo>;
   /** Historial de deshacer, lo mas viejo primero, con lo alcanzable sobre el disco vigente. */
-  historial(): HistorialDeDev;
+  historial(): DevHistory;
   /** Lee el puerto en el momento: lo que el editor puede abrir. */
-  archivos(): ArchivosDeDev;
+  archivos(): DevFiles;
   /** `undefined` si el archivo no existe. */
-  archivo(ruta: string): ArchivoDeDev | undefined;
+  archivo(ruta: string): DevFile | undefined;
   deshacer(): Promise<ResultadoDelWorkspaceVivo>;
   rehacer(): Promise<ResultadoDelWorkspaceVivo>;
   /** Lleva el Workspace a la entrada `id` (0: Inicio) sin apilar; `unknown-entry` si no existe. */
   saltar(id: number): Promise<ResultadoDelWorkspaceVivo>;
   /** Geometria de una Vista de la ultima Sesion buena (con `tema`, con ese Tema y sin cache); `undefined` si falta la Vista o el Tema. */
-  geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<GeometriaCacheada | undefined>;
+  geometria(vista: string, opciones?: OpcionesDeGeometria): Promise<CachedGeometry | undefined>;
   /** `inspect` sobre la ultima Sesion buena, con la salida normalizada como `inspect --json`; `undefined` si el Workspace nunca compilo. */
   consultar(consulta: Consulta): Respuesta | undefined;
   /**
    * Instantanea de conexion: lo que recibe un cliente de `/eventos` al conectar, en orden: `estado`, `historial` y la
    * `actividad` con `previos: true` del Registro de actividad vivo.
    */
-  conexion(): EventoDeDev[];
+  conexion(): DevEvent[];
   /** Relee el puerto y recompila ya (sin esperar al debounce). */
   recargar(): Promise<void>;
   codigo(): CodigoDelWorkspace;
@@ -144,11 +144,11 @@ export const DEBOUNCE_MS = 150;
 const BORRADO = '<borrado>';
 
 /** Lo externo gana: una sola escritura ajena hace externa la Diferencia. */
-const unirOrigen = (a: OrigenDeDiferencia | undefined, b: OrigenDeDiferencia | undefined): OrigenDeDiferencia | undefined => (a === 'externo' || b === 'externo' ? 'externo' : (a ?? b));
+const unirOrigen = (a: DiffOrigin | undefined, b: DiffOrigin | undefined): DiffOrigin | undefined => (a === 'externo' || b === 'externo' ? 'externo' : (a ?? b));
 
 const SIN_CODIGO: CodigoCompilado = { componentes: {}, issues: [], bundle: 'return {};' };
 
-const esEdicionesDeTexto = (aplicable: Intencion | EdicionesDeTexto): aplicable is EdicionesDeTexto => 'ediciones' in aplicable;
+const esEdicionesDeTexto = (aplicable: Intent | EdicionesDeTexto): aplicable is EdicionesDeTexto => 'ediciones' in aplicable;
 
 const hashesDe = (archivos: ArchivosDelWorkspace): Record<string, string> => Object.fromEntries(Object.entries(archivos).map(([ruta, texto]) => [ruta, hashDeContenido(texto)]));
 
@@ -156,7 +156,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
   const { puerto, raiz, reloj, debounceMs = DEBOUNCE_MS, compilarCodigo = () => SIN_CODIGO, ahora } = opciones;
 
   const fuentesDe = (recursos: Record<string, string> | undefined): Record<string, string> | undefined =>
-    recursos === undefined ? undefined : Object.fromEntries(Object.entries(recursos).filter(([ruta]) => esArchivoDeFuente(ruta)));
+    recursos === undefined ? undefined : Object.fromEntries(Object.entries(recursos).filter(([ruta]) => isFontFile(ruta)));
   const opcionesDeSesion = (recursos: Record<string, string> | undefined): { archivosDeFuente?: string[] } => {
     const fuentes = fuentesDe(recursos);
     return fuentes === undefined ? {} : { archivosDeFuente: Object.keys(fuentes) };
@@ -166,32 +166,32 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
   let archivos = puerto.leer().disco;
   /** Recursos (`.tsx`, fuentes) de la ultima Sesion buena. */
   let recursos = puerto.recursos();
-  let cambio: TipoDeCambio | undefined;
+  let cambio: ChangeKind | undefined;
   let codigo = compilarCodigo();
   let confiado = opciones.confiarEnCodigo ?? false;
   let actual: Sesion = abrirSesion(archivos, { ...opcionesDeSesion(recursos), componentes: codigo.componentes, issuesDelAdaptador: codigo.issues });
   /** Ultima Sesion sin errores de compilacion. */
   let buena: { sesion: Sesion; archivos: ArchivosDelWorkspace } | undefined = actual.fuente === undefined ? undefined : { sesion: actual, archivos };
   /** Compile issues plus the old file conventions of the Workspace paths (as `validate` reports them). */
-  const conConvenciones = (lista: Issue[]): Issue[] => [...lista, ...convencionesObsoletas(puerto.rutas?.() ?? [])];
+  const conConvenciones = (lista: Issue[]): Issue[] => [...lista, ...obsoleteConventions(puerto.rutas?.() ?? [])];
   let issues: Issue[] = conConvenciones(await actual.diagnosticar());
   /** version -> archivo -> hash. */
   const versiones = new Map<number, Record<string, string>>([[version, hashesDe(archivos)]]);
   let estado = construirEstado();
 
-  const oyentes = new Set<(evento: EventoDeDev) => void>();
-  const emitir = (evento: EventoDeDev): void => {
+  const oyentes = new Set<(evento: DevEvent) => void>();
+  const emitir = (evento: DevEvent): void => {
     for (const oyente of [...oyentes]) oyente(evento);
   };
   let historial: HistorialDeArchivos = historialVacio;
   /** El alcance se calcula sobre el disco del momento. */
-  const historialDeDev = (): HistorialDeDev => historialVisible(historial, puerto.leer().propios);
+  const historialDeDev = (): DevHistory => historialVisible(historial, puerto.leer().propios);
   /** Ruta -> hash de lo que escribio la UI (`BORRADO` si lo borro) y aun no vio una recompilacion: asi se reconoce su eco. */
   const escritosPropios = new Map<string, string>();
   /** Origen de lo cambiado desde la ultima Sesion buena; `undefined` si no cambio ningun archivo. */
-  let origenPendiente: OrigenDeDiferencia | undefined;
+  let origenPendiente: DiffOrigin | undefined;
 
-  function construirEstado(): EstadoDeDev {
+  function construirEstado(): DevState {
     const fuente = buena?.sesion.fuente;
     const proveedor = buena === undefined ? undefined : combineIconProviders(workspaceIcons(buena.archivos), genericIcons());
     const fuentes = fuentesDe(recursos);
@@ -199,7 +199,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
       version,
       ...(cambio !== undefined && { cambio }),
       fuente,
-      iconos: proveedor === undefined ? {} : serializarIconos(proveedor),
+      iconos: proveedor === undefined ? {} : serializeIcons(proveedor),
       vistas: fuente?.views.map(({ id }) => id) ?? [],
       ...(fuentes !== undefined && { fuentes }),
       issues: issues.map((issue) => ({ ...issue, href: `vscode://file/${raiz}/${issue.file}:${issue.line}:${issue.column}` })),
@@ -226,11 +226,11 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     archivos = nuevos;
     // Con errores se conserva el ultimo dibujo bueno (y sus recursos de referencia): no hay cambio que dibujar.
     cambio = sesion.fuente === undefined ? undefined : clasificarCambio({ fuente: buena?.sesion.fuente, recursos: recursos ?? {} }, { fuente: sesion.fuente, recursos: nuevosRecursos ?? {} });
-    let diferencia: DiferenciaDeDev | undefined;
+    let diferencia: DevDiff | undefined;
     if (sesion.fuente !== undefined) {
       const cambios = buena?.sesion.fuente === undefined ? undefined : diferenciar(buena.sesion.fuente, sesion.fuente);
       // Un cambio sin archivos tocados (recursos) no tiene autor conocido: externo.
-      if (cambios !== undefined && !diferenciaVacia(cambios)) diferencia = { version: version + 1, origen: origenPendiente ?? 'externo', ...cambios };
+      if (cambios !== undefined && !emptyDiff(cambios)) diferencia = { version: version + 1, origen: origenPendiente ?? 'externo', ...cambios };
       origenPendiente = undefined;
       buena = { sesion, archivos: nuevos };
       recursos = nuevosRecursos;
@@ -241,15 +241,15 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     versiones.delete(version - VERSIONES_GUARDADAS);
     estado = construirEstado();
     // Toda escritura (propia o externa) recompila: el Historial y su alcance viajan con cada estado.
-    emitir({ nombre: 'estado', datos: estado });
-    emitir({ nombre: 'historial', datos: historialDeDev() });
-    if (diferencia !== undefined) emitir({ nombre: 'diferencia', datos: diferencia });
+    emitir({ name: 'estado', data: estado });
+    emitir({ name: 'historial', data: historialDeDev() });
+    if (diferencia !== undefined) emitir({ name: 'diferencia', data: diferencia });
   };
   /** `propio` si cada archivo que cambio es un eco por hash de una escritura de la UI (y lo consume). */
-  function origenDe(previos: ArchivosDelWorkspace, nuevos: ArchivosDelWorkspace): OrigenDeDiferencia | undefined {
+  function origenDe(previos: ArchivosDelWorkspace, nuevos: ArchivosDelWorkspace): DiffOrigin | undefined {
     const cambiados = [...new Set([...Object.keys(previos), ...Object.keys(nuevos)])].filter((ruta) => previos[ruta] !== nuevos[ruta]);
     if (cambiados.length === 0) return undefined;
-    let origen: OrigenDeDiferencia = 'propio';
+    let origen: DiffOrigin = 'propio';
     for (const ruta of cambiados) {
       const texto = nuevos[ruta];
       if (escritosPropios.get(ruta) === (texto === undefined ? BORRADO : hashDeContenido(texto))) escritosPropios.delete(ruta);
@@ -344,7 +344,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     return hashes === undefined ? undefined : { visto: hashes };
   };
 
-  const editar = (aplicable: Intencion | EdicionesDeTexto, versionVista?: number): Promise<ResultadoDelWorkspaceVivo> =>
+  const editar = (aplicable: Intent | EdicionesDeTexto, versionVista?: number): Promise<ResultadoDelWorkspaceVivo> =>
     enCola(async () => {
       const traducido = vistoDe(versionVista);
       if (traducido === undefined) {
@@ -388,7 +388,7 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
       return recompilarTrasEscribir();
     });
 
-  const listarArchivos = (): ArchivosDeDev => {
+  const listarArchivos = (): DevFiles => {
     const { disco, propios } = puerto.leer();
     return {
       version,
@@ -417,11 +417,11 @@ export async function abrirWorkspaceVivo(opciones: OpcionesDelWorkspaceVivo): Pr
     geometria: (vista, opciones) => buena?.sesion.geometria(vista, opciones) ?? Promise.resolve(undefined),
     consultar(consulta) {
       const r = buena?.sesion.consultar(consulta);
-      return r === undefined || 'noEncontrado' in r ? r : { salida: salidaDeInspectSchema.parse(r.salida) };
+      return r === undefined || 'noEncontrado' in r ? r : { salida: inspectOutputSchema.parse(r.salida) };
     },
     conexion: () => [
-      { nombre: 'estado', datos: estado },
-      { nombre: 'historial', datos: historialDeDev() },
+      { name: 'estado', data: estado },
+      { name: 'historial', data: historialDeDev() },
       actividad.conexion(),
     ],
     recargar: () => recompilar(),

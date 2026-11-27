@@ -3,8 +3,8 @@
  * `vista.nodes` y una fila por Mensaje. Cada nivel de activacion anidado se desplaza medio ancho de activacion y las
  * flechas terminan en el borde de la activacion vigente.
  */
-import { activacionesDe } from 'canonico';
-import type { Activacion, CajaDeActivacion, CajaDeGrupoColocada, CajaDeNodo, GeometriaSecuencia, ItemResuelto, MarcoDeFragmento, MensajeResuelto, NotaColocada, NotaResuelta, OperandoColocado, RutaDeMensaje, VistaDeSecuencia } from 'canonico';
+import { activationsOf } from 'canonical';
+import type { Activation, ActivationBox, PlacedGroupBox, NodeBox, SequenceGeometry, ResolvedItem, FragmentFrame, ResolvedMessage, PlacedNote, ResolvedNote, PlacedOperand, MessageRoute, SequenceView } from 'canonical';
 import { ESQUINA_DE_NOTA, cajaDeNota, colocarEnCaja, colocarNodo, comoTabla, contenidoDeNodo, metricasDeHoja, tamanoDeEtiqueta, textoDeGuarda } from 'tema';
 import type { Metricas, TablaDeMetricas } from 'tema';
 
@@ -36,27 +36,27 @@ const RELLENO_V_DE_GRUPO = 4;
 const HOLGURA_DE_TITULO = 8;
 
 /** Niveles de Fragmentos anidados de una lista de items (0 si no hay ninguno); `destino` recibe, por Fragmento, cuantos niveles hay bajo el. */
-function profundidadDe(items: readonly ItemResuelto[], destino = new Map<string, number>()): number {
+function profundidadDe(items: readonly ResolvedItem[], destino = new Map<string, number>()): number {
   return Math.max(
     0,
     ...items.map((item) => {
       if (item.type === 'message' || item.type === 'note') return 0;
       if (item.type === 'ref') {
-        destino.set(item.ruta, 0);
+        destino.set(item.path, 0);
         return 1;
       }
       const dentro = Math.max(0, ...item.operands.map((operando) => profundidadDe(operando.items, destino)));
-      destino.set(item.ruta, dentro);
+      destino.set(item.path, dentro);
       return 1 + dentro;
     }),
   );
 }
 
-function notasDe(items: readonly ItemResuelto[]): NotaResuelta[] {
-  return items.flatMap((item): NotaResuelta[] => (item.type === 'note' ? [item] : item.type === 'fragment' ? item.operands.flatMap((o) => notasDe(o.items)) : []));
+function notasDe(items: readonly ResolvedItem[]): ResolvedNote[] {
+  return items.flatMap((item): ResolvedNote[] => (item.type === 'note' ? [item] : item.type === 'fragment' ? item.operands.flatMap((o) => notasDe(o.items)) : []));
 }
 
-export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | TablaDeMetricas): GeometriaSecuencia {
+export function layoutSecuencia(vista: SequenceView, metricas: Metricas | TablaDeMetricas): SequenceGeometry {
   const tabla = comoTabla(metricas);
   const sec = tabla.base.secuencia;
   if (sec === undefined) throw new Error('layoutSecuencia: the Metrics table has no sequence part; compute it with tablaDeMetricas(tema, \'sequence\')');
@@ -78,11 +78,11 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
     return colocarNodo(contenidoDeNodo(nodo, m), m);
   });
   const altoDeCabecera = Math.max(0, ...medidas.map(({ height }) => height));
-  const anchoDeEtiqueta = (mensaje: MensajeResuelto): number => (mensaje.label === undefined ? 0 : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta).width);
-  const altoDeEtiqueta = (mensaje: MensajeResuelto): number => (mensaje.label === undefined ? 0 : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta).height);
+  const anchoDeEtiqueta = (mensaje: ResolvedMessage): number => (mensaje.label === undefined ? 0 : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta).width);
+  const altoDeEtiqueta = (mensaje: ResolvedMessage): number => (mensaje.label === undefined ? 0 : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta).height);
 
   const huecos = lifelines.slice(1).map((_, i) => Math.max(huecoEntreLifelines, (medidas[i]!.width + medidas[i + 1]!.width) / 2 + SEPARACION_DE_CABECERAS));
-  const necesidades = (mensaje: MensajeResuelto): NecesidadDeAncho | undefined => {
+  const necesidades = (mensaje: ResolvedMessage): NecesidadDeAncho | undefined => {
     const a = columna.get(mensaje.from);
     const b = columna.get(mensaje.to);
     if (a === undefined || b === undefined) return undefined;
@@ -91,9 +91,9 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
   };
   // Mensajes de menor a mayor alcance: el hueco que falta se suma al ultimo tramo del alcance.
   // Notas: `over X, Y` pide que la caja quepa entre X e Y (con su sobresalir); `left of`/`right of` piden hueco con la vecina.
-  const cajasDeNota = new Map(notasDe(itemsDeLaInteraccion).map((nota) => [nota.ruta, cajaDeNota(nota.text, tabla.etiqueta)]));
+  const cajasDeNota = new Map(notasDe(itemsDeLaInteraccion).map((nota) => [nota.path, cajaDeNota(nota.text, tabla.etiqueta)]));
   const pedidosDeNota = notasDe(itemsDeLaInteraccion).flatMap((nota): NecesidadDeAncho[] => {
-    const caja = cajasDeNota.get(nota.ruta)!;
+    const caja = cajasDeNota.get(nota.path)!;
     const cols = nota.targets.map((id) => columna.get(id)!);
     const a = Math.min(...cols);
     const b = Math.max(...cols);
@@ -109,26 +109,26 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
 
   // `box` de Grupos abiertos: cada nivel reserva una franja de titulo sobre las cabeceras y relleno a los lados.
   const grupos = vista.interaction.groups ?? [];
-  const niveles = Math.max(0, ...grupos.map((g) => g.nivel + 1));
+  const niveles = Math.max(0, ...grupos.map((g) => g.level + 1));
   const titulos = new Map(grupos.map((g) => [g.id, tamanoDeEtiqueta(g.label, tabla.etiqueta)]));
   const altoDeTitulo = Math.max(0, ...[...titulos.values()].map((t) => t.height)) + HOLGURA_DE_TITULO;
   const relleno = (nivel: number): number => RELLENO_H_DE_GRUPO * (niveles - nivel);
   const extremos = new Map(grupos.map((g) => [g.id, { desde: Math.min(...g.lifelines.map((id) => columna.get(id)!)), hasta: Math.max(...g.lifelines.map((id) => columna.get(id)!)) }]));
   // El hueco entre dos columnas suma el relleno del box que termina a la izquierda y el del que empieza a la derecha.
   for (let k = 0; k + 1 < lifelines.length; k++) {
-    const termina = Math.max(0, ...grupos.filter((g) => extremos.get(g.id)!.hasta === k).map((g) => relleno(g.nivel)));
-    const empieza = Math.max(0, ...grupos.filter((g) => extremos.get(g.id)!.desde === k + 1).map((g) => relleno(g.nivel)));
+    const termina = Math.max(0, ...grupos.filter((g) => extremos.get(g.id)!.hasta === k).map((g) => relleno(g.level)));
+    const empieza = Math.max(0, ...grupos.filter((g) => extremos.get(g.id)!.desde === k + 1).map((g) => relleno(g.level)));
     huecos[k] = huecos[k]! + termina + empieza;
   }
   const centros: number[] = [];
   const nivelesBajo = new Map<string, number>();
   const profundidad = profundidadDe(itemsDeLaInteraccion, nivelesBajo);
-  const margenIzquierdo = MARGEN + Math.max(profundidad > 0 ? rellenoHDeFragmento + SANGRIA_DE_ANIDADO * (profundidad - 1) : 0, ...grupos.filter((g) => extremos.get(g.id)!.desde === 0).map((g) => relleno(g.nivel)));
+  const margenIzquierdo = MARGEN + Math.max(profundidad > 0 ? rellenoHDeFragmento + SANGRIA_DE_ANIDADO * (profundidad - 1) : 0, ...grupos.filter((g) => extremos.get(g.id)!.desde === 0).map((g) => relleno(g.level)));
   const salienteDeLaPrimeraColumna = Math.max(
     0,
     ...notasDe(itemsDeLaInteraccion).flatMap((nota) => {
       if (!nota.targets.some((id) => columna.get(id) === 0)) return [];
-      const ancho = cajasDeNota.get(nota.ruta)!.width;
+      const ancho = cajasDeNota.get(nota.path)!.width;
       return [nota.anchor === 'left' ? ancho + HUECO_DE_NOTA : nota.anchor === 'over' && nota.targets.length === 1 ? ancho / 2 : SOBRESALE_DE_NOTA];
     }),
   );
@@ -138,22 +138,22 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
   const yInicio = yCabecera + altoDeCabecera + MARGEN;
 
   // Filas: la `y` de cada flecha, de arriba abajo; un Fragmento suma pestana, guarda y padding arriba, padding abajo y un divisor por operando.
-  const { activaciones } = activacionesDe(mensajes);
+  const { activations: activaciones } = activationsOf(mensajes);
   const creada = (id: string): number => mensajes.findIndex((m) => m.kind === 'create' && m.to === id);
   const destruccion = (id: string): number => mensajes.findIndex((m) => m.kind === 'destroy' && m.to === id);
-  const indiceDe = new Map(mensajes.map((m, i) => [m.ruta, i]));
+  const indiceDe = new Map(mensajes.map((m, i) => [m.path, i]));
   const ys: number[] = [];
   const altosDeLazo: number[] = [];
-  const marcos: MarcoDeFragmento[] = [];
+  const marcos: FragmentFrame[] = [];
   /** Mensajes (rutas) contenidos en cada Fragmento, anidados incluidos. */
   const contenido = new Map<string, string[]>();
   /** Extremos horizontales de las Notas de cada Fragmento y columnas de cada `ref`. */
   const extremosDeNota = new Map<string, number[]>();
   const columnasDeRef = new Map<string, number[]>();
-  const notas: NotaColocada[] = [];
+  const notas: PlacedNote[] = [];
   let cursor = yInicio;
-  const colocarMensaje = (mensaje: MensajeResuelto): void => {
-    const i = indiceDe.get(mensaje.ruta)!;
+  const colocarMensaje = (mensaje: ResolvedMessage): void => {
+    const i = indiceDe.get(mensaje.path)!;
     const alto = altoDeEtiqueta(mensaje);
     if (mensaje.from === mensaje.to) {
       altosDeLazo[i] = Math.max(ALTO_DE_LAZO, alto);
@@ -169,23 +169,23 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
     }
   };
   /** Devuelve la profundidad de Fragmentos anidados que contienen (0 si no hay). */
-  const colocarItems = (items: readonly ItemResuelto[], nivel: number, rutas: string[], extremos: number[]): number => {
+  const colocarItems = (items: readonly ResolvedItem[], nivel: number, rutas: string[], extremos: number[]): number => {
     let altura = 0;
     for (const item of items) {
       if (item.type === 'message') {
         colocarMensaje(item.message);
-        rutas.push(item.message.ruta);
+        rutas.push(item.message.path);
         continue;
       }
       if (item.type === 'note') {
-        const caja = cajasDeNota.get(item.ruta)!;
+        const caja = cajasDeNota.get(item.path)!;
         const cols = item.targets.map((id) => xDeLifeline(id));
         const izq = Math.min(...cols);
         const der = Math.max(...cols);
         const ancho = item.anchor === 'over' && cols.length > 1 && izq !== der ? Math.max(caja.width, der - izq + 2 * SOBRESALE_DE_NOTA) : caja.width;
         const nx = item.anchor === 'left' ? izq - HUECO_DE_NOTA - ancho : item.anchor === 'right' ? der + HUECO_DE_NOTA : Math.round((izq + der) / 2 - ancho / 2);
         const arriba = cursor + ESPACIO_ENTRE_NOTAS;
-        notas.push({ ruta: item.ruta, anchor: item.anchor, x: nx, y: arriba, width: ancho, height: caja.height, lines: caja.lines, lineHeight: caja.lineHeight, fold: ESQUINA_DE_NOTA });
+        notas.push({ ruta: item.path, anchor: item.anchor, x: nx, y: arriba, width: ancho, height: caja.height, lines: caja.lines, lineHeight: caja.lineHeight, fold: ESQUINA_DE_NOTA });
         extremos.push(nx, nx + ancho);
         cursor = arriba + caja.height + ESPACIO_ENTRE_NOTAS;
         continue;
@@ -196,9 +196,9 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
         const titulo = tamanoDeEtiqueta(item.title, tabla.etiqueta);
         const tab = { x: 0, y: arriba, width: pestana.width + HOLGURA_DE_PESTANA, height: pestana.height };
         const alto = pestana.height + titulo.height + rellenoArribaDeFragmento + rellenoAbajoDeFragmento;
-        marcos.push({ ruta: item.ruta, operator: 'ref', nivel, x: 0, y: arriba, width: 0, height: alto, tab, title: { text: item.title, box: { x: 0, y: arriba + pestana.height + rellenoArribaDeFragmento / 2, ...titulo } }, operands: [{ y1: arriba, y2: arriba + alto }] });
-        const columnas = (item.participantes.length > 0 ? item.participantes : lifelines.map((l) => l.id)).map(xDeLifeline);
-        columnasDeRef.set(item.ruta, columnas);
+        marcos.push({ ruta: item.path, operator: 'ref', nivel, x: 0, y: arriba, width: 0, height: alto, tab, title: { text: item.title, box: { x: 0, y: arriba + pestana.height + rellenoArribaDeFragmento / 2, ...titulo } }, operands: [{ y1: arriba, y2: arriba + alto }] });
+        const columnas = (item.participants.length > 0 ? item.participants : lifelines.map((l) => l.id)).map(xDeLifeline);
+        columnasDeRef.set(item.path, columnas);
         // El Fragmento que contiene al `ref` lo envuelve: sus extremos cuentan para el marco padre.
         extremos.push(...columnas);
         cursor = arriba + alto + HUECO_ENTRE_FRAGMENTOS;
@@ -210,14 +210,14 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
       const arriba = cursor + HUECO_ENTRE_FRAGMENTOS;
       const pestana = tamanoDeEtiqueta(item.operator, tabla.etiqueta);
       const tab = { x: 0, y: arriba, width: pestana.width + HOLGURA_DE_PESTANA, height: pestana.height };
-      const marco: MarcoDeFragmento = { ruta: item.ruta, operator: item.operator, nivel, x: 0, y: arriba, width: 0, height: 0, tab, operands: [] };
+      const marco: FragmentFrame = { ruta: item.path, operator: item.operator, nivel, x: 0, y: arriba, width: 0, height: 0, tab, operands: [] };
       marcos.push(marco);
       let alturaInterna = 0;
       item.operands.forEach((operando, k) => {
         const arribaDelOperando = k === 0 ? arriba : cursor;
         const guarda = operando.guard === undefined ? undefined : textoDeGuarda(operando.guard);
         const medida = guarda === undefined ? undefined : tamanoDeEtiqueta(guarda, tabla.etiqueta);
-        const colocado: OperandoColocado = { y1: arribaDelOperando, y2: arribaDelOperando, ...(k > 0 && { divider: arribaDelOperando }) };
+        const colocado: PlacedOperand = { y1: arribaDelOperando, y2: arribaDelOperando, ...(k > 0 && { divider: arribaDelOperando }) };
         if (guarda !== undefined && medida !== undefined) {
           // En el primer operando la guarda va junto a la pestana; en los siguientes, bajo su divisor.
           colocado.guard = { text: guarda, box: { x: 0, y: arribaDelOperando, ...medida } };
@@ -231,8 +231,8 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
       });
       marco.height = cursor - arriba;
       cursor += HUECO_ENTRE_FRAGMENTOS;
-      contenido.set(item.ruta, dentro);
-      extremosDeNota.set(item.ruta, extremosDentro);
+      contenido.set(item.path, dentro);
+      extremosDeNota.set(item.path, extremosDentro);
       extremos.push(...extremosDentro);
       rutas.push(...dentro);
       altura = Math.max(altura, alturaInterna + 1);
@@ -257,34 +257,34 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
     return d < 0 ? yFinal : ys[d]!;
   };
 
-  const cajasDeActivacion: CajaDeActivacion[] = activaciones.map((a) => ({
+  const cajasDeActivacion: ActivationBox[] = activaciones.map((a) => ({
     lifeline: a.lifeline,
-    nivel: a.nivel,
-    x: xDeLifeline(a.lifeline) + (a.nivel * anchoDeActivacion) / 2 - anchoDeActivacion / 2,
-    y1: ys[a.desde]!,
-    y2: Math.min(a.cierraEn !== undefined ? finDeFragmento(a.cierraEn) : a.hasta === null ? yFinal : ys[a.hasta]!, yFinalDe(a.lifeline)),
+    nivel: a.level,
+    x: xDeLifeline(a.lifeline) + (a.level * anchoDeActivacion) / 2 - anchoDeActivacion / 2,
+    y1: ys[a.from]!,
+    y2: Math.min(a.closesAt !== undefined ? finDeFragmento(a.closesAt) : a.to === null ? yFinal : ys[a.to]!, yFinalDe(a.lifeline)),
     width: anchoDeActivacion,
   }));
 
   /** Indice del Mensaje en que termina la activacion; el que cierra un Fragmento termina medio indice tras su ultimo Mensaje. */
-  const cortes = new Map<Activacion, number>();
-  const corte = (a: Activacion): number => {
-    if (a.cierraEn === undefined) return a.hasta ?? Infinity;
+  const cortes = new Map<Activation, number>();
+  const corte = (a: Activation): number => {
+    if (a.closesAt === undefined) return a.to ?? Infinity;
     let c = cortes.get(a);
     if (c === undefined) {
-      c = Math.max(...mensajes.flatMap((m, i) => (m.ambito?.includes(a.cierraEn!) ? [i] : []))) + 0.5;
+      c = Math.max(...mensajes.flatMap((m, i) => (m.scope?.includes(a.closesAt!) ? [i] : []))) + 0.5;
       cortes.set(a, c);
     }
     return c;
   };
   /** Nivel de la activacion mas anidada de `lifeline` vigente tras (`despues`) o justo antes de enviar el Mensaje `i`; -1 si no hay. */
   const nivelVigente = (lifeline: string, i: number, despues: boolean): number =>
-    Math.max(-1, ...activaciones.filter((a: Activacion) => a.lifeline === lifeline && (despues ? a.desde <= i && corte(a) > i : a.desde < i && corte(a) >= i)).map((a) => a.nivel));
+    Math.max(-1, ...activaciones.filter((a: Activation) => a.lifeline === lifeline && (despues ? a.from <= i && corte(a) > i : a.from < i && corte(a) >= i)).map((a) => a.level));
   const borde = (lifeline: string, nivel: number, lado: 'izquierdo' | 'derecho'): number =>
     nivel < 0 ? xDeLifeline(lifeline) : xDeLifeline(lifeline) + (nivel * anchoDeActivacion) / 2 + (lado === 'derecho' ? 1 : -1) * (anchoDeActivacion / 2);
 
   let derecha = 0;
-  const rutas: Record<string, RutaDeMensaje> = {};
+  const rutas: Record<string, MessageRoute> = {};
   mensajes.forEach((mensaje, i) => {
     const y = ys[i]!;
     const etiqueta = mensaje.label === undefined ? undefined : tamanoDeEtiqueta(mensaje.label, tabla.etiqueta);
@@ -294,7 +294,7 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
       const lazo = Math.max(inicio, fin) + anchoDeLazo;
       const alto = altosDeLazo[i]!;
       const caja = etiqueta === undefined ? undefined : { x: lazo + 6, y: Math.round(y + (alto - etiqueta.height) / 2), ...etiqueta };
-      rutas[mensaje.ruta] = { points: [{ x: inicio, y }, { x: lazo, y }, { x: lazo, y: y + alto }, { x: fin, y: y + alto }], ...(caja !== undefined && { label: caja }) };
+      rutas[mensaje.path] = { points: [{ x: inicio, y }, { x: lazo, y }, { x: lazo, y: y + alto }, { x: fin, y: y + alto }], ...(caja !== undefined && { label: caja }) };
       derecha = Math.max(derecha, caja === undefined ? lazo : caja.x + caja.width);
       return;
     }
@@ -304,13 +304,13 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
       // `create` termina en el borde de la cabecera que baja; `destroy`, en el marcador sobre la linea.
       const fin = mensaje.kind === 'destroy' ? xDeLifeline(mensaje.to) : xDeLifeline(mensaje.to) + (haciaLaDerecha ? -1 : 1) * (medidas[columna.get(mensaje.to)!]!.width / 2);
       const caja = etiqueta === undefined ? undefined : { x: Math.round((inicio + fin) / 2 - etiqueta.width / 2), y: y - etiqueta.height - 2, ...etiqueta };
-      rutas[mensaje.ruta] = { points: [{ x: inicio, y }, { x: fin, y }], ...(caja !== undefined && { label: caja }) };
+      rutas[mensaje.path] = { points: [{ x: inicio, y }, { x: fin, y }], ...(caja !== undefined && { label: caja }) };
       return;
     }
     const inicio = borde(mensaje.from, nivelVigente(mensaje.from, i, false), haciaLaDerecha ? 'derecho' : 'izquierdo');
     const fin = borde(mensaje.to, nivelVigente(mensaje.to, i, true), haciaLaDerecha ? 'izquierdo' : 'derecho');
     const caja = etiqueta === undefined ? undefined : { x: Math.round((inicio + fin) / 2 - etiqueta.width / 2), y: y - etiqueta.height - 2, ...etiqueta };
-    rutas[mensaje.ruta] = { points: [{ x: inicio, y }, { x: fin, y }], ...(caja !== undefined && { label: caja }) };
+    rutas[mensaje.path] = { points: [{ x: inicio, y }, { x: fin, y }], ...(caja !== undefined && { label: caja }) };
   });
 
   // Marcos: cubren las Lifelines de su contenido mas relleno; cada nivel de anidacion suma una sangria.
@@ -348,8 +348,8 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
   }
   for (const nota of notas) derecha = Math.max(derecha, nota.x + nota.width);
 
-  const nodes: Record<string, CajaDeNodo> = {};
-  const lineas: GeometriaSecuencia['lifelines'] = {};
+  const nodes: Record<string, NodeBox> = {};
+  const lineas: SequenceGeometry['lifelines'] = {};
   lifelines.forEach((nodo, i) => {
     const { width } = medidas[i]!;
     const caja = { x: Math.round(xDeLifeline(nodo.id) - width / 2), y: yDeCabecera(nodo.id), width, height: altoDeCabecera };
@@ -360,15 +360,15 @@ export function layoutSecuencia(vista: VistaDeSecuencia, metricas: Metricas | Ta
   });
   // Cada box rodea las cabeceras de sus Lifelines hasta el final de sus lineas (los exteriores sobresalen mas).
   const pie = yFinal + RELLENO_FINAL;
-  const cajasDeGrupo: CajaDeGrupoColocada[] = grupos.map((g) => {
+  const cajasDeGrupo: PlacedGroupBox[] = grupos.map((g) => {
     const cajas = g.lifelines.map((id) => nodes[id]!);
     const titulo = titulos.get(g.id)!;
-    const izquierda = Math.min(...cajas.map((c) => c.x)) - relleno(g.nivel);
-    const ancho = Math.max(Math.max(...cajas.map((c) => c.x + c.width)) + relleno(g.nivel) - izquierda, titulo.width + 2 * HOLGURA_DE_TITULO);
-    const arriba = MARGEN + g.nivel * altoDeTitulo;
-    const abajo = pie + RELLENO_V_DE_GRUPO * (niveles - g.nivel);
+    const izquierda = Math.min(...cajas.map((c) => c.x)) - relleno(g.level);
+    const ancho = Math.max(Math.max(...cajas.map((c) => c.x + c.width)) + relleno(g.level) - izquierda, titulo.width + 2 * HOLGURA_DE_TITULO);
+    const arriba = MARGEN + g.level * altoDeTitulo;
+    const abajo = pie + RELLENO_V_DE_GRUPO * (niveles - g.level);
     derecha = Math.max(derecha, izquierda + ancho);
-    return { id: g.id, label: g.label, nivel: g.nivel, x: Math.round(izquierda), y: arriba, width: Math.round(ancho), height: abajo - arriba, title: { x: Math.round(izquierda) + HOLGURA_DE_TITULO, y: arriba + HOLGURA_DE_TITULO / 2, ...titulo } };
+    return { id: g.id, label: g.label, nivel: g.level, x: Math.round(izquierda), y: arriba, width: Math.round(ancho), height: abajo - arriba, title: { x: Math.round(izquierda) + HOLGURA_DE_TITULO, y: arriba + HOLGURA_DE_TITULO / 2, ...titulo } };
   });
   const hayAlgo = lifelines.length > 0;
   return {

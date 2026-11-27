@@ -3,8 +3,8 @@
  * absolutas (Grupos HTML, Aristas SVG, Nodos HTML) bajo un solo `transform` de pan/zoom, asi HTML y SVG quedan alineados
  * a cualquier zoom. Pura: la misma entrada da el mismo arbol. Los valores de atributo van sin escapar: React los escapa.
  */
-import { idDeArista, idDeElementoDeSecuencia } from 'canonico';
-import type { AristaResuelta, CajaDeNodo, Geometria, GeometriaGrafo, IconProvider, NodoResuelto, Tema, Visibilidad, VistaDeGrafo, VistaResuelta } from 'canonico';
+import { edgeId, sequenceElementId } from 'canonical';
+import type { ResolvedEdge, NodeBox, Geometry, GraphGeometry, IconProvider, ResolvedNode, Theme, Visibility, GraphView, ResolvedView } from 'canonical';
 import { indiceDeGeometria } from 'layout';
 import { ESTADOS, atributosVisibles, colocarEnCaja, contenidoDeNodo, metricasDeHoja } from 'tema';
 import type { Metricas } from 'tema';
@@ -41,14 +41,14 @@ export type Estados = Readonly<Record<string, readonly EstadoVisual[]>>;
 
 export interface EntradaDeEscena {
   /** Vista ya resuelta con su colapso (`resolveView`); render no guarda estado de colapso. */
-  view: VistaResuelta;
-  geometry: Geometria;
-  theme: Tema;
+  view: ResolvedView;
+  geometry: Geometry;
+  theme: Theme;
   icons?: IconProvider;
   width: number;
   height: number;
   /** Visibilidad 0..1 de Nodos y Aristas; sin ella, todo vale 1. */
-  visibility?: Visibilidad;
+  visibility?: Visibility;
   camera?: Camara;
   /** Sin el, como `completo`. */
   detail?: NivelDeDetalle;
@@ -75,10 +75,10 @@ export interface EntradaDeEscena {
 }
 
 export interface Contexto extends EntradaDeEscena {
-  visibility: Visibilidad;
+  visibility: Visibility;
   estilo: Estilo;
   /** Cajas en coordenadas del lienzo (las de la geometria son relativas al Grupo padre). */
-  cajas: ReadonlyMap<string, CajaDeNodo>;
+  cajas: ReadonlyMap<string, NodeBox>;
   /** Nombre accesible de cada Nodo, sacado solo del Modelo (nunca del Tema). */
   nombres?: ReadonlyMap<string, string>;
   /** Color de Paleta de cada Nodo: el de su Tipo o override; `ORIGIN` de una Arista toma el de su origen. */
@@ -87,7 +87,7 @@ export interface Contexto extends EntradaDeEscena {
   escalonado: ReadonlyMap<string, number>;
 }
 
-type ContextoDeGrafo = Contexto & { view: VistaDeGrafo; geometry: GeometriaGrafo };
+type ContextoDeGrafo = Contexto & { view: GraphView; geometry: GraphGeometry };
 
 /**
  * Lanza si un Nodo de la Vista is not in the geometry, si la Geometria es de otro Tipo de diagrama que la Vista o si
@@ -118,8 +118,8 @@ function conPlaneados(entrada: EntradaDeEscena): EntradaDeEscena {
     ...view.nodes.filter((nodo) => nodo.planned === true).map((nodo) => nodo.id),
     ...view.nodes.flatMap((nodo) => nodo.attributes.filter((atributo) => atributo.planned === true).map((atributo) => `${nodo.id}#${atributo.name}`)),
     ...(view.type === 'sequence'
-      ? view.interaction.messages.filter((mensaje) => mensaje.planned === true).map((mensaje) => idDeElementoDeSecuencia(view.interaction.id, mensaje.ruta))
-      : view.edges.filter((arista) => arista.planned === true).map(idDeArista)),
+      ? view.interaction.messages.filter((mensaje) => mensaje.planned === true).map((mensaje) => sequenceElementId(view.interaction.id, mensaje.path))
+      : view.edges.filter((arista) => arista.planned === true).map(edgeId)),
   ];
   if (ids.length === 0) return entrada;
   const estados: Record<string, readonly EstadoVisual[]> = { ...entrada.estados };
@@ -127,7 +127,7 @@ function conPlaneados(entrada: EntradaDeEscena): EntradaDeEscena {
   return { ...entrada, estados };
 }
 
-function construirEscenaDeGrafo(entrada: EntradaDeEscena & { view: VistaDeGrafo; geometry: GeometriaGrafo }): Elemento {
+function construirEscenaDeGrafo(entrada: EntradaDeEscena & { view: GraphView; geometry: GraphGeometry }): Elemento {
   const { view, geometry, theme } = entrada;
   const estilo = entrada.estilo ?? resolverEstilo(theme, entrada.view.type, entrada.metricas);
   const { raices, cajas } = indiceDeGeometria(view, geometry);
@@ -215,15 +215,15 @@ export function marcoDeEscena(entrada: EntradaDeEscena, estilo: Estilo, capas: E
 /** Cuanto sobresale, en unidades del lienzo, la pagina que se mueve con la camara. */
 const MARGEN_DE_PAGINA = 4000;
 
-const esGrupo = (nodo: NodoResuelto): boolean => nodo.children.length > 0;
+const esGrupo = (nodo: ResolvedNode): boolean => nodo.children.length > 0;
 
 /**
  * Nombre accesible de cada Nodo: etiqueta, Tipo y relaciones ("va a" / "viene de"). Sale solo del Modelo, nunca del
  * Tema; el SVG de Aristas es decorativo, asi que la relacion se anuncia aqui.
  */
-export function nombresAccesibles(aristas: readonly AristaResuelta[], nodos: readonly NodoResuelto[]): Map<string, string> {
+export function nombresAccesibles(aristas: readonly ResolvedEdge[], nodos: readonly ResolvedNode[]): Map<string, string> {
   const etiqueta = new Map(nodos.map((n) => [n.id, n.label]));
-  const destino = (id: string, arista: AristaResuelta): string => `${etiqueta.get(id) ?? id}${arista.label === undefined ? '' : ` (${arista.label})`}`;
+  const destino = (id: string, arista: ResolvedEdge): string => `${etiqueta.get(id) ?? id}${arista.label === undefined ? '' : ` (${arista.label})`}`;
   return new Map(
     nodos.map((nodo) => {
       const sale = aristas.filter((e) => e.from.node === nodo.id).map((e) => destino(e.to.node, e));
@@ -244,7 +244,7 @@ export function nombresAccesibles(aristas: readonly AristaResuelta[], nodos: rea
  * Posicion de cada Nodo visible en el `stagger` de `enter`: en orden de dibujo, entre los
  * `nuevos` si se dan o entre todos los visibles. Vacio sin `stagger` en el Tema.
  */
-export function posicionesDeEscalonado(raices: readonly NodoResuelto[], visibility: Visibilidad, estilo: Estilo, nuevos?: readonly string[]): Map<string, number> {
+export function posicionesDeEscalonado(raices: readonly ResolvedNode[], visibility: Visibility, estilo: Estilo, nuevos?: readonly string[]): Map<string, number> {
   const posiciones = new Map<string, number>();
   if (ELEMENTOS.every((clave) => pinturaDeElemento(estilo.pintura, clave).animacion?.escalonadoMs === undefined)) return posiciones;
   const elegidos = nuevos === undefined ? undefined : new Set(nuevos);
@@ -255,7 +255,7 @@ export function posicionesDeEscalonado(raices: readonly NodoResuelto[], visibili
 }
 
 /** Nodos en preorden (un Grupo antes que sus hijos): el orden de apilado dentro de cada capa. */
-export function aplanar(nodo: NodoResuelto): NodoResuelto[] {
+export function aplanar(nodo: ResolvedNode): ResolvedNode[] {
   return [nodo, ...nodo.children.flatMap(aplanar)];
 }
 
@@ -264,11 +264,11 @@ export function aplanar(nodo: NodoResuelto): NodoResuelto[] {
  * y su giro. El giro va en el mismo `transform`, tras la traslacion: gira la caja sobre su centro sin moverla de su sitio
  * (la propiedad `rotate` se aplicaria antes de la traslacion y la desplazaria).
  */
-function posicion(caja: CajaDeNodo, giro = 0): string {
+function posicion(caja: NodeBox, giro = 0): string {
   return `width:${num(caja.width)}px;height:${num(caja.height)}px;transform:translate(${num(caja.x)}px,${num(caja.y)}px)${giro === 0 ? '' : ` rotate(${num(giro)}deg)`};`;
 }
 
-export function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
+export function cajaDeNodo(nodo: ResolvedNode, contexto: Contexto): Elemento {
   const caja = contexto.cajas.get(nodo.id);
   if (caja === undefined) throw new Error(`Node '${nodo.id}' is not in the geometry`);
   const { estilo, onSelect, onToggle, icons, detail } = contexto;
@@ -327,7 +327,7 @@ export function cajaDeNodo(nodo: NodoResuelto, contexto: Contexto): Elemento {
   };
 }
 
-function estadosDeNodo(nodo: NodoResuelto, caja: CajaDeNodo, { estados, estilo, detail }: Contexto): Elemento[] {
+function estadosDeNodo(nodo: ResolvedNode, caja: NodeBox, { estados, estilo, detail }: Contexto): Elemento[] {
   if (estados === undefined) return [];
   const propios = contornos(estados[nodo.id]).map((e) => pintarEstadoDeCaja(e, nodo.id));
   if (esGrupo(nodo) || !tieneFilas(nodo, estilo, detail)) return propios;
@@ -363,18 +363,18 @@ export function estadoDeTrazo<T>(declarados: Partial<Record<EstadoVisual, T>> | 
 /** Estados con contorno propio sobre el elemento: todos menos `dimmed` y `planned`. */
 export const contornos = (lista: readonly EstadoVisual[] | undefined): EstadoVisual[] => (lista ?? []).filter((e) => e !== 'dimmed' && e !== 'planned');
 
-function tieneFilas(nodo: NodoResuelto, estilo: Estilo, detail?: NivelDeDetalle): boolean {
+function tieneFilas(nodo: ResolvedNode, estilo: Estilo, detail?: NivelDeDetalle): boolean {
   return (detail === undefined || detail === 'completo') && atributosVisibles(nodo, metricasDeHoja(estilo.tabla, nodo)).length > 0;
 }
 
 /** Valor de la Paleta para el color del Nodo; sin color, o desconocido, el borde del Estilo. */
-export function colorDeTrazo(nodo: NodoResuelto, estilo: Estilo): string {
+export function colorDeTrazo(nodo: ResolvedNode, estilo: Estilo): string {
   return (nodo.color !== undefined ? estilo.paleta[nodo.color] : undefined) ?? estilo.borde;
 }
 
 /** Arista con su etiqueta. Una Arista sin ruta en la geometria (ELK no la enruto) se omite. */
-function aristaSvg(arista: AristaResuelta, { view, geometry, estilo, onSelect, visibility, estados, coloresDeNodo }: ContextoDeGrafo): Elemento[] {
-  const id = idDeArista(arista);
+function aristaSvg(arista: ResolvedEdge, { view, geometry, estilo, onSelect, visibility, estados, coloresDeNodo }: ContextoDeGrafo): Elemento[] {
+  const id = edgeId(arista);
   const puntos = geometry.edges[id]?.points;
   if (puntos === undefined || puntos.length < 2) return [];
   const v = visibilidadSvg(visibility(id));
@@ -402,8 +402,8 @@ function aristaSvg(arista: AristaResuelta, { view, geometry, estilo, onSelect, v
  * ningun trazo (de esta ni de otra Arista) la tape. Hereda la visibilidad, el
  * atenuado y el clic de su Arista.
  */
-function etiquetaSvg(arista: AristaResuelta, { geometry, estilo, onSelect, visibility, estados, coloresDeNodo }: ContextoDeGrafo): Elemento[] {
-  const id = idDeArista(arista);
+function etiquetaSvg(arista: ResolvedEdge, { geometry, estilo, onSelect, visibility, estados, coloresDeNodo }: ContextoDeGrafo): Elemento[] {
+  const id = edgeId(arista);
   const puntos = geometry.edges[id]?.points;
   if (arista.label === undefined || puntos === undefined || puntos.length < 2) return [];
   const v = visibilidadSvg(visibility(id));

@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
-import type { GeometriaSecuencia } from 'canonico';
+import type { SequenceGeometry } from 'canonical';
 import type { Camara } from 'render';
 
 import type { Calculo } from './geometria';
@@ -101,7 +101,7 @@ export function useArrastre(e: EntradaDeArrastre): { desplazado: Movimiento | un
       window.addEventListener('mouseup', alSoltar);
     };
     /** Reordenar Lifelines: la cabecera (o el titulo de un `box`) sigue al raton en horizontal y al soltar avisa el orden visible. */
-    const pulsarEnSecuencia = (evento: MouseEvent, geometria: GeometriaSecuencia): void => {
+    const pulsarEnSecuencia = (evento: MouseEvent, geometria: SequenceGeometry): void => {
       const k0 = e.ancho / e.camaraVigente.current!.width;
       const caja = nodo.getBoundingClientRect();
       const camara = e.camaraVigente.current!;

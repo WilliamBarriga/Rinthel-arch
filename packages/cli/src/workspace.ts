@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
-import { esArchivoDeFuente, tipoDeFuente } from 'canonico';
+import { isFontFile, fontMimeType } from 'canonical';
 import type { ArchivosDelWorkspace } from 'dsl';
 
 /** Nombre de la carpeta de salida derivada del Workspace (build y Registro de actividad). */
@@ -68,11 +68,11 @@ export function leerRecursos(raiz: string): Record<string, string> {
   return recorrer(raiz, (nombre) => EXTENSIONES_DE_RECURSO.some((extension) => nombre.endsWith(extension)), (ruta) => createHash('sha256').update(readFileSync(ruta)).digest('hex'));
 }
 
-export { esArchivoDeFuente };
+export { isFontFile as esArchivoDeFuente };
 
 /** Rutas relativas a `raiz`, con `/`. */
 export function leerFuentes(raiz: string): string[] {
-  return Object.keys(leerRecursos(raiz)).filter(esArchivoDeFuente);
+  return Object.keys(leerRecursos(raiz)).filter(isFontFile);
 }
 
 /**
@@ -80,7 +80,7 @@ export function leerFuentes(raiz: string): string[] {
  * regulares y solo si, resueltos los enlaces simbolicos, siguen dentro de su raiz; cualquier otra cosa da `undefined`.
  */
 export function leerArchivoDeFuente(raices: readonly string[], ruta: string): { bytes: Buffer; tipo: string } | undefined {
-  const tipo = tipoDeFuente(ruta);
+  const tipo = fontMimeType(ruta);
   if (tipo === undefined) return undefined;
   for (const raiz of raices) {
     try {

@@ -1,8 +1,8 @@
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
-import type { GeometriaGrafo, VistaResuelta } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
+import type { GraphGeometry, ResolvedView } from 'canonical';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, Camara, VistaInteractivaProps } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -11,7 +11,7 @@ afterEach(cleanup);
 
 const nodo = (id: string, children: unknown[] = []) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children });
 const arista = (from: string, to: string) => ({ from: { node: from }, to: { node: to } });
-const fuente = fuenteCanonicaSchema.parse({
+const fuente = canonicalFormSchema.parse({
   specification: { nodeTypes: [{ name: 'servicio' }] },
   model: {
     nodes: [nodo('a'), nodo('b'), nodo('c'), nodo('g', [nodo('g.x')])],
@@ -19,12 +19,12 @@ const fuente = fuenteCanonicaSchema.parse({
   },
   views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], expanded: ['g'] }],
 });
-const enFila: AdaptadorDeLayout = async (vista: VistaResuelta) => {
-  const nodes: GeometriaGrafo['nodes'] = {};
+const enFila: AdaptadorDeLayout = async (vista: ResolvedView) => {
+  const nodes: GraphGeometry['nodes'] = {};
   vista.nodes.forEach((n, i) => {
     nodes[n.id] = { x: i * 60, y: 0, width: 50, height: 50 };
   });
-  const edges: GeometriaGrafo['edges'] = {};
+  const edges: GraphGeometry['edges'] = {};
   edges['a -> b'] = { points: [{ x: 100, y: 25 }, { x: 120, y: 25 }] };
   edges['b -> c'] = { points: [{ x: 220, y: 25 }, { x: 240, y: 25 }] };
   return { nodes, edges, labels: {}, kind: 'grafo', pinsSolapados: [], width: 600, height: 50 };

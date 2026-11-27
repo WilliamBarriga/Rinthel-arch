@@ -4,14 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { CONTRACT_VERSION, salidaDeValidateSchema } from 'canonico';
+import { CONTRACT_VERSION, validateOutputSchema } from 'canonical';
 import { run } from 'cli';
 
 const FIXTURE = resolve(__dirname, 'fixtures/tema-errores');
 
 async function validar(raiz: string) {
   const r = await run(['validate', '--workspace', raiz, '--json']);
-  return { ...r, salida: salidaDeValidateSchema.parse(JSON.parse(r.stdout)) };
+  return { ...r, salida: validateOutputSchema.parse(JSON.parse(r.stdout)) };
 }
 
 describe('validate: codigos de Tema', () => {

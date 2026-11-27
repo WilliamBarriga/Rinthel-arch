@@ -1,14 +1,14 @@
 import {
-  CODIGOS,
+  CODES,
   CONTRACT_VERSION,
-  DESCRIPCION_DE_CODIGO,
+  CODE_DESCRIPTION,
   EDIT_CONTRACT_VERSION,
   INSPECT_CONTRACT_VERSION,
-  salidaDeEditJsonSchema,
-  salidaDeInspectJsonSchema,
-  salidaDeValidateJsonSchema,
-} from 'canonico';
-import type { FuenteCanonica } from 'canonico';
+  editOutputJsonSchema,
+  inspectOutputJsonSchema,
+  validateOutputJsonSchema,
+} from 'canonical';
+import type { CanonicalForm } from 'canonical';
 
 import { CARPETA_DE_SALIDA } from './workspace';
 
@@ -41,7 +41,7 @@ view overview {
 }`;
 
 /** `SKILL.md` del proyecto. Determinista: el mismo catalogo produce los mismos bytes. */
-export function generarSkill(fuente: FuenteCanonica): string {
+export function generarSkill(fuente: CanonicalForm): string {
   const tipos = fuente.specification.nodeTypes.map(
     (tipo) => `| \`${tipo.name}\` | ${celda(tipo.description)} | ${celda(tipo.icon ?? '')} | ${celda(tipo.color ?? '')} |`,
   );
@@ -49,7 +49,7 @@ export function generarSkill(fuente: FuenteCanonica): string {
     (tema) =>
       `| \`${tema.name}\` | ${Object.keys(tema.palette).map((color) => `\`${color}\``).join(', ') || '-'} |`,
   );
-  const codigos = Object.values(CODIGOS).map((codigo) => `| \`${codigo}\` | ${DESCRIPCION_DE_CODIGO[codigo]} |`);
+  const codigos = Object.values(CODES).map((codigo) => `| \`${codigo}\` | ${CODE_DESCRIPTION[codigo]} |`);
 
   return `---
 name: diagrams
@@ -115,7 +115,7 @@ Every issue carries \`code\` (stable), \`severity\` (\`error\` or \`warning\`), 
 Schema (JSON Schema derived from the contract's Zod schema):
 
 \`\`\`json
-${JSON.stringify(salidaDeValidateJsonSchema(), null, 2)}
+${JSON.stringify(validateOutputJsonSchema(), null, 2)}
 \`\`\`
 
 ## Query the Model (inspect)
@@ -141,7 +141,7 @@ diagrams inspect theme <name> --workspace <path> [--kind <kind>] [--state <state
 \`inspect --json\` schema (JSON Schema derived from the Zod schema):
 
 \`\`\`json
-${JSON.stringify(salidaDeInspectJsonSchema(), null, 2)}
+${JSON.stringify(inspectOutputJsonSchema(), null, 2)}
 \`\`\`
 
 ## Structured editing (edit)
@@ -165,7 +165,7 @@ diagrams edit --workspace <path> --edits '[{"file":"main.dg","range":{"start":{"
 \`edit --json\` schema (JSON Schema derived from the Zod schema):
 
 \`\`\`json
-${JSON.stringify(salidaDeEditJsonSchema(), null, 2)}
+${JSON.stringify(editOutputJsonSchema(), null, 2)}
 \`\`\`
 
 ## Live loop (dev)

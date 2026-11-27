@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveView, revealAt } from 'canonico';
+import { resolveView, revealAt } from 'canonical';
 import { compile } from 'dsl';
 import { TEMA_NEUTRO } from 'tema';
 

@@ -1,9 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView as layoutDeVista } from 'layout';
-import type { GeometriaGrafo } from 'canonico';
+import type { GraphGeometry } from 'canonical';
 import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
 import { TEMA_NEUTRO } from 'tema';
@@ -20,8 +20,8 @@ const layoutView = async (...args: Parameters<typeof layoutDeVista>) => {
 
 const nodo = (id: string) => ({ id, type: 'servicio', title: id.toUpperCase(), description: '', children: [] });
 
-async function props(extra: Partial<Omit<DiagramProps, 'geometry'>> = {}): Promise<Omit<DiagramProps, 'geometry'> & { geometry: GeometriaGrafo }> {
-  const fuente = fuenteCanonicaSchema.parse({
+async function props(extra: Partial<Omit<DiagramProps, 'geometry'>> = {}): Promise<Omit<DiagramProps, 'geometry'> & { geometry: GraphGeometry }> {
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: { nodes: [nodo('a'), nodo('b'), nodo('c')], edges: [{ from: { node: 'a' }, to: { node: 'b' } }, { from: { node: 'b' }, to: { node: 'c' } }] },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],

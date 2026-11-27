@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
-import type { VistaDeGrafo, VistaDeSecuencia } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
+import type { GraphView, SequenceView } from 'canonical';
 import { compile } from 'dsl';
 
 const WORKSPACE = `
@@ -65,11 +65,11 @@ describe('planned mark', () => {
       ['pay', 'Pay', true],
       ['notify', 'notify', undefined],
     ]);
-    expect(fuenteCanonicaSchema.parse(JSON.parse(JSON.stringify(fuente)))).toEqual(fuente);
+    expect(canonicalFormSchema.parse(JSON.parse(JSON.stringify(fuente)))).toEqual(fuente);
   });
 
   it('a planned Group marks its descendants and an Edge touching something planned is planned (architecture)', () => {
-    const vista = resolveView(compiled(), 'all') as VistaDeGrafo;
+    const vista = resolveView(compiled(), 'all') as GraphView;
     const planeados = Object.fromEntries(vista.nodes.map((nodo) => [nodo.id, nodo.planned === true]));
     expect(planeados).toEqual({ shop: false, 'shop.api': false, 'shop.checkout': true, 'shop.checkout.cart': true, billing: true, mail: false, orders: false });
     expect(vista.edges.map((arista) => [arista.from.node, arista.to.node, arista.planned === true])).toEqual([
@@ -81,7 +81,7 @@ describe('planned mark', () => {
   });
 
   it('a merged Edge stays planned only if every Edge it merges is', () => {
-    const vista = resolveView(compiled(), 'all', { collapsed: ['shop'] }) as VistaDeGrafo;
+    const vista = resolveView(compiled(), 'all', { collapsed: ['shop'] }) as GraphView;
     const deShop = vista.edges.filter((arista) => arista.from.node === 'shop');
     expect(deShop.map((arista) => [arista.to.node, arista.count, arista.planned === true])).toEqual([
       ['mail', 2, false],
@@ -90,7 +90,7 @@ describe('planned mark', () => {
   });
 
   it('keeps the planned Attribute in an er View', () => {
-    const vista = resolveView(compiled(), 'data') as VistaDeGrafo;
+    const vista = resolveView(compiled(), 'data') as GraphView;
     expect(vista.nodes[0]!.attributes.map((atributo) => [atributo.name, atributo.planned === true])).toEqual([
       ['id', false],
       ['coupon', true],
@@ -98,9 +98,9 @@ describe('planned mark', () => {
   });
 
   it('a Message is planned when its Interaction or one of its Lifelines is (sequence)', () => {
-    const pagar = resolveView(compiled(), 'paying') as VistaDeSecuencia;
+    const pagar = resolveView(compiled(), 'paying') as SequenceView;
     expect(pagar.interaction.messages.map((mensaje) => mensaje.planned === true)).toEqual([true]);
-    const avisar = resolveView(compiled(), 'notifying') as VistaDeSecuencia;
+    const avisar = resolveView(compiled(), 'notifying') as SequenceView;
     expect(avisar.interaction.messages.map((mensaje) => [mensaje.to, mensaje.planned === true])).toEqual([
       ['mail', false],
       ['billing', true],

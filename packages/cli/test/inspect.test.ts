@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { INSPECT_CONTRACT_VERSION, salidaDeInspectSchema } from 'canonico';
+import { INSPECT_CONTRACT_VERSION, inspectOutputSchema } from 'canonical';
 import { run } from 'cli';
 
 const DG = `specification { node servicio  node dato }
@@ -37,7 +37,7 @@ function workspace(texto = DG): string {
 
 async function json(args: string[], raiz = workspace()) {
   const r = await run(['inspect', ...args, '--workspace', raiz, '--json']);
-  return { ...r, salida: r.stdout === '' ? undefined : salidaDeInspectSchema.parse(JSON.parse(r.stdout)) };
+  return { ...r, salida: r.stdout === '' ? undefined : inspectOutputSchema.parse(JSON.parse(r.stdout)) };
 }
 
 describe('inspect search', () => {

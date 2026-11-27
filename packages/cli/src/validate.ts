@@ -1,5 +1,5 @@
-import { CONTRACT_VERSION } from 'canonico';
-import type { Issue, SalidaDeValidate } from 'canonico';
+import { CONTRACT_VERSION } from 'canonical';
+import type { Issue, ValidateOutput } from 'canonical';
 
 export interface OpcionesDeValidate {
   maxIssues: number;
@@ -15,7 +15,7 @@ function compararIssues(a: Issue, b: Issue): number {
 export function construirSalida(
   desordenados: readonly Issue[],
   { maxIssues, strict }: OpcionesDeValidate,
-): SalidaDeValidate {
+): ValidateOutput {
   const issues = [...desordenados].sort(compararIssues);
   const errors = issues.filter((issue) => issue.severity === 'error').length;
   const warnings = issues.length - errors;
@@ -32,7 +32,7 @@ const pista = (issue: Issue): string =>
   issue.hint !== undefined ? `; ${issue.hint}` : issue.fix !== undefined && issue.fix.replacement !== '' ? `; did you mean '${issue.fix.replacement}'` : '';
 
 /** Una linea por issue y un resumen. */
-export function textoLegible(salida: SalidaDeValidate): string {
+export function textoLegible(salida: ValidateOutput): string {
   const lineas = salida.issues.map(
     (issue) =>
       `${issue.file}:${issue.line}:${issue.column} ${issue.severity} ${issue.code} ${issue.message}${pista(issue)}`,

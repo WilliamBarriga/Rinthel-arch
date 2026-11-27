@@ -2,8 +2,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import type { ReactElement, ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView, revealAt } from 'canonico';
-import type { Geometria, VistaDeGrafo, VistaResuelta } from 'canonico';
+import { canonicalFormSchema, resolveView, revealAt } from 'canonical';
+import type { Geometry, GraphView, ResolvedView } from 'canonical';
 import { layoutView } from 'layout';
 import { Diagram, resolverEstilo } from 'render';
 import type { DiagramProps } from 'render';
@@ -16,8 +16,8 @@ import { capaDe, etiquetaCon, hojaDe, propiedad, rectDe, traslacionDe } from './
 const nodo = (id: string, title: string, children: unknown[] = []) => ({ id, type: 'servicio', title, description: '', children });
 
 /** a { a1 a2 } -> b -> c, con dos pasos: primero `a`, luego `b` y `c`. */
-function vista(estado = {}, steps: unknown[] = []): VistaDeGrafo {
-  const fuente = fuenteCanonicaSchema.parse({
+function vista(estado = {}, steps: unknown[] = []): GraphView {
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: {
       nodes: [nodo('a', 'A', [nodo('a.a1', 'A1'), nodo('a.a2', 'A2')]), nodo('b', 'B'), nodo('c', 'C')],
@@ -28,7 +28,7 @@ function vista(estado = {}, steps: unknown[] = []): VistaDeGrafo {
     },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [], steps }],
   });
-  return resolveView(fuente, 'v', estado) as VistaDeGrafo;
+  return resolveView(fuente, 'v', estado) as GraphView;
 }
 
 const PASOS = [
@@ -52,8 +52,8 @@ const CON_CAPAS: TemaResuelto = {
   },
 };
 
-async function props(view: VistaResuelta, extra: Partial<DiagramProps> = {}): Promise<DiagramProps> {
-  const geometry: Geometria = await layoutView(view, TEMA_NEUTRO);
+async function props(view: ResolvedView, extra: Partial<DiagramProps> = {}): Promise<DiagramProps> {
+  const geometry: Geometry = await layoutView(view, TEMA_NEUTRO);
   return { view, geometry, theme: TEMA_NEUTRO, width: 800, height: 600, ...extra };
 }
 
@@ -309,7 +309,7 @@ describe('Diagram', () => {
 
   it('las etiquetas de Arista van en una pasada posterior a todos los trazos, con la visibilidad de su Arista', async () => {
     const base = vista();
-    const view: VistaResuelta = { ...base, edges: base.edges.map((e, i) => (i === 0 ? { ...e, label: 'uno' } : e)) };
+    const view: ResolvedView = { ...base, edges: base.edges.map((e, i) => (i === 0 ? { ...e, label: 'uno' } : e)) };
     const html = dibujo(await props(view, { visibility: (id) => (id === 'a.a1 -> b' ? 0.5 : 1) }));
     const ultimaArista = html.lastIndexOf('<g data-edge="');
 
@@ -462,7 +462,7 @@ describe('Diagram', () => {
     });
 
     it('un Atributo seleccionado marca su fila, en el rectangulo de la colocacion', async () => {
-      const fuente = fuenteCanonicaSchema.parse({
+      const fuente = canonicalFormSchema.parse({
         specification: { nodeTypes: [{ name: 'servicio' }] },
         model: { nodes: [{ ...nodo('t', 'T'), attributes: [{ name: 'id', type: 'int' }, { name: 'nombre', type: 'text' }] }], edges: [] },
         views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],

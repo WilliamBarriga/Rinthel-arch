@@ -19,7 +19,7 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 - **Puertos**: interfaces que define el nucleo segun lo que necesita. **Adaptadores**: sistema de archivos, ELK, d3-zoom, Web Worker, CLI; viven en el borde y dependen del nucleo, nunca al reves.
 - Un seam existe cuando algo varia a traves de el: un adaptador es un seam hipotetico, dos es uno real. Con un solo adaptador, llamada directa.
 - Las dependencias entran como argumento; las funciones devuelven resultados en vez de mutar.
-- Direccion de dependencias: `canonico -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. Un paquete solo importa de los anteriores. `tema` va tras `canonico` porque reutiliza sus `Issue` y codigos, y antes de `dsl` porque el compilador de Temas valida con su catalogo (ADR 0004, enmienda).
+- Direccion de dependencias: `canonical -> tema -> dsl -> layout -> sesion -> render -> shell -> estudio -> cli`. Un paquete solo importa de los anteriores. `tema` va tras `canonical` porque reutiliza sus `Issue` y codigos, y antes de `dsl` porque el compilador de Temas valida con su catalogo (ADR 0004, enmienda).
 - `scanner` sits outside the chain (ADR 0010): it imports no workspace package and only `cli` imports it (`AISLADOS` in `scripts/check-dependencies.ts`).
 - El nucleo es agnostico del Proyecto documentado (ver `AGENTS.md`).
 
@@ -47,8 +47,8 @@ Monorepo con workspaces. Un paquete en `packages/` por modulo profundo (canonico
 5. `ADR relacionado`: el ADR del contrato del paquete.
 6. `Probar`: `pnpm --filter <paquete> test`.
 
-Modelo: `packages/canonico/README.md`. `pnpm check:docs` falla si un paquete no tiene README o si este pierde una seccion, nombra un archivo de entrada inexistente o no da el comando de `Probar`.
+Modelo: `packages/canonical/README.md`. `pnpm check:docs` falla si un paquete no tiene README o si este pierde una seccion, nombra un archivo de entrada inexistente o no da el comando de `Probar`.
 
 ## Chequeos automaticos
 
-La direccion de dependencias, los imports internos entre paquetes, la superficie `exports` y la pureza del nucleo (`canonico`, `tema`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell`, `estudio` y `cli` son adaptadores), y que ningun archivo reexporte (`export ... from`) de otro paquete salvo `estudio/protocolo` y la fachada de `shell`, y que `scripts/` y `bench/` usen de los paquetes solo su nombre o lo que declara `exports` (nunca sus `test/` o `scripts/` por ruta), los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.
+La direccion de dependencias, los imports internos entre paquetes, la superficie `exports` y la pureza del nucleo (`canonical`, `tema`, `dsl`, `sesion`, `render`: sin `node:*`, reloj, azar, `process`, red ni DOM; `layout`, `shell`, `estudio` y `cli` son adaptadores), y que ningun archivo reexporte (`export ... from`) de otro paquete salvo `estudio/protocolo` y la fachada de `shell`, y que `scripts/` y `bench/` usen de los paquetes solo su nombre o lo que declara `exports` (nunca sus `test/` o `scripts/` por ruta), los verifica `scripts/check-dependencies.ts` (`pnpm check:deps`); no se repiten en review.

@@ -8,12 +8,12 @@ Compilador del DSL de texto (gramatica Langium) a la Fuente canonica.
 - Declara en DSL los Temas incorporados `neutral` y `neutral-dark` (`src/incorporados.ts`, cero avisos de contraste); `high-contrast` es de `tema`. La gramatica es `src/gramatica/diagramas.langium`; `src/generated/` sale de `pnpm generate` (lo corre `build`), no se versiona ni se edita.
 
 ## Que NO hace
-- No define ni valida el esquema de la Fuente canonica: eso es de `canonico`.
+- No define ni valida el esquema de la Fuente canonica: eso es de `canonical`.
 - No define el catalogo de Primitivas, Slots y Efectos ni calcula geometria: eso es de `tema` y `layout`.
 - No lee disco: recibe `ArchivosDelWorkspace` ya leido.
 
 ## Depende de
-`canonico` y `tema` (`docs/CODING.md`, "Direccion de dependencias"). Dependencia externa: `langium`.
+`canonical` y `tema` (`docs/CODING.md`, "Direccion de dependencias"). Dependencia externa: `langium`.
 
 ## Archivo de entrada
 `packages/dsl/src/index.ts` (la cabecera documenta invariantes y modos de error).

@@ -5,7 +5,7 @@
  * Invariantes: puro y determinista (sin I/O, reloj, azar ni DOM); las Metricas solo dependen
  * de fuentes, tamano de texto y disposicion de Slots, nunca de pintura, animacion ni `code`.
  * Errores: los datos invalidos se devuelven todos a la vez como errores; solo `resolverTema` lanza.
- * Dependencias: solo `canonico`.
+ * Dependencias: solo `canonical`.
  */
 export { CATALOGO, DEFINICION_DE_SLOT, SLOTS, SLOTS_DE_TEXTO, construirPrimitiva, primitivasDe, primitivasDeFamilia, resolverTokens, sugerir, validarPropiedades } from './catalogo';
 export { ALINEACIONES, CABECERA_POR_DEFECTO, DIRECCIONES, DISPOSICION_POR_DEFECTO, SLOTS_SOLO_DE_NODO, alineacionDe, construirDisposicion, describirDisposicion, esCaja, slotsDe } from './disposicion';

@@ -1,24 +1,24 @@
 /** Props de datos de `VistaInteractiva` para la Vista activa: iconos, Geometrias cacheadas, Tema y tamano. */
 import { useMemo } from 'react';
 
-import { hidratarIconos } from 'canonico';
-import type { FuenteCanonica, Geometria, IconProvider, Tema } from 'canonico';
+import { hydrateIcons } from 'canonical';
+import type { CanonicalForm, Geometry, IconProvider, Theme } from 'canonical';
 
 import { useTamano } from '../marco/use-tamano';
 
 export interface DatosDeVista {
-  fuente: FuenteCanonica;
+  fuente: CanonicalForm;
   iconos: Readonly<Record<string, string>>;
   /** Solo las que llegaron; las demas las calcula el Worker. */
-  geometrias: Readonly<Record<string, { theme: string; geometry: Geometria }>>;
+  geometrias: Readonly<Record<string, { theme: string; geometry: Geometry }>>;
 }
 
 /** `theme` es `undefined` si la Fuente no trae Temas. */
 export function usePropsDeDatos(
   { fuente, iconos, geometrias }: DatosDeVista,
   vista: string,
-): { icons: IconProvider; cachedGeometries: Record<string, Geometria>; theme: Tema | undefined; width: number; height: number } {
-  const icons = useMemo(() => hidratarIconos(iconos), [iconos]);
+): { icons: IconProvider; cachedGeometries: Record<string, Geometry>; theme: Theme | undefined; width: number; height: number } {
+  const icons = useMemo(() => hydrateIcons(iconos), [iconos]);
   const cachedGeometries = useMemo(
     () => Object.fromEntries(Object.entries(geometrias).map(([id, { geometry }]) => [id, geometry])),
     [geometrias],

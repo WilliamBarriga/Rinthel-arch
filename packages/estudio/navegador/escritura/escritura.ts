@@ -7,7 +7,7 @@
  * vacia el guardado pendiente del editor, para no operar sobre un estado viejo. Nunca lanza: el resultado es un dato.
  * El guardado del editor no pasa por aqui: reconcilia con el disco a su manera (`editor/guardado.ts`).
  */
-import type { Intencion } from 'canonico';
+import type { Intent } from 'canonical';
 
 import type { EstadoDeDev, PeticionDeEdiciones } from '../../src/protocolo';
 import type { ClienteDeDev, ResultadoDeEnvio } from '../cliente';
@@ -20,7 +20,7 @@ export type EleccionDeEdiciones = (estado: EstadoDeDev) => Omit<PeticionDeEdicio
 
 export type PedidoDeEscritura =
   /** `fallo` encabeza el aviso de un rechazo que no es 409 (p. ej. `No se pudo mover el Pin`). */
-  | { intencion: Intencion; fallo: string }
+  | { intencion: Intent; fallo: string }
   | { ediciones: EleccionDeEdiciones; fallo: string; reintentar?: boolean }
   | { historial: MovimientoDelHistorial };
 

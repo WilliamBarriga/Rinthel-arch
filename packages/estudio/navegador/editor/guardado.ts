@@ -9,7 +9,7 @@
  * Invariantes: envios y reconciliaciones van en serie; lo que se teclea durante un envio se guarda despues sobre la base
  * nueva; `pendiente` siempre lleva la base al buffer. Otro rechazo deja los cambios pendientes y el estado `error`.
  */
-import { hashDeContenido } from 'canonico';
+import { contentHash } from 'canonical';
 import { ChangeSet, Text } from '@codemirror/state';
 
 import type { ResultadoDeEnvio } from '../cliente';
@@ -133,7 +133,7 @@ export function crearGuardador(opciones: OpcionesDelGuardador): Guardador {
 
   const sincronizar = (enDisco: { hash: string; version: number }): Promise<void> =>
     enSerie(async () => {
-      if (enDisco.hash === hashDeContenido(base)) {
+      if (enDisco.hash === contentHash(base)) {
         version = Math.max(version, enDisco.version);
         return;
       }

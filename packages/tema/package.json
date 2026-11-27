@@ -20,7 +20,7 @@
     "vitest": "^4.1.11"
   },
   "dependencies": {
-    "canonico": "workspace:*",
+    "canonical": "workspace:*",
     "zod": "^4.6.6"
   },
   "sideEffects": false

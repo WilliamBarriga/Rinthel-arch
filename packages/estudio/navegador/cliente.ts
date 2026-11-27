@@ -7,8 +7,8 @@
  * con el ultimo; los datos que no son JSON se descartan. El evento `estado` se valida como `GET /api/estado`: uno
  * malformado no llega a `suscribir` y se reporta a `alMalformado`.
  */
-import { geometriaCacheadaSchema, salidaDeInspectSchema } from 'canonico';
-import type { GeometriaCacheada, Intencion, MotivoDeRechazo, SalidaDeInspect } from 'canonico';
+import { cachedGeometrySchema, inspectOutputSchema } from 'canonical';
+import type { CachedGeometry, Intent, RejectionReason, InspectOutput } from 'canonical';
 
 import {
   archivoDeDevSchema,
@@ -30,10 +30,10 @@ import type { ArchivoDeDev, ArchivosDeDev, CodigoDeDev, ComandoDeInspect, Estado
  * `desactualizado` es el 409 (`stale-hash`; lo resuelve `escritura/escritura.ts`). `version` (si `dev` la da)
  * es la del estado tras la escritura; `motivo` y `file`, los del rechazo.
  */
-export type ResultadoDeEnvio = { ok: true; version?: number } | { ok: false; desactualizado: boolean; message: string; reason?: MotivoDeRechazo; file?: string };
+export type ResultadoDeEnvio = { ok: true; version?: number } | { ok: false; desactualizado: boolean; message: string; reason?: RejectionReason; file?: string };
 
 /** `error` solo si llego malformada. */
-export type LecturaDeGeometria = { ok: true; geometria: GeometriaCacheada } | { ok: false; error?: string };
+export type LecturaDeGeometria = { ok: true; geometria: CachedGeometry } | { ok: false; error?: string };
 
 export interface DependenciasDelCliente {
   fetch: typeof fetch;
@@ -58,7 +58,7 @@ function motivo(error: { issues: ReadonlyArray<{ path: readonly PropertyKey[]; m
 const PLAZO_DE_GEOMETRIA_MS = 4000;
 
 /** `ok: false` lleva el mensaje de `inspect` y los ids cercanos (vacios si el fallo no es "no existe"). */
-export type LecturaDeInspect = { ok: true; salida: SalidaDeInspect } | { ok: false; message: string; suggestions: string[] };
+export type LecturaDeInspect = { ok: true; salida: InspectOutput } | { ok: false; message: string; suggestions: string[] };
 
 /** Lectura que puede fallar con un motivo visible (red, estado HTTP o respuesta malformada). */
 export type Lectura<T> = { ok: true; valor: T } | { ok: false; message: string };
@@ -76,7 +76,7 @@ export interface ClienteDeDev {
   /** `GET /api/inspect/<comando>/<argumento>`; `opciones` van en la query (las de `tema`). */
   inspeccionar(comando: ComandoDeInspect, argumento: string, opciones?: Readonly<Record<string, string>>): Promise<LecturaDeInspect>;
   /** `version` es la del estado que vio la pagina; el servidor la traduce a `visto`. */
-  editar(intencion: Intencion, version: number): Promise<ResultadoDeEnvio>;
+  editar(intencion: Intent, version: number): Promise<ResultadoDeEnvio>;
   /** Ediciones de texto (`POST /api/edit { ediciones, version, descripcion?, aunqueNoCompile? }`): editor, `fix` y "Aplicar N fix". */
   editarTexto(peticion: PeticionDeEdiciones): Promise<ResultadoDeEnvio>;
   /** `GET /api/archivos`. */
@@ -123,7 +123,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
 
   const valorDe = <T>(lectura: Lectura<T>): T | undefined => (lectura.ok ? lectura.valor : undefined);
 
-  /** `POST` de JSON: el 2xx contra `aceptada` y el rechazo contra `rechazoDeDevSchema`. */
+  /** `POST` de JSON: el 2xx contra `aceptada` y el rechazo contra `devRejectionSchema`. */
   const post = async (ruta: string, cuerpo: unknown, aceptada: Esquema<{ ok: true; version?: number }> = escrituraDeDevSchema): Promise<ResultadoDeEnvio> => {
     try {
       const res = await fetchFn(ruta, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(cuerpo) });
@@ -160,7 +160,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
     const delNombre = oyentes.get(nombre) ?? new Set();
     oyentes.set(nombre, delNombre);
     delNombre.add(alDatos);
-    cerrarConexion ??= eventos(RUTAS_DE_DEV.eventos, alEvento);
+    cerrarConexion ??= eventos(RUTAS_DE_DEV.events, alEvento);
     return () => {
       delNombre.delete(alDatos);
       if ([...oyentes.values()].every((o) => o.size === 0)) {
@@ -178,7 +178,7 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
         const res = await fetchFn(ruta);
         const cuerpo: unknown = await res.json().catch(() => undefined);
         if (res.ok) {
-          const leida = validar(ruta, salidaDeInspectSchema, cuerpo);
+          const leida = validar(ruta, inspectOutputSchema, cuerpo);
           return leida.ok ? { ok: true, salida: leida.valor } : { ok: false, message: leida.message, suggestions: [] };
         }
         const rechazo = inspectNoEncontradoSchema.safeParse(cuerpo);
@@ -187,17 +187,17 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
         return { ok: false, message: (error as Error).message, suggestions: [] };
       }
     },
-    estado: async () => valorDe(await leer(RUTAS_DE_DEV.estado, estadoDeDevSchema)),
+    estado: async () => valorDe(await leer(RUTAS_DE_DEV.state, estadoDeDevSchema)),
     suscribir: (alEstado, alMalformado) =>
       escuchar('estado', (datos) => {
         const leido = estadoDeDevSchema.safeParse(datos);
         if (leido.success) alEstado(leido.data);
         else alMalformado?.(`Malformed state event (${motivo(leido.error)})`);
       }),
-    codigo: () => leer(RUTAS_DE_DEV.codigo, codigoDeDevSchema),
-    confiar: () => post(RUTAS_DE_DEV.confiar, {}, confianzaDeDevSchema),
+    codigo: () => leer(RUTAS_DE_DEV.code, codigoDeDevSchema),
+    confiar: () => post(RUTAS_DE_DEV.trust, {}, confianzaDeDevSchema),
     async bundleDeComponentes() {
-      const ruta = RUTAS_DE_DEV.componentes;
+      const ruta = RUTAS_DE_DEV.components;
       try {
         const res = await fetchFn(ruta);
         if (!res.ok) return { ok: false, message: mensajeDeError(res.status, ruta, await res.json().catch(() => undefined)) };
@@ -209,11 +209,11 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
     },
     editar: (intencion, version) => post(RUTAS_DE_DEV.edit, { ...intencion, version }),
     editarTexto: (peticion) => post(RUTAS_DE_DEV.edit, peticion),
-    archivos: () => leer(RUTAS_DE_DEV.archivos, archivosDeDevSchema),
+    archivos: () => leer(RUTAS_DE_DEV.files, archivosDeDevSchema),
     archivo: async (file) => valorDe(await leer(rutaDeArchivo(file), archivoDeDevSchema)),
-    deshacer: () => post(RUTAS_DE_DEV.deshacer, {}),
-    rehacer: () => post(RUTAS_DE_DEV.rehacer, {}),
-    saltar: (id) => post(RUTAS_DE_DEV.saltar, { id }),
+    deshacer: () => post(RUTAS_DE_DEV.undo, {}),
+    rehacer: () => post(RUTAS_DE_DEV.redo, {}),
+    saltar: (id) => post(RUTAS_DE_DEV.jump, { id }),
     async geometria(vista, { tema } = {}) {
       const NO_LLEGO = Symbol('no-llego');
       const abortar = new AbortController();
@@ -225,13 +225,13 @@ export function crearClienteDeDev({ fetch: fetchFn, eventos, plazoDeGeometriaMs 
         }, plazoDeGeometriaMs);
       });
       const pedida = (async (): Promise<unknown> => {
-        const res = await fetchFn(`${RUTAS_DE_DEV.vista}${encodeURIComponent(vista)}${tema === undefined ? '' : `?tema=${encodeURIComponent(tema)}`}`, { signal: abortar.signal });
+        const res = await fetchFn(`${RUTAS_DE_DEV.view}${encodeURIComponent(vista)}${tema === undefined ? '' : `?tema=${encodeURIComponent(tema)}`}`, { signal: abortar.signal });
         return res.ok ? await res.json() : NO_LLEGO;
       })().catch(() => NO_LLEGO);
       const cruda = await Promise.race([pedida, vencida]);
       clearTimeout(plazo);
       if (cruda === NO_LLEGO) return { ok: false };
-      const leida = geometriaCacheadaSchema.safeParse(cruda);
+      const leida = cachedGeometrySchema.safeParse(cruda);
       if (leida.success) return { ok: true, geometria: leida.data };
       return { ok: false, error: `Malformed geometry in View ${vista}: ${motivo(leida.error)}`.trim() };
     },

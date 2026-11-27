@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveView } from 'canonico';
-import type { VistaDeSecuencia } from 'canonico';
+import { resolveView } from 'canonical';
+import type { SequenceView } from 'canonical';
 import { abrirSesion } from 'sesion';
 
 const modelo = (interaccion: string, vistas: string) => `specification { node servicio }
@@ -26,7 +26,7 @@ const escenario = `  interaction i {
 
 function resolver(texto: string, vista: string) {
   const sesion = abrirSesion({ 'main.dg': texto });
-  const vr = resolveView(sesion.fuente!, vista) as VistaDeSecuencia;
+  const vr = resolveView(sesion.fuente!, vista) as SequenceView;
   return { sesion, resuelta: vr, mensajes: vr.interaction.messages };
 }
 
@@ -67,7 +67,7 @@ describe('seam sesion: depth, collapsed y exclude en secuencia', () => {
     );
     const { resuelta, mensajes } = resuelta_(texto);
     expect(resuelta.nodes.map((n) => n.id)).toEqual(['cliente', 'sistema.api']);
-    expect(mensajes.map((m) => m.ruta)).toEqual(['0', '2']);
+    expect(mensajes.map((m) => m.path)).toEqual(['0', '2']);
     expect(resuelta.interaction.items.map((i) => i.type)).toEqual(['message', 'message']);
   });
 

@@ -4,15 +4,15 @@
  */
 import { join } from 'node:path';
 
-import { planeados } from 'canonico';
-import type { Atributo, Modelo, Nodo, ScanCoverage, ScanCoverageNotice } from 'canonico';
+import { plannedSets } from 'canonical';
+import type { Attribute, Model, Node, ScanCoverage, ScanCoverageNotice } from 'canonical';
 import { EXCLUDED_FOLDERS, byCodeUnit } from 'scanner';
 import type { ScanDraft, ScanTable } from 'scanner';
 
 import { abrirSesionDe } from './sesion-cli';
 import { leerWorkspace, rutasDeDg } from './workspace';
 
-/** Its shape is the `coverage` of the `scan --json` contract (`scanSummarySchema` in `canonico`). */
+/** Its shape is the `coverage` of the `scan --json` contract (`scanSummarySchema` in `canonical`). */
 export type Coverage = ScanCoverage;
 type CoverageCount = Coverage['units'];
 type ColumnDifference = Coverage['columns'][number];
@@ -58,7 +58,7 @@ export function coverageOf(draft: ScanDraft, workspace: string, ignores: (id: st
 interface CoverageNode {
   id: string;
   refs: string[];
-  attributes: Atributo[];
+  attributes: Attribute[];
 }
 
 /**
@@ -66,13 +66,13 @@ interface CoverageNode {
  * planned Group) is proposed code, so it never makes an orphan ref, and a planned Attribute (marked or of a planned
  * Node) is never extra.
  */
-function coverageNodes(model: Modelo): CoverageNode[] {
+function coverageNodes(model: Model): CoverageNode[] {
   const nodes: CoverageNode[] = [];
-  const planned = planeados(model);
-  const visit = (node: Nodo): void => {
+  const planned = plannedSets(model);
+  const visit = (node: Node): void => {
     const refs = node.source.filter((source) => source.kind === 'path').map((source) => source.ref);
-    if (refs.length > 0 && !planned.nodos.has(node.id)) {
-      nodes.push({ id: node.id, refs, attributes: node.attributes.filter((attribute) => !planned.atributos.has(`${node.id}#${attribute.name}`)) });
+    if (refs.length > 0 && !planned.nodes.has(node.id)) {
+      nodes.push({ id: node.id, refs, attributes: node.attributes.filter((attribute) => !planned.attributes.has(`${node.id}#${attribute.name}`)) });
     }
     node.children.forEach(visit);
   };
@@ -80,7 +80,7 @@ function coverageNodes(model: Modelo): CoverageNode[] {
   return nodes;
 }
 
-function compare(draft: ScanDraft, model: Modelo, workspace: string, ignores: (id: string) => boolean): Coverage {
+function compare(draft: ScanDraft, model: Model, workspace: string, ignores: (id: string) => boolean): Coverage {
   const units = new Set(draft.units.map((unit) => unit.id));
   const tables = new Map(draft.tables.map((table) => [table.id, table]));
   const externals = new Set(draft.externals.map((external) => external.id));

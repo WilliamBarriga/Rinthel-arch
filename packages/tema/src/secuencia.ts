@@ -1,5 +1,5 @@
 /** Elementos de Tema de la secuencia: tabla unica de lo que admite cada bloque (la usan `dsl`, la validacion y la referencia). */
-import { OPERADORES_DE_FRAGMENTO, TIPOS_DE_MENSAJE } from 'canonico';
+import { FRAGMENT_OPERATORS, MESSAGE_KINDS } from 'canonical';
 
 import type { NombreDePrimitiva, UbicacionDePrimitiva } from './catalogo';
 
@@ -30,7 +30,7 @@ export const ESPECIFICACION_DE_SECUENCIA: Readonly<Record<BloqueDeSecuencia, Esp
     capas: 'capa-arista',
     marcadores: ['start', 'end'],
     textos: { label: { primitiva: 'label', ubicacion: 'etiqueta' } },
-    parches: { palabra: 'kind', nombres: TIPOS_DE_MENSAJE },
+    parches: { palabra: 'kind', nombres: MESSAGE_KINDS },
     metricas: {
       gap: { min: 12, max: 120, defecto: 32 },
       'loop-width': { min: 12, max: 120, defecto: 36 },
@@ -45,7 +45,7 @@ export const ESPECIFICACION_DE_SECUENCIA: Readonly<Record<BloqueDeSecuencia, Esp
       guard: { primitiva: 'text', ubicacion: 'texto-slot' },
       divider: { primitiva: 'line', ubicacion: 'capa-arista' },
     },
-    parches: { palabra: 'op', nombres: [...OPERADORES_DE_FRAGMENTO, 'ref'] },
+    parches: { palabra: 'op', nombres: [...FRAGMENT_OPERATORS, 'ref'] },
     metricas: { padding: { min: 0, max: 64, defecto: 16 }, 'padding-y': { min: 2, max: 40, defecto: 10 } },
   },
   note: { capas: 'capa-nodo', marcadores: [], textos: { text: { primitiva: 'text', ubicacion: 'texto-slot' } }, metricas: {} },

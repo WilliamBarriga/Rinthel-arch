@@ -27,7 +27,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.0.0",
-    "canonico": "workspace:*",
+    "canonical": "workspace:*",
     "cli": "workspace:*",
     "dsl": "workspace:*",
     "esbuild": "^0.28.2",

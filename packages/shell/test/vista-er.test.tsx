@@ -1,7 +1,7 @@
 import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { idDeArista } from 'canonico';
+import { edgeId } from 'canonical';
 import { layoutView } from 'layout';
 import { abrirSesion } from 'sesion';
 import { VistaInteractiva } from 'shell';
@@ -37,7 +37,7 @@ const montar = async (vista: string) => {
   return { ...resultado, fuente };
 };
 
-const idDe = (fuente: { model: { edges: Parameters<typeof idDeArista>[0][] } }, i: number) => idDeArista(fuente.model.edges[i]!);
+const idDe = (fuente: { model: { edges: Parameters<typeof edgeId>[0][] } }, i: number) => edgeId(fuente.model.edges[i]!);
 
 describe('Vista ER en jsdom', () => {
   it('cada tabla muestra su cabecera y una fila por Atributo con un chip por marca de clave', async () => {

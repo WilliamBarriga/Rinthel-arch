@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema, resolveView } from 'canonico';
+import { canonicalFormSchema, resolveView } from 'canonical';
 import { layoutView } from 'layout';
 import { resolverEstilo } from 'render';
 import { TEMA_NEUTRO } from 'tema';
@@ -18,7 +18,7 @@ const ARCHIVOS = [
 const url = (ruta: string): string => `/fuentes/${ruta.split('/').map(encodeURIComponent).join('/')}`;
 
 async function dibujo(tema: TemaResuelto, extra: Record<string, unknown>): Promise<string> {
-  const fuente = fuenteCanonicaSchema.parse({
+  const fuente = canonicalFormSchema.parse({
     specification: { nodeTypes: [{ name: 'servicio' }] },
     model: { nodes: [{ id: 'a', type: 'servicio', title: 'A', description: '', children: [] }], edges: [] },
     views: [{ id: 'v', type: 'architecture', include: ['**'], exclude: [] }],

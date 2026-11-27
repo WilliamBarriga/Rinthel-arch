@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { fuenteCanonicaSchema } from 'canonico';
+import { canonicalFormSchema } from 'canonical';
 import { run } from 'cli';
 
 const fixtures = join(import.meta.dirname, 'fixtures');
@@ -24,7 +24,7 @@ describe('build', () => {
 
     expect(resultado.exitCode).toBe(0);
     expect(resultado.stderr).toBe('');
-    const fuente = fuenteCanonicaSchema.parse(leerJson(join(workspace, '.diagrams', 'canonico.json')));
+    const fuente = canonicalFormSchema.parse(leerJson(join(workspace, '.diagrams', 'canonico.json')));
     expect(fuente.views.map((vista) => vista.id)).toEqual(['general', 'detalle']);
     expect(readdirSync(join(workspace, '.diagrams', 'geometria')).sort()).toEqual([
       'detalle.json',
@@ -89,7 +89,7 @@ describe('build', () => {
     const resultado = await run(['build', '--workspace', workspace, '--theme-path', temas, '--theme', 'corporativo']);
 
     expect(resultado.exitCode).toBe(0);
-    const fuente = fuenteCanonicaSchema.parse(leerJson(join(workspace, '.diagrams', 'canonico.json')));
+    const fuente = canonicalFormSchema.parse(leerJson(join(workspace, '.diagrams', 'canonico.json')));
     expect(fuente.themes.map((tema) => tema.name)).toContain('corporativo');
     const general = leerJson(join(workspace, '.diagrams', 'geometria', 'general.json')) as { theme: string };
     expect(general.theme).toBe('corporativo');

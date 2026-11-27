@@ -2,7 +2,7 @@
  * Traduce la ruta de un valor de la Fuente canonica al texto del DSL que lo origino. Invariante: las listas de
  * la Fuente conservan el orden del AST, asi que el indice `i` de la Fuente es el `i`-esimo del AST.
  */
-import type { FuenteCanonica, SitioDeTexto, TextRange, Ubicador } from 'canonico';
+import type { CanonicalForm, TextSite, TextRange, Locator } from 'canonical';
 
 import type { Edge, Element, Fragment, Interaction, NodeTypeDecl, View } from './generated/ast';
 import { aRango, puntoVacio, rangoDe, rangoDeIndice, rangoDeMarca } from './posiciones';
@@ -16,7 +16,7 @@ function antesDeLaLlave(nodo: AstNode): TextRange {
 }
 
 export interface DatosDelUbicador {
-  fuente: FuenteCanonica;
+  fuente: CanonicalForm;
   /** Nodos por id cualificado, con su AST y archivo. */
   nodos: ReadonlyMap<string, { archivo: string; ast: Element }>;
   /** Aristas compiladas, en el mismo orden que `fuente.model.edges`. */
@@ -35,9 +35,9 @@ export interface DatosDelUbicador {
 
 type Ruta = readonly (string | number)[];
 
-const sitio = (file: string, range: TextRange): SitioDeTexto => ({ file, range });
+const sitio = (file: string, range: TextRange): TextSite => ({ file, range });
 
-export function crearUbicador(datos: DatosDelUbicador): Ubicador {
+export function crearUbicador(datos: DatosDelUbicador): Locator {
   return (ruta) => {
     const [seccion, indice, ...resto] = ruta;
     if (seccion === 'model' && indice === 'nodes') return deNodo(datos, ruta);
@@ -53,7 +53,7 @@ export function crearUbicador(datos: DatosDelUbicador): Ubicador {
   };
 }
 
-function deNodo({ fuente, nodos }: DatosDelUbicador, ruta: Ruta): SitioDeTexto | null {
+function deNodo({ fuente, nodos }: DatosDelUbicador, ruta: Ruta): TextSite | null {
   let actual: unknown = fuente;
   for (const clave of ruta.slice(0, ruta.at(-3) === 'attributes' ? -3 : -1)) actual = (actual as Record<string | number, unknown>)[clave];
   const propiedad = ruta.at(-1) as string;
@@ -69,7 +69,7 @@ function deNodo({ fuente, nodos }: DatosDelUbicador, ruta: Ruta): SitioDeTexto |
   return sitio(declarado.archivo, propiedad === 'planned' ? rangoDeMarca(declarado.ast, propiedad) : rangoDe(declarado.ast, propiedad));
 }
 
-function deArista({ aristas }: DatosDelUbicador, [i, lado, campo]: Ruta): SitioDeTexto | null {
+function deArista({ aristas }: DatosDelUbicador, [i, lado, campo]: Ruta): TextSite | null {
   const arista = aristas[i as number];
   if (arista === undefined) return null;
   // Cardinalidades: `ruta` = [i, 'fromCardinality' | 'toCardinality'], sin `campo`.
@@ -82,7 +82,7 @@ function deArista({ aristas }: DatosDelUbicador, [i, lado, campo]: Ruta): SitioD
  * `[i, 'id' | 'title']` o `[i, 'items', j, ...]` de una Interaccion; dentro de un Fragmento el camino sigue con
  * `'operands', k, 'items', l`, y termina en `from | to | id` (Mensaje) o `separator` (operando).
  */
-function deInteraccion({ interacciones }: DatosDelUbicador, [i, campo, ...resto]: Ruta): SitioDeTexto | null {
+function deInteraccion({ interacciones }: DatosDelUbicador, [i, campo, ...resto]: Ruta): TextSite | null {
   const interaccion = interacciones[i as number];
   if (interaccion === undefined) return null;
   if (campo === 'items') {
@@ -114,14 +114,14 @@ function deInteraccion({ interacciones }: DatosDelUbicador, [i, campo, ...resto]
 }
 
 /** Valor de la propiedad `clave` (`icon` o `color`) del `i`-esimo Tipo de nodo. */
-function deTipo({ tipos, conSintaxisRota }: DatosDelUbicador, [i, clave]: Ruta): SitioDeTexto | null {
+function deTipo({ tipos, conSintaxisRota }: DatosDelUbicador, [i, clave]: Ruta): TextSite | null {
   const tipo = tipos[i as number];
   const prop = tipo?.ast.props.find((candidata) => candidata.key === clave);
   if (tipo === undefined || prop === undefined || conSintaxisRota.has(tipo.archivo)) return null;
   return sitio(tipo.archivo, rangoDe(prop, 'value'));
 }
 
-function deVista(datos: DatosDelUbicador, indice: number, ruta: Ruta): SitioDeTexto | null {
+function deVista(datos: DatosDelUbicador, indice: number, ruta: Ruta): TextSite | null {
   const vista = datos.vistas[indice];
   if (vista === undefined || datos.conSintaxisRota.has(vista.archivo)) return null;
   const { archivo, ast } = vista;

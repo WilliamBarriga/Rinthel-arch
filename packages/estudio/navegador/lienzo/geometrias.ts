@@ -3,7 +3,7 @@
  * estado sin `cambio`) no pide nada. Tras un cambio de `estructura` o una version saltada, descarta lo pedido y pide
  * la Vista activa; mientras llega se dibuja el estado anterior. Una Geometria malformada se reporta en `errores`.
  */
-import type { FuenteCanonica, GeometriaCacheada } from 'canonico';
+import type { CanonicalForm, CachedGeometry } from 'canonical';
 
 import type { EstadoDeDev } from '../../src/protocolo';
 
@@ -11,15 +11,15 @@ import type { LecturaDeGeometria } from '../cliente';
 
 /** `geometrias`: las que ya llegaron para la estructura del estado. */
 export interface Dibujable {
-  estado: EstadoDeDev & { fuente: FuenteCanonica };
-  geometrias: Readonly<Record<string, GeometriaCacheada>>;
+  estado: EstadoDeDev & { fuente: CanonicalForm };
+  geometrias: Readonly<Record<string, CachedGeometry>>;
   errores: readonly string[];
 }
 
 export interface DependenciasDeGeometrias {
   pedir: (vista: string) => Promise<LecturaDeGeometria>;
   /** Vista activa antes de que la pagina dibuje (la del hash de URL). */
-  vistaInicial: (fuente: FuenteCanonica) => string | undefined;
+  vistaInicial: (fuente: CanonicalForm) => string | undefined;
 }
 
 export interface GeometriasDeDev {
@@ -31,7 +31,7 @@ export interface GeometriasDeDev {
   suscribir(aviso: () => void): () => void;
 }
 
-type ConFuente = EstadoDeDev & { fuente: FuenteCanonica };
+type ConFuente = EstadoDeDev & { fuente: CanonicalForm };
 
 export function crearGeometriasDeDev({ pedir, vistaInicial }: DependenciasDeGeometrias): GeometriasDeDev {
   const avisos = new Set<() => void>();
@@ -41,7 +41,7 @@ export function crearGeometriasDeDev({ pedir, vistaInicial }: DependenciasDeGeom
   let esperando: { estado: ConFuente; vista: string } | undefined;
   let activa: string | undefined;
   /** Se reemplaza en cada cambio de estructura; lo que llegue tarde a la ronda vieja se descarta. */
-  let ronda = { pedidas: new Set<string>(), geometrias: {} as Record<string, GeometriaCacheada>, errores: [] as string[] };
+  let ronda = { pedidas: new Set<string>(), geometrias: {} as Record<string, CachedGeometry>, errores: [] as string[] };
 
   const avisar = (): void => {
     for (const aviso of avisos) aviso();

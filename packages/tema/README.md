@@ -13,7 +13,7 @@ Catalogo de Primitivas y Slots, esquema del Tema resuelto y Estilo resuelto (Met
 - No mide texto en el navegador ni decide si un aviso bloquea: eso es de `shell` y `sesion`.
 
 ## Depende de
-`canonico` (tipos y constantes del Modelo, `CODIGOS` y `candidatosCercanos`). Dependencia externa: `zod`.
+`canonical` (tipos y constantes del Modelo, `CODES` y `nearestCandidates`). Dependencia externa: `zod`.
 
 ## Archivo de entrada
 `packages/tema/src/index.ts` (la cabecera documenta la interfaz completa).

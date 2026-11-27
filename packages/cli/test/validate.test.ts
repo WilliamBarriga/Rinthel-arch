@@ -11,7 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { salidaDeValidateSchema } from 'canonico';
+import { validateOutputSchema } from 'canonical';
 import { run } from 'cli';
 
 const fixtures = join(import.meta.dirname, 'fixtures');
@@ -34,7 +34,7 @@ describe('validate', () => {
     const resultado = await run(['validate', '--workspace', join(fixtures, 'con-errores'), '--json']);
 
     expect(resultado.exitCode).toBe(1);
-    const salida = salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
+    const salida = validateOutputSchema.parse(JSON.parse(resultado.stdout));
     expect(salida.ok).toBe(false);
     expect(salida.summary).toEqual({ errors: 2, warnings: 0, truncated: false });
     expect(salida.issues.map((i) => [i.file, i.line, i.column, i.code])).toEqual([
@@ -69,7 +69,7 @@ theme otro extends neutral { node { layer fill { color fram } } }
     const resultado = await run(['validate', '--workspace', join(fixtures, 'arista-colgante'), '--json']);
 
     expect(resultado.exitCode).toBe(1);
-    const salida = salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
+    const salida = validateOutputSchema.parse(JSON.parse(resultado.stdout));
     expect(salida.issues).toHaveLength(1);
     expect(salida.issues[0]).toMatchObject({
       code: 'dangling-edge',
@@ -91,7 +91,7 @@ theme otro extends neutral { node { layer fill { color fram } } }
     );
 
     expect(resultado.exitCode).toBe(1);
-    const salida = salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
+    const salida = validateOutputSchema.parse(JSON.parse(resultado.stdout));
     expect(salida.issues.map((i) => [i.line, i.column, i.code])).toEqual([
       [9, 23, 'unknown-attribute'],
     ]);
@@ -205,7 +205,7 @@ describe('validate: bucle validate/fix', () => {
 
   async function validar(raiz: string) {
     const resultado = await run(['validate', '--workspace', raiz, '--json']);
-    return salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
+    return validateOutputSchema.parse(JSON.parse(resultado.stdout));
   }
 
   it('aplicar el fix al texto hace desaparecer el issue al revalidar, sin que validate escriba', async () => {
@@ -276,7 +276,7 @@ view v {
       const resultado = await run(['validate', '--workspace', workspace, '--json']);
 
       expect(resultado.exitCode).toBe(0);
-      const salida = salidaDeValidateSchema.parse(JSON.parse(resultado.stdout));
+      const salida = validateOutputSchema.parse(JSON.parse(resultado.stdout));
       expect(salida.ok).toBe(true);
       expect(salida.summary).toEqual({ errors: 0, warnings: 1, truncated: false });
       expect(salida.issues).toEqual([

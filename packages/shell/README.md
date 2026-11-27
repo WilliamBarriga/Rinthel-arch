@@ -13,7 +13,7 @@ Capa interactiva en React sobre `render`: pan/zoom, Seleccion, navegacion entre 
 - No define el CLI ni sirve archivos: eso es de `cli`.
 
 ## Depende de
-`canonico`, `tema`, `layout`, `sesion` y `render`. Dependencias externas: `d3-selection`, `d3-zoom`; `react` es peer.
+`canonical`, `tema`, `layout`, `sesion` y `render`. Dependencias externas: `d3-selection`, `d3-zoom`; `react` es peer.
 
 ## Archivo de entrada
 `packages/shell/src/index.ts` (la cabecera documenta la interfaz publica y los props).

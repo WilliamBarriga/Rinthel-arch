@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import type { ReactElement } from 'react';
 
-import type { Issue } from 'canonico';
+import type { Issue } from 'canonical';
 
 /** Issue que muestra el visor: con `href`, su `archivo:linea` enlaza al editor (en `dev`, `vscode://file/...`). */
 export type IssueDelVisor = Issue & { href?: string };

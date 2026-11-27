@@ -1,5 +1,5 @@
 /** Estilo resuelto: Metricas (lo que mide `layout`) y pintura (colores ya como valor), separadas para que cambiar solo la pintura no relayoutee. */
-import type { Tema } from 'canonico';
+import type { Theme } from 'canonical';
 
 import type { Animacion, Efecto, Transicion } from './animacion';
 import { pilaDeFuente, resolverFuentes } from './fuentes';
@@ -375,7 +375,7 @@ function pinturaDeSecuencia(tema: TemaResuelto, variable: string | undefined, pi
   };
 }
 
-export function estiloResuelto(tema: Tema, opciones: OpcionesDeEstilo): EstiloResuelto {
+export function estiloResuelto(tema: Theme, opciones: OpcionesDeEstilo): EstiloResuelto {
   const resuelto = temaParaDiagrama(resolverTema(tema), opciones.diagrama);
   const variable = opciones.colorEnVariable;
   const pinturaDe = (elemento: ElementoDeTema, tipo: string | undefined, color: string | undefined, colapsado = false): PinturaDeNodo => {

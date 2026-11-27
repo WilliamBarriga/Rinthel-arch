@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { FuenteCanonica } from 'canonico';
+import type { CanonicalForm } from 'canonical';
 import { abrirSesion, diferenciar } from 'sesion';
 
 import type { DiferenciaDeDev, ElementoDeDiferenciaDeDev } from '../src/protocolo';
@@ -44,7 +44,7 @@ theme claro extends neutral {
 }
 `;
 
-const fuente: FuenteCanonica = abrirSesion({ 'main.dg': DSL }).fuente!;
+const fuente: CanonicalForm = abrirSesion({ 'main.dg': DSL }).fuente!;
 
 const nodo = (id: string): ElementoDeDiferenciaDeDev => ({ kind: 'node', id });
 

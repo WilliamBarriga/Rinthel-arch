@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveView } from 'canonico';
-import type { Nodo, VistaDeSecuencia } from 'canonico';
+import { resolveView } from 'canonical';
+import type { Node, SequenceView } from 'canonical';
 import { compile } from 'dsl';
 
 import { generarSecuencia, generarWorkspace } from '../bench/generador';
 
-const contar = (nodos: readonly Nodo[]): number => nodos.reduce((suma, nodo) => suma + 1 + contar(nodo.children), 0);
-const profundidad = (nodos: readonly Nodo[]): number => nodos.reduce((max, nodo) => Math.max(max, 1 + profundidad(nodo.children)), 0);
+const contar = (nodos: readonly Node[]): number => nodos.reduce((suma, nodo) => suma + 1 + contar(nodo.children), 0);
+const profundidad = (nodos: readonly Node[]): number => nodos.reduce((max, nodo) => Math.max(max, 1 + profundidad(nodo.children)), 0);
 
 describe('generarWorkspace', () => {
   it.each([1, 10, 137, 1000])('compila sin issues y tiene exactamente %i Nodos', (nodos) => {
@@ -48,15 +48,15 @@ describe('generarSecuencia', () => {
     const { issues, canonico } = generar(mensajes);
 
     expect(issues).toEqual([]);
-    const vista = resolveView(canonico!, 'secuencia') as VistaDeSecuencia;
+    const vista = resolveView(canonico!, 'secuencia') as SequenceView;
     expect(vista.interaction.messages).toHaveLength(mensajes);
   });
 
   it('tiene 50 Lifelines y Fragmentos anidados tres niveles', () => {
-    const vista = resolveView(generar(1000).canonico!, 'secuencia') as VistaDeSecuencia;
+    const vista = resolveView(generar(1000).canonico!, 'secuencia') as SequenceView;
 
     expect(vista.nodes).toHaveLength(50);
-    const maxima = Math.max(...vista.interaction.messages.map((m) => m.ambito?.length ?? 0));
+    const maxima = Math.max(...vista.interaction.messages.map((m) => m.scope?.length ?? 0));
     expect(maxima).toBe(3);
   });
 
