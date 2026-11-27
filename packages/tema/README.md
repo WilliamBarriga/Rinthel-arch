@@ -10,7 +10,7 @@ Catalog of Primitives and Slots, schema of the resolved Theme and Resolved style
 ## What it does not do
 - Does not read nor compile the DSL text of a Theme: that is `dsl`.
 - Does not compute positions nor draw: that is `layout` and `render`.
-- Does not measure text in the browser nor decide whether a warning blocks: that is `shell` and `sesion`.
+- Does not measure text in the browser nor decide whether a warning blocks: that is `shell` and `session`.
 
 ## Depends on
 `canonical` (Model types and constants, `CODES` and `nearestCandidates`). External dependency: `zod`.

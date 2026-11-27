@@ -122,8 +122,8 @@ async function skill(
   const abierta = abrirSesionDe(leer, opciones.workspace);
   if ('fallo' in abierta) return abierta.fallo;
   const { sesion } = abierta;
-  if (sesion.fuente === undefined) return { exitCode: 1, stdout: await textoDeIssues(sesion), stderr: '' };
-  const texto = generarSkill(sesion.fuente);
+  if (sesion.source === undefined) return { exitCode: 1, stdout: await textoDeIssues(sesion), stderr: '' };
+  const texto = generarSkill(sesion.source);
   if (opciones.out === undefined) return { exitCode: 0, stdout: texto, stderr: '' };
   try {
     escribirArchivo(opciones.out, texto);
@@ -148,15 +148,15 @@ async function ejecutar(
 
   let issues;
   let archivosDeSalida: Record<string, string> = {};
-  if (sesion.fuente !== undefined && tema !== undefined && !sesion.fuente.themes.some(({ name }) => name === tema)) {
-    const disponibles = sesion.fuente.themes.map(({ name }) => name).join(', ');
+  if (sesion.source !== undefined && tema !== undefined && !sesion.source.themes.some(({ name }) => name === tema)) {
+    const disponibles = sesion.source.themes.map(({ name }) => name).join(', ');
     return uso(`Theme '${tema}' is not declared. Available: ${disponibles}`);
   }
   try {
     if (comando === 'build') {
-      ({ archivos: archivosDeSalida, issues } = await sesion.construir());
+      ({ files: archivosDeSalida, issues } = await sesion.build());
     } else {
-      issues = await sesion.diagnosticar();
+      issues = await sesion.diagnose();
     }
   } catch (error) {
     return uso(`Internal error while computing the geometry: ${(error as Error).message}`);

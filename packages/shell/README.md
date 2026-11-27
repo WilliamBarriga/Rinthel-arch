@@ -9,11 +9,11 @@ Interactive React layer over `render`: pan/zoom, Selection, navigation between V
 
 ## What it does not do
 - Does not draw SVG nor compute positions: that is `render` and `layout`.
-- Does not read nor write the DSL: pure editing is `sesion`'s.
+- Does not read nor write the DSL: pure editing is `session`'s.
 - Does not define the CLI nor serve files: that is `cli`.
 
 ## Depends on
-`canonical`, `tema`, `layout`, `sesion` and `render`. External dependencies: `d3-selection`, `d3-zoom`; `react` is a peer.
+`canonical`, `tema`, `layout`, `session` and `render`. External dependencies: `d3-selection`, `d3-zoom`; `react` is a peer.
 
 ## Entry file
 `packages/shell/src/index.ts` (the header documents the public interface and the props).

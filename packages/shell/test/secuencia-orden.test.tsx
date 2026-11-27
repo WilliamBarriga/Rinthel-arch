@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { layoutView } from 'layout';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout, VistaInteractivaProps } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
@@ -32,7 +32,7 @@ view cerrada { type sequence
  interaction i
  depth 1 }
 `;
-const fuente = abrirSesion({ 'main.dg': texto }).fuente!;
+const fuente = openSession({ 'main.dg': texto }).source!;
 const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
 const camara = { x: 0, y: 0, width: 1200, height: 800 };
 

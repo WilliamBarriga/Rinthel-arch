@@ -175,7 +175,7 @@ Lifeline header (Node entry with its `diagram sequence` patch), `activation.widt
 
 ## Layout and Geometry
 
-- **A single entry**: `layoutView` / `layoutConMetricas` choose the algorithm by `vista.type`; `sesion`, `cli`, `shell` and the Worker do not change. Sequence runs through the same adapter (Worker in the shell, Node in the CLI).
+- **A single entry**: `layoutView` / `layoutConMetricas` choose the algorithm by `vista.type`; `session`, `cli`, `shell` and the Worker do not change. Sequence runs through the same adapter (Worker in the shell, Node in the CLI).
 - **Geometry**: union discriminated by `kind`, `grafo` (architecture, flow, ER) or `secuencia`. Both share `nodes` (in sequence, the Lifeline headers), `width` and `height`, so `indiceDeGeometria`, camera and morph keep working. `secuencia` adds Lifelines (x, start y, end y, destroyed), activations, Messages (by index path, with points and label box), Fragments (frame, tab, guards, dividers) and Notes. `render` switches on `kind` and does not measure.
 - **ER**: the architecture ELK path (`layered`, `RIGHT`, orthogonal) with the post-ELK adjustment of the port to the Attribute's row, plus a new guarantee: the last segment of every Edge into a table is horizontal and is at least as long as the crow's foot marker (without it the foot rides on the bend). ELK ports per row (`FIXED_POS` E/W) discarded; reopened only for unacceptable crossings or overlaps.
 - **Sequence**: own algorithm without ELK, deterministic and synchronous (`async` signature for uniformity).

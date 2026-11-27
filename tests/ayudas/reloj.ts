@@ -1,32 +1,32 @@
 /**
- * Reloj falso para el Workspace vivo y el Registro de actividad vivo de `sesion` (unica copia): las tareas
- * programadas solo corren al `avanzar`. Cumple `Reloj` de `sesion` por forma, sin importarlo.
+ * Fake clock for the Live workspace and the live Activity log of `session` (single copy): scheduled tasks only run
+ * on `advance`. It satisfies the `Clock` of `session` by shape, without importing it.
  */
-export interface RelojFalso {
-  programar(fn: () => void, ms: number): () => void;
-  /** Avanza el tiempo y corre las tareas vencidas, en orden de programacion. */
-  avanzar(ms: number): void;
-  /** Tareas programadas que aun no corrieron. */
-  pendientes(): number;
+export interface FakeClock {
+  schedule(fn: () => void, ms: number): () => void;
+  /** Advances time and runs the due tasks, in scheduling order. */
+  advance(ms: number): void;
+  /** Scheduled tasks that have not run yet. */
+  pending(): number;
 }
 
-export function relojFalso(): RelojFalso {
-  let ahora = 0;
-  let tareas: { en: number; fn: () => void }[] = [];
+export function fakeClock(): FakeClock {
+  let now = 0;
+  let tasks: { at: number; fn: () => void }[] = [];
   return {
-    programar(fn, ms) {
-      const tarea = { en: ahora + ms, fn };
-      tareas.push(tarea);
+    schedule(fn, ms) {
+      const task = { at: now + ms, fn };
+      tasks.push(task);
       return () => {
-        tareas = tareas.filter((t) => t !== tarea);
+        tasks = tasks.filter((t) => t !== task);
       };
     },
-    avanzar(ms) {
-      ahora += ms;
-      const vencidas = tareas.filter((t) => t.en <= ahora);
-      tareas = tareas.filter((t) => t.en > ahora);
-      for (const t of vencidas) t.fn();
+    advance(ms) {
+      now += ms;
+      const due = tasks.filter((t) => t.at <= now);
+      tasks = tasks.filter((t) => t.at > now);
+      for (const t of due) t.fn();
     },
-    pendientes: () => tareas.length,
+    pending: () => tasks.length,
   };
 }

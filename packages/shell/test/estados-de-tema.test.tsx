@@ -2,7 +2,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { layoutView } from 'layout';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 
@@ -13,7 +13,7 @@ const NODO = `  node {\n    layer forma rect { radius 6 }\n    layer relleno sol
 const layout: AdaptadorDeLayout = (vista, tema, medidas) => layoutView(vista, tema, { ...(medidas !== undefined && { medidas }) });
 
 const montar = async (texto: string, vista: string, esperar: string, selected: string) => {
-  const fuente = abrirSesion({ 'main.dg': texto }).fuente!;
+  const fuente = openSession({ 'main.dg': texto }).source!;
   const r = render(
     <VistaInteractiva source={fuente} view={vista} theme={fuente.themes.find((t) => t.name === 't')!} layout={layout} width={1200} height={900} selected={selected} />,
   );
@@ -89,7 +89,7 @@ describe('Estados del Tema pintados en ER', () => {
     const fila = (a: string) => container.querySelector(`[data-attribute="orders#${a}"]`)!.getAttribute('style');
     expect(fila('id')).toMatch(/#16a34a|rgb\(22, 163, 74\)/);
     expect(fila('email')).toMatch(/#fefce8|rgb\(254, 252, 232\)/);
-    expect((await sesion.diagnosticar()).filter((i) => i.severity === 'error')).toEqual([]);
+    expect((await sesion.diagnose()).filter((i) => i.severity === 'error')).toEqual([]);
   });
 
   it('el size de row name cambia el tamano pintado del nombre', async () => {
@@ -101,8 +101,8 @@ describe('Estados del Tema pintados en ER', () => {
 });
 
 async function montarEr(texto: string, selected: string) {
-  const sesion = abrirSesion({ 'main.dg': texto });
-  const fuente = sesion.fuente!;
+  const sesion = openSession({ 'main.dg': texto });
+  const fuente = sesion.source!;
   const r = render(<VistaInteractiva source={fuente} view="tablas" theme={fuente.themes.find((t) => t.name === 't')!} layout={layout} width={900} height={600} selected={selected} />);
   await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-id="orders"]')).not.toBeNull(), { timeout: 15000 });
   return { ...r, sesion };

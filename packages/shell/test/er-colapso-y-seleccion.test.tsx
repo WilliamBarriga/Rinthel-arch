@@ -3,8 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { edgeId } from 'canonical';
 import { layoutView } from 'layout';
-import { abrirSesion, crearHistorial, deshacer, editarEnHistorial } from 'sesion';
-import type { Historial, Intencion } from 'sesion';
+import { openSession, createUndoHistory, undo, editInHistory } from 'session';
+import type { UndoHistory, Intent } from 'session';
 import { VistaInteractiva } from 'shell';
 import { TEMA_NEUTRO } from 'tema';
 import { posicionDe, pulsarEn } from './ayudas';
@@ -37,7 +37,7 @@ view abierta { type er  include **  }
 `;
 
 const montar = async (vista: string) => {
-  const fuente = abrirSesion({ 'main.dg': ER }).fuente!;
+  const fuente = openSession({ 'main.dg': ER }).source!;
   const r = render(<VistaInteractiva source={fuente} view={vista} theme={TEMA_NEUTRO} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} />);
   await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-id="clientes"]')).not.toBeNull(), { timeout: 8000 });
   return { ...r, fuente };
@@ -86,7 +86,7 @@ view p { type er  include **  steps { step "Uno" { show a, b, edge b -> a }  ste
 `;
 
 const montarTablas = async (extra: Partial<Parameters<typeof VistaInteractiva>[0]> = {}) => {
-  const fuente = abrirSesion({ 'main.dg': TABLAS }).fuente!;
+  const fuente = openSession({ 'main.dg': TABLAS }).source!;
   const r = render(<VistaInteractiva source={fuente} view="v" theme={TEMA_NEUTRO} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} {...extra} />);
   await waitFor(() => expect(r.container.querySelector('.rd-vista[data-layout="listo"] [data-id="a"]')).not.toBeNull(), { timeout: 8000 });
   return r;
@@ -115,16 +115,16 @@ describe('ER: seleccion', () => {
 
 describe('ER: arrastrar una tabla', () => {
   it('escribe un Pin con move-pin y se deshace', async () => {
-    let historial: Historial = crearHistorial({ 'main.dg': TABLAS });
+    let historial: UndoHistory = createUndoHistory({ 'main.dg': TABLAS });
     const control = {
-      archivos: () => historial.archivos,
-      aplicar(i: Intencion) {
-        const r = editarEnHistorial(historial, i);
-        if (r.ok) historial = r.historial;
+      archivos: () => historial.files,
+      aplicar(i: Intent) {
+        const r = editInHistory(historial, i);
+        if (r.ok) historial = r.history;
         return r;
       },
       deshacer() {
-        const h = deshacer(historial);
+        const h = undo(historial);
         if (h !== undefined) historial = h;
         return h !== undefined;
       },
@@ -166,7 +166,7 @@ describe('ER: arrastrar una tabla', () => {
 
 describe('ER: Pasos', () => {
   it('un Paso revela tablas y FK como en arquitectura', async () => {
-    const fuente = abrirSesion({ 'main.dg': TABLAS }).fuente!;
+    const fuente = openSession({ 'main.dg': TABLAS }).source!;
     const { container } = render(<VistaInteractiva source={fuente} view="p" theme={TEMA_NEUTRO} layout={(v, t, m) => layoutView(v, t, { medidas: m })} width={900} height={600} morphMs={0} />);
     await waitFor(() => expect(container.querySelector('.rd-vista[data-layout="listo"] [data-id="a"]')).not.toBeNull(), { timeout: 8000 });
     const opacidad = (id: string) => {

@@ -46,7 +46,7 @@ export interface OpcionesDeMontaje {
 
 export async function montarEstudio(propios: Record<string, string>, { hash = '', plataforma = 'otras', temas, actividad, codigo, confirmar = () => false, envolverFetch = (f) => f, envolverEventos = (e) => e }: OpcionesDeMontaje = {}): Promise<{ dev: DevEnMemoria; contenedor: HTMLElement }> {
   window.history.replaceState(null, '', `/${hash}`);
-  const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }), ...(actividad !== undefined && { actividad }), ...(codigo !== undefined && { codigo }) });
+  const dev = await devEnMemoria({ own: propios, ...(temas !== undefined && { themes: temas }), ...(actividad !== undefined && { activity: actividad }), ...(codigo !== undefined && { codigo }) });
   const { container } = render(<Estudio fetch={envolverFetch(dev.fetch)} eventos={envolverEventos(dev.eventos)} hash={hashDelNavegador(window)} layout={layoutReal} confirmar={confirmar} plataforma={plataforma} />);
   return { dev, contenedor: container };
 }
@@ -57,7 +57,7 @@ export async function montarEstudio(propios: Record<string, string>, { hash = ''
  */
 export async function montarExportado(propios: Record<string, string>, { hash = '', temas }: Pick<OpcionesDeMontaje, 'hash' | 'temas'> = {}): Promise<{ datos: DatosDeExportado; contenedor: HTMLElement }> {
   window.history.replaceState(null, '', `/${hash}`);
-  const dev = await devEnMemoria({ propios, ...(temas !== undefined && { temas }) });
+  const dev = await devEnMemoria({ own: propios, ...(temas !== undefined && { themes: temas }) });
   const datos = await capturarExportado({ fetch: dev.fetch, leerFuente: () => undefined });
   await dev.cerrar();
   const { container } = render(<Estudio {...propsDeExportado(datos)} hash={hashDelNavegador(window)} layout={layoutReal} plataforma="otras" />);

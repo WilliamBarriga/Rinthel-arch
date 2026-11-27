@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { CanonicalForm } from 'canonical';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 
 import { aHashDeEstudio, deHashDeEstudio, hashDeEstudio } from '../navegador/lienzo/hash-de-estudio';
 import { indiceDeVistas } from '../navegador/vistas/indice';
@@ -44,9 +44,9 @@ view otra {
 `;
 
 const fuente = (): CanonicalForm => {
-  const sesion = abrirSesion({ 'main.dg': DSL });
-  if (sesion.fuente === undefined) throw new Error('la Fuente de prueba no compila');
-  return sesion.fuente;
+  const sesion = openSession({ 'main.dg': DSL });
+  if (sesion.source === undefined) throw new Error('la Fuente de prueba no compila');
+  return sesion.source;
 };
 
 describe('indice de Vistas', () => {

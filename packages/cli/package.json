@@ -30,7 +30,7 @@
     "estudio": "workspace:*",
     "layout": "workspace:*",
     "scanner": "workspace:*",
-    "sesion": "workspace:*",
+    "session": "workspace:*",
     "tema": "workspace:*"
   },
   "bin": {

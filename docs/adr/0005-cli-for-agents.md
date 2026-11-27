@@ -44,7 +44,7 @@ Human and agent must be able to work comfortably, alone or together. Moving a Pi
 
 ### Common core
 
-A single write gate `aplicarAlWorkspace(puerto, aplicable, visto?)` in the `sesion` package (applying `{ file, range, replacement }` edits over the file map is internal, pure and does not touch disk; only the gate writes through the port). It has two entry points:
+A single write gate `applyToWorkspace(port, applicable, seen?)` in the `session` package (applying `{ file, range, replacement }` edits over the file map is internal, pure and does not touch disk; only the gate writes through the port). It has two entry points:
 
 - **Shell** (`dev`): edit endpoint, at the human's request when making a gesture.
 - **CLI**: `diagrams edit` with `--json`, for the agent. Same exit codes as `validate` (0 correct, 1 edit rejected or invalid, 2 usage or internal failure) and its own `contractVersion`, like `inspect`. It only writes edits the caller asked for; never as a side effect of validating.
@@ -127,7 +127,7 @@ The CLI writes an append-only log per Workspace, `resolve(--workspace)/.diagrams
 
 `validate` and `inspect` still do not touch the DSL or the outputs of `build`; their only new side effect is this trail. On by default; `DIAGRAMS_ACTIVITY=0` turns it off. A failure writing the log is ignored: it never changes stdout, stderr or the exit code.
 
-The emitter is a single point of the CLI (a wrapper of `run` or an injectable dependency), not each command; `sesion` stays pure.
+The emitter is a single point of the CLI (a wrapper of `run` or an injectable dependency), not each command; `session` stays pure.
 
 ### Event
 

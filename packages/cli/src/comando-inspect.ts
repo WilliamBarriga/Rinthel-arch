@@ -66,11 +66,11 @@ async function consultar(
   const abierta = abrirSesionDe(leer, workspace, carpetaDeTemas);
   if ('fallo' in abierta) return abierta.fallo;
   const { sesion } = abierta;
-  if (sesion.fuente === undefined) {
+  if (sesion.source === undefined) {
     return fallo(1, `The Workspace has errors; fix them with 'validate' before querying.\n${(await textoDeIssues(sesion)).trimEnd()}`);
   }
   const respuesta = consultarInspect(sesion, { comando: comando as InspectCommand, argumento: argumento ?? '', catalogo: catalogo === true, ...(tipo !== undefined && { tipo }), ...(estado !== undefined && { estado }), ...(diagrama !== undefined && { diagrama }) });
   if (respuesta === undefined) return fallo(1, 'The Workspace has errors; fix them with \'validate\' before querying.');
-  if ('noEncontrado' in respuesta) return fallo(1, respuesta.noEncontrado);
-  return { exitCode: 0, stdout: json ? comoJson(respuesta.salida) : textoLegible(respuesta.salida), stderr: '' };
+  if ('notFound' in respuesta) return fallo(1, respuesta.notFound);
+  return { exitCode: 0, stdout: json ? comoJson(respuesta.output) : textoLegible(respuesta.output), stderr: '' };
 }

@@ -2,7 +2,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { layoutView } from 'layout';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 
 afterEach(cleanup);
@@ -30,9 +30,9 @@ const BASE = `  node { layer forma rect  layer relleno solid { color papel }  la
   edge { layer linea line { color tinta  width 1 }  end arrow { size 8 } }`;
 
 const montar = async (bloques: string) => {
-  const sesion = abrirSesion({ 'main.dg': `${MODELO}theme t {\n  ${PALETA}\n${BASE}\n${bloques}\n}\n` });
-  expect((await sesion.diagnosticar()).filter((i) => i.severity === 'error')).toEqual([]);
-  const fuente = sesion.fuente!;
+  const sesion = openSession({ 'main.dg': `${MODELO}theme t {\n  ${PALETA}\n${BASE}\n${bloques}\n}\n` });
+  expect((await sesion.diagnose()).filter((i) => i.severity === 'error')).toEqual([]);
+  const fuente = sesion.source!;
   const resultado = render(
     <VistaInteractiva source={fuente} view="v" theme={fuente.themes.find((t) => t.name === 't')!} layout={(vista, tema, medidas) => layoutView(vista, tema, { medidas })} width={1000} height={700} />,
   );

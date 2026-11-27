@@ -2,7 +2,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { layoutView } from 'layout';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 
 afterEach(cleanup);
@@ -35,9 +35,9 @@ view v { type sequence  interaction i  theme t }
 `;
 
 const montar = async (dsl: string, vista: string, esperar: string) => {
-  const sesion = abrirSesion({ "main.dg": dsl });
-  if (sesion.fuente === undefined) throw new Error(JSON.stringify(await sesion.diagnosticar()).slice(0, 1500));
-  const fuente = sesion.fuente;
+  const sesion = openSession({ "main.dg": dsl });
+  if (sesion.source === undefined) throw new Error(JSON.stringify(await sesion.diagnose()).slice(0, 1500));
+  const fuente = sesion.source;
   const resultado = render(
     <VistaInteractiva source={fuente} view={vista} theme={fuente.themes.find((t) => t.name === 't')!} layout={(v, t, medidas) => layoutView(v, t, { medidas })} width={900} height={600} />,
   );

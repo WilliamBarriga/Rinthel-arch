@@ -1,5 +1,5 @@
 /**
- * Comando `edit`: unica escritura explicita sobre el DSL; escribe solo por `aplicarAlWorkspace` y nunca al validar.
+ * Comando `edit`: unica escritura explicita sobre el DSL; escribe solo por `applyToWorkspace` y nunca al validar.
  * Formas: Pin (`--view --node --x --y`), `--intent '<json>'` o `--edits '<json>'` (rangos 1-based, fin excluido).
  * `--hash <archivo>=<hash>` es el `visto` de la Intencion; cada edicion lleva su `hash` (o toma `--hash`; sin ninguno,
  * el del disco al leer). Un hash viejo rechaza todo, sin escritura parcial.
@@ -10,8 +10,8 @@ import type { EditOutput } from 'canonical';
 import type { ArchivosDelWorkspace } from 'dsl';
 import { existsSync, renameSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { aplicarAlWorkspace, hashDeContenido } from 'sesion';
-import type { Aplicable } from 'sesion';
+import { applyToWorkspace, contentHash } from 'session';
+import type { Applicable } from 'session';
 
 import { leerConTemas, uso } from './sesion-cli';
 import type { ResultadoDeEjecucion } from './sesion-cli';
@@ -80,10 +80,10 @@ export async function editar(
   } catch (error) {
     return uso(`Could not read the Workspace: ${(error as Error).message}`);
   }
-  const hashVigente = (file: string) => hashes.get(file) ?? hashDeContenido(archivos[file] ?? '');
+  const hashVigente = (file: string) => hashes.get(file) ?? contentHash(archivos[file] ?? '');
   const json = v.json === true;
 
-  let aplicable: Aplicable;
+  let aplicable: Applicable;
   if (v.edits !== undefined) {
     let pedidas;
     try {
@@ -123,12 +123,12 @@ export async function editar(
   const raiz = v.workspace;
   let resultado;
   try {
-    resultado = aplicarAlWorkspace(
+    resultado = applyToWorkspace(
       {
-        leer: () => ({ disco: archivos, propios }),
-        escribir: (f, texto) => escribirArchivo(destinoEnWorkspace(raiz, f), texto),
-        renombrar: (antigua, nueva) => renombrarRuta(destinoEnWorkspace(raiz, antigua), destinoEnWorkspace(raiz, nueva)),
-        existe: (ruta) => existeRuta(destinoEnWorkspace(raiz, ruta)),
+        read: () => ({ disk: archivos, own: propios }),
+        write: (f, texto) => escribirArchivo(destinoEnWorkspace(raiz, f), texto),
+        renamePath: (antigua, nueva) => renombrarRuta(destinoEnWorkspace(raiz, antigua), destinoEnWorkspace(raiz, nueva)),
+        exists: (ruta) => existeRuta(destinoEnWorkspace(raiz, ruta)),
       },
       aplicable,
       Object.fromEntries(hashes),
@@ -137,7 +137,7 @@ export async function editar(
     return conObjetivo(uso(`Could not write: ${(error as Error).message}`));
   }
   if (!resultado.ok) return conObjetivo(rechazado(resultado, json));
-  const { ediciones, cambiados, renombrados } = resultado;
+  const { edits: ediciones, changed: cambiados, renamed: renombrados } = resultado;
   // `files`: written files plus the new path of each rename.
   const tocados = [...new Set([...cambiados, ...renombrados.map((r) => r.rename)])].sort();
   const salida: EditOutput = editOutputSchema.parse({

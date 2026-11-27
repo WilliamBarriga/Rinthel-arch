@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ActivityEvent, CanonicalForm } from 'canonical';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 
 import { eventoDeActividad } from '../src/contrato';
 import { destinoDelObjetivo, marcaDelEvento, resumenDelEvento } from '../navegador/agente/actividad';
@@ -33,7 +33,7 @@ view solo-cache {
 }
 `;
 
-const fuente = abrirSesion({ 'main.dg': DSL }).fuente as CanonicalForm;
+const fuente = openSession({ 'main.dg': DSL }).source as CanonicalForm;
 
 const evento = (extra: Partial<ActivityEvent> = {}): ActivityEvent => eventoDeActividad(7, { args: [], ...extra });
 

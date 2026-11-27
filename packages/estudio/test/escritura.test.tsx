@@ -39,9 +39,9 @@ async function montarYEscribirFuera(antes: (dev: DevEnMemoria) => Promise<void> 
   const montado = await montarEstudio({ 'main.dg': DSL }, { hash: '#view=mapa', envolverEventos });
   await lienzoListo(montado.contenedor, 'mapa');
   await antes(montado.dev);
-  await waitFor(() => expect(montado.dev.workspace.texto('main.dg')).toBeDefined());
+  await waitFor(() => expect(montado.dev.workspace.text('main.dg')).toBeDefined());
   retenidos.activo = true;
-  montado.dev.editarFuera('main.dg', conCache(montado.dev.workspace.texto('main.dg')!));
+  montado.dev.editarFuera('main.dg', conCache(montado.dev.workspace.text('main.dg')!));
   await montado.dev.asentado();
   return montado;
 }
@@ -144,7 +144,7 @@ describe('Escritura ante un 409', () => {
     const { dev, contenedor } = await montarEstudio({ 'main.dg': DSL_SECUENCIA }, { hash: '#view=sec', envolverEventos });
     await waitFor(() => expect(contenedor.querySelector('.rd-vista[data-layout="listo"] [data-lifeline="db"]')).not.toBeNull(), { timeout: 15000 });
     retenidos.activo = true;
-    dev.editarFuera('main.dg', conCacheEnSecuencia(dev.workspace.texto('main.dg')!));
+    dev.editarFuera('main.dg', conCacheEnSecuencia(dev.workspace.text('main.dg')!));
     await dev.asentado();
 
     arrastrarCabecera(contenedor, 'api', 'db');
@@ -176,12 +176,12 @@ describe('Escritura ante un 409', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Issues' }));
     const boton = await screen.findByRole('button', { name: 'Apply fix for main.dg:8' });
     retenidos.activo = true;
-    dev.editarFuera('main.dg', `// agente\n${dev.workspace.texto('main.dg')!}`);
+    dev.editarFuera('main.dg', `// agente\n${dev.workspace.text('main.dg')!}`);
     await dev.asentado();
 
     fireEvent.click(boton);
 
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(`// agente\n${DSL}`));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(`// agente\n${DSL}`));
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

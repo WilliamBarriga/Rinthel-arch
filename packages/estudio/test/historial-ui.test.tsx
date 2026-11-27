@@ -43,21 +43,21 @@ describe('isla de Historial', () => {
   it('un clic salta a la entrada sin apilar: el futuro queda atenuado y se puede volver a el', async () => {
     const { dev } = await montarEstudio({ 'main.dg': DSL });
     await moverPin(dev, 'api', 10);
-    const conUno = dev.workspace.texto('main.dg');
+    const conUno = dev.workspace.text('main.dg');
     await moverPin(dev, 'db', 20);
-    const conDos = dev.workspace.texto('main.dg');
+    const conDos = dev.workspace.text('main.dg');
     const lista = await abrirHistorial();
 
     fireEvent.click(await within(lista).findByRole('button', { name: /move api in mapa/ }));
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(conUno));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(conUno));
     await waitFor(() => expect(boton(lista, /move api in mapa/).getAttribute('aria-current')).toBe('step'));
     expect(filas(lista)).toHaveLength(3);
     expect(filas(lista)[0]?.getAttribute('data-futuro')).toBe('true');
 
     fireEvent.click(boton(lista, /Start/));
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(DSL));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(DSL));
     fireEvent.click(boton(lista, /move db in mapa/));
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(conDos));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(conDos));
   });
 
   it('tras una escritura externa, las entradas que restaurarian el archivo quedan deshabilitadas con el motivo', async () => {
@@ -66,7 +66,7 @@ describe('isla de Historial', () => {
     const lista = await abrirHistorial();
     await waitFor(() => expect(filas(lista)).toHaveLength(2));
 
-    dev.editarFuera('main.dg', `${dev.workspace.texto('main.dg')}\n// fuera\n`);
+    dev.editarFuera('main.dg', `${dev.workspace.text('main.dg')}\n// fuera\n`);
     await waitFor(() => expect(boton(lista, /Start/).disabled).toBe(true));
     expect(filas(lista)[1]?.textContent).toMatch(/main\.dg.*changed outside dev/);
     expect(boton(lista, /move api in mapa/).disabled).toBe(false);
@@ -85,7 +85,7 @@ describe('isla de Historial', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Code' }));
     const caja = await screen.findByRole('textbox', { name: /^Code of main\.dg/ });
     const vista = EditorView.findFromDOM(caja)!;
-    await waitFor(() => expect(vista.state.doc.toString()).toBe(dev.workspace.texto('main.dg')));
+    await waitFor(() => expect(vista.state.doc.toString()).toBe(dev.workspace.text('main.dg')));
 
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     vista.dispatch({ changes: { from: vista.state.doc.length, insert: '// pendiente\n' }, userEvent: 'input.type' });
@@ -93,7 +93,7 @@ describe('isla de Historial', () => {
     vi.useRealTimers();
 
     await waitFor(() => expect(posts).toEqual(['/api/edit', '/api/historial/saltar']));
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(DSL));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(DSL));
     await waitFor(() => expect(boton(lista, /text of main\.dg/)).toBeDefined());
   });
 });

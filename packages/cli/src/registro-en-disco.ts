@@ -10,7 +10,7 @@
 import { appendFileSync, mkdirSync, readFileSync, renameSync, statSync, unwatchFile, watchFile } from 'node:fs';
 import { join } from 'node:path';
 
-import type { RegistroDeActividad } from 'sesion';
+import type { ActivityLog } from 'session';
 
 import { carpetaDeSalida } from './workspace';
 
@@ -38,17 +38,17 @@ export function anexarAlRegistro(raiz: string, linea: string): void {
 }
 
 /** El registro de `raiz` como lo espera el Workspace vivo, con un observador propio (el del Workspace ignora carpetas ocultas). */
-export function registroEnDisco(raiz: string): RegistroDeActividad {
+export function registroEnDisco(raiz: string): ActivityLog {
   const ruta = rutaDelRegistro(raiz);
   return {
-    leer() {
+    read() {
       try {
         return readFileSync(ruta, 'utf8');
       } catch {
         return undefined;
       }
     },
-    observar(alCambiar) {
+    watch(alCambiar) {
       const oyente = (): void => alCambiar();
       watchFile(ruta, { interval: INTERVALO_DE_SONDEO_MS, persistent: false }, oyente);
       return () => unwatchFile(ruta, oyente);

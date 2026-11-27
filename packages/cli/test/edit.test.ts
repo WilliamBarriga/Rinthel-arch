@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { EDIT_CONTRACT_VERSION, editOutputSchema } from 'canonical';
 import { run } from 'cli';
-import { hashDeContenido } from 'sesion';
+import { contentHash } from 'session';
 
 const DG = `specification { node servicio }
 model {
@@ -54,7 +54,7 @@ describe('edit pin', () => {
 
   it('acepta un hash vigente', async () => {
     const raiz = workspace();
-    const r = await run(['edit', '--workspace', raiz, ...pin('general', 'a', '1', '2'), '--hash', `main.dg=${hashDeContenido(DG)}`]);
+    const r = await run(['edit', '--workspace', raiz, ...pin('general', 'a', '1', '2'), '--hash', `main.dg=${contentHash(DG)}`]);
     expect(r.exitCode).toBe(0);
   });
 

@@ -36,7 +36,7 @@ describe('adaptador de compilacion de .tsx', () => {
     const resultado = compiladorDeCodigo(raiz).compilar();
 
     expect(resultado.issues).toEqual([]);
-    expect(Object.keys(resultado.componentes)).toEqual(['Aurora']);
+    expect(Object.keys(resultado.components)).toEqual(['Aurora']);
     const registro = cargarComponentes(resultado.bundle);
     expect(Object.keys(registro)).toEqual(['Aurora']);
     const html = renderToStaticMarkup(createElement(registro['Aurora']!, { id: 'api', parametros: { hue: 3 } } as never));
@@ -62,7 +62,7 @@ describe('adaptador de compilacion de .tsx', () => {
     const roto = compilador.compilar();
 
     expect(new Set(roto.issues.map((i) => i.code))).toEqual(new Set(['theme-code-compile']));
-    expect(Object.keys(roto.componentes)).toEqual(['Aurora']);
+    expect(Object.keys(roto.components)).toEqual(['Aurora']);
     const registro = cargarComponentes(roto.bundle);
     expect(renderToStaticMarkup(createElement(registro['Aurora']!, { id: 'x', parametros: { hue: 1 } } as never))).toBe('<i data-aurora="x" data-hue="1"></i>');
   });
@@ -76,8 +76,8 @@ describe('adaptador de compilacion de .tsx', () => {
   });
 
   it('un Workspace sin .tsx o inexistente no tiene componentes ni issues', () => {
-    expect(compiladorDeCodigo(workspace({ 'main.dg': '' })).compilar()).toMatchObject({ componentes: {}, issues: [] });
-    expect(compiladorDeCodigo('/no/existe/rinthel').compilar()).toMatchObject({ componentes: {}, issues: [] });
+    expect(compiladorDeCodigo(workspace({ 'main.dg': '' })).compilar()).toMatchObject({ components: {}, issues: [] });
+    expect(compiladorDeCodigo('/no/existe/rinthel').compilar()).toMatchObject({ components: {}, issues: [] });
   });
 
   it('un cambio en un .tsx se recompila y un Workspace igual reutiliza el resultado', () => {

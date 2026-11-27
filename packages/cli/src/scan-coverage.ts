@@ -49,7 +49,7 @@ export function findWorkspace(root: string, explicit: string | undefined): { pat
 export function coverageOf(draft: ScanDraft, workspace: string, ignores: (id: string) => boolean): Coverage | CoverageNotice {
   const opened = abrirSesionDe(leerWorkspace, workspace);
   if ('fallo' in opened) return { workspace, error: opened.fallo.stderr.trim() };
-  const model = opened.sesion.fuente?.model;
+  const model = opened.sesion.source?.model;
   if (model === undefined) return { workspace, error: `the Workspace does not compile; run diagrams validate --workspace ${workspace}` };
   return compare(draft, model, workspace, ignores);
 }

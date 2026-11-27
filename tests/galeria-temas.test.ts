@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveView } from 'canonical';
 import type { GraphView, SequenceView } from 'canonical';
 import { compile } from 'dsl';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { CATALOGO, ESTADOS, estiloResuelto, resolverTema } from 'tema';
 import type { TemaResuelto } from 'tema';
 
@@ -128,7 +128,7 @@ describe('galeria de Temas de ejemplo', () => {
   });
 
   it('los warnings de cada ejemplo son exactamente los declarados en su cabecera, y no hay otros', async () => {
-    const warnings = (await abrirSesion(archivos).diagnosticar()).filter((i) => i.severity === 'warning');
+    const warnings = (await openSession(archivos).diagnose()).filter((i) => i.severity === 'warning');
     const vistasDe = (nombre: string) => ['', '-reference', '-sequence', '-er'].map((sufijo) => `In View '${nombre}${sufijo}'`);
     const deTema = (nombre: string) => warnings.filter((i) => i.message.startsWith(`Theme '${nombre}'`) || vistasDe(nombre).some((v) => i.message.startsWith(v)));
     const lista = (nombre: string, linea: string): string[] => {
@@ -159,7 +159,7 @@ describe('galeria de Temas de ejemplo', () => {
 
   it('toda fuente que declara un Tema de la galeria tiene archivo en el Workspace', async () => {
     const archivosDeFuente = readdirSync(resolve(CARPETA_DE_TEMAS, 'fonts')).map((f) => `fonts/${f}`);
-    const faltantes = (await abrirSesion(archivos, { archivosDeFuente }).diagnosticar()).filter((i) => i.code === 'theme-font-missing');
+    const faltantes = (await openSession(archivos, { fontFiles: archivosDeFuente }).diagnose()).filter((i) => i.code === 'theme-font-missing');
     expect(faltantes.map((i) => i.message)).toEqual([]);
   });
 });

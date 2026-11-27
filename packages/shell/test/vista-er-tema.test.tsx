@@ -2,7 +2,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { layoutView } from 'layout';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 
 afterEach(cleanup);
@@ -27,8 +27,8 @@ const tema = (nodo: string, resto = ''): string =>
   `theme t {\n  ${PALETA}\n  node {\n    layer forma rect { radius 6 }\n    layer relleno solid { color papel }\n    layer borde border { color tinta width 1 }\n    slots { title attrs }\n${nodo}\n  }\n${resto}\n}\n`;
 
 const montar = async (dsl: string) => {
-  const sesion = abrirSesion({ 'main.dg': ER + dsl });
-  const fuente = sesion.fuente!;
+  const sesion = openSession({ 'main.dg': ER + dsl });
+  const fuente = sesion.source!;
   const resultado = render(
     <VistaInteractiva source={fuente} view="tablas" theme={fuente.themes.find((t) => t.name === 't')!} layout={(vista, tema, medidas) => layoutView(vista, tema, { medidas })} width={900} height={600} />,
   );

@@ -2,7 +2,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { layoutView } from 'layout';
-import { abrirSesion } from 'sesion';
+import { openSession } from 'session';
 import { VistaInteractiva } from 'shell';
 import type { AdaptadorDeLayout } from 'shell';
 import { pulsarNodo } from './ayudas';
@@ -27,7 +27,7 @@ view v { type sequence
  interaction checkout }
 `;
 
-const fuente = abrirSesion({ 'main.dg': texto }).fuente!;
+const fuente = openSession({ 'main.dg': texto }).source!;
 const layout: AdaptadorDeLayout = (vista, tema) => layoutView(vista, tema);
 
 describe('VistaInteractiva con una Vista de secuencia', () => {
@@ -77,7 +77,7 @@ view v { type sequence
 `;
 
   it('dibuja el marcador cross al final de la Lifeline destruida y ninguno en las demas', async () => {
-    const source = abrirSesion({ 'main.dg': ciclo }).fuente!;
+    const source = openSession({ 'main.dg': ciclo }).source!;
     const { container } = render(<VistaInteractiva source={source} view="v" theme={TEMA_NEUTRO} layout={layout} width={800} height={600} />);
     await waitFor(() => expect(container.querySelector('[data-message]')).not.toBeNull());
 

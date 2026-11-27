@@ -36,7 +36,7 @@
     "layout": "workspace:*",
     "playwright": "^1.64.0",
     "render": "workspace:*",
-    "sesion": "workspace:*",
+    "session": "workspace:*",
     "shell": "workspace:*",
     "tema": "workspace:*",
     "typescript": "^5.9.3",

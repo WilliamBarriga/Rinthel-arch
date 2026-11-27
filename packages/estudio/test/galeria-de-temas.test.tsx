@@ -67,7 +67,7 @@ describe('galeria de Temas', () => {
 
     await waitFor(() => expect(fondoDelLienzo(contenedor)).toBe('#405060'));
     expect(fondoOriginal).not.toBe('#405060');
-    expect(dev.workspace.texto('main.dg')).toBe(DSL);
+    expect(dev.workspace.text('main.dg')).toBe(DSL);
 
     fireEvent.click(within(ficha).getByRole('button', { name: 'Stop previewing' }));
     await waitFor(() => expect(fondoDelLienzo(contenedor)).toBe(fondoOriginal));
@@ -106,10 +106,10 @@ describe('galeria de Temas', () => {
 
     fireEvent.click(within(galeria).getByRole('option', { name: 'oscuro' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Pin oscuro to mapa' }));
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(DSL.replace('view mapa {\n', 'view mapa {\n  theme oscuro\n')));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(DSL.replace('view mapa {\n', 'view mapa {\n  theme oscuro\n')));
     await waitFor(() => expect(within(galeria).getByRole('option', { name: 'oscuro' }).textContent).toContain('pinned'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Unpin the Theme of mapa' }));
-    await waitFor(() => expect(dev.workspace.texto('main.dg')).toBe(DSL));
+    await waitFor(() => expect(dev.workspace.text('main.dg')).toBe(DSL));
   });
 });
